@@ -9,7 +9,8 @@
     <name>patra-parent</name>
 
     <properties>
-        <java.version>24</java.version>
+        <java.version>21</java.version>
+        <project.version>0.1.0-SNAPSHOT</project.version>
         <spring-boot.version>3.2.4</spring-boot.version>
         <!-- 你在用 Spring Cloud Alibaba，这里用 BOM 对齐；具体版本按兼容矩阵来填 -->
         <spring-cloud.version>2023.0.1</spring-cloud.version>

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.papertrace</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+    </parent>
+
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-registry</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>patra-registry</name>
+
+    <properties>
+        <jakarta.validation.version>3.0.2</jakarta.validation.version>
+        <hutool.version>5.8.26</hutool.version>
+        <mapstruct.version>1.5.5.Final</mapstruct.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 外部库版本统一管理（供子模块引用） -->
+            <dependency>
+                <groupId>jakarta.validation</groupId>
+                <artifactId>jakarta.validation-api</artifactId>
+                <version>${jakarta.validation.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+
+            <!-- 内部共享模块（版本由此父 POM统一） -->
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-shared-kernel</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-starter-query</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-starter-web</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-starter-mybatis-plus</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- registry 内部子模块版本统一管理（供互相依赖时省略 version） -->
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-registry-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-registry-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-registry-app</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-registry-infra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-registry-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>patra-registry-api</module>
+        <module>patra-registry-domain</module>
+        <module>patra-registry-app</module>
+        <module>patra-registry-infra</module>
+        <module>patra-registry-adapter</module>
+    </modules>
+</project>
