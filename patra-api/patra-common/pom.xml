@@ -4,9 +4,22 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.papertrace</groupId>
+    <parent>
+        <groupId>com.papertrace</groupId>
+        <artifactId>patra-parent</artifactId>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
     <artifactId>patra-common</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+        </dependency>
+    </dependencies>
 
 
 </project>

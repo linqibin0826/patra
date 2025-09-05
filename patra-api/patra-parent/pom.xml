@@ -11,18 +11,35 @@
     <properties>
         <java.version>21</java.version>
         <project.version>0.1.0-SNAPSHOT</project.version>
+
         <spring-boot.version>3.2.4</spring-boot.version>
-        <!-- 你在用 Spring Cloud Alibaba，这里用 BOM 对齐；具体版本按兼容矩阵来填 -->
+
+        <!-- 用 Spring Cloud Alibaba，这里用 BOM 对齐；具体版本按兼容矩阵来填 -->
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <mybatis-plus.version>3.5.12</mybatis-plus.version>
         <mysql.version>8.4.0</mysql.version>
+
         <lombok.version>1.18.38</lombok.version>
         <mapstruct.version>1.6.0</mapstruct.version>
         <lombok.mapstruct.version>0.2.0</lombok.mapstruct.version>
+
+        <hutoll.version>5.8.22</hutoll.version>
+
         <maven.compiler.release>${java.version}</maven.compiler.release>
+        <maven.enforcer.plugin.version>3.4.1</maven.enforcer.plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+            <!-- 不要 optional=true；会阻断传递 -->
+        </dependency>
+    </dependencies>
 
     <!-- 依赖版本统一管理 -->
     <dependencyManagement>
@@ -94,6 +111,12 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutoll.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -128,6 +151,28 @@
                         </compilerArgs>
                     </configuration>
                 </plugin>
+
+                <!-- 约束守门员 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>3.4.1</version>
+                    <executions>
+                        <execution>
+                            <id>enforce-ssot</id>
+                            <goals><goal>enforce</goal></goals>
+                            <configuration>
+                                <rules>
+                                    <DependencyConvergence/>
+                                    <RequireUpperBoundDeps/>
+                                    <BanDuplicatePomDependencyVersions/>
+                                </rules>
+                                <fail>true</fail>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>

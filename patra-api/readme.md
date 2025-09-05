@@ -10,13 +10,11 @@
 
 ### 1.1 分层与依赖
 
-- **适配层（adapter）**：对外协议与入/出站端口（Web、RPC、MQ、Scheduler）。只依赖 **app + api**；可选依赖 `patra-starter-web`。
-- **应用层（app）**：用例编排、权限与事务、集成事件。只依赖 **domain** 与共享库：`patra-starter-query`、`gateways-*`、`patra-common`。
-- **基础设施层（infra）**：持久化/缓存/消息等技术实现。只依赖 **domain** 与持久化/映射库：`patra-starter-mybatis-plus`。
-- **领域层（domain）**：实体/值对象/聚合/领域事件与仓储端口，仅依赖 `patra-shared-kernel`（**禁止**依赖 Spring/MP/Web/api）。
-- **接口层（api）**：对外 DTO/枚举/路径，不依赖 Spring（最多 `jakarta.validation`）。
-
-> 注：`medoc-query` 被 **ingest**（当前）与 **search**（未来）两个应用层模块复用，用于编译查询条件；其对 `registry` 的依赖通过**端口**倒置实现，见第 4 章。
+- **适配层（adapter）**：对外协议与入/出站端口（Web、RPC、MQ、Scheduler）。只依赖 **app + api**；可选依赖 `patra-spring-boot-starter-web`、`patra-spring-boot-starter-core`。
+  - **应用层（app）**：用例编排、权限与事务、集成事件。只依赖 **domain** 与共享库：`patra-common`、`patra-spring-boot-starter-core`。
+- **基础设施层（infra）**：持久化/缓存/消息等技术实现。只依赖 **domain** 与持久化/映射库：`patra-spring-boot-starter-mybatis`、`patra-spring-boot-starter-core`。
+- **领域层（domain）**：实体/值对象/聚合/领域事件与仓储端口，仅依赖 `patra-common`（**禁止**依赖 Spring/MP/Web/api）。
+- **接口层（api）**：对外 DTO/枚举/路径，不依赖 Spring。
 
 ---
 
@@ -29,10 +27,6 @@
 ### 2.2 当前阶段目标：数据落地
 
 统一接入各平台并解析，将原始文献数据可靠落库，完成基础清洗，支撑后续检索与智能分析。
-
-### 2.3 演进路线
-
-稳定后将拆出独立 **search 模块**.
 
 ---
 
@@ -65,7 +59,7 @@ config/ (可选)
   RegistryAdapterConfig.java      // Web/MQ/Scheduler 等适配器所需 Bean
 ```
 
-**硬性约束**：仅依赖 **app+api**（可选 `patra-starter-web`）；无业务逻辑/无事务/不构造领域对象；DTO 校验在 controller；统一返回 View/Response；记录访问日志与追踪但不泄露领域细节。
+**硬性约束**：仅依赖 **app+api**（可选 `patra-spring-boot-starter-web`）；无业务逻辑/无事务/不构造领域对象；DTO 校验在 controller；统一返回 View/Response；记录访问日志与追踪但不泄露领域细节。
 
 **REST 命名**：前缀 `/api/registry/**`；资源复数；命令式动作用冒号后缀，如 `POST /provenances/{id}:sync`。
 
@@ -139,7 +133,7 @@ port/
 ```
 persistence/
   entity/
-    RegProvenanceEntity.java        // 实体全部继承 BaseEntity（patra-starter-mybatis-plus）
+    RegProvenanceEntity.java        // 实体全部继承 BaseEntity（patra-spring-boot-starter-mybatis）
     RegProvenanceConfigEntity.java
   mapper/                          // MyBatis-Plus Mapper 接口
     ProvenanceMapper.java

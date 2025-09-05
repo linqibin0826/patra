@@ -31,20 +31,6 @@
             <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
 
-        <!-- Lombok 作为可选依赖，避免传递给下游 -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- MapStruct 注解库（编译期用，保持可选；processor 放到 parent 或业务模块里） -->
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-            <optional>true</optional>
-        </dependency>
-
         <!-- 配置元数据（开发期 IDE 提示），运行期不参与 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

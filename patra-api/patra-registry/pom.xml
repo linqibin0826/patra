@@ -12,14 +12,10 @@
     </parent>
 
     <artifactId>patra-registry</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>patra-registry</name>
-
-    <properties>
-        <jakarta.validation.version>3.0.2</jakarta.validation.version>
-        <hutool.version>5.8.26</hutool.version>
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
-    </properties>
+    <name>patra-registry (Aggregator)</name>
+    <description>SSOT 聚合模块：api/domain/infra/app/adapter</description>
 
     <dependencyManagement>
         <dependencies>
@@ -59,4 +55,14 @@
         <module>patra-registry-infra</module>
         <module>patra-registry-adapter</module>
     </modules>
+
+    <build>
+        <plugins>
+            <!-- 约束守门员 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

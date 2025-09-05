@@ -18,10 +18,17 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-registry-domain</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>

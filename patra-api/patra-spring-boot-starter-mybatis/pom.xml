@@ -15,6 +15,17 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
+
+        <!-- DO中统一使用jackson或pojo表示数据库中的json字段 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- 让这是一个“真正的 Spring Boot Starter”（提供自动配置能力） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
