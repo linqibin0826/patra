@@ -20,10 +20,6 @@
         </dependency>
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-starter-query</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
         </dependency>
     </dependencies>

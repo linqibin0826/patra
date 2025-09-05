@@ -22,9 +22,5 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-registry-api</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-starter-web</artifactId>
-        </dependency>
     </dependencies>
 </project>

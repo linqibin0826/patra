@@ -9,8 +9,7 @@
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../patra-parent/pom.xml</relativePath>
     </parent>
-    <artifactId>patra-starter-web</artifactId>
+    <artifactId>patra-spring-boot-starter-web</artifactId>
     <packaging>jar</packaging>
-    <name>patra-starter-web</name>
 </project>
 

@@ -20,7 +20,7 @@
         </dependency>
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-starter-mybatis-plus</artifactId>
+            <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>

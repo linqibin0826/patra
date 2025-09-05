@@ -10,11 +10,10 @@
     <modules>
         <module>patra-parent</module>
         <module>patra-common</module>
-        <module>patra-shared-kernel</module>
-        <module>patra-starter-web</module>
-        <module>patra-starter-query</module>
-        <module>patra-starter-mybatis-plus</module>
         <module>patra-registry</module>
+        <module>patra-spring-boot-starter-web</module>
+        <module>patra-spring-boot-starter-mybatis</module>
+        <module>patra-spring-boot-starter-core</module>
 <!--        <module>patra-ingest</module>-->
     </modules>
 </project>

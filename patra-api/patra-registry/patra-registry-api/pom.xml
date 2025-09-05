@@ -13,10 +13,4 @@
     <packaging>jar</packaging>
     <name>patra-registry-api</name>
 
-    <dependencies>
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-        </dependency>
-    </dependencies>
 </project>
