@@ -1,6 +1,7 @@
 package com.patra.registry.domain.port;
 
 import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +17,7 @@ public interface LiteratureProvenanceRepository {
      * @param code 数据源代码
      * @return 文献数据源
      */
-    Optional<LiteratureProvenance> findByCode(String code);
+    Optional<LiteratureProvenance> findByCode(LiteratureProvenanceCode code);
     
     /**
      * 根据ID查找
@@ -44,12 +45,12 @@ public interface LiteratureProvenanceRepository {
      * 根据业务键删除（逻辑删除）
      * @param code 数据源代码
      */
-    void deleteByCode(String code);
+    void deleteByCode(LiteratureProvenanceCode code);
     
     /**
      * 检查业务键是否存在
      * @param code 数据源代码
      * @return 是否存在
      */
-    boolean existsByCode(String code);
+    boolean existsByCode(LiteratureProvenanceCode code);
 }

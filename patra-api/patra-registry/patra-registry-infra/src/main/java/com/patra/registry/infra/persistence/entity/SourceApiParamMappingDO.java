@@ -47,9 +47,5 @@ public class SourceApiParamMappingDO extends BaseDO {
      * 备注/补充说明
      */
     private JsonNode notes;
-    
-    /**
-     * json数组，备注/变更说明
-     */
-    private JsonNode recordRemarks;
+
 }

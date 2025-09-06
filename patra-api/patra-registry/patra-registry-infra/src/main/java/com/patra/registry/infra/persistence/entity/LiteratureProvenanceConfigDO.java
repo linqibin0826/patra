@@ -91,9 +91,4 @@ public class LiteratureProvenanceConfigDO extends BaseDO {
      * 默认 HTTP 头(如 User-Agent/From/email 等)
      */
     private JsonNode headers;
-    
-    /**
-     * json数组,备注/变更说明
-     */
-    private JsonNode recordRemarks;
 }

@@ -7,6 +7,7 @@ package com.patra.registry.app.service;
  */
 
 import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.registry.domain.port.LiteratureProvenanceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class LiteratureProvenanceAppService {
     /**
      * 根据业务键查找文献数据源
      */
-    public Optional<LiteratureProvenance> findByCode(String code) {
+    public Optional<LiteratureProvenance> findByCode(LiteratureProvenanceCode code) {
         return repository.findByCode(code);
     }
     
@@ -56,23 +57,8 @@ public class LiteratureProvenanceAppService {
     /**
      * 删除文献数据源
      */
-    public void deleteByCode(String code) {
+    public void deleteByCode(LiteratureProvenanceCode code) {
         repository.deleteByCode(code);
     }
-    
-    /**
-     * 激活数据源
-     */
-    public void activate(String code) {
-        // TODO: 实现激活逻辑
-        throw new UnsupportedOperationException("activate not implemented yet");
-    }
-    
-    /**
-     * 停用数据源
-     */
-    public void deactivate(String code) {
-        // TODO: 实现停用逻辑
-        throw new UnsupportedOperationException("deactivate not implemented yet");
-    }
+
 }

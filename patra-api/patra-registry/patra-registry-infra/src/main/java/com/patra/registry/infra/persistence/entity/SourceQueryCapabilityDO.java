@@ -151,9 +151,4 @@ public class SourceQueryCapabilityDO extends BaseDO {
      * token 值正则（可选）
      */
     private String tokenValuePattern;
-    
-    /**
-     * json数组，备注/变更说明
-     */
-    private JsonNode recordRemarks;
 }

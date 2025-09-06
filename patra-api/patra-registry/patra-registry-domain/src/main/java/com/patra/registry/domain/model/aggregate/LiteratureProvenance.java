@@ -6,6 +6,7 @@ package com.patra.registry.domain.model.aggregate;
  * docref.adapter: /docs/adapter/rest/controller/literature-provenances.naming.txt
  */
 
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.registry.domain.model.vo.ApiParamMapping;
 import com.patra.registry.domain.model.vo.QueryRenderRule;
 import com.patra.registry.domain.model.vo.RecordRemark;
@@ -34,7 +35,7 @@ public class LiteratureProvenance {
     /**
      * 数据源代码;简短标识符（业务键）
      */
-    String code;
+    LiteratureProvenanceCode code;
 
     /**
      * 记录备注

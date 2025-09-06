@@ -1,6 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,10 +25,5 @@ public class LiteratureProvenanceDO extends BaseDO {
     /**
      * 数据源代码;简短标识符
      */
-    private String code;
-    
-    /**
-     * json数组,备注/变更说明
-     */
-    private JsonNode recordRemarks;
+    private LiteratureProvenanceCode code;
 }

@@ -1,6 +1,7 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.registry.domain.port.LiteratureProvenanceRepository;
 import com.patra.registry.infra.mapstruct.LiteratureProvenanceConverter;
 import com.patra.registry.infra.persistence.mapper.LiteratureProvenanceMapper;
@@ -22,7 +23,7 @@ public class LiteratureProvenanceRepositoryImpl implements LiteratureProvenanceR
     private final LiteratureProvenanceConverter converter;
     
     @Override
-    public Optional<LiteratureProvenance> findByCode(String code) {
+    public Optional<LiteratureProvenance> findByCode(LiteratureProvenanceCode code) {
         // TODO: 实现根据业务键查找的逻辑
         // 需要使用 MyBatis-Plus 的 QueryWrapper 查询
         throw new UnsupportedOperationException("findByCode not implemented yet");
@@ -47,13 +48,13 @@ public class LiteratureProvenanceRepositoryImpl implements LiteratureProvenanceR
     }
     
     @Override
-    public void deleteByCode(String code) {
+    public void deleteByCode(LiteratureProvenanceCode code) {
         // TODO: 实现逻辑删除的逻辑
         throw new UnsupportedOperationException("deleteByCode not implemented yet");
     }
     
     @Override
-    public boolean existsByCode(String code) {
+    public boolean existsByCode(LiteratureProvenanceCode code) {
         // TODO: 实现检查业务键是否存在的逻辑
         throw new UnsupportedOperationException("existsByCode not implemented yet");
     }

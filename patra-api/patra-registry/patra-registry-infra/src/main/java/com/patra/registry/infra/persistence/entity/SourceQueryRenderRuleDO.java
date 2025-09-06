@@ -90,9 +90,5 @@ public class SourceQueryRenderRuleDO extends BaseDO {
      * 可选渲染函数名（如 pubmedDatetypeRenderer）
      */
     private String fn;
-    
-    /**
-     * json数组，备注/变更说明
-     */
-    private JsonNode recordRemarks;
+
 }

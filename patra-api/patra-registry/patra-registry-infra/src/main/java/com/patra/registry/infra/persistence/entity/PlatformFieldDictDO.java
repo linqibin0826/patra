@@ -45,9 +45,4 @@ public class PlatformFieldDictDO extends BaseDO {
      * 仅日期类使用的 datetype 映射
      */
     private DateType datetype;
-    
-    /**
-     * json 数组，备注/变更说明
-     */
-    private JsonNode recordRemarks;
 }

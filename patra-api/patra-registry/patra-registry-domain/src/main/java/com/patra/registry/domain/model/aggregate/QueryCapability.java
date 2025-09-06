@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.aggregate;
 
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.registry.domain.model.enums.MatchType;
 import com.patra.registry.domain.model.enums.QueryOperation;
 import com.patra.registry.domain.model.enums.RangeKind;
@@ -30,6 +31,11 @@ public class QueryCapability {
      * 所属文献数据源ID
      */
     Long literatureProvenanceId;
+
+    /**
+     * 所属文献数据源代码
+     */
+    LiteratureProvenanceCode literatureProvenanceCode;
     
     /**
      * 内部字段键，如 ti/ab/tiab/la/pt/dp/owner
