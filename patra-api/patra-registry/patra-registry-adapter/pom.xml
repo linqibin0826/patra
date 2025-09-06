@@ -18,9 +18,10 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-registry-app</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-registry-api</artifactId>
+            <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
     </dependencies>
 </project>
