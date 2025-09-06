@@ -1,14 +1,9 @@
 package com.patra.registry.app.service;
 
-/**
- * docref.aggregate: /docs/domain/aggregate/LiteratureProvenance.txt
- * docref.api: /docs/api/rest/dto/request/LiteratureProvenanceRequest.txt,/docs/api/rest/dto/response/LiteratureProvenanceResponse.txt
- * docref.adapter: /docs/adapter/rest/controller/literature-provenances.naming.txt
- */
-
+import com.patra.registry.app.view.ProvenanceSummary;
 import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
 import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
-import com.patra.registry.domain.port.LiteratureProvenanceRepository;
+import com.patra.registry.app.port.out.LiteratureProvenanceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +15,17 @@ import java.util.Optional;
  */
 @Service
 @RequiredArgsConstructor
-public class LiteratureProvenanceAppService {
+public class LiteratureProvenanceService {
     
     private final LiteratureProvenanceRepository repository;
+
+
+    /**
+     * 分页查询文献数据源
+     */
+    public List<ProvenanceSummary> findAll() {
+        return repository.findAll();
+    }
     
     /**
      * 根据业务键查找文献数据源
@@ -46,13 +49,7 @@ public class LiteratureProvenanceAppService {
         // TODO: 实现更新逻辑，包括版本控制
         return repository.save(aggregate);
     }
-    
-    /**
-     * 分页查询文献数据源
-     */
-    public List<LiteratureProvenance> findAll(int offset, int limit) {
-        return repository.findAll(offset, limit);
-    }
+
     
     /**
      * 删除文献数据源

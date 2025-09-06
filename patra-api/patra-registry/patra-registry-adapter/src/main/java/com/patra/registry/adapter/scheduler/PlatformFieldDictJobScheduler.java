@@ -5,7 +5,7 @@
  */
 package com.patra.registry.adapter.scheduler;
 
-import com.patra.registry.app.service.PlatformFieldDictAppService;
+import com.patra.registry.app.service.PlatformFieldDictService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PlatformFieldDictJobScheduler {
 
-    private final PlatformFieldDictAppService appService;
+    private final PlatformFieldDictService appService;
 
     /**
      * 每天凌晨2点执行字典清理任务

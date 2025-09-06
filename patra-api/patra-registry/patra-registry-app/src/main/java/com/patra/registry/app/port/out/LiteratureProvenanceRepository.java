@@ -1,5 +1,6 @@
-package com.patra.registry.domain.port;
+package com.patra.registry.app.port.out;
 
+import com.patra.registry.app.view.ProvenanceSummary;
 import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
 import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 
@@ -35,11 +36,9 @@ public interface LiteratureProvenanceRepository {
     
     /**
      * 分页查询
-     * @param offset 偏移量
-     * @param limit 限制数量
      * @return 文献数据源列表
      */
-    List<LiteratureProvenance> findAll(int offset, int limit);
+    List<ProvenanceSummary> findAll();
     
     /**
      * 根据业务键删除（逻辑删除）

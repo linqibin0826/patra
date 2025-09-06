@@ -12,6 +12,6 @@ import org.mapstruct.Mapper;
  * 文献数据源应用层映射器
  */
 @Mapper(componentModel = "spring")
-public interface LiteratureProvenanceAppMapper {
+public interface LiteratureProvenanceAppConvertor {
 
 }

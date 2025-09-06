@@ -1,7 +1,7 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.domain.model.aggregate.PlatformFieldDict;
-import com.patra.registry.domain.port.PlatformFieldDictRepository;
+import com.patra.registry.app.port.out.PlatformFieldDictRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +14,7 @@ import java.util.Optional;
  */
 @Service
 @RequiredArgsConstructor
-public class PlatformFieldDictAppService {
+public class PlatformFieldDictService {
 
     private final PlatformFieldDictRepository repository;
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.registry.infra.persistence.mapper.LiteratureProvenanceMapper">
+
+    <select id="selectProvSummaryAll" resultType="com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO">
+        select rlp.`id`,
+               rlp.`name`,
+               rlp.`code`
+        from patra_registry.reg_literature_provenance rlp
+        where deleted = 0
+        order by updated_at desc
+    </select>
+</mapper>

@@ -1,11 +1,14 @@
 package com.patra.registry.infra.persistence.repository;
 
+import com.patra.registry.app.port.out.LiteratureProvenanceRepository;
+import com.patra.registry.app.view.ProvenanceSummary;
 import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
 import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
-import com.patra.registry.domain.port.LiteratureProvenanceRepository;
 import com.patra.registry.infra.mapstruct.LiteratureProvenanceConverter;
+import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.LiteratureProvenanceMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,12 +18,20 @@ import java.util.Optional;
  * 文献数据源仓储实现
  * docref: /docs/domain/port/LiteratureProvenanceRepository.txt
  */
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class LiteratureProvenanceRepositoryImpl implements LiteratureProvenanceRepository {
-    
-    private final LiteratureProvenanceMapper mapper;
+
+    private final LiteratureProvenanceMapper provenanceMapper;
     private final LiteratureProvenanceConverter converter;
+
+
+    @Override
+    public List<ProvenanceSummary> findAll() {
+        List<LiteratureProvenanceDO> provenances = provenanceMapper.selectProvSummaryAll();
+        return converter.toSummaryList(provenances);
+    }
     
     @Override
     public Optional<LiteratureProvenance> findByCode(LiteratureProvenanceCode code) {
@@ -40,12 +51,7 @@ public class LiteratureProvenanceRepositoryImpl implements LiteratureProvenanceR
         // TODO: 实现保存聚合的逻辑
         throw new UnsupportedOperationException("save not implemented yet");
     }
-    
-    @Override
-    public List<LiteratureProvenance> findAll(int offset, int limit) {
-        // TODO: 实现分页查询的逻辑
-        throw new UnsupportedOperationException("findAll not implemented yet");
-    }
+
     
     @Override
     public void deleteByCode(LiteratureProvenanceCode code) {

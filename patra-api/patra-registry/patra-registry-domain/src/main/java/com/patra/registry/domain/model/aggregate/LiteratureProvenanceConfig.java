@@ -111,6 +111,5 @@ public class LiteratureProvenanceConfig {
      */
     Long version;
 
-    // 业务方法占位符
     // TODO: 实现配置验证和获取有效值的方法
 }

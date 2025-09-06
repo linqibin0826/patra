@@ -1,11 +1,5 @@
 package com.patra.registry.domain.model.aggregate;
 
-/**
- * docref.aggregate: /docs/domain/aggregate/LiteratureProvenance.txt
- * docref.api: /docs/api/rest/dto/request/LiteratureProvenanceRequest.txt,/docs/api/rest/dto/response/LiteratureProvenanceResponse.txt
- * docref.adapter: /docs/adapter/rest/controller/literature-provenances.naming.txt
- */
-
 import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.registry.domain.model.vo.ApiParamMapping;
 import com.patra.registry.domain.model.vo.QueryRenderRule;
@@ -67,6 +61,5 @@ public class LiteratureProvenance {
      */
     List<QueryRenderRule> queryRenderRules;
 
-    // 业务方法占位符
     // TODO: 实现聚合业务逻辑：状态流转、配置验证、规则管理等
 }

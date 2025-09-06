@@ -1,4 +1,4 @@
-package com.patra.registry.domain.port;
+package com.patra.registry.app.port.out;
 
 import com.patra.registry.domain.model.aggregate.PlatformFieldDict;
 

@@ -18,7 +18,6 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <mybatis-plus.version>3.5.12</mybatis-plus.version>
-        <mysql.version>8.4.0</mysql.version>
 
         <lombok.version>1.18.38</lombok.version>
         <mapstruct.version>1.6.0</mapstruct.version>
@@ -39,6 +38,7 @@
             <scope>provided</scope>
             <!-- 不要 optional=true；会阻断传递 -->
         </dependency>
+
     </dependencies>
 
     <!-- 依赖版本统一管理 -->
@@ -81,6 +81,12 @@
                 <artifactId>mapstruct</artifactId>
                 <version>${mapstruct.version}</version>
                 <optional>true</optional>
+            </dependency>
+
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok-mapstruct-binding</artifactId>
+                <version>${lombok.mapstruct.version}</version>
             </dependency>
 
             <!-- patra相关模块 -->
@@ -180,12 +186,38 @@
         </pluginManagement>
 
         <!-- 2) 真正让“所有模块都生效”的插件，直接启用（省得子模块声明） -->
+        <!-- 编译器插件几乎所有模块都需要，直接启用 -->
+
         <plugins>
-            <!-- 编译器插件几乎所有模块都需要，直接启用 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>${lombok.mapstruct.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-Amapstruct.defaultComponentModel=spring</arg>
+                    </compilerArgs>
+                </configuration>
             </plugin>
+
         </plugins>
     </build>
 </project>

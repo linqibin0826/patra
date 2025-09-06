@@ -8,6 +8,6 @@ package com.patra.registry.app.mapping;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
-public interface PlatformFieldDictAppMapper {
+public interface PlatformFieldDictAppConvertor {
 
 }

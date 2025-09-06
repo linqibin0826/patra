@@ -49,6 +49,7 @@
     </dependencyManagement>
 
     <modules>
+        <module>patra-registry-boot</module>
         <module>patra-registry-api</module>
         <module>patra-registry-domain</module>
         <module>patra-registry-app</module>
