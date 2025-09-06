@@ -7,20 +7,18 @@ Copilot 在生成或改写代码时必须严格遵守以下约束。
 
 ## 0. 通用要求
 
-- **只生成骨架代码**（类、接口、注解、必要字段、注释），不写增删改查逻辑。
 - **强制使用 Lombok 注解**：`@Data`、`@Getter`、`@Setter`、`@Builder`、`@SuperBuilder`、`@EqualsAndHashCode`、`@Value` 等。
     - **禁止**手写 getter/setter/toString/equals/hashCode。
-- **MapStruct 转换器**必须被 Spring 管理：`@Mapper(componentModel = "spring")`。
-- **Mapper 接口**只能 `extends BaseMapper<DO>`，不得声明自定义方法。
-- **XML 文件**仅允许 `<sql>` 占位，不写 CRUD 语句。
-
+- **MapStruct 转换器**必须被 Spring 管理：`@Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
+        unmappedTargetPolicy = org.mapstruct.ReportingPolicy.IGNORE)`。
+- **Mapper 接口** `extends BaseMapper<xxxDO>`，
 ---
 
 ## 1. 分层职责与依赖
 
 ### api 层
 
-- **职责**：对外契约（REST/RPC DTO、IntegrationEvent DTO、协议枚举、错误码、路径常量）。
+- **职责**：对外契约（RPC DTO、IntegrationEvent DTO、协议枚举、错误码、路径常量）。
 - **依赖**：仅允许 `jakarta.validation`。
 - **禁区**：禁止依赖 Spring/domain/infra/app。
 - **规范**：DTO 字段语义清晰，避免暴露内部标识；IntegrationEvent 包含最小字段集（eventId、occurredAt、aggregateId 等）。
@@ -28,10 +26,10 @@ Copilot 在生成或改写代码时必须严格遵守以下约束。
 ### adapter 层
 
 - **职责**：协议适配（REST 控制器、MQ Consumer/Producer、Scheduler）。
-- **依赖**：`app` + `api`，可选 `patra-starter-web`、MQ/RPC SDK。
+- **依赖**：`app` + `api`，`patra-spring-boot-starter-web`、MQ/RPC SDK等。
 - **禁区**：禁止依赖 domain/infra。
 - **规范**：
-    - Controller：只做参数校验/转发，不写业务逻辑。
+    - Controller：只做参数校验/参数映射/转发，不写业务逻辑。
     - Producer：实现 app 的发布端口，映射 AppEvent → IntegrationEvent → 调用 MQ SDK。
     - Consumer：消费 IntegrationEvent DTO → 转换为 command/query → 调用 app。
     - Scheduler：只触发 app 用例，不含业务。
@@ -39,17 +37,12 @@ Copilot 在生成或改写代码时必须严格遵守以下约束。
 ### app 层
 
 - **职责**：用例编排（权限、事务、聚合协作、事件触发）；转换领域异常为应用异常。
-- **依赖**：`domain`、`patra-common`、`patra-spring-boot-starter-core`。
+- **依赖**：`domain`、`patra-common`、`patra-spring-boot-starter-core`等。
 - **禁区**：禁止依赖 adapter/infra/api。
-- **规范**：
-    - `*AppService`：只保留类与注释，方法体留空或最小签名。
-    - `EventPublisher`：仅定义接口方法，不含实现。
-    - command/query：作为入参模型，字段仅含注解占位。
-    - mapping：使用 MapStruct，负责 app ↔ domain 映射。
 
 ### domain 层
 
-- **职责**：内核（聚合、实体、VO、领域事件、仓储端口）。
+- **职责**：内核（聚合、实体、VO、领域事件）。
 - **依赖**：仅允许 `patra-common`（hutool-core）。
 - **禁区**：禁止任何 Spring/MyBatis/Web/api 依赖与注解。
 - **规范**：
@@ -57,19 +50,17 @@ Copilot 在生成或改写代码时必须严格遵守以下约束。
     - 值对象：不可变；推荐 `@Value` 或 `@AllArgsConstructor` + `@EqualsAndHashCode`。
     - 领域事件：仅描述事实，不含技术细节。
     - 枚举：数据库字段枚举必须实现 `CodeEnum<C>`；二值开关用 `boolean`。
-    - 仓储端口：只定义聚合级别的 load/save 方法，不定义行级 CRUD。
 
 ### infra 层
 
-- **职责**：持久化与技术落地；实现 `domain.port.*`；DO ↔ 聚合映射；Outbox 托管。
+- **职责**：持久化与技术落地；实现 `app.port.*`；DO ↔ 聚合映射；Outbox 托管。
 - **依赖**：`domain`、MyBatis-Plus Starter。
 - **禁区**：禁止依赖 app/adapter/api。
 - **规范**：
     - DO：继承 `BaseDO`，字段用 Lombok 注解；枚举字段用 domain 枚举；JSON 字段用 `JsonNode` 或 `String`。
-    - Mapper：`extends BaseMapper<DO>`，不得添加自定义方法。
-    - RepositoryImpl：仅留类和注释，不写 CRUD 实现；组合 baseMapper 与 Converter 即可。
+    - Mapper：`extends BaseMapper<xxDO>`。
+    - RepositoryImpl：组合 baseMapper 与 Converter 。
     - Converter：使用 MapStruct，注解最小化；只做字段映射，不含业务逻辑。
-    - XML：只包含 `<sql>` 占位。
     - Outbox：与聚合同事务落库，Adapter Relay 扫描发布。
 
 ---
@@ -79,7 +70,7 @@ Copilot 在生成或改写代码时必须严格遵守以下约束。
 ```
 
 api/
-    rest/dto/{request,response}/
+    dto/
     rpc/client/
     events/
     enums/
@@ -87,7 +78,9 @@ api/
 
 adapter/
     rest/controller/
-    rest/dto/
+    rest/mapping/xxxReq/RespConvertor.java
+    rest/dto/resp
+    rest/dto/req
     scheduler/
     mq/consumer/
     mq/producer/
@@ -96,21 +89,24 @@ adapter/
 app/
     service/
     usecase/{command,query}/
-    mapping/
+    mapping/xxxAppConvertor.java
     security/
     event/publisher/
+    port/in/
+    port/out/
     tx/
     config/
 
 domain/
-    model/{aggregate,vo,event,enums}/
-    port/
+    aggregate/
+    vo/
+    event/
+    enums/
 
 infra/
     persistence/{entity,mapper,repository}/
-    mapstruct/
+    mapstruct/xxxConvertor.java
     config/
-
 ```
 
 ---
@@ -129,7 +125,6 @@ infra/
 ## 4. 质量守则
 
 - 分层依赖合法，无跨层耦合。
-- Mapper 无自定义方法；XML 仅 `<sql>` 占位。
 - Lombok 注解齐全，不手写 getter/setter。
 - MapStruct 转换器简洁，必须 Spring 管理。
 - DTO 与事件演进采用版本化；新增字段必须向后兼容。

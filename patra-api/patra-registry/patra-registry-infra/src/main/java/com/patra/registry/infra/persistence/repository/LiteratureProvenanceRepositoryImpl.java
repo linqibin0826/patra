@@ -2,8 +2,8 @@ package com.patra.registry.infra.persistence.repository;
 
 import com.patra.registry.app.port.out.LiteratureProvenanceRepository;
 import com.patra.registry.app.view.ProvenanceSummary;
-import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
+import com.patra.registry.domain.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.enums.LiteratureProvenanceCode;
 import com.patra.registry.infra.mapstruct.LiteratureProvenanceConverter;
 import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.LiteratureProvenanceMapper;

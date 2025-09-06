@@ -1,9 +1,8 @@
 package com.patra.registry.infra.persistence.entity;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.registry.domain.model.enums.Cardinality;
-import com.patra.registry.domain.model.enums.DataType;
-import com.patra.registry.domain.model.enums.DateType;
+import com.patra.registry.domain.enums.Cardinality;
+import com.patra.registry.domain.enums.DataType;
+import com.patra.registry.domain.enums.DateType;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

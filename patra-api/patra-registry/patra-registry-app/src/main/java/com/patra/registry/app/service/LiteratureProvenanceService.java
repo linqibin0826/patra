@@ -1,8 +1,8 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.app.view.ProvenanceSummary;
-import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
+import com.patra.registry.domain.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.enums.LiteratureProvenanceCode;
 import com.patra.registry.app.port.out.LiteratureProvenanceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

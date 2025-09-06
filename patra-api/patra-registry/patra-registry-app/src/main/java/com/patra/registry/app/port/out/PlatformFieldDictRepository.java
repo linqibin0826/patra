@@ -1,6 +1,6 @@
 package com.patra.registry.app.port.out;
 
-import com.patra.registry.domain.model.aggregate.PlatformFieldDict;
+import com.patra.registry.domain.aggregate.PlatformFieldDict;
 
 import java.util.List;
 import java.util.Optional;

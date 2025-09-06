@@ -5,8 +5,8 @@
  */
 package com.patra.registry.app.usecase.query;
 
-import com.patra.registry.domain.model.enums.Cardinality;
-import com.patra.registry.domain.model.enums.DataType;
+import com.patra.registry.domain.enums.Cardinality;
+import com.patra.registry.domain.enums.DataType;
 import lombok.Builder;
 import lombok.Value;
 

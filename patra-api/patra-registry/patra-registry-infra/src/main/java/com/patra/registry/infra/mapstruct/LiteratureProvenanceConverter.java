@@ -2,7 +2,7 @@ package com.patra.registry.infra.mapstruct;
 
 import cn.hutool.core.collection.CollUtil;
 import com.patra.registry.app.view.ProvenanceSummary;
-import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.aggregate.LiteratureProvenance;
 import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

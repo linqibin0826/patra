@@ -1,8 +1,8 @@
 package com.patra.registry.app.port.out;
 
 import com.patra.registry.app.view.ProvenanceSummary;
-import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
+import com.patra.registry.domain.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.enums.LiteratureProvenanceCode;
 
 import java.util.List;
 import java.util.Optional;

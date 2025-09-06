@@ -1,9 +1,9 @@
-package com.patra.registry.domain.model.aggregate;
+package com.patra.registry.domain.aggregate;
 
-import com.patra.registry.domain.model.enums.Cardinality;
-import com.patra.registry.domain.model.enums.DataType;
-import com.patra.registry.domain.model.enums.DateType;
-import com.patra.registry.domain.model.vo.RecordRemark;
+import com.patra.registry.domain.enums.Cardinality;
+import com.patra.registry.domain.enums.DataType;
+import com.patra.registry.domain.enums.DateType;
+import com.patra.registry.domain.vo.RecordRemark;
 import lombok.Builder;
 import lombok.Value;
 

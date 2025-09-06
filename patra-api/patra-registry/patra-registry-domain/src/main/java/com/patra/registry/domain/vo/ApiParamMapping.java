@@ -1,4 +1,4 @@
-package com.patra.registry.domain.model.vo;
+package com.patra.registry.domain.vo;
 
 import lombok.Builder;
 import lombok.Value;

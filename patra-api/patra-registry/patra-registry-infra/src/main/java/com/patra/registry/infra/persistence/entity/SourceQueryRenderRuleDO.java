@@ -1,10 +1,10 @@
 package com.patra.registry.infra.persistence.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.registry.domain.model.enums.EmitTarget;
-import com.patra.registry.domain.model.enums.MatchType;
-import com.patra.registry.domain.model.enums.QueryOperation;
-import com.patra.registry.domain.model.enums.ValueType;
+import com.patra.registry.domain.enums.EmitTarget;
+import com.patra.registry.domain.enums.MatchType;
+import com.patra.registry.domain.enums.QueryOperation;
+import com.patra.registry.domain.enums.ValueType;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

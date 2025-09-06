@@ -45,3 +45,5 @@ build/
 /docker/docker/
 /docker/mysql/data/
 /docker/nacos/logs/
+/docker/nacos/
+/docker/redis/data/

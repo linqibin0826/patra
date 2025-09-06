@@ -1,6 +1,6 @@
 package com.patra.registry.infra.mapstruct;
 
-import com.patra.registry.domain.model.aggregate.PlatformFieldDict;
+import com.patra.registry.domain.aggregate.PlatformFieldDict;
 import com.patra.registry.infra.persistence.entity.PlatformFieldDictDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

@@ -1,4 +1,4 @@
-package com.patra.registry.domain.model.event;
+package com.patra.registry.domain.event;
 
 /**
  * docref.aggregate: /docs/domain/aggregate/LiteratureProvenance.txt

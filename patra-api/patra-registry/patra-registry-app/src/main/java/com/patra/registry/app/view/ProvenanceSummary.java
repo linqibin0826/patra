@@ -1,6 +1,6 @@
 package com.patra.registry.app.view;
 
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
+import com.patra.registry.domain.enums.LiteratureProvenanceCode;
 
 /**
  * 数据来源概要

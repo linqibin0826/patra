@@ -1,4 +1,4 @@
-package com.patra.registry.domain.model.enums;
+package com.patra.registry.domain.enums;
 
 import com.patra.common.enums.CodeEnum;
 import lombok.Getter;

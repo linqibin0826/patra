@@ -1,9 +1,9 @@
-package com.patra.registry.domain.model.aggregate;
+package com.patra.registry.domain.aggregate;
 
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
-import com.patra.registry.domain.model.vo.ApiParamMapping;
-import com.patra.registry.domain.model.vo.QueryRenderRule;
-import com.patra.registry.domain.model.vo.RecordRemark;
+import com.patra.registry.domain.enums.LiteratureProvenanceCode;
+import com.patra.registry.domain.vo.ApiParamMapping;
+import com.patra.registry.domain.vo.QueryRenderRule;
+import com.patra.registry.domain.vo.RecordRemark;
 import lombok.Builder;
 import lombok.Value;
 
