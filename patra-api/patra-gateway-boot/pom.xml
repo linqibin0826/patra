@@ -3,40 +3,32 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>com.papertrace</groupId>
-        <artifactId>patra-registry</artifactId>
+        <artifactId>patra-parent</artifactId>
+        <relativePath>../patra-parent/pom.xml</relativePath>
         <version>0.1.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-registry-boot</artifactId>
+    <artifactId>patra-gateway-boot</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 
     <dependencies>
+        <!-- 网关（Reactive 版） -->
         <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-core</artifactId>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
         </dependency>
 
+        <!-- Nacos 注册/配置（Spring Cloud Alibaba） -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-registry-adapter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-registry-infra</artifactId>
         </dependency>
     </dependencies>
 

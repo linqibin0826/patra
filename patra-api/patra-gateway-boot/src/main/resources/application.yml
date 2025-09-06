@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: patra-gateway
+
+  config:
+    import:
+      - "optional:nacos:patra-gateway.yaml?group=DEFAULT_GROUP&namespace=public"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+
+server:
+  port: 9528
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
