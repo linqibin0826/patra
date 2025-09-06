@@ -14,5 +14,9 @@
     <name>patra-registry-domain</name>
 
     <dependencies>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
     </dependencies>
 </project>

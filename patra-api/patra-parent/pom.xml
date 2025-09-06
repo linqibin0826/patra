@@ -70,13 +70,10 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- MyBatis-Plus BOM -->
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-bom</artifactId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
 
             <dependency>
@@ -128,6 +125,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
                     <configuration>
+                        <release>${maven.compiler.release}</release>
                         <annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>
@@ -146,7 +144,6 @@
                             </path>
                         </annotationProcessorPaths>
                         <compilerArgs>
-                            <release>${maven.compiler.release}</release>
                             <arg>-Amapstruct.defaultComponentModel=spring</arg>
                         </compilerArgs>
                     </configuration>
@@ -160,7 +157,9 @@
                     <executions>
                         <execution>
                             <id>enforce-ssot</id>
-                            <goals><goal>enforce</goal></goals>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
                             <configuration>
                                 <rules>
                                     <DependencyConvergence/>

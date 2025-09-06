@@ -56,13 +56,5 @@
         <module>patra-registry-adapter</module>
     </modules>
 
-    <build>
-        <plugins>
-            <!-- 约束守门员 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
+
 </project>

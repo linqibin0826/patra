@@ -38,10 +38,11 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
 
-        <!-- 3.5.9+ 分页等功能所需的 SQL 解析模块（BOM 管版本） -->
+        <!-- 3.5.9+ 分页等功能所需的 SQL 解析模块 -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
         </dependency>
 
 

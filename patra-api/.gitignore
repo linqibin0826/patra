@@ -1,5 +1,12 @@
 target/
+*.log
+*.iml
+# 保留必要的 Wrapper 文件
 !.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+!.mvn/maven.config
+!.mvn/settings.xml
+
 !**/src/main/**/target/
 !**/src/test/**/target/
 
@@ -9,7 +16,6 @@ target/
 .idea/compiler.xml
 .idea/libraries/
 *.iws
-*.iml
 *.ipr
 
 ### Eclipse ###
