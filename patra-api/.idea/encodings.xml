@@ -5,6 +5,20 @@
     <file url="file://$PROJECT_DIR$/patra-common/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-gateway-boot/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-gateway-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-adapter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-adapter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-app/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-app/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-boot/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-infra/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-infra/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-parent/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-parent/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-adapter/src/main/java" charset="UTF-8" />

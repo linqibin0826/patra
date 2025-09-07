@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.papertrace</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>patra-ingest</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>patra-ingest (Aggregator)</name>
+    <description>数据采集聚合模块: api/domain/infra/app/adapter</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ingest 内部子模块版本统一管理（供互相依赖时省略 version） -->
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-ingest-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-ingest-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-ingest-app</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-ingest-infra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-ingest-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>patra-ingest-boot</module>
+        <module>patra-ingest-api</module>
+        <module>patra-ingest-domain</module>
+        <module>patra-ingest-app</module>
+        <module>patra-ingest-infra</module>
+        <module>patra-ingest-adapter</module>
+    </modules>
+
+</project>
