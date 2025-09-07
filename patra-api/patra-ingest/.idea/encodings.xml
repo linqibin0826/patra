@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/patra-ingest-adapter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-adapter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-app/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-app/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-boot/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-contract/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-contract/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-infra/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest-infra/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
