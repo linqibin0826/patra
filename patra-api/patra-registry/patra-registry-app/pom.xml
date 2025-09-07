@@ -23,11 +23,11 @@
             <artifactId>patra-registry-api</artifactId>
         </dependency>
 
-
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-registry-contract</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>
@@ -36,6 +36,11 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-mapstruct-binding</artifactId>
         </dependency>
     </dependencies>
 </project>

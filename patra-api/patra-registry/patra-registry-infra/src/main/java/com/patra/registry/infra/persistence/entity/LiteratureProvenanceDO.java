@@ -1,6 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
-import com.patra.registry.domain.enums.LiteratureProvenanceCode;
+import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.ingest.infra.persistence.mapper.JobMapper">
+
+    <!-- 采集任务表结果映射 -->
+    <resultMap id="BaseResultMap" type="com.patra.ingest.infra.persistence.entity.JobDO">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="plan_id" property="planId" jdbcType="BIGINT"/>
+        <result column="slice_id" property="sliceId" jdbcType="BIGINT"/>
+        <result column="literature_provenance_id" property="literatureProvenanceId" jdbcType="BIGINT"/>
+        <result column="job_type" property="jobType" jdbcType="VARCHAR"/>
+        <result column="trigger_type" property="triggerType" jdbcType="VARCHAR"/>
+        <result column="api_credential_id" property="apiCredentialId" jdbcType="BIGINT"/>
+        <result column="params" property="params" jdbcType="LONGVARCHAR"/>
+        <result column="job_key" property="jobKey" jdbcType="VARCHAR"/>
+        <result column="idempotent_key" property="idempotentKey" jdbcType="CHAR"/>
+        <result column="expr_hash" property="exprHash" jdbcType="CHAR"/>
+        <result column="priority" property="priority" jdbcType="TINYINT"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="scheduled_at" property="scheduledAt" jdbcType="TIMESTAMP"/>
+        <result column="started_at" property="startedAt" jdbcType="TIMESTAMP"/>
+        <result column="finished_at" property="finishedAt" jdbcType="TIMESTAMP"/>
+        <result column="last_heartbeat" property="lastHeartbeat" jdbcType="TIMESTAMP"/>
+        <result column="parent_job_id" property="parentJobId" jdbcType="BIGINT"/>
+        <result column="scheduler_run_id" property="schedulerRunId" jdbcType="VARCHAR"/>
+        <result column="correlation_id" property="correlationId" jdbcType="VARCHAR"/>
+        <result column="error" property="error" jdbcType="LONGVARCHAR"/>
+        <result column="record_remarks" property="recordRemarks" jdbcType="LONGVARCHAR"/>
+        <result column="version" property="version" jdbcType="BIGINT"/>
+        <result column="ip_address" property="ipAddress" jdbcType="VARBINARY"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="created_by" property="createdBy" jdbcType="BIGINT"/>
+        <result column="created_by_name" property="createdByName" jdbcType="VARCHAR"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_by" property="updatedBy" jdbcType="BIGINT"/>
+        <result column="updated_by_name" property="updatedByName" jdbcType="VARCHAR"/>
+        <result column="deleted" property="deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+</mapper>

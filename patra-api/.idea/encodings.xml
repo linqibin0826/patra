@@ -13,6 +13,8 @@
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-app/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-boot/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-contract/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-contract/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-domain/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-domain/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-infra/src/main/java" charset="UTF-8" />
@@ -29,6 +31,8 @@
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-app/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-boot/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-contract/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-contract/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-domain/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-domain/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-registry/patra-registry-infra/src/main/java" charset="UTF-8" />

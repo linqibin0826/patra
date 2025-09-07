@@ -54,8 +54,8 @@ Copilot 在生成或改写代码时必须严格遵守以下约束。
 ### infra 层
 
 - **职责**：持久化与技术落地；实现 `app.port.*`；DO ↔ 聚合映射；Outbox 托管。
-- **依赖**：`domain`、MyBatis-Plus Starter。
-- **禁区**：禁止依赖 app/adapter/api。
+- **依赖**：`domain`、`app`, MyBatis-Plus Starter。
+- **禁区**：禁止依赖 adapter/api。
 - **规范**：
     - DO：继承 `BaseDO`，字段用 Lombok 注解；枚举字段用 domain 枚举；JSON 字段用 `JsonNode` 或 `String`。
     - Mapper：`extends BaseMapper<xxDO>`。

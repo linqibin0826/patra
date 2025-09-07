@@ -8,7 +8,6 @@
         <groupId>com.papertrace</groupId>
         <artifactId>patra-ingest</artifactId>
         <version>0.1.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-ingest-boot</artifactId>
@@ -18,25 +17,27 @@
     <dependencies>
         <dependency>
             <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
             <artifactId>patra-ingest-adapter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-ingest-infra</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-core</artifactId>
-        </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 
 </project>

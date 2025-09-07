@@ -27,6 +27,11 @@
             </dependency>
             <dependency>
                 <groupId>com.papertrace</groupId>
+                <artifactId>patra-registry-contract</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
                 <artifactId>patra-registry-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -50,11 +55,72 @@
 
     <modules>
         <module>patra-registry-boot</module>
+        <!--
+            应用启动模块（Bootstrap）。
+            - 作为最终可执行入口，包含 main 方法和 Spring Boot 启动配置。
+            - 负责装配 adapter、app、infra 等模块。
+            - 本身不写业务逻辑。
+            - 依赖：adapter、app、infra。
+        -->
+
         <module>patra-registry-api</module>
+        <!--
+            外部服务 API 契约模块（Public API）。
+            - 对其他微服务或客户端暴露的接口数据结构（Request/Response DTO、错误码定义）。
+            - 这里的类应该是“对外稳定”的契约，不要包含领域逻辑。
+            - 可以附带 swagger 注解、校验注解（如 javax.validation）。
+            - 被 adapter 使用，对外提供 REST/RPC 接口时依赖此模块。
+        -->
+
+        <module>patra-registry-contract</module>
+        <!--
+            内部跨层契约模块（Internal Contract）。
+            - 用于应用层 (app) 与基础设施层 (infra) 之间的协作。
+            - 包含 QueryPort 接口 + ReadModel/DTO（只读投影），也可以放一些跨层共享的枚举或轻量接口。
+            - 不依赖 Spring/Web/ORM 等框架，保持“纯净”。
+            - app 调用 QueryPort，infra 提供实现。
+            - 依赖方向：app -> contract；infra -> contract。
+        -->
+
         <module>patra-registry-domain</module>
+        <!--
+            领域层（Domain）。
+            - 核心业务逻辑，唯一不依赖其他业务模块的层。
+            - 包含领域模型 (Entity, ValueObject, DomainEvent)。
+            - 包含领域服务、领域规则。
+            - 定义出站 Port（如 Repository 接口、外部系统网关接口）。
+            - 被 app 使用；由 infra 实现这些 port。
+        -->
+
         <module>patra-registry-app</module>
+        <!--
+            应用层（Application）。
+            - 编排用例（Use Case/Application Service），定义入站 Port（Command Handler）。
+            - 依赖 domain 来执行业务逻辑。
+            - 使用 contract（QueryPort）获取读侧数据。
+            - 对外不直接暴露接口，而是由 adapter 调用。
+            - 依赖方向：app -> domain, contract。
+        -->
+
         <module>patra-registry-infra</module>
+        <!--
+            基础设施层（Infrastructure）。
+            - 提供技术实现，如数据库访问、消息队列、第三方服务适配。
+            - 实现 domain 定义的出站 Port（例如 Repository）。
+            - 实现 contract 定义的 QueryPort。
+            - 可以依赖 ORM 框架、缓存客户端、RPC 框架。
+            - 依赖方向：infra -> domain, contract。
+        -->
+
         <module>patra-registry-adapter</module>
+        <!--
+            适配层（Adapter）。
+            - 入站适配器：对外暴露 API（REST Controller, RPC Endpoint），接收外部请求。
+            - 出站适配器：调用外部系统（如果没有可省略）。
+            - 在入站部分，调用 app 层的用例，将外部 DTO 映射为内部命令对象，再执行用例。
+            - 在出站部分，将内部对象映射为对外 API 定义的 DTO。
+            - 依赖方向：adapter -> app, api。
+        -->
     </modules>
 
 

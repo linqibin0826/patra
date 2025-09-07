@@ -8,11 +8,9 @@
         <groupId>com.papertrace</groupId>
         <artifactId>patra-ingest</artifactId>
         <version>0.1.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-ingest-infra</artifactId>
-    <name>patra-ingest-infra</name>
     <description>数据采集基础设施模块 - 数据持久化和外部系统适配</description>
 
     <dependencies>
@@ -20,13 +18,26 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-ingest-domain</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-ingest-app</artifactId>
+            <artifactId>patra-ingest-contract</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-mapstruct-binding</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

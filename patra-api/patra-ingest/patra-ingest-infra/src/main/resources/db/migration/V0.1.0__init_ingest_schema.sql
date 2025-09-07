@@ -102,7 +102,6 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='Ingest-计划切片：每个切片有局部化的 expr（带时间范围），可独立执行';
 
-COMMIT;
 
 CREATE TABLE IF NOT EXISTS `ing_job`
 (

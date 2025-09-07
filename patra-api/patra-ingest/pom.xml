@@ -25,6 +25,13 @@
                 <artifactId>patra-ingest-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-ingest-contract</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.papertrace</groupId>
                 <artifactId>patra-ingest-domain</artifactId>
@@ -51,6 +58,7 @@
     <modules>
         <module>patra-ingest-boot</module>
         <module>patra-ingest-api</module>
+        <module>patra-ingest-contract</module>
         <module>patra-ingest-domain</module>
         <module>patra-ingest-app</module>
         <module>patra-ingest-infra</module>

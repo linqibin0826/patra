@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: patra-ingest
+
+  config:
+    import:
+      - "optional:nacos:patra-ingest.yaml?group=DEFAULT_GROUP&namespace=public"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+
+server:
+  port: 6100

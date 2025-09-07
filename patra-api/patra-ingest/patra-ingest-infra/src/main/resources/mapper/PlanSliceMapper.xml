@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.ingest.infra.persistence.mapper.PlanSliceMapper">
+
+    <!-- 计划切片表结果映射 -->
+    <resultMap id="BaseResultMap" type="com.patra.ingest.infra.persistence.entity.PlanSliceDO">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="plan_id" property="planId" jdbcType="BIGINT"/>
+        <result column="slice_no" property="sliceNo" jdbcType="INTEGER"/>
+        <result column="slice_from" property="sliceFrom" jdbcType="TIMESTAMP"/>
+        <result column="slice_to" property="sliceTo" jdbcType="TIMESTAMP"/>
+        <result column="expr_hash" property="exprHash" jdbcType="CHAR"/>
+        <result column="expr_snapshot_json" property="exprSnapshotJson" jdbcType="LONGVARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="last_job_id" property="lastJobId" jdbcType="BIGINT"/>
+        <result column="total_batches" property="totalBatches" jdbcType="INTEGER"/>
+        <result column="total_hits" property="totalHits" jdbcType="BIGINT"/>
+        <result column="error_count" property="errorCount" jdbcType="INTEGER"/>
+        <result column="record_remarks" property="recordRemarks" jdbcType="LONGVARCHAR"/>
+        <result column="version" property="version" jdbcType="BIGINT"/>
+        <result column="ip_address" property="ipAddress" jdbcType="VARBINARY"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="created_by" property="createdBy" jdbcType="BIGINT"/>
+        <result column="created_by_name" property="createdByName" jdbcType="VARCHAR"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_by" property="updatedBy" jdbcType="BIGINT"/>
+        <result column="updated_by_name" property="updatedByName" jdbcType="VARCHAR"/>
+        <result column="deleted" property="deleted" jdbcType="TINYINT"/>
+    </resultMap>
+
+</mapper>

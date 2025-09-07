@@ -1,8 +1,8 @@
 package com.patra.registry.infra.mapstruct;
 
 import cn.hutool.core.collection.CollUtil;
-import com.patra.registry.app.view.ProvenanceSummary;
-import com.patra.registry.domain.aggregate.LiteratureProvenance;
+import com.patra.registry.contract.query.view.ProvenanceSummaryView;
+import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
 import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -45,12 +45,13 @@ public interface LiteratureProvenanceConverter {
     /**
      * DO 转换为文献数据源概要信息视图
      */
-    ProvenanceSummary toSummary(LiteratureProvenanceDO literatureProvenanceDO);
+    @Mapping(target = "code", expression = "java(literatureProvenanceDO.getCode().name())")
+    ProvenanceSummaryView toSummary(LiteratureProvenanceDO literatureProvenanceDO);
 
     /**
      * 批量 DO 转换为文献数据源概要信息视图列表
      */
-    default List<ProvenanceSummary> toSummaryList(List<LiteratureProvenanceDO> provenances) {
+    default List<ProvenanceSummaryView> toSummaryView(List<LiteratureProvenanceDO> provenances) {
         if (CollUtil.isEmpty(provenances)) {
             return List.of();
         }

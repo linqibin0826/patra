@@ -24,6 +24,11 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

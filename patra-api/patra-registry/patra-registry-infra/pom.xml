@@ -21,7 +21,7 @@
 
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-registry-app</artifactId>
+            <artifactId>patra-registry-contract</artifactId>
         </dependency>
 
         <dependency>

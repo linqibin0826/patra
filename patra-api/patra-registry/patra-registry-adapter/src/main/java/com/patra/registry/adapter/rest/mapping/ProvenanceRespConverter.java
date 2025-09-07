@@ -2,9 +2,8 @@ package com.patra.registry.adapter.rest.mapping;
 
 import cn.hutool.core.collection.CollUtil;
 import com.patra.registry.adapter.rest.resp.dto.resp.ProvenanceSummaryResp;
-import com.patra.registry.app.view.ProvenanceSummary;
+import com.patra.registry.contract.query.view.ProvenanceSummaryView;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 
 import java.util.List;
@@ -14,10 +13,9 @@ import java.util.List;
 )
 public interface ProvenanceRespConverter {
 
-    @Mapping(target = "code", expression = "java(summary.code().name())")
-    ProvenanceSummaryResp toResp(ProvenanceSummary summary);
+    ProvenanceSummaryResp toResp(ProvenanceSummaryView summary);
 
-    default List<ProvenanceSummaryResp> toRespList(List<ProvenanceSummary> summaries) {
+    default List<ProvenanceSummaryResp> toRespList(List<ProvenanceSummaryView> summaries) {
         if (CollUtil.isEmpty(summaries)) {
             return List.of();
         }

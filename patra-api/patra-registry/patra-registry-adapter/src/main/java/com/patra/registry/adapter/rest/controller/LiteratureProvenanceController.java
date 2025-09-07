@@ -4,7 +4,7 @@ package com.patra.registry.adapter.rest.controller;
 import com.patra.registry.adapter.rest.mapping.ProvenanceRespConverter;
 import com.patra.registry.adapter.rest.resp.dto.resp.ProvenanceSummaryResp;
 import com.patra.registry.app.service.LiteratureProvenanceService;
-import com.patra.registry.app.view.ProvenanceSummary;
+import com.patra.registry.contract.query.view.ProvenanceSummaryView;
 import com.patra.starter.web.resp.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class LiteratureProvenanceController {
 
     @GetMapping
     public ApiResponse<List<ProvenanceSummaryResp>> findAll() {
-        List<ProvenanceSummary> summaries = appService.findAll();
+        List<ProvenanceSummaryView> summaries = appService.findAll();
         return ApiResponse.ok(viewMapper.toRespList(summaries));
     }
 }
