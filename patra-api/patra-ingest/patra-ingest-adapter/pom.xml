@@ -28,6 +28,25 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
+
+        <!-- Feign -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <!-- 负载均衡（Spring Cloud LoadBalancer），必须！-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
+
+        <!-- 共享契约 -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-api</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

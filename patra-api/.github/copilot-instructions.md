@@ -78,7 +78,7 @@ api/
 
 adapter/
     rest/controller/
-    rest/mapping/xxxReq/RespConvertor.java
+    rest/mapping/xxxReq/RespConverter.java
     rest/dto/resp
     rest/dto/req
     scheduler/
@@ -89,7 +89,7 @@ adapter/
 app/
     service/
     usecase/{command,query}/
-    mapping/xxxAppConvertor.java
+    mapping/xxxAppConverter.java
     security/
     event/publisher/
     port/in/
@@ -105,7 +105,7 @@ domain/
 
 infra/
     persistence/{entity,mapper,repository}/
-    mapstruct/xxxConvertor.java
+    mapstruct/xxxConverter.java
     config/
 ```
 

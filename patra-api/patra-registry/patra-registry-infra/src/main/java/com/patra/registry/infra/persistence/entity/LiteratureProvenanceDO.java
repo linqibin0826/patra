@@ -1,6 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,5 +25,5 @@ public class LiteratureProvenanceDO extends BaseDO {
     /**
      * 数据源代码;简短标识符
      */
-    private LiteratureProvenanceCode code;
+    private ProvenanceCode code;
 }

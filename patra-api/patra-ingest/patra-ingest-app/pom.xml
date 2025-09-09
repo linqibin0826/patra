@@ -20,13 +20,25 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-ingest-domain</artifactId>
         </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-ingest-api</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-ingest-contract</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-expr-kernel</artifactId>
         </dependency>
 
     </dependencies>

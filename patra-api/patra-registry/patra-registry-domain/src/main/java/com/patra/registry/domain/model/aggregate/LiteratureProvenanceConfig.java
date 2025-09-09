@@ -1,6 +1,6 @@
 package com.patra.registry.domain.model.aggregate;
 
-import com.patra.registry.domain.model.enums.LiteratureProvenanceCode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.model.vo.RecordRemark;
 import lombok.Builder;
 import lombok.Value;
@@ -29,7 +29,7 @@ public class LiteratureProvenanceConfig {
     /**
      * 数据源代码（业务键）
      */
-    LiteratureProvenanceCode literatureProvenanceCode;
+    ProvenanceCode provenanceCode;
 
     /**
      * 窗口计算/展示的时区;写库仍用UTC

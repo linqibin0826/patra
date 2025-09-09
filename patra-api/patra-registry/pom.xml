@@ -22,11 +22,6 @@
             <!-- registry 内部子模块版本统一管理（供互相依赖时省略 version） -->
             <dependency>
                 <groupId>com.papertrace</groupId>
-                <artifactId>patra-registry-api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.papertrace</groupId>
                 <artifactId>patra-registry-contract</artifactId>
                 <version>${project.version}</version>
             </dependency>

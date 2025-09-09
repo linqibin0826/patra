@@ -13,4 +13,30 @@
     <packaging>jar</packaging>
     <name>patra-registry-api</name>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
+
+        <!-- 只允许 DTO 校验注解 -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
+        <!-- 提供 @RequestMapping / @GetMapping 等注解，定义 HTTP 契约接口时需要 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 定义 Feign 接口时需要，用于 @FeignClient 注解 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-openfeign-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 </project>

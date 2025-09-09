@@ -3,6 +3,8 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/patra-common/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-common/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-expr-kernel/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-expr-kernel/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-gateway-boot/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-gateway-boot/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-ingest/patra-ingest-adapter/src/main/java" charset="UTF-8" />

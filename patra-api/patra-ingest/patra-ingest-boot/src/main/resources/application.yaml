@@ -20,3 +20,12 @@ spring:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
+
+# 可选：超时、日志级别
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+logging.level.com.patra.registry.api.rpc.client: INFO
