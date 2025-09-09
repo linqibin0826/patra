@@ -28,6 +28,7 @@ public class LiteratureProvenanceController {
 
     @GetMapping
     public ApiResponse<List<ProvenanceSummaryResp>> findAll() {
+        log.info("Received request to list all literature provenances");
         List<ProvenanceSummaryView> summaries = appService.findAll();
         return ApiResponse.ok(viewMapper.toRespList(summaries));
     }

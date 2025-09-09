@@ -37,6 +37,12 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-toolkit-logback-1.x</artifactId>
+            <version>9.5.0</version>
+        </dependency>
     </dependencies>
 
     <!-- 不在这里放 maven-compiler-plugin 的 annotationProcessorPaths -->

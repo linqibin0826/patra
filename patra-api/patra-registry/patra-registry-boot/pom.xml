@@ -38,6 +38,12 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-registry-infra</artifactId>
         </dependency>
+
+        <!-- 显式依赖 app，避免运行时缺类 -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-app</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

@@ -1,10 +1,11 @@
 spring:
   application:
-    name: patra-ingest
+    name: patra-registry
 
   config:
     import:
-      - "optional:nacos:patra-ingest.yaml?group=DEFAULT_GROUP&namespace=public"
+      - "optional:nacos:patra-registry.yaml?group=DEFAULT_GROUP&namespace=public"
+      - "optional:nacos:patra.yaml?group=DEFAULT_GROUP&namespace=public"
 
   cloud:
     nacos:
@@ -16,4 +17,4 @@ spring:
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
 server:
-  port: 6100
+  port: 6000

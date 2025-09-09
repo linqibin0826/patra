@@ -265,8 +265,8 @@ CREATE TABLE IF NOT EXISTS `ing_run_batch`
     `page_size`       INT UNSIGNED                                    NULL COMMENT '页大小（便于核对与统计）',
 
     -- 分页/令牌边界
-    `before_token`    VARCHAR(1024)                                   NULL COMMENT '本批开始令牌/位置（如 retstart/cursorMark 等）',
-    `after_token`     VARCHAR(1024)                                   NULL COMMENT '本批结束令牌/下一位置（next-cursor/nextCursorMark 等）',
+    `before_token`    VARCHAR(512)                                   NULL COMMENT '本批开始令牌/位置（如 retstart/cursorMark 等）',
+    `after_token`     VARCHAR(512)                                   NULL COMMENT '本批结束令牌/下一位置（next-cursor/nextCursorMark 等）',
 
     -- 幂等与统计
     `idempotent_key`  CHAR(64)                                        NULL COMMENT '批次幂等键：如 SHA256(run_id + before_token | page_no)',

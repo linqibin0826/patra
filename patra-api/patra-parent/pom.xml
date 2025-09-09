@@ -87,6 +87,15 @@
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok-mapstruct-binding</artifactId>
                 <version>${lombok.mapstruct.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- 只放在 annotationProcessor，不要放 compile/implementation 否则容易类重复 -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
+                <scope>provided</scope>
             </dependency>
 
             <!-- patra相关模块 -->

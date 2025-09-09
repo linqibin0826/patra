@@ -1,0 +1,66 @@
+extensions:
+  zpages:
+    endpoint: 0.0.0.0:55679
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 75
+    spike_limit_percentage: 25
+  batch:
+    timeout: 2s
+    send_batch_size: 1024
+  resource:
+    attributes:
+      - key: service.namespace
+        action: upsert
+        value: patra
+
+exporters:
+  otlp/oap:
+    endpoint: skywalking-oap:11800
+    tls:
+      insecure: true
+    # 可以加上重试和队列，避免丢数据
+    retry_on_failure: { }
+    sending_queue: { }
+
+  debug:
+    verbosity: detailed
+
+service:
+  telemetry:
+    logs:
+      level: debug
+    metrics:
+      level: normal          # 可选：none/basic/normal/detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888   # 在宿主机上 curl http://127.0.0.1:8888/metrics 可看到采集器自监控
+
+  extensions: [ health_check, zpages ]
+  pipelines:
+    traces:
+      receivers: [ otlp ]
+      exporters: [ otlp/oap ]
+#    metrics:
+#      receivers: [ otlp ]
+#      processors: [ memory_limiter, resource, batch ]
+#      exporters: [ otlp/oap, debug ]
+#    logs:
+#      receivers: [ otlp ]
+#      processors: [ memory_limiter, resource, batch ]
+#      exporters: [ otlp/oap, debug ]

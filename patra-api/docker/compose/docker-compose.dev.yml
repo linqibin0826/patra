@@ -1,12 +1,98 @@
 version: "3.9"
+
 services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    container_name: patra-es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g   # ← 建议
+      - TZ=Asia/Shanghai
+    ports:
+      - "9200:9200"     # 开发环境仅本机
+    ulimits:                      # 提升文件句柄与锁内存
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - ../es/data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    # Linux 宿主建议提前执行：sysctl -w vm.max_map_count=262144
+
+  skywalking-oap:
+    image: apache/skywalking-oap-server:10.2.0
+    container_name: patra-skywalking-oap
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      SW_STORAGE: elasticsearch
+      SW_STORAGE_ES_CLUSTER_NODES: elasticsearch:9200
+      SW_STORAGE_ES_HTTP_PROTOCOL: http
+      SW_STORAGE_ES_INDEX_SHARDS_NUMBER: 1
+      SW_STORAGE_ES_INDEX_REPLICAS_NUMBER: 0
+#      SW_LOGGING_LEVEL: DEBUG
+      SW_TELEMETRY: prometheus
+      SW_TELEMETRY_PROMETHEUS_HOST: 0.0.0.0
+      SW_TELEMETRY_PROMETHEUS_PORT: 1234
+      SW_HEALTH_CHECKER: default
+      SW_LOG_LAL_FILES: sw-grpc-default
+#      SW_CORE_GRPC_PORT: 11800      # gRPC/OTLP
+#      SW_CORE_REST_PORT: 12800      # REST/UI 查询
+#      SW_RECEIVER_ZIPKIN: default
+#      SW_QUERY_ZIPKIN: default
+#      SW_OTEL_RECEIVER: default
+#      SW_OTEL_RECEIVER_ENABLED_HANDLERS: otlp-traces,otlp-metrics,otlp-logs
+#      SW_OTEL_RECEIVER_ENABLED_HANDLERS: otlp-traces
+    ports:
+      - "11800:11800"   # gRPC (含 OTLP)
+      - "12800:12800"   # HTTP / GraphQL
+#    volumes:
+#      - ../oap-lal/sw-grpc-default.yaml:/skywalking/config/lal/sw-grpc-sw-grpc-default.yaml:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:12800/healthcheck >/dev/null" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  skywalking-ui:
+    image: apache/skywalking-ui:10.2.0
+    container_name: patra-skywalking-ui
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      SW_OAP_ADDRESS: "http://skywalking-oap:12800"
+      SW_TIMEOUT: "30000"
+    ports:
+      - "8088:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      skywalking-oap:
+        condition: service_healthy
+
   mysql:
     image: mysql:8.0.36
     container_name: patra-mysql
     restart: unless-stopped
-    ports: ["13306:3306"]
+    ports: [ "13306:3306" ]     # 仅本机
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me}
       TZ: Asia/Shanghai
     command: >
       --default-authentication-plugin=caching_sha2_password
@@ -20,7 +106,7 @@ services:
       - ../mysql/conf.d:/etc/mysql/conf.d
       - ../mysql/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -uroot -p123456 -h 127.0.0.1 --silent"]
+      test: [ "CMD-SHELL", "mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1 --silent" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -29,48 +115,41 @@ services:
     image: redis:7.0.15
     container_name: patra-redis
     restart: unless-stopped
-    ports: ["16379:6379"]
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports: [ "16379:6379" ]     # 仅本机
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     volumes:
       - ../redis/data:/data
       - ../redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 10
 
   nacos:
-    image: nacos/nacos-server:v2.5.1-slim        # Apple 芯片推荐 slim；若拉不动再加: platform: linux/amd64
-    # platform: linux/amd64
+    image: nacos/nacos-server:v3.0.3
     container_name: patra-nacos
     restart: unless-stopped
     environment:
       - MODE=standalone
       - TZ=Asia/Shanghai
-      # ✅ 不要设置 SPRING_DATASOURCE_PLATFORM / MYSQL_*，这样才会走 Derby
-      # 🔐 鉴权三件套（2.2.1+ 必填）
       - NACOS_AUTH_ENABLE=true
       - NACOS_AUTH_TOKEN=wur4obqxgTEPKRgkbloX3m4Gx+uUuIuIsp6YjKrGgv0=
-      - NACOS_AUTH_IDENTITY_KEY=papertrace
-      - NACOS_AUTH_IDENTITY_VALUE=papertrace
-      # JVM（本地）
-      - JVM_XMS=256m
-      - JVM_XMX=256m
-      - JVM_XMN=128m
+      - NACOS_AUTH_IDENTITY_KEY=patra
+      - NACOS_AUTH_IDENTITY_VALUE=patra
     ports:
-      - "8848:8848"   # Console & OpenAPI
-      - "9848:9848"   # gRPC
-      - "9849:9849"   # gRPC
+      - "4000:8080"
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
     volumes:
       - ../nacos/logs:/home/nacos/logs
-      - ../nacos/data:/home/nacos/data   # ✅ 建议把 data 也挂出来，保证可写
+      - ../nacos/data:/home/nacos/data
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:8848/nacos/" ]
       interval: 10s
       timeout: 5s
-      retries: 30
-
+      retries: 10
 
 networks:
   default:
