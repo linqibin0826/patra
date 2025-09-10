@@ -107,6 +107,12 @@
 
             <dependency>
                 <groupId>com.papertrace</groupId>
+                <artifactId>patra-common-error</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.papertrace</groupId>
                 <artifactId>patra-spring-boot-starter-core</artifactId>
                 <version>${project.version}</version>
             </dependency>

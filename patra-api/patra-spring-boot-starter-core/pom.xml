@@ -19,6 +19,11 @@
             <artifactId>patra-common</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common-error</artifactId>
+        </dependency>
+
         <!-- 自定义 AutoConfiguration 的基础 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
