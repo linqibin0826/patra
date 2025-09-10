@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.starter.mybatis.type.CodeEnumTypeHandler;
-import com.patra.starter.mybatis.type.JsonNodeTypeHandler;
+import com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler;
+import com.patra.starter.mybatis.type.JsonToMapTypeHandler;
 import org.mybatis.spring.mapper.MapperScannerConfigurer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
+
+import java.util.Map;
 
 /**
  * Patra MyBatis 公共自动配置
@@ -54,17 +57,25 @@ public class PatraMybatisAutoConfiguration {
      * MyBatis Configuration 定制：
      * <ol>
      *     <li>设置 {@link CodeEnumTypeHandler} 为全局默认枚举处理器</li>
-     *     <li>为 {@link JsonNode} 注册 {@link JsonNodeTypeHandler}，统一 JSON 映射</li>
+     *     <li>为 {@link JsonNode} 注册 {@link JsonToJsonNodeTypeHandler}，统一 JSON 映射</li>
      * </ol>
      *
      * <p>使用 Spring 注入的 {@link ObjectMapper}，避免重复实例化，保证与全局 Jackson 配置一致。</p>
      */
     @Bean
-    public ConfigurationCustomizer enumAndJsonCustomizer(ObjectMapper objectMapper) {
+    public ConfigurationCustomizer enumAndJsonCustomizer(
+            ObjectMapper objectMapper) {
+
         return (MybatisConfiguration cfg) -> {
             cfg.setDefaultEnumTypeHandler(CodeEnumTypeHandler.class);
+
+            // 原有：JsonNode 的处理器
             cfg.getTypeHandlerRegistry()
-                    .register(JsonNode.class, new JsonNodeTypeHandler(objectMapper));
+                    .register(JsonNode.class, new JsonToJsonNodeTypeHandler(objectMapper));
+
+            // 新增：Map<String,Object> 的处理器
+            cfg.getTypeHandlerRegistry()
+                    .register(Map.class, new JsonToMapTypeHandler(objectMapper));
         };
     }
 }

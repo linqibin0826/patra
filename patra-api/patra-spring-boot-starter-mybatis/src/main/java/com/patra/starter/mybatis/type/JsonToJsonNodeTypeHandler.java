@@ -33,11 +33,11 @@ import java.sql.*;
  */
 @MappedTypes(JsonNode.class)
 @MappedJdbcTypes(value = {JdbcType.VARCHAR, JdbcType.LONGVARCHAR, JdbcType.CLOB, JdbcType.LONGNVARCHAR, JdbcType.OTHER}, includeNullJdbcType = true)
-public class JsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
+public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
 
     private final ObjectMapper objectMapper;
 
-    public JsonNodeTypeHandler(ObjectMapper objectMapper) {
+    public JsonToJsonNodeTypeHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

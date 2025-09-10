@@ -13,7 +13,7 @@
 
     <select id="selectConfigByCode" resultType="com.patra.registry.contract.query.view.LiteratureProvenanceConfigView">
         select rlp.id                           as provenanceId,
-               rlp.name                         as provenanceCode,
+               rlp.code                         as provenanceCode,
                rlpc.`timezone`,
                rlpc.`retry_max`                 as retryMax,
                rlpc.`backoff_ms`                as backoffMs,

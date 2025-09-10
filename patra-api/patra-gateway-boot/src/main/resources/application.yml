@@ -15,5 +15,24 @@ spring:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
+    gateway:
+      routes:
+        - id: patra-ingest
+          uri: lb://patra-ingest
+          predicates:
+            - Path=/patra-ingest/**
+          filters:
+            - StripPrefix=1
+
+        - id: patra-registry
+          uri: lb://patra-registry
+          predicates:
+            - Path=/patra-registry/**
+          filters:
+            - StripPrefix=1
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.loadbalancer: DEBUG
 server:
   port: 9528

@@ -1,5 +1,7 @@
 package com.patra.common.enums;
 
+import lombok.Getter;
+
 /**
  * 采集数据源枚举。
  *
@@ -7,8 +9,7 @@ package com.patra.common.enums;
  * 用于标识支持的上游数据源，并提供从字符串解析与列出全部 code 的能力。
  *
  * @author linqibin
- * @date 2025-08-21 00:00:00
- * @since 0.0.1
+ * @since 0.1.0
  */
 public enum ProvenanceCode implements CodeEnum<String> {
 
@@ -31,20 +32,15 @@ public enum ProvenanceCode implements CodeEnum<String> {
     CORD19("cord19", "CORD-19"),
     GIM("gim", "WHO GIM");
 
+    @Getter
     private final String code;
 
+    @Getter
     private final String description;
 
     ProvenanceCode(String code, String display) {
         this.code = code;
         this.description = display;
-    }
-
-    /**
-     * 显示名称（用于 UI 或日志）。
-     */
-    public String display() {
-        return description;
     }
 
     /**
@@ -84,8 +80,5 @@ public enum ProvenanceCode implements CodeEnum<String> {
         };
     }
 
-    @Override
-    public String getCode() {
-        return code;
-    }
+
 }

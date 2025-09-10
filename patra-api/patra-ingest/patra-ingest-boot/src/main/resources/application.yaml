@@ -21,6 +21,7 @@ spring:
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
 
+
 # 可选：超时、日志级别
 feign:
   client:
