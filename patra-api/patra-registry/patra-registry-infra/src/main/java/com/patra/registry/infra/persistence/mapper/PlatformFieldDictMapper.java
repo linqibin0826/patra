@@ -10,5 +10,4 @@ import org.apache.ibatis.annotations.Mapper;
  */
 public interface PlatformFieldDictMapper extends BaseMapper<PlatformFieldDictDO> {
     
-    // 严禁添加自定义方法，所有操作通过 MyBatis-Plus 提供的标准方法实现
 }

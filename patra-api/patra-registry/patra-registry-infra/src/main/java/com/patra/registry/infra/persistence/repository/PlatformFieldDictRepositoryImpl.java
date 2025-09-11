@@ -4,6 +4,8 @@ import com.patra.registry.domain.model.aggregate.PlatformFieldDict;
 import com.patra.registry.domain.port.PlatformFieldDictRepository;
 import com.patra.registry.infra.mapstruct.PlatformFieldDictConverter;
 import com.patra.registry.infra.persistence.mapper.PlatformFieldDictMapper;
+import com.patra.registry.infra.persistence.entity.PlatformFieldDictDO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -23,38 +25,51 @@ public class PlatformFieldDictRepositoryImpl implements PlatformFieldDictReposit
     
     @Override
     public Optional<PlatformFieldDict> findByFieldKey(String fieldKey) {
-        // TODO: 实现根据业务键查找的逻辑
-        // 需要使用 MyBatis-Plus 的 QueryWrapper 查询
-        throw new UnsupportedOperationException("findByFieldKey not implemented yet");
+    var q = new LambdaQueryWrapper<PlatformFieldDictDO>()
+        .eq(PlatformFieldDictDO::getFieldKey, fieldKey)
+        .last("limit 1");
+    var doObj = mapper.selectOne(q);
+    return Optional.ofNullable(doObj).map(converter::toAggregate);
     }
     
     @Override
     public Optional<PlatformFieldDict> findById(Long id) {
-        // TODO: 实现根据ID查找的逻辑
-        throw new UnsupportedOperationException("findById not implemented yet");
+    var doObj = mapper.selectById(id);
+    return Optional.ofNullable(doObj).map(converter::toAggregate);
     }
     
     @Override
     public PlatformFieldDict save(PlatformFieldDict aggregate) {
-        // TODO: 实现保存聚合的逻辑
-        throw new UnsupportedOperationException("save not implemented yet");
+        PlatformFieldDictDO toSave = converter.toDO(aggregate);
+        if (toSave.getId() == null) {
+            mapper.insert(toSave);
+        } else {
+            mapper.updateById(toSave);
+        }
+        return converter.toAggregate(toSave);
     }
     
     @Override
     public List<PlatformFieldDict> findAll(int offset, int limit) {
-        // TODO: 实现分页查询的逻辑
-        throw new UnsupportedOperationException("findAll not implemented yet");
+    var q = new LambdaQueryWrapper<PlatformFieldDictDO>()
+        .orderByAsc(PlatformFieldDictDO::getFieldKey)
+        .last("limit " + Math.max(0, limit) + " offset " + Math.max(0, offset));
+    var list = mapper.selectList(q);
+    return converter.toAggregateList(list);
     }
     
     @Override
     public void deleteByFieldKey(String fieldKey) {
-        // TODO: 实现逻辑删除的逻辑
-        throw new UnsupportedOperationException("deleteByFieldKey not implemented yet");
+    var q = new LambdaQueryWrapper<PlatformFieldDictDO>()
+        .eq(PlatformFieldDictDO::getFieldKey, fieldKey);
+    mapper.delete(q);
     }
     
     @Override
     public boolean existsByFieldKey(String fieldKey) {
-        // TODO: 实现检查业务键是否存在的逻辑
-        throw new UnsupportedOperationException("existsByFieldKey not implemented yet");
+    var q = new LambdaQueryWrapper<PlatformFieldDictDO>()
+        .eq(PlatformFieldDictDO::getFieldKey, fieldKey);
+    Long cnt = mapper.selectCount(q);
+    return cnt != null && cnt > 0;
     }
 }

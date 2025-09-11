@@ -4,6 +4,9 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.adapter.rest._internal.converter.LiteratureProvenanceApiConverter;
 import com.patra.registry.api.rpc.contract.LiteratureProvenanceHttpApi;
 import com.patra.registry.api.rpc.dto.LiteratureProvenanceConfigApiResp;
+import com.patra.registry.api.rpc.dto.QueryCapabilityApiResp;
+import com.patra.registry.api.rpc.dto.ApiParamMappingApiResp;
+import com.patra.registry.api.rpc.dto.QueryRenderRuleApiResp;
 import com.patra.registry.app.usecase.LiteratureProvenanceQueryUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,5 +24,26 @@ public class LiteratureProvenanceApiImpl implements LiteratureProvenanceHttpApi 
         log.info("Received request to get config for provenance code: {}", provenanceCode);
         var view = queryUseCase.getConfigView(provenanceCode);
         return apiConverter.toConfigApiResp(view);
+    }
+
+    @Override
+    public java.util.List<QueryCapabilityApiResp> getQueryCapabilitiesByCode(ProvenanceCode provenanceCode) {
+        log.info("Received request to get query capabilities for provenance code: {}", provenanceCode);
+        var views = queryUseCase.getQueryCapabilities(provenanceCode);
+        return apiConverter.toQueryCapabilityApiResps(views);
+    }
+
+    @Override
+    public java.util.List<ApiParamMappingApiResp> getApiParamMappingsByCode(ProvenanceCode provenanceCode) {
+        log.info("Received request to get api param mappings for provenance code: {}", provenanceCode);
+        var views = queryUseCase.getApiParamMappings(provenanceCode);
+        return apiConverter.toApiParamMappingApiResps(views);
+    }
+
+    @Override
+    public java.util.List<QueryRenderRuleApiResp> getQueryRenderRulesByCode(ProvenanceCode provenanceCode) {
+        log.info("Received request to get query render rules for provenance code: {}", provenanceCode);
+        var views = queryUseCase.getQueryRenderRules(provenanceCode);
+        return apiConverter.toQueryRenderRuleApiResps(views);
     }
 }
