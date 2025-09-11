@@ -12,14 +12,14 @@ import java.util.Objects;
 /**
  * 平台自定义异常：承载 PlatformError（与 RFC7807 对齐）。
  * 使用方式：
- * throw new PatraException(REGErrors.MISSING_PROVENANCE_ID, Map.of("param","provenanceId"));
+ * throw new PatraHttpException(REGErrors.MISSING_PROVENANCE_ID, Map.of("param","provenanceId"));
  * 或者：
- * throw new PatraException(REGErrors.REGISTRY_NOT_FOUND).withDetail("id=123 not found");
+ * throw new PatraHttpException(REGErrors.REGISTRY_NOT_FOUND).withDetail("id=123 not found");
  * <p>
  * Starter-Web 的 @ControllerAdvice 捕获后：
  * -> 反序列化为 Problem JSON 输出（含 code/status/title/...）
  */
-public class PatraException extends RuntimeException {
+public class PatraHttpException extends RuntimeException {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -31,7 +31,7 @@ public class PatraException extends RuntimeException {
     /**
      * 直接用已构造好的 PlatformError 包装（最底层构造）
      */
-    public PatraException(PlatformError error) {
+    public PatraHttpException(PlatformError error) {
         super(buildMessage(Objects.requireNonNull(error, "error must not be null")));
         this.error = error;
     }
@@ -39,7 +39,7 @@ public class PatraException extends RuntimeException {
     /**
      * 直接用 PlatformError + cause 包装
      */
-    public PatraException(PlatformError error, Throwable cause) {
+    public PatraHttpException(PlatformError error, Throwable cause) {
         super(buildMessage(Objects.requireNonNull(error, "error must not be null")), cause);
         this.error = error;
     }
@@ -47,49 +47,49 @@ public class PatraException extends RuntimeException {
     /**
      * 用强类型错误定义（枚举）构造，自动从 codebook 补全 title/http
      */
-    public PatraException(ErrorDef def) {
+    public PatraHttpException(ErrorDef def) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(def, "def")).build());
     }
 
     /**
      * 用强类型错误定义 + 详情文本
      */
-    public PatraException(ErrorDef def, String detail) {
+    public PatraHttpException(ErrorDef def, String detail) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(def, "def")).detail(detail).build());
     }
 
     /**
      * 用强类型错误定义 + 扩展上下文（extras）
      */
-    public PatraException(ErrorDef def, Map<String, ?> extras) {
+    public PatraHttpException(ErrorDef def, Map<String, ?> extras) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(def, "def")).params(extras).build());
     }
 
     /**
      * 用强类型错误定义 + 详情 + cause
      */
-    public PatraException(ErrorDef def, String detail, Throwable cause) {
+    public PatraHttpException(ErrorDef def, String detail, Throwable cause) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(def, "def")).detail(detail).build(), cause);
     }
 
     /**
      * 用强类型错误定义 + 详情 + extras + cause
      */
-    public PatraException(ErrorDef def, String detail, Map<String, ?> extras, Throwable cause) {
+    public PatraHttpException(ErrorDef def, String detail, Map<String, ?> extras, Throwable cause) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(def, "def")).detail(detail).params(extras).build(), cause);
     }
 
     /**
      * 用 ErrorCode 构造（不建议业务侧直接用，保留给过渡/测试）
      */
-    public PatraException(ErrorCode code) {
+    public PatraHttpException(ErrorCode code) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(code, "code")).build());
     }
 
     /**
      * 用 ErrorCode + 详情 + extras
      */
-    public PatraException(ErrorCode code, String detail, Map<String, ?> extras) {
+    public PatraHttpException(ErrorCode code, String detail, Map<String, ?> extras) {
         this(PlatformErrorFactory.of(Objects.requireNonNull(code, "code")).detail(detail).params(extras).build());
     }
 
@@ -129,17 +129,17 @@ public class PatraException extends RuntimeException {
      * 基于当前异常复制一个“仅修改 detail”后的新异常（不改变栈轨迹和 cause）。
      * 便于在抓到后补充更多上下文说明。
      */
-    public PatraException withDetail(String newDetail) {
+    public PatraHttpException withDetail(String newDetail) {
         PlatformError updated = error.withDetail(newDetail);
-        return (getCause() == null) ? new PatraException(updated) : new PatraException(updated, getCause());
+        return (getCause() == null) ? new PatraHttpException(updated) : new PatraHttpException(updated, getCause());
     }
 
     /**
      * 基于当前异常合并更多 extras，返回新异常
      */
-    public PatraException withExtras(Map<String, ?> extras) {
+    public PatraHttpException withExtras(Map<String, ?> extras) {
         PlatformError updated = error.withExtras(extras);
-        return (getCause() == null) ? new PatraException(updated) : new PatraException(updated, getCause());
+        return (getCause() == null) ? new PatraHttpException(updated) : new PatraHttpException(updated, getCause());
     }
 
     /* ===================== 内部：生成异常消息 ===================== */

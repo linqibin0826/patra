@@ -4,6 +4,7 @@ import com.patra.common.error.core.PlatformError;
 import com.patra.common.error.enums.COMErrors;
 import com.patra.starter.core.error.codec.PlatformErrorCodec;
 import com.patra.starter.core.error.codec.ProblemJsonConstant;
+import com.patra.starter.core.error.exception.PatraHttpException;
 import com.patra.starter.core.error.runtime.PlatformErrorFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
-public class PatraGlobalExceptionHandler {
+public class PatraHttpExceptionHandler {
 
     private final PlatformErrorCodec codec; // 建议在自动装配里注入 JacksonPlatformErrorCodec
 
@@ -62,6 +63,16 @@ public class PatraGlobalExceptionHandler {
                 .instance(req.getRequestURI())
                 .build();
 
+        return write(pe);
+    }
+
+    @ExceptionHandler(PatraHttpException.class)
+    public ResponseEntity<?> handlePatraHttpException(PatraHttpException ex, HttpServletRequest req) {
+        PlatformError pe = ex.error().toBuilder()
+                .service(service)
+                .instance(req.getRequestURI())
+                .build();
+        log.warn("PatraHttpException: code={}, detail={}", pe.code(), pe.detail(), ex);
         return write(pe);
     }
 
