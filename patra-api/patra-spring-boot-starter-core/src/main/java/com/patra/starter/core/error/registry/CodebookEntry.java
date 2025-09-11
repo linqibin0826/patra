@@ -1,6 +1,7 @@
-package com.patra.error.registry;
+package com.patra.starter.core.error.registry;
 
-import com.patra.error.core.ErrorCode;
+
+import com.patra.common.error.core.ErrorCode;
 
 import java.util.Map;
 import java.util.Objects;

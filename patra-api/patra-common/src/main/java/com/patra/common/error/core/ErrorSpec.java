@@ -1,7 +1,4 @@
-package com.patra.error.spec;
-
-import com.patra.error.core.Category;
-import com.patra.error.core.ErrorCode;
+package com.patra.common.error.core;
 
 import java.util.EnumMap;
 import java.util.Map;

@@ -1,1 +1,1 @@
-com.patra.starter.core.error.PatraErrorAutoConfiguration
+com.patra.starter.core.error.runtime.PatraErrorAutoConfiguration

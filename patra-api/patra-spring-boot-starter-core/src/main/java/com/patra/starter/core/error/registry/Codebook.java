@@ -1,6 +1,7 @@
-package com.patra.error.registry;
+package com.patra.starter.core.error.registry;
 
-import com.patra.error.core.ErrorCode;
+
+import com.patra.common.error.core.ErrorCode;
 
 import java.util.*;
 
@@ -38,10 +39,8 @@ public final class Codebook {
     /** 合并另一本登记薄（右侧覆盖左侧） */
     public Codebook merge(Codebook other) {
         if (other == null) return this;
-        var merged = new Codebook();
-        merged.entries.putAll(this.entries);
-        merged.entries.putAll(other.entries);
-        return merged;
+        this.entries.putAll(other.entries);
+        return this;
     }
 
     /** 校验：所有登记的 code 是否满足格式（返回不合法列表） */

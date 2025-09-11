@@ -1,6 +1,7 @@
-package com.patra.error.registry;
+package com.patra.starter.core.error.registry;
 
-import com.patra.error.core.ErrorCode;
+
+import com.patra.common.error.core.ErrorCode;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -88,9 +89,9 @@ public final class CodebookParser {
         }
     }
 
-    // ---------- json (optional) ----------
+    // ---------- json----------
 
-    private Codebook loadFromJson(URL url) {
+    public Codebook loadFromJson(URL url) {
         Codebook cb = new Codebook();
         String json;
         try (var in = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {

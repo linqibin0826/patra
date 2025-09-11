@@ -1,4 +1,4 @@
-package com.patra.starter.core.error;
+package com.patra.starter.core.error.runtime;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -12,4 +12,7 @@ public class PatraErrorProperties {
     private boolean failFast = true;
     private boolean logSummary = true;
     private List<String> redactedKeys = List.of("token", "password", "secret");
+    private boolean validateModulePrefix = true;
+    private boolean detectConflict = true;
+    private boolean failOnConflict = true;
 }

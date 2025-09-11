@@ -1,4 +1,4 @@
-package com.patra.error.core;
+package com.patra.common.error.core;
 
 import java.util.Objects;
 import java.util.regex.Pattern;

@@ -1,6 +1,6 @@
 ///**
-// * docref:/docs/adapter/mq/consumer/README.md
-// * docref:/docs/api/events/README.md
+// * docref:/docs/adapter/mq/consumer/ERROR-README.md
+// * docref:/docs/api/events/ERROR-README.md
 // * docref:/docs/domain/aggregates.discovery.md
 // */
 //package com.patra.registry.adapter.mq.consumer;

@@ -1,4 +1,4 @@
-package com.patra.error.core;
+package com.patra.common.error.core;
 
 /**
  * 错误类别（与 HTTP 语义建议映射对应）：

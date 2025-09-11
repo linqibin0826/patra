@@ -1,6 +1,7 @@
-package com.patra.error.registry;
+package com.patra.starter.core.error.registry;
 
-import com.patra.error.spec.ErrorSpec;
+
+import com.patra.common.error.core.ErrorSpec;
 
 import java.io.BufferedReader;
 import java.io.IOException;

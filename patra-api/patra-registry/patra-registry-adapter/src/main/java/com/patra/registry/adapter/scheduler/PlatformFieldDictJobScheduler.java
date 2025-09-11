@@ -1,6 +1,6 @@
 /**
- * docref:/docs/adapter/scheduler/README.md
- * docref:/docs/app/service/README.md
+ * docref:/docs/adapter/scheduler/ERROR-README.md
+ * docref:/docs/app/service/ERROR-README.md
  * docref:/docs/domain/aggregates.discovery.md
  */
 package com.patra.registry.adapter.scheduler;

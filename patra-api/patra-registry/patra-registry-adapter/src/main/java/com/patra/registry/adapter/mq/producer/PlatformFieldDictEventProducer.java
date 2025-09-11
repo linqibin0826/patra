@@ -1,6 +1,6 @@
 ///**
-// * docref:/docs/adapter/mq/producer/README.md
-// * docref:/docs/api/events/README.md
+// * docref:/docs/adapter/mq/producer/ERROR-README.md
+// * docref:/docs/api/events/ERROR-README.md
 // * docref:/docs/domain/aggregates.discovery.md
 // */
 //package com.patra.registry.adapter.mq.producer;

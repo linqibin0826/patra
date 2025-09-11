@@ -1,4 +1,4 @@
-package com.patra.error.core;
+package com.patra.common.error.core;
 
 /**
  * 强类型错误定义：枚举项实现它即可。
