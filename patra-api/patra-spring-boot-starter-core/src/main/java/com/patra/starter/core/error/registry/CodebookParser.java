@@ -1,7 +1,9 @@
 package com.patra.starter.core.error.registry;
 
-
+import cn.hutool.core.convert.Convert;
+import cn.hutool.core.util.StrUtil;
 import com.patra.common.error.core.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,24 +13,48 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * 从类路径加载 codebook：
- * - 支持 properties：META-INF/patra/codebook-*.properties
- * 约定：
+ * 错误码册解析器，负责从类路径资源加载错误码配置。
+ * 
+ * <p>支持的资源格式：
+ * <ul>
+ *   <li>Properties 格式：{@code META-INF/patra/codebook-*.properties}</li>
+ *   <li>JSON 格式：{@code META-INF/patra/codebook-*.json}（需 Jackson 运行时支持）</li>
+ * </ul>
+ * 
+ * <p>Properties 文件约定格式：
+ * <pre>{@code
  * REG-C0101.title=Parameter missing
  * REG-C0101.http=422
- * REG-C0101.doc=https://...
+ * REG-C0101.doc=https://docs.example.com/errors/REG-C0101
  * REG-C0101.owner=registry-team
- * REG-C0101.extras.foo=bar
- * <p>
- * - 可选支持 json：META-INF/patra/codebook-*.json（需要运行时存在 Jackson）
- * 约定：
+ * REG-C0101.extras.customField=customValue
+ * }</pre>
+ * 
+ * <p>JSON 文件约定格式：
+ * <pre>{@code
  * [
- * {"code":"REG-C0101","title":"...","http":422,"doc":"...","owner":"...","extras":{"k":"v"}},
- * ...
+ *   {
+ *     "code": "REG-C0101",
+ *     "title": "Parameter missing",
+ *     "http": 422,
+ *     "doc": "https://docs.example.com/errors/REG-C0101",
+ *     "owner": "registry-team",
+ *     "extras": {
+ *       "customField": "customValue"
+ *     }
+ *   }
  * ]
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
+@Slf4j
 public final class CodebookParser {
-
+    
+    /**
+     * 默认构造器。
+     */
     public CodebookParser() {
     }
 
@@ -80,13 +106,14 @@ public final class CodebookParser {
         return cb;
     }
 
-    private static Integer parseIntOrNull(String s) {
-        if (s == null) return null;
-        try {
-            return Integer.valueOf(s.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
+    /**
+     * 使用 Hutool 安全地解析整数，避免异常。
+     * 
+     * @param value 待解析的字符串值
+     * @return 解析后的整数，解析失败时返回 null
+     */
+    private static Integer parseIntOrNull(String value) {
+        return StrUtil.isBlank(value) ? null : Convert.toInt(value.trim(), null);
     }
 
     // ---------- json----------
@@ -140,7 +167,6 @@ public final class CodebookParser {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> optMap(Map<?, ?> m, String k) {
         Object v = m.get(k);
         if (v instanceof Map<?, ?> map) {
@@ -154,15 +180,6 @@ public final class CodebookParser {
     }
 
     // ---------- 资源发现与 Jackson 反射桥 ----------
-
-    private static boolean jacksonPresent() {
-        try {
-            Class.forName("com.fasterxml.jackson.databind.ObjectMapper");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
 
     /**
      * ObjectMapper().readValue(json, List.class) 反射调用

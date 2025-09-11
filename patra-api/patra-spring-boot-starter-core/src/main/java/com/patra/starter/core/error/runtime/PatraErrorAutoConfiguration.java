@@ -1,5 +1,7 @@
 package com.patra.starter.core.error.runtime;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.starter.core.error.codec.JacksonPlatformErrorCodec;
 import com.patra.starter.core.error.codec.PlatformErrorCodec;
@@ -17,6 +19,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.lang.NonNull;
 
 import java.io.IOException;
 import java.net.URL;
@@ -25,35 +28,101 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Patra 平台错误处理框架自动配置类。
+ * 
+ * <p>该配置类负责自动装配平台错误处理框架的核心组件：
+ * <ul>
+ *   <li>ModuleRegistry：模块注册表，管理模块元数据</li>
+ *   <li>CodebookParser：错误码解析器，从配置文件加载错误码定义</li>
+ *   <li>Codebook：错误码册，聚合所有错误码定义</li>
+ *   <li>PlatformErrorCodec：平台错误编解码器，处理序列化和反序列化</li>
+ * </ul>
+ * 
+ * <p>自动装配条件：
+ * <ul>
+ *   <li>类路径中存在 PlatformErrorFactory 和 Codebook 类</li>
+ *   <li>配置属性 patra.error.enabled 为 true（默认为 true）</li>
+ *   <li>使用 @ConditionalOnMissingBean 避免重复装配</li>
+ * </ul>
+ * 
+ * <p>配置加载策略：
+ * <ul>
+ *   <li>扫描 classpath*:/META-INF/patra/module-*.properties 加载模块定义</li>
+ *   <li>扫描 classpath*:/META-INF/patra/codebook-*.properties 和 codebook-*.json 加载错误码</li>
+ *   <li>按文件名排序加载，确保加载顺序的确定性</li>
+ *   <li>支持冲突检测和验证，可配置失败策略</li>
+ * </ul>
+ * 
+ * <p>使用示例：
+ * <pre>{@code
+ * # application.yml
+ * patra:
+ *   error:
+ *     enabled: true
+ *     log-summary: true
+ *     fail-fast: false
+ *     detect-conflict: true
+ *     fail-on-conflict: false
+ *     validate-module-prefix: true
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ * @see PatraErrorProperties
+ * @see PlatformErrorFactory
+ * @see Codebook
+ * @see ModuleRegistry
+ */
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(PatraErrorProperties.class)
-@ConditionalOnClass({Problems.class, Codebook.class})
+@ConditionalOnClass({PlatformErrorFactory.class, Codebook.class})
 @ConditionalOnProperty(prefix = "patra.error", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PatraErrorAutoConfiguration implements ResourceLoaderAware {
 
     private ResourceLoader resourceLoader;
 
+    /* ==================== ResourceLoaderAware 实现 ==================== */
+
     @Override
-    public void setResourceLoader(ResourceLoader resourceLoader) {
+    public void setResourceLoader(@NonNull ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
 
+    /* ==================== Bean 装配方法 ==================== */
+
+    /**
+     * 配置模块注册表 Bean。
+     * 
+     * <p>从类路径扫描 module-*.properties 文件，加载模块元数据定义。
+     * 支持多个 JAR 包中的同名资源合并。
+     * 
+     * @param properties 配置属性
+     * @return 模块注册表实例
+     */
     @Bean
     @ConditionalOnMissingBean
-    public ModuleRegistry moduleRegistry(PatraErrorProperties props) {
+    public ModuleRegistry moduleRegistry(PatraErrorProperties properties) {
         var registry = new ModuleRegistry();
-        // 让 registry 自己用 ClassLoader 合并所有同名资源（无需你前置扫描）
-        ClassLoader cl = getBeanClassLoader();
-        registry.loadFromClasspath(cl);
+        
+        // 让注册表自己处理类路径扫描和资源合并
+        ClassLoader classLoader = getBeanClassLoader();
+        registry.loadFromClasspath(classLoader);
 
-        if (props.isLogSummary()) {
-            // 简单输出一下有哪些模块被登记（可按需精简）
-            log.info("[patra-error] module-registry loaded, modules={}", registry.all().keySet());
+        if (properties.isLogSummary()) {
+            var moduleNames = registry.all().keySet();
+            log.info("[patra-error] Module registry loaded successfully, modules={}", moduleNames);
         }
+        
         return registry;
     }
 
+    /**
+     * 配置错误码解析器 Bean。
+     * 
+     * @return 错误码解析器实例
+     */
     @Bean
     @ConditionalOnMissingBean
     public CodebookParser codebookParser() {
@@ -112,7 +181,7 @@ public class PatraErrorAutoConfiguration implements ResourceLoaderAware {
         }
 
         // 绑定到 Problems，全局生效
-        Problems.setCodebookProvider(() -> merged);
+        PlatformErrorFactory.setCodebookProvider(() -> merged);
         return merged;
     }
 

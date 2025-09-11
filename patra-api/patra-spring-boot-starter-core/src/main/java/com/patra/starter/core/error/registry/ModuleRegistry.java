@@ -1,7 +1,8 @@
 package com.patra.starter.core.error.registry;
 
-
+import cn.hutool.core.util.StrUtil;
 import com.patra.common.error.core.ErrorSpec;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,51 +12,118 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * 模块前缀注册表（REG/VAU/QRY/...）。
- * - 数据来源：
- * 1) 内存注册（register()）
- * 2) 类路径资源：META-INF/patra/module-registry.properties（可多份，自动合并）
- * 3) 可选：META-INF/patra/module-registry.json（若运行时存在 Jackson）
- * <p>
- * - 目的：在运行/测试/CI 时对模块前缀进行轻量校验与说明关联。
+ * 模块前缀注册表，管理系统模块的元数据信息。
+ * 
+ * <p>主要功能：
+ * <ul>
+ *   <li>管理模块前缀（如 REG、VAU、QRY 等）与其元数据的映射关系</li>
+ *   <li>支持从类路径资源自动加载模块定义</li>
+ *   <li>提供模块前缀的有效性验证功能</li>
+ *   <li>支持运行时动态注册模块信息</li>
+ * </ul>
+ * 
+ * <p>数据来源：
+ * <ol>
+ *   <li>内存直接注册（register() 方法）</li>
+ *   <li>类路径资源：META-INF/patra/module-*.properties（支持多份文件自动合并）</li>
+ *   <li>可选支持：META-INF/patra/module-*.json（需要 Jackson 运行时支持）</li>
+ * </ol>
+ * 
+ * <p>配置文件格式示例：
+ * <pre>{@code
+ * # module-registry.properties
+ * REG.owner=registry-team
+ * REG.description=User registration module
+ * REG.doc=https://docs.example.com/modules/registration
+ * 
+ * VAU.owner=validation-team
+ * VAU.description=Validation module
+ * VAU.doc=https://docs.example.com/modules/validation
+ * }</pre>
+ * 
+ * <p>设计目标：
+ * <ul>
+ *   <li>在开发/测试/CI 环境中对模块前缀进行轻量级校验</li>
+ *   <li>提供模块与团队责任人的关联关系</li>
+ *   <li>支持模块文档和描述信息的集中管理</li>
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ * @see ErrorSpec
  */
+@Slf4j
 public final class ModuleRegistry {
 
     /**
-     * 描述一个模块前缀的基本信息
+     * 模块信息记录，包含模块的基本元数据。
+     * 
+     * @param module 模块前缀，必须符合 ErrorSpec.MODULE_PATTERN 规范
+     * @param owner 模块负责人或团队
+     * @param description 模块描述信息
+     * @param doc 模块文档链接
      */
     public record ModuleInfo(String module, String owner, String description, String doc) {
+        
+        /**
+         * 创建 ModuleInfo 实例并验证模块前缀格式。
+         * 
+         * @param module 模块前缀
+         * @param owner 负责人
+         * @param description 描述
+         * @param doc 文档链接
+         * @throws IllegalArgumentException 如果模块前缀格式不符合规范
+         */
+        public ModuleInfo {
+            if (StrUtil.isBlank(module) || !ErrorSpec.MODULE_PATTERN.matcher(module).matches()) {
+                throw new IllegalArgumentException("Invalid module prefix: " + module);
+            }
+        }
     }
 
+    /**
+     * 模块信息存储映射，键为模块前缀，值为模块信息。
+     * 使用 TreeMap 保证输出顺序的一致性。
+     */
     private final Map<String, ModuleInfo> modules = new TreeMap<>();
 
+    /**
+     * 默认构造器，创建空的模块注册表。
+     */
     public ModuleRegistry() {
     }
 
     /**
-     * 是否为已知模块前缀（严格大小写）
+     * 检查指定的字符串是否为已知的模块前缀。
+     * 
+     * @param module 模块前缀字符串，区分大小写
+     * @return 如果是已知模块返回 true，否则返回 false
      */
     public boolean isKnownModule(String module) {
-        return modules.containsKey(module);
+        return StrUtil.isNotBlank(module) && modules.containsKey(module);
     }
 
     /**
-     * 注册一个模块记录（重复则覆盖）
+     * 注册一个模块信息，如果模块前缀已存在则覆盖。
+     * 
+     * @param moduleInfo 模块信息对象
+     * @throws NullPointerException 如果 moduleInfo 为 null
      */
-    public void register(ModuleInfo info) {
-        Objects.requireNonNull(info, "info");
-        if (!ErrorSpec.MODULE_PATTERN.matcher(info.module()).matches()) {
-            throw new IllegalArgumentException("Invalid module prefix: " + info.module());
+    public void register(ModuleInfo moduleInfo) {
+        Objects.requireNonNull(moduleInfo, "ModuleInfo must not be null");
+        modules.put(moduleInfo.module(), moduleInfo);
+        log.debug("Registered module: {}", moduleInfo.module());
+    }
+
+    /**
+     * 批量注册模块信息。
+     * 
+     * @param moduleInfoList 模块信息列表，可以为 null 或空
+     */
+    public void registerAll(Collection<ModuleInfo> moduleInfoList) {
+        if (moduleInfoList != null && !moduleInfoList.isEmpty()) {
+            moduleInfoList.forEach(this::register);
         }
-        modules.put(info.module(), info);
-    }
-
-    /**
-     * 批量注册
-     */
-    public void registerAll(Collection<ModuleInfo> list) {
-        if (list == null) return;
-        list.forEach(this::register);
     }
 
     /**
