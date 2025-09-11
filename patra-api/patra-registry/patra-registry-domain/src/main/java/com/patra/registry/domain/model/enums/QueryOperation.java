@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * 查询操作枚举
- * docref: /docs/domain/enums.discovery.md#5-queryoperation-查询操作枚举
  */
 @Getter
 @RequiredArgsConstructor

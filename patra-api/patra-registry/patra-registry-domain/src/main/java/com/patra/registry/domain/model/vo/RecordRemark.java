@@ -6,8 +6,7 @@ import lombok.Value;
 import java.time.LocalDateTime;
 
 /**
- * 记录备注值对象
- * docref: /docs/infra/json-and-nullability.plan.md#1-审计备注类-json-record_remarks
+ * 记录备注值对象（审计信息）。
  */
 @Value
 @Builder

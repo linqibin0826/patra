@@ -4,8 +4,8 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * API参数映射值对象
- * docref: /docs/domain/model/vo/ApiParamMapping.txt
+ * API 参数映射值对象。
+ * <p>用于把内部标准键（stdKey）映射到供应商 API 的具体参数名，并可指定转换函数。
  */
 @Value
 @Builder

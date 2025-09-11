@@ -8,8 +8,8 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * 查询渲染规则值对象
- * docref: /docs/domain/model/vo/QueryRenderRule.txt
+ * 查询渲染规则值对象。
+ * <p>描述将内部查询表达渲染为上游 API 可接受的 query/params 文本的规则模板。
  */
 @Value
 @Builder

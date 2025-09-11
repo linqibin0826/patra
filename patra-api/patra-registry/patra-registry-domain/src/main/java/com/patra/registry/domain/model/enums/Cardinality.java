@@ -5,8 +5,10 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 基数枚举
- * docref: /docs/domain/enums.discovery.md#2-cardinality-基数枚举
+ * 基数字段取值枚举：单值或多值。
+ * <p>用于 {@code PlatformFieldDict} 声明字段是否可出现多个值。
+ * @author linqibin
+ * @since 0.1.0
  */
 @Getter
 @RequiredArgsConstructor

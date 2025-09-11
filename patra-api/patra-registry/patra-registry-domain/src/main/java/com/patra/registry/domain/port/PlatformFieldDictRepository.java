@@ -7,7 +7,6 @@ import java.util.Optional;
 
 /**
  * 平台字段字典仓储端口
- * docref: /docs/domain/port/PlatformFieldDictRepository.txt
  */
 public interface PlatformFieldDictRepository {
     

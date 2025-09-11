@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 数据类型枚举
- * docref: /docs/domain/enums.discovery.md#1-datatype-数据类型枚举
+ * 平台字段数据类型枚举。
+ * <p>用于 {@code PlatformFieldDict} 与渲染/校验逻辑，约束字段的原子类型。
  */
 @Getter
 @RequiredArgsConstructor

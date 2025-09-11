@@ -5,8 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 渲染目标枚举
- * docref: /docs/domain/enums.discovery.md#8-emittarget-渲染目标枚举
+ * 查询渲染输出目标：拼接到 query 字符串或 params 参数表。
  */
 @Getter
 @RequiredArgsConstructor

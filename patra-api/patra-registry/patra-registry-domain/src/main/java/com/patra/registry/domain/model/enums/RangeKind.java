@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 范围类型枚举
- * docref: /docs/domain/enums.discovery.md#4-rangekind-范围类型枚举
+ * 范围类型枚举：不支持、日期、日期时间、数值。
+ * <p>用于 {@code QueryCapability} 声明 RANGE 操作时的值域类型。
  */
 @Getter
 @RequiredArgsConstructor

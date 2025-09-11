@@ -5,8 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 值类型枚举
- * docref: /docs/domain/enums.discovery.md#7-valuetype-值类型枚举
+ * 规则渲染时的值类型提示（影响格式化与校验）。
  */
 @Getter
 @RequiredArgsConstructor

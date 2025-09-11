@@ -5,8 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 日期类型枚举
- * docref: /docs/domain/enums.discovery.md#3-datetype-日期类型枚举
+ * 日期类型枚举（如 PubMed 的 PDAT/EDAT/MHDA），用于日期字段语义映射。
  */
 @Getter
 @RequiredArgsConstructor

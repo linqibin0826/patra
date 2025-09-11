@@ -7,8 +7,7 @@ import lombok.RequiredArgsConstructor;
 
 
 /**
- * 匹配策略枚举
- * docref: /docs/domain/enums.discovery.md#6-matchtype-匹配策略枚举
+ * 文本匹配策略：短语、精确或任意。
  */
 @Getter
 @RequiredArgsConstructor
