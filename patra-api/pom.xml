@@ -17,5 +17,7 @@
         <module>patra-spring-boot-starter-core</module>
         <module>patra-spring-boot-starter-web</module>
         <module>patra-spring-boot-starter-mybatis</module>
+
+        <module>patra-spring-cloud-starter-feign</module>
     </modules>
 </project>
