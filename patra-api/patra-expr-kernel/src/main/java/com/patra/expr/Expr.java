@@ -9,8 +9,7 @@ package com.patra.expr;
  * 典型用法：通过 {@link Exprs} 工厂方法构造表达式树，再交由规范化与校验流程处理。
  *
  * @author linqibin
- * @date 2025-09-01
- * @since 0.0.1
+ * @since 0.1.0
  */
 public sealed interface Expr permits And, Or, Not, Const, Atom {
 

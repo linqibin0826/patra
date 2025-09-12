@@ -3,7 +3,6 @@ package com.patra.registry.infra.persistence.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.contract.query.view.LiteratureProvenanceConfigView;
 import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;

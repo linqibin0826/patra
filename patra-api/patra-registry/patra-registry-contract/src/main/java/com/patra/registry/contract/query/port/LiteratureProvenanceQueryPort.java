@@ -31,6 +31,14 @@ public interface LiteratureProvenanceQueryPort {
     /** 获取 API 参数映射集合 */
     List<ApiParamMappingView> getApiParamMappingsByProvenanceCode(ProvenanceCode provenanceCode);
 
+    /**
+     * 获取指定 operation 的 API 参数映射集合（DB 端过滤避免全量加载）。
+     * @param provenanceCode 数据源code
+     * @param operation 操作：search/fetch/lookup 等
+     * @return 仅当前 operation 的参数映射
+     */
+    List<ApiParamMappingView> getApiParamMappingsByProvenanceCodeAndOperation(ProvenanceCode provenanceCode, String operation);
+
     /** 获取查询渲染规则集合 */
     List<QueryRenderRuleView> getQueryRenderRulesByProvenanceCode(ProvenanceCode provenanceCode);
 }

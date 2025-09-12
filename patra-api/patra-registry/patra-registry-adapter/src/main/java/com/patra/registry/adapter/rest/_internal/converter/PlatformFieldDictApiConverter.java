@@ -13,7 +13,7 @@ public interface PlatformFieldDictApiConverter {
 
     PlatformFieldDictApiResp toApiResp(PlatformFieldDictView src);
 
-    default List<PlatformFieldDictApiResp> toApiRespList(List<PlatformFieldDictView> list) {
+    default List<PlatformFieldDictApiResp> toApiRespList(List<com.patra.registry.contract.query.view.PlatformFieldDictView> list) {
         if (list == null || list.isEmpty()) return java.util.List.of();
         List<PlatformFieldDictApiResp> res = new ArrayList<>(list.size());
         for (PlatformFieldDictView it : list) res.add(toApiResp(it));

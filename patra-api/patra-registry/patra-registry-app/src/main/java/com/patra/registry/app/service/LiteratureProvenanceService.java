@@ -43,7 +43,12 @@ public class LiteratureProvenanceService implements LiteratureProvenanceQueryUse
     public java.util.List<ApiParamMappingView> getApiParamMappings(ProvenanceCode provenanceCode) {
         return queryPort.getApiParamMappingsByProvenanceCode(provenanceCode);
     }
-    
+
+    @Override
+    public java.util.List<ApiParamMappingView> getApiParamMappingsByOperation(ProvenanceCode provenanceCode, String operation) {
+        return queryPort.getApiParamMappingsByProvenanceCodeAndOperation(provenanceCode, operation);
+    }
+
     @Override
     public java.util.List<QueryRenderRuleView> getQueryRenderRules(ProvenanceCode provenanceCode) {
         return queryPort.getQueryRenderRulesByProvenanceCode(provenanceCode);

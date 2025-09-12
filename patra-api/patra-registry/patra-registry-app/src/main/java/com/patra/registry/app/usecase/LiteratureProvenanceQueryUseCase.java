@@ -25,6 +25,14 @@ public interface LiteratureProvenanceQueryUseCase {
     /** 获取 API 参数映射集合 */
     java.util.List<ApiParamMappingView> getApiParamMappings(ProvenanceCode provenanceCode);
 
+    /**
+     * 获取指定 operation 的 API 参数映射集合（由底层端口进行 DB 过滤）。
+     * @param provenanceCode 数据源代码
+     * @param operation 操作：search/fetch/lookup 等
+     * @return 仅当前 operation 的参数映射
+     */
+    java.util.List<ApiParamMappingView> getApiParamMappingsByOperation(ProvenanceCode provenanceCode, String operation);
+
     /** 获取查询渲染规则集合 */
     java.util.List<QueryRenderRuleView> getQueryRenderRules(ProvenanceCode provenanceCode);
 }

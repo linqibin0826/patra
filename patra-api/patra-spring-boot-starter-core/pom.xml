@@ -45,5 +45,4 @@
         </dependency>
     </dependencies>
 
-    <!-- 不在这里放 maven-compiler-plugin 的 annotationProcessorPaths -->
 </project>

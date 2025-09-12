@@ -43,16 +43,6 @@ public enum ProvenanceCode implements CodeEnum<String> {
         this.description = display;
     }
 
-    /**
-     * 从字符串解析数据源。
-     *
-     * <p>
-     * 支持常见别名与大小写/连字符差异。
-     *
-     * @param s 待解析字符串
-     * @return 对应的枚举项
-     * @throws IllegalArgumentException 未匹配到任一数据源
-     */
     public static ProvenanceCode parse(String s) {
         if (s == null)
             throw new IllegalArgumentException("source is null");
@@ -79,6 +69,5 @@ public enum ProvenanceCode implements CodeEnum<String> {
             default -> throw new IllegalArgumentException("Unknown source: " + s);
         };
     }
-
-
 }
+

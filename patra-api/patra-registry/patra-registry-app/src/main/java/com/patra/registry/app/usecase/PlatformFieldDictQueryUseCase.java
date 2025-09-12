@@ -1,7 +1,5 @@
 package com.patra.registry.app.usecase;
 
-import com.patra.registry.contract.query.view.PlatformFieldDictView;
-
 import java.util.List;
 
 /**
@@ -11,5 +9,5 @@ import java.util.List;
  * @since 0.1.0
  */
 public interface PlatformFieldDictQueryUseCase {
-    List<PlatformFieldDictView> listAll();
+    List<com.patra.registry.contract.query.view.PlatformFieldDictView> listAll();
 }

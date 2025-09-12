@@ -44,7 +44,7 @@ public class LiteratureProvenanceQueryPortImpl implements LiteratureProvenanceQu
     @Override
     public List<ProvenanceSummaryView> findAll() {
         List<LiteratureProvenanceDO> provenances = provenanceMapper.selectProvSummaryAll();
-        return converter.toSummaryView(provenances);
+        return provenances.stream().map(converter::toSummary).toList();
     }
 
     @Override
@@ -78,7 +78,21 @@ public class LiteratureProvenanceQueryPortImpl implements LiteratureProvenanceQu
     if (prov == null) return java.util.List.of();
     var list = apiParamMappingMapper.selectList(new LambdaQueryWrapper<SourceApiParamMappingDO>()
         .eq(SourceApiParamMappingDO::getLiteratureProvenanceId, prov.getId()));
-    return apiParamMappingConverter.toViewList(list);
+        return list.stream().map(apiParamMappingConverter::mapApiParam).toList();
+    }
+
+    @Override
+    public List<ApiParamMappingView> getApiParamMappingsByProvenanceCodeAndOperation(ProvenanceCode provenanceCode, String operation) {
+        // 根据 code → id
+        var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<LiteratureProvenanceDO>()
+                .select(LiteratureProvenanceDO::getId)
+                .eq(LiteratureProvenanceDO::getCode, provenanceCode));
+        if (prov == null) return java.util.List.of();
+        // 直接在 DB 端按 operation 过滤，避免全量入内存
+        var list = apiParamMappingMapper.selectList(new LambdaQueryWrapper<SourceApiParamMappingDO>()
+                .eq(SourceApiParamMappingDO::getLiteratureProvenanceId, prov.getId())
+                .eq(SourceApiParamMappingDO::getOperation, operation));
+        return list.stream().map(apiParamMappingConverter::mapApiParam).toList();
     }
 
     @Override

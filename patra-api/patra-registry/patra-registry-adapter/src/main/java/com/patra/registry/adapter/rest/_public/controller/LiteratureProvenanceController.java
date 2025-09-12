@@ -1,7 +1,7 @@
 package com.patra.registry.adapter.rest._public.controller;
 
 
-import com.patra.registry.adapter.rest._public.Converter.ProvenanceWebConverter;
+import com.patra.registry.adapter.rest._public.convertor.ProvenanceWebConverter;
 import com.patra.registry.adapter.rest._public.resp.dto.resp.ProvenanceSummaryResp;
 import com.patra.registry.app.service.LiteratureProvenanceService;
 import com.patra.registry.contract.query.view.ProvenanceSummaryView;

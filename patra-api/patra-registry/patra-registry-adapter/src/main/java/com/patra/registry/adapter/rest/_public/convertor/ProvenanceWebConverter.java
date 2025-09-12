@@ -1,4 +1,4 @@
-package com.patra.registry.adapter.rest._public.Converter;
+package com.patra.registry.adapter.rest._public.convertor;
 
 import cn.hutool.core.collection.CollUtil;
 import com.patra.registry.adapter.rest._public.resp.dto.resp.ProvenanceSummaryResp;

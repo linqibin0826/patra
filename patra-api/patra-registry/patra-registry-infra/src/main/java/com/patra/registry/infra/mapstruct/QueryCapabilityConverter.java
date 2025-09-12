@@ -33,13 +33,14 @@ public interface QueryCapabilityConverter {
     @Mapping(target = "termMatches", expression = "java(toStringList(src.getTermMatches()))")
     @Mapping(target = "rangeKind", expression = "java(toRangeKindString(src.getRangeKind()))")
     @Mapping(target = "tokenKinds", expression = "java(toStringList(src.getTokenKinds()))")
-    QueryCapabilityView toView(SourceQueryCapabilityDO src, ProvenanceCode provenanceCode);
+    @Named("mapCapability")
+    QueryCapabilityView mapCapability(SourceQueryCapabilityDO src, ProvenanceCode provenanceCode);
 
     default List<QueryCapabilityView> toViewList(List<SourceQueryCapabilityDO> src, ProvenanceCode code) {
         if (src == null || src.isEmpty()) return java.util.List.of();
         List<QueryCapabilityView> list = new ArrayList<>(src.size());
         for (SourceQueryCapabilityDO it : src) {
-            list.add(toView(it, code));
+            list.add(mapCapability(it, code));
         }
         return list;
     }
