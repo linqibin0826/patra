@@ -1,5 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
@@ -9,11 +10,11 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * 文献数据源配置数据对象
- * docref: /docs/schema/tables.inventory.md#reg_literature_provenance_config
  */
 @Data
 @SuperBuilder
 @NoArgsConstructor
+@TableName(value = "reg_literature_provenance_config", autoResultMap = true)
 @EqualsAndHashCode(callSuper = true)
 public class LiteratureProvenanceConfigDO extends BaseDO {
 

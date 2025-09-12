@@ -19,7 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 文献数据源内部 HTTP 提供方实现。
@@ -72,7 +74,7 @@ public class LiteratureProvenanceApiImpl implements LiteratureProvenanceHttpApi 
      * <p>注意：apiParams 通过用例在 DB 端按 operation 过滤，避免全量内存过滤。
      *
      * @param provenanceCode 数据源代码
-     * @param operation 操作：search/fetch/lookup 等
+     * @param operation      操作：search/fetch/lookup 等
      * @return 快照聚合 DTO
      */
     @Override
@@ -90,20 +92,47 @@ public class LiteratureProvenanceApiImpl implements LiteratureProvenanceHttpApi 
                 : queryUseCase.getApiParamMappingsByOperation(provenanceCode, operation);
         List<com.patra.registry.contract.query.view.PlatformFieldDictView> fieldDictViews = fieldDictUseCase.listAll();
 
-        List<QueryCapabilityApiResp> capabilities = apiConverter.toQueryCapabilityApiRespList(capabilityViews);
-        List<QueryRenderRuleApiResp> renderRules = apiConverter.ruleViews2ApiList(renderRuleViews);
-        List<ApiParamMappingApiResp> apiParams = apiConverter.toApiParamMappingApiRespList(apiParamViews);
-        List<PlatformFieldDictApiResp> fieldDict = fieldDictConverter.toApiRespList(fieldDictViews);
+        List<QueryCapabilityApiResp> capabilities = Optional.ofNullable(apiConverter.toQueryCapabilityApiRespList(capabilityViews)).orElseGet(List::of);
+        List<QueryRenderRuleApiResp> renderRules = Optional.ofNullable(apiConverter.ruleViews2ApiList(renderRuleViews)).orElseGet(List::of);
+        List<ApiParamMappingApiResp> apiParams = Optional.ofNullable(apiConverter.toApiParamMappingApiRespList(apiParamViews)).orElseGet(List::of);
+        List<PlatformFieldDictApiResp> fieldDict = Optional.ofNullable(fieldDictConverter.toApiRespList(fieldDictViews)).orElseGet(List::of);
+
+        // 贴近下游结构：
+        // - renderRules: 按 priority 降序，其次 fieldKey/op 升序，null 安全
+        renderRules = renderRules.stream()
+                .sorted(Comparator
+                        .comparing((QueryRenderRuleApiResp r) -> Optional.ofNullable(r.priority()).orElse(Integer.MIN_VALUE)).reversed()
+                        .thenComparing(r -> Optional.ofNullable(r.fieldKey()).orElse(""))
+                        .thenComparing(r -> Optional.ofNullable(r.op()).orElse("")))
+                .collect(Collectors.toList());
+
+        // - fieldDict: 以 fieldKey 去重并按 key 升序稳定输出，然后转 Map
+        LinkedHashMap<String, PlatformFieldDictApiResp> fieldDictMap = fieldDict.stream()
+                .filter(it -> it.fieldKey() != null)
+                .sorted(Comparator.comparing(PlatformFieldDictApiResp::fieldKey))
+                .collect(Collectors.toMap(PlatformFieldDictApiResp::fieldKey, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+
+        // - capabilities: 以 fieldKey 去重（若重复则保留第一次），按 fieldKey 升序输出，然后转 Map
+        LinkedHashMap<String, QueryCapabilityApiResp> capabilitiesMap = capabilities.stream()
+                .filter(it -> it.fieldKey() != null)
+                .sorted(Comparator.comparing(QueryCapabilityApiResp::fieldKey))
+                .collect(Collectors.toMap(QueryCapabilityApiResp::fieldKey, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+
+        // - apiParams: 以 stdKey 去重（保留第一次），按 stdKey 升序输出，然后转 Map
+        LinkedHashMap<String, ApiParamMappingApiResp> apiParamsMap = apiParams.stream()
+                .filter(it -> it.stdKey() != null)
+                .sorted(Comparator.comparing(ApiParamMappingApiResp::stdKey))
+                .collect(Collectors.toMap(ApiParamMappingApiResp::stdKey, Function.identity(), (a, b) -> a, LinkedHashMap::new));
 
         long version = 0L; // 暂无规则源版本，默认 0（后续可由端口提供组合版本/更新时间）
         Instant updatedAt = null; // 暂无更新时间
 
         log.info("[LiteratureProvenance] GetExprConfigSnapshot, code={}, operation={} - done. summary: capabilities={}, renderRules={}, apiParams={}, fieldDict={}",
                 provenanceCode, operation,
-                capabilities == null ? 0 : capabilities.size(),
-                renderRules == null ? 0 : renderRules.size(),
-                apiParams == null ? 0 : apiParams.size(),
-                fieldDict == null ? 0 : fieldDict.size());
+                capabilitiesMap.size(),
+                renderRules.size(),
+                apiParamsMap.size(),
+                fieldDictMap.size());
 
         return new ProvenanceExprConfigSnapshotApiResp(
                 configView.provenanceId(),
@@ -111,10 +140,10 @@ public class LiteratureProvenanceApiImpl implements LiteratureProvenanceHttpApi 
                 operation,
                 version,
                 updatedAt,
-                fieldDict,
-                capabilities,
+                fieldDictMap,
+                capabilitiesMap,
                 renderRules,
-                apiParams
+                apiParamsMap
         );
     }
 }

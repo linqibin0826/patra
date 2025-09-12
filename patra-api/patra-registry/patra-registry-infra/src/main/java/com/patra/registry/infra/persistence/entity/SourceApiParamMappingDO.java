@@ -1,5 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
@@ -14,6 +15,7 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
+@TableName(value = "reg_source_api_param_mapping", autoResultMap = true)
 @EqualsAndHashCode(callSuper = true)
 public class SourceApiParamMappingDO extends BaseDO {
 

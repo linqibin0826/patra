@@ -1,5 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.registry.domain.model.enums.RangeKind;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 @Data
 @SuperBuilder
 @NoArgsConstructor
+@TableName(value = "reg_source_query_capability", autoResultMap = true)
 @EqualsAndHashCode(callSuper = true)
 public class SourceQueryCapabilityDO extends BaseDO {
     

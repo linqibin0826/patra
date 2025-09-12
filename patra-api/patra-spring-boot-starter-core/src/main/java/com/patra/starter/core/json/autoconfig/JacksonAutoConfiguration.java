@@ -21,7 +21,7 @@ public class JacksonAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(name = "provenanceCodeModule")
     public Module provenanceCodeModule() {
-        log.debug("loaded JacksonAutoConfiguration.provenanceCodeModule()");
+        log.info("loaded JacksonAutoConfiguration.provenanceCodeModule()");
         return new ProvenanceCodeModule();
     }
 }

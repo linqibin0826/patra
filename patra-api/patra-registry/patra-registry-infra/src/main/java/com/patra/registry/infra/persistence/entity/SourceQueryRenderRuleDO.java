@@ -1,5 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.registry.domain.model.enums.EmitTarget;
 import com.patra.registry.domain.model.enums.MatchType;
@@ -13,11 +14,11 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * 数据源查询渲染规则数据对象
- * docref: /docs/schema/tables.inventory.md#reg_source_query_render_rule
  */
 @Data
 @SuperBuilder
 @NoArgsConstructor
+@TableName(value = "reg_source_query_render_rule", autoResultMap = true)
 @EqualsAndHashCode(callSuper = true)
 public class SourceQueryRenderRuleDO extends BaseDO {
     

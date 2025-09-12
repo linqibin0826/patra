@@ -1,5 +1,6 @@
 package com.patra.registry.infra.persistence.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.registry.domain.model.enums.Cardinality;
 import com.patra.registry.domain.model.enums.DataType;
 import com.patra.registry.domain.model.enums.DateType;
@@ -11,11 +12,11 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * 平台字段字典数据对象
- * docref: /docs/schema/tables.inventory.md#reg_plat_field_dict
  */
 @Data
 @SuperBuilder
 @NoArgsConstructor
+@TableName(value = "reg_plat_field_dict")
 @EqualsAndHashCode(callSuper = true)
 public class PlatformFieldDictDO extends BaseDO {
 
