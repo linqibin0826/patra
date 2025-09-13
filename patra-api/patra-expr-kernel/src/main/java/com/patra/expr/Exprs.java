@@ -218,4 +218,11 @@ public final class Exprs {
         // 约定：field 使用 kind，便于 canonical key 与渲染。
         return new Atom(kind, Atom.Op.TOKEN, new Atom.Token(kind, value));
     }
+
+    public static Expr constTrue() {
+        return Const.TRUE;
+    }
+    public static Expr constFalse() {
+        return Const.FALSE;
+    }
 }

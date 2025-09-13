@@ -6,6 +6,8 @@ import com.patra.registry.contract.query.view.QueryCapabilityView;
 import com.patra.registry.contract.query.view.ApiParamMappingView;
 import com.patra.registry.contract.query.view.QueryRenderRuleView;
 
+import java.util.List;
+
 public interface LiteratureProvenanceQueryUseCase {
 
     /**
@@ -34,5 +36,5 @@ public interface LiteratureProvenanceQueryUseCase {
     java.util.List<ApiParamMappingView> getApiParamMappingsByOperation(ProvenanceCode provenanceCode, String operation);
 
     /** 获取查询渲染规则集合 */
-    java.util.List<QueryRenderRuleView> getQueryRenderRules(ProvenanceCode provenanceCode);
+    List<QueryRenderRuleView> getQueryRenderRules(ProvenanceCode provenanceCode);
 }

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -122,12 +123,12 @@ public class SourceQueryCapabilityDO extends BaseDO {
     /**
      * 最小时间（DATETIME，UTC）
      */
-    private LocalDateTime datetimeMin;
+    private Instant datetimeMin;
     
     /**
      * 最大时间（DATETIME，UTC）
      */
-    private LocalDateTime datetimeMax;
+    private Instant datetimeMax;
     
     /**
      * 最小数值（NUMBER）

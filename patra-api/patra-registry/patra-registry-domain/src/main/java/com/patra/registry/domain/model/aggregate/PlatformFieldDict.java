@@ -139,7 +139,7 @@ public class PlatformFieldDict {
         Assert.notNull(newCardinality, "newCardinality is null");
         if (newCardinality == this.cardinality) return;
         this.cardinality = newCardinality;
-        appendRemark("cardinality->" + newCardinality.name(), operator);
+        appendRemark("cardinality->" + newCardinality, operator);
         registerUpdated();
     }
 
@@ -151,7 +151,7 @@ public class PlatformFieldDict {
         this.isDate = true;
         this.datetype = newDatetype;
         validateInvariants();
-        appendRemark("isDate=true,datetype->" + newDatetype.name(), operator);
+        appendRemark("isDate=true,datetype->" + newDatetype, operator);
         registerUpdated();
     }
 

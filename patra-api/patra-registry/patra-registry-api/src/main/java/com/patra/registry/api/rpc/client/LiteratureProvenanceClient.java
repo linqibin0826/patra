@@ -8,6 +8,4 @@ import org.springframework.cloud.openfeign.FeignClient;
         contextId = "literatureProvenanceConfigClient"
 )
 public interface LiteratureProvenanceClient extends LiteratureProvenanceHttpApi {
-
-
 }

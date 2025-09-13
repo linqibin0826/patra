@@ -11,9 +11,9 @@ import java.util.List;
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlatformFieldDictQueryConverter {
 
-    @Mapping(target = "dataType", expression = "java(src.getDataType()==null?null:src.getDataType().name())")
-    @Mapping(target = "cardinality", expression = "java(src.getCardinality()==null?null:src.getCardinality().name())")
-    @Mapping(target = "datetype", expression = "java(src.getDatetype()==null?null:src.getDatetype().name())")
+    @Mapping(target = "dataType", expression = "java(src.getDataType()==null?null:src.getDataType().getCode())")
+    @Mapping(target = "cardinality", expression = "java(src.getCardinality()==null?null:src.getCardinality().getCode())")
+    @Mapping(target = "datetype", expression = "java(src.getDatetype()==null?null:src.getDatetype().getCode())")
     PlatformFieldDictView toView(PlatformFieldDictDO src);
 
     default List<PlatformFieldDictView> toViewList(List<PlatformFieldDictDO> list) {

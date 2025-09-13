@@ -3,6 +3,7 @@ package com.patra.registry.api.rpc.dto;
 import com.patra.common.enums.ProvenanceCode;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,8 +35,8 @@ public record QueryCapabilityApiResp(
         Boolean rangeAllowClosedAtInfty,
         LocalDate dateMin,
         LocalDate dateMax,
-        LocalDateTime datetimeMin,
-        LocalDateTime datetimeMax,
+        Instant datetimeMin,
+        Instant datetimeMax,
         BigDecimal numberMin,
         BigDecimal numberMax,
         Boolean existsSupported,

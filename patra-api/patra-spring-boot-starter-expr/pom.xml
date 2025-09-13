@@ -19,5 +19,13 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-expr-kernel</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-api</artifactId>
+        </dependency>
     </dependencies>
 </project>

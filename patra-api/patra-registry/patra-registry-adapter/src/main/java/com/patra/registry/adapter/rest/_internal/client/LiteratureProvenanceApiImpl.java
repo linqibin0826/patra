@@ -14,6 +14,7 @@ import com.patra.registry.app.usecase.LiteratureProvenanceQueryUseCase;
 import com.patra.registry.app.usecase.PlatformFieldDictQueryUseCase;
 import com.patra.registry.adapter.rest._internal.converter.PlatformFieldDictApiConverter;
 import com.patra.registry.contract.query.view.ApiParamMappingView;
+import com.patra.registry.contract.query.view.PlatformFieldDictView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
@@ -90,7 +91,7 @@ public class LiteratureProvenanceApiImpl implements LiteratureProvenanceHttpApi 
         var apiParamViews = (operation == null || operation.isBlank())
                 ? List.<ApiParamMappingView>of()
                 : queryUseCase.getApiParamMappingsByOperation(provenanceCode, operation);
-        List<com.patra.registry.contract.query.view.PlatformFieldDictView> fieldDictViews = fieldDictUseCase.listAll();
+        List<PlatformFieldDictView> fieldDictViews = fieldDictUseCase.listAll();
 
         List<QueryCapabilityApiResp> capabilities = Optional.ofNullable(apiConverter.toQueryCapabilityApiRespList(capabilityViews)).orElseGet(List::of);
         List<QueryRenderRuleApiResp> renderRules = Optional.ofNullable(apiConverter.ruleViews2ApiList(renderRuleViews)).orElseGet(List::of);
