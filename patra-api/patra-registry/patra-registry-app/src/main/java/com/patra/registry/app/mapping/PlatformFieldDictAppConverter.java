@@ -1,6 +1,6 @@
 /**
- * docref:/docs/app/mapping/ERROR-README.md
- * docref:/docs/api/rest/dto/ERROR-README.md
+ * docref:/docs/app/mapping/ERROR-README_1.md
+ * docref:/docs/api/rest/dto/ERROR-README_1.md
  * docref:/docs/domain/aggregates.discovery.md
  */
 package com.patra.registry.app.mapping;

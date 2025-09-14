@@ -41,6 +41,10 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.github.yswtrue</groupId>
+            <artifactId>xxl-job-spring-boot3-starter</artifactId>
+        </dependency>
 
         <!-- 共享契约 -->
         <dependency>

@@ -1,17 +1,23 @@
 package com.patra.ingest.infra.persistence.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import java.time.LocalDateTime;
 
 /**
- * 计划切片数据对象
+ * 计划切片 · 去前缀实体，对应表：ing_plan_slice。
+ * <p>通用分片（时间/ID/token/预算），是并行与幂等的边界。</p>
+ *
+ * 字段要点：
+ * - status：{@link SliceStatus}
+ * - sliceSpec/exprSnapshot：JSON
+ *
+ * 继承 BaseDO：id、recordRemarks、created/updatedBy/At、version、ipAddress、deleted。
  *
  * @author linqibin
  * @since 0.1.0
@@ -20,72 +26,28 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@TableName("ing_plan_slice")
+@TableName(value = "ing_plan_slice", autoResultMap = true)
 public class PlanSliceDO extends BaseDO {
-    
-    /**
-     * 计划ID
-     */
-    @TableField("plan_id")
+
+    /** 关联 PlanID */
     private Long planId;
-    
-    /**
-     * 切片序号（0..N）
-     */
-    @TableField("slice_no")
+
+    /** 切片序号(0..N) */
     private Integer sliceNo;
-    
-    /**
-     * 切片起始（含）
-     */
-    @TableField("slice_from")
-    private LocalDateTime sliceFrom;
-    
-    /**
-     * 切片结束（含）
-     */
-    @TableField("slice_to")
-    private LocalDateTime sliceTo;
-    
-    /**
-     * 切片表达式哈希（派生+局部化）
-     */
-    @TableField("expr_hash")
+
+    /** 切片签名哈希(规范化的通用边界JSON) */
+    private String sliceSignatureHash;
+
+    /** 通用边界说明：时间/ID区间/landmark/预算等（JSON） */
+    private JsonNode sliceSpec;
+
+    /** 局部化表达式哈希 */
     private String exprHash;
-    
-    /**
-     * 切片专属表达式快照（含局部化的时间条件）
-     */
-    @TableField("expr_snapshot_json")
-    private String exprSnapshotJson;
-    
-    /**
-     * 切片状态
-     */
-    @TableField("status")
+
+    /** 局部化表达式 AST 快照（含本Slice边界） */
+    private JsonNode exprSnapshot;
+
+    /** 切片状态 */
     private SliceStatus status;
-    
-    /**
-     * 最近一次Job ID（冗余）
-     */
-    @TableField("last_job_id")
-    private Long lastJobId;
-    
-    /**
-     * 该切片产生的分页批次数（回填）
-     */
-    @TableField("total_batches")
-    private Integer totalBatches;
-    
-    /**
-     * 该切片累计命中/写入条数（回填）
-     */
-    @TableField("total_hits")
-    private Long totalHits;
-    
-    /**
-     * 失败批次数（回填）
-     */
-    @TableField("error_count")
-    private Integer errorCount;
 }
+

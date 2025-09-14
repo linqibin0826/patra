@@ -9,6 +9,7 @@ import com.patra.starter.expr.compiler.render.ExprRenderer;
 import com.patra.starter.expr.compiler.slice.ExprSlicer;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
+import com.patra.starter.expr.compiler.util.ExprConditions;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -24,6 +25,11 @@ public class DefaultExprCompiler implements ExprCompiler {
     private final ExprRenderer renderer;
     private final ExprSlicer slicer;
     private final ExprNormalizer normalizer;
+
+    @Override
+    public Boolean hasAtom(Expr expr) {
+        return ExprConditions.hasAtom(expr);
+    }
 
     @Override
     public CompileResult compile(Expr expr,

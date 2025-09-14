@@ -1,17 +1,28 @@
 package com.patra.ingest.infra.persistence.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
 import java.time.LocalDateTime;
 
 /**
- * 采集计划数据对象
+ * 计划蓝图 · 去前缀实体，对应表：ing_plan。
+ * <p>定义总时间窗口与切片策略，以及表达式原型快照。</p>
+ * <p>
+ * 字段要点：
+ * - sliceStrategy：{@link SliceStrategy}
+ * - status：{@link PlanStatus}
+ * - windowFrom/windowTo：UTC
+ * - sliceParams/exprProtoSnapshot：JSON
+ * <p>
+ * 继承 BaseDO：id、recordRemarks、created/updatedBy/At、version、ipAddress、deleted。
  *
  * @author linqibin
  * @since 0.1.0
@@ -20,54 +31,52 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@TableName("ing_plan")
+@TableName(value = "ing_plan", autoResultMap = true)
 public class PlanDO extends BaseDO {
-    
+
     /**
-     * 人类可读或外部幂等键（唯一）
+     * 关联调度实例ID
      */
-    @TableField("plan_key")
+    private Long scheduleInstanceId;
+
+    /**
+     * 人类可读/外部幂等键（唯一）
+     */
     private String planKey;
-    
+
     /**
-     * 计划名称
+     * 表达式原型哈希
      */
-    @TableField("name")
-    private String name;
-    
+    private String exprProtoHash;
+
     /**
-     * 计划说明
+     * 表达式原型 AST 快照
      */
-    @TableField("description")
-    private String description;
-    
+    private JsonNode exprProtoSnapshot;
+
     /**
-     * 表达式哈希：SHA-256(normalized_json)
+     * 总窗起(UTC, 含)
      */
-    @TableField("expr_hash")
-    private String exprHash;
-    
+    private LocalDateTime windowFrom;
+
     /**
-     * 表达式快照JSON（只读）
+     * 总窗止(UTC, 不含)
      */
-    @TableField("expr_snapshot_json")
-    private String exprSnapshotJson;
-    
+    private LocalDateTime windowTo;
+
     /**
-     * 起始时间（含）
+     * 切片策略
      */
-    @TableField("date_from")
-    private LocalDateTime dateFrom;
-    
+    private SliceStrategy sliceStrategy;
+
     /**
-     * 结束时间（含）
+     * 切片参数（JSON）
      */
-    @TableField("date_to")
-    private LocalDateTime dateTo;
-    
+    private JsonNode sliceParams;
+
     /**
      * 计划状态
      */
-    @TableField("status")
     private PlanStatus status;
 }
+

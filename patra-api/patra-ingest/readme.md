@@ -1,249 +1,348 @@
-# 1) 有界上下文（Bounded Context）与通用语言（Ubiquitous Language）
+# `patra-ingest`
 
-**Ingest（采集）上下文**负责：计划编排（Plan/PlanSlice）→ 任务下发（Job）→ 运行（Run/RunBatch）→ 游标推进（Cursor/CursorHistory）→ 源命中与回放（SourceHit）→ 字段谱系（FieldProvenance）→ 指标快照（MetricSnapshot）。
-
-通用术语：
-
-* **Plan**：采集计划（时间范围、表达式、供给方配置）。
-* **PlanSlice**：计划切片（按时间/ID分片，让任务并发可控）。
-* **Job**：从计划或切片生成的可执行单元（具幂等等、调度时间窗）。
-* **Run**：一次 Job 的尝试（带窗口与 attemptNo，不变量：from < to，attempt ≥ 1）。
-* **RunBatch**：Run 内的批处理编号（幂等等键保障去重）。
-* **Cursor**：来源级别的增量推进点（key/value，面向外部源）。
-* **CursorHistory**：游标变更的可追溯历史（窗口+时间）。
-* **SourceHit**：对外部源的原始命中（保存原始 JSON、哈希、来源唯一 ID）。
-* **FieldProvenance**：某作品（work）字段的来源证明（哪个命中、哪条值、何时抽取）。
-* **MetricSnapshot**：某作品/来源的指标（质量、覆盖度等）在某时刻的快照。
+> Ingest 服务：可观测数据与业务事件的统一入口，负责高吞吐低延迟地接收、校验、规范化与落地（持久化/缓存/转发），并通过 Outbox + Relay 实现对外发布；作为写侧入口，读侧通过 contract 暴露必要的查询能力（状态/偏移/任务）。
+> 架构采用 六边形架构（Hexagonal / Ports & Adapters）+ DDD 分层 + CQRS，保持业务内核纯净与技术细节隔离。
 
 ---
 
-# 2) 聚合划分（Aggregates）与关系
+## 1. 分层与依赖原则
 
-## A. Plan 聚合
+整体分层结构与依赖方向与仓库统一约束一致：
 
-* **聚合根**：`Plan`
-* **实体**：`PlanSlice`（也可独立为聚合，取决于写入/并发需求；推荐**独立聚合**以降低 Plan 热点）
-* **不变量**：`dateFrom <= dateTo`；Plan 状态机（DRAFT→ACTIVE→PAUSED→FINISHED）
-* **关系**：`Plan`（弱引用）→ `PlanSlice`（独立聚合，用 `planId` 关联）
+- 接口层（api）：对外契约（REST/RPC DTO、IntegrationEvent DTO、错误码、路径常量等）。
+  - 仅依赖：`jakarta.validation`。
+  - 不依赖 Spring、domain、infra、app、contract。
 
-## B. Job 聚合
+- 契约层（contract）：内部跨层查询契约（QueryPort + ReadModel/DTO、查���条件对象、共享轻量枚举）。
+  - 被 `app` 调用，被 `infra` 实现。
+  - 不依赖 Spring、domain、app、adapter、api。
 
-* **聚合根**：`Job`
-* **实体**：无（Job 内部属性即可）
-* **不变量**：`jobKey`/`idempotentKey` 唯一；时间窗与状态机（PENDING→SCHEDULED→RUNNING→SUCCEED/FAILED/CANCELLED）
-* **关系**：Job 引用 `Plan`/`PlanSlice` 的 id（弱一致，不加 FK 也行）
+- 适配层（adapter）：协议适配（Web、MQ、Scheduler）。
+  - 依赖：`app` + `api`，可选 Web/MQ SDK。
+  - 不依赖 domain、infra、contract。
 
-## C. Run 聚合
+- 应用层（app）：用例编排（鉴权、事务、聚合协作、事件触发）。
+  - 依赖：`domain`、`contract`、`patra-common` 等共享库。
+  - 不依赖 adapter、infra、api。
 
-* **聚合根**：`Run`
-* **实体**：`RunBatch`（通常**同一事务内写入**，建议作为**同聚合**子实体）
-* **不变量**：`windowFrom < windowTo`；`attemptNo ≥ 1`；`(jobId, cursorKey, window, attemptNo)` 幂等唯一
+- 领域层（domain）：业务内核（聚合、实体、值对象、领域事件、仓储端口）。
+  - 依赖：`patra-common`（含 hutool-core）。
+  - 不依赖 Spring、MyBatis、Web、api、contract。
 
-## D. Cursor 聚合
+- 基础设施层（infra）：持久化/缓存/消息等技术实现。
+  - 依赖：`domain`、`contract`、`patra-spring-boot-starter-mybatis` 等。
+  - 不依赖 app、adapter、api。
 
-* **聚合根**：`Cursor`
-* **实体**：`CursorHistory`（可作为独立表/审计，不必在同一聚合内强事务）
-* **不变量**：同一 `(provenanceId, cursorKey)` 唯一；推进策略单调不回退（由领域服务保证）
+依赖方向（A → B 表示 A 依赖 B）：
 
-## E. SourceHit 聚合
-
-* **聚合根**：`SourceHit`
-* **不变量**：`(provenanceId, sourceSpecificId, rawDataHash)` 唯一；`retrievedAt` 不晚于持久化时间（弱检查）
-
-## F. FieldProvenance 聚合
-
-* **聚合根**：`FieldProvenance`
-* **不变量**：`(workId, fieldName, sourceHitId, valueHash)` 唯一；`collectedAt` 合理
-
-## G. MetricSnapshot 聚合
-
-* **聚合根**：`MetricSnapshot`
-* **不变量**：`(workId, metricType, source, collectedAt)` 唯一
-
-> 读多写少的 **FieldProvenance** 与 **MetricSnapshot** 可用于读模型/分析，必要时与 OLAP 分层解耦。
+```
+boot     → adapter, app, infra
+adapter  → app, api
+app      → domain, contract
+infra    → domain, contract
+api      → (no deps)
+contract → (no deps)
+domain   → (no deps，仅通用库)
+```
 
 ---
 
-# 3) 领域对象草模（关键属性 & 不变量）
+## 2. 模块说明
 
-> 仅列核心字段，实际代码以 Record/类形式表达，保持值对象不可变与输入校验。
+### 2.1 `patra-ingest-api`
 
-* **Plan**
+职责
 
-    * id, planKey, name, exprHash, dateFrom, dateTo, status, createdAt, updatedAt
-    * 规则：时间范围合法；状态机流转合法
+- 定义对��契约：REST/RPC DTO、IntegrationEvent DTO、路径与错误码常量。
+- 统一 Ingest 协议（支持批量/压缩/分片等可选能力，向后兼容演进）。
 
-* **PlanSlice**
+约束
 
-    * id, planId, sliceNo, sliceFrom, sliceTo, exprHash
-    * 规则：范围合法；在 Plan 范围内（应用/领域校验）
+- 只依赖 `jakarta.validation`。
+- 不包含任何实现逻辑。
 
-* **Job**
+目录结构
 
-    * id, jobKey, idempotentKey, planId?, sliceId?, scheduledAt, status, windowFrom?, windowTo?
-    * 规则：幂等键唯一；状态/时间窗一致性
-
-* **Run**
-
-    * id, jobId, cursorKey?, windowFrom, windowTo, attemptNo, status
-    * 规则：窗口合法；attempt ≥ 1；与 Job 关联存在
-
-* **RunBatch**
-
-    * id, runId, batchNo, idempotentKey, status
-    * 规则：批次号单 run 唯一；幂等键唯一
-
-* **Cursor**
-
-    * id, literatureProvenanceId, cursorKey, cursorValue, version
-    * 规则：同源-同 key 唯一；推进策略（单调）
-
-* **SourceHit**
-
-    * id, workId, literatureProvenanceId, sourceSpecificId, retrievedAt, rawDataJson, rawDataHash
-    * 规则：去重唯一键；hash/bin 比较
-
-* **FieldProvenance**
-
-    * id, workId, fieldName, sourceHitId, valueJson, valueHash, collectedAt
-    * 规则：组合唯一；对应 SourceHit 存在（弱检查）
-
-* **MetricSnapshot**
-
-    * id, workId, metricType, source, collectedAt, valueJson
-    * 规则：组合唯一
-
-> **值对象**：`TimeWindow(from, to)`、`IdempotentKey(value)`、`ExprHash(value)`、`CursorPair(key, value)`、`MetricValue(json)`、`ProvenanceValue(json, hash)` 等，均在构造时校验。
+```
+rest/dto/{request,response}/
+rpc/client/
+events/
+enums/
+error/
+```
 
 ---
 
-# 4) 领域事件（Domain Events）
+### 2.2 `patra-ingest-contract`
 
-* `PlanActivated`, `PlanPaused`, `PlanFinished`
-* `JobScheduled`, `JobStarted`, `JobSucceeded`, `JobFailed`, `JobCancelled`
-* `RunStarted`, `RunSucceeded`, `RunFailed`, `RunRetried`
-* `CursorAdvanced`（携带 old/new 值，用于写入 CursorHistory）
-* `SourceHitRecorded`（触发解析/规范化流程）
-* `FieldProvenanceDerived`（某字段已抽取出标准值）
-* `MetricSnapshotUpdated`
+职责
 
-事件用于解耦：**应用服务**发布领域事件；**出站适配器**（MQ/异步）订阅推进下游流程。
+- 定义内部跨层查询契约：
+  - 查询端口（QueryPort 接口）。
+  - 查询返回对象（ReadModel/DTO）。
+  - 查询条件对象（例如按 stream/source/时间范围统计、偏移与健康状态）。
+- 可选：共享的轻量枚举或 VO。
 
----
+约束
 
-# 5) 领域服务与策略（Domain Services / Policies）
+- 不依赖 Spring/Web/domain。
+- 被 `app` 调用，被 `infra` 实现。
 
-* **JobAssembler**：从 Plan/PlanSlice 生成 Job（计算幂等等 key、设定时间窗、去重防抖）。
-* **RunOrchestrator**：驱动 Run 生命周期（attempt 递增、窗口继承、失败重试上限策略）。
-* **CursorAdvancePolicy**：基于来源类型定义推进规则（时间戳/自增 ID/复合游标），保证**单调**与**幂等**。
-* **SourceNormalizationService（ACL 防腐层）**：原始 JSON → 规范值（`valueJson`）与 schema 版本；产出 `valueHash`。
-* **FieldDerivationService**：将 SourceHit 解析出的候选值写入 FieldProvenance，处理冲突（最新优先/质量优先/权重合并）。
-* **MetricAggregationService**：周期性从 Field/Hit 汇总指标，写入 MetricSnapshot。
+目录结构
 
----
-
-# 6) 仓储端口（Repository Ports）
-
-> 每个聚合一个仓储接口，**放在 app**，仅表达领域意图；实现由 infra 提供（MyBatis-Plus）。
-
-* `PlanRepository`：`save/ByKey/findSlices(planId)/activate/pause/finish`
-* `PlanSliceRepository`：`save/batchSave/findByPlanAndNo`
-* `JobRepository`：`save/findByKey/findPending(beforeTime)/markRunning/finish`
-* `RunRepository`：`save/findLatestAttempt(jobId,window)/appendBatch/listBatches(runId)/finish`
-* `CursorRepository`：`get(provenanceId, key)/saveOrAdvance/appendHistory`
-* `SourceHitRepository`：`saveIfAbsent(hit)/listByWork(workId, page)/existsByUnique(provenanceId, sourceSpecificId, hash)`
-* `FieldProvenanceRepository`：`saveIfAbsent(fp)/listLatestByWorkAndField(workId, field, limit)`
-* `MetricSnapshotRepository`：`upsert(snapshot)/findLatest(workId, metricType, source)`
-
-> **查询型端口（Query Ports）**：为读用例提供面向场景的查询（避免在应用层堆 SQL）。
+```
+query/port/
+query/view/
+common/
+```
 
 ---
 
-# 7) 应用服务用例（Application Services）
+### 2.3 `patra-ingest-adapter`
 
-* **PlanAppService**
+职责
 
-    * `createPlan(cmd)`：校验范围/表达式，持久化，发 `PlanActivated?`
-    * `slicePlan(planId, policy)`：生成切片，落库
-    * `activate/pause/finish(planId)`
+- 协议适配：
+  - REST 控制器：对接 Agent/SDK/Collector（如 OpenTelemetry Collector）入站写入接口；
+  - MQ Consumer：支持外部系统推送或重放；
+  - Scheduler：重试/补偿/定时聚合与 Outbox Relay；
+  - Producer：实现 app 发布端口，将 AppEvent → IntegrationEvent（api DTO）→ 通过 MQ/HTTP 发送。
+- 只做参数校验/映射/转发，不写业务逻辑。
 
-* **JobAppService**
+约束
 
-    * `generateJobs(planId or sliceId)`：调用 `JobAssembler`
-    * `scheduleDueJobs(now)`：拉取待调度，投递执行事件/命令
-    * `markJobRunning/finish/fail(jobId, reason)`
-
-* **RunAppService**
-
-    * `startRun(jobId, window, attempt)`：校验幂等键，创建 `Run` 与首个 `RunBatch`
-    * `appendRunBatch(runId, batchNo, idemKey)`：入队批次
-    * `finishRun(runId, summary)`：写指标/派生下一步
-
-* **CursorAppService**
-
-    * `advanceCursor(provenanceId, key, candidateValue)`：根据策略推进 + 记录历史
-
-* **IngestAppService（面向外部源）**
-
-    * `recordSourceHit(cmd)`：`SourceHitRepository.saveIfAbsent` → 发布 `SourceHitRecorded`
-    * `deriveFieldProvenance(hitId)`：调用规范化与派生服务 → 写 `FieldProvenance`
-    * `updateMetricSnapshot(workId, metrics)`：写 `MetricSnapshot`
-
-> 应用服务只做**编排**与**事务边界**控制；领域规则在实体/值对象/领域服务中。
+- 依赖：`app` + `api`。
+- 不依赖 domain/infra/contract。
 
 ---
 
-# 8) 六边形架构端口与适配器
+### 2.4 `patra-ingest-app`
 
-* **入站适配器（驱动）**：REST（管理/查询）、Scheduler（定时调度）、MQ/事件订阅（触发下游）
-* **出站适配器（被驱动）**：Repository（MyBatis-Plus）、外部 API 客户端、消息发布器（RocketMQ/Kafka）、配置中心（Nacos）
+职责
 
-端口定义：
+- 用例编排：
+  - 写侧���鉴权、幂等、解压/解码、规范化、分流与聚合边界调用、事务控制；
+  - 读侧：经 `contract.QueryPort` 聚合查询读模型；
+  - 事件：将领域事件转为 AppEvent，通过发布端口写入 Outbox。
+- 转换领域异常为应用异常。
 
-* `…Repository` 接口（app）
-* `EventPublisher`（app，发布领域事件）
-* `ExternalSourceClient`（ACL，屏蔽源系统差异）
+约束
 
----
-
-# 9) 枚举与类型映射（MyBatis-Plus / TypeHandler）
-
-* `Status`、`MetricType`、`SourceType` 等统一枚举，落库采用 **TINYINT 或 VARCHAR + CodeEnum**；
-* `Hash`/`Key` 等值对象在 TypeHandler 中按 **BINARY/utf8mb4\_bin** 对等映射，避免大小写陷阱。
-* `TimeWindow` 可拆两列映射，构造时校验。
+- 依赖：`domain`、`contract`、`patra-common`（以及必要的 starter）。
+- 不依赖 adapter/infra/api。
 
 ---
 
-# 10) 事务与一致性
+### 2.5 `patra-ingest-domain`
 
-* **单聚合强事务**：`Plan`、`Job`、`Run(+RunBatch)`、`Cursor`、`SourceHit`、`FieldProvenance`、`MetricSnapshot`。
-* **跨聚合最终一致**：用领域事件驱动（本地事务 + 事件表/Outbox），出站 MQ 发布，订阅者异步处理。
-* **幂等**：所有写接口以 `idempotentKey` 或复合唯一键兜底；应用层重试不造成重复写。
+职责
 
----
+- 领域建模：
+  - 聚合：IngestStream、IngestBatch、RoutingRule、Source 等；
+  - 领域行为：验证 schema、不变量与配额；批次合并与提交；
+  - 领域事件：RecordIngested、BatchCommitted、StreamRouted 等；
+  - 仓储端口：加载/持久化聚合快照与事件。
 
-# 11) 查询模型与索引友好用例
+约束
 
-* **最新指标**：`findLatest(workId, metricType, source)` 走 `(work_id, metric_type, source, collected_at)` 索引 + `ORDER BY collected_at DESC LIMIT 1`
-* **按作品回放来源**：`listByWork(workId, page)` 走 `(work_id, retrieved_at)` 索引
-
----
-
-# 13) 命名与转换器约定
-
-* 转换器分三类：
-
-    * `*RestAssembler`：`Req/Resp ↔ App DTO`（adapter-in/web）
-    * `*xxxConverter`：`DO ↔ Domain`（adapter-out/persistence）
-    * `*AppConverter`：`ExternalDTO ↔ Domain/VO`（app）
-* 枚举与码表：`XxxStatus` 采用 `CodeEnum`。
+- 依赖：`patra-common`。
+- 不依赖 Spring/ORM/Web/api/contract；零注解。
 
 ---
 
-# 15) 与表结构的精确映射要点
+### 2.6 `patra-ingest-infra`
 
-* 所有 `id`/外键列统一 `BIGINT UNSIGNED`；实体用 `Long`，并在 MP 配置 `DbColumnType.LONG`。
-* 哈希/键类字段用 **BINARY/utf8mb4\_bin**；TypeHandler 做到**大小写透明**。
-* `TimeWindow` 映射两列，构造器校验 `from < to`；数据库加 `CHECK` 双保险。
-* **幂等等键**在领域中作为**值对象**参与等价性判断；库中建唯一索引兜底。
-* 读多写少的查询构造成 **Query Port**，避免在应用层拼 SQL。
+职责
+
+- 技术落地：
+  - 实现 `domain.port.*` 的仓储，维护 DO ↔ 聚合映射；
+  - 实现 `contract.QueryPort` 的查询（状态/吞吐/延迟/失败原因等读模型）；
+  - Outbox 托管与事务一致性；
+  - 可选缓存与批量写优化（分片、合并、异步刷盘）。
+
+约束
+
+- 依赖：`domain` + `contract` + MyBatis/Starter 等。
+- 不依赖 app/adapter/api。
+
+---
+
+## 3. 事件流转规范
+
+- 领域事件（DomainEvent）：在 domain 产生，描述 Ingest 业务事实（如某条记录被接收、批次已提交）。
+- 应用事件（AppEvent）：在 app 定义/触发，承载编排语境；通过发布端口写入 Outbox。
+- 集成事件（IntegrationEvent）：在 api 定义，作为对外契约（供下游存储/索引/分析或其他服务订阅）。
+- 发布链路：DomainEvent → AppEvent → adapter → IntegrationEvent → MQ/RPC/REST。
+- 订阅链路：adapter 消费 IntegrationEvent → 转为 command/query → 调 app → domain 执行业务 → infra 落库。
+
+---
+
+## 4. 开发约束与风格
+
+- 零注解/零框架污染：domain 层不出现 `@Component/@Entity/@Table`。
+- Lombok 强制：数据类与 DO/DTO/VO 等统一使用 Lombok，不手写 getter/setter/toString/equals/hashCode。
+- MapStruct：Converter 必须被 Spring 管理；只做字段映射，不含业务。
+- Mapper：所有 Mapper 必须 `extends BaseMapper<DO>`。
+- DTO/事件演进��新增字段向后兼容，破坏性修改采用版本化策略（Ingest 协议 version 字段）。
+- 幂等等：写侧通过 requestId/traceId/内容哈希等形成幂等键；批次内去重；可选滑动窗口控制。
+- 回压与限流：在 adapter 层进行初步限流，app 层保障背压与排队策略，infra 层批量落库。
+
+---
+
+## 5. 测试策略
+
+- domain：聚合行为与不变量（批次合并、配额校验、路由规则）。
+- app：编排链路（幂等等、解压/解码、事件发布）。
+- infra：仓储单测覆盖 DO ↔ 聚合 ↔ ReadModel 映射、CRUD、并发控制、Outbox 一致性。
+- adapter：契约测试（REST/MQ 输入输出与文档一致，包含批量与压缩场景）。
+- api：DTO/事件模型序列化正确，包含 version 演进用例。
+
+---
+
+## 6. 版本与演进
+
+- 向后兼容优先；Ingest 协议通过 `version` 字段演进。
+- 弃用策略：旧接口/事件标记 `@Deprecated` 并设定淘汰周期；
+- 契约文档：OpenAPI/AsyncAPI 或 Markdown 同步更新。
+
+---
+
+## 7. 架构分层与依赖方向（Hexagonal + DDD + CQRS）
+
+```mermaid
+flowchart TD
+%% 约定：A --> B 表示 A 依赖 B（编译期依赖）
+
+subgraph API[api对外契约, 无依赖]
+API1[REST/RPC DTO]
+API2[IntegrationEvent DTO]
+end
+
+subgraph CONTRACT[contract内部查询契约, 无依赖]
+C1[QueryPort]
+C2[ReadModel/DTO]
+end
+
+subgraph DOMAIN[domain领域内核, 无依赖]
+D1[Aggregates/Entities/VO]
+D2[Domain Events]
+D3[Repository Ports]
+end
+
+subgraph APP[app用例编排]
+P1[Command UseCases]
+P2[Query UseCases]
+P3[Event Publisher Port]
+end
+
+subgraph INFRA[infra技术实现]
+I1[RepositoryImpl]
+I2[QueryPortImpl]
+I3[Outbox Storage]
+end
+
+subgraph ADAPTER[adapter协议适配]
+A1[REST Controllers]
+A2[MQ Consumers/Producers]
+A3[Schedulers]
+end
+
+subgraph BOOT[boot启动装配]
+B1[Spring Boot App]
+end
+
+%% 依赖边（A 依赖 B）
+ADAPTER --> APP
+ADAPTER --> API
+
+APP --> DOMAIN
+APP --> CONTRACT
+
+INFRA --> DOMAIN
+INFRA --> CONTRACT
+
+BOOT --> ADAPTER
+BOOT --> APP
+BOOT --> INFRA
+```
+
+---
+
+## 8. 入站写入典型调用链（REST 批量写）
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client/Agent/Collector
+  participant AC as Adapter.Controller
+  participant AS as App.IngestService
+  participant RP as Domain.RepositoryPort
+  participant IR as Infra.RepositoryImpl
+  participant AG as Domain.IngestStream Aggregate
+
+  C->>AC: POST /api/ingest/streams/{streamId}/records BatchRequestDTO
+  AC->>AS: 转换为 Command（含幂等键/压缩信息）
+  AS->>RP: load(streamId)
+  RP->>IR: findById(streamId)
+  IR-->>RP: Aggregate Snapshot
+  RP-->>AS: Aggregate
+  AS->>AG: 校验/合并/路由（执行业务���则）
+  AS->>RP: save(aggregate)
+  RP->>IR: persist + append outbox(AppEvent)
+  IR-->>RP: OK
+  AS-->>AC: ResponseDTO（成功条数/失败原因/下游偏移）
+  AC-->>C: 200 OK + ResponseDTO
+```
+
+---
+
+## 9. 查询调用链（读侧，经过 contract）
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant AC as Adapter.Controller
+  participant AS as App.QueryService
+  participant QP as Contract.QueryPort
+  participant IQ as Infra.QueryPortImpl
+  participant V as Contract.ReadModel
+
+  C->>AC: GET /api/ingest/streams/{id}/stats?range=...
+  AC->>AS: 转换为 Query 调用用例
+  AS->>QP: findStatsByStream(range)
+  QP->>IQ: infra 实现查询
+  IQ-->>QP: ReadModel(吞吐/延迟/失败率)
+  QP-->>AS: ReadModel
+  AS-->>AC: 转换为 ResponseDTO
+  AC-->>C: 200 OK + ResponseDTO
+```
+
+---
+
+## 10. 事件发布典型链路（出站）
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant AG as Domain.Ingest Aggregate
+  participant AS as App.Service
+  participant EP as App.EventPublisher (Port)
+  participant IR as Infra.RepositoryImpl
+  participant OB as Infra.Outbox
+  participant RL as Adapter.OutboxRelay
+  participant MP as Adapter.MQ Producer
+  participant API as api.IntegrationEvent DTO
+  participant MQ as MQ Broker
+
+  AG-->>AS: DomainEvent(RecordIngested/BatchCommitted)
+  AS->>EP: publish(AppEvent)
+  EP->>IR: Outbox.append(AppEvent JSON)
+  IR->>OB: 保存与聚合同事务
+  RL->>OB: poll(PENDING)
+  OB-->>RL: AppEvent JSON
+  RL->>API: 转换为 IntegrationEvent
+  RL->>MP: send(IntegrationEvent)
+  MP->>MQ: produce(topic, payload)
+  MQ-->>*: 下游存储/索引/分析系统消费
+```

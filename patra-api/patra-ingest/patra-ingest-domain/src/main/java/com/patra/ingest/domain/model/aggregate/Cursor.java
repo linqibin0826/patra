@@ -1,258 +1,356 @@
 package com.patra.ingest.domain.model.aggregate;
 
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.ingest.domain.model.enums.CursorAdvanceDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
-import com.patra.ingest.domain.model.vo.CursorKey;
-import com.patra.ingest.domain.model.vo.CursorState;
+import com.patra.ingest.domain.model.enums.NamespaceScope;
+import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.event.CursorAdvancedEvent;
 import lombok.Builder;
-import lombok.Value;
-import lombok.With;
+import lombok.Getter;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * 游标聚合根
- * 管理数据源的游标状态和位置信息
+ * 通用水位聚合根。
+ * <p>
+ * 为某来源 + 操作类型 + 游标键 + 命名空间维护"当前水位"，统一 time/id/token 三形态。
+ * 支持归一化时间/数值以进行排序与范围对比；保留最近一次推进的 lineage 以支撑端到端追踪。
+ * </p>
+ * <p>
+ * 聚合根职责：
+ * - 管理水位的推进和回退
+ * - 确保水位变更的有效性
+ * - 维护水位溯源信息
+ * - 产生水位推进事件
+ * </p>
  *
  * @author linqibin
  * @since 0.1.0
  */
-@Value
+@Getter
 @Builder
-@With
 public class Cursor {
-    
-    /**
-     * 聚合根ID
-     */
-    Long id;
-    
-    /**
-     * 关联任务ID
-     */
-    Long jobId;
-    
-    /**
-     * 游标键
-     */
-    CursorKey cursorKey;
-    
-    /**
-     * 游标类型
-     */
-    CursorType type;
-    
-    /**
-     * 游标状态
-     */
-    CursorState state;
-    
-    /**
-     * 扩展属性（存储额外的游标相关信息）
-     */
+
+    /** 聚合标识 */
+    private final Long id;
+
+    /** 来源代码 */
+    private final ProvenanceCode literatureProvenanceCode;
+
+    /** 操作类型 */
+    private final OperationType operation;
+
+    /** 游标键 */
+    private final String cursorKey;
+
+    /** 命名空间 */
+    private final NamespaceScope namespaceScope;
+
+    /** 命名空间键 */
+    private final String namespaceKey;
+
+    /** 游标类型 */
+    private final CursorType cursorType;
+
+    /** 当前有效游标值 */
+    private String cursorValue;
+
+    /** 观测到的最大边界 */
+    private String observedMaxValue;
+
+    /** 归一化时间（cursorType=time 时填充） */
+    private LocalDateTime normalizedInstant;
+
+    /** 归一化数值（cursorType=id 时填充） */
+    private BigDecimal normalizedNumeric;
+
+    /** 最近一次推进的调度实例 */
+    private Long scheduleInstanceId;
+
+    /** 最近一次推进关联 Plan */
+    private Long planId;
+
+    /** 最近一次推进关联 Slice */
+    private Long sliceId;
+
+    /** 最近一次推进关联 Task */
+    private Long taskId;
+
+    /** 最近一次推进的 Run */
+    private Long lastRunId;
+
+    /** 最近一次推进的 Batch */
+    private Long lastBatchId;
+
+    /** 最近推进使用的表达式哈希 */
+    private String exprHash;
+
+    /** 领域事件列表 */
     @Builder.Default
-    Map<String, String> properties = new HashMap<>();
-    
+    private final List<Object> domainEvents = new ArrayList<>();
+
     /**
-     * 备注信息
+     * 创建新的水位游标。
+     *
+     * @param literatureProvenanceCode 来源代码
+     * @param operation               操作类型
+     * @param cursorKey               游标键
+     * @param namespaceScope          命名空间
+     * @param namespaceKey            命名空间键
+     * @param cursorType              游标类型
+     * @param initialValue            初始值
+     * @return 游标实例
      */
-    String remarks;
-    
+    public static Cursor create(ProvenanceCode literatureProvenanceCode,
+                               OperationType operation,
+                               String cursorKey,
+                               NamespaceScope namespaceScope,
+                               String namespaceKey,
+                               CursorType cursorType,
+                               String initialValue) {
+
+        validateCreationParameters(literatureProvenanceCode, operation, cursorKey,
+                                 namespaceScope, namespaceKey, cursorType);
+
+        Cursor cursor = Cursor.builder()
+                .literatureProvenanceCode(literatureProvenanceCode)
+                .operation(operation)
+                .cursorKey(cursorKey)
+                .namespaceScope(namespaceScope)
+                .namespaceKey(namespaceKey != null ? namespaceKey : "")
+                .cursorType(cursorType)
+                .cursorValue(initialValue)
+                .build();
+
+        // 设置归一化值
+        cursor.updateNormalizedValues(initialValue);
+
+        return cursor;
+    }
+
     /**
-     * 乐观锁版本号
+     * 验证创建参数。
      */
-    Long version;
-    
-    /**
-     * 创建时间
-     */
-    LocalDateTime createdAt;
-    
-    /**
-     * 更新时间
-     */
-    LocalDateTime updatedAt;
-    
-    /**
-     * 验证游标的业务规则
-     */
-    public void validate() {
-        if (jobId == null) {
-            throw new IllegalArgumentException("任务ID不能为空");
+    private static void validateCreationParameters(ProvenanceCode literatureProvenanceCode,
+                                                 OperationType operation,
+                                                 String cursorKey,
+                                                 NamespaceScope namespaceScope,
+                                                 String namespaceKey,
+                                                 CursorType cursorType) {
+        if (literatureProvenanceCode == null) {
+            throw new IllegalArgumentException("来源代码不能为空");
         }
-        if (cursorKey == null) {
+        if (operation == null) {
+            throw new IllegalArgumentException("操作类型不能为空");
+        }
+        if (cursorKey == null || cursorKey.trim().isEmpty()) {
             throw new IllegalArgumentException("游标键不能为空");
         }
-        if (type == null) {
+        if (namespaceScope == null) {
+            throw new IllegalArgumentException("命名空间不能为空");
+        }
+        if (cursorType == null) {
             throw new IllegalArgumentException("游标类型不能为空");
         }
-        if (state == null) {
-            throw new IllegalArgumentException("游标状态不能为空");
-        }
-        
-        // 根据类型验证游标值格式
-        validateCursorValueByType();
     }
-    
+
     /**
-     * 根据游标类型验证游标值格式
+     * 推进水位。
+     *
+     * @param newValue    新的水位值
+     * @param direction   推进方向
+     * @param windowFrom  覆盖窗口起
+     * @param windowTo    覆盖窗口止
+     * @param taskId      关联任务ID
+     * @param runId       关联运行ID
+     * @param batchId     关联批次ID
+     * @param exprHash    表达式哈希
+     * @throws IllegalArgumentException 如果新值无效
      */
-    private void validateCursorValueByType() {
-        String value = state.getValue();
-        
-        switch (type) {
-            case PAGE:
-                try {
-                    int page = Integer.parseInt(value);
-                    if (page < 0) {
-                        throw new IllegalArgumentException("分页游标值必须为非负整数");
-                    }
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("分页游标值必须为有效整数");
-                }
+    public void advance(String newValue,
+                       CursorAdvanceDirection direction,
+                       LocalDateTime windowFrom,
+                       LocalDateTime windowTo,
+                       Long taskId,
+                       Long runId,
+                       Long batchId,
+                       String exprHash) {
+
+        if (newValue == null) {
+            throw new IllegalArgumentException("新的水位值不能为空");
+        }
+
+        // 验证推进方向的合法性
+        if (CursorAdvanceDirection.FORWARD.equals(direction)) {
+            validateForwardAdvance(newValue);
+        }
+
+        String oldValue = this.cursorValue;
+        this.cursorValue = newValue;
+        updateNormalizedValues(newValue);
+
+        // 更新溯源信息
+        updateLineage(taskId, runId, batchId, exprHash);
+
+        // 产生推进事件
+        addDomainEvent(CursorAdvancedEvent.of(
+                literatureProvenanceCode,
+                operation,
+                cursorKey,
+                namespaceScope,
+                namespaceKey,
+                cursorType,
+                oldValue,
+                newValue,
+                direction,
+                windowFrom,
+                windowTo
+        ));
+    }
+
+    /**
+     * 验证前向推进的合法性。
+     */
+    private void validateForwardAdvance(String newValue) {
+        if (cursorValue == null) {
+            return; // 首次设置，无需验证
+        }
+
+        switch (cursorType) {
+            case TIME:
+                validateTimeAdvance(newValue);
                 break;
-                
-            case TIMESTAMP:
-                try {
-                    Long.parseLong(value);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("时间戳游标值必须为有效长整型");
-                }
+            case ID:
+                validateIdAdvance(newValue);
                 break;
-                
             case TOKEN:
-            case CUSTOM:
-                // TOKEN和CUSTOM类型的游标值格式由具体业务决定，这里不做严格验证
+                // TOKEN 类型无需验证顺序，任��值都可以
                 break;
-                
-            default:
-                throw new IllegalArgumentException("不支持的游标类型: " + type);
         }
     }
-    
+
     /**
-     * 更新游标值
+     * 验证时间类型的推进。
      */
-    public Cursor updateValue(String newValue) {
-        if (state.getFinished()) {
-            throw new IllegalStateException("已完成的游标不能更新值");
-        }
-        
-        CursorState newState = state.updateValue(newValue);
-        return this.withState(newState).withUpdatedAt(LocalDateTime.now());
-    }
-    
-    /**
-     * 标记游标为已完成
-     */
-    public Cursor markFinished() {
-        CursorState newState = state.markFinished();
-        return this.withState(newState).withUpdatedAt(LocalDateTime.now());
-    }
-    
-    /**
-     * 设置下次检查时间
-     */
-    public Cursor scheduleNextCheck(LocalDateTime nextCheckAt) {
-        if (state.getFinished()) {
-            throw new IllegalStateException("已完成的游标不需要设置检查时间");
-        }
-        
-        CursorState newState = state.withNextCheck(nextCheckAt);
-        return this.withState(newState).withUpdatedAt(LocalDateTime.now());
-    }
-    
-    /**
-     * 判断游标是否已完成
-     */
-    public boolean isFinished() {
-        return state.getFinished();
-    }
-    
-    /**
-     * 判断是否需要检查
-     */
-    public boolean needsCheck() {
-        return state.needsCheck();
-    }
-    
-    /**
-     * 获取游标当前值
-     */
-    public String getCurrentValue() {
-        return state.getValue();
-    }
-    
-    /**
-     * 获取下一个页码（仅适用于分页类型）
-     */
-    public Integer getNextPage() {
-        if (type != CursorType.PAGE) {
-            throw new IllegalStateException("只有分页类型的游标才能获取下一页码");
-        }
-        
+    private void validateTimeAdvance(String newValue) {
         try {
-            int currentPage = Integer.parseInt(state.getValue());
-            return currentPage + 1;
-        } catch (NumberFormatException e) {
-            throw new IllegalStateException("分页游标值格式错误: " + state.getValue());
+            LocalDateTime newTime = LocalDateTime.parse(newValue);
+            if (normalizedInstant != null && newTime.isBefore(normalizedInstant)) {
+                throw new IllegalArgumentException("时间类型的水位不能后退");
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无效的时间格式: " + newValue);
         }
     }
-    
+
     /**
-     * 设置扩展属性
+     * 验证ID类型的推进。
      */
-    public Cursor setProperty(String key, String value) {
-        if (key == null || key.trim().isEmpty()) {
-            throw new IllegalArgumentException("属性键不能为空");
+    private void validateIdAdvance(String newValue) {
+        try {
+            BigDecimal newId = new BigDecimal(newValue);
+            if (normalizedNumeric != null && newId.compareTo(normalizedNumeric) < 0) {
+                throw new IllegalArgumentException("ID类���的水位不能后退");
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无效的数值格式: " + newValue);
         }
-        
-        Map<String, String> newProperties = new HashMap<>(this.properties);
+    }
+
+    /**
+     * 更新归一化值。
+     */
+    private void updateNormalizedValues(String value) {
         if (value == null) {
-            newProperties.remove(key);
-        } else {
-            newProperties.put(key, value);
+            return;
         }
-        
-        return this.withProperties(newProperties).withUpdatedAt(LocalDateTime.now());
+
+        switch (cursorType) {
+            case TIME:
+                try {
+                    this.normalizedInstant = LocalDateTime.parse(value);
+                } catch (Exception e) {
+                    // 忽略解析错误，保持原值
+                }
+                break;
+            case ID:
+                try {
+                    this.normalizedNumeric = new BigDecimal(value);
+                } catch (Exception e) {
+                    // 忽略解析错误，保持原值
+                }
+                break;
+            case TOKEN:
+                // TOKEN 类型不需要归一化
+                break;
+        }
     }
-    
+
     /**
-     * 获取扩展属性
+     * 更新溯源信息。
      */
-    public String getProperty(String key) {
-        return properties.get(key);
+    private void updateLineage(Long taskId, Long runId, Long batchId, String exprHash) {
+        this.taskId = taskId;
+        this.lastRunId = runId;
+        this.lastBatchId = batchId;
+        this.exprHash = exprHash;
     }
-    
+
     /**
-     * 获取扩展属性，带默认值
+     * 获取唯一标识键。
+     *
+     * @return 唯一标识字符串
      */
-    public String getProperty(String key, String defaultValue) {
-        return properties.getOrDefault(key, defaultValue);
+    public String getUniqueKey() {
+        return String.format("%s:%s:%s:%s:%s",
+                literatureProvenanceCode.getCode(),
+                operation.name(),
+                cursorKey,
+                namespaceScope.name(),
+                namespaceKey != null ? namespaceKey : "");
     }
-    
+
     /**
-     * 判断是否包含指定属性
+     * 检查是否为全局命名空间。
+     *
+     * @return 如果是全局命名空间返回 true
      */
-    public boolean hasProperty(String key) {
-        return properties.containsKey(key);
+    public boolean isGlobalNamespace() {
+        return NamespaceScope.GLOBAL.equals(namespaceScope);
     }
-    
+
     /**
-     * 重置游标（将值重置为初始状态）
+     * 检查是否为表达式命名空间。
+     *
+     * @return 如果是表达式命名空间返回 true
      */
-    public Cursor reset(String initialValue) {
-        CursorState newState = CursorState.create(initialValue);
-        return this.withState(newState).withUpdatedAt(LocalDateTime.now());
+    public boolean isExprNamespace() {
+        return NamespaceScope.EXPR.equals(namespaceScope);
     }
-    
+
     /**
-     * 创建游标的副本（用于备份或测试）
+     * 添加领域事件。
      */
-    public Cursor copy() {
-        return this.withId(null)
-                   .withVersion(null)
-                   .withCreatedAt(null)
-                   .withUpdatedAt(null);
+    private void addDomainEvent(Object event) {
+        domainEvents.add(event);
+    }
+
+    /**
+     * 获取领域事件列表（只读）。
+     */
+    public List<Object> getDomainEvents() {
+        return Collections.unmodifiableList(domainEvents);
+    }
+
+    /**
+     * 清除领域事件。
+     */
+    public void clearDomainEvents() {
+        domainEvents.clear();
     }
 }

@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
 
 /**
  * 数据源查询能力数据对象
- * docref: /docs/schema/tables.inventory.md#reg_source_query_capability
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @SuperBuilder

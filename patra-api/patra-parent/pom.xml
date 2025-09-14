@@ -24,6 +24,7 @@
         <lombok.mapstruct.version>0.2.0</lombok.mapstruct.version>
 
         <hutoll.version>5.8.22</hutoll.version>
+        <xxl-job-starter.version>1.0.2</xxl-job-starter.version>
 
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.enforcer.plugin.version>3.4.1</maven.enforcer.plugin.version>
@@ -151,6 +152,12 @@
                 <groupId>com.papertrace</groupId>
                 <artifactId>patra-registry-api</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.github.yswtrue</groupId>
+                <artifactId>xxl-job-spring-boot3-starter</artifactId>
+                <version>${xxl-job-starter.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

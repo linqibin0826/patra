@@ -21,6 +21,8 @@ import java.util.Map;
  */
 public interface ExprCompiler {
 
+    Boolean hasAtom(Expr expr);
+
 
     // ========= 编译（验证 + 渲染） =========
 

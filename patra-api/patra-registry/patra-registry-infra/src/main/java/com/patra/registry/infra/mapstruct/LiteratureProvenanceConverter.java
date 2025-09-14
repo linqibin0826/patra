@@ -16,6 +16,6 @@ public interface LiteratureProvenanceConverter {
     /**w
      * DO 转换为文献数据源概要信息视图
      */
-    @Mapping(target = "code", expression = "java(literatureProvenanceDO.getCode().name())")
+    @Mapping(target = "code", expression = "java(literatureProvenanceDO.getCode().getCode())")
     ProvenanceSummaryView toSummary(LiteratureProvenanceDO literatureProvenanceDO);
 }
