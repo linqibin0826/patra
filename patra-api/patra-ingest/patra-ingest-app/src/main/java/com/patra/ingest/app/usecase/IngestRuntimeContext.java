@@ -5,7 +5,6 @@ import com.patra.ingest.domain.model.enums.SchedulerSource;
 import lombok.Builder;
 import lombok.Value;
 
-import java.time.Instant;
 import java.time.ZoneId;
 
 import static com.patra.ingest.domain.model.enums.SchedulerSource.XXL;

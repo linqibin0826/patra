@@ -2,7 +2,6 @@
 package com.patra.ingest.app.usecase.command;
 
 import java.time.Duration;
-import java.util.Objects;
 import java.util.Optional;
 
 /** 运行安全阈值，避免误采或过载。 */

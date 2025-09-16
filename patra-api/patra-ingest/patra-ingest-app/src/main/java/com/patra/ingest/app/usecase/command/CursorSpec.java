@@ -58,4 +58,9 @@ public record CursorSpec(
         return new CursorSpec(CursorType.HYBRID, timeField, SortDirection.ASC, lastSeenId,
                 since, until, Optional.empty(), Optional.empty());
     }
+
+    public static CursorSpec empty() {
+        return new CursorSpec(CursorType.TIME, Optional.empty(), SortDirection.ASC,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    }
 }

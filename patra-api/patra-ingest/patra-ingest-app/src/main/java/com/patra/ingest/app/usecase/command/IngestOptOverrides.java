@@ -8,17 +8,13 @@ import java.util.Optional;
  * 一般情况下应为空，优先使用数据源配置；仅在临时/灰度需要时覆盖。
  */
 public record IngestOptOverrides(
-        Optional<String> timeFieldName,
-        Optional<String> idFieldName,
-        Optional<String> pageParamName
+        Optional<String> timeFieldName
 ) {
     public IngestOptOverrides {
         timeFieldName = timeFieldName == null ? Optional.empty() : timeFieldName;
-        idFieldName = idFieldName == null ? Optional.empty() : idFieldName;
-        pageParamName = pageParamName == null ? Optional.empty() : pageParamName;
     }
 
     public static IngestOptOverrides empty() {
-        return new IngestOptOverrides(Optional.empty(), Optional.empty(), Optional.empty());
+        return new IngestOptOverrides(Optional.empty());
     }
 }
