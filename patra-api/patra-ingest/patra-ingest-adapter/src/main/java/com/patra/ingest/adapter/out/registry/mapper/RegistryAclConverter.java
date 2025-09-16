@@ -11,7 +11,7 @@ import org.mapstruct.ReportingPolicy;
         unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface RegistryAclConverter {
 
-    @Mapping(target = "timezone", expression = "java(ZoneId.of(resp.timezone()))")
+    @Mapping(target = "timezone", expression = "java(resp.timezone() == null ? ZoneId.of(\"UTC\") : ZoneId.of(resp.timezone()))")
     @Mapping(target = "retryPolicy", expression =
             "java(new ProvenanceConfigSnapshot.RetryPolicy(resp.retryMax(), resp.backoffMs(), resp.retryJitter()==null?0.0:resp.retryJitter()))")
     @Mapping(target = "rateLimitPolicy", expression =

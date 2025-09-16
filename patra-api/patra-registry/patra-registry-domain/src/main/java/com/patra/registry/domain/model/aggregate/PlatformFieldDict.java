@@ -5,7 +5,7 @@ import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.StrUtil;
 import com.patra.registry.domain.model.enums.Cardinality;
 import com.patra.registry.domain.model.enums.DataType;
-import com.patra.registry.domain.model.enums.DateType;
+import com.patra.common.enums.IngestDateType;
 import com.patra.registry.domain.model.vo.RecordRemark;
 import lombok.*;
 
@@ -59,7 +59,7 @@ public class PlatformFieldDict {
     /**
      * 仅日期类使用的 datetype 映射
      */
-    private DateType datetype;
+    private IngestDateType datetype;
 
     /**
      * 记录备注
@@ -88,7 +88,7 @@ public class PlatformFieldDict {
                                            DataType dataType,
                                            Cardinality cardinality,
                                            Boolean isDate,
-                                           DateType datetype,
+                                           IngestDateType datetype,
                                            String operator) {
         PlatformFieldDict agg = PlatformFieldDict.builder()
                 .id(id)
@@ -146,7 +146,7 @@ public class PlatformFieldDict {
     /**
      * 标记为日期字段（设置 datetype）
      */
-    public void markAsDate(DateType newDatetype, String operator) {
+    public void markAsDate(IngestDateType newDatetype, String operator) {
         Assert.notNull(newDatetype, "newDatetype is null");
         this.isDate = true;
         this.datetype = newDatetype;

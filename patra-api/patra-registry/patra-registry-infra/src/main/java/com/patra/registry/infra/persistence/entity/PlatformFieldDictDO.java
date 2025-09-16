@@ -3,7 +3,7 @@ package com.patra.registry.infra.persistence.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.registry.domain.model.enums.Cardinality;
 import com.patra.registry.domain.model.enums.DataType;
-import com.patra.registry.domain.model.enums.DateType;
+import com.patra.common.enums.IngestDateType;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -44,5 +44,5 @@ public class PlatformFieldDictDO extends BaseDO {
     /**
      * 仅日期类使用的 datetype 映射
      */
-    private DateType datetype;
+    private IngestDateType datetype;
 }

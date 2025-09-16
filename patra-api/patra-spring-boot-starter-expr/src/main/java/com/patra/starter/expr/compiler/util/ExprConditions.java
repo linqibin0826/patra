@@ -1,7 +1,6 @@
 package com.patra.starter.expr.compiler.util;
 
 import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
 import com.patra.starter.expr.compiler.normalize.ExprNormalizer;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 

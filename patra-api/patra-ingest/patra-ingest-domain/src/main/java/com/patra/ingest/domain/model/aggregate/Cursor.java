@@ -3,8 +3,8 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorAdvanceDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
 import com.patra.ingest.domain.model.event.CursorAdvancedEvent;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,7 +43,7 @@ public class Cursor {
     private final ProvenanceCode literatureProvenanceCode;
 
     /** 操作类型 */
-    private final OperationType operation;
+    private final IngestOperationType operation;
 
     /** 游标键 */
     private final String cursorKey;
@@ -107,7 +107,7 @@ public class Cursor {
      * @return 游标实例
      */
     public static Cursor create(ProvenanceCode literatureProvenanceCode,
-                               OperationType operation,
+                               IngestOperationType operation,
                                String cursorKey,
                                NamespaceScope namespaceScope,
                                String namespaceKey,
@@ -137,7 +137,7 @@ public class Cursor {
      * 验证创建参数。
      */
     private static void validateCreationParameters(ProvenanceCode literatureProvenanceCode,
-                                                 OperationType operation,
+                                                 IngestOperationType operation,
                                                  String cursorKey,
                                                  NamespaceScope namespaceScope,
                                                  String namespaceKey,

@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.event.TaskStatusChangedEvent;
 import lombok.Builder;
@@ -48,7 +48,7 @@ public class Task {
     private final ProvenanceCode literatureProvenanceCode;
 
     /** 操作类型 */
-    private final OperationType operation;
+    private final IngestOperationType operation;
 
     /** API凭据ID */
     private final Long apiCredentialId;
@@ -106,7 +106,7 @@ public class Task {
                              Long planId,
                              Long sliceId,
                              ProvenanceCode literatureProvenanceCode,
-                             OperationType operation,
+                             IngestOperationType operation,
                              String params,
                              String idempotentKey,
                              String exprHash,
@@ -135,7 +135,7 @@ public class Task {
      */
     private static void validateCreationParameters(Long sliceId,
                                                  ProvenanceCode literatureProvenanceCode,
-                                                 OperationType operation,
+                                                 IngestOperationType operation,
                                                  String idempotentKey,
                                                  String exprHash) {
         if (sliceId == null) {

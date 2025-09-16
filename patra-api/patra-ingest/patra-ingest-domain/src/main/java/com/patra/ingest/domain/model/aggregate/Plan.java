@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.aggregate;
 
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.domain.model.vo.TimeWindow;
@@ -45,6 +46,9 @@ public class Plan {
 
     /** 表达式原型 AST 快照 */
     private final String exprProtoSnapshot;
+
+    /** 计划类型 */
+    private final IngestOperationType operation;
 
     /** 总窗起(UTC, 含) */
     private final LocalDateTime windowFrom;

@@ -21,7 +21,10 @@ import java.util.Map;
  */
 public interface ExprCompiler {
 
-    Boolean hasAtom(Expr expr);
+    /**
+     * 判断 Expr 中是否包含 DateRange 或 DateTimeRange 类型的子节点。
+     */
+    Boolean containsDateOrTimeRange(Expr expr);
 
 
     // ========= 编译（验证 + 渲染） =========

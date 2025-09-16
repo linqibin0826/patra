@@ -3,8 +3,8 @@ package com.patra.ingest.infra.persistence.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.CursorEvent;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
 import com.patra.ingest.domain.port.CursorEventRepository;
 import com.patra.ingest.infra.mapstruct.CursorEventConverter;
 import com.patra.ingest.infra.persistence.entity.CursorEventDO;
@@ -44,7 +44,7 @@ public class CursorEventRepositoryImpl implements CursorEventRepository {
     }
 
     @Override
-    public List<CursorEvent> findRecentByTimeline(ProvenanceCode provenanceCode, OperationType operation, String cursorKey, NamespaceScope namespaceScope, String namespaceKey, int limit) {
+    public List<CursorEvent> findRecentByTimeline(ProvenanceCode provenanceCode, IngestOperationType operation, String cursorKey, NamespaceScope namespaceScope, String namespaceKey, int limit) {
         int lim = Math.max(1, Math.min(limit, 1000));
         var q = new LambdaQueryWrapper<CursorEventDO>()
                 .eq(CursorEventDO::getLiteratureProvenanceCode, provenanceCode)

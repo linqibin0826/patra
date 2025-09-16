@@ -1,5 +1,6 @@
 package com.patra.ingest.app.model.registry;
 
+import com.patra.common.enums.IngestDateType;
 import com.patra.common.enums.ProvenanceCode;
 
 import java.time.ZoneId;
@@ -15,7 +16,7 @@ public record ProvenanceConfigSnapshot(
         ZoneId timezone,            // 外部是 String timezone，这里提升为 ZoneId
         boolean enableAccess,
         String baseUrl,
-        String dateFieldDefault,    // 默认日期字段（如 updatedAt/publishedAt）
+        IngestDateType dateFieldDefault,
 
         RetryPolicy retryPolicy,          // 重试策略：max/backoff/jitter
         RateLimitPolicy rateLimitPolicy,  // 限流策略：每秒令牌

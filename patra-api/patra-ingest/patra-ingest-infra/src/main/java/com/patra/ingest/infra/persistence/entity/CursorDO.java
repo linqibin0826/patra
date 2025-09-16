@@ -3,8 +3,8 @@ package com.patra.ingest.infra.persistence.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
  * </p>
  * <p>
  * 说明：
- * - operation 使用 {@link OperationType}；
+ * - operation 使用 {@link IngestOperationType}；
  * - namespaceScope 使用 {@link NamespaceScope}；
  * - cursorType 使用 {@link CursorType}。
  * 这些枚举均实现 CodeEnum<String>，无需显式 TypeHandler，将由基础设施自动处理。
@@ -47,7 +47,7 @@ public class CursorDO extends BaseDO {
     private ProvenanceCode literatureProvenanceCode;
 
     /** 操作类型：harvest/backfill/update/metrics */
-    private OperationType operation;
+    private IngestOperationType operation;
 
     /** 游标键：updated_at/published_at/seq_id/cursor_token 等 */
     private String cursorKey;

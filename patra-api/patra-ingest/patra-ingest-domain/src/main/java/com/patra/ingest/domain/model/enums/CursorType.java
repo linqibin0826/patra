@@ -10,6 +10,7 @@ import lombok.Getter;
 public enum CursorType implements CodeEnum<String> {
     TIME("time", "时间型游标"),
     ID("id", "递增ID型游标"),
+    HYBRID("hybrid", "混合游标(时间 + id)"),
     TOKEN("token", "不透明令牌游标");
 
     private final String code;

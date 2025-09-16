@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
@@ -53,6 +54,10 @@ public class PlanDO extends BaseDO {
      * 表达式原型 AST 快照
      */
     private JsonNode exprProtoSnapshot;
+
+
+    /** 采集类型 */
+    private IngestOperationType operation;
 
     /**
      * 总窗起(UTC, 含)

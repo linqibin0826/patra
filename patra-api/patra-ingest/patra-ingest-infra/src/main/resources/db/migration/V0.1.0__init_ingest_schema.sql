@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `schedule_instance_id` BIGINT UNSIGNED                                                     NOT NULL COMMENT '关联调度实例',
     `plan_key`             VARCHAR(128)                                                        NOT NULL COMMENT '人类可读/外部幂等键（唯一）',
 
+    `operation`            ENUM ('harvest','backfill','update','metrics')                      NOT NULL COMMENT '采集类型',
     `expr_proto_hash`      CHAR(64)                                                            NOT NULL COMMENT '表达式原型哈希',
     `expr_proto_snapshot`  JSON                                                                NULL COMMENT '表达式原型 AST 快照',
 
@@ -133,41 +134,41 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 -- ======================================================================
 CREATE TABLE IF NOT EXISTS `ing_task`
 (
-    `id`                         BIGINT UNSIGNED                                NOT NULL COMMENT 'PK · TaskID',
+    `id`                         BIGINT UNSIGNED  NOT NULL COMMENT 'PK · TaskID',
 
-    `schedule_instance_id`       BIGINT UNSIGNED                                NOT NULL COMMENT '冗余调度实例，便于聚合',
-    `plan_id`                    BIGINT UNSIGNED                                NOT NULL,
-    `slice_id`                   BIGINT UNSIGNED                                NOT NULL,
+    `schedule_instance_id`       BIGINT UNSIGNED  NOT NULL COMMENT '冗余调度实例，便于聚合',
+    `plan_id`                    BIGINT UNSIGNED  NOT NULL,
+    `slice_id`                   BIGINT UNSIGNED  NOT NULL,
 
     `literature_provenance_code` VARCHAR(64)                                    NOT NULL COMMENT '来源代码：pubmed/epmc/crossref 等',
     `operation`                  ENUM ('harvest','backfill','update','metrics') NOT NULL COMMENT '操作类型',
     `api_credential_id`          BIGINT UNSIGNED                                NULL COMMENT '所用凭据ID（可空=匿名/公共）',
 
-    `params`                     JSON                                           NULL COMMENT '任务参数(规范化)',
-    `idempotent_key`             CHAR(64)                                       NOT NULL COMMENT 'SHA256(slice_signature + expr_hash + operation + trigger + normalized(params))',
-    `expr_hash`                  CHAR(64)                                       NOT NULL COMMENT '冗余：执行表达式哈希',
+    `params`                     JSON             NULL COMMENT '任务参数(规范化)',
+    `idempotent_key`             CHAR(64)         NOT NULL COMMENT 'SHA256(slice_signature + expr_hash + operation + trigger + normalized(params))',
+    `expr_hash`                  CHAR(64)         NOT NULL COMMENT '冗余：执行表达式哈希',
 
-    `priority`                   TINYINT UNSIGNED                               NOT NULL DEFAULT 5 COMMENT '1高→9低',
+    `priority`                   TINYINT UNSIGNED NOT NULL DEFAULT 5 COMMENT '1高→9低',
     `status`                     ENUM ('queued','running','succeeded','failed','cancelled')
-                                                                                NOT NULL DEFAULT 'queued' COMMENT '任务状态',
-    `scheduled_at`               TIMESTAMP(6)                                   NULL COMMENT '计划开始',
-    `started_at`                 TIMESTAMP(6)                                   NULL COMMENT '实际开始',
-    `finished_at`                TIMESTAMP(6)                                   NULL COMMENT '结束',
+                                                  NOT NULL DEFAULT 'queued' COMMENT '任务状态',
+    `scheduled_at`               TIMESTAMP(6)     NULL COMMENT '计划开始',
+    `started_at`                 TIMESTAMP(6)     NULL COMMENT '实际开始',
+    `finished_at`                TIMESTAMP(6)     NULL COMMENT '结束',
 
-    `scheduler_run_id`           VARCHAR(64)                                    NULL COMMENT '外部调度运行ID（若逐片触发才用）',
-    `correlation_id`             VARCHAR(64)                                    NULL COMMENT 'Trace/CID',
+    `scheduler_run_id`           VARCHAR(64)      NULL COMMENT '外部调度运行ID（若逐片触发才用）',
+    `correlation_id`             VARCHAR(64)      NULL COMMENT 'Trace/CID',
 
     -- 审计字段
-    `record_remarks`             JSON                                           NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `version`                    BIGINT UNSIGNED                                NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`                 VARBINARY(16)                                  NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `created_at`                 TIMESTAMP(6)                                   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC)',
-    `created_by`                 BIGINT UNSIGNED                                NULL COMMENT '创建人ID',
-    `created_by_name`            VARCHAR(100)                                   NULL COMMENT '创建人姓名',
-    `updated_at`                 TIMESTAMP(6)                                   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC)',
-    `updated_by`                 BIGINT UNSIGNED                                NULL COMMENT '更新人ID',
-    `updated_by_name`            VARCHAR(100)                                   NULL COMMENT '更新人姓名',
-    `deleted`                    TINYINT(1)                                     NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=未删,1=已删',
+    `record_remarks`             JSON             NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `version`                    BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`                 VARBINARY(16)    NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `created_at`                 TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC)',
+    `created_by`                 BIGINT UNSIGNED  NULL COMMENT '创建人ID',
+    `created_by_name`            VARCHAR(100)     NULL COMMENT '创建人姓名',
+    `updated_at`                 TIMESTAMP(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC)',
+    `updated_by`                 BIGINT UNSIGNED  NULL COMMENT '更新人ID',
+    `updated_by_name`            VARCHAR(100)     NULL COMMENT '更新人姓名',
+    `deleted`                    TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=未删,1=已删',
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_task_idem` (`idempotent_key`),
@@ -375,7 +376,7 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
 
     `direction`                  ENUM ('forward','backfill')                    NULL COMMENT 'forward=增量; backfill=历史回灌',
 
-    `idempotent_key`             CHAR(64)                                       NOT NULL COMMENT '事件幂等键：SHA256(source,op,key,ns_scope,ns_key,prev->new,window,run_id,...)',
+    `idempotent_key`             CHAR(64)                                       NOT NULL COMMENT '事件幂等键：SHA256(source,op,key,ns_scope,ns_key,prev->new,ingestWindow,run_id,...)',
 
     `schedule_instance_id`       BIGINT UNSIGNED                                NULL,
     `plan_id`                    BIGINT UNSIGNED                                NULL,

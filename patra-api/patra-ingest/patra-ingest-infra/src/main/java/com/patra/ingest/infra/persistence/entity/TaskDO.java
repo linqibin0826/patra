@@ -3,7 +3,7 @@ package com.patra.ingest.infra.persistence.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * <p>每个计划切片生成一个任务；支持强幂等与调度/执行状态。</p>
  *
  * 字段要点：
- * - operation：{@link OperationType}
+ * - operation：{@link IngestOperationType}
  * - status：{@link TaskStatus}
  * - params：JSON
  *
@@ -47,7 +47,7 @@ public class TaskDO extends BaseDO {
     private ProvenanceCode literatureProvenanceCode;
 
     /** 操作类型 */
-    private OperationType operation;
+    private IngestOperationType operation;
 
     /** 所用凭据ID（可空=匿名/公共） */
     private Long apiCredentialId;

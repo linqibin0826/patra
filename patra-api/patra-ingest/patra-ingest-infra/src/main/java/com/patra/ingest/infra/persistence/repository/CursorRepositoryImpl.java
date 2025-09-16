@@ -3,8 +3,8 @@ package com.patra.ingest.infra.persistence.repository;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.Cursor;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
 import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.infra.mapstruct.CursorConverter;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
@@ -34,7 +34,7 @@ public class CursorRepositoryImpl implements CursorRepository {
     }
 
     @Override
-    public Optional<Cursor> findByUniqueKey(ProvenanceCode provenanceCode, OperationType operation, String cursorKey, NamespaceScope namespaceScope, String namespaceKey) {
+    public Optional<Cursor> findByUniqueKey(ProvenanceCode provenanceCode, IngestOperationType operation, String cursorKey, NamespaceScope namespaceScope, String namespaceKey) {
         var q = new LambdaQueryWrapper<CursorDO>()
                 .eq(CursorDO::getLiteratureProvenanceCode, provenanceCode)
                 .eq(CursorDO::getOperation, operation)

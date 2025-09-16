@@ -3,8 +3,8 @@ package com.patra.ingest.domain.model.entity;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorAdvanceDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -36,7 +36,7 @@ public class CursorEvent {
     private ProvenanceCode literatureProvenanceCode;
 
     /** 操作类型 */
-    private OperationType operation;
+    private IngestOperationType operation;
 
     /** 游标键 */
     private String cursorKey;

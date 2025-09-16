@@ -23,7 +23,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.mapstruct.version>0.2.0</lombok.mapstruct.version>
 
-        <hutoll.version>5.8.22</hutoll.version>
+        <hutool.version>5.8.22</hutool.version>
         <xxl-job-starter.version>1.0.2</xxl-job-starter.version>
 
         <maven.compiler.release>${java.version}</maven.compiler.release>
@@ -144,7 +144,7 @@
             <dependency>
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-core</artifactId>
-                <version>${hutoll.version}</version>
+                <version>${hutool.version}</version>
             </dependency>
 
 

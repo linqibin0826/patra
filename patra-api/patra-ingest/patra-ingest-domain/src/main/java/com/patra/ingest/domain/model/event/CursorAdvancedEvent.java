@@ -4,7 +4,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorAdvanceDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import lombok.Value;
 
 import java.time.LocalDateTime;
@@ -26,7 +26,7 @@ public class CursorAdvancedEvent {
     ProvenanceCode provenanceCode;
 
     /** 操作类型 */
-    OperationType operation;
+    IngestOperationType operation;
 
     /** 游标键 */
     String cursorKey;
@@ -75,7 +75,7 @@ public class CursorAdvancedEvent {
      * @return 领域事件
      */
     public static CursorAdvancedEvent of(ProvenanceCode provenanceCode,
-                                        OperationType operation,
+                                        IngestOperationType operation,
                                         String cursorKey,
                                         NamespaceScope namespaceScope,
                                         String namespaceKey,

@@ -3,7 +3,7 @@ package com.patra.ingest.domain.port;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +24,7 @@ public interface CursorEventRepository {
 
     /** 按时间线维度查询最近的事件列表 */
     List<CursorEvent> findRecentByTimeline(ProvenanceCode provenanceCode,
-                                           OperationType operation,
+                                           IngestOperationType operation,
                                            String cursorKey,
                                            NamespaceScope namespaceScope,
                                            String namespaceKey,

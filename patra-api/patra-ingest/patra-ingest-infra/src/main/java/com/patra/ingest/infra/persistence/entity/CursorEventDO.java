@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorAdvanceDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
+import com.patra.ingest.domain.model.enums.IngestOperationType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.enums.OperationType;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
  * <p>每次成功推进记一条事件；支持回放与全链路回溯。</p>
  *
  * 字段要点：
- * - operation：{@link OperationType}
+ * - operation：{@link IngestOperationType}
  * - namespaceScope：{@link NamespaceScope}
  * - cursorType：{@link CursorType}
  * - direction：{@link CursorAdvanceDirection}
@@ -41,7 +41,7 @@ public class CursorEventDO extends BaseDO {
     private ProvenanceCode literatureProvenanceCode;
 
     /** 操作类型 */
-    private OperationType operation;
+    private IngestOperationType operation;
 
     /** 游标键：updated_at/published_at/seq_id/cursor_token 等 */
     private String cursorKey;

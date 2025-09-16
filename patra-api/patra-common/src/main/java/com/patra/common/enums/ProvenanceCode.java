@@ -1,16 +1,37 @@
 package com.patra.common.enums;
 
 import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * 采集数据源枚举。
+ * Enumeration of provenance codes representing supported upstream data sources.
  *
- * <p>
- * 用于标识支持的上游数据源，并提供从字符串解析与列出全部 code 的能力。
+ * <p>This enum provides identifiers for various literature and metadata databases
+ * (e.g., PubMed, Crossref, DataCite), and supports parsing from strings as well
+ * as JSON serialization/deserialization through Jackson annotations.
+ *
+ * <p>Examples of sources:
+ * <ul>
+ *   <li><b>PUBMED</b>: PubMed, a free database of biomedical literature maintained by NCBI.</li>
+ *   <li><b>PMC</b>: PubMed Central, a free full-text archive of biomedical and life sciences journal literature.</li>
+ *   <li><b>EPMC</b>: Europe PMC, a free repository of life sciences articles, preprints, and other resources.</li>
+ *   <li><b>CROSSREF</b>: A database providing Digital Object Identifiers (DOIs) and metadata for scholarly works.</li>
+ *   <li><b>DATACITE</b>: A global nonprofit organization that provides persistent identifiers (DOIs) for research data.</li>
+ * </ul>
+ *
+ * <p>References:
+ * <ul>
+ *   <li>NCBI PubMed: <a href="https://pubmed.ncbi.nlm.nih.gov/">https://pubmed.ncbi.nlm.nih.gov/</a></li>
+ *   <li>Europe PMC: <a href="https://europepmc.org/">https://europepmc.org/</a></li>
+ *   <li>Crossref: <a href="https://www.crossref.org/">https://www.crossref.org/</a></li>
+ *   <li>DataCite: <a href="https://datacite.org/">https://datacite.org/</a></li>
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
  */
+@Getter
 public enum ProvenanceCode implements CodeEnum<String> {
 
     PUBMED("pubmed", "PubMed"),
@@ -32,17 +53,36 @@ public enum ProvenanceCode implements CodeEnum<String> {
     CORD19("cord19", "CORD-19"),
     GIM("gim", "WHO GIM");
 
-    @Getter
+    /**
+     * The unique string code identifier for the data source (e.g., "pubmed").
+     */
     private final String code;
 
-    @Getter
+    /**
+     * A human-readable description or display name of the data source (e.g., "PubMed").
+     */
     private final String description;
 
+    /**
+     * Constructs a provenance code enum constant.
+     *
+     * @param code the unique identifier string
+     * @param display the human-readable description
+     */
     ProvenanceCode(String code, String display) {
         this.code = code;
         this.description = display;
     }
 
+    /**
+     * Parses a string into a ProvenanceCode.
+     * This method normalizes the input (trims, lowercases, replaces '-' with '_')
+     * and maps common aliases to the appropriate code.
+     *
+     * @param s the input string
+     * @return the corresponding ProvenanceCode
+     * @throws IllegalArgumentException if the string does not match any known source
+     */
     public static ProvenanceCode parse(String s) {
         if (s == null)
             throw new IllegalArgumentException("source is null");
@@ -69,5 +109,25 @@ public enum ProvenanceCode implements CodeEnum<String> {
             default -> throw new IllegalArgumentException("Unknown source: " + s);
         };
     }
-}
 
+    /**
+     * Factory method for JSON deserialization.
+     *
+     * @param value the string value from JSON
+     * @return the corresponding ProvenanceCode
+     */
+    @JsonCreator
+    public static ProvenanceCode fromJson(String value) {
+        return parse(value);
+    }
+
+    /**
+     * Returns the string code for JSON serialization.
+     *
+     * @return the code of this ProvenanceCode
+     */
+    @JsonValue
+    public String toJson() {
+        return this.code;
+    }
+}

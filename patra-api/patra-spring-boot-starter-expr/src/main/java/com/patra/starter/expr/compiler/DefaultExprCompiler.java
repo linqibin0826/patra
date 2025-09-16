@@ -27,7 +27,7 @@ public class DefaultExprCompiler implements ExprCompiler {
     private final ExprNormalizer normalizer;
 
     @Override
-    public Boolean hasAtom(Expr expr) {
+    public Boolean containsDateOrTimeRange(Expr expr) {
         return ExprConditions.hasAtom(expr);
     }
 
