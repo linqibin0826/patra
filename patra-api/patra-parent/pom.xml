@@ -24,7 +24,7 @@
         <lombok.mapstruct.version>0.2.0</lombok.mapstruct.version>
 
         <hutool.version>5.8.22</hutool.version>
-        <xxl-job-starter.version>1.0.2</xxl-job-starter.version>
+        <xxl-job.version>3.2.0</xxl-job.version>
 
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.enforcer.plugin.version>3.4.1</maven.enforcer.plugin.version>
@@ -75,6 +75,12 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.xuxueli</groupId>
+                <artifactId>xxl-job-core</artifactId>
+                <version>${xxl-job.version}</version>
             </dependency>
 
             <dependency>
@@ -154,11 +160,6 @@
                 <version>${project.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>io.github.yswtrue</groupId>
-                <artifactId>xxl-job-spring-boot3-starter</artifactId>
-                <version>${xxl-job-starter.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -167,7 +168,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.13.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
                     <parameters>true</parameters>
