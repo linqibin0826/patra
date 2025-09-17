@@ -8,7 +8,7 @@ import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
-        unmappedTargetPolicy = ReportingPolicy.ERROR)
+        unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface RegistryAclConverter {
 
     @Mapping(target = "timezone", expression = "java(resp.timezone() == null ? ZoneId.of(\"UTC\") : ZoneId.of(resp.timezone()))")

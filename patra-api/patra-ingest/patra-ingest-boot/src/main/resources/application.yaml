@@ -5,12 +5,11 @@ spring:
   application:
     name: patra-ingest
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:default}
   config:
     import:
       - "optional:nacos:patra-ingest.yaml?group=DEFAULT_GROUP&namespace=public"
       - "optional:nacos:patra.yaml?group=DEFAULT_GROUP&namespace=public"
-
   cloud:
     nacos:
       server-addr: ${NACOS_ADDR:127.0.0.1:8848}
@@ -21,12 +20,3 @@ spring:
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
 
-
-# 可选：超时、日志级别
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 2000
-        readTimeout: 5000
-logging.level.com.patra.registry.api.rpc.client: INFO

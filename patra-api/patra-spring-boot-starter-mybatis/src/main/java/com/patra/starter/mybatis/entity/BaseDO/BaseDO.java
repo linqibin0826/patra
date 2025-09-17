@@ -6,6 +6,7 @@ import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -22,7 +23,7 @@ public abstract class BaseDO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
@@ -37,7 +38,7 @@ public abstract class BaseDO implements Serializable {
      * 创建时间（自动填充）
      */
     @TableField(value = "created_at", fill = FieldFill.INSERT)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     /**
      * 创建人ID（自动填充）
@@ -55,7 +56,7 @@ public abstract class BaseDO implements Serializable {
      * 更新时间（自动填充）
      */
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     /**
      * 更新人ID（自动填充）

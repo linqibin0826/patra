@@ -89,12 +89,13 @@ public class Plan {
                              LocalDateTime windowFrom,
                              LocalDateTime windowTo,
                              SliceStrategy sliceStrategy,
-                             String sliceParams) {
+                             String sliceParams,
+                             IngestOperationType operation) {
 
         validateCreationParameters(scheduleInstanceId, planKey, exprProtoHash,
                                  windowFrom, windowTo, sliceStrategy);
 
-        return Plan.builder()
+    return Plan.builder()
                 .scheduleInstanceId(scheduleInstanceId)
                 .planKey(planKey)
                 .exprProtoHash(exprProtoHash)
@@ -103,6 +104,7 @@ public class Plan {
                 .windowTo(windowTo)
                 .sliceStrategy(sliceStrategy)
                 .sliceParams(sliceParams)
+        .operation(operation)
                 .status(PlanStatus.DRAFT) // 初始状态为草稿
                 .build();
     }
@@ -221,6 +223,7 @@ public class Plan {
     /**
      * 添加领域事件。
      */
+    @SuppressWarnings("unused")
     private void addDomainEvent(Object event) {
         domainEvents.add(event);
     }

@@ -1,0 +1,18 @@
+# 可选：超时、日志级别
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+
+xxl:
+  job:
+    admin:
+      addresses: http://papertrace.com:7070/xxl-job-admin   # Admin外部可访问的URL
+    executor:
+      appname: papertrace-ingest-executor                      # 执行器名
+      ip: host.docker.internal
+      logpath: ${PAPERTRACE_LOG_DIR:/Users/linqibin/IdeaProjects/medoc/Papertrace-api/logs}/patra-ingest/xxl-job
+      logretentiondays: 30

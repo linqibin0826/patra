@@ -27,8 +27,6 @@ public class IngestPubmedJobHandler {
      */
     private final StartPlanUseCase startPlanUseCase;
 
-
-
     @XxlJob("pubmedHarvestJob")
     public ReturnT<String> pubmedHarvestJob() {
         final IngestOperationType operationType = IngestOperationType.HARVEST;
