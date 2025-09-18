@@ -1,6 +1,6 @@
 # Registry · Expr 子域：SQL 设计文档与使用说明
 > 版本：2025-09-18 09:08:54 UTC · 适配 MySQL 8.0 / InnoDB / utf8mb4_0900_ai_ci  
-> 关联脚本：**reg_expr_final.sql**（四张表）
+> 关联脚本：见仓库中的 `docs/patra-registry/patra-registry.sql`（包含本子域四张表）
 
 ---
 
@@ -78,11 +78,11 @@ flowchart TD
 
 维度与时间片唯一键：
 ```
-(provenance_id, scope, task_type_key, operation_code, std_key, effective_from)
+(provenance_id, scope_code, task_type_key, operation_code, std_key, effective_from)
 ```
 
 关键列：
-- `scope`：`SOURCE`/`TASK`（可扩展）。
+- `scope_code`：`SOURCE`/`TASK`（可扩展）。
 - `task_type`/`task_type_key`：任务类型，`NULL→ALL`（生成列）。
 - `operation_code`：`SEARCH/DETAIL/LOOKUP`。
 - `std_key`：标准键（通常来自 `reg_expr_field_dict.field_key`）。
@@ -98,7 +98,7 @@ flowchart TD
 
 维度与时间片唯一键：
 ```
-(provenance_id, scope, task_type_key, field_key, effective_from)
+(provenance_id, scope_code, task_type_key, field_key, effective_from)
 ```
 
 关键列：
@@ -115,7 +115,7 @@ flowchart TD
 
 维度与时间片唯一键（引入归一化列消除 NULL 歧义）：
 ```
-(provenance_id, scope, task_type_key, field_key,
+(provenance_id, scope_code, task_type_key, field_key,
  op_code, match_type_key, negated_key, value_type_key,
  emit_type_code, effective_from)
 ```
@@ -149,7 +149,7 @@ SELECT m.provider_param_name, m.transform_code
 FROM reg_prov_api_param_map m
 WHERE m.deleted=0
   AND m.provenance_id=:provId
-  AND m.scope=:scopeCode
+  AND m.scope_code=:scopeCode
   AND m.task_type_key=:taskKey
   AND m.operation_code=:opCode
   AND m.std_key=:stdKey
@@ -164,7 +164,7 @@ SELECT c.ops, c.term_matches, c.range_kind_code, c.in_max_size, c.range_allow_op
 FROM reg_prov_expr_capability c
 WHERE c.deleted=0
   AND c.provenance_id=:provId
-  AND c.scope=:scopeCode
+  AND c.scope_code=:scopeCode
   AND c.task_type_key=:taskKey
   AND c.field_key=:fieldKey
   AND NOW() BETWEEN c.effective_from AND COALESCE(c.effective_to,'9999-12-31')
@@ -178,7 +178,7 @@ SELECT r.emit_type_code, r.template, r.item_template, r.joiner, r.wrap_group, r.
 FROM reg_prov_expr_render_rule r
 WHERE r.deleted=0
   AND r.provenance_id=:provId
-  AND r.scope=:scopeCode
+  AND r.scope_code=:scopeCode
   AND r.task_type_key=:taskKey
   AND r.field_key=:fieldKey
   AND r.op_code=:opCode
@@ -218,7 +218,7 @@ VALUES (1001, 'publish_date', 'DATE', 'SINGLE', 1, 1);
 **参数名映射（PubMed SEARCH）**：
 ```sql
 INSERT INTO reg_prov_api_param_map
-(id, provenance_id, scope, task_type, operation_code, std_key, provider_param_name, transform_code, effective_from)
+(id, provenance_id, scope_code, task_type, operation_code, std_key, provider_param_name, transform_code, effective_from)
 VALUES
 (2001, 1, 'SOURCE', NULL, 'SEARCH', 'from', 'mindate', NULL, '2025-01-01 00:00:00'),
 (2002, 1, 'SOURCE', NULL, 'SEARCH', 'to',   'maxdate', 'TO_EXCLUSIVE_MINUS_1D', '2025-01-01 00:00:00');
@@ -227,7 +227,7 @@ VALUES
 **字段能力**：
 ```sql
 INSERT INTO reg_prov_expr_capability
-(id, provenance_id, scope, task_type, field_key, effective_from, ops, range_kind_code, range_allow_open_end)
+(id, provenance_id, scope_code, task_type, field_key, effective_from, ops, range_kind_code, range_allow_open_end)
 VALUES
 (3001, 1, 'SOURCE', NULL, 'publish_date', '2025-01-01 00:00:00',
   JSON_ARRAY('RANGE'), 'DATE', 1);
@@ -236,7 +236,7 @@ VALUES
 **渲染规则（PARAMS）**：
 ```sql
 INSERT INTO reg_prov_expr_render_rule
-(id, provenance_id, scope, task_type, field_key, op_code, emit_type_code, value_type_code,
+(id, provenance_id, scope_code, task_type, field_key, op_code, emit_type_code, value_type_code,
  effective_from, params, fn_code)
 VALUES
 (4001, 1, 'SOURCE', NULL, 'publish_date', 'RANGE', 'PARAMS', 'DATE',
@@ -258,7 +258,7 @@ FROM reg_prov_api_param_map a
 JOIN reg_prov_api_param_map b
   ON a.id<>b.id AND a.deleted=0 AND b.deleted=0
  AND a.provenance_id=b.provenance_id
- AND a.scope=b.scope AND a.task_type_key=b.task_type_key
+ AND a.scope_code=b.scope_code AND a.task_type_key=b.task_type_key
  AND a.operation_code=b.operation_code AND a.std_key=b.std_key
  AND COALESCE(a.effective_to,'9999-12-31') > b.effective_from
  AND COALESCE(b.effective_to,'9999-12-31') > a.effective_from;
@@ -299,7 +299,7 @@ WHERE deleted=0 AND params IS NOT NULL
 
 ## 9. 运行与运维建议
 
-- **灰度**：通过 `scope='TASK'` + 指定 `task_type` 生效；稳定后迁移到 `SOURCE/ALL`。
+ - **灰度**：通过 `scope_code='TASK'` + 指定 `task_type` 生效；稳定后迁移到 `SOURCE/ALL`。
 - **版本化**：新增时间片（更新 `effective_from`），不编辑历史段；历史段不必软删。
 - **监控**：为“查不到当前生效”的情况记录详细维度键，便于回溯。
 - **导入导出**：配置以 `*_code` 与 `field_key` 为主键，适配 GitOps 与多环境迁移。
@@ -323,10 +323,10 @@ A：通过生成列将 `NULL` 归一化为 `ANY`，保证维度键唯一与查�
 
 - 名称统一：`reg_expr_field_dict / reg_prov_api_param_map / reg_prov_expr_capability / reg_prov_expr_render_rule`。
 - 去 ENUM：改为 `*_code VARCHAR`，与 `sys_dict_item.item_code` 对齐。
-- 增加 `scope/task_type/task_type_key/effective_from/effective_to`。
+- 增加 `scope_code/task_type/task_type_key/effective_from/effective_to`。
 - 维度唯一键改造：渲染规则引入归一化键（`match_type_key/negated_key/value_type_key`）。
 - 参数名映射与渲染模板解耦；transform（值级）与 fn（模板级）解耦。
 
 ---
 
-**附**：请配合仓库中的 **reg_expr_final.sql** 使用，确保建表结构与本文一致。
+**附**：请配合仓库中的 `docs/patra-registry/patra-registry.sql` 使用，确保建表结构与本文一致。

@@ -493,17 +493,17 @@ WHERE t.type_code = 'oauth_grant_type';
 
 ### 6.1 字段命名规范（以字典编码关联）
 
-- 业务表字段直接使用语义字段名并保存“字典编码”（`item_code`），不保存 `*_id`：
-  - 例如 `http_method VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)'`。
-  - 例如 `endpoint_usage VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)'`。
-  - 例如 `scope VARCHAR(16) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)'`。
-  - 例如 `lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)'`。
+- 业务表字段直接使用语义字段名并保存“字典编码”（`item_code`），不保存 `*_id`；并在字段名上以 `_code` 后缀明确这是“字典编码”：
+  - 例如 `http_method_code VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)'`。
+  - 例如 `endpoint_usage_code VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)'`。
+  - 例如 `scope_code VARCHAR(16) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)'`。
+  - 例如 `lifecycle_status_code VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)'`。
 
 - 不与 `sys_dict_*` 建立物理外键；由应用层在写入/变更时校验“编码存在且类型匹配”。
 
 ### 6.2 端点定义示例（以编码关联字典）
 
-> 以 `reg_prov_endpoint_def` 的 `http_method`、`endpoint_usage` 两个字段为例：
+> 以 `reg_prov_endpoint_def` 的 `http_method_code`、`endpoint_usage_code` 两个字段为例：
 
 ```sql
 -- 示例：在新建表时直接保存“字典编码”，不使用 *_id；（旧表迁移见 §8）
@@ -511,13 +511,13 @@ CREATE TABLE reg_prov_endpoint_def
 (
     id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     provenance_id   BIGINT UNSIGNED NOT NULL,
-    scope           VARCHAR(16)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)',
+  scope_code      VARCHAR(16)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)',
     task_type       VARCHAR(64)     NULL,
     task_type_key   VARCHAR(64)     NOT NULL DEFAULT 'ALL',
     endpoint_name   VARCHAR(64)     NOT NULL,
-    http_method     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)',
-    endpoint_usage  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)',
-    lifecycle_status VARCHAR(32)    NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)',
+  http_method_code     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)',
+  endpoint_usage_code  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)',
+  lifecycle_status_code VARCHAR(32)    NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)',
     -- ... 其它字段略 ...
     record_remarks  JSON            NULL,
     created_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6),

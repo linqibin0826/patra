@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
  *     reg_prov_credential               —— 鉴权/密钥配置（可选绑定端点）
  * - 外键：所有配置表以 provenance_id 关联 reg_provenance(id)；凭证表可选关联端点 reg_prov_endpoint_def(id)。
  * - 生效区间：effective_from/effective_to 采用 [start, end) 语义；不重叠由应用层保证。
- * - 作用域：scope = SOURCE|TASK；当 scope='SOURCE' 时 task_type 置 NULL；当 scope='TASK' 时 task_type 必须设置（由应用层保证）。
+ * - 作用域：scope_code = SOURCE|TASK；当 scope_code='SOURCE' 时 task_type 置 NULL；当 scope_code='TASK' 时 task_type 必须设置（由应用层保证）。
  * - 生成列：task_type_key = IFNULL(task_type, 'ALL')，便于维度唯一键与检索。
  * ===================================================================== */
 
@@ -177,8 +177,8 @@ CREATE TABLE `reg_provenance`
     `base_url_default` VARCHAR(512)    NULL COMMENT '默认基础URL：当未在 HTTP 策略中覆盖时，用于端点 path 的拼接',
     `timezone_default` VARCHAR(64)     NOT NULL DEFAULT 'UTC' COMMENT '默认时区（IANA TZ，如 UTC/Asia/Shanghai）：窗口计算/展示的缺省时区',
     `docs_url`         VARCHAR(512)    NULL COMMENT '官方文档/说明链接：便于排障或核对 API 用法',
-    `is_active`        TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用该来源：1=启用；0=停用（应用读取时可据此过滤）',
-    `lifecycle_status` VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `is_active`             TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用该来源：1=启用；0=停用（应用读取时可据此过滤）',
+  `lifecycle_status_code` VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`   JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -209,15 +209,15 @@ CREATE TABLE `reg_prov_endpoint_def`
 (
     `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：端点定义记录ID；可被凭证表 reg_prov_credential.endpoint_id 可选引用',
     `provenance_id`        BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`           VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`            VARCHAR(32)     NULL COMMENT '任务类型文本：当 scope=TASK 时需填写；示例 harvest/update/backfill（去 ENUM 化）',
     `endpoint_name`        VARCHAR(64)     NOT NULL COMMENT '端点逻辑名称：如 search / detail / works / token；用于业务侧选择端点',
 
     `effective_from`       TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
     `effective_to`         TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `endpoint_usage`       VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=endpoint_usage)：用途 SEARCH/DETAIL/BATCH/AUTH/HEALTH',
-    `http_method`          VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=http_method)：HTTP 方法 GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS',
+  `endpoint_usage_code`  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=endpoint_usage)：用途 SEARCH/DETAIL/BATCH/AUTH/HEALTH',
+  `http_method_code`     VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=http_method)：HTTP 方法 GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS',
     `path_template`        VARCHAR(512)    NOT NULL COMMENT '路径模板：相对路径或绝对路径；可包含占位符（如 /entrez/eutils/esearch.fcgi）',
     `default_query_params` JSON            NULL COMMENT '默认查询参数JSON：作为每次请求的基础 query（运行时可覆盖/合并）',
     `default_body_payload` JSON            NULL COMMENT '默认请求体JSON：POST/PUT/PATCH 的基础 body（运行时可覆盖/合并）',
@@ -232,8 +232,8 @@ CREATE TABLE `reg_prov_endpoint_def`
     `ids_param_name`       VARCHAR(64)     NULL COMMENT '批量详情请求中，ID列表的参数名（端点级覆盖项）',
 
     /* 生成列：将 task_type 标准化为 ALL 或实际值，便于唯一键 */
-    `task_type_key`        VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：当 task_type 为空取 ALL；用于维度唯一键',
-    `lifecycle_status`     VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期',
+  `task_type_key`        VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：当 task_type 为空取 ALL；用于维度唯一键',
+  `lifecycle_status_code` VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期',
 
     -- BaseDO（统一审计字段）
     `record_remarks`       JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -249,15 +249,15 @@ CREATE TABLE `reg_prov_endpoint_def`
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_endpoint_def__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    -- 字典以编码关联：scope/endpoint_usage/http_method/lifecycle_status 使用 sys_dict_item.item_code
+  -- 字典以编码关联：scope_code/endpoint_usage_code/http_method_code/lifecycle_status_code 使用 sys_dict_item.item_code
 
     /* 维度唯一：同 (provenance_id, scope, task_type_key, endpoint_name) 下 effective_from 唯一；不重叠由应用保证 */
-    UNIQUE KEY `uk_reg_prov_endpoint_def__dim_from` (`provenance_id`, `scope`, `task_type_key`, `endpoint_name`,
+  UNIQUE KEY `uk_reg_prov_endpoint_def__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `endpoint_name`,
                                                      `effective_from`),
-    KEY `idx_reg_prov_endpoint_def__dim_to` (`provenance_id`, `scope`, `task_type_key`, `endpoint_name`,
+  KEY `idx_reg_prov_endpoint_def__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `endpoint_name`,
                                              `effective_to`),
-    KEY `idx_reg_prov_endpoint_def__usage` (`endpoint_usage`),
-    KEY `idx_reg_prov_endpoint_def__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+  KEY `idx_reg_prov_endpoint_def__usage` (`endpoint_usage_code`),
+  KEY `idx_reg_prov_endpoint_def__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id`
                                              DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -273,25 +273,25 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：时间窗口与增量指针配置记录ID',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`              VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
     `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
     /* 窗口定义 */
-    `window_mode`             VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=window_mode)：窗口模式 SLIDING/CALENDAR',
+  `window_mode_code`        VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=window_mode)：窗口模式 SLIDING/CALENDAR',
     `window_size_value`       INT             NOT NULL DEFAULT 1 COMMENT '窗口长度的数值部分，如 1/7/30；单位见 window_size_unit',
-    `window_size_unit`        VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=time_unit)：窗口长度单位 SECOND/MINUTE/HOUR/DAY',
+  `window_size_unit_code`   VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=time_unit)：窗口长度单位 SECOND/MINUTE/HOUR/DAY',
     `calendar_align_to`       VARCHAR(16)     NULL COMMENT 'CALENDAR 模式对齐粒度（去 ENUM 化，示例：HOUR/DAY/WEEK/MONTH）',
     `lookback_value`          INT             NULL COMMENT '回看长度数值：用于补偿延迟数据（与 lookback_unit 搭配）',
-    `lookback_unit`           VARCHAR(16)     NULL COMMENT 'DICT CODE(type=time_unit)：回看长度单位 SECOND/MINUTE/HOUR/DAY',
+  `lookback_unit_code`      VARCHAR(16)     NULL COMMENT 'DICT CODE(type=time_unit)：回看长度单位 SECOND/MINUTE/HOUR/DAY',
     `overlap_value`           INT             NULL COMMENT '窗口重叠长度数值：相邻窗口之间的重叠（迟到兜底）',
-    `overlap_unit`            VARCHAR(16)     NULL COMMENT 'DICT CODE(type=time_unit)：窗口重叠单位 SECOND/MINUTE/HOUR/DAY',
+  `overlap_unit_code`       VARCHAR(16)     NULL COMMENT 'DICT CODE(type=time_unit)：窗口重叠单位 SECOND/MINUTE/HOUR/DAY',
     `watermark_lag_seconds`   INT             NULL COMMENT '水位滞后秒数：处理乱序/迟到数据时允许的最大延迟',
 
     /* 增量指针定义 */
-    `offset_type`             VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=offset_type)：指针类型 DATE/ID/COMPOSITE',
+  `offset_type_code`        VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=offset_type)：指针类型 DATE/ID/COMPOSITE',
     `offset_field_name`       VARCHAR(128)    NULL COMMENT '指针字段名或 JSONPath（如 DATE 字段名/ID 字段名/复合键主维度）',
     `offset_date_format`      VARCHAR(64)     NULL COMMENT 'DATE 指针格式/语义：如 ISO_INSTANT、epochMillis、YYYYMMDD',
     `default_date_field_name` VARCHAR(64)     NULL COMMENT '默认增量日期字段名（如 PubMed: EDAT/PDAT/MHDA；Crossref: indexed-date）',
@@ -300,7 +300,7 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 
     /* 生成列 */
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期',
+  `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期',
 
     -- BaseDO（统一审计字段）
     `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -316,10 +316,10 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_window_offset_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    -- 字典以编码关联：scope/window_mode/window_size_unit/lookback_unit/overlap_unit/offset_type/lifecycle_status 使用 item_code
-    UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_window_offset_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_window_offset_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC,
+  -- 字典以编码关联：scope_code/window_mode_code/window_size_unit_code/lookback_unit_code/overlap_unit_code/offset_type_code/lifecycle_status_code 使用 item_code
+  UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from`),
+  KEY `idx_reg_prov_window_offset_cfg__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `effective_to`),
+  KEY `idx_reg_prov_window_offset_cfg__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC,
                                                   `id`
                                                   DESC)
 ) ENGINE = InnoDB
@@ -336,13 +336,13 @@ CREATE TABLE `reg_prov_pagination_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：分页与游标配置记录ID',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`              VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
     `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `pagination_mode`         VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=pagination_mode)：分页模式 PAGE_NUMBER/CURSOR/TOKEN/SCROLL',
+  `pagination_mode_code`    VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=pagination_mode)：分页模式 PAGE_NUMBER/CURSOR/TOKEN/SCROLL',
     `page_size_value`         INT             NULL COMMENT '每页大小：PAGE_NUMBER/SCROLL 模式常用；空表示使用应用默认',
     `max_pages_per_execution` INT             NULL COMMENT '单次执行最多翻页数：防止深翻造成高成本',
     `page_number_param_name`  VARCHAR(64)     NULL COMMENT '页码参数名（如 page）',
@@ -362,7 +362,7 @@ CREATE TABLE `reg_prov_pagination_cfg`
     `total_count_xpath`       VARCHAR(512)    NULL COMMENT '如何从 XML 响应中提取总条数的 XPath（可选）',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -378,10 +378,10 @@ CREATE TABLE `reg_prov_pagination_cfg`
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_pagination_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    -- 字典以编码关联：scope/pagination_mode/lifecycle_status 使用 item_code
-    UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_pagination_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_pagination_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+  -- 字典以编码关联：scope_code/pagination_mode_code/lifecycle_status_code 使用 item_code
+  UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from`),
+  KEY `idx_reg_prov_pagination_cfg__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `effective_to`),
+  KEY `idx_reg_prov_pagination_cfg__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id`
                                                DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -397,7 +397,7 @@ CREATE TABLE `reg_prov_http_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：HTTP 策略配置记录ID',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`              VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
@@ -412,13 +412,13 @@ CREATE TABLE `reg_prov_http_cfg`
     `proxy_url_value`         VARCHAR(512)    NULL COMMENT '代理地址：如 http://user:pass@host:port 或 socks5://host:port',
     `accept_compress_enabled` TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否接受压缩响应：1=接受 gzip/deflate/br 等；0=不接受',
     `prefer_http2_enabled`    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否优先使用 HTTP/2（若客户端/服务端支持）',
-    `retry_after_policy`      VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=retry_after_policy)：对服务端 Retry-After 的处理策略',
+  `retry_after_policy_code` VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=retry_after_policy)：对服务端 Retry-After 的处理策略',
     `retry_after_cap_millis`  INT             NULL COMMENT '当选择 RESPECT/CLAMP 时的最大等待上限（毫秒）',
     `idempotency_header_name` VARCHAR(64)     NULL COMMENT '幂等性 Header 名称（如 Idempotency-Key），用于避免重复提交',
     `idempotency_ttl_seconds` INT             NULL COMMENT '幂等性键过期时间（秒），仅客户端/服务端支持时有效',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -434,10 +434,10 @@ CREATE TABLE `reg_prov_http_cfg`
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_http_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    -- 字典以编码关联：scope/retry_after_policy/lifecycle_status 使用 item_code
-    UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_http_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_http_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC)
+  -- 字典以编码关联：scope_code/retry_after_policy_code/lifecycle_status_code 使用 item_code
+  UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from`),
+  KEY `idx_reg_prov_http_cfg__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `effective_to`),
+  KEY `idx_reg_prov_http_cfg__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id` DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -452,7 +452,7 @@ CREATE TABLE `reg_prov_batching_cfg`
 (
     `id`                         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：批量抓取与请求成型配置记录ID',
     `provenance_id`              BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                      VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`                 VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`                  VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
     `effective_from`             TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
@@ -465,15 +465,15 @@ CREATE TABLE `reg_prov_batching_cfg`
     `ids_join_delimiter`         VARCHAR(8)      NULL     DEFAULT ',' COMMENT 'ID 列表拼接的分隔符（如 , 或 +）',
     `max_ids_per_request`        INT             NULL COMMENT '每个 HTTP 请求允许携带的 ID 最大数量（硬上限）',
     `prefer_compact_payload`     TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否尽量压缩请求体（如去掉冗余空白）',
-    `payload_compress_strategy`  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=payload_compress_strategy)：请求体压缩策略',
+  `payload_compress_strategy_code`  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=payload_compress_strategy)：请求体压缩策略',
     `app_parallelism_degree`     INT             NULL COMMENT '应用层并行请求数：限制整体并发度',
     `per_host_concurrency_limit` INT             NULL COMMENT '每主机并发上限：限制与同一主机的并发连接数',
     `http_conn_pool_size`        INT             NULL COMMENT '连接池大小：HTTP 连接复用池的容量（客户端支持时生效）',
-    `backpressure_strategy`      VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=backpressure_strategy)：背压策略',
+  `backpressure_strategy_code` VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=backpressure_strategy)：背压策略',
     `request_template_json`      JSON            NULL COMMENT '请求成型模板：用于将内部字段映射到 query/body 的规则 JSON',
 
     `task_type_key`              VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`           VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `lifecycle_status_code`      VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`             JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -490,12 +490,12 @@ CREATE TABLE `reg_prov_batching_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
-    -- 字典以编码关联：scope/payload_compress_strategy/backpressure_strategy/lifecycle_status 使用 sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_batching_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_batching_cfg__by_ep_cred` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`,
+  -- 字典以编码关联：scope_code/payload_compress_strategy_code/backpressure_strategy_code/lifecycle_status_code 使用 sys_dict_item.item_code
+  UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from`),
+  KEY `idx_reg_prov_batching_cfg__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `effective_to`),
+  KEY `idx_reg_prov_batching_cfg__by_ep_cred` (`provenance_id`, `scope_code`, `task_type_key`, `endpoint_id`,
                                                  `credential_name`),
-    KEY `idx_reg_prov_batching_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+  KEY `idx_reg_prov_batching_cfg__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id`
                                              DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -511,14 +511,14 @@ CREATE TABLE `reg_prov_retry_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：重试与退避配置记录ID',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`              VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
     `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
     `max_retry_times`         INT             NULL COMMENT '最大重试次数：为空则使用应用默认；0 表示不重试',
-    `backoff_policy_type`     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=backoff_policy_type)：退避策略',
+  `backoff_policy_type_code` VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=backoff_policy_type)：退避策略',
     `initial_delay_millis`    INT             NULL COMMENT '首个重试的延迟（毫秒）',
     `max_delay_millis`        INT             NULL COMMENT '单次重试的最大延迟（毫秒）',
     `exp_multiplier_value`    DOUBLE          NULL COMMENT '指数退避的乘数因子（如 2.0）',
@@ -530,7 +530,7 @@ CREATE TABLE `reg_prov_retry_cfg`
     `circuit_cooldown_millis` INT             NULL COMMENT '断路器冷却时间（毫秒）：过后允许半开探测',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -546,10 +546,10 @@ CREATE TABLE `reg_prov_retry_cfg`
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_retry_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    -- 字典以编码关联：scope/backoff_policy_type/lifecycle_status 使用 item_code
-    UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_retry_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_retry_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+  -- 字典以编码关联：scope_code/backoff_policy_type_code/lifecycle_status_code 使用 item_code
+  UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from`),
+  KEY `idx_reg_prov_retry_cfg__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `effective_to`),
+  KEY `idx_reg_prov_retry_cfg__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id`
                                           DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -565,7 +565,7 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
 (
     `id`                         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：限流与并发配置记录ID',
     `provenance_id`              BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                      VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
+  `scope_code`                 VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
     `task_type`                  VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
     `effective_from`             TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
@@ -575,14 +575,14 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     `burst_bucket_capacity`      INT             NULL COMMENT '突发桶容量（最大瞬时令牌数），用于吸收短时峰值',
     `max_concurrent_requests`    INT             NULL COMMENT '全局并发请求上限（连接/请求数），为空表示默认',
     `per_credential_qps_limit`   INT             NULL COMMENT '按密钥的 QPS 上限：多把密钥时可分摊流量',
-    `bucket_granularity_scope`   VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=bucket_granularity_scope)：令牌桶粒度',
+  `bucket_granularity_scope_code`   VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=bucket_granularity_scope)：令牌桶粒度',
     `smoothing_window_millis`    INT             NULL COMMENT '平滑窗口（毫秒）：用于平滑令牌发放与计数',
     `respect_server_rate_header` TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否遵循服务端速率响应头（如 X-RateLimit-*）：1=遵循；0=忽略',
     `endpoint_id`                BIGINT UNSIGNED NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
     `credential_name`            VARCHAR(64)     NULL COMMENT '可选：关联凭证逻辑名，用于细化限流',
 
     `task_type_key`              VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`           VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `lifecycle_status_code`      VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`             JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -599,12 +599,12 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
-    -- 字典以编码关联：scope/bucket_granularity_scope/lifecycle_status 使用 sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_rate_limit_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_rate_limit_cfg__by_ep_cred` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`,
+  -- 字典以编码关联：scope_code/bucket_granularity_scope_code/lifecycle_status_code 使用 sys_dict_item.item_code
+  UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from`),
+  KEY `idx_reg_prov_rate_limit_cfg__dim_to` (`provenance_id`, `scope_code`, `task_type_key`, `effective_to`),
+  KEY `idx_reg_prov_rate_limit_cfg__by_ep_cred` (`provenance_id`, `scope_code`, `task_type_key`, `endpoint_id`,
                                                    `credential_name`),
-    KEY `idx_reg_prov_rate_limit_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+  KEY `idx_reg_prov_rate_limit_cfg__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id`
                                                DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -621,13 +621,13 @@ CREATE TABLE `reg_prov_credential`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：凭证记录ID',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：凭证作用域 SOURCE/TASK',
+  `scope_code`              VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：凭证作用域 SOURCE/TASK',
     `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
     `endpoint_id`             BIGINT UNSIGNED NULL COMMENT '可选外键：若该凭证仅用于某个端点，则指定端点配置ID → reg_prov_endpoint_def(id)',
 
     `credential_name`         VARCHAR(64)     NOT NULL COMMENT '凭证标签：用于人类可读标识与应用优先级选择（可与端点的 credential_hint_name 配合）',
     `auth_type`               VARCHAR(32)     NOT NULL COMMENT '鉴权类型文本（去 ENUM 化）；如 API_KEY/BEARER/BASIC/OAUTH2/CUSTOM',
-    `inbound_location`        VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=inbound_location)：凭证放置位置',
+  `inbound_location_code`   VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=inbound_location)：凭证放置位置',
     `credential_field_name`   VARCHAR(128)    NULL COMMENT '凭证字段名：如 Authorization / api_key / access_token',
     `credential_value_prefix` VARCHAR(64)     NULL COMMENT '凭证值前缀：如 "Bearer "，会拼接在凭证值之前',
     `credential_value_ref`    VARCHAR(256)    NULL COMMENT '凭证值引用（如 KMS 密钥名/路径），不落明文',
@@ -650,7 +650,7 @@ CREATE TABLE `reg_prov_credential`
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
     `endpoint_id_key`         BIGINT AS (IFNULL(`endpoint_id`, 0)) STORED COMMENT '生成列：端点ID的统一键（NULL→0）用于唯一约束',
     `preferred_1`             CHAR(1) AS (CASE WHEN `is_default_preferred` = 1 THEN 'Y' ELSE NULL END) STORED COMMENT '生成列：默认优先=Y（NULL 可重复）',
-    `lifecycle_status`        VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
+  `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
     `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -667,13 +667,13 @@ CREATE TABLE `reg_prov_credential`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_credential__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_credential__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
-    -- 字典以编码关联：scope/inbound_location/lifecycle_status 使用 item_code
+  -- 字典以编码关联：scope_code/inbound_location_code/lifecycle_status_code 使用 item_code
 
-    KEY `idx_reg_prov_credential__dim` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`, `credential_name`),
+  KEY `idx_reg_prov_credential__dim` (`provenance_id`, `scope_code`, `task_type_key`, `endpoint_id`, `credential_name`),
     KEY `idx_reg_prov_credential__effective` (`effective_from`, `effective_to`),
-    KEY `idx_reg_prov_credential__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+  KEY `idx_reg_prov_credential__active` (`provenance_id`, `scope_code`, `task_type_key`, `effective_from` DESC, `id`
                                            DESC),
-    UNIQUE KEY `uk_reg_prov_credential__preferred_one` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id_key`,
+  UNIQUE KEY `uk_reg_prov_credential__preferred_one` (`provenance_id`, `scope_code`, `task_type_key`, `endpoint_id_key`,
                                                         `preferred_1`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -742,7 +742,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
     `id`                  BIGINT UNSIGNED NOT NULL COMMENT '主键（雪花/发号器），库内标识',
     `provenance_id`       BIGINT UNSIGNED NOT NULL COMMENT '来源 ID（逻辑外键 → reg_provenance.id），区分不同数据源/供应商',
 
-    `scope`               VARCHAR(8)      NOT NULL DEFAULT 'SOURCE' COMMENT '作用域 code：SOURCE=按来源生效；TASK=按任务类型限定（灰度发布/试点用途）',
+  `scope_code`          VARCHAR(8)      NOT NULL DEFAULT 'SOURCE' COMMENT '作用域 code：SOURCE=按来源生效；TASK=按任务类型限定（灰度发布/试点用途）',
     `task_type`           VARCHAR(32)     NULL COMMENT '任务类型（可空）：例如 HARVEST/UPDATE/BACKFILL/SANDBOX；用于 TASK 级灰度',
     `task_type_key`       VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：将 NULL 归一化为 ALL，稳定维度 Join/唯一键',
 
@@ -768,8 +768,8 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
     `deleted`             TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除：0=未删，1=已删；读侧统一过滤',
 
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_param_map__dim_from`
-        (`provenance_id`, `scope`, `task_type_key`, `operation_code`, `std_key`,
+  UNIQUE KEY `uk_param_map__dim_from`
+    (`provenance_id`, `scope_code`, `task_type_key`, `operation_code`, `std_key`,
          `effective_from`) COMMENT '维度唯一 + 起始时间，保证任一时刻命中至多一条',
     KEY `idx_param_map_lookup` (`provenance_id`, `operation_code`, `std_key`) COMMENT '常用查询：按来源+操作+标准键命中当前生效',
     KEY `idx_param_map_rev` (`provenance_id`, `operation_code`, `provider_param_name`) COMMENT '反查：已知平台参数名回溯标准键',
@@ -792,7 +792,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
     `id`                          BIGINT UNSIGNED NOT NULL COMMENT '主键（雪花/发号器），库内标识',
     `provenance_id`               BIGINT UNSIGNED NOT NULL COMMENT '来源 ID（逻辑外键 → reg_provenance.id）',
 
-    `scope`                       VARCHAR(8)      NOT NULL DEFAULT 'SOURCE' COMMENT '作用域 code：SOURCE/TASK；用于灰度与试点',
+  `scope_code`                  VARCHAR(8)      NOT NULL DEFAULT 'SOURCE' COMMENT '作用域 code：SOURCE/TASK；用于灰度与试点',
     `task_type`                   VARCHAR(32)     NULL COMMENT '任务类型（可空）：HARVEST/UPDATE/BACKFILL...',
     `task_type_key`               VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：将 NULL 归一为 ALL，稳定维度',
 
@@ -844,8 +844,8 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
     `deleted`                     TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除：0=未删，1=已删',
 
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_cap__dim_from`
-        (`provenance_id`, `scope`, `task_type_key`, `field_key`,
+  UNIQUE KEY `uk_cap__dim_from`
+    (`provenance_id`, `scope_code`, `task_type_key`, `field_key`,
          `effective_from`) COMMENT '维度唯一 + 起始时间，保证同一时刻命中唯一配置',
     KEY `idx_cap_updated` (`updated_at`) COMMENT '增量/审计查询',
     KEY `idx_cap_lookup` (`provenance_id`, `field_key`) COMMENT '常用查询：按来源+字段查看能力'
@@ -867,7 +867,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
     `id`              BIGINT UNSIGNED NOT NULL COMMENT '主键（雪花/发号器），库内标识',
     `provenance_id`   BIGINT UNSIGNED NOT NULL COMMENT '来源 ID（逻辑外键 → reg_provenance.id）',
 
-    `scope`           VARCHAR(8)      NOT NULL DEFAULT 'SOURCE' COMMENT '作用域 code：SOURCE/TASK；配合 task_type 做灰度',
+  `scope_code`      VARCHAR(8)      NOT NULL DEFAULT 'SOURCE' COMMENT '作用域 code：SOURCE/TASK；配合 task_type 做灰度',
     `task_type`       VARCHAR(32)     NULL COMMENT '任务类型（可空）：HARVEST/UPDATE/BACKFILL...',
     `task_type_key`   VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：将 NULL 归一化为 ALL',
 
@@ -906,8 +906,8 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
     `deleted`         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '软删除：0=未删，1=已删',
 
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_render__dim_from`
-        (`provenance_id`, `scope`, `task_type_key`, `field_key`, `op_code`, `match_type_key`, `negated_key`,
+  UNIQUE KEY `uk_render__dim_from`
+    (`provenance_id`, `scope_code`, `task_type_key`, `field_key`, `op_code`, `match_type_key`, `negated_key`,
          `value_type_key`, `emit_type_code`, `effective_from`) COMMENT '维度唯一 + 起始时间；通过归一化列消除 NULL 歧义',
     KEY `idx_render_updated` (`updated_at`) COMMENT '增量/审计查询',
     KEY `idx_render_lookup` (`provenance_id`, `field_key`, `op_code`) COMMENT '常用查询：按来源+字段+操作命中规则'
