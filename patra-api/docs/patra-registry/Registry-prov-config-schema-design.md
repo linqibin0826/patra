@@ -32,7 +32,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
     * 外键只指向**来源主键**与**端点定义主键**，其余跨维度依赖留在应用侧装配。
 * **契合 DDD / 六边形 / CQRS 的落地**：
 
-    * 领域层只依赖\*\*端口（Ports）/仓储（Repositories）\*\*抽象；
+    * 领域层只依赖 **端口（Ports）/仓储（Repositories）** 抽象；
     * 基础设施层（MyBatis-Plus + Jackson）做关系-对象映射与 JSON 映射；
     * 读写分离：读侧可直接组织“当前生效配置”的查询与缓存；写侧通过新增区间记录实现“灰度切换、平滑回滚”。
 
@@ -1120,23 +1120,25 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-              AND lifecycle_status='PUBLISHED' AND deleted=0
+            AND lifecycle_status = 'PUBLISHED'
+            AND deleted = 0
             AND endpoint_id = (SELECT id FROM ep LIMIT 1)
-              AND effective_from <= @now
-              AND (effective_to IS NULL OR effective_to > @now)
+            AND effective_from <= @now
+            AND (effective_to IS NULL OR effective_to > @now)
             AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-            ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
+          ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          UNION ALL
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-              AND lifecycle_status='PUBLISHED' AND deleted=0
+            AND lifecycle_status = 'PUBLISHED'
+            AND deleted = 0
             AND endpoint_id IS NULL
-              AND effective_from <= @now
-              AND (effective_to IS NULL OR effective_to > @now)
+            AND effective_from <= @now
+            AND (effective_to IS NULL OR effective_to > @now)
             AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-            ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
+          ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          LIMIT 1)
 
@@ -1584,7 +1586,8 @@ WITH ep AS ((SELECT *
      cred AS ((SELECT *
                FROM reg_prov_credential
                WHERE provenance_id = @pid
-                 AND lifecycle_status='PUBLISHED' AND deleted=0
+                 AND lifecycle_status = 'PUBLISHED'
+                 AND deleted = 0
                  AND endpoint_id = (SELECT id FROM ep LIMIT 1)
                  AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
                  AND effective_from <= @now
@@ -1595,7 +1598,8 @@ WITH ep AS ((SELECT *
               (SELECT *
                FROM reg_prov_credential
                WHERE provenance_id = @pid
-                 AND lifecycle_status='PUBLISHED' AND deleted=0
+                 AND lifecycle_status = 'PUBLISHED'
+                 AND deleted = 0
                  AND endpoint_id IS NULL
                  AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
                  AND effective_from <= @now
@@ -2212,14 +2216,14 @@ FROM ep_search,
 ```sql
 CREATE OR REPLACE VIEW v_reg_prov_http_cfg_active AS
 SELECT *
-FROM (
-  SELECT h.*, ROW_NUMBER() OVER (
-           PARTITION BY h.provenance_id, h.scope, h.task_type_key
-           ORDER BY h.effective_from DESC, h.id DESC
-         ) AS rn
-  FROM reg_prov_http_cfg h
-  WHERE h.lifecycle_status = 'PUBLISHED' AND h.deleted = 0
-) t
+FROM (SELECT h.*,
+             ROW_NUMBER() OVER (
+                 PARTITION BY h.provenance_id, h.scope, h.task_type_key
+                 ORDER BY h.effective_from DESC, h.id DESC
+                 ) AS rn
+      FROM reg_prov_http_cfg h
+      WHERE h.lifecycle_status = 'PUBLISHED'
+        AND h.deleted = 0) t
 WHERE t.rn = 1;
 ```
 
@@ -2235,14 +2239,12 @@ WHERE t.rn = 1;
 
 (SELECT h.*
  FROM reg_prov_http_cfg h
- WHERE h.provenance_id = (
-         SELECT id
-         FROM reg_provenance
-         WHERE provenance_code = :provenance_code
-           AND lifecycle_status = 'PUBLISHED'
-           AND deleted = 0
-         LIMIT 1
-       )
+ WHERE h.provenance_id = (SELECT id
+                          FROM reg_provenance
+                          WHERE provenance_code = :provenance_code
+                            AND lifecycle_status = 'PUBLISHED'
+                            AND deleted = 0
+                          LIMIT 1)
    AND h.lifecycle_status = 'PUBLISHED'
    AND h.deleted = 0
    AND h.scope = 'TASK'
@@ -2254,14 +2256,12 @@ WHERE t.rn = 1;
 UNION ALL
 (SELECT h.*
  FROM reg_prov_http_cfg h
- WHERE h.provenance_id = (
-         SELECT id
-         FROM reg_provenance
-         WHERE provenance_code = :provenance_code
-           AND lifecycle_status = 'PUBLISHED'
-           AND deleted = 0
-         LIMIT 1
-       )
+ WHERE h.provenance_id = (SELECT id
+                          FROM reg_provenance
+                          WHERE provenance_code = :provenance_code
+                            AND lifecycle_status = 'PUBLISHED'
+                            AND deleted = 0
+                          LIMIT 1)
    AND h.lifecycle_status = 'PUBLISHED'
    AND h.deleted = 0
    AND h.scope = 'SOURCE'
@@ -3203,27 +3203,28 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 DROP TABLE IF EXISTS `reg_provenance`;
 CREATE TABLE `reg_provenance`
 (
-    `id`               BIGINT UNSIGNED                      NOT NULL AUTO_INCREMENT COMMENT '主键：数据来源唯一标识；被所有 reg_prov_* 配置表通过 provenance_id 引用',
-    `provenance_code`  VARCHAR(64)                          NOT NULL COMMENT '来源编码：全局唯一、稳定（如 pubmed / crossref），用于程序内查找与约束',
-    `provenance_name`  VARCHAR(128)                         NOT NULL COMMENT '来源名称：人类可读名称（如 PubMed / Crossref）',
-    `base_url_default` VARCHAR(512)                         NULL COMMENT '默认基础URL：当未在 HTTP 策略中覆盖时，用于端点 path 的拼接',
-    `timezone_default` VARCHAR(64)                          NOT NULL DEFAULT 'UTC' COMMENT '默认时区（IANA TZ，如 UTC/Asia/Shanghai）：窗口计算/展示的缺省时区',
-    `docs_url`         VARCHAR(512)                         NULL COMMENT '官方文档/说明链接：便于排障或核对 API 用法',
-    `is_active`        TINYINT(1)                           NOT NULL DEFAULT 1 COMMENT '是否启用该来源：1=启用；0=停用（应用读取时可据此过滤）',
-    `lifecycle_status` ENUM ('DRAFT','PUBLISHED','RETIRED') NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：DRAFT 草稿；PUBLISHED 已发布；RETIRED 退役（读侧仅取 PUBLISHED）',
+    `id`                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：数据来源唯一标识；被所有 reg_prov_* 配置表通过 provenance_id 引用',
+    `provenance_code`     VARCHAR(64)     NOT NULL COMMENT '来源编码：全局唯一、稳定（如 pubmed / crossref），用于程序内查找与约束',
+    `provenance_name`     VARCHAR(128)    NOT NULL COMMENT '来源名称：人类可读名称（如 PubMed / Crossref）',
+    `base_url_default`    VARCHAR(512)    NULL COMMENT '默认基础URL：当未在 HTTP 策略中覆盖时，用于端点 path 的拼接',
+    `timezone_default`    VARCHAR(64)     NOT NULL DEFAULT 'UTC' COMMENT '默认时区（IANA TZ，如 UTC/Asia/Shanghai）：窗口计算/展示的缺省时区',
+    `docs_url`            VARCHAR(512)    NULL COMMENT '官方文档/说明链接：便于排障或核对 API 用法',
+    `is_active`           TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用该来源：1=启用；0=停用（应用读取时可据此过滤）',
+    `lifecycle_status_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`   JSON                                 NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`       TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`       BIGINT UNSIGNED                      NULL COMMENT '创建人ID',
-    `created_by_name`  VARCHAR(100)                         NULL COMMENT '创建人姓名',
-    `updated_at`       TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`       BIGINT UNSIGNED                      NULL COMMENT '更新人ID',
-    `updated_by_name`  VARCHAR(100)                         NULL COMMENT '更新人姓名',
-    `version`          BIGINT UNSIGNED                      NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`       VARBINARY(16)                        NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`          TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`      JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`          BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`     VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`          BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`     VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`             BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`          VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`             TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
+    -- Removed physical FK to dictionary: lifecycle_status_id → sys_dict_item(id)
     UNIQUE KEY `uk_reg_provenance_code` (`provenance_code`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -3238,56 +3239,57 @@ CREATE TABLE `reg_provenance`
 DROP TABLE IF EXISTS `reg_prov_endpoint_def`;
 CREATE TABLE `reg_prov_endpoint_def`
 (
-    `id`                   BIGINT UNSIGNED                                             NOT NULL AUTO_INCREMENT COMMENT '主键：端点定义记录ID；可被凭证表 reg_prov_credential.endpoint_id 可选引用',
-    `provenance_id`        BIGINT UNSIGNED                                             NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                ENUM ('SOURCE','TASK')                                      NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`            ENUM ('harvest','update','backfill')                        NULL COMMENT '任务类型：当 scope=TASK 时需填写；harvest=全量首采，update=增量，backfill=回填',
-    `endpoint_name`        VARCHAR(64)                                                 NOT NULL COMMENT '端点逻辑名称：如 search / fetch / works / token；用于业务侧选择端点',
+    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：端点定义记录ID；可被凭证表 reg_prov_credential.endpoint_id 可选引用',
+    `provenance_id`        BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`             BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
+    `task_type`            VARCHAR(32)     NULL COMMENT '任务类型文本：当 scope=TASK 时需填写；示例 harvest/update/backfill（去 ENUM 化）',
+    `endpoint_name`        VARCHAR(64)     NOT NULL COMMENT '端点逻辑名称：如 search / fetch / works / token；用于业务侧选择端点',
 
-    `effective_from`       TIMESTAMP(6)                                                NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
-    `effective_to`         TIMESTAMP(6)                                                NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`       TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
+    `effective_to`         TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `endpoint_usage`       ENUM ('SEARCH','FETCH','TOKEN','METADATA','PING','RATE')    NOT NULL DEFAULT 'SEARCH' COMMENT '用途：SEARCH=检索列表；FETCH=详情；TOKEN=换取令牌；METADATA=元数据；PING=健康检查；RATE=配额端点',
-    `http_method`          ENUM ('GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS') NOT NULL DEFAULT 'GET' COMMENT 'HTTP 方法：GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS',
-    `path_template`        VARCHAR(512)                                                NOT NULL COMMENT '路径模板：相对路径或绝对路径；可包含占位符（如 /entrez/eutils/esearch.fcgi）',
-    `default_query_params` JSON                                                        NULL COMMENT '默认查询参数JSON：作为每次请求的基础 query（运行时可覆盖/合并）',
-    `default_body_payload` JSON                                                        NULL COMMENT '默认请求体JSON：POST/PUT/PATCH 的基础 body（运行时可覆盖/合并）',
-    `request_content_type` VARCHAR(64)                                                 NULL COMMENT '请求体内容类型：如 application/json / application/x-www-form-urlencoded',
-    `is_auth_required`     TINYINT(1)                                                  NOT NULL DEFAULT 0 COMMENT '是否需要鉴权：1=需要；0=不需要（匿名可调用）',
-    `credential_hint_name` VARCHAR(64)                                                 NULL COMMENT '凭证提示：偏好使用的凭证标签/名称，辅助在多凭证中挑选',
+    `endpoint_usage_id`    BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=endpoint_usage) 用途：SEARCH/DETAIL/BATCH/AUTH/HEALTH 等',
+    `http_method_id`       BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=http_method) HTTP 方法',
+    `path_template`        VARCHAR(512)    NOT NULL COMMENT '路径模板：相对路径或绝对路径；可包含占位符（如 /entrez/eutils/esearch.fcgi）',
+    `default_query_params` JSON            NULL COMMENT '默认查询参数JSON：作为每次请求的基础 query（运行时可覆盖/合并）',
+    `default_body_payload` JSON            NULL COMMENT '默认请求体JSON：POST/PUT/PATCH 的基础 body（运行时可覆盖/合并）',
+    `request_content_type` VARCHAR(64)     NULL COMMENT '请求体内容类型：如 application/json / application/x-www-form-urlencoded',
+    `is_auth_required`     TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否需要鉴权：1=需要；0=不需要（匿名可调用）',
+    `credential_hint_name` VARCHAR(64)     NULL COMMENT '凭证提示：偏好使用的凭证标签/名称，辅助在多凭证中挑选',
 
     /* 端点级分页/批量覆盖（可为空：由 reg_prov_pagination_cfg 或应用决定） */
-    `page_param_name`      VARCHAR(64)                                                 NULL COMMENT '分页页码参数名（端点级覆盖项）',
-    `page_size_param_name` VARCHAR(64)                                                 NULL COMMENT '分页每页大小参数名（端点级覆盖项）',
-    `cursor_param_name`    VARCHAR(64)                                                 NULL COMMENT '游标/令牌参数名（端点级覆盖项）',
-    `ids_param_name`       VARCHAR(64)                                                 NULL COMMENT '批量详情请求中，ID列表的参数名（端点级覆盖项）',
+    `page_param_name`      VARCHAR(64)     NULL COMMENT '分页页码参数名（端点级覆盖项）',
+    `page_size_param_name` VARCHAR(64)     NULL COMMENT '分页每页大小参数名（端点级覆盖项）',
+    `cursor_param_name`    VARCHAR(64)     NULL COMMENT '游标/令牌参数名（端点级覆盖项）',
+    `ids_param_name`       VARCHAR(64)     NULL COMMENT '批量详情请求中，ID列表的参数名（端点级覆盖项）',
 
     /* 生成列：将 task_type 标准化为 ALL 或实际值，便于唯一键 */
-    `task_type_key`        VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：当 task_type 为空取 ALL，否则取其枚举值；用于维度唯一键',
-    `lifecycle_status`     ENUM ('DRAFT','PUBLISHED','RETIRED')                        NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `task_type_key`        VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：当 task_type 为空取 ALL；用于维度唯一键',
+    `lifecycle_status_id`  BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`       JSON                                                        NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`           TIMESTAMP(6)                                                NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`           BIGINT UNSIGNED                                             NULL COMMENT '创建人ID',
-    `created_by_name`      VARCHAR(100)                                                NULL COMMENT '创建人姓名',
-    `updated_at`           TIMESTAMP(6)                                                NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`           BIGINT UNSIGNED                                             NULL COMMENT '更新人ID',
-    `updated_by_name`      VARCHAR(100)                                                NULL COMMENT '更新人姓名',
-    `version`              BIGINT UNSIGNED                                             NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`           VARBINARY(16)                                               NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`              TINYINT(1)                                                  NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`       JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`           BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`      VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`           TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`           BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`      VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`              BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`           VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`              TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_endpoint_def__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
+    -- Removed physical FKs to dictionary: scope_id/endpoint_usage_id/http_method_id/lifecycle_status_id
 
-    /* 维度唯一：同 (provenance_id, scope, task_type_key, endpoint_name) 下 effective_from 唯一；不重叠由应用保证 */
-    UNIQUE KEY `uk_reg_prov_endpoint_def__dim_from` (`provenance_id`, `scope`, `task_type_key`, `endpoint_name`,
+    /* 维度唯一：同 (provenance_id, scope_id, task_type_key, endpoint_name) 下 effective_from 唯一；不重叠由应用保证 */
+    UNIQUE KEY `uk_reg_prov_endpoint_def__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `endpoint_name`,
                                                      `effective_from`),
-    KEY `idx_reg_prov_endpoint_def__dim_to` (`provenance_id`, `scope`, `task_type_key`, `endpoint_name`,
+    KEY `idx_reg_prov_endpoint_def__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `endpoint_name`,
                                              `effective_to`),
-    KEY `idx_reg_prov_endpoint_def__usage` (`endpoint_usage`),
-    KEY `idx_reg_prov_endpoint_def__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+    KEY `idx_reg_prov_endpoint_def__usage` (`endpoint_usage_id`),
+    KEY `idx_reg_prov_endpoint_def__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id`
                                              DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -3301,54 +3303,56 @@ CREATE TABLE `reg_prov_endpoint_def`
 DROP TABLE IF EXISTS `reg_prov_window_offset_cfg`;
 CREATE TABLE `reg_prov_window_offset_cfg`
 (
-    `id`                      BIGINT UNSIGNED                       NOT NULL AUTO_INCREMENT COMMENT '主键：时间窗口与增量指针配置记录ID',
-    `provenance_id`           BIGINT UNSIGNED                       NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   ENUM ('SOURCE','TASK')                NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`               ENUM ('harvest','update','backfill')  NULL COMMENT '任务类型：当 scope=TASK 时需填写',
+    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：时间窗口与增量指针配置记录ID',
+    `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域',
+    `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
-    `effective_from`          TIMESTAMP(6)                          NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
-    `effective_to`            TIMESTAMP(6)                          NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
+    `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
     /* 窗口定义 */
-    `window_mode`             ENUM ('SLIDING','CALENDAR')           NOT NULL DEFAULT 'SLIDING' COMMENT '窗口模式：SLIDING=滑动窗口；CALENDAR=对齐日历边界（如按天/月）',
-    `window_size_value`       INT                                   NOT NULL DEFAULT 1 COMMENT '窗口长度的数值部分，如 1/7/30；单位见 window_size_unit',
-    `window_size_unit`        ENUM ('SECOND','MINUTE','HOUR','DAY') NOT NULL DEFAULT 'DAY' COMMENT '窗口长度单位：秒/分/时/天',
-    `calendar_align_to`       ENUM ('HOUR','DAY','WEEK','MONTH')    NULL COMMENT 'CALENDAR 模式对齐粒度：若为空，则按 SLIDING 逻辑',
-    `lookback_value`          INT                                   NULL COMMENT '回看长度数值：用于补偿延迟数据（与 lookback_unit 搭配）',
-    `lookback_unit`           ENUM ('SECOND','MINUTE','HOUR','DAY') NULL COMMENT '回看长度单位：秒/分/时/天',
-    `overlap_value`           INT                                   NULL COMMENT '窗口重叠长度数值：相邻窗口之间的重叠（迟到兜底）',
-    `overlap_unit`            ENUM ('SECOND','MINUTE','HOUR','DAY') NULL COMMENT '窗口重叠单位：秒/分/时/天',
-    `watermark_lag_seconds`   INT                                   NULL COMMENT '水位滞后秒数：处理乱序/迟到数据时允许的最大延迟',
+    `window_mode_id`          BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=window_mode) 窗口模式',
+    `window_size_value`       INT             NOT NULL DEFAULT 1 COMMENT '窗口长度的数值部分，如 1/7/30；单位见 window_size_unit',
+    `window_size_unit_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=time_unit) 窗口长度单位',
+    `calendar_align_to`       VARCHAR(16)     NULL COMMENT 'CALENDAR 模式对齐粒度（去 ENUM 化，示例：HOUR/DAY/WEEK/MONTH）',
+    `lookback_value`          INT             NULL COMMENT '回看长度数值：用于补偿延迟数据（与 lookback_unit 搭配）',
+    `lookback_unit_id`        BIGINT UNSIGNED NULL COMMENT 'FK: sys_dict_item.id (type=time_unit) 回看长度单位：秒/分/时/天',
+    `overlap_value`           INT             NULL COMMENT '窗口重叠长度数值：相邻窗口之间的重叠（迟到兜底）',
+    `overlap_unit_id`         BIGINT UNSIGNED NULL COMMENT 'FK: sys_dict_item.id (type=time_unit) 窗口重叠单位：秒/分/时/天',
+    `watermark_lag_seconds`   INT             NULL COMMENT '水位滞后秒数：处理乱序/迟到数据时允许的最大延迟',
 
     /* 增量指针定义 */
-    `offset_type`             ENUM ('DATE','ID','COMPOSITE')        NOT NULL DEFAULT 'DATE' COMMENT '指针类型：DATE=按时间字段推进；ID=按唯一标识推进；COMPOSITE=复合键',
-    `offset_field_name`       VARCHAR(128)                          NULL COMMENT '指针字段名或 JSONPath（如 DATE 字段名/ID 字段名/复合键主维度）',
-    `offset_date_format`      VARCHAR(64)                           NULL COMMENT 'DATE 指针格式/语义：如 ISO_INSTANT、epochMillis、YYYYMMDD',
-    `default_date_field_name` VARCHAR(64)                           NULL COMMENT '默认增量日期字段名（如 PubMed: EDAT/PDAT/MHDA；Crossref: indexed-date）',
-    `max_ids_per_window`      INT                                   NULL COMMENT '单窗口最多可处理的ID数量（超过则需二次切窗）',
-    `max_window_span_seconds` INT                                   NULL COMMENT '单窗口最大跨度（秒）：过长窗口将被强制切分',
+    `offset_type_id`          BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=offset_type) 指针类型',
+    `offset_field_name`       VARCHAR(128)    NULL COMMENT '指针字段名或 JSONPath（如 DATE 字段名/ID 字段名/复合键主维度）',
+    `offset_date_format`      VARCHAR(64)     NULL COMMENT 'DATE 指针格式/语义：如 ISO_INSTANT、epochMillis、YYYYMMDD',
+    `default_date_field_name` VARCHAR(64)     NULL COMMENT '默认增量日期字段名（如 PubMed: EDAT/PDAT/MHDA；Crossref: indexed-date）',
+    `max_ids_per_window`      INT             NULL COMMENT '单窗口最多可处理的ID数量（超过则需二次切窗）',
+    `max_window_span_seconds` INT             NULL COMMENT '单窗口最大跨度（秒）：过长窗口将被强制切分',
 
     /* 生成列 */
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')  NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `lifecycle_status_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`          JSON                                  NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`              TIMESTAMP(6)                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`              BIGINT UNSIGNED                       NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)                          NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`              BIGINT UNSIGNED                       NULL COMMENT '更新人ID',
-    `updated_by_name`         VARCHAR(100)                          NULL COMMENT '更新人姓名',
-    `version`                 BIGINT UNSIGNED                       NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`              VARBINARY(16)                         NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                 TINYINT(1)                            NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_window_offset_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_window_offset_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_window_offset_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+    -- Removed physical FKs to dictionary: scope/window_mode/window_size_unit/lookback_unit/overlap_unit/offset_type/lifecycle_status
+    UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from`),
+    KEY `idx_reg_prov_window_offset_cfg__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_window_offset_cfg__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC,
+                                                  `id`
                                                   DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -3362,53 +3366,54 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 DROP TABLE IF EXISTS `reg_prov_pagination_cfg`;
 CREATE TABLE `reg_prov_pagination_cfg`
 (
-    `id`                      BIGINT UNSIGNED                                       NOT NULL AUTO_INCREMENT COMMENT '主键：分页与游标配置记录ID',
-    `provenance_id`           BIGINT UNSIGNED                                       NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   ENUM ('SOURCE','TASK')                                NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`               ENUM ('harvest','update','backfill')                  NULL COMMENT '任务类型：当 scope=TASK 时需填写',
+    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：分页与游标配置记录ID',
+    `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域',
+    `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
-    `effective_from`          TIMESTAMP(6)                                          NOT NULL COMMENT '生效起始（含）',
-    `effective_to`            TIMESTAMP(6)                                          NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
+    `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `pagination_mode`         ENUM ('NONE','PAGE_NUMBER','CURSOR','TOKEN','SCROLL') NOT NULL DEFAULT 'PAGE_NUMBER' COMMENT '分页模式：NONE=不分页；PAGE_NUMBER=页码；CURSOR=游标；TOKEN=令牌；SCROLL=滚动',
-    `page_size_value`         INT                                                   NULL COMMENT '每页大小：PAGE_NUMBER/SCROLL 模式常用；空表示使用应用默认',
-    `max_pages_per_execution` INT                                                   NULL COMMENT '单次执行最多翻页数：防止深翻造成高成本',
-    `page_number_param_name`  VARCHAR(64)                                           NULL COMMENT '页码参数名（如 page）',
-    `page_size_param_name`    VARCHAR(64)                                           NULL COMMENT '每页大小参数名（如 pageSize/rows）',
-    `start_page_number`       INT                                                   NOT NULL DEFAULT 1 COMMENT '起始页码（PAGE_NUMBER 模式的起点）',
-    `sort_field_param_name`   VARCHAR(64)                                           NULL COMMENT '排序字段参数名（如 sort）',
-    `sort_direction`          ENUM ('ASC','DESC')                                   NULL COMMENT '排序方向（ASC/DESC）',
+    `pagination_mode_id`      BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=pagination_mode) 分页模式',
+    `page_size_value`         INT             NULL COMMENT '每页大小：PAGE_NUMBER/SCROLL 模式常用；空表示使用应用默认',
+    `max_pages_per_execution` INT             NULL COMMENT '单次执行最多翻页数：防止深翻造成高成本',
+    `page_number_param_name`  VARCHAR(64)     NULL COMMENT '页码参数名（如 page）',
+    `page_size_param_name`    VARCHAR(64)     NULL COMMENT '每页大小参数名（如 pageSize/rows）',
+    `start_page_number`       INT             NOT NULL DEFAULT 1 COMMENT '起始页码（PAGE_NUMBER 模式的起点）',
+    `sort_field_param_name`   VARCHAR(64)     NULL COMMENT '排序字段参数名（如 sort）',
+    `sort_direction`          VARCHAR(8)      NULL COMMENT '排序方向文本（ASC/DESC）',
 
     /* 游标/令牌模式 */
-    `cursor_param_name`       VARCHAR(64)                                           NULL COMMENT '游标参数名（如 cursor/next_token）',
-    `initial_cursor_value`    VARCHAR(256)                                          NULL COMMENT '初始游标值：为空表示由应用从响应或配置中确定',
-    `next_cursor_jsonpath`    VARCHAR(512)                                          NULL COMMENT '如何从响应中提取下一页游标的路径（JSONPath/JMESPath等）',
-    `has_more_jsonpath`       VARCHAR(512)                                          NULL COMMENT '如何判断是否还有下一页的路径（布尔）',
-    `total_count_jsonpath`    VARCHAR(512)                                          NULL COMMENT '如何从响应中提取总条数的路径（可选）',
-    `next_cursor_xpath`       VARCHAR(512)                                          NULL COMMENT '如何从 XML 响应中提取下一页游标的 XPath（可选）',
-    `has_more_xpath`          VARCHAR(512)                                          NULL COMMENT '如何从 XML 响应中判断是否还有下一页的 XPath（布尔，可选）',
-    `total_count_xpath`       VARCHAR(512)                                          NULL COMMENT '如何从 XML 响应中提取总条数的 XPath（可选）',
+    `cursor_param_name`       VARCHAR(64)     NULL COMMENT '游标参数名（如 cursor/next_token）',
+    `initial_cursor_value`    VARCHAR(256)    NULL COMMENT '初始游标值：为空表示由应用从响应或配置中确定',
+    `next_cursor_jsonpath`    VARCHAR(512)    NULL COMMENT '如何从响应中提取下一页游标的路径（JSONPath/JMESPath等）',
+    `has_more_jsonpath`       VARCHAR(512)    NULL COMMENT '如何判断是否还有下一页的路径（布尔）',
+    `total_count_jsonpath`    VARCHAR(512)    NULL COMMENT '如何从响应中提取总条数的路径（可选）',
+    `next_cursor_xpath`       VARCHAR(512)    NULL COMMENT '如何从 XML 响应中提取下一页游标的 XPath（可选）',
+    `has_more_xpath`          VARCHAR(512)    NULL COMMENT '如何从 XML 响应中判断是否还有下一页的 XPath（布尔，可选）',
+    `total_count_xpath`       VARCHAR(512)    NULL COMMENT '如何从 XML 响应中提取总条数的 XPath（可选）',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')                  NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `lifecycle_status_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`          JSON                                                  NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`              TIMESTAMP(6)                                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`              BIGINT UNSIGNED                                       NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)                                          NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)                                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`              BIGINT UNSIGNED                                       NULL COMMENT '更新人ID',
-    `updated_by_name`         VARCHAR(100)                                          NULL COMMENT '更新人姓名',
-    `version`                 BIGINT UNSIGNED                                       NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`              VARBINARY(16)                                         NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                 TINYINT(1)                                            NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_pagination_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_pagination_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_pagination_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+    -- Removed physical FKs to dictionary: scope_id/pagination_mode_id/lifecycle_status_id
+    UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from`),
+    KEY `idx_reg_prov_pagination_cfg__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_pagination_cfg__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id`
                                                DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -3422,48 +3427,49 @@ CREATE TABLE `reg_prov_pagination_cfg`
 DROP TABLE IF EXISTS `reg_prov_http_cfg`;
 CREATE TABLE `reg_prov_http_cfg`
 (
-    `id`                      BIGINT UNSIGNED                      NOT NULL AUTO_INCREMENT COMMENT '主键：HTTP 策略配置记录ID',
-    `provenance_id`           BIGINT UNSIGNED                      NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   ENUM ('SOURCE','TASK')               NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`               ENUM ('harvest','update','backfill') NULL COMMENT '任务类型：当 scope=TASK 时需填写',
+    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：HTTP 策略配置记录ID',
+    `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域',
+    `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
-    `effective_from`          TIMESTAMP(6)                         NOT NULL COMMENT '生效起始（含）',
-    `effective_to`            TIMESTAMP(6)                         NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
+    `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `base_url_override`       VARCHAR(512)                         NULL COMMENT '基础URL覆盖：若不为空，将覆盖 reg_provenance.base_url_default',
-    `default_headers_json`    JSON                                 NULL COMMENT '默认HTTP Headers（JSON），运行时与请求头合并',
-    `timeout_connect_millis`  INT                                  NULL COMMENT '连接超时（毫秒）：建立 TCP/SSL 连接的超时时间',
-    `timeout_read_millis`     INT                                  NULL COMMENT '读取超时（毫秒）：读取响应主体的超时时间',
-    `timeout_total_millis`    INT                                  NULL COMMENT '总超时（毫秒）：一次请求从开始到结束的最大耗时',
-    `tls_verify_enabled`      TINYINT(1)                           NOT NULL DEFAULT 1 COMMENT '是否校验 TLS 证书：1=开启；0=关闭（仅测试环境）',
-    `proxy_url_value`         VARCHAR(512)                         NULL COMMENT '代理地址：如 http://user:pass@host:port 或 socks5://host:port',
-    `accept_compress_enabled` TINYINT(1)                           NOT NULL DEFAULT 1 COMMENT '是否接受压缩响应：1=接受 gzip/deflate/br 等；0=不接受',
-    `prefer_http2_enabled`    TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '是否优先使用 HTTP/2（若客户端/服务端支持）',
-    `retry_after_policy`      ENUM ('IGNORE','RESPECT','CLAMP')    NOT NULL DEFAULT 'RESPECT' COMMENT '对服务端 Retry-After 的处理：IGNORE=忽略；RESPECT=遵循；CLAMP=按上限截断',
-    `retry_after_cap_millis`  INT                                  NULL COMMENT '当选择 RESPECT/CLAMP 时的最大等待上限（毫秒）',
-    `idempotency_header_name` VARCHAR(64)                          NULL COMMENT '幂等性 Header 名称（如 Idempotency-Key），用于避免重复提交',
-    `idempotency_ttl_seconds` INT                                  NULL COMMENT '幂等性键过期时间（秒），仅客户端/服务端支持时有效',
+    `base_url_override`       VARCHAR(512)    NULL COMMENT '基础URL覆盖：若不为空，将覆盖 reg_provenance.base_url_default',
+    `default_headers_json`    JSON            NULL COMMENT '默认HTTP Headers（JSON），运行时与请求头合并',
+    `timeout_connect_millis`  INT             NULL COMMENT '连接超时（毫秒）：建立 TCP/SSL 连接的超时时间',
+    `timeout_read_millis`     INT             NULL COMMENT '读取超时（毫秒）：读取响应主体的超时时间',
+    `timeout_total_millis`    INT             NULL COMMENT '总超时（毫秒）：一次请求从开始到结束的最大耗时',
+    `tls_verify_enabled`      TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否校验 TLS 证书：1=开启；0=关闭（仅测试环境）',
+    `proxy_url_value`         VARCHAR(512)    NULL COMMENT '代理地址：如 http://user:pass@host:port 或 socks5://host:port',
+    `accept_compress_enabled` TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否接受压缩响应：1=接受 gzip/deflate/br 等；0=不接受',
+    `prefer_http2_enabled`    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否优先使用 HTTP/2（若客户端/服务端支持）',
+    `retry_after_policy_id`   BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=retry_after_policy) 对服务端 Retry-After 的处理策略',
+    `retry_after_cap_millis`  INT             NULL COMMENT '当选择 RESPECT/CLAMP 时的最大等待上限（毫秒）',
+    `idempotency_header_name` VARCHAR(64)     NULL COMMENT '幂等性 Header 名称（如 Idempotency-Key），用于避免重复提交',
+    `idempotency_ttl_seconds` INT             NULL COMMENT '幂等性键过期时间（秒），仅客户端/服务端支持时有效',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED') NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `lifecycle_status_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`          JSON                                 NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`              TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`              BIGINT UNSIGNED                      NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)                         NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`              BIGINT UNSIGNED                      NULL COMMENT '更新人ID',
-    `updated_by_name`         VARCHAR(100)                         NULL COMMENT '更新人姓名',
-    `version`                 BIGINT UNSIGNED                      NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`              VARBINARY(16)                        NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                 TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_http_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_http_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_http_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC)
+    -- Removed physical FKs to dictionary: scope_id/retry_after_policy_id/lifecycle_status_id
+    UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from`),
+    KEY `idx_reg_prov_http_cfg__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_http_cfg__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id` DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3476,51 +3482,52 @@ CREATE TABLE `reg_prov_http_cfg`
 DROP TABLE IF EXISTS `reg_prov_batching_cfg`;
 CREATE TABLE `reg_prov_batching_cfg`
 (
-    `id`                         BIGINT UNSIGNED                      NOT NULL AUTO_INCREMENT COMMENT '主键：批量抓取与请求成型配置记录ID',
-    `provenance_id`              BIGINT UNSIGNED                      NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                      ENUM ('SOURCE','TASK')               NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`                  ENUM ('harvest','update','backfill') NULL COMMENT '任务类型：当 scope=TASK 时需填写',
+    `id`                           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：批量抓取与请求成型配置记录ID',
+    `provenance_id`                BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域',
+    `task_type`                    VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
-    `effective_from`             TIMESTAMP(6)                         NOT NULL COMMENT '生效起始（含）',
-    `effective_to`               TIMESTAMP(6)                         NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`               TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
+    `effective_to`                 TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `detail_fetch_batch_size`    INT                                  NULL COMMENT '单次详情抓取的批大小（条数），为空则由应用使用默认',
-    `endpoint_id`                BIGINT UNSIGNED                      NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
-    `credential_name`            VARCHAR(64)                          NULL COMMENT '可选：关联凭证逻辑名，用于细化控制',
-    `ids_param_name`             VARCHAR(64)                          NULL COMMENT '批详情请求中，ID 列表的参数名；为空则由端点或应用决定',
-    `ids_join_delimiter`         VARCHAR(8)                           NULL     DEFAULT ',' COMMENT 'ID 列表拼接的分隔符（如 , 或 +）',
-    `max_ids_per_request`        INT                                  NULL COMMENT '每个 HTTP 请求允许携带的 ID 最大数量（硬上限）',
-    `prefer_compact_payload`     TINYINT(1)                           NOT NULL DEFAULT 1 COMMENT '是否尽量压缩请求体（如去掉冗余空白）',
-    `payload_compress_strategy`  ENUM ('NONE','GZIP')                 NOT NULL DEFAULT 'NONE' COMMENT '请求体压缩策略：NONE=不压缩；GZIP=gzip 压缩',
-    `app_parallelism_degree`     INT                                  NULL COMMENT '应用层并行请求数：限制整体并发度',
-    `per_host_concurrency_limit` INT                                  NULL COMMENT '每主机并发上限：限制与同一主机的并发连接数',
-    `http_conn_pool_size`        INT                                  NULL COMMENT '连接池大小：HTTP 连接复用池的容量（客户端支持时生效）',
-    `backpressure_strategy`      ENUM ('BLOCK','DROP','YIELD')        NOT NULL DEFAULT 'BLOCK' COMMENT '背压策略：BLOCK=阻塞等待；DROP=丢弃；YIELD=让出/降速',
-    `request_template_json`      JSON                                 NULL COMMENT '请求成型模板：用于将内部字段映射到 query/body 的规则 JSON',
+    `detail_fetch_batch_size`      INT             NULL COMMENT '单次详情抓取的批大小（条数），为空则由应用使用默认',
+    `endpoint_id`                  BIGINT UNSIGNED NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
+    `credential_name`              VARCHAR(64)     NULL COMMENT '可选：关联凭证逻辑名，用于细化控制',
+    `ids_param_name`               VARCHAR(64)     NULL COMMENT '批详情请求中，ID 列表的参数名；为空则由端点或应用决定',
+    `ids_join_delimiter`           VARCHAR(8)      NULL     DEFAULT ',' COMMENT 'ID 列表拼接的分隔符（如 , 或 +）',
+    `max_ids_per_request`          INT             NULL COMMENT '每个 HTTP 请求允许携带的 ID 最大数量（硬上限）',
+    `prefer_compact_payload`       TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否尽量压缩请求体（如去掉冗余空白）',
+    `payload_compress_strategy_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=payload_compress_strategy) 请求体压缩策略',
+    `app_parallelism_degree`       INT             NULL COMMENT '应用层并行请求数：限制整体并发度',
+    `per_host_concurrency_limit`   INT             NULL COMMENT '每主机并发上限：限制与同一主机的并发连接数',
+    `http_conn_pool_size`          INT             NULL COMMENT '连接池大小：HTTP 连接复用池的容量（客户端支持时生效）',
+    `backpressure_strategy_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=backpressure_strategy) 背压策略',
+    `request_template_json`        JSON            NULL COMMENT '请求成型模板：用于将内部字段映射到 query/body 的规则 JSON',
 
-    `task_type_key`              VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`           ENUM ('DRAFT','PUBLISHED','RETIRED') NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `task_type_key`                VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status_id`          BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`             JSON                                 NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`                 TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`                 BIGINT UNSIGNED                      NULL COMMENT '创建人ID',
-    `created_by_name`            VARCHAR(100)                         NULL COMMENT '创建人姓名',
-    `updated_at`                 TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`                 BIGINT UNSIGNED                      NULL COMMENT '更新人ID',
-    `updated_by_name`            VARCHAR(100)                         NULL COMMENT '更新人姓名',
-    `version`                    BIGINT UNSIGNED                      NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`                 VARBINARY(16)                        NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                    TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`               JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`                   TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`                   BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`              VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`                   TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`                   BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`              VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                      BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`                   VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                      TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
-    UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_batching_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_batching_cfg__by_ep_cred` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`,
+    -- Removed physical FKs to dictionary: scope_id/payload_compress_strategy_id/backpressure_strategy_id/lifecycle_status_id
+    UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from`),
+    KEY `idx_reg_prov_batching_cfg__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_batching_cfg__by_ep_cred` (`provenance_id`, `scope_id`, `task_type_key`, `endpoint_id`,
                                                  `credential_name`),
-    KEY `idx_reg_prov_batching_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+    KEY `idx_reg_prov_batching_cfg__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id`
                                              DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -3534,46 +3541,48 @@ CREATE TABLE `reg_prov_batching_cfg`
 DROP TABLE IF EXISTS `reg_prov_retry_cfg`;
 CREATE TABLE `reg_prov_retry_cfg`
 (
-    `id`                      BIGINT UNSIGNED                                  NOT NULL AUTO_INCREMENT COMMENT '主键：重试与退避配置记录ID',
-    `provenance_id`           BIGINT UNSIGNED                                  NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   ENUM ('SOURCE','TASK')                           NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`               ENUM ('harvest','update','backfill')             NULL COMMENT '任务类型：当 scope=TASK 时需填写',
+    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：重试与退避配置记录ID',
+    `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域',
+    `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
-    `effective_from`          TIMESTAMP(6)                                     NOT NULL COMMENT '生效起始（含）',
-    `effective_to`            TIMESTAMP(6)                                     NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
+    `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `max_retry_times`         INT                                              NULL COMMENT '最大重试次数：为空则使用应用默认；0 表示不重试',
-    `backoff_policy_type`     ENUM ('FIXED','EXP','EXP_JITTER','DECOR_JITTER') NOT NULL DEFAULT 'EXP_JITTER' COMMENT '退避策略：FIXED=固定；EXP=指数；EXP_JITTER=指数+抖动；DECOR_JITTER=装饰性抖动',
-    `initial_delay_millis`    INT                                              NULL COMMENT '首个重试的延迟（毫秒）',
-    `max_delay_millis`        INT                                              NULL COMMENT '单次重试的最大延迟（毫秒）',
-    `exp_multiplier_value`    DOUBLE                                           NULL COMMENT '指数退避的乘数因子（如 2.0）',
-    `jitter_factor_ratio`     DOUBLE                                           NULL COMMENT '抖动系数（0~1）：随机扰动的幅度',
-    `retry_http_status_json`  JSON                                             NULL COMMENT '可重试的 HTTP 状态码列表（JSON 数组，如 [429,500,503]）',
-    `giveup_http_status_json` JSON                                             NULL COMMENT '直接放弃的 HTTP 状态码列表（JSON 数组）',
-    `retry_on_network_error`  TINYINT(1)                                       NOT NULL DEFAULT 1 COMMENT '网络错误是否重试：1=重试；0=不重试',
-    `circuit_break_threshold` INT                                              NULL COMMENT '断路器阈值：连续失败次数达到该值后短路',
-    `circuit_cooldown_millis` INT                                              NULL COMMENT '断路器冷却时间（毫秒）：过后允许半开探测',
+    `max_retry_times`         INT             NULL COMMENT '最大重试次数：为空则使用应用默认；0 表示不重试',
+    `backoff_policy_type_id`  BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=backoff_policy_type) 退避策略',
+    `initial_delay_millis`    INT             NULL COMMENT '首个重试的延迟（毫秒）',
+    `max_delay_millis`        INT             NULL COMMENT '单次重试的最大延迟（毫秒）',
+    `exp_multiplier_value`    DOUBLE          NULL COMMENT '指数退避的乘数因子（如 2.0）',
+    `jitter_factor_ratio`     DOUBLE          NULL COMMENT '抖动系数（0~1）：随机扰动的幅度',
+    `retry_http_status_json`  JSON            NULL COMMENT '可重试的 HTTP 状态码列表（JSON 数组，如 [429,500,503]）',
+    `giveup_http_status_json` JSON            NULL COMMENT '直接放弃的 HTTP 状态码列表（JSON 数组）',
+    `retry_on_network_error`  TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '网络错误是否重试：1=重试；0=不重试',
+    `circuit_break_threshold` INT             NULL COMMENT '断路器阈值：连续失败次数达到该值后短路',
+    `circuit_cooldown_millis` INT             NULL COMMENT '断路器冷却时间（毫秒）：过后允许半开探测',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')             NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `lifecycle_status_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`          JSON                                             NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`              TIMESTAMP(6)                                     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`              BIGINT UNSIGNED                                  NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)                                     NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)                                     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`              BIGINT UNSIGNED                                  NULL COMMENT '更新人ID',
-    `updated_by_name`         VARCHAR(100)                                     NULL COMMENT '更新人姓名',
-    `version`                 BIGINT UNSIGNED                                  NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`              VARBINARY(16)                                    NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                 TINYINT(1)                                       NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_retry_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_retry_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_retry_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC)
+    -- Removed physical FKs to dictionary: scope_id/backoff_policy_type_id/lifecycle_status_id
+    UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from`),
+    KEY `idx_reg_prov_retry_cfg__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_retry_cfg__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id`
+                                          DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3586,47 +3595,48 @@ CREATE TABLE `reg_prov_retry_cfg`
 DROP TABLE IF EXISTS `reg_prov_rate_limit_cfg`;
 CREATE TABLE `reg_prov_rate_limit_cfg`
 (
-    `id`                         BIGINT UNSIGNED                          NOT NULL AUTO_INCREMENT COMMENT '主键：限流与并发配置记录ID',
-    `provenance_id`              BIGINT UNSIGNED                          NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                      ENUM ('SOURCE','TASK')                   NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`                  ENUM ('harvest','update','backfill')     NULL COMMENT '任务类型：当 scope=TASK 时需填写',
+    `id`                          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：限流与并发配置记录ID',
+    `provenance_id`               BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                    BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 配置作用域',
+    `task_type`                   VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
 
-    `effective_from`             TIMESTAMP(6)                             NOT NULL COMMENT '生效起始（含）',
-    `effective_to`               TIMESTAMP(6)                             NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`              TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）',
+    `effective_to`                TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `rate_tokens_per_second`     INT                                      NULL COMMENT '全局 QPS（令牌生成速率，令牌/秒）；为空表示使用应用默认或不限制',
-    `burst_bucket_capacity`      INT                                      NULL COMMENT '突发桶容量（最大瞬时令牌数），用于吸收短时峰值',
-    `max_concurrent_requests`    INT                                      NULL COMMENT '全局并发请求上限（连接/请求数），为空表示默认',
-    `per_credential_qps_limit`   INT                                      NULL COMMENT '按密钥的 QPS 上限：多把密钥时可分摊流量',
-    `bucket_granularity_scope`   ENUM ('GLOBAL','PER_KEY','PER_ENDPOINT') NOT NULL DEFAULT 'GLOBAL' COMMENT '令牌桶粒度：GLOBAL=整体；PER_KEY=按密钥；PER_ENDPOINT=按端点',
-    `smoothing_window_millis`    INT                                      NULL COMMENT '平滑窗口（毫秒）：用于平滑令牌发放与计数',
-    `respect_server_rate_header` TINYINT(1)                               NOT NULL DEFAULT 1 COMMENT '是否遵循服务端速率响应头（如 X-RateLimit-*）：1=遵循；0=忽略',
-    `endpoint_id`                BIGINT UNSIGNED                          NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
-    `credential_name`            VARCHAR(64)                              NULL COMMENT '可选：关联凭证逻辑名，用于细化限流',
+    `rate_tokens_per_second`      INT             NULL COMMENT '全局 QPS（令牌生成速率，令牌/秒）；为空表示使用应用默认或不限制',
+    `burst_bucket_capacity`       INT             NULL COMMENT '突发桶容量（最大瞬时令牌数），用于吸收短时峰值',
+    `max_concurrent_requests`     INT             NULL COMMENT '全局并发请求上限（连接/请求数），为空表示默认',
+    `per_credential_qps_limit`    INT             NULL COMMENT '按密钥的 QPS 上限：多把密钥时可分摊流量',
+    `bucket_granularity_scope_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=bucket_granularity_scope) 令牌桶粒度',
+    `smoothing_window_millis`     INT             NULL COMMENT '平滑窗口（毫秒）：用于平滑令牌发放与计数',
+    `respect_server_rate_header`  TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否遵循服务端速率响应头（如 X-RateLimit-*）：1=遵循；0=忽略',
+    `endpoint_id`                 BIGINT UNSIGNED NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
+    `credential_name`             VARCHAR(64)     NULL COMMENT '可选：关联凭证逻辑名，用于细化限流',
 
-    `task_type_key`              VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `lifecycle_status`           ENUM ('DRAFT','PUBLISHED','RETIRED')     NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `task_type_key`               VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status_id`         BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`             JSON                                     NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`                 TIMESTAMP(6)                             NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`                 BIGINT UNSIGNED                          NULL COMMENT '创建人ID',
-    `created_by_name`            VARCHAR(100)                             NULL COMMENT '创建人姓名',
-    `updated_at`                 TIMESTAMP(6)                             NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`                 BIGINT UNSIGNED                          NULL COMMENT '更新人ID',
-    `updated_by_name`            VARCHAR(100)                             NULL COMMENT '更新人姓名',
-    `version`                    BIGINT UNSIGNED                          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`                 VARBINARY(16)                            NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                    TINYINT(1)                               NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`              JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`                  TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`                  BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`             VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`                  TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`                  BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`             VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                     BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`                  VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                     TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
-    UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_rate_limit_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
-    KEY `idx_reg_prov_rate_limit_cfg__by_ep_cred` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`,
+    -- Removed physical FKs to dictionary: scope_id/bucket_granularity_scope_id/lifecycle_status_id
+    UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from`),
+    KEY `idx_reg_prov_rate_limit_cfg__dim_to` (`provenance_id`, `scope_id`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_rate_limit_cfg__by_ep_cred` (`provenance_id`, `scope_id`, `task_type_key`, `endpoint_id`,
                                                    `credential_name`),
-    KEY `idx_reg_prov_rate_limit_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+    KEY `idx_reg_prov_rate_limit_cfg__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id`
                                                DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -3641,60 +3651,61 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
 DROP TABLE IF EXISTS `reg_prov_credential`;
 CREATE TABLE `reg_prov_credential`
 (
-    `id`                      BIGINT UNSIGNED                                     NOT NULL AUTO_INCREMENT COMMENT '主键：凭证记录ID',
-    `provenance_id`           BIGINT UNSIGNED                                     NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                   ENUM ('SOURCE','TASK')                              NOT NULL DEFAULT 'SOURCE' COMMENT '凭证作用域：SOURCE=按来源；TASK=限定到特定任务类型',
-    `task_type`               ENUM ('harvest','update','backfill')                NULL COMMENT '任务类型：当 scope=TASK 时需填写',
-    `endpoint_id`             BIGINT UNSIGNED                                     NULL COMMENT '可选外键：若该凭证仅用于某个端点，则指定端点配置ID → reg_prov_endpoint_def(id)',
+    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：凭证记录ID',
+    `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope_id`                BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=scope) 凭证作用域',
+    `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
+    `endpoint_id`             BIGINT UNSIGNED NULL COMMENT '可选外键：若该凭证仅用于某个端点，则指定端点配置ID → reg_prov_endpoint_def(id)',
 
-    `credential_name`         VARCHAR(64)                                         NOT NULL COMMENT '凭证标签：用于人类可读标识与应用优先级选择（可与端点的 credential_hint_name 配合）',
-    `auth_type`               ENUM ('API_KEY','BEARER','BASIC','OAUTH2','CUSTOM') NOT NULL COMMENT '鉴权类型：API_KEY=静态Key；BEARER=Bearer令牌；BASIC=Basic认证；OAUTH2=OAuth2；CUSTOM=自定义',
-    `inbound_location`        ENUM ('HEADER','QUERY','BODY')                      NOT NULL DEFAULT 'HEADER' COMMENT '凭证放置位置：HTTP Header / Query 参数 / 请求体',
-    `credential_field_name`   VARCHAR(128)                                        NULL COMMENT '凭证字段名：如 Authorization / api_key / access_token',
-    `credential_value_prefix` VARCHAR(64)                                         NULL COMMENT '凭证值前缀：如 "Bearer "，会拼接在凭证值之前',
-    `credential_value_ref`    VARCHAR(256)                                        NULL COMMENT '凭证值引用（如 KMS 密钥名/路径），不落明文',
-    `basic_username_ref`      VARCHAR(256)                                        NULL COMMENT 'Basic 认证用户名引用',
-    `basic_password_ref`      VARCHAR(256)                                        NULL COMMENT 'Basic 认证密码引用',
+    `credential_name`         VARCHAR(64)     NOT NULL COMMENT '凭证标签：用于人类可读标识与应用优先级选择（可与端点的 credential_hint_name 配合）',
+    `auth_type`               VARCHAR(32)     NOT NULL COMMENT '鉴权类型文本（去 ENUM 化）；如 API_KEY/BEARER/BASIC/OAUTH2/CUSTOM',
+    `inbound_location_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=inbound_location) 凭证放置位置',
+    `credential_field_name`   VARCHAR(128)    NULL COMMENT '凭证字段名：如 Authorization / api_key / access_token',
+    `credential_value_prefix` VARCHAR(64)     NULL COMMENT '凭证值前缀：如 "Bearer "，会拼接在凭证值之前',
+    `credential_value_ref`    VARCHAR(256)    NULL COMMENT '凭证值引用（如 KMS 密钥名/路径），不落明文',
+    `basic_username_ref`      VARCHAR(256)    NULL COMMENT 'Basic 认证用户名引用',
+    `basic_password_ref`      VARCHAR(256)    NULL COMMENT 'Basic 认证密码引用',
 
     /* OAuth2 客户端凭证（全部使用引用字段） */
-    `oauth_token_url`         VARCHAR(512)                                        NULL COMMENT 'OAuth2 Token 端点 URL（client credentials 等流程）',
-    `oauth_client_id_ref`     VARCHAR(256)                                        NULL COMMENT 'OAuth2 客户端 ID 的引用',
-    `oauth_client_secret_ref` VARCHAR(256)                                        NULL COMMENT 'OAuth2 客户端密钥的引用',
-    `oauth_scope`             VARCHAR(512)                                        NULL COMMENT 'OAuth2 请求的 scope（以空格或逗号分隔）',
-    `oauth_audience`          VARCHAR(512)                                        NULL COMMENT 'OAuth2 audience/资源标识',
-    `extra_json`              JSON                                                NULL COMMENT '自定义扩展字段：如签名算法、HMAC 盐、额外 Header 模板等（由应用解释）',
+    `oauth_token_url`         VARCHAR(512)    NULL COMMENT 'OAuth2 Token 端点 URL（client credentials 等流程）',
+    `oauth_client_id_ref`     VARCHAR(256)    NULL COMMENT 'OAuth2 客户端 ID 的引用',
+    `oauth_client_secret_ref` VARCHAR(256)    NULL COMMENT 'OAuth2 客户端密钥的引用',
+    `oauth_scope`             VARCHAR(512)    NULL COMMENT 'OAuth2 请求的 scope（以空格或逗号分隔）',
+    `oauth_audience`          VARCHAR(512)    NULL COMMENT 'OAuth2 audience/资源标识',
+    `extra_json`              JSON            NULL COMMENT '自定义扩展字段：如签名算法、HMAC 盐、额外 Header 模板等（由应用解释）',
 
-    `effective_from`          TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '生效起始（含）；允许多把凭证区间重叠以支持轮换',
-    `effective_to`            TIMESTAMP(6)                                        NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
-    `is_default_preferred`    TINYINT(1)                                          NOT NULL DEFAULT 0 COMMENT '是否标记为默认/首选：1=默认（用于同维度多把时的优先选择）；0=普通',
+    `effective_from`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '生效起始（含）；允许多把凭证区间重叠以支持轮换',
+    `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `is_default_preferred`    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否标记为默认/首选：1=默认（用于同维度多把时的优先选择）；0=普通',
 
     /* 生成列与弱互斥唯一键支持 */
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
     `endpoint_id_key`         BIGINT AS (IFNULL(`endpoint_id`, 0)) STORED COMMENT '生成列：端点ID的统一键（NULL→0）用于唯一约束',
     `preferred_1`             CHAR(1) AS (CASE WHEN `is_default_preferred` = 1 THEN 'Y' ELSE NULL END) STORED COMMENT '生成列：默认优先=Y（NULL 可重复）',
-
-    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')                NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+    `lifecycle_status_id`     BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=lifecycle_status) 生命周期：读侧仅取 ACTIVE/有效项',
 
     -- BaseDO（统一审计字段）
-    `record_remarks`          JSON                                                NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`              TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`              BIGINT UNSIGNED                                     NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)                                        NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`              BIGINT UNSIGNED                                     NULL COMMENT '更新人ID',
-    `updated_by_name`         VARCHAR(100)                                        NULL COMMENT '更新人姓名',
-    `version`                 BIGINT UNSIGNED                                     NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`              VARBINARY(16)                                       NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                 TINYINT(1)                                          NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_credential__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_credential__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
+    -- Removed physical FKs to dictionary: scope_id/inbound_location_id/lifecycle_status_id
 
-    KEY `idx_reg_prov_credential__dim` (`provenance_id`, `scope`, `task_type`, `endpoint_id`, `credential_name`),
+    KEY `idx_reg_prov_credential__dim` (`provenance_id`, `scope_id`, `task_type_key`, `endpoint_id`, `credential_name`),
     KEY `idx_reg_prov_credential__effective` (`effective_from`, `effective_to`),
-    KEY `idx_reg_prov_credential__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC),
-    UNIQUE KEY `uk_reg_prov_credential__preferred_one` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id_key`,
+    KEY `idx_reg_prov_credential__active` (`provenance_id`, `scope_id`, `task_type_key`, `effective_from` DESC, `id`
+                                           DESC),
+    UNIQUE KEY `uk_reg_prov_credential__preferred_one` (`provenance_id`, `scope_id`, `task_type_key`, `endpoint_id_key`,
                                                         `preferred_1`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

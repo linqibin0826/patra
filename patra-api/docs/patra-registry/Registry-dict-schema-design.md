@@ -62,8 +62,7 @@ BaseDO 字段（所有表均包含）：
      `created_at`      TIMESTAMP(6)         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
      `created_by`      BIGINT UNSIGNED      NULL COMMENT '创建人ID',
      `created_by_name` VARCHAR(100)         NULL COMMENT '创建人姓名',
-     `updated_at`      TIMESTAMP(6)         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON
-UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+     `updated_at`      TIMESTAMP(6)         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
     `updated_by` BIGINT UNSIGNED NULL COMMENT '更新人ID',
     `updated_by_name` VARCHAR (100) NULL COMMENT '更新人姓名',
     `version` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
@@ -141,7 +140,6 @@ CREATE TABLE IF NOT EXISTS sys_dict_item
     UNIQUE KEY uk_sys_dict_item__type_code (type_id, item_code),
     UNIQUE KEY uk_sys_dict_item__default_per_type (default_key), -- 确保“同类型仅一个默认项”
     KEY idx_sys_dict_item__type_enabled (type_id, enabled, deleted, display_order),
-    CONSTRAINT fk_sys_dict_item__type FOREIGN KEY (type_id) REFERENCES sys_dict_type (id),
     CONSTRAINT chk_sys_dict_item__code_format CHECK (REGEXP_LIKE(item_code, '^[A-Z0-9_]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -174,7 +172,6 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
     PRIMARY KEY (id),
     UNIQUE KEY uk_dict_alias__src_code (source_system, external_code),
     KEY idx_dict_alias__item (item_id, source_system),
-    CONSTRAINT fk_dict_alias__item FOREIGN KEY (item_id) REFERENCES sys_dict_item (id),
     CONSTRAINT chk_dict_alias__src_format CHECK (REGEXP_LIKE(source_system, '^[a-z0-9_\\-]{1,64}$'))
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
