@@ -53,14 +53,14 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
 >
 > -- 2) 为 PubMed update 任务配置窗口与增量指针（按天滑动，EDAT 字段）
 > INSERT INTO reg_prov_window_offset_cfg
-> (provenance_id, scope, task_type, effective_from, window_mode, window_size_value, window_size_unit,
->  overlap_value, overlap_unit, offset_type, default_date_field_name)
+> (provenance_id, scope_code, task_type, effective_from, window_mode_code, window_size_value, window_size_unit_code,
+>  overlap_value, overlap_unit_code, offset_type_code, default_date_field_name)
 > VALUES ( (SELECT id FROM reg_provenance WHERE provenance_code='pubmed'),
 >          'TASK','update','2025-01-01','SLIDING',1,'DAY',1,'DAY','DATE','EDAT');
 >
 > -- 3) 为 Crossref harvest 配置游标分页（cursor）
 > INSERT INTO reg_prov_pagination_cfg
-> (provenance_id, scope, task_type, effective_from, pagination_mode,
+> (provenance_id, scope_code, task_type, effective_from, pagination_mode_code,
 >  cursor_param_name, next_cursor_jsonpath)
 > VALUES ( (SELECT id FROM reg_provenance WHERE provenance_code='crossref'),
 >          'TASK','harvest','2025-01-01','CURSOR','cursor','$.message.next-cursor');
@@ -116,7 +116,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
 * **生成列**
 
     * 所有 `*_cfg`/`_def`（除凭证）含 `task_type_key`（`IFNULL(task_type,'ALL')`），用于唯一索引
-      `(provenance_id, scope, task_type_key, effective_from)` 与查询过滤。
+      `(provenance_id, scope_code, task_type_key, effective_from)` 与查询过滤。
 
 > **ER 关系（文字版）**
 > `reg_provenance (1) ──< (N) reg_prov_endpoint_def`
@@ -141,7 +141,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
 
 * **数据库**：MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`；
 * **结构化为主、JSON 为辅**：端点默认参数、请求模板、状态码列表等用 `JSON` 存储；
-* **索引**：覆盖 `(provenance_id, scope, task_type_key, effective_from)` 与常用维度（如端点用途、时间上界）；
+* **索引**：覆盖 `(provenance_id, scope_code, task_type_key, effective_from)` 与常用维度（如端点用途、时间上界）；
 * **应用层**（建议栈）：Java 21 + Spring Boot 3.2.x + Spring Cloud 2023.0.1 + Spring Cloud Alibaba 2023.0.1.0 +
   MyBatis-Plus 3.5.12 + Jackson。
 
@@ -164,14 +164,14 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
            SET @now = UTC_TIMESTAMP();
            (SELECT *
            FROM reg_prov_pagination_cfg
-           WHERE provenance_id=@pid AND scope='TASK' AND task_type='update'
+           WHERE provenance_id=@pid AND scope_code='TASK' AND task_type='update'
            AND effective_from<=@now AND (effective_to IS NULL OR effective_to>@now)
            ORDER BY effective_from DESC, id DESC
            LIMIT 1)
            UNION ALL
            (SELECT *
            FROM reg_prov_pagination_cfg
-           WHERE provenance_id=@pid AND scope='SOURCE'
+           WHERE provenance_id=@pid AND scope_code='SOURCE'
            AND effective_from<=@now AND (effective_to IS NULL OR effective_to>@now)
            ORDER BY effective_from DESC, id DESC
            LIMIT 1)
@@ -201,8 +201,8 @@ SET @crossref_id = (SELECT id
 -- 2) 端点定义（示例）
 -- PubMed: ESearch（检索）与 EFetch（详情）
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from,
- endpoint_usage, http_method, path_template, default_query_params, request_content_type, is_auth_required)
+(provenance_id, scope_code, task_type, endpoint_name, effective_from,
+ endpoint_usage_code, http_method_code, path_template, default_query_params, request_content_type, is_auth_required)
 VALUES (@pubmed_id, 'TASK', 'update', 'esearch', '2025-01-01', 'SEARCH', 'GET', '/eutils/esearch.fcgi',
         JSON_OBJECT('db', 'pubmed', 'retmode', 'json'), 'application/json', 0),
        (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01', 'FETCH', 'GET', '/eutils/efetch.fcgi',
@@ -210,26 +210,26 @@ VALUES (@pubmed_id, 'TASK', 'update', 'esearch', '2025-01-01', 'SEARCH', 'GET', 
 
 -- Crossref: works 搜索端点（cursor-based）
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from,
- endpoint_usage, http_method, path_template, request_content_type, is_auth_required)
+(provenance_id, scope_code, task_type, endpoint_name, effective_from,
+ endpoint_usage_code, http_method_code, path_template, request_content_type, is_auth_required)
 VALUES (@crossref_id, 'TASK', 'harvest', 'works', '2025-01-01', 'SEARCH', 'GET', '/works',
         'application/json', 0);
 
 -- 3) 时间窗口与增量指针
 -- PubMed update：按天滑动 + 1 天重叠；DATE 指针默认 EDAT
 INSERT INTO reg_prov_window_offset_cfg
-(provenance_id, scope, task_type, effective_from,
- window_mode, window_size_value, window_size_unit, overlap_value, overlap_unit,
- offset_type, default_date_field_name)
+(provenance_id, scope_code, task_type, effective_from,
+ window_mode_code, window_size_value, window_size_unit_code, overlap_value, overlap_unit_code,
+ offset_type_code, default_date_field_name)
 VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01',
         'SLIDING', 1, 'DAY', 1, 'DAY',
         'DATE', 'EDAT');
 
 -- Crossref harvest：按天滑动；DATE 指针使用 indexed
 INSERT INTO reg_prov_window_offset_cfg
-(provenance_id, scope, task_type, effective_from,
- window_mode, window_size_value, window_size_unit,
- offset_type, default_date_field_name)
+(provenance_id, scope_code, task_type, effective_from,
+ window_mode_code, window_size_value, window_size_unit_code,
+ offset_type_code, default_date_field_name)
 VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01',
         'SLIDING', 1, 'DAY',
         'DATE', 'indexed');
@@ -237,21 +237,21 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01',
 -- 4) 分页/游标
 -- PubMed：页码分页
 INSERT INTO reg_prov_pagination_cfg
-(provenance_id, scope, task_type, effective_from,
- pagination_mode, page_size_value, page_number_param_name, page_size_param_name, start_page_number)
+(provenance_id, scope_code, task_type, effective_from,
+ pagination_mode_code, page_size_value, page_number_param_name, page_size_param_name, start_page_number)
 VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01',
         'PAGE_NUMBER', 100, 'page', 'retmax', 1);
 
 -- Crossref：cursor 分页，下一游标在 $.message.next-cursor
 INSERT INTO reg_prov_pagination_cfg
-(provenance_id, scope, task_type, effective_from,
- pagination_mode, cursor_param_name, next_cursor_jsonpath)
+(provenance_id, scope_code, task_type, effective_from,
+ pagination_mode_code, cursor_param_name, next_cursor_jsonpath)
 VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01',
         'CURSOR', 'cursor', '$.message["next-cursor"]');
 
 -- 5) HTTP 策略（示例：设置 UA / 超时）
 INSERT INTO reg_prov_http_cfg
-(provenance_id, scope, task_type, effective_from,
+(provenance_id, scope_code, task_type, effective_from,
  default_headers_json, timeout_connect_millis, timeout_read_millis)
 VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01',
         JSON_OBJECT('User-Agent', 'PapertraceHarvester/1.0', 'From', 'ops@example.com'), 2000, 10000),
@@ -277,7 +277,7 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01',
 * **`reg_prov_credential`**：鉴权/密钥（Credentials/Authentication），定义多把凭证（API Key、Bearer、Basic、OAuth2 等），可**可选
   **绑定到某个端点定义，支持区间重叠以实现平滑轮换。
 
-> 注：除凭证外，所有 `reg_prov_*` 配置/定义表均支持**作用域** `scope={SOURCE|TASK}` 与**任务**
+> 注：除凭证外，所有 `reg_prov_*` 配置/定义表均支持**作用域** `scope_code={SOURCE|TASK}` 与**任务**
 `task_type={harvest|update|backfill}`；生成列 `task_type_key = IFNULL(task_type,'ALL')` 用于唯一索引与查询过滤。
 > 约定：**不使用触发器/CHECK**；区间不重叠、作用域-任务互斥等规则由**应用层保证**。
 
@@ -335,9 +335,9 @@ SET @now = UTC_TIMESTAMP();
 (SELECT *
  FROM reg_prov_pagination_cfg
  WHERE provenance_id = @pid
-   AND scope = 'TASK'
+   AND scope_code = 'TASK'
    AND task_type = :taskType
-   AND lifecycle_status = 'PUBLISHED'
+   AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
@@ -348,8 +348,8 @@ UNION ALL
 (SELECT *
  FROM reg_prov_pagination_cfg
  WHERE provenance_id = @pid
-   AND scope = 'SOURCE'
-   AND lifecycle_status = 'PUBLISHED'
+   AND scope_code = 'SOURCE'
+   AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
@@ -373,7 +373,7 @@ LIMIT 1;
 
 读取侧一律依据 `effective_from/to` 与 `ORDER BY effective_from DESC, id DESC LIMIT 1` 选择当前生效，不受区间重叠影响。
 
-`(provenance_id, scope, task_type_key, [endpoint_name], effective_from)`。
+`(provenance_id, scope_code, task_type_key, [endpoint_name], effective_from)`。
 
 #### 2.5.A 伪代码（Java，应用层，无触发器）
 
@@ -382,8 +382,8 @@ LIMIT 1;
 
 class Dim {
     Long provenanceId;
-    String scope;           // "TASK" | "SOURCE"
-    String taskType;        // may be null when scope == SOURCE
+    String scope_code;           // "TASK" | "SOURCE"
+    String taskType;        // may be null when scope_code == SOURCE
     Long endpointId;        // optional for credential binding
 }
 
@@ -433,7 +433,7 @@ class PublishService {
         }
 
         // 3) 插入新记录（不修改旧记录的起点；如需回收，另行设置旧记录 effective_to）
-        set(newRecord, "lifecycleStatus", "PUBLISHED");
+        set(newRecord, "lifecycleStatusCode", "ACTIVE");
         set(newRecord, "deleted", 0);
         set(newRecord, "createdAt", now);
         set(newRecord, "updatedAt", now);
@@ -449,9 +449,9 @@ class PublishService {
 class ActiveSelector {
     /**
      * SQL 形态（两段 UNION ALL 取 Top1）：
-     * 1) scope='TASK' and task_type=?
-     * 2) scope='SOURCE'
-     * where lifecycle_status='PUBLISHED' and deleted=0
+     * 1) scope_code='TASK' and task_type=?
+     * 2) scope_code='SOURCE'
+     * where lifecycle_status_code='ACTIVE' and deleted=0
      *   and effective_from<=now and (effective_to is null or effective_to>now)
      * order by effective_from desc, id desc limit 1
      */
@@ -485,7 +485,7 @@ class OverlapChecker {
     boolean overlapsWithExisting(String table, Dim dim, Instant from, Instant toNullable) {
         // exists (
         //  select 1 from {table}
-        //   where provenance_id=? and scope=? and task_type_key=COALESCE(?, 'ALL')
+        //   where provenance_id=? and scope_code=? and task_type_key=COALESCE(?, 'ALL')
         //     and NOT( (effective_to is not null and effective_to <= :from)
         //              or (:toNullable is not null and :toNullable <= effective_from) )
         //  limit 1
@@ -500,7 +500,7 @@ class OverlapChecker {
 ## 3. 表结构详解（字段、索引、外键、使用建议）
 
 > 说明：以下与已发布的建表 SQL 一一对应；不含触发器/CHECK/审计字段。
-> 公共字段模式（除凭证）：`provenance_id` + `scope` + `task_type` + `effective_from/to` + 生成列 `task_type_key` + 维度唯一索引
+> 公共字段模式（除凭证）：`provenance_id` + `scope_code` + `task_type` + `effective_from/to` + 生成列 `task_type_key` + 维度唯一索引
 
 ### 3.1 `reg_provenance` — 来源主数据
 
@@ -532,11 +532,11 @@ class OverlapChecker {
 **关键字段**
 
 * `provenance_id`：外键 → `reg_provenance.id`。
-* `scope` / `task_type` / `task_type_key`：作用域与任务。
+* `scope_code` / `task_type` / `task_type_key`：作用域与任务。
 * `endpoint_name`：端点逻辑名（如 `esearch`、`efetch`、`works`、`token`）。
 * `effective_from/to`：生效区间。
-* `endpoint_usage`：用途枚举（`SEARCH|FETCH|TOKEN|...`）。
-* `http_method`：`GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS`。
+* `endpoint_usage_code`：用途枚举（`SEARCH|FETCH|TOKEN|...`）。
+* `http_method_code`：`GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS`。
 * `path_template`：相对（推荐）或绝对路径。
 * `default_query_params` / `default_body_payload`（JSON）：默认 query 与 body（应用层合并）。
 * `request_content_type`：请求体类型（JSON/Form 等）。
@@ -546,12 +546,12 @@ class OverlapChecker {
 
 **索引/唯一**
 
-* **维度唯一** `uk_reg_prov_endpoint_def__dim_from (provenance_id, scope, task_type_key, endpoint_name, effective_from)`
-* 辅助索引：`idx_reg_prov_endpoint_def__dim_to (...)`、`idx_reg_prov_endpoint_def__usage (endpoint_usage)`
+* **维度唯一** `uk_reg_prov_endpoint_def__dim_from (provenance_id, scope_code, task_type_key, endpoint_name, effective_from)`
+* 辅助索引：`idx_reg_prov_endpoint_def__dim_to (...)`、`idx_reg_prov_endpoint_def__usage (endpoint_usage_code)`
 
 **使用建议**
 
-* 搜索请求：取 `endpoint_usage='SEARCH'` 的当前生效端点；详情请求：取 `FETCH`。
+* 搜索请求：取 `endpoint_usage_code='SEARCH'` 的当前生效端点；详情请求：取 `FETCH`。
 * 覆盖分页参数名：若设置则在该端点**优先生效**，否则落回 `reg_prov_pagination_cfg`。
 
 ---
@@ -561,14 +561,14 @@ class OverlapChecker {
 **定位**：切窗策略（滑动/日历对齐）、窗口长度/重叠/回看、水位滞后；增量指针（DATE/ID/COMPOSITE）。
 **关键字段**
 
-* 窗口：`window_mode (SLIDING|CALENDAR)`、`window_size_value + window_size_unit`、`calendar_align_to`、
+* 窗口：`window_mode_code (SLIDING|CALENDAR)`、`window_size_value + window_size_unit_code`、`calendar_align_to`、
   `lookback_value/unit`、`overlap_value/unit`、`watermark_lag_seconds`。
-* 指针：`offset_type (DATE|ID|COMPOSITE)`、`offset_field_name`、`offset_date_format`、`default_date_field_name`。
+* 指针：`offset_type_code (DATE|ID|COMPOSITE)`、`offset_field_name`、`offset_date_format`、`default_date_field_name`。
 * 限制：`max_ids_per_window`、`max_window_span_seconds`（防止超大窗口）。
 
 **索引/唯一**
 
-* `uk_reg_prov_window_offset_cfg__dim_from (provenance_id, scope, task_type_key, effective_from)`
+* `uk_reg_prov_window_offset_cfg__dim_from (provenance_id, scope_code, task_type_key, effective_from)`
 * `idx_reg_prov_window_offset_cfg__dim_to (...)`
 
 **使用建议**
@@ -584,7 +584,7 @@ class OverlapChecker {
 **定位**：页码（`PAGE_NUMBER`）、游标（`CURSOR`）、令牌（`TOKEN`）、滚动（`SCROLL`）的参数与响应提取规则。
 **关键字段**
 
-* 基本：`pagination_mode`、`page_size_value`、`max_pages_per_execution`、`page_number_param_name`、`page_size_param_name`、
+* 基本：`pagination_mode_code`、`page_size_value`、`max_pages_per_execution`、`page_number_param_name`、`page_size_param_name`、
   `start_page_number`、`sort_field_param_name`、`sort_direction`。
 * 游标/令牌：`cursor_param_name`、`initial_cursor_value`、`next_cursor_jsonpath`、`has_more_jsonpath`、
   `total_count_jsonpath`。
@@ -611,7 +611,7 @@ class OverlapChecker {
 * `default_headers_json`：常见 UA/邮箱/`mailto` 等。
 * 超时：`timeout_connect_millis`、`timeout_read_millis`、`timeout_total_millis`。
 * TLS/代理：`tls_verify_enabled`、`proxy_url_value`、`prefer_http2_enabled`、`accept_compress_enabled`。
-* `Retry-After`：`retry_after_policy (IGNORE|RESPECT|CLAMP)` + `retry_after_cap_millis`。
+* `Retry-After`：`retry_after_policy_code (IGNORE|RESPECT|CLAMP)` + `retry_after_cap_millis`。
 * 幂等：`idempotency_header_name` + `idempotency_ttl_seconds`。
 
 **索引/唯一**
@@ -633,9 +633,9 @@ class OverlapChecker {
 
 * 批量：`detail_fetch_batch_size`、`ids_param_name`、`ids_join_delimiter`、`max_ids_per_request`。
 * 并发：`app_parallelism_degree`、`per_host_concurrency_limit`、`http_conn_pool_size`。
-* 背压：`backpressure_strategy (BLOCK|DROP|YIELD)`。
+* 背压：`backpressure_strategy_code (BLOCK|DROP|YIELD)`。
 * 成型：`request_template_json`（自定义 query/body 映射）。
-* 压缩：`payload_compress_strategy (NONE|GZIP)`、`prefer_compact_payload`。
+* 压缩：`payload_compress_strategy_code (NONE|GZIP)`、`prefer_compact_payload`。
 
 **索引/唯一**
 
@@ -655,7 +655,7 @@ class OverlapChecker {
 **定位**：网络/服务端异常的重试与退避规则，支持断路器。
 **关键字段**
 
-* 次数与退避：`max_retry_times`、`backoff_policy_type (FIXED|EXP|EXP_JITTER|DECOR_JITTER)`、`initial_delay_millis`、
+* 次数与退避：`max_retry_times`、`backoff_policy_type_code (FIXED|EXP|EXP_JITTER|DECOR_JITTER)`、`initial_delay_millis`、
   `max_delay_millis`、`exp_multiplier_value`、`jitter_factor_ratio`。
 * 状态码：`retry_http_status_json`（可重试）与 `giveup_http_status_json`（不重试）。
 * 网络错误：`retry_on_network_error`。
@@ -670,7 +670,7 @@ class OverlapChecker {
 
 * **429/503** 常设为可重试；**400/401** 通常不重试。
 * **带抖动的指数退避**（`EXP_JITTER`）更稳健，减少惊群。
-* 与 `HTTP.retry_after_policy` 联动：若服务端返回 `Retry-After`，可选择尊重或限幅。
+* 与 `HTTP.retry_after_policy_code` 联动：若服务端返回 `Retry-After`，可选择尊重或限幅。
 
 ---
 
@@ -681,7 +681,7 @@ class OverlapChecker {
 
 * 速率与突发：`rate_tokens_per_second`、`burst_bucket_capacity`。
 * 并发：`max_concurrent_requests`。
-* 粒度：`bucket_granularity_scope (GLOBAL|PER_KEY|PER_ENDPOINT)`。
+* 粒度：`bucket_granularity_scope_code (GLOBAL|PER_KEY|PER_ENDPOINT)`。
 * 自适应：`respect_server_rate_header`（遵循服务端 `X-RateLimit-*`）。
 * 平滑：`smoothing_window_millis`。
 
@@ -692,13 +692,13 @@ class OverlapChecker {
 
 **使用建议**
 
-* 若使用多把密钥，可设 `bucket_granularity_scope='PER_KEY'`，并配合 `per_credential_qps_limit`（见字段
+* 若使用多把密钥，可设 `bucket_granularity_scope_code='PER_KEY'`，并配合 `per_credential_qps_limit`（见字段
   `per_credential_qps_limit`）。
 * 与 `reg_prov_batching_cfg.app_parallelism_degree` 协同，避免客户端拥塞。
 
 > 注：本表字段名在 SQL 中为
 > `rate_tokens_per_second` / `burst_bucket_capacity` / `max_concurrent_requests` /
-> `per_credential_qps_limit` / `bucket_granularity_scope` /
+> `per_credential_qps_limit` / `bucket_granularity_scope_code` /
 > `smoothing_window_millis` / `respect_server_rate_header`。
 
 ---
@@ -708,9 +708,9 @@ class OverlapChecker {
 **定位**：为来源/TASK 配置多把凭证（API Key、Bearer、Basic、OAuth2…），**可选**绑定端点，允许区间重叠以支持轮换。
 **关键字段**
 
-* 归属：`provenance_id`（外键） + `scope/task_type`。
+* 归属：`provenance_id`（外键） + `scope_code/task_type`。
 * **端点绑定**：`endpoint_id`（可空；外键 → `reg_prov_endpoint_def.id`），用于“某凭证只给某个端点使用”。
-* 基本信息：`credential_name`（标签）、`auth_type`、`inbound_location (HEADER|QUERY|BODY)`。
+* 基本信息：`credential_name`（标签）、`auth_type`、`inbound_location_code (HEADER|QUERY|BODY)`。
 * API Key/Bearer：`credential_field_name`、`credential_value_prefix`（如 `"Bearer "`）、`credential_value_plain`（建议存引用）。
 * Basic：`basic_username`、`basic_password`。
 * OAuth2：`oauth_token_url`、`oauth_client_id`、`oauth_client_secret`、`oauth_scope`、`oauth_audience`。
@@ -720,7 +720,7 @@ class OverlapChecker {
 **索引/外键**
 
 * 外键：`provenance_id → reg_provenance.id`；`endpoint_id → reg_prov_endpoint_def.id`（可空）。
-* 索引：`idx_reg_prov_credential__dim (provenance_id, scope, task_type, endpoint_id, credential_name)`、
+* 索引：`idx_reg_prov_credential__dim (provenance_id, scope_code, task_type, endpoint_id, credential_name)`、
   `idx_reg_prov_credential__effective (effective_from, effective_to)`。
 
 **使用建议**
@@ -733,9 +733,9 @@ class OverlapChecker {
 
 ### 3.10 查询与索引使用建议（通用）
 
-* **过滤顺序**：`provenance_id` → `scope`/`task_type`（或 `task_type_key`）→ `effective_from <= now < effective_to` →
+* **过滤顺序**：`provenance_id` → `scope_code`/`task_type`（或 `task_type_key`）→ `effective_from <= now < effective_to` →
   `ORDER BY effective_from DESC, id DESC LIMIT 1`。
-* **复合索引命中**：已在各表建立 `(provenance_id, scope, task_type_key, ..., effective_from)` 复合唯一索引，结合
+* **复合索引命中**：已在各表建立 `(provenance_id, scope_code, task_type_key, ..., effective_from)` 复合唯一索引，结合
   `effective_to` 辅助索引，能高效支撑“当前生效记录”的检索。
 * **缓存建议**：读侧可将“（provenance\_code, task\_type）→ 维度配置聚合体”进行短 TTL 缓存；端点级也可按 `endpoint_name`
   做二级缓存。
@@ -753,8 +753,8 @@ class OverlapChecker {
 * **字段**（所有 `reg_prov_*_cfg` 与 `reg_prov_endpoint_def` 都具备）
 
     * `provenance_id`：归属来源（FK → `reg_provenance.id`）
-    * `scope ∈ {SOURCE, TASK}`：作用域
-    * `task_type ∈ {harvest, update, backfill} | NULL`：当 `scope='TASK'` 时**必须**设置；`scope='SOURCE'` 时建议置 `NULL`
+    * `scope_code ∈ {SOURCE, TASK}`：作用域
+    * `task_type ∈ {harvest, update, backfill} | NULL`：当 `scope_code='TASK'` 时**必须**设置；`scope_code='SOURCE'` 时建议置 `NULL`
     * `task_type_key`：生成列，`IFNULL(task_type,'ALL')`，仅用于索引与筛选
 * **选择意图**
 
@@ -763,8 +763,8 @@ class OverlapChecker {
 
 > 约束不在数据库层执行；由应用层保证：
 >
-> * `scope='TASK'` ⇒ `task_type IS NOT NULL`
-> * `scope='SOURCE'` ⇒ `task_type IS NULL`（推荐）
+> * `scope_code='TASK'` ⇒ `task_type IS NOT NULL`
+> * `scope_code='SOURCE'` ⇒ `task_type IS NULL`（推荐）
 
 ---
 
@@ -776,11 +776,11 @@ class OverlapChecker {
 * **冲突检测 SQL（参考）**：同维度新增前可做一次交集检查
 
   ```sql
-  -- :pid, :scope, :task_type_key, :from, :to
+  -- :pid, :scope_code, :task_type_key, :from, :to
   SELECT 1
   FROM reg_prov_pagination_cfg
   WHERE provenance_id = :pid
-    AND scope = :scope
+    AND scope_code = :scope_code
     AND task_type_key = :task_type_key
     AND NOT(  -- 与新窗口无交集的条件取反
       (effective_to   IS NOT NULL AND effective_to   <= :from)
@@ -817,8 +817,8 @@ class OverlapChecker {
   决定并列；如需多把，取前 N 把供应用轮询/加权。
 - NULL 语义：字段为 NULL 表示“由应用使用默认值”。
 
-    * 若传入了 `task_type`：先在 `scope='TASK' AND task_type=:task_type` 中选；若没有结果，再回退 `scope='SOURCE'`
-    * 若未传入 `task_type`：直接走 `scope='SOURCE'`
+    * 若传入了 `task_type`：先在 `scope_code='TASK' AND task_type=:task_type` 中选；若没有结果，再回退 `scope_code='SOURCE'`
+    * 若未传入 `task_type`：直接走 `scope_code='SOURCE'`
 
 4. **最新原则**：在候选集中按 `effective_from DESC` 取 **第一条**
 5. **并列兜底**：若仍并列（理论上不会出现），可再按 `id DESC` 兜底
@@ -836,7 +836,7 @@ SET @now = UTC_TIMESTAMP();
 (SELECT *
  FROM reg_prov_pagination_cfg
  WHERE provenance_id = @pid
-   AND scope = 'TASK'
+   AND scope_code = 'TASK'
    AND task_type = :taskType
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
@@ -846,7 +846,7 @@ UNION ALL
 (SELECT *
  FROM reg_prov_pagination_cfg
  WHERE provenance_id = @pid
-   AND scope = 'SOURCE'
+   AND scope_code = 'SOURCE'
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
  ORDER BY effective_from DESC, id DESC
@@ -858,14 +858,14 @@ LIMIT 1;
 
 在以上 1\~5 的基础上，多了端点维度过滤：
 
-* **按用途**：`endpoint_usage IN ('SEARCH','FETCH','TOKEN',...)`
+* **按用途**：`endpoint_usage_code IN ('SEARCH','FETCH','TOKEN',...)`
 * **按名称**：如明确指定 `endpoint_name`，则在同一用途下**精确匹配**
 * **端点级覆盖**：若选出的端点记录含 `page_param_name`/`cursor_param_name` 等，则这些**仅对该端点请求**优先生效（见 §4.4）
 
 > **PubMed 例**：
 >
-> * `endpoint_usage='SEARCH'` ⇒ 选出 `esearch` 当前生效记录
-> * `endpoint_usage='FETCH'` ⇒ 选出 `efetch` 当前生效记录
+> * `endpoint_usage_code='SEARCH'` ⇒ 选出 `esearch` 当前生效记录
+> * `endpoint_usage_code='FETCH'` ⇒ 选出 `efetch` 当前生效记录
 
 ---
 
@@ -908,7 +908,7 @@ reg_prov_http_cfg.base_url_override     >     reg_provenance.base_url_default   
 
 1. **端点绑定优先**：若当前请求明确绑定到某端点（或端点用途），则优先筛选 `endpoint_id = 该端点.id` 的凭证；若无绑定，再用
    `endpoint_id IS NULL` 的全局凭证
-2. **作用域优先**：任务内优先 `scope='TASK' AND task_type=:taskType`，否则 `scope='SOURCE'`
+2. **作用域优先**：任务内优先 `scope_code='TASK' AND task_type=:taskType`，否则 `scope_code='SOURCE'`
 3. **时间过滤**：`effective_from <= now < COALESCE(effective_to,+∞)`
 4. **默认标记**：优先 `is_default_preferred = 1`
 5. **最新原则**：同一优先级并列时，按 `effective_from DESC, id DESC` 取第一把
@@ -924,10 +924,10 @@ SET @now = UTC_TIMESTAMP();
 (SELECT *
  FROM reg_prov_credential
  WHERE provenance_id = @pid
-   AND lifecycle_status = 'PUBLISHED'
+   AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
    AND (@endpoint_id IS NOT NULL AND endpoint_id = @endpoint_id)
-   AND ((scope = 'TASK' AND task_type = @taskType) OR (scope = 'SOURCE' AND @taskType IS NULL) OR (scope = 'SOURCE'))
+   AND ((scope_code = 'TASK' AND task_type = @taskType) OR (scope_code = 'SOURCE' AND @taskType IS NULL) OR (scope_code = 'SOURCE'))
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
  ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -936,10 +936,10 @@ UNION ALL
 (SELECT *
  FROM reg_prov_credential
  WHERE provenance_id = @pid
-   AND lifecycle_status = 'PUBLISHED'
+   AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
    AND endpoint_id IS NULL
-   AND ((scope = 'TASK' AND task_type = @taskType) OR (scope = 'SOURCE' AND @taskType IS NULL) OR (scope = 'SOURCE'))
+   AND ((scope_code = 'TASK' AND task_type = @taskType) OR (scope_code = 'SOURCE' AND @taskType IS NULL) OR (scope_code = 'SOURCE'))
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
  ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -971,9 +971,9 @@ SET @now = UTC_TIMESTAMP();
 WITH ep AS ((SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
-               AND endpoint_usage = 'SEARCH'
+               AND endpoint_usage_code = 'SEARCH'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -982,8 +982,8 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
-               AND endpoint_usage = 'SEARCH'
+               AND scope_code = 'SOURCE'
+               AND endpoint_usage_code = 'SEARCH'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -994,7 +994,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_pagination_cfg
           WHERE provenance_id = @pid
-            AND scope = 'TASK'
+            AND scope_code = 'TASK'
             AND task_type = 'update'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
@@ -1004,7 +1004,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_pagination_cfg
           WHERE provenance_id = @pid
-            AND scope = 'SOURCE'
+            AND scope_code = 'SOURCE'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY effective_from DESC, id DESC
@@ -1015,7 +1015,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_http_cfg
           WHERE provenance_id = @pid
-            AND scope = 'TASK'
+            AND scope_code = 'TASK'
             AND task_type = 'update'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
@@ -1025,7 +1025,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_http_cfg
           WHERE provenance_id = @pid
-            AND scope = 'SOURCE'
+            AND scope_code = 'SOURCE'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY effective_from DESC, id DESC
@@ -1036,7 +1036,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_window_offset_cfg
           WHERE provenance_id = @pid
-            AND scope = 'TASK'
+            AND scope_code = 'TASK'
             AND task_type = 'update'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
@@ -1046,7 +1046,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_window_offset_cfg
           WHERE provenance_id = @pid
-            AND scope = 'SOURCE'
+            AND scope_code = 'SOURCE'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY effective_from DESC, id DESC
@@ -1057,7 +1057,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_batching_cfg
           WHERE provenance_id = @pid
-            AND scope = 'TASK'
+            AND scope_code = 'TASK'
             AND task_type = 'update'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
@@ -1067,7 +1067,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_batching_cfg
           WHERE provenance_id = @pid
-            AND scope = 'SOURCE'
+            AND scope_code = 'SOURCE'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY effective_from DESC, id DESC
@@ -1078,7 +1078,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_retry_cfg
           WHERE provenance_id = @pid
-            AND scope = 'TASK'
+            AND scope_code = 'TASK'
             AND task_type = 'update'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
@@ -1088,7 +1088,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_retry_cfg
           WHERE provenance_id = @pid
-            AND scope = 'SOURCE'
+            AND scope_code = 'SOURCE'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY effective_from DESC, id DESC
@@ -1099,7 +1099,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_rate_limit_cfg
           WHERE provenance_id = @pid
-            AND scope = 'TASK'
+            AND scope_code = 'TASK'
             AND task_type = 'update'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
@@ -1109,7 +1109,7 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_rate_limit_cfg
           WHERE provenance_id = @pid
-            AND scope = 'SOURCE'
+            AND scope_code = 'SOURCE'
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY effective_from DESC, id DESC
@@ -1120,24 +1120,24 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-            AND lifecycle_status = 'PUBLISHED'
+            AND lifecycle_status_code = 'ACTIVE'
             AND deleted = 0
             AND endpoint_id = (SELECT id FROM ep LIMIT 1)
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
-            AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
+            AND ((scope_code = 'TASK' AND task_type = 'update') OR scope_code = 'SOURCE')
           ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          UNION ALL
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-            AND lifecycle_status = 'PUBLISHED'
+            AND lifecycle_status_code = 'ACTIVE'
             AND deleted = 0
             AND endpoint_id IS NULL
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
-            AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
+            AND ((scope_code = 'TASK' AND task_type = 'update') OR scope_code = 'SOURCE')
           ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          LIMIT 1)
@@ -1154,8 +1154,8 @@ FROM ep,
      cred;
 ```
 
-> **Crossref（harvest + cursor）** 仅需把任务与用途替换为 `task_type='harvest'`、`endpoint_usage='SEARCH'`，分页维度取
-`pagination_mode='CURSOR'` 的当前生效记录即可。
+> **Crossref（harvest + cursor）** 仅需把任务与用途替换为 `task_type='harvest'`、`endpoint_usage_code='SEARCH'`，分页维度取
+`pagination_mode_code='CURSOR'` 的当前生效记录即可。
 
 ---
 
@@ -1231,7 +1231,7 @@ WHERE provenance_code = :code;
 #### 5.1.2 新增配置（以分页为例）：写前冲突预检
 
 > 以 `reg_prov_pagination_cfg` 为例；其他 `reg_prov_*` 同理，替换表名即可。
-> 目标：同维度（`provenance_id, scope, task_type`）内，**新区间**与既有区间**不得重叠**（业务规则在应用层保证）。
+> 目标：同维度（`provenance_id, scope_code, task_type`）内，**新区间**与既有区间**不得重叠**（业务规则在应用层保证）。
 
 ```sql
 -- 约束：:from ≤ :to（若 :to 非空）；校验由应用层做。
@@ -1239,7 +1239,7 @@ WHERE provenance_code = :code;
 SELECT 1
 FROM reg_prov_pagination_cfg
 WHERE provenance_id = @pid
-  AND scope = :scope
+  AND scope_code = :scope_code
   AND IFNULL(task_type, 'ALL') = IFNULL(:taskType, 'ALL')
   AND NOT ( -- 与新区间没有交集的条件取反
     (effective_to IS NOT NULL AND effective_to <= :from)
@@ -1262,9 +1262,9 @@ LIMIT 1;
 ```sql
 -- 以分页为例（PAGE_NUMBER 100/页，从1开始）
 INSERT INTO reg_prov_pagination_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- pagination_mode, page_size_value, page_number_param_name, page_size_param_name, start_page_number)
-VALUES (@pid, :scope, :taskType, :newFrom, :newTo,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ pagination_mode_code, page_size_value, page_number_param_name, page_size_param_name, start_page_number)
+VALUES (@pid, :scope_code, :taskType, :newFrom, :newTo,
         'PAGE_NUMBER', 100, 'page', 'retmax', 1);
 ```
 
@@ -1279,7 +1279,7 @@ VALUES (@pid, :scope, :taskType, :newFrom, :newTo,
 UPDATE reg_prov_pagination_cfg
 SET effective_to = :newFrom + INTERVAL :grace MINUTE
 WHERE provenance_id = @pid
-  AND scope = :scope
+  AND scope_code = :scope_code
   AND IFNULL(task_type, 'ALL') = IFNULL(:taskType, 'ALL')
   AND effective_from < :newFrom
   AND (effective_to IS NULL OR effective_to > :newFrom)
@@ -1313,7 +1313,7 @@ SET effective_to = NULL
 WHERE id = (SELECT id
             FROM reg_prov_pagination_cfg
             WHERE provenance_id = @pid
-              AND scope = :scope
+              AND scope_code = :scope_code
               AND IFNULL(task_type, 'ALL') = IFNULL(:taskType, 'ALL')
               AND effective_from < (SELECT effective_from FROM reg_prov_pagination_cfg WHERE id = :newCfgId)
             ORDER BY effective_from DESC, id DESC
@@ -1324,7 +1324,7 @@ WHERE id = (SELECT id
 
 ### 5.2 幂等写入模板（Upsert/去重）
 
-> 由于表的唯一键为 `(provenance_id, scope, task_type_key, [endpoint_name], effective_from)`，**一般不建议**直接
+> 由于表的唯一键为 `(provenance_id, scope_code, task_type_key, [endpoint_name], effective_from)`，**一般不建议**直接
 `ON DUPLICATE KEY` 覆盖 `effective_from`（可能破坏历史）。
 > 推荐做**幂等插入**（若相同维度+起点已存在则更新非关键字段）。
 
@@ -1332,17 +1332,17 @@ WHERE id = (SELECT id
 
 ```sql
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from, effective_to,
- endpoint_usage, http_method, path_template, default_query_params, default_body_payload,
+(provenance_id, scope_code, task_type, endpoint_name, effective_from, effective_to,
+ endpoint_usage_code, http_method_code, path_template, default_query_params, default_body_payload,
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
-VALUES (@pid, :scope, :taskType, :endpointName, :from, :to,
+VALUES (@pid, :scope_code, :taskType, :endpointName, :from, :to,
         :usage, :method, :path, :defaultQueryJson, :defaultBodyJson,
         :contentType, :needAuth, :credHint,
         :pageParam, :sizeParam, :cursorParam, :idsParam)
 ON DUPLICATE KEY UPDATE effective_to         = VALUES(effective_to),
-                        endpoint_usage       = VALUES(endpoint_usage),
-                        http_method          = VALUES(http_method),
+                        endpoint_usage_code       = VALUES(endpoint_usage_code),
+                        http_method_code          = VALUES(http_method_code),
                         path_template        = VALUES(path_template),
                         default_query_params = VALUES(default_query_params),
                         default_body_payload = VALUES(default_body_payload),
@@ -1376,9 +1376,9 @@ SET @now = UTC_TIMESTAMP();
 (SELECT *
  FROM reg_prov_http_cfg
  WHERE provenance_id = @pid
-   AND lifecycle_status = 'PUBLISHED'
+   AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
-   AND scope = 'TASK'
+   AND scope_code = 'TASK'
    AND task_type = :taskType
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
@@ -1388,9 +1388,9 @@ UNION ALL
 (SELECT *
  FROM reg_prov_http_cfg
  WHERE provenance_id = @pid
-   AND lifecycle_status = 'PUBLISHED'
+   AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
-   AND scope = 'SOURCE'
+   AND scope_code = 'SOURCE'
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
  ORDER BY effective_from DESC, id DESC
@@ -1405,11 +1405,11 @@ LIMIT 1;
 WITH ep AS ((SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = :taskType
-               AND endpoint_usage = :usage
+               AND endpoint_usage_code = :usage
                AND (:endpointName IS NULL OR endpoint_name = :endpointName)
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1419,10 +1419,10 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'SOURCE'
-               AND endpoint_usage = :usage
+               AND scope_code = 'SOURCE'
+               AND endpoint_usage_code = :usage
                AND (:endpointName IS NULL OR endpoint_name = :endpointName)
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1451,9 +1451,9 @@ SET @now = UTC_TIMESTAMP();
 WITH ep AS ((SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
-               AND endpoint_usage = 'SEARCH'
+               AND endpoint_usage_code = 'SEARCH'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -1462,8 +1462,8 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
-               AND endpoint_usage = 'SEARCH'
+               AND scope_code = 'SOURCE'
+               AND endpoint_usage_code = 'SEARCH'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -1472,7 +1472,7 @@ WITH ep AS ((SELECT *
      http AS ((SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
-                 AND scope = 'TASK'
+                 AND scope_code = 'TASK'
                  AND task_type = 'update'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
@@ -1482,7 +1482,7 @@ WITH ep AS ((SELECT *
               (SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
-                 AND scope = 'SOURCE'
+                 AND scope_code = 'SOURCE'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
                ORDER BY effective_from DESC, id DESC
@@ -1491,7 +1491,7 @@ WITH ep AS ((SELECT *
      win AS ((SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
-                AND scope = 'TASK'
+                AND scope_code = 'TASK'
                 AND task_type = 'update'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
@@ -1501,7 +1501,7 @@ WITH ep AS ((SELECT *
              (SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
-                AND scope = 'SOURCE'
+                AND scope_code = 'SOURCE'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
               ORDER BY effective_from DESC, id DESC
@@ -1510,7 +1510,7 @@ WITH ep AS ((SELECT *
      pg AS ((SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1520,7 +1520,7 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -1529,7 +1529,7 @@ WITH ep AS ((SELECT *
      bt AS ((SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1539,7 +1539,7 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -1548,7 +1548,7 @@ WITH ep AS ((SELECT *
      rt AS ((SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1558,7 +1558,7 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -1567,7 +1567,7 @@ WITH ep AS ((SELECT *
      rl AS ((SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1577,7 +1577,7 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -1586,10 +1586,10 @@ WITH ep AS ((SELECT *
      cred AS ((SELECT *
                FROM reg_prov_credential
                WHERE provenance_id = @pid
-                 AND lifecycle_status = 'PUBLISHED'
+                 AND lifecycle_status_code = 'ACTIVE'
                  AND deleted = 0
                  AND endpoint_id = (SELECT id FROM ep LIMIT 1)
-                 AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
+                 AND ((scope_code = 'TASK' AND task_type = 'update') OR scope_code = 'SOURCE')
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
                ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -1598,10 +1598,10 @@ WITH ep AS ((SELECT *
               (SELECT *
                FROM reg_prov_credential
                WHERE provenance_id = @pid
-                 AND lifecycle_status = 'PUBLISHED'
+                 AND lifecycle_status_code = 'ACTIVE'
                  AND deleted = 0
                  AND endpoint_id IS NULL
-                 AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
+                 AND ((scope_code = 'TASK' AND task_type = 'update') OR scope_code = 'SOURCE')
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
                ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -1662,21 +1662,21 @@ WHERE provenance_code = :code;
 SET @now = UTC_TIMESTAMP();
 
 -- 以分页为例；其他维度同理
-(SELECT 'pagination' AS cfg, id, scope, task_type, effective_from, effective_to
+(SELECT 'pagination' AS cfg, id, scope_code, task_type, effective_from, effective_to
  FROM reg_prov_pagination_cfg
  WHERE provenance_id = @pid
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
- ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC
+ ORDER BY scope_code = 'TASK' DESC, effective_from DESC, id DESC
  LIMIT 1)
 UNION ALL
 -- 加上 window/http/batching/retry/rate/endpoint 等同样写法……
-SELECT 'window', id, scope, task_type, effective_from, effective_to
+SELECT 'window', id, scope_code, task_type, effective_from, effective_to
 FROM reg_prov_window_offset_cfg
 WHERE provenance_id = @pid
   AND effective_from <= @now
   AND (effective_to IS NULL OR effective_to > @now)
-ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC
+ORDER BY scope_code = 'TASK' DESC, effective_from DESC, id DESC
 LIMIT 1;
 ```
 
@@ -1689,7 +1689,7 @@ FROM reg_prov_pagination_cfg a
          JOIN reg_prov_pagination_cfg b
               ON a.id < b.id
                   AND a.provenance_id = b.provenance_id
-                  AND a.scope = b.scope
+                  AND a.scope_code = b.scope_code
                   AND IFNULL(a.task_type, 'ALL') = IFNULL(b.task_type, 'ALL')
                   AND NOT (
                       (a.effective_to IS NOT NULL AND a.effective_to <= b.effective_from)
@@ -1705,17 +1705,17 @@ WHERE a.provenance_id = @pid;
 SELECT *
 FROM reg_prov_endpoint_def
 WHERE provenance_id = @pid
-  AND endpoint_usage = :usage
+  AND endpoint_usage_code = :usage
   AND effective_from <= UTC_TIMESTAMP()
   AND (effective_to IS NULL OR effective_to > UTC_TIMESTAMP())
-ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC;
+ORDER BY scope_code = 'TASK' DESC, effective_from DESC, id DESC;
 ```
 
 ---
 
 ### 5.8 性能与一致性建议
 
-* **索引命中**：查询条件顺序尽量贴合复合索引顺序（`provenance_id, scope, task_type_key, [endpoint_name], effective_from`
+* **索引命中**：查询条件顺序尽量贴合复合索引顺序（`provenance_id, scope_code, task_type_key, [endpoint_name], effective_from`
   ），并带上时间过滤。
 * **一次运行内冻结**：作业启动时一次性读取并缓存“合同”，运行中不变（避免半途切换）。
 * **幂等**：写入接口携带**明确的维度键**与 `effective_from`，避免随机生成时间造成误判。
@@ -1730,7 +1730,7 @@ ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC;
 | 错误        | 原因                              | 快速修复                                    |
 |-----------|---------------------------------|-----------------------------------------|
 | 查不到“当前生效” | 区间写反或 `effective_from` 在未来      | 调整区间；或设置临时回退的 SOURCE 级配置                |
-| 任务/来源混淆   | `scope='TASK'` 但 `task_type` 为空 | 回填 `task_type`；或改成 `scope='SOURCE'`     |
+| 任务/来源混淆   | `scope_code='TASK'` 但 `task_type` 为空 | 回填 `task_type`；或改成 `scope_code='SOURCE'`     |
 | 端点参数冲突    | 端点与分页维度同时配置了不同参数名               | 遵循“端点 > 维度”的覆盖；清理不必要的字段                 |
 | 频繁 429/限流 | 客户端限流过高或服务端配额不足                 | 下调 `rate_limit`/`parallelism`；或启用多把凭证分流 |
 | 游标翻页失败    | `next_cursor_jsonpath` 不正确      | 调整提取路径；打印原始响应以定位                        |
@@ -1776,8 +1776,8 @@ WHERE provenance_code = 'pubmed';
 ```sql
 /* 搜索端点：ESearch（返回 PMID 列表） */
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from, effective_to,
- endpoint_usage, http_method, path_template,
+(provenance_id, scope_code, task_type, endpoint_name, effective_from, effective_to,
+ endpoint_usage_code, http_method_code, path_template,
  default_query_params, default_body_payload,
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
@@ -1792,8 +1792,8 @@ VALUES (@pubmed_id, 'TASK', 'update', 'esearch', '2025-01-01 00:00:00', NULL,
 
 /* 详情端点：EFetch（按 PMID 批量返回详情） */
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from, effective_to,
- endpoint_usage, http_method, path_template,
+(provenance_id, scope_code, task_type, endpoint_name, effective_from, effective_to,
+ endpoint_usage_code, http_method_code, path_template,
  default_query_params, default_body_payload,
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
@@ -1808,7 +1808,7 @@ VALUES (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01 00:00:00', NULL,
 
 > **要点**
 >
-> * `endpoint_usage='SEARCH'` / `'FETCH'` 用于运行时按用途快速选择端点。
+> * `endpoint_usage_code='SEARCH'` / `'FETCH'` 用于运行时按用途快速选择端点。
 > * `page_param_name='page'`、`page_size_param_name='retmax'` 仅是**应用层参数名**，最终在发送请求时转为
     `retstart=(page-1)*retmax`。
 > * `ids_param_name='id'` 表示 EFetch 的 ID 列表放在 `id=1,2,3`。
@@ -1819,10 +1819,10 @@ VALUES (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_window_offset_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- window_mode, window_size_value, window_size_unit, calendar_align_to,
- lookback_value, lookback_unit, overlap_value, overlap_unit, watermark_lag_seconds,
- offset_type, offset_field_name, offset_date_format, default_date_field_name,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
+ lookback_value, lookback_unit_code, overlap_value, overlap_unit_code, watermark_lag_seconds,
+ offset_type_code, offset_field_name, offset_date_format, default_date_field_name,
  max_ids_per_window, max_window_span_seconds)
 VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
         'SLIDING', 1, 'DAY', NULL,
@@ -1843,8 +1843,8 @@ VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_pagination_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- pagination_mode, page_size_value, max_pages_per_execution,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ pagination_mode_code, page_size_value, max_pages_per_execution,
  page_number_param_name, page_size_param_name, start_page_number,
  sort_field_param_name, sort_direction,
  cursor_param_name, initial_cursor_value, next_cursor_jsonpath, has_more_jsonpath, total_count_jsonpath)
@@ -1864,12 +1864,12 @@ VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_http_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
  base_url_override, default_headers_json,
  timeout_connect_millis, timeout_read_millis, timeout_total_millis,
  tls_verify_enabled, proxy_url_value,
  accept_compress_enabled, prefer_http2_enabled,
- retry_after_policy, retry_after_cap_millis,
+ retry_after_policy_code, retry_after_cap_millis,
  idempotency_header_name, idempotency_ttl_seconds)
 VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
         NULL,
@@ -1889,11 +1889,11 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_batching_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
  detail_fetch_batch_size, ids_param_name, ids_join_delimiter, max_ids_per_request,
- prefer_compact_payload, payload_compress_strategy,
+ prefer_compact_payload, payload_compress_strategy_code,
  app_parallelism_degree, per_host_concurrency_limit, http_conn_pool_size,
- backpressure_strategy, request_template_json)
+ backpressure_strategy_code, request_template_json)
 VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
         200, 'id', ',', 200,
         1, 'NONE',
@@ -1909,8 +1909,8 @@ VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_retry_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- max_retry_times, backoff_policy_type, initial_delay_millis, max_delay_millis, exp_multiplier_value,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ max_retry_times, backoff_policy_type_code, initial_delay_millis, max_delay_millis, exp_multiplier_value,
  jitter_factor_ratio,
  retry_http_status_json, giveup_http_status_json, retry_on_network_error,
  circuit_break_threshold, circuit_cooldown_millis)
@@ -1928,9 +1928,9 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_rate_limit_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
  rate_tokens_per_second, burst_bucket_capacity, max_concurrent_requests,
- per_credential_qps_limit, bucket_granularity_scope,
+ per_credential_qps_limit, bucket_granularity_scope_code,
  smoothing_window_millis, respect_server_rate_header)
 VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
         5, 5, 10,
@@ -1947,8 +1947,8 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 ```sql
 /* 若有 API Key，可配置为查询参数 api_key=xxxx */
 INSERT INTO reg_prov_credential
-(provenance_id, scope, task_type, endpoint_id,
- credential_name, auth_type, inbound_location,
+(provenance_id, scope_code, task_type, endpoint_id,
+ credential_name, auth_type, inbound_location_code,
  credential_field_name, credential_value_prefix, credential_value_ref,
  basic_username_ref, basic_password_ref,
  oauth_token_url, oauth_client_id_ref, oauth_client_secret_ref, oauth_scope, oauth_audience, extra_json,
@@ -1982,11 +1982,11 @@ SET @now = UTC_TIMESTAMP();
 WITH ep_search AS ((SELECT *
                     FROM reg_prov_endpoint_def
                     WHERE provenance_id = @pid
-                      AND lifecycle_status = 'PUBLISHED'
+                      AND lifecycle_status_code = 'ACTIVE'
                       AND deleted = 0
-                      AND scope = 'TASK'
+                      AND scope_code = 'TASK'
                       AND task_type = 'update'
-                      AND endpoint_usage = 'SEARCH'
+                      AND endpoint_usage_code = 'SEARCH'
                       AND effective_from <= @now
                       AND (effective_to IS NULL OR effective_to > @now)
                     ORDER BY effective_from DESC, id DESC
@@ -1995,10 +1995,10 @@ WITH ep_search AS ((SELECT *
                    (SELECT *
                     FROM reg_prov_endpoint_def
                     WHERE provenance_id = @pid
-                      AND lifecycle_status = 'PUBLISHED'
+                      AND lifecycle_status_code = 'ACTIVE'
                       AND deleted = 0
-                      AND scope = 'SOURCE'
-                      AND endpoint_usage = 'SEARCH'
+                      AND scope_code = 'SOURCE'
+                      AND endpoint_usage_code = 'SEARCH'
                       AND effective_from <= @now
                       AND (effective_to IS NULL OR effective_to > @now)
                     ORDER BY effective_from DESC, id DESC
@@ -2007,11 +2007,11 @@ WITH ep_search AS ((SELECT *
      ep_fetch AS ((SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
-                     AND lifecycle_status = 'PUBLISHED'
+                     AND lifecycle_status_code = 'ACTIVE'
                      AND deleted = 0
-                     AND scope = 'TASK'
+                     AND scope_code = 'TASK'
                      AND task_type = 'update'
-                     AND endpoint_usage = 'FETCH'
+                     AND endpoint_usage_code = 'FETCH'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2020,10 +2020,10 @@ WITH ep_search AS ((SELECT *
                   (SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
-                     AND lifecycle_status = 'PUBLISHED'
+                     AND lifecycle_status_code = 'ACTIVE'
                      AND deleted = 0
-                     AND scope = 'SOURCE'
-                     AND endpoint_usage = 'FETCH'
+                     AND scope_code = 'SOURCE'
+                     AND endpoint_usage_code = 'FETCH'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2032,9 +2032,9 @@ WITH ep_search AS ((SELECT *
      http AS ((SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
-                 AND lifecycle_status = 'PUBLISHED'
+                 AND lifecycle_status_code = 'ACTIVE'
                  AND deleted = 0
-                 AND scope = 'TASK'
+                 AND scope_code = 'TASK'
                  AND task_type = 'update'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
@@ -2044,9 +2044,9 @@ WITH ep_search AS ((SELECT *
               (SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
-                 AND lifecycle_status = 'PUBLISHED'
+                 AND lifecycle_status_code = 'ACTIVE'
                  AND deleted = 0
-                 AND scope = 'SOURCE'
+                 AND scope_code = 'SOURCE'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
                ORDER BY effective_from DESC, id DESC
@@ -2055,9 +2055,9 @@ WITH ep_search AS ((SELECT *
      win AS ((SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
-                AND lifecycle_status = 'PUBLISHED'
+                AND lifecycle_status_code = 'ACTIVE'
                 AND deleted = 0
-                AND scope = 'TASK'
+                AND scope_code = 'TASK'
                 AND task_type = 'update'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
@@ -2067,9 +2067,9 @@ WITH ep_search AS ((SELECT *
              (SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
-                AND lifecycle_status = 'PUBLISHED'
+                AND lifecycle_status_code = 'ACTIVE'
                 AND deleted = 0
-                AND scope = 'SOURCE'
+                AND scope_code = 'SOURCE'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
               ORDER BY effective_from DESC, id DESC
@@ -2078,9 +2078,9 @@ WITH ep_search AS ((SELECT *
      pg AS ((SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2090,9 +2090,9 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2101,9 +2101,9 @@ WITH ep_search AS ((SELECT *
      bt AS ((SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2113,9 +2113,9 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2124,9 +2124,9 @@ WITH ep_search AS ((SELECT *
      rt AS ((SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2136,9 +2136,9 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2147,9 +2147,9 @@ WITH ep_search AS ((SELECT *
      rl AS ((SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2159,9 +2159,9 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
-               AND lifecycle_status = 'PUBLISHED'
+               AND lifecycle_status_code = 'ACTIVE'
                AND deleted = 0
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2172,10 +2172,10 @@ WITH ep_search AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-            AND lifecycle_status = 'PUBLISHED'
+            AND lifecycle_status_code = 'ACTIVE'
             AND deleted = 0
             AND endpoint_id = (SELECT id FROM ep_search LIMIT 1)
-            AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
+            AND ((scope_code = 'TASK' AND task_type = 'update') OR scope_code = 'SOURCE')
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -2184,10 +2184,10 @@ WITH ep_search AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-            AND lifecycle_status = 'PUBLISHED'
+            AND lifecycle_status_code = 'ACTIVE'
             AND deleted = 0
             AND endpoint_id IS NULL
-            AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
+            AND ((scope_code = 'TASK' AND task_type = 'update') OR scope_code = 'SOURCE')
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -2211,18 +2211,18 @@ FROM ep_search,
 
 为减少重复 SQL，可在 MySQL 8.0 中使用窗口函数构建“当前生效”视图（按维度取 Top 1），或提供存储过程按入参返回单条配置。
 
-示例一：HTTP 策略“当前生效”视图（每个 `(provenance_id, scope, task_type_key)` 一条）
+示例一：HTTP 策略“当前生效”视图（每个 `(provenance_id, scope_code, task_type_key)` 一条）
 
 ```sql
 CREATE OR REPLACE VIEW v_reg_prov_http_cfg_active AS
 SELECT *
 FROM (SELECT h.*,
              ROW_NUMBER() OVER (
-                 PARTITION BY h.provenance_id, h.scope, h.task_type_key
+                 PARTITION BY h.provenance_id, h.scope_code, h.task_type_key
                  ORDER BY h.effective_from DESC, h.id DESC
                  ) AS rn
       FROM reg_prov_http_cfg h
-      WHERE h.lifecycle_status = 'PUBLISHED'
+      WHERE h.lifecycle_status_code = 'ACTIVE'
         AND h.deleted = 0) t
 WHERE t.rn = 1;
 ```
@@ -2242,12 +2242,12 @@ WHERE t.rn = 1;
  WHERE h.provenance_id = (SELECT id
                           FROM reg_provenance
                           WHERE provenance_code = :provenance_code
-                            AND lifecycle_status = 'PUBLISHED'
+                            AND lifecycle_status_code = 'ACTIVE'
                             AND deleted = 0
                           LIMIT 1)
-   AND h.lifecycle_status = 'PUBLISHED'
+   AND h.lifecycle_status_code = 'ACTIVE'
    AND h.deleted = 0
-   AND h.scope = 'TASK'
+   AND h.scope_code = 'TASK'
    AND h.task_type = :task_type
    AND h.effective_from <= UTC_TIMESTAMP()
    AND (h.effective_to IS NULL OR h.effective_to > UTC_TIMESTAMP())
@@ -2259,12 +2259,12 @@ UNION ALL
  WHERE h.provenance_id = (SELECT id
                           FROM reg_provenance
                           WHERE provenance_code = :provenance_code
-                            AND lifecycle_status = 'PUBLISHED'
+                            AND lifecycle_status_code = 'ACTIVE'
                             AND deleted = 0
                           LIMIT 1)
-   AND h.lifecycle_status = 'PUBLISHED'
+   AND h.lifecycle_status_code = 'ACTIVE'
    AND h.deleted = 0
-   AND h.scope = 'SOURCE'
+   AND h.scope_code = 'SOURCE'
    AND h.effective_from <= UTC_TIMESTAMP()
    AND (h.effective_to IS NULL OR h.effective_to > UTC_TIMESTAMP())
  ORDER BY h.effective_from DESC, h.id DESC
@@ -2362,9 +2362,9 @@ GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi
 
 ```sql
 INSERT INTO reg_prov_window_offset_cfg
-(provenance_id, scope, task_type, effective_from,
- window_mode, window_size_value, window_size_unit, calendar_align_to,
- offset_type, default_date_field_name)
+(provenance_id, scope_code, task_type, effective_from,
+ window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
+ offset_type_code, default_date_field_name)
 VALUES (@pubmed_id, 'TASK', 'backfill', '2025-01-15 00:00:00',
         'CALENDAR', 1, 'DAY', 'DAY',
         'DATE', 'PDAT'); -- 回填按出版日期 PDAT
@@ -2420,8 +2420,8 @@ WHERE provenance_code = 'crossref';
 ```sql
 /* 搜索端点：GET /works（cursor-based） */
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from, effective_to,
- endpoint_usage, http_method, path_template,
+(provenance_id, scope_code, task_type, endpoint_name, effective_from, effective_to,
+ endpoint_usage_code, http_method_code, path_template,
  default_query_params, default_body_payload,
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
@@ -2436,8 +2436,8 @@ VALUES (@crossref_id, 'TASK', 'harvest', 'works', '2025-01-01 00:00:00', NULL,
 
 /* 详情端点：GET /works/{doi}（单条） */
 INSERT INTO reg_prov_endpoint_def
-(provenance_id, scope, task_type, endpoint_name, effective_from, effective_to,
- endpoint_usage, http_method, path_template,
+(provenance_id, scope_code, task_type, endpoint_name, effective_from, effective_to,
+ endpoint_usage_code, http_method_code, path_template,
  default_query_params, default_body_payload,
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
@@ -2450,7 +2450,7 @@ VALUES (@crossref_id, 'TASK', 'harvest', 'work_by_doi', '2025-01-01 00:00:00', N
 
 > **要点**
 >
-> * `endpoint_usage='SEARCH'` → 当前生效检索端点；`'FETCH'` → 按 DOI 的详情端点。
+> * `endpoint_usage_code='SEARCH'` → 当前生效检索端点；`'FETCH'` → 按 DOI 的详情端点。
 > * 端点级参数名覆盖：`page_size_param_name='rows'`、`cursor_param_name='cursor'`；
 > * 详情端点 `path_template` 使用占位符 `{doi}`，应用层在发送请求前替换。
 
@@ -2460,10 +2460,10 @@ VALUES (@crossref_id, 'TASK', 'harvest', 'work_by_doi', '2025-01-01 00:00:00', N
 
 ```sql
 INSERT INTO reg_prov_window_offset_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- window_mode, window_size_value, window_size_unit, calendar_align_to,
- lookback_value, lookback_unit, overlap_value, overlap_unit, watermark_lag_seconds,
- offset_type, offset_field_name, offset_date_format, default_date_field_name,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
+ lookback_value, lookback_unit_code, overlap_value, overlap_unit_code, watermark_lag_seconds,
+ offset_type_code, offset_field_name, offset_date_format, default_date_field_name,
  max_ids_per_window, max_window_span_seconds)
 VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
         'SLIDING', 1, 'DAY', NULL,
@@ -2480,8 +2480,8 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_pagination_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- pagination_mode, page_size_value, max_pages_per_execution,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ pagination_mode_code, page_size_value, max_pages_per_execution,
  page_number_param_name, page_size_param_name, start_page_number,
  sort_field_param_name, sort_direction,
  cursor_param_name, initial_cursor_value, next_cursor_jsonpath, has_more_jsonpath, total_count_jsonpath)
@@ -2505,12 +2505,12 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_http_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
  base_url_override, default_headers_json,
  timeout_connect_millis, timeout_read_millis, timeout_total_millis,
  tls_verify_enabled, proxy_url_value,
  accept_compress_enabled, prefer_http2_enabled,
- retry_after_policy, retry_after_cap_millis,
+ retry_after_policy_code, retry_after_cap_millis,
  idempotency_header_name, idempotency_ttl_seconds)
 VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
         NULL,
@@ -2531,11 +2531,11 @@ VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_batching_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
  detail_fetch_batch_size, ids_param_name, ids_join_delimiter, max_ids_per_request,
- prefer_compact_payload, payload_compress_strategy,
+ prefer_compact_payload, payload_compress_strategy_code,
  app_parallelism_degree, per_host_concurrency_limit, http_conn_pool_size,
- backpressure_strategy, request_template_json)
+ backpressure_strategy_code, request_template_json)
 VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
         1, NULL, NULL, 1, -- 详情按 DOI 单条请求
         1, 'NONE',
@@ -2551,8 +2551,8 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_retry_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- max_retry_times, backoff_policy_type, initial_delay_millis, max_delay_millis, exp_multiplier_value,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ max_retry_times, backoff_policy_type_code, initial_delay_millis, max_delay_millis, exp_multiplier_value,
  jitter_factor_ratio,
  retry_http_status_json, giveup_http_status_json, retry_on_network_error,
  circuit_break_threshold, circuit_cooldown_millis)
@@ -2562,7 +2562,7 @@ VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
         12, 60000);
 ```
 
-> 结合 §7.6 的 `retry_after_policy='RESPECT'`，当返回 `Retry-After` 时按上限 60s 遵循。
+> 结合 §7.6 的 `retry_after_policy_code='RESPECT'`，当返回 `Retry-After` 时按上限 60s 遵循。
 
 ---
 
@@ -2570,9 +2570,9 @@ VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ```sql
 INSERT INTO reg_prov_rate_limit_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
+(provenance_id, scope_code, task_type, effective_from, effective_to,
  rate_tokens_per_second, burst_bucket_capacity, max_concurrent_requests,
- per_credential_qps_limit, bucket_granularity_scope,
+ per_credential_qps_limit, bucket_granularity_scope_code,
  smoothing_window_millis, respect_server_rate_header)
 VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
         10, 10, 24,
@@ -2590,8 +2590,8 @@ Crossref 公网通常**无需密钥**（但礼仪头必须）；若有合作或�
 
 ```sql
 INSERT INTO reg_prov_credential
-(provenance_id, scope, task_type, endpoint_id,
- credential_name, auth_type, inbound_location,
+(provenance_id, scope_code, task_type, endpoint_id,
+ credential_name, auth_type, inbound_location_code,
  credential_field_name, credential_value_prefix, credential_value_ref,
  basic_username_ref, basic_password_ref,
  oauth_token_url, oauth_client_id_ref, oauth_client_secret_ref, oauth_scope, oauth_audience, extra_json,
@@ -2621,9 +2621,9 @@ SET @now = UTC_TIMESTAMP();
 WITH ep_search AS ((SELECT *
                     FROM reg_prov_endpoint_def
                     WHERE provenance_id = @pid
-                      AND scope = 'TASK'
+                      AND scope_code = 'TASK'
                       AND task_type = 'harvest'
-                      AND endpoint_usage = 'SEARCH'
+                      AND endpoint_usage_code = 'SEARCH'
                       AND effective_from <= @now
                       AND (effective_to IS NULL OR effective_to > @now)
                     ORDER BY effective_from DESC, id DESC
@@ -2632,8 +2632,8 @@ WITH ep_search AS ((SELECT *
                    (SELECT *
                     FROM reg_prov_endpoint_def
                     WHERE provenance_id = @pid
-                      AND scope = 'SOURCE'
-                      AND endpoint_usage = 'SEARCH'
+                      AND scope_code = 'SOURCE'
+                      AND endpoint_usage_code = 'SEARCH'
                       AND effective_from <= @now
                       AND (effective_to IS NULL OR effective_to > @now)
                     ORDER BY effective_from DESC, id DESC
@@ -2642,9 +2642,9 @@ WITH ep_search AS ((SELECT *
      ep_fetch AS ((SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
-                     AND scope = 'TASK'
+                     AND scope_code = 'TASK'
                      AND task_type = 'harvest'
-                     AND endpoint_usage = 'FETCH'
+                     AND endpoint_usage_code = 'FETCH'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2653,8 +2653,8 @@ WITH ep_search AS ((SELECT *
                   (SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
-                     AND scope = 'SOURCE'
-                     AND endpoint_usage = 'FETCH'
+                     AND scope_code = 'SOURCE'
+                     AND endpoint_usage_code = 'FETCH'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2663,7 +2663,7 @@ WITH ep_search AS ((SELECT *
      http AS ((SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
-                 AND scope = 'TASK'
+                 AND scope_code = 'TASK'
                  AND task_type = 'harvest'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
@@ -2673,7 +2673,7 @@ WITH ep_search AS ((SELECT *
               (SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
-                 AND scope = 'SOURCE'
+                 AND scope_code = 'SOURCE'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
                ORDER BY effective_from DESC, id DESC
@@ -2682,7 +2682,7 @@ WITH ep_search AS ((SELECT *
      win AS ((SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
-                AND scope = 'TASK'
+                AND scope_code = 'TASK'
                 AND task_type = 'harvest'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
@@ -2692,7 +2692,7 @@ WITH ep_search AS ((SELECT *
              (SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
-                AND scope = 'SOURCE'
+                AND scope_code = 'SOURCE'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
               ORDER BY effective_from DESC, id DESC
@@ -2701,7 +2701,7 @@ WITH ep_search AS ((SELECT *
      pg AS ((SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'harvest'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2711,7 +2711,7 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2720,7 +2720,7 @@ WITH ep_search AS ((SELECT *
      bt AS ((SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'harvest'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2730,7 +2730,7 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2739,7 +2739,7 @@ WITH ep_search AS ((SELECT *
      rt AS ((SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'harvest'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2749,7 +2749,7 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2758,7 +2758,7 @@ WITH ep_search AS ((SELECT *
      rl AS ((SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
-               AND scope = 'TASK'
+               AND scope_code = 'TASK'
                AND task_type = 'harvest'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -2768,7 +2768,7 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
-               AND scope = 'SOURCE'
+               AND scope_code = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -2779,10 +2779,10 @@ WITH ep_search AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-            AND lifecycle_status = 'PUBLISHED'
+            AND lifecycle_status_code = 'ACTIVE'
             AND deleted = 0
             AND endpoint_id = (SELECT id FROM ep_search LIMIT 1)
-            AND ((scope = 'TASK' AND task_type = 'harvest') OR scope = 'SOURCE')
+            AND ((scope_code = 'TASK' AND task_type = 'harvest') OR scope_code = 'SOURCE')
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -2791,10 +2791,10 @@ WITH ep_search AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
-            AND lifecycle_status = 'PUBLISHED'
+            AND lifecycle_status_code = 'ACTIVE'
             AND deleted = 0
             AND endpoint_id IS NULL
-            AND ((scope = 'TASK' AND task_type = 'harvest') OR scope = 'SOURCE')
+            AND ((scope_code = 'TASK' AND task_type = 'harvest') OR scope_code = 'SOURCE')
             AND effective_from <= @now
             AND (effective_to IS NULL OR effective_to > @now)
           ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -2881,10 +2881,10 @@ FROM ep_search,
 
 ```sql
 INSERT INTO reg_prov_window_offset_cfg
-(provenance_id, scope, task_type, effective_from, effective_to,
- window_mode, window_size_value, window_size_unit, calendar_align_to,
- lookback_value, lookback_unit, overlap_value, overlap_unit, watermark_lag_seconds,
- offset_type, offset_field_name, offset_date_format, default_date_field_name)
+(provenance_id, scope_code, task_type, effective_from, effective_to,
+ window_mode_code, window_size_value, window_size_unit_code, calendar_align_to,
+ lookback_value, lookback_unit_code, overlap_value, overlap_unit_code, watermark_lag_seconds,
+ offset_type_code, offset_field_name, offset_date_format, default_date_field_name)
 VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
         'SLIDING', 1, 'DAY', NULL,
         NULL, NULL, 1, 'DAY', 900,
@@ -2907,7 +2907,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 **答**：**不是。**
 
-* 读取时先尝试 `TASK` 级（`scope='TASK' AND task_type=?`），没有才回退 `SOURCE`；
+* 读取时先尝试 `TASK` 级（`scope_code='TASK' AND task_type=?`），没有才回退 `SOURCE`；
 * **不会**把 `TASK` 与 `SOURCE` 两条记录按字段做合并（除了“端点级小范围覆盖”，见 §4.4）；
 * 字段为 `NULL` 的含义是“交给应用默认值”。
 
@@ -2966,7 +2966,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 **答**：不建议。
 
 * JSON 仅作**扩展位**（默认参数、模板、状态码数组等）；
-* 关键过滤键（如 `pagination_mode`、`endpoint_usage`、`scope/task_type`）必须是结构化列，并建索引；
+* 关键过滤键（如 `pagination_mode_code`、`endpoint_usage_code`、`scope_code/task_type`）必须是结构化列，并建索引；
 * 如需对 JSON 做轻度查询，可在应用侧解析，或在后续演进中增加“**生成列 + 索引**”。
 
 ---
@@ -2988,7 +2988,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 1. `reg_prov_rate_limit_cfg`：降低 `rate_tokens_per_second` / `max_concurrent_requests`；
 2. `reg_prov_retry_cfg`：用 `EXP_JITTER`，增大 `initial_delay_millis` / `max_delay_millis`，包含 429/5xx；
 3. `reg_prov_batching_cfg`：减小 `detail_fetch_batch_size` 与并行度；
-4. `reg_prov_http_cfg`：确保 `retry_after_policy='RESPECT'` 并设置上限。
+4. `reg_prov_http_cfg`：确保 `retry_after_policy_code='RESPECT'` 并设置上限。
 
 > 采用“先加新→观察→关旧”的灰度节奏，不要直接覆盖旧配置。
 
@@ -3044,7 +3044,7 @@ FROM reg_prov_pagination_cfg
 WHERE provenance_id = @pid
   AND effective_from <= @T
   AND (effective_to IS NULL OR effective_to > @T)
-ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC
+ORDER BY scope_code = 'TASK' DESC, effective_from DESC, id DESC
 LIMIT 1;
 ```
 
@@ -3075,7 +3075,7 @@ LIMIT 1;
 
 ---
 
-### 8.18 为什么有时 `endpoint_usage='FETCH'` 不需要？
+### 8.18 为什么有时 `endpoint_usage_code='FETCH'` 不需要？
 
 **答**：
 
@@ -3098,7 +3098,7 @@ LIMIT 1;
 
 **答**：
 
-* WHERE 子句写法与复合索引顺序不匹配（应优先 `provenance_id, scope, task_type_key, [endpoint_name], effective_from`）；
+* WHERE 子句写法与复合索引顺序不匹配（应优先 `provenance_id, scope_code, task_type_key, [endpoint_name], effective_from`）；
 * 遗漏时间过滤（`effective_from <= now < effective_to`），导致范围扩大；
 * 对列做函数运算（如 `DATE(effective_from)`），破坏索引；
 * 使用 `%like%` 搜索 JSON 串；
@@ -3115,7 +3115,7 @@ LIMIT 1;
 
 ```sql
 INSERT INTO reg_prov_pagination_cfg
-(provenance_id, scope, task_type, effective_from, pagination_mode, page_size_value,
+(provenance_id, scope_code, task_type, effective_from, pagination_mode_code, page_size_value,
  page_size_param_name, cursor_param_name)
 VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR', 150, 'rows', 'cursor');
 ```
@@ -3150,7 +3150,7 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 
 * 读取时把候选凭证按优先级排序取 **前 N** 把；
 * 应用侧实现**轮询/加权轮询**（基于配额或历史 429 比例），并结合健康探测做**熔断**；
-* 若需要**按密钥限流**，在 `reg_prov_rate_limit_cfg.bucket_granularity_scope='PER_KEY'` 前提下，应用层把“当前凭证标识”作为限流桶
+* 若需要**按密钥限流**，在 `reg_prov_rate_limit_cfg.bucket_granularity_scope_code='PER_KEY'` 前提下，应用层把“当前凭证标识”作为限流桶
   Key。
 
 ---
