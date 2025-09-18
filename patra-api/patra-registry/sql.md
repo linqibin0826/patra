@@ -1,4 +1,6 @@
-# 0. 摘要（Executive Summary）
+# Papertrace Registry Schema & SQL 指南
+
+## 0. 摘要（Executive Summary）
 
 本设计面向**医学文献数据采集**（如 **PubMed / Crossref** 等多源对接）的**通用配置库**，目标是在 **MySQL 8.0** 上以*
 *高度拆分、强语义命名、低耦合、可演进**的方式，沉淀采集端最常见且多变的配置维度（时间窗口、增量指针、分页/游标、端点与
@@ -66,9 +68,9 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
 
 ---
 
-# 1. 背景与总体设计
+## 1. 背景与总体设计
 
-## 1.1 业务背景
+### 1.1 业务背景
 
 * 医学文献生态存在多个主流数据源（如 **PubMed**、**Crossref**），**API 风格差异大**：增量字段命名不同、分页/游标机制不同、端点与
   HTTP 约束不同、配额与限流策略不同、鉴权方式也不同。
@@ -80,7 +82,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
     * **可扩展**：为少量“供应商特有参数”预留 JSON 扩展位；
     * **跨任务差异**：同一数据源在 `harvest | update | backfill` 的策略可不同（窗口、分页、重试、限流等）。
 
-## 1.2 设计原则与不做的事
+### 1.2 设计原则与不做的事
 
 * **维度拆分优先**：将“时间窗口/指针、分页/游标、端点与 HTTP、批量、重试、限流、鉴权”分别建表，**避免大而全的胖表**与后续频繁改表。
 * **强语义命名**：表使用 `reg_prov_` 前缀 + 清晰后缀，字段避免缩写歧义；`provenance_id` 统一指向 `reg_provenance(id)`。
@@ -95,7 +97,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
     * 读侧：每个维度**只取一条当前生效记录**，再组合成“执行合同”。
 * **扩展而不过度设计**：特殊参数放 `JSON`，但常用路径（索引键、过滤键）必须是结构化列。
 
-## 1.3 表与关系（概览）
+### 1.3 表与关系（概览）
 
 * **主数据表**
 
@@ -122,7 +124,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
 > `reg_prov_endpoint_def (1) ──< (0..N) reg_prov_credential`（可选）
 > 运行时：应用分别从各表**各取一条当前生效**（优先 TASK → 回退 SOURCE），再拼成“执行合同”。
 
-## 1.4 作用域与时间模型
+### 1.4 作用域与时间模型
 
 * **作用域**
 
@@ -135,7 +137,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
     * **不重叠由应用层保证**（建表时无触发器/CHECK）；
     * 灰度切换：**先插入新记录（新起点），再关闭旧记录**（写入 `effective_to`），观察后清理。
 
-## 1.5 技术选型与实现边界
+### 1.5 技术选型与实现边界
 
 * **数据库**：MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`；
 * **结构化为主、JSON 为辅**：端点默认参数、请求模板、状态码列表等用 `JSON` 存储；
@@ -146,7 +148,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
     * **Hexagonal**：适配器（REST/MQ/调度）→ 应用服务用例（CQRS）→ 领域（配置装配）→ 仓储（MyBatis-Plus 映射到 `reg_prov_*`）。
     * **读侧缓存**：可将“当前生效配置”以 `(provenance_code, task_type)` 为 Key 做短TTL缓存，降低 DB 压力。
 
-## 1.6 使用方式（读写路径概要）
+### 1.6 使用方式（读写路径概要）
 
 * **写入顺序**
 
@@ -178,7 +180,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
 
     * 应用侧按此模式对**各维度**各取一条，组装为一次运行的“执行合同”。
 
-## 1.7 示例预览（PubMed / Crossref，简版）
+### 1.7 示例预览（PubMed / Crossref，简版）
 
 > 详细完整示例会在后续章节给出，这里先放一组**可直接执行**的核心样例，帮助理解模型。
 
@@ -257,9 +259,9 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01',
         JSON_OBJECT('User-Agent', 'PapertraceHarvester/1.0', 'mailto', 'ops@example.com'), 2000, 12000);
 ```
 
-# 2. 表清单与关系概览
+## 2. 表清单与关系概览
 
-## 2.1 表清单（逐表一句话定位）
+### 2.1 表清单（逐表一句话定位）
 
 * **`reg_provenance`**：来源主数据（Provenance Registry），登记外部数据源（如 PubMed、Crossref）的基础信息（编码、名称、默认
   BaseURL、默认时区、启用状态等）。
@@ -279,7 +281,7 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01',
 `task_type={harvest|update|backfill}`；生成列 `task_type_key = IFNULL(task_type,'ALL')` 用于唯一索引与查询过滤。
 > 约定：**不使用触发器/CHECK**；区间不重叠、作用域-任务互斥等规则由**应用层保证**。
 
-## 2.2 关系图（ER 概览）
+### 2.2 关系图（ER 概览）
 
 ```mermaid
 erDiagram
@@ -303,7 +305,7 @@ erDiagram
     * 端点定义 + HTTP 策略 + 分页/游标 + 批量成型 + 重试退避 + 限流并发 + 凭证，共同构成一次“采集运行合同”。
     * 组合时，**每个维度只取一条“当前生效记录”**（优先 TASK → 回退 SOURCE）。
 
-## 2.3 维度、作用域与时间区间的组合规则
+### 2.3 维度、作用域与时间区间的组合规则
 
 * **作用域选择**：当同一维度同时存在 `TASK` 与 `SOURCE` 两种配置，运行时**优先 TASK**（严格匹配 `task_type`），否则回退
   `SOURCE`。
@@ -312,7 +314,7 @@ erDiagram
 * **端点局部覆盖**：端点定义提供 `page_param_name / page_size_param_name / cursor_param_name / ids_param_name` 等**端点级覆盖
   **，只对该端点请求生效。
 
-## 2.4 “当前生效配置”的装配流程（读侧）
+### 2.4 “当前生效配置”的装配流程（读侧）
 
 **输入**：`provenance_code`、`task_type`（可选）、`endpoint_name`（可选）。
 **输出**：每个维度一条“当前生效”记录。
@@ -335,9 +337,11 @@ SET @now = UTC_TIMESTAMP();
  WHERE provenance_id = @pid
    AND scope = 'TASK'
    AND task_type = :taskType
+   AND lifecycle_status = 'PUBLISHED'
+   AND deleted = 0
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
- ORDER BY effective_from DESC
+ ORDER BY effective_from DESC, id DESC
  LIMIT 1)
 UNION ALL
 -- 回退 SOURCE 级
@@ -345,9 +349,11 @@ UNION ALL
  FROM reg_prov_pagination_cfg
  WHERE provenance_id = @pid
    AND scope = 'SOURCE'
+   AND lifecycle_status = 'PUBLISHED'
+   AND deleted = 0
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
- ORDER BY effective_from DESC
+ ORDER BY effective_from DESC, id DESC
  LIMIT 1)
 LIMIT 1;
 ```
@@ -356,15 +362,147 @@ LIMIT 1;
 
 ---
 
-# 3. 表结构详解（字段、索引、外键、使用建议）
+### 2.5 发布与“仅一条当前生效”的应用侧护栏
 
-> 说明：以下与已发布的建表 SQL 一一对应；不含触发器/CHECK/审计字段。
-> 公共字段模式（除凭证）：`provenance_id` + `scope` + `task_type` + `effective_from/to` + 生成列 `task_type_key` + 维度唯一索引
+不在 DB 端做区间重叠的强校验；发布流建议：
+
+- 幂等键：每次“发布版本”生成 `publish_idempotency_key`，以免重复提交。
+- 锁粒度：按维度获取行级锁（例如“当前维度最近一条”`SELECT ... FOR UPDATE`），再插入新记录；避免并发写入冲突。
+- 乐观锁：使用 `version` 字段做乐观锁更新；冲突时重试。
+- 重叠检测：应用侧在提交前做“与现有区间的轻量冲突检查”，只提示告警，不阻塞（允许有意轮换的重叠）。
+
+读取侧一律依据 `effective_from/to` 与 `ORDER BY effective_from DESC, id DESC LIMIT 1` 选择当前生效，不受区间重叠影响。
+
 `(provenance_id, scope, task_type_key, [endpoint_name], effective_from)`。
+
+#### 2.5.A 伪代码（Java，应用层，无触发器）
+
+```java
+// 目标：发布一条“新区间配置”并确保读侧可预测、写侧无死锁/无触发器
+
+class Dim {
+    Long provenanceId;
+    String scope;           // "TASK" | "SOURCE"
+    String taskType;        // may be null when scope == SOURCE
+    Long endpointId;        // optional for credential binding
+}
+
+interface PublishLogRepository {
+    boolean existsByKey(String idempotencyKey);
+
+    void save(String idempotencyKey, String table, Dim dim, Long newId);
+}
+
+interface GenericConfigRepository<T> {
+    // 锁住该维度最近一条（FOR UPDATE），避免并发写冲突
+    Optional<T> selectLatestForUpdate(String table, Dim dim);
+
+    // 轻量重叠检查（仅提示，不强挡写）
+    boolean existsOverlap(String table, Dim dim, Instant from, Instant toNullable);
+
+    Long insert(String table, T record);
+}
+
+class PublishService {
+    private final PublishLogRepository publishLogRepo;
+    private final GenericConfigRepository<Object> repo;
+
+    PublishService(PublishLogRepository publishLogRepo, GenericConfigRepository<Object> repo) {
+        this.publishLogRepo = publishLogRepo;
+        this.repo = repo;
+    }
+
+    // @Transactional
+    public void publishConfig(String table, Dim dim, Object newRecord, String idempotencyKey) {
+        if (publishLogRepo.existsByKey(idempotencyKey)) {
+            return; // 幂等：重复提交直接返回
+        }
+
+        // tx.begin();
+        Instant now = Instant.now();
+
+        // 1) 锁维度最近一条，避免并发写入（行级锁）
+        repo.selectLatestForUpdate(table, dim);
+
+        // 2) 重叠检查（仅日志告警，不阻塞）
+        // 假定 newRecord 有 getEffectiveFrom()/getEffectiveTo()
+        Instant from = (Instant) invoke(newRecord, "getEffectiveFrom");
+        Instant to = (Instant) invoke(newRecord, "getEffectiveTo");
+        if (repo.existsOverlap(table, dim, from, to)) {
+            // log.warn("interval overlapped; allowed for rotation/gray release");
+        }
+
+        // 3) 插入新记录（不修改旧记录的起点；如需回收，另行设置旧记录 effective_to）
+        set(newRecord, "lifecycleStatus", "PUBLISHED");
+        set(newRecord, "deleted", 0);
+        set(newRecord, "createdAt", now);
+        set(newRecord, "updatedAt", now);
+        set(newRecord, "version", 0);
+        Long newId = repo.insert(table, newRecord);
+
+        publishLogRepo.save(idempotencyKey, table, dim, newId);
+        // tx.commit();
+    }
+}
+
+// 读取单维度当前生效（TASK 优先，SOURCE 回退）。返回 0/1 行
+class ActiveSelector {
+    /**
+     * SQL 形态（两段 UNION ALL 取 Top1）：
+     * 1) scope='TASK' and task_type=?
+     * 2) scope='SOURCE'
+     * where lifecycle_status='PUBLISHED' and deleted=0
+     *   and effective_from<=now and (effective_to is null or effective_to>now)
+     * order by effective_from desc, id desc limit 1
+     */
+    Optional<Object> selectActive(String table, long pid, String taskType, Instant now) {
+        // 伪代码：用查询构造器/Mapper 实现上述 SQL
+        return Optional.empty();
+    }
+}
+
+// 凭证选择：端点绑定优先 → 默认标记 → 最新（按 effective_from desc, id desc）
+class CredentialSelector {
+    List<Object> listActiveCredentials(long pid, String taskType, Long endpointId, Instant now, int topN) {
+        List<Object> bound = queryCredentials(pid, taskType, endpointId, now);
+        List<Object> global = queryCredentials(pid, taskType, null, now);
+        List<Object> merged = new ArrayList<>();
+        merged.addAll(bound);
+        merged.addAll(global);
+        // 排序：is_default_preferred desc, effective_from desc, id desc
+        merged.sort((a, b) -> compare(a, b));
+        return merged.stream().limit(topN).toList();
+    }
+
+    private List<Object> queryCredentials(long pid, String taskType, Long endpointId, Instant now) {
+        // 伪实现：SELECT * FROM reg_prov_credential WHERE ...
+        return List.of();
+    }
+}
+
+// 区间重叠检查（应用层；仅提示，不依赖触发器/CHECK）
+class OverlapChecker {
+    boolean overlapsWithExisting(String table, Dim dim, Instant from, Instant toNullable) {
+        // exists (
+        //  select 1 from {table}
+        //   where provenance_id=? and scope=? and task_type_key=COALESCE(?, 'ALL')
+        //     and NOT( (effective_to is not null and effective_to <= :from)
+        //              or (:toNullable is not null and :toNullable <= effective_from) )
+        //  limit 1
+        // )
+        return false;
+    }
+}
+```
 
 ---
 
-## 3.1 `reg_provenance` — 来源主数据
+## 3. 表结构详解（字段、索引、外键、使用建议）
+
+> 说明：以下与已发布的建表 SQL 一一对应；不含触发器/CHECK/审计字段。
+> 公共字段模式（除凭证）：`provenance_id` + `scope` + `task_type` + `effective_from/to` + 生成列 `task_type_key` + 维度唯一索引
+
+### 3.1 `reg_provenance` — 来源主数据
 
 **定位**：登记外部数据源（Provenance），作为所有配置的外键根。
 **关键字段**
@@ -388,7 +526,7 @@ LIMIT 1;
 
 ---
 
-## 3.2 `reg_prov_endpoint_def` — 端点定义
+### 3.2 `reg_prov_endpoint_def` — 端点定义
 
 **定位**：定义搜索/详情/令牌等端点，附带默认 query/body、HTTP 方法、是否鉴权；提供端点级分页参数覆盖。
 **关键字段**
@@ -398,7 +536,7 @@ LIMIT 1;
 * `endpoint_name`：端点逻辑名（如 `esearch`、`efetch`、`works`、`token`）。
 * `effective_from/to`：生效区间。
 * `endpoint_usage`：用途枚举（`SEARCH|FETCH|TOKEN|...`）。
-* `http_method`：`GET|POST|PUT|PATCH|DELETE`。
+* `http_method`：`GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS`。
 * `path_template`：相对（推荐）或绝对路径。
 * `default_query_params` / `default_body_payload`（JSON）：默认 query 与 body（应用层合并）。
 * `request_content_type`：请求体类型（JSON/Form 等）。
@@ -418,7 +556,7 @@ LIMIT 1;
 
 ---
 
-## 3.3 `reg_prov_window_offset_cfg` — 时间窗口与增量指针
+### 3.3 `reg_prov_window_offset_cfg` — 时间窗口与增量指针
 
 **定位**：切窗策略（滑动/日历对齐）、窗口长度/重叠/回看、水位滞后；增量指针（DATE/ID/COMPOSITE）。
 **关键字段**
@@ -441,7 +579,7 @@ LIMIT 1;
 
 ---
 
-## 3.4 `reg_prov_pagination_cfg` — 分页与游标
+### 3.4 `reg_prov_pagination_cfg` — 分页与游标
 
 **定位**：页码（`PAGE_NUMBER`）、游标（`CURSOR`）、令牌（`TOKEN`）、滚动（`SCROLL`）的参数与响应提取规则。
 **关键字段**
@@ -464,7 +602,7 @@ LIMIT 1;
 
 ---
 
-## 3.5 `reg_prov_http_cfg` — HTTP 策略
+### 3.5 `reg_prov_http_cfg` — HTTP 策略
 
 **定位**：来源/TASK 级 HTTP 行为（BaseURL 覆盖、默认 Header、超时、TLS、代理、`Retry-After`、幂等等）。
 **关键字段**
@@ -488,7 +626,7 @@ LIMIT 1;
 
 ---
 
-## 3.6 `reg_prov_batching_cfg` — 批量抓取与请求成型
+### 3.6 `reg_prov_batching_cfg` — 批量抓取与请求成型
 
 **定位**：详情批量、ID 参数名/分隔符、并行/背压、请求模板与压缩。
 **关键字段**
@@ -512,7 +650,7 @@ LIMIT 1;
 
 ---
 
-## 3.7 `reg_prov_retry_cfg` — 重试与退避
+### 3.7 `reg_prov_retry_cfg` — 重试与退避
 
 **定位**：网络/服务端异常的重试与退避规则，支持断路器。
 **关键字段**
@@ -536,7 +674,7 @@ LIMIT 1;
 
 ---
 
-## 3.8 `reg_prov_rate_limit_cfg` — 限流与并发
+### 3.8 `reg_prov_rate_limit_cfg` — 限流与并发
 
 **定位**：客户端侧的令牌桶/QPS、突发、并发上限与桶粒度设置。
 **关键字段**
@@ -565,7 +703,7 @@ LIMIT 1;
 
 ---
 
-## 3.9 `reg_prov_credential` — 鉴权/密钥
+### 3.9 `reg_prov_credential` — 鉴权/密钥
 
 **定位**：为来源/TASK 配置多把凭证（API Key、Bearer、Basic、OAuth2…），**可选**绑定端点，允许区间重叠以支持轮换。
 **关键字段**
@@ -577,40 +715,40 @@ LIMIT 1;
 * Basic：`basic_username`、`basic_password`。
 * OAuth2：`oauth_token_url`、`oauth_client_id`、`oauth_client_secret`、`oauth_scope`、`oauth_audience`。
 * 扩展：`extra_json`（签名算法、HMAC 盐、额外 Header 模板等）。
-* 生效区间：`valid_from/valid_to`（允许重叠）；优先策略由应用侧决定（可参考 `is_default_preferred`）。
+* 生效区间：`effective_from/effective_to`（允许重叠）；优先策略由应用侧决定（可参考 `is_default_preferred`）。
 
 **索引/外键**
 
 * 外键：`provenance_id → reg_provenance.id`；`endpoint_id → reg_prov_endpoint_def.id`（可空）。
 * 索引：`idx_reg_prov_credential__dim (provenance_id, scope, task_type, endpoint_id, credential_name)`、
-  `idx_reg_prov_credential__valid (valid_from, valid_to)`。
+  `idx_reg_prov_credential__effective (effective_from, effective_to)`。
 
 **使用建议**
 
-* **轮换**：先插入新凭证（`valid_from=当前`），将旧凭证 `valid_to=当前+重叠窗口`，待观测稳定后再关闭旧凭证。
+* **轮换**：先插入新凭证（`effective_from=当前`），将旧凭证 `effective_to=当前+重叠窗口`，待观测稳定后再关闭旧凭证。
 * **端点绑定**：若某端点需要单独的密钥或更高配额，可填 `endpoint_id` 指向对应端点定义。
 * **安全**：`credential_value_plain` 建议存**引用**（如 KMS 的 key id），真实密钥由应用从安全存储获取。
 
 ---
 
-## 3.10 查询与索引使用建议（通用）
+### 3.10 查询与索引使用建议（通用）
 
 * **过滤顺序**：`provenance_id` → `scope`/`task_type`（或 `task_type_key`）→ `effective_from <= now < effective_to` →
-  `ORDER BY effective_from DESC LIMIT 1`。
+  `ORDER BY effective_from DESC, id DESC LIMIT 1`。
 * **复合索引命中**：已在各表建立 `(provenance_id, scope, task_type_key, ..., effective_from)` 复合唯一索引，结合
   `effective_to` 辅助索引，能高效支撑“当前生效记录”的检索。
 * **缓存建议**：读侧可将“（provenance\_code, task\_type）→ 维度配置聚合体”进行短 TTL 缓存；端点级也可按 `endpoint_name`
   做二级缓存。
 * **并发写入**：灰度/回滚建议采用“先加新→再关旧”的顺序，并在应用侧做幂等与区间冲突检测。
 
-# 4. 作用域与优先级模型
+## 4. 作用域与优先级模型
 
 本章给出**统一的“配置选取与合并”规则**，确保在多来源（Provenance）、多任务（`harvest|update|backfill`）、多时间区间并存的情况下，应用端能
 **稳定、可预期**地装配出“当前生效”的采集运行合同（端点 + HTTP + 窗口/指针 + 分页/游标 + 批量 + 重试 + 限流 + 凭证）。
 
 ---
 
-## 4.1 作用域模型（Scope Model）
+### 4.1 作用域模型（Scope Model）
 
 * **字段**（所有 `reg_prov_*_cfg` 与 `reg_prov_endpoint_def` 都具备）
 
@@ -630,7 +768,7 @@ LIMIT 1;
 
 ---
 
-## 4.2 时间区间模型（Effective Interval）
+### 4.2 时间区间模型（Effective Interval）
 
 * **字段**：`effective_from TIMESTAMP(6)`、`effective_to TIMESTAMP(6) NULL`
 * **语义**：区间采用 **半开区间** `[effective_from, effective_to)`；`effective_to IS NULL` 表示持续有效
@@ -655,11 +793,11 @@ LIMIT 1;
 
 ---
 
-## 4.3 维度优先级与决策树（Deterministic Selection）
+### 4.3 维度优先级与决策树（Deterministic Selection）
 
 **目标**：对于每个维度（端点定义/窗口/分页/HTTP/批量/重试/限流/凭证），**恰好选出 1 条“当前生效记录”**。
 
-### 4.3.1 基本决策树（除凭证外）
+#### 4.3.1 基本决策树（除凭证外）
 
 以“分页维度”为例，其他维度同理（仅换表名）：
 
@@ -667,8 +805,21 @@ LIMIT 1;
 2. **时间过滤**：`effective_from <= now < COALESCE(effective_to, +∞)`
 3. **任务优先**：
 
+#### 4.3.3 字段合并与优先级总则
+
+总则：除“端点默认 Query/Body”与“HTTP Headers”在应用层进行键级合并外，其他字段不做字段级覆盖。
+
+- 端点分页参数名：`endpoint_def.*_param_name` > `pagination_cfg.*` > 应用默认。
+- BaseURL：`http_cfg.base_url_override` > `provenance.base_url_default` > 应用默认。
+- Headers 合并顺序：`http_cfg.default_headers_json` 为基底，运行时请求头覆盖同名键，发送前删除值为 NULL 的键。
+- 时间窗口/指针：TASK 级命中优先，其次 SOURCE 级；仅取单条当前生效记录。
+- 凭证选择链：端点绑定优先，其次全局；TASK 优先，其次 SOURCE；时间过滤；默认标记优先；按 `effective_from DESC, id DESC`
+  决定并列；如需多把，取前 N 把供应用轮询/加权。
+- NULL 语义：字段为 NULL 表示“由应用使用默认值”。
+
     * 若传入了 `task_type`：先在 `scope='TASK' AND task_type=:task_type` 中选；若没有结果，再回退 `scope='SOURCE'`
     * 若未传入 `task_type`：直接走 `scope='SOURCE'`
+
 4. **最新原则**：在候选集中按 `effective_from DESC` 取 **第一条**
 5. **并列兜底**：若仍并列（理论上不会出现），可再按 `id DESC` 兜底
 
@@ -703,7 +854,7 @@ UNION ALL
 LIMIT 1;
 ```
 
-### 4.3.2 端点定义的选择（`reg_prov_endpoint_def`）
+#### 4.3.2 端点定义的选择（`reg_prov_endpoint_def`）
 
 在以上 1\~5 的基础上，多了端点维度过滤：
 
@@ -718,7 +869,7 @@ LIMIT 1;
 
 ---
 
-## 4.4 字段覆盖与合并顺序（仅端点级覆盖，非全局字段合并）
+### 4.4 字段覆盖与合并顺序（仅端点级覆盖，非全局字段合并）
 
 本设计**不做链式覆盖**，即**不会把 SOURCE 与 TASK 两条记录做字段级 merge**。唯一的覆盖例外发生在“端点 → 分页/批量参数名”的
 **局部覆盖**：
@@ -751,16 +902,16 @@ reg_prov_http_cfg.base_url_override     >     reg_provenance.base_url_default   
 
 ---
 
-## 4.5 凭证选择优先级（`reg_prov_credential`）
+### 4.5 凭证选择优先级（`reg_prov_credential`）
 
 凭证与其他维度不同：凭证可能**并存多把有效**，用于轮换/分流。建议优先级如下：
 
 1. **端点绑定优先**：若当前请求明确绑定到某端点（或端点用途），则优先筛选 `endpoint_id = 该端点.id` 的凭证；若无绑定，再用
    `endpoint_id IS NULL` 的全局凭证
 2. **作用域优先**：任务内优先 `scope='TASK' AND task_type=:taskType`，否则 `scope='SOURCE'`
-3. **时间过滤**：`valid_from <= now < COALESCE(valid_to,+∞)`
+3. **时间过滤**：`effective_from <= now < COALESCE(effective_to,+∞)`
 4. **默认标记**：优先 `is_default_preferred = 1`
-5. **最新原则**：同一优先级并列时，按 `valid_from DESC, id DESC` 取第一把
+5. **最新原则**：同一优先级并列时，按 `effective_from DESC, id DESC` 取第一把
 6. **多把策略**（可选）：若需要并行多把，按上述规则得出**有序清单**，由应用以**轮询/加权/健康检查**进行使用与熔断
 
 > **SQL（取“单把首选凭证”）**
@@ -773,21 +924,25 @@ SET @now = UTC_TIMESTAMP();
 (SELECT *
  FROM reg_prov_credential
  WHERE provenance_id = @pid
+   AND lifecycle_status = 'PUBLISHED'
+   AND deleted = 0
    AND (@endpoint_id IS NOT NULL AND endpoint_id = @endpoint_id)
    AND ((scope = 'TASK' AND task_type = @taskType) OR (scope = 'SOURCE' AND @taskType IS NULL) OR (scope = 'SOURCE'))
-   AND valid_from <= @now
-   AND (valid_to IS NULL OR valid_to > @now)
- ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+   AND effective_from <= @now
+   AND (effective_to IS NULL OR effective_to > @now)
+ ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
  LIMIT 1)
 UNION ALL
 (SELECT *
  FROM reg_prov_credential
  WHERE provenance_id = @pid
+   AND lifecycle_status = 'PUBLISHED'
+   AND deleted = 0
    AND endpoint_id IS NULL
    AND ((scope = 'TASK' AND task_type = @taskType) OR (scope = 'SOURCE' AND @taskType IS NULL) OR (scope = 'SOURCE'))
-   AND valid_from <= @now
-   AND (valid_to IS NULL OR valid_to > @now)
- ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+   AND effective_from <= @now
+   AND (effective_to IS NULL OR effective_to > @now)
+ ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
  LIMIT 1)
 LIMIT 1;
 ```
@@ -796,7 +951,7 @@ LIMIT 1;
 
 ---
 
-## 4.6 多维度聚合：装配“运行合同”（Execution Contract）
+### 4.6 多维度聚合：装配“运行合同”（Execution Contract）
 
 **目标**：一次请求/一次任务运行需要把多个维度拼成“合同”。推荐在应用端做**多子查询 + 组合**，每个子查询确保只返回 0/1 行，然后
 **CROSS JOIN** 到一起（MySQL 用子查询 + CROSS JOIN 即可）。
@@ -965,21 +1120,23 @@ WITH ep AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
+              AND lifecycle_status='PUBLISHED' AND deleted=0
             AND endpoint_id = (SELECT id FROM ep LIMIT 1)
-            AND valid_from <= @now
-            AND (valid_to IS NULL OR valid_to > @now)
+              AND effective_from <= @now
+              AND (effective_to IS NULL OR effective_to > @now)
             AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-          ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+            ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          UNION ALL
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
+              AND lifecycle_status='PUBLISHED' AND deleted=0
             AND endpoint_id IS NULL
-            AND valid_from <= @now
-            AND (valid_to IS NULL OR valid_to > @now)
+              AND effective_from <= @now
+              AND (effective_to IS NULL OR effective_to > @now)
             AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-          ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+            ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          LIMIT 1)
 
@@ -1000,7 +1157,7 @@ FROM ep,
 
 ---
 
-## 4.7 灰度切换与回滚（运营流程）
+### 4.7 灰度切换与回滚（运营流程）
 
 **目标**：零停机切换配置，快速回滚。
 
@@ -1019,7 +1176,7 @@ FROM ep,
 
 ---
 
-## 4.8 异常与兜底策略
+### 4.8 异常与兜底策略
 
 | 场景                     | 表现/风险         | 兜底建议                                                         |
 |------------------------|---------------|--------------------------------------------------------------|
@@ -1033,7 +1190,7 @@ FROM ep,
 
 ---
 
-## 4.9 最佳实践小结（可落地）
+### 4.9 最佳实践小结（可落地）
 
 * 写侧：**先加新、再关旧**；所有修改先跑**预检 SQL**（交集检查、必填检查、依赖存在性检查）。
 * 读侧：统一封装“取当前生效”的**通用函数**，并做**短 TTL 缓存**；一次运行内冻结配置。
@@ -1041,11 +1198,11 @@ FROM ep,
 * 凭证：支持**多把候选** + **健康探测** + **熔断**；默认标记 + 最新优先。
 * 时区：DB 存 UTC；展示/窗口对齐用 `reg_provenance.timezone_default` 或任务级 HTTP 配置（如需）。
 
-# 5. 读写操作实践（SQL 模板与最佳实践）
+## 5. 读写操作实践（SQL 模板与最佳实践）
 
-## 5.1 写入与变更（新增配置、灰度切换、回滚）
+### 5.1 写入与变更（新增配置、灰度切换、回滚）
 
-### 5.1.1 新增来源（Provenance）
+#### 5.1.1 新增来源（Provenance）
 
 > 幂等：`provenance_code` 唯一。存在则取回 `id`；不存在则插入。
 
@@ -1069,7 +1226,7 @@ WHERE provenance_code = :code;
 
 ---
 
-### 5.1.2 新增配置（以分页为例）：写前冲突预检
+#### 5.1.2 新增配置（以分页为例）：写前冲突预检
 
 > 以 `reg_prov_pagination_cfg` 为例；其他 `reg_prov_*` 同理，替换表名即可。
 > 目标：同维度（`provenance_id, scope, task_type`）内，**新区间**与既有区间**不得重叠**（业务规则在应用层保证）。
@@ -1094,7 +1251,7 @@ LIMIT 1;
 
 ---
 
-### 5.1.3 灰度切换（Zero-Downtime）
+#### 5.1.3 灰度切换（Zero-Downtime）
 
 > 策略：**先加新**（未来 T+Δ 生效），**后关旧**（观察期结束再收口），保证在途任务不受影响。
 
@@ -1124,7 +1281,7 @@ WHERE provenance_id = @pid
   AND IFNULL(task_type, 'ALL') = IFNULL(:taskType, 'ALL')
   AND effective_from < :newFrom
   AND (effective_to IS NULL OR effective_to > :newFrom)
-ORDER BY effective_from DESC
+ORDER BY effective_from DESC, id DESC
 LIMIT 1;
 ```
 
@@ -1135,7 +1292,7 @@ LIMIT 1;
 
 ---
 
-### 5.1.4 快速回滚
+#### 5.1.4 快速回滚
 
 > 新配置异常时，执行**回滚**：
 >
@@ -1157,13 +1314,13 @@ WHERE id = (SELECT id
               AND scope = :scope
               AND IFNULL(task_type, 'ALL') = IFNULL(:taskType, 'ALL')
               AND effective_from < (SELECT effective_from FROM reg_prov_pagination_cfg WHERE id = :newCfgId)
-            ORDER BY effective_from DESC
+            ORDER BY effective_from DESC, id DESC
             LIMIT 1);
 ```
 
 ---
 
-## 5.2 幂等写入模板（Upsert/去重）
+### 5.2 幂等写入模板（Upsert/去重）
 
 > 由于表的唯一键为 `(provenance_id, scope, task_type_key, [endpoint_name], effective_from)`，**一般不建议**直接
 `ON DUPLICATE KEY` 覆盖 `effective_from`（可能破坏历史）。
@@ -1202,7 +1359,7 @@ ON DUPLICATE KEY UPDATE effective_to         = VALUES(effective_to),
 
 ---
 
-## 5.3 读取“当前生效配置”SQL 模板（单维度）
+### 5.3 读取“当前生效配置”SQL 模板（单维度）
 
 > 通用查询模式（以 `reg_prov_http_cfg` 为例；其他维度换表名字段即可）。
 
@@ -1217,6 +1374,8 @@ SET @now = UTC_TIMESTAMP();
 (SELECT *
  FROM reg_prov_http_cfg
  WHERE provenance_id = @pid
+   AND lifecycle_status = 'PUBLISHED'
+   AND deleted = 0
    AND scope = 'TASK'
    AND task_type = :taskType
    AND effective_from <= @now
@@ -1227,6 +1386,8 @@ UNION ALL
 (SELECT *
  FROM reg_prov_http_cfg
  WHERE provenance_id = @pid
+   AND lifecycle_status = 'PUBLISHED'
+   AND deleted = 0
    AND scope = 'SOURCE'
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
@@ -1242,6 +1403,8 @@ LIMIT 1;
 WITH ep AS ((SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'TASK'
                AND task_type = :taskType
                AND endpoint_usage = :usage
@@ -1254,6 +1417,8 @@ WITH ep AS ((SELECT *
             (SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'SOURCE'
                AND endpoint_usage = :usage
                AND (:endpointName IS NULL OR endpoint_name = :endpointName)
@@ -1268,7 +1433,7 @@ FROM ep;
 
 ---
 
-## 5.4 跨维度聚合查询（装配“运行合同”）
+### 5.4 跨维度聚合查询（装配“运行合同”）
 
 > 目标：一次取齐**端点 + HTTP + 窗口/指针 + 分页 + 批量 + 重试 + 限流 + 凭证**，由应用把 JSON 字段做合并并生成请求。
 
@@ -1419,21 +1584,23 @@ WITH ep AS ((SELECT *
      cred AS ((SELECT *
                FROM reg_prov_credential
                WHERE provenance_id = @pid
+                 AND lifecycle_status='PUBLISHED' AND deleted=0
                  AND endpoint_id = (SELECT id FROM ep LIMIT 1)
                  AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-                 AND valid_from <= @now
-                 AND (valid_to IS NULL OR valid_to > @now)
-               ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+                 AND effective_from <= @now
+                 AND (effective_to IS NULL OR effective_to > @now)
+               ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
                LIMIT 1)
               UNION ALL
               (SELECT *
                FROM reg_prov_credential
                WHERE provenance_id = @pid
+                 AND lifecycle_status='PUBLISHED' AND deleted=0
                  AND endpoint_id IS NULL
                  AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-                 AND valid_from <= @now
-                 AND (valid_to IS NULL OR valid_to > @now)
-               ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+                 AND effective_from <= @now
+                 AND (effective_to IS NULL OR effective_to > @now)
+               ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
                LIMIT 1)
               LIMIT 1)
 SELECT *
@@ -1456,7 +1623,7 @@ FROM ep,
 
 ---
 
-## 5.5 端点级覆盖的使用示例
+### 5.5 端点级覆盖的使用示例
 
 **场景**：大多数端点用 `page=...&retmax=...`，但 `works` 端点要求 `rows=...`。
 
@@ -1465,11 +1632,11 @@ FROM ep,
 
 ---
 
-## 5.6 凭证选择：单把 / 多把
+### 5.6 凭证选择：单把 / 多把
 
 **单把（首选）**
 
-* 端点绑定优先 → `is_default_preferred=1` → 最新 `valid_from` → `id` 兜底。
+* 端点绑定优先 → `is_default_preferred=1` → 最新 `effective_from` → `id` 兜底。
 * 参考 §4.5 的 SQL。
 
 **多把（并行/分流）**
@@ -1479,7 +1646,7 @@ FROM ep,
 
 ---
 
-## 5.7 诊断与运维 SQL（常用）
+### 5.7 诊断与运维 SQL（常用）
 
 **列出某来源在当前时刻“生效”的所有维度**
 
@@ -1496,7 +1663,7 @@ SET @now = UTC_TIMESTAMP();
  WHERE provenance_id = @pid
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
- ORDER BY scope = 'TASK' DESC, effective_from DESC
+ ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC
  LIMIT 1)
 UNION ALL
 -- 加上 window/http/batching/retry/rate/endpoint 等同样写法……
@@ -1505,7 +1672,7 @@ FROM reg_prov_window_offset_cfg
 WHERE provenance_id = @pid
   AND effective_from <= @now
   AND (effective_to IS NULL OR effective_to > @now)
-ORDER BY scope = 'TASK' DESC, effective_from DESC
+ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC
 LIMIT 1;
 ```
 
@@ -1537,12 +1704,12 @@ WHERE provenance_id = @pid
   AND endpoint_usage = :usage
   AND effective_from <= UTC_TIMESTAMP()
   AND (effective_to IS NULL OR effective_to > UTC_TIMESTAMP())
-ORDER BY scope = 'TASK' DESC, effective_from DESC;
+ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC;
 ```
 
 ---
 
-## 5.8 性能与一致性建议
+### 5.8 性能与一致性建议
 
 * **索引命中**：查询条件顺序尽量贴合复合索引顺序（`provenance_id, scope, task_type_key, [endpoint_name], effective_from`
   ），并带上时间过滤。
@@ -1554,7 +1721,7 @@ ORDER BY scope = 'TASK' DESC, effective_from DESC;
 
 ---
 
-## 5.9 常见错误与应对
+### 5.9 常见错误与应对
 
 | 错误        | 原因                              | 快速修复                                    |
 |-----------|---------------------------------|-----------------------------------------|
@@ -1566,9 +1733,9 @@ ORDER BY scope = 'TASK' DESC, effective_from DESC;
 
 ---
 
-# 6. PubMed 示例（端到端）
+## 6. PubMed 示例（端到端）
 
-## 6.1 背景与 API 速览（面向本库的映射）
+### 6.1 背景与 API 速览（面向本库的映射）
 
 * **E-utilities** 家族常用端点：
 
@@ -1582,7 +1749,7 @@ ORDER BY scope = 'TASK' DESC, effective_from DESC;
 
 ---
 
-## 6.2 主数据：登记 PubMed 来源
+### 6.2 主数据：登记 PubMed 来源
 
 ```sql
 -- ① 新增来源（若已存在则忽略）
@@ -1600,7 +1767,7 @@ WHERE provenance_code = 'pubmed';
 
 ---
 
-## 6.3 端点定义（搜索与详情）
+### 6.3 端点定义（搜索与详情）
 
 ```sql
 /* 搜索端点：ESearch（返回 PMID 列表） */
@@ -1644,7 +1811,7 @@ VALUES (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.4 时间窗口与增量指针（按天滑动 + 重叠）
+### 6.4 时间窗口与增量指针（按天滑动 + 重叠）
 
 ```sql
 INSERT INTO reg_prov_window_offset_cfg
@@ -1668,7 +1835,7 @@ VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.5 分页/游标（页码模型 → retstart）
+### 6.5 分页/游标（页码模型 → retstart）
 
 ```sql
 INSERT INTO reg_prov_pagination_cfg
@@ -1689,7 +1856,7 @@ VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.6 HTTP 策略（Headers/超时/Retry-After）
+### 6.6 HTTP 策略（Headers/超时/Retry-After）
 
 ```sql
 INSERT INTO reg_prov_http_cfg
@@ -1714,7 +1881,7 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.7 批量抓取与请求成型（EFetch 批量）
+### 6.7 批量抓取与请求成型（EFetch 批量）
 
 ```sql
 INSERT INTO reg_prov_batching_cfg
@@ -1734,7 +1901,7 @@ VALUES (@pubmed_id, 'TASK', 'update', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.8 重试与退避（含断路器）
+### 6.8 重试与退避（含断路器）
 
 ```sql
 INSERT INTO reg_prov_retry_cfg
@@ -1753,7 +1920,7 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.9 限流与并发（客户端令牌桶）
+### 6.9 限流与并发（客户端令牌桶）
 
 ```sql
 INSERT INTO reg_prov_rate_limit_cfg
@@ -1771,20 +1938,20 @@ VALUES (@pubmed_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 6.10 凭证（可选：API Key 提升配额）
+### 6.10 凭证（可选：API Key 提升配额）
 
 ```sql
 /* 若有 API Key，可配置为查询参数 api_key=xxxx */
 INSERT INTO reg_prov_credential
 (provenance_id, scope, task_type, endpoint_id,
  credential_name, auth_type, inbound_location,
- credential_field_name, credential_value_prefix, credential_value_plain,
- basic_username, basic_password,
- oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, oauth_audience, extra_json,
- valid_from, valid_to, is_default_preferred)
+ credential_field_name, credential_value_prefix, credential_value_ref,
+ basic_username_ref, basic_password_ref,
+ oauth_token_url, oauth_client_id_ref, oauth_client_secret_ref, oauth_scope, oauth_audience, extra_json,
+ effective_from, effective_to, is_default_preferred)
 VALUES (@pubmed_id, 'SOURCE', NULL, NULL,
         'default-api-key', 'API_KEY', 'QUERY',
-        'api_key', NULL, 'REDACTED_OR_REFERENCE', -- 推荐存“引用”，真实值由应用从安全存储拉取
+        'api_key', NULL, 'kms://path/to/secret',
         NULL, NULL,
         NULL, NULL, NULL, NULL, NULL, NULL,
         '2025-01-01 00:00:00', NULL, 1);
@@ -1794,7 +1961,7 @@ VALUES (@pubmed_id, 'SOURCE', NULL, NULL,
 
 ---
 
-## 6.11 组合查询：装配“PubMed / update”的当前生效配置
+### 6.11 组合查询：装配“PubMed / update”的当前生效配置
 
 > 运行一次 `SEARCH`（ESearch）与后续 `FETCH`（EFetch）通常要**同时读取**多个维度。以下 SQL 取齐端点/HTTP/窗口/分页/批量/重试/限流/凭证各
 > 1 条“当前生效”记录。
@@ -1811,6 +1978,8 @@ SET @now = UTC_TIMESTAMP();
 WITH ep_search AS ((SELECT *
                     FROM reg_prov_endpoint_def
                     WHERE provenance_id = @pid
+                      AND lifecycle_status = 'PUBLISHED'
+                      AND deleted = 0
                       AND scope = 'TASK'
                       AND task_type = 'update'
                       AND endpoint_usage = 'SEARCH'
@@ -1822,6 +1991,8 @@ WITH ep_search AS ((SELECT *
                    (SELECT *
                     FROM reg_prov_endpoint_def
                     WHERE provenance_id = @pid
+                      AND lifecycle_status = 'PUBLISHED'
+                      AND deleted = 0
                       AND scope = 'SOURCE'
                       AND endpoint_usage = 'SEARCH'
                       AND effective_from <= @now
@@ -1832,6 +2003,8 @@ WITH ep_search AS ((SELECT *
      ep_fetch AS ((SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
+                     AND lifecycle_status = 'PUBLISHED'
+                     AND deleted = 0
                      AND scope = 'TASK'
                      AND task_type = 'update'
                      AND endpoint_usage = 'FETCH'
@@ -1843,6 +2016,8 @@ WITH ep_search AS ((SELECT *
                   (SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
+                     AND lifecycle_status = 'PUBLISHED'
+                     AND deleted = 0
                      AND scope = 'SOURCE'
                      AND endpoint_usage = 'FETCH'
                      AND effective_from <= @now
@@ -1853,6 +2028,8 @@ WITH ep_search AS ((SELECT *
      http AS ((SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
+                 AND lifecycle_status = 'PUBLISHED'
+                 AND deleted = 0
                  AND scope = 'TASK'
                  AND task_type = 'update'
                  AND effective_from <= @now
@@ -1863,6 +2040,8 @@ WITH ep_search AS ((SELECT *
               (SELECT *
                FROM reg_prov_http_cfg
                WHERE provenance_id = @pid
+                 AND lifecycle_status = 'PUBLISHED'
+                 AND deleted = 0
                  AND scope = 'SOURCE'
                  AND effective_from <= @now
                  AND (effective_to IS NULL OR effective_to > @now)
@@ -1872,6 +2051,8 @@ WITH ep_search AS ((SELECT *
      win AS ((SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
+                AND lifecycle_status = 'PUBLISHED'
+                AND deleted = 0
                 AND scope = 'TASK'
                 AND task_type = 'update'
                 AND effective_from <= @now
@@ -1882,6 +2063,8 @@ WITH ep_search AS ((SELECT *
              (SELECT *
               FROM reg_prov_window_offset_cfg
               WHERE provenance_id = @pid
+                AND lifecycle_status = 'PUBLISHED'
+                AND deleted = 0
                 AND scope = 'SOURCE'
                 AND effective_from <= @now
                 AND (effective_to IS NULL OR effective_to > @now)
@@ -1891,6 +2074,8 @@ WITH ep_search AS ((SELECT *
      pg AS ((SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
@@ -1901,6 +2086,8 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_pagination_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1910,6 +2097,8 @@ WITH ep_search AS ((SELECT *
      bt AS ((SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
@@ -1920,6 +2109,8 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_batching_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1929,6 +2120,8 @@ WITH ep_search AS ((SELECT *
      rt AS ((SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
@@ -1939,6 +2132,8 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_retry_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1948,6 +2143,8 @@ WITH ep_search AS ((SELECT *
      rl AS ((SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'TASK'
                AND task_type = 'update'
                AND effective_from <= @now
@@ -1958,6 +2155,8 @@ WITH ep_search AS ((SELECT *
             (SELECT *
              FROM reg_prov_rate_limit_cfg
              WHERE provenance_id = @pid
+               AND lifecycle_status = 'PUBLISHED'
+               AND deleted = 0
                AND scope = 'SOURCE'
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
@@ -1969,21 +2168,25 @@ WITH ep_search AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
+            AND lifecycle_status = 'PUBLISHED'
+            AND deleted = 0
             AND endpoint_id = (SELECT id FROM ep_search LIMIT 1)
             AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-            AND valid_from <= @now
-            AND (valid_to IS NULL OR valid_to > @now)
-          ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+            AND effective_from <= @now
+            AND (effective_to IS NULL OR effective_to > @now)
+          ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          UNION ALL
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
+            AND lifecycle_status = 'PUBLISHED'
+            AND deleted = 0
             AND endpoint_id IS NULL
             AND ((scope = 'TASK' AND task_type = 'update') OR scope = 'SOURCE')
-            AND valid_from <= @now
-            AND (valid_to IS NULL OR valid_to > @now)
-          ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+            AND effective_from <= @now
+            AND (effective_to IS NULL OR effective_to > @now)
+          ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          LIMIT 1)
 SELECT *
@@ -2000,12 +2203,83 @@ FROM ep_search,
 
 ---
 
-## 6.12 运行片段：从“窗口”到“请求”的一步步
+### 5.7 读侧封装模板（视图/存储过程）
+
+为减少重复 SQL，可在 MySQL 8.0 中使用窗口函数构建“当前生效”视图（按维度取 Top 1），或提供存储过程按入参返回单条配置。
+
+示例一：HTTP 策略“当前生效”视图（每个 `(provenance_id, scope, task_type_key)` 一条）
+
+```sql
+CREATE OR REPLACE VIEW v_reg_prov_http_cfg_active AS
+SELECT *
+FROM (
+  SELECT h.*, ROW_NUMBER() OVER (
+           PARTITION BY h.provenance_id, h.scope, h.task_type_key
+           ORDER BY h.effective_from DESC, h.id DESC
+         ) AS rn
+  FROM reg_prov_http_cfg h
+  WHERE h.lifecycle_status = 'PUBLISHED' AND h.deleted = 0
+) t
+WHERE t.rn = 1;
+```
+
+示例二：按来源与任务获取 HTTP 策略（无存储过程/无触发器，返回 0/1 行）
+
+注：不使用触发器与存储过程。以下提供直接可执行的查询模板，供应用层 PreparedStatement 使用。
+
+等价查询模板（无存储过程/无触发器）
+
+```sql
+-- 参数占位：:provenance_code, :task_type（harvest|update|backfill）
+-- 说明：与上面的存储过程语义一致；可直接在应用层以 PreparedStatement 方式执行。
+
+(SELECT h.*
+ FROM reg_prov_http_cfg h
+ WHERE h.provenance_id = (
+         SELECT id
+         FROM reg_provenance
+         WHERE provenance_code = :provenance_code
+           AND lifecycle_status = 'PUBLISHED'
+           AND deleted = 0
+         LIMIT 1
+       )
+   AND h.lifecycle_status = 'PUBLISHED'
+   AND h.deleted = 0
+   AND h.scope = 'TASK'
+   AND h.task_type = :task_type
+   AND h.effective_from <= UTC_TIMESTAMP()
+   AND (h.effective_to IS NULL OR h.effective_to > UTC_TIMESTAMP())
+ ORDER BY h.effective_from DESC, h.id DESC
+ LIMIT 1)
+UNION ALL
+(SELECT h.*
+ FROM reg_prov_http_cfg h
+ WHERE h.provenance_id = (
+         SELECT id
+         FROM reg_provenance
+         WHERE provenance_code = :provenance_code
+           AND lifecycle_status = 'PUBLISHED'
+           AND deleted = 0
+         LIMIT 1
+       )
+   AND h.lifecycle_status = 'PUBLISHED'
+   AND h.deleted = 0
+   AND h.scope = 'SOURCE'
+   AND h.effective_from <= UTC_TIMESTAMP()
+   AND (h.effective_to IS NULL OR h.effective_to > UTC_TIMESTAMP())
+ ORDER BY h.effective_from DESC, h.id DESC
+ LIMIT 1)
+LIMIT 1;
+```
+
+---
+
+### 6.12 运行片段：从“窗口”到“请求”的一步步
 
 > 目标：**增量 Update**，以 `EDAT` 为增量字段，将窗口 `[T, T+1d)` 的新增文献拉全。
 > 示例取 `T=2025-07-01 00:00:00Z`，**重叠** 1 天（窗口来自 §6.4）。
 
-### 6.12.1 计算时间窗口（应用层）
+#### 6.12.1 计算时间窗口（应用层）
 
 * 配置：`SLIDING`、`window_size=1 DAY`、`overlap=1 DAY`、`default_date_field_name='EDAT'`。
 * 假设上次水位为 `2025-07-01T00:00:00Z`，则本次窗口：
@@ -2015,7 +2289,7 @@ FROM ep_search,
     * `datetype = 'edat'`
     * 请求中可映射为：`mindate=2025/07/01&maxdate=2025/07/02`（或等效 term 语法）
 
-### 6.12.2 构造检索请求（ESearch）
+#### 6.12.2 构造检索请求（ESearch）
 
 * **端点**：从 `ep_search` 读 `path_template='/eutils/esearch.fcgi'`；
 * **BaseURL**：`http.base_url_override` 若为空则用 `reg_provenance.base_url_default`；
@@ -2026,16 +2300,18 @@ FROM ep_search,
 * **最终（示意 URL）**：
 
   ```
-  GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
-      ?db=pubmed
-      &retmode=json
-      &datetype=edat
-      &term=cancer
-      &mindate=2025/07/01
-      &maxdate=2025/07/02
-      &retmax=100
-      &retstart=0         -- 由 page=1 转换而来
-      [&api_key=XXXX]     -- 若有凭证
+
+GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
+?db=pubmed
+&retmode=json
+&datetype=edat
+&term=cancer
+&mindate=2025/07/01
+&maxdate=2025/07/02
+&retmax=100
+&retstart=0 -- 由 page=1 转换而来
+[&api_key=XXXX]     -- 若有凭证
+
   ```
 * **翻页**：若 `count>100`，下一页 `page=2 → retstart=100`，以此类推，直到达到 `max_pages_per_execution` 或拉全。
 
@@ -2045,7 +2321,7 @@ FROM ep_search,
 * PMID 列表在 `$.esearchresult.idlist[*]`（应用层解析）；
 * 产出 **PMID 集合** 供详情阶段使用。
 
-### 6.12.3 详情抓取（EFetch 批量）
+#### 6.12.3 详情抓取（EFetch 批量）
 
 * **端点**：从 `ep_fetch` 取 `path_template='/eutils/efetch.fcgi'`；
 * **批量**：`detail_fetch_batch_size=200`；**ID 参数名** 从端点 `ids_param_name='id'`（或批量维度回退）读取；
@@ -2053,16 +2329,18 @@ FROM ep_search,
 * **最终（示意 URL）**：
 
   ```
-  GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi
-      ?db=pubmed
-      &retmode=xml
-      &rettype=abstract
-      &id=34567890,34567891,34567892,...
-      [&api_key=XXXX]
+
+GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi
+?db=pubmed
+&retmode=xml
+&rettype=abstract
+&id=34567890,34567891,34567892,...
+[&api_key=XXXX]
+
   ```
 * **解析**：返回 XML；应用层解析为内部结构并入库。
 
-### 6.12.4 稳健性与配额
+#### 6.12.4 稳健性与配额
 
 * **限流**：`rate_tokens_per_second=5`、`burst=5`、`max_concurrent_requests=10`；
 * **重试**：429/5xx 退避重试；尊重 `Retry-After`；
@@ -2070,7 +2348,7 @@ FROM ep_search,
 
 ---
 
-## 6.13（可选）回填 Backfill 的差异化配置
+### 6.13（可选）回填 Backfill 的差异化配置
 
 若要大规模回填可：
 
@@ -2092,9 +2370,9 @@ VALUES (@pubmed_id, 'TASK', 'backfill', '2025-01-15 00:00:00',
         'DATE', 'PDAT'); -- 回填按出版日期 PDAT
 ```
 
-# 7. Crossref 示例（端到端）
+## 7. Crossref 示例（端到端）
 
-## 7.1 背景与 API 速览（面向本库的映射）
+### 7.1 背景与 API 速览（面向本库的映射）
 
 * **核心资源**：`/works`
 
@@ -2120,7 +2398,7 @@ VALUES (@pubmed_id, 'TASK', 'backfill', '2025-01-15 00:00:00',
 
 ---
 
-## 7.2 主数据：登记 Crossref 来源
+### 7.2 主数据：登记 Crossref 来源
 
 ```sql
 -- ① 新增来源（若已存在则忽略）
@@ -2137,7 +2415,7 @@ WHERE provenance_code = 'crossref';
 
 ---
 
-## 7.3 端点定义（works 检索与 DOI 详情）
+### 7.3 端点定义（works 检索与 DOI 详情）
 
 ```sql
 /* 搜索端点：GET /works（cursor-based） */
@@ -2178,7 +2456,7 @@ VALUES (@crossref_id, 'TASK', 'harvest', 'work_by_doi', '2025-01-01 00:00:00', N
 
 ---
 
-## 7.4 时间窗口与增量指针（按 indexed 滑动）
+### 7.4 时间窗口与增量指针（按 indexed 滑动）
 
 ```sql
 INSERT INTO reg_prov_window_offset_cfg
@@ -2198,7 +2476,7 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 7.5 分页：CURSOR（游标）
+### 7.5 分页：CURSOR（游标）
 
 ```sql
 INSERT INTO reg_prov_pagination_cfg
@@ -2223,7 +2501,7 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 7.6 HTTP 策略（User-Agent / mailto）
+### 7.6 HTTP 策略（User-Agent / mailto）
 
 ```sql
 INSERT INTO reg_prov_http_cfg
@@ -2249,7 +2527,7 @@ VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 7.7 批量抓取与请求成型（详情为单条）
+### 7.7 批量抓取与请求成型（详情为单条）
 
 ```sql
 INSERT INTO reg_prov_batching_cfg
@@ -2269,7 +2547,7 @@ VALUES (@crossref_id, 'TASK', 'harvest', '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 7.8 重试与退避（尊重 Retry-After）
+### 7.8 重试与退避（尊重 Retry-After）
 
 ```sql
 INSERT INTO reg_prov_retry_cfg
@@ -2288,7 +2566,7 @@ VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 7.9 限流与并发（按端点或全局）
+### 7.9 限流与并发（按端点或全局）
 
 ```sql
 INSERT INTO reg_prov_rate_limit_cfg
@@ -2306,7 +2584,7 @@ VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
 
 ---
 
-## 7.10 凭证（可选：Bearer / 自定义）
+### 7.10 凭证（可选：Bearer / 自定义）
 
 Crossref 公网通常**无需密钥**（但礼仪头必须）；若有合作或私有网关，可如下配置 **Bearer** 示例：
 
@@ -2314,13 +2592,13 @@ Crossref 公网通常**无需密钥**（但礼仪头必须）；若有合作或�
 INSERT INTO reg_prov_credential
 (provenance_id, scope, task_type, endpoint_id,
  credential_name, auth_type, inbound_location,
- credential_field_name, credential_value_prefix, credential_value_plain,
- basic_username, basic_password,
- oauth_token_url, oauth_client_id, oauth_client_secret, oauth_scope, oauth_audience, extra_json,
- valid_from, valid_to, is_default_preferred)
+ credential_field_name, credential_value_prefix, credential_value_ref,
+ basic_username_ref, basic_password_ref,
+ oauth_token_url, oauth_client_id_ref, oauth_client_secret_ref, oauth_scope, oauth_audience, extra_json,
+ effective_from, effective_to, is_default_preferred)
 VALUES (@crossref_id, 'SOURCE', NULL, NULL,
         'partner-bearer', 'BEARER', 'HEADER',
-        'Authorization', 'Bearer ', 'REDACTED_OR_REFERENCE',
+        'Authorization', 'Bearer ', 'kms://path/to/bearer/ref',
         NULL, NULL,
         NULL, NULL, NULL, NULL, NULL, NULL,
         '2025-01-01 00:00:00', NULL, 1);
@@ -2330,7 +2608,7 @@ VALUES (@crossref_id, 'SOURCE', NULL, NULL,
 
 ---
 
-## 7.11 组合查询：装配“Crossref / harvest”的当前生效配置
+### 7.11 组合查询：装配“Crossref / harvest”的当前生效配置
 
 ```sql
 /* 入参：provenance_code='crossref'，task_type='harvest' */
@@ -2501,21 +2779,25 @@ WITH ep_search AS ((SELECT *
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
+            AND lifecycle_status = 'PUBLISHED'
+            AND deleted = 0
             AND endpoint_id = (SELECT id FROM ep_search LIMIT 1)
             AND ((scope = 'TASK' AND task_type = 'harvest') OR scope = 'SOURCE')
-            AND valid_from <= @now
-            AND (valid_to IS NULL OR valid_to > @now)
-          ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+            AND effective_from <= @now
+            AND (effective_to IS NULL OR effective_to > @now)
+          ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          UNION ALL
          (SELECT *
           FROM reg_prov_credential
           WHERE provenance_id = @pid
+            AND lifecycle_status = 'PUBLISHED'
+            AND deleted = 0
             AND endpoint_id IS NULL
             AND ((scope = 'TASK' AND task_type = 'harvest') OR scope = 'SOURCE')
-            AND valid_from <= @now
-            AND (valid_to IS NULL OR valid_to > @now)
-          ORDER BY is_default_preferred DESC, valid_from DESC, id DESC
+            AND effective_from <= @now
+            AND (effective_to IS NULL OR effective_to > @now)
+          ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
           LIMIT 1)
          LIMIT 1)
 SELECT *
@@ -2532,11 +2814,11 @@ FROM ep_search,
 
 ---
 
-## 7.12 运行片段：从“窗口”到“请求”的一步步
+### 7.12 运行片段：从“窗口”到“请求”的一步步
 
 > 目标：**全量/增量 Harvest**，以 `indexed` 字段、**day 窗口 + 1 天重叠**，使用 **cursor-based** 翻页。
 
-### 7.12.1 计算时间窗口（应用层）
+#### 7.12.1 计算时间窗口（应用层）
 
 * 配置：`SLIDING`；`window_size=1 DAY`；`overlap=1 DAY`；`default_date_field_name='indexed'`；
 * 假设上次水位 `2025-07-01`，本次窗口：
@@ -2546,7 +2828,7 @@ FROM ep_search,
 
     * `filter=from-index-date:2025-07-01,until-index-date:2025-07-02`
 
-### 7.12.2 构造检索请求（`GET /works`）
+#### 7.12.2 构造检索请求（`GET /works`）
 
 * **端点**：`path_template='/works'`；
 * **BaseURL**：HTTP 策略或主数据；
@@ -2570,7 +2852,7 @@ FROM ep_search,
     * `$.message.items[*]` → 记录数组，内含 DOI、标题等；
     * `$.message["next-cursor"]` → 下一页游标，直到为空或达到 `max_pages_per_execution`。
 
-### 7.12.3 详情抓取（`GET /works/{doi}`，可选）
+#### 7.12.3 详情抓取（`GET /works/{doi}`，可选）
 
 * 许多场景可以直接以 `items` 入库；若需要详情补全：
 
@@ -2582,7 +2864,7 @@ FROM ep_search,
   GET https://api.crossref.org/works/10.1000/xyz123
   ```
 
-### 7.12.4 稳健性与配额
+#### 7.12.4 稳健性与配额
 
 * **限流**：`PER_ENDPOINT` 粒度，SEARCH 与 FETCH 分别记数；
 * **重试**：对 429/5xx 指定指数退避并**尊重 Retry-After**；
@@ -2590,7 +2872,7 @@ FROM ep_search,
 
 ---
 
-## 7.13（可选）任务差异化：Update / Backfill
+### 7.13（可选）任务差异化：Update / Backfill
 
 * **Update**：将 `task_type='update'` 的窗口/分页/限流等作为**另一组区间**写入；例如窗口设置更短、并发限制更小；
 * **Backfill**：可用 `CALENDAR` 模式与较大跨度（如周/月），并提升 `max_pages_per_execution`。
@@ -2609,9 +2891,9 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
         'DATE', NULL, 'YYYY-MM-DD', 'created');
 ```
 
-# 8. FAQ 与常见陷阱
+## 8. FAQ 与常见陷阱
 
-## 8.1 为什么不在数据库做“区间不重叠”校验？
+### 8.1 为什么不在数据库做“区间不重叠”校验？
 
 **答**：
 
@@ -2621,7 +2903,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.2 `SOURCE` 与 `TASK` 的关系是“覆盖合并”吗？
+### 8.2 `SOURCE` 与 `TASK` 的关系是“覆盖合并”吗？
 
 **答**：**不是。**
 
@@ -2631,7 +2913,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.3 端点级覆盖与维度配置冲突时，谁优先？
+### 8.3 端点级覆盖与维度配置冲突时，谁优先？
 
 **答**：**端点级参数名 > 维度配置 > 应用默认**。
 
@@ -2641,7 +2923,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.4 PubMed 是“偏移量分页”，为什么模型里用 `PAGE_NUMBER`？
+### 8.4 PubMed 是“偏移量分页”，为什么模型里用 `PAGE_NUMBER`？
 
 **答**：为了统一抽象。
 
@@ -2649,7 +2931,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 * 这样可与 Crossref 的 `CURSOR` 在同一套分页抽象下实现；
 * 端点级可以覆盖参数名（`retmax`、`page`），但**偏移换算**在应用层。
 
-## 8.5 Crossref 的下一游标提取不到，怎么办？
+### 8.5 Crossref 的下一游标提取不到，怎么办？
 
 **答**：
 
@@ -2660,7 +2942,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.6 如何避免“同一时刻多条配置同时生效”？
+### 8.6 如何避免“同一时刻多条配置同时生效”？
 
 **答**：
 
@@ -2670,7 +2952,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.7 想“改起点时间”怎么办？可以 `UPDATE effective_from` 吗？
+### 8.7 想“改起点时间”怎么办？可以 `UPDATE effective_from` 吗？
 
 **答**：不推荐直接改起点。
 
@@ -2679,7 +2961,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.8 JSON 字段能当过滤条件用吗？
+### 8.8 JSON 字段能当过滤条件用吗？
 
 **答**：不建议。
 
@@ -2689,7 +2971,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.9 凭证存明文安全吗？
+### 8.9 凭证存明文安全吗？
 
 **答**：**不安全，不建议。**
 
@@ -2699,7 +2981,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.10 429（限流）或 503（拥塞）居高不下，优先调哪个表？
+### 8.10 429（限流）或 503（拥塞）居高不下，优先调哪个表？
 
 **答**（优先级）：
 
@@ -2712,7 +2994,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.11 是否需要在库里保存“增量水位/游标”？
+### 8.11 是否需要在库里保存“增量水位/游标”？
 
 **答**：**不在本库**。
 
@@ -2721,7 +3003,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.12 如何决定字段放“结构列”还是“JSON 扩展”？
+### 8.12 如何决定字段放“结构列”还是“JSON 扩展”？
 
 **答**：
 
@@ -2731,7 +3013,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.13 应用端是否需要事务地写入多维度的变更？
+### 8.13 应用端是否需要事务地写入多维度的变更？
 
 **答**：视规模决定。
 
@@ -2741,7 +3023,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.14 用 `UNION ALL ... LIMIT 1` 选“当前生效”会不会拿到两行？
+### 8.14 用 `UNION ALL ... LIMIT 1` 选“当前生效”会不会拿到两行？
 
 **答**：不会。
 
@@ -2751,7 +3033,7 @@ VALUES (@crossref_id, 'TASK', 'update', '2025-02-01 00:00:00', NULL,
 
 ---
 
-## 8.15 如何“时间回放”定位某个事故发生时的配置？
+### 8.15 如何“时间回放”定位某个事故发生时的配置？
 
 **答**：用“时间穿越”查询（Time-Travel-like）：
 
@@ -2762,7 +3044,7 @@ FROM reg_prov_pagination_cfg
 WHERE provenance_id = @pid
   AND effective_from <= @T
   AND (effective_to IS NULL OR effective_to > @T)
-ORDER BY scope = 'TASK' DESC, effective_from DESC
+ORDER BY scope = 'TASK' DESC, effective_from DESC, id DESC
 LIMIT 1;
 ```
 
@@ -2770,7 +3052,7 @@ LIMIT 1;
 
 ---
 
-## 8.16 PubMed：为什么窗口覆盖 1 天还会有重复 PMID？
+### 8.16 PubMed：为什么窗口覆盖 1 天还会有重复 PMID？
 
 **答**：
 
@@ -2783,7 +3065,7 @@ LIMIT 1;
 
 ---
 
-## 8.17 Crossref：全量拉取时 `total-results` 很大，是否要依赖它终止？
+### 8.17 Crossref：全量拉取时 `total-results` 很大，是否要依赖它终止？
 
 **答**：不依赖。
 
@@ -2793,7 +3075,7 @@ LIMIT 1;
 
 ---
 
-## 8.18 为什么有时 `endpoint_usage='FETCH'` 不需要？
+### 8.18 为什么有时 `endpoint_usage='FETCH'` 不需要？
 
 **答**：
 
@@ -2803,7 +3085,7 @@ LIMIT 1;
 
 ---
 
-## 8.19 `effective_to` 需要长期保留 NULL 吗？
+### 8.19 `effective_to` 需要长期保留 NULL 吗？
 
 **答**：可以。
 
@@ -2812,7 +3094,7 @@ LIMIT 1;
 
 ---
 
-## 8.20 索引仍然慢，可能踩到哪些坑？
+### 8.20 索引仍然慢，可能踩到哪些坑？
 
 **答**：
 
@@ -2824,7 +3106,7 @@ LIMIT 1;
 
 ---
 
-## 8.21 示例：一次“安全变更”的最小 SQL 序列？
+### 8.21 示例：一次“安全变更”的最小 SQL 序列？
 
 **答**：以“把 Crossref rows 从 200 调整到 150”为例：
 
@@ -2845,7 +3127,7 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 
 ---
 
-## 8.22 有没有推荐的“配置冷启动”顺序？
+### 8.22 有没有推荐的“配置冷启动”顺序？
 
 **答**：
 
@@ -2862,7 +3144,7 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 
 ---
 
-## 8.23 多把凭证如何“加权分流”？
+### 8.23 多把凭证如何“加权分流”？
 
 **答**：
 
@@ -2873,7 +3155,7 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 
 ---
 
-## 8.24 如何在不变更生产表结构的前提下扩展？
+### 8.24 如何在不变更生产表结构的前提下扩展？
 
 **答**：
 
@@ -2883,20 +3165,20 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 
 ---
 
-## 8.25 我应不应该在一张视图里把所有维度 join 好？
+### 8.25 我应不应该在一张视图里把所有维度 join 好？
 
 **答**：不建议在 DB 端做“总大视图”。
 
 * 各维度都有**时间区间与优先级**，在视图中很难写成一个既高效又正确的通用逻辑；
 * 推荐按 §4.6 / §5.4 的模式由**应用端**拼装，或在读侧做**短 TTL 聚合缓存**。
 
-# 9. 附录 A：建表 SQL（索引/外键已包含）
+## 9. 附录 A：建表 SQL（索引/外键已包含）
 
 ```mysql
 /* =====================================================================
  * 医学文献采集配置库（MySQL 8.0）
  * 说明：
- * - 仅数据库对象与索引；无触发器、无 CHECK 约束、无审计字段；校验交由应用层处理。
+ * - 仅数据库对象与索引；无触发器、无 CHECK 约束；包含通用审计字段（BaseDO）；校验交由应用层处理。
  * - 字符集：utf8mb4；排序规则：utf8mb4_0900_ai_ci；引擎：InnoDB。
  * - 命名规范：
  *   - 主数据表：reg_provenance（数据源/来源登记）。
@@ -2921,13 +3203,26 @@ VALUES (@pid, 'TASK', 'harvest', UTC_TIMESTAMP() + INTERVAL 10 MINUTE, 'CURSOR',
 DROP TABLE IF EXISTS `reg_provenance`;
 CREATE TABLE `reg_provenance`
 (
-    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：数据来源唯一标识；被所有 reg_prov_* 配置表通过 provenance_id 引用',
-    `provenance_code`  VARCHAR(64)     NOT NULL COMMENT '来源编码：全局唯一、稳定（如 pubmed / crossref），用于程序内查找与约束',
-    `provenance_name`  VARCHAR(128)    NOT NULL COMMENT '来源名称：人类可读名称（如 PubMed / Crossref）',
-    `base_url_default` VARCHAR(512)    NULL COMMENT '默认基础URL：当未在 HTTP 策略中覆盖时，用于端点 path 的拼接',
-    `timezone_default` VARCHAR(64)     NOT NULL DEFAULT 'UTC' COMMENT '默认时区（IANA TZ，如 UTC/Asia/Shanghai）：窗口计算/展示的缺省时区',
-    `docs_url`         VARCHAR(512)    NULL COMMENT '官方文档/说明链接：便于排障或核对 API 用法',
-    `is_active`        TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否启用该来源：1=启用；0=停用（应用读取时可据此过滤）',
+    `id`               BIGINT UNSIGNED                      NOT NULL AUTO_INCREMENT COMMENT '主键：数据来源唯一标识；被所有 reg_prov_* 配置表通过 provenance_id 引用',
+    `provenance_code`  VARCHAR(64)                          NOT NULL COMMENT '来源编码：全局唯一、稳定（如 pubmed / crossref），用于程序内查找与约束',
+    `provenance_name`  VARCHAR(128)                         NOT NULL COMMENT '来源名称：人类可读名称（如 PubMed / Crossref）',
+    `base_url_default` VARCHAR(512)                         NULL COMMENT '默认基础URL：当未在 HTTP 策略中覆盖时，用于端点 path 的拼接',
+    `timezone_default` VARCHAR(64)                          NOT NULL DEFAULT 'UTC' COMMENT '默认时区（IANA TZ，如 UTC/Asia/Shanghai）：窗口计算/展示的缺省时区',
+    `docs_url`         VARCHAR(512)                         NULL COMMENT '官方文档/说明链接：便于排障或核对 API 用法',
+    `is_active`        TINYINT(1)                           NOT NULL DEFAULT 1 COMMENT '是否启用该来源：1=启用；0=停用（应用读取时可据此过滤）',
+    `lifecycle_status` ENUM ('DRAFT','PUBLISHED','RETIRED') NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：DRAFT 草稿；PUBLISHED 已发布；RETIRED 退役（读侧仅取 PUBLISHED）',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`   JSON                                 NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`       TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`       BIGINT UNSIGNED                      NULL COMMENT '创建人ID',
+    `created_by_name`  VARCHAR(100)                         NULL COMMENT '创建人姓名',
+    `updated_at`       TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`       BIGINT UNSIGNED                      NULL COMMENT '更新人ID',
+    `updated_by_name`  VARCHAR(100)                         NULL COMMENT '更新人姓名',
+    `version`          BIGINT UNSIGNED                      NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`       VARBINARY(16)                        NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`          TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_reg_provenance_code` (`provenance_code`)
 ) ENGINE = InnoDB
@@ -2943,32 +3238,45 @@ CREATE TABLE `reg_provenance`
 DROP TABLE IF EXISTS `reg_prov_endpoint_def`;
 CREATE TABLE `reg_prov_endpoint_def`
 (
-    `id`                   BIGINT UNSIGNED                                          NOT NULL AUTO_INCREMENT COMMENT '主键：端点定义记录ID；可被凭证表 reg_prov_credential.endpoint_id 可选引用',
-    `provenance_id`        BIGINT UNSIGNED                                          NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `scope`                ENUM ('SOURCE','TASK')                                   NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
-    `task_type`            ENUM ('harvest','update','backfill')                     NULL COMMENT '任务类型：当 scope=TASK 时需填写；harvest=全量首采，update=增量，backfill=回填',
-    `endpoint_name`        VARCHAR(64)                                              NOT NULL COMMENT '端点逻辑名称：如 search / fetch / works / token；用于业务侧选择端点',
+    `id`                   BIGINT UNSIGNED                                             NOT NULL AUTO_INCREMENT COMMENT '主键：端点定义记录ID；可被凭证表 reg_prov_credential.endpoint_id 可选引用',
+    `provenance_id`        BIGINT UNSIGNED                                             NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
+    `scope`                ENUM ('SOURCE','TASK')                                      NOT NULL DEFAULT 'SOURCE' COMMENT '配置作用域：SOURCE=按来源通用；TASK=限定到特定任务类型',
+    `task_type`            ENUM ('harvest','update','backfill')                        NULL COMMENT '任务类型：当 scope=TASK 时需填写；harvest=全量首采，update=增量，backfill=回填',
+    `endpoint_name`        VARCHAR(64)                                                 NOT NULL COMMENT '端点逻辑名称：如 search / fetch / works / token；用于业务侧选择端点',
 
-    `effective_from`       TIMESTAMP(6)                                             NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
-    `effective_to`         TIMESTAMP(6)                                             NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
+    `effective_from`       TIMESTAMP(6)                                                NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',
+    `effective_to`         TIMESTAMP(6)                                                NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
-    `endpoint_usage`       ENUM ('SEARCH','FETCH','TOKEN','METADATA','PING','RATE') NOT NULL DEFAULT 'SEARCH' COMMENT '用途：SEARCH=检索列表；FETCH=详情；TOKEN=换取令牌；METADATA=元数据；PING=健康检查；RATE=配额端点',
-    `http_method`          ENUM ('GET','POST','PUT','PATCH','DELETE')               NOT NULL DEFAULT 'GET' COMMENT 'HTTP 方法：GET/POST/PUT/PATCH/DELETE',
-    `path_template`        VARCHAR(768)                                             NOT NULL COMMENT '路径模板：相对路径或绝对路径；可包含占位符（如 /entrez/eutils/esearch.fcgi）',
-    `default_query_params` JSON                                                     NULL COMMENT '默认查询参数JSON：作为每次请求的基础 query（运行时可覆盖/合并）',
-    `default_body_payload` JSON                                                     NULL COMMENT '默认请求体JSON：POST/PUT/PATCH 的基础 body（运行时可覆盖/合并）',
-    `request_content_type` VARCHAR(64)                                              NULL COMMENT '请求体内容类型：如 application/json / application/x-www-form-urlencoded',
-    `is_auth_required`     TINYINT(1)                                               NOT NULL DEFAULT 0 COMMENT '是否需要鉴权：1=需要；0=不需要（匿名可调用）',
-    `credential_hint_name` VARCHAR(64)                                              NULL COMMENT '凭证提示：偏好使用的凭证标签/名称，辅助在多凭证中挑选',
+    `endpoint_usage`       ENUM ('SEARCH','FETCH','TOKEN','METADATA','PING','RATE')    NOT NULL DEFAULT 'SEARCH' COMMENT '用途：SEARCH=检索列表；FETCH=详情；TOKEN=换取令牌；METADATA=元数据；PING=健康检查；RATE=配额端点',
+    `http_method`          ENUM ('GET','POST','PUT','PATCH','DELETE','HEAD','OPTIONS') NOT NULL DEFAULT 'GET' COMMENT 'HTTP 方法：GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS',
+    `path_template`        VARCHAR(512)                                                NOT NULL COMMENT '路径模板：相对路径或绝对路径；可包含占位符（如 /entrez/eutils/esearch.fcgi）',
+    `default_query_params` JSON                                                        NULL COMMENT '默认查询参数JSON：作为每次请求的基础 query（运行时可覆盖/合并）',
+    `default_body_payload` JSON                                                        NULL COMMENT '默认请求体JSON：POST/PUT/PATCH 的基础 body（运行时可覆盖/合并）',
+    `request_content_type` VARCHAR(64)                                                 NULL COMMENT '请求体内容类型：如 application/json / application/x-www-form-urlencoded',
+    `is_auth_required`     TINYINT(1)                                                  NOT NULL DEFAULT 0 COMMENT '是否需要鉴权：1=需要；0=不需要（匿名可调用）',
+    `credential_hint_name` VARCHAR(64)                                                 NULL COMMENT '凭证提示：偏好使用的凭证标签/名称，辅助在多凭证中挑选',
 
     /* 端点级分页/批量覆盖（可为空：由 reg_prov_pagination_cfg 或应用决定） */
-    `page_param_name`      VARCHAR(64)                                              NULL COMMENT '分页页码参数名（端点级覆盖项）',
-    `page_size_param_name` VARCHAR(64)                                              NULL COMMENT '分页每页大小参数名（端点级覆盖项）',
-    `cursor_param_name`    VARCHAR(64)                                              NULL COMMENT '游标/令牌参数名（端点级覆盖项）',
-    `ids_param_name`       VARCHAR(64)                                              NULL COMMENT '批量详情请求中，ID列表的参数名（端点级覆盖项）',
+    `page_param_name`      VARCHAR(64)                                                 NULL COMMENT '分页页码参数名（端点级覆盖项）',
+    `page_size_param_name` VARCHAR(64)                                                 NULL COMMENT '分页每页大小参数名（端点级覆盖项）',
+    `cursor_param_name`    VARCHAR(64)                                                 NULL COMMENT '游标/令牌参数名（端点级覆盖项）',
+    `ids_param_name`       VARCHAR(64)                                                 NULL COMMENT '批量详情请求中，ID列表的参数名（端点级覆盖项）',
 
     /* 生成列：将 task_type 标准化为 ALL 或实际值，便于唯一键 */
     `task_type_key`        VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：当 task_type 为空取 ALL，否则取其枚举值；用于维度唯一键',
+    `lifecycle_status`     ENUM ('DRAFT','PUBLISHED','RETIRED')                        NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`       JSON                                                        NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`           TIMESTAMP(6)                                                NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`           BIGINT UNSIGNED                                             NULL COMMENT '创建人ID',
+    `created_by_name`      VARCHAR(100)                                                NULL COMMENT '创建人姓名',
+    `updated_at`           TIMESTAMP(6)                                                NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`           BIGINT UNSIGNED                                             NULL COMMENT '更新人ID',
+    `updated_by_name`      VARCHAR(100)                                                NULL COMMENT '更新人姓名',
+    `version`              BIGINT UNSIGNED                                             NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`           VARBINARY(16)                                               NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`              TINYINT(1)                                                  NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_endpoint_def__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
@@ -2978,7 +3286,9 @@ CREATE TABLE `reg_prov_endpoint_def`
                                                      `effective_from`),
     KEY `idx_reg_prov_endpoint_def__dim_to` (`provenance_id`, `scope`, `task_type_key`, `endpoint_name`,
                                              `effective_to`),
-    KEY `idx_reg_prov_endpoint_def__usage` (`endpoint_usage`)
+    KEY `idx_reg_prov_endpoint_def__usage` (`endpoint_usage`),
+    KEY `idx_reg_prov_endpoint_def__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+                                             DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3020,11 +3330,26 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 
     /* 生成列 */
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')  NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`          JSON                                  NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED                       NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)                          NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED                       NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)                          NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED                       NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)                         NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)                            NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_window_offset_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_window_offset_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`)
+    KEY `idx_reg_prov_window_offset_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_window_offset_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+                                                  DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3060,13 +3385,31 @@ CREATE TABLE `reg_prov_pagination_cfg`
     `next_cursor_jsonpath`    VARCHAR(512)                                          NULL COMMENT '如何从响应中提取下一页游标的路径（JSONPath/JMESPath等）',
     `has_more_jsonpath`       VARCHAR(512)                                          NULL COMMENT '如何判断是否还有下一页的路径（布尔）',
     `total_count_jsonpath`    VARCHAR(512)                                          NULL COMMENT '如何从响应中提取总条数的路径（可选）',
+    `next_cursor_xpath`       VARCHAR(512)                                          NULL COMMENT '如何从 XML 响应中提取下一页游标的 XPath（可选）',
+    `has_more_xpath`          VARCHAR(512)                                          NULL COMMENT '如何从 XML 响应中判断是否还有下一页的 XPath（布尔，可选）',
+    `total_count_xpath`       VARCHAR(512)                                          NULL COMMENT '如何从 XML 响应中提取总条数的 XPath（可选）',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')                  NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`          JSON                                                  NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)                                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED                                       NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)                                          NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)                                          NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED                                       NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)                                          NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED                                       NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)                                         NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)                                            NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_pagination_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_pagination_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`)
+    KEY `idx_reg_prov_pagination_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_pagination_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+                                               DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3102,11 +3445,25 @@ CREATE TABLE `reg_prov_http_cfg`
     `idempotency_ttl_seconds` INT                                  NULL COMMENT '幂等性键过期时间（秒），仅客户端/服务端支持时有效',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED') NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`          JSON                                 NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED                      NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)                         NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED                      NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)                         NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED                      NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)                        NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_http_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_http_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`)
+    KEY `idx_reg_prov_http_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_http_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3128,6 +3485,8 @@ CREATE TABLE `reg_prov_batching_cfg`
     `effective_to`               TIMESTAMP(6)                         NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
     `detail_fetch_batch_size`    INT                                  NULL COMMENT '单次详情抓取的批大小（条数），为空则由应用使用默认',
+    `endpoint_id`                BIGINT UNSIGNED                      NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
+    `credential_name`            VARCHAR(64)                          NULL COMMENT '可选：关联凭证逻辑名，用于细化控制',
     `ids_param_name`             VARCHAR(64)                          NULL COMMENT '批详情请求中，ID 列表的参数名；为空则由端点或应用决定',
     `ids_join_delimiter`         VARCHAR(8)                           NULL     DEFAULT ',' COMMENT 'ID 列表拼接的分隔符（如 , 或 +）',
     `max_ids_per_request`        INT                                  NULL COMMENT '每个 HTTP 请求允许携带的 ID 最大数量（硬上限）',
@@ -3140,11 +3499,29 @@ CREATE TABLE `reg_prov_batching_cfg`
     `request_template_json`      JSON                                 NULL COMMENT '请求成型模板：用于将内部字段映射到 query/body 的规则 JSON',
 
     `task_type_key`              VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status`           ENUM ('DRAFT','PUBLISHED','RETIRED') NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`             JSON                                 NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`                 TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`                 BIGINT UNSIGNED                      NULL COMMENT '创建人ID',
+    `created_by_name`            VARCHAR(100)                         NULL COMMENT '创建人姓名',
+    `updated_at`                 TIMESTAMP(6)                         NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`                 BIGINT UNSIGNED                      NULL COMMENT '更新人ID',
+    `updated_by_name`            VARCHAR(100)                         NULL COMMENT '更新人姓名',
+    `version`                    BIGINT UNSIGNED                      NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`                 VARBINARY(16)                        NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                    TINYINT(1)                           NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
+    CONSTRAINT `fk_reg_prov_batching_cfg__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
     UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_batching_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`)
+    KEY `idx_reg_prov_batching_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_batching_cfg__by_ep_cred` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`,
+                                                 `credential_name`),
+    KEY `idx_reg_prov_batching_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+                                             DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3178,11 +3555,25 @@ CREATE TABLE `reg_prov_retry_cfg`
     `circuit_cooldown_millis` INT                                              NULL COMMENT '断路器冷却时间（毫秒）：过后允许半开探测',
 
     `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')             NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`          JSON                                             NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)                                     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED                                  NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)                                     NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)                                     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED                                  NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)                                     NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED                                  NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)                                    NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)                                       NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_retry_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_retry_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`)
+    KEY `idx_reg_prov_retry_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_retry_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3210,13 +3601,33 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     `bucket_granularity_scope`   ENUM ('GLOBAL','PER_KEY','PER_ENDPOINT') NOT NULL DEFAULT 'GLOBAL' COMMENT '令牌桶粒度：GLOBAL=整体；PER_KEY=按密钥；PER_ENDPOINT=按端点',
     `smoothing_window_millis`    INT                                      NULL COMMENT '平滑窗口（毫秒）：用于平滑令牌发放与计数',
     `respect_server_rate_header` TINYINT(1)                               NOT NULL DEFAULT 1 COMMENT '是否遵循服务端速率响应头（如 X-RateLimit-*）：1=遵循；0=忽略',
+    `endpoint_id`                BIGINT UNSIGNED                          NULL COMMENT '可选：关联端点定义 → reg_prov_endpoint_def(id)',
+    `credential_name`            VARCHAR(64)                              NULL COMMENT '可选：关联凭证逻辑名，用于细化限流',
 
     `task_type_key`              VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `lifecycle_status`           ENUM ('DRAFT','PUBLISHED','RETIRED')     NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`             JSON                                     NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`                 TIMESTAMP(6)                             NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`                 BIGINT UNSIGNED                          NULL COMMENT '创建人ID',
+    `created_by_name`            VARCHAR(100)                             NULL COMMENT '创建人姓名',
+    `updated_at`                 TIMESTAMP(6)                             NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`                 BIGINT UNSIGNED                          NULL COMMENT '更新人ID',
+    `updated_by_name`            VARCHAR(100)                             NULL COMMENT '更新人姓名',
+    `version`                    BIGINT UNSIGNED                          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`                 VARBINARY(16)                            NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                    TINYINT(1)                               NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
+    CONSTRAINT `fk_reg_prov_rate_limit_cfg__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
     UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `scope`, `task_type_key`, `effective_from`),
-    KEY `idx_reg_prov_rate_limit_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`)
+    KEY `idx_reg_prov_rate_limit_cfg__dim_to` (`provenance_id`, `scope`, `task_type_key`, `effective_to`),
+    KEY `idx_reg_prov_rate_limit_cfg__by_ep_cred` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id`,
+                                                   `credential_name`),
+    KEY `idx_reg_prov_rate_limit_cfg__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id`
+                                               DESC)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -3241,31 +3652,52 @@ CREATE TABLE `reg_prov_credential`
     `inbound_location`        ENUM ('HEADER','QUERY','BODY')                      NOT NULL DEFAULT 'HEADER' COMMENT '凭证放置位置：HTTP Header / Query 参数 / 请求体',
     `credential_field_name`   VARCHAR(128)                                        NULL COMMENT '凭证字段名：如 Authorization / api_key / access_token',
     `credential_value_prefix` VARCHAR(64)                                         NULL COMMENT '凭证值前缀：如 "Bearer "，会拼接在凭证值之前',
-    `credential_value_plain`  TEXT                                                NULL COMMENT '凭证明文/引用：建议存放“引用”（如 KMS 密钥名），真实密钥由应用从安全存储拉取',
-    `basic_username`          VARCHAR(256)                                        NULL COMMENT 'Basic 认证用户名（仅 auth_type=BASIC 时使用）',
-    `basic_password`          VARCHAR(512)                                        NULL COMMENT 'Basic 认证密码（仅 auth_type=BASIC 时使用）',
+    `credential_value_ref`    VARCHAR(256)                                        NULL COMMENT '凭证值引用（如 KMS 密钥名/路径），不落明文',
+    `basic_username_ref`      VARCHAR(256)                                        NULL COMMENT 'Basic 认证用户名引用',
+    `basic_password_ref`      VARCHAR(256)                                        NULL COMMENT 'Basic 认证密码引用',
 
-    /* OAuth2 客户端凭证/自定义扩展 */
+    /* OAuth2 客户端凭证（全部使用引用字段） */
     `oauth_token_url`         VARCHAR(512)                                        NULL COMMENT 'OAuth2 Token 端点 URL（client credentials 等流程）',
-    `oauth_client_id`         VARCHAR(256)                                        NULL COMMENT 'OAuth2 客户端 ID',
-    `oauth_client_secret`     VARCHAR(512)                                        NULL COMMENT 'OAuth2 客户端密钥（或密钥引用）',
+    `oauth_client_id_ref`     VARCHAR(256)                                        NULL COMMENT 'OAuth2 客户端 ID 的引用',
+    `oauth_client_secret_ref` VARCHAR(256)                                        NULL COMMENT 'OAuth2 客户端密钥的引用',
     `oauth_scope`             VARCHAR(512)                                        NULL COMMENT 'OAuth2 请求的 scope（以空格或逗号分隔）',
     `oauth_audience`          VARCHAR(512)                                        NULL COMMENT 'OAuth2 audience/资源标识',
     `extra_json`              JSON                                                NULL COMMENT '自定义扩展字段：如签名算法、HMAC 盐、额外 Header 模板等（由应用解释）',
 
-    `valid_from`              TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '凭证生效起始（含）；允许多把凭证区间重叠以支持轮换',
-    `valid_to`                TIMESTAMP(6)                                        NULL COMMENT '凭证生效结束（不含）；NULL 表示长期有效',
+    `effective_from`          TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '生效起始（含）；允许多把凭证区间重叠以支持轮换',
+    `effective_to`            TIMESTAMP(6)                                        NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
     `is_default_preferred`    TINYINT(1)                                          NOT NULL DEFAULT 0 COMMENT '是否标记为默认/首选：1=默认（用于同维度多把时的优先选择）；0=普通',
+
+    /* 生成列与弱互斥唯一键支持 */
+    `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
+    `endpoint_id_key`         BIGINT AS (IFNULL(`endpoint_id`, 0)) STORED COMMENT '生成列：端点ID的统一键（NULL→0）用于唯一约束',
+    `preferred_1`             CHAR(1) AS (CASE WHEN `is_default_preferred` = 1 THEN 'Y' ELSE NULL END) STORED COMMENT '生成列：默认优先=Y（NULL 可重复）',
+
+    `lifecycle_status`        ENUM ('DRAFT','PUBLISHED','RETIRED')                NOT NULL DEFAULT 'PUBLISHED' COMMENT '生命周期：读侧仅取 PUBLISHED',
+
+    -- BaseDO（统一审计字段）
+    `record_remarks`          JSON                                                NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `created_at`              TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+    `created_by`              BIGINT UNSIGNED                                     NULL COMMENT '创建人ID',
+    `created_by_name`         VARCHAR(100)                                        NULL COMMENT '创建人姓名',
+    `updated_at`              TIMESTAMP(6)                                        NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+    `updated_by`              BIGINT UNSIGNED                                     NULL COMMENT '更新人ID',
+    `updated_by_name`         VARCHAR(100)                                        NULL COMMENT '更新人姓名',
+    `version`                 BIGINT UNSIGNED                                     NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`              VARBINARY(16)                                       NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `deleted`                 TINYINT(1)                                          NOT NULL DEFAULT 0 COMMENT '逻辑删除',
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_credential__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     CONSTRAINT `fk_reg_prov_credential__endpoint` FOREIGN KEY (`endpoint_id`) REFERENCES `reg_prov_endpoint_def` (`id`),
 
-    /* 常用检索与有效期索引（不强制唯一） */
     KEY `idx_reg_prov_credential__dim` (`provenance_id`, `scope`, `task_type`, `endpoint_id`, `credential_name`),
-    KEY `idx_reg_prov_credential__valid` (`valid_from`, `valid_to`)
+    KEY `idx_reg_prov_credential__effective` (`effective_from`, `effective_to`),
+    KEY `idx_reg_prov_credential__active` (`provenance_id`, `scope`, `task_type_key`, `effective_from` DESC, `id` DESC),
+    UNIQUE KEY `uk_reg_prov_credential__preferred_one` (`provenance_id`, `scope`, `task_type_key`, `endpoint_id_key`,
+                                                        `preferred_1`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='鉴权/密钥配置：多把凭证并存（允许生效区间重叠）并可选绑定端点；支持 API Key、Bearer、Basic 与 OAuth2 等多种鉴权方式。';
+    COMMENT ='鉴权/密钥配置：凭证以“引用”存储（不落明文）；支持端点绑定与重叠有效期；弱互斥保证同维度默认首选唯一。';
 ```
