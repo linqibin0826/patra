@@ -218,6 +218,39 @@ WHERE di.enabled = 1
 | `retry_after_policy`        | 重试等待策略          | `NONE`,`RESPECT_HEADER`,`FIXED`,`EXP_BACKOFF`                                     |
 | `backoff_policy_type`       | 退避策略            | `FIXED`,`EXP`,`EXP_JITTER`,`DECOR_JITTER`                                         |
 | `backpressure_strategy`     | 背压策略            | `BLOCK`,`DROP`,`YIELD`                                                            |
+
+---
+
+## 5. 兼容性与别名映射（legacy 同义词）
+
+为了平滑过渡历史文档与外部供应商的取值命名差异，建议通过 `sys_dict_item_alias` 维护同义词映射，读写层统一面向“规范 code”。
+
+- 典型映射建议（source_system 建议使用 `legacy_v1` 作为内部遗留标识，或供应商名如 `pubmed`/`crossref`）：
+  - endpoint_usage: `FETCH` → `DETAIL`
+  - bucket_granularity_scope: `PER_KEY` → `CREDENTIAL`；`PER_ENDPOINT` → `ENDPOINT`
+  - lifecycle_status: （如有历史）`PUBLISHED` → `ACTIVE`
+
+示例 SQL（以 endpoint_usage 为例，省略插入类型与项目的基础数据）：
+
+```sql
+-- 查询规范项 id（以 endpoint_usage.DETAIL 为例）
+SELECT di.id INTO @detail_id
+FROM sys_dict_item di
+JOIN sys_dict_type dt ON dt.id = di.type_id
+WHERE dt.type_code = 'endpoint_usage'
+  AND di.item_code = 'DETAIL'
+  AND di.deleted = 0;
+
+-- 建立 legacy 同义映射：FETCH → DETAIL
+INSERT INTO sys_dict_item_alias (item_id, source_system, external_code, external_label, notes)
+VALUES
+  (@detail_id, 'legacy_v1', 'FETCH', 'fetch', 'legacy synonym of DETAIL');
+```
+
+注意事项：
+- 别名表不改变业务表的取值，业务表一律存放规范 `item_code`；
+- 别名用于对接/导入/兼容查询时的转换，避免把遗留值扩散到业务表；
+- `(source_system, external_code)` 全局唯一，避免冲突。
 | `payload_compress_strategy` | 压缩策略            | `NONE`,`GZIP`                                                                     |
 | `inbound_location`          | 鉴权参数放置位置        | `HEADER`,`QUERY`,`BODY`                                                           |
 | `lifecycle_status`          | 生命周期            | `DRAFT`,`ACTIVE`,`DEPRECATED`,`RETIRED`                                           |

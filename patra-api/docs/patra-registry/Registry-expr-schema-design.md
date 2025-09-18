@@ -46,7 +46,7 @@ flowchart TD
 **字典类型建议**：
 - `reg_data_type`：`DATE/DATETIME/NUMBER/TEXT/KEYWORD/BOOLEAN/TOKEN`
 - `reg_cardinality`：`SINGLE/MULTI`
-- `reg_operation`：`SEARCH/FETCH/LOOKUP`
+- `reg_operation`：`SEARCH/DETAIL/LOOKUP`
 - `reg_expr_op`：`TERM/IN/RANGE/EXISTS/TOKEN`
 - `reg_range_kind`：`NONE/DATE/DATETIME/NUMBER`
 - `reg_match_type`：`PHRASE/EXACT/ANY`
@@ -84,7 +84,7 @@ flowchart TD
 关键列：
 - `scope`：`SOURCE`/`TASK`（可扩展）。
 - `task_type`/`task_type_key`：任务类型，`NULL→ALL`（生成列）。
-- `operation_code`：`SEARCH/FETCH/LOOKUP`。
+- `operation_code`：`SEARCH/DETAIL/LOOKUP`。
 - `std_key`：标准键（通常来自 `reg_expr_field_dict.field_key`）。
 - `provider_param_name`：供应商参数名。
 - `transform_code`：值级转换（如 `TO_EXCLUSIVE_MINUS_1D`）。
@@ -293,7 +293,7 @@ WHERE deleted=0 AND params IS NOT NULL
 
 - **端点/分页/HTTP/限流/重试/凭证**：由 `reg_prov_*` 维护。
 - **表达式统一与渲染**：由本子域维护。参数名映射只在 `reg_prov_api_param_map`。渲染规则不重复做键名映射。
-- **操作名**：端点操作 `reg_operation`（SEARCH/FETCH/LOOKUP）；表达式操作符 `reg_expr_op`（TERM/IN/RANGE/EXISTS/TOKEN）。两者在代码层用不同的值对象。
+- **操作名**：端点操作 `reg_operation`（SEARCH/DETAIL/LOOKUP）；表达式操作符 `reg_expr_op`（TERM/IN/RANGE/EXISTS/TOKEN）。两者在代码层用不同的值对象。
 
 ---
 
