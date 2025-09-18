@@ -16,7 +16,7 @@
     3) **外部代码映射表** `sys_dict_item_alias`（可对接 PubMed/Crossref/遗留值）；
     4) **只读视图** `v_sys_dict_item_enabled`（读侧统一入口）。
 - 不引入触发器；所有表**包含统一审计字段**（BaseDO）。
-- 业务表通过 **FK → `sys_dict_item.id`** 引用字典项，实现新增取值 **零 DDL**。
+- 业务表通过**字典编码（`item_code`）关联**字典项（不使用 `id` 外键），实现新增取值 **零 DDL**，由应用层保证类型匹配与有效性。
 
 ---
 
@@ -458,52 +458,58 @@ WHERE t.type_code = 'oauth_grant_type';
 
 ## 6. 在业务表中的引用方式（示例与规范）
 
-### 6.1 字段命名规范
+### 6.1 字段命名规范（以字典编码关联）
 
-- 统一采用 `*_id`，FK → `sys_dict_item.id`，并在注释中标注对应 `type_code`：  
-  例如 `http_method_id BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=http_method)'`。
+- 业务表字段直接使用语义字段名并保存“字典编码”（`item_code`），不保存 `*_id`：
+  - 例如 `http_method VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)'`。
+  - 例如 `endpoint_usage VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)'`。
+  - 例如 `scope VARCHAR(16) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)'`。
+  - 例如 `lifecycle_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)'`。
 
-### 6.2 端点定义示例（替换 ENUM）
+- 不与 `sys_dict_*` 建立物理外键；由应用层在写入/变更时校验“编码存在且类型匹配”。
 
-> 以 `reg_prov_endpoint_def` 的 `http_method`、`endpoint_usage` 两个枚举字段为例：
+### 6.2 端点定义示例（以编码关联字典）
+
+> 以 `reg_prov_endpoint_def` 的 `http_method`、`endpoint_usage` 两个字段为例：
 
 ```sql
--- 示例：在新建表时直接使用 FK；（旧表迁移见 §8）
+-- 示例：在新建表时直接保存“字典编码”，不使用 *_id；（旧表迁移见 §8）
 CREATE TABLE reg_prov_endpoint_def
 (
-    id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    provenance_id     BIGINT UNSIGNED NOT NULL,
-    scope             VARCHAR(16)     NOT NULL, -- 也可改为 scope_id（若希望彻底去枚举）
-    task_type         VARCHAR(64)     NULL,
-    task_type_key     VARCHAR(64)     NOT NULL DEFAULT 'ALL',
-    endpoint_name     VARCHAR(64)     NOT NULL,
-    http_method_id    BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=http_method)',
-    endpoint_usage_id BIGINT UNSIGNED NOT NULL COMMENT 'FK: sys_dict_item.id (type=endpoint_usage)',
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    provenance_id   BIGINT UNSIGNED NOT NULL,
+    scope           VARCHAR(16)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)',
+    task_type       VARCHAR(64)     NULL,
+    task_type_key   VARCHAR(64)     NOT NULL DEFAULT 'ALL',
+    endpoint_name   VARCHAR(64)     NOT NULL,
+    http_method     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)',
+    endpoint_usage  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)',
+    lifecycle_status VARCHAR(32)    NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)',
     -- ... 其它字段略 ...
-    record_remarks    JSON            NULL,
-    created_at        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    created_by        BIGINT UNSIGNED NULL,
-    created_by_name   VARCHAR(100)    NULL,
-    updated_at        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    updated_by        BIGINT UNSIGNED NULL,
-    updated_by_name   VARCHAR(100)    NULL,
-    version           BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    ip_address        VARBINARY(16)   NULL,
-    deleted           TINYINT(1)      NOT NULL DEFAULT 0,
-    PRIMARY KEY (id),
-    CONSTRAINT fk_ep_def__method FOREIGN KEY (http_method_id) REFERENCES sys_dict_item (id),
-    CONSTRAINT fk_ep_def__usage FOREIGN KEY (endpoint_usage_id) REFERENCES sys_dict_item (id)
+    record_remarks  JSON            NULL,
+    created_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    created_by      BIGINT UNSIGNED NULL,
+    created_by_name VARCHAR(100)    NULL,
+    updated_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    updated_by      BIGINT UNSIGNED NULL,
+    updated_by_name VARCHAR(100)    NULL,
+    version         BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    ip_address      VARBINARY(16)   NULL,
+    deleted         TINYINT(1)      NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci COMMENT ='端点定义（示例：去 ENUM 化）';
+  COLLATE = utf8mb4_0900_ai_ci COMMENT ='端点定义（示例：以编码关联字典）';
 ```
 
-### 6.3 应用层校验（限制“类型匹配”）
+### 6.3 应用层校验（保证“类型匹配 + 有效性”）
 
-- 纯 SQL 难以在 FK 上强约束“`http_method_id` 必属 `http_method` 类型”；MySQL 的 CHECK 不能引用子查询。
-- **实践做法**：在 **应用层/仓储层** 统一校验：
-    - 通过 `v_sys_dict_item_enabled` 反查 `type_code`，断言与预期一致；
-    - 对外 REST DTO 使用 `(typeCode, itemCode)` 交互，入库前解析为 `item_id`。
+- MySQL 的 CHECK 不能引用子查询，难以在数据库层强约束“`http_method` 一定属于 `http_method` 类型”。
+- 实践做法（写路径）：
+  - 入参以 `(typeCode, itemCode)` 或直接 `itemCode` 形式传入；
+  - 应用层通过 `v_sys_dict_item_enabled(type_code, item_code)` 校验存在性与启用状态；
+  - 校验通过后直接持久化 `item_code` 到业务表；无需也不生成/保存 `item_id`。
+  - 读路径可按需联查 `v_sys_dict_item_enabled` 以获得展示名（display_name）。
 
 ---
 
@@ -569,7 +575,6 @@ HAVING c > 1;
 ## 9. FAQ 与取舍
 
 - **问：为何不直接用 CHECK 强约束“类型匹配”？**  
-  MySQL 8.0 的 CHECK 不能引用子查询，无法在 FK 层面保证 `*_id` 一定属于某个 `type_code`。实践采用**应用层校验 + 巡检 SQL
-  **。
+  MySQL 8.0 的 CHECK 不能引用子查询，无法在数据库层保证 `http_method` 等字段一定属于某个 `type_code`。实践采用**应用层校验 + 巡检 SQL**。
 - **问：默认项如何防止并发写冲突？**  
   `default_key` + 唯一键天生防止；并发设置多个默认将失败，应用层捕获后重试或回滚。
