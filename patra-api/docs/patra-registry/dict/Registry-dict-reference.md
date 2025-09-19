@@ -1,59 +1,19 @@
-# Papertrace 系统字典（去 ENUM 化）设计与 SQL（MySQL 8.0）
+# Papertrace Registry · 字典（Dict）Reference
 
-> 版本：2025-09-18 · 适配 Papertrace Registry（采集数据源配置）  
-> 目标：用**字典表**替换所有 ENUM，支持**零 DDL 演进**、**默认项唯一**、**多来源映射**、**完善审计**，并与 DDD/六边形架构落地对齐。
+导航： [体系总览](../README.md) ｜ 同域： [字典 Guide](Registry-dict-guide.md) ｜ [字典 Ops](Registry-dict-ops.md)
 
----
+## 目录
+- [1. 表结构（包含统一审计字段 BaseDO）](#sec-1)
+  - [1.1 `sys_dict_type` — 字典类型](#sec-1-1)
+  - [1.2 `sys_dict_item` — 字典项目](#sec-1-2)
+  - [1.3 `sys_dict_item_alias` — 外部映射（PubMed/Crossref/遗留）](#sec-1-3)
+  - [1.4 读侧视图 `v_sys_dict_item_enabled`](#sec-1-4)
+- [2. 字典类型清单（覆盖原文所有枚举）](#sec-2)
+- [3. 兼容性与别名映射（legacy 同义词）](#sec-3)
+- [3. 可执行种子数据（INSERT）](#sec-3)
 
-## 0. 摘要（Executive Summary）
 
-- 在《Papertrace Registry Schema & SQL 指南》中广泛使用了枚举（如 `http_method`、`endpoint_usage`、`pagination_mode`、
-  `window_mode`、`offset_type`、`retry_after_policy`、`bucket_granularity_scope`、`backoff_policy_type`、
-  `backpressure_strategy`、`payload_compress_strategy`、`inbound_location`、`lifecycle_status` 等）。
-- 为避免 **ENUM 演进困难** 与 **线上变更卡顿**，本方案提供：
-    1) **字典类型表** `sys_dict_type`；
-    2) **字典项目表** `sys_dict_item`（含“同类型仅一个默认项”的**强约束**）；
-    3) **外部代码映射表** `sys_dict_item_alias`（可对接 PubMed/Crossref/遗留值）；
-    4) **只读视图** `v_sys_dict_item_enabled`（读侧统一入口）。
-- 不引入触发器；所有表**包含统一审计字段**（BaseDO）。
-- 业务表通过**字典编码（`item_code`）关联**字典项（不使用 `id` 外键），实现新增取值 **零 DDL**，由应用层保证类型匹配与有效性。
-
----
-
-## 1. 背景与总体设计
-
-### 1.1 设计动机
-
-- **ENUM 的问题**：新增取值需 `ALTER`，发版窗口受限；跨环境迁移复杂；与第三方值对表困难。
-- **采集域的现实**：数据源差异大、演进快（端点用途、分页模型、限流粒度、鉴权模式等经常新增）。
-- **DDD/六边形**：将**可枚举的业务语义**收敛到“**字典**”作为**对外契约**的一部分，读写解耦，发布可控。
-
-### 1.2 设计目标
-
-- **零 DDL 演进**：新增/废弃取值仅需 `INSERT/UPDATE`。
-- **默认项唯一**：同一类型最多一个**启用且未删除**的默认项。
-- **可观测/可治理**：带审计、软删、版本号；提供健康检查 SQL。
-- **高可用**：适配 MySQL 8.0，避免触发器/存储过程，提高可移植性。
-
-### 1.3 术语约定
-
-- **类型（type）**：一组枚举的语义集合，如 `http_method`。
-- **项目（item）**：类型下的某个取值，如 `GET`。键 `item_code` **稳定**且**全大写+下划线**。
-- **启用/删除**：`enabled`=1 且 `deleted`=0 才参与业务选择。
-
----
-
-## 2. 数据模型与约束（ER 抽象）
-
-- `sys_dict_type (1) ——< sys_dict_item (N)`：类型与项目的父子关系。
-- `sys_dict_item_alias (N)`：为一个项目提供多个外部平台/遗留系统的“别名/编码”。
-- **默认唯一**：`sys_dict_item.default_key` 是一个**生成列**；当 `is_default=1` 且启用未删时取 `type_id`，否则为 `NULL`
-  ；配合唯一键确保**同类型仅一条默认**。
-- **读侧视图**：`v_sys_dict_item_enabled` 只暴露启用且未删的项目，减少 where 条件重复。
-
----
-
-## 3. 表结构（包含统一审计字段 BaseDO）
+## <a id="sec-1"></a> 1. 表结构（包含统一审计字段 BaseDO）
 
 BaseDO 字段（所有表均包含）：
 
@@ -70,7 +30,7 @@ BaseDO 字段（所有表均包含）：
     `deleted` TINYINT (1) NOT NULL DEFAULT 0 COMMENT '逻辑删除'
  ```
 
-### 3.1 `sys_dict_type` — 字典类型
+### <a id="sec-1-1"></a> 1.1 `sys_dict_type` — 字典类型
 
 ```sql
 CREATE TABLE IF NOT EXISTS sys_dict_type
@@ -103,7 +63,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_type
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='系统字典-类型';
 ```
 
-### 3.2 `sys_dict_item` — 字典项目
+### <a id="sec-1-2"></a> 1.2 `sys_dict_item` — 字典项目
 
 ```sql
 CREATE TABLE IF NOT EXISTS sys_dict_item
@@ -146,7 +106,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='系统字典-项目';
 ```
 
-### 3.3 `sys_dict_item_alias` — 外部映射（PubMed/Crossref/遗留）
+### <a id="sec-1-3"></a> 1.3 `sys_dict_item_alias` — 外部映射（PubMed/Crossref/遗留）
 
 ```sql
 CREATE TABLE IF NOT EXISTS sys_dict_item_alias
@@ -178,7 +138,7 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
   COLLATE = utf8mb4_0900_ai_ci COMMENT ='系统字典-外部映射';
 ```
 
-### 3.4 读侧视图 `v_sys_dict_item_enabled`
+### <a id="sec-1-4"></a> 1.4 读侧视图 `v_sys_dict_item_enabled`
 
 ```sql
 CREATE OR REPLACE VIEW v_sys_dict_item_enabled AS
@@ -201,7 +161,8 @@ WHERE di.enabled = 1
 
 ---
 
-## 4. 字典类型清单（覆盖原文所有枚举）
+
+## <a id="sec-2"></a> 2. 字典类型清单（覆盖原文所有枚举）
 
 > 以下 **type_code** 与 **item_code** 为**建议标准**，可直接导入种子数据。
 
@@ -229,7 +190,8 @@ WHERE di.enabled = 1
 
 ---
 
-## 5. 兼容性与别名映射（legacy 同义词）
+
+## <a id="sec-3"></a> 3. 兼容性与别名映射（legacy 同义词）
 
 为了平滑过渡历史文档与外部供应商的取值命名差异，建议通过 `sys_dict_item_alias` 维护同义词映射，读写层统一面向“规范 code”。
 
@@ -270,7 +232,8 @@ VALUES
 
 ---
 
-## 5. 可执行种子数据（INSERT）
+
+## <a id="sec-3"></a> 3. 可执行种子数据（INSERT）
 
 > 建议作为**迁移脚本**的一部分一次性导入；以后仅增量变更。
 
@@ -601,126 +564,3 @@ WHERE t.type_code = 'oauth_grant_type';
 ```
 
 ---
-
-## 6. 在业务表中的引用方式（示例与规范）
-
-### 6.1 字段命名规范（以字典编码关联）
-
-- 业务表字段直接使用语义字段名并保存“字典编码”（`item_code`），不保存 `*_id`；并在字段名上以 `_code` 后缀明确这是“字典编码”：
-  - 例如 `http_method_code VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)'`。
-  - 例如 `endpoint_usage_code VARCHAR(32) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)'`。
-  - 例如 `scope_code VARCHAR(16) NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)'`。
-  - 例如 `lifecycle_status_code VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)'`。
-
-- 不与 `sys_dict_*` 建立物理外键；由应用层在写入/变更时校验“编码存在且类型匹配”。
-
-### 6.2 端点定义示例（以编码关联字典）
-
-> 以 `reg_prov_endpoint_def` 的 `http_method_code`、`endpoint_usage_code` 两个字段为例：
-
-```sql
--- 示例：在新建表时直接保存“字典编码”，不使用 *_id；（旧表迁移见 §8）
-CREATE TABLE reg_prov_endpoint_def
-(
-    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    provenance_id   BIGINT UNSIGNED NOT NULL,
-  scope_code      VARCHAR(16)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=scope)',
-    task_type       VARCHAR(64)     NULL,
-    task_type_key   VARCHAR(64)     NOT NULL DEFAULT 'ALL',
-    endpoint_name   VARCHAR(64)     NOT NULL,
-  http_method_code     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=http_method)',
-  endpoint_usage_code  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE: sys_dict_item.item_code (type=endpoint_usage)',
-  lifecycle_status_code VARCHAR(32)    NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE: sys_dict_item.item_code (type=lifecycle_status)',
-    -- ... 其它字段略 ...
-    record_remarks  JSON            NULL,
-    created_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    created_by      BIGINT UNSIGNED NULL,
-    created_by_name VARCHAR(100)    NULL,
-    updated_at      TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    updated_by      BIGINT UNSIGNED NULL,
-    updated_by_name VARCHAR(100)    NULL,
-    version         BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    ip_address      VARBINARY(16)   NULL,
-    deleted         TINYINT(1)      NOT NULL DEFAULT 0,
-    PRIMARY KEY (id)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci COMMENT ='端点定义（示例：以编码关联字典）';
-```
-
-### 6.3 应用层校验（保证“类型匹配 + 有效性”）
-
-- MySQL 的 CHECK 不能引用子查询，难以在数据库层强约束“`http_method` 一定属于 `http_method` 类型”。
-- 实践做法（写路径）：
-  - 入参以 `(typeCode, itemCode)` 或直接 `itemCode` 形式传入；
-  - 应用层通过 `v_sys_dict_item_enabled(type_code, item_code)` 校验存在性与启用状态；
-  - 校验通过后直接持久化 `item_code` 到业务表；无需也不生成/保存 `item_id`。
-  - 读路径可按需联查 `v_sys_dict_item_enabled` 以获得展示名（display_name）。
-
----
-
-## 7. 读写实践与健康检查
-
-### 7.1 常用查询
-
-```sql
--- 取指定类型 + 编码
-SELECT item_id, type_code, item_code, display_name
-FROM v_sys_dict_item_enabled
-WHERE type_code = 'http_method'
-  AND item_code = 'GET';
-
--- 取某类型默认项
-SELECT item_id, item_code
-FROM v_sys_dict_item_enabled
-WHERE type_code = 'endpoint_usage'
-  AND is_default = 1;
-
--- 列出可用项（按显示顺序）
-SELECT item_id, item_code, display_name
-FROM v_sys_dict_item_enabled
-WHERE type_code = 'retry_after_policy'
-ORDER BY display_order;
-```
-
-### 7.2 数据质量巡检（应返回 0 行）
-
-```sql
--- A. 检查“默认项>1”的违规
-SELECT dt.type_code, COUNT(*) AS defaults
-FROM sys_dict_item di
-         JOIN sys_dict_type dt ON dt.id = di.type_id
-WHERE di.is_default = 1
-  AND di.enabled = 1
-  AND di.deleted = 0
-  AND dt.deleted = 0
-GROUP BY dt.type_code
-HAVING COUNT(*) > 1;
-
--- B. 检查“同类型重复 item_code”（理论上被唯一键阻止，这里兜底）
-SELECT dt.type_code, di.item_code, COUNT(*) c
-FROM sys_dict_item di
-         JOIN sys_dict_type dt ON dt.id = di.type_id
-GROUP BY dt.type_code, di.item_code
-HAVING c > 1;
-```
-
----
-
-## 8. 运维与治理（Runbook）
-
-- **新增类型**：`sys_dict_type` 插入一行；尽量避免删除，使用 `deleted=1` 软删。
-- **新增项目**：`sys_dict_item` 插入；如要设为默认，将其他项目的 `is_default` 更新为 0（唯一约束可防止并发冲突）。
-- **废弃项目**：将 `enabled=0` 或 `deleted=1`；不建议修改 `item_code`（稳定键）。
-- **外部映射**：在 `sys_dict_item_alias` 维护第三方值映射，避免在业务表“硬编码对照表”。
-- **发布审计**：使用 `record_remarks` 记录变更原因（JSON 数组）。
-- **定期巡检**：执行 §7.2 的健康检查 SQL。
-
----
-
-## 9. FAQ 与取舍
-
-- **问：为何不直接用 CHECK 强约束“类型匹配”？**  
-  MySQL 8.0 的 CHECK 不能引用子查询，无法在数据库层保证 `http_method` 等字段一定属于某个 `type_code`。实践采用**应用层校验 + 巡检 SQL**。
-- **问：默认项如何防止并发写冲突？**  
-  `default_key` + 唯一键天生防止；并发设置多个默认将失败，应用层捕获后重试或回滚。
