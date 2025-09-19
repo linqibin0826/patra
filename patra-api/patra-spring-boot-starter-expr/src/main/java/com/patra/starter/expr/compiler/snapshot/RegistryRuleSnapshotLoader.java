@@ -10,14 +10,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RegistryRuleSnapshotLoader implements RuleSnapshotLoader {
 
-    private final ProvenanceClient feignClient;
 
     @Override
     public ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operation) {
-        var resp = feignClient.getExprConfigSnapshot(
-                provenanceCode,
-                operation
-        );
-        return RegistrySnapshotAssembler.toSnapshot(resp);
+        return null;
     }
 }

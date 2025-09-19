@@ -36,7 +36,7 @@ public class ExprCompilerAutoConfiguration {
     @ConditionalOnMissingBean(RuleSnapshotLoader.class)
     @ConditionalOnProperty(prefix = "patra.expr.compiler.registry-api", name = "enabled", havingValue = "true", matchIfMissing = true)
     public RuleSnapshotLoader feignRuleSnapshotLoader(ProvenanceClient feignClient) {
-        return new RegistryRuleSnapshotLoader(feignClient);
+        return new RegistryRuleSnapshotLoader();
     }
 
     @Bean
