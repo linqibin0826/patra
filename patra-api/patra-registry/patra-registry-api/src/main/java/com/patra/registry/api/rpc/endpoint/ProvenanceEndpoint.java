@@ -1,4 +1,4 @@
-package com.patra.registry.api.rpc.contract;
+package com.patra.registry.api.rpc.endpoint;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.api.rpc.dto.*;
@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-public interface ProvenanceHttpApi {
+public interface ProvenanceEndpoint {
 
     String BASE_PATH = "/_internal/provenances";
 

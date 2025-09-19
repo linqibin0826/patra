@@ -1,0 +1,46 @@
+package com.patra.registry.adapter.rest._internal.convertor;
+
+import com.patra.registry.api.rpc.dto.dict.DictionaryHealthResp;
+import com.patra.registry.api.rpc.dto.dict.DictionaryItemResp;
+import com.patra.registry.api.rpc.dto.dict.DictionaryReferenceReq;
+import com.patra.registry.api.rpc.dto.dict.DictionaryTypeResp;
+import com.patra.registry.api.rpc.dto.dict.DictionaryValidationResp;
+import com.patra.registry.contract.query.view.DictionaryHealthQuery;
+import com.patra.registry.contract.query.view.DictionaryItemQuery;
+import com.patra.registry.contract.query.view.DictionaryTypeQuery;
+import com.patra.registry.contract.query.view.DictionaryValidationQuery;
+import com.patra.registry.domain.model.vo.DictionaryReference;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
+
+/**
+ * MapStruct converter bridging contract query objects and API DTOs for dictionary endpoints.
+ */
+@Mapper(
+        componentModel = "spring",
+        unmappedTargetPolicy = ReportingPolicy.ERROR
+)
+public interface DictionaryApiConvertor {
+
+    DictionaryItemResp toItemResp(DictionaryItemQuery query);
+
+    List<DictionaryItemResp> toItemResp(List<DictionaryItemQuery> queries);
+
+    DictionaryTypeResp toTypeResp(DictionaryTypeQuery query);
+
+    List<DictionaryTypeResp> toTypeResp(List<DictionaryTypeQuery> queries);
+
+    @Mapping(target = "valid", source = "isValid")
+    DictionaryValidationResp toValidationResp(DictionaryValidationQuery query);
+
+    List<DictionaryValidationResp> toValidationResp(List<DictionaryValidationQuery> queries);
+
+    DictionaryHealthResp toHealthResp(DictionaryHealthQuery query);
+
+    DictionaryReference toReference(DictionaryReferenceReq request);
+
+    List<DictionaryReference> toReference(List<DictionaryReferenceReq> requests);
+}
