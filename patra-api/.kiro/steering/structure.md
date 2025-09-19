@@ -107,10 +107,10 @@ config/                             # Adapter configuration
 ## Critical Coding Rules
 
 ### Data Objects & Enums
-- **DO中不要使用Java enum** - Use string/int fields instead
-- **JSON字段统一使用Jackson JsonNode** - For database JSON columns
-- **不可变对象优先使用record** - For value objects and immutable data
-- **可变对象使用Lombok + class** - Avoid manual getters/setters
+- **No Java enums in DO classes** - Use string/int fields instead
+- **JSON fields use Jackson JsonNode** - For database JSON columns
+- **Immutable objects use record** - For value objects and immutable data
+- **Mutable objects use Lombok + class** - Avoid manual getters/setters
 
 ### Tool Usage Priority
 1. **Hutool** - First choice for utilities (domain layer approved)
@@ -119,7 +119,7 @@ config/                             # Adapter configuration
 4. Only create new utilities if none exist
 
 ### Security & Performance
-- **严禁硬编码凭据** - Use environment variables/config center
-- **SQL全面参数化** - No string concatenation, prevent injection
-- **幂等设计** - All collection/parsing/cleaning must be re-entrant
-- **批处理优先** - Avoid N+1 queries, use pagination/async where possible
+- **No hardcoded credentials** - Use environment variables/config center
+- **Parameterized SQL only** - No string concatenation, prevent injection
+- **Idempotent design** - All collection/parsing/cleaning must be re-entrant
+- **Batch processing preferred** - Avoid N+1 queries, use pagination/async where possible

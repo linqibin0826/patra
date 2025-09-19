@@ -1,17 +1,17 @@
 # Product Overview
 
-## Papertrace - 医学文献数据平台
+## Papertrace - Medical Literature Data Platform
 
 Papertrace is a SpringCloud microservices platform designed for collecting, processing, and managing medical literature data from multiple open sources.
 
 ### Core Purpose
-1. **统一采集**: Unified collection from 10+ medical literature sources (PubMed, EPMC, etc.)
-2. **SSOT管理**: Single source of truth for configuration, dictionaries, and metadata
-3. **数据处理**: Raw literature data parsing, cleaning, and standardization
-4. **后续目标**: Search capabilities and intelligent analysis
+1. **Unified Collection**: Collect from 10+ medical literature sources (PubMed, EPMC, etc.)
+2. **SSOT Management**: Single source of truth for configuration, dictionaries, and metadata
+3. **Data Processing**: Raw literature data parsing, cleaning, and standardization
+4. **Future Goals**: Search capabilities and intelligent analysis
 
-### Current Phase: 数据可靠落地
-Focus on reliable data landing - ensuring the complete flow: **采集 → 解析/清洗 → 入库**
+### Current Phase: Reliable Data Landing
+Focus on reliable data landing - ensuring the complete flow: **Collection → Parsing/Cleaning → Storage**
 
 ### Key Business Flows
 1. **Admin-triggered Collection**: Manual collection via web interface
