@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-public interface LiteratureProvenanceHttpApi {
+public interface ProvenanceHttpApi {
 
-    String BASE_PATH = "/_internal/literature-provenances";
+    String BASE_PATH = "/_internal/provenances";
 
     @GetMapping(BASE_PATH + "/{code}/config")
     LiteratureProvenanceConfigApiResp getConfigByCode(@PathVariable("code") ProvenanceCode provenanceCode);

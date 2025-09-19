@@ -1,7 +1,7 @@
 package com.patra.starter.expr.compiler.snapshot;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.registry.api.rpc.client.LiteratureProvenanceClient;
+import com.patra.registry.api.rpc.client.ProvenanceClient;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RegistryRuleSnapshotLoader implements RuleSnapshotLoader {
 
-    private final LiteratureProvenanceClient feignClient;
+    private final ProvenanceClient feignClient;
 
     @Override
     public ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operation) {

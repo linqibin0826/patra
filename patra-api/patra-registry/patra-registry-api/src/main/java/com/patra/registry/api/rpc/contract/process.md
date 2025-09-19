@@ -1,12 +1,12 @@
 # LiteratureProvenanceHttpApi#getConfigByCode 调用链路与时序
 
-本文档说明 `com.patra.registry.api.rpc.contract.LiteratureProvenanceHttpApi#getConfigByCode` 的实现方与调用方，以及端到端的数据与控制流转细节，并附详细时序图。
+本文档说明 `com.patra.registry.api.rpc.contract.ProvenanceHttpApi#getConfigByCode` 的实现方与调用方，以及端到端的数据与控制流转细节，并附详细时序图。
 
 ---
 
 ## 接口概览
 
-- 契约接口：`com.patra.registry.api.rpc.contract.LiteratureProvenanceHttpApi`
+- 契约接口：`com.patra.registry.api.rpc.contract.ProvenanceHttpApi`
 - 路径与方法：`GET /_internal/literature-provenances/{code}/config`
 - 入参：`@PathVariable("code") ProvenanceCode provenanceCode`
 - 出参：`com.patra.registry.api.rpc.dto.LiteratureProvenanceConfigApiResp`

@@ -20,7 +20,7 @@ Maven 依赖（父 POM 已聚合，无需额外版本号）：
 ```
 
 前置（用于默认快照加载）：
-- 引入 patra-registry-api，确保容器中存在 Feign Client：com.patra.registry.api.rpc.client.LiteratureProvenanceClient。
+- 引入 patra-registry-api，确保容器中存在 Feign Client：com.patra.registry.api.rpc.client.ProvenanceClient。
 - 若你不希望依赖 Registry，可自定义一个 RuleSnapshotLoader Bean 覆盖默认实现。
 
 ---

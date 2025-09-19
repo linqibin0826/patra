@@ -1,5 +1,6 @@
 package com.patra.starter.expr.compiler.boot;
 
+import com.patra.registry.api.rpc.client.ProvenanceClient;
 import com.patra.starter.expr.compiler.DefaultExprCompiler;
 import com.patra.starter.expr.compiler.ExprCompiler;
 import com.patra.starter.expr.compiler.checker.CapabilityChecker;
@@ -12,7 +13,6 @@ import com.patra.starter.expr.compiler.slice.DefaultExprSlicer;
 import com.patra.starter.expr.compiler.slice.ExprSlicer;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
-import com.patra.registry.api.rpc.client.LiteratureProvenanceClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -35,7 +35,7 @@ public class ExprCompilerAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(RuleSnapshotLoader.class)
     @ConditionalOnProperty(prefix = "patra.expr.compiler.registry-api", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RuleSnapshotLoader feignRuleSnapshotLoader(LiteratureProvenanceClient feignClient) {
+    public RuleSnapshotLoader feignRuleSnapshotLoader(ProvenanceClient feignClient) {
         return new RegistryRuleSnapshotLoader(feignClient);
     }
 
