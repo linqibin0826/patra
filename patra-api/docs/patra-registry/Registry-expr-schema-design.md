@@ -55,6 +55,8 @@ flowchart TD
 
 > 约定：`item_code` 全大写；配置表中的 `*_code` 推荐大写，或查询时 `UPPER()` 对齐。
 
+> 字典种子请参考《Registry-dict-schema-design》，规范编码包含 `endpoint_usage=DETAIL`（legacy `FETCH`）、`retry_after_policy=IGNORE/RESPECT/CLAMP`、`bucket_granularity_scope=GLOBAL/PER_KEY/PER_ENDPOINT/PER_IP/PER_TASK` 等。
+
 ---
 
 ## 3. 表结构与要点

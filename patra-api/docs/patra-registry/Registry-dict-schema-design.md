@@ -214,10 +214,18 @@ WHERE di.enabled = 1
 | `window_mode`               | 窗口模式            | `SLIDING`,`CALENDAR`                                                              |
 | `time_unit`                 | 时间单位            | `SECOND`,`MINUTE`,`HOUR`,`DAY`                                                    |
 | `offset_type`               | 增量指针类型          | `DATE`,`ID`,`COMPOSITE`                                                           |
-| `bucket_granularity_scope`  | 限流粒度            | `GLOBAL`,`CREDENTIAL`,`ENDPOINT`,`IP`,`TASK`                                      |
-| `retry_after_policy`        | 重试等待策略          | `NONE`,`RESPECT_HEADER`,`FIXED`,`EXP_BACKOFF`                                     |
+| `reg_data_type`             | 统一字段数据类型       | `DATE`,`DATETIME`,`NUMBER`,`TEXT`,`KEYWORD`,`BOOLEAN`,`TOKEN`                     |
+| `reg_cardinality`           | 字段基数            | `SINGLE`,`MULTI`                                                                  |
+| `bucket_granularity_scope`  | 限流粒度            | `GLOBAL`,`PER_KEY`,`PER_ENDPOINT`,`PER_IP`,`PER_TASK`                             |
+| `retry_after_policy`        | Retry-After 策略     | `IGNORE`,`RESPECT`,`CLAMP`                                                        |
 | `backoff_policy_type`       | 退避策略            | `FIXED`,`EXP`,`EXP_JITTER`,`DECOR_JITTER`                                         |
 | `backpressure_strategy`     | 背压策略            | `BLOCK`,`DROP`,`YIELD`                                                            |
+| `reg_operation`             | 端点操作            | `SEARCH`,`DETAIL`,`LOOKUP`                                                         |
+| `reg_expr_op`               | 表达式操作符          | `TERM`,`IN`,`RANGE`,`EXISTS`,`TOKEN`                                               |
+| `reg_range_kind`            | 范围值类型            | `NONE`,`DATE`,`DATETIME`,`NUMBER`                                                  |
+| `reg_match_type`            | 匹配策略            | `PHRASE`,`EXACT`,`ANY`                                                             |
+| `reg_emit_type`             | 渲染产出类型          | `QUERY`,`PARAMS`                                                                   |
+| `reg_transform`             | 渲染/取值转换函数       | `IDENTITY`,`TO_EXCLUSIVE_MINUS_1D`,`PUBMED_DATETYPE`                               |
 
 ---
 
@@ -227,7 +235,8 @@ WHERE di.enabled = 1
 
 - 典型映射建议（source_system 建议使用 `legacy_v1` 作为内部遗留标识，或供应商名如 `pubmed`/`crossref`）：
   - endpoint_usage: `FETCH` → `DETAIL`
-  - bucket_granularity_scope: `PER_KEY` → `CREDENTIAL`；`PER_ENDPOINT` → `ENDPOINT`
+  - bucket_granularity_scope: `CREDENTIAL` → `PER_KEY`；`ENDPOINT` → `PER_ENDPOINT`；`IP` → `PER_IP`；`TASK` → `PER_TASK`
+  - retry_after_policy: `NONE` → `IGNORE`；`RESPECT_HEADER` → `RESPECT`；`FIXED`/`EXP_BACKOFF` → `CLAMP`
   - lifecycle_status: （如有历史）`PUBLISHED` → `ACTIVE`
 
 示例 SQL（以 endpoint_usage 为例，省略插入类型与项目的基础数据）：
@@ -241,7 +250,7 @@ WHERE dt.type_code = 'endpoint_usage'
   AND di.item_code = 'DETAIL'
   AND di.deleted = 0;
 
--- 建立 legacy 同义映射：FETCH → DETAIL
+-- 建立 legacy 同义映射：FETCH → DETAIL (DETAIL 为规范编码)
 INSERT INTO sys_dict_item_alias (item_id, source_system, external_code, external_label, notes)
 VALUES
   (@detail_id, 'legacy_v1', 'FETCH', 'fetch', 'legacy synonym of DETAIL');
@@ -275,10 +284,18 @@ VALUES ('scope', '作用域', '配置维度作用域', 0, 1),
        ('window_mode', '窗口模式', '滑动/日历对齐', 1, 1),
        ('time_unit', '时间单位', 'SECOND/MINUTE/HOUR/DAY', 1, 1),
        ('offset_type', '增量指针类型', '基于日期/ID/复合键', 1, 1),
-       ('bucket_granularity_scope', '配额/限流粒度', 'GLOBAL/CREDENTIAL/ENDPOINT/IP/TASK', 1, 1),
-       ('retry_after_policy', '重试等待策略', 'Retry-After 解析与等待', 1, 1),
+       ('reg_data_type', '统一字段数据类型', 'DATE/DATETIME/NUMBER/TEXT/KEYWORD/BOOLEAN/TOKEN', 0, 1),
+       ('reg_cardinality', '字段基数', 'SINGLE/MULTI', 0, 1),
+       ('bucket_granularity_scope', '配额/限流粒度', 'GLOBAL/PER_KEY/PER_ENDPOINT/PER_IP/PER_TASK', 1, 1),
+       ('retry_after_policy', 'Retry-After 策略', 'IGNORE/RESPECT/CLAMP', 1, 1),
        ('backoff_policy_type', '退避策略', '固定/指数/抖动', 1, 1),
        ('backpressure_strategy', '背压策略', '阻塞/丢弃/让出', 1, 1),
+       ('reg_operation', '端点操作', 'SEARCH/DETAIL/LOOKUP', 0, 1),
+       ('reg_expr_op', '表达式操作符', 'TERM/IN/RANGE/EXISTS/TOKEN', 0, 1),
+       ('reg_range_kind', '范围值类型', 'NONE/DATE/DATETIME/NUMBER', 0, 1),
+       ('reg_match_type', '匹配策略', 'PHRASE/EXACT/ANY', 0, 1),
+       ('reg_emit_type', '渲染产出类型', 'QUERY/PARAMS', 0, 1),
+       ('reg_transform', '渲染/取值转换', 'IDENTITY/TO_EXCLUSIVE_MINUS_1D/自定义', 1, 1),
        ('payload_compress_strategy', '压缩策略', 'NONE/GZIP', 1, 1),
        ('inbound_location', '鉴权参数放置位置', 'Header/Query/Body', 1, 1),
        ('lifecycle_status', '生命周期状态', '草稿/生效/弃用/下线', 0, 1),
@@ -375,32 +392,58 @@ FROM sys_dict_type t
                SELECT 'COMPOSITE', '复合指针', 30, 0) x
 WHERE t.type_code = 'offset_type';
 
+-- reg_data_type
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'DATE', '日期', 10, 0
+               UNION ALL
+               SELECT 'DATETIME', '日期时间', 20, 0
+               UNION ALL
+               SELECT 'NUMBER', '数值', 30, 0
+               UNION ALL
+               SELECT 'TEXT', '长文本', 40, 0
+               UNION ALL
+               SELECT 'KEYWORD', '关键词', 50, 0
+               UNION ALL
+               SELECT 'BOOLEAN', '布尔', 60, 0
+               UNION ALL
+               SELECT 'TOKEN', '标记/令牌', 70, 1) x
+WHERE t.type_code = 'reg_data_type';
+
+-- reg_cardinality
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'SINGLE', '单值', 10, 1
+               UNION ALL
+               SELECT 'MULTI', '多值', 20, 0) x
+WHERE t.type_code = 'reg_cardinality';
+
 -- bucket_granularity_scope
 INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
 SELECT id, x.code, x.name, x.ord, x.def
 FROM sys_dict_type t
          JOIN (SELECT 'GLOBAL', '全局', 10, 1
                UNION ALL
-               SELECT 'CREDENTIAL', '按凭证', 20, 0
+               SELECT 'PER_KEY', '按凭证', 20, 0
                UNION ALL
-               SELECT 'ENDPOINT', '按端点', 30, 0
+               SELECT 'PER_ENDPOINT', '按端点', 30, 0
                UNION ALL
-               SELECT 'IP', '按来源IP', 40, 0
+               SELECT 'PER_IP', '按来源IP', 40, 0
                UNION ALL
-               SELECT 'TASK', '按任务类型', 50, 0) x
+               SELECT 'PER_TASK', '按任务类型', 50, 0) x
 WHERE t.type_code = 'bucket_granularity_scope';
 
 -- retry_after_policy
 INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
 SELECT id, x.code, x.name, x.ord, x.def
 FROM sys_dict_type t
-         JOIN (SELECT 'NONE', '固定间隔/不读取头', 10, 0
+         JOIN (SELECT 'IGNORE', '忽略响应头', 10, 0
                UNION ALL
-               SELECT 'RESPECT_HEADER', '遵循 Retry-After 头', 20, 1
+               SELECT 'RESPECT', '完全遵循 Retry-After', 20, 1
                UNION ALL
-               SELECT 'FIXED', '固定退避', 30, 0
-               UNION ALL
-               SELECT 'EXP_BACKOFF', '指数退避', 40, 0) x
+               SELECT 'CLAMP', '遵循但设置上限', 30, 0) x
 WHERE t.type_code = 'retry_after_policy';
 
 -- backoff_policy_type
@@ -415,6 +458,76 @@ FROM sys_dict_type t
                UNION ALL
                SELECT 'DECOR_JITTER', '装饰性抖动', 40, 0) x
 WHERE t.type_code = 'backoff_policy_type';
+
+-- reg_operation
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'SEARCH', '检索/搜索', 10, 1
+               UNION ALL
+               SELECT 'DETAIL', '详情调用', 20, 0
+               UNION ALL
+               SELECT 'LOOKUP', '单条查询/查表', 30, 0) x
+WHERE t.type_code = 'reg_operation';
+
+-- reg_expr_op
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'TERM', '词条匹配', 10, 1
+               UNION ALL
+               SELECT 'IN', '集合包含', 20, 0
+               UNION ALL
+               SELECT 'RANGE', '范围', 30, 0
+               UNION ALL
+               SELECT 'EXISTS', '存在判断', 40, 0
+               UNION ALL
+               SELECT 'TOKEN', '令牌搜索', 50, 0) x
+WHERE t.type_code = 'reg_expr_op';
+
+-- reg_range_kind
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'NONE', '无范围', 10, 1
+               UNION ALL
+               SELECT 'DATE', '日期', 20, 0
+               UNION ALL
+               SELECT 'DATETIME', '日期时间', 30, 0
+               UNION ALL
+               SELECT 'NUMBER', '数字', 40, 0) x
+WHERE t.type_code = 'reg_range_kind';
+
+-- reg_match_type
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'PHRASE', '短语', 10, 1
+               UNION ALL
+               SELECT 'EXACT', '精确', 20, 0
+               UNION ALL
+               SELECT 'ANY', '不限', 30, 0) x
+WHERE t.type_code = 'reg_match_type';
+
+-- reg_emit_type
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'QUERY', '查询拼接', 10, 1
+               UNION ALL
+               SELECT 'PARAMS', '参数输出', 20, 0) x
+WHERE t.type_code = 'reg_emit_type';
+
+-- reg_transform
+INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)
+SELECT id, x.code, x.name, x.ord, x.def
+FROM sys_dict_type t
+         JOIN (SELECT 'IDENTITY', '不变换', 10, 1
+               UNION ALL
+               SELECT 'TO_EXCLUSIVE_MINUS_1D', '闭区间-1天转开区间', 20, 0
+               UNION ALL
+               SELECT 'PUBMED_DATETYPE', 'PubMed DateType', 30, 0) x
+WHERE t.type_code = 'reg_transform';
 
 -- backpressure_strategy
 INSERT INTO sys_dict_item (type_id, item_code, item_name, display_order, is_default)

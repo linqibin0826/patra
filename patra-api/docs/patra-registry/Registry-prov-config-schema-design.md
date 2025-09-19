@@ -1,4 +1,4 @@
-# Papertrace Registry Schema & SQL 指南
+# Patra Registry Provenance Config Schema & SQL 指南
 
 ## 0. 摘要（Executive Summary）
 
@@ -104,7 +104,7 @@ HTTP、批量成型、重试退避、限流并发、鉴权密钥）。
     * `reg_provenance`：登记来源（`provenance_code`、`base_url_default`、`timezone_default`…）。
 * **配置/定义表（均含 `provenance_id` → `reg_provenance.id`）**
 
-    * `reg_prov_endpoint_def`：端点名称、用途（SEARCH/FETCH/TOKEN…）、HTTP 方法、路径模板、默认 Query/Body；端点级参数名（如
+    * `reg_prov_endpoint_def`：端点名称、用途（SEARCH/DETAIL/TOKEN…）、HTTP 方法、路径模板、默认 Query/Body；端点级参数名（如
       `page_param_name`）仅用于**描述该端点本身**。
     * `reg_prov_window_offset_cfg`：时间窗口模型（SLIDING/CALENDAR）、窗口长度/重叠/回看、水位滞后；增量指针（DATE/ID/COMPOSITE、默认日期字段）。
     * `reg_prov_pagination_cfg`：分页模式（PAGE\_NUMBER/CURSOR/TOKEN/SCROLL）、参数名、游标提取 JSONPath。
@@ -199,13 +199,13 @@ SET @crossref_id = (SELECT id
                     WHERE provenance_code = 'crossref');
 
 -- 2) 端点定义（示例）
--- PubMed: ESearch（检索）与 EFetch（详情）
+-- PubMed: ESearch（检索）与 EFetch（详情，规范 code=DETAIL，legacy=FETCH）
 INSERT INTO reg_prov_endpoint_def
 (provenance_id, scope_code, task_type, endpoint_name, effective_from,
  endpoint_usage_code, http_method_code, path_template, default_query_params, request_content_type, is_auth_required)
 VALUES (@pubmed_id, 'TASK', 'update', 'esearch', '2025-01-01', 'SEARCH', 'GET', '/eutils/esearch.fcgi',
         JSON_OBJECT('db', 'pubmed', 'retmode', 'json'), 'application/json', 0),
-       (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01', 'FETCH', 'GET', '/eutils/efetch.fcgi',
+       (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01', 'DETAIL', 'GET', '/eutils/efetch.fcgi',
         JSON_OBJECT('db', 'pubmed', 'retmode', 'xml'), 'application/xml', 0);
 
 -- Crossref: works 搜索端点（cursor-based）
@@ -500,7 +500,8 @@ class OverlapChecker {
 ## 3. 表结构详解（字段、索引、外键、使用建议）
 
 > 说明：以下与已发布的建表 SQL 一一对应；不含触发器/CHECK/审计字段。
-> 公共字段模式（除凭证）：`provenance_id` + `scope_code` + `task_type` + `effective_from/to` + 生成列 `task_type_key` + 维度唯一索引
+> 公共字段模式（除凭证）：`provenance_id` + `scope_code` + `task_type` + `effective_from/to` + 生成列 `task_type_key` +
+> 维度唯一索引
 
 ### 3.1 `reg_provenance` — 来源主数据
 
@@ -535,7 +536,7 @@ class OverlapChecker {
 * `scope_code` / `task_type` / `task_type_key`：作用域与任务。
 * `endpoint_name`：端点逻辑名（如 `esearch`、`efetch`、`works`、`token`）。
 * `effective_from/to`：生效区间。
-* `endpoint_usage_code`：用途枚举（`SEARCH|FETCH|TOKEN|...`）。
+* `endpoint_usage_code`：用途枚举（`SEARCH|DETAIL|TOKEN|...`，`FETCH` 为 legacy 别名，通过字典 alias 映射至 `DETAIL`）。
 * `http_method_code`：`GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS`。
 * `path_template`：相对（推荐）或绝对路径。
 * `default_query_params` / `default_body_payload`（JSON）：默认 query 与 body（应用层合并）。
@@ -546,12 +547,13 @@ class OverlapChecker {
 
 **索引/唯一**
 
-* **维度唯一** `uk_reg_prov_endpoint_def__dim_from (provenance_id, scope_code, task_type_key, endpoint_name, effective_from)`
+* **维度唯一**
+  `uk_reg_prov_endpoint_def__dim_from (provenance_id, scope_code, task_type_key, endpoint_name, effective_from)`
 * 辅助索引：`idx_reg_prov_endpoint_def__dim_to (...)`、`idx_reg_prov_endpoint_def__usage (endpoint_usage_code)`
 
 **使用建议**
 
-* 搜索请求：取 `endpoint_usage_code='SEARCH'` 的当前生效端点；详情请求：取 `FETCH`。
+* 搜索请求：取 `endpoint_usage_code='SEARCH'` 的当前生效端点；详情请求：取 `DETAIL`。
 * 覆盖分页参数名：若设置则在该端点**优先生效**，否则落回 `reg_prov_pagination_cfg`。
 
 ---
@@ -584,7 +586,8 @@ class OverlapChecker {
 **定位**：页码（`PAGE_NUMBER`）、游标（`CURSOR`）、令牌（`TOKEN`）、滚动（`SCROLL`）的参数与响应提取规则。
 **关键字段**
 
-* 基本：`pagination_mode_code`、`page_size_value`、`max_pages_per_execution`、`page_number_param_name`、`page_size_param_name`、
+* 基本：`pagination_mode_code`、`page_size_value`、`max_pages_per_execution`、`page_number_param_name`、
+  `page_size_param_name`、
   `start_page_number`、`sort_field_param_name`、`sort_direction`。
 * 游标/令牌：`cursor_param_name`、`initial_cursor_value`、`next_cursor_jsonpath`、`has_more_jsonpath`、
   `total_count_jsonpath`。
@@ -681,7 +684,7 @@ class OverlapChecker {
 
 * 速率与突发：`rate_tokens_per_second`、`burst_bucket_capacity`。
 * 并发：`max_concurrent_requests`。
-* 粒度：`bucket_granularity_scope_code (GLOBAL|PER_KEY|PER_ENDPOINT)`。
+* 粒度：`bucket_granularity_scope_code (GLOBAL|PER_KEY|PER_ENDPOINT|PER_IP|PER_TASK)`。
 * 自适应：`respect_server_rate_header`（遵循服务端 `X-RateLimit-*`）。
 * 平滑：`smoothing_window_millis`。
 
@@ -754,7 +757,8 @@ class OverlapChecker {
 
     * `provenance_id`：归属来源（FK → `reg_provenance.id`）
     * `scope_code ∈ {SOURCE, TASK}`：作用域
-    * `task_type ∈ {harvest, update, backfill} | NULL`：当 `scope_code='TASK'` 时**必须**设置；`scope_code='SOURCE'` 时建议置 `NULL`
+    * `task_type ∈ {harvest, update, backfill} | NULL`：当 `scope_code='TASK'` 时**必须**设置；`scope_code='SOURCE'` 时建议置
+      `NULL`
     * `task_type_key`：生成列，`IFNULL(task_type,'ALL')`，仅用于索引与筛选
 * **选择意图**
 
@@ -817,7 +821,8 @@ class OverlapChecker {
   决定并列；如需多把，取前 N 把供应用轮询/加权。
 - NULL 语义：字段为 NULL 表示“由应用使用默认值”。
 
-    * 若传入了 `task_type`：先在 `scope_code='TASK' AND task_type=:task_type` 中选；若没有结果，再回退 `scope_code='SOURCE'`
+    * 若传入了 `task_type`：先在 `scope_code='TASK' AND task_type=:task_type` 中选；若没有结果，再回退
+      `scope_code='SOURCE'`
     * 若未传入 `task_type`：直接走 `scope_code='SOURCE'`
 
 4. **最新原则**：在候选集中按 `effective_from DESC` 取 **第一条**
@@ -858,14 +863,14 @@ LIMIT 1;
 
 在以上 1\~5 的基础上，多了端点维度过滤：
 
-* **按用途**：`endpoint_usage_code IN ('SEARCH','FETCH','TOKEN',...)`
+* **按用途**：`endpoint_usage_code IN ('SEARCH','DETAIL','TOKEN',...)`
 * **按名称**：如明确指定 `endpoint_name`，则在同一用途下**精确匹配**
 * **端点级覆盖**：若选出的端点记录含 `page_param_name`/`cursor_param_name` 等，则这些**仅对该端点请求**优先生效（见 §4.4）
 
 > **PubMed 例**：
 >
 > * `endpoint_usage_code='SEARCH'` ⇒ 选出 `esearch` 当前生效记录
-> * `endpoint_usage_code='FETCH'` ⇒ 选出 `efetch` 当前生效记录
+> * `endpoint_usage_code='DETAIL'` ⇒ 选出 `efetch` 当前生效记录
 
 ---
 
@@ -927,7 +932,8 @@ SET @now = UTC_TIMESTAMP();
    AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
    AND (@endpoint_id IS NOT NULL AND endpoint_id = @endpoint_id)
-   AND ((scope_code = 'TASK' AND task_type = @taskType) OR (scope_code = 'SOURCE' AND @taskType IS NULL) OR (scope_code = 'SOURCE'))
+   AND ((scope_code = 'TASK' AND task_type = @taskType) OR (scope_code = 'SOURCE' AND @taskType IS NULL) OR
+        (scope_code = 'SOURCE'))
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
  ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -939,7 +945,8 @@ UNION ALL
    AND lifecycle_status_code = 'ACTIVE'
    AND deleted = 0
    AND endpoint_id IS NULL
-   AND ((scope_code = 'TASK' AND task_type = @taskType) OR (scope_code = 'SOURCE' AND @taskType IS NULL) OR (scope_code = 'SOURCE'))
+   AND ((scope_code = 'TASK' AND task_type = @taskType) OR (scope_code = 'SOURCE' AND @taskType IS NULL) OR
+        (scope_code = 'SOURCE'))
    AND effective_from <= @now
    AND (effective_to IS NULL OR effective_to > @now)
  ORDER BY is_default_preferred DESC, effective_from DESC, id DESC
@@ -1341,8 +1348,8 @@ VALUES (@pid, :scope_code, :taskType, :endpointName, :from, :to,
         :contentType, :needAuth, :credHint,
         :pageParam, :sizeParam, :cursorParam, :idsParam)
 ON DUPLICATE KEY UPDATE effective_to         = VALUES(effective_to),
-                        endpoint_usage_code       = VALUES(endpoint_usage_code),
-                        http_method_code          = VALUES(http_method_code),
+                        endpoint_usage_code  = VALUES(endpoint_usage_code),
+                        http_method_code     = VALUES(http_method_code),
                         path_template        = VALUES(path_template),
                         default_query_params = VALUES(default_query_params),
                         default_body_payload = VALUES(default_body_payload),
@@ -1401,7 +1408,7 @@ LIMIT 1;
 **端点定义（按用途/名称）**
 
 ```sql
--- :usage in ('SEARCH','FETCH','TOKEN','METADATA','PING','RATE')
+-- :usage in ('SEARCH','DETAIL','TOKEN','METADATA','PING','RATE')
 WITH ep AS ((SELECT *
              FROM reg_prov_endpoint_def
              WHERE provenance_id = @pid
@@ -1715,7 +1722,8 @@ ORDER BY scope_code = 'TASK' DESC, effective_from DESC, id DESC;
 
 ### 5.8 性能与一致性建议
 
-* **索引命中**：查询条件顺序尽量贴合复合索引顺序（`provenance_id, scope_code, task_type_key, [endpoint_name], effective_from`
+* **索引命中**：查询条件顺序尽量贴合复合索引顺序（
+  `provenance_id, scope_code, task_type_key, [endpoint_name], effective_from`
   ），并带上时间过滤。
 * **一次运行内冻结**：作业启动时一次性读取并缓存“合同”，运行中不变（避免半途切换）。
 * **幂等**：写入接口携带**明确的维度键**与 `effective_from`，避免随机生成时间造成误判。
@@ -1727,13 +1735,13 @@ ORDER BY scope_code = 'TASK' DESC, effective_from DESC, id DESC;
 
 ### 5.9 常见错误与应对
 
-| 错误        | 原因                              | 快速修复                                    |
-|-----------|---------------------------------|-----------------------------------------|
-| 查不到“当前生效” | 区间写反或 `effective_from` 在未来      | 调整区间；或设置临时回退的 SOURCE 级配置                |
-| 任务/来源混淆   | `scope_code='TASK'` 但 `task_type` 为空 | 回填 `task_type`；或改成 `scope_code='SOURCE'`     |
-| 端点参数冲突    | 端点与分页维度同时配置了不同参数名               | 遵循“端点 > 维度”的覆盖；清理不必要的字段                 |
-| 频繁 429/限流 | 客户端限流过高或服务端配额不足                 | 下调 `rate_limit`/`parallelism`；或启用多把凭证分流 |
-| 游标翻页失败    | `next_cursor_jsonpath` 不正确      | 调整提取路径；打印原始响应以定位                        |
+| 错误        | 原因                                   | 快速修复                                     |
+|-----------|--------------------------------------|------------------------------------------|
+| 查不到“当前生效” | 区间写反或 `effective_from` 在未来           | 调整区间；或设置临时回退的 SOURCE 级配置                 |
+| 任务/来源混淆   | `scope_code='TASK'` 但 `task_type` 为空 | 回填 `task_type`；或改成 `scope_code='SOURCE'` |
+| 端点参数冲突    | 端点与分页维度同时配置了不同参数名                    | 遵循“端点 > 维度”的覆盖；清理不必要的字段                  |
+| 频繁 429/限流 | 客户端限流过高或服务端配额不足                      | 下调 `rate_limit`/`parallelism`；或启用多把凭证分流  |
+| 游标翻页失败    | `next_cursor_jsonpath` 不正确           | 调整提取路径；打印原始响应以定位                         |
 
 ---
 
@@ -1798,7 +1806,7 @@ INSERT INTO reg_prov_endpoint_def
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
 VALUES (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01 00:00:00', NULL,
-        'FETCH', 'GET', '/eutils/efetch.fcgi',
+        'DETAIL', 'GET', '/eutils/efetch.fcgi',
            /* 缺省 query：库名=pubmed，返回 xml；rettype 视业务需要 */
         JSON_OBJECT('db', 'pubmed', 'retmode', 'xml', 'rettype', 'abstract'),
         NULL,
@@ -1808,7 +1816,7 @@ VALUES (@pubmed_id, 'TASK', 'update', 'efetch', '2025-01-01 00:00:00', NULL,
 
 > **要点**
 >
-> * `endpoint_usage_code='SEARCH'` / `'FETCH'` 用于运行时按用途快速选择端点。
+> * `endpoint_usage_code='SEARCH'` / `'DETAIL'` 用于运行时按用途快速选择端点。
 > * `page_param_name='page'`、`page_size_param_name='retmax'` 仅是**应用层参数名**，最终在发送请求时转为
     `retstart=(page-1)*retmax`。
 > * `ids_param_name='id'` 表示 EFetch 的 ID 列表放在 `id=1,2,3`。
@@ -1967,7 +1975,7 @@ VALUES (@pubmed_id, 'SOURCE', NULL, NULL,
 
 ### 6.11 组合查询：装配“PubMed / update”的当前生效配置
 
-> 运行一次 `SEARCH`（ESearch）与后续 `FETCH`（EFetch）通常要**同时读取**多个维度。以下 SQL 取齐端点/HTTP/窗口/分页/批量/重试/限流/凭证各
+> 运行一次 `SEARCH`（ESearch）与后续 `DETAIL`（EFetch）通常要**同时读取**多个维度。以下 SQL 取齐端点/HTTP/窗口/分页/批量/重试/限流/凭证各
 > 1 条“当前生效”记录。
 > 应用端将 JSON 字段做合并，并将端点级参数名覆盖应用到请求构造。
 
@@ -2011,7 +2019,7 @@ WITH ep_search AS ((SELECT *
                      AND deleted = 0
                      AND scope_code = 'TASK'
                      AND task_type = 'update'
-                     AND endpoint_usage_code = 'FETCH'
+                     AND endpoint_usage_code = 'DETAIL'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2023,7 +2031,7 @@ WITH ep_search AS ((SELECT *
                      AND lifecycle_status_code = 'ACTIVE'
                      AND deleted = 0
                      AND scope_code = 'SOURCE'
-                     AND endpoint_usage_code = 'FETCH'
+                     AND endpoint_usage_code = 'DETAIL'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2377,7 +2385,7 @@ VALUES (@pubmed_id, 'TASK', 'backfill', '2025-01-15 00:00:00',
 * **核心资源**：`/works`
 
     * **检索（SEARCH）**：`GET /works` 支持按时间过滤、排序、分页；
-    * **详情（FETCH）**：`GET /works/{doi}` 以 DOI 拉取单条详情；
+    * **详情（DETAIL）**：`GET /works/{doi}` 以 DOI 拉取单条详情；
 * **时间/增量**：常用 `indexed`（索引时间）或 `created`（创建时间）作为增量字段；
 
     * 过滤语法（示例）：`filter=from-index-date:YYYY-MM-DD,until-index-date:YYYY-MM-DD`；
@@ -2442,7 +2450,7 @@ INSERT INTO reg_prov_endpoint_def
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
 VALUES (@crossref_id, 'TASK', 'harvest', 'work_by_doi', '2025-01-01 00:00:00', NULL,
-        'FETCH', 'GET', '/works/{doi}',
+        'DETAIL', 'GET', '/works/{doi}',
         NULL, NULL,
         'application/json', 0, NULL,
         NULL, NULL, NULL, NULL);
@@ -2450,7 +2458,7 @@ VALUES (@crossref_id, 'TASK', 'harvest', 'work_by_doi', '2025-01-01 00:00:00', N
 
 > **要点**
 >
-> * `endpoint_usage_code='SEARCH'` → 当前生效检索端点；`'FETCH'` → 按 DOI 的详情端点。
+> * `endpoint_usage_code='SEARCH'` → 当前生效检索端点；`'DETAIL'` → 按 DOI 的详情端点。
 > * 端点级参数名覆盖：`page_size_param_name='rows'`、`cursor_param_name='cursor'`；
 > * 详情端点 `path_template` 使用占位符 `{doi}`，应用层在发送请求前替换。
 
@@ -2576,7 +2584,7 @@ INSERT INTO reg_prov_rate_limit_cfg
  smoothing_window_millis, respect_server_rate_header)
 VALUES (@crossref_id, 'SOURCE', NULL, '2025-01-01 00:00:00', NULL,
         10, 10, 24,
-        NULL, 'PER_ENDPOINT', -- 按端点粒度限流（SEARCH 与 FETCH 分别计数）
+        NULL, 'PER_ENDPOINT', -- 按端点粒度限流（SEARCH 与 DETAIL 分别计数）
         1000, 1);
 ```
 
@@ -2644,7 +2652,7 @@ WITH ep_search AS ((SELECT *
                    WHERE provenance_id = @pid
                      AND scope_code = 'TASK'
                      AND task_type = 'harvest'
-                     AND endpoint_usage_code = 'FETCH'
+                     AND endpoint_usage_code = 'DETAIL'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2654,7 +2662,7 @@ WITH ep_search AS ((SELECT *
                    FROM reg_prov_endpoint_def
                    WHERE provenance_id = @pid
                      AND scope_code = 'SOURCE'
-                     AND endpoint_usage_code = 'FETCH'
+                     AND endpoint_usage_code = 'DETAIL'
                      AND effective_from <= @now
                      AND (effective_to IS NULL OR effective_to > @now)
                    ORDER BY effective_from DESC, id DESC
@@ -2866,7 +2874,7 @@ FROM ep_search,
 
 #### 7.12.4 稳健性与配额
 
-* **限流**：`PER_ENDPOINT` 粒度，SEARCH 与 FETCH 分别记数；
+* **限流**：`PER_ENDPOINT` 粒度，SEARCH 与 DETAIL 分别记数；
 * **重试**：对 429/5xx 指定指数退避并**尊重 Retry-After**；
 * **水位推进**：窗口内成功完成后推进到 `end`；考虑 `watermark_lag_seconds` 与 `overlap`。
 
@@ -3075,13 +3083,13 @@ LIMIT 1;
 
 ---
 
-### 8.18 为什么有时 `endpoint_usage_code='FETCH'` 不需要？
+### 8.18 为什么有时 `endpoint_usage_code='DETAIL'`（legacy `FETCH`）不需要？
 
 **答**：
 
 * 对 Crossref，`/works` 的 `items` 已经包含大量详情字段，可直接入库；
-* 若业务仍需补齐（例如作者机构的丰富化），再使用 `work_by_doi`（`FETCH`）作为**可选补充**；
-* 因而 `FETCH` 端点并非总是必需。
+* 若业务仍需补齐（例如作者机构的丰富化），再使用 `work_by_doi`（`DETAIL`）作为**可选补充**；
+* 因而 `DETAIL` 端点并非总是必需。
 
 ---
 
@@ -3098,7 +3106,8 @@ LIMIT 1;
 
 **答**：
 
-* WHERE 子句写法与复合索引顺序不匹配（应优先 `provenance_id, scope_code, task_type_key, [endpoint_name], effective_from`）；
+* WHERE 子句写法与复合索引顺序不匹配（应优先
+  `provenance_id, scope_code, task_type_key, [endpoint_name], effective_from`）；
 * 遗漏时间过滤（`effective_from <= now < effective_to`），导致范围扩大；
 * 对列做函数运算（如 `DATE(effective_from)`），破坏索引；
 * 使用 `%like%` 搜索 JSON 串；
