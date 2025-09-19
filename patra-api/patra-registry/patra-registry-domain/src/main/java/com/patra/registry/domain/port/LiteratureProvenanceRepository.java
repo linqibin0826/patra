@@ -1,7 +1,7 @@
 package com.patra.registry.domain.port;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.registry.domain.model.aggregate.LiteratureProvenance;
+import com.patra.registry.domain.model.aggregate.Provenance;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,21 +17,21 @@ public interface LiteratureProvenanceRepository {
 	 * @param code 数据源业务码
 	 * @return 聚合
 	 */
-	Optional<LiteratureProvenance> findByCode(ProvenanceCode code);
+	Optional<Provenance> findByCode(ProvenanceCode code);
 
 	/**
 	 * 按 ID 查找聚合。
 	 * @param id 技术键
 	 * @return 聚合
 	 */
-	Optional<LiteratureProvenance> findById(Long id);
+	Optional<Provenance> findById(Long id);
 
 	/**
 	 * 保存聚合（新建或更新）。
 	 * @param aggregate 聚合
 	 * @return 持久化后的聚合
 	 */
-	LiteratureProvenance save(LiteratureProvenance aggregate);
+	Provenance save(Provenance aggregate);
 
 	/**
 	 * 分页查询聚合。
@@ -39,7 +39,7 @@ public interface LiteratureProvenanceRepository {
 	 * @param limit 数量
 	 * @return 聚合列表
 	 */
-	List<LiteratureProvenance> findAll(int offset, int limit);
+	List<Provenance> findAll(int offset, int limit);
 
 	/**
 	 * 判断业务键是否存在。

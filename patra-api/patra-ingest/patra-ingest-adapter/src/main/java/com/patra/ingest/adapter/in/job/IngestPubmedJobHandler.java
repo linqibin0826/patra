@@ -43,7 +43,7 @@ public class IngestPubmedJobHandler {
             JobParameterValidator.validate(dto);
 
             // 4) Map to app-layer command
-            String requestedBy = "xxl-job"; // could be enhanced with executor identity
+            String requestedBy = "xxl-job";
             var command = JobParameterMapper.toJobStartPlanCommand(
                     dto,
                     requestedBy,

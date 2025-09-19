@@ -32,7 +32,7 @@ public class QueryCapability {
     /**
      * 所属文献数据源ID
      */
-    Long literatureProvenanceId;
+    Long ProvenanceId;
 
     /**
      * 所属文献数据源代码

@@ -11,7 +11,7 @@ import com.patra.registry.infra.mapstruct.ApiParamMappingConverter;
 import com.patra.registry.infra.mapstruct.LiteratureProvenanceConverter;
 import com.patra.registry.infra.mapstruct.QueryCapabilityConverter;
 import com.patra.registry.infra.mapstruct.QueryRenderRuleConverter;
-import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
+import com.patra.registry.infra.persistence.entity.ProvenanceDO;
 import com.patra.registry.infra.persistence.entity.SourceQueryCapabilityDO;
 import com.patra.registry.infra.persistence.entity.SourceApiParamMappingDO;
 import com.patra.registry.infra.persistence.entity.SourceQueryRenderRuleDO;
@@ -43,7 +43,7 @@ public class LiteratureProvenanceQueryPortImpl implements LiteratureProvenanceQu
 
     @Override
     public List<ProvenanceSummaryView> findAll() {
-        List<LiteratureProvenanceDO> provenances = provenanceMapper.selectProvSummaryAll();
+        List<ProvenanceDO> provenances = provenanceMapper.selectProvSummaryAll();
         return provenances.stream().map(converter::toSummary).toList();
     }
 
@@ -55,16 +55,16 @@ public class LiteratureProvenanceQueryPortImpl implements LiteratureProvenanceQu
     @Override
     public List<QueryCapabilityView> getQueryCapabilitiesByProvenanceCode(ProvenanceCode provenanceCode) {
         // 先查出 provenanceId
-        LambdaQueryWrapper<LiteratureProvenanceDO> provQ = new LambdaQueryWrapper<>();
-        provQ.select(LiteratureProvenanceDO::getId)
-                .eq(LiteratureProvenanceDO::getCode, provenanceCode);
-        LiteratureProvenanceDO prov = provenanceMapper.selectOne(provQ);
+        LambdaQueryWrapper<ProvenanceDO> provQ = new LambdaQueryWrapper<>();
+        provQ.select(ProvenanceDO::getId)
+                .eq(ProvenanceDO::getCode, provenanceCode);
+        ProvenanceDO prov = provenanceMapper.selectOne(provQ);
         if (prov == null) {
             return List.of();
         }
         // 根据 provenanceId 查询 capability DO 列表
         LambdaQueryWrapper<SourceQueryCapabilityDO> capQ = new LambdaQueryWrapper<>();
-        capQ.eq(SourceQueryCapabilityDO::getLiteratureProvenanceId, prov.getId());
+        capQ.eq(SourceQueryCapabilityDO::getProvenanceId, prov.getId());
         List<SourceQueryCapabilityDO> dos = capabilityMapper.selectList(capQ);
         return capabilityConverter.toViewList(dos, provenanceCode);
     }
@@ -72,25 +72,25 @@ public class LiteratureProvenanceQueryPortImpl implements LiteratureProvenanceQu
     @Override
     public List<ApiParamMappingView> getApiParamMappingsByProvenanceCode(ProvenanceCode provenanceCode) {
     // 查 provenanceId
-    var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<LiteratureProvenanceDO>()
-        .select(LiteratureProvenanceDO::getId)
-        .eq(LiteratureProvenanceDO::getCode, provenanceCode));
+    var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<ProvenanceDO>()
+        .select(ProvenanceDO::getId)
+        .eq(ProvenanceDO::getCode, provenanceCode));
     if (prov == null) return java.util.List.of();
     var list = apiParamMappingMapper.selectList(new LambdaQueryWrapper<SourceApiParamMappingDO>()
-        .eq(SourceApiParamMappingDO::getLiteratureProvenanceId, prov.getId()));
+        .eq(SourceApiParamMappingDO::getProvenanceId, prov.getId()));
         return list.stream().map(apiParamMappingConverter::mapApiParam).toList();
     }
 
     @Override
     public List<ApiParamMappingView> getApiParamMappingsByProvenanceCodeAndOperation(ProvenanceCode provenanceCode, String operation) {
         // 根据 code → id
-        var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<LiteratureProvenanceDO>()
-                .select(LiteratureProvenanceDO::getId)
-                .eq(LiteratureProvenanceDO::getCode, provenanceCode));
+        var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<ProvenanceDO>()
+                .select(ProvenanceDO::getId)
+                .eq(ProvenanceDO::getCode, provenanceCode));
         if (prov == null) return java.util.List.of();
         // 直接在 DB 端按 operation 过滤，避免全量入内存
         var list = apiParamMappingMapper.selectList(new LambdaQueryWrapper<SourceApiParamMappingDO>()
-                .eq(SourceApiParamMappingDO::getLiteratureProvenanceId, prov.getId())
+                .eq(SourceApiParamMappingDO::getProvenanceId, prov.getId())
                 .eq(SourceApiParamMappingDO::getOperation, operation));
         return list.stream().map(apiParamMappingConverter::mapApiParam).toList();
     }
@@ -98,12 +98,12 @@ public class LiteratureProvenanceQueryPortImpl implements LiteratureProvenanceQu
     @Override
     public List<QueryRenderRuleView> getQueryRenderRulesByProvenanceCode(ProvenanceCode provenanceCode) {
     // 查 provenanceId
-    var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<LiteratureProvenanceDO>()
-        .select(LiteratureProvenanceDO::getId)
-        .eq(LiteratureProvenanceDO::getCode, provenanceCode));
+    var prov = provenanceMapper.selectOne(new LambdaQueryWrapper<ProvenanceDO>()
+        .select(ProvenanceDO::getId)
+        .eq(ProvenanceDO::getCode, provenanceCode));
     if (prov == null) return java.util.List.of();
     var list = queryRenderRuleMapper.selectList(new LambdaQueryWrapper<SourceQueryRenderRuleDO>()
-        .eq(SourceQueryRenderRuleDO::getLiteratureProvenanceId, prov.getId()));
+        .eq(SourceQueryRenderRuleDO::getProvenanceId, prov.getId()));
     return queryRenderRuleConverter.toViewList(list);
     }
 }

@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
  * 文献数据源幂等性守卫
  */
 @RequiredArgsConstructor
-public class LiteratureProvenanceIdempotencyGuard {
+public class ProvenanceIdempotencyGuard {
     
     /**
      * 检查创建操作的幂等性

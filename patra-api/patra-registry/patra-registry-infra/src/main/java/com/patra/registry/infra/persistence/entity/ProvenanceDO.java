@@ -14,9 +14,9 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-@TableName(value = "reg_literature_provenance")
+@TableName(value = "reg_provenance")
 @EqualsAndHashCode(callSuper = true)
-public class LiteratureProvenanceDO extends BaseDO {
+public class ProvenanceDO extends BaseDO {
     
     /**
      * 数据源名称;pubmed/epmc/openalex/crossref

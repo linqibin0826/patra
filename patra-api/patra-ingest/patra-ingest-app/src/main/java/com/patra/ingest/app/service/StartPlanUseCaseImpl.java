@@ -95,8 +95,7 @@ public class StartPlanUseCaseImpl implements StartPlanUseCase {
                 provenanceCode,
                 toJson(cfg),
                 exprProtoHash,
-                exprProtoSnapshot
-        );
+                exprProtoSnapshot);
         sched = scheduleInstanceRepository.save(sched);
 
         // 3) plan 聚合（MVP：TIME 策略，窗口由 CursorSpec since/until 推导）
@@ -122,8 +121,7 @@ public class StartPlanUseCaseImpl implements StartPlanUseCase {
                 windowTo,
                 SliceStrategy.TIME,
                 toJson(sliceParams),
-                ingestOperationType
-        );
+                ingestOperationType);
         plan.ready();
         plan = planRepository.save(plan);
 
@@ -138,10 +136,10 @@ public class StartPlanUseCaseImpl implements StartPlanUseCase {
                 cfg,
                 command,
                 plan.getId(),
-                ctx.getProvenanceZone()
-        );
+                ctx.getProvenanceZone());
 
-        // 5) 落库 PlanSlice + Task（幂等键 = SHA256(sliceSignature + exprHash + operation + trigger + normalized(params))）
+        // 5) 落库 PlanSlice + Task（幂等键 = SHA256(sliceSignature + exprHash + operation +
+        // trigger + normalized(params))）
         for (var d : drafts) {
             PlanSlice slice = PlanSlice.builder()
                     .planId(plan.getId())
@@ -165,7 +163,8 @@ public class StartPlanUseCaseImpl implements StartPlanUseCase {
                     .build();
 
             String normalizedParams = toJson(taskParams);
-            String idempotentKey = sha256(slice.getSliceSignatureHash() + "|" + slice.getExprHash() + "|" + ingestOperationType.toCode() + "|manual|" + normalizedParams);
+            String idempotentKey = sha256(slice.getSliceSignatureHash() + "|" + slice.getExprHash() + "|"
+                    + ingestOperationType.toCode() + "|manual|" + normalizedParams);
 
             Task task = Task.create(
                     sched.getId(),
@@ -177,14 +176,12 @@ public class StartPlanUseCaseImpl implements StartPlanUseCase {
                     idempotentKey,
                     slice.getExprHash(),
                     5,
-                    null
-            );
+                    null);
             taskRepository.save(task);
         }
 
         return plan.getId();
     }
-
 
     private ProvenanceConfigSnapshot retrieveProvenanceConfiguration(ProvenanceCode provenanceCode) {
         // Retrieve configuration from Registry service

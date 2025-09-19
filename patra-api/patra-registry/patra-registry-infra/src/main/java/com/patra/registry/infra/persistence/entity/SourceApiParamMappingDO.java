@@ -21,9 +21,9 @@ public class SourceApiParamMappingDO extends BaseDO {
 
     
     /**
-     * 逻辑外键→reg_literature_provenance.id
+     * 逻辑外键→reg_provenance.id
      */
-    private Long literatureProvenanceId;
+    private Long ProvenanceId;
     
     /**
      * 操作名：search/fetch/lookup…

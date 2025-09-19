@@ -28,7 +28,7 @@ import java.util.Map;
  *
  * @author linqibin
  * @since 0.1.0
- * @see LiteratureProvenance#replaceConfig(LiteratureProvenanceConfig, String)
+ * @see Provenance#replaceConfig(LiteratureProvenanceConfig, String)
  */
 @Value
 @Builder
@@ -42,7 +42,7 @@ public class LiteratureProvenanceConfig {
     /**
      * 所属文献数据源ID
      */
-    Long literatureProvenanceId;
+    Long ProvenanceId;
 
     /**
      * 数据源代码（业务键）

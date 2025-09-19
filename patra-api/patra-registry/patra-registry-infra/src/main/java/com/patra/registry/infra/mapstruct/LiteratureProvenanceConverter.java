@@ -1,7 +1,7 @@
 package com.patra.registry.infra.mapstruct;
 
 import com.patra.registry.contract.query.view.ProvenanceSummaryView;
-import com.patra.registry.infra.persistence.entity.LiteratureProvenanceDO;
+import com.patra.registry.infra.persistence.entity.ProvenanceDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -17,5 +17,5 @@ public interface LiteratureProvenanceConverter {
      * DO 转换为文献数据源概要信息视图
      */
     @Mapping(target = "code", expression = "java(literatureProvenanceDO.getCode().getCode())")
-    ProvenanceSummaryView toSummary(LiteratureProvenanceDO literatureProvenanceDO);
+    ProvenanceSummaryView toSummary(ProvenanceDO provenanceDO);
 }

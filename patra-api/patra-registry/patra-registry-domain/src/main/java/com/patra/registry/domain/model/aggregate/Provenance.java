@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @ToString
 @EqualsAndHashCode(of = "id")
 @Builder(toBuilder = true)
-public class LiteratureProvenance {
+public class Provenance {
 
     /**
      * 聚合根ID（技术键）
@@ -98,17 +98,17 @@ public class LiteratureProvenance {
     /**
      * 工厂：创建有效的新聚合，并登记“已创建”事件。
      */
-    public static LiteratureProvenance create(Long id,
-                                              ProvenanceCode code,
-                                              String name,
-                                              LiteratureProvenanceConfig config,
-                                              QueryCapability capability,
-                                              List<ApiParamMapping> mappings,
-                                              List<QueryRenderRule> rules,
-                                              String operator) {
+    public static Provenance create(Long id,
+                                    ProvenanceCode code,
+                                    String name,
+                                    LiteratureProvenanceConfig config,
+                                    QueryCapability capability,
+                                    List<ApiParamMapping> mappings,
+                                    List<QueryRenderRule> rules,
+                                    String operator) {
         Assert.notNull(code, "code is required");
         Assert.isFalse(StrUtil.isBlank(name), "name is blank");
-        LiteratureProvenance agg = LiteratureProvenance.builder()
+        Provenance agg = Provenance.builder()
                 .id(id)
                 .code(code)
                 .name(StrUtil.trim(name))

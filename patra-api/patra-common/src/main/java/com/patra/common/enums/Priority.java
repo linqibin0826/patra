@@ -1,5 +1,7 @@
 package com.patra.common.enums;
 
 public enum Priority {
-    LOW, NORMAL, HIGH
+    LOWEST, LOWER, LOW,
+    NORMAL,
+    HIGH, HIGHER, HIGHEST
 }

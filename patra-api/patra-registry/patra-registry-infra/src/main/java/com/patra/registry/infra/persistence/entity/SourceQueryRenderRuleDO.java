@@ -23,9 +23,9 @@ import lombok.experimental.SuperBuilder;
 public class SourceQueryRenderRuleDO extends BaseDO {
     
     /**
-     * 逻辑外键→reg_literature_provenance.id
+     * 逻辑外键→reg_provenance.id
      */
-    private Long literatureProvenanceId;
+    private Long ProvenanceId;
     
     /**
      * 内部字段键，如 ti/ab/tiab/la/pt/dp/owner

@@ -14,14 +14,14 @@ import lombok.experimental.SuperBuilder;
 @Data
 @SuperBuilder
 @NoArgsConstructor
-@TableName(value = "reg_literature_provenance_config", autoResultMap = true)
+@TableName(value = "reg_provenance_config", autoResultMap = true)
 @EqualsAndHashCode(callSuper = true)
 public class LiteratureProvenanceConfigDO extends BaseDO {
 
     /**
-     * 逻辑外键→reg_literature_provenance.id
+     * 逻辑外键→reg_provenance.id
      */
-    private Long literatureProvenanceId;
+    private Long ProvenanceId;
     
     /**
      * 窗口计算/展示的时区;写库仍用UTC
