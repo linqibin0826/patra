@@ -14,6 +14,7 @@ import com.patra.registry.contract.query.view.DictionaryItemQuery;
 import com.patra.registry.contract.query.view.DictionaryTypeQuery;
 import com.patra.registry.contract.query.view.DictionaryValidationQuery;
 import com.patra.registry.domain.model.vo.DictionaryReference;
+import com.patra.registry.domain.exception.DictionaryNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -63,9 +64,8 @@ public class DictionaryClientImpl implements DictionaryClient {
             Optional<DictionaryItemQuery> result = dictionaryQueryAppService.findItemByTypeAndCode(typeCode, itemCode);
 
             if (result.isEmpty()) {
-                log.info("API: Dictionary item not found, returning null for 404: typeCode={}, itemCode={}",
-                        typeCode, itemCode);
-                return null; // Return null for 404 handling by Feign
+                log.info("API: Dictionary item not found: typeCode={}, itemCode={}", typeCode, itemCode);
+                throw new DictionaryNotFoundException(typeCode, itemCode);
             }
 
             log.info("API: Successfully returned dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
@@ -115,7 +115,7 @@ public class DictionaryClientImpl implements DictionaryClient {
 
             if (result.isEmpty()) {
                 log.info("API: No default dictionary item found for type: typeCode={}", typeCode);
-                return null; // Return null for consistent handling
+                throw new DictionaryNotFoundException(typeCode);
             }
 
             log.info("API: Successfully returned default dictionary item for type: typeCode={}, itemCode={}",
@@ -177,7 +177,9 @@ public class DictionaryClientImpl implements DictionaryClient {
             if (result.isEmpty()) {
                 log.info("API: Dictionary item not found by alias: sourceSystem={}, externalCode={}",
                         sourceSystem, externalCode);
-                return null; // Return null for consistent handling
+                throw new DictionaryNotFoundException(
+                        String.format("Dictionary item not found by alias: sourceSystem=%s, externalCode=%s",
+                                sourceSystem, externalCode), null, null);
             }
 
             log.info("API: Successfully returned dictionary item by alias: sourceSystem={}, externalCode={}, itemCode={}",

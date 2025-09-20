@@ -17,13 +17,6 @@
 ### 基础Web服务
 ```xml
 <dependencies>
-    <!-- 核心错误处理 -->
-    <dependency>
-        <groupId>com.patra</groupId>
-        <artifactId>patra-spring-boot-starter-core</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-    </dependency>
-    
     <!-- Web错误处理 -->
     <dependency>
         <groupId>com.patra</groupId>

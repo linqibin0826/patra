@@ -53,8 +53,7 @@ public class ErrorResolutionService {
     /** 错误指标采集器 */
     private final ErrorMetrics errorMetrics;
     
-    /** 按异常类型缓存解析结果的本地缓存 */
-    private final ConcurrentHashMap<Class<?>, ErrorResolution> resolutionCache = new ConcurrentHashMap<>();
+    // 移除按异常类型的类级缓存，避免同类不同实例（不同错误码/语义）被误复用
     
     /**
      * 构造函数。
@@ -89,23 +88,10 @@ public class ErrorResolutionService {
             return createFallbackResolution();
         }
         
-        // 先查本地缓存以提升性能
+        // 直接解析（不使用类级缓存，避免错误码被误复用）
         Class<?> exceptionClass = exception.getClass();
-        ErrorResolution cached = resolutionCache.get(exceptionClass);
-        boolean cacheHit = cached != null;
-        
-        ErrorResolution resolution;
-        if (cacheHit) {
-            log.debug("Cache hit for exception class: {}", exceptionClass.getSimpleName());
-            resolution = cached;
-        } else {
-            // 结合因果链回溯进行解析
-            resolution = resolveWithCauseChain(exception, 0);
-            
-            // 将解析结果写入缓存
-            resolutionCache.put(exceptionClass, resolution);
-            log.debug("Cached resolution for {} -> {}", exceptionClass.getSimpleName(), resolution);
-        }
+        boolean cacheHit = false;
+        ErrorResolution resolution = resolveWithCauseChain(exception, 0);
         
         // 记录指标
         long resolutionTime = System.currentTimeMillis() - startTime;
@@ -285,8 +271,13 @@ public class ErrorResolutionService {
      */
     private boolean isClientError(Throwable exception) {
         String className = exception.getClass().getSimpleName().toLowerCase();
-        return className.contains("validation") || 
-               className.contains("illegal") || 
+        // 扩充常见校验/客户端错误的关键词覆盖，降低误判为 5xx 的概率
+        return className.contains("validation") ||
+               className.contains("notvalid") ||
+               className.contains("bind") ||
+               className.contains("constraint") ||
+               className.contains("missing") ||
+               className.contains("illegal") ||
                className.contains("invalid") ||
                className.contains("bad") ||
                className.contains("malformed");
