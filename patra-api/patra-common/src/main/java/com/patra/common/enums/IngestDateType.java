@@ -1,9 +1,9 @@
 package com.patra.common.enums;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 文献数据常见日期类型（用于区分不同日期字段，如 PubMed 中的 PDAT/EDAT/MHDA）。
@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  */
 @Getter
 @RequiredArgsConstructor
-public enum IngestDateType implements CodeEnum<String> {
+public enum IngestDateType {
 
     PDAT("PDAT", "Publication Date", "The official publication date of the article"),
     EDAT("EDAT", "Entrez Date", "The date when the article was entered into PubMed"),

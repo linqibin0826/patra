@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.patra.registry.infra.persistence.entity.RegSysDictTypeDO;
+import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

@@ -3,9 +3,9 @@ package com.patra.registry.infra.mapstruct;
 import com.patra.registry.domain.model.vo.DictionaryAlias;
 import com.patra.registry.domain.model.vo.DictionaryItem;
 import com.patra.registry.domain.model.vo.DictionaryType;
-import com.patra.registry.infra.persistence.entity.RegSysDictItemAliasDO;
-import com.patra.registry.infra.persistence.entity.RegSysDictItemDO;
-import com.patra.registry.infra.persistence.entity.RegSysDictTypeDO;
+import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemAliasDO;
+import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemDO;
+import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -31,7 +31,7 @@ public interface DictionaryEntityConverter {
     /**
      * 将字典类型实体转换为领域对象。
      *
-     * @see com.patra.registry.infra.persistence.entity.RegSysDictTypeDO
+     * @see com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO
      * @see com.patra.registry.domain.model.vo.DictionaryType
      */
     DictionaryType toDomain(RegSysDictTypeDO entity);
@@ -39,7 +39,7 @@ public interface DictionaryEntityConverter {
     /**
      * 将字典项实体转换为领域对象。
      *
-     * @see com.patra.registry.infra.persistence.entity.RegSysDictItemDO
+     * @see RegSysDictItemDO
      * @see com.patra.registry.domain.model.vo.DictionaryItem
      */
     @Mapping(target = "displayName", source = "itemName")
@@ -49,7 +49,7 @@ public interface DictionaryEntityConverter {
     /**
      * 将字典别名实体转换为领域对象。
      *
-     * @see com.patra.registry.infra.persistence.entity.RegSysDictItemAliasDO
+     * @see RegSysDictItemAliasDO
      * @see com.patra.registry.domain.model.vo.DictionaryAlias
      */
     DictionaryAlias toDomain(RegSysDictItemAliasDO entity);

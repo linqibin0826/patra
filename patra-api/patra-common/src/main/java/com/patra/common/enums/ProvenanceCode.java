@@ -1,8 +1,8 @@
 package com.patra.common.enums;
 
-import lombok.Getter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
 
 /**
  * 上游数据来源枚举（Provenance）。
@@ -14,7 +14,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * @since 0.1.0
  */
 @Getter
-public enum ProvenanceCode implements CodeEnum<String> {
+public enum ProvenanceCode {
 
     PUBMED("pubmed", "PubMed"),
     PMC("pmc", "PubMed Central"),

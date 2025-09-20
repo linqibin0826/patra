@@ -1,4 +1,4 @@
-package com.patra.registry.infra.persistence.entity;
+package com.patra.registry.infra.persistence.entity.dictionary;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;

@@ -1,0 +1,65 @@
+package com.patra.registry.app.mapping;
+
+import com.patra.registry.contract.query.view.provenance.BatchingConfigQuery;
+import com.patra.registry.contract.query.view.provenance.CredentialQuery;
+import com.patra.registry.contract.query.view.provenance.EndpointDefinitionQuery;
+import com.patra.registry.contract.query.view.provenance.HttpConfigQuery;
+import com.patra.registry.contract.query.view.provenance.PaginationConfigQuery;
+import com.patra.registry.contract.query.view.provenance.ProvenanceConfigQuery;
+import com.patra.registry.contract.query.view.provenance.ProvenanceQuery;
+import com.patra.registry.contract.query.view.provenance.RateLimitConfigQuery;
+import com.patra.registry.contract.query.view.provenance.RetryConfigQuery;
+import com.patra.registry.contract.query.view.provenance.WindowOffsetQuery;
+import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
+import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
+import com.patra.registry.domain.model.vo.provenance.Credential;
+import com.patra.registry.domain.model.vo.provenance.EndpointDefinition;
+import com.patra.registry.domain.model.vo.provenance.HttpConfig;
+import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
+import com.patra.registry.domain.model.vo.provenance.Provenance;
+import com.patra.registry.domain.model.vo.provenance.RateLimitConfig;
+import com.patra.registry.domain.model.vo.provenance.RetryConfig;
+import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
+
+import java.util.List;
+
+/**
+ * Provenance 领域对象 -> 契约 Query 的转换器。
+ */
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+public interface ProvenanceQueryAssembler {
+
+    ProvenanceQuery toQuery(Provenance provenance);
+
+    EndpointDefinitionQuery toQuery(EndpointDefinition endpoint);
+
+    WindowOffsetQuery toQuery(WindowOffsetConfig config);
+
+    PaginationConfigQuery toQuery(PaginationConfig config);
+
+    HttpConfigQuery toQuery(HttpConfig config);
+
+    BatchingConfigQuery toQuery(BatchingConfig config);
+
+    RetryConfigQuery toQuery(RetryConfig config);
+
+    RateLimitConfigQuery toQuery(RateLimitConfig config);
+
+    CredentialQuery toQuery(Credential credential);
+
+    List<CredentialQuery> toCredentialQueries(List<Credential> credentials);
+
+    @Mapping(target = "provenance", source = "provenance")
+    @Mapping(target = "endpoint", source = "endpoint")
+    @Mapping(target = "windowOffset", source = "windowOffset")
+    @Mapping(target = "pagination", source = "pagination")
+    @Mapping(target = "http", source = "http")
+    @Mapping(target = "batching", source = "batching")
+    @Mapping(target = "retry", source = "retry")
+    @Mapping(target = "rateLimit", source = "rateLimit")
+    @Mapping(target = "credentials", source = "credentials")
+    ProvenanceConfigQuery toQuery(ProvenanceConfiguration configuration);
+}
