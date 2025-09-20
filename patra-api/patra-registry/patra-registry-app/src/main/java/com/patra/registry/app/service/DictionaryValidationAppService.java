@@ -8,6 +8,7 @@ import com.patra.registry.domain.model.vo.DictionaryItem;
 import com.patra.registry.domain.model.vo.DictionaryReference;
 import com.patra.registry.domain.model.vo.ValidationResult;
 import com.patra.registry.domain.port.DictionaryRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +25,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class DictionaryValidationAppService {
 
     /** Dictionary repository for data access */
@@ -31,19 +33,6 @@ public class DictionaryValidationAppService {
 
     /** Converter for domain to Query object mapping */
     private final DictionaryValidationConverter dictionaryValidationConverter;
-
-    /**
-     * Constructs a new DictionaryValidationAppService with required dependencies.
-     *
-     * @param dictionaryRepository the repository for dictionary data access
-     * @param dictionaryValidationConverter the converter for domain to query object mapping
-     */
-    public DictionaryValidationAppService(
-            DictionaryRepository dictionaryRepository,
-            DictionaryValidationConverter dictionaryValidationConverter) {
-        this.dictionaryRepository = dictionaryRepository;
-        this.dictionaryValidationConverter = dictionaryValidationConverter;
-    }
 
     /** 校验单个字典引用（存在、启用、未删除），返回详细结果。 */
     public DictionaryValidationQuery validateReference(String typeCode, String itemCode) {
