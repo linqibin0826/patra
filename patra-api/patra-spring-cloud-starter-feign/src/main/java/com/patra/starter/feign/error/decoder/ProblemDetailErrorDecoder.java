@@ -15,18 +15,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
 /**
- * Feign error decoder that converts remote service error responses into RemoteCallException instances.
- * Supports RFC 7807 ProblemDetail responses with fallback handling for non-standard responses.
- * 
- * Features:
- * - Automatic ProblemDetail parsing and conversion
- * - Tolerant mode for graceful handling of malformed responses
- * - Trace ID extraction from response headers
- * - Configurable response body size limits
- * - Fallback to standard FeignException when appropriate
- * 
+ * 将下游服务错误响应解码为 {@link com.patra.starter.feign.error.exception.RemoteCallException} 的 Feign 错误解码器。
+ *
+ * <p>支持符合 RFC 7807 的 {@link org.springframework.http.ProblemDetail} 响应；
+ * 对非标准/畸形响应在“宽容模式”下进行优雅兜底；必要时退回 {@link feign.FeignException}。
+ *
+ * <p>特性：
+ * - 自动解析 {@link ProblemDetail} 并转换为领域内统一异常
+ * - 宽容模式（tolerant）保障异常/非 JSON/空体的健壮处理
+ * - 从响应头提取 TraceId，便于调用链路关联
+ * - 受配置限制的响应体读取大小，避免内存风险
+ * - 全程打点 {@link com.patra.starter.feign.error.metrics.FeignErrorMetrics}
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.feign.error.config.FeignErrorProperties 配置项
+ * @see com.patra.starter.feign.error.metrics.FeignErrorMetrics 指标采集
+ * @see feign.codec.ErrorDecoder Feign 解码 SPI
  */
 @Slf4j
 public class ProblemDetailErrorDecoder implements ErrorDecoder {
@@ -36,11 +41,11 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     private final FeignErrorMetrics feignErrorMetrics;
     
     /**
-     * Constructs a new ProblemDetailErrorDecoder with the specified configuration.
-     * 
-     * @param objectMapper the Jackson ObjectMapper for JSON parsing
-     * @param properties the Feign error handling configuration
-     * @param feignErrorMetrics the metrics collector for Feign error handling
+     * 构造函数。
+     *
+     * @param objectMapper Jackson 的 JSON 解析器
+     * @param properties Feign 错误处理配置
+     * @param feignErrorMetrics Feign 错误处理指标采集器
      */
     public ProblemDetailErrorDecoder(ObjectMapper objectMapper, FeignErrorProperties properties, 
                                    FeignErrorMetrics feignErrorMetrics) {
@@ -50,26 +55,26 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
     
     /**
-     * Decodes a Feign error response into an appropriate exception.
-     * 
-     * @param methodKey the Feign method key that triggered this error
-     * @param response the error response from the remote service
-     * @return an exception representing the error condition
+     * 将 Feign 错误响应解码为合适的异常对象。
+     *
+     * @param methodKey 触发本次调用的 Feign 方法键
+     * @param response 下游服务返回的错误响应
+     * @return 代表错误语义的异常实例
      */
     @Override
     public Exception decode(String methodKey, Response response) {
-        log.debug("Decoding error response for method: {}, status: {}", methodKey, response.status());
+        log.debug("Decoding remote error response: method={}, status={}", methodKey, response.status());
         
         boolean decodingSuccess = false;
         boolean tolerantModeUsed = false;
         
         try {
-            // Check content type and record metrics
+            // Detect content type and record metrics
             String contentType = getContentType(response);
             boolean isProblemDetail = isProblemDetailResponse(response);
             feignErrorMetrics.recordContentTypeDetection(methodKey, contentType, isProblemDetail);
             
-            // Try to parse as ProblemDetail first
+            // Try ProblemDetail parsing first
             if (isProblemDetail) {
                 long parseStartTime = System.currentTimeMillis();
                 ProblemDetail problemDetail = parseProblemDetailSafely(response);
@@ -79,10 +84,10 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
                 feignErrorMetrics.recordProblemDetailParsing(methodKey, response.status(), parseSuccess, parseTime);
                 
                 if (parseSuccess) {
-                    log.debug("Successfully parsed ProblemDetail for method: {}", methodKey);
+                    log.debug("Parsed ProblemDetail successfully: method={}", methodKey);
                     decodingSuccess = true;
                     
-                    // Record trace ID extraction
+                    // Record trace id extraction
                     String traceId = extractTraceId(response);
                     feignErrorMetrics.recordTraceIdExtraction(methodKey, traceId != null, 
                                                             traceId != null ? "response_header" : null);
@@ -91,18 +96,18 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
                 }
             }
             
-            // Handle non-ProblemDetail responses based on tolerant mode
+            // Non-ProblemDetail response: handle based on tolerant/strict mode
             if (properties.isTolerant()) {
                 tolerantModeUsed = true;
                 decodingSuccess = true;
                 return handleTolerantMode(methodKey, response);
             } else {
-                log.debug("Strict mode: falling back to FeignException for method: {}", methodKey);
+                log.debug("Strict mode: fallback to FeignException, method={}", methodKey);
                 return FeignException.errorStatus(methodKey, response);
             }
             
         } catch (Exception e) {
-            log.warn("Failed to decode error response for method: {}, error: {}", methodKey, e.getMessage());
+            log.warn("Failed to decode remote error response, method={}, error={}", methodKey, e.getMessage());
             
             if (properties.isTolerant()) {
                 tolerantModeUsed = true;
@@ -122,28 +127,26 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
                 return FeignException.errorStatus(methodKey, response);
             }
         } finally {
-            // Record overall decoding success metrics
+            // Record overall decoding success
             feignErrorMetrics.recordErrorDecodingSuccess(methodKey, response.status(), 
                                                        decodingSuccess, tolerantModeUsed);
         }
     }
     
     /**
-     * Handles error responses in tolerant mode, providing graceful fallbacks
-     * for various non-standard response conditions.
+     * 宽容模式下的兜底处理，针对多种非标准响应提供温和降级。
      */
     private RemoteCallException handleTolerantMode(String methodKey, Response response) {
         String traceId = extractTraceId(response);
         String message = buildFallbackMessage(response);
         
-        log.debug("Tolerant mode: creating RemoteCallException for method: {}, status: {}", 
-                 methodKey, response.status());
+        log.debug("Tolerant mode: creating RemoteCallException, method={}, status={}", methodKey, response.status());
         
         return new RemoteCallException(response.status(), message, methodKey, traceId);
     }
     
     /**
-     * Builds a fallback error message from the response.
+     * 从响应中构建兜底的错误消息。
      */
     private String buildFallbackMessage(Response response) {
         String reason = response.reason();
@@ -151,37 +154,37 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
             return reason;
         }
         
-        // Try to read a small portion of the response body for context
+        // Read a small portion of body for context
         try {
             String body = readResponseBodySafely(response);
             if (body != null && !body.trim().isEmpty()) {
-                // Truncate long bodies for readability
+                // Truncate long body for readability
                 if (body.length() > 200) {
                     body = body.substring(0, 200) + "...";
                 }
                 return "HTTP " + response.status() + ": " + body;
             }
         } catch (Exception e) {
-            log.debug("Failed to read response body for fallback message: {}", e.getMessage());
+                log.debug("Failed to read response body for fallback message: {}", e.getMessage());
         }
         
         return "HTTP " + response.status();
     }
     
     /**
-     * Safely parses a ProblemDetail from the response body.
-     * Returns null if parsing fails or body is empty/invalid.
+     * 安全地从响应体解析 {@link ProblemDetail}。
+     * 若解析失败或响应体为空/非法，返回 {@code null}。
      */
     private ProblemDetail parseProblemDetailSafely(Response response) {
         try {
             String body = readResponseBodySafely(response);
             if (body == null || body.trim().isEmpty()) {
-                log.debug("Empty response body, cannot parse ProblemDetail");
+            log.debug("Empty response body; cannot parse ProblemDetail");
                 return null;
             }
             
             ProblemDetail problemDetail = objectMapper.readValue(body, ProblemDetail.class);
-            log.debug("Successfully parsed ProblemDetail with status: {}", problemDetail.getStatus());
+            log.debug("Successfully parsed ProblemDetail with status={}", problemDetail.getStatus());
             return problemDetail;
             
         } catch (Exception e) {
@@ -191,7 +194,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
     
     /**
-     * Safely reads the response body with size limits and error handling.
+     * 在大小限制与错误处理保护下安全读取响应体。
      */
     private String readResponseBodySafely(Response response) throws IOException {
         if (response.body() == null) {
@@ -200,7 +203,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
         
         long readStartTime = System.currentTimeMillis();
         
-        // Read with size limit to prevent memory issues
+        // Read with configured max bytes to avoid memory risk
         byte[] bodyBytes = response.body().asInputStream().readNBytes(properties.getMaxErrorBodySize());
         String body = new String(bodyBytes, StandardCharsets.UTF_8);
         
@@ -214,8 +217,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
     
     /**
-     * Checks if the response appears to be a ProblemDetail response
-     * based on the Content-Type header.
+     * Determine if response is ProblemDetail by Content-Type.
      */
     private boolean isProblemDetailResponse(Response response) {
         String contentType = getContentType(response);
@@ -223,7 +225,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
     
     /**
-     * Gets the content type from response headers.
+     * Get Content-Type from response headers.
      */
     private String getContentType(Response response) {
         Collection<String> contentTypes = response.headers().get("content-type");
@@ -239,10 +241,10 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     }
     
     /**
-     * Extracts trace ID from common response headers for correlation.
+     * Extract TraceId from common response headers for correlation.
      */
     private String extractTraceId(Response response) {
-        // Try common trace headers in order of preference
+        // Try common trace headers in order
         String[] traceHeaders = {"traceId", "X-B3-TraceId", "traceparent", "X-Trace-Id"};
         
         for (String header : traceHeaders) {
@@ -250,13 +252,13 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
             if (values != null && !values.isEmpty()) {
                 String traceId = values.iterator().next();
                 if (traceId != null && !traceId.trim().isEmpty()) {
-                    log.debug("Extracted trace ID from header {}: {}", header, traceId);
+                    log.debug("Extracted TraceId from header {}: {}", header, traceId);
                     return traceId.trim();
                 }
             }
         }
         
-        log.debug("No trace ID found in response headers");
+        log.debug("No TraceId found in response headers");
         return null;
     }
 }

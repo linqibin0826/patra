@@ -23,9 +23,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Auto-configuration for core error handling infrastructure.
- * Provides default implementations for all SPI interfaces with conditional beans.
- * 
+ * 核心错误处理自动装配。
+ *
+ * <p>为各 SPI 提供条件化的默认实现，包括：状态映射、Trace 提供者、指标采集、
+ * 熔断保护的映射贡献者，以及错误解析服务等。
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -36,10 +38,9 @@ import java.util.stream.Collectors;
 public class CoreErrorAutoConfiguration {
     
     /**
-     * Default status mapping strategy using suffix heuristics.
-     * Only created if no custom implementation is provided.
-     * 
-     * @return suffix heuristic status mapping strategy
+     * 默认的基于后缀启发式的状态映射策略（缺省实现）。
+     *
+     * @return 状态映射策略实例
      */
     @Bean
     @ConditionalOnMissingBean
@@ -49,11 +50,10 @@ public class CoreErrorAutoConfiguration {
     }
     
     /**
-     * Default trace provider using header-based extraction from MDC.
-     * Only created if no custom implementation is provided.
-     * 
-     * @param tracingProperties tracing configuration properties
-     * @return header-based trace provider
+     * 默认的基于请求头名从 MDC 提取 TraceId 的提供者（缺省实现）。
+     *
+     * @param tracingProperties 追踪配置
+     * @return Trace 提供者实例
      */
     @Bean
     @ConditionalOnMissingBean
@@ -64,10 +64,9 @@ public class CoreErrorAutoConfiguration {
     }
     
     /**
-     * Default error metrics implementation for collecting error handling statistics.
-     * Only created if no custom implementation is provided.
-     * 
-     * @return default error metrics implementation
+     * 默认的错误指标实现（若用户未自定义则注入）。
+     *
+     * @return 指标实现
      */
     @Bean
     @ConditionalOnMissingBean
@@ -78,12 +77,11 @@ public class CoreErrorAutoConfiguration {
     }
     
     /**
-     * Circuit breaker-protected error mapping contributors.
-     * Wraps each contributor with circuit breaker protection when enabled.
-     * 
-     * @param errorProperties error configuration properties
-     * @param originalContributors list of original ErrorMappingContributor beans
-     * @return list of circuit breaker protected contributors
+     * 带熔断保护的错误映射贡献者集合（按需包装）。
+     *
+     * @param errorProperties 错误处理配置
+     * @param originalContributors 原始贡献者集合
+     * @return 包装后的贡献者集合
      */
     @Bean
     @ConditionalOnProperty(prefix = "patra.error.monitoring.circuit-breaker", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -113,14 +111,13 @@ public class CoreErrorAutoConfiguration {
     }
     
     /**
-     * Error resolution service that orchestrates the error resolution algorithm.
-     * Uses all available ErrorMappingContributor beans for fine-grained mappings.
-     * 
-     * @param errorProperties error configuration properties
-     * @param statusMappingStrategy status mapping strategy
-     * @param mappingContributors list of all ErrorMappingContributor beans (potentially circuit breaker protected)
-     * @param errorMetrics error metrics collector
-     * @return error resolution service
+     * 错误解析服务，负责编排错误解析算法。
+     *
+     * @param errorProperties 错误处理配置
+     * @param statusMappingStrategy 状态映射策略
+     * @param mappingContributors 错误映射贡献者集合（可能包含熔断包装）
+     * @param errorMetrics 指标采集器
+     * @return 错误解析服务实例
      */
     @Bean
     public ErrorResolutionService errorResolutionService(

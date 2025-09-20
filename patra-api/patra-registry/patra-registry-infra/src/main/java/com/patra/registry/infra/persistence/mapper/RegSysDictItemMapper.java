@@ -10,25 +10,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * MyBatis-Plus mapper for dictionary item read operations.
- * Provides data access methods for sys_dict_item table in the CQRS query pipeline.
- * All methods are read-only and optimized for dictionary query performance.
- * Uses v_sys_dict_item_enabled view for optimized enabled item queries.
- * 
+ * 字典项读取 Mapper（MyBatis-Plus）。
+ *
+ * <p>服务于 CQRS 查询侧，仅包含只读操作，面向表 sys_dict_item；
+ * 包含针对启用项的优化查询。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 @Mapper
 public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
 
-    /**
-     * Find dictionary item by type code and item code using optimized view.
-     * Uses v_sys_dict_item_enabled view for performance optimization.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code, must not be null
-     * @return Optional containing the dictionary item if found, enabled, and not deleted, empty otherwise
-     */
+    /** 按类型编码与项编码查询启用且未删除的字典项。 */
     @Select("""
             SELECT di.* FROM sys_dict_item di
             JOIN sys_dict_type dt ON dt.id = di.type_id
@@ -41,13 +34,7 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
     Optional<RegSysDictItemDO> selectByTypeAndItemCode(@Param("typeCode") String typeCode, 
                                                        @Param("itemCode") String itemCode);
 
-    /**
-     * Find all enabled dictionary items for a specific type.
-     * Returns items sorted by display_order ascending, then by item_code ascending.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @return List of enabled dictionary items for the specified type, properly sorted
-     */
+    /** 查询某类型下所有启用项（排序：display_order、item_code）。 */
     @Select("""
             SELECT di.* FROM sys_dict_item di
             JOIN sys_dict_type dt ON dt.id = di.type_id
@@ -59,13 +46,7 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
             """)
     List<RegSysDictItemDO> selectEnabledByTypeCode(@Param("typeCode") String typeCode);
 
-    /**
-     * Find the default dictionary item for a specific type.
-     * Uses the is_default flag and business constraints to locate the default item.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @return Optional containing the default dictionary item if exists, empty otherwise
-     */
+    /** 查询某类型默认项（is_default=1 且启用且未删除）。 */
     @Select("""
             SELECT di.* FROM sys_dict_item di
             JOIN sys_dict_type dt ON dt.id = di.type_id
@@ -78,13 +59,7 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
             """)
     Optional<RegSysDictItemDO> selectDefaultByTypeCode(@Param("typeCode") String typeCode);
 
-    /**
-     * Find dictionary items by type ID for internal operations.
-     * Used when type ID is already known to avoid additional joins.
-     * 
-     * @param typeId the dictionary type ID, must not be null
-     * @return List of enabled dictionary items for the specified type ID
-     */
+    /** 根据类型 ID 查询启用项（内部使用）。 */
     @Select("""
             SELECT * FROM sys_dict_item 
             WHERE type_id = #{typeId}
@@ -94,13 +69,7 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
             """)
     List<RegSysDictItemDO> selectEnabledByTypeId(@Param("typeId") Long typeId);
 
-    /**
-     * Count enabled items for a specific dictionary type.
-     * Used for system health monitoring and metadata operations.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @return count of enabled items for the specified type
-     */
+    /** 统计某类型启用项数量（健康/统计）。 */
     @Select("""
             SELECT COUNT(*) FROM sys_dict_item di
             JOIN sys_dict_type dt ON dt.id = di.type_id
@@ -111,12 +80,7 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
             """)
     int countEnabledByTypeCode(@Param("typeCode") String typeCode);
 
-    /**
-     * Find types with multiple default items (data integrity check).
-     * Used for system health monitoring to detect constraint violations.
-     * 
-     * @return List of type codes that have more than one default item
-     */
+    /** 查询存在多个默认项的类型（数据完整性检查）。 */
     @Select("""
             SELECT dt.type_code FROM sys_dict_item di
             JOIN sys_dict_type dt ON dt.id = di.type_id
@@ -129,12 +93,7 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
             """)
     List<String> selectTypesWithMultipleDefaults();
 
-    /**
-     * Find types without any default items.
-     * Used for system health monitoring to identify configuration gaps.
-     * 
-     * @return List of type codes that have no default items
-     */
+    /** 查询没有默认项的类型（配置缺失检查）。 */
     @Select("""
             SELECT dt.type_code FROM sys_dict_type dt
             LEFT JOIN sys_dict_item di ON dt.id = di.type_id 
@@ -146,21 +105,11 @@ public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
             """)
     List<String> selectTypesWithoutDefaults();
 
-    /**
-     * Count total enabled dictionary items across all types.
-     * Used for system health monitoring and statistics.
-     * 
-     * @return total count of enabled dictionary items
-     */
+    /** 统计全局启用项总数（健康/统计）。 */
     @Select("SELECT COUNT(*) FROM sys_dict_item WHERE enabled = 1 AND deleted = 0")
     int countTotalEnabled();
 
-    /**
-     * Count total dictionary items (including disabled) across all types.
-     * Used for system health monitoring and statistics.
-     * 
-     * @return total count of all dictionary items (excluding deleted)
-     */
+    /** 统计全局项总数（含禁用，排除删除）。 */
     @Select("SELECT COUNT(*) FROM sys_dict_item WHERE deleted = 0")
     int countTotal();
 }

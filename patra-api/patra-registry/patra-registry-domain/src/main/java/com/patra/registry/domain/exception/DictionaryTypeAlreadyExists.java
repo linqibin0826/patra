@@ -1,23 +1,23 @@
 package com.patra.registry.domain.exception;
 
 /**
- * Domain exception thrown when attempting to create a dictionary type that already exists.
- * This exception indicates that the specified dictionary type code is already
- * in use and cannot be created again due to uniqueness constraints.
- * 
+ * 当尝试创建已存在的字典类型时抛出。
+ *
+ * <p>表示给定类型编码已被使用，因唯一性约束无法再次创建。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryTypeAlreadyExists extends RegistryConflict {
     
-    /** The dictionary type code that already exists */
+    /** 已存在的字典类型编码 */
     private final String typeCode;
     
     /**
-     * Constructs a new dictionary type already exists exception for the specified type code.
-     * 
-     * @param typeCode the dictionary type code that already exists, must not be null
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 使用类型编码构造异常。
+     *
+     * @param typeCode 已存在的类型编码
+     * @throws IllegalArgumentException 当编码为空
      */
     public DictionaryTypeAlreadyExists(String typeCode) {
         super(String.format("Dictionary type already exists: %s", typeCode));
@@ -28,11 +28,7 @@ public class DictionaryTypeAlreadyExists extends RegistryConflict {
     }
     
     /**
-     * Constructs a new dictionary type already exists exception with a custom message.
-     * 
-     * @param typeCode the dictionary type code that already exists, must not be null
-     * @param message the detail message explaining the conflict
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 自定义消息构造异常。
      */
     public DictionaryTypeAlreadyExists(String typeCode, String message) {
         super(message);
@@ -43,12 +39,7 @@ public class DictionaryTypeAlreadyExists extends RegistryConflict {
     }
     
     /**
-     * Constructs a new dictionary type already exists exception with a custom message and cause.
-     * 
-     * @param typeCode the dictionary type code that already exists, must not be null
-     * @param message the detail message explaining the conflict
-     * @param cause the cause of this exception
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 自定义消息与原因构造异常。
      */
     public DictionaryTypeAlreadyExists(String typeCode, String message, Throwable cause) {
         super(message, cause);
@@ -58,11 +49,7 @@ public class DictionaryTypeAlreadyExists extends RegistryConflict {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Returns the dictionary type code that already exists.
-     * 
-     * @return the type code, never null or empty
-     */
+    /** 返回已存在的类型编码。 */
     public String getTypeCode() {
         return typeCode;
     }

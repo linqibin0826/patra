@@ -14,11 +14,10 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * MapStruct converter for dictionary entity to domain object mapping.
- * Handles conversion between database entities and domain objects in the CQRS read pipeline.
- * This converter is used exclusively for read operations and maintains clean boundaries
- * between infrastructure and domain layers.
- * 
+ * MapStruct 转换器：实体 -> 领域对象（查询侧）。
+ *
+ * <p>用于 CQRS 查询管线，将数据库实体转换为领域对象；仅用于读操作，确保基础设施层与领域层边界清晰。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -30,61 +29,49 @@ import java.util.List;
 public interface DictionaryEntityConverter {
 
     /**
-     * Convert dictionary type entity to domain object.
-     * Maps database entity fields to domain object properties with appropriate transformations.
-     * Handles null-safe conversion of Boolean wrapper types to primitive boolean.
-     * 
-     * @param entity the dictionary type entity from database, must not be null
-     * @return domain object representing the dictionary type
+     * 将字典类型实体转换为领域对象。
+     *
+     * @see com.patra.registry.infra.persistence.entity.RegSysDictTypeDO
+     * @see com.patra.registry.domain.model.vo.DictionaryType
      */
     DictionaryType toDomain(RegSysDictTypeDO entity);
 
     /**
-     * Convert dictionary item entity to domain object.
-     * Maps database entity fields to domain object properties with appropriate transformations.
-     * Handles null-safe conversion of Boolean wrapper types to primitive boolean.
-     * 
-     * @param entity the dictionary item entity from database, must not be null
-     * @return domain object representing the dictionary item
+     * 将字典项实体转换为领域对象。
+     *
+     * @see com.patra.registry.infra.persistence.entity.RegSysDictItemDO
+     * @see com.patra.registry.domain.model.vo.DictionaryItem
      */
     @Mapping(target = "displayName", source = "itemName")
     @Mapping(target = "sortOrder", source = "displayOrder")
     DictionaryItem toDomain(RegSysDictItemDO entity);
 
     /**
-     * Convert dictionary alias entity to domain object.
-     * Maps database entity fields to domain object properties with appropriate transformations.
-     * Handles null-safe conversion and provides empty string defaults for optional fields.
-     * 
-     * @param entity the dictionary alias entity from database, must not be null
-     * @return domain object representing the dictionary alias
+     * 将字典别名实体转换为领域对象。
+     *
+     * @see com.patra.registry.infra.persistence.entity.RegSysDictItemAliasDO
+     * @see com.patra.registry.domain.model.vo.DictionaryAlias
      */
     DictionaryAlias toDomain(RegSysDictItemAliasDO entity);
 
     /**
-     * Convert list of dictionary type entities to domain objects.
-     * Provides batch conversion for efficient processing of multiple entities.
-     * 
-     * @param entities list of dictionary type entities from database, must not be null
-     * @return list of domain objects representing dictionary types
+     * 批量：类型实体 -> 领域对象。
+     *
+     * @see #toDomain(RegSysDictTypeDO)
      */
     List<DictionaryType> toDomainList(List<RegSysDictTypeDO> entities);
 
     /**
-     * Convert list of dictionary item entities to domain objects.
-     * Provides batch conversion for efficient processing of multiple entities.
-     * 
-     * @param entities list of dictionary item entities from database, must not be null
-     * @return list of domain objects representing dictionary items
+     * 批量：项实体 -> 领域对象。
+     *
+     * @see #toDomain(RegSysDictItemDO)
      */
     List<DictionaryItem> toItemDomainList(List<RegSysDictItemDO> entities);
 
     /**
-     * Convert list of dictionary alias entities to domain objects.
-     * Provides batch conversion for efficient processing of multiple entities.
-     * 
-     * @param entities list of dictionary alias entities from database, must not be null
-     * @return list of domain objects representing dictionary aliases
+     * 批量：别名实体 -> 领域对象。
+     *
+     * @see #toDomain(RegSysDictItemAliasDO)
      */
     List<DictionaryAlias> toAliasDomainList(List<RegSysDictItemAliasDO> entities);
 }

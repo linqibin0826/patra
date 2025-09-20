@@ -1,13 +1,13 @@
 package com.patra.starter.web.error.model;
 
 /**
- * Represents a validation error with field information and masked sensitive data.
- * Used in ProblemDetail responses to provide detailed validation error information.
- * 
- * @param field the field name that failed validation, must not be null
- * @param rejectedValue the rejected value (may be masked for sensitive fields), can be null
- * @param message the validation error message, must not be null
- * 
+ * 表示单条校验错误（包含字段名、值与消息；敏感值已脱敏）。
+ * 用于 ProblemDetail 的扩展字段，便于前端精确提示。
+ *
+ * @param field 出错字段名
+ * @param rejectedValue 被拒绝的值（可能已脱敏）
+ * @param message 错误消息
+ *
  * @author linqibin
  * @since 0.1.0
  */

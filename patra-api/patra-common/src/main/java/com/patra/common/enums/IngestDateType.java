@@ -6,25 +6,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Enumeration of date types (DateType) used to distinguish between different
- * kinds of date fields in literature databases such as PubMed.
+ * 文献数据常见日期类型（用于区分不同日期字段，如 PubMed 中的 PDAT/EDAT/MHDA）。
  *
- * <p>This enum reflects the metadata fields defined in PubMed:
+ * <p>示例含义：
  * <ul>
- *   <li><b>PDAT (Publication Date)</b>: The official publication date of the article,
- *   often used as a filter in search queries (e.g., "publication date [PDAT]").</li>
- *   <li><b>EDAT (Entrez Date)</b>: The date when the article was entered into
- *   the PubMed database, useful for tracking ingestion time.</li>
- *   <li><b>MHDA (MeSH Date)</b>: The date when MeSH (Medical Subject Headings)
- *   indexing was assigned to the article, indicating completion of subject annotation.</li>
+ *   <li><b>PDAT</b>（Publication Date）：论文正式发表日期，常用于检索过滤。</li>
+ *   <li><b>EDAT</b>（Entrez Date）：论文被收录至数据库的日期，反映抓取/入库时间。</li>
+ *   <li><b>MHDA</b>（MeSH Date）：论文被分配 MeSH 主题词的日期，表示主题标注完成。</li>
  * </ul>
  *
- * <p>References:
- * <ul>
- *   <li>NCBI PubMed Help, "Search Field Descriptions and Tags",
- *   <a href="https://www.ncbi.nlm.nih.gov/books/NBK3827/#pubmedhelp.Search_Field_Descriptions_and">link</a></li>
- *   <li>US National Library of Medicine, PubMed Data Element (Field) Descriptions.</li>
- * </ul>
+ * <p>引用：PubMed 帮助文档等。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -37,28 +28,17 @@ public enum IngestDateType implements CodeEnum<String> {
     EDAT("EDAT", "Entrez Date", "The date when the article was entered into PubMed"),
     MHDA("MHDA", "MeSH Date", "The date when MeSH indexing was assigned to the article");
 
-    /**
-     * The code used in PubMed to identify this date type (e.g., "PDAT").
-     */
+    /** PubMed 中用于标识该日期类型的代码（如 "PDAT"）。 */
     private final String code;
 
-    /**
-     * The short name of the date type (e.g., "Publication Date").
-     */
+    /** 日期类型短名称（例如 “Publication Date”）。 */
     private final String name;
 
-    /**
-     * A detailed description of the meaning of this date type.
-     */
+    /** 该日期类型的详细说明。 */
     private final String description;
 
     /**
-     * Factory method for creating a DateType from a code string.
-     * This method is annotated with @JsonCreator to support JSON deserialization.
-     *
-     * @param code the string code (case-insensitive) representing the date type
-     * @return the corresponding DateType enum
-     * @throws IllegalArgumentException if the code does not match any DateType
+     * 工厂方法：由字符串 code 创建枚举（@JsonCreator）。
      */
     @JsonCreator
     public static IngestDateType fromCode(String code) {
@@ -71,10 +51,7 @@ public enum IngestDateType implements CodeEnum<String> {
     }
 
     /**
-     * Returns the code of this DateType for JSON serialization.
-     * This method is annotated with @JsonValue.
-     *
-     * @return the string code of this DateType
+     * JSON 序列化输出 code（@JsonValue）。
      */
     @JsonValue
     public String toCode() {

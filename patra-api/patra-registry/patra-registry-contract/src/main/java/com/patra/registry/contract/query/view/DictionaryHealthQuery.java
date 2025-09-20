@@ -4,16 +4,15 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Dictionary health status query object for system monitoring.
- * Shared between app module and contract module for health information.
- * This immutable query object represents comprehensive health metrics about the dictionary system,
- * used for monitoring, diagnostics, and health check endpoints.
- * 
- * @param totalTypes total number of dictionary types in the system
- * @param totalItems total number of dictionary items across all types
- * @param enabledItems number of enabled dictionary items available for use
- * @param typesWithoutDefault list of type codes that do not have any default items (potential issue)
- * @param typesWithMultipleDefaults list of type codes that have multiple default items (data integrity issue)
+ * 字典系统健康状态查询对象（用于监控）。
+ *
+ * <p>在 app 与 contract 模块间共享；不可变，承载字典系统的健康指标，用于监控/诊断/健康检查。</p>
+ *
+ * @param totalTypes 字典类型总数
+ * @param totalItems 字典项总数
+ * @param enabledItems 启用项总数
+ * @param typesWithoutDefault 无默认项的类型编码列表（潜在问题）
+ * @param typesWithMultipleDefaults 存在多个默认项的类型编码列表（数据完整性问题）
  * @author linqibin
  * @since 0.1.0
  */
@@ -25,16 +24,7 @@ public record DictionaryHealthQuery(
     List<String> typesWithMultipleDefaults
 ) {
     
-    /**
-     * Creates a new DictionaryHealthQuery with validation and immutable collections.
-     * 
-     * @param totalTypes total number of dictionary types in the system
-     * @param totalItems total number of dictionary items across all types
-     * @param enabledItems number of enabled dictionary items available for use
-     * @param typesWithoutDefault list of type codes that do not have default items
-     * @param typesWithMultipleDefaults list of type codes that have multiple default items
-     * @throws IllegalArgumentException if any count is negative
-     */
+    /** 校验参数并不可变化集合的紧凑构造器。 */
     public DictionaryHealthQuery {
         if (totalTypes < 0) {
             throw new IllegalArgumentException("Total types count cannot be negative");
@@ -55,14 +45,7 @@ public record DictionaryHealthQuery(
             Collections.emptyList();
     }
     
-    /**
-     * Creates a healthy dictionary status with no issues.
-     * 
-     * @param totalTypes total number of dictionary types
-     * @param totalItems total number of dictionary items
-     * @param enabledItems number of enabled dictionary items
-     * @return a DictionaryHealthQuery indicating a healthy system
-     */
+    /** 创建无问题的健康状态。 */
     public static DictionaryHealthQuery healthy(int totalTypes, int totalItems, int enabledItems) {
         return new DictionaryHealthQuery(
             totalTypes, 
@@ -73,48 +56,27 @@ public record DictionaryHealthQuery(
         );
     }
     
-    /**
-     * Checks if the dictionary system is in a healthy state.
-     * A system is considered healthy if there are no integrity issues.
-     * 
-     * @return true if no integrity issues are detected, false otherwise
-     */
+    /** 是否健康（无完整性问题即为健康）。 */
     public boolean isHealthy() {
         return typesWithoutDefault.isEmpty() && typesWithMultipleDefaults.isEmpty();
     }
     
-    /**
-     * Checks if there are any data integrity issues.
-     * 
-     * @return true if integrity issues are detected, false otherwise
-     */
+    /** 是否存在数据完整性问题。 */
     public boolean hasIntegrityIssues() {
         return !isHealthy();
     }
     
-    /**
-     * Gets the number of dictionary types with integrity issues.
-     * 
-     * @return count of types that have either no default or multiple defaults
-     */
+    /** 存在问题的类型数量（无默认或多默认）。 */
     public int getTypesWithIssuesCount() {
         return typesWithoutDefault.size() + typesWithMultipleDefaults.size();
     }
     
-    /**
-     * Gets the number of disabled items (total items minus enabled items).
-     * 
-     * @return count of items that are disabled
-     */
+    /** 禁用项数量（totalItems - enabledItems）。 */
     public int getDisabledItems() {
         return Math.max(0, totalItems - enabledItems);
     }
     
-    /**
-     * Gets the percentage of enabled items out of total items.
-     * 
-     * @return percentage of enabled items (0.0 to 100.0), or 0.0 if no items exist
-     */
+    /** 启用项占比（0.0~100.0；无数据返回 0.0）。 */
     public double getEnabledItemsPercentage() {
         if (totalItems == 0) {
             return 0.0;
@@ -122,29 +84,17 @@ public record DictionaryHealthQuery(
         return (double) enabledItems / totalItems * 100.0;
     }
     
-    /**
-     * Checks if there are any types without default items.
-     * 
-     * @return true if some types are missing default items, false otherwise
-     */
+    /** 是否存在无默认项的类型。 */
     public boolean hasTypesWithoutDefaults() {
         return !typesWithoutDefault.isEmpty();
     }
     
-    /**
-     * Checks if there are any types with multiple default items.
-     * 
-     * @return true if some types have multiple default items, false otherwise
-     */
+    /** 是否存在多个默认项的类型。 */
     public boolean hasTypesWithMultipleDefaults() {
         return !typesWithMultipleDefaults.isEmpty();
     }
     
-    /**
-     * Gets a summary description of the health status.
-     * 
-     * @return a human-readable summary of the dictionary system health
-     */
+    /** 获取健康状态摘要。 */
     public String getHealthSummary() {
         if (isHealthy()) {
             return String.format("Healthy: %d types, %d items (%d enabled)", 
@@ -155,11 +105,7 @@ public record DictionaryHealthQuery(
         }
     }
     
-    /**
-     * Gets all types with integrity issues (both without defaults and with multiple defaults).
-     * 
-     * @return a list of all type codes that have integrity issues
-     */
+    /** 获取存在完整性问题的所有类型（含无默认与多默认）。 */
     public List<String> getAllTypesWithIssues() {
         if (typesWithoutDefault.isEmpty() && typesWithMultipleDefaults.isEmpty()) {
             return Collections.emptyList();

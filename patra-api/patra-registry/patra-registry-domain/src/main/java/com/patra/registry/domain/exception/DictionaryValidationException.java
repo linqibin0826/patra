@@ -3,30 +3,26 @@ package com.patra.registry.domain.exception;
 import java.util.List;
 
 /**
- * Domain exception thrown when dictionary validation fails due to business rule violations.
- * This exception indicates that dictionary data or references violate domain constraints
- * such as disabled items, missing defaults, or invalid references.
- * 
+ * 字典校验因违反业务规则而失败时抛出。
+ *
+ * <p>表示字典数据或引用违反了领域约束（如项被禁用、缺失默认项、无效引用等）。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryValidationException extends RegistryRuleViolation {
     
-    /** The dictionary type code associated with this exception, if applicable */
+    /** 关联的字典类型编码（如适用） */
     private final String typeCode;
     
-    /** The dictionary item code associated with this exception, if applicable */
+    /** 关联的字典项编码（如适用） */
     private final String itemCode;
     
-    /** List of validation error messages providing detailed failure information */
+    /** 详细校验错误消息列表 */
     private final List<String> validationErrors;
     
     /**
-     * Constructs a new dictionary validation exception with a single validation error.
-     * 
-     * @param message the validation error message
-     * @param typeCode the dictionary type code associated with the validation failure
-     * @param itemCode the dictionary item code associated with the validation failure
+     * 单条错误消息构造异常。
      */
     public DictionaryValidationException(String message, String typeCode, String itemCode) {
         super(message);
@@ -36,10 +32,7 @@ public class DictionaryValidationException extends RegistryRuleViolation {
     }
     
     /**
-     * Constructs a new dictionary validation exception with multiple validation errors.
-     * 
-     * @param validationErrors list of validation error messages
-     * @param typeCode the dictionary type code associated with the validation failures
+     * 多条错误消息构造异常。
      */
     public DictionaryValidationException(List<String> validationErrors, String typeCode) {
         super(String.format("Dictionary validation failed for type %s: %s", 
@@ -50,12 +43,7 @@ public class DictionaryValidationException extends RegistryRuleViolation {
     }
     
     /**
-     * Constructs a new dictionary validation exception with multiple validation errors and custom message.
-     * 
-     * @param message the main validation error message
-     * @param validationErrors list of detailed validation error messages
-     * @param typeCode the dictionary type code associated with the validation failures
-     * @param itemCode the dictionary item code associated with the validation failures
+     * 多条错误消息 + 自定义主消息构造异常。
      */
     public DictionaryValidationException(String message, List<String> validationErrors, 
                                        String typeCode, String itemCode) {
@@ -65,29 +53,17 @@ public class DictionaryValidationException extends RegistryRuleViolation {
         this.validationErrors = validationErrors != null ? List.copyOf(validationErrors) : List.of();
     }
     
-    /**
-     * Gets the dictionary type code associated with this exception.
-     * 
-     * @return the type code, or null if not applicable
-     */
+    /** 获取类型编码（如有）。 */
     public String getTypeCode() {
         return typeCode;
     }
     
-    /**
-     * Gets the dictionary item code associated with this exception.
-     * 
-     * @return the item code, or null if not applicable
-     */
+    /** 获取项编码（如有）。 */
     public String getItemCode() {
         return itemCode;
     }
     
-    /**
-     * Gets the list of validation error messages.
-     * 
-     * @return immutable list of validation error messages
-     */
+    /** 获取校验错误消息列表（不可变）。 */
     public List<String> getValidationErrors() {
         return validationErrors;
     }

@@ -9,10 +9,10 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct converter for domain to contract Query object mapping.
- * Handles conversion between domain value objects and contract query objects
- * for dictionary items and types in CQRS read operations.
- * 
+ * MapStruct 转换器：领域对象 -> 契约层 Query 对象。
+ *
+ * <p>用于 CQRS 查询侧，将领域 VO 转换为对外 Query 对象（字典项/类型）。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -23,13 +23,9 @@ import org.mapstruct.ReportingPolicy;
 public interface DictionaryQueryConverter {
     
     /**
-     * Converts a domain DictionaryItem to a contract DictionaryItemQuery.
-     * Maps all relevant fields from the domain object to the query object,
-     * excluding internal fields like 'deleted' that are not needed in query responses.
-     * 
-     * @param domainItem the domain dictionary item to convert
-     * @param typeCode the type code to include in the query object
-     * @return the converted DictionaryItemQuery object
+     * 领域 DictionaryItem -> 契约 DictionaryItemQuery。
+     *
+     * <p>排除内部字段（如 deleted）。</p>
      */
     @Mapping(target = "typeCode", source = "typeCode")
     @Mapping(target = "itemCode", source = "domainItem.itemCode")
@@ -41,13 +37,7 @@ public interface DictionaryQueryConverter {
     DictionaryItemQuery toQuery(DictionaryItem domainItem, String typeCode);
     
     /**
-     * Converts a domain DictionaryType to a contract DictionaryTypeQuery.
-     * Maps the type metadata and includes additional computed fields like item counts.
-     * 
-     * @param domainType the domain dictionary type to convert
-     * @param enabledItemCount the number of enabled items in this type
-     * @param hasDefault whether this type has a default item
-     * @return the converted DictionaryTypeQuery object
+     * 领域 DictionaryType -> 契约 DictionaryTypeQuery（含计算字段）。
      */
     @Mapping(target = "typeCode", source = "domainType.typeCode")
     @Mapping(target = "typeName", source = "domainType.typeName")

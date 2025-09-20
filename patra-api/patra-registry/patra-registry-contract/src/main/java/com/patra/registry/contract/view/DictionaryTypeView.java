@@ -1,15 +1,14 @@
 package com.patra.registry.contract.view;
 
 /**
- * Dictionary type view object for external subsystem consumption.
- * Used in contract module for clean API boundaries and external system integration.
- * This immutable view object provides a simplified representation of dictionary types
- * optimized for external consumption without internal implementation details.
- * 
- * @param typeCode unique dictionary type code identifier
- * @param typeName human-readable type name for display purposes
- * @param description detailed type description explaining purpose and usage
- * @param itemCount number of available items in this type (enabled items only)
+ * 字典类型视图对象（对外消费）。
+ *
+ * <p>位于 contract 模块，作为清晰 API 边界；不可变表示，面向外部消费。</p>
+ *
+ * @param typeCode 类型编码
+ * @param typeName 类型名称
+ * @param description 类型描述
+ * @param itemCount 可用项数量（仅启用项）
  * @author linqibin
  * @since 0.1.0
  */
@@ -20,15 +19,7 @@ public record DictionaryTypeView(
     int itemCount
 ) {
     
-    /**
-     * Creates a new DictionaryTypeView with validation.
-     * 
-     * @param typeCode unique dictionary type code identifier
-     * @param typeName human-readable type name for display purposes
-     * @param description detailed type description explaining purpose and usage
-     * @param itemCount number of available items in this type
-     * @throws IllegalArgumentException if typeCode or typeName is null or empty, or if itemCount is negative
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryTypeView {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -46,39 +37,22 @@ public record DictionaryTypeView(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Checks if this dictionary type has any items available.
-     * 
-     * @return true if there are items in this type, false otherwise
-     */
+    /** 是否含有可用项。 */
     public boolean hasItems() {
         return itemCount > 0;
     }
     
-    /**
-     * Checks if this dictionary type has a meaningful description.
-     * 
-     * @return true if description is not null and not empty, false otherwise
-     */
+    /** 是否包含有效描述。 */
     public boolean hasDescription() {
         return description != null && !description.trim().isEmpty();
     }
     
-    /**
-     * Gets a display-friendly label combining the type code and type name.
-     * Useful for dropdown lists and selection components in external systems.
-     * 
-     * @return a string in the format "typeCode - typeName"
-     */
+    /** 获取显示标签（typeCode - typeName），便于外部下拉/选择组件。 */
     public String getDisplayLabel() {
         return typeCode + " - " + typeName;
     }
     
-    /**
-     * Gets a summary description of this dictionary type including item count.
-     * 
-     * @return a human-readable summary including type name and item count
-     */
+    /** 获取类型摘要（含项数）。 */
     public String getSummary() {
         if (itemCount == 0) {
             return typeName + " (no items)";
@@ -89,22 +63,12 @@ public record DictionaryTypeView(
         }
     }
     
-    /**
-     * Creates a simplified view with only essential fields for basic display.
-     * Useful when only basic information is needed for external system integration.
-     * 
-     * @return a new DictionaryTypeView with empty description
-     */
+    /** 创建简化视图（清空描述）。 */
     public DictionaryTypeView toSimplifiedView() {
         return new DictionaryTypeView(typeCode, typeName, "", itemCount);
     }
     
-    /**
-     * Checks if this dictionary type is suitable for use in external systems.
-     * A type is suitable if it has a meaningful name and at least one item.
-     * 
-     * @return true if the type is suitable for external use, false otherwise
-     */
+    /** 是否适合外部使用（有名称且至少一个项）。 */
     public boolean isSuitableForExternalUse() {
         return hasItems() && typeName != null && !typeName.trim().isEmpty();
     }

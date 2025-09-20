@@ -1,28 +1,22 @@
 package com.patra.registry.domain.exception;
 
 /**
- * Domain exception thrown when attempting to use a disabled dictionary item.
- * This exception indicates that the requested dictionary item exists but is
- * currently disabled and cannot be used in business operations.
- * 
+ * 当尝试使用被禁用的字典项时抛出。
+ *
+ * <p>表示该项存在，但当前处于禁用状态，无法参与业务操作。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryItemDisabled extends RegistryRuleViolation {
     
-    /** The dictionary type code */
+    /** 字典类型编码 */
     private final String typeCode;
     
-    /** The dictionary item code that is disabled */
+    /** 被禁用的字典项编码 */
     private final String itemCode;
     
-    /**
-     * Constructs a new dictionary item disabled exception.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code that is disabled, must not be null
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 使用类型编码与项编码构造异常。 */
     public DictionaryItemDisabled(String typeCode, String itemCode) {
         super(String.format("Dictionary item is disabled: typeCode=%s, itemCode=%s", typeCode, itemCode));
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -35,14 +29,7 @@ public class DictionaryItemDisabled extends RegistryRuleViolation {
         this.itemCode = itemCode;
     }
     
-    /**
-     * Constructs a new dictionary item disabled exception with a custom message.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code that is disabled, must not be null
-     * @param message the detail message explaining the rule violation
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 自定义消息构造异常。 */
     public DictionaryItemDisabled(String typeCode, String itemCode, String message) {
         super(message);
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -55,15 +42,7 @@ public class DictionaryItemDisabled extends RegistryRuleViolation {
         this.itemCode = itemCode;
     }
     
-    /**
-     * Constructs a new dictionary item disabled exception with a custom message and cause.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code that is disabled, must not be null
-     * @param message the detail message explaining the rule violation
-     * @param cause the cause of this exception
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 自定义消息与原因构造异常。 */
     public DictionaryItemDisabled(String typeCode, String itemCode, String message, Throwable cause) {
         super(message, cause);
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -76,20 +55,12 @@ public class DictionaryItemDisabled extends RegistryRuleViolation {
         this.itemCode = itemCode;
     }
     
-    /**
-     * Returns the dictionary type code.
-     * 
-     * @return the type code, never null or empty
-     */
+    /** 返回类型编码。 */
     public String getTypeCode() {
         return typeCode;
     }
     
-    /**
-     * Returns the dictionary item code that is disabled.
-     * 
-     * @return the item code, never null or empty
-     */
+    /** 返回被禁用的项编码。 */
     public String getItemCode() {
         return itemCode;
     }

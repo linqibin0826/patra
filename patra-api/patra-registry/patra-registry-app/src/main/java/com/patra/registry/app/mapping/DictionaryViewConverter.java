@@ -11,10 +11,10 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * MapStruct converter for contract Query to View object mapping.
- * Handles conversion between contract query objects and view objects
- * for external API consumption, excluding internal system fields.
- * 
+ * MapStruct 转换器：契约 Query 对象 -> View 对象。
+ *
+ * <p>用于对外 API 展示，排除内部系统字段。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -24,13 +24,7 @@ import java.util.List;
 )
 public interface DictionaryViewConverter {
     
-    /**
-     * Converts a contract DictionaryItemQuery to a DictionaryItemView.
-     * Maps fields suitable for external consumption, excluding internal status fields.
-     * 
-     * @param query the dictionary item query to convert
-     * @return the converted DictionaryItemView object for external consumption
-     */
+    /** 将 DictionaryItemQuery 转为对外展示的 DictionaryItemView。 */
     @Mapping(target = "typeCode", source = "typeCode")
     @Mapping(target = "itemCode", source = "itemCode")
     @Mapping(target = "displayName", source = "displayName")
@@ -39,24 +33,13 @@ public interface DictionaryViewConverter {
     @Mapping(target = "sortOrder", source = "sortOrder")
     DictionaryItemView toView(DictionaryItemQuery query);
 
-    /**
-     * Converts a contract DictionaryTypeQuery to a DictionaryTypeView.
-     * Maps type metadata suitable for external consumption.
-     * 
-     * @param query the dictionary type query to convert
-     * @return the converted DictionaryTypeView object for external consumption
-     */
+    /** 将 DictionaryTypeQuery 转为对外展示的 DictionaryTypeView。 */
     @Mapping(target = "typeCode", source = "typeCode")
     @Mapping(target = "typeName", source = "typeName")
     @Mapping(target = "description", source = "description")
     @Mapping(target = "itemCount", source = "enabledItemCount")
     DictionaryTypeView toView(DictionaryTypeQuery query);
     
-    /**
-     * Converts a list of DictionaryTypeQuery objects to DictionaryTypeView objects.
-     * 
-     * @param queries the list of dictionary type queries to convert
-     * @return the converted list of DictionaryTypeView objects
-     */
+    /** 批量转换类型视图。 */
     List<DictionaryTypeView> toViews(List<DictionaryTypeQuery> queries);
 }

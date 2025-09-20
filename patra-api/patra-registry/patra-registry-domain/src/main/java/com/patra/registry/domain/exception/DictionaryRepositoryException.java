@@ -6,32 +6,26 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Repository exception thrown when dictionary repository operations fail.
- * This exception represents infrastructure-level errors such as database connectivity issues,
- * SQL execution failures, or data access problems that occur in the repository layer.
- * 
- * As part of the domain layer, this exception defines the contract for repository failures
- * without coupling to specific infrastructure implementations.
- * 
+ * 字典仓储操作失败时抛出的异常（领域层）。
+ *
+ * <p>代表基础设施层错误，例如数据库连接问题、SQL 执行失败、数据访问异常等；
+ * 在领域层定义仓储失败的契约，而不与具体基础设施实现耦合。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryRepositoryException extends RegistryException implements HasErrorTraits {
     
-    /** The operation that was being performed when the exception occurred */
+    /** 发生异常时执行的仓储操作名称 */
     private final String operation;
     
-    /** The dictionary type code associated with the failed operation, if applicable */
+    /** 与失败操作相关的字典类型编码（如适用） */
     private final String typeCode;
     
-    /** The dictionary item code associated with the failed operation, if applicable */
+    /** 与失败操作相关的字典项编码（如适用） */
     private final String itemCode;
     
-    /**
-     * Constructs a new dictionary repository exception with the specified detail message.
-     * 
-     * @param message the detail message explaining the repository failure
-     */
+    /** 构造函数（消息）。 */
     public DictionaryRepositoryException(String message) {
         super(message);
         this.operation = null;
@@ -39,12 +33,7 @@ public class DictionaryRepositoryException extends RegistryException implements 
         this.itemCode = null;
     }
     
-    /**
-     * Constructs a new dictionary repository exception with the specified detail message and cause.
-     * 
-     * @param message the detail message explaining the repository failure
-     * @param cause the underlying cause of the repository failure
-     */
+    /** 构造函数（消息 + 原因）。 */
     public DictionaryRepositoryException(String message, Throwable cause) {
         super(message, cause);
         this.operation = null;
@@ -52,13 +41,7 @@ public class DictionaryRepositoryException extends RegistryException implements 
         this.itemCode = null;
     }
     
-    /**
-     * Constructs a new dictionary repository exception with operation context.
-     * 
-     * @param message the detail message explaining the repository failure
-     * @param operation the repository operation that failed
-     * @param cause the underlying cause of the repository failure
-     */
+    /** 构造函数（消息 + 操作名 + 原因）。 */
     public DictionaryRepositoryException(String message, String operation, Throwable cause) {
         super(message, cause);
         this.operation = operation;
@@ -66,15 +49,7 @@ public class DictionaryRepositoryException extends RegistryException implements 
         this.itemCode = null;
     }
     
-    /**
-     * Constructs a new dictionary repository exception with full context.
-     * 
-     * @param message the detail message explaining the repository failure
-     * @param operation the repository operation that failed
-     * @param typeCode the dictionary type code associated with the failed operation
-     * @param itemCode the dictionary item code associated with the failed operation
-     * @param cause the underlying cause of the repository failure
-     */
+    /** 构造函数（完整上下文）。 */
     public DictionaryRepositoryException(String message, String operation, 
                                        String typeCode, String itemCode, Throwable cause) {
         super(message, cause);
@@ -83,39 +58,22 @@ public class DictionaryRepositoryException extends RegistryException implements 
         this.itemCode = itemCode;
     }
     
-    /**
-     * Gets the repository operation that failed.
-     * 
-     * @return the operation name, or null if not specified
-     */
+    /** 获取失败的仓储操作名称。 */
     public String getOperation() {
         return operation;
     }
     
-    /**
-     * Gets the dictionary type code associated with the failed operation.
-     * 
-     * @return the type code, or null if not applicable
-     */
+    /** 获取相关的字典类型编码（如有）。 */
     public String getTypeCode() {
         return typeCode;
     }
     
-    /**
-     * Gets the dictionary item code associated with the failed operation.
-     * 
-     * @return the item code, or null if not applicable
-     */
+    /** 获取相关的字典项编码（如有）。 */
     public String getItemCode() {
         return itemCode;
     }
     
-    /**
-     * Returns the error traits for repository exceptions.
-     * Repository exceptions are typically classified as dependency unavailable.
-     * 
-     * @return set containing the DEP_UNAVAILABLE error trait
-     */
+    /** 返回错误特征：仓储异常通常归类为 DEP_UNAVAILABLE。 */
     @Override
     public Set<ErrorTrait> getErrorTraits() {
         return Set.of(ErrorTrait.DEP_UNAVAILABLE);

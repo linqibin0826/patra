@@ -85,10 +85,10 @@ public class PatraMybatisAutoConfiguration {
     }
     
     /**
-     * Creates the data layer error mapping contributor for handling MyBatis-Plus and database exceptions.
-     * 
-     * @param errorProperties error configuration properties, must not be null
-     * @return data layer error mapping contributor instance, never null
+     * 注册数据层错误映射贡献者（处理 MyBatis-Plus 与数据库异常）。
+     *
+     * @param errorProperties 错误处理配置
+     * @return 贡献者实例
      */
     @Bean
     @ConditionalOnMissingBean

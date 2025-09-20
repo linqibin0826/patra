@@ -12,19 +12,21 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Default implementation of ValidationErrorsFormatter with sensitive data masking.
- * Masks common sensitive field patterns and applies size limits to prevent oversized responses.
- * 
+ * 默认的校验错误格式化器，带敏感字段脱敏与数量限制。
+ *
+ * <p>功能：对常见敏感字段进行掩码处理，并对错误条数施加上限，避免响应体过大。</p>
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.web.error.model.ValidationError
  */
 @Slf4j
 public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatter {
     
-    /** Maximum number of validation errors to include in response */
+    /** 响应中包含的校验错误上限 */
     private static final int MAX_ERRORS = 100;
     
-    /** Sensitive field patterns that should be masked */
+    /** 需要脱敏的字段名模式（忽略大小写，包含匹配） */
     private static final Set<String> SENSITIVE_PATTERNS = Set.of(
         "password", "token", "secret", "key", "credential", "auth", 
         "pin", "ssn", "credit", "card", "account"
@@ -48,10 +50,10 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
     }
     
     /**
-     * Maps ObjectError to ValidationError with sensitive data masking.
-     * 
-     * @param error the object error to map, must not be null
-     * @return validation error with masked sensitive data, never null
+     * 将 Spring 的 ObjectError 映射为 ValidationError（带脱敏）。
+     *
+     * @param error Spring 校验错误对象
+     * @return 转换后的校验错误
      */
     private ValidationError mapToValidationError(ObjectError error) {
         if (error instanceof FieldError fieldError) {
@@ -71,11 +73,11 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
     }
     
     /**
-     * Masks sensitive field values based on field name patterns.
-     * 
-     * @param fieldName the field name to check for sensitivity, can be null
-     * @param value the field value to potentially mask, can be null
-     * @return masked value if field is sensitive, original value otherwise
+     * 根据字段名模式对敏感值进行脱敏。
+     *
+     * @param fieldName 字段名
+     * @param value 字段值
+     * @return 脱敏后的值；非敏感则原样返回
      */
     private Object maskSensitiveValue(String fieldName, Object value) {
         if (fieldName == null || value == null) {

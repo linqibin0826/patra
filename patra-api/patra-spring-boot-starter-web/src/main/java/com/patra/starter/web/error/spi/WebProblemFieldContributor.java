@@ -4,20 +4,22 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
- * Web-specific SPI interface for contributing custom fields to ProblemDetail responses.
- * This interface provides access to HttpServletRequest for web-specific field extraction.
- * 
+ * Web 端为 {@link org.springframework.http.ProblemDetail} 提供扩展字段的 SPI 接口。
+ *
+ * <p>提供 {@link jakarta.servlet.http.HttpServletRequest}，便于提取与请求相关的上下文字段。</p>
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.web.error.builder.ProblemDetailBuilder
  */
 public interface WebProblemFieldContributor {
     
     /**
-     * Contributes custom fields to the ProblemDetail response with web context.
-     * 
-     * @param fields the mutable map of fields to add to, must not be null
-     * @param exception the exception being handled, must not be null
-     * @param request the HTTP servlet request providing web context, must not be null
+     * 贡献 ProblemDetail 扩展字段（包含 Web 上下文）。
+     *
+     * @param fields 可变字典
+     * @param exception 当前异常
+     * @param request HTTP 请求
      */
     void contribute(Map<String, Object> fields, Throwable exception, HttpServletRequest request);
 }

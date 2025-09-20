@@ -4,37 +4,41 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties for Feign error handling.
- * Provides configuration for error decoding behavior, tolerant mode,
- * and ProblemDetail response handling.
- * 
+ * Feign 错误处理配置项。
+ *
+ * <p>用于控制错误解码行为、宽容模式以及 {@link org.springframework.http.ProblemDetail}
+ * 响应的处理策略。
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder
+ * @see com.patra.starter.feign.error.config.FeignErrorAutoConfiguration
  */
 @Data
 @ConfigurationProperties(prefix = "patra.feign.problem")
 public class FeignErrorProperties {
     
-    /** Whether Feign error handling is enabled */
+    /** 是否启用 Feign 错误处理 */
     private boolean enabled = true;
     
-    /** 
-     * Whether to use tolerant mode for error decoding.
-     * In tolerant mode, the decoder gracefully handles:
-     * - 404 responses with empty bodies
-     * - Non-JSON responses
-     * - Malformed ProblemDetail responses
-     * When false, strict mode throws FeignException for non-ProblemDetail responses.
+    /**
+     * 是否启用宽容（tolerant）模式。
+     *
+     * <p>开启后，将优雅处理以下场景：
+     * - 404 且无响应体
+     * - 非 JSON 响应
+     * - 非法/畸形的 ProblemDetail
+     * 关闭则进入严格模式：非 ProblemDetail 直接回退为 {@link feign.FeignException}。
      */
     private boolean tolerant = true;
     
-    /** Maximum size of error response body to read (in bytes) */
+    /** 读取错误响应体的最大字节数 */
     private int maxErrorBodySize = 64 * 1024; // 64KB
     
-    /** Whether to include stack traces in error responses (for debugging) */
+    /** 是否在错误响应中包含堆栈信息（用于调试） */
     private boolean includeStackTrace = false;
     
-    /** Monitoring and observability configuration */
+    /** 监控与可观测性相关配置 */
     private MonitoringProperties monitoring = new MonitoringProperties();
     
     /**
@@ -42,28 +46,28 @@ public class FeignErrorProperties {
      */
     @Data
     public static class MonitoringProperties {
-        /** Whether monitoring is enabled */
+        /** 是否启用监控 */
         private boolean enabled = true;
         
-        /** Whether to log slow parsing operations */
+        /** 是否记录解析耗时过慢的日志 */
         private boolean logSlowParsing = true;
         
-        /** Threshold in milliseconds for slow parsing logging */
+        /** 解析慢日志阈值（毫秒） */
         private long slowParsingThresholdMs = 100;
         
-        /** Whether to log response body reading performance */
+        /** 是否记录响应体读取性能日志 */
         private boolean logResponseBodyReading = true;
         
-        /** Threshold in milliseconds for slow response body reading */
+        /** 响应体读取慢日志阈值（毫秒） */
         private long slowBodyReadingThresholdMs = 50;
         
-        /** Interval for decoding success rate logging (number of attempts) */
+        /** 解码成功率日志的记录间隔（按尝试次数） */
         private int decodingSuccessLogInterval = 10;
         
-        /** Interval for trace ID extraction rate logging (number of attempts) */
+        /** TraceId 提取成功率日志的记录间隔（按尝试次数） */
         private int traceIdExtractionLogInterval = 25;
         
-        /** Interval for content type distribution logging (number of responses) */
+        /** Content-Type 分布日志记录间隔（按响应条数） */
         private int contentTypeDistributionLogInterval = 50;
     }
 }

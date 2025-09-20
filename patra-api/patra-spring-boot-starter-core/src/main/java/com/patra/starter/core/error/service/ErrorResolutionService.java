@@ -16,40 +16,53 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service for resolving exceptions to error codes and HTTP status codes.
- * Implements the error resolution algorithm with cause chain traversal and class-level caching.
- * 
+ * 将异常解析为业务错误码与 HTTP 状态码的核心服务。
+ *
+ * <p>特性：
+ * - 支持异常因果链（cause chain）逐级回溯与最大深度限制
+ * - 基于异常类型的类级缓存，提升解析性能
+ * - 可插拔的 {@link com.patra.starter.core.error.spi.ErrorMappingContributor 映射贡献者} 扩展点
+ * - 结合 {@link com.patra.starter.core.error.spi.StatusMappingStrategy 状态映射策略} 与语义特征（traits）
+ * - 结合 {@link com.patra.starter.core.error.metrics.ErrorMetrics 指标采集} 进行观测
+ *
+ * <p>解析优先级：
+ * 1) {@link com.patra.common.error.ApplicationException}（优先级最高）
+ * 2) {@link com.patra.starter.core.error.spi.ErrorMappingContributor}
+ * 3) {@link com.patra.common.error.trait.HasErrorTraits}（基于语义特征）
+ * 4) 命名约定启发式
+ * 5) 兜底策略（区分客户端/服务端错误）
+ *
  * @author linqibin
  * @since 0.1.0
  */
 @Slf4j
 public class ErrorResolutionService {
     
-    /** Maximum depth for cause chain traversal to prevent infinite loops */
+    /** 因果链遍历的最大深度，避免极端情况下的无限循环 */
     private static final int MAX_CAUSE_DEPTH = 10;
     
-    /** Error handling configuration */
+    /** 错误处理配置 */
     private final ErrorProperties errorProperties;
     
-    /** Status mapping strategy */
+    /** 状态映射策略 */
     private final StatusMappingStrategy statusMappingStrategy;
     
-    /** List of error mapping contributors */
+    /** 错误映射贡献者列表 */
     private final List<ErrorMappingContributor> mappingContributors;
     
-    /** Error metrics collector */
+    /** 错误指标采集器 */
     private final ErrorMetrics errorMetrics;
     
-    /** Cache for resolved error resolutions by exception class */
+    /** 按异常类型缓存解析结果的本地缓存 */
     private final ConcurrentHashMap<Class<?>, ErrorResolution> resolutionCache = new ConcurrentHashMap<>();
     
     /**
-     * Creates a new ErrorResolutionService.
-     * 
-     * @param errorProperties error configuration properties, must not be null
-     * @param statusMappingStrategy status mapping strategy, must not be null
-     * @param mappingContributors list of error mapping contributors, must not be null
-     * @param errorMetrics error metrics collector, must not be null
+     * 构造函数。
+     *
+     * @param errorProperties 错误处理配置，不能为空
+     * @param statusMappingStrategy 状态映射策略，不能为空
+     * @param mappingContributors 错误映射贡献者列表，不能为空
+     * @param errorMetrics 错误指标采集器，不能为空
      */
     public ErrorResolutionService(ErrorProperties errorProperties,
                                 StatusMappingStrategy statusMappingStrategy,
@@ -62,40 +75,39 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Resolves an exception to an error code and HTTP status.
-     * Uses class-level caching for performance optimization and includes monitoring.
-     * 
-     * @param exception the exception to resolve, must not be null
-     * @return error resolution containing error code and HTTP status
+     * 将异常解析为业务错误码与 HTTP 状态码，并记录相关指标。
+     * 支持类级缓存加速重复类型异常的解析。
+     *
+     * @param exception 待解析的异常，不能为空
+     * @return 解析结果，包含错误码与 HTTP 状态码
      */
     public ErrorResolution resolve(Throwable exception) {
         long startTime = System.currentTimeMillis();
         
         if (exception == null) {
-            log.warn("Null exception passed to resolve, using fallback");
+            log.warn("Null exception passed to resolve; using fallback resolution");
             return createFallbackResolution();
         }
         
-        // Check cache first for performance
+        // 先查本地缓存以提升性能
         Class<?> exceptionClass = exception.getClass();
         ErrorResolution cached = resolutionCache.get(exceptionClass);
         boolean cacheHit = cached != null;
         
         ErrorResolution resolution;
         if (cacheHit) {
-            log.debug("Using cached resolution for exception class: {}", exceptionClass.getSimpleName());
+            log.debug("Cache hit for exception class: {}", exceptionClass.getSimpleName());
             resolution = cached;
         } else {
-            // Resolve with cause chain traversal
+            // 结合因果链回溯进行解析
             resolution = resolveWithCauseChain(exception, 0);
             
-            // Cache the resolution for this exception class
+            // 将解析结果写入缓存
             resolutionCache.put(exceptionClass, resolution);
-            log.debug("Cached resolution for exception class: {} -> {}", 
-                     exceptionClass.getSimpleName(), resolution);
+            log.debug("Cached resolution for {} -> {}", exceptionClass.getSimpleName(), resolution);
         }
         
-        // Record metrics
+        // 记录指标
         long resolutionTime = System.currentTimeMillis() - startTime;
         errorMetrics.recordResolutionTime(exceptionClass, resolution.errorCode(), resolutionTime, cacheHit);
         errorMetrics.recordCacheHitMiss(exceptionClass, cacheHit);
@@ -106,29 +118,29 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Resolves exception with cause chain traversal up to maximum depth.
-     * 
-     * @param exception the exception to resolve
-     * @param depth current traversal depth
-     * @return error resolution
+     * 结合因果链逐级回溯解析异常，直到达成映射或超过最大深度。
+     *
+     * @param exception 异常对象
+     * @param depth 当前回溯深度
+     * @return 解析结果
      */
     private ErrorResolution resolveWithCauseChain(Throwable exception, int depth) {
         if (depth > MAX_CAUSE_DEPTH) {
-            log.warn("Maximum cause chain depth {} exceeded, using server error fallback", MAX_CAUSE_DEPTH);
+            log.warn("Exceeded max cause-chain depth {}. Falling back to server error", MAX_CAUSE_DEPTH);
             return new ErrorResolution(createCode("0500"), 500);
         }
         
-        log.debug("Resolving exception at depth {}: {}", depth, exception.getClass().getSimpleName());
+        log.debug("Resolving at depth {}: {}", depth, exception.getClass().getSimpleName());
         
-        // 1. ApplicationException - highest priority
+        // 1. ApplicationException（框架内业务异常）优先
         if (exception instanceof ApplicationException appEx) {
             ErrorCodeLike code = appEx.getErrorCode();
             int status = statusMappingStrategy.mapToHttpStatus(code, exception);
-            log.debug("Resolved ApplicationException to code: {}, status: {}", code.code(), status);
+            log.debug("Resolved ApplicationException -> code={}, status={}", code.code(), status);
             return new ErrorResolution(code, status);
         }
         
-        // 2. ErrorMappingContributor - explicit overrides
+        // 2. ErrorMappingContributor（显式映射）
         for (ErrorMappingContributor contributor : mappingContributors) {
             long contributorStartTime = System.currentTimeMillis();
             boolean success = false;
@@ -142,11 +154,10 @@ public class ErrorResolutionService {
                     
                     ErrorCodeLike code = mapped.get();
                     int status = statusMappingStrategy.mapToHttpStatus(code, exception);
-                    log.debug("Resolved via ErrorMappingContributor to code: {}, status: {}", 
-                             code.code(), status);
+                    log.debug("Resolved via ErrorMappingContributor -> code={}, status={}", code.code(), status);
                     return new ErrorResolution(code, status);
                 }
-                success = true; // No mapping found is still considered success
+                success = true; // 未匹配不视为失败
             } catch (Exception e) {
                 log.warn("ErrorMappingContributor {} failed: {}", 
                         contributor.getClass().getSimpleName(), e.getMessage());
@@ -156,52 +167,51 @@ public class ErrorResolutionService {
             }
         }
         
-        // 3. HasErrorTraits - semantic classification
+        // 3. HasErrorTraits（基于语义特征分类）
         if (exception instanceof HasErrorTraits traitsEx) {
             Set<ErrorTrait> traits = traitsEx.getErrorTraits();
             if (traits != null && !traits.isEmpty()) {
                 ErrorCodeLike code = mapTraitsToCode(traits);
                 int status = mapTraitsToStatus(traits);
-                log.debug("Resolved via ErrorTraits {} to code: {}, status: {}", 
-                         traits, code.code(), status);
+                log.debug("Resolved via ErrorTraits {} -> code={}, status={}", traits, code.code(), status);
                 return new ErrorResolution(code, status);
             }
         }
         
-        // 4. Naming convention heuristics
+        // 4. 命名约定启发式
         String className = exception.getClass().getSimpleName();
         ErrorResolution namingResolution = resolveByNamingConvention(className);
         if (namingResolution != null) {
-            log.debug("Resolved via naming convention '{}' to code: {}, status: {}", 
+            log.debug("Resolved by naming convention '{}' -> code={}, status={}", 
                      className, namingResolution.errorCode().code(), namingResolution.httpStatus());
             return namingResolution;
         }
         
-        // Try cause chain if current exception doesn't match
+        // 若当前异常未匹配，尝试因果链
         Throwable cause = exception.getCause();
         if (cause != null && cause != exception) {
-            log.debug("Trying cause chain for: {}", cause.getClass().getSimpleName());
+            log.debug("Following cause chain: {}", cause.getClass().getSimpleName());
             ErrorResolution causeResolution = resolveWithCauseChain(cause, depth + 1);
             errorMetrics.recordCauseChainDepth(depth + 1, true);
             return causeResolution;
         }
         
-        // 5. Final fallback
+        // 5. 最终兜底（区分客户端/服务端错误）
         ErrorResolution fallback = isClientError(exception) ? 
             new ErrorResolution(createCode("0422"), 422) : 
             new ErrorResolution(createCode("0500"), 500);
         
-        log.debug("Using fallback resolution for {}: code: {}, status: {}", 
+        log.debug("Using fallback for {} -> code={}, status={}", 
                  className, fallback.errorCode().code(), fallback.httpStatus());
         
-        // Record that we reached fallback resolution
+        // 记录进入兜底解析的深度
         errorMetrics.recordCauseChainDepth(depth, false);
         
         return fallback;
     }
     
     /**
-     * Maps error traits to error code.
+     * 根据语义特征映射业务错误码。
      */
     private ErrorCodeLike mapTraitsToCode(Set<ErrorTrait> traits) {
         if (traits.contains(ErrorTrait.NOT_FOUND)) {
@@ -225,7 +235,7 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Maps error traits to HTTP status.
+     * 根据语义特征映射 HTTP 状态码。
      */
     private int mapTraitsToStatus(Set<ErrorTrait> traits) {
         if (traits.contains(ErrorTrait.NOT_FOUND)) {
@@ -249,7 +259,7 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Resolves exception by naming convention heuristics.
+     * 基于异常类名的命名约定进行启发式解析。
      */
     private ErrorResolution resolveByNamingConvention(String className) {
         if (className.endsWith("NotFound")) {
@@ -271,7 +281,7 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Determines if an exception represents a client error.
+     * 判断异常是否更可能属于客户端错误（4xx）。
      */
     private boolean isClientError(Throwable exception) {
         String className = exception.getClass().getSimpleName().toLowerCase();
@@ -283,12 +293,12 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Creates an error code with the configured context prefix.
+     * 使用配置的上下文前缀创建业务错误码。
      */
     private ErrorCodeLike createCode(String suffix) {
         String contextPrefix = errorProperties.getContextPrefix();
         if (contextPrefix == null || contextPrefix.isEmpty()) {
-            log.warn("Context prefix not configured, using 'UNKNOWN'");
+            log.warn("Context prefix not configured; using 'UNKNOWN'");
             contextPrefix = "UNKNOWN";
         }
         final String finalContextPrefix = contextPrefix;
@@ -296,7 +306,7 @@ public class ErrorResolutionService {
     }
     
     /**
-     * Creates a fallback error resolution for severe error cases.
+     * 构建严重错误情况下的兜底解析结果。
      */
     private ErrorResolution createFallbackResolution() {
         return new ErrorResolution(createCode("0500"), 500);

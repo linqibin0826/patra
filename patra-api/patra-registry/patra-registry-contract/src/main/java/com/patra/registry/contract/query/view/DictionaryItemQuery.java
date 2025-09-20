@@ -1,18 +1,17 @@
 package com.patra.registry.contract.query.view;
 
 /**
- * Dictionary item query object for CQRS read operations.
- * Shared between app module and contract module for consistent data structure.
- * This immutable query object represents dictionary item data optimized for read operations
- * and external subsystem consumption via API contracts.
- * 
- * @param typeCode dictionary type code that this item belongs to
- * @param itemCode dictionary item code, unique within its type
- * @param displayName human-readable display name for UI presentation
- * @param description detailed description of the dictionary item purpose and usage
- * @param isDefault whether this is the default item for its type (only one per type should be true)
- * @param sortOrder numeric sort order for display ordering (lower values appear first)
- * @param enabled whether the item is currently enabled and available for use
+ * 字典项查询对象（CQRS 查询侧）。
+ *
+ * <p>在 app 与 contract 模块间共享的数据结构；不可变，便于对外 API 消费。</p>
+ *
+ * @param typeCode 所属字典类型编码
+ * @param itemCode 字典项编码（类型内唯一）
+ * @param displayName 展示名
+ * @param description 描述
+ * @param isDefault 是否为该类型默认项
+ * @param sortOrder 排序值（小值优先）
+ * @param enabled 是否启用
  * @author linqibin
  * @since 0.1.0
  */
@@ -26,18 +25,7 @@ public record DictionaryItemQuery(
     boolean enabled
 ) {
     
-    /**
-     * Creates a new DictionaryItemQuery with validation.
-     * 
-     * @param typeCode dictionary type code that this item belongs to
-     * @param itemCode dictionary item code, unique within its type
-     * @param displayName human-readable display name for UI presentation
-     * @param description detailed description of the dictionary item
-     * @param isDefault whether this is the default item for its type
-     * @param sortOrder numeric sort order for display ordering
-     * @param enabled whether the item is currently enabled and available
-     * @throws IllegalArgumentException if typeCode, itemCode, or displayName is null or empty
-     */
+    /** 校验参数的紧凑构造器。 */
     public DictionaryItemQuery {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -56,31 +44,17 @@ public record DictionaryItemQuery(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Checks if this dictionary item is available for use.
-     * An item is available if it is enabled.
-     * 
-     * @return true if the item is available for use, false otherwise
-     */
+    /** 是否可用（启用即视为可用）。 */
     public boolean isAvailable() {
         return enabled;
     }
     
-    /**
-     * Gets a formatted reference string for this dictionary item.
-     * 
-     * @return a string in the format "typeCode:itemCode"
-     */
+    /** 获取引用字符串（typeCode:itemCode）。 */
     public String getReferenceString() {
         return typeCode + ":" + itemCode;
     }
     
-    /**
-     * Checks if this item can serve as a default value.
-     * An item can be default only if it is available and marked as default.
-     * 
-     * @return true if this item can serve as a default value, false otherwise
-     */
+    /** 是否可作为默认项（需可用且标记默认）。 */
     public boolean canBeDefault() {
         return isAvailable() && isDefault;
     }

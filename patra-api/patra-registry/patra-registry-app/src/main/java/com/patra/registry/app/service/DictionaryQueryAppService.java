@@ -47,14 +47,8 @@ public class DictionaryQueryAppService {
     }
     
     /**
-     * Find dictionary item by type code and item code.
-     * Performs optimized lookup for a specific dictionary item without loading the full aggregate.
-     * Returns empty result if the item doesn't exist, is disabled, or is deleted.
-     * 
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @param itemCode the dictionary item code, must not be null or empty
-     * @return Optional containing the dictionary item query object if found, empty otherwise
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
+     * 按类型与项编码查询单个字典项（不加载聚合）。
+     * 项不存在/禁用/删除则返回空。
      */
     public Optional<DictionaryItemQuery> findItemByTypeAndCode(String typeCode, String itemCode) {
         log.debug("Finding dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
@@ -81,13 +75,7 @@ public class DictionaryQueryAppService {
     }
     
     /**
-     * Find all enabled dictionary items for a given type.
-     * Returns items sorted by sort_order ascending, then by item_code ascending.
-     * Only includes items that are enabled and not deleted.
-     * 
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @return List of enabled dictionary item query objects, sorted by sort_order then item_code, never null
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 查询某类型下所有启用项（排序：sort_order 升序，其次 item_code 升序）。
      */
     public List<DictionaryItemQuery> findEnabledItemsByType(String typeCode) {
         log.debug("Finding enabled dictionary items for type: typeCode={}", typeCode);
@@ -104,13 +92,7 @@ public class DictionaryQueryAppService {
     }
     
     /**
-     * Find the default dictionary item for a given type.
-     * Returns the item marked as default that is enabled and not deleted.
-     * Logs a warning if multiple default items are detected (data integrity issue).
-     * 
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @return Optional containing the default dictionary item query object if exists, empty otherwise
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 查询某类型的默认项（可用且未删除）。若存在多个默认项将记录告警。
      */
     public Optional<DictionaryItemQuery> findDefaultItemByType(String typeCode) {
         log.debug("Finding default dictionary item for type: typeCode={}", typeCode);
@@ -142,14 +124,7 @@ public class DictionaryQueryAppService {
     }
     
     /**
-     * Find dictionary item by external system alias.
-     * Searches through alias mappings to find the corresponding internal dictionary item.
-     * Only returns items that are enabled and not deleted.
-     * 
-     * @param sourceSystem the external system identifier, must not be null or empty
-     * @param externalCode the external system's code, must not be null or empty
-     * @return Optional containing the mapped dictionary item query object if found, empty otherwise
-     * @throws IllegalArgumentException if sourceSystem or externalCode is null or empty
+     * 通过外部系统别名查询字典项（仅返回可用且未删除的项）。
      */
     public Optional<DictionaryItemQuery> findByAlias(String sourceSystem, String externalCode) {
         log.debug("Finding dictionary item by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
@@ -177,11 +152,7 @@ public class DictionaryQueryAppService {
     }
     
     /**
-     * Find all dictionary types in the system.
-     * Returns all dictionary types with metadata including item counts and default status.
-     * Provides comprehensive type information for metadata retrieval and system overview.
-     * 
-     * @return List of all dictionary type query objects, ordered by type_code, never null
+     * 查询系统内所有字典类型（含项数与默认项等元数据）。
      */
     public List<DictionaryTypeQuery> findAllTypes() {
         log.debug("Finding all dictionary types");
@@ -195,13 +166,7 @@ public class DictionaryQueryAppService {
         return result;
     }
     
-    /**
-     * Converts a domain DictionaryType to a DictionaryTypeQuery with additional metadata.
-     * Enriches the type information with item counts and default status.
-     * 
-     * @param domainType the domain dictionary type to convert
-     * @return the converted DictionaryTypeQuery with enriched metadata
-     */
+    /** 将领域类型转换为带元数据的查询对象。 */
     private DictionaryTypeQuery convertTypeToQuery(DictionaryType domainType) {
         int enabledItemCount = dictionaryRepository.countEnabledItemsByType(domainType.typeCode());
         boolean hasDefault = dictionaryRepository.findDefaultItemByType(domainType.typeCode()).isPresent();

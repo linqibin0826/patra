@@ -7,9 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Optional;
 
 /**
- * Wrapper that adds circuit breaker protection to ErrorMappingContributor implementations.
- * Prevents cascading failures when contributors are slow or failing frequently.
- * 
+ * 为 ErrorMappingContributor 增加熔断保护的包装器。
+ *
+ * <p>当贡献者变慢或频繁失败时，避免级联故障。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -21,10 +22,10 @@ public class CircuitBreakerProtectedContributor implements ErrorMappingContribut
     private final String contributorName;
     
     /**
-     * Creates a new circuit breaker protected contributor.
-     * 
-     * @param delegate the actual contributor to protect
-     * @param circuitBreaker the circuit breaker to use
+     * 构造包装器。
+     *
+     * @param delegate 被保护的实际贡献者
+     * @param circuitBreaker 使用的熔断器
      */
     public CircuitBreakerProtectedContributor(ErrorMappingContributor delegate, CircuitBreaker circuitBreaker) {
         this.delegate = delegate;
@@ -49,29 +50,17 @@ public class CircuitBreakerProtectedContributor implements ErrorMappingContribut
         }
     }
     
-    /**
-     * Gets the underlying delegate contributor.
-     * 
-     * @return the delegate contributor
-     */
+    /** 获取底层被包装的贡献者。 */
     public ErrorMappingContributor getDelegate() {
         return delegate;
     }
     
-    /**
-     * Gets the circuit breaker protecting this contributor.
-     * 
-     * @return the circuit breaker
-     */
+    /** 获取熔断器实例。 */
     public CircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
     }
     
-    /**
-     * Gets the name of the protected contributor.
-     * 
-     * @return the contributor name
-     */
+    /** 获取被保护贡献者的名称。 */
     public String getContributorName() {
         return contributorName;
     }

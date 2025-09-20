@@ -12,32 +12,27 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Dictionary aggregate root representing dictionary domain concepts for read operations.
- * This aggregate is designed for CQRS query operations only - no command operations are supported.
- * The aggregate encapsulates dictionary type metadata, items, and aliases while providing
- * domain logic for querying, validation, and business rule enforcement.
- * 
+ * 字典聚合根（仅查询侧）。
+ *
+ * <p>用于 CQRS 的查询操作，不支持命令修改。聚合封装类型元数据、字典项与别名，
+ * 并提供查询、校验与业务规则相关的领域逻辑。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class Dictionary {
     
-    /** Dictionary type metadata defining the characteristics of this dictionary */
+    /** 字典类型元数据 */
     private final DictionaryType type;
     
-    /** List of dictionary items belonging to this type, immutable after construction */
+    /** 字典项列表（构造后不可变） */
     private final List<DictionaryItem> items;
     
-    /** List of external system aliases for dictionary items, immutable after construction */
+    /** 字典项的外部系统别名列表（构造后不可变） */
     private final List<DictionaryAlias> aliases;
     
     /**
-     * Creates a new Dictionary aggregate with the provided type, items, and aliases.
-     * 
-     * @param type the dictionary type metadata, must not be null
-     * @param items the list of dictionary items, must not be null (can be empty)
-     * @param aliases the list of external aliases, must not be null (can be empty)
-     * @throws IllegalArgumentException if type is null
+     * 构造函数（含类型、项与别名）。
      */
     public Dictionary(DictionaryType type, List<DictionaryItem> items, List<DictionaryAlias> aliases) {
         if (type == null) {
@@ -48,24 +43,13 @@ public class Dictionary {
         this.aliases = aliases != null ? Collections.unmodifiableList(new ArrayList<>(aliases)) : Collections.emptyList();
     }
     
-    /**
-     * Creates a new Dictionary aggregate with type and items only (no aliases).
-     * 
-     * @param type the dictionary type metadata, must not be null
-     * @param items the list of dictionary items, must not be null (can be empty)
-     * @throws IllegalArgumentException if type is null
-     */
+    /** 仅含类型与项（无别名）的构造函数。 */
     public Dictionary(DictionaryType type, List<DictionaryItem> items) {
         this(type, items, Collections.emptyList());
     }
     
     /**
-     * Find dictionary item by item code within this dictionary type.
-     * Only returns items that are not deleted (soft-delete aware).
-     * 
-     * @param itemCode the item code to search for, must not be null or empty
-     * @return Optional containing the dictionary item if found and not deleted, empty otherwise
-     * @throws IllegalArgumentException if itemCode is null or empty
+     * 按项编码查找（忽略已删除）。
      */
     public Optional<DictionaryItem> findItemByCode(String itemCode) {
         if (itemCode == null || itemCode.trim().isEmpty()) {
@@ -78,13 +62,7 @@ public class Dictionary {
                 .findFirst();
     }
     
-    /**
-     * Find the default dictionary item for this type.
-     * Returns the first default item found if multiple exist (data integrity issue).
-     * Only considers items that are enabled and not deleted.
-     * 
-     * @return Optional containing the default item if exists and is available, empty otherwise
-     */
+    /** 查找默认项（只考虑可用且未删除）。 */
     public Optional<DictionaryItem> findDefaultItem() {
         return items.stream()
                 .filter(DictionaryItem::isAvailable)
@@ -92,12 +70,7 @@ public class Dictionary {
                 .findFirst();
     }
     
-    /**
-     * Get all enabled dictionary items for this type.
-     * Returns items that are enabled and not deleted, sorted by sort_order then item_code.
-     * 
-     * @return List of enabled dictionary items, sorted by sort_order ascending then item_code ascending
-     */
+    /** 获取所有可用项（排序：sort_order 升序，其次 item_code 升序）。 */
     public List<DictionaryItem> getEnabledItems() {
         return items.stream()
                 .filter(DictionaryItem::isAvailable)
@@ -106,12 +79,7 @@ public class Dictionary {
                 .toList();
     }
     
-    /**
-     * Get all visible dictionary items for this type (not deleted, regardless of enabled status).
-     * Returns items sorted by sort_order then item_code.
-     * 
-     * @return List of visible dictionary items, sorted by sort_order ascending then item_code ascending
-     */
+    /** 获取所有可见项（未删除，忽略启用状态；同样按排序规则）。 */
     public List<DictionaryItem> getVisibleItems() {
         return items.stream()
                 .filter(DictionaryItem::isVisible)
@@ -121,12 +89,7 @@ public class Dictionary {
     }
     
     /**
-     * Validate if an item reference is valid for this dictionary type.
-     * An item reference is valid if the item exists, is enabled, and not deleted.
-     * 
-     * @param itemCode the dictionary item code to validate, must not be null or empty
-     * @return ValidationResult indicating success or failure with detailed error message
-     * @throws IllegalArgumentException if itemCode is null or empty
+     * 校验某项引用是否有效（需存在、启用且未删除）。
      */
     public ValidationResult validateItemReference(String itemCode) {
         if (itemCode == null || itemCode.trim().isEmpty()) {
@@ -147,14 +110,7 @@ public class Dictionary {
     }
     
     /**
-     * Find dictionary item by external system alias.
-     * Searches through aliases to find matching source system and external code,
-     * then returns the corresponding dictionary item if it exists and is available.
-     * 
-     * @param sourceSystem the external system identifier, must not be null or empty
-     * @param externalCode the external system's code, must not be null or empty
-     * @return Optional containing the mapped dictionary item if found and available, empty otherwise
-     * @throws IllegalArgumentException if sourceSystem or externalCode is null or empty
+     * 通过外部系统别名查找字典项（需匹配来源系统与外部编码）。
      */
     public Optional<DictionaryItem> findByAlias(String sourceSystem, String externalCode) {
         if (sourceSystem == null || sourceSystem.trim().isEmpty()) {
@@ -174,26 +130,16 @@ public class Dictionary {
             return Optional.empty();
         }
         
-        // Note: In a real implementation, we would need the item code from the alias
-        // For now, this is a placeholder that would need to be completed with proper alias-to-item mapping
-        // This would typically involve a repository call or additional data in the alias
+        // 说明：真实实现需要从别名中得到对应 itemCode 并完成映射（可能涉及仓储查询）
         return Optional.empty();
     }
     
-    /**
-     * Check if this dictionary has any default items.
-     * 
-     * @return true if at least one enabled item is marked as default, false otherwise
-     */
+    /** 是否存在默认项。 */
     public boolean hasDefaultItem() {
         return findDefaultItem().isPresent();
     }
     
-    /**
-     * Check if this dictionary has multiple default items (data integrity issue).
-     * 
-     * @return true if more than one enabled item is marked as default, false otherwise
-     */
+    /** 是否存在多个默认项（数据完整性风险）。 */
     public boolean hasMultipleDefaultItems() {
         long defaultCount = items.stream()
                 .filter(DictionaryItem::isAvailable)
@@ -202,49 +148,29 @@ public class Dictionary {
         return defaultCount > 1;
     }
     
-    /**
-     * Get the count of enabled items in this dictionary.
-     * 
-     * @return the number of items that are enabled and not deleted
-     */
+    /** 可用项数量。 */
     public int getEnabledItemCount() {
         return (int) items.stream()
                 .filter(DictionaryItem::isAvailable)
                 .count();
     }
     
-    /**
-     * Get the total count of items in this dictionary (including disabled and deleted).
-     * 
-     * @return the total number of items in this dictionary
-     */
+    /** 所有项总数（含禁用/删除）。 */
     public int getTotalItemCount() {
         return items.size();
     }
     
-    /**
-     * Get the dictionary type metadata.
-     * 
-     * @return the immutable dictionary type information
-     */
+    /** 获取类型元数据。 */
     public DictionaryType getType() {
         return type;
     }
     
-    /**
-     * Get all dictionary items (immutable view).
-     * 
-     * @return immutable list of all dictionary items
-     */
+    /** 获取全部字典项（不可变视图）。 */
     public List<DictionaryItem> getItems() {
         return items;
     }
     
-    /**
-     * Get all dictionary aliases (immutable view).
-     * 
-     * @return immutable list of all dictionary aliases
-     */
+    /** 获取全部别名（不可变视图）。 */
     public List<DictionaryAlias> getAliases() {
         return aliases;
     }

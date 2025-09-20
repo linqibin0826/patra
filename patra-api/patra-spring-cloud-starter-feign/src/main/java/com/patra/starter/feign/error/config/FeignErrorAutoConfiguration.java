@@ -17,15 +17,18 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * Auto-configuration for Feign error handling components.
- * Provides automatic registration of error decoders, request interceptors,
- * and other Feign-specific error handling infrastructure.
- * 
- * This configuration is activated when:
- * - Feign classes are present on the classpath
- * - The patra.feign.problem.enabled property is true (default)
- * - Required dependencies (ObjectMapper, TraceProvider) are available
- * 
+ * Feign 错误处理自动装配。
+ *
+ * <p>自动注册以下组件：
+ * - 错误解码器 {@link com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder}
+ * - 请求拦截器 {@link com.patra.starter.feign.error.interceptor.TraceIdRequestInterceptor}
+ * - 指标采集 {@link com.patra.starter.feign.error.metrics.FeignErrorMetrics}
+ *
+ * <p>生效条件：
+ * - 类路径存在 Feign 相关类
+ * - 配置项 {@code patra.feign.problem.enabled=true}（默认开启）
+ * - 存在必要依赖（如 {@link com.fasterxml.jackson.databind.ObjectMapper}、{@link com.patra.starter.core.error.spi.TraceProvider}）
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -46,10 +49,9 @@ import org.springframework.context.annotation.Bean;
 public class FeignErrorAutoConfiguration {
     
     /**
-     * Default Feign error metrics implementation for collecting Feign error handling statistics.
-     * Only created if no custom implementation is provided.
-     * 
-     * @return default Feign error metrics implementation
+     * 默认的 Feign 错误指标实现（若用户未自定义则注入本实现）。
+     *
+     * @return 默认指标实现
      */
     @Bean
     @ConditionalOnMissingBean
@@ -60,40 +62,34 @@ public class FeignErrorAutoConfiguration {
     }
     
     /**
-     * Configures the ProblemDetail error decoder for Feign clients.
-     * This decoder automatically converts RFC 7807 ProblemDetail responses
-     * from downstream services into RemoteCallException instances.
-     * 
-     * @param objectMapper the Jackson ObjectMapper for JSON parsing
-     * @param properties the Feign error handling configuration
-     * @param feignErrorMetrics the metrics collector for Feign error handling
-     * @return the configured error decoder
+     * 配置基于 {@link org.springframework.http.ProblemDetail} 的错误解码器。
+     *
+     * @param objectMapper Jackson 解析器
+     * @param properties 错误处理配置
+     * @param feignErrorMetrics 指标采集器
+     * @return 错误解码器实例
      */
     @Bean
     @ConditionalOnMissingBean(ErrorDecoder.class)
     public ErrorDecoder problemDetailErrorDecoder(ObjectMapper objectMapper, 
                                                  FeignErrorProperties properties,
                                                  FeignErrorMetrics feignErrorMetrics) {
-        log.info("Configuring ProblemDetailErrorDecoder with tolerant mode: {}", 
-                properties.isTolerant());
+        log.info("Configuring ProblemDetailErrorDecoder, tolerant={}", properties.isTolerant());
         return new ProblemDetailErrorDecoder(objectMapper, properties, feignErrorMetrics);
     }
     
     /**
-     * Configures the trace ID request interceptor for automatic trace propagation.
-     * This interceptor adds trace IDs to outgoing Feign requests to maintain
-     * distributed tracing correlation across service boundaries.
-     * 
-     * @param traceProvider the trace provider for extracting current trace ID
-     * @param tracingProperties the tracing configuration
-     * @return the configured request interceptor
+     * 配置 TraceId 透传拦截器，保持跨服务的链路追踪关联。
+     *
+     * @param traceProvider TraceId 提供者
+     * @param tracingProperties 链路追踪配置
+     * @return 请求拦截器实例
      */
     @Bean
     @ConditionalOnMissingBean(TraceIdRequestInterceptor.class)
     public TraceIdRequestInterceptor traceIdRequestInterceptor(TraceProvider traceProvider,
                                                               TracingProperties tracingProperties) {
-        log.info("Configuring TraceIdRequestInterceptor with headers: {}", 
-                tracingProperties.getHeaderNames());
+        log.info("Configuring TraceIdRequestInterceptor, headers={}", tracingProperties.getHeaderNames());
         return new TraceIdRequestInterceptor(traceProvider, tracingProperties);
     }
 }

@@ -5,19 +5,20 @@ import org.springframework.validation.BindingResult;
 import java.util.List;
 
 /**
- * SPI interface for formatting validation errors with sensitive data masking.
- * Implementations should mask sensitive field values and apply size limits.
- * 
+ * 校验错误格式化 SPI 接口（需支持敏感信息脱敏与数量限制）。
+ *
+ * <p>实现类应对敏感字段值进行掩码处理，并控制最大输出条数。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public interface ValidationErrorsFormatter {
     
     /**
-     * Formats validation errors from BindingResult with sensitive data masking.
-     * 
-     * @param bindingResult the binding result containing validation errors, must not be null
-     * @return list of formatted validation errors with masked sensitive data, never null
+     * 从 Spring 的 BindingResult 格式化校验错误（带脱敏）。
+     *
+     * @param bindingResult 包含校验错误的结果对象
+     * @return 脱敏后的校验错误列表
      */
     List<ValidationError> formatWithMasking(BindingResult bindingResult);
 }

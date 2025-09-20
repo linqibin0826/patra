@@ -1,17 +1,16 @@
 package com.patra.registry.contract.query.view;
 
 /**
- * Dictionary item view object for external subsystem consumption.
- * Used in contract module for clean API boundaries and external system integration.
- * This immutable view object represents dictionary item data optimized for external consumption,
- * excluding internal fields like enabled/deleted status that are not relevant to external systems.
- * 
- * @param typeCode dictionary type code that this item belongs to
- * @param itemCode dictionary item code, unique within its type
- * @param displayName human-readable display name for UI presentation
- * @param description detailed description of the dictionary item purpose and usage
- * @param isDefault whether this is the default item for its type
- * @param sortOrder numeric sort order for display ordering (lower values appear first)
+ * 字典项视图对象（对外消费，query.view）。
+ *
+ * <p>用于对外接口的简化项信息表示，隐藏内部状态字段（如 enabled/deleted）。</p>
+ *
+ * @param typeCode 所属类型编码
+ * @param itemCode 字典项编码（类型内唯一）
+ * @param displayName 展示名
+ * @param description 描述
+ * @param isDefault 是否默认项
+ * @param sortOrder 排序值（小值优先）
  * @author linqibin
  * @since 0.1.0
  */
@@ -24,17 +23,7 @@ public record DictionaryItemView(
     int sortOrder
 ) {
     
-    /**
-     * Creates a new DictionaryItemView with validation.
-     * 
-     * @param typeCode dictionary type code that this item belongs to
-     * @param itemCode dictionary item code, unique within its type
-     * @param displayName human-readable display name for UI presentation
-     * @param description detailed description of the dictionary item
-     * @param isDefault whether this is the default item for its type
-     * @param sortOrder numeric sort order for display ordering
-     * @throws IllegalArgumentException if typeCode, itemCode, or displayName is null or empty
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryItemView {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -53,21 +42,15 @@ public record DictionaryItemView(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Gets a formatted reference string for this dictionary item.
-     * 
-     * @return a string in the format "typeCode:itemCode"
-     */
+    /** 获取引用字符串（typeCode:itemCode）。 */
     public String getReferenceString() {
         return typeCode + ":" + itemCode;
     }
     
     /**
-     * Creates a DictionaryItemView from a DictionaryItemQuery.
-     * Converts query object to view object by excluding internal fields.
-     * 
-     * @param query the dictionary item query to convert
-     * @return a new DictionaryItemView with external-facing fields only
+     * 从 DictionaryItemQuery 构建视图对象（对外字段）。
+     *
+     * @see com.patra.registry.contract.query.view.DictionaryItemQuery
      */
     public static DictionaryItemView fromQuery(DictionaryItemQuery query) {
         return new DictionaryItemView(

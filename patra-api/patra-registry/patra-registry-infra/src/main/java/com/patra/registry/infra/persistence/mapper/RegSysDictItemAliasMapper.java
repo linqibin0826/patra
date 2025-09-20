@@ -11,24 +11,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * MyBatis-Plus mapper for dictionary item alias read operations.
- * Provides data access methods for sys_dict_item_alias table in the CQRS query pipeline.
- * All methods are read-only and support external system integration through alias mappings.
- * 
+ * 字典项别名读取 Mapper（MyBatis-Plus）。
+ *
+ * <p>服务于 CQRS 查询侧，仅包含只读操作，面向表 sys_dict_item_alias；
+ * 支持通过别名桥接外部系统与内部字典项。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 @Mapper
 public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAliasDO> {
 
-    /**
-     * Find dictionary item by external system alias.
-     * Resolves external codes to internal dictionary items for system integration.
-     * 
-     * @param sourceSystem the external system identifier, must not be null
-     * @param externalCode the external system's code, must not be null
-     * @return Optional containing the mapped dictionary item if found and enabled, empty otherwise
-     */
+    /** 按外部系统别名查找对应的内部字典项（需启用且未删除）。 */
     @Select("""
             SELECT di.* FROM sys_dict_item di
             JOIN sys_dict_item_alias dia ON dia.item_id = di.id
@@ -43,13 +37,7 @@ public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAlia
     Optional<RegSysDictItemDO> selectItemByAlias(@Param("sourceSystem") String sourceSystem, 
                                                  @Param("externalCode") String externalCode);
 
-    /**
-     * Find all aliases for a specific dictionary item.
-     * Used for understanding external system mappings and integration documentation.
-     * 
-     * @param itemId the dictionary item ID, must not be null
-     * @return List of aliases for the specified dictionary item
-     */
+    /** 查询某个字典项的全部别名。 */
     @Select("""
             SELECT * FROM sys_dict_item_alias 
             WHERE item_id = #{itemId} 
@@ -58,13 +46,7 @@ public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAlia
             """)
     List<RegSysDictItemAliasDO> selectByItemId(@Param("itemId") Long itemId);
 
-    /**
-     * Find aliases by source system.
-     * Used for system-specific integration and migration operations.
-     * 
-     * @param sourceSystem the external system identifier, must not be null
-     * @return List of aliases from the specified source system
-     */
+    /** 按来源系统查询别名集合。 */
     @Select("""
             SELECT * FROM sys_dict_item_alias 
             WHERE source_system = #{sourceSystem} 
@@ -73,14 +55,7 @@ public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAlia
             """)
     List<RegSysDictItemAliasDO> selectBySourceSystem(@Param("sourceSystem") String sourceSystem);
 
-    /**
-     * Find alias by exact source system and external code combination.
-     * Used for validating alias uniqueness and direct alias lookups.
-     * 
-     * @param sourceSystem the external system identifier, must not be null
-     * @param externalCode the external system's code, must not be null
-     * @return Optional containing the alias if found, empty otherwise
-     */
+    /** 按来源系统+外部编码精确查询别名（用于唯一性校验/直查）。 */
     @Select("""
             SELECT * FROM sys_dict_item_alias 
             WHERE source_system = #{sourceSystem} 
@@ -90,13 +65,7 @@ public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAlia
     Optional<RegSysDictItemAliasDO> selectBySourceAndCode(@Param("sourceSystem") String sourceSystem, 
                                                           @Param("externalCode") String externalCode);
 
-    /**
-     * Find all aliases for dictionary items of a specific type.
-     * Used for type-specific integration analysis and documentation.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @return List of aliases for items belonging to the specified type
-     */
+    /** 查询某类型下所有字典项的别名集合。 */
     @Select("""
             SELECT dia.* FROM sys_dict_item_alias dia
             JOIN sys_dict_item di ON di.id = dia.item_id
@@ -109,21 +78,11 @@ public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAlia
             """)
     List<RegSysDictItemAliasDO> selectByTypeCode(@Param("typeCode") String typeCode);
 
-    /**
-     * Count total aliases in the system.
-     * Used for system health monitoring and statistics.
-     * 
-     * @return total count of non-deleted aliases
-     */
+    /** 统计系统内别名总数（未删除）。 */
     @Select("SELECT COUNT(*) FROM sys_dict_item_alias WHERE deleted = 0")
     int countTotal();
 
-    /**
-     * Find all distinct source systems.
-     * Used for understanding external system integration landscape.
-     * 
-     * @return List of distinct source system identifiers
-     */
+    /** 查询所有不同的来源系统标识（了解外部集成面貌）。 */
     @Select("""
             SELECT DISTINCT source_system FROM sys_dict_item_alias 
             WHERE deleted = 0 
@@ -131,13 +90,7 @@ public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAlia
             """)
     List<String> selectDistinctSourceSystems();
 
-    /**
-     * Count aliases by source system.
-     * Used for integration analysis and system health monitoring.
-     * 
-     * @param sourceSystem the external system identifier, must not be null
-     * @return count of aliases for the specified source system
-     */
+    /** 按来源系统统计别名数量（分析/健康）。 */
     @Select("""
             SELECT COUNT(*) FROM sys_dict_item_alias 
             WHERE source_system = #{sourceSystem} 

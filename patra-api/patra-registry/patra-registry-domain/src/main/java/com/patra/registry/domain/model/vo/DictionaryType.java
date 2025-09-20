@@ -1,15 +1,15 @@
 package com.patra.registry.domain.model.vo;
 
 /**
- * Dictionary type value object representing dictionary type metadata.
- * This immutable value object encapsulates all information about a dictionary type
- * including its identification, display properties, and behavioral characteristics.
- * 
- * @param typeCode unique code identifying the dictionary type, must not be null or empty
- * @param typeName human-readable name of the dictionary type for display purposes
- * @param description detailed description of the dictionary type purpose and usage
- * @param allowCustomItems whether this type allows custom items to be added by users
- * @param isSystem whether this is a system-managed dictionary type (read-only for users)
+ * 字典类型值对象（不可变）。
+ *
+ * <p>封装类型标识、展示属性与行为特征。</p>
+ *
+ * @param typeCode 类型编码（必填）
+ * @param typeName 类型名称（展示）
+ * @param description 类型描述
+ * @param allowCustomItems 是否允许用户自定义项
+ * @param isSystem 是否为系统内置类型（通常只读）
  * @author linqibin
  * @since 0.1.0
  */
@@ -21,16 +21,7 @@ public record DictionaryType(
     boolean isSystem
 ) {
     
-    /**
-     * Creates a new DictionaryType with validation.
-     * 
-     * @param typeCode unique code identifying the dictionary type
-     * @param typeName human-readable name of the dictionary type
-     * @param description detailed description of the dictionary type purpose
-     * @param allowCustomItems whether this type allows custom items to be added
-     * @param isSystem whether this is a system-managed dictionary type
-     * @throws IllegalArgumentException if typeCode or typeName is null or empty
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryType {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -44,21 +35,12 @@ public record DictionaryType(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Checks if this dictionary type is editable by users.
-     * System dictionary types are typically read-only for users.
-     * 
-     * @return true if the dictionary type can be modified by users, false otherwise
-     */
+    /** 是否可被用户编辑（系统类型通常只读）。 */
     public boolean isEditable() {
         return !isSystem;
     }
     
-    /**
-     * Checks if this dictionary type supports custom item creation.
-     * 
-     * @return true if custom items can be added to this type, false otherwise
-     */
+    /** 是否支持自定义项创建。 */
     public boolean supportsCustomItems() {
         return allowCustomItems;
     }

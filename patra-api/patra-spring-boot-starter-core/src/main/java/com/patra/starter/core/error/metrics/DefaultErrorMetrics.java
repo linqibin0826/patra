@@ -8,26 +8,26 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * Default implementation of ErrorMetrics that provides in-memory metrics collection.
- * This implementation uses structured logging and in-memory counters for basic observability.
- * Can be replaced with more sophisticated metrics implementations (Micrometer, etc.).
- * 
+ * 错误指标默认实现，基于内存计数并配合结构化日志输出，提供基础可观测性。
+ *
+ * <p>可替换为更成熟的方案（如 Micrometer 等）。
+ *
  * @author linqibin
  * @since 0.1.0
  */
 @Slf4j
 public class DefaultErrorMetrics implements ErrorMetrics {
     
-    /** Cache hit/miss counters by exception class */
+    /** 按异常类型统计缓存命中/未命中次数 */
     private final ConcurrentHashMap<String, CacheStats> cacheStats = new ConcurrentHashMap<>();
     
-    /** Error code distribution counters */
+    /** 错误码分布计数 */
     private final ConcurrentHashMap<String, LongAdder> errorCodeCounts = new ConcurrentHashMap<>();
     
-    /** Contributor performance stats */
+    /** 贡献者性能统计 */
     private final ConcurrentHashMap<String, ContributorStats> contributorStats = new ConcurrentHashMap<>();
     
-    /** Cause chain depth statistics */
+    /** 因果链深度统计 */
     private final ConcurrentHashMap<Integer, LongAdder> causeChainDepthCounts = new ConcurrentHashMap<>();
     
     @Override
@@ -138,7 +138,7 @@ public class DefaultErrorMetrics implements ErrorMetrics {
     }
     
     /**
-     * Calculates success rate for a contributor.
+     * 计算贡献者成功率。
      */
     private double calculateSuccessRate(ContributorStats stats) {
         long total = stats.totalExecutions.sum();
@@ -147,7 +147,7 @@ public class DefaultErrorMetrics implements ErrorMetrics {
     }
     
     /**
-     * Cache statistics holder.
+     * 缓存统计结构。
      */
     private static class CacheStats {
         final LongAdder hits = new LongAdder();
@@ -155,7 +155,7 @@ public class DefaultErrorMetrics implements ErrorMetrics {
     }
     
     /**
-     * Contributor statistics holder.
+     * 贡献者统计结构。
      */
     private static class ContributorStats {
         final LongAdder totalExecutions = new LongAdder();

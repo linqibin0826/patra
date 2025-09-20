@@ -1,8 +1,8 @@
 package com.patra.starter.core.error.circuit;
 
 /**
- * Exception thrown when a circuit breaker is open and rejecting calls.
- * 
+ * 当熔断器处于打开状态并拒绝调用时抛出。
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -11,20 +11,16 @@ public class CircuitBreakerOpenException extends RuntimeException {
     private final String circuitBreakerName;
     
     /**
-     * Creates a new CircuitBreakerOpenException.
-     * 
-     * @param circuitBreakerName the name of the circuit breaker that is open
+     * 构造异常。
+     *
+     * @param circuitBreakerName 熔断器名称
      */
     public CircuitBreakerOpenException(String circuitBreakerName) {
         super("Circuit breaker '" + circuitBreakerName + "' is open");
         this.circuitBreakerName = circuitBreakerName;
     }
     
-    /**
-     * Gets the name of the circuit breaker that is open.
-     * 
-     * @return the circuit breaker name
-     */
+    /** 获取打开状态的熔断器名称。 */
     public String getCircuitBreakerName() {
         return circuitBreakerName;
     }

@@ -22,19 +22,22 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import java.util.List;
 
 /**
- * Global REST exception handler that converts all exceptions to RFC 7807 ProblemDetail responses.
- * Extends ResponseEntityExceptionHandler to handle Spring MVC exceptions and provides unified
- * error handling across all REST controllers.
- * 
+ * 全局 REST 异常处理器：统一转换为 RFC 7807 的 {@link org.springframework.http.ProblemDetail} 响应。
+ *
+ * <p>继承 {@link org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler}
+ * 处理 Spring MVC 层异常，为所有 REST 控制器提供一致的错误输出格式。</p>
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.web.error.builder.ProblemDetailBuilder
+ * @see com.patra.starter.core.error.service.ErrorResolutionService
  */
 @Slf4j
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     
-    /** Maximum number of validation errors to include in response */
+    /** 响应中包含的校验错误上限 */
     private static final int MAX_VALIDATION_ERRORS = 100;
     
     private final ErrorResolutionService errorResolutionService;
@@ -51,11 +54,11 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     
     /**
-     * Handles all general exceptions using the error resolution algorithm.
-     * 
-     * @param ex the exception to handle, must not be null
-     * @param request the HTTP servlet request, must not be null
-     * @return ResponseEntity with ProblemDetail body and appropriate HTTP status
+     * 处理一般异常，按错误解析算法转换为 ProblemDetail。
+     *
+     * @param ex 异常对象
+     * @param request HTTP 请求
+     * @return 含 ProblemDetail 的响应实体
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
@@ -78,11 +81,11 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     
     /**
-     * Handles validation exceptions with detailed validation error information.
-     * 
-     * @param ex the method argument not valid exception, must not be null
-     * @param request the HTTP servlet request, must not be null
-     * @return ResponseEntity with ProblemDetail body including validation errors array
+     * 处理参数校验异常，并返回包含详细校验错误的 ProblemDetail。
+     *
+     * @param ex 参数校验异常
+     * @param request HTTP 请求
+     * @return 含校验错误数组的 ProblemDetail 响应
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidationException(
@@ -116,10 +119,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     }
     
     /**
-     * Converts int HTTP status to HttpStatus with fallback to 500.
-     * 
-     * @param status the HTTP status code as int
-     * @return the corresponding HttpStatus, defaults to INTERNAL_SERVER_ERROR for invalid codes
+     * 将 int 状态码安全转换为 HttpStatus，非法值回退为 500。
+     *
+     * @param status 整型状态码
+     * @return 对应的 HttpStatus
      */
     private HttpStatus convertToHttpStatus(int status) {
         try {

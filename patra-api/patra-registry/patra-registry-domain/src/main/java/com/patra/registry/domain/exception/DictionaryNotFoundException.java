@@ -1,25 +1,23 @@
 package com.patra.registry.domain.exception;
 
 /**
- * Domain exception thrown when a requested dictionary type or item cannot be found.
- * This exception indicates that the requested dictionary resource does not exist
- * in the system or is not accessible due to business rules.
- * 
+ * 当请求的字典类型或字典项未找到时抛出。
+ *
+ * <p>表示该资源不存在或因业务规则不可访问。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryNotFoundException extends RegistryNotFound {
     
-    /** The dictionary type code associated with this exception, if applicable */
+    /** 关联的字典类型编码（如适用） */
     private final String typeCode;
     
-    /** The dictionary item code associated with this exception, if applicable */
+    /** 关联的字典项编码（如适用） */
     private final String itemCode;
     
     /**
-     * Constructs a new dictionary not found exception for a missing type.
-     * 
-     * @param typeCode the dictionary type code that was not found
+     * 类型未找到的场景构造异常。
      */
     public DictionaryNotFoundException(String typeCode) {
         super(String.format("Dictionary type not found: %s", typeCode));
@@ -28,10 +26,7 @@ public class DictionaryNotFoundException extends RegistryNotFound {
     }
     
     /**
-     * Constructs a new dictionary not found exception for a missing item.
-     * 
-     * @param typeCode the dictionary type code
-     * @param itemCode the dictionary item code that was not found
+     * 项未找到的场景构造异常。
      */
     public DictionaryNotFoundException(String typeCode, String itemCode) {
         super(String.format("Dictionary item not found: typeCode=%s, itemCode=%s", typeCode, itemCode));
@@ -40,11 +35,7 @@ public class DictionaryNotFoundException extends RegistryNotFound {
     }
     
     /**
-     * Constructs a new dictionary not found exception with a custom message.
-     * 
-     * @param message the detail message explaining what was not found
-     * @param typeCode the dictionary type code, if applicable
-     * @param itemCode the dictionary item code, if applicable
+     * 自定义消息构造异常。
      */
     public DictionaryNotFoundException(String message, String typeCode, String itemCode) {
         super(message);
@@ -52,20 +43,12 @@ public class DictionaryNotFoundException extends RegistryNotFound {
         this.itemCode = itemCode;
     }
     
-    /**
-     * Gets the dictionary type code associated with this exception.
-     * 
-     * @return the type code, or null if not applicable
-     */
+    /** 获取类型编码（如有）。 */
     public String getTypeCode() {
         return typeCode;
     }
     
-    /**
-     * Gets the dictionary item code associated with this exception.
-     * 
-     * @return the item code, or null if not applicable
-     */
+    /** 获取项编码（如有）。 */
     public String getItemCode() {
         return itemCode;
     }

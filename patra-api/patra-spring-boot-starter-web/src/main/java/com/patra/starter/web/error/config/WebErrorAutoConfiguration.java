@@ -21,9 +21,13 @@ import org.springframework.context.annotation.Bean;
 import java.util.List;
 
 /**
- * Auto-configuration for web-specific error handling components.
- * Provides beans for global exception handling, ProblemDetail building, and validation error formatting.
- * 
+ * Web 端错误处理自动装配。
+ *
+ * <p>提供以下组件的条件化注册：
+ * - 全局异常处理器 {@link com.patra.starter.web.error.handler.GlobalRestExceptionHandler}
+ * - ProblemDetail 构造器 {@link com.patra.starter.web.error.builder.ProblemDetailBuilder}
+ * - 校验错误格式化器 {@link com.patra.starter.web.error.spi.ValidationErrorsFormatter}
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -35,9 +39,9 @@ import java.util.List;
 public class WebErrorAutoConfiguration {
     
     /**
-     * Creates the default validation errors formatter with sensitive data masking.
-     * 
-     * @return validation errors formatter instance, never null
+     * 默认的校验错误格式化器（带敏感信息脱敏）。
+     *
+     * @return 实例
      */
     @Bean
     @ConditionalOnMissingBean
@@ -47,14 +51,14 @@ public class WebErrorAutoConfiguration {
     }
     
     /**
-     * Creates the ProblemDetail builder with all required dependencies.
-     * 
-     * @param errorProperties error configuration properties, must not be null
-     * @param webProperties web error configuration properties, must not be null
-     * @param traceProvider trace provider for correlation IDs, must not be null
-     * @param coreFieldContributors list of core field contributors, can be empty
-     * @param webFieldContributors list of web field contributors, can be empty
-     * @return ProblemDetail builder instance, never null
+     * 构造 ProblemDetail 构造器。
+     *
+     * @param errorProperties 错误处理配置
+     * @param webProperties Web 错误配置
+     * @param traceProvider TraceId 提供者
+     * @param coreFieldContributors 核心字段贡献者集合
+     * @param webFieldContributors Web 字段贡献者集合
+     * @return 构造器实例
      */
     @Bean
     @ConditionalOnMissingBean
@@ -78,12 +82,12 @@ public class WebErrorAutoConfiguration {
     }
     
     /**
-     * Creates the global REST exception handler.
-     * 
-     * @param errorResolutionService error resolution service, must not be null
-     * @param problemDetailBuilder ProblemDetail builder, must not be null
-     * @param validationErrorsFormatter validation errors formatter, must not be null
-     * @return global exception handler instance, never null
+     * 创建全局 REST 异常处理器。
+     *
+     * @param errorResolutionService 错误解析服务
+     * @param problemDetailBuilder ProblemDetail 构造器
+     * @param validationErrorsFormatter 校验错误格式化器
+     * @return 处理器实例
      */
     @Bean
     @ConditionalOnMissingBean

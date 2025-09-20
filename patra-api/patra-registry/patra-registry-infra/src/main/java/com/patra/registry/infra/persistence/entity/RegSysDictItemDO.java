@@ -11,15 +11,16 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Dictionary item entity for sys_dict_item table.
- * Represents individual dictionary entries belonging to a specific dictionary type.
- * This entity is used exclusively for read-only operations in the dictionary CQRS query pipeline.
- * 
- * Business rules enforced at database level:
- * - Each type can have at most one default item (enforced by default_key generated column)
- * - Item codes must be unique within the same type
- * - Item codes follow uppercase with underscores format (e.g., "GET", "PAGE_NUMBER")
- * 
+ * 字典项实体（表 sys_dict_item）。
+ *
+ * <p>隶属于某类型的具体条目；CQRS 查询侧只读使用。</p>
+ *
+ * <p>数据库层规则（约束示意）：
+ * - 每个类型最多一个默认项（由 default_key 生成列配合唯一约束实现）
+ * - 同一类型内 item_code 唯一
+ * - item_code 建议大写下划线风格（如 "GET", "PAGE_NUMBER"）
+ *
+ * </p>
  * @author linqibin
  * @since 0.1.0
  */
@@ -32,100 +33,86 @@ import lombok.experimental.SuperBuilder;
 public class RegSysDictItemDO extends BaseDO {
 
     /**
-     * Parent dictionary type ID.
-     * Logical foreign key reference to sys_dict_type.id.
-     * Establishes the hierarchical relationship between types and items.
+     * 父类型 ID。
+     * 逻辑外键，指向 sys_dict_type.id，用于建立类型与项的层级关系。
      */
     @TableField("type_id")
     private Long typeId;
 
     /**
-     * Dictionary item code - stable business key.
-     * Format: uppercase with underscores (e.g., "GET", "POST", "PAGE_NUMBER").
-     * This field serves as the primary business identifier for dictionary items.
-     * Must be unique within the same dictionary type.
+     * 字典项编码（稳定业务键）。
+     * 建议格式：大写+下划线（如 "GET"、"POST"、"PAGE_NUMBER"）。
+     * 同一类型内唯一，作为项的主要业务标识。
      */
     @TableField("item_code")
     private String itemCode;
 
     /**
-     * Human-readable item name for display purposes.
-     * Used in UI components, dropdown lists, and user-facing documentation.
-     * Provides clear identification of the dictionary item's meaning.
+     * 项名称（展示用）。
+     * 用于 UI 下拉/列表与用户文档，清晰标识项含义。
      */
     @TableField("item_name")
     private String itemName;
 
     /**
-     * Short name or abbreviation for compact UI scenarios.
-     * Optional field used when space is limited in user interfaces.
-     * Provides a concise representation of the dictionary item.
+     * 短名称/缩写（紧凑 UI 场景，非必填）。
      */
     @TableField("short_name")
     private String shortName;
 
     /**
-     * Detailed description of the dictionary item.
-     * Explains the semantics, boundaries, and compatibility considerations.
-     * Helps developers and users understand when to use this dictionary value.
+     * 项描述。
+     * 说明语义、边界与兼容性，便于理解何时使用该值。
      */
     @TableField("description")
     private String description;
 
     /**
-     * Display order for sorting dictionary items.
-     * Lower values appear first in ordered lists and UI components.
-     * Default value is 100, allowing for flexible insertion of new items.
+     * 展示排序。
+     * 值越小越靠前；默认 100，便于灵活插入新项。
      */
     @TableField("display_order")
     private Integer displayOrder;
 
     /**
-     * Whether this item is the default value for its dictionary type.
-     * Only one item per type can be marked as default (enforced by database constraint).
-     * Used for providing fallback values in business logic.
+     * 是否为该类型的默认项。
+     * 每个类型仅允许一个默认项（数据库层约束保证）。
      */
     @TableField("is_default")
     private Boolean isDefault;
 
     /**
-     * Whether this dictionary item is currently enabled.
-     * Disabled items (0) do not participate in business operations.
-     * Enabled items (1) are available for selection and validation.
-     * Allows temporary deactivation without deletion.
+     * 是否启用。
+     * 禁用（0）不参与业务；启用（1）可供选择/校验；可临时停用而不删除。
      */
     @TableField("enabled")
     private Boolean enabled;
 
     /**
-     * Label color for UI display purposes.
-     * Can be hex color codes (#AABBCC) or semantic color names.
-     * Used by frontend components for visual differentiation.
+     * 标签颜色（展示）。
+     * 支持十六进制色值（#AABBCC）或语义色名，供前端区分展示。
      */
     @TableField("label_color")
     private String labelColor;
 
     /**
-     * Icon name for UI display purposes.
-     * References icon identifiers used by frontend icon libraries.
-     * Provides visual representation of dictionary items in user interfaces.
+     * 图标名称（展示）。
+     * 引用前端图标库的标识，增强视觉表达。
      */
     @TableField("icon_name")
     private String iconName;
 
     /**
-     * Extended attributes stored as JSON.
-     * Contains business-specific key-value pairs such as aliases, hints, compatibility flags, etc.
-     * Uses Jackson JsonNode for flexible JSON handling without strict schema constraints.
+     * 扩展属性（JSON）。
+     * 存放业务特定键值（如别名、提示、兼容标记等）；使用 JsonNode 灵活承载。
      */
     @TableField("attributes_json")
     private JsonNode attributesJson;
 
     /**
-     * Generated column for enforcing unique default constraint.
-     * Automatically calculated as type_id when (is_default=1 AND enabled=1 AND deleted=0), otherwise NULL.
-     * Used by database unique constraint to ensure only one default item per type.
-     * This field should not be manually set - it's managed by the database.
+     * 生成列：用于唯一默认项约束。
+     * 当 (is_default=1 AND enabled=1 AND deleted=0) 时计算为 type_id，否则为 NULL；
+     * 由数据库唯一约束保证每类型仅一个默认项；该字段不应手工赋值。
      */
     @TableField("default_key")
     private Long defaultKey;

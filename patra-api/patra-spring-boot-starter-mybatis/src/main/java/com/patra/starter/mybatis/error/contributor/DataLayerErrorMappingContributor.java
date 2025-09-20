@@ -12,11 +12,13 @@ import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Optional;
 
 /**
- * Error mapping contributor for MyBatis-Plus and database layer exceptions.
- * Maps MyBatis-Plus and database exceptions to appropriate error codes through the unified error resolution channel.
- * 
+ * MyBatis-Plus/数据库层异常的错误映射贡献者。
+ *
+ * <p>通过统一的错误解析通道，将 MyBatis-Plus 及数据库异常映射为合适的业务错误码。</p>
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.core.error.service.ErrorResolutionService
  */
 @Slf4j
 @Component

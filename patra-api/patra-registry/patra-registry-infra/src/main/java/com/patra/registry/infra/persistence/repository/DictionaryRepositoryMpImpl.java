@@ -22,11 +22,11 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Dictionary repository implementation using MyBatis-Plus.
- * Provides data access for dictionary CQRS read operations with optimized queries.
- * This implementation handles entity to domain object conversion using MapStruct converters
- * and includes comprehensive logging for troubleshooting and monitoring.
- * 
+ * 基于 MyBatis-Plus 的字典查询侧仓储实现。
+ *
+ * <p>提供面向 CQRS 查询侧的高效数据访问，使用 MapStruct 完成实体到领域对象的转换，
+ * 并通过结构化日志便于排障与观测。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -35,16 +35,16 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DictionaryRepositoryMpImpl implements DictionaryRepository {
     
-    /** MyBatis-Plus mapper for dictionary types */
+    /** 类型 Mapper */
     private final RegSysDictTypeMapper typeMapper;
     
-    /** MyBatis-Plus mapper for dictionary items */
+    /** 项 Mapper */
     private final RegSysDictItemMapper itemMapper;
     
-    /** MyBatis-Plus mapper for dictionary aliases */
+    /** 别名 Mapper */
     private final RegSysDictItemAliasMapper aliasMapper;
     
-    /** Entity to domain converter */
+    /** 实体 -> 领域 转换器 */
     private final DictionaryEntityConverter entityConverter;
     
     /**

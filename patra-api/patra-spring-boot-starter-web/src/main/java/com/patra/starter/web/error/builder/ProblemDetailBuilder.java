@@ -21,11 +21,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Builder for creating RFC 7807 ProblemDetail responses with sensitive data masking
- * and proxy-aware path extraction. Handles both core and web-specific field contributions.
- * 
+ * 构建 RFC 7807 {@link org.springframework.http.ProblemDetail} 响应的构造器。
+ *
+ * <p>特性：
+ * - 支持敏感信息脱敏
+ * - 代理友好的路径提取（Forwarded / X-Forwarded-Uri 等）
+ * - 同时处理核心与 Web 维度的扩展字段
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.web.error.config.WebErrorAutoConfiguration
  */
 @Slf4j
 @Component
@@ -51,12 +56,12 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * Builds a ProblemDetail response from error resolution and HTTP context.
-     * 
-     * @param resolution the error resolution containing error code and HTTP status, must not be null
-     * @param exception the exception being handled, must not be null
-     * @param request the HTTP servlet request for context extraction, must not be null
-     * @return fully populated ProblemDetail response, never null
+     * 根据解析结果与 HTTP 上下文构建 ProblemDetail。
+     *
+     * @param resolution 解析结果（含错误码与状态码）
+     * @param exception 当前处理的异常
+     * @param request HTTP 请求
+     * @return 填充完成的 ProblemDetail
      */
     public ProblemDetail build(ErrorResolution resolution, Throwable exception, HttpServletRequest request) {
         log.debug("Building ProblemDetail: errorCode={}, httpStatus={}", 
@@ -114,11 +119,11 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * Extracts request path with proxy-aware header support.
-     * Priority: Standard Forwarded header > X-Forwarded-* > requestURI
-     * 
-     * @param request the HTTP servlet request, must not be null
-     * @return the extracted request path, never null
+     * 代理友好地提取请求路径。
+     * 优先级：Forwarded > X-Forwarded-* > requestURI。
+     *
+     * @param request HTTP 请求
+     * @return 路径字符串
      */
     private String extractPath(HttpServletRequest request) {
         // Priority: Standard Forwarded header > X-Forwarded-* > requestURI
@@ -149,11 +154,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * Parses path from standard Forwarded header.
-     * Format: for=...; proto=...; host=...; path=...
-     * 
-     * @param forwarded the Forwarded header value, must not be null
-     * @return the parsed path or null if not found
+     * 从标准 Forwarded 头中解析 path 字段（for/ proto/ host/ path）。
+     *
+     * @param forwarded Forwarded 头值
+     * @return 解析出的路径；未找到返回 null
      */
     private String parseForwardedPath(String forwarded) {
         String[] parts = forwarded.split(";");
@@ -167,10 +171,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * Converts int HTTP status to HttpStatus with fallback to 500.
-     * 
-     * @param status the HTTP status code as int
-     * @return the corresponding HttpStatus, defaults to INTERNAL_SERVER_ERROR for invalid codes
+     * 将 int 状态码转换为 HttpStatus（非法值回退 500）。
+     *
+     * @param status 整型状态码
+     * @return HttpStatus
      */
     private HttpStatus convertToHttpStatus(int status) {
         try {
@@ -182,10 +186,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * Masks sensitive data patterns in error messages.
-     * 
-     * @param message the error message to mask, can be null
-     * @return the message with sensitive data masked, or null if input was null
+     * 对错误消息中的敏感信息进行脱敏。
+     *
+     * @param message 原始消息
+     * @return 脱敏后的消息
      */
     private String maskSensitiveData(String message) {
         if (message == null) {
@@ -199,10 +203,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * Builds the type URI for ProblemDetail from error code.
-     * 
-     * @param errorCode the error code to build URI for, must not be null
-     * @return the type URI for the error code, never null
+     * 根据错误码构建 ProblemDetail 的 type URI。
+     *
+     * @param errorCode 错误码
+     * @return type URI
      */
     private URI buildTypeUri(com.patra.common.error.codes.ErrorCodeLike errorCode) {
         String baseUrl = webProperties.getTypeBaseUrl();

@@ -3,64 +3,64 @@ package com.patra.starter.core.error.circuit;
 import java.util.function.Supplier;
 
 /**
- * Simple circuit breaker interface for protecting error mapping contributors
- * from cascading failures and performance issues.
- * 
+ * 简单的熔断器接口，用于保护错误映射贡献者，避免级联故障与性能问题。
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.core.error.circuit.DefaultCircuitBreaker 默认实现
  */
 public interface CircuitBreaker {
     
     /**
-     * Circuit breaker states.
+     * 熔断器状态。
      */
     enum State {
-        /** Circuit is closed, allowing normal operation */
+        /** 闭合，允许正常调用 */
         CLOSED,
-        /** Circuit is open, rejecting calls to prevent cascading failures */
+        /** 打开，拒绝调用以防止级联故障 */
         OPEN,
-        /** Circuit is half-open, allowing limited calls to test recovery */
+        /** 半开，允许有限探测调用以验证恢复情况 */
         HALF_OPEN
     }
     
     /**
-     * Executes the given supplier with circuit breaker protection.
-     * 
-     * @param supplier the operation to execute
-     * @param <T> the return type
-     * @return the result of the operation
-     * @throws CircuitBreakerOpenException if the circuit is open
+     * 在熔断器保护下执行给定操作。
+     *
+     * @param supplier 待执行的操作
+     * @param <T> 返回类型
+     * @return 操作结果
+     * @throws CircuitBreakerOpenException 当熔断器处于打开状态
      */
     <T> T execute(Supplier<T> supplier) throws CircuitBreakerOpenException;
     
     /**
-     * Gets the current state of the circuit breaker.
-     * 
-     * @return the current state
+     * 获取当前熔断器状态。
+     *
+     * @return 当前状态
      */
     State getState();
     
     /**
-     * Gets the failure rate as a percentage (0.0 to 1.0).
-     * 
-     * @return the current failure rate
+     * 获取失败率（0.0 ~ 1.0）。
+     *
+     * @return 当前失败率
      */
     double getFailureRate();
     
     /**
-     * Gets the number of recent calls tracked by the circuit breaker.
-     * 
-     * @return the number of recent calls
+     * 获取近期调用计数。
+     *
+     * @return 近期调用总数
      */
     long getRecentCallCount();
     
     /**
-     * Manually opens the circuit breaker.
+     * 手动打开熔断器。
      */
     void forceOpen();
     
     /**
-     * Manually closes the circuit breaker.
+     * 手动关闭熔断器。
      */
     void forceClose();
 }

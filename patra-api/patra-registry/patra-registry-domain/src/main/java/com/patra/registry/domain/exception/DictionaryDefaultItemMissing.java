@@ -1,24 +1,19 @@
 package com.patra.registry.domain.exception;
 
 /**
- * Domain exception thrown when a dictionary type requires a default item but none is configured.
- * This exception indicates that the dictionary type has business rules requiring a default item,
- * but no item is marked as the default or the default item is missing.
- * 
+ * 当字典类型需要配置默认项但缺失时抛出。
+ *
+ * <p>表示该类型按业务规则应有默认项，但未标记默认项或默认项不存在。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
     
-    /** The dictionary type code that is missing a default item */
+    /** 缺失默认项的字典类型编码 */
     private final String typeCode;
     
-    /**
-     * Constructs a new dictionary default item missing exception.
-     * 
-     * @param typeCode the dictionary type code that is missing a default item, must not be null
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 使用类型编码构造异常。 */
     public DictionaryDefaultItemMissing(String typeCode) {
         super(String.format("Dictionary type is missing a default item: %s", typeCode));
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -27,13 +22,7 @@ public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Constructs a new dictionary default item missing exception with a custom message.
-     * 
-     * @param typeCode the dictionary type code that is missing a default item, must not be null
-     * @param message the detail message explaining the rule violation
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 自定义消息构造异常。 */
     public DictionaryDefaultItemMissing(String typeCode, String message) {
         super(message);
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -42,14 +31,7 @@ public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Constructs a new dictionary default item missing exception with a custom message and cause.
-     * 
-     * @param typeCode the dictionary type code that is missing a default item, must not be null
-     * @param message the detail message explaining the rule violation
-     * @param cause the cause of this exception
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 自定义消息与原因构造异常。 */
     public DictionaryDefaultItemMissing(String typeCode, String message, Throwable cause) {
         super(message, cause);
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -58,11 +40,7 @@ public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Returns the dictionary type code that is missing a default item.
-     * 
-     * @return the type code, never null or empty
-     */
+    /** 返回类型编码。 */
     public String getTypeCode() {
         return typeCode;
     }

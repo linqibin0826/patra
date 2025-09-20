@@ -1,15 +1,14 @@
 package com.patra.registry.contract.query.view;
 
 /**
- * Dictionary type view object for external subsystem consumption.
- * Used in contract module for clean API boundaries and external system integration.
- * This immutable view object represents dictionary type metadata optimized for external consumption,
- * providing essential type information without internal system details.
- * 
- * @param typeCode unique dictionary type code identifier
- * @param typeName human-readable type name for display purposes
- * @param description detailed type description explaining purpose and usage
- * @param itemCount number of available items in this type (enabled items only)
+ * 字典类型视图对象（对外消费，query.view）。
+ *
+ * <p>用于对外接口的简化类型信息表示，隐藏内部实现细节。</p>
+ *
+ * @param typeCode 类型编码
+ * @param typeName 类型名称
+ * @param description 类型描述
+ * @param itemCount 可用项（启用）数量
  * @author linqibin
  * @since 0.1.0
  */
@@ -20,15 +19,7 @@ public record DictionaryTypeView(
     int itemCount
 ) {
     
-    /**
-     * Creates a new DictionaryTypeView with validation.
-     * 
-     * @param typeCode unique dictionary type code identifier
-     * @param typeName human-readable type name for display purposes
-     * @param description detailed type description explaining purpose and usage
-     * @param itemCount number of available items in this type
-     * @throws IllegalArgumentException if typeCode or typeName is null or empty, or if itemCount is negative
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryTypeView {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -46,21 +37,15 @@ public record DictionaryTypeView(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Checks if this dictionary type has any available items.
-     * 
-     * @return true if there are items available in this type, false otherwise
-     */
+    /** 是否存在可用项。 */
     public boolean hasItems() {
         return itemCount > 0;
     }
     
     /**
-     * Creates a DictionaryTypeView from a DictionaryTypeQuery.
-     * Converts query object to view object for external consumption.
-     * 
-     * @param query the dictionary type query to convert
-     * @return a new DictionaryTypeView with external-facing fields only
+     * 从 DictionaryTypeQuery 构建视图对象（对外字段）。
+     *
+     * @see com.patra.registry.contract.query.view.DictionaryTypeQuery
      */
     public static DictionaryTypeView fromQuery(DictionaryTypeQuery query) {
         return new DictionaryTypeView(

@@ -5,28 +5,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Enumeration of provenance codes representing supported upstream data sources.
+ * 上游数据来源枚举（Provenance）。
  *
- * <p>This enum provides identifiers for various literature and metadata databases
- * (e.g., PubMed, Crossref, DataCite), and supports parsing from strings as well
- * as JSON serialization/deserialization through Jackson annotations.
- *
- * <p>Examples of sources:
- * <ul>
- *   <li><b>PUBMED</b>: PubMed, a free database of biomedical literature maintained by NCBI.</li>
- *   <li><b>PMC</b>: PubMed Central, a free full-text archive of biomedical and life sciences journal literature.</li>
- *   <li><b>EPMC</b>: Europe PMC, a free repository of life sciences articles, preprints, and other resources.</li>
- *   <li><b>CROSSREF</b>: A database providing Digital Object Identifiers (DOIs) and metadata for scholarly works.</li>
- *   <li><b>DATACITE</b>: A global nonprofit organization that provides persistent identifiers (DOIs) for research data.</li>
- * </ul>
- *
- * <p>References:
- * <ul>
- *   <li>NCBI PubMed: <a href="https://pubmed.ncbi.nlm.nih.gov/">https://pubmed.ncbi.nlm.nih.gov/</a></li>
- *   <li>Europe PMC: <a href="https://europepmc.org/">https://europepmc.org/</a></li>
- *   <li>Crossref: <a href="https://www.crossref.org/">https://www.crossref.org/</a></li>
- *   <li>DataCite: <a href="https://datacite.org/">https://datacite.org/</a></li>
- * </ul>
+ * <p>为常见文献/元数据来源提供统一标识（如 PubMed、Crossref、DataCite），
+ * 支持字符串解析与 Jackson JSON 序列化/反序列化。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -53,35 +35,20 @@ public enum ProvenanceCode implements CodeEnum<String> {
     CORD19("cord19", "CORD-19"),
     GIM("gim", "WHO GIM");
 
-    /**
-     * The unique string code identifier for the data source (e.g., "pubmed").
-     */
+    /** 数据源标识（如 "pubmed"）。 */
     private final String code;
 
-    /**
-     * A human-readable description or display name of the data source (e.g., "PubMed").
-     */
+    /** 数据源的展示名称或说明（如 "PubMed"）。 */
     private final String description;
 
-    /**
-     * Constructs a provenance code enum constant.
-     *
-     * @param code the unique identifier string
-     * @param display the human-readable description
-     */
+    /** 构造函数。 */
     ProvenanceCode(String code, String display) {
         this.code = code;
         this.description = display;
     }
 
     /**
-     * Parses a string into a ProvenanceCode.
-     * This method normalizes the input (trims, lowercases, replaces '-' with '_')
-     * and maps common aliases to the appropriate code.
-     *
-     * @param s the input string
-     * @return the corresponding ProvenanceCode
-     * @throws IllegalArgumentException if the string does not match any known source
+     * 解析字符串为枚举：会进行规范化（trim、lowercase、'-'→'_'）并处理常见别名。
      */
     public static ProvenanceCode parse(String s) {
         if (s == null)
@@ -110,22 +77,13 @@ public enum ProvenanceCode implements CodeEnum<String> {
         };
     }
 
-    /**
-     * Factory method for JSON deserialization.
-     *
-     * @param value the string value from JSON
-     * @return the corresponding ProvenanceCode
-     */
+    /** JSON 反序列化工厂方法。 */
     @JsonCreator
     public static ProvenanceCode fromJson(String value) {
         return parse(value);
     }
 
-    /**
-     * Returns the string code for JSON serialization.
-     *
-     * @return the code of this ProvenanceCode
-     */
+    /** JSON 序列化输出 code。 */
     @JsonValue
     public String toJson() {
         return this.code;

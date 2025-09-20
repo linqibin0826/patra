@@ -4,18 +4,18 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Dictionary health status value object for system monitoring and diagnostics.
- * This immutable value object encapsulates comprehensive health metrics about the dictionary system,
- * including counts, integrity issues, and potential problems that require attention.
- * 
- * @param totalTypes total number of dictionary types in the system
- * @param totalItems total number of dictionary items across all types
- * @param enabledItems number of dictionary items that are currently enabled and available
- * @param deletedItems number of dictionary items that have been soft-deleted
- * @param typesWithoutDefault list of type codes that do not have any default items (potential issue)
- * @param typesWithMultipleDefaults list of type codes that have multiple default items (data integrity issue)
- * @param disabledTypes number of dictionary types that are currently disabled
- * @param systemTypes number of dictionary types that are system-managed (read-only)
+ * 字典系统健康状态值对象（监控/诊断）。
+ *
+ * <p>不可变，承载系统项数、完整性问题及其他需要关注的指标。</p>
+ *
+ * @param totalTypes 类型总数
+ * @param totalItems 项总数
+ * @param enabledItems 启用项总数
+ * @param deletedItems 已删除项总数（软删）
+ * @param typesWithoutDefault 无默认项的类型列表
+ * @param typesWithMultipleDefaults 多默认项的类型列表
+ * @param disabledTypes 禁用的类型数量
+ * @param systemTypes 系统内置类型数量（只读）
  * @author linqibin
  * @since 0.1.0
  */
@@ -30,19 +30,7 @@ public record DictionaryHealthStatus(
     int systemTypes
 ) {
     
-    /**
-     * Creates a new DictionaryHealthStatus with validation and immutable collections.
-     * 
-     * @param totalTypes total number of dictionary types in the system
-     * @param totalItems total number of dictionary items across all types
-     * @param enabledItems number of dictionary items that are currently enabled
-     * @param deletedItems number of dictionary items that have been soft-deleted
-     * @param typesWithoutDefault list of type codes without default items
-     * @param typesWithMultipleDefaults list of type codes with multiple default items
-     * @param disabledTypes number of dictionary types that are currently disabled
-     * @param systemTypes number of dictionary types that are system-managed
-     * @throws IllegalArgumentException if any count is negative
-     */
+    /** 带参数校验与不可变化集合的紧凑构造器。 */
     public DictionaryHealthStatus {
         if (totalTypes < 0) {
             throw new IllegalArgumentException("Total types count cannot be negative");
@@ -72,15 +60,7 @@ public record DictionaryHealthStatus(
             Collections.emptyList();
     }
     
-    /**
-     * Creates a healthy dictionary status with no issues.
-     * 
-     * @param totalTypes total number of dictionary types
-     * @param totalItems total number of dictionary items
-     * @param enabledItems number of enabled dictionary items
-     * @param systemTypes number of system-managed types
-     * @return a DictionaryHealthStatus indicating a healthy system
-     */
+    /** 创建“健康”状态（无问题）。 */
     public static DictionaryHealthStatus healthy(int totalTypes, int totalItems, int enabledItems, int systemTypes) {
         return new DictionaryHealthStatus(
             totalTypes, 
@@ -94,48 +74,27 @@ public record DictionaryHealthStatus(
         );
     }
     
-    /**
-     * Checks if the dictionary system is in a healthy state.
-     * A system is considered healthy if there are no integrity issues.
-     * 
-     * @return true if no integrity issues are detected, false otherwise
-     */
+    /** 是否健康（无完整性问题即健康）。 */
     public boolean isHealthy() {
         return typesWithoutDefault.isEmpty() && typesWithMultipleDefaults.isEmpty();
     }
     
-    /**
-     * Checks if there are any data integrity issues.
-     * 
-     * @return true if integrity issues are detected, false otherwise
-     */
+    /** 是否存在完整性问题。 */
     public boolean hasIntegrityIssues() {
         return !isHealthy();
     }
     
-    /**
-     * Gets the number of dictionary types with integrity issues.
-     * 
-     * @return count of types that have either no default or multiple defaults
-     */
+    /** 存在问题的类型数量（无默认或多默认）。 */
     public int getTypesWithIssuesCount() {
         return typesWithoutDefault.size() + typesWithMultipleDefaults.size();
     }
     
-    /**
-     * Gets the number of disabled items (total items minus enabled items minus deleted items).
-     * 
-     * @return count of items that are disabled but not deleted
-     */
+    /** 禁用项数量（totalItems - enabledItems - deletedItems）。 */
     public int getDisabledItems() {
         return Math.max(0, totalItems - enabledItems - deletedItems);
     }
     
-    /**
-     * Gets the percentage of enabled items out of total items.
-     * 
-     * @return percentage of enabled items (0.0 to 100.0), or 0.0 if no items exist
-     */
+    /** 启用项占比（0.0~100.0；无数据返回 0.0）。 */
     public double getEnabledItemsPercentage() {
         if (totalItems == 0) {
             return 0.0;
@@ -143,38 +102,22 @@ public record DictionaryHealthStatus(
         return (double) enabledItems / totalItems * 100.0;
     }
     
-    /**
-     * Gets the number of user-managed dictionary types (non-system types).
-     * 
-     * @return count of dictionary types that are not system-managed
-     */
+    /** 非系统类型数量（用户管理类型）。 */
     public int getUserTypes() {
         return Math.max(0, totalTypes - systemTypes);
     }
     
-    /**
-     * Checks if there are any types without default items.
-     * 
-     * @return true if some types are missing default items, false otherwise
-     */
+    /** 是否存在无默认项的类型。 */
     public boolean hasTypesWithoutDefaults() {
         return !typesWithoutDefault.isEmpty();
     }
     
-    /**
-     * Checks if there are any types with multiple default items.
-     * 
-     * @return true if some types have multiple default items, false otherwise
-     */
+    /** 是否存在多个默认项的类型。 */
     public boolean hasTypesWithMultipleDefaults() {
         return !typesWithMultipleDefaults.isEmpty();
     }
     
-    /**
-     * Gets a summary description of the health status.
-     * 
-     * @return a human-readable summary of the dictionary system health
-     */
+    /** 获取健康状态摘要。 */
     public String getHealthSummary() {
         if (isHealthy()) {
             return String.format("Healthy: %d types, %d items (%d enabled)", 

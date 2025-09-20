@@ -6,42 +6,36 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Semantic base exception for Registry business rule violations.
- * This exception indicates that an operation violates business rules, validation constraints,
- * or data integrity requirements (e.g., invalid schema format, constraint violations).
- * 
- * All Registry rule violation exceptions should extend this class to ensure consistent
- * error trait classification and handling.
- * 
+ * Registry 领域规则违反（Rule Violation）语义的基类异常。
+ *
+ * <p>表示操作违反业务规则/校验约束/数据完整性等（如格式非法、约束冲突）。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public abstract class RegistryRuleViolation extends RegistryException implements HasErrorTraits {
     
     /**
-     * Constructs a new registry rule violation exception with the specified detail message.
-     * 
-     * @param message the detail message explaining the rule violation
+     * 使用消息构造异常。
+     *
+     * @param message 详情消息
      */
     protected RegistryRuleViolation(String message) {
         super(message);
     }
     
     /**
-     * Constructs a new registry rule violation exception with the specified detail message and cause.
-     * 
-     * @param message the detail message explaining the rule violation
-     * @param cause the cause of this exception
+     * 使用消息与原因构造异常。
+     *
+     * @param message 详情消息
+     * @param cause 异常原因
      */
     protected RegistryRuleViolation(String message, Throwable cause) {
         super(message, cause);
     }
     
     /**
-     * Returns the error traits for rule violation exceptions.
-     * All Registry rule violation exceptions are classified with the RULE_VIOLATION trait.
-     * 
-     * @return set containing the RULE_VIOLATION error trait
+     * 返回该异常的错误特征集合（恒为 RULE_VIOLATION）。
      */
     @Override
     public Set<ErrorTrait> getErrorTraits() {

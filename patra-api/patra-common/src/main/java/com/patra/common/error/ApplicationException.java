@@ -3,28 +3,20 @@ package com.patra.common.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * Application layer exception that carries business error codes.
- * This exception is used in the application layer to wrap domain exceptions
- * or represent application-specific errors with structured error codes.
- * 
- * The embedded ErrorCodeLike is used by the error resolution algorithm
- * to determine appropriate HTTP status codes and error responses.
- * 
+ * 应用层异常：承载业务错误码。
+ *
+ * <p>用于在应用层封装领域异常，或表示带结构化错误码的应用错误。
+ * 内嵌的 ErrorCodeLike 将用于错误解析算法判定 HTTP 状态与错误响应。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class ApplicationException extends RuntimeException {
     
-    /** The business error code associated with this exception */
+    /** 本异常关联的业务错误码 */
     private final ErrorCodeLike errorCode;
     
-    /**
-     * Constructs a new application exception with the specified error code and message.
-     * 
-     * @param errorCode the business error code, must not be null
-     * @param message the detail message explaining the exception
-     * @throws IllegalArgumentException if errorCode is null
-     */
+    /** 构造函数（错误码 + 消息）。 */
     public ApplicationException(ErrorCodeLike errorCode, String message) {
         super(message);
         if (errorCode == null) {
@@ -33,14 +25,7 @@ public class ApplicationException extends RuntimeException {
         this.errorCode = errorCode;
     }
     
-    /**
-     * Constructs a new application exception with the specified error code, message, and cause.
-     * 
-     * @param errorCode the business error code, must not be null
-     * @param message the detail message explaining the exception
-     * @param cause the cause of this exception
-     * @throws IllegalArgumentException if errorCode is null
-     */
+    /** 构造函数（错误码 + 消息 + 原因）。 */
     public ApplicationException(ErrorCodeLike errorCode, String message, Throwable cause) {
         super(message, cause);
         if (errorCode == null) {
@@ -49,11 +34,7 @@ public class ApplicationException extends RuntimeException {
         this.errorCode = errorCode;
     }
     
-    /**
-     * Returns the business error code associated with this exception.
-     * 
-     * @return the error code, never null
-     */
+    /** 返回关联的业务错误码。 */
     public ErrorCodeLike getErrorCode() {
         return errorCode;
     }

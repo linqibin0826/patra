@@ -7,6 +7,11 @@ import java.time.Instant;
 
 @Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
+/**
+ * 通用 API 响应包装器。
+ *
+ * <p>提供统一的成功/失败响应结构，包含时间戳与可选数据体。</p>
+ */
 public class ApiResponse<T> {
 
     private final boolean success;
@@ -27,10 +32,16 @@ public class ApiResponse<T> {
         this.data = data;
     }
 
+    /**
+     * 创建成功响应。
+     */
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, ResultCode.OK.getCode(), ResultCode.OK.getMessage(), data);
     }
 
+    /**
+     * 创建失败响应（业务错误）。
+     */
     public static <T> ApiResponse<T> failure(ResultCode code, String message) {
         return new ApiResponse<>(false, code.getCode(), message == null ? code.getMessage() : message, null);
     }

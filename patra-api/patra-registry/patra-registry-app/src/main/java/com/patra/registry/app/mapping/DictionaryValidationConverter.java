@@ -9,10 +9,10 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct converter for domain to contract validation Query object mapping.
- * Handles conversion between domain validation objects and contract query objects
- * for dictionary validation and health status in CQRS read operations.
- * 
+ * MapStruct 转换器：领域校验/健康对象 -> 契约层 Query 对象。
+ *
+ * <p>用于 CQRS 查询侧，将领域校验结果与健康状态映射为对外查询对象。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -22,28 +22,14 @@ import org.mapstruct.ReportingPolicy;
 )
 public interface DictionaryValidationConverter {
     
-    /**
-     * Converts a domain ValidationResult to a contract DictionaryValidationQuery.
-     * Maps validation outcome and error information for API responses.
-     * 
-     * @param validationResult the domain validation result to convert
-     * @param typeCode the dictionary type code that was validated
-     * @param itemCode the dictionary item code that was validated
-     * @return the converted DictionaryValidationQuery object
-     */
+    /** 领域 ValidationResult -> 契约 DictionaryValidationQuery。 */
     @Mapping(target = "typeCode", source = "typeCode")
     @Mapping(target = "itemCode", source = "itemCode")
     @Mapping(target = "isValid", source = "validationResult.isValid")
     @Mapping(target = "errorMessage", source = "validationResult.errorMessage")
     DictionaryValidationQuery toQuery(ValidationResult validationResult, String typeCode, String itemCode);
     
-    /**
-     * Converts a domain DictionaryHealthStatus to a contract DictionaryHealthQuery.
-     * Maps all health metrics and integrity issue information for monitoring endpoints.
-     * 
-     * @param healthStatus the domain health status to convert
-     * @return the converted DictionaryHealthQuery object
-     */
+    /** 领域 DictionaryHealthStatus -> 契约 DictionaryHealthQuery。 */
     @Mapping(target = "totalTypes", source = "totalTypes")
     @Mapping(target = "totalItems", source = "totalItems")
     @Mapping(target = "enabledItems", source = "enabledItems")

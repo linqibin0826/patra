@@ -13,9 +13,10 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 /**
- * Registry-specific error mapping contributor for fine-grained exception to error code mappings.
- * Provides explicit mappings for Registry domain exceptions and data layer exceptions.
- * 
+ * Registry 专用错误映射贡献者：提供细粒度的异常→错误码映射。
+ *
+ * <p>覆盖 Registry 领域异常与数据层异常的显式映射。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -24,10 +25,7 @@ import java.util.Optional;
 public class RegistryErrorMappingContributor implements ErrorMappingContributor {
 
     /**
-     * Maps Registry-specific exceptions to appropriate error codes.
-     * 
-     * @param exception the exception to map
-     * @return Optional containing the mapped error code, empty if no mapping found
+     * 执行异常到错误码的映射。
      */
     @Override
     public Optional<ErrorCodeLike> mapException(Throwable exception) {

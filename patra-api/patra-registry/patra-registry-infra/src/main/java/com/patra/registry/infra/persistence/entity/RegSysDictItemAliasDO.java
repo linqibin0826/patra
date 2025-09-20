@@ -10,15 +10,16 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Dictionary item alias entity for sys_dict_item_alias table.
- * Provides external system mappings for dictionary items to support legacy system integration.
- * This entity is used exclusively for read-only operations in the dictionary CQRS query pipeline.
- * 
- * Business rules:
- * - Each (source_system, external_code) combination must be globally unique
- * - Aliases enable integration with external systems without modifying business tables
- * - Common source systems include: pubmed, crossref, legacy_v1, etc.
- * 
+ * 字典项别名实体（表 sys_dict_item_alias）。
+ *
+ * <p>为外部系统集成提供映射（只读，用于 CQRS 查询侧）。</p>
+ *
+ * <p>规则示意：
+ * - (source_system, external_code) 全局唯一
+ * - 通过别名对接外部系统而不改动业务表结构
+ * - 常见来源：pubmed、crossref、legacy_v1 等
+ * </p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -39,35 +40,32 @@ public class RegSysDictItemAliasDO extends BaseDO {
     private Long itemId;
 
     /**
-     * Source system identifier for the external mapping.
-     * Identifies which external system or legacy application provides this alias.
-     * Format: lowercase with underscores or hyphens (e.g., "pubmed", "crossref", "legacy_v1").
-     * Used to namespace external codes and prevent conflicts between systems.
+     * 外部映射来源系统标识。
+     * 标识该别名来自哪个外部系统或遗留应用。
+     * 格式建议：小写+下划线或中划线（如 "pubmed"、"crossref"、"legacy_v1"）。
+     * 用于为外部编码命名空间化，避免不同系统冲突。
      */
     @TableField("source_system")
     private String sourceSystem;
 
     /**
-     * External code or value from the source system.
-     * The actual code/value used by the external system to represent this dictionary item.
-     * Combined with source_system, this must be globally unique across all aliases.
-     * Used as the mapping key for translating external values to internal dictionary items.
+     * 外部系统的编码/取值。
+     * 外部系统用来表示该字典项的实际编码；与 source_system 组合后在全局范围内唯一。
+     * 用作外部值映射至内部字典项的关键键值。
      */
     @TableField("external_code")
     private String externalCode;
 
     /**
-     * External label or display name from the source system.
-     * Optional field containing the human-readable name used by the external system.
-     * Provides context for understanding the external system's terminology.
+     * 外部系统的展示标签（可选）。
+     * 存放外部系统的人类可读名称，便于理解外部术语。
      */
     @TableField("external_label")
     private String externalLabel;
 
     /**
-     * Notes about the alias mapping.
-     * Contains additional information such as differences, compatibility notes, source links, etc.
-     * Helps developers understand the mapping context and any special considerations.
+     * 别名映射说明。
+     * 记录差异、兼容性说明、来源链接等补充信息，便于理解映射上下文。
      */
     @TableField("notes")
     private String notes;

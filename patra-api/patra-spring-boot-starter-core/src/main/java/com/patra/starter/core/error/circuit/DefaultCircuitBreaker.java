@@ -10,11 +10,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
- * Default implementation of CircuitBreaker with configurable failure thresholds
- * and recovery timeouts. Uses a sliding window approach to track recent calls.
- * 
+ * 熔断器默认实现，支持可配置的失败阈值与恢复超时。
+ *
+ * <p>采用滑动窗口统计近期调用数据，用于判定打开/关闭熔断状态。
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.core.error.circuit.CircuitBreaker
  */
 @Slf4j
 public class DefaultCircuitBreaker implements CircuitBreaker {
@@ -33,13 +35,13 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     private final AtomicInteger totalCalls = new AtomicInteger(0);
     
     /**
-     * Creates a new DefaultCircuitBreaker with the specified configuration.
-     * 
-     * @param name the name of the circuit breaker
-     * @param failureThreshold the number of consecutive failures to open the circuit
-     * @param failureRateThreshold the failure rate threshold (0.0 to 1.0) to open the circuit
-     * @param timeout the timeout duration before attempting to close the circuit
-     * @param slidingWindowSize the size of the sliding window for tracking calls
+     * 构造函数。
+     *
+     * @param name 熔断器名称
+     * @param failureThreshold 连续失败次数阈值
+     * @param failureRateThreshold 失败率阈值（0.0~1.0）
+     * @param timeout 从 OPEN 尝试恢复前的超时时长
+     * @param slidingWindowSize 滑动窗口大小（统计调用数）
      */
     public DefaultCircuitBreaker(String name, int failureThreshold, double failureRateThreshold, 
                                Duration timeout, int slidingWindowSize) {
@@ -106,7 +108,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
     
     /**
-     * Handles successful execution.
+     * 成功执行后的处理。
      */
     private void onSuccess() {
         incrementTotalCalls();
@@ -124,7 +126,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
     
     /**
-     * Handles failed execution.
+     * 失败执行后的处理。
      */
     private void onFailure() {
         incrementTotalCalls();
@@ -146,12 +148,12 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
     
     /**
-     * Increments total calls and maintains sliding window.
-     */
+      * 增加总调用计数并维护滑动窗口。
+      */
     private void incrementTotalCalls() {
         int total = totalCalls.incrementAndGet();
         
-        // Reset counters when sliding window is full to maintain recent statistics
+        // When window is full, reduce counts to keep recent statistics
         if (total >= slidingWindowSize) {
             int currentSuccess = successCount.get();
             int currentFailure = failureCount.get();
@@ -170,7 +172,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
     
     /**
-     * Determines if the circuit should be opened based on failure criteria.
+     * 根据失败条件判断是否需要打开熔断器。
      */
     private boolean shouldOpenCircuit(int consecutiveFailures) {
         // Open if consecutive failures exceed threshold
@@ -187,7 +189,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
     
     /**
-     * Determines if we should attempt to reset the circuit from OPEN to HALF_OPEN.
+     * 判断是否应从 OPEN 尝试重置为 HALF_OPEN。
      */
     private boolean shouldAttemptReset() {
         long lastFailure = lastFailureTime.get();
@@ -196,7 +198,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
     
     /**
-     * Resets all counters.
+     * 重置所有统计计数。
      */
     private void resetCounters() {
         successCount.set(0);

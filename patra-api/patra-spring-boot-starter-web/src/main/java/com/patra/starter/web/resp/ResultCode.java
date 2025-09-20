@@ -3,6 +3,9 @@ package com.patra.starter.web.resp;
 import lombok.Getter;
 
 @Getter
+/**
+ * Web 层通用结果码（示例）。
+ */
 public enum ResultCode {
 
     OK(0, "OK"),
@@ -27,4 +30,3 @@ public enum ResultCode {
     }
 
 }
-

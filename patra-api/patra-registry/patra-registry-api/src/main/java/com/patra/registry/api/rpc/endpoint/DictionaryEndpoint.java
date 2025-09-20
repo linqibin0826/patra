@@ -10,116 +10,98 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Dictionary HTTP API contract for internal subsystem access.
- * Defines the REST endpoints that subsystems can consume via Feign clients.
- * This interface is strictly read-only following CQRS query patterns and provides
- * a clean contract boundary for dictionary operations across microservices.
- * 
- * <p>All endpoints use the internal API path pattern (/_internal/dictionaries/**) 
- * to distinguish from public API endpoints. The interface returns dedicated API DTO objects
- * for consistent data structures between services.</p>
- * 
- * <p>Supported operations include:</p>
+ * 字典服务对内 HTTP API 契约。
+ *
+ * <p>定义供各子系统（通过 Feign 客户端）调用的只读查询接口，遵循 CQRS 的查询侧约束，
+ * 在微服务间提供清晰稳定的契约边界。所有端点均以内部路径前缀 {@code /_internal/dictionaries/**}
+ * 区分于对外公开的 API，返回专用的 API DTO，确保跨服务的数据结构一致。</p>
+ *
+ * <p>支持能力：</p>
  * <ul>
- *   <li>Dictionary item retrieval by type and code</li>
- *   <li>Enabled items listing by type</li>
- *   <li>Default item retrieval by type</li>
- *   <li>Batch validation of dictionary references</li>
- *   <li>External alias resolution</li>
- *   <li>Dictionary type metadata retrieval</li>
- *   <li>System health status monitoring</li>
+ *   <li>按类型与编码查询字典项</li>
+ *   <li>按类型查询启用项列表</li>
+ *   <li>按类型查询默认项</li>
+ *   <li>批量校验字典引用</li>
+ *   <li>外部别名解析为内部字典项</li>
+ *   <li>查询字典类型元数据</li>
+ *   <li>系统健康状态监控</li>
  * </ul>
- * 
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.registry.api.rpc.client.DictionaryClient Feign 客户端
  */
 public interface DictionaryEndpoint {
     
-    /** Base path for internal dictionary API endpoints */
+    /** 内部 API 的基础路径前缀 */
     String BASE_PATH = "/_internal/dictionaries";
     
     /**
-     * Get dictionary item by type and item code.
-     * Retrieves a specific dictionary item identified by its type code and item code.
-     * Only returns enabled and non-deleted items.
-     * 
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @param itemCode the dictionary item code, must not be null or empty
-     * @return DictionaryItemResp object if found and enabled, null if not found or disabled
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
+     * 根据类型与编码查询字典项（仅返回启用且未删除的项）。
+     *
+     * @param typeCode 字典类型编码，不能为空
+     * @param itemCode 字典项编码，不能为空
+     * @return 若存在且可用则返回对象；不存在或不可用则返回 null
+     * @throws IllegalArgumentException 当参数为空时
      */
     @GetMapping(BASE_PATH + "/types/{typeCode}/items/{itemCode}")
     DictionaryItemResp getItemByTypeAndCode(@PathVariable("typeCode") String typeCode, 
                                             @PathVariable("itemCode") String itemCode);
     
     /**
-     * Get all enabled dictionary items for a specific type.
-     * Retrieves all enabled and non-deleted items for the specified dictionary type,
-     * sorted by sort_order ascending, then by item_code ascending.
-     * 
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @return List of enabled dictionary items, empty list if type not found or no enabled items
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 查询某类型下所有启用的字典项（先按 sort_order 升序，再按 item_code 升序）。
+     *
+     * @param typeCode 字典类型编码，不能为空
+     * @return 启用项列表；类型不存在或无启用项时返回空列表
+     * @throws IllegalArgumentException 当参数为空时
      */
     @GetMapping(BASE_PATH + "/types/{typeCode}/items")
     List<DictionaryItemResp> getEnabledItemsByType(@PathVariable("typeCode") String typeCode);
     
     /**
-     * Get the default dictionary item for a specific type.
-     * Retrieves the item marked as default (is_default=true) for the specified type.
-     * Only returns enabled and non-deleted default items.
-     * 
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @return DictionaryItemResp object if default exists and is enabled, null if no default or disabled
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 查询某类型的默认字典项（仅返回启用且未删除的默认项）。
+     *
+     * @param typeCode 字典类型编码，不能为空
+     * @return 若存在且可用则返回；不存在或不可用则返回 null
+     * @throws IllegalArgumentException 当参数为空时
      */
     @GetMapping(BASE_PATH + "/types/{typeCode}/default")
     DictionaryItemResp getDefaultItemByType(@PathVariable("typeCode") String typeCode);
     
     /**
-     * Validate multiple dictionary references in batch.
-     * Validates a list of dictionary references to ensure they exist and are enabled.
-     * This is the primary validation endpoint for subsystems to verify dictionary references
-     * before persisting business data.
-     * 
-     * @param references list of dictionary references to validate, must not be null
-     * @return List of validation results corresponding to each input reference in the same order
-     * @throws IllegalArgumentException if references list is null
+     * 批量校验字典引用（存在且启用）。用于业务子系统在持久化前进行引用有效性校验。
+     *
+     * @param references 待校验的引用列表，不能为空
+     * @return 与入参一一对应的校验结果列表
+     * @throws IllegalArgumentException 当列表为空时
      */
     @PostMapping(BASE_PATH + "/validate")
     List<DictionaryValidationResp> validateReferences(@RequestBody List<DictionaryReferenceReq> references);
     
     /**
-     * Get dictionary item by external system alias.
-     * Resolves an external system's code to the corresponding internal dictionary item.
-     * This enables integration with legacy systems and external data sources that use
-     * different coding schemes.
-     * 
-     * @param sourceSystem the external system identifier, must not be null or empty
-     * @param externalCode the external system's code, must not be null or empty
-     * @return DictionaryItemResp object if alias mapping exists and item is enabled, null otherwise
-     * @throws IllegalArgumentException if sourceSystem or externalCode is null or empty
+     * 通过外部系统别名查询字典项（兼容异构编码体系）。
+     *
+     * @param sourceSystem 外部系统标识，不能为空
+     * @param externalCode 外部系统的编码，不能为空
+     * @return 若存在映射且可用则返回；否则返回 null
+     * @throws IllegalArgumentException 当参数为空时
      */
     @GetMapping(BASE_PATH + "/aliases")
     DictionaryItemResp getItemByAlias(@RequestParam("sourceSystem") String sourceSystem,
                                       @RequestParam("externalCode") String externalCode);
     
     /**
-     * Get all dictionary types in the system.
-     * Retrieves metadata for all dictionary types including item counts and default status.
-     * Useful for administrative interfaces and system monitoring.
-     * 
-     * @return List of all dictionary types ordered by type_code, empty list if no types exist
+     * 查询系统内所有字典类型元数据（含项数、默认项等）。
+     *
+     * @return 按 type_code 排序的类型列表；无数据返回空列表
      */
     @GetMapping(BASE_PATH + "/types")
     List<DictionaryTypeResp> getAllTypes();
     
     /**
-     * Get dictionary system health status for monitoring.
-     * Provides comprehensive health metrics including item counts, integrity issues,
-     * and configuration problems. Used by monitoring systems and health check endpoints.
-     * 
-     * @return DictionaryHealthResp containing system health metrics and issue details
+     * 获取字典系统健康状态（用于监控）。
+     *
+     * @return 包含健康指标与问题明细的对象
      */
     @GetMapping(BASE_PATH + "/health")
     DictionaryHealthResp getHealthStatus();

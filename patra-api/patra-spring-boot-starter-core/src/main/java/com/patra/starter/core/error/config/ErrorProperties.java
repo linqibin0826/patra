@@ -4,9 +4,10 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Error handling configuration properties for the core starter.
- * Provides configuration for error handling behavior and status mapping.
- * 
+ * 核心错误处理配置项。
+ *
+ * <p>用于控制错误处理行为与状态映射策略。
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -14,81 +15,73 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "patra.error")
 public class ErrorProperties {
     
-    /** Whether error handling is enabled */
+    /** 是否启用错误处理 */
     private boolean enabled = true;
     
-    /** Context prefix for error codes (e.g., REG, ORD, INV) - REQUIRED */
+    /** 错误码上下文前缀（如：REG、ORD、INV），必填 */
     private String contextPrefix;
     
-    /** Status mapping configuration */
+    /** 状态映射配置 */
     private MapStatusProperties mapStatus = new MapStatusProperties();
     
-    /** Monitoring and observability configuration */
+    /** 监控与可观测性配置 */
     private MonitoringProperties monitoring = new MonitoringProperties();
     
-    /**
-     * Status mapping configuration properties.
-     */
+    /** 状态映射相关配置。 */
     @Data
     public static class MapStatusProperties {
-        /** Status mapping strategy name */
+        /** 状态映射策略名 */
         private String strategy = "suffix-heuristic";
     }
     
-    /**
-     * Monitoring and observability configuration properties.
-     */
+    /** 监控与可观测性相关配置。 */
     @Data
     public static class MonitoringProperties {
-        /** Whether monitoring is enabled */
+        /** 是否启用监控 */
         private boolean enabled = true;
         
-        /** Circuit breaker configuration */
+        /** 熔断器配置 */
         private CircuitBreakerProperties circuitBreaker = new CircuitBreakerProperties();
         
-        /** Metrics collection configuration */
+        /** 指标采集配置 */
         private MetricsProperties metrics = new MetricsProperties();
     }
     
-    /**
-     * Circuit breaker configuration properties.
-     */
+    /** 熔断器相关配置。 */
     @Data
     public static class CircuitBreakerProperties {
-        /** Whether circuit breakers are enabled for error mapping contributors */
+        /** 是否对映射贡献者启用熔断保护 */
         private boolean enabled = true;
         
-        /** Number of consecutive failures to open the circuit */
+        /** 连续失败次数阈值（超过则打开熔断） */
         private int failureThreshold = 5;
         
-        /** Failure rate threshold (0.0 to 1.0) to open the circuit */
+        /** 失败率阈值（0.0~1.0，超过则打开熔断） */
         private double failureRateThreshold = 0.5;
         
-        /** Timeout duration in milliseconds before attempting to close the circuit */
+        /** 从 OPEN 到 HALF_OPEN 之前的超时时间（毫秒） */
         private long timeoutMs = 60000; // 1 minute
         
-        /** Size of the sliding window for tracking calls */
+        /** 滑动窗口大小（用于统计调用次数） */
         private int slidingWindowSize = 100;
     }
     
-    /**
-     * Metrics collection configuration properties.
-     */
+    /** 指标采集相关配置。 */
     @Data
     public static class MetricsProperties {
-        /** Whether metrics collection is enabled */
+        /** 是否启用指标采集 */
         private boolean enabled = true;
         
-        /** Whether to log slow resolution performance */
+        /** 是否记录解析耗时过慢日志 */
         private boolean logSlowResolution = true;
         
-        /** Threshold in milliseconds for slow resolution logging */
+        /** 解析慢日志阈值（毫秒） */
         private long slowResolutionThresholdMs = 100;
         
-        /** Whether to log cache performance statistics */
+        /** 是否记录缓存命中统计日志 */
         private boolean logCachePerformance = true;
         
-        /** Interval for cache performance logging (number of requests) */
+        /** 缓存命中日志记录间隔（按请求次数） */
         private int cachePerformanceLogInterval = 50;
     }
 }

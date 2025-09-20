@@ -17,7 +17,7 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * MapStruct converter bridging contract query objects and API DTOs for dictionary endpoints.
+ * MapStruct 转换器：契约 Query 对象 <-> API DTO（字典内部端点）。
  */
 @Mapper(
         componentModel = "spring",

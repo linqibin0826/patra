@@ -1,31 +1,29 @@
 /**
- * Registry service error handling API.
- * 
- * This package contains the error code catalog and related contracts for the Registry service.
- * The error codes follow a structured format and are designed to provide consistent,
- * machine-readable error identification across all Registry service operations.
- * 
- * <h2>Error Code Format</h2>
- * All Registry error codes follow the format: {@code REG-NNNN}
+ * Registry 服务错误处理 API。
+ *
+ * <p>本包包含错误码目录及相关契约。错误码采用结构化格式，旨在为所有 Registry 操作
+ * 提供一致且可机器识别的错误标识。</p>
+ *
+ * <h2>错误码格式</h2>
+ * 全部错误码遵循 {@code REG-NNNN}：
  * <ul>
- *   <li>{@code REG} - Registry service context prefix</li>
- *   <li>{@code NNNN} - Four-digit numeric code</li>
+ *   <li>{@code REG} —— Registry 服务上下文前缀</li>
+ *   <li>{@code NNNN} —— 四位数字编码</li>
  * </ul>
- * 
- * <h2>Error Code Categories</h2>
+ *
+ * <h2>分类</h2>
  * <ul>
- *   <li>{@code 0xxx} - Common HTTP-aligned codes (REG-0400 to REG-0504)</li>
- *   <li>{@code 1xxx} - Business-specific codes organized by domain</li>
+ *   <li>{@code 0xxx} —— 对齐 HTTP 的通用错误（REG-0400 ~ REG-0504）</li>
+ *   <li>{@code 1xxx} —— 领域/业务特定错误</li>
  * </ul>
- * 
- * <h2>Append-Only Policy</h2>
- * This error catalog follows an append-only principle:
+ *
+ * <h2>追加式维护</h2>
  * <ul>
- *   <li>New error codes can be added as needed</li>
- *   <li>Existing codes must never be removed or modified</li>
- *   <li>This ensures API stability and backward compatibility</li>
+ *   <li>按需新增错误码</li>
+ *   <li>既有错误码不删除、不修改</li>
+ *   <li>以保障 API 稳定性与兼容性</li>
  * </ul>
- * 
+ *
  * @author linqibin
  * @since 0.1.0
  */

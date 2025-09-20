@@ -21,25 +21,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Dictionary API implementation for internal subsystem access.
- * Implements the Feign client contract and delegates to application services while converting
- * contract query objects into API DTOs for downstream subsystems.
+ * 字典内部 API 控制器实现（供子系统调用）。
  *
- * <p>This controller provides internal API endpoints following the /_internal/dictionaries/** pattern
- * for consumption by other microservices via Feign clients. All operations are strictly read-only
- * following CQRS query patterns.</p>
+ * <p>实现 Feign 客户端契约，委托应用服务并完成 Query -> DTO 的转换；遵循
+ * /_internal/dictionaries/** 路由前缀；严格只读，符合 CQRS 查询侧。</p>
  *
- * <p>The controller handles null returns appropriately for 404 scenarios, allowing Feign clients
- * to handle missing resources gracefully. All operations include structured logging with request
- * parameters for monitoring and troubleshooting.</p>
- *
- * <p>Key features:</p>
- * <ul>
- *   <li>Delegation to application services with dedicated MapStruct conversion</li>
- *   <li>Consistent error handling and logging patterns</li>
- *   <li>Optimized for service-to-service communication</li>
- *   <li>Full compliance with DictionaryHttpApi contract</li>
- * </ul>
+ * <p>在 404 场景下通过返回 null 交由 Feign 层处理；统一结构化日志包含请求入参，便于观测与排障。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -48,28 +35,16 @@ import java.util.Optional;
 @RestController
 public class DictionaryClientImpl implements DictionaryClient {
 
-    /**
-     * Dictionary query application service for read operations
-     */
+    /** 字典查询应用服务 */
     private final DictionaryQueryAppService dictionaryQueryAppService;
 
-    /**
-     * Dictionary validation application service for validation operations
-     */
+    /** 字典校验应用服务 */
     private final DictionaryValidationAppService dictionaryValidationAppService;
 
-    /**
-     * API converter bridging contract query objects and HTTP DTOs
-     */
+    /** 契约 Query <-> HTTP DTO 转换器 */
     private final DictionaryApiConvertor dictionaryApiConvertor;
 
-    /**
-     * Constructs a new DictionaryApiImpl with required application services.
-     *
-     * @param dictionaryQueryAppService      the service for dictionary query operations
-     * @param dictionaryValidationAppService the service for dictionary validation operations
-     * @param dictionaryApiConvertor         the converter bridging contract queries and API DTOs
-     */
+    /** 构造函数。 */
     public DictionaryClientImpl(
             DictionaryQueryAppService dictionaryQueryAppService,
             DictionaryValidationAppService dictionaryValidationAppService,
@@ -79,16 +54,7 @@ public class DictionaryClientImpl implements DictionaryClient {
         this.dictionaryApiConvertor = dictionaryApiConvertor;
     }
 
-    /**
-     * Get dictionary item by type and item code.
-     * Retrieves a specific dictionary item identified by its type code and item code.
-     * Returns null for missing or disabled items to enable proper 404 handling by Feign clients.
-     *
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @param itemCode the dictionary item code, must not be null or empty
-     * @return DictionaryItemResp object if found and enabled, null for 404 handling by Feign
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 按类型与项编码获取字典项（未找到/禁用返回 null，交由 Feign 处理 404）。 */
     @Override
     public DictionaryItemResp getItemByTypeAndCode(String typeCode, String itemCode) {
         log.info("API: Getting dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
@@ -116,15 +82,7 @@ public class DictionaryClientImpl implements DictionaryClient {
         }
     }
 
-    /**
-     * Get all enabled dictionary items for a specific type.
-     * Retrieves all enabled and non-deleted items for the specified dictionary type.
-     * Returns empty list if type not found or no enabled items exist.
-     *
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @return List of enabled dictionary item responses, empty list if type not found or no enabled items
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 获取某类型下所有启用项（类型不存在或无启用项返回空列表）。 */
     @Override
     public List<DictionaryItemResp> getEnabledItemsByType(String typeCode) {
         log.info("API: Getting enabled dictionary items for type: typeCode={}", typeCode);
@@ -147,15 +105,7 @@ public class DictionaryClientImpl implements DictionaryClient {
         }
     }
 
-    /**
-     * Get the default dictionary item for a specific type.
-     * Retrieves the item marked as default that is enabled and not deleted.
-     * Returns null if no default exists or default item is disabled.
-     *
-     * @param typeCode the dictionary type code, must not be null or empty
-     * @return DictionaryItemResp object if default exists and is enabled, null otherwise
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 获取某类型的默认项（可用且未删除；不存在或不可用返回 null）。 */
     @Override
     public DictionaryItemResp getDefaultItemByType(String typeCode) {
         log.info("API: Getting default dictionary item for type: typeCode={}", typeCode);
@@ -183,15 +133,7 @@ public class DictionaryClientImpl implements DictionaryClient {
         }
     }
 
-    /**
-     * Validate multiple dictionary references in batch.
-     * Validates a list of dictionary references to ensure they exist and are enabled.
-     * This is the primary validation endpoint for subsystems to verify dictionary references.
-     *
-     * @param references list of dictionary reference requests to validate, must not be null
-     * @return List of validation results corresponding to each input reference in the same order
-     * @throws IllegalArgumentException if references list is null
-     */
+    /** 批量校验字典引用（存在且启用）。 */
     @Override
     public List<DictionaryValidationResp> validateReferences(List<DictionaryReferenceReq> references) {
         int requestSize = references != null ? references.size() : 0;
@@ -223,16 +165,7 @@ public class DictionaryClientImpl implements DictionaryClient {
         }
     }
 
-    /**
-     * Get dictionary item by external system alias.
-     * Resolves an external system's code to the corresponding internal dictionary item.
-     * Returns null if alias mapping doesn't exist or mapped item is disabled.
-     *
-     * @param sourceSystem the external system identifier, must not be null or empty
-     * @param externalCode the external system's code, must not be null or empty
-     * @return DictionaryItemResp object if alias mapping exists and item is enabled, null otherwise
-     * @throws IllegalArgumentException if sourceSystem or externalCode is null or empty
-     */
+    /** 通过外部系统别名获取字典项（不存在或不可用返回 null）。 */
     @Override
     public DictionaryItemResp getItemByAlias(String sourceSystem, String externalCode) {
         log.info("API: Getting dictionary item by alias: sourceSystem={}, externalCode={}",

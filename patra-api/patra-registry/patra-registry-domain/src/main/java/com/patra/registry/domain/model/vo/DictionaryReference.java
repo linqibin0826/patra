@@ -1,12 +1,12 @@
 package com.patra.registry.domain.model.vo;
 
 /**
- * Dictionary reference value object for validation operations.
- * This immutable value object represents a reference to a specific dictionary item
- * within a dictionary type, used primarily for validation and lookup operations.
- * 
- * @param typeCode the dictionary type code being referenced, must not be null or empty
- * @param itemCode the dictionary item code being referenced, must not be null or empty
+ * 字典引用值对象（用于校验/查找）。
+ *
+ * <p>不可变，表示某类型下特定字典项的引用。</p>
+ *
+ * @param typeCode 被引用的类型编码（不能为空）
+ * @param itemCode 被引用的项编码（不能为空）
  * @author linqibin
  * @since 0.1.0
  */
@@ -15,13 +15,7 @@ public record DictionaryReference(
     String itemCode
 ) {
     
-    /**
-     * Creates a new DictionaryReference with validation.
-     * 
-     * @param typeCode the dictionary type code being referenced
-     * @param itemCode the dictionary item code being referenced
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryReference {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -34,44 +28,22 @@ public record DictionaryReference(
         itemCode = itemCode.trim();
     }
     
-    /**
-     * Creates a dictionary reference from type and item codes.
-     * 
-     * @param typeCode the dictionary type code
-     * @param itemCode the dictionary item code
-     * @return a new DictionaryReference instance
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 工厂方法：由类型与项编码创建引用。 */
     public static DictionaryReference of(String typeCode, String itemCode) {
         return new DictionaryReference(typeCode, itemCode);
     }
     
-    /**
-     * Gets a string representation of this reference in the format "typeCode:itemCode".
-     * 
-     * @return a formatted string representation of this dictionary reference
-     */
+    /** 返回引用字符串表示（typeCode:itemCode）。 */
     public String toReferenceString() {
         return typeCode + ":" + itemCode;
     }
     
-    /**
-     * Checks if this reference matches the given type and item codes.
-     * 
-     * @param otherTypeCode the type code to compare against
-     * @param otherItemCode the item code to compare against
-     * @return true if both type and item codes match, false otherwise
-     */
+    /** 与给定类型/项编码是否匹配。 */
     public boolean matches(String otherTypeCode, String otherItemCode) {
         return typeCode.equals(otherTypeCode) && itemCode.equals(otherItemCode);
     }
     
-    /**
-     * Checks if this reference has the same type code as another reference.
-     * 
-     * @param other the other dictionary reference to compare
-     * @return true if both references have the same type code, false otherwise
-     */
+    /** 与另一引用是否具有相同类型编码。 */
     public boolean hasSameType(DictionaryReference other) {
         return other != null && typeCode.equals(other.typeCode);
     }

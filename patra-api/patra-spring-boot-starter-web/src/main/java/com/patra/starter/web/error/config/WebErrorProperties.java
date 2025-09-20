@@ -4,9 +4,10 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Web-specific error handling configuration properties.
- * Provides configuration for web error handling behavior including ProblemDetail formatting.
- * 
+ * Web 端错误处理配置项。
+ *
+ * <p>用于控制 Web 层错误输出（ProblemDetail 等）的格式与行为。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -14,12 +15,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "patra.web.problem")
 public class WebErrorProperties {
     
-    /** Whether web error handling is enabled */
+    /** 是否启用 Web 错误处理 */
     private boolean enabled = true;
     
-    /** Base URL for ProblemDetail type field construction */
+    /** 构造 ProblemDetail#type 字段的基础 URL */
     private String typeBaseUrl = "https://errors.example.com/";
     
-    /** Whether to include stack traces in error responses (for debugging) */
+    /** 错误响应是否包含堆栈（调试用途） */
     private boolean includeStack = false;
 }

@@ -8,22 +8,24 @@ import org.slf4j.MDC;
 import java.util.Optional;
 
 /**
- * Trace provider that extracts trace IDs from MDC (Mapped Diagnostic Context).
- * Supports multiple trace header formats commonly used in distributed tracing systems.
- * 
+ * 基于 MDC（映射诊断上下文）从已配置的请求头名提取 TraceId 的实现。
+ *
+ * <p>兼容多种分布式追踪常见的头格式。
+ *
  * @author linqibin
  * @since 0.1.0
+ * @see com.patra.starter.core.error.config.TracingProperties
  */
 @Slf4j
 public class HeaderBasedTraceProvider implements TraceProvider {
     
-    /** Tracing configuration properties */
+    /** 链路追踪配置 */
     private final TracingProperties tracingProperties;
     
     /**
-     * Creates a new HeaderBasedTraceProvider with the given configuration.
-     * 
-     * @param tracingProperties tracing configuration, must not be null
+     * 构造函数。
+     *
+     * @param tracingProperties 追踪配置，不能为空
      */
     public HeaderBasedTraceProvider(TracingProperties tracingProperties) {
         this.tracingProperties = tracingProperties;

@@ -1,23 +1,20 @@
 package com.patra.registry.domain.exception;
 
 /**
- * Domain exception thrown when attempting to use a disabled dictionary type.
- * This exception indicates that the requested dictionary type exists but is
- * currently disabled and cannot be used in business operations.
- * 
+ * 当尝试使用被禁用的字典类型时抛出。
+ *
+ * <p>表示该类型存在，但当前处于禁用状态，无法参与业务操作。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryTypeDisabled extends RegistryRuleViolation {
     
-    /** The dictionary type code that is disabled */
+    /** 被禁用的字典类型编码 */
     private final String typeCode;
     
     /**
-     * Constructs a new dictionary type disabled exception.
-     * 
-     * @param typeCode the dictionary type code that is disabled, must not be null
-     * @throws IllegalArgumentException if typeCode is null or empty
+     * 使用类型编码构造异常。
      */
     public DictionaryTypeDisabled(String typeCode) {
         super(String.format("Dictionary type is disabled: %s", typeCode));
@@ -27,13 +24,7 @@ public class DictionaryTypeDisabled extends RegistryRuleViolation {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Constructs a new dictionary type disabled exception with a custom message.
-     * 
-     * @param typeCode the dictionary type code that is disabled, must not be null
-     * @param message the detail message explaining the rule violation
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 自定义消息构造异常。 */
     public DictionaryTypeDisabled(String typeCode, String message) {
         super(message);
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -42,14 +33,7 @@ public class DictionaryTypeDisabled extends RegistryRuleViolation {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Constructs a new dictionary type disabled exception with a custom message and cause.
-     * 
-     * @param typeCode the dictionary type code that is disabled, must not be null
-     * @param message the detail message explaining the rule violation
-     * @param cause the cause of this exception
-     * @throws IllegalArgumentException if typeCode is null or empty
-     */
+    /** 自定义消息与原因构造异常。 */
     public DictionaryTypeDisabled(String typeCode, String message, Throwable cause) {
         super(message, cause);
         if (typeCode == null || typeCode.trim().isEmpty()) {
@@ -58,11 +42,7 @@ public class DictionaryTypeDisabled extends RegistryRuleViolation {
         this.typeCode = typeCode;
     }
     
-    /**
-     * Returns the dictionary type code that is disabled.
-     * 
-     * @return the type code, never null or empty
-     */
+    /** 返回被禁用的类型编码。 */
     public String getTypeCode() {
         return typeCode;
     }

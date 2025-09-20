@@ -1,15 +1,14 @@
 package com.patra.registry.domain.model.vo;
 
 /**
- * Dictionary alias value object for external system integration.
- * This immutable value object represents the mapping between external system codes
- * and internal dictionary items, enabling seamless integration with legacy systems
- * and external data sources.
- * 
- * @param sourceSystem identifier of the external system providing the alias (e.g., "LEGACY_ERP", "EXTERNAL_API")
- * @param externalCode the external system's code for this dictionary item
- * @param externalLabel the external system's human-readable label for this dictionary item
- * @param notes additional notes about the alias mapping, transformation rules, or usage context
+ * 外部系统集成用的字典别名值对象（不可变）。
+ *
+ * <p>描述外部系统编码与内部字典项之间的映射，便于对接遗留系统与外部数据源。</p>
+ *
+ * @param sourceSystem 外部系统标识（如 "LEGACY_ERP", "EXTERNAL_API"）
+ * @param externalCode 外部系统的编码
+ * @param externalLabel 外部系统的人类可读标签
+ * @param notes 该映射的附注、转换规则或使用场景
  * @author linqibin
  * @since 0.1.0
  */
@@ -20,15 +19,7 @@ public record DictionaryAlias(
     String notes
 ) {
     
-    /**
-     * Creates a new DictionaryAlias with validation.
-     * 
-     * @param sourceSystem identifier of the external system providing the alias
-     * @param externalCode the external system's code for this dictionary item
-     * @param externalLabel the external system's label for this dictionary item
-     * @param notes additional notes about the alias mapping
-     * @throws IllegalArgumentException if sourceSystem or externalCode is null or empty
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryAlias {
         if (sourceSystem == null || sourceSystem.trim().isEmpty()) {
             throw new IllegalArgumentException("Source system cannot be null or empty");
@@ -43,39 +34,22 @@ public record DictionaryAlias(
         notes = notes != null ? notes.trim() : "";
     }
     
-    /**
-     * Checks if this alias has a meaningful external label.
-     * 
-     * @return true if the external label is not null and not empty, false otherwise
-     */
+    /** 是否具有有效的外部标签。 */
     public boolean hasExternalLabel() {
         return externalLabel != null && !externalLabel.isEmpty();
     }
     
-    /**
-     * Checks if this alias has additional notes.
-     * 
-     * @return true if notes are provided, false otherwise
-     */
+    /** 是否包含附注说明。 */
     public boolean hasNotes() {
         return notes != null && !notes.isEmpty();
     }
     
-    /**
-     * Gets the display label for this alias, preferring external label over external code.
-     * 
-     * @return the external label if available, otherwise the external code
-     */
+    /** 获取用于展示的标签（优先外部标签，否则使用外部编码）。 */
     public String getDisplayLabel() {
         return hasExternalLabel() ? externalLabel : externalCode;
     }
     
-    /**
-     * Creates a unique key for this alias based on source system and external code.
-     * This key can be used for deduplication and lookup operations.
-     * 
-     * @return a unique string key combining source system and external code
-     */
+    /** 创建别名唯一键（sourceSystem:externalCode）。 */
     public String getUniqueKey() {
         return sourceSystem + ":" + externalCode;
     }

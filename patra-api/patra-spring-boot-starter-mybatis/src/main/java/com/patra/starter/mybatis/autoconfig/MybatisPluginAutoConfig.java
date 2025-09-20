@@ -17,7 +17,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Mybatis-Plus 插件自动配置
+ * MyBatis-Plus 插件自动配置。
+ *
+ * <p>启用分页、乐观锁与防全表操作插件，并提供简易元数据填充器。</p>
  */
 @Slf4j
 @AutoConfiguration
@@ -37,7 +39,7 @@ public class MybatisPluginAutoConfig {
 
     @Bean
     public MetaObjectHandler metaObjectHandler(@Nullable Clock clock) {
-        log.info("初始化 Mybatis-Plus MetaObjectHandler");
+        log.info("Initialize MyBatis-Plus MetaObjectHandler");
         return new MetaObjectHandler() {
             @Override
             public void insertFill(MetaObject metaObject) {

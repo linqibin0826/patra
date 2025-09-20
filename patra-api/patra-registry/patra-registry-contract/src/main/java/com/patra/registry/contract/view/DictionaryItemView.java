@@ -1,17 +1,17 @@
 package com.patra.registry.contract.view;
 
 /**
- * Dictionary item view object for external subsystem consumption.
- * Used in contract module for clean API boundaries and external system integration.
- * This immutable view object provides a simplified representation of dictionary items
- * optimized for external consumption without internal implementation details.
- * 
- * @param typeCode dictionary type code that this item belongs to
- * @param itemCode dictionary item code, unique within its type
- * @param displayName human-readable display name for UI presentation
- * @param description detailed description of the dictionary item purpose and usage
- * @param isDefault whether this is the default item for its type
- * @param sortOrder numeric sort order for display ordering (lower values appear first)
+ * 字典项视图对象（对外消费）。
+ *
+ * <p>位于 contract 模块，作为清晰 API 边界，供外部系统集成使用；
+ * 不可变，屏蔽内部实现细节。</p>
+ *
+ * @param typeCode 所属类型编码
+ * @param itemCode 字典项编码（类型内唯一）
+ * @param displayName 展示名
+ * @param description 描述
+ * @param isDefault 是否默认项
+ * @param sortOrder 排序值（小值优先）
  * @author linqibin
  * @since 0.1.0
  */
@@ -24,17 +24,7 @@ public record DictionaryItemView(
     int sortOrder
 ) {
     
-    /**
-     * Creates a new DictionaryItemView with validation.
-     * 
-     * @param typeCode dictionary type code that this item belongs to
-     * @param itemCode dictionary item code, unique within its type
-     * @param displayName human-readable display name for UI presentation
-     * @param description detailed description of the dictionary item
-     * @param isDefault whether this is the default item for its type
-     * @param sortOrder numeric sort order for display ordering
-     * @throws IllegalArgumentException if typeCode, itemCode, or displayName is null or empty
-     */
+    /** 带参数校验的紧凑构造器。 */
     public DictionaryItemView {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -53,41 +43,22 @@ public record DictionaryItemView(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Gets a formatted reference string for this dictionary item.
-     * Useful for logging, debugging, and external system integration.
-     * 
-     * @return a string in the format "typeCode:itemCode"
-     */
+    /** 获取引用字符串（typeCode:itemCode），便于日志/集成。 */
     public String getReferenceString() {
         return typeCode + ":" + itemCode;
     }
     
-    /**
-     * Gets a display-friendly label combining the item code and display name.
-     * Useful for dropdown lists and selection components in external systems.
-     * 
-     * @return a string in the format "itemCode - displayName"
-     */
+    /** 获取展示标签（itemCode - displayName），便于外部下拉/选择组件。 */
     public String getDisplayLabel() {
         return itemCode + " - " + displayName;
     }
     
-    /**
-     * Checks if this item has a meaningful description.
-     * 
-     * @return true if description is not null and not empty, false otherwise
-     */
+    /** 是否包含有效描述。 */
     public boolean hasDescription() {
         return description != null && !description.trim().isEmpty();
     }
     
-    /**
-     * Creates a simplified view with only essential fields for basic display.
-     * Useful when only basic information is needed for external system integration.
-     * 
-     * @return a new DictionaryItemView with empty description and default sort order
-     */
+    /** 创建简化视图（仅保留必要字段）。 */
     public DictionaryItemView toSimplifiedView() {
         return new DictionaryItemView(typeCode, itemCode, displayName, "", isDefault, 0);
     }

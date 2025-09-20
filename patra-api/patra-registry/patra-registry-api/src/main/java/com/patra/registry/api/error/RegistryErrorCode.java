@@ -3,17 +3,17 @@ package com.patra.registry.api.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * Registry service error code catalog implementing the ErrorCodeLike contract.
- * This enum provides a comprehensive catalog of all Registry service error codes
- * following the REG-NNNN format with Registry context prefix.
- * 
- * Error codes are organized into categories:
- * - 0xxx: Common HTTP-aligned codes
- * - 1xxx: Business-specific codes
- * 
- * This catalog follows an append-only principle - new codes can be added but
- * existing codes should never be removed or modified to maintain API stability.
- * 
+ * Registry 服务错误码目录（实现 ErrorCodeLike）。
+ *
+ * <p>统一采用 REG-NNNN 形式（REG 为上下文前缀）。</p>
+ *
+ * <p>分类：
+ * - 0xxx：对齐 HTTP 的通用错误
+ * - 1xxx：领域/业务特定错误
+ * </p>
+ *
+ * <p>追加式维护：仅新增，不删除/修改既有错误码，确保 API 稳定性。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -23,64 +23,34 @@ public enum RegistryErrorCode implements ErrorCodeLike {
     // Common HTTP-aligned codes (0xxx series)
     // ========================================
     
-    /**
-     * Bad Request - The request was invalid or malformed.
-     * Corresponds to HTTP 400 Bad Request.
-     */
+    /** 错误请求（HTTP 400）。 */
     REG_0400("REG-0400"),
     
-    /**
-     * Unauthorized - Authentication is required or has failed.
-     * Corresponds to HTTP 401 Unauthorized.
-     */
+    /** 未认证（HTTP 401）。 */
     REG_0401("REG-0401"),
     
-    /**
-     * Forbidden - The request is understood but access is denied.
-     * Corresponds to HTTP 403 Forbidden.
-     */
+    /** 禁止访问（HTTP 403）。 */
     REG_0403("REG-0403"),
     
-    /**
-     * Not Found - The requested resource could not be found.
-     * Corresponds to HTTP 404 Not Found.
-     */
+    /** 未找到（HTTP 404）。 */
     REG_0404("REG-0404"),
     
-    /**
-     * Conflict - The request conflicts with the current state of the resource.
-     * Corresponds to HTTP 409 Conflict.
-     */
+    /** 冲突（HTTP 409）。 */
     REG_0409("REG-0409"),
     
-    /**
-     * Unprocessable Entity - The request is well-formed but contains semantic errors.
-     * Corresponds to HTTP 422 Unprocessable Entity.
-     */
+    /** 语义错误（HTTP 422）。 */
     REG_0422("REG-0422"),
     
-    /**
-     * Too Many Requests - Rate limit exceeded or quota exhausted.
-     * Corresponds to HTTP 429 Too Many Requests.
-     */
+    /** 请求过多/配额耗尽（HTTP 429）。 */
     REG_0429("REG-0429"),
     
-    /**
-     * Internal Server Error - An unexpected error occurred on the server.
-     * Corresponds to HTTP 500 Internal Server Error.
-     */
+    /** 服务器内部错误（HTTP 500）。 */
     REG_0500("REG-0500"),
     
-    /**
-     * Service Unavailable - The service is temporarily unavailable.
-     * Corresponds to HTTP 503 Service Unavailable.
-     */
+    /** 服务不可用（HTTP 503）。 */
     REG_0503("REG-0503"),
     
-    /**
-     * Gateway Timeout - Timeout occurred while waiting for upstream service.
-     * Corresponds to HTTP 504 Gateway Timeout.
-     */
+    /** 网关超时（HTTP 504）。 */
     REG_0504("REG-0504"),
     
     // ========================================
@@ -89,94 +59,52 @@ public enum RegistryErrorCode implements ErrorCodeLike {
     
     // Dictionary operations (14xx series)
     
-    /**
-     * Dictionary Type Not Found - The specified dictionary type could not be found.
-     * Maps to: DictionaryNotFoundException (for type-level operations)
-     */
+    /** 字典类型未找到（映射：DictionaryNotFoundException，类型级）。 */
     REG_1401("REG-1401"),
     
-    /**
-     * Dictionary Item Not Found - The specified dictionary item could not be found.
-     * Maps to: DictionaryNotFoundException (for item-level operations)
-     */
+    /** 字典项未找到（映射：DictionaryNotFoundException，项级）。 */
     REG_1402("REG-1402"),
     
-    /**
-     * Dictionary Item Disabled - The specified dictionary item is disabled.
-     * Maps to: DictionaryItemDisabled
-     */
+    /** 字典项被禁用（映射：DictionaryItemDisabled）。 */
     REG_1403("REG-1403"),
     
-    /**
-     * Dictionary Type Already Exists - Attempted to create a dictionary type that already exists.
-     * Maps to: DictionaryTypeAlreadyExists
-     */
+    /** 字典类型已存在（映射：DictionaryTypeAlreadyExists）。 */
     REG_1404("REG-1404"),
     
-    /**
-     * Dictionary Item Already Exists - Attempted to create a dictionary item that already exists.
-     * Maps to: DictionaryItemAlreadyExists
-     */
+    /** 字典项已存在（映射：DictionaryItemAlreadyExists）。 */
     REG_1405("REG-1405"),
     
-    /**
-     * Dictionary Type Disabled - The specified dictionary type is disabled.
-     * Maps to: DictionaryTypeDisabled
-     */
+    /** 字典类型被禁用（映射：DictionaryTypeDisabled）。 */
     REG_1406("REG-1406"),
     
-    /**
-     * Dictionary Validation Error - The dictionary data failed validation.
-     * Maps to: DictionaryValidationException
-     */
+    /** 字典校验失败（映射：DictionaryValidationException）。 */
     REG_1407("REG-1407"),
     
-    /**
-     * Dictionary Default Item Missing - Required default item is missing from dictionary type.
-     * Maps to: DictionaryDefaultItemMissing
-     */
+    /** 缺失默认项（映射：DictionaryDefaultItemMissing）。 */
     REG_1408("REG-1408"),
     
-    /**
-     * Dictionary Repository Error - Database or repository layer error occurred.
-     * Maps to: DictionaryRepositoryException
-     */
+    /** 数据库/仓储层错误（映射：DictionaryRepositoryException）。 */
     REG_1409("REG-1409"),
     
     // Registry general operations (15xx series)
     
-    /**
-     * Registry Quota Exceeded - Operation would exceed system quotas or limits.
-     * Maps to: RegistryQuotaExceeded
-     */
+    /** 超出配额限制（映射：RegistryQuotaExceeded）。 */
     REG_1501("REG-1501");
     
     private final String code;
     
-    /**
-     * Constructs a RegistryErrorCode with the specified code string.
-     * 
-     * @param code the error code string following REG-NNNN format
-     */
+    /** 构造函数。 */
     RegistryErrorCode(String code) {
         this.code = code;
     }
     
-    /**
-     * Returns the unique error code identifier.
-     * 
-     * @return the error code string in REG-NNNN format
-     */
+    /** 返回错误码字符串（REG-NNNN）。 */
     @Override
     public String code() {
         return code;
     }
     
-    /**
-     * Returns the error code string representation.
-     * 
-     * @return the error code string
-     */
+    /** 返回字符串表示。 */
     @Override
     public String toString() {
         return code;

@@ -6,6 +6,11 @@ import java.util.Collections;
 import java.util.List;
 
 @Data
+/**
+ * 通用分页结果。
+ *
+ * @param <T> 记录类型
+ */
 public class PageResult<T> {
 
     private long total;
@@ -18,6 +23,9 @@ public class PageResult<T> {
 
     private List<T> records = Collections.emptyList();
 
+    /**
+     * 构造分页结果。
+     */
     public static <T> PageResult<T> of(long total, long current, long size, List<T> records) {
         PageResult<T> r = new PageResult<>();
         r.total = total;

@@ -1,27 +1,23 @@
 package com.patra.registry.domain.exception;
 
 /**
- * Domain exception thrown when attempting to create a dictionary item that already exists.
- * This exception indicates that the specified dictionary item code is already
- * in use within the dictionary type and cannot be created again due to uniqueness constraints.
- * 
+ * 当尝试在某类型下创建已存在的字典项时抛出。
+ *
+ * <p>表示给定项编码在该类型中已被使用，因唯一性约束无法再次创建。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public class DictionaryItemAlreadyExists extends RegistryConflict {
     
-    /** The dictionary type code */
+    /** 字典类型编码 */
     private final String typeCode;
     
-    /** The dictionary item code that already exists */
+    /** 已存在的字典项编码 */
     private final String itemCode;
     
     /**
-     * Constructs a new dictionary item already exists exception.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code that already exists, must not be null
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
+     * 使用类型编码与项编码构造异常。
      */
     public DictionaryItemAlreadyExists(String typeCode, String itemCode) {
         super(String.format("Dictionary item already exists: typeCode=%s, itemCode=%s", typeCode, itemCode));
@@ -36,12 +32,7 @@ public class DictionaryItemAlreadyExists extends RegistryConflict {
     }
     
     /**
-     * Constructs a new dictionary item already exists exception with a custom message.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code that already exists, must not be null
-     * @param message the detail message explaining the conflict
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
+     * 自定义消息构造异常。
      */
     public DictionaryItemAlreadyExists(String typeCode, String itemCode, String message) {
         super(message);
@@ -56,13 +47,7 @@ public class DictionaryItemAlreadyExists extends RegistryConflict {
     }
     
     /**
-     * Constructs a new dictionary item already exists exception with a custom message and cause.
-     * 
-     * @param typeCode the dictionary type code, must not be null
-     * @param itemCode the dictionary item code that already exists, must not be null
-     * @param message the detail message explaining the conflict
-     * @param cause the cause of this exception
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
+     * 自定义消息与原因构造异常。
      */
     public DictionaryItemAlreadyExists(String typeCode, String itemCode, String message, Throwable cause) {
         super(message, cause);
@@ -76,20 +61,12 @@ public class DictionaryItemAlreadyExists extends RegistryConflict {
         this.itemCode = itemCode;
     }
     
-    /**
-     * Returns the dictionary type code.
-     * 
-     * @return the type code, never null or empty
-     */
+    /** 返回类型编码。 */
     public String getTypeCode() {
         return typeCode;
     }
     
-    /**
-     * Returns the dictionary item code that already exists.
-     * 
-     * @return the item code, never null or empty
-     */
+    /** 返回已存在的项编码。 */
     public String getItemCode() {
         return itemCode;
     }

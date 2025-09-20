@@ -1,16 +1,15 @@
 package com.patra.registry.contract.query.view;
 
 /**
- * Dictionary type query object for CQRS read operations.
- * Shared between app module and contract module for consistent data structure.
- * This immutable query object represents dictionary type metadata optimized for read operations
- * and external subsystem consumption via API contracts.
- * 
- * @param typeCode unique dictionary type code identifier
- * @param typeName human-readable type name for display purposes
- * @param description detailed type description explaining purpose and usage
- * @param enabledItemCount number of enabled items available in this type
- * @param hasDefault whether this type has a default item configured
+ * 字典类型查询对象（CQRS 查询侧）。
+ *
+ * <p>在 app 与 contract 模块间共享；不可变，便于对外 API 消费。</p>
+ *
+ * @param typeCode 类型编码
+ * @param typeName 类型名称
+ * @param description 类型描述
+ * @param enabledItemCount 启用项数量
+ * @param hasDefault 是否配置了默认项
  * @author linqibin
  * @since 0.1.0
  */
@@ -22,16 +21,7 @@ public record DictionaryTypeQuery(
     boolean hasDefault
 ) {
     
-    /**
-     * Creates a new DictionaryTypeQuery with validation.
-     * 
-     * @param typeCode unique dictionary type code identifier
-     * @param typeName human-readable type name for display purposes
-     * @param description detailed type description explaining purpose and usage
-     * @param enabledItemCount number of enabled items available in this type
-     * @param hasDefault whether this type has a default item configured
-     * @throws IllegalArgumentException if typeCode or typeName is null or empty, or if enabledItemCount is negative
-     */
+    /** 校验参数的紧凑构造器。 */
     public DictionaryTypeQuery {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
@@ -49,40 +39,22 @@ public record DictionaryTypeQuery(
         description = description != null ? description.trim() : "";
     }
     
-    /**
-     * Checks if this dictionary type has any enabled items available.
-     * 
-     * @return true if there are enabled items in this type, false otherwise
-     */
+    /** 是否有启用项。 */
     public boolean hasEnabledItems() {
         return enabledItemCount > 0;
     }
     
-    /**
-     * Checks if this dictionary type is properly configured.
-     * A type is considered properly configured if it has enabled items and a default item.
-     * 
-     * @return true if the type has enabled items and a default item, false otherwise
-     */
+    /** 是否配置完善（存在启用项且有默认项）。 */
     public boolean isProperlyConfigured() {
         return hasEnabledItems() && hasDefault;
     }
     
-    /**
-     * Checks if this dictionary type has configuration issues.
-     * Issues include having no enabled items or missing a default item when items exist.
-     * 
-     * @return true if configuration issues are detected, false otherwise
-     */
+    /** 是否存在配置问题（无启用项或缺默认项）。 */
     public boolean hasConfigurationIssues() {
         return !hasEnabledItems() || (hasEnabledItems() && !hasDefault);
     }
     
-    /**
-     * Gets a summary description of this dictionary type's status.
-     * 
-     * @return a human-readable summary of the type's configuration status
-     */
+    /** 获取类型状态摘要。 */
     public String getStatusSummary() {
         if (!hasEnabledItems()) {
             return "No enabled items";

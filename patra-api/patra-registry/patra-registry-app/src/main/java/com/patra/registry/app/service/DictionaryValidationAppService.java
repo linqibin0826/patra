@@ -15,12 +15,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Dictionary validation application service for CQRS read-side validation operations.
- * Provides validation capabilities using contract Query objects for consistency.
- * This service is strictly read-only and does not modify any data.
+ * 字典校验应用服务（CQRS 查询侧）。
  *
- * All validation operations follow CQRS query patterns, providing read-side validation
- * without any command or data modification capabilities.
+ * <p>基于契约层 Query 对象提供一致的校验能力；严格只读，不修改数据。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -48,16 +45,7 @@ public class DictionaryValidationAppService {
         this.dictionaryValidationConverter = dictionaryValidationConverter;
     }
 
-    /**
-     * Validate a single dictionary reference.
-     * Checks if the specified type and item codes exist, are enabled, and not deleted.
-     * Provides detailed validation results with specific error messages for different failure scenarios.
-     *
-     * @param typeCode the dictionary type code to validate, must not be null or empty
-     * @param itemCode the dictionary item code to validate, must not be null or empty
-     * @return DictionaryValidationQuery containing validation outcome and error message if invalid
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 校验单个字典引用（存在、启用、未删除），返回详细结果。 */
     public DictionaryValidationQuery validateReference(String typeCode, String itemCode) {
         log.debug("Validating dictionary reference: typeCode={}, itemCode={}", typeCode, itemCode);
         requireTypeCode(typeCode);
@@ -95,15 +83,7 @@ public class DictionaryValidationAppService {
         return dictionaryValidationConverter.toQuery(result, typeCode, itemCode);
     }
 
-    /**
-     * Validate multiple dictionary references in batch.
-     * Validates a list of dictionary references to ensure they exist and are enabled.
-     * This is the primary validation endpoint for subsystems to verify dictionary references.
-     *
-     * @param references list of dictionary reference requests to validate, must not be null
-     * @return List of DictionaryValidationQuery objects corresponding to each input reference, never null
-     * @throws IllegalArgumentException if references list is null
-     */
+    /** 批量校验字典引用（存在且启用），返回与入参对应的结果列表。 */
     public List<DictionaryValidationQuery> validateReferences(List<DictionaryReference> references) {
         log.debug("Validating {} dictionary references in batch", references != null ? references.size() : 0);
         requireReferences(references);
@@ -130,13 +110,7 @@ public class DictionaryValidationAppService {
         return results;
     }
 
-    /**
-     * Get dictionary system health status for monitoring and diagnostics.
-     * Provides comprehensive health metrics including integrity issues and system statistics.
-     * This operation may be expensive as it aggregates data across all dictionary tables.
-     *
-     * @return DictionaryHealthQuery containing system health metrics and issues
-     */
+    /** 获取字典系统健康状态（聚合统计，可能较重）。 */
     public DictionaryHealthQuery getHealthStatus() {
         log.debug("Getting dictionary system health status");
 
@@ -177,15 +151,7 @@ public class DictionaryValidationAppService {
         return validateReference(reference.typeCode(), reference.itemCode());
     }
 
-    /**
-     * Check if a dictionary reference is valid without returning detailed validation information.
-     * Provides a lightweight validation check that returns only a boolean result.
-     *
-     * @param typeCode the dictionary type code to validate, must not be null or empty
-     * @param itemCode the dictionary item code to validate, must not be null or empty
-     * @return true if the reference is valid (exists, enabled, not deleted), false otherwise
-     * @throws IllegalArgumentException if typeCode or itemCode is null or empty
-     */
+    /** 轻量校验是否有效（仅返回布尔）。 */
     public boolean isValidReference(String typeCode, String itemCode) {
         log.debug("Checking if dictionary reference is valid: typeCode={}, itemCode={}", typeCode, itemCode);
         DictionaryValidationQuery result = validateReference(typeCode, itemCode);
@@ -197,12 +163,7 @@ public class DictionaryValidationAppService {
         return isValid;
     }
 
-    /**
-     * Get validation statistics for monitoring purposes.
-     * Provides summary information about validation operations without performing actual validations.
-     *
-     * @return a summary string containing validation-related statistics
-     */
+    /** 获取校验统计摘要（监控用）。 */
     public String getValidationStatistics() {
         log.debug("Getting dictionary validation statistics");
 

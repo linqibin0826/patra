@@ -1,21 +1,19 @@
 package com.patra.common.error.codes;
 
 /**
- * Contract for business error codes that can be used across the error handling system.
- * Implementations should provide a unique code identifier that can be used for
- * error resolution, mapping, and client-side error handling.
- * 
+ * 业务错误码契约，供统一错误处理体系使用。
+ *
+ * <p>实现需提供全局唯一的错误码标识，用于错误解析、映射与客户端处理。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public interface ErrorCodeLike {
     
     /**
-     * Returns the unique error code identifier.
-     * The code should follow a consistent format (e.g., "REG-0404", "ORD-1001")
-     * and be suitable for both human reading and programmatic handling.
-     * 
-     * @return the error code string, must not be null or empty
+     * 返回唯一的错误码字符串。
+     *
+     * <p>建议遵循统一格式（如 "REG-0404"、"ORD-1001"），便于人读与程序处理。</p>
      */
     String code();
 }

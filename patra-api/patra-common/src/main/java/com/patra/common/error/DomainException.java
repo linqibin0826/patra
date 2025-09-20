@@ -1,33 +1,22 @@
 package com.patra.common.error;
 
 /**
- * Base class for all domain exceptions in the Patra platform.
- * This class provides a framework-agnostic foundation for domain-layer exceptions
- * without any dependencies on Spring or other frameworks.
- * 
- * Domain exceptions should extend this class to maintain clean separation
- * between domain logic and technical concerns.
- * 
+ * 领域异常基类。
+ *
+ * <p>为领域层异常提供与框架无关的基类，不依赖 Spring 等框架。</p>
+ * <p>领域异常应继承本类，以保持领域逻辑与技术细节的清晰分离。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public abstract class DomainException extends RuntimeException {
     
-    /**
-     * Constructs a new domain exception with the specified detail message.
-     * 
-     * @param message the detail message explaining the exception
-     */
+    /** 构造函数（消息）。 */
     protected DomainException(String message) {
         super(message);
     }
     
-    /**
-     * Constructs a new domain exception with the specified detail message and cause.
-     * 
-     * @param message the detail message explaining the exception
-     * @param cause the cause of this exception
-     */
+    /** 构造函数（消息 + 原因）。 */
     protected DomainException(String message, Throwable cause) {
         super(message, cause);
     }
