@@ -10,7 +10,13 @@ import java.util.List;
  * @author linqibin
  * @since 0.1.0
  */
-public class DictionaryValidationException extends DictionaryDomainException {
+public class DictionaryValidationException extends RegistryRuleViolation {
+    
+    /** The dictionary type code associated with this exception, if applicable */
+    private final String typeCode;
+    
+    /** The dictionary item code associated with this exception, if applicable */
+    private final String itemCode;
     
     /** List of validation error messages providing detailed failure information */
     private final List<String> validationErrors;
@@ -23,7 +29,9 @@ public class DictionaryValidationException extends DictionaryDomainException {
      * @param itemCode the dictionary item code associated with the validation failure
      */
     public DictionaryValidationException(String message, String typeCode, String itemCode) {
-        super(message, typeCode, itemCode);
+        super(message);
+        this.typeCode = typeCode;
+        this.itemCode = itemCode;
         this.validationErrors = List.of(message);
     }
     
@@ -35,7 +43,9 @@ public class DictionaryValidationException extends DictionaryDomainException {
      */
     public DictionaryValidationException(List<String> validationErrors, String typeCode) {
         super(String.format("Dictionary validation failed for type %s: %s", 
-                           typeCode, String.join(", ", validationErrors)), typeCode, null);
+                           typeCode, String.join(", ", validationErrors)));
+        this.typeCode = typeCode;
+        this.itemCode = null;
         this.validationErrors = List.copyOf(validationErrors);
     }
     
@@ -49,8 +59,28 @@ public class DictionaryValidationException extends DictionaryDomainException {
      */
     public DictionaryValidationException(String message, List<String> validationErrors, 
                                        String typeCode, String itemCode) {
-        super(message, typeCode, itemCode);
+        super(message);
+        this.typeCode = typeCode;
+        this.itemCode = itemCode;
         this.validationErrors = validationErrors != null ? List.copyOf(validationErrors) : List.of();
+    }
+    
+    /**
+     * Gets the dictionary type code associated with this exception.
+     * 
+     * @return the type code, or null if not applicable
+     */
+    public String getTypeCode() {
+        return typeCode;
+    }
+    
+    /**
+     * Gets the dictionary item code associated with this exception.
+     * 
+     * @return the item code, or null if not applicable
+     */
+    public String getItemCode() {
+        return itemCode;
     }
     
     /**

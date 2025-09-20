@@ -1,5 +1,10 @@
 package com.patra.registry.domain.exception;
 
+import com.patra.common.error.trait.ErrorTrait;
+import com.patra.common.error.trait.HasErrorTraits;
+
+import java.util.Set;
+
 /**
  * Repository exception thrown when dictionary repository operations fail.
  * This exception represents infrastructure-level errors such as database connectivity issues,
@@ -11,7 +16,7 @@ package com.patra.registry.domain.exception;
  * @author linqibin
  * @since 0.1.0
  */
-public class DictionaryRepositoryException extends RuntimeException {
+public class DictionaryRepositoryException extends RegistryException implements HasErrorTraits {
     
     /** The operation that was being performed when the exception occurred */
     private final String operation;
@@ -103,5 +108,16 @@ public class DictionaryRepositoryException extends RuntimeException {
      */
     public String getItemCode() {
         return itemCode;
+    }
+    
+    /**
+     * Returns the error traits for repository exceptions.
+     * Repository exceptions are typically classified as dependency unavailable.
+     * 
+     * @return set containing the DEP_UNAVAILABLE error trait
+     */
+    @Override
+    public Set<ErrorTrait> getErrorTraits() {
+        return Set.of(ErrorTrait.DEP_UNAVAILABLE);
     }
 }

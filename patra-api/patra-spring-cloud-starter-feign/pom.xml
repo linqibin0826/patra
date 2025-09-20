@@ -8,6 +8,7 @@
         <groupId>com.papertrace</groupId>
         <artifactId>patra-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-spring-cloud-starter-feign</artifactId>
@@ -36,6 +37,19 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
             <optional>true</optional>
+        </dependency>
+        
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.github.tomakehurst</groupId>
+            <artifactId>wiremock-jre8</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

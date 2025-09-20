@@ -20,6 +20,16 @@
         </dependency>
 
         <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-cloud-starter-feign</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
         </dependency>
@@ -44,6 +54,25 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-registry-app</artifactId>
         </dependency>
+
+        <!-- API module for error codes -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-api</artifactId>
+        </dependency>
+
+        <!-- Domain module for domain exceptions -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-domain</artifactId>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -51,6 +80,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
                 <executions>
                     <execution>
                         <goals>

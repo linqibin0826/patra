@@ -8,7 +8,13 @@ package com.patra.registry.domain.exception;
  * @author linqibin
  * @since 0.1.0
  */
-public class DictionaryNotFoundException extends DictionaryDomainException {
+public class DictionaryNotFoundException extends RegistryNotFound {
+    
+    /** The dictionary type code associated with this exception, if applicable */
+    private final String typeCode;
+    
+    /** The dictionary item code associated with this exception, if applicable */
+    private final String itemCode;
     
     /**
      * Constructs a new dictionary not found exception for a missing type.
@@ -16,7 +22,9 @@ public class DictionaryNotFoundException extends DictionaryDomainException {
      * @param typeCode the dictionary type code that was not found
      */
     public DictionaryNotFoundException(String typeCode) {
-        super(String.format("Dictionary type not found: %s", typeCode), typeCode, null);
+        super(String.format("Dictionary type not found: %s", typeCode));
+        this.typeCode = typeCode;
+        this.itemCode = null;
     }
     
     /**
@@ -26,8 +34,9 @@ public class DictionaryNotFoundException extends DictionaryDomainException {
      * @param itemCode the dictionary item code that was not found
      */
     public DictionaryNotFoundException(String typeCode, String itemCode) {
-        super(String.format("Dictionary item not found: typeCode=%s, itemCode=%s", typeCode, itemCode), 
-              typeCode, itemCode);
+        super(String.format("Dictionary item not found: typeCode=%s, itemCode=%s", typeCode, itemCode));
+        this.typeCode = typeCode;
+        this.itemCode = itemCode;
     }
     
     /**
@@ -38,6 +47,26 @@ public class DictionaryNotFoundException extends DictionaryDomainException {
      * @param itemCode the dictionary item code, if applicable
      */
     public DictionaryNotFoundException(String message, String typeCode, String itemCode) {
-        super(message, typeCode, itemCode);
+        super(message);
+        this.typeCode = typeCode;
+        this.itemCode = itemCode;
+    }
+    
+    /**
+     * Gets the dictionary type code associated with this exception.
+     * 
+     * @return the type code, or null if not applicable
+     */
+    public String getTypeCode() {
+        return typeCode;
+    }
+    
+    /**
+     * Gets the dictionary item code associated with this exception.
+     * 
+     * @return the item code, or null if not applicable
+     */
+    public String getItemCode() {
+        return itemCode;
     }
 }

@@ -4,12 +4,16 @@ import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.starter.core.error.config.ErrorProperties;
+import com.patra.starter.mybatis.error.contributor.DataLayerErrorMappingContributor;
 import com.patra.starter.mybatis.type.CodeEnumTypeHandler;
 import com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler;
 import com.patra.starter.mybatis.type.JsonToMapTypeHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.mapper.MapperScannerConfigurer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
 import java.util.Map;
@@ -37,6 +41,7 @@ import java.util.Map;
  *     <li>不涉及事务、数据源配置，这部分交由具体业务模块 infra/config 处理</li>
  * </ul>
  */
+@Slf4j
 @AutoConfiguration
 @ConditionalOnClass(MapperScannerConfigurer.class)
 public class PatraMybatisAutoConfiguration {
@@ -77,5 +82,20 @@ public class PatraMybatisAutoConfiguration {
             cfg.getTypeHandlerRegistry()
                     .register(Map.class, new JsonToMapTypeHandler(objectMapper));
         };
+    }
+    
+    /**
+     * Creates the data layer error mapping contributor for handling MyBatis-Plus and database exceptions.
+     * 
+     * @param errorProperties error configuration properties, must not be null
+     * @return data layer error mapping contributor instance, never null
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DataLayerErrorMappingContributor dataLayerErrorMappingContributor(
+            ErrorProperties errorProperties) {
+        
+        log.debug("Creating data layer error mapping contributor for MyBatis-Plus");
+        return new DataLayerErrorMappingContributor(errorProperties);
     }
 }

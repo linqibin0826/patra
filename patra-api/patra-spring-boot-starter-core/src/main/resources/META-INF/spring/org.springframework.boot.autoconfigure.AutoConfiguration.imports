@@ -1,2 +1,2 @@
 com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration
-com.patra.starter.core.error.runtime.PatraErrorAutoConfiguration
+com.patra.starter.core.error.config.CoreErrorAutoConfiguration

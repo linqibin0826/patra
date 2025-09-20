@@ -1,0 +1,27 @@
+{
+  "properties": [
+    {
+      "name": "patra.error.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether error handling is enabled.",
+      "defaultValue": true
+    },
+    {
+      "name": "patra.error.context-prefix",
+      "type": "java.lang.String",
+      "description": "Context prefix for error codes (e.g., REG, ORD, INV). This is required for proper error code generation."
+    },
+    {
+      "name": "patra.error.map-status.strategy",
+      "type": "java.lang.String",
+      "description": "Status mapping strategy name.",
+      "defaultValue": "suffix-heuristic"
+    },
+    {
+      "name": "patra.tracing.header-names",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of header names to check for trace ID extraction.",
+      "defaultValue": ["traceId", "X-B3-TraceId", "traceparent"]
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 package com.patra.registry.app.util;
 
-import com.patra.registry.domain.exception.DictionaryDomainException;
 import com.patra.registry.domain.exception.DictionaryNotFoundException;
 import com.patra.registry.domain.exception.DictionaryValidationException;
 import com.patra.registry.domain.exception.DictionaryRepositoryException;
+import com.patra.registry.domain.exception.RegistryException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -52,7 +52,7 @@ public class DictionaryErrorHandler {
      *                      if applicable
      * @param <T>           the return type of the operation
      * @return the result of the operation
-     * @throws DictionaryDomainException     if a domain-level error occurs
+     * @throws RegistryException             if a domain-level error occurs
      * @throws DictionaryRepositoryException if an infrastructure-level error occurs
      */
     public <T> T executeWithErrorHandling(Supplier<T> operation, String operationName,
@@ -71,19 +71,19 @@ public class DictionaryErrorHandler {
                     operationName, typeCode, itemCode, e.getMessage());
             throw e; // Re-throw as-is for proper handling by controllers
 
+        } catch (DictionaryRepositoryException e) {
+            log.error("Dictionary repository error: operation={}, typeCode={}, itemCode={}, message={}",
+                    operationName, typeCode, itemCode, e.getMessage(), e);
+            throw e; // Re-throw as-is for proper handling by controllers
+
         } catch (DictionaryValidationException e) {
             log.warn("Dictionary validation failed: operation={}, typeCode={}, itemCode={}, errors={}",
                     operationName, typeCode, itemCode, e.getValidationErrors());
             throw e; // Re-throw as-is for proper handling by controllers
 
-        } catch (DictionaryDomainException e) {
+        } catch (RegistryException e) {
             log.warn("Dictionary domain error: operation={}, typeCode={}, itemCode={}, message={}",
                     operationName, typeCode, itemCode, e.getMessage());
-            throw e; // Re-throw as-is for proper handling by controllers
-
-        } catch (DictionaryRepositoryException e) {
-            log.error("Dictionary repository error: operation={}, typeCode={}, itemCode={}, message={}",
-                    operationName, typeCode, itemCode, e.getMessage(), e);
             throw e; // Re-throw as-is for proper handling by controllers
 
         } catch (IllegalArgumentException e) {
@@ -95,10 +95,10 @@ public class DictionaryErrorHandler {
             log.error("Unexpected error in dictionary operation: operation={}, typeCode={}, itemCode={}, message={}",
                     operationName, typeCode, itemCode, e.getMessage(), e);
 
-            // Wrap unexpected exceptions in domain exception for consistent handling
-            throw new DictionaryDomainException(
+            // Wrap unexpected exceptions in validation exception for consistent handling
+            throw new DictionaryValidationException(
                     String.format("Unexpected error in %s operation", operationName),
-                    typeCode, itemCode, e);
+                    typeCode, itemCode);
         }
     }
 
@@ -111,7 +111,7 @@ public class DictionaryErrorHandler {
      * @param operationName the name of the operation for logging purposes
      * @param <T>           the return type of the operation
      * @return the result of the operation
-     * @throws DictionaryDomainException     if a domain-level error occurs
+     * @throws RegistryException             if a domain-level error occurs
      * @throws DictionaryRepositoryException if an infrastructure-level error occurs
      */
     public <T> T executeWithErrorHandling(Supplier<T> operation, String operationName) {

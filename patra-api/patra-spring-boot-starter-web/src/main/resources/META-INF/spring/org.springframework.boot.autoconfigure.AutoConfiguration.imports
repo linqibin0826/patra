@@ -1,1 +1,1 @@
-com.patra.starter.web.autoconfig.WebConversionAutoConfiguration
+com.patra.starter.web.error.config.WebErrorAutoConfiguration

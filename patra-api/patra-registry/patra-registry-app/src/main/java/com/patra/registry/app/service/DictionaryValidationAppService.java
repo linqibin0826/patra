@@ -4,7 +4,7 @@ import com.patra.registry.app.mapping.DictionaryValidationConverter;
 import com.patra.registry.app.util.DictionaryErrorHandler;
 import com.patra.registry.contract.query.view.DictionaryHealthQuery;
 import com.patra.registry.contract.query.view.DictionaryValidationQuery;
-import com.patra.registry.domain.exception.DictionaryDomainException;
+import com.patra.registry.domain.exception.RegistryException;
 import com.patra.registry.domain.exception.DictionaryRepositoryException;
 import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
 import com.patra.registry.domain.model.vo.DictionaryItem;
@@ -112,7 +112,7 @@ public class DictionaryValidationAppService {
             ValidationResult result = ValidationResult.failure("Validation failed due to repository error: " + e.getMessage());
             return dictionaryValidationConverter.toQuery(result, typeCode, itemCode);
 
-        } catch (DictionaryDomainException e) {
+        } catch (RegistryException e) {
             log.error("Dictionary validation failed unexpectedly: typeCode={}, itemCode={}, message={}",
                     typeCode, itemCode, e.getMessage());
             ValidationResult result = ValidationResult.failure("Validation failed due to system error: " + e.getMessage());
@@ -167,7 +167,7 @@ public class DictionaryValidationAppService {
                             ref.typeCode(), ref.itemCode()))
                     .toList();
 
-        } catch (DictionaryDomainException e) {
+        } catch (RegistryException e) {
             log.error("Batch validation failed unexpectedly: referencesCount={}, message={}",
                     references.size(), e.getMessage());
             String message = "Validation failed due to system error: " + e.getMessage();

@@ -1,2 +1,2 @@
 com.patra.starter.feign.runtime.PatraFeignAutoConfiguration
-
+com.patra.starter.feign.error.config.FeignErrorAutoConfiguration

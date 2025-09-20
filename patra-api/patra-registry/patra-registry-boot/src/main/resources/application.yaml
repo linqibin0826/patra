@@ -16,6 +16,26 @@ spring:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Error handling configuration
+patra:
+  error:
+    enabled: true
+    context-prefix: REG
+  web:
+    problem:
+      enabled: true
+      type-base-url: "https://errors.papertrace.com"
+      include-stack: false
+  feign:
+    problem:
+      enabled: true
+      tolerant: true
 
 server:
   port: 6000
