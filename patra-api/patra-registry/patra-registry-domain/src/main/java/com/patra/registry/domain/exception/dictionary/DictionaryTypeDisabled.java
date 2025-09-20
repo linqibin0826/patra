@@ -1,4 +1,6 @@
-package com.patra.registry.domain.exception;
+package com.patra.registry.domain.exception.dictionary;
+
+import com.patra.registry.domain.exception.RegistryRuleViolation;
 
 /**
  * 当尝试使用被禁用的字典类型时抛出。

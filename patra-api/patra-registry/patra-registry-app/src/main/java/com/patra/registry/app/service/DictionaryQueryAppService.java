@@ -16,27 +16,31 @@ import java.util.Optional;
  * Dictionary query application service for CQRS read operations.
  * Orchestrates dictionary query use cases and uses contract Query objects for consistency.
  * This service is strictly read-only and does not support any command operations.
- * 
+ * <p>
  * All methods in this service follow CQRS query patterns, providing optimized read access
  * to dictionary data while maintaining clean separation from command operations.
- * 
+ *
  * @author linqibin
  * @since 0.1.0
  */
 @Slf4j
 @Service
 public class DictionaryQueryAppService {
-    
-    /** Dictionary repository for data access */
+
+    /**
+     * Dictionary repository for data access
+     */
     private final DictionaryRepository dictionaryRepository;
-    
-    /** Converter for domain to Query object mapping */
+
+    /**
+     * Converter for domain to Query object mapping
+     */
     private final DictionaryQueryConverter dictionaryQueryConverter;
 
     /**
      * Constructs a new DictionaryQueryAppService with required dependencies.
-     * 
-     * @param dictionaryRepository the repository for dictionary data access
+     *
+     * @param dictionaryRepository     the repository for dictionary data access
      * @param dictionaryQueryConverter the converter for domain to query object mapping
      */
     public DictionaryQueryAppService(
@@ -45,7 +49,7 @@ public class DictionaryQueryAppService {
         this.dictionaryRepository = dictionaryRepository;
         this.dictionaryQueryConverter = dictionaryQueryConverter;
     }
-    
+
     /**
      * 按类型与项编码查询单个字典项（不加载聚合）。
      * 项不存在/禁用/删除则返回空。
@@ -73,7 +77,7 @@ public class DictionaryQueryAppService {
         log.debug("Successfully found dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
         return Optional.of(result);
     }
-    
+
     /**
      * 查询某类型下所有启用项（排序：sort_order 升序，其次 item_code 升序）。
      */
@@ -90,7 +94,7 @@ public class DictionaryQueryAppService {
         log.info("Found {} enabled dictionary items for type: typeCode={}", result.size(), typeCode);
         return result;
     }
-    
+
     /**
      * 查询某类型的默认项（可用且未删除）。若存在多个默认项将记录告警。
      */
@@ -122,7 +126,7 @@ public class DictionaryQueryAppService {
         log.debug("Successfully found default dictionary item: typeCode={}, itemCode={}", typeCode, item.itemCode());
         return Optional.of(result);
     }
-    
+
     /**
      * 通过外部系统别名查询字典项（仅返回可用且未删除的项）。
      */
@@ -150,7 +154,7 @@ public class DictionaryQueryAppService {
                 sourceSystem, externalCode);
         return Optional.empty();
     }
-    
+
     /**
      * 查询系统内所有字典类型（含项数与默认项等元数据）。
      */
@@ -165,8 +169,10 @@ public class DictionaryQueryAppService {
         log.info("Found {} dictionary types in system", result.size());
         return result;
     }
-    
-    /** 将领域类型转换为带元数据的查询对象。 */
+
+    /**
+     * 将领域类型转换为带元数据的查询对象。
+     */
     private DictionaryTypeQuery convertTypeToQuery(DictionaryType domainType) {
         int enabledItemCount = dictionaryRepository.countEnabledItemsByType(domainType.typeCode());
         boolean hasDefault = dictionaryRepository.findDefaultItemByType(domainType.typeCode()).isPresent();

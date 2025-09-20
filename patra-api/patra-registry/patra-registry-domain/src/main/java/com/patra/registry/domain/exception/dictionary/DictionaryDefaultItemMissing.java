@@ -1,4 +1,6 @@
-package com.patra.registry.domain.exception;
+package com.patra.registry.domain.exception.dictionary;
+
+import com.patra.registry.domain.exception.RegistryRuleViolation;
 
 /**
  * 当字典类型需要配置默认项但缺失时抛出。

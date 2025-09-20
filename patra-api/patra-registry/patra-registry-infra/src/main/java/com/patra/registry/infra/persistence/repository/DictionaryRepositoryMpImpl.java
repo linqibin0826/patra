@@ -6,7 +6,7 @@ import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
 import com.patra.registry.domain.model.vo.DictionaryItem;
 import com.patra.registry.domain.model.vo.DictionaryType;
 import com.patra.registry.domain.port.DictionaryRepository;
-import com.patra.registry.domain.exception.DictionaryRepositoryException;
+import com.patra.registry.domain.exception.dictionary.DictionaryRepositoryException;
 import com.patra.registry.infra.mapstruct.DictionaryEntityConverter;
 import com.patra.registry.infra.persistence.entity.RegSysDictItemAliasDO;
 import com.patra.registry.infra.persistence.entity.RegSysDictItemDO;

@@ -14,7 +14,7 @@ import com.patra.registry.contract.query.view.DictionaryItemQuery;
 import com.patra.registry.contract.query.view.DictionaryTypeQuery;
 import com.patra.registry.contract.query.view.DictionaryValidationQuery;
 import com.patra.registry.domain.model.vo.DictionaryReference;
-import com.patra.registry.domain.exception.DictionaryNotFoundException;
+import com.patra.registry.domain.exception.dictionary.DictionaryNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 

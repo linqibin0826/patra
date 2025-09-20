@@ -1,6 +1,5 @@
 package com.patra.registry.domain.port;
 
-import com.patra.registry.domain.exception.DictionaryRepositoryException;
 import com.patra.registry.domain.model.aggregate.Dictionary;
 import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
 import com.patra.registry.domain.model.vo.DictionaryItem;

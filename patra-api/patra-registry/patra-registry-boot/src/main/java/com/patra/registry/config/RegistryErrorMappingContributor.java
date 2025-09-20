@@ -3,6 +3,7 @@ package com.patra.registry.config;
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.registry.api.error.RegistryErrorCode;
 import com.patra.registry.domain.exception.*;
+import com.patra.registry.domain.exception.dictionary.*;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;

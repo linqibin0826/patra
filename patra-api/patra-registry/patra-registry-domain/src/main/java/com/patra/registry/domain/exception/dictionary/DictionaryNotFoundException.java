@@ -1,4 +1,6 @@
-package com.patra.registry.domain.exception;
+package com.patra.registry.domain.exception.dictionary;
+
+import com.patra.registry.domain.exception.RegistryNotFound;
 
 /**
  * 当请求的字典类型或字典项未找到时抛出。

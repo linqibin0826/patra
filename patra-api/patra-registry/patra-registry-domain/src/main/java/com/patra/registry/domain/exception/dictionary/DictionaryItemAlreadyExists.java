@@ -1,4 +1,6 @@
-package com.patra.registry.domain.exception;
+package com.patra.registry.domain.exception.dictionary;
+
+import com.patra.registry.domain.exception.RegistryConflict;
 
 /**
  * 当尝试在某类型下创建已存在的字典项时抛出。

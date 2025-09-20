@@ -1,7 +1,8 @@
-package com.patra.registry.domain.exception;
+package com.patra.registry.domain.exception.dictionary;
 
 import com.patra.common.error.trait.ErrorTrait;
 import com.patra.common.error.trait.HasErrorTraits;
+import com.patra.registry.domain.exception.RegistryException;
 
 import java.util.Set;
 
