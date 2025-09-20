@@ -1,10 +1,8 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.app.mapping.DictionaryQueryConverter;
-import com.patra.registry.app.util.DictionaryErrorHandler;
 import com.patra.registry.contract.query.view.DictionaryItemQuery;
 import com.patra.registry.contract.query.view.DictionaryTypeQuery;
-import com.patra.registry.domain.exception.DictionaryRepositoryException;
 import com.patra.registry.domain.model.vo.DictionaryItem;
 import com.patra.registry.domain.model.vo.DictionaryType;
 import com.patra.registry.domain.port.DictionaryRepository;
@@ -35,9 +33,6 @@ public class DictionaryQueryAppService {
     /** Converter for domain to Query object mapping */
     private final DictionaryQueryConverter dictionaryQueryConverter;
 
-    /** Error handler providing consistent exception management */
-    private final DictionaryErrorHandler dictionaryErrorHandler;
-    
     /**
      * Constructs a new DictionaryQueryAppService with required dependencies.
      * 
@@ -46,11 +41,9 @@ public class DictionaryQueryAppService {
      */
     public DictionaryQueryAppService(
             DictionaryRepository dictionaryRepository,
-            DictionaryQueryConverter dictionaryQueryConverter,
-            DictionaryErrorHandler dictionaryErrorHandler) {
+            DictionaryQueryConverter dictionaryQueryConverter) {
         this.dictionaryRepository = dictionaryRepository;
         this.dictionaryQueryConverter = dictionaryQueryConverter;
-        this.dictionaryErrorHandler = dictionaryErrorHandler;
     }
     
     /**
@@ -65,29 +58,26 @@ public class DictionaryQueryAppService {
      */
     public Optional<DictionaryItemQuery> findItemByTypeAndCode(String typeCode, String itemCode) {
         log.debug("Finding dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
-        dictionaryErrorHandler.validateTypeCode(typeCode);
-        dictionaryErrorHandler.validateItemCode(itemCode);
+        requireTypeCode(typeCode);
+        requireItemCode(itemCode);
 
-        return dictionaryErrorHandler.executeWithErrorHandling(() -> {
-            Optional<DictionaryItem> domainItem = dictionaryRepository.findItemByTypeAndCode(typeCode, itemCode);
+        Optional<DictionaryItem> domainItem = dictionaryRepository.findItemByTypeAndCode(typeCode, itemCode);
 
-            if (domainItem.isEmpty()) {
-                log.debug("Dictionary item not found: typeCode={}, itemCode={}", typeCode, itemCode);
-                return Optional.empty();
-            }
+        if (domainItem.isEmpty()) {
+            log.debug("Dictionary item not found: typeCode={}, itemCode={}", typeCode, itemCode);
+            return Optional.empty();
+        }
 
-            DictionaryItem item = domainItem.get();
-            if (!item.isAvailable()) {
-                log.debug("Dictionary item found but not available: typeCode={}, itemCode={}, enabled={}, deleted={}",
-                        typeCode, itemCode, item.enabled(), item.deleted());
-                return Optional.empty();
-            }
+        DictionaryItem item = domainItem.get();
+        if (!item.isAvailable()) {
+            log.debug("Dictionary item found but not available: typeCode={}, itemCode={}, enabled={}, deleted={}",
+                    typeCode, itemCode, item.enabled(), item.deleted());
+            return Optional.empty();
+        }
 
-            DictionaryItemQuery result = dictionaryQueryConverter.toQuery(item, typeCode);
-            log.debug("Successfully found dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
-            return Optional.of(result);
-
-        }, "findItemByTypeAndCode", typeCode, itemCode);
+        DictionaryItemQuery result = dictionaryQueryConverter.toQuery(item, typeCode);
+        log.debug("Successfully found dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
+        return Optional.of(result);
     }
     
     /**
@@ -101,19 +91,16 @@ public class DictionaryQueryAppService {
      */
     public List<DictionaryItemQuery> findEnabledItemsByType(String typeCode) {
         log.debug("Finding enabled dictionary items for type: typeCode={}", typeCode);
-        dictionaryErrorHandler.validateTypeCode(typeCode);
+        requireTypeCode(typeCode);
 
-        return dictionaryErrorHandler.executeWithErrorHandling(() -> {
-            List<DictionaryItem> domainItems = dictionaryRepository.findEnabledItemsByType(typeCode);
+        List<DictionaryItem> domainItems = dictionaryRepository.findEnabledItemsByType(typeCode);
 
-            List<DictionaryItemQuery> result = domainItems.stream()
-                    .map(item -> dictionaryQueryConverter.toQuery(item, typeCode))
-                    .toList();
+        List<DictionaryItemQuery> result = domainItems.stream()
+                .map(item -> dictionaryQueryConverter.toQuery(item, typeCode))
+                .toList();
 
-            log.info("Found {} enabled dictionary items for type: typeCode={}", result.size(), typeCode);
-            return result;
-
-        }, "findEnabledItemsByType", typeCode, null);
+        log.info("Found {} enabled dictionary items for type: typeCode={}", result.size(), typeCode);
+        return result;
     }
     
     /**
@@ -127,34 +114,31 @@ public class DictionaryQueryAppService {
      */
     public Optional<DictionaryItemQuery> findDefaultItemByType(String typeCode) {
         log.debug("Finding default dictionary item for type: typeCode={}", typeCode);
-        dictionaryErrorHandler.validateTypeCode(typeCode);
+        requireTypeCode(typeCode);
 
-        return dictionaryErrorHandler.executeWithErrorHandling(() -> {
-            Optional<DictionaryItem> domainItem = dictionaryRepository.findDefaultItemByType(typeCode);
+        Optional<DictionaryItem> domainItem = dictionaryRepository.findDefaultItemByType(typeCode);
 
-            if (domainItem.isEmpty()) {
-                log.debug("No default dictionary item found for type: typeCode={}", typeCode);
-                return Optional.empty();
-            }
+        if (domainItem.isEmpty()) {
+            log.debug("No default dictionary item found for type: typeCode={}", typeCode);
+            return Optional.empty();
+        }
 
-            DictionaryItem item = domainItem.get();
-            if (!item.canBeDefault()) {
-                log.warn("Default dictionary item found but not available: typeCode={}, itemCode={}, enabled={}, deleted={}",
-                        typeCode, item.itemCode(), item.enabled(), item.deleted());
-                return Optional.empty();
-            }
+        DictionaryItem item = domainItem.get();
+        if (!item.canBeDefault()) {
+            log.warn("Default dictionary item found but not available: typeCode={}, itemCode={}, enabled={}, deleted={}",
+                    typeCode, item.itemCode(), item.enabled(), item.deleted());
+            return Optional.empty();
+        }
 
-            List<DictionaryItem> allItems = dictionaryRepository.findEnabledItemsByType(typeCode);
-            long defaultCount = allItems.stream().filter(DictionaryItem::isDefault).count();
-            if (defaultCount > 1) {
-                log.warn("Multiple default items detected for type: typeCode={}, defaultCount={}", typeCode, defaultCount);
-            }
+        List<DictionaryItem> allItems = dictionaryRepository.findEnabledItemsByType(typeCode);
+        long defaultCount = allItems.stream().filter(DictionaryItem::isDefault).count();
+        if (defaultCount > 1) {
+            log.warn("Multiple default items detected for type: typeCode={}, defaultCount={}", typeCode, defaultCount);
+        }
 
-            DictionaryItemQuery result = dictionaryQueryConverter.toQuery(item, typeCode);
-            log.debug("Successfully found default dictionary item: typeCode={}, itemCode={}", typeCode, item.itemCode());
-            return Optional.of(result);
-
-        }, "findDefaultItemByType", typeCode, null);
+        DictionaryItemQuery result = dictionaryQueryConverter.toQuery(item, typeCode);
+        log.debug("Successfully found default dictionary item: typeCode={}, itemCode={}", typeCode, item.itemCode());
+        return Optional.of(result);
     }
     
     /**
@@ -169,36 +153,27 @@ public class DictionaryQueryAppService {
      */
     public Optional<DictionaryItemQuery> findByAlias(String sourceSystem, String externalCode) {
         log.debug("Finding dictionary item by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
-        
-        if (sourceSystem == null || sourceSystem.trim().isEmpty()) {
-            throw new IllegalArgumentException("Source system cannot be null or empty");
-        }
-        if (externalCode == null || externalCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("External code cannot be null or empty");
-        }
+        requireText(sourceSystem, "Source system cannot be null or empty");
+        requireText(externalCode, "External code cannot be null or empty");
 
-        return dictionaryErrorHandler.executeWithErrorHandling(() -> {
-            Optional<DictionaryItem> domainItem = dictionaryRepository.findByAlias(sourceSystem, externalCode);
+        Optional<DictionaryItem> domainItem = dictionaryRepository.findByAlias(sourceSystem, externalCode);
 
-            if (domainItem.isEmpty()) {
-                log.debug("Dictionary item not found by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
-                return Optional.empty();
-            }
-
-            DictionaryItem item = domainItem.get();
-            if (!item.isAvailable()) {
-                log.debug("Dictionary item found by alias but not available: sourceSystem={}, externalCode={}, enabled={}, deleted={}",
-                        sourceSystem, externalCode, item.enabled(), item.deleted());
-                return Optional.empty();
-            }
-
-            log.warn("findByAlias method needs enhancement to return type code information");
-
-            log.debug("Successfully found dictionary item by alias but type code lookup not implemented: sourceSystem={}, externalCode={}",
-                    sourceSystem, externalCode);
+        if (domainItem.isEmpty()) {
+            log.debug("Dictionary item not found by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
             return Optional.empty();
+        }
 
-        }, "findByAlias", sourceSystem, externalCode);
+        DictionaryItem item = domainItem.get();
+        if (!item.isAvailable()) {
+            log.debug("Dictionary item found by alias but not available: sourceSystem={}, externalCode={}, enabled={}, deleted={}",
+                    sourceSystem, externalCode, item.enabled(), item.deleted());
+            return Optional.empty();
+        }
+
+        log.warn("findByAlias method needs enhancement to return type code information");
+        log.debug("Successfully found dictionary item by alias but type code lookup not implemented: sourceSystem={}, externalCode={}",
+                sourceSystem, externalCode);
+        return Optional.empty();
     }
     
     /**
@@ -210,17 +185,14 @@ public class DictionaryQueryAppService {
      */
     public List<DictionaryTypeQuery> findAllTypes() {
         log.debug("Finding all dictionary types");
-        return dictionaryErrorHandler.executeWithErrorHandling(() -> {
-            List<DictionaryType> domainTypes = dictionaryRepository.findAllTypes();
+        List<DictionaryType> domainTypes = dictionaryRepository.findAllTypes();
 
-            List<DictionaryTypeQuery> result = domainTypes.stream()
-                    .map(this::convertTypeToQuery)
-                    .toList();
+        List<DictionaryTypeQuery> result = domainTypes.stream()
+                .map(this::convertTypeToQuery)
+                .toList();
 
-            log.info("Found {} dictionary types in system", result.size());
-            return result;
-
-        }, "findAllTypes");
+        log.info("Found {} dictionary types in system", result.size());
+        return result;
     }
     
     /**
@@ -231,17 +203,22 @@ public class DictionaryQueryAppService {
      * @return the converted DictionaryTypeQuery with enriched metadata
      */
     private DictionaryTypeQuery convertTypeToQuery(DictionaryType domainType) {
-        try {
-            return dictionaryErrorHandler.executeWithErrorHandling(() -> {
-                int enabledItemCount = dictionaryRepository.countEnabledItemsByType(domainType.typeCode());
-                boolean hasDefault = dictionaryRepository.findDefaultItemByType(domainType.typeCode()).isPresent();
-                return dictionaryQueryConverter.toQuery(domainType, enabledItemCount, hasDefault);
-            }, "convertTypeToQuery", domainType.typeCode(), null);
+        int enabledItemCount = dictionaryRepository.countEnabledItemsByType(domainType.typeCode());
+        boolean hasDefault = dictionaryRepository.findDefaultItemByType(domainType.typeCode()).isPresent();
+        return dictionaryQueryConverter.toQuery(domainType, enabledItemCount, hasDefault);
+    }
 
-        } catch (DictionaryRepositoryException e) {
-            log.error("Failed to retrieve metadata for dictionary type: typeCode={}, error={}",
-                    domainType.typeCode(), e.getMessage());
-            return dictionaryQueryConverter.toQuery(domainType, 0, false);
+    private void requireTypeCode(String typeCode) {
+        requireText(typeCode, "Dictionary type code cannot be null or empty");
+    }
+
+    private void requireItemCode(String itemCode) {
+        requireText(itemCode, "Dictionary item code cannot be null or empty");
+    }
+
+    private void requireText(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
         }
     }
 }

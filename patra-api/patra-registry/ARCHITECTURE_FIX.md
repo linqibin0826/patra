@@ -46,17 +46,15 @@ domain → 无外部依赖 (✓)
 - ✅ 删除重复的 `patra-registry-domain/port/DictionaryRepositoryException.java`
 
 ### 2. Import语句更新
-更新了以下文件中的import语句：
+更新了以下文件中的 import 语句：
 
 - ✅ `DictionaryRepository.java` (domain/port)
 - ✅ `DictionaryRepositoryMpImpl.java` (infra)
-- ✅ `DictionaryErrorHandler.java` (app)
-- ✅ `DictionaryExceptionHandler.java` (adapter)
-- ✅ `DictionaryExceptionHandlerTest.java` (test)
-- ✅ `DictionaryErrorHandlingIntegrationTest.java` (test)
+
+> 注：后续随着异常体系对齐，`DictionaryErrorHandler` 等本地组件已被整体移除，不再需要额外维护。
 
 ### 3. 文档更新
-- ✅ 更新 `ERROR_HANDLING.md` 中的包路径引用
+- ⛔️ 原 `ERROR_HANDLING.md` 已删除，统一采用平台级《Patra 异常体系设计规范》作为唯一来源
 
 ## 验证结果
 
