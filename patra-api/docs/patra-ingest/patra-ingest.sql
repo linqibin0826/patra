@@ -1,9 +1,21 @@
 -- =====================================================================
 -- B. 采集（ingest）—— ing_*
+-- - 统一审计字段：record_remarks / created_at/created_by/created_by_name / updated_at/updated_by/updated_by_name / version / ip_address / deleted。
+-- - 不创建物理外键（跨/内模块均由应用层保证完整性，必要处建立二级索引）。
+-- - MySQL 8.0 · InnoDB · utf8mb4_0900_ai_ci
 -- =====================================================================
 -- ======================================================================
 -- 1) 调度实例：一次外部触发与其“当时配置/表达式原型”快照
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_schedule_instance —— 调度实例
+ * 语义：记录一次外部调度触发事件的“根”，固化当时的调度入参、来源配置快照、表达式原型（未局部化）。
+ * 关键点：
+ *  - provenance_code 对齐 reg_provenance.provenance_code（逻辑关联，不建 FK）；
+ *  - provenance_config_snapshot 为按 reg_prov_* 读侧装配出的中立快照；
+ *  - expr_proto_* 仅保存表达式原型，后续派生 plan/slice 时再局部化。
+ * 索引：idx_sched_src(scheduler_code, scheduler_job_id, scheduler_log_id)。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 (
     `id`                         BIGINT UNSIGNED                     NOT NULL AUTO_INCREMENT COMMENT 'PK · 调度实例ID',
@@ -38,11 +50,20 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='调度实例：一次外部触发与其快照（作为本次编排的根）';
+    COMMENT ='调度实例：一次外部触发与其快照（作为本次编排的根）；不创建物理外键';
 
 -- ======================================================================
 -- 2) 计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_plan —— 计划蓝图
+ * 语义：一次采集批次的蓝图，定义总窗口与切片策略；不执行。
+ * 关键点：
+ *  - 与 ing_schedule_instance 逻辑关联（不建 FK）；
+ *  - 使用 *_code（dict）存储操作/策略/状态；
+ *  - plan_key 作为对外幂等/可读键（唯一）。
+ * 索引：uk_plan_key / idx_plan_sched / idx_plan_status / idx_plan_expr。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_plan`
 (
     `id`                   BIGINT UNSIGNED                                                     NOT NULL AUTO_INCREMENT COMMENT 'PK · PlanID',
@@ -80,16 +101,21 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_plan_expr` (`expr_proto_hash`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    CONSTRAINT `fk_ing_plan__schedule_instance` FOREIGN KEY (`schedule_instance_id`) REFERENCES `ing_schedule_instance` (`id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）';
+    COMMENT ='计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）；不创建物理外键';
 
 -- ======================================================================
 -- 3) 计划切片：通用分片（时间/ID/token/预算），并行与幂等边界
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_plan_slice —— 计划切片
+ * 语义：根据 plan 的总窗与策略切出的分片；并行与幂等的最小单元；expr_* 为局部化表达式（含边界）。
+ * 关键点：同一 plan 下 (slice_no) 与 (slice_signature_hash) 各自唯一；不建 FK。
+ * 索引：uk_slice_unique / uk_slice_sig / idx_slice_status / idx_slice_expr。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 (
     `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · SliceID',
@@ -123,16 +149,24 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     KEY `idx_slice_expr` (`expr_hash`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    CONSTRAINT `fk_ing_plan_slice__plan` FOREIGN KEY (`plan_id`) REFERENCES `ing_plan` (`id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='计划切片：通用分片（时间/ID/token/预算），是并行与幂等的边界';
+    COMMENT ='计划切片：通用分片（时间/ID/token/预算），是并行与幂等的边界；不创建物理外键';
 
 -- ======================================================================
 -- 4) 任务：每个切片生成一个任务；支持强幂等与调度/执行状态
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_task —— 派生任务
+ * 语义：每个 slice 派生出一个可调度任务；绑定来源、操作、凭据与执行参数。
+ * 关键点：
+ *  - 逻辑关联 schedule_instance/plan/slice（不建 FK）；
+ *  - credential_id 逻辑指向 reg_prov_credential.id（不建 FK，保留二级索引 idx_task_cred）；
+ *  - 幂等键 idempotent_key 唯一，保证“同 slice+操作+参数+触发上下文”只建一条任务。
+ * 索引：uk_task_idem / idx_task_slice / idx_task_src_op / idx_task_sched_at。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task`
 (
     `id`                         BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT COMMENT 'PK · TaskID',
@@ -178,18 +212,21 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`),
-    KEY `idx_task_cred` (`credential_id`),
-    CONSTRAINT `fk_ing_task__schedule_instance` FOREIGN KEY (`schedule_instance_id`) REFERENCES `ing_schedule_instance` (`id`),
-    CONSTRAINT `fk_ing_task__plan` FOREIGN KEY (`plan_id`) REFERENCES `ing_plan` (`id`),
-    CONSTRAINT `fk_ing_task__slice` FOREIGN KEY (`slice_id`) REFERENCES `ing_plan_slice` (`id`)
+    KEY `idx_task_cred` (`credential_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='任务：每个切片生成一个任务；支持强幂等与调度/执行状态';
+    COMMENT ='任务：每个切片生成一个任务；支持强幂等与调度/执行状态；不创建物理外键';
 
 -- ======================================================================
 -- 5) 任务运行（attempt）：一次具体尝试；失败重试/回放各自新增记录
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_task_run —— 任务运行（attempt）
+ * 语义：一次具体尝试（首次/重试/回放）；失败不覆盖 task，只在 run 记录。
+ * 关键点：同一 task 下 (attempt_no) 唯一；不建 FK。
+ * 索引：uk_run_attempt / idx_run_task_status。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task_run`
 (
     `id`               BIGINT UNSIGNED                                             NOT NULL AUTO_INCREMENT COMMENT 'PK · RunID',
@@ -228,16 +265,23 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     KEY `idx_run_task_status` (`task_id`, `status_code`, `started_at`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    CONSTRAINT `fk_ing_task_run__task` FOREIGN KEY (`task_id`) REFERENCES `ing_task` (`id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='任务运行（attempt）：一次具体尝试；失败重试/回放各自新增记录';
+    COMMENT ='任务运行（attempt）：一次具体尝试；失败重试/回放各自新增记录；不创建物理外键';
 
 -- ======================================================================
 -- 6) 运行批次：页码/令牌步进的最小账目；承载断点续跑与去重
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_task_run_batch —— 运行批次
+ * 语义：run 执行过程中的分页/令牌步进账目，是断点续跑与去重的最小颗粒。
+ * 关键点：
+ *  - 与 run/task/slice/plan 仅逻辑关联（不建 FK）；
+ *  - 幂等键 idempotent_key 非空且唯一；(run_id,batch_no) 与 (run_id,before_token) 唯一。
+ * 索引：uk_run_batch_no / uk_run_before_tok / uk_batch_idem 及状态时间索引。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
 (
     `id`              BIGINT UNSIGNED                                 NOT NULL AUTO_INCREMENT COMMENT 'PK · BatchID',
@@ -288,19 +332,24 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     KEY `idx_batch_expr` (`expr_hash`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    CONSTRAINT `fk_ing_task_run_batch__run` FOREIGN KEY (`run_id`) REFERENCES `ing_task_run` (`id`),
-    CONSTRAINT `fk_ing_task_run_batch__task` FOREIGN KEY (`task_id`) REFERENCES `ing_task` (`id`),
-    CONSTRAINT `fk_ing_task_run_batch__slice` FOREIGN KEY (`slice_id`) REFERENCES `ing_plan_slice` (`id`),
-    CONSTRAINT `fk_ing_task_run_batch__plan` FOREIGN KEY (`plan_id`) REFERENCES `ing_plan` (`id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='运行批次：页码/令牌步进的最小账目；承载断点续跑与去重';
+    COMMENT ='运行批次：页码/令牌步进的最小账目；承载断点续跑与去重；不创建物理外键';
 
 -- ======================================================================
 -- 7) 通用水位（当前值）：(source_code + operation + cursor_key + namespace) 唯一
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_cursor —— 当前水位
+ * 语义：某来源 + 操作 + 游标键 + 命名空间的当前推进值；兼容 TIME/ID/TOKEN 三类。
+ * 关键点：
+ *  - 唯一：(provenance_code, operation_code, cursor_key, namespace_scope_code, namespace_key)；
+ *  - 归一值：normalized_instant / normalized_numeric 便于排序与范围查询；
+ *  - lineage：最近一次推进的 schedule/plan/slice/task/run/batch（逻辑关联，不建 FK）。
+ * 索引：uk_cursor_ns / idx_cursor_src_key / idx_cursor_sort_time / idx_cursor_sort_id / idx_cursor_lineage。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_cursor`
 (
     `id`                         BIGINT UNSIGNED                                NOT NULL AUTO_INCREMENT COMMENT 'PK',
@@ -350,21 +399,23 @@ CREATE TABLE IF NOT EXISTS `ing_cursor`
     KEY `idx_cursor_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `last_run_id`, `last_batch_id`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    CONSTRAINT `fk_ing_cursor__sched` FOREIGN KEY (`schedule_instance_id`) REFERENCES `ing_schedule_instance` (`id`),
-    CONSTRAINT `fk_ing_cursor__plan` FOREIGN KEY (`plan_id`) REFERENCES `ing_plan` (`id`),
-    CONSTRAINT `fk_ing_cursor__slice` FOREIGN KEY (`slice_id`) REFERENCES `ing_plan_slice` (`id`),
-    CONSTRAINT `fk_ing_cursor__task` FOREIGN KEY (`task_id`) REFERENCES `ing_task` (`id`),
-    CONSTRAINT `fk_ing_cursor__run` FOREIGN KEY (`last_run_id`) REFERENCES `ing_task_run` (`id`),
-    CONSTRAINT `fk_ing_cursor__batch` FOREIGN KEY (`last_batch_id`) REFERENCES `ing_task_run_batch` (`id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='通用水位·当前值：(source_code + operation + cursor_key + namespace) 唯一；兼容 time/id/token';
+    COMMENT ='通用水位·当前值：(source_code + operation + cursor_key + namespace) 唯一；兼容 time/id/token；不创建物理外键';
 
 -- ======================================================================
 -- 8) 水位推进事件（不可变）：每次成功推进记一条事件；支持回放与全链路回溯
 -- ======================================================================
+/* ====================================================================
+ * 表：ing_cursor_event —— 水位推进事件
+ * 语义：Append-only 审计事件；每次成功推进记录一条，支持回放与全链路回溯。
+ * 关键点：
+ *  - 幂等：idempotent_key 唯一；
+ *  - lineage：schedule/plan/slice/task/run/batch 逻辑关联（不建 FK）。
+ * 索引：uk_cur_evt_idem / idx_cur_evt_timeline / idx_cur_evt_window / idx_cur_evt_instant / idx_cur_evt_numeric / idx_cur_evt_lineage。
+ * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_cursor_event`
 (
     `id`                         BIGINT UNSIGNED                                NOT NULL AUTO_INCREMENT COMMENT 'PK',
@@ -424,14 +475,8 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     KEY `idx_cur_evt_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `run_id`, `batch_id`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    CONSTRAINT `fk_ing_cur_evt__sched` FOREIGN KEY (`schedule_instance_id`) REFERENCES `ing_schedule_instance` (`id`),
-    CONSTRAINT `fk_ing_cur_evt__plan` FOREIGN KEY (`plan_id`) REFERENCES `ing_plan` (`id`),
-    CONSTRAINT `fk_ing_cur_evt__slice` FOREIGN KEY (`slice_id`) REFERENCES `ing_plan_slice` (`id`),
-    CONSTRAINT `fk_ing_cur_evt__task` FOREIGN KEY (`task_id`) REFERENCES `ing_task` (`id`),
-    CONSTRAINT `fk_ing_cur_evt__run` FOREIGN KEY (`run_id`) REFERENCES `ing_task_run` (`id`),
-    CONSTRAINT `fk_ing_cur_evt__batch` FOREIGN KEY (`batch_id`) REFERENCES `ing_task_run_batch` (`id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='水位推进事件（不可变）：每次成功推进一条事件；支持回放与全链路回溯';
+    COMMENT ='水位推进事件（不可变）：每次成功推进一条事件；支持回放与全链路回溯；不创建物理外键';

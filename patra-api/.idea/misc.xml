@@ -13,6 +13,7 @@
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/patra-ingest/pom.xml" />
         <option value="$PROJECT_DIR$/patra-shared-kernel/pom.xml" />
         <option value="$PROJECT_DIR$/patra-spring-boot-starter-observability/pom.xml" />
         <option value="$PROJECT_DIR$/patra-starter-query/pom.xml" />
