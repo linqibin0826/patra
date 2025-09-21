@@ -12,7 +12,7 @@
 
 ## 2. 技术栈
 
-- **语言/运行时**：Java **25**
+- **语言/运行时**：Java **21**
 - **框架**：Spring Boot 3.2.x、MyBatis-Plus（MP）、Lombok、MapStruct。
 - **数据库迁移**：Flyway（脚本位于 `src/main/resources/db/migration`）。
 - **测试**：JUnit 5、Mockito、AssertJ。
