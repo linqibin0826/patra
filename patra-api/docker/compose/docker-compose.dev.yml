@@ -92,7 +92,7 @@ services:
     restart: unless-stopped
     ports: [ "13306:3306" ]     # 仅本机
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
       TZ: Asia/Shanghai
     command: >
       --default-authentication-plugin=caching_sha2_password
