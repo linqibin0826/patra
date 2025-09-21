@@ -311,7 +311,7 @@ CREATE TABLE `reg_prov_window_offset_cfg`
     `window_mode_code`        VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=window_mode)：窗口模式 SLIDING/CALENDAR',
     `window_size_value`       INT             NOT NULL DEFAULT 1 COMMENT '窗口长度的数值部分，如 1/7/30；单位见 window_size_unit',
     `window_size_unit_code`   VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=time_unit)：窗口长度单位 SECOND/MINUTE/HOUR/DAY',
-    `calendar_align_to`       VARCHAR(16)     NULL COMMENT 'CALENDAR 模式对齐粒度（去 ENUM 化，示例：HOUR/DAY/WEEK/MONTH）',
+    `calendar_align_to`       VARCHAR(16)     NULL COMMENT 'CALENDAR 模式对齐粒度（示例：HOUR/DAY/WEEK/MONTH）',
     `lookback_value`          INT             NULL COMMENT '回看长度数值：用于补偿延迟数据（与 lookback_unit 搭配）',
     `lookback_unit_code`      VARCHAR(16)     NULL COMMENT 'DICT CODE(type=time_unit)：回看长度单位 SECOND/MINUTE/HOUR/DAY',
     `overlap_value`           INT             NULL COMMENT '窗口重叠长度数值：相邻窗口之间的重叠（迟到兜底）',

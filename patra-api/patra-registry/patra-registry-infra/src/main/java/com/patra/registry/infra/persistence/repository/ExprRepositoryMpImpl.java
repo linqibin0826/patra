@@ -152,7 +152,7 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         if (negated == null) {
             return "ANY";
         }
-        return Boolean.TRUE.equals(negated) ? "T" : "F";
+        return negated ? "T" : "F";
     }
 
     private String normalizeValueKey(String valueTypeCode) {
