@@ -4,6 +4,18 @@
 -- - 不创建物理外键（跨/内模块均由应用层保证完整性，必要处建立二级索引）。
 -- - MySQL 8.0 · InnoDB · utf8mb4_0900_ai_ci
 -- =====================================================================
+-- 设计更新(2025-09-21)：
+--  1. 根据采集调度/可视化/统计的高频查询需求，统一在核心执行链路表冗余 provenance_code：
+--     ing_plan / ing_plan_slice / ing_task 已有或新增 / ing_task_run / ing_task_run_batch。
+--     目的：
+--       - 减少跨表回溯 schedule_instance -> task -> slice -> plan 时的多跳 join；
+--       - 支持按 (provenance_code, operation_code, status_code, 时间) 直接过滤聚合；
+--       - 统一与 reg_provenance.provenance_code 的逻辑对齐（仍不建外键）。
+--  2. 未引入 provenance_id；遵循“CODE 即主识别”策略，避免额外维度。
+--  3. 未预留物理分区字段；后续如需冷热分离，可按 created_at RANGE 或 provenance_code HASH 重建。
+--  4. 不改动原有字段与语义；仅追加新列与对应复合索引 (idx_*_prov_src / idx_*_prov_status_time 等)。
+--  5. 保持 append-only 语义的事件表 ing_cursor_event 不再额外冗余（其已含 provenance_code）。
+--  6. 迁移策略：线上从旧版 -> 新版需通过 alter 添加列并 backfill；本文件为重建全量结构（不含迁移脚本）。
 -- ======================================================================
 -- 1) 调度实例：一次外部触发与其“当时配置/表达式原型”快照
 -- ======================================================================
@@ -70,6 +82,9 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `schedule_instance_id` BIGINT UNSIGNED                                                     NOT NULL COMMENT '关联调度实例',
     `plan_key`             VARCHAR(128)                                                        NOT NULL COMMENT '人类可读/外部幂等键（唯一）',
 
+  `provenance_code`      VARCHAR(64)                                                         NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（便于按来源聚合）',
+  `endpoint_name`        VARCHAR(64)                                                         NULL COMMENT '来源端点标识（search/detail/metrics 等），辅助区分多端点策略',
+
     `operation_code`       VARCHAR(32)                                                         NOT NULL COMMENT 'DICT CODE(type=ing_operation)：采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
     `expr_proto_hash`      CHAR(64)                                                            NOT NULL COMMENT '表达式原型哈希',
     `expr_proto_snapshot`  JSON                                                                NULL COMMENT '表达式原型 AST 快照',
@@ -97,6 +112,8 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_plan_key` (`plan_key`),
     KEY `idx_plan_sched` (`schedule_instance_id`),
+  KEY `idx_plan_prov_op` (`provenance_code`, `operation_code`),
+  KEY `idx_plan_endpoint` (`endpoint_name`),
     KEY `idx_plan_status` (`status_code`),
     KEY `idx_plan_expr` (`expr_proto_hash`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
@@ -120,6 +137,8 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 (
     `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · SliceID',
     `plan_id`              BIGINT UNSIGNED NOT NULL COMMENT '关联 Plan',
+
+  `provenance_code`      VARCHAR(64)     NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（加速按来源过滤）',
 
     `slice_no`             INT             NOT NULL COMMENT '切片序号(0..N)',
     `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '切片签名哈希(规范化的通用边界JSON)',
@@ -145,6 +164,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_slice_unique` (`plan_id`, `slice_no`),
     UNIQUE KEY `uk_slice_sig` (`plan_id`, `slice_signature_hash`),
+  KEY `idx_slice_prov_status` (`provenance_code`, `status_code`),
     KEY `idx_slice_status` (`status_code`),
     KEY `idx_slice_expr` (`expr_hash`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
@@ -233,6 +253,9 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `task_id`          BIGINT UNSIGNED                                             NOT NULL COMMENT '关联任务',
     `attempt_no`       INT UNSIGNED                                                NOT NULL DEFAULT 1 COMMENT '尝试序号(1起)',
 
+  `provenance_code`  VARCHAR(64)                                                 NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（回溯与聚合）',
+  `operation_code`   VARCHAR(32)                                                 NULL COMMENT '冗余：操作类型（任务已含），便于直接按 (source,op,status) 统计',
+
     `status_code`      VARCHAR(32)                                                 NOT NULL DEFAULT 'PLANNED' COMMENT 'DICT CODE(type=ing_task_run_status)：PLANNED/RUNNING/SUCCEEDED/FAILED/CANCELLED',
     `checkpoint`       JSON                                                        NULL COMMENT '运行级检查点（如 nextHint / resumeToken 等）',
     `stats`            JSON                                                        NULL COMMENT '统计：fetched/upserted/failed/pages 等',
@@ -262,6 +285,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_run_attempt` (`task_id`, `attempt_no`),
+  KEY `idx_run_prov_op_status` (`provenance_code`, `operation_code`, `status_code`),
     KEY `idx_run_task_status` (`task_id`, `status_code`, `started_at`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
@@ -291,6 +315,9 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     `slice_id`        BIGINT UNSIGNED                                 NULL COMMENT '冗余 · Slice',
     `plan_id`         BIGINT UNSIGNED                                 NULL COMMENT '冗余 · Plan',
     `expr_hash`       CHAR(64)                                        NULL COMMENT '冗余 · 执行表达式哈希',
+
+  `provenance_code` VARCHAR(64)                                     NULL COMMENT '冗余：来源代码（来源于 task/run 链路）',
+  `operation_code`  VARCHAR(32)                                     NULL COMMENT '冗余：操作类型（来源于 task）',
 
     `batch_no`        INT UNSIGNED                                    NOT NULL DEFAULT 1 COMMENT '批次序号(1起,连续)',
     `page_no`         INT UNSIGNED                                    NULL COMMENT '页码（offset/limit；token 分页为空）',
@@ -326,6 +353,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
 
     KEY `idx_batch_after_tok` (`run_id`, `after_token`),
     KEY `idx_batch_status_time` (`run_id`, `status_code`, `committed_at`),
+  KEY `idx_batch_prov_op_status` (`provenance_code`, `operation_code`, `status_code`, `committed_at`),
     KEY `idx_batch_task` (`task_id`, `status_code`, `committed_at`),
     KEY `idx_batch_slice` (`slice_id`, `status_code`, `committed_at`),
     KEY `idx_batch_plan` (`plan_id`, `status_code`, `committed_at`),

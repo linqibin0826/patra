@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -84,17 +85,29 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
      * 处理参数校验异常，并返回包含详细校验错误的 ProblemDetail。
      *
      * @param ex 参数校验异常
-     * @param request HTTP 请求
+     * @param headers HTTP 响应头
+     * @param status HTTP 状态码
+     * @param request Web 请求
      * @return 含校验错误数组的 ProblemDetail 响应
      */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidationException(
-            MethodArgumentNotValidException ex, HttpServletRequest request) {
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            @NonNull MethodArgumentNotValidException ex, 
+            @NonNull org.springframework.http.HttpHeaders headers,
+            @NonNull org.springframework.http.HttpStatusCode status,
+            @NonNull org.springframework.web.context.request.WebRequest request) {
         
         log.debug("Handling validation exception: errorCount={}", ex.getBindingResult().getErrorCount());
         
         ErrorResolution resolution = errorResolutionService.resolve(ex);
-        ProblemDetail problemDetail = problemDetailBuilder.build(resolution, ex, request);
+        
+        // Convert WebRequest to HttpServletRequest for ProblemDetailBuilder
+        HttpServletRequest servletRequest = null;
+        if (request instanceof org.springframework.web.context.request.ServletWebRequest servletWebRequest) {
+            servletRequest = servletWebRequest.getRequest();
+        }
+        
+        ProblemDetail problemDetail = problemDetailBuilder.build(resolution, ex, servletRequest);
         
         // Add validation errors array with sensitive data masking
         List<ValidationError> errors = validationErrorsFormatter.formatWithMasking(ex.getBindingResult());
