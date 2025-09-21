@@ -12,7 +12,7 @@
         <module>patra-common</module>
         <module>patra-gateway-boot</module>
         <module>patra-registry</module>
-        <!--        <module>patra-ingest</module>-->
+    <module>patra-ingest</module>
 
         <module>patra-expr-kernel</module>
         <module>patra-spring-boot-starter-expr</module>
