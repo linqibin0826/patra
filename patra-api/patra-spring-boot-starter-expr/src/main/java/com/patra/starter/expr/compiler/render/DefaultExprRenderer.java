@@ -1,192 +1,344 @@
 package com.patra.starter.expr.compiler.render;
 
-import com.patra.common.enums.ProvenanceCode;
+import com.patra.expr.And;
 import com.patra.expr.Atom;
+import com.patra.expr.Const;
 import com.patra.expr.Expr;
-import com.patra.starter.expr.compiler.ExprCompiler.Issue;
-import com.patra.starter.expr.compiler.ExprCompiler.RenderTrace;
-import com.patra.starter.expr.compiler.ExprCompiler.Severity;
+import com.patra.expr.Not;
+import com.patra.expr.Or;
+import com.patra.expr.TextMatch;
+import com.patra.starter.expr.compiler.model.Issue;
+import com.patra.starter.expr.compiler.model.RenderTrace;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 
-import java.util.*;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * 极简渲染器：
- * - 支持 Atom(TERM) / Atom(IN)
- * - 仅消费 Emit=query/params 两类规则
- * - 规则选择：fieldKey 完全相等 + op 相同；TERM 会尝试匹配 matchType（忽略大小写）
- * - 模板支持占位符：{{v}}（TERM）；{{items}}（IN，已按 itemTemplate+joiner 渲染）
- * - 未识别节点：跳过并给出 WARN
- * - 布尔结构：简单 AND 聚合（以 " AND " 连接），OR/NOT 暂跳过并 WARN
- */
 public class DefaultExprRenderer implements ExprRenderer {
 
     @Override
-    public Outcome render(Expr expr,
-                          ProvenanceSnapshot snapshot,
-                          ProvenanceCode provenance,
-                          String operation,
-                          boolean traceEnabled) {
-        List<String> queryPieces = new ArrayList<>();
+    public RenderOutcome render(Expr expression, ProvenanceSnapshot snapshot, boolean traceEnabled) {
+        Objects.requireNonNull(expression, "expression");
+        Objects.requireNonNull(snapshot, "snapshot");
+
+        List<String> queryFragments = new ArrayList<>();
         Map<String, String> params = new LinkedHashMap<>();
-        List<Issue> warns = new ArrayList<>();
-        List<RenderTrace.Hit> hits = new ArrayList<>();
+        List<Issue> warnings = new ArrayList<>();
+        List<RenderTrace.Hit> hits = traceEnabled ? new ArrayList<>() : null;
 
-        walk(expr, snapshot, queryPieces, params, warns, hits);
+        renderNode(expression, snapshot, queryFragments, params, warnings, hits);
 
-        String query = String.join(" AND ", queryPieces);
+        String query = String.join(" AND ", queryFragments);
         RenderTrace trace = traceEnabled ? new RenderTrace(hits) : null;
-        return new Outcome(query, params, trace, warns);
+        return new RenderOutcome(query, params, warnings, trace);
     }
 
-    // ===== 遍历：仅对 AND 做深度展开，OR/NOT 暂警告并跳过 =====
-    private void walk(Expr e,
-                      ProvenanceSnapshot snap,
-                      List<String> queryPieces,
-                      Map<String, String> params,
-                      List<Issue> warns,
-                      List<RenderTrace.Hit> hits) {
-        if (e instanceof Atom a) {
-            renderAtom(a, snap, queryPieces, params, warns, hits);
+    private void renderNode(Expr node,
+                            ProvenanceSnapshot snapshot,
+                            List<String> fragments,
+                            Map<String, String> params,
+                            List<Issue> warnings,
+                            List<RenderTrace.Hit> hits) {
+        if (node instanceof And andExpr) {
+            andExpr.children().forEach(child -> renderNode(child, snapshot, fragments, params, warnings, hits));
             return;
         }
-        String cn = e.getClass().getSimpleName();
-        try {
-            if ("And".equals(cn)) {
-                var f = e.getClass().getDeclaredField("children");
-                f.setAccessible(true);
-                Object v = f.get(e);
-                if (v instanceof List<?> list) {
-                    for (Object o : list) {
-                        if (o instanceof Expr ce) walk(ce, snap, queryPieces, params, warns, hits);
-                    }
-                }
-            } else if ("Or".equals(cn) || "Not".equals(cn)) {
-                warns.add(warn("W-RENDER-BOOL-PARTIAL", "当前渲染器仅支持 AND 聚合，OR/NOT 将被跳过",
-                        Map.of("node", cn)));
-            } else {
-                warns.add(warn("W-RENDER-NODE", "未知节点类型，跳过渲染", Map.of("node", cn)));
+        if (node instanceof Or) {
+            warnings.add(Issue.warn("W-BOOL-OR-UNSUPPORTED",
+                    "OR branches are currently not rendered",
+                    Map.of("node", node)));
+            return;
+        }
+        if (node instanceof Not) {
+            warnings.add(Issue.warn("W-BOOL-NOT-UNSUPPORTED",
+                    "NOT expressions are not rendered",
+                    Map.of("node", node)));
+            return;
+        }
+        if (node instanceof Const constant) {
+            if (constant == Const.FALSE) {
+                warnings.add(Issue.warn("W-CONST-FALSE", "Expression is unsatisfiable", Map.of()));
             }
-        } catch (ReflectiveOperationException ex) {
-            warns.add(warn("W-RENDER-REFLECT", "访问 AST 节点失败，跳过渲染",
-                    Map.of("node", cn, "ex", ex.getClass().getSimpleName())));
+            return;
+        }
+        if (node instanceof Atom atom) {
+            renderAtom(atom, snapshot, fragments, params, warnings, hits);
         }
     }
 
-    private void renderAtom(Atom a,
-                            ProvenanceSnapshot snap,
-                            List<String> queryPieces,
-                            Map<String, String> params,
-                            List<Issue> warns,
-                            List<RenderTrace.Hit> hits) {
-        // 选择规则
-        ProvenanceSnapshot.RenderRuleTemplate rule = selectRule(a, snap, warns);
-        if (rule == null) return;
+    private void renderAtom(Atom atom,
+                             ProvenanceSnapshot snapshot,
+                             List<String> fragments,
+                             Map<String, String> params,
+                             List<Issue> warnings,
+                             List<RenderTrace.Hit> hits) {
+        AtomContext ctx = AtomContext.create(atom);
 
-        // 渲染
-        switch (a.op()) {
-            case TERM -> {
-                if (!(a.val() instanceof Atom.Str sv)) {
-                    warns.add(warn("W-VAL-MISMATCH", "TERM 值类型不匹配，跳过", Map.of("field", a.field())));
-                    return;
+        ProvenanceSnapshot.RenderRule queryRule = selectRule(snapshot, atom, ProvenanceSnapshot.EmitType.QUERY, false, ctx.matchTypeCode(), ctx.valueType());
+        if (queryRule != null && queryRule.template() != null) {
+            String fragment = buildQuery(queryRule, ctx);
+            if (!fragment.isBlank()) {
+                fragments.add(fragment);
+                if (hits != null) {
+                    hits.add(new RenderTrace.Hit(atom.fieldKey(), atom.operator().name(), queryRule.priority(), ruleId(queryRule)));
                 }
-                String qFrag = null;
-                if (rule.emit() == ProvenanceSnapshot.RenderRuleTemplate.Emit.query) {
-                    String tpl = nz(rule.template());
-                    qFrag = tpl.replace("{{v}}", quote(sv.v()));
-                }
-                if (rule.emit() == ProvenanceSnapshot.RenderRuleTemplate.Emit.params) {
-                    // 若规则提供了 params 映射，优先根据映射填值；否则尝试用 field->value
-                    if (rule.params() != null && !rule.params().isEmpty()) {
-                        rule.params().forEach((stdKey, providerParam) -> {
-                            params.put(providerParam, sv.v());
-                        });
-                    } else {
-                        params.put(a.field(), sv.v());
-                    }
-                }
-                if (qFrag != null && !qFrag.isBlank()) queryPieces.add(qFrag);
-                hits.add(new RenderTrace.Hit(a.field(), "TERM", rule.priority(), hitId(rule)));
             }
-            case IN -> {
-                if (!(a.val() instanceof Atom.Strs iv)) {
-                    warns.add(warn("W-VAL-MISMATCH", "IN 值类型不匹配，跳过", Map.of("field", a.field())));
-                    return;
-                }
-                if (rule.emit() == ProvenanceSnapshot.RenderRuleTemplate.Emit.query) {
-                    String itemTpl = nz(rule.itemTemplate(), "{{v}}");
-                    String joined = iv.v().stream()
-                            .map(this::quote)
-                            .map(s -> itemTpl.replace("{{v}}", s))
-                            .collect(Collectors.joining(nz(rule.joiner(), " OR ")));
-                    if (rule.wrapGroup()) joined = "(" + joined + ")";
-                    String tpl = nz(rule.template(), "{{items}}");
-                    String qFrag = tpl.replace("{{items}}", joined);
-                    queryPieces.add(qFrag);
-                } else if (rule.emit() == ProvenanceSnapshot.RenderRuleTemplate.Emit.params) {
-                    if (rule.params() != null && !rule.params().isEmpty()) {
-                        rule.params().forEach((stdKey, providerParam) -> {
-                            params.put(providerParam, String.join(",", iv.v()));
-                        });
-                    } else {
-                        params.put(a.field(), String.join(",", iv.v()));
-                    }
-                }
-                hits.add(new RenderTrace.Hit(a.field(), "IN", rule.priority(), hitId(rule)));
+        } else {
+            warnings.add(Issue.warn("W-RENDER-RULE-MISSING",
+                    "No query render rule found",
+                    Map.of("fieldKey", atom.fieldKey(), "operator", atom.operator().name())));
+        }
+
+        ProvenanceSnapshot.RenderRule paramRule = selectRule(snapshot, atom, ProvenanceSnapshot.EmitType.PARAMS, false, ctx.matchTypeCode(), ctx.valueType());
+        if (paramRule != null && !paramRule.params().isEmpty()) {
+            applyParams(paramRule, ctx, snapshot, params, warnings, hits);
+        }
+    }
+
+    private String buildQuery(ProvenanceSnapshot.RenderRule rule, AtomContext ctx) {
+        if (ctx.atom.operator() == Atom.Operator.IN) {
+            List<String> renderedItems = ctx.rawItems.stream()
+                    .map(value -> applyTemplate(Optional.ofNullable(rule.itemTemplate()).orElse("{{v}}"), ctx.placeholders(value)))
+                    .collect(Collectors.toList());
+            String joined = String.join(Optional.ofNullable(rule.joiner()).orElse(" OR "), renderedItems);
+            if (rule.wrapGroup()) {
+                joined = "(" + joined + ")";
             }
-            default -> warns.add(warn("W-OP-UNSUPPORTED", "暂不支持该操作符的渲染，已跳过",
-                    Map.of("field", a.field(), "op", a.op().name())));
+            return applyTemplate(rule.template(), ctx.basePlaceholders().with("{{items}}", joined));
+        }
+        return applyTemplate(rule.template(), ctx.basePlaceholders());
+    }
+
+    private void applyParams(ProvenanceSnapshot.RenderRule rule,
+                              AtomContext ctx,
+                              ProvenanceSnapshot snapshot,
+                              Map<String, String> params,
+                              List<Issue> warnings,
+                              List<RenderTrace.Hit> hits) {
+        for (Map.Entry<String, String> entry : rule.params().entrySet()) {
+            String stdKey = entry.getKey();
+            String template = entry.getValue();
+            ProvenanceSnapshot.ApiParameter mapping = snapshot.apiParameterMap().get(stdKey);
+            if (mapping == null) {
+                warnings.add(Issue.warn("W-PARAM-MAP-MISSING",
+                        "Standard key lacks provider parameter mapping",
+                        Map.of("stdKey", stdKey)));
+                continue;
+            }
+            String value = applyTemplate(template, ctx.basePlaceholders());
+            params.put(mapping.providerParamName(), value);
+            if (hits != null) {
+                hits.add(new RenderTrace.Hit(ctx.atom.fieldKey(), ctx.atom.operator().name(), rule.priority(), ruleId(rule) + "#param:" + stdKey));
+            }
         }
     }
 
-    private ProvenanceSnapshot.RenderRuleTemplate selectRule(Atom a,
-                                                             ProvenanceSnapshot snap,
-                                                             List<Issue> warns) {
-        ProvenanceSnapshot.RenderRuleTemplate.Op need =
-                a.op() == Atom.Op.TERM ? ProvenanceSnapshot.RenderRuleTemplate.Op.term :
-                        a.op() == Atom.Op.IN ? ProvenanceSnapshot.RenderRuleTemplate.Op.in : null;
-        if (need == null) return null;
+    private ProvenanceSnapshot.RenderRule selectRule(ProvenanceSnapshot snapshot,
+                                                     Atom atom,
+                                                     ProvenanceSnapshot.EmitType emit,
+                                                     boolean negated,
+                                                     String matchType,
+                                                     ProvenanceSnapshot.ValueType valueType) {
+        return snapshot.renderRules().stream()
+                .filter(rule -> rule.emitType() == emit)
+                .filter(rule -> rule.operator() == atom.operator())
+                .filter(rule -> Objects.equals(rule.fieldKey(), atom.fieldKey()))
+                .filter(rule -> matchesNegation(rule, negated))
+                .filter(rule -> matchesMatchType(rule, matchType))
+                .filter(rule -> matchesValueType(rule, valueType))
+                .max(Comparator.comparingInt(ProvenanceSnapshot.RenderRule::priority))
+                .orElse(null);
+    }
 
-        String match = null;
-        if (a.op() == Atom.Op.TERM && a.val() instanceof Atom.Str sv && sv.match() != null) {
-            match = sv.match().name().toLowerCase(Locale.ROOT);
+    private boolean matchesNegation(ProvenanceSnapshot.RenderRule rule, boolean negated) {
+        return switch (rule.negation()) {
+            case ANY -> true;
+            case TRUE -> negated;
+            case FALSE -> !negated;
+        };
+    }
+
+    private boolean matchesMatchType(ProvenanceSnapshot.RenderRule rule, String matchType) {
+        if (rule.matchTypeCode() == null || rule.matchTypeCode().isBlank()) {
+            return true;
+        }
+        if (matchType == null) {
+            return "ANY".equalsIgnoreCase(rule.matchTypeCode());
+        }
+        return rule.matchTypeCode().equalsIgnoreCase(matchType);
+    }
+
+    private boolean matchesValueType(ProvenanceSnapshot.RenderRule rule, ProvenanceSnapshot.ValueType type) {
+        if (rule.valueType() == null || rule.valueType() == ProvenanceSnapshot.ValueType.ANY) {
+            return true;
+        }
+        return rule.valueType() == type;
+    }
+
+    private String applyTemplate(String template, PlaceholderMap placeholders) {
+        if (template == null || template.isBlank()) {
+            return "";
+        }
+        String result = template;
+        for (Map.Entry<String, String> entry : placeholders.entries()) {
+            result = result.replace(entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
+
+    private String ruleId(ProvenanceSnapshot.RenderRule rule) {
+        return rule.fieldKey() + "|" + rule.operator().name() + "|" + rule.emitType();
+    }
+
+    private record PlaceholderMap(Map<String, String> delegate) {
+        PlaceholderMap {
+            delegate = Map.copyOf(delegate);
         }
 
-        // renderRules 已按 priority 降序；这里选择第一个最匹配的
-        for (var r : snap.renderRules()) {
-            if (!Objects.equals(r.fieldKey(), a.field())) continue;
-            if (r.op() != need) continue;
-            if (r.matchType() != null && match != null && !r.matchType().equalsIgnoreCase(match)) continue;
-            return r;
+        PlaceholderMap with(String key, String value) {
+            Map<String, String> copy = new LinkedHashMap<>(delegate);
+            copy.put(key, value);
+            return new PlaceholderMap(copy);
         }
-        warns.add(warn("W-RULE-NOT-FOUND", "未找到匹配的渲染规则，已跳过",
-                Map.of("field", a.field(), "op", a.op().name(), "match", match)));
-        return null;
+
+        Set<Map.Entry<String, String>> entries() {
+            return delegate.entrySet();
+        }
+
+        String get(String key) {
+            return delegate.get(key);
+        }
     }
 
-    // ===== 工具 =====
-    private String hitId(ProvenanceSnapshot.RenderRuleTemplate r) {
-        // 简易可读 ID：field|op|prio
-        return r.fieldKey() + "|" + r.op() + "|" + r.priority();
+    private static class AtomContext {
+        private final Atom atom;
+        private final PlaceholderMap base;
+        private final List<String> rawItems;
+
+        private AtomContext(Atom atom, PlaceholderMap base, List<String> rawItems) {
+            this.atom = atom;
+            this.base = base;
+            this.rawItems = rawItems;
+        }
+
+        static AtomContext create(Atom atom) {
+            Map<String, String> placeholders = new LinkedHashMap<>();
+            placeholders.put("{{field}}", atom.fieldKey());
+            switch (atom.operator()) {
+                case TERM -> populateTerm(placeholders, (Atom.TermValue) atom.value());
+                case IN -> {
+                    Atom.InValues v = (Atom.InValues) atom.value();
+                    List<String> raw = List.copyOf(v.values());
+                    List<String> quoted = raw.stream().map(DefaultExprRenderer::quote).toList();
+                    placeholders.put("{{items}}", String.join(",", quoted));
+                    placeholders.put("{{joined}}", String.join(",", raw));
+                    return new AtomContext(atom, new PlaceholderMap(placeholders), raw);
+                }
+                case RANGE -> populateRange(placeholders, (Atom.RangeValue) atom.value());
+                case EXISTS -> {
+                    Atom.ExistsFlag flag = (Atom.ExistsFlag) atom.value();
+                    placeholders.put("{{exists}}", Boolean.toString(flag.shouldExist()));
+                }
+                case TOKEN -> {
+                    Atom.TokenValue token = (Atom.TokenValue) atom.value();
+                    placeholders.put("{{type}}", defaultString(token.tokenType()));
+                    placeholders.put("{{value}}", defaultString(token.tokenValue()));
+                    placeholders.put("{{token}}", defaultString(token.tokenType()));
+                    placeholders.put("{{quoted}}", quote(defaultString(token.tokenValue())));
+                }
+            }
+            return new AtomContext(atom, new PlaceholderMap(placeholders), List.of());
+        }
+
+        private static void populateTerm(Map<String, String> placeholders, Atom.TermValue value) {
+            String text = defaultString(value.text());
+            placeholders.put("{{v}}", text);
+            placeholders.put("{{value}}", text);
+            placeholders.put("{{quoted}}", quote(text));
+            placeholders.put("{{match}}", value.match().name());
+            placeholders.put("{{case}}", value.caseSensitivity().name());
+        }
+
+        private static void populateRange(Map<String, String> placeholders, Atom.RangeValue value) {
+            if (value instanceof Atom.DateRange dr) {
+                placeholders.put("{{from}}", formatDate(dr.from()));
+                placeholders.put("{{to}}", formatDate(dr.to()));
+            } else if (value instanceof Atom.DateTimeRange dtr) {
+                placeholders.put("{{from}}", formatInstant(dtr.from()));
+                placeholders.put("{{to}}", formatInstant(dtr.to()));
+            } else if (value instanceof Atom.NumberRange nr) {
+                placeholders.put("{{from}}", formatNumber(nr.from()));
+                placeholders.put("{{to}}", formatNumber(nr.to()));
+            }
+        }
+
+        PlaceholderMap basePlaceholders() {
+            return base;
+        }
+
+        PlaceholderMap placeholders(String overrideValue) {
+            return base.with("{{v}}", overrideValue)
+                    .with("{{value}}", overrideValue)
+                    .with("{{quoted}}", quote(overrideValue));
+        }
+
+        String matchTypeCode() {
+            if (atom.operator() == Atom.Operator.TERM) {
+                Atom.TermValue value = (Atom.TermValue) atom.value();
+                return value.match() == null ? null : value.match().name();
+            }
+            return null;
+        }
+
+        ProvenanceSnapshot.ValueType valueType() {
+            return switch (atom.operator()) {
+                case RANGE -> {
+                    Atom.RangeValue value = (Atom.RangeValue) atom.value();
+                    if (value instanceof Atom.DateRange) {
+                        yield ProvenanceSnapshot.ValueType.DATE;
+                    }
+                    if (value instanceof Atom.DateTimeRange) {
+                        yield ProvenanceSnapshot.ValueType.DATETIME;
+                    }
+                    if (value instanceof Atom.NumberRange) {
+                        yield ProvenanceSnapshot.ValueType.NUMBER;
+                    }
+                    yield ProvenanceSnapshot.ValueType.ANY;
+                }
+                default -> ProvenanceSnapshot.ValueType.STRING;
+            };
+        }
     }
 
-    private Issue warn(String code, String msg, Map<String, Object> ctx) {
-        return new Issue(Severity.WARN, code, msg, ctx);
+    private static String defaultString(String value) {
+        return value == null ? "" : value;
     }
 
-    private String quote(String s) {
-        if (s == null) return "\"\"";
-        String esc = s.replace("\"", "\\\"");
+    private static String quote(String value) {
+        String esc = value.replace("\"", "\\\"");
         return "\"" + esc + "\"";
-        // 后续可接入 {{q v}} 助手与更复杂转义策略
     }
 
-    private String nz(String v) {
-        return v == null ? "" : v;
+    private static String formatDate(LocalDate date) {
+        return date == null ? "" : date.toString();
     }
 
-    private String nz(String v, String def) {
-        return v == null || v.isBlank() ? def : v;
+    private static String formatInstant(Instant instant) {
+        return instant == null ? "" : instant.toString();
+    }
+
+    private static String formatNumber(BigDecimal number) {
+        return number == null ? "" : number.stripTrailingZeros().toPlainString();
     }
 }

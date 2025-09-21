@@ -1,26 +1,25 @@
 package com.patra.registry.infra.persistence.repository;
 
-import com.patra.registry.domain.model.vo.expr.ApiParamMapping;
-import com.patra.registry.domain.model.vo.expr.ExprCapability;
-import com.patra.registry.domain.model.vo.expr.ExprField;
-import com.patra.registry.domain.model.vo.expr.ExprRenderRule;
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.infra.mapstruct.ExprEntityConverter;
-import com.patra.registry.infra.persistence.entity.expr.RegExprFieldDictDO;
-import com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO;
-import com.patra.registry.infra.persistence.entity.expr.RegProvExprCapabilityDO;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
+import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper;
+import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 /**
  * Expr 仓储 MyBatis 实现。
@@ -34,90 +33,59 @@ public class ExprRepositoryMpImpl implements ExprRepository {
     private final RegProvApiParamMapMapper apiParamMapMapper;
     private final RegProvExprCapabilityMapper capabilityMapper;
     private final RegProvExprRenderRuleMapper renderRuleMapper;
+    private final RegProvenanceMapper provenanceMapper;
     private final ExprEntityConverter converter;
 
     @Override
-    public List<ExprField> findAllFields() {
-        List<RegExprFieldDictDO> entities = fieldDictMapper.selectAllActive();
-        return entities.stream().map(converter::toDomain).toList();
-    }
-
-    @Override
-    public Optional<ApiParamMapping> findActiveParamMapping(Long provenanceId,
-                                                            String taskType,
-                                                            String operationCode,
-                                                            String stdKey,
-                                                            Instant at) {
+    public ExprSnapshot loadSnapshot(ProvenanceCode provenanceCode,
+                                     String taskType,
+                                     String operationCode,
+                                     Instant at) {
         Instant timestamp = at != null ? at : Instant.now();
         String taskKey = normalizeTaskKey(taskType);
+        String normalizedOperation = normalizeCode(operationCode);
 
-        // Prefer TASK scope when taskType is provided
+        Long provenanceId = resolveProvenanceId(provenanceCode);
+
+        List<ExprField> fields = fieldDictMapper.selectAllActive().stream()
+                .map(converter::toDomain)
+                .toList();
+
+        Map<String, ExprCapability> capabilityMap = new LinkedHashMap<>();
+        capabilityMapper.selectActiveByScope(provenanceId, "SOURCE", "ALL", timestamp)
+                .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         if (taskType != null) {
-            Optional<RegProvApiParamMapDO> taskLevel = apiParamMapMapper.selectActive(
-                    provenanceId, "TASK", taskKey, normalizeCode(operationCode), normalizeKey(stdKey), timestamp);
-            if (taskLevel.isPresent()) {
-                return taskLevel.map(converter::toDomain);
-            }
+            capabilityMapper.selectActiveByScope(provenanceId, "TASK", taskKey, timestamp)
+                    .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         }
+        List<ExprCapability> capabilities = new ArrayList<>(capabilityMap.values());
 
-        Optional<RegProvApiParamMapDO> sourceLevel = apiParamMapMapper.selectActive(
-                provenanceId, "SOURCE", "ALL", normalizeCode(operationCode), normalizeKey(stdKey), timestamp);
-        return sourceLevel.map(converter::toDomain);
+        Map<String, ExprRenderRule> renderRuleMap = new LinkedHashMap<>();
+        renderRuleMapper.selectActiveByScope(provenanceId, "SOURCE", "ALL", timestamp)
+                .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
+        if (taskType != null) {
+            renderRuleMapper.selectActiveByScope(provenanceId, "TASK", taskKey, timestamp)
+                    .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
+        }
+        List<ExprRenderRule> renderRules = new ArrayList<>(renderRuleMap.values());
+
+        Map<String, ApiParamMapping> paramMappings = new LinkedHashMap<>();
+        apiParamMapMapper.selectActiveByScope(provenanceId, "SOURCE", "ALL", normalizedOperation, timestamp)
+                .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
+        if (taskType != null) {
+            apiParamMapMapper.selectActiveByScope(provenanceId, "TASK", taskKey, normalizedOperation, timestamp)
+                    .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
+        }
+        List<ApiParamMapping> apiParams = new ArrayList<>(paramMappings.values());
+
+        return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
     }
 
-    @Override
-    public Optional<ExprCapability> findActiveCapability(Long provenanceId,
-                                                         String taskType,
-                                                         String fieldKey,
-                                                         Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
-        String taskKey = normalizeTaskKey(taskType);
-
-        if (taskType != null) {
-            Optional<RegProvExprCapabilityDO> taskLevel = capabilityMapper.selectActive(
-                    provenanceId, "TASK", taskKey, normalizeKey(fieldKey), timestamp);
-            if (taskLevel.isPresent()) {
-                return taskLevel.map(converter::toDomain);
-            }
-        }
-
-        Optional<RegProvExprCapabilityDO> sourceLevel = capabilityMapper.selectActive(
-                provenanceId, "SOURCE", "ALL", normalizeKey(fieldKey), timestamp);
-        return sourceLevel.map(converter::toDomain);
-    }
-
-    @Override
-    public Optional<ExprRenderRule> findActiveRenderRule(Long provenanceId,
-                                                         String taskType,
-                                                         String fieldKey,
-                                                         String opCode,
-                                                         String matchTypeCode,
-                                                         Boolean negated,
-                                                         String valueTypeCode,
-                                                         String emitTypeCode,
-                                                         Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
-        String taskKey = normalizeTaskKey(taskType);
-        String normalizedOp = normalizeCode(opCode);
-        String normalizedMatchKey = normalizeMatchKey(matchTypeCode);
-        String normalizedNegatedKey = normalizeNegatedKey(negated);
-        String normalizedValueKey = normalizeValueKey(valueTypeCode);
-        String normalizedEmit = normalizeCode(emitTypeCode);
-        String normalizedField = normalizeKey(fieldKey);
-
-        if (taskType != null) {
-            Optional<RegProvExprRenderRuleDO> taskLevel = renderRuleMapper.selectActive(
-                    provenanceId, "TASK", taskKey, normalizedField, normalizedOp,
-                    normalizedMatchKey, normalizedNegatedKey, normalizedValueKey, normalizedEmit, timestamp);
-            if (taskLevel.isPresent()) {
-                return taskLevel.map(converter::toDomain);
-            }
-        }
-
-        Optional<RegProvExprRenderRuleDO> sourceLevel = renderRuleMapper.selectActive(
-                provenanceId, "SOURCE", "ALL", normalizedField, normalizedOp,
-                normalizedMatchKey, normalizedNegatedKey, normalizedValueKey, normalizedEmit, timestamp);
-        return sourceLevel.map(converter::toDomain);
+    private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
+        String code = provenanceCode.getCode();
+        return provenanceMapper.selectByCode(code)
+                .map(RegProvenanceDO::getId)
+                .orElseThrow(() -> new IllegalArgumentException("Provenance code not found: " + code));
     }
 
     private String normalizeTaskKey(String taskType) {
@@ -160,5 +128,18 @@ public class ExprRepositoryMpImpl implements ExprRepository {
             return "ANY";
         }
         return valueTypeCode.trim().toUpperCase();
+    }
+
+    private String renderRuleKey(RegProvExprRenderRuleDO entity) {
+        String field = normalizeKey(entity.getFieldKey());
+        String op = normalizeCode(entity.getOpCode());
+        String matchKey = entity.getMatchTypeKey() == null || entity.getMatchTypeKey().isBlank()
+                ? "ANY" : entity.getMatchTypeKey();
+        String negatedKey = entity.getNegatedKey() == null || entity.getNegatedKey().isBlank()
+                ? "ANY" : entity.getNegatedKey();
+        String valueKey = entity.getValueTypeKey() == null || entity.getValueTypeKey().isBlank()
+                ? "ANY" : entity.getValueTypeKey();
+        String emit = normalizeCode(entity.getEmitTypeCode());
+        return String.join("|", field, op, matchKey, negatedKey, valueKey, emit);
     }
 }

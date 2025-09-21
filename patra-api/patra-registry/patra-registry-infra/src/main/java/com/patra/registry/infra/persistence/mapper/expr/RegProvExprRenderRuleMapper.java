@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -45,4 +46,30 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
                                                    @Param("valueTypeKey") String valueTypeKey,
                                                    @Param("emitTypeCode") String emitTypeCode,
                                                    @Param("now") Instant now);
+
+    /** 查询指定维度下全部当前生效的渲染规则。 */
+    @Select("""
+            SELECT *
+            FROM (
+                SELECT r.*,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY r.scope_code, r.task_type_key, r.field_key,
+                                        r.op_code, r.match_type_key, r.negated_key, r.value_type_key, r.emit_type_code
+                           ORDER BY r.effective_from DESC, r.id DESC
+                       ) AS rn
+                FROM reg_prov_expr_render_rule r
+                WHERE r.deleted = 0
+                  AND r.lifecycle_status_code = 'ACTIVE'
+                  AND r.provenance_id = #{provenanceId}
+                  AND r.scope_code = #{scopeCode}
+                  AND r.task_type_key = #{taskTypeKey}
+                  AND r.effective_from <= #{now}
+                  AND (r.effective_to IS NULL OR r.effective_to > #{now})
+            ) t
+            WHERE t.rn = 1
+            """)
+    List<RegProvExprRenderRuleDO> selectActiveByScope(@Param("provenanceId") Long provenanceId,
+                                                      @Param("scopeCode") String scopeCode,
+                                                      @Param("taskTypeKey") String taskTypeKey,
+                                                      @Param("now") Instant now);
 }

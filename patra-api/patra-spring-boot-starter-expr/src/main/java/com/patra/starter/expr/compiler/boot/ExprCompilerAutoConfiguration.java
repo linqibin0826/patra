@@ -1,17 +1,19 @@
 package com.patra.starter.expr.compiler.boot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.registry.api.rpc.client.ExprClient;
 import com.patra.registry.api.rpc.client.ProvenanceClient;
 import com.patra.starter.expr.compiler.DefaultExprCompiler;
 import com.patra.starter.expr.compiler.ExprCompiler;
-import com.patra.starter.expr.compiler.checker.CapabilityChecker;
-import com.patra.starter.expr.compiler.checker.DefaultCapabilityChecker;
+import com.patra.starter.expr.compiler.check.CapabilityChecker;
+import com.patra.starter.expr.compiler.check.DefaultCapabilityChecker;
 import com.patra.starter.expr.compiler.normalize.DefaultExprNormalizer;
 import com.patra.starter.expr.compiler.normalize.ExprNormalizer;
 import com.patra.starter.expr.compiler.render.DefaultExprRenderer;
 import com.patra.starter.expr.compiler.render.ExprRenderer;
 import com.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
-import lombok.extern.slf4j.Slf4j;
+import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -19,22 +21,26 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-@Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(CompilerProperties.class)
 public class ExprCompilerAutoConfiguration {
 
-    /**
-     * 当且仅当：
-     * 1) 用户未自定义 RuleSnapshotLoader Bean
-     * 2) 且 patra.expr.compiler.registry-api.enabled=true
-     * 时，注册基于 Feign 的 Loader。
-     */
     @Bean
     @ConditionalOnMissingBean(RuleSnapshotLoader.class)
+    @ConditionalOnBean({ProvenanceClient.class, ExprClient.class})
     @ConditionalOnProperty(prefix = "patra.expr.compiler.registry-api", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RuleSnapshotLoader feignRuleSnapshotLoader(ProvenanceClient feignClient) {
-        return new RegistryRuleSnapshotLoader();
+    public SnapshotAssembler exprSnapshotAssembler(ObjectMapper objectMapper) {
+        return new SnapshotAssembler(objectMapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(RuleSnapshotLoader.class)
+    @ConditionalOnBean({ProvenanceClient.class, ExprClient.class, SnapshotAssembler.class})
+    @ConditionalOnProperty(prefix = "patra.expr.compiler.registry-api", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public RuleSnapshotLoader registryRuleSnapshotLoader(ProvenanceClient provenanceClient,
+                                                         ExprClient exprClient,
+                                                         SnapshotAssembler snapshotAssembler) {
+        return new RegistryRuleSnapshotLoader(provenanceClient, exprClient, snapshotAssembler);
     }
 
     @Bean
@@ -43,6 +49,11 @@ public class ExprCompilerAutoConfiguration {
         return new DefaultCapabilityChecker();
     }
 
+    @Bean
+    @ConditionalOnMissingBean(ExprNormalizer.class)
+    public ExprNormalizer exprNormalizer() {
+        return new DefaultExprNormalizer();
+    }
 
     @Bean
     @ConditionalOnMissingBean(ExprRenderer.class)
@@ -51,27 +62,13 @@ public class ExprCompilerAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(ExprNormalizer.class)
-    public ExprNormalizer exprNormalizer() {
-        // 目前未启用规范化，直接返回原对象
-        return new DefaultExprNormalizer();
-    }
-
-    /**
-     * 说明：
-     * - 仅当容器里已经有 RuleSnapshotLoader（当前阶段即 Feign 版）时，才注册默认编译器。
-     * - 若业务方自定义了 ExprCompiler Bean，则不会覆盖。
-     */
-    @Bean
-    @ConditionalOnBean({RuleSnapshotLoader.class, CapabilityChecker.class, ExprRenderer.class})
     @ConditionalOnMissingBean(ExprCompiler.class)
-    public ExprCompiler exprCompiler(RuleSnapshotLoader snapshotLoader,
-                                     CompilerProperties props,
+    @ConditionalOnBean({RuleSnapshotLoader.class, CapabilityChecker.class, ExprNormalizer.class, ExprRenderer.class})
+    @ConditionalOnProperty(prefix = "patra.expr.compiler", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public ExprCompiler exprCompiler(RuleSnapshotLoader loader,
                                      CapabilityChecker checker,
-                                     ExprRenderer renderer,
-                                     ExprNormalizer normalizer
-    ) {
-        log.info("loaded ExprCompilerAutoConfiguration.exprCompiler()");
-        return new DefaultExprCompiler(snapshotLoader, props, checker, renderer, normalizer);
+                                     ExprNormalizer normalizer,
+                                     ExprRenderer renderer) {
+        return new DefaultExprCompiler(loader, checker, normalizer, renderer);
     }
 }

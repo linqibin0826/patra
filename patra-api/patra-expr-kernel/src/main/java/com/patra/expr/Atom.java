@@ -4,93 +4,154 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * 原子条件：字段 + 操作符 + 值（值为代数类型）。
- * <p>设计目标：覆盖主流学术/文献平台的 term/范围/存在性等通用语义；平台差异通过渲染规则吸收。</p>
+ * Leaf expression describing a field-level constraint.
  */
-public record Atom(String field, Op op, Val val) implements Expr {
+public record Atom(String fieldKey, Operator operator, Value value) implements Expr {
 
-    /**
-     * 操作符：
-     * <ul>
-     *   <li>TERM：单值词项（支持 {@link TextMatch} 策略）。</li>
-     *   <li>IN：多值集合中的任意一个。</li>
-     *   <li>RANGE：范围（日期/日期时间/数值）。</li>
-     *   <li>EXISTS：字段存在性（存在/不存在）。</li>
-     *   <li>TOKEN：平台内建的特殊记号（如 ownerNasa、PMC2600426）。</li>
-     * </ul>
-     */
-    public enum Op {TERM, IN, RANGE, EXISTS, TOKEN}
+    public Atom {
+        Objects.requireNonNull(fieldKey, "fieldKey");
+        if (fieldKey.isBlank()) {
+            throw new IllegalArgumentException("fieldKey must not be blank");
+        }
+        Objects.requireNonNull(operator, "operator");
+        Objects.requireNonNull(value, "value");
+        operator.verifyValueCompatibility(value);
+    }
 
-    /**
-     * 值类型（代数类型）。不同操作符对值类型有明确约束。
-     */
-    public sealed interface Val permits Str, Strs, DateRange, DateTimeRange, NumberRange, Bool, Token {
+    @Override
+    public <R> R accept(Visitor<R> visitor) {
+        return visitor.visitAtom(this);
     }
 
     /**
-     * 字符串值（带匹配策略）。
-     * <p>caseSensitive 用于确需区分大小写的场景；默认 false。</p>
+     * Supported field operators.
      */
-    public record Str(String v, TextMatch match, boolean caseSensitive) implements Val {
-        public Str(String v, TextMatch match) {
-            this(v, match, false);
+    public enum Operator {
+        TERM(TermValue.class),
+        IN(InValues.class),
+        RANGE(RangeValue.class),
+        EXISTS(ExistsFlag.class),
+        TOKEN(TokenValue.class);
+
+        private final Class<? extends Value> supportedType;
+
+        Operator(Class<? extends Value> supportedType) {
+            this.supportedType = supportedType;
+        }
+
+        void verifyValueCompatibility(Value value) {
+            if (!supportedType.isInstance(value)) {
+                throw new IllegalArgumentException(
+                        "Operator " + this + " does not support value type " + value.getClass().getSimpleName());
+            }
+        }
+    }
+
+    /** Marker parent for all value variants. */
+    public sealed interface Value permits TermValue, InValues, RangeValue, ExistsFlag, TokenValue {
+    }
+
+    /**
+     * TEXT based value for TERM operations.
+     */
+    public record TermValue(String text, TextMatch match, CaseSensitivity caseSensitivity) implements Value {
+        public TermValue {
+            Objects.requireNonNull(match, "match");
+            Objects.requireNonNull(caseSensitivity, "caseSensitivity");
+        }
+
+        public TermValue(String text, TextMatch match) {
+            this(text, match, CaseSensitivity.INSENSITIVE);
         }
     }
 
     /**
-     * 多字符串集合（用于 IN）。
+     * Collection of discrete string values used for IN operations.
      */
-    public record Strs(List<String> v, boolean caseSensitive) implements Val {
-        public Strs(List<String> v) {
-            this(v, false);
+    public record InValues(List<String> values, CaseSensitivity caseSensitivity) implements Value {
+        public InValues {
+            Objects.requireNonNull(values, "values");
+            if (values.isEmpty()) {
+                throw new IllegalArgumentException("IN values must contain at least one item");
+            }
+            if (values.stream().anyMatch(Objects::isNull)) {
+                throw new IllegalArgumentException("IN values cannot contain null items");
+            }
+            values = List.copyOf(values);
+            Objects.requireNonNull(caseSensitivity, "caseSensitivity");
+        }
+
+        public InValues(List<String> values) {
+            this(values, CaseSensitivity.INSENSITIVE);
         }
     }
 
-    /**
-     * 日期范围（日粒度）。端点可空；边界开闭由 boundary 指定。
-     */
-    public record DateRange(LocalDate from, LocalDate to, Boundary fromBoundary, Boundary toBoundary) implements Val {
+    /** Common contract for range based values. */
+    public sealed interface RangeValue extends Value permits DateRange, DateTimeRange, NumberRange {
+        Boundary fromBoundary();
+
+        Boundary toBoundary();
+
+        enum Boundary {
+            OPEN,
+            CLOSED
+        }
+    }
+
+    public record DateRange(LocalDate from,
+                            LocalDate to,
+                            Boundary fromBoundary,
+                            Boundary toBoundary) implements RangeValue {
+        public DateRange {
+            Objects.requireNonNull(fromBoundary, "fromBoundary");
+            Objects.requireNonNull(toBoundary, "toBoundary");
+        }
+
         public DateRange(LocalDate from, LocalDate to) {
             this(from, to, Boundary.CLOSED, Boundary.CLOSED);
         }
     }
 
-    /**
-     * 日期时间范围（到秒/毫秒级）。适合支持 since/until 的平台。
-     */
-    public record DateTimeRange(Instant from, Instant to, Boundary fromBoundary, Boundary toBoundary) implements Val {
+    public record DateTimeRange(Instant from,
+                                Instant to,
+                                Boundary fromBoundary,
+                                Boundary toBoundary) implements RangeValue {
+        public DateTimeRange {
+            Objects.requireNonNull(fromBoundary, "fromBoundary");
+            Objects.requireNonNull(toBoundary, "toBoundary");
+        }
+
         public DateTimeRange(Instant from, Instant to) {
             this(from, to, Boundary.CLOSED, Boundary.CLOSED);
         }
     }
 
-    /**
-     * 数值范围。使用 BigDecimal 表示端点，便于等精度比较；端点可空。
-     */
-    public record NumberRange(BigDecimal from, BigDecimal to, Boundary fromBoundary,
-                              Boundary toBoundary) implements Val {
+    public record NumberRange(BigDecimal from,
+                              BigDecimal to,
+                              Boundary fromBoundary,
+                              Boundary toBoundary) implements RangeValue {
+        public NumberRange {
+            Objects.requireNonNull(fromBoundary, "fromBoundary");
+            Objects.requireNonNull(toBoundary, "toBoundary");
+        }
+
         public NumberRange(BigDecimal from, BigDecimal to) {
             this(from, to, Boundary.CLOSED, Boundary.CLOSED);
         }
     }
 
-    /**
-     * 字段存在性：exists=true 表示要求存在；false 表示要求不存在。
-     */
-    public record Bool(boolean exists) implements Val {
+    /** EXISTS operation – simply indicates presence/absence. */
+    public record ExistsFlag(boolean shouldExist) implements Value {
     }
 
-    /**
-     * 特殊记号（平台内建 token）。
-     * <p>kind 建议为 token 分类（如 "owner"、"pmcid"），value 为其取值（如 "nasa" 或 "PMC2600426"）。</p>
-     */
-    public record Token(String kind, String value) implements Val {
+    /** TOKEN operation – platform specific token semantics. */
+    public record TokenValue(String tokenType, String tokenValue) implements Value {
+        public TokenValue {
+            Objects.requireNonNull(tokenType, "tokenType");
+            Objects.requireNonNull(tokenValue, "tokenValue");
+        }
     }
-
-    /**
-     * 区间边界类型：开/闭。
-     */
-    public enum Boundary {OPEN, CLOSED}
 }

@@ -1,89 +1,187 @@
 package com.patra.starter.expr.compiler.snapshot;
 
-import lombok.Builder;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
-/**
- * 调用方规则快照（不可变）。
- * 由 Loader（Feign/File/Inline）装载，作为编译器域层唯一事实输入。
- */
-@Builder
 public record ProvenanceSnapshot(
-        ProvenanceKey key,
-        String operation,
+        Identity identity,
+        Scope scope,
+        Operation operation,
         long version,
-        Instant updatedAt,
-        Map<String, FieldDictEntry> fieldDict,         // fieldKey -> 定义
-        Map<String, CapabilityRule> capability,        // fieldKey -> 能力规则
-        List<RenderRuleTemplate> renderRules,          // 已按 priority 降序
-        Map<String, ApiParamMappingEntry> apiParam     // stdKey -> 映射
+        Instant capturedAt,
+        Map<String, FieldDefinition> fieldDictionary,
+        Map<String, Capability> capabilityMatrix,
+        Map<String, ApiParameter> apiParameterMap,
+        List<RenderRule> renderRules
 ) {
-    public record ProvenanceKey(Long id, String code) {}
 
-    public record FieldDictEntry(
-            String fieldKey,
-            DataType dataType,         // date/datetime/number/text/keyword/boolean/token
-            Cardinality cardinality,   // single/multi
-            boolean isDateField,       // 注意：避免使用关键字
-            String datetype            // PDAT/EDAT/MHDA
-    ) {
-        public enum DataType { date, datetime, number, text, keyword, bool, token }
-        public enum Cardinality { single, multi }
+    public ProvenanceSnapshot {
+        Objects.requireNonNull(identity, "identity");
+        Objects.requireNonNull(scope, "scope");
+        Objects.requireNonNull(operation, "operation");
+        Objects.requireNonNull(capturedAt, "capturedAt");
+        Objects.requireNonNull(fieldDictionary, "fieldDictionary");
+        Objects.requireNonNull(capabilityMatrix, "capabilityMatrix");
+        Objects.requireNonNull(apiParameterMap, "apiParameterMap");
+        Objects.requireNonNull(renderRules, "renderRules");
+        fieldDictionary = Map.copyOf(fieldDictionary);
+        capabilityMatrix = Map.copyOf(capabilityMatrix);
+        apiParameterMap = Map.copyOf(apiParameterMap);
+        renderRules = List.copyOf(renderRules);
     }
 
-    public record CapabilityRule(
-            List<String> ops,                      // ["TERM","IN","RANGE","EXISTS","TOKEN"]
-            List<String> negatableOps,             // 允许 NOT 的子集；null 表示同 ops
-            boolean supportsNotOp,
-            List<String> termMatches,              // ["PHRASE","EXACT","ANY"]
+    public record Identity(Long provenanceId, String code, String name) {
+        public Identity {
+            Objects.requireNonNull(code, "code");
+        }
+    }
+
+    public record Scope(String scopeCode, String taskTypeKey) {
+        public static Scope sourceScope() {
+            return new Scope("SOURCE", null);
+        }
+    }
+
+    public record Operation(String code, String defaultTimezone) {
+        public Operation {
+            Objects.requireNonNull(code, "code");
+        }
+    }
+
+    public record FieldDefinition(
+            String fieldKey,
+            String displayName,
+            String description,
+            DataType dataType,
+            Cardinality cardinality,
+            boolean exposable,
+            boolean dateField
+    ) {
+        public FieldDefinition {
+            Objects.requireNonNull(fieldKey, "fieldKey");
+            Objects.requireNonNull(dataType, "dataType");
+            Objects.requireNonNull(cardinality, "cardinality");
+        }
+    }
+
+    public enum DataType {
+        DATE,
+        DATETIME,
+        NUMBER,
+        TEXT,
+        KEYWORD,
+        BOOLEAN,
+        TOKEN
+    }
+
+    public enum Cardinality {
+        SINGLE,
+        MULTI
+    }
+
+    public record Capability(
+            Set<String> ops,
+            Set<String> negatableOps,
+            boolean supportsNot,
+            Set<String> termMatches,
             boolean termCaseSensitiveAllowed,
             boolean termAllowBlank,
-            int termMinLen,
-            int termMaxLen,
+            int termMinLength,
+            int termMaxLength,
             String termPattern,
             int inMaxSize,
             boolean inCaseSensitiveAllowed,
-            RangeKind rangeKind,                   // NONE/DATE/DATETIME/NUMBER
+            RangeKind rangeKind,
             boolean rangeAllowOpenStart,
             boolean rangeAllowOpenEnd,
-            boolean rangeAllowClosedAtInfty,
-            LocalDate dateMin,                        // yyyy-MM-dd
-            LocalDate dateMax,                        // yyyy-MM-dd
-            Instant datetimeMin,                   // UTC
-            Instant datetimeMax,                   // UTC
-            String numberMin,                      // 用字符串承载高精度
+            boolean rangeAllowClosedAtInfinity,
+            LocalDate dateMin,
+            LocalDate dateMax,
+            Instant datetimeMin,
+            Instant datetimeMax,
+            String numberMin,
             String numberMax,
             boolean existsSupported,
-            List<String> tokenKinds,               // 小写
+            Set<String> tokenKinds,
             String tokenValuePattern
-    ) { public enum RangeKind { NONE, DATE, DATETIME, NUMBER } }
-
-    public record RenderRuleTemplate(
-            String fieldKey,
-            Op op,                      // term/in/range/exists/token
-            String matchType,           // phrase/exact/any（TERM）
-            Boolean negated,            // 可空=不区分
-            String valueType,           // string/date/datetime/number（RANGE）
-            Emit emit,                  // query/params
-            int priority,               // 越大越优先
-            String template,            // query 模板
-            String itemTemplate,        // IN 单项模板
-            String joiner,              // 集合连接符
-            boolean wrapGroup,          // 集合是否包裹
-            Map<String, String> params, // 标准键 -> 供应商参数名（当前规则）
-            String fn                   // 自定义渲染函数名
     ) {
-        public enum Emit { query, params }
-        public enum Op { term, in, range, exists, token }
+        public Capability {
+            Objects.requireNonNull(ops, "ops");
+            Objects.requireNonNull(rangeKind, "rangeKind");
+            ops = Set.copyOf(ops);
+            negatableOps = negatableOps == null ? Set.of() : Set.copyOf(negatableOps);
+            termMatches = termMatches == null ? Set.of() : Set.copyOf(termMatches);
+            tokenKinds = tokenKinds == null ? Set.of() : Set.copyOf(tokenKinds);
+        }
     }
 
-    public record ApiParamMappingEntry(
+    public enum RangeKind {
+        NONE,
+        DATE,
+        DATETIME,
+        NUMBER
+    }
+
+    public record ApiParameter(
             String stdKey,
-            String providerParam,
-            String transform
-    ) {}
+            String providerParamName,
+            String transformCode,
+            String notesJson
+    ) {
+        public ApiParameter {
+            Objects.requireNonNull(stdKey, "stdKey");
+        }
+    }
+
+    public record RenderRule(
+            String fieldKey,
+            String scopeCode,
+            String taskTypeKey,
+            com.patra.expr.Atom.Operator operator,
+            String matchTypeCode,
+            NegationQualifier negation,
+            ValueType valueType,
+            EmitType emitType,
+            String template,
+            String itemTemplate,
+            String joiner,
+            boolean wrapGroup,
+            Map<String, String> params,
+            String functionCode,
+            Instant effectiveFrom,
+            Instant effectiveTo,
+            int priority
+    ) {
+        public RenderRule {
+            Objects.requireNonNull(fieldKey, "fieldKey");
+            Objects.requireNonNull(operator, "operator");
+            Objects.requireNonNull(emitType, "emitType");
+            if (params != null) {
+                params = Map.copyOf(params);
+            }
+        }
+    }
+
+    public enum NegationQualifier {
+        ANY,
+        TRUE,
+        FALSE
+    }
+
+    public enum ValueType {
+        ANY,
+        STRING,
+        DATE,
+        DATETIME,
+        NUMBER
+    }
+
+    public enum EmitType {
+        QUERY,
+        PARAMS
+    }
 }

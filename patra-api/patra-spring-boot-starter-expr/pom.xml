@@ -27,5 +27,9 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-registry-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-core</artifactId>
+        </dependency>
     </dependencies>
 </project>

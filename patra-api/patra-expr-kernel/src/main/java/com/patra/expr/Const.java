@@ -1,6 +1,14 @@
 package com.patra.expr;
 
 /**
- * 常量：TRUE/FALSE。用于空组短路与“矛盾 / 永真”化简。
+ * Boolean constant expression.
  */
-public enum Const implements Expr {TRUE, FALSE}
+public enum Const implements Expr {
+    TRUE,
+    FALSE;
+
+    @Override
+    public <R> R accept(Visitor<R> visitor) {
+        return visitor.visitConst(this);
+    }
+}

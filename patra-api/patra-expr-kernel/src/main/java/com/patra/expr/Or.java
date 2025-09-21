@@ -1,12 +1,23 @@
 package com.patra.expr;
 
-
 import java.util.List;
+import java.util.Objects;
 
 /**
- * 布尔或（OR）。
- * <p>语义：任一子表达式为真时整体为真；全部子表达式为假时整体为假。</p>
- * <p>规范化：子节点为空时，经 {@link ExprNormalizer} 规范化后等价于 {@link Const#FALSE}。</p>
+ * Logical disjunction of {@link Expr} nodes.
  */
 public record Or(List<Expr> children) implements Expr {
+
+    public Or {
+        Objects.requireNonNull(children, "children");
+        if (children.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("OR expression cannot contain null children");
+        }
+        children = List.copyOf(children);
+    }
+
+    @Override
+    public <R> R accept(Visitor<R> visitor) {
+        return visitor.visitOr(this);
+    }
 }

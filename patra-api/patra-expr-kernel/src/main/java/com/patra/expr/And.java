@@ -1,10 +1,23 @@
 package com.patra.expr;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
- * 布尔与（AND）。
- * <p>语义：所有子表达式皆为真时整体为真；存在任一子表达式为假时整体为假。</p>
+ * Logical conjunction of {@link Expr} nodes.
  */
 public record And(List<Expr> children) implements Expr {
+
+    public And {
+        Objects.requireNonNull(children, "children");
+        if (children.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("AND expression cannot contain null children");
+        }
+        children = List.copyOf(children);
+    }
+
+    @Override
+    public <R> R accept(Visitor<R> visitor) {
+        return visitor.visitAnd(this);
+    }
 }
