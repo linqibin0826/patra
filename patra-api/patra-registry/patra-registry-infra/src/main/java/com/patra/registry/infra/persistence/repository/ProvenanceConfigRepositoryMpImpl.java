@@ -1,5 +1,8 @@
 package com.patra.registry.infra.persistence.repository;
 
+import com.patra.common.constant.RegistryKeys;
+import com.patra.common.enums.RegistryScope;
+import com.patra.common.util.RegistryKeyUtils;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.Credential;

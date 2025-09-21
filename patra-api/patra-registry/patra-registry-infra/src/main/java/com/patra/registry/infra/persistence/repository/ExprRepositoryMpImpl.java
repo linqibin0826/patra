@@ -1,6 +1,9 @@
 package com.patra.registry.infra.persistence.repository;
 
+import com.patra.common.constant.RegistryKeys;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.enums.RegistryScope;
+import com.patra.common.util.RegistryKeyUtils;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.infra.mapstruct.ExprEntityConverter;
@@ -42,8 +45,8 @@ public class ExprRepositoryMpImpl implements ExprRepository {
                                      String operationCode,
                                      Instant at) {
         Instant timestamp = at != null ? at : Instant.now();
-        String taskKey = normalizeTaskKey(taskType);
-        String normalizedOperation = normalizeCode(operationCode);
+        String taskKey = RegistryKeyUtils.normalizeTaskKey(taskType);
+        String normalizedOperation = RegistryKeyUtils.normalizeCode(operationCode);
 
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
@@ -52,28 +55,28 @@ public class ExprRepositoryMpImpl implements ExprRepository {
                 .toList();
 
         Map<String, ExprCapability> capabilityMap = new LinkedHashMap<>();
-        capabilityMapper.selectActiveByScope(provenanceId, "SOURCE", "ALL", timestamp)
+        capabilityMapper.selectActiveByScope(provenanceId, RegistryScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
                 .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         if (taskType != null) {
-            capabilityMapper.selectActiveByScope(provenanceId, "TASK", taskKey, timestamp)
+            capabilityMapper.selectActiveByScope(provenanceId, RegistryScope.TASK.code(), taskKey, timestamp)
                     .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         }
         List<ExprCapability> capabilities = new ArrayList<>(capabilityMap.values());
 
         Map<String, ExprRenderRule> renderRuleMap = new LinkedHashMap<>();
-        renderRuleMapper.selectActiveByScope(provenanceId, "SOURCE", "ALL", timestamp)
+        renderRuleMapper.selectActiveByScope(provenanceId, RegistryScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
                 .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
         if (taskType != null) {
-            renderRuleMapper.selectActiveByScope(provenanceId, "TASK", taskKey, timestamp)
+            renderRuleMapper.selectActiveByScope(provenanceId, RegistryScope.TASK.code(), taskKey, timestamp)
                     .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
         }
         List<ExprRenderRule> renderRules = new ArrayList<>(renderRuleMap.values());
 
         Map<String, ApiParamMapping> paramMappings = new LinkedHashMap<>();
-        apiParamMapMapper.selectActiveByScope(provenanceId, "SOURCE", "ALL", normalizedOperation, timestamp)
+        apiParamMapMapper.selectActiveByScope(provenanceId, RegistryScope.SOURCE.code(), RegistryKeys.ALL, normalizedOperation, timestamp)
                 .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
         if (taskType != null) {
-            apiParamMapMapper.selectActiveByScope(provenanceId, "TASK", taskKey, normalizedOperation, timestamp)
+            apiParamMapMapper.selectActiveByScope(provenanceId, RegistryScope.TASK.code(), taskKey, normalizedOperation, timestamp)
                     .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
         }
         List<ApiParamMapping> apiParams = new ArrayList<>(paramMappings.values());
@@ -88,58 +91,13 @@ public class ExprRepositoryMpImpl implements ExprRepository {
                 .orElseThrow(() -> new IllegalArgumentException("Provenance code not found: " + code));
     }
 
-    private String normalizeTaskKey(String taskType) {
-        if (taskType == null || taskType.isBlank()) {
-            return "ALL";
-        }
-        return taskType.trim();
-    }
-
-    private String normalizeCode(String value) {
-        if (value == null) {
-            throw new IllegalArgumentException("Argument cannot be null");
-        }
-        return value.trim().toUpperCase();
-    }
-
-    private String normalizeKey(String value) {
-        if (value == null) {
-            throw new IllegalArgumentException("Argument cannot be null");
-        }
-        return value.trim();
-    }
-
-    private String normalizeMatchKey(String matchTypeCode) {
-        if (matchTypeCode == null || matchTypeCode.isBlank()) {
-            return "ANY";
-        }
-        return matchTypeCode.trim().toUpperCase();
-    }
-
-    private String normalizeNegatedKey(Boolean negated) {
-        if (negated == null) {
-            return "ANY";
-        }
-        return negated ? "T" : "F";
-    }
-
-    private String normalizeValueKey(String valueTypeCode) {
-        if (valueTypeCode == null || valueTypeCode.isBlank()) {
-            return "ANY";
-        }
-        return valueTypeCode.trim().toUpperCase();
-    }
-
     private String renderRuleKey(RegProvExprRenderRuleDO entity) {
-        String field = normalizeKey(entity.getFieldKey());
-        String op = normalizeCode(entity.getOpCode());
-        String matchKey = entity.getMatchTypeKey() == null || entity.getMatchTypeKey().isBlank()
-                ? "ANY" : entity.getMatchTypeKey();
-        String negatedKey = entity.getNegatedKey() == null || entity.getNegatedKey().isBlank()
-                ? "ANY" : entity.getNegatedKey();
-        String valueKey = entity.getValueTypeKey() == null || entity.getValueTypeKey().isBlank()
-                ? "ANY" : entity.getValueTypeKey();
-        String emit = normalizeCode(entity.getEmitTypeCode());
+        String field = RegistryKeyUtils.normalizeFieldKey(entity.getFieldKey());
+        String op = RegistryKeyUtils.normalizeCode(entity.getOpCode());
+        String matchKey = RegistryKeyUtils.normalizeMatchKey(entity.getMatchTypeKey());
+        String negatedKey = RegistryKeyUtils.normalizeNegatedKey(entity.getNegatedKey());
+        String valueKey = RegistryKeyUtils.normalizeValueKey(entity.getValueTypeKey());
+        String emit = RegistryKeyUtils.normalizeCode(entity.getEmitTypeCode());
         return String.join("|", field, op, matchKey, negatedKey, valueKey, emit);
     }
 }
