@@ -12,7 +12,7 @@
 
 ## 2. 技术栈
 
-- **语言/运行时**：Java **21**
+- **语言/运行时**：Java **25**
 - **框架**：Spring Boot 3.2.x、MyBatis-Plus（MP）、Lombok、MapStruct。
 - **数据库迁移**：Flyway（脚本位于 `src/main/resources/db/migration`）。
 - **测试**：JUnit 5、Mockito、AssertJ。
@@ -51,13 +51,6 @@
 - 面向接口编程（如 `List<String> list = new ArrayList<>()`）；在**合适**场景使用工厂/策略/观察者/单例等模式解决**重复**问题。
 - 遵循 **SOLID**、**DRY**、**KISS**；**可读性优先**，避免晦涩技巧。
 - 日志使用 SLF4J；**禁止** `System.out.println`；日志包含关键上下文（但**不泄露敏感信息**）。
-
----
-
-## 7. Java 21 新特性提示
-
-- 有限使用 `record`、`switch` 表达式/模式匹配、文本块 `"""`、sealed classes、虚拟线程等。
-- 若新特性**降低可读性/可测性**，优先采用传统写法，并在注释给出理由。
 
 ---
 
