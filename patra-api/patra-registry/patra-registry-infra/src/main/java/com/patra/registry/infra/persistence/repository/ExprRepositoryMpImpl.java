@@ -2,7 +2,7 @@ package com.patra.registry.infra.persistence.repository;
 
 import com.patra.common.constant.RegistryKeys;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.enums.RegistryScope;
+import com.patra.common.enums.RegistryConfigScope; // updated
 import com.patra.common.util.RegistryKeyUtils;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
@@ -26,6 +26,11 @@ import java.util.Map;
 
 /**
  * Expr 仓储 MyBatis 实现。
+ * <p>职责：聚合 Expr 相关 DO（字段字典 / 能力 / 渲染规则 / 参数映射）并生成领域快照。</p>
+ * <p>说明：按 SOURCE → TASK 作用域顺序合并，TASK 级覆盖同 key 的 SOURCE 级条目。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Repository
@@ -55,28 +60,28 @@ public class ExprRepositoryMpImpl implements ExprRepository {
                 .toList();
 
         Map<String, ExprCapability> capabilityMap = new LinkedHashMap<>();
-        capabilityMapper.selectActiveByScope(provenanceId, RegistryScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
+        capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
                 .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         if (taskType != null) {
-            capabilityMapper.selectActiveByScope(provenanceId, RegistryScope.TASK.code(), taskKey, timestamp)
+            capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, timestamp)
                     .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         }
         List<ExprCapability> capabilities = new ArrayList<>(capabilityMap.values());
 
         Map<String, ExprRenderRule> renderRuleMap = new LinkedHashMap<>();
-        renderRuleMapper.selectActiveByScope(provenanceId, RegistryScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
+        renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
                 .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
         if (taskType != null) {
-            renderRuleMapper.selectActiveByScope(provenanceId, RegistryScope.TASK.code(), taskKey, timestamp)
+            renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, timestamp)
                     .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
         }
         List<ExprRenderRule> renderRules = new ArrayList<>(renderRuleMap.values());
 
         Map<String, ApiParamMapping> paramMappings = new LinkedHashMap<>();
-        apiParamMapMapper.selectActiveByScope(provenanceId, RegistryScope.SOURCE.code(), RegistryKeys.ALL, normalizedOperation, timestamp)
+        apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeys.ALL, normalizedOperation, timestamp)
                 .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
         if (taskType != null) {
-            apiParamMapMapper.selectActiveByScope(provenanceId, RegistryScope.TASK.code(), taskKey, normalizedOperation, timestamp)
+            apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, normalizedOperation, timestamp)
                     .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
         }
         List<ApiParamMapping> apiParams = new ArrayList<>(paramMappings.values());
@@ -95,7 +100,8 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         String field = RegistryKeyUtils.normalizeFieldKey(entity.getFieldKey());
         String op = RegistryKeyUtils.normalizeCode(entity.getOpCode());
         String matchKey = RegistryKeyUtils.normalizeMatchKey(entity.getMatchTypeKey());
-        String negatedKey = RegistryKeyUtils.normalizeNegatedKey(entity.getNegatedKey());
+        // FIX: 使用布尔字段 negated 生成规范化 key，而不是 String negatedKey 字段，避免类型不匹配。
+        String negatedKey = RegistryKeyUtils.normalizeNegatedKey(entity.getNegated());
         String valueKey = RegistryKeyUtils.normalizeValueKey(entity.getValueTypeKey());
         String emit = RegistryKeyUtils.normalizeCode(entity.getEmitTypeCode());
         return String.join("|", field, op, matchKey, negatedKey, valueKey, emit);

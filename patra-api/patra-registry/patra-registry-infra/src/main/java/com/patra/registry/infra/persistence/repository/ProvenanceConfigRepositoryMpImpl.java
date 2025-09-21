@@ -1,30 +1,13 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.common.constant.RegistryKeys;
-import com.patra.common.enums.RegistryScope;
-import com.patra.common.util.RegistryKeyUtils;
+import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
-import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
-import com.patra.registry.domain.model.vo.provenance.Credential;
-import com.patra.registry.domain.model.vo.provenance.EndpointDefinition;
-import com.patra.registry.domain.model.vo.provenance.HttpConfig;
-import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
-import com.patra.registry.domain.model.vo.provenance.Provenance;
-import com.patra.registry.domain.model.vo.provenance.RateLimitConfig;
-import com.patra.registry.domain.model.vo.provenance.RetryConfig;
-import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
+import com.patra.registry.domain.model.vo.provenance.*;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
 import com.patra.registry.infra.mapstruct.ProvenanceEntityConverter;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvBatchingCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvCredentialMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvEndpointDefMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvHttpCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvPaginationCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvRateLimitCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvRetryCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvWindowOffsetCfgMapper;
-import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
+import com.patra.registry.infra.persistence.mapper.provenance.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -35,11 +18,19 @@ import java.util.Optional;
 
 /**
  * Provenance 配置仓储 MyBatis 实现。
+ * <p>按 TASK → SOURCE 优先级查询并执行覆盖逻辑，若任务级无结果则回退到来源级。</p>
+ * <p>所有 scope 查询统一使用 {@link RegistryConfigScope} 常量，避免字符串硬编码。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigRepository {
+
+    private static final String SCOPE_SOURCE = RegistryConfigScope.SOURCE.code();
+    private static final String SCOPE_TASK = RegistryConfigScope.TASK.code();
 
     private final RegProvenanceMapper provenanceMapper;
     private final RegProvEndpointDefMapper endpointDefMapper;
@@ -60,8 +51,9 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
 
     @Override
     public List<Provenance> findAllProvenances() {
-        List<RegProvenanceDO> entities = provenanceMapper.selectAllActive();
-        return entities.stream().map(converter::toDomain).toList();
+        return provenanceMapper.selectAllActive().stream()
+                .map(converter::toDomain)
+                .toList();
     }
 
     @Override
@@ -72,19 +64,18 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         if (endpointName == null || endpointName.isBlank()) {
             return Optional.empty();
         }
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
 
         if (taskType != null) {
             Optional<EndpointDefinition> taskLevel = endpointDefMapper.selectActive(
-                            provenanceId, "TASK", taskKey, endpointName.trim(), timestamp)
+                            provenanceId, SCOPE_TASK, taskKey, endpointName.trim(), timestamp)
                     .map(converter::toDomain);
             if (taskLevel.isPresent()) {
                 return taskLevel;
             }
         }
-
-        return endpointDefMapper.selectActive(provenanceId, "SOURCE", "ALL", endpointName.trim(), timestamp)
+        return endpointDefMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointName.trim(), timestamp)
                 .map(converter::toDomain);
     }
 
@@ -92,19 +83,17 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     public Optional<WindowOffsetConfig> findActiveWindowOffset(Long provenanceId,
                                                                String taskType,
                                                                Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
             Optional<WindowOffsetConfig> taskLevel = windowOffsetCfgMapper.selectActive(
-                            provenanceId, "TASK", taskKey, timestamp)
+                            provenanceId, SCOPE_TASK, taskKey, timestamp)
                     .map(converter::toDomain);
             if (taskLevel.isPresent()) {
                 return taskLevel;
             }
         }
-
-        return windowOffsetCfgMapper.selectActive(provenanceId, "SOURCE", "ALL", timestamp)
+        return windowOffsetCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -112,19 +101,17 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     public Optional<PaginationConfig> findActivePagination(Long provenanceId,
                                                            String taskType,
                                                            Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
             Optional<PaginationConfig> taskLevel = paginationCfgMapper.selectActive(
-                            provenanceId, "TASK", taskKey, timestamp)
+                            provenanceId, SCOPE_TASK, taskKey, timestamp)
                     .map(converter::toDomain);
             if (taskLevel.isPresent()) {
                 return taskLevel;
             }
         }
-
-        return paginationCfgMapper.selectActive(provenanceId, "SOURCE", "ALL", timestamp)
+        return paginationCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -132,19 +119,17 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     public Optional<HttpConfig> findActiveHttpConfig(Long provenanceId,
                                                      String taskType,
                                                      Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
             Optional<HttpConfig> taskLevel = httpCfgMapper.selectActive(
-                            provenanceId, "TASK", taskKey, timestamp)
+                            provenanceId, SCOPE_TASK, taskKey, timestamp)
                     .map(converter::toDomain);
             if (taskLevel.isPresent()) {
                 return taskLevel;
             }
         }
-
-        return httpCfgMapper.selectActive(provenanceId, "SOURCE", "ALL", timestamp)
+        return httpCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -154,44 +139,40 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                        Long endpointId,
                                                        String credentialName,
                                                        Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
-            Optional<BatchingConfig> precise = queryBatching(provenanceId, "TASK", taskKey, endpointId, credentialName, timestamp);
+            Optional<BatchingConfig> precise = queryBatching(provenanceId, SCOPE_TASK, taskKey, endpointId, credentialName, timestamp);
             if (precise.isPresent()) {
                 return precise;
             }
-            Optional<BatchingConfig> taskGeneral = queryBatching(provenanceId, "TASK", taskKey, null, null, timestamp);
+            Optional<BatchingConfig> taskGeneral = queryBatching(provenanceId, SCOPE_TASK, taskKey, null, null, timestamp);
             if (taskGeneral.isPresent()) {
                 return taskGeneral;
             }
         }
-
-        Optional<BatchingConfig> sourcePrecise = queryBatching(provenanceId, "SOURCE", "ALL", endpointId, credentialName, timestamp);
+        Optional<BatchingConfig> sourcePrecise = queryBatching(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointId, credentialName, timestamp);
         if (sourcePrecise.isPresent()) {
             return sourcePrecise;
         }
-        return queryBatching(provenanceId, "SOURCE", "ALL", null, null, timestamp);
+        return queryBatching(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, null, null, timestamp);
     }
 
     @Override
     public Optional<RetryConfig> findActiveRetry(Long provenanceId,
                                                  String taskType,
                                                  Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
             Optional<RetryConfig> taskLevel = retryCfgMapper.selectActive(
-                            provenanceId, "TASK", taskKey, timestamp)
+                            provenanceId, SCOPE_TASK, taskKey, timestamp)
                     .map(converter::toDomain);
             if (taskLevel.isPresent()) {
                 return taskLevel;
             }
         }
-
-        return retryCfgMapper.selectActive(provenanceId, "SOURCE", "ALL", timestamp)
+        return retryCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -201,25 +182,23 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                          Long endpointId,
                                                          String credentialName,
                                                          Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
-            Optional<RateLimitConfig> precise = queryRateLimit(provenanceId, "TASK", taskKey, endpointId, credentialName, timestamp);
+            Optional<RateLimitConfig> precise = queryRateLimit(provenanceId, SCOPE_TASK, taskKey, endpointId, credentialName, timestamp);
             if (precise.isPresent()) {
                 return precise;
             }
-            Optional<RateLimitConfig> taskGeneral = queryRateLimit(provenanceId, "TASK", taskKey, null, null, timestamp);
+            Optional<RateLimitConfig> taskGeneral = queryRateLimit(provenanceId, SCOPE_TASK, taskKey, null, null, timestamp);
             if (taskGeneral.isPresent()) {
                 return taskGeneral;
             }
         }
-
-        Optional<RateLimitConfig> sourcePrecise = queryRateLimit(provenanceId, "SOURCE", "ALL", endpointId, credentialName, timestamp);
+        Optional<RateLimitConfig> sourcePrecise = queryRateLimit(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointId, credentialName, timestamp);
         if (sourcePrecise.isPresent()) {
             return sourcePrecise;
         }
-        return queryRateLimit(provenanceId, "SOURCE", "ALL", null, null, timestamp);
+        return queryRateLimit(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, null, null, timestamp);
     }
 
     @Override
@@ -227,12 +206,11 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                   String taskType,
                                                   Long endpointId,
                                                   Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
         if (taskType != null) {
             List<Credential> taskScoped = credentialMapper.selectActive(
-                            provenanceId, "TASK", taskKey, endpointId, timestamp)
+                            provenanceId, SCOPE_TASK, taskKey, endpointId, timestamp)
                     .stream()
                     .map(converter::toDomain)
                     .toList();
@@ -240,8 +218,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                 return taskScoped;
             }
         }
-
-        return credentialMapper.selectActive(provenanceId, "SOURCE", "ALL", endpointId, timestamp)
+        return credentialMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointId, timestamp)
                 .stream()
                 .map(converter::toDomain)
                 .toList();
@@ -256,8 +233,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         if (provenanceOpt.isEmpty()) {
             return Optional.empty();
         }
-
-        Instant timestamp = at != null ? at : Instant.now();
+        Instant timestamp = atOrNow(at);
         Provenance provenance = provenanceOpt.get();
         Optional<EndpointDefinition> endpointOpt = findActiveEndpoint(provenanceId, taskType, endpointName, timestamp);
         EndpointDefinition endpoint = endpointOpt.orElse(null);
@@ -307,7 +283,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
 
     private String normalizeTaskKey(String taskType) {
         if (taskType == null || taskType.isBlank()) {
-            return "ALL";
+            return RegistryKeys.ALL;
         }
         return taskType.trim();
     }
@@ -321,5 +297,9 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
             return Optional.empty();
         }
         return Optional.of(converter.toDomain(entity));
+    }
+
+    private Instant atOrNow(Instant at) {
+        return at != null ? at : Instant.now();
     }
 }
