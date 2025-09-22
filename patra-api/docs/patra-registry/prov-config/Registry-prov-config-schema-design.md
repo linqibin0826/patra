@@ -1,5 +1,5 @@
 # Patra Registry · Provenance Config · 总览
-导航： [体系总览](../README.md) ｜ 同级： [字典总览](../dict/Registry-dict-schema-design.md) ｜ [Expr 总览](../expr/Registry-expr-schema-design.md) ｜ [DDL](../patra-registry.sql)
+导航： [体系总览](../README.md) ｜ 同级： [字典总览](../dict/Registry-dict-schema-design.md) ｜ [Expr 总览](../expr/Registry-expr-schema-design.md) ｜ [DDL](../sql/patra-registry.sql)
 
 为提升可读性与规范化，来源配置文档按“四篇”组织：
 

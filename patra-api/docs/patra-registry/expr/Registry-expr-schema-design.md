@@ -1,5 +1,5 @@
 # Registry · Expr · 总览
-导航： [体系总览](../README.md) ｜ 同级： [字典总览](../dict/Registry-dict-schema-design.md) ｜ [来源配置总览](../prov-config/Registry-prov-config-schema-design.md) ｜ [DDL](../patra-registry.sql)
+导航： [体系总览](../README.md) ｜ 同级： [字典总览](../dict/Registry-dict-schema-design.md) ｜ [来源配置总览](../prov-config/Registry-prov-config-schema-design.md) ｜ [DDL](../sql/patra-registry.sql)
 
 为增强连贯性，Expr 文档按“Guide / Reference / Usage”三篇组织：
 

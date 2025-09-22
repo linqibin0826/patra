@@ -1,5 +1,5 @@
 # Papertrace 系统字典（去 ENUM 化）· 总览
-导航： [体系总览](../README.md) ｜ 同级： [Expr 总览](../expr/Registry-expr-schema-design.md) ｜ [来源配置总览](../prov-config/Registry-prov-config-schema-design.md) ｜ [DDL](../patra-registry.sql)
+导航： [体系总览](../README.md) ｜ 同级： [Expr 总览](../expr/Registry-expr-schema-design.md) ｜ [来源配置总览](../prov-config/Registry-prov-config-schema-design.md) ｜ [DDL](../sql/patra-registry.sql)
 
 面向规范化和可读性，字典文档按“Guide / Reference / Ops”三篇组织：
 
