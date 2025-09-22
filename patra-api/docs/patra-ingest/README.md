@@ -1,38 +1,39 @@
 # Papertrace · Patra Ingest 文档体系总览
 
-本目录汇集 Ingest（采集编排执行）相关设计与 SQL，按“Guide → Reference → Ops → SQL”的脉络组织，支持顺序阅读与交叉跳转。
+本目录重构为四个子域：Core / Strategy / Cursor / Runtime，并提供 SQL 与术语表。所有长文保持高内聚，避免碎片；命名与 Registry 对齐。
 
-## 导航（推荐阅读顺序）
+## 导航（推荐顺序）
+1) Core（核心流程与数据对象）  
+   索引：`core/Ingest-core-schema-design.md`
+2) Strategy（策略位矩阵与编排能力）  
+   索引：`strategy/Ingest-strategy-schema-design.md`
+3) Cursor（水位与命名空间模型）  
+   索引：`cursor/Ingest-cursor-schema-design.md`
+4) Runtime（执行流水线 / 状态机 / 运维 / 观测）  
+   索引：`runtime/Ingest-runtime-schema-design.md`
+5) SQL（DDL + 索引）  
+   文件：`sql/patra-ingest.sql`
+6) 术语词汇表：`GLOSSARY.md`
 
-- 1) Ingest Schema 总览（编排语义与关系）
-  - 目录索引：`docs/patra-ingest/ingest-schema-design.md`
-- 2) Guide（入门 + 设计意图 + 使用）
-  - 分篇：`docs/patra-ingest/ingest-guide.md`
-- 3) Reference（表结构要点 + 状态机 + 幂等键）
-  - 分篇：`docs/patra-ingest/ingest-reference.md`
-- 4) Ops / Runbook（运维与排障）
-  - 分篇：`docs/patra-ingest/ingest-ops.md`
-- 5) 建表 SQL（整套 DDL + 索引）
-  - 文件：`docs/patra-ingest/patra-ingest.sql`
+## 子域作用
+- Core：调度→计划→切片→任务→运行→批次对象模型与快照边界。
+- Strategy：分页 / 时间窗 / 两段式 / 限流 / 预算 / 重试 / 自适应切片策略位与校验矩阵。
+- Cursor：事件先行、仅前进、多命名空间（HARVEST/BACKFILL/UPDATE）水位推进模型。
+- Runtime：Planner / Executor 双流水线、状态机、幂等、自愈、黑匣子观测与指标。
 
-## 关系图（高层语义）
-
-- 调度触发 → `ing_schedule_instance`：固化“触发入参 + 来源配置快照 + 表达式原型”。
-- 生成计划 → `ing_plan`：定义总目标窗口与切片策略（time/id/cursor/预算）。
-- 切片计划 → `ing_plan_slice`：把总窗切分为多个可并行且幂等的 slice；派生局部化表达式。
-- 派生任务 → `ing_task`：每个 slice 生成 1 个任务，绑定来源/操作/凭据/参数，并形成强幂等键。
-- 任务运行 → `ing_task_run`：一次具体尝试（首次/重试/回放）；失败不覆盖 task，仅记录于 run。
-- 运行批次 → `ing_task_run_batch`：分页/令牌步进的最小账目，承载断点续跑与去重。
-- 推进水位 → `ing_cursor_event`（事件账）与 `ing_cursor`（当前值，仅最新）。
+## 全局原则（不在子文档重复）
+- 时间窗统一 UTC、半开区间 `[from,to)`；等于 `to` 归下一窗。
+- “事件先行”：写 `ing_cursor_event` 后再尝试推进 `ing_cursor`，仅前进。
+- 幂等分层：Task / Batch / CursorEvent + 业务唯一键 `(provenance_code, endpoint, provider_id)`。
+- 快照不可变：执行期完全依赖表达式/Spec 快照，不受 Registry 后续漂移影响。
 
 ## 快速入口
-
-- 总览：`docs/patra-ingest/ingest-schema-design.md`
-- 入门：`docs/patra-ingest/ingest-guide.md`
-- 参考：`docs/patra-ingest/ingest-reference.md`
-- 运维：`docs/patra-ingest/ingest-ops.md`
-- 全部 DDL：`docs/patra-ingest/patra-ingest.sql`
+- 核心模型：`core/Ingest-core-schema-design.md`
+- 策略矩阵：`strategy/Ingest-strategy-schema-design.md`
+- 游标模型：`cursor/Ingest-cursor-schema-design.md`
+- 执行流水线：`runtime/Ingest-runtime-schema-design.md`
+- 全部 DDL：`sql/patra-ingest.sql`
+- 术语表：`GLOSSARY.md`
 
 ---
-
-提示：文档采用“高内聚长文”风格，避免碎片化；与 Registry 文档在风格与术语上保持一致。
+提示：各索引页含同域导航；引用跨域概念时链接其 schema-design 或 reference 文件，避免冗复制。 

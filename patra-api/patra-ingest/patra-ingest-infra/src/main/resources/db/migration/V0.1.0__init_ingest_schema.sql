@@ -15,7 +15,6 @@
 --  3. 未预留物理分区字段；后续如需冷热分离，可按 created_at RANGE 或 provenance_code HASH 重建。
 --  4. 不改动原有字段与语义；仅追加新列与对应复合索引 (idx_*_prov_src / idx_*_prov_status_time 等)。
 --  5. 保持 append-only 语义的事件表 ing_cursor_event 不再额外冗余（其已含 provenance_code）。
---  6. 迁移策略：线上从旧版 -> 新版需通过 alter 添加列并 backfill；本文件为重建全量结构（不含迁移脚本）。
 -- ======================================================================
 -- 1) 调度实例：一次外部触发与其“当时配置/表达式原型”快照
 -- ======================================================================
@@ -174,7 +173,6 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='计划切片：通用分片（时间/ID/token/预算），是并行与幂等的边界；不创建物理外键';
-
 -- ======================================================================
 -- 4) 任务：每个切片生成一个任务；支持强幂等与调度/执行状态
 -- ======================================================================
@@ -185,7 +183,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
  *  - 逻辑关联 schedule_instance/plan/slice（不建 FK）；
  *  - credential_id 逻辑指向 reg_prov_credential.id（不建 FK，保留二级索引 idx_task_cred）；
  *  - 幂等键 idempotent_key 唯一，保证“同 slice+操作+参数+触发上下文”只建一条任务。
- * 索引：uk_task_idem / idx_task_slice / idx_task_src_op / idx_task_sched_at。
+ * 索引：uk_task_idem / idx_task_slice / idx_task_src_op / idx_task_sched_at / idx_task_queue / idx_task_cred。
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task`
 (
@@ -204,6 +202,12 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     `expr_hash`            CHAR(64)         NOT NULL COMMENT '冗余：执行表达式哈希',
 
     `priority`             TINYINT UNSIGNED NOT NULL DEFAULT 5 COMMENT '1高→9低',
+
+    -- 任务租约（并发抢占/续租/回收）
+    `lease_owner`          VARCHAR(64)      NULL COMMENT '租约持有者标识（执行器实例/workerId）',
+    `leased_until`         TIMESTAMP(6)     NULL COMMENT '租约到期时间(UTC)，过期视为可重新抢占',
+    `lease_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '累计抢占/续租次数（监控/熔断用）',
+
     `status_code`          VARCHAR(32)      NOT NULL DEFAULT 'QUEUED' COMMENT 'DICT CODE(type=ing_task_status)：QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED',
     `scheduled_at`         TIMESTAMP(6)     NULL COMMENT '计划开始',
     `started_at`           TIMESTAMP(6)     NULL COMMENT '实际开始',
@@ -225,14 +229,23 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     `deleted`              TINYINT(1)       NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=未删,1=已删',
 
     PRIMARY KEY (`id`),
+
+    -- 幂等与常用检索索引
     UNIQUE KEY `uk_task_idem` (`idempotent_key`),
     KEY `idx_task_slice` (`slice_id`, `status_code`),
     KEY `idx_task_src_op` (`provenance_code`, `operation_code`, `status_code`),
     KEY `idx_task_sched_at` (`status_code`, `scheduled_at`),
+    KEY `idx_task_cred` (`credential_id`),
+
+    -- 队列检索索引：用于批量拉取待运行任务
+    -- 建议查询：WHERE status_code='QUEUED' AND (leased_until IS NULL OR leased_until < NOW(6))
+    -- 公平出队：priority ASC（数值小优先）→ scheduled_at ASC → id ASC
+    KEY `idx_task_queue` (`status_code`, `leased_until`, `priority`, `scheduled_at`, `id`),
+
+    -- 审计辅助索引
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`),
-    KEY `idx_task_cred` (`credential_id`)
+    KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci

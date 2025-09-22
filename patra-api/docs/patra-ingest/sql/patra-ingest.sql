@@ -29,39 +29,40 @@
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 (
-    `id`                         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · 调度实例ID',
-    `scheduler_code`             VARCHAR(32)     NOT NULL DEFAULT 'XXL' COMMENT 'DICT CODE(type=ing_scheduler)：调度器来源',
-    `scheduler_job_id`           VARCHAR(64)     NULL COMMENT '外部 JobID（如 XXL 的 jobId）',
-    `scheduler_log_id`           VARCHAR(64)     NULL COMMENT '外部运行/日志ID（如 XXL 的 logId）',
-    `trigger_type_code`          VARCHAR(32)     NOT NULL DEFAULT 'SCHEDULE' COMMENT 'DICT CODE(type=ing_trigger_type)：触发类型',
-    `triggered_at`               TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '触发时间(UTC)',
-    `trigger_params`             JSON            NULL COMMENT '调度入参(规范化)',
-    `provenance_code`            VARCHAR(64)     NOT NULL COMMENT '来源代码：与 reg_provenance.provenance_code 一致，如 pubmed/epmc/crossref',
-    `provenance_config_snapshot` JSON            NULL COMMENT '来源配置/窗口/限流/重试等快照（中立模型）',
-    `expr_proto_hash`            CHAR(64)        NULL COMMENT '表达式原型哈希（规范化 AST）',
-    `expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型 AST 快照（不含切片条件)',
+		`id`                         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · 调度实例ID',
+		`scheduler_code`             VARCHAR(32)     NOT NULL DEFAULT 'XXL' COMMENT 'DICT CODE(type=ing_scheduler)：调度器来源',
+		`scheduler_job_id`           VARCHAR(64)     NULL COMMENT '外部 JobID（如 XXL 的 jobId）',
+		`scheduler_log_id`           VARCHAR(64)     NULL COMMENT '外部运行/日志ID（如 XXL 的 logId）',
+		`trigger_type_code`          VARCHAR(32)     NOT NULL DEFAULT 'SCHEDULE' COMMENT 'DICT CODE(type=ing_trigger_type)：触发类型',
+		`triggered_at`               TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '触发时间(UTC)',
+		`trigger_params`             JSON            NULL COMMENT '调度入参(规范化)',
+		`provenance_code`            VARCHAR(64)     NOT NULL COMMENT '来源代码：与 reg_provenance.provenance_code 一致，如 pubmed/epmc/crossref',
+		`provenance_config_snapshot` JSON            NULL COMMENT '来源配置/窗口/限流/重试等快照（中立模型）',
+		`expr_proto_hash`            CHAR(64)        NULL COMMENT '表达式原型哈希（规范化 AST）',
+		`expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型 AST 快照（不含切片条件)',
 
-    -- 审计字段
-    `record_remarks`             JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `version`                    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`                 VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `created_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC)',
-    `created_by`                 BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`            VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC)',
-    `updated_by`                 BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name`            VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `deleted`                    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=未删,1=已删',
+		-- 审计字段
+		`record_remarks`             JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+		`version`                    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+		`ip_address`                 VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+		`created_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC)',
+		`created_by`                 BIGINT UNSIGNED NULL COMMENT '创建人ID',
+		`created_by_name`            VARCHAR(100)    NULL COMMENT '创建人姓名',
+		`updated_at`                 TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC)',
+		`updated_by`                 BIGINT UNSIGNED NULL COMMENT '更新人ID',
+		`updated_by_name`            VARCHAR(100)    NULL COMMENT '更新人姓名',
+		`deleted`                    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=未删,1=已删',
 
-    PRIMARY KEY (`id`),
-    KEY `idx_sched_src` (`scheduler_code`, `scheduler_job_id`, `scheduler_log_id`),
-    KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
-    KEY `idx_audit_created_by` (`created_by`),
-    KEY `idx_audit_updated_by` (`updated_by`)
+		PRIMARY KEY (`id`),
+		KEY `idx_sched_src` (`scheduler_code`, `scheduler_job_id`, `scheduler_log_id`),
+		KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
+		KEY `idx_audit_created_by` (`created_by`),
+		KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='调度实例：一次外部触发与其快照（作为本次编排的根）；不创建物理外键';
+	DEFAULT CHARSET = utf8mb4
+	COLLATE = utf8mb4_0900_ai_ci
+		COMMENT ='调度实例：一次外部触发与其快照（作为本次编排的根）；不创建物理外键';
+
 
 -- ======================================================================
 -- 2) 计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）
@@ -87,6 +88,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `operation_code`       VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation)：采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
     `expr_proto_hash`      CHAR(64)        NOT NULL COMMENT '表达式原型哈希',
     `expr_proto_snapshot`  JSON            NULL COMMENT '表达式原型 AST 快照',
+    `spec_fingerprint`     CHAR(64)        NULL COMMENT '编译后 Spec Snapshot 指纹（auth/pagination/window/retry/rate/batching/expr 等规范化哈希；回放/复用判定）',
 
     `window_from`          TIMESTAMP(6)    NULL COMMENT '总窗起(含,UTC)',
     `window_to`            TIMESTAMP(6)    NULL COMMENT '总窗止(不含,UTC)',
@@ -94,7 +96,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `slice_strategy_code`  VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_slice_strategy)：TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID',
     `slice_params`         JSON            NULL COMMENT '切片参数：step/zone/landmarks/budget 等',
 
-    `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'READY' COMMENT 'DICT CODE(type=ing_plan_status)：DRAFT/READY/ACTIVE/COMPLETED/ABORTED',
+    `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status)：DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED',
 
     -- 审计字段
     `record_remarks`       JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -115,13 +117,14 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_plan_endpoint` (`endpoint_name`),
     KEY `idx_plan_status` (`status_code`),
     KEY `idx_plan_expr` (`expr_proto_hash`),
+    KEY `idx_plan_fingerprint` (`spec_fingerprint`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）；不创建物理外键';
+    COMMENT ='计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）；含 Spec 指纹；不创建物理外键';
 
 -- ======================================================================
 -- 3) 计划切片：通用分片（时间/ID/token/预算），并行与幂等边界
