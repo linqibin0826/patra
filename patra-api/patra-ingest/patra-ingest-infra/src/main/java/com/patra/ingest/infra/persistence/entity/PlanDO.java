@@ -32,8 +32,10 @@ public class PlanDO extends BaseDO {
     @TableField("expr_proto_hash") private String exprProtoHash;
     /** 表达式原型AST快照 */
     @TableField("expr_proto_snapshot") private String exprProtoSnapshot;
-    /** Spec快照指纹 */
-    @TableField("spec_fingerprint") private String specFingerprint;
+    /** 来源配置中立快照(JSON) */
+    @TableField("provenance_config_snapshot") private String provenanceConfigSnapshot;
+    /** 来源配置规范化哈希 */
+    @TableField("provenance_config_hash") private String provenanceConfigHash;
     /** 逻辑时间窗口起 */
     @TableField("window_from") private java.time.Instant windowFrom;
     /** 逻辑时间窗口止 */

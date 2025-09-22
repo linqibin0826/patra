@@ -27,7 +27,8 @@ public class Plan {
     private final String operationCode;
     private final String exprProtoHash;
     private final String exprProtoSnapshot;
-    private final String specFingerprint;
+    private final String provenanceConfigSnapshot;
+    private final String provenanceConfigHash;
     private final Instant windowFrom;
     private final Instant windowTo;
     private final String sliceStrategyCode;
@@ -42,7 +43,8 @@ public class Plan {
                 String operationCode, 
                 String exprProtoHash,
                 String exprProtoSnapshot,
-                String specFingerprint,
+                String provenanceConfigSnapshot,
+                String provenanceConfigHash,
                 Instant windowFrom, 
                 Instant windowTo,
                 String sliceStrategyCode,
@@ -56,7 +58,8 @@ public class Plan {
         this.operationCode = operationCode;
         this.exprProtoHash = exprProtoHash;
         this.exprProtoSnapshot = exprProtoSnapshot;
-        this.specFingerprint = specFingerprint;
+    this.provenanceConfigSnapshot = provenanceConfigSnapshot;
+    this.provenanceConfigHash = provenanceConfigHash;
         this.windowFrom = windowFrom;
         this.windowTo = windowTo;
         this.sliceStrategyCode = sliceStrategyCode;
@@ -74,7 +77,8 @@ public class Plan {
                               String operationCode,
                               String exprProtoHash,
                               String exprProtoSnapshot,
-                              String specFingerprint,
+                              String provenanceConfigSnapshot,
+                              String provenanceConfigHash,
                               Instant windowFrom,
                               Instant windowTo,
                               String sliceStrategyCode,
@@ -88,7 +92,8 @@ public class Plan {
                 operationCode,
                 exprProtoHash,
                 exprProtoSnapshot,
-                specFingerprint,
+                provenanceConfigSnapshot,
+                provenanceConfigHash,
                 windowFrom,
                 windowTo,
                 sliceStrategyCode,
