@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.persistence.converter;
 
-import com.patra.ingest.domain.model.entity.Task;
+import com.patra.ingest.domain.model.aggregate.Task;
 import com.patra.ingest.domain.model.vo.IdempotentKey;
 import com.patra.ingest.domain.model.vo.TaskParams;
 import com.patra.ingest.infra.persistence.entity.TaskDO;

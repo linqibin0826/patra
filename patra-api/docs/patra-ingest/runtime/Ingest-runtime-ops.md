@@ -12,17 +12,17 @@
 - 告警阈值初始建议
 
 ## 0. 初始化与巡检（迁移自根级 ingest-ops）
-- 初始化数据库：执行 `sql/patra-ingest.sql`（确保新增 `spec_fingerprint` 字段已存在于 `ing_plan`）。
+- 初始化数据库：执行 `sql/patra-ingest.sql`（确保 `provenance_config_snapshot` 与 `provenance_config_hash` 字段已存在于 `ing_plan`）。
 - 字典对齐：Registry 必须提前写入 ingest 相关字典项 (`ing_scheduler`, `ing_operation`, `ing_slice_strategy`, `ing_task_status`, 等)。
 - 结构巡检脚本（示例）:
   - 检查唯一键：`SHOW INDEX FROM ing_task WHERE Key_name='uk_task_idem';`
   - 检查新增指纹索引：`SHOW INDEX FROM ing_plan WHERE Key_name='idx_plan_fingerprint';`
   - 检查冗余来源列是否存在：`DESC ing_task` 中应含 `provenance_code`。
-- 差异升级（若旧环境无 spec_fingerprint）：
+- 差异升级（若旧环境无 provenance_config_*）：
 ```sql
-ALTER TABLE ing_plan ADD COLUMN `spec_fingerprint` CHAR(64) NULL COMMENT 'Spec 指纹' AFTER expr_proto_snapshot;
-CREATE INDEX idx_plan_fingerprint ON ing_plan(spec_fingerprint);
-ALTER TABLE ing_plan MODIFY COLUMN status_code VARCHAR(32) NOT NULL DEFAULT 'DRAFT';
+ALTER TABLE ing_plan ADD COLUMN `provenance_config_snapshot` JSON NULL COMMENT '来源配置/窗口/限流/重试等快照（中立模型）' AFTER expr_proto_snapshot;
+ALTER TABLE ing_plan ADD COLUMN `provenance_config_hash` CHAR(64) NULL COMMENT '规范化来源配置哈希' AFTER provenance_config_snapshot;
+CREATE INDEX idx_plan_prov_config_hash ON ing_plan(provenance_config_hash);
 ```
 
 ## 1. 错误分级矩阵

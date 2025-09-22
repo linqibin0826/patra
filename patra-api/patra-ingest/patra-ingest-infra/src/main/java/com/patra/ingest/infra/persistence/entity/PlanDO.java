@@ -30,10 +30,18 @@ public class PlanDO extends BaseDO {
     @TableField("operation_code") private String operationCode;
     /** 表达式原型哈希（未切片前的原始表达式编译指纹） */
     @TableField("expr_proto_hash") private String exprProtoHash;
+    /** 表达式原型AST快照 */
+    @TableField("expr_proto_snapshot") private String exprProtoSnapshot;
+    /** Spec快照指纹 */
+    @TableField("spec_fingerprint") private String specFingerprint;
     /** 逻辑时间窗口起 */
     @TableField("window_from") private java.time.Instant windowFrom;
     /** 逻辑时间窗口止 */
     @TableField("window_to") private java.time.Instant windowTo;
-    /** 状态代码（PENDING/RUNNING/COMPLETED/FAILED） */
+    /** 切片策略代码 */
+    @TableField("slice_strategy_code") private String sliceStrategyCode;
+    /** 切片参数JSON */
+    @TableField("slice_params") private String sliceParams;
+    /** 状态代码（DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED） */
     @TableField("status_code") private String statusCode;
 }

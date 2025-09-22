@@ -9,7 +9,7 @@
 | ing_plan_slice | PENDING → DISPATCHED → EXECUTING → SUCCEEDED / FAILED / PARTIAL / CANCELLED | 切片生成=PENDING；任务派生=DISPATCHED；首次任务运行=EXECUTING | 全任务成功=SUCCEEDED；部分失败=PARTIAL；全失败=FAILED | 不回退到 PENDING |
 | ing_task | QUEUED → RUNNING → SUCCEEDED / FAILED / CANCELLED | 任务创建=QUEUED；租约获取并启动=RUNNING | 正常完成=SUCCEEDED；达最大重试且失败=FAILED；人工/系统停止=CANCELLED | SUCCEEDED 不再变更 |
 | ing_task_run | PLANNED → RUNNING → SUCCEEDED / FAILED / CANCELLED | 创建尝试=PLANNED；执行器启动=RUNNING | 全批次成功=SUCCEEDED；错误失败=FAILED；人工取消=CANCELLED | 不回退到 PLANNED |
-| ing_task_run_batch | RUNNING → SUCCEEDED / FAILED / SKIPPED | 批次提交=RUNNING | 数据入库成功=SUCCEEDED；错误=FAILED；条件跳过=SKIPPED | 终态后不可修改 |
+| ing_task_run_batch | RUNNING → SUCCEEDED / FAILED / SKIPPED | 批次提交=RUNNING (预插入) | 数据入库成功=SUCCEEDED；错误=FAILED；条件跳过=SKIPPED | 终态后不可修改 |
 
 状态字段来源：对应表的 status_code。PARTIAL 仅对 plan_slice 与 plan / task_run (可选) 表示存在部分失败但可继续。
 
@@ -43,7 +43,7 @@
 | ing_task_run_batch | before_token/after_token | 分页游标 | TOKEN 模式关键 |
 | ing_task_run_batch | idempotent_key | 幂等键 | run_id + before_token/page_no |
 | ing_task_run_batch | record_count | 本批记录数 | 数据吞吐统计 |
-| ing_task_run_batch | committed_at | 提交时间 | 用于速率/延迟计算 |
+| ing_task_run_batch | committed_at | 提交时间 | 用于速率/延迟/滞后计算 |
 
 ## 4. 统计字段建议 (stats JSON)
 | 维度 | Key | 描述 |
@@ -82,7 +82,7 @@
 
 ## 7. 时间线与 lineage 聚合
 执行链路：schedule_instance → plan → slice → task → run → batch。
-每层冗余 provenance_code / operation_code / expr_hash 以支撑直接过滤，不必反查上游。
+每层冗余 provenance_code / operation_code / expr_hash（以及 batch/run 级 committed_at 时间）支撑直接过滤与时间线分析，无需回表上游。
 
 ## 8. 性能注意事项
 | 场景 | 风险 | 缓解 |

@@ -9,16 +9,16 @@ ExecutorTrigger ──▶ dequeue task(lease) ─▶ run ─▶ batch loop ─�
 ```
 核心解耦：Planner 只做“确定性生成 + 库存控制 + 快照编译”，Executor 只对已派生 Task 做幂等消费与游标推进。二者通过数据库 + 幂等键连接。
 
-## 2. 状态机总览 (摘要)
+## 2. 状态机总览 (摘要，对齐 SQL)
 | 对象 | 主要状态 | 迁移触发 | 终止条件 |
 |------|---------|---------|---------|
-| plan | DRAFT→SLICING→READY/PARTIAL/FAILED | 编译/切片结果 | READY/PARTIAL/FAILED |
-| slice | PENDING→READY/FAILED | 切片计算 | READY/FAILED |
-| task | QUEUED→DISPATCHED→EXECUTING→SUCCEEDED/FAILED/PARTIAL/CANCELLED | 租约/执行结果 | 终态 |
-| run | PLANNED→RUNNING→SUCCEEDED/FAILED/PARTIAL/CANCELLED | 尝试开始/批次结果 | 终态 |
-| batch | RUNNING→SUCCEEDED/FAILED/SKIPPED | 请求/解析 | 终态 |
+| plan | DRAFT→SLICING→READY/PARTIAL/FAILED/COMPLETED | 切片生成开始/结束 | COMPLETED 或 FAILED/PARTIAL |
+| slice | PENDING→DISPATCHED→EXECUTING→SUCCEEDED/FAILED/PARTIAL/CANCELLED | 任务派生 / 首次任务运行 | SUCCEEDED/FAILED/PARTIAL/CANCELLED |
+| task | QUEUED→RUNNING→SUCCEEDED/FAILED/CANCELLED | 租约获取/执行结果 | SUCCEEDED/FAILED/CANCELLED |
+| run | PLANNED→RUNNING→SUCCEEDED/FAILED/CANCELLED | 尝试开始/批次完成 | SUCCEEDED/FAILED/CANCELLED |
+| batch | RUNNING→SUCCEEDED/FAILED/SKIPPED | 预插入后执行/解析 | SUCCEEDED/FAILED/SKIPPED |
 
-PARTIAL 语义：已取得部分成功但剩余窗口/预算需再切或后续任务补完，不视为 FAILED；需要 Planner/Strategy 判定是否触发在线再切片。
+PARTIAL：当前仅对 plan / slice 使用（任务与 run 不含 PARTIAL 状态）；表示部分子单元失败但集合可继续，不视为整体失败。
 
 ## 3. 任务租约模型
 | 字段 | 含义 | 行为 |

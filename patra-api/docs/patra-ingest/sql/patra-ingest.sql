@@ -1,30 +1,16 @@
--- =====================================================================
 -- B. 采集（ingest）—— ing_*
 -- - 统一审计字段：record_remarks / created_at/created_by/created_by_name / updated_at/updated_by/updated_by_name / version / ip_address / deleted。
 -- - 不创建物理外键（跨/内模块均由应用层保证完整性，必要处建立二级索引）。
 -- - MySQL 8.0 · InnoDB · utf8mb4_0900_ai_ci
--- =====================================================================
--- 设计更新(2025-09-21)：
---  1. 根据采集调度/可视化/统计的高频查询需求，统一在核心执行链路表冗余 provenance_code：
---     ing_plan / ing_plan_slice / ing_task 已有或新增 / ing_task_run / ing_task_run_batch。
---     目的：
---       - 减少跨表回溯 schedule_instance -> task -> slice -> plan 时的多跳 join；
---       - 支持按 (provenance_code, operation_code, status_code, 时间) 直接过滤聚合；
---       - 统一与 reg_provenance.provenance_code 的逻辑对齐（仍不建外键）。
---  2. 未引入 provenance_id；遵循“CODE 即主识别”策略，避免额外维度。
---  3. 未预留物理分区字段；后续如需冷热分离，可按 created_at RANGE 或 provenance_code HASH 重建。
---  4. 不改动原有字段与语义；仅追加新列与对应复合索引 (idx_*_prov_src / idx_*_prov_status_time 等)。
---  5. 保持 append-only 语义的事件表 ing_cursor_event 不再额外冗余（其已含 provenance_code）。
 -- ======================================================================
--- 1) 调度实例：一次外部触发与其“当时配置/表达式原型”快照
+-- 1) 调度实例：一次外部触发事件
 -- ======================================================================
 /* ====================================================================
  * 表：ing_schedule_instance —— 调度实例
- * 语义：记录一次外部调度触发事件的“根”，固化当时的调度入参、来源配置快照、表达式原型（未局部化）。
+ * 语义：记录一次外部调度触发事件的"根"，固化当时的调度入参。
  * 关键点：
  *  - provenance_code 对齐 reg_provenance.provenance_code（逻辑关联，不建 FK）；
- *  - provenance_config_snapshot 为按 reg_prov_* 读侧装配出的中立快照；
- *  - expr_proto_* 仅保存表达式原型，后续派生 plan/slice 时再局部化。
+ *  - 配置快照和表达式原型在 ing_plan 级别保存。
  * 索引：idx_sched_src(scheduler_code, scheduler_job_id, scheduler_log_id)。
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
@@ -37,9 +23,6 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 		`triggered_at`               TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '触发时间(UTC)',
 		`trigger_params`             JSON            NULL COMMENT '调度入参(规范化)',
 		`provenance_code`            VARCHAR(64)     NOT NULL COMMENT '来源代码：与 reg_provenance.provenance_code 一致，如 pubmed/epmc/crossref',
-		`provenance_config_snapshot` JSON            NULL COMMENT '来源配置/窗口/限流/重试等快照（中立模型）',
-		`expr_proto_hash`            CHAR(64)        NULL COMMENT '表达式原型哈希（规范化 AST）',
-		`expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型 AST 快照（不含切片条件)',
 
 		-- 审计字段
 		`record_remarks`             JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
@@ -61,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `ing_schedule_instance`
 ) ENGINE = InnoDB
 	DEFAULT CHARSET = utf8mb4
 	COLLATE = utf8mb4_0900_ai_ci
-		COMMENT ='调度实例：一次外部触发与其快照（作为本次编排的根）；不创建物理外键';
+		COMMENT ='调度实例：一次外部触发事件（作为本次编排的根）；不创建物理外键';
 
 
 -- ======================================================================
@@ -88,7 +71,8 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `operation_code`       VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation)：采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
     `expr_proto_hash`      CHAR(64)        NOT NULL COMMENT '表达式原型哈希',
     `expr_proto_snapshot`  JSON            NULL COMMENT '表达式原型 AST 快照',
-    `spec_fingerprint`     CHAR(64)        NULL COMMENT '编译后 Spec Snapshot 指纹（auth/pagination/window/retry/rate/batching/expr 等规范化哈希；回放/复用判定）',
+    `provenance_config_snapshot` JSON      NULL COMMENT '来源配置/窗口/限流/重试等快照（中立模型）',
+    `provenance_config_hash` CHAR(64)      NULL COMMENT '编译后来源配置哈希（auth/pagination/window/retry/rate/batching 等规范化哈希；回放/复用判定）',
 
     `window_from`          TIMESTAMP(6)    NULL COMMENT '总窗起(含,UTC)',
     `window_to`            TIMESTAMP(6)    NULL COMMENT '总窗止(不含,UTC)',
@@ -117,14 +101,14 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_plan_endpoint` (`endpoint_name`),
     KEY `idx_plan_status` (`status_code`),
     KEY `idx_plan_expr` (`expr_proto_hash`),
-    KEY `idx_plan_fingerprint` (`spec_fingerprint`),
+    KEY `idx_plan_prov_config_hash` (`provenance_config_hash`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）；含 Spec 指纹；不创建物理外键';
+    COMMENT ='计划蓝图：定义总窗口与切片策略（表达式原型，不含局部化条件）；含来源配置哈希；不创建物理外键';
 
 -- ======================================================================
 -- 3) 计划切片：通用分片（时间/ID/token/预算），并行与幂等边界

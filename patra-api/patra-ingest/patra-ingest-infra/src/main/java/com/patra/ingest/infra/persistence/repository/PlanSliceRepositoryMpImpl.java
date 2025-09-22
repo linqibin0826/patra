@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.patra.ingest.domain.model.entity.PlanSlice;
+import com.patra.ingest.domain.model.aggregate.PlanSlice;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.infra.persistence.converter.PlanSliceConverter;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
@@ -20,10 +20,20 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
     private final PlanSliceConverter converter;
 
     @Override
+    public PlanSlice save(PlanSlice slice) {
+        PlanSliceDO dto = converter.toDO(slice);
+        if (dto.getId() == null) {
+            mapper.insert(dto);
+        } else {
+            mapper.updateById(dto);
+        }
+        return converter.toDomain(dto);
+    }
+
+    @Override
     public void saveAll(List<PlanSlice> slices) {
         for (PlanSlice slice : slices) {
-            PlanSliceDO dto = converter.toDO(slice);
-            if (dto.getId() == null) mapper.insert(dto); else mapper.updateById(dto);
+            save(slice);
         }
     }
 

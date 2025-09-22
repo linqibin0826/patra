@@ -11,9 +11,10 @@
 - ing_task_run / ing_task_run_batch（详见 runtime）
 
 ## Plan / Slice 字段（快照原型与局部化）
-- expr_proto_hash / expr_proto_snapshot
-- expr_hash / expr_snapshot
-- slice_spec / slice_signature_hash
+- Plan 原型快照: expr_proto_hash / expr_proto_snapshot
+- Plan 来源配置快照: provenance_config_snapshot / provenance_config_hash（规范化后判定复用/回放）
+- Slice 局部化: expr_hash / expr_snapshot
+- Slice 通用边界: slice_spec / slice_signature_hash
 
 ## 幂等层次概览
 - Task: idempotent_key
@@ -25,36 +26,42 @@
 |------|------|------|
 | scheduler_code / job_id / log_id | 外部调度溯源 | 组合索引 idx_sched_src |
 | provenance_code | 来源代码快照 | 编排聚合加速 |
-| provenance_config_snapshot | 来源配置中立快照 | 不随运行时变动 |
-| expr_proto_hash / snapshot | 原型表达式及 AST | 后续局部化基线 |
+| trigger_params | 触发参数规范化 | 记录外部传入上下文 |
 | triggered_at | 触发时间 | 统计入口 |
 
 ## 2. ing_plan 关键字段
 | 字段 | 说明 | 备注 |
 |------|------|------|
+| schedule_instance_id | 关联调度根 | 索引 idx_plan_sched |
 | plan_key | 人类可读/幂等键 | uk_plan_key |
-| operation_code | 操作类型 | HARVEST/BACKFILL/UPDATE |
-| window_from/to | 总窗口 | 半开区间 `[from,to)` |
-| slice_strategy_code / slice_params | 切片策略 | TIME/ID_RANGE/... |
-| expr_proto_hash/snapshot | 原型保留 | 对比 diff |
-| spec_fingerprint | Spec Snapshot 指纹 | 快照复用/回放一致性 |
-| status_code | 计划状态 | READY/PARTIAL/FAILED/COMPLETED |
+| provenance_code | 来源冗余 | 加速来源聚合（可空=生成时填） |
+| endpoint_name | 来源端点标识 | search/detail/metrics 等 |
+| operation_code | 操作类型 | HARVEST/BACKFILL/UPDATE/METRICS |
+| expr_proto_hash / expr_proto_snapshot | 表达式原型及 AST | 差异/回放基线 |
+| provenance_config_snapshot | 来源配置中立模型快照 | auth/pagination/window 等 |
+| provenance_config_hash | 规范化配置哈希 | idx_plan_prov_config_hash 判定复用 |
+| window_from / window_to | 总窗口 | 半开区间 `[from,to)` |
+| slice_strategy_code / slice_params | 切片策略与参数 | TIME / ID_RANGE / CURSOR_LANDMARK / VOLUME_BUDGET / HYBRID |
+| status_code | 计划状态 | DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED |
 
 ## 3. ing_plan_slice 关键字段
 | 字段 | 说明 | 备注 |
 |------|------|------|
+| plan_id | 关联计划 | 索引 idx_plan_sched (间接) |
+| provenance_code | 来源冗余 | 直接按来源过滤 |
 | slice_no | 序号 | 唯一 (plan_id, slice_no) |
-| slice_signature_hash | 通用边界签名 | 去重/幂等 |
-| slice_spec | JSON 边界 | 时间/ID/token/预算 |
-| expr_hash / snapshot | 局部化表达式 | 增量调试 |
-| status_code | 状态 | PENDING/EXECUTING/SUCCEEDED/FAILED/PARTIAL |
+| slice_signature_hash | 通用边界签名 | uk_slice_sig 去重/幂等 |
+| slice_spec | JSON 边界 | 时间/ID/token/预算等统一格式 |
+| expr_hash / expr_snapshot | 局部化表达式 AST | 注入 slice 边界后生成 |
+| status_code | 状态 | PENDING/DISPATCHED/EXECUTING/SUCCEEDED/FAILED/PARTIAL/CANCELLED |
 
 ## 4. 关联与冗余
 | 目的 | 冗余列 | 价值 |
 |------|--------|------|
-| 快速过滤来源+操作 | provenance_code, operation_code (计划/切片/任务) | 降低多表 join |
+| 快速过滤来源+操作 | provenance_code, operation_code | 降低多表 join |
 | 表达式变更溯源 | expr_proto_hash / expr_hash | 回放与审计 |
-| 性能 | slice_signature_hash | 避免重复构造 |
+| 来源配置复用 | provenance_config_hash | 判断是否可复用计划编译结果 |
+| 去重与并行边界 | slice_signature_hash | 避免重复构造 |
 
 ## 5. 幂等层次
 | 层级 | 机制 | 冲突行为 | 说明 |
@@ -69,7 +76,10 @@
 |----|------|------|
 | ing_schedule_instance | idx_sched_src | 按外部 job/log 聚合 |
 | ing_plan | idx_plan_prov_op | 来源+操作过滤 |
+| ing_plan | idx_plan_expr | 快速按表达式原型聚合 |
+| ing_plan | idx_plan_prov_config_hash | 计划配置复用判定 |
 | ing_plan_slice | uk_slice_sig | 去重幂等 |
+| ing_plan_slice | idx_slice_prov_status | 来源+状态过滤 |
 | ing_plan_slice | idx_slice_status | 进度监控 |
 
 ## 7. 典型查询
@@ -78,6 +88,7 @@
 | 查看计划进度 | SELECT status_code,count(*) FROM ing_plan_slice WHERE plan_id=? GROUP BY status_code | 百分比计算 |
 | 重建本地化差异 | SELECT slice_no, expr_hash FROM ing_plan_slice WHERE plan_id=? | 对比变更 |
 | 切片失败排查 | SELECT * FROM ing_plan_slice WHERE plan_id=? AND status_code='FAILED' LIMIT 50 | 快速调试 |
+| 查询来源操作计划 | SELECT id,plan_key FROM ing_plan WHERE provenance_code=? AND operation_code=? | 快速定位 |
 
 ## 8. 与其他文档的映射
 | 概念 | 详述位置 |

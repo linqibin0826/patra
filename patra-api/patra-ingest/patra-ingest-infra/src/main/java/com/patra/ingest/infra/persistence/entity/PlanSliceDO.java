@@ -25,6 +25,8 @@ public class PlanSliceDO extends BaseDO {
     @TableField("slice_spec") private String sliceSpec;
     /** 表达式哈希（切片后具体执行表达式版本） */
     @TableField("expr_hash") private String exprHash;
+    /** 表达式快照（局部化后的AST） */
+    @TableField("expr_snapshot") private String exprSnapshot;
     /** 状态代码（PENDING/DISPATCHED/SUCCEEDED/FAILED） */
     @TableField("status_code") private String statusCode;
 }

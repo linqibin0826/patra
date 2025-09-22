@@ -46,7 +46,7 @@
 ## 2. 幂等键公式
 | 层 | 公式 | 说明 |
 |----|------|------|
-| Event | SHA256(source,op,key,ns_scope,ns_key,prev->new,window,run_id,batch_id) | 确保同一次推进只记一条 |
+| Event | SHA256(source,op,key,ns_scope,ns_key,prev->new,window,run_id,batch_id) | 事件先行：一次逻辑推进只记一条 |
 | Cursor(CAS) | 条件：new > old（按类型比较） | 仅前进；否则不更新 |
 
 TIME 比较：normalized_instant；ID 比较：normalized_numeric；TOKEN：只要值不同且业务定义“可接受前进”即可（通常记录但不回退）。

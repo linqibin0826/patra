@@ -51,24 +51,24 @@ task_run_batch (分页/令牌/时间推进最小账目)
 cursor_event → cursor (事件先行, 仅前进)
 ```
 
-### 4.1 核心对象表对应 (更新：对齐 `sql/patra-ingest.sql` 2025-09-21 冗余字段与索引)
+### 4.1 核心对象表对应 (更新：对齐 `sql/patra-ingest.sql` 2025-09-22 冗余字段与索引)
 | 概念 | 表 | 关键字段(节选) | 状态机(详见 runtime-reference) |
 |------|----|----------------|--------------------------------|
 | 调度根 | ing_schedule_instance | provenance_code, trigger_params, expr_proto_hash/snapshot | - |
-| 计划 | ing_plan | plan_key, provenance_code, endpoint_name, operation_code, window_from/to, slice_strategy_code, slice_params, expr_proto_hash | DRAFT→... |
+| 计划 | ing_plan | plan_key, provenance_code, endpoint_name, operation_code, window_from/to, slice_strategy_code, slice_params, expr_proto_hash, provenance_config_hash | DRAFT→... |
 | 切片 | ing_plan_slice | plan_id, provenance_code, slice_no, slice_signature_hash, slice_spec, expr_hash | PENDING→... |
 | 任务 | ing_task | provenance_code, operation_code, credential_id, params, idempotent_key, lease_*, priority, expr_hash | QUEUED→... |
 | 运行 | ing_task_run | task_id, attempt_no, provenance_code, operation_code, checkpoint, stats, window_from/to | PLANNED→... |
-| 批次 | ing_task_run_batch | run_id, batch_no, page_no, before_token/after_token, provenance_code, operation_code, idempotent_key, record_count | RUNNING→... |
+| 批次 | ing_task_run_batch | run_id, batch_no, page_no, before_token/after_token, provenance_code, operation_code, idempotent_key, record_count, committed_at | RUNNING→... |
 | 游标事件 | ing_cursor_event | provenance_code, operation_code, cursor_key, namespace_scope_code/key, direction_code, idempotent_key | append-only |
 | 游标现值 | ing_cursor | provenance_code, operation_code, cursor_key, namespace_scope_code/key, version | - 仅前进 |
 
 ### 4.2 冗余字段与索引设计要点
-> 新增冗余：`provenance_code` 现已存在于 plan / plan_slice / task / task_run / task_run_batch（cursor_event & cursor 原本就有），用于：
-> 1) 减少回溯 lineage 多跳 join；2) 直接按 (provenance_code, operation_code, status_code, 时间) 聚合；3) 与 Registry `reg_provenance.provenance_code` 逻辑对齐（无物理 FK）。
+> 冗余：`provenance_code`（plan / slice / task / run / batch / cursor_event / cursor）与 `operation_code`（task 及以下层级）；`provenance_config_hash` 用于识别配置是否复用。
+> 目的：1) 减少 lineage 多跳 join；2) 直接按 (provenance_code, operation_code, status_code, 时间) 聚合；3) 计划编译缓存与回放一致性校验。
 
 关键复合索引（节选，详见 SQL DDL 注释）：
-- 计划：`idx_plan_prov_op(provenance_code, operation_code)`、`idx_plan_expr(expr_proto_hash)`
+- 计划：`idx_plan_prov_op(provenance_code, operation_code)`、`idx_plan_expr(expr_proto_hash)`、`idx_plan_prov_config_hash(provenance_config_hash)`
 - 切片：`idx_slice_prov_status(provenance_code, status_code)` + 唯一 `uk_slice_sig(plan_id, slice_signature_hash)`
 - 任务：`idx_task_src_op(provenance_code, operation_code, status_code)`、`idx_task_queue(status_code, leased_until, priority, scheduled_at, id)`
 - 运行：`idx_run_prov_op_status(provenance_code, operation_code, status_code)`
@@ -80,10 +80,15 @@ cursor_event → cursor (事件先行, 仅前进)
 - 幂等键逻辑不变；冗余不参与幂等哈希，避免来源 code 变化导致历史幂等签名波动（来源 code 属稳定键）。
 - 写入路径需在派生阶段填充 provenance_code（不可为 NULL），保持 lineage 完整性。
 
-### 4.3 plan_key 用途
+### 4.3 plan_key 用途 / provenance_config_hash
 `plan_key` 作为对外（或调度层）可读 / 幂等识别键：
 - 允许外部重复触发同一窗口/策略时复用已存在 plan（可选逻辑）。
 - 与内部自增 ID 分离，便于日志与告警引用。
+
+`provenance_config_hash`：对编译后来源配置（鉴权/分页/窗口/重试/限流/批量）做规范化 Hash：
+- 判断是否已有同配置+表达式原型的 plan 可复用；
+- 回放/审计确认历史执行使用的配置未漂移；
+- 提供缓存键减少重复解析。
 
 ## 5. 概念要点
 ### 5.1 Schedule Instance
@@ -97,7 +102,14 @@ cursor_event → cursor (事件先行, 仅前进)
 ### 5.5 Task Run
 一次尝试（首次/重试/回放），持有 checkpoint 与累积 stats，不覆盖 task。
 ### 5.6 Task Run Batch
-分页 / token / 时间推进最小账目；写入顺序：插入记录 → 解析响应 → 去重/入库/事件 → 生成下一 hint → stats；幂等键保障重放。
+分页 / token / 时间推进最小账目；写入顺序：
+1. 预插入 batch(status=RUNNING, idempotent_key)
+2. 远程请求+解析响应（页/令牌/时间范围）
+3. 去重/落库/触发事件（Outbox / cursor_event）
+4. 生成下一位置 hint (after_token 或 page_no+1)
+5. 聚合 stats 与记录 record_count
+6. 设置 committed_at（提交边界时间）
+幂等：命中 uk_batch_idem / uk_run_before_tok 直接读取旧 batch 跳过远程调用。
 ### 5.7 Cursor Event / Cursor
 事件 append-only，记录 lineage + prev/new；cursor 仅保存最新现值并仅前进；事件先行使得即便并发写现值失败仍具可回放性。
 

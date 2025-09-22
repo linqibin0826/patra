@@ -40,7 +40,13 @@ public class TaskDO extends BaseDO {
     @TableField("expr_hash") private String exprHash;
     /** 调度优先级（值越大/小——根据策略定义） */
     @TableField("priority") private Integer priority;
-    /** 状态代码（PENDING/RUNNING/SUCCEEDED/FAILED 等） */
+    /** 租约持有者标识 */
+    @TableField("lease_owner") private String leaseOwner;
+    /** 租约到期时间 */
+    @TableField("leased_until") private java.time.Instant leasedUntil;
+    /** 租约累计次数 */
+    @TableField("lease_count") private Integer leaseCount;
+    /** 状态代码（QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED） */
     @TableField("status_code") private String statusCode;
     /** 计划调度时间（预计开始时间） */
     @TableField("scheduled_at") private java.time.Instant scheduledAt;
