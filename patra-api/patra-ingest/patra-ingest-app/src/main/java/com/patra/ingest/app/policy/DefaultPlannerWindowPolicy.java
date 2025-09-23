@@ -6,37 +6,34 @@ import com.patra.ingest.domain.model.value.PlannerWindow;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
-import java.time.Instant;
+import java.time.*;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 默认计划器窗口策略实现。
- * <p>负责基于配置快照和运行时状态，生成合适的执行窗口。</p>
- * <p>策略优先级：
+ * 默认计划器窗口策略实现（App Layer · Policy）。
+ * <p>基于最新 {@link ProvenanceConfigSnapshot.WindowOffsetConfig} 生成时间窗口；
+ * 支持 SLIDING / CALENDAR 两种窗口模式。缺省（无配置或字段为空）视为全量（返回 null-null 窗口）。</p>
+ * <p>优先级：
  * <ol>
- *   <li>手动指定窗口（triggerNorm 中的 requestedWindowFrom/To）</li>
- *   <li>UPDATE 操作（返回空窗口，表示全量更新）</li>
- *   <li>基于 WindowOffsetConfig 配置生成窗口</li>
- *   <li>降级到默认硬编码策略</li>
+ *   <li>手动指定窗口 (requestedWindowFrom/To)</li>
+ *   <li>UPDATE 操作 → 全量（null-null）</li>
+ *   <li>窗口配置（SLIDING / CALENDAR）</li>
+ *   <li>降级：无配置 → 全量（null-null）</li>
  * </ol></p>
- * <p>窗口配置字段映射：
+ * <p>配置字段要点（映射 WindowOffsetConfig）：
  * <ul>
- *   <li>{@code windowModeCode}: SLIDING|CALENDAR|FULL - 窗口模式</li>
- *   <li>{@code windowSizeValue + windowSizeUnitCode}: 窗口大小</li>
- *   <li>{@code overlapValue + overlapUnitCode}: 重叠量（用于游标水位线回溯）</li>
- *   <li>{@code lookbackValue + lookbackUnitCode}: 回溯量（初始窗口向前扩展）</li>
- *   <li>{@code watermarkLagSeconds}: 水位滞后秒数（安全延迟）</li>
- *   <li>{@code maxWindowSpanSeconds}: 最大窗口跨度限制</li>
+ *   <li>windowModeCode: SLIDING | CALENDAR</li>
+ *   <li>windowSizeValue + windowSizeUnitCode (SECOND|MINUTE|HOUR|DAY)</li>
+ *   <li>overlapValue + overlapUnitCode：重叠回溯（再次获取边界重叠部分）</li>
+ *   <li>lookbackValue + lookbackUnitCode：初始窗口额外回看</li>
+ *   <li>watermarkLagSeconds：安全滞后（避免未完全落地的数据）</li>
+ *   <li>maxWindowSpanSeconds：硬限制（防止窗口过大）</li>
+ *   <li>calendarAlignTo：CALENDAR 模式对齐粒度（HOUR|DAY|WEEK|MONTH）</li>
  * </ul></p>
- * <p>典型使用场景：
- * <ul>
- *   <li><strong>PubMed Update</strong>: SLIDING + windowSize=1DAY + overlap=1DAY</li>
- *   <li><strong>Crossref Harvest</strong>: SLIDING + 基于indexed字段的增量抓取</li>
- *   <li><strong>全量刷新</strong>: FULL 模式或 windowModeCode=null</li>
- * </ul></p>
- * 
+ * <p>全量刷新：无 windowOffset 或 windowModeCode 为空。</p>
  * @author linqibin
  * @since 0.1.0
  */
@@ -44,241 +41,209 @@ import java.util.Optional;
 @Component
 public class DefaultPlannerWindowPolicy implements PlannerWindowPolicy {
 
-    private static final Duration DEFAULT_HARVEST_WINDOW = Duration.ofDays(1);
-    private static final Duration DEFAULT_SAFETY_LAG = Duration.ofHours(1);
-    private static final Duration DEFAULT_MIN_WINDOW = Duration.ofMinutes(1);
-    private static final Duration DEFAULT_MAX_WINDOW = Duration.ofDays(7);
+    private static final Duration DEFAULT_HARVEST_WINDOW = Duration.ofDays(1); // 缺省滑动窗口大小
+    private static final Duration DEFAULT_SAFETY_LAG = Duration.ofHours(1);    // 缺省安全滞后
+    private static final Duration DEFAULT_MIN_WINDOW = Duration.ofMinutes(1);  // 最小窗口长度
+    private static final Duration DEFAULT_MAX_WINDOW = Duration.ofDays(7);     // 最大窗口长度（无配置）
 
     @Override
     public PlannerWindow resolveWindow(PlanTriggerNorm triggerNorm,
                                        ProvenanceConfigSnapshot snapshot,
                                        Instant cursorWatermark,
                                        Instant currentTime) {
-        
-        log.debug("resolving window for provenance={}, operation={}, trigger={}",
+        log.debug("resolving window provenance={}, operation={}, trigger={}",
                 triggerNorm.provenanceCode(), triggerNorm.operationType(), triggerNorm.triggerType());
 
-        // 1. UPDATE 操作返回空窗口（全量更新）
+        // 1. UPDATE → 全量
         if (triggerNorm.isUpdate()) {
-            log.debug("UPDATE operation detected, returning null window for full refresh");
-            return new PlannerWindow(null, null);
+            log.debug("UPDATE operation → full refresh (null window)");
+            return PlannerWindow.full();
         }
-
-        // 2. 手动指定窗口优先级最高
+        // 2. 手动指定窗口
         if (triggerNorm.requestedWindowFrom() != null && triggerNorm.requestedWindowTo() != null) {
-            log.debug("using manual window: {} to {}", triggerNorm.requestedWindowFrom(), triggerNorm.requestedWindowTo());
+            log.debug("manual window override: {} -> {}", triggerNorm.requestedWindowFrom(), triggerNorm.requestedWindowTo());
             return new PlannerWindow(triggerNorm.requestedWindowFrom(), triggerNorm.requestedWindowTo());
         }
-
-        // 3. 基于 WindowOffsetConfig 生成窗口
-        return buildWindowFromConfig(snapshot.windowOffset(), cursorWatermark, currentTime);
+        // 3. 配置驱动
+        ProvenanceConfigSnapshot.WindowOffsetConfig cfg = snapshot.windowOffset();
+        if (cfg == null || cfg.windowModeCode() == null || cfg.windowModeCode().isBlank()) {
+            log.debug("no windowOffset config → full refresh (null window)");
+            return PlannerWindow.full();
+        }
+        String mode = cfg.windowModeCode().toUpperCase();
+        return switch (mode) {
+            case "SLIDING" -> buildSlidingWindow(cfg, cursorWatermark, currentTime);
+            case "CALENDAR" -> buildCalendarWindow(cfg, cursorWatermark, currentTime, snapshot.provenance().timezoneDefault());
+            default -> {
+                log.warn("unsupported windowModeCode={} → fallback full refresh", mode);
+                yield PlannerWindow.full();
+            }
+        };
     }
 
-    /**
-     * 基于 WindowOffsetConfig 构建时间窗口。
-     */
-    private PlannerWindow buildWindowFromConfig(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset,
-                                                Instant cursorWatermark,
-                                                Instant currentTime) {
-        
-        // 检查是否启用窗口模式
-        if (windowOffset == null || "FULL".equals(windowOffset.windowModeCode())) {
-            log.debug("full mode detected or no window config, returning null window for full refresh");
-            return new PlannerWindow(null, null);
+    /* ===================== SLIDING MODE ===================== */
+
+    private PlannerWindow buildSlidingWindow(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
+                                             Instant cursorWatermark,
+                                             Instant now) {
+        Duration watermarkLag = watermarkLag(cfg);
+        Instant effectiveNow = now.minus(watermarkLag); // 可见上界
+
+        // 起点：有 cursor → cursor - overlap；否则 (effectiveNow - windowSize - lookback)
+        Instant from;
+        Duration overlap = parseDuration(cfg.overlapValue(), cfg.overlapUnitCode(), Duration.ZERO);
+        if (cursorWatermark != null) {
+            from = cursorWatermark.minus(overlap);
+        } else {
+            Duration windowSize = windowSize(cfg);
+            Duration lookback = parseDuration(cfg.lookbackValue(), cfg.lookbackUnitCode(), Duration.ZERO);
+            from = effectiveNow.minus(windowSize).minus(lookback);
         }
-
-        // 解析安全延迟 (watermark lag)
-        Duration watermarkLag = Optional.ofNullable(windowOffset.watermarkLagSeconds())
-                .map(Duration::ofSeconds)
-                .orElse(DEFAULT_SAFETY_LAG);
-
-        // 确定窗口起始时间
-        Instant from = determineWindowStart(windowOffset, cursorWatermark, currentTime, watermarkLag);
-        
-        // 确定窗口结束时间
-        Instant to = determineWindowEnd(windowOffset, from, currentTime, watermarkLag);
-        
-        // 确保结束时间晚于起始时间
+        Instant to = determineSlidingEnd(cfg, from, effectiveNow);
         if (!to.isAfter(from)) {
             to = from.plusSeconds(1);
-            log.warn("adjusted window end time to avoid invalid range: from={}, to={}", from, to);
         }
-
-        // 应用窗口大小限制
-        to = applyWindowSizeConstraints(windowOffset, from, to);
-
-        log.debug("built time window: {} to {} (duration={}min)", 
-                from, to, Duration.between(from, to).toMinutes());
-
+        to = applyWindowSpanConstraints(cfg, from, to);
+        log.debug("SLIDING window built: {} -> {} ({}s)", from, to, Duration.between(from, to).getSeconds());
         return new PlannerWindow(from, to);
     }
 
-    /**
-     * 确定窗口起始时间，考虑重叠和回溯逻辑。
-     */
-    private Instant determineWindowStart(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset,
-                                         Instant cursorWatermark,
-                                         Instant currentTime,
-                                         Duration watermarkLag) {
+    private Instant determineSlidingEnd(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
+                                        Instant from,
+                                        Instant effectiveNow) {
+        Duration size = windowSize(cfg);
+        Instant calc = from.plus(size);
+        // 不得超过可见上界
+        return calc.isAfter(effectiveNow) ? effectiveNow : calc;
+    }
+
+    /* ===================== CALENDAR MODE ===================== */
+
+    private PlannerWindow buildCalendarWindow(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
+                                              Instant cursorWatermark,
+                                              Instant now,
+                                              String timezone) {
+        ZoneId zoneId = safeZone(timezone);
+        Duration watermarkLag = watermarkLag(cfg);
+        Instant effectiveNow = now.minus(watermarkLag);
+
+        // 对齐结束边界（floor）
+        Instant alignedEnd = alignToBoundary(effectiveNow, cfg.calendarAlignTo(), zoneId);
+        if (alignedEnd.isAfter(effectiveNow)) {
+            // 防守式：若由于对齐逻辑导致超前，回退一个单位
+            alignedEnd = rollBackOneUnit(alignedEnd, cfg.calendarAlignTo(), zoneId);
+        }
+
+        Duration windowSize = windowSize(cfg); // 使用 windowSizeValue * unit
+        Instant start = alignedEnd.minus(windowSize);
+
+        // lookback: 仅当无 cursor 或首次执行。此处简单：无 cursor 时添加。
+        if (cursorWatermark == null) {
+            Duration lookback = parseDuration(cfg.lookbackValue(), cfg.lookbackUnitCode(), Duration.ZERO);
+            start = start.minus(lookback);
+        }
+
+        // overlap: 有 cursor 时再扩大起点
         if (cursorWatermark != null) {
-            // 有游标水位线时，考虑重叠量向前回溯
-            Duration overlapDuration = parseOverlapDuration(windowOffset);
-            Instant from = cursorWatermark.minus(overlapDuration);
-            log.debug("using cursor watermark with overlap: cursor={}, overlap={}min, from={}", 
-                    cursorWatermark, overlapDuration.toMinutes(), from);
-            return from;
+            Duration overlap = parseDuration(cfg.overlapValue(), cfg.overlapUnitCode(), Duration.ZERO);
+            Instant overlapStart = cursorWatermark.minus(overlap);
+            if (overlapStart.isBefore(start)) {
+                start = overlapStart;
+            }
         }
 
-        // 无游标时，基于当前时间和配置计算起始时间
-        Duration windowSize = parseWindowSize(windowOffset);
-        Duration lookbackDuration = parseLookbackDuration(windowOffset);
-        
-        // 计算基准时间点（当前时间减去水位滞后）
-        Instant baseTime = currentTime.minus(watermarkLag);
-        
-        // 应用回溯和窗口大小
-        Instant from = baseTime.minus(windowSize).minus(lookbackDuration);
-        
-        log.debug("calculated window start: baseTime={}, windowSize={}min, lookback={}min, from={}", 
-                baseTime, windowSize.toMinutes(), lookbackDuration.toMinutes(), from);
-        return from;
-    }
-
-    /**
-     * 确定窗口结束时间。
-     */
-    private Instant determineWindowEnd(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset,
-                                       Instant from,
-                                       Instant currentTime,
-                                       Duration watermarkLag) {
-        
-        // 基于窗口大小计算结束时间
-        Duration windowSize = parseWindowSize(windowOffset);
-        Instant calculatedTo = from.plus(windowSize);
-        
-        // 不能超过当前时间减去水位滞后
-        Instant maxTo = currentTime.minus(watermarkLag);
-        
-        Instant to = calculatedTo.isBefore(maxTo) ? calculatedTo : maxTo;
-        
-        log.debug("determined window end: calculatedTo={}, maxTo={}, finalTo={}", 
-                calculatedTo, maxTo, to);
-        return to;
-    }
-
-    /**
-     * 解析重叠量配置。
-     */
-    private Duration parseOverlapDuration(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset) {
-        if (windowOffset.overlapValue() == null) {
-            return Duration.ZERO;
+        Instant end = alignedEnd; // CALENDAR 模式以对齐点作为结束（不超过 effectiveNow）
+        if (!end.isAfter(start)) {
+            end = start.plusSeconds(1);
         }
+        end = applyWindowSpanConstraints(cfg, start, end);
+        log.debug("CALENDAR window built: {} -> {} ({}s) align={}, tz={}", start, end,
+                Duration.between(start, end).getSeconds(), cfg.calendarAlignTo(), zoneId);
+        return new PlannerWindow(start, end);
+    }
 
-        int value = windowOffset.overlapValue();
-        String unit = Objects.toString(windowOffset.overlapUnitCode(), "MINUTES").toUpperCase();
+    private ZoneId safeZone(String tz) {
+        try { return tz == null || tz.isBlank() ? ZoneOffset.UTC : ZoneId.of(tz); } catch (Exception e) { return ZoneOffset.UTC; }
+    }
 
-        // TODO 用枚举（Common模块）
-        Duration duration = switch (unit) {
-            case "SECONDS" -> Duration.ofSeconds(value);
-            case "MINUTES" -> Duration.ofMinutes(value);
-            case "HOURS" -> Duration.ofHours(value);
-            case "DAYS" -> Duration.ofDays(value);
+    private Instant alignToBoundary(Instant instant, String alignTo, ZoneId zone) {
+        if (alignTo == null || alignTo.isBlank()) return truncateToHour(instant, zone); // 默认按小时
+        String a = alignTo.toUpperCase();
+        ZonedDateTime zdt = instant.atZone(zone);
+        return switch (a) {
+            case "HOUR" -> zdt.withMinute(0).withSecond(0).withNano(0).toInstant();
+            case "DAY" -> zdt.toLocalDate().atStartOfDay(zone).toInstant();
+            case "WEEK" -> zdt.with(ChronoField.DAY_OF_WEEK, 1).toLocalDate().atStartOfDay(zone).toInstant(); // ISO 周一
+            case "MONTH" -> zdt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay(zone).toInstant();
+            default -> truncateToHour(instant, zone);
+        };
+    }
+
+    private Instant rollBackOneUnit(Instant end, String alignTo, ZoneId zone) {
+        if (alignTo == null) return end.minus(Duration.ofHours(1));
+        return switch (alignTo.toUpperCase()) {
+            case "HOUR" -> end.minus(Duration.ofHours(1));
+            case "DAY" -> end.minus(Duration.ofDays(1));
+            case "WEEK" -> end.minus(Duration.ofDays(7));
+            case "MONTH" -> end.atZone(zone).minusMonths(1).toInstant();
+            default -> end.minus(Duration.ofHours(1));
+        };
+    }
+
+    private Instant truncateToHour(Instant instant, ZoneId zone) {
+        ZonedDateTime z = instant.atZone(zone);
+        return z.withMinute(0).withSecond(0).withNano(0).toInstant();
+    }
+
+    /* ===================== COMMON HELPERS ===================== */
+
+    private Duration watermarkLag(ProvenanceConfigSnapshot.WindowOffsetConfig cfg) {
+        return Optional.ofNullable(cfg.watermarkLagSeconds()).map(Duration::ofSeconds).orElse(DEFAULT_SAFETY_LAG);
+    }
+
+    private Duration windowSize(ProvenanceConfigSnapshot.WindowOffsetConfig cfg) {
+        if (cfg.windowSizeValue() == null) return DEFAULT_HARVEST_WINDOW;
+        return parseDuration(cfg.windowSizeValue(), cfg.windowSizeUnitCode(), DEFAULT_HARVEST_WINDOW);
+    }
+
+    private Duration parseDuration(Integer value, String unitCode, Duration defaultIfNull) {
+        if (value == null) return defaultIfNull;
+        String u = (unitCode == null ? "HOUR" : unitCode).trim().toUpperCase(); // 支持单数/兼容性
+        return switch (u) {
+            case "SECOND", "SECONDS" -> Duration.ofSeconds(value);
+            case "MINUTE", "MINUTES" -> Duration.ofMinutes(value);
+            case "HOUR", "HOURS" -> Duration.ofHours(value);
+            case "DAY", "DAYS" -> Duration.ofDays(value);
             default -> {
-                log.warn("unknown overlap unit: {}, using minutes", unit);
-                yield Duration.ofMinutes(value);
+                log.warn("unknown time unit={}, fallback default", u);
+                yield defaultIfNull;
             }
         };
-
-        log.debug("parsed overlap duration: {} {} = {}min", value, unit, duration.toMinutes());
-        return duration;
     }
 
-    /**
-     * 解析回溯量配置。
-     */
-    private Duration parseLookbackDuration(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset) {
-        if (windowOffset.lookbackValue() == null) {
-            return Duration.ZERO;
-        }
-
-        int value = windowOffset.lookbackValue();
-        String unit = Objects.toString(windowOffset.lookbackUnitCode(), "MINUTES").toUpperCase();
-
-        Duration duration = switch (unit) {
-            case "SECONDS" -> Duration.ofSeconds(value);
-            case "MINUTES" -> Duration.ofMinutes(value);
-            case "HOURS" -> Duration.ofHours(value);
-            case "DAYS" -> Duration.ofDays(value);
-            default -> {
-                log.warn("unknown lookback unit: {}, using minutes", unit);
-                yield Duration.ofMinutes(value);
-            }
-        };
-
-        log.debug("parsed lookback duration: {} {} = {}min", value, unit, duration.toMinutes());
-        return duration;
-    }
-
-    /**
-     * 解析窗口大小配置。
-     */
-    private Duration parseWindowSize(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset) {
-        if (windowOffset.windowSizeValue() == null) {
-            return DEFAULT_HARVEST_WINDOW;
-        }
-
-        int value = windowOffset.windowSizeValue();
-        String unit = Objects.toString(windowOffset.windowSizeUnitCode(), "HOURS").toUpperCase();
-
-        // TODO
-        Duration duration = switch (unit) {
-            case "SECONDS" -> Duration.ofSeconds(value);
-            case "MINUTES" -> Duration.ofMinutes(value);
-            case "HOURS" -> Duration.ofHours(value);
-            case "DAYS" -> Duration.ofDays(value);
-            default -> {
-                log.warn("unknown window size unit: {}, using default", unit);
-                yield DEFAULT_HARVEST_WINDOW;
-            }
-        };
-
-        log.debug("parsed window size: {} {} = {}min", value, unit, duration.toMinutes());
-        return duration;
-    }
-
-    /**
-     * 应用窗口大小约束。
-     */
-    private Instant applyWindowSizeConstraints(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset,
+    private Instant applyWindowSpanConstraints(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                                Instant from,
                                                Instant to) {
-        Instant constrainedTo = to;
-
-        // 应用最大窗口限制
-        if (windowOffset.maxWindowSpanSeconds() != null) {
-            Duration maxWindow = Duration.ofSeconds(windowOffset.maxWindowSpanSeconds());
-            Instant maxTo = from.plus(maxWindow);
-            if (constrainedTo.isAfter(maxTo)) {
-                constrainedTo = maxTo;
-                log.debug("applied max window constraint: {}min", maxWindow.toMinutes());
+        Instant result = to;
+        if (cfg.maxWindowSpanSeconds() != null) {
+            Instant maxTo = from.plusSeconds(cfg.maxWindowSpanSeconds());
+            if (result.isAfter(maxTo)) {
+                result = maxTo;
+                log.debug("applied configured maxWindowSpanSeconds={}s", cfg.maxWindowSpanSeconds());
             }
         } else {
-            // 使用默认最大窗口限制
             Instant maxTo = from.plus(DEFAULT_MAX_WINDOW);
-            if (constrainedTo.isAfter(maxTo)) {
-                constrainedTo = maxTo;
-                log.debug("applied default max window constraint: {}min", DEFAULT_MAX_WINDOW.toMinutes());
+            if (result.isAfter(maxTo)) {
+                result = maxTo;
+                log.debug("applied default max window {}s", DEFAULT_MAX_WINDOW.getSeconds());
             }
         }
-
-        // 应用最小窗口限制（使用默认值，因为配置中没有专门的最小窗口字段）
+        // 最小窗口
         Instant minTo = from.plus(DEFAULT_MIN_WINDOW);
-        if (constrainedTo.isBefore(minTo)) {
-            constrainedTo = minTo;
-            log.debug("applied default min window constraint: {}min", DEFAULT_MIN_WINDOW.toMinutes());
+        if (result.isBefore(minTo)) {
+            result = minTo;
+            log.debug("applied min window {}s", DEFAULT_MIN_WINDOW.getSeconds());
         }
-
-        return constrainedTo;
+        return result;
     }
 }
-

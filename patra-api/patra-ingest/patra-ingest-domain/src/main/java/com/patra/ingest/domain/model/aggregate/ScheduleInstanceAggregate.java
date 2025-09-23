@@ -4,6 +4,8 @@ import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.SchedulerCode;
 import com.patra.ingest.domain.model.enums.TriggerType;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -11,6 +13,8 @@ import java.util.Objects;
 /**
  * 调度实例聚合根：记录一次计划触发及其初始快照。
  */
+@EqualsAndHashCode(callSuper = true)
+@Data
 public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
 
     private final SchedulerCode schedulerCode;
@@ -20,19 +24,20 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     private final Instant triggeredAt;
     private final ProvenanceCode provenanceCode;
     private String provenanceConfigSnapshotJson;
+    private String provenanceConfigHash;
     private String exprProtoHash;
     private String exprProtoSnapshotJson;
 
     private ScheduleInstanceAggregate(Long id,
-                                       SchedulerCode schedulerCode,
-                                       String schedulerJobId,
-                                       String schedulerLogId,
-                                       TriggerType triggerType,
-                                       Instant triggeredAt,
-                                       ProvenanceCode provenanceCode,
-                                       String provenanceConfigSnapshotJson,
-                                       String exprProtoHash,
-                                       String exprProtoSnapshotJson) {
+                                      SchedulerCode schedulerCode,
+                                      String schedulerJobId,
+                                      String schedulerLogId,
+                                      TriggerType triggerType,
+                                      Instant triggeredAt,
+                                      ProvenanceCode provenanceCode,
+                                      String provenanceConfigSnapshotJson,
+                                      String exprProtoHash,
+                                      String exprProtoSnapshotJson) {
         super(id);
         this.schedulerCode = Objects.requireNonNull(schedulerCode, "schedulerCode不能为空");
         this.schedulerJobId = schedulerJobId;
@@ -64,16 +69,16 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     }
 
     public static ScheduleInstanceAggregate restore(Long id,
-                                                     SchedulerCode schedulerCode,
-                                                     String schedulerJobId,
-                                                     String schedulerLogId,
-                                                     TriggerType triggerType,
-                                                     Instant triggeredAt,
-                                                     ProvenanceCode provenanceCode,
-                                                     String provenanceConfigSnapshotJson,
-                                                     String exprProtoHash,
-                                                     String exprProtoSnapshotJson,
-                                                     long version) {
+                                                    SchedulerCode schedulerCode,
+                                                    String schedulerJobId,
+                                                    String schedulerLogId,
+                                                    TriggerType triggerType,
+                                                    Instant triggeredAt,
+                                                    ProvenanceCode provenanceCode,
+                                                    String provenanceConfigSnapshotJson,
+                                                    String exprProtoHash,
+                                                    String exprProtoSnapshotJson,
+                                                    long version) {
         ScheduleInstanceAggregate aggregate = new ScheduleInstanceAggregate(id,
                 schedulerCode,
                 schedulerJobId,
@@ -91,47 +96,13 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     /**
      * 更新快照信息，便于回溯。
      */
-    public void recordSnapshots(String provenanceConfigSnapshotJson,
+    public void recordSnapshots(String provenanceConfigHash,
+                                String provenanceConfigSnapshotJson,
                                 String exprProtoHash,
                                 String exprProtoSnapshotJson) {
+        this.provenanceConfigHash = provenanceConfigHash;
         this.provenanceConfigSnapshotJson = provenanceConfigSnapshotJson;
         this.exprProtoHash = exprProtoHash;
         this.exprProtoSnapshotJson = exprProtoSnapshotJson;
-    }
-
-    public SchedulerCode getSchedulerCode() {
-        return schedulerCode;
-    }
-
-    public String getSchedulerJobId() {
-        return schedulerJobId;
-    }
-
-    public String getSchedulerLogId() {
-        return schedulerLogId;
-    }
-
-    public TriggerType getTriggerType() {
-        return triggerType;
-    }
-
-    public Instant getTriggeredAt() {
-        return triggeredAt;
-    }
-
-    public ProvenanceCode getProvenanceCode() {
-        return provenanceCode;
-    }
-
-    public String getProvenanceConfigSnapshotJson() {
-        return provenanceConfigSnapshotJson;
-    }
-
-    public String getExprProtoHash() {
-        return exprProtoHash;
-    }
-
-    public String getExprProtoSnapshotJson() {
-        return exprProtoSnapshotJson;
     }
 }

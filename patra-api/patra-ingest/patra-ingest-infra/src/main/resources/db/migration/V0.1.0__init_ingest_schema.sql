@@ -69,16 +69,21 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `endpoint_name`              VARCHAR(64)     NULL COMMENT '来源端点标识（search/detail/metrics 等），辅助区分多端点策略',
 
     `operation_code`             VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation)：采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
-    `expr_proto_hash`            CHAR(64)        NOT NULL COMMENT '表达式原型哈希',
-    `expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型 AST 快照',
-    `provenance_config_snapshot` JSON            NULL COMMENT '来源配置/窗口/限流/重试等快照（中立模型）',
-    `provenance_config_hash`     CHAR(64)        NULL COMMENT '编译后来源配置哈希（auth/pagination/window/retry/rate/batching 等规范化哈希；回放/复用判定）',
+    `expr_proto_hash`            CHAR(64)        NOT NULL COMMENT '表达式原型哈希：对“规范化后的原型AST”计算出的指纹；用于幂等/快速比较；与 expr_proto_snapshot 一一对应',
+
+    `expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型快照（AST，JSON）：不含任何切片/局部化条件的“全局表达式树”；用于回放与审计（从该原型派生多个 slice）',
+
+    `provenance_config_snapshot` JSON            NULL COMMENT '来源配置快照（中立模型，JSON）：将 reg_prov_* 的鉴权/分页/时间窗/限流/重试/批处理等配置编译为执行期不变的快照',
+
+    `provenance_config_hash`     CHAR(64)        NULL COMMENT '来源配置快照哈希：对规范化后的 provenance_config_snapshot 计算出的指纹；用于复用判定与变更检测',
+
+    `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT '切片策略：TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID 等；决定如何从原型生成多个 slice',
+
+    `slice_params`               JSON            NULL COMMENT '切片参数：与切片策略配套的细节（如步长、时间区、landmark、预算上限等）；仅用于生成 slice，不直接参与执行',
 
     `window_from`                TIMESTAMP(6)    NULL COMMENT '总窗起(含,UTC)',
     `window_to`                  TIMESTAMP(6)    NULL COMMENT '总窗止(不含,UTC)',
 
-    `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_slice_strategy)：TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID',
-    `slice_params`               JSON            NULL COMMENT '切片参数：step/zone/landmarks/budget 等',
 
     `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status)：DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED',
 
@@ -127,12 +132,13 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     `provenance_code`      VARCHAR(64)     NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（加速按来源过滤）',
 
     `slice_no`             INT             NOT NULL COMMENT '切片序号(0..N)',
-    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '切片签名哈希(规范化的通用边界JSON)',
-    `slice_spec`           JSON            NOT NULL COMMENT '通用边界说明：时间/ID区间/landmark/预算等',
+    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '切片签名哈希：仅对 slice_spec（边界JSON）做规范化后计算；用于判重/去重（同一 plan 下相同边界不重复生成）',
 
-    `expr_hash`            CHAR(64)        NOT NULL COMMENT '局部化表达式哈希',
-    `expr_snapshot`        JSON            NULL COMMENT '局部化表达式 AST 快照（含本Slice边界）',
+    `slice_spec`           JSON            NOT NULL COMMENT '切片边界说明（JSON）：声明本 slice 的执行范围与约束（时间窗口/ID 区间/游标landmark/预算等），不含业务表达式逻辑',
 
+    `expr_hash`            CHAR(64)        NOT NULL COMMENT '局部化表达式哈希：对“规范化后的局部化AST”计算出的指纹；通常与 slice_signature_hash 一起变化',
+
+    `expr_snapshot`        JSON            NULL COMMENT '局部化表达式快照（AST，JSON）：在 plan 的原型上注入本 slice 的边界条件后的“可直接执行表达式树”；slice 自带可重放语义',
     `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_slice_status)：PENDING/DISPATCHED/EXECUTING/SUCCEEDED/FAILED/PARTIAL/CANCELLED',
 
     -- 审计字段
@@ -160,6 +166,8 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='计划切片：通用分片（时间/ID/token/预算），是并行与幂等的边界；不创建物理外键';
+
+
 -- ======================================================================
 -- 4) 任务：每个切片生成一个任务；支持强幂等与调度/执行状态
 -- ======================================================================

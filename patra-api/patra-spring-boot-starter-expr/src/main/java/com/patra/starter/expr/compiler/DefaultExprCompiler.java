@@ -41,7 +41,7 @@ public class DefaultExprCompiler implements ExprCompiler {
         Objects.requireNonNull(request, "request");
 
         ProvenanceSnapshot snapshot = snapshotLoader.load(request.provenance(), request.taskType(), request.operationCode());
-        Expr normalized = normalizer.normalize(request.expression(), snapshot, request.options().strict());
+        Expr normalized = normalizer.normalize(request.expression(), request.options().strict());
 
         List<Issue> issues = capabilityChecker.check(normalized, snapshot, request.options().strict());
         List<Issue> warnings = new ArrayList<>();
@@ -56,7 +56,7 @@ public class DefaultExprCompiler implements ExprCompiler {
         ValidationReport report = new ValidationReport(warnings, errors);
 
         if (!errors.isEmpty()) {
-            return new CompileResult("", Map.of(), report, toRef(snapshot, request.operationCode()), request.options().traceEnabled() ? new RenderTrace(List.of()) : null);
+            return new CompileResult("", Map.of(), normalized, report, toRef(snapshot, request.operationCode()), request.options().traceEnabled() ? new RenderTrace(List.of()) : null);
         }
 
         ExprRenderer.RenderOutcome outcome = renderer.render(normalized, snapshot, request.options().traceEnabled());
@@ -70,11 +70,11 @@ public class DefaultExprCompiler implements ExprCompiler {
                     "Rendered query exceeds length budget",
                     Map.of("max", request.options().maxQueryLength(), "actual", outcome.query().length())));
             ValidationReport finalReport = new ValidationReport(mergedWarnings, mergedErrors);
-            return new CompileResult("", Map.of(), finalReport, toRef(snapshot, request.operationCode()), outcome.trace());
+            return new CompileResult("", Map.of(), normalized, finalReport, toRef(snapshot, request.operationCode()), outcome.trace());
         }
 
         ValidationReport finalReport = new ValidationReport(mergedWarnings, mergedErrors);
-        return new CompileResult(outcome.query(), outcome.params(), finalReport, toRef(snapshot, request.operationCode()), outcome.trace());
+        return new CompileResult(outcome.query(), outcome.params(), normalized, finalReport, toRef(snapshot, request.operationCode()), outcome.trace());
     }
 
     private SnapshotRef toRef(ProvenanceSnapshot snapshot, String operationCode) {

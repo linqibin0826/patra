@@ -21,7 +21,7 @@ import java.util.Set;
 public class DefaultExprNormalizer implements ExprNormalizer {
 
     @Override
-    public Expr normalize(Expr expression, ProvenanceSnapshot snapshot, boolean strictMode) {
+    public Expr normalize(Expr expression, boolean strictMode) {
         Objects.requireNonNull(expression, "expression");
         return normalizeNode(expression);
     }

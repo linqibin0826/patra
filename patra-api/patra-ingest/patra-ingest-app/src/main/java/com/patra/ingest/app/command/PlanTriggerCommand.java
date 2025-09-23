@@ -18,6 +18,7 @@ public record PlanTriggerCommand(
         ProvenanceCode provenanceCode,
         EndpointCode endpointCode,
         OperationType operationType,
+        String step, /*PT6H  分步的切片大小*/
         TriggerType triggerType,
         SchedulerCode schedulerCode,
         String schedulerJobId,
