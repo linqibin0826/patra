@@ -3,6 +3,7 @@ package com.patra.registry.infra.persistence.repository;
 import com.patra.registry.domain.model.aggregate.Dictionary;
 import com.patra.registry.domain.model.vo.DictionaryAlias;
 import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
+import com.patra.registry.domain.model.vo.DictionaryId;
 import com.patra.registry.domain.model.vo.DictionaryItem;
 import com.patra.registry.domain.model.vo.DictionaryType;
 import com.patra.registry.domain.port.DictionaryRepository;
@@ -87,9 +88,9 @@ public class DictionaryRepositoryMpImpl implements DictionaryRepository {
             List<DictionaryAlias> aliases = entityConverter.toAliasDomainList(aliasEntities);
             log.debug("Repository: Found {} aliases for type: typeCode={}", aliases.size(), typeCode);
             
-            // Create and return dictionary aggregate
-            Dictionary dictionary = new Dictionary(type, items, aliases);
-            log.debug("Repository: Successfully created dictionary aggregate: typeCode={}, itemCount={}, aliasCount={}", 
+            // Create and return dictionary aggregate using record constructor
+            Dictionary dictionary = new Dictionary(DictionaryId.of(type), type, items, aliases);
+            log.debug("Repository: Successfully created dictionary aggregate: typeCode={}, itemCount={}, aliasCount={}",
                      typeCode, items.size(), aliases.size());
             return Optional.of(dictionary);
             

@@ -21,7 +21,6 @@ import com.patra.registry.domain.model.vo.provenance.RateLimitConfig;
 import com.patra.registry.domain.model.vo.provenance.RetryConfig;
 import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
@@ -52,14 +51,5 @@ public interface ProvenanceQueryAssembler {
 
     List<CredentialQuery> toCredentialQueries(List<Credential> credentials);
 
-    @Mapping(target = "provenance", source = "provenance")
-    @Mapping(target = "endpoint", source = "endpoint")
-    @Mapping(target = "windowOffset", source = "windowOffset")
-    @Mapping(target = "pagination", source = "pagination")
-    @Mapping(target = "http", source = "http")
-    @Mapping(target = "batching", source = "batching")
-    @Mapping(target = "retry", source = "retry")
-    @Mapping(target = "rateLimit", source = "rateLimit")
-    @Mapping(target = "credentials", source = "credentials")
     ProvenanceConfigQuery toQuery(ProvenanceConfiguration configuration);
 }

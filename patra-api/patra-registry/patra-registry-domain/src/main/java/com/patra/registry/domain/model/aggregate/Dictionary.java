@@ -1,51 +1,67 @@
 package com.patra.registry.domain.model.aggregate;
 
 import com.patra.registry.domain.model.vo.DictionaryAlias;
+import com.patra.registry.domain.model.vo.DictionaryId;
 import com.patra.registry.domain.model.vo.DictionaryItem;
 import com.patra.registry.domain.model.vo.DictionaryType;
 import com.patra.registry.domain.model.vo.ValidationResult;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * 字典聚合根（仅查询侧）。
+ * 字典聚合：封装字典类型、字典项与别名的组合视图。
  *
- * <p>用于 CQRS 的查询操作，不支持命令修改。聚合封装类型元数据、字典项与别名，
+ * <p>只读聚合，用于 CQRS 查询侧。封装字典类型元数据、字典项与别名，
  * 并提供查询、校验与业务规则相关的领域逻辑。</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
-public class Dictionary {
-    
-    /** 字典类型元数据 */
-    private final DictionaryType type;
-    
-    /** 字典项列表（构造后不可变） */
-    private final List<DictionaryItem> items;
-    
-    /** 字典项的外部系统别名列表（构造后不可变） */
-    private final List<DictionaryAlias> aliases;
-    
-    /**
-     * 构造函数（含类型、项与别名）。
-     */
-    public Dictionary(DictionaryType type, List<DictionaryItem> items, List<DictionaryAlias> aliases) {
+public record Dictionary(
+        DictionaryId id,
+        DictionaryType type,
+        List<DictionaryItem> items,
+        List<DictionaryAlias> aliases
+) {
+    public Dictionary {
         if (type == null) {
             throw new IllegalArgumentException("Dictionary type cannot be null");
         }
-        this.type = type;
-        this.items = items != null ? Collections.unmodifiableList(new ArrayList<>(items)) : Collections.emptyList();
-        this.aliases = aliases != null ? Collections.unmodifiableList(new ArrayList<>(aliases)) : Collections.emptyList();
+        if (id == null) {
+            id = DictionaryId.of(type);
+        }
+        items = items == null ? List.of() : List.copyOf(items);
+        aliases = aliases == null ? List.of() : List.copyOf(aliases);
+
+        // 验证ID与类型的一致性
+        if (!id.typeCode().equals(type.typeCode())) {
+            throw new IllegalArgumentException("Dictionary ID type code must match dictionary type code");
+        }
+
+        // 检查是否存在多个默认项（数据完整性风险）
+        long defaultCount = items.stream().filter(DictionaryItem::isDefault).count();
+        if (defaultCount > 1) {
+            throw new IllegalArgumentException("Dictionary cannot have multiple default items: " + type.typeCode());
+        }
     }
-    
-    /** 仅含类型与项（无别名）的构造函数。 */
-    public Dictionary(DictionaryType type, List<DictionaryItem> items) {
-        this(type, items, Collections.emptyList());
+
+    /* ========== Getters ========== */
+
+    /** 获取类型元数据。 */
+    public DictionaryType getType() {
+        return type;
+    }
+
+    /** 获取全部字典项（不可变视图）。 */
+    public List<DictionaryItem> getItems() {
+        return items;
+    }
+
+    /** 获取全部别名（不可变视图）。 */
+    public List<DictionaryAlias> getAliases() {
+        return aliases;
     }
     
     /**
@@ -159,19 +175,5 @@ public class Dictionary {
     public int getTotalItemCount() {
         return items.size();
     }
-    
-    /** 获取类型元数据。 */
-    public DictionaryType getType() {
-        return type;
-    }
-    
-    /** 获取全部字典项（不可变视图）。 */
-    public List<DictionaryItem> getItems() {
-        return items;
-    }
-    
-    /** 获取全部别名（不可变视图）。 */
-    public List<DictionaryAlias> getAliases() {
-        return aliases;
-    }
+
 }
