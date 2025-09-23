@@ -1,5 +1,6 @@
 package com.patra.ingest.app.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -10,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class IngestAppConfig {
-    
-    // 配置类，Spring会自动扫描并注册标记了@Service的应用服务
-    
+
+    // 组件扫描会注册 @Component/@Service 的实现，此处无需显式声明 Bean
+
 }

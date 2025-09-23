@@ -292,7 +292,7 @@
 ```json
 {
   "provenanceCode": "pubmed",
-  "endpointName": "search",
+  "endpointCode": "search",
   "operation": "HARVEST",
   "http": {
     "method": "GET",

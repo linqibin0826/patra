@@ -10,16 +10,8 @@ import com.patra.registry.api.rpc.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.rpc.dto.provenance.RateLimitConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.RetryConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.WindowOffsetResp;
-import com.patra.registry.contract.query.view.provenance.BatchingConfigQuery;
-import com.patra.registry.contract.query.view.provenance.CredentialQuery;
-import com.patra.registry.contract.query.view.provenance.EndpointDefinitionQuery;
-import com.patra.registry.contract.query.view.provenance.HttpConfigQuery;
-import com.patra.registry.contract.query.view.provenance.PaginationConfigQuery;
+import com.patra.registry.contract.query.view.provenance.*;
 import com.patra.registry.contract.query.view.provenance.ProvenanceConfigQuery;
-import com.patra.registry.contract.query.view.provenance.ProvenanceQuery;
-import com.patra.registry.contract.query.view.provenance.RateLimitConfigQuery;
-import com.patra.registry.contract.query.view.provenance.RetryConfigQuery;
-import com.patra.registry.contract.query.view.provenance.WindowOffsetQuery;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 

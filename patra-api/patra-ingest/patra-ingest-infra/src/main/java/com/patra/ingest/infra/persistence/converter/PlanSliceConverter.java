@@ -1,43 +1,49 @@
 package com.patra.ingest.infra.persistence.converter;
 
-import com.patra.ingest.domain.model.aggregate.PlanSlice;
+import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.SliceStatus;
-import com.patra.ingest.domain.model.vo.SliceSpec;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
 import org.springframework.stereotype.Component;
 
+/**
+ * 计划切片转换器。
+ */
 @Component
 public class PlanSliceConverter {
-    public PlanSlice toDomain(PlanSliceDO source){
-        if(source==null) return null;
-        SliceStatus status = source.getStatusCode()==null? null : SliceStatus.valueOf(source.getStatusCode());
-        // sliceSpec 先不反序列化为复杂结构，留待后续实现
-        SliceSpec spec = null; // TODO: 从source.getSliceSpec() JSON反序列化
-        return new PlanSlice(
-            source.getId(),
-            source.getPlanId(),
-            source.getProvenanceCode(),
-            source.getSliceNo(),
-            source.getSliceSignatureHash(),
-            spec,
-            source.getExprHash(),
-            source.getExprSnapshot(),
-            status
-        );
+
+    public PlanSliceDO toEntity(PlanSliceAggregate aggregate) {
+        PlanSliceDO entity = new PlanSliceDO();
+        entity.setId(aggregate.getId());
+        entity.setPlanId(aggregate.getPlanId());
+        entity.setProvenanceCode(aggregate.getProvenanceCode());
+        entity.setSliceNo(aggregate.getSequence());
+        entity.setSliceSignatureHash(aggregate.getSliceSignatureHash());
+        entity.setSliceSpec(aggregate.getSliceSpecJson());
+        entity.setExprHash(aggregate.getExprHash());
+        entity.setExprSnapshot(aggregate.getExprSnapshotJson());
+        entity.setStatusCode(aggregate.getStatus().name());
+        entity.setVersion(aggregate.getVersion());
+        return entity;
     }
-    
-    public PlanSliceDO toDO(PlanSlice slice){
-        if(slice==null) return null;
-        return PlanSliceDO.builder()
-            .id(slice.getId())
-            .planId(slice.getPlanId())
-            .provenanceCode(slice.getProvenanceCode())
-            .sliceNo(slice.getSliceNo())
-            .sliceSignatureHash(slice.getSliceSignatureHash())
-            .sliceSpec(null) // TODO: 序列化slice.getSliceSpec()为JSON
-            .exprHash(slice.getExprHash())
-            .exprSnapshot(slice.getExprSnapshot())
-            .statusCode(slice.getStatus()==null? null : slice.getStatus().name())
-            .build();
+
+    public PlanSliceAggregate toAggregate(PlanSliceDO entity) {
+        if (entity == null) {
+            return null;
+        }
+        SliceStatus status = entity.getStatusCode() == null
+                ? SliceStatus.PENDING
+                : SliceStatus.valueOf(entity.getStatusCode());
+        long version = entity.getVersion() == null ? 0L : entity.getVersion();
+        return PlanSliceAggregate.restore(
+                entity.getId(),
+                entity.getPlanId(),
+                entity.getProvenanceCode(),
+                entity.getSliceNo() == null ? 0 : entity.getSliceNo(),
+                entity.getSliceSignatureHash(),
+                entity.getSliceSpec(),
+                entity.getExprHash(),
+                entity.getExprSnapshot(),
+                status,
+                version);
     }
 }

@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.ingest.domain.model.aggregate.ScheduleInstance;
+import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 
 public interface ScheduleInstanceRepository {
-    ScheduleInstance save(ScheduleInstance instance);
+    ScheduleInstanceAggregate save(ScheduleInstanceAggregate instance);
 }
