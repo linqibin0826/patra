@@ -1,333 +1,154 @@
-# 《Patra Ingest · 切窗（Window Slicing）策略设计（最终版）》
+# 《Plan 阶段窗口确定设计（基于 Cursor / 用户入参 / window\_offset）》
 
-> 目标：把“如何把**一次采集总窗口**切成**若干可并行、可重放、可幂等**的执行切片（PlanSlice）”讲到操作层级，**直接对应你的 SQL 结构**：`ing_plan` / `ing_plan_slice` / `ing_cursor(_event)` 与 Registry（唯一真实数据来源）的四类表（表达式字段字典、能力、渲染规则、参数映射）以及 starter-expr 的 AST 原型/局部化语义。
+## 1. 目标与输入/输出
 
----
+* **目标**：在 Plan 阶段计算出**确定的总窗口**并落库到 `ing_plan.window_from / window_to`，后续切片器据此进行切窗。
+* **输入**
 
-## 0. 范围与结论
+    * **用户入参**：`Instant windowFrom`、`Instant windowTo`（可空）。
+    * **水位表**：`ing_cursor`（必要时参考 `ing_cursor_event` 以审计）。
+    * **Registry**：`reg_prov_window_offset_cfg`（当前生效配置）。
+* **输出**
 
-* **范围**：HARVEST / BACKFILL / UPDATE 三类操作的“切窗策略选择与具体切法”。
-* **结论**：切窗分四大策略 **TIME → CURSOR\_LANDMARK → ID\_RANGE → VOLUME\_BUDGET/HYBRID**（只做时间类型，但需要抽象，可以扩展），以**运行期快照**为基石、用**预算/观测**自适应细分或合并，**先看水位再切窗**，并将每个切片的边界落在 `ing_plan_slice.slice_spec`，局部化表达式落在 `ing_plan_slice.expr_snapshot`。
-* **关键不变量**：UTC、半开区间 `[from, to)`、幂等键稳定、游标仅前进（BACKFILL 独立命名空间）。
+    * `ing_plan.window_from`（UTC，含）
+    * `ing_plan.window_to`（UTC，不含）
 
----
+## 2. 配置选择（window\_offset 的生效记录）
 
-## 1. 名词与字段映射（对齐 SQL）
+    provenanceConfigSnapshot中的值
 
-* **Plan 层（`ing_plan`）**
+## 3. HARVEST（增量）窗口确定
 
-    * `expr_proto_snapshot`：**表达式原型**（AST，JSON，不含切片边界）
-    * `expr_proto_hash`：原型 AST 的规范化哈希
-    * `window_from/to`：总窗口建议（UTC，\[from,to)）
-    * `slice_strategy_code`：TIME / ID\_RANGE / CURSOR\_LANDMARK / VOLUME\_BUDGET / HYBRID
-    * `slice_params`：策略参数（步长、目标量、预算、排序、安全延迟等）
-    * `provenance_config_snapshot/hash`：来源配置执行期快照/指纹
+**语义**：从“前向水位”推进到“当前安全上界”，并以 `lookback` 轻度回看覆盖迟到数据。窗口为 **UTC 半开** `[from, to)`。
 
-* **Slice 层（`ing_plan_slice`）**
+### 3.1 游标定位
 
-    * `slice_spec`：**切片边界/步进行为**（JSON，非业务条件）
-    * `slice_signature_hash`：对 `slice_spec` 规范化后的指纹（去重）
-    * `expr_snapshot`：**局部化表达式**（= 原型 + 本 slice 的边界）
-    * `expr_hash`：局部化 AST 的规范化哈希
+* `operation_code=HARVEST`。
+* `cursor_type=TIME`；`cursor_key`：优先使用 `offset_field_name`（若指向时间字段），否则使用 `default_date_field_name`（如
+  PubMed: EDAT/PDAT/MHDA；Crossref: indexed-date）。
+* 命名空间：按项目约定（常用 `EXPR`：`namespace_key=expr_hash`；或 `GLOBAL` 共享）。用于从 `ing_cursor` 读取“前向水位”。
 
-* **水位（`ing_cursor` / `_event`）**
+### 3.2 计算步骤
 
-    * 唯一键：(provenance\_code, operation\_code, cursor\_key, namespace\_scope\_code, namespace\_key)
-    * `cursor_type_code`：TIME / ID / TOKEN；`cursor_value` 与 `normalized_*`
-    * **只前进**：乐观锁版本；事件先写、当前值后更
+1. **安全上界**
 
----
+* `nowSafe = nowUTC - watermark_lag_seconds`（若为空则为 0）。
+* 上界候选：`toCandidate = min(user.windowTo?, nowSafe)`（`?` 表示可空；为空则忽略该项）。
 
-# 二、策略抽象设计（便于扩展）
+2. **下界候选**
 
-> 目标：**现在只实现 TIME**，但抽象到位，后续加 **CURSOR\_LANDMARK / ID\_RANGE / VOLUME\_BUDGET / HYBRID** 时“新增类、加枚举，不改老代码”。
+* 若存在游标 `harvestWM`：
 
-## 1) DDD 分层落点（要点）
+    * 先**回看**：`lowerByCursor = harvestWM - lookback`（lookback 可空；为空视为 0）。
+    * 再与用户下界取最大：`fromCandidate = max(lowerByCursor, user.windowFrom?)`。
+* 若不存在游标：
 
-* **DOMAIN（纯内核）**：策略接口 + 值对象（SliceSpec/Window/Range/Cursor/Budget/Hint），与框架无关
-* **APP（用例）**：PlannerUseCase 调 `SliceStrategyRegistry` 产 slice 集；ExecutorUseCase 只消费现成 `slice_spec`
+    * 若用户给了下界：`fromCandidate = user.windowFrom`；
+    * 否则**默认回退**：按 `window_size_value/unit` 回看一窗：`fromCandidate = nowSafe - 1×window_size`。
 
-## 2) 接口与注册中心（核心）
+3. **模式对齐（若 CALENDAR）**
 
-### 策略枚举
+* `from = floorAlign(fromCandidate, calendar_align_to)`；
+* `to   = floorAlign(toCandidate,   calendar_align_to)`；
 
-```java
-public enum SliceStrategyCode { TIME, CURSOR_LANDMARK, ID_RANGE, VOLUME_BUDGET, HYBRID }
-```
+> 对齐规则：向**下**取整，使 `[from,to)` 左闭右开；若对齐后二者相等 → 空窗口。
 
-### 值对象（示意）
+4. **合法性校验与产出**
 
-```java
-public record WindowSpec(Instant from, Instant to, Boundary fromBoundary, Boundary toBoundary,
-                         ZoneId zone, TimePrecision precision) {}
-public record RangeSpec(String key, String from, String to, Boundary fromBoundary, Boundary toBoundary) {}
-public record CursorSpec(CursorType type, String startToken, Long startOffset, Integer pageSize,
-                         StopCondition stop) {}
-public record BudgetSpec(Integer maxRequests, Integer maxRecords, Integer maxDurationSec, Priority priority) {}
-public record SliceHints(Integer expectedPageSize, String order, Integer safetyLagSec, Boolean explore) {}
+* 若 `from >= to` → 空窗口（Plan 可直接返回 0 切片并记录原因）；
+* 否则写入 `ing_plan.window_from = from`、`ing_plan.window_to = to`。
+* 审计记录：所用游标值、lookback、用户裁剪、对齐动作、`nowSafe` 等。
 
-public record SliceSpecPayload( // ↔ ing_plan_slice.slice_spec JSON
-    SliceStrategyCode strategy,
-    WindowSpec window,
-    RangeSpec range,
-    CursorSpec cursor,
-    BudgetSpec budget,
-    SliceHints hints
-) {}
-```
+> **说明**：`overlap` 与 `max_window_span_seconds` 不在 Plan 总窗强行应用，而在**切片阶段**约束**单 slice** 的重叠与跨度。
 
-### 策略接口（Sealed Interface + 扩展点）
+## 4. BACKFILL（回填）窗口确定
 
-```java
-public sealed interface SliceStrategy permits TimeSliceStrategy, CursorSliceStrategy, IdRangeSliceStrategy,
-                                           VolumeSliceStrategy, HybridSliceStrategy {
-    SliceStrategyCode code();
-    List<SliceSpecPayload> planSlices(PlanContext ctx);
-    // 可选：估算器与再切片建议
-    default Optional<ResliceAdvice> resliceIfNeeded(ExecutionObservation obs) { return Optional.empty(); }
-}
-```
+**语义**：补齐历史空洞，不影响“前向增量”的水位。窗口为 **UTC 半开** `[from, to)`。
 
+### 4.1 游标与锚点
 
+* `operation_code=BACKFILL`。
+* 使用**独立的回填进度游标**（建议命名空间 `CUSTOM`，`namespace_key` 取“回填活动ID/planId 的哈希”），`cursor_type=TIME`，
+  `cursor_key` 通常与 HARVEST 相同的时间字段。
+* 查询**前向增量水位**（HARVEST 的进度）作为天然上限 `forwardWM`。
 
-### 策略注册表（Spring Bean + Map）
+### 4.2 计算步骤
 
-```java
-@Component
-public class SliceStrategyRegistry {
-    private final Map<SliceStrategyCode, SliceStrategy> strategies;
-    public SliceStrategyRegistry(List<SliceStrategy> beans) {
-        this.strategies = beans.stream().collect(Collectors.toUnmodifiableMap(SliceStrategy::code, it -> it));
-    }
-    public SliceStrategy get(SliceStrategyCode code) { return Objects.requireNonNull(strategies.get(code)); }
-}
-```
+1. **上界锚点**
 
-> **扩展方式**：新增策略 = 新建一个实现类（如 `CursorSliceStrategy`），`code()` 返回对应枚举，Spring 自动注入到注册表。**PlannerUseCase 无需修改**。
+* `nowSafe = nowUTC - watermark_lag_seconds`。
+* `upperAnchor = min(user.windowTo?, forwardWM?, nowSafe)`；**回填不得超过这条锚线**（避免与增量重叠过深或读到未稳定数据）。
 
-## 3) TIME 策略的默认实现（算法要点）
+2. **下界候选**
 
-* **归一总窗**：根据水位/请求/now−safetyLag，统一 UTC、`[from,to)`
-* **初切**：按 `step` 线性切；每片注入 AST 的 `RANGE(updated_at)` → 生成 `expr_snapshot/expr_hash`
-* **估算与二分**：
+* 若存在回填游标 `backfillWM`：`fromCandidate = max(backfillWM, user.windowFrom?)`；
+* 若不存在回填游标：
 
-    * 优先 `count` 能力；否则“首页外推/历史回归”；
-    * 超阈值则二分至 `minStep`；极小可合并
-* **乱序防护**：若源无排序保障，自动加 `overlapDelta` 与执行端本地过滤
-* **预算落库**：写入 `slice_spec.budget`，作为执行端硬限
-* **签名**：`slice_signature_hash = hash(normalize(slice_spec))`
+    * 若用户给了下界：`fromCandidate = user.windowFrom`；
+    * 否则**默认回退**：以 `upperAnchor - 1×window_size` 作为下界（至少一窗的回看量）。
 
-> **resliceIfNeeded(obs)**：执行端反馈页深/429/体积/错误率 → 返回 `[剩余窗拆分]` 建议。
+3. **边界收敛**
 
-## 4) 其他策略的骨架（先留接口，后加实现）
+* 防越界：`fromCandidate = min(fromCandidate, upperAnchor)`；
+* 若为 CALENDAR：
 
-* **CURSOR\_LANDMARK**：`CursorSpec{type, startToken/offset, pageSize, stopCondition}`
-* **ID\_RANGE**：`RangeSpec{key, from, to}`（或哈希分桶）
-* **VOLUME\_BUDGET**：只设 `budget` + `hints.explore=true`
-* **HYBRID**：Window + Cursor + Budget 同时生效
+    * `from = floorAlign(fromCandidate, calendar_align_to)`；
+    * `to   = floorAlign(upperAnchor,   calendar_align_to)`。
 
-## 5) 关键协作对象（建议抽象）
+4. **合法性校验与产出**
 
-* **WatermarkPort**：读 `ing_cursor`（Planner）、写事件与当前值（Executor）
-* **RegistryPort**：读取 `reg_prov_*` 能力、渲染映射
-* **ExprPort**：AST 注入与规范化哈希
-* **Estimator**：记录量/页数估算（可插拔）
-* **Normalizer**：`slice_spec` 规范化（生成签名）
-* **Validator**：单 slice 规则校验（生成失败直接拒绝入库）
+* 若 `from >= to` → 空窗口；
+* 否则写入 `ing_plan.window_from = from`、`ing_plan.window_to = to`。
+* 审计记录：`forwardWM`、`backfillWM`、用户裁剪、对齐动作、`nowSafe` 等。
 
----
+> **说明**：回填不应“回退”前向水位；它维护的是**自己的进度游标**（与增量隔离）。`overlap` 仍在切片阶段使用。
 
-# 三、入参 → 用例编排（落到 App 层）
+## 5. UPDATE（刷新/核对）窗口确定
 
-## PlannerUseCase（伪流程）
+**语义**：对既有记录再抓取与校对。Plan 需要给出本次 UPDATE 的时间窗口，用于**节奏控制与统计口径**；是否作为筛选条件取决于“时间驱动
+vs ID 驱动”模式。
 
-3. WatermarkPort 读取水位（不写）
-4. 构建 `PlanContext` → `SliceStrategyRegistry.get(force)` → `planSlices(ctx)`
-5. 逐片：`validate` → 计算 `slice_signature_hash` → 落 `ing_plan_slice`（同时落局部化 `expr_snapshot/expr_hash`）
-6. 为每片落 `ing_task(QUEUED)`
-7. 返回结果（切片数、跳过/去重数、预计请求量）
+### 5.1 模式判定
 
+* 满足以下任一情况 → **时间驱动 UPDATE**：
+
+    * `cfg.offset_type_code=DATE` 且用户给了 `windowFrom/windowTo`；
+    * 或明确要求按时间巡检。
+* 其他情况 → **ID 驱动 UPDATE**（更常见；候选 ID 来自读侧/信号），时间窗仅用于**分摊与限流**。
+
+### 5.2 时间驱动 UPDATE（与 HARVEST 类似，但推进的是“刷新检查时间”）
+
+* 游标：`operation_code=UPDATE`；`cursor_type=TIME`；`cursor_key='refresh_checked_at'`（约定名）；命名空间通常取 `GLOBAL` 或
+  `EXPR`。
+* 计算：
+
+    1. `nowSafe = nowUTC - watermark_lag_seconds`；
+    2. `toCandidate = min(user.windowTo?, nowSafe)`；
+    3. `fromCandidate = max(updateWM?, user.windowFrom?)`；若无游标且无下界，默认
+       `fromCandidate = nowSafe - 1×window_size`；
+    4. 若 CALENDAR → 各自向下对齐；
+    5. 若 `from >= to` → 空窗口；否则写 `ing_plan.window_from/to`。
+* 注：推进的是“刷新检查时间”的游标，**不影响业务 updated 水位**。
+
+### 5.3 ID 驱动 UPDATE（常态）
+
+* 候选记录来自读侧或信号（撤稿/合并/错误隔离等）。Plan 仍需产出**巡检时间窗**用于**调度节奏**：
+
+    * 若用户给了 `windowFrom/windowTo` → 直接采用（上界仍裁剪 `nowSafe`；CALENDAR 需对齐）；
+    * 若用户未给 → 取 `nowSafe - 1×window_size` 到 `nowSafe` 作为**本轮巡检窗**（可对齐）。
+* 可选：维护一个 `UPDATE/GLOBAL` 的“刷新检查时间”游标，代表**巡检覆盖进度**，便于分摊 1/N 日常刷新。
+* 产出依然写 `ing_plan.window_from/to`，但执行期的筛选以**候选 ID 集**为主，时间窗仅用于节奏/预算。
+
+## 6. 产出与落库（Plan）
 
 ---
 
-## 3. 窗口来源与水位读取（所有策略共通）
+### 小结（拿来就能用）
 
-* **先看水位再切窗**（Planner 只读）：
+* **HARVEST**：`to = min(user.to?, now - lag)`；`from = max(user.from?, harvestWM - lookback)`；CALENDAR 则对齐；合法性检查后落库。
+* **BACKFILL**：`to = min(user.to?, forwardWM?, now - lag)`；`from = user.from? / backfillWM? / (to - 1×window_size)`
+  ；对齐后落库；不触碰前向水位。
+* **UPDATE**：
 
-    * HARVEST：`namespace_scope=EXPR`，`namespace_key=expr_proto_hash`（表达式变更不串线）；`cursor_key=updated_at`（或等价）。
-    * BACKFILL：`namespace_scope=CUSTOM`，`namespace_key=plan_id`（与前向水位隔离）。
-    * UPDATE：`CUSTOM`（依据刷新策略：时间型用 `refresh_checked_at`，ID 型用 `provider_id`/桶号）。
-* **总窗计算**（以 HARVEST 为例）：
-
-    * `from = max(request.minFrom, waterline, registry.lowerBound)`
-    * `to = min(request.maxTo, now - safetyLag)`
-    * **UTC**、半开 `[from, to)`、统一精度（推荐毫秒）。
-* **首跑缺水位**：以 registry/产品定义的基线起步；切片必须二分限流。
-
----
-
-## 4. `slice_spec` 总体结构（规范）
-
-```json
-{
-  "strategy": "TIME | ID_RANGE | CURSOR_LANDMARK | VOLUME_BUDGET | HYBRID",
-  "window": { /* 时间窗 */ },
-  "range":  { /* ID 区间/哈希桶 */ },
-  "cursor": { /* token/offset/page/size 与停止条件 */ },
-  "budget": { "maxRequests": 0, "maxRecords": 0, "maxDurationSec": 0, "priority": "HIGH|MEDIUM|LOW" },
-  "hints":  { /* 排序、安全延迟、期望页大小、试探标志等 */ }
-}
-```
-
-> **签名规范化**（生成 `slice_signature_hash`）：固定键顺序、小写键、UTC ISO-8601、枚举大写、去默认空值、数值统一字符串或统一数值。
-
----
-
-## 5. TIME 策略（最常用，重点讲透）
-
-
-### 5.2 初始切窗（Planner）
-
-* **输入**：`ing_plan.window_from/to`、`slice_params.step`（ISO-8601 Duration，如 `PT6H/P1D`）、`targetRecordsPerSlice`（可选）、`expectedPageSize`、`safetyLagSec`、`maxRequests/maxDurationSec` 等。
-* **初切**：按 `step` 从 `[from,to)` 线性切段（UTC）。
-* **注入表达式**：将每段 `[f,t)` 注入 `expr_proto_snapshot` 的 `RANGE(updated_at)`，形成 `slice.expr_snapshot` 与 `expr_hash`。
-* **形成 `slice_spec`**：
-
-```json
-{
-  "strategy":"TIME",
-  "window":{"from":"...Z","to":"...Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC","precision":"MILLIS"},
-  "budget":{"maxRequests":800,"maxRecords":200000,"maxDurationSec":1200,"priority":"HIGH"},
-  "hints":{"expectedPageSize":200,"order":"updated_at:asc","safetyLagSec":300}
-}
-```
-
-### 5.3 规模估算与自适应二分/合并
-
-* **估算优先级**：
-  A) 供应商 `count`（若有）→ B) 历史统计（同来源/相似窗）→ C) 首页样本外推（`firstPageCount * pages`）→ D) 保守常量。
-* **目标**：每 slice 落在目标“请求数/记录数/时长”区间。
-* **二分规则**：如估算 > `targetRecordsPerSlice * (1 + ε)` 或预计页数 > `maxPagesPerSlice`，对该窗做二分，递归直至落入目标或达到 `minStep`。
-* **合并规则**：估算极小且合并后仍在预算内，可合并相邻窗，减少碎片。
-* **安全延迟自适应**：若近 N 次运行“晚到率”> 阈值（如 0.5%），`safetyLagSec += Δ`（上限可配，如 1h）；低于阈值则渐进回调。
-
-### 5.4 边界与排序约束
-
-* **统一半开** `[from,to)`；`updated_at == to` 由下一窗处理。
-* **排序**：尽量 `updated_at:asc`；若源不保证排序，执行端本地过滤 `updated_at`，并**增加窗重叠 Δ**（可配，如 1–5 分钟）来容忍乱序；重叠区靠唯一键/updated 覆盖去重。
-* **分辨率对齐**：若供应商只支持“到日”，则 `from/to` 向日整；`precision` 标记为 `DAY`，并用本地过滤精化到毫秒。
-
-### 5.5 计划 → 任务
-
-* 对每个窗生成一条 `ing_plan_slice` 与一条 `ing_task(QUEUED)`。
-* 幂等：`slice_signature_hash` 与 `uk_slice_sig` 保证同窗不重复。
-
-### 5.6 执行期在线再切片（自愈）
-
-* **触发阈值（任一命中）**：
-
-    * 页深 > `maxPagesHard`（如 2000）；
-    * 连续 429 或 `Retry-After` 总时长超 `maxBackoffSec`；
-    * 单页响应体 > `maxBytesPerPage`；
-    * 错误率 > X%。
-* **动作**：将**剩余**窗口二分为 `[mid,to)` 新窗，写入“重切请求队列”（Planner 消费生成新的 slice）；当前 task 以 `PARTIAL` 收口。
-* **审计**：`ing_task_run_batch` 记录触发原因与上下文（token/pageNo/bytes）。
-
----
-
-## 6. CURSOR\_LANDMARK 策略（游标/令牌）
-
-    暂时不用做
----
-
-## 7. ID\_RANGE 策略（ID 段/分桶）
-    暂时不用做
----
-
-## 8. VOLUME\_BUDGET 策略与 HYBRID
-
-    暂时不用做
-
----
-
-## 9. 与游标（`ing_cursor`）的联动规则
-
-* **读取（Planner）**：定位唯一键后读取 `cursor_value`；Planner **只读不写**。
-* **推进（Executor）**：
-
-    1. 先写 `ing_cursor_event`（包含 `direction=FORWARD|BACKFILL`、窗口、lineage、`observed_max_value`）；
-    2. 再用乐观锁更新 `ing_cursor`（**只允许前进**；BACKFILL 在自己的 `namespace`）。
-* **命名空间**：
-
-    * HARVEST：`EXPR` + `expr_proto_hash`；
-    * BACKFILL：`CUSTOM(plan_id)`；
-    * UPDATE：`CUSTOM`（按刷新策略定义）。
-* **比较函数**：
-
-    * TIME：`normalized_instant`；
-    * ID：`normalized_numeric`；
-    * TOKEN：不做“前向”持久水位。
-* **observed\_max\_value**：记录此次观测到的最大 `updated_at/ID`，供下次规划参考（可选）。
-
----
-
-## 10. 预算器与并发（与切窗的耦合点）
-
-* **每个 slice** 必须带 `budget`：`maxRequests/maxRecords/maxDurationSec/priority`；
-* **规划期**：依据 `reg_prov_rate_limit_cfg`、`reg_prov_retry_cfg`、`reg_prov_batching_cfg` 粗估“每 slice 可承载的请求与时间”；
-* **运行期**：遇 429/5xx → 退避降速；超过预算即收口 `PARTIAL` 并触发**在线再切片**；
-* **配额优先级**：HARVEST > UPDATE > BACKFILL（可配），Planner 生成时即写入 `priority`，Executor 按优先队列消费。
-
----
-
-## 11. 边界与异常场景（强规则）
-
-* **半开区间**：统一 `[from,to)`；`==to` 的记录肯定归下一窗。
-* **乱序/晚到**：配置 `overlapDelta` 与 `safetyLagSec`；晚到率超阈值自动增大 `safetyLagSec`。
-* **分辨率不一致**：供应商日粒度 → `precision=DAY`，本地再精化。
-* **无排序保证**：必须本地过滤 `updated_at`；页深/429 触发回切。
-* **无 `RANGE`**：优先转为 CURSOR\_LANDMARK，再不行用 HYBRID/VOLUME。
-* **撤稿/合并**：交由 UPDATE 路线处理（Signals）；不破坏 HARVEST 切窗。
-* **UTF/时区**：一切时间字段**强制 UTC**；禁止在 `slice_spec` 出现本地时区。
-
----
-
-## 12. 校验清单（Validator）
-
-对每条 `slice_spec` 生成后执行以下校验（失败拒绝入库）：
-
-* `strategy` 与子段一致性（TIME→必须有 `window`；ID\_RANGE→必须有 `range`；CURSOR→必须有 `cursor`）。
-* 时间：`from < to`、UTC ISO-8601、`boundary.from/to` 合法、`precision` 合法。
-
-
----
-
-
-## 14. 与表达式（starter-expr AST）的契约
-
-* **Plan 原型**：`expr_proto_snapshot`（不含任何窗/ID 边界）
-* **Slice 局部化**：将 `slice_spec` 的窗口/ID 植入 AST（`RANGE(updated_at)` / `TERM(id in)` / `TOKEN` 不落入持久水位）
-* **Hash 稳定性**：AND/OR 子节点**排序规范**；时间统一精度；枚举大写；数值一致化。
-* **安全**：仅允许 JSONPath/白名单函数；请求参数渲染后进行供应商参数白名单校验（映射表）。
-
----
-
-
-## 附录 B：在线再切片触发阈值（建议默认）
-
-* `maxPagesSoft=1000`，`maxPagesHard=2000`
-* `429WindowSec=300` 内 `429Count>=5` → 触发
-* `maxBytesPerPage=5MB`（或来源定）
-* `errorRate>=5%`（近 50 页窗口统计）
-* 动作：将**剩余**窗口二分为两半；生成新 slice（`slice_spec.window.from=mid`）；当前 task 以 `PARTIAL` 收口。
-
----
-
-## 附录 C：安全延迟（SafetyLag）自适应
-
-* 指标：最近 7 天晚到率（`late_arrival = items(updatedAt > window.to)` / `totalItems`）。
-* 调整：
-
-    * `late_arrival > 0.5%` → `+5m`，上限 1h；
-    * `< 0.1%` 且 `safetyLag > 5m` → `-1m`；
-* 生效：写入 Planner 的默认 `slice_params`，并在 `slice_spec.hints.safetyLagSec` 回显。
+    * 时间驱动：同 HARVEST，但推进的是“刷新检查时间”；
+    * ID 驱动：窗口用于**节奏**（用户给定或默认一窗），候选来自读侧/信号，必要时维护巡检游标。

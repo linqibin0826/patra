@@ -87,8 +87,7 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
         // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
         PlanBusinessExpr planBusinessExpr = buildPlanBusinessExpr(norm, configSnapshot);
 
-        // Phase 4: 快照落库（配置 + 表达式规范化形态）
-        schedule.recordSnapshots();
+        // Phase 4: scheduleInstance落库
         schedule = scheduleInstanceRepository.saveOrUpdateInstance(schedule);
 
         // Phase 5: 前置验证（窗口合理性 / 背压 / 能力）
@@ -253,5 +252,26 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
             }
         }
         return taskRepository.saveAll(tasks);
+    }
+
+    /**
+     * 根据设计：cursor_key 优先使用 offsetFieldName（若是时间字段），否则使用 defaultDateFieldName。
+     * 这里无法直接判断 offsetFieldName 是否时间字段（需要来源 schema），简化：若存在 offsetFieldName 则用之；否则 fallback defaultDateFieldName；仍为空则使用操作类型默认键。
+     */
+    private String resolveCursorKey(ProvenanceConfigSnapshot snapshot, OperationCode op) {
+        ProvenanceConfigSnapshot.WindowOffsetConfig w = snapshot.windowOffset();
+        if (w != null) {
+            if (w.offsetFieldName() != null && !w.offsetFieldName().isBlank()) {
+                return w.offsetFieldName();
+            }
+            if (w.defaultDateFieldName() != null && !w.defaultDateFieldName().isBlank()) {
+                return w.defaultDateFieldName();
+            }
+        }
+        // UPDATE 特殊：刷新检查时间统一使用固定键
+        if (op == OperationCode.UPDATE) {
+            return "refresh_checked_at";
+        }
+        return "_ts"; // 通用兜底键
     }
 }

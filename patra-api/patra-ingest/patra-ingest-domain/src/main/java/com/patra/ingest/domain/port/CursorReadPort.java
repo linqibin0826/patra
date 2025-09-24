@@ -10,5 +10,6 @@ import java.time.Instant;
  */
 public interface CursorReadPort {
 
+    // TODO 水位查询待优化（namespaceKey, cursorKey）两个维度的
     Instant loadForwardWatermark(ProvenanceCode provenanceCode, OperationCode operationCode);
 }
