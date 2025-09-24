@@ -2,14 +2,13 @@ package com.patra.ingest.adapter.in.scheduler.param;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.OperationType;
-import com.patra.ingest.domain.model.enums.SchedulerCode;
+import com.patra.ingest.domain.model.enums.OperationCode;
+import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.Instant;
-import java.time.Duration;
 
 /**
  * 调度触发参数。
@@ -27,7 +26,7 @@ public class ScheduleTriggerParam {
      * 调度器代码，默认 XXL。
      */
     @Builder.Default
-    private SchedulerCode schedulerCode = SchedulerCode.XXL;
+    private Scheduler scheduler = Scheduler.XXL;
     
     /**
      * 端点名称。
@@ -54,7 +53,7 @@ public class ScheduleTriggerParam {
     /**
      * 操作代码（必需）。
      */
-    private OperationType operationCode;
+    private OperationCode operationCode;
     
     /**
      * 时间窗口开始时间。

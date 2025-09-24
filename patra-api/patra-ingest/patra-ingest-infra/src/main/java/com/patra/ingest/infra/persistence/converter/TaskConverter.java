@@ -25,7 +25,8 @@ public class TaskConverter {
         entity.setExprHash(aggregate.getExprHash());
         entity.setPriority(aggregate.getPriority());
         entity.setScheduledAt(aggregate.getScheduledAt());
-        entity.setStatusCode(aggregate.getStatus().name());
+        // 使用字典编码
+        entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
         entity.setVersion(aggregate.getVersion());
         return entity;
     }
@@ -36,7 +37,7 @@ public class TaskConverter {
         }
         TaskStatus status = entity.getStatusCode() == null
                 ? TaskStatus.QUEUED
-                : TaskStatus.valueOf(entity.getStatusCode());
+                : TaskStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
         return TaskAggregate.restore(
                 entity.getId(),

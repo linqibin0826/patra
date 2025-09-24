@@ -37,7 +37,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                        long currentQueuedTasks) {
         
         log.debug("validating plan assembly for provenance={}, operation={}, window={}, queuedTasks={}",
-                triggerNorm.provenanceCode(), triggerNorm.operationType(), window, currentQueuedTasks);
+                triggerNorm.provenanceCode(), triggerNorm.operationCode(), window, currentQueuedTasks);
 
         // 1. 验证窗口合理性
         validateWindow(triggerNorm, window);
@@ -64,7 +64,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
         // 非 UPDATE 操作需要有效窗口
         if (window.from() == null || window.to() == null) {
             throw new IllegalStateException(
-                    String.format("Time window is required for %s operation", triggerNorm.operationType()));
+                    String.format("Time window is required for %s operation", triggerNorm.operationCode()));
         }
 
         // 验证窗口时间顺序

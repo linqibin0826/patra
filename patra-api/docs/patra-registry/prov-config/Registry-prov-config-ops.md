@@ -177,7 +177,7 @@ INSERT INTO reg_prov_endpoint_def
  endpoint_usage_code, http_method_code, path_template, default_query_params, default_body_payload,
  request_content_type, is_auth_required, credential_hint_name,
  page_param_name, page_size_param_name, cursor_param_name, ids_param_name)
-VALUES (@pid, :scope_code, :taskType, :endpointCode, :from, :to,
+VALUES (@pid, :scope_code, :taskType, :endpoint, :from, :to,
         :usage, :method, :path, :defaultQueryJson, :defaultBodyJson,
         :contentType, :needAuth, :credHint,
         :pageParam, :sizeParam, :cursorParam, :idsParam)
@@ -251,7 +251,7 @@ WITH ep AS ((SELECT *
                AND scope_code = 'TASK'
                AND task_type = :taskType
                AND endpoint_usage_code = :usage
-               AND (:endpointCode IS NULL OR endpoint_name = :endpointCode)
+               AND (:endpoint IS NULL OR endpoint_name = :endpoint)
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC
@@ -264,7 +264,7 @@ WITH ep AS ((SELECT *
                AND deleted = 0
                AND scope_code = 'SOURCE'
                AND endpoint_usage_code = :usage
-               AND (:endpointCode IS NULL OR endpoint_name = :endpointCode)
+               AND (:endpoint IS NULL OR endpoint_name = :endpoint)
                AND effective_from <= @now
                AND (effective_to IS NULL OR effective_to > @now)
              ORDER BY effective_from DESC, id DESC

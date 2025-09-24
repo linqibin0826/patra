@@ -1,5 +1,8 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.ingest.domain.model.enums.OperationCode;
+
 import java.time.Instant;
 
 /**
@@ -7,5 +10,5 @@ import java.time.Instant;
  */
 public interface CursorReadPort {
 
-    Instant loadForwardWatermark(String provenanceCode, String operationCode);
+    Instant loadForwardWatermark(ProvenanceCode provenanceCode, OperationCode operationCode);
 }

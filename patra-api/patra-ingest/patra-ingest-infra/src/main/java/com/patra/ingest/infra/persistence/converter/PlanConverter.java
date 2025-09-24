@@ -34,7 +34,8 @@ public class PlanConverter {
         entity.setWindowTo(aggregate.getWindowTo());
         entity.setSliceStrategyCode(aggregate.getSliceStrategyCode());
         entity.setSliceParams(readJson(aggregate.getSliceParamsJson()));
-        entity.setStatusCode(aggregate.getStatus().name());
+        // 使用字典编码
+        entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
         entity.setVersion(aggregate.getVersion());
         return entity;
     }
@@ -48,7 +49,7 @@ public class PlanConverter {
         String sliceParams = writeJson(entity.getSliceParams());
         PlanStatus status = entity.getStatusCode() == null
                 ? PlanStatus.DRAFT
-                : PlanStatus.valueOf(entity.getStatusCode());
+                : PlanStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
         return PlanAggregate.restore(
                 entity.getId(),

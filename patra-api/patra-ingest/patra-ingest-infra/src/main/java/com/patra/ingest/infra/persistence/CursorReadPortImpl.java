@@ -1,6 +1,8 @@
 package com.patra.ingest.infra.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.port.CursorReadPort;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
 import com.patra.ingest.infra.persistence.mapper.CursorMapper;
@@ -16,9 +18,9 @@ public class CursorReadPortImpl implements CursorReadPort {
     private final CursorMapper cursorMapper;
 
     @Override
-    public Instant loadForwardWatermark(String provenanceCode, String operationCode) {
+    public Instant loadForwardWatermark(ProvenanceCode provenanceCode, OperationCode operationCode) {
         QueryWrapper<CursorDO> wrapper = new QueryWrapper<>();
-        wrapper.eq("provenance_code", provenanceCode)
+        wrapper.eq("provenance_code", provenanceCode.getCode())
                 .eq("operation_code", operationCode)
                 .eq("cursor_type_code", "TIME")
                 .eq("namespace_scope_code", "GLOBAL")

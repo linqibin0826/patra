@@ -1,7 +1,7 @@
 package com.patra.ingest.adapter.in.scheduler.job;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +19,8 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
     }
 
     @Override
-    protected OperationType getOperationType() {
-        return OperationType.HARVEST;
+    protected OperationCode getOperationType() {
+        return OperationCode.HARVEST;
     }
 
     @XxlJob("pubmedHarvest")

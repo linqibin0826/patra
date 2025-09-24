@@ -48,8 +48,8 @@ public class DefaultPlannerEngine implements PlannerEngine {
                 norm.scheduleInstanceId(),
                 planKey,
                 norm.provenanceCode().getCode(),
-                norm.endpointCode().name().toLowerCase(),
-                norm.operationType().name(),
+                norm.endpoint().name().toLowerCase(),
+                norm.operationCode().name(),
                 planExprHash,
                 planExprJson,
                 serializeConfigSnapshot(config),
@@ -101,7 +101,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
                     null,
                     (long) slice.getSequence(),
                     norm.provenanceCode().getCode(),
-                    norm.operationType().name(),
+                    norm.operationCode().name(),
                     null,
                     buildTaskParamsJson(norm, slice),
                     idemKey,
@@ -114,9 +114,9 @@ public class DefaultPlannerEngine implements PlannerEngine {
 
     private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
         StringBuilder builder = new StringBuilder();
-        builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationType().name());
-        if (norm.endpointCode() != null) {
-            builder.append(":").append(norm.endpointCode().name().toLowerCase());
+        builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationCode().name());
+        if (norm.endpoint() != null) {
+            builder.append(":").append(norm.endpoint().name().toLowerCase());
         }
         if (window.from() != null && window.to() != null) {
             builder.append(":").append(window.from().toEpochMilli()).append("-").append(window.to().toEpochMilli());
@@ -152,7 +152,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
     private String computeSignature(PlanTriggerNorm norm, String payload) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update((norm.provenanceCode().getCode() + "|" + norm.operationType().name()).getBytes(StandardCharsets.UTF_8));
+            digest.update((norm.provenanceCode().getCode() + "|" + norm.operationCode().name()).getBytes(StandardCharsets.UTF_8));
             digest.update(payload.getBytes(StandardCharsets.UTF_8));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(digest.digest());
         } catch (NoSuchAlgorithmException e) {

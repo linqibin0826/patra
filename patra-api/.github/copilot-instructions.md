@@ -132,9 +132,8 @@ CompileResult result = compiler.compile(request);
 
 ## 8. 特殊约定与最佳实践
 
-### JSON与枚举处理
+### JSON处理
 - **数据库JSON列**: 统一用`JsonNode`类型，配置`JsonToJsonNodeTypeHandler`
-- **枚举字段**: domain枚举实现`CodeEnum<C>`，DO直接使用该枚举，禁用Java enum
 
 ### 工具类复用优先级
 1. **Hutool** → 2. **patra-common** → 3. **patra-* starters** → 4. 自定义工具

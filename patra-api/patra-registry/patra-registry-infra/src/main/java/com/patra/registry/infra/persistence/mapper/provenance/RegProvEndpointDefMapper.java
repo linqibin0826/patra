@@ -24,7 +24,7 @@ public interface RegProvEndpointDefMapper extends BaseMapper<RegProvEndpointDefD
               AND provenance_id = #{provenanceId}
               AND scope_code = #{scopeCode}
               AND task_type_key = #{taskTypeKey}
-              AND endpoint_name = #{endpointCode}
+              AND endpoint_name = #{endpoint}
               AND effective_from <= #{now}
               AND (effective_to IS NULL OR effective_to > #{now})
             ORDER BY effective_from DESC, id DESC
@@ -33,6 +33,6 @@ public interface RegProvEndpointDefMapper extends BaseMapper<RegProvEndpointDefD
     Optional<RegProvEndpointDefDO> selectActive(@Param("provenanceId") Long provenanceId,
                                                 @Param("scopeCode") String scopeCode,
                                                 @Param("taskTypeKey") String taskTypeKey,
-                                                @Param("endpointCode") String endpointCode,
+                                                @Param("endpoint") String endpoint,
                                                 @Param("now") Instant now);
 }

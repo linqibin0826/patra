@@ -12,8 +12,8 @@ public interface CursorEventConverter {
     CursorEvent toDomain(CursorEventDO source);
     CursorEventDO toDO(CursorEvent source);
 
-    default CursorType mapType(String code){ return code==null? null : CursorType.valueOf(code); }
-    default String mapType(CursorType type){ return type==null? null : type.name(); }
-    default CursorDirection mapDir(String code){ return code==null? null : CursorDirection.valueOf(code); }
-    default String mapDir(CursorDirection dir){ return dir==null? null : dir.name(); }
+    default CursorType mapType(String code){ return code==null? null : CursorType.fromCode(code); }
+    default String mapType(CursorType type){ return type==null? null : type.getCode(); }
+    default CursorDirection mapDir(String code){ return code==null? null : CursorDirection.fromCode(code); }
+    default String mapDir(CursorDirection dir){ return dir==null? null : dir.getCode(); }
 }

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import java.time.*;
 import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -53,7 +52,7 @@ public class DefaultPlannerWindowPolicy implements PlannerWindowPolicy {
                                        Instant cursorWatermark,
                                        Instant currentTime) {
         log.debug("resolving window provenance={}, operation={}, trigger={}",
-                triggerNorm.provenanceCode(), triggerNorm.operationType(), triggerNorm.triggerType());
+                triggerNorm.provenanceCode(), triggerNorm.operationCode(), triggerNorm.triggerType());
 
         // 1. UPDATE → 全量
         if (triggerNorm.isUpdate()) {

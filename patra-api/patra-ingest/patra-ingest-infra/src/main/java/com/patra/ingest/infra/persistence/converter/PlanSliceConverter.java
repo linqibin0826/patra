@@ -21,7 +21,8 @@ public class PlanSliceConverter {
         entity.setSliceSpec(aggregate.getSliceSpecJson());
         entity.setExprHash(aggregate.getExprHash());
         entity.setExprSnapshot(aggregate.getExprSnapshotJson());
-        entity.setStatusCode(aggregate.getStatus().name());
+        // 使用字典编码
+        entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
         entity.setVersion(aggregate.getVersion());
         return entity;
     }
@@ -32,7 +33,7 @@ public class PlanSliceConverter {
         }
         SliceStatus status = entity.getStatusCode() == null
                 ? SliceStatus.PENDING
-                : SliceStatus.valueOf(entity.getStatusCode());
+                : SliceStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
         return PlanSliceAggregate.restore(
                 entity.getId(),

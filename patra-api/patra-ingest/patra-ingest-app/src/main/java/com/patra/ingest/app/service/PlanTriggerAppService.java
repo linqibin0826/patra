@@ -2,13 +2,15 @@ package com.patra.ingest.app.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
 import com.patra.ingest.app.model.PlanBusinessExpr;
 import com.patra.ingest.app.model.PlanBlueprintCommand;
 import com.patra.ingest.app.util.ExprHashUtil;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.port.CursorReadPort;
-import com.patra.ingest.app.port.outbound.ProvenanceConfigPort;
+import com.patra.ingest.app.port.outbound.ProvenancePort;
 import com.patra.ingest.domain.port.TaskInventoryPort;
 import com.patra.ingest.app.usecase.PlanTriggerUseCase;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
@@ -47,7 +49,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PlanTriggerAppService implements PlanTriggerUseCase {
 
-    private final ProvenanceConfigPort provenanceConfigPort;
+    private final ProvenancePort provenancePort;
     private final CursorReadPort cursorReadPort;
     private final TaskInventoryPort taskInventoryPort;
     private final PlannerWindowPolicy plannerWindowPolicy;
@@ -64,19 +66,22 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
     @Override
     @Transactional
     public PlanTriggerResult triggerPlan(PlanTriggerCommand command) {
-        log.info("plan-trigger start, provenance={}, op={}", command.provenanceCode(), command.operationType());
-        Instant now = Instant.now();
+        ProvenanceCode provenanceCode = command.provenanceCode();
+        OperationCode operationCode = command.operationCode();
+
+        log.info("plan-trigger start, provenance={}, op={}", provenanceCode, operationCode);
+        Instant now = command.triggeredAt();
 
         // Phase 1: 调度实例 & 来源配置运行期快照
         ScheduleInstanceAggregate schedule = persistScheduleInstance(command);
-        ProvenanceConfigSnapshot configSnapshot = provenanceConfigPort.fetchConfig(
-                command.provenanceCode(), command.endpointCode(), command.operationType());
+
+        ProvenanceConfigSnapshot configSnapshot = provenancePort.fetchConfig(
+                provenanceCode, command.endpoint(), operationCode
+        );
         PlanTriggerNorm norm = buildTriggerNorm(schedule, command);
 
         // Phase 2: 游标水位 (仅前进) + 解析计划窗口（TIME 策略）
-        Instant cursorWatermark = cursorReadPort.loadForwardWatermark(
-                command.provenanceCode().getCode(), command.operationType().name());
-
+        Instant cursorWatermark = cursorReadPort.loadForwardWatermark(provenanceCode, operationCode);
         PlannerWindow window = plannerWindowPolicy.resolveWindow(norm, configSnapshot, cursorWatermark, now);
 
         // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
@@ -84,11 +89,11 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
 
         // Phase 4: 快照落库（配置 + 表达式规范化形态）
         schedule.recordSnapshots();
-        schedule = scheduleInstanceRepository.save(schedule);
+        schedule = scheduleInstanceRepository.saveOrUpdateInstance(schedule);
 
         // Phase 5: 前置验证（窗口合理性 / 背压 / 能力）
         long queuedTasks = taskInventoryPort.countQueuedTasks(
-                command.provenanceCode().getCode(), command.operationType().name());
+                provenanceCode.getCode(), operationCode.name());
         plannerValidator.validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
 
         // Phase 6: 组装蓝图
@@ -113,24 +118,24 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
 
     private ScheduleInstanceAggregate persistScheduleInstance(PlanTriggerCommand command) {
         ScheduleInstanceAggregate schedule = ScheduleInstanceAggregate.start(
-                command.schedulerCode(),
+                command.scheduler(),
                 command.schedulerJobId(),
                 command.schedulerLogId(),
                 command.triggerType(),
-                Instant.now(),
+                command.triggeredAt(),
                 command.provenanceCode());
-        return scheduleInstanceRepository.save(schedule);
+        return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
     }
 
     private PlanTriggerNorm buildTriggerNorm(ScheduleInstanceAggregate schedule, PlanTriggerCommand command) {
         return new PlanTriggerNorm(
                 schedule.getId(),
                 command.provenanceCode(),
-                command.endpointCode(),
-                command.operationType(),
+                command.endpoint(),
+                command.operationCode(),
                 command.step(),
                 command.triggerType(),
-                command.schedulerCode(),
+                command.scheduler(),
                 command.schedulerJobId(),
                 command.schedulerLogId(),
                 command.windowFrom(),
@@ -156,7 +161,7 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
      * 包含业务逻辑约束，但不包含窗口约束（窗口约束由 SliceStrategy 添加）
      */
     private Expr buildPlanBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        log.debug("构建 Plan 业务表达式，操作类型: {}", norm.operationType());
+        log.debug("构建 Plan 业务表达式，操作类型: {}", norm.operationCode());
 
         // 根据配置和操作类型构建业务逻辑表达式
         // 例如：数据源过滤、状态约束、业务规则等

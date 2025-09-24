@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.converter;
 
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.enums.CursorType;
+import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
@@ -11,6 +12,9 @@ public interface CursorConverter {
     Cursor toDomain(CursorDO source);
     CursorDO toDO(Cursor source);
 
-    default CursorType mapType(String code){ return code==null? null : CursorType.valueOf(code); }
-    default String mapType(CursorType type){ return type==null? null : type.name(); }
+    default CursorType mapType(String code){ return code==null? null : CursorType.fromCode(code); }
+    default String mapType(CursorType type){ return type==null? null : type.getCode(); }
+
+    default NamespaceScope mapNsScope(String code){ return code==null? null : NamespaceScope.fromCode(code); }
+    default String mapNsScope(NamespaceScope scope){ return scope==null? null : scope.getCode(); }
 }

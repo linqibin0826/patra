@@ -6,12 +6,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.Priority;
 import com.patra.ingest.domain.model.enums.TriggerType;
-import com.patra.ingest.domain.model.enums.SchedulerCode;
+import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.app.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
 import com.patra.ingest.app.usecase.PlanTriggerUseCase;
-import com.patra.ingest.domain.model.enums.EndpointCode;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.Endpoint;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.xxl.job.core.context.XxlJobHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,13 +48,13 @@ public abstract class AbstractProvenanceScheduleJob {
     /**
      * 获取当前任务对应的操作类型（由子类固定）。
      */
-    protected abstract OperationType getOperationType();
+    protected abstract OperationCode getOperationType();
 
     /**
      * 获取端点名称，默认 SEARCH，子类可覆盖。
      */
-    protected EndpointCode getEndpointName() {
-        return EndpointCode.SEARCH;
+    protected Endpoint getEndpointName() {
+        return Endpoint.SEARCH;
     }
 
     /**
@@ -72,12 +72,13 @@ public abstract class AbstractProvenanceScheduleJob {
                     getOperationType(),
                     "PT6H",
                     TriggerType.SCHEDULE,
-                    SchedulerCode.XXL,
+                    Scheduler.XXL,
                     XxlJobHelper.getJobId() + "",
                     "0",
                     null,
                     null,
                     null,
+                    Instant.now(),
                     Map.of()
             );
         }
@@ -111,12 +112,13 @@ public abstract class AbstractProvenanceScheduleJob {
                     getOperationType(),
                     "PT6H",
                     TriggerType.SCHEDULE,
-                    SchedulerCode.XXL,
+                    Scheduler.XXL,
                     XxlJobHelper.getJobId() + "",
                     "0",
                     windowFrom,
                     windowTo,
                     priority,
+                    Instant.now(),
                     triggerParams
             );
         } catch (Exception e) {

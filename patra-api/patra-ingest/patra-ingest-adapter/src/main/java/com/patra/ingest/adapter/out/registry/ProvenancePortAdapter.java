@@ -2,10 +2,10 @@ package com.patra.ingest.adapter.out.registry;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.adapter.out.registry.converter.ProvenanceConfigSnapshotConverter;
-import com.patra.ingest.app.port.outbound.ProvenanceConfigPort;
+import com.patra.ingest.app.port.outbound.ProvenancePort;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
-import com.patra.ingest.domain.model.enums.EndpointCode;
-import com.patra.ingest.domain.model.enums.OperationType;
+import com.patra.ingest.domain.model.enums.Endpoint;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.registry.api.rpc.client.ProvenanceClient;
 import com.patra.registry.api.rpc.dto.provenance.ProvenanceConfigResp;
@@ -34,16 +34,16 @@ import java.util.Collections;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProvenanceConfigPortAdapter implements ProvenanceConfigPort {
+public class ProvenancePortAdapter implements ProvenancePort {
 
     private final ProvenanceClient provenanceClient;
     private final ProvenanceConfigSnapshotConverter converter;
 
     @Override
-    public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, EndpointCode endpointCode, OperationType operationType) {
+    public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, Endpoint endpointCode, OperationCode operationCode) {
         String code = provenanceCode.getCode();
         String endpoint = endpointCode.name();
-        String taskType = operationType.name();
+        String taskType = operationCode.name();
         Instant queryTime = Instant.now();
 
         log.debug("开始获取来源配置, code={}, taskType={}, endpoint={}, at={}", 

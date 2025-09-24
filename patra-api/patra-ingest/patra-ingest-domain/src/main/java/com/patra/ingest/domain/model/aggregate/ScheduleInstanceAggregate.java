@@ -2,7 +2,7 @@ package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.SchedulerCode;
+import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -17,7 +17,7 @@ import java.util.Objects;
 @Data
 public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
 
-    private final SchedulerCode schedulerCode;
+    private final Scheduler scheduler;
     private final String schedulerJobId;
     private final String schedulerLogId;
     private final TriggerType triggerType;
@@ -25,14 +25,14 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     private final ProvenanceCode provenanceCode;
 
     private ScheduleInstanceAggregate(Long id,
-                                      SchedulerCode schedulerCode,
+                                      Scheduler scheduler,
                                       String schedulerJobId,
                                       String schedulerLogId,
                                       TriggerType triggerType,
                                       Instant triggeredAt,
                                       ProvenanceCode provenanceCode) {
         super(id);
-        this.schedulerCode = Objects.requireNonNull(schedulerCode, "schedulerCode不能为空");
+        this.scheduler = Objects.requireNonNull(scheduler, "schedulerCode不能为空");
         this.schedulerJobId = schedulerJobId;
         this.schedulerLogId = schedulerLogId;
         this.triggerType = Objects.requireNonNull(triggerType, "triggerType不能为空");
@@ -41,14 +41,14 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
         // exprProto* 不再在调度实例层面保存（留空，Plan 层保存）
     }
 
-    public static ScheduleInstanceAggregate start(SchedulerCode schedulerCode,
-            String schedulerJobId,
-            String schedulerLogId,
-            TriggerType triggerType,
-            Instant triggeredAt,
-            ProvenanceCode provenanceCode) {
+    public static ScheduleInstanceAggregate start(Scheduler scheduler,
+                                                  String schedulerJobId,
+                                                  String schedulerLogId,
+                                                  TriggerType triggerType,
+                                                  Instant triggeredAt,
+                                                  ProvenanceCode provenanceCode) {
     return new ScheduleInstanceAggregate(null,
-        schedulerCode,
+            scheduler,
         schedulerJobId,
         schedulerLogId,
         triggerType,
@@ -57,7 +57,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     }
 
     public static ScheduleInstanceAggregate restore(Long id,
-            SchedulerCode schedulerCode,
+            Scheduler scheduler,
             String schedulerJobId,
             String schedulerLogId,
             TriggerType triggerType,
@@ -65,7 +65,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
             ProvenanceCode provenanceCode,
             long version) {
     ScheduleInstanceAggregate aggregate = new ScheduleInstanceAggregate(id,
-        schedulerCode,
+            scheduler,
         schedulerJobId,
         schedulerLogId,
         triggerType,
