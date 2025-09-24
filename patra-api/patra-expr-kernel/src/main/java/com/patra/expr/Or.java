@@ -15,9 +15,4 @@ public record Or(List<Expr> children) implements Expr {
         }
         children = List.copyOf(children);
     }
-
-    @Override
-    public <R> R accept(Visitor<R> visitor) {
-        return visitor.visitOr(this);
-    }
 }

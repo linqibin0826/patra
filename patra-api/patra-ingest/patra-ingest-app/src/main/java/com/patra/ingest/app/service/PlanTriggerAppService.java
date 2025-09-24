@@ -6,8 +6,6 @@ import com.patra.ingest.app.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
 import com.patra.ingest.domain.model.expr.ExprPlanPrototype;
 import com.patra.ingest.domain.port.CursorReadPort;
-import com.patra.ingest.app.port.outbound.ExprCompilerPort;
-import com.patra.ingest.domain.port.ExprPrototypePort;
 import com.patra.ingest.app.port.outbound.ProvenanceConfigPort;
 import com.patra.ingest.domain.port.TaskInventoryPort;
 import com.patra.ingest.app.usecase.PlanTriggerUseCase;
@@ -30,14 +28,13 @@ import com.patra.ingest.app.policy.PlannerWindowPolicy;
 import com.patra.ingest.app.validator.PlannerValidator;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
-import com.patra.starter.expr.compiler.model.OperationCodes;
-import com.patra.starter.expr.compiler.model.TaskTypes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,8 +48,6 @@ import java.util.stream.Collectors;
 public class PlanTriggerAppService implements PlanTriggerUseCase {
 
     private final ProvenanceConfigPort provenanceConfigPort;
-    private final ExprPrototypePort exprPrototypePort;
-    private final ExprCompilerPort exprCompilerPort;
     private final CursorReadPort cursorReadPort;
     private final TaskInventoryPort taskInventoryPort;
     private final PlannerWindowPolicy plannerWindowPolicy;
@@ -82,19 +77,15 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
         Instant cursorWatermark = cursorReadPort.loadForwardWatermark(
                 command.provenanceCode().getCode(), command.operationType().name());
 
-
         PlannerWindow window = plannerWindowPolicy.resolveWindow(norm, configSnapshot, cursorWatermark, now);
 
-        // Phase 3: 计划级表达式构造（窗口→RANGE；UPDATE→TRUE）并通过 Port 生成产物
-        Expr planExpr = buildPlanExpression(norm, configSnapshot, window);
-
-
-        ExprPlanArtifacts exprArtifacts = compilePlanLevelArtifacts(planExpr, norm, configSnapshot);
+        // Phase 3: 编译 Plan 级别业务表达式
+        ExprPlanPrototype planPrototype = compilePlanBusinessExpression(norm, configSnapshot);
 
         // Phase 4: 快照落库（配置 + 表达式规范化形态）
         String configSnapshotJson = serializeConfigSnapshot(configSnapshot);
         schedule.recordSnapshots(Integer.toHexString(configSnapshot.hashCode()),
-                configSnapshotJson, exprArtifacts.exprProtoHash(), exprArtifacts.exprProtoSnapshotJson());
+                configSnapshotJson, planPrototype.exprProtoHash(), planPrototype.exprDefinitionJson());
         schedule = scheduleInstanceRepository.save(schedule);
 
         // Phase 5: 前置验证（窗口合理性 / 背压 / 能力）
@@ -102,7 +93,8 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
                 command.provenanceCode().getCode(), command.operationType().name());
         plannerValidator.validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
 
-        // Phase 6: 组装蓝图 (exprArtifacts 注入) → assemble
+        // Phase 6: 构建制品并组装蓝图
+        ExprPlanArtifacts exprArtifacts = buildPlanArtifactsFromPrototype(planPrototype);
         PlanBlueprintCommand blueprint = new PlanBlueprintCommand(norm, window, configSnapshot, exprArtifacts);
         PlanAssembly assembly = plannerEngine.assemble(blueprint);
 
@@ -134,136 +126,138 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
     }
 
     private PlanTriggerNorm buildTriggerNorm(ScheduleInstanceAggregate schedule, PlanTriggerCommand command) {
-    return new PlanTriggerNorm(
-        schedule.getId(),
-        command.provenanceCode(),
-        command.endpointCode(),
-        command.operationType(),
-        command.step(),
-        command.triggerType(),
-        command.schedulerCode(),
-        command.schedulerJobId(),
-        command.schedulerLogId(),
-        command.windowFrom(),
-        command.windowTo(),
-        command.priority(),
-        command.triggerParams());
+        return new PlanTriggerNorm(
+                schedule.getId(),
+                command.provenanceCode(),
+                command.endpointCode(),
+                command.operationType(),
+                command.step(),
+                command.triggerType(),
+                command.schedulerCode(),
+                command.schedulerJobId(),
+                command.schedulerLogId(),
+                command.windowFrom(),
+                command.windowTo(),
+                command.priority(),
+                command.triggerParams());
+    }
+
+
+    /**
+     * Phase 3: 编译 Plan 级别业务表达式
+     * <p>
+     * 核心设计理念：
+     * 1. 只负责 Plan 业务表达式，不涉及任何 Slice 逻辑
+     * 2. 返回 ExprPlanPrototype，表示这只是一个原型，不能直接使用
+     * 3. Slice 表达式由 SliceStrategy 在 Phase 6 中动态构建
+     */
+    private ExprPlanPrototype compilePlanBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+        log.info("开始编译 Plan 业务表达式，操作类型: {}", norm.operationType());
+
+        // 1. 构建 Plan 级别业务表达式（包含业务逻辑，但无窗口约束）
+        Expr planBusinessExpr = buildPlanBusinessExpression(norm, configSnapshot);
+        String planExprJson = serializeExprToJson(planBusinessExpr);
+        String planExprHash = Integer.toHexString(planExprJson.hashCode());
+
+        // 2. 构建 Plan 原型
+        ExprPlanPrototype planPrototype = new ExprPlanPrototype(planExprHash, planExprJson, Map.of());
+
+        log.info("Plan 业务表达式编译完成，哈希: {}", planPrototype.exprProtoHash());
+
+        return planPrototype;
     }
 
     /**
-     * 基于窗口和配置构建计划表达式。
+     * Phase 6: 构建 Plan 制品
+     * 
+     * 关键理念：
+     * 1. Plan 表达式不需要编译，因为它不会被直接执行
+     * 2. Plan 表达式没有参数，因为参数在构建时已经确定
+     * 3. 只是简单地将原型转换为制品格式，供 SliceStrategy 使用
      */
-    private Expr buildPlanExpression(PlanTriggerNorm norm,
-                                     ProvenanceConfigSnapshot configSnapshot,
-                                     PlannerWindow window) {
+    private ExprPlanArtifacts buildPlanArtifactsFromPrototype(ExprPlanPrototype planPrototype) {
+        // 直接构建制品，不进行编译
+        // Plan 表达式只是原型，不会被直接执行，所以不需要编译
+        return new ExprPlanArtifacts(
+                planPrototype.exprProtoHash(),           // Plan 业务表达式哈希
+                planPrototype.exprDefinitionJson(),      // Plan 业务表达式定义（未编译）  
+                Map.of(),                                // 无参数，因为参数在表达式构建时已确定
+                List.of()                                // 空 Slice 模板，由 SliceStrategy 动态构建
+        );
+    }
 
-        log.debug("building plan expression for provenance={}, operation={}, window={}",
-                norm.provenanceCode(), norm.operationType(), window);
+    /**
+     * 构建 Plan 级别业务表达式
+     * 包含业务逻辑约束，但不包含窗口约束（窗口约束由 SliceStrategy 添加）
+     */
+    private Expr buildPlanBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+        log.debug("构建 Plan 业务表达式，操作类型: {}", norm.operationType());
 
-        // 如果是 UPDATE 操作或者没有窗口，返回常量 true（全量）
-        if (norm.isUpdate() || window.from() == null || window.to() == null) {
-            log.debug("building constant true expression for update/full mode");
+        // 根据配置和操作类型构建业务逻辑表达式
+        // 例如：数据源过滤、状态约束、业务规则等
+        // 注意：这里不包含时间窗口约束，时间窗口由 SliceStrategy 添加
+
+        List<Expr> businessConstraints = buildBusinessConstraints(norm, configSnapshot);
+
+        if (businessConstraints.isEmpty()) {
+            // 如果没有业务约束，返回恒真（但实际使用时必须添加窗口约束）
             return Exprs.constTrue();
+        } else if (businessConstraints.size() == 1) {
+            return businessConstraints.getFirst();
+        } else {
+            // 多个业务约束用 AND 连接
+            return Exprs.and(businessConstraints);
         }
-
-        // 基于窗口配置构建时间范围表达式
-        ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = configSnapshot.windowOffset();
-        String dateField = determineDateField(windowOffset);
-
-        // 构建时间范围表达式
-        Expr timeRangeExpr = Exprs.rangeDateTime(dateField, window.from(), window.to());
-
-        log.debug("built time range expression: field={}, from={}, to={}", dateField, window.from(), window.to());
-
-        // 可以根据需要添加其他条件
-        return timeRangeExpr;
     }
 
     /**
-     * 确定时间字段名称。
-     * TODO
+     * 构建业务约束列表
      */
-    private String determineDateField(ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset) {
-        if (windowOffset == null) {
-            log.warn("window offset config is null, using default 'date' field");
-            return "date"; // 默认字段名
-        }
+    private List<Expr> buildBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+        List<Expr> constraints = new ArrayList<>();
 
-        // 优先使用配置的偏移字段
-        if (windowOffset.offsetFieldName() != null && !windowOffset.offsetFieldName().trim().isEmpty()) {
-            return windowOffset.offsetFieldName();
-        }
+        // 根据数据源配置添加约束
 
-        // 使用默认日期字段
-        if (windowOffset.defaultDateFieldName() != null && !windowOffset.defaultDateFieldName().trim().isEmpty()) {
-            return windowOffset.defaultDateFieldName();
-        }
-
-        // 最后降级到通用字段名
-        return "date";
-    }
-
-    /**
-     * 编译表达式。
-     */
-    private ExprPlanArtifacts compilePlanLevelArtifacts(Expr expression,
-                                                        PlanTriggerNorm norm,
-                                                        ProvenanceConfigSnapshot snapshot) {
-        // 1. 获取表达式原型（可来自 registry / cache）
-        var prototype = exprPrototypePort.fetchPrototype(
-                norm.provenanceCode().getCode(),
-                norm.endpointCode() == null ? null : norm.endpointCode().name().toLowerCase(),
-                determineOperationCode(norm));
-        // 2. 目前未对 AST 融合原型；简单将窗口表达式附加（占位）
-        String mergedDefinition = mergeProtoWithWindowExpr(prototype.exprDefinitionJson(), expression);
-        // 3. 重新构造一个新的原型再编译（stub 编译为直返）
-        var mergedProto = new ExprPlanPrototype(
-                Integer.toHexString(mergedDefinition.hashCode()),
-                mergedDefinition,
-                prototype.metadata());
-        ExprPlanArtifacts artifacts = exprCompilerPort.compilePrototype(mergedProto);
-        log.debug("expr artifacts ready hash={} protoLen={}", artifacts.exprProtoHash(), artifacts.exprProtoSnapshotJson().length());
-        return artifacts;
-    }
-
-    /**
-     * 确定任务类型。
-     */
-    private String determineTaskType(PlanTriggerNorm norm) {
+        // 根据操作类型添加特定约束
         if (norm.isUpdate()) {
-            return TaskTypes.UPDATE;
-        } else if (norm.isHarvest()) {
-            return TaskTypes.SEARCH;
+            // UPDATE 操作可能有特定的业务约束
+            constraints.addAll(buildUpdateBusinessConstraints(norm, configSnapshot));
         }
-        return TaskTypes.SEARCH; // 默认
+
+        // 可以根据 configSnapshot 添加更多业务约束
+        // constraints.add(buildSourceConstraint(configSnapshot));
+        // constraints.add(buildStatusConstraint(configSnapshot));
+
+        return constraints;
     }
 
     /**
-     * 确定操作代码。
+     * 构建 UPDATE 操作的业务约束
      */
-    private String determineOperationCode(PlanTriggerNorm norm) {
-        // 可以根据 norm.operationType() 映射到具体的操作代码
-        String operationType = norm.operationType().name();
-        return switch (operationType.toUpperCase()) {
-            case "HARVEST" -> OperationCodes.SEARCH;
-            case "UPDATE" -> OperationCodes.SEARCH;
-            case "DETAIL" -> OperationCodes.DETAIL;
-            case "COUNT" -> OperationCodes.COUNT;
-            default -> OperationCodes.SEARCH;
-        };
+    private List<Expr> buildUpdateBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+        List<Expr> constraints = new ArrayList<>();
+
+        // UPDATE 操作的特定业务约束
+        // 例如：只更新特定状态的记录
+        // constraints.add(Exprs.term("status", "pending", TextMatch.EXACT));
+
+        return constraints;
     }
 
     /**
-     * 生成表达式哈希。
+     * 使用 ObjectMapper 将表达式序列化为 JSON 字符串
      */
-    private String mergeProtoWithWindowExpr(String protoJson, Expr windowExpr) {
-        // 简化合并策略：若窗口表达式为 TRUE 则直接返回原型；否则包一层复合 JSON
-        String exprPart = windowExpr.toString();
-        if ("TRUE".equalsIgnoreCase(exprPart)) {
-            return protoJson;
+    private String serializeExprToJson(Expr expr) {
+        if (expr == null) {
+            return "null";
         }
-        return "{\"type\":\"AND\",\"children\":[" + protoJson + ",{" + "\"rangeExpr\":\"" + exprPart.replace("\"", "'") + "\"}" + "]}";
+        try {
+            return objectMapper.writeValueAsString(expr);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize expression to JSON", e);
+        }
     }
+
 
     private String serializeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
         if (snapshot == null) return null;

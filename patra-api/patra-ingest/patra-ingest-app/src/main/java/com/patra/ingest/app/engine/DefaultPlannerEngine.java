@@ -56,10 +56,11 @@ public class DefaultPlannerEngine implements PlannerEngine {
                 buildSliceParams(norm));
         plan.startSlicing();
 
-    SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
-    List<PlanSliceAggregate> slices = strategy == null
-        ? new ArrayList<>()
-        : strategy.slice(norm, window, exprArtifacts);
+        SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
+        List<PlanSliceAggregate> slices = strategy == null
+                ? new ArrayList<>()
+                : strategy.slice(norm, window, exprArtifacts);
+
         List<TaskAggregate> tasks = buildTasks(norm, slices, exprArtifacts);
 
         if (slices.isEmpty() || tasks.isEmpty()) {
@@ -79,19 +80,19 @@ public class DefaultPlannerEngine implements PlannerEngine {
         List<TaskAggregate> tasks = new ArrayList<>(slices.size());
         for (PlanSliceAggregate slice : slices) {
             String idemKey = computeSignature(norm, slice.getSliceSignatureHash());
-        Integer priorityVal = norm.priority() == null ? null : norm.priority().ordinal();
-        tasks.add(TaskAggregate.create(
-            norm.scheduleInstanceId(),
-            null,
-            (long) slice.getSequence(),
-            norm.provenanceCode().getCode(),
-            norm.operationType().name(),
-            null,
-            buildTaskParamsJson(norm, slice),
-            idemKey,
-            slice.getExprHash(),
-            priorityVal,
-            norm.requestedWindowFrom()));
+            Integer priorityVal = norm.priority() == null ? null : norm.priority().ordinal();
+            tasks.add(TaskAggregate.create(
+                    norm.scheduleInstanceId(),
+                    null,
+                    (long) slice.getSequence(),
+                    norm.provenanceCode().getCode(),
+                    norm.operationType().name(),
+                    null,
+                    buildTaskParamsJson(norm, slice),
+                    idemKey,
+                    slice.getExprHash(),
+                    priorityVal,
+                    norm.requestedWindowFrom()));
         }
         return tasks;
     }
@@ -130,7 +131,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
         if (snapshot == null) {
             return null;
         }
-    return snapshot.provenance() == null ? null : "{\"provenanceCode\":\"" + snapshot.provenance().code() + "\"}";
+        return snapshot.provenance() == null ? null : "{\"provenanceCode\":\"" + snapshot.provenance().code() + "\"}";
     }
 
     private String computeSignature(PlanTriggerNorm norm, String payload) {

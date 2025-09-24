@@ -21,11 +21,6 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
         operator.verifyValueCompatibility(value);
     }
 
-    @Override
-    public <R> R accept(Visitor<R> visitor) {
-        return visitor.visitAtom(this);
-    }
-
     /**
      * Supported field operators.
      */
