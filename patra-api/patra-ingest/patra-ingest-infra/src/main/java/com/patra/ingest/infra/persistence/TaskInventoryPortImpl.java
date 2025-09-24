@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.patra.ingest.app.port.outbound.TaskInventoryPort;
+import com.patra.ingest.domain.port.TaskInventoryPort;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import com.patra.ingest.infra.persistence.mapper.TaskMapper;
 import lombok.RequiredArgsConstructor;

@@ -11,12 +11,15 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
-/** 触发命令归一化后的领域对象。 */
+/**
+ * 触发命令归一化后的领域对象。
+ */
 public record PlanTriggerNorm(
         Long scheduleInstanceId,
         ProvenanceCode provenanceCode,
         EndpointCode endpointCode,
         OperationType operationType,
+        String step,
         TriggerType triggerType,
         SchedulerCode schedulerCode,
         String schedulerJobId,
@@ -34,7 +37,15 @@ public record PlanTriggerNorm(
         Objects.requireNonNull(schedulerCode, "schedulerCode不能为空");
     }
 
-    public boolean isHarvest() { return operationType == OperationType.HARVEST; }
-    public boolean isBackfill() { return operationType == OperationType.BACKFILL; }
-    public boolean isUpdate() { return operationType == OperationType.UPDATE; }
+    public boolean isHarvest() {
+        return operationType == OperationType.HARVEST;
+    }
+
+    public boolean isBackfill() {
+        return operationType == OperationType.BACKFILL;
+    }
+
+    public boolean isUpdate() {
+        return operationType == OperationType.UPDATE;
+    }
 }

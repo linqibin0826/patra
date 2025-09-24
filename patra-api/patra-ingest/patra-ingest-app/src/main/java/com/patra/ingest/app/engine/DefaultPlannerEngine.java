@@ -3,6 +3,8 @@ package com.patra.ingest.app.engine;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
+import com.patra.ingest.app.strategy.SliceStrategyRegistry;
+import com.patra.ingest.app.strategy.SliceStrategy;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.command.PlanBlueprintCommand;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
@@ -14,8 +16,6 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -26,7 +26,11 @@ import java.util.List;
 @Component
 public class DefaultPlannerEngine implements PlannerEngine {
 
-    private static final Duration DEFAULT_SLICE_STEP = Duration.ofHours(1);
+    private final SliceStrategyRegistry sliceStrategyRegistry;
+
+    public DefaultPlannerEngine(SliceStrategyRegistry sliceStrategyRegistry) {
+        this.sliceStrategyRegistry = sliceStrategyRegistry;
+    }
 
     @Override
     public PlanAssembly assemble(PlanBlueprintCommand command) {
@@ -52,7 +56,10 @@ public class DefaultPlannerEngine implements PlannerEngine {
                 buildSliceParams(norm));
         plan.startSlicing();
 
-        List<PlanSliceAggregate> slices = buildSlices(norm, window, exprArtifacts);
+    SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
+    List<PlanSliceAggregate> slices = strategy == null
+        ? new ArrayList<>()
+        : strategy.slice(norm, window, exprArtifacts);
         List<TaskAggregate> tasks = buildTasks(norm, slices, exprArtifacts);
 
         if (slices.isEmpty() || tasks.isEmpty()) {
@@ -64,57 +71,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
         return new PlanAssembly(plan, slices, tasks, PlanAssembly.PlanAssemblyStatus.READY);
     }
 
-    private List<PlanSliceAggregate> buildSlices(PlanTriggerNorm norm,
-                                                 PlannerWindow window,
-                                                 ExprPlanArtifacts exprArtifacts) {
-        List<PlanSliceAggregate> result = new ArrayList<>();
-        if (norm.isUpdate()) {
-            result.add(PlanSliceAggregate.create(
-                    null,
-                    norm.provenanceCode().getCode(),
-                    1,
-                    computeSignature(norm, "UPDATE"),
-                    "{\"type\":\"SINGLE\"}",
-                    exprArtifacts.sliceTemplates().isEmpty() ? exprArtifacts.exprProtoHash() : exprArtifacts.sliceTemplates().getFirst().exprHash(),
-                    exprArtifacts.sliceTemplates().isEmpty() ? exprArtifacts.exprProtoSnapshotJson() : exprArtifacts.sliceTemplates().getFirst().exprSnapshotJson()));
-            return result;
-        }
-
-        Instant from = window.from();
-        Instant to = window.to();
-        if (from == null || to == null) {
-            return result;
-        }
-
-        Duration step = DEFAULT_SLICE_STEP;
-        Instant cursor = from;
-        int index = 1;
-        while (cursor.isBefore(to)) {
-            Instant upper = cursor.plus(step);
-            if (upper.isAfter(to)) {
-                upper = to;
-            }
-            String specJson = "{\"type\":\"TIME\",\"from\":" + cursor.toString() + ",\"to\":" + upper.toString() + "}";
-            String signature = computeSignature(norm, specJson + index);
-            String exprHash = exprArtifacts.sliceTemplates().isEmpty()
-                    ? exprArtifacts.exprProtoHash()
-                    : exprArtifacts.sliceTemplates().getFirst().exprHash();
-            String exprSnapshot = exprArtifacts.sliceTemplates().isEmpty()
-                    ? exprArtifacts.exprProtoSnapshotJson()
-                    : exprArtifacts.sliceTemplates().getFirst().exprSnapshotJson();
-            result.add(PlanSliceAggregate.create(
-                    null,
-                    norm.provenanceCode().getCode(),
-                    index,
-                    signature,
-                    specJson,
-                    exprHash,
-                    exprSnapshot));
-            cursor = upper;
-            index++;
-        }
-        return result;
-    }
+    // buildSlices moved to dedicated strategies (TimeSliceStrategy / SingleSliceStrategy)
 
     private List<TaskAggregate> buildTasks(PlanTriggerNorm norm,
                                            List<PlanSliceAggregate> slices,

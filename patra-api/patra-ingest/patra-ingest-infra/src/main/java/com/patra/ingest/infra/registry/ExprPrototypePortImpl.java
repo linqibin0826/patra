@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.registry;
 
-import com.patra.ingest.app.port.outbound.ExprPrototypePort;
+import com.patra.ingest.domain.port.ExprPrototypePort;
 import com.patra.ingest.domain.model.expr.ExprPlanPrototype;
 import org.springframework.stereotype.Component;
 

@@ -85,5 +85,5 @@ public class IngTaskDO extends BaseDO {
     
     /** 备注信息（JSON格式） */
     @TableField(value = "record_remarks", typeHandler = JacksonTypeHandler.class)
-    private JsonNode recordRemarks;
+    private JsonNode recordRemarksJson;
 }

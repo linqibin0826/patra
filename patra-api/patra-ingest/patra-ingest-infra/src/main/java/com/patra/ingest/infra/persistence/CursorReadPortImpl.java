@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.patra.ingest.app.port.outbound.CursorReadPort;
+import com.patra.ingest.domain.port.CursorReadPort;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
 import com.patra.ingest.infra.persistence.mapper.CursorMapper;
 import lombok.RequiredArgsConstructor;

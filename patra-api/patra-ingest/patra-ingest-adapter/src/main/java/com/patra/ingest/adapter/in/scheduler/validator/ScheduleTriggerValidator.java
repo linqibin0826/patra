@@ -38,8 +38,8 @@ public class ScheduleTriggerValidator {
     public void validate(ScheduleTriggerParam param, ProvenanceConfigSnapshot config) {
         Objects.requireNonNull(param, "触发参数不能为空");
         
-        log.debug("开始验证调度触发参数, provenance={}, operation={}, endpoint={}", 
-                param.getProvenanceCode(), param.getOperationCode(), param.getEndpointName());
+    log.debug("开始验证调度触发参数, provenance={}, operation={}, endpoint={}",
+        param.getProvenanceCode(), param.getOperationCode(), param.getEndpointName());
         
         // 1) provenance 存在
         validateProvenanceExists(param, config);
@@ -51,7 +51,7 @@ public class ScheduleTriggerValidator {
         validateWindowValid(param);
         
         // 4) safetyLag ≤ provider.maxLag
-        validateSafetyLag(param, config);
+    // 当前调度参数未提供 safetyLag 字段，跳过安全延迟校验（迁移后可基于窗口策略内置 lag）
         
         log.debug("调度触发参数验证通过");
     }
@@ -63,7 +63,7 @@ public class ScheduleTriggerValidator {
         if (param.getProvenanceCode() == null) {
             throw new IngestConfigurationException(
                     null, 
-                    param.getOperationCode() != null ? param.getOperationCode().getCode() : null,
+                    param.getOperationCode() != null ? param.getOperationCode().name() : null,
                     param.getEndpointName(),
                     "来源代码不能为空",
                     null
@@ -73,7 +73,7 @@ public class ScheduleTriggerValidator {
         if (config == null) {
             throw new IngestConfigurationException(
                     param.getProvenanceCode().getCode(),
-                    param.getOperationCode() != null ? param.getOperationCode().getCode() : null,
+                    param.getOperationCode() != null ? param.getOperationCode().name() : null,
                     param.getEndpointName(),
                     String.format("来源配置不存在: %s", param.getProvenanceCode().getCode()),
                     null
@@ -83,7 +83,7 @@ public class ScheduleTriggerValidator {
         if (config.provenance() == null || config.provenance().code() == null) {
             throw new IngestConfigurationException(
                     param.getProvenanceCode().getCode(),
-                    param.getOperationCode() != null ? param.getOperationCode().getCode() : null,
+                    param.getOperationCode() != null ? param.getOperationCode().name() : null,
                     param.getEndpointName(),
                     String.format("来源配置无效: %s", param.getProvenanceCode().getCode()),
                     null
@@ -94,7 +94,7 @@ public class ScheduleTriggerValidator {
         if (!param.getProvenanceCode().getCode().equals(config.provenance().code())) {
             throw new IngestConfigurationException(
                     param.getProvenanceCode().getCode(),
-                    param.getOperationCode() != null ? param.getOperationCode().getCode() : null,
+                    param.getOperationCode() != null ? param.getOperationCode().name() : null,
                     param.getEndpointName(),
                     String.format("来源代码不匹配: 请求=%s, 配置=%s", 
                             param.getProvenanceCode().getCode(), config.provenance().code()),
@@ -122,7 +122,7 @@ public class ScheduleTriggerValidator {
         // 检查端点配置是否支持该操作
         if (config.endpoint() != null) {
             String configTaskType = config.endpoint().taskType();
-            String paramOperation = param.getOperationCode().getCode().toLowerCase();
+            String paramOperation = param.getOperationCode().name().toLowerCase();
             
             // 如果配置中有任务类型，验证操作是否匹配
             if (configTaskType != null && !configTaskType.toLowerCase().contains(paramOperation)) {
@@ -131,7 +131,7 @@ public class ScheduleTriggerValidator {
             }
         }
         
-        log.debug("操作验证通过: {}", param.getOperationCode().getCode());
+    log.debug("操作验证通过: {}", param.getOperationCode().name());
     }
     
     /**
@@ -141,7 +141,7 @@ public class ScheduleTriggerValidator {
         if (param.getWindowFrom() == null) {
             throw new IngestConfigurationException(
                     param.getProvenanceCode().getCode(),
-                    param.getOperationCode().getCode(),
+                    param.getOperationCode().name(),
                     param.getEndpointName(),
                     "时间窗口开始时间不能为空",
                     null
@@ -154,7 +154,7 @@ public class ScheduleTriggerValidator {
         if (param.getWindowFrom().isBefore(now.minus(Duration.ofDays(365)))) {
             throw new IngestConfigurationException(
                     param.getProvenanceCode().getCode(),
-                    param.getOperationCode().getCode(),
+                    param.getOperationCode().name(),
                     param.getEndpointName(),
                     String.format("时间窗口开始时间过早: %s (不能超过一年前)", param.getWindowFrom()),
                     null
@@ -166,7 +166,7 @@ public class ScheduleTriggerValidator {
             if (!param.getWindowFrom().isBefore(param.getWindowTo())) {
                 throw new IngestConfigurationException(
                         param.getProvenanceCode().getCode(),
-                        param.getOperationCode().getCode(),
+                        param.getOperationCode().name(),
                         param.getEndpointName(),
                         String.format("时间窗口无效: 开始时间(%s) 必须早于结束时间(%s)", 
                                 param.getWindowFrom(), param.getWindowTo()),
@@ -178,7 +178,7 @@ public class ScheduleTriggerValidator {
             if (param.getWindowTo().isAfter(now.plus(Duration.ofDays(30)))) {
                 throw new IngestConfigurationException(
                         param.getProvenanceCode().getCode(),
-                        param.getOperationCode().getCode(),
+                        param.getOperationCode().name(),
                         param.getEndpointName(),
                         String.format("时间窗口结束时间过晚: %s (不能超过30天后)", param.getWindowTo()),
                         null
@@ -186,54 +186,11 @@ public class ScheduleTriggerValidator {
             }
         }
         
-        log.debug("时间窗口验证通过: {} -> {}", param.getWindowFrom(), param.getWindowTo());
+    log.debug("时间窗口验证通过: {} -> {}", param.getWindowFrom(), param.getWindowTo());
     }
     
     /**
      * 4) 验证 safetyLag ≤ provider.maxLag。
      */
-    private void validateSafetyLag(ScheduleTriggerParam param, ProvenanceConfigSnapshot config) {
-        if (param.getSafetyLag() == null) {
-            log.debug("安全延迟未设置，跳过验证");
-            return;
-        }
-        
-        if (param.getSafetyLag().isNegative()) {
-            throw new IngestConfigurationException(
-                    param.getProvenanceCode().getCode(),
-                    param.getOperationCode().getCode(),
-                    param.getEndpointName(),
-                    String.format("安全延迟不能为负数: %s", param.getSafetyLag()),
-                    null
-            );
-        }
-        
-        // 检查是否超过配置的最大延迟
-        if (config.windowOffset() != null && config.windowOffset().watermarkLagSeconds() != null) {
-            Duration maxLag = Duration.ofSeconds(config.windowOffset().watermarkLagSeconds());
-            if (param.getSafetyLag().compareTo(maxLag) > 0) {
-                throw new IngestConfigurationException(
-                        param.getProvenanceCode().getCode(),
-                        param.getOperationCode().getCode(),
-                        param.getEndpointName(),
-                        String.format("安全延迟(%s)超过提供商最大延迟(%s)", 
-                                param.getSafetyLag(), maxLag),
-                        null
-                );
-            }
-        }
-        
-        // 通用安全检查：不能超过24小时
-        if (param.getSafetyLag().compareTo(Duration.ofHours(24)) > 0) {
-            throw new IngestConfigurationException(
-                    param.getProvenanceCode().getCode(),
-                    param.getOperationCode().getCode(),
-                    param.getEndpointName(),
-                    String.format("安全延迟(%s)不能超过24小时", param.getSafetyLag()),
-                    null
-            );
-        }
-        
-        log.debug("安全延迟验证通过: {}", param.getSafetyLag());
-    }
+    // safetyLag 验证逻辑已移除（参数模型不再包含该字段）
 }
