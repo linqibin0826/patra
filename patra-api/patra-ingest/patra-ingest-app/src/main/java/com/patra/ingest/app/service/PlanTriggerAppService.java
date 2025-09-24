@@ -83,7 +83,7 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
         PlanBusinessExpr planBusinessExpr = buildPlanBusinessExpr(norm, configSnapshot);
 
         // Phase 4: 快照落库（配置 + 表达式规范化形态）
-    schedule.recordSnapshots();
+        schedule.recordSnapshots();
         schedule = scheduleInstanceRepository.save(schedule);
 
         // Phase 5: 前置验证（窗口合理性 / 背压 / 能力）
@@ -222,8 +222,6 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
             throw new RuntimeException("Failed to serialize expression to JSON", e);
         }
     }
-
-
 
 
     private List<PlanSliceAggregate> persistSlices(PlanAggregate plan, List<PlanSliceAggregate> slices) {

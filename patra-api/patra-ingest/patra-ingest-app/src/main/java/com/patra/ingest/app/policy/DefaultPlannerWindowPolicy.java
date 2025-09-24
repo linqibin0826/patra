@@ -34,6 +34,7 @@ import java.util.Optional;
  *   <li>calendarAlignTo：CALENDAR 模式对齐粒度（HOUR|DAY|WEEK|MONTH）</li>
  * </ul></p>
  * <p>全量刷新：无 windowOffset 或 windowModeCode 为空。</p>
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -73,7 +74,8 @@ public class DefaultPlannerWindowPolicy implements PlannerWindowPolicy {
         String mode = cfg.windowModeCode().toUpperCase();
         return switch (mode) {
             case "SLIDING" -> buildSlidingWindow(cfg, cursorWatermark, currentTime);
-            case "CALENDAR" -> buildCalendarWindow(cfg, cursorWatermark, currentTime, snapshot.provenance().timezoneDefault());
+            case "CALENDAR" ->
+                    buildCalendarWindow(cfg, cursorWatermark, currentTime, snapshot.provenance().timezoneDefault());
             default -> {
                 log.warn("unsupported windowModeCode={} → fallback full refresh", mode);
                 yield PlannerWindow.full();
@@ -163,7 +165,11 @@ public class DefaultPlannerWindowPolicy implements PlannerWindowPolicy {
     }
 
     private ZoneId safeZone(String tz) {
-        try { return tz == null || tz.isBlank() ? ZoneOffset.UTC : ZoneId.of(tz); } catch (Exception e) { return ZoneOffset.UTC; }
+        try {
+            return tz == null || tz.isBlank() ? ZoneOffset.UTC : ZoneId.of(tz);
+        } catch (Exception e) {
+            return ZoneOffset.UTC;
+        }
     }
 
     private Instant alignToBoundary(Instant instant, String alignTo, ZoneId zone) {
