@@ -8,7 +8,7 @@ public enum Const implements Expr {
     FALSE;
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(ExprVisitor<R> visitor) {
         return visitor.visitConst(this);
     }
 }

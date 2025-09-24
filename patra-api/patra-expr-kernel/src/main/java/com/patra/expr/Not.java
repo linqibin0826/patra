@@ -12,7 +12,7 @@ public record Not(Expr child) implements Expr {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(ExprVisitor<R> visitor) {
         return visitor.visitNot(this);
     }
 }

@@ -22,7 +22,7 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(ExprVisitor<R> visitor) {
         return visitor.visitAtom(this);
     }
 
