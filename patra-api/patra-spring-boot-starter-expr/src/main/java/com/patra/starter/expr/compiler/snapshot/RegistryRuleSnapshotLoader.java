@@ -28,7 +28,7 @@ public class RegistryRuleSnapshotLoader implements RuleSnapshotLoader {
 
     @Override
     public ProvenanceSnapshot load(ProvenanceCode provenanceCode, String taskType, String operationCode) {
-        ProvenanceResp provenance = provenanceClient.getProvenance(provenanceCode.getCode());
+        ProvenanceResp provenance = provenanceClient.getProvenance(provenanceCode);
         ExprSnapshotResp snapshot = exprClient.getSnapshot(provenanceCode.getCode(), taskType, operationCode, null);
         return snapshotAssembler.assemble(provenance, snapshot, taskType, operationCode);
     }

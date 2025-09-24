@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_retry_cfg} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvRetryCfgMapper extends BaseMapper<RegProvRetryCfgDO> {
 
     Optional<RegProvRetryCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,

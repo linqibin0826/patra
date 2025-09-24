@@ -21,6 +21,11 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
         operator.verifyValueCompatibility(value);
     }
 
+    @Override
+    public <R> R accept(Visitor<R> visitor) {
+        return visitor.visitAtom(this);
+    }
+
     /**
      * Supported field operators.
      */
@@ -45,7 +50,9 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
         }
     }
 
-    /** Marker parent for all value variants. */
+    /**
+     * Marker parent for all value variants.
+     */
     public sealed interface Value permits TermValue, InValues, RangeValue, ExistsFlag, TokenValue {
     }
 
@@ -84,7 +91,9 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
         }
     }
 
-    /** Common contract for range based values. */
+    /**
+     * Common contract for range based values.
+     */
     public sealed interface RangeValue extends Value permits DateRange, DateTimeRange, NumberRange {
         Boundary fromBoundary();
 
@@ -138,11 +147,15 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
         }
     }
 
-    /** EXISTS operation – simply indicates presence/absence. */
+    /**
+     * EXISTS operation – simply indicates presence/absence.
+     */
     public record ExistsFlag(boolean shouldExist) implements Value {
     }
 
-    /** TOKEN operation – platform specific token semantics. */
+    /**
+     * TOKEN operation – platform specific token semantics.
+     */
     public record TokenValue(String tokenType, String tokenValue) implements Value {
         public TokenValue {
             Objects.requireNonNull(tokenType, "tokenType");

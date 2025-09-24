@@ -1,5 +1,6 @@
 package com.patra.registry.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.Credential;
@@ -20,7 +21,7 @@ import java.util.Optional;
  */
 public interface ProvenanceConfigRepository {
 
-    Optional<Provenance> findProvenanceByCode(String provenanceCode);
+    Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode);
 
     List<Provenance> findAllProvenances();
 

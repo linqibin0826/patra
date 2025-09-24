@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * {@code reg_prov_credential} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvCredentialMapper extends BaseMapper<RegProvCredentialDO> {
 
     /**

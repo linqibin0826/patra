@@ -10,7 +10,6 @@ import java.time.Instant;
 /**
  * Expr 子域内部 API 契约。
  */
-@RequestMapping
 public interface ExprEndpoint {
 
     String BASE_PATH = "/_internal/expr";

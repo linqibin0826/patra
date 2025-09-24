@@ -84,7 +84,7 @@ public final class Exprs {
     }
 
     public static Expr rangeDateTime(String field, Instant from, Instant to) {
-        return new Atom(field, Atom.Operator.RANGE, new Atom.DateTimeRange(from, to, Atom.RangeValue.Boundary.CLOSED, Atom.RangeValue.Boundary.CLOSED));
+        return new Atom(field, Operator.RANGE, new DateTimeRange(from, to));
     }
 
     public static Expr rangeDateTime(String field,

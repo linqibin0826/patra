@@ -10,4 +10,9 @@ public record Not(Expr child) implements Expr {
     public Not {
         Objects.requireNonNull(child, "child");
     }
+
+    @Override
+    public <R> R accept(Visitor<R> visitor) {
+        return visitor.visitNot(this);
+    }
 }

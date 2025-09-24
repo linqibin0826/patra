@@ -13,7 +13,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_expr_capability} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapabilityDO> {
 
     /** 查询指定维度当前生效的字段能力。 */

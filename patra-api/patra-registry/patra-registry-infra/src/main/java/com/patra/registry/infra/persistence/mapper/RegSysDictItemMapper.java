@@ -18,7 +18,7 @@ import java.util.Optional;
  * @author linqibin
  * @since 0.1.0
  */
-@Mapper
+
 public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
 
     /** 按类型编码与项编码查询启用且未删除的字典项。 */

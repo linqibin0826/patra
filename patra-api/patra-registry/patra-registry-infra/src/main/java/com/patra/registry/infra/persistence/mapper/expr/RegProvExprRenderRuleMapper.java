@@ -13,7 +13,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_expr_render_rule} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRenderRuleDO> {
 
     /** 查询指定维度当前生效的渲染规则。 */

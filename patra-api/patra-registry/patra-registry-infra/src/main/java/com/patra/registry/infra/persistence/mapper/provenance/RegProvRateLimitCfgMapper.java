@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_rate_limit_cfg} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvRateLimitCfgMapper extends BaseMapper<RegProvRateLimitCfgDO> {
 
     /**

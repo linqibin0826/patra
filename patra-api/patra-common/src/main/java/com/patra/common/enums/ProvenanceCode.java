@@ -16,24 +16,24 @@ import lombok.Getter;
 @Getter
 public enum ProvenanceCode {
 
-    PUBMED("pubmed", "PubMed"),
-    PMC("pmc", "PubMed Central"),
-    EPMC("epmc", "Europe PMC"),
-    OPENALEX("openalex", "OpenAlex"),
-    CROSSREF("crossref", "Crossref"),
-    UNPAYWALL("unpaywall", "Unpaywall"),
-    DOAJ("doaj", "DOAJ"),
-    SEMANTIC_SCHOLAR("semanticscholar", "Semantic Scholar"),
-    CORE("core", "CORE"),
-    DATACITE("datacite", "DataCite"),
-    BIORXIV("biorxiv", "bioRxiv"),
-    MEDRXIV("medrxiv", "medRxiv"),
-    PLOS("plos", "PLOS"),
-    SPRINGER_OA("springer_oa", "Springer OA"),
-    THE_LENS("the_lens", "The Lens"),
-    LITCOVID("litcovid", "LitCovid"),
-    CORD19("cord19", "CORD-19"),
-    GIM("gim", "WHO GIM");
+    PUBMED("PUBMED", "PubMed"),
+    PMC("PMC", "PubMed Central"),
+    EPMC("EPMC", "Europe PMC"),
+    OPENALEX("OPENALEX", "OpenAlex"),
+    CROSSREF("CROSSREF", "Crossref"),
+    UNPAYWALL("UNPAYWALL", "Unpaywall"),
+    DOAJ("DOAJ", "DOAJ"),
+    SEMANTIC_SCHOLAR("SEMANTICSCHOLAR", "Semantic Scholar"),
+    CORE("CORE", "CORE"),
+    DATACITE("DATACITE", "DataCite"),
+    BIORXIV("BIORXIV", "bioRxiv"),
+    MEDRXIV("MEDRXIV", "medRxiv"),
+    PLOS("PLOS", "PLOS"),
+    SPRINGER_OA("SPRINGER_OA", "Springer OA"),
+    THE_LENS("THE_LENS", "The Lens"),
+    LITCOVID("LITCOVID", "LitCovid"),
+    CORD19("CORD19", "CORD-19"),
+    GIM("GIM", "WHO GIM");
 
     /** 数据源标识（如 "pubmed"）。 */
     private final String code;

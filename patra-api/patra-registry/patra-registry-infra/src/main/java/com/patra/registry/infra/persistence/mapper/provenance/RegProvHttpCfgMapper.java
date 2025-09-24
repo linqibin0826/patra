@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_http_cfg} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvHttpCfgMapper extends BaseMapper<RegProvHttpCfgDO> {
 
     Optional<RegProvHttpCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,

@@ -50,7 +50,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
                 code, taskType, endpoint, queryTime);
 
         try {
-            ProvenanceConfigResp resp = provenanceClient.getConfiguration(code, taskType, endpoint, queryTime);
+            ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, taskType, endpoint, queryTime);
             
             if (resp == null) {
                 log.warn("Registry 返回空配置响应, provenanceCode={}, taskType={}, endpoint={}", 

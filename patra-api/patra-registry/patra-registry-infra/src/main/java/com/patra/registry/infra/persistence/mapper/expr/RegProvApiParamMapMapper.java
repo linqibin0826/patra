@@ -13,7 +13,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_api_param_map} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvApiParamMapMapper extends BaseMapper<RegProvApiParamMapDO> {
 
     /**

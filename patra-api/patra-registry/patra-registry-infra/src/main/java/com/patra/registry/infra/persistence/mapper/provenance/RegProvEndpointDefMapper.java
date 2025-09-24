@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_endpoint_def} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvEndpointDefMapper extends BaseMapper<RegProvEndpointDefDO> {
 
     /**

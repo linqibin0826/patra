@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * {@code reg_prov_window_offset_cfg} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvWindowOffsetCfgMapper extends BaseMapper<RegProvWindowOffsetCfgDO> {
 
     /**

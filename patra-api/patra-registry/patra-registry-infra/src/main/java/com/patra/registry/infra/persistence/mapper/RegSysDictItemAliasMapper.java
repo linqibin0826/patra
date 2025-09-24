@@ -19,7 +19,7 @@ import java.util.Optional;
  * @author linqibin
  * @since 0.1.0
  */
-@Mapper
+
 public interface RegSysDictItemAliasMapper extends BaseMapper<RegSysDictItemAliasDO> {
 
     /** 按外部系统别名查找对应的内部字典项（需启用且未删除）。 */

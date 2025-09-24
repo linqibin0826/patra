@@ -15,7 +15,7 @@ import java.util.List;
  * @author linqibin
  * @since 0.1.0
  */
-@Mapper
+
 public interface IngPlanMapper extends BaseMapper<IngPlanDO> {
     
     /**

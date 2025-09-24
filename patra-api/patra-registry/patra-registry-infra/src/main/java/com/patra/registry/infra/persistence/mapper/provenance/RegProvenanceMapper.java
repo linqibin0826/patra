@@ -12,7 +12,7 @@ import java.util.Optional;
 /**
  * {@code reg_provenance} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegProvenanceMapper extends BaseMapper<RegProvenanceDO> {
 
     @Select("SELECT * FROM reg_provenance WHERE provenance_code = #{code} AND deleted = 0")

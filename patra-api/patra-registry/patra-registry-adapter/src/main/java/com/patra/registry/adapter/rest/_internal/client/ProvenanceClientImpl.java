@@ -1,5 +1,6 @@
 package com.patra.registry.adapter.rest._internal.client;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.adapter.rest._internal.convertor.ProvenanceApiConvertor;
 import com.patra.registry.api.rpc.client.ProvenanceClient;
 import com.patra.registry.api.rpc.dto.provenance.ProvenanceConfigResp;
@@ -32,13 +33,13 @@ public class ProvenanceClientImpl implements ProvenanceClient {
     }
 
     @Override
-    public ProvenanceResp getProvenance(String code) {
+    public ProvenanceResp getProvenance(ProvenanceCode code) {
         Optional<ProvenanceQuery> result = appService.findProvenance(code);
         return result.map(convertor::toResp).orElse(null);
     }
 
     @Override
-    public ProvenanceConfigResp getConfiguration(String code,
+    public ProvenanceConfigResp getConfiguration(ProvenanceCode code,
                                                  String taskType,
                                                  String endpointName,
                                                  Instant at) {

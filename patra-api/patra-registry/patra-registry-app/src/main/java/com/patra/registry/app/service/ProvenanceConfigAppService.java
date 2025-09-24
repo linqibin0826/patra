@@ -1,5 +1,6 @@
 package com.patra.registry.app.service;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.mapping.ProvenanceQueryAssembler;
 import com.patra.registry.contract.query.view.provenance.ProvenanceConfigQuery;
 import com.patra.registry.contract.query.view.provenance.ProvenanceQuery;
@@ -33,7 +34,7 @@ public class ProvenanceConfigAppService {
     }
 
     /** 按编码查询来源元数据。 */
-    public Optional<ProvenanceQuery> findProvenance(String provenanceCode) {
+    public Optional<ProvenanceQuery> findProvenance(ProvenanceCode provenanceCode) {
         return repository.findProvenanceByCode(provenanceCode)
                 .map(assembler::toQuery);
     }
@@ -41,13 +42,13 @@ public class ProvenanceConfigAppService {
     /**
      * 加载来源在指定任务与端点下的聚合配置。
      */
-    public Optional<ProvenanceConfigQuery> loadConfiguration(String provenanceCode,
+    public Optional<ProvenanceConfigQuery> loadConfiguration(ProvenanceCode provenanceCode,
                                                              String taskType,
                                                              String endpointName,
                                                              Instant at) {
         Optional<Provenance> provenanceOpt = repository.findProvenanceByCode(provenanceCode);
         if (provenanceOpt.isEmpty()) {
-            log.warn("Provenance not found: code={}", provenanceCode);
+            log.error("Provenance not found: code={}", provenanceCode);
             return Optional.empty();
         }
 

@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * {@code reg_expr_field_dict} 表的只读 Mapper。
  */
-@Mapper
+
 public interface RegExprFieldDictMapper extends BaseMapper<RegExprFieldDictDO> {
 
     /** 查询全部未删除的字段字典（按字段键排序）。 */

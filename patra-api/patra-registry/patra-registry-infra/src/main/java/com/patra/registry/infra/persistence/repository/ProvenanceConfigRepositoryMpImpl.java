@@ -1,6 +1,7 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.common.constant.RegistryKeys;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.*;
@@ -45,8 +46,8 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     private final ProvenanceEntityConverter converter;
 
     @Override
-    public Optional<Provenance> findProvenanceByCode(String provenanceCode) {
-        return provenanceMapper.selectByCode(provenanceCode)
+    public Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode) {
+        return provenanceMapper.selectByCode(provenanceCode.getCode())
                 .map(converter::toDomain);
     }
 

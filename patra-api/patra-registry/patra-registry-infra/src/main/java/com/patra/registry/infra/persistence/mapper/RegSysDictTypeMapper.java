@@ -17,7 +17,7 @@ import java.util.Optional;
  * @author linqibin
  * @since 0.1.0
  */
-@Mapper
+
 public interface RegSysDictTypeMapper extends BaseMapper<RegSysDictTypeDO> {
 
     /** 按类型编码查询类型（使用稳定业务键 type_code）。 */
