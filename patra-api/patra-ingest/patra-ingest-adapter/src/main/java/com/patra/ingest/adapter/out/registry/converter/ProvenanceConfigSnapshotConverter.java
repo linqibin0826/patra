@@ -280,7 +280,7 @@ public interface ProvenanceConfigSnapshotConverter {
         if (source == null || source.isEmpty()) {
             return Collections.emptyList();
         }
-        
+
         return source.stream()
                 .map(this::mapCredentialConfig)
                 .toList();

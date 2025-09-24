@@ -43,7 +43,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
     public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, Endpoint endpointCode, OperationCode operationCode) {
         String code = provenanceCode.getCode();
         String endpoint = endpointCode.name();
-        String taskType = operationCode.name();
+        String taskType = operationCode.name(); // 在registry域中交taskType
         Instant queryTime = Instant.now();
 
         log.debug("开始获取来源配置, code={}, taskType={}, endpoint={}, at={}", 

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvCredentialDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.time.Instant;
 import java.util.List;
@@ -15,23 +14,11 @@ import java.util.List;
 @Mapper
 public interface RegProvCredentialMapper extends BaseMapper<RegProvCredentialDO> {
 
-    @Select({"<script>",
-            "SELECT *",
-            "FROM reg_prov_credential",
-            "WHERE deleted = 0",
-            "  AND lifecycle_status_code = 'ACTIVE'",
-            "  AND provenance_id = #{provenanceId}",
-            "  AND scope_code = #{scopeCode}",
-            "  AND task_type_key = #{taskTypeKey}",
-            "  <if test='endpointId != null'>AND endpoint_id = #{endpointId}</if>",
-            "  <if test='endpointId == null'>AND endpoint_id IS NULL</if>",
-            "  AND effective_from &lt;= #{now}",
-            "  AND (effective_to IS NULL OR effective_to &gt; #{now})",
-            "ORDER BY is_default_preferred DESC, effective_from DESC, id DESC",
-            "</script>"})
-    List<RegProvCredentialDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                           @Param("scopeCode") String scopeCode,
-                                           @Param("taskTypeKey") String taskTypeKey,
-                                           @Param("endpointId") Long endpointId,
-                                           @Param("now") Instant now);
+    /**
+     * 合并查询（TASK/SOURCE + 精确/ALL + endpoint 精确/泛化），并按 默认标记 → effective_from DESC → id DESC 排序返回全部候选。
+     */
+    List<RegProvCredentialDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
+                                                 @Param("taskTypeKey") String taskTypeKey,
+                                                 @Param("endpointId") Long endpointId,
+                                                 @Param("now") Instant now);
 }

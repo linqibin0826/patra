@@ -19,14 +19,23 @@ package com.patra.common.constant;
  * @since 0.1.0
  */
 public final class RegistryKeys {
-    private RegistryKeys() {}
+    private RegistryKeys() {
+    }
 
-    /** 任务 / 来源维度下的“全量”标记，表示不针对某个具体 task / source 的特化配置。 */
+    /**
+     * 任务 / 来源维度下的“全量”标记，表示不针对某个具体 task / source 的特化配置。
+     */
     public static final String ALL = "ALL";
-    /** 匹配条件 / valueType / matchType 未指定或“任意”占位。 */
+    /**
+     * 匹配条件 / valueType / matchType 未指定或“任意”占位。
+     */
     public static final String ANY = "ANY";
-    /** 规则取反：已显式设置为 true 的规范化 Key（尽量使用单字符提升组合 Key 压缩度）。 */
+    /**
+     * 规则取反：已显式设置为 true 的规范化 Key（尽量使用单字符提升组合 Key 压缩度）。
+     */
     public static final String NEGATED_TRUE = "T";
-    /** 规则取反：为 false（或未取反）时的规范化 Key。 */
+    /**
+     * 规则取反：为 false（或未取反）时的规范化 Key。
+     */
     public static final String NEGATED_FALSE = "F";
 }

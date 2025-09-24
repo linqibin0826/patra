@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.registry.infra.persistence.mapper.provenance.RegProvPaginationCfgMapper">
+    <select id="selectActiveMerged" resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO">
+        SELECT *
+        FROM reg_prov_pagination_cfg
+        WHERE deleted = 0
+          AND lifecycle_status_code = 'ACTIVE'
+          AND provenance_id = #{provenanceId}
+          AND effective_from &lt;= #{now}
+          AND (effective_to IS NULL OR effective_to &gt; #{now})
+          AND scope_code IN ('TASK','SOURCE')
+          AND task_type_key IN (#{taskTypeKey}, 'ALL')
+        ORDER BY
+          CASE scope_code WHEN 'TASK' THEN 1 ELSE 2 END,
+          CASE WHEN task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+          effective_from DESC,
+          id DESC
+        LIMIT 1
+    </select>
+</mapper>

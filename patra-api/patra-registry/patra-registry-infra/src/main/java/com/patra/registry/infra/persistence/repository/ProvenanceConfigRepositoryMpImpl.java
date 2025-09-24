@@ -18,8 +18,12 @@ import java.util.Optional;
 
 /**
  * Provenance 配置仓储 MyBatis 实现。
- * <p>按 TASK → SOURCE 优先级查询并执行覆盖逻辑，若任务级无结果则回退到来源级。</p>
- * <p>所有 scope 查询统一使用 {@link RegistryConfigScope} 常量，避免字符串硬编码。</p>
+ * <p>
+ * 按 TASK → SOURCE 优先级查询并执行覆盖逻辑，若任务级无结果则回退到来源级。
+ * </p>
+ * <p>
+ * 所有 scope 查询统一使用 {@link RegistryConfigScope} 常量，避免字符串硬编码。
+ * </p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -28,9 +32,6 @@ import java.util.Optional;
 @Repository
 @RequiredArgsConstructor
 public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigRepository {
-
-    private static final String SCOPE_SOURCE = RegistryConfigScope.SOURCE.code();
-    private static final String SCOPE_TASK = RegistryConfigScope.TASK.code();
 
     private final RegProvenanceMapper provenanceMapper;
     private final RegProvEndpointDefMapper endpointDefMapper;
@@ -66,16 +67,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         }
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-
-        if (taskType != null) {
-            Optional<EndpointDefinition> taskLevel = endpointDefMapper.selectActive(
-                            provenanceId, SCOPE_TASK, taskKey, endpointName.trim(), timestamp)
-                    .map(converter::toDomain);
-            if (taskLevel.isPresent()) {
-                return taskLevel;
-            }
-        }
-        return endpointDefMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointName.trim(), timestamp)
+        return endpointDefMapper.selectActiveMerged(provenanceId, taskKey, endpointName.trim(), timestamp)
                 .map(converter::toDomain);
     }
 
@@ -85,15 +77,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                                Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            Optional<WindowOffsetConfig> taskLevel = windowOffsetCfgMapper.selectActive(
-                            provenanceId, SCOPE_TASK, taskKey, timestamp)
-                    .map(converter::toDomain);
-            if (taskLevel.isPresent()) {
-                return taskLevel;
-            }
-        }
-        return windowOffsetCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
+        return windowOffsetCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -103,15 +87,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                            Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            Optional<PaginationConfig> taskLevel = paginationCfgMapper.selectActive(
-                            provenanceId, SCOPE_TASK, taskKey, timestamp)
-                    .map(converter::toDomain);
-            if (taskLevel.isPresent()) {
-                return taskLevel;
-            }
-        }
-        return paginationCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
+        return paginationCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -121,15 +97,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                      Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            Optional<HttpConfig> taskLevel = httpCfgMapper.selectActive(
-                            provenanceId, SCOPE_TASK, taskKey, timestamp)
-                    .map(converter::toDomain);
-            if (taskLevel.isPresent()) {
-                return taskLevel;
-            }
-        }
-        return httpCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
+        return httpCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -141,21 +109,8 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                        Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            Optional<BatchingConfig> precise = queryBatching(provenanceId, SCOPE_TASK, taskKey, endpointId, credentialName, timestamp);
-            if (precise.isPresent()) {
-                return precise;
-            }
-            Optional<BatchingConfig> taskGeneral = queryBatching(provenanceId, SCOPE_TASK, taskKey, null, null, timestamp);
-            if (taskGeneral.isPresent()) {
-                return taskGeneral;
-            }
-        }
-        Optional<BatchingConfig> sourcePrecise = queryBatching(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointId, credentialName, timestamp);
-        if (sourcePrecise.isPresent()) {
-            return sourcePrecise;
-        }
-        return queryBatching(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, null, null, timestamp);
+        return batchingCfgMapper.selectActiveMerged(provenanceId, taskKey, endpointId, credentialName, timestamp)
+                .map(converter::toDomain);
     }
 
     @Override
@@ -164,15 +119,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                  Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            Optional<RetryConfig> taskLevel = retryCfgMapper.selectActive(
-                            provenanceId, SCOPE_TASK, taskKey, timestamp)
-                    .map(converter::toDomain);
-            if (taskLevel.isPresent()) {
-                return taskLevel;
-            }
-        }
-        return retryCfgMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, timestamp)
+        return retryCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -184,21 +131,8 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                          Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            Optional<RateLimitConfig> precise = queryRateLimit(provenanceId, SCOPE_TASK, taskKey, endpointId, credentialName, timestamp);
-            if (precise.isPresent()) {
-                return precise;
-            }
-            Optional<RateLimitConfig> taskGeneral = queryRateLimit(provenanceId, SCOPE_TASK, taskKey, null, null, timestamp);
-            if (taskGeneral.isPresent()) {
-                return taskGeneral;
-            }
-        }
-        Optional<RateLimitConfig> sourcePrecise = queryRateLimit(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointId, credentialName, timestamp);
-        if (sourcePrecise.isPresent()) {
-            return sourcePrecise;
-        }
-        return queryRateLimit(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, null, null, timestamp);
+        return rateLimitCfgMapper.selectActiveMerged(provenanceId, taskKey, endpointId, credentialName, timestamp)
+                .map(converter::toDomain);
     }
 
     @Override
@@ -208,17 +142,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                   Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        if (taskType != null) {
-            List<Credential> taskScoped = credentialMapper.selectActive(
-                            provenanceId, SCOPE_TASK, taskKey, endpointId, timestamp)
-                    .stream()
-                    .map(converter::toDomain)
-                    .toList();
-            if (!taskScoped.isEmpty()) {
-                return taskScoped;
-            }
-        }
-        return credentialMapper.selectActive(provenanceId, SCOPE_SOURCE, RegistryKeys.ALL, endpointId, timestamp)
+        return credentialMapper.selectActiveMerged(provenanceId, taskKey, endpointId, timestamp)
                 .stream()
                 .map(converter::toDomain)
                 .toList();
@@ -256,36 +180,27 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                 batching.orElse(null),
                 retry.orElse(null),
                 rateLimit.orElse(null),
-                credentials
-        );
+                credentials);
         return Optional.of(configuration);
     }
 
-    private Optional<BatchingConfig> queryBatching(Long provenanceId,
-                                                   String scopeCode,
-                                                   String taskKey,
-                                                   Long endpointId,
-                                                   String credentialName,
-                                                   Instant timestamp) {
-        return batchingCfgMapper.selectActive(provenanceId, scopeCode, taskKey, endpointId, credentialName, timestamp)
-                .map(converter::toDomain);
-    }
-
-    private Optional<RateLimitConfig> queryRateLimit(Long provenanceId,
-                                                     String scopeCode,
-                                                     String taskKey,
-                                                     Long endpointId,
-                                                     String credentialName,
-                                                     Instant timestamp) {
-        return rateLimitCfgMapper.selectActive(provenanceId, scopeCode, taskKey, endpointId, credentialName, timestamp)
-                .map(converter::toDomain);
-    }
-
     private String normalizeTaskKey(String taskType) {
-        if (taskType == null || taskType.isBlank()) {
+        if (taskType == null) {
             return RegistryKeys.ALL;
         }
-        return taskType.trim();
+        String trimmed = taskType.trim();
+        if (trimmed.isEmpty()) {
+            return RegistryKeys.ALL;
+        }
+        // 非字母数字统一为下划线，然后连续下划线折叠为单个，下划线首尾修剪
+        String upper = trimmed.toUpperCase();
+        String normalized = upper.replaceAll("[^A-Z0-9]", "_");
+        normalized = normalized.replaceAll("_+", "_");
+        normalized = normalized.replaceAll("^_+|_+$", "");
+        if (normalized.isEmpty()) {
+            return RegistryKeys.ALL;
+        }
+        return normalized;
     }
 
     private Optional<Provenance> findProvenanceById(Long provenanceId) {

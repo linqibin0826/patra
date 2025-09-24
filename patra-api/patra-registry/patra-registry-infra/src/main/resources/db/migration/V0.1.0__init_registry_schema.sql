@@ -232,7 +232,7 @@ CREATE TABLE `reg_prov_endpoint_def`
     `id`                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：端点定义记录ID；可被凭证表 reg_prov_credential.endpoint_id 可选引用',
     `provenance_id`         BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
     `scope_code`            VARCHAR(8)      NOT NULL COMMENT 'DICT CODE(type=scope)：配置作用域 SOURCE/TASK',
-    `task_type`             VARCHAR(32)     NULL COMMENT '任务类型文本：当 scope=TASK 时需填写；示例 harvest/update/backfill（去 ENUM 化）',
+    `task_type`             VARCHAR(32)     NULL COMMENT '任务类型文本：当 scope=TASK 时需填写；示例 HARVEST/UPDATE/BACKFILL（去 ENUM 化）',
     `endpoint_name`         VARCHAR(64)     NOT NULL COMMENT '端点逻辑名称：如 search / detail / works / token；用于业务侧选择端点',
 
     `effective_from`        TIMESTAMP(6)    NOT NULL COMMENT '生效起始（含）；不重叠由应用层保证',

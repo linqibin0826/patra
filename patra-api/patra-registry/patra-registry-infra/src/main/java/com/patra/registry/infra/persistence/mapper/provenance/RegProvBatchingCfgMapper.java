@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvBatchingCfgDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -15,27 +14,12 @@ import java.util.Optional;
 @Mapper
 public interface RegProvBatchingCfgMapper extends BaseMapper<RegProvBatchingCfgDO> {
 
-    @Select({"<script>",
-            "SELECT *",
-            "FROM reg_prov_batching_cfg",
-            "WHERE deleted = 0",
-            "  AND lifecycle_status_code = 'ACTIVE'",
-            "  AND provenance_id = #{provenanceId}",
-            "  AND scope_code = #{scopeCode}",
-            "  AND task_type_key = #{taskTypeKey}",
-            "  AND effective_from &lt;= #{now}",
-            "  AND (effective_to IS NULL OR effective_to &gt; #{now})",
-            "  <if test='endpointId != null'>AND endpoint_id = #{endpointId}</if>",
-            "  <if test='endpointId == null'>AND endpoint_id IS NULL</if>",
-            "  <if test='credentialName != null'>AND credential_name = #{credentialName}</if>",
-            "  <if test='credentialName == null'>AND credential_name IS NULL</if>",
-            "ORDER BY effective_from DESC, id DESC",
-            "LIMIT 1",
-            "</script>"})
-    Optional<RegProvBatchingCfgDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                @Param("scopeCode") String scopeCode,
-                                                @Param("taskTypeKey") String taskTypeKey,
-                                                @Param("endpointId") Long endpointId,
-                                                @Param("credentialName") String credentialName,
-                                                @Param("now") Instant now);
+    /**
+     * 合并查询（含 TASK/SOURCE + 精确/ALL + endpoint/credential 精确或泛化）并按确定性优先级挑选唯一记录。
+     */
+    Optional<RegProvBatchingCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
+                                                      @Param("taskTypeKey") String taskTypeKey,
+                                                      @Param("endpointId") Long endpointId,
+                                                      @Param("credentialName") String credentialName,
+                                                      @Param("now") Instant now);
 }
