@@ -2,12 +2,16 @@ package com.patra.ingest.app.strategy;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.ingest.app.model.PlanBusinessExpr;
 import com.patra.ingest.app.strategy.model.SliceContext;
 import com.patra.ingest.app.strategy.model.SliceDraft;
 import com.patra.ingest.app.util.ExprHashUtil;
+import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -19,6 +23,9 @@ import java.util.List;
 public class TimeSliceStrategy implements SliceStrategy {
 
     private static final Duration DEFAULT_STEP = Duration.ofHours(1);
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public String code() {
@@ -46,7 +53,7 @@ public class TimeSliceStrategy implements SliceStrategy {
         while (cursor.isBefore(to)) {
             Instant upper = cursor.plus(step);
             if (upper.isAfter(to)) upper = to;
-            String specJson = "{\"type\":\"TIME\",\"from\":\"" + cursor + "\",\"to\":\"" + upper + "\"}";
+            String specJson = buildSpecJson(context, cursor, upper);
             Expr timeConstraint = buildTimeWindowConstraint(cursor, upper);
             Expr combined = Exprs.and(List.of(planExpr.expr(), timeConstraint));
             String combinedJson;
@@ -86,5 +93,25 @@ public class TimeSliceStrategy implements SliceStrategy {
     private String serializeExprToJson(Expr expr) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writeValueAsString(expr);
+    }
+
+    private String buildSpecJson(SliceContext context, Instant from, Instant to) {
+
+        ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
+        ObjectNode root = JsonNodeFactory.instance.objectNode();
+        root.put("strategy", code());
+        // window
+        ObjectNode window = root.putObject("window");
+        window.put("from", from.toString());
+        window.put("to", to.toString());
+        ObjectNode boundary = window.putObject("boundary");
+        boundary.put("from", "CLOSED");
+        boundary.put("to", "OPEN");
+        window.put("timezone", configSnapshot.provenance().timezoneDefault());
+        try {
+            return objectMapper.writeValueAsString(root);
+        } catch (Exception e) {
+            return "{\"strategy\":\"" + code() + "\"}";
+        }
     }
 }

@@ -61,9 +61,9 @@ public class DefaultPlannerEngine implements PlannerEngine {
         plan.startSlicing();
 
         SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
-        List<SliceDraft> drafts = strategy == null
-                ? new ArrayList<>()
-                : strategy.slice(new SliceContext(norm, window, planBusinessExpr));
+    List<SliceDraft> drafts = strategy == null
+        ? new ArrayList<>()
+        : strategy.slice(new SliceContext(norm, window, planBusinessExpr, config));
 
         List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
         for (SliceDraft d : drafts) {
