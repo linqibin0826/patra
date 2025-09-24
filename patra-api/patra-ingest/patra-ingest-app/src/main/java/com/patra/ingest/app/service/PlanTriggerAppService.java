@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
-import com.patra.ingest.domain.model.expr.ExprPlanPrototype;
+import com.patra.ingest.app.model.PlanBusinessExpr;
+import com.patra.ingest.app.model.PlanBlueprintCommand;
+import com.patra.ingest.app.util.ExprHashUtil;
 import com.patra.ingest.domain.port.CursorReadPort;
 import com.patra.ingest.app.port.outbound.ProvenanceConfigPort;
 import com.patra.ingest.domain.port.TaskInventoryPort;
@@ -14,9 +16,7 @@ import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.command.PlanBlueprintCommand;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
-import com.patra.ingest.domain.model.expr.ExprPlanArtifacts;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
 import com.patra.ingest.domain.port.PlanRepository;
@@ -79,13 +79,11 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
 
         PlannerWindow window = plannerWindowPolicy.resolveWindow(norm, configSnapshot, cursorWatermark, now);
 
-        // Phase 3: 编译 Plan 级别业务表达式
-        ExprPlanPrototype planPrototype = compilePlanBusinessExpression(norm, configSnapshot);
+        // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
+        PlanBusinessExpr planBusinessExpr = buildPlanBusinessExpr(norm, configSnapshot);
 
         // Phase 4: 快照落库（配置 + 表达式规范化形态）
-        String configSnapshotJson = serializeConfigSnapshot(configSnapshot);
-        schedule.recordSnapshots(Integer.toHexString(configSnapshot.hashCode()),
-                configSnapshotJson, planPrototype.exprProtoHash(), planPrototype.exprDefinitionJson());
+    schedule.recordSnapshots();
         schedule = scheduleInstanceRepository.save(schedule);
 
         // Phase 5: 前置验证（窗口合理性 / 背压 / 能力）
@@ -93,9 +91,8 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
                 command.provenanceCode().getCode(), command.operationType().name());
         plannerValidator.validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
 
-        // Phase 6: 构建制品并组装蓝图
-        ExprPlanArtifacts exprArtifacts = buildPlanArtifactsFromPrototype(planPrototype);
-        PlanBlueprintCommand blueprint = new PlanBlueprintCommand(norm, window, configSnapshot, exprArtifacts);
+        // Phase 6: 组装蓝图
+        PlanBlueprintCommand blueprint = new PlanBlueprintCommand(norm, window, configSnapshot, planBusinessExpr);
         PlanAssembly assembly = plannerEngine.assemble(blueprint);
 
         // Phase 7: 持久化 Plan / Slice / Task
@@ -144,46 +141,14 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
 
 
     /**
-     * Phase 3: 编译 Plan 级别业务表达式
-     * <p>
-     * 核心设计理念：
-     * 1. 只负责 Plan 业务表达式，不涉及任何 Slice 逻辑
-     * 2. 返回 ExprPlanPrototype，表示这只是一个原型，不能直接使用
-     * 3. Slice 表达式由 SliceStrategy 在 Phase 6 中动态构建
+     * Phase 3: 构建 Plan 级业务表达式（纯业务逻辑模板，不含窗口约束）。
+     * 窗口约束在切片策略中动态添加；该表达式不会直接执行，因此不做编译。
      */
-    private ExprPlanPrototype compilePlanBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        log.info("开始编译 Plan 业务表达式，操作类型: {}", norm.operationType());
-
-        // 1. 构建 Plan 级别业务表达式（包含业务逻辑，但无窗口约束）
-        Expr planBusinessExpr = buildPlanBusinessExpression(norm, configSnapshot);
-        String planExprJson = serializeExprToJson(planBusinessExpr);
-        String planExprHash = Integer.toHexString(planExprJson.hashCode());
-
-        // 2. 构建 Plan 原型
-        ExprPlanPrototype planPrototype = new ExprPlanPrototype(planExprHash, planExprJson, Map.of());
-
-        log.info("Plan 业务表达式编译完成，哈希: {}", planPrototype.exprProtoHash());
-
-        return planPrototype;
-    }
-
-    /**
-     * Phase 6: 构建 Plan 制品
-     * 
-     * 关键理念：
-     * 1. Plan 表达式不需要编译，因为它不会被直接执行
-     * 2. Plan 表达式没有参数，因为参数在构建时已经确定
-     * 3. 只是简单地将原型转换为制品格式，供 SliceStrategy 使用
-     */
-    private ExprPlanArtifacts buildPlanArtifactsFromPrototype(ExprPlanPrototype planPrototype) {
-        // 直接构建制品，不进行编译
-        // Plan 表达式只是原型，不会被直接执行，所以不需要编译
-        return new ExprPlanArtifacts(
-                planPrototype.exprProtoHash(),           // Plan 业务表达式哈希
-                planPrototype.exprDefinitionJson(),      // Plan 业务表达式定义（未编译）  
-                Map.of(),                                // 无参数，因为参数在表达式构建时已确定
-                List.of()                                // 空 Slice 模板，由 SliceStrategy 动态构建
-        );
+    private PlanBusinessExpr buildPlanBusinessExpr(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+        Expr expr = buildPlanBusinessExpression(norm, configSnapshot);
+        String json = serializeExprToJson(expr);
+        String hash = ExprHashUtil.sha256Hex(json);
+        return new PlanBusinessExpr(expr, json, hash);
     }
 
     /**
@@ -259,14 +224,6 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
     }
 
 
-    private String serializeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
-        if (snapshot == null) return null;
-        try {
-            return objectMapper.writeValueAsString(snapshot);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize config snapshot", e);
-        }
-    }
 
 
     private List<PlanSliceAggregate> persistSlices(PlanAggregate plan, List<PlanSliceAggregate> slices) {

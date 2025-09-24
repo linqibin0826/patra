@@ -1,19 +1,8 @@
 package com.patra.ingest.domain.model.expr;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
 /**
- * 表达式编译产物：计划和切片执行所需的快照与模板。
+ * @deprecated 已弃用：Plan 表达式不再在 domain 层保留制品结构；
+ * 使用应用层的 PlanBusinessExpr + SliceDraft 模型。该类仅为兼容残留引用而保留，将在后续版本移除。
  */
-public record ExprPlanArtifacts(String exprProtoHash,
-                                String exprProtoSnapshotJson,
-                                Map<String, Object> planLevelParameters,
-                                List<ExprSliceTemplate> sliceTemplates) {
-    public ExprPlanArtifacts {
-        Objects.requireNonNull(exprProtoHash, "exprProtoHash不能为空");
-        sliceTemplates = sliceTemplates == null ? List.of() : List.copyOf(sliceTemplates);
-        planLevelParameters = planLevelParameters == null ? Map.of() : Map.copyOf(planLevelParameters);
-    }
-}
+@Deprecated
+public final class ExprPlanArtifacts { private ExprPlanArtifacts() {} }

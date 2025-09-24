@@ -1,9 +1,8 @@
+// Deprecated and removed: Plan 级表达式不再需要编译端口
 package com.patra.ingest.app.port.outbound;
 
-import com.patra.ingest.domain.model.expr.ExprPlanArtifacts;
-import com.patra.ingest.domain.model.expr.ExprPlanPrototype;
-
-public interface ExprCompilerPort {
-
-    ExprPlanArtifacts compilePrototype(ExprPlanPrototype prototype);
-}
+/**
+ * @deprecated 已移除编译职责，Plan 表达式仅作为模板使用。
+ */
+@Deprecated
+interface ExprCompilerPort { }

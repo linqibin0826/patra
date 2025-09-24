@@ -29,10 +29,4 @@ public class ScheduleInstanceDO extends BaseDO {
     @TableField("triggered_at") private java.time.Instant triggeredAt;
     /** 来源代码（本次调度针对的文献源） */
     @TableField("provenance_code") private String provenanceCode;
-    /** 当时的来源配置 JSON 快照（防止变更影响追溯） */
-    @TableField("provenance_config_snapshot") private String provenanceConfigSnapshot;
-    /** 表达式原型哈希（生成计划前的表达式指纹） */
-    @TableField("expr_proto_hash") private String exprProtoHash;
-    /** 表达式原型 JSON 快照 */
-    @TableField("expr_proto_snapshot") private String exprProtoSnapshot;
 }

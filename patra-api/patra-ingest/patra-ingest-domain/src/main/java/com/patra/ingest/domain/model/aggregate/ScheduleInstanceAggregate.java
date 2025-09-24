@@ -23,10 +23,6 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     private final TriggerType triggerType;
     private final Instant triggeredAt;
     private final ProvenanceCode provenanceCode;
-    private String provenanceConfigSnapshotJson;
-    private String provenanceConfigHash;
-    private String exprProtoHash;
-    private String exprProtoSnapshotJson;
 
     private ScheduleInstanceAggregate(Long id,
                                       SchedulerCode schedulerCode,
@@ -34,10 +30,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
                                       String schedulerLogId,
                                       TriggerType triggerType,
                                       Instant triggeredAt,
-                                      ProvenanceCode provenanceCode,
-                                      String provenanceConfigSnapshotJson,
-                                      String exprProtoHash,
-                                      String exprProtoSnapshotJson) {
+                                      ProvenanceCode provenanceCode) {
         super(id);
         this.schedulerCode = Objects.requireNonNull(schedulerCode, "schedulerCode不能为空");
         this.schedulerJobId = schedulerJobId;
@@ -45,64 +38,43 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
         this.triggerType = Objects.requireNonNull(triggerType, "triggerType不能为空");
         this.triggeredAt = triggeredAt == null ? Instant.now() : triggeredAt;
         this.provenanceCode = provenanceCode;
-        this.provenanceConfigSnapshotJson = provenanceConfigSnapshotJson;
-        this.exprProtoHash = exprProtoHash;
-        this.exprProtoSnapshotJson = exprProtoSnapshotJson;
+        // exprProto* 不再在调度实例层面保存（留空，Plan 层保存）
     }
 
     public static ScheduleInstanceAggregate start(SchedulerCode schedulerCode,
-                                                  String schedulerJobId,
-                                                  String schedulerLogId,
-                                                  TriggerType triggerType,
-                                                  Instant triggeredAt,
-                                                  ProvenanceCode provenanceCode) {
-        return new ScheduleInstanceAggregate(null,
-                schedulerCode,
-                schedulerJobId,
-                schedulerLogId,
-                triggerType,
-                triggeredAt,
-                provenanceCode,
-                null,
-                null,
-                null);
+            String schedulerJobId,
+            String schedulerLogId,
+            TriggerType triggerType,
+            Instant triggeredAt,
+            ProvenanceCode provenanceCode) {
+    return new ScheduleInstanceAggregate(null,
+        schedulerCode,
+        schedulerJobId,
+        schedulerLogId,
+        triggerType,
+        triggeredAt,
+        provenanceCode);
     }
 
     public static ScheduleInstanceAggregate restore(Long id,
-                                                    SchedulerCode schedulerCode,
-                                                    String schedulerJobId,
-                                                    String schedulerLogId,
-                                                    TriggerType triggerType,
-                                                    Instant triggeredAt,
-                                                    ProvenanceCode provenanceCode,
-                                                    String provenanceConfigSnapshotJson,
-                                                    String exprProtoHash,
-                                                    String exprProtoSnapshotJson,
-                                                    long version) {
-        ScheduleInstanceAggregate aggregate = new ScheduleInstanceAggregate(id,
-                schedulerCode,
-                schedulerJobId,
-                schedulerLogId,
-                triggerType,
-                triggeredAt,
-                provenanceCode,
-                provenanceConfigSnapshotJson,
-                exprProtoHash,
-                exprProtoSnapshotJson);
+            SchedulerCode schedulerCode,
+            String schedulerJobId,
+            String schedulerLogId,
+            TriggerType triggerType,
+            Instant triggeredAt,
+            ProvenanceCode provenanceCode,
+            long version) {
+    ScheduleInstanceAggregate aggregate = new ScheduleInstanceAggregate(id,
+        schedulerCode,
+        schedulerJobId,
+        schedulerLogId,
+        triggerType,
+        triggeredAt,
+        provenanceCode);
         aggregate.assignVersion(version);
         return aggregate;
     }
 
-    /**
-     * 更新快照信息，便于回溯。
-     */
-    public void recordSnapshots(String provenanceConfigHash,
-                                String provenanceConfigSnapshotJson,
-                                String exprProtoHash,
-                                String exprProtoSnapshotJson) {
-        this.provenanceConfigHash = provenanceConfigHash;
-        this.provenanceConfigSnapshotJson = provenanceConfigSnapshotJson;
-        this.exprProtoHash = exprProtoHash;
-        this.exprProtoSnapshotJson = exprProtoSnapshotJson;
-    }
+    // 目前无需额外快照记录；如未来需要可扩展方法
+    public void recordSnapshots() {}
 }

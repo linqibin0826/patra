@@ -6,11 +6,13 @@ import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.app.strategy.SliceStrategyRegistry;
 import com.patra.ingest.app.strategy.SliceStrategy;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.command.PlanBlueprintCommand;
+import com.patra.ingest.app.model.PlanBlueprintCommand;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
-import com.patra.ingest.domain.model.expr.ExprPlanArtifacts;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.app.strategy.model.SliceContext;
+import com.patra.ingest.app.strategy.model.SliceDraft;
+import com.patra.ingest.app.model.PlanBusinessExpr;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -36,7 +38,9 @@ public class DefaultPlannerEngine implements PlannerEngine {
     public PlanAssembly assemble(PlanBlueprintCommand command) {
         PlanTriggerNorm norm = command.triggerNorm();
         PlannerWindow window = command.window();
-        ExprPlanArtifacts exprArtifacts = command.exprArtifacts();
+        PlanBusinessExpr planBusinessExpr = command.planBusinessExpr();
+        String planExprHash = planBusinessExpr.hash();
+        String planExprJson = planBusinessExpr.jsonSnapshot();
         ProvenanceConfigSnapshot config = command.configSnapshot();
 
         String planKey = buildPlanKey(norm, window);
@@ -46,8 +50,8 @@ public class DefaultPlannerEngine implements PlannerEngine {
                 norm.provenanceCode().getCode(),
                 norm.endpointCode().name().toLowerCase(),
                 norm.operationType().name(),
-                exprArtifacts.exprProtoHash(),
-                exprArtifacts.exprProtoSnapshotJson(),
+                planExprHash,
+                planExprJson,
                 serializeConfigSnapshot(config),
                 null,
                 window.from(),
@@ -57,11 +61,23 @@ public class DefaultPlannerEngine implements PlannerEngine {
         plan.startSlicing();
 
         SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
-        List<PlanSliceAggregate> slices = strategy == null
+        List<SliceDraft> drafts = strategy == null
                 ? new ArrayList<>()
-                : strategy.slice(norm, window, exprArtifacts);
+                : strategy.slice(new SliceContext(norm, window, planBusinessExpr));
 
-        List<TaskAggregate> tasks = buildTasks(norm, slices, exprArtifacts);
+        List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
+        for (SliceDraft d : drafts) {
+            slices.add(PlanSliceAggregate.create(
+                    null,
+                    norm.provenanceCode().getCode(),
+                    d.sequence(),
+                    d.sliceSignatureSeed(),
+                    d.sliceSpecJson(),
+                    d.sliceExprHash(),
+                    d.sliceExprJson()));
+        }
+
+        List<TaskAggregate> tasks = buildTasks(norm, slices);
 
         if (slices.isEmpty() || tasks.isEmpty()) {
             plan.markFailed();
@@ -75,8 +91,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
     // buildSlices moved to dedicated strategies (TimeSliceStrategy / SingleSliceStrategy)
 
     private List<TaskAggregate> buildTasks(PlanTriggerNorm norm,
-                                           List<PlanSliceAggregate> slices,
-                                           ExprPlanArtifacts exprArtifacts) {
+                                           List<PlanSliceAggregate> slices) {
         List<TaskAggregate> tasks = new ArrayList<>(slices.size());
         for (PlanSliceAggregate slice : slices) {
             String idemKey = computeSignature(norm, slice.getSliceSignatureHash());

@@ -1,11 +1,7 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.ingest.domain.model.expr.ExprPlanPrototype;
-
 /**
- * 表达式原型获取端口（Domain Port）
+ * 已废弃：ExprPrototypePort 不再使用，保留空文件兼容。
  */
-public interface ExprPrototypePort {
-
-    ExprPlanPrototype fetchPrototype(String provenanceCode, String endpointName, String operationCode);
-}
+@Deprecated
+public interface ExprPrototypePort { }

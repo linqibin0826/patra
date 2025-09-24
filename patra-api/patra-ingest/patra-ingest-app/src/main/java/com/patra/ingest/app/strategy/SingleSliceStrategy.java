@@ -1,9 +1,8 @@
 package com.patra.ingest.app.strategy;
 
-import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
-import com.patra.ingest.domain.model.expr.ExprPlanArtifacts;
-import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.app.strategy.model.SliceContext;
+import com.patra.ingest.app.strategy.model.SliceDraft;
+import com.patra.expr.Expr;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,18 +13,19 @@ public class SingleSliceStrategy implements SliceStrategy {
     public String code() { return "SINGLE"; }
 
     @Override
-    public List<PlanSliceAggregate> slice(PlanTriggerNorm norm,
-                                          PlannerWindow window,
-                                          ExprPlanArtifacts exprArtifacts) {
-        String exprHash = exprArtifacts.sliceTemplates().isEmpty() ? exprArtifacts.exprProtoHash() : exprArtifacts.sliceTemplates().getFirst().exprHash();
-        String exprSnapshot = exprArtifacts.sliceTemplates().isEmpty() ? exprArtifacts.exprProtoSnapshotJson() : exprArtifacts.sliceTemplates().getFirst().exprSnapshotJson();
-        return List.of(PlanSliceAggregate.create(
-                null,
-                norm.provenanceCode().getCode(),
+    public List<SliceDraft> slice(SliceContext context) {
+        // UPDATE 模式：不加时间窗口，直接使用 Plan 业务表达式
+        Expr base = context.planExpr().expr();
+        String json = context.planExpr().jsonSnapshot();
+        String hash = context.planExpr().hash();
+        return List.of(new SliceDraft(
                 1,
                 "SINGLE",
                 "{\"type\":\"SINGLE\"}",
-                exprHash,
-                exprSnapshot));
+                base,
+                json,
+                hash,
+                context.window().from(),
+                context.window().to()));
     }
 }

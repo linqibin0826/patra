@@ -1,7 +1,7 @@
 package com.patra.ingest.app.engine;
 
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
-import com.patra.ingest.domain.model.command.PlanBlueprintCommand;
+import com.patra.ingest.app.model.PlanBlueprintCommand;
 
 /**
  * 计划编排引擎（应用层组件）。

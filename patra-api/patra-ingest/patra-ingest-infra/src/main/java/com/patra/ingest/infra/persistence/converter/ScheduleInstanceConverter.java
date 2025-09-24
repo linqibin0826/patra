@@ -16,9 +16,6 @@ public class ScheduleInstanceConverter {
         entity.setTriggerTypeCode(aggregate.getTriggerType() == null ? null : aggregate.getTriggerType().name());
         entity.setTriggeredAt(aggregate.getTriggeredAt());
         entity.setProvenanceCode(aggregate.getProvenanceCode() == null ? null : aggregate.getProvenanceCode().getCode());
-        entity.setProvenanceConfigSnapshot(aggregate.getProvenanceConfigSnapshotJson());
-        entity.setExprProtoHash(aggregate.getExprProtoHash());
-        entity.setExprProtoSnapshot(aggregate.getExprProtoSnapshotJson());
         entity.setVersion(aggregate.getVersion());
         return entity;
     }
@@ -36,9 +33,6 @@ public class ScheduleInstanceConverter {
                 entity.getTriggerTypeCode() == null ? null : com.patra.ingest.domain.model.enums.TriggerType.valueOf(entity.getTriggerTypeCode()),
                 entity.getTriggeredAt(),
                 entity.getProvenanceCode() == null ? null : com.patra.common.enums.ProvenanceCode.parse(entity.getProvenanceCode()),
-                entity.getProvenanceConfigSnapshot(),
-                entity.getExprProtoHash(),
-                entity.getExprProtoSnapshot(),
                 version);
     }
 }
