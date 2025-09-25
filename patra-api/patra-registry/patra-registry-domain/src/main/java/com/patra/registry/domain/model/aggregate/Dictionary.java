@@ -1,10 +1,10 @@
 package com.patra.registry.domain.model.aggregate;
 
-import com.patra.registry.domain.model.vo.DictionaryAlias;
-import com.patra.registry.domain.model.vo.DictionaryId;
-import com.patra.registry.domain.model.vo.DictionaryItem;
-import com.patra.registry.domain.model.vo.DictionaryType;
-import com.patra.registry.domain.model.vo.ValidationResult;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryAlias;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryId;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
+import com.patra.registry.domain.model.vo.dictionary.ValidationResult;
 
 import java.util.Comparator;
 import java.util.List;

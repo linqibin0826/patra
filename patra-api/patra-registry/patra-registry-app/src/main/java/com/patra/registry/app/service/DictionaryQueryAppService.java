@@ -1,10 +1,10 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.app.mapping.DictionaryQueryConverter;
-import com.patra.registry.contract.query.view.DictionaryItemQuery;
-import com.patra.registry.contract.query.view.DictionaryTypeQuery;
-import com.patra.registry.domain.model.vo.DictionaryItem;
-import com.patra.registry.domain.model.vo.DictionaryType;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemQuery;
+import com.patra.registry.domain.model.read.dictionary.DictionaryTypeQuery;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
 import com.patra.registry.domain.port.DictionaryRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

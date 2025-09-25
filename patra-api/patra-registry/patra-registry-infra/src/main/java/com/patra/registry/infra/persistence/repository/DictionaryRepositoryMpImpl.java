@@ -1,11 +1,11 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.registry.domain.model.aggregate.Dictionary;
-import com.patra.registry.domain.model.vo.DictionaryAlias;
-import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
-import com.patra.registry.domain.model.vo.DictionaryId;
-import com.patra.registry.domain.model.vo.DictionaryItem;
-import com.patra.registry.domain.model.vo.DictionaryType;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryAlias;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryHealthStatus;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryId;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
 import com.patra.registry.domain.port.DictionaryRepository;
 import com.patra.registry.domain.exception.dictionary.DictionaryRepositoryException;
 import com.patra.registry.infra.mapstruct.DictionaryEntityConverter;

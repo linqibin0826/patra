@@ -1,10 +1,10 @@
 package com.patra.registry.app.mapping;
 
-import com.patra.registry.contract.query.view.expr.ApiParamMappingQuery;
-import com.patra.registry.contract.query.view.expr.ExprCapabilityQuery;
-import com.patra.registry.contract.query.view.expr.ExprFieldQuery;
-import com.patra.registry.contract.query.view.expr.ExprRenderRuleQuery;
-import com.patra.registry.contract.query.view.expr.ExprSnapshotQuery;
+import com.patra.registry.domain.model.read.expr.ApiParamMappingQuery;
+import com.patra.registry.domain.model.read.expr.ExprCapabilityQuery;
+import com.patra.registry.domain.model.read.expr.ExprFieldQuery;
+import com.patra.registry.domain.model.read.expr.ExprRenderRuleQuery;
+import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import com.patra.registry.domain.model.vo.expr.ApiParamMapping;
 import com.patra.registry.domain.model.vo.expr.ExprCapability;
 import com.patra.registry.domain.model.vo.expr.ExprField;

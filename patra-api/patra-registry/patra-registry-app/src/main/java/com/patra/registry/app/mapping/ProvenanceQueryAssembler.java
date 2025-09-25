@@ -1,15 +1,15 @@
 package com.patra.registry.app.mapping;
 
-import com.patra.registry.contract.query.view.provenance.BatchingConfigQuery;
-import com.patra.registry.contract.query.view.provenance.CredentialQuery;
-import com.patra.registry.contract.query.view.provenance.EndpointDefinitionQuery;
-import com.patra.registry.contract.query.view.provenance.HttpConfigQuery;
-import com.patra.registry.contract.query.view.provenance.PaginationConfigQuery;
-import com.patra.registry.contract.query.view.provenance.ProvenanceConfigQuery;
-import com.patra.registry.contract.query.view.provenance.ProvenanceQuery;
-import com.patra.registry.contract.query.view.provenance.RateLimitConfigQuery;
-import com.patra.registry.contract.query.view.provenance.RetryConfigQuery;
-import com.patra.registry.contract.query.view.provenance.WindowOffsetQuery;
+import com.patra.registry.domain.model.read.provenance.BatchingConfigQuery;
+import com.patra.registry.domain.model.read.provenance.CredentialQuery;
+import com.patra.registry.domain.model.read.provenance.EndpointDefinitionQuery;
+import com.patra.registry.domain.model.read.provenance.HttpConfigQuery;
+import com.patra.registry.domain.model.read.provenance.PaginationConfigQuery;
+import com.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
+import com.patra.registry.domain.model.read.provenance.ProvenanceQuery;
+import com.patra.registry.domain.model.read.provenance.RateLimitConfigQuery;
+import com.patra.registry.domain.model.read.provenance.RetryConfigQuery;
+import com.patra.registry.domain.model.read.provenance.WindowOffsetQuery;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.Credential;

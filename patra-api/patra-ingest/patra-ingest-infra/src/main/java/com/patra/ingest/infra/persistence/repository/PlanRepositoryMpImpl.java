@@ -3,8 +3,8 @@ package com.patra.ingest.infra.persistence.repository;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.infra.persistence.converter.PlanConverter;
-import com.patra.ingest.infra.persistence.entity.IngPlanDO;
-import com.patra.ingest.infra.persistence.mapper.IngPlanMapper;
+import com.patra.ingest.infra.persistence.entity.PlanDO;
+import com.patra.ingest.infra.persistence.mapper.PlanMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -16,12 +16,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PlanRepositoryMpImpl implements PlanRepository {
 
-    private final IngPlanMapper planMapper;
+    private final PlanMapper planMapper;
     private final PlanConverter planConverter;
 
     @Override
     public PlanAggregate save(PlanAggregate plan) {
-        IngPlanDO entity = planConverter.toEntity(plan);
+        PlanDO entity = planConverter.toEntity(plan);
         if (entity.getId() == null) {
             planMapper.insert(entity);
         } else {
@@ -35,7 +35,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
         if (planKey == null || planKey.isBlank()) {
             return Optional.empty();
         }
-        IngPlanDO entity = planMapper.findByPlanKey(planKey);
+        PlanDO entity = planMapper.findByPlanKey(planKey);
         return Optional.ofNullable(entity).map(planConverter::toAggregate);
     }
 

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
-import com.patra.ingest.infra.persistence.entity.IngPlanDO;
+import com.patra.ingest.infra.persistence.entity.PlanDO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,8 +18,8 @@ public class PlanConverter {
 
     private final ObjectMapper objectMapper;
 
-    public IngPlanDO toEntity(PlanAggregate aggregate) {
-        IngPlanDO entity = new IngPlanDO();
+    public PlanDO toEntity(PlanAggregate aggregate) {
+        PlanDO entity = new PlanDO();
         entity.setId(aggregate.getId());
         entity.setScheduleInstanceId(aggregate.getScheduleInstanceId());
         entity.setPlanKey(aggregate.getPlanKey());
@@ -40,7 +40,7 @@ public class PlanConverter {
         return entity;
     }
 
-    public PlanAggregate toAggregate(IngPlanDO entity) {
+    public PlanAggregate toAggregate(PlanDO entity) {
         if (entity == null) {
             return null;
         }

@@ -10,8 +10,7 @@ import com.patra.registry.api.rpc.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.rpc.dto.provenance.RateLimitConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.RetryConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.WindowOffsetResp;
-import com.patra.registry.contract.query.view.provenance.*;
-import com.patra.registry.contract.query.view.provenance.ProvenanceConfigQuery;
+import com.patra.registry.domain.model.read.provenance.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 

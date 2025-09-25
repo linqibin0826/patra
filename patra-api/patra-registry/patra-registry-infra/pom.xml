@@ -21,11 +21,6 @@
 
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-registry-contract</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
@@ -37,7 +32,6 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-            <version>${mapstruct.version}</version>
         </dependency>
 
     </dependencies>

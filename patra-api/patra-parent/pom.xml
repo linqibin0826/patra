@@ -144,7 +144,6 @@
                 <version>${hutool.version}</version>
             </dependency>
 
-
             <dependency>
                 <groupId>com.papertrace</groupId>
                 <artifactId>patra-registry-api</artifactId>

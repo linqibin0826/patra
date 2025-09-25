@@ -1,9 +1,9 @@
 package com.patra.registry.domain.port;
 
 import com.patra.registry.domain.model.aggregate.Dictionary;
-import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
-import com.patra.registry.domain.model.vo.DictionaryItem;
-import com.patra.registry.domain.model.vo.DictionaryType;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryHealthStatus;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
 
 import java.util.List;
 import java.util.Optional;

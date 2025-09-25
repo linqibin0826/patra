@@ -1,9 +1,9 @@
 package com.patra.registry.app.mapping;
 
-import com.patra.registry.contract.query.view.DictionaryItemQuery;
-import com.patra.registry.contract.query.view.DictionaryItemView;
-import com.patra.registry.contract.query.view.DictionaryTypeQuery;
-import com.patra.registry.contract.query.view.DictionaryTypeView;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemQuery;
+import com.patra.registry.domain.model.read.dictionary.DictionaryItemView;
+import com.patra.registry.domain.model.read.dictionary.DictionaryTypeQuery;
+import com.patra.registry.domain.model.read.dictionary.DictionaryTypeView;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

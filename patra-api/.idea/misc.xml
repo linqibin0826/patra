@@ -14,6 +14,8 @@
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/patra-ingest/patra-ingest-contract/pom.xml" />
+        <option value="$PROJECT_DIR$/patra-registry/patra-registry-contract/pom.xml" />
         <option value="$PROJECT_DIR$/patra-shared-kernel/pom.xml" />
         <option value="$PROJECT_DIR$/patra-spring-boot-starter-observability/pom.xml" />
         <option value="$PROJECT_DIR$/patra-starter-query/pom.xml" />

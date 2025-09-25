@@ -1,9 +1,9 @@
 package com.patra.registry.app.mapping;
 
-import com.patra.registry.contract.query.view.DictionaryHealthQuery;
-import com.patra.registry.contract.query.view.DictionaryValidationQuery;
-import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
-import com.patra.registry.domain.model.vo.ValidationResult;
+import com.patra.registry.domain.model.read.dictionary.DictionaryHealthQuery;
+import com.patra.registry.domain.model.read.dictionary.DictionaryValidationQuery;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryHealthStatus;
+import com.patra.registry.domain.model.vo.dictionary.ValidationResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;

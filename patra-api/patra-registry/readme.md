@@ -12,31 +12,26 @@
 * **接口层（api）**：对外契约（REST/RPC DTO、集成事件 DTO、枚举、路径常量等）。
 
     * 仅依赖：`jakarta.validation`。
-    * 不依赖 Spring、domain、infra、app、contract。
-
-* **契约层（contract）**：内部跨层契约（QueryPort + ReadModel/DTO、查询条件对象、少量共享枚举）。
-
-    * 被 `app` 调用，被 `infra` 实现。
-    * 不依赖 Spring、domain、app、adapter、api。
+    * 不依赖 Spring、domain、infra、app、。
 
 * **适配层（adapter）**：对外协议适配（Web、RPC、MQ、Scheduler）。
 
     * 依赖：`app` + `api`，可选 Web/MQ SDK。
-    * 不依赖 domain、infra、contract。
+    * 不依赖 domain、infra、。
 
 * **应用层（app）**：用例编排（权限校验、事务边界、聚合协作、事件触发）。
 
-    * 依赖：`domain`、`contract`、`patra-common` 等共享库。
+    * 依赖：`domain`、``、`patra-common` 等共享库。
     * 不依赖 adapter、infra、api。
 
 * **领域层（domain）**：业务语义内核（聚合、实体、值对象、领域事件、仓储端口）。
 
     * 依赖：`patra-common`（含 hutool-core 工具）。
-    * 不依赖 Spring、MyBatis、Web、api、contract。
+    * 不依赖 Spring、MyBatis、Web、api、。
 
 * **基础设施层（infra）**：持久化/缓存等技术实现。
 
-    * 依赖：`domain`、`contract`、`patra-spring-boot-starter-mybatis` 等技术组件。
+    * 依赖：`domain`、``、`patra-spring-boot-starter-mybatis` 等技术组件。
     * 不依赖 app、adapter、api。
 
 依赖方向：
@@ -44,10 +39,10 @@
 ```
 boot     → adapter, app, infra
 adapter  → app, api
-app      → domain, contract
-infra    → domain, contract
+app      → domain, 
+infra    → domain, 
 api      → (no deps)
-contract → (no deps)
+ → (no deps)
 domain   → (no deps，仅通用库)
 ```
 
@@ -79,32 +74,6 @@ error/
 
 ---
 
-### 2.2 `patra-registry-contract`
-
-**职责**
-
-* 定义内部跨层契约：
-
-    * 查询端口（QueryPort 接口）。
-    * 查询返回对象（ReadModel/DTO）。
-    * 查询条件对象。
-* 可选：跨层共享的轻量枚举或 VO。
-
-**约束**
-
-* 不依赖 Spring/Web/domain。
-* 被 `app` 调用，被 `infra` 实现。
-
-**目录结构**
-
-```
-query/port/           
-query/view/            
-common/               
-```
-
----
-
 ### 2.3 `patra-registry-adapter`
 
 **职责**
@@ -116,7 +85,7 @@ common/
 **约束**
 
 * 依赖：`app` + `api`。
-* 不包含业务逻辑；不依赖 domain/infra/contract。
+* 不包含业务逻辑；不依赖 domain/infra/。
 
 ---
 
@@ -125,12 +94,12 @@ common/
 **职责**
 
 * 用例编排：权限检查、事务控制、聚合协作、事件触发。
-* 调用 `domain.Repository`（写侧）和 `contract.QueryPort`（读侧）。
+* 调用 `domain.Repository`（写侧）和 `.QueryPort`（读侧）。
 * 转换领域异常为应用异常；封装应用事件。
 
 **约束**
 
-* 依赖：`domain`、`contract`、`patra-common`。
+* 依赖：`domain`、``、`patra-common`。
 * 不依赖 adapter/infra/api。
 
 ---
@@ -145,7 +114,7 @@ common/
 **约束**
 
 * 依赖：`patra-common`。
-* 不依赖 Spring/ORM/Web/api/contract。
+* 不依赖 Spring/ORM/Web/api/。
 
 ---
 
@@ -154,12 +123,11 @@ common/
 **职责**
 
 * 实现 `domain.port.*` 的仓储，持久化/缓存/技术落地。
-* 实现 `contract.QueryPort` 的查询。
 * DO ↔ 聚合 ↔ ReadModel 映射；维护 Outbox 事件托管。
 
 **约束**
 
-* 依赖：`domain` + `contract` + MyBatis/Starter。
+* 依赖：`domain` + MyBatis/Starter。
 * 不依赖 app/adapter/api。
 
 ---
@@ -202,65 +170,6 @@ common/
 
 ---
 
-## 7. 架构分层与依赖方向（Hexagonal + DDD + CQRS）
-
-```mermaid
-flowchart TD
-%% 约定：A --> B 表示 A 依赖 B（编译期依赖）
-
-subgraph API[api（对外契约，无依赖）]
-API1[REST/RPC DTO]
-API2[IntegrationEvent DTO]
-end
-
-subgraph CONTRACT[contract（内部查询契约，无依赖）]
-C1[QueryPort]
-C2[ReadModel/DTO]
-end
-
-subgraph DOMAIN[domain（领域内核，无依赖）]
-D1[Aggregates/Entities/VO]
-D2[Domain Events]
-D3[Repository Ports]
-end
-
-subgraph APP[app（用例编排）]
-P1[Command UseCases]
-P2[Query UseCases]
-P3[Event Publisher Port]
-end
-
-subgraph INFRA[infra（技术实现）]
-I1[RepositoryImpl]
-I2[QueryPortImpl]
-I3[Outbox Storage]
-end
-
-subgraph ADAPTER[adapter（协议适配）]
-A1[REST Controllers]
-A2[MQ Consumers/Producers]
-A3[Schedulers]
-end
-
-subgraph BOOT[boot（启动装配）]
-B1[Spring Boot App]
-end
-
-%% 依赖边（A 依赖 B）
-ADAPTER --> APP
-ADAPTER --> API
-
-APP --> DOMAIN
-APP --> CONTRACT
-
-INFRA --> DOMAIN
-INFRA --> CONTRACT
-
-BOOT --> ADAPTER
-BOOT --> APP
-BOOT --> INFRA
-
-```
 
 ---
 
@@ -292,7 +201,7 @@ sequenceDiagram
 
 ---
 
-## 9. 查询调用链（读侧，经过 contract）
+## 9. 查询调用链（读侧，经过 ）
 
 ```mermaid
 sequenceDiagram
@@ -300,9 +209,9 @@ sequenceDiagram
   participant C as Client
   participant AC as Adapter.Controller
   participant AS as App.QueryService
-  participant QP as Contract.QueryPort
+  participant QP as .QueryPort
   participant IQ as Infra.QueryPortImpl
-  participant V as Contract.ReadModel
+  participant V as .ReadModel
 
   C->>AC: GET /api/registry/resources?criteria
   AC->>AS: 转换为 Query 调用用例

@@ -4,7 +4,7 @@ import com.patra.registry.adapter.rest._internal.convertor.ExprApiConvertor;
 import com.patra.registry.api.rpc.client.ExprClient;
 import com.patra.registry.api.rpc.dto.expr.ExprSnapshotResp;
 import com.patra.registry.app.service.ExprQueryAppService;
-import com.patra.registry.contract.query.view.expr.ExprSnapshotQuery;
+import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;

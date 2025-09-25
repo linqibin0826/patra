@@ -22,11 +22,6 @@
             <!-- registry 内部子模块版本统一管理（供互相依赖时省略 version） -->
             <dependency>
                 <groupId>com.papertrace</groupId>
-                <artifactId>patra-registry-contract</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.papertrace</groupId>
                 <artifactId>patra-registry-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -71,15 +66,6 @@
             - 被 adapter 使用，对外提供 REST/RPC 接口时依赖此模块。
         -->
 
-        <module>patra-registry-contract</module>
-        <!--
-            内部跨层契约模块（Internal Contract）。
-            - 用于应用层 (app) 与基础设施层 (infra) 之间的协作。
-            - 包含 QueryPort 接口 + ReadModel/DTO（只读投影），也可以放一些跨层共享的枚举或轻量接口。
-            - 不依赖 Spring/Web/ORM 等框架，保持“纯净”。
-            - app 调用 QueryPort，infra 提供实现。
-            - 依赖方向：app -> contract；infra -> contract。
-        -->
 
         <module>patra-registry-domain</module>
         <!--

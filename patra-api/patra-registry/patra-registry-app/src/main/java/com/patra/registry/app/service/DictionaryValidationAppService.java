@@ -1,12 +1,12 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.app.mapping.DictionaryValidationConverter;
-import com.patra.registry.contract.query.view.DictionaryHealthQuery;
-import com.patra.registry.contract.query.view.DictionaryValidationQuery;
-import com.patra.registry.domain.model.vo.DictionaryHealthStatus;
-import com.patra.registry.domain.model.vo.DictionaryItem;
-import com.patra.registry.domain.model.vo.DictionaryReference;
-import com.patra.registry.domain.model.vo.ValidationResult;
+import com.patra.registry.domain.model.read.dictionary.DictionaryHealthQuery;
+import com.patra.registry.domain.model.read.dictionary.DictionaryValidationQuery;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryHealthStatus;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryReference;
+import com.patra.registry.domain.model.vo.dictionary.ValidationResult;
 import com.patra.registry.domain.port.DictionaryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

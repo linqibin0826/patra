@@ -5,11 +5,11 @@ import com.patra.registry.api.rpc.dto.expr.ExprCapabilityResp;
 import com.patra.registry.api.rpc.dto.expr.ExprFieldResp;
 import com.patra.registry.api.rpc.dto.expr.ExprRenderRuleResp;
 import com.patra.registry.api.rpc.dto.expr.ExprSnapshotResp;
-import com.patra.registry.contract.query.view.expr.ApiParamMappingQuery;
-import com.patra.registry.contract.query.view.expr.ExprCapabilityQuery;
-import com.patra.registry.contract.query.view.expr.ExprFieldQuery;
-import com.patra.registry.contract.query.view.expr.ExprRenderRuleQuery;
-import com.patra.registry.contract.query.view.expr.ExprSnapshotQuery;
+import com.patra.registry.domain.model.read.expr.ApiParamMappingQuery;
+import com.patra.registry.domain.model.read.expr.ExprCapabilityQuery;
+import com.patra.registry.domain.model.read.expr.ExprFieldQuery;
+import com.patra.registry.domain.model.read.expr.ExprRenderRuleQuery;
+import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 

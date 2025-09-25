@@ -2,7 +2,7 @@ package com.patra.registry.app.service;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.mapping.ExprQueryAssembler;
-import com.patra.registry.contract.query.view.expr.ExprSnapshotQuery;
+import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import com.patra.registry.domain.port.ExprRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

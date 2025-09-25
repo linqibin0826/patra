@@ -1,8 +1,8 @@
 package com.patra.registry.infra.mapstruct;
 
-import com.patra.registry.domain.model.vo.DictionaryAlias;
-import com.patra.registry.domain.model.vo.DictionaryItem;
-import com.patra.registry.domain.model.vo.DictionaryType;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryAlias;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
+import com.patra.registry.domain.model.vo.dictionary.DictionaryType;
 import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemAliasDO;
 import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemDO;
 import com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO;
@@ -32,7 +32,7 @@ public interface DictionaryEntityConverter {
      * 将字典类型实体转换为领域对象。
      *
      * @see com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO
-     * @see com.patra.registry.domain.model.vo.DictionaryType
+     * @see DictionaryType
      */
     DictionaryType toDomain(RegSysDictTypeDO entity);
 
@@ -40,7 +40,7 @@ public interface DictionaryEntityConverter {
      * 将字典项实体转换为领域对象。
      *
      * @see RegSysDictItemDO
-     * @see com.patra.registry.domain.model.vo.DictionaryItem
+     * @see DictionaryItem
      */
     @Mapping(target = "displayName", source = "itemName")
     @Mapping(target = "sortOrder", source = "displayOrder")
@@ -50,7 +50,7 @@ public interface DictionaryEntityConverter {
      * 将字典别名实体转换为领域对象。
      *
      * @see RegSysDictItemAliasDO
-     * @see com.patra.registry.domain.model.vo.DictionaryAlias
+     * @see DictionaryAlias
      */
     DictionaryAlias toDomain(RegSysDictItemAliasDO entity);
 
