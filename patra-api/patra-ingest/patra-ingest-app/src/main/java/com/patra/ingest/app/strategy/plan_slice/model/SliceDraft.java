@@ -1,4 +1,4 @@
-package com.patra.ingest.app.strategy.model;
+package com.patra.ingest.app.strategy.plan_slice.model;
 
 import com.patra.expr.Expr;
 import java.time.Instant;

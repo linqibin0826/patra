@@ -1,4 +1,4 @@
-package com.patra.ingest.app.port.outbound;
+package com.patra.ingest.app.port;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Endpoint;

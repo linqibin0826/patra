@@ -1,4 +1,4 @@
-package com.patra.ingest.app.strategy.model;
+package com.patra.ingest.app.strategy.plan_slice.model;
 
 import com.patra.ingest.app.model.PlanBusinessExpr;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;

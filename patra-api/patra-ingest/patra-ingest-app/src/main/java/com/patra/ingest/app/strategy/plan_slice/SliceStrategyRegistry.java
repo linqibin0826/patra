@@ -1,4 +1,4 @@
-package com.patra.ingest.app.strategy;
+package com.patra.ingest.app.strategy.plan_slice;
 
 import org.springframework.stereotype.Component;
 

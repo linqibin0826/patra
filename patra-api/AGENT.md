@@ -61,7 +61,6 @@ Papertrace/
 patra-{service}/
 ├─ patra-{service}-boot/ # 可执行入口
 ├─ patra-{service}-api/ # 外部 API 契约（DTO/接口）
-├─ patra-{service}-contract/ # 内部契约（QueryPorts/ReadModels）
 ├─ patra-{service}-domain/ # 领域（实体/聚合/枚举/端口）
 ├─ patra-{service}-app/ # 应用（用例/服务编排）
 ├─ patra-{service}-infra/ # 基础设施（仓储/适配）
@@ -72,10 +71,10 @@ patra-{service}/
 ### 3.2 依赖方向（必须遵守）
 
 * `adapter` → `app` + `api`（+ 可选 web starters）
-* `app` → `domain` + `contract` + `patra-common` + core starter
-* `infra` → `domain` + `contract` + mybatis starter + core starter
+* `app` → `domain` + `patra-common` + core starter
+* `infra` → `domain` + + mybatis starter + core starter
 * `domain` → **仅** `patra-common`（**禁止**引入 Spring/框架）
-* `api`、`contract`：不依赖框架
+* `api`：不依赖框架
 
 ---
 
@@ -284,13 +283,6 @@ mvn clean package -DskipTests
     * 应用服务 `{Aggregate}AppService`
     * 仓储接口 `{Aggregate}Repository` / 实现 `{Aggregate}RepositoryMpImpl`
     * MyBatis `{Entity}Mapper`；MapStruct `{Entity}Converter`
-
-### 12.8 CQRS 与 Contract
-
-* **读写分离**：Query 侧只读，不包含 C/U/D；模型分离（ReadModel vs Command）。
-* 用例命名后缀：`*Query` / `*Command`；查询经 `contract.QueryPort`。
-* 跨子系统集成：**API（Feign） → Contract（Query/View） → Adapter**。
-* 内部调用路径：`/_internal/{service}/**`；服务发现按约定配置。
 
 ### 12.9 JavaDoc（极简版）
 

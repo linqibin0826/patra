@@ -1,14 +1,14 @@
 package com.patra.ingest.app.service;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.app.command.PlanTriggerCommand;
+import com.patra.ingest.app.usecase.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
 import com.patra.ingest.app.model.PlanBusinessExpr;
 import com.patra.ingest.app.model.PlanBlueprintCommand;
 import com.patra.ingest.app.util.ExprHashUtil;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.port.CursorReadPort;
-import com.patra.ingest.app.port.outbound.ProvenancePort;
+import com.patra.ingest.app.port.ProvenancePort;
 import com.patra.ingest.domain.port.TaskInventoryPort;
 import com.patra.ingest.app.usecase.PlanTriggerUseCase;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;

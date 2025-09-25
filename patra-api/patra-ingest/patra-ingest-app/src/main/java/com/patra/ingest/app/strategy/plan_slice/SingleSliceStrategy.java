@@ -1,7 +1,7 @@
-package com.patra.ingest.app.strategy;
+package com.patra.ingest.app.strategy.plan_slice;
 
-import com.patra.ingest.app.strategy.model.SliceContext;
-import com.patra.ingest.app.strategy.model.SliceDraft;
+import com.patra.ingest.app.strategy.plan_slice.model.SliceContext;
+import com.patra.ingest.app.strategy.plan_slice.model.SliceDraft;
 import com.patra.expr.Expr;
 import com.patra.ingest.app.util.SliceSignatureUtil;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package com.patra.ingest.app.command;
+package com.patra.ingest.app.usecase.command;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;

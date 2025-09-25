@@ -7,7 +7,7 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.Priority;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.enums.Scheduler;
-import com.patra.ingest.app.command.PlanTriggerCommand;
+import com.patra.ingest.app.usecase.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
 import com.patra.ingest.app.usecase.PlanTriggerUseCase;
 import com.patra.ingest.domain.model.enums.Endpoint;

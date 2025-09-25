@@ -27,10 +27,10 @@ patra-spring-boot-starter-*/ # 错误处理/Web/MyBatis/表达式 starters
 
 ### 严格依赖约束
 - **adapter** → **app** + **api** (可选 web starters)
-- **app** → **domain** + **contract** + **patra-common** + core starter  
-- **infra** → **domain** + **contract** + mybatis starter + core starter
+- **app** → **domain** + **patra-common** + core starter  
+- **infra** → **domain** + mybatis starter + core starter
 - **domain** → **仅** **patra-common** (禁止Spring/框架)
-- **api**, **contract** → 不依赖框架
+- **api** → 不依赖框架
 
 ### 分层职责
 - **api**: 对外契约(RPC DTO, 事件, 枚举, 错误码)
@@ -45,9 +45,6 @@ patra-spring-boot-starter-*/ # 错误处理/Web/MyBatis/表达式 starters
 
 ### 本地环境启动
 ```bash
-# 启动基础设施 
-cd docker/compose && docker-compose -f docker-compose.dev.yml up -d
-
 # 服务端口: MySQL:13306 Redis:16379 ES:9200 Nacos:8848 SkyWalking:8088 XXL-Job:7070
 
 # 构建命令
@@ -117,11 +114,6 @@ CompileResult result = compiler.compile(request);
 ---
 
 ## 7. 数据一致性与事务
-
-### CQRS分离
-- **Query侧**: contract层ReadModel，经QueryPort访问，优化查询性能
-- **Command侧**: domain聚合处理，app层事务编排
-- **时间线**: 配置表支持`effective_from/to`实现版本管理
 
 ### Outbox事件模式
 - **领域事件**: domain层描述业务事实

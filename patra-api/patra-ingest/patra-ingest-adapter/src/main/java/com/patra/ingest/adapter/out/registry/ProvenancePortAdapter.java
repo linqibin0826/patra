@@ -2,7 +2,7 @@ package com.patra.ingest.adapter.out.registry;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.adapter.out.registry.converter.ProvenanceConfigSnapshotConverter;
-import com.patra.ingest.app.port.outbound.ProvenancePort;
+import com.patra.ingest.app.port.ProvenancePort;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;

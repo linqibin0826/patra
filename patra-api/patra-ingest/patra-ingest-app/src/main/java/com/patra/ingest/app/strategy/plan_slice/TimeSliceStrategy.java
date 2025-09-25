@@ -1,4 +1,4 @@
-package com.patra.ingest.app.strategy;
+package com.patra.ingest.app.strategy.plan_slice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.ingest.app.model.PlanBusinessExpr;
-import com.patra.ingest.app.strategy.model.SliceContext;
-import com.patra.ingest.app.strategy.model.SliceDraft;
+import com.patra.ingest.app.strategy.plan_slice.model.SliceContext;
+import com.patra.ingest.app.strategy.plan_slice.model.SliceDraft;
 import com.patra.ingest.app.util.ExprHashUtil;
 import com.patra.ingest.app.util.SliceSignatureUtil;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
