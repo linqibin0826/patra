@@ -11,6 +11,7 @@ import com.patra.expr.Atom.TermValue;
 import com.patra.expr.Atom.TokenValue;
 
 import java.math.BigDecimal;
+import com.patra.expr.json.ExprJsonCodec;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -131,5 +132,21 @@ public final class Exprs {
 
     public static Expr token(String field, String tokenType, String tokenValue) {
         return new Atom(field, Operator.TOKEN, new TokenValue(tokenType, tokenValue));
+    }
+
+    // ---------------- JSON convenience ----------------
+
+    /**
+     * Serialize an expression tree to JSON using the built-in codec.
+     */
+    public static String toJson(Expr expr) {
+        return ExprJsonCodec.toJson(expr);
+    }
+
+    /**
+     * Deserialize JSON into an expression tree using the built-in codec.
+     */
+    public static Expr fromJson(String json) {
+        return ExprJsonCodec.fromJson(json);
     }
 }

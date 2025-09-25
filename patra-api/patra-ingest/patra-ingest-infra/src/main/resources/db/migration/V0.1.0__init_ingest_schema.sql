@@ -133,9 +133,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 
     `slice_no`             INT             NOT NULL COMMENT '切片序号(0..N)',
     `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '切片签名哈希：仅对 slice_spec（边界JSON）做规范化后计算；用于判重/去重（同一 plan 下相同边界不重复生成）',
-
     `slice_spec`           JSON            NOT NULL COMMENT '切片边界说明（JSON）：声明本 slice 的执行范围与约束（时间窗口/ID 区间/游标landmark/预算等），不含业务表达式逻辑',
-
     `expr_hash`            CHAR(64)        NOT NULL COMMENT '局部化表达式哈希：对“规范化后的局部化AST”计算出的指纹；通常与 slice_signature_hash 一起变化',
 
     `expr_snapshot`        JSON            NULL COMMENT '局部化表达式快照（AST，JSON）：在 plan 的原型上注入本 slice 的边界条件后的“可直接执行表达式树”；slice 自带可重放语义',

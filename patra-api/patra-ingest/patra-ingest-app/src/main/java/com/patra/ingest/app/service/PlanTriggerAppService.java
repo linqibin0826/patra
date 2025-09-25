@@ -1,7 +1,5 @@
 package com.patra.ingest.app.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.command.PlanTriggerCommand;
 import com.patra.ingest.app.dto.PlanTriggerResult;
@@ -61,7 +59,7 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
     private final PlanSliceRepository planSliceRepository;
     private final TaskRepository taskRepository;
 
-    private final ObjectMapper objectMapper;
+    // ObjectMapper 不再用于表达式序列化，改用 Exprs.toJson；如后续需要通用 JSON，可再注入。
 
     @Override
     @Transactional
@@ -150,7 +148,7 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
      */
     private PlanBusinessExpr buildPlanBusinessExpr(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         Expr expr = buildPlanBusinessExpression(norm, configSnapshot);
-        String json = serializeExprToJson(expr);
+        String json = Exprs.toJson(expr);
         String hash = ExprHashUtil.sha256Hex(json);
         return new PlanBusinessExpr(expr, json, hash);
     }
@@ -211,20 +209,6 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
         // constraints.add(Exprs.term("status", "pending", TextMatch.EXACT));
 
         return constraints;
-    }
-
-    /**
-     * 使用 ObjectMapper 将表达式序列化为 JSON 字符串
-     */
-    private String serializeExprToJson(Expr expr) {
-        if (expr == null) {
-            return "null";
-        }
-        try {
-            return objectMapper.writeValueAsString(expr);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize expression to JSON", e);
-        }
     }
 
 

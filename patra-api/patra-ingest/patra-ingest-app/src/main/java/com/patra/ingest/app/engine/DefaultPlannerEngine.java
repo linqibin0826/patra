@@ -1,5 +1,7 @@
 package com.patra.ingest.app.engine;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
@@ -13,6 +15,7 @@ import com.patra.ingest.domain.model.value.PlannerWindow;
 import com.patra.ingest.app.strategy.model.SliceContext;
 import com.patra.ingest.app.strategy.model.SliceDraft;
 import com.patra.ingest.app.model.PlanBusinessExpr;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -29,6 +32,9 @@ import java.util.List;
 public class DefaultPlannerEngine implements PlannerEngine {
 
     private final SliceStrategyRegistry sliceStrategyRegistry;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     public DefaultPlannerEngine(SliceStrategyRegistry sliceStrategyRegistry) {
         this.sliceStrategyRegistry = sliceStrategyRegistry;
@@ -61,9 +67,9 @@ public class DefaultPlannerEngine implements PlannerEngine {
         plan.startSlicing();
 
         SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
-    List<SliceDraft> drafts = strategy == null
-        ? new ArrayList<>()
-        : strategy.slice(new SliceContext(norm, window, planBusinessExpr, config));
+        List<SliceDraft> drafts = strategy == null
+                ? new ArrayList<>()
+                : strategy.slice(new SliceContext(norm, window, planBusinessExpr, config));
 
         List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
         for (SliceDraft d : drafts) {
@@ -146,7 +152,11 @@ public class DefaultPlannerEngine implements PlannerEngine {
         if (snapshot == null) {
             return null;
         }
-        return snapshot.provenance() == null ? null : "{\"provenanceCode\":\"" + snapshot.provenance().code() + "\"}";
+        try {
+            return objectMapper.writeValueAsString(snapshot);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private String computeSignature(PlanTriggerNorm norm, String payload) {

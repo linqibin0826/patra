@@ -29,30 +29,30 @@ class ExprJsonCodecTest {
                 Exprs.constTrue()
         ));
 
-        String json = ExprJsonCodec.toJson(expr);
-        Expr parsed = ExprJsonCodec.fromJson(json);
+            String json = Exprs.toJson(expr);
+            Expr parsed = Exprs.fromJson(json);
 
         assertNotNull(parsed);
         assertInstanceOf(And.class, parsed);
         // 再序列化一次进行幂等性校验（结构序列化稳定性）
-        String json2 = ExprJsonCodec.toJson(parsed);
+            String json2 = Exprs.toJson(parsed);
         assertEquals(json, json2, "Serialized JSON should be stable");
     }
 
     @Test
     @DisplayName("Serialize CONST true/false")
     void constSerialize() {
-        assertTrue(ExprJsonCodec.toJson(Const.TRUE).contains("\"value\":true"));
-        assertTrue(ExprJsonCodec.toJson(Const.FALSE).contains("\"value\":false"));
+            assertTrue(Exprs.toJson(Const.TRUE).contains("\"value\":true"));
+            assertTrue(Exprs.toJson(Const.FALSE).contains("\"value\":false"));
     }
 
     @Test
     @DisplayName("Atom TERM with case + match")
     void atomTerm() {
         Expr term = Exprs.term("title", "Heart", TextMatch.ANY, true);
-        String json = ExprJsonCodec.toJson(term);
+            String json = Exprs.toJson(term);
         assertTrue(json.contains("\"TERM\""));
-        Expr back = ExprJsonCodec.fromJson(json);
+            Expr back = Exprs.fromJson(json);
         assertInstanceOf(Atom.class, back);
         Atom a = (Atom) back;
         assertEquals(Atom.Operator.TERM, a.operator());
@@ -69,9 +69,9 @@ class ExprJsonCodecTest {
         Expr num = Exprs.rangeNumber("n", new BigDecimal("1.0"), new BigDecimal("2.5"));
 
         for (Expr e : List.of(d, dt, num)) {
-            String json = ExprJsonCodec.toJson(e);
-            Expr back = ExprJsonCodec.fromJson(json);
-            assertEquals(json, ExprJsonCodec.toJson(back));
+                String json = Exprs.toJson(e);
+                Expr back = Exprs.fromJson(json);
+                assertEquals(json, Exprs.toJson(back));
         }
     }
 
@@ -79,8 +79,8 @@ class ExprJsonCodecTest {
     @DisplayName("EXISTS flag round trip")
     void existsFlag() {
         Expr e = Exprs.exists("retracted", false);
-        String json = ExprJsonCodec.toJson(e);
-        Expr b = ExprJsonCodec.fromJson(json);
-        assertEquals(json, ExprJsonCodec.toJson(b));
+            String json = Exprs.toJson(e);
+            Expr b = Exprs.fromJson(json);
+            assertEquals(json, Exprs.toJson(b));
     }
 }

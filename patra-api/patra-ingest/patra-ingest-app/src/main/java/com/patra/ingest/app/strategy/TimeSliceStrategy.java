@@ -1,6 +1,5 @@
 package com.patra.ingest.app.strategy;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -10,6 +9,7 @@ import com.patra.ingest.app.model.PlanBusinessExpr;
 import com.patra.ingest.app.strategy.model.SliceContext;
 import com.patra.ingest.app.strategy.model.SliceDraft;
 import com.patra.ingest.app.util.ExprHashUtil;
+import com.patra.ingest.app.util.SliceSignatureUtil;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -36,6 +36,11 @@ public class TimeSliceStrategy implements SliceStrategy {
     public List<SliceDraft> slice(SliceContext context) {
         List<SliceDraft> result = new ArrayList<>();
         if (context.window() == null || context.window().from() == null || context.window().to() == null) return result;
+        // 解析时间字段：优先 windowOffset.offsetFieldName (仅当 offsetType=DATE)，其次 windowOffset.defaultDateFieldName；无法解析直接终止
+        String timeField = resolveTimeField(context.configSnapshot());
+        if (timeField == null) {
+            return result; // TODO 无法确定时间字段：终止（上层将标记失败）
+        }
         Instant from = context.window().from();
         Instant to = context.window().to();
         if (!from.isBefore(to)) return result;
@@ -54,19 +59,14 @@ public class TimeSliceStrategy implements SliceStrategy {
             Instant upper = cursor.plus(step);
             if (upper.isAfter(to)) upper = to;
             String specJson = buildSpecJson(context, cursor, upper);
-            Expr timeConstraint = buildTimeWindowConstraint(cursor, upper);
+            Expr timeConstraint = buildTimeWindowConstraint(timeField, cursor, upper);
             Expr combined = Exprs.and(List.of(planExpr.expr(), timeConstraint));
-            String combinedJson;
-            try {
-                combinedJson = serializeExprToJson(combined);
-            } catch (JsonProcessingException e) {
-                // 回退为恒真表达式 JSON
-                combinedJson = planExpr.jsonSnapshot();
-            }
+            String combinedJson = Exprs.toJson(combined);
             String combinedHash = ExprHashUtil.sha256Hex(combinedJson);
+            String signatureHash = SliceSignatureUtil.signatureHash(objectMapper, specJson);
             result.add(new SliceDraft(
                     index,
-                    specJson,
+                    signatureHash,
                     specJson,
                     combined,
                     combinedJson,
@@ -82,17 +82,21 @@ public class TimeSliceStrategy implements SliceStrategy {
     /**
      * 构建时间窗口约束表达式
      */
-    private Expr buildTimeWindowConstraint(Instant from, Instant to) {
-        // 构建 RANGE(updated_at, from, to) 表达式
-        return Exprs.rangeDateTime("updated_at", from, to);
+    private Expr buildTimeWindowConstraint(String field, Instant from, Instant to) {
+        return Exprs.rangeDateTime(field, from, to);
     }
 
-    /**
-     * 序列化表达式为 JSON
-     */
-    private String serializeExprToJson(Expr expr) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.writeValueAsString(expr);
+    private String resolveTimeField(ProvenanceConfigSnapshot snapshot) {
+        if (snapshot == null) return null;
+        ProvenanceConfigSnapshot.WindowOffsetConfig w = snapshot.windowOffset();
+        if (w == null) return null;
+        if (w.offsetTypeCode() != null && w.offsetTypeCode().equalsIgnoreCase("DATE") && w.offsetFieldName() != null && !w.offsetFieldName().isBlank()) {
+            return w.offsetFieldName();
+        }
+        if (w.defaultDateFieldName() != null && !w.defaultDateFieldName().isBlank()) {
+            return w.defaultDateFieldName();
+        }
+        return null; // 不回退
     }
 
     private String buildSpecJson(SliceContext context, Instant from, Instant to) {
