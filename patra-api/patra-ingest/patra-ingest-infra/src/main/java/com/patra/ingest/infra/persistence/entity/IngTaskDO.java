@@ -43,10 +43,6 @@ public class IngTaskDO extends BaseDO {
     @TableField("operation_code")
     private String operationCode;
     
-    /** 凭证ID */
-    @TableField("credential_id")
-    private Long credentialId;
-    
     /** 任务参数（JSON格式） */
     @TableField(value = "params", typeHandler = JacksonTypeHandler.class)
     private JsonNode params;
@@ -82,6 +78,22 @@ public class IngTaskDO extends BaseDO {
     /** 租约次数 */
     @TableField("lease_count")
     private Integer leaseCount;
+    
+    /** 执行期心跳时间 */
+    @TableField("last_heartbeat_at")
+    private Instant lastHeartbeatAt;
+
+    /** 重试次数 */
+    @TableField("retry_count")
+    private Integer retryCount;
+
+    /** 最近错误码 */
+    @TableField("last_error_code")
+    private String lastErrorCode;
+
+    /** 最近错误信息 */
+    @TableField("last_error_msg")
+    private String lastErrorMsg;
     
     /** 备注信息（JSON格式） */
     @TableField(value = "record_remarks", typeHandler = JacksonTypeHandler.class)

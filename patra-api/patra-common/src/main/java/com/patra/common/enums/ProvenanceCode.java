@@ -35,13 +35,19 @@ public enum ProvenanceCode {
     CORD19("CORD19", "CORD-19"),
     GIM("GIM", "WHO GIM");
 
-    /** 数据源标识（如 "pubmed"）。 */
+    /**
+     * 数据源标识（如 "pubmed"）。
+     */
     private final String code;
 
-    /** 数据源的展示名称或说明（如 "PubMed"）。 */
+    /**
+     * 数据源的展示名称或说明（如 "PubMed"）。
+     */
     private final String description;
 
-    /** 构造函数。 */
+    /**
+     * 构造函数。
+     */
     ProvenanceCode(String code, String display) {
         this.code = code;
         this.description = display;
@@ -77,13 +83,17 @@ public enum ProvenanceCode {
         };
     }
 
-    /** JSON 反序列化工厂方法。 */
+    /**
+     * JSON 反序列化工厂方法。
+     */
     @JsonCreator
     public static ProvenanceCode fromJson(String value) {
         return parse(value);
     }
 
-    /** JSON 序列化输出 code。 */
+    /**
+     * JSON 序列化输出 code。
+     */
     @JsonValue
     public String toJson() {
         return this.code;

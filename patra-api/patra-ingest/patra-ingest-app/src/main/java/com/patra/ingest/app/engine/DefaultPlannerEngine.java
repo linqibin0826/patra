@@ -108,7 +108,6 @@ public class DefaultPlannerEngine implements PlannerEngine {
                     (long) slice.getSequence(),
                     norm.provenanceCode().getCode(),
                     norm.operationCode().name(),
-                    null,
                     buildTaskParamsJson(norm, slice),
                     idemKey,
                     slice.getExprHash(),

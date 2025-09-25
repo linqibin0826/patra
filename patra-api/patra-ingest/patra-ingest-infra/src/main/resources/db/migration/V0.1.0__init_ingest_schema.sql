@@ -67,24 +67,17 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
 
     `provenance_code`            VARCHAR(64)     NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（便于按来源聚合）',
     `endpoint_name`              VARCHAR(64)     NULL COMMENT '来源端点标识（search/detail/metrics 等），辅助区分多端点策略',
-
     `operation_code`             VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation)：采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
+
     `expr_proto_hash`            CHAR(64)        NOT NULL COMMENT '表达式原型哈希：对“规范化后的原型AST”计算出的指纹；用于幂等/快速比较；与 expr_proto_snapshot 一一对应',
-
     `expr_proto_snapshot`        JSON            NULL COMMENT '表达式原型快照（AST，JSON）：不含任何切片/局部化条件的“全局表达式树”；用于回放与审计（从该原型派生多个 slice）',
-
     `provenance_config_snapshot` JSON            NULL COMMENT '来源配置快照（中立模型，JSON）：将 reg_prov_* 的鉴权/分页/时间窗/限流/重试/批处理等配置编译为执行期不变的快照',
-
     `provenance_config_hash`     CHAR(64)        NULL COMMENT '来源配置快照哈希：对规范化后的 provenance_config_snapshot 计算出的指纹；用于复用判定与变更检测',
-
     `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT '切片策略：TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID 等；决定如何从原型生成多个 slice',
-
     `slice_params`               JSON            NULL COMMENT '切片参数：与切片策略配套的细节（如步长、时间区、landmark、预算上限等）；仅用于生成 slice，不直接参与执行',
 
     `window_from`                TIMESTAMP(6)    NULL COMMENT '总窗起(含,UTC)',
     `window_to`                  TIMESTAMP(6)    NULL COMMENT '总窗止(不含,UTC)',
-
-
     `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status)：DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED',
 
     -- 审计字段
@@ -188,7 +181,6 @@ CREATE TABLE IF NOT EXISTS `ing_task`
 
     `provenance_code`      VARCHAR(64)      NOT NULL COMMENT '来源代码：与 reg_provenance.provenance_code 一致',
     `operation_code`       VARCHAR(32)      NOT NULL COMMENT 'DICT CODE(type=ing_operation)：操作类型 HARVEST/BACKFILL/UPDATE/METRICS',
-    `credential_id`        BIGINT UNSIGNED  NULL COMMENT '所用凭据ID（reg_prov_credential.id；可空=匿名/公共）',
 
     `params`               JSON             NULL COMMENT '任务参数(规范化)',
     `idempotent_key`       CHAR(64)         NOT NULL COMMENT 'SHA256(slice_signature + expr_hash + operation + trigger + normalized(params))',
@@ -196,10 +188,14 @@ CREATE TABLE IF NOT EXISTS `ing_task`
 
     `priority`             TINYINT UNSIGNED NOT NULL DEFAULT 5 COMMENT '1高→9低',
 
-    -- 任务租约（并发抢占/续租/回收）
-    `lease_owner`          VARCHAR(64)      NULL COMMENT '租约持有者标识（执行器实例/workerId）',
+    -- 任务租约（续租/回收）
+    `lease_owner`          VARCHAR(128)     NULL COMMENT '执行期租约持有者（实例#线程）',
     `leased_until`         TIMESTAMP(6)     NULL COMMENT '租约到期时间(UTC)，过期视为可重新抢占',
     `lease_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '累计抢占/续租次数（监控/熔断用）',
+    `last_heartbeat_at`    TIMESTAMP(6)     NULL COMMENT '执行期心跳时间',
+    `retry_count`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '重试次数',
+    `last_error_code`      VARCHAR(64)      NULL COMMENT '最近错误码',
+    `last_error_msg`       VARCHAR(512)     NULL COMMENT '最近错误信息',
 
     `status_code`          VARCHAR(32)      NOT NULL DEFAULT 'QUEUED' COMMENT 'DICT CODE(type=ing_task_status)：QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED',
     `scheduled_at`         TIMESTAMP(6)     NULL COMMENT '计划开始',
@@ -228,7 +224,6 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     KEY `idx_task_slice` (`slice_id`, `status_code`),
     KEY `idx_task_src_op` (`provenance_code`, `operation_code`, `status_code`),
     KEY `idx_task_sched_at` (`status_code`, `scheduled_at`),
-    KEY `idx_task_cred` (`credential_id`),
 
     -- 队列检索索引：用于批量拉取待运行任务
     -- 建议查询：WHERE status_code='QUEUED' AND (leased_until IS NULL OR leased_until < NOW(6))
@@ -514,3 +509,63 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='水位推进事件（不可变）：每次成功推进一条事件；支持回放与全链路回溯；不创建物理外键';
+
+-- ======================================================================
+-- 表：ing_outbox_message —— 通用 Outbox（任务推送/集成事件等）
+-- 语义：与业务写入同一事务落库；由 Relay 扫描并投递到 MQ（如 RocketMQ）。
+-- 设计要点：
+--  - (channel, dedup_key) 唯一，保障源端幂等；
+--  - 仅扫描本表进行发布，不扫业务热表；
+--  - partition_key 建议使用 "provenance:operation"（可按需扩展，但不作为独立字段）。
+-- ======================================================================
+CREATE TABLE IF NOT EXISTS `ing_outbox_message`
+(
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · OutboxID',
+    `aggregate_type`   VARCHAR(32)     NOT NULL COMMENT '聚合类型：如 TASK/PLAN/...；用于审计与回放定位',
+    `aggregate_id`     BIGINT UNSIGNED NOT NULL COMMENT '聚合根ID；任务场景=ing_task.id',
+    `channel`          VARCHAR(64)     NOT NULL COMMENT '逻辑通道=目标Topic，如 ingest.task',
+    `op_type`          VARCHAR(32)     NOT NULL COMMENT '业务语义标签：如 TASK_READY / EVENT_PUBLISHED',
+    `partition_key`    VARCHAR(128)    NOT NULL COMMENT '分片/顺序路由键；建议 "provenance:operation"；用于顺序投递或分区限流 如 PUBMED:HARVEST',
+    `dedup_key`        VARCHAR(128)    NOT NULL COMMENT '幂等键；任务=ing_task.idempotent_key；(channel, dedup_key) 唯一',
+    `payload_json`     JSON            NOT NULL COMMENT '最小必要载荷(JSON)：taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore 等；大字段不入队',
+    `headers_json`     JSON            NULL COMMENT '扩展头(JSON)：correlationId 等',
+    `not_before`       TIMESTAMP(6)    NULL COMMENT '最早可发布时间(UTC)：NULL=随时可发；用于定时/延时发布',
+
+    `status_code`      VARCHAR(16)     NOT NULL DEFAULT 'PENDING' COMMENT '发布状态：PENDING/PUBLISHING/PUBLISHED/FAILED/DEAD',
+    `retry_count`      INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '发布重试次数（失败则+1）',
+    `next_retry_at`    TIMESTAMP(6)    NULL COMMENT '下次尝试发布时间(UTC)，配合退避曲线使用',
+    `error_code`       VARCHAR(64)     NULL COMMENT '最近一次发布错误码',
+    `error_msg`        VARCHAR(512)    NULL COMMENT '最近一次发布错误详情',
+
+    `pub_lease_owner`  VARCHAR(128)    NULL COMMENT '发布器租约持有者（实例ID或workerId），防止多发布器并发同一行',
+    `pub_leased_until` TIMESTAMP(6)    NULL COMMENT '发布器租约到期(UTC)，过期可被其他发布器接管',
+    `msg_id`           VARCHAR(128)    NULL COMMENT 'Broker 返回的消息ID（对账/回放标识）',
+
+    -- 审计字段
+    `record_remarks`   JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
+    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    `ip_address`       VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
+    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间(UTC)',
+    `created_by`       BIGINT UNSIGNED NULL COMMENT '创建人ID',
+    `created_by_name`  VARCHAR(100)    NULL COMMENT '创建人姓名',
+    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间(UTC)',
+    `updated_by`       BIGINT UNSIGNED NULL COMMENT '更新人ID',
+    `updated_by_name`  VARCHAR(100)    NULL COMMENT '更新人姓名',
+    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除：0=未删,1=已删',
+
+    PRIMARY KEY (`id`),
+
+    -- 源端去重：同一 channel 下 dedup_key 必须唯一
+    UNIQUE KEY `uk_outbox_channel_dedup` (`channel`, `dedup_key`),
+    -- 轻量扫描索引：按状态+时间游标批量发布
+    KEY `idx_outbox_status_time` (`status_code`, `not_before`, `id`),
+    -- 顺序/分区发布与回放（按 channel + partition_key 管控并发或保序）
+    KEY `idx_outbox_partition` (`channel`, `partition_key`, `status_code`),
+    -- 发布器租约回收（多 Relay 并行时用于回收过期租约）
+    KEY `idx_outbox_lease` (`status_code`, `pub_leased_until`),
+    -- 归档/对账便利
+    KEY `idx_outbox_created` (`created_at`),
+    KEY `idx_outbox_deleted_upd` (`deleted`, `updated_at`)
+)
+    ENGINE = InnoDB COMMENT ='Outbox：通用出站消息表（任务推送/集成事件统一托管；与业务写入同事务，不含credential_id；Relay扫描并投递到MQ）';
+

@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -42,6 +43,13 @@ public class ScheduleInstanceDO extends BaseDO {
      */
     @TableField("triggered_at")
     private java.time.Instant triggeredAt;
+
+    /**
+     * 触发参数
+     */
+    @TableField("trigger_params")
+    private JsonNode triggerParams;
+
     /**
      * 来源代码（本次调度针对的文献源）
      */

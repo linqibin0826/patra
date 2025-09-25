@@ -30,8 +30,6 @@ public class TaskDO extends BaseDO {
     @TableField("provenance_code") private String provenanceCode;
     /** 操作代码（如 SEARCH/UPDATE，冗余） */
     @TableField("operation_code") private String operationCode;
-    /** 使用的凭证/账号引用（可为空） */
-    @TableField("credential_id") private Long credentialId;
     /** 参数 JSON（任务执行所需动态参数） */
     @TableField("params") private String params;
     /** 幂等键（防重复派发/提交） */
@@ -46,6 +44,14 @@ public class TaskDO extends BaseDO {
     @TableField("leased_until") private java.time.Instant leasedUntil;
     /** 租约累计次数 */
     @TableField("lease_count") private Integer leaseCount;
+    /** 执行期心跳时间 */
+    @TableField("last_heartbeat_at") private java.time.Instant lastHeartbeatAt;
+    /** 重试次数 */
+    @TableField("retry_count") private Integer retryCount;
+    /** 最近错误码 */
+    @TableField("last_error_code") private String lastErrorCode;
+    /** 最近错误信息 */
+    @TableField("last_error_msg") private String lastErrorMsg;
     /** 状态代码（QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED） */
     @TableField("status_code") private String statusCode;
     /** 计划调度时间（预计开始时间） */

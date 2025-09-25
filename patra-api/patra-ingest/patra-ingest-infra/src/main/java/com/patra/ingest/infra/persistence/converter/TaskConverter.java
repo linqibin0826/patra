@@ -19,12 +19,15 @@ public class TaskConverter {
         entity.setSliceId(aggregate.getSliceId());
         entity.setProvenanceCode(aggregate.getProvenanceCode());
         entity.setOperationCode(aggregate.getOperationCode());
-        entity.setCredentialId(aggregate.getCredentialId());
         entity.setParams(aggregate.getParamsJson());
         entity.setIdempotentKey(aggregate.getIdempotentKey());
         entity.setExprHash(aggregate.getExprHash());
         entity.setPriority(aggregate.getPriority());
         entity.setScheduledAt(aggregate.getScheduledAt());
+        entity.setLastHeartbeatAt(aggregate.getLastHeartbeatAt());
+        entity.setRetryCount(aggregate.getRetryCount());
+        entity.setLastErrorCode(aggregate.getLastErrorCode());
+        entity.setLastErrorMsg(aggregate.getLastErrorMsg());
         // 使用字典编码
         entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
         entity.setVersion(aggregate.getVersion());
@@ -39,19 +42,22 @@ public class TaskConverter {
                 ? TaskStatus.QUEUED
                 : TaskStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
-        return TaskAggregate.restore(
+    return TaskAggregate.restore(
                 entity.getId(),
                 entity.getScheduleInstanceId(),
                 entity.getPlanId(),
                 entity.getSliceId(),
                 entity.getProvenanceCode(),
                 entity.getOperationCode(),
-                entity.getCredentialId(),
-                entity.getParams(),
+        entity.getParams(),
                 entity.getIdempotentKey(),
                 entity.getExprHash(),
                 entity.getPriority(),
                 entity.getScheduledAt(),
+        entity.getLastHeartbeatAt(),
+        entity.getRetryCount(),
+        entity.getLastErrorCode(),
+        entity.getLastErrorMsg(),
                 status,
                 version);
     }

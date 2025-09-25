@@ -120,6 +120,7 @@ public class PlanTriggerAppService implements PlanTriggerUseCase {
                 command.schedulerLogId(),
                 command.triggerType(),
                 command.triggeredAt(),
+                command.triggerParams(),
                 command.provenanceCode());
         return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
     }

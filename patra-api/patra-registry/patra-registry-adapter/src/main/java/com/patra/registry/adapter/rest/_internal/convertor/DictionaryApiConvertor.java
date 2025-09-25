@@ -12,6 +12,7 @@ import com.patra.registry.contract.query.view.DictionaryValidationQuery;
 import com.patra.registry.domain.model.vo.DictionaryReference;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.List;
  * MapStruct 转换器：契约 Query 对象 <-> API DTO（字典内部端点）。
  */
 @Mapper(
-        componentModel = "spring",
+        componentModel = MappingConstants.ComponentModel.SPRING,
         unmappedTargetPolicy = ReportingPolicy.ERROR
 )
 public interface DictionaryApiConvertor {

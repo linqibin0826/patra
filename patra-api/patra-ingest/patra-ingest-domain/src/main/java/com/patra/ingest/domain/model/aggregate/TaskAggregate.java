@@ -15,12 +15,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
     private Long sliceId;
     private final String provenanceCode;
     private final String operationCode;
-    private final Long credentialId;
     private final String paramsJson;
     private final String idempotentKey;
     private final String exprHash;
     private final Integer priority;
     private final Instant scheduledAt;
+    private final Instant lastHeartbeatAt;
+    private final Integer retryCount;
+    private final String lastErrorCode;
+    private final String lastErrorMsg;
     private TaskStatus status;
 
     private TaskAggregate(Long id,
@@ -29,12 +32,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
                           Long sliceId,
                           String provenanceCode,
                           String operationCode,
-                          Long credentialId,
                           String paramsJson,
                           String idempotentKey,
                           String exprHash,
                           Integer priority,
                           Instant scheduledAt,
+                          Instant lastHeartbeatAt,
+                          Integer retryCount,
+                          String lastErrorCode,
+                          String lastErrorMsg,
                           TaskStatus status) {
         super(id);
         this.scheduleInstanceId = scheduleInstanceId;
@@ -42,12 +48,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
         this.sliceId = sliceId;
         this.provenanceCode = provenanceCode;
         this.operationCode = operationCode;
-        this.credentialId = credentialId;
         this.paramsJson = paramsJson;
         this.idempotentKey = idempotentKey;
         this.exprHash = exprHash;
         this.priority = priority;
         this.scheduledAt = scheduledAt;
+        this.lastHeartbeatAt = lastHeartbeatAt;
+        this.retryCount = retryCount;
+        this.lastErrorCode = lastErrorCode;
+        this.lastErrorMsg = lastErrorMsg;
         this.status = status == null ? TaskStatus.QUEUED : status;
     }
 
@@ -56,7 +65,6 @@ public class TaskAggregate extends AggregateRoot<Long> {
                                        Long sliceId,
                                        String provenanceCode,
                                        String operationCode,
-                                       Long credentialId,
                                        String paramsJson,
                                        String idempotentKey,
                                        String exprHash,
@@ -68,12 +76,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
                 sliceId,
                 provenanceCode,
                 operationCode,
-                credentialId,
                 paramsJson,
                 idempotentKey,
                 exprHash,
                 priority,
                 scheduledAt,
+                null,
+                0,
+                null,
+                null,
                 TaskStatus.QUEUED);
     }
 
@@ -83,12 +94,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
                                         Long sliceId,
                                         String provenanceCode,
                                         String operationCode,
-                                        Long credentialId,
                                         String paramsJson,
                                         String idempotentKey,
                                         String exprHash,
                                         Integer priority,
                                         Instant scheduledAt,
+                                        Instant lastHeartbeatAt,
+                                        Integer retryCount,
+                                        String lastErrorCode,
+                                        String lastErrorMsg,
                                         TaskStatus status,
                                         long version) {
         TaskAggregate aggregate = new TaskAggregate(id,
@@ -97,12 +111,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
                 sliceId,
                 provenanceCode,
                 operationCode,
-                credentialId,
                 paramsJson,
                 idempotentKey,
                 exprHash,
                 priority,
                 scheduledAt,
+                lastHeartbeatAt,
+                retryCount,
+                lastErrorCode,
+                lastErrorMsg,
                 status);
         aggregate.assignVersion(version);
         return aggregate;
@@ -153,10 +170,6 @@ public class TaskAggregate extends AggregateRoot<Long> {
         return operationCode;
     }
 
-    public Long getCredentialId() {
-        return credentialId;
-    }
-
     public String getParamsJson() {
         return paramsJson;
     }
@@ -179,5 +192,21 @@ public class TaskAggregate extends AggregateRoot<Long> {
 
     public TaskStatus getStatus() {
         return status;
+    }
+
+    public Instant getLastHeartbeatAt() {
+        return lastHeartbeatAt;
+    }
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public String getLastErrorCode() {
+        return lastErrorCode;
+    }
+
+    public String getLastErrorMsg() {
+        return lastErrorMsg;
     }
 }

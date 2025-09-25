@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.persistence.converter;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
@@ -8,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ScheduleInstanceConverter {
-
     public ScheduleInstanceDO toDO(ScheduleInstanceAggregate aggregate) {
         ScheduleInstanceDO entity = new ScheduleInstanceDO();
         entity.setId(aggregate.getId());
@@ -37,7 +37,8 @@ public class ScheduleInstanceConverter {
                 entity.getSchedulerLogId(),
                 entity.getTriggerTypeCode() == null ? null : TriggerType.fromCode(entity.getTriggerTypeCode()),
                 entity.getTriggeredAt(),
-                entity.getProvenanceCode() == null ? null : com.patra.common.enums.ProvenanceCode.parse(entity.getProvenanceCode()),
+                null, // TODO
+                entity.getProvenanceCode() == null ? null : ProvenanceCode.parse(entity.getProvenanceCode()),
                 version);
     }
 }

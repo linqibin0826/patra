@@ -1,8 +1,10 @@
 package com.patra.ingest.domain.model.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 
-/** 计划状态（DICT：ing_plan_status）。
+/**
+ * 计划状态（DICT：ing_plan_status）。
  * <p>字段映射：ing_plan.status_code → DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED</p>
  */
 @Getter
@@ -14,13 +16,23 @@ public enum PlanStatus {
     FAILED("FAILED", "失败"),
     COMPLETED("COMPLETED", "已完成");
 
-    private final String code; private final String description;
-    PlanStatus(String code, String description){ this.code=code; this.description=description; }
+    private final String code;
+    private final String description;
 
-    public static PlanStatus fromCode(String value){
-        if(value==null){ throw new IllegalArgumentException("Plan status code cannot be null"); }
-        String n=value.trim().toUpperCase();
-        for(PlanStatus e:values()){ if(e.code.equals(n)) return e; }
-        throw new IllegalArgumentException("Unknown plan status code: "+value);
+    PlanStatus(String code, String description) {
+        this.code = code;
+        this.description = description;
+    }
+
+    @JsonCreator
+    public static PlanStatus fromCode(String value) {
+        if (value == null) {
+            throw new IllegalArgumentException("Plan status code cannot be null");
+        }
+        String n = value.trim().toUpperCase();
+        for (PlanStatus e : values()) {
+            if (e.code.equals(n)) return e;
+        }
+        throw new IllegalArgumentException("Unknown plan status code: " + value);
     }
 }
