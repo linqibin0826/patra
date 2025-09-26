@@ -1,10 +1,10 @@
 package com.patra.ingest.app.orchestration.slice;
 
+import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
 import com.patra.starter.core.json.JsonNormalizer;
-import com.patra.starter.core.util.HashUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -23,7 +23,7 @@ public class SingleSlicePlanner implements SlicePlanner {
         String hash = context.planExpression().hash();
         JsonNormalizer.Result specNormalized = JsonNormalizer.normalizeDefault(Map.of("strategy", code()));
         String specJson = specNormalized.getCanonicalJson();
-        String signatureHash = HashUtils.sha256Hex(specNormalized);
+        String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
         return List.of(new SlicePlan(
                 1,
                 signatureHash,

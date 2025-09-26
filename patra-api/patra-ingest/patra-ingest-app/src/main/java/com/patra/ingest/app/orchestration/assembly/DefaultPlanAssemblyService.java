@@ -1,5 +1,6 @@
 package com.patra.ingest.app.orchestration.assembly;
 
+import com.patra.common.util.HashUtils;
 import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.orchestration.slice.SlicePlanner;
 import com.patra.ingest.app.orchestration.slice.SlicePlannerRegistry;
@@ -13,7 +14,6 @@ import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
 import com.patra.starter.core.json.JsonNormalizer;
-import com.patra.starter.core.util.HashUtils;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -49,7 +49,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         ProvenanceConfigSnapshot config = request.configSnapshot();
         JsonNormalizer.Result configSnapshot = normalizeConfigSnapshot(config);
         String configSnapshotJson = configSnapshot == null ? null : configSnapshot.getCanonicalJson();
-        String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot);
+        String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot.getHashMaterial());
 
         String planKey = buildPlanKey(norm, window);
         PlanAggregate plan = PlanAggregate.create(

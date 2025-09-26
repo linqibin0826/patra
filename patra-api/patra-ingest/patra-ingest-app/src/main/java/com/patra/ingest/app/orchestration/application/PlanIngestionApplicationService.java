@@ -1,6 +1,7 @@
 package com.patra.ingest.app.orchestration.application;
 
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.expr.And;
 import com.patra.ingest.app.orchestration.command.PlanIngestionRequest;
 import com.patra.ingest.app.orchestration.dto.PlanIngestionResult;
 import com.patra.ingest.app.orchestration.assembly.PlanAssemblyRequest;
@@ -26,7 +27,7 @@ import com.patra.ingest.app.validator.PlannerValidator;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.starter.core.json.JsonNormalizer;
-import com.patra.starter.core.util.HashUtils;
+import com.patra.common.util.HashUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,7 +83,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                 provenanceCode, operationCode, cursorWatermark, window == null ? null : window.from(), window == null ? null : window.to());
 
         // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
-        PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(norm, configSnapshot);
+        PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(norm, configSnapshot); // 外部条件未来在 buildPlanBusinessExpression 前构造成 Expr 再注入
         log.debug("plan-ingest expr built hash={} jsonSize={}", expressionDescriptor.hash(), expressionDescriptor.jsonSnapshot().length());
 
         // Phase 4: 前置验证（窗口合理性 / 背压 / 能力）
@@ -157,7 +158,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         String exprJson = Exprs.toJson(expr);
         JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(exprJson);
         String canonicalJson = normalized.getCanonicalJson();
-        String hash = HashUtils.sha256Hex(normalized);
+        String hash = HashUtils.sha256Hex(normalized.getHashMaterial());
         return new PlanExpressionDescriptor(expr, canonicalJson, hash);
     }
 
@@ -165,6 +166,16 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
      * 构建 Plan 级别业务表达式
      * 包含业务逻辑约束，但不包含窗口约束（窗口约束由 slice planner 添加）
      */
+
+    /**
+     * 未来注入“外部（管理员配置）条件 → Expr” 的单一占位。
+     * 当前返回 null 表示无外部条件。
+     * 后续直接在此方法中把前端参数转换为一棵 Expr（可以是 AND/OR 复合），然后在 buildPlanBusinessExpression 中纳入组合即可。
+     */
+    private Expr buildExternalConditionsExpr(PlanTriggerNorm norm) {
+        return null; // 占位：后续实现
+    }
+
     private Expr buildPlanBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         log.debug("构建 Plan 业务表达式，操作类型: {}", norm.operationCode());
 
@@ -173,6 +184,16 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         // 注意：这里不包含时间窗口约束，时间窗口由 slice planner 添加
 
         List<Expr> businessConstraints = buildBusinessConstraints(norm, configSnapshot);
+        // 外部条件占位注入
+        Expr external = buildExternalConditionsExpr(norm);
+        if (external != null) {
+            if (external instanceof And(List<Expr> children)) {
+                // 若外部本身是 AND，扁平化可减少树深度
+                businessConstraints.addAll(children);
+            } else {
+                businessConstraints.add(external);
+            }
+        }
 
         if (businessConstraints.isEmpty()) {
             // 如果没有业务约束，返回恒真（但实际使用时必须添加窗口约束）
