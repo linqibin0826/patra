@@ -2,14 +2,12 @@ package com.patra.starter.expr.compiler.normalize;
 
 import com.patra.expr.And;
 import com.patra.expr.Atom;
-import com.patra.expr.CaseSensitivity;
 import com.patra.expr.Const;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.expr.Not;
 import com.patra.expr.Or;
 import com.patra.expr.TextMatch;
-import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

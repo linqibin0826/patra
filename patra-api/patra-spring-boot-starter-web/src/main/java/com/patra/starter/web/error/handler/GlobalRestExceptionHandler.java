@@ -71,9 +71,13 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
         // Convert int status to HttpStatus with fallback to 500
         HttpStatus httpStatus = convertToHttpStatus(resolution.httpStatus());
         
-        log.info("Exception handled: errorCode={}, httpStatus={}, path={}", 
-                resolution.errorCode().code(), httpStatus.value(), 
-                problemDetail.getProperties().get(ErrorKeys.PATH));
+        Object path = null;
+        var props = problemDetail.getProperties();
+        if (props != null) {
+            path = props.get(ErrorKeys.PATH);
+        }
+    log.info("Exception handled: errorCode={}, httpStatus={}, path={}", 
+        resolution.errorCode().code(), httpStatus.value(), path);
         
         return ResponseEntity
             .status(httpStatus)
@@ -121,9 +125,13 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
         
         problemDetail.setProperty(ErrorKeys.ERRORS, errors);
         
-        log.info("Validation exception handled: errorCode={}, validationErrors={}, path={}", 
-                resolution.errorCode().code(), errors.size(), 
-                problemDetail.getProperties().get(ErrorKeys.PATH));
+        Object vPath = null;
+        var vProps = problemDetail.getProperties();
+        if (vProps != null) {
+            vPath = vProps.get(ErrorKeys.PATH);
+        }
+    log.info("Validation exception handled: errorCode={}, validationErrors={}, path={}", 
+        resolution.errorCode().code(), errors.size(), vPath);
         
         return ResponseEntity
             .status(HttpStatus.UNPROCESSABLE_ENTITY)

@@ -19,6 +19,12 @@
             <artifactId>patra-registry-domain</artifactId>
         </dependency>
 
+        <!-- Uses com.patra.common.* (RegistryKeys, ProvenanceCode, RegistryConfigScope, RegistryKeyUtils) -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>

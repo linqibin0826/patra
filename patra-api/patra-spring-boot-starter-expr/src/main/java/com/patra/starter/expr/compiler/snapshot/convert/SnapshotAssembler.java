@@ -26,6 +26,7 @@ import java.util.Set;
 /**
  * Converts registry DTOs into the starter's immutable {@link ProvenanceSnapshot} model.
  */
+@SuppressWarnings("unused")
 public class SnapshotAssembler {
 
     private final ObjectMapper objectMapper;

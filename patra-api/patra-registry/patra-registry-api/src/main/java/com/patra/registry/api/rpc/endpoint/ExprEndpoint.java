@@ -2,7 +2,6 @@ package com.patra.registry.api.rpc.endpoint;
 
 import com.patra.registry.api.rpc.dto.expr.ExprSnapshotResp;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.Instant;

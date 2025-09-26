@@ -16,6 +16,12 @@
     <description>数据采集应用模块 - 应用服务和用例编排</description>
 
     <dependencies>
+        <!-- 公共类型（ProvenanceCode 等） -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-ingest-domain</artifactId>
@@ -34,6 +40,12 @@
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-expr</artifactId>
+        </dependency>
+
+        <!-- 直接使用表达式内核 API（com.patra.expr.*） -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-expr-kernel</artifactId>
         </dependency>
 
         <dependency>

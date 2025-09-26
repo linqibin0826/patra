@@ -54,9 +54,12 @@ public class RemoteCallException extends RuntimeException {
         
         // 从 ProblemDetail 扩展属性中提取错误码与 TraceId
         Map<String, Object> properties = problemDetail.getProperties();
+        if (properties == null) {
+            properties = Collections.emptyMap();
+        }
         this.errorCode = (String) properties.get(ErrorKeys.CODE);
         this.traceId = (String) properties.get(ErrorKeys.TRACE_ID);
-        
+
         // 复制所有扩展字段，保留以备后续使用
         this.extensions = new HashMap<>(properties);
     }

@@ -64,7 +64,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
             return snapshot;
             
         } catch (FeignException ex) {
-            return handleFeignException(ex, code, taskType, endpoint, taskType, endpoint);
+            return handleFeignException(ex, code, taskType, endpoint);
         } catch (Exception ex) {
             String msg = String.format("获取来源配置时发生未知错误, code=%s, taskType=%s, endpoint=%s", 
                     code, taskType, endpoint);
@@ -77,8 +77,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
      * 处理 Feign 异常。
      */
     private ProvenanceConfigSnapshot handleFeignException(FeignException ex, String code, 
-                                                          String taskType, String endpoint,
-                                                          String operationCode, String endpointName) {
+                                                          String taskType, String endpoint) {
         int status = ex.status();
         String responseBody = ex.contentUTF8();
         
@@ -92,7 +91,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
             String msg = String.format("Registry 客户端错误, code=%s, status=%d, response=%s", 
                     code, status, responseBody);
             log.error(msg);
-            throw new IngestConfigurationException(code, operationCode, endpointName, msg, ex);
+            throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
         }
         
         if (status >= 500 && status < 600) {
@@ -106,7 +105,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
         String msg = String.format("Registry 调用失败, code=%s, status=%d, response=%s", 
                 code, status, responseBody);
         log.error(msg);
-        throw new IngestConfigurationException(code, operationCode, endpointName, msg, ex);
+        throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
     }
 
     /**
@@ -141,25 +140,4 @@ public class ProvenancePortAdapter implements ProvenancePort {
         );
     }
 
-    /**
-     * 规范化任务类型。
-     */
-    private String normalizeTaskType(String operationCode) {
-        if (operationCode == null) {
-            return null;
-        }
-        String trimmed = operationCode.trim();
-        return trimmed.isEmpty() ? null : trimmed.toLowerCase();
-    }
-
-    /**
-     * 规范化端点名称。
-     */
-    private String normalizeEndpointName(String endpointName) {
-        if (endpointName == null) {
-            return null;
-        }
-        String trimmed = endpointName.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
 }

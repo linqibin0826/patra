@@ -6,19 +6,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
 /**
- * 计划聚合与数据对象转换器。
+ * 计划聚合与数据对象转换器（MapStruct 接口）。
+ * 使用 default 方法保留原有手写逻辑，统一组件模型为 Spring。
  */
-@Component
-@RequiredArgsConstructor
-public class PlanConverter {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface PlanConverter {
 
-    private final ObjectMapper objectMapper;
+    ObjectMapper MAPPER = new ObjectMapper();
 
-    public PlanDO toEntity(PlanAggregate aggregate) {
+    default PlanDO toEntity(PlanAggregate aggregate) {
+        if (aggregate == null) {
+            return null;
+        }
         PlanDO entity = new PlanDO();
         entity.setId(aggregate.getId());
         entity.setScheduleInstanceId(aggregate.getScheduleInstanceId());
@@ -40,7 +43,7 @@ public class PlanConverter {
         return entity;
     }
 
-    public PlanAggregate toAggregate(PlanDO entity) {
+    default PlanAggregate toAggregate(PlanDO entity) {
         if (entity == null) {
             return null;
         }
@@ -75,7 +78,7 @@ public class PlanConverter {
             return null;
         }
         try {
-            return objectMapper.readTree(json);
+            return MAPPER.readTree(json);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("无法解析计划快照JSON", e);
         }

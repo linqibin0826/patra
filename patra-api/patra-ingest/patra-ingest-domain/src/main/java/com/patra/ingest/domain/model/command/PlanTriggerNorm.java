@@ -32,7 +32,7 @@ public record PlanTriggerNorm(
     public PlanTriggerNorm {
         Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId不能为空");
         Objects.requireNonNull(provenanceCode, "provenanceCode不能为空");
-        Objects.requireNonNull(operationCode, "operationType不能为空");
+        Objects.requireNonNull(operationCode, "operationCode不能为空");
         Objects.requireNonNull(triggerType, "triggerType不能为空");
         Objects.requireNonNull(scheduler, "schedulerCode不能为空");
     }

@@ -2,7 +2,6 @@ package com.patra.registry.infra.persistence.mapper.expr;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 

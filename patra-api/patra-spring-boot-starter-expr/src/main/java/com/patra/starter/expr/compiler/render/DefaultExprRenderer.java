@@ -6,7 +6,6 @@ import com.patra.expr.Const;
 import com.patra.expr.Expr;
 import com.patra.expr.Not;
 import com.patra.expr.Or;
-import com.patra.expr.TextMatch;
 import com.patra.starter.expr.compiler.model.Issue;
 import com.patra.starter.expr.compiler.model.RenderTrace;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
@@ -18,7 +17,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -216,6 +214,7 @@ public class DefaultExprRenderer implements ExprRenderer {
             return delegate.entrySet();
         }
 
+        @SuppressWarnings("unused")
         String get(String key) {
             return delegate.get(key);
         }

@@ -5,6 +5,7 @@ import com.patra.ingest.domain.model.enums.CursorType;
 import java.time.Instant;
 
 /** 游标推进事件(append-only)。 */
+@SuppressWarnings("unused")
 public class CursorEvent {
     private final Long id;
     private final String provenanceCode;

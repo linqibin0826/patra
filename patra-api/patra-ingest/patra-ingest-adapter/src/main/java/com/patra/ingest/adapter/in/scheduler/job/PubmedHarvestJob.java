@@ -19,7 +19,7 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
     }
 
     @Override
-    protected OperationCode getOperationType() {
+    protected OperationCode getOperationCode() {
         return OperationCode.HARVEST;
     }
 

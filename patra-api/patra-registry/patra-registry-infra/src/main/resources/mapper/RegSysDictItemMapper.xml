@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.registry.infra.persistence.mapper.RegSysDictItemMapper">
+
+  <resultMap id="RegSysDictItemResultMap" type="com.patra.registry.infra.persistence.entity.dictionary.RegSysDictItemDO">
+    <id column="id" property="id"/>
+  </resultMap>
+
+  <select id="selectByTypeAndItemCode" resultMap="RegSysDictItemResultMap">
+    SELECT di.* FROM sys_dict_item di
+    JOIN sys_dict_type dt ON dt.id = di.type_id
+    WHERE dt.type_code = #{typeCode}
+      AND di.item_code = #{itemCode}
+      AND di.enabled = 1
+      AND di.deleted = 0
+      AND dt.deleted = 0
+  </select>
+
+  <select id="selectEnabledByTypeCode" resultMap="RegSysDictItemResultMap">
+    SELECT di.* FROM sys_dict_item di
+    JOIN sys_dict_type dt ON dt.id = di.type_id
+    WHERE dt.type_code = #{typeCode}
+      AND di.enabled = 1
+      AND di.deleted = 0
+      AND dt.deleted = 0
+    ORDER BY di.display_order ASC, di.item_code ASC
+  </select>
+
+  <select id="selectDefaultByTypeCode" resultMap="RegSysDictItemResultMap">
+    SELECT di.* FROM sys_dict_item di
+    JOIN sys_dict_type dt ON dt.id = di.type_id
+    WHERE dt.type_code = #{typeCode}
+      AND di.is_default = 1
+      AND di.enabled = 1
+      AND di.deleted = 0
+      AND dt.deleted = 0
+    LIMIT 1
+  </select>
+
+  <select id="selectEnabledByTypeId" resultMap="RegSysDictItemResultMap">
+    SELECT * FROM sys_dict_item
+    WHERE type_id = #{typeId}
+      AND enabled = 1
+      AND deleted = 0
+    ORDER BY display_order ASC, item_code ASC
+  </select>
+
+  <select id="countEnabledByTypeCode" resultType="int">
+    SELECT COUNT(*) FROM sys_dict_item di
+    JOIN sys_dict_type dt ON dt.id = di.type_id
+    WHERE dt.type_code = #{typeCode}
+      AND di.enabled = 1
+      AND di.deleted = 0
+      AND dt.deleted = 0
+  </select>
+
+  <select id="selectTypesWithMultipleDefaults" resultType="string">
+    SELECT dt.type_code FROM sys_dict_item di
+    JOIN sys_dict_type dt ON dt.id = di.type_id
+    WHERE di.is_default = 1
+      AND di.enabled = 1
+      AND di.deleted = 0
+      AND dt.deleted = 0
+    GROUP BY dt.type_code, di.type_id
+    HAVING COUNT(*) > 1
+  </select>
+
+  <select id="selectTypesWithoutDefaults" resultType="string">
+    SELECT dt.type_code FROM sys_dict_type dt
+    LEFT JOIN sys_dict_item di ON dt.id = di.type_id
+      AND di.is_default = 1
+      AND di.enabled = 1
+      AND di.deleted = 0
+    WHERE dt.deleted = 0
+      AND di.id IS NULL
+  </select>
+
+  <select id="countTotalEnabled" resultType="int">
+    SELECT COUNT(*) FROM sys_dict_item WHERE enabled = 1 AND deleted = 0
+  </select>
+
+  <select id="countTotal" resultType="int">
+    SELECT COUNT(*) FROM sys_dict_item WHERE deleted = 0
+  </select>
+
+</mapper>

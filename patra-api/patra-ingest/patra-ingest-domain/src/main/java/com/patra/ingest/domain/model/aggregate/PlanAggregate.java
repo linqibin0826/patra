@@ -2,6 +2,8 @@ package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.enums.Endpoint;
+import com.patra.ingest.domain.model.enums.OperationCode;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -14,8 +16,9 @@ public class PlanAggregate extends AggregateRoot<Long> {
     private final Long scheduleInstanceId;
     private final String planKey;
     private final String provenanceCode;
-    private final String endpointName;
-    private final String operationCode;
+    // 内部采用枚举以保证领域一致性；持久化时由 Converter 转为字符串
+    private final Endpoint endpoint;
+    private final OperationCode operationCode;
     private final String exprProtoHash;
     private final String exprProtoSnapshotJson;
     private final String provenanceConfigSnapshotJson;
@@ -30,8 +33,8 @@ public class PlanAggregate extends AggregateRoot<Long> {
                           Long scheduleInstanceId,
                           String planKey,
                           String provenanceCode,
-                          String endpointName,
-                          String operationCode,
+                          Endpoint endpoint,
+                          OperationCode operationCode,
                           String exprProtoHash,
                           String exprProtoSnapshotJson,
                           String provenanceConfigSnapshotJson,
@@ -45,7 +48,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
         this.scheduleInstanceId = Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId不能为空");
         this.planKey = Objects.requireNonNull(planKey, "planKey不能为空");
         this.provenanceCode = provenanceCode;
-        this.endpointName = endpointName;
+        this.endpoint = endpoint;
         this.operationCode = operationCode;
         this.exprProtoHash = exprProtoHash;
         this.exprProtoSnapshotJson = exprProtoSnapshotJson;
@@ -62,24 +65,27 @@ public class PlanAggregate extends AggregateRoot<Long> {
      * 创建新的计划蓝图。
      */
     public static PlanAggregate create(Long scheduleInstanceId,
-                                       String planKey,
-                                       String provenanceCode,
-                                       String endpointName,
-                                       String operationCode,
-                                       String exprProtoHash,
-                                       String exprProtoSnapshotJson,
-                                       String provenanceConfigSnapshotJson,
-                                       String provenanceConfigHash,
-                                       Instant windowFrom,
-                                       Instant windowTo,
-                                       String sliceStrategyCode,
-                                       String sliceParamsJson) {
+                       String planKey,
+                       String provenanceCode,
+                       String endpointName,
+                       String operationCode,
+                       String exprProtoHash,
+                       String exprProtoSnapshotJson,
+                       String provenanceConfigSnapshotJson,
+                       String provenanceConfigHash,
+                       Instant windowFrom,
+                       Instant windowTo,
+                       String sliceStrategyCode,
+                       String sliceParamsJson) {
+    // 解析为领域内枚举，统一大小写/空白处理
+    Endpoint endpoint = endpointName == null ? null : Endpoint.fromCode(endpointName);
+    OperationCode op = operationCode == null ? null : OperationCode.fromCode(operationCode);
         return new PlanAggregate(null,
                 scheduleInstanceId,
                 planKey,
                 provenanceCode,
-                endpointName,
-                operationCode,
+        endpoint,
+        op,
                 exprProtoHash,
                 exprProtoSnapshotJson,
                 provenanceConfigSnapshotJson,
@@ -98,8 +104,8 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                         Long scheduleInstanceId,
                                         String planKey,
                                         String provenanceCode,
-                                        String endpointName,
-                                        String operationCode,
+                    String endpointName,
+                    String operationCode,
                                         String exprProtoHash,
                                         String exprProtoSnapshotJson,
                                         String provenanceConfigSnapshotJson,
@@ -110,12 +116,14 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                         String sliceParamsJson,
                                         PlanStatus status,
                                         long version) {
+    Endpoint endpoint = endpointName == null ? null : Endpoint.fromCode(endpointName);
+    OperationCode op = operationCode == null ? null : OperationCode.fromCode(operationCode);
         PlanAggregate aggregate = new PlanAggregate(id,
                 scheduleInstanceId,
                 planKey,
                 provenanceCode,
-                endpointName,
-                operationCode,
+        endpoint,
+        op,
                 exprProtoHash,
                 exprProtoSnapshotJson,
                 provenanceConfigSnapshotJson,
@@ -164,13 +172,13 @@ public class PlanAggregate extends AggregateRoot<Long> {
         return provenanceCode;
     }
 
-    public String getEndpointName() {
-        return endpointName;
-    }
+    public String getEndpointName() { return endpoint == null ? null : endpoint.name(); }
 
-    public String getOperationCode() {
-        return operationCode;
-    }
+    public String getOperationCode() { return operationCode == null ? null : operationCode.getCode(); }
+
+    // 如需领域内直接使用枚举，可暴露以下只读访问器
+    public Endpoint getEndpoint() { return endpoint; }
+    public OperationCode getOperation() { return operationCode; }
 
     public String getExprProtoHash() {
         return exprProtoHash;

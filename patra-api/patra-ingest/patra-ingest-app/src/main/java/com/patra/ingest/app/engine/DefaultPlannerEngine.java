@@ -31,6 +31,9 @@ import java.util.List;
 @Component
 public class DefaultPlannerEngine implements PlannerEngine {
 
+    private static final String SLICE_STRATEGY_SINGLE = "SINGLE";
+    private static final String SLICE_STRATEGY_TIME = "TIME";
+
     private final SliceStrategyRegistry sliceStrategyRegistry;
 
     @Autowired
@@ -54,15 +57,15 @@ public class DefaultPlannerEngine implements PlannerEngine {
                 norm.scheduleInstanceId(),
                 planKey,
                 norm.provenanceCode().getCode(),
-                norm.endpoint().name().toLowerCase(),
-                norm.operationCode().name(),
+        norm.endpoint() == null ? null : norm.endpoint().name(),
+        norm.operationCode() == null ? null : norm.operationCode().name(),
                 planExprHash,
                 planExprJson,
                 serializeConfigSnapshot(config),
                 null,
                 window.from(),
                 window.to(),
-                determineSliceStrategy(norm),
+        determineSliceStrategy(norm),
                 buildSliceParams(norm));
         plan.startSlicing();
 
@@ -131,16 +134,16 @@ public class DefaultPlannerEngine implements PlannerEngine {
 
     private String determineSliceStrategy(PlanTriggerNorm norm) {
         if (norm.isUpdate()) {
-            return "SINGLE";
+            return SLICE_STRATEGY_SINGLE;
         }
-        return "TIME";
+        return SLICE_STRATEGY_TIME;
     }
 
     private String buildSliceParams(PlanTriggerNorm norm) {
         if (norm.isUpdate()) {
-            return "{\"strategy\":\"SINGLE\"}";
+            return "{\"strategy\":\"" + SLICE_STRATEGY_SINGLE + "\"}";
         }
-        return "{\"strategy\":\"TIME\"}";
+        return "{\"strategy\":\"" + SLICE_STRATEGY_TIME + "\"}";
     }
 
     private String buildTaskParamsJson(PlanTriggerNorm norm, PlanSliceAggregate slice) {

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.ingest.infra.persistence.mapper.PlanMapper">
+
+  <resultMap id="PlanResultMap" type="com.patra.ingest.infra.persistence.entity.PlanDO">
+    <!-- 若字段与列名一致且有全局驼峰映射，可省略；这里保守指定主键 -->
+    <id column="id" property="id"/>
+  </resultMap>
+
+  <select id="findByPlanKey" resultMap="PlanResultMap">
+    SELECT * FROM ing_plan WHERE plan_key = #{planKey} AND deleted = 0
+  </select>
+
+  <select id="findByScheduleInstanceId" resultMap="PlanResultMap">
+    SELECT * FROM ing_plan 
+    WHERE schedule_instance_id = #{scheduleInstanceId} 
+      AND deleted = 0 
+    ORDER BY created_at
+  </select>
+
+  <select id="findActiveByProvenanceAndOperation" resultMap="PlanResultMap">
+    SELECT * FROM ing_plan 
+    WHERE provenance_code = #{provenanceCode} 
+      AND operation_code = #{operationCode} 
+      AND status_code IN 
+      <foreach collection="statusCodes" item="status" open="(" separator="," close=")">
+        #{status}
+      </foreach>
+      AND deleted = 0 
+    ORDER BY created_at DESC
+  </select>
+
+  <select id="countByPlanKey" resultType="int">
+    SELECT COUNT(1) FROM ing_plan WHERE plan_key = #{planKey} AND deleted = 0
+  </select>
+
+  <select id="countByProvenanceAndOperationAndStatus" resultType="long">
+    SELECT COUNT(1) FROM ing_plan 
+    WHERE provenance_code = #{provenanceCode} 
+      AND operation_code = #{operationCode} 
+      AND status_code = #{statusCode} 
+      AND deleted = 0
+  </select>
+
+  <update id="batchUpdateStatus">
+    UPDATE ing_plan 
+    SET status_code = #{statusCode}, 
+        record_remarks = JSON_SET(COALESCE(record_remarks, '{}'), '$.batchUpdateReason', #{remarks}),
+        updated_at = NOW(),
+        version = version + 1
+    WHERE id IN 
+    <foreach collection="planIds" item="planId" open="(" separator="," close=")">
+      #{planId}
+    </foreach>
+      AND deleted = 0
+  </update>
+
+  <update id="softDeleteById">
+    UPDATE ing_plan 
+    SET deleted = 1, 
+        updated_at = NOW(),
+        version = version + 1
+    WHERE id = #{planId}
+  </update>
+
+</mapper>

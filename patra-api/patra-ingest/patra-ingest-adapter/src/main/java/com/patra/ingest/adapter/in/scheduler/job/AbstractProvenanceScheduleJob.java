@@ -48,12 +48,12 @@ public abstract class AbstractProvenanceScheduleJob {
     /**
      * 获取当前任务对应的操作类型（由子类固定）。
      */
-    protected abstract OperationCode getOperationType();
+    protected abstract OperationCode getOperationCode();
 
     /**
      * 获取端点名称，默认 SEARCH，子类可覆盖。
      */
-    protected Endpoint getEndpointName() {
+    protected Endpoint getEndpoint() {
         return Endpoint.SEARCH;
     }
 
@@ -66,10 +66,10 @@ public abstract class AbstractProvenanceScheduleJob {
     protected PlanTriggerCommand parseJobParam(String paramStr) {
         // 空参数 -> 空 Map
         if (paramStr == null || paramStr.trim().isEmpty()) {
-            return new PlanTriggerCommand(
-                    getProvenanceCode(),
-                    getEndpointName(),
-                    getOperationType(),
+        return new PlanTriggerCommand(
+            getProvenanceCode(),
+            getEndpoint(),
+            getOperationCode(),
                     "PT6H",
                     TriggerType.SCHEDULE,
                     Scheduler.XXL,
@@ -106,10 +106,10 @@ public abstract class AbstractProvenanceScheduleJob {
                     priority = Priority.valueOf(root.get("priority").asText().toUpperCase());
                 } catch (Exception ignored) { /* 忽略无法解析的优先级 */ }
             }
-            return new PlanTriggerCommand(
-                    getProvenanceCode(),
-                    getEndpointName(),
-                    getOperationType(),
+        return new PlanTriggerCommand(
+            getProvenanceCode(),
+            getEndpoint(),
+            getOperationCode(),
                     "PT6H",
                     TriggerType.SCHEDULE,
                     Scheduler.XXL,
@@ -135,22 +135,22 @@ public abstract class AbstractProvenanceScheduleJob {
         long startTime = System.currentTimeMillis();
 
         try {
-            log.info("开始执行{}:{}:{} 调度任务, 参数: {}", getProvenanceCode().getCode(), getEndpointName(), getOperationType(), paramStr);
+            log.info("开始执行{}:{}:{} 调度任务, 参数: {}", getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
 
             PlanTriggerCommand command = parseJobParam(paramStr);
             PlanTriggerResult result = planTriggerUseCase.triggerPlan(command);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("{}:{}:{} 调度任务执行成功, 耗时: {}ms, planId: {}, taskCount: {}",
-                    getProvenanceCode().getCode(), getEndpointName(), getOperationType(), duration, result.planId(), result.taskCount());
+        log.info("{}:{}:{} 调度任务执行成功, 耗时: {}ms, planId: {}, taskCount: {}",
+            getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, result.planId(), result.taskCount());
 
             XxlJobHelper.handleSuccess(String.format("任务执行成功，耗时%dms，planId=%s，taskCount=%d",
                     duration, result.planId(), result.taskCount()));
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("{}:{}:{} 调度任务执行失败, 耗时: {}ms, 错误: {}",
-                    getProvenanceCode().getCode(), getEndpointName(), getOperationType(), duration, e.getMessage(), e);
+        log.error("{}:{}:{} 调度任务执行失败, 耗时: {}ms, 错误: {}",
+            getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, e.getMessage(), e);
 
             XxlJobHelper.handleFail(String.format("任务执行失败: %s", e.getMessage()));
             throw e;

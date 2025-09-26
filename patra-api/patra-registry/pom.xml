@@ -82,9 +82,8 @@
             应用层（Application）。
             - 编排用例（Use Case/Application Service），定义入站 Port（Command Handler）。
             - 依赖 domain 来执行业务逻辑。
-            - 使用 contract（QueryPort）获取读侧数据。
             - 对外不直接暴露接口，而是由 adapter 调用。
-            - 依赖方向：app -> domain, contract。
+            - 依赖方向：app -> domain。
         -->
 
         <module>patra-registry-infra</module>
@@ -92,9 +91,8 @@
             基础设施层（Infrastructure）。
             - 提供技术实现，如数据库访问、消息队列、第三方服务适配。
             - 实现 domain 定义的出站 Port（例如 Repository）。
-            - 实现 contract 定义的 QueryPort。
             - 可以依赖 ORM 框架、缓存客户端、RPC 框架。
-            - 依赖方向：infra -> domain, contract。
+            - 依赖方向：infra -> domain。
         -->
 
         <module>patra-registry-adapter</module>

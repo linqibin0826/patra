@@ -3,15 +3,19 @@ package com.patra.ingest.infra.persistence.converter;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
 /**
- * 计划切片转换器。
+ * 计划切片转换器（MapStruct 接口）。
  */
-@Component
-public class PlanSliceConverter {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface PlanSliceConverter {
 
-    public PlanSliceDO toEntity(PlanSliceAggregate aggregate) {
+    default PlanSliceDO toEntity(PlanSliceAggregate aggregate) {
+        if (aggregate == null) {
+            return null;
+        }
         PlanSliceDO entity = new PlanSliceDO();
         entity.setId(aggregate.getId());
         entity.setPlanId(aggregate.getPlanId());
@@ -27,7 +31,7 @@ public class PlanSliceConverter {
         return entity;
     }
 
-    public PlanSliceAggregate toAggregate(PlanSliceDO entity) {
+    default PlanSliceAggregate toAggregate(PlanSliceDO entity) {
         if (entity == null) {
             return null;
         }

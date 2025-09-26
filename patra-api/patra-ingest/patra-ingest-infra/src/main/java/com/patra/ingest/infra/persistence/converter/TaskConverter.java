@@ -3,15 +3,19 @@ package com.patra.ingest.infra.persistence.converter;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.ReportingPolicy;
 
 /**
- * 任务聚合与数据对象转换。
+ * 任务聚合与数据对象转换（MapStruct 接口）。
  */
-@Component
-public class TaskConverter {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface TaskConverter {
 
-    public TaskDO toEntity(TaskAggregate aggregate) {
+    default TaskDO toEntity(TaskAggregate aggregate) {
+        if (aggregate == null) {
+            return null;
+        }
         TaskDO entity = new TaskDO();
         entity.setId(aggregate.getId());
         entity.setScheduleInstanceId(aggregate.getScheduleInstanceId());
@@ -34,7 +38,7 @@ public class TaskConverter {
         return entity;
     }
 
-    public TaskAggregate toAggregate(TaskDO entity) {
+    default TaskAggregate toAggregate(TaskDO entity) {
         if (entity == null) {
             return null;
         }
@@ -42,22 +46,22 @@ public class TaskConverter {
                 ? TaskStatus.QUEUED
                 : TaskStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
-    return TaskAggregate.restore(
+        return TaskAggregate.restore(
                 entity.getId(),
                 entity.getScheduleInstanceId(),
                 entity.getPlanId(),
                 entity.getSliceId(),
                 entity.getProvenanceCode(),
                 entity.getOperationCode(),
-        entity.getParams(),
+                entity.getParams(),
                 entity.getIdempotentKey(),
                 entity.getExprHash(),
                 entity.getPriority(),
                 entity.getScheduledAt(),
-        entity.getLastHeartbeatAt(),
-        entity.getRetryCount(),
-        entity.getLastErrorCode(),
-        entity.getLastErrorMsg(),
+                entity.getLastHeartbeatAt(),
+                entity.getRetryCount(),
+                entity.getLastErrorCode(),
+                entity.getLastErrorMsg(),
                 status,
                 version);
     }

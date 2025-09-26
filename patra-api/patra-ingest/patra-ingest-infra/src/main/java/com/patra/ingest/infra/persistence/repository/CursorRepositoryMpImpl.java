@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,5 +36,20 @@ public class CursorRepositoryMpImpl implements CursorRepository {
             .eq("namespace_scope_code", namespaceScopeCode)
             .eq("namespace_key", namespaceKey));
         return Optional.ofNullable(found).map(converter::toDomain);
+    }
+
+    @Override
+    public Optional<Instant> findLatestGlobalTimeWatermark(String provenanceCode, String operationCode) {
+        QueryWrapper<CursorDO> wrapper = new QueryWrapper<>();
+        wrapper.eq("provenance_code", provenanceCode);
+        if (operationCode != null) {
+            wrapper.eq("operation_code", operationCode);
+        }
+        wrapper.eq("cursor_type_code", "TIME")
+               .eq("namespace_scope_code", "GLOBAL")
+               .orderByDesc("updated_at")
+               .last("LIMIT 1");
+        CursorDO one = mapper.selectOne(wrapper);
+        return Optional.ofNullable(one).map(CursorDO::getNormalizedInstant);
     }
 }

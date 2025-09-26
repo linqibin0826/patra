@@ -6,6 +6,7 @@ import com.patra.ingest.domain.model.vo.IdempotentKey;
 import java.time.Instant;
 
 /** 单次运行的分页/令牌批次。 */
+@SuppressWarnings("unused")
 public class TaskRunBatch {
     private final Long id;
     private final Long runId;

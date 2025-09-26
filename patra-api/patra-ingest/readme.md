@@ -1,6 +1,6 @@
 # `patra-ingest`
 
-> Ingest 服务：可观测数据与业务事件的统一入口，负责高吞吐低延迟地接收、校验、规范化与落地（持久化/缓存/转发），并通过 Outbox + Relay 实现对外发布；作为写侧入口，读侧通过 contract 暴露必要的查询能力（状态/偏移/任务）。
+> Ingest 服务：可观测数据与业务事件的统一入口，负责高吞吐低延迟地接收、校验、规范化与落地（持久化/缓存/转发），并通过 Outbox + Relay 实现对外发布；作为写侧入口，读侧通过 app/infra 提供必要的查询能力（状态/偏移/任务）。
 > 架构采用 六边形架构（Hexagonal / Ports & Adapters）+ DDD 分层 + CQRS，保持业务内核纯净与技术细节隔离。
 
 ---
@@ -13,24 +13,22 @@
   - 仅依赖：`jakarta.validation`。
   - 不依赖 Spring、domain、infra、app、contract。
 
-- 契约层（contract）：内部跨层查询契约（QueryPort + ReadModel/DTO、查���条件对象、共享轻量枚举）。
-  - 被 `app` 调用，被 `infra` 实现。
-  - 不依赖 Spring、domain、app、adapter、api。
+ 
 
 - 适配层（adapter）：协议适配（Web、MQ、Scheduler）。
   - 依赖：`app` + `api`，可选 Web/MQ SDK。
-  - 不依赖 domain、infra、contract。
+  - 不依赖 domain、infra。
 
 - 应用层（app）：用例编排（鉴权、事务、聚合协作、事件触发）。
-  - 依赖：`domain`、`contract`、`patra-common` 等共享库。
+  - 依赖：`domain`、`patra-common` 等共享库。
   - 不依赖 adapter、infra、api。
 
-- 领域层（domain）：业务内核（聚合、实体、值对象、领域事件、仓储端口）。
+- 领域层（domain）：业务内核（聚合、实体、值对象、领域事件、仓储端口、查询视图接口）。
   - 依赖：`patra-common`（含 hutool-core）。
-  - 不依赖 Spring、MyBatis、Web、api、contract。
+  - 不依赖 Spring、MyBatis、Web、api。
 
 - 基础设施层（infra）：持久化/缓存/消息等技术实现。
-  - 依赖：`domain`、`contract`、`patra-spring-boot-starter-mybatis` 等。
+  - 依赖：`domain`、`patra-spring-boot-starter-mybatis` 等。
   - 不依赖 app、adapter、api。
 
 依赖方向（A → B 表示 A 依赖 B）：
@@ -38,10 +36,9 @@
 ```
 boot     → adapter, app, infra
 adapter  → app, api
-app      → domain, contract
-infra    → domain, contract
+app      → domain
+infra    → domain
 api      → (no deps)
-contract → (no deps)
 domain   → (no deps，仅通用库)
 ```
 
@@ -73,28 +70,7 @@ error/
 
 ---
 
-### 2.2 `patra-ingest-contract`
-
-职责
-
-- 定义内部跨层查询契约：
-  - 查询端口（QueryPort 接口）。
-  - 查询返回对象（ReadModel/DTO）。
-  - 查询条件对象（例如按 stream/source/时间范围统计、偏移与健康状态）。
-- 可选：共享的轻量枚举或 VO。
-
-约束
-
-- 不依赖 Spring/Web/domain。
-- 被 `app` 调用，被 `infra` 实现。
-
-目录结构
-
-```
-query/port/
-query/view/
-common/
-```
+（原 `patra-ingest-contract` 模块已移除，查询相关接口可由 domain 暴露、由 infra 实现或由 app 聚合封装。）
 
 ---
 
@@ -218,10 +194,6 @@ API1[REST/RPC DTO]
 API2[IntegrationEvent DTO]
 end
 
-subgraph CONTRACT[contract内部查询契约, 无依赖]
-C1[QueryPort]
-C2[ReadModel/DTO]
-end
 
 subgraph DOMAIN[domain领域内核, 无依赖]
 D1[Aggregates/Entities/VO]
@@ -237,7 +209,7 @@ end
 
 subgraph INFRA[infra技术实现]
 I1[RepositoryImpl]
-I2[QueryPortImpl]
+I2[Query Implementations]
 I3[Outbox Storage]
 end
 
@@ -256,10 +228,9 @@ ADAPTER --> APP
 ADAPTER --> API
 
 APP --> DOMAIN
-APP --> CONTRACT
-
 INFRA --> DOMAIN
-INFRA --> CONTRACT
+ 
+INFRA --> DOMAIN
 
 BOOT --> ADAPTER
 BOOT --> APP
@@ -296,7 +267,7 @@ sequenceDiagram
 
 ---
 
-## 9. 查询调用链（读侧，经过 contract）
+## 9. 查询调用链（读侧）
 
 ```mermaid
 sequenceDiagram
@@ -304,16 +275,16 @@ sequenceDiagram
   participant C as Client
   participant AC as Adapter.Controller
   participant AS as App.QueryService
-  participant QP as Contract.QueryPort
-  participant IQ as Infra.QueryPortImpl
-  participant V as Contract.ReadModel
+  participant DM as Domain.QueryPort (可选)
+  participant IQ as Infra.Query (实现)
+  participant V as ReadModel/DTO
 
   C->>AC: GET /api/ingest/streams/{id}/stats?range=...
   AC->>AS: 转换为 Query 调用用例
-  AS->>QP: findStatsByStream(range)
-  QP->>IQ: infra 实现查询
-  IQ-->>QP: ReadModel(吞吐/延迟/失败率)
-  QP-->>AS: ReadModel
+  AS->>DM: findStatsByStream(range)（或由 AS 直接编排到 IQ）
+  DM->>IQ: infra 实现查询
+  IQ-->>DM: ReadModel(吞吐/延迟/失败率)
+  DM-->>AS: ReadModel
   AS-->>AC: 转换为 ResponseDTO
   AC-->>C: 200 OK + ResponseDTO
 ```

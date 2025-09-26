@@ -5,6 +5,7 @@ import com.patra.ingest.domain.model.vo.RunStats;
 import java.time.Instant;
 
 /** 任务运行 Attempt。 */
+@SuppressWarnings("unused")
 public class TaskRun {
     private final Long id;
     private final Long taskId;

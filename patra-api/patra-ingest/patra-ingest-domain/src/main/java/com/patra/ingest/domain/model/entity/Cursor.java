@@ -5,6 +5,7 @@ import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.domain.model.vo.CursorValue;
 
 /** 当前游标。 */
+@SuppressWarnings("unused")
 public class Cursor {
     private final Long id;
     private final String provenanceCode;

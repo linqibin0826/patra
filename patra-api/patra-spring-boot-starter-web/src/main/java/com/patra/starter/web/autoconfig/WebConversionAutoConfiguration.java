@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.lang.NonNull;
 
 /**
  * Web 层通用转换器自动配置。
@@ -27,7 +28,7 @@ public class WebConversionAutoConfiguration {
         log.info("loaded WebConversionAutoConfiguration.provenanceCodeConverter()");
         return new Converter<String, ProvenanceCode>() {
             @Override
-            public ProvenanceCode convert(String source) {
+            public ProvenanceCode convert(@NonNull String source) {
                 return source == null ? null : ProvenanceCode.parse(source);
             }
         };

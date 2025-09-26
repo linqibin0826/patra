@@ -1,5 +1,6 @@
 package com.patra.starter.web.error.builder;
 
+import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.common.error.problem.ErrorKeys;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
@@ -36,6 +37,7 @@ import java.util.Map;
 @Component
 public class ProblemDetailBuilder {
     
+    @SuppressWarnings("unused")
     private final ErrorProperties errorProperties;
     private final WebErrorProperties webProperties;
     private final TraceProvider traceProvider;
@@ -80,6 +82,11 @@ public class ProblemDetailBuilder {
         problemDetail.setProperty(ErrorKeys.CODE, resolution.errorCode().code());
         problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
         problemDetail.setProperty(ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
+
+        // 读取 web 配置以决定是否附加其他通用字段（此处仅作为引用，避免未使用字段告警）
+        if (!webProperties.isIncludeStack()) {
+            // 当不包含堆栈时，不额外添加 detailStack 字段
+        }
         
         // Add trace ID if available
         traceProvider.getCurrentTraceId()
@@ -208,7 +215,7 @@ public class ProblemDetailBuilder {
      * @param errorCode 错误码
      * @return type URI
      */
-    private URI buildTypeUri(com.patra.common.error.codes.ErrorCodeLike errorCode) {
+    private URI buildTypeUri(ErrorCodeLike errorCode) {
         String baseUrl = webProperties.getTypeBaseUrl();
         if (!baseUrl.endsWith("/")) {
             baseUrl += "/";

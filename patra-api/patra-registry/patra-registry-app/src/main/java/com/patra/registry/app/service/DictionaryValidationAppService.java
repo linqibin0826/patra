@@ -74,10 +74,11 @@ public class DictionaryValidationAppService {
 
     /** 批量校验字典引用（存在且启用），返回与入参对应的结果列表。 */
     public List<DictionaryValidationQuery> validateReferences(List<DictionaryReference> references) {
-        log.debug("Validating {} dictionary references in batch", references != null ? references.size() : 0);
+        int size = references == null ? 0 : references.size();
+        log.debug("Validating {} dictionary references in batch", size);
         requireReferences(references);
 
-        if (references.isEmpty()) {
+        if (references == null || references.isEmpty()) {
             log.debug("Empty references list provided for batch validation");
             return List.of();
         }
@@ -137,7 +138,8 @@ public class DictionaryValidationAppService {
     public DictionaryValidationQuery validateReference(DictionaryReference reference) {
         log.debug("Validating dictionary reference object: {}", reference != null ? reference.toReferenceString() : "null");
         requireReference(reference);
-        return validateReference(reference.typeCode(), reference.itemCode());
+    final DictionaryReference ref = java.util.Objects.requireNonNull(reference, "reference");
+    return validateReference(ref.typeCode(), ref.itemCode());
     }
 
     /** 轻量校验是否有效（仅返回布尔）。 */
