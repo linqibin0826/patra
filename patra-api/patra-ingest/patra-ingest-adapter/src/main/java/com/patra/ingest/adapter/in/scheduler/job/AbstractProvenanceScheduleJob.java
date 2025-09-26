@@ -7,9 +7,9 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.Priority;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.enums.Scheduler;
-import com.patra.ingest.app.usecase.command.PlanTriggerCommand;
-import com.patra.ingest.app.dto.PlanTriggerResult;
-import com.patra.ingest.app.usecase.PlanTriggerUseCase;
+import com.patra.ingest.app.orchestration.command.PlanIngestionRequest;
+import com.patra.ingest.app.orchestration.dto.PlanIngestionResult;
+import com.patra.ingest.app.orchestration.application.PlanIngestionUseCase;
 import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.xxl.job.core.context.XxlJobHelper;
@@ -24,7 +24,7 @@ import java.util.Map;
  *
  * <p>为各个数据来源提供统一的XXL-Job调度任务框架，包含：
  * - JSON参数解析和验证
- * - 调用app层的triggerPlan方法
+ * - 调用 app 层的 ingestPlan 方法
  * - 错误处理和日志记录
  * - 子类只需实现getProvenanceCode方法</p>
  *
@@ -35,7 +35,7 @@ import java.util.Map;
 public abstract class AbstractProvenanceScheduleJob {
 
     @Autowired
-    private PlanTriggerUseCase planTriggerUseCase;
+    private PlanIngestionUseCase planIngestionUseCase;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -61,15 +61,15 @@ public abstract class AbstractProvenanceScheduleJob {
      * 解析XXL-Job参数。
      *
      * @param paramStr JSON格式的参数字符串
-     * @return 解析后的PlanTriggerCommand对象
+     * @return 解析后的请求对象
      */
-    protected PlanTriggerCommand parseJobParam(String paramStr) {
+    protected PlanIngestionRequest parseJobParam(String paramStr) {
         // 空参数 -> 空 Map
         if (paramStr == null || paramStr.trim().isEmpty()) {
-        return new PlanTriggerCommand(
-            getProvenanceCode(),
-            getEndpoint(),
-            getOperationCode(),
+            return new PlanIngestionRequest(
+                    getProvenanceCode(),
+                    getEndpoint(),
+                    getOperationCode(),
                     "PT6H",
                     TriggerType.SCHEDULE,
                     Scheduler.XXL,
@@ -79,8 +79,7 @@ public abstract class AbstractProvenanceScheduleJob {
                     null,
                     null,
                     Instant.now(),
-                    Map.of()
-            );
+                    Map.of());
         }
         try {
             JsonNode root = objectMapper.readTree(paramStr);
@@ -106,10 +105,10 @@ public abstract class AbstractProvenanceScheduleJob {
                     priority = Priority.valueOf(root.get("priority").asText().toUpperCase());
                 } catch (Exception ignored) { /* 忽略无法解析的优先级 */ }
             }
-        return new PlanTriggerCommand(
-            getProvenanceCode(),
-            getEndpoint(),
-            getOperationCode(),
+            return new PlanIngestionRequest(
+                    getProvenanceCode(),
+                    getEndpoint(),
+                    getOperationCode(),
                     "PT6H",
                     TriggerType.SCHEDULE,
                     Scheduler.XXL,
@@ -119,8 +118,7 @@ public abstract class AbstractProvenanceScheduleJob {
                     windowTo,
                     priority,
                     Instant.now(),
-                    triggerParams
-            );
+                    triggerParams);
         } catch (Exception e) {
             throw new IllegalArgumentException("JSON参数解析失败: " + e.getMessage(), e);
         }
@@ -137,20 +135,20 @@ public abstract class AbstractProvenanceScheduleJob {
         try {
             log.info("开始执行{}:{}:{} 调度任务, 参数: {}", getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
 
-            PlanTriggerCommand command = parseJobParam(paramStr);
-            PlanTriggerResult result = planTriggerUseCase.triggerPlan(command);
+            PlanIngestionRequest command = parseJobParam(paramStr);
+            PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
 
             long duration = System.currentTimeMillis() - startTime;
-        log.info("{}:{}:{} 调度任务执行成功, 耗时: {}ms, planId: {}, taskCount: {}",
-            getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, result.planId(), result.taskCount());
+            log.info("{}:{}:{} 调度任务执行成功, 耗时: {}ms, planId: {}, taskCount: {}",
+                    getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, result.planId(), result.taskCount());
 
             XxlJobHelper.handleSuccess(String.format("任务执行成功，耗时%dms，planId=%s，taskCount=%d",
                     duration, result.planId(), result.taskCount()));
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-        log.error("{}:{}:{} 调度任务执行失败, 耗时: {}ms, 错误: {}",
-            getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, e.getMessage(), e);
+            log.error("{}:{}:{} 调度任务执行失败, 耗时: {}ms, 错误: {}",
+                    getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, e.getMessage(), e);
 
             XxlJobHelper.handleFail(String.format("任务执行失败: %s", e.getMessage()));
             throw e;

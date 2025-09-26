@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.command;
+package com.patra.ingest.app.orchestration.command;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
@@ -12,9 +12,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Adapter 层传入的计划触发命令，经过缺省解析后进入应用层。
+ * Adapter 层传入的计划编排请求，经过缺省解析后进入应用层。
  */
-public record PlanTriggerCommand(
+public record PlanIngestionRequest(
         ProvenanceCode provenanceCode,
         Endpoint endpoint,
         OperationCode operationCode,
@@ -29,7 +29,7 @@ public record PlanTriggerCommand(
         Instant triggeredAt,
         Map<String, Object> triggerParams
 ) {
-    public PlanTriggerCommand {
+    public PlanIngestionRequest {
         Objects.requireNonNull(provenanceCode, "provenanceCode不能为空");
         Objects.requireNonNull(operationCode, "operationType不能为空");
         Objects.requireNonNull(triggerType, "triggerType不能为空");

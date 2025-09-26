@@ -1,4 +1,4 @@
-package com.patra.ingest.app.policy;
+package com.patra.ingest.app.orchestration.window;
 
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
@@ -43,7 +43,7 @@ import java.time.temporal.TemporalAdjusters;
  */
 @Slf4j
 @Component
-public class DefaultPlannerWindowPolicy implements PlannerWindowPolicy {
+public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
     private static final Duration DEFAULT_WINDOW_SIZE = Duration.ofHours(24);
     private static final Duration DEFAULT_SAFETY_LAG = Duration.ZERO;

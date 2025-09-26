@@ -1,4 +1,4 @@
-package com.patra.ingest.app.policy;
+package com.patra.ingest.app.orchestration.window;
 
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
@@ -22,7 +22,7 @@ import java.time.Instant;
  * @author linqibin
  * @since 0.1.0
  */
-public interface PlannerWindowPolicy {
+public interface PlanningWindowResolver {
 
     /**
      * 解析执行窗口。
@@ -38,4 +38,3 @@ public interface PlannerWindowPolicy {
                                 Instant cursorWatermark,
                                 Instant currentTime);
 }
-

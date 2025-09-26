@@ -1,17 +1,15 @@
-package com.patra.ingest.app.strategy.plan_slice;
+package com.patra.ingest.app.orchestration.slice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
-import com.patra.ingest.app.model.PlanBusinessExpr;
-import com.patra.ingest.app.strategy.plan_slice.model.SliceContext;
-import com.patra.ingest.app.strategy.plan_slice.model.SliceDraft;
-import com.patra.ingest.app.util.ExprHashUtil;
-import com.patra.ingest.app.util.SliceSignatureUtil;
+import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
+import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
+import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.patra.starter.core.json.JsonNormalizer;
+import com.patra.starter.core.util.HashUtils;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -20,12 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class TimeSliceStrategy implements SliceStrategy {
+public class TimeSlicePlanner implements SlicePlanner {
 
     private static final Duration DEFAULT_STEP = Duration.ofHours(1);
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @Override
     public String code() {
@@ -33,8 +28,8 @@ public class TimeSliceStrategy implements SliceStrategy {
     }
 
     @Override
-    public List<SliceDraft> slice(SliceContext context) {
-        List<SliceDraft> result = new ArrayList<>();
+    public List<SlicePlan> slice(SlicePlanningContext context) {
+        List<SlicePlan> result = new ArrayList<>();
         if (context.window() == null || context.window().from() == null || context.window().to() == null) return result;
         // 解析时间字段：优先 windowOffset.offsetFieldName (仅当 offsetType=DATE)，其次 windowOffset.defaultDateFieldName；无法解析直接终止
         String timeField = resolveTimeField(context.configSnapshot());
@@ -54,17 +49,19 @@ public class TimeSliceStrategy implements SliceStrategy {
         }
         Instant cursor = from;
         int index = 1;
-        PlanBusinessExpr planExpr = context.planExpr();
+        PlanExpressionDescriptor planExpr = context.planExpression();
         while (cursor.isBefore(to)) {
             Instant upper = cursor.plus(step);
             if (upper.isAfter(to)) upper = to;
-            String specJson = buildSpecJson(context, cursor, upper);
+            JsonNormalizer.Result specNormalized = buildSpec(context, cursor, upper);
+            String specJson = specNormalized.getCanonicalJson();
             Expr timeConstraint = buildTimeWindowConstraint(timeField, cursor, upper);
             Expr combined = Exprs.and(List.of(planExpr.expr(), timeConstraint));
-            String combinedJson = Exprs.toJson(combined);
-            String combinedHash = ExprHashUtil.sha256Hex(combinedJson);
-            String signatureHash = SliceSignatureUtil.signatureHash(objectMapper, specJson);
-            result.add(new SliceDraft(
+            JsonNormalizer.Result combinedNormalized = JsonNormalizer.normalizeDefault(Exprs.toJson(combined));
+            String combinedJson = combinedNormalized.getCanonicalJson();
+            String combinedHash = HashUtils.sha256Hex(combinedNormalized);
+            String signatureHash = HashUtils.sha256Hex(specNormalized);
+            result.add(new SlicePlan(
                     index,
                     signatureHash,
                     specJson,
@@ -99,7 +96,7 @@ public class TimeSliceStrategy implements SliceStrategy {
         return null; // 不回退
     }
 
-    private String buildSpecJson(SliceContext context, Instant from, Instant to) {
+    private JsonNormalizer.Result buildSpec(SlicePlanningContext context, Instant from, Instant to) {
 
         ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
         ObjectNode root = JsonNodeFactory.instance.objectNode();
@@ -113,9 +110,14 @@ public class TimeSliceStrategy implements SliceStrategy {
         boundary.put("to", "OPEN");
         window.put("timezone", configSnapshot.provenance().timezoneDefault());
         try {
-            return objectMapper.writeValueAsString(root);
-        } catch (Exception e) {
-            return "{\"strategy\":\"" + code() + "\"}";
+            return JsonNormalizer.normalizeDefault(root);
+        } catch (JsonNormalizer.JsonNormalizationException ex) {
+            String fallback = "{\"strategy\":\"" + code() + "\"}";
+            try {
+                return JsonNormalizer.normalizeDefault(fallback);
+            } catch (JsonNormalizer.JsonNormalizationException ignored) {
+                throw ex;
+            }
         }
     }
 }

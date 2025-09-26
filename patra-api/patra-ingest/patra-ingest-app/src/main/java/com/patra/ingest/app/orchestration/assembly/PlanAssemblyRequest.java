@@ -1,23 +1,24 @@
-package com.patra.ingest.app.model;
+package com.patra.ingest.app.orchestration.assembly;
 
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import java.util.Objects;
 
 /**
- * 计划编排蓝图命令（应用层）。
+ * Immutable request for plan assembly composed by the application service.
  */
-public record PlanBlueprintCommand(
+public record PlanAssemblyRequest(
         PlanTriggerNorm triggerNorm,
         PlannerWindow window,
         ProvenanceConfigSnapshot configSnapshot,
-        PlanBusinessExpr planBusinessExpr
+        PlanExpressionDescriptor planExpression
 ) {
-    public PlanBlueprintCommand {
+    public PlanAssemblyRequest {
         Objects.requireNonNull(triggerNorm, "triggerNorm不能为空");
         Objects.requireNonNull(window, "window不能为空");
         Objects.requireNonNull(configSnapshot, "configSnapshot不能为空");
-        Objects.requireNonNull(planBusinessExpr, "planBusinessExpr不能为空");
+        Objects.requireNonNull(planExpression, "planExpression不能为空");
     }
 }

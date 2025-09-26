@@ -1,21 +1,19 @@
-package com.patra.ingest.app.engine;
+package com.patra.ingest.app.orchestration.assembly;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
+import com.patra.ingest.app.orchestration.slice.SlicePlanner;
+import com.patra.ingest.app.orchestration.slice.SlicePlannerRegistry;
+import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
+import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
-import com.patra.ingest.app.strategy.plan_slice.SliceStrategyRegistry;
-import com.patra.ingest.app.strategy.plan_slice.SliceStrategy;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.app.model.PlanBlueprintCommand;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
-import com.patra.ingest.app.strategy.plan_slice.model.SliceContext;
-import com.patra.ingest.app.strategy.plan_slice.model.SliceDraft;
-import com.patra.ingest.app.model.PlanBusinessExpr;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.patra.starter.core.json.JsonNormalizer;
+import com.patra.starter.core.util.HashUtils;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -24,58 +22,59 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 /**
- * 默认计划编排引擎：从蓝图命令生成 Plan/Slices/Tasks。
+ * Default coordinator that materializes plan aggregate, slices, and tasks from a trigger request.
  */
 @Component
-public class DefaultPlannerEngine implements PlannerEngine {
+public class DefaultPlanAssemblyService implements PlanAssemblyService {
 
     private static final String SLICE_STRATEGY_SINGLE = "SINGLE";
     private static final String SLICE_STRATEGY_TIME = "TIME";
 
-    private final SliceStrategyRegistry sliceStrategyRegistry;
+    private final SlicePlannerRegistry slicePlannerRegistry;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    public DefaultPlannerEngine(SliceStrategyRegistry sliceStrategyRegistry) {
-        this.sliceStrategyRegistry = sliceStrategyRegistry;
+    public DefaultPlanAssemblyService(SlicePlannerRegistry slicePlannerRegistry) {
+        this.slicePlannerRegistry = slicePlannerRegistry;
     }
 
     @Override
-    public PlanAssembly assemble(PlanBlueprintCommand command) {
-        PlanTriggerNorm norm = command.triggerNorm();
-        PlannerWindow window = command.window();
-        PlanBusinessExpr planBusinessExpr = command.planBusinessExpr();
-        String planExprHash = planBusinessExpr.hash();
-        String planExprJson = planBusinessExpr.jsonSnapshot();
-        ProvenanceConfigSnapshot config = command.configSnapshot();
+    public PlanAssembly assemble(PlanAssemblyRequest request) {
+        PlanTriggerNorm norm = request.triggerNorm();
+        PlannerWindow window = request.window();
+        PlanExpressionDescriptor planExpression = request.planExpression();
+        String planExprHash = planExpression.hash();
+        String planExprJson = planExpression.jsonSnapshot();
+        ProvenanceConfigSnapshot config = request.configSnapshot();
+        JsonNormalizer.Result configSnapshot = normalizeConfigSnapshot(config);
+        String configSnapshotJson = configSnapshot == null ? null : configSnapshot.getCanonicalJson();
+        String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot);
 
         String planKey = buildPlanKey(norm, window);
         PlanAggregate plan = PlanAggregate.create(
                 norm.scheduleInstanceId(),
                 planKey,
                 norm.provenanceCode().getCode(),
-        norm.endpoint() == null ? null : norm.endpoint().name(),
-        norm.operationCode() == null ? null : norm.operationCode().name(),
+                norm.endpoint() == null ? null : norm.endpoint().name(),
+                norm.operationCode() == null ? null : norm.operationCode().name(),
                 planExprHash,
                 planExprJson,
-                serializeConfigSnapshot(config),
-                null,
+                configSnapshotJson,
+                configSnapshotHash,
                 window.from(),
                 window.to(),
-        determineSliceStrategy(norm),
+                determineSliceStrategy(norm),
                 buildSliceParams(norm));
         plan.startSlicing();
 
-        SliceStrategy strategy = sliceStrategyRegistry.get(determineSliceStrategy(norm));
-        List<SliceDraft> drafts = strategy == null
+        SlicePlanner planner = slicePlannerRegistry.get(determineSliceStrategy(norm));
+        List<SlicePlan> drafts = planner == null
                 ? new ArrayList<>()
-                : strategy.slice(new SliceContext(norm, window, planBusinessExpr, config));
+                : planner.slice(new SlicePlanningContext(norm, window, planExpression, config));
 
         List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
-        for (SliceDraft d : drafts) {
+        for (SlicePlan d : drafts) {
             slices.add(PlanSliceAggregate.create(
                     null,
                     norm.provenanceCode().getCode(),
@@ -97,7 +96,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
         return new PlanAssembly(plan, slices, tasks, PlanAssembly.PlanAssemblyStatus.READY);
     }
 
-    // buildSlices moved to dedicated strategies (TimeSliceStrategy / SingleSliceStrategy)
+    // buildSlices moved to dedicated planners (TimeSlicePlanner / SingleSlicePlanner)
 
     private List<TaskAggregate> buildTasks(PlanTriggerNorm norm,
                                            List<PlanSliceAggregate> slices) {
@@ -111,7 +110,7 @@ public class DefaultPlannerEngine implements PlannerEngine {
                     (long) slice.getSequence(),
                     norm.provenanceCode().getCode(),
                     norm.operationCode().name(),
-                    buildTaskParamsJson(norm, slice),
+                    buildTaskParamsJson(slice),
                     idemKey,
                     slice.getExprHash(),
                     priorityVal,
@@ -140,25 +139,21 @@ public class DefaultPlannerEngine implements PlannerEngine {
     }
 
     private String buildSliceParams(PlanTriggerNorm norm) {
-        if (norm.isUpdate()) {
-            return "{\"strategy\":\"" + SLICE_STRATEGY_SINGLE + "\"}";
-        }
-        return "{\"strategy\":\"" + SLICE_STRATEGY_TIME + "\"}";
+        String strategy = determineSliceStrategy(norm);
+        JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(Map.of("strategy", strategy));
+        return normalized.getCanonicalJson();
     }
 
-    private String buildTaskParamsJson(PlanTriggerNorm norm, PlanSliceAggregate slice) {
-        return "{\"sliceNo\":" + slice.getSequence() + "}";
+    private String buildTaskParamsJson(PlanSliceAggregate slice) {
+        JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(Map.of("sliceNo", slice.getSequence()));
+        return normalized.getCanonicalJson();
     }
 
-    private String serializeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
+    private JsonNormalizer.Result normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
         if (snapshot == null) {
             return null;
         }
-        try {
-            return objectMapper.writeValueAsString(snapshot);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
+        return JsonNormalizer.normalizeDefault(snapshot);
     }
 
     private String computeSignature(PlanTriggerNorm norm, String payload) {
@@ -172,4 +167,3 @@ public class DefaultPlannerEngine implements PlannerEngine {
         }
     }
 }
-
