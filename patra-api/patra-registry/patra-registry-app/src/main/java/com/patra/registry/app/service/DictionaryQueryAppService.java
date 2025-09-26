@@ -1,6 +1,6 @@
 package com.patra.registry.app.service;
 
-import com.patra.registry.app.mapping.DictionaryQueryConverter;
+import com.patra.registry.app.converter.DictionaryQueryConverter;
 import com.patra.registry.domain.model.read.dictionary.DictionaryItemQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryTypeQuery;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;

@@ -6,7 +6,7 @@ import com.patra.common.enums.RegistryConfigScope; // updated
 import com.patra.common.util.RegistryKeyUtils;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
-import com.patra.registry.infra.mapstruct.ExprEntityConverter;
+import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper;

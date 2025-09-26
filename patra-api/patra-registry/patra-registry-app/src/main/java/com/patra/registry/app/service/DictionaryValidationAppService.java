@@ -1,6 +1,6 @@
 package com.patra.registry.app.service;
 
-import com.patra.registry.app.mapping.DictionaryValidationConverter;
+import com.patra.registry.app.converter.DictionaryValidationConverter;
 import com.patra.registry.domain.model.read.dictionary.DictionaryHealthQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryValidationQuery;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryHealthStatus;

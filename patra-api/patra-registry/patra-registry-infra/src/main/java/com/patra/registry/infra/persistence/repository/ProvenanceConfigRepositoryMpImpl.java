@@ -6,7 +6,7 @@ import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.*;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
-import com.patra.registry.infra.mapstruct.ProvenanceEntityConverter;
+import com.patra.registry.infra.persistence.converter.ProvenanceEntityConverter;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.provenance.*;
 import lombok.RequiredArgsConstructor;

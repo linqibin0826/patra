@@ -1,7 +1,7 @@
 package com.patra.registry.app.service;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.registry.app.mapping.ProvenanceQueryAssembler;
+import com.patra.registry.app.converter.ProvenanceQueryAssembler;
 import com.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
 import com.patra.registry.domain.model.read.provenance.ProvenanceQuery;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
