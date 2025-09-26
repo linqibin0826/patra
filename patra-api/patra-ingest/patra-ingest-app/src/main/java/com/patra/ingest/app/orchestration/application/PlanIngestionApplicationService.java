@@ -63,12 +63,11 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         ProvenanceCode provenanceCode = request.provenanceCode();
         OperationCode operationCode = request.operationCode();
 
-        log.info("plan-ingest start, provenance={}, op={}", provenanceCode, operationCode);
         Instant now = request.triggeredAt();
+        log.info("plan-ingest start, provenance={}, op={}, triggeredAt={}", provenanceCode, operationCode, now);
 
-        // Phase 1: 调度实例 & 来源配置运行期快照
+        // Phase 1: 调度实例（持久化一次即可） + 来源配置快照
         ScheduleInstanceAggregate schedule = persistScheduleInstance(request);
-
         ProvenanceConfigSnapshot configSnapshot = provenancePort.fetchConfig(
                 provenanceCode, request.endpoint(), operationCode
         );
@@ -76,32 +75,32 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
 
         // Phase 2: 游标水位 (仅前进) + 解析计划窗口（TIME 策略）
         Instant cursorWatermark = cursorRepository
-                .findLatestGlobalTimeWatermark(provenanceCode.getCode(), operationCode == null ? null : operationCode.getCode())
+                .findLatestGlobalTimeWatermark(provenanceCode.getCode(), opCode(operationCode))
                 .orElse(null);
         PlannerWindow window = planningWindowResolver.resolveWindow(norm, configSnapshot, cursorWatermark, now);
+        log.debug("plan-ingest window resolved provenance={} op={} cursorWatermark={} window=[{}, {})",
+                provenanceCode, operationCode, cursorWatermark, window == null ? null : window.from(), window == null ? null : window.to());
 
         // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
         PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(norm, configSnapshot);
+        log.debug("plan-ingest expr built hash={} jsonSize={}", expressionDescriptor.hash(), expressionDescriptor.jsonSnapshot().length());
 
-        // Phase 4: scheduleInstance落库
-        schedule = scheduleInstanceRepository.saveOrUpdateInstance(schedule);
-
-        // Phase 5: 前置验证（窗口合理性 / 背压 / 能力）
+        // Phase 4: 前置验证（窗口合理性 / 背压 / 能力）
         long queuedTasks = taskRepository.countQueuedTasks(
-                provenanceCode.getCode(), operationCode == null ? null : operationCode.getCode());
+                provenanceCode.getCode(), opCode(operationCode));
         plannerValidator.validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
+        log.debug("plan-ingest validation passed queuedTasks={}", queuedTasks);
 
-        // Phase 6: 组装蓝图
+        // Phase 5: 组装蓝图
         PlanAssemblyRequest assemblyRequest = new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
         PlanAssembly assembly = planAssemblyService.assemble(assemblyRequest);
 
-        // Phase 7: 持久化 Plan / Slice / Task
+        // Phase 6: 持久化 Plan / Slice / Task
         PlanAggregate persistedPlan = planRepository.save(assembly.plan());
         List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
         List<TaskAggregate> persistedTasks = persistTasks(schedule, persistedPlan, persistedSlices, assembly.tasks());
 
-        log.info("plan-ingest success, planId={}, sliceCount={}, taskCount={}",
-                persistedPlan.getId(), persistedSlices.size(), persistedTasks.size());
+        log.info("plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})", persistedPlan.getId(), persistedSlices.size(), persistedTasks.size(), window == null ? null : window.from(), window == null ? null : window.to());
 
         return new PlanIngestionResult(
                 schedule.getId(),
@@ -109,6 +108,14 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                 persistedSlices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
                 persistedTasks.size(),
                 assembly.status().name());
+    }
+
+
+    /**
+     * 统一获取操作码字符串，避免多处判空三元表达式。
+     */
+    private String opCode(OperationCode op) {
+        return op == null ? null : op.getCode();
     }
 
     private ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionRequest request) {
@@ -145,7 +152,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
      * Phase 3: 构建 Plan 级业务表达式（纯业务逻辑模板，不含窗口约束）。
      * 窗口约束在切片策略中动态添加；该表达式不会直接执行，因此不做编译。
      */
-    private PlanExpressionDescriptor buildPlanExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+    private PlanExpressionDescriptor buildPlanExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) { // 后续可抽取为 ExpressionCanonicalizer
         Expr expr = buildPlanBusinessExpression(norm, configSnapshot);
         String exprJson = Exprs.toJson(expr);
         JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(exprJson);
