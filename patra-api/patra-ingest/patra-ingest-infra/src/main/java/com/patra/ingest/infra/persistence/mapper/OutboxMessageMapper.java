@@ -9,6 +9,9 @@ import java.util.List;
 
 public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
 
+    OutboxMessageDO findByChannelAndDedup(@Param("channel") String channel,
+                                          @Param("dedupKey") String dedupKey);
+
     List<OutboxMessageDO> lockPending(@Param("channel") String channel,
                                       @Param("status") String status,
                                       @Param("available") Instant available,

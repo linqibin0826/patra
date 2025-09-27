@@ -208,6 +208,13 @@ public class TaskAggregate extends AggregateRoot<Long> {
         this.leaseInfo = leaseInfo.release();
     }
 
+    public void prepareForRetry() {
+        releaseLease();
+        this.executionTimeline = ExecutionTimeline.empty();
+        this.schedulerContext = TaskSchedulerContext.empty();
+        markQueued();
+    }
+
     public LeaseInfo getLeaseInfo() {
         return leaseInfo;
     }

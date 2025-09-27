@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 基于 MyBatis-Plus 的 Outbox 仓储实现。
@@ -33,6 +34,25 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
             OutboxMessageDO entity = converter.toEntity(message);
             mapper.insert(entity);
         }
+    }
+
+    @Override
+    public void saveOrUpdate(OutboxMessage message) {
+        if (message == null) {
+            return;
+        }
+        OutboxMessageDO entity = converter.toEntity(message);
+        if (entity.getId() == null) {
+            mapper.insert(entity);
+        } else {
+            mapper.updateById(entity);
+        }
+    }
+
+    @Override
+    public Optional<OutboxMessage> findByChannelAndDedup(String channel, String dedupKey) {
+        OutboxMessageDO entity = mapper.findByChannelAndDedup(channel, dedupKey);
+        return Optional.ofNullable(entity).map(converter::toDomain);
     }
 
     @Override

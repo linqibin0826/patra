@@ -9,6 +9,7 @@ import com.patra.ingest.app.outbox.support.OutboxChannels;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
+import com.patra.ingest.domain.model.enums.OutboxStatus;
 import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 将任务入队事件转换为 Outbox 消息并持久化。
@@ -71,6 +73,56 @@ public class TaskOutboxPublisher {
 
         if (!messages.isEmpty()) {
             outboxMessageRepository.saveAll(messages);
+        }
+    }
+
+    public void publishRetry(List<TaskQueuedEvent> events,
+                             PlanAggregate plan,
+                             ScheduleInstanceAggregate schedule) {
+        if (events == null || events.isEmpty()) {
+            return;
+        }
+        Objects.requireNonNull(plan, "plan must not be null");
+        Objects.requireNonNull(schedule, "schedule must not be null");
+
+        for (TaskQueuedEvent event : events) {
+            ObjectNode payloadNode = buildPayload(event, plan);
+            ObjectNode headersNode = buildHeaders(event, schedule, plan);
+            String payloadJson = writeJson(payloadNode);
+            String headersJson = writeJson(headersNode);
+            Instant notBefore = resolveNotBefore(event.scheduledAt());
+
+            Optional<OutboxMessage> existing = outboxMessageRepository.findByChannelAndDedup(DEFAULT_CHANNEL, event.idempotentKey());
+            if (existing.isPresent()) {
+                OutboxMessage refreshed = existing.get().toBuilder()
+                        .statusCode(OutboxStatus.PENDING.name())
+                        .retryCount(0)
+                        .nextRetryAt(null)
+                        .errorCode(null)
+                        .errorMsg(null)
+                        .payloadJson(payloadJson)
+                        .headersJson(headersJson)
+                        .notBefore(notBefore)
+                        .leaseOwner(null)
+                        .leaseExpireAt(null)
+                        .msgId(null)
+                        .build();
+                outboxMessageRepository.saveOrUpdate(refreshed);
+            } else {
+                OutboxMessage message = OutboxMessage.builder()
+                        .aggregateType(AGGREGATE_TYPE_TASK)
+                        .aggregateId(event.taskId())
+                        .channel(DEFAULT_CHANNEL)
+                        .opType(DEFAULT_OP_TYPE)
+                        .partitionKey(buildPartitionKey(event))
+                        .dedupKey(event.idempotentKey())
+                        .payloadJson(payloadJson)
+                        .headersJson(headersJson)
+                        .notBefore(notBefore)
+                        .retryCount(0)
+                        .build();
+                outboxMessageRepository.saveOrUpdate(message);
+            }
         }
     }
 

@@ -21,6 +21,7 @@ import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.enums.OperationCode;
+import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
@@ -104,6 +105,22 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
             log.info("plan-ingest dedup hit existing planKey={}, reuse planId={}", draftPlan.getPlanKey(), existingPlan.getId());
             List<PlanSliceAggregate> existingSlices = planSliceRepository.findByPlanId(existingPlan.getId());
             List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
+
+            List<TaskAggregate> retryTasks = new ArrayList<>();
+            for (TaskAggregate task : existingTasks) {
+                if (shouldRetry(task)) {
+                    task.prepareForRetry();
+                    taskRepository.save(task);
+                    retryTasks.add(task);
+                }
+            }
+            if (!retryTasks.isEmpty()) {
+                existingPlan.markPartial();
+                planRepository.save(existingPlan);
+                List<TaskQueuedEvent> retryEvents = collectQueuedEvents(retryTasks);
+                taskOutboxPublisher.publishRetry(retryEvents, existingPlan, schedule);
+            }
+
             return new PlanIngestionResult(
                     schedule.getId(),
                     existingPlan.getId(),
@@ -182,6 +199,11 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                     .forEach(events::add);
         }
         return events;
+    }
+
+    private boolean shouldRetry(TaskAggregate task) {
+        TaskStatus status = task.getStatus();
+        return status == TaskStatus.FAILED || status == TaskStatus.CANCELLED;
     }
 
     private List<PlanSliceAggregate> persistSlices(PlanAggregate plan, List<PlanSliceAggregate> slices) {
