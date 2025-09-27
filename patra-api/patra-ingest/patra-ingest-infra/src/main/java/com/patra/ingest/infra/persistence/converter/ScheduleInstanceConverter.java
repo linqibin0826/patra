@@ -1,7 +1,9 @@
 package com.patra.ingest.infra.persistence.converter;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
+import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
@@ -11,6 +13,8 @@ import org.mapstruct.ReportingPolicy;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ScheduleInstanceConverter {
+    TypeReference<java.util.Map<String, Object>> MAP_TYPE = new TypeReference<>() { };
+
     default ScheduleInstanceDO toDO(ScheduleInstanceAggregate aggregate) {
         if (aggregate == null) {
             return null;
@@ -25,8 +29,7 @@ public interface ScheduleInstanceConverter {
         entity.setTriggerTypeCode(aggregate.getTriggerType() == null ? null : aggregate.getTriggerType().getCode());
         entity.setTriggeredAt(aggregate.getTriggeredAt());
         entity.setProvenanceCode(aggregate.getProvenanceCode() == null ? null : aggregate.getProvenanceCode().getCode());
-        // 触发参数：目前 domain 使用 Map<String,Object>，DO 是 JsonNode，暂置空或由上层填充
-        entity.setTriggerParams((JsonNode) null);
+        entity.setTriggerParams(toJsonNode(aggregate.getTriggerParams()));
         entity.setVersion(aggregate.getVersion());
         return entity;
     }
@@ -44,8 +47,22 @@ public interface ScheduleInstanceConverter {
                 entity.getSchedulerLogId(),
                 entity.getTriggerTypeCode() == null ? null : TriggerType.fromCode(entity.getTriggerTypeCode()),
                 entity.getTriggeredAt(),
-                null, // triggerParams TODO: 由上层决定是否需要反序列化
+                toParamMap(entity.getTriggerParams()),
                 entity.getProvenanceCode() == null ? null : ProvenanceCode.parse(entity.getProvenanceCode()),
                 version);
+    }
+
+    default JsonNode toJsonNode(java.util.Map<String, Object> params) {
+        if (params == null || params.isEmpty()) {
+            return null;
+        }
+        return JsonMapperHolder.getObjectMapper().valueToTree(params);
+    }
+
+    default java.util.Map<String, Object> toParamMap(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return java.util.Collections.emptyMap();
+        }
+        return JsonMapperHolder.getObjectMapper().convertValue(node, MAP_TYPE);
     }
 }
