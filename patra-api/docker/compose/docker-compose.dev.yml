@@ -134,7 +134,7 @@ services:
       - MODE=standalone
       - TZ=Asia/Shanghai
       - NACOS_AUTH_ENABLE=true
-      - NACOS_AUTH_TOKEN=wur4obqxgTEPKRgkbloX3m4Gx+uUuIuIsp6YjKrGgv0=
+      - NACOS_AUTH_TOKEN=wur4obqxgTEPKRgkbloX3m4Gx+uUuIsp6YjKrGgv0=
       - NACOS_AUTH_IDENTITY_KEY=patra
       - NACOS_AUTH_IDENTITY_VALUE=patra
     ports:
@@ -179,6 +179,74 @@ services:
       mysql:
         condition: service_healthy
 
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.1.4
+    container_name: patra-rocketmq-namesrv
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    command: [ "sh", "mqnamesrv" ]
+    ports:
+      - "9876:9876"           # NameServer，建议开发期只暴露本机
+    volumes:
+      - ../rocketmq/namesrv/logs:/home/rocketmq/logs
+      - ../rocketmq/namesrv/store:/home/rocketmq/store
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9876'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.1.4
+    container_name: patra-rocketmq-broker
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+      # 如客户端在宿主机/外网访问，请在 broker.conf 里设置 brokerIP1=宿主机IP
+    command: >
+      sh mqbroker --enable-proxy
+      -c /home/rocketmq/rocketmq-5.1.4/conf/broker.conf
+    ports:
+      - "10909:10909"         # remoting
+      - "10911:10911"         # remoting
+      - "10912:10912"         # HA
+      - "7071:8080"           # proxy (HTTP)
+      - "8081:8081"           # proxy (gRPC/HTTP2) —— 5.x 客户端默认连这个
+    volumes:
+      - ../rocketmq/broker/logs:/home/rocketmq/logs
+      - ../rocketmq/broker/store:/home/rocketmq/store
+      - ../rocketmq/broker/conf/broker.conf:/home/rocketmq/rocketmq-5.1.4/conf/broker.conf:ro
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/10911 && exec 3<>/dev/tcp/127.0.0.1/8081'" ]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:2.1.0
+    container_name: patra-rocketmq-dashboard
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-namesrv:9876"
+    ports:
+      - "4002:8082"           # Dashboard UI
+    depends_on:
+      rocketmq-namesrv:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:8082/ >/dev/null 2>&1 || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
 networks:
   default:
