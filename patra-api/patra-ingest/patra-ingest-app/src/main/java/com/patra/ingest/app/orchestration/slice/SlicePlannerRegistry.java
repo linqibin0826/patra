@@ -1,6 +1,6 @@
 package com.patra.ingest.app.orchestration.slice;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +22,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class SlicePlannerRegistry {
 
-    /** 策略编码到实现的映射表。 */
-    private final Map<String, SlicePlanner> planners = new HashMap<>();
+    /** 策略到实现的映射表。 */
+    private final Map<SliceStrategy, SlicePlanner> planners = new EnumMap<>(SliceStrategy.class);
 
     /**
      * 构造函数：在 Spring 上下文构建期间注册所有策略实现。
@@ -33,17 +33,17 @@ public class SlicePlannerRegistry {
     public SlicePlannerRegistry(List<SlicePlanner> plannerList) {
         for (SlicePlanner planner : plannerList) {
             planners.putIfAbsent(planner.code(), planner);
-            log.debug("Slice planner registered, code={}, impl={}", planner.code(), planner.getClass().getName());
+            log.debug("Slice planner registered, code={}, impl={}", planner.code().getCode(), planner.getClass().getName());
         }
     }
 
     /**
-     * 获取指定编码的策略实现。
+     * 获取指定策略的实现。
      *
-     * @param code 策略编码
+     * @param strategy 策略枚举
      * @return 匹配的策略实现，未注册时返回 null
      */
-    public SlicePlanner get(String code) {
-        return planners.get(code);
+    public SlicePlanner get(SliceStrategy strategy) {
+        return planners.get(strategy);
     }
 }

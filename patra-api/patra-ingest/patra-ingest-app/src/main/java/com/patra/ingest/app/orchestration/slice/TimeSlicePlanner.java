@@ -45,8 +45,8 @@ public class TimeSlicePlanner implements SlicePlanner {
     private static final Duration DEFAULT_STEP = Duration.ofHours(1);
 
     @Override
-    public String code() {
-        return "TIME";
+    public SliceStrategy code() {
+        return SliceStrategy.TIME;
     }
 
     @Override
@@ -168,7 +168,7 @@ public class TimeSlicePlanner implements SlicePlanner {
     private JsonNormalizer.Result buildSpec(SlicePlanningContext context, Instant from, Instant to) {
         ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
         ObjectNode root = JsonNodeFactory.instance.objectNode();
-        root.put("strategy", code());
+        root.put("strategy", code().getCode());
 
         // 构造 window 节点，确保时区信息与边界语义可溯源
         ObjectNode window = root.putObject("window");
@@ -187,7 +187,7 @@ public class TimeSlicePlanner implements SlicePlanner {
             return JsonNormalizer.normalizeDefault(root);
         } catch (JsonNormalizer.JsonNormalizationException ex) {
             log.error("Failed to normalize slice spec, fallback to minimal payload, from={}, to={}", from, to, ex);
-            String fallback = "{\"strategy\":\"" + code() + "\"}";
+            String fallback = "{\"strategy\":\"" + code().getCode() + "\"}";
             try {
                 return JsonNormalizer.normalizeDefault(fallback);
             } catch (JsonNormalizer.JsonNormalizationException ignored) {

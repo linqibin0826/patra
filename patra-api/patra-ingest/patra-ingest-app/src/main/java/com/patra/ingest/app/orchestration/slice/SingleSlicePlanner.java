@@ -25,15 +25,15 @@ import org.springframework.stereotype.Component;
 public class SingleSlicePlanner implements SlicePlanner {
 
     @Override
-    public String code() {
-        return "SINGLE";
+    public SliceStrategy code() {
+        return SliceStrategy.SINGLE;
     }
 
     @Override
     public List<SlicePlan> slice(SlicePlanningContext context) {
         // UPDATE / ID 驱动场景：不补充额外窗口约束，遵循 Plan 原有业务表达式
         Expr baseExpr = context.planExpression().expr();
-        JsonNormalizer.Result specNormalized = JsonNormalizer.normalizeDefault(Map.of("strategy", code()));
+        JsonNormalizer.Result specNormalized = JsonNormalizer.normalizeDefault(Map.of("strategy", code().getCode()));
         String specJson = specNormalized.getCanonicalJson();
         String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 

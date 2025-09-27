@@ -21,11 +21,11 @@ import java.util.List;
 public interface SlicePlanner {
 
     /**
-     * 返回策略编码，通常对应配置中的 strategy 标识。
+     * 返回策略枚举，通常对应配置中的 strategy 标识。
      *
-     * @return 策略编码
+     * @return 策略枚举
      */
-    String code();
+    SliceStrategy code();
 
     /**
      * 根据上下文拆分计划窗口，生成切片列表。

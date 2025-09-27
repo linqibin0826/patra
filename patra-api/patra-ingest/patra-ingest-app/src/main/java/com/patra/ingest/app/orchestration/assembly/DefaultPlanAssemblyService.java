@@ -9,6 +9,7 @@ import com.patra.expr.canonical.ExprCanonicalizer;
 import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.orchestration.slice.SlicePlanner;
 import com.patra.ingest.app.orchestration.slice.SlicePlannerRegistry;
+import com.patra.ingest.app.orchestration.slice.SliceStrategy;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
@@ -36,8 +37,6 @@ import java.util.Map;
 @Component
 public class DefaultPlanAssemblyService implements PlanAssemblyService {
 
-    private static final String SLICE_STRATEGY_SINGLE = "SINGLE";
-    private static final String SLICE_STRATEGY_TIME = "TIME";
     /**
      * 默认 JSON 规范化器，用于保持配置与策略参数的稳定序列化形态。
      */
@@ -73,7 +72,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         PlanExpressionDescriptor planExpression = request.planExpression();
         ProvenanceConfigSnapshot configSnapshot = request.configSnapshot();
 
-        String sliceStrategy = determineSliceStrategy(norm);
+        SliceStrategy sliceStrategy = determineSliceStrategy(norm);
         JsonNormalizer.Result configCanonical = normalizeConfigSnapshot(configSnapshot);
 
         PlanAggregate plan = createPlanAggregate(norm, window, planExpression, sliceStrategy, configCanonical);
@@ -108,12 +107,13 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     private PlanAggregate createPlanAggregate(PlanTriggerNorm norm,
                                               PlannerWindow window,
                                               PlanExpressionDescriptor planExpression,
-                                              String sliceStrategy,
+                                              SliceStrategy sliceStrategy,
                                               JsonNormalizer.Result configSnapshot) {
         String planKey = buildPlanKey(norm, window);
         String configSnapshotJson = configSnapshot == null ? null : configSnapshot.getCanonicalJson();
         String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot.getHashMaterial());
 
+        String sliceStrategyCode = sliceStrategy.getCode();
         return PlanAggregate.create(
                 norm.scheduleInstanceId(),
                 planKey,
@@ -126,7 +126,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
                 configSnapshotHash,
                 window.from(),
                 window.to(),
-                sliceStrategy,
+                sliceStrategyCode,
                 buildSliceParams(sliceStrategy)
         );
     }
@@ -148,7 +148,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
                                                 PlannerWindow window,
                                                 PlanExpressionDescriptor planExpression,
                                                 ProvenanceConfigSnapshot configSnapshot,
-                                                String sliceStrategy) {
+                                                SliceStrategy sliceStrategy) {
         SlicePlanner planner = slicePlannerRegistry.get(sliceStrategy);
         if (planner == null) {
             return new SliceGenerationResult(List.of(), List.of());
@@ -252,18 +252,18 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     /**
      * 判断当前触发是否仅需单片执行。
      */
-    private String determineSliceStrategy(PlanTriggerNorm norm) {
+    private SliceStrategy determineSliceStrategy(PlanTriggerNorm norm) {
         if (norm.isUpdate()) {
-            return SLICE_STRATEGY_SINGLE;
+            return SliceStrategy.SINGLE;
         }
-        return SLICE_STRATEGY_TIME;
+        return SliceStrategy.TIME;
     }
 
     /**
      * 规范化切片策略参数，保持 canonical JSON。
      */
-    private String buildSliceParams(String sliceStrategy) {
-        JsonNormalizer.Result normalized = DEFAULT_NORMALIZER.normalize(Map.of("strategy", sliceStrategy));
+    private String buildSliceParams(SliceStrategy sliceStrategy) {
+        JsonNormalizer.Result normalized = DEFAULT_NORMALIZER.normalize(Map.of("strategy", sliceStrategy.getCode()));
         return normalized.getCanonicalJson();
     }
 
