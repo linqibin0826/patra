@@ -26,8 +26,8 @@ import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.app.validator.PlannerValidator;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
-import com.patra.starter.core.json.JsonNormalizer;
-import com.patra.common.util.HashUtils;
+import com.patra.expr.canonical.ExprCanonicalizer;
+import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -67,7 +67,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         Instant now = request.triggeredAt();
         log.info("plan-ingest start, provenance={}, op={}, triggeredAt={}", provenanceCode, operationCode, now);
 
-        // Phase 1: 调度实例（持久化一次即可） + 来源配置快照
+        // Phase 1: 调度实例 + 来源配置快照
         ScheduleInstanceAggregate schedule = persistScheduleInstance(request);
         ProvenanceConfigSnapshot configSnapshot = provenancePort.fetchConfig(
                 provenanceCode, request.endpoint(), operationCode
@@ -155,17 +155,9 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
      */
     private PlanExpressionDescriptor buildPlanExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) { // 后续可抽取为 ExpressionCanonicalizer
         Expr expr = buildPlanBusinessExpression(norm, configSnapshot);
-        String exprJson = Exprs.toJson(expr);
-        JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(exprJson);
-        String canonicalJson = normalized.getCanonicalJson();
-        String hash = HashUtils.sha256Hex(normalized.getHashMaterial());
-        return new PlanExpressionDescriptor(expr, canonicalJson, hash);
+        ExprCanonicalSnapshot snapshot = ExprCanonicalizer.canonicalize(expr);
+        return new PlanExpressionDescriptor(expr, snapshot.canonicalJson(), snapshot.hash());
     }
-
-    /**
-     * 构建 Plan 级别业务表达式
-     * 包含业务逻辑约束，但不包含窗口约束（窗口约束由 slice planner 添加）
-     */
 
     /**
      * 未来注入“外部（管理员配置）条件 → Expr” 的单一占位。

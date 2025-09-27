@@ -1,7 +1,7 @@
 package com.patra.ingest.app.orchestration.slice;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
@@ -9,7 +9,7 @@ import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.starter.core.json.JsonNormalizer;
+import com.patra.common.json.JsonNormalizer;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -55,19 +55,14 @@ public class TimeSlicePlanner implements SlicePlanner {
             if (upper.isAfter(to)) upper = to;
             JsonNormalizer.Result specNormalized = buildSpec(context, cursor, upper);
             String specJson = specNormalized.getCanonicalJson();
+            String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
             Expr timeConstraint = buildTimeWindowConstraint(timeField, cursor, upper);
             Expr combined = Exprs.and(List.of(planExpr.expr(), timeConstraint));
-            JsonNormalizer.Result combinedNormalized = JsonNormalizer.normalizeDefault(Exprs.toJson(combined));
-            String combinedJson = combinedNormalized.getCanonicalJson();
-            String combinedHash = HashUtils.sha256Hex(combinedNormalized.getHashMaterial());
-            String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
             result.add(new SlicePlan(
                     index,
                     signatureHash,
                     specJson,
                     combined,
-                    combinedJson,
-                    combinedHash,
                     cursor,
                     upper));
             cursor = upper;

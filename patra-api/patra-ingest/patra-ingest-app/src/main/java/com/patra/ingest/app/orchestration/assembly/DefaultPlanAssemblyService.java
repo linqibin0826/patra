@@ -5,6 +5,8 @@ import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.orchestration.slice.SlicePlanner;
 import com.patra.ingest.app.orchestration.slice.SlicePlannerRegistry;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
+import com.patra.expr.canonical.ExprCanonicalizer;
+import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
@@ -13,7 +15,7 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
-import com.patra.starter.core.json.JsonNormalizer;
+import com.patra.common.json.JsonNormalizer;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -75,14 +77,15 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
 
         List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
         for (SlicePlan d : drafts) {
+            ExprCanonicalSnapshot sliceSnapshot = ExprCanonicalizer.canonicalize(d.sliceExpr());
             slices.add(PlanSliceAggregate.create(
                     null,
                     norm.provenanceCode().getCode(),
                     d.sequence(),
                     d.sliceSignatureSeed(),
                     d.sliceSpecJson(),
-                    d.sliceExprHash(),
-                    d.sliceExprJson()));
+                    sliceSnapshot.hash(),
+                    sliceSnapshot.canonicalJson()));
         }
 
         List<TaskAggregate> tasks = buildTasks(norm, slices);

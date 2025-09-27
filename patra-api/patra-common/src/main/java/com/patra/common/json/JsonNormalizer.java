@@ -1,4 +1,4 @@
-package com.patra.starter.core.json;
+package com.patra.common.json;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -45,7 +45,67 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * JSON 规范化工具，用于生成确定性的结构和值。
+ * JSON 规范化/标准化工具，用于将任意输入（POJO/JsonNode/字符串等）
+ * 转换为 <b>确定性（deterministic）</b> 的 JSON 结构与文本表示。
+ * <p>
+ * 特性概览：
+ * <ul>
+ *   <li><b>键排序</b>：对象键按可选比较器（ASCII/UNICODE）稳定排序；</li>
+ *   <li><b>数组处理</b>：默认去重+排序（按类型标签与序列化值）；对配置的“序列化字段”保留原顺序；</li>
+ *   <li><b>空值策略</b>：按配置移除空对象/空数组/空字符串，支持白名单保留；</li>
+ *   <li><b>类型规整</b>：布尔/数字/时间的宽松或严格规整；BigDecimal 去除尾随 0 与负 scale；</li>
+ *   <li><b>字符串规整</b>：可裁剪首尾空白、折叠多空格、按字段/路径小写化；</li>
+ *   <li><b>时间规整</b>：多格式解析（含时间戳秒/毫秒），规范化为 UTC 毫秒精度格式
+ *       {@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}；</li>
+ *   <li><b>边界保护</b>：字符串 UTF-8 字节数上限检查、最大深度限制、非法数值（NaN/Inf）拒绝；</li>
+ *   <li><b>确定性文本</b>：使用 {@code ObjectWriter} 关闭缩进并启用
+ *       {@link com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN}
+ *       生成稳定的 canonical JSON 文本。</li>
+ * </ul>
+ *
+ * <h3>与 Spring 注入的区别</h3>
+ * <p>
+ * 本类<b>不依赖 Spring</b>。它通过 {@link JsonMapperHolder} 取得全局 {@link ObjectMapper}：
+ * <ul>
+ *   <li>若存在 Spring 环境，Starter 中的 {@code JacksonProvider} 会在容器就绪后调用
+ *       {@link JsonMapperHolder#register(com.fasterxml.jackson.databind.ObjectMapper)}，
+ *       从而让本类复用 <b>容器内</b>的 {@code ObjectMapper} 配置；</li>
+ *   <li>无 Spring 时，本类按需懒加载一个默认的 {@code JsonMapper}（自动发现模块）。</li>
+ * </ul>
+ * 在业务代码中，<b>推荐优先使用 DI 注入</b>的 {@code ObjectMapper}，或直接注入一个
+ * 领域服务使用它；仅当处于无法注入的静态/公共库/非 Spring 路径时，使用本工具的静态工厂方法
+ *（如 {@link #usingDefault()} / {@link #withConfig(Config)}）。
+ * </p>
+ *
+ * <h3>典型用途</h3>
+ * <ul>
+ *   <li>为签名/去重/缓存键生成稳定的 canonical JSON 及其字节材料；</li>
+ *   <li>多来源 JSON 数据清洗与规范化；</li>
+ *   <li>表达式/规则/配置的标准形态固化（与哈希绑定）。</li>
+ * </ul>
+ *
+ * <h3>线程安全</h3>
+ * 本类是<b>不可变</b>对象；其依赖的 {@link ObjectMapper} 由 {@link JsonMapperHolder} 保证
+ * 单例可见性；内部使用的 {@link ObjectWriter} 亦为线程安全的共享快照，可跨线程复用。
+ *
+ * <h3>示例</h3>
+ * <pre>{@code
+ * // 快速规范化（使用全局 ObjectMapper 与默认配置）
+ * JsonNormalizer.Result r = JsonNormalizer.normalizeDefault(input);
+ * String canonical = r.getCanonicalJson();
+ * byte[] material = r.getHashMaterial();
+ *
+ * // 自定义配置
+ * JsonNormalizer normalizer = JsonNormalizer.withConfig(
+ *     JsonNormalizer.Config.builder()
+ *         .coerceNumber(true)
+ *         .coerceTime(true)
+ *         .removeEmpty(true)
+ *         .build()
+ * );
+ * JsonNormalizer.Result r2 = normalizer.normalize(input);
+ * }
+ * </pre>
  */
 public final class JsonNormalizer {
 
@@ -82,35 +142,49 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 使用默认配置和全局 ObjectMapper 进行规范化。
+     * 使用全局 {@link ObjectMapper}（来自 {@link JsonMapperHolder}，在 Spring 环境下由
+     * Starter 桥接到容器实例）与默认 {@link Config} 执行一次性规范化。
      */
     public static Result normalizeDefault(Object input) {
         return usingDefault().normalize(input);
     }
 
     /**
-     * 创建使用默认配置的 JsonNormalizer。
+     * 使用全局 {@link ObjectMapper} 与默认 {@link Config} 构造一个可复用实例。
+     * 适用于同一配置下的多次规范化调用（减少构造开销）。
      */
     public static JsonNormalizer usingDefault() {
-        return new JsonNormalizer(JacksonProvider.getObjectMapper(), Config.builder().build());
+        return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), Config.builder().build());
     }
 
     /**
-     * 使用特定配置的 JsonNormalizer。
+     * 使用全局 {@link ObjectMapper} 与给定 {@link Config} 构造实例。
+     * 若需手动指定 {@link ObjectMapper}，请使用 {@link #withMapper(ObjectMapper, Config)}。
      */
     public static JsonNormalizer withConfig(Config config) {
-        return new JsonNormalizer(JacksonProvider.getObjectMapper(), config);
+        return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), config);
     }
 
     /**
-     * 使用提供的 ObjectMapper 与配置创建实例。
+     * 显式提供 {@link ObjectMapper} 与配置进行构造。
+     * <p>
+     * 提示：在 Spring/DI 场景更建议注入 {@code ObjectMapper} 到你的服务层，再在该层组合使用本类，
+     * 而不是将本类当作服务定位器替代 DI。
+     * </p>
      */
     public static JsonNormalizer withMapper(ObjectMapper objectMapper, Config config) {
         return new JsonNormalizer(objectMapper, config);
     }
 
     /**
-     * 对输入进行规范化处理。
+     * 执行规范化：
+     * <ol>
+     *   <li>将入参转为 {@link JsonNode}（字符串会先解析；POJO 通过 {@link ObjectMapper#valueToTree(Object)}）；</li>
+     *   <li>按配置递归规整对象/数组/标量（键排序、数组去重与排序/保序、空值处理、数值与时间与布尔规整、字符串处理等）；</li>
+     *   <li>使用 canonical {@link ObjectWriter} 生成稳定 JSON 文本，作为哈希材料；</li>
+     *   <li>返回 {@link Result}：包含 canonical 值对象、文本与字节材料。</li>
+     * </ol>
+     * 失败时抛出 {@link JsonNormalizationException}（如深度超限、非法数、字符串超限等）。
      */
     public Result normalize(Object input) {
         JsonNode root = toJsonNode(input);
@@ -491,7 +565,12 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 规范化结果。
+     * 规范化结果载体：
+     * <ul>
+     *   <li>{@code canonicalValue}：规范化后的 Java 值（不可变集合视图）；</li>
+     *   <li>{@code canonicalJson}：确定性 JSON 文本；</li>
+     *   <li>{@code hashMaterial}：用于签名/去重/缓存键的字节材料（UTF-8 编码）。</li>
+     * </ul>
      */
     public static final class Result {
         private final Object canonicalValue;
@@ -518,7 +597,18 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 配置项。
+     * 规范化行为配置。
+     * <p>关键选项：</p>
+     * <ul>
+     *   <li>{@code removeEmpty}/{@code keepEmptyWhitelist}：空值移除与白名单；</li>
+     *   <li>{@code coerceBoolean}/{@code coerceNumber}/{@code coerceTime}：类型规整策略；</li>
+     *   <li>{@code defaultZoneId}：仅解析到本地时间时的默认时区；</li>
+     *   <li>{@code sequenceFieldWhitelist}：这些路径/字段的数组保序，不做去重与全局排序；</li>
+     *   <li>{@code arrayDeduplicate}：数组是否去重；</li>
+     *   <li>{@code trimStrings}/{@code collapseSpaces}/{@code lowercaseFields}：字符串处理；</li>
+     *   <li>{@code sortComparator}：对象键排序策略；</li>
+     *   <li>{@code maxDepth}/{@code maxStringBytes}/{@code forbidKeys}：安全边界与禁用键。</li>
+     * </ul>
      */
     public static final class Config {
         private final boolean removeEmpty;
@@ -576,6 +666,10 @@ public final class JsonNormalizer {
             }
         }
 
+        /**
+         * {@link Config} 构建器。默认偏向“稳态、宽松、可去噪”。
+         * 按需覆盖以适配更严格或更宽松的需求。
+         */
         public static final class Builder {
             private boolean removeEmpty = true;
             private final Set<String> keepEmptyWhitelist = new LinkedHashSet<>();
@@ -763,7 +857,7 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 规范化异常。
+     * 规范化失败异常：包含解析失败、非法数值、时间/深度/长度越界、遇到禁用键等错误场景。
      */
     public static class JsonNormalizationException extends RuntimeException {
         public JsonNormalizationException(String message) {

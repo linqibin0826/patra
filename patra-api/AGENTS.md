@@ -168,7 +168,16 @@ patra-{service}/
 
 ⸻
 
-## 13. 附：按层包结构（关键目录）
+## 13. 测试
+    • 测试框架：JUnit 5 + Spring Boot Test + MyBatis-Plus Test + AssertJ + Mockito
+    • 测试前提: 单元测试前检查该子模块是否引入单元测试依赖，单元测试在各个子模块中进行，不依赖spring-boot-starter-test。
+               集成测试在 patra-{service}-boot 中进行，依赖 spring-boot-starter-test。
+    • 单元测试：每个模块必须有；覆盖核心逻辑与边界条件。
+    • 集成测试：跨模块/跨服务的关键路径（如采集→解析→入库）。
+    • 测试数据：使用内存 DB（H2）或测试容器（Testcontainers）；避免依赖外部服务。
+    • Mock：使用 Mockito 或类似工具；避免过度 Mock 导致测试失效。
+
+## 14. 附：按层包结构（关键目录）
 **Domain (`com.patra.{service}.domain`)**
 
 ```

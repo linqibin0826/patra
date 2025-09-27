@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.patra.expr.*;
 import com.patra.expr.Atom.*;
 
@@ -35,7 +36,7 @@ public final class ExprJsonCodec {
      * 注册 serializer / deserializer 的模块
      */
     public static com.fasterxml.jackson.databind.Module module() {
-        com.fasterxml.jackson.databind.module.SimpleModule m = new com.fasterxml.jackson.databind.module.SimpleModule("expr-json-module");
+        SimpleModule m = new SimpleModule("expr-json-module");
         m.addSerializer(Expr.class, new ExprSerializer());
         m.addDeserializer(Expr.class, new ExprDeserializer());
         return m;
