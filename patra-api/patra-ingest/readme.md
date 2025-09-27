@@ -317,3 +317,11 @@ sequenceDiagram
   MP->>MQ: produce(topic, payload)
   MQ-->>*: 下游存储/索引/分析系统消费
 ```
+
+### 11. Outbox Relay
+
+- 调度入口：XXL-Job `ingestOutboxRelayJob`，参数 `channel` 必填，可选 `batchSize`、`leaseDuration`（ISO8601 或秒）、`maxRetry`、`retryBackoff`。
+- RocketMQ 目的地命名：`{namespace}.INGEST.TASK:READY`，其中 namespace 取自 `patra.messaging.rocketmq.naming.namespace`。
+- 配置项：`patra.ingest.outbox-relay.*`，包含开关、批量大小、租约时长、重试上限与退避等；支持 `scheduled-fallback-enabled` 备用轮询。
+- 状态流转：`PENDING → PUBLISHING → PUBLISHED`，失败根据重试策略回退至 `PENDING` 或进入 `DEAD`，租约字段 `pub_lease_owner/pub_leased_until` 控制并发。
+- 事件负载：`ingest.task.ready`，载荷与头部映射为 `TaskReadyMessage`，借助 `PatraMessage` 附带 `eventId/traceId`。

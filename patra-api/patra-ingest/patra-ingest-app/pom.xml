@@ -42,6 +42,11 @@
             <artifactId>patra-spring-boot-starter-expr</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-rocketmq</artifactId>
+        </dependency>
+
         <!-- 直接使用表达式内核 API（com.patra.expr.*） -->
         <dependency>
             <groupId>com.papertrace</groupId>

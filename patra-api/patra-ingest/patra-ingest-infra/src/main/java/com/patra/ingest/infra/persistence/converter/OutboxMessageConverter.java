@@ -21,6 +21,8 @@ public class OutboxMessageConverter {
 
     public OutboxMessageDO toEntity(OutboxMessage message) {
         OutboxMessageDO entity = new OutboxMessageDO();
+        entity.setId(message.getId());
+        entity.setVersion(message.getVersion());
         entity.setAggregateType(message.getAggregateType());
         entity.setAggregateId(message.getAggregateId());
         entity.setChannel(message.getChannel());
@@ -32,7 +34,37 @@ public class OutboxMessageConverter {
         entity.setNotBefore(message.getNotBefore());
         entity.setStatusCode(message.getStatusCode() == null ? DEFAULT_STATUS : message.getStatusCode());
         entity.setRetryCount(message.getRetryCount());
+        entity.setNextRetryAt(message.getNextRetryAt());
+        entity.setErrorCode(message.getErrorCode());
+        entity.setErrorMsg(message.getErrorMsg());
+        entity.setPubLeaseOwner(message.getLeaseOwner());
+        entity.setPubLeasedUntil(message.getLeaseExpireAt());
+        entity.setMsgId(message.getMsgId());
         return entity;
+    }
+
+    public OutboxMessage toDomain(OutboxMessageDO entity) {
+        return OutboxMessage.builder()
+                .id(entity.getId())
+                .version(entity.getVersion())
+                .aggregateType(entity.getAggregateType())
+                .aggregateId(entity.getAggregateId())
+                .channel(entity.getChannel())
+                .opType(entity.getOpType())
+                .partitionKey(entity.getPartitionKey())
+                .dedupKey(entity.getDedupKey())
+                .payloadJson(writeTree(entity.getPayloadJson()))
+                .headersJson(writeTree(entity.getHeadersJson()))
+                .notBefore(entity.getNotBefore())
+                .statusCode(entity.getStatusCode())
+                .retryCount(entity.getRetryCount())
+                .nextRetryAt(entity.getNextRetryAt())
+                .errorCode(entity.getErrorCode())
+                .errorMsg(entity.getErrorMsg())
+                .leaseOwner(entity.getPubLeaseOwner())
+                .leaseExpireAt(entity.getPubLeasedUntil())
+                .msgId(entity.getMsgId())
+                .build();
     }
 
     private JsonNode readTree(String json) {
@@ -43,6 +75,17 @@ public class OutboxMessageConverter {
             return objectMapper.readTree(json);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("解析 outbox JSON 字段失败", e);
+        }
+    }
+
+    private String writeTree(JsonNode jsonNode) {
+        if (jsonNode == null || jsonNode.isNull()) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(jsonNode);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("序列化 outbox JSON 字段失败", e);
         }
     }
 }

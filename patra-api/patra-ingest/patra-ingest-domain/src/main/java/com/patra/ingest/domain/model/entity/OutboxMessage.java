@@ -8,6 +8,8 @@ import java.util.Objects;
  */
 public final class OutboxMessage {
 
+    private final Long id;
+    private final Long version;
     private final String aggregateType;
     private final Long aggregateId;
     private final String channel;
@@ -19,8 +21,16 @@ public final class OutboxMessage {
     private final Instant notBefore;
     private final String statusCode;
     private final Integer retryCount;
+    private final Instant nextRetryAt;
+    private final String errorCode;
+    private final String errorMsg;
+    private final String leaseOwner;
+    private final Instant leaseExpireAt;
+    private final String msgId;
 
     private OutboxMessage(Builder builder) {
+        this.id = builder.id;
+        this.version = builder.version;
         this.aggregateType = Objects.requireNonNull(builder.aggregateType, "aggregateType 必填");
         this.aggregateId = Objects.requireNonNull(builder.aggregateId, "aggregateId 必填");
         this.channel = Objects.requireNonNull(builder.channel, "channel 必填");
@@ -32,6 +42,20 @@ public final class OutboxMessage {
         this.notBefore = builder.notBefore;
         this.statusCode = builder.statusCode == null ? "PENDING" : builder.statusCode;
         this.retryCount = builder.retryCount == null ? 0 : builder.retryCount;
+        this.nextRetryAt = builder.nextRetryAt;
+        this.errorCode = builder.errorCode;
+        this.errorMsg = builder.errorMsg;
+        this.leaseOwner = builder.leaseOwner;
+        this.leaseExpireAt = builder.leaseExpireAt;
+        this.msgId = builder.msgId;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     public String getAggregateType() {
@@ -78,11 +102,60 @@ public final class OutboxMessage {
         return retryCount;
     }
 
+    public Instant getNextRetryAt() {
+        return nextRetryAt;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
+    }
+
+    public String getErrorMsg() {
+        return errorMsg;
+    }
+
+    public String getLeaseOwner() {
+        return leaseOwner;
+    }
+
+    public Instant getLeaseExpireAt() {
+        return leaseExpireAt;
+    }
+
+    public String getMsgId() {
+        return msgId;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
 
+    public Builder toBuilder() {
+        return new Builder()
+                .id(id)
+                .version(version)
+                .aggregateType(aggregateType)
+                .aggregateId(aggregateId)
+                .channel(channel)
+                .opType(opType)
+                .partitionKey(partitionKey)
+                .dedupKey(dedupKey)
+                .payloadJson(payloadJson)
+                .headersJson(headersJson)
+                .notBefore(notBefore)
+                .statusCode(statusCode)
+                .retryCount(retryCount)
+                .nextRetryAt(nextRetryAt)
+                .errorCode(errorCode)
+                .errorMsg(errorMsg)
+                .leaseOwner(leaseOwner)
+                .leaseExpireAt(leaseExpireAt)
+                .msgId(msgId);
+    }
+
     public static final class Builder {
+        private Long id;
+        private Long version;
         private String aggregateType;
         private Long aggregateId;
         private String channel;
@@ -94,8 +167,24 @@ public final class OutboxMessage {
         private Instant notBefore;
         private String statusCode;
         private Integer retryCount;
+        private Instant nextRetryAt;
+        private String errorCode;
+        private String errorMsg;
+        private String leaseOwner;
+        private Instant leaseExpireAt;
+        private String msgId;
 
         private Builder() {
+        }
+
+        public Builder id(Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder version(Long version) {
+            this.version = version;
+            return this;
         }
 
         public Builder aggregateType(String aggregateType) {
@@ -150,6 +239,36 @@ public final class OutboxMessage {
 
         public Builder retryCount(Integer retryCount) {
             this.retryCount = retryCount;
+            return this;
+        }
+
+        public Builder nextRetryAt(Instant nextRetryAt) {
+            this.nextRetryAt = nextRetryAt;
+            return this;
+        }
+
+        public Builder errorCode(String errorCode) {
+            this.errorCode = errorCode;
+            return this;
+        }
+
+        public Builder errorMsg(String errorMsg) {
+            this.errorMsg = errorMsg;
+            return this;
+        }
+
+        public Builder leaseOwner(String leaseOwner) {
+            this.leaseOwner = leaseOwner;
+            return this;
+        }
+
+        public Builder leaseExpireAt(Instant leaseExpireAt) {
+            this.leaseExpireAt = leaseExpireAt;
+            return this;
+        }
+
+        public Builder msgId(String msgId) {
+            this.msgId = msgId;
             return this;
         }
 

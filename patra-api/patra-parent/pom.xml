@@ -41,6 +41,11 @@
             <!-- 不要 optional=true；会阻断传递 -->
         </dependency>
 
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <!-- 依赖版本统一管理 -->
