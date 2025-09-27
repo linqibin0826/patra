@@ -1,5 +1,6 @@
 package com.patra.ingest.app.outbox;
 
+import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.app.outbox.command.OutboxRelayCommand;
 import com.patra.ingest.app.outbox.config.OutboxRelayProperties;
 import com.patra.ingest.app.outbox.dto.OutboxRelayResult;
@@ -38,7 +39,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     @Transactional
     public OutboxRelayResult relay(OutboxRelayCommand command) {
         if (!relayProperties.isEnabled()) {
-            log.debug("Outbox Relay 已禁用，跳过 channel={}", command.channel());
+            log.debug("outbox relay disabled, skip channel={}", command.channel());
             return new OutboxRelayResult(0, 0, 0, 0, 0);
         }
         int batchSize = normalizeBatchSize(command.batchSize());
@@ -122,17 +123,17 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         String errorMsg = truncate(ex.getMessage(), 512);
         if (bodyParseFailure(ex)) {
             relayRepository.markDead(message.getId(), publishingVersion, nextRetry, errorCode, errorMsg);
-            log.error("Outbox 消息解析失败，标记为 DEAD，id={} channel={}", message.getId(), message.getChannel(), ex);
+            log.error("outbox payload parsing failed, mark dead, id={} channel={}", message.getId(), message.getChannel(), ex);
             return FailureHandling.DEAD;
         }
         if (nextRetry >= maxRetry) {
             relayRepository.markDead(message.getId(), publishingVersion, nextRetry, errorCode, errorMsg);
-            log.error("Outbox 消息重试达到上限，标记为 DEAD，id={} channel={} retry={}", message.getId(), message.getChannel(), nextRetry, ex);
+            log.error("outbox publish retries exhausted, mark dead, id={} channel={} retry={}", message.getId(), message.getChannel(), nextRetry, ex);
             return FailureHandling.DEAD;
         }
         Instant nextRetryAt = executeAt.plus(resolveBackoff(retryBackoff, nextRetry));
         relayRepository.markRetry(message.getId(), publishingVersion, nextRetry, nextRetryAt, errorCode, errorMsg);
-        log.warn("Outbox 消息发布失败，将重试，id={} channel={} retry={} nextRetryAt={}", message.getId(), message.getChannel(), nextRetry, nextRetryAt, ex);
+        log.warn("outbox publish failed, scheduled retry, id={} channel={} retry={} nextRetryAt={}", message.getId(), message.getChannel(), nextRetry, nextRetryAt, ex);
         return FailureHandling.RETRY;
     }
 
@@ -172,13 +173,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     }
 
     private String truncate(String msg, int max) {
-        if (msg == null) {
-            return null;
-        }
-        if (msg.length() <= max) {
-            return msg;
-        }
-        return msg.substring(0, max);
+        return StrUtil.isBlank(msg) ? msg : StrUtil.maxLength(msg, max);
     }
 
     private enum FailureHandling {

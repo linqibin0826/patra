@@ -30,10 +30,10 @@ public record PlanIngestionRequest(
         Map<String, Object> triggerParams
 ) {
     public PlanIngestionRequest {
-        Objects.requireNonNull(provenanceCode, "provenanceCode不能为空");
-        Objects.requireNonNull(operationCode, "operationType不能为空");
-        Objects.requireNonNull(triggerType, "triggerType不能为空");
-        Objects.requireNonNull(scheduler, "schedulerCode不能为空");
+        Objects.requireNonNull(provenanceCode, "provenanceCode must not be null");
+        Objects.requireNonNull(operationCode, "operationCode must not be null");
+        Objects.requireNonNull(triggerType, "triggerType must not be null");
+        Objects.requireNonNull(scheduler, "scheduler must not be null");
         priority = priority == null ? Priority.NORMAL : priority;
     }
 }

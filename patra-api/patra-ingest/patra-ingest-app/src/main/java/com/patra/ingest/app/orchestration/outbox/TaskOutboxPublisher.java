@@ -41,13 +41,13 @@ public class TaskOutboxPublisher {
         if (events == null || events.isEmpty()) {
             return;
         }
-        Objects.requireNonNull(plan, "plan 不可为空");
-        Objects.requireNonNull(schedule, "schedule 不可为空");
+        Objects.requireNonNull(plan, "plan must not be null");
+        Objects.requireNonNull(schedule, "schedule must not be null");
 
         List<OutboxMessage> messages = new ArrayList<>(events.size());
         for (TaskQueuedEvent event : events) {
             if (event.taskId() == null) {
-                log.warn("跳过未持久化的任务事件，planId={}", event.planId());
+                log.warn("skip task event without persistence, planId={}", event.planId());
                 continue;
             }
             ObjectNode payloadNode = buildPayload(event, plan);
@@ -138,7 +138,7 @@ public class TaskOutboxPublisher {
         try {
             return objectMapper.writeValueAsString(node);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("无法序列化出箱消息", e);
+            throw new IllegalStateException("failed to serialize outbox message", e);
         }
     }
 

@@ -1,12 +1,14 @@
 package com.patra.ingest.app.orchestration.assembly;
 
+import cn.hutool.core.text.CharSequenceUtil;
+import com.patra.common.json.JsonNormalizer;
 import com.patra.common.util.HashUtils;
+import com.patra.expr.canonical.ExprCanonicalSnapshot;
+import com.patra.expr.canonical.ExprCanonicalizer;
 import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.orchestration.slice.SlicePlanner;
 import com.patra.ingest.app.orchestration.slice.SlicePlannerRegistry;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
-import com.patra.expr.canonical.ExprCanonicalizer;
-import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
@@ -15,25 +17,35 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
-import com.patra.common.json.JsonNormalizer;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Default coordinator that materializes plan aggregate, slices, and tasks from a trigger request.
+ * 默认的计划装配服务：根据触发请求组装计划、切片与任务聚合。
  */
 @Component
 public class DefaultPlanAssemblyService implements PlanAssemblyService {
 
     private static final String SLICE_STRATEGY_SINGLE = "SINGLE";
     private static final String SLICE_STRATEGY_TIME = "TIME";
+    /**
+     * 默认 JSON 规范化器，用于保持配置与策略参数的稳定序列化形态。
+     */
+    private static final JsonNormalizer DEFAULT_NORMALIZER = JsonNormalizer.usingDefault();
+
+    /**
+     * 任务参数专用规范化器：关闭布尔、时间的强制推断，避免序号 0/1 被自动转为布尔或时间戳。
+     */
+    private static final JsonNormalizer TASK_PARAM_NORMALIZER = JsonNormalizer.withConfig(
+            JsonNormalizer.Config.builder()
+                    .coerceBoolean(JsonNormalizer.Config.CoerceBoolean.NONE)
+                    .coerceTime(false)
+                    .build()
+    );
 
     private final SlicePlannerRegistry slicePlannerRegistry;
 
@@ -41,54 +53,25 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         this.slicePlannerRegistry = slicePlannerRegistry;
     }
 
+    /**
+     * 组装计划、切片与任务，形成可持久化的聚合集合。
+     * <p>流程：规范化配置 → 构建计划聚合 → 调用切片策略 → 派生任务。</p>
+     */
     @Override
     public PlanAssembly assemble(PlanAssemblyRequest request) {
         PlanTriggerNorm norm = request.triggerNorm();
         PlannerWindow window = request.window();
         PlanExpressionDescriptor planExpression = request.planExpression();
-        String planExprHash = planExpression.hash();
-        String planExprJson = planExpression.jsonSnapshot();
-        ProvenanceConfigSnapshot config = request.configSnapshot();
-        JsonNormalizer.Result configSnapshot = normalizeConfigSnapshot(config);
-        String configSnapshotJson = configSnapshot == null ? null : configSnapshot.getCanonicalJson();
-        String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot.getHashMaterial());
+        ProvenanceConfigSnapshot configSnapshot = request.configSnapshot();
 
-        String planKey = buildPlanKey(norm, window);
-        PlanAggregate plan = PlanAggregate.create(
-                norm.scheduleInstanceId(),
-                planKey,
-                norm.provenanceCode().getCode(),
-                norm.endpoint() == null ? null : norm.endpoint().name(),
-                norm.operationCode() == null ? null : norm.operationCode().name(),
-                planExprHash,
-                planExprJson,
-                configSnapshotJson,
-                configSnapshotHash,
-                window.from(),
-                window.to(),
-                determineSliceStrategy(norm),
-                buildSliceParams(norm));
+        String sliceStrategy = determineSliceStrategy(norm);
+        JsonNormalizer.Result configCanonical = normalizeConfigSnapshot(configSnapshot);
+
+        PlanAggregate plan = createPlanAggregate(norm, window, planExpression, sliceStrategy, configCanonical);
         plan.startSlicing();
 
-        SlicePlanner planner = slicePlannerRegistry.get(determineSliceStrategy(norm));
-        List<SlicePlan> drafts = planner == null
-                ? new ArrayList<>()
-                : planner.slice(new SlicePlanningContext(norm, window, planExpression, config));
-
-        List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
-        for (SlicePlan d : drafts) {
-            ExprCanonicalSnapshot sliceSnapshot = ExprCanonicalizer.canonicalize(d.sliceExpr());
-            slices.add(PlanSliceAggregate.create(
-                    null,
-                    norm.provenanceCode().getCode(),
-                    d.sequence(),
-                    d.sliceSignatureSeed(),
-                    d.sliceSpecJson(),
-                    sliceSnapshot.hash(),
-                    sliceSnapshot.canonicalJson()));
-        }
-
-        List<TaskAggregate> tasks = buildTasks(norm, slices);
+        List<PlanSliceAggregate> slices = createSlices(norm, window, planExpression, configSnapshot, sliceStrategy);
+        List<TaskAggregate> tasks = slices.isEmpty() ? List.of() : createTasks(norm, slices);
 
         if (slices.isEmpty() || tasks.isEmpty()) {
             plan.markFailed();
@@ -99,29 +82,97 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         return new PlanAssembly(plan, slices, tasks, PlanAssembly.PlanAssemblyStatus.READY);
     }
 
-    // buildSlices moved to dedicated planners (TimeSlicePlanner / SingleSlicePlanner)
+    /**
+     * 根据归一化请求构造计划聚合。
+     */
+    private PlanAggregate createPlanAggregate(PlanTriggerNorm norm,
+                                              PlannerWindow window,
+                                              PlanExpressionDescriptor planExpression,
+                                              String sliceStrategy,
+                                              JsonNormalizer.Result configSnapshot) {
+        String planKey = buildPlanKey(norm, window);
+        String configSnapshotJson = configSnapshot == null ? null : configSnapshot.getCanonicalJson();
+        String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot.getHashMaterial());
 
-    private List<TaskAggregate> buildTasks(PlanTriggerNorm norm,
-                                           List<PlanSliceAggregate> slices) {
+        return PlanAggregate.create(
+                norm.scheduleInstanceId(),
+                planKey,
+                norm.provenanceCode().getCode(),
+                norm.endpoint() == null ? null : norm.endpoint().name(),
+                norm.operationCode() == null ? null : norm.operationCode().name(),
+                planExpression.hash(),
+                planExpression.jsonSnapshot(),
+                configSnapshotJson,
+                configSnapshotHash,
+                window.from(),
+                window.to(),
+                sliceStrategy,
+                buildSliceParams(sliceStrategy)
+        );
+    }
+
+    /**
+     * 触发对应的切片规划器生成切片草稿，并转为聚合。
+     */
+    private List<PlanSliceAggregate> createSlices(PlanTriggerNorm norm,
+                                                  PlannerWindow window,
+                                                  PlanExpressionDescriptor planExpression,
+                                                  ProvenanceConfigSnapshot configSnapshot,
+                                                  String sliceStrategy) {
+        SlicePlanner planner = slicePlannerRegistry.get(sliceStrategy);
+        if (planner == null) {
+            return List.of();
+        }
+
+        List<SlicePlan> drafts = planner.slice(new SlicePlanningContext(norm, window, planExpression, configSnapshot));
+        if (drafts == null || drafts.isEmpty()) {
+            return List.of();
+        }
+
+        List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
+        for (SlicePlan draft : drafts) {
+            ExprCanonicalSnapshot sliceSnapshot = ExprCanonicalizer.canonicalize(draft.sliceExpr());
+            slices.add(PlanSliceAggregate.create(
+                    null,
+                    norm.provenanceCode().getCode(),
+                    draft.sequence(),
+                    draft.sliceSignatureSeed(),
+                    draft.sliceSpecJson(),
+                    sliceSnapshot.hash(),
+                    sliceSnapshot.canonicalJson()
+            ));
+        }
+        return slices;
+    }
+
+    /**
+     * 为每个切片派生任务。此处暂以切片序号作为占位 sliceId，后续持久化时再绑定真实 ID。
+     */
+    private List<TaskAggregate> createTasks(PlanTriggerNorm norm, List<PlanSliceAggregate> slices) {
         List<TaskAggregate> tasks = new ArrayList<>(slices.size());
         for (PlanSliceAggregate slice : slices) {
             String idemKey = computeSignature(norm, slice.getSliceSignatureHash());
             Integer priorityVal = norm.priority() == null ? null : norm.priority().ordinal();
+
             tasks.add(TaskAggregate.create(
                     norm.scheduleInstanceId(),
                     null,
                     (long) slice.getSequence(),
                     norm.provenanceCode().getCode(),
                     norm.operationCode().name(),
-                    buildTaskParamsJson(slice),
+                    buildTaskParamsJson(slice.getSequence()),
                     idemKey,
                     slice.getExprHash(),
                     priorityVal,
-                    norm.requestedWindowFrom()));
+                    norm.requestedWindowFrom()
+            ));
         }
         return tasks;
     }
 
+    /**
+     * 依据数据源、操作与时间窗口生成计划唯一键。
+     */
     private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
         StringBuilder builder = new StringBuilder();
         builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationCode().name());
@@ -134,6 +185,9 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         return builder.toString();
     }
 
+    /**
+     * 判断当前触发是否仅需单片执行。
+     */
     private String determineSliceStrategy(PlanTriggerNorm norm) {
         if (norm.isUpdate()) {
             return SLICE_STRATEGY_SINGLE;
@@ -141,32 +195,41 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         return SLICE_STRATEGY_TIME;
     }
 
-    private String buildSliceParams(PlanTriggerNorm norm) {
-        String strategy = determineSliceStrategy(norm);
-        JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(Map.of("strategy", strategy));
+    /**
+     * 规范化切片策略参数，保持 canonical JSON。
+     */
+    private String buildSliceParams(String sliceStrategy) {
+        JsonNormalizer.Result normalized = DEFAULT_NORMALIZER.normalize(Map.of("strategy", sliceStrategy));
         return normalized.getCanonicalJson();
     }
 
-    private String buildTaskParamsJson(PlanSliceAggregate slice) {
-        JsonNormalizer.Result normalized = JsonNormalizer.normalizeDefault(Map.of("sliceNo", slice.getSequence()));
+    /**
+     * 构造任务参数，确保 sliceNo 序号以数值形式存储，不被自动推断为布尔或时间。
+     */
+    private String buildTaskParamsJson(int sliceSequence) {
+        JsonNormalizer.Result normalized = TASK_PARAM_NORMALIZER.normalize(Map.of("sliceNo", sliceSequence));
         return normalized.getCanonicalJson();
     }
 
+    /**
+     * 规范化配置快照，以便持久化 JSON 与哈希值。
+     */
     private JsonNormalizer.Result normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
         if (snapshot == null) {
             return null;
         }
-        return JsonNormalizer.normalizeDefault(snapshot);
+        return DEFAULT_NORMALIZER.normalize(snapshot);
     }
 
+    /**
+     * 基于来源、操作与切片签名生成任务幂等键。
+     */
     private String computeSignature(PlanTriggerNorm norm, String payload) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update((norm.provenanceCode().getCode() + "|" + norm.operationCode().name()).getBytes(StandardCharsets.UTF_8));
-            digest.update(payload.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("cannot compute signature", e);
-        }
+        String material = CharSequenceUtil.join("|",
+                norm.provenanceCode().getCode(),
+                norm.operationCode().name(),
+                payload == null ? CharSequenceUtil.EMPTY : payload);
+        byte[] digest = HashUtils.sha256(material);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
     }
 }

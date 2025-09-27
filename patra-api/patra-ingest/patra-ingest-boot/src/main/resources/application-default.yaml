@@ -35,3 +35,10 @@ patra:
       scheduled-fixed-delay: PT60S
       scheduled-channels:
         - ingest.task.ready
+
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: ingest-producer
+    send-message-timeout: 5000
+    retry-times-when-send-failed: 2

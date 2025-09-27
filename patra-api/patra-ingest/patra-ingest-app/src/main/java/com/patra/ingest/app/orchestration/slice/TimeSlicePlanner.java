@@ -1,21 +1,21 @@
 package com.patra.ingest.app.orchestration.slice;
 
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.json.JsonNormalizer;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
-import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.app.orchestration.slice.model.SlicePlan;
+import com.patra.ingest.app.orchestration.slice.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.common.json.JsonNormalizer;
-import org.springframework.stereotype.Component;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.stereotype.Component;
 
 @Component
 public class TimeSlicePlanner implements SlicePlanner {
@@ -40,9 +40,9 @@ public class TimeSlicePlanner implements SlicePlanner {
         Instant to = context.window().to();
         if (!from.isBefore(to)) return result;
         Duration step = DEFAULT_STEP;
-        if (context.norm().step() != null && !context.norm().step().isBlank()) {
+        if (StrUtil.isNotBlank(context.norm().step())) {
             try {
-                step = Duration.parse(context.norm().step());
+                step = Duration.parse(context.norm().step().trim());
             } catch (Exception e) {
                 // 保留默认步长
             }
@@ -82,10 +82,10 @@ public class TimeSlicePlanner implements SlicePlanner {
         if (snapshot == null) return null;
         ProvenanceConfigSnapshot.WindowOffsetConfig w = snapshot.windowOffset();
         if (w == null) return null;
-        if (w.offsetTypeCode() != null && w.offsetTypeCode().equalsIgnoreCase("DATE") && w.offsetFieldName() != null && !w.offsetFieldName().isBlank()) {
+        if (StrUtil.equalsIgnoreCase(w.offsetTypeCode(), "DATE") && StrUtil.isNotBlank(w.offsetFieldName())) {
             return w.offsetFieldName();
         }
-        if (w.defaultDateFieldName() != null && !w.defaultDateFieldName().isBlank()) {
+        if (StrUtil.isNotBlank(w.defaultDateFieldName())) {
             return w.defaultDateFieldName();
         }
         return null; // 不回退
@@ -103,7 +103,10 @@ public class TimeSlicePlanner implements SlicePlanner {
         ObjectNode boundary = window.putObject("boundary");
         boundary.put("from", "CLOSED");
         boundary.put("to", "OPEN");
-        window.put("timezone", configSnapshot.provenance().timezoneDefault());
+        String timezone = configSnapshot != null && configSnapshot.provenance() != null
+                ? StrUtil.blankToDefault(configSnapshot.provenance().timezoneDefault(), "UTC")
+                : "UTC";
+        window.put("timezone", timezone);
         try {
             return JsonNormalizer.normalizeDefault(root);
         } catch (JsonNormalizer.JsonNormalizationException ex) {

@@ -16,9 +16,9 @@ public record PlanAssemblyRequest(
         PlanExpressionDescriptor planExpression
 ) {
     public PlanAssemblyRequest {
-        Objects.requireNonNull(triggerNorm, "triggerNorm不能为空");
-        Objects.requireNonNull(window, "window不能为空");
-        Objects.requireNonNull(configSnapshot, "configSnapshot不能为空");
-        Objects.requireNonNull(planExpression, "planExpression不能为空");
+        Objects.requireNonNull(triggerNorm, "triggerNorm must not be null");
+        Objects.requireNonNull(window, "window must not be null");
+        Objects.requireNonNull(configSnapshot, "configSnapshot must not be null");
+        Objects.requireNonNull(planExpression, "planExpression must not be null");
     }
 }

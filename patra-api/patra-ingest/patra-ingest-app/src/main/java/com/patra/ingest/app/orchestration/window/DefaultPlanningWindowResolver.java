@@ -1,14 +1,23 @@
 package com.patra.ingest.app.orchestration.window;
 
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.alignFloor;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.computeLaggedNow;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.isCalendarMode;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.maxInstant;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.minInstant;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.resolveDuration;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.resolveWindowSize;
+import static com.patra.ingest.app.orchestration.window.support.PlanningWindowSupport.resolveZone;
+
+import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.time.*;
-import java.time.temporal.ChronoField;
-import java.time.temporal.TemporalAdjusters;
 
 /**
  * 默认计划器窗口策略实现（App Layer · Policy）。
@@ -54,18 +63,22 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
                                        ProvenanceConfigSnapshot snapshot,
                                        Instant cursorWatermark,
                                        Instant currentTime) {
-        ProvenanceConfigSnapshot.WindowOffsetConfig cfg = snapshot.windowOffset();
+        ProvenanceConfigSnapshot.WindowOffsetConfig cfg = snapshot == null ? null : snapshot.windowOffset();
+        String timezone = snapshot != null && snapshot.provenance() != null
+                ? snapshot.provenance().timezoneDefault()
+                : null;
+
         Instant userFrom = triggerNorm.requestedWindowFrom();
         Instant userTo = triggerNorm.requestedWindowTo();
 
-        Instant nowSafe = applyLag(currentTime, cfg);
+        Instant nowSafe = computeLaggedNow(currentTime, cfg, DEFAULT_SAFETY_LAG);
 
         if (triggerNorm.isHarvest()) {
-            return resolveHarvest(cfg, cursorWatermark, userFrom, userTo, nowSafe, snapshot.provenance().timezoneDefault());
+            return resolveHarvest(cfg, cursorWatermark, userFrom, userTo, nowSafe, timezone);
         } else if (triggerNorm.isBackfill()) {
-            return resolveBackfill(cfg, cursorWatermark, null, userFrom, userTo, nowSafe, snapshot.provenance().timezoneDefault());
+            return resolveBackfill(cfg, cursorWatermark, null, userFrom, userTo, nowSafe, timezone);
         } else if (triggerNorm.isUpdate()) {
-            return resolveUpdate(cfg, cursorWatermark, userFrom, userTo, nowSafe, snapshot.provenance().timezoneDefault());
+            return resolveUpdate(cfg, cursorWatermark, userFrom, userTo, nowSafe, timezone);
         }
         return PlannerWindow.full();
     }
@@ -77,10 +90,11 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
                                          Instant userTo,
                                          Instant nowSafe,
                                          String timezone) {
-        Duration windowSize = windowSize(cfg);
-        Duration lookback = parseDuration(cfg == null ? null : cfg.lookbackValue(), cfg == null ? null : cfg.lookbackUnitCode(), Duration.ZERO);
+        Duration windowSize = resolveWindowSize(cfg, DEFAULT_WINDOW_SIZE);
+        Duration lookback = resolveDuration(cfg == null ? null : cfg.lookbackValue(),
+                cfg == null ? null : cfg.lookbackUnitCode(), Duration.ZERO);
 
-        Instant toCandidate = minNonNull(userTo, nowSafe);
+        Instant toCandidate = minInstant(userTo, nowSafe);
         if (toCandidate == null) {
             toCandidate = nowSafe; // 没有用户上界 → 使用 nowSafe
         }
@@ -88,19 +102,17 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
         Instant fromCandidate;
         if (harvestWM != null) {
             Instant lowerByCursor = harvestWM.minus(lookback);
-            fromCandidate = maxNonNull(lowerByCursor, userFrom);
+            fromCandidate = maxInstant(lowerByCursor, userFrom);
+        } else if (userFrom != null) {
+            fromCandidate = userFrom;
         } else {
-            if (userFrom != null) {
-                fromCandidate = userFrom;
-            } else {
-                fromCandidate = toCandidate.minus(windowSize); // 默认回退一窗
-            }
+            fromCandidate = toCandidate.minus(windowSize); // 默认回退一窗
         }
 
-        if (cfg != null && isCalendar(cfg)) {
-            ZoneId zone = safeZone(timezone);
-            fromCandidate = floorAlign(fromCandidate, cfg.calendarAlignTo(), zone);
-            toCandidate = floorAlign(toCandidate, cfg.calendarAlignTo(), zone);
+        if (isCalendarMode(cfg)) {
+            ZoneId zone = resolveZone(timezone);
+            fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
+            toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
         }
 
         if (!toCandidate.isAfter(fromCandidate)) {
@@ -118,32 +130,32 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
                                           Instant userTo,
                                           Instant nowSafe,
                                           String timezone) {
-        Duration windowSize = windowSize(cfg);
+        Duration windowSize = resolveWindowSize(cfg, DEFAULT_WINDOW_SIZE);
 
         // forwardWM = harvestWM 作为 upperAnchor 候选，这里 cursorWatermark 已按调用方传入对应 BACKFILL 游标；需要读取前向水位？
         // 设计中 forwardWM 来源 HARVEST 水位：此策略接口当前只拿到单一 cursorWatermark。为了不扩接口，这里假设传入的是 BACKFILL 游标；
         // 若需要 forwardWM 需扩展接口或在上层额外查询后放入 triggerParams；暂以 cursorWatermark 仅当 backfillWM 使用。
-    Instant upperAnchor = minNonNull(userTo, forwardWM, nowSafe);
-        if (upperAnchor == null) upperAnchor = nowSafe;
+        Instant upperAnchor = minInstant(userTo, forwardWM, nowSafe);
+        if (upperAnchor == null) {
+            upperAnchor = nowSafe;
+        }
 
         Instant fromCandidate;
         if (backfillWM != null) {
-            fromCandidate = maxNonNull(backfillWM, userFrom);
+            fromCandidate = maxInstant(backfillWM, userFrom);
+        } else if (userFrom != null) {
+            fromCandidate = userFrom;
         } else {
-            if (userFrom != null) {
-                fromCandidate = userFrom;
-            } else {
-                fromCandidate = upperAnchor.minus(windowSize);
-            }
+            fromCandidate = upperAnchor.minus(windowSize);
         }
         if (fromCandidate.isAfter(upperAnchor)) {
             fromCandidate = upperAnchor; // 防越界
         }
 
-        if (cfg != null && isCalendar(cfg)) {
-            ZoneId zone = safeZone(timezone);
-            fromCandidate = floorAlign(fromCandidate, cfg.calendarAlignTo(), zone);
-            upperAnchor = floorAlign(upperAnchor, cfg.calendarAlignTo(), zone);
+        if (isCalendarMode(cfg)) {
+            ZoneId zone = resolveZone(timezone);
+            fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
+            upperAnchor = alignFloor(upperAnchor, cfg.calendarAlignTo(), zone);
         }
         if (!upperAnchor.isAfter(fromCandidate)) {
             log.debug("BACKFILL window empty: {} >= {}", fromCandidate, upperAnchor);
@@ -159,20 +171,24 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
                                         Instant userTo,
                                         Instant nowSafe,
                                         String timezone) {
-        Duration windowSize = windowSize(cfg);
-        boolean timeDriven = (cfg != null && "DATE".equalsIgnoreCase(cfg.offsetTypeCode()) && (userFrom != null || userTo != null))
+        Duration windowSize = resolveWindowSize(cfg, DEFAULT_WINDOW_SIZE);
+        boolean timeDriven = (cfg != null && StrUtil.equalsIgnoreCase(cfg.offsetTypeCode(), "DATE") && (userFrom != null || userTo != null))
                 || (userFrom != null || userTo != null);
 
         Instant fromCandidate;
         Instant toCandidate;
         if (timeDriven) {
-            toCandidate = minNonNull(userTo, nowSafe);
-            if (toCandidate == null) toCandidate = nowSafe;
+            toCandidate = minInstant(userTo, nowSafe);
+            if (toCandidate == null) {
+                toCandidate = nowSafe;
+            }
             if (updateWM != null && userFrom != null) {
-                fromCandidate = maxNonNull(updateWM, userFrom);
+                fromCandidate = maxInstant(updateWM, userFrom);
             } else if (updateWM != null) {
                 fromCandidate = updateWM;
-                if (userFrom != null && userFrom.isAfter(fromCandidate)) fromCandidate = userFrom;
+                if (userFrom != null && userFrom.isAfter(fromCandidate)) {
+                    fromCandidate = userFrom;
+                }
             } else if (userFrom != null) {
                 fromCandidate = userFrom;
             } else {
@@ -180,8 +196,10 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             }
         } else { // ID 驱动
             if (userFrom != null || userTo != null) {
-                toCandidate = minNonNull(userTo, nowSafe);
-                if (toCandidate == null) toCandidate = nowSafe;
+                toCandidate = minInstant(userTo, nowSafe);
+                if (toCandidate == null) {
+                    toCandidate = nowSafe;
+                }
                 fromCandidate = userFrom != null ? userFrom : toCandidate.minus(windowSize);
             } else {
                 toCandidate = nowSafe;
@@ -189,10 +207,10 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             }
         }
 
-        if (cfg != null && isCalendar(cfg)) {
-            ZoneId zone = safeZone(timezone);
-            fromCandidate = floorAlign(fromCandidate, cfg.calendarAlignTo(), zone);
-            toCandidate = floorAlign(toCandidate, cfg.calendarAlignTo(), zone);
+        if (isCalendarMode(cfg)) {
+            ZoneId zone = resolveZone(timezone);
+            fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
+            toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
         }
         if (!toCandidate.isAfter(fromCandidate)) {
             log.debug("UPDATE window empty: {} >= {}", fromCandidate, toCandidate);
@@ -212,72 +230,5 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     private PlannerWindow nullWindowIfEmpty(Instant from, Instant to) {
         // 返回一个最小窗口以便上层可感知 empty，再由 validator 处理；避免 IllegalArgumentException
         return new PlannerWindow(from, from.plus(MIN_EFFECTIVE_WINDOW));
-    }
-
-    private boolean isCalendar(ProvenanceConfigSnapshot.WindowOffsetConfig cfg) {
-        return cfg != null && cfg.windowModeCode() != null && "CALENDAR".equalsIgnoreCase(cfg.windowModeCode());
-    }
-
-    private Instant applyLag(Instant now, ProvenanceConfigSnapshot.WindowOffsetConfig cfg) {
-        if (cfg == null || cfg.watermarkLagSeconds() == null) return now.minus(DEFAULT_SAFETY_LAG);
-        return now.minusSeconds(cfg.watermarkLagSeconds());
-    }
-
-    private Duration windowSize(ProvenanceConfigSnapshot.WindowOffsetConfig cfg) {
-        if (cfg == null || cfg.windowSizeValue() == null) return DEFAULT_WINDOW_SIZE;
-        return parseDuration(cfg.windowSizeValue(), cfg.windowSizeUnitCode(), DEFAULT_WINDOW_SIZE);
-    }
-
-    private Duration parseDuration(Integer value, String unitCode, Duration defaultIfNull) {
-        if (value == null) return defaultIfNull;
-        String u = (unitCode == null ? "HOUR" : unitCode).trim().toUpperCase();
-        return switch (u) {
-            case "SECOND", "SECONDS" -> Duration.ofSeconds(value);
-            case "MINUTE", "MINUTES" -> Duration.ofMinutes(value);
-            case "HOUR", "HOURS" -> Duration.ofHours(value);
-            case "DAY", "DAYS" -> Duration.ofDays(value);
-            default -> defaultIfNull;
-        };
-    }
-
-    private Instant minNonNull(Instant... instants) {
-        Instant result = null;
-        for (Instant i : instants) {
-            if (i == null) continue;
-            if (result == null || i.isBefore(result)) result = i;
-        }
-        return result;
-    }
-
-    private Instant maxNonNull(Instant a, Instant b) {
-        if (a == null) return b;
-        if (b == null) return a;
-        return a.isAfter(b) ? a : b;
-    }
-
-    private ZoneId safeZone(String tz) {
-        try {
-            return tz == null || tz.isBlank() ? ZoneOffset.UTC : ZoneId.of(tz);
-        } catch (Exception e) {
-            return ZoneOffset.UTC;
-        }
-    }
-
-    private Instant floorAlign(Instant instant, String alignTo, ZoneId zone) {
-        if (alignTo == null || alignTo.isBlank()) return truncateToHour(instant, zone);
-        String a = alignTo.toUpperCase();
-        ZonedDateTime zdt = instant.atZone(zone);
-        return switch (a) {
-            case "HOUR" -> zdt.withMinute(0).withSecond(0).withNano(0).toInstant();
-            case "DAY" -> zdt.toLocalDate().atStartOfDay(zone).toInstant();
-            case "WEEK" -> zdt.with(ChronoField.DAY_OF_WEEK, 1).toLocalDate().atStartOfDay(zone).toInstant();
-            case "MONTH" -> zdt.with(TemporalAdjusters.firstDayOfMonth()).toLocalDate().atStartOfDay(zone).toInstant();
-            default -> truncateToHour(instant, zone);
-        };
-    }
-
-    private Instant truncateToHour(Instant instant, ZoneId zone) {
-        ZonedDateTime z = instant.atZone(zone);
-        return z.withMinute(0).withSecond(0).withNano(0).toInstant();
     }
 }

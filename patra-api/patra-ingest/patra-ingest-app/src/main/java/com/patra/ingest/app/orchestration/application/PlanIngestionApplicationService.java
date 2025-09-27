@@ -1,45 +1,43 @@
 package com.patra.ingest.app.orchestration.application;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.expr.And;
-import com.patra.ingest.app.orchestration.command.PlanIngestionRequest;
-import com.patra.ingest.app.orchestration.dto.PlanIngestionResult;
+import com.patra.ingest.app.orchestration.application.support.PlanExpressionBuilder;
 import com.patra.ingest.app.orchestration.assembly.PlanAssemblyRequest;
 import com.patra.ingest.app.orchestration.assembly.PlanAssemblyService;
+import com.patra.ingest.app.orchestration.command.PlanIngestionRequest;
+import com.patra.ingest.app.orchestration.dto.PlanIngestionResult;
 import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.orchestration.outbox.TaskOutboxPublisher;
 import com.patra.ingest.app.orchestration.window.PlanningWindowResolver;
-import com.patra.ingest.domain.model.enums.OperationCode;
-import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.app.port.ProvenancePort;
+import com.patra.ingest.app.validator.PlannerValidator;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.enums.OperationCode;
+import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.ScheduleInstanceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
-import com.patra.ingest.app.validator.PlannerValidator;
-import com.patra.expr.Expr;
-import com.patra.expr.Exprs;
-import com.patra.expr.canonical.ExprCanonicalizer;
-import com.patra.expr.canonical.ExprCanonicalSnapshot;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Ingestion orchestration entry point used by various adapters.
@@ -56,6 +54,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
     private final PlannerValidator plannerValidator;
     private final PlanAssemblyService planAssemblyService;
     private final TaskOutboxPublisher taskOutboxPublisher;
+    private final PlanExpressionBuilder planExpressionBuilder;
 
     private final ScheduleInstanceRepository scheduleInstanceRepository;
     private final PlanRepository planRepository;
@@ -86,7 +85,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                 provenanceCode, operationCode, cursorWatermark, window == null ? null : window.from(), window == null ? null : window.to());
 
         // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
-        PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(norm, configSnapshot); // 外部条件未来在 buildPlanBusinessExpression 前构造成 Expr 再注入
+        PlanExpressionDescriptor expressionDescriptor = planExpressionBuilder.build(norm, configSnapshot);
         log.debug("plan-ingest expr built hash={} jsonSize={}", expressionDescriptor.hash(), expressionDescriptor.jsonSnapshot().length());
 
         // Phase 4: 前置验证（窗口合理性 / 背压 / 能力）
@@ -102,7 +101,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         // Phase 6: 持久化 Plan / Slice / Task
         PlanAggregate persistedPlan = planRepository.save(assembly.plan());
         List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
-        List<TaskAggregate> persistedTasks = persistTasks(schedule, persistedPlan, persistedSlices, assembly.tasks());
+        List<TaskAggregate> persistedTasks = persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 
         List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
         taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
@@ -155,91 +154,11 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
     }
 
 
-    /**
-     * Phase 3: 构建 Plan 级业务表达式（纯业务逻辑模板，不含窗口约束）。
-     * 窗口约束在切片策略中动态添加；该表达式不会直接执行，因此不做编译。
-     */
-    private PlanExpressionDescriptor buildPlanExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) { // 后续可抽取为 ExpressionCanonicalizer
-        Expr expr = buildPlanBusinessExpression(norm, configSnapshot);
-        ExprCanonicalSnapshot snapshot = ExprCanonicalizer.canonicalize(expr);
-        return new PlanExpressionDescriptor(expr, snapshot.canonicalJson(), snapshot.hash());
-    }
-
-    /**
-     * 未来注入“外部（管理员配置）条件 → Expr” 的单一占位。
-     * 当前返回 null 表示无外部条件。
-     * 后续直接在此方法中把前端参数转换为一棵 Expr（可以是 AND/OR 复合），然后在 buildPlanBusinessExpression 中纳入组合即可。
-     */
-    private Expr buildExternalConditionsExpr(PlanTriggerNorm norm) {
-        return null; // 占位：后续实现
-    }
-
-    private Expr buildPlanBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        log.debug("构建 Plan 业务表达式，操作类型: {}", norm.operationCode());
-
-        // 根据配置和操作类型构建业务逻辑表达式
-        // 例如：数据源过滤、状态约束、业务规则等
-        // 注意：这里不包含时间窗口约束，时间窗口由 slice planner 添加
-
-        List<Expr> businessConstraints = buildBusinessConstraints(norm, configSnapshot);
-        // 外部条件占位注入
-        Expr external = buildExternalConditionsExpr(norm);
-        if (external != null) {
-            if (external instanceof And(List<Expr> children)) {
-                // 若外部本身是 AND，扁平化可减少树深度
-                businessConstraints.addAll(children);
-            } else {
-                businessConstraints.add(external);
-            }
-        }
-
-        if (businessConstraints.isEmpty()) {
-            // 如果没有业务约束，返回恒真（但实际使用时必须添加窗口约束）
-            return Exprs.constTrue();
-        } else if (businessConstraints.size() == 1) {
-            return businessConstraints.getFirst();
-        } else {
-            // 多个业务约束用 AND 连接
-            return Exprs.and(businessConstraints);
-        }
-    }
-
-    /**
-     * 构建业务约束列表
-     */
-    private List<Expr> buildBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        List<Expr> constraints = new ArrayList<>();
-
-        // 根据数据源配置添加约束
-
-        // 根据操作类型添加特定约束
-        if (norm.isUpdate()) {
-            // UPDATE 操作可能有特定的业务约束
-            constraints.addAll(buildUpdateBusinessConstraints(norm, configSnapshot));
-        }
-
-        // 可以根据 configSnapshot 添加更多业务约束
-        // constraints.add(buildSourceConstraint(configSnapshot));
-        // constraints.add(buildStatusConstraint(configSnapshot));
-
-        return constraints;
-    }
-
-    /**
-     * 构建 UPDATE 操作的业务约束
-     */
-    private List<Expr> buildUpdateBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        List<Expr> constraints = new ArrayList<>();
-
-        // UPDATE 操作的特定业务约束
-        // 例如：只更新特定状态的记录
-        // constraints.add(Exprs.term("status", "pending", TextMatch.EXACT));
-
-        return constraints;
-    }
-
 
     private List<TaskQueuedEvent> collectQueuedEvents(List<TaskAggregate> tasks) {
+        if (CollUtil.isEmpty(tasks)) {
+            return List.of();
+        }
         List<TaskQueuedEvent> events = new ArrayList<>(tasks.size());
         for (TaskAggregate task : tasks) {
             task.raiseQueuedEvent();
@@ -252,30 +171,31 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
     }
 
     private List<PlanSliceAggregate> persistSlices(PlanAggregate plan, List<PlanSliceAggregate> slices) {
-        for (PlanSliceAggregate slice : slices) {
-            slice.bindPlan(plan.getId());
+        if (CollUtil.isEmpty(slices)) {
+            return List.of();
         }
+        slices.forEach(slice -> slice.bindPlan(plan.getId()));
         return planSliceRepository.saveAll(slices);
     }
 
-    private List<TaskAggregate> persistTasks(ScheduleInstanceAggregate schedule,
-                                             PlanAggregate plan,
+    private List<TaskAggregate> persistTasks(PlanAggregate plan,
                                              List<PlanSliceAggregate> persistedSlices,
                                              List<TaskAggregate> tasks) {
-        Map<Integer, PlanSliceAggregate> sliceBySeq = persistedSlices.stream()
-                .collect(Collectors.toMap(PlanSliceAggregate::getSequence, it -> it));
+        if (CollUtil.isEmpty(tasks)) {
+            return List.of();
+        }
+        Map<Integer, PlanSliceAggregate> sliceBySeq = MapUtil.newHashMap(persistedSlices.size());
+        for (PlanSliceAggregate slice : persistedSlices) {
+            sliceBySeq.putIfAbsent(slice.getSequence(), slice);
+        }
         for (TaskAggregate task : tasks) {
-            Long placeholderSliceId = task.getSliceId();
-            int sequence = placeholderSliceId == null ? 0 : placeholderSliceId.intValue();
-            PlanSliceAggregate slice = sliceBySeq.get(sequence);
-            if (slice != null) {
-                task.bindPlanAndSlice(plan.getId(), slice.getId());
-            } else {
-                task.bindPlanAndSlice(plan.getId(), null);
-            }
+            Long placeholderSequence = task.getSliceId();
+            PlanSliceAggregate slice = ObjectUtil.isNull(placeholderSequence)
+                    ? null
+                    : sliceBySeq.get(placeholderSequence.intValue());
+            task.bindPlanAndSlice(plan.getId(), slice == null ? null : slice.getId());
         }
         return taskRepository.saveAll(tasks);
     }
 
-    // 读写合并后，游标键的选择在窗口策略中统一处理，不再由应用服务关心
 }

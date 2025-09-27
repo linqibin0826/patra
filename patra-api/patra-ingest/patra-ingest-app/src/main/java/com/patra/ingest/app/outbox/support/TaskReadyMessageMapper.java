@@ -28,7 +28,7 @@ public class TaskReadyMessageMapper {
                     : objectMapper.treeToValue(headerNode, TaskReadyMessage.Header.class);
             return new TaskReadyMessage(payload, header);
         } catch (IOException e) {
-            throw new IllegalStateException("解析 outbox 载荷失败", e);
+            throw new IllegalStateException("failed to parse outbox payload", e);
         }
     }
 }

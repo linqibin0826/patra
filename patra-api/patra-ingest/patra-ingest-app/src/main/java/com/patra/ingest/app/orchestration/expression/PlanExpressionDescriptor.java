@@ -9,8 +9,8 @@ import java.util.Objects;
  */
 public record PlanExpressionDescriptor(Expr expr, String jsonSnapshot, String hash) {
     public PlanExpressionDescriptor {
-        Objects.requireNonNull(expr, "expr不能为空");
+        Objects.requireNonNull(expr, "expr must not be null");
         jsonSnapshot = jsonSnapshot == null ? "{}" : jsonSnapshot;
-        Objects.requireNonNull(hash, "hash不能为空");
+        Objects.requireNonNull(hash, "hash must not be null");
     }
 }

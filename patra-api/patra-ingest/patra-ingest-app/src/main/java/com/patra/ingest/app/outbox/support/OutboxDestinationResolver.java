@@ -20,11 +20,11 @@ public class OutboxDestinationResolver {
 
     public String resolve(String channel) {
         if (!StringUtils.hasText(channel)) {
-            throw new IllegalArgumentException("channel 不能为空");
+            throw new IllegalArgumentException("channel must not be blank");
         }
         String[] segments = channel.split("\\.");
         if (segments.length < 3) {
-            throw new IllegalArgumentException("channel 命名必须至少包含 3 个段：" + channel);
+            throw new IllegalArgumentException("channel must contain at least three segments: " + channel);
         }
         String topicCore = Arrays.stream(segments)
                 .limit(2)
@@ -35,7 +35,7 @@ public class OutboxDestinationResolver {
                 .map(this::toUpperToken)
                 .collect(Collectors.joining("."));
         if (!StringUtils.hasText(tag)) {
-            throw new IllegalArgumentException("channel 必须包含事件段：" + channel);
+            throw new IllegalArgumentException("channel must contain event segment: " + channel);
         }
         String namespace = properties.getNaming().getNamespace();
         String topic = StringUtils.hasText(namespace)
@@ -46,11 +46,11 @@ public class OutboxDestinationResolver {
 
     private String toUpperToken(String value) {
         if (!StringUtils.hasText(value)) {
-            throw new IllegalArgumentException("channel 段不能为空");
+            throw new IllegalArgumentException("channel segment must not be blank");
         }
         String trimmed = value.trim();
         if (!trimmed.matches("[a-z0-9]+")) {
-            throw new IllegalArgumentException("channel 段仅支持小写字母或数字: " + trimmed);
+            throw new IllegalArgumentException("channel segment must contain lowercase alphanumerics only: " + trimmed);
         }
         return trimmed.toUpperCase(Locale.ROOT);
     }

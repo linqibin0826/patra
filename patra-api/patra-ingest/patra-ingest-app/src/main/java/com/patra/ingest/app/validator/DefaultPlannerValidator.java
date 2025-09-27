@@ -1,12 +1,13 @@
 package com.patra.ingest.app.validator;
 
+import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
+import java.time.Duration;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
 
 /**
  * 默认计划器验证器实现。
@@ -61,6 +62,8 @@ public class DefaultPlannerValidator implements PlannerValidator {
             return;
         }
 
+        Objects.requireNonNull(window, "planner window must not be null");
+
         // 非 UPDATE 操作需要有效窗口
         if (window.from() == null || window.to() == null) {
             throw new IllegalStateException(
@@ -110,13 +113,18 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                             ProvenanceConfigSnapshot snapshot, 
                                             PlannerWindow window) {
         
+        if (snapshot == null) {
+            log.warn("provenance config snapshot is missing, skip capability validation");
+            return;
+        }
+
         // 检查 HARVEST 操作的增量能力
         if (triggerNorm.isHarvest()) {
             validateIncrementalCapability(triggerNorm, snapshot, window);
         }
 
         // 检查窗口配置完整性
-        if (!triggerNorm.isUpdate() && window.from() != null && window.to() != null) {
+        if (!triggerNorm.isUpdate() && window != null && window.from() != null && window.to() != null) {
             validateWindowConfigCompleteness(snapshot);
         }
     }
@@ -131,8 +139,8 @@ public class DefaultPlannerValidator implements PlannerValidator {
         ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
         
         // 如果没有窗口配置，但要求时间窗口，则需要手动指定窗口
-        if (windowOffset == null || "FULL".equals(windowOffset.windowModeCode())) {
-            if (triggerNorm.requestedWindowFrom() == null && window.from() != null) {
+        if (windowOffset == null || StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
+            if (triggerNorm.requestedWindowFrom() == null && window != null && window.from() != null) {
                 throw new IllegalStateException(
                         String.format("Source %s does not support automatic incremental harvest; explicit window required",
                                 triggerNorm.provenanceCode()));
@@ -140,10 +148,11 @@ public class DefaultPlannerValidator implements PlannerValidator {
         }
 
         // 检查偏移字段配置
-        if (windowOffset != null && 
-            ("DATE".equals(windowOffset.offsetTypeCode()) || "COMPOSITE".equals(windowOffset.offsetTypeCode()))) {
-            
-            if (isBlank(windowOffset.offsetFieldName()) && isBlank(windowOffset.defaultDateFieldName())) {
+        if (windowOffset != null &&
+                (StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "DATE")
+                        || StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "COMPOSITE"))) {
+
+            if (StrUtil.isBlank(windowOffset.offsetFieldName()) && StrUtil.isBlank(windowOffset.defaultDateFieldName())) {
                 throw new IllegalStateException(
                         String.format("Source %s configured for %s offset but missing date field configuration",
                                 triggerNorm.provenanceCode(), windowOffset.offsetTypeCode()));
@@ -159,24 +168,17 @@ public class DefaultPlannerValidator implements PlannerValidator {
     private void validateWindowConfigCompleteness(ProvenanceConfigSnapshot snapshot) {
         ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
         
-        if (windowOffset != null && !"FULL".equals(windowOffset.windowModeCode())) {
+        if (windowOffset != null && !StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
             // 验证窗口大小配置
             if (windowOffset.windowSizeValue() == null || windowOffset.windowSizeValue() <= 0) {
-                log.warn("Window size not configured or invalid, will use defaults");
+                log.warn("window size not configured or invalid, fallback to defaults");
             }
-            
+
             // 验证最大窗口跨度
             if (windowOffset.maxWindowSpanSeconds() != null && windowOffset.maxWindowSpanSeconds() <= 0) {
-                log.warn("Invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
+                log.warn("invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
             }
         }
-    }
-
-    /**
-     * 检查字符串是否为空。
-     */
-    private boolean isBlank(String str) {
-        return str == null || str.trim().isEmpty();
     }
 }
 

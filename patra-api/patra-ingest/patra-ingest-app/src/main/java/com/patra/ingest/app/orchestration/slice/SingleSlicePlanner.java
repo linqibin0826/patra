@@ -27,7 +27,7 @@ public class SingleSlicePlanner implements SlicePlanner {
                 signatureHash,
                 specJson,
                 base,
-                context.window().from(),
-                context.window().to()));
+                context.window() == null ? null : context.window().from(),
+                context.window() == null ? null : context.window().to()));
     }
 }
