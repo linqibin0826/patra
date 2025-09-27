@@ -57,7 +57,7 @@ mvn clean package -DskipTests
 ## 3. 技术栈与版本（关键）
 	• 语言/构建：Java 21，Maven（多模块；父 POM 统一依赖），UTF-8
 	• 核心框架：Spring Boot 3.2.4；Spring Cloud 2023.0.1；Spring Cloud Alibaba 2023.0.1.0
-	• 数据持久：MyBatis-Plus 3.5.12，MySQL 8.0，Redis 7.0，Elasticsearch 8.14，RocketMQ 5.3.2
+	• 数据持久：MyBatis-Plus 3.5.12，MySQL 8.0，Redis 7.0，Elasticsearch 8.14，RocketMQ 5.x
 	• 基础设施：Nacos（注册/配置），SkyWalking 10.2（APM/Tracing），XXL-Job 3.2.0（调度），Docker Compose（本地）
 	• 工具/映射：Lombok 1.18.38，MapStruct 1.6.3，Hutool 5.8.22
 	• 自研 Starters：patra-spring-boot-starter-core/-web/-mybatis，patra-spring-cloud-starter-feign
