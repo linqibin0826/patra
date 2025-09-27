@@ -104,8 +104,6 @@ patra-{service}/
 	• 检查 + 测试（快速回归）：mvn -q -DskipITs test
 	• 全仓编译：.mvn clean compile（或 mvn -q -T 1C -DskipTests compile）
 	• 打包：mvn clean package -DskipTests（必要时移除 -DskipTests）
-	• 运行本地基础设施：进入 docker/，执行 docker compose up -d
-	• 关闭基础设施：docker compose down
 
 ⸻
 
@@ -135,20 +133,9 @@ patra-{service}/
 	• 调度：XXL-Job（作业在 adapter/scheduler），注意幂等、重试、限流。
 	• 追踪/APM：SkyWalking；在日志中传递 trace/correlation ID。
 
-## 9. 安全与权限（智能体必须遵守）
-
-允许无需确认
-• 读取/列出文件、编译单模块、运行单元测试、静态检查（lint/format/type-check）。
-• 在工作目录内创建/修改代码与测试文件。
-
-需要事先获得批准
-• 变更数据库结构/清空数据/大规模回填；RocketMQ 主题/订阅调整。
-• 执行全仓重构/跨大量模块的改名、移动。
-• 任何会暴露或写入敏感信息的操作（密钥、令牌、证书、隐私数据）。
-
-禁止
-• 提交包含明文密钥/凭据的内容。
-• 对 domain 层引入框架依赖或从下层向上反向依赖。
+## 9. Flyway 迁移
+    • 每个微服务独立管理；脚本放在 patra-{service}-infra/src/main/resources/db/migration。
+    • 命名：V{version}__{description}.sql，版本号递增（如 V1、V2）。
 
 ## 10. 日志规范（@Slf4j）
 	• 需要日志的类使用 @Slf4j；统一 SLF4J API。

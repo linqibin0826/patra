@@ -24,10 +24,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
         TaskDO entity = converter.toEntity(task);
         if (entity.getId() == null) {
             mapper.insert(entity);
+            task.assignId(entity.getId());
         } else {
             mapper.updateById(entity);
         }
-        return converter.toAggregate(entity);
+        Long version = entity.getVersion();
+        task.assignVersion(version == null ? task.getVersion() : version);
+        return task;
     }
 
     @Override

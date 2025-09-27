@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.TaskStatus;
+import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 
 import java.time.Instant;
 
@@ -128,6 +129,25 @@ public class TaskAggregate extends AggregateRoot<Long> {
     public void bindPlanAndSlice(Long planId, Long sliceId) {
         this.planId = planId;
         this.sliceId = sliceId;
+    }
+
+    /**
+     * 聚合准备入队时生成领域事件，供应用层出箱。
+     */
+    public TaskQueuedEvent raiseQueuedEvent() {
+        TaskQueuedEvent event = TaskQueuedEvent.of(
+                getId(),
+                this.planId,
+                this.sliceId,
+                this.scheduleInstanceId,
+                this.provenanceCode,
+                this.operationCode,
+                this.idempotentKey,
+                this.paramsJson,
+                this.priority,
+                this.scheduledAt);
+        addDomainEvent(event);
+        return event;
     }
 
     public void markQueued() {

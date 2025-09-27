@@ -7,6 +7,7 @@ import com.patra.ingest.app.orchestration.dto.PlanIngestionResult;
 import com.patra.ingest.app.orchestration.assembly.PlanAssemblyRequest;
 import com.patra.ingest.app.orchestration.assembly.PlanAssemblyService;
 import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
+import com.patra.ingest.app.orchestration.outbox.TaskOutboxPublisher;
 import com.patra.ingest.app.orchestration.window.PlanningWindowResolver;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.port.CursorRepository;
@@ -16,6 +17,7 @@ import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
+import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
@@ -53,6 +55,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
     private final PlanningWindowResolver planningWindowResolver;
     private final PlannerValidator plannerValidator;
     private final PlanAssemblyService planAssemblyService;
+    private final TaskOutboxPublisher taskOutboxPublisher;
 
     private final ScheduleInstanceRepository scheduleInstanceRepository;
     private final PlanRepository planRepository;
@@ -100,6 +103,9 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         PlanAggregate persistedPlan = planRepository.save(assembly.plan());
         List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
         List<TaskAggregate> persistedTasks = persistTasks(schedule, persistedPlan, persistedSlices, assembly.tasks());
+
+        List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
+        taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
 
         log.info("plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})", persistedPlan.getId(), persistedSlices.size(), persistedTasks.size(), window == null ? null : window.from(), window == null ? null : window.to());
 
@@ -232,6 +238,18 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         return constraints;
     }
 
+
+    private List<TaskQueuedEvent> collectQueuedEvents(List<TaskAggregate> tasks) {
+        List<TaskQueuedEvent> events = new ArrayList<>(tasks.size());
+        for (TaskAggregate task : tasks) {
+            task.raiseQueuedEvent();
+            task.pullDomainEvents().stream()
+                    .filter(TaskQueuedEvent.class::isInstance)
+                    .map(TaskQueuedEvent.class::cast)
+                    .forEach(events::add);
+        }
+        return events;
+    }
 
     private List<PlanSliceAggregate> persistSlices(PlanAggregate plan, List<PlanSliceAggregate> slices) {
         for (PlanSliceAggregate slice : slices) {
