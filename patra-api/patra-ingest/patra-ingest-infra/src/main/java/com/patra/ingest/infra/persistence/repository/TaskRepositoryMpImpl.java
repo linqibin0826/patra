@@ -43,6 +43,22 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     }
 
     @Override
+    public List<TaskAggregate> findByPlanId(Long planId) {
+        if (planId == null) {
+            return List.of();
+        }
+        List<TaskDO> entities = mapper.selectList(new QueryWrapper<TaskDO>().eq("plan_id", planId));
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+        List<TaskAggregate> aggregates = new ArrayList<>(entities.size());
+        for (TaskDO entity : entities) {
+            aggregates.add(converter.toAggregate(entity));
+        }
+        return aggregates;
+    }
+
+    @Override
     public long countQueuedTasks(String provenanceCode, String operationCode) {
         QueryWrapper<TaskDO> wrapper = new QueryWrapper<>();
         wrapper.eq("status_code", "QUEUED");

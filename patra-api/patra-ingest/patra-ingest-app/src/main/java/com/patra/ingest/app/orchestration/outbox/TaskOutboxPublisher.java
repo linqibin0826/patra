@@ -1,9 +1,11 @@
 package com.patra.ingest.app.orchestration.outbox;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.ingest.app.outbox.support.OutboxChannels;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
@@ -28,7 +30,7 @@ public class TaskOutboxPublisher {
 
     private static final String AGGREGATE_TYPE_TASK = "TASK";
     /** 默认通道，可进一步下沉到配置中心。 */
-    private static final String DEFAULT_CHANNEL = "ingest.task";
+    private static final String DEFAULT_CHANNEL = OutboxChannels.INGEST_TASK_READY;
     /** 默认业务操作类型标识。 */
     private static final String DEFAULT_OP_TYPE = "TASK_READY";
 
@@ -93,7 +95,7 @@ public class TaskOutboxPublisher {
             payload.put("scheduledAt", event.scheduledAt().toString());
         }
         if (event.paramsJson() != null) {
-            payload.put("params", event.paramsJson());
+            payload.set("params", readJsonNode(event.paramsJson()));
         }
         payload.put("planKey", plan.getPlanKey());
         if (plan.getWindowFrom() != null) {
@@ -142,8 +144,16 @@ public class TaskOutboxPublisher {
         }
     }
 
+    private JsonNode readJsonNode(String json) {
+        try {
+            return objectMapper.readTree(json);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("failed to parse task params json", e);
+        }
+    }
+
     private Instant resolveNotBefore(Instant scheduledAt) {
-        return scheduledAt;
+        return scheduledAt == null ? Instant.now() : scheduledAt;
     }
 
     private String buildPartitionKey(TaskQueuedEvent event) {

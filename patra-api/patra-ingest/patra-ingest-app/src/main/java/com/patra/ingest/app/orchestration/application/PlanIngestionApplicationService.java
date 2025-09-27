@@ -98,8 +98,22 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         PlanAssemblyRequest assemblyRequest = new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
         PlanAssembly assembly = planAssemblyService.assemble(assemblyRequest);
 
+        PlanAggregate draftPlan = assembly.plan();
+        PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
+        if (existingPlan != null) {
+            log.info("plan-ingest dedup hit existing planKey={}, reuse planId={}", draftPlan.getPlanKey(), existingPlan.getId());
+            List<PlanSliceAggregate> existingSlices = planSliceRepository.findByPlanId(existingPlan.getId());
+            List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
+            return new PlanIngestionResult(
+                    schedule.getId(),
+                    existingPlan.getId(),
+                    existingSlices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
+                    existingTasks.size(),
+                    existingPlan.getStatus().name());
+        }
+
         // Phase 6: 持久化 Plan / Slice / Task
-        PlanAggregate persistedPlan = planRepository.save(assembly.plan());
+        PlanAggregate persistedPlan = planRepository.save(draftPlan);
         List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
         List<TaskAggregate> persistedTasks = persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 

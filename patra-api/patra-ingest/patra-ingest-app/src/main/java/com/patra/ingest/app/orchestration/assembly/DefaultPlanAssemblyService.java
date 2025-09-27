@@ -1,6 +1,7 @@
 package com.patra.ingest.app.orchestration.assembly;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import com.patra.common.enums.Priority;
 import com.patra.common.json.JsonNormalizer;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
@@ -19,6 +20,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -70,8 +72,9 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         PlanAggregate plan = createPlanAggregate(norm, window, planExpression, sliceStrategy, configCanonical);
         plan.startSlicing();
 
-        List<PlanSliceAggregate> slices = createSlices(norm, window, planExpression, configSnapshot, sliceStrategy);
-        List<TaskAggregate> tasks = slices.isEmpty() ? List.of() : createTasks(norm, slices);
+        SliceGenerationResult sliceResult = createSlices(norm, window, planExpression, configSnapshot, sliceStrategy);
+        List<PlanSliceAggregate> slices = sliceResult.aggregates();
+        List<TaskAggregate> tasks = slices.isEmpty() ? List.of() : createTasks(norm, window, sliceResult);
 
         if (slices.isEmpty() || tasks.isEmpty()) {
             plan.markFailed();
@@ -114,19 +117,19 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     /**
      * 触发对应的切片规划器生成切片草稿，并转为聚合。
      */
-    private List<PlanSliceAggregate> createSlices(PlanTriggerNorm norm,
-                                                  PlannerWindow window,
-                                                  PlanExpressionDescriptor planExpression,
-                                                  ProvenanceConfigSnapshot configSnapshot,
-                                                  String sliceStrategy) {
+    private SliceGenerationResult createSlices(PlanTriggerNorm norm,
+                                                PlannerWindow window,
+                                                PlanExpressionDescriptor planExpression,
+                                                ProvenanceConfigSnapshot configSnapshot,
+                                                String sliceStrategy) {
         SlicePlanner planner = slicePlannerRegistry.get(sliceStrategy);
         if (planner == null) {
-            return List.of();
+            return new SliceGenerationResult(List.of(), List.of());
         }
 
         List<SlicePlan> drafts = planner.slice(new SlicePlanningContext(norm, window, planExpression, configSnapshot));
         if (drafts == null || drafts.isEmpty()) {
-            return List.of();
+            return new SliceGenerationResult(List.of(), List.of());
         }
 
         List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
@@ -142,17 +145,25 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
                     sliceSnapshot.canonicalJson()
             ));
         }
-        return slices;
+        return new SliceGenerationResult(slices, drafts);
     }
 
     /**
      * 为每个切片派生任务。此处暂以切片序号作为占位 sliceId，后续持久化时再绑定真实 ID。
      */
-    private List<TaskAggregate> createTasks(PlanTriggerNorm norm, List<PlanSliceAggregate> slices) {
+    private List<TaskAggregate> createTasks(PlanTriggerNorm norm,
+                                             PlannerWindow window,
+                                             SliceGenerationResult sliceResult) {
+        List<PlanSliceAggregate> slices = sliceResult.aggregates();
+        List<SlicePlan> drafts = sliceResult.drafts();
         List<TaskAggregate> tasks = new ArrayList<>(slices.size());
-        for (PlanSliceAggregate slice : slices) {
+        for (int i = 0; i < slices.size(); i++) {
+            PlanSliceAggregate slice = slices.get(i);
+            SlicePlan draft = drafts.get(i);
             String idemKey = computeSignature(norm, slice.getSliceSignatureHash());
-            Integer priorityVal = norm.priority() == null ? null : norm.priority().ordinal();
+            Priority effectivePriority = norm.priority() == null ? Priority.NORMAL : norm.priority();
+            int priorityVal = effectivePriority.queueValue();
+            Instant scheduledAt = determineScheduledAt(draft, window);
 
             tasks.add(TaskAggregate.create(
                     norm.scheduleInstanceId(),
@@ -164,10 +175,20 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
                     idemKey,
                     slice.getExprHash(),
                     priorityVal,
-                    norm.requestedWindowFrom()
+                    scheduledAt
             ));
         }
         return tasks;
+    }
+
+    private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
+        if (draft.windowFrom() != null) {
+            return draft.windowFrom();
+        }
+        if (window != null && window.from() != null) {
+            return window.from();
+        }
+        return Instant.now();
     }
 
     /**
@@ -231,5 +252,8 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
                 payload == null ? CharSequenceUtil.EMPTY : payload);
         byte[] digest = HashUtils.sha256(material);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+    }
+
+    private record SliceGenerationResult(List<PlanSliceAggregate> aggregates, List<SlicePlan> drafts) {
     }
 }
