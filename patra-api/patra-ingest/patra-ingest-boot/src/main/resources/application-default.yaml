@@ -15,3 +15,23 @@ xxl:
       ip: host.docker.internal
       logpath: ${PAPERTRACE_LOG_DIR:/Users/linqibin/IdeaProjects/medoc/Papertrace-api/logs}/patra-ingest/xxl-job
       logretentiondays: 30
+
+patra:
+  messaging:
+    rocketmq:
+      enabled: true
+      naming:
+        namespace: DEV
+        topicPattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"
+        tagDelimiter: "."
+  ingest:
+    outbox-relay:
+      enabled: true
+      scheduled-fallback-enabled: false
+      batch-size: 200
+      lease-duration: PT30S
+      max-retry: 5
+      retry-backoff: PT5S
+      scheduled-fixed-delay: PT60S
+      scheduled-channels:
+        - ingest.task.ready
