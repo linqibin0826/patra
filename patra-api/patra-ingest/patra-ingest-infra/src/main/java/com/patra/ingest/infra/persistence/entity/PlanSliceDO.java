@@ -2,31 +2,56 @@ package com.patra.ingest.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Data @SuperBuilder @NoArgsConstructor @AllArgsConstructor @EqualsAndHashCode(callSuper = true)
-@TableName("ing_plan_slice")
 /**
- * 计划切片表 (ing_plan_slice)
- * 将 Plan 拆分成多个可并行/序列执行的窗口或区段（时间/ID/Token），支持局部失败重试。
+ * <p><b>计划切片 DO</b> —— 映射表：<code>ing_plan_slice</code></p>
+ * <p>语义：将计划蓝图按策略切分出的最小幂等执行单元；每个切片派生一个任务。</p>
+ * <p>要点：
+ * <ul>
+ *   <li><code>slice_signature_hash</code> 对 <code>slice_spec</code> 做规范化哈希，配合唯一索引防止重复生成。</li>
+ *   <li><code>slice_spec</code>、<code>expr_snapshot</code> 均为 JSON AST，使用 {@link JacksonTypeHandler} 保持结构化。</li>
+ * </ul>
+ * </p>
  */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName(value = "ing_plan_slice", autoResultMap = true)
 public class PlanSliceDO extends BaseDO {
-    /** 所属计划 ID */
-    @TableField("plan_id") private Long planId;
-    /** 来源代码（冗余） */
-    @TableField("provenance_code") private String provenanceCode;
-    /** 切片序号（稳定顺序） */
-    @TableField("slice_no") private Integer sliceNo;
-    /** 切片签名哈希（规范化 spec + expr_hash 计算） */
-    @TableField("slice_signature_hash") private String sliceSignatureHash;
-    /** 切片规格 JSON（时间/ID/Token 界限等） */
-    @TableField("slice_spec") private String sliceSpec;
-    /** 表达式哈希（切片后具体执行表达式版本） */
-    @TableField("expr_hash") private String exprHash;
-    /** 表达式快照（局部化后的AST） */
-    @TableField("expr_snapshot") private String exprSnapshot;
-    /** 状态代码（PENDING/DISPATCHED/SUCCEEDED/FAILED） */
-    @TableField("status_code") private String statusCode;
+
+    /** 关联计划 ID */
+    @TableField("plan_id")
+    private Long planId;
+
+    /** 冗余的来源代码 */
+    @TableField("provenance_code")
+    private String provenanceCode;
+
+    /** 切片序号（0..N） */
+    @TableField("slice_no")
+    private Integer sliceNo;
+
+    /** 切片签名哈希（基于规范化 slice_spec） */
+    @TableField("slice_signature_hash")
+    private String sliceSignatureHash;
+
+    /** 切片边界描述（JSON） */
+    @TableField(value = "slice_spec", typeHandler = JacksonTypeHandler.class)
+    private JsonNode sliceSpec;
+
+    /** 局部化表达式哈希 */
+    @TableField("expr_hash")
+    private String exprHash;
+
+    /** 局部化表达式快照（JSON AST，可重放） */
+    @TableField(value = "expr_snapshot", typeHandler = JacksonTypeHandler.class)
+    private JsonNode exprSnapshot;
+
+    /** 切片状态（DICT：ing_slice_status） */
+    @TableField("status_code")
+    private String statusCode;
 }

@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.converter;
 
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.TaskStatus;
+import com.patra.starter.core.json.JsonNodeSupport;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
@@ -10,7 +11,7 @@ import org.mapstruct.ReportingPolicy;
  * 任务聚合与数据对象转换（MapStruct 接口）。
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface TaskConverter {
+public interface TaskConverter extends JsonNodeSupport {
 
     default TaskDO toEntity(TaskAggregate aggregate) {
         if (aggregate == null) {
@@ -23,7 +24,7 @@ public interface TaskConverter {
         entity.setSliceId(aggregate.getSliceId());
         entity.setProvenanceCode(aggregate.getProvenanceCode());
         entity.setOperationCode(aggregate.getOperationCode());
-        entity.setParams(aggregate.getParamsJson());
+        entity.setParams(readJsonNode(aggregate.getParamsJson()));
         entity.setIdempotentKey(aggregate.getIdempotentKey());
         entity.setExprHash(aggregate.getExprHash());
         entity.setPriority(aggregate.getPriority());
@@ -46,6 +47,7 @@ public interface TaskConverter {
                 ? TaskStatus.QUEUED
                 : TaskStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
+        String paramsJson = writeJsonString(entity.getParams());
         return TaskAggregate.restore(
                 entity.getId(),
                 entity.getScheduleInstanceId(),
@@ -53,7 +55,7 @@ public interface TaskConverter {
                 entity.getSliceId(),
                 entity.getProvenanceCode(),
                 entity.getOperationCode(),
-                entity.getParams(),
+                paramsJson,
                 entity.getIdempotentKey(),
                 entity.getExprHash(),
                 entity.getPriority(),
