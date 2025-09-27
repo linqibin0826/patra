@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
+import com.patra.ingest.domain.model.vo.ExecutionWindow;
+import com.patra.ingest.domain.model.vo.RunContext;
 import com.patra.ingest.domain.model.vo.RunStats;
+import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
 import com.patra.ingest.infra.persistence.entity.TaskRunDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
@@ -28,7 +31,14 @@ public interface TaskRunConverter {
         entity.setError(source.getError());
         entity.setStartedAt(source.getStartedAt());
         entity.setFinishedAt(source.getFinishedAt());
-        // 尚未在领域模型中建模的属性留空（checkpoint/window/heartbeat 等）
+        entity.setLastHeartbeat(source.getLastHeartbeat());
+        entity.setWindowFrom(source.getExecutionWindow() == null ? null : source.getExecutionWindow().windowFrom());
+        entity.setWindowTo(source.getExecutionWindow() == null ? null : source.getExecutionWindow().windowTo());
+        entity.setCheckpoint(buildCheckpointNode(source.getCheckpoint()));
+        if (source.getRunContext() != null) {
+            entity.setSchedulerRunId(source.getRunContext().schedulerRunId());
+            entity.setCorrelationId(source.getRunContext().correlationId());
+        }
         return entity;
     }
 
@@ -40,6 +50,9 @@ public interface TaskRunConverter {
                 ? TaskRunStatus.PLANNED
                 : TaskRunStatus.fromCode(entity.getStatusCode());
         RunStats stats = deriveStats(entity.getStats());
+        TaskRunCheckpoint checkpoint = checkpointFromNode(entity.getCheckpoint());
+        ExecutionWindow window = new ExecutionWindow(entity.getWindowFrom(), entity.getWindowTo());
+        RunContext runContext = new RunContext(entity.getSchedulerRunId(), entity.getCorrelationId());
         return TaskRun.restore(
                 entity.getId(),
                 entity.getTaskId(),
@@ -50,6 +63,10 @@ public interface TaskRunConverter {
                 stats,
                 entity.getStartedAt(),
                 entity.getFinishedAt(),
+                entity.getLastHeartbeat(),
+                checkpoint,
+                window,
+                runContext,
                 entity.getError());
     }
 
@@ -74,5 +91,28 @@ public interface TaskRunConverter {
         long failed = statsNode.has("failed") ? statsNode.get("failed").asLong() : 0L;
         long pages = statsNode.has("pages") ? statsNode.get("pages").asLong() : 0L;
         return new RunStats(fetched, upserted, failed, pages);
+    }
+
+    private JsonNode buildCheckpointNode(TaskRunCheckpoint checkpoint) {
+        if (checkpoint == null || !checkpoint.isPresent()) {
+            return null;
+        }
+        try {
+            return JsonMapperHolder.getObjectMapper().readTree(checkpoint.raw());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Checkpoint JSON 解析失败", e);
+        }
+    }
+
+    private TaskRunCheckpoint checkpointFromNode(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return TaskRunCheckpoint.empty();
+        }
+        try {
+            String raw = JsonMapperHolder.getObjectMapper().writeValueAsString(node);
+            return new TaskRunCheckpoint(raw);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Checkpoint JSON 序列化失败", e);
+        }
     }
 }

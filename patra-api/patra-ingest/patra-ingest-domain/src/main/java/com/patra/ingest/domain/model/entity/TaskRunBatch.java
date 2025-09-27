@@ -21,6 +21,7 @@ public class TaskRunBatch {
     private final Integer pageNo;
     private final Integer pageSize;
     private final String beforeToken;
+    private final String exprHash;
     private final IdempotentKey idempotentKey;
     private BatchStatus status;
     private BatchStats stats;
@@ -39,6 +40,7 @@ public class TaskRunBatch {
                         Integer pageNo,
                         Integer pageSize,
                         String beforeToken,
+                        String exprHash,
                         IdempotentKey idempotentKey) {
         this(id,
                 runId,
@@ -52,6 +54,7 @@ public class TaskRunBatch {
                 pageSize,
                 beforeToken,
                 null,
+                exprHash,
                 idempotentKey,
                 BatchStatus.RUNNING,
                 BatchStats.of(0),
@@ -71,6 +74,7 @@ public class TaskRunBatch {
                          Integer pageSize,
                          String beforeToken,
                          String afterToken,
+                         String exprHash,
                          IdempotentKey idempotentKey,
                          BatchStatus status,
                          BatchStats stats,
@@ -88,6 +92,7 @@ public class TaskRunBatch {
         this.pageSize = pageSize;
         this.beforeToken = beforeToken;
         this.afterToken = afterToken;
+        this.exprHash = exprHash;
         this.idempotentKey = idempotentKey;
         this.status = status;
         this.stats = stats == null ? BatchStats.of(0) : stats;
@@ -107,6 +112,7 @@ public class TaskRunBatch {
                                        Integer pageSize,
                                        String beforeToken,
                                        String afterToken,
+                                       String exprHash,
                                        IdempotentKey idempotentKey,
                                        BatchStatus status,
                                        BatchStats stats,
@@ -124,6 +130,7 @@ public class TaskRunBatch {
                 pageSize,
                 beforeToken,
                 afterToken,
+                exprHash,
                 idempotentKey,
                 status,
                 stats,

@@ -2,6 +2,9 @@ package com.patra.ingest.infra.persistence.converter;
 
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.TaskStatus;
+import com.patra.ingest.domain.model.vo.ExecutionTimeline;
+import com.patra.ingest.domain.model.vo.LeaseInfo;
+import com.patra.ingest.domain.model.vo.TaskSchedulerContext;
 import com.patra.starter.core.json.JsonNodeSupport;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import org.mapstruct.Mapper;
@@ -33,6 +36,22 @@ public interface TaskConverter extends JsonNodeSupport {
         entity.setRetryCount(aggregate.getRetryCount());
         entity.setLastErrorCode(aggregate.getLastErrorCode());
         entity.setLastErrorMsg(aggregate.getLastErrorMsg());
+        LeaseInfo leaseInfo = aggregate.getLeaseInfo();
+        if (leaseInfo != null) {
+            entity.setLeaseOwner(leaseInfo.owner());
+            entity.setLeasedUntil(leaseInfo.leasedUntil());
+            entity.setLeaseCount(leaseInfo.leaseCount());
+        }
+        ExecutionTimeline timeline = aggregate.getExecutionTimeline();
+        if (timeline != null) {
+            entity.setStartedAt(timeline.startedAt());
+            entity.setFinishedAt(timeline.finishedAt());
+        }
+        TaskSchedulerContext schedulerContext = aggregate.getSchedulerContext();
+        if (schedulerContext != null) {
+            entity.setSchedulerRunId(schedulerContext.schedulerRunId());
+            entity.setCorrelationId(schedulerContext.correlationId());
+        }
         // 使用字典编码
         entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
         entity.setVersion(aggregate.getVersion());
@@ -48,6 +67,9 @@ public interface TaskConverter extends JsonNodeSupport {
                 : TaskStatus.fromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
         String paramsJson = writeJsonString(entity.getParams());
+        LeaseInfo leaseInfo = LeaseInfo.snapshotOf(entity.getLeaseOwner(), entity.getLeasedUntil(), entity.getLeaseCount());
+        ExecutionTimeline timeline = new ExecutionTimeline(entity.getStartedAt(), entity.getFinishedAt());
+        TaskSchedulerContext schedulerContext = new TaskSchedulerContext(entity.getSchedulerRunId(), entity.getCorrelationId());
         return TaskAggregate.restore(
                 entity.getId(),
                 entity.getScheduleInstanceId(),
@@ -65,6 +87,9 @@ public interface TaskConverter extends JsonNodeSupport {
                 entity.getLastErrorCode(),
                 entity.getLastErrorMsg(),
                 status,
+                leaseInfo,
+                timeline,
+                schedulerContext,
                 version);
     }
 }

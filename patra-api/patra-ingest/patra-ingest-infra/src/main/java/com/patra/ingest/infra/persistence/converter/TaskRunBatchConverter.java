@@ -24,7 +24,7 @@ public interface TaskRunBatchConverter {
         entity.setTaskId(source.getTaskId());
         entity.setSliceId(source.getSliceId());
         entity.setPlanId(source.getPlanId());
-        entity.setExprHash(null); // TODO: 领域模型尚未承载 exprHash
+        entity.setExprHash(source.getExprHash());
         entity.setProvenanceCode(source.getProvenanceCode());
         entity.setOperationCode(source.getOperationCode());
         entity.setBatchNo(source.getBatchNo());
@@ -62,6 +62,7 @@ public interface TaskRunBatchConverter {
                 entity.getPageSize(),
                 entity.getBeforeToken(),
                 entity.getAfterToken(),
+                entity.getExprHash(),
                 mapIdempotentKey(entity.getIdempotentKey()),
                 status,
                 stats,

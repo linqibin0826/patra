@@ -1,7 +1,10 @@
 package com.patra.ingest.domain.model.entity;
 
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
+import com.patra.ingest.domain.model.vo.ExecutionWindow;
+import com.patra.ingest.domain.model.vo.RunContext;
 import com.patra.ingest.domain.model.vo.RunStats;
+import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
 import java.time.Instant;
 import lombok.Getter;
 
@@ -18,10 +21,27 @@ public class TaskRun {
     private RunStats stats;
     private Instant startedAt;
     private Instant finishedAt;
+    private Instant lastHeartbeat;
     private String error;
+    private TaskRunCheckpoint checkpoint;
+    private ExecutionWindow executionWindow;
+    private RunContext runContext;
 
     public TaskRun(Long id, Long taskId, int attemptNo, String provenanceCode, String operationCode) {
-        this(id, taskId, attemptNo, provenanceCode, operationCode, TaskRunStatus.PLANNED, RunStats.empty(), null, null, null);
+        this(id,
+                taskId,
+                attemptNo,
+                provenanceCode,
+                operationCode,
+                TaskRunStatus.PLANNED,
+                RunStats.empty(),
+                TaskRunCheckpoint.empty(),
+                ExecutionWindow.empty(),
+                null,
+                null,
+                null,
+                RunContext.empty(),
+                null);
     }
 
     private TaskRun(Long id,
@@ -31,8 +51,12 @@ public class TaskRun {
                     String operationCode,
                     TaskRunStatus status,
                     RunStats stats,
+                    TaskRunCheckpoint checkpoint,
+                    ExecutionWindow executionWindow,
                     Instant startedAt,
                     Instant finishedAt,
+                    Instant lastHeartbeat,
+                    RunContext runContext,
                     String error) {
         this.id = id;
         this.taskId = taskId;
@@ -41,8 +65,12 @@ public class TaskRun {
         this.operationCode = operationCode;
         this.status = status;
         this.stats = stats == null ? RunStats.empty() : stats;
+        this.checkpoint = checkpoint == null ? TaskRunCheckpoint.empty() : checkpoint;
+        this.executionWindow = executionWindow == null ? ExecutionWindow.empty() : executionWindow;
         this.startedAt = startedAt;
         this.finishedAt = finishedAt;
+        this.lastHeartbeat = lastHeartbeat;
+        this.runContext = runContext == null ? RunContext.empty() : runContext;
         this.error = error;
     }
 
@@ -55,8 +83,25 @@ public class TaskRun {
                                   RunStats stats,
                                   Instant startedAt,
                                   Instant finishedAt,
+                                  Instant lastHeartbeat,
+                                  TaskRunCheckpoint checkpoint,
+                                  ExecutionWindow window,
+                                  RunContext runContext,
                                   String error) {
-        return new TaskRun(id, taskId, attemptNo, provenanceCode, operationCode, status, stats, startedAt, finishedAt, error);
+        return new TaskRun(id,
+                taskId,
+                attemptNo,
+                provenanceCode,
+                operationCode,
+                status,
+                stats,
+                checkpoint,
+                window,
+                startedAt,
+                finishedAt,
+                lastHeartbeat,
+                runContext,
+                error);
     }
 
     public void start(Instant now) {
@@ -64,6 +109,24 @@ public class TaskRun {
             status = TaskRunStatus.RUNNING;
             startedAt = now;
         }
+    }
+
+    public void assignWindow(ExecutionWindow window) {
+        this.executionWindow = window == null ? ExecutionWindow.empty() : window;
+    }
+
+    public void updateCheckpoint(TaskRunCheckpoint checkpoint) {
+        this.checkpoint = checkpoint == null ? TaskRunCheckpoint.empty() : checkpoint;
+    }
+
+    public void heartbeat(Instant heartbeatAt) {
+        this.lastHeartbeat = heartbeatAt;
+    }
+
+    public void bindRunContext(String schedulerRunId, String correlationId) {
+        RunContext updated = this.runContext.withSchedulerRun(schedulerRunId);
+        updated = updated.withCorrelation(correlationId);
+        this.runContext = updated;
     }
 
     public void appendStats(RunStats delta) {
