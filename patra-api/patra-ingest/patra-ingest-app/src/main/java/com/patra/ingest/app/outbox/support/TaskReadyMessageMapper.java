@@ -9,15 +9,22 @@ import java.io.IOException;
 
 /**
  * 将 Outbox 载荷转换为任务发布消息。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class TaskReadyMessageMapper {
 
+    /** JSON 映射器 */
     private final ObjectMapper objectMapper;
 
     public TaskReadyMessageMapper(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 将 OutboxMessage 映射为 TaskReadyMessage。
+     */
     public TaskReadyMessage map(OutboxMessage message) {
         try {
             JsonNode payloadNode = objectMapper.readTree(message.getPayloadJson());

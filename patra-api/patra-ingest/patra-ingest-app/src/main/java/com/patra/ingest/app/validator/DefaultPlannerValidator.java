@@ -37,7 +37,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                        PlannerWindow window,
                                        long currentQueuedTasks) {
         
-        log.debug("validating plan assembly for provenance={}, operation={}, window={}, queuedTasks={}",
+        log.debug("Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
                 triggerNorm.provenanceCode(), triggerNorm.operationCode(), window, currentQueuedTasks);
 
         // 1. 验证窗口合理性
@@ -49,7 +49,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
         // 3. 验证来源配置能力
         validateSourceCapabilities(triggerNorm, snapshot, window);
         
-        log.debug("plan assembly validation passed");
+        log.debug("Plan assembly validation passed");
     }
 
     /**
@@ -58,7 +58,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
         // UPDATE 操作允许空窗口
         if (triggerNorm.isUpdate()) {
-            log.debug("UPDATE operation, allowing null window");
+            log.debug("Update operation detected, allowing null window");
             return;
         }
 
@@ -90,7 +90,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                             windowDuration.toSeconds(), MIN_REASONABLE_WINDOW.toSeconds()));
         }
 
-        log.debug("window validation passed: duration={}min", windowDuration.toMinutes());
+        log.debug("Window validation passed, duration={}min", windowDuration.toMinutes());
     }
 
     /**
@@ -103,7 +103,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                             currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD));
         }
         
-        log.debug("queue backpressure check passed: {} tasks queued", currentQueuedTasks);
+        log.debug("Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
     }
 
     /**
@@ -114,7 +114,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                             PlannerWindow window) {
         
         if (snapshot == null) {
-            log.warn("provenance config snapshot is missing, skip capability validation");
+            log.warn("Provenance config snapshot is missing, skip capability validation");
             return;
         }
 
@@ -159,7 +159,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
             }
         }
 
-        log.debug("incremental capability validation passed for source={}", triggerNorm.provenanceCode());
+        log.debug("Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
     }
 
     /**

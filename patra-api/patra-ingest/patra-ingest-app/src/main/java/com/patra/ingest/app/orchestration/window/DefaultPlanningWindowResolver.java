@@ -49,15 +49,22 @@ import org.springframework.stereotype.Component;
  * - watermark_lag_seconds 为空视为0
  * - lookback / overlap 在 Plan 总窗不应用 overlap（overlap 在 slice 阶段使用），此实现忽略 overlap
  * - maxWindowSpanSeconds 不在总窗强制截断（切片阶段约束 slice），若配置需强制可在此加保护，这里仅做最小防守
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Component
 public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
+    /** 默认总窗口跨度（24 小时）。 */
     private static final Duration DEFAULT_WINDOW_SIZE = Duration.ofHours(24);
+    /** 默认安全延迟，用于修剪“当前时间”。 */
     private static final Duration DEFAULT_SAFETY_LAG = Duration.ZERO;
-    private static final Duration MIN_EFFECTIVE_WINDOW = Duration.ofSeconds(1); // 避免非正向
+    /** 最小有效窗口长度（>0 秒，避免产生空窗）。 */
+    private static final Duration MIN_EFFECTIVE_WINDOW = Duration.ofSeconds(1);
 
+    /** {@inheritDoc} */
     @Override
     public PlannerWindow resolveWindow(PlanTriggerNorm triggerNorm,
                                        ProvenanceConfigSnapshot snapshot,
@@ -84,6 +91,9 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     }
 
     /* ===================== HARVEST ===================== */
+    /**
+     * 解析 HARVEST 模式的计划窗口。
+     */
     private PlannerWindow resolveHarvest(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                          Instant harvestWM,
                                          Instant userFrom,
@@ -123,6 +133,9 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     }
 
     /* ===================== BACKFILL ===================== */
+    /**
+     * 解析 BACKFILL 模式的计划窗口。
+     */
     private PlannerWindow resolveBackfill(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                           Instant backfillWM,
                                           Instant forwardWM,
@@ -165,6 +178,9 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     }
 
     /* ===================== UPDATE ===================== */
+    /**
+     * 解析 UPDATE 模式的计划窗口。
+     */
     private PlannerWindow resolveUpdate(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                         Instant updateWM,
                                         Instant userFrom,
@@ -220,6 +236,9 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     }
 
     /* ===================== Helpers ===================== */
+    /**
+     * 生成安全窗口，确保窗口长度不低于最小阈值。
+     */
     private PlannerWindow safeWindow(Instant from, Instant to) {
         if (Duration.between(from, to).compareTo(MIN_EFFECTIVE_WINDOW) < 0) {
             to = from.plus(MIN_EFFECTIVE_WINDOW);
@@ -227,6 +246,9 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
         return new PlannerWindow(from, to);
     }
 
+    /**
+     * 当窗口为空时，返回一个最小窗口供上层识别并做兜底处理。
+     */
     private PlannerWindow nullWindowIfEmpty(Instant from, Instant to) {
         // 返回一个最小窗口以便上层可感知 empty，再由 validator 处理；避免 IllegalArgumentException
         return new PlannerWindow(from, from.plus(MIN_EFFECTIVE_WINDOW));

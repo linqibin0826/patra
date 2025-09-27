@@ -21,12 +21,7 @@ import java.util.Map;
 
 /**
  * 抽象的 Provenance 调度任务基类。
- *
- * <p>为各个数据来源提供统一的XXL-Job调度任务框架，包含：
- * - JSON参数解析和验证
- * - 调用 app 层的 ingestPlan 方法
- * - 错误处理和日志记录
- * - 子类只需实现getProvenanceCode方法</p>
+ * <p>为各个数据来源提供统一的 XXL-Job 处理模板，负责参数解析、执行编排与异常处理。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -34,37 +29,49 @@ import java.util.Map;
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {
 
+    /**
+     * 计划编排应用服务
+     */
     @Autowired
     private PlanIngestionUseCase planIngestionUseCase;
 
+    /**
+     * JSON 解析器
+     */
     @Autowired
     private ObjectMapper objectMapper;
 
     /**
      * 获取当前任务对应的来源代码。
+     *
+     * @return 数据来源枚举
      */
     protected abstract ProvenanceCode getProvenanceCode();
 
     /**
      * 获取当前任务对应的操作类型（由子类固定）。
+     *
+     * @return 操作类型枚举
      */
     protected abstract OperationCode getOperationCode();
 
     /**
      * 获取端点名称，默认 SEARCH，子类可覆盖。
+     *
+     * @return 端点枚举
      */
     protected Endpoint getEndpoint() {
         return Endpoint.SEARCH;
     }
 
     /**
-     * 解析XXL-Job参数。
+     * 解析 XXL-Job 参数。
      *
-     * @param paramStr JSON格式的参数字符串
-     * @return 解析后的请求对象
+     * @param paramStr JSON 格式的参数字符串
+     * @return 解析后的应用层请求
      */
     protected PlanIngestionRequest parseJobParam(String paramStr) {
-        // 空参数 -> 空 Map
+        // 空参数 -> 使用默认触发配置
         if (paramStr == null || paramStr.trim().isEmpty()) {
             return new PlanIngestionRequest(
                     getProvenanceCode(),
@@ -92,18 +99,24 @@ public abstract class AbstractProvenanceScheduleJob {
             Instant windowFrom = null;
             if (root.hasNonNull("windowFrom")) {
                 String wf = root.get("windowFrom").asText();
-                if (!wf.isEmpty()) windowFrom = Instant.parse(wf);
+                if (!wf.isEmpty()) {
+                    windowFrom = Instant.parse(wf);
+                }
             }
             Instant windowTo = null;
             if (root.hasNonNull("windowTo")) {
                 String wt = root.get("windowTo").asText();
-                if (!wt.isEmpty()) windowTo = Instant.parse(wt);
+                if (!wt.isEmpty()) {
+                    windowTo = Instant.parse(wt);
+                }
             }
             Priority priority = null;
             if (root.hasNonNull("priority")) {
                 try {
                     priority = Priority.valueOf(root.get("priority").asText().toUpperCase());
-                } catch (Exception ignored) { /* 忽略无法解析的优先级 */ }
+                } catch (Exception ignored) {
+                    // 忽略无法解析的优先级取值
+                }
             }
             return new PlanIngestionRequest(
                     getProvenanceCode(),
@@ -127,30 +140,31 @@ public abstract class AbstractProvenanceScheduleJob {
     /**
      * 执行调度任务的通用逻辑。
      *
-     * @param paramStr XXL-Job JSON参数字符串
+     * @param paramStr XXL-Job JSON 参数字符串
      */
     protected void executeScheduleJob(String paramStr) {
         long startTime = System.currentTimeMillis();
 
         try {
-            log.info("开始执行{}:{}:{} 调度任务, 参数: {}", getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
+            log.info("Starting scheduled job, provenance={}, endpoint={}, operation={}, rawParam={}",
+                    getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
 
             PlanIngestionRequest command = parseJobParam(paramStr);
             PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("{}:{}:{} 调度任务执行成功, 耗时: {}ms, planId: {}, taskCount: {}",
+            log.info("Scheduled job completed, provenance={}, endpoint={}, operation={}, durationMs={}, planId={}, taskCount={}",
                     getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, result.planId(), result.taskCount());
 
-            XxlJobHelper.handleSuccess(String.format("任务执行成功，耗时%dms，planId=%s，taskCount=%d",
+            XxlJobHelper.handleSuccess(String.format("Job succeeded in %dms, planId=%s, taskCount=%d",
                     duration, result.planId(), result.taskCount()));
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("{}:{}:{} 调度任务执行失败, 耗时: {}ms, 错误: {}",
+            log.error("Scheduled job failed, provenance={}, endpoint={}, operation={}, durationMs={}, error={}",
                     getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, e.getMessage(), e);
 
-            XxlJobHelper.handleFail(String.format("任务执行失败: %s", e.getMessage()));
+            XxlJobHelper.handleFail(String.format("Job failed: %s", e.getMessage()));
             throw e;
         }
     }

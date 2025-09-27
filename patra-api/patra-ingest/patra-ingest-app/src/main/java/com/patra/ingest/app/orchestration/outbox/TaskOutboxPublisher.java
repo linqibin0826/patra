@@ -24,6 +24,10 @@ import java.util.Optional;
 
 /**
  * 将任务入队事件转换为 Outbox 消息并持久化。
+ * <p>支持首发与补偿场景，保障任务推送链路的幂等性。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Component
@@ -36,9 +40,18 @@ public class TaskOutboxPublisher {
     /** 默认业务操作类型标识。 */
     private static final String DEFAULT_OP_TYPE = "TASK_READY";
 
+    /** Outbox 仓储 */
     private final OutboxMessageRepository outboxMessageRepository;
+    /** JSON 处理器 */
     private final ObjectMapper objectMapper;
 
+    /**
+     * 首次发布任务入队事件。
+     *
+     * @param events 入队事件列表
+     * @param plan 关联计划
+     * @param schedule 调度实例
+     */
     public void publish(List<TaskQueuedEvent> events,
                         PlanAggregate plan,
                         ScheduleInstanceAggregate schedule) {
@@ -76,6 +89,13 @@ public class TaskOutboxPublisher {
         }
     }
 
+    /**
+     * 对补偿任务刷新或新增 Outbox 记录，便于 Relay 重新发布。
+     *
+     * @param events 入队事件列表
+     * @param plan 关联计划
+     * @param schedule 调度实例
+     */
     public void publishRetry(List<TaskQueuedEvent> events,
                              PlanAggregate plan,
                              ScheduleInstanceAggregate schedule) {
@@ -108,6 +128,7 @@ public class TaskOutboxPublisher {
                         .msgId(null)
                         .build();
                 outboxMessageRepository.saveOrUpdate(refreshed);
+                log.info("Refreshed outbox message for retry, aggregateId={}, dedupKey={}", event.taskId(), event.idempotentKey());
             } else {
                 OutboxMessage message = OutboxMessage.builder()
                         .aggregateType(AGGREGATE_TYPE_TASK)
@@ -122,10 +143,18 @@ public class TaskOutboxPublisher {
                         .retryCount(0)
                         .build();
                 outboxMessageRepository.saveOrUpdate(message);
+                log.info("Created new retry outbox message, aggregateId={}, dedupKey={}", event.taskId(), event.idempotentKey());
             }
         }
     }
 
+    /**
+     * 构建消息负载。
+     *
+     * @param event 任务入队事件
+     * @param plan 关联计划
+     * @return JSON 负载
+     */
     private ObjectNode buildPayload(TaskQueuedEvent event, PlanAggregate plan) {
         ObjectNode payload = JsonNodeFactory.instance.objectNode();
         payload.put("taskId", event.taskId());
@@ -163,6 +192,14 @@ public class TaskOutboxPublisher {
         return payload;
     }
 
+    /**
+     * 构建消息头部，用于传递调度上下文。
+     *
+     * @param event 任务事件
+     * @param schedule 调度实例
+     * @param plan 计划信息
+     * @return JSON 头部
+     */
     private ObjectNode buildHeaders(TaskQueuedEvent event,
                                     ScheduleInstanceAggregate schedule,
                                     PlanAggregate plan) {
@@ -188,6 +225,12 @@ public class TaskOutboxPublisher {
         return headers;
     }
 
+    /**
+     * 序列化 JSON 节点。
+     *
+     * @param node JSON 节点
+     * @return 序列化字符串
+     */
     private String writeJson(ObjectNode node) {
         try {
             return objectMapper.writeValueAsString(node);
@@ -196,6 +239,12 @@ public class TaskOutboxPublisher {
         }
     }
 
+    /**
+     * 读取 JSON 字符串为节点。
+     *
+     * @param json JSON 字符串
+     * @return 解析后的节点
+     */
     private JsonNode readJsonNode(String json) {
         try {
             return objectMapper.readTree(json);
@@ -204,10 +253,22 @@ public class TaskOutboxPublisher {
         }
     }
 
+    /**
+     * 解析最早发布时间。
+     *
+     * @param scheduledAt 任务调度时间
+     * @return NotBefore 时间
+     */
     private Instant resolveNotBefore(Instant scheduledAt) {
         return scheduledAt == null ? Instant.now() : scheduledAt;
     }
 
+    /**
+     * 生成分区键，确保同来源同操作在下游保持顺序。
+     *
+     * @param event 任务事件
+     * @return 分区键
+     */
     private String buildPartitionKey(TaskQueuedEvent event) {
         String provenance = event.provenanceCode() == null ? "" : event.provenanceCode();
         String operation = event.operationCode() == null ? "" : event.operationCode();

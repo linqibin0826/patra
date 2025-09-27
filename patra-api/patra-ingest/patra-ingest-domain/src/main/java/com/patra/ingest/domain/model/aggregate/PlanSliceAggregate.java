@@ -6,17 +6,28 @@ import com.patra.ingest.domain.model.enums.SliceStatus;
 import java.util.Objects;
 
 /**
- * 计划切片聚合根。
+ * 计划切片聚合根，描述计划切片的签名与状态流转。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class PlanSliceAggregate extends AggregateRoot<Long> {
 
+    /** 关联计划 ID */
     private Long planId;
+    /** 来源编码 */
     private final String provenanceCode;
+    /** 切片序号 */
     private final int sequence;
+    /** 切片签名哈希 */
     private final String sliceSignatureHash;
+    /** 切片规格 JSON */
     private final String sliceSpecJson;
+    /** 局部表达式哈希 */
     private final String exprHash;
+    /** 局部表达式快照 JSON */
     private final String exprSnapshotJson;
+    /** 切片状态 */
     private SliceStatus status;
 
     private PlanSliceAggregate(Long id,

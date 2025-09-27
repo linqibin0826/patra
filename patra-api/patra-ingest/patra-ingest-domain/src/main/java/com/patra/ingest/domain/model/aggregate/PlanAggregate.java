@@ -10,23 +10,39 @@ import java.util.Objects;
 
 /**
  * 计划聚合根：负责封装计划蓝图与状态流转。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class PlanAggregate extends AggregateRoot<Long> {
 
+    /** 调度实例 ID */
     private final Long scheduleInstanceId;
+    /** 计划幂等键 */
     private final String planKey;
+    /** 来源编码 */
     private final String provenanceCode;
-    // 内部采用枚举以保证领域一致性；持久化时由 Converter 转为字符串
+    /** 来源端点（领域枚举） */
     private final Endpoint endpoint;
+    /** 操作类型（领域枚举） */
     private final OperationCode operationCode;
+    /** 表达式原型哈希 */
     private final String exprProtoHash;
+    /** 表达式原型快照 JSON */
     private final String exprProtoSnapshotJson;
+    /** 来源配置快照 JSON */
     private final String provenanceConfigSnapshotJson;
+    /** 来源配置快照哈希 */
     private final String provenanceConfigHash;
+    /** 窗口开始 */
     private final Instant windowFrom;
+    /** 窗口结束 */
     private final Instant windowTo;
+    /** 切片策略编码 */
     private final String sliceStrategyCode;
+    /** 切片策略参数 JSON */
     private final String sliceParamsJson;
+    /** 当前计划状态 */
     private PlanStatus status;
 
     private PlanAggregate(Long id,

@@ -16,13 +16,21 @@ import org.springframework.stereotype.Component;
 
 /**
  * Plan 业务表达式构建器，负责根据触发命令与来源配置生成 canonical 表达式。
+ * <p>在计划装配阶段使用，可扩展外部自定义规则。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Component
 public class PlanExpressionBuilder {
 
     /**
-     * 构造计划级表达式描述对象（含原始 Expr、规范化 JSON 与哈希）。
+     * 构造计划级表达式描述对象（含原始表达式、规范化 JSON 与哈希）。
+     *
+     * @param norm 触发规范
+     * @param configSnapshot 来源配置快照
+     * @return 计划表达式描述
      */
     public PlanExpressionDescriptor build(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         Expr businessExpr = buildBusinessExpression(norm, configSnapshot);
@@ -30,8 +38,11 @@ public class PlanExpressionBuilder {
         return new PlanExpressionDescriptor(businessExpr, snapshot.canonicalJson(), snapshot.hash());
     }
 
+    /**
+     * 构建计划业务表达式。
+     */
     private Expr buildBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        log.debug("building plan business expression, operation={}", norm.operationCode());
+        log.debug("Building plan business expression, operation={}", norm.operationCode());
 
         List<Expr> constraints = buildBusinessConstraints(norm, configSnapshot);
         Expr external = buildExternalConditionsExpr(norm);
@@ -59,6 +70,9 @@ public class PlanExpressionBuilder {
         return null;
     }
 
+    /**
+     * 构建基础约束列表。
+     */
     private List<Expr> buildBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         List<Expr> constraints = new ArrayList<>();
         if (norm.isUpdate()) {
@@ -67,6 +81,9 @@ public class PlanExpressionBuilder {
         return constraints;
     }
 
+    /**
+     * 构建 UPDATE 操作相关约束。
+     */
     private List<Expr> buildUpdateBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         return new ArrayList<>();
     }

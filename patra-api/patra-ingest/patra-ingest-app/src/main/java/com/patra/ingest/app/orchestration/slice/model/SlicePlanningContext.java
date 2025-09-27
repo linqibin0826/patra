@@ -8,6 +8,18 @@ import java.util.Objects;
 
 /**
  * 切片策略上下文。
+ * <p>
+ * 聚合计划触发规范、计划窗口、业务表达式以及来源配置快照，作为切片策略执行的输入。
+ * 该上下文由应用层在编排阶段统一构建，保证策略执行时信息完备、语义一致。
+ * </p>
+ *
+ * @param norm            触发规范，包含计划模式、步长等信息
+ * @param window          计划窗口，统一采用 UTC 半开区间
+ * @param planExpression  计划表达式描述，含 Expr、快照 JSON 与哈希
+ * @param configSnapshot  来源配置快照，可选（部分测试场景为空）
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record SlicePlanningContext(PlanTriggerNorm norm,
                                    PlannerWindow window,

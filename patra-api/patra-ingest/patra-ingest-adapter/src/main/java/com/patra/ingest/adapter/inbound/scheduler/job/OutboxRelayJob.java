@@ -19,17 +19,27 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Outbox Relay XXL-Job 任务处理器。
+ * Outbox Relay XXL-Job 任务处理器，负责拉取 Outbox 并驱动消息发布。
+ * <p>结合 XXL 参数与默认配置生成指令，调用应用层 OutboxRelayUseCase。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class OutboxRelayJob {
 
+    /** JSON 解析器 */
     private final ObjectMapper objectMapper;
+    /** Outbox Relay 应用用例 */
     private final OutboxRelayUseCase relayUseCase;
+    /** Relay 运行配置 */
     private final OutboxRelayProperties relayProperties;
 
+    /**
+     * XXL-Job 执行入口，解析调度参数并发起 Relay。
+     */
     @XxlJob("ingestOutboxRelayJob")
     public void execute() {
         Instant now = Instant.now();
@@ -54,22 +64,25 @@ public class OutboxRelayJob {
                     leaseOwner
             );
             OutboxRelayResult result = relayUseCase.relay(command);
-            log.info("Outbox Relay 完成 channel={} fetched={} success={} retried={} dead={} skipped={}",
+            log.info("Outbox relay completed, channel={}, fetched={}, success={}, retry={}, dead={}, skipped={}",
                     channel,
                     result.fetched(),
                     result.succeeded(),
                     result.retried(),
                     result.dead(),
                     result.skipped());
-            XxlJobHelper.handleSuccess("Relay 完成 channel=%s fetched=%d success=%d retry=%d dead=%d skipped=%d".formatted(
+            XxlJobHelper.handleSuccess("Relay finished channel=%s fetched=%d success=%d retry=%d dead=%d skipped=%d".formatted(
                     channel, result.fetched(), result.succeeded(), result.retried(), result.dead(), result.skipped()));
         } catch (Exception ex) {
-            log.error("Outbox Relay 任务执行失败", ex);
-            XxlJobHelper.handleFail("执行失败: " + ex.getMessage());
-            throw new IllegalStateException("Outbox Relay 执行失败", ex);
+            log.error("Outbox relay execution failed", ex);
+            XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
+            throw new IllegalStateException("Outbox relay execution failed", ex);
         }
     }
 
+    /**
+     * 解析调度参数 JSON。
+     */
     private OutboxRelayJobParam parseParam(String param) {
         if (!StringUtils.hasText(param)) {
             return new OutboxRelayJobParam(null, null, null, null, null);
@@ -77,10 +90,13 @@ public class OutboxRelayJob {
         try {
             return objectMapper.readValue(param, OutboxRelayJobParam.class);
         } catch (Exception e) {
-            throw new IllegalArgumentException("解析参数失败: " + e.getMessage(), e);
+            throw new IllegalArgumentException("Failed to parse relay param: " + e.getMessage(), e);
         }
     }
 
+    /**
+     * 解析正整数配置，若为空或非法则使用兜底值。
+     */
     private int resolvePositive(Integer candidate, int fallback) {
         if (candidate == null || candidate <= 0) {
             return fallback;
@@ -88,6 +104,9 @@ public class OutboxRelayJob {
         return candidate;
     }
 
+    /**
+     * 解析持续时间，可接受 ISO8601 或秒数格式。
+     */
     private Duration resolveDuration(String value, Duration fallback) {
         if (!StringUtils.hasText(value)) {
             return fallback;
@@ -98,10 +117,13 @@ public class OutboxRelayJob {
             }
             return Duration.ofSeconds(Long.parseLong(value));
         } catch (Exception e) {
-            throw new IllegalArgumentException("非法的持续时间: " + value, e);
+            throw new IllegalArgumentException("Illegal duration value: " + value, e);
         }
     }
 
+    /**
+     * 构建租约持有者标识，便于多实例并发调度。
+     */
     private String buildLeaseOwner() {
         try {
             String host = InetAddress.getLocalHost().getHostName();

@@ -28,6 +28,10 @@ import java.util.Map;
 
 /**
  * 默认的计划装配服务：根据触发请求组装计划、切片与任务聚合。
+ * <p>负责驱动切片策略与任务生成，是计划落库前的核心装配器。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Component
 public class DefaultPlanAssemblyService implements PlanAssemblyService {
@@ -58,6 +62,9 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     /**
      * 组装计划、切片与任务，形成可持久化的聚合集合。
      * <p>流程：规范化配置 → 构建计划聚合 → 调用切片策略 → 派生任务。</p>
+     *
+     * @param request 装配请求，包含触发规范、窗口、配置与表达式
+     * @return 组合后的聚合集合
      */
     @Override
     public PlanAssembly assemble(PlanAssemblyRequest request) {
@@ -88,6 +95,16 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     /**
      * 根据归一化请求构造计划聚合。
      */
+    /**
+     * 构建计划聚合根，封装来源配置与表达式快照。
+     *
+     * @param norm 触发规范
+     * @param window 计划窗口
+     * @param planExpression 计划级表达式描述
+     * @param sliceStrategy 切片策略编码
+     * @param configSnapshot 配置快照（规范化）
+     * @return 新的计划聚合
+     */
     private PlanAggregate createPlanAggregate(PlanTriggerNorm norm,
                                               PlannerWindow window,
                                               PlanExpressionDescriptor planExpression,
@@ -116,6 +133,16 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
 
     /**
      * 触发对应的切片规划器生成切片草稿，并转为聚合。
+     */
+    /**
+     * 按策略生成切片草稿并转换为聚合。
+     *
+     * @param norm 触发规范
+     * @param window 计划窗口
+     * @param planExpression 计划表达式
+     * @param configSnapshot 来源配置
+     * @param sliceStrategy 切片策略编码
+     * @return 切片聚合及草稿集合
      */
     private SliceGenerationResult createSlices(PlanTriggerNorm norm,
                                                 PlannerWindow window,
@@ -151,6 +178,14 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     /**
      * 为每个切片派生任务。此处暂以切片序号作为占位 sliceId，后续持久化时再绑定真实 ID。
      */
+    /**
+     * 根据切片信息派生任务聚合。
+     *
+     * @param norm 触发规范
+     * @param window 计划窗口
+     * @param sliceResult 切片生成结果
+     * @return 任务聚合列表
+     */
     private List<TaskAggregate> createTasks(PlanTriggerNorm norm,
                                              PlannerWindow window,
                                              SliceGenerationResult sliceResult) {
@@ -181,6 +216,13 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         return tasks;
     }
 
+    /**
+     * 决定任务的计划执行时间。
+     *
+     * @param draft 切片草稿
+     * @param window 计划窗口
+     * @return 任务计划时间
+     */
     private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
         if (draft.windowFrom() != null) {
             return draft.windowFrom();
@@ -188,6 +230,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
         if (window != null && window.from() != null) {
             return window.from();
         }
+        // 无窗口时回退当前时间，保持调度及时性
         return Instant.now();
     }
 

@@ -11,14 +11,25 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * 基于 MyBatis-Plus 的计划仓储实现。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class PlanRepositoryMpImpl implements PlanRepository {
 
+    /** 计划 Mapper */
     private final PlanMapper planMapper;
+    /** 聚合与 DO 转换器 */
     private final PlanConverter planConverter;
 
+    /**
+     * 按是否存在 ID 执行插入或更新。
+     */
     @Override
     public PlanAggregate save(PlanAggregate plan) {
         PlanDO entity = planConverter.toEntity(plan);
@@ -30,6 +41,9 @@ public class PlanRepositoryMpImpl implements PlanRepository {
         return planConverter.toAggregate(entity);
     }
 
+    /**
+     * 根据 planKey 查询计划。
+     */
     @Override
     public Optional<PlanAggregate> findByPlanKey(String planKey) {
         if (planKey == null || planKey.isBlank()) {
@@ -39,6 +53,9 @@ public class PlanRepositoryMpImpl implements PlanRepository {
         return Optional.ofNullable(entity).map(planConverter::toAggregate);
     }
 
+    /**
+     * 判断 planKey 是否存在。
+     */
     @Override
     public boolean existsByPlanKey(String planKey) {
         if (planKey == null || planKey.isBlank()) {

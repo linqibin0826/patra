@@ -21,24 +21,25 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class XxlJobConfig {
     
+    /** 调度中心地址 */
     @Value("${xxl.job.admin.addresses}")
     private String adminAddresses;
-    
+    /** 执行器绑定 IP */
     @Value("${xxl.job.executor.ip:}")
     private String ip;
-    
+    /** 调度访问令牌 */
     @Value("${xxl.job.accessToken:}")
     private String accessToken;
-    
+    /** 执行器日志路径 */
     @Value("${xxl.job.executor.logpath:logs/xxl-job}")
     private String logPath;
-    
+    /** 日志保留天数 */
     @Value("${xxl.job.executor.logretentiondays:30}")
     private int logRetentionDays;
-
+    /** 应用服务端口 */
     @Value("${server.port}")
     private int serverPort;
-
+    /** 应用名称 */
     @Value("${spring.application.name}")
     private String appName;
     
@@ -47,7 +48,7 @@ public class XxlJobConfig {
      */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
-        log.info("初始化 XXL-Job 执行器配置...");
+        log.info("Initializing XXL-Job executor configuration...");
         
         XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
         xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
@@ -59,7 +60,7 @@ public class XxlJobConfig {
         xxlJobSpringExecutor.setLogPath(logPath);
         xxlJobSpringExecutor.setLogRetentionDays(logRetentionDays);
         
-        log.info("XXL-Job 执行器配置完成: appName={}, adminAddresses={}, port={}", 
+        log.info("XXL-Job executor initialized, appName={}, adminAddresses={}, port={}",
                 appName, adminAddresses, executorPort);
         
         return xxlJobSpringExecutor;

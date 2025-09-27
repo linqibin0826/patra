@@ -13,17 +13,27 @@ import java.util.Objects;
 
 /**
  * 调度实例聚合根：记录一次计划触发及其初始快照。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
 
+    /** 调度器类型 */
     private final Scheduler scheduler;
+    /** 调度任务 ID */
     private final String schedulerJobId;
+    /** 调度日志 ID */
     private final String schedulerLogId;
+    /** 触发类型 */
     private final TriggerType triggerType;
+    /** 触发时间 */
     private final Instant triggeredAt;
+    /** 来源编码 */
     private final ProvenanceCode provenanceCode;
+    /** 触发参数 */
     private final Map<String, Object> triggerParams;
 
     private ScheduleInstanceAggregate(Long id,

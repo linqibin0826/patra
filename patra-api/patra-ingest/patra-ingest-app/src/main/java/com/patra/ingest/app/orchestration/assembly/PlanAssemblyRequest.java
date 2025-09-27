@@ -7,7 +7,12 @@ import com.patra.ingest.app.orchestration.expression.PlanExpressionDescriptor;
 import java.util.Objects;
 
 /**
- * Immutable request for plan assembly composed by the application service.
+ * 应用层构造的计划装配请求，聚合触发规范、窗口、配置与表达式。
+ *
+ * @param triggerNorm 触发规范
+ * @param window 计划窗口
+ * @param configSnapshot 配置快照
+ * @param planExpression 计划表达式描述
  */
 public record PlanAssemblyRequest(
         PlanTriggerNorm triggerNorm,

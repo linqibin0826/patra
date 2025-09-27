@@ -4,12 +4,18 @@ import java.time.Instant;
 
 /**
  * ingest.task.ready 消息载体。
+ *
+ * @param payload 消息主体
+ * @param header 消息头部
  */
 public record TaskReadyMessage(
         Payload payload,
         Header header
 ) {
 
+    /**
+     * 任务消息主体。
+     */
     public record Payload(
             Long taskId,
             Long planId,

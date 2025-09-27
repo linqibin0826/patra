@@ -22,24 +22,35 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Outbox Relay 应用服务。
+ * Outbox Relay 应用服务，负责 Outbox -> MQ 的消息转发。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OutboxRelayApplicationService implements OutboxRelayUseCase {
 
+    /** Outbox 仓储（含发布操作） */
     private final OutboxRelayRepository relayRepository;
+    /** RocketMQ 消息发布器 */
     private final PatraMessagePublisher messagePublisher;
+    /** Relay 配置 */
     private final OutboxRelayProperties relayProperties;
+    /** 目的地解析器 */
     private final OutboxDestinationResolver destinationResolver;
+    /** 消息体映射器 */
     private final TaskReadyMessageMapper messageMapper;
 
+    /**
+     * 执行 Outbox Relay 流程。
+     */
     @Override
     @Transactional
     public OutboxRelayResult relay(OutboxRelayCommand command) {
         if (!relayProperties.isEnabled()) {
-            log.debug("outbox relay disabled, skip channel={}", command.channel());
+            log.debug("Outbox relay disabled, skipping channel={}", command.channel());
             return new OutboxRelayResult(0, 0, 0, 0, 0);
         }
         int batchSize = normalizeBatchSize(command.batchSize());
@@ -94,6 +105,9 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         return new OutboxRelayResult(messages.size(), succeeded, retried, dead, skipped);
     }
 
+    /**
+     * 构建 RocketMQ 消息载体。
+     */
     private PatraMessage<TaskReadyMessage> buildPatraMessage(OutboxMessage message,
                                                              TaskReadyMessage body,
                                                              Instant occurredAtFallback) {
@@ -111,6 +125,9 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
                 .build();
     }
 
+    /**
+     * 处理发布失败逻辑。
+     */
     private FailureHandling handleFailure(OutboxMessage message,
                                           long publishingVersion,
                                           Instant executeAt,
@@ -137,10 +154,16 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         return FailureHandling.RETRY;
     }
 
+    /**
+     * 判断是否为消息体解析失败。
+     */
     private boolean bodyParseFailure(Exception ex) {
         return ex instanceof IllegalStateException;
     }
 
+    /**
+     * 校正批次大小。
+     */
     private int normalizeBatchSize(int candidate) {
         int fallback = relayProperties.getBatchSize();
         if (candidate <= 0) {
@@ -149,6 +172,9 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         return Math.min(candidate, fallback);
     }
 
+    /**
+     * 校正正整数参数。
+     */
     private int normalizePositive(int candidate, int fallback) {
         if (candidate <= 0) {
             return fallback;
@@ -156,6 +182,9 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         return candidate;
     }
 
+    /**
+     * 校正常量持续时间。
+     */
     private Duration normalizeDuration(Duration candidate, Duration fallback) {
         if (candidate == null || candidate.isNegative() || candidate.isZero()) {
             return fallback;
@@ -163,6 +192,9 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         return candidate;
     }
 
+    /**
+     * 根据尝试次数计算退避时间。
+     */
     private Duration resolveBackoff(Duration base, int attempt) {
         if (attempt <= 1) {
             return base;
@@ -172,6 +204,9 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         return base.multipliedBy(multiplier);
     }
 
+    /**
+     * 截断字符串。
+     */
     private String truncate(String msg, int max) {
         return StrUtil.isBlank(msg) ? msg : StrUtil.maxLength(msg, max);
     }

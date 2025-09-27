@@ -10,27 +10,49 @@ import com.patra.ingest.domain.model.vo.TaskSchedulerContext;
 import java.time.Instant;
 
 /**
- * 采集任务聚合根。
+ * 采集任务聚合根，封装调度、执行、租约等状态信息。
+ * <p>支持幂等键生成、运行状态管理以及重试补偿。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class TaskAggregate extends AggregateRoot<Long> {
 
+    /** 调度实例 ID */
     private Long scheduleInstanceId;
+    /** 计划 ID */
     private Long planId;
+    /** 切片 ID */
     private Long sliceId;
+    /** 来源编码 */
     private final String provenanceCode;
+    /** 操作编码 */
     private final String operationCode;
+    /** 任务参数 JSON */
     private final String paramsJson;
+    /** 幂等键 */
     private final String idempotentKey;
+    /** 表达式哈希 */
     private final String exprHash;
+    /** 调度优先级 */
     private final Integer priority;
+    /** 计划执行时间 */
     private final Instant scheduledAt;
+    /** 最近心跳时间 */
     private final Instant lastHeartbeatAt;
+    /** 重试次数 */
     private final Integer retryCount;
+    /** 最近错误码 */
     private final String lastErrorCode;
+    /** 最近错误信息 */
     private final String lastErrorMsg;
+    /** 任务状态 */
     private TaskStatus status;
+    /** 租约信息 */
     private LeaseInfo leaseInfo;
+    /** 执行时间线 */
     private ExecutionTimeline executionTimeline;
+    /** 调度上下文 */
     private TaskSchedulerContext schedulerContext;
 
     private TaskAggregate(Long id,
@@ -73,6 +95,21 @@ public class TaskAggregate extends AggregateRoot<Long> {
         this.schedulerContext = schedulerContext == null ? TaskSchedulerContext.empty() : schedulerContext;
     }
 
+    /**
+     * 创建新的任务聚合。
+     *
+     * @param scheduleInstanceId 调度实例 ID
+     * @param planId 计划 ID
+     * @param sliceId 切片 ID 占位
+     * @param provenanceCode 来源编码
+     * @param operationCode 操作编码
+     * @param paramsJson 参数 JSON
+     * @param idempotentKey 幂等键
+     * @param exprHash 表达式哈希
+     * @param priority 优先级
+     * @param scheduledAt 计划执行时间
+     * @return 新任务聚合
+     */
     public static TaskAggregate create(Long scheduleInstanceId,
                                        Long planId,
                                        Long sliceId,
@@ -104,6 +141,9 @@ public class TaskAggregate extends AggregateRoot<Long> {
                 TaskSchedulerContext.empty());
     }
 
+    /**
+     * 从持久化记录重建任务聚合。
+     */
     public static TaskAggregate restore(Long id,
                                         Long scheduleInstanceId,
                                         Long planId,
@@ -208,6 +248,9 @@ public class TaskAggregate extends AggregateRoot<Long> {
         this.leaseInfo = leaseInfo.release();
     }
 
+    /**
+     * 在补偿场景下重置任务状态，回退到排队态。
+     */
     public void prepareForRetry() {
         releaseLease();
         this.executionTimeline = ExecutionTimeline.empty();

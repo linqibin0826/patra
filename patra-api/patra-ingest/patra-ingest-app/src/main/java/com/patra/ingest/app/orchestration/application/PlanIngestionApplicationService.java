@@ -41,26 +41,47 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Ingestion orchestration entry point used by various adapters.
+ * 采集计划编排核心服务，承接调度层调用，完成计划、切片、任务的全链路生成与补偿。
+ * <p>负责串联配置读取、窗口计算、装配持久化及 Outbox 发布，是调度入口的核心实现。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanIngestionApplicationService implements PlanIngestionUseCase {
 
+    /** 来源配置查询端口 */
     private final ProvenancePort provenancePort;
+    /** 游标仓储，用于获取水位 */
     private final CursorRepository cursorRepository;
+    /** 任务仓储 */
     private final TaskRepository taskRepository;
+    /** 计划窗口解析策略 */
     private final PlanningWindowResolver planningWindowResolver;
+    /** 编排前置校验器 */
     private final PlannerValidator plannerValidator;
+    /** 计划装配服务 */
     private final PlanAssemblyService planAssemblyService;
+    /** 任务 Outbox 发布器 */
     private final TaskOutboxPublisher taskOutboxPublisher;
+    /** 计划表达式构建器 */
     private final PlanExpressionBuilder planExpressionBuilder;
 
+    /** 调度实例仓储 */
     private final ScheduleInstanceRepository scheduleInstanceRepository;
+    /** 计划仓储 */
     private final PlanRepository planRepository;
+    /** 切片仓储 */
     private final PlanSliceRepository planSliceRepository;
 
+    /**
+     * 受调度触发的计划编排主流程。
+     *
+     * @param request 调度请求，包括来源、操作、窗口及扩展参数
+     * @return 计划执行结果摘要
+     */
     @Override
     @Transactional
     public PlanIngestionResult ingestPlan(PlanIngestionRequest request) {
@@ -109,6 +130,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
             List<TaskAggregate> retryTasks = new ArrayList<>();
             for (TaskAggregate task : existingTasks) {
                 if (shouldRetry(task)) {
+                    // 重置失败/取消任务，准备重新排队
                     task.prepareForRetry();
                     taskRepository.save(task);
                     retryTasks.add(task);
@@ -155,6 +177,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         return op == null ? null : op.getCode();
     }
 
+    /**
+     * 根据调度请求落库或更新调度实例。
+     *
+     * @param request 调度请求
+     * @return 持久化后的调度实例
+     */
     private ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionRequest request) {
         ScheduleInstanceAggregate schedule = ScheduleInstanceAggregate.start(
                 request.scheduler(),
@@ -167,6 +195,13 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
     }
 
+    /**
+     * 基于调度实例与请求构建领域触发规范。
+     *
+     * @param schedule 调度实例
+     * @param request 调度请求
+     * @return 触发规范
+     */
     private PlanTriggerNorm buildTriggerNorm(ScheduleInstanceAggregate schedule, PlanIngestionRequest request) {
         return new PlanTriggerNorm(
                 schedule.getId(),
@@ -186,6 +221,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
 
 
 
+    /**
+     * 收集任务聚合产生的入队事件。
+     *
+     * @param tasks 任务集合
+     * @return 入队事件列表
+     */
     private List<TaskQueuedEvent> collectQueuedEvents(List<TaskAggregate> tasks) {
         if (CollUtil.isEmpty(tasks)) {
             return List.of();
@@ -201,6 +242,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         return events;
     }
 
+    /**
+     * 判定任务是否需要发起补偿重试。
+     *
+     * @param task 任务聚合
+     * @return true 表示需要重试
+     */
     private boolean shouldRetry(TaskAggregate task) {
         TaskStatus status = task.getStatus();
         return status == TaskStatus.FAILED || status == TaskStatus.CANCELLED;

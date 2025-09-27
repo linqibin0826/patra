@@ -4,7 +4,12 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 计划编排产物。
+ * 计划编排产物，封装计划、切片、任务与状态。
+ *
+ * @param plan 计划聚合
+ * @param slices 切片集合
+ * @param tasks 任务集合
+ * @param status 装配状态
  */
 public record PlanAssembly(PlanAggregate plan,
                            List<PlanSliceAggregate> slices,

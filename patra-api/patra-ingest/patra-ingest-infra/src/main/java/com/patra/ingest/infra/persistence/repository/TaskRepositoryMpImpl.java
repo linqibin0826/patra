@@ -12,13 +12,24 @@ import java.util.List;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 
+/**
+ * 基于 MyBatis-Plus 的任务仓储实现。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 @Repository
 @RequiredArgsConstructor
 public class TaskRepositoryMpImpl implements TaskRepository {
 
+    /** 任务 Mapper */
     private final TaskMapper mapper;
+    /** 任务转换器 */
     private final TaskConverter converter;
 
+    /**
+     * 插入或更新任务聚合。
+     */
     @Override
     public TaskAggregate save(TaskAggregate task) {
         TaskDO entity = converter.toEntity(task);
@@ -33,6 +44,9 @@ public class TaskRepositoryMpImpl implements TaskRepository {
         return task;
     }
 
+    /**
+     * 批量保存任务。
+     */
     @Override
     public List<TaskAggregate> saveAll(List<TaskAggregate> tasks) {
         List<TaskAggregate> persisted = new ArrayList<>(tasks.size());
@@ -42,6 +56,9 @@ public class TaskRepositoryMpImpl implements TaskRepository {
         return persisted;
     }
 
+    /**
+     * 根据计划 ID 查询任务集合。
+     */
     @Override
     public List<TaskAggregate> findByPlanId(Long planId) {
         if (planId == null) {
@@ -58,6 +75,9 @@ public class TaskRepositoryMpImpl implements TaskRepository {
         return aggregates;
     }
 
+    /**
+     * 统计排队中的任务数量。
+     */
     @Override
     public long countQueuedTasks(String provenanceCode, String operationCode) {
         QueryWrapper<TaskDO> wrapper = new QueryWrapper<>();

@@ -5,27 +5,49 @@ import java.util.Objects;
 
 /**
  * Outbox 消息领域对象，封装基础字段。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class OutboxMessage {
 
+    /** 主键 */
     private final Long id;
+    /** 乐观锁版本 */
     private final Long version;
+    /** 聚合类型 */
     private final String aggregateType;
+    /** 聚合 ID */
     private final Long aggregateId;
+    /** 逻辑通道 */
     private final String channel;
+    /** 业务操作类型 */
     private final String opType;
+    /** 分区键 */
     private final String partitionKey;
+    /** 幂等键 */
     private final String dedupKey;
+    /** 负载 JSON */
     private final String payloadJson;
+    /** 头部 JSON */
     private final String headersJson;
+    /** 最早可发布时间 */
     private final Instant notBefore;
+    /** 状态码 */
     private final String statusCode;
+    /** 重试次数 */
     private final Integer retryCount;
+    /** 下次重试时间 */
     private final Instant nextRetryAt;
+    /** 错误码 */
     private final String errorCode;
+    /** 错误信息 */
     private final String errorMsg;
+    /** 租约持有者 */
     private final String leaseOwner;
+    /** 租约到期时间 */
     private final Instant leaseExpireAt;
+    /** 消息 ID */
     private final String msgId;
 
     private OutboxMessage(Builder builder) {

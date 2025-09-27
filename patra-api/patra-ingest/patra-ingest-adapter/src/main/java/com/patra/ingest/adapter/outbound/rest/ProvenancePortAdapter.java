@@ -31,42 +31,52 @@ import java.util.Collections;
  * @author linqibin
  * @since 0.1.0
  */
+/**
+ * Registry 出站适配器：负责访问 patra-registry 获取来源配置。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ProvenancePortAdapter implements ProvenancePort {
 
+    /** Registry RPC 客户端 */
     private final ProvenanceClient provenanceClient;
+    /** 配置快照转换器 */
     private final ProvenanceConfigSnapshotConverter converter;
 
+    /**
+     * 调用 Registry 获取来源配置。
+     */
     @Override
     public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, Endpoint endpointCode, OperationCode operationCode) {
         String code = provenanceCode.getCode();
         String endpoint = endpointCode.name();
-        String taskType = operationCode.name(); // 在registry域中交taskType
+        String taskType = operationCode.name();
         Instant queryTime = Instant.now();
 
-        log.debug("开始获取来源配置, code={}, taskType={}, endpoint={}, at={}", 
+        log.debug("Requesting provenance config, code={}, taskType={}, endpoint={}, at={}",
                 code, taskType, endpoint, queryTime);
 
         try {
             ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, taskType, endpoint, queryTime);
-            
+
             if (resp == null) {
-                log.warn("Registry 返回空配置响应, provenanceCode={}, taskType={}, endpoint={}", 
-                        code, taskType, endpoint);
+                log.warn("Registry returned empty config, code={}, taskType={}, endpoint={}", code, taskType, endpoint);
                 return createMinimalSnapshot(code);
             }
 
             ProvenanceConfigSnapshot snapshot = converter.convert(resp);
-            
-            log.debug("成功获取来源配置, code={}, snapshot={}", code, snapshot);
+
+            log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
             return snapshot;
-            
+
         } catch (FeignException ex) {
             return handleFeignException(ex, code, taskType, endpoint);
         } catch (Exception ex) {
-            String msg = String.format("获取来源配置时发生未知错误, code=%s, taskType=%s, endpoint=%s", 
+            String msg = String.format("Unexpected error when fetching config, code=%s, taskType=%s, endpoint=%s",
                     code, taskType, endpoint);
             log.error(msg, ex);
             throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
@@ -82,27 +92,27 @@ public class ProvenancePortAdapter implements ProvenancePort {
         String responseBody = ex.contentUTF8();
         
         if (status == 404) {
-            log.warn("来源配置未找到, code={}, taskType={}, endpoint={}, status={}", 
+            log.warn("Provenance config not found, code={}, taskType={}, endpoint={}, status={}",
                     code, taskType, endpoint, status);
             return createMinimalSnapshot(code);
         }
-        
+
         if (status >= 400 && status < 500) {
-            String msg = String.format("Registry 客户端错误, code=%s, status=%d, response=%s", 
+            String msg = String.format("Registry client error, code=%s, status=%d, response=%s",
                     code, status, responseBody);
             log.error(msg);
             throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
         }
-        
+
         if (status >= 500 && status < 600) {
-            String msg = String.format("Registry 服务端错误, code=%s, status=%d, response=%s", 
+            String msg = String.format("Registry server error, code=%s, status=%d, response=%s",
                     code, status, responseBody);
             log.error(msg);
-            log.warn("Registry 服务不可用，使用最小配置降级, provenanceCode={}", code);
+            log.warn("Registry unavailable, fallback to minimal snapshot, code={}", code);
             return createMinimalSnapshot(code);
         }
-        
-        String msg = String.format("Registry 调用失败, code=%s, status=%d, response=%s", 
+
+        String msg = String.format("Registry call failed, code=%s, status=%d, response=%s",
                 code, status, responseBody);
         log.error(msg);
         throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
@@ -112,7 +122,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
      * 创建最小可用配置快照。
      */
     private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
-        log.info("创建最小可用配置快照, provenanceCode={}", provenanceCode);
+        log.info("Creating minimal provenance snapshot, code={}", provenanceCode);
         
         // 创建最小的 ProvenanceInfo
         ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance = 

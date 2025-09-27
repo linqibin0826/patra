@@ -4,11 +4,20 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 
 import java.util.List;
 
+/**
+ * 任务仓储端口定义。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 public interface TaskRepository {
+    /** 保存任务 */
     TaskAggregate save(TaskAggregate task);
 
+    /** 批量保存任务 */
     List<TaskAggregate> saveAll(List<TaskAggregate> tasks);
 
+    /** 根据计划 ID 查询任务 */
     List<TaskAggregate> findByPlanId(Long planId);
 
     /**
