@@ -1,11 +1,11 @@
 package com.patra.ingest.app.validator;
 
 import cn.hutool.core.util.StrUtil;
+import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
 import java.time.Duration;
-import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -62,32 +62,38 @@ public class DefaultPlannerValidator implements PlannerValidator {
             return;
         }
 
-        Objects.requireNonNull(window, "planner window must not be null");
+        if (window == null) {
+            throw new PlanValidationException("计划窗口不能为空", PlanValidationException.Reason.WINDOW_MISSING);
+        }
 
         // 非 UPDATE 操作需要有效窗口
         if (window.from() == null || window.to() == null) {
-            throw new IllegalStateException(
-                    String.format("Time window is required for %s operation", triggerNorm.operationCode()));
+            throw new PlanValidationException(
+                    String.format("Time window is required for %s operation", triggerNorm.operationCode()),
+                    PlanValidationException.Reason.WINDOW_MISSING);
         }
 
         // 验证窗口时间顺序
         if (!window.from().isBefore(window.to())) {
-            throw new IllegalStateException(
-                    String.format("Invalid window: from=%s must be before to=%s", window.from(), window.to()));
+            throw new PlanValidationException(
+                    String.format("Invalid window: from=%s must be before to=%s", window.from(), window.to()),
+                    PlanValidationException.Reason.WINDOW_INVALID);
         }
 
         // 验证窗口大小合理性
         Duration windowDuration = Duration.between(window.from(), window.to());
         if (windowDuration.compareTo(MAX_REASONABLE_WINDOW) > 0) {
-            throw new IllegalStateException(
-                    String.format("Window too large: %d days exceeds maximum %d days", 
-                            windowDuration.toDays(), MAX_REASONABLE_WINDOW.toDays()));
+            throw new PlanValidationException(
+                    String.format("Window too large: %d days exceeds maximum %d days",
+                            windowDuration.toDays(), MAX_REASONABLE_WINDOW.toDays()),
+                    PlanValidationException.Reason.WINDOW_TOO_LARGE);
         }
 
         if (windowDuration.compareTo(MIN_REASONABLE_WINDOW) < 0) {
-            throw new IllegalStateException(
+            throw new PlanValidationException(
                     String.format("Window too small: %d seconds below minimum %d seconds",
-                            windowDuration.toSeconds(), MIN_REASONABLE_WINDOW.toSeconds()));
+                            windowDuration.toSeconds(), MIN_REASONABLE_WINDOW.toSeconds()),
+                    PlanValidationException.Reason.WINDOW_TOO_SMALL);
         }
 
         log.debug("Window validation passed, duration={}min", windowDuration.toMinutes());
@@ -98,9 +104,10 @@ public class DefaultPlannerValidator implements PlannerValidator {
      */
     private void validateQueueBackpressure(long currentQueuedTasks) {
         if (currentQueuedTasks > DEFAULT_QUEUE_THRESHOLD) {
-            throw new IllegalStateException(
+            throw new PlanValidationException(
                     String.format("Too many queued tasks (%d > %d), applying backpressure on plan trigger",
-                            currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD));
+                            currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD),
+                    PlanValidationException.Reason.QUEUE_BACKPRESSURE);
         }
         
         log.debug("Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
@@ -141,9 +148,10 @@ public class DefaultPlannerValidator implements PlannerValidator {
         // 如果没有窗口配置，但要求时间窗口，则需要手动指定窗口
         if (windowOffset == null || StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
             if (triggerNorm.requestedWindowFrom() == null && window != null && window.from() != null) {
-                throw new IllegalStateException(
+                throw new PlanValidationException(
                         String.format("Source %s does not support automatic incremental harvest; explicit window required",
-                                triggerNorm.provenanceCode()));
+                                triggerNorm.provenanceCode()),
+                        PlanValidationException.Reason.CAPABILITY_MISMATCH);
             }
         }
 
@@ -153,9 +161,10 @@ public class DefaultPlannerValidator implements PlannerValidator {
                         || StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "COMPOSITE"))) {
 
             if (StrUtil.isBlank(windowOffset.offsetFieldName()) && StrUtil.isBlank(windowOffset.defaultDateFieldName())) {
-                throw new IllegalStateException(
+                throw new PlanValidationException(
                         String.format("Source %s configured for %s offset but missing date field configuration",
-                                triggerNorm.provenanceCode(), windowOffset.offsetTypeCode()));
+                                triggerNorm.provenanceCode(), windowOffset.offsetTypeCode()),
+                        PlanValidationException.Reason.CAPABILITY_MISMATCH);
             }
         }
 
@@ -181,4 +190,3 @@ public class DefaultPlannerValidator implements PlannerValidator {
         }
     }
 }
-

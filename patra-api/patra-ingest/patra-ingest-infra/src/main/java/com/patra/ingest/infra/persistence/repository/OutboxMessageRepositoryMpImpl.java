@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.persistence.repository;
 
+import com.patra.ingest.domain.exception.OutboxPersistenceException;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.enums.OutboxStatus;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
@@ -77,7 +78,8 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     public void markPublished(Long id, Long expectedVersion, String msgId) {
         int updated = mapper.markPublished(id, expectedVersion, msgId);
         if (updated != 1) {
-            throw new IllegalStateException("更新 Outbox 状态失败，id=" + id);
+            throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_PUBLISHED,
+                    "更新 Outbox 状态失败，id=" + id);
         }
     }
 
@@ -85,7 +87,8 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     public void markRetry(Long id, Long expectedVersion, int retryCount, Instant nextRetryAt, String errorCode, String errorMsg) {
         int updated = mapper.markRetry(id, expectedVersion, retryCount, nextRetryAt, errorCode, errorMsg);
         if (updated != 1) {
-            throw new IllegalStateException("写回 Outbox 重试失败，id=" + id);
+            throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_RETRY,
+                    "写回 Outbox 重试失败，id=" + id);
         }
     }
 
@@ -93,7 +96,8 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     public void markDead(Long id, Long expectedVersion, int retryCount, String errorCode, String errorMsg) {
         int updated = mapper.markDead(id, expectedVersion, retryCount, errorCode, errorMsg);
         if (updated != 1) {
-            throw new IllegalStateException("标记 Outbox DEAD 失败，id=" + id);
+            throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_DEAD,
+                    "标记 Outbox DEAD 失败，id=" + id);
         }
     }
 }

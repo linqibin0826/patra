@@ -9,7 +9,8 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.registry.api.rpc.client.ProvenanceClient;
 import com.patra.registry.api.rpc.dto.provenance.ProvenanceConfigResp;
-import feign.FeignException;
+import com.patra.starter.feign.error.exception.RemoteCallException;
+import com.patra.starter.feign.error.util.RemoteErrorHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -73,8 +74,8 @@ public class ProvenancePortAdapter implements ProvenancePort {
             log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
             return snapshot;
 
-        } catch (FeignException ex) {
-            return handleFeignException(ex, code, taskType, endpoint);
+        } catch (RemoteCallException ex) {
+            return handleRemoteException(ex, code, taskType, endpoint);
         } catch (Exception ex) {
             String msg = String.format("Unexpected error when fetching config, code=%s, taskType=%s, endpoint=%s",
                     code, taskType, endpoint);
@@ -84,36 +85,32 @@ public class ProvenancePortAdapter implements ProvenancePort {
     }
 
     /**
-     * 处理 Feign 异常。
+     * 处理远端 ProblemDetail 异常。
      */
-    private ProvenanceConfigSnapshot handleFeignException(FeignException ex, String code, 
-                                                          String taskType, String endpoint) {
-        int status = ex.status();
-        String responseBody = ex.contentUTF8();
-        
-        if (status == 404) {
-            log.warn("Provenance config not found, code={}, taskType={}, endpoint={}, status={}",
-                    code, taskType, endpoint, status);
+    private ProvenanceConfigSnapshot handleRemoteException(RemoteCallException ex,
+                                                          String code,
+                                                          String taskType,
+                                                          String endpoint) {
+        if (RemoteErrorHelper.isNotFound(ex)) {
+            log.warn("Provenance config not found, code={}, taskType={}, endpoint={}, remoteCode={}, status={}, traceId={}",
+                    code, taskType, endpoint, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
             return createMinimalSnapshot(code);
         }
 
-        if (status >= 400 && status < 500) {
-            String msg = String.format("Registry client error, code=%s, status=%d, response=%s",
-                    code, status, responseBody);
-            log.error(msg);
-            throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
-        }
-
-        if (status >= 500 && status < 600) {
-            String msg = String.format("Registry server error, code=%s, status=%d, response=%s",
-                    code, status, responseBody);
-            log.error(msg);
-            log.warn("Registry unavailable, fallback to minimal snapshot, code={}", code);
+        if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
+            log.warn("Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
+                    code, ex.getHttpStatus(), ex.getTraceId());
             return createMinimalSnapshot(code);
         }
 
-        String msg = String.format("Registry call failed, code=%s, status=%d, response=%s",
-                code, status, responseBody);
+        String msg = "Registry client error" +
+                String.format(
+                        ", code=%s, status=%d, remoteCode=%s, traceId=%s, detail=%s",
+                        code,
+                        ex.getHttpStatus(),
+                        ex.getErrorCode(),
+                        ex.getTraceId(),
+                        ex.getMessage());
         log.error(msg);
         throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
     }
