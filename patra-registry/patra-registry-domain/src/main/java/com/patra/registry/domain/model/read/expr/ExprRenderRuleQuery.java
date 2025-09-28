@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.read.expr;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
@@ -25,30 +26,14 @@ public record ExprRenderRuleQuery(
         Instant effectiveTo
 ) {
     public ExprRenderRuleQuery {
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (fieldKey == null || fieldKey.isBlank()) {
-            throw new IllegalArgumentException("Field key cannot be blank");
-        }
-        if (opCode == null || opCode.isBlank()) {
-            throw new IllegalArgumentException("Operation code cannot be blank");
-        }
-        if (emitTypeCode == null || emitTypeCode.isBlank()) {
-            throw new IllegalArgumentException("Emit type code cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
-        scopeCode = scopeCode.trim();
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        scopeCode = DomainValidationException.notBlank(scopeCode, "Scope code");
+        fieldKey = DomainValidationException.notBlank(fieldKey, "Field key");
+        opCode = DomainValidationException.notBlank(opCode, "Operation code");
+        emitTypeCode = DomainValidationException.notBlank(emitTypeCode, "Emit type code");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
         taskType = taskType != null ? taskType.trim() : null;
-        fieldKey = fieldKey.trim();
-        opCode = opCode.trim();
         matchTypeCode = matchTypeCode != null ? matchTypeCode.trim() : null;
         valueTypeCode = valueTypeCode != null ? valueTypeCode.trim() : null;
-        emitTypeCode = emitTypeCode.trim();
     }
 }

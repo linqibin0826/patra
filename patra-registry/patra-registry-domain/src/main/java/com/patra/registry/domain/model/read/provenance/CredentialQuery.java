@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.time.Instant;
 
 /**
@@ -33,28 +35,28 @@ public record CredentialQuery(
 ) {
     public CredentialQuery {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Credential id must be positive");
+            throw new DomainValidationException("Credential id must be positive");
         }
         if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
+            throw new DomainValidationException("Provenance id must be positive");
         }
         if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
+            throw new DomainValidationException("Scope code cannot be blank");
         }
         if (credentialName == null || credentialName.isBlank()) {
-            throw new IllegalArgumentException("Credential name cannot be blank");
+            throw new DomainValidationException("Credential name cannot be blank");
         }
         if (authType == null || authType.isBlank()) {
-            throw new IllegalArgumentException("Auth type cannot be blank");
+            throw new DomainValidationException("Auth type cannot be blank");
         }
         if (inboundLocationCode == null || inboundLocationCode.isBlank()) {
-            throw new IllegalArgumentException("Inbound location code cannot be blank");
+            throw new DomainValidationException("Inbound location code cannot be blank");
         }
         if (lifecycleStatusCode == null || lifecycleStatusCode.isBlank()) {
-            throw new IllegalArgumentException("Lifecycle status code cannot be blank");
+            throw new DomainValidationException("Lifecycle status code cannot be blank");
         }
         if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
+            throw new DomainValidationException("Effective from cannot be null");
         }
         scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;
@@ -72,7 +74,7 @@ public record CredentialQuery(
         oauthClientSecretRef = oauthClientSecretRef != null ? oauthClientSecretRef.trim() : null;
         oauthScope = oauthScope != null ? oauthScope.trim() : null;
         oauthAudience = oauthAudience != null ? oauthAudience.trim() : null;
-        extraJson = extraJson;
+    // extraJson 原值保持（JSON 结构外部消费时再解析）
         lifecycleStatusCode = lifecycleStatusCode.trim();
     }
 }

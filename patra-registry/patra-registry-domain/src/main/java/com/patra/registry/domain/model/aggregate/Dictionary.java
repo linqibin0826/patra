@@ -9,6 +9,7 @@ import com.patra.registry.domain.model.vo.dictionary.ValidationResult;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
  * 字典聚合：封装字典类型、字典项与别名的组合视图。
@@ -27,7 +28,7 @@ public record Dictionary(
 ) {
     public Dictionary {
         if (type == null) {
-            throw new IllegalArgumentException("Dictionary type cannot be null");
+            throw new DomainValidationException("Dictionary type cannot be null");
         }
         if (id == null) {
             id = DictionaryId.of(type);
@@ -37,13 +38,13 @@ public record Dictionary(
 
         // 验证ID与类型的一致性
         if (!id.typeCode().equals(type.typeCode())) {
-            throw new IllegalArgumentException("Dictionary ID type code must match dictionary type code");
+            throw new DomainValidationException("Dictionary ID type code must match dictionary type code");
         }
 
         // 检查是否存在多个默认项（数据完整性风险）
         long defaultCount = items.stream().filter(DictionaryItem::isDefault).count();
         if (defaultCount > 1) {
-            throw new IllegalArgumentException("Dictionary cannot have multiple default items: " + type.typeCode());
+            throw new DomainValidationException("Dictionary cannot have multiple default items: " + type.typeCode());
         }
     }
 
@@ -69,7 +70,7 @@ public record Dictionary(
      */
     public Optional<DictionaryItem> findItemByCode(String itemCode) {
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Item code cannot be null or empty");
+            throw new DomainValidationException("Item code cannot be null or empty");
         }
         
         return items.stream()
@@ -109,7 +110,7 @@ public record Dictionary(
      */
     public ValidationResult validateItemReference(String itemCode) {
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Item code cannot be null or empty");
+            throw new DomainValidationException("Item code cannot be null or empty");
         }
         
         Optional<DictionaryItem> item = findItemByCode(itemCode);
@@ -130,10 +131,10 @@ public record Dictionary(
      */
     public Optional<DictionaryItem> findByAlias(String sourceSystem, String externalCode) {
         if (sourceSystem == null || sourceSystem.trim().isEmpty()) {
-            throw new IllegalArgumentException("Source system cannot be null or empty");
+            throw new DomainValidationException("Source system cannot be null or empty");
         }
         if (externalCode == null || externalCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("External code cannot be null or empty");
+            throw new DomainValidationException("External code cannot be null or empty");
         }
         
         // Find matching alias

@@ -1,6 +1,7 @@
 package com.patra.registry.domain.exception.dictionary;
 
 import com.patra.registry.domain.exception.RegistryRuleViolation;
+import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
  * 当尝试使用被禁用的字典项时抛出。
@@ -22,10 +23,10 @@ public class DictionaryItemDisabled extends RegistryRuleViolation {
     public DictionaryItemDisabled(String typeCode, String itemCode) {
         super(String.format("Dictionary item is disabled: typeCode=%s, itemCode=%s", typeCode, itemCode));
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Type code cannot be null or empty");
+            throw new DomainValidationException("Type code cannot be null or empty");
         }
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Item code cannot be null or empty");
+            throw new DomainValidationException("Item code cannot be null or empty");
         }
         this.typeCode = typeCode;
         this.itemCode = itemCode;
@@ -35,10 +36,10 @@ public class DictionaryItemDisabled extends RegistryRuleViolation {
     public DictionaryItemDisabled(String typeCode, String itemCode, String message) {
         super(message);
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Type code cannot be null or empty");
+            throw new DomainValidationException("Type code cannot be null or empty");
         }
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Item code cannot be null or empty");
+            throw new DomainValidationException("Item code cannot be null or empty");
         }
         this.typeCode = typeCode;
         this.itemCode = itemCode;
@@ -48,10 +49,10 @@ public class DictionaryItemDisabled extends RegistryRuleViolation {
     public DictionaryItemDisabled(String typeCode, String itemCode, String message, Throwable cause) {
         super(message, cause);
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Type code cannot be null or empty");
+            throw new DomainValidationException("Type code cannot be null or empty");
         }
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Item code cannot be null or empty");
+            throw new DomainValidationException("Item code cannot be null or empty");
         }
         this.typeCode = typeCode;
         this.itemCode = itemCode;

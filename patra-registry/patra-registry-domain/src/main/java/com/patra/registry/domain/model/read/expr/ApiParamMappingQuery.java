@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.read.expr;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
@@ -18,29 +19,13 @@ public record ApiParamMappingQuery(
         Instant effectiveTo
 ) {
     public ApiParamMappingQuery {
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (operationCode == null || operationCode.isBlank()) {
-            throw new IllegalArgumentException("Operation code cannot be blank");
-        }
-        if (stdKey == null || stdKey.isBlank()) {
-            throw new IllegalArgumentException("Standard key cannot be blank");
-        }
-        if (providerParamName == null || providerParamName.isBlank()) {
-            throw new IllegalArgumentException("Provider param name cannot be blank");
-        }
-        scopeCode = scopeCode.trim();
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        scopeCode = DomainValidationException.notBlank(scopeCode, "Scope code");
+        operationCode = DomainValidationException.notBlank(operationCode, "Operation code");
+        stdKey = DomainValidationException.notBlank(stdKey, "Standard key");
+        providerParamName = DomainValidationException.notBlank(providerParamName, "Provider param name");
         taskType = taskType != null ? taskType.trim() : null;
-        operationCode = operationCode.trim();
-        stdKey = stdKey.trim();
-        providerParamName = providerParamName.trim();
         transformCode = transformCode != null ? transformCode.trim() : null;
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
     }
 }

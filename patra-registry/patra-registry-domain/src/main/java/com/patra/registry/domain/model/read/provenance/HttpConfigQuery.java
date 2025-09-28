@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.time.Instant;
 
 /**
@@ -29,25 +31,25 @@ public record HttpConfigQuery(
 ) {
     public HttpConfigQuery {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("HTTP config id must be positive");
+            throw new DomainValidationException("HTTP config id must be positive");
         }
         if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
+            throw new DomainValidationException("Provenance id must be positive");
         }
         if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
+            throw new DomainValidationException("Scope code cannot be blank");
         }
         if (retryAfterPolicyCode == null || retryAfterPolicyCode.isBlank()) {
-            throw new IllegalArgumentException("Retry-after policy code cannot be blank");
+            throw new DomainValidationException("Retry-after policy code cannot be blank");
         }
         if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
+            throw new DomainValidationException("Effective from cannot be null");
         }
         scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;
         taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         baseUrlOverride = baseUrlOverride != null ? baseUrlOverride.trim() : null;
-        defaultHeadersJson = defaultHeadersJson;
+    // defaultHeadersJson 原值保持（允许为 null，不做 trim）
         proxyUrlValue = proxyUrlValue != null ? proxyUrlValue.trim() : null;
         retryAfterPolicyCode = retryAfterPolicyCode.trim();
         idempotencyHeaderName = idempotencyHeaderName != null ? idempotencyHeaderName.trim() : null;

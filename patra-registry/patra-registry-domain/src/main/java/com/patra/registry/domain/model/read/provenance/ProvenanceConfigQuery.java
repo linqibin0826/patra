@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.util.List;
 
 /**
@@ -18,7 +20,7 @@ public record ProvenanceConfigQuery(
 ) {
     public ProvenanceConfigQuery {
         if (provenance == null) {
-            throw new IllegalArgumentException("Provenance cannot be null");
+            throw new DomainValidationException("Provenance cannot be null");
         }
         credentials = credentials == null ? List.of() : List.copyOf(credentials);
     }

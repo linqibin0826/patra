@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.vo.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 /**
  * 校验结果值对象（不可变）。
  *
@@ -18,7 +20,7 @@ public record ValidationResult(
     /** 带参数校验的紧凑构造器。 */
     public ValidationResult {
         if (!isValid && (errorMessage == null || errorMessage.trim().isEmpty())) {
-            throw new IllegalArgumentException("Error message is required when validation fails");
+            throw new DomainValidationException("Error message is required when validation fails");
         }
         // Normalize error message
         errorMessage = errorMessage != null ? errorMessage.trim() : null;
@@ -32,7 +34,7 @@ public record ValidationResult(
     /** 创建“校验失败”结果（带错误信息）。 */
     public static ValidationResult failure(String errorMessage) {
         if (errorMessage == null || errorMessage.trim().isEmpty()) {
-            throw new IllegalArgumentException("Error message cannot be null or empty for failed validation");
+            throw new DomainValidationException("Error message cannot be null or empty for failed validation");
         }
         return new ValidationResult(false, errorMessage);
     }

@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.vo.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -33,22 +35,22 @@ public record DictionaryHealthStatus(
     /** 带参数校验与不可变化集合的紧凑构造器。 */
     public DictionaryHealthStatus {
         if (totalTypes < 0) {
-            throw new IllegalArgumentException("Total types count cannot be negative");
+            throw new DomainValidationException("Total types count cannot be negative");
         }
         if (totalItems < 0) {
-            throw new IllegalArgumentException("Total items count cannot be negative");
+            throw new DomainValidationException("Total items count cannot be negative");
         }
         if (enabledItems < 0) {
-            throw new IllegalArgumentException("Enabled items count cannot be negative");
+            throw new DomainValidationException("Enabled items count cannot be negative");
         }
         if (deletedItems < 0) {
-            throw new IllegalArgumentException("Deleted items count cannot be negative");
+            throw new DomainValidationException("Deleted items count cannot be negative");
         }
         if (disabledTypes < 0) {
-            throw new IllegalArgumentException("Disabled types count cannot be negative");
+            throw new DomainValidationException("Disabled types count cannot be negative");
         }
         if (systemTypes < 0) {
-            throw new IllegalArgumentException("System types count cannot be negative");
+            throw new DomainValidationException("System types count cannot be negative");
         }
         
         // Ensure immutable collections

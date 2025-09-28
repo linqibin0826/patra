@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 /**
  * 字典校验查询对象（CQRS 查询侧）。
  *
@@ -22,13 +24,13 @@ public record DictionaryValidationQuery(
     /** 带参数校验的紧凑构造器。 */
     public DictionaryValidationQuery {
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
+            throw new DomainValidationException("Dictionary type code cannot be null or empty");
         }
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary item code cannot be null or empty");
+            throw new DomainValidationException("Dictionary item code cannot be null or empty");
         }
         if (!isValid && (errorMessage == null || errorMessage.trim().isEmpty())) {
-            throw new IllegalArgumentException("Error message is required when validation fails");
+            throw new DomainValidationException("Error message is required when validation fails");
         }
         
         // Normalize the codes and error message
@@ -45,7 +47,7 @@ public record DictionaryValidationQuery(
     /** 创建“校验失败”结果（带错误信息）。 */
     public static DictionaryValidationQuery failure(String typeCode, String itemCode, String errorMessage) {
         if (errorMessage == null || errorMessage.trim().isEmpty()) {
-            throw new IllegalArgumentException("Error message cannot be null or empty for failed validation");
+            throw new DomainValidationException("Error message cannot be null or empty for failed validation");
         }
         return new DictionaryValidationQuery(typeCode, itemCode, false, errorMessage);
     }

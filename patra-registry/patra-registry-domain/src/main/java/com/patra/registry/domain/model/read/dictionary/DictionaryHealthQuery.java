@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -27,13 +29,13 @@ public record DictionaryHealthQuery(
     /** 校验参数并不可变化集合的紧凑构造器。 */
     public DictionaryHealthQuery {
         if (totalTypes < 0) {
-            throw new IllegalArgumentException("Total types count cannot be negative");
+            throw new DomainValidationException("Total types count cannot be negative");
         }
         if (totalItems < 0) {
-            throw new IllegalArgumentException("Total items count cannot be negative");
+            throw new DomainValidationException("Total items count cannot be negative");
         }
         if (enabledItems < 0) {
-            throw new IllegalArgumentException("Enabled items count cannot be negative");
+            throw new DomainValidationException("Enabled items count cannot be negative");
         }
         
         // Ensure immutable collections

@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.vo.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
@@ -47,31 +48,19 @@ public record BatchingConfig(
                           Integer httpConnPoolSize,
                           String backpressureStrategyCode,
                           String requestTemplateJson) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Batching config id must be positive");
-        }
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (payloadCompressStrategyCode == null || payloadCompressStrategyCode.isBlank()) {
-            throw new IllegalArgumentException("Payload compress strategy code cannot be blank");
-        }
-        if (backpressureStrategyCode == null || backpressureStrategyCode.isBlank()) {
-            throw new IllegalArgumentException("Backpressure strategy code cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
+        DomainValidationException.positive(id, "Batching config id");
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
+        String payloadCompressTrimmed = DomainValidationException.notBlank(payloadCompressStrategyCode, "Payload compress strategy code");
+        String backpressureTrimmed = DomainValidationException.notBlank(backpressureStrategyCode, "Backpressure strategy code");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id;
-        this.provenanceId = provenanceId;
-        this.scopeCode = scopeCode.trim();
+        this.id = id; // 已验证
+        this.provenanceId = provenanceId; // 已验证
+        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom;
+        this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;
         this.detailFetchBatchSize = detailFetchBatchSize;
         this.endpointId = endpointId;
@@ -80,11 +69,11 @@ public record BatchingConfig(
         this.idsJoinDelimiter = idsJoinDelimiter != null ? idsJoinDelimiter.trim() : null;
         this.maxIdsPerRequest = maxIdsPerRequest;
         this.preferCompactPayload = preferCompactPayload;
-        this.payloadCompressStrategyCode = payloadCompressStrategyCode.trim();
+        this.payloadCompressStrategyCode = payloadCompressTrimmed;
         this.appParallelismDegree = appParallelismDegree;
         this.perHostConcurrencyLimit = perHostConcurrencyLimit;
         this.httpConnPoolSize = httpConnPoolSize;
-        this.backpressureStrategyCode = backpressureStrategyCode.trim();
+        this.backpressureStrategyCode = backpressureTrimmed;
         this.requestTemplateJson = requestTemplateJson;
     }
 }

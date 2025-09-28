@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.vo.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 /**
  * {@code reg_provenance} 的领域值对象。
  */
@@ -21,30 +23,20 @@ public record Provenance(
                       String docsUrl,
                       boolean active,
                       String lifecycleStatusCode) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (code == null || code.isBlank()) {
-            throw new IllegalArgumentException("Provenance code cannot be blank");
-        }
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Provenance name cannot be blank");
-        }
-        if (timezoneDefault == null || timezoneDefault.isBlank()) {
-            throw new IllegalArgumentException("Timezone cannot be blank");
-        }
-        if (lifecycleStatusCode == null || lifecycleStatusCode.isBlank()) {
-            throw new IllegalArgumentException("Lifecycle status code cannot be blank");
-        }
+        DomainValidationException.positive(id, "Provenance id");
+        String codeTrimmed = DomainValidationException.notBlank(code, "Provenance code");
+        String nameTrimmed = DomainValidationException.notBlank(name, "Provenance name");
+        String tzTrimmed = DomainValidationException.notBlank(timezoneDefault, "Timezone");
+        String lifecycleTrimmed = DomainValidationException.notBlank(lifecycleStatusCode, "Lifecycle status code");
 
-        this.id = id;
-        this.code = code.trim();
-        this.name = name.trim();
+        this.id = id; // 已验证为正
+        this.code = codeTrimmed;
+        this.name = nameTrimmed;
         this.baseUrlDefault = baseUrlDefault != null ? baseUrlDefault.trim() : null;
-        this.timezoneDefault = timezoneDefault.trim();
+        this.timezoneDefault = tzTrimmed;
         this.docsUrl = docsUrl != null ? docsUrl.trim() : null;
         this.active = active;
-        this.lifecycleStatusCode = lifecycleStatusCode.trim();
+        this.lifecycleStatusCode = lifecycleTrimmed;
     }
 
     /** 是否处于激活状态。 */

@@ -27,7 +27,18 @@
 
         <dependency>
             <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
+            <artifactId>mapstruct</artifactId>        </dependency>
+
+        <!-- 错误码 / DTO 使用 -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-api</artifactId>
+        </dependency>
+
+        <!-- 引入 dao 相关异常定义（org.springframework.dao.*） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
         </dependency>
     </dependencies>
 </project>

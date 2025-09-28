@@ -1,5 +1,7 @@
 package com.patra.registry.domain.support;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.util.Locale;
 
 /**
@@ -28,7 +30,7 @@ public final class RegistryKeyNormalizer {
      */
     public static String normalizeCode(String value) {
         if (value == null) {
-            throw new IllegalArgumentException("value 不能为空");
+            throw new DomainValidationException("value 不能为空");
         }
         return value.trim().toUpperCase(Locale.ROOT);
     }
@@ -38,7 +40,7 @@ public final class RegistryKeyNormalizer {
      */
     public static String normalizeFieldKey(String value) {
         if (value == null) {
-            throw new IllegalArgumentException("value 不能为空");
+            throw new DomainValidationException("value 不能为空");
         }
         return value.trim();
     }

@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.vo.expr;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -73,32 +74,20 @@ public record ExprCapability(
                           boolean existsSupported,
                           String tokenKindsJson,
                           String tokenValuePattern) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Capability id must be positive");
-        }
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (fieldKey == null || fieldKey.isBlank()) {
-            throw new IllegalArgumentException("Field key cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
-        if (rangeKindCode == null || rangeKindCode.isBlank()) {
-            throw new IllegalArgumentException("Range kind code cannot be blank");
-        }
+        DomainValidationException.positive(id, "Capability id");
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
+        String fieldKeyTrimmed = DomainValidationException.notBlank(fieldKey, "Field key");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
+        String rangeKindTrimmed = DomainValidationException.notBlank(rangeKindCode, "Range kind code");
 
-        this.id = id;
-        this.provenanceId = provenanceId;
-        this.scopeCode = scopeCode.trim();
+        this.id = id; // 已验证
+        this.provenanceId = provenanceId; // 已验证
+        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.fieldKey = fieldKey.trim();
-        this.effectiveFrom = effectiveFrom;
+        this.fieldKey = fieldKeyTrimmed;
+        this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;
         this.opsJson = opsJson;
         this.negatableOpsJson = negatableOpsJson;
@@ -111,7 +100,7 @@ public record ExprCapability(
         this.termPattern = termPattern != null ? termPattern.trim() : null;
         this.inMaxSize = inMaxSize;
         this.inCaseSensitiveAllowed = inCaseSensitiveAllowed;
-        this.rangeKindCode = rangeKindCode.trim();
+    this.rangeKindCode = rangeKindTrimmed;
         this.rangeAllowOpenStart = rangeAllowOpenStart;
         this.rangeAllowOpenEnd = rangeAllowOpenEnd;
         this.rangeAllowClosedAtInfinity = rangeAllowClosedAtInfinity;
@@ -128,9 +117,7 @@ public record ExprCapability(
 
     /** 判断当前能力是否在指定时间点生效。 */
     public boolean isEffectiveAt(Instant instant) {
-        if (instant == null) {
-            throw new IllegalArgumentException("Instant cannot be null");
-        }
+        DomainValidationException.nonNull(instant, "Instant");
         boolean afterStart = !instant.isBefore(effectiveFrom);
         boolean beforeEnd = effectiveTo == null || instant.isBefore(effectiveTo);
         return afterStart && beforeEnd;
