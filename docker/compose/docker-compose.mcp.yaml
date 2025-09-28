@@ -1,0 +1,66 @@
+version: "3.9"
+
+networks:
+  default:
+    name: mcp-net
+
+services:
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # MySQL 的 MCP Server（基于 benborla 的 mcp-server-mysql，通过 npx 运行）
+  # 用法（一次性前台运行，供 MCP 客户端通过 Docker 命令调用）：
+  #   docker compose -f docker-compose.mcp.yaml run --rm mcp-mysql
+  # 也可在 Claude Desktop 的 mcpServers 配置中将 command 指向 docker 并传 compose run 参数
+  # ───────────────────────────────────────────────────────────────────────────────
+  mcp-mysql:
+    image: node:22.20.0
+    container_name: mcp-mysql
+    restart: "no"                       # MCP server 通常由客户端按需拉起
+    environment:
+      # 典型本机 MySQL 连接串（配合你现有 MySQL 服务端口映射自行替换）
+      # 例：mysql://user:pass@host:port/database
+      MYSQL_URL: ${MYSQL_URL:-mysql://root:123456@host.docker.internal:13306/patra_ingest}
+      TZ: Asia/Shanghai
+      # 可选：对返回行数/超时做约束（具体要看 mcp-server-mysql 是否支持这些 env）
+      # MAX_ROWS: "1000"
+      # QUERY_TIMEOUT_MS: "15000"
+    # 不暴露端口：benborla 的实现常以 STDIO/前台进程被客户端调用；
+    # 如果你自研/换成 HTTP 传输的 MCP server，再按需暴露端口。
+    command: >
+      sh -lc "npx -y @benborla29/mcp-server-mysql \"$MYSQL_URL\""
+    # 如需让容器内访问宿主 MySQL：使用 host.docker.internal（在 Linux 需配置 docker engine 支持）
+    # 也可把你的 db 放到同一桥接网络，直接引用服务名连接。
+    networks:
+      - default
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # MCP Inspector（可选）：交互式查看 MCP 工具注册与调用，排错很好用
+  # 用法：docker compose -f docker-compose.mcp.yaml run --rm mcp-inspector
+  # ───────────────────────────────────────────────────────────────────────────────
+  mcp-inspector:
+    image: node:22.20.0
+    container_name: mcp-inspector
+    restart: "no"
+    environment:
+      MYSQL_URL: ${MYSQL_URL:-mysql://root:123456@host.docker.internal:13306/yourdb}
+      TZ: Asia/Shanghai
+    command: >
+      sh -lc "npx -y @modelcontextprotocol/inspector npx:@benborla29/mcp-server-mysql \"$MYSQL_URL\""
+    networks:
+      - default
+
+  # ───────────────────────────────────────────────────────────────────────────────
+  # 预留模板：更多自有 MCP Server 在这里加（例：Postgres、HTTP API 聚合等）
+  # 复制下面块，改镜像/命令/ENV 即可。
+  # ───────────────────────────────────────────────────────────────────────────────
+  # mcp-postgres:
+  #   image: node:20-alpine
+  #   container_name: mcp-postgres
+  #   restart: "no"
+  #   environment:
+  #     PG_URL: ${PG_URL:-postgres://user:pass@host.docker.internal:15432/db}
+  #     TZ: Asia/Shanghai
+  #   command: >
+  #     sh -lc "npx -y @your-scope/mcp-server-postgres \"$PG_URL\""
+  #   networks:
+  #     - default
