@@ -107,6 +107,7 @@
         <appender-ref ref="SW_GRPC"/>
     </appender>
 
+    <logger name="com.patra" level="DEBUG"/>
     <!-- 降噪 -->
     <logger name="com.baomidou" level="WARN"/>
     <logger name="org.mybatis" level="WARN"/>

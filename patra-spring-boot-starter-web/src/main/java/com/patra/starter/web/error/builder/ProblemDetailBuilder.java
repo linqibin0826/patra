@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.time.Instant;
@@ -34,7 +33,6 @@ import java.util.Map;
  * @see com.patra.starter.web.error.config.WebErrorAutoConfiguration
  */
 @Slf4j
-@Component
 public class ProblemDetailBuilder {
     
     @SuppressWarnings("unused")

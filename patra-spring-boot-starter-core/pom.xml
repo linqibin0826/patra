@@ -31,6 +31,18 @@
             <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
 
+        <!-- Micrometer 指标基础 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
+        <!-- Resilience4j 熔断器 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-circuitbreaker</artifactId>
+        </dependency>
+
         <!-- 配置元数据（开发期 IDE 提示），运行期不参与 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

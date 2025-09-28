@@ -11,7 +11,7 @@ import java.util.Optional;
  *
  * @author linqibin
  * @since 0.1.0
- * @see com.patra.starter.core.error.service.ErrorResolutionService
+ * @see com.patra.starter.core.error.engine.ErrorResolutionEngine
  */
 public interface ErrorMappingContributor {
     

@@ -1,11 +1,12 @@
 package com.patra.starter.web.error.config;
 
 import com.patra.starter.core.error.config.ErrorProperties;
-import com.patra.starter.core.error.service.ErrorResolutionService;
+import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
 import com.patra.starter.core.error.spi.ProblemFieldContributor;
 import com.patra.starter.core.error.spi.TraceProvider;
+import com.patra.starter.web.error.adapter.DefaultProblemDetailAdapter;
+import com.patra.starter.web.error.adapter.ProblemDetailAdapter;
 import com.patra.starter.web.error.builder.ProblemDetailBuilder;
-
 import com.patra.starter.web.error.formatter.DefaultValidationErrorsFormatter;
 import com.patra.starter.web.error.handler.GlobalRestExceptionHandler;
 import com.patra.starter.web.error.spi.ValidationErrorsFormatter;
@@ -22,14 +23,6 @@ import java.util.List;
 
 /**
  * Web 端错误处理自动装配。
- *
- * <p>提供以下组件的条件化注册：
- * - 全局异常处理器 {@link com.patra.starter.web.error.handler.GlobalRestExceptionHandler}
- * - ProblemDetail 构造器 {@link com.patra.starter.web.error.builder.ProblemDetailBuilder}
- * - 校验错误格式化器 {@link com.patra.starter.web.error.spi.ValidationErrorsFormatter}
- *
- * @author linqibin
- * @since 0.1.0
  */
 @Slf4j
 @AutoConfiguration
@@ -37,72 +30,40 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "patra.web.problem", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(WebErrorProperties.class)
 public class WebErrorAutoConfiguration {
-    
-    /**
-     * 默认的校验错误格式化器（带敏感信息脱敏）。
-     *
-     * @return 实例
-     */
+
     @Bean
     @ConditionalOnMissingBean
     public ValidationErrorsFormatter defaultValidationErrorsFormatter() {
-        log.debug("Creating default validation errors formatter");
+        log.debug("创建默认 ValidationErrorsFormatter");
         return new DefaultValidationErrorsFormatter();
     }
-    
-    /**
-     * 构造 ProblemDetail 构造器。
-     *
-     * @param errorProperties 错误处理配置
-     * @param webProperties Web 错误配置
-     * @param traceProvider TraceId 提供者
-     * @param coreFieldContributors 核心字段贡献者集合
-     * @param webFieldContributors Web 字段贡献者集合
-     * @return 构造器实例
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ProblemDetailBuilder problemDetailBuilder(
-            ErrorProperties errorProperties,
-            WebErrorProperties webProperties,
-            TraceProvider traceProvider,
-            List<ProblemFieldContributor> coreFieldContributors,
-            List<WebProblemFieldContributor> webFieldContributors) {
-        
-        log.debug("Creating ProblemDetail builder: coreContributors={}, webContributors={}", 
-                coreFieldContributors.size(), webFieldContributors.size());
-        
-        return new ProblemDetailBuilder(
-            errorProperties, 
-            webProperties, 
-            traceProvider, 
-            coreFieldContributors, 
-            webFieldContributors
-        );
-    }
-    
-    /**
-     * 创建全局 REST 异常处理器。
-     *
-     * @param errorResolutionService 错误解析服务
-     * @param problemDetailBuilder ProblemDetail 构造器
-     * @param validationErrorsFormatter 校验错误格式化器
-     * @return 处理器实例
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public GlobalRestExceptionHandler globalRestExceptionHandler(
-            ErrorResolutionService errorResolutionService,
-            ProblemDetailBuilder problemDetailBuilder,
-            ValidationErrorsFormatter validationErrorsFormatter) {
-        
-        log.debug("Creating global REST exception handler");
-        return new GlobalRestExceptionHandler(
-            errorResolutionService, 
-            problemDetailBuilder, 
-            validationErrorsFormatter
-        );
-    }
-    
 
+    @Bean
+    @ConditionalOnMissingBean
+    public ProblemDetailBuilder problemDetailBuilder(ErrorProperties errorProperties,
+                                                     WebErrorProperties webProperties,
+                                                     TraceProvider traceProvider,
+                                                     List<ProblemFieldContributor> coreFieldContributors,
+                                                     List<WebProblemFieldContributor> webFieldContributors) {
+        log.debug("创建 ProblemDetailBuilder：coreContributors={} webContributors={}",
+                coreFieldContributors.size(), webFieldContributors.size());
+        return new ProblemDetailBuilder(errorProperties, webProperties, traceProvider,
+                coreFieldContributors, webFieldContributors);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ProblemDetailAdapter problemDetailAdapter(ErrorResolutionPipeline pipeline,
+                                                     ProblemDetailBuilder problemDetailBuilder) {
+        log.debug("创建默认 ProblemDetailAdapter");
+        return new DefaultProblemDetailAdapter(pipeline, problemDetailBuilder);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public GlobalRestExceptionHandler globalRestExceptionHandler(ProblemDetailAdapter problemDetailAdapter,
+                                                                 ValidationErrorsFormatter validationErrorsFormatter) {
+        log.debug("创建全局 REST 异常处理器");
+        return new GlobalRestExceptionHandler(problemDetailAdapter, validationErrorsFormatter);
+    }
 }

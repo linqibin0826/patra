@@ -12,7 +12,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
  *
  * @author linqibin
  * @since 0.1.0
- * @see com.patra.starter.core.error.service.ErrorResolutionService 错误解析服务
+ * @see com.patra.starter.core.error.engine.ErrorResolutionEngine 错误解析引擎
  */
 public interface StatusMappingStrategy {
     

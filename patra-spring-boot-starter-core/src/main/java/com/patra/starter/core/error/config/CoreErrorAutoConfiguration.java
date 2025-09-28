@@ -1,139 +1,129 @@
 package com.patra.starter.core.error.config;
 
-import com.patra.starter.core.error.circuit.CircuitBreaker;
-import com.patra.starter.core.error.circuit.CircuitBreakerProtectedContributor;
-import com.patra.starter.core.error.circuit.DefaultCircuitBreaker;
-import com.patra.starter.core.error.metrics.DefaultErrorMetrics;
-import com.patra.starter.core.error.metrics.ErrorMetrics;
-import com.patra.starter.core.error.service.ErrorResolutionService;
+import com.patra.starter.core.error.engine.DefaultErrorResolutionEngine;
+import com.patra.starter.core.error.engine.ErrorResolutionEngine;
+import com.patra.starter.core.error.observation.ErrorObservationRecorder;
+import com.patra.starter.core.error.observation.MicrometerErrorObservationRecorder;
+import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
+import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
+import com.patra.starter.core.error.pipeline.interceptor.CircuitBreakerInterceptor;
+import com.patra.starter.core.error.pipeline.interceptor.MetricsInterceptor;
+import com.patra.starter.core.error.pipeline.interceptor.TracingInterceptor;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import com.patra.starter.core.error.spi.StatusMappingStrategy;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.core.error.strategy.SuffixHeuristicStatusMappingStrategy;
 import com.patra.starter.core.error.trace.HeaderBasedTraceProvider;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Duration;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * 核心错误处理自动装配。
+ * 平台级错误处理自动装配。
  *
- * <p>为各 SPI 提供条件化的默认实现，包括：状态映射、Trace 提供者、指标采集、
- * 熔断保护的映射贡献者，以及错误解析服务等。
- *
- * @author linqibin
- * @since 0.1.0
+ * <p>提供默认的解析引擎、拦截器与观测能力，业务方可通过自定义 Bean 覆盖。</p>
  */
 @Slf4j
 @Configuration
 @EnableConfigurationProperties({ErrorProperties.class, TracingProperties.class})
 @ConditionalOnProperty(prefix = "patra.error", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CoreErrorAutoConfiguration {
-    
-    /**
-     * 默认的基于后缀启发式的状态映射策略（缺省实现）。
-     *
-     * @return 状态映射策略实例
-     */
+
     @Bean
     @ConditionalOnMissingBean
     public StatusMappingStrategy defaultStatusMappingStrategy() {
-        log.debug("Creating default SuffixHeuristicStatusMappingStrategy");
+        log.debug("使用默认的后缀启发式状态映射策略");
         return new SuffixHeuristicStatusMappingStrategy();
     }
-    
-    /**
-     * 默认的基于请求头名从 MDC 提取 TraceId 的提供者（缺省实现）。
-     *
-     * @param tracingProperties 追踪配置
-     * @return Trace 提供者实例
-     */
+
     @Bean
     @ConditionalOnMissingBean
     public TraceProvider defaultTraceProvider(TracingProperties tracingProperties) {
-        log.debug("Creating default HeaderBasedTraceProvider with headers: {}", 
-                 tracingProperties.getHeaderNames());
+        log.debug("使用默认的基于请求头的 TraceProvider: {}", tracingProperties.getHeaderNames());
         return new HeaderBasedTraceProvider(tracingProperties);
     }
-    
-    /**
-     * 默认的错误指标实现（若用户未自定义则注入）。
-     *
-     * @return 指标实现
-     */
+
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "patra.error.monitoring.metrics", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public ErrorMetrics defaultErrorMetrics() {
-        log.debug("Creating default ErrorMetrics implementation");
-        return new DefaultErrorMetrics();
-    }
-    
-    /**
-     * 带熔断保护的错误映射贡献者集合（按需包装）。
-     *
-     * @param errorProperties 错误处理配置
-     * @param originalContributors 原始贡献者集合
-     * @return 包装后的贡献者集合
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = "patra.error.monitoring.circuit-breaker", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public List<ErrorMappingContributor> circuitBreakerProtectedContributors(
-            ErrorProperties errorProperties,
-            List<ErrorMappingContributor> originalContributors) {
-        
-        ErrorProperties.CircuitBreakerProperties cbProps = errorProperties.getMonitoring().getCircuitBreaker();
-        
-        log.info("Creating circuit breaker protected contributors: {} contributors", originalContributors.size());
-        
-        return originalContributors.stream()
-            .map(contributor -> {
-                String contributorName = contributor.getClass().getSimpleName();
-                CircuitBreaker circuitBreaker = new DefaultCircuitBreaker(
-                    contributorName,
-                    cbProps.getFailureThreshold(),
-                    cbProps.getFailureRateThreshold(),
-                    Duration.ofMillis(cbProps.getTimeoutMs()),
-                    cbProps.getSlidingWindowSize()
-                );
-                
-                log.debug("Created circuit breaker for contributor: {}", contributorName);
-                return new CircuitBreakerProtectedContributor(contributor, circuitBreaker);
-            })
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * 错误解析服务，负责编排错误解析算法。
-     *
-     * @param errorProperties 错误处理配置
-     * @param statusMappingStrategy 状态映射策略
-     * @param mappingContributors 错误映射贡献者集合（可能包含熔断包装）
-     * @param errorMetrics 指标采集器
-     * @return 错误解析服务实例
-     */
-    @Bean
-    public ErrorResolutionService errorResolutionService(
-            ErrorProperties errorProperties,
-            StatusMappingStrategy statusMappingStrategy,
-            List<ErrorMappingContributor> mappingContributors,
-            ErrorMetrics errorMetrics) {
-        
-        log.info("Creating ErrorResolutionService with context prefix: '{}', {} mapping contributors", 
-                errorProperties.getContextPrefix(), mappingContributors.size());
-        
-        if (errorProperties.getContextPrefix() == null || errorProperties.getContextPrefix().trim().isEmpty()) {
-            log.warn("Context prefix is not configured! Error codes will use 'UNKNOWN' prefix. " +
-                    "Please set patra.error.context-prefix property.");
+    public ErrorObservationRecorder errorObservationRecorder(ErrorProperties errorProperties,
+                                                             ObjectProvider<MeterRegistry> meterRegistryProvider) {
+        if (!errorProperties.getObservation().isEnabled()) {
+            log.info("错误解析观测已关闭，注入 NoOp 观测器");
+            return ErrorObservationRecorder.NO_OP;
         }
-        
-        return new ErrorResolutionService(errorProperties, statusMappingStrategy, mappingContributors, errorMetrics);
+        MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
+        if (meterRegistry == null) {
+            log.warn("Micrometer MeterRegistry 不存在，观测自动降级为 NoOp");
+            return ErrorObservationRecorder.NO_OP;
+        }
+        return new MicrometerErrorObservationRecorder(meterRegistry, errorProperties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ErrorResolutionEngine errorResolutionEngine(ErrorProperties errorProperties,
+                                                       StatusMappingStrategy statusMappingStrategy,
+                                                       List<ErrorMappingContributor> mappingContributors) {
+        if (errorProperties.getContextPrefix() == null || errorProperties.getContextPrefix().isBlank()) {
+            log.warn("patra.error.context-prefix 未配置，统一错误码将使用 UNKNOWN 前缀");
+        }
+        return new DefaultErrorResolutionEngine(errorProperties, statusMappingStrategy, mappingContributors);
+    }
+
+    @Bean
+    public ErrorResolutionPipeline errorResolutionPipeline(ErrorResolutionEngine engine,
+                                                           ObjectProvider<ResolutionInterceptor> interceptorsProvider) {
+        List<ResolutionInterceptor> interceptors = interceptorsProvider.orderedStream().toList();
+        log.info("构建错误解析管线，拦截器数量: {}", interceptors.size());
+        return new ErrorResolutionPipeline(engine, interceptors);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "patra.error.observation", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public MetricsInterceptor metricsInterceptor(ErrorObservationRecorder observationRecorder,
+                                                 ErrorProperties errorProperties) {
+        return new MetricsInterceptor(observationRecorder, errorProperties.getObservation());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public TracingInterceptor tracingInterceptor(TraceProvider traceProvider) {
+        return new TracingInterceptor(traceProvider);
+    }
+
+    @Bean(name = "errorResolutionCircuitBreaker")
+    @ConditionalOnProperty(prefix = "patra.error.circuit-breaker", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public CircuitBreaker errorResolutionCircuitBreaker(ErrorProperties errorProperties) {
+        ErrorProperties.CircuitBreakerProperties cb = errorProperties.getCircuitBreaker();
+        CircuitBreakerConfig config = CircuitBreakerConfig.custom()
+                .failureRateThreshold(cb.getFailureRateThreshold())
+                .minimumNumberOfCalls(cb.getMinimumNumberOfCalls())
+                .slidingWindowSize(cb.getSlidingWindowSize())
+                .permittedNumberOfCallsInHalfOpenState(cb.getPermittedCallsInHalfOpenState())
+                .waitDurationInOpenState(cb.getWaitDurationInOpenState())
+                .build();
+        log.info("创建错误解析熔断器配置: failureRate={} slidingWindow={}",
+                cb.getFailureRateThreshold(), cb.getSlidingWindowSize());
+        return CircuitBreaker.of("patra-error-resolution", config);
+    }
+
+    @Bean
+    @ConditionalOnBean(name = "errorResolutionCircuitBreaker")
+    public CircuitBreakerInterceptor circuitBreakerInterceptor(
+            @Qualifier("errorResolutionCircuitBreaker") CircuitBreaker circuitBreaker,
+            ErrorObservationRecorder observationRecorder,
+            ErrorProperties errorProperties) {
+        return new CircuitBreakerInterceptor(circuitBreaker, observationRecorder, errorProperties);
     }
 }
