@@ -1,6 +1,7 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.app.converter.DictionaryValidationConverter;
+import com.patra.registry.domain.exception.dictionary.DictionaryValidationException;
 import com.patra.registry.domain.model.read.dictionary.DictionaryHealthQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryValidationQuery;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryHealthStatus;
@@ -38,7 +39,7 @@ public class DictionaryValidationAppService {
     public DictionaryValidationQuery validateReference(String typeCode, String itemCode) {
         log.debug("Validating dictionary reference: typeCode={}, itemCode={}", typeCode, itemCode);
         requireTypeCode(typeCode);
-        requireItemCode(itemCode);
+        requireItemCode(typeCode, itemCode);
 
         if (!dictionaryRepository.existsByTypeCode(typeCode)) {
             log.warn("Dictionary validation failed - type not found: typeCode={}, itemCode={}", typeCode, itemCode);
@@ -133,7 +134,7 @@ public class DictionaryValidationAppService {
      *
      * @param reference the dictionary reference to validate, must not be null
      * @return DictionaryValidationQuery containing validation outcome and error message if invalid
-     * @throws IllegalArgumentException if reference is null
+     * @throws DictionaryValidationException 当引用为空时抛出
      */
     public DictionaryValidationQuery validateReference(DictionaryReference reference) {
         log.debug("Validating dictionary reference object: {}", reference != null ? reference.toReferenceString() : "null");
@@ -177,28 +178,26 @@ public class DictionaryValidationAppService {
     }
 
     private void requireTypeCode(String typeCode) {
-        requireText(typeCode, "Dictionary type code cannot be null or empty");
+        if (typeCode == null || typeCode.isBlank()) {
+            throw new DictionaryValidationException("Dictionary type code cannot be null or empty", typeCode, null);
+        }
     }
 
-    private void requireItemCode(String itemCode) {
-        requireText(itemCode, "Dictionary item code cannot be null or empty");
-    }
-
-    private void requireText(String value, String message) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
+    private void requireItemCode(String typeCode, String itemCode) {
+        if (itemCode == null || itemCode.isBlank()) {
+            throw new DictionaryValidationException("Dictionary item code cannot be null or empty", typeCode, itemCode);
         }
     }
 
     private void requireReferences(List<DictionaryReference> references) {
         if (references == null) {
-            throw new IllegalArgumentException("References list cannot be null");
+            throw new DictionaryValidationException("References list cannot be null", null, null);
         }
     }
 
     private void requireReference(DictionaryReference reference) {
         if (reference == null) {
-            throw new IllegalArgumentException("Dictionary reference cannot be null");
+            throw new DictionaryValidationException("Dictionary reference cannot be null", null, null);
         }
     }
 }

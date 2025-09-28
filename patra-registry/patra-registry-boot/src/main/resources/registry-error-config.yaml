@@ -1,0 +1,53 @@
+# Registry 模块本地错误处理配置，后续迁移至 Nacos 统一治理。
+patra:
+  error:
+    enabled: true
+    context-prefix: REG
+    engine:
+      max-cause-depth: 10
+      enable-trait-mapping: true
+      enable-naming-heuristic: true
+    observation:
+      enabled: true
+      slow-threshold-ms: 200
+      log-slow-resolution: true
+    circuit-breaker:
+      enabled: true
+      failure-rate-threshold: 50.0
+      minimum-number-of-calls: 20
+      sliding-window-size: 50
+      permitted-calls-in-half-open-state: 5
+      wait-duration-in-open-state: PT30S
+
+  web:
+    problem:
+      enabled: true
+      type-base-url: "https://errors.papertrace.com"
+      include-stack: false
+
+  feign:
+    problem:
+      enabled: true
+      tolerant: true
+      max-error-body-size: 65536
+      include-stack-trace: false
+      observation:
+        enabled: true
+        slow-parsing-threshold-ms: 150
+        log-slow-parsing: true
+        slow-body-reading-threshold-ms: 80
+        log-slow-body-reading: true
+        log-tolerant-usage: true
+
+registry:
+  error-catalog:
+    dictionary-type-not-found: REG-1401
+    dictionary-item-not-found: REG-1402
+    dictionary-item-disabled: REG-1403
+    dictionary-type-already-exists: REG-1404
+    dictionary-item-already-exists: REG-1405
+    dictionary-type-disabled: REG-1406
+    dictionary-validation-failed: REG-1407
+    dictionary-default-missing: REG-1408
+    dictionary-repository-error: REG-1409
+    quota-exceeded: REG-1501
