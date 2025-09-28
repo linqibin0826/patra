@@ -19,9 +19,39 @@
 
 ### 2.2 扩展规则
 - 业务若需自定义错误码映射，应实现 `ErrorMappingContributor` 并注册为 Bean。
-- 状态获取：错误码自身提供 `httpStatus()`；HTTP 对齐段（0xxx）通过 `HttpStdErrors` 工厂按前缀生成；如需特殊 Trace 获取，提供 `TraceProvider`。
+- 状态获取：错误码自身提供 `httpStatus()`；HTTP 对齐段（0xxx）通过 `HttpStdErrors` 工厂按前缀生成（推荐注入 `HttpStdErrors.Group` 使用，避免硬编码 of("ING"/"REG")）。
 - 观测：若接入第三方指标体系，可自定义 `ErrorObservationRecorder` 替换默认实现。
 - 遵循六边形：核心模块不引入 Web/Feign 依赖，保持纯粹。
+- 已移除：`StatusMappingStrategy` 相关配置与示例均废弃，请勿再实现/依赖该接口。
+
+### 2.3 0xxx 获取与使用示例（强烈推荐）
+- 建议通过注入 `HttpStdErrors.Group` 获取 0xxx 段标准错误码，前缀由 `patra.error.context-prefix` 提供：
+
+```java
+@Component
+@RequiredArgsConstructor
+class DemoMappingContributor implements ErrorMappingContributor {
+    private final HttpStdErrors.Group http; // 自动按前缀绑定（REG/ING/...）
+
+    @Override
+    public Optional<ErrorCodeLike> mapException(Throwable exception) {
+        if (exception instanceof DuplicateKeyException) {
+            return Optional.of(http.CONFLICT()); // 409 → REG-0409 / ING-0409
+        }
+        if (exception instanceof DataIntegrityViolationException) {
+            return Optional.of(http.UNPROCESSABLE()); // 422 → REG-0422 / ING-0422
+        }
+        return Optional.empty();
+    }
+}
+```
+
+- 禁止在各模块的错误码枚举中维护 0xxx 常量；禁止通过 `HttpStdErrors.of("REG")` 等在使用点硬编码前缀。
+
+### 2.4 返回 null 的反例（Anti‑Pattern）
+- 控制器/适配层在“未找到/不可用”场景禁止返回 `null`，应抛出相应领域异常（如 `DictionaryNotFoundException`、`ProvenanceNotFoundException`），由统一 Web 适配层输出 `ProblemDetail`（0xxx 由工厂提供）。
+- 这样可确保：HTTP 状态正确、下游 Feign 能解码为 `RemoteCallException`，上游可以按语义降级/重试。
+
 ## 3. Web 适配层（patra-spring-boot-starter-web）
 
 ### 3.1 组件职责
@@ -96,3 +126,6 @@
 - **配置约束**：`application.yaml` 经由 `spring.config.import` 引入新的 `registry-error-config.yaml`，本地即可启用统一引擎、观测与熔断策略。
 - **后续建议**：补充字典查询/校验用例的 ProblemDetail 集成测试，与 `patra-registry` 未来的错误码注册中心实现联动校验。
 
+
+## 11. 参考资料
+- 跨服务错误链路最佳实践：`docs/cross-service-error-best-practices.md`

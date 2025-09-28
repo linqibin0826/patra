@@ -28,7 +28,7 @@ import java.util.Optional;
  * <p>实现 Feign 客户端契约，委托应用服务并完成 Query -> DTO 的转换；遵循
  * /_internal/dictionaries/** 路由前缀；严格只读，符合 CQRS 查询侧。</p>
  *
- * <p>在 404 场景下通过返回 null 交由 Feign 层处理；统一结构化日志包含请求入参，便于观测与排障。</p>
+ * <p>在 404 场景下抛出领域异常（如 DictionaryNotFoundException），由统一错误处理输出 ProblemDetail（REG-0404），Feign 解码为 RemoteCallException；统一结构化日志包含请求入参，便于观测与排障。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -56,7 +56,7 @@ public class DictionaryClientImpl implements DictionaryClient {
         this.dictionaryApiConverter = dictionaryApiConverter;
     }
 
-    /** 按类型与项编码获取字典项（未找到/禁用返回 null，交由 Feign 处理 404）。 */
+    /** 按类型与项编码获取字典项（未找到抛出领域异常，统一输出 REG-0404 ProblemDetail，由 Feign 解码）。 */
     @Override
     public DictionaryItemResp getItemByTypeAndCode(String typeCode, String itemCode) {
         log.info("API: Getting dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
