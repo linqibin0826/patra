@@ -1,6 +1,6 @@
 package com.patra.registry.infra.persistence.repository;
 
-import com.patra.common.constant.RegistryKeys;
+import com.patra.registry.domain.support.RegistryKeyPlaceholders;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
@@ -187,11 +187,11 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
 
     private String normalizeTaskKey(String taskType) {
         if (taskType == null) {
-            return RegistryKeys.ALL;
+            return RegistryKeyPlaceholders.ALL;
         }
         String trimmed = taskType.trim();
         if (trimmed.isEmpty()) {
-            return RegistryKeys.ALL;
+            return RegistryKeyPlaceholders.ALL;
         }
         // 非字母数字统一为下划线，然后连续下划线折叠为单个，下划线首尾修剪
         String upper = trimmed.toUpperCase();
@@ -199,7 +199,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         normalized = normalized.replaceAll("_+", "_");
         normalized = normalized.replaceAll("^_+|_+$", "");
         if (normalized.isEmpty()) {
-            return RegistryKeys.ALL;
+            return RegistryKeyPlaceholders.ALL;
         }
         return normalized;
     }

@@ -117,6 +117,7 @@ class DemoMappingContributor implements ErrorMappingContributor {
 - **远端调用**：`patra-ingest-adapter` 通过 `patra-spring-cloud-starter-feign` 的 `ProblemDetailErrorDecoder` 统一解析下游错误，`ProvenancePortAdapter` 仅在无法恢复的 4xx 情况下抛出 `IngestConfigurationException`。
 - **计划编排**：`PlanIngestionApplicationService` 针对窗口解析、验证、装配、持久化等阶段抛出 `PlanValidationException`/`PlanAssemblyException`/`PlanPersistenceException`，对应 `ING-1403`/`ING-1601`/`ING-1503` 错误码，确保 ProblemDetail 可区分编排环节。
 - **下一步建议**：为 Outbox/调度等场景补充单元测试，并在 Nacos 注册 ING 前缀，确保多环境配置一致。
+- 
 ## 10. 模块落地示例：Registry
 
 - **错误码目录**：`patra-registry-api/src/main/java/com/patra/registry/api/error/RegistryErrorCode.java` 维护 REG-1xxx 段；HTTP 对齐段（0xxx）由 `HttpStdErrors` 工厂提供，`patra-registry-boot/src/main/resources/registry-error-config.yaml` 提供本地登记，后续迁移至 Nacos。

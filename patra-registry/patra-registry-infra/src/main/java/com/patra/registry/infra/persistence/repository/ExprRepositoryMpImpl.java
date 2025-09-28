@@ -1,9 +1,9 @@
 package com.patra.registry.infra.persistence.repository;
 
-import com.patra.common.constant.RegistryKeys;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.enums.RegistryConfigScope; // updated
-import com.patra.common.util.RegistryKeyUtils;
+import com.patra.common.enums.RegistryConfigScope;
+import com.patra.registry.domain.support.RegistryKeyNormalizer;
+import com.patra.registry.domain.support.RegistryKeyPlaceholders;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
@@ -49,44 +49,72 @@ public class ExprRepositoryMpImpl implements ExprRepository {
                                      String taskType,
                                      String operationCode,
                                      Instant at) {
-        Instant timestamp = at != null ? at : Instant.now();
-        String taskKey = RegistryKeyUtils.normalizeTaskKey(taskType);
-        String normalizedOperation = RegistryKeyUtils.normalizeCode(operationCode);
-
+        Instant timestamp = atOrNow(at);
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
-        List<ExprField> fields = fieldDictMapper.selectAllActive().stream()
+        String taskKey = RegistryKeyNormalizer.normalizeTaskKey(taskType);
+        boolean hasTaskScope = !RegistryKeyPlaceholders.ALL.equals(taskKey);
+        String normalizedOperation = RegistryKeyNormalizer.normalizeCode(operationCode);
+
+        List<ExprField> fields = loadFields();
+        List<ExprCapability> capabilities = loadCapabilities(provenanceId, taskKey, hasTaskScope, timestamp);
+        List<ExprRenderRule> renderRules = loadRenderRules(provenanceId, taskKey, hasTaskScope, timestamp);
+        List<ApiParamMapping> apiParams = loadApiParamMappings(provenanceId, taskKey, normalizedOperation, hasTaskScope, timestamp);
+
+        return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
+    }
+
+    private List<ExprField> loadFields() {
+        return fieldDictMapper.selectAllActive().stream()
                 .map(converter::toDomain)
                 .toList();
+    }
 
+    private List<ExprCapability> loadCapabilities(Long provenanceId,
+                                                   String taskKey,
+                                                   boolean hasTaskScope,
+                                                   Instant timestamp) {
         Map<String, ExprCapability> capabilityMap = new LinkedHashMap<>();
-        capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
+        capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeyPlaceholders.ALL, timestamp)
                 .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
-        if (taskType != null) {
+        if (hasTaskScope) {
             capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, timestamp)
                     .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
         }
-        List<ExprCapability> capabilities = new ArrayList<>(capabilityMap.values());
+        return new ArrayList<>(capabilityMap.values());
+    }
 
+    private List<ExprRenderRule> loadRenderRules(Long provenanceId,
+                                                 String taskKey,
+                                                 boolean hasTaskScope,
+                                                 Instant timestamp) {
         Map<String, ExprRenderRule> renderRuleMap = new LinkedHashMap<>();
-        renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeys.ALL, timestamp)
+        renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeyPlaceholders.ALL, timestamp)
                 .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
-        if (taskType != null) {
+        if (hasTaskScope) {
             renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, timestamp)
                     .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
         }
-        List<ExprRenderRule> renderRules = new ArrayList<>(renderRuleMap.values());
+        return new ArrayList<>(renderRuleMap.values());
+    }
 
+    private List<ApiParamMapping> loadApiParamMappings(Long provenanceId,
+                                                       String taskKey,
+                                                       String normalizedOperation,
+                                                       boolean hasTaskScope,
+                                                       Instant timestamp) {
         Map<String, ApiParamMapping> paramMappings = new LinkedHashMap<>();
-        apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeys.ALL, normalizedOperation, timestamp)
+        apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeyPlaceholders.ALL, normalizedOperation, timestamp)
                 .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
-        if (taskType != null) {
+        if (hasTaskScope) {
             apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, normalizedOperation, timestamp)
                     .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
         }
-        List<ApiParamMapping> apiParams = new ArrayList<>(paramMappings.values());
+        return new ArrayList<>(paramMappings.values());
+    }
 
-        return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
+    private Instant atOrNow(Instant at) {
+        return at != null ? at : Instant.now();
     }
 
     private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
@@ -97,13 +125,12 @@ public class ExprRepositoryMpImpl implements ExprRepository {
     }
 
     private String renderRuleKey(RegProvExprRenderRuleDO entity) {
-        String field = RegistryKeyUtils.normalizeFieldKey(entity.getFieldKey());
-        String op = RegistryKeyUtils.normalizeCode(entity.getOpCode());
-        String matchKey = RegistryKeyUtils.normalizeMatchKey(entity.getMatchTypeKey());
-        // FIX: 使用布尔字段 negated 生成规范化 key，而不是 String negatedKey 字段，避免类型不匹配。
-        String negatedKey = RegistryKeyUtils.normalizeNegatedKey(entity.getNegated());
-        String valueKey = RegistryKeyUtils.normalizeValueKey(entity.getValueTypeKey());
-        String emit = RegistryKeyUtils.normalizeCode(entity.getEmitTypeCode());
+        String field = RegistryKeyNormalizer.normalizeFieldKey(entity.getFieldKey());
+        String op = RegistryKeyNormalizer.normalizeCode(entity.getOpCode());
+        String matchKey = RegistryKeyNormalizer.normalizeMatchKey(entity.getMatchTypeKey());
+        String negatedKey = RegistryKeyNormalizer.normalizeNegatedKey(entity.getNegated());
+        String valueKey = RegistryKeyNormalizer.normalizeValueKey(entity.getValueTypeKey());
+        String emit = RegistryKeyNormalizer.normalizeCode(entity.getEmitTypeCode());
         return String.join("|", field, op, matchKey, negatedKey, valueKey, emit);
     }
 }

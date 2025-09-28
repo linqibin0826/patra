@@ -32,13 +32,6 @@ import java.util.Collections;
  * @author linqibin
  * @since 0.1.0
  */
-
-/**
- * Registry 出站适配器：负责访问 patra-registry 获取来源配置。
- *
- * @author linqibin
- * @since 0.1.0
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -97,9 +90,9 @@ public class ProvenancePortAdapter implements ProvenancePort {
                                                            String taskType,
                                                            String endpoint) {
         if (RemoteErrorHelper.isNotFound(ex)) {
-            log.warn("Provenance config not found, code={}, taskType={}, endpoint={}, remoteCode={}, status={}, traceId={}",
-                    code, taskType, endpoint, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
-            return createMinimalSnapshot(code);
+            String msg = String.format("Provenance config not found, code=%s, taskType=%s, endpoint=%s", code, taskType, endpoint);
+            log.warn("{} (remoteCode={}, status={}, traceId={})", msg, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
+            throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
         }
 
         if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
