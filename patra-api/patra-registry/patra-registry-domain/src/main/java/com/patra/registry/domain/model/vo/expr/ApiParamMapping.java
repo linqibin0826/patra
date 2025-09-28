@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.vo.expr;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
@@ -31,47 +32,31 @@ public record ApiParamMapping(
                            String notesJson,
                            Instant effectiveFrom,
                            Instant effectiveTo) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Mapping id must be positive");
-        }
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (operationCode == null || operationCode.isBlank()) {
-            throw new IllegalArgumentException("Operation code cannot be blank");
-        }
-        if (stdKey == null || stdKey.isBlank()) {
-            throw new IllegalArgumentException("Standard key cannot be blank");
-        }
-        if (providerParamName == null || providerParamName.isBlank()) {
-            throw new IllegalArgumentException("Provider param name cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
+        DomainValidationException.positive(id, "Mapping id");
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
+        String opTrimmed = DomainValidationException.notBlank(operationCode, "Operation code");
+        String stdKeyTrimmed = DomainValidationException.notBlank(stdKey, "Standard key");
+        String providerParamTrimmed = DomainValidationException.notBlank(providerParamName, "Provider param name");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id;
-        this.provenanceId = provenanceId;
-        this.scopeCode = scopeCode.trim();
+        this.id = id; // 已验证
+        this.provenanceId = provenanceId; // 已验证
+        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.operationCode = operationCode.trim();
-        this.stdKey = stdKey.trim();
-        this.providerParamName = providerParamName.trim();
+        this.operationCode = opTrimmed;
+        this.stdKey = stdKeyTrimmed;
+        this.providerParamName = providerParamTrimmed;
         this.transformCode = transformCode != null ? transformCode.trim() : null;
         this.notesJson = notesJson;
-        this.effectiveFrom = effectiveFrom;
+        this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;
     }
 
     /** 判断当前记录是否在给定时间点生效。 */
     public boolean isEffectiveAt(Instant instant) {
-        if (instant == null) {
-            throw new IllegalArgumentException("Instant cannot be null");
-        }
+        DomainValidationException.nonNull(instant, "Instant");
         boolean afterStart = !instant.isBefore(effectiveFrom);
         boolean beforeEnd = effectiveTo == null || instant.isBefore(effectiveTo);
         return afterStart && beforeEnd;

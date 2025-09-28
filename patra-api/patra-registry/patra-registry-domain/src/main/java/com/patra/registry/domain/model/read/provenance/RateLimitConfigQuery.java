@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.time.Instant;
 
 /**
@@ -25,19 +27,19 @@ public record RateLimitConfigQuery(
 ) {
     public RateLimitConfigQuery {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Rate limit config id must be positive");
+            throw new DomainValidationException("Rate limit config id must be positive");
         }
         if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
+            throw new DomainValidationException("Provenance id must be positive");
         }
         if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
+            throw new DomainValidationException("Scope code cannot be blank");
         }
         if (bucketGranularityScopeCode == null || bucketGranularityScopeCode.isBlank()) {
-            throw new IllegalArgumentException("Bucket granularity scope code cannot be blank");
+            throw new DomainValidationException("Bucket granularity scope code cannot be blank");
         }
         if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
+            throw new DomainValidationException("Effective from cannot be null");
         }
         scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;

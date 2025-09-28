@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.aggregate;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.Credential;
 import com.patra.registry.domain.model.vo.provenance.EndpointDefinition;
@@ -36,9 +37,7 @@ public record ProvenanceConfiguration(
         List<Credential> credentials
 ) {
     public ProvenanceConfiguration {
-        if (provenance == null) {
-            throw new IllegalArgumentException("Provenance must not be null");
-        }
+        DomainValidationException.nonNull(provenance, "Provenance");
         credentials = credentials == null ? List.of() : List.copyOf(credentials);
     }
 

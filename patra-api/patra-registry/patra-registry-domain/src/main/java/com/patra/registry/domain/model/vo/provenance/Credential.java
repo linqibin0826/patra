@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.vo.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
@@ -55,40 +56,24 @@ public record Credential(
                       Instant effectiveTo,
                       boolean defaultPreferred,
                       String lifecycleStatusCode) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Credential id must be positive");
-        }
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (credentialName == null || credentialName.isBlank()) {
-            throw new IllegalArgumentException("Credential name cannot be blank");
-        }
-        if (authType == null || authType.isBlank()) {
-            throw new IllegalArgumentException("Auth type cannot be blank");
-        }
-        if (inboundLocationCode == null || inboundLocationCode.isBlank()) {
-            throw new IllegalArgumentException("Inbound location code cannot be blank");
-        }
-        if (lifecycleStatusCode == null || lifecycleStatusCode.isBlank()) {
-            throw new IllegalArgumentException("Lifecycle status code cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
+        DomainValidationException.positive(id, "Credential id");
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
+        String nameTrimmed = DomainValidationException.notBlank(credentialName, "Credential name");
+        String authTypeTrimmed = DomainValidationException.notBlank(authType, "Auth type");
+        String inboundLocTrimmed = DomainValidationException.notBlank(inboundLocationCode, "Inbound location code");
+        String lifecycleTrimmed = DomainValidationException.notBlank(lifecycleStatusCode, "Lifecycle status code");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id;
-        this.provenanceId = provenanceId;
-        this.scopeCode = scopeCode.trim();
+        this.id = id; // 已验证
+        this.provenanceId = provenanceId; // 已验证
+        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.endpointId = endpointId;
-        this.credentialName = credentialName.trim();
-        this.authType = authType.trim();
-        this.inboundLocationCode = inboundLocationCode.trim();
+        this.credentialName = nameTrimmed;
+        this.authType = authTypeTrimmed;
+        this.inboundLocationCode = inboundLocTrimmed;
         this.credentialFieldName = credentialFieldName != null ? credentialFieldName.trim() : null;
         this.credentialValuePrefix = credentialValuePrefix != null ? credentialValuePrefix.trim() : null;
         this.credentialValueRef = credentialValueRef != null ? credentialValueRef.trim() : null;
@@ -100,10 +85,10 @@ public record Credential(
         this.oauthScope = oauthScope != null ? oauthScope.trim() : null;
         this.oauthAudience = oauthAudience != null ? oauthAudience.trim() : null;
         this.extraJson = extraJson;
-        this.effectiveFrom = effectiveFrom;
+        this.effectiveFrom = effectiveFrom; // 非 null 验证
         this.effectiveTo = effectiveTo;
         this.defaultPreferred = defaultPreferred;
-        this.lifecycleStatusCode = lifecycleStatusCode.trim();
+        this.lifecycleStatusCode = lifecycleTrimmed;
     }
 
     public boolean isDefaultPreferred() {

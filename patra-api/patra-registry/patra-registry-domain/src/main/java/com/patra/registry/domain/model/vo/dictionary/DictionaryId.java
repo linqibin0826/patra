@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.vo.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.util.Objects;
 
 /**
@@ -17,7 +19,7 @@ public record DictionaryId(String typeCode) {
     public DictionaryId {
         Objects.requireNonNull(typeCode, "Dictionary ID type code cannot be null");
         if (typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary ID type code cannot be empty");
+            throw new DomainValidationException("Dictionary ID type code cannot be empty");
         }
         typeCode = typeCode.trim();
     }

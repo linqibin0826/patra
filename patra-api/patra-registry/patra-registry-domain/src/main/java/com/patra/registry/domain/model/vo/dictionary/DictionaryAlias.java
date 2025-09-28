@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.vo.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 /**
  * 外部系统集成用的字典别名值对象（不可变）。
  *
@@ -22,10 +24,10 @@ public record DictionaryAlias(
     /** 带参数校验的紧凑构造器。 */
     public DictionaryAlias {
         if (sourceSystem == null || sourceSystem.trim().isEmpty()) {
-            throw new IllegalArgumentException("Source system cannot be null or empty");
+            throw new DomainValidationException("Source system cannot be null or empty");
         }
         if (externalCode == null || externalCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("External code cannot be null or empty");
+            throw new DomainValidationException("External code cannot be null or empty");
         }
         // Normalize the values to ensure consistency
         sourceSystem = sourceSystem.trim().toUpperCase();

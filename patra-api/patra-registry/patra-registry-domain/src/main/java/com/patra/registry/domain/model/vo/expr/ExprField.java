@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.vo.expr;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.util.Objects;
 
 /**
@@ -26,25 +27,17 @@ public record ExprField(
                      String cardinalityCode,
                      boolean exposable,
                      boolean dateField) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Expr field id must be positive");
-        }
-        if (fieldKey == null || fieldKey.isBlank()) {
-            throw new IllegalArgumentException("Expr field key cannot be null or blank");
-        }
-        if (dataTypeCode == null || dataTypeCode.isBlank()) {
-            throw new IllegalArgumentException("Expr field data type code cannot be null or blank");
-        }
-        if (cardinalityCode == null || cardinalityCode.isBlank()) {
-            throw new IllegalArgumentException("Expr field cardinality code cannot be null or blank");
-        }
+        DomainValidationException.positive(id, "Expr field id");
+        String keyTrimmed = DomainValidationException.notBlank(fieldKey, "Expr field key");
+        String dtTrimmed = DomainValidationException.notBlank(dataTypeCode, "Expr field data type code");
+        String cardinalityTrimmed = DomainValidationException.notBlank(cardinalityCode, "Expr field cardinality code");
 
-        this.id = id;
-        this.fieldKey = fieldKey.trim();
+        this.id = id; // 已验证
+        this.fieldKey = keyTrimmed;
         this.displayName = displayName != null ? displayName.trim() : "";
         this.description = description != null ? description.trim() : "";
-        this.dataTypeCode = dataTypeCode.trim();
-        this.cardinalityCode = cardinalityCode.trim();
+        this.dataTypeCode = dtTrimmed;
+        this.cardinalityCode = cardinalityTrimmed;
         this.exposable = exposable;
         this.dateField = dateField;
     }

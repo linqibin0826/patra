@@ -1,6 +1,7 @@
 package com.patra.registry.domain.model.vo.expr;
 
 import java.time.Instant;
+import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
  * 表 {@code reg_prov_expr_render_rule} 对应的领域值对象。
@@ -51,36 +52,16 @@ public record ExprRenderRule(
                           boolean wrapGroup,
                           String paramsJson,
                           String functionCode) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Render rule id must be positive");
-        }
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (fieldKey == null || fieldKey.isBlank()) {
-            throw new IllegalArgumentException("Field key cannot be blank");
-        }
-        if (opCode == null || opCode.isBlank()) {
-            throw new IllegalArgumentException("Operation code cannot be blank");
-        }
-        if (emitTypeCode == null || emitTypeCode.isBlank()) {
-            throw new IllegalArgumentException("Emit type code cannot be blank");
-        }
-        if (matchTypeKey == null || matchTypeKey.isBlank()) {
-            throw new IllegalArgumentException("Match type key cannot be blank");
-        }
-        if (negatedKey == null || negatedKey.isBlank()) {
-            throw new IllegalArgumentException("Negated key cannot be blank");
-        }
-        if (valueTypeKey == null || valueTypeKey.isBlank()) {
-            throw new IllegalArgumentException("Value type key cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
+        if (id == null || id <= 0) throw new DomainValidationException("Render rule id must be positive");
+        if (provenanceId == null || provenanceId <= 0) throw new DomainValidationException("Provenance id must be positive");
+        if (scopeCode == null || scopeCode.isBlank()) throw new DomainValidationException("Scope code cannot be blank");
+        if (fieldKey == null || fieldKey.isBlank()) throw new DomainValidationException("Field key cannot be blank");
+        if (opCode == null || opCode.isBlank()) throw new DomainValidationException("Operation code cannot be blank");
+        if (emitTypeCode == null || emitTypeCode.isBlank()) throw new DomainValidationException("Emit type code cannot be blank");
+        if (matchTypeKey == null || matchTypeKey.isBlank()) throw new DomainValidationException("Match type key cannot be blank");
+        if (negatedKey == null || negatedKey.isBlank()) throw new DomainValidationException("Negated key cannot be blank");
+        if (valueTypeKey == null || valueTypeKey.isBlank()) throw new DomainValidationException("Value type key cannot be blank");
+        if (effectiveFrom == null) throw new DomainValidationException("Effective from cannot be null");
 
         this.id = id;
         this.provenanceId = provenanceId;
@@ -109,7 +90,7 @@ public record ExprRenderRule(
     /** 判断是否在给定时间点生效。 */
     public boolean isEffectiveAt(Instant instant) {
         if (instant == null) {
-            throw new IllegalArgumentException("Instant cannot be null");
+            throw new DomainValidationException("Instant cannot be null");
         }
         boolean afterStart = !instant.isBefore(effectiveFrom);
         boolean beforeEnd = effectiveTo == null || instant.isBefore(effectiveTo);

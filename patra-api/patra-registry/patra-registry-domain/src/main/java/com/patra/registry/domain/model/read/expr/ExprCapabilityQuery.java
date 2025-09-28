@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.read.expr;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,25 +41,12 @@ public record ExprCapabilityQuery(
         Instant effectiveTo
 ) {
     public ExprCapabilityQuery {
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (fieldKey == null || fieldKey.isBlank()) {
-            throw new IllegalArgumentException("Field key cannot be blank");
-        }
-        if (rangeKindCode == null || rangeKindCode.isBlank()) {
-            throw new IllegalArgumentException("Range kind code cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
-        scopeCode = scopeCode.trim();
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        scopeCode = DomainValidationException.notBlank(scopeCode, "Scope code");
+        fieldKey = DomainValidationException.notBlank(fieldKey, "Field key");
+        rangeKindCode = DomainValidationException.notBlank(rangeKindCode, "Range kind code");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
         taskType = taskType != null ? taskType.trim() : null;
-        fieldKey = fieldKey.trim();
-        rangeKindCode = rangeKindCode.trim();
         termPattern = termPattern != null ? termPattern.trim() : null;
         tokenValuePattern = tokenValuePattern != null ? tokenValuePattern.trim() : null;
     }

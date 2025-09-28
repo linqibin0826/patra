@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.vo.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 /**
  * 字典项值对象（不可变）。
  *
@@ -28,10 +30,10 @@ public record DictionaryItem(
     /** 带参数校验的紧凑构造器。 */
     public DictionaryItem {
         if (itemCode == null || itemCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary item code cannot be null or empty");
+            throw new DomainValidationException("Dictionary item code cannot be null or empty");
         }
         if (displayName == null || displayName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary item display name cannot be null or empty");
+            throw new DomainValidationException("Dictionary item display name cannot be null or empty");
         }
         // Normalize the codes and names to ensure consistency
         itemCode = itemCode.trim();

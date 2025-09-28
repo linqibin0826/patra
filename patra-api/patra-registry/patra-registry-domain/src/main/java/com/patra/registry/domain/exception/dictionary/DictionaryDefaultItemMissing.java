@@ -1,6 +1,7 @@
 package com.patra.registry.domain.exception.dictionary;
 
 import com.patra.registry.domain.exception.RegistryRuleViolation;
+import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
  * 当字典类型需要配置默认项但缺失时抛出。
@@ -19,7 +20,7 @@ public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
     public DictionaryDefaultItemMissing(String typeCode) {
         super(String.format("Dictionary type is missing a default item: %s", typeCode));
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Type code cannot be null or empty");
+            throw new DomainValidationException("Type code cannot be null or empty");
         }
         this.typeCode = typeCode;
     }
@@ -28,7 +29,7 @@ public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
     public DictionaryDefaultItemMissing(String typeCode, String message) {
         super(message);
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Type code cannot be null or empty");
+            throw new DomainValidationException("Type code cannot be null or empty");
         }
         this.typeCode = typeCode;
     }
@@ -37,7 +38,7 @@ public class DictionaryDefaultItemMissing extends RegistryRuleViolation {
     public DictionaryDefaultItemMissing(String typeCode, String message, Throwable cause) {
         super(message, cause);
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Type code cannot be null or empty");
+            throw new DomainValidationException("Type code cannot be null or empty");
         }
         this.typeCode = typeCode;
     }

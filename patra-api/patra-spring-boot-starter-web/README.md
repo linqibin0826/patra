@@ -1,364 +1,233 @@
-# Patra Spring Boot Starter Web
+## 模块：patra-spring-boot-starter-web
 
-Web error handling starter that automatically converts all exceptions to RFC 7807 ProblemDetail responses. Provides global exception handling for REST APIs with zero configuration.
+提供 Web 层（Spring MVC / Servlet）统一错误响应与基础类型转换能力：
 
-## Features
+1. 全局异常 → RFC 7807 ProblemDetail（含扩展字段）
+2. 校验（JSR-380）错误收集与脱敏格式化
+3. 可插拔字段贡献 SPI（核心 + Web 维度分层）
+4. 代理/网关环境路径提取（Forwarded / X-Forwarded-*）
+5. 标准化 traceId / timestamp / error code 输出
+6. 提供 `String -> ProvenanceCode` 全局 Converter
 
-- **Automatic ProblemDetail conversion** for all exceptions
-- **RFC 7807 compliance** with standard and extension fields
-- **Validation error formatting** with sensitive data masking
-- **Proxy-aware path extraction** for load balancer environments
-- **Data layer exception handling** (DuplicateKey, DataIntegrity, OptimisticLocking)
-- **Sensitive data masking** in error messages and validation errors
+---
 
-## Quick Start
-
-### 1. Add Dependencies
+## 1. 快速开始
 
 ```xml
-<dependencies>
-    <dependency>
-        <groupId>com.patra</groupId>
-        <artifactId>patra-spring-boot-starter-core</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-        <groupId>com.patra</groupId>
-        <artifactId>patra-spring-boot-starter-web</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-spring-boot-starter-core</artifactId>
+</dependency>
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-spring-boot-starter-web</artifactId>
+</dependency>
 ```
 
-### 2. Configure Properties
-
+YAML：
 ```yaml
 patra:
-  error:
-    context-prefix: REG  # Required in core starter
-  web:
-    problem:
-      enabled: true
-      type-base-url: "https://errors.example.com/"
-      include-stack: false
+    error:
+        context-prefix: REG   # core starter 中提供错误码分组前缀
+    web:
+        problem:
+            enabled: true
+            type-base-url: "https://errors.example.com/"
+            include-stack: false
 ```
 
-### 3. Use in Controllers
-
+Controller 中无需手写 try/catch：
 ```java
-@RestController
-@RequestMapping("/api/registry")
-public class NamespaceController {
-    
-    @GetMapping("/namespaces/{id}")
-    public NamespaceDto getNamespace(@PathVariable String id) {
-        // Just throw domain exceptions - they'll be handled automatically
-        throw new NamespaceNotFoundException(id);
-    }
-    
-    @PostMapping("/namespaces")
-    public NamespaceDto createNamespace(@Valid @RequestBody CreateNamespaceRequest request) {
-        // Validation errors are automatically formatted
-        // Domain exceptions are automatically converted to ProblemDetail
-        return namespaceService.create(request);
-    }
+@GetMapping("/namespaces/{id}")
+public NamespaceDto find(@PathVariable String id) {
+        throw new NamespaceNotFoundException(id); // 自动转换为 ProblemDetail
 }
 ```
 
-## Configuration Properties
+---
 
-### Web Error Properties (`patra.web.problem`)
+## 2. 自动配置与 Bean
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `enabled` | boolean | `true` | Enable/disable web error handling |
-| `type-base-url` | String | `https://errors.example.com/` | Base URL for ProblemDetail type field |
-| `include-stack` | boolean | `false` | Include stack trace in responses (dev only) |
+| Bean | 默认实现 | 作用 |
+|------|----------|------|
+| Converter<String, ProvenanceCode> | provenanceCodeConverter | PathVariable/RequestParam 自动绑定枚举别名 |
+| ValidationErrorsFormatter | DefaultValidationErrorsFormatter | 校验错误收集 + 脱敏 + 截断 |
+| ProblemDetailBuilder | ProblemDetailBuilder | 聚合核心与 Web 扩展字段，构建 ProblemDetail |
+| ProblemDetailAdapter | DefaultProblemDetailAdapter | 调用核心 `ErrorResolutionPipeline` 适配为响应模型 |
+| GlobalRestExceptionHandler | GlobalRestExceptionHandler | 统一异常入口（包含参数校验专用处理） |
 
-### Example Configuration
+> 属性开关：`patra.web.problem.enabled=false` 可整体关闭；单 Bean 可通过自定义同类型 Bean 覆盖。
 
-```yaml
-patra:
-  web:
-    problem:
-      enabled: true
-      type-base-url: "https://docs.mycompany.com/errors/"
-      include-stack: false  # Never enable in production
-```
+---
 
-## ProblemDetail Response Format
+## 3. 配置属性（`patra.web.problem.*`）
 
-### Standard Response
+| 属性 | 默认 | 说明 |
+|------|------|------|
+| enabled | true | 是否启用 Web 层错误处理 |
+| type-base-url | https://errors.example.com/ | 构造 ProblemDetail.type 前缀（末尾自动补 `/`） |
+| include-stack | false | 是否包含堆栈（生产环境禁止开启） |
 
+---
+
+## 4. 请求→响应处理流程
+
+1. 异常抛出（域/应用/运行时）
+2. `GlobalRestExceptionHandler` 捕获
+3. `ProblemDetailAdapter` 调用 `ErrorResolutionPipeline.resolve(Throwable)` 得到 `ErrorResolution`
+4. `ProblemDetailBuilder` 按以下顺序填充：
+     - 标准字段：type / title / detail / status
+     - 扩展字段：code / path / timestamp / traceId
+     - Core ProblemFieldContributor 扩展
+     - Web ProblemFieldContributor 扩展（含请求上下文）
+5. 参数校验异常：额外加入 `errors` 数组（字段 + 拒绝值 + 消息）
+6. 返回 `application/problem+json`
+
+---
+
+## 5. ProblemDetail 字段规范
+
+| 字段 | 来源 | 说明 |
+|------|------|------|
+| type | `type-base-url` + 错误码小写 | 唯一错误文档定位入口 |
+| title | 错误码（原值） | 保持短、标识性强 |
+| status | pipeline 解析出的 HTTP 状态 | 非法值回退 500 |
+| detail | 异常消息（脱敏后） | 生产建议保持通用语义 |
+| code | 错误码（扩展字段） | 与 title 同步，利于前端匹配 |
+| traceId | TraceProvider | 分布式追踪 ID |
+| path | Forwarded/X-Forwarded-* 优先 | 网关后可见真实路径 |
+| timestamp | UTC ISO-8601 | 服务端时间戳 |
+| errors | (可选) 校验错误数组 | 仅在校验异常时存在 |
+
+示例：
 ```json
 {
-  "type": "https://errors.example.com/reg-1001",
-  "title": "REG-1001",
-  "status": 404,
-  "detail": "Namespace not found: test-namespace",
-  "code": "REG-1001",
-  "traceId": "abc123def456",
-  "path": "/api/registry/namespaces/test-namespace",
-  "timestamp": "2025-09-20T10:30:00Z"
+    "type": "https://errors.example.com/reg-1001",
+    "title": "REG-1001",
+    "status": 404,
+    "detail": "Namespace not found: ns-x",
+    "code": "REG-1001",
+    "traceId": "4f1d9b3c...",
+    "path": "/api/registry/namespaces/ns-x",
+    "timestamp": "2025-09-28T08:30:20Z"
 }
 ```
 
-### Validation Error Response
+---
 
-```json
-{
-  "type": "https://errors.example.com/reg-0422",
-  "title": "REG-0422",
-  "status": 422,
-  "detail": "Validation failed",
-  "code": "REG-0422",
-  "traceId": "abc123def456",
-  "path": "/api/registry/namespaces",
-  "timestamp": "2025-09-20T10:30:00Z",
-  "errors": [
-    {
-      "field": "name",
-      "rejectedValue": "***",
-      "message": "Name must not be empty"
-    },
-    {
-      "field": "description",
-      "rejectedValue": null,
-      "message": "Description is required"
-    }
-  ]
-}
-```
+## 6. 校验错误格式化 (DefaultValidationErrorsFormatter)
 
-## Handled Exception Types
+处理逻辑：
+| 步骤 | 说明 |
+|------|------|
+| 收集 | `BindingResult#getAllErrors()` → 限制最多 100 条 |
+| 字段识别 | FieldError vs ObjectError（全局错误） |
+| 脱敏 | 字段名包含 password/token/secret/key/credential/auth/pin/ssn/credit/card/account → `***` |
+| 截断告警 | 超过上限写日志 WARN |
 
-### Domain Exceptions
+自定义：实现 `ValidationErrorsFormatter` Bean 即可覆盖。
 
-All domain exceptions extending `DomainException` are automatically handled:
+---
 
-```java
-// Automatically mapped to 404
-public class NamespaceNotFoundException extends RegistryNotFound {
-    public NamespaceNotFoundException(String namespaceId) {
-        super("Namespace not found: " + namespaceId);
-    }
-}
+## 7. 扩展点（SPI）
 
-// Automatically mapped to 409
-public class NamespaceAlreadyExists extends RegistryConflict {
-    public NamespaceAlreadyExists(String namespaceId) {
-        super("Namespace already exists: " + namespaceId);
-    }
-}
-```
+| 接口 | 方向 | 典型用途 |
+|------|------|----------|
+| ProblemFieldContributor (core starter) | 核心字段 | 与业务无关的通用扩展（如 host, env） |
+| WebProblemFieldContributor | Web 上下文字段 | userAgent / clientIp / geo 信息 |
+| ValidationErrorsFormatter | 校验错误格式 | 自定义脱敏策略、错误分组 |
 
-### Application Exceptions
+> 避免在 contributor 中写入超大对象；大对象请转换为可追踪 ID。
 
-Exceptions with explicit error codes:
+---
 
-```java
-throw new ApplicationException(
-    RegistryErrorCode.REG_1001, 
-    "Custom error message"
-);
-```
+## 8. 自定义示例
 
-### Validation Exceptions
-
-JSR-380 validation errors are automatically formatted:
-
-```java
-@PostMapping("/namespaces")
-public NamespaceDto create(@Valid @RequestBody CreateNamespaceRequest request) {
-    // MethodArgumentNotValidException is automatically handled
-    return service.create(request);
-}
-```
-
-### Data Layer Exceptions
-
-Database exceptions are automatically mapped:
-
-- `DuplicateKeyException` → 409 Conflict
-- `DataIntegrityViolationException` → 422 Unprocessable Entity
-- `OptimisticLockingFailureException` → 409 Conflict
-
-## Customization
-
-### Custom Field Contributors
-
-Add custom fields to all ProblemDetail responses:
-
+自定义 Web 字段：
 ```java
 @Component
-public class CustomWebFieldContributor implements WebProblemFieldContributor {
-    
-    @Override
-    public void contribute(Map<String, Object> fields, Throwable exception, HttpServletRequest request) {
-        fields.put("userAgent", request.getHeader("User-Agent"));
-        fields.put("clientIp", extractClientIp(request));
-    }
-    
-    private String extractClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        return forwarded != null ? forwarded.split(",")[0] : request.getRemoteAddr();
+class UserAgentContributor implements WebProblemFieldContributor {
+    public void contribute(Map<String,Object> f, Throwable ex, HttpServletRequest req){
+        f.put("userAgent", req.getHeader("User-Agent"));
+        f.put("clientIp", Optional.ofNullable(req.getHeader("X-Forwarded-For"))
+                .map(h -> h.split(",")[0]).orElse(req.getRemoteAddr()));
     }
 }
 ```
 
-### Custom Validation Formatter
-
-Customize validation error formatting:
-
+自定义校验错误格式化：
 ```java
 @Component
-public class CustomValidationErrorsFormatter implements ValidationErrorsFormatter {
-    
-    @Override
-    public List<ValidationError> formatWithMasking(BindingResult bindingResult) {
-        return bindingResult.getFieldErrors().stream()
-            .map(error -> new ValidationError(
-                error.getField(),
-                maskSensitiveValue(error.getField(), error.getRejectedValue()),
-                error.getDefaultMessage()
-            ))
-            .collect(Collectors.toList());
+class SimpleValidationFormatter implements ValidationErrorsFormatter {
+    public List<ValidationError> formatWithMasking(BindingResult br){
+        return br.getFieldErrors().stream()
+            .map(e -> new ValidationError(e.getField(), redact(e.getField(), e.getRejectedValue()), e.getDefaultMessage()))
+            .toList();
     }
-    
-    private Object maskSensitiveValue(String field, Object value) {
-        if (field.toLowerCase().contains("password") || 
-            field.toLowerCase().contains("token")) {
-            return "***";
-        }
-        return value;
-    }
+    private Object redact(String field, Object val){
+        if(field.toLowerCase().contains("password")) return "***"; return val; }
 }
 ```
 
-## Security Features
+---
 
-### Sensitive Data Masking
+## 9. 性能 & 安全
 
-The starter automatically masks sensitive data in:
+| 关注点 | 策略 |
+|--------|------|
+| 大量校验错误 | 截断 100 条，日志提示 | 
+| 堆栈暴露 | 默认关闭 include-stack |
+| 敏感信息泄漏 | message 正则脱敏 + validation masking |
+| 规则执行开销 | 核心解析在 core starter 中缓存（若已实现）|
+| 路径获取 | 多头部容错，避免 NPE |
 
-- Error messages (password, token, secret, key patterns)
-- Validation error rejected values
-- Custom field contributions
+---
 
-### Proxy-Aware Path Extraction
+## 10. 最佳实践
 
-Correctly extracts request paths in proxy/load balancer environments:
+| 场景 | 建议 |
+|------|------|
+| 统一错误码文档 | 与 type-base-url 对应，生成静态页面或 OpenAPI link |
+| 前端提示 | 使用 code + errors[*].field 进行 i18n 映射 |
+| 追踪 | traceId 贯穿日志 / 前端错误反馈收集表单 |
+| 单元测试 | 断言 ProblemDetail 的关键字段（type/code/status/path）|
 
-1. Standard `Forwarded` header (RFC 7239)
-2. `X-Forwarded-Path` header
-3. `X-Forwarded-Uri` header
-4. Fallback to `request.getRequestURI()`
+---
 
-## Testing
+## 11. Roadmap
 
-### Integration Testing
+| 优先级 | 项目 | 描述 |
+|--------|------|------|
+| High | Stack 输出安全开关细化 | dev/prod profile 自动判定 |
+| High | OpenAPI 集成 | 生成错误码规范文档 endpoint |
+| Mid | i18n 支持 | ProblemDetail title/detail 可按 Accept-Language 动态翻译 |
+| Mid | 可配置截断策略 | 校验错误数量、字段白名单 |
+| Low | 链路可观测增强 | 输出 correlationId / spanId |
 
-```java
-@SpringBootTest
-@AutoConfigureTestDatabase
-@TestPropertySource(properties = {
-    "patra.error.context-prefix=TEST",
-    "patra.web.problem.enabled=true"
-})
-class WebErrorHandlingIntegrationTest {
-    
-    @Autowired
-    private MockMvc mockMvc;
-    
-    @Test
-    void shouldReturnProblemDetailForDomainException() throws Exception {
-        mockMvc.perform(get("/api/test/not-found"))
-            .andExpect(status().isNotFound())
-            .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
-            .andExpect(jsonPath("$.type").value("https://errors.example.com/test-0404"))
-            .andExpect(jsonPath("$.title").value("TEST-0404"))
-            .andExpect(jsonPath("$.status").value(404))
-            .andExpect(jsonPath("$.code").value("TEST-0404"))
-            .andExpect(jsonPath("$.traceId").exists())
-            .andExpect(jsonPath("$.path").value("/api/test/not-found"))
-            .andExpect(jsonPath("$.timestamp").exists());
-    }
-    
-    @Test
-    void shouldFormatValidationErrors() throws Exception {
-        mockMvc.perform(post("/api/test/validate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-            .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.errors").isArray())
-            .andExpect(jsonPath("$.errors[0].field").exists())
-            .andExpect(jsonPath("$.errors[0].message").exists());
-    }
-}
-```
+---
 
-### Unit Testing
+## 12. FAQ
 
-```java
-@ExtendWith(MockitoExtension.class)
-class GlobalRestExceptionHandlerTest {
-    
-    @Mock
-    private ErrorResolutionService errorResolutionService;
-    
-    @Mock
-    private ProblemDetailBuilder problemDetailBuilder;
-    
-    @InjectMocks
-    private GlobalRestExceptionHandler handler;
-    
-    @Test
-    void shouldHandleApplicationException() {
-        ApplicationException ex = new ApplicationException(
-            TestErrorCode.VALIDATION_FAILED, 
-            "Test message"
-        );
-        
-        when(errorResolutionService.resolve(ex))
-            .thenReturn(new ErrorResolution(TestErrorCode.VALIDATION_FAILED, 422));
-        
-        ResponseEntity<ProblemDetail> response = handler.handleException(ex, mockRequest);
-        
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-}
-```
+| 问题 | 回答 |
+|------|------|
+| 为什么不默认输出堆栈? | 避免敏感信息泄漏与响应膨胀；调试时临时开启 |
+| errors 字段为空怎么办? | 仅校验异常才存在；其他场景省略字段更简洁 |
+| 如何扩展 ProblemDetail 字段? | 实现 ProblemFieldContributor / WebProblemFieldContributor |
+| traceId 缺失? | 确认核心 starter TraceProvider 是否正确接入（日志 MDC）|
 
-## Performance Considerations
+---
 
-### Response Size Limits
+## 13. 参考源码
 
-- Validation errors are limited to 100 items to prevent oversized responses
-- Stack traces are excluded by default (configurable)
-- Sensitive data is masked to prevent information leakage
+| 位置 | 说明 |
+|------|------|
+| `web/autoconfig/WebConversionAutoConfiguration.java` | 字符串到 ProvenanceCode 转换自动配置 |
+| `web/error/config/WebErrorAutoConfiguration.java` | Web 错误自动配置入口 |
+| `web/error/builder/ProblemDetailBuilder.java` | ProblemDetail 构造逻辑 |
+| `web/error/handler/GlobalRestExceptionHandler.java` | 全局异常处理器 |
+| `web/error/formatter/DefaultValidationErrorsFormatter.java` | 校验错误脱敏与截断 |
+| `web/error/adapter/DefaultProblemDetailAdapter.java` | 解析结果适配 -> ProblemDetail |
 
-### Caching
+---
 
-- Error resolution results are cached at the core starter level
-- ProblemDetail building is optimized for common scenarios
-
-## Troubleshooting
-
-### Common Issues
-
-1. **ProblemDetail not returned**: Check that `patra.web.problem.enabled=true`
-2. **Missing fields**: Verify core starter configuration and field contributors
-3. **Wrong HTTP status**: Check error resolution algorithm and error code httpStatus/HttpStdErrors 使用是否正确
-
-### Debug Logging
-
-```yaml
-logging:
-  level:
-    com.patra.starter.web.error: DEBUG
-    com.patra.starter.core.error: DEBUG
-```
-
-## Migration
-
-See the [Migration Guide](../docs/MIGRATION_GUIDE.md) for detailed instructions on migrating from manual exception handling to automatic ProblemDetail responses.
+如需新增功能或发现问题，请附：请求路径、traceId、异常类型、当前响应 JSON、期望结果。

@@ -1,5 +1,6 @@
 package com.patra.registry.domain.model.vo.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
@@ -47,28 +48,18 @@ public record HttpConfig(
                       Integer retryAfterCapMillis,
                       String idempotencyHeaderName,
                       Integer idempotencyTtlSeconds) {
-        if (id == null || id <= 0) {
-            throw new IllegalArgumentException("HTTP config id must be positive");
-        }
-        if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
-        }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
-        }
-        if (retryAfterPolicyCode == null || retryAfterPolicyCode.isBlank()) {
-            throw new IllegalArgumentException("Retry-after policy code cannot be blank");
-        }
-        if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
-        }
+        DomainValidationException.positive(id, "HTTP config id");
+        DomainValidationException.positive(provenanceId, "Provenance id");
+        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
+        String retryAfterTrimmed = DomainValidationException.notBlank(retryAfterPolicyCode, "Retry-after policy code");
+        DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id;
-        this.provenanceId = provenanceId;
-        this.scopeCode = scopeCode.trim();
+        this.id = id; // 已验证
+        this.provenanceId = provenanceId; // 已验证
+        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom;
+        this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;
         this.baseUrlOverride = baseUrlOverride != null ? baseUrlOverride.trim() : null;
         this.defaultHeadersJson = defaultHeadersJson;
@@ -79,7 +70,7 @@ public record HttpConfig(
         this.proxyUrlValue = proxyUrlValue != null ? proxyUrlValue.trim() : null;
         this.acceptCompressEnabled = acceptCompressEnabled;
         this.preferHttp2Enabled = preferHttp2Enabled;
-        this.retryAfterPolicyCode = retryAfterPolicyCode.trim();
+        this.retryAfterPolicyCode = retryAfterTrimmed;
         this.retryAfterCapMillis = retryAfterCapMillis;
         this.idempotencyHeaderName = idempotencyHeaderName != null ? idempotencyHeaderName.trim() : null;
         this.idempotencyTtlSeconds = idempotencyTtlSeconds;

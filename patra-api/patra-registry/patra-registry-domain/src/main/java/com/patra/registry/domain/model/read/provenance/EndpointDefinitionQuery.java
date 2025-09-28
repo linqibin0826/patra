@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.time.Instant;
 
 /**
@@ -29,28 +31,28 @@ public record EndpointDefinitionQuery(
 ) {
     public EndpointDefinitionQuery {
         if (id == null || id <= 0) {
-            throw new IllegalArgumentException("Endpoint id must be positive");
+            throw new DomainValidationException("Endpoint id must be positive");
         }
         if (provenanceId == null || provenanceId <= 0) {
-            throw new IllegalArgumentException("Provenance id must be positive");
+            throw new DomainValidationException("Provenance id must be positive");
         }
         if (scopeCode == null || scopeCode.isBlank()) {
-            throw new IllegalArgumentException("Scope code cannot be blank");
+            throw new DomainValidationException("Scope code cannot be blank");
         }
         if (endpointName == null || endpointName.isBlank()) {
-            throw new IllegalArgumentException("Endpoint name cannot be blank");
+            throw new DomainValidationException("Endpoint name cannot be blank");
         }
         if (endpointUsageCode == null || endpointUsageCode.isBlank()) {
-            throw new IllegalArgumentException("Endpoint usage code cannot be blank");
+            throw new DomainValidationException("Endpoint usage code cannot be blank");
         }
         if (httpMethodCode == null || httpMethodCode.isBlank()) {
-            throw new IllegalArgumentException("HTTP method code cannot be blank");
+            throw new DomainValidationException("HTTP method code cannot be blank");
         }
         if (pathTemplate == null || pathTemplate.isBlank()) {
-            throw new IllegalArgumentException("Path template cannot be blank");
+            throw new DomainValidationException("Path template cannot be blank");
         }
         if (effectiveFrom == null) {
-            throw new IllegalArgumentException("Effective from cannot be null");
+            throw new DomainValidationException("Effective from cannot be null");
         }
         scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;

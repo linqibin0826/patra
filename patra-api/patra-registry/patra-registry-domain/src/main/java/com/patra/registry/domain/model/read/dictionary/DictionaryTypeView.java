@@ -1,5 +1,7 @@
 package com.patra.registry.domain.model.read.dictionary;
 
+import com.patra.registry.domain.exception.DomainValidationException;
+
 /**
  * 字典类型视图对象（对外消费，query.view）。
  *
@@ -22,13 +24,13 @@ public record DictionaryTypeView(
     /** 带参数校验的紧凑构造器。 */
     public DictionaryTypeView {
         if (typeCode == null || typeCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
+            throw new DomainValidationException("Dictionary type code cannot be null or empty");
         }
         if (typeName == null || typeName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Dictionary type name cannot be null or empty");
+            throw new DomainValidationException("Dictionary type name cannot be null or empty");
         }
         if (itemCount < 0) {
-            throw new IllegalArgumentException("Item count cannot be negative");
+            throw new DomainValidationException("Item count cannot be negative");
         }
         
         // Normalize the codes and names to ensure consistency
