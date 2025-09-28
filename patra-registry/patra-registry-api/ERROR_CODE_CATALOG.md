@@ -11,24 +11,7 @@ All Registry error codes follow the structured format: **`REG-NNNN`**
 
 ## Error Code Categories
 
-### Common HTTP-Aligned Codes (0xxx Series)
-
-These codes correspond directly to standard HTTP status codes and provide consistent error handling for common scenarios.
-
-| Code | HTTP Status | Description | Usage |
-|------|-------------|-------------|-------|
-| `REG-0400` | 400 | Bad Request | The request was invalid or malformed |
-| `REG-0401` | 401 | Unauthorized | Authentication is required or has failed |
-| `REG-0403` | 403 | Forbidden | The request is understood but access is denied |
-| `REG-0404` | 404 | Not Found | The requested resource could not be found |
-| `REG-0409` | 409 | Conflict | The request conflicts with the current state of the resource |
-| `REG-0422` | 422 | Unprocessable Entity | The request is well-formed but contains semantic errors |
-| `REG-0429` | 429 | Too Many Requests | Rate limit exceeded or quota exhausted |
-| `REG-0500` | 500 | Internal Server Error | An unexpected error occurred on the server |
-| `REG-0503` | 503 | Service Unavailable | The service is temporarily unavailable |
-| `REG-0504` | 504 | Gateway Timeout | Timeout occurred while waiting for upstream service |
-
-### Business-Specific Codes (1xxx Series)
+### Business-Specific Codes (1xxx Series) (1xxx Series)
 
 These codes represent business logic errors specific to Registry service operations and map directly to domain exceptions.
 
@@ -81,7 +64,7 @@ All Registry service errors follow the RFC 7807 ProblemDetail format:
 ### For Developers
 
 1. **Error Code Selection**: Choose the most specific error code available
-2. **Fallback Strategy**: Use HTTP-aligned codes (0xxx series) when no specific business code applies
+2. **Fallback Strategy**: Use HTTP-aligned codes via `HttpStdErrors` factory when no specific business code applies
 3. **Error Messages**: Provide clear, actionable error messages in the `detail` field
 4. **Consistency**: Maintain consistent error handling patterns across all endpoints
 

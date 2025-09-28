@@ -1,6 +1,6 @@
 package com.patra.starter.mybatis.autoconfig;
 
-import com.patra.starter.core.error.config.ErrorProperties;
+import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.mybatis.error.contributor.DataLayerErrorMappingContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.mapper.MapperScannerConfigurer;
@@ -42,25 +42,9 @@ public class PatraMybatisAutoConfiguration {
      * <p>业务模块可通过 MyBatis-Plus 的配置项追加或覆盖扫描路径。</p>
      */
     @Bean
-    public MapperScannerConfigurer mapperScannerConfigurer() {
-        MapperScannerConfigurer c = new MapperScannerConfigurer();
-        c.setBasePackage("com.patra.**.infra.persistence.mapper");
-        return c;
-    }
-
-    
-    /**
-     * 注册数据层错误映射贡献者（处理 MyBatis-Plus 与数据库异常）。
-     *
-     * @param errorProperties 错误处理配置
-     * @return 贡献者实例
-     */
-    @Bean
     @ConditionalOnMissingBean
-    public DataLayerErrorMappingContributor dataLayerErrorMappingContributor(
-            ErrorProperties errorProperties) {
-        
+    public DataLayerErrorMappingContributor dataLayerErrorMappingContributor(HttpStdErrors.Group http) {
         log.debug("Creating data layer error mapping contributor for MyBatis-Plus");
-        return new DataLayerErrorMappingContributor(errorProperties);
+        return new DataLayerErrorMappingContributor(http);
     }
 }

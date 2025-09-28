@@ -1,6 +1,7 @@
 package com.patra.registry.config;
 
 import com.patra.common.error.codes.ErrorCodeLike;
+import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.registry.api.error.RegistryErrorCode;
 import com.patra.registry.domain.exception.*;
 import com.patra.registry.domain.exception.dictionary.*;
@@ -24,6 +25,12 @@ import java.util.Optional;
 @Slf4j
 @Component
 public class RegistryErrorMappingContributor implements ErrorMappingContributor {
+
+    private final HttpStdErrors.Group http;
+
+    public RegistryErrorMappingContributor(HttpStdErrors.Group http) {
+        this.http = http;
+    }
 
     /**
      * 执行异常到错误码的映射。
@@ -78,17 +85,17 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
         // Data layer exceptions - map to appropriate business codes
         if (exception instanceof DuplicateKeyException) {
             // Could be dictionary type or item already exists
-            return Optional.of(RegistryErrorCode.REG_0409); // Conflict
+            return Optional.of(http.CONFLICT()); // Conflict
         }
         
         if (exception instanceof DataIntegrityViolationException) {
             // Data integrity issues - validation error
-            return Optional.of(RegistryErrorCode.REG_0422); // Unprocessable Entity
+            return Optional.of(http.UNPROCESSABLE()); // 422
         }
         
         if (exception instanceof OptimisticLockingFailureException) {
             // Concurrent modification - conflict
-            return Optional.of(RegistryErrorCode.REG_0409); // Conflict
+            return Optional.of(http.CONFLICT()); // Conflict
         }
         
         // No mapping found

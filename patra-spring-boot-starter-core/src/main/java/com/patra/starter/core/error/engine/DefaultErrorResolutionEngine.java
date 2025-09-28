@@ -7,7 +7,6 @@ import com.patra.common.error.trait.HasErrorTraits;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
-import com.patra.starter.core.error.spi.StatusMappingStrategy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -32,17 +31,14 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     private static final String DEFAULT_CONTEXT = "UNKNOWN";
 
     private final ErrorProperties errorProperties;
-    private final StatusMappingStrategy statusMappingStrategy;
     private final List<ErrorMappingContributor> mappingContributors;
     private final int maxCauseDepth;
     private final boolean traitMappingEnabled;
     private final boolean namingHeuristicEnabled;
 
     public DefaultErrorResolutionEngine(ErrorProperties errorProperties,
-                                        StatusMappingStrategy statusMappingStrategy,
                                         List<ErrorMappingContributor> mappingContributors) {
         this.errorProperties = errorProperties;
-        this.statusMappingStrategy = statusMappingStrategy;
         this.mappingContributors = mappingContributors;
         this.maxCauseDepth = errorProperties.getEngine().getMaxCauseDepth();
         this.traitMappingEnabled = errorProperties.getEngine().isEnableTraitMapping();
@@ -61,14 +57,14 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     private ErrorResolution resolveWithCause(Throwable exception, int depth) {
         if (depth > maxCauseDepth) {
             log.warn("超过最大因果链深度 {}，直接返回服务器错误", maxCauseDepth);
-            return new ErrorResolution(createCode("0500"), 500);
+            ErrorCodeLike code = createCode("0500");
+            return new ErrorResolution(code, code.httpStatus());
         }
 
         if (exception instanceof ApplicationException appEx) {
             ErrorCodeLike errorCode = appEx.getErrorCode();
-            int status = statusMappingStrategy.mapToHttpStatus(errorCode, exception);
             log.debug("按 ApplicationException 直接解析 -> {}", errorCode.code());
-            return new ErrorResolution(errorCode, status);
+            return new ErrorResolution(errorCode, errorCode.httpStatus());
         }
 
         for (ErrorMappingContributor contributor : mappingContributors) {
@@ -76,9 +72,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
                 var mapped = contributor.mapException(exception);
                 if (mapped.isPresent()) {
                     ErrorCodeLike code = mapped.get();
-                    int status = statusMappingStrategy.mapToHttpStatus(code, exception);
                     log.debug("通过 ErrorMappingContributor({}) 解析成功 -> {}", contributor.getClass().getSimpleName(), code.code());
-                    return new ErrorResolution(code, status);
+                    return new ErrorResolution(code, code.httpStatus());
                 }
             } catch (Exception ex) {
                 log.warn("ErrorMappingContributor({}) 处理异常失败: {}", contributor.getClass().getSimpleName(), ex.getMessage());
@@ -89,9 +84,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
             Set<ErrorTrait> traits = hasErrorTraits.getErrorTraits();
             if (traits != null && !traits.isEmpty()) {
                 ErrorCodeLike code = mapTraitsToCode(traits);
-                int status = mapTraitsToStatus(traits);
                 log.debug("通过 Trait 解析 -> {}", code.code());
-                return new ErrorResolution(code, status);
+                return new ErrorResolution(code, code.httpStatus());
             }
         }
 
@@ -114,88 +108,51 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
     private ErrorResolution fallbackForException(Throwable exception) {
         if (isClientErrorLike(exception)) {
-            return new ErrorResolution(createCode("0422"), 422);
+            ErrorCodeLike code = createCode("0422");
+            return new ErrorResolution(code, code.httpStatus());
         }
         return fallbackServerError();
     }
-
     private ErrorCodeLike mapTraitsToCode(Set<ErrorTrait> traits) {
-        if (traits.contains(ErrorTrait.NOT_FOUND)) {
-            return createCode("0404");
-        }
-        if (traits.contains(ErrorTrait.CONFLICT)) {
-            return createCode("0409");
-        }
-        if (traits.contains(ErrorTrait.RULE_VIOLATION)) {
-            return createCode("0422");
-        }
-        if (traits.contains(ErrorTrait.QUOTA_EXCEEDED)) {
-            return createCode("0429");
-        }
-        if (traits.contains(ErrorTrait.UNAUTHORIZED)) {
-            return createCode("0401");
-        }
-        if (traits.contains(ErrorTrait.FORBIDDEN)) {
-            return createCode("0403");
-        }
-        if (traits.contains(ErrorTrait.TIMEOUT)) {
-            return createCode("0504");
-        }
-        if (traits.contains(ErrorTrait.DEP_UNAVAILABLE)) {
-            return createCode("0503");
-        }
+        if (traits.contains(ErrorTrait.NOT_FOUND)) { return createCode("0404"); }
+        if (traits.contains(ErrorTrait.CONFLICT)) { return createCode("0409"); }
+        if (traits.contains(ErrorTrait.RULE_VIOLATION)) { return createCode("0422"); }
+        if (traits.contains(ErrorTrait.QUOTA_EXCEEDED)) { return createCode("0429"); }
+        if (traits.contains(ErrorTrait.UNAUTHORIZED)) { return createCode("0401"); }
+        if (traits.contains(ErrorTrait.FORBIDDEN)) { return createCode("0403"); }
+        if (traits.contains(ErrorTrait.TIMEOUT)) { return createCode("0504"); }
+        if (traits.contains(ErrorTrait.DEP_UNAVAILABLE)) { return createCode("0503"); }
         return createCode("0500");
-    }
-
-    private int mapTraitsToStatus(Set<ErrorTrait> traits) {
-        if (traits.contains(ErrorTrait.NOT_FOUND)) {
-            return 404;
-        }
-        if (traits.contains(ErrorTrait.CONFLICT)) {
-            return 409;
-        }
-        if (traits.contains(ErrorTrait.RULE_VIOLATION)) {
-            return 422;
-        }
-        if (traits.contains(ErrorTrait.QUOTA_EXCEEDED)) {
-            return 429;
-        }
-        if (traits.contains(ErrorTrait.UNAUTHORIZED)) {
-            return 401;
-        }
-        if (traits.contains(ErrorTrait.FORBIDDEN)) {
-            return 403;
-        }
-        if (traits.contains(ErrorTrait.TIMEOUT)) {
-            return 504;
-        }
-        if (traits.contains(ErrorTrait.DEP_UNAVAILABLE)) {
-            return 503;
-        }
-        return 500;
     }
 
     private ErrorResolution resolveByNamingConvention(String className) {
         if (className.endsWith("NotFound")) {
-            return new ErrorResolution(createCode("0404"), 404);
+            ErrorCodeLike c = createCode("0404");
+            return new ErrorResolution(c, c.httpStatus());
         }
         if (className.endsWith("Conflict") || className.endsWith("AlreadyExists")) {
-            return new ErrorResolution(createCode("0409"), 409);
+            ErrorCodeLike c = createCode("0409");
+            return new ErrorResolution(c, c.httpStatus());
         }
         if (className.endsWith("Invalid") || className.endsWith("Validation")) {
-            return new ErrorResolution(createCode("0422"), 422);
+            ErrorCodeLike c = createCode("0422");
+            return new ErrorResolution(c, c.httpStatus());
         }
         if (className.endsWith("QuotaExceeded")) {
-            return new ErrorResolution(createCode("0429"), 429);
+            ErrorCodeLike c = createCode("0429");
+            return new ErrorResolution(c, c.httpStatus());
         }
         if (className.endsWith("Unauthorized")) {
-            return new ErrorResolution(createCode("0401"), 401);
+            ErrorCodeLike c = createCode("0401");
+            return new ErrorResolution(c, c.httpStatus());
         }
         if (className.endsWith("Forbidden")) {
-            return new ErrorResolution(createCode("0403"), 403);
+            ErrorCodeLike c = createCode("0403");
+            return new ErrorResolution(c, c.httpStatus());
         }
         if (className.endsWith("Timeout")) {
-            return new ErrorResolution(createCode("0504"), 504);
+            ErrorCodeLike c = createCode("0504");
+            return new ErrorResolution(c, c.httpStatus());
         }
         return null;
     }
@@ -214,7 +171,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     }
 
     private ErrorResolution fallbackServerError() {
-        return new ErrorResolution(createCode("0500"), 500);
+        ErrorCodeLike code = createCode("0500");
+        return new ErrorResolution(code, code.httpStatus());
     }
 
     private ErrorCodeLike createCode(String suffix) {
@@ -222,7 +180,24 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         if (contextPrefix == null || contextPrefix.isBlank()) {
             contextPrefix = DEFAULT_CONTEXT;
         }
-        String finalPrefix = contextPrefix;
-        return () -> finalPrefix + "-" + suffix;
+        final String finalCode = contextPrefix + "-" + suffix;
+        int status;
+        try {
+            status = Integer.parseInt(suffix);
+            if (status < 100 || status > 599) {
+                status = 500;
+            }
+        } catch (NumberFormatException e) {
+            status = 500;
+        }
+        final int http = status;
+        return new ErrorCodeLike() {
+            @Override
+            public String code() { return finalCode; }
+            @Override
+            public int httpStatus() { return http; }
+            @Override
+            public String toString() { return finalCode; }
+        };
     }
 }

@@ -40,7 +40,6 @@ That's it! The starter will auto-configure all necessary components.
 |----------|------|---------|-------------|
 | `enabled` | boolean | `true` | Enable/disable error handling |
 | `context-prefix` | String | **Required** | Error code prefix (e.g., REG, ORD, INV) |
-| `map-status.strategy` | String | `suffix-heuristic` | HTTP status mapping strategy |
 
 ### Tracing Properties (`patra.tracing`)
 
@@ -55,8 +54,6 @@ patra:
   error:
     enabled: true
     context-prefix: REG
-    map-status:
-      strategy: suffix-heuristic
   tracing:
     header-names:
       - traceId
@@ -68,29 +65,6 @@ patra:
 ## SPI Interfaces
 
 The core starter provides several SPI interfaces for customization:
-
-### StatusMappingStrategy
-
-Maps error codes to HTTP status codes:
-
-```java
-@Component
-public class CustomStatusMappingStrategy implements StatusMappingStrategy {
-    
-    @Override
-    public int mapToHttpStatus(ErrorCodeLike errorCode, Throwable exception) {
-        String code = errorCode.code();
-        
-        // Custom mapping logic
-        if (code.endsWith("-QUOTA")) {
-            return 429; // Too Many Requests
-        }
-        
-        // Fallback to default strategy
-        return 422;
-    }
-}
-```
 
 ### ErrorMappingContributor
 

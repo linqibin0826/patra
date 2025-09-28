@@ -1,5 +1,6 @@
 package com.patra.starter.core.error.config;
 
+import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.core.error.engine.DefaultErrorResolutionEngine;
 import com.patra.starter.core.error.engine.ErrorResolutionEngine;
 import com.patra.starter.core.error.observation.ErrorObservationRecorder;
@@ -10,9 +11,7 @@ import com.patra.starter.core.error.pipeline.interceptor.CircuitBreakerIntercept
 import com.patra.starter.core.error.pipeline.interceptor.MetricsInterceptor;
 import com.patra.starter.core.error.pipeline.interceptor.TracingInterceptor;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
-import com.patra.starter.core.error.spi.StatusMappingStrategy;
 import com.patra.starter.core.error.spi.TraceProvider;
-import com.patra.starter.core.error.strategy.SuffixHeuristicStatusMappingStrategy;
 import com.patra.starter.core.error.trace.HeaderBasedTraceProvider;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -40,12 +39,6 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "patra.error", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CoreErrorAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public StatusMappingStrategy defaultStatusMappingStrategy() {
-        log.debug("使用默认的后缀启发式状态映射策略");
-        return new SuffixHeuristicStatusMappingStrategy();
-    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -73,12 +66,11 @@ public class CoreErrorAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ErrorResolutionEngine errorResolutionEngine(ErrorProperties errorProperties,
-                                                       StatusMappingStrategy statusMappingStrategy,
                                                        List<ErrorMappingContributor> mappingContributors) {
         if (errorProperties.getContextPrefix() == null || errorProperties.getContextPrefix().isBlank()) {
             log.warn("patra.error.context-prefix 未配置，统一错误码将使用 UNKNOWN 前缀");
         }
-        return new DefaultErrorResolutionEngine(errorProperties, statusMappingStrategy, mappingContributors);
+        return new DefaultErrorResolutionEngine(errorProperties, mappingContributors);
     }
 
     @Bean
@@ -125,5 +117,15 @@ public class CoreErrorAutoConfiguration {
             ErrorObservationRecorder observationRecorder,
             ErrorProperties errorProperties) {
         return new CircuitBreakerInterceptor(circuitBreaker, observationRecorder, errorProperties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(HttpStdErrors.Group.class)
+    public HttpStdErrors.Group httpStdErrorsGroup(ErrorProperties errorProperties) {
+        String prefix = errorProperties.getContextPrefix();
+        if (prefix == null || prefix.isBlank()) {
+            prefix = "UNKNOWN";
+        }
+        return HttpStdErrors.of(prefix);
     }
 }
