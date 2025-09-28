@@ -21,7 +21,7 @@ All Registry error codes follow the format: **`REG-NNNN`**
 
 ### Categories
 
-- **0xxx Series** - Common HTTP-aligned codes (REG-0400 to REG-0504)
+- **0xxx Series** - HTTP-aligned codes provided by `HttpStdErrors` factory (not enumerated here)
 - **14xx Series** - Dictionary operations (REG-1401 to REG-1409)
 - **15xx Series** - Registry general operations (REG-1501)
 

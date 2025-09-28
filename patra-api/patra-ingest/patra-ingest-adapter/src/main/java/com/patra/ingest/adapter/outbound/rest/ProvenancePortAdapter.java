@@ -32,6 +32,7 @@ import java.util.Collections;
  * @author linqibin
  * @since 0.1.0
  */
+
 /**
  * Registry 出站适配器：负责访问 patra-registry 获取来源配置。
  *
@@ -43,9 +44,13 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class ProvenancePortAdapter implements ProvenancePort {
 
-    /** Registry RPC 客户端 */
+    /**
+     * Registry RPC 客户端
+     */
     private final ProvenanceClient provenanceClient;
-    /** 配置快照转换器 */
+    /**
+     * 配置快照转换器
+     */
     private final ProvenanceConfigSnapshotConverter converter;
 
     /**
@@ -88,9 +93,9 @@ public class ProvenancePortAdapter implements ProvenancePort {
      * 处理远端 ProblemDetail 异常。
      */
     private ProvenanceConfigSnapshot handleRemoteException(RemoteCallException ex,
-                                                          String code,
-                                                          String taskType,
-                                                          String endpoint) {
+                                                           String code,
+                                                           String taskType,
+                                                           String endpoint) {
         if (RemoteErrorHelper.isNotFound(ex)) {
             log.warn("Provenance config not found, code={}, taskType={}, endpoint={}, remoteCode={}, status={}, traceId={}",
                     code, taskType, endpoint, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
@@ -120,9 +125,9 @@ public class ProvenancePortAdapter implements ProvenancePort {
      */
     private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
         log.info("Creating minimal provenance snapshot, code={}", provenanceCode);
-        
+
         // 创建最小的 ProvenanceInfo
-        ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance = 
+        ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance =
                 new ProvenanceConfigSnapshot.ProvenanceInfo(
                         null, // id
                         provenanceCode, // code
@@ -133,7 +138,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
                         true, // active
                         null  // lifecycleStatusCode
                 );
-        
+
         return new ProvenanceConfigSnapshot(
                 minimalProvenance,
                 null, // endpoint

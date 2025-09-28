@@ -19,7 +19,7 @@
 
 ### 2.2 扩展规则
 - 业务若需自定义错误码映射，应实现 `ErrorMappingContributor` 并注册为 Bean。
-- 自定义状态映射：实现 `StatusMappingStrategy`；如需特殊 Trace 获取，提供 `TraceProvider`。
+- 状态获取：错误码自身提供 `httpStatus()`；HTTP 对齐段（0xxx）通过 `HttpStdErrors` 工厂按前缀生成；如需特殊 Trace 获取，提供 `TraceProvider`。
 - 观测：若接入第三方指标体系，可自定义 `ErrorObservationRecorder` 替换默认实现。
 - 遵循六边形：核心模块不引入 Web/Feign 依赖，保持纯粹。
 ## 3. Web 适配层（patra-spring-boot-starter-web）
@@ -81,7 +81,7 @@
 
 ## 9. 模块落地示例：Ingest
 
-- **错误码目录**：`patra-ingest-api/src/main/java/com/patra/ingest/api/error/IngestErrorCode.java` 定义了 ING-0xxx/1xxx 段错误码，用于区分 HTTP 对齐错误与采集业务错误。
+- **错误码目录**：`patra-ingest-api/src/main/java/com/patra/ingest/api/error/IngestErrorCode.java` 定义 ING-1xxx 段业务错误码；HTTP 对齐段（0xxx）通过 `HttpStdErrors` 工厂（按 `patra.error.context-prefix` 自动前缀）生成，用于区分 HTTP 对齐错误与采集业务错误。
 - **映射组件**：`patra-ingest-boot/src/main/java/com/patra/ingest/config/IngestErrorMappingContributor.java` 将领域异常、调度参数错误、Outbox 状态异常映射到上述错误码，并透传远端 ProblemDetail。
 - **配置约束**：`patra-ingest-boot/src/main/resources/ingest-error-config.yaml` 汇总 `patra.error.*` 与 `patra.feign.problem.*` 本地默认值，并在 `application.yaml` 通过 `spring.config.import` 引入，方便后续迁移至 Nacos。
 - **远端调用**：`patra-ingest-adapter` 通过 `patra-spring-cloud-starter-feign` 的 `ProblemDetailErrorDecoder` 统一解析下游错误，`ProvenancePortAdapter` 仅在无法恢复的 4xx 情况下抛出 `IngestConfigurationException`。
@@ -89,7 +89,7 @@
 - **下一步建议**：为 Outbox/调度等场景补充单元测试，并在 Nacos 注册 ING 前缀，确保多环境配置一致。
 ## 10. 模块落地示例：Registry
 
-- **错误码目录**：`patra-registry-api/src/main/java/com/patra/registry/api/error/RegistryErrorCode.java` 维护 REG-0xxx/1xxx 段，`patra-registry-boot/src/main/resources/registry-error-config.yaml` 提供本地登记，后续迁移至 Nacos。
+- **错误码目录**：`patra-registry-api/src/main/java/com/patra/registry/api/error/RegistryErrorCode.java` 维护 REG-1xxx 段；HTTP 对齐段（0xxx）由 `HttpStdErrors` 工厂提供，`patra-registry-boot/src/main/resources/registry-error-config.yaml` 提供本地登记，后续迁移至 Nacos。
 - **映射组件**：`patra-registry-boot/src/main/java/com/patra/registry/config/RegistryErrorMappingContributor.java` 负责将领域异常（如 `DictionaryValidationException`、`DictionaryNotFoundException`）映射为 REG-140x/150x 错误码。
 - **领域异常应用**：应用/适配层统一抛出领域异常；`DictionaryQueryAppService`、`DictionaryValidationAppService` 用 `DictionaryValidationException` 替换 `IllegalArgumentException`，确保 ProblemDetail 能返回 REG-1407，同时包含 type/item 上下文。
 - **Web/Feign 适配**：`DictionaryClientImpl` 捕获领域异常进行结构化日志，异常交由 `ProblemDetailAdapter` 输出，保持 RFC7807。

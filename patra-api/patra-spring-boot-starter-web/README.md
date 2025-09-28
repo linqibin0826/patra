@@ -348,7 +348,7 @@ class GlobalRestExceptionHandlerTest {
 
 1. **ProblemDetail not returned**: Check that `patra.web.problem.enabled=true`
 2. **Missing fields**: Verify core starter configuration and field contributors
-3. **Wrong HTTP status**: Check error resolution algorithm and status mapping strategy
+3. **Wrong HTTP status**: Check error resolution algorithm and error code httpStatus/HttpStdErrors 使用是否正确
 
 ### Debug Logging
 

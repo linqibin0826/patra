@@ -38,7 +38,11 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
         } catch (CallNotPermittedException ex) {
             observationRecorder.recordCircuitBreakerFallback(exception);
             log.warn("错误解析熔断器开启，使用兜底错误码。原因: {}", ex.getMessage());
-            return new ErrorResolution(() -> contextPrefix + "-0503", 503);
+            return new ErrorResolution(new com.patra.common.error.codes.ErrorCodeLike() {
+                @Override public String code() { return contextPrefix + "-0503"; }
+                @Override public int httpStatus() { return 503; }
+                @Override public String toString() { return code(); }
+            }, 503);
         }
     }
 }

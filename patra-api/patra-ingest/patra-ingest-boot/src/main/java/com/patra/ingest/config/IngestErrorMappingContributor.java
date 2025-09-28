@@ -12,6 +12,7 @@ import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import com.patra.starter.feign.error.exception.RemoteCallException;
+import com.patra.starter.feign.error.util.RemoteErrorHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -70,15 +71,14 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
 
     private ErrorCodeLike resolveConfigurationError(IngestConfigurationException exception) {
         Throwable cause = exception.getCause();
-        if (cause instanceof RemoteCallException remoteCallException) {
-            int status = remoteCallException.getHttpStatus();
-            if (status == 404) {
+        if (cause instanceof RemoteCallException remote) {
+            if (RemoteErrorHelper.isNotFound(remote)) {
                 return IngestErrorCode.ING_1201;
             }
-            if (status >= 500) {
+            if (RemoteErrorHelper.isServerError(remote) || RemoteErrorHelper.isRetryable(remote)) {
                 return IngestErrorCode.ING_1203;
             }
-            if (status >= 400) {
+            if (RemoteErrorHelper.isClientError(remote)) {
                 return IngestErrorCode.ING_1202;
             }
         }

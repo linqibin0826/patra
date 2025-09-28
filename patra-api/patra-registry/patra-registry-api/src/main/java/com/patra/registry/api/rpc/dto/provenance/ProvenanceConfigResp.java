@@ -38,28 +38,27 @@ import java.util.List;
  * @param retry        重试与退避配置（最大重试次数、退避策略、白/黑名单状态码、网络错误是否重试、熔断阈值等）。缺省时按引擎默认策略执行。
  * @param rateLimit    限流与并发表面控制（令牌速率、突发桶容量、最大并发、按凭证粒度限制、服务器头遵守等）。未配置即不做来源专属限制。
  * @param credentials  鉴权凭证列表（可能多条：API Key / Basic / OAuth 等）。调用方需根据 endpoint.authRequired 与各凭证生命周期、默认偏好选择。允许为空列表表示开放或无需鉴权。</p>
- *
  * @author linqibin
  * @since 0.1.0
  */
 public record ProvenanceConfigResp(
-        /** 基础来源元数据（reg_provenance） */
+        /* 基础来源元数据（reg_provenance） */
         ProvenanceResp provenance,
-        /** 端点定义（reg_prov_endpoint_def），可能为空 */
+        /* 端点定义（reg_prov_endpoint_def），可能为空 */
         EndpointDefinitionResp endpoint,
-        /** 增量窗口/指针配置（reg_prov_window_offset_cfg），可能为空 */
+        /* 增量窗口/指针配置（reg_prov_window_offset_cfg），可能为空 */
         WindowOffsetResp windowOffset,
-        /** 分页 / 游标配置（reg_prov_pagination_cfg），可能为空 */
+        /* 分页 / 游标配置（reg_prov_pagination_cfg），可能为空 */
         PaginationConfigResp pagination,
-        /** HTTP 通信策略（reg_prov_http_cfg），可能为空 */
+        /* HTTP 通信策略（reg_prov_http_cfg），可能为空 */
         HttpConfigResp http,
-        /** 批量与请求成型策略（reg_prov_batching_cfg），可能为空 */
+        /* 批量与请求成型策略（reg_prov_batching_cfg），可能为空 */
         BatchingConfigResp batching,
-        /** 重试与退避策略（reg_prov_retry_cfg），可能为空 */
+        /* 重试与退避策略（reg_prov_retry_cfg），可能为空 */
         RetryConfigResp retry,
-        /** 限流与并发策略（reg_prov_rate_limit_cfg），可能为空 */
+        /* 限流与并发策略（reg_prov_rate_limit_cfg），可能为空 */
         RateLimitConfigResp rateLimit,
-        /** 凭证列表（reg_prov_credential），可为空列表 */
+        /* 凭证列表（reg_prov_credential），可为空列表 */
         List<CredentialResp> credentials
 ) {
 }

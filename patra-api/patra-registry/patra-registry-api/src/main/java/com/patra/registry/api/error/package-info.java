@@ -13,7 +13,7 @@
  *
  * <h2>分类</h2>
  * <ul>
- *   <li>{@code 0xxx} —— 对齐 HTTP 的通用错误（REG-0400 ~ REG-0504）</li>
+ *   <li>{@code 0xxx} —— 对齐 HTTP 的通用错误（由 HttpStdErrors 工厂按前缀生成，不在枚举中维护）</li>
  *   <li>{@code 1xxx} —— 领域/业务特定错误</li>
  * </ul>
  *
