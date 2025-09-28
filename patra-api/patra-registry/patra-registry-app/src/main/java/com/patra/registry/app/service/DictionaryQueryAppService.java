@@ -1,6 +1,7 @@
 package com.patra.registry.app.service;
 
 import com.patra.registry.app.converter.DictionaryQueryConverter;
+import com.patra.registry.domain.exception.dictionary.DictionaryValidationException;
 import com.patra.registry.domain.model.read.dictionary.DictionaryItemQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryTypeQuery;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryItem;
@@ -57,7 +58,7 @@ public class DictionaryQueryAppService {
     public Optional<DictionaryItemQuery> findItemByTypeAndCode(String typeCode, String itemCode) {
         log.debug("Finding dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
         requireTypeCode(typeCode);
-        requireItemCode(itemCode);
+        requireItemCode(typeCode, itemCode);
 
         Optional<DictionaryItem> domainItem = dictionaryRepository.findItemByTypeAndCode(typeCode, itemCode);
 
@@ -132,8 +133,8 @@ public class DictionaryQueryAppService {
      */
     public Optional<DictionaryItemQuery> findByAlias(String sourceSystem, String externalCode) {
         log.debug("Finding dictionary item by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
-        requireText(sourceSystem, "Source system cannot be null or empty");
-        requireText(externalCode, "External code cannot be null or empty");
+        requireText(sourceSystem, "Source system cannot be null or empty", null, null);
+        requireText(externalCode, "External code cannot be null or empty", null, null);
 
         Optional<DictionaryItem> domainItem = dictionaryRepository.findByAlias(sourceSystem, externalCode);
 
@@ -180,16 +181,16 @@ public class DictionaryQueryAppService {
     }
 
     private void requireTypeCode(String typeCode) {
-        requireText(typeCode, "Dictionary type code cannot be null or empty");
+        requireText(typeCode, "Dictionary type code cannot be null or empty", typeCode, null);
     }
 
-    private void requireItemCode(String itemCode) {
-        requireText(itemCode, "Dictionary item code cannot be null or empty");
+    private void requireItemCode(String typeCode, String itemCode) {
+        requireText(itemCode, "Dictionary item code cannot be null or empty", typeCode, itemCode);
     }
 
-    private void requireText(String value, String message) {
+    private void requireText(String value, String message, String typeCode, String itemCode) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
+            throw new DictionaryValidationException(message, typeCode, itemCode);
         }
     }
 }

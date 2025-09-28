@@ -15,6 +15,7 @@ import com.patra.registry.domain.model.read.dictionary.DictionaryTypeQuery;
 import com.patra.registry.domain.model.read.dictionary.DictionaryValidationQuery;
 import com.patra.registry.domain.model.vo.dictionary.DictionaryReference;
 import com.patra.registry.domain.exception.dictionary.DictionaryNotFoundException;
+import com.patra.registry.domain.exception.dictionary.DictionaryValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -71,7 +72,7 @@ public class DictionaryClientImpl implements DictionaryClient {
             log.info("API: Successfully returned dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
             return dictionaryApiConverter.toItemResp(result.get());
 
-        } catch (IllegalArgumentException e) {
+        } catch (DictionaryValidationException e) {
             log.warn("API: Invalid parameters for dictionary item lookup: typeCode={}, itemCode={}, error={}",
                     typeCode, itemCode, e.getMessage());
             throw e;
@@ -94,7 +95,7 @@ public class DictionaryClientImpl implements DictionaryClient {
                     result.size(), typeCode);
             return dictionaryApiConverter.toItemResp(result);
 
-        } catch (IllegalArgumentException e) {
+        } catch (DictionaryValidationException e) {
             log.warn("API: Invalid type code for enabled items lookup: typeCode={}, error={}",
                     typeCode, e.getMessage());
             throw e;
@@ -122,7 +123,7 @@ public class DictionaryClientImpl implements DictionaryClient {
                     typeCode, result.get().itemCode());
             return dictionaryApiConverter.toItemResp(result.get());
 
-        } catch (IllegalArgumentException e) {
+        } catch (DictionaryValidationException e) {
             log.warn("API: Invalid type code for default item lookup: typeCode={}, error={}",
                     typeCode, e.getMessage());
             throw e;
@@ -155,7 +156,7 @@ public class DictionaryClientImpl implements DictionaryClient {
 
             return dictionaryApiConverter.toValidationResp(result);
 
-        } catch (IllegalArgumentException e) {
+        } catch (DictionaryValidationException e) {
             log.warn("API: Invalid references list for batch validation: error={}", e.getMessage());
             throw e;
         } catch (Exception e) {
@@ -186,7 +187,7 @@ public class DictionaryClientImpl implements DictionaryClient {
                     sourceSystem, externalCode, result.get().itemCode());
             return dictionaryApiConverter.toItemResp(result.get());
 
-        } catch (IllegalArgumentException e) {
+        } catch (DictionaryValidationException e) {
             log.warn("API: Invalid parameters for alias lookup: sourceSystem={}, externalCode={}, error={}",
                     sourceSystem, externalCode, e.getMessage());
             throw e;

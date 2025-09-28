@@ -87,3 +87,12 @@
 - **远端调用**：`patra-ingest-adapter` 通过 `patra-spring-cloud-starter-feign` 的 `ProblemDetailErrorDecoder` 统一解析下游错误，`ProvenancePortAdapter` 仅在无法恢复的 4xx 情况下抛出 `IngestConfigurationException`。
 - **计划编排**：`PlanIngestionApplicationService` 针对窗口解析、验证、装配、持久化等阶段抛出 `PlanValidationException`/`PlanAssemblyException`/`PlanPersistenceException`，对应 `ING-1403`/`ING-1601`/`ING-1503` 错误码，确保 ProblemDetail 可区分编排环节。
 - **下一步建议**：为 Outbox/调度等场景补充单元测试，并在 Nacos 注册 ING 前缀，确保多环境配置一致。
+## 10. 模块落地示例：Registry
+
+- **错误码目录**：`patra-registry-api/src/main/java/com/patra/registry/api/error/RegistryErrorCode.java` 维护 REG-0xxx/1xxx 段，`patra-registry-boot/src/main/resources/registry-error-config.yaml` 提供本地登记，后续迁移至 Nacos。
+- **映射组件**：`patra-registry-boot/src/main/java/com/patra/registry/config/RegistryErrorMappingContributor.java` 负责将领域异常（如 `DictionaryValidationException`、`DictionaryNotFoundException`）映射为 REG-140x/150x 错误码。
+- **领域异常应用**：应用/适配层统一抛出领域异常；`DictionaryQueryAppService`、`DictionaryValidationAppService` 用 `DictionaryValidationException` 替换 `IllegalArgumentException`，确保 ProblemDetail 能返回 REG-1407，同时包含 type/item 上下文。
+- **Web/Feign 适配**：`DictionaryClientImpl` 捕获领域异常进行结构化日志，异常交由 `ProblemDetailAdapter` 输出，保持 RFC7807。
+- **配置约束**：`application.yaml` 经由 `spring.config.import` 引入新的 `registry-error-config.yaml`，本地即可启用统一引擎、观测与熔断策略。
+- **后续建议**：补充字典查询/校验用例的 ProblemDetail 集成测试，与 `patra-registry` 未来的错误码注册中心实现联动校验。
+
