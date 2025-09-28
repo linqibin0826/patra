@@ -7,6 +7,8 @@ import com.patra.ingest.app.outbox.command.OutboxRelayCommand;
 import com.patra.ingest.app.outbox.config.OutboxRelayProperties;
 import com.patra.ingest.app.outbox.dto.OutboxRelayResult;
 import com.patra.ingest.app.outbox.support.OutboxChannels;
+import com.patra.ingest.domain.exception.IngestScheduleParameterException;
+import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
@@ -76,7 +78,7 @@ public class OutboxRelayJob {
         } catch (Exception ex) {
             log.error("Outbox relay execution failed", ex);
             XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
-            throw new IllegalStateException("Outbox relay execution failed", ex);
+            throw new OutboxRelayExecutionException("Outbox relay execution failed", ex);
         }
     }
 
@@ -90,7 +92,7 @@ public class OutboxRelayJob {
         try {
             return objectMapper.readValue(param, OutboxRelayJobParam.class);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to parse relay param: " + e.getMessage(), e);
+            throw new IngestScheduleParameterException("Failed to parse relay param: " + e.getMessage(), e);
         }
     }
 
@@ -117,7 +119,7 @@ public class OutboxRelayJob {
             }
             return Duration.ofSeconds(Long.parseLong(value));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Illegal duration value: " + value, e);
+            throw new IngestScheduleParameterException("Illegal duration value: " + value, e);
         }
     }
 

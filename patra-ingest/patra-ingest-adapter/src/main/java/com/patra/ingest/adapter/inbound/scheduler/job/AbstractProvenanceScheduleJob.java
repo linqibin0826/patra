@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.Priority;
+import com.patra.ingest.domain.exception.IngestScheduleParameterException;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.app.orchestration.command.PlanIngestionRequest;
@@ -91,7 +92,7 @@ public abstract class AbstractProvenanceScheduleJob {
         try {
             JsonNode root = objectMapper.readTree(paramStr);
             if (!root.isObject()) {
-                throw new IllegalArgumentException("任务参数必须为JSON对象");
+                throw new IngestScheduleParameterException("任务参数必须为JSON对象");
             }
             Map<String, Object> triggerParams = objectMapper.convertValue(root, new TypeReference<>() {
             });
@@ -133,7 +134,7 @@ public abstract class AbstractProvenanceScheduleJob {
                     Instant.now(),
                     triggerParams);
         } catch (Exception e) {
-            throw new IllegalArgumentException("JSON参数解析失败: " + e.getMessage(), e);
+            throw new IngestScheduleParameterException("JSON参数解析失败: " + e.getMessage(), e);
         }
     }
 

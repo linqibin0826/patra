@@ -3,6 +3,7 @@ package com.patra.ingest.infra.persistence.converter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
 import com.patra.ingest.domain.model.vo.ExecutionWindow;
@@ -100,7 +101,7 @@ public interface TaskRunConverter {
         try {
             return JsonMapperHolder.getObjectMapper().readTree(checkpoint.raw());
         } catch (Exception e) {
-            throw new IllegalArgumentException("Checkpoint JSON 解析失败", e);
+            throw new TaskCheckpointException(TaskCheckpointException.Type.PARSE, "Checkpoint JSON 解析失败", e);
         }
     }
 
@@ -112,7 +113,7 @@ public interface TaskRunConverter {
             String raw = JsonMapperHolder.getObjectMapper().writeValueAsString(node);
             return new TaskRunCheckpoint(raw);
         } catch (Exception e) {
-            throw new IllegalArgumentException("Checkpoint JSON 序列化失败", e);
+            throw new TaskCheckpointException(TaskCheckpointException.Type.SERIALIZE, "Checkpoint JSON 序列化失败", e);
         }
     }
 }

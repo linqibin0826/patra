@@ -14,6 +14,9 @@ import com.patra.ingest.app.orchestration.outbox.TaskOutboxPublisher;
 import com.patra.ingest.app.orchestration.window.PlanningWindowResolver;
 import com.patra.ingest.app.port.ProvenancePort;
 import com.patra.ingest.app.validator.PlannerValidator;
+import com.patra.ingest.domain.exception.PlanAssemblyException;
+import com.patra.ingest.domain.exception.PlanPersistenceException;
+import com.patra.ingest.domain.exception.PlanValidationException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
@@ -92,17 +95,15 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         log.info("plan-ingest start, provenance={}, op={}, triggeredAt={}", provenanceCode, operationCode, now);
 
         // Phase 1: 调度实例 + 来源配置快照
-        ScheduleInstanceAggregate schedule = persistScheduleInstance(request);
+        ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
         ProvenanceConfigSnapshot configSnapshot = provenancePort.fetchConfig(
                 provenanceCode, request.endpoint(), operationCode
         );
         PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
 
         // Phase 2: 游标水位 (仅前进) + 解析计划窗口（TIME 策略）
-        Instant cursorWatermark = cursorRepository
-                .findLatestGlobalTimeWatermark(provenanceCode.getCode(), opCode(operationCode))
-                .orElse(null);
-        PlannerWindow window = planningWindowResolver.resolveWindow(norm, configSnapshot, cursorWatermark, now);
+        Instant cursorWatermark = lookupCursorWatermark(provenanceCode, operationCode);
+        PlannerWindow window = resolvePlannerWindow(norm, configSnapshot, cursorWatermark, now);
         log.debug("plan-ingest window resolved provenance={} op={} cursorWatermark={} window=[{}, {})",
                 provenanceCode, operationCode, cursorWatermark, window == null ? null : window.from(), window == null ? null : window.to());
 
@@ -113,12 +114,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         // Phase 4: 前置验证（窗口合理性 / 背压 / 能力）
         long queuedTasks = taskRepository.countQueuedTasks(
                 provenanceCode.getCode(), opCode(operationCode));
-        plannerValidator.validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
+        validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
         log.debug("plan-ingest validation passed queuedTasks={}", queuedTasks);
 
         // Phase 5: 组装蓝图
         PlanAssemblyRequest assemblyRequest = new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
-        PlanAssembly assembly = planAssemblyService.assemble(assemblyRequest);
+        PlanAssembly assembly = assemblePlan(assemblyRequest);
 
         PlanAggregate draftPlan = assembly.plan();
         PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
@@ -132,7 +133,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                 if (shouldRetry(task)) {
                     // 重置失败/取消任务，准备重新排队
                     task.prepareForRetry();
-                    taskRepository.save(task);
+                    saveTaskSafely(task);
                     retryTasks.add(task);
                 }
             }
@@ -152,7 +153,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         }
 
         // Phase 6: 持久化 Plan / Slice / Task
-        PlanAggregate persistedPlan = planRepository.save(draftPlan);
+        PlanAggregate persistedPlan = savePlanSafely(draftPlan);
         List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
         List<TaskAggregate> persistedTasks = persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 
@@ -177,13 +178,84 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         return op == null ? null : op.getCode();
     }
 
+    private Instant lookupCursorWatermark(ProvenanceCode provenanceCode, OperationCode operationCode) {
+        try {
+            return cursorRepository.findLatestGlobalTimeWatermark(provenanceCode.getCode(), opCode(operationCode))
+                    .orElse(null);
+        } catch (RuntimeException ex) {
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.PLAN,
+                    "Failed to load cursor watermark", ex);
+        }
+    }
+
+    private PlannerWindow resolvePlannerWindow(PlanTriggerNorm norm,
+                                               ProvenanceConfigSnapshot configSnapshot,
+                                               Instant cursorWatermark,
+                                               Instant now) {
+        try {
+            return planningWindowResolver.resolveWindow(norm, configSnapshot, cursorWatermark, now);
+        } catch (PlanValidationException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new PlanValidationException("Failed to resolve planning window: " + ex.getMessage(),
+                    PlanValidationException.Reason.WINDOW_INVALID, ex);
+        }
+    }
+
+    private void validateBeforeAssemble(PlanTriggerNorm norm,
+                                        ProvenanceConfigSnapshot configSnapshot,
+                                        PlannerWindow window,
+                                        long queuedTasks) {
+        try {
+            plannerValidator.validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
+        } catch (PlanValidationException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new PlanValidationException("Plan validation failed: " + ex.getMessage(), ex);
+        }
+    }
+
+    private PlanAssembly assemblePlan(PlanAssemblyRequest assemblyRequest) {
+        PlanAssembly assembly;
+        try {
+            assembly = planAssemblyService.assemble(assemblyRequest);
+        } catch (PlanValidationException | PlanAssemblyException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new PlanAssemblyException("Plan assembly execution failed", PlanAssemblyException.Reason.SLICE_GENERATION_FAILED, ex);
+        }
+
+        if (assembly == null || assembly.status() == PlanAssembly.PlanAssemblyStatus.FAILED) {
+            throw new PlanAssemblyException("Plan assembly produced no executable units", PlanAssemblyException.Reason.EMPTY_RESULT);
+        }
+        return assembly;
+    }
+
+    private PlanAggregate savePlanSafely(PlanAggregate draftPlan) {
+        try {
+            return planRepository.save(draftPlan);
+        } catch (RuntimeException ex) {
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.PLAN,
+                    "Failed to persist plan aggregate", ex);
+        }
+    }
+
+    private void saveTaskSafely(TaskAggregate task) {
+        try {
+            taskRepository.save(task);
+        } catch (RuntimeException ex) {
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.TASK_RETRY,
+                    "Failed to persist task retry state", ex);
+        }
+    }
+
     /**
      * 根据调度请求落库或更新调度实例。
      *
      * @param request 调度请求
      * @return 持久化后的调度实例
      */
-    private ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionRequest request) {
+    private ScheduleInstanceAggregate persistScheduleInstanceSafely(PlanIngestionRequest request) {
         ScheduleInstanceAggregate schedule = ScheduleInstanceAggregate.start(
                 request.scheduler(),
                 request.schedulerJobId(),
@@ -192,7 +264,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                 request.triggeredAt(),
                 request.triggerParams(),
                 request.provenanceCode());
-        return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
+        try {
+            return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
+        } catch (RuntimeException ex) {
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.SCHEDULE_INSTANCE,
+                    "Failed to persist schedule instance", ex);
+        }
     }
 
     /**
@@ -258,7 +335,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
             return List.of();
         }
         slices.forEach(slice -> slice.bindPlan(plan.getId()));
-        return planSliceRepository.saveAll(slices);
+        try {
+            return planSliceRepository.saveAll(slices);
+        } catch (RuntimeException ex) {
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.PLAN_SLICE,
+                    "Failed to persist plan slices", ex);
+        }
     }
 
     private List<TaskAggregate> persistTasks(PlanAggregate plan,
@@ -278,7 +360,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
                     : sliceBySeq.get(placeholderSequence.intValue());
             task.bindPlanAndSlice(plan.getId(), slice == null ? null : slice.getId());
         }
-        return taskRepository.saveAll(tasks);
+        try {
+            return taskRepository.saveAll(tasks);
+        } catch (RuntimeException ex) {
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.TASK,
+                    "Failed to persist tasks", ex);
+        }
     }
 
 }

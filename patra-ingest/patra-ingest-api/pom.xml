@@ -16,6 +16,10 @@
     <description>数据采集API模块 - 对外发布的事件和接口定义</description>
 
     <dependencies>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
         <!-- Validation API -->
         <dependency>
             <groupId>jakarta.validation</groupId>

@@ -31,8 +31,8 @@
 
         <!-- Feign -->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-cloud-starter-feign</artifactId>
         </dependency>
 
         <!-- 负载均衡（Spring Cloud LoadBalancer），必须！-->

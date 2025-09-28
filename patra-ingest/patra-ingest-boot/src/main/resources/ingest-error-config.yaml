@@ -1,0 +1,51 @@
+# Ingest 模块本地错误处理配置，后续可迁移到 Nacos。
+patra:
+  error:
+    enabled: true
+    context-prefix: ING
+    engine:
+      max-cause-depth: 10
+      enable-trait-mapping: true
+      enable-naming-heuristic: true
+    observation:
+      enabled: true
+      slow-threshold-ms: 200
+      log-slow-resolution: true
+    circuit-breaker:
+      enabled: true
+      failure-rate-threshold: 50.0
+      minimum-number-of-calls: 20
+      sliding-window-size: 50
+      permitted-calls-in-half-open-state: 5
+      wait-duration-in-open-state: PT30S
+
+  feign:
+    problem:
+      enabled: true
+      tolerant: true
+      max-error-body-size: 65536
+      include-stack-trace: false
+      observation:
+        enabled: true
+        slow-parsing-threshold-ms: 150
+        log-slow-parsing: true
+        slow-body-reading-threshold-ms: 80
+        log-slow-body-reading: true
+        log-tolerant-usage: true
+
+# 错误码目录仅用于文档化，便于后续同步到配置中心。
+ingest:
+  error-catalog:
+    registry-config-not-found: ING-1201
+    registry-config-invalid: ING-1202
+    registry-config-degraded: ING-1203
+    outbox-write-failed: ING-1301
+    outbox-update-conflict: ING-1302
+    outbox-mark-dead-failed: ING-1303
+    schedule-param-invalid: ING-1401
+    relay-execution-failed: ING-1402
+    plan-validation-failed: ING-1403
+    checkpoint-parse-failed: ING-1501
+    checkpoint-serialize-failed: ING-1502
+    plan-persistence-failed: ING-1503
+    plan-assembly-failed: ING-1601
