@@ -11,7 +11,7 @@
   - Feign：`ProblemDetailErrorDecoder` 将下游错误解码为 `RemoteCallException`；
   - 语义判断：使用 `RemoteErrorHelper`（`isNotFound/isClientError/isServerError/isRetryable`）分类处理；
   - 降级与重试：
-    - 404 → 业务可降级（如 Ingest 最小快照）；
+    - 404 → 判定为不可恢复配置缺失，立即抛出本地领域异常并终止流程；
     - 5xx/429/网络错误 → 重试/熔断/回退；
     - 4xx（非 404）→ 抛本地领域异常（不可恢复）。
 
@@ -25,7 +25,7 @@
   - 注入 `HttpStdErrors.Group`：避免在使用点硬编码 of("REG"/"ING")；
   - 在 Adapter 层抛领域异常，不返回 null；
   - 保持 `ProblemDetail` 字段：`code/path/timestamp/traceId`；
-  - 在 Ingest 侧使用 `RemoteErrorHelper` 分类决定降级/抛错。
+  - 在 Ingest 侧使用 `RemoteErrorHelper` 分类决定降级/抛错，其中“降级”仅限可恢复错误（如 5xx/429）。
 - Don’t：
   - 不在枚举维护 0xxx；不再实现/依赖 `StatusMappingStrategy`；
   - 不在领域模型中硬编码 HTTP 概念（由错误码承载）；
@@ -48,9 +48,16 @@ class ProvenanceClientImpl implements ProvenanceClient {
 
 // 上游（Ingest）示例：远端错误分类
 private ProvenanceConfigSnapshot handleRemote(RemoteCallException ex, String code, String taskType, String endpoint) {
-    if (RemoteErrorHelper.isNotFound(ex)) return createMinimalSnapshot(code);
-    if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) return createMinimalSnapshot(code);
-    String msg = String.format("Registry client error, code=%s, status=%d, remoteCode=%s, traceId=%s", code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId());
+    if (RemoteErrorHelper.isNotFound(ex)) {
+        String msg = String.format("Provenance config not found, code=%s, taskType=%s, endpoint=%s", code, taskType, endpoint);
+        throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
+    }
+    if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
+        return createMinimalSnapshot(code);
+    }
+    String msg = String.format(
+            "Registry client error, code=%s, status=%d, remoteCode=%s, traceId=%s",
+            code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId());
     throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
 }
 ```

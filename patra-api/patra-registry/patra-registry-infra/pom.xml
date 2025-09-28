@@ -19,7 +19,7 @@
             <artifactId>patra-registry-domain</artifactId>
         </dependency>
 
-        <!-- Uses com.patra.common.* (RegistryKeys, ProvenanceCode, RegistryConfigScope, RegistryKeyUtils) -->
+        <!-- 依赖 patra-registry-domain 的占位符/归一化工具与 patra-common 枚举语义 -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>

@@ -49,17 +49,15 @@ class ProvenancePortAdapterTest {
     }
 
     @Test
-    @DisplayName("Registry 未找到时降级为最小快照")
-    void shouldFallbackToMinimalSnapshotWhenNotFound() {
+    @DisplayName("Registry 未找到时抛出 IngestConfigurationException")
+    void shouldThrowConfigurationExceptionWhenNotFound() {
         RemoteCallException remote = new RemoteCallException("REG-0404", 404, "not found",
                 "method", "trace-404", Map.of());
         when(provenanceClient.getConfiguration(any(), any(), any(), any())).thenThrow(remote);
 
-        ProvenanceConfigSnapshot result = adapter.fetchConfig(ProvenanceCode.PUBMED, Endpoint.SEARCH, OperationCode.FULL);
-
-        assertThat(result.provenance().code()).isEqualTo(ProvenanceCode.PUBMED.getCode());
-        assertThat(result.credentials()).isEmpty();
-        assertThat(result.endpoint()).isNull();
+        assertThatThrownBy(() -> adapter.fetchConfig(ProvenanceCode.PUBMED, Endpoint.SEARCH, OperationCode.FULL))
+                .isInstanceOf(IngestConfigurationException.class)
+                .hasCause(remote);
     }
 
     @Test

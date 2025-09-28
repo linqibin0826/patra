@@ -2,7 +2,6 @@ package com.patra.starter.expr.compiler.snapshot.convert;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.expr.Atom;
-import com.patra.common.constant.RegistryKeys;
 import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.api.rpc.dto.expr.ApiParamMappingResp;
 import com.patra.registry.api.rpc.dto.expr.ExprCapabilityResp;
