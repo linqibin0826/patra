@@ -1,16 +1,14 @@
 package com.patra.starter.web.error.handler;
 
 import com.patra.common.error.problem.ErrorKeys;
-import com.patra.starter.core.error.model.ErrorResolution;
-import com.patra.starter.core.error.service.ErrorResolutionService;
-import com.patra.starter.web.error.builder.ProblemDetailBuilder;
+import com.patra.starter.web.error.adapter.ProblemDetailAdapter;
+import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import com.patra.starter.web.error.model.ValidationError;
 import com.patra.starter.web.error.spi.ValidationErrorsFormatter;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -23,134 +21,83 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import java.util.List;
 
 /**
- * 全局 REST 异常处理器：统一转换为 RFC 7807 的 {@link org.springframework.http.ProblemDetail} 响应。
- *
- * <p>继承 {@link org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler}
- * 处理 Spring MVC 层异常，为所有 REST 控制器提供一致的错误输出格式。</p>
- *
- * @author linqibin
- * @since 0.1.0
- * @see com.patra.starter.web.error.builder.ProblemDetailBuilder
- * @see com.patra.starter.core.error.service.ErrorResolutionService
+ * 全局 REST 异常处理器：基于平台统一错误解析输出 RFC 7807 ProblemDetail。
  */
 @Slf4j
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
-    
-    /** 响应中包含的校验错误上限 */
+
+    /** ProblemDetail 中校验错误数组的最大长度 */
     private static final int MAX_VALIDATION_ERRORS = 100;
-    
-    private final ErrorResolutionService errorResolutionService;
-    private final ProblemDetailBuilder problemDetailBuilder;
+
+    private final ProblemDetailAdapter problemDetailAdapter;
     private final ValidationErrorsFormatter validationErrorsFormatter;
-    
-    public GlobalRestExceptionHandler(
-            ErrorResolutionService errorResolutionService,
-            ProblemDetailBuilder problemDetailBuilder,
-            ValidationErrorsFormatter validationErrorsFormatter) {
-        this.errorResolutionService = errorResolutionService;
-        this.problemDetailBuilder = problemDetailBuilder;
+
+    public GlobalRestExceptionHandler(ProblemDetailAdapter problemDetailAdapter,
+                                      ValidationErrorsFormatter validationErrorsFormatter) {
+        this.problemDetailAdapter = problemDetailAdapter;
         this.validationErrorsFormatter = validationErrorsFormatter;
     }
-    
+
     /**
-     * 处理一般异常，按错误解析算法转换为 ProblemDetail。
-     *
-     * @param ex 异常对象
-     * @param request HTTP 请求
-     * @return 含 ProblemDetail 的响应实体
+     * 兜底异常处理：对任意异常输出统一 ProblemDetail。
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
-        log.debug("Handling exception: {}", ex.getClass().getSimpleName(), ex);
-        
-        ErrorResolution resolution = errorResolutionService.resolve(ex);
-        ProblemDetail problemDetail = problemDetailBuilder.build(resolution, ex, request);
-        
-        // Convert int status to HttpStatus with fallback to 500
-        HttpStatus httpStatus = convertToHttpStatus(resolution.httpStatus());
-        
-        Object path = null;
-        var props = problemDetail.getProperties();
-        if (props != null) {
-            path = props.get(ErrorKeys.PATH);
-        }
-    log.info("Exception handled: errorCode={}, httpStatus={}, path={}", 
-        resolution.errorCode().code(), httpStatus.value(), path);
-        
+        ProblemDetailResponse response = problemDetailAdapter.adapt(ex, request);
+
+        Object path = response.problemDetail().getProperties() == null
+                ? null
+                : response.problemDetail().getProperties().get(ErrorKeys.PATH);
+        log.info("Exception handled: errorCode={} status={} path={}", 
+                response.errorResolution().errorCode().code(),
+                response.httpStatus().value(),
+                path);
+
         return ResponseEntity
-            .status(httpStatus)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(problemDetail);
+                .status(response.httpStatus())
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(response.problemDetail());
     }
-    
+
     /**
-     * 处理参数校验异常，并返回包含详细校验错误的 ProblemDetail。
-     *
-     * @param ex 参数校验异常
-     * @param headers HTTP 响应头
-     * @param status HTTP 状态码
-     * @param request Web 请求
-     * @return 含校验错误数组的 ProblemDetail 响应
+     * 参数校验异常处理，附带校验错误数组。
      */
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            @NonNull MethodArgumentNotValidException ex, 
+            @NonNull MethodArgumentNotValidException ex,
             @NonNull org.springframework.http.HttpHeaders headers,
             @NonNull org.springframework.http.HttpStatusCode status,
             @NonNull org.springframework.web.context.request.WebRequest request) {
-        
-        log.debug("Handling validation exception: errorCount={}", ex.getBindingResult().getErrorCount());
-        
-        ErrorResolution resolution = errorResolutionService.resolve(ex);
-        
-        // Convert WebRequest to HttpServletRequest for ProblemDetailBuilder
+
         HttpServletRequest servletRequest = null;
         if (request instanceof org.springframework.web.context.request.ServletWebRequest servletWebRequest) {
             servletRequest = servletWebRequest.getRequest();
         }
-        
-        ProblemDetail problemDetail = problemDetailBuilder.build(resolution, ex, servletRequest);
-        
-        // Add validation errors array with sensitive data masking
+
+        ProblemDetailResponse response = problemDetailAdapter.adapt(ex, servletRequest);
+        ProblemDetail problemDetail = response.problemDetail();
+
         List<ValidationError> errors = validationErrorsFormatter.formatWithMasking(ex.getBindingResult());
-        
-        // Limit errors array size to prevent oversized responses
         if (errors.size() > MAX_VALIDATION_ERRORS) {
-            log.warn("Validation errors truncated: total={}, included={}", 
-                    errors.size(), MAX_VALIDATION_ERRORS);
+            log.warn("Validation errors truncated: total={}, included={}", errors.size(), MAX_VALIDATION_ERRORS);
             errors = errors.subList(0, MAX_VALIDATION_ERRORS);
         }
-        
         problemDetail.setProperty(ErrorKeys.ERRORS, errors);
-        
-        Object vPath = null;
-        var vProps = problemDetail.getProperties();
-        if (vProps != null) {
-            vPath = vProps.get(ErrorKeys.PATH);
-        }
-    log.info("Validation exception handled: errorCode={}, validationErrors={}, path={}", 
-        resolution.errorCode().code(), errors.size(), vPath);
-        
+
+        Object path = problemDetail.getProperties() == null
+                ? null
+                : problemDetail.getProperties().get(ErrorKeys.PATH);
+        log.info("Validation exception handled: errorCode={} validationErrors={} path={} status={}",
+                response.errorResolution().errorCode().code(),
+                errors.size(),
+                path,
+                response.httpStatus().value());
+
         return ResponseEntity
-            .status(HttpStatus.UNPROCESSABLE_ENTITY)
-            .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-            .body(problemDetail);
-    }
-    
-    /**
-     * 将 int 状态码安全转换为 HttpStatus，非法值回退为 500。
-     *
-     * @param status 整型状态码
-     * @return 对应的 HttpStatus
-     */
-    private HttpStatus convertToHttpStatus(int status) {
-        try {
-            return HttpStatus.valueOf(status);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid HTTP status code: {}, falling back to 500", status);
-            return HttpStatus.INTERNAL_SERVER_ERROR;
-        }
+                .status(response.httpStatus())
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(problemDetail);
     }
 }
