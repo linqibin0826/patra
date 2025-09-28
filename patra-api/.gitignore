@@ -40,23 +40,22 @@ build/
 ### VS Code ###
 .vscode/
 
+# 保留 compose 目录
+!/docker/compose/
 
-# 忽略 docker 目录下的所有内容
-/docker/
 ### Mac OS ###
 .DS_Store
-/docker/docker/
-/docker/mysql/data/
 !/docker/mysql/init
-/docker/nacos/logs/
 !/docker/nacos/
+/docker/nacos/logs/
 /docker/redis/data/
 
+/docker
 
 
 
-# 保留 compose 目录
-!/compose/
+
+
 
 # 保留 .env.dev 文件
 !.env.dev
