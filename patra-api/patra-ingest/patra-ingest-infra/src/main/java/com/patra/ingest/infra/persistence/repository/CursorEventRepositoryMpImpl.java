@@ -34,12 +34,12 @@ public class CursorEventRepositoryMpImpl implements CursorEventRepository {
         if (dto.getId() == null) {
             mapper.insert(dto);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] cursor event insert cursorKey={} wm={}", dto.getCursorKey(), dto.getNewInstant());
+                log.debug("[INGEST][INFRA] cursor event insert cursorKey={} wm={}", dto.getCursorKey(), dto.getNewInstant());
             }
         } else {
             mapper.updateById(dto);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] cursor event update id={} cursorKey={} wm={}", dto.getId(), dto.getCursorKey(), dto.getNewInstant());
+                log.debug("[INGEST][INFRA] cursor event update id={} cursorKey={} wm={}", dto.getId(), dto.getCursorKey(), dto.getNewInstant());
             }
         }
         CursorEventDO persisted = mapper.selectById(dto.getId());

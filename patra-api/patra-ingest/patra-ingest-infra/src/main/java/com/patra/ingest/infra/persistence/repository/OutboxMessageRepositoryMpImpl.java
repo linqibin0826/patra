@@ -74,7 +74,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
             return;
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][REPO] outbox batch insert size={} firstChannel={}", messages.size(), messages.get(0).getChannel());
+            log.debug("[INGEST][INFRA] outbox batch insert size={} firstChannel={}", messages.size(), messages.get(0).getChannel());
         }
         for (OutboxMessage message : messages) {
             OutboxMessageDO entity = converter.toEntity(message);
@@ -96,12 +96,12 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         if (entity.getId() == null) {
             mapper.insert(entity);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] outbox insert channel={} dedupKey={} id={}", message.getChannel(), message.getDedupKey(), entity.getId());
+                log.debug("[INGEST][INFRA] outbox insert channel={} dedupKey={} id={}", message.getChannel(), message.getDedupKey(), entity.getId());
             }
         } else {
             mapper.updateById(entity);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] outbox update id={} channel={} version={} (non-state fields)", entity.getId(), message.getChannel(), message.getVersion());
+                log.debug("[INGEST][INFRA] outbox update id={} channel={} version={} (non-state fields)", entity.getId(), message.getChannel(), message.getVersion());
             }
         }
     }
@@ -157,7 +157,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         int updated = mapper.acquireLease(id, expectedVersion, leaseOwner, leaseExpireAt);
         boolean success = updated == 1;
         if (success && log.isDebugEnabled()) {
-            log.debug("[INGEST][REPO] outbox lease acquire id={} owner={} expireAt={}", id, leaseOwner, leaseExpireAt);
+            log.debug("[INGEST][INFRA] outbox lease acquire id={} owner={} expireAt={}", id, leaseOwner, leaseExpireAt);
         }
         return success;
     }
@@ -178,7 +178,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
                     "更新 Outbox 状态失败，id=" + id);
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][REPO] outbox published id={} brokerMsgId={}", id, messageId);
+            log.debug("[INGEST][INFRA] outbox published id={} brokerMsgId={}", id, messageId);
         }
     }
 
@@ -201,7 +201,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
                     "写回 Outbox 重试失败，id=" + id);
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][REPO] outbox deferred id={} retryCount={} nextRetryAt={} errCode={}", id, retryCount, nextRetryAt, errorCode);
+            log.debug("[INGEST][INFRA] outbox deferred id={} retryCount={} nextRetryAt={} errCode={}", id, retryCount, nextRetryAt, errorCode);
         }
     }
 
@@ -223,7 +223,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
                     "标记 Outbox DEAD 失败，id=" + id);
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][REPO] outbox failed id={} retryCount={} errCode={} errMsgLen={}", id, retryCount, errorCode,
+            log.debug("[INGEST][INFRA] outbox failed id={} retryCount={} errCode={} errMsgLen={}", id, retryCount, errorCode,
                 errorMessage == null ? 0 : errorMessage.length());
         }
     }

@@ -41,14 +41,14 @@ public class ScheduleInstanceRepositoryMpImpl implements ScheduleInstanceReposit
         ScheduleInstanceDO entity = converter.toDO(instance);
         if (instance.getId() != null) {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] schedule instance update id={} triggerType={}", instance.getId(), instance.getTriggerType());
+                log.debug("[INGEST][INFRA] schedule instance update id={} triggerType={}", instance.getId(), instance.getTriggerType());
             }
             mapper.updateById(entity);
             return instance;
         }
         mapper.insert(entity);
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][REPO] schedule instance insert triggeredAt={} id={} (post-insert)", entity.getTriggeredAt(), entity.getId());
+            log.debug("[INGEST][INFRA] schedule instance insert triggeredAt={} id={} (post-insert)", entity.getTriggeredAt(), entity.getId());
         }
         return converter.toDomain(entity);
     }

@@ -44,12 +44,12 @@ public class CursorRepositoryMpImpl implements CursorRepository {
         if (dto.getId() == null) {
             mapper.insert(dto);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] cursor insert provenance={} operation={} key={} scope={} ns={}", dto.getProvenanceCode(), dto.getOperationCode(), dto.getCursorKey(), dto.getNamespaceScopeCode(), dto.getNamespaceKey());
+                log.debug("[INGEST][INFRA] cursor insert provenance={} operation={} key={} scope={} ns={}", dto.getProvenanceCode(), dto.getOperationCode(), dto.getCursorKey(), dto.getNamespaceScopeCode(), dto.getNamespaceKey());
             }
         } else {
             mapper.updateById(dto);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] cursor update id={} key={} scope={} ns={} watermark={}", dto.getId(), dto.getCursorKey(), dto.getNamespaceScopeCode(), dto.getNamespaceKey(), dto.getNormalizedInstant());
+                log.debug("[INGEST][INFRA] cursor update id={} key={} scope={} ns={} watermark={}", dto.getId(), dto.getCursorKey(), dto.getNamespaceScopeCode(), dto.getNamespaceKey(), dto.getNormalizedInstant());
             }
         }
         CursorDO persisted = mapper.selectById(dto.getId());

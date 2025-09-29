@@ -48,13 +48,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
         TaskDO entity = converter.toEntity(task);
         if (entity.getId() == null) {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] task insert planId={} idemKey={}", entity.getPlanId(), entity.getIdempotentKey());
+                log.debug("[INGEST][INFRA] task insert planId={} idemKey={}", entity.getPlanId(), entity.getIdempotentKey());
             }
             mapper.insert(entity);
             task.assignId(entity.getId());
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] task update id={} planId={} status={}", entity.getId(), entity.getPlanId(), entity.getStatusCode());
+                log.debug("[INGEST][INFRA] task update id={} planId={} status={}", entity.getId(), entity.getPlanId(), entity.getStatusCode());
             }
             mapper.updateById(entity);
         }
