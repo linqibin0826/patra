@@ -56,20 +56,21 @@ public class ProvenancePortAdapter implements ProvenancePort {
         String taskType = operationCode.name();
         Instant queryTime = Instant.now();
 
-        log.debug("Requesting provenance config, code={}, taskType={}, endpoint={}, at={}",
+        log.debug("[INGEST][ADAPTER] Requesting provenance config, code={}, taskType={}, endpoint={}, at={}",
                 code, taskType, endpoint, queryTime);
 
         try {
             ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, taskType, endpoint, queryTime);
 
             if (resp == null) {
-                log.warn("Registry returned empty config, code={}, taskType={}, endpoint={}", code, taskType, endpoint);
+                log.warn("[INGEST][ADAPTER] Registry returned empty config, code={}, taskType={}, endpoint={}", code, taskType, endpoint);
                 return createMinimalSnapshot(code);
             }
 
             ProvenanceConfigSnapshot snapshot = converter.convert(resp);
 
-            log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
+            // 日志输出转换结果哈希信息便于诊断（snapshot 本身含 toString）
+            log.debug("[INGEST][ADAPTER] Provenance config loaded, code={}, snapshot={}", code, snapshot);
             return snapshot;
 
         } catch (RemoteCallException ex) {
@@ -77,7 +78,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
         } catch (Exception ex) {
             String msg = String.format("Unexpected error when fetching config, code=%s, taskType=%s, endpoint=%s",
                     code, taskType, endpoint);
-            log.error(msg, ex);
+            log.error("[INGEST][ADAPTER] " + msg, ex);
             throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
         }
     }
@@ -91,12 +92,12 @@ public class ProvenancePortAdapter implements ProvenancePort {
                                                            String endpoint) {
         if (RemoteErrorHelper.isNotFound(ex)) {
             String msg = String.format("Provenance config not found, code=%s, taskType=%s, endpoint=%s", code, taskType, endpoint);
-            log.warn("{} (remoteCode={}, status={}, traceId={})", msg, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
+            log.warn("[INGEST][ADAPTER] {} (remoteCode={}, status={}, traceId={})", msg, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
             throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
         }
 
         if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
-            log.warn("Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
+            log.warn("[INGEST][ADAPTER] Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
                     code, ex.getHttpStatus(), ex.getTraceId());
             return createMinimalSnapshot(code);
         }
@@ -109,7 +110,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
                         ex.getErrorCode(),
                         ex.getTraceId(),
                         ex.getMessage());
-        log.error(msg);
+        log.error("[INGEST][ADAPTER] " + msg);
         throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
     }
 
@@ -117,7 +118,7 @@ public class ProvenancePortAdapter implements ProvenancePort {
      * 创建最小可用配置快照。
      */
     private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
-        log.info("Creating minimal provenance snapshot, code={}", provenanceCode);
+    log.info("[INGEST][ADAPTER] Creating minimal provenance snapshot, code={}", provenanceCode);
 
         // 创建最小的 ProvenanceInfo
         ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance =

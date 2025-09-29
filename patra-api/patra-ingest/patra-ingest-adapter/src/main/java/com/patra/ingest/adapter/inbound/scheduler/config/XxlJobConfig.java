@@ -48,19 +48,20 @@ public class XxlJobConfig {
      */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
-        log.info("Initializing XXL-Job executor configuration...");
+    log.info("[INGEST][ADAPTER] Initializing XXL-Job executor configuration...");
         
         XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
         xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
         xxlJobSpringExecutor.setAppname(appName);
         xxlJobSpringExecutor.setIp(ip);
+    // 调度执行端口约定为应用端口 + 1，避免与主服务冲突
         int executorPort = serverPort + 1;
         xxlJobSpringExecutor.setPort(executorPort);
         xxlJobSpringExecutor.setAccessToken(accessToken);
         xxlJobSpringExecutor.setLogPath(logPath);
         xxlJobSpringExecutor.setLogRetentionDays(logRetentionDays);
         
-        log.info("XXL-Job executor initialized, appName={}, adminAddresses={}, port={}",
+    log.info("[INGEST][ADAPTER] XXL-Job executor initialized, appName={}, adminAddresses={}, port={}",
                 appName, adminAddresses, executorPort);
         
         return xxlJobSpringExecutor;
