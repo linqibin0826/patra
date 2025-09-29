@@ -100,9 +100,10 @@ public class TaskOutboxPublisher {
         List<OutboxMessage> messages = new ArrayList<>(events.size());
         for (TaskQueuedEvent event : events) {
             if (event.taskId() == null) {
-                log.warn("skip task event without persistence, planId={}", event.planId());
+                log.warn("[INGEST][APP] skip task event without persistence, planId={}", event.planId());
                 continue;
             }
+            // 生成 payload / headers，保证消息具备幂等信息
             ObjectNode payloadNode = buildPayload(event, plan);
             ObjectNode headersNode = buildHeaders(event, schedule, plan);
             OutboxMessage message = OutboxMessage.builder()
@@ -121,6 +122,7 @@ public class TaskOutboxPublisher {
         }
 
         if (!messages.isEmpty()) {
+            // 一次性批量持久化，降低数据库往返
             outboxMessageRepository.saveAll(messages);
         }
     }
@@ -173,7 +175,7 @@ public class TaskOutboxPublisher {
                         .msgId(null)
                         .build();
                 outboxMessageRepository.saveOrUpdate(refreshed);
-                log.info("Refreshed outbox message for retry, aggregateId={}, dedupKey={}", event.taskId(), event.idempotentKey());
+                log.info("[INGEST][APP] Refreshed outbox message for retry, aggregateId={}, dedupKey={}", event.taskId(), event.idempotentKey());
             } else {
                 OutboxMessage message = OutboxMessage.builder()
                         .aggregateType(AGGREGATE_TYPE_TASK)
@@ -188,7 +190,7 @@ public class TaskOutboxPublisher {
                         .retryCount(0)
                         .build();
                 outboxMessageRepository.saveOrUpdate(message);
-                log.info("Created new retry outbox message, aggregateId={}, dedupKey={}", event.taskId(), event.idempotentKey());
+                log.info("[INGEST][APP] Created new retry outbox message, aggregateId={}, dedupKey={}", event.taskId(), event.idempotentKey());
             }
         }
     }

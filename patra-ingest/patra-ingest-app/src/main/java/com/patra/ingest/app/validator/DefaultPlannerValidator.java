@@ -32,7 +32,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                        ProvenanceConfigSnapshot snapshot,
                                        PlannerWindow window,
                                        long currentQueuedTasks) {
-        log.debug("Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
+    log.debug("[INGEST][APP] Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
                 triggerNorm.provenanceCode(), triggerNorm.operationCode(), window, currentQueuedTasks);
 
         // 1. 验证窗口合理性
@@ -44,7 +44,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
         // 3. 验证来源配置能力
         validateSourceCapabilities(triggerNorm, snapshot, window);
         
-        log.debug("Plan assembly validation passed");
+    log.debug("[INGEST][APP] Plan assembly validation passed");
     }
 
     /**
@@ -53,7 +53,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
         // UPDATE 操作允许空窗口
         if (triggerNorm.isUpdate()) {
-            log.debug("Update operation detected, allowing null window");
+            log.debug("[INGEST][APP] Update operation detected, allowing null window");
             return;
         }
 
@@ -91,7 +91,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                     PlanValidationException.Reason.WINDOW_TOO_SMALL);
         }
 
-        log.debug("Window validation passed, duration={}min", windowDuration.toMinutes());
+    log.debug("[INGEST][APP] Window validation passed, duration={}min", windowDuration.toMinutes());
     }
 
     /**
@@ -105,7 +105,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                     PlanValidationException.Reason.QUEUE_BACKPRESSURE);
         }
         
-        log.debug("Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
+    log.debug("[INGEST][APP] Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
     }
 
     /**
@@ -116,7 +116,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                             PlannerWindow window) {
         
         if (snapshot == null) {
-            log.warn("Provenance config snapshot is missing, skip capability validation");
+            log.warn("[INGEST][APP] Provenance config snapshot is missing, skip capability validation");
             return;
         }
 
@@ -163,7 +163,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
             }
         }
 
-        log.debug("Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
+    log.debug("[INGEST][APP] Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
     }
 
     /**
@@ -175,12 +175,12 @@ public class DefaultPlannerValidator implements PlannerValidator {
         if (windowOffset != null && !StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
             // 验证窗口大小配置
             if (windowOffset.windowSizeValue() == null || windowOffset.windowSizeValue() <= 0) {
-                log.warn("window size not configured or invalid, fallback to defaults");
+                log.warn("[INGEST][APP] window size not configured or invalid, fallback to defaults");
             }
 
             // 验证最大窗口跨度
             if (windowOffset.maxWindowSpanSeconds() != null && windowOffset.maxWindowSpanSeconds() <= 0) {
-                log.warn("invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
+                log.warn("[INGEST][APP] invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
             }
         }
     }

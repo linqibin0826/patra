@@ -115,9 +115,6 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 根据归一化请求构造计划聚合。
-     */
-    /**
      * 构建 Plan 聚合根。
      * <p>包含：表达式哈希、表达式 JSON 快照、配置 canonical JSON + hash、窗口、切片策略、切片参数 JSON。</p>
      */
@@ -155,10 +152,10 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
      * 生成切片：调用策略 → SlicePlan 列表 → canonical 表达式快照 → PlanSlice 聚合。
      */
     private SliceGenerationResult createSlices(PlanTriggerNorm norm,
-                                                PlannerWindow window,
-                                                PlanExpressionDescriptor planExpression,
-                                                ProvenanceConfigSnapshot configSnapshot,
-                                                SliceStrategy sliceStrategy) {
+                                               PlannerWindow window,
+                                               PlanExpressionDescriptor planExpression,
+                                               ProvenanceConfigSnapshot configSnapshot,
+                                               SliceStrategy sliceStrategy) {
         SlicePlanner planner = slicePlannerRegistry.get(sliceStrategy);
         if (planner == null) {
             return new SliceGenerationResult(List.of(), List.of());
@@ -193,8 +190,8 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
      * <p>任务幂等键 material = provenance | operation | sliceSignatureHash → sha256 → Base64Url。</p>
      */
     private List<TaskAggregate> createTasks(PlanTriggerNorm norm,
-                                             PlannerWindow window,
-                                             SliceGenerationResult sliceResult) {
+                                            PlannerWindow window,
+                                            SliceGenerationResult sliceResult) {
         List<PlanSliceAggregate> slices = sliceResult.aggregates();
         List<SlicePlan> drafts = sliceResult.drafts();
         List<TaskAggregate> tasks = new ArrayList<>(slices.size());

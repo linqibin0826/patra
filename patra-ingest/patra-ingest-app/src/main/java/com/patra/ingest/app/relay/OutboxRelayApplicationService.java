@@ -38,6 +38,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
 
     /**
      * 执行一次 Relay。关闭状态下返回空统计，避免调度报错。
+     *
      * @param instruction 指令（可空字段）
      * @return 执行报告
      */
@@ -46,14 +47,15 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     public RelayReport relay(OutboxRelayInstruction instruction) {
         if (!properties.isEnabled()) {
             String channel = CharSequenceUtil.blankToDefault(instruction.channel(), properties.getDefaultChannel());
-            log.info("Outbox relay disabled, skip channel={}", channel);
+            log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channel);
             return RelayReport.empty(channel);
         }
+        // 记录执行起始时间，用于生成耗时指标
         long start = System.currentTimeMillis();
 
         RelayPlan plan = planBuilder.build(instruction);
         if (log.isDebugEnabled()) {
-            log.debug("relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
+            log.debug("[INGEST][APP] relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
                     plan.channel(), plan.batchSize(), plan.leaseOwner(), plan.leaseExpireAt());
         }
 
@@ -61,7 +63,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         eventPublisher.publish(result.events());
 
         long elapsed = System.currentTimeMillis() - start;
-        log.info("relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
+        log.info("[INGEST][APP] relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
                 result.channel(), result.fetched(), result.published(), result.retried(), result.failed(), result.leaseMissed(), elapsed);
         return new RelayReport(
                 result.channel(),

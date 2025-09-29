@@ -65,10 +65,11 @@ public class OutboxRelayExecutor {
      * @return 批次结果统计
      */
     public RelayBatchResult execute(RelayPlan plan) {
+        // 按计划批量拉取待发送消息，受租约与批大小约束
         List<OutboxMessage> messages = relayStore.fetchPending(plan.channel(), plan.triggeredAt(), plan.batchSize());
         if (messages.isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("relay executor no-pending channel={} triggeredAt={}", plan.channel(), plan.triggeredAt());
+                log.debug("[INGEST][APP] relay executor no-pending channel={} triggeredAt={}", plan.channel(), plan.triggeredAt());
             }
             return RelayBatchResult.empty(plan.channel());
         }
@@ -95,6 +96,7 @@ public class OutboxRelayExecutor {
             relayStore.markPublished(message.getId(), publishingVersion, publishResult.messageId());
             context.onPublished(message, publishResult);
         } catch (Exception ex) {
+            // 将异常统一交由失败决策模块评估（重试 / 失败）
             handleFailure(message, context, publishingVersion, ex);
         }
     }
@@ -255,7 +257,7 @@ public class OutboxRelayExecutor {
         private void onLeaseMissed(OutboxMessage message) {
             leaseMissed++;
             if (log.isDebugEnabled()) {
-                log.debug("relay lease-missed messageId={} channel={} existingLeaseOwner={}",
+                log.debug("[INGEST][APP] relay lease-missed messageId={} channel={} existingLeaseOwner={}",
                         message.getId(), message.getChannel(), message.getLeaseOwner());
             }
             events.add(new OutboxLeaseMissedEvent(
@@ -272,7 +274,7 @@ public class OutboxRelayExecutor {
          */
         private void onPublished(OutboxMessage message, OutboxPublisherPort.PublishResult publishResult) {
             if (log.isDebugEnabled()) {
-                log.debug("relay published messageId={} channel={} externalMsgId={}",
+                log.debug("[INGEST][APP] relay published messageId={} channel={} externalMsgId={}",
                         message.getId(), message.getChannel(), publishResult.messageId());
             }
             published++;
@@ -294,7 +296,7 @@ public class OutboxRelayExecutor {
                               String errorMessage,
                               Exception exception) {
             failed++;
-            log.error("Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
+            log.error("[INGEST][APP] Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
                     message.getId(), message.getChannel(), nextRetry, errorCode, exception);
             events.add(new OutboxMessageFailedEvent(
                     message.getId(),
@@ -316,7 +318,7 @@ public class OutboxRelayExecutor {
                                 String errorMessage,
                                 Exception exception) {
             retried++;
-            log.warn("Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
+            log.warn("[INGEST][APP] Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
                     message.getId(), message.getChannel(), nextRetry, nextRetryAt, errorCode, exception);
             events.add(new OutboxMessageDeferredEvent(
                     message.getId(),

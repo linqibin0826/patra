@@ -13,9 +13,11 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.value.PlannerWindow;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -76,14 +78,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
-    /** 默认总窗口跨度（24 小时）。 */
+    /**
+     * 默认总窗口跨度（24 小时）。
+     */
     private static final Duration DEFAULT_WINDOW_SIZE = Duration.ofHours(24);
-    /** 默认安全延迟，用于修剪“当前时间”。 */
+    /**
+     * 默认安全延迟，用于修剪“当前时间”。
+     */
     private static final Duration DEFAULT_SAFETY_LAG = Duration.ZERO;
-    /** 最小有效窗口长度（>0 秒，避免产生空窗）。 */
+    /**
+     * 最小有效窗口长度（>0 秒，避免产生空窗）。
+     */
     private static final Duration MIN_EFFECTIVE_WINDOW = Duration.ofSeconds(1);
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public PlannerWindow resolveWindow(PlanTriggerNorm triggerNorm,
                                        ProvenanceConfigSnapshot snapshot,
@@ -97,6 +107,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
         Instant userFrom = triggerNorm.requestedWindowFrom();
         Instant userTo = triggerNorm.requestedWindowTo();
 
+        // 根据配置的安全延迟修剪当前时间，避免未落库数据被纳入
         Instant nowSafe = computeLaggedNow(currentTime, cfg, DEFAULT_SAFETY_LAG);
 
         if (triggerNorm.isHarvest()) {
@@ -110,6 +121,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     }
 
     /* ===================== HARVEST ===================== */
+
     /**
      * 解析 HARVEST 模式窗口。
      * <p>利用当前 HARVEST 游标（harvestWM）+ lookback 回退以避免漏数据；无游标视为首次，从用户 from 或默认跨度推导。</p>
@@ -146,13 +158,14 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
         }
 
         if (!toCandidate.isAfter(fromCandidate)) {
-            log.debug("HARVEST window empty after alignment: {} >= {}", fromCandidate, toCandidate);
+            log.debug("[INGEST][APP] HARVEST window empty after alignment: {} >= {}", fromCandidate, toCandidate);
             return nullWindowIfEmpty(fromCandidate, toCandidate);
         }
         return safeWindow(fromCandidate, toCandidate);
     }
 
     /* ===================== BACKFILL ===================== */
+
     /**
      * 解析 BACKFILL 模式窗口。
      * <p>BACKFILL 游标（backfillWM）控制最小 from，上界受用户 to / nowSafe 约束；forwardWM 预留。</p>
@@ -192,13 +205,14 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             upperAnchor = alignFloor(upperAnchor, cfg.calendarAlignTo(), zone);
         }
         if (!upperAnchor.isAfter(fromCandidate)) {
-            log.debug("BACKFILL window empty: {} >= {}", fromCandidate, upperAnchor);
+            log.debug("[INGEST][APP] BACKFILL window empty: {} >= {}", fromCandidate, upperAnchor);
             return nullWindowIfEmpty(fromCandidate, upperAnchor);
         }
         return safeWindow(fromCandidate, upperAnchor);
     }
 
     /* ===================== UPDATE ===================== */
+
     /**
      * 解析 UPDATE 模式窗口。
      * <p>区分 timeDriven 和 ID 驱动；timeDriven 依赖用户窗口或日期型 offsetType。</p>
@@ -251,13 +265,14 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
         }
         if (!toCandidate.isAfter(fromCandidate)) {
-            log.debug("UPDATE window empty: {} >= {}", fromCandidate, toCandidate);
+            log.debug("[INGEST][APP] UPDATE window empty: {} >= {}", fromCandidate, toCandidate);
             return nullWindowIfEmpty(fromCandidate, toCandidate);
         }
         return safeWindow(fromCandidate, toCandidate);
     }
 
     /* ===================== Helpers ===================== */
+
     /**
      * 构造安全窗口：若长度 < 最小阈值则扩展 to，避免 0 时长。
      */

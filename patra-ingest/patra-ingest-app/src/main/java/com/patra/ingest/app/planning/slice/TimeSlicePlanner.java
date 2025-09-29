@@ -11,10 +11,12 @@ import com.patra.ingest.app.planning.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.planning.slice.model.SlicePlan;
 import com.patra.ingest.app.planning.slice.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -38,7 +40,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class TimeSlicePlanner implements SlicePlanner {
 
-    /** 默认切片步长（1 小时）。 */
+    /**
+     * 默认切片步长（1 小时）。
+     */
     private static final Duration DEFAULT_STEP = Duration.ofHours(1);
 
     @Override
@@ -51,7 +55,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         // 初始化返回集合，保持顺序稳定
         List<SlicePlan> result = new ArrayList<>();
         if (context.window() == null || context.window().from() == null || context.window().to() == null) {
-            log.warn("Skip time slicing because planning window is missing: norm={}, window={}.",
+            log.warn("[INGEST][APP] Skip time slicing because planning window is missing: norm={}, window={}.",
                     context.norm(), context.window());
             return result;
         }
@@ -59,7 +63,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         // 解析时间字段：优先使用 offsetFieldName（仅 DATE 模式），否则回退到 defaultDateFieldName
         String timeField = resolveTimeField(context.configSnapshot());
         if (timeField == null) {
-            log.error("Cannot resolve time field from provenance snapshot, provenanceCode={}, endpoint={}, operation={}",
+            log.error("[INGEST][APP] Cannot resolve time field from provenance snapshot, provenanceCode={}, endpoint={}, operation={}",
                     context.norm().provenanceCode(),
                     context.norm().endpoint() == null ? null : context.norm().endpoint().name(),
                     context.norm().operationCode());
@@ -69,7 +73,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         Instant from = context.window().from();
         Instant to = context.window().to();
         if (!from.isBefore(to)) {
-            log.warn("Skip time slicing because window is not forward, from={} to={}.", from, to);
+            log.warn("[INGEST][APP] Skip time slicing because window is not forward, from={} to={}.", from, to);
             return result;
         }
 
@@ -79,7 +83,7 @@ public class TimeSlicePlanner implements SlicePlanner {
             try {
                 step = Duration.parse(context.norm().step().trim());
             } catch (Exception e) {
-                log.warn("Invalid step format, fallback to default, stepString={}.", context.norm().step(), e);
+                log.warn("[INGEST][APP] Invalid step format, fallback to default, stepString={}.", context.norm().step(), e);
             }
         }
 
@@ -110,7 +114,7 @@ public class TimeSlicePlanner implements SlicePlanner {
                     cursor,
                     upper));
 
-            log.debug("Time slice prepared, sequence={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
+            log.debug("[INGEST][APP] Time slice prepared, sequence={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
 
             cursor = upper;
             index++;
@@ -120,6 +124,7 @@ public class TimeSlicePlanner implements SlicePlanner {
 
     /**
      * 构建时间窗口约束表达式。半开区间约定：from 含，to 开。
+     *
      * @param field 时间字段名
      * @param from  切片起点（含）
      * @param to    切片终点（开）
@@ -131,6 +136,7 @@ public class TimeSlicePlanner implements SlicePlanner {
 
     /**
      * 从配置快照中解析时间字段。优先级：DATE 模式 offsetFieldName > defaultDateFieldName。
+     *
      * @param snapshot 来源配置快照
      * @return 可用于范围过滤的字段名，无法解析返回 null
      */
@@ -155,9 +161,10 @@ public class TimeSlicePlanner implements SlicePlanner {
     /**
      * 构建切片规格 JSON，并执行规范化。字段：strategy、window(from/to + boundary + timezone)。
      * 规范化失败回退最小 JSON 保证哈希仍可用。
-     * @param context  切片上下文
-     * @param from     切片起点
-     * @param to       切片终点
+     *
+     * @param context 切片上下文
+     * @param from    切片起点
+     * @param to      切片终点
      * @return 规范化结果（canonical JSON + 哈希素材）
      */
     private JsonNormalizer.Result buildSpec(SlicePlanningContext context, Instant from, Instant to) {
@@ -181,7 +188,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         try {
             return JsonNormalizer.normalizeDefault(root);
         } catch (JsonNormalizer.JsonNormalizationException ex) {
-            log.error("Failed to normalize slice spec, fallback to minimal payload, from={}, to={}", from, to, ex);
+            log.error("[INGEST][APP] Failed to normalize slice spec, fallback to minimal payload, from={}, to={}", from, to, ex);
             String fallback = "{\"strategy\":\"" + code().getCode() + "\"}";
             try {
                 return JsonNormalizer.normalizeDefault(fallback);
