@@ -1,11 +1,15 @@
 package com.patra.ingest.app.planning.outbox;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.ingest.app.relay.support.OutboxChannels;
+import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
@@ -55,7 +59,7 @@ public class TaskOutboxPublisher {
     public void publish(List<TaskQueuedEvent> events,
                         PlanAggregate plan,
                         ScheduleInstanceAggregate schedule) {
-        if (events == null || events.isEmpty()) {
+        if (CollUtil.isEmpty(events)) {
             return;
         }
         Objects.requireNonNull(plan, "plan must not be null");
@@ -99,7 +103,7 @@ public class TaskOutboxPublisher {
     public void publishRetry(List<TaskQueuedEvent> events,
                              PlanAggregate plan,
                              ScheduleInstanceAggregate schedule) {
-        if (events == null || events.isEmpty()) {
+        if (CollUtil.isEmpty(events)) {
             return;
         }
         Objects.requireNonNull(plan, "plan must not be null");
@@ -175,7 +179,7 @@ public class TaskOutboxPublisher {
         if (event.scheduledAt() != null) {
             payload.put("scheduledAt", event.scheduledAt().toString());
         }
-        if (event.paramsJson() != null) {
+        if (CharSequenceUtil.isNotBlank(event.paramsJson())) {
             payload.set("params", readJsonNode(event.paramsJson()));
         }
         payload.put("planKey", plan.getPlanKey());
@@ -186,7 +190,7 @@ public class TaskOutboxPublisher {
             payload.put("planWindowTo", plan.getWindowTo().toString());
         }
         payload.put("planSliceStrategy", plan.getSliceStrategyCode());
-        if (plan.getSliceParamsJson() != null) {
+        if (CharSequenceUtil.isNotBlank(plan.getSliceParamsJson())) {
             payload.put("planSliceParams", plan.getSliceParamsJson());
         }
         return payload;
@@ -216,10 +220,10 @@ public class TaskOutboxPublisher {
         headers.put("triggeredAt", schedule.getTriggeredAt().toString());
         headers.put("occurredAt", event.occurredAt().toString());
         headers.put("planKey", plan.getPlanKey());
-        if (plan.getOperationCode() != null) {
+        if (CharSequenceUtil.isNotBlank(plan.getOperationCode())) {
             headers.put("planOperation", plan.getOperationCode());
         }
-        if (plan.getEndpointName() != null) {
+        if (CharSequenceUtil.isNotBlank(plan.getEndpointName())) {
             headers.put("planEndpoint", plan.getEndpointName());
         }
         return headers;
@@ -235,7 +239,8 @@ public class TaskOutboxPublisher {
         try {
             return objectMapper.writeValueAsString(node);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("failed to serialize outbox message", e);
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.TASK,
+                    "序列化 Outbox 消息负载失败", e);
         }
     }
 
@@ -249,7 +254,8 @@ public class TaskOutboxPublisher {
         try {
             return objectMapper.readTree(json);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("failed to parse task params json", e);
+            throw new PlanPersistenceException(PlanPersistenceException.Stage.TASK,
+                    "解析任务参数 JSON 失败", e);
         }
     }
 
@@ -270,17 +276,17 @@ public class TaskOutboxPublisher {
      * @return 分区键
      */
     private String buildPartitionKey(TaskQueuedEvent event) {
-        String provenance = event.provenanceCode() == null ? "" : event.provenanceCode();
-        String operation = event.operationCode() == null ? "" : event.operationCode();
-        if (provenance.isEmpty() && operation.isEmpty()) {
+        String provenance = StrUtil.nullToEmpty(event.provenanceCode());
+        String operation = StrUtil.nullToEmpty(event.operationCode());
+        if (StrUtil.isEmpty(provenance) && StrUtil.isEmpty(operation)) {
             return "TASK";
         }
-        if (operation.isEmpty()) {
-            return provenance;
-        }
-        if (provenance.isEmpty()) {
+        if (StrUtil.isEmpty(provenance)) {
             return operation;
         }
-        return provenance + ":" + operation;
+        if (StrUtil.isEmpty(operation)) {
+            return provenance;
+        }
+        return provenance + ':' + operation;
     }
 }

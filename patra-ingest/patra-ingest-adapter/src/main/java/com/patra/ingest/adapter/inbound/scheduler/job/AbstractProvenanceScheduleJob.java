@@ -1,5 +1,6 @@
 package com.patra.ingest.adapter.inbound.scheduler.job;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -73,7 +74,7 @@ public abstract class AbstractProvenanceScheduleJob {
      */
     protected PlanIngestionRequest parseJobParam(String paramStr) {
         // 空参数 -> 使用默认触发配置
-        if (paramStr == null || paramStr.trim().isEmpty()) {
+        if (CharSequenceUtil.isBlank(paramStr)) {
             return new PlanIngestionRequest(
                     getProvenanceCode(),
                     getEndpoint(),
@@ -81,7 +82,7 @@ public abstract class AbstractProvenanceScheduleJob {
                     "PT6H",
                     TriggerType.SCHEDULE,
                     Scheduler.XXL,
-                    XxlJobHelper.getJobId() + "",
+                    String.valueOf(XxlJobHelper.getJobId()),
                     "0",
                     null,
                     null,
@@ -100,15 +101,15 @@ public abstract class AbstractProvenanceScheduleJob {
             Instant windowFrom = null;
             if (root.hasNonNull("windowFrom")) {
                 String wf = root.get("windowFrom").asText();
-                if (!wf.isEmpty()) {
-                    windowFrom = Instant.parse(wf);
+                if (CharSequenceUtil.isNotBlank(wf)) {
+                    windowFrom = Instant.parse(CharSequenceUtil.trim(wf));
                 }
             }
             Instant windowTo = null;
             if (root.hasNonNull("windowTo")) {
                 String wt = root.get("windowTo").asText();
-                if (!wt.isEmpty()) {
-                    windowTo = Instant.parse(wt);
+                if (CharSequenceUtil.isNotBlank(wt)) {
+                    windowTo = Instant.parse(CharSequenceUtil.trim(wt));
                 }
             }
             Priority priority = null;
@@ -126,7 +127,7 @@ public abstract class AbstractProvenanceScheduleJob {
                     "PT6H",
                     TriggerType.SCHEDULE,
                     Scheduler.XXL,
-                    XxlJobHelper.getJobId() + "",
+                    String.valueOf(XxlJobHelper.getJobId()),
                     "0",
                     windowFrom,
                     windowTo,

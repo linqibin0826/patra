@@ -1,13 +1,13 @@
 package com.patra.ingest.app.relay.plan;
 
+import cn.hutool.core.net.NetUtil;
+import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.app.relay.command.OutboxRelayInstruction;
 import com.patra.ingest.app.relay.config.OutboxRelayProperties;
 import com.patra.ingest.domain.model.value.RelayPlan;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -27,7 +27,7 @@ public class OutboxRelayPlanBuilder {
     }
 
     public RelayPlan build(OutboxRelayInstruction instruction) {
-        String channel = StringUtils.hasText(instruction.channel())
+        String channel = StrUtil.isNotBlank(instruction.channel())
                 ? instruction.channel()
                 : properties.getDefaultChannel();
         Instant triggeredAt = instruction.triggeredAt() != null ? instruction.triggeredAt() : Instant.now(clock);
@@ -35,9 +35,9 @@ public class OutboxRelayPlanBuilder {
         Duration leaseDuration = normalizeDuration(instruction.leaseDuration(), properties.getLeaseDuration());
         int maxAttempts = normalizePositive(instruction.maxAttempts(), properties.getMaxAttempts());
         Duration initialBackoff = normalizeDuration(instruction.initialBackoff(), properties.getInitialBackoff());
-        String leaseOwner = StringUtils.hasText(instruction.leaseOwner())
+        String leaseOwner = StrUtil.isNotBlank(instruction.leaseOwner())
                 ? instruction.leaseOwner()
-                : buildLeaseOwner();
+                : buildLeaseOwner(triggeredAt);
         return new RelayPlan(
                 channel,
                 triggeredAt,
@@ -65,12 +65,8 @@ public class OutboxRelayPlanBuilder {
         return candidate;
     }
 
-    private String buildLeaseOwner() {
-        try {
-            String host = InetAddress.getLocalHost().getHostName();
-            return host + "-" + Instant.now(clock).toEpochMilli();
-        } catch (UnknownHostException ex) {
-            return "unknown-" + Instant.now(clock).toEpochMilli();
-        }
+    private String buildLeaseOwner(Instant timestamp) {
+        String host = StrUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");
+        return host + '-' + timestamp.toEpochMilli() + '-' + IdUtil.fastSimpleUUID();
     }
 }

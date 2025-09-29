@@ -1,6 +1,8 @@
 package com.patra.ingest.app.relay.policy;
 
+import cn.hutool.core.exceptions.ExceptionUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import org.springframework.stereotype.Component;
 
@@ -16,18 +18,13 @@ public class DefaultRelayErrorClassifier implements RelayErrorClassifier {
 
     @Override
     public RelayErrorKind classify(Throwable cause) {
-        Throwable root = rootCause(cause);
-        if (root instanceof IllegalArgumentException || root instanceof IllegalStateException || root instanceof JsonProcessingException) {
+        Throwable root = ExceptionUtil.getRootCause(cause);
+        if (root instanceof OutboxRelayExecutionException
+                || root instanceof IllegalArgumentException
+                || root instanceof IllegalStateException
+                || root instanceof JsonProcessingException) {
             return RelayErrorKind.FATAL;
         }
         return RelayErrorKind.TRANSIENT;
-    }
-
-    private Throwable rootCause(Throwable cause) {
-        Throwable current = cause;
-        while (current.getCause() != null && current.getCause() != current) {
-            current = current.getCause();
-        }
-        return current;
     }
 }

@@ -1,5 +1,6 @@
 package com.patra.ingest.app.relay;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.ingest.app.relay.command.OutboxRelayInstruction;
 import com.patra.ingest.app.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.relay.dto.RelayReport;
@@ -30,7 +31,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     @Transactional
     public RelayReport relay(OutboxRelayInstruction instruction) {
         if (!properties.isEnabled()) {
-            String channel = instruction.channel() != null ? instruction.channel() : properties.getDefaultChannel();
+            String channel = CharSequenceUtil.blankToDefault(instruction.channel(), properties.getDefaultChannel());
             log.info("Outbox relay disabled, skip channel={}", channel);
             return RelayReport.empty(channel);
         }

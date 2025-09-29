@@ -10,9 +10,11 @@ import com.patra.ingest.domain.model.value.RelayBatchResult;
 import com.patra.ingest.domain.model.value.RelayPlan;
 import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import com.patra.ingest.domain.policy.RelayErrorClassifier.RelayErrorKind;
+import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.policy.RelayRetryPolicy;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
 import com.patra.ingest.domain.port.OutboxRelayStore;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -23,6 +25,7 @@ import java.util.List;
 /**
  * Outbox Relay 执行器，负责编排一次批量发布流程。
  */
+@Slf4j
 @Component
 public class OutboxRelayExecutor {
 
@@ -99,6 +102,8 @@ public class OutboxRelayExecutor {
                             errorMessage
                     );
                     failed++;
+                    log.error("Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
+                            message.getId(), message.getChannel(), nextRetry, errorCode, ex);
                     events.add(new OutboxMessageFailedEvent(
                             message.getId(),
                             message.getChannel(),
@@ -119,6 +124,8 @@ public class OutboxRelayExecutor {
                             errorMessage
                     );
                     retried++;
+                    log.warn("Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
+                            message.getId(), message.getChannel(), nextRetry, nextRetryAt, errorCode, ex);
                     events.add(new OutboxMessageDeferredEvent(
                             message.getId(),
                             message.getChannel(),
@@ -159,7 +166,7 @@ public class OutboxRelayExecutor {
         if (message == null) {
             return null;
         }
-        return message.length() <= ERROR_MSG_LIMIT ? message : message.substring(0, ERROR_MSG_LIMIT);
+        return StrUtil.maxLength(message, ERROR_MSG_LIMIT);
     }
 
     private enum FailureHandling {

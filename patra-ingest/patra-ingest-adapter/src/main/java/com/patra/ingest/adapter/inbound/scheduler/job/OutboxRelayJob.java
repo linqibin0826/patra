@@ -1,5 +1,8 @@
 package com.patra.ingest.adapter.inbound.scheduler.job;
 
+import cn.hutool.core.net.NetUtil;
+import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.adapter.inbound.scheduler.param.OutboxRelayJobParam;
 import com.patra.ingest.app.relay.OutboxRelayUseCase;
@@ -13,9 +16,7 @@ import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
-import java.net.InetAddress;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -66,25 +67,26 @@ public class OutboxRelayJob {
     }
 
     private String resolveChannel(String channel) {
-        return StringUtils.hasText(channel) ? channel : relayProperties.getDefaultChannel();
+        return CharSequenceUtil.blankToDefault(channel, relayProperties.getDefaultChannel());
     }
 
     private Duration parseDuration(String value) {
-        if (!StringUtils.hasText(value)) {
+        if (CharSequenceUtil.isBlank(value)) {
             return null;
         }
+        String trimmed = CharSequenceUtil.trim(value);
         try {
-            if (value.startsWith("PT")) {
-                return Duration.parse(value);
+            if (trimmed.startsWith("PT")) {
+                return Duration.parse(trimmed);
             }
-            return Duration.ofSeconds(Long.parseLong(value));
+            return Duration.ofSeconds(Long.parseLong(trimmed));
         } catch (Exception ex) {
             throw new IngestScheduleParameterException("Illegal duration value: " + value, ex);
         }
     }
 
     private OutboxRelayJobParam parseParam(String param) {
-        if (!StringUtils.hasText(param)) {
+        if (CharSequenceUtil.isBlank(param)) {
             return new OutboxRelayJobParam(null, null, null, null, null);
         }
         try {
@@ -95,11 +97,7 @@ public class OutboxRelayJob {
     }
 
     private String buildLeaseOwner() {
-        try {
-            String host = InetAddress.getLocalHost().getHostName();
-            return host + "-" + XxlJobHelper.getJobId() + "-" + Thread.currentThread().threadId();
-        } catch (Exception ex) {
-            return "unknown-" + XxlJobHelper.getJobId();
-        }
+        String host = CharSequenceUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");
+        return host + '-' + XxlJobHelper.getJobId() + '-' + Thread.currentThread().threadId() + '-' + IdUtil.fastSimpleUUID();
     }
 }
