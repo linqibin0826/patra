@@ -1,6 +1,6 @@
 # patra-spring-boot-starter-rocketmq
 
-RocketMQ 统一封装 Starter，提供消息模型、命名规范与发布抽象。
+RocketMQ 统一封装 Starter，提供消息模型、命名/分组规范校验、目的地构建与发布抽象。
 
 ## 1. 模块定位
 - **服务/组件作用**：标准化 RocketMQ 消息的 header/payload、Topic 命名与发布 API
@@ -8,11 +8,12 @@ RocketMQ 统一封装 Starter，提供消息模型、命名规范与发布抽象
 - **架构边界**：Starter 负责封装模板和规范约束；消费端基类将在后续版本提供
 
 ## 2. 核心能力
-- **消息模型 `PatraMessage<T>`**：统一 `eventId` / `traceId` / `occurredAt` 字段
-- **发布抽象 `PatraMessagePublisher`**：隐藏 `RocketMQTemplate` 细节，强制命名校验
-- **Topic 命名规范**：可配置 namespace、正则、tag 分隔符
-- **重试属性占位**：预置消费重试参数，为后续消费端扩展做准备
-- **Trace 衔接**：与核心 Starter 的 TraceProvider 集成，透传链路信息
+- 消息模型：`PatraMessage<T>` 统一 `eventId`/`traceId`/`occurredAt`
+- 发布抽象：`PatraMessagePublisher` 支持 `send`/`sendByChannel`/`sendOrderly`/`sendDelay`
+- 命名规范：`TopicNameValidator`（Topic 前缀/正则/namespace）+ `GroupNameValidator`（消费组）
+- 启动校验：`RocketMQListenerAnnotationValidator` 对 `@RocketMQMessageListener` 的 `topic/tag/group` 进行 fail-fast 校验
+- 目的地构建：`DestinationBuilder.fromChannel("domain.resource.event") -> TOPIC:TAG`
+- Trace 衔接：`PatraMessageFactory` 优先从 `TraceProvider` 注入 `traceId`
 
 详尽用法、配置表与最佳实践见 `docs/modules/starters/rocketmq.md`。
 
@@ -36,7 +37,8 @@ RocketMQ 统一封装 Starter，提供消息模型、命名规范与发布抽象
       rocketmq:
         enabled: true
         naming:
-          namespace: INGEST
+          # 建议留空，自动按 Spring profiles.active 推导（dev→DEV；会剔除非字母数字）
+          namespace: ${spring.profiles.active:}
           topic-pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"
           tag-delimiter: "."
         retry:
@@ -47,18 +49,25 @@ RocketMQ 统一封装 Starter，提供消息模型、命名规范与发布抽象
     producer.group: ingest-producer
   ```
 - 发布示例：`publisher.send("INGEST.ARTICLE.CREATED", PatraMessage.of(payload))`
+- Channel 示例：`publisher.sendByChannel("ingest.task.ready", PatraMessage.of(payload)) // -> INGEST.TASK:READY`
+ - 消费组命名：`svc-{service}-{consumer}-cg`（正则 `^[a-z][a-z0-9\-]*$`），示例：`svc-ingest-relay-cg`
 
 ## 5. 观测与运维
 - 关键日志：Topic、eventId、traceId、publish result；建议落地统一日志模式
 - 建议结合 RocketMQ Console/Exporter 监控 Lag、重试、DLQ
 - Topic 命名校验失败会抛异常，避免垃圾 Topic；生产环境需提前校验命名方案
 
-## 6. 测试策略
+## 6. 错误处理（平台化）
+- 运行期发布入口（`send*`/`sendByChannel`）对命名/参数等校验失败，统一抛出 `ApplicationException(UNPROCESSABLE/422)`，消息包含 `destination/channel` 等上下文。
+- Web/Feign 适配层会据此输出统一的 `ProblemDetail`，错误码前缀来源于 `patra.error.context-prefix`（未配置时为 `UNKNOWN`）。
+- 启动期/配置期（例如 `@RocketMQMessageListener` 注解）不合规仍使用标准异常 `IllegalArgumentException` 直接 fail‑fast，便于快速定位配置问题。
+
+## 7. 测试策略
 - 使用 Embedded RocketMQ 或 MockTemplate 验证 Publisher 行为
 - 断言 Topic 命名校验、header 注入、 traceId 透传
 - 模拟发送失败，确认异常处理与日志输出
 
-## 7. Roadmap 与风险
+## 8. Roadmap 与风险
 | 项目 | 状态 | 风险/备注 |
 |------|------|-----------|
 | 消费端抽象 | 规划 | 需统一重试、死信、指标策略 |

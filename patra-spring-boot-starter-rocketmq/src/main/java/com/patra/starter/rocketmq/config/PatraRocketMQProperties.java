@@ -51,6 +51,11 @@ public class PatraRocketMQProperties {
          * 默认 Tag 分隔符。
          */
         private String tagDelimiter = ".";
+        /**
+         * 消费者分组命名规范（默认：小写开头，允许小写/数字/连字符）。
+         * 例如：svc-ingest-task-cg
+         */
+        private String consumerGroupPattern = "^[a-z][a-z0-9\\-]*$";
 
         public String getNamespace() {
             return namespace;
@@ -74,6 +79,14 @@ public class PatraRocketMQProperties {
 
         public void setTagDelimiter(String tagDelimiter) {
             this.tagDelimiter = tagDelimiter;
+        }
+
+        public String getConsumerGroupPattern() {
+            return consumerGroupPattern;
+        }
+
+        public void setConsumerGroupPattern(String consumerGroupPattern) {
+            this.consumerGroupPattern = consumerGroupPattern;
         }
     }
 

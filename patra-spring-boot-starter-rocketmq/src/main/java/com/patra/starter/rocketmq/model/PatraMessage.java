@@ -1,5 +1,7 @@
 package com.patra.starter.rocketmq.model;
 
+import lombok.Getter;
+
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
@@ -7,6 +9,7 @@ import java.util.UUID;
 /**
  * 统一消息载体，封装 traceId / eventId 等公共字段。
  */
+@Getter
 public final class PatraMessage<T> {
 
     private final String eventId;
@@ -19,22 +22,6 @@ public final class PatraMessage<T> {
         this.traceId = builder.traceId;
         this.occurredAt = builder.occurredAt == null ? Instant.now() : builder.occurredAt;
         this.payload = builder.payload;
-    }
-
-    public String getEventId() {
-        return eventId;
-    }
-
-    public String getTraceId() {
-        return traceId;
-    }
-
-    public Instant getOccurredAt() {
-        return occurredAt;
-    }
-
-    public T getPayload() {
-        return payload;
     }
 
     public static <T> Builder<T> builder() {

@@ -1,7 +1,11 @@
 package com.patra.starter.rocketmq.config;
 
+import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.rocketmq.publisher.PatraMessagePublisher;
 import com.patra.starter.rocketmq.publisher.RocketMQMessagePublisher;
+import com.patra.starter.rocketmq.support.PatraMessageFactory;
+import com.patra.starter.rocketmq.support.RocketMQListenerAnnotationValidator;
+import com.patra.starter.core.error.spi.TraceProvider;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -22,7 +26,30 @@ public class PatraRocketMQAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(PatraMessagePublisher.class)
     public PatraMessagePublisher patraMessagePublisher(RocketMQTemplate rocketMQTemplate,
-                                                       PatraRocketMQProperties properties) {
-        return new RocketMQMessagePublisher(rocketMQTemplate, properties);
+                                                       PatraRocketMQProperties properties,
+                                                       org.springframework.core.env.Environment environment,
+                                                       org.springframework.beans.factory.ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) {
+        return new RocketMQMessagePublisher(rocketMQTemplate, properties, environment, httpErrorsProvider);
+    }
+
+    /**
+     * 消费端注解启动期校验器：topic / selector / consumerGroup。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RocketMQListenerAnnotationValidator rocketMQListenerAnnotationValidator(PatraRocketMQProperties properties,
+                                                                                   org.springframework.core.env.Environment environment) {
+        return new RocketMQListenerAnnotationValidator(properties, environment);
+    }
+
+    /**
+     * 消息工厂：从 TraceProvider 注入 traceId。
+     * 若未引入 core-starter（无 TraceProvider），则注入一个无依赖的工厂实现。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PatraMessageFactory patraMessageFactory(org.springframework.beans.factory.ObjectProvider<TraceProvider> traceProvider) {
+        TraceProvider provider = traceProvider.getIfAvailable();
+        return provider != null ? new PatraMessageFactory(provider) : new PatraMessageFactory();
     }
 }
