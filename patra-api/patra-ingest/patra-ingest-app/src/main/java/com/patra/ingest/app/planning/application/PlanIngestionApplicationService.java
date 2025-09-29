@@ -137,7 +137,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         OperationCode operationCode = request.operationCode();
 
         Instant now = request.triggeredAt();
-        log.info("plan-ingest start, provenance={}, op={}, triggeredAt={}", provenanceCode, operationCode, now);
+        log.info("[INGEST][APP] plan-ingest start, provenance={}, op={}, triggeredAt={}", provenanceCode, operationCode, now);
 
         // Phase 1: 调度实例 + 来源配置快照
         ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
@@ -149,27 +149,28 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         // Phase 2: 游标水位 (仅前进) + 解析计划窗口（TIME 策略）
         Instant cursorWatermark = lookupCursorWatermark(provenanceCode, operationCode);
         PlannerWindow window = resolvePlannerWindow(norm, configSnapshot, cursorWatermark, now);
-        log.debug("plan-ingest window resolved provenance={} op={} cursorWatermark={} window=[{}, {})",
+        log.debug("[INGEST][APP] plan-ingest window resolved provenance={} op={} cursorWatermark={} window=[{}, {})",
                 provenanceCode, operationCode, cursorWatermark, window == null ? null : window.from(), window == null ? null : window.to());
 
         // Phase 3: 构建 Plan 级别业务表达式（内存对象，不编译）
         PlanExpressionDescriptor expressionDescriptor = planExpressionBuilder.build(norm, configSnapshot);
-        log.debug("plan-ingest expr built hash={} jsonSize={}", expressionDescriptor.hash(), expressionDescriptor.jsonSnapshot().length());
+        log.debug("[INGEST][APP] plan-ingest expr built hash={} jsonSize={}", expressionDescriptor.hash(), expressionDescriptor.jsonSnapshot().length());
 
         // Phase 4: 前置验证（窗口合理性 / 背压 / 能力）
         long queuedTasks = taskRepository.countQueuedTasks(
                 provenanceCode.getCode(), opCode(operationCode));
         validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
-        log.debug("plan-ingest validation passed queuedTasks={}", queuedTasks);
+        log.debug("[INGEST][APP] plan-ingest validation passed queuedTasks={}", queuedTasks);
 
         // Phase 5: 组装蓝图
         PlanAssemblyRequest assemblyRequest = new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
         PlanAssembly assembly = assemblePlan(assemblyRequest);
 
         PlanAggregate draftPlan = assembly.plan();
+        // 幂等复用：若 planKey 已存在，直接走补偿/重试分支
         PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
         if (existingPlan != null) {
-            log.info("plan-ingest dedup hit existing planKey={}, reuse planId={}", draftPlan.getPlanKey(), existingPlan.getId());
+            log.info("[INGEST][APP] plan-ingest dedup hit existing planKey={}, reuse planId={}", draftPlan.getPlanKey(), existingPlan.getId());
             List<PlanSliceAggregate> existingSlices = planSliceRepository.findByPlanId(existingPlan.getId());
             List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
 
@@ -205,7 +206,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
         List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
         taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
 
-        log.info("plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})", persistedPlan.getId(), persistedSlices.size(), persistedTasks.size(), window == null ? null : window.from(), window == null ? null : window.to());
+        log.info("[INGEST][APP] plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})", persistedPlan.getId(), persistedSlices.size(), persistedTasks.size(), window == null ? null : window.from(), window == null ? null : window.to());
 
         return new PlanIngestionResult(
                 schedule.getId(),

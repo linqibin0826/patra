@@ -9,8 +9,10 @@ import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.ingest.app.planning.expression.PlanExpressionDescriptor;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +30,7 @@ public class PlanExpressionBuilder {
     /**
      * 构造计划级表达式描述对象（含原始表达式、规范化 JSON 与哈希）。
      *
-     * @param norm 触发规范
+     * @param norm           触发规范
      * @param configSnapshot 来源配置快照
      * @return 计划表达式描述
      */
@@ -42,8 +44,9 @@ public class PlanExpressionBuilder {
      * 构建计划业务表达式。
      */
     private Expr buildBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-        log.debug("Building plan business expression, operation={}", norm.operationCode());
+        log.debug("[INGEST][APP] Building plan business expression, operation={}", norm.operationCode());
 
+        // 基于触发规范与配置先构建内置约束
         List<Expr> constraints = buildBusinessConstraints(norm, configSnapshot);
         Expr external = buildExternalConditionsExpr(norm);
         if (external != null) {

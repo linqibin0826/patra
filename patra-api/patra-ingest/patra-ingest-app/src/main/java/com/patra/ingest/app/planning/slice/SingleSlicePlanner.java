@@ -43,7 +43,7 @@ public class SingleSlicePlanner implements SlicePlanner {
         String specJson = specNormalized.getCanonicalJson();
         String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
-        log.debug("Single slice planned, provenance={}, hash={}.",
+        log.debug("[INGEST][APP] Single slice planned, provenance={}, hash={}",
                 context.norm().provenanceCode(), signatureHash);
 
         return List.of(new SlicePlan(

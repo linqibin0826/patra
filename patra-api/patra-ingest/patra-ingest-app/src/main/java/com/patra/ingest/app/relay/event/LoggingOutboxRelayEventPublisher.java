@@ -16,7 +16,10 @@ public class LoggingOutboxRelayEventPublisher implements OutboxRelayEventPublish
 
     @Override
     public void publish(List<OutboxRelayDomainEvent> events) {
-        if (events == null || events.isEmpty()) { return; }
-        events.forEach(event -> log.debug("relay-event: {}", event));
+        if (events == null || events.isEmpty()) {
+            return;
+        }
+        // 仅在 DEBUG 级别打印事件快照，避免生产环境噪音
+        events.forEach(event -> log.debug("[INGEST][APP] relay-event: {}", event));
     }
 }
