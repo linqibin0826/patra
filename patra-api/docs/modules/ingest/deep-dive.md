@@ -17,11 +17,11 @@
 | 模块 | 说明 |
 | ---- | ---- |
 | patra-ingest-api | 错误码与对外 DTO（当前主要是错误码枚举） |
-| patra-ingest-adapter | XXL-Job 调度入口 / 远程 provenance 配置适配端口 / Outbox Relay Job |
+| patra-ingest-adapter | XXL-Job 调度入口（Inbound Only）/ Outbox Relay Job |
 | patra-ingest-app | `planning`：计划构建、窗口解析、切片、任务与 Outbox 装配；`relay`：Outbox 租约发布、失败分类与退避策略 |
-| patra-ingest-domain | 聚合与领域异常（Plan / PlanSlice / Task / ScheduleInstance 等）以及仓储端口 |
+| patra-ingest-domain | 聚合与领域异常（Plan / PlanSlice / Task / ScheduleInstance 等）以及领域端口（如 `PatraRegistryPort`） |
 | patra-ingest-domain | 消息通道目录（ChannelKey / IngestChannels），统一发送/接收语义 |
-| patra-ingest-infra | MyBatis-Plus DO、Mapper、仓储实现、Outbox 持久化 |
+| patra-ingest-infra | MyBatis-Plus DO、Mapper、仓储实现、Outbox 持久化 / RPC 出站（`infra.rpc.registry.*`） |
 | patra-ingest-boot | Spring Boot 启动与错误码映射装配 |
 
 > 应用层约定：`app.planning` 聚焦计划生命周期（Plan/Task 装配、OutboxMessage 挂车）；`app.relay` 专注 Outbox Relay 批次执行、租约管理与领域事件发布。

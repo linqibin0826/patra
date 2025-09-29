@@ -29,28 +29,13 @@
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Feign -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-cloud-starter-feign</artifactId>
-        </dependency>
-
-        <!-- 负载均衡（Spring Cloud LoadBalancer），必须！-->
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
 
-        <!-- 共享契约 -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-registry-api</artifactId>
-        </dependency>
+        <!-- 出站 Feign/契约移动至 infra 层；adapter 仅保留 inbound 依赖 -->
 
         <dependency>
             <groupId>org.mapstruct</groupId>
