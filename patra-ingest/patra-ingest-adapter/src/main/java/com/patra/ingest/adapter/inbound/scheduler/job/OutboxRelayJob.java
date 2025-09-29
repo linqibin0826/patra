@@ -42,6 +42,7 @@ public class OutboxRelayJob {
      */
     @XxlJob("ingestOutboxRelayJob")
     public void execute() {
+        // 使用注入时钟生成一致的执行时间，方便测试控制
         Instant now = Instant.now(clock);
         try {
             OutboxRelayJobParam jobParam = parseParam(XxlJobHelper.getJobParam());
@@ -52,12 +53,12 @@ public class OutboxRelayJob {
             XxlJobHelper.handleSuccess("Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d"
                     .formatted(report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
 
-            log.info("Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
+            log.info("[INGEST][ADAPTER] Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
                     report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
         } catch (OutboxRelayExecutionException ex) {
             throw ex;
         } catch (Exception ex) {
-            log.error("Outbox relay execution failed", ex);
+            log.error("[INGEST][ADAPTER] Outbox relay execution failed", ex);
             XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
             throw new OutboxRelayExecutionException("Outbox relay execution failed", ex);
         }

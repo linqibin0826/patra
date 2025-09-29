@@ -57,7 +57,9 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     @Override
     public PublishResult publish(OutboxMessage message, RelayPlan plan) {
         String destination = destinationResolver.resolve(plan.channel());
+        // 按照 Outbox 载荷映射为领域消息体
         TaskReadyMessage body = messageMapper.map(message);
+        // 拼装 PatraMessage 以对接 MQ SDK（含 traceId / occurredAt）
         PatraMessage<TaskReadyMessage> mqMessage = buildMessage(message, body, plan.triggeredAt());
         if (log.isDebugEnabled()) {
             log.debug("[INGEST][INFRA] publish outbox message start destination={} dedupKey={} partitionKey={}", destination, message.getDedupKey(), message.getPartitionKey());
@@ -87,7 +89,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
                 : message.getPartitionKey();
         Instant occurredAt = body.header() != null && body.header().occurredAt() != null
                 ? body.header().occurredAt()
-                : fallbackOccurredAt;
+        : fallbackOccurredAt;
         return PatraMessage.<TaskReadyMessage>builder()
                 .eventId(message.getDedupKey())
                 .traceId(traceId)

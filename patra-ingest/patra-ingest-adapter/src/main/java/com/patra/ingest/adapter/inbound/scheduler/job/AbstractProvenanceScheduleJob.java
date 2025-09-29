@@ -134,7 +134,7 @@ public abstract class AbstractProvenanceScheduleJob {
         try {
             return Priority.valueOf(normalized);
         } catch (IllegalArgumentException ex) {
-            log.warn("忽略非法优先级取值: {}", priority);
+            log.warn("[INGEST][ADAPTER] 忽略非法优先级取值: {}", priority);
             return null;
         }
     }
@@ -161,17 +161,18 @@ public abstract class AbstractProvenanceScheduleJob {
      * @param paramStr XXL-Job JSON 参数字符串（可为空）
      */
     protected void executeScheduleJob(String paramStr) {
-        long startTime = System.currentTimeMillis();
+    // 记录执行起始时间，便于统计 SLA 耗时
+    long startTime = System.currentTimeMillis();
 
         try {
-            log.info("Starting scheduled job, provenance={}, endpoint={}, operation={}, rawParam={}",
+        log.info("[INGEST][ADAPTER] Starting scheduled job, provenance={}, endpoint={}, operation={}, rawParam={}",
                     getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
 
             PlanIngestionRequest command = parseJobParam(paramStr);
             PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
 
             long duration = System.currentTimeMillis() - startTime;
-            log.info("Scheduled job completed, provenance={}, endpoint={}, operation={}, durationMs={}, planId={}, taskCount={}",
+        log.info("[INGEST][ADAPTER] Scheduled job completed, provenance={}, endpoint={}, operation={}, durationMs={}, planId={}, taskCount={}",
                     getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, result.planId(), result.taskCount());
 
             XxlJobHelper.handleSuccess(String.format("Job succeeded in %dms, planId=%s, taskCount=%d",
@@ -179,7 +180,7 @@ public abstract class AbstractProvenanceScheduleJob {
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("Scheduled job failed, provenance={}, endpoint={}, operation={}, durationMs={}, error={}",
+        log.error("[INGEST][ADAPTER] Scheduled job failed, provenance={}, endpoint={}, operation={}, durationMs={}, error={}",
                     getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, e.getMessage(), e);
 
             XxlJobHelper.handleFail(String.format("Job failed: %s", e.getMessage()));

@@ -77,6 +77,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
             log.debug("[INGEST][INFRA] outbox batch insert size={} firstChannel={}", messages.size(), messages.get(0).getChannel());
         }
         for (OutboxMessage message : messages) {
+            // 转换为数据对象，使用 MyBatis-Plus insert 写入单条记录
             OutboxMessageDO entity = converter.toEntity(message);
             mapper.insert(entity);
         }
@@ -99,6 +100,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
                 log.debug("[INGEST][INFRA] outbox insert channel={} dedupKey={} id={}", message.getChannel(), message.getDedupKey(), entity.getId());
             }
         } else {
+            // 仅更新非状态字段（如 payload/header），状态推进由专用 mark* 方法承担
             mapper.updateById(entity);
             if (log.isDebugEnabled()) {
                 log.debug("[INGEST][INFRA] outbox update id={} channel={} version={} (non-state fields)", entity.getId(), message.getChannel(), message.getVersion());
@@ -138,6 +140,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         if (entities == null || entities.isEmpty()) {
             return Collections.emptyList();
         }
+        // 映射为领域对象供上层 Relay 处理
         return entities.stream().map(converter::toDomain).toList();
     }
 
@@ -195,6 +198,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
      */
     @Override
     public void markDeferred(Long id, Long expectedVersion, int retryCount, Instant nextRetryAt, String errorCode, String errorMessage) {
+        // 使用乐观锁条件更新，将状态回退并记录下一次重试计划
         int updated = mapper.markDeferred(id, expectedVersion, retryCount, nextRetryAt, errorCode, errorMessage);
         if (updated != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_RETRY,
