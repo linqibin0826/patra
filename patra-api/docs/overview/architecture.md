@@ -20,10 +20,10 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 保持“内环无框架、外环可替换”，确保测试与演进成本可控。
 ## 3. 数据采集主流程
 1. **调度触发**：XXL-Job 将任务上下文推送至 patra-ingest adapter 层
-2. **配置组装**：ingest 通过 Feign 调用 patra-registry 获取 provenance 与表达式快照
-3. **窗口解析**：根据 HARVEST/BACKFILL/UPDATE 策略生成 Plan 与 PlanSlice
-4. **任务装配**：构建 Task + OutboxMessage，并写入事务性表
-5. **消息发布**：Outbox Relay 扫描待发布消息，发送至 RocketMQ 指定 Topic
+2. **配置组装**：adapter 调用 `app.planning.PlanIngestionApplicationService`，通过 Feign 获取 provenance 与表达式快照
+3. **窗口解析**：`app.planning.window` 根据 HARVEST/BACKFILL/UPDATE 策略生成 Plan 与 PlanSlice
+4. **任务装配**：`app.planning` 构建 Task + OutboxMessage，并写入事务性表
+5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），发送至 RocketMQ 指定 Topic
 6. **下游消费**：后续解析/清洗/索引服务消费 RocketMQ 事件完成链路闭环
 
 所有步骤遵循幂等键、租约与指数退避策略，保证可回放与稳定性。
