@@ -20,7 +20,7 @@
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>π
+            <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
 
