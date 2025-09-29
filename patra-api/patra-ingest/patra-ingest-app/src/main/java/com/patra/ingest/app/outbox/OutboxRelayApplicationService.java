@@ -50,7 +50,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     @Transactional
     public OutboxRelayResult relay(OutboxRelayCommand command) {
         if (!relayProperties.isEnabled()) {
-            log.debug("Outbox relay disabled, skipping channel={}", command.channel());
+            log.warn("Outbox relay disabled, skipping channel={}", command.channel());
             return new OutboxRelayResult(0, 0, 0, 0, 0);
         }
         int batchSize = normalizeBatchSize(command.batchSize());
