@@ -2,11 +2,13 @@
 
 为 RocketMQ 交互提供 Papertrace 统一规范封装：
 
-1. 统一消息模型 `PatraMessage<T>`（eventId / traceId / occurredAt / payload）
-2. 发布抽象 `PatraMessagePublisher` 隐藏底层模板细节
-3. 主题命名规范校验（可配置前缀 / 正则 / Tag 分隔符）
-4. 基础重试策略属性占位（供消费端基类使用）
-5. 与核心 trace 体系衔接（traceId 透传头 → 载体字段）
+1. 统一消息模型 `PatraMessage<T>`（eventId/traceId/occurredAt/payload）
+2. 发布抽象 `PatraMessagePublisher`：`send`/`sendByChannel`/`sendOrderly`/`sendDelay`
+3. 命名规范校验：`TopicNameValidator`（支持 namespace 前缀）+ `GroupNameValidator`
+4. 启动期注解校验：`RocketMQListenerAnnotationValidator` 对消费端 `topic/tag/group` fail-fast
+5. 与核心 trace 衔接：`PatraMessageFactory` 从 `TraceProvider` 注入 traceId
+
+说明：若未显式配置 `naming.namespace`，系统将使用 Spring `profiles.active` 的第一个值推导命名空间（转大写并剔除非字母数字），并强制所有 Topic 以该前缀开头，启动期和发送前均会严格校验。
 
 ---
 
@@ -19,14 +21,14 @@
 </dependency>
 ```
 
-YAML：
+YAML（可选，未配置 namespace 时将自动读取 Spring profiles.active 并转为大写作为 namespace，例如 dev→DEV、uat→UAT；会剔除非字母数字字符）：
 ```yaml
 patra:
   messaging:
     rocketmq:
       enabled: true
       naming:
-        namespace: INGEST
+        namespace: ${spring.profiles.active:}   # 建议留空，自动按 profile 推导（如 dev→DEV）
         topic-pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"  # 默认
         tag-delimiter: "."
       retry:
@@ -43,7 +45,11 @@ patra:
 | `PatraRocketMQAutoConfiguration` | 注册 `PatraMessagePublisher` | 存在 `RocketMQTemplate` 且 enabled=true |
 | `PatraRocketMQProperties` | 统一属性入口 | 总是 |
 | `RocketMQMessagePublisher` | 实际发送实现 | 通过条件注入 |
-| `TopicNameValidator` | Topic 规范校验 | 发布前调用 |
+| `TopicNameValidator` | Topic 规范校验（含 namespace） | 发布前调用 |
+| `GroupNameValidator` | 消费组命名校验 | 启动/监听校验 |
+| `RocketMQListenerAnnotationValidator` | 启动期校验注解参数 | BeanPostProcessor |
+| `DestinationBuilder` | `channel -> destination` 解析 | 通用工具 |
+| `PatraMessageFactory` | 从 TraceProvider 注入 traceId | 可选依赖 core |
 
 ---
 
@@ -93,7 +99,10 @@ PatraMessage<OrderCreated> msg = PatraMessage.<OrderCreated>builder()
 class OrderEventPublisher {
   private final PatraMessagePublisher publisher;
   public void publish(OrderCreated evt) {
+    // 直接 destination
     publisher.send("INGEST.ORDER.CREATED", PatraMessage.of(evt));
+    // 或按 channel 规范（domain.resource.event）
+    publisher.sendByChannel("ingest.order.created", PatraMessage.of(evt));
   }
 }
 ```
@@ -114,23 +123,68 @@ class OrderEventPublisher {
 - 次级段：聚合或功能（ARTICLE / TASK）
 - 末级：事件类型（CREATED / UPDATED）
 
-示例：`INGEST.ARTICLE.CREATED`
+示例：`INGEST.ARTICLE.CREATED`；channel：`ingest.article.created` -> destination：`INGEST.ARTICLE:CREATED`
 
 不合规时抛出 `IllegalArgumentException`，杜绝“随机命名”污染。
 
 ---
 
-## 7. 扩展点
+## 7. 消费组命名规范（最终采用）
+
+- 正则：`^[a-z][a-z0-9\-]*$`
+- 规则：`svc-{service}-{consumer}-cg`
+  - `service`：微服务名（如 `ingest`、`registry`）
+  - `consumer`：消费职责的简明名词短语（如 `relay`、`task-ready`、`article-indexer`）
+- 示例：
+  - `svc-ingest-relay-cg`
+  - `svc-registry-sync-cg`
+
+启动时会基于该正则校验消费组；不合规直接 fail-fast。
+
+---
+
+## 8. 消费端监听与校验
+
+编写监听器（适配层 `patra-{service}-adapter`）：
+
+```java
+@Slf4j
+@Component
+@RocketMQMessageListener(
+  consumerGroup = "svc-ingest-relay-cg",
+  topic = "INGEST.TASK",
+  selectorExpression = "READY"
+)
+public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMessage> {
+  @Override
+  protected void handleMessage(PatraMessage<TaskReadyMessage> message) {
+    log.info("收到任务：eventId={} traceId={}", message.getEventId(), message.getTraceId());
+    // 调用应用服务 ...
+  }
+}
+```
+
+启动时将自动校验 topic/tag/group 命名；不合规直接抛出异常阻止启动。
+
+## 9. 错误处理与异常策略
+
+- 运行期发布入口（`send` / `sendByChannel` / `sendOrderly` / `sendDelay`）：
+  - 命名或参数不合规将抛出 `ApplicationException(UNPROCESSABLE/422)`，错误消息包含 `destination`/`channel` 等上下文；
+  - Web/Feign 适配层会统一输出 `ProblemDetail`，错误码前缀来自 `patra.error.context-prefix`（缺省 `UNKNOWN`）。
+- 启动期/配置期校验（`@RocketMQMessageListener` 注解参数）：
+  - 不合规直接抛出 `IllegalArgumentException`，fail‑fast 终止启动，便于定位配置问题。
+
+## 10. 扩展点
 
 | 场景 | 做法 |
 |------|------|
 | 自定义发布逻辑（例如延迟/事务消息） | 自行实现 `PatraMessagePublisher` 并覆盖 Bean |
 | 增强命名校验 | Fork/替换 `TopicNameValidator` 或在发送前包装一层校验 |
-| 统一 traceId 注入 | 在构建 `PatraMessage` 时集成核心 TraceProvider |
+| 统一 traceId 注入 | 使用 `PatraMessageFactory`（需引入 core-starter） |
 
 ---
 
-## 8. 最佳实践
+## 11. 最佳实践
 
 | 目标 | 建议 |
 |------|------|
@@ -141,7 +195,7 @@ class OrderEventPublisher {
 
 ---
 
-## 9. Roadmap
+## 12. Roadmap
 
 | 优先级 | 项目 | 内容 |
 |--------|------|------|
@@ -153,7 +207,7 @@ class OrderEventPublisher {
 
 ---
 
-## 10. FAQ
+## 13. FAQ
 
 | 问题 | 回答 |
 |------|------|

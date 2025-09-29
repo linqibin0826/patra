@@ -146,7 +146,8 @@
 | `SlicePlannerRegistry` | 新增切片策略 | 实现接口 + 注册 Bean |
 | `PlanningWindowResolver` | 自定义窗口算法 | 替换默认实现 |
 | `PlanExpressionBuilder` | 新 DSL/过滤表达式 | 组合/装饰模式注入 |
-| `OutboxDestinationResolver` | 动态目的地路由 | 自定义 Bean |
+| `DestinationBuilder` | 统一 `channel → destination` 解析 | 由 RocketMQ Starter 提供 |
+| （可选）装饰 Publisher | 自定义发布策略（延迟/事务/路由） | 覆盖 `PatraMessagePublisher` Bean |
 | `IngestErrorMappingContributor` | 扩展错误码映射 | 追加异常映射 |
 
 ## 10. 运维排障速查

@@ -16,9 +16,11 @@
     <name>Patra Spring Boot Starter RocketMQ</name>
 
     <dependencies>
+
+        <!-- 引入核心 Starter（提供 TraceProvider 等 SPI），用于消息 traceId 注入等通用能力 -->
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
         <dependency>

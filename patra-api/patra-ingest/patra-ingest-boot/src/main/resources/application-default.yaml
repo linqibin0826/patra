@@ -21,7 +21,7 @@ patra:
     rocketmq:
       enabled: true
       naming:
-        namespace: DEV
+        namespace: ${spring.profiles.active:}
         topicPattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"
         tagDelimiter: "."
   ingest:

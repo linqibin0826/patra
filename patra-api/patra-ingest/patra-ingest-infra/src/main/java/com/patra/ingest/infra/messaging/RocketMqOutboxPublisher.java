@@ -1,7 +1,6 @@
 package com.patra.ingest.infra.messaging;
 
 import com.patra.ingest.domain.model.value.TaskReadyMessage;
-import com.patra.ingest.infra.messaging.support.OutboxDestinationResolver;
 import com.patra.ingest.infra.messaging.support.TaskReadyMessageMapper;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.value.RelayPlan;
@@ -37,40 +36,39 @@ import java.time.Instant;
 public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 
     private final TaskReadyMessageMapper messageMapper;
-    private final OutboxDestinationResolver destinationResolver;
     private final PatraMessagePublisher messagePublisher;
 
     public RocketMqOutboxPublisher(TaskReadyMessageMapper messageMapper,
-                                   OutboxDestinationResolver destinationResolver,
                                    PatraMessagePublisher messagePublisher) {
         this.messageMapper = messageMapper;
-        this.destinationResolver = destinationResolver;
         this.messagePublisher = messagePublisher;
     }
 
     /**
      * 发布单条 Outbox 消息到 RocketMQ。
+     *
      * @param message Outbox 消息（已由上层获取租约并校验状态）
-     * @param plan Relay 发布计划（含触发时间 / channel）
+     * @param plan    Relay 发布计划（含触发时间 / channel）
      * @return 发布结果（当前实现返回 NONE，brokerMsgId 由上层通过 markPublished 记录）
      */
     @Override
     public PublishResult publish(OutboxMessage message, RelayPlan plan) {
-        String destination = destinationResolver.resolve(plan.channel());
+        String channel = plan.channel();
         // 按照 Outbox 载荷映射为领域消息体
         TaskReadyMessage body = messageMapper.map(message);
         // 拼装 PatraMessage 以对接 MQ SDK（含 traceId / occurredAt）
         PatraMessage<TaskReadyMessage> mqMessage = buildMessage(message, body, plan.triggeredAt());
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] publish outbox message start destination={} dedupKey={} partitionKey={}", destination, message.getDedupKey(), message.getPartitionKey());
+            log.debug("[INGEST][INFRA] publish outbox message start channel={} dedupKey={} partitionKey={}", channel, message.getDedupKey(), message.getPartitionKey());
         }
         try {
-            messagePublisher.send(destination, mqMessage);
+            // 统一从 channel 解析为 destination 并发送
+            messagePublisher.sendByChannel(channel, mqMessage);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][INFRA] publish outbox message success destination={} dedupKey={}", destination, message.getDedupKey());
+                log.debug("[INGEST][INFRA] publish outbox message success channel={} dedupKey={}", channel, message.getDedupKey());
             }
         } catch (Exception e) {
-            log.error("[INGEST][INFRA] publish outbox message fail destination={} dedupKey={} err={}", destination, message.getDedupKey(), e.getMessage(), e);
+            log.error("[INGEST][INFRA] publish outbox message fail channel={} dedupKey={} err={}", channel, message.getDedupKey(), e.getMessage(), e);
             throw e;
         }
         return PublishResult.NONE;
@@ -82,14 +80,14 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
      * <p>occurredAt 优先：header.occurredAt → plan.triggeredAt（fallbackOccurredAt 参数）。</p>
      */
     private PatraMessage<TaskReadyMessage> buildMessage(OutboxMessage message,
-                            TaskReadyMessage body,
-                            Instant fallbackOccurredAt) {
+                                                        TaskReadyMessage body,
+                                                        Instant fallbackOccurredAt) {
         String traceId = body.header() != null && body.header().scheduleInstanceId() != null
                 ? String.valueOf(body.header().scheduleInstanceId())
                 : message.getPartitionKey();
         Instant occurredAt = body.header() != null && body.header().occurredAt() != null
                 ? body.header().occurredAt()
-        : fallbackOccurredAt;
+                : fallbackOccurredAt;
         return PatraMessage.<TaskReadyMessage>builder()
                 .eventId(message.getDedupKey())
                 .traceId(traceId)

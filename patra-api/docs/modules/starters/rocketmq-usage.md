@@ -4,6 +4,8 @@
 
 - Starter 说明：`./rocketmq.md`
 - Outbox 集成示例：`../../ingest/deep-dive.md`
-- 配置参考：见 `rocketmq.md` 第 2 节
+- 配置参考：见 `rocketmq.md` 第 2 节（未显式配置 `naming.namespace` 时，将按 `spring.profiles.active` 自动推导命名空间）
+
+运行期错误处理：发布入口对命名/参数不合规会抛出 `ApplicationException(422)`；Web/Feign 将统一输出 `ProblemDetail`。
 
 如需更新 RocketMQ 规范，请同步编辑 `rocketmq.md` 并在此保留链接。
