@@ -42,6 +42,13 @@ public class PatraMybatisAutoConfiguration {
      * <p>业务模块可通过 MyBatis-Plus 的配置项追加或覆盖扫描路径。</p>
      */
     @Bean
+    public MapperScannerConfigurer mapperScannerConfigurer() {
+        MapperScannerConfigurer c = new MapperScannerConfigurer();
+        c.setBasePackage("com.patra.**.infra.persistence.mapper");
+        return c;
+    }
+
+    @Bean
     @ConditionalOnMissingBean
     public DataLayerErrorMappingContributor dataLayerErrorMappingContributor(HttpStdErrors.Group http) {
         log.debug("Creating data layer error mapping contributor for MyBatis-Plus");
