@@ -1,7 +1,9 @@
 package com.patra.ingest.infra.messaging.support;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.model.value.TaskReadyMessage;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import org.springframework.stereotype.Component;
@@ -27,14 +29,16 @@ public class TaskReadyMessageMapper {
     public TaskReadyMessage map(OutboxMessage message) {
         try {
             JsonNode payloadNode = objectMapper.readTree(message.getPayloadJson());
-            JsonNode headerNode = message.getHeadersJson() == null ? null : objectMapper.readTree(message.getHeadersJson());
+            JsonNode headerNode = CharSequenceUtil.isBlank(message.getHeadersJson())
+                    ? null
+                    : objectMapper.readTree(message.getHeadersJson());
             TaskReadyMessage.Payload payload = objectMapper.treeToValue(payloadNode, TaskReadyMessage.Payload.class);
             TaskReadyMessage.Header header = headerNode == null
                     ? null
                     : objectMapper.treeToValue(headerNode, TaskReadyMessage.Header.class);
             return new TaskReadyMessage(payload, header);
         } catch (IOException e) {
-            throw new IllegalStateException("failed to parse outbox payload", e);
+            throw new OutboxRelayExecutionException("Failed to map outbox payload to TaskReadyMessage", e);
         }
     }
 }
