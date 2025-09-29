@@ -66,10 +66,10 @@ public class OutboxRelayExecutor {
      */
     public RelayBatchResult execute(RelayPlan plan) {
         // 按计划批量拉取待发送消息，受租约与批大小约束
-        List<OutboxMessage> messages = relayStore.fetchPending(plan.channel(), plan.triggeredAt(), plan.batchSize());
+        List<OutboxMessage> messages = relayStore.fetchPending(plan.channel().channel(), plan.triggeredAt(), plan.batchSize());
         if (messages.isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][APP] relay executor no-pending channel={} triggeredAt={}", plan.channel(), plan.triggeredAt());
+                log.debug("[INGEST][APP] relay executor no-pending channel={} triggeredAt={}", plan.channel().channel(), plan.triggeredAt());
             }
             return RelayBatchResult.empty(plan.channel());
         }

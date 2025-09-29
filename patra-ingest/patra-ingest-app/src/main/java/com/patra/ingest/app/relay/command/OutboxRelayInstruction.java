@@ -18,7 +18,7 @@ import java.time.Instant;
  * 不变式：该对象为不可变结构，供后续构建 {@code RelayPlan} 使用。
  */
 public record OutboxRelayInstruction(
-        String channel,
+        com.patra.ingest.domain.messaging.ChannelKey channel,
         Instant triggeredAt,
         Integer batchSize,
         Duration leaseDuration,

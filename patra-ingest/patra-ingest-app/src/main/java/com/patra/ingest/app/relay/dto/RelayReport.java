@@ -14,7 +14,7 @@ package com.patra.ingest.app.relay.dto;
  * 用途：日志观测 / 调度平台展示 / 指标上报聚合。
  */
 public record RelayReport(
-        String channel,
+        com.patra.ingest.domain.messaging.ChannelKey channel,
         int fetched,
         int published,
         int retried,
@@ -22,7 +22,7 @@ public record RelayReport(
         int leaseMissed
 ) {
     /** 返回空统计（用于功能关闭场景）。 */
-    public static RelayReport empty(String channel) {
+    public static RelayReport empty(com.patra.ingest.domain.messaging.ChannelKey channel) {
         return new RelayReport(channel, 0, 0, 0, 0, 0);
     }
 }

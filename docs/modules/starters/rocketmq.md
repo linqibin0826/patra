@@ -50,6 +50,7 @@ patra:
 | `RocketMQListenerAnnotationValidator` | 启动期校验注解参数 | BeanPostProcessor |
 | `DestinationBuilder` | `channel -> destination` 解析 | 通用工具 |
 | `PatraMessageFactory` | 从 TraceProvider 注入 traceId | 可选依赖 core |
+| `ChannelRegistry` | 统一 channel 注册与校验（可选白名单） | 注解/接口式注册 |
 
 ---
 
@@ -99,10 +100,8 @@ PatraMessage<OrderCreated> msg = PatraMessage.<OrderCreated>builder()
 class OrderEventPublisher {
   private final PatraMessagePublisher publisher;
   public void publish(OrderCreated evt) {
-    // 直接 destination
-    publisher.send("INGEST.ORDER.CREATED", PatraMessage.of(evt));
-    // 或按 channel 规范（domain.resource.event）
-    publisher.sendByChannel("ingest.order.created", PatraMessage.of(evt));
+    // 推荐：领域通道目录（ChannelKey）+ 按规范构建 destination
+    publisher.sendByChannel(IngestChannels.TASK_READY.channel(), PatraMessage.of(evt));
   }
 }
 ```
@@ -166,7 +165,37 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 
 启动时将自动校验 topic/tag/group 命名；不合规直接抛出异常阻止启动。
 
-## 9. 错误处理与异常策略
+## 9. Channel 注册与白名单（约束发送/接收）
+
+为避免“随意新增 channel”，Starter 提供统一注册器 `ChannelRegistry`，支持两种注册方式（二选一或同时）：
+
+- 注解方式（推荐）：在任意 Spring Bean 上声明允许的 channel 集合
+  ```java
+  @Component
+  @PatraMessagingChannels({
+      "ingest.task.ready",
+      "ingest.article.created"
+  })
+  class IngestMessagingChannels {}
+  ```
+- 接口方式：提供一个 `ChannelCatalog` Bean 返回集合
+  ```java
+  @Configuration
+  class IngestChannelCatalog implements ChannelCatalog {
+    public Collection<String> channels() {
+      return Set.of("ingest.task.ready");
+    }
+  }
+  ```
+
+校验策略：
+- 统一格式：`^[a-z0-9]+(\.[a-z0-9]+)+$`（至少三段、小写点分段）；
+- 可选 domain：`patra.messaging.channels.domain=ingest`（要求第一段等于该 domain）；
+- 白名单强制：`patra.messaging.channels.enforce=true`（默认 true）。若未注册任何 channel，将仅做格式校验并告警。
+
+发送路径：`sendByChannel("domain.resource.event")` 会先通过 `ChannelRegistry.validate(channel)` 再解析为目的地并发送。
+
+## 10. 错误处理与异常策略
 
 - 运行期发布入口（`send` / `sendByChannel` / `sendOrderly` / `sendDelay`）：
   - 命名或参数不合规将抛出 `ApplicationException(UNPROCESSABLE/422)`，错误消息包含 `destination`/`channel` 等上下文；
@@ -174,7 +203,7 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 - 启动期/配置期校验（`@RocketMQMessageListener` 注解参数）：
   - 不合规直接抛出 `IllegalArgumentException`，fail‑fast 终止启动，便于定位配置问题。
 
-## 10. 扩展点
+## 11. 扩展点
 
 | 场景 | 做法 |
 |------|------|
@@ -184,7 +213,7 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 
 ---
 
-## 11. 最佳实践
+## 12. 最佳实践
 
 | 目标 | 建议 |
 |------|------|
@@ -195,7 +224,7 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 
 ---
 
-## 12. Roadmap
+## 13. Roadmap
 
 | 优先级 | 项目 | 内容 |
 |--------|------|------|
@@ -207,7 +236,7 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 
 ---
 
-## 13. FAQ
+## 14. FAQ
 
 | 问题 | 回答 |
 |------|------|

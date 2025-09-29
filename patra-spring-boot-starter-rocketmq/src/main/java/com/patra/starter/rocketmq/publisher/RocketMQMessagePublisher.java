@@ -2,6 +2,7 @@ package com.patra.starter.rocketmq.publisher;
 
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.HttpStdErrors;
+import com.patra.starter.rocketmq.channels.ChannelRegistry;
 import com.patra.starter.rocketmq.config.PatraRocketMQProperties;
 import com.patra.starter.rocketmq.model.PatraMessage;
 import com.patra.starter.rocketmq.support.DestinationBuilder;
@@ -21,7 +22,8 @@ import org.springframework.messaging.support.MessageBuilder;
 public record RocketMQMessagePublisher(RocketMQTemplate rocketMQTemplate,
                                        PatraRocketMQProperties properties,
                                        Environment environment,
-                                       ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) implements PatraMessagePublisher {
+                                       ObjectProvider<HttpStdErrors.Group> httpErrorsProvider,
+                                       ChannelRegistry channelRegistry) implements PatraMessagePublisher {
 
     @Override
     public void send(String destination, PatraMessage<?> message) {
@@ -48,6 +50,10 @@ public record RocketMQMessagePublisher(RocketMQTemplate rocketMQTemplate,
     @Override
     public void sendByChannel(String channel, PatraMessage<?> message) {
         try {
+            // 先进行 channel 统一注册表校验（若 enforce=true 会校验白名单）
+            if (channelRegistry != null) {
+                channelRegistry.validate(channel);
+            }
             // 依据 profile 推导 namespace 并构建目的地
             String ns = EnvNamespaceResolver.resolve(environment, properties.getNaming());
             PatraRocketMQProperties.Naming effective = new PatraRocketMQProperties.Naming();

@@ -34,9 +34,7 @@ public class OutboxRelayPlanBuilder {
      * @return 计划对象
      */
     public RelayPlan build(OutboxRelayInstruction instruction) {
-        String channel = StrUtil.isNotBlank(instruction.channel())
-                ? instruction.channel()
-                : properties.getDefaultChannel();
+        var channelKey = resolveChannelKey(instruction);
         Instant triggeredAt = instruction.triggeredAt() != null ? instruction.triggeredAt() : Instant.now(clock);
         int batchSize = normalizePositive(instruction.batchSize(), properties.getBatchSize());
         Duration leaseDuration = normalizeDuration(instruction.leaseDuration(), properties.getLeaseDuration());
@@ -46,7 +44,7 @@ public class OutboxRelayPlanBuilder {
                 ? instruction.leaseOwner()
                 : buildLeaseOwner(triggeredAt);
         return new RelayPlan(
-                channel,
+                channelKey,
                 triggeredAt,
                 batchSize,
                 leaseDuration,
@@ -56,6 +54,32 @@ public class OutboxRelayPlanBuilder {
                 properties.getMaxBackoff(),
                 leaseOwner
         );
+    }
+
+    /**
+     * 解析得到 ChannelKey：
+     * 优先使用指令提供；否则尝试解析配置的 defaultChannel（支持 "ingest.task.ready" 或别名 "TASK_READY"）；均缺失时使用内置默认。
+     */
+    private com.patra.ingest.domain.messaging.ChannelKey resolveChannelKey(OutboxRelayInstruction instruction) {
+        if (instruction.channel() != null) {
+            return instruction.channel();
+        }
+        String cfg = properties.getDefaultChannel();
+        if (StrUtil.isNotBlank(cfg)) {
+            // 1) 尝试按规范字符串解析
+            var byChannel = com.patra.ingest.domain.messaging.IngestChannels.fromChannel(cfg);
+            if (byChannel.isPresent()) {
+                return byChannel.get();
+            }
+            // 2) 尝试按别名（枚举名）解析
+            try {
+                return com.patra.ingest.domain.messaging.IngestChannels.valueOf(cfg.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+                // fall through to default
+            }
+        }
+        // 默认回退
+        return com.patra.ingest.domain.messaging.IngestChannels.TASK_READY;
     }
 
     /**

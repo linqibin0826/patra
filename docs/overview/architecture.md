@@ -13,8 +13,8 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 ## 2. 分层约束（Hexagonal / DDD）
 - **领域层 (domain)**：纯 Java，对外通过聚合、值对象与领域事件表达业务不变量
 - **应用层 (app)**：编排用例、事务、幂等控制，仅依赖领域端口
-- **适配层 (adapter)**：承载 REST/MQ/调度等交互，负责协议转换与错误映射
-- **基础设施层 (infra)**：实现仓储、消息、缓存等二级端口
+- **适配层 (adapter)**：承载 REST/MQ/调度等入站交互（Inbound Only），负责协议转换与错误映射
+- **基础设施层 (infra)**：实现仓储、消息、Feign 等出站二级端口（Outbound），由领域端口约束
 - **启动层 (boot)**：整合配置，约束依赖方向 `adapter → app → domain ← infra`
 
 保持“内环无框架、外环可替换”，确保测试与演进成本可控。
@@ -23,7 +23,7 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 2. **配置组装**：adapter 调用 `app.planning.PlanIngestionApplicationService`，通过 Feign 获取 provenance 与表达式快照
 3. **窗口解析**：`app.planning.window` 根据 HARVEST/BACKFILL/UPDATE 策略生成 Plan 与 PlanSlice
 4. **任务装配**：`app.planning` 构建 Task + OutboxMessage，并写入事务性表
-5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），发送至 RocketMQ 指定 Topic
+5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），基于领域通道目录（ChannelKey）发送至 RocketMQ 指定 Topic
 6. **下游消费**：后续解析/清洗/索引服务消费 RocketMQ 事件完成链路闭环
 
 所有步骤遵循幂等键、租约与指数退避策略，保证可回放与稳定性。

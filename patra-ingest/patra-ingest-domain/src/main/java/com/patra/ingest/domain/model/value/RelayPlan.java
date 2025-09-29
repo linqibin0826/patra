@@ -8,7 +8,7 @@ import java.util.Objects;
  * Outbox Relay 执行计划。
  */
 public record RelayPlan(
-        String channel,
+        com.patra.ingest.domain.messaging.ChannelKey channel,
         Instant triggeredAt,
         int batchSize,
         Duration leaseDuration,

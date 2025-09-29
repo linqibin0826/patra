@@ -51,10 +51,10 @@ public class OutboxRelayJob {
             RelayReport report = relayUseCase.relay(instruction);
 
             XxlJobHelper.handleSuccess("Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d"
-                    .formatted(report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
+                    .formatted(report.channel().channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
 
             log.info("[INGEST][ADAPTER] Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
-                    report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
+                    report.channel().channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
         } catch (OutboxRelayExecutionException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -86,8 +86,20 @@ public class OutboxRelayJob {
     /**
      * 解析通道：为空时回退配置默认值。
      */
-    private String resolveChannel(String channel) {
-        return CharSequenceUtil.blankToDefault(channel, relayProperties.getDefaultChannel());
+    private com.patra.ingest.domain.messaging.ChannelKey resolveChannel(String channel) {
+        if (CharSequenceUtil.isBlank(channel)) {
+            return null; // 交由 Builder 回退到默认值
+        }
+        String trimmed = CharSequenceUtil.trim(channel);
+        var byChannel = com.patra.ingest.domain.messaging.IngestChannels.fromChannel(trimmed);
+        if (byChannel.isPresent()) {
+            return byChannel.get();
+        }
+        try {
+            return com.patra.ingest.domain.messaging.IngestChannels.valueOf(trimmed.toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new IngestScheduleParameterException("Illegal channel value: " + channel, ex);
+        }
     }
 
     /**

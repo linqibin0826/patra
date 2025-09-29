@@ -9,7 +9,7 @@ import java.util.List;
  * Relay 批次执行结果。
  */
 public record RelayBatchResult(
-        String channel,
+        com.patra.ingest.domain.messaging.ChannelKey channel,
         int fetched,
         int published,
         int retried,
@@ -21,7 +21,7 @@ public record RelayBatchResult(
         events = events == null ? List.of() : List.copyOf(events);
     }
 
-    public static RelayBatchResult empty(String channel) {
+    public static RelayBatchResult empty(com.patra.ingest.domain.messaging.ChannelKey channel) {
         return new RelayBatchResult(channel, 0, 0, 0, 0, 0, Collections.emptyList());
     }
 }
