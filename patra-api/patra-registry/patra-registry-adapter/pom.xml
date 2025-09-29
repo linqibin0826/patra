@@ -20,14 +20,15 @@
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.papertrace</groupId>π
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
 
 
         <dependency>
             <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>        </dependency>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
 
         <!-- 错误码 / DTO 使用 -->
         <dependency>
