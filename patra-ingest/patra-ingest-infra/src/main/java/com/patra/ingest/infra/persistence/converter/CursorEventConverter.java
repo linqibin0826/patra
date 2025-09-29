@@ -6,53 +6,36 @@ import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.CursorLineage;
 import com.patra.ingest.infra.persistence.entity.CursorEventDO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
+/**
+ * CursorEvent（游标推进事件）聚合 ↔ DO 转换器。
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CursorEventConverter {
 
-    default CursorEventDO toDO(CursorEvent source) {
-        if (source == null) {
-            return null;
-        }
-        CursorEventDO entity = new CursorEventDO();
-        entity.setId(source.getId());
-        entity.setProvenanceCode(source.getProvenanceCode());
-        entity.setOperationCode(source.getOperationCode());
-        entity.setCursorKey(source.getCursorKey());
-        entity.setNamespaceScopeCode(source.getNamespaceScopeCode());
-        entity.setNamespaceKey(source.getNamespaceKey());
-        entity.setCursorTypeCode(source.getCursorType() == null ? null : source.getCursorType().getCode());
-        entity.setPrevValue(source.getPrevValue());
-        entity.setNewValue(source.getNewValue());
-        entity.setWindowFrom(source.getWindowFrom());
-        entity.setWindowTo(source.getWindowTo());
-        entity.setDirectionCode(source.getDirection() == null ? null : source.getDirection().getCode());
-        entity.setIdempotentKey(source.getIdempotentKey());
-        entity.setObservedMaxValue(source.getObservedMaxValue());
-        entity.setPrevInstant(source.getPrevInstant());
-        entity.setNewInstant(source.getNewInstant());
-        entity.setPrevNumeric(source.getPrevNumeric());
-        entity.setNewNumeric(source.getNewNumeric());
-        CursorLineage lineage = source.getLineage();
-        if (lineage != null) {
-            entity.setScheduleInstanceId(lineage.scheduleInstanceId());
-            entity.setPlanId(lineage.planId());
-            entity.setSliceId(lineage.sliceId());
-            entity.setTaskId(lineage.taskId());
-            entity.setRunId(lineage.runId());
-            entity.setBatchId(lineage.batchId());
-        }
-        entity.setExprHash(source.getExprHash());
-        return entity;
-    }
+    @Mapping(target = "cursorTypeCode", source = "cursorType", qualifiedByName = "cursorTypeToCode")
+    @Mapping(target = "directionCode", source = "direction", qualifiedByName = "cursorDirectionToCode")
+    @Mapping(target = "scheduleInstanceId", source = "lineage.scheduleInstanceId")
+    @Mapping(target = "planId", source = "lineage.planId")
+    @Mapping(target = "sliceId", source = "lineage.sliceId")
+    @Mapping(target = "taskId", source = "lineage.taskId")
+    @Mapping(target = "runId", source = "lineage.runId")
+    @Mapping(target = "batchId", source = "lineage.batchId")
+    CursorEventDO toDO(CursorEvent source);
 
     default CursorEvent toDomain(CursorEventDO entity) {
+        return toEvent(entity);
+    }
+
+    static CursorEvent toEvent(CursorEventDO entity) {
         if (entity == null) {
             return null;
         }
-        CursorType type = entity.getCursorTypeCode() == null ? null : CursorType.fromCode(entity.getCursorTypeCode());
-        CursorDirection direction = entity.getDirectionCode() == null ? null : CursorDirection.fromCode(entity.getDirectionCode());
+        CursorType type = cursorTypeFromCode(entity.getCursorTypeCode());
+        CursorDirection direction = cursorDirectionFromCode(entity.getDirectionCode());
         CursorLineage lineage = new CursorLineage(
                 entity.getScheduleInstanceId(),
                 entity.getPlanId(),
@@ -81,5 +64,23 @@ public interface CursorEventConverter {
                 entity.getNewNumeric(),
                 lineage,
                 entity.getExprHash());
+    }
+
+    @Named("cursorTypeToCode")
+    static String cursorTypeToCode(CursorType type) {
+        return type == null ? null : type.getCode();
+    }
+
+    static CursorType cursorTypeFromCode(String code) {
+        return code == null ? null : CursorType.fromCode(code);
+    }
+
+    @Named("cursorDirectionToCode")
+    static String cursorDirectionToCode(CursorDirection direction) {
+        return direction == null ? null : direction.getCode();
+    }
+
+    static CursorDirection cursorDirectionFromCode(String code) {
+        return code == null ? null : CursorDirection.fromCode(code);
     }
 }

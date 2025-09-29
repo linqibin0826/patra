@@ -15,7 +15,7 @@ import java.time.Instant;
  * <p>语义：每个计划切片派生出的执行任务，绑定来源、操作、幂等键与租约。</p>
  * <p>要点：
  * <ul>
- *   <li><code>idempotent_key</code> 全局唯一，保障重复调度不会生成重复任务。</li>
+ *   <li><code>idempotent_key</code> 全局唯一（UK：uk_task_idem），保障重复调度不会生成重复任务。</li>
  *   <li><code>params</code> 保存规范化任务参数，配合 {@link JacksonTypeHandler} 保留结构。</li>
  *   <li>租约字段（<code>lease_owner</code>/<code>leased_until</code>/<code>lease_count</code>）支撑抢占与续租模型。</li>
  * </ul>

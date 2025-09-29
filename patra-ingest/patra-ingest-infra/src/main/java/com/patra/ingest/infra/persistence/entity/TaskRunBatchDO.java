@@ -15,7 +15,7 @@ import java.time.Instant;
  * <p>语义：Task Run 在执行过程中的分页/令牌步进账目，是断点续跑与去重的最小颗粒。</p>
  * <p>要点：
  * <ul>
- *   <li><code>idempotent_key</code> 唯一，保证重复回写不会产生重复批次。</li>
+ *   <li><code>idempotent_key</code> 唯一（UK：uk_batch_idem），保证重复回写不会产生重复批次。</li>
  *   <li><code>before_token</code>/<code>after_token</code> 记录分页游标；配合唯一索引回溯。</li>
  *   <li><code>stats</code> 用 JSON 存储批次级指标（fetched/upserted 等）。</li>
  * </ul>

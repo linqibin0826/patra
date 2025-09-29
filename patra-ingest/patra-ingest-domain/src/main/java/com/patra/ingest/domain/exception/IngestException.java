@@ -5,8 +5,20 @@ import com.patra.common.error.DomainException;
 /**
  * Ingest 领域异常基类。
  *
- * <p>用于承载 Ingest 领域内的业务规则错误，供应用层统一处理。
- * 所有 Ingest 领域异常应继承本类以保持一致性并便于统一处理。</p>
+ * <p>语义：统一承载“领域显式失败”与“与领域强相关的持久化/依赖故障包装”，保证应用层（App / Adapter）可以：
+ * <ul>
+ *   <li>区分可重试与不可重试（结合具体子类的 {@code ErrorTrait}）。</li>
+ *   <li>统一日志结构与告警降噪（只需匹配继承层次）。</li>
+ *   <li>在 Outbox / 调度回调中进行细粒度统计与指标聚合。</li>
+ * </ul>
+ * </p>
+ * <p>使用约定：
+ * <ul>
+ *   <li>新增任何 Ingest 领域异常需继承本类并实现 {@code HasErrorTraits}（若需暴露错误特征）。</li>
+ *   <li>避免在外层直接抛出通用 RuntimeException，应转换为语义明确的子类。</li>
+ *   <li>日志中需包含关键上下文（计划 key / provenance / operation / window），以支持排查。</li>
+ * </ul>
+ * </p>
  *
  * @author linqibin
  * @since 0.1.0

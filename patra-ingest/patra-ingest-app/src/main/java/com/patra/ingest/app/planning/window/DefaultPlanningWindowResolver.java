@@ -20,35 +20,54 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 默认计划器窗口策略实现（App Layer · Policy）。
+ * 默认计划窗口解析实现（HARVEST / BACKFILL / UPDATE）。
  * <p>
- * 实现 HARVEST / BACKFILL / UPDATE 三类窗口确定算法：
- * <p>
- * HARVEST：
- * to = min(user.to?, now - lag)
- * if cursor exists: fromCandidate = max(user.from?, cursor - lookback)
- * else: fromCandidate = user.from? | (nowSafe - windowSize)
- * CALENDAR: from/to 向下对齐；对齐后相等视为空窗口
- * <p>
- * BACKFILL：
- * upperAnchor = min(user.to?, forwardWM?, now - lag)
- * if backfillCursor exists: fromCandidate = max(backfillWM, user.from?)
- * else: fromCandidate = user.from? | (upperAnchor - windowSize)
- * fromCandidate 不可超过 upperAnchor
- * CALENDAR: 对齐
- * <p>
- * UPDATE：
- * 时间驱动（有用户窗口 or offset_type=DATE 且提供 windowFrom/To）：
- * to = min(user.to?, nowSafe)
- * from = max(user.from?, updateWM?) | (nowSafe - windowSize) 当均为空
- * ID 驱动：
- * 若无用户窗口：from = nowSafe - windowSize, to = nowSafe
- * CALENDAR：对齐
- * <p>
- * 其它细节：
- * - watermark_lag_seconds 为空视为0
- * - lookback / overlap 在 Plan 总窗不应用 overlap（overlap 在 slice 阶段使用），此实现忽略 overlap
- * - maxWindowSpanSeconds 不在总窗强制截断（切片阶段约束 slice），若配置需强制可在此加保护，这里仅做最小防守
+ * 聚焦“计划级”窗口（非切片级）；不处理 overlap（切片阶段处理）与跨多游标高级策略。
+ * </p>
+ * <h4>公共规则</h4>
+ * <ul>
+ *   <li>nowSafe = min(currentTime - watermarkLag, currentTime)（若配置为空则不减）</li>
+ *   <li>窗口半开区间 [from, to)，对齐日历后如 from == to → 视为空窗口（返回最小兜底窗）</li>
+ *   <li>若无法判定模式或模式不支持 → 返回 full()（上游可按全量处理）</li>
+ *   <li>最小非空长度：小于 1s 时扩展为 1s，避免下游创建 0 时长任务</li>
+ * </ul>
+ * <h4>HARVEST</h4>
+ * <pre>
+ * toCandidate   = min(user.to?, nowSafe)
+ * fromCandidate = harvestWM? max(user.from?, harvestWM - lookback) : (user.from? | toCandidate - windowSize)
+ * CALENDAR 对齐 → 空窗检测
+ * </pre>
+ * <h4>BACKFILL</h4>
+ * <pre>
+ * upperAnchor   = min(user.to?, forwardWM?, nowSafe)  // forwardWM 目前未注入，留扩展
+ * fromCandidate = backfillWM? max(backfillWM, user.from?) : (user.from? | upperAnchor - windowSize)
+ * 边界矫正：fromCandidate 不得 > upperAnchor
+ * CALENDAR 对齐 → 空窗检测
+ * </pre>
+ * <h4>UPDATE</h4>
+ * <pre>
+ * timeDriven = (offsetType=DATE 且存在用户窗口) 或 (任一用户窗口给定)
+ * if timeDriven:
+ *   toCandidate   = min(user.to?, nowSafe) (缺省回退 nowSafe)
+ *   fromCandidate = 有 updateWM 与 user.from? → max(updateWM, user.from?)
+ *                | 仅 updateWM → updateWM（并与 user.from? 比较）
+ *                | 仅 user.from → user.from
+ *                | 否则 nowSafe - windowSize
+ * else (ID 驱动):
+ *   若无用户窗口: [nowSafe - windowSize, nowSafe]
+ *   否则与 timeDriven 类似，但 fromCandidate = user.from? | (toCandidate - windowSize)
+ * CALENDAR 对齐 → 空窗检测
+ * </pre>
+ * <h4>设计取舍</h4>
+ * <ul>
+ *   <li>forwardWM 暂未暴露；需要时可扩接口或在 triggerNorm.embed()</li>
+ *   <li>maxWindowSpanSeconds 未强行截断：交由切片阶段（TimeSlicePlanner）精细化控制</li>
+ *   <li>空窗处理返回“最小有效窗”而非 null：简化调用方判空逻辑，但仍可通过 from==to(+1s 扩展) 识别</li>
+ * </ul>
+ * <h4>复杂度</h4>
+ * <p>所有分支 O(1)，无外部 IO。</p>
+ * <h4>线程安全</h4>
+ * <p>无状态，可单例。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -92,7 +111,8 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
     /* ===================== HARVEST ===================== */
     /**
-     * 解析 HARVEST 模式的计划窗口。
+     * 解析 HARVEST 模式窗口。
+     * <p>利用当前 HARVEST 游标（harvestWM）+ lookback 回退以避免漏数据；无游标视为首次，从用户 from 或默认跨度推导。</p>
      */
     private PlannerWindow resolveHarvest(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                          Instant harvestWM,
@@ -119,7 +139,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             fromCandidate = toCandidate.minus(windowSize); // 默认回退一窗
         }
 
-        if (isCalendarMode(cfg)) {
+        if (isCalendarMode(cfg) && cfg != null) {
             ZoneId zone = resolveZone(timezone);
             fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
             toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
@@ -134,7 +154,8 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
     /* ===================== BACKFILL ===================== */
     /**
-     * 解析 BACKFILL 模式的计划窗口。
+     * 解析 BACKFILL 模式窗口。
+     * <p>BACKFILL 游标（backfillWM）控制最小 from，上界受用户 to / nowSafe 约束；forwardWM 预留。</p>
      */
     private PlannerWindow resolveBackfill(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                           Instant backfillWM,
@@ -165,7 +186,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             fromCandidate = upperAnchor; // 防越界
         }
 
-        if (isCalendarMode(cfg)) {
+        if (isCalendarMode(cfg) && cfg != null) {
             ZoneId zone = resolveZone(timezone);
             fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
             upperAnchor = alignFloor(upperAnchor, cfg.calendarAlignTo(), zone);
@@ -179,7 +200,8 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
     /* ===================== UPDATE ===================== */
     /**
-     * 解析 UPDATE 模式的计划窗口。
+     * 解析 UPDATE 模式窗口。
+     * <p>区分 timeDriven 和 ID 驱动；timeDriven 依赖用户窗口或日期型 offsetType。</p>
      */
     private PlannerWindow resolveUpdate(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                         Instant updateWM,
@@ -223,7 +245,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
             }
         }
 
-        if (isCalendarMode(cfg)) {
+        if (isCalendarMode(cfg) && cfg != null) {
             ZoneId zone = resolveZone(timezone);
             fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
             toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
@@ -237,7 +259,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
 
     /* ===================== Helpers ===================== */
     /**
-     * 生成安全窗口，确保窗口长度不低于最小阈值。
+     * 构造安全窗口：若长度 < 最小阈值则扩展 to，避免 0 时长。
      */
     private PlannerWindow safeWindow(Instant from, Instant to) {
         if (Duration.between(from, to).compareTo(MIN_EFFECTIVE_WINDOW) < 0) {
@@ -247,7 +269,7 @@ public class DefaultPlanningWindowResolver implements PlanningWindowResolver {
     }
 
     /**
-     * 当窗口为空时，返回一个最小窗口供上层识别并做兜底处理。
+     * 空窗兜底：对齐后 from >= to 时，返回 from → from+MIN_EFFECTIVE_WINDOW，供上游继续流程，同时可检测“原始空窗”。
      */
     private PlannerWindow nullWindowIfEmpty(Instant from, Instant to) {
         // 返回一个最小窗口以便上层可感知 empty，再由 validator 处理；避免 IllegalArgumentException

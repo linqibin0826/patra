@@ -21,21 +21,18 @@ import org.springframework.stereotype.Component;
 /**
  * 基于时间窗口的切片策略（Application Layer · Policy）。
  * <p>
- * 该策略按照配置的窗口跨度，将计划窗口均匀拆分为多个时间切片，并为每个切片构建唯一的签名和检索表达式。
- * 其依据 patra-registry 下发的 WindowOffset 配置确定时间字段，并结合 Plan 的业务表达式生成最终查询条件。
+ * 将上游计划窗口 [from, to) 按固定步长切分为若干半开区间子窗口；每个子窗口融合业务表达式生成独立 Slice。
  * </p>
- *
- * <p>
- * 设计要点：
+ * <p>设计要点：
  * <ul>
- *   <li>支持配置步长（ISO-8601 Duration），默认 1 小时。</li>
- *   <li>当无法解析时间字段或窗口为空时返回空切片集合，由上层标记流程失败。</li>
- *   <li>每个切片生成稳定签名（sha256），保证幂等。</li>
+ *   <li>步长配置：优先使用规范化上下文中的 step（ISO-8601 Duration），非法则回退默认 1h。</li>
+ *   <li>时间字段解析：offsetFieldName (DATE 模式) > defaultDateFieldName。</li>
+ *   <li>幂等性：对规格 JSON 规范化后取 sha256，重复规划得到相同签名。</li>
+ *   <li>边界：最后一个切片不足步长直接对齐窗口终点。</li>
+ *   <li>复杂度：O(n)，n = ceil((to-from)/step)。</li>
  * </ul>
  * </p>
- *
- * @author linqibin
- * @since 0.1.0
+ * <p>失败返回空列表：窗口缺失；from>=to；无法解析时间字段。</p>
  */
 @Slf4j
 @Component
@@ -122,8 +119,7 @@ public class TimeSlicePlanner implements SlicePlanner {
     }
 
     /**
-     * 构建时间窗口约束表达式。
-     *
+     * 构建时间窗口约束表达式。半开区间约定：from 含，to 开。
      * @param field 时间字段名
      * @param from  切片起点（含）
      * @param to    切片终点（开）
@@ -134,8 +130,7 @@ public class TimeSlicePlanner implements SlicePlanner {
     }
 
     /**
-     * 从配置快照中解析时间字段。
-     *
+     * 从配置快照中解析时间字段。优先级：DATE 模式 offsetFieldName > defaultDateFieldName。
      * @param snapshot 来源配置快照
      * @return 可用于范围过滤的字段名，无法解析返回 null
      */
@@ -158,12 +153,12 @@ public class TimeSlicePlanner implements SlicePlanner {
     }
 
     /**
-     * 构建切片规格 JSON，并执行规范化。
-     *
+     * 构建切片规格 JSON，并执行规范化。字段：strategy、window(from/to + boundary + timezone)。
+     * 规范化失败回退最小 JSON 保证哈希仍可用。
      * @param context  切片上下文
      * @param from     切片起点
      * @param to       切片终点
-     * @return 规范化结果，包含 canonical JSON 及哈希素材
+     * @return 规范化结果（canonical JSON + 哈希素材）
      */
     private JsonNormalizer.Result buildSpec(SlicePlanningContext context, Instant from, Instant to) {
         ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();

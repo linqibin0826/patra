@@ -12,10 +12,21 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 /**
- * 基于 MyBatis-Plus 的计划仓储实现。
- *
- * @author linqibin
- * @since 0.1.0
+ * 计划仓储 MyBatis-Plus 实现（Infra Layer）。
+ * <p>
+ * 职责：
+ * <ul>
+ *   <li>PlanAggregate ↔ PlanDO 映射</li>
+ *   <li>按 planKey 幂等查询 / 存在性判断</li>
+ *   <li>插入 / 更新（无复杂条件更新，乐观锁交由 MP 版本字段维护）</li>
+ * </ul>
+ * </p>
+ * 日志策略：
+ * <ul>
+ *   <li>DEBUG：insert / update 关键字段（id, planKey）</li>
+ *   <li>INFO：避免高频 CRUD 噪声，不打印</li>
+ * </ul>
+ * 线程安全：无状态，依赖注入单例。
  */
 @Slf4j
 @Repository
@@ -28,21 +39,31 @@ public class PlanRepositoryMpImpl implements PlanRepository {
     private final PlanConverter planConverter;
 
     /**
-     * 按是否存在 ID 执行插入或更新。
+     * 保存 Plan：根据是否有 ID 决定 insert 或 update。
+     * <p>聚合到 DO 再回转，保证版本 / 自增主键回写。</p>
+     * @param plan 聚合（必填）
+     * @return 持久化后聚合
      */
     @Override
     public PlanAggregate save(PlanAggregate plan) {
         PlanDO entity = planConverter.toEntity(plan);
         if (entity.getId() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][REPO] plan insert planKey={}", entity.getPlanKey());
+            }
             planMapper.insert(entity);
         } else {
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][REPO] plan update id={} planKey={}", entity.getId(), entity.getPlanKey());
+            }
             planMapper.updateById(entity);
         }
         return planConverter.toAggregate(entity);
     }
 
     /**
-     * 根据 planKey 查询计划。
+     * 按 planKey 查询。
+     * @param planKey 幂等键（为空返回 empty）
      */
     @Override
     public Optional<PlanAggregate> findByPlanKey(String planKey) {
@@ -55,6 +76,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
 
     /**
      * 判断 planKey 是否存在。
+     * @param planKey 幂等键
      */
     @Override
     public boolean existsByPlanKey(String planKey) {

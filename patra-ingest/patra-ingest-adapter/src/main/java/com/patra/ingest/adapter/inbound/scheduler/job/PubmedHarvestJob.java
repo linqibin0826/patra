@@ -8,38 +8,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * PubMed HARVEST 任务入口，负责衔接 XXL-Job 与应用层。
- * <p>该任务固定来源为 PUBMED、操作类型为 HARVEST，通过父类统一解析参数并触发后续编排。</p>
- *
- * @author linqibin
- * @since 0.1.0
+ * PubMed HARVEST 调度作业：绑定 PUBMED 来源 + HARVEST 操作，通过父类统一完成参数解析与计划编排。
+ * <p>该类自身不处理业务细节，职责是声明来源/操作并提供 XXL 执行入口。</p>
  */
 @Slf4j
 @Component
 public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
 
-    /**
-     * 获取任务对应的数据来源编码。
-     *
-     * @return PUBMED 来源
-     */
+    /** 固定 PUBMED 来源。 */
     @Override
     protected ProvenanceCode getProvenanceCode() {
         return ProvenanceCode.PUBMED;
     }
 
-    /**
-     * 获取任务对应的操作类型。
-     *
-     * @return HARVEST 操作
-     */
+    /** 固定 HARVEST 操作。 */
     @Override
     protected OperationCode getOperationCode() {
         return OperationCode.HARVEST;
     }
 
     /**
-     * XXL-Job 执行入口，从调度器获取参数并交由父类处理。
+     * XXL-Job 执行入口：获取调度参数并委派给模板方法 {@link #executeScheduleJob(String)}。
      */
     @XxlJob("pubmedHarvest")
     public void run() {

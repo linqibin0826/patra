@@ -27,8 +27,8 @@ public class ExprQueryAppService {
                                           String operationCode,
                                           Instant at) {
         ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
-        log.debug("Loading expr snapshot: provenanceCode={}, taskType={}, operationCode={}",
-                code, taskType, operationCode);
+    log.debug("[REGISTRY][APP] load expr snapshot provenanceCode={} taskType={} operationCode={}",
+        code, taskType, operationCode);
         return assembler.toQuery(exprRepository.loadSnapshot(code, taskType, operationCode, at));
     }
 }

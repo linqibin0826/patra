@@ -15,8 +15,9 @@ import java.time.Instant;
  * <p>要点：
  * <ul>
  *   <li><code>namespace_scope_code</code> + <code>namespace_key</code> 区分不同命名空间（全局 / 表达式 / 自定义）。</li>
- *   <li><code>normalized_instant</code>/<code>normalized_numeric</code> 将不同游标类型归一化以便排序和范围查询。</li>
+ *   <li><code>normalized_instant</code>/<code>normalized_numeric</code> 将不同游标类型归一化以便排序与范围查询。</li>
  *   <li>链路冗余字段（schedule/plan/slice/task/run/batch）支持快速回溯来源。</li>
+ *   <li>唯一约束（建议）：(provenance_code, operation_code, cursor_key, namespace_scope_code, namespace_key)。</li>
  * </ul>
  * </p>
  */

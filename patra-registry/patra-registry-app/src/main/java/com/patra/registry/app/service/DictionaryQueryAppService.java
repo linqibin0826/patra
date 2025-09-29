@@ -56,26 +56,26 @@ public class DictionaryQueryAppService {
      * 项不存在/禁用/删除则返回空。
      */
     public Optional<DictionaryItemQuery> findItemByTypeAndCode(String typeCode, String itemCode) {
-        log.debug("Finding dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ITEM stage=START typeCode={} itemCode={}", typeCode, itemCode);
         requireTypeCode(typeCode);
         requireItemCode(typeCode, itemCode);
 
         Optional<DictionaryItem> domainItem = dictionaryRepository.findItemByTypeAndCode(typeCode, itemCode);
 
         if (domainItem.isEmpty()) {
-            log.debug("Dictionary item not found: typeCode={}, itemCode={}", typeCode, itemCode);
+            log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ITEM stage=MISS typeCode={} itemCode={}", typeCode, itemCode);
             return Optional.empty();
         }
 
         DictionaryItem item = domainItem.get();
         if (!item.isAvailable()) {
-            log.debug("Dictionary item found but not available: typeCode={}, itemCode={}, enabled={}, deleted={}",
+        log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ITEM stage=UNAVAILABLE typeCode={} itemCode={} enabled={} deleted={}",
                     typeCode, itemCode, item.enabled(), item.deleted());
             return Optional.empty();
         }
 
         DictionaryItemQuery result = dictionaryQueryConverter.toQuery(item, typeCode);
-        log.debug("Successfully found dictionary item: typeCode={}, itemCode={}", typeCode, itemCode);
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ITEM stage=SUCCESS typeCode={} itemCode={}", typeCode, itemCode);
         return Optional.of(result);
     }
 
@@ -83,7 +83,7 @@ public class DictionaryQueryAppService {
      * 查询某类型下所有启用项（排序：sort_order 升序，其次 item_code 升序）。
      */
     public List<DictionaryItemQuery> findEnabledItemsByType(String typeCode) {
-        log.debug("Finding enabled dictionary items for type: typeCode={}", typeCode);
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ENABLED stage=START typeCode={}", typeCode);
         requireTypeCode(typeCode);
 
         List<DictionaryItem> domainItems = dictionaryRepository.findEnabledItemsByType(typeCode);
@@ -100,13 +100,13 @@ public class DictionaryQueryAppService {
      * 查询某类型的默认项（可用且未删除）。若存在多个默认项将记录告警。
      */
     public Optional<DictionaryItemQuery> findDefaultItemByType(String typeCode) {
-        log.debug("Finding default dictionary item for type: typeCode={}", typeCode);
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=DEFAULT stage=START typeCode={}", typeCode);
         requireTypeCode(typeCode);
 
         Optional<DictionaryItem> domainItem = dictionaryRepository.findDefaultItemByType(typeCode);
 
         if (domainItem.isEmpty()) {
-            log.debug("No default dictionary item found for type: typeCode={}", typeCode);
+            log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=DEFAULT stage=MISS typeCode={}", typeCode);
             return Optional.empty();
         }
 
@@ -124,7 +124,7 @@ public class DictionaryQueryAppService {
         }
 
         DictionaryItemQuery result = dictionaryQueryConverter.toQuery(item, typeCode);
-        log.debug("Successfully found default dictionary item: typeCode={}, itemCode={}", typeCode, item.itemCode());
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=DEFAULT stage=SUCCESS typeCode={} itemCode={}", typeCode, item.itemCode());
         return Optional.of(result);
     }
 
@@ -132,26 +132,26 @@ public class DictionaryQueryAppService {
      * 通过外部系统别名查询字典项（仅返回可用且未删除的项）。
      */
     public Optional<DictionaryItemQuery> findByAlias(String sourceSystem, String externalCode) {
-        log.debug("Finding dictionary item by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ALIAS stage=START sourceSystem={} externalCode={}", sourceSystem, externalCode);
         requireText(sourceSystem, "Source system cannot be null or empty", null, null);
         requireText(externalCode, "External code cannot be null or empty", null, null);
 
         Optional<DictionaryItem> domainItem = dictionaryRepository.findByAlias(sourceSystem, externalCode);
 
         if (domainItem.isEmpty()) {
-            log.debug("Dictionary item not found by alias: sourceSystem={}, externalCode={}", sourceSystem, externalCode);
+            log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ALIAS stage=MISS sourceSystem={} externalCode={}", sourceSystem, externalCode);
             return Optional.empty();
         }
 
         DictionaryItem item = domainItem.get();
         if (!item.isAvailable()) {
-            log.debug("Dictionary item found by alias but not available: sourceSystem={}, externalCode={}, enabled={}, deleted={}",
+        log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ALIAS stage=UNAVAILABLE sourceSystem={} externalCode={} enabled={} deleted={}",
                     sourceSystem, externalCode, item.enabled(), item.deleted());
             return Optional.empty();
         }
 
         log.warn("findByAlias method needs enhancement to return type code information");
-        log.debug("Successfully found dictionary item by alias but type code lookup not implemented: sourceSystem={}, externalCode={}",
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=ALIAS stage=SUCCESS sourceSystem={} externalCode={}",
                 sourceSystem, externalCode);
         return Optional.empty();
     }
@@ -160,7 +160,7 @@ public class DictionaryQueryAppService {
      * 查询系统内所有字典类型（含项数与默认项等元数据）。
      */
     public List<DictionaryTypeQuery> findAllTypes() {
-        log.debug("Finding all dictionary types");
+    log.debug("[REGISTRY][APP] domain=DICT-QUERY feature=TYPES stage=START");
         List<DictionaryType> domainTypes = dictionaryRepository.findAllTypes();
 
         List<DictionaryTypeQuery> result = domainTypes.stream()

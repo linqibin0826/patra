@@ -23,7 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Outbox Relay 执行器，负责编排一次批量发布流程。
+ * Outbox Relay 执行器：负责在单次触发周期内完成 Outbox 消息的拉取、租约校验、发布与状态回写。
+ * <p>幂等保障：依赖租约获取 + 版本号自增；失败回写持久化错误信息防止重复处理；延期重试通过 nextRetryAt 控制。</p>
+ * <p>异常分类：使用 {@link RelayErrorClassifier} 区分 FATAL / TRANSIENT，指导 markFailed 与 markDeferred 的分支选择。</p>
+ * <p>日志策略：DEBUG 精准诊断（可选开启）；WARN 记录可重试失败；ERROR 记录永久失败。</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Component
@@ -46,121 +52,163 @@ public class OutboxRelayExecutor {
         this.errorClassifier = errorClassifier;
     }
 
+    /**
+     * 执行单批次发布。
+     * <ol>
+     *   <li>fetchPending 按计划条件拉取候选消息</li>
+     *   <li>逐条 acquireLease（乐观并发控制）</li>
+     *   <li>publish → markPublished / classify exception → markFailed / markDeferred</li>
+     *   <li>累计事件与统计信息</li>
+     * </ol>
+     *
+     * @param plan 发布计划
+     * @return 批次结果统计
+     */
     public RelayBatchResult execute(RelayPlan plan) {
         List<OutboxMessage> messages = relayStore.fetchPending(plan.channel(), plan.triggeredAt(), plan.batchSize());
         if (messages.isEmpty()) {
+            if (log.isDebugEnabled()) {
+                log.debug("relay executor no-pending channel={} triggeredAt={}", plan.channel(), plan.triggeredAt());
+            }
             return RelayBatchResult.empty(plan.channel());
         }
-        List<OutboxRelayDomainEvent> events = new ArrayList<>();
-        int published = 0;
-        int retried = 0;
-        int failed = 0;
-        int leaseMissed = 0;
+        RelayContext context = new RelayContext(plan);
         for (OutboxMessage message : messages) {
-            long currentVersion = message.getVersion() == null ? 0L : message.getVersion();
-            boolean leased = relayStore.acquireLease(
-                    message.getId(),
-                    message.getVersion(),
-                    plan.leaseOwner(),
-                    plan.leaseExpireAt()
-            );
-            if (!leased) {
-                leaseMissed++;
-                events.add(new OutboxLeaseMissedEvent(
-                        message.getId(),
-                        message.getChannel(),
-                        plan.leaseOwner(),
-                        message.getLeaseOwner(),
-                        plan.triggeredAt()
-                ));
-                continue;
-            }
-            long publishingVersion = currentVersion + 1;
-            try {
-                OutboxPublisherPort.PublishResult publishResult = publisherPort.publish(message, plan);
-                relayStore.markPublished(message.getId(), publishingVersion, publishResult.messageId());
-                published++;
-                events.add(new OutboxMessagePublishedEvent(
-                        message.getId(),
-                        message.getChannel(),
-                        message.getPartitionKey(),
-                        publishResult.messageId(),
-                        plan.triggeredAt()
-                ));
-            } catch (Exception ex) {
-                RelayErrorKind kind = errorClassifier.classify(ex);
-                FailureHandling handling = determineFailureHandling(message, plan, kind);
-                String errorCode = errorCode(ex);
-                String errorMessage = errorMessage(ex);
-                int nextRetry = nextRetryCount(message);
-                if (handling == FailureHandling.FAIL) {
-                    relayStore.markFailed(
-                            message.getId(),
-                            publishingVersion,
-                            nextRetry,
-                            errorCode,
-                            errorMessage
-                    );
-                    failed++;
-                    log.error("Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
-                            message.getId(), message.getChannel(), nextRetry, errorCode, ex);
-                    events.add(new OutboxMessageFailedEvent(
-                            message.getId(),
-                            message.getChannel(),
-                            nextRetry,
-                            errorCode,
-                            errorMessage,
-                            plan.triggeredAt()
-                    ));
-                } else {
-                    Duration delay = retryPolicy.computeDelay(nextRetry);
-                    Instant nextRetryAt = plan.triggeredAt().plus(delay);
-                    relayStore.markDeferred(
-                            message.getId(),
-                            publishingVersion,
-                            nextRetry,
-                            nextRetryAt,
-                            errorCode,
-                            errorMessage
-                    );
-                    retried++;
-                    log.warn("Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
-                            message.getId(), message.getChannel(), nextRetry, nextRetryAt, errorCode, ex);
-                    events.add(new OutboxMessageDeferredEvent(
-                            message.getId(),
-                            message.getChannel(),
-                            nextRetry,
-                            nextRetryAt,
-                            errorCode,
-                            errorMessage,
-                            plan.triggeredAt()
-                    ));
-                }
-            }
+            processMessage(message, context);
         }
-        return new RelayBatchResult(plan.channel(), messages.size(), published, retried, failed, leaseMissed, events);
+        return context.toBatchResult(messages.size());
     }
 
-    private FailureHandling determineFailureHandling(OutboxMessage message, RelayPlan plan, RelayErrorKind kind) {
+    /**
+     * 处理单条消息的完整转发表达：先尝试获取租约，成功后进行发布并依据结果写回状态。
+     *
+     * @param message 待处理的 Outbox 消息
+     * @param context 批次上下文，负责累计统计与事件
+     */
+    private void processMessage(OutboxMessage message, RelayContext context) {
+        if (!tryAcquireLease(message, context)) {
+            return;
+        }
+        long publishingVersion = nextVersionOf(message);
+        try {
+            OutboxPublisherPort.PublishResult publishResult = publisherPort.publish(message, context.plan());
+            relayStore.markPublished(message.getId(), publishingVersion, publishResult.messageId());
+            context.onPublished(message, publishResult);
+        } catch (Exception ex) {
+            handleFailure(message, context, publishingVersion, ex);
+        }
+    }
+
+    /**
+     * 尝试为消息抢占租约；若失败则直接记录租约失效事件并跳过后续处理。
+     *
+     * @param message 待抢占租约的消息
+     * @param context 批次上下文
+     * @return true 表示获取成功
+     */
+    private boolean tryAcquireLease(OutboxMessage message, RelayContext context) {
+        RelayPlan plan = context.plan();
+        boolean leased = relayStore.acquireLease(
+                message.getId(),
+                message.getVersion(),
+                plan.leaseOwner(),
+                plan.leaseExpireAt()
+        );
+        if (!leased) {
+            context.onLeaseMissed(message);
+        }
+        return leased;
+    }
+
+    /**
+     * 根据异常决定失败处理路径：永久失败直接落盘，暂时性失败按策略推算重试时间。
+     *
+     * @param message           当前处理的消息
+     * @param context           批次上下文
+     * @param publishingVersion 发布时预期写入的版本号
+     * @param exception         发布阶段抛出的异常
+     */
+    private void handleFailure(OutboxMessage message,
+                               RelayContext context,
+                               long publishingVersion,
+                               Exception exception) {
+        RelayPlan plan = context.plan();
+        FailureDecision decision = decideFailure(message, plan, exception);
+        if (decision.handling() == FailureHandling.FAIL) {
+            relayStore.markFailed(
+                    message.getId(),
+                    publishingVersion,
+                    decision.nextRetry(),
+                    decision.errorCode(),
+                    decision.errorMessage()
+            );
+            context.onFailed(message, decision.nextRetry(), decision.errorCode(), decision.errorMessage(), exception);
+            return;
+        }
+        Duration delay = retryPolicy.computeDelay(decision.nextRetry());
+        Instant nextRetryAt = plan.triggeredAt().plus(delay);
+        relayStore.markDeferred(
+                message.getId(),
+                publishingVersion,
+                decision.nextRetry(),
+                nextRetryAt,
+                decision.errorCode(),
+                decision.errorMessage()
+        );
+        context.onDeferred(message, decision.nextRetry(), nextRetryAt, decision.errorCode(), decision.errorMessage(), exception);
+    }
+
+    /**
+     * 汇总异常相关属性，判断最终处理策略并封装返回，避免在主流程中散落多处局部变量。
+     */
+    private FailureDecision decideFailure(OutboxMessage message, RelayPlan plan, Exception exception) {
+        RelayErrorKind kind = errorClassifier.classify(exception);
+        int nextRetry = nextRetryCount(message);
+        FailureHandling handling = determineFailureHandling(plan, kind, nextRetry);
+        String errorCode = errorCode(exception);
+        String errorMessage = errorMessage(exception);
+        return new FailureDecision(handling, nextRetry, errorCode, errorMessage);
+    }
+
+    /**
+     * 根据异常类型及下一次重试计数，判断应当立即失败还是进入重试流程。
+     */
+    private FailureHandling determineFailureHandling(RelayPlan plan, RelayErrorKind kind, int nextRetry) {
         if (kind == RelayErrorKind.FATAL) {
             return FailureHandling.FAIL;
         }
-        int nextRetry = nextRetryCount(message);
         if (nextRetry >= plan.maxAttempts()) {
             return FailureHandling.FAIL;
         }
         return FailureHandling.RETRY;
     }
 
+    /**
+     * 计算下一次写库时的版本号（null 视为 0 处理）。
+     */
+    private long nextVersionOf(OutboxMessage message) {
+        long currentVersion = message.getVersion() == null ? 0L : message.getVersion();
+        return currentVersion + 1;
+    }
+
+    /**
+     * 计算下一次重试计数，后续会写回数据库作为最新 retryCount。
+     */
     private int nextRetryCount(OutboxMessage message) {
         int currentRetry = message.getRetryCount() == null ? 0 : message.getRetryCount();
         return currentRetry + 1;
     }
 
+    /**
+     * 提取异常类型名称，用作错误码字段。
+     */
     private String errorCode(Exception exception) {
         return exception.getClass().getSimpleName();
     }
 
+    /**
+     * 截断异常消息，避免过长内容撑爆存储字段。
+     */
     private String errorMessage(Exception exception) {
         String message = exception.getMessage();
         if (message == null) {
@@ -169,8 +217,131 @@ public class OutboxRelayExecutor {
         return StrUtil.maxLength(message, ERROR_MSG_LIMIT);
     }
 
+    /**
+     * 失败决策快照：承载异常分类后的处理方式与关键元数据。
+     */
+    private record FailureDecision(FailureHandling handling, int nextRetry, String errorCode, String errorMessage) {
+    }
+
     private enum FailureHandling {
-        RETRY,
-        FAIL
+        RETRY, FAIL
+    }
+
+    /**
+     * 批次上下文：封装统计计数、事件列表与日志输出，保证循环体语义清晰。
+     */
+    private static final class RelayContext {
+        private final RelayPlan plan;
+        private final List<OutboxRelayDomainEvent> events = new ArrayList<>();
+        private int published;
+        private int retried;
+        private int failed;
+        private int leaseMissed;
+
+        private RelayContext(RelayPlan plan) {
+            this.plan = plan;
+        }
+
+        /**
+         * 供外层读取当前批次计划。
+         */
+        private RelayPlan plan() {
+            return plan;
+        }
+
+        /**
+         * 租约抢占失败：记录日志并积累业务事件。
+         */
+        private void onLeaseMissed(OutboxMessage message) {
+            leaseMissed++;
+            if (log.isDebugEnabled()) {
+                log.debug("relay lease-missed messageId={} channel={} existingLeaseOwner={}",
+                        message.getId(), message.getChannel(), message.getLeaseOwner());
+            }
+            events.add(new OutboxLeaseMissedEvent(
+                    message.getId(),
+                    message.getChannel(),
+                    plan.leaseOwner(),
+                    message.getLeaseOwner(),
+                    plan.triggeredAt()
+            ));
+        }
+
+        /**
+         * 发布成功：记录外部消息 ID 并累计成功计数。
+         */
+        private void onPublished(OutboxMessage message, OutboxPublisherPort.PublishResult publishResult) {
+            if (log.isDebugEnabled()) {
+                log.debug("relay published messageId={} channel={} externalMsgId={}",
+                        message.getId(), message.getChannel(), publishResult.messageId());
+            }
+            published++;
+            events.add(new OutboxMessagePublishedEvent(
+                    message.getId(),
+                    message.getChannel(),
+                    message.getPartitionKey(),
+                    publishResult.messageId(),
+                    plan.triggeredAt()
+            ));
+        }
+
+        /**
+         * 永久失败：输出错误日志并记录领域事件。
+         */
+        private void onFailed(OutboxMessage message,
+                              int nextRetry,
+                              String errorCode,
+                              String errorMessage,
+                              Exception exception) {
+            failed++;
+            log.error("Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
+                    message.getId(), message.getChannel(), nextRetry, errorCode, exception);
+            events.add(new OutboxMessageFailedEvent(
+                    message.getId(),
+                    message.getChannel(),
+                    nextRetry,
+                    errorCode,
+                    errorMessage,
+                    plan.triggeredAt()
+            ));
+        }
+
+        /**
+         * 延迟重试：以 WARN 级别输出并记录重试计划。
+         */
+        private void onDeferred(OutboxMessage message,
+                                int nextRetry,
+                                Instant nextRetryAt,
+                                String errorCode,
+                                String errorMessage,
+                                Exception exception) {
+            retried++;
+            log.warn("Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
+                    message.getId(), message.getChannel(), nextRetry, nextRetryAt, errorCode, exception);
+            events.add(new OutboxMessageDeferredEvent(
+                    message.getId(),
+                    message.getChannel(),
+                    nextRetry,
+                    nextRetryAt,
+                    errorCode,
+                    errorMessage,
+                    plan.triggeredAt()
+            ));
+        }
+
+        /**
+         * 汇总最终批次结果，为调用方返回统计数据与事件列表。
+         */
+        private RelayBatchResult toBatchResult(int totalMessages) {
+            return new RelayBatchResult(
+                    plan.channel(),
+                    totalMessages,
+                    published,
+                    retried,
+                    failed,
+                    leaseMissed,
+                    events
+            );
+        }
     }
 }

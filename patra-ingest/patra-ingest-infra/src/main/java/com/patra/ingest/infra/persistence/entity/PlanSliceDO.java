@@ -13,7 +13,7 @@ import lombok.EqualsAndHashCode;
  * <p>语义：将计划蓝图按策略切分出的最小幂等执行单元；每个切片派生一个任务。</p>
  * <p>要点：
  * <ul>
- *   <li><code>slice_signature_hash</code> 对 <code>slice_spec</code> 做规范化哈希，配合唯一索引防止重复生成。</li>
+ *   <li><code>slice_signature_hash</code> 对 <code>slice_spec</code> 做规范化哈希（UK：uk_slice_signature），防止重复生成。</li>
  *   <li><code>slice_spec</code>、<code>expr_snapshot</code> 均为 JSON AST，使用 {@link JacksonTypeHandler} 保持结构化。</li>
  * </ul>
  * </p>

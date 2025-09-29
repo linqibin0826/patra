@@ -1,57 +1,54 @@
 package com.patra.ingest.infra.persistence.converter;
 
+import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.SliceStatus;
-import com.patra.starter.core.json.JsonNodeSupport;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * 计划切片转换器（MapStruct 接口）。
+ * 计划切片聚合 ↔ 数据对象转换器。
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface PlanSliceConverter extends JsonNodeSupport {
+public interface PlanSliceConverter {
 
-    default PlanSliceDO toEntity(PlanSliceAggregate aggregate) {
-        if (aggregate == null) {
-            return null;
-        }
-        PlanSliceDO entity = new PlanSliceDO();
-        entity.setId(aggregate.getId());
-        entity.setPlanId(aggregate.getPlanId());
-        entity.setProvenanceCode(aggregate.getProvenanceCode());
-        entity.setSliceNo(aggregate.getSequence());
-        entity.setSliceSignatureHash(aggregate.getSliceSignatureHash());
-        entity.setSliceSpec(readJsonNode(aggregate.getSliceSpecJson()));
-        entity.setExprHash(aggregate.getExprHash());
-        entity.setExprSnapshot(readJsonNode(aggregate.getExprSnapshotJson()));
-        // 使用字典编码
-        entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
-        entity.setVersion(aggregate.getVersion());
-        return entity;
-    }
+    @Mapping(target = "sliceSpec", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceSpecJson()))")
+    @Mapping(target = "exprSnapshot", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
+    @Mapping(target = "statusCode", source = "status", qualifiedByName = "sliceStatusToCode")
+    PlanSliceDO toEntity(PlanSliceAggregate aggregate);
 
     default PlanSliceAggregate toAggregate(PlanSliceDO entity) {
+        return toPlanSliceAggregate(entity);
+    }
+
+    static PlanSliceAggregate toPlanSliceAggregate(PlanSliceDO entity) {
         if (entity == null) {
             return null;
         }
-        SliceStatus status = entity.getStatusCode() == null
-                ? SliceStatus.PENDING
-                : SliceStatus.fromCode(entity.getStatusCode());
+        SliceStatus status = sliceStatusFromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
-        String sliceSpecJson = writeJsonString(entity.getSliceSpec());
-        String exprSnapshotJson = writeJsonString(entity.getExprSnapshot());
         return PlanSliceAggregate.restore(
                 entity.getId(),
                 entity.getPlanId(),
                 entity.getProvenanceCode(),
                 entity.getSliceNo() == null ? 0 : entity.getSliceNo(),
                 entity.getSliceSignatureHash(),
-                sliceSpecJson,
+                JsonNodeMappings.jsonNodeToString(entity.getSliceSpec()),
                 entity.getExprHash(),
-                exprSnapshotJson,
+                JsonNodeMappings.jsonNodeToString(entity.getExprSnapshot()),
                 status,
                 version);
+    }
+
+    @Named("sliceStatusToCode")
+    static String sliceStatusToCode(SliceStatus status) {
+        return status == null ? null : status.getCode();
+    }
+
+    static SliceStatus sliceStatusFromCode(String code) {
+        return code == null ? SliceStatus.PENDING : SliceStatus.fromCode(code);
     }
 }

@@ -28,8 +28,31 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 默认的计划装配服务：根据触发请求组装计划、切片与任务聚合。
- * <p>负责驱动切片策略与任务生成，是计划落库前的核心装配器。</p>
+ * 默认计划装配服务实现。
+ * <p>
+ * 负责将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssembly} 聚合集合：
+ * <ol>
+ *   <li>确定切片策略（UPDATE → SINGLE；否则 TIME）</li>
+ *   <li>规范化配置（canonical JSON + hash material）</li>
+ *   <li>创建 Plan 聚合（含表达式快照 / 配置签名 / 窗口 / 策略编码）</li>
+ *   <li>调用切片策略生成草稿（SlicePlan）并转为 PlanSlice 聚合（表达式 canonical + hash）</li>
+ *   <li>为每个切片派生 Task 聚合（幂等键、优先级、计划执行时间）</li>
+ *   <li>根据切片 / 任务是否为空标记 Plan 状态（FAILED 或 READY）</li>
+ * </ol>
+ * </p>
+ * <h4>幂等策略</h4>
+ * <p>PlanKey 在 createPlanAggregate 内基于（provenance, operation, endpoint?, windowFrom-windowTo?）生成；任务幂等键使用（provenance | operation | sliceSignatureHash）。
+ * 该类不做重复检测，由上层持久化与唯一索引确保。</p>
+ * <h4>失败条件</h4>
+ * <ul>
+ *   <li>未找到切片策略实现（registry 返回 null） → 返回 FAILED（空集合）</li>
+ *   <li>切片策略返回空列表 → FAILED</li>
+ *   <li>切片存在但派生任务为空（理论不应出现）→ FAILED</li>
+ * </ul>
+ * <h4>复杂度</h4>
+ * <p>O(n) n=切片数；规范化与哈希为线性。</p>
+ * <h4>线程安全</h4>
+ * <p>无共享可变状态；registry 只读查找，可单例。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -59,11 +82,11 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 组装计划、切片与任务，形成可持久化的聚合集合。
-     * <p>流程：规范化配置 → 构建计划聚合 → 调用切片策略 → 派生任务。</p>
+     * 装配入口。
+     * <p>无副作用（除时间调用 Instant.now 与规范化过程），不持久化。</p>
      *
-     * @param request 装配请求，包含触发规范、窗口、配置与表达式
-     * @return 组合后的聚合集合
+     * @param request 装配请求
+     * @return PlanAssembly（READY 或 FAILED）
      */
     @Override
     public PlanAssembly assemble(PlanAssemblyRequest request) {
@@ -95,14 +118,8 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
      * 根据归一化请求构造计划聚合。
      */
     /**
-     * 构建计划聚合根，封装来源配置与表达式快照。
-     *
-     * @param norm 触发规范
-     * @param window 计划窗口
-     * @param planExpression 计划级表达式描述
-     * @param sliceStrategy 切片策略编码
-     * @param configSnapshot 配置快照（规范化）
-     * @return 新的计划聚合
+     * 构建 Plan 聚合根。
+     * <p>包含：表达式哈希、表达式 JSON 快照、配置 canonical JSON + hash、窗口、切片策略、切片参数 JSON。</p>
      */
     private PlanAggregate createPlanAggregate(PlanTriggerNorm norm,
                                               PlannerWindow window,
@@ -135,14 +152,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
      * 触发对应的切片规划器生成切片草稿，并转为聚合。
      */
     /**
-     * 按策略生成切片草稿并转换为聚合。
-     *
-     * @param norm 触发规范
-     * @param window 计划窗口
-     * @param planExpression 计划表达式
-     * @param configSnapshot 来源配置
-     * @param sliceStrategy 切片策略编码
-     * @return 切片聚合及草稿集合
+     * 生成切片：调用策略 → SlicePlan 列表 → canonical 表达式快照 → PlanSlice 聚合。
      */
     private SliceGenerationResult createSlices(PlanTriggerNorm norm,
                                                 PlannerWindow window,
@@ -179,12 +189,8 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
      * 为每个切片派生任务。此处暂以切片序号作为占位 sliceId，后续持久化时再绑定真实 ID。
      */
     /**
-     * 根据切片信息派生任务聚合。
-     *
-     * @param norm 触发规范
-     * @param window 计划窗口
-     * @param sliceResult 切片生成结果
-     * @return 任务聚合列表
+     * 生成任务：一切片一任务。
+     * <p>任务幂等键 material = provenance | operation | sliceSignatureHash → sha256 → Base64Url。</p>
      */
     private List<TaskAggregate> createTasks(PlanTriggerNorm norm,
                                              PlannerWindow window,
@@ -217,11 +223,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 决定任务的计划执行时间。
-     *
-     * @param draft 切片草稿
-     * @param window 计划窗口
-     * @return 任务计划时间
+     * 计算任务调度时间：优先切片 windowFrom，其次总窗口 from，最后即时 now。
      */
     private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
         if (draft.windowFrom() != null) {
@@ -235,7 +237,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 依据数据源、操作与时间窗口生成计划唯一键。
+     * 计算 PlanKey：provenance:operation[:endpoint][:from-toMillis]。
      */
     private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
         StringBuilder builder = new StringBuilder();
@@ -250,7 +252,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 判断当前触发是否仅需单片执行。
+     * 选择切片策略（扩展点）：目前 UPDATE → SINGLE，其他 → TIME。
      */
     private SliceStrategy determineSliceStrategy(PlanTriggerNorm norm) {
         if (norm.isUpdate()) {
@@ -260,7 +262,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 规范化切片策略参数，保持 canonical JSON。
+     * 生成策略参数 JSON：保持稳定序列化（例如{"strategy":"time"}）。
      */
     private String buildSliceParams(SliceStrategy sliceStrategy) {
         JsonNormalizer.Result normalized = DEFAULT_NORMALIZER.normalize(Map.of("strategy", sliceStrategy.getCode()));
@@ -268,7 +270,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 构造任务参数，确保 sliceNo 序号以数值形式存储，不被自动推断为布尔或时间。
+     * 构造任务参数 JSON：仅包含 sliceNo；使用定制 normalizer 防止类型歧义。
      */
     private String buildTaskParamsJson(int sliceSequence) {
         JsonNormalizer.Result normalized = TASK_PARAM_NORMALIZER.normalize(Map.of("sliceNo", sliceSequence));
@@ -276,7 +278,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 规范化配置快照，以便持久化 JSON 与哈希值。
+     * 配置快照 canonical 化：返回 null 表示无配置（允许 UPDATE 等模式）。
      */
     private JsonNormalizer.Result normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
         if (snapshot == null) {
@@ -286,7 +288,7 @@ public class DefaultPlanAssemblyService implements PlanAssemblyService {
     }
 
     /**
-     * 基于来源、操作与切片签名生成任务幂等键。
+     * 生成任务幂等键：sha256(provenance|operation|sliceHash) → Base64Url 无填充。
      */
     private String computeSignature(PlanTriggerNorm norm, String payload) {
         String material = CharSequenceUtil.join("|",

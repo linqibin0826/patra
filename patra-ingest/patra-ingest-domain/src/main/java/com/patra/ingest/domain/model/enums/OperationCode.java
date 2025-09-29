@@ -4,30 +4,40 @@ import lombok.Getter;
 
 /**
  * 采集操作类型（DICT：ing_operation）。
- *
- * <p>持久化字段（参考 V0.1.0__init_ingest_schema.sql）</p>
+ * <p><b>持久化字段映射</b></p>
  * <ul>
- *   <li>ing_plan.operation_code —— HARVEST/BACKFILL/UPDATE/METRICS</li>
- *   <li>ing_task.operation_code —— HARVEST/BACKFILL/UPDATE/METRICS</li>
- *   <li>ing_cursor.operation_code —— HARVEST/BACKFILL/UPDATE/METRICS</li>
- *   <li>ing_cursor_event.operation_code —— HARVEST/BACKFILL/UPDATE/METRICS</li>
+ *   <li>ing_plan.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
+ *   <li>ing_task.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
+ *   <li>ing_cursor.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
+ *   <li>ing_cursor_event.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
  * </ul>
- *
- * <p>转换约定（domain 无框架依赖）</p>
+ * <p><b>解析与输出约定</b></p>
  * <ul>
- *   <li>输出编码：{@link #getCode()}（大写）</li>
- *   <li>解析编码：{@link #fromCode(String)} 忽略大小写/首尾空白；未知抛出 IllegalArgumentException</li>
+ *   <li>输出统一使用大写 {@link #getCode()}</li>
+ *   <li>解析使用 {@link #fromCode(String)} 忽略大小写与首尾空白；未知值抛出 IllegalArgumentException</li>
  * </ul>
+ * <p>扩展策略：新增操作类型需同步更新上游配置与字典表；保持向后兼容。</p>
  *
- * <p>分层：domain</p>
- *
- * author linqibin @since 0.1.0
+ * @author linqibin
+ * @since 0.1.0
  */
 @Getter
 public enum OperationCode {
+    /**
+     * 初始全量采集（通常为首次或窗口重建）
+     */
     HARVEST("HARVEST", "全量采集"),
+    /**
+     * 历史数据回补（弥补缺口或修正）
+     */
     BACKFILL("BACKFILL", "回灌补采"),
+    /**
+     * 增量更新（基于游标推进）
+     */
     UPDATE("UPDATE", "增量更新"),
+    /**
+     * 指标/统计类操作（读取型，无数据主写）
+     */
     METRICS("METRICS", "指标统计");
 
     private final String code;
@@ -40,6 +50,7 @@ public enum OperationCode {
 
     /**
      * 解析编码为枚举。
+     *
      * @param value 字符串编码（如 "harvest"/" UPDATE ")
      * @return 对应枚举
      * @throws IllegalArgumentException 当为空或不识别时抛出
