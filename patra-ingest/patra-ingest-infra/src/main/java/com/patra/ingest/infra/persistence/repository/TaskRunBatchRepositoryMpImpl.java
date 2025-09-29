@@ -37,12 +37,12 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
             if (dto.getId() == null) {
                 mapper.insert(dto);
                 if (log.isDebugEnabled()) {
-                    log.debug("[INGEST][REPO] task run batch insert runId={} size={} status={}", dto.getRunId(), dto.getRecordCount(), dto.getStatusCode());
+                    log.debug("[INGEST][INFRA] task run batch insert runId={} size={} status={}", dto.getRunId(), dto.getRecordCount(), dto.getStatusCode());
                 }
             } else {
                 mapper.updateById(dto);
                 if (log.isDebugEnabled()) {
-                    log.debug("[INGEST][REPO] task run batch update id={} runId={} size={} status={}", dto.getId(), dto.getRunId(), dto.getRecordCount(), dto.getStatusCode());
+                    log.debug("[INGEST][INFRA] task run batch update id={} runId={} size={} status={}", dto.getId(), dto.getRunId(), dto.getRecordCount(), dto.getStatusCode());
                 }
             }
         }

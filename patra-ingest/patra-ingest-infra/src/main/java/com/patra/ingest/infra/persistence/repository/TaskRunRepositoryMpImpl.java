@@ -50,12 +50,12 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
         if (dto.getId() == null) {
             mapper.insert(dto);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] task run insert taskId={} attemptNo={}", dto.getTaskId(), dto.getAttemptNo());
+                log.debug("[INGEST][INFRA] task run insert taskId={} attemptNo={}", dto.getTaskId(), dto.getAttemptNo());
             }
         } else {
             mapper.updateById(dto);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] task run update id={} attemptNo={} status={}", dto.getId(), dto.getAttemptNo(), dto.getStatusCode());
+                log.debug("[INGEST][INFRA] task run update id={} attemptNo={} status={}", dto.getId(), dto.getAttemptNo(), dto.getStatusCode());
             }
         }
         // 返回数据库最新状态重新映射（包含生成的 ID）

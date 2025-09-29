@@ -55,12 +55,12 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
         PlanSliceDO entity = converter.toEntity(slice);
         if (entity.getId() == null) {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] slice insert planId={} hash={}", entity.getPlanId(), entity.getExprHash());
+                log.debug("[INGEST][INFRA] slice insert planId={} hash={}", entity.getPlanId(), entity.getExprHash());
             }
             mapper.insert(entity);
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][REPO] slice update id={} planId={} hash={}", entity.getId(), entity.getPlanId(), entity.getExprHash());
+                log.debug("[INGEST][INFRA] slice update id={} planId={} hash={}", entity.getId(), entity.getPlanId(), entity.getExprHash());
             }
             mapper.updateById(entity);
         }
