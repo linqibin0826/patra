@@ -9,45 +9,31 @@ import com.patra.ingest.domain.model.vo.BatchStats;
 import com.patra.ingest.domain.model.vo.IdempotentKey;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
+/**
+ * TaskRunBatch（运行批次）聚合 ↔ DO 转换器。
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskRunBatchConverter {
 
-    default TaskRunBatchDO toDO(TaskRunBatch source) {
-        if (source == null) {
-            return null;
-        }
-        TaskRunBatchDO entity = new TaskRunBatchDO();
-        entity.setId(source.getId());
-        entity.setRunId(source.getRunId());
-        entity.setTaskId(source.getTaskId());
-        entity.setSliceId(source.getSliceId());
-        entity.setPlanId(source.getPlanId());
-        entity.setExprHash(source.getExprHash());
-        entity.setProvenanceCode(source.getProvenanceCode());
-        entity.setOperationCode(source.getOperationCode());
-        entity.setBatchNo(source.getBatchNo());
-        entity.setPageNo(source.getPageNo());
-        entity.setPageSize(source.getPageSize());
-        entity.setBeforeToken(source.getBeforeToken());
-        entity.setAfterToken(source.getAfterToken());
-        entity.setIdempotentKey(mapIdempotentKey(source.getIdempotentKey()));
-        entity.setRecordCount(extractRecordCount(source.getStats()));
-        entity.setStatusCode(source.getStatus() == null ? null : source.getStatus().getCode());
-        entity.setCommittedAt(source.getCommittedAt());
-        entity.setError(source.getError());
-        entity.setStats(buildStatsNode(source.getStats()));
-        return entity;
-    }
+    @Mapping(target = "idempotentKey", source = "idempotentKey", qualifiedByName = "idempotentKeyToString")
+    @Mapping(target = "recordCount", source = "stats", qualifiedByName = "statsToRecordCount")
+    @Mapping(target = "stats", source = "stats", qualifiedByName = "statsToJson")
+    @Mapping(target = "statusCode", source = "status", qualifiedByName = "batchStatusToCode")
+    TaskRunBatchDO toDO(TaskRunBatch source);
 
     default TaskRunBatch toDomain(TaskRunBatchDO entity) {
+        return toTaskRunBatch(entity);
+    }
+
+    static TaskRunBatch toTaskRunBatch(TaskRunBatchDO entity) {
         if (entity == null) {
             return null;
         }
-        BatchStatus status = entity.getStatusCode() == null
-                ? BatchStatus.RUNNING
-                : BatchStatus.fromCode(entity.getStatusCode());
+        BatchStatus status = batchStatusFromCode(entity.getStatusCode());
         BatchStats stats = deriveStats(entity.getRecordCount(), entity.getStats());
         return TaskRunBatch.restore(
                 entity.getId(),
@@ -63,26 +49,47 @@ public interface TaskRunBatchConverter {
                 entity.getBeforeToken(),
                 entity.getAfterToken(),
                 entity.getExprHash(),
-                mapIdempotentKey(entity.getIdempotentKey()),
+                stringToIdempotentKey(entity.getIdempotentKey()),
                 status,
                 stats,
                 entity.getCommittedAt(),
                 entity.getError());
     }
 
-    default IdempotentKey mapIdempotentKey(String raw) {
-        return raw == null ? null : new IdempotentKey(raw);
+    @Named("batchStatusToCode")
+    static String batchStatusToCode(BatchStatus status) {
+        return status == null ? null : status.getCode();
     }
 
-    default String mapIdempotentKey(IdempotentKey key) {
+    static BatchStatus batchStatusFromCode(String code) {
+        return code == null ? BatchStatus.RUNNING : BatchStatus.fromCode(code);
+    }
+
+    @Named("idempotentKeyToString")
+    static String idempotentKeyToString(IdempotentKey key) {
         return key == null ? null : key.value();
     }
 
-    private Integer extractRecordCount(BatchStats stats) {
+    static IdempotentKey stringToIdempotentKey(String raw) {
+        return raw == null ? null : new IdempotentKey(raw);
+    }
+
+    @Named("statsToRecordCount")
+    static Integer statsToRecordCount(BatchStats stats) {
         return stats == null ? null : stats.recordCount();
     }
 
-    private BatchStats deriveStats(Integer recordCount, JsonNode statsNode) {
+    @Named("statsToJson")
+    static JsonNode statsToJson(BatchStats stats) {
+        if (stats == null) {
+            return null;
+        }
+        ObjectNode node = JsonMapperHolder.getObjectMapper().createObjectNode();
+        node.put("recordCount", stats.recordCount());
+        return node;
+    }
+
+    static BatchStats deriveStats(Integer recordCount, JsonNode statsNode) {
         if (recordCount != null) {
             return BatchStats.of(recordCount);
         }
@@ -90,14 +97,5 @@ public interface TaskRunBatchConverter {
             return BatchStats.of(statsNode.get("recordCount").asInt());
         }
         return BatchStats.of(0);
-    }
-
-    private ObjectNode buildStatsNode(BatchStats stats) {
-        if (stats == null) {
-            return null;
-        }
-        ObjectNode node = JsonMapperHolder.getObjectMapper().createObjectNode();
-        node.put("recordCount", stats.recordCount());
-        return node;
     }
 }

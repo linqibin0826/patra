@@ -10,18 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 默认计划器验证器实现。
- * <p>负责在计划装配前进行预验证，确保配置合理性和系统健康状态。</p>
- * <p>验证维度：
+ * 默认计划器验证器实现：提供窗口背压 + 来源能力 + 窗口合理性等基础校验。
+ * <p>阈值策略：
  * <ul>
- *   <li>窗口合理性验证</li>
- *   <li>队列背压检查</li>
- *   <li>来源能力与操作类型匹配性</li>
- *   <li>窗口配置完整性</li>
- * </ul></p>
- * 
- * @author linqibin
- * @since 0.1.0
+ *   <li>DEFAULT_QUEUE_THRESHOLD=50：超出判定为背压，需暂缓触发。</li>
+ *   <li>MAX_REASONABLE_WINDOW=30d：防止一次性规划过大时间跨度导致任务膨胀。</li>
+ *   <li>MIN_REASONABLE_WINDOW=1min：避免毫秒级或过小切片浪费。</li>
+ * </ul>
+ * UPDATE 操作允许缺失窗口；HARVEST 操作需确保窗口或增量能力配置完整。</p>
  */
 @Slf4j
 @Component
@@ -36,7 +32,6 @@ public class DefaultPlannerValidator implements PlannerValidator {
                                        ProvenanceConfigSnapshot snapshot,
                                        PlannerWindow window,
                                        long currentQueuedTasks) {
-        
         log.debug("Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
                 triggerNorm.provenanceCode(), triggerNorm.operationCode(), window, currentQueuedTasks);
 
@@ -53,7 +48,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     }
 
     /**
-     * 验证窗口合理性。
+     * 验证窗口合理性：存在性/时间顺序/跨度上下限。
      */
     private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
         // UPDATE 操作允许空窗口
@@ -100,7 +95,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     }
 
     /**
-     * 验证队列背压。
+     * 验证队列背压：当前排队任务超过阈值阻断新规划，避免系统过载。
      */
     private void validateQueueBackpressure(long currentQueuedTasks) {
         if (currentQueuedTasks > DEFAULT_QUEUE_THRESHOLD) {
@@ -114,7 +109,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     }
 
     /**
-     * 验证来源配置能力。
+     * 验证来源能力与偏移、窗口配置完整性。
      */
     private void validateSourceCapabilities(PlanTriggerNorm triggerNorm, 
                                             ProvenanceConfigSnapshot snapshot, 
@@ -137,7 +132,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     }
 
     /**
-     * 验证增量采集能力。
+     * 验证增量采集能力：若声明支持增量（非 FULL），需具备偏移字段；否则要求显式窗口。
      */
     private void validateIncrementalCapability(PlanTriggerNorm triggerNorm,
                                                ProvenanceConfigSnapshot snapshot,
@@ -172,7 +167,7 @@ public class DefaultPlannerValidator implements PlannerValidator {
     }
 
     /**
-     * 验证窗口配置完整性。
+     * 验证窗口模式相关配置（窗口尺寸、最大跨度等）；仅警告，不中断。
      */
     private void validateWindowConfigCompleteness(ProvenanceConfigSnapshot snapshot) {
         ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();

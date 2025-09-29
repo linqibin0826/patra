@@ -27,8 +27,37 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * 将任务入队事件转换为 Outbox 消息并持久化。
- * <p>支持首发与补偿场景，保障任务推送链路的幂等性。</p>
+ * 任务 Outbox 发布器（应用层基础设施适配）。
+ * <p>
+ * 职责：
+ * <ul>
+ *   <li>接收任务入队事件（首发 / 补偿）</li>
+ *   <li>构造幂等可重放的 OutboxMessage（含 headers / payload / dedupKey / partitionKey）</li>
+ *   <li>持久化到 Outbox 存储，供后续 Relay 可靠转发到 MQ</li>
+ * </ul>
+ * </p>
+ * <h4>幂等策略</h4>
+ * <ul>
+ *   <li>首次发布：按事件（taskId + idempotentKey）生成消息，若 taskId 为空直接跳过（说明未持久化成功）</li>
+ *   <li>补偿发布：根据 (channel, dedupKey) 查询；存在则刷新状态 / 负载 / 头部并重置重试计数，不存在则创建</li>
+ * </ul>
+ * <h4>分区策略</h4>
+ * <p>partitionKey = provenance:operation（缺失字段退化拼接），用于下游确保同来源 + 操作顺序。</p>
+ * <h4>延时发布</h4>
+ * <p>notBefore = scheduledAt（为空则即时）。</p>
+ * <h4>失败模式</h4>
+ * <ul>
+ *   <li>JSON 序列化 / 解析失败 → 抛出 {@link com.patra.ingest.domain.exception.PlanPersistenceException}</li>
+ *   <li>仓储 save / saveOrUpdate 异常 → 向上抛出，由上层事务框架回滚</li>
+ * </ul>
+ * <h4>日志策略</h4>
+ * <ul>
+ *   <li>WARN：跳过无 taskId 事件</li>
+ *   <li>INFO：补偿刷新或新建 retry outbox</li>
+ *   <li>DEBUG：可在未来扩展打印更细粒度调试（当前避免噪声）</li>
+ * </ul>
+ * <h4>线程安全</h4>
+ * <p>无共享可变状态（仓储 / ObjectMapper 为线程安全用法），组件为无状态单例。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -51,10 +80,13 @@ public class TaskOutboxPublisher {
 
     /**
      * 首次发布任务入队事件。
+     * <p>遍历事件构造消息：若 taskId 为空（任务尚未持久化成功）将跳过，避免孤儿消息。</p>
+     * <h4>复杂度</h4>
+     * <p>O(n) n=事件数。</p>
      *
-     * @param events 入队事件列表
-     * @param plan 关联计划
-     * @param schedule 调度实例
+     * @param events 入队事件列表（为空/空集合直接返回，不抛错）
+     * @param plan 关联计划（必须非 null）
+     * @param schedule 调度实例（必须非 null）
      */
     public void publish(List<TaskQueuedEvent> events,
                         PlanAggregate plan,
@@ -94,11 +126,20 @@ public class TaskOutboxPublisher {
     }
 
     /**
-     * 对补偿任务刷新或新增 Outbox 记录，便于 Relay 重新发布。
+     * 补偿场景发布（刷新或新增）。
+     * <p>逻辑：按 (channel, dedupKey) 查找 → 刷新状态与负载 → 未命中则新建。</p>
+     * <h4>状态重置</h4>
+     * <ul>
+     *   <li>statusCode → PENDING</li>
+     *   <li>retryCount → 0；nextRetryAt / error 字段清空</li>
+     *   <li>lease / msgId 清空：释放占用以便 Relay 重新获取</li>
+     * </ul>
+     * <h4>复杂度</h4>
+     * <p>O(n) + 仓储查询次数 n。</p>
      *
-     * @param events 入队事件列表
-     * @param plan 关联计划
-     * @param schedule 调度实例
+     * @param events 入队事件列表（为空时直接返回）
+     * @param plan 关联计划（非 null）
+     * @param schedule 调度实例（非 null）
      */
     public void publishRetry(List<TaskQueuedEvent> events,
                              PlanAggregate plan,

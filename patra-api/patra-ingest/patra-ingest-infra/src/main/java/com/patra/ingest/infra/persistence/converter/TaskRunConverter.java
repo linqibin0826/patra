@@ -12,48 +12,38 @@ import com.patra.ingest.domain.model.vo.RunStats;
 import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
 import com.patra.ingest.infra.persistence.entity.TaskRunDO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
+/**
+ * TaskRun（单次任务运行）聚合 ↔ DO 转换器。
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskRunConverter {
 
-    default TaskRunDO toDO(TaskRun source) {
-        if (source == null) {
-            return null;
-        }
-        TaskRunDO entity = new TaskRunDO();
-        entity.setId(source.getId());
-        entity.setTaskId(source.getTaskId());
-        entity.setAttemptNo(source.getAttemptNo());
-        entity.setProvenanceCode(source.getProvenanceCode());
-        entity.setOperationCode(source.getOperationCode());
-        entity.setStatusCode(source.getStatus() == null ? null : source.getStatus().getCode());
-        entity.setStats(buildStatsNode(source.getStats()));
-        entity.setError(source.getError());
-        entity.setStartedAt(source.getStartedAt());
-        entity.setFinishedAt(source.getFinishedAt());
-        entity.setLastHeartbeat(source.getLastHeartbeat());
-        entity.setWindowFrom(source.getExecutionWindow() == null ? null : source.getExecutionWindow().windowFrom());
-        entity.setWindowTo(source.getExecutionWindow() == null ? null : source.getExecutionWindow().windowTo());
-        entity.setCheckpoint(buildCheckpointNode(source.getCheckpoint()));
-        if (source.getRunContext() != null) {
-            entity.setSchedulerRunId(source.getRunContext().schedulerRunId());
-            entity.setCorrelationId(source.getRunContext().correlationId());
-        }
-        return entity;
-    }
+    @Mapping(target = "statusCode", source = "status", qualifiedByName = "taskRunStatusToCode")
+    @Mapping(target = "stats", source = "stats", qualifiedByName = "runStatsToJson")
+    @Mapping(target = "windowFrom", source = "executionWindow.windowFrom")
+    @Mapping(target = "windowTo", source = "executionWindow.windowTo")
+    @Mapping(target = "checkpoint", source = "checkpoint", qualifiedByName = "checkpointToJson")
+    @Mapping(target = "schedulerRunId", source = "runContext.schedulerRunId")
+    @Mapping(target = "correlationId", source = "runContext.correlationId")
+    TaskRunDO toDO(TaskRun source);
 
     default TaskRun toDomain(TaskRunDO entity) {
+        return toTaskRun(entity);
+    }
+
+    static TaskRun toTaskRun(TaskRunDO entity) {
         if (entity == null) {
             return null;
         }
-        TaskRunStatus status = entity.getStatusCode() == null
-                ? TaskRunStatus.PLANNED
-                : TaskRunStatus.fromCode(entity.getStatusCode());
+        TaskRunStatus status = taskRunStatusFromCode(entity.getStatusCode());
         RunStats stats = deriveStats(entity.getStats());
         TaskRunCheckpoint checkpoint = checkpointFromNode(entity.getCheckpoint());
         ExecutionWindow window = new ExecutionWindow(entity.getWindowFrom(), entity.getWindowTo());
-        RunContext runContext = new RunContext(entity.getSchedulerRunId(), entity.getCorrelationId());
+        RunContext context = new RunContext(entity.getSchedulerRunId(), entity.getCorrelationId());
         return TaskRun.restore(
                 entity.getId(),
                 entity.getTaskId(),
@@ -67,11 +57,21 @@ public interface TaskRunConverter {
                 entity.getLastHeartbeat(),
                 checkpoint,
                 window,
-                runContext,
+                context,
                 entity.getError());
     }
 
-    private ObjectNode buildStatsNode(RunStats stats) {
+    @Named("taskRunStatusToCode")
+    static String taskRunStatusToCode(TaskRunStatus status) {
+        return status == null ? null : status.getCode();
+    }
+
+    static TaskRunStatus taskRunStatusFromCode(String code) {
+        return code == null ? TaskRunStatus.PLANNED : TaskRunStatus.fromCode(code);
+    }
+
+    @Named("runStatsToJson")
+    static JsonNode runStatsToJson(RunStats stats) {
         if (stats == null) {
             return null;
         }
@@ -83,7 +83,19 @@ public interface TaskRunConverter {
         return node;
     }
 
-    private RunStats deriveStats(JsonNode statsNode) {
+    @Named("checkpointToJson")
+    static JsonNode checkpointToJson(TaskRunCheckpoint checkpoint) {
+        if (checkpoint == null || !checkpoint.isPresent()) {
+            return null;
+        }
+        try {
+            return JsonMapperHolder.getObjectMapper().readTree(checkpoint.raw());
+        } catch (Exception ex) {
+            throw new TaskCheckpointException(TaskCheckpointException.Type.PARSE, "Checkpoint JSON 解析失败", ex);
+        }
+    }
+
+    static RunStats deriveStats(JsonNode statsNode) {
         if (statsNode == null || statsNode.isNull()) {
             return RunStats.empty();
         }
@@ -94,26 +106,15 @@ public interface TaskRunConverter {
         return new RunStats(fetched, upserted, failed, pages);
     }
 
-    private JsonNode buildCheckpointNode(TaskRunCheckpoint checkpoint) {
-        if (checkpoint == null || !checkpoint.isPresent()) {
-            return null;
-        }
-        try {
-            return JsonMapperHolder.getObjectMapper().readTree(checkpoint.raw());
-        } catch (Exception e) {
-            throw new TaskCheckpointException(TaskCheckpointException.Type.PARSE, "Checkpoint JSON 解析失败", e);
-        }
-    }
-
-    private TaskRunCheckpoint checkpointFromNode(JsonNode node) {
+    static TaskRunCheckpoint checkpointFromNode(JsonNode node) {
         if (node == null || node.isNull()) {
             return TaskRunCheckpoint.empty();
         }
         try {
             String raw = JsonMapperHolder.getObjectMapper().writeValueAsString(node);
             return new TaskRunCheckpoint(raw);
-        } catch (Exception e) {
-            throw new TaskCheckpointException(TaskCheckpointException.Type.SERIALIZE, "Checkpoint JSON 序列化失败", e);
+        } catch (Exception ex) {
+            throw new TaskCheckpointException(TaskCheckpointException.Type.SERIALIZE, "Checkpoint JSON 序列化失败", ex);
         }
     }
 }

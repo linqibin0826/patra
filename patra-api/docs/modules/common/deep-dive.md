@@ -141,6 +141,19 @@ JsonNormalizer.Result r2 = normalizer.normalize(input);
 
 失败场景会抛出 `JsonNormalizer.JsonNormalizationException`（需在调用边界捕获并转换为业务异常或日志告警）。
 
+### 3.3.3 JsonNodeMappings
+
+用途：为 MapStruct 或非 Spring 环境提供统一的 JSON ↔ `JsonNode` / Map 工具，避免在下层模块散落 `ObjectMapper` 配置。
+
+| 方法 | 说明 | 使用场景 |
+|------|------|----------|
+| `jsonStringToNode(String)` | 字符串 → JsonNode，空串返回 null | DO ↔ 聚合转换，避免空串写入数据库 |
+| `jsonNodeToString(JsonNode)` | JsonNode → 字符串，null 节点返回 null | MapStruct expression 调用 |
+| `mapToJsonNode(Map<String, ?>)` | Map → JsonNode，空 Map 返回 null | 调度参数、动态配置写库 |
+| `jsonNodeToMap(JsonNode)` | JsonNode → Map | 仓储层恢复调度参数、扩展字段 |
+
+> 该工具纯静态、无 Spring 依赖，可在 `patra-common`、domain、infra 等任意层调用；在 MapStruct 中建议使用 `expression = "java(JsonNodeMappings.jsonStringToNode(...))"` 明确依赖。
+
 ### 3.4 枚举（enums）
 
 | 枚举 | 说明 | 典型用途 |

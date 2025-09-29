@@ -14,9 +14,10 @@ import java.time.Instant;
  * <p>语义：Append-only 审计事件，记录游标从旧值到新值的每次推进，支持回放与全链路追踪。</p>
  * <p>要点：
  * <ul>
- *   <li><code>idempotent_key</code> 唯一，防止重复写入同一事件。</li>
- *   <li>同时持久化时间/数值归一值，便于跨类型排序与统计。</li>
- *   <li>链路冗余字段串联 schedule → plan → slice → task → run → batch。</li>
+ *   <li><code>idempotent_key</code> 唯一（UK：uk_cur_evt_idem），防止重复写入同一事件。</li>
+ *   <li>同时持久化时间 / 数值归一值（prev/new + observed），便于跨类型排序与统计。</li>
+ *   <li>链路冗余字段串联 schedule → plan → slice → task → run → batch，支持问题回溯。</li>
+ *   <li>方向 <code>direction_code</code> 允许标记回填（BACKFILL）与正常前进（FORWARD）。</li>
  * </ul>
  * </p>
  */

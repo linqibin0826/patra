@@ -15,7 +15,7 @@ import java.time.Instant;
  * <p>语义：描述一次 Task 的具体尝试（attempt），包含重试信息与运行快照。</p>
  * <p>要点：
  * <ul>
- *   <li><code>attempt_no</code> 在同一任务内唯一，记录第几次尝试。</li>
+ *   <li><code>attempt_no</code> 在同一任务内唯一（UK：uk_task_run_attempt），记录第几次尝试。</li>
  *   <li><code>checkpoint</code>/<code>stats</code> 使用 JSON 存储断点与统计指标。</li>
  *   <li>时间字段追踪开始/结束节点并支持心跳超时判定。</li>
  * </ul>

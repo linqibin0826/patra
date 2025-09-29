@@ -19,6 +19,7 @@
 - Starter 深入：`modules/starters/core.md`、`modules/starters/web.md`、`modules/starters/expr.md`、`modules/starters/mybatis.md`、`modules/starters/rocketmq.md`、`modules/starters/feign.md`
 - RocketMQ 规范速览：`modules/starters/rocketmq-usage.md`
 - 错误处理总览：`standards/platform-error-handling.md`
+- 日志规范：`standards/logging-convention.md`
 
 ## 维护指南
 - 新增文档时确认归属目录，并在此索引补充链接

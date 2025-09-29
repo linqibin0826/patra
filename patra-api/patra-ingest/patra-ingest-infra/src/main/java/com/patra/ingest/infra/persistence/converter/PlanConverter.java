@@ -1,54 +1,35 @@
 package com.patra.ingest.infra.persistence.converter;
 
+import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
-import com.patra.starter.core.json.JsonNodeSupport;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * 计划聚合与数据对象转换器（MapStruct 接口）。
- * 使用 default 方法保留原有手写逻辑，统一组件模型为 Spring。
+ * 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 转换器。
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface PlanConverter extends JsonNodeSupport {
+public interface PlanConverter {
 
-    default PlanDO toEntity(PlanAggregate aggregate) {
-        if (aggregate == null) {
-            return null;
-        }
-        PlanDO entity = new PlanDO();
-        entity.setId(aggregate.getId());
-        entity.setScheduleInstanceId(aggregate.getScheduleInstanceId());
-        entity.setPlanKey(aggregate.getPlanKey());
-        entity.setProvenanceCode(aggregate.getProvenanceCode());
-        entity.setEndpointName(aggregate.getEndpointName());
-        entity.setOperationCode(aggregate.getOperationCode());
-        entity.setExprProtoHash(aggregate.getExprProtoHash());
-        entity.setExprProtoSnapshot(readJsonNode(aggregate.getExprProtoSnapshotJson()));
-        entity.setProvenanceConfigSnapshot(readJsonNode(aggregate.getProvenanceConfigSnapshotJson()));
-        entity.setProvenanceConfigHash(aggregate.getProvenanceConfigHash());
-        entity.setWindowFrom(aggregate.getWindowFrom());
-        entity.setWindowTo(aggregate.getWindowTo());
-        entity.setSliceStrategyCode(aggregate.getSliceStrategyCode());
-        entity.setSliceParams(readJsonNode(aggregate.getSliceParamsJson()));
-        // 使用字典编码
-        entity.setStatusCode(aggregate.getStatus() == null ? null : aggregate.getStatus().getCode());
-        entity.setVersion(aggregate.getVersion());
-        return entity;
-    }
+    @Mapping(target = "exprProtoSnapshot", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprProtoSnapshotJson()))")
+    @Mapping(target = "provenanceConfigSnapshot", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getProvenanceConfigSnapshotJson()))")
+    @Mapping(target = "sliceParams", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceParamsJson()))")
+    @Mapping(target = "statusCode", source = "status", qualifiedByName = "planStatusToCode")
+    PlanDO toEntity(PlanAggregate aggregate);
 
     default PlanAggregate toAggregate(PlanDO entity) {
+        return toPlanAggregate(entity);
+    }
+
+    static PlanAggregate toPlanAggregate(PlanDO entity) {
         if (entity == null) {
             return null;
         }
-        String exprProtoSnapshot = writeJsonString(entity.getExprProtoSnapshot());
-        String provenanceConfigSnapshot = writeJsonString(entity.getProvenanceConfigSnapshot());
-        String sliceParams = writeJsonString(entity.getSliceParams());
-        PlanStatus status = entity.getStatusCode() == null
-                ? PlanStatus.DRAFT
-                : PlanStatus.fromCode(entity.getStatusCode());
+        PlanStatus status = planStatusFromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
         return PlanAggregate.restore(
                 entity.getId(),
@@ -58,14 +39,23 @@ public interface PlanConverter extends JsonNodeSupport {
                 entity.getEndpointName(),
                 entity.getOperationCode(),
                 entity.getExprProtoHash(),
-                exprProtoSnapshot,
-                provenanceConfigSnapshot,
+                JsonNodeMappings.jsonNodeToString(entity.getExprProtoSnapshot()),
+                JsonNodeMappings.jsonNodeToString(entity.getProvenanceConfigSnapshot()),
                 entity.getProvenanceConfigHash(),
                 entity.getWindowFrom(),
                 entity.getWindowTo(),
                 entity.getSliceStrategyCode(),
-                sliceParams,
+                JsonNodeMappings.jsonNodeToString(entity.getSliceParams()),
                 status,
                 version);
+    }
+
+    @Named("planStatusToCode")
+    static String planStatusToCode(PlanStatus status) {
+        return status == null ? null : status.getCode();
+    }
+
+    static PlanStatus planStatusFromCode(String code) {
+        return code == null ? PlanStatus.DRAFT : PlanStatus.fromCode(code);
     }
 }

@@ -23,24 +23,6 @@
 ---
 
 ## 1. 快速开始（本地开发）
-> 目标：在本地启动基础设施 + 单模块开发编译测试
-
-```bash
-# 1) JDK 与构建
-java -version        # 要求 Java 21
-mvn -v               # Maven 多模块，父 POM 统一依赖
-
-# 2) 全仓快速编译（不打包）
-mvn -q -T 1C -DskipTests compile
-
-# 3) 单模块开发（例：patra-registry）
-cd patra-registry && mvn -q clean test
-
-# 4) 打包（当前默认跳过测试；如需跑测，去掉 -DskipTests）
-mvn clean package -DskipTests
-```
-
-⸻
 
 ## 2. 项目概览
 	• 名称：Papertrace – 医学文献数据平台
@@ -163,58 +145,6 @@ patra-{service}/
     • 集成测试：跨模块/跨服务的关键路径（如采集→解析→入库）。
     • 测试数据：使用内存 DB（H2）或测试容器（Testcontainers）；避免依赖外部服务。
     • Mock：使用 Mockito 或类似工具；避免过度 Mock 导致测试失效。
-
-## 14. 附：按层包结构（关键目录）
-**Domain (`com.patra.{service}.domain`)**
-
-```
-model/
-  aggregate/{name}/   # aggregates/entities
-  vo/                 # value objects
-  readonly/           # read-only objects
-  event/              # domain events
-  enums/              # domain enums (may be reused across layers)
-port/                 # repository/service ports
-```
-
-**Application (`com.patra.{service}.app`)**
-
-```
-service/              # application services (use-case orchestration)
-usecase/command|query # command/query DTOs
-converter/              # Domain ↔ App (MapStruct)
-security/             # authorization checks
-model/readonly/event/ # models used by app/adapter
-tx/                   # transaction helpers (idempotency/locks)
-config/               # application config
-```
-
-**Infrastructure (`com.patra.{service}.infra`)**
-
-```
-persistence/
-  entity/             # DB entities (extends BaseDO)
-  mapper/             # MyBatis-Plus mappers
-  repository/         # repository implementations
-  converter/          # Entity ↔ Domain converters
-config/               # infra config
-```
-
-**Adapter (`com.patra.{service}.adapter`)**
-
-```
-inbound/
-  /rest/               # REST controllers
-  /scheduler/          # scheduled jobs (XXL-Job)
-  /mq/                 # MQ listeners
-outbound/
-  /rest/             # REST clients (Feign)
-  /mq/                 # MQ producers
-  /other/              # other adapters (e.g., file, email)
-config                # adapter configuration
-```
-
-
 ⸻
 
 ## 14. 变更边界（TL;DR）

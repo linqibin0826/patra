@@ -56,6 +56,7 @@
 ## 4. 窗口与切片
 
 窗口模式：
+
 | 模式 | 用途 | 关键参数 | 保护策略 |
 | ---- | ---- | -------- | -------- |
 | HARVEST | 增量采集 | lookback / alignment / lagSafety | 超近实时截断与滞后缓冲 |
@@ -63,6 +64,7 @@
 | UPDATE | 选择性更新 | 输入窗口或游标 | 空或过小窗口跳过 |
 
 切片策略：
+
 | 策略 | 行为 | 场景 |
 | ---- | ---- | ---- |
 | TIME | 按时间步长拆分多个子窗口 | 大跨度/并行 |
@@ -73,6 +75,7 @@
 状态流转：`DRAFT → SLICING → READY / PARTIAL / FAILED / COMPLETED`（执行端更新）。
 
 错误分类：
+
 | 异常类型 | 触发点 | 错误码段 |
 | -------- | ------ | -------- |
 | PlanValidationException | 窗口非法 / 队列过载 | ING-12xx |
@@ -119,7 +122,24 @@
 
 索引建议：Outbox 按 `(status_code, not_before, id)` + `(channel, partition_key, status_code)`；Task 按 `(status_code, priority)`。
 
-## 9. 扩展点
+## 9. 持久化转换器规范
+
+### MapStruct 统一约定
+- DO ↔ 聚合/实体映射统一使用 MapStruct 接口；如需 `default` 方法，仅可用于委托本接口静态辅助方法，禁止引入业务分支。
+- 通用 JSON、Map 转换统一依赖 `JsonNodeMappings`（位于 `patra-common`），通过 `JsonNodeMappings.jsonStringToNode(...)` 等静态方法完成，避免重复维护 `ObjectMapper`。
+- 枚举 code ↔ 枚举体、值对象拆解逻辑统一内联在各个 MapStruct Converter 中的 `@Named` 静态方法，保持映射语义与聚合转换贴合。
+- MapStruct 映射禁止依赖 Spring 工具类（如 `StringUtils`），确保 `patra-common` 等基础模块在纯 JDK 环境也能编译。
+
+### Converter 内置静态方法规范
+- `TaskConverter`：处理任务状态、租约、时间线拆组，复用 `LeaseInfo` / `ExecutionTimeline` 值对象并负责 JSON ↔ 字符串转换。
+- `PlanConverter` / `PlanSliceConverter`：封装计划及切片状态回退、JSON 快照转换，直接调用 `JsonNodeMappings`。
+- `TaskRunConverter` / `TaskRunBatchConverter`：将统计、检查点与幂等键解析为领域值对象，集中处理 JSON 解析异常。
+- `CursorConverter` / `CursorEventConverter`：统一游标类型、命名空间、方向枚举与血缘信息映射，集中封装 Cursor/CursorEvent 聚合的写入与回放策略。
+- `ScheduleInstanceConverter`：处理 Scheduler/TriggerType 字典反解与调度参数 Map ↔ Json 转换。
+
+> 通过上述约定，infra 层 converter 仍保持声明式，同时避免额外 support 包，领域模型演化仅需在对应 Converter 中调整，方便追踪与复用。
+
+## 10. 扩展点
 
 | 扩展点 | 目的 | 做法 |
 | ------ | ---- | ---- |

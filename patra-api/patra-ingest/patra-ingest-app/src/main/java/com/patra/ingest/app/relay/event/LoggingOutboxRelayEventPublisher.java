@@ -7,7 +7,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 默认事件发布器：记录领域事件日志，便于观测与调试。
+ * 日志型事件发布器：将事件以 DEBUG 级别输出，供开发与诊断使用。
+ * <p>生产环境可通过提高日志级别或替换为复合发布器，写入指标系统。</p>
  */
 @Slf4j
 @Component
@@ -15,9 +16,7 @@ public class LoggingOutboxRelayEventPublisher implements OutboxRelayEventPublish
 
     @Override
     public void publish(List<OutboxRelayDomainEvent> events) {
-        if (events == null || events.isEmpty()) {
-            return;
-        }
+        if (events == null || events.isEmpty()) { return; }
         events.forEach(event -> log.debug("relay-event: {}", event));
     }
 }

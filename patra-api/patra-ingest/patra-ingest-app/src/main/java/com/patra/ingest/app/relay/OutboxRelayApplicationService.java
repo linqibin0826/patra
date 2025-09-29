@@ -15,7 +15,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Outbox Relay 应用服务，负责编排领域执行与事件发布。
+ * Outbox Relay 应用服务：对外暴露单次批量发布编排入口。
+ * <p>流程：
+ * <ol>
+ *   <li>特性开关校验（disabled 直接返回空报告）</li>
+ *   <li>构建 {@link RelayPlan}</li>
+ *   <li>委派执行器发布并收集 {@link RelayBatchResult}</li>
+ *   <li>发布领域事件（用于审计/监控）</li>
+ *   <li>组装并返回 {@link RelayReport}</li>
+ * </ol>
+ * 事务：方法标注 @Transactional（默认单库写入原子性），执行器内部按消息更新状态。</p>
  */
 @Slf4j
 @Service
@@ -27,6 +36,11 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     private final OutboxRelayExecutor relayExecutor;
     private final OutboxRelayEventPublisher eventPublisher;
 
+    /**
+     * 执行一次 Relay。关闭状态下返回空统计，避免调度报错。
+     * @param instruction 指令（可空字段）
+     * @return 执行报告
+     */
     @Override
     @Transactional
     public RelayReport relay(OutboxRelayInstruction instruction) {
@@ -35,9 +49,20 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
             log.info("Outbox relay disabled, skip channel={}", channel);
             return RelayReport.empty(channel);
         }
+        long start = System.currentTimeMillis();
+
         RelayPlan plan = planBuilder.build(instruction);
+        if (log.isDebugEnabled()) {
+            log.debug("relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
+                    plan.channel(), plan.batchSize(), plan.leaseOwner(), plan.leaseExpireAt());
+        }
+
         RelayBatchResult result = relayExecutor.execute(plan);
         eventPublisher.publish(result.events());
+
+        long elapsed = System.currentTimeMillis() - start;
+        log.info("relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
+                result.channel(), result.fetched(), result.published(), result.retried(), result.failed(), result.leaseMissed(), elapsed);
         return new RelayReport(
                 result.channel(),
                 result.fetched(),

@@ -15,7 +15,7 @@ import java.time.Instant;
  * <p>语义：一次采集批次的蓝图，固化来源配置、表达式原型与切片策略。</p>
  * <p>要点：
  * <ul>
- *   <li><code>plan_key</code> 是对外可读且幂等的业务键，唯一约束（UK：uk_plan_key）。</li>
+ *   <li><code>plan_key</code> 对外可读且幂等（UK：uk_plan_key）。</li>
  *   <li><code>expr_proto_snapshot</code> / <code>provenance_config_snapshot</code> 以 JSON 存储快照，允许回放与比对。</li>
  *   <li><code>slice_strategy_code</code> + <code>slice_params</code> 决定如何派生子切片。</li>
  * </ul>

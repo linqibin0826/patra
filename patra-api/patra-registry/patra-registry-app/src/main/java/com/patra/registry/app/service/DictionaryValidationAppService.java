@@ -37,7 +37,7 @@ public class DictionaryValidationAppService {
 
     /** 校验单个字典引用（存在、启用、未删除），返回详细结果。 */
     public DictionaryValidationQuery validateReference(String typeCode, String itemCode) {
-        log.debug("Validating dictionary reference: typeCode={}, itemCode={}", typeCode, itemCode);
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=SINGLE stage=START typeCode={} itemCode={}", typeCode, itemCode);
         requireTypeCode(typeCode);
         requireItemCode(typeCode, itemCode);
 
@@ -68,7 +68,7 @@ public class DictionaryValidationAppService {
             return dictionaryValidationConverter.toQuery(result, typeCode, itemCode);
         }
 
-        log.debug("Dictionary validation succeeded: typeCode={}, itemCode={}", typeCode, itemCode);
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=SINGLE stage=SUCCESS typeCode={} itemCode={}", typeCode, itemCode);
         ValidationResult result = ValidationResult.success();
         return dictionaryValidationConverter.toQuery(result, typeCode, itemCode);
     }
@@ -76,11 +76,11 @@ public class DictionaryValidationAppService {
     /** 批量校验字典引用（存在且启用），返回与入参对应的结果列表。 */
     public List<DictionaryValidationQuery> validateReferences(List<DictionaryReference> references) {
         int size = references == null ? 0 : references.size();
-        log.debug("Validating {} dictionary references in batch", size);
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=BATCH stage=START size={}", size);
         requireReferences(references);
 
         if (references == null || references.isEmpty()) {
-            log.debug("Empty references list provided for batch validation");
+            log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=BATCH stage=EMPTY");
             return List.of();
         }
 
@@ -103,7 +103,7 @@ public class DictionaryValidationAppService {
 
     /** 获取字典系统健康状态（聚合统计，可能较重）。 */
     public DictionaryHealthQuery getHealthStatus() {
-        log.debug("Getting dictionary system health status");
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=HEALTH stage=START");
 
         DictionaryHealthStatus healthStatus = dictionaryRepository.getHealthStatus();
 
@@ -124,7 +124,7 @@ public class DictionaryValidationAppService {
         }
 
         DictionaryHealthQuery result = dictionaryValidationConverter.toQuery(healthStatus);
-        log.debug("Successfully retrieved dictionary health status");
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=HEALTH stage=SUCCESS");
         return result;
     }
 
@@ -137,7 +137,7 @@ public class DictionaryValidationAppService {
      * @throws DictionaryValidationException 当引用为空时抛出
      */
     public DictionaryValidationQuery validateReference(DictionaryReference reference) {
-        log.debug("Validating dictionary reference object: {}", reference != null ? reference.toReferenceString() : "null");
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=OBJECT stage=START ref={}", reference != null ? reference.toReferenceString() : "null");
         requireReference(reference);
     final DictionaryReference ref = java.util.Objects.requireNonNull(reference, "reference");
     return validateReference(ref.typeCode(), ref.itemCode());
@@ -145,11 +145,11 @@ public class DictionaryValidationAppService {
 
     /** 轻量校验是否有效（仅返回布尔）。 */
     public boolean isValidReference(String typeCode, String itemCode) {
-        log.debug("Checking if dictionary reference is valid: typeCode={}, itemCode={}", typeCode, itemCode);
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=CHECK stage=START typeCode={} itemCode={}", typeCode, itemCode);
         DictionaryValidationQuery result = validateReference(typeCode, itemCode);
         boolean isValid = result.isValid();
 
-        log.debug("Dictionary reference validity check result: typeCode={}, itemCode={}, isValid={}",
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=CHECK stage=RESULT typeCode={} itemCode={} isValid={}",
                 typeCode, itemCode, isValid);
 
         return isValid;
@@ -157,7 +157,7 @@ public class DictionaryValidationAppService {
 
     /** 获取校验统计摘要（监控用）。 */
     public String getValidationStatistics() {
-        log.debug("Getting dictionary validation statistics");
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=STATS stage=START");
 
         DictionaryHealthQuery health = getHealthStatus();
 
@@ -173,7 +173,7 @@ public class DictionaryValidationAppService {
                 health.typesWithMultipleDefaults().size()
         );
 
-        log.debug("Generated validation statistics summary");
+    log.debug("[REGISTRY][APP] domain=DICT-VALIDATE feature=STATS stage=SUCCESS");
         return statistics;
     }
 

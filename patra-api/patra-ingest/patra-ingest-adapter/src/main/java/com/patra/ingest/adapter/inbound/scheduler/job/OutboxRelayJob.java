@@ -22,7 +22,10 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Outbox Relay XXL-Job 任务处理器。
+ * Outbox Relay 调度作业：负责周期性扫描 Outbox 表，获取可投递消息并尝试发布。
+ * <p>工作流：参数解析 → 构造指令（含租约/重试配置）→ 调用应用用例 → 上报结果。</p>
+ * <p>幂等性：租约拥有者标识包含 host + jobId + threadId + uuid，保障并发实例区分。</p>
+ * <p>失败模式：业务失败封装为 {@link OutboxRelayExecutionException} 抛出，XXL 标记失败。</p>
  */
 @Slf4j
 @Component
@@ -34,17 +37,23 @@ public class OutboxRelayJob {
     private final OutboxRelayProperties relayProperties;
     private final Clock clock;
 
+    /**
+     * XXL-Job 入口。解析参数执行 relay，并将统计结果写入调度日志。
+     */
     @XxlJob("ingestOutboxRelayJob")
     public void execute() {
         Instant now = Instant.now(clock);
         try {
             OutboxRelayJobParam jobParam = parseParam(XxlJobHelper.getJobParam());
             OutboxRelayInstruction instruction = buildInstruction(jobParam, now);
+
             RelayReport report = relayUseCase.relay(instruction);
+
             XxlJobHelper.handleSuccess("Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d"
                     .formatted(report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
-            log.info("Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}"
-                    , report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
+
+            log.info("Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
+                    report.channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
         } catch (OutboxRelayExecutionException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -54,6 +63,13 @@ public class OutboxRelayJob {
         }
     }
 
+    /**
+     * 构建 relay 指令：封装目标通道、时间基准、批大小、租约配置与重试策略。
+     *
+     * @param param 任务参数（可能部分字段为空）
+     * @param now   当前时间（注入 Clock 便于测试）
+     * @return OutboxRelayInstruction
+     */
     private OutboxRelayInstruction buildInstruction(OutboxRelayJobParam param, Instant now) {
         return new OutboxRelayInstruction(
                 resolveChannel(param.channel()),
@@ -66,10 +82,20 @@ public class OutboxRelayJob {
         );
     }
 
+    /**
+     * 解析通道：为空时回退配置默认值。
+     */
     private String resolveChannel(String channel) {
         return CharSequenceUtil.blankToDefault(channel, relayProperties.getDefaultChannel());
     }
 
+    /**
+     * 解析持续时间：支持 ISO-8601（以 PT 开头）或纯秒数字串。
+     *
+     * @param value 持续时间字符串
+     * @return Duration 或 null
+     * @throws IngestScheduleParameterException 非法格式
+     */
     private Duration parseDuration(String value) {
         if (CharSequenceUtil.isBlank(value)) {
             return null;
@@ -85,6 +111,9 @@ public class OutboxRelayJob {
         }
     }
 
+    /**
+     * 解析 JSON 参数，失败抛出调度参数异常。
+     */
     private OutboxRelayJobParam parseParam(String param) {
         if (CharSequenceUtil.isBlank(param)) {
             return new OutboxRelayJobParam(null, null, null, null, null);
@@ -96,6 +125,9 @@ public class OutboxRelayJob {
         }
     }
 
+    /**
+     * 构造租约 owner 标识：host + jobId + threadId + uuid，避免冲突并便于追踪。
+     */
     private String buildLeaseOwner() {
         String host = CharSequenceUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");
         return host + '-' + XxlJobHelper.getJobId() + '-' + Thread.currentThread().threadId() + '-' + IdUtil.fastSimpleUUID();

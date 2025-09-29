@@ -16,7 +16,7 @@ import java.time.Instant;
  * <p>要点：
  * <ul>
  *   <li><code>scheduler_code</code>/<code>scheduler_job_id</code>/<code>scheduler_log_id</code> 组合追踪调度来源与执行日志。</li>
- *   <li><code>trigger_params</code> 保存规范化的入参快照（JSON），便于跨语言重放。</li>
+ *   <li><code>trigger_params</code> 保存规范化的入参快照（JSON），便于跨语言重放；空集合不落库。</li>
  *   <li><code>provenance_code</code> 与注册中心保持一致，不建物理外键，仅做逻辑校验。</li>
  * </ul>
  * </p>

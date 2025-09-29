@@ -77,8 +77,8 @@ public class DictionaryClientImpl implements DictionaryClient {
                     typeCode, itemCode, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("API: Failed to get dictionary item: typeCode={}, itemCode={}, error={}",
-                    typeCode, itemCode, e.getMessage(), e);
+        log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=ITEM stage=FAIL typeCode={} itemCode={} error={}",
+            typeCode, itemCode, e.getMessage(), e);
             throw e;
         }
     }
@@ -100,8 +100,8 @@ public class DictionaryClientImpl implements DictionaryClient {
                     typeCode, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("API: Failed to get enabled dictionary items: typeCode={}, error={}",
-                    typeCode, e.getMessage(), e);
+        log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=ENABLED stage=FAIL typeCode={} error={}",
+            typeCode, e.getMessage(), e);
             throw e;
         }
     }
@@ -128,8 +128,8 @@ public class DictionaryClientImpl implements DictionaryClient {
                     typeCode, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("API: Failed to get default dictionary item: typeCode={}, error={}",
-                    typeCode, e.getMessage(), e);
+        log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=DEFAULT stage=FAIL typeCode={} error={}",
+            typeCode, e.getMessage(), e);
             throw e;
         }
     }
@@ -160,8 +160,8 @@ public class DictionaryClientImpl implements DictionaryClient {
             log.warn("API: Invalid references list for batch validation: error={}", e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("API: Failed to validate dictionary references: referencesCount={}, error={}",
-                    requestSize, e.getMessage(), e);
+        log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=VALIDATE stage=FAIL referencesCount={} error={}",
+            requestSize, e.getMessage(), e);
             throw e;
         }
     }
@@ -192,8 +192,8 @@ public class DictionaryClientImpl implements DictionaryClient {
                     sourceSystem, externalCode, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("API: Failed to get dictionary item by alias: sourceSystem={}, externalCode={}, error={}",
-                    sourceSystem, externalCode, e.getMessage(), e);
+        log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=ALIAS stage=FAIL sourceSystem={} externalCode={} error={}",
+            sourceSystem, externalCode, e.getMessage(), e);
             throw e;
         }
     }
@@ -216,7 +216,7 @@ public class DictionaryClientImpl implements DictionaryClient {
             return dictionaryApiConverter.toTypeResp(result);
 
         } catch (Exception e) {
-            log.error("API: Failed to get all dictionary types: error={}", e.getMessage(), e);
+            log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=TYPES stage=FAIL error={}", e.getMessage(), e);
             throw e;
         }
     }
@@ -247,7 +247,7 @@ public class DictionaryClientImpl implements DictionaryClient {
             return dictionaryApiConverter.toHealthResp(result);
 
         } catch (Exception e) {
-            log.error("API: Failed to get dictionary health status: error={}", e.getMessage(), e);
+            log.error("[REGISTRY][ADAPTER] domain=DICT-CLIENT feature=HEALTH stage=FAIL error={}", e.getMessage(), e);
             throw e;
         }
     }
