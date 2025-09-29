@@ -2,10 +2,10 @@ package com.patra.ingest.adapter.inbound.scheduler.job;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.adapter.inbound.scheduler.param.OutboxRelayJobParam;
-import com.patra.ingest.app.outbox.OutboxRelayUseCase;
-import com.patra.ingest.app.outbox.command.OutboxRelayInstruction;
-import com.patra.ingest.app.outbox.config.OutboxRelayProperties;
-import com.patra.ingest.app.outbox.dto.RelayReport;
+import com.patra.ingest.app.relay.OutboxRelayUseCase;
+import com.patra.ingest.app.relay.command.OutboxRelayInstruction;
+import com.patra.ingest.app.relay.config.OutboxRelayProperties;
+import com.patra.ingest.app.relay.dto.RelayReport;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.xxl.job.core.context.XxlJobHelper;
