@@ -5,7 +5,7 @@
 ## 1. 模块定位
 - **服务/组件作用**：围绕来源 (provenance) 与操作 (operation) 生成采集计划，保证链路幂等、可回放、可观测
 - **主要消费者**：调度中心（XXL-Job）、下游解析/清洗服务、RocketMQ 事件订阅方
-- **架构边界**：遵循六边形分层——`adapter`(调度/远端配置/Relay)、`app`(Planning/Relay 用例编排)、`domain`(Plan/Task 聚合)、`infra`(仓储)、`boot`(启动装配)
+- **架构边界**：遵循六边形分层——`adapter`(Inbound：调度/监听，仅入站)、`app`(Planning/Relay 用例编排)、`domain`(Plan/Task 聚合/领域端口)、`infra`(Outbound：仓储/消息/RPC)、`boot`(启动装配)
 
 ## 2. 核心能力
 - **窗口策略**：HARVEST / BACKFILL / UPDATE，控制齐次校验与滞后安全
@@ -21,10 +21,10 @@
   | 子模块 | 职责 |
   |--------|------|
   | `patra-ingest-api` | 错误码、外部 DTO |
-  | `patra-ingest-adapter` | XXL-Job、远程配置适配、Outbox Relay 调度入口 |
+  | `patra-ingest-adapter` | XXL-Job 入站（Inbound Only）、Outbox Relay 调度入口 |
   | `patra-ingest-app` | `planning`（计划装配）与 `relay`（Outbox Relay）用例编排 |
   | `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule 聚合与端口 |
-  | `patra-ingest-infra` | MyBatis-Plus DO、Mapper、仓储实现 |
+  | `patra-ingest-infra` | MyBatis-Plus DO、Mapper、仓储实现、RPC 出站（`infra.rpc.registry.*`） |
   | `patra-ingest-boot` | Spring Boot 启动、错误码映射 |
 - 关键依赖：`patra-common`、`patra-expr-kernel`、MyBatis-Plus、RocketMQ、XXL-Job、Nacos
 - 禁止事项：在 domain 层引入框架；在 adapter 中写业务逻辑

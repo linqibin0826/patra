@@ -29,6 +29,20 @@
             <artifactId>patra-spring-boot-starter-rocketmq</artifactId>
         </dependency>
 
+        <!-- 出站 RPC（Feign）能力与共享契约 -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-cloud-starter-feign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-registry-api</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>

@@ -1,8 +1,8 @@
-package com.patra.ingest.adapter.outbound.rest;
+package com.patra.ingest.infra.rpc.registry;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.adapter.outbound.rest.converter.ProvenanceConfigSnapshotConverter;
-import com.patra.ingest.app.port.ProvenancePort;
+import com.patra.ingest.infra.rpc.registry.converter.ProvenanceConfigSnapshotConverter;
+import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
 import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -35,7 +35,7 @@ import java.util.Collections;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProvenancePortAdapter implements ProvenancePort {
+public class ProvenancePortRpcAdapter implements PatraRegistryPort {
 
     /**
      * Registry RPC 客户端

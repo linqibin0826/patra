@@ -12,7 +12,7 @@ import com.patra.ingest.app.planning.dto.PlanIngestionResult;
 import com.patra.ingest.app.planning.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.planning.outbox.TaskOutboxPublisher;
 import com.patra.ingest.app.planning.window.PlanningWindowResolver;
-import com.patra.ingest.app.port.ProvenancePort;
+import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.app.validator.PlannerValidator;
 import com.patra.ingest.domain.exception.PlanAssemblyException;
 import com.patra.ingest.domain.exception.PlanPersistenceException;
@@ -71,31 +71,38 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
     /**
      * 来源配置查询端口（上游 provenance 服务访问抽象）。
      */
-    private final ProvenancePort provenancePort;
+    private final PatraRegistryPort patraRegistryPort;
+
     /**
      * 游标仓储：用于查询最近一次全局时间水位（推进窗口起点）。
      */
     private final CursorRepository cursorRepository;
+
     /**
      * 任务仓储：支撑任务去重统计与批量保存。
      */
     private final TaskRepository taskRepository;
+
     /**
      * 计划窗口解析策略：根据调度规范、配置与游标水位计算本次执行窗口。
      */
     private final PlanningWindowResolver planningWindowResolver;
+
     /**
      * 编排前置校验器：集中校验窗口合理性、排队压力、能力边界等。
      */
     private final PlannerValidator plannerValidator;
+
     /**
      * 计划装配服务：负责 Plan / Slice / Task 蓝图组装（不含持久化）。
      */
     private final PlanAssemblyService planAssemblyService;
+
     /**
      * 任务 Outbox 发布器：将入队事件转换为 Outbox 消息并持久化 / 发布。
      */
     private final TaskOutboxPublisher taskOutboxPublisher;
+
     /**
      * 计划表达式构建器：生成计划级表达式描述（未编译，仅快照与哈希）。
      */
@@ -105,10 +112,12 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
      * 调度实例仓储：保存 / 更新调度触发记录，支撑幂等追踪。
      */
     private final ScheduleInstanceRepository scheduleInstanceRepository;
+
     /**
      * 计划仓储：保存或查询计划聚合，支持 planKey 幂等判断。
      */
     private final PlanRepository planRepository;
+
     /**
      * 切片仓储：批量持久化计划切片聚合。
      */
@@ -141,7 +150,7 @@ public class PlanIngestionApplicationService implements PlanIngestionUseCase {
 
         // Phase 1: 调度实例 + 来源配置快照
         ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
-        ProvenanceConfigSnapshot configSnapshot = provenancePort.fetchConfig(
+        ProvenanceConfigSnapshot configSnapshot = patraRegistryPort.fetchConfig(
                 provenanceCode, request.endpoint(), operationCode
         );
         PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
