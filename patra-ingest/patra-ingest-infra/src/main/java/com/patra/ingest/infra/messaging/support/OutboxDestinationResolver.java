@@ -1,6 +1,7 @@
-package com.patra.ingest.app.outbox.support;
+package com.patra.ingest.infra.messaging.support;
 
 import com.patra.starter.rocketmq.config.PatraRocketMQProperties;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
@@ -9,10 +10,8 @@ import java.util.stream.Collectors;
 
 /**
  * 将频道映射为 RocketMQ 目的地（topic:tag）。
- *
- * @author linqibin
- * @since 0.1.0
  */
+@Component
 public class OutboxDestinationResolver {
 
     /** RocketMQ 命名配置 */

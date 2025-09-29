@@ -1,4 +1,4 @@
-package com.patra.ingest.app.outbox.support;
+package com.patra.ingest.infra.messaging.support;
 
 import com.patra.starter.rocketmq.config.PatraRocketMQProperties;
 import org.junit.jupiter.api.Assertions;

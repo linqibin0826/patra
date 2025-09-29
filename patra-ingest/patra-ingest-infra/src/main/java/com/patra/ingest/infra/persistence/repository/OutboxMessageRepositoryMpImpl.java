@@ -2,9 +2,8 @@ package com.patra.ingest.infra.persistence.repository;
 
 import com.patra.ingest.domain.exception.OutboxPersistenceException;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.domain.model.enums.OutboxStatus;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
-import com.patra.ingest.domain.port.OutboxRelayRepository;
+import com.patra.ingest.domain.port.OutboxRelayStore;
 import com.patra.ingest.infra.persistence.converter.OutboxMessageConverter;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
 import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
@@ -21,7 +20,7 @@ import java.util.Optional;
  */
 @Repository
 @RequiredArgsConstructor
-public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, OutboxRelayRepository {
+public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, OutboxRelayStore {
 
     private final OutboxMessageMapper mapper;
     private final OutboxMessageConverter converter;
@@ -56,12 +55,14 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         return Optional.ofNullable(entity).map(converter::toDomain);
     }
 
+    // ===== OutboxRelayStore =====
+
     @Override
-    public List<OutboxMessage> lockPending(String channel, Instant available, int limit) {
+    public List<OutboxMessage> fetchPending(String channel, Instant availableTime, int limit) {
         if (limit <= 0) {
             return Collections.emptyList();
         }
-        List<OutboxMessageDO> entities = mapper.lockPending(channel, OutboxStatus.PENDING.name(), available, limit);
+        List<OutboxMessageDO> entities = mapper.fetchPending(channel, availableTime, limit);
         if (entities == null || entities.isEmpty()) {
             return Collections.emptyList();
         }
@@ -69,14 +70,14 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
 
     @Override
-    public boolean markPublishing(Long id, String expectedStatus, Long expectedVersion, String leaseOwner, Instant leaseExpireAt) {
-        int updated = mapper.markPublishing(id, expectedStatus, expectedVersion, leaseOwner, leaseExpireAt);
+    public boolean acquireLease(Long id, Long expectedVersion, String leaseOwner, Instant leaseExpireAt) {
+        int updated = mapper.acquireLease(id, expectedVersion, leaseOwner, leaseExpireAt);
         return updated == 1;
     }
 
     @Override
-    public void markPublished(Long id, Long expectedVersion, String msgId) {
-        int updated = mapper.markPublished(id, expectedVersion, msgId);
+    public void markPublished(Long id, Long expectedVersion, String messageId) {
+        int updated = mapper.markPublished(id, expectedVersion, messageId);
         if (updated != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_PUBLISHED,
                     "更新 Outbox 状态失败，id=" + id);
@@ -84,8 +85,8 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
 
     @Override
-    public void markRetry(Long id, Long expectedVersion, int retryCount, Instant nextRetryAt, String errorCode, String errorMsg) {
-        int updated = mapper.markRetry(id, expectedVersion, retryCount, nextRetryAt, errorCode, errorMsg);
+    public void markDeferred(Long id, Long expectedVersion, int retryCount, Instant nextRetryAt, String errorCode, String errorMessage) {
+        int updated = mapper.markDeferred(id, expectedVersion, retryCount, nextRetryAt, errorCode, errorMessage);
         if (updated != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_RETRY,
                     "写回 Outbox 重试失败，id=" + id);
@@ -93,8 +94,8 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
 
     @Override
-    public void markDead(Long id, Long expectedVersion, int retryCount, String errorCode, String errorMsg) {
-        int updated = mapper.markDead(id, expectedVersion, retryCount, errorCode, errorMsg);
+    public void markFailed(Long id, Long expectedVersion, int retryCount, String errorCode, String errorMessage) {
+        int updated = mapper.markFailed(id, expectedVersion, retryCount, errorCode, errorMessage);
         if (updated != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_DEAD,
                     "标记 Outbox DEAD 失败，id=" + id);
