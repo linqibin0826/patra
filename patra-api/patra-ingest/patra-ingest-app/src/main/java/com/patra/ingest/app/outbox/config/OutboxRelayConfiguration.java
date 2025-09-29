@@ -1,11 +1,10 @@
 package com.patra.ingest.app.outbox.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.ingest.app.outbox.support.OutboxDestinationResolver;
-import com.patra.ingest.app.outbox.support.TaskReadyMessageMapper;
-import com.patra.starter.rocketmq.config.PatraRocketMQProperties;
+import com.patra.ingest.domain.policy.RelayRetryPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.time.Clock;
 
 /**
  * Outbox Relay Bean 注册。
@@ -14,12 +13,12 @@ import org.springframework.context.annotation.Configuration;
 public class OutboxRelayConfiguration {
 
     @Bean
-    public OutboxDestinationResolver outboxDestinationResolver(PatraRocketMQProperties rocketMQProperties) {
-        return new OutboxDestinationResolver(rocketMQProperties);
+    public Clock systemClock() {
+        return Clock.systemUTC();
     }
 
     @Bean
-    public TaskReadyMessageMapper taskReadyMessageMapper(ObjectMapper objectMapper) {
-        return new TaskReadyMessageMapper(objectMapper);
+    public RelayRetryPolicy relayRetryPolicy(OutboxRelayProperties properties) {
+        return new RelayRetryPolicy(properties.getInitialBackoff(), properties.getBackoffMultiplier(), properties.getMaxBackoff());
     }
 }

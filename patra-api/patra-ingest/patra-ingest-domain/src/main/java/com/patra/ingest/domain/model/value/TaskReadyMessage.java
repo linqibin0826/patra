@@ -1,4 +1,4 @@
-package com.patra.ingest.app.outbox.model;
+package com.patra.ingest.domain.model.value;
 
 import java.time.Instant;
 

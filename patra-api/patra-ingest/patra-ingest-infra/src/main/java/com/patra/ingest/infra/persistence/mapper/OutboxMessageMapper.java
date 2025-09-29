@@ -12,31 +12,29 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
     OutboxMessageDO findByChannelAndDedup(@Param("channel") String channel,
                                           @Param("dedupKey") String dedupKey);
 
-    List<OutboxMessageDO> lockPending(@Param("channel") String channel,
-                                      @Param("status") String status,
-                                      @Param("available") Instant available,
-                                      @Param("limit") int limit);
+    List<OutboxMessageDO> fetchPending(@Param("channel") String channel,
+                                       @Param("available") Instant available,
+                                       @Param("limit") int limit);
 
-    int markPublishing(@Param("id") Long id,
-                       @Param("expectedStatus") String expectedStatus,
-                       @Param("expectedVersion") Long expectedVersion,
-                       @Param("leaseOwner") String leaseOwner,
-                       @Param("leaseExpireAt") Instant leaseExpireAt);
+    int acquireLease(@Param("id") Long id,
+                     @Param("expectedVersion") Long expectedVersion,
+                     @Param("leaseOwner") String leaseOwner,
+                     @Param("leaseExpireAt") Instant leaseExpireAt);
 
     int markPublished(@Param("id") Long id,
                       @Param("expectedVersion") Long expectedVersion,
                       @Param("msgId") String msgId);
 
-    int markRetry(@Param("id") Long id,
-                  @Param("expectedVersion") Long expectedVersion,
-                  @Param("retryCount") int retryCount,
-                  @Param("nextRetryAt") Instant nextRetryAt,
-                  @Param("errorCode") String errorCode,
-                  @Param("errorMsg") String errorMsg);
+    int markDeferred(@Param("id") Long id,
+                     @Param("expectedVersion") Long expectedVersion,
+                     @Param("retryCount") int retryCount,
+                     @Param("nextRetryAt") Instant nextRetryAt,
+                     @Param("errorCode") String errorCode,
+                     @Param("errorMsg") String errorMsg);
 
-    int markDead(@Param("id") Long id,
-                 @Param("expectedVersion") Long expectedVersion,
-                 @Param("retryCount") int retryCount,
-                 @Param("errorCode") String errorCode,
-                 @Param("errorMsg") String errorMsg);
+    int markFailed(@Param("id") Long id,
+                   @Param("expectedVersion") Long expectedVersion,
+                   @Param("retryCount") int retryCount,
+                   @Param("errorCode") String errorCode,
+                   @Param("errorMsg") String errorMsg);
 }

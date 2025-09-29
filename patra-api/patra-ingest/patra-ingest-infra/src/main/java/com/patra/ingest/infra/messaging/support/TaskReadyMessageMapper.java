@@ -1,18 +1,17 @@
-package com.patra.ingest.app.outbox.support;
+package com.patra.ingest.infra.messaging.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.ingest.app.outbox.model.TaskReadyMessage;
+import com.patra.ingest.domain.model.value.TaskReadyMessage;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
 /**
  * 将 Outbox 载荷转换为任务发布消息。
- *
- * @author linqibin
- * @since 0.1.0
  */
+@Component
 public class TaskReadyMessageMapper {
 
     /** JSON 映射器 */

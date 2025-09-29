@@ -1,13 +1,13 @@
 package com.patra.ingest.app.outbox.config;
 
+import com.patra.ingest.app.outbox.support.OutboxChannels;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.List;
 
 /**
- * Outbox Relay 配置。
+ * Outbox Relay 默认配置。
  */
 @Component
 @ConfigurationProperties(prefix = "patra.ingest.outbox-relay")
@@ -15,20 +15,20 @@ public class OutboxRelayProperties {
 
     /** 是否启用 Relay */
     private boolean enabled = true;
-    /** 是否启用定时兜底 */
-    private boolean scheduledFallbackEnabled = false;
-    /** 单批处理数量 */
+    /** 默认频道 */
+    private String defaultChannel = OutboxChannels.INGEST_TASK_READY;
+    /** 默认批次大小 */
     private int batchSize = 200;
-    /** 租约维持时间 */
+    /** 默认租约持续时长 */
     private Duration leaseDuration = Duration.ofSeconds(30);
-    /** 最大重试次数（含首发） */
-    private int maxRetry = 5;
-    /** 重试退避初值 */
-    private Duration retryBackoff = Duration.ofSeconds(5);
-    /** 定时兜底固定延迟 */
-    private Duration scheduledFixedDelay = Duration.ofSeconds(60);
-    /** 定时兜底关注的频道列表 */
-    private List<String> scheduledChannels = List.of();
+    /** 最大尝试次数（包含第一次） */
+    private int maxAttempts = 5;
+    /** 首次退避时长 */
+    private Duration initialBackoff = Duration.ofSeconds(5);
+    /** 退避倍数 */
+    private double backoffMultiplier = 2.0d;
+    /** 退避上限 */
+    private Duration maxBackoff = Duration.ofMinutes(2);
 
     public boolean isEnabled() {
         return enabled;
@@ -38,12 +38,12 @@ public class OutboxRelayProperties {
         this.enabled = enabled;
     }
 
-    public boolean isScheduledFallbackEnabled() {
-        return scheduledFallbackEnabled;
+    public String getDefaultChannel() {
+        return defaultChannel;
     }
 
-    public void setScheduledFallbackEnabled(boolean scheduledFallbackEnabled) {
-        this.scheduledFallbackEnabled = scheduledFallbackEnabled;
+    public void setDefaultChannel(String defaultChannel) {
+        this.defaultChannel = defaultChannel;
     }
 
     public int getBatchSize() {
@@ -62,35 +62,35 @@ public class OutboxRelayProperties {
         this.leaseDuration = leaseDuration;
     }
 
-    public int getMaxRetry() {
-        return maxRetry;
+    public int getMaxAttempts() {
+        return maxAttempts;
     }
 
-    public void setMaxRetry(int maxRetry) {
-        this.maxRetry = maxRetry;
+    public void setMaxAttempts(int maxAttempts) {
+        this.maxAttempts = maxAttempts;
     }
 
-    public Duration getRetryBackoff() {
-        return retryBackoff;
+    public Duration getInitialBackoff() {
+        return initialBackoff;
     }
 
-    public void setRetryBackoff(Duration retryBackoff) {
-        this.retryBackoff = retryBackoff;
+    public void setInitialBackoff(Duration initialBackoff) {
+        this.initialBackoff = initialBackoff;
     }
 
-    public Duration getScheduledFixedDelay() {
-        return scheduledFixedDelay;
+    public double getBackoffMultiplier() {
+        return backoffMultiplier;
     }
 
-    public void setScheduledFixedDelay(Duration scheduledFixedDelay) {
-        this.scheduledFixedDelay = scheduledFixedDelay;
+    public void setBackoffMultiplier(double backoffMultiplier) {
+        this.backoffMultiplier = backoffMultiplier;
     }
 
-    public List<String> getScheduledChannels() {
-        return scheduledChannels;
+    public Duration getMaxBackoff() {
+        return maxBackoff;
     }
 
-    public void setScheduledChannels(List<String> scheduledChannels) {
-        this.scheduledChannels = scheduledChannels;
+    public void setMaxBackoff(Duration maxBackoff) {
+        this.maxBackoff = maxBackoff;
     }
 }

@@ -1,219 +1,49 @@
 package com.patra.ingest.app.outbox;
 
-import cn.hutool.core.util.StrUtil;
-import com.patra.ingest.app.outbox.command.OutboxRelayCommand;
+import com.patra.ingest.app.outbox.command.OutboxRelayInstruction;
 import com.patra.ingest.app.outbox.config.OutboxRelayProperties;
-import com.patra.ingest.app.outbox.dto.OutboxRelayResult;
-import com.patra.ingest.app.outbox.model.TaskReadyMessage;
-import com.patra.ingest.app.outbox.support.OutboxDestinationResolver;
-import com.patra.ingest.app.outbox.support.TaskReadyMessageMapper;
-import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.domain.model.enums.OutboxStatus;
-import com.patra.ingest.domain.port.OutboxRelayRepository;
-import com.patra.starter.rocketmq.model.PatraMessage;
-import com.patra.starter.rocketmq.publisher.PatraMessagePublisher;
+import com.patra.ingest.app.outbox.dto.RelayReport;
+import com.patra.ingest.app.outbox.event.OutboxRelayEventPublisher;
+import com.patra.ingest.app.outbox.executor.OutboxRelayExecutor;
+import com.patra.ingest.app.outbox.plan.RelayPlanFactory;
+import com.patra.ingest.domain.model.value.RelayBatchResult;
+import com.patra.ingest.domain.model.value.RelayPlan;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-
 /**
- * Outbox Relay 应用服务，负责 Outbox -> MQ 的消息转发。
- *
- * @author linqibin
- * @since 0.1.0
+ * Outbox Relay 应用服务，负责编排领域执行与事件发布。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OutboxRelayApplicationService implements OutboxRelayUseCase {
 
-    /** Outbox 仓储（含发布操作） */
-    private final OutboxRelayRepository relayRepository;
-    /** RocketMQ 消息发布器 */
-    private final PatraMessagePublisher messagePublisher;
-    /** Relay 配置 */
-    private final OutboxRelayProperties relayProperties;
-    /** 目的地解析器 */
-    private final OutboxDestinationResolver destinationResolver;
-    /** 消息体映射器 */
-    private final TaskReadyMessageMapper messageMapper;
+    private final OutboxRelayProperties properties;
+    private final RelayPlanFactory relayPlanFactory;
+    private final OutboxRelayExecutor relayExecutor;
+    private final OutboxRelayEventPublisher eventPublisher;
 
-    /**
-     * 执行 Outbox Relay 流程。
-     */
     @Override
     @Transactional
-    public OutboxRelayResult relay(OutboxRelayCommand command) {
-        if (!relayProperties.isEnabled()) {
-            log.warn("Outbox relay disabled, skipping channel={}", command.channel());
-            return new OutboxRelayResult(0, 0, 0, 0, 0);
+    public RelayReport relay(OutboxRelayInstruction instruction) {
+        if (!properties.isEnabled()) {
+            String channel = instruction.channel() != null ? instruction.channel() : properties.getDefaultChannel();
+            log.info("Outbox relay disabled, skip channel={}", channel);
+            return RelayReport.empty(channel);
         }
-        int batchSize = normalizeBatchSize(command.batchSize());
-        Duration leaseDuration = normalizeDuration(command.leaseDuration(), relayProperties.getLeaseDuration());
-        int maxRetry = normalizePositive(command.maxRetry(), relayProperties.getMaxRetry());
-        Duration retryBackoff = normalizeDuration(command.retryBackoff(), relayProperties.getRetryBackoff());
-        List<OutboxMessage> messages = relayRepository.lockPending(
-                command.channel(),
-                command.executeAt(),
-                batchSize
+        RelayPlan plan = relayPlanFactory.create(instruction);
+        RelayBatchResult result = relayExecutor.execute(plan);
+        eventPublisher.publish(result.events());
+        return new RelayReport(
+                result.channel(),
+                result.fetched(),
+                result.published(),
+                result.retried(),
+                result.failed(),
+                result.leaseMissed()
         );
-        if (messages.isEmpty()) {
-            return new OutboxRelayResult(0, 0, 0, 0, 0);
-        }
-        String destination = destinationResolver.resolve(command.channel());
-        int succeeded = 0;
-        int retried = 0;
-        int dead = 0;
-        int skipped = 0;
-        for (OutboxMessage message : messages) {
-            long currentVersion = message.getVersion() == null ? 0L : message.getVersion();
-            Instant leaseExpireAt = command.executeAt().plus(leaseDuration);
-            boolean leasing = relayRepository.markPublishing(
-                    message.getId(),
-                    OutboxStatus.PENDING.name(),
-                    currentVersion,
-                    command.leaseOwner(),
-                    leaseExpireAt
-            );
-            if (!leasing) {
-                skipped++;
-                continue;
-            }
-            long publishingVersion = currentVersion + 1;
-            try {
-                TaskReadyMessage body = messageMapper.map(message);
-                PatraMessage<TaskReadyMessage> patraMessage = buildPatraMessage(message, body, command.executeAt());
-                messagePublisher.send(destination, patraMessage);
-                relayRepository.markPublished(message.getId(), publishingVersion, null);
-                succeeded++;
-            } catch (Exception ex) {
-                FailureHandling handling = handleFailure(message, publishingVersion, command.executeAt(), maxRetry, retryBackoff, ex);
-                if (handling == FailureHandling.DEAD) {
-                    dead++;
-                } else if (handling == FailureHandling.RETRY) {
-                    retried++;
-                } else {
-                    skipped++;
-                }
-            }
-        }
-        return new OutboxRelayResult(messages.size(), succeeded, retried, dead, skipped);
-    }
-
-    /**
-     * 构建 RocketMQ 消息载体。
-     */
-    private PatraMessage<TaskReadyMessage> buildPatraMessage(OutboxMessage message,
-                                                             TaskReadyMessage body,
-                                                             Instant occurredAtFallback) {
-        String traceId = body.header() != null && body.header().scheduleInstanceId() != null
-                ? String.valueOf(body.header().scheduleInstanceId())
-                : message.getPartitionKey();
-        Instant occurredAt = body.header() != null && body.header().occurredAt() != null
-                ? body.header().occurredAt()
-                : occurredAtFallback;
-        return PatraMessage.<TaskReadyMessage>builder()
-                .eventId(message.getDedupKey())
-                .traceId(traceId)
-                .occurredAt(occurredAt)
-                .payload(body)
-                .build();
-    }
-
-    /**
-     * 处理发布失败逻辑。
-     */
-    private FailureHandling handleFailure(OutboxMessage message,
-                                          long publishingVersion,
-                                          Instant executeAt,
-                                          int maxRetry,
-                                          Duration retryBackoff,
-                                          Exception ex) {
-        int currentRetry = message.getRetryCount() == null ? 0 : message.getRetryCount();
-        int nextRetry = currentRetry + 1;
-        String errorCode = ex.getClass().getSimpleName();
-        String errorMsg = truncate(ex.getMessage(), 512);
-        if (bodyParseFailure(ex)) {
-            relayRepository.markDead(message.getId(), publishingVersion, nextRetry, errorCode, errorMsg);
-            log.error("outbox payload parsing failed, mark dead, id={} channel={}", message.getId(), message.getChannel(), ex);
-            return FailureHandling.DEAD;
-        }
-        if (nextRetry >= maxRetry) {
-            relayRepository.markDead(message.getId(), publishingVersion, nextRetry, errorCode, errorMsg);
-            log.error("outbox publish retries exhausted, mark dead, id={} channel={} retry={}", message.getId(), message.getChannel(), nextRetry, ex);
-            return FailureHandling.DEAD;
-        }
-        Instant nextRetryAt = executeAt.plus(resolveBackoff(retryBackoff, nextRetry));
-        relayRepository.markRetry(message.getId(), publishingVersion, nextRetry, nextRetryAt, errorCode, errorMsg);
-        log.warn("outbox publish failed, scheduled retry, id={} channel={} retry={} nextRetryAt={}", message.getId(), message.getChannel(), nextRetry, nextRetryAt, ex);
-        return FailureHandling.RETRY;
-    }
-
-    /**
-     * 判断是否为消息体解析失败。
-     */
-    private boolean bodyParseFailure(Exception ex) {
-        return ex instanceof IllegalStateException;
-    }
-
-    /**
-     * 校正批次大小。
-     */
-    private int normalizeBatchSize(int candidate) {
-        int fallback = relayProperties.getBatchSize();
-        if (candidate <= 0) {
-            return fallback;
-        }
-        return Math.min(candidate, fallback);
-    }
-
-    /**
-     * 校正正整数参数。
-     */
-    private int normalizePositive(int candidate, int fallback) {
-        if (candidate <= 0) {
-            return fallback;
-        }
-        return candidate;
-    }
-
-    /**
-     * 校正常量持续时间。
-     */
-    private Duration normalizeDuration(Duration candidate, Duration fallback) {
-        if (candidate == null || candidate.isNegative() || candidate.isZero()) {
-            return fallback;
-        }
-        return candidate;
-    }
-
-    /**
-     * 根据尝试次数计算退避时间。
-     */
-    private Duration resolveBackoff(Duration base, int attempt) {
-        if (attempt <= 1) {
-            return base;
-        }
-        int exponent = Math.min(attempt - 1, 10);
-        long multiplier = 1L << exponent;
-        return base.multipliedBy(multiplier);
-    }
-
-    /**
-     * 截断字符串。
-     */
-    private String truncate(String msg, int max) {
-        return StrUtil.isBlank(msg) ? msg : StrUtil.maxLength(msg, max);
-    }
-
-    private enum FailureHandling {
-        RETRY,
-        DEAD,
-        SKIPPED
     }
 }
