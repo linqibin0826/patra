@@ -1,179 +1,74 @@
-# 模块：patra-spring-boot-starter-rocketmq
+# patra-spring-boot-starter-rocketmq
 
-为 RocketMQ 交互提供 Papertrace 统一规范封装：
+RocketMQ 统一封装 Starter，提供消息模型、命名规范与发布抽象。
 
-1. 统一消息模型 `PatraMessage<T>`（eventId / traceId / occurredAt / payload）
-2. 发布抽象 `PatraMessagePublisher` 隐藏底层模板细节
-3. 主题命名规范校验（可配置前缀 / 正则 / Tag 分隔符）
-4. 基础重试策略属性占位（供消费端基类使用）
-5. 与核心 trace 体系衔接（traceId 透传头 → 载体字段）
+## 1. 模块定位
+- **服务/组件作用**：标准化 RocketMQ 消息的 header/payload、Topic 命名与发布 API
+- **主要消费者**：`patra-ingest` Outbox Relay、未来事件驱动服务
+- **架构边界**：Starter 负责封装模板和规范约束；消费端基类将在后续版本提供
 
----
+## 2. 核心能力
+- **消息模型 `PatraMessage<T>`**：统一 `eventId` / `traceId` / `occurredAt` 字段
+- **发布抽象 `PatraMessagePublisher`**：隐藏 `RocketMQTemplate` 细节，强制命名校验
+- **Topic 命名规范**：可配置 namespace、正则、tag 分隔符
+- **重试属性占位**：预置消费重试参数，为后续消费端扩展做准备
+- **Trace 衔接**：与核心 Starter 的 TraceProvider 集成，透传链路信息
 
-## 1. 快速开始
+详尽用法、配置表与最佳实践见 `docs/modules/starters/rocketmq.md`。
 
-```xml
-<dependency>
-  <groupId>com.papertrace</groupId>
-  <artifactId>patra-spring-boot-starter-rocketmq</artifactId>
-</dependency>
-```
+## 3. 分层结构与依赖
+- 主要包：`config`（自动配置/属性）、`model`、`publisher`、`support`
+- 依赖：`patra-spring-boot-starter-core`、`rocketmq-spring-boot-starter`
 
-YAML：
-```yaml
-patra:
-  messaging:
-    rocketmq:
-      enabled: true
-      naming:
-        namespace: INGEST
-        topic-pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"  # 默认
-        tag-delimiter: "."
-      retry:
-        max-attempts: 3
-        backoff: 1s
-```
+## 4. 运行与配置
+- Maven 引入：
+  ```xml
+  <dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-spring-boot-starter-rocketmq</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </dependency>
+  ```
+- 基本配置：
+  ```yaml
+  patra:
+    messaging:
+      rocketmq:
+        enabled: true
+        naming:
+          namespace: INGEST
+          topic-pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"
+          tag-delimiter: "."
+        retry:
+          max-attempts: 3
+          backoff: 1s
+  rocketmq:
+    name-server: ${MQ_NAMESERVER}
+    producer.group: ingest-producer
+  ```
+- 发布示例：`publisher.send("INGEST.ARTICLE.CREATED", PatraMessage.of(payload))`
 
----
+## 5. 观测与运维
+- 关键日志：Topic、eventId、traceId、publish result；建议落地统一日志模式
+- 建议结合 RocketMQ Console/Exporter 监控 Lag、重试、DLQ
+- Topic 命名校验失败会抛异常，避免垃圾 Topic；生产环境需提前校验命名方案
 
-## 2. 自动配置
+## 6. 测试策略
+- 使用 Embedded RocketMQ 或 MockTemplate 验证 Publisher 行为
+- 断言 Topic 命名校验、header 注入、 traceId 透传
+- 模拟发送失败，确认异常处理与日志输出
 
-| 类 | 作用 | 条件 |
-|----|------|------|
-| `PatraRocketMQAutoConfiguration` | 注册 `PatraMessagePublisher` | 存在 `RocketMQTemplate` 且 enabled=true |
-| `PatraRocketMQProperties` | 统一属性入口 | 总是 |
-| `RocketMQMessagePublisher` | 实际发送实现 | 通过条件注入 |
-| `TopicNameValidator` | Topic 规范校验 | 发布前调用 |
+## 7. Roadmap 与风险
+| 项目 | 状态 | 风险/备注 |
+|------|------|-----------|
+| 消费端抽象 | 规划 | 需统一重试、死信、指标策略 |
+| 事务 / 延迟消息 | 规划 | 需结合 RocketMQ 事务接口及延迟级别 |
+| 序列化插件 | 规划 | 提供可插拔编码（Avro/Protobuf）
+| 批量发送 | 规划 | 注意吞吐提升与顺序保证冲突 |
 
----
+风险：Topic 命名不合规、NameServer/Producer 配置缺失、traceId 未透传导致链路断档。
 
-## 3. 配置属性 (`patra.messaging.rocketmq`)
-
-| 节点 | 字段 | 默认 | 说明 |
-|------|------|------|------|
-| 根 | enabled | true | 模块开关 |
-| naming | namespace | (null) | 业务命名空间（可用于 Topic 约束扩展） |
-| naming | topic-pattern | ^[A-Z][A-Z0-9]*(\.[A-Z0-9]+)*$ | Topic 合法正则（大写+点分段） |
-| naming | tag-delimiter | . | Tag 切割符 |
-| retry | max-attempts | 3 | 消费（后续扩展）最大尝试次数 |
-| retry | backoff | 1s | 指数退避初值（后续消费侧用） |
-
-> 当前版本仅对发布侧使用命名 & 日志规范；消费重试策略字段为后续基类预留。
-
----
-
-## 4. 消息模型 `PatraMessage<T>`
-
-| 字段 | 说明 |
-|------|------|
-| eventId | 事件唯一标识（默认 UUID） |
-| traceId | 分布式追踪标识（可由上游填充） |
-| occurredAt | 事件产生时间（默认 `Instant.now()`） |
-| payload | 业务载荷 |
-
-构建：
-```java
-PatraMessage<OrderCreated> msg = PatraMessage.of(new OrderCreated(orderId));
-```
-或：
-```java
-PatraMessage<OrderCreated> msg = PatraMessage.<OrderCreated>builder()
-  .traceId(currentTraceId)
-  .payload(new OrderCreated(orderId))
-  .build();
-```
-
----
-
-## 5. 发布 API
-
-```java
-@RequiredArgsConstructor
-@Service
-class OrderEventPublisher {
-  private final PatraMessagePublisher publisher;
-  public void publish(OrderCreated evt) {
-    publisher.send("INGEST.ORDER.CREATED", PatraMessage.of(evt));
-  }
-}
-```
-
-内部步骤：
-1. 校验 Topic 命名（`TopicNameValidator`）
-2. 构造 Spring `Message`，设置头：eventId / traceId / occurredAt
-3. 调用 `RocketMQTemplate.convertAndSend`
-
----
-
-## 6. Topic 命名规范
-
-默认正则：`^[A-Z][A-Z0-9]*(\.[A-Z0-9]+)*$`
-
-建议：
-- 顶级段：业务域（如 INGEST / REGISTRY）
-- 次级段：聚合或功能（ARTICLE / TASK）
-- 末级：事件类型（CREATED / UPDATED）
-
-示例：`INGEST.ARTICLE.CREATED`
-
-不合规时抛出 `IllegalArgumentException`，杜绝“随机命名”污染。
-
----
-
-## 7. 扩展点
-
-| 场景 | 做法 |
-|------|------|
-| 自定义发布逻辑（例如延迟/事务消息） | 自行实现 `PatraMessagePublisher` 并覆盖 Bean |
-| 增强命名校验 | Fork/替换 `TopicNameValidator` 或在发送前包装一层校验 |
-| 统一 traceId 注入 | 在构建 `PatraMessage` 时集成核心 TraceProvider |
-
----
-
-## 8. 最佳实践
-
-| 目标 | 建议 |
-|------|------|
-| 事件可追踪 | 始终填充 traceId，并在消费侧日志输出 eventId + traceId |
-| 演进兼容 | payload 使用向前兼容结构（新增字段可空） |
-| 排错 | 记录 destination / eventId / traceId / 发生时间 |
-| 多环境隔离 | 使用 namespace 前缀 + 不同集群 NameServer 配置 |
-
----
-
-## 9. Roadmap
-
-| 优先级 | 项目 | 内容 |
-|--------|------|------|
-| High | 消费端抽象 | 统一监听基类（重试 / DLQ / 指标） |
-| High | 事务消息支持 | 包装本地事务 + MQ 二阶段提交流程 |
-| Mid | 消费指标 | 每 Topic Lag / 耗时分位统计 |
-| Mid | 序列化策略 SPI | Avro / Protobuf 可插拔编码 |
-| Low | 批量发送 | 聚合 flush 降低网络开销 |
-
----
-
-## 10. FAQ
-
-| 问题 | 回答 |
-|------|------|
-| 为什么再次封装 publisher? | 隐藏模板细节 + 强制注入规范（命名/头） |
-| traceId 如何获得? | 由上游 Web / Feign starter 提供 TraceProvider 注入 | 
-| 命名校验能否关闭? | 目前不支持，若需要可自定义 Publisher 跳过校验 |
-| 如何做延迟消息? | 自定义实现 Publisher 并调用 `rocketMQTemplate.syncSend` 指定 delay level |
-
----
-
-## 11. 参考源码
-
-| 位置 | 说明 |
-|------|------|
-| `config/PatraRocketMQAutoConfiguration.java` | 自动配置入口 |
-| `config/PatraRocketMQProperties.java` | 属性定义 |
-| `publisher/RocketMQMessagePublisher.java` | 默认发送实现 |
-| `model/PatraMessage.java` | 通用消息载体 |
-| `support/TopicNameValidator.java` | Topic 校验逻辑 |
-
----
-
-如需新增：请同时说明使用场景 / 与现有能力差异 / 期望指标。
+## 8. 参考资料
+- 深度文档：`docs/modules/starters/rocketmq.md`
+- Outbox 流程：`docs/modules/ingest/deep-dive.md`
+- 错误规范：`docs/standards/platform-error-handling.md`

@@ -1,264 +1,57 @@
-## 模块：patra-expr-kernel
-
-面向 Papertrace 平台的“统一表达式内核（Expression Kernel）”。提供一个**确定性、可序列化、可规范化并支持扩展的布尔过滤表达式 AST**，用于：
-
-1. 跨服务传递结构化查询/过滤条件（避免 DSL 字符串拼接）
-2. 产生稳定的“语义指纹”（canonical JSON + SHA-256）用于缓存键 / 幂等锁 / 查询去重
-3. 为后续“表达式下推”（解析到 ES / SQL / 自研索引）提供统一抽象层
-4. 支撑审计与可观测（可记录标准化 JSON 快照，而非不稳定用户输入）
-
-> 设计哲学：以最小表达能力覆盖 80% 常见过滤场景，其余通过外围“表达式编译器”转化为内核 AST；内核自身保持**无框架依赖**与**不可变（immutable）**。
-
----
-
-## 1. 设计目标
-
-| 目标 | 说明 | 约束策略 |
-|------|------|---------|
-| 不可变 | 节点均为 record/enum | 构造后即安全复用 / 线程安全 |
-| 可组合 | AND / OR 树 + NOT + 常量 | 逻辑算子最小集，降低解析复杂度 |
-| 严格类型 | Atom.Operator ↔ Value 显式约束 | 编译期防错，避免运行期兼容判断 |
-| 可序列化 | 自定义 Jackson Codec | 稳定 JSON Schema，兼容老版本字段 |
-| 可规范化 | Canonicalizer 产出确定性 JSON | 字段排序 / 空裁剪 / 数值归一 / 文本空白折叠 |
-| 可哈希 | 内置 SHA-256 指纹 | 作为缓存键、重复检测 |
-| 可访问 | Visitor 模式 | 各存储后端实现翻译器 |
-| 渐进扩展 | 通过外层编译阶段扩展语义 | 内核不直接膨胀算子种类 |
-
----
-
-## 2. AST 总览
-
-根接口：`Expr` (sealed) 允许以下节点：
-
-| 节点 | 说明 | 重要字段 |
-|------|------|----------|
-| And(List<Expr>) | 逻辑与（≥1 子节点） | children 已复制为不可变 List |
-| Or(List<Expr>) | 逻辑或（≥1 子节点） | 同上 |
-| Not(Expr) | 逻辑非 | child |
-| Const(TRUE / FALSE) | 常量短路 | 枚举值 |
-| Atom(fieldKey, operator, value) | 叶子约束 | operator 与 value 类型强匹配 |
-
-Atom 支持的 `Operator` 与对应 `Value`（sealed hierarchy）：
-
-| Operator | Value 类型 | 语义 |
-|----------|-----------|------|
-| TERM | TermValue(text, match, caseSensitivity) | 单值匹配（等值/前缀/模糊等取决于 TextMatch） |
-| IN | InValues(List<String>, caseSensitivity) | 多枚举值匹配（非空列表） |
-| RANGE | DateRange / DateTimeRange / NumberRange | 区间匹配（支持开闭边界） |
-| EXISTS | ExistsFlag(shouldExist) | 字段存在性 |
-| TOKEN | TokenValue(tokenType, tokenValue) | 平台自定义语义 token（如安全标签） |
-
-补充枚举：`CaseSensitivity (SENSITIVE/INSENSITIVE)`、`TextMatch`（如 EXACT / PREFIX / SUBSTRING / REGEX 等，依代码定义）。
-
-所有构造器中执行参数合法性与类型兼容校验；失败抛出 `IllegalArgumentException`。
-
----
-
-## 3. JSON 序列化协议（ExprJsonCodec）
-
-Codec 通过静态工厂 `ExprJsonCodec.mapper()` 暴露预配置 `ObjectMapper`。核心规则：
-
-1. 节点统一含有 `type` 字段：AND / OR / NOT / CONST / ATOM
-2. 逻辑节点字段：
-	- AND/OR: `{ "type":"AND", "children":[ ... ] }`
-	- NOT: `{ "type":"NOT", "child": { ... } }`
-3. CONST: `{ "type":"CONST", "value": true|false }`
-4. ATOM: `{ "type":"ATOM", "field":"f", "op":"TERM", "value": { ... } }`
-5. Value 子结构：
-	- TERM: `{ "kind":"TERM", "text":"abc", "match":"EXACT", "case":"INSENSITIVE" }`
-	- IN: `{ "kind":"IN", "values":["a","b"], "case":"SENSITIVE" }`
-	- RANGE(Date): `{ "kind":"RANGE", "rangeType":"DATE", "from":"2024-01-01", "to":"2024-02-01", "fromBoundary":"CLOSED", "toBoundary":"OPEN" }`
-	- RANGE(DateTime): `rangeType=DATETIME`, 时间戳格式采用 ISO-8601（Instant）
-	- RANGE(Number): `rangeType=NUMBER`, 数字按字符串解析为 BigDecimal
-	- EXISTS: `{ "kind":"EXISTS", "shouldExist": true }`
-	- TOKEN: `{ "kind":"TOKEN", "tokenType":"X", "tokenValue":"Y" }`
-6. 允许未知字段（反序列化时忽略），为前向兼容预留
-7. `null` / 空白字符串会在 Canonical 化阶段剔除（非语义必要不应出现）
-
-### 3.1 版本兼容策略
-
-| 变更类型 | 策略 | 示例 |
-|----------|------|------|
-| 新增 Value 字段 | 仅写出；读时设置默认值 | 新增 `locale` 时旧 JSON 可缺失 |
-| 新增 kind / operator | 需外围“编译器”先行降级/转译 | 新增 GEO_BOX 先转为多个 RANGE/TERM |
-| 删除字段 | 通过 Canonical 化淡化影响 | 删除可冗余空字段 |
-| 语义变更 | bump 次版本 + 文档说明 | TextMatch 规则调整 |
-
----
-
-## 4. 规范化（Canonicalization）
-
-类：`ExprCanonicalizer` + 快照：`ExprCanonicalSnapshot(expr, canonicalJson, hash)`。
-
-流程：Expr -> 逻辑 JSON -> 递归规范化 -> 稳定排序/裁剪 -> 序列化字符串 -> SHA-256。
-
-规则明细：
-1. Object 字段名排序（自然序）
-2. 递归处理后剔除“空”节点：null / missing / 空对象 / 空数组 / 空字符串
-3. Array：
-	- 子元素先各自规范化
-	- 生成 `(typeTag|serialized)` 唯一键去重（保持首次出现）
-	- 依据 `(typeTag, serialized)` 排序：
-	  - typeTag：Null=0, Boolean=1, Number=2, Text=3, Object=4, Array=5, Other=9
-4. 文本：trim + 折叠连续空白为单空格
-5. 数字：`stripTrailingZeros()`；若 scale < 0 则设为 0；保证 1 与 1.0 规范后一致
-6. 产出 JSON 使用预配置 writer（无额外格式化，紧凑）
-7. Hash：`sha256Hex(canonicalJson UTF-8)`（复用 `patra-common` 的 `HashUtils`）
-
-使用场景：
-| 场景 | 描述 |
-|------|------|
-| 缓存 Key | canonicalJson 或 hash 作为查询缓存主键 |
-| 幂等控制 | hash 作为请求签名，防止重复提交 |
-| 结果复用 | 多用户相同语义表达式共享一次解析/计划 |
-| 审计追溯 | 记录 canonicalJson，减少敏感冗余 |
-
-复杂度：O(N log N)（主要来自对象字段排序 + 数组去重排序）。
-
----
-
-## 5. 工厂与使用示例（Exprs）
-
-`Exprs` 提供静态便捷方法：`and(List<Expr>)`、`or(...)`、`not(expr)`、`term(field, text, match)`、`in(field, List<String>)`、`range(field, from, to)` 等（具体以源码为准）。
-
-```java
-import static com.patra.expr.Exprs.*;
-import com.patra.expr.*;
-
-Expr expr = and(
-	 term("title", "AI", TextMatch.SUBSTRING),
-	 or(
-		  exists("publisher"),
-		  term("journal", "Nature", TextMatch.EXACT)
-	 ),
-	 rangeDate("publishDate", LocalDate.parse("2024-01-01"), LocalDate.parse("2024-12-31"))
-);
-
-// 序列化
-String json = Exprs.toJson(expr);
-// 反序列化
-Expr parsed = Exprs.fromJson(json);
-// 规范化 + Hash
-var snapshot = ExprCanonicalizer.canonicalize(expr);
-String canonicalJson = snapshot.canonicalJson();
-String hash = snapshot.hash();
-```
-
----
-
-## 6. Visitor 模式
-
-接口：`ExprVisitor<R>`；便捷抽象：`ExprVisitor.NoReturn`。
-
-实现一个转译器（示例：转为 SQL 片段）：
-
-```java
-class SqlTranslator implements ExprVisitor<String> {
-  public String visitAnd(And andNode) {
-	  return andNode.children().stream().map(e -> e.accept(this))
-				.collect(Collectors.joining(" AND ", "(", ")"));
-  }
-  public String visitOr(Or orNode) { /* 类似 */ }
-  public String visitNot(Not notNode) { return "NOT " + notNode.child().accept(this); }
-  public String visitConst(Const c) { return c.value() ? "1=1" : "1=0"; }
-  public String visitAtom(Atom atom) { /* 根据 operator/ value 生成条件 */ }
-}
-```
-
-> 约定：后端落地层（ES / SQL / Lucene）均实现独立 visitor，保持内核无依赖。
-
----
-
-## 7. 性能与内存
-
-| 项目 | 影响因素 | 建议 |
-|------|----------|------|
-| 构造 | 大量小节点 | 尽量复用不可变子表达式（常量池） |
-| 序列化 | 频繁 toJson | 缓存 ObjectMapper；避免重复 canonicalize 同一实例 |
-| 规范化 | 去重 + 排序 | 大数组（>1k 条）可在构建阶段先做去重排序 |
-| 哈希 | 大表达式 | 若表达式稳定可缓存 snapshot（弱引用 Map） |
-
----
-
-## 8. 错误与边界
-
-| 场景 | 行为 |
-|------|------|
-| fieldKey 为空/空白 | 构造器抛出 IllegalArgumentException |
-| IN 空列表 | 抛出 IllegalArgumentException |
-| Operator 与 Value 不匹配 | 抛出 IllegalArgumentException |
-| 规范化 JSON 解析异常 | 抛出 IllegalStateException（上层可包装为业务错误） |
-
----
-
-## 9. 扩展策略（不直接修改内核的建议）
-
-| 需求 | 推荐做法 |
-|------|----------|
-| 新算子（如 BETWEEN_EXCLUSIVE） | 外层 DSL -> 编译为 RANGE + Boundary.OPEN |
-| 复合逻辑（如 A XOR B） | 编译期重写为 (A OR B) AND NOT (A AND B) |
-| 模糊权重/评分 | 另行扩展权重模型，不纳入内核 AST |
-| 聚合/排序/分页 | 归属上层 QueryDTO，不放入 Expr 树 |
-
----
-
-## 10. Roadmap
-
-| 优先级 | 项目 | 描述 |
-|--------|------|------|
-| High | JSON Schema 明文化 | 发布 machine-readable schema (JSON Schema Draft) |
-| High | 表达式缓存接口 | 提供可插拔 snapshot 缓存 SPI |
-| Mid | 更多 TextMatch | 支持正则 / 通配符 / 语音学匹配 |
-| Mid | 统计工具 | 节点计数 / 深度 / 复杂度分级 |
-| Low | Canonical 优化 | 大数组分块 + 并行排序（需要基准） |
-| Low | 运算重写优化 | 常见模式 (A AND A) -> A, (A AND TRUE) -> A |
-
----
-
-## 11. FAQ
-
-| 问题 | 回答 |
-|------|------|
-| 为什么不直接使用字符串 DSL? | 难以做结构化分析 / 重写 / 安全过滤；AST 提供静态保障 |
-| 为什么不支持 NOT IN? | 通过 NOT + IN 组合表达即可；保持算子集最小 |
-| Hash 与 JSON 哪个作为缓存键? | 建议使用 hash 主键 + canonicalJson 旁路存储便于调试 |
-| 是否需要稳定字段顺序? | 是，Canonical 化后保持，避免 hash 震荡 |
-
----
-
-## 12. 快速引用
-
-| 目标 | 代码 |
-|------|------|
-| 构建表达式 | `Expr expr = Exprs.term("field", "v", TextMatch.EXACT);` |
-| 序列化 | `String json = Exprs.toJson(expr);` |
-| 反序列化 | `Expr expr = Exprs.fromJson(json);` |
-| 规范化+哈希 | `ExprCanonicalizer.canonicalize(expr)` |
-| 自定义 Visitor | 实现 `ExprVisitor<R>` |
-
----
-
-## 13. 贡献指南（模块内）
-
-1. 新增节点/算子前先评估是否可由现有组合表达
-2. 保持 record / enum 不可变语义
-3. 绝不在内核引入框架依赖（Spring / MyBatis 等）
-4. 变更 JSON 协议需更新本 README 的“JSON 序列化协议”与 Roadmap
-5. 添加/修改规则后补充单元测试（序列化 / Canonical / Visitor）
-
----
-
-## 14. 参考
-
-| 主题 | 位置 |
-|------|------|
-| Canonical 实现 | `canonical/ExprCanonicalizer.java` |
-| JSON Codec | `json/ExprJsonCodec.java` |
-| 工厂 | `Exprs.java` |
-| AST 定义 | `Expr.java` + 同目录各节点 |
-| 快照 | `canonical/ExprCanonicalSnapshot.java` |
-
----
-
-如需扩展方案或遇到表达式翻译问题，请在主仓库讨论区提出（建议附：原始 JSON、canonicalJson、期望翻译方言示例）。
-
+# patra-expr-kernel
+
+统一的不可变表达式 AST 内核，支撑跨服务的过滤条件编排、规范化与签名。
+
+## 1. 模块定位
+- **服务/组件作用**：构建最小而稳定的布尔表达式模型（AND/OR/NOT/CONST/ATOM），输出可序列化、可规范化、可哈希的语义快照
+- **主要消费者**：`patra-spring-boot-starter-expr`、`patra-ingest`、未来的检索/分析服务
+- **架构边界**：纯 Java 库，无任何框架依赖；算子集合保持精简，扩展通过外围编译阶段实现
+
+## 2. 核心能力
+- **AST 定义**：sealed interface `Expr` + record 节点，保证不可变与类型安全
+- **序列化协议**：`ExprJsonCodec` 提供稳定 JSON Schema 与前向兼容策略
+- **规范化与签名**：`ExprCanonicalizer` 产出 canonical JSON 与 SHA-256 指纹，支撑缓存、幂等、审计
+- **Visitor 机制**：`ExprVisitor` 让 ES/SQL/自定义引擎可独立实现翻译器
+- **工具工厂**：`Exprs` 快速构造表达式，减少样板代码
+
+> 详尽说明（AST 表格、JSON 示例、性能策略）见 `docs/modules/expr-kernel/deep-dive.md`。
+
+## 3. 分层结构与依赖
+- 目录概览：`expr/`（AST）、`json/`（Codec）、`canonical/`（规范化）、`visitor/`（Visitor 接口）
+- 依赖：仅依赖 JDK 21、Jackson（由父 POM 管控）
+- 禁止事项：引入框架依赖、把聚合/查询语义直接放入 AST（需经外层转译）
+
+## 4. 运行与配置
+- **引入方式**：
+  ```xml
+  <dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-expr-kernel</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </dependency>
+  ```
+- **必要配置**：无；若与 Spring 集成，`patra-spring-boot-starter-expr` 会注入额外的编译与规则
+- **基本用法**：通过 `Exprs` 构建表达式 → `Exprs.toJson` 序列化 → `ExprCanonicalizer` 生成签名
+
+## 5. 观测与运维
+- 模块本身无运行态指标；其规范化输出用于跟踪表达式命中情况
+- 建议在使用方记录 `canonicalJson/hash` 以便排障和缓存命中分析
+
+## 6. 测试策略
+- AST：验证 record 不变量（字段非空、Operator/Value 匹配）
+- JSON Codec：序列化/反序列化互逆、前向兼容（忽略未知字段）
+- Canonicalizer：覆盖空值、数组去重、数值规范化；对复杂表达式进行快照对比
+- Visitor：为自定义翻译器提供最小单元测试集合
+
+## 7. Roadmap 与风险
+| 项目 | 状态 | 风险/备注 |
+|------|------|-----------|
+| JSON Schema 发布 | High | 需与调用方同步升级；Schema 变更需走版本管理 |
+| Snapshot 缓存 SPI | High | 注意线程安全与内存占用 |
+| TextMatch 扩展 | Mid | 保留最小算子集，需评估编译器兼容 | 
+| Canonical 性能优化 | Low | 大数组排序可能成为瓶颈，待基准验证 |
+
+## 8. 参考资料
+- 深度文档：`docs/modules/expr-kernel/deep-dive.md`
+- 表达式编译 Starter：`patra-spring-boot-starter-expr/README.md`
+- 采集链路示例：`docs/process/ingest-dataflow.md`
