@@ -9,7 +9,7 @@
 
 ## 2. 调度与上下文
 1. XXL-Job 调度中心触发作业，传入 `provenanceCode`、`operationCode`、窗口参数
-2. `patra-ingest-adapter` 解析调度参数，构造 `ScheduleInstance`
+2. `patra-ingest-adapter` 解析调度参数，构造 `ScheduleInstance` 并调用 `app.planning` 的 `PlanIngestionApplicationService`
 3. 记录调度日志，确保 `schedule_instance` 表可追溯
 
 ## 3. 配置拉取与规范化
@@ -20,15 +20,15 @@
 ## 4. 窗口解析与切片
 - 根据操作类型选择 HARVEST / BACKFILL / UPDATE 策略
 - 校验窗口跨度、滞后安全（lagSafety）与齐次对齐（alignment）
-- 通过 `SlicePlannerRegistry` 生成 PlanSlice（TIME / SINGLE 等），写入 `ing_plan_slice`
+- 通过 `app.planning.slice.SlicePlannerRegistry` 生成 PlanSlice（TIME / SINGLE 等），写入 `ing_plan_slice`
 
 ## 5. 任务装配与持久化
 1. 构建 Task（幂等键：`provenance:operation:slice_signature_hash:exprProtoHash`）
-2. 同事务写入 Plan / Slice / Task / OutboxMessage
+2. 同事务写入 Plan / Slice / Task / OutboxMessage（`app.planning.outbox.TaskOutboxPublisher` 负责挂载 Outbox 记录）
 3. 失败即整体回滚，成功记录 Plan 状态 `READY`
 
 ## 6. Outbox 发布
-1. Relay 任务扫描 `status=PENDING` 且租约未占用的消息
+1. Relay 任务（`app.relay.OutboxRelayExecutor`）扫描 `status=PENDING` 且租约未占用的消息
 2. 设置租约并发送 RocketMQ；成功后置为 `PUBLISHED` 并记录 msgId
 3. 失败根据 `retry_count` 动态计算 `next_retry_at`，超过阈值标记 `DEAD`
 

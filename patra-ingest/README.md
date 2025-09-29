@@ -5,7 +5,7 @@
 ## 1. 模块定位
 - **服务/组件作用**：围绕来源 (provenance) 与操作 (operation) 生成采集计划，保证链路幂等、可回放、可观测
 - **主要消费者**：调度中心（XXL-Job）、下游解析/清洗服务、RocketMQ 事件订阅方
-- **架构边界**：遵循六边形分层——`adapter`(调度/远端配置/Relay)、`app`(用例编排)、`domain`(Plan/Task 聚合)、`infra`(仓储)、`boot`(启动装配)
+- **架构边界**：遵循六边形分层——`adapter`(调度/远端配置/Relay)、`app`(Planning/Relay 用例编排)、`domain`(Plan/Task 聚合)、`infra`(仓储)、`boot`(启动装配)
 
 ## 2. 核心能力
 - **窗口策略**：HARVEST / BACKFILL / UPDATE，控制齐次校验与滞后安全
@@ -21,8 +21,8 @@
   | 子模块 | 职责 |
   |--------|------|
   | `patra-ingest-api` | 错误码、外部 DTO |
-  | `patra-ingest-adapter` | XXL-Job、远程配置适配、Outbox Relay |
-  | `patra-ingest-app` | 计划与 Relay 用例编排、幂等控制 |
+  | `patra-ingest-adapter` | XXL-Job、远程配置适配、Outbox Relay 调度入口 |
+  | `patra-ingest-app` | `planning`（计划装配）与 `relay`（Outbox Relay）用例编排 |
   | `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule 聚合与端口 |
   | `patra-ingest-infra` | MyBatis-Plus DO、Mapper、仓储实现 |
   | `patra-ingest-boot` | Spring Boot 启动、错误码映射 |
