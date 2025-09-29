@@ -46,9 +46,11 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
     @Transactional
     public RelayReport relay(OutboxRelayInstruction instruction) {
         if (!properties.isEnabled()) {
-            String channel = CharSequenceUtil.blankToDefault(instruction.channel(), properties.getDefaultChannel());
-            log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channel);
-            return RelayReport.empty(channel);
+            var channelKey = instruction.channel() != null
+                    ? instruction.channel()
+                    : resolveDefaultChannelKey();
+            log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channelKey.channel());
+            return RelayReport.empty(channelKey);
         }
         // 记录执行起始时间，用于生成耗时指标
         long start = System.currentTimeMillis();
@@ -56,7 +58,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
         RelayPlan plan = planBuilder.build(instruction);
         if (log.isDebugEnabled()) {
             log.debug("[INGEST][APP] relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
-                    plan.channel(), plan.batchSize(), plan.leaseOwner(), plan.leaseExpireAt());
+                    plan.channel().channel(), plan.batchSize(), plan.leaseOwner(), plan.leaseExpireAt());
         }
 
         RelayBatchResult result = relayExecutor.execute(plan);
@@ -64,7 +66,7 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
 
         long elapsed = System.currentTimeMillis() - start;
         log.info("[INGEST][APP] relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
-                result.channel(), result.fetched(), result.published(), result.retried(), result.failed(), result.leaseMissed(), elapsed);
+                result.channel().channel(), result.fetched(), result.published(), result.retried(), result.failed(), result.leaseMissed(), elapsed);
         return new RelayReport(
                 result.channel(),
                 result.fetched(),
@@ -73,5 +75,17 @@ public class OutboxRelayApplicationService implements OutboxRelayUseCase {
                 result.failed(),
                 result.leaseMissed()
         );
+    }
+
+    private com.patra.ingest.domain.messaging.ChannelKey resolveDefaultChannelKey() {
+        String cfg = properties.getDefaultChannel();
+        if (CharSequenceUtil.isNotBlank(cfg)) {
+            var byChannel = com.patra.ingest.domain.messaging.IngestChannels.fromChannel(cfg);
+            if (byChannel.isPresent()) return byChannel.get();
+            try {
+                return com.patra.ingest.domain.messaging.IngestChannels.valueOf(cfg.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) { }
+        }
+        return com.patra.ingest.domain.messaging.IngestChannels.TASK_READY;
     }
 }

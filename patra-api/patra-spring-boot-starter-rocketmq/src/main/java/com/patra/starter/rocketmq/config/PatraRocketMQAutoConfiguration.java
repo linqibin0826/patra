@@ -1,6 +1,9 @@
 package com.patra.starter.rocketmq.config;
 
 import com.patra.common.error.codes.HttpStdErrors;
+import com.patra.starter.rocketmq.channels.ChannelCatalog;
+import com.patra.starter.rocketmq.channels.ChannelRegistry;
+import com.patra.starter.rocketmq.config.PatraChannelProperties;
 import com.patra.starter.rocketmq.publisher.PatraMessagePublisher;
 import com.patra.starter.rocketmq.publisher.RocketMQMessagePublisher;
 import com.patra.starter.rocketmq.support.PatraMessageFactory;
@@ -18,7 +21,7 @@ import org.springframework.context.annotation.Bean;
  * 自定义 RocketMQ 自动配置，复用官方 starter 能力并注入自研规范组件。
  */
 @AutoConfiguration
-@EnableConfigurationProperties(PatraRocketMQProperties.class)
+@EnableConfigurationProperties({PatraRocketMQProperties.class, PatraChannelProperties.class})
 @ConditionalOnClass(RocketMQTemplate.class)
 @ConditionalOnProperty(prefix = "patra.messaging.rocketmq", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PatraRocketMQAutoConfiguration {
@@ -28,8 +31,17 @@ public class PatraRocketMQAutoConfiguration {
     public PatraMessagePublisher patraMessagePublisher(RocketMQTemplate rocketMQTemplate,
                                                        PatraRocketMQProperties properties,
                                                        org.springframework.core.env.Environment environment,
-                                                       org.springframework.beans.factory.ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) {
-        return new RocketMQMessagePublisher(rocketMQTemplate, properties, environment, httpErrorsProvider);
+                                                       org.springframework.beans.factory.ObjectProvider<HttpStdErrors.Group> httpErrorsProvider,
+                                                       ChannelRegistry channelRegistry) {
+        return new RocketMQMessagePublisher(rocketMQTemplate, properties, environment, httpErrorsProvider, channelRegistry);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelRegistry channelRegistry(org.springframework.beans.factory.ObjectProvider<java.util.Collection<ChannelCatalog>> catalogsProvider,
+                                           org.springframework.beans.factory.ObjectProvider<HttpStdErrors.Group> httpErrorsProvider,
+                                           PatraChannelProperties channelProperties) {
+        return new ChannelRegistry(catalogsProvider, httpErrorsProvider, channelProperties);
     }
 
     /**

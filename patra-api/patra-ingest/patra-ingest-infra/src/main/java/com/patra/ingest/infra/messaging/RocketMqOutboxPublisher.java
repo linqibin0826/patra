@@ -53,22 +53,22 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
      */
     @Override
     public PublishResult publish(OutboxMessage message, RelayPlan plan) {
-        String channel = plan.channel();
+        var channelKey = plan.channel();
         // 按照 Outbox 载荷映射为领域消息体
         TaskReadyMessage body = messageMapper.map(message);
         // 拼装 PatraMessage 以对接 MQ SDK（含 traceId / occurredAt）
         PatraMessage<TaskReadyMessage> mqMessage = buildMessage(message, body, plan.triggeredAt());
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] publish outbox message start channel={} dedupKey={} partitionKey={}", channel, message.getDedupKey(), message.getPartitionKey());
+            log.debug("[INGEST][INFRA] publish outbox message start channel={} dedupKey={} partitionKey={}", channelKey.channel(), message.getDedupKey(), message.getPartitionKey());
         }
         try {
             // 统一从 channel 解析为 destination 并发送
-            messagePublisher.sendByChannel(channel, mqMessage);
+            messagePublisher.sendByChannel(channelKey.channel(), mqMessage);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][INFRA] publish outbox message success channel={} dedupKey={}", channel, message.getDedupKey());
+                log.debug("[INGEST][INFRA] publish outbox message success channel={} dedupKey={}", channelKey.channel(), message.getDedupKey());
             }
         } catch (Exception e) {
-            log.error("[INGEST][INFRA] publish outbox message fail channel={} dedupKey={} err={}", channel, message.getDedupKey(), e.getMessage(), e);
+            log.error("[INGEST][INFRA] publish outbox message fail channel={} dedupKey={} err={}", channelKey.channel(), message.getDedupKey(), e.getMessage(), e);
             throw e;
         }
         return PublishResult.NONE;

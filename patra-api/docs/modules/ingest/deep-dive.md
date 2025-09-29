@@ -9,7 +9,7 @@
 2. 切片策略：TIME、SINGLE，可扩展注册
 3. 计划装配：Plan + Slice + Task 原子构建与部分失败处理
 4. 幂等体系：表达式/配置/切片规范化哈希 + 任务幂等键 + Outbox 去重字段
-5. Outbox & Relay：租约、指数退避、死信标记、分区顺序
+5. Outbox & Relay：租约、指数退避、死信标记、分区顺序，强类型通道目录（ChannelKey）
 6. 错误码映射：ING-12xx..16xx 覆盖验证、装配、持久化、Outbox、外部依赖
 
 ## 1. 模块角色
@@ -20,6 +20,7 @@
 | patra-ingest-adapter | XXL-Job 调度入口 / 远程 provenance 配置适配端口 / Outbox Relay Job |
 | patra-ingest-app | `planning`：计划构建、窗口解析、切片、任务与 Outbox 装配；`relay`：Outbox 租约发布、失败分类与退避策略 |
 | patra-ingest-domain | 聚合与领域异常（Plan / PlanSlice / Task / ScheduleInstance 等）以及仓储端口 |
+| patra-ingest-domain | 消息通道目录（ChannelKey / IngestChannels），统一发送/接收语义 |
 | patra-ingest-infra | MyBatis-Plus DO、Mapper、仓储实现、Outbox 持久化 |
 | patra-ingest-boot | Spring Boot 启动与错误码映射装配 |
 
@@ -49,7 +50,7 @@
 5. 校验（窗口合法、队列压力、来源能力）
 6. 装配：Plan(DRAFT→SLICING) → 切片列表 → 任务列表（计算幂等键）
 7. 持久化（Plan / Slice / Task + OutboxMessage 同事务）
-8. Relay（租约扫描 PENDING Outbox → 发布 MQ → 更新状态或重试）
+8. Relay（租约扫描 PENDING Outbox → `ChannelRegistry` 校验 channel → 发布 MQ → 更新状态或重试）
 
 失败策略：写库前失败直接中断；写库成功但发布失败则按照 `retry_count + next_retry_at` 指数退避，超过阈值标记 `DEAD`。
 
@@ -93,7 +94,9 @@
 发布步骤：
 1. 扫描 `status=PENDING` 且租约未占用、`not_before` 已到期的行
 2. 设置租约并置为 `PUBLISHING`
-3. 同步发送 MQ：成功 -> `PUBLISHED` + `msgId`；失败 -> 计算 `next_retry_at` 回退 `PENDING` 或超过阈值标记 `DEAD`
+3. 发送 MQ：发送前按全局 `ChannelRegistry` 校验 `channel`（小写点分段≥3，可选 domain，白名单）；
+   - 成功 -> `PUBLISHED` + `msgId`
+   - 失败 -> 计算 `next_retry_at` 回退 `PENDING` 或超过阈值标记 `DEAD`
 
 指数退避：`delay = baseMs * 2^retry`（裁剪上限），避免重试风暴。
 
@@ -147,6 +150,8 @@
 | `PlanningWindowResolver` | 自定义窗口算法 | 替换默认实现 |
 | `PlanExpressionBuilder` | 新 DSL/过滤表达式 | 组合/装饰模式注入 |
 | `DestinationBuilder` | 统一 `channel → destination` 解析 | 由 RocketMQ Starter 提供 |
+| `ChannelRegistry` | 统一 channel 注册/校验 | 注解/接口注册，`patra.messaging.channels.*` 控制 |
+| 领域通道目录 | `ChannelKey` + `IngestChannels` | 去魔法值，适配发送/接收 |
 | （可选）装饰 Publisher | 自定义发布策略（延迟/事务/路由） | 覆盖 `PatraMessagePublisher` Bean |
 | `IngestErrorMappingContributor` | 扩展错误码映射 | 追加异常映射 |
 
