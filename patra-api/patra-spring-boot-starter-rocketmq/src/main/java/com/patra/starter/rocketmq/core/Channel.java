@@ -1,4 +1,4 @@
-package com.patra.starter.rocketmq.core.channel;
+package com.patra.starter.rocketmq.core;
 
 import com.patra.common.messaging.ChannelKey;
 
@@ -34,27 +34,32 @@ public record Channel(String value) {
     }
 
     /**
+     * 分割并返回各段（懒加载）。
+     * <p>使用 limit=3 确保只分割前两个点，保持 event 段完整。
+     */
+    private String[] parts() {
+        return value.split("\\.", 3);
+    }
+
+    /**
      * 获取领域（第一段）。
      */
     public String domain() {
-        return value.substring(0, value.indexOf('.'));
+        return parts()[0];
     }
 
     /**
      * 获取资源（第二段）。
      */
     public String resource() {
-        String afterDomain = value.substring(value.indexOf('.') + 1);
-        int idx = afterDomain.indexOf('.');
-        return idx > 0 ? afterDomain.substring(0, idx) : afterDomain;
+        return parts()[1];
     }
 
     /**
      * 获取事件（第三段及之后）。
      */
     public String event() {
-        String afterDomain = value.substring(value.indexOf('.') + 1);
-        int idx = afterDomain.indexOf('.');
-        return idx > 0 ? afterDomain.substring(idx + 1) : "";
+        String[] p = parts();
+        return p.length > 2 ? p[2] : "";
     }
 }

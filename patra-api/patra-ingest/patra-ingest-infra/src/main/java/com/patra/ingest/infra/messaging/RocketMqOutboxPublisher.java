@@ -6,7 +6,7 @@ import com.patra.ingest.domain.model.vo.RelayPlan;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
 import com.patra.ingest.infra.messaging.converter.TaskReadyMessageConverter;
-import com.patra.starter.rocketmq.core.channel.Channel;
+import com.patra.starter.rocketmq.core.Channel;
 import com.patra.starter.rocketmq.core.message.Message;
 import com.patra.starter.rocketmq.publisher.MessagePublisher;
 import lombok.extern.slf4j.Slf4j;

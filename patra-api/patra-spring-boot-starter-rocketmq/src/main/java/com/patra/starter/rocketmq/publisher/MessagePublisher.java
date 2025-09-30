@@ -1,6 +1,6 @@
 package com.patra.starter.rocketmq.publisher;
 
-import com.patra.starter.rocketmq.core.channel.Channel;
+import com.patra.starter.rocketmq.core.Channel;
 import com.patra.starter.rocketmq.core.destination.Destination;
 import com.patra.starter.rocketmq.core.message.Message;
 
