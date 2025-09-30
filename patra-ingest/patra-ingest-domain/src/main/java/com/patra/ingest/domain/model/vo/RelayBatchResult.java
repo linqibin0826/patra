@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.vo;
 
 import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
+import com.patra.ingest.domain.messaging.ChannelKey;
 
 import java.util.Collections;
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.List;
  * Relay 批次执行结果。
  */
 public record RelayBatchResult(
-        com.patra.ingest.domain.messaging.ChannelKey channel,
+        ChannelKey channel,
         int fetched,
         int published,
         int retried,
