@@ -1,4 +1,6 @@
-# Registry 服务专题
+# Registry 服务专题（已归档）
+
+> 本页已合并至：`docs/modules/registry/deep-dive.md`。如需最新内容请跳转至专题页。
 
 本专题补充 `patra-registry/README.md`，聚焦配置治理、快照生成与常见运维操作。
 
