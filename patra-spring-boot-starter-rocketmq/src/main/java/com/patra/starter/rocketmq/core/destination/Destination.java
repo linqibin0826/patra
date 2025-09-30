@@ -12,6 +12,9 @@ public record Destination(String topic, String tag) {
 
     public Destination {
         Objects.requireNonNull(topic, "topic 不能为空");
+        if (topic.isBlank()) {
+            throw new IllegalArgumentException("topic 不能为空白字符串");
+        }
         // tag 允许为 null（表示不指定 tag）
     }
 
@@ -20,9 +23,18 @@ public record Destination(String topic, String tag) {
      */
     public static Destination parse(String destination) {
         Objects.requireNonNull(destination, "destination 不能为空");
+        if (destination.isBlank()) {
+            throw new IllegalArgumentException("destination 不能为空白字符串");
+        }
+        
         int idx = destination.indexOf(':');
         if (idx > 0) {
-            return new Destination(destination.substring(0, idx), destination.substring(idx + 1));
+            String topic = destination.substring(0, idx);
+            String tag = destination.substring(idx + 1);
+            if (tag.isBlank()) {
+                throw new IllegalArgumentException("tag 不能为空白字符串: " + destination);
+            }
+            return new Destination(topic, tag);
         }
         return new Destination(destination, null);
     }

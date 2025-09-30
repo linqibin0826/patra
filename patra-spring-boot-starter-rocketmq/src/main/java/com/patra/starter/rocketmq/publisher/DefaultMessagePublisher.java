@@ -2,11 +2,11 @@ package com.patra.starter.rocketmq.publisher;
 
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.HttpStdErrors;
-import com.patra.starter.rocketmq.core.channel.Channel;
+import com.patra.starter.rocketmq.core.Channel;
 import com.patra.starter.rocketmq.core.destination.Destination;
-import com.patra.starter.rocketmq.core.destination.DestinationBuilder;
+import com.patra.starter.rocketmq.core.destination.ChannelDestinationConverter;
 import com.patra.starter.rocketmq.core.message.Message;
-import com.patra.starter.rocketmq.core.message.MessageHeaders;
+import com.patra.starter.rocketmq.core.message.MessageHeaderKeys;
 import com.patra.starter.rocketmq.validation.TopicValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
@@ -23,16 +23,16 @@ import org.springframework.messaging.support.MessageBuilder;
 public class DefaultMessagePublisher implements MessagePublisher {
 
     private final RocketMQTemplate rocketMQTemplate;
-    private final DestinationBuilder destinationBuilder;
+    private final ChannelDestinationConverter channelDestinationConverter;
     private final TopicValidator topicValidator;
     private final ObjectProvider<HttpStdErrors.Group> httpErrorsProvider;
 
     public DefaultMessagePublisher(RocketMQTemplate rocketMQTemplate,
-                                   DestinationBuilder destinationBuilder,
+                                   ChannelDestinationConverter channelDestinationConverter,
                                    TopicValidator topicValidator,
                                    ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) {
         this.rocketMQTemplate = rocketMQTemplate;
-        this.destinationBuilder = destinationBuilder;
+        this.channelDestinationConverter = channelDestinationConverter;
         this.topicValidator = topicValidator;
         this.httpErrorsProvider = httpErrorsProvider;
     }
@@ -45,8 +45,8 @@ public class DefaultMessagePublisher implements MessagePublisher {
     @Override
     public void sendByChannel(Channel channel, Message<?> message) {
         try {
-            // 构建 destination
-            Destination destination = destinationBuilder.build(channel);
+            // 转换 channel 为 destination
+            Destination destination = channelDestinationConverter.convert(channel);
 
             // 发送
             send(destination, message);
@@ -80,9 +80,9 @@ public class DefaultMessagePublisher implements MessagePublisher {
             // 构建 RocketMQ 消息
             org.springframework.messaging.Message<?> mqMessage = MessageBuilder
                     .withPayload(message)
-                    .setHeader(MessageHeaders.EVENT_ID, message.getEventId())
-                    .setHeader(MessageHeaders.TRACE_ID, message.getTraceId())
-                    .setHeader(MessageHeaders.OCCURRED_AT, message.getOccurredAt())
+                    .setHeader(MessageHeaderKeys.EVENT_ID, message.getEventId())
+                    .setHeader(MessageHeaderKeys.TRACE_ID, message.getTraceId())
+                    .setHeader(MessageHeaderKeys.OCCURRED_AT, message.getOccurredAt())
                     .build();
 
             String dest = destination.toString();

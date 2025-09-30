@@ -3,7 +3,7 @@ package com.patra.starter.rocketmq.autoconfigure;
 import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.rocketmq.consumer.ConsumerBootstrap;
-import com.patra.starter.rocketmq.core.destination.DestinationBuilder;
+import com.patra.starter.rocketmq.core.destination.ChannelDestinationConverter;
 import com.patra.starter.rocketmq.core.message.MessageFactory;
 import com.patra.starter.rocketmq.naming.NamespaceResolver;
 import com.patra.starter.rocketmq.publisher.DefaultMessagePublisher;
@@ -47,9 +47,9 @@ public class RocketMQAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public DestinationBuilder destinationBuilder(Environment environment, RocketMQProperties properties) {
+    public ChannelDestinationConverter channelDestinationConverter(Environment environment, RocketMQProperties properties) {
         String namespace = NamespaceResolver.resolve(environment, properties.getNaming().getNamespace());
-        return new DestinationBuilder(namespace);
+        return new ChannelDestinationConverter(namespace);
     }
 
     @Bean
@@ -62,12 +62,12 @@ public class RocketMQAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public MessagePublisher messagePublisher(RocketMQTemplate rocketMQTemplate,
-                                             DestinationBuilder destinationBuilder,
+                                             ChannelDestinationConverter channelDestinationConverter,
                                              TopicValidator topicValidator,
                                              ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) {
         return new DefaultMessagePublisher(
                 rocketMQTemplate,
-                destinationBuilder,
+                channelDestinationConverter,
                 topicValidator,
                 httpErrorsProvider
         );
