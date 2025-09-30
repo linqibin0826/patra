@@ -1,5 +1,7 @@
 package com.patra.starter.rocketmq.core.channel;
 
+import com.patra.common.messaging.ChannelKey;
+
 import java.util.Objects;
 import java.util.regex.Pattern;
 

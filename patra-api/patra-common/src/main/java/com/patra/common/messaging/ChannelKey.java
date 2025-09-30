@@ -24,6 +24,7 @@ package com.patra.common.messaging;
  * @since 0.1.0
  */
 public interface ChannelKey {
+
     /**
      * 业务域，如：ingest / registry / analysis
      * <p>建议小写，对应微服务名或领域边界</p>

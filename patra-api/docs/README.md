@@ -16,7 +16,8 @@
 - Registry 专题：`modules/registry/deep-dive.md`
 - Ingest 深入：`modules/ingest/deep-dive.md`
 - 公共模块：`modules/common/deep-dive.md`、`modules/expr-kernel/deep-dive.md`
-- Starter 深入：`modules/starters/core.md`、`modules/starters/web.md`、`modules/starters/expr.md`、`modules/starters/mybatis.md`、`modules/starters/feign.md`
+- Starter 模块 README：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`、`patra-spring-boot-starter-rocketmq/README.md`
+- RocketMQ Starter 使用指南：`modules/starters/rocketmq-starter.md`
 
 - 错误处理总览：`standards/platform-error-handling.md`
 - 日志规范：`standards/logging-convention.md`
@@ -25,4 +26,4 @@
 - 新增文档时确认归属目录，并在此索引补充链接
 - 文档顶部注明状态（草案/待补充/已验证），提示阅读者可信度
 - 引用代码请使用仓库相对路径或固定 commit 链接，避免链接失效
-- 模块专题文档作为权威来源；如需在模块代码目录（如 `patra-*/`）保留 README，请指向对应专题页，避免重复维护
+- 模块专题文档作为权威来源；Starter 类文档以各 Starter 模块 README 为权威。若在模块代码目录（如 `patra-*/`）保留 README，请指向对应专题页/权威页，避免重复维护

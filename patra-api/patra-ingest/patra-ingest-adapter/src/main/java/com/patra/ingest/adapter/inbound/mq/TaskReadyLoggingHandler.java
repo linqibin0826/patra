@@ -1,12 +1,10 @@
 package com.patra.ingest.adapter.inbound.mq;
 
-import com.patra.ingest.api.messaging.IngestPublishedChannels;
-import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
-import com.patra.starter.rocketmq.consumer.ConsumerMode;
-import com.patra.starter.rocketmq.consumer.Consumes;
-import com.patra.starter.rocketmq.consumer.PatraMessageHandler;
-import com.patra.starter.rocketmq.model.PatraMessage;
+import com.patra.starter.rocketmq.consumer.ConsumeMode;
+import com.patra.starter.rocketmq.consumer.MessageHandler;
+import com.patra.starter.rocketmq.consumer.MessageListener;
+import com.patra.starter.rocketmq.core.message.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,14 +18,15 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Consumes(channel = IngestPublishedChannels.TASK_READY,  // 使用领域常量，保持一致性
+@MessageListener(
+        channel = "ingest.task.ready",  // 直接指定 channel 字符串
         consumer = "relay",
-        mode = ConsumerMode.CONCURRENT,
+        mode = ConsumeMode.CONCURRENT,
         concurrency = 2)
-public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMessage> {
+public class TaskReadyLoggingHandler implements MessageHandler<TaskReadyMessage> {
 
     @Override
-    public void handle(PatraMessage<TaskReadyMessage> message) {
+    public void handle(Message<TaskReadyMessage> message) {
         // 仅记录日志，验证链路打通；实际项目请调用应用服务
         log.info("[INGEST][ADAPTER] recv task-ready eventId={} traceId={} payload={}",
                 message.getEventId(), message.getTraceId(), message.getPayload());

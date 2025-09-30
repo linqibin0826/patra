@@ -74,7 +74,7 @@ patra-gateway-boot/
 主要风险：过滤器阻塞导致事件循环卡顿、错误透传不一致、安全策略缺失。建议逐项落地并监控。
 
 ## 8. 参考资料
-- Starter 使用指南：`docs/modules/starters/`（核心/Web/Feign/MyBatis 等）
+- Starter 使用指南：各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`、`patra-spring-boot-starter-rocketmq`）
 - 错误模型：`docs/standards/platform-error-handling.md`
 - 架构概览：`docs/overview/architecture.md`
 - FAQ 提示：

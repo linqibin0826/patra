@@ -22,7 +22,6 @@ import java.util.Optional;
  * <ul>
  *   <li><b>内部发送侧</b>：使用枚举实例 {@code IngestPublishingChannels.TASK_READY.channel()}</li>
  *   <li><b>外部消费侧</b>：引用 API 契约 {@code IngestPublishedChannels.TASK_READY}</li>
- *   <li><b>配置注册</b>：通过 {@link com.patra.starter.rocketmq.channels.ChannelCatalog} 注册到白名单</li>
  * </ul>
  * </p>
  *

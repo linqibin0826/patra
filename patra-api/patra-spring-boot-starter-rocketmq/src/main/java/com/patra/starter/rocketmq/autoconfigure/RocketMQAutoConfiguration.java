@@ -1,8 +1,9 @@
 package com.patra.starter.rocketmq.autoconfigure;
 
+import com.patra.common.error.codes.HttpStdErrors;
+import com.patra.common.messaging.ChannelKey;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.rocketmq.consumer.ConsumerBootstrap;
-import com.patra.starter.rocketmq.core.channel.ChannelKey;
 import com.patra.starter.rocketmq.core.channel.ChannelRegistry;
 import com.patra.starter.rocketmq.core.destination.DestinationBuilder;
 import com.patra.starter.rocketmq.core.message.MessageFactory;
@@ -11,7 +12,6 @@ import com.patra.starter.rocketmq.publisher.DefaultMessagePublisher;
 import com.patra.starter.rocketmq.publisher.MessagePublisher;
 import com.patra.starter.rocketmq.validation.GroupValidator;
 import com.patra.starter.rocketmq.validation.TopicValidator;
-import com.patra.common.error.codes.HttpStdErrors;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -111,7 +111,7 @@ public class RocketMQAutoConfiguration {
             scanner.addIncludeFilter(new AssignableTypeFilter(ChannelKey.class));
 
             // 扫描常见包路径
-            String[] basePackages = {"com.patra", "com.papertrace"};
+            String[] basePackages = {"com.patra"};
             for (String basePackage : basePackages) {
                 scanner.findCandidateComponents(basePackage).forEach(beanDef -> {
                     try {
