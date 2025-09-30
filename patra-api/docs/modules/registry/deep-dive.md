@@ -81,6 +81,12 @@ isEffectiveAt(t) = !t.isBefore(effectiveFrom) && (effectiveTo == null || t.isBef
 taskType / operationCode 允许占位 "ALL"（标准化阶段统一填充）
 ```
 
+### 1.6 配置生效流程（摘要）
+1. 在管理端写入配置（或通过 SQL 种子导入）
+2. 数据按 `effective_from` / `effective_to` 控制时间窗口
+3. Registry 读取时依据 `Scope` 优先级 SOURCE < TASK 合并
+4. 最终快照通过 Feign 暴露给 ingest / 分析服务
+
 ---
 
 ## 2. 分层结构与依赖（Hexagonal）
@@ -304,6 +310,12 @@ String opCodeTrimmed = DomainValidationException.notBlank(operationCode, "Operat
 | 快照缓存过期     | 读取陈旧 | 版本号 + 失效广播（规划）            |
 | 参数映射缺失     | 下游异常 | 构建 snapshot 时校验必需 Key（规划） |
 
+建议建立定时巡检任务，检测以下风险：
+
+- 同一 scope + task + operation 的时间窗口重叠
+- Dictionary 默认项超过 1 条
+- Expr 能力缺失必需字段
+
 ---
 
 ## 10. 测试策略
@@ -357,6 +369,9 @@ String opCodeTrimmed = DomainValidationException.notBlank(operationCode, "Operat
 * 添加错误码：更新 `ERROR_CODE_CATALOG.md`，不得复用既有编号。
 * 性能相关改动：附基准（前后 latency 或构建耗时）。
 * PR 模板字段：Changelog / 风险 / 回滚策略 / 验证步骤。
+* 配置变更采用追加式（append-only），避免直接修改历史记录；关键配置使用事务并记录操作人。
+* 批量导入先在测试库验证，可参考 `docs/modules/registry/sql` 样例。
+* 写侧尚未启用 Outbox，变更后请关注缓存失效与快照一致性（参见 Roadmap）。
 
 ---
 
@@ -369,3 +384,19 @@ String opCodeTrimmed = DomainValidationException.notBlank(operationCode, "Operat
 | reg_prov_expr_*              | 表达式能力（field / capability / render_rule / api_param_mapping）                                      |
 
 
+
+## 16. 附：常用命令
+
+```bash
+# 校验模块测试
+cd patra-registry && ../../mvnw -q test
+
+# 单独运行 Boot 服务（本地）
+../../mvnw -pl patra-registry/patra-registry-boot -am spring-boot:run
+```
+
+## 17. 延伸阅读
+
+- 模块 README：`patra-registry/README.md`
+- SQL 种子：`docs/modules/registry/sql`
+- 错误规范：`docs/standards/platform-error-handling.md`

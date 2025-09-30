@@ -1,0 +1,163 @@
+package com.patra.starter.expr.compiler;
+
+import com.patra.common.enums.ProvenanceCode;
+import com.patra.expr.Expr;
+import com.patra.expr.Exprs;
+import com.patra.expr.TextMatch;
+import com.patra.starter.expr.compiler.check.CapabilityChecker;
+import com.patra.starter.expr.compiler.model.CompileRequest;
+import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
+import com.patra.starter.expr.compiler.model.CompileResult;
+import com.patra.starter.expr.compiler.model.Issue;
+import com.patra.starter.expr.compiler.model.RenderTrace;
+import com.patra.starter.expr.compiler.render.ExprRenderer;
+import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
+import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class DefaultExprCompilerTest {
+
+    private ProvenanceSnapshot snapshot;
+
+    @BeforeEach
+    void setUp() {
+        ProvenanceSnapshot.FieldDefinition field = new ProvenanceSnapshot.FieldDefinition(
+                "title", "Title", "", ProvenanceSnapshot.DataType.TEXT, ProvenanceSnapshot.Cardinality.SINGLE, true, false
+        );
+        ProvenanceSnapshot.Capability capability = new ProvenanceSnapshot.Capability(
+                Set.of("TERM"),
+                Set.of(),
+                false,
+                Set.of("PHRASE"),
+                false,
+                false,
+                0,
+                100,
+                null,
+                100,
+                false,
+                ProvenanceSnapshot.RangeKind.NONE,
+                false,
+                false,
+                false,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                Set.of(),
+                null
+        );
+        snapshot = new ProvenanceSnapshot(
+                new ProvenanceSnapshot.Identity(1L, "PUBMED", "PubMed"),
+                ProvenanceSnapshot.Scope.sourceScope(),
+                new ProvenanceSnapshot.Operation("SEARCH", "UTC"),
+                1L,
+                Instant.parse("2024-05-01T00:00:00Z"),
+                Map.of("title", field),
+                Map.of("title", capability),
+                Map.of(),
+                List.of()
+        );
+    }
+
+    @Test
+    void compile_shouldStopWhenCapabilityErrors() {
+        Issue error = Issue.error("E", "err", Map.of());
+        DefaultExprCompiler compiler = new DefaultExprCompiler(
+                new StubSnapshotLoader(snapshot),
+                new StubCapabilityChecker(List.of(error)),
+                new IdentityNormalizer(),
+                new StubRenderer("query", Map.of(), List.of(), null)
+        );
+
+        CompileRequest request = CompileRequestBuilder.of(Exprs.term("title", "hello", TextMatch.PHRASE), ProvenanceCode.PUBMED)
+                .build();
+        CompileResult result = compiler.compile(request);
+
+        assertThat(result.query()).isEmpty();
+        assertThat(result.report().errors()).containsExactly(error);
+        assertThat(result.snapshot().provenanceCode()).isEqualTo("PUBMED");
+    }
+
+    @Test
+    void compile_shouldRenderQueryAndMergeWarnings() {
+        Issue warn = Issue.warn("W", "warn", Map.of());
+        RenderTrace trace = new RenderTrace(List.of(new RenderTrace.Hit("title", "TERM", 1, "rule")));
+        DefaultExprCompiler compiler = new DefaultExprCompiler(
+                new StubSnapshotLoader(snapshot),
+                new StubCapabilityChecker(List.of()),
+                new IdentityNormalizer(),
+                new StubRenderer("title:hello", Map.of("q", "hello"), List.of(warn), trace)
+        );
+
+        CompileRequest request = CompileRequestBuilder.of(Exprs.term("title", "hello", TextMatch.PHRASE), ProvenanceCode.PUBMED)
+                .withTraceEnabled(true)
+                .build();
+        CompileResult result = compiler.compile(request);
+
+        assertThat(result.query()).isEqualTo("title:hello");
+        assertThat(result.params()).containsEntry("q", "hello");
+        assertThat(result.report().warnings()).containsExactly(warn);
+        assertThat(result.trace()).isEqualTo(trace);
+    }
+
+    @Test
+    void compile_shouldAddLengthErrorWhenQueryTooLong() {
+        DefaultExprCompiler compiler = new DefaultExprCompiler(
+                new StubSnapshotLoader(snapshot),
+                new StubCapabilityChecker(List.of()),
+                new IdentityNormalizer(),
+                new StubRenderer("a".repeat(50), Map.of(), List.of(), null)
+        );
+
+        CompileRequest request = CompileRequestBuilder.of(Exprs.term("title", "hello", TextMatch.PHRASE), ProvenanceCode.PUBMED)
+                .withMaxQueryLength(10)
+                .build();
+        CompileResult result = compiler.compile(request);
+
+        assertThat(result.query()).isEmpty();
+        assertThat(result.report().errors())
+                .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("E-QUERY-LEN-MAX"));
+    }
+
+    private record StubSnapshotLoader(ProvenanceSnapshot snapshot) implements RuleSnapshotLoader {
+        @Override
+        public ProvenanceSnapshot load(ProvenanceCode provenanceCode, String taskType, String operationCode) {
+            return snapshot;
+        }
+    }
+
+    private record StubCapabilityChecker(List<Issue> issues) implements CapabilityChecker {
+        @Override
+        public List<Issue> check(Expr expression, ProvenanceSnapshot snapshot, boolean strictMode) {
+            return issues;
+        }
+    }
+
+    private record StubRenderer(String query, Map<String, String> params, List<Issue> warnings, RenderTrace trace)
+            implements ExprRenderer {
+        @Override
+        public RenderOutcome render(Expr expression, ProvenanceSnapshot snapshot, boolean traceEnabled) {
+            return new RenderOutcome(query, params, warnings, trace);
+        }
+    }
+
+    private static final class IdentityNormalizer implements com.patra.starter.expr.compiler.normalize.ExprNormalizer {
+        @Override
+        public Expr normalize(Expr expression, boolean strictMode) {
+            return expression;
+        }
+    }
+}

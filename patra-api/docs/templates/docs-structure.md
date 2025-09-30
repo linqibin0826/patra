@@ -11,9 +11,11 @@ docs/
 │   ├─ ingest-dataflow.md
 │   ├─ registry-config-lifecycle.md
 │   └─ error-handling.md
-├─ modules/                  # 按模块拆分的深度文档（与 README 互补）
-│   ├─ ingest.md
-│   ├─ registry.md
+├─ modules/                  # 按模块拆分的专题文档（deep-dive），不再维护模块 README
+│   ├─ ingest/
+│   │   └─ deep-dive.md
+│   ├─ registry/
+│   │   └─ deep-dive.md
 │   └─ starters/
 │       ├─ core.md
 │       └─ feign.md

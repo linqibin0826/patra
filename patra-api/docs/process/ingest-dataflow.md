@@ -48,4 +48,4 @@
 ## 9. 相关文档
 - 模块 README：`patra-ingest/README.md`
 - 错误规范：`docs/standards/cross-service-error-best-practices.md`
-- RocketMQ 规范：`docs/modules/starters/rocketmq-usage.md`
+- Starters 指南：`docs/modules/starters/`（核心/Web/Feign/MyBatis 等）

@@ -265,6 +265,6 @@ class MessagePublisherTest {
 
 ## 10. 参考资料
 
-- 深度文档：`docs/modules/starters/rocketmq.md`
+- Starters 指南：`docs/modules/starters/`（核心/Web/Feign/MyBatis 等）
 - Outbox 流程：`docs/modules/ingest/deep-dive.md`
 - 错误规范：`docs/standards/platform-error-handling.md`

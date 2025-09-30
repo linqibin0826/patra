@@ -24,7 +24,7 @@ Papertrace 聚焦医学科研文献的统一采集、标准化与智能分析，
 | 模块 | 职责摘要 | 深入文档 |
 |------|---------|---------|
 | `patra-ingest` | 采集计划装配、窗口切片、Outbox 发布 | [README](patra-ingest/README.md) · [采集链路](docs/process/ingest-dataflow.md) |
-| `patra-registry` | 配置/字典/表达式 SSOT，提供快照服务 | [README](patra-registry/README.md) · [专题](docs/modules/registry/README.md) |
+| `patra-registry` | 配置/字典/表达式 SSOT，提供快照服务 | [README](patra-registry/README.md) · [专题](docs/modules/registry/deep-dive.md) |
 | `patra-gateway-boot` | API 网关、路由、鉴权与错误对齐 | [README](patra-gateway-boot/README.md) |
 | `patra-common` | 跨服务领域基类、错误模型、JSON 规范化 | [README](patra-common/README.md) |
 | `patra-expr-kernel` | 表达式 AST 与规范化引擎 | [README](patra-expr-kernel/README.md) |
@@ -34,7 +34,7 @@ Papertrace 聚焦医学科研文献的统一采集、标准化与智能分析，
 ## 业务与流程入口
 - **采集→计划→出站**：详见 `docs/process/ingest-dataflow.md`
 - **错误规范与跨服务处理**：`docs/standards/platform-error-handling.md`、`docs/standards/cross-service-error-best-practices.md`
-- **RocketMQ 使用规范**：`docs/modules/starters/rocketmq-usage.md`
+
 - 更多流程文档将逐步补充至 `docs/process/`
 
 ## 开发规范速览
@@ -43,7 +43,7 @@ Papertrace 聚焦医学科研文献的统一采集、标准化与智能分析，
 - 公共能力优先复用 `patra-common` 与自研 Starters，不重复造轮子
 - 错误输出采用 ProblemDetail，使用 `patra.error.context-prefix` 管理错误段
 - 配置与密钥通过 Nacos/环境变量管理，禁止写入仓库
-- 更多规范参见 `docs/standards/platform-error-handling.md` 与各模块 README
+- 更多规范参见 `docs/standards/platform-error-handling.md` 与各模块专题文档（deep-dive）
 
 ## 观测与运维
 - 指标：通过 Micrometer 输出错误计数、延迟、慢调用、熔断等指标，计划统一落到 SkyWalking/Prometheus

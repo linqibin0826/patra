@@ -102,5 +102,5 @@
 ## 8. 参考资料
 - 深入文档：`docs/modules/ingest/deep-dive.md`
 - 端到端流程：`docs/process/ingest-dataflow.md`
-- Registry 配置：`docs/modules/registry/README.md`
+- Registry 配置：`docs/modules/registry/deep-dive.md`
 - 错误规范：`docs/standards/platform-error-handling.md`
