@@ -1,30 +1,11 @@
 # patra-spring-boot-starter-rocketmq
 
-RocketMQ 统一封装 Sta### Channel 注册（约束"可用 channel"）
-推荐使用 `ChannelCatalog` 接口方式，从领域枚举自动提取：
-```java
-@Configuration
-public class IngestMessagingConfiguration {
-    @Bean
-    public ChannelCatalog ingestChannelCatalog() {
-        return () -> Arrays.stream(IngestChannels.values())
-                          .map(ChannelKey::channel)
-                          .collect(Collectors.toSet());
-    }
-}
-```
-或使用注解方式（适用于简单场景）：
-```java
-@Component
-@PatraMessagingChannels({"ingest.task.ready"})
-class ChannelRegistration {}
-```
-可选配置：息模型、命名/分组规范校验、目的地构建与发布抽象。
+RocketMQ 统一封装：消息模型、发布抽象、命名规范校验、目的地构建与 Channel 注册。
 
 ## 1. 模块定位
 - **服务/组件作用**：标准化 RocketMQ 消息的 header/payload、Topic 命名与发布 API
 - **主要消费者**：`patra-ingest` Outbox Relay、未来事件驱动服务
-- **架构边界**：Starter 负责封装模板和规范约束；消费端基类将在后续版本提供
+- **架构边界**：Starter 负责封装模板和规范约束；提供 `PatraMessageHandler` 接口供消费端实现
 
 ## 2. 核心能力
 - 消息模型：`PatraMessage<T>` 统一 `eventId`/`traceId`/`occurredAt`
@@ -32,8 +13,10 @@ class ChannelRegistration {}
 - 命名规范：`TopicNameValidator`（Topic 前缀/正则/namespace）+ `GroupNameValidator`（消费组）
 - 启动校验：`RocketMQListenerAnnotationValidator` 对 `@RocketMQMessageListener` 的 `topic/tag/group` 进行 fail-fast 校验
 - 目的地构建：`DestinationBuilder.fromChannel("domain.resource.event") -> TOPIC:TAG`
-- Channel 注册：`ChannelRegistry` 统一收集与校验允许的 channel（注解/接口式），`sendByChannel` 发送前进行校验
+- **API 契约**：发布方在 `{service}-api` 模块暴露 `PublishedChannels`，消费方引用避免硬编码
+- Channel 注册：`ChannelRegistry` 统一收集与校验允许的 channel，`sendByChannel` 发送前进行校验
 - Trace 衔接：`PatraMessageFactory` 优先从 `TraceProvider` 注入 `traceId`
+- 消费者接口：`PatraMessageHandler<T>` + `@Consumes` 注解实现运行时注册
 
 详尽用法、配置表与最佳实践见 `docs/modules/starters/rocketmq.md`。
 
@@ -61,32 +44,47 @@ class ChannelRegistration {}
           namespace: ${spring.profiles.active:}
           topic-pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"
           tag-delimiter: "."
+          consumer-group-pattern: "^[a-z][a-z0-9\\-]*$"
         retry:
           max-attempts: 3
           backoff: 1s
+      channels:
+        enforce: true         # 默认 true；true 时要求在注册表内
+        domain: ingest        # 可选；要求 channel 第一段等于该值
   rocketmq:
     name-server: ${MQ_NAMESERVER}
-    producer.group: ingest-producer
+    producer:
+      group: ingest-producer
   ```
 - 发布示例：`publisher.send("INGEST.ARTICLE.CREATED", PatraMessage.of(payload))`
 - Channel 示例：`publisher.sendByChannel("ingest.task.ready", PatraMessage.of(payload)) // -> INGEST.TASK:READY`
- - 消费组命名：`svc-{service}-{consumer}-cg`（正则 `^[a-z][a-z0-9\-]*$`），示例：`svc-ingest-relay-cg`
-
-### Channel 注册（约束“可用 channel”）
-无需 YAML，推荐在模块内用注解声明：
-```java
-@Component
-@PatraMessagingChannels({"ingest.task.ready"})
-class IngestMessagingChannels {}
-```
-或提供一个 `ChannelCatalog` Bean 返回集合。可选配置：
-```yaml
-patra:
-  messaging:
-    channels:
-      enforce: true         # 默认 true；true 时要求在注册表内
-      domain: ingest        # 可选；要求 channel 第一段等于该值
-```
+- 消费组命名：`svc-{service}-{consumer}-cg`（正则 `^[a-z][a-z0-9\-]*$`），示例：`svc-ingest-relay-cg`
+- 消费者注解：
+  ```java
+  // 方式一：引用发布方 API 契约（推荐）
+  import com.patra.ingest.api.messaging.IngestPublishedChannels;
+  
+  @Consumes(channel = IngestPublishedChannels.TASK_READY, consumer = "relay")
+  
+  // 方式二：字符串 channel（不推荐，容易硬编码错误）
+  @Consumes(channel = "ingest.task.ready", consumer = "relay")
+  
+  // 方式三：枚举 channel（内部使用，类型安全）
+  @Consumes(channelEnum = IngestChannels.class, channelName = "TASK_READY", consumer = "relay")
+  ```
+- Channel 注册：提供 `ChannelCatalog` Bean，从领域枚举自动提取（实现 SSOT）
+  ```java
+  @Configuration
+  public class IngestMessagingConfiguration {
+      @Bean
+      public ChannelCatalog ingestChannelCatalog() {
+          // 自动从领域枚举提取所有 channel，保持单一数据源
+          return () -> Arrays.stream(IngestChannels.values())
+                            .map(ChannelKey::channel)
+                            .collect(Collectors.toSet());
+      }
+  }
+  ```
 
 ## 5. 观测与运维
 - 关键日志：Topic、eventId、traceId、publish result；建议落地统一日志模式
@@ -113,7 +111,7 @@ patra:
 
 风险：Topic 命名不合规、NameServer/Producer 配置缺失、traceId 未透传导致链路断档。
 
-## 8. 参考资料
+## 9. 参考资料
 - 深度文档：`docs/modules/starters/rocketmq.md`
 - Outbox 流程：`docs/modules/ingest/deep-dive.md`
 - 错误规范：`docs/standards/platform-error-handling.md`

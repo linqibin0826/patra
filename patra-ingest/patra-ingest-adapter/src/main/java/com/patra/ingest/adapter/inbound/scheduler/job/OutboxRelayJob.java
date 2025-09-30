@@ -4,6 +4,7 @@ import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.adapter.inbound.scheduler.param.OutboxRelayJobParam;
 import com.patra.ingest.app.usecase.relay.OutboxRelayUseCase;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
@@ -11,6 +12,7 @@ import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import lombok.RequiredArgsConstructor;
@@ -86,17 +88,17 @@ public class OutboxRelayJob {
     /**
      * 解析通道：为空时回退配置默认值。
      */
-    private com.patra.ingest.domain.messaging.ChannelKey resolveChannel(String channel) {
+    private ChannelKey resolveChannel(String channel) {
         if (CharSequenceUtil.isBlank(channel)) {
             return null; // 交由 Builder 回退到默认值
         }
         String trimmed = CharSequenceUtil.trim(channel);
-        var byChannel = com.patra.ingest.domain.messaging.IngestChannels.fromChannel(trimmed);
+        var byChannel = IngestPublishingChannels.fromChannel(trimmed);
         if (byChannel.isPresent()) {
             return byChannel.get();
         }
         try {
-            return com.patra.ingest.domain.messaging.IngestChannels.valueOf(trimmed.toUpperCase());
+            return IngestPublishingChannels.valueOf(trimmed.toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new IngestScheduleParameterException("Illegal channel value: " + channel, ex);
         }

@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.model.vo;
 
+import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
-import com.patra.ingest.domain.messaging.ChannelKey;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +22,7 @@ public record RelayBatchResult(
         events = events == null ? List.of() : List.copyOf(events);
     }
 
-    public static RelayBatchResult empty(com.patra.ingest.domain.messaging.ChannelKey channel) {
+    public static RelayBatchResult empty(ChannelKey channel) {
         return new RelayBatchResult(channel, 0, 0, 0, 0, 0, Collections.emptyList());
     }
 }

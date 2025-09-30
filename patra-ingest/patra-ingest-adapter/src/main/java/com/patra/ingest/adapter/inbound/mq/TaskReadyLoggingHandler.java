@@ -1,6 +1,7 @@
 package com.patra.ingest.adapter.inbound.mq;
 
-import com.patra.ingest.domain.messaging.IngestChannels;
+import com.patra.ingest.api.messaging.IngestPublishedChannels;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import com.patra.starter.rocketmq.consumer.ConsumerMode;
 import com.patra.starter.rocketmq.consumer.Consumes;
@@ -19,7 +20,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@Consumes(channel = IngestChannels.CH_TASK_READY,  // 使用领域常量，保持一致性
+@Consumes(channel = IngestPublishedChannels.TASK_READY,  // 使用领域常量，保持一致性
         consumer = "relay",
         mode = ConsumerMode.CONCURRENT,
         concurrency = 2)

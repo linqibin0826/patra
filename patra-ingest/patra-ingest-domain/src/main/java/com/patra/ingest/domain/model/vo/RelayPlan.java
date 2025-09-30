@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.model.vo;
 
-import com.patra.ingest.domain.messaging.ChannelKey;
+import com.patra.common.messaging.ChannelKey;
 
 import java.time.Duration;
 import java.time.Instant;
