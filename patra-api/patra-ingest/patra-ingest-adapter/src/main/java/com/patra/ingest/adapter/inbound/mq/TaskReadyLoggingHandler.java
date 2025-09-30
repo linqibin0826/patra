@@ -1,6 +1,6 @@
 package com.patra.ingest.adapter.inbound.mq;
 
-import com.patra.ingest.domain.model.value.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import com.patra.starter.rocketmq.consumer.ConsumerMode;
 import com.patra.starter.rocketmq.consumer.Consumes;
 import com.patra.starter.rocketmq.consumer.PatraMessageHandler;

@@ -22,10 +22,41 @@
   |--------|------|
   | `patra-ingest-api` | 错误码、外部 DTO |
   | `patra-ingest-adapter` | XXL-Job 入站（Inbound Only）、Outbox Relay 调度入口 |
-  | `patra-ingest-app` | `planning`（计划装配）与 `relay`（Outbox Relay）用例编排 |
+  | `patra-ingest-app` | **用例层**：`usecase/plan`（计划编排用例）与 `usecase/relay`（Outbox 转发用例） |
   | `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule 聚合与端口 |
   | `patra-ingest-infra` | MyBatis-Plus DO、Mapper、仓储实现、RPC 出站（`infra.rpc.registry.*`） |
   | `patra-ingest-boot` | Spring Boot 启动、错误码映射 |
+
+- **app 层架构**（遵循 DDD + 六边形架构）：
+  ```
+  app/
+  ├── config/                       # 应用层配置
+  └── usecase/                      # 用例层
+      ├── plan/                     # 计划编排用例
+      │   ├── PlanIngestionUseCase.java          # 用例接口
+      │   ├── PlanIngestionOrchestrator.java     # 编排器
+      │   ├── command/              # 命令对象
+      │   ├── dto/                  # 结果 DTO
+      │   ├── assembler/            # 计划组装器
+      │   ├── slicer/               # 切片策略
+      │   ├── window/               # 窗口解析
+      │   ├── expression/           # 表达式构建
+      │   ├── validator/            # 前置验证
+      │   └── publisher/            # Outbox 发布
+      │
+      └── relay/                    # Outbox 转发用例
+          ├── OutboxRelayUseCase.java            # 用例接口
+          ├── OutboxRelayOrchestrator.java       # 编排器
+          ├── command/              # 命令对象
+          ├── dto/                  # 结果 DTO
+          ├── executor/             # 转发执行器
+          ├── planner/              # 计划构建
+          ├── policy/               # 错误分类策略
+          ├── publisher/            # 事件发布
+          ├── config/               # Relay 配置
+          └── support/              # 支持工具
+  ```
+
 - 关键依赖：`patra-common`、`patra-expr-kernel`、MyBatis-Plus、RocketMQ、XXL-Job、Nacos
 - 禁止事项：在 domain 层引入框架；在 adapter 中写业务逻辑
 

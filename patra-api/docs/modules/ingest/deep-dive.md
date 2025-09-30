@@ -18,13 +18,79 @@
 | ---- | ---- |
 | patra-ingest-api | 错误码与对外 DTO（当前主要是错误码枚举） |
 | patra-ingest-adapter | XXL-Job 调度入口（Inbound Only）/ Outbox Relay Job |
-| patra-ingest-app | `planning`：计划构建、窗口解析、切片、任务与 Outbox 装配；`relay`：Outbox 租约发布、失败分类与退避策略 |
-| patra-ingest-domain | 聚合与领域异常（Plan / PlanSlice / Task / ScheduleInstance 等）以及领域端口（如 `PatraRegistryPort`） |
-| patra-ingest-domain | 消息通道目录（ChannelKey / IngestChannels），统一发送/接收语义 |
+| patra-ingest-app | **用例层架构**：<br>- `usecase/plan`：计划编排用例（窗口解析、切片、组装、验证、发布）<br>- `usecase/relay`：Outbox 转发用例（租约管理、批量发布、失败分类与退避）<br>- 遵循 DDD + 六边形架构，清晰的用例边界与统一命名规范 |
+| patra-ingest-domain | 聚合与领域异常（Plan / PlanSlice / Task / ScheduleInstance 等）以及领域端口（如 `PatraRegistryPort`）<br>消息通道目录（ChannelKey / IngestChannels），统一发送/接收语义 |
 | patra-ingest-infra | MyBatis-Plus DO、Mapper、仓储实现、Outbox 持久化 / RPC 出站（`infra.rpc.registry.*`） |
 | patra-ingest-boot | Spring Boot 启动与错误码映射装配 |
 
-> 应用层约定：`app.planning` 聚焦计划生命周期（Plan/Task 装配、OutboxMessage 挂车）；`app.relay` 专注 Outbox Relay 批次执行、租约管理与领域事件发布。
+> **应用层设计原则**：
+> - 每个用例自包含：command、dto、核心逻辑、支持组件
+> - 统一命名：`*Orchestrator`（编排器）、`*Command`（命令）、`*Impl`（实现）
+> - 职责清晰：`plan` 聚焦计划生命周期，`relay` 专注 Outbox 批次执行
+> - 遵循六边形架构：用例层不依赖框架，仅依赖领域接口
+
+### 1.1 应用层架构详解
+
+#### Plan 用例（计划编排）
+
+**核心组件**：
+- `PlanIngestionOrchestrator`：主编排器，协调整个计划生成流程
+- `PlanAssembler`：组装器，负责 Plan/Slice/Task 的蓝图构建
+- `SlicePlanner`：切片策略（TIME/SINGLE），支持策略注册扩展
+- `PlanningWindowResolver`：窗口解析器，处理 HARVEST/BACKFILL/UPDATE 模式
+- `PlanExpressionBuilder`：表达式构建器，生成规范化表达式快照
+- `PlannerValidator`：前置验证器，校验窗口合法性与队列压力
+- `TaskOutboxPublisher`：Outbox 发布器，将任务事件持久化
+
+**目录结构**：
+```
+usecase/plan/
+├── PlanIngestionUseCase.java          # 用例接口
+├── PlanIngestionOrchestrator.java     # 主编排器
+├── command/PlanIngestionCommand.java  # 命令对象
+├── dto/PlanIngestionResult.java       # 结果 DTO
+├── assembler/                         # 组装器
+│   ├── PlanAssembler.java
+│   ├── PlanAssemblerImpl.java
+│   └── PlanAssemblyRequest.java
+├── slicer/                            # 切片策略
+│   ├── SlicePlanner.java
+│   ├── SlicePlannerRegistry.java
+│   ├── TimeSlicePlanner.java
+│   ├── SingleSlicePlanner.java
+│   └── model/
+├── window/                            # 窗口解析
+│   ├── PlanningWindowResolver.java
+│   ├── PlanningWindowResolverImpl.java
+│   └── support/
+├── expression/                        # 表达式构建
+├── validator/                         # 验证器
+└── publisher/                         # 发布器
+```
+
+#### Relay 用例（Outbox 转发）
+
+**核心组件**：
+- `OutboxRelayOrchestrator`：主编排器，协调批量转发流程
+- `OutboxRelayExecutor`：执行器，处理单批次消息发布
+- `RelayPlanBuilder`：计划构建器，生成转发计划
+- `RelayErrorClassifier`：错误分类器，区分 FATAL/TRANSIENT 错误
+- `RelayEventPublisher`：事件发布器，发布领域事件
+
+**目录结构**：
+```
+usecase/relay/
+├── OutboxRelayUseCase.java           # 用例接口
+├── OutboxRelayOrchestrator.java      # 主编排器
+├── command/OutboxRelayCommand.java   # 命令对象
+├── dto/RelayReport.java              # 结果 DTO
+├── executor/                         # 执行器
+├── planner/                          # 计划构建
+├── policy/                           # 错误分类
+├── publisher/                        # 事件发布
+├── config/                           # 配置
+└── support/                          # 工具
+```
 
 ## 2. 核心领域概念与幂等
 
@@ -42,17 +108,43 @@
 3. 切片 spec → 规范化 → `slice_signature_hash`
 4. 任务幂等键 = `provenance:operation:slice_signature_hash:exprProtoHash`
 
-## 3. 处理流程
-1. 调度作业（XXL-Job）解析参数并记录 `ScheduleInstance`
-2. 远程拉取 provenance 配置 → 快照化 + Hash
-3. 根据操作模式解析窗口（校验跨度、齐次对齐、滞后安全）
-4. 规范化表达式（JSON + Hash）
-5. 校验（窗口合法、队列压力、来源能力）
-6. 装配：Plan(DRAFT→SLICING) → 切片列表 → 任务列表（计算幂等键）
-7. 持久化（Plan / Slice / Task + OutboxMessage 同事务）
-8. Relay（租约扫描 PENDING Outbox → `ChannelRegistry` 校验 channel → 发布 MQ → 更新状态或重试）
+## 3. 处理流程（用例层视角）
 
-失败策略：写库前失败直接中断；写库成功但发布失败则按照 `retry_count + next_retry_at` 指数退避，超过阈值标记 `DEAD`。
+### 3.1 Plan Ingestion（计划摄入用例）
+
+1. **调度触发**：XXL-Job 解析参数并记录 `ScheduleInstance`
+2. **用例入口**：`ScheduleRunAdapter` 构建 `PlanIngestionCommand` → 调用 `PlanIngestionOrchestrator`
+3. **前置验证**：`PlannerValidator` 校验窗口参数合法性、队列压力、来源能力
+4. **窗口解析**：`PlanningWindowResolver` 根据 HARVEST/BACKFILL/UPDATE 模式解析时间窗口（校验跨度、齐次对齐、滞后安全）
+5. **配置拉取**：远程拉取 provenance 配置 → 快照化 + Hash (`provenanceConfigHash`)
+6. **表达式构建**：`PlanExpressionBuilder` 规范化表达式 → 生成 `exprProtoHash`
+7. **计划组装**：`PlanAssembler` 协调流程
+   - 构建 Plan 蓝图（状态：DRAFT → SLICING）
+   - 调用 `SlicePlanner`（TIME/SINGLE 策略）生成 PlanSlice 列表
+   - 为每个 Slice 生成 `slice_signature_hash` 并创建 Task
+   - 计算任务幂等键：`provenance:operation:slice_signature_hash:exprProtoHash`
+8. **持久化**：`PlanRepository` 保存 Plan/Slice/Task（单事务）
+9. **Outbox 发布**：`TaskOutboxPublisher` 装配 OutboxMessage 并写入 Outbox 表（同事务）
+
+### 3.2 Outbox Relay（转发用例）
+
+1. **调度触发**：XXL-Job 定时扫描 PENDING 状态的 Outbox 记录
+2. **用例入口**：`OutboxRelayJobAdapter` 构建 `OutboxRelayCommand` → 调用 `OutboxRelayOrchestrator`
+3. **租约获取**：通过 `pub_lease_owner` + `pub_leased_until` 获取批次租约
+4. **计划构建**：`RelayPlanBuilder` 根据租约批次生成转发计划
+5. **批量执行**：`OutboxRelayExecutor` 遍历批次
+   - 校验 `channel`（通过 `ChannelRegistry`）
+   - 发布消息到 RocketMQ
+   - 更新状态：PUBLISHED（成功） / 递增 `retry_count`（失败）
+6. **错误分类**：`RelayErrorClassifier` 区分 FATAL / TRANSIENT 错误
+   - **TRANSIENT**：指数退避更新 `next_retry_at`
+   - **FATAL**：超过重试阈值标记 `DEAD`
+7. **事件发布**：`RelayEventPublisher` 发布领域事件（如 `OutboxMessagePublishedEvent`）
+8. **租约释放**：执行完成后释放租约（清除 `pub_lease_owner`）
+
+**失败策略**：
+- 写库前失败 → 直接中断（保持幂等）
+- 写库成功但发布失败 → 按照 `retry_count + next_retry_at` 指数退避，超过阈值标记 `DEAD`
 
 ## 4. 窗口与切片
 

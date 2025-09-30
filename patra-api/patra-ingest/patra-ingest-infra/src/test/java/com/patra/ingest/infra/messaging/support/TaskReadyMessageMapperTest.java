@@ -3,7 +3,7 @@ package com.patra.ingest.infra.messaging.support;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.domain.model.value.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

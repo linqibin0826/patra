@@ -5,7 +5,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
-import com.patra.ingest.domain.model.value.RelayPlan;
+import com.patra.ingest.domain.model.vo.RelayPlan;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;

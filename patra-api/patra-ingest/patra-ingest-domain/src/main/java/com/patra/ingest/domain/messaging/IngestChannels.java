@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.messaging;
 
-import com.patra.ingest.domain.model.value.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 
 import java.util.Arrays;
 import java.util.Locale;
