@@ -9,10 +9,26 @@ import java.util.Optional;
 /**
  * Ingest 模块内的标准通道目录（强类型）。
  * <p>仅声明语义，不包含任何 MQ 细节，供 app/infra/adapter 统一引用，消除魔法值。</p>
+ *
+ * <p><b>使用指南</b>：
+ * <ul>
+ *   <li>发送侧：使用枚举实例方法 {@code IngestChannels.TASK_READY.channel()}</li>
+ *   <li>接收侧（注解）：使用编译期常量 {@code @Consumes(channel = IngestChannels.CH_TASK_READY)}</li>
+ * </ul>
+ * </p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public enum IngestChannels implements ChannelKey {
+    
     /** 调度任务准备就绪 */
     TASK_READY("ingest", "task", "ready", TaskReadyMessage.class);
+    
+    // ============ 编译期常量（供注解使用） ============
+    
+    /** 任务就绪通道的字符串常量（注解专用） */
+    public static final String CH_TASK_READY = "ingest.task.ready";
 
     private final String domain;
     private final String resource;

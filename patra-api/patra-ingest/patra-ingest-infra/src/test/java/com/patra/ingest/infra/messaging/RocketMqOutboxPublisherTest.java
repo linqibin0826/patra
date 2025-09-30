@@ -3,7 +3,7 @@ package com.patra.ingest.infra.messaging;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
-import com.patra.ingest.infra.messaging.support.TaskReadyMessageMapper;
+import com.patra.ingest.infra.messaging.converter.TaskReadyMessageConverter;
 import com.patra.starter.rocketmq.model.PatraMessage;
 import com.patra.starter.rocketmq.publisher.PatraMessagePublisher;
 import org.junit.jupiter.api.DisplayName;
@@ -34,13 +34,13 @@ class RocketMqOutboxPublisherTest {
     @Test
     @DisplayName("正常发布：构造 PatraMessage 并委托 publisher 发送，返回 NONE")
     void publishSuccess() throws Exception {
-        TaskReadyMessageMapper mapper = mock(TaskReadyMessageMapper.class);
+        TaskReadyMessageConverter mapper = mock(TaskReadyMessageConverter.class);
         PatraMessagePublisher publisher = mock(PatraMessagePublisher.class);
         RocketMqOutboxPublisher out = new RocketMqOutboxPublisher(mapper, publisher);
         OutboxMessage msg = base().headersJson(null).build();
         TaskReadyMessage body = new TaskReadyMessage(new TaskReadyMessage.Payload(1L,2L,3L, "P","O","k",1, null, "{}", "pk", null, null, null, null),
                 new TaskReadyMessage.Header(100L, "xxl", 1L, 2L, "MANUAL", null, null, "pk", "HARVEST", "SEARCH"));
-        when(mapper.map(any(OutboxMessage.class))).thenReturn(body);
+        when(mapper.convert(any(OutboxMessage.class))).thenReturn(body);
 
         RelayPlan plan = new RelayPlan(
                 com.patra.ingest.domain.messaging.IngestChannels.TASK_READY,
@@ -69,10 +69,10 @@ class RocketMqOutboxPublisherTest {
     @Test
     @DisplayName("下游抛异常时应向上抛出")
     void publishFailure() throws Exception {
-        TaskReadyMessageMapper mapper = mock(TaskReadyMessageMapper.class);
+        TaskReadyMessageConverter mapper = mock(TaskReadyMessageConverter.class);
         PatraMessagePublisher publisher = mock(PatraMessagePublisher.class);
         RocketMqOutboxPublisher out = new RocketMqOutboxPublisher(mapper, publisher);
-        when(mapper.map(any())).thenReturn(new TaskReadyMessage(null, null));
+        when(mapper.convert(any())).thenReturn(new TaskReadyMessage(null, null));
         doThrow(new RuntimeException("mq down")).when(publisher).sendByChannel(anyString(), any());
 
         OutboxMessage msg = base().headersJson(null).build();

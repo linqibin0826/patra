@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.messaging.support;
+package com.patra.ingest.infra.messaging.converter;
 
 import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -21,14 +21,17 @@ import java.io.IOException;
  *   <li>保持纯转换（无副作用 / 无日志），方便单元测试。</li>
  * </ul>
  * </p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Component
-public class TaskReadyMessageMapper {
+public class TaskReadyMessageConverter {
 
     /** JSON 映射器（线程安全：ObjectMapper 由 Spring 单例管理） */
     private final ObjectMapper objectMapper;
 
-    public TaskReadyMessageMapper(ObjectMapper objectMapper) {
+    public TaskReadyMessageConverter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
@@ -39,7 +42,7 @@ public class TaskReadyMessageMapper {
      * @return 领域发布消息
      * @throws OutboxRelayExecutionException JSON 结构不合法或字段缺失
      */
-    public TaskReadyMessage map(OutboxMessage message) {
+    public TaskReadyMessage convert(OutboxMessage message) {
         try {
             JsonNode payloadNode = objectMapper.readTree(message.getPayloadJson());
             JsonNode headerNode = CharSequenceUtil.isBlank(message.getHeadersJson())

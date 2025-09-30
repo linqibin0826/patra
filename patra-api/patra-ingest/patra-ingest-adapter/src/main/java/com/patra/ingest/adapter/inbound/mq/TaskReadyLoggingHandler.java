@@ -1,5 +1,6 @@
 package com.patra.ingest.adapter.inbound.mq;
 
+import com.patra.ingest.domain.messaging.IngestChannels;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import com.patra.starter.rocketmq.consumer.ConsumerMode;
 import com.patra.starter.rocketmq.consumer.Consumes;
@@ -12,10 +13,13 @@ import org.springframework.stereotype.Component;
  * Ingest 示例消费者（仅日志）：消费 ingest.task.ready 事件。
  * <p>
  * 注意：本类仅用于演示消费方案落地，不做实际业务处理。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Component
-@Consumes(channel = "ingest.task.ready",
+@Consumes(channel = IngestChannels.CH_TASK_READY,  // 使用领域常量，保持一致性
         consumer = "relay",
         mode = ConsumerMode.CONCURRENT,
         concurrency = 2)

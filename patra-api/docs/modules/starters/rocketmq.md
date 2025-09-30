@@ -195,26 +195,35 @@ public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMes
 
 ## 9. Channel 注册与白名单（约束发送/接收）
 
-为避免“随意新增 channel”，Starter 提供统一注册器 `ChannelRegistry`，支持两种注册方式（二选一或同时）：
+为避免"随意新增 channel"，Starter 提供统一注册器 `ChannelRegistry`，支持两种注册方式（二选一或同时）：
 
-- 注解方式（推荐）：在任意 Spring Bean 上声明允许的 channel 集合
+- **接口方式（推荐）**：提供一个 `ChannelCatalog` Bean，从领域枚举自动提取
+  ```java
+  @Configuration
+  public class IngestMessagingConfiguration {
+    @Bean
+    public ChannelCatalog ingestChannelCatalog() {
+      // 自动从领域枚举提取所有 channel，保持单一数据源（SSOT）
+      return () -> Arrays.stream(IngestChannels.values())
+                        .map(ChannelKey::channel)
+                        .collect(Collectors.toSet());
+    }
+  }
+  ```
+- **注解方式**：在任意 Spring Bean 上声明允许的 channel 集合
   ```java
   @Component
   @PatraMessagingChannels({
       "ingest.task.ready",
       "ingest.article.created"
   })
-  class IngestMessagingChannels {}
+  class ChannelRegistration {}
   ```
-- 接口方式：提供一个 `ChannelCatalog` Bean 返回集合
-  ```java
-  @Configuration
-  class IngestChannelCatalog implements ChannelCatalog {
-    public Collection<String> channels() {
-      return Set.of("ingest.task.ready");
-    }
-  }
-  ```
+
+**推荐使用接口方式**：
+- ✅ 自动从领域枚举同步，无需重复维护
+- ✅ 编译期类型安全
+- ✅ 符合 DDD 依赖方向（infra → domain）
 
 校验策略：
 - 统一格式：`^[a-z0-9]+(\.[a-z0-9]+)+$`（至少三段、小写点分段）；

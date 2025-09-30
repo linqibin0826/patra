@@ -23,24 +23,6 @@
 ---
 
 ## 1. 快速开始（本地开发）
-> 目标：在本地启动基础设施 + 单模块开发编译测试
-
-```bash
-# 1) JDK 与构建
-java -version        # 要求 Java 21
-mvn -v               # Maven 多模块，父 POM 统一依赖
-
-# 2) 全仓快速编译（不打包）
-mvn -q -T 1C -DskipTests compile
-
-# 3) 单模块开发（例：patra-registry）
-cd patra-registry && mvn -q clean test
-
-# 4) 打包（当前默认跳过测试；如需跑测，去掉 -DskipTests）
-mvn clean package -DskipTests
-```
-
-⸻
 
 ## 2. 项目概览
 	• 名称：Papertrace – 医学文献数据平台
@@ -57,7 +39,7 @@ mvn clean package -DskipTests
 ## 3. 技术栈与版本（关键）
 	• 语言/构建：Java 21，Maven（多模块；父 POM 统一依赖），UTF-8
 	• 核心框架：Spring Boot 3.2.4；Spring Cloud 2023.0.1；Spring Cloud Alibaba 2023.0.1.0
-	• 数据持久：MyBatis-Plus 3.5.12，MySQL 8.0，Redis 7.0，Elasticsearch 8.14，RocketMQ 5.x
+	• 数据持久：MyBatis-Plus 3.5.12，MySQL 8.0，Redis 7.0，Elasticsearch 8.14，RocketMQ 5.3.2
 	• 基础设施：Nacos（注册/配置），SkyWalking 10.2（APM/Tracing），XXL-Job 3.2.0（调度），Docker Compose（本地）
 	• 工具/映射：Lombok 1.18.38，MapStruct 1.6.3，Hutool 5.8.22
 	• 自研 Starters：patra-spring-boot-starter-core/-web/-mybatis，patra-spring-cloud-starter-feign
@@ -87,6 +69,12 @@ patra-{service}/
 ├─ patra-{service}-infra/     # 基础设施（仓储）
 └─ patra-{service}-adapter/   # 适配层（REST/调度/MQ）
 
+**设计原则**：
+- **自包含**：每个用例目录包含完整的 command/dto/核心逻辑/支持组件
+- **统一命名**：`*Orchestrator`（编排器）、`*Command`（命令）、`*Impl`（实现）
+- **职责清晰**：`plan` 聚焦计划生命周期，`relay` 专注 Outbox 批次执行
+- **依赖方向**：用例层不依赖框架（仅依赖领域接口和 patra-common）
+
 ### 4.2 依赖方向（必须遵守）
 
 	• adapter → app + api（+ web starters）
@@ -104,8 +92,6 @@ patra-{service}/
 	• 检查 + 测试（快速回归）：mvn -q -DskipITs test
 	• 全仓编译：.mvn clean compile（或 mvn -q -T 1C -DskipTests compile）
 	• 打包：mvn clean package -DskipTests（必要时移除 -DskipTests）
-	• 运行本地基础设施：进入 docker/，执行 docker compose up -d
-	• 关闭基础设施：docker compose down
 
 ⸻
 
@@ -135,20 +121,9 @@ patra-{service}/
 	• 调度：XXL-Job（作业在 adapter/scheduler），注意幂等、重试、限流。
 	• 追踪/APM：SkyWalking；在日志中传递 trace/correlation ID。
 
-## 9. 安全与权限（智能体必须遵守）
-
-允许无需确认
-	• 读取/列出文件、编译单模块、运行单元测试、静态检查（lint/format/type-check）。
-	• 在工作目录内创建/修改代码与测试文件。
-
-需要事先获得批准
-	• 变更数据库结构/清空数据/大规模回填；RocketMQ 主题/订阅调整。
-	• 执行全仓重构/跨大量模块的改名、移动。
-	• 任何会暴露或写入敏感信息的操作（密钥、令牌、证书、隐私数据）。
-
-禁止
-	• 提交包含明文密钥/凭据的内容。
-	• 对 domain 层引入框架依赖或从下层向上反向依赖。
+## 9. Flyway 迁移
+    • 每个微服务独立管理；脚本放在 patra-{service}-infra/src/main/resources/db/migration。
+    • 命名：V{version}__{description}.sql，版本号递增（如 V1、V2）。
 
 ## 10. 日志规范（@Slf4j）
 	• 需要日志的类使用 @Slf4j；统一 SLF4J API。
@@ -168,60 +143,23 @@ patra-{service}/
 
 ⸻
 
-## 13. 附：按层包结构（关键目录）
-**Domain (`com.patra.{service}.domain`)**
-
-```
-model/
-  aggregate/{name}/   # aggregates/entities
-  vo/                 # value objects
-  readonly/           # read-only objects
-  event/              # domain events
-  enums/              # domain enums (may be reused across layers)
-port/                 # repository/service ports
-```
-
-**Application (`com.patra.{service}.app`)**
-
-```
-service/              # application services (use-case orchestration)
-usecase/command|query # command/query DTOs
-converter/              # Domain ↔ App (MapStruct)
-security/             # authorization checks
-model/readonly/event/ # models used by app/adapter
-tx/                   # transaction helpers (idempotency/locks)
-config/               # application config
-```
-
-**Infrastructure (`com.patra.{service}.infra`)**
-
-```
-persistence/
-  entity/             # DB entities (extends BaseDO)
-  mapper/             # MyBatis-Plus mappers
-  repository/         # repository implementations
-  converter/          # Entity ↔ Domain converters
-config/               # infra config
-```
-
-**Adapter (`com.patra.{service}.adapter`)**
-
-```
-inbound/
-  /rest/               # REST controllers
-  /scheduler/          # scheduled jobs (XXL-Job)
-  /mq/                 # MQ listeners
-outbound/
-  /rest/             # REST clients (Feign)
-  /mq/                 # MQ producers
-  /other/              # other adapters (e.g., file, email)
-config                # adapter configuration
-```
-
-
+## 13. 测试
+    • 测试框架：JUnit 5 + Spring Boot Test + MyBatis-Plus Test + AssertJ + Mockito
+    • 测试前提: 单元测试前检查该子模块是否引入单元测试依赖，单元测试在各个子模块中进行，不依赖spring-boot-starter-test。
+               集成测试在 patra-{service}-boot 中进行，依赖 spring-boot-starter-test。
+    • 单元测试：每个模块必须有；覆盖核心逻辑与边界条件。
+    • 集成测试：跨模块/跨服务的关键路径（如采集→解析→入库）。
+    • 测试数据：使用内存 DB（H2）或测试容器（Testcontainers）；避免依赖外部服务。
+    • Mock：使用 Mockito 或类似工具；避免过度 Mock 导致测试失效。
 ⸻
 
 ## 14. 变更边界（TL;DR）
 	• 不明确 → 先问；能复用 → 不重造；不越层 → 不破边界。
 	• 以 清晰、短小、可维护 的实现为先；显式说明假设与权衡。
 	• 子目录若存在 AGENTS.md，就近优先采用更细规则（本文件为全局基线）。
+
+## 15. 文档维护与同步
+- 当你修改或新增代码、配置、脚本时，请同步检查相关文档（仓库根 README、`docs/`、模块 README、运行手册等）是否需要更新，确保描述与实现一致。
+- 若本说明（`AGENTS.md`）涉及内容已过期，或新增了需要智能体遵循的约束，请在完成变更后立刻更新对应章节，并在提交信息中标注“docs”或“agents”方便追踪。
+- 新增文档时务必在 `docs/README.md` 补充索引，并在受影响模块的 README 中添加跳转链接，避免信息孤岛。
+- 变更规则或流程需记录来源（需求单、评审纪要等），将链接或说明附在相关文档中，便于后续审计。
