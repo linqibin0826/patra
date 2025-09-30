@@ -36,6 +36,7 @@ public class RelayPlanBuilder {
      * @return 计划对象
      */
     public RelayPlan build(OutboxRelayCommand instruction) {
+        // TODO 需要确认channel的的生成逻辑 （channel其实在数据库中已经存在了， 在outbox表中）
         var channelKey = resolveChannelKey(instruction);
         Instant triggeredAt = instruction.triggeredAt() != null ? instruction.triggeredAt() : Instant.now(clock);
         int batchSize = normalizePositive(instruction.batchSize(), properties.getBatchSize());
