@@ -1,5 +1,6 @@
 package com.patra.starter.rocketmq.core.channel;
 
+import com.patra.common.messaging.ChannelKey;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

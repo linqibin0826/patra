@@ -14,7 +14,7 @@
 - **诊断信息**：提供 `ValidationReport`、`RenderTrace` 帮助定位失败原因
 - **Registry 集成**：内置客户端从 Registry 拉取快照，可按操作类型默认化
 
-详细流程与配置见 `docs/modules/starters/expr.md`。
+本模块 README 覆盖流程与配置；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`、`patra-spring-boot-starter-rocketmq`）。
 
 ## 3. 分层结构与依赖
 - 核心包：`compiler`（编译器）、`normalizer`、`renderer`、`report`
@@ -60,6 +60,6 @@
 风险：Registry 快照不一致、表达式复杂度过高导致性能下降、扩展 Bean 顺序冲突。
 
 ## 8. 参考资料
-- 深度文档：`docs/modules/starters/expr.md`
+- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-rocketmq/README.md`
 - 表达式内核：`patra-expr-kernel/README.md`
 - Registry 快照：`docs/modules/registry/deep-dive.md`

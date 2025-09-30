@@ -16,9 +16,6 @@ docs/
 │   │   └─ deep-dive.md
 │   ├─ registry/
 │   │   └─ deep-dive.md
-│   └─ starters/
-│       ├─ core.md
-│       └─ feign.md
 ├─ operations/               # 运维、观测、部署、回放
 │   ├─ runbook.md
 │   ├─ monitoring.md
@@ -28,4 +25,5 @@ docs/
 └─ templates/                # 文档模板（当前目录）
 ```
 
+> 说明：Starter 文档仅在各 Starter 模块目录内的 README 维护（如 `patra-spring-boot-starter-*/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-rocketmq/README.md`）。
 > 可按优先级逐步补全，未实现的文档可创建占位符并标注 TODO。

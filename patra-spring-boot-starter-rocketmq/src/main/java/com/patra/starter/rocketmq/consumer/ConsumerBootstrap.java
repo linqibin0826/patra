@@ -1,7 +1,6 @@
 package com.patra.starter.rocketmq.consumer;
 
 import com.patra.starter.rocketmq.autoconfigure.RocketMQProperties;
-import com.patra.starter.rocketmq.core.channel.ChannelKey;
 import com.patra.starter.rocketmq.naming.NamespaceResolver;
 import com.patra.starter.rocketmq.validation.GroupValidator;
 import com.patra.starter.rocketmq.validation.TopicValidator;
@@ -84,11 +83,22 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
                                    String serviceName,
                                    String namespace) {
         try {
-            // 解析 ChannelKey
-            ChannelKey channelKey = resolveChannelKey(annotation.channelEnum(), annotation.channelName());
-            String domain = channelKey.domain();
-            String resource = channelKey.resource();
-            String event = channelKey.event();
+            // 直接从 channel 字符串解析
+            String channelStr = annotation.channel();
+            if (channelStr == null || channelStr.isBlank()) {
+                throw new IllegalArgumentException("channel 不能为空");
+            }
+            
+            String[] parts = channelStr.trim().split("\\.");
+            if (parts.length < 3) {
+                throw new IllegalArgumentException(
+                        "channel 格式错误，应为 domain.resource.event，实际: " + channelStr
+                );
+            }
+            
+            String domain = parts[0];
+            String resource = parts[1];
+            String event = parts[2];
 
             // 构建 Topic 和 Tag
             String topicBase = (domain + "." + resource).toUpperCase(Locale.ROOT);
@@ -136,7 +146,7 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
                     var msg = (com.patra.starter.rocketmq.core.message.Message<Object>) message;
 
                     log.info("[CONSUME][START] channel={}, group={}, eventId={}, traceId={}",
-                            channelKey.channel(), group, msg.getEventId(), msg.getTraceId());
+                            channelStr, group, msg.getEventId(), msg.getTraceId());
 
                     @SuppressWarnings("unchecked")
                     MessageHandler<Object> h = (MessageHandler<Object>) handler;
@@ -144,11 +154,11 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
 
                     long cost = System.currentTimeMillis() - startTime;
                     log.info("[CONSUME][SUCCESS] channel={}, group={}, costMs={}, eventId={}",
-                            channelKey.channel(), group, cost, msg.getEventId());
+                            channelStr, group, cost, msg.getEventId());
                 } catch (Exception ex) {
                     long cost = System.currentTimeMillis() - startTime;
                     log.error("[CONSUME][FAIL] channel={}, group={}, costMs={}, error={}",
-                            channelKey.channel(), group, cost, ex.getMessage(), ex);
+                            channelStr, group, cost, ex.getMessage(), ex);
                     throw new RuntimeException(ex);
                 }
             };
@@ -172,6 +182,7 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
     /**
      * 设置消费模式（兼容不同版本）。
      */
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void setConsumeMode(DefaultRocketMQListenerContainer container, ConsumeMode mode) {
         try {
             Class<?> rocketMQConsumeMode = Class.forName("org.apache.rocketmq.spring.annotation.ConsumeMode");
@@ -210,24 +221,4 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
         }
     }
 
-    /**
-     * 解析 ChannelKey 枚举。
-     */
-    private ChannelKey resolveChannelKey(Class<? extends Enum<? extends ChannelKey>> enumClass, String name) {
-        if (enumClass == null) {
-            throw new IllegalArgumentException("channelEnum 不能为空");
-        }
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("channelName 不能为空");
-        }
-        try {
-            @SuppressWarnings("unchecked")
-            Enum<? extends ChannelKey> constant = Enum.valueOf((Class) enumClass, name.trim());
-            return (ChannelKey) constant;
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(
-                    "channelName '" + name + "' 不存在于枚举 " + enumClass.getName(), e
-            );
-        }
-    }
 }

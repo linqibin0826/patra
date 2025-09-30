@@ -1,5 +1,6 @@
 package com.patra.starter.rocketmq.core.channel;
 
+import com.patra.common.messaging.ChannelKey;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 

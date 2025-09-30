@@ -252,10 +252,12 @@ usecase/relay/
 | `PlanningWindowResolver` | 自定义窗口算法 | 替换默认实现 |
 | `PlanExpressionBuilder` | 新 DSL/过滤表达式 | 组合/装饰模式注入 |
 | `DestinationBuilder` | 统一 `channel → destination` 解析 | 由 RocketMQ Starter 提供 |
-| `ChannelRegistry` | 统一 channel 注册/校验 | 注解/接口注册，`patra.messaging.channels.*` 控制 |
-| 领域通道目录 | `ChannelKey` + `IngestChannels` | 去魔法值，适配发送/接收 |
+| `ChannelRegistry` | 统一 channel 注册/校验（可选） | 注解/接口注册，`patra.messaging.channels.*` 控制 |
+| 领域通道目录 | `ChannelKey` + `IngestChannels` | 去魔法值，适配发送；消费方可直接使用 channel 字符串（v0.1.0+） |
 | （可选）装饰 Publisher | 自定义发布策略（延迟/事务/路由） | 覆盖 `PatraMessagePublisher` Bean |
 | `IngestErrorMappingContributor` | 扩展错误码映射 | 追加异常映射 |
+
+> **注**：从 v0.1.0 开始，消费方可以直接在 `@MessageListener` 中使用 channel 字符串（如 `"ingest.task.ready"`），无需依赖发布方的枚举类。详见 [RocketMQ Starter 使用指南](../../starters/rocketmq-starter.md)。
 
 ## 10. 运维排障速查
 

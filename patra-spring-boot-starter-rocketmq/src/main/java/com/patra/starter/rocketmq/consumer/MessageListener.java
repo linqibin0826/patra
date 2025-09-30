@@ -1,6 +1,5 @@
 package com.patra.starter.rocketmq.consumer;
 
-import com.patra.starter.rocketmq.core.channel.ChannelKey;
 
 import java.lang.annotation.*;
 
@@ -9,7 +8,7 @@ import java.lang.annotation.*;
  *
  * <p>设计原则：
  * <ul>
- *   <li>强制使用 ChannelKey 枚举，保证类型安全</li>
+ *   <li>直接使用 channel 字符串（格式：domain.resource.event）</li>
  *   <li>consumer 标识用于生成消费组：svc-{service}-{consumer}-cg</li>
  *   <li>框架自动注册容器并启动监听</li>
  * </ul>
@@ -17,8 +16,7 @@ import java.lang.annotation.*;
  * <p>使用示例：
  * <pre>{@code
  * @MessageListener(
- *     channelEnum = IngestChannels.class,
- *     channelName = "TASK_READY",
+ *     channel = "ingest.task.ready",
  *     consumer = "relay",
  *     mode = ConsumeMode.CONCURRENT,
  *     concurrency = 2
@@ -39,14 +37,10 @@ import java.lang.annotation.*;
 public @interface MessageListener {
 
     /**
-     * Channel 枚举类（必填，必须实现 ChannelKey 接口）。
+     * 消息通道（格式：domain.resource.event）。
+     * <p>例如：ingest.task.ready</p>
      */
-    Class<? extends Enum<? extends ChannelKey>> channelEnum();
-
-    /**
-     * Channel 枚举常量名称（必填，如 "TASK_READY"）。
-     */
-    String channelName();
+    String channel();
 
     /**
      * 消费者职责标识（用于生成消费组）。
