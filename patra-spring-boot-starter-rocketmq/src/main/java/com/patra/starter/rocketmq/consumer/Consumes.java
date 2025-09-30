@@ -29,10 +29,15 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Consumes {
-    /** 领域通道目录（必须是实现了 ChannelKey 的枚举类） */
-    Class<? extends Enum<?>> channelEnum();
-    /** 枚举常量名称（如 "TASK_READY"），避免在注解中写完整字符串 channel */
-    String channelName();
+    /**
+     * 可选：通用字符串通道（小写点分段，如 "ingest.task.ready"）。
+     * 若提供该字段，将优先使用此值；否则需要提供 {@link #channelEnum()} + {@link #channelName()}。
+     */
+    String channel() default "";
+    /** 领域通道目录（必须是实现了 ChannelKey 的枚举类）。当未提供 {@link #channel()} 时必填。 */
+    Class<? extends Enum<?>> channelEnum() default PlaceholderChannel.class;
+    /** 枚举常量名称（如 "TASK_READY"）。当未提供 {@link #channel()} 时必填。 */
+    String channelName() default "";
     /** 本消费者的职责名，用于生成 group（svc-{service}-{consumer}-cg）与观测标签 */
     String consumer();
     /** 消费模式：顺序（ORDERLY）或并发（CONCURRENT） */

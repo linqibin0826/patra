@@ -1,5 +1,7 @@
 package com.patra.ingest.domain.model.value;
 
+import com.patra.ingest.domain.messaging.ChannelKey;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
@@ -8,7 +10,7 @@ import java.util.Objects;
  * Outbox Relay 执行计划。
  */
 public record RelayPlan(
-        com.patra.ingest.domain.messaging.ChannelKey channel,
+        ChannelKey channel,
         Instant triggeredAt,
         int batchSize,
         Duration leaseDuration,

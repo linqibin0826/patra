@@ -8,9 +8,9 @@
 
 运行期错误处理：发布入口对命名/参数不合规会抛出 `ApplicationException(422)`；Web/Feign 将统一输出 `ProblemDetail`。
 
-推荐落地（去魔法值）：
-- 在 `patra-{service}-domain` 定义强类型通道目录（`ChannelKey` + `{Service}Channels`），如 `IngestChannels.TASK_READY`；
-- 发送：`publisher.sendByChannel(IngestChannels.TASK_READY.channel(), PatraMessage.of(payload))`；
-- 接收：使用组合注解（建议后续统一为 `@Consumes(IngestChannels.TASK_READY)`）生成监听参数，禁止在注解中手写字符串。
+推荐落地：
+- 发送：统一使用 `publisher.sendByChannel("domain.resource.event", PatraMessage.of(payload))`，或通过 `ChannelKey` `.channel()` 生成；
+- 接收：统一使用 `@Consumes(channel="domain.resource.event", consumer="roleName")` 注解，Starter 自动映射 `topic/tag/group` 并做强校验；
+- 不再手写 `@RocketMQMessageListener` 的 `topic/tag/group` 字符串，降低维护成本与出错概率。
 
 如需更新 RocketMQ 规范，请同步编辑 `rocketmq.md` 并在此保留链接。
