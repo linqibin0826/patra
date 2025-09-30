@@ -18,7 +18,7 @@ import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.domain.model.vo.PlannerWindow;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;

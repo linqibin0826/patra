@@ -2,7 +2,7 @@ package com.patra.ingest.app.usecase.plan.slicer.model;
 
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import com.patra.ingest.domain.model.command.PlanTriggerNorm;
-import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.domain.model.vo.PlannerWindow;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import java.util.Objects;
 

@@ -4,7 +4,7 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
-import com.patra.ingest.domain.model.value.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import org.springframework.stereotype.Component;
 

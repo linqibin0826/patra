@@ -1,8 +1,8 @@
 package com.patra.ingest.infra.messaging;
 
 import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.domain.model.value.RelayPlan;
-import com.patra.ingest.domain.model.value.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.RelayPlan;
+import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import com.patra.ingest.infra.messaging.support.TaskReadyMessageMapper;
 import com.patra.starter.rocketmq.model.PatraMessage;
 import com.patra.starter.rocketmq.publisher.PatraMessagePublisher;

@@ -79,7 +79,7 @@ public abstract class AbstractProvenanceScheduleJob {
      */
     protected PlanIngestionCommand parseJobParam(String paramStr) {
         if (CharSequenceUtil.isBlank(paramStr)) {
-            return buildPlanIngestionRequest(ProvenanceScheduleJobParam.empty(), Map.of());
+            return buildPlanIngestionCommand(ProvenanceScheduleJobParam.empty(), Map.of());
         }
         try {
             Map<String, Object> rawParams = objectMapper.readValue(paramStr, new TypeReference<>() { });
@@ -92,13 +92,13 @@ public abstract class AbstractProvenanceScheduleJob {
             Map<String, Object> triggerParams = (rawParams == null || rawParams.isEmpty())
                     ? Map.of()
                     : Collections.unmodifiableMap(new LinkedHashMap<>(rawParams));
-            return buildPlanIngestionRequest(jobParam, triggerParams);
+            return buildPlanIngestionCommand(jobParam, triggerParams);
         } catch (Exception e) {
             throw new IngestScheduleParameterException("JSON参数解析失败: " + e.getMessage(), e);
         }
     }
 
-    private PlanIngestionCommand buildPlanIngestionRequest(ProvenanceScheduleJobParam param, Map<String, Object> triggerParams) {
+    private PlanIngestionCommand buildPlanIngestionCommand(ProvenanceScheduleJobParam param, Map<String, Object> triggerParams) {
         ProvenanceScheduleJobParam nonNullParam = param == null ? ProvenanceScheduleJobParam.empty() : param;
         Map<String, Object> nonNullTriggerParams = triggerParams == null ? Map.of() : triggerParams;
         return new PlanIngestionCommand(

@@ -27,7 +27,7 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.value.PlannerWindow;
+import com.patra.ingest.domain.model.vo.PlannerWindow;
 import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;

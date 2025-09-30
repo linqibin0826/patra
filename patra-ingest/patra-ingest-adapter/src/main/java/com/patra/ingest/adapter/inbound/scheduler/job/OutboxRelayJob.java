@@ -46,9 +46,9 @@ public class OutboxRelayJob {
         Instant now = Instant.now(clock);
         try {
             OutboxRelayJobParam jobParam = parseParam(XxlJobHelper.getJobParam());
-            OutboxRelayInstruction instruction = buildInstruction(jobParam, now);
+            OutboxRelayCommand command = buildInstruction(jobParam, now);
 
-            RelayReport report = relayUseCase.relay(instruction);
+            RelayReport report = relayUseCase.relay(command);
 
             XxlJobHelper.handleSuccess("Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d"
                     .formatted(report.channel().channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
@@ -65,7 +65,7 @@ public class OutboxRelayJob {
     }
 
     /**
-     * 构建 relay 指令：封装目标通道、时间基准、批大小、租约配置与重试策略。
+     * 构建 relay 命令：封装目标通道、时间基准、批大小、租约配置与重试策略。
      *
      * @param param 任务参数（可能部分字段为空）
      * @param now   当前时间（注入 Clock 便于测试）

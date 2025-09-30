@@ -69,7 +69,55 @@ patra-{service}/
 ├─ patra-{service}-infra/     # 基础设施（仓储）
 └─ patra-{service}-adapter/   # 适配层（REST/调度/MQ）
 
-### 4.2 依赖方向（必须遵守）
+### 4.2 patra-ingest-app 用例层架构（示例）
+
+patra-ingest-app/src/main/java/com/patra/ingest/app/
+├─ usecase/                   # 用例目录（按业务能力划分）
+│  ├─ plan/                  # 计划编排用例
+│  │  ├── PlanIngestionUseCase.java          # 用例接口
+│  │  ├── PlanIngestionOrchestrator.java     # 主编排器
+│  │  ├── command/                           # 命令对象
+│  │  │   └── PlanIngestionCommand.java
+│  │  ├── dto/                               # 结果 DTO
+│  │  │   └── PlanIngestionResult.java
+│  │  ├── assembler/                         # 组装器（Plan/Slice/Task 蓝图）
+│  │  │   ├── PlanAssembler.java
+│  │  │   ├── PlanAssemblerImpl.java
+│  │  │   └── PlanAssemblyRequest.java
+│  │  ├── slicer/                            # 切片策略（TIME/SINGLE）
+│  │  │   ├── SlicePlanner.java
+│  │  │   ├── SlicePlannerRegistry.java
+│  │  │   ├── TimeSlicePlanner.java
+│  │  │   ├── SingleSlicePlanner.java
+│  │  │   └── model/
+│  │  ├── window/                            # 窗口解析（HARVEST/BACKFILL/UPDATE）
+│  │  │   ├── PlanningWindowResolver.java
+│  │  │   ├── PlanningWindowResolverImpl.java
+│  │  │   └── support/
+│  │  ├── expression/                        # 表达式构建与哈希
+│  │  ├── validator/                         # 前置验证器（窗口/队列）
+│  │  └── publisher/                         # Outbox 发布器
+│  └─ relay/                 # Outbox 转发用例
+│     ├── OutboxRelayUseCase.java            # 用例接口
+│     ├── OutboxRelayOrchestrator.java       # 主编排器
+│     ├── command/                           # 命令对象
+│     │   └── OutboxRelayCommand.java
+│     ├── dto/                               # 结果 DTO
+│     │   └── RelayReport.java
+│     ├── executor/                          # 批次执行器
+│     ├── planner/                           # 转发计划构建
+│     ├── policy/                            # 错误分类（FATAL/TRANSIENT）
+│     ├── publisher/                         # 领域事件发布
+│     ├── config/                            # 配置
+│     └── support/                           # 工具
+
+**设计原则**：
+- **自包含**：每个用例目录包含完整的 command/dto/核心逻辑/支持组件
+- **统一命名**：`*Orchestrator`（编排器）、`*Command`（命令）、`*Impl`（实现）
+- **职责清晰**：`plan` 聚焦计划生命周期，`relay` 专注 Outbox 批次执行
+- **依赖方向**：用例层不依赖框架（仅依赖领域接口和 patra-common）
+
+### 4.3 依赖方向（必须遵守）
 
 	• adapter → app + api（+ web starters）
 	• app → domain + patra-common + core starter
