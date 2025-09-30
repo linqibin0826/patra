@@ -1,7 +1,7 @@
 package com.patra.ingest.infra.messaging;
 
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
-import com.patra.ingest.infra.messaging.support.TaskReadyMessageMapper;
+import com.patra.ingest.infra.messaging.converter.TaskReadyMessageConverter;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
@@ -35,10 +35,10 @@ import java.time.Instant;
 @Component
 public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 
-    private final TaskReadyMessageMapper messageMapper;
+    private final TaskReadyMessageConverter messageMapper;
     private final PatraMessagePublisher messagePublisher;
 
-    public RocketMqOutboxPublisher(TaskReadyMessageMapper messageMapper,
+    public RocketMqOutboxPublisher(TaskReadyMessageConverter messageMapper,
                                    PatraMessagePublisher messagePublisher) {
         this.messageMapper = messageMapper;
         this.messagePublisher = messagePublisher;
@@ -55,7 +55,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     public PublishResult publish(OutboxMessage message, RelayPlan plan) {
         var channelKey = plan.channel();
         // 按照 Outbox 载荷映射为领域消息体
-        TaskReadyMessage body = messageMapper.map(message);
+        TaskReadyMessage body = messageMapper.convert(message);
         // 拼装 PatraMessage 以对接 MQ SDK（含 traceId / occurredAt）
         PatraMessage<TaskReadyMessage> mqMessage = buildMessage(message, body, plan.triggeredAt());
         if (log.isDebugEnabled()) {

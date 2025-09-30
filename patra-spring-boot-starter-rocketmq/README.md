@@ -1,6 +1,25 @@
 # patra-spring-boot-starter-rocketmq
 
-RocketMQ 统一封装 Starter，提供消息模型、命名/分组规范校验、目的地构建与发布抽象。
+RocketMQ 统一封装 Sta### Channel 注册（约束"可用 channel"）
+推荐使用 `ChannelCatalog` 接口方式，从领域枚举自动提取：
+```java
+@Configuration
+public class IngestMessagingConfiguration {
+    @Bean
+    public ChannelCatalog ingestChannelCatalog() {
+        return () -> Arrays.stream(IngestChannels.values())
+                          .map(ChannelKey::channel)
+                          .collect(Collectors.toSet());
+    }
+}
+```
+或使用注解方式（适用于简单场景）：
+```java
+@Component
+@PatraMessagingChannels({"ingest.task.ready"})
+class ChannelRegistration {}
+```
+可选配置：息模型、命名/分组规范校验、目的地构建与发布抽象。
 
 ## 1. 模块定位
 - **服务/组件作用**：标准化 RocketMQ 消息的 header/payload、Topic 命名与发布 API
