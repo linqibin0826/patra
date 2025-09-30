@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.plan.assembler;
 
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;

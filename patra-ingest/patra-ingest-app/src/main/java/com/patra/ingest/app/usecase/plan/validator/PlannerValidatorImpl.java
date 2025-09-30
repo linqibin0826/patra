@@ -2,7 +2,7 @@ package com.patra.ingest.app.usecase.plan.validator;
 
 import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.exception.PlanValidationException;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
 import java.time.Duration;

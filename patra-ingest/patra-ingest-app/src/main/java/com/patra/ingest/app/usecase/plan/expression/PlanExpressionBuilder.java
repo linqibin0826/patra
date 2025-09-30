@@ -7,7 +7,7 @@ import com.patra.expr.Exprs;
 import com.patra.expr.canonical.ExprCanonicalizer;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 
 import java.util.ArrayList;

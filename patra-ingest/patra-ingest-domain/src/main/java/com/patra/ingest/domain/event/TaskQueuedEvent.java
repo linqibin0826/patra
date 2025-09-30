@@ -1,4 +1,4 @@
-package com.patra.ingest.domain.model.event;
+package com.patra.ingest.domain.event;
 
 import com.patra.common.domain.DomainEvent;
 

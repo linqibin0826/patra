@@ -1,4 +1,4 @@
-package com.patra.ingest.domain.model.command;
+package com.patra.ingest.domain.model.vo;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;

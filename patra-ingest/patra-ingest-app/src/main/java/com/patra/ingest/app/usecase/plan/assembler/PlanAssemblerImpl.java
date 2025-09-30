@@ -6,6 +6,7 @@ import com.patra.common.json.JsonNormalizer;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.expr.canonical.ExprCanonicalizer;
+import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.usecase.plan.slicer.SlicePlanner;
 import com.patra.ingest.app.usecase.plan.slicer.SlicePlannerRegistry;
@@ -13,10 +14,9 @@ import com.patra.ingest.app.usecase.plan.slicer.SliceStrategy;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
-import com.patra.ingest.domain.model.aggregate.PlanAssembly;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
 import org.springframework.stereotype.Component;
@@ -28,9 +28,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 默认计划装配服务实现。
+ * 计划装配实现类。
  * <p>
- * 负责将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssembly} 聚合集合：
+ * 负责将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssemblyResult} 聚合集合：
  * <ol>
  *   <li>确定切片策略（UPDATE → SINGLE；否则 TIME）</li>
  *   <li>规范化配置（canonical JSON + hash material）</li>
@@ -86,10 +86,10 @@ public class PlanAssemblerImpl implements PlanAssembler {
      * <p>无副作用（除时间调用 Instant.now 与规范化过程），不持久化。</p>
      *
      * @param request 装配请求
-     * @return PlanAssembly（READY 或 FAILED）
+     * @return PlanAssemblyResult（READY 或 FAILED）
      */
     @Override
-    public PlanAssembly assemble(PlanAssemblyRequest request) {
+    public PlanAssemblyResult assemble(PlanAssemblyRequest request) {
         PlanTriggerNorm norm = request.triggerNorm();
         PlannerWindow window = request.window();
         PlanExpressionDescriptor planExpression = request.planExpression();
@@ -107,11 +107,11 @@ public class PlanAssemblerImpl implements PlanAssembler {
 
         if (slices.isEmpty() || tasks.isEmpty()) {
             plan.markFailed();
-            return new PlanAssembly(plan, slices, tasks, PlanAssembly.PlanAssemblyStatus.FAILED);
+            return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.FAILED);
         }
 
         plan.markReady();
-        return new PlanAssembly(plan, slices, tasks, PlanAssembly.PlanAssemblyStatus.READY);
+        return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.READY);
     }
 
     /**

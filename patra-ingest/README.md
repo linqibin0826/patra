@@ -23,7 +23,7 @@
   | `patra-ingest-api` | 错误码、外部 DTO |
   | `patra-ingest-adapter` | XXL-Job 入站（Inbound Only）、Outbox Relay 调度入口 |
   | `patra-ingest-app` | **用例层**：`usecase/plan`（计划编排用例）与 `usecase/relay`（Outbox 转发用例） |
-  | `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule 聚合与端口 |
+  | `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule 聚合与端口<br>**包结构**（v0.1.0 重构）：<br>- `domain/event/` 统一事件目录<br>- `domain/model/aggregate/` 聚合根（保留 Aggregate 后缀）<br>- `domain/model/vo/` 值对象（含 PlanTriggerNorm） |
   | `patra-ingest-infra` | MyBatis-Plus DO、Mapper、仓储实现、RPC 出站（`infra.rpc.registry.*`） |
   | `patra-ingest-boot` | Spring Boot 启动、错误码映射 |
 
