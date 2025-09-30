@@ -43,7 +43,7 @@ class RocketMqOutboxPublisherTest {
         when(mapper.convert(any(OutboxMessage.class))).thenReturn(body);
 
         RelayPlan plan = new RelayPlan(
-                com.patra.ingest.domain.messaging.IngestChannels.TASK_READY,
+                com.patra.ingest.domain.messaging.IngestPublishingChannels.TASK_READY,
                 Instant.parse("2024-01-01T00:00:00Z"),
                 10,
                 java.time.Duration.ofSeconds(30),
@@ -77,7 +77,7 @@ class RocketMqOutboxPublisherTest {
 
         OutboxMessage msg = base().headersJson(null).build();
         RelayPlan plan = new RelayPlan(
-                com.patra.ingest.domain.messaging.IngestChannels.TASK_READY,
+                com.patra.ingest.domain.messaging.IngestPublishingChannels.TASK_READY,
                 Instant.now(),
                 10,
                 java.time.Duration.ofSeconds(30),

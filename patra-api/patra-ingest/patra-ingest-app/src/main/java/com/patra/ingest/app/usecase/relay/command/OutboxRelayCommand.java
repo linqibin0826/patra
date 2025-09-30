@@ -1,5 +1,7 @@
 package com.patra.ingest.app.usecase.relay.command;
 
+import com.patra.common.messaging.ChannelKey;
+
 import java.time.Duration;
 import java.time.Instant;
 
@@ -18,7 +20,7 @@ import java.time.Instant;
  * 不变式：该对象为不可变结构，供后续构建 {@code RelayPlan} 使用。
  */
 public record OutboxRelayCommand(
-        com.patra.ingest.domain.messaging.ChannelKey channel,
+        ChannelKey channel,
         Instant triggeredAt,
         Integer batchSize,
         Duration leaseDuration,

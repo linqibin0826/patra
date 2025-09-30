@@ -1,12 +1,14 @@
 package com.patra.ingest.app.usecase.relay;
 
 import cn.hutool.core.text.CharSequenceUtil;
+import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.app.usecase.relay.publisher.RelayEventPublisher;
 import com.patra.ingest.app.usecase.relay.executor.OutboxRelayExecutor;
 import com.patra.ingest.app.usecase.relay.planner.RelayPlanBuilder;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.model.vo.RelayBatchResult;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import lombok.RequiredArgsConstructor;
@@ -77,15 +79,15 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
         );
     }
 
-    private com.patra.ingest.domain.messaging.ChannelKey resolveDefaultChannelKey() {
+    private ChannelKey resolveDefaultChannelKey() {
         String cfg = properties.getDefaultChannel();
         if (CharSequenceUtil.isNotBlank(cfg)) {
-            var byChannel = com.patra.ingest.domain.messaging.IngestChannels.fromChannel(cfg);
+            var byChannel = IngestPublishingChannels.fromChannel(cfg);
             if (byChannel.isPresent()) return byChannel.get();
             try {
-                return com.patra.ingest.domain.messaging.IngestChannels.valueOf(cfg.trim().toUpperCase());
+                return IngestPublishingChannels.valueOf(cfg.trim().toUpperCase());
             } catch (IllegalArgumentException ignored) { }
         }
-        return com.patra.ingest.domain.messaging.IngestChannels.TASK_READY;
+        return IngestPublishingChannels.TASK_READY;
     }
 }

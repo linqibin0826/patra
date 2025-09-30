@@ -31,6 +31,7 @@ patra:
         namespace: ${spring.profiles.active:}   # 建议留空，自动按 profile 推导（如 dev→DEV）
         topic-pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"  # 默认
         tag-delimiter: "."
+        consumer-group-pattern: "^[a-z][a-z0-9\\-]*$"  # 消费组命名规范
       retry:
         max-attempts: 3
         backoff: 1s
@@ -42,8 +43,9 @@ patra:
 
 | 类 | 作用 | 条件 |
 |----|------|------|
-| `PatraRocketMQAutoConfiguration` | 注册 `PatraMessagePublisher` | 存在 `RocketMQTemplate` 且 enabled=true |
-| `PatraRocketMQProperties` | 统一属性入口 | 总是 |
+| `PatraRocketMQAutoConfiguration` | 注册 `PatraMessagePublisher` 等核心 Bean | 存在 `RocketMQTemplate` 且 enabled=true |
+| `PatraRocketMQProperties` | RocketMQ 统一属性入口 (`patra.messaging.rocketmq`) | 总是 |
+| `PatraChannelProperties` | Channel 配置属性 (`patra.messaging.channels`) | 总是 |
 | `RocketMQMessagePublisher` | 实际发送实现 | 通过条件注入 |
 | `TopicNameValidator` | Topic 规范校验（含 namespace） | 发布前调用 |
 | `GroupNameValidator` | 消费组命名校验 | 启动/监听校验 |
@@ -51,6 +53,7 @@ patra:
 | `DestinationBuilder` | `channel -> destination` 解析 | 通用工具 |
 | `PatraMessageFactory` | 从 TraceProvider 注入 traceId | 可选依赖 core |
 | `ChannelRegistry` | 统一 channel 注册与校验（可选白名单） | 注解/接口式注册 |
+| `EnvNamespaceResolver` | 从 Spring profiles 推导 namespace | 自动配置使用 |
 
 ---
 
@@ -59,9 +62,10 @@ patra:
 | 节点 | 字段 | 默认 | 说明 |
 |------|------|------|------|
 | 根 | enabled | true | 模块开关 |
-| naming | namespace | (null) | 业务命名空间（可用于 Topic 约束扩展） |
+| naming | namespace | (null) | 业务命名空间（未配置时从 profiles.active 推导） |
 | naming | topic-pattern | ^[A-Z][A-Z0-9]*(\.[A-Z0-9]+)*$ | Topic 合法正则（大写+点分段） |
 | naming | tag-delimiter | . | Tag 切割符 |
+| naming | consumer-group-pattern | ^[a-z][a-z0-9\-]*$ | 消费组命名正则（小写+连字符） |
 | retry | max-attempts | 3 | 消费（后续扩展）最大尝试次数 |
 | retry | backoff | 1s | 指数退避初值（后续消费侧用） |
 
@@ -149,14 +153,13 @@ class OrderEventPublisher {
 ```java
 @Slf4j
 @Component
-@RocketMQMessageListener(
-  consumerGroup = "svc-ingest-relay-cg",
-  topic = "INGEST.TASK",
-  selectorExpression = "READY"
-)
-public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMessage> {
+@Consumes(channel = "ingest.task.ready",
+          consumer = "relay",
+          mode = ConsumerMode.CONCURRENT,
+          concurrency = 2)
+public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMessage> {
   @Override
-  protected void handleMessage(PatraMessage<TaskReadyMessage> message) {
+  public void handle(PatraMessage<TaskReadyMessage> message) throws Exception {
     log.info("收到任务：eventId={} traceId={}", message.getEventId(), message.getTraceId());
     // 调用应用服务 ...
   }
@@ -169,22 +172,59 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 
 Starter 提供通用注解 `@Consumes` 与处理接口 `PatraMessageHandler<T>`，用最少心智负担保证强一致性：
 
+**方式一：引用发布方 API 契约（强烈推荐）**
+```java
+import com.patra.ingest.api.messaging.IngestPublishedChannels;
+import com.patra.ingest.api.messaging.TaskReadyEvent;
+
+@Slf4j
+@Component
+@Consumes(channel = IngestPublishedChannels.TASK_READY,  // 引用发布方契约
+          consumer = "relay",
+          mode = ConsumerMode.CONCURRENT,
+          concurrency = 2)
+public class TaskReadyHandler implements PatraMessageHandler<TaskReadyEvent> {
+  @Override
+  public void handle(PatraMessage<TaskReadyEvent> message) throws Exception {
+    log.info("recv event: id={} traceId={} payload={}", 
+             message.getEventId(), message.getTraceId(), message.getPayload());
+  }
+}
+```
+
+**方式二：直接使用字符串（不推荐）**
 ```java
 @Slf4j
 @Component
-@Consumes(channel = "ingest.task.ready",   // 小写点分段：domain.resource.event[.sub]
-          consumer = "relay",             // 职责名 → 生成 group：svc-{service}-{consumer}-cg
-          mode = ConsumerMode.CONCURRENT,  // 并发或顺序
+@Consumes(channel = "ingest.task.ready",  // 硬编码，容易出错
+          consumer = "relay",
+          mode = ConsumerMode.CONCURRENT,
+          concurrency = 2)
+public class TaskReadyHandler implements PatraMessageHandler<TaskReadyMessage> {
+  // ...
+}
+```
+
+**方式二：使用领域枚举（类型安全）**
+```java
+@Slf4j
+@Component
+@Consumes(channelEnum = IngestChannels.class,  // 领域通道枚举
+          channelName = "TASK_READY",           // 枚举常量名
+          consumer = "relay",
+          mode = ConsumerMode.CONCURRENT,
           concurrency = 2)
 public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMessage> {
   @Override
   public void handle(PatraMessage<TaskReadyMessage> message) throws Exception {
-    log.info("recv event: id={} traceId={} payload={}", message.getEventId(), message.getTraceId(), message.getPayload());
+    log.info("recv event: id={} traceId={} payload={}", 
+             message.getEventId(), message.getTraceId(), message.getPayload());
   }
 }
 ```
 
 启动期：按规范将 `channel` → `topic/tag/group` 映射并注册监听容器，自动补齐 `namespace` 前缀（基于 `spring.profiles.active`）。
+
 强校验：
 - 命名规范：`topic/tag/group` 全量校验（含 namespace 前缀与消费组正则）。
 - selector：默认从事件名推导为大写；如需细分，可用 `selector` 覆盖（要求大写点分段）。
@@ -195,40 +235,64 @@ public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMes
 
 ## 9. Channel 注册与白名单（约束发送/接收）
 
-为避免"随意新增 channel"，Starter 提供统一注册器 `ChannelRegistry`，支持两种注册方式（二选一或同时）：
+为避免"随意新增 channel"，Starter 提供统一注册器 `ChannelRegistry`。
 
-- **接口方式（推荐）**：提供一个 `ChannelCatalog` Bean，从领域枚举自动提取
-  ```java
-  @Configuration
-  public class IngestMessagingConfiguration {
+### 设计理念
+
+**发布方暴露契约 → 消费方引用契约**
+
+1. **发布方**：在 `{service}-api` 模块中声明 `PublishedChannels`，使用 `@PublishedChannel` 标注
+2. **消费方**：引用发布方的 API 模块，直接使用常量，无需猜测
+3. **注册器**：从领域枚举或 API 契约提取 channel，进行白名单校验
+
+### API 契约示例（发布方）
+
+```java
+// patra-ingest-api 模块
+package com.patra.ingest.api.messaging;
+
+import com.patra.common.messaging.PublishedChannel;
+
+public final class IngestPublishedChannels {
+    
+    @PublishedChannel(
+        description = "采集任务准备就绪事件",
+        payloadType = TaskReadyEvent.class
+    )
+    public static final String TASK_READY = "ingest.task.ready";
+    
+    // 其他通道...
+}
+```
+
+### 注册方式
+
+使用 `ChannelCatalog` 接口，从领域枚举自动提取：
+
+```java
+@Configuration
+public class IngestMessagingConfiguration {
     @Bean
     public ChannelCatalog ingestChannelCatalog() {
-      // 自动从领域枚举提取所有 channel，保持单一数据源（SSOT）
-      return () -> Arrays.stream(IngestChannels.values())
-                        .map(ChannelKey::channel)
-                        .collect(Collectors.toSet());
+        // 自动从领域枚举提取所有 channel，保持单一数据源（SSOT）
+        return () -> Arrays.stream(IngestChannels.values())
+                          .map(ChannelKey::channel)
+                          .collect(Collectors.toSet());
     }
-  }
-  ```
-- **注解方式**：在任意 Spring Bean 上声明允许的 channel 集合
-  ```java
-  @Component
-  @PatraMessagingChannels({
-      "ingest.task.ready",
-      "ingest.article.created"
-  })
-  class ChannelRegistration {}
-  ```
+}
+```
 
-**推荐使用接口方式**：
+**设计优势**：
+- ✅ API 模块保持纯净（仅依赖 patra-common，无 MQ 依赖）
+- ✅ 消费方直接引用发布方契约，编译期类型安全
 - ✅ 自动从领域枚举同步，无需重复维护
-- ✅ 编译期类型安全
-- ✅ 符合 DDD 依赖方向（infra → domain）
+- ✅ 符合 DDD 依赖方向（infra → domain → common）
 
-校验策略：
-- 统一格式：`^[a-z0-9]+(\.[a-z0-9]+)+$`（至少三段、小写点分段）；
-- 可选 domain：`patra.messaging.channels.domain=ingest`（要求第一段等于该 domain）；
-- 白名单强制：`patra.messaging.channels.enforce=true`（默认 true）。若未注册任何 channel，将仅做格式校验并告警。
+### 校验策略
+
+- 统一格式：`^[a-z0-9]+(\.[a-z0-9]+)+$`（至少三段、小写点分段）
+- 可选 domain：`patra.messaging.channels.domain=ingest`（要求第一段等于该 domain）
+- 白名单强制：`patra.messaging.channels.enforce=true`（默认 true）。若未注册任何 channel，将仅做格式校验并告警
 
 发送路径：`sendByChannel("domain.resource.event")` 会先通过 `ChannelRegistry.validate(channel)` 再解析为目的地并发送。
 
@@ -284,15 +348,41 @@ public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMes
 
 ---
 
-## 11. 参考源码
+## 15. 参考源码
+
+### RocketMQ Starter（`com.patra.starter.rocketmq`）
 
 | 位置 | 说明 |
 |------|------|
-| `config/PatraRocketMQAutoConfiguration.java` | 自动配置入口 |
-| `config/PatraRocketMQProperties.java` | 属性定义 |
-| `publisher/RocketMQMessagePublisher.java` | 默认发送实现 |
-| `model/PatraMessage.java` | 通用消息载体 |
-| `support/TopicNameValidator.java` | Topic 校验逻辑 |
+| `config/PatraRocketMQAutoConfiguration` | 自动配置入口 |
+| `config/PatraRocketMQProperties` | RocketMQ 属性定义 |
+| `config/PatraChannelProperties` | Channel 配置属性 |
+| `publisher/RocketMQMessagePublisher` | 默认发送实现 |
+| `publisher/PatraMessagePublisher` | 发布接口 |
+| `model/PatraMessage` | 通用消息载体 |
+| `support/TopicNameValidator` | Topic 校验逻辑 |
+| `support/GroupNameValidator` | 消费组命名校验 |
+| `support/DestinationBuilder` | Channel→Destination 转换 |
+| `support/EnvNamespaceResolver` | Namespace 自动推导 |
+| `consumer/Consumes` | 消费者注解 |
+| `consumer/PatraMessageHandler` | 消费者处理接口 |
+| `consumer/ConsumesRegistrar` | 消费者运行时注册器 |
+| `channels/ChannelCatalog` | Channel 注册接口 |
+| `channels/ChannelRegistry` | Channel 注册与校验 |
+
+### 公共抽象（`com.patra.common.messaging`）
+
+| 位置 | 说明 |
+|------|------|
+| `ChannelKey` | 通道键接口（domain.resource.event） |
+| `PublishedChannel` | 发布通道标注注解 |
+
+### API 契约示例（`{service}-api`）
+
+| 位置 | 说明 |
+|------|------|
+| `api/messaging/{Service}PublishedChannels` | 对外发布的通道常量 |
+| `api/messaging/*Event` | 事件载荷 DTO |
 
 ---
 

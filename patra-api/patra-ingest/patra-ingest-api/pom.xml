@@ -20,6 +20,7 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
         </dependency>
+        
         <!-- Validation API -->
         <dependency>
             <groupId>jakarta.validation</groupId>

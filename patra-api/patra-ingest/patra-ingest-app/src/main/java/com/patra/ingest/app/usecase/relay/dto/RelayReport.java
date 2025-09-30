@@ -1,5 +1,7 @@
 package com.patra.ingest.app.usecase.relay.dto;
 
+import com.patra.common.messaging.ChannelKey;
+
 /**
  * Relay 执行统计结果（单次批量发布维度）。
  * <p>字段语义：
@@ -14,7 +16,7 @@ package com.patra.ingest.app.usecase.relay.dto;
  * 用途：日志观测 / 调度平台展示 / 指标上报聚合。
  */
 public record RelayReport(
-        com.patra.ingest.domain.messaging.ChannelKey channel,
+        ChannelKey channel,
         int fetched,
         int published,
         int retried,
@@ -22,7 +24,7 @@ public record RelayReport(
         int leaseMissed
 ) {
     /** 返回空统计（用于功能关闭场景）。 */
-    public static RelayReport empty(com.patra.ingest.domain.messaging.ChannelKey channel) {
+    public static RelayReport empty(ChannelKey channel) {
         return new RelayReport(channel, 0, 0, 0, 0, 0);
     }
 }

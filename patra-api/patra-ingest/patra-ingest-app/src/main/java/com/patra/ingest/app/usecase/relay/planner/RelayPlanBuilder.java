@@ -3,8 +3,10 @@ package com.patra.ingest.app.usecase.relay.planner;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
+import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
+import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import org.springframework.stereotype.Component;
 
@@ -60,26 +62,26 @@ public class RelayPlanBuilder {
      * 解析得到 ChannelKey：
      * 优先使用指令提供；否则尝试解析配置的 defaultChannel（支持 "ingest.task.ready" 或别名 "TASK_READY"）；均缺失时使用内置默认。
      */
-    private com.patra.ingest.domain.messaging.ChannelKey resolveChannelKey(OutboxRelayCommand instruction) {
+    private ChannelKey resolveChannelKey(OutboxRelayCommand instruction) {
         if (instruction.channel() != null) {
             return instruction.channel();
         }
         String cfg = properties.getDefaultChannel();
         if (StrUtil.isNotBlank(cfg)) {
             // 1) 尝试按规范字符串解析
-            var byChannel = com.patra.ingest.domain.messaging.IngestChannels.fromChannel(cfg);
+            var byChannel = IngestPublishingChannels.fromChannel(cfg);
             if (byChannel.isPresent()) {
                 return byChannel.get();
             }
             // 2) 尝试按别名（枚举名）解析
             try {
-                return com.patra.ingest.domain.messaging.IngestChannels.valueOf(cfg.trim().toUpperCase());
+                return IngestPublishingChannels.valueOf(cfg.trim().toUpperCase());
             } catch (IllegalArgumentException ignored) {
                 // fall through to default
             }
         }
         // 默认回退
-        return com.patra.ingest.domain.messaging.IngestChannels.TASK_READY;
+        return IngestPublishingChannels.TASK_READY;
     }
 
     /**
