@@ -1,10 +1,8 @@
 package com.patra.starter.rocketmq.autoconfigure;
 
 import com.patra.common.error.codes.HttpStdErrors;
-import com.patra.common.messaging.ChannelKey;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.rocketmq.consumer.ConsumerBootstrap;
-import com.patra.starter.rocketmq.core.channel.ChannelRegistry;
 import com.patra.starter.rocketmq.core.destination.DestinationBuilder;
 import com.patra.starter.rocketmq.core.message.MessageFactory;
 import com.patra.starter.rocketmq.naming.NamespaceResolver;
@@ -20,12 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.env.Environment;
-import org.springframework.core.type.filter.AssignableTypeFilter;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * RocketMQ 自动配置。
@@ -38,14 +31,6 @@ import java.util.List;
 @ConditionalOnClass(RocketMQTemplate.class)
 @ConditionalOnProperty(prefix = "patra.messaging.rocketmq", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RocketMQAutoConfiguration {
-
-    @Bean
-    @ConditionalOnMissingBean
-    public ChannelRegistry channelRegistry(RocketMQProperties properties) {
-        // 扫描所有实现 ChannelKey 的枚举类
-        List<Class<? extends Enum<? extends ChannelKey>>> channelEnums = scanChannelEnums();
-        return new ChannelRegistry(channelEnums, properties.getChannel().isEnforceWhitelist());
-    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -78,13 +63,11 @@ public class RocketMQAutoConfiguration {
     @ConditionalOnMissingBean
     public MessagePublisher messagePublisher(RocketMQTemplate rocketMQTemplate,
                                              DestinationBuilder destinationBuilder,
-                                             ChannelRegistry channelRegistry,
                                              TopicValidator topicValidator,
                                              ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) {
         return new DefaultMessagePublisher(
                 rocketMQTemplate,
                 destinationBuilder,
-                channelRegistry,
                 topicValidator,
                 httpErrorsProvider
         );
@@ -97,36 +80,5 @@ public class RocketMQAutoConfiguration {
                                                TopicValidator topicValidator,
                                                GroupValidator groupValidator) {
         return new ConsumerBootstrap(environment, properties, topicValidator, groupValidator);
-    }
-
-    /**
-     * 扫描所有实现 ChannelKey 的枚举类。
-     */
-    @SuppressWarnings("unchecked")
-    private List<Class<? extends Enum<? extends ChannelKey>>> scanChannelEnums() {
-        List<Class<? extends Enum<? extends ChannelKey>>> result = new ArrayList<>();
-        try {
-            ClassPathScanningCandidateComponentProvider scanner = 
-                    new ClassPathScanningCandidateComponentProvider(false);
-            scanner.addIncludeFilter(new AssignableTypeFilter(ChannelKey.class));
-
-            // 扫描常见包路径
-            String[] basePackages = {"com.patra"};
-            for (String basePackage : basePackages) {
-                scanner.findCandidateComponents(basePackage).forEach(beanDef -> {
-                    try {
-                        Class<?> clazz = Class.forName(beanDef.getBeanClassName());
-                        if (clazz.isEnum() && ChannelKey.class.isAssignableFrom(clazz)) {
-                            result.add((Class<? extends Enum<? extends ChannelKey>>) clazz);
-                        }
-                    } catch (ClassNotFoundException e) {
-                        // 忽略
-                    }
-                });
-            }
-        } catch (Exception e) {
-            // 扫描失败不影响启动，只是不会自动注册
-        }
-        return result;
     }
 }
