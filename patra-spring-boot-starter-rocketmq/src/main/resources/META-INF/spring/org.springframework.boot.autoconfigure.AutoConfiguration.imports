@@ -1,1 +1,1 @@
-com.patra.starter.rocketmq.config.PatraRocketMQAutoConfiguration
+com.patra.starter.rocketmq.autoconfigure.RocketMQAutoConfiguration
