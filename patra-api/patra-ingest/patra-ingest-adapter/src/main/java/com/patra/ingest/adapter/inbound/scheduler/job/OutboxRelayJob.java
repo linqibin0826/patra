@@ -5,10 +5,10 @@ import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.adapter.inbound.scheduler.param.OutboxRelayJobParam;
-import com.patra.ingest.app.relay.OutboxRelayUseCase;
-import com.patra.ingest.app.relay.command.OutboxRelayInstruction;
-import com.patra.ingest.app.relay.config.OutboxRelayProperties;
-import com.patra.ingest.app.relay.dto.RelayReport;
+import com.patra.ingest.app.usecase.relay.OutboxRelayUseCase;
+import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
+import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
+import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.xxl.job.core.context.XxlJobHelper;
@@ -69,10 +69,10 @@ public class OutboxRelayJob {
      *
      * @param param 任务参数（可能部分字段为空）
      * @param now   当前时间（注入 Clock 便于测试）
-     * @return OutboxRelayInstruction
+     * @return OutboxRelayCommand
      */
-    private OutboxRelayInstruction buildInstruction(OutboxRelayJobParam param, Instant now) {
-        return new OutboxRelayInstruction(
+    private OutboxRelayCommand buildInstruction(OutboxRelayJobParam param, Instant now) {
+        return new OutboxRelayCommand(
                 resolveChannel(param.channel()),
                 now,
                 param.batchSize(),
