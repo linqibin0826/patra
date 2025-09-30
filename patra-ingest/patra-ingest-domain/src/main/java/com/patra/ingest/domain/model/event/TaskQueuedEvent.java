@@ -18,27 +18,27 @@ import java.time.Instant;
  * <p>幂等：以 {@code taskId} 为唯一键；重复发布视为异常，应在上游避免。</p>
  */
 public record TaskQueuedEvent(
-    /** 任务主键 ID。 */
+        /*任务主键 ID。 */
         Long taskId,
-    /** 所属计划 ID。 */
+        /*所属计划 ID。 */
         Long planId,
-    /** 所属切片 ID。 */
+        /*所属切片 ID。 */
         Long sliceId,
-    /** 调度实例 ID。 */
+        /*调度实例 ID。 */
         Long scheduleInstanceId,
-    /** 来源代码。 */
+        /*来源代码。 */
         String provenanceCode,
-    /** 操作代码。 */
+        /*操作代码。 */
         String operationCode,
-    /** 幂等键（去重语义）。 */
+        /*幂等键（去重语义）。 */
         String idempotentKey,
-    /** 任务参数 JSON。 */
+        /*任务参数 JSON。 */
         String paramsJson,
-    /** 优先级（数值越大优先级可能越高，视实现）。 */
+        /*优先级（数值越大优先级可能越高，视实现）。 */
         Integer priority,
-    /** 计划调度执行时间。 */
+        /*计划调度执行时间。 */
         Instant scheduledAt,
-    /** 事件发生时间。 */
+        /*事件发生时间。 */
         Instant occurredAt
 ) implements DomainEvent {
 
@@ -50,16 +50,16 @@ public record TaskQueuedEvent(
     /**
      * 工厂方法：使用必需上下文创建事件，并自动填充 occurredAt。
      *
-     * @param taskId 任务 ID
-     * @param planId 计划 ID
-     * @param sliceId 切片 ID
+     * @param taskId             任务 ID
+     * @param planId             计划 ID
+     * @param sliceId            切片 ID
      * @param scheduleInstanceId 调度实例 ID
-     * @param provenanceCode 来源代码
-     * @param operationCode 操作代码
-     * @param idempotentKey 幂等键
-     * @param paramsJson 参数 JSON
-     * @param priority 优先级
-     * @param scheduledAt 计划执行时间
+     * @param provenanceCode     来源代码
+     * @param operationCode      操作代码
+     * @param idempotentKey      幂等键
+     * @param paramsJson         参数 JSON
+     * @param priority           优先级
+     * @param scheduledAt        计划执行时间
      * @return 事件实例
      */
     public static TaskQueuedEvent of(Long taskId,

@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.enums.Priority;
 import com.patra.ingest.adapter.inbound.scheduler.param.ProvenanceScheduleJobParam;
-import com.patra.ingest.app.planning.application.PlanIngestionUseCase;
-import com.patra.ingest.app.planning.command.PlanIngestionRequest;
-import com.patra.ingest.app.planning.dto.PlanIngestionResult;
+import com.patra.ingest.app.usecase.plan.PlanIngestionUseCase;
+import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
+import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
 import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
@@ -74,10 +74,10 @@ public abstract class AbstractProvenanceScheduleJob {
      * <p>支持字段：windowFrom、windowTo、priority、step、schedulerLogId、triggeredAt 以及任意扩展字段（透传为 triggerParams）。</p>
      * <p>失败策略：结构非法或 JSON 读取失败抛出 {@link IngestScheduleParameterException}，由调度入口捕获并标记失败。</p>
      * @param paramStr 原始 XXL Job 参数（JSON 字符串，可为空）
-     * @return PlanIngestionRequest 请求
+     * @return PlanIngestionCommand 请求
      * @throws IngestScheduleParameterException 参数不合法时抛出
      */
-    protected PlanIngestionRequest parseJobParam(String paramStr) {
+    protected PlanIngestionCommand parseJobParam(String paramStr) {
         if (CharSequenceUtil.isBlank(paramStr)) {
             return buildPlanIngestionRequest(ProvenanceScheduleJobParam.empty(), Map.of());
         }
@@ -98,10 +98,10 @@ public abstract class AbstractProvenanceScheduleJob {
         }
     }
 
-    private PlanIngestionRequest buildPlanIngestionRequest(ProvenanceScheduleJobParam param, Map<String, Object> triggerParams) {
+    private PlanIngestionCommand buildPlanIngestionRequest(ProvenanceScheduleJobParam param, Map<String, Object> triggerParams) {
         ProvenanceScheduleJobParam nonNullParam = param == null ? ProvenanceScheduleJobParam.empty() : param;
         Map<String, Object> nonNullTriggerParams = triggerParams == null ? Map.of() : triggerParams;
-        return new PlanIngestionRequest(
+        return new PlanIngestionCommand(
                 getProvenanceCode(),
                 getEndpoint(),
                 getOperationCode(),
@@ -168,7 +168,7 @@ public abstract class AbstractProvenanceScheduleJob {
         log.info("[INGEST][ADAPTER] Starting scheduled job, provenance={}, endpoint={}, operation={}, rawParam={}",
                     getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
 
-            PlanIngestionRequest command = parseJobParam(paramStr);
+            PlanIngestionCommand command = parseJobParam(paramStr);
             PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
 
             long duration = System.currentTimeMillis() - startTime;
