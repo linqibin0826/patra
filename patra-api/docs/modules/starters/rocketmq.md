@@ -165,6 +165,33 @@ public class TaskReadyListener extends AbstractPatraMessageListener<TaskReadyMes
 
 启动时将自动校验 topic/tag/group 命名；不合规直接抛出异常阻止启动。
 
+### 8.1 自定义消费注解（运行时注册版）
+
+为降低维护成本并保证强一致性，Starter 提供 `@Consumes` 注解与 `PatraMessageHandler<T>` 接口：
+
+```java
+@Slf4j
+@Component
+@Consumes(channelEnum = IngestChannels.class,  // 领域通道目录（强类型）
+          channelName = "TASK_READY",        // 枚举常量名，避免手写字符串通道
+          consumer = "relay",                // 职责名，用于生成 group：svc-{service}-{consumer}-cg
+          mode = ConsumerMode.CONCURRENT,     // 并发或顺序
+          concurrency = 2)                    // 建议并发度
+public class TaskReadyLoggingHandler implements PatraMessageHandler<TaskReadyMessage> {
+  @Override
+  public void handle(PatraMessage<TaskReadyMessage> message) throws Exception {
+    log.info("recv event: id={} traceId={} payload={}", message.getEventId(), message.getTraceId(), message.getPayload());
+  }
+}
+```
+
+启动期：框架按规范将 `channel` → `topic/tag/group` 映射并注册监听容器，自动补齐 `namespace` 前缀（基于 `spring.profiles.active`）。
+强校验：
+- 目录一致性：`channel` 与 Handler 泛型 `T` 必须匹配领域目录绑定的载荷类型；
+- 命名规范：`topic/tag/group` 全量校验（含 namespace 前缀与消费组正则）。
+
+说明：`consumer` 值是“职责名”，用于区分同一服务内不同角色的消费组（如 `relay`/`audit`），形成独立位点与观测标签。
+
 ## 9. Channel 注册与白名单（约束发送/接收）
 
 为避免“随意新增 channel”，Starter 提供统一注册器 `ChannelRegistry`，支持两种注册方式（二选一或同时）：

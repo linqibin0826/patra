@@ -6,6 +6,7 @@ import com.patra.starter.rocketmq.channels.ChannelRegistry;
 import com.patra.starter.rocketmq.config.PatraChannelProperties;
 import com.patra.starter.rocketmq.publisher.PatraMessagePublisher;
 import com.patra.starter.rocketmq.publisher.RocketMQMessagePublisher;
+import com.patra.starter.rocketmq.consumer.ConsumesRegistrar;
 import com.patra.starter.rocketmq.support.PatraMessageFactory;
 import com.patra.starter.rocketmq.support.RocketMQListenerAnnotationValidator;
 import com.patra.starter.core.error.spi.TraceProvider;
@@ -42,6 +43,16 @@ public class PatraRocketMQAutoConfiguration {
                                            org.springframework.beans.factory.ObjectProvider<HttpStdErrors.Group> httpErrorsProvider,
                                            PatraChannelProperties channelProperties) {
         return new ChannelRegistry(catalogsProvider, httpErrorsProvider, channelProperties);
+    }
+
+    /**
+     * 基于 @Consumes 注解的消费者注册器（运行时注册）。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ConsumesRegistrar consumesRegistrar(org.springframework.core.env.Environment environment,
+                                               org.springframework.beans.factory.ObjectProvider<PatraRocketMQProperties> props) {
+        return new ConsumesRegistrar(environment, props);
     }
 
     /**
