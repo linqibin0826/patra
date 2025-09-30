@@ -13,7 +13,7 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 ## 2. 分层约束（Hexagonal / DDD）
 - **领域层 (domain)**：纯 Java，对外通过聚合、值对象与领域事件表达业务不变量
 - **应用层 (app)**：编排用例、事务、幂等控制，仅依赖领域端口
-- **适配层 (adapter)**：承载 REST/MQ/调度等入站交互（Inbound Only），负责协议转换与错误映射
+- **适配层 (adapter)**：承载 REST/MQ/调度等入站交互（Inbound Only），负责协议转换与错误映射；MQ 入站统一使用 `@Consumes(channel, consumer)` 声明，Starter 自动映射并校验 `topic/tag/group`
 - **基础设施层 (infra)**：实现仓储、消息、Feign 等出站二级端口（Outbound），由领域端口约束
 - **启动层 (boot)**：整合配置，约束依赖方向 `adapter → app → domain ← infra`
 
