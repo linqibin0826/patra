@@ -5,4 +5,3 @@ package com.patra.starter.rocketmq.consumer;
  */
 public enum PlaceholderChannel { __ }
 
-π
