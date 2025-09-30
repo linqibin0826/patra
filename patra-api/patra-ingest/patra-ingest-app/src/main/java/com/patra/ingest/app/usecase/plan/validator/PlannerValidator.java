@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.plan.validator;
 
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
 import com.patra.ingest.domain.exception.PlanValidationException;

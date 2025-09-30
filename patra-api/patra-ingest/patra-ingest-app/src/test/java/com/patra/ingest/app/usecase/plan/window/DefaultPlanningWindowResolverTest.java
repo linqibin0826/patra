@@ -2,7 +2,7 @@ package com.patra.ingest.app.usecase.plan.window;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;

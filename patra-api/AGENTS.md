@@ -69,8 +69,30 @@ patra-{service}/
 ├─ patra-{service}-infra/     # 基础设施（仓储）
 └─ patra-{service}-adapter/   # 适配层（REST/调度/MQ）
 
-### 4.2 patra-ingest-app 用例层架构（示例）
+**domain 层包结构规范**（以 patra-ingest-domain 为例）：
+```
+domain/
+├─ event/                     # 领域事件（统一目录）
+├─ exception/                 # 领域异常
+├─ messaging/                 # 消息通道定义（ChannelKey）
+├─ model/
+│  ├─ aggregate/             # 聚合根（保留 Aggregate 后缀）
+│  ├─ entity/                # 实体
+│  ├─ enums/                 # 枚举
+│  ├─ snapshot/              # 快照
+│  └─ vo/                    # 值对象（如 PlanTriggerNorm）
+├─ policy/                   # 领域策略接口
+└─ port/                     # 端口接口（仓储/消息/RPC）
+```
 
+**关键约定**：
+- 聚合根保留 `Aggregate` 后缀（如 `PlanAggregate`），明确聚合边界
+- 事件统一在 `domain/event/` 避免重复目录
+- Command/Query 对象属于应用层，不应出现在 domain 层
+- domain 层禁止引入任何框架依赖（仅依赖 patra-common）
+
+### 4.2 patra-ingest-app 用例层架构（示例）
+```
 patra-ingest-app/src/main/java/com/patra/ingest/app/
 ├─ usecase/                   # 用例目录（按业务能力划分）
 │  ├─ plan/                  # 计划编排用例
@@ -110,6 +132,7 @@ patra-ingest-app/src/main/java/com/patra/ingest/app/
 │     ├── publisher/                         # 领域事件发布
 │     ├── config/                            # 配置
 │     └── support/                           # 工具
+```
 
 **设计原则**：
 - **自包含**：每个用例目录包含完整的 command/dto/核心逻辑/支持组件

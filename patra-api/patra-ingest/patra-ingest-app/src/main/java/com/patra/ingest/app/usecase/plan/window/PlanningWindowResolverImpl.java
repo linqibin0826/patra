@@ -10,7 +10,7 @@ import static com.patra.ingest.app.usecase.plan.window.support.PlanningWindowSup
 import static com.patra.ingest.app.usecase.plan.window.support.PlanningWindowSupport.resolveZone;
 
 import cn.hutool.core.util.StrUtil;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
 

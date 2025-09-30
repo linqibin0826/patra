@@ -92,15 +92,25 @@ usecase/relay/
 └── support/                          # 工具
 ```
 
-## 2. 核心领域概念与幂等
+## 2. 核心领域概念
 
-| 概念 | 功能 | 幂等/关键字段 |
-| ---- | ---- | ------------- |
-| ScheduleInstance | 一次调度触发上下文 | scheduler_* + provenance_code |
-| Plan | 计划蓝图（窗口 + 配置 + 表达式 + 策略） | plan_key / exprProtoHash / provenanceConfigHash |
-| PlanSlice | 计划切片（可独立执行子窗口） | slice_signature_hash |
-| Task | 待执行任务（由切片派生） | idempotent_key |
-| OutboxMessage | 出站消息 | (channel, dedup_key) + 租约字段 |
+### 命名约定与设计原则
+
+**聚合根命名**：所有聚合根类保留 `Aggregate` 后缀（如 `PlanAggregate`、`TaskAggregate`），这是团队明确的命名约定，理由：
+1. **显式识别**：在代码库中快速识别聚合根与普通实体/值对象的区别
+2. **一致性**：与 `PlanAssembly`（非聚合但命名特殊）形成一致的命名风格
+3. **明确边界**：在六边形架构中清晰标识聚合边界
+
+**包组织原则**（v0.1.0 重构）：
+- 领域事件统一在 `domain/event/`（避免重复目录）
+- 值对象统一在 `domain/model/vo/`（如 `PlanTriggerNorm`，从 `command/` 重新分类）
+- Command/Query 对象属于应用层关注点，不应出现在 domain 层
+
+> 相关重构详情见仓库根目录 `DOMAIN_REFACTORING_REPORT.md`
+
+### 聚合根与实体
+
+| 聚合根 | 职责 | 不变量 |
 
 哈希规范：
 1. 表达式原型 JSON → 规范化 → `exprProtoHash`

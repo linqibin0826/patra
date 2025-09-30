@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.DomainEvent;
-import com.patra.ingest.domain.model.event.TaskQueuedEvent;
+import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.vo.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.LeaseInfo;
 import com.patra.ingest.domain.model.vo.TaskSchedulerContext;

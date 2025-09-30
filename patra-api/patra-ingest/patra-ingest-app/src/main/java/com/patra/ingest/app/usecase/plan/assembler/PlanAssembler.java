@@ -1,11 +1,11 @@
 package com.patra.ingest.app.usecase.plan.assembler;
 
-import com.patra.ingest.domain.model.aggregate.PlanAssembly;
+import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 
 /**
  * 计划装配服务接口。
  * <p>
- * 输入 {@link PlanAssemblyRequest}（已完成窗口解析、表达式编译、配置快照收集）；输出 {@link com.patra.ingest.domain.model.aggregate.PlanAssembly}
+ * 输入 {@link PlanAssemblyRequest}（已完成窗口解析、表达式编译、配置快照收集）；输出 {@link PlanAssemblyResult}
  * 聚合集合（Plan + PlanSlice[] + Task[]），并标注 READY / FAILED 状态：
  * <ul>
  *   <li>READY：至少 1 个切片且至少 1 个任务</li>
@@ -28,5 +28,5 @@ public interface PlanAssembler {
      * @param request 装配请求（非 null）
      * @return 聚合装配结果（含状态）
      */
-    PlanAssembly assemble(PlanAssemblyRequest request);
+    PlanAssemblyResult assemble(PlanAssemblyRequest request);
 }

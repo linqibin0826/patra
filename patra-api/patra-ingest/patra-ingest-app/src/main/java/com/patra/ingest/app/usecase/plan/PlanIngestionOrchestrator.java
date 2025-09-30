@@ -4,46 +4,37 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjectUtil;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.app.usecase.plan.expression.PlanExpressionBuilder;
-import com.patra.ingest.app.usecase.plan.assembler.PlanAssemblyRequest;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssembler;
+import com.patra.ingest.app.usecase.plan.assembler.PlanAssemblyRequest;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
+import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
+import com.patra.ingest.app.usecase.plan.expression.PlanExpressionBuilder;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.usecase.plan.publisher.TaskOutboxPublisher;
-import com.patra.ingest.app.usecase.plan.window.PlanningWindowResolver;
-import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.app.usecase.plan.validator.PlannerValidator;
+import com.patra.ingest.app.usecase.plan.window.PlanningWindowResolver;
+import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.exception.PlanAssemblyException;
 import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.exception.PlanValidationException;
-import com.patra.ingest.domain.model.aggregate.PlanAggregate;
-import com.patra.ingest.domain.model.aggregate.PlanAssembly;
-import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
-import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
-import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.command.PlanTriggerNorm;
+import com.patra.ingest.domain.model.aggregate.*;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
-import com.patra.ingest.domain.model.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
-import com.patra.ingest.domain.port.CursorRepository;
-import com.patra.ingest.domain.port.PlanRepository;
-import com.patra.ingest.domain.port.PlanSliceRepository;
-import com.patra.ingest.domain.port.ScheduleInstanceRepository;
-import com.patra.ingest.domain.port.TaskRepository;
+import com.patra.ingest.domain.port.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 采集计划编排核心应用服务：承接调度层（调度任务 / 手动触发）调用，完成
@@ -173,7 +164,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
         // Phase 5: 组装蓝图
         PlanAssemblyRequest assemblyRequest = new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
-        PlanAssembly assembly = assemblePlan(assemblyRequest);
+        PlanAssemblyResult assembly = assemblePlan(assemblyRequest);
 
         PlanAggregate draftPlan = assembly.plan();
         // 幂等复用：若 planKey 已存在，直接走补偿/重试分支
@@ -307,8 +298,8 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
      * @return 装配结果
      * @throws PlanAssemblyException 装配失败或结果为空
      */
-    private PlanAssembly assemblePlan(PlanAssemblyRequest assemblyRequest) {
-        PlanAssembly assembly;
+    private PlanAssemblyResult assemblePlan(PlanAssemblyRequest assemblyRequest) {
+        PlanAssemblyResult assembly;
         try {
             assembly = planAssembler.assemble(assemblyRequest);
         } catch (PlanValidationException | PlanAssemblyException ex) {
@@ -317,7 +308,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
             throw new PlanAssemblyException("Plan assembly execution failed", PlanAssemblyException.Reason.SLICE_GENERATION_FAILED, ex);
         }
 
-        if (assembly == null || assembly.status() == PlanAssembly.PlanAssemblyStatus.FAILED) {
+        if (assembly == null || assembly.status() == PlanAssemblyResult.AssemblyStatus.FAILED) {
             throw new PlanAssemblyException("Plan assembly produced no executable units", PlanAssemblyException.Reason.EMPTY_RESULT);
         }
         return assembly;
