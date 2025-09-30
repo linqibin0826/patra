@@ -3,7 +3,6 @@ package com.patra.starter.rocketmq.publisher;
 import com.patra.common.error.ApplicationException;
 import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.rocketmq.core.channel.Channel;
-import com.patra.starter.rocketmq.core.channel.ChannelRegistry;
 import com.patra.starter.rocketmq.core.destination.Destination;
 import com.patra.starter.rocketmq.core.destination.DestinationBuilder;
 import com.patra.starter.rocketmq.core.message.Message;
@@ -25,18 +24,15 @@ public class DefaultMessagePublisher implements MessagePublisher {
 
     private final RocketMQTemplate rocketMQTemplate;
     private final DestinationBuilder destinationBuilder;
-    private final ChannelRegistry channelRegistry;
     private final TopicValidator topicValidator;
     private final ObjectProvider<HttpStdErrors.Group> httpErrorsProvider;
 
     public DefaultMessagePublisher(RocketMQTemplate rocketMQTemplate,
                                    DestinationBuilder destinationBuilder,
-                                   ChannelRegistry channelRegistry,
                                    TopicValidator topicValidator,
                                    ObjectProvider<HttpStdErrors.Group> httpErrorsProvider) {
         this.rocketMQTemplate = rocketMQTemplate;
         this.destinationBuilder = destinationBuilder;
-        this.channelRegistry = channelRegistry;
         this.topicValidator = topicValidator;
         this.httpErrorsProvider = httpErrorsProvider;
     }
@@ -49,9 +45,6 @@ public class DefaultMessagePublisher implements MessagePublisher {
     @Override
     public void sendByChannel(Channel channel, Message<?> message) {
         try {
-            // 校验 channel 在白名单内
-            channelRegistry.validate(channel);
-
             // 构建 destination
             Destination destination = destinationBuilder.build(channel);
 

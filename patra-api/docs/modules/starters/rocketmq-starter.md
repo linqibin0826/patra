@@ -23,8 +23,6 @@ patra:
   messaging:
     rocketmq:
       enabled: true
-      channel:
-        enforce-whitelist: false  # 生产环境建议 true
 
 rocketmq:
   name-server: ${MQ_NAMESERVER}
@@ -156,6 +154,7 @@ public void handle(Message<TaskReadyPayload> message) throws Exception {
 
 - ✅ 简化消费者配置，支持直接使用 channel 字符串
 - ✅ 移除枚举强制依赖，降低消费方与发布方耦合
+- ✅ 删除白名单校验机制，Channel 现在只能通过 ChannelKey 创建，保证类型安全
 - ✅ 添加启动时 channel 格式验证
 
 ## 参考资料

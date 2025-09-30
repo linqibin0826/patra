@@ -34,13 +34,6 @@ public record Channel(String value) {
     }
 
     /**
-     * 从字符串创建。
-     */
-    public static Channel of(String value) {
-        return new Channel(value);
-    }
-
-    /**
      * 获取领域（第一段）。
      */
     public String domain() {

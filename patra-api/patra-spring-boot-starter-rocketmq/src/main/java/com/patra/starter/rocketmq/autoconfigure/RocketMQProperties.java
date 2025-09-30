@@ -85,21 +85,10 @@ public class RocketMQProperties {
     }
 
     /**
-     * Channel 配置。
+     * Channel 配置（保留以支持未来扩展）。
      */
     public static class Channel {
-        /**
-         * 是否强制白名单校验。
-         */
-        private boolean enforceWhitelist = true;
-
-        public boolean isEnforceWhitelist() {
-            return enforceWhitelist;
-        }
-
-        public void setEnforceWhitelist(boolean enforceWhitelist) {
-            this.enforceWhitelist = enforceWhitelist;
-        }
+        // 保留类定义，未来可能添加其他配置项
     }
 
     /**
