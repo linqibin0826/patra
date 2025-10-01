@@ -145,6 +145,26 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
 
     /**
+     * 拉取所有通道的待发布消息。
+     * <p>用于未指定具体 channel 时，获取所有频道的待发布消息。</p>
+     * @param availableTime 可用时间上限（<=），通常为当前时间
+     * @param limit 最大条数（<=0 返回空）
+     * @return 待处理消息集合（可能为空）
+     */
+    @Override
+    public List<OutboxMessage> fetchPendingAllChannels(Instant availableTime, int limit) {
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+        List<OutboxMessageDO> entities = mapper.fetchPendingAllChannels(availableTime, limit);
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // 映射为领域对象供上层 Relay 处理
+        return entities.stream().map(converter::toDomain).toList();
+    }
+
+    /**
      * 通过乐观锁获取租约。
      * <p>条件：id = ? AND version = :expectedVersion AND (lease_owner IS NULL OR lease_expire_at &lt; NOW)。</p>
      * <p>成功：更新 leaseOwner / leaseExpireAt / version=version+1，返回 true；失败：返回 false（可能已被他人获取或版本冲突）。</p>

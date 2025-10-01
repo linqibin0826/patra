@@ -55,7 +55,7 @@ public class OutboxRelayExecutor {
     /**
      * 执行单批次发布。
      * <ol>
-     *   <li>fetchPending 按计划条件拉取候选消息</li>
+     *   <li>fetchPending 按计划条件拉取候选消息（支持单 channel 或全部 channel）</li>
      *   <li>逐条 acquireLease（乐观并发控制）</li>
      *   <li>publish → markPublished / classify exception → markFailed / markDeferred</li>
      *   <li>累计事件与统计信息</li>
@@ -66,10 +66,12 @@ public class OutboxRelayExecutor {
      */
     public RelayBatchResult execute(RelayPlan plan) {
         // 按计划批量拉取待发送消息，受租约与批大小约束
-        List<OutboxMessage> messages = relayStore.fetchPending(plan.channel().channel(), plan.triggeredAt(), plan.batchSize());
+        // 如果 plan.channel() 为 null，则获取所有 channel 的消息
+        List<OutboxMessage> messages = fetchMessages(plan);
         if (messages.isEmpty()) {
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][APP] relay executor no-pending channel={} triggeredAt={}", plan.channel().channel(), plan.triggeredAt());
+                String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
+                log.debug("[INGEST][APP] relay executor no-pending channel={} triggeredAt={}", channelDesc, plan.triggeredAt());
             }
             return RelayBatchResult.empty(plan.channel());
         }
@@ -78,6 +80,22 @@ public class OutboxRelayExecutor {
             processMessage(message, context);
         }
         return context.toBatchResult(messages.size());
+    }
+
+    /**
+     * 根据计划拉取消息：如果指定了 channel 则仅拉取该 channel，否则拉取所有 channel。
+     *
+     * @param plan 发布计划
+     * @return 待处理消息列表
+     */
+    private List<OutboxMessage> fetchMessages(RelayPlan plan) {
+        if (plan.channel() != null) {
+            // 指定了 channel，仅拉取该 channel 的消息
+            return relayStore.fetchPending(plan.channel().channel(), plan.triggeredAt(), plan.batchSize());
+        } else {
+            // 未指定 channel，拉取所有 channel 的消息
+            return relayStore.fetchPendingAllChannels(plan.triggeredAt(), plan.batchSize());
+        }
     }
 
     /**
