@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @MessageListener(
-        channel = "ingest.task.ready",  // 直接指定 channel 字符串
+        channel = "INGEST.TASK.READY",  // 直接指定 channel 字符串
         consumer = "relay",
         mode = ConsumeMode.CONCURRENT,
         concurrency = 2)
