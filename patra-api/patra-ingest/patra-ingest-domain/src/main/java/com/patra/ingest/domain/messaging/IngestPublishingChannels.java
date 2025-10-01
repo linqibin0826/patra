@@ -31,7 +31,7 @@ import java.util.Optional;
 public enum IngestPublishingChannels implements ChannelKey {
     
     /** 调度任务准备就绪事件 */
-    TASK_READY("ingest", "task", "ready", TaskReadyMessage.class);
+    TASK_READY("INGEST", "TASK", "READY", TaskReadyMessage.class);
 
     private final String domain;
     private final String resource;
