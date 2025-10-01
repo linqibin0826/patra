@@ -25,6 +25,16 @@ public interface OutboxRelayStore {
     List<OutboxMessage> fetchPending(String channel, Instant availableTime, int limit);
 
     /**
+     * 拉取所有频道的符合条件的 Outbox 消息。
+     * <p>用于未指定具体 channel 时，获取所有频道的待发布消息。</p>
+     *
+     * @param availableTime 当前可发布的时间基准，通常为调度触发时间
+     * @param limit         最大拉取数量，避免一次性加载过多消息
+     * @return 待发布的消息列表，按实现约定排序；若无可发布消息返回空列表
+     */
+    List<OutboxMessage> fetchPendingAllChannels(Instant availableTime, int limit);
+
+    /**
      * 尝试为指定 Outbox 消息抢占租约并进入发布中状态。
      *
      * @param id              Outbox 主键

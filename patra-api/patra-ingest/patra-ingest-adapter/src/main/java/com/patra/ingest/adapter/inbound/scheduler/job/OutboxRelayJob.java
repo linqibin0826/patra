@@ -41,6 +41,7 @@ public class OutboxRelayJob {
 
     /**
      * XXL-Job 入口。解析参数执行 relay，并将统计结果写入调度日志。
+     * <p>支持指定 channel 或处理所有 channel（参数为空时）。</p>
      */
     @XxlJob("ingestOutboxRelayJob")
     public void execute() {
@@ -52,11 +53,12 @@ public class OutboxRelayJob {
 
             RelayReport report = relayUseCase.relay(command);
 
+            String channelDesc = report.channel() != null ? report.channel().channel() : "ALL_CHANNELS";
             XxlJobHelper.handleSuccess("Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d"
-                    .formatted(report.channel().channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
+                    .formatted(channelDesc, report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed()));
 
             log.info("[INGEST][ADAPTER] Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
-                    report.channel().channel(), report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
+                    channelDesc, report.fetched(), report.published(), report.retried(), report.failed(), report.leaseMissed());
         } catch (OutboxRelayExecutionException ex) {
             throw ex;
         } catch (Exception ex) {

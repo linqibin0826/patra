@@ -24,6 +24,18 @@
         FOR UPDATE SKIP LOCKED
     </select>
 
+    <select id="fetchPendingAllChannels" resultType="com.patra.ingest.infra.persistence.entity.OutboxMessageDO">
+        SELECT
+            *
+        FROM patra_ingest.ing_outbox_message
+        WHERE status_code IN ('PENDING', 'FAILED')
+          AND (not_before IS NULL OR not_before  &lt;= #{available})
+          AND (next_retry_at IS NULL OR next_retry_at &lt;= #{available})
+        ORDER BY channel, id
+        LIMIT #{limit}
+        FOR UPDATE SKIP LOCKED
+    </select>
+
     <update id="acquireLease">
         UPDATE patra_ingest.ing_outbox_message
         SET status_code = 'PUBLISHING',

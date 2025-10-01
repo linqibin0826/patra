@@ -1,14 +1,11 @@
 package com.patra.ingest.app.usecase.relay;
 
-import cn.hutool.core.text.CharSequenceUtil;
-import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
 import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.app.usecase.relay.publisher.RelayEventPublisher;
 import com.patra.ingest.app.usecase.relay.executor.OutboxRelayExecutor;
 import com.patra.ingest.app.usecase.relay.planner.RelayPlanBuilder;
-import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.model.vo.RelayBatchResult;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +37,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
 
     /**
      * 执行一次 Relay。关闭状态下返回空统计，避免调度报错。
+     * <p>支持指定 channel 或处理所有 channel（instruction.channel() 为 null）。</p>
      *
      * @param instruction 指令（可空字段）
      * @return 执行报告
@@ -50,8 +48,9 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
         if (!properties.isEnabled()) {
             var channelKey = instruction.channel() != null
                     ? instruction.channel()
-                    : resolveDefaultChannelKey();
-            log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channelKey.channel());
+                    : null;  // null 表示所有 channel
+            String channelDesc = channelKey != null ? channelKey.channel() : "ALL_CHANNELS";
+            log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channelDesc);
             return RelayReport.empty(channelKey);
         }
         // 记录执行起始时间，用于生成耗时指标
@@ -59,16 +58,18 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
 
         RelayPlan plan = planBuilder.build(instruction);
         if (log.isDebugEnabled()) {
+            String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
             log.debug("[INGEST][APP] relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
-                    plan.channel().channel(), plan.batchSize(), plan.leaseOwner(), plan.leaseExpireAt());
+                    channelDesc, plan.batchSize(), plan.leaseOwner(), plan.leaseExpireAt());
         }
 
         RelayBatchResult result = relayExecutor.execute(plan);
         eventPublisher.publish(result.events());
 
         long elapsed = System.currentTimeMillis() - start;
+        String channelDesc = result.channel() != null ? result.channel().channel() : "ALL_CHANNELS";
         log.info("[INGEST][APP] relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
-                result.channel().channel(), result.fetched(), result.published(), result.retried(), result.failed(), result.leaseMissed(), elapsed);
+                channelDesc, result.fetched(), result.published(), result.retried(), result.failed(), result.leaseMissed(), elapsed);
         return new RelayReport(
                 result.channel(),
                 result.fetched(),
@@ -77,17 +78,5 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
                 result.failed(),
                 result.leaseMissed()
         );
-    }
-
-    private ChannelKey resolveDefaultChannelKey() {
-        String cfg = properties.getDefaultChannel();
-        if (CharSequenceUtil.isNotBlank(cfg)) {
-            var byChannel = IngestPublishingChannels.fromChannel(cfg);
-            if (byChannel.isPresent()) return byChannel.get();
-            try {
-                return IngestPublishingChannels.valueOf(cfg.trim().toUpperCase());
-            } catch (IllegalArgumentException ignored) { }
-        }
-        return IngestPublishingChannels.TASK_READY;
     }
 }

@@ -6,7 +6,6 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
-import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +16,7 @@ import java.time.Instant;
 /**
  * RelayPlan 构建器：合并调度指令与默认配置，生成领域执行所需的不可变计划对象。
  * <p>覆盖规则：指令字段优先；为空/非法则回退到 {@link OutboxRelayProperties} 对应默认值。</p>
+ * <p>channel 为 null 时表示处理所有 channel 的消息。</p>
  */
 @Component
 public class RelayPlanBuilder {
@@ -31,13 +31,14 @@ public class RelayPlanBuilder {
 
     /**
      * 构建 RelayPlan。
+     * <p>如果 instruction.channel() 为 null 且配置中也未指定默认 channel，则 channel 保持为 null，表示处理所有 channel。</p>
      *
      * @param instruction 指令（可能为空字段）
      * @return 计划对象
      */
     public RelayPlan build(OutboxRelayCommand instruction) {
-        // TODO 需要确认channel的的生成逻辑 （channel其实在数据库中已经存在了， 在outbox表中）
-        var channelKey = resolveChannelKey(instruction);
+        // channel 可以为 null，表示处理所有 channel
+        ChannelKey channelKey = resolveChannelKey(instruction);
         Instant triggeredAt = instruction.triggeredAt() != null ? instruction.triggeredAt() : Instant.now(clock);
         int batchSize = normalizePositive(instruction.batchSize(), properties.getBatchSize());
         Duration leaseDuration = normalizeDuration(instruction.leaseDuration(), properties.getLeaseDuration());
@@ -61,28 +62,14 @@ public class RelayPlanBuilder {
 
     /**
      * 解析得到 ChannelKey：
-     * 优先使用指令提供；否则尝试解析配置的 defaultChannel（支持 "ingest.task.ready" 或别名 "TASK_READY"）；均缺失时使用内置默认。
+     * <ul>
+     *   <li>如果指令提供了 channel，则使用指令的 channel</li>
+     *   <li>否则返回 null，表示处理所有 channel</li>
+     * </ul>
      */
     private ChannelKey resolveChannelKey(OutboxRelayCommand instruction) {
-        if (instruction.channel() != null) {
-            return instruction.channel();
-        }
-        String cfg = properties.getDefaultChannel();
-        if (StrUtil.isNotBlank(cfg)) {
-            // 1) 尝试按规范字符串解析
-            var byChannel = IngestPublishingChannels.fromChannel(cfg);
-            if (byChannel.isPresent()) {
-                return byChannel.get();
-            }
-            // 2) 尝试按别名（枚举名）解析
-            try {
-                return IngestPublishingChannels.valueOf(cfg.trim().toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-                // fall through to default
-            }
-        }
-        // 默认回退
-        return IngestPublishingChannels.TASK_READY;
+        // 直接返回指令中的 channel，可能为 null（表示处理所有 channel）
+        return instruction.channel();
     }
 
     /**

@@ -8,6 +8,7 @@ import java.util.Objects;
 
 /**
  * Outbox Relay 执行计划。
+ * <p>channel 为 null 时表示处理所有 channel 的消息。</p>
  */
 public record RelayPlan(
         ChannelKey channel,
@@ -21,7 +22,7 @@ public record RelayPlan(
         String leaseOwner
 ) {
     public RelayPlan {
-        Objects.requireNonNull(channel, "channel 必填");
+        // channel 允许为 null，表示处理所有 channel
         Objects.requireNonNull(triggeredAt, "triggeredAt 必填");
         Objects.requireNonNull(leaseDuration, "leaseDuration 必填");
         Objects.requireNonNull(initialBackoff, "initialBackoff 必填");

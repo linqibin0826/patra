@@ -43,6 +43,15 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
                                        @Param("limit") int limit);
 
     /**
+     * 拉取所有通道的可发布消息列表。
+     * @param available 可用时间上限（通常为当前时间）
+     * @param limit 限制条数
+     * @return 消息集合（可能为空）
+     */
+    List<OutboxMessageDO> fetchPendingAllChannels(@Param("available") Instant available,
+                                                   @Param("limit") int limit);
+
+    /**
      * 通过乐观锁获取租约并自增版本。
      * 条件（示例）：id=? AND version=:expectedVersion AND (pub_lease_owner IS NULL OR pub_leased_until < NOW).
      * @param id 主键
