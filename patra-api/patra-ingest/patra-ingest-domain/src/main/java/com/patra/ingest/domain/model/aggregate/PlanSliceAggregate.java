@@ -18,7 +18,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     /** 来源编码 */
     private final String provenanceCode;
     /** 切片序号 */
-    private final int sequence;
+    private final int sliceNo;
     /** 切片签名哈希 */
     private final String sliceSignatureHash;
     /** 切片规格 JSON */
@@ -33,7 +33,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     private PlanSliceAggregate(Long id,
                                Long planId,
                                String provenanceCode,
-                               int sequence,
+                               int sliceNo,
                                String sliceSignatureHash,
                                String sliceSpecJson,
                                String exprHash,
@@ -42,7 +42,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
         super(id);
         this.planId = planId;
         this.provenanceCode = provenanceCode;
-        this.sequence = sequence;
+        this.sliceNo = sliceNo;
         this.sliceSignatureHash = sliceSignatureHash;
         this.sliceSpecJson = sliceSpecJson;
         this.exprHash = exprHash;
@@ -52,7 +52,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
 
     public static PlanSliceAggregate create(Long planId,
                                             String provenanceCode,
-                                            int sequence,
+                                            int sliceNo,
                                             String sliceSignatureHash,
                                             String sliceSpecJson,
                                             String exprHash,
@@ -61,7 +61,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
         return new PlanSliceAggregate(null,
                 planId,
                 provenanceCode,
-                sequence,
+                sliceNo,
                 sliceSignatureHash,
                 sliceSpecJson,
                 exprHash,
@@ -127,8 +127,8 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
         return provenanceCode;
     }
 
-    public int getSequence() {
-        return sequence;
+    public int getSliceNo() {
+        return sliceNo;
     }
 
     public String getSliceSignatureHash() {

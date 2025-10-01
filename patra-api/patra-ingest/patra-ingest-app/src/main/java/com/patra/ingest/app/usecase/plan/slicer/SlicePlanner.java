@@ -11,7 +11,7 @@ import java.util.List;
  * <p>策略实现需满足：
  * <ul>
  *   <li>code 唯一，用于在注册表中定位实现类；</li>
- *   <li>slice 返回的切片集合必须按顺序排列，sequence 从 1 开始递增；</li>
+ *   <li>slice 返回的切片集合必须按顺序排列，sliceNo 从 1 开始递增；</li>
  *   <li>遇到无法切片的场景返回空集合，并由上层处理。</li>
  * </ul></p>
  *
