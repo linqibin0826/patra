@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 /**
  * Ingest 示例消费者（仅日志）：消费 ingest.task.ready 事件。
  * <p>
- * 注意：本类仅用于演示消费方案落地，不做实际业务处理。
+ * 注意: 当前消费者和发布者属于同一个应用，因此消息对象直接使用领域模型。
  *
  * @author linqibin
  * @since 0.1.0

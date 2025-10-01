@@ -127,6 +127,8 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
 
             // 创建监听容器
             DefaultRocketMQListenerContainer container = new DefaultRocketMQListenerContainer();
+            // 注入 Spring 上下文，保证容器内部初始化可获取 Environment/BeanFactory
+            container.setApplicationContext(applicationContext);
             container.setNameServer(nameServer);
             container.setTopic(topic);
             container.setConsumerGroup(group);
@@ -164,6 +166,72 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
             };
 
             container.setRocketMQListener(listener);
+
+            // 兼容 RocketMQ 默认容器实现：需要注入 RocketMQMessageListener 注解元数据
+            // 通过匿名实现提供必须的配置，避免容器在 init 时访问空注解导致 NPE
+            org.apache.rocketmq.spring.annotation.RocketMQMessageListener rocketCfg =
+                    new org.apache.rocketmq.spring.annotation.RocketMQMessageListener() {
+                        @Override
+                        public Class<? extends java.lang.annotation.Annotation> annotationType() {
+                            return org.apache.rocketmq.spring.annotation.RocketMQMessageListener.class;
+                        }
+                        @Override
+                        public String consumerGroup() { return group; }
+                        @Override
+                        public String topic() { return topic; }
+                        @Override
+                        public org.apache.rocketmq.spring.annotation.SelectorType selectorType() {
+                            return org.apache.rocketmq.spring.annotation.SelectorType.TAG;
+                        }
+                        @Override
+                        public String selectorExpression() { return selector; }
+                        @Override
+                        public org.apache.rocketmq.spring.annotation.ConsumeMode consumeMode() {
+                            // 我们的自定义枚举为 CONCURRENT/ORDERLY；RocketMQ 注解为 CONCURRENTLY/ORDERLY
+                            return annotation.mode() == ConsumeMode.ORDERLY
+                                    ? org.apache.rocketmq.spring.annotation.ConsumeMode.ORDERLY
+                                    : org.apache.rocketmq.spring.annotation.ConsumeMode.CONCURRENTLY;
+                        }
+                        @Override
+                        public org.apache.rocketmq.spring.annotation.MessageModel messageModel() {
+                            return org.apache.rocketmq.spring.annotation.MessageModel.CLUSTERING;
+                        }
+                        @Override
+                        public int consumeThreadMax() { return Math.max(1, annotation.concurrency()); }
+                        @Override
+                        public int consumeThreadNumber() { return Math.max(1, annotation.concurrency()); }
+                        @Override
+                        public int maxReconsumeTimes() { return -1; }
+                        @Override
+                        public long consumeTimeout() { return 15L; }
+                        @Override
+                        public int replyTimeout() { return 3000; }
+                        @Override
+                        public String accessKey() { return ""; }
+                        @Override
+                        public String secretKey() { return ""; }
+                        @Override
+                        public boolean enableMsgTrace() { return false; }
+                        @Override
+                        public String customizedTraceTopic() { return ""; }
+                        @Override
+                        public String nameServer() { return nameServer == null ? "" : nameServer; }
+                        @Override
+                        public String accessChannel() { return ""; }
+                        @Override
+                        public String tlsEnable() { return ""; }
+                        @Override
+                        public String namespace() { return namespace == null ? "" : namespace; }
+                        @Override
+                        public int delayLevelWhenNextConsume() { return 0; }
+                        @Override
+                        public int suspendCurrentQueueTimeMillis() { return 1000; }
+                        @Override
+                        public int awaitTerminationMillisWhenShutdown() { return 0; }
+                        @Override
+                        public String instanceName() { return ""; }
+                    };
+            container.setRocketMQMessageListener(rocketCfg);
 
             // 注册并启动容器
             factory.registerSingleton(containerBeanName, container);
