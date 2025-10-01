@@ -465,7 +465,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         }
         Map<Integer, PlanSliceAggregate> sliceBySeq = MapUtil.newHashMap(persistedSlices.size());
         for (PlanSliceAggregate slice : persistedSlices) {
-            sliceBySeq.putIfAbsent(slice.getSequence(), slice);
+            sliceBySeq.putIfAbsent(slice.getSliceNo(), slice);
         }
         for (TaskAggregate task : tasks) {
             Long placeholderSequence = task.getSliceId();

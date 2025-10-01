@@ -172,7 +172,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
             slices.add(PlanSliceAggregate.create(
                     null,
                     norm.provenanceCode().getCode(),
-                    draft.sequence(),
+                    draft.sliceNo(),
                     draft.sliceSignatureSeed(),
                     draft.sliceSpecJson(),
                     sliceSnapshot.hash(),
@@ -206,10 +206,10 @@ public class PlanAssemblerImpl implements PlanAssembler {
             tasks.add(TaskAggregate.create(
                     norm.scheduleInstanceId(),
                     null,
-                    (long) slice.getSequence(),
+                    (long) slice.getSliceNo(),
                     norm.provenanceCode().getCode(),
                     norm.operationCode().name(),
-                    buildTaskParamsJson(slice.getSequence()),
+                    buildTaskParamsJson(slice.getSliceNo()),
                     idemKey,
                     slice.getExprHash(),
                     priorityVal,

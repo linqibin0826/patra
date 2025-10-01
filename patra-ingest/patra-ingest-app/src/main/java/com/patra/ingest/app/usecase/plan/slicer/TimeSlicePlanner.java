@@ -114,7 +114,7 @@ public class TimeSlicePlanner implements SlicePlanner {
                     cursor,
                     upper));
 
-            log.debug("[INGEST][APP] Time slice prepared, sequence={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
+            log.debug("[INGEST][APP] Time slice prepared, sliceNo={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
 
             cursor = upper;
             index++;

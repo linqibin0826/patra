@@ -18,7 +18,7 @@ import java.util.Objects;
  * </p>
  * <h4>不变式</h4>
  * <ul>
- *   <li>{@code sequence >= 1}</li>
+ *   <li>{@code sliceNo >= 1}</li>
  *   <li>{@code sliceSignatureSeed != null && !sliceSignatureSeed.isBlank()}</li>
  *   <li>{@code sliceSpecJson != null && !sliceSpecJson.isBlank()}</li>
  *   <li>{@code sliceExpr != null}</li>
@@ -29,7 +29,7 @@ import java.util.Objects;
  * <h4>与下游关系</h4>
  * <p>后续会被转换为领域层 Slice 聚合或直接派生任务参数；签名素材将参与 SHA-256 或类似算法生成幂等键。</p>
  *
- * @param sequence           切片序号（从 1 开始递增）
+ * @param sliceNo           切片序号（从 1 开始递增）
  * @param sliceSignatureSeed 切片签名原始素材（规范化后的 JSON）
  * @param sliceSpecJson      切片规格的 canonical JSON 表达
  * @param sliceExpr          执行该切片的业务表达式
@@ -39,7 +39,7 @@ import java.util.Objects;
  * @author linqibin
  * @since 0.1.0
  */
-public record SlicePlan(int sequence,
+public record SlicePlan(int sliceNo,
                         String sliceSignatureSeed,
                         String sliceSpecJson,
                         Expr sliceExpr,
