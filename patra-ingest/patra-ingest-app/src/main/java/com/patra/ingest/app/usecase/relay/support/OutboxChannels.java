@@ -7,7 +7,7 @@ package com.patra.ingest.app.usecase.relay.support;
 public final class OutboxChannels {
 
     /** 任务已准备就绪（调度生成的 Task 入队等待执行）。 */
-    public static final String INGEST_TASK_READY = "ingest.task.ready";
+    public static final String INGEST_TASK_READY = "INGEST.TASK.READY";
 
     private OutboxChannels() { }
 }
