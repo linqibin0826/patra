@@ -3,7 +3,7 @@ package com.patra.ingest.domain.model.vo;
 import java.time.Instant;
 
 /**
- * ingest.task.ready 消息载体。
+ * INGEST_TASK_READY 消息载体。
  *
  * @param payload 消息主体
  * @param header 消息头部

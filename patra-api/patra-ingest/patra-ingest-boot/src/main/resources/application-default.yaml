@@ -22,7 +22,7 @@ patra:
       enabled: true
       naming:
         namespace: ${spring.profiles.active:}
-        topicPattern: "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$"
+        topicPattern: "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$"
         tagDelimiter: "."
   ingest:
     outbox-relay:
@@ -34,7 +34,7 @@ patra:
       retry-backoff: PT5S
       scheduled-fixed-delay: PT60S
       scheduled-channels:
-        - ingest.task.ready
+        - INGEST_TASK_READY
 
 rocketmq:
   name-server: localhost:9876

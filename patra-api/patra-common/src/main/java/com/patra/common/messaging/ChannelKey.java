@@ -3,11 +3,11 @@ package com.patra.common.messaging;
 import java.util.Locale;
 
 /**
- * 消息通道键抽象，描述 domain.resource.event 三级语义。
+ * 消息通道键抽象，描述 domain_resource_event 三级语义。
  * <p>
  * 设计目标：
  * <ul>
- *   <li>提供统一的通道命名规范（domain.resource.event）</li>
+ *   <li>提供统一的通道命名规范（domain_resource_event）</li>
  *   <li>作为发布方和消费方的契约基础</li>
  *   <li>不依赖任何具体 MQ 实现细节</li>
  *   <li>放在 patra-common 中，保持 API 模块纯净</li>
@@ -46,10 +46,10 @@ public interface ChannelKey {
     String event();
 
     /**
-     * 规范化小写点分段通道，例如：ingest.task.ready
-     * <p>默认实现拼接 domain.resource.event</p>
+     * 规范化大写下划线分段通道，例如：INGEST_TASK_READY
+     * <p>默认实现拼接 domain_resource_event</p>
      */
     default String channel() {
-        return domain().toUpperCase(Locale.ROOT) + "." + resource().toUpperCase(Locale.ROOT) + "." + event().toUpperCase(Locale.ROOT);
+        return domain().toUpperCase(Locale.ROOT) + "_" + resource().toUpperCase(Locale.ROOT) + "_" + event().toUpperCase(Locale.ROOT);
     }
 }

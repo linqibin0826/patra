@@ -21,7 +21,7 @@ class TaskReadyMessageConverterTest {
         return OutboxMessage.builder()
                 .aggregateType("PLAN")
                 .aggregateId(1L)
-                .channel("ingest.task.ready")
+                .channel("INGEST_TASK_READY")
                 .opType("HARVEST")
                 .partitionKey("p1")
                 .dedupKey("d1");

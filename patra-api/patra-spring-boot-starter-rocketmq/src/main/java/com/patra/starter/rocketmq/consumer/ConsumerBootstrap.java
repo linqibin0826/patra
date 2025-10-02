@@ -89,10 +89,10 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
                 throw new IllegalArgumentException("channel 不能为空");
             }
             
-            String[] parts = channelStr.trim().split("\\.");
+            String[] parts = channelStr.trim().split("_");
             if (parts.length < 3) {
                 throw new IllegalArgumentException(
-                        "channel 格式错误，应为 domain.resource.event，实际: " + channelStr
+                        "channel 格式错误，应为 domain_resource_event，实际: " + channelStr
                 );
             }
             
@@ -101,8 +101,8 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
             String event = parts[2];
 
             // 构建 Topic 和 Tag
-            String topicBase = (domain + "." + resource).toUpperCase(Locale.ROOT);
-            String topic = namespace.toUpperCase(Locale.ROOT) + "." + topicBase;
+            String topicBase = (domain + "_" + resource).toUpperCase(Locale.ROOT);
+            String topic = namespace.toUpperCase(Locale.ROOT) + "_" + topicBase;
             String selector = annotation.selector().isBlank()
                     ? event.toUpperCase(Locale.ROOT)
                     : annotation.selector().toUpperCase(Locale.ROOT);
@@ -284,8 +284,8 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
         if (selector.contains("||") || selector.contains("|")) {
             throw new IllegalArgumentException("选择表达式不支持 OR 操作: " + selector);
         }
-        if (!selector.matches("^[A-Z0-9]+(\\.[A-Z0-9]+)*$")) {
-            throw new IllegalArgumentException("选择表达式应为大写点分段: " + selector);
+        if (!selector.matches("^[A-Z0-9]+(_[A-Z0-9]+)*$")) {
+            throw new IllegalArgumentException("选择表达式应为大写下划线分段: " + selector);
         }
     }
 

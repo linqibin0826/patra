@@ -53,14 +53,14 @@ public enum IngestPublishingChannels implements ChannelKey {
     public Class<?> payloadType() { return payloadType; }
 
     /**
-     * 将规范化字符串（例如 "ingest.task.ready"）解析为通道枚举。
+     * 将规范化字符串（例如 "INGEST_TASK_READY"）解析为通道枚举。
      *
-     * @param channel 通道字符串（小写点分段）
+     * @param channel 通道字符串（大写下划线分段）
      * @return 匹配的枚举实例，若无匹配则返回 empty
      */
     public static Optional<IngestPublishingChannels> fromChannel(String channel) {
         if (channel == null || channel.isBlank()) return Optional.empty();
-        String ch = channel.trim().toLowerCase(Locale.ROOT);
+        String ch = channel.trim().toUpperCase(Locale.ROOT);
         return Arrays.stream(values()).filter(it -> it.channel().equals(ch)).findFirst();
     }
 }
