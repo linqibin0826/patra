@@ -52,7 +52,7 @@ public class RocketMQProperties {
         /**
          * Topic 命名正则。
          */
-        private String topicPattern = "^[A-Z][A-Z0-9]*(\\.[A-Z0-9]+)*$";
+        private String topicPattern = "^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$";
 
         /**
          * 消费组命名正则。

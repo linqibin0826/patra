@@ -9,9 +9,9 @@ import java.util.Locale;
  *
  * <p>转换规则：
  * <ul>
- *   <li>channel: domain.resource.event → TOPIC: NAMESPACE.DOMAIN.RESOURCE, TAG: EVENT</li>
+ *   <li>channel: domain_resource_event → TOPIC: NAMESPACE_DOMAIN_RESOURCE, TAG: EVENT</li>
  *   <li>namespace 来自环境配置（如 DEV、PROD）</li>
- *   <li>所有段转为大写</li>
+ *   <li>所有段已为大写</li>
  * </ul>
  *
  * @author linqibin
@@ -27,15 +27,17 @@ public class ChannelDestinationConverter {
 
     /**
      * 从 Channel 转换为 Destination。
+     * <p>Channel 已使用下划线格式，直接拼接即可。
      */
     public Destination convert(Channel channel) {
-        String domain = channel.domain().toUpperCase(Locale.ROOT);
-        String resource = channel.resource().toUpperCase(Locale.ROOT);
-        String event = channel.event().toUpperCase(Locale.ROOT);
+        String domain = channel.domain();
+        String resource = channel.resource();
+        String event = channel.event();
 
+        // 直接使用下划线分隔
         String topic = namespace.isEmpty()
-                ? domain + "." + resource
-                : namespace + "." + domain + "." + resource;
+                ? domain + "_" + resource
+                : namespace + "_" + domain + "_" + resource;
 
         return new Destination(topic, event);
     }

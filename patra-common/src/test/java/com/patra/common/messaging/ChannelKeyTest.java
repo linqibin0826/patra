@@ -24,8 +24,8 @@ class ChannelKeyTest {
     };
 
     @Test
-    void channel_shouldJoinSegmentsWithDot() {
-        assertThat(normalKey.channel()).isEqualTo("ingest.task.ready");
+    void channel_shouldJoinSegmentsWithUnderscore() {
+        assertThat(normalKey.channel()).isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -46,6 +46,6 @@ class ChannelKeyTest {
                 return "Updated";
             }
         };
-        assertThat(mixed.channel()).isEqualTo("Registry.Config.Updated");
+        assertThat(mixed.channel()).isEqualTo("REGISTRY_CONFIG_UPDATED");
     }
 }

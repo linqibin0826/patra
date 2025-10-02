@@ -32,9 +32,9 @@ public class TopicValidator {
             );
         }
 
-        if (!namespace.isEmpty() && !topic.startsWith(namespace + ".")) {
+        if (!namespace.isEmpty() && !topic.startsWith(namespace + "_")) {
             throw new IllegalArgumentException(
-                    "Topic '" + topic + "' 必须以命名空间 '" + namespace + ".' 开头"
+                    "Topic '" + topic + "' 必须以命名空间 '" + namespace + "_' 开头"
             );
         }
     }

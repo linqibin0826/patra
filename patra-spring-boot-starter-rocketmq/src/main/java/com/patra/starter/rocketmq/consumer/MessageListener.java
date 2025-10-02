@@ -8,7 +8,7 @@ import java.lang.annotation.*;
  *
  * <p>设计原则：
  * <ul>
- *   <li>直接使用 channel 字符串（格式：domain.resource.event）</li>
+ *   <li>直接使用 channel 字符串（格式：domain_resource_event，大写）</li>
  *   <li>consumer 标识用于生成消费组：svc-{service}-{consumer}-cg</li>
  *   <li>框架自动注册容器并启动监听</li>
  * </ul>
@@ -16,7 +16,7 @@ import java.lang.annotation.*;
  * <p>使用示例：
  * <pre>{@code
  * @MessageListener(
- *     channel = "ingest.task.ready",
+ *     channel = "INGEST_TASK_READY",
  *     consumer = "relay",
  *     mode = ConsumeMode.CONCURRENT,
  *     concurrency = 2
@@ -37,8 +37,8 @@ import java.lang.annotation.*;
 public @interface MessageListener {
 
     /**
-     * 消息通道（格式：domain.resource.event）。
-     * <p>例如：ingest.task.ready</p>
+     * 消息通道（格式：domain_resource_event，大写）。
+     * <p>例如：INGEST_TASK_READY</p>
      */
     String channel();
 

@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Ingest 示例消费者（仅日志）：消费 ingest.task.ready 事件。
+ * Ingest 示例消费者（仅日志）：消费 INGEST_TASK_READY 事件。
  * <p>
  * 注意: 当前消费者和发布者属于同一个应用，因此消息对象直接使用领域模型。
  *
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @MessageListener(
-        channel = "INGEST.TASK.READY",  // 直接指定 channel 字符串
+        channel = "INGEST_TASK_READY",  // 直接指定 channel 字符串
         consumer = "relay",
         mode = ConsumeMode.CONCURRENT,
         concurrency = 2)

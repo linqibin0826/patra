@@ -68,7 +68,7 @@ public class OutboxMessageDO extends BaseDO {
     private Long aggregateId;
 
     /**
-     * 逻辑通道 = 目标 Topic（例如：<code>ingest.task</code>）。
+     * 逻辑通道 = 目标 Topic（例如：<code>INGEST_TASK</code>）。
      * <p>与 {@link #dedupKey} 组成唯一键保障幂等（UK：uk_outbox_channel_dedup）。</p>
      * <p>建议：通道种类保持稳定且数量可控，由适配层进行路由与鉴权。</p>
      */

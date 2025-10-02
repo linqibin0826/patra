@@ -26,7 +26,7 @@ public class OutboxRelayProperties {
 
     /** 是否启用 Relay */
     private boolean enabled = true;
-    /** 默认频道（字符串，支持 "ingest.task.ready" 或别名 "TASK_READY"），为空时使用内置默认 */
+    /** 默认频道（字符串，支持 "INGEST_TASK_READY" 或别名 "TASK_READY"），为空时使用内置默认 */
     private String defaultChannel;
     /** 默认批次大小 */
     private int batchSize = 200;
