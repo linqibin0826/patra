@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.messaging;
 
-import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.RelayPlan;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
@@ -35,11 +34,13 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
 
     @Override
     public PublishResult publish(OutboxMessage message, RelayPlan plan) {
-        // 1. 从 plan 获取 channel
-        ChannelKey channelKey = plan.channel();
+        // 1. 从消息本身获取 channel（数据库查询出来的实际数据）
+        // 注意：不能使用 plan.channel()，因为它可能为 null（查询所有频道时）
+        String channelValue = message.getChannel();
 
         // 2. 创建 RocketMQ Channel（值对象，用于类型安全）
-        Channel channel = Channel.of(channelKey);
+        // 注意：使用 fromString 方法自动处理大小写转换（数据库存储大写格式）
+        Channel channel = Channel.fromString(channelValue);
 
         // 3. 映射为领域消息体
         TaskReadyMessage body = messageMapper.convert(message);

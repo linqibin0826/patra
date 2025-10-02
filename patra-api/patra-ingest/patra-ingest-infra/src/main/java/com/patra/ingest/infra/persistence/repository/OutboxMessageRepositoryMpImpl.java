@@ -124,9 +124,14 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
 
     /**
      * 拉取待发布消息。
+     * <p>支持按频道过滤或拉取所有频道：</p>
+     * <ul>
+     *   <li>当 channel 非 null 时，仅拉取指定频道的消息</li>
+     *   <li>当 channel 为 null 时，拉取所有频道的消息</li>
+     * </ul>
      * <p>过滤条件示意：state=PENDING AND available_at &lt;= :availableTime AND (lease_owner IS NULL OR lease_expire_at &lt; NOW)。</p>
      * <p>不加排序保证：由 Mapper 层定义（建议按 available_at, id ASC）。</p>
-     * @param channel 通道
+     * @param channel 通道，为 null 时拉取所有通道
      * @param availableTime 可用时间上限（<=），通常为当前时间
      * @param limit 最大条数（<=0 返回空）
      * @return 待处理消息集合（可能为空）
@@ -137,26 +142,6 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
             return Collections.emptyList();
         }
         List<OutboxMessageDO> entities = mapper.fetchPending(channel, availableTime, limit);
-        if (entities == null || entities.isEmpty()) {
-            return Collections.emptyList();
-        }
-        // 映射为领域对象供上层 Relay 处理
-        return entities.stream().map(converter::toDomain).toList();
-    }
-
-    /**
-     * 拉取所有通道的待发布消息。
-     * <p>用于未指定具体 channel 时，获取所有频道的待发布消息。</p>
-     * @param availableTime 可用时间上限（<=），通常为当前时间
-     * @param limit 最大条数（<=0 返回空）
-     * @return 待处理消息集合（可能为空）
-     */
-    @Override
-    public List<OutboxMessage> fetchPendingAllChannels(Instant availableTime, int limit) {
-        if (limit <= 0) {
-            return Collections.emptyList();
-        }
-        List<OutboxMessageDO> entities = mapper.fetchPendingAllChannels(availableTime, limit);
         if (entities == null || entities.isEmpty()) {
             return Collections.emptyList();
         }
