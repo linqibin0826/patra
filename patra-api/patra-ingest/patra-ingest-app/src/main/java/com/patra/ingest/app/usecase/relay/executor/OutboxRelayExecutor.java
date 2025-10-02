@@ -82,7 +82,7 @@ public class OutboxRelayExecutor {
         return context.toBatchResult(messages.size());
     }
 
-        /**
+    /**
      * 根据计划从存储层拉取待发布消息。
      *
      * @param plan 转发计划，包含频道过滤、可用时间和批次大小信息

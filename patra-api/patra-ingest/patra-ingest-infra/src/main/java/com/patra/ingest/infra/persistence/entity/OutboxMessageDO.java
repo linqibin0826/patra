@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
-import com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -107,14 +106,14 @@ public class OutboxMessageDO extends BaseDO {
      * <p>典型字段：<code>taskId</code>/<code>sliceKey</code>/<code>planKey</code>/<code>provenance</code>/<code>operation</code>/<code>endpoint</code>/<code>priority</code>/<code>notBefore</code> 等。</p>
      * <p>约束：仅承载业务发布所需的<strong>精简</strong>信息；大字段/原始文档不得入队。</p>
      */
-    @TableField(value = "payload_json", typeHandler = JsonToJsonNodeTypeHandler.class)
+    @TableField("payload_json")
     private JsonNode payloadJson;
 
     /**
      * 扩展头（JSON），例如 <code>correlationId</code>、追踪上下文等。
      * <p>可空；用于跨系统链路对齐与排障。</p>
      */
-    @TableField(value = "headers_json", typeHandler = JsonToJsonNodeTypeHandler.class)
+    @TableField("headers_json")
     private JsonNode headersJson;
 
     /**

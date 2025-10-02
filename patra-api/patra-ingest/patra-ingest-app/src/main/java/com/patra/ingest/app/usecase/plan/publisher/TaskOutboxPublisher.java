@@ -234,7 +234,7 @@ public class TaskOutboxPublisher {
         }
         payload.put("planSliceStrategy", plan.getSliceStrategyCode());
         if (CharSequenceUtil.isNotBlank(plan.getSliceParamsJson())) {
-            payload.put("planSliceParams", plan.getSliceParamsJson());
+            payload.set("planSliceParams", readJsonNode(plan.getSliceParamsJson()));
         }
         return payload;
     }
