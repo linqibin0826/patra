@@ -1,8 +1,14 @@
 package com.patra.starter.mybatis.autoconfig;
 
+import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.mybatis.error.contributor.DataLayerErrorMappingContributor;
+import com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.mapper.MapperScannerConfigurer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -54,4 +60,21 @@ public class PatraMybatisAutoConfiguration {
         log.debug("Creating data layer error mapping contributor for MyBatis-Plus");
         return new DataLayerErrorMappingContributor(http);
     }
+
+
+    /**
+     * 在 MyBatis Configuration 初始化时注册自定义 TypeHandler。
+     * <p>这是注册 TypeHandler 的正确时机，确保在解析 XML 和生成 autoResultMap 时 TypeHandler 已可用。</p>
+     */
+    @Bean
+    public ConfigurationCustomizer configurationCustomizer(ObjectMapper objectMapper) {
+        return configuration -> {
+            // 注册 JsonNode TypeHandler（全局生效）
+            configuration.getTypeHandlerRegistry()
+                    .register(JsonNode.class, new JsonToJsonNodeTypeHandler(objectMapper));
+
+            log.info("Custom TypeHandlers registered: JsonNode -> JsonToJsonNodeTypeHandler");
+        };
+    }
+
 }

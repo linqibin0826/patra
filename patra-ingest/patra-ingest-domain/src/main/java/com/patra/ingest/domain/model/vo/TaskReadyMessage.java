@@ -25,12 +25,30 @@ public record TaskReadyMessage(
             String idempotentKey,
             Integer priority,
             Instant scheduledAt,
-            String params,
+            TaskParams params,
             String planKey,
             Instant planWindowFrom,
             Instant planWindowTo,
             String planSliceStrategy,
-            String planSliceParams
+            PlanSliceParams planSliceParams
+    ) {
+    }
+
+    /**
+     * 任务参数。
+     * <p>包含任务执行所需的具体参数。</p>
+     */
+    public record TaskParams(
+            Integer sliceNo
+    ) {
+    }
+
+    /**
+     * 计划切片参数。
+     * <p>描述切片策略的具体参数。</p>
+     */
+    public record PlanSliceParams(
+            String strategy
     ) {
     }
 

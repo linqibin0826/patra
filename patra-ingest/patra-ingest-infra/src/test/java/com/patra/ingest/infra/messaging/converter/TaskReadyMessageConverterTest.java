@@ -31,7 +31,8 @@ class TaskReadyMessageConverterTest {
     @DisplayName("payload 必须是合法 JSON；headers 可空")
     void convertPayloadAndOptionalHeader() {
         TaskReadyMessageConverter mapper = new TaskReadyMessageConverter(new ObjectMapper());
-        String payloadJson = "{\"taskId\":1,\"planId\":2,\"sliceId\":3,\"provenance\":\"P\",\"operation\":\"O\",\"idempotentKey\":\"k\",\"priority\":1,\"scheduledAt\":\"2024-01-01T00:00:00Z\",\"params\":\"{}\",\"planKey\":\"pk\",\"planWindowFrom\":\"2024-01-01T00:00:00Z\",\"planWindowTo\":\"2024-01-02T00:00:00Z\",\"planSliceStrategy\":\"TIME\",\"planSliceParams\":\"{}\"}";
+        // params 和 planSliceParams 都是对象
+        String payloadJson = "{\"taskId\":1,\"planId\":2,\"sliceId\":3,\"provenance\":\"P\",\"operation\":\"O\",\"idempotentKey\":\"k\",\"priority\":1,\"scheduledAt\":\"2024-01-01T00:00:00Z\",\"params\":{\"sliceNo\":1},\"planKey\":\"pk\",\"planWindowFrom\":\"2024-01-01T00:00:00Z\",\"planWindowTo\":\"2024-01-02T00:00:00Z\",\"planSliceStrategy\":\"TIME\",\"planSliceParams\":{\"strategy\":\"TIME\"}}";
         String headerJson = "{\"scheduleInstanceId\":10,\"scheduler\":\"xxl\",\"schedulerJobId\":11,\"schedulerLogId\":12,\"triggerType\":\"MANUAL\",\"triggeredAt\":\"2024-01-01T00:00:00Z\",\"occurredAt\":\"2024-01-01T00:00:00Z\",\"planKey\":\"pk\",\"planOperation\":\"HARVEST\",\"planEndpoint\":\"SEARCH\"}";
 
         OutboxMessage msg = base().payloadJson(payloadJson).headersJson(null).build();
