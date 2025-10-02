@@ -2,6 +2,26 @@
 
 计划式文献采集与任务装配引擎，负责调度解析、切片、任务生成与 Outbox 发布。
 
+## 最近更新（2025-10-02）
+
+### 🔧 代码优化
+- **合并 Outbox 查询方法**：将 `fetchPending` 和 `fetchPendingAllChannels` 合并为单一方法，通过 `channel` 参数是否为 `null` 来控制查询范围
+  - 接口层：`OutboxRelayStore.fetchPending(String channel, Instant availableTime, int limit)`
+  - Mapper 层：使用 MyBatis 动态 SQL（`<if>` 和 `<choose>`）实现条件装配
+  - 优势：减少代码重复，提升可维护性，保持 SQL 性能
+  
+### 🐛 Bug 修复
+- **修复 RocketMqOutboxPublisher 的 channel 获取逻辑**
+  - **问题**：错误地从 `plan.channel()` 获取 channel，导致查询所有频道时出现 NPE
+  - **修复**：改为从消息本身（`message.getChannel()`）获取 channel，确保数据一致性
+  - **格式处理**：在 `Channel` 类中新增 `fromString()` 静态工厂方法，自动将大写格式（如 `INGEST.TASK.READY`）转换为小写格式（`ingest.task.ready`）
+
+### ✨ 基础设施增强
+- **Channel 类改进** (`patra-spring-boot-starter-rocketmq`)
+  - 修改正则表达式从 `[a-z0-9]` 改为 `[A-Z0-9]`，**仅支持大写格式**
+  - 新增 `Channel.fromString(String channelValue)` 静态工厂方法
+  - 与系统约定一致：全平台统一使用大写格式（如 `INGEST.TASK.READY`）
+
 ## 1. 模块定位
 - **服务/组件作用**：围绕来源 (provenance) 与操作 (operation) 生成采集计划，保证链路幂等、可回放、可观测
 - **主要消费者**：调度中心（XXL-Job）、下游解析/清洗服务、RocketMQ 事件订阅方

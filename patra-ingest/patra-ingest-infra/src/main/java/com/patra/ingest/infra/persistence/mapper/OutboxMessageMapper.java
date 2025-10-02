@@ -33,7 +33,12 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
 
     /**
      * 拉取可发布（PENDING 且到达可用时间 & 未被有效租约占用）的消息列表。
-     * @param channel 通道
+     * <p>支持按频道过滤或拉取所有频道：</p>
+     * <ul>
+     *   <li>当 channel 非 null 时，仅拉取指定频道的消息</li>
+     *   <li>当 channel 为 null 时，拉取所有频道的消息</li>
+     * </ul>
+     * @param channel 通道，为 null 时拉取所有频道
      * @param available 可用时间上限（通常为当前时间）
      * @param limit 限制条数
      * @return 消息集合（可能为空）
@@ -41,15 +46,6 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
     List<OutboxMessageDO> fetchPending(@Param("channel") String channel,
                                        @Param("available") Instant available,
                                        @Param("limit") int limit);
-
-    /**
-     * 拉取所有通道的可发布消息列表。
-     * @param available 可用时间上限（通常为当前时间）
-     * @param limit 限制条数
-     * @return 消息集合（可能为空）
-     */
-    List<OutboxMessageDO> fetchPendingAllChannels(@Param("available") Instant available,
-                                                   @Param("limit") int limit);
 
     /**
      * 通过乐观锁获取租约并自增版本。

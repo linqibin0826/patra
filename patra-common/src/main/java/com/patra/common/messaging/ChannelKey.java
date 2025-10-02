@@ -1,5 +1,7 @@
 package com.patra.common.messaging;
 
+import java.util.Locale;
+
 /**
  * 消息通道键抽象，描述 domain.resource.event 三级语义。
  * <p>
@@ -48,6 +50,6 @@ public interface ChannelKey {
      * <p>默认实现拼接 domain.resource.event</p>
      */
     default String channel() {
-        return domain() + "." + resource() + "." + event();
+        return domain().toUpperCase(Locale.ROOT) + "." + resource().toUpperCase(Locale.ROOT) + "." + event().toUpperCase(Locale.ROOT);
     }
 }

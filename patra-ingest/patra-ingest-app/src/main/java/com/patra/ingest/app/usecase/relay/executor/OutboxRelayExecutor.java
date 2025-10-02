@@ -82,20 +82,16 @@ public class OutboxRelayExecutor {
         return context.toBatchResult(messages.size());
     }
 
-    /**
-     * 根据计划拉取消息：如果指定了 channel 则仅拉取该 channel，否则拉取所有 channel。
+        /**
+     * 根据计划从存储层拉取待发布消息。
      *
-     * @param plan 发布计划
-     * @return 待处理消息列表
+     * @param plan 转发计划，包含频道过滤、可用时间和批次大小信息
+     * @return 待发布消息集合，空集合表示无消息可发
      */
     private List<OutboxMessage> fetchMessages(RelayPlan plan) {
-        if (plan.channel() != null) {
-            // 指定了 channel，仅拉取该 channel 的消息
-            return relayStore.fetchPending(plan.channel().channel(), plan.triggeredAt(), plan.batchSize());
-        } else {
-            // 未指定 channel，拉取所有 channel 的消息
-            return relayStore.fetchPendingAllChannels(plan.triggeredAt(), plan.batchSize());
-        }
+        // channel 为 null 时，fetchPending 会拉取所有频道的消息
+        String channel = plan.channel() != null ? plan.channel().channel() : null;
+        return relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
     }
 
     /**

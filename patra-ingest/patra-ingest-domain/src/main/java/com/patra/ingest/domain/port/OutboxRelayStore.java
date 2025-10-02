@@ -15,24 +15,19 @@ import java.util.List;
 public interface OutboxRelayStore {
 
     /**
-     * 按频道拉取符合条件的 Outbox 消息。
+     * 拉取符合条件的 Outbox 消息。
+     * <p>支持按频道过滤或拉取所有频道：</p>
+     * <ul>
+     *   <li>当 channel 非 null 时，仅拉取指定频道的消息</li>
+     *   <li>当 channel 为 null 时，拉取所有频道的消息</li>
+     * </ul>
      *
-     * @param channel       消息频道标识
+     * @param channel       消息频道标识，为 null 时拉取所有频道
      * @param availableTime 当前可发布的时间基准，通常为调度触发时间
      * @param limit         最大拉取数量，避免一次性加载过多消息
      * @return 待发布的消息列表，按实现约定排序；若无可发布消息返回空列表
      */
     List<OutboxMessage> fetchPending(String channel, Instant availableTime, int limit);
-
-    /**
-     * 拉取所有频道的符合条件的 Outbox 消息。
-     * <p>用于未指定具体 channel 时，获取所有频道的待发布消息。</p>
-     *
-     * @param availableTime 当前可发布的时间基准，通常为调度触发时间
-     * @param limit         最大拉取数量，避免一次性加载过多消息
-     * @return 待发布的消息列表，按实现约定排序；若无可发布消息返回空列表
-     */
-    List<OutboxMessage> fetchPendingAllChannels(Instant availableTime, int limit);
 
     /**
      * 尝试为指定 Outbox 消息抢占租约并进入发布中状态。

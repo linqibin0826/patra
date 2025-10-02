@@ -77,6 +77,10 @@ usecase/plan/
 - `RelayErrorClassifier`：错误分类器，区分 FATAL/TRANSIENT 错误
 - `RelayEventPublisher`：事件发布器，发布领域事件
 
+**近期优化（v0.1.0+）**：
+- `OutboxRelayStore.fetchPending()` 方法合并：支持按频道过滤或拉取所有频道（通过 `channel` 参数是否为 `null` 控制），使用 MyBatis 动态 SQL 条件装配，简化了接口设计和实现复杂度
+- `RocketMqOutboxPublisher` 修复：从消息本身（`message.getChannel()`）而非计划（`plan.channel()`）获取 channel，避免 NPE 并确保数据一致性；自动将大写格式（如 `INGEST.TASK.READY`）转换为小写以符合 `Channel` 类的格式要求
+
 **目录结构**：
 ```
 usecase/relay/
@@ -193,10 +197,19 @@ usecase/relay/
 
 核心字段：`channel` / `partition_key` / `dedup_key` / `status_code` / `retry_count` / `next_retry_at` / `pub_lease_owner` / `pub_leased_until`。
 
+**持久化端口优化（v0.1.0+）**：
+- `OutboxRelayStore.fetchPending(String channel, Instant availableTime, int limit)`：统一接口，`channel` 参数可为 `null`
+  - 当 `channel` 非 `null` 时：仅拉取指定频道的消息，排序为 `ORDER BY id`
+  - 当 `channel` 为 `null` 时：拉取所有频道的消息，排序为 `ORDER BY channel, id`
+- MyBatis XML 使用 `<if test="channel != null and channel != ''">` 和 `<choose>` 标签实现动态条件装配
+
 发布步骤：
 1. 扫描 `status=PENDING` 且租约未占用、`not_before` 已到期的行
 2. 设置租约并置为 `PUBLISHING`
-3. 发送 MQ：发送前按全局 `ChannelRegistry` 校验 `channel`（小写点分段≥3，可选 domain，白名单）；
+3. 发送 MQ：
+   - **Channel 格式**：统一使用大写格式（如 `INGEST.TASK.READY`），数据库存储和代码中均保持一致
+   - **Channel 来源**：从消息本身（`message.getChannel()`）获取，而非从 `plan.channel()` 获取，确保在拉取所有频道时不会出现 NPE
+   - 发送前按全局 `ChannelRegistry` 校验 `channel`（大写点分段≥3，可选 domain，白名单）
    - 成功 -> `PUBLISHED` + `msgId`
    - 失败 -> 计算 `next_retry_at` 回退 `PENDING` 或超过阈值标记 `DEAD`
 
