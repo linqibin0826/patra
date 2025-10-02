@@ -54,7 +54,7 @@ public class TaskReadyMessageConverter {
                     : objectMapper.treeToValue(headerNode, TaskReadyMessage.Header.class);
             return new TaskReadyMessage(payload, header);
         } catch (IOException e) {
-            throw new OutboxRelayExecutionException("Failed to map outbox payload to TaskReadyMessage", e);
+            throw new OutboxRelayExecutionException("Failed to map outbox payload to TaskReadyMessage, messageId=" + message.getId(), e);
         }
     }
 }
