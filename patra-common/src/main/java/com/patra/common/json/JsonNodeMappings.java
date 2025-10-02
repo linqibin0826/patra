@@ -43,13 +43,17 @@ public final class JsonNodeMappings {
      * @return 字符串表现形式，null 节点返回 null
      */
     public static String jsonNodeToString(JsonNode node) {
-        if (node == null || node.isNull()) {
+        if (node == null) {
             return null;
         }
+        // 注意：isNull() 检查的是 JSON null 值，不是 Java null
+        // 例如：ObjectMapper.readTree("null") 会返回一个 isNull()=true 的 NullNode
+        // 但我们仍然应该序列化它为字符串 "null"
+        // 所以移除 isNull() 检查，让所有非 null 的 JsonNode 都进行序列化
         try {
             return MAPPER.writeValueAsString(node);
         } catch (JsonProcessingException ex) {
-            throw new IllegalArgumentException("JSON 序列化失败", ex);
+            throw new IllegalArgumentException("JSON 序列化失败: " + node.getClass().getSimpleName(), ex);
         }
     }
 

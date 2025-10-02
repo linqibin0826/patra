@@ -2,9 +2,9 @@ package com.patra.ingest.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
+import com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -35,7 +35,7 @@ import java.time.Instant;
  * </p>
  * <p>
  * 字段说明：JSON 列（<code>payload_json</code>/<code>headers_json</code>）使用
- * {@link com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler JacksonTypeHandler} 与 Jackson {@link com.fasterxml.jackson.databind.JsonNode JsonNode}
+ * {@link com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler JsonToJsonNodeTypeHandler} 与 Jackson {@link com.fasterxml.jackson.databind.JsonNode JsonNode}
  * 进行无模式（schemaless）存储；仅放置<strong>最小必要</strong>信息（如 taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore 等），
  * 体积较大的原始内容不得入队。
  * </p>
@@ -107,14 +107,14 @@ public class OutboxMessageDO extends BaseDO {
      * <p>典型字段：<code>taskId</code>/<code>sliceKey</code>/<code>planKey</code>/<code>provenance</code>/<code>operation</code>/<code>endpoint</code>/<code>priority</code>/<code>notBefore</code> 等。</p>
      * <p>约束：仅承载业务发布所需的<strong>精简</strong>信息；大字段/原始文档不得入队。</p>
      */
-    @TableField(value = "payload_json", typeHandler = JacksonTypeHandler.class)
+    @TableField(value = "payload_json", typeHandler = JsonToJsonNodeTypeHandler.class)
     private JsonNode payloadJson;
 
     /**
      * 扩展头（JSON），例如 <code>correlationId</code>、追踪上下文等。
      * <p>可空；用于跨系统链路对齐与排障。</p>
      */
-    @TableField(value = "headers_json", typeHandler = JacksonTypeHandler.class)
+    @TableField(value = "headers_json", typeHandler = JsonToJsonNodeTypeHandler.class)
     private JsonNode headersJson;
 
     /**
