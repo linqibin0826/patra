@@ -3,6 +3,7 @@ package com.patra.ingest.domain.port;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 计划切片（Plan Slice）仓储端口。
@@ -36,4 +37,12 @@ public interface PlanSliceRepository {
      * @return 该计划对应的切片列表
      */
     List<PlanSliceAggregate> findByPlanId(Long planId);
+
+    /**
+     * 根据切片 ID 查询切片聚合。
+     *
+     * @param sliceId 切片 ID
+     * @return 若存在返回切片聚合，否则返回 empty
+     */
+    Optional<PlanSliceAggregate> findById(Long sliceId);
 }

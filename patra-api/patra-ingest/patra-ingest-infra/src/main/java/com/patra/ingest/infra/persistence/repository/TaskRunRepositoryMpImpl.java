@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -99,5 +100,41 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
     @Override
     public int getLatestAttemptNo(Long taskId) {
         return mapper.selectLatestAttemptNo(taskId);
+    }
+
+    @Override
+    public Optional<TaskRun> findById(Long runId) {
+        if (runId == null) {
+            return Optional.empty();
+        }
+        TaskRunDO entity = mapper.selectById(runId);
+        return Optional.ofNullable(entity).map(converter::toDomain);
+    }
+
+    @Override
+    public boolean updateCheckpointAndHeartbeat(Long runId, String checkpointJson, Instant now) {
+        int updated = mapper.updateCheckpointAndHeartbeat(runId, checkpointJson, now);
+        if (updated == 0) {
+            log.warn("[INGEST][INFRA] task run checkpoint update missed runId={}", runId);
+        }
+        return updated > 0;
+    }
+
+    @Override
+    public boolean touchHeartbeat(Long runId, Instant now) {
+        int updated = mapper.touchHeartbeat(runId, now);
+        if (updated == 0) {
+            log.warn("[INGEST][INFRA] task run heartbeat touch missed runId={}", runId);
+        }
+        return updated > 0;
+    }
+
+    @Override
+    public boolean markFailed(Long runId, String errorMessage, Instant now) {
+        int updated = mapper.markFailed(runId, errorMessage, now);
+        if (updated == 0) {
+            log.warn("[INGEST][INFRA] task run markFailed missed runId={}", runId);
+        }
+        return updated > 0;
     }
 }

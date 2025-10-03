@@ -94,7 +94,7 @@ public class IngestStreamConsumers {
     private TaskReadyCommand parsePayload(String payload, Map<String, Object> headers) throws Exception {
         // 解析 payload 为 POJO
         TaskReadyPayload dto = objectMapper.readValue(payload, TaskReadyPayload.class);
-        
+
         // 校验必需字段
         dto.validate();
 
@@ -109,7 +109,7 @@ public class IngestStreamConsumers {
                 dto.getPriority(),
                 dto.getScheduledAt(),
                 dto.getPlanWindowFrom(),
-                dto.getPlanWindowTo(),
+        dto.getPlanWindowTo(),
                 allHeaders
         );
     }

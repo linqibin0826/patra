@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -92,5 +93,14 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
                 .stream()
                 .map(converter::toAggregate)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<PlanSliceAggregate> findById(Long sliceId) {
+        if (sliceId == null) {
+            return Optional.empty();
+        }
+        PlanSliceDO entity = mapper.selectById(sliceId);
+        return Optional.ofNullable(entity).map(converter::toAggregate);
     }
 }
