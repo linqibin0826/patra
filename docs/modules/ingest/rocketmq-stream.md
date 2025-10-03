@@ -64,9 +64,9 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
   - binder 按需创建并绑定到 RocketMQ topic
 - **通道白名单校验（新增）**：
   - 目的：仅允许在白名单中的 channel 发送，避免误发到未就绪或禁用的通道。
-  - 配置：`papertrace.ingest.outbox.strict-channel-whitelist`（布尔，默认 false）、`papertrace.ingest.outbox.allowed-channels`（字符串列表）。
+  - 配置：`papertrace.ingest.outbox.strict-channel-whitelist`（布尔，默认 false）、`papertrace.ingest.outbox.allowed-channels`（字符串列表，加载时会归一化为 UPPER_SNAKE）。
   - 启动校验（Fail Fast）：当 strict=true 且 `allowed-channels` 为空时，应用启动时报 ERROR 并中止启动；避免运行期才发现配置缺失。
-  - 运行时校验：当 strict=true 且当前 channel 不在列表中，拒绝发送并抛出 `OutboxPublishException("CHANNEL_NOT_ALLOWED")`，建议 app 层据此判定为“不可重试”。
+- 运行时校验：当 strict=true 且当前 channel 不在列表中，拒绝发送并抛出 `OutboxPublishException(Reason.CHANNEL_NOT_ALLOWED, ...)`，建议 app 层据此判定为“不可重试”。
   - 伪代码：
     ```java
     // 启动校验（在 OutboxMqProperties.@PostConstruct 中）
@@ -78,7 +78,7 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
     String channel = message.getChannel();
     Set<String> allowed = props.getAllowedChannels();
     if (props.isStrictChannelWhitelist() && !allowed.contains(channel)) {
-        throw new OutboxPublishException("CHANNEL_NOT_ALLOWED: " + channel);
+        throw new OutboxPublishException(Reason.CHANNEL_NOT_ALLOWED, "CHANNEL_NOT_ALLOWED: " + channel);
     }
     boolean ok = streamBridge.send(channel, messageBuilder.build());
     ```
@@ -96,9 +96,9 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
     - **短期方案**：通过 RocketMQ Binder 的 `SendCallback` 或 `RocketMQTemplate` 包装层获取（需额外适配）
     - **降级方案**：本次实现暂不写回 msgId，先保证发送成功性；后续 Phase 2 改用 `RocketMQTemplate.syncSend()` 获取 `SendResult.msgId` 并更新数据库
 - 返回值：
-  - 发送成功返回 `PublishResult.SUCCESS`
-  - 发送失败（`send()` 返回 false）抛出 `OutboxPublishException`，由 app 层决定重试
-  - 已发送跳过返回 `PublishResult.ALREADY_SENT`（msgId 非空场景）
+  - 发送成功返回 `PublishResult.NONE`（RocketMQ Binder 暂未返回 msgId）
+  - 发送失败（`send()` 返回 false 或抛 `MessagingException`）抛出 `OutboxPublishException(Reason.SEND_FAILED)`，由应用层策略决定重试
+  - 已发送跳过返回 `new PublishResult(existingMsgId)`（msgId 非空场景复用原值）
 - 条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq", matchIfMissing=true)`；若配置被显式设为非 `rocketmq` 值，可在启动阶段抛出异常（Fail Fast），不提供 noop 回退。
 
 ---
@@ -247,8 +247,8 @@ papertrace:
   - 实现动态 channel 发布：`streamBridge.send(message.getChannel(), ...)`
   - 使用 `MessageConst.PROPERTY_KEYS`/`PROPERTY_TAGS` 设置消息头
   - 分区键兜底：为空回退 dedupKey
-  - 白名单校验：strict 模式下非白名单通道直接抛 `OutboxPublishException(CHANNEL_NOT_ALLOWED)`（不可重试）
-  - **发送前检查 msgId**：若非空则跳过（`ALREADY_SENT`，Phase 2 生效更明显）
+- 白名单校验：strict 模式下非白名单通道直接抛 `OutboxPublishException(Reason.CHANNEL_NOT_ALLOWED, ...)`（不可重试）
+  - **发送前检查 msgId**：若非空则跳过（视为已发送，返回 `new PublishResult(existingMsgId)`）
   - 发送失败抛出 `OutboxPublishException`
   - 条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq", matchIfMissing=true)`
 4) **入站消费者**：
@@ -271,7 +271,7 @@ papertrace:
 - 出站：
   - `publisher=rocketmq` 时，Relay 批次 published 计数正确增加；异常进入 app 失败/重试分支
   - 发送成功后消息可在 RocketMQ 控制台查询到（topic=`INGEST_TASK_READY`）
-  - 白名单校验：`strict-channel-whitelist=true` 时，非白名单通道发送被拒绝（抛 `OutboxPublishException: CHANNEL_NOT_ALLOWED`），且未触发实际网络发送
+- 白名单校验：`strict-channel-whitelist=true` 时，非白名单通道发送被拒绝（抛 `OutboxPublishException(Reason.CHANNEL_NOT_ALLOWED, ...)`），且未触发实际网络发送
   - 出站去重：同一 outbox 记录重复执行时，若 `msg_id` 非空则跳过发送；当前阶段通常为空，因此以 Outbox 状态与消费端基于 KEYS 的幂等保障（Phase 2 启用 msgId 写回后再补强）
 - 入站：
   - 成功消费 `INGEST_TASK_READY` 并打印包含 payload 与关键头的日志
@@ -323,13 +323,14 @@ String channel = message.getChannel(); // 如 "INGEST_TASK_READY"
 
 // 白名单校验（仅允许配置的通道）
 Set<String> allowed = props.getAllowedChannels();
-if (props.isStrictChannelWhitelist() && (allowed == null || !allowed.contains(channel))) {
-    throw new OutboxPublishException("未被允许的通道: " + channel);
+if (props.isStrictChannelWhitelist() && !allowed.contains(channel.toUpperCase(Locale.ROOT))) {
+    throw new OutboxPublishException(OutboxPublishException.Reason.CHANNEL_NOT_ALLOWED,
+        "未被允许的通道: " + channel);
 }
 
 // 分区键兜底
-String partitionKey = StrUtil.isNotBlank(message.getPartitionKey()) 
-    ? message.getPartitionKey() 
+String partitionKey = StringUtils.hasText(message.getPartitionKey())
+    ? message.getPartitionKey()
     : message.getDedupKey();
 
 MessageBuilder<String> mb = MessageBuilder

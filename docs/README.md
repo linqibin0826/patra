@@ -15,6 +15,7 @@
 - 采集链路指南：`process/ingest-dataflow.md`
 - Registry 专题：`modules/registry/deep-dive.md`
 - Ingest 深入：`modules/ingest/deep-dive.md`
+- RocketMQ 接入：`modules/ingest/rocketmq-stream.md`
 - 公共模块：`modules/common/deep-dive.md`、`modules/expr-kernel/deep-dive.md`
 - Starter 模块 README：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`
 

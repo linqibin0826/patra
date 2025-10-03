@@ -23,7 +23,7 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 2. **配置组装**：adapter 调用 `app.planning.PlanIngestionApplicationService`，通过 Feign 获取 provenance 与表达式快照
 3. **窗口解析**：`app.planning.window` 根据 HARVEST/BACKFILL/UPDATE 策略生成 Plan 与 PlanSlice
 4. **任务装配**：`app.planning` 构建 Task + OutboxMessage，并写入事务性表
-5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），经由 `OutboxPublisherPort` 发布（默认实现仅记录日志，可扩展 MQ/Webhook 等通道）
+5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），经由 `OutboxPublisherPort` 发布；当前实现为 `RocketMqOutboxPublisher`，基于 Spring Cloud Stream + RocketMQ 动态目的地投递
 6. **下游消费**：后续解析/清洗/索引服务可接入异步通道，消费发布事件以完成链路闭环
 
 所有步骤遵循幂等键、租约与指数退避策略，保证可回放与稳定性。
