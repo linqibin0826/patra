@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
  *   <li>插入 / 更新 TaskRun（含统计 / 检查点字段 JSON）。</li>
  *   <li>查询最新一次尝试（按 attempt_no 降序取 1）。</li>
  *   <li>查询所有尝试（审计 / 排障）。</li>
+ *   <li>获取最新 attemptNo（用于生成下一次尝试编号）。</li>
  * </ul>
  * </p>
  * <p>设计：
@@ -88,5 +89,15 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
             .eq("task_id", taskId)
             .orderByAsc("attempt_no"))
                 .stream().map(converter::toDomain).collect(Collectors.toList());
+    }
+
+    /**
+     * 获取任务的最新 attemptNo（用于生成下一次尝试编号）。
+     * @param taskId 任务 ID
+     * @return 最大的 attemptNo，若无运行记录则返回 0
+     */
+    @Override
+    public int getLatestAttemptNo(Long taskId) {
+        return mapper.selectLatestAttemptNo(taskId);
     }
 }
