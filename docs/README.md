@@ -26,3 +26,4 @@
 - 文档顶部注明状态（草案/待补充/已验证），提示阅读者可信度
 - 引用代码请使用仓库相对路径或固定 commit 链接，避免链接失效
 - 模块专题文档作为权威来源；Starter 类文档以各 Starter 模块 README 为权威。若在模块代码目录（如 `patra-*/`）保留 README，请指向对应专题页/权威页，避免重复维护
+- Ingest RocketMQ 接入：`modules/ingest/rocketmq-stream.md`
