@@ -28,12 +28,6 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
-        <!-- 入站 MQ 依赖放在 adapter 层，符合六边形架构（inbound）职责归属 -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-rocketmq</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

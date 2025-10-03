@@ -1,6 +1,7 @@
 package com.patra.ingest.app.usecase.relay.config;
 
 import com.patra.ingest.app.usecase.relay.support.OutboxChannels;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -20,14 +21,14 @@ import java.time.Duration;
  *   <li>maxBackoff：退避上限，防止无限指数增长。</li>
  * </ul>
  */
+@Data
 @Component
 @ConfigurationProperties(prefix = "patra.ingest.outbox-relay")
 public class OutboxRelayProperties {
 
     /** 是否启用 Relay */
     private boolean enabled = true;
-    /** 默认频道（字符串，支持 "INGEST_TASK_READY" 或别名 "TASK_READY"），为空时使用内置默认 */
-    private String defaultChannel;
+
     /** 默认批次大小 */
     private int batchSize = 200;
     /** 默认租约持续时长 */
@@ -41,62 +42,4 @@ public class OutboxRelayProperties {
     /** 退避上限 */
     private Duration maxBackoff = Duration.ofMinutes(2);
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public String getDefaultChannel() { return defaultChannel; }
-    public void setDefaultChannel(String defaultChannel) { this.defaultChannel = defaultChannel; }
-
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
-
-    public Duration getLeaseDuration() {
-        return leaseDuration;
-    }
-
-    public void setLeaseDuration(Duration leaseDuration) {
-        this.leaseDuration = leaseDuration;
-    }
-
-    public int getMaxAttempts() {
-        return maxAttempts;
-    }
-
-    public void setMaxAttempts(int maxAttempts) {
-        this.maxAttempts = maxAttempts;
-    }
-
-    public Duration getInitialBackoff() {
-        return initialBackoff;
-    }
-
-    public void setInitialBackoff(Duration initialBackoff) {
-        this.initialBackoff = initialBackoff;
-    }
-
-    public double getBackoffMultiplier() {
-        return backoffMultiplier;
-    }
-
-    public void setBackoffMultiplier(double backoffMultiplier) {
-        this.backoffMultiplier = backoffMultiplier;
-    }
-
-    public Duration getMaxBackoff() {
-        return maxBackoff;
-    }
-
-    public void setMaxBackoff(Duration maxBackoff) {
-        this.maxBackoff = maxBackoff;
-    }
 }

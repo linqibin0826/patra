@@ -14,7 +14,7 @@
 - **类型转换**：提供 `String -> ProvenanceCode` 等全局 Converter
 - **代理信息提取**：解析 `Forwarded/X-Forwarded-*` 头，补充客户端地址
 
-本模块 README 即为权威文档；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`、`patra-spring-boot-starter-rocketmq`）。
+本模块 README 即为权威文档；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`）。
 
 ## 3. 分层结构与依赖
 - 主要包：`problem`（ProblemDetail 组装）、`advice`（异常处理）、`converter`（类型转换）、`forwarded`
@@ -61,6 +61,6 @@
 风险：上下游未同步错误字段、Forwarded 头信任链配置错误、业务层重复处理异常。
 
 ## 8. 参考资料
-- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-rocketmq/README.md`、`patra-spring-boot-starter-expr/README.md`
+- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`
 - 核心错误解析：`patra-spring-boot-starter-core/README.md`
 - 错误规范：`docs/standards/platform-error-handling.md`

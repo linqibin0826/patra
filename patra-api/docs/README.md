@@ -16,8 +16,7 @@
 - Registry 专题：`modules/registry/deep-dive.md`
 - Ingest 深入：`modules/ingest/deep-dive.md`
 - 公共模块：`modules/common/deep-dive.md`、`modules/expr-kernel/deep-dive.md`
-- Starter 模块 README：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`、`patra-spring-boot-starter-rocketmq/README.md`
-- RocketMQ Starter 使用指南：`modules/starters/rocketmq-starter.md`
+- Starter 模块 README：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`
 
 - 错误处理总览：`standards/platform-error-handling.md`
 - 日志规范：`standards/logging-convention.md`

@@ -13,7 +13,7 @@ import java.time.Instant;
  * <p><b>Outbox 消息 DO</b> —— 映射表：<code>ing_outbox_message</code></p>
  * <p>
  * 语义：与业务数据<strong>同一事务</strong>落库的通用出站消息（任务推送 / 集成事件统一托管）。
- * Relay 仅扫描本表并发布到 MQ（如 RocketMQ），不扫描业务热表，确保写侧最小侵入与发布解耦。
+ * Relay 仅扫描本表并发布到外部通道（如 MQ/Webhook），不扫描业务热表，确保写侧最小侵入与发布解耦。
  * </p>
  * <p>
  * 关键规则：

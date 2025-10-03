@@ -5,7 +5,7 @@
 ## 1. 前置条件
 - Nacos 已同步 provenance/expr 配置
 - Registry 服务运行并对外暴露 API
-- RocketMQ、MySQL、XXL-Job 稳定可用
+- MySQL、XXL-Job 稳定可用；消息通道（如 MQ）按部署选配
 
 ## 2. 调度与上下文
 1. XXL-Job 调度中心触发作业，传入 `provenanceCode`、`operationCode`、窗口参数
@@ -29,7 +29,7 @@
 
 ## 6. Outbox 发布
 1. Relay 任务（`app.relay.OutboxRelayExecutor`）扫描 `status=PENDING` 且租约未占用的消息
-2. 设置租约并发送 RocketMQ；成功后置为 `PUBLISHED` 并记录 msgId
+2. 获取租约后委托 `OutboxPublisherPort` 发布；当前默认实现 `NoopOutboxPublisher`，仅记录日志并返回空 msgId，后续可替换为 MQ/Webhook 等具体实现
 3. 失败根据 `retry_count` 动态计算 `next_retry_at`，超过阈值标记 `DEAD`
 
 ## 7. 观测与排障
@@ -38,7 +38,7 @@
 - 常见问题
   - **配置缺失**：Registry 返回 404 → 调整配置或回放
   - **窗口异常**：ING-12xx → 检查跨度、滞后、队列阈值
-  - **Outbox 堆积**：查看 RocketMQ 可用性与租约超时
+  - **Outbox 堆积**：查看消息发布日志与租约是否超时
 
 ## 8. 回放流程（建议）
 1. 手动将 `DEAD` 消息状态改为 `PENDING` 并清空租约字段
@@ -48,4 +48,4 @@
 ## 9. 相关文档
 - 模块 README：`patra-ingest/README.md`
 - 错误规范：`docs/standards/cross-service-error-best-practices.md`
-- Starters 指南：各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`、`patra-spring-boot-starter-rocketmq`）
+- Starters 指南：各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`）
