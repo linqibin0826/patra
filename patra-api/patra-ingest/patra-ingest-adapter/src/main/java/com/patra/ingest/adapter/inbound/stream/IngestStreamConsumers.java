@@ -1,7 +1,6 @@
 package com.patra.ingest.adapter.inbound.stream;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.rocketmq.common.message.MessageConst;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -15,15 +14,30 @@ import java.util.function.Consumer;
 @Configuration
 public class IngestStreamConsumers {
 
-    private static final String TOPIC_HEADER = "rocketmq_TOPIC";
+    /**
+     * Spring Cloud Stream RocketMQ Binder 使用的 header keys:
+     * - ROCKET_KEYS: 消息业务键（对应 RocketMQ 的 KEYS 属性）
+     * - ROCKET_TAGS: 消息标签（对应 RocketMQ 的 TAGS 属性）
+     * - ROCKET_MQ_TOPIC: Topic 名称
+     */
+    private static final String HEADER_KEYS = "ROCKET_KEYS";
+    private static final String HEADER_TAGS = "ROCKET_TAGS";
+    private static final String HEADER_TOPIC = "ROCKET_MQ_TOPIC";
 
     @Bean
     public Consumer<Message<String>> ingestTaskReadyConsumer() {
         return message -> {
-            Object topic = message.getHeaders().getOrDefault(TOPIC_HEADER, "unknown");
-            Object keys = message.getHeaders().get(MessageConst.PROPERTY_KEYS);
-            Object tags = message.getHeaders().get(MessageConst.PROPERTY_TAGS);
-            Object partitionKey = message.getHeaders().get("partitionKey");
+            // DEBUG 日志：打印所有 headers 用于诊断
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][ADAPTER] Received headers: {}", message.getHeaders());
+            }
+            
+            // 读取 RocketMQ 相关 headers（使用正确的 key）
+            String topic = (String) message.getHeaders().getOrDefault(HEADER_TOPIC, "unknown");
+            String keys = (String) message.getHeaders().get(HEADER_KEYS);
+            String tags = (String) message.getHeaders().get(HEADER_TAGS);
+            String partitionKey = (String) message.getHeaders().get("partitionKey");
+            
             log.info("[INGEST][ADAPTER] consume topic={} KEYS={} TAGS={} partitionKey={} payload={}",
                     topic, keys, tags, partitionKey, message.getPayload());
         };

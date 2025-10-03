@@ -240,35 +240,39 @@ public class TaskOutboxPublisher {
     }
 
     /**
-     * 构建消息头部，用于传递调度上下文。
+     * 构建消息头部，仅传递必要的追踪信息。
+     * <p>
+     * <strong>设计原则</strong>：Headers 应该是轻量的，仅用于路由、追踪和调试，
+     * 不应包含业务数据。大部分上下文信息应放在 payload 中。
+     * </p>
+     * <p>
+     * <strong>当前策略</strong>：仅保留调度追踪信息，便于关联日志和问题排查。
+     * </p>
      *
      * @param event 任务事件
      * @param schedule 调度实例
-     * @param plan 计划信息
-     * @return JSON 头部
+     * @param plan 计划信息（未使用，保留以便将来扩展）
+     * @return JSON 头部（包含追踪信息）
      */
     private ObjectNode buildHeaders(TaskQueuedEvent event,
                                     ScheduleInstanceAggregate schedule,
                                     PlanAggregate plan) {
         ObjectNode headers = JsonNodeFactory.instance.objectNode();
+        
+        // 调度追踪：用于关联调度日志和问题排查
         headers.put("scheduleInstanceId", schedule.getId());
         headers.put("scheduler", schedule.getScheduler().name());
         if (schedule.getSchedulerJobId() != null) {
             headers.put("schedulerJobId", schedule.getSchedulerJobId());
         }
-        if (schedule.getSchedulerLogId() != null) {
-            headers.put("schedulerLogId", schedule.getSchedulerLogId());
-        }
-        headers.put("triggerType", schedule.getTriggerType().name());
+        
+        // 时间追踪：用于延迟分析和性能监控
         headers.put("triggeredAt", schedule.getTriggeredAt().toString());
         headers.put("occurredAt", event.occurredAt().toString());
-        headers.put("planKey", plan.getPlanKey());
-        if (CharSequenceUtil.isNotBlank(plan.getOperationCode())) {
-            headers.put("planOperation", plan.getOperationCode());
-        }
-        if (CharSequenceUtil.isNotBlank(plan.getEndpointName())) {
-            headers.put("planEndpoint", plan.getEndpointName());
-        }
+        
+        // 注意：其他业务信息（planKey、planOperation、planEndpoint 等）已包含在 payload 中，
+        // 无需在 headers 中重复传递，避免数据冗余和网络开销
+        
         return headers;
     }
 
