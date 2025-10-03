@@ -8,10 +8,17 @@
 - 主题（topic）命名沿用领域规范：下划线分段 UPPER_SNAKE（如 `INGEST_TASK_READY`）。
 - 配置走 Nacos/环境变量；不硬编码密钥/地址；支持配置回退到 `NoopOutboxPublisher`。
 
-TL;DR
-- 生产端：固定使用 `outbox-out-0` binding，通过 `BinderHeaders.TARGET_DESTINATION`=`OutboxMessage.channel()` 动态路由。
-- 消费端：为示例通道 `INGEST_TASK_READY` 增加函数式消费者，先打印日志。
-- 失败/重试：仍由 app 层（Relay 执行器）统一处理；生产异常直接抛出，让编排决定重试/失败。
+TL;DR（选型：纯动态目的地，不预定义生产 binding）
+- 生产端：直接调用 `StreamBridge.send(channel, message)`；`channel` 即 RocketMQ topic；不使用 `outbox-out-0` 及 `TARGET_DESTINATION` 头。
+- 消费端：示例订阅 `INGEST_TASK_READY`，函数式 `Consumer<Message<String>>` 打印日志验证链路。
+- 失败/重试：发送失败抛异常，由 Relay 编排器统一判定重试/失败。
+- 回退：`papertrace.ingest.outbox.publisher=noop` 立即停用 MQ 发布。
+- 白名单：`strict-channel-whitelist=true` 时，仅允许 `allowed-channels` 中的 channel 发布（默认关闭）
+
+术语映射
+- channel（领域统一术语，同时为 StreamBridge.send 的第一个参数） = RocketMQ topic
+- dedupKey → RocketMQ KEYS 属性（MessageConst.PROPERTY_KEYS）
+- opType → RocketMQ TAGS 属性（MessageConst.PROPERTY_TAGS）
 
 ---
 
@@ -35,27 +42,39 @@ TL;DR
 
 ---
 
-## 4. 通道命名与动态目的地策略
+## 4. 通道命名与动态发布策略
 - 领域规范：统一下划线分段 UPPER_SNAKE（例：`INGEST_TASK_READY`），来源于 `ChannelKey.channel()`。
-- **动态目的地（方案 A - 纯动态创建）**：
-  - **不预定义 `outbox-out-0` binding**，避免创建占位符 topic
-  - 直接使用 `StreamBridge.send(destination, message)`，由 binder 按需创建通道
-  - destination 即为实际 topic 名称（如 `INGEST_TASK_READY`）
-  - 优点：无冗余配置，灵活性高；缺点：失去统一的生产者配置（需通过代码或 binder 全局默认控制）
+- 动态发布（纯动态创建）：
+  - 不预定义生产 binding（如 `outbox-out-0`），避免创建占位符 topic。
+  - 使用 `StreamBridge.send(channel, message)` 按需发送；channel 即实际 RocketMQ topic 名称。
+  - 优点：无冗余配置，按需创建，领域 channel 直观映射；权衡：集中生产者高级参数需依赖全局默认或代码控制。
 - 可选统一前缀：如需，可采用 `papertrace_INGEST_TASK_READY`（避免点号）。
 
 ---
 
 ## 5. 出站实现（infra）
 - 新增类：`patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/messaging/RocketMqOutboxPublisher.java`
-- 职责：实现 `OutboxPublisherPort.publish(message, plan)`，使用 `StreamBridge.send(destination, message)` 动态发布。
-- **动态目的地核心逻辑**：
+- 职责：实现 `OutboxPublisherPort.publish(message, plan)`，使用 `StreamBridge.send(channel, message)` 动态发布。
+**动态 channel 发布核心逻辑**：
   ```java
-  String destination = message.getChannel(); // 如 "INGEST_TASK_READY"
-  streamBridge.send(destination, messageBuilder.build());
+  String channel = message.getChannel(); // 如 "INGEST_TASK_READY"
+  streamBridge.send(channel, messageBuilder.build());
   ```
-  - 无需设置 `TARGET_DESTINATION` 头，直接以 channel 作为 destination 参数
+  - 无需设置 `TARGET_DESTINATION` 头，直接用 channel 作为发送参数
   - binder 按需创建并绑定到 RocketMQ topic
+- **通道白名单校验（新增）**：
+  - 目的：仅允许在白名单中的 channel 发送，避免误发到未就绪或禁用的通道。
+  - 配置：`papertrace.ingest.outbox.strict-channel-whitelist`（布尔，默认 false）、`papertrace.ingest.outbox.allowed-channels`（字符串列表）。
+  - 行为：当 strict=true 时，若 `allowed-channels` 为空或当前 channel 不在列表中，直接拒绝发送并抛出 `OutboxPublishException("CHANNEL_NOT_ALLOWED")`，建议 app 层据此判定为“不可重试”。
+  - 伪代码：
+    ```java
+    String channel = message.getChannel();
+    Set<String> allowed = props.getAllowedChannels();
+    if (props.isStrictChannelWhitelist() && (allowed == null || !allowed.contains(channel))) {
+        throw new OutboxPublishException("CHANNEL_NOT_ALLOWED: " + channel);
+    }
+    boolean ok = streamBridge.send(channel, messageBuilder.build());
+    ```
 - 载荷与头：
   - payload：`message.getPayloadJson()`（字符串 JSON），`content-type=application/json`
   - 业务头：若 `headersJson` 非空，反序列化后注入消息头（勿含敏感信息）
@@ -109,14 +128,14 @@ spring:
                       access-key: ${ROCKETMQ_AK:}
                       secret-key: ${ROCKETMQ_SK:}
       
-      # ⚠️ 采用方案 A：纯动态创建，不预定义 outbox-out-0 binding
+      # 纯动态创建，不预定义 outbox-out-0 binding
       # 生产端无需显式 binding 配置，由 StreamBridge 动态创建
       
       # Binder 全局生产者默认配置（可选）
       default:
         producer:
           partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
-          partition-count: 8
+          partition-count: 8  # 确保 broker 中 topic 队列数 >= 8；若关闭自动创建需提前 mqadmin 预创建
       
       bindings:
         # 示例消费者：订阅 INGEST_TASK_READY
@@ -138,19 +157,26 @@ papertrace:
   ingest:
     outbox:
       publisher: ${PUBLISHER_IMPL:rocketmq}  # rocketmq | noop
+      strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
+      allowed-channels:
+        - INGEST_TASK_READY   # 示例；仅允许在列表中的通道发送
+        # - INGEST_TASK_PARSED
 ```
 
 配置要点
-- **无 `outbox-out-0` binding**：避免创建占位符 topic，完全动态创建
-- **全局默认生产者配置**：通过 `spring.cloud.stream.default.producer` 统一控制分区策略（可选）
-- **分区键兜底表达式**：`partitionKey != null ? partitionKey : KEYS`，避免空键导致热点
-- **环境变量注入**：不在代码中硬编码地址/密钥；全部走环境变量/Nacos（暂时写 boot 模块的 application.yaml 中）
-- **topic 命名**：使用下划线命名，避免点号字符
+- 纯动态：无 `outbox-out-0` 生产 binding，首次发送触发（或需预创建）实际 topic。
+- 分区策略：`partitionKey` 为空回退 `KEYS`，缓解热点。
+- 分区与队列：`partition-count` 不得超过 topic 实际队列数；生产环境常关闭自动创建，需预创建。
+- 全局默认生产者：可集中管理分区表达式与并发参数。
+- 环境变量注入：不硬编码地址/密钥，全部走 Nacos / 环境变量。
+- 白名单校验：开启 `strict-channel-whitelist=true` 后，仅 `allowed-channels` 列表中的通道允许发送；列表为空时将拒绝所有发送（安全默认关：默认 false）。
+- 命名规范：下划线 UPPER_SNAKE，避免点号。
+- 自动创建前提：依赖 broker `autoCreateTopicEnable=true`；关闭时用 `mqadmin updateTopic` 预创建并指定队列数。
 
 ---
 
 ## 8. 消息契约（最小约束）
-- destination：来自 `OutboxMessage.channel()`（例：`INGEST_TASK_READY`），直接作为 RocketMQ topic 名称
+- channel：来自 `OutboxMessage.channel()`（例：`INGEST_TASK_READY`），直接作为 RocketMQ topic 名称
 - payload：JSON 字符串（与通道关联的 payloadType 匹配）
 - headers（建议，使用 RocketMQ 常量）：
   - `MessageConst.PROPERTY_KEYS`=dedupKey（去重/追踪，对应 RocketMQ 原生 KEYS 属性）
@@ -181,13 +207,9 @@ papertrace:
 - **顺序与分区**：
     - 当前普通消息；若需分区有序，需评估 binder 对顺序消息与队列策略的支持
     - 分区键兜底已实现：为空时回退到 dedupKey，避免热点
-- **msgId 写回限制**（当前阶段）：
-    - `StreamBridge.send()` 仅返回 `boolean`，无法直接获取 broker 返回的 msgId
-    - **短期方案**：暂不写回 msgId，依赖 dedupKey 去重（业务层幂等）
-    - **重复发送风险**：网络抖动时可能 broker 已收到但客户端收到失败响应 → app 层重试 → 消费端必须基于 dedupKey 做幂等
+- **msgId 写回限制**：当前阶段策略见第 5 节（暂不写回）；重复发送风险需消费端基于 KEYS（dedupKey）实现幂等。
 - **分区数与队列数不一致**：
-    - 配置 `partition-count=8` 必须 ≤ RocketMQ topic 实际队列数
-    - 建议：先在 RocketMQ 手动创建 topic 并指定队列数，再启动应用范围与目标
+  - `partition-count=8` 必须 ≤ 目标 topic 队列数；若自动创建关闭需手工创建（示例：`mqadmin updateTopic -n ${ROCKETMQ_NAMESRV} -t INGEST_TASK_READY -c <ClusterName> -r 6 -w 6`）。
 ---
 
 ## 11. 灰度与回滚
@@ -207,9 +229,10 @@ papertrace:
    - 补充消费者重试配置（`max-attempts`/`back-off-*`）
 3) **出站实现**：
    - 新增 `RocketMqOutboxPublisher`，装配 `StreamBridge`
-   - 实现动态目的地发布：`streamBridge.send(message.getChannel(), ...)`
+  - 实现动态 channel 发布：`streamBridge.send(message.getChannel(), ...)`
    - 使用 `MessageConst.PROPERTY_KEYS`/`PROPERTY_TAGS` 设置消息头
    - 实现分区键兜底逻辑：为空时回退到 dedupKey
+   - 增加通道白名单校验：基于 `papertrace.ingest.outbox.strict-channel-whitelist` 与 `allowed-channels`；不在白名单直接拒绝（建议标记为不可重试）
    - **发送前检查 msgId**：若非空则跳过（`ALREADY_SENT`）
    - 发送失败抛出 `OutboxPublishException`
    - 补充条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq")`
@@ -230,6 +253,7 @@ papertrace:
 - 出站：
   - `publisher=rocketmq` 时，Relay 批次 published 计数正确增加；异常进入 app 失败/重试分支
   - 发送成功后消息可在 RocketMQ 控制台查询到（topic=`INGEST_TASK_READY`）
+  - 白名单校验：`strict-channel-whitelist=true` 时，非白名单通道发送被拒绝（抛 `OutboxPublishException: CHANNEL_NOT_ALLOWED`），且未触发实际网络发送
   - **msgId 去重**：同一 outbox 记录重复执行时，若 `msg_id` 非空则跳过发送
 - 入站：
   - 成功消费 `INGEST_TASK_READY` 并打印包含 payload 与关键头的日志
@@ -266,9 +290,6 @@ papertrace:
   - 改用 `RocketMQTemplate.syncSend()` 替代 `StreamBridge`
   - 获取 `SendResult.msgId` 并更新到 `outbox_message.msg_id` 字段
   - 实现严格去重：发送前检查 msgId，避免网络抖动导致重复发送
-- **Phase 2 - 通道白名单**：
-  - 实现 `OutboxMqProperties` 配置类，加载 `allowed-channels`
-  - 在 `RocketMqOutboxPublisher` 发送前校验，拒绝未授权通道
 - **Phase 3 - 高级特性**：
   - 事务/半消息与回查
   - DLQ（死信队列）/重放工具
@@ -284,10 +305,16 @@ papertrace:
 - 示例代码（片段，供参考，不是最终实现）：
 - 
 ```java
-// 出站发布（核心要点示例 - 方案 A 纯动态创建）
+// 出站发布（核心要点示例 - 纯动态创建）
 import org.apache.rocketmq.common.message.MessageConst;
 
-String destination = message.getChannel(); // 如 "INGEST_TASK_READY"
+String channel = message.getChannel(); // 如 "INGEST_TASK_READY"
+
+// 白名单校验（仅允许配置的通道）
+Set<String> allowed = props.getAllowedChannels();
+if (props.isStrictChannelWhitelist() && (allowed == null || !allowed.contains(channel))) {
+    throw new OutboxPublishException("未被允许的通道: " + channel);
+}
 
 // 分区键兜底
 String partitionKey = StrUtil.isNotBlank(message.getPartitionKey()) 
@@ -302,9 +329,9 @@ MessageBuilder<String> mb = MessageBuilder
   .setHeader("partitionKey", partitionKey);
 
 // 直接发送到动态 destination，无需 TARGET_DESTINATION 头
-boolean ok = streamBridge.send(destination, mb.build());
+boolean ok = streamBridge.send(channel, mb.build());
 if (!ok) {
-    throw new OutboxPublishException("发送失败: " + destination);
+  throw new OutboxPublishException("发送失败: " + channel);
 }
 ```
 
@@ -325,7 +352,7 @@ public Consumer<Message<String>> ingestTaskReadyConsumer() {
 ```
 
 ```yaml
-# 配置示例（方案 A - 无 outbox-out-0 binding）
+# 配置示例（纯动态：无 outbox-out-0 binding）
 spring:
   cloud:
     stream:
