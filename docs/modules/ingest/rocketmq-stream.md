@@ -1,19 +1,19 @@
 # Ingest 模块 RocketMQ 5.x 接入（Spring Cloud Stream + StreamBridge + 动态目的地）
 
-> 状态：草案（Draft）｜作者：Codex｜适用版本：Spring Boot 3.2.x / Spring Cloud 2023.0.x / Spring Cloud Alibaba 2023.0.1.0
+> 作者：linqibin｜适用版本：Spring Boot 3.2.x / Spring Cloud 2023.0.x / Spring Cloud Alibaba 2023.0.1.0
 
 ## 1. 适用范围与目标
 - 仅涉及 `patra-ingest` 服务：在 infra 层实现 Outbox 出站（发布），在 adapter 层实现入站（消费，先日志）。
 - 出站采用 Spring Cloud Stream（SCS）+ RocketMQ Binder，通过 `StreamBridge` 动态目的地发布；不修改 domain 与 app，用例仍由 `OutboxRelayExecutor` 编排。
 - 主题（topic）命名沿用领域规范：下划线分段 UPPER_SNAKE（如 `INGEST_TASK_READY`）。
-- 配置走 Nacos/环境变量；不硬编码密钥/地址；支持配置回退到 `NoopOutboxPublisher`。
+- 配置走 Nacos/环境变量；不硬编码密钥/地址；无“noop”回退，所有发送失败或不被允许的通道统一抛出异常（显式失败）。
 
 TL;DR（选型：纯动态目的地，不预定义生产 binding）
 - 生产端：直接调用 `StreamBridge.send(channel, message)`；`channel` 即 RocketMQ topic；不使用 `outbox-out-0` 及 `TARGET_DESTINATION` 头。
 - 消费端：示例订阅 `INGEST_TASK_READY`，函数式 `Consumer<Message<String>>` 打印日志验证链路。
-- 失败/重试：发送失败抛异常，由 Relay 编排器统一判定重试/失败。
-- 回退：`papertrace.ingest.outbox.publisher=noop` 立即停用 MQ 发布。
-- 白名单：`strict-channel-whitelist=true` 时，仅允许 `allowed-channels` 中的 channel 发布（默认关闭）
+- 失败/重试：发送失败抛异常，由 Relay 编排器统一判定重试/失败；不可重试错误（例如通道不在白名单）由异常 errorCode 识别并终止。
+- 无回退 noop：不做“静默忽略”，所有不允许的操作显式失败（删除noop实现）。
+- 白名单：`strict-channel-whitelist=true` 时，仅允许 `allowed-channels` 中的 channel 发布（默认关闭；开启后未列出的通道立即抛异常）。
 
 术语映射
 - channel（领域统一术语，同时为 StreamBridge.send 的第一个参数） = RocketMQ topic
@@ -25,7 +25,7 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
 ## 2. 架构与分层
 - domain：`OutboxPublisherPort`（保持不动）
 - app：`OutboxRelayExecutor`（保持不动，publish→写回状态）
-- infra：新增 `RocketMqOutboxPublisher` 实现端口；与 `NoopOutboxPublisher` 通过配置开关切换
+- infra：新增 `RocketMqOutboxPublisher` 实现端口（唯一实现，未提供 noop 回退）
 - adapter：新增函数式 `Consumer<Message<String>>` 入站（先打印）
 - boot：集中 SCS/binder 绑定与连接配置（推荐托管至 Nacos）
 
@@ -99,7 +99,7 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
   - 发送成功返回 `PublishResult.SUCCESS`
   - 发送失败（`send()` 返回 false）抛出 `OutboxPublishException`，由 app 层决定重试
   - 已发送跳过返回 `PublishResult.ALREADY_SENT`（msgId 非空场景）
-- 条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq")`；保持 `NoopOutboxPublisher` 作为默认回退
+- 条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq", matchIfMissing=true)`；若配置被显式设为非 `rocketmq` 值，可在启动阶段抛出异常（Fail Fast），不提供 noop 回退。
 
 ---
 
@@ -168,7 +168,7 @@ spring:
 papertrace:
   ingest:
     outbox:
-      publisher: ${PUBLISHER_IMPL:rocketmq}  # rocketmq | noop
+  publisher: ${PUBLISHER_IMPL:rocketmq}  # 仅支持 rocketmq（其他值将触发启动失败）
       strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
       allowed-channels:
         - INGEST_TASK_READY   # 示例；仅允许在列表中的通道发送
@@ -183,7 +183,7 @@ papertrace:
 - 默认 Binder：设置 `spring.cloud.stream.defaultBinder=rocketmq`，确保动态目的地路由到 RocketMQ。
 - 连接方式：`name-server` 与 `endpoint` 二选一（gRPC Proxy），按部署方式择一配置。
 - 环境变量注入：不硬编码地址/密钥，全部走 Nacos / 环境变量。
-- 白名单校验：`strict-channel-whitelist=true` 时，启动期若列表为空将 Fail Fast；运行期仅允许列表内通道发送。
+- 白名单校验：`strict-channel-whitelist=true` 时，启动期若列表为空将 Fail Fast；运行期仅允许列表内通道发送（否则抛 `OutboxPublishException`）。
 - 统一前缀：当前不启用统一前缀；保持真实 UPPER_SNAKE topic。
 - 命名规范：下划线 UPPER_SNAKE，避免点号。
 - 自动创建前提：依赖 broker `autoCreateTopicEnable=true`；关闭时用 `mqadmin updateTopic` 预创建并指定队列数。
@@ -228,43 +228,42 @@ papertrace:
 ---
 
 ## 11. 灰度与回滚
-- 回滚：配置切回 `publisher=noop` 即可，无需改代码。
-- 灰度：按通道在 Nacos 配置白名单，仅允许部分通道使用 RocketMQ 发布，其余仍走 Noop（可在 publisher 内做校验）。
+- 回滚：通过调整白名单实现“最小可用通道”策略；若需要完全禁止发送，可临时停用相关调度 / 阻断调用（不提供 noop 兜底）。
+- 灰度：使用 `strict-channel-whitelist=true` + 逐步扩展 `allowed-channels` 方式分阶段放量。未放量的通道尝试发送将立即抛异常（可归类不可重试）。
 
 ---
 
 ## 12. 任务拆解（Task List）
 1) **依赖接入**：
-   - 在 `patra-ingest-infra/pom.xml` 添加 `spring-cloud-starter-stream-rocketmq`
-   - 在 `patra-ingest-adapter/pom.xml` 添加 `spring-cloud-starter-stream-rocketmq`
-   - 在 `patra-ingest-infra/pom.xml` 添加 `rocketmq-client`（仅 `<scope>provided</scope>`，用于引入常量类）
+  - 在 `patra-ingest-infra/pom.xml` 添加 `spring-cloud-starter-stream-rocketmq`
+  - 在 `patra-ingest-adapter/pom.xml` 添加 `spring-cloud-starter-stream-rocketmq`
+  - （可选）显式添加 `rocketmq-client` 以锁定版本（无需 provided）。
 2) **配置落地**：
-   - 在 `patra-ingest-boot` 的 Nacos 配置（或本地 application.yaml）添加 binder/bindings 与 `papertrace.ingest.outbox.publisher` 开关
-   - **移除 `outbox-out-0` binding 配置**，采用纯动态创建
-   - 补充消费者重试配置（`max-attempts`/`back-off-*`）
+  - 在 `patra-ingest-boot` 的 Nacos 配置（或本地 application.yaml）添加 binder/bindings 与 `papertrace.ingest.outbox.publisher=rocketmq`
+  - **移除 `outbox-out-0` binding 配置**，采用纯动态创建
+  - 补充消费者重试配置（`max-attempts`/`back-off-*`）
 3) **出站实现**：
-   - 新增 `RocketMqOutboxPublisher`，装配 `StreamBridge`
+  - 新增 `RocketMqOutboxPublisher`，装配 `StreamBridge`
   - 实现动态 channel 发布：`streamBridge.send(message.getChannel(), ...)`
-   - 使用 `MessageConst.PROPERTY_KEYS`/`PROPERTY_TAGS` 设置消息头
-   - 实现分区键兜底逻辑：为空时回退到 dedupKey
-   - 增加通道白名单校验：基于 `papertrace.ingest.outbox.strict-channel-whitelist` 与 `allowed-channels`；不在白名单直接拒绝（建议标记为不可重试）
-   - **发送前检查 msgId**：若非空则跳过（`ALREADY_SENT`）
-   - 发送失败抛出 `OutboxPublishException`
-   - 补充条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq")`
+  - 使用 `MessageConst.PROPERTY_KEYS`/`PROPERTY_TAGS` 设置消息头
+  - 分区键兜底：为空回退 dedupKey
+  - 白名单校验：strict 模式下非白名单通道直接抛 `OutboxPublishException(CHANNEL_NOT_ALLOWED)`（不可重试）
+  - **发送前检查 msgId**：若非空则跳过（`ALREADY_SENT`，Phase 2 生效更明显）
+  - 发送失败抛出 `OutboxPublishException`
+  - 条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq", matchIfMissing=true)`
 4) **入站消费者**：
-   - 新增 `IngestStreamConsumers`，实现 `ingestTaskReadyConsumer` 日志打印
-   - 验证消息头能否正确获取（KEYS/TAGS/partitionKey）
+  - 新增 `IngestStreamConsumers`，实现 `ingestTaskReadyConsumer` 日志打印
+  - 验证消息头能否正确获取（KEYS/TAGS/partitionKey）
 5) **验证联调**：
-   - 本地 RocketMQ + XXL 触发 `ingestOutboxRelayJob`
-   - 检查发布/消费/写回日志
-   - 验证重试配置生效（模拟消费失败）
+  - 本地 RocketMQ + XXL 触发 `ingestOutboxRelayJob`
+  - 检查发布/消费/写回日志
+  - 验证重试配置生效（模拟消费失败）
 6) **文档同步**：
-   - 本文件合并与完善
-   - 在 `docs/README.md` 增加索引条目
-
+  - 本文件合并与完善
+  - 在 `docs/README.md` 增加索引条目
 7) **启动校验（Fail Fast）**：
-   - 新增 `OutboxMqProperties`（`@ConfigurationProperties(prefix="papertrace.ingest.outbox")` + `@Validated`），在 `@PostConstruct` 中校验：`strict=true` 且 `allowed-channels` 为空 → 抛出 `IllegalStateException`，并记录 ERROR 日志
-   - 在 auto-config（infra）中 `@EnableConfigurationProperties(OutboxMqProperties.class)` 生效
+  - 新增 `OutboxMqProperties`（`@ConfigurationProperties(prefix="papertrace.ingest.outbox")` + `@Validated`），在 `@PostConstruct` 中校验：`strict=true` 且 `allowed-channels` 为空 → 抛出 `IllegalStateException` 并记录 ERROR
+  - auto-config 中 `@EnableConfigurationProperties(OutboxMqProperties.class)` 生效
 
 ---
 
@@ -279,8 +278,6 @@ papertrace:
   - 能正确获取 `KEYS`、`TAGS`、`partitionKey` 头信息（验证常量映射）
   - RocketMQ 扩展属性生效：`spring.cloud.stream.rocketmq.bindings.ingestTaskReadyConsumer-in-0.consumer.delayLevelWhenNextConsume=0` 生效验证
   - 消费失败时触发本地重试（最多 3 次），观察退避延迟
-- 可回滚：
-  - `publisher=noop` 时，Relay 流程不依赖 MQ 仍可完成（仅日志）
 - 架构合规：
   - domain/app 未引入框架依赖；仅 infra/adapter 接入 binder；配置由 Nacos/环境变量注入
 - 配置健壮性：
@@ -291,23 +288,8 @@ papertrace:
 
 ---
 
-## 14. 变更文件清单（预期）
-- 依赖：
-  - `patra-ingest/patra-ingest-infra/pom.xml`
-  - `patra-ingest/patra-ingest-adapter/pom.xml`
-- 代码：
-  - `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/messaging/RocketMqOutboxPublisher.java`（新增）
-  - `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/messaging/NoopOutboxPublisher.java`（补充条件装配，可选）
-  - `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/inbound/stream/IngestStreamConsumers.java`（新增）
-- 配置：
-  - `patra-ingest-boot` 应用配置（Nacos）增加 stream/binder/bindings 与开关
-- 文档：
-  - 本文件
-  - `docs/README.md` 索引新增一行（参见下节）
 
----
-
-## 16. 附录：索引与示例片段
+## 14. 附录：索引与示例片段
 - 文档索引建议：在 `docs/README.md` 的"快速入口"新增
     - `modules/ingest/rocketmq-stream.md`（Ingest：RocketMQ 接入指南）
 - 示例代码（片段，供参考，不是最终实现）：
