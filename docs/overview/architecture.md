@@ -6,14 +6,14 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 - **patra-registry**：单一可信源（SSOT），管理来源配置、字典、表达式能力
 - **patra-ingest**：采集与计划装配引擎，负责调度、窗口切分、任务出站
 - **patra-gateway-boot**：统一接入网关，承担路由、鉴权、流控与错误形态对齐
-- **自研 Starters**：封装错误解析、Web 输出、Feign 调用、RocketMQ、MyBatis 等跨服务标准
+- **自研 Starters**：封装错误解析、Web 输出、Feign 调用、MyBatis 等跨服务标准
 - **patra-expr-kernel**：表达式 AST 内核，保证跨服务规则的确定性
 - **patra-common**：领域基类、错误码模型、JSON 规范化工具
 
 ## 2. 分层约束（Hexagonal / DDD）
 - **领域层 (domain)**：纯 Java，对外通过聚合、值对象与领域事件表达业务不变量
 - **应用层 (app)**：编排用例、事务、幂等控制，仅依赖领域端口
-- **适配层 (adapter)**：承载 REST/MQ/调度等入站交互（Inbound Only），负责协议转换与错误映射；MQ 入站统一使用 `@Consumes(channel, consumer)` 声明，Starter 自动映射并校验 `topic/tag/group`
+- **适配层 (adapter)**：承载 REST/调度等入站交互（Inbound Only），负责协议转换与错误映射；后续若接入消息通道，可通过专用适配器扩展
 - **基础设施层 (infra)**：实现仓储、消息、Feign 等出站二级端口（Outbound），由领域端口约束
 - **启动层 (boot)**：整合配置，约束依赖方向 `adapter → app → domain ← infra`
 
@@ -23,8 +23,8 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 2. **配置组装**：adapter 调用 `app.planning.PlanIngestionApplicationService`，通过 Feign 获取 provenance 与表达式快照
 3. **窗口解析**：`app.planning.window` 根据 HARVEST/BACKFILL/UPDATE 策略生成 Plan 与 PlanSlice
 4. **任务装配**：`app.planning` 构建 Task + OutboxMessage，并写入事务性表
-5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），基于领域通道目录（ChannelKey）发送至 RocketMQ 指定 Topic
-6. **下游消费**：后续解析/清洗/索引服务消费 RocketMQ 事件完成链路闭环
+5. **消息发布**：`app.relay` 扫描待发布消息（租约 + 退避），经由 `OutboxPublisherPort` 发布（默认实现仅记录日志，可扩展 MQ/Webhook 等通道）
+6. **下游消费**：后续解析/清洗/索引服务可接入异步通道，消费发布事件以完成链路闭环
 
 所有步骤遵循幂等键、租约与指数退避策略，保证可回放与稳定性。
 ## 4. 基础设施依赖
@@ -32,7 +32,7 @@ Papertrace 聚焦医学文献的采集、标准化与服务化。整体采用“
 - **MySQL**：主数据存储（计划、配置、字典、快照等）
 - **Redis**：缓存与限流（规划中）
 - **Elasticsearch**：文献索引（后续阶段）
-- **RocketMQ**：事件总线，承载计划任务与后续处理通知
+- **消息通道**：按业务需要接入 MQ/Webhook 等外部媒介
 - **SkyWalking**：全链路追踪；Starter 负责注入 TraceId
 - **XXL-Job**：调度中心，驱动采集窗口与回放任务
 

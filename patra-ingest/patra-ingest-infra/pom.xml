@@ -24,11 +24,6 @@
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-rocketmq</artifactId>
-        </dependency>
-
         <!-- 出站 RPC（Feign）能力与共享契约 -->
         <dependency>
             <groupId>com.papertrace</groupId>

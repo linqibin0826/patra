@@ -14,7 +14,7 @@
 - **观测指标**：解析耗时、慢解析阈值、Trace 提取结果
 - **工具类**：`RemoteErrorHelper` 提供 `isNotFound/isRetryable` 等辅助判断
 
-本模块 README 提供配置项与扩展示例；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-boot-starter-rocketmq`）。
+本模块 README 提供配置项与扩展示例；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`）。
 
 ## 3. 分层结构与依赖
 - 包结构：`decoder`（错误解码）、`observation`、`tracing`、`support`
@@ -64,6 +64,6 @@
 风险：下游未返回 ProblemDetail、body 过大导致内存占用、Trace 头缺失。确保 tolerant 模式启用并监控异常。
 
 ## 8. 参考资料
-- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-rocketmq/README.md`、`patra-spring-boot-starter-expr/README.md`
+- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`
 - 错误处理规范：`docs/standards/platform-error-handling.md`
 - 核心 Starter：`patra-spring-boot-starter-core/README.md`

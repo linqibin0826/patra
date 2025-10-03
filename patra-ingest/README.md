@@ -11,20 +11,14 @@
   - 优势：减少代码重复，提升可维护性，保持 SQL 性能
   
 ### 🐛 Bug 修复
-- **修复 RocketMqOutboxPublisher 的 channel 获取逻辑**
-  - **问题**：错误地从 `plan.channel()` 获取 channel，导致查询所有频道时出现 NPE
-  - **修复**：改为从消息本身（`message.getChannel()`）获取 channel，确保数据一致性
-  - **格式处理**：在 `Channel` 类中新增 `fromString()` 静态工厂方法，自动将大写格式（如 `INGEST.TASK.READY`）转换为小写格式（`ingest.task.ready`）
-
-### ✨ 基础设施增强
-- **Channel 类改进** (`patra-spring-boot-starter-rocketmq`)
-  - 修改正则表达式从 `[a-z0-9]` 改为 `[A-Z0-9]`，**仅支持大写格式**
-  - 新增 `Channel.fromString(String channelValue)` 静态工厂方法
-  - 与系统约定一致：全平台统一使用大写格式（如 `INGEST.TASK.READY`）
+- **移除 RocketMQ Starter 依赖链**
+  - 清理 `patra-spring-boot-starter-rocketmq` 模块引用并下线 RocketMQ 集成
+  - 新增 `NoopOutboxPublisher`，保持 Outbox 流程在降级模式下仍可执行
+  - 同步更新配置与文档，防止缺失依赖导致启动异常
 
 ## 1. 模块定位
 - **服务/组件作用**：围绕来源 (provenance) 与操作 (operation) 生成采集计划，保证链路幂等、可回放、可观测
-- **主要消费者**：调度中心（XXL-Job）、下游解析/清洗服务、RocketMQ 事件订阅方
+- **主要消费者**：调度中心（XXL-Job）、下游解析/清洗服务、后续异步处理通道（待 MQ 对接）
 - **架构边界**：遵循六边形分层——`adapter`(Inbound：调度/监听，仅入站)、`app`(Planning/Relay 用例编排)、`domain`(Plan/Task 聚合/领域端口)、`infra`(Outbound：仓储/消息/RPC)、`boot`(启动装配)
 
 ## 2. 核心能力
@@ -77,7 +71,7 @@
           └── support/              # 支持工具
   ```
 
-- 关键依赖：`patra-common`、`patra-expr-kernel`、MyBatis-Plus、RocketMQ、XXL-Job、Nacos
+- 关键依赖：`patra-common`、`patra-expr-kernel`、MyBatis-Plus、XXL-Job、Nacos
 - 禁止事项：在 domain 层引入框架；在 adapter 中写业务逻辑
 
 ## 4. 运行与配置
@@ -99,7 +93,7 @@
   |------|----------|
   | 无任务生成 | 查看 `ing_plan` 表，关注 ING-12xx 日志 |
   | Outbox 堆积 | 查询 `ing_outbox_message` 状态，分析重试/死信 |
-  | 发布抖动 | 检查 `retry_count` 与 MQ 可用性，必要时调节 backoff |
+  | 发布抖动 | 检查 `retry_count` 与消息通道可用性，必要时调节 backoff |
 
 ## 6. 测试策略
 - Domain：验证 Plan/PlanSlice/Task 聚合不变量、幂等键生成
@@ -117,7 +111,7 @@
 | 任务执行端协议 | Mid | 执行链路尚未闭环，需明确消息规范 |
 | Relay 熔断/限速 | Low | 防重试风暴，需结合监控阈值 |
 
-主要风险：配置不一致、窗口越界、Outbox 重试风暴、MQ 不可用。建议配合 `docs/process/ingest-dataflow.md` 端到端排查。
+主要风险：配置不一致、窗口越界、Outbox 重试风暴、消息通道不可用。建议配合 `docs/process/ingest-dataflow.md` 端到端排查。
 
 ## 8. 参考资料
 - 深入文档：`docs/modules/ingest/deep-dive.md`

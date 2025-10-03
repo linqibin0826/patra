@@ -14,7 +14,7 @@
 - **JSON 字段处理**：提供 `JsonNode`、`Map<String,Object>` TypeHandler
 - **Mapper 扫描约定**：自动扫描 `infra` 包下 Mapper
 
-本模块 README 即为权威文档；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`、`patra-spring-boot-starter-rocketmq`）。
+本模块 README 即为权威文档；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`）。
 
 ## 3. 分层结构与依赖
 - 核心包：`config`（自动配置）、`error`、`handler`
@@ -52,6 +52,6 @@
 风险：自动填充字段与业务逻辑冲突、TypeHandler 未注册导致序列化失败、防全表拦截误伤批处理。
 
 ## 8. 参考资料
-- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-rocketmq/README.md`、`patra-spring-boot-starter-expr/README.md`
+- 其他 Starter：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-expr/README.md`
 - 错误规范：`docs/standards/platform-error-handling.md`
 - Registry/ingest Infra 实现：参见各模块 `infra` 包

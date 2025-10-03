@@ -2,7 +2,7 @@
 
 > 内容迁移自历史 README，完整保留采集计划、幂等策略与 Outbox 流程说明。
 
-统一的“计划式采集 + 任务排队”引擎：从调度触发开始，按来源 (provenance) + 操作 (operation) 拉取配置 → 解析采集窗口 → 生成计划 (Plan) → 切片 (PlanSlice) → 任务 (Task) → 写入 Outbox → Relay 发布至 MQ，保障幂等、安全、可回放、可扩展、可观察。
+统一的“计划式采集 + 任务排队”引擎：从调度触发开始，按来源 (provenance) + 操作 (operation) 拉取配置 → 解析采集窗口 → 生成计划 (Plan) → 切片 (PlanSlice) → 任务 (Task) → 写入 Outbox → Relay 发布至可配置通道（当前默认仅记录日志），保障幂等、安全、可回放、可扩展、可观察。
 
 当前实现重点：
 1. 窗口策略：HARVEST / BACKFILL / UPDATE
@@ -79,7 +79,7 @@ usecase/plan/
 
 **近期优化（v0.1.0+）**：
 - `OutboxRelayStore.fetchPending()` 方法合并：支持按频道过滤或拉取所有频道（通过 `channel` 参数是否为 `null` 控制），使用 MyBatis 动态 SQL 条件装配，简化了接口设计和实现复杂度
-- `RocketMqOutboxPublisher` 修复：从消息本身（`message.getChannel()`）而非计划（`plan.channel()`）获取 channel，避免 NPE 并确保数据一致性；自动将大写格式（如 `INGEST.TASK.READY`）转换为小写以符合 `Channel` 类的格式要求
+- `OutboxPublisherPort` 降级：移除 RocketMQ 依赖，默认实现改为 `NoopOutboxPublisher`，以日志方式输出发布行为，后续可按需替换为 MQ/Webhook 等具体通道
 
 **目录结构**：
 ```
@@ -148,7 +148,7 @@ usecase/relay/
 4. **计划构建**：`RelayPlanBuilder` 根据租约批次生成转发计划
 5. **批量执行**：`OutboxRelayExecutor` 遍历批次
    - 校验 `channel`（通过 `ChannelRegistry`）
-   - 发布消息到 RocketMQ
+   - 调用 `OutboxPublisherPort` 发布（默认由 `NoopOutboxPublisher` 记录日志）
    - 更新状态：PUBLISHED（成功） / 递增 `retry_count`（失败）
 6. **错误分类**：`RelayErrorClassifier` 区分 FATAL / TRANSIENT 错误
    - **TRANSIENT**：指数退避更新 `next_retry_at`
@@ -206,11 +206,10 @@ usecase/relay/
 发布步骤：
 1. 扫描 `status=PENDING` 且租约未占用、`not_before` 已到期的行
 2. 设置租约并置为 `PUBLISHING`
-3. 发送 MQ：
-   - **Channel 格式**：统一使用大写格式（如 `INGEST.TASK.READY`），数据库存储和代码中均保持一致
-   - **Channel 来源**：从消息本身（`message.getChannel()`）获取，而非从 `plan.channel()` 获取，确保在拉取所有频道时不会出现 NPE
-   - 发送前按全局 `ChannelRegistry` 校验 `channel`（大写点分段≥3，可选 domain，白名单）
-   - 成功 -> `PUBLISHED` + `msgId`
+3. 调用 `OutboxPublisherPort` 发布：
+   - 默认 `NoopOutboxPublisher` 仅记录日志并返回空 `msgId`
+   - 若替换为实际通道实现（如 MQ/Webhook），需确保频道命名、幂等策略与领域约定保持一致
+   - 成功 -> `PUBLISHED` + 外部 `msgId`（可为空）
    - 失败 -> 计算 `next_retry_at` 回退 `PENDING` 或超过阈值标记 `DEAD`
 
 指数退避：`delay = baseMs * 2^retry`（裁剪上限），避免重试风暴。
@@ -264,13 +263,12 @@ usecase/relay/
 | `SlicePlannerRegistry` | 新增切片策略 | 实现接口 + 注册 Bean |
 | `PlanningWindowResolver` | 自定义窗口算法 | 替换默认实现 |
 | `PlanExpressionBuilder` | 新 DSL/过滤表达式 | 组合/装饰模式注入 |
-| `DestinationBuilder` | 统一 `channel → destination` 解析 | 由 RocketMQ Starter 提供 |
+| `DestinationBuilder` | 统一 `channel → destination` 解析 | 待具体通道实现提供（默认未启用） |
 | `ChannelRegistry` | 统一 channel 注册/校验（可选） | 注解/接口注册，`patra.messaging.channels.*` 控制 |
 | 领域通道目录 | `ChannelKey` + `IngestChannels` | 去魔法值，适配发送；消费方可直接使用 channel 字符串（v0.1.0+） |
 | （可选）装饰 Publisher | 自定义发布策略（延迟/事务/路由） | 覆盖 `PatraMessagePublisher` Bean |
 | `IngestErrorMappingContributor` | 扩展错误码映射 | 追加异常映射 |
 
-> **注**：从 v0.1.0 开始，消费方可以直接在 `@MessageListener` 中使用 channel 字符串（如 `"ingest.task.ready"`），无需依赖发布方的枚举类。详见 [RocketMQ Starter 使用指南](../../starters/rocketmq-starter.md)。
 
 ## 10. 运维排障速查
 
@@ -278,7 +276,7 @@ usecase/relay/
 | ---- | -------- | -------- |
 | 无任务生成 | 检查 `ing_plan` 是否新增；查看日志 ING-12xx | 调整窗口或降低队列阈值 |
 | Plan 长期 SLICING | 切片生成异常或空集 | 检查切片策略、窗口跨度 |
-| Outbox 堆积 | `status=PENDING` 激增 | 查看发布错误码；检查 MQ 可用性 |
+| Outbox 堆积 | `status=PENDING` 激增 | 查看发布日志；确认发布实现是否可用 |
 | 多条消息 DEAD | 重试次数超限 | 修复问题后人工回放 |
 | 发布抖动 | `retry_count` 激增 | 调整退避参数或临时降并发 |
 
@@ -296,7 +294,7 @@ usecase/relay/
 1. 新增调度：继承 `AbstractProvenanceScheduleJob`，配置 XXL-Job 参数
 2. 运行：触发作业 → 查看 `ing_plan` / `ing_plan_slice` / `ing_task` / `ing_outbox_message`
 3. 验证发布：观察 Outbox 状态从 PENDING → PUBLISHED
-4. 模拟失败：临时阻断 MQ，观察 `retry_count` 与 `next_retry_at`
+4. 模拟失败：临时让发布实现抛出异常（例如在 `NoopOutboxPublisher` 中故意抛错），观察 `retry_count` 与 `next_retry_at`
 5. 扩展策略：实现新 `SlicePlanner` 并注册到 `SlicePlannerRegistry`
 
 ---

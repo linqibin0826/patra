@@ -4,15 +4,15 @@ Papertrace 聚焦医学科研文献的统一采集、标准化与智能分析，
 
 ## 系统总览
 - **业务目标**：接入 10+ 文献源，构建单一可信源（SSOT），保障采集→解析→入库链路可追踪
-- **技术特色**：六边形架构 + DDD、事件驱动（Outbox→RocketMQ）、统一错误模型（ProblemDetail）
+- **技术特色**：六边形架构 + DDD、事件驱动（Outbox 设计，可随时对接 MQ 实现）、统一错误模型（ProblemDetail）
 - **当前重点**：稳定数据落地链路、完善 Registry 配置治理、强化错误与观测规范
-- **核心依赖**：Java 21、Spring Boot 3.2.4、Spring Cloud 2023.0.1、Spring Cloud Alibaba 2023.0.1.0、MyBatis-Plus 3.5.12、RocketMQ 5.3.2、MySQL 8.0、Redis 7.0、Elasticsearch 8.14、Nacos、SkyWalking、XXL-Job
+- **核心依赖**：Java 21、Spring Boot 3.2.4、Spring Cloud 2023.0.1、Spring Cloud Alibaba 2023.0.1.0、MyBatis-Plus 3.5.12、MySQL 8.0、Redis 7.0、Elasticsearch 8.14、Nacos、SkyWalking、XXL-Job
 
 > 架构详情见 `docs/overview/architecture.md`。
 
 ## 快速开始
 1. **环境准备**：安装 JDK 21、Docker、Docker Compose，优先使用仓库自带 `./mvnw`
-2. **启动依赖**：进入 `docker/compose` 执行 `docker compose up -d` 拉起 MySQL、Redis、Elasticsearch、RocketMQ、Nacos、SkyWalking、XXL-Job 等基础设施
+2. **启动依赖**：进入 `docker/compose` 执行 `docker compose up -d` 拉起 MySQL、Redis、Elasticsearch、Nacos、SkyWalking、XXL-Job 等基础设施
 3. **全仓编译**：在仓库根目录运行 `./mvnw -q -DskipTests compile` 验证依赖完整性（首次构建依赖下载耗时较长）
 4. **单模块开发**：进入目标模块（例如 `patra-registry`）执行 `./mvnw -q clean test`
 5. **运行服务**：各 `*-boot` 模块提供 Spring Boot 启动入口，根据需要配置 `application-local.yaml` 与 Nacos 配置项
@@ -29,7 +29,7 @@ Papertrace 聚焦医学科研文献的统一采集、标准化与智能分析，
 | `patra-common` | 跨服务领域基类、错误模型、JSON 规范化 | [README](patra-common/README.md) |
 | `patra-expr-kernel` | 表达式 AST 与规范化引擎 | [README](patra-expr-kernel/README.md) |
 | `patra-parent` | Maven 父 POM，统一依赖与插件 | [README](patra-parent/README.md) |
-| Starters 系列 | 核心/Web/Feign/MyBatis/RocketMQ 自动配置 | [core](patra-spring-boot-starter-core/README.md) · [web](patra-spring-boot-starter-web/README.md) · [feign](patra-spring-cloud-starter-feign/README.md) · [rocketmq](patra-spring-boot-starter-rocketmq/README.md) |
+| Starters 系列 | 核心/Web/Feign/MyBatis 自动配置 | [core](patra-spring-boot-starter-core/README.md) · [web](patra-spring-boot-starter-web/README.md) · [feign](patra-spring-cloud-starter-feign/README.md) |
 
 ## 业务与流程入口
 - **采集→计划→出站**：详见 `docs/process/ingest-dataflow.md`
