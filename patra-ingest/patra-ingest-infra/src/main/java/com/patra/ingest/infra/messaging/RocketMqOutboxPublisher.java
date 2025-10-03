@@ -48,7 +48,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     }
 
     @Override
-    public PublishResult publish(OutboxMessage message, RelayPlan plan) throws Exception {
+    public PublishResult publish(OutboxMessage message, RelayPlan plan) {
         if (StringUtils.hasText(message.getMsgId())) {
             if (log.isDebugEnabled()) {
                 log.debug("[INGEST][INFRA] Skip publishing message id={} channel={} because msgId already present",

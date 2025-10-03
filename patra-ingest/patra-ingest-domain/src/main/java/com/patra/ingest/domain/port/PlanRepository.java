@@ -36,4 +36,12 @@ public interface PlanRepository {
      * @return 存在返回 {@code true}，否则 {@code false}
      */
     boolean existsByPlanKey(String planKey);
+
+    /**
+     * 根据计划 ID 查询聚合。
+     *
+     * @param planId 计划 ID
+     * @return 若存在返回计划聚合，否则返回 empty
+     */
+    Optional<PlanAggregate> findById(Long planId);
 }

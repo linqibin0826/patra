@@ -18,7 +18,7 @@ import java.util.Map;
  *   <li>operation：操作编码（必需）</li>
  *   <li>priority：调度优先级（可选）</li>
  *   <li>scheduledAt：计划执行时间（可选）</li>
- *   <li>planWindowFrom/To：计划窗口边界（可选，用于初始化 TaskRun）</li>
+ *   <li>planWindowFrom/To：计划窗口边界（可选，仅作为调试参考）</li>
  *   <li>headers：MQ 消息头（包含 ROCKET_MQ_MESSAGE_ID、traceId、partitionKey 等追踪字段）</li>
  * </ul>
  * </p>

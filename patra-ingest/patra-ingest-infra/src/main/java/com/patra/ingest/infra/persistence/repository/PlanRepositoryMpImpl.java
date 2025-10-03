@@ -85,4 +85,13 @@ public class PlanRepositoryMpImpl implements PlanRepository {
         }
         return planMapper.countByPlanKey(planKey) > 0;
     }
+
+    @Override
+    public Optional<PlanAggregate> findById(Long planId) {
+        if (planId == null) {
+            return Optional.empty();
+        }
+        PlanDO entity = planMapper.selectById(planId);
+        return Optional.ofNullable(entity).map(planConverter::toAggregate);
+    }
 }

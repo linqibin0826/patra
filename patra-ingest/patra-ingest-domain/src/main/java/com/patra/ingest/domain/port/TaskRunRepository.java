@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.port;
 
 import com.patra.ingest.domain.model.entity.TaskRun;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,4 +46,41 @@ public interface TaskRunRepository {
      * @return 最大的 attemptNo，若无运行记录则返回 0
      */
     int getLatestAttemptNo(Long taskId);
+
+    /**
+     * 按运行 ID 查询运行记录。
+     *
+     * @param runId 运行 ID
+     * @return 若存在则返回运行记录，否则 empty
+     */
+    Optional<TaskRun> findById(Long runId);
+
+    /**
+     * 覆盖写入检查点并刷新心跳时间。
+     *
+     * @param runId 运行 ID
+     * @param checkpointJson 检查点 JSON 字符串（null/空串表示清空）
+     * @param now 当前时间
+     * @return 是否更新成功
+     */
+    boolean updateCheckpointAndHeartbeat(Long runId, String checkpointJson, Instant now);
+
+    /**
+    * 仅刷新心跳时间（不触碰检查点）。
+    *
+    * @param runId 运行 ID
+    * @param now 当前时间
+    * @return 是否更新成功
+    */
+    boolean touchHeartbeat(Long runId, Instant now);
+
+    /**
+     * 将运行记录标记为失败并记录错误信息。
+     *
+     * @param runId 运行 ID
+     * @param errorMessage 错误信息
+     * @param now 当前时间
+     * @return 是否更新成功
+     */
+    boolean markFailed(Long runId, String errorMessage, Instant now);
 }

@@ -5,6 +5,8 @@ import com.patra.ingest.infra.persistence.entity.TaskRunDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.Instant;
+
 /**
  * 任务执行（TaskRun）表 Mapper。
  * <p>
@@ -33,4 +35,24 @@ public interface TaskRunMapper extends BaseMapper<TaskRunDO> {
      * @return 最大 attemptNo，若无记录则返回 0
      */
     int selectLatestAttemptNo(@Param("taskId") Long taskId);
+
+    /**
+     * 覆盖检查点并刷新心跳时间。
+     */
+    int updateCheckpointAndHeartbeat(@Param("runId") Long runId,
+                                     @Param("checkpointJson") String checkpointJson,
+                                     @Param("now") Instant now);
+
+    /**
+    * 刷新心跳时间。
+    */
+    int touchHeartbeat(@Param("runId") Long runId,
+                   @Param("now") Instant now);
+
+    /**
+     * 将运行记录标记为失败。
+     */
+    int markFailed(@Param("runId") Long runId,
+                   @Param("errorMsg") String errorMsg,
+                   @Param("now") Instant now);
 }
