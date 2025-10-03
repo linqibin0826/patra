@@ -41,6 +41,21 @@
             <!-- 不要 optional=true；会阻断传递 -->
         </dependency>
 
+        <!-- MapStruct 编译期处理器（为 IDE/增量编译提供可见性） -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>${mapstruct.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Lombok 与 MapStruct 绑定，避免 getter/setter 解析问题 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok-mapstruct-binding</artifactId>
+            <version>${lombok.mapstruct.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

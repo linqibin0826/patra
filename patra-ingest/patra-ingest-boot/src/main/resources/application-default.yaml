@@ -39,6 +39,6 @@ patra:
 rocketmq:
   name-server: localhost:9876
   producer:
-    group: ingest-producer
+    group: patra-ingest
     send-message-timeout: 5000
     retry-times-when-send-failed: 2
