@@ -29,7 +29,7 @@
 
 ## 6. Outbox 发布
 1. Relay 任务（`app.relay.OutboxRelayExecutor`）扫描 `status=PENDING` 且租约未占用的消息
-2. 获取租约后委托 `OutboxPublisherPort` 发布；当前默认实现 `NoopOutboxPublisher`，仅记录日志并返回空 msgId，后续可替换为 MQ/Webhook 等具体实现
+2. 获取租约后委托 `OutboxPublisherPort` 发布；当前实现为 `RocketMqOutboxPublisher`，通过 StreamBridge 将消息推送至 RocketMQ 主题（动态目的地）
 3. 失败根据 `retry_count` 动态计算 `next_retry_at`，超过阈值标记 `DEAD`
 
 ## 7. 观测与排障

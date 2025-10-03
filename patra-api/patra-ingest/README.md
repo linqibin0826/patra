@@ -10,11 +10,11 @@
   - Mapper 层：使用 MyBatis 动态 SQL（`<if>` 和 `<choose>`）实现条件装配
   - 优势：减少代码重复，提升可维护性，保持 SQL 性能
   
-### 🐛 Bug 修复
-- **移除 RocketMQ Starter 依赖链**
-  - 清理 `patra-spring-boot-starter-rocketmq` 模块引用并下线 RocketMQ 集成
-  - 新增 `NoopOutboxPublisher`，保持 Outbox 流程在降级模式下仍可执行
-  - 同步更新配置与文档，防止缺失依赖导致启动异常
+### 🚀 功能落地
+- **RocketMQ 出站发布回归**
+  - 接入 `spring-cloud-starter-stream-rocketmq`，实现 `RocketMqOutboxPublisher` 通过 StreamBridge 动态目的地发布
+  - 新增 `papertrace.ingest.outbox` 白名单配置，支持 `strict-channel-whitelist` Fail Fast 与运行期校验
+  - Adapter 增加 `ingestTaskReadyConsumer` 函数式消费者验证链路，日志输出 KEYS/TAGS/partitionKey
 
 ## 1. 模块定位
 - **服务/组件作用**：围绕来源 (provenance) 与操作 (operation) 生成采集计划，保证链路幂等、可回放、可观测
