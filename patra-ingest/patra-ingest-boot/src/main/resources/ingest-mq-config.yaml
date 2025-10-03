@@ -1,0 +1,41 @@
+spring:
+  cloud:
+    stream:
+      defaultBinder: rocketmq
+      binders:
+        rocketmq:
+          type: rocketmq
+          environment:
+            spring:
+              cloud:
+                stream:
+                  rocketmq:
+                    binder:
+                      name-server: ${ROCKETMQ_NAMESRV:127.0.0.1:9876}
+                      access-key: ${ROCKETMQ_AK:}
+                      secret-key: ${ROCKETMQ_SK:}
+      default:
+        producer:
+          # Boot 会将此字符串转换为 SpEL 并注入 ProducerProperties#setPartitionKeyExpression
+          partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
+          partition-count: 8
+      bindings:
+        ingestTaskReadyConsumer-in-0:
+          binder: rocketmq
+          destination: INGEST_TASK_READY
+          group: ingest-consumer
+          content-type: application/json
+          consumer:
+            concurrency: 2
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0
+
+papertrace:
+  ingest:
+    outbox:
+      publisher: ${PUBLISHER_IMPL:rocketmq}
+      strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
+      allowed-channels:
+        - INGEST_TASK_READY
