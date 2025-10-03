@@ -19,6 +19,41 @@ spring:
       discovery:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
+    stream:
+      defaultBinder: rocketmq
+      binders:
+        rocketmq:
+          type: rocketmq
+          environment:
+            spring:
+              cloud:
+                stream:
+                  rocketmq:
+                    binder:
+                      name-server: ${ROCKETMQ_NAMESRV:127.0.0.1:9876}
+                      access-key: ${ROCKETMQ_AK:}
+                      secret-key: ${ROCKETMQ_SK:}
+      default:
+        producer:
+          partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
+          partition-count: 8
+      bindings:
+        ingestTaskReadyConsumer-in-0:
+          binder: rocketmq
+          destination: INGEST_TASK_READY
+          group: ingest-consumer
+          content-type: application/json
+          consumer:
+            concurrency: 2
+            max-attempts: 3
+            back-off-initial-interval: 1000
+            back-off-max-interval: 10000
+            back-off-multiplier: 2.0
+      rocketmq:
+        bindings:
+          ingestTaskReadyConsumer-in-0:
+            consumer:
+              delayLevelWhenNextConsume: 0
   datasource: # 数据库连接的 JDBC URL
     # - 3306 是 MySQL 的默认端口
     # - my_database 是你的数据库名
@@ -53,3 +88,11 @@ spring:
   data:
     redis:
       url: redis://localhost:16379
+
+papertrace:
+  ingest:
+    outbox:
+      publisher: ${PUBLISHER_IMPL:rocketmq}
+      strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
+      allowed-channels:
+        - INGEST_TASK_READY

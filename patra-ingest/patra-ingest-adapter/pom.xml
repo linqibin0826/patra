@@ -33,6 +33,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-stream-rocketmq</artifactId>
+        </dependency>
+
         <!-- 出站 Feign/契约移动至 infra 层；adapter 仅保留 inbound 依赖 -->
 
         <dependency>

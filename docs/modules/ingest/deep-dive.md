@@ -79,7 +79,7 @@ usecase/plan/
 
 **近期优化（v0.1.0+）**：
 - `OutboxRelayStore.fetchPending()` 方法合并：支持按频道过滤或拉取所有频道（通过 `channel` 参数是否为 `null` 控制），使用 MyBatis 动态 SQL 条件装配，简化了接口设计和实现复杂度
-- `OutboxPublisherPort` 降级：移除 RocketMQ 依赖，默认实现改为 `NoopOutboxPublisher`，以日志方式输出发布行为，后续可按需替换为 MQ/Webhook 等具体通道
+- `OutboxPublisherPort` 集成：落地 `RocketMqOutboxPublisher`，基于 Spring Cloud Stream + RocketMQ 实现动态目的地发布，并支持通道白名单校验
 
 **目录结构**：
 ```
@@ -148,7 +148,7 @@ usecase/relay/
 4. **计划构建**：`RelayPlanBuilder` 根据租约批次生成转发计划
 5. **批量执行**：`OutboxRelayExecutor` 遍历批次
    - 校验 `channel`（通过 `ChannelRegistry`）
-   - 调用 `OutboxPublisherPort` 发布（默认由 `NoopOutboxPublisher` 记录日志）
+   - 调用 `OutboxPublisherPort` 发布（当前实现 `RocketMqOutboxPublisher`，动态创建/路由 RocketMQ 主题）
    - 更新状态：PUBLISHED（成功） / 递增 `retry_count`（失败）
 6. **错误分类**：`RelayErrorClassifier` 区分 FATAL / TRANSIENT 错误
    - **TRANSIENT**：指数退避更新 `next_retry_at`
@@ -207,9 +207,9 @@ usecase/relay/
 1. 扫描 `status=PENDING` 且租约未占用、`not_before` 已到期的行
 2. 设置租约并置为 `PUBLISHING`
 3. 调用 `OutboxPublisherPort` 发布：
-   - 默认 `NoopOutboxPublisher` 仅记录日志并返回空 `msgId`
-   - 若替换为实际通道实现（如 MQ/Webhook），需确保频道命名、幂等策略与领域约定保持一致
-   - 成功 -> `PUBLISHED` + 外部 `msgId`（可为空）
+   - `RocketMqOutboxPublisher` 通过 StreamBridge 将消息投递到 `channel` 对应的 RocketMQ 主题，并附带 KEYS/TAGS/partitionKey 头
+   - 启用 `strict-channel-whitelist` 时，未授权通道直接抛出 `OutboxPublishException(CHANNEL_NOT_ALLOWED)` 并标记为不可重试
+   - 成功 -> `PUBLISHED` + 外部 `msgId`（待 RocketMQ SDK 提供回写能力，可为空）
    - 失败 -> 计算 `next_retry_at` 回退 `PENDING` 或超过阈值标记 `DEAD`
 
 指数退避：`delay = baseMs * 2^retry`（裁剪上限），避免重试风暴。
@@ -294,7 +294,7 @@ usecase/relay/
 1. 新增调度：继承 `AbstractProvenanceScheduleJob`，配置 XXL-Job 参数
 2. 运行：触发作业 → 查看 `ing_plan` / `ing_plan_slice` / `ing_task` / `ing_outbox_message`
 3. 验证发布：观察 Outbox 状态从 PENDING → PUBLISHED
-4. 模拟失败：临时让发布实现抛出异常（例如在 `NoopOutboxPublisher` 中故意抛错），观察 `retry_count` 与 `next_retry_at`
+4. 模拟失败：临时让发布实现抛出异常（例如在 `RocketMqOutboxPublisher` 中手动抛出 `OutboxPublishException`），观察 `retry_count` 与 `next_retry_at`
 5. 扩展策略：实现新 `SlicePlanner` 并注册到 `SlicePlannerRegistry`
 
 ---
