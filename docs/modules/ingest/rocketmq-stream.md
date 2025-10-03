@@ -37,19 +37,42 @@ TL;DR
 
 ## 4. 通道命名与动态目的地策略
 - 领域规范：统一下划线分段 UPPER_SNAKE（例：`INGEST_TASK_READY`），来源于 `ChannelKey.channel()`。
-- 动态目的地：生产端固定使用 `outbox-out-0` binding，通过设置消息头 `BinderHeaders.TARGET_DESTINATION=channel` 路由到实际 topic。
+- **动态目的地（方案 A - 纯动态创建）**：
+  - **不预定义 `outbox-out-0` binding**，避免创建占位符 topic
+  - 直接使用 `StreamBridge.send(destination, message)`，由 binder 按需创建通道
+  - destination 即为实际 topic 名称（如 `INGEST_TASK_READY`）
+  - 优点：无冗余配置，灵活性高；缺点：失去统一的生产者配置（需通过代码或 binder 全局默认控制）
 - 可选统一前缀：如需，可采用 `papertrace_INGEST_TASK_READY`（避免点号）。
 
 ---
 
 ## 5. 出站实现（infra）
 - 新增类：`patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/messaging/RocketMqOutboxPublisher.java`
-- 职责：实现 `OutboxPublisherPort.publish(message, plan)`，使用 `StreamBridge#send("outbox-out-0", message)` 发布。
+- 职责：实现 `OutboxPublisherPort.publish(message, plan)`，使用 `StreamBridge.send(destination, message)` 动态发布。
+- **动态目的地核心逻辑**：
+  ```java
+  String destination = message.getChannel(); // 如 "INGEST_TASK_READY"
+  streamBridge.send(destination, messageBuilder.build());
+  ```
+  - 无需设置 `TARGET_DESTINATION` 头，直接以 channel 作为 destination 参数
+  - binder 按需创建并绑定到 RocketMQ topic
 - 载荷与头：
   - payload：`message.getPayloadJson()`（字符串 JSON），`content-type=application/json`
   - 业务头：若 `headersJson` 非空，反序列化后注入消息头（勿含敏感信息）
-  - RocketMQ 建议头：`KEYS=dedupKey`、`TAGS=opType`；`partitionKey` 放在 headers['partitionKey'] 以配合分区表达式
-- 返回值：短期返回 `PublishResult.NONE`（SCS 模式下 msgId 不直观）；后续如需记录 msgId，可引入 RocketMQTemplate 或回调增强
+  - **RocketMQ 标准头（使用常量）**：
+    - `MessageConst.PROPERTY_KEYS=dedupKey`（去重/追踪键）
+    - `MessageConst.PROPERTY_TAGS=opType`（业务标签）
+    - `partitionKey` 放在 headers['partitionKey'] 以配合分区表达式（**含兜底逻辑**：为空时回退到 dedupKey）
+- **msgId 写回逻辑**（已有字段 `msg_id`）：
+  - 发送前检查：若 `message.getMsgId()` 非空 → 跳过发送（已发送过）
+  - 发送后更新：
+    - **问题**：`StreamBridge.send()` 仅返回 `boolean`，无法直接获取 broker 返回的 msgId
+    - **短期方案**：通过 RocketMQ Binder 的 `SendCallback` 或 `RocketMQTemplate` 包装层获取（需额外适配）
+    - **降级方案**：本次实现暂不写回 msgId，先保证发送成功性；后续 Phase 2 改用 `RocketMQTemplate.syncSend()` 获取 `SendResult.msgId` 并更新数据库
+- 返回值：
+  - 发送成功返回 `PublishResult.SUCCESS`
+  - 发送失败（`send()` 返回 false）抛出 `OutboxPublishException`，由 app 层决定重试
+  - 已发送跳过返回 `PublishResult.ALREADY_SENT`（msgId 非空场景）
 - 条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq")`；保持 `NoopOutboxPublisher` 作为默认回退
 
 ---
@@ -57,6 +80,10 @@ TL;DR
 ## 6. 入站消费（adapter）
 - 新增类：`patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/inbound/stream/IngestStreamConsumers.java`
 - 定义 `@Bean Consumer<Message<String>> ingestTaskReadyConsumer()`，订阅 `INGEST_TASK_READY`，打印关键头与 payload（用于链路验证）
+- **消费者配置增强**：
+  - 本地重试：`max-attempts=3`，指数退避（`back-off-*`）
+  - 并发度：`concurrency=2`（可按实际调整）
+  - 延迟重试级别：`delayLevelWhenNextConsume=0`（RocketMQ 特定，0 表示立即重试）
 - 后续可扩展：多通道绑定、反序列化为强类型 DTO、校验与路由到用例
 
 ---
@@ -81,16 +108,17 @@ spring:
                       # ACL（如启用）
                       access-key: ${ROCKETMQ_AK:}
                       secret-key: ${ROCKETMQ_SK:}
+      
+      # ⚠️ 采用方案 A：纯动态创建，不预定义 outbox-out-0 binding
+      # 生产端无需显式 binding 配置，由 StreamBridge 动态创建
+      
+      # Binder 全局生产者默认配置（可选）
+      default:
+        producer:
+          partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
+          partition-count: 8
+      
       bindings:
-        # 生产端统一 binding（目的地由 header 覆盖）
-        outbox-out-0:
-          binder: rocketmq
-          destination: PT_PLACEHOLDER
-          content-type: application/json
-          producer:
-            partition-key-expression: "headers['partitionKey']"
-            partition-count: 8
-
         # 示例消费者：订阅 INGEST_TASK_READY
         ingestTaskReadyConsumer-in-0:
           binder: rocketmq
@@ -99,6 +127,12 @@ spring:
           content-type: application/json
           consumer:
             concurrency: 2
+            max-attempts: 3                     # 本地重试 3 次
+            back-off-initial-interval: 1000     # 首次重试等 1s
+            back-off-max-interval: 10000        # 最大等 10s
+            back-off-multiplier: 2.0            # 指数退避
+            # RocketMQ 特定配置
+            delayLevelWhenNextConsume: 0        # 0=立即重试，1-18=预设延迟级别
 
 papertrace:
   ingest:
@@ -107,20 +141,26 @@ papertrace:
 ```
 
 配置要点
-- 不在代码中硬编码地址/密钥；全部走环境变量/Nacos（暂时写boot模块的application.yaml中）。
-- 目的地动态路由，`destination` 仅占位；实际以消息头覆盖。
-- topic 使用下划线命名，避免点号字符。
+- **无 `outbox-out-0` binding**：避免创建占位符 topic，完全动态创建
+- **全局默认生产者配置**：通过 `spring.cloud.stream.default.producer` 统一控制分区策略（可选）
+- **分区键兜底表达式**：`partitionKey != null ? partitionKey : KEYS`，避免空键导致热点
+- **环境变量注入**：不在代码中硬编码地址/密钥；全部走环境变量/Nacos（暂时写 boot 模块的 application.yaml 中）
+- **topic 命名**：使用下划线命名，避免点号字符
 
 ---
 
 ## 8. 消息契约（最小约束）
-- destination：来自 `OutboxMessage.channel()`（例：`INGEST_TASK_READY`）
+- destination：来自 `OutboxMessage.channel()`（例：`INGEST_TASK_READY`），直接作为 RocketMQ topic 名称
 - payload：JSON 字符串（与通道关联的 payloadType 匹配）
-- headers（建议）：
-  - `KEYS`=dedupKey（去重/追踪）
-  - `TAGS`=opType（业务标签）
-  - `partitionKey`=partitionKey（分区路由）
-  - 业务自定义头：来自 `headersJson`（非敏感）
+- headers（建议，使用 RocketMQ 常量）：
+  - `MessageConst.PROPERTY_KEYS`=dedupKey（去重/追踪，对应 RocketMQ 原生 KEYS 属性）
+  - `MessageConst.PROPERTY_TAGS`=opType（业务标签，对应 RocketMQ 原生 TAGS 属性）
+  - `partitionKey`=partitionKey（分区路由，兜底逻辑：为空时使用 dedupKey）
+  - 业务自定义头：来自 `headersJson`（非敏感，如 traceId、sourceSystem 等）
+- **msgId 字段**（数据库已有）：
+  - 表字段：`msg_id varchar(128) comment 'Broker 返回的消息ID（对账/回放标识）'`
+  - 当前阶段：暂不写回（StreamBridge 限制）
+  - Phase 2：改用 `RocketMQTemplate.syncSend()` 获取 `SendResult.msgId` 并更新到数据库
 
 ---
 
@@ -135,11 +175,19 @@ papertrace:
 ---
 
 ## 10. 风险与对策
-- 头键兼容：不同 binder 版本 RocketMQ 头键可能存在差异。上线前以实际 binder 实测校准（本方案先使用通用 `KEYS/TAGS` 键名）。
-- 动态目的地安全：可在 Nacos 维护“允许目的地白名单”，发送前在 publisher 侧进行校验。
-- 顺序与分区：当前普通消息；若需分区有序，需评估 binder 对顺序消息与队列策略的支持。
-- msgId：短期返回 `NONE`；如必须写回 msgId，后续接入 RocketMQTemplate 或发送回调拦截器。
-
+- **消息头键名兼容性**：
+    - **必须使用 RocketMQ 常量**：`MessageConst.PROPERTY_KEYS`/`PROPERTY_TAGS`（需引入 `rocketmq-client` 依赖）
+    - 不同 binder 版本可能存在键名映射差异，上线前**必须实测验证**消费端能否正确获取 KEYS/TAGS
+- **顺序与分区**：
+    - 当前普通消息；若需分区有序，需评估 binder 对顺序消息与队列策略的支持
+    - 分区键兜底已实现：为空时回退到 dedupKey，避免热点
+- **msgId 写回限制**（当前阶段）：
+    - `StreamBridge.send()` 仅返回 `boolean`，无法直接获取 broker 返回的 msgId
+    - **短期方案**：暂不写回 msgId，依赖 dedupKey 去重（业务层幂等）
+    - **重复发送风险**：网络抖动时可能 broker 已收到但客户端收到失败响应 → app 层重试 → 消费端必须基于 dedupKey 做幂等
+- **分区数与队列数不一致**：
+    - 配置 `partition-count=8` 必须 ≤ RocketMQ topic 实际队列数
+    - 建议：先在 RocketMQ 手动创建 topic 并指定队列数，再启动应用范围与目标
 ---
 
 ## 11. 灰度与回滚
@@ -149,24 +197,51 @@ papertrace:
 ---
 
 ## 12. 任务拆解（Task List）
-1) 依赖接入：在 infra/adapter 模块 POM 添加 `spring-cloud-starter-stream-rocketmq`
-2) 配置落地：在 `patra-ingest-boot` 的 Nacos 配置添加 binder/bindings 与 `papertrace.ingest.outbox.publisher` 开关
-3) 出站实现：新增 `RocketMqOutboxPublisher`，装配 `StreamBridge`，实现动态目的地与头部映射
-4) 入站消费者：新增 `IngestStreamConsumers`，实现 `ingestTaskReadyConsumer` 日志打印
-5) 验证联调：本地 RocketMQ + XXL 触发，检查发布/消费/写回
-6) 文档同步：本文件合并与完善；在 `docs/README.md` 增加索引条目
+1) **依赖接入**：
+   - 在 `patra-ingest-infra/pom.xml` 添加 `spring-cloud-starter-stream-rocketmq`
+   - 在 `patra-ingest-adapter/pom.xml` 添加 `spring-cloud-starter-stream-rocketmq`
+   - 在 `patra-ingest-infra/pom.xml` 添加 `rocketmq-client`（仅 `<scope>provided</scope>`，用于引入常量类）
+2) **配置落地**：
+   - 在 `patra-ingest-boot` 的 Nacos 配置（或本地 application.yaml）添加 binder/bindings 与 `papertrace.ingest.outbox.publisher` 开关
+   - **移除 `outbox-out-0` binding 配置**，采用纯动态创建
+   - 补充消费者重试配置（`max-attempts`/`back-off-*`）
+3) **出站实现**：
+   - 新增 `RocketMqOutboxPublisher`，装配 `StreamBridge`
+   - 实现动态目的地发布：`streamBridge.send(message.getChannel(), ...)`
+   - 使用 `MessageConst.PROPERTY_KEYS`/`PROPERTY_TAGS` 设置消息头
+   - 实现分区键兜底逻辑：为空时回退到 dedupKey
+   - **发送前检查 msgId**：若非空则跳过（`ALREADY_SENT`）
+   - 发送失败抛出 `OutboxPublishException`
+   - 补充条件装配：`@ConditionalOnProperty(name="papertrace.ingest.outbox.publisher", havingValue="rocketmq")`
+4) **入站消费者**：
+   - 新增 `IngestStreamConsumers`，实现 `ingestTaskReadyConsumer` 日志打印
+   - 验证消息头能否正确获取（KEYS/TAGS/partitionKey）
+5) **验证联调**：
+   - 本地 RocketMQ + XXL 触发 `ingestOutboxRelayJob`
+   - 检查发布/消费/写回日志
+   - 验证重试配置生效（模拟消费失败）
+6) **文档同步**：
+   - 本文件合并与完善
+   - 在 `docs/README.md` 增加索引条目
 
 ---
 
 ## 13. 验收标准（Acceptance Criteria）
 - 出站：
   - `publisher=rocketmq` 时，Relay 批次 published 计数正确增加；异常进入 app 失败/重试分支
+  - 发送成功后消息可在 RocketMQ 控制台查询到（topic=`INGEST_TASK_READY`）
+  - **msgId 去重**：同一 outbox 记录重复执行时，若 `msg_id` 非空则跳过发送
 - 入站：
   - 成功消费 `INGEST_TASK_READY` 并打印包含 payload 与关键头的日志
+  - 能正确获取 `KEYS`、`TAGS`、`partitionKey` 头信息（验证常量映射）
+  - 消费失败时触发本地重试（最多 3 次），观察退避延迟
 - 可回滚：
   - `publisher=noop` 时，Relay 流程不依赖 MQ 仍可完成（仅日志）
 - 架构合规：
   - domain/app 未引入框架依赖；仅 infra/adapter 接入 binder；配置由 Nacos/环境变量注入
+- 动态创建验证：
+  - RocketMQ 控制台中**不存在** `PT_PLACEHOLDER` 等占位符 topic
+  - 仅在首次发送时自动创建实际通道对应的 topic（如 `INGEST_TASK_READY`）
 
 ---
 
@@ -187,36 +262,94 @@ papertrace:
 ---
 
 ## 15. 后续演进（非本次范围）
-- 事务/半消息与回查、DLQ/重放工具、统一 Topic 前缀策略、通道白名单校验组件
-- 指标与告警：发送成功/失败计数、延迟、堆积、消费失败告警
-- 强类型 payload 校验与 schema 演进策略（向后兼容）
+- **Phase 2 - msgId 写回增强**：
+  - 改用 `RocketMQTemplate.syncSend()` 替代 `StreamBridge`
+  - 获取 `SendResult.msgId` 并更新到 `outbox_message.msg_id` 字段
+  - 实现严格去重：发送前检查 msgId，避免网络抖动导致重复发送
+- **Phase 2 - 通道白名单**：
+  - 实现 `OutboxMqProperties` 配置类，加载 `allowed-channels`
+  - 在 `RocketMqOutboxPublisher` 发送前校验，拒绝未授权通道
+- **Phase 3 - 高级特性**：
+  - 事务/半消息与回查
+  - DLQ（死信队列）/重放工具
+  - 统一 Topic 前缀策略（如 `pt_`）
+  - 监控指标与告警：发送成功/失败计数、延迟、堆积、消费失败告警
+  - 强类型 payload 校验与 schema 演进策略（向后兼容）
 
 ---
 
 ## 16. 附录：索引与示例片段
-- 文档索引建议：在 `docs/README.md` 的“快速入口”新增
-  - `modules/ingest/rocketmq-stream.md`（Ingest：RocketMQ 接入指南）
+- 文档索引建议：在 `docs/README.md` 的"快速入口"新增
+    - `modules/ingest/rocketmq-stream.md`（Ingest：RocketMQ 接入指南）
 - 示例代码（片段，供参考，不是最终实现）：
+- 
 ```java
-// 出站发布（核心要点示例）
+// 出站发布（核心要点示例 - 方案 A 纯动态创建）
+import org.apache.rocketmq.common.message.MessageConst;
+
+String destination = message.getChannel(); // 如 "INGEST_TASK_READY"
+
+// 分区键兜底
+String partitionKey = StrUtil.isNotBlank(message.getPartitionKey()) 
+    ? message.getPartitionKey() 
+    : message.getDedupKey();
+
 MessageBuilder<String> mb = MessageBuilder
   .withPayload(message.getPayloadJson())
-  .setHeader(BinderHeaders.TARGET_DESTINATION, message.getChannel())
   .setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
-  .setHeaderIfAbsent("KEYS", message.getDedupKey())
-  .setHeaderIfAbsent("TAGS", message.getOpType())
-  .setHeaderIfAbsent("partitionKey", message.getPartitionKey());
-boolean ok = streamBridge.send("outbox-out-0", mb.build());
+  .setHeader(MessageConst.PROPERTY_KEYS, message.getDedupKey())       // 使用常量
+  .setHeader(MessageConst.PROPERTY_TAGS, message.getOpType())         // 使用常量
+  .setHeader("partitionKey", partitionKey);
+
+// 直接发送到动态 destination，无需 TARGET_DESTINATION 头
+boolean ok = streamBridge.send(destination, mb.build());
+if (!ok) {
+    throw new OutboxPublishException("发送失败: " + destination);
+}
 ```
+
 ```java
 // 入站消费者（日志验证示例）
 @Bean
 public Consumer<Message<String>> ingestTaskReadyConsumer() {
-  return msg -> log.info("[INGEST][ADAPTER] consume topic={} keys={} tags={} headers={} payload={}",
-      msg.getHeaders().getOrDefault("rocketmq_TOPIC", "unknown"),
-      msg.getHeaders().getOrDefault("KEYS", null),
-      msg.getHeaders().getOrDefault("TAGS", null),
-      msg.getHeaders(),
-      msg.getPayload());
+  return msg -> {
+      log.info("[INGEST][ADAPTER] consume topic={} KEYS={} TAGS={} partitionKey={} headers={} payload={}",
+          msg.getHeaders().getOrDefault("rocketmq_TOPIC", "unknown"),
+          msg.getHeaders().get(MessageConst.PROPERTY_KEYS),          // 验证常量映射
+          msg.getHeaders().get(MessageConst.PROPERTY_TAGS),
+          msg.getHeaders().get("partitionKey"),
+          msg.getHeaders(),
+          msg.getPayload());
+  };
 }
+```
+
+```yaml
+# 配置示例（方案 A - 无 outbox-out-0 binding）
+spring:
+  cloud:
+    stream:
+      binders:
+        rocketmq:
+          type: rocketmq
+          environment:
+            spring.cloud.stream.rocketmq.binder:
+              name-server: 127.0.0.1:9876
+      
+      # 全局默认生产者配置（可选）
+      default:
+        producer:
+          partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
+          partition-count: 8
+      
+      bindings:
+        # 仅定义消费者 binding
+        ingestTaskReadyConsumer-in-0:
+          binder: rocketmq
+          destination: INGEST_TASK_READY
+          group: ingest-consumer
+          consumer:
+            concurrency: 2
+            max-attempts: 3
+            back-off-initial-interval: 1000
 ```
