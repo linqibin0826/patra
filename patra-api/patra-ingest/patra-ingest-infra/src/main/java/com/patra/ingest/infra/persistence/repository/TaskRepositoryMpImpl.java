@@ -10,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 基于 MyBatis-Plus 的任务仓储实现。
@@ -21,11 +23,13 @@ import java.util.List;
  *   <li>任务聚合（TaskAggregate）的持久化与回读。</li>
  *   <li>按计划 ID 查询任务集合（用于切片回放 / 统计）。</li>
  *   <li>统计排队状态的任务数量（队列背压判断输入来源）。</li>
+ *   <li>支持租约相关操作（CAS 抢占、续租、置 RUNNING）。</li>
  * </ul>
  * 日志策略：
  * <ul>
  *   <li>DEBUG：插入 / 更新操作（含 id / planId）。</li>
- *   <li>INFO：不打印高频查询日志，减少 I/O。</li>
+ *   <li>INFO：租约抢占与续租关键节点。</li>
+ *   <li>不打印高频查询日志，减少 I/O。</li>
  * </ul>
  * </p>
  */
@@ -99,6 +103,20 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     }
 
     /**
+     * 按任务 ID 查询任务聚合。
+     * @param taskId 任务 ID
+     * @return 任务聚合，不存在则返回 empty
+     */
+    @Override
+    public Optional<TaskAggregate> findById(Long taskId) {
+        if (taskId == null) {
+            return Optional.empty();
+        }
+        TaskDO entity = mapper.selectById(taskId);
+        return entity == null ? Optional.empty() : Optional.of(converter.toAggregate(entity));
+    }
+
+    /**
      * 统计处于 QUEUED 状态的任务数量（可选按来源 / 操作过滤）。
      * @param provenanceCode 来源代码，可空
      * @param operationCode 操作代码，可空
@@ -115,5 +133,67 @@ public class TaskRepositoryMpImpl implements TaskRepository {
             wrapper.eq("operation_code", operationCode);
         }
         return mapper.selectCount(wrapper);
+    }
+
+    /**
+     * CAS 抢占租约（步骤 0）。
+     * @param taskId 任务 ID
+     * @param owner 租约持有者标识
+     * @param now 当前时间（UTC）
+     * @param ttlSeconds 租约 TTL（秒）
+     * @param idempotentKey 幂等键（用于防御性校验）
+     * @return true 表示抢占成功，false 表示他人持有或条件不满足
+     */
+    @Override
+    public boolean tryAcquireLease(Long taskId, String owner, Instant now, int ttlSeconds, String idempotentKey) {
+        int affected = mapper.tryAcquireLease(taskId, owner, now, ttlSeconds, idempotentKey);
+        if (affected > 0) {
+            log.info("[INGEST][INFRA] task lease acquired taskId={} owner={}", taskId, owner);
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][INFRA] task lease miss taskId={} owner={}", taskId, owner);
+            }
+        }
+        return affected > 0;
+    }
+
+    /**
+     * 置任务为 RUNNING 状态并更新租约（步骤 1）。
+     * @param taskId 任务 ID
+     * @param owner 租约持有者
+     * @param now 当前时间
+     * @param ttlSeconds 租约 TTL（秒）
+     * @return true 表示更新成功，false 表示租约已丢失
+     */
+    @Override
+    public boolean markRunningWithLease(Long taskId, String owner, Instant now, int ttlSeconds) {
+        int affected = mapper.markRunningWithLease(taskId, owner, now, ttlSeconds);
+        if (affected > 0) {
+            log.info("[INGEST][INFRA] task marked RUNNING taskId={} owner={}", taskId, owner);
+        } else {
+            log.warn("[INGEST][INFRA] task lease lost on markRunning taskId={} owner={}", taskId, owner);
+        }
+        return affected > 0;
+    }
+
+    /**
+     * 心跳续租。
+     * @param taskId 任务 ID
+     * @param owner 租约持有者
+     * @param now 当前时间
+     * @param ttlSeconds 租约 TTL（秒）
+     * @return true 表示续租成功，false 表示租约已丢失
+     */
+    @Override
+    public boolean renewLease(Long taskId, String owner, Instant now, int ttlSeconds) {
+        int affected = mapper.renewLease(taskId, owner, now, ttlSeconds);
+        if (affected > 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][INFRA] task lease renewed taskId={} owner={}", taskId, owner);
+            }
+        } else {
+            log.warn("[INGEST][INFRA] task lease lost on renew taskId={} owner={}", taskId, owner);
+        }
+        return affected > 0;
     }
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.ingest.infra.persistence.mapper.TaskRunMapper">
+
+    <!--
+        获取任务的最新 attemptNo
+        
+        用途：生成下一次尝试编号（latestAttemptNo + 1）
+        
+        返回：最大 attemptNo，若无记录则返回 0
+    -->
+    <select id="selectLatestAttemptNo" resultType="int">
+        SELECT IFNULL(MAX(attempt_no), 0)
+          FROM patra_ingest.ing_task_run
+         WHERE task_id = #{taskId} and deleted = 0
+    </select>
+
+</mapper>

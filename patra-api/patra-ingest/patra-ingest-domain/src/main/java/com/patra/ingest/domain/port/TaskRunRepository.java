@@ -37,4 +37,12 @@ public interface TaskRunRepository {
      * @return 运行记录集合，按实现约定输出顺序（通常 attemptNo 升序）
      */
     List<TaskRun> findAll(Long taskId);
+
+    /**
+     * 获取任务的最新 attemptNo（用于生成下一次尝试编号）。
+     *
+     * @param taskId 任务 ID
+     * @return 最大的 attemptNo，若无运行记录则返回 0
+     */
+    int getLatestAttemptNo(Long taskId);
 }
