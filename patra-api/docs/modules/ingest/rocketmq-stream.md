@@ -48,7 +48,7 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
   - 不预定义生产 binding（如 `outbox-out-0`），避免创建占位符 topic。
   - 使用 `StreamBridge.send(channel, message)` 按需发送；channel 即实际 RocketMQ topic 名称。
   - 优点：无冗余配置，按需创建，领域 channel 直观映射；权衡：集中生产者高级参数需依赖全局默认或代码控制。
-- 可选统一前缀：如需，可采用 `papertrace_INGEST_TASK_READY`（避免点号）。
+- 不启用统一前缀：按领域约定使用真实 UPPER_SNAKE topic 名称（如 `INGEST_TASK_READY`）；若未来需要再评估统一前缀策略。
 
 ---
 
@@ -65,12 +65,19 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
 - **通道白名单校验（新增）**：
   - 目的：仅允许在白名单中的 channel 发送，避免误发到未就绪或禁用的通道。
   - 配置：`papertrace.ingest.outbox.strict-channel-whitelist`（布尔，默认 false）、`papertrace.ingest.outbox.allowed-channels`（字符串列表）。
-  - 行为：当 strict=true 时，若 `allowed-channels` 为空或当前 channel 不在列表中，直接拒绝发送并抛出 `OutboxPublishException("CHANNEL_NOT_ALLOWED")`，建议 app 层据此判定为“不可重试”。
+  - 启动校验（Fail Fast）：当 strict=true 且 `allowed-channels` 为空时，应用启动时报 ERROR 并中止启动；避免运行期才发现配置缺失。
+  - 运行时校验：当 strict=true 且当前 channel 不在列表中，拒绝发送并抛出 `OutboxPublishException("CHANNEL_NOT_ALLOWED")`，建议 app 层据此判定为“不可重试”。
   - 伪代码：
     ```java
+    // 启动校验（在 OutboxMqProperties.@PostConstruct 中）
+    if (props.isStrictChannelWhitelist() && (CollUtil.isEmpty(props.getAllowedChannels()))) {
+        throw new IllegalStateException("strict=true 但 allowed-channels 为空（Fail Fast）");
+    }
+
+    // 运行时校验（在发送前）
     String channel = message.getChannel();
     Set<String> allowed = props.getAllowedChannels();
-    if (props.isStrictChannelWhitelist() && (allowed == null || !allowed.contains(channel))) {
+    if (props.isStrictChannelWhitelist() && !allowed.contains(channel)) {
         throw new OutboxPublishException("CHANNEL_NOT_ALLOWED: " + channel);
     }
     boolean ok = streamBridge.send(channel, messageBuilder.build());
@@ -102,7 +109,7 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
 - **消费者配置增强**：
   - 本地重试：`max-attempts=3`，指数退避（`back-off-*`）
   - 并发度：`concurrency=2`（可按实际调整）
-  - 延迟重试级别：`delayLevelWhenNextConsume=0`（RocketMQ 特定，0 表示立即重试）
+  - 延迟重试级别：`spring.cloud.stream.rocketmq.bindings.ingestTaskReadyConsumer-in-0.consumer.delayLevelWhenNextConsume=0`（RocketMQ 扩展属性，0 表示立即重试；不得配置在通用 `bindings.*.consumer` 下）
 - 后续可扩展：多通道绑定、反序列化为强类型 DTO、校验与路由到用例
 
 ---
@@ -112,6 +119,7 @@ TL;DR（选型：纯动态目的地，不预定义生产 binding）
 spring:
   cloud:
     stream:
+      defaultBinder: rocketmq
       binders:
         rocketmq:
           type: rocketmq
@@ -121,9 +129,9 @@ spring:
                 stream:
                   rocketmq:
                     binder:
-                      # RocketMQ 5.x：name-server 或 proxy 二选一
+                      # RocketMQ 5.x：name-server 或 endpoint（二选一，gRPC Proxy）
                       name-server: ${ROCKETMQ_NAMESRV:127.0.0.1:9876}
-                      # proxy: ${ROCKETMQ_PROXY:}
+                      # endpoint: ${ROCKETMQ_ENDPOINT:}
                       # ACL（如启用）
                       access-key: ${ROCKETMQ_AK:}
                       secret-key: ${ROCKETMQ_SK:}
@@ -150,8 +158,12 @@ spring:
             back-off-initial-interval: 1000     # 首次重试等 1s
             back-off-max-interval: 10000        # 最大等 10s
             back-off-multiplier: 2.0            # 指数退避
-            # RocketMQ 特定配置
-            delayLevelWhenNextConsume: 0        # 0=立即重试，1-18=预设延迟级别
+      # RocketMQ 扩展属性需放在以下路径
+      rocketmq:
+        bindings:
+          ingestTaskReadyConsumer-in-0:
+            consumer:
+              delayLevelWhenNextConsume: 0        # 0=立即重试，1-18=预设延迟级别
 
 papertrace:
   ingest:
@@ -168,8 +180,11 @@ papertrace:
 - 分区策略：`partitionKey` 为空回退 `KEYS`，缓解热点。
 - 分区与队列：`partition-count` 不得超过 topic 实际队列数；生产环境常关闭自动创建，需预创建。
 - 全局默认生产者：可集中管理分区表达式与并发参数。
+- 默认 Binder：设置 `spring.cloud.stream.defaultBinder=rocketmq`，确保动态目的地路由到 RocketMQ。
+- 连接方式：`name-server` 与 `endpoint` 二选一（gRPC Proxy），按部署方式择一配置。
 - 环境变量注入：不硬编码地址/密钥，全部走 Nacos / 环境变量。
-- 白名单校验：开启 `strict-channel-whitelist=true` 后，仅 `allowed-channels` 列表中的通道允许发送；列表为空时将拒绝所有发送（安全默认关：默认 false）。
+- 白名单校验：`strict-channel-whitelist=true` 时，启动期若列表为空将 Fail Fast；运行期仅允许列表内通道发送。
+- 统一前缀：当前不启用统一前缀；保持真实 UPPER_SNAKE topic。
 - 命名规范：下划线 UPPER_SNAKE，避免点号。
 - 自动创建前提：依赖 broker `autoCreateTopicEnable=true`；关闭时用 `mqadmin updateTopic` 预创建并指定队列数。
 
@@ -207,7 +222,7 @@ papertrace:
 - **顺序与分区**：
     - 当前普通消息；若需分区有序，需评估 binder 对顺序消息与队列策略的支持
     - 分区键兜底已实现：为空时回退到 dedupKey，避免热点
-- **msgId 写回限制**：当前阶段策略见第 5 节（暂不写回）；重复发送风险需消费端基于 KEYS（dedupKey）实现幂等。
+- **msgId 写回限制**：当前阶段不写回（使用 `StreamBridge.send()` 仅返回 boolean）；出站“去重”依赖 outbox 状态与消费端基于 KEYS（dedupKey）的幂等。Phase 2 改用 `RocketMQTemplate.syncSend()` 后，再启用基于 `msgId` 的严格去重。
 - **分区数与队列数不一致**：
   - `partition-count=8` 必须 ≤ 目标 topic 队列数；若自动创建关闭需手工创建（示例：`mqadmin updateTopic -n ${ROCKETMQ_NAMESRV} -t INGEST_TASK_READY -c <ClusterName> -r 6 -w 6`）。
 ---
@@ -247,6 +262,10 @@ papertrace:
    - 本文件合并与完善
    - 在 `docs/README.md` 增加索引条目
 
+7) **启动校验（Fail Fast）**：
+   - 新增 `OutboxMqProperties`（`@ConfigurationProperties(prefix="papertrace.ingest.outbox")` + `@Validated`），在 `@PostConstruct` 中校验：`strict=true` 且 `allowed-channels` 为空 → 抛出 `IllegalStateException`，并记录 ERROR 日志
+   - 在 auto-config（infra）中 `@EnableConfigurationProperties(OutboxMqProperties.class)` 生效
+
 ---
 
 ## 13. 验收标准（Acceptance Criteria）
@@ -254,15 +273,18 @@ papertrace:
   - `publisher=rocketmq` 时，Relay 批次 published 计数正确增加；异常进入 app 失败/重试分支
   - 发送成功后消息可在 RocketMQ 控制台查询到（topic=`INGEST_TASK_READY`）
   - 白名单校验：`strict-channel-whitelist=true` 时，非白名单通道发送被拒绝（抛 `OutboxPublishException: CHANNEL_NOT_ALLOWED`），且未触发实际网络发送
-  - **msgId 去重**：同一 outbox 记录重复执行时，若 `msg_id` 非空则跳过发送
+  - 出站去重：同一 outbox 记录重复执行时，若 `msg_id` 非空则跳过发送；当前阶段通常为空，因此以 Outbox 状态与消费端基于 KEYS 的幂等保障（Phase 2 启用 msgId 写回后再补强）
 - 入站：
   - 成功消费 `INGEST_TASK_READY` 并打印包含 payload 与关键头的日志
   - 能正确获取 `KEYS`、`TAGS`、`partitionKey` 头信息（验证常量映射）
+  - RocketMQ 扩展属性生效：`spring.cloud.stream.rocketmq.bindings.ingestTaskReadyConsumer-in-0.consumer.delayLevelWhenNextConsume=0` 生效验证
   - 消费失败时触发本地重试（最多 3 次），观察退避延迟
 - 可回滚：
   - `publisher=noop` 时，Relay 流程不依赖 MQ 仍可完成（仅日志）
 - 架构合规：
   - domain/app 未引入框架依赖；仅 infra/adapter 接入 binder；配置由 Nacos/环境变量注入
+- 配置健壮性：
+  - `strict-channel-whitelist=true` 且 `allowed-channels` 为空 → 应用启动失败（Fail Fast），输出 ERROR 日志
 - 动态创建验证：
   - RocketMQ 控制台中**不存在** `PT_PLACEHOLDER` 等占位符 topic
   - 仅在首次发送时自动创建实际通道对应的 topic（如 `INGEST_TASK_READY`）
@@ -285,25 +307,32 @@ papertrace:
 
 ---
 
-## 15. 后续演进（非本次范围）
-- **Phase 2 - msgId 写回增强**：
-  - 改用 `RocketMQTemplate.syncSend()` 替代 `StreamBridge`
-  - 获取 `SendResult.msgId` 并更新到 `outbox_message.msg_id` 字段
-  - 实现严格去重：发送前检查 msgId，避免网络抖动导致重复发送
-- **Phase 3 - 高级特性**：
-  - 事务/半消息与回查
-  - DLQ（死信队列）/重放工具
-  - 统一 Topic 前缀策略（如 `pt_`）
-  - 监控指标与告警：发送成功/失败计数、延迟、堆积、消费失败告警
-  - 强类型 payload 校验与 schema 演进策略（向后兼容）
-
----
-
 ## 16. 附录：索引与示例片段
 - 文档索引建议：在 `docs/README.md` 的"快速入口"新增
     - `modules/ingest/rocketmq-stream.md`（Ingest：RocketMQ 接入指南）
 - 示例代码（片段，供参考，不是最终实现）：
 - 
+```java
+// 启动校验属性（Fail Fast）
+// 建议放置在 infra 的配置模块中，并通过 @EnableConfigurationProperties 激活
+@ConfigurationProperties(prefix = "papertrace.ingest.outbox")
+@Validated
+public class OutboxMqProperties {
+    /** 是否启用严格白名单校验 */
+    private boolean strictChannelWhitelist;
+    /** 允许发送的通道列表 */
+    private Set<String> allowedChannels = new HashSet<>();
+
+    @PostConstruct
+    public void validate() {
+        if (strictChannelWhitelist && (allowedChannels == null || allowedChannels.isEmpty())) {
+            throw new IllegalStateException("strict-channel-whitelist=true 但 allowed-channels 为空");
+        }
+    }
+    // getter/setter 省略
+}
+```
+
 ```java
 // 出站发布（核心要点示例 - 纯动态创建）
 import org.apache.rocketmq.common.message.MessageConst;
@@ -356,6 +385,7 @@ public Consumer<Message<String>> ingestTaskReadyConsumer() {
 spring:
   cloud:
     stream:
+      defaultBinder: rocketmq
       binders:
         rocketmq:
           type: rocketmq
@@ -379,4 +409,11 @@ spring:
             concurrency: 2
             max-attempts: 3
             back-off-initial-interval: 1000
+
+      # RocketMQ 扩展属性
+      rocketmq:
+        bindings:
+          ingestTaskReadyConsumer-in-0:
+            consumer:
+              delayLevelWhenNextConsume: 0
 ```
