@@ -2,6 +2,7 @@ package com.patra.ingest.app.usecase.relay.policy;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,10 @@ public class RelayErrorClassifierImpl implements RelayErrorClassifier {
 
     @Override
     public RelayErrorKind classify(Throwable cause) {
+        Throwable publish = findPublishException(cause);
+        if (publish instanceof OutboxPublishException publishException) {
+            return publishException.getReason().isFatal() ? RelayErrorKind.FATAL : RelayErrorKind.TRANSIENT;
+        }
         Throwable root = ExceptionUtil.getRootCause(cause);
         if (root instanceof OutboxRelayExecutionException
                 || root instanceof IllegalArgumentException
@@ -29,5 +34,16 @@ public class RelayErrorClassifierImpl implements RelayErrorClassifier {
             return RelayErrorKind.FATAL;
         }
         return RelayErrorKind.TRANSIENT;
+    }
+
+    private Throwable findPublishException(Throwable cause) {
+        Throwable current = cause;
+        while (current != null) {
+            if (current instanceof OutboxPublishException) {
+                return current;
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 }
