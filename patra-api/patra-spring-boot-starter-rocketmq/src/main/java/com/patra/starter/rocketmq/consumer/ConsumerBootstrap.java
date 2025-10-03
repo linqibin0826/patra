@@ -1,10 +1,12 @@
 package com.patra.starter.rocketmq.consumer;
 
 import com.patra.starter.rocketmq.autoconfigure.RocketMQProperties;
+import com.patra.starter.rocketmq.core.message.Message;
 import com.patra.starter.rocketmq.naming.NamespaceResolver;
 import com.patra.starter.rocketmq.validation.GroupValidator;
 import com.patra.starter.rocketmq.validation.TopicValidator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.apache.rocketmq.spring.support.DefaultRocketMQListenerContainer;
 import org.springframework.beans.BeansException;
@@ -50,7 +52,7 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
 
     @Override
     public void afterSingletonsInstantiated() {
-        DefaultListableBeanFactory factory = (DefaultListableBeanFactory) 
+        DefaultListableBeanFactory factory = (DefaultListableBeanFactory)
                 applicationContext.getAutowireCapableBeanFactory();
 
         String nameServer = environment.getProperty("rocketmq.name-server");
@@ -88,14 +90,14 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
             if (channelStr == null || channelStr.isBlank()) {
                 throw new IllegalArgumentException("channel 不能为空");
             }
-            
+
             String[] parts = channelStr.trim().split("_");
             if (parts.length < 3) {
                 throw new IllegalArgumentException(
                         "channel 格式错误，应为 domain_resource_event，实际: " + channelStr
                 );
             }
-            
+
             String domain = parts[0];
             String resource = parts[1];
             String event = parts[2];
@@ -145,7 +147,7 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
                 long startTime = System.currentTimeMillis();
                 try {
                     @SuppressWarnings("unchecked")
-                    var msg = (com.patra.starter.rocketmq.core.message.Message<Object>) message;
+                    var msg = (Message<Object>) message;
 
                     log.info("[CONSUME][START] channel={}, group={}, eventId={}, traceId={}",
                             channelStr, group, msg.getEventId(), msg.getTraceId());
@@ -169,11 +171,11 @@ public class ConsumerBootstrap implements BeanPostProcessor, SmartInitializingSi
 
             // 兼容 RocketMQ 默认容器实现：需要注入 RocketMQMessageListener 注解元数据
             // 通过匿名实现提供必须的配置，避免容器在 init 时访问空注解导致 NPE
-            org.apache.rocketmq.spring.annotation.RocketMQMessageListener rocketCfg =
+            RocketMQMessageListener rocketCfg =
                     new org.apache.rocketmq.spring.annotation.RocketMQMessageListener() {
                         @Override
                         public Class<? extends java.lang.annotation.Annotation> annotationType() {
-                            return org.apache.rocketmq.spring.annotation.RocketMQMessageListener.class;
+                            return RocketMQMessageListener.class;
                         }
                         @Override
                         public String consumerGroup() { return group; }
