@@ -157,7 +157,6 @@ CREATE TABLE IF NOT EXISTS sys_dict_item_alias
  *     reg_prov_batching_cfg             —— 批量抓取与请求成型配置
  *     reg_prov_retry_cfg                —— 重试与退避配置
  *     reg_prov_rate_limit_cfg           —— 限流与并发配置
- *     reg_prov_credential               —— 鉴权/密钥配置
  * - 外键：所有配置表以 provenance_id 关联 reg_provenance(id)。
  * - 生效区间：effective_from/effective_to 采用 [start, end) 语义；不重叠由应用层保证。
  * - 生成列：task_type_key = IFNULL(task_type, 'ALL')，便于维度唯一键与检索。
@@ -424,7 +423,6 @@ CREATE TABLE `reg_prov_batching_cfg`
     `effective_to`                   TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
 
     `detail_fetch_batch_size`        INT             NULL COMMENT '单次详情抓取的批大小（条数），为空则由应用使用默认',
-    `credential_name`                VARCHAR(64)     NULL COMMENT '可选：关联凭证逻辑名，用于细化控制',
     `ids_param_name`                 VARCHAR(64)     NULL COMMENT '批详情请求中，ID 列表的参数名；为空则由端点或应用决定',
     `ids_join_delimiter`             VARCHAR(8)      NULL     DEFAULT ',' COMMENT 'ID 列表拼接的分隔符（如 , 或 +）',
     `max_ids_per_request`            INT             NULL COMMENT '每个 HTTP 请求允许携带的 ID 最大数量（硬上限）',
@@ -549,8 +547,6 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     `bucket_granularity_scope_code` VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=bucket_granularity_scope)：令牌桶粒度 (GLOBAL/PER_KEY/PER_ENDPOINT/PER_IP/PER_TASK)',
     `smoothing_window_millis`       INT             NULL COMMENT '平滑窗口（毫秒）：用于平滑令牌发放与计数',
     `respect_server_rate_header`    TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否遵循服务端速率响应头（如 X-RateLimit-*）：1=遵循；0=忽略',
-    `credential_name`               VARCHAR(64)     NULL COMMENT '可选：关联凭证逻辑名，用于细化限流',
-
     `task_type_key`                 VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
     `lifecycle_status_code`         VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
 
@@ -578,77 +574,6 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
     COMMENT ='限流与并发配置：配置 QPS/突发/并发与桶粒度（全局/按密钥/按端点），可结合服务端速率响应头进行自适应；支持 SOURCE/TASK 作用域。';
-
-
-/* ====================================================================
- * 表：reg_prov_credential —— 鉴权/密钥（Credential）
- * 领域：Registry · Provenance Config
- * 语义：为来源/TASK 配置多把凭证（API Key/Bearer/Basic/OAuth2…），可选绑定端点；支持区间重叠以轮换。
- * 时间片：task_type 可空；[effective_from, effective_to)。
- * 关系：provenance_id → reg_provenance.id；endpoint_id 可空 → reg_prov_endpoint_def.id。
- * 索引：维度 + 端点 + 名称；按生效区间筛选当前记录。
- * 用法：轮换流程“先加新、后关旧（短重叠观测）”；敏感值建议仅存引用（由 KMS 等外部系统提供）。
- * ==================================================================== */
-DROP TABLE IF EXISTS `reg_prov_credential`;
-CREATE TABLE `reg_prov_credential`
-(
-    `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键：凭证记录ID',
-    `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT '外键：所属来源ID → reg_provenance(id)',
-    `task_type`               VARCHAR(32)     NULL COMMENT '任务类型文本（去 ENUM 化）',
-
-    `credential_name`         VARCHAR(64)     NOT NULL COMMENT '凭证标签：用于人类可读标识与应用优先级选择（可与端点的 credential_hint_name 配合）',
-    `auth_type`               VARCHAR(32)     NOT NULL COMMENT '鉴权类型文本（去 ENUM 化）；如 API_KEY/BEARER/BASIC/OAUTH2/CUSTOM',
-    `inbound_location_code`   VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=inbound_location)：凭证放置位置',
-    `credential_field_name`   VARCHAR(128)    NULL COMMENT '凭证字段名：如 Authorization / api_key / access_token',
-    `credential_value_prefix` VARCHAR(64)     NULL COMMENT '凭证值前缀：如 "Bearer "，会拼接在凭证值之前',
-    `credential_value_ref`    VARCHAR(256)    NULL COMMENT '凭证值引用（如 KMS 密钥名/路径），不落明文',
-    `basic_username_ref`      VARCHAR(256)    NULL COMMENT 'Basic 认证用户名引用',
-    `basic_password_ref`      VARCHAR(256)    NULL COMMENT 'Basic 认证密码引用',
-
-    /* OAuth2 客户端凭证（全部使用引用字段） */
-    `oauth_token_url`         VARCHAR(512)    NULL COMMENT 'OAuth2 Token 端点 URL（client credentials 等流程）',
-    `oauth_client_id_ref`     VARCHAR(256)    NULL COMMENT 'OAuth2 客户端 ID 的引用',
-    `oauth_client_secret_ref` VARCHAR(256)    NULL COMMENT 'OAuth2 客户端密钥的引用',
-    `oauth_scope`             VARCHAR(512)    NULL COMMENT 'OAuth2 请求的 scope（以空格或逗号分隔）',
-    `oauth_audience`          VARCHAR(512)    NULL COMMENT 'OAuth2 audience/资源标识',
-    `extra_json`              JSON            NULL COMMENT '自定义扩展字段：如签名算法、HMAC 盐、额外 Header 模板等（由应用解释）',
-
-    `effective_from`          TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '生效起始（含）；允许多把凭证区间重叠以支持轮换',
-    `effective_to`            TIMESTAMP(6)    NULL COMMENT '生效结束（不含）；NULL 表示长期有效',
-    `is_default_preferred`    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '是否标记为默认/首选：1=默认（用于同维度多把时的优先选择）；0=普通',
-
-    /* 生成列与弱互斥唯一键支持 */
-    `task_type_key`           VARCHAR(16) AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT '生成列：task_type 标准化；为空取 ALL',
-    `preferred_1`             CHAR(1) AS (CASE WHEN `is_default_preferred` = 1 THEN 'Y' ELSE NULL END) STORED COMMENT '生成列：默认优先=Y（NULL 可重复）',
-    `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status)：生命周期：读侧仅取 ACTIVE/有效项',
-
-    -- BaseDO（统一审计字段）
-    `record_remarks`          JSON            NULL COMMENT 'json数组,备注/变更说明 [{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]',
-    `created_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
-    `created_by`              BIGINT UNSIGNED NULL COMMENT '创建人ID',
-    `created_by_name`         VARCHAR(100)    NULL COMMENT '创建人姓名',
-    `updated_at`              TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
-    `updated_by`              BIGINT UNSIGNED NULL COMMENT '更新人ID',
-    `updated_by_name`         VARCHAR(100)    NULL COMMENT '更新人姓名',
-    `version`                 BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
-    `ip_address`              VARBINARY(16)   NULL COMMENT '请求方 IP(二进制,支持 IPv4/IPv6)',
-    `deleted`                 TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
-
-    PRIMARY KEY (`id`),
-    CONSTRAINT `fk_reg_prov_credential__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    -- 字典以编码关联：inbound_location_code/lifecycle_status_code 使用 item_code
-
-    KEY `idx_reg_prov_credential__dim` (`provenance_id`, `task_type_key`, `credential_name`),
-    KEY `idx_reg_prov_credential__effective` (`effective_from`, `effective_to`),
-    KEY `idx_reg_prov_credential__active` (`provenance_id`, `task_type_key`, `effective_from` DESC, `id`
-                                           DESC),
-    UNIQUE KEY `uk_reg_prov_credential__preferred_one` (`provenance_id`, `task_type_key`,
-                                                        `preferred_1`)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='鉴权/密钥配置：凭证以“引用”存储（不落明文）；支持端点绑定与重叠有效期；弱互斥保证同维度默认首选唯一。';
-
 
 -- =====================================================================
 -- Registry · Expr 子域 · 统一命名&必修复项（使用 code，含作用域/任务/时间片，维度唯一键）
