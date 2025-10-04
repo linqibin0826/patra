@@ -14,7 +14,7 @@ public interface ExprRepository {
      * 加载指定来源与任务范围的聚合快照（字段、能力、渲染规则、参数映射）。
      */
     ExprSnapshot loadSnapshot(ProvenanceCode provenanceCode,
-                              String taskType,
+                              String operationType,
                               String operationCode,
                               Instant at);
 }

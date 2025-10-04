@@ -25,36 +25,34 @@ public interface ProvenanceConfigRepository {
     List<Provenance> findAllProvenances();
 
     Optional<WindowOffsetConfig> findActiveWindowOffset(Long provenanceId,
-                                                        String taskType,
+                                                        String operationType,
                                                         Instant at);
 
     Optional<PaginationConfig> findActivePagination(Long provenanceId,
-                                                    String taskType,
+                                                    String operationType,
                                                     Instant at);
 
     Optional<HttpConfig> findActiveHttpConfig(Long provenanceId,
-                                              String taskType,
+                                              String operationType,
                                               Instant at);
 
     Optional<BatchingConfig> findActiveBatching(Long provenanceId,
-                                               String taskType,
-                                               String credentialName,
+                                               String operationType,
                                                Instant at);
 
     Optional<RetryConfig> findActiveRetry(Long provenanceId,
-                                          String taskType,
+                                          String operationType,
                                           Instant at);
 
     Optional<RateLimitConfig> findActiveRateLimit(Long provenanceId,
-                                                  String taskType,
-                                                  String credentialName,
+                                                  String operationType,
                                                   Instant at);
 
     List<Credential> findActiveCredentials(Long provenanceId,
-                                           String taskType,
+                                           String operationType,
                                            Instant at);
 
     Optional<ProvenanceConfiguration> loadConfiguration(Long provenanceId,
-                                                        String taskType,
+                                                        String operationType,
                                                         Instant at);
 }

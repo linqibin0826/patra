@@ -9,8 +9,8 @@ import java.time.Instant;
 public record ApiParamMapping(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         String operationCode,
         String stdKey,
         String providerParamName,
@@ -21,8 +21,8 @@ public record ApiParamMapping(
 ) {
     public ApiParamMapping(Long id,
                            Long provenanceId,
-                           String taskType,
-                           String taskTypeKey,
+                           String operationType,
+                           String operationTypeKey,
                            String operationCode,
                            String stdKey,
                            String providerParamName,
@@ -39,8 +39,8 @@ public record ApiParamMapping(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.operationCode = opTrimmed;
         this.stdKey = stdKeyTrimmed;
         this.providerParamName = providerParamTrimmed;

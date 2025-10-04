@@ -9,8 +9,8 @@ import java.time.Instant;
  * <ul>
  *   <li>{@code id} 主键。</li>
  *   <li>{@code provenanceId} 来源 ID。</li>
- *   <li>{@code taskType} 任务类型。</li>
- *   <li>{@code taskTypeKey} 任务子键。</li>
+ *   <li>{@code operationType} 操作类型。</li>
+ *   <li>{@code operationTypeKey} 操作子键。</li>
  *   <li>{@code effectiveFrom} 生效起。</li>
  *   <li>{@code effectiveTo} 生效止。</li>
  *   <li>{@code maxRetryTimes} 最大重试次数（不含首次请求）。</li>
@@ -31,10 +31,10 @@ public record RetryConfigResp(
         Long id,
         /** 来源 ID */
         Long provenanceId,
-        /** 任务类型 */
-        String taskType,
-        /** 任务子键 */
-        String taskTypeKey,
+        /** 操作类型 */
+        String operationType,
+        /** 操作子键 */
+        String operationTypeKey,
         /** 生效起 */
         Instant effectiveFrom,
         /** 生效止（不含） */

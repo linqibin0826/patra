@@ -38,18 +38,13 @@ public interface ProvenanceEntityConverter {
     PaginationConfig toDomain(RegProvPaginationCfgDO entity);
 
     @Mapping(target = "tlsVerifyEnabled", expression = "java(Boolean.TRUE.equals(entity.getTlsVerifyEnabled()))")
-    @Mapping(target = "acceptCompressEnabled", expression = "java(Boolean.TRUE.equals(entity.getAcceptCompressEnabled()))")
-    @Mapping(target = "preferHttp2Enabled", expression = "java(Boolean.TRUE.equals(entity.getPreferHttp2Enabled()))")
     HttpConfig toDomain(RegProvHttpCfgDO entity);
 
-    @Mapping(target = "preferCompactPayload", expression = "java(Boolean.TRUE.equals(entity.getPreferCompactPayload()))")
-    @Mapping(target = "requestTemplateJson", source = "requestTemplateJson")
     BatchingConfig toDomain(RegProvBatchingCfgDO entity);
 
     @Mapping(target = "retryOnNetworkError", expression = "java(Boolean.TRUE.equals(entity.getRetryOnNetworkError()))")
     RetryConfig toDomain(RegProvRetryCfgDO entity);
 
-    @Mapping(target = "respectServerRateHeader", expression = "java(Boolean.TRUE.equals(entity.getRespectServerRateHeader()))")
     RateLimitConfig toDomain(RegProvRateLimitCfgDO entity);
 
     @Mapping(target = "defaultPreferred", expression = "java(Boolean.TRUE.equals(entity.getIsDefaultPreferred()))")

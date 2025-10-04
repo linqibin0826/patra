@@ -7,7 +7,7 @@ import java.time.Instant;
  */
 public record ExprRenderRuleResp(
         Long provenanceId,
-        String taskType,
+        String operationType,
         String fieldKey,
         String opCode,
         String matchTypeCode,

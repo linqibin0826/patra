@@ -25,11 +25,11 @@ public class RegProvExprRenderRuleDO extends BaseDO {
     @TableField("provenance_id")
     private Long provenanceId;
 
-    @TableField("task_type")
-    private String taskType;
+    @TableField("operation_type")
+    private String operationType;
 
-    @TableField("task_type_key")
-    private String taskTypeKey;
+    @TableField("operation_type_key")
+    private String operationTypeKey;
 
     @TableField("lifecycle_status_code")
     private String lifecycleStatusCode;

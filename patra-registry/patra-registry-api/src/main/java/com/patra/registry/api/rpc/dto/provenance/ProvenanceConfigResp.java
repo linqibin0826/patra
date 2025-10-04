@@ -18,11 +18,11 @@ import java.util.List;
  *   <li>{@code rateLimit} → reg_prov_rate_limit_cfg（速率与并发限制，可选）</li>
  *   <li>{@code credentials} → reg_prov_credential（一个来源/端点下可能存在多条有效凭证）</li>
  * </ul>
- * “可选”表示该来源在当前 scope/taskType/taskTypeKey 与时间片内未配置或未生效时可返回 {@code null} 或空集合；业务方需做好空值兜底。</p>
+ * “可选”表示该来源在当前 scope/operationType/operationTypeKey 与时间片内未配置或未生效时可返回 {@code null} 或空集合；业务方需做好空值兜底。</p>
  * <p>一致性说明：聚合生成时建议在同一事务 / 配置版本快照下查询，确保时间片（effective_from / effective_to）判定统一，否则可能出现跨片段撕裂。</p>
  * <p>使用建议：
  * <ol>
- *   <li>获取后在调用方内做不可变缓存（key=provenance.code+scope+taskType+taskTypeKey），并结合配置版本或更新时间做失效。</li>
+ *   <li>获取后在调用方内做不可变缓存（key=provenance.code+scope+operationType+operationTypeKey），并结合配置版本或更新时间做失效。</li>
  *   <li>当某组件为 {@code null} 时按默认引擎策略（例如：无分页时视为单页；无限流时遵循调用方全局限流）。</li>
  *   <li>凭证数组可能包含多条：需按照 {@code defaultPreferred} / 生命周期状态过滤选择。</li>
  * </ol>

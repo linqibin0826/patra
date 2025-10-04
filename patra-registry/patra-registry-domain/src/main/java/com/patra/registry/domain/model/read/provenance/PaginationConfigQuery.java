@@ -10,26 +10,15 @@ import java.time.Instant;
 public record PaginationConfigQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         String paginationModeCode,
         Integer pageSizeValue,
         Integer maxPagesPerExecution,
-        String pageNumberParamName,
-        String pageSizeParamName,
-        Integer startPageNumber,
         String sortFieldParamName,
-        String sortDirection,
-        String cursorParamName,
-        String initialCursorValue,
-        String nextCursorJsonpath,
-        String hasMoreJsonpath,
-        String totalCountJsonpath,
-        String nextCursorXpath,
-        String hasMoreXpath,
-        String totalCountXpath
+        Integer sortingDirection
 ) {
     public PaginationConfigQuery {
         if (id == null || id <= 0) {
@@ -44,20 +33,9 @@ public record PaginationConfigQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         paginationModeCode = paginationModeCode.trim();
-        pageNumberParamName = pageNumberParamName != null ? pageNumberParamName.trim() : null;
-        pageSizeParamName = pageSizeParamName != null ? pageSizeParamName.trim() : null;
         sortFieldParamName = sortFieldParamName != null ? sortFieldParamName.trim() : null;
-        sortDirection = sortDirection != null ? sortDirection.trim() : null;
-        cursorParamName = cursorParamName != null ? cursorParamName.trim() : null;
-        initialCursorValue = initialCursorValue != null ? initialCursorValue.trim() : null;
-        nextCursorJsonpath = nextCursorJsonpath != null ? nextCursorJsonpath.trim() : null;
-        hasMoreJsonpath = hasMoreJsonpath != null ? hasMoreJsonpath.trim() : null;
-        totalCountJsonpath = totalCountJsonpath != null ? totalCountJsonpath.trim() : null;
-        nextCursorXpath = nextCursorXpath != null ? nextCursorXpath.trim() : null;
-        hasMoreXpath = hasMoreXpath != null ? hasMoreXpath.trim() : null;
-        totalCountXpath = totalCountXpath != null ? totalCountXpath.trim() : null;
     }
 }

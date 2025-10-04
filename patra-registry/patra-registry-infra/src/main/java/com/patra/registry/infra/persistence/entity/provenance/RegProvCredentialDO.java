@@ -25,8 +25,8 @@ public class RegProvCredentialDO extends BaseDO {
     @TableField("provenance_id")
     private Long provenanceId;
 
-    @TableField("task_type")
-    private String taskType;
+    @TableField("operation_type")
+    private String operationType;
 
     @TableField("credential_name")
     private String credentialName;
@@ -79,8 +79,8 @@ public class RegProvCredentialDO extends BaseDO {
     @TableField("is_default_preferred")
     private Boolean isDefaultPreferred;
 
-    @TableField("task_type_key")
-    private String taskTypeKey;
+    @TableField("operation_type_key")
+    private String operationTypeKey;
 
     @TableField("preferred_1")
     private String preferred1;

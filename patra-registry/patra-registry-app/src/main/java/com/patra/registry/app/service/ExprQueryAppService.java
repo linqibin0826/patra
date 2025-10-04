@@ -23,12 +23,12 @@ public class ExprQueryAppService {
 
     /** 加载指定来源的表达式聚合快照。 */
     public ExprSnapshotQuery loadSnapshot(String provenanceCode,
-                                          String taskType,
+                                          String operationType,
                                           String operationCode,
                                           Instant at) {
         ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
-    log.debug("[REGISTRY][APP] load expr snapshot provenanceCode={} taskType={} operationCode={}",
-        code, taskType, operationCode);
-        return assembler.toQuery(exprRepository.loadSnapshot(code, taskType, operationCode, at));
+        log.debug("[REGISTRY][APP] load expr snapshot provenanceCode={} operationType={} operationCode={}",
+                code, operationType, operationCode);
+        return assembler.toQuery(exprRepository.loadSnapshot(code, operationType, operationCode, at));
     }
 }

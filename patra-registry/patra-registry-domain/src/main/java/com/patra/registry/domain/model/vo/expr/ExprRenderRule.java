@@ -9,8 +9,8 @@ import com.patra.registry.domain.exception.DomainValidationException;
 public record ExprRenderRule(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         String fieldKey,
         String opCode,
         String matchTypeCode,
@@ -31,8 +31,8 @@ public record ExprRenderRule(
 ) {
     public ExprRenderRule(Long id,
                           Long provenanceId,
-                          String taskType,
-                          String taskTypeKey,
+                          String operationType,
+                          String operationTypeKey,
                           String fieldKey,
                           String opCode,
                           String matchTypeCode,
@@ -62,8 +62,8 @@ public record ExprRenderRule(
 
         this.id = id;
         this.provenanceId = provenanceId;
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.fieldKey = fieldKey.trim();
         this.opCode = opCode.trim();
         this.matchTypeCode = matchTypeCode != null ? matchTypeCode.trim() : null;

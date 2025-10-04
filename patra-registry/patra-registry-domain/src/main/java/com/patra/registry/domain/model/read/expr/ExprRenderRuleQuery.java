@@ -8,7 +8,7 @@ import java.time.Instant;
  */
 public record ExprRenderRuleQuery(
         Long provenanceId,
-        String taskType,
+        String operationType,
         String fieldKey,
         String opCode,
         String matchTypeCode,
@@ -30,7 +30,7 @@ public record ExprRenderRuleQuery(
         opCode = DomainValidationException.notBlank(opCode, "Operation code");
         emitTypeCode = DomainValidationException.notBlank(emitTypeCode, "Emit type code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
-        taskType = taskType != null ? taskType.trim() : null;
+        operationType = operationType != null ? operationType.trim() : null;
         matchTypeCode = matchTypeCode != null ? matchTypeCode.trim() : null;
         valueTypeCode = valueTypeCode != null ? valueTypeCode.trim() : null;
     }

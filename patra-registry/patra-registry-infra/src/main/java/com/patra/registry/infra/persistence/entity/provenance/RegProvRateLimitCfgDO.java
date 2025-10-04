@@ -25,8 +25,8 @@ public class RegProvRateLimitCfgDO extends BaseDO {
     @TableField("provenance_id")
     private Long provenanceId;
 
-    @TableField("task_type")
-    private String taskType;
+    @TableField("operation_type")
+    private String operationType;
 
     @TableField("effective_from")
     private Instant effectiveFrom;
@@ -34,32 +34,14 @@ public class RegProvRateLimitCfgDO extends BaseDO {
     @TableField("effective_to")
     private Instant effectiveTo;
 
-    @TableField("rate_tokens_per_second")
-    private Integer rateTokensPerSecond;
-
-    @TableField("burst_bucket_capacity")
-    private Integer burstBucketCapacity;
-
     @TableField("max_concurrent_requests")
     private Integer maxConcurrentRequests;
 
     @TableField("per_credential_qps_limit")
     private Integer perCredentialQpsLimit;
 
-    @TableField("bucket_granularity_scope_code")
-    private String bucketGranularityScopeCode;
-
-    @TableField("smoothing_window_millis")
-    private Integer smoothingWindowMillis;
-
-    @TableField("respect_server_rate_header")
-    private Boolean respectServerRateHeader;
-
-    @TableField("credential_name")
-    private String credentialName;
-
-    @TableField("task_type_key")
-    private String taskTypeKey;
+    @TableField("operation_type_key")
+    private String operationTypeKey;
 
     @TableField("lifecycle_status_code")
     private String lifecycleStatusCode;

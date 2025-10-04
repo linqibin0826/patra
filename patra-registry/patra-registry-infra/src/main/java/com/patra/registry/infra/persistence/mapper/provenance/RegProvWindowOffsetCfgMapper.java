@@ -14,10 +14,10 @@ import java.util.Optional;
 public interface RegProvWindowOffsetCfgMapper extends BaseMapper<RegProvWindowOffsetCfgDO> {
 
     /**
-     * 按 TASK → SOURCE、精确 task → ALL、effective_from DESC、id DESC 的顺序挑选唯一记录。
+     * 按 operation → source、精确 operation → ALL、effective_from DESC、id DESC 的顺序挑选唯一记录。
      * 统一在 SQL 内完成候选过滤与优先级排序，保证灰度/重叠期间仍返回确定结果。
      */
     Optional<RegProvWindowOffsetCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                          @Param("taskTypeKey") String taskTypeKey,
+                                                          @Param("operationTypeKey") String operationTypeKey,
                                                           @Param("now") Instant now);
 }

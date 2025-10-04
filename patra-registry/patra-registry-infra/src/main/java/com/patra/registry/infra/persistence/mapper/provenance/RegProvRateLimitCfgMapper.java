@@ -14,10 +14,9 @@ import java.util.Optional;
 public interface RegProvRateLimitCfgMapper extends BaseMapper<RegProvRateLimitCfgDO> {
 
     /**
-     * 合并查询（含 TASK/SOURCE + 精确/ALL + credential 精确或泛化）并按确定性优先级挑选唯一记录。
+     * 合并查询（operation/source 双层 + 精确/ALL）并按确定性优先级挑选唯一记录。
      */
     Optional<RegProvRateLimitCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                       @Param("taskTypeKey") String taskTypeKey,
-                                                       @Param("credentialName") String credentialName,
+                                                       @Param("operationTypeKey") String operationTypeKey,
                                                        @Param("now") Instant now);
 }

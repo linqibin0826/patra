@@ -10,7 +10,7 @@ import java.time.LocalDate;
  */
 public record ExprCapabilityQuery(
         Long provenanceId,
-        String taskType,
+        String operationType,
         String fieldKey,
         String opsJson,
         String negatableOpsJson,
@@ -44,7 +44,7 @@ public record ExprCapabilityQuery(
         fieldKey = DomainValidationException.notBlank(fieldKey, "Field key");
         rangeKindCode = DomainValidationException.notBlank(rangeKindCode, "Range kind code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
-        taskType = taskType != null ? taskType.trim() : null;
+        operationType = operationType != null ? operationType.trim() : null;
         termPattern = termPattern != null ? termPattern.trim() : null;
         tokenValuePattern = tokenValuePattern != null ? tokenValuePattern.trim() : null;
     }

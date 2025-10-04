@@ -9,8 +9,8 @@ import java.time.Instant;
 public record WindowOffsetConfig(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         String windowModeCode,
@@ -31,8 +31,8 @@ public record WindowOffsetConfig(
 ) {
     public WindowOffsetConfig(Long id,
                               Long provenanceId,
-                              String taskType,
-                              String taskTypeKey,
+                              String operationType,
+                              String operationTypeKey,
                               Instant effectiveFrom,
                               Instant effectiveTo,
                               String windowModeCode,
@@ -59,8 +59,8 @@ public record WindowOffsetConfig(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;
         this.windowModeCode = modeTrimmed;

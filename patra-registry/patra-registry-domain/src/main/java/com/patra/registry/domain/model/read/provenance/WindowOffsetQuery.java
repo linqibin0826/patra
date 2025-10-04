@@ -10,8 +10,8 @@ import java.time.Instant;
 public record WindowOffsetQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         String windowModeCode,
@@ -49,8 +49,8 @@ public record WindowOffsetQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         windowModeCode = windowModeCode.trim();
         windowSizeUnitCode = windowSizeUnitCode.trim();
         calendarAlignTo = calendarAlignTo != null ? calendarAlignTo.trim() : null;

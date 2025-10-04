@@ -25,8 +25,8 @@ public class RegProvRetryCfgDO extends BaseDO {
     @TableField("provenance_id")
     private Long provenanceId;
 
-    @TableField("task_type")
-    private String taskType;
+    @TableField("operation_type")
+    private String operationType;
 
     @TableField("effective_from")
     private Instant effectiveFrom;
@@ -67,8 +67,8 @@ public class RegProvRetryCfgDO extends BaseDO {
     @TableField("circuit_cooldown_millis")
     private Integer circuitCooldownMillis;
 
-    @TableField("task_type_key")
-    private String taskTypeKey;
+    @TableField("operation_type_key")
+    private String operationTypeKey;
 
     @TableField("lifecycle_status_code")
     private String lifecycleStatusCode;

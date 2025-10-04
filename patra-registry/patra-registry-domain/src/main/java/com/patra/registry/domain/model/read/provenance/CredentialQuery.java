@@ -10,8 +10,8 @@ import java.time.Instant;
 public record CredentialQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         String credentialName,
         String authType,
         String inboundLocationCode,
@@ -53,8 +53,8 @@ public record CredentialQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         credentialName = credentialName.trim();
         authType = authType.trim();
         inboundLocationCode = inboundLocationCode.trim();

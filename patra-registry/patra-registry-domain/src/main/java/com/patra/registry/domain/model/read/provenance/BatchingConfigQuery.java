@@ -10,22 +10,14 @@ import java.time.Instant;
 public record BatchingConfigQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer detailFetchBatchSize,
-        String credentialName,
         String idsParamName,
         String idsJoinDelimiter,
-        Integer maxIdsPerRequest,
-        boolean preferCompactPayload,
-        String payloadCompressStrategyCode,
-        Integer appParallelismDegree,
-        Integer perHostConcurrencyLimit,
-        Integer httpConnPoolSize,
-        String backpressureStrategyCode,
-        String requestTemplateJson
+        Integer maxIdsPerRequest
 ) {
     public BatchingConfigQuery {
         if (id == null || id <= 0) {
@@ -34,21 +26,12 @@ public record BatchingConfigQuery(
         if (provenanceId == null || provenanceId <= 0) {
             throw new DomainValidationException("Provenance id must be positive");
         }
-        if (payloadCompressStrategyCode == null || payloadCompressStrategyCode.isBlank()) {
-            throw new DomainValidationException("Payload compress strategy code cannot be blank");
-        }
-        if (backpressureStrategyCode == null || backpressureStrategyCode.isBlank()) {
-            throw new DomainValidationException("Backpressure strategy code cannot be blank");
-        }
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        credentialName = credentialName != null ? credentialName.trim() : null;
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         idsParamName = idsParamName != null ? idsParamName.trim() : null;
         idsJoinDelimiter = idsJoinDelimiter != null ? idsJoinDelimiter.trim() : null;
-        payloadCompressStrategyCode = payloadCompressStrategyCode.trim();
-        backpressureStrategyCode = backpressureStrategyCode.trim();
     }
 }

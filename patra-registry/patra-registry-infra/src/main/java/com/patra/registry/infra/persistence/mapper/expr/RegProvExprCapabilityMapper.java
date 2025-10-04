@@ -22,18 +22,18 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
             WHERE deleted = 0
               AND lifecycle_status_code = 'ACTIVE'
               AND provenance_id = #{provenanceId}
-              AND task_type_key IN (#{taskTypeKey}, 'ALL')
+              AND operation_type_key IN (#{operationTypeKey}, 'ALL')
               AND field_key = #{fieldKey}
               AND effective_from <= #{now}
               AND (effective_to IS NULL OR effective_to > #{now})
             ORDER BY
-              CASE WHEN task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+              CASE WHEN operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
               effective_from DESC,
               id DESC
             LIMIT 1
             """)
     Optional<RegProvExprCapabilityDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                   @Param("taskTypeKey") String taskTypeKey,
+                                                   @Param("operationTypeKey") String operationTypeKey,
                                                    @Param("fieldKey") String fieldKey,
                                                    @Param("now") Instant now);
 
@@ -44,7 +44,7 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
                 SELECT c.*,
                        ROW_NUMBER() OVER (
                            PARTITION BY c.field_key
-                           ORDER BY CASE WHEN c.task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+                           ORDER BY CASE WHEN c.operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
                                     c.effective_from DESC,
                                     c.id DESC
                        ) AS rn
@@ -52,7 +52,7 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
                 WHERE c.deleted = 0
                   AND c.lifecycle_status_code = 'ACTIVE'
                   AND c.provenance_id = #{provenanceId}
-                  AND c.task_type_key IN (#{taskTypeKey}, 'ALL')
+                  AND c.operation_type_key IN (#{operationTypeKey}, 'ALL')
                   AND c.effective_from <= #{now}
                   AND (c.effective_to IS NULL OR c.effective_to > #{now})
             ) t
@@ -60,6 +60,6 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
             ORDER BY t.field_key
             """)
     List<RegProvExprCapabilityDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
-                                                     @Param("taskTypeKey") String taskTypeKey,
+                                                     @Param("operationTypeKey") String operationTypeKey,
                                                      @Param("now") Instant now);
 }

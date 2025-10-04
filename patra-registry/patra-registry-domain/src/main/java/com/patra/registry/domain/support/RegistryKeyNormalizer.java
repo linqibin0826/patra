@@ -16,13 +16,13 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * 任务类型 Key 规范化：null/blank → ALL，其余 trim，保留原大小写以兼容既有约定。
+     * 操作类型 Key 规范化：null/blank → ALL，其余 trim，保留原大小写以兼容既有约定。
      */
-    public static String normalizeTaskKey(String taskType) {
-        if (taskType == null || taskType.isBlank()) {
+    public static String normalizeOperationKey(String operationType) {
+        if (operationType == null || operationType.isBlank()) {
             return RegistryKeyPlaceholders.ALL;
         }
-        return taskType.trim();
+        return operationType.trim();
     }
 
     /**

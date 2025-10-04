@@ -9,8 +9,8 @@ import java.time.Instant;
 public record RetryConfig(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer maxRetryTimes,
@@ -27,8 +27,8 @@ public record RetryConfig(
 ) {
     public RetryConfig(Long id,
                        Long provenanceId,
-                       String taskType,
-                       String taskTypeKey,
+                       String operationType,
+                       String operationTypeKey,
                        Instant effectiveFrom,
                        Instant effectiveTo,
                        Integer maxRetryTimes,
@@ -47,11 +47,11 @@ public record RetryConfig(
         String backoffTrimmed = DomainValidationException.notBlank(backoffPolicyTypeCode, "Backoff policy type code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // 已验证
-        this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom; // 非 null 已验证
+        this.id = id;
+        this.provenanceId = provenanceId;
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
+        this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.maxRetryTimes = maxRetryTimes;
         this.backoffPolicyTypeCode = backoffTrimmed;

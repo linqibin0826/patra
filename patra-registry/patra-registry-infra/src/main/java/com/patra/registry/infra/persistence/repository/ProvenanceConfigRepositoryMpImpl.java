@@ -59,73 +59,71 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
 
     @Override
     public Optional<WindowOffsetConfig> findActiveWindowOffset(Long provenanceId,
-                                                               String taskType,
+                                                               String operationType,
                                                                Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return windowOffsetCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return windowOffsetCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public Optional<PaginationConfig> findActivePagination(Long provenanceId,
-                                                           String taskType,
+                                                           String operationType,
                                                            Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return paginationCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return paginationCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public Optional<HttpConfig> findActiveHttpConfig(Long provenanceId,
-                                                     String taskType,
+                                                     String operationType,
                                                      Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return httpCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return httpCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public Optional<BatchingConfig> findActiveBatching(Long provenanceId,
-                                                       String taskType,
-                                                       String credentialName,
+                                                       String operationType,
                                                        Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return batchingCfgMapper.selectActiveMerged(provenanceId, taskKey, credentialName, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return batchingCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public Optional<RetryConfig> findActiveRetry(Long provenanceId,
-                                                 String taskType,
+                                                 String operationType,
                                                  Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return retryCfgMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return retryCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public Optional<RateLimitConfig> findActiveRateLimit(Long provenanceId,
-                                                         String taskType,
-                                                         String credentialName,
+                                                         String operationType,
                                                          Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return rateLimitCfgMapper.selectActiveMerged(provenanceId, taskKey, credentialName, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return rateLimitCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public List<Credential> findActiveCredentials(Long provenanceId,
-                                                  String taskType,
+                                                  String operationType,
                                                   Instant at) {
         Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return credentialMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
+        String operationKey = normalizeOperationKey(operationType);
+        return credentialMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .stream()
                 .map(converter::toDomain)
                 .toList();
@@ -133,7 +131,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
 
     @Override
     public Optional<ProvenanceConfiguration> loadConfiguration(Long provenanceId,
-                                                               String taskType,
+                                                               String operationType,
                                                                Instant at) {
         Optional<Provenance> provenanceOpt = findProvenanceById(provenanceId);
         if (provenanceOpt.isEmpty()) {
@@ -142,13 +140,13 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         Instant timestamp = atOrNow(at);
         Provenance provenance = provenanceOpt.get();
 
-        Optional<WindowOffsetConfig> window = findActiveWindowOffset(provenanceId, taskType, timestamp);
-        Optional<PaginationConfig> pagination = findActivePagination(provenanceId, taskType, timestamp);
-        Optional<HttpConfig> httpConfig = findActiveHttpConfig(provenanceId, taskType, timestamp);
-        Optional<BatchingConfig> batching = findActiveBatching(provenanceId, taskType, null, timestamp);
-        Optional<RetryConfig> retry = findActiveRetry(provenanceId, taskType, timestamp);
-        Optional<RateLimitConfig> rateLimit = findActiveRateLimit(provenanceId, taskType, null, timestamp);
-        List<Credential> credentials = findActiveCredentials(provenanceId, taskType, timestamp);
+        Optional<WindowOffsetConfig> window = findActiveWindowOffset(provenanceId, operationType, timestamp);
+        Optional<PaginationConfig> pagination = findActivePagination(provenanceId, operationType, timestamp);
+        Optional<HttpConfig> httpConfig = findActiveHttpConfig(provenanceId, operationType, timestamp);
+        Optional<BatchingConfig> batching = findActiveBatching(provenanceId, operationType, timestamp);
+        Optional<RetryConfig> retry = findActiveRetry(provenanceId, operationType, timestamp);
+        Optional<RateLimitConfig> rateLimit = findActiveRateLimit(provenanceId, operationType, timestamp);
+        List<Credential> credentials = findActiveCredentials(provenanceId, operationType, timestamp);
 
         ProvenanceConfiguration configuration = new ProvenanceConfiguration(
                 provenance,
@@ -162,11 +160,11 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         return Optional.of(configuration);
     }
 
-    private String normalizeTaskKey(String taskType) {
-        if (taskType == null) {
+    private String normalizeOperationKey(String operationType) {
+        if (operationType == null) {
             return RegistryKeyPlaceholders.ALL;
         }
-        String trimmed = taskType.trim();
+        String trimmed = operationType.trim();
         if (trimmed.isEmpty()) {
             return RegistryKeyPlaceholders.ALL;
         }

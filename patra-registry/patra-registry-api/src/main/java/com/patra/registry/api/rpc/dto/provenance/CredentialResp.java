@@ -9,8 +9,8 @@ import java.time.Instant;
  * <ul>
  *   <li>{@code id} 主键。</li>
  *   <li>{@code provenanceId} 来源 ID。</li>
- *   <li>{@code taskType} 任务类型。</li>
- *   <li>{@code taskTypeKey} 任务子键。</li>
+ *   <li>{@code operationType} 操作类型。</li>
+ *   <li>{@code operationTypeKey} 操作子键。</li>
  *   <li>{@code credentialName} 凭证名称（唯一标识，同来源内区分不同密钥）。</li>
  *   <li>{@code authType} 认证类型枚举：API_KEY / BASIC / OAUTH2_CLIENT_CREDENTIALS / BEARER_TOKEN 等。</li>
  *   <li>{@code inboundLocationCode} 凭证注入位置：HEADER / QUERY / BODY / PATH / COOKIE。</li>
@@ -37,10 +37,10 @@ public record CredentialResp(
         Long id,
         /** 来源 ID */
         Long provenanceId,
-        /** 任务类型 */
-        String taskType,
-        /** 任务子键 */
-        String taskTypeKey,
+        /** 操作类型 */
+        String operationType,
+        /** 操作子键 */
+        String operationTypeKey,
         /** 凭证名称 */
         String credentialName,
         /** 认证类型 */
