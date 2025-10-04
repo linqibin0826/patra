@@ -10,7 +10,6 @@ import java.time.Instant;
 public record WindowOffsetQuery(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         Instant effectiveFrom,
@@ -38,9 +37,6 @@ public record WindowOffsetQuery(
         if (provenanceId == null || provenanceId <= 0) {
             throw new DomainValidationException("Provenance id must be positive");
         }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new DomainValidationException("Scope code cannot be blank");
-        }
         if (windowModeCode == null || windowModeCode.isBlank()) {
             throw new DomainValidationException("Window mode code cannot be blank");
         }
@@ -53,7 +49,6 @@ public record WindowOffsetQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;
         taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         windowModeCode = windowModeCode.trim();

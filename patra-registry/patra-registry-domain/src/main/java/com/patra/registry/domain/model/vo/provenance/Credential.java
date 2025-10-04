@@ -9,7 +9,6 @@ import java.time.Instant;
 public record Credential(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         String credentialName,
@@ -33,7 +32,6 @@ public record Credential(
 ) {
     public Credential(Long id,
                       Long provenanceId,
-                      String scopeCode,
                       String taskType,
                       String taskTypeKey,
                       String credentialName,
@@ -56,7 +54,6 @@ public record Credential(
                       String lifecycleStatusCode) {
         DomainValidationException.positive(id, "Credential id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
         String nameTrimmed = DomainValidationException.notBlank(credentialName, "Credential name");
         String authTypeTrimmed = DomainValidationException.notBlank(authType, "Auth type");
         String inboundLocTrimmed = DomainValidationException.notBlank(inboundLocationCode, "Inbound location code");
@@ -65,7 +62,6 @@ public record Credential(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.credentialName = nameTrimmed;

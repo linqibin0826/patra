@@ -9,7 +9,6 @@ import java.time.Instant;
 public record RetryConfig(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         Instant effectiveFrom,
@@ -28,7 +27,6 @@ public record RetryConfig(
 ) {
     public RetryConfig(Long id,
                        Long provenanceId,
-                       String scopeCode,
                        String taskType,
                        String taskTypeKey,
                        Instant effectiveFrom,
@@ -46,13 +44,11 @@ public record RetryConfig(
                        Integer circuitCooldownMillis) {
         DomainValidationException.positive(id, "Retry config id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
         String backoffTrimmed = DomainValidationException.notBlank(backoffPolicyTypeCode, "Backoff policy type code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom; // 非 null 已验证

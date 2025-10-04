@@ -9,7 +9,6 @@ import java.time.Instant;
 public record HttpConfig(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         Instant effectiveFrom,
@@ -30,7 +29,6 @@ public record HttpConfig(
 ) {
     public HttpConfig(Long id,
                       Long provenanceId,
-                      String scopeCode,
                       String taskType,
                       String taskTypeKey,
                       Instant effectiveFrom,
@@ -50,13 +48,11 @@ public record HttpConfig(
                       Integer idempotencyTtlSeconds) {
         DomainValidationException.positive(id, "HTTP config id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
         String retryAfterTrimmed = DomainValidationException.notBlank(retryAfterPolicyCode, "Retry-after policy code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom; // 非 null 已验证

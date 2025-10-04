@@ -9,7 +9,6 @@ import java.time.Instant;
 public record ApiParamMapping(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         String operationCode,
@@ -22,7 +21,6 @@ public record ApiParamMapping(
 ) {
     public ApiParamMapping(Long id,
                            Long provenanceId,
-                           String scopeCode,
                            String taskType,
                            String taskTypeKey,
                            String operationCode,
@@ -34,7 +32,6 @@ public record ApiParamMapping(
                            Instant effectiveTo) {
         DomainValidationException.positive(id, "Mapping id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
         String opTrimmed = DomainValidationException.notBlank(operationCode, "Operation code");
         String stdKeyTrimmed = DomainValidationException.notBlank(stdKey, "Standard key");
         String providerParamTrimmed = DomainValidationException.notBlank(providerParamName, "Provider param name");
@@ -42,7 +39,6 @@ public record ApiParamMapping(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.operationCode = opTrimmed;

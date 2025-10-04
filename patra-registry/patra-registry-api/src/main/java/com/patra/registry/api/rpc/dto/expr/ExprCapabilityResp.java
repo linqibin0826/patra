@@ -9,7 +9,6 @@ import java.time.LocalDate;
  */
 public record ExprCapabilityResp(
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String fieldKey,
         String opsJson,

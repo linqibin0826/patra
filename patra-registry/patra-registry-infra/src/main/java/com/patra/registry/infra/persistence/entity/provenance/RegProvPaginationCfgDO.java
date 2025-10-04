@@ -25,9 +25,6 @@ public class RegProvPaginationCfgDO extends BaseDO {
     @TableField("provenance_id")
     private Long provenanceId;
 
-    @TableField("scope_code")
-    private String scopeCode;
-
     @TableField("task_type")
     private String taskType;
 

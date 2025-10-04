@@ -10,7 +10,6 @@ import java.time.Instant;
 public record CredentialQuery(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         String credentialName,
@@ -39,9 +38,6 @@ public record CredentialQuery(
         if (provenanceId == null || provenanceId <= 0) {
             throw new DomainValidationException("Provenance id must be positive");
         }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new DomainValidationException("Scope code cannot be blank");
-        }
         if (credentialName == null || credentialName.isBlank()) {
             throw new DomainValidationException("Credential name cannot be blank");
         }
@@ -57,7 +53,6 @@ public record CredentialQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;
         taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         credentialName = credentialName.trim();
