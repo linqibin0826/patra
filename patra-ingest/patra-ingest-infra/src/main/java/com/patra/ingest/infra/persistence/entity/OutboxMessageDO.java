@@ -3,7 +3,7 @@ package com.patra.ingest.infra.persistence.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -39,7 +39,7 @@ import java.time.Instant;
  * 体积较大的原始内容不得入队。
  * </p>
  * <p>
- * 审计与通用字段（如 <code>created_at</code>/<code>version</code> 等）继承自 {@link com.patra.starter.mybatis.entity.BaseDO.BaseDO BaseDO}。
+ * 审计与通用字段（如 <code>created_at</code>/<code>version</code> 等）继承自 {@link BaseDO BaseDO}。
  * </p>
  * <p>分层定位：Hexagonal 的 <em>infra / persistence DO</em>，仅承担持久化映射，不包含领域行为。</p>
  *

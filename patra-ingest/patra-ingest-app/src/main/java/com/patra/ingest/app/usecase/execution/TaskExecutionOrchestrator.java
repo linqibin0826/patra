@@ -2,8 +2,11 @@ package com.patra.ingest.app.usecase.execution;
 
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNormalizer;
 import com.patra.common.util.HashUtils;
+import com.patra.expr.Expr;
+import com.patra.expr.Exprs;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
@@ -18,6 +21,7 @@ import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import com.patra.starter.expr.compiler.ExprCompiler;
+import com.patra.starter.expr.compiler.model.CompileResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -172,7 +176,10 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
         }
 
         // 步骤3：渲染expr并执行（交由下游组件处理）
-//        exprCompiler
+        Expr expr = Exprs.fromJson(configSnapshot.exprSnapshotJson);
+        CompileResult compileResult = exprCompiler.compile(expr, ProvenanceCode.parse(task.getProvenanceCode()));
+
+
 
 
         log.info("[INGEST][APP] task execution steps 0-2 done taskId={} owner={} runId={}", taskId, owner, run.getId());

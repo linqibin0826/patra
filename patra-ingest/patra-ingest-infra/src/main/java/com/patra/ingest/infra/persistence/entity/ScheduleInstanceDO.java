@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -20,7 +20,7 @@ import java.time.Instant;
  *   <li><code>provenance_code</code> 与注册中心保持一致，不建物理外键，仅做逻辑校验。</li>
  * </ul>
  * </p>
- * <p>审计字段继承自 {@link com.patra.starter.mybatis.entity.BaseDO.BaseDO BaseDO}。</p>
+ * <p>审计字段继承自 {@link BaseDO BaseDO}。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

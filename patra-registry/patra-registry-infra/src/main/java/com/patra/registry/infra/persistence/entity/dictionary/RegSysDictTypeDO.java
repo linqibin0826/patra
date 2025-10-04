@@ -3,7 +3,7 @@ package com.patra.registry.infra.persistence.entity.dictionary;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

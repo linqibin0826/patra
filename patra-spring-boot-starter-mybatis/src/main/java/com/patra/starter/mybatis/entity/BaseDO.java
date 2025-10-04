@@ -1,7 +1,10 @@
-package com.patra.starter.mybatis.entity.BaseDO;
+package com.patra.starter.mybatis.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
