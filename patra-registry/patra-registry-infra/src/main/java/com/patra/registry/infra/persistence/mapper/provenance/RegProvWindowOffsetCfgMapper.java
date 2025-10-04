@@ -8,14 +8,18 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * {@code reg_prov_window_offset_cfg} 表的只读 Mapper。
+ * Read-only mapper for {@code reg_prov_window_offset_cfg}.
+ * SQL implementation located in {@code resources/mapper/RegProvWindowOffsetCfgMapper.xml}.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-
 public interface RegProvWindowOffsetCfgMapper extends BaseMapper<RegProvWindowOffsetCfgDO> {
 
     /**
-     * 按 operation → source、精确 operation → ALL、effective_from DESC、id DESC 的顺序挑选唯一记录。
-     * 统一在 SQL 内完成候选过滤与优先级排序，保证灰度/重叠期间仍返回确定结果。
+     * Selects the active window-offset configuration, preferring the specific operation key and
+     * falling back to {@code ALL}. Ordering is handled within the SQL to guarantee deterministic
+     * results even during overlapping slices.
      */
     Optional<RegProvWindowOffsetCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
                                                           @Param("operationTypeKey") String operationTypeKey,

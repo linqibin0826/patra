@@ -18,13 +18,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Provenance 配置仓储 MyBatis 实现。
- * <p>
- * 按 TASK → SOURCE 优先级查询并执行覆盖逻辑，若任务级无结果则回退到来源级。
- * </p>
- * <p>
- * 所有 scope 查询统一使用 {@link RegistryConfigScope} 常量，避免字符串硬编码。
- * </p>
+ * MyBatis-based read-side repository for provenance configuration aggregates.
+ * <p>Applies the precedence hierarchy of operation scope over source scope, falling back to
+ * source-level defaults when operation-specific slices are absent.</p>
+ * <p>All scope keys are normalized via {@link RegistryConfigScope} constants to avoid string literals.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -168,7 +165,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         if (trimmed.isEmpty()) {
             return RegistryKeyPlaceholders.ALL;
         }
-        // 非字母数字统一为下划线，然后连续下划线折叠为单个，下划线首尾修剪
+        // Replace non-alphanumeric characters with underscores and collapse consecutive underscores.
         String upper = trimmed.toUpperCase();
         String normalized = upper.replaceAll("[^A-Z0-9]", "_");
         normalized = normalized.replaceAll("_+", "_");

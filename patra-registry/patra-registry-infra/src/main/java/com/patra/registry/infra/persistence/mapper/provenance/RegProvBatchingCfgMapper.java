@@ -8,13 +8,16 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * {@code reg_prov_batching_cfg} 表的只读 Mapper。
+ * Read-only mapper for {@code reg_prov_batching_cfg}.
+ * Backed by SQL statements in {@code resources/mapper/RegProvBatchingCfgMapper.xml}.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-
 public interface RegProvBatchingCfgMapper extends BaseMapper<RegProvBatchingCfgDO> {
 
     /**
-     * 合并查询（operation/source 双层 + 精确/ALL）并按确定性优先级挑选唯一记录。
+     * Returns the most specific batching configuration for the given provenance and operation scope.
      */
     Optional<RegProvBatchingCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
                                                       @Param("operationTypeKey") String operationTypeKey,

@@ -13,7 +13,11 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Expr 相关实体到领域对象的转换器。
+ * MapStruct converter turning expression-related persistence entities into domain view models.
+ * Used exclusively on the CQRS read side.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ExprEntityConverter {

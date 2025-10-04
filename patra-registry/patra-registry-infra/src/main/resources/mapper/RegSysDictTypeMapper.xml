@@ -8,23 +8,23 @@
   </resultMap>
 
   <select id="selectByTypeCode" resultMap="RegSysDictTypeResultMap">
-    SELECT * FROM sys_dict_type WHERE type_code = #{typeCode} AND deleted = 0
+    SELECT * FROM patra_registry.sys_dict_type WHERE type_code = #{typeCode} AND deleted = 0
   </select>
 
   <select id="selectAllEnabled" resultMap="RegSysDictTypeResultMap">
-    SELECT * FROM sys_dict_type WHERE deleted = 0 ORDER BY type_code
+    SELECT * FROM patra_registry.sys_dict_type WHERE deleted = 0 ORDER BY type_code
   </select>
 
   <select id="countTotal" resultType="int">
-    SELECT COUNT(*) FROM sys_dict_type WHERE deleted = 0
+    SELECT COUNT(*) FROM patra_registry.sys_dict_type WHERE deleted = 0
   </select>
 
   <select id="selectCustomizableTypes" resultMap="RegSysDictTypeResultMap">
-    SELECT * FROM sys_dict_type WHERE allow_custom_items = 1 AND deleted = 0 ORDER BY type_code
+    SELECT * FROM patra_registry.sys_dict_type WHERE allow_custom_items = 1 AND deleted = 0 ORDER BY type_code
   </select>
 
   <select id="selectSystemTypes" resultMap="RegSysDictTypeResultMap">
-    SELECT * FROM sys_dict_type WHERE is_system = 1 AND deleted = 0 ORDER BY type_code
+    SELECT * FROM patra_registry.sys_dict_type WHERE is_system = 1 AND deleted = 0 ORDER BY type_code
   </select>
 
 </mapper>

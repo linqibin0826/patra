@@ -23,10 +23,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 基于 MyBatis-Plus 的字典查询侧仓储实现。
- *
- * <p>提供面向 CQRS 查询侧的高效数据访问，使用 MapStruct 完成实体到领域对象的转换，
- * 并通过结构化日志便于排障与观测。</p>
+ * MyBatis-Plus based read-side repository for dictionary metadata.
+ * <p>Provides optimized CQRS query utilities and relies on MapStruct for entity to
+ * domain conversions while offering structured logging for observability.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -36,16 +35,16 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DictionaryRepositoryMpImpl implements DictionaryRepository {
     
-    /** 类型 Mapper */
+    /** Mapper for dictionary type entities. */
     private final RegSysDictTypeMapper typeMapper;
-    
-    /** 项 Mapper */
+
+    /** Mapper for dictionary item entities. */
     private final RegSysDictItemMapper itemMapper;
-    
-    /** 别名 Mapper */
+
+    /** Mapper for dictionary alias entities. */
     private final RegSysDictItemAliasMapper aliasMapper;
-    
-    /** 实体 -> 领域 转换器 */
+
+    /** Converts persistence entities into domain view objects. */
     private final DictionaryEntityConverter entityConverter;
     
     /**

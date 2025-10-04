@@ -8,13 +8,16 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * {@code reg_prov_rate_limit_cfg} 表的只读 Mapper。
+ * Read-only mapper for {@code reg_prov_rate_limit_cfg}.
+ * SQL implementation located in {@code resources/mapper/RegProvRateLimitCfgMapper.xml}.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-
 public interface RegProvRateLimitCfgMapper extends BaseMapper<RegProvRateLimitCfgDO> {
 
     /**
-     * 合并查询（operation/source 双层 + 精确/ALL）并按确定性优先级挑选唯一记录。
+     * Retrieves the effective rate limit configuration scoped by provenance and operation.
      */
     Optional<RegProvRateLimitCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
                                                        @Param("operationTypeKey") String operationTypeKey,

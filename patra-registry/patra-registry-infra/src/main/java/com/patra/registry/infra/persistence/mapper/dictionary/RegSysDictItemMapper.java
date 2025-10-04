@@ -8,42 +8,59 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 字典项读取 Mapper（MyBatis-Plus）。
+ * Read-only mapper for {@code sys_dict_item}.
+ * <p>Offers query helpers for dictionary items and their defaults.</p>
  *
- * <p>服务于 CQRS 查询侧，仅包含只读操作，面向表 sys_dict_item；
- * 包含针对启用项的优化查询。</p>
+ * <p>SQL statements reside in {@code resources/mapper/RegSysDictItemMapper.xml}.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
-
 public interface RegSysDictItemMapper extends BaseMapper<RegSysDictItemDO> {
 
-    /** 按类型编码与项编码查询启用且未删除的字典项。 */
-    Optional<RegSysDictItemDO> selectByTypeAndItemCode(@Param("typeCode") String typeCode, 
+    /**
+     * Finds an enabled dictionary item by type code and item code pair.
+     */
+    Optional<RegSysDictItemDO> selectByTypeAndItemCode(@Param("typeCode") String typeCode,
                                                        @Param("itemCode") String itemCode);
 
-    /** 查询某类型下所有启用项（排序：display_order、item_code）。 */
+    /**
+     * Lists enabled items for the specified type ordered by display order and item code.
+     */
     List<RegSysDictItemDO> selectEnabledByTypeCode(@Param("typeCode") String typeCode);
 
-    /** 查询某类型默认项（is_default=1 且启用且未删除）。 */
+    /**
+     * Returns the default item (if any) for the given type code.
+     */
     Optional<RegSysDictItemDO> selectDefaultByTypeCode(@Param("typeCode") String typeCode);
 
-    /** 根据类型 ID 查询启用项（内部使用）。 */
+    /**
+     * Lists enabled items by type identifier (used internally where type id is available).
+     */
     List<RegSysDictItemDO> selectEnabledByTypeId(@Param("typeId") Long typeId);
 
-    /** 统计某类型启用项数量（健康/统计）。 */
+    /**
+     * Counts enabled items for a given type code.
+     */
     int countEnabledByTypeCode(@Param("typeCode") String typeCode);
 
-    /** 查询存在多个默认项的类型（数据完整性检查）。 */
+    /**
+     * Detects type codes that currently have multiple defaults defined.
+     */
     List<String> selectTypesWithMultipleDefaults();
 
-    /** 查询没有默认项的类型（配置缺失检查）。 */
+    /**
+     * Returns type codes that do not have any default item configured.
+     */
     List<String> selectTypesWithoutDefaults();
 
-    /** 统计全局启用项总数（健康/统计）。 */
+    /**
+     * Counts all enabled dictionary items across all types.
+     */
     int countTotalEnabled();
 
-    /** 统计全局项总数（含禁用，排除删除）。 */
+    /**
+     * Counts all dictionary items excluding soft-deleted rows.
+     */
     int countTotal();
 }

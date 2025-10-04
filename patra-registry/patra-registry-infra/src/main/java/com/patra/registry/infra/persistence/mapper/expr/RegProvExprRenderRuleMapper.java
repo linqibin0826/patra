@@ -3,40 +3,35 @@ package com.patra.registry.infra.persistence.mapper.expr;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * {@code reg_prov_expr_render_rule} 表的只读 Mapper。
+ * Read-only mapper for {@code reg_prov_expr_render_rule}.
+ * Supplies helpers to locate the active render rule for expression atoms.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 
 public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRenderRuleDO> {
 
-    /** 查询指定维度当前生效的渲染规则。 */
-    @Select("""
-            SELECT *
-            FROM reg_prov_expr_render_rule
-            WHERE deleted = 0
-              AND lifecycle_status_code = 'ACTIVE'
-              AND provenance_id = #{provenanceId}
-              AND operation_type_key IN (#{operationTypeKey}, 'ALL')
-              AND field_key = #{fieldKey}
-              AND op_code = #{opCode}
-              AND match_type_key = #{matchTypeKey}
-              AND negated_key = #{negatedKey}
-              AND value_type_key = #{valueTypeKey}
-              AND emit_type_code = #{emitTypeCode}
-              AND effective_from <= #{now}
-              AND (effective_to IS NULL OR effective_to > #{now})
-            ORDER BY
-              CASE WHEN operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
-              effective_from DESC,
-              id DESC
-            LIMIT 1
-            """)
+    /**
+     * Retrieves the most specific active render rule matching the supplied dimension.
+     *
+     * @param provenanceId      provenance identifier
+     * @param operationTypeKey  normalized operation key (ALL fallback supported)
+     * @param fieldKey          canonical field key
+     * @param opCode            expression operator code
+     * @param matchTypeKey      normalized match type key
+     * @param negatedKey        normalized negation key
+     * @param valueTypeKey      normalized value type key
+     * @param emitTypeCode      emission type (QUERY/PARAMS)
+     * @param now               evaluation timestamp
+     * @return optional render rule effective at {@code now}
+     */
     Optional<RegProvExprRenderRuleDO> selectActive(@Param("provenanceId") Long provenanceId,
                                                    @Param("operationTypeKey") String operationTypeKey,
                                                    @Param("fieldKey") String fieldKey,
@@ -47,28 +42,15 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
                                                    @Param("emitTypeCode") String emitTypeCode,
                                                    @Param("now") Instant now);
 
-    /** 查询指定任务维度（含 ALL 回退）下全部当前生效的渲染规则。 */
-    @Select("""
-            SELECT *
-            FROM (
-                SELECT r.*,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY r.field_key, r.op_code, r.match_type_key, r.negated_key, r.value_type_key, r.emit_type_code
-                           ORDER BY CASE WHEN r.operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
-                                    r.effective_from DESC,
-                                    r.id DESC
-                       ) AS rn
-                FROM reg_prov_expr_render_rule r
-                WHERE r.deleted = 0
-                  AND r.lifecycle_status_code = 'ACTIVE'
-                  AND r.provenance_id = #{provenanceId}
-                  AND r.operation_type_key IN (#{operationTypeKey}, 'ALL')
-                  AND r.effective_from <= #{now}
-                  AND (r.effective_to IS NULL OR r.effective_to > #{now})
-            ) t
-            WHERE t.rn = 1
-            ORDER BY t.field_key, t.op_code, t.match_type_key, t.negated_key, t.value_type_key, t.emit_type_code
-            """)
+    /**
+     * Lists active render rules for the provided provenance/operation scope,
+     * collapsing source-level fallbacks per rule signature.
+     *
+     * @param provenanceId      provenance identifier
+     * @param operationTypeKey  normalized operation type key
+     * @param now               evaluation timestamp
+     * @return list of render rules, one per unique rule signature
+     */
     List<RegProvExprRenderRuleDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
                                                      @Param("operationTypeKey") String operationTypeKey,
                                                      @Param("now") Instant now);
