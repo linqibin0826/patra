@@ -149,7 +149,9 @@ class JsonNormalizerTest {
                 .hasMessageContaining("Non-finite number");
 
         // epoch 过大触发保护
-        JsonNormalizer.Config cfg = JsonNormalizer.Config.builder().build();
+        JsonNormalizer.Config cfg = JsonNormalizer.Config.builder()
+                .coerceTime(true)
+                .build();
         JsonNormalizer n2 = JsonNormalizer.withConfig(cfg);
         assertThatThrownBy(() -> n2.normalize( Map.of("t", "99999999999999") ))
                 .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)

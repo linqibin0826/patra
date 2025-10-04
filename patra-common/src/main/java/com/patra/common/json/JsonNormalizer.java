@@ -673,9 +673,9 @@ public final class JsonNormalizer {
         public static final class Builder {
             private boolean removeEmpty = true;
             private final Set<String> keepEmptyWhitelist = new LinkedHashSet<>();
-            private CoerceBoolean coerceBoolean = CoerceBoolean.LOOSE;
+            private CoerceBoolean coerceBoolean = CoerceBoolean.NONE;
             private boolean coerceNumber = true;
-            private boolean coerceTime = true;
+            private boolean coerceTime = false;
             private ZoneId defaultZoneId = ZoneOffset.UTC;
             private final Set<String> sequenceFieldWhitelist = new LinkedHashSet<>();
             private boolean arrayDeduplicate = true;

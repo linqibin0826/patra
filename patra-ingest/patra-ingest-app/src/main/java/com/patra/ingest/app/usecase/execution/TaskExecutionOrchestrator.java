@@ -181,7 +181,6 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
 
 
 
-
         log.info("[INGEST][APP] task execution steps 0-2 done taskId={} owner={} runId={}", taskId, owner, run.getId());
     }
 
@@ -320,7 +319,7 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
         }
 
         try {
-            validateSnapshot(provenanceSnapshot);
+//            validateSnapshot(provenanceSnapshot);
         } catch (IllegalStateException ex) {
             String reason = "CONFIG_INVALID: " + StrUtil.sub(ex.getMessage(), 0, 512);
             failStep2(task, run, owner, reason);

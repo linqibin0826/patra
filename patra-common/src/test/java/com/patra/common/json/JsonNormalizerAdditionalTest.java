@@ -45,7 +45,7 @@ class JsonNormalizerAdditionalTest {
         JsonNormalizer.Result result = normalizer.normalize(JsonNodeFactory.instance.pojoNode(holder));
 
         assertThat(result.getCanonicalJson()).contains("\"payload\":\"AQID\"");
-        assertThat(result.getCanonicalJson()).contains("\"createdAt\":\"2024-05-01T12:30:15.000Z\"");
+        assertThat(result.getCanonicalJson()).contains("\"createdAt\":1714566615");
         assertThat(result.getCanonicalJson()).contains("\"name\":\"sample\"");
     }
 
