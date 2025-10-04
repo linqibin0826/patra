@@ -40,9 +40,6 @@ public class RegProvBatchingCfgDO extends BaseDO {
     @TableField("detail_fetch_batch_size")
     private Integer detailFetchBatchSize;
 
-    @TableField("endpoint_id")
-    private Long endpointId;
-
     @TableField("credential_name")
     private String credentialName;
 

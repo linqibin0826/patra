@@ -15,7 +15,6 @@ import java.time.Instant;
  *   <li>{@code effectiveFrom} 生效起。</li>
  *   <li>{@code effectiveTo} 生效止。</li>
  *   <li>{@code detailFetchBatchSize} 明细抓取时单批 ID 数（驱动内部分片）。</li>
- *   <li>{@code endpointId} 优先绑定的端点（可覆盖聚合中默认 endpoint）。</li>
  *   <li>{@code credentialName} 指定使用的凭证（为空则由调度器决策）。</li>
  *   <li>{@code idsParamName} 批量 ID 参数名（例如 ids / id_list）。</li>
  *   <li>{@code idsJoinDelimiter} ID 以字符串拼接的分隔符（如 , 或 +）。</li>
@@ -46,8 +45,6 @@ public record BatchingConfigResp(
         Instant effectiveTo,
         /** 明细批量拉取时单批大小 */
         Integer detailFetchBatchSize,
-        /** 绑定端点 ID */
-        Long endpointId,
         /** 指定凭证名 */
         String credentialName,
         /** ID 参数名 */

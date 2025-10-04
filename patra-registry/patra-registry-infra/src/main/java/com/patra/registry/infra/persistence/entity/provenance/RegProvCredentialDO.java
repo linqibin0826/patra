@@ -31,9 +31,6 @@ public class RegProvCredentialDO extends BaseDO {
     @TableField("task_type")
     private String taskType;
 
-    @TableField("endpoint_id")
-    private Long endpointId;
-
     @TableField("credential_name")
     private String credentialName;
 
@@ -87,9 +84,6 @@ public class RegProvCredentialDO extends BaseDO {
 
     @TableField("task_type_key")
     private String taskTypeKey;
-
-    @TableField("endpoint_id_key")
-    private Long endpointIdKey;
 
     @TableField("preferred_1")
     private String preferred1;

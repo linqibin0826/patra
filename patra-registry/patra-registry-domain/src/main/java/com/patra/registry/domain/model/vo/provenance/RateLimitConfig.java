@@ -21,7 +21,6 @@ public record RateLimitConfig(
         String bucketGranularityScopeCode,
         Integer smoothingWindowMillis,
         boolean respectServerRateHeader,
-        Long endpointId,
         String credentialName
 ) {
     public RateLimitConfig(Long id,
@@ -38,7 +37,6 @@ public record RateLimitConfig(
                            String bucketGranularityScopeCode,
                            Integer smoothingWindowMillis,
                            boolean respectServerRateHeader,
-                           Long endpointId,
                            String credentialName) {
         DomainValidationException.positive(id, "Rate limit config id");
         DomainValidationException.positive(provenanceId, "Provenance id");
@@ -60,7 +58,6 @@ public record RateLimitConfig(
         this.bucketGranularityScopeCode = bucketScopeTrimmed;
         this.smoothingWindowMillis = smoothingWindowMillis;
         this.respectServerRateHeader = respectServerRateHeader;
-        this.endpointId = endpointId;
         this.credentialName = credentialName != null ? credentialName.trim() : null;
     }
 }

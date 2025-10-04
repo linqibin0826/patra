@@ -28,7 +28,6 @@ public interface ProvenanceConfigSnapshotConverter {
      * @return 配置快照
      */
     @Mapping(target = "provenance", source = "provenance")
-    @Mapping(target = "endpoint", source = "endpoint")
     @Mapping(target = "windowOffset", source = "windowOffset")
     @Mapping(target = "pagination", source = "pagination")
     @Mapping(target = "http", source = "http")
@@ -54,37 +53,6 @@ public interface ProvenanceConfigSnapshotConverter {
                 source.docsUrl(),
                 source.active(),
                 source.lifecycleStatusCode()
-        );
-    }
-
-    /**
-     * 映射端点定义。
-     */
-    default ProvenanceConfigSnapshot.EndpointDefinition mapEndpointDefinition(EndpointDefinitionResp source) {
-        if (source == null) {
-            return null;
-        }
-        return new ProvenanceConfigSnapshot.EndpointDefinition(
-                source.id(),
-                source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
-                source.endpointName(),
-                source.endpointUsageCode(),
-                source.httpMethodCode(),
-                source.pathTemplate(),
-                source.defaultQueryParamsJson(),
-                source.defaultBodyPayloadJson(),
-                source.requestContentType(),
-                source.authRequired(),
-                source.credentialHintName(),
-                source.pageParamName(),
-                source.pageSizeParamName(),
-                source.cursorParamName(),
-                source.idsParamName(),
-                source.effectiveFrom(),
-                source.effectiveTo()
         );
     }
 
@@ -202,7 +170,6 @@ public interface ProvenanceConfigSnapshotConverter {
                 source.effectiveFrom(),
                 source.effectiveTo(),
                 source.detailFetchBatchSize(),
-                source.endpointId(),
                 source.credentialName(),
                 source.idsParamName(),
                 source.idsJoinDelimiter(),
@@ -268,7 +235,6 @@ public interface ProvenanceConfigSnapshotConverter {
                 source.bucketGranularityScopeCode(),
                 source.smoothingWindowMillis(),
                 source.respectServerRateHeader(),
-                source.endpointId(),
                 source.credentialName()
         );
     }
@@ -299,7 +265,6 @@ public interface ProvenanceConfigSnapshotConverter {
                 source.scopeCode(),
                 source.taskType(),
                 source.taskTypeKey(),
-                source.endpointId(),
                 source.credentialName(),
                 source.authType(),
                 source.inboundLocationCode(),

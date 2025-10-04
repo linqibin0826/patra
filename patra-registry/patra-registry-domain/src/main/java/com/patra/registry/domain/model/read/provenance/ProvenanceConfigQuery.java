@@ -9,7 +9,6 @@ import java.util.List;
  */
 public record ProvenanceConfigQuery(
         ProvenanceQuery provenance,
-        EndpointDefinitionQuery endpoint,
         WindowOffsetQuery windowOffset,
         PaginationConfigQuery pagination,
         HttpConfigQuery http,

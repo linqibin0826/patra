@@ -2,7 +2,6 @@ package com.patra.registry.infra.persistence.converter;
 
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.Credential;
-import com.patra.registry.domain.model.vo.provenance.EndpointDefinition;
 import com.patra.registry.domain.model.vo.provenance.HttpConfig;
 import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
 import com.patra.registry.domain.model.vo.provenance.Provenance;
@@ -11,7 +10,6 @@ import com.patra.registry.domain.model.vo.provenance.RetryConfig;
 import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvBatchingCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvCredentialDO;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvEndpointDefDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvHttpCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvPaginationCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvRateLimitCfgDO;
@@ -34,11 +32,6 @@ public interface ProvenanceEntityConverter {
     @Mapping(target = "name", source = "provenanceName")
     @Mapping(target = "active", expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
     Provenance toDomain(RegProvenanceDO entity);
-
-    @Mapping(target = "defaultQueryParamsJson", source = "defaultQueryParams")
-    @Mapping(target = "defaultBodyPayloadJson", source = "defaultBodyPayload")
-    @Mapping(target = "authRequired", expression = "java(Boolean.TRUE.equals(entity.getIsAuthRequired()))")
-    EndpointDefinition toDomain(RegProvEndpointDefDO entity);
 
     WindowOffsetConfig toDomain(RegProvWindowOffsetCfgDO entity);
 

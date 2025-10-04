@@ -35,6 +35,5 @@ public interface ProvenanceEndpoint {
     @GetMapping(BASE_PATH + "/{code}/config")
     ProvenanceConfigResp getConfiguration(@PathVariable("code") ProvenanceCode code,
                                           @RequestParam(value = "taskType", required = false) String taskType,
-                                          @RequestParam(value = "endpointName", required = false) String endpointName,
                                           @RequestParam(value = "at", required = false) Instant at);
 }

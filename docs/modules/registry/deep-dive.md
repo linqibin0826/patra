@@ -31,7 +31,7 @@ Registry 服务 = Papertrace 平台“元数据与配置”的 **单一可信源
 ### 1.2 Provenance 子域
 
 配置 = 多切片（Slice）按 Scope + 时间生效窗口 聚合：
-`Provenance` + `EndpointDefinition` + `WindowOffsetConfig` + `PaginationConfig` + `HttpConfig` + `BatchingConfig` +
+`Provenance` + `WindowOffsetConfig` + `PaginationConfig` + `HttpConfig` + `BatchingConfig` +
 `RetryConfig` + `RateLimitConfig` + `Credential`。
 
 组装算法（简化伪代码）：

@@ -40,11 +40,10 @@ public class ProvenanceConfigAppService {
     }
 
     /**
-     * 加载来源在指定任务与端点下的聚合配置。
+     * 加载来源在指定任务语义下的聚合配置。
      */
     public Optional<ProvenanceConfigQuery> loadConfiguration(ProvenanceCode provenanceCode,
                                                              String taskType,
-                                                             String endpointName,
                                                              Instant at) {
         Optional<Provenance> provenanceOpt = repository.findProvenanceByCode(provenanceCode);
         if (provenanceOpt.isEmpty()) {
@@ -54,7 +53,7 @@ public class ProvenanceConfigAppService {
 
         Provenance provenance = provenanceOpt.get();
         Optional<ProvenanceConfiguration> configuration = repository.loadConfiguration(
-                provenance.id(), taskType, endpointName, at != null ? at : Instant.now());
+                provenance.id(), taskType, at != null ? at : Instant.now());
 
         return configuration.map(assembler::toQuery);
     }

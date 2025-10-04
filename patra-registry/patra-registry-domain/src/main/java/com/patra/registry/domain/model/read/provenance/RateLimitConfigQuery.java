@@ -22,7 +22,6 @@ public record RateLimitConfigQuery(
         String bucketGranularityScopeCode,
         Integer smoothingWindowMillis,
         boolean respectServerRateHeader,
-        Long endpointId,
         String credentialName
 ) {
     public RateLimitConfigQuery {

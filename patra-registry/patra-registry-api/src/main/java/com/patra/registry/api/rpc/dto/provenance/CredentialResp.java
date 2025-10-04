@@ -12,7 +12,6 @@ import java.time.Instant;
  *   <li>{@code scopeCode} 作用域。</li>
  *   <li>{@code taskType} 任务类型。</li>
  *   <li>{@code taskTypeKey} 任务子键。</li>
- *   <li>{@code endpointId} 绑定端点（为空表示在该来源/任务全局可用）。</li>
  *   <li>{@code credentialName} 凭证名称（唯一标识，同来源内区分不同密钥）。</li>
  *   <li>{@code authType} 认证类型枚举：API_KEY / BASIC / OAUTH2_CLIENT_CREDENTIALS / BEARER_TOKEN 等。</li>
  *   <li>{@code inboundLocationCode} 凭证注入位置：HEADER / QUERY / BODY / PATH / COOKIE。</li>
@@ -45,8 +44,6 @@ public record CredentialResp(
         String taskType,
         /** 任务子键 */
         String taskTypeKey,
-        /** 绑定端点 ID（可空） */
-        Long endpointId,
         /** 凭证名称 */
         String credentialName,
         /** 认证类型 */

@@ -10,7 +10,7 @@ import java.util.List;
  * 凭证维度可多条。</p>
  *
  * <p>包含的维度（表 → 领域嵌套 record）：
- * reg_provenance → ProvenanceInfo；reg_prov_endpoint_def → EndpointDefinition；reg_prov_window_offset_cfg → WindowOffsetConfig；
+ * reg_provenance → ProvenanceInfo；reg_prov_window_offset_cfg → WindowOffsetConfig；
  * reg_prov_pagination_cfg → PaginationConfig；reg_prov_http_cfg → HttpConfig；reg_prov_batching_cfg → BatchingConfig；
  * reg_prov_retry_cfg → RetryConfig；reg_prov_rate_limit_cfg → RateLimitConfig；reg_prov_credential → CredentialConfig。</p>
  *
@@ -19,7 +19,6 @@ import java.util.List;
  */
 public record ProvenanceConfigSnapshot(
         /* 来源基础信息 */ ProvenanceInfo provenance,
-        /* 端点定义（可空） */ EndpointDefinition endpoint,
         /* 时间窗口 / 增量指针（可空） */ WindowOffsetConfig windowOffset,
         /* 分页 / 游标（可空） */ PaginationConfig pagination,
         /* HTTP 策略（可空） */ HttpConfig http,
@@ -42,35 +41,6 @@ public record ProvenanceConfigSnapshot(
             /* 官方/文档 URL（调试引用） */ String docsUrl,
             /* 是否启用（快速开关） */ boolean active,
             /* 生命周期状态 (lifecycle_status: DRAFT|ACTIVE|DEPRECATED|RETIRED) */ String lifecycleStatusCode
-    ) {
-    }
-
-    /**
-     * 端点定义（reg_prov_endpoint_def）。
-     * 字典：scope = SOURCE|TASK；endpoint_usage = SEARCH|DETAIL|BATCH|AUTH|HEALTH；http_method = GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS；lifecycle_status 同上。
-     * 端点级 page/cursor/ids 参数存在时覆盖同维度 Pagination/Batching 配置。
-     */
-    public record EndpointDefinition(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
-            /* 任务类型（scope=TASK 时必填；文本去枚举化） */ String taskType,
-            /* 标准化任务键（生成列：NULL→ALL） */ String taskTypeKey,
-            /* 端点逻辑名称（如 search / detail / works / token） */ String endpointName,
-            /* 端点用途 (endpoint_usage: SEARCH|DETAIL|BATCH|AUTH|HEALTH) */ String endpointUsageCode,
-            /* HTTP 方法 (http_method: GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) */ String httpMethodCode,
-            /* 路径模板（相对或绝对；可含占位符） */ String pathTemplate,
-            /* 默认查询参数 JSON（运行时基础合并） */ String defaultQueryParamsJson,
-            /* 默认请求体 JSON（运行时基础合并） */ String defaultBodyPayloadJson,
-            /* 请求内容类型（如 application/json） */ String requestContentType,
-            /* 是否需要鉴权 */ boolean authRequired,
-            /* 凭证提示名（多凭证选择辅助） */ String credentialHintName,
-            /* 分页：页号参数名（覆盖项，可空） */ String pageParamName,
-            /* 分页：页大小参数名（覆盖项，可空） */ String pageSizeParamName,
-            /* 游标/令牌参数名（覆盖项，可空） */ String cursorParamName,
-            /* 批量：ID 列表参数名（覆盖项，可空） */ String idsParamName,
-            /* 生效起（含，UTC） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo
     ) {
     }
 
@@ -176,7 +146,6 @@ public record ProvenanceConfigSnapshot(
             /* 生效起（含） */ Instant effectiveFrom,
             /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
             /* 详情抓取批大小（NULL=应用默认） */ Integer detailFetchBatchSize,
-            /* 绑定端点ID（可空） */ Long endpointId,
             /* 指定凭证名（可空） */ String credentialName,
             /* ID 参数名（可空） */ String idsParamName,
             /* ID 拼接分隔符（默认 ,） */ String idsJoinDelimiter,
@@ -237,7 +206,6 @@ public record ProvenanceConfigSnapshot(
                          String bucketGranularityScopeCode,
             /* 平滑窗口毫秒（发放/统计平滑） */ Integer smoothingWindowMillis,
             /* 是否遵守服务端 Rate 头 (Retry-After / X-RateLimit-*) */ boolean respectServerRateHeader,
-            /* 绑定端点ID（可空） */ Long endpointId,
             /* 绑定凭证名（可空） */ String credentialName
     ) {
     }
@@ -253,7 +221,6 @@ public record ProvenanceConfigSnapshot(
             /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 绑定端点ID（可空） */ Long endpointId,
             /* 凭证名称（选择标签） */ String credentialName,
             /* 认证类型（API_KEY/BASIC/OAUTH2_CLIENT_CREDENTIALS 等） */ String authType,
             /* 注入位置 (inbound_location: HEADER|QUERY|BODY) */ String inboundLocationCode,

@@ -21,7 +21,6 @@ import java.time.Instant;
  *   <li>{@code bucketGranularityScopeCode} 桶粒度：GLOBAL / PROVENANCE / ENDPOINT / CREDENTIAL。</li>
  *   <li>{@code smoothingWindowMillis} 平滑窗口毫秒（对瞬时尖峰做平滑）。</li>
  *   <li>{@code respectServerRateHeader} 是否解析服务器返回的速率控制头（如 X-RateLimit-Reset）。</li>
- *   <li>{@code endpointId} 限制绑定的端点（可选）。</li>
  *   <li>{@code credentialName} 限制绑定的凭证（细粒度策略）。</li>
  * </ul>
  */
@@ -54,8 +53,6 @@ public record RateLimitConfigResp(
         Integer smoothingWindowMillis,
         /** 是否遵守服务器速率头 */
         boolean respectServerRateHeader,
-        /** 绑定端点 ID */
-        Long endpointId,
         /** 绑定凭证名 */
         String credentialName
 ) {
