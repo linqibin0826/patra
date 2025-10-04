@@ -14,9 +14,8 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * MapStruct 转换器：实体 -> 领域对象（查询侧）。
- *
- * <p>用于 CQRS 查询管线，将数据库实体转换为领域对象；仅用于读操作，确保基础设施层与领域层边界清晰。</p>
+ * MapStruct converter for dictionary entities on the query side of CQRS.
+ * Translates persistence layer records into domain view objects.
  *
  * @author linqibin
  * @since 0.1.0
@@ -29,49 +28,34 @@ import java.util.List;
 public interface DictionaryEntityConverter {
 
     /**
-     * 将字典类型实体转换为领域对象。
-     *
-     * @see com.patra.registry.infra.persistence.entity.dictionary.RegSysDictTypeDO
-     * @see DictionaryType
+     * Converts a dictionary type entity to its domain representation.
      */
     DictionaryType toDomain(RegSysDictTypeDO entity);
 
     /**
-     * 将字典项实体转换为领域对象。
-     *
-     * @see RegSysDictItemDO
-     * @see DictionaryItem
+     * Converts a dictionary item entity to its domain representation.
      */
     @Mapping(target = "displayName", source = "itemName")
     @Mapping(target = "sortOrder", source = "displayOrder")
     DictionaryItem toDomain(RegSysDictItemDO entity);
 
     /**
-     * 将字典别名实体转换为领域对象。
-     *
-     * @see RegSysDictItemAliasDO
-     * @see DictionaryAlias
+     * Converts a dictionary alias entity to its domain representation.
      */
     DictionaryAlias toDomain(RegSysDictItemAliasDO entity);
 
     /**
-     * 批量：类型实体 -> 领域对象。
-     *
-     * @see #toDomain(RegSysDictTypeDO)
+     * Batch conversion helper for dictionary type entities.
      */
     List<DictionaryType> toDomainList(List<RegSysDictTypeDO> entities);
 
     /**
-     * 批量：项实体 -> 领域对象。
-     *
-     * @see #toDomain(RegSysDictItemDO)
+     * Batch conversion helper for dictionary item entities.
      */
     List<DictionaryItem> toItemDomainList(List<RegSysDictItemDO> entities);
 
     /**
-     * 批量：别名实体 -> 领域对象。
-     *
-     * @see #toDomain(RegSysDictItemAliasDO)
+     * Batch conversion helper for dictionary alias entities.
      */
     List<DictionaryAlias> toAliasDomainList(List<RegSysDictItemAliasDO> entities);
 }

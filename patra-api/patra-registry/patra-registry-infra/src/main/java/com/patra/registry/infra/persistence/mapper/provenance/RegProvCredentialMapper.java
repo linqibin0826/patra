@@ -8,13 +8,16 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * {@code reg_prov_credential} 表的只读 Mapper。
+ * Read-only mapper for {@code reg_prov_credential}.
+ * SQL implementation located in {@code resources/mapper/RegProvCredentialMapper.xml}.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-
 public interface RegProvCredentialMapper extends BaseMapper<RegProvCredentialDO> {
 
     /**
-     * 合并查询（TASK/SOURCE + 精确/ALL）并按 默认标记 → effective_from DESC → id DESC 排序返回全部候选。
+     * Fetches active credential definitions ordered by preference, falling back to source-level scope.
      */
     List<RegProvCredentialDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
                                                  @Param("operationTypeKey") String operationTypeKey,

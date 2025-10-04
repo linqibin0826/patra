@@ -10,7 +10,11 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * 数据表 {@code reg_expr_field_dict} 对应的实体。
+ * Persistence entity mapped to {@code reg_expr_field_dict}.
+ * <p>Defines canonical field metadata shared across provenances.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @SuperBuilder
@@ -20,31 +24,31 @@ import lombok.experimental.SuperBuilder;
 @TableName("reg_expr_field_dict")
 public class RegExprFieldDictDO extends BaseDO {
 
-    /** 统一内部字段键（业务稳定键）。 */
+    /** Canonical field key that remains stable across environments. */
     @TableField("field_key")
     private String fieldKey;
 
-    /** 字段展示名。 */
+    /** Optional display name surfaced in consoles. */
     @TableField("display_name")
     private String displayName;
 
-    /** 字段说明。 */
+    /** Rich description explaining field semantics. */
     @TableField("description")
     private String description;
 
-    /** 数据类型编码。 */
+    /** Data type code (DATE/DATETIME/NUMBER/TEXT/...). */
     @TableField("data_type_code")
     private String dataTypeCode;
 
-    /** 基数编码（SINGLE/MULTI）。 */
+    /** Cardinality code indicating single or multi-valued fields. */
     @TableField("cardinality_code")
     private String cardinalityCode;
 
-    /** 是否允许对外暴露。 */
+    /** Flag indicating whether the field is exposable to clients. */
     @TableField("exposable")
     private Boolean exposable;
 
-    /** 是否为日期字段。 */
+    /** Flag indicating whether the field should be treated as date-like. */
     @TableField("is_date")
     private Boolean dateField;
 }

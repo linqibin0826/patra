@@ -3,7 +3,7 @@
 <mapper namespace="com.patra.registry.infra.persistence.mapper.provenance.RegProvRetryCfgMapper">
     <select id="selectActiveMerged" resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvRetryCfgDO">
         SELECT *
-        FROM reg_prov_retry_cfg
+        FROM patra_registry.reg_prov_retry_cfg
         WHERE deleted = 0
           AND lifecycle_status_code = 'ACTIVE'
           AND provenance_id = #{provenanceId}

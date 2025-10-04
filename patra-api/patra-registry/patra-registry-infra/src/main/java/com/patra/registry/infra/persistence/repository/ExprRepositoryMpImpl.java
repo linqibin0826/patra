@@ -19,9 +19,10 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Expr 仓储 MyBatis 实现。
- * <p>职责：聚合 Expr 相关 DO（字段字典 / 能力 / 渲染规则 / 参数映射）并生成领域快照。</p>
- * <p>说明：优先匹配精确 operationTypeKey，若不存在则回退到 ALL 默认配置。</p>
+ * MyBatis-based read-side repository for expression metadata.
+ * <p>Aggregates field dictionaries, capabilities, render rules, and API parameter mappings to
+ * build domain snapshots. Operation-specific configuration is preferred and the logic falls
+ * back to {@code ALL} when a dedicated slice is unavailable.</p>
  *
  * @author linqibin
  * @since 0.1.0

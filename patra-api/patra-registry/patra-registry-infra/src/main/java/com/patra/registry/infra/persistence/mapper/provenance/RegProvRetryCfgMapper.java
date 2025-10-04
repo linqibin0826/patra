@@ -8,11 +8,17 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * {@code reg_prov_retry_cfg} 表的只读 Mapper。
+ * Read-only mapper for {@code reg_prov_retry_cfg}.
+ * SQL statements are defined in {@code resources/mapper/RegProvRetryCfgMapper.xml}.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-
 public interface RegProvRetryCfgMapper extends BaseMapper<RegProvRetryCfgDO> {
 
+    /**
+     * Fetches the retry configuration effective for the specified provenance/operation scope.
+     */
     Optional<RegProvRetryCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
                                                    @Param("operationTypeKey") String operationTypeKey,
                                                    @Param("now") Instant now);

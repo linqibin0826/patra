@@ -23,7 +23,11 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * Provenance 相关实体到领域对象的转换器。
+ * MapStruct converter turning provenance-related persistence entities into domain view models.
+ * Used exclusively on the query side to assemble provenance configuration snapshots.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface ProvenanceEntityConverter {

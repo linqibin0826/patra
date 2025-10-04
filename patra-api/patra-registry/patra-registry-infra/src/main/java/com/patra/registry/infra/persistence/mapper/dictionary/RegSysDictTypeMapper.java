@@ -8,28 +8,50 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 字典类型读取 Mapper（MyBatis-Plus）。
+ * Read-only mapper for {@code sys_dict_type}.
+ * <p>Provides convenience queries for dictionary type metadata on the query side.</p>
  *
- * <p>服务于 CQRS 查询侧，仅包含只读操作，面向表 sys_dict_type。</p>
+ * <p>SQL implementations reside in {@code resources/mapper/RegSysDictTypeMapper.xml}.
+ * To modify query logic please update the corresponding XML file.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
-
 public interface RegSysDictTypeMapper extends BaseMapper<RegSysDictTypeDO> {
 
-    /** 按类型编码查询类型（使用稳定业务键 type_code）。 */
+    /**
+     * Retrieves a dictionary type by its stable business code.
+     *
+     * @param typeCode dictionary type code (unique)
+     * @return optional dictionary type definition
+     */
     Optional<RegSysDictTypeDO> selectByTypeCode(@Param("typeCode") String typeCode);
 
-    /** 查询全部未删除的字典类型（按 type_code 排序）。 */
+    /**
+     * Lists all non-deleted dictionary types ordered by {@code type_code}.
+     *
+     * @return dictionary type list
+     */
     List<RegSysDictTypeDO> selectAllEnabled();
 
-    /** 统计未删除的字典类型总数（健康/统计）。 */
+    /**
+     * Counts all non-deleted dictionary types.
+     *
+     * @return active dictionary type count
+     */
     int countTotal();
 
-    /** 查询允许自定义项的类型（allow_custom_items=1）。 */
+    /**
+     * Lists types that allow business-side custom items.
+     *
+     * @return dictionary type list
+     */
     List<RegSysDictTypeDO> selectCustomizableTypes();
 
-    /** 查询系统管理的类型（is_system=1）。 */
+    /**
+     * Lists system-managed dictionary types.
+     *
+     * @return dictionary type list
+     */
     List<RegSysDictTypeDO> selectSystemTypes();
 }

@@ -8,8 +8,8 @@
   </resultMap>
 
   <select id="selectByTypeAndItemCode" resultMap="RegSysDictItemResultMap">
-    SELECT di.* FROM sys_dict_item di
-    JOIN sys_dict_type dt ON dt.id = di.type_id
+    SELECT di.* FROM patra_registry.sys_dict_item di
+    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.item_code = #{itemCode}
       AND di.enabled = 1
@@ -18,8 +18,8 @@
   </select>
 
   <select id="selectEnabledByTypeCode" resultMap="RegSysDictItemResultMap">
-    SELECT di.* FROM sys_dict_item di
-    JOIN sys_dict_type dt ON dt.id = di.type_id
+    SELECT di.* FROM patra_registry.sys_dict_item di
+    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.enabled = 1
       AND di.deleted = 0
@@ -28,8 +28,8 @@
   </select>
 
   <select id="selectDefaultByTypeCode" resultMap="RegSysDictItemResultMap">
-    SELECT di.* FROM sys_dict_item di
-    JOIN sys_dict_type dt ON dt.id = di.type_id
+    SELECT di.* FROM patra_registry.sys_dict_item di
+    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.is_default = 1
       AND di.enabled = 1
@@ -39,7 +39,7 @@
   </select>
 
   <select id="selectEnabledByTypeId" resultMap="RegSysDictItemResultMap">
-    SELECT * FROM sys_dict_item
+    SELECT * FROM patra_registry.sys_dict_item
     WHERE type_id = #{typeId}
       AND enabled = 1
       AND deleted = 0
@@ -47,8 +47,8 @@
   </select>
 
   <select id="countEnabledByTypeCode" resultType="int">
-    SELECT COUNT(*) FROM sys_dict_item di
-    JOIN sys_dict_type dt ON dt.id = di.type_id
+    SELECT COUNT(*) FROM patra_registry.sys_dict_item di
+    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.enabled = 1
       AND di.deleted = 0
@@ -56,8 +56,8 @@
   </select>
 
   <select id="selectTypesWithMultipleDefaults" resultType="string">
-    SELECT dt.type_code FROM sys_dict_item di
-    JOIN sys_dict_type dt ON dt.id = di.type_id
+    SELECT dt.type_code FROM patra_registry.sys_dict_item di
+    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE di.is_default = 1
       AND di.enabled = 1
       AND di.deleted = 0
@@ -67,8 +67,8 @@
   </select>
 
   <select id="selectTypesWithoutDefaults" resultType="string">
-    SELECT dt.type_code FROM sys_dict_type dt
-    LEFT JOIN sys_dict_item di ON dt.id = di.type_id
+    SELECT dt.type_code FROM patra_registry.patra_registry.sys_dict_type dt
+    LEFT JOIN patra_registry.sys_dict_item di ON dt.id = di.type_id
       AND di.is_default = 1
       AND di.enabled = 1
       AND di.deleted = 0
@@ -77,11 +77,11 @@
   </select>
 
   <select id="countTotalEnabled" resultType="int">
-    SELECT COUNT(*) FROM sys_dict_item WHERE enabled = 1 AND deleted = 0
+    SELECT COUNT(*) FROM patra_registry.sys_dict_item WHERE enabled = 1 AND deleted = 0
   </select>
 
   <select id="countTotal" resultType="int">
-    SELECT COUNT(*) FROM sys_dict_item WHERE deleted = 0
+    SELECT COUNT(*) FROM patra_registry.sys_dict_item WHERE deleted = 0
   </select>
 
 </mapper>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper">
+
+    <select id="selectByCode" resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO">
+        SELECT *
+        FROM patra_registry.reg_provenance
+        WHERE provenance_code = #{code}
+          AND deleted = 0
+    </select>
+
+    <select id="selectAllActive" resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO">
+        SELECT *
+        FROM patra_registry.reg_provenance
+        WHERE deleted = 0
+        ORDER BY provenance_code
+    </select>
+
+</mapper>

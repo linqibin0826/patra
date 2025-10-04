@@ -5,7 +5,7 @@
     <!-- 合并查询：优先匹配 operationTypeKey，其次 ALL；按 effective_from DESC, id DESC 排序 -->
     <select id="selectActiveMerged" resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO">
         SELECT *
-        FROM reg_prov_window_offset_cfg
+        FROM patra_registry.reg_prov_window_offset_cfg
         WHERE deleted = 0
           AND lifecycle_status_code = 'ACTIVE'
           AND provenance_id = #{provenanceId}

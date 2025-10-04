@@ -4,7 +4,7 @@
     <select id="selectActiveMerged"
             resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvHttpCfgDO">
         SELECT *
-        FROM reg_prov_http_cfg
+        FROM patra_registry.reg_prov_http_cfg
         WHERE deleted = 0
           AND lifecycle_status_code = 'ACTIVE'
           AND provenance_id = #{provenanceId}
