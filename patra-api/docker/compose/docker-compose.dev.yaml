@@ -205,6 +205,7 @@ services:
     environment:
       TZ: Asia/Shanghai
       NAMESRV_ADDR: rocketmq-namesrv:9876
+      JAVA_OPT_EXT: "-Xint"  # 避免 JDK 8u372 JIT 崩溃，开发环境可用，性能会下降
       # 如客户端在宿主机/外网访问，请在 broker.conf 里设置 brokerIP1=宿主机IP
     command: >
       sh mqbroker --enable-proxy

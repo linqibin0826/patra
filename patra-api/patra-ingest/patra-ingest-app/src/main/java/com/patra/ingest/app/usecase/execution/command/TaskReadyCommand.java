@@ -62,14 +62,27 @@ public record TaskReadyCommand(
      * 从 headers 提取追踪字段（辅助方法）。
      */
     public String getMessageId() {
-        return headers != null ? (String) headers.get("ROCKET_MQ_MESSAGE_ID") : null;
+        return resolveHeaderAsString("ROCKET_MQ_MESSAGE_ID");
     }
 
     public String getCorrelationId() {
-        return headers != null ? (String) headers.get("id") : null;
+        return resolveHeaderAsString("id");
     }
 
     public String getSchedulerRunId() {
-        return headers != null ? (String) headers.get("scheduler") : null;
+        return resolveHeaderAsString("scheduler");
+    }
+
+    private String resolveHeaderAsString(String key) {
+        if (headers == null) {
+            return null;
+        }
+        Object value = headers.get(key);
+        if (value == null) {
+            return null;
+        }
+        // RocketMQ 頭部字段可能為 UUID 等非字串類型，統一轉為字串避免類型轉換異常
+        return value instanceof String ? (String) value : value.toString();
     }
 }
+
