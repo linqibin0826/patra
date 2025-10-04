@@ -36,6 +36,9 @@ public class RegProvExprCapabilityDO extends BaseDO {
     @TableField("task_type_key")
     private String taskTypeKey;
 
+    @TableField("lifecycle_status_code")
+    private String lifecycleStatusCode;
+
     @TableField("field_key")
     private String fieldKey;
 
