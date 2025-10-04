@@ -45,12 +45,11 @@ public class ProvenanceClientImpl implements ProvenanceClient {
     @Override
     public ProvenanceConfigResp getConfiguration(ProvenanceCode code,
                                                  String taskType,
-                                                 String endpointName,
                                                  Instant at) {
-        Optional<ProvenanceConfigQuery> result = appService.loadConfiguration(code, taskType, endpointName, at);
+        Optional<ProvenanceConfigQuery> result = appService.loadConfiguration(code, taskType, at);
         if (result.isEmpty()) {
             throw new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
-                    "Provenance configuration not found: code=" + code + ", taskType=" + taskType + ", endpoint=" + endpointName);
+                    "Provenance configuration not found: code=" + code + ", taskType=" + taskType);
         }
         return converter.toResp(result.get());
     }

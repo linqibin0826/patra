@@ -13,7 +13,6 @@ public record CredentialQuery(
         String scopeCode,
         String taskType,
         String taskTypeKey,
-        Long endpointId,
         String credentialName,
         String authType,
         String inboundLocationCode,

@@ -5,12 +5,11 @@ import java.util.List;
 /**
  * 数据来源（Provenance）完整配置聚合响应 DTO。<br>
  * <p>用途：供外部调用方（例如 Ingest 采集引擎 / 表达式编排层）一次性拉取某一
- * {@link ProvenanceResp} 在特定作用域/任务维度下生效的“端点 + 窗口/指针 + 分页 + HTTP + 批量 + 重试 + 限流 + 凭证”组合配置，
+ * {@link ProvenanceResp} 在特定作用域/任务维度下生效的“窗口/指针 + 分页 + HTTP + 批量 + 重试 + 限流 + 凭证”组合配置，
  * 减少多次 RPC 往返并保证快照一致性。</p>
  * <p>对应关系（Record 组件 → 逻辑表 / 配置来源）：
  * <ul>
  *   <li>{@code provenance} → 主数据表 reg_provenance</li>
- *   <li>{@code endpoint} → reg_prov_endpoint_def（端点定义，可选）</li>
  *   <li>{@code windowOffset} → reg_prov_window_offset_cfg（增量 / 时间窗口，可选）</li>
  *   <li>{@code pagination} → reg_prov_pagination_cfg（分页/游标策略，可选）</li>
  *   <li>{@code http} → reg_prov_http_cfg（HTTP 通信基础策略，可选）</li>
@@ -30,7 +29,6 @@ import java.util.List;
  * </p>
  *
  * @param provenance   基础来源元数据（必填）。驱动所有后续配置的逻辑主键（code）与默认属性（基础 Base URL / 时区 / 激活状态等）。
- * @param endpoint     端点定义。描述任务对应的 HTTP 接入点（方法、路径模板、默认 Query/Body、鉴权需求、分页参数名等）。可能为 null 代表任务不依赖单一固定端点（例如内部生成数据）。
  * @param windowOffset 时间窗口与增量指针策略。控制增量抓取的时间切片/回溯/重叠与偏移字段解析模式。无增量语义任务可为 null。
  * @param pagination   分页/游标抽取策略。定义分页模式（页号 / 游标 / 混合）、参数名、起始页、JSONPath/XPath 提取下一个游标等。非分页接口可为 null。
  * @param http         HTTP 基础策略（Header 默认值、超时、TLS 校验、代理、Idempotency Header 等）。未覆盖时使用引擎全局默认。
@@ -44,8 +42,6 @@ import java.util.List;
 public record ProvenanceConfigResp(
         /* 基础来源元数据（reg_provenance） */
         ProvenanceResp provenance,
-        /* 端点定义（reg_prov_endpoint_def），可能为空 */
-        EndpointDefinitionResp endpoint,
         /* 增量窗口/指针配置（reg_prov_window_offset_cfg），可能为空 */
         WindowOffsetResp windowOffset,
         /* 分页 / 游标配置（reg_prov_pagination_cfg），可能为空 */

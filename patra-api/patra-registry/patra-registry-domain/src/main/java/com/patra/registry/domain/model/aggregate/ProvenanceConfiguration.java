@@ -3,7 +3,6 @@ package com.patra.registry.domain.model.aggregate;
 import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.Credential;
-import com.patra.registry.domain.model.vo.provenance.EndpointDefinition;
 import com.patra.registry.domain.model.vo.provenance.HttpConfig;
 import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
 import com.patra.registry.domain.model.vo.provenance.Provenance;
@@ -15,10 +14,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Provenance 配置聚合：封装来源、端点及各维度配置的组合视图。
+ * Provenance 配置聚合：封装来源及多维配置的组合视图。
  *
- * <p>只读聚合，用于 CQRS 查询侧。封装特定来源在特定时间点的完整配置状态，
- * 包括端点定义、HTTP配置、重试策略、限流配置等各个维度。</p>
+ * <p>只读聚合，用于 CQRS 查询侧。封装特定来源在特定时间点的配置状态，
+ * 包括 HTTP 配置、重试策略、限流配置等各个维度。</p>
  *
  * <p>支持SOURCE级别和TASK级别的配置组合，遵循"TASK优先，SOURCE回退"的策略。</p>
  *
@@ -27,7 +26,6 @@ import java.util.Optional;
  */
 public record ProvenanceConfiguration(
         Provenance provenance,
-        EndpointDefinition endpoint,
         WindowOffsetConfig windowOffset,
         PaginationConfig pagination,
         HttpConfig http,
@@ -39,11 +37,6 @@ public record ProvenanceConfiguration(
     public ProvenanceConfiguration {
         DomainValidationException.nonNull(provenance, "Provenance");
         credentials = credentials == null ? List.of() : List.copyOf(credentials);
-    }
-
-    /** 是否存在端点定义。 */
-    public boolean hasEndpoint() {
-        return endpoint != null;
     }
 
     /** 是否配置了窗口策略。 */

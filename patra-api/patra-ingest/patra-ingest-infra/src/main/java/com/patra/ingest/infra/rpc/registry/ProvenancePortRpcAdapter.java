@@ -60,7 +60,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
                 code, taskType, endpoint, queryTime);
 
         try {
-            ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, taskType, endpoint, queryTime);
+            ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, taskType, queryTime);
 
             if (resp == null) {
                 log.warn("[INGEST][ADAPTER] Registry returned empty config, code={}, taskType={}, endpoint={}", code, taskType, endpoint);
@@ -118,7 +118,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
      * 创建最小可用配置快照。
      */
     private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
-    log.info("[INGEST][ADAPTER] Creating minimal provenance snapshot, code={}", provenanceCode);
+        log.info("[INGEST][ADAPTER] Creating minimal provenance snapshot, code={}", provenanceCode);
 
         // 创建最小的 ProvenanceInfo
         ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance =
@@ -135,7 +135,6 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
 
         return new ProvenanceConfigSnapshot(
                 minimalProvenance,
-                null, // endpoint
                 null, // windowOffset
                 null, // pagination
                 null, // http

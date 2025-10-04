@@ -2,7 +2,6 @@ package com.patra.registry.adapter.inbound.rest.feign.converter;
 
 import com.patra.registry.api.rpc.dto.provenance.BatchingConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.CredentialResp;
-import com.patra.registry.api.rpc.dto.provenance.EndpointDefinitionResp;
 import com.patra.registry.api.rpc.dto.provenance.HttpConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.PaginationConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.ProvenanceConfigResp;
@@ -25,8 +24,6 @@ public interface ProvenanceApiConverter {
     ProvenanceResp toResp(ProvenanceQuery query);
 
     List<ProvenanceResp> toResp(List<ProvenanceQuery> queries);
-
-    EndpointDefinitionResp toResp(EndpointDefinitionQuery query);
 
     WindowOffsetResp toResp(WindowOffsetQuery query);
 

@@ -58,9 +58,6 @@ public class RegProvRateLimitCfgDO extends BaseDO {
     @TableField("respect_server_rate_header")
     private Boolean respectServerRateHeader;
 
-    @TableField("endpoint_id")
-    private Long endpointId;
-
     @TableField("credential_name")
     private String credentialName;
 

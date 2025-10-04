@@ -15,7 +15,6 @@ public record BatchingConfig(
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer detailFetchBatchSize,
-        Long endpointId,
         String credentialName,
         String idsParamName,
         String idsJoinDelimiter,
@@ -36,7 +35,6 @@ public record BatchingConfig(
                           Instant effectiveFrom,
                           Instant effectiveTo,
                           Integer detailFetchBatchSize,
-                          Long endpointId,
                           String credentialName,
                           String idsParamName,
                           String idsJoinDelimiter,
@@ -63,7 +61,6 @@ public record BatchingConfig(
         this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;
         this.detailFetchBatchSize = detailFetchBatchSize;
-        this.endpointId = endpointId;
         this.credentialName = credentialName != null ? credentialName.trim() : null;
         this.idsParamName = idsParamName != null ? idsParamName.trim() : null;
         this.idsJoinDelimiter = idsJoinDelimiter != null ? idsJoinDelimiter.trim() : null;

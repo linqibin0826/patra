@@ -394,20 +394,6 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
         if (snapshot == null) {
             throw new IllegalStateException("配置快照缺失");
         }
-        ProvenanceConfigSnapshot.EndpointDefinition endpoint = snapshot.endpoint();
-        if (endpoint == null) {
-            throw new IllegalStateException("endpoint 定义缺失");
-        }
-        if (isBlank(endpoint.endpointName())) {
-            throw new IllegalStateException("endpointName 不能为空");
-        }
-        if (isBlank(endpoint.httpMethodCode())) {
-            throw new IllegalStateException("httpMethod 不能为空");
-        }
-        if (isBlank(endpoint.pathTemplate())) {
-            throw new IllegalStateException("pathTemplate 不能为空");
-        }
-
         String baseUrlDefault = snapshot.provenance() == null ? null : snapshot.provenance().baseUrlDefault();
         String baseUrlOverride = snapshot.http() == null ? null : snapshot.http().baseUrlOverride();
         if (isBlank(baseUrlDefault) && isBlank(baseUrlOverride)) {

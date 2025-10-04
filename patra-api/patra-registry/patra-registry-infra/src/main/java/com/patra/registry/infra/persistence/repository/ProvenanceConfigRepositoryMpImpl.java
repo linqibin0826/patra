@@ -35,7 +35,6 @@ import java.util.Optional;
 public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigRepository {
 
     private final RegProvenanceMapper provenanceMapper;
-    private final RegProvEndpointDefMapper endpointDefMapper;
     private final RegProvWindowOffsetCfgMapper windowOffsetCfgMapper;
     private final RegProvPaginationCfgMapper paginationCfgMapper;
     private final RegProvHttpCfgMapper httpCfgMapper;
@@ -56,20 +55,6 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         return provenanceMapper.selectAllActive().stream()
                 .map(converter::toDomain)
                 .toList();
-    }
-
-    @Override
-    public Optional<EndpointDefinition> findActiveEndpoint(Long provenanceId,
-                                                           String taskType,
-                                                           String endpointName,
-                                                           Instant at) {
-        if (endpointName == null || endpointName.isBlank()) {
-            return Optional.empty();
-        }
-        Instant timestamp = atOrNow(at);
-        String taskKey = normalizeTaskKey(taskType);
-        return endpointDefMapper.selectActiveMerged(provenanceId, taskKey, endpointName.trim(), timestamp)
-                .map(converter::toDomain);
     }
 
     @Override
@@ -105,12 +90,11 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     @Override
     public Optional<BatchingConfig> findActiveBatching(Long provenanceId,
                                                        String taskType,
-                                                       Long endpointId,
                                                        String credentialName,
                                                        Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        return batchingCfgMapper.selectActiveMerged(provenanceId, taskKey, endpointId, credentialName, timestamp)
+        return batchingCfgMapper.selectActiveMerged(provenanceId, taskKey, credentialName, timestamp)
                 .map(converter::toDomain);
     }
 
@@ -127,23 +111,21 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     @Override
     public Optional<RateLimitConfig> findActiveRateLimit(Long provenanceId,
                                                          String taskType,
-                                                         Long endpointId,
                                                          String credentialName,
                                                          Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        return rateLimitCfgMapper.selectActiveMerged(provenanceId, taskKey, endpointId, credentialName, timestamp)
+        return rateLimitCfgMapper.selectActiveMerged(provenanceId, taskKey, credentialName, timestamp)
                 .map(converter::toDomain);
     }
 
     @Override
     public List<Credential> findActiveCredentials(Long provenanceId,
                                                   String taskType,
-                                                  Long endpointId,
                                                   Instant at) {
         Instant timestamp = atOrNow(at);
         String taskKey = normalizeTaskKey(taskType);
-        return credentialMapper.selectActiveMerged(provenanceId, taskKey, endpointId, timestamp)
+        return credentialMapper.selectActiveMerged(provenanceId, taskKey, timestamp)
                 .stream()
                 .map(converter::toDomain)
                 .toList();
@@ -152,7 +134,6 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     @Override
     public Optional<ProvenanceConfiguration> loadConfiguration(Long provenanceId,
                                                                String taskType,
-                                                               String endpointName,
                                                                Instant at) {
         Optional<Provenance> provenanceOpt = findProvenanceById(provenanceId);
         if (provenanceOpt.isEmpty()) {
@@ -160,21 +141,17 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         }
         Instant timestamp = atOrNow(at);
         Provenance provenance = provenanceOpt.get();
-        Optional<EndpointDefinition> endpointOpt = findActiveEndpoint(provenanceId, taskType, endpointName, timestamp);
-        EndpointDefinition endpoint = endpointOpt.orElse(null);
-        Long endpointId = endpoint != null ? endpoint.id() : null;
 
         Optional<WindowOffsetConfig> window = findActiveWindowOffset(provenanceId, taskType, timestamp);
         Optional<PaginationConfig> pagination = findActivePagination(provenanceId, taskType, timestamp);
         Optional<HttpConfig> httpConfig = findActiveHttpConfig(provenanceId, taskType, timestamp);
-        Optional<BatchingConfig> batching = findActiveBatching(provenanceId, taskType, endpointId, null, timestamp);
+        Optional<BatchingConfig> batching = findActiveBatching(provenanceId, taskType, null, timestamp);
         Optional<RetryConfig> retry = findActiveRetry(provenanceId, taskType, timestamp);
-        Optional<RateLimitConfig> rateLimit = findActiveRateLimit(provenanceId, taskType, endpointId, null, timestamp);
-        List<Credential> credentials = findActiveCredentials(provenanceId, taskType, endpointId, timestamp);
+        Optional<RateLimitConfig> rateLimit = findActiveRateLimit(provenanceId, taskType, null, timestamp);
+        List<Credential> credentials = findActiveCredentials(provenanceId, taskType, timestamp);
 
         ProvenanceConfiguration configuration = new ProvenanceConfiguration(
                 provenance,
-                endpoint,
                 window.orElse(null),
                 pagination.orElse(null),
                 httpConfig.orElse(null),

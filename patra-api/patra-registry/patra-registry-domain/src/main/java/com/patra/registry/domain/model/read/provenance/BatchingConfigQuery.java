@@ -16,7 +16,6 @@ public record BatchingConfigQuery(
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer detailFetchBatchSize,
-        Long endpointId,
         String credentialName,
         String idsParamName,
         String idsJoinDelimiter,

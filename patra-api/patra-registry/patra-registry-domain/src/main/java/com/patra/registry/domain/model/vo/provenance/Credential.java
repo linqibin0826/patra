@@ -12,7 +12,6 @@ public record Credential(
         String scopeCode,
         String taskType,
         String taskTypeKey,
-        Long endpointId,
         String credentialName,
         String authType,
         String inboundLocationCode,
@@ -37,7 +36,6 @@ public record Credential(
                       String scopeCode,
                       String taskType,
                       String taskTypeKey,
-                      Long endpointId,
                       String credentialName,
                       String authType,
                       String inboundLocationCode,
@@ -70,7 +68,6 @@ public record Credential(
         this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.endpointId = endpointId;
         this.credentialName = nameTrimmed;
         this.authType = authTypeTrimmed;
         this.inboundLocationCode = inboundLocTrimmed;
