@@ -9,8 +9,8 @@ import java.time.Instant;
  * <ul>
  *   <li>{@code id} 主键。</li>
  *   <li>{@code provenanceId} 所属来源。</li>
- *   <li>{@code taskType} 任务类型。</li>
- *   <li>{@code taskTypeKey} 任务子键。</li>
+ *   <li>{@code operationType} 操作类型。</li>
+ *   <li>{@code operationTypeKey} 操作子键。</li>
  *   <li>{@code effectiveFrom} 生效起（含）。</li>
  *   <li>{@code effectiveTo} 生效止（不含）。</li>
  *   <li>{@code windowModeCode} 窗口模式：例如 FIXED / SLIDING / NONE。影响窗口的生成算法。</li>
@@ -36,10 +36,10 @@ public record WindowOffsetResp(
         Long id,
         /** 来源 ID */
         Long provenanceId,
-        /** 任务类型 */
-        String taskType,
-        /** 任务子键 */
-        String taskTypeKey,
+        /** 操作类型 */
+        String operationType,
+        /** 操作子键 */
+        String operationTypeKey,
         /** 生效起 */
         Instant effectiveFrom,
         /** 生效止（不含） */

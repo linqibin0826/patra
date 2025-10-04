@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
     `id`                  BIGINT UNSIGNED NOT NULL COMMENT 'Primary key (snowflake/sequence); internal identifier',
     `provenance_id`       BIGINT UNSIGNED NOT NULL COMMENT 'Source ID (logical FK -> reg_provenance.id) to distinguish providers',
 
-    `task_type`           VARCHAR(32)     NULL COMMENT 'Task type (optional): HARVEST/UPDATE/BACKFILL/SANDBOX; for task-level gray rollout',
-    `task_type_key`       VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT 'Generated column: normalize NULL to ALL for stable join/unique key',
+    `operation_type`           VARCHAR(32)     NULL COMMENT 'Task type (optional): HARVEST/UPDATE/BACKFILL/SANDBOX; for task-level gray rollout',
+    `operation_type_key`       VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Generated column: normalize NULL to ALL for stable join/unique key',
 
     `operation_code`      VARCHAR(32)     NOT NULL COMMENT 'Endpoint operation code (dict reg_operation): SEARCH/DETAIL/LOOKUP..., consistent with endpoint execution contract',
     `std_key`             VARCHAR(64)     NOT NULL COMMENT 'Standard key (unified internal semantic key): e.g., from/to/ti/ab; typically produced during rendering',
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_param_map__dim_from`
-        (`provenance_id`, `task_type_key`, `operation_code`, `std_key`,
+        (`provenance_id`, `operation_type_key`, `operation_code`, `std_key`,
          `effective_from`) COMMENT 'Dimension uniqueness + start time to ensure at most one match at any time'
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC
@@ -92,8 +92,8 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
     `id`                          BIGINT UNSIGNED NOT NULL COMMENT 'Primary key (snowflake/sequence); internal identifier',
     `provenance_id`               BIGINT UNSIGNED NOT NULL COMMENT 'Source ID (logical FK -> reg_provenance.id)',
 
-    `task_type`                   VARCHAR(32)     NULL COMMENT 'Task type (optional): HARVEST/UPDATE/BACKFILL...',
-    `task_type_key`               VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT 'Generated column: normalize NULL to ALL',
+    `operation_type`                   VARCHAR(32)     NULL COMMENT 'Task type (optional): HARVEST/UPDATE/BACKFILL...',
+    `operation_type_key`               VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Generated column: normalize NULL to ALL',
 
     `field_key`                   VARCHAR(64)     NOT NULL COMMENT 'Unified internal field key (logical FK -> reg_expr_field_dict.field_key)',
 
@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_cap__dim_from`
-        (`provenance_id`, `task_type_key`, `field_key`,
+        (`provenance_id`, `operation_type_key`, `field_key`,
          `effective_from`) COMMENT 'Dimension uniqueness + start time to ensure a unique match at any time'
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC
@@ -164,8 +164,8 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
     `id`              BIGINT UNSIGNED NOT NULL COMMENT 'Primary key (snowflake/sequence); internal identifier',
     `provenance_id`   BIGINT UNSIGNED NOT NULL COMMENT 'Source ID (logical FK -> reg_provenance.id)',
 
-    `task_type`       VARCHAR(32)     NULL COMMENT 'Task type (optional): HARVEST/UPDATE/BACKFILL...',
-    `task_type_key`   VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`task_type` AS CHAR), 'ALL')) STORED COMMENT 'Generated column: normalize NULL to ALL',
+    `operation_type`       VARCHAR(32)     NULL COMMENT 'Task type (optional): HARVEST/UPDATE/BACKFILL...',
+    `operation_type_key`   VARCHAR(16) GENERATED ALWAYS AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Generated column: normalize NULL to ALL',
 
     `field_key`       VARCHAR(64)     NOT NULL COMMENT 'Unified internal field key (logical FK -> reg_expr_field_dict.field_key)',
     `op_code`         VARCHAR(16)     NOT NULL COMMENT 'Expression operator code (dict reg_expr_op): TERM/IN/RANGE/EXISTS/TOKEN',
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_render__dim_from`
-        (`provenance_id`, `task_type_key`, `field_key`, `op_code`, `match_type_key`, `negated_key`,
+        (`provenance_id`, `operation_type_key`, `field_key`, `op_code`, `match_type_key`, `negated_key`,
          `value_type_key`, `emit_type_code`, `effective_from`) COMMENT 'Dimension uniqueness + start time; normalized keys eliminate NULL ambiguity'
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC

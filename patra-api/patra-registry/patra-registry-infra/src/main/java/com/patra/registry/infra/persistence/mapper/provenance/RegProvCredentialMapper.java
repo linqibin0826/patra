@@ -17,6 +17,6 @@ public interface RegProvCredentialMapper extends BaseMapper<RegProvCredentialDO>
      * 合并查询（TASK/SOURCE + 精确/ALL）并按 默认标记 → effective_from DESC → id DESC 排序返回全部候选。
      */
     List<RegProvCredentialDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                 @Param("taskTypeKey") String taskTypeKey,
+                                                 @Param("operationTypeKey") String operationTypeKey,
                                                  @Param("now") Instant now);
 }

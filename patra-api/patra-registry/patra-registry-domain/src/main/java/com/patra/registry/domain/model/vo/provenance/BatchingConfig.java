@@ -9,64 +9,38 @@ import java.time.Instant;
 public record BatchingConfig(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer detailFetchBatchSize,
-        String credentialName,
         String idsParamName,
         String idsJoinDelimiter,
-        Integer maxIdsPerRequest,
-        boolean preferCompactPayload,
-        String payloadCompressStrategyCode,
-        Integer appParallelismDegree,
-        Integer perHostConcurrencyLimit,
-        Integer httpConnPoolSize,
-        String backpressureStrategyCode,
-        String requestTemplateJson
+        Integer maxIdsPerRequest
 ) {
     public BatchingConfig(Long id,
                           Long provenanceId,
-                          String taskType,
-                          String taskTypeKey,
+                          String operationType,
+                          String operationTypeKey,
                           Instant effectiveFrom,
                           Instant effectiveTo,
                           Integer detailFetchBatchSize,
-                          String credentialName,
                           String idsParamName,
                           String idsJoinDelimiter,
-                          Integer maxIdsPerRequest,
-                          boolean preferCompactPayload,
-                          String payloadCompressStrategyCode,
-                          Integer appParallelismDegree,
-                          Integer perHostConcurrencyLimit,
-                          Integer httpConnPoolSize,
-                          String backpressureStrategyCode,
-                          String requestTemplateJson) {
+                          Integer maxIdsPerRequest) {
         DomainValidationException.positive(id, "Batching config id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String payloadCompressTrimmed = DomainValidationException.notBlank(payloadCompressStrategyCode, "Payload compress strategy code");
-        String backpressureTrimmed = DomainValidationException.notBlank(backpressureStrategyCode, "Backpressure strategy code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // 已验证
-        this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom; // 非 null 已验证
+        this.id = id;
+        this.provenanceId = provenanceId;
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
+        this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.detailFetchBatchSize = detailFetchBatchSize;
-        this.credentialName = credentialName != null ? credentialName.trim() : null;
         this.idsParamName = idsParamName != null ? idsParamName.trim() : null;
         this.idsJoinDelimiter = idsJoinDelimiter != null ? idsJoinDelimiter.trim() : null;
         this.maxIdsPerRequest = maxIdsPerRequest;
-        this.preferCompactPayload = preferCompactPayload;
-        this.payloadCompressStrategyCode = payloadCompressTrimmed;
-        this.appParallelismDegree = appParallelismDegree;
-        this.perHostConcurrencyLimit = perHostConcurrencyLimit;
-        this.httpConnPoolSize = httpConnPoolSize;
-        this.backpressureStrategyCode = backpressureTrimmed;
-        this.requestTemplateJson = requestTemplateJson;
     }
 }

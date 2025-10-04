@@ -11,8 +11,8 @@ import java.time.LocalDate;
 public record ExprCapability(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         String fieldKey,
         Instant effectiveFrom,
         Instant effectiveTo,
@@ -43,8 +43,8 @@ public record ExprCapability(
 ) {
     public ExprCapability(Long id,
                           Long provenanceId,
-                          String taskType,
-                          String taskTypeKey,
+                          String operationType,
+                          String operationTypeKey,
                           String fieldKey,
                           Instant effectiveFrom,
                           Instant effectiveTo,
@@ -80,8 +80,8 @@ public record ExprCapability(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.fieldKey = fieldKeyTrimmed;
         this.effectiveFrom = effectiveFrom; // 非 null 已验证
         this.effectiveTo = effectiveTo;

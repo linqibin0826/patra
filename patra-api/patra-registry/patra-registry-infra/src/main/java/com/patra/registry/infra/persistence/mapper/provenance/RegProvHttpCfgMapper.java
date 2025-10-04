@@ -14,6 +14,6 @@ import java.util.Optional;
 public interface RegProvHttpCfgMapper extends BaseMapper<RegProvHttpCfgDO> {
 
     Optional<RegProvHttpCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                  @Param("taskTypeKey") String taskTypeKey,
+                                                  @Param("operationTypeKey") String operationTypeKey,
                                                   @Param("now") Instant now);
 }

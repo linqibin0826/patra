@@ -10,8 +10,8 @@ import java.time.Instant;
 public record RetryConfigQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer maxRetryTimes,
@@ -39,8 +39,8 @@ public record RetryConfigQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         backoffPolicyTypeCode = backoffPolicyTypeCode.trim();
     }
 }

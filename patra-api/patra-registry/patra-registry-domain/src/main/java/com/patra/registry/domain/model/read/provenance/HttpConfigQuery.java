@@ -10,19 +10,16 @@ import java.time.Instant;
 public record HttpConfigQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
-        String baseUrlOverride,
         String defaultHeadersJson,
         Integer timeoutConnectMillis,
         Integer timeoutReadMillis,
         Integer timeoutTotalMillis,
         boolean tlsVerifyEnabled,
         String proxyUrlValue,
-        boolean acceptCompressEnabled,
-        boolean preferHttp2Enabled,
         String retryAfterPolicyCode,
         Integer retryAfterCapMillis,
         String idempotencyHeaderName,
@@ -41,10 +38,8 @@ public record HttpConfigQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        baseUrlOverride = baseUrlOverride != null ? baseUrlOverride.trim() : null;
-    // defaultHeadersJson 原值保持（允许为 null，不做 trim）
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         proxyUrlValue = proxyUrlValue != null ? proxyUrlValue.trim() : null;
         retryAfterPolicyCode = retryAfterPolicyCode.trim();
         idempotencyHeaderName = idempotencyHeaderName != null ? idempotencyHeaderName.trim() : null;

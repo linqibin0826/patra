@@ -25,17 +25,14 @@ public class RegProvHttpCfgDO extends BaseDO {
     @TableField("provenance_id")
     private Long provenanceId;
 
-    @TableField("task_type")
-    private String taskType;
+    @TableField("operation_type")
+    private String operationType;
 
     @TableField("effective_from")
     private Instant effectiveFrom;
 
     @TableField("effective_to")
     private Instant effectiveTo;
-
-    @TableField("base_url_override")
-    private String baseUrlOverride;
 
     @TableField("default_headers_json")
     private String defaultHeadersJson;
@@ -55,12 +52,6 @@ public class RegProvHttpCfgDO extends BaseDO {
     @TableField("proxy_url_value")
     private String proxyUrlValue;
 
-    @TableField("accept_compress_enabled")
-    private Boolean acceptCompressEnabled;
-
-    @TableField("prefer_http2_enabled")
-    private Boolean preferHttp2Enabled;
-
     @TableField("retry_after_policy_code")
     private String retryAfterPolicyCode;
 
@@ -73,8 +64,8 @@ public class RegProvHttpCfgDO extends BaseDO {
     @TableField("idempotency_ttl_seconds")
     private Integer idempotencyTtlSeconds;
 
-    @TableField("task_type_key")
-    private String taskTypeKey;
+    @TableField("operation_type_key")
+    private String operationTypeKey;
 
     @TableField("lifecycle_status_code")
     private String lifecycleStatusCode;

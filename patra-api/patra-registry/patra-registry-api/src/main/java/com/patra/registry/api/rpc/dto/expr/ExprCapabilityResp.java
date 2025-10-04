@@ -9,7 +9,7 @@ import java.time.LocalDate;
  */
 public record ExprCapabilityResp(
         Long provenanceId,
-        String taskType,
+        String operationType,
         String fieldKey,
         String opsJson,
         String negatableOpsJson,

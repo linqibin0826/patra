@@ -23,10 +23,10 @@ public class ExprClientImpl implements ExprClient {
 
     @Override
     public ExprSnapshotResp getSnapshot(String provenanceCode,
-                                        String taskType,
+                                        String operationType,
                                         String operationCode,
                                         Instant at) {
-        ExprSnapshotQuery snapshot = exprQueryAppService.loadSnapshot(provenanceCode, taskType, operationCode, at);
+        ExprSnapshotQuery snapshot = exprQueryAppService.loadSnapshot(provenanceCode, operationType, operationCode, at);
         return converter.toResp(snapshot);
     }
 }

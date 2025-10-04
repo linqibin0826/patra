@@ -9,19 +9,16 @@ import java.time.Instant;
 public record HttpConfig(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
-        String baseUrlOverride,
         String defaultHeadersJson,
         Integer timeoutConnectMillis,
         Integer timeoutReadMillis,
         Integer timeoutTotalMillis,
         boolean tlsVerifyEnabled,
         String proxyUrlValue,
-        boolean acceptCompressEnabled,
-        boolean preferHttp2Enabled,
         String retryAfterPolicyCode,
         Integer retryAfterCapMillis,
         String idempotencyHeaderName,
@@ -29,19 +26,16 @@ public record HttpConfig(
 ) {
     public HttpConfig(Long id,
                       Long provenanceId,
-                      String taskType,
-                      String taskTypeKey,
+                      String operationType,
+                      String operationTypeKey,
                       Instant effectiveFrom,
                       Instant effectiveTo,
-                      String baseUrlOverride,
                       String defaultHeadersJson,
                       Integer timeoutConnectMillis,
                       Integer timeoutReadMillis,
                       Integer timeoutTotalMillis,
                       boolean tlsVerifyEnabled,
                       String proxyUrlValue,
-                      boolean acceptCompressEnabled,
-                      boolean preferHttp2Enabled,
                       String retryAfterPolicyCode,
                       Integer retryAfterCapMillis,
                       String idempotencyHeaderName,
@@ -51,21 +45,18 @@ public record HttpConfig(
         String retryAfterTrimmed = DomainValidationException.notBlank(retryAfterPolicyCode, "Retry-after policy code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // 已验证
-        this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom; // 非 null 已验证
+        this.id = id;
+        this.provenanceId = provenanceId;
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
+        this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
-        this.baseUrlOverride = baseUrlOverride != null ? baseUrlOverride.trim() : null;
         this.defaultHeadersJson = defaultHeadersJson;
         this.timeoutConnectMillis = timeoutConnectMillis;
         this.timeoutReadMillis = timeoutReadMillis;
         this.timeoutTotalMillis = timeoutTotalMillis;
         this.tlsVerifyEnabled = tlsVerifyEnabled;
         this.proxyUrlValue = proxyUrlValue != null ? proxyUrlValue.trim() : null;
-        this.acceptCompressEnabled = acceptCompressEnabled;
-        this.preferHttp2Enabled = preferHttp2Enabled;
         this.retryAfterPolicyCode = retryAfterTrimmed;
         this.retryAfterCapMillis = retryAfterCapMillis;
         this.idempotencyHeaderName = idempotencyHeaderName != null ? idempotencyHeaderName.trim() : null;

@@ -9,8 +9,8 @@ import java.time.Instant;
 public record Credential(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         String credentialName,
         String authType,
         String inboundLocationCode,
@@ -32,8 +32,8 @@ public record Credential(
 ) {
     public Credential(Long id,
                       Long provenanceId,
-                      String taskType,
-                      String taskTypeKey,
+                      String operationType,
+                      String operationTypeKey,
                       String credentialName,
                       String authType,
                       String inboundLocationCode,
@@ -62,8 +62,8 @@ public record Credential(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.credentialName = nameTrimmed;
         this.authType = authTypeTrimmed;
         this.inboundLocationCode = inboundLocTrimmed;

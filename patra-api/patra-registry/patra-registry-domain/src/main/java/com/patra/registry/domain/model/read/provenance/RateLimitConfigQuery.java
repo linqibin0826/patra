@@ -10,18 +10,12 @@ import java.time.Instant;
 public record RateLimitConfigQuery(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
-        Integer rateTokensPerSecond,
-        Integer burstBucketCapacity,
         Integer maxConcurrentRequests,
-        Integer perCredentialQpsLimit,
-        String bucketGranularityScopeCode,
-        Integer smoothingWindowMillis,
-        boolean respectServerRateHeader,
-        String credentialName
+        Integer perCredentialQpsLimit
 ) {
     public RateLimitConfigQuery {
         if (id == null || id <= 0) {
@@ -30,15 +24,10 @@ public record RateLimitConfigQuery(
         if (provenanceId == null || provenanceId <= 0) {
             throw new DomainValidationException("Provenance id must be positive");
         }
-        if (bucketGranularityScopeCode == null || bucketGranularityScopeCode.isBlank()) {
-            throw new DomainValidationException("Bucket granularity scope code cannot be blank");
-        }
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        taskType = taskType != null ? taskType.trim() : null;
-        taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        bucketGranularityScopeCode = bucketGranularityScopeCode.trim();
-        credentialName = credentialName != null ? credentialName.trim() : null;
+        operationType = operationType != null ? operationType.trim() : null;
+        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
     }
 }

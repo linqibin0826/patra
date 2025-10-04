@@ -8,7 +8,7 @@ import java.time.Instant;
  */
 public record ApiParamMappingQuery(
         Long provenanceId,
-        String taskType,
+        String operationType,
         String operationCode,
         String stdKey,
         String providerParamName,
@@ -22,7 +22,7 @@ public record ApiParamMappingQuery(
         operationCode = DomainValidationException.notBlank(operationCode, "Operation code");
         stdKey = DomainValidationException.notBlank(stdKey, "Standard key");
         providerParamName = DomainValidationException.notBlank(providerParamName, "Provider param name");
-        taskType = taskType != null ? taskType.trim() : null;
+        operationType = operationType != null ? operationType.trim() : null;
         transformCode = transformCode != null ? transformCode.trim() : null;
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
     }

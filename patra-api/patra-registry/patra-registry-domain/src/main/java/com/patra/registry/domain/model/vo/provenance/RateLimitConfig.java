@@ -9,51 +9,32 @@ import java.time.Instant;
 public record RateLimitConfig(
         Long id,
         Long provenanceId,
-        String taskType,
-        String taskTypeKey,
+        String operationType,
+        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
-        Integer rateTokensPerSecond,
-        Integer burstBucketCapacity,
         Integer maxConcurrentRequests,
-        Integer perCredentialQpsLimit,
-        String bucketGranularityScopeCode,
-        Integer smoothingWindowMillis,
-        boolean respectServerRateHeader,
-        String credentialName
+        Integer perCredentialQpsLimit
 ) {
     public RateLimitConfig(Long id,
                            Long provenanceId,
-                           String taskType,
-                           String taskTypeKey,
+                           String operationType,
+                           String operationTypeKey,
                            Instant effectiveFrom,
                            Instant effectiveTo,
-                           Integer rateTokensPerSecond,
-                           Integer burstBucketCapacity,
                            Integer maxConcurrentRequests,
-                           Integer perCredentialQpsLimit,
-                           String bucketGranularityScopeCode,
-                           Integer smoothingWindowMillis,
-                           boolean respectServerRateHeader,
-                           String credentialName) {
+                           Integer perCredentialQpsLimit) {
         DomainValidationException.positive(id, "Rate limit config id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String bucketScopeTrimmed = DomainValidationException.notBlank(bucketGranularityScopeCode, "Bucket granularity scope code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // 已验证
-        this.provenanceId = provenanceId; // 已验证
-        this.taskType = taskType != null ? taskType.trim() : null;
-        this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom; // 非 null 已验证
+        this.id = id;
+        this.provenanceId = provenanceId;
+        this.operationType = operationType != null ? operationType.trim() : null;
+        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
+        this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
-        this.rateTokensPerSecond = rateTokensPerSecond;
-        this.burstBucketCapacity = burstBucketCapacity;
         this.maxConcurrentRequests = maxConcurrentRequests;
         this.perCredentialQpsLimit = perCredentialQpsLimit;
-        this.bucketGranularityScopeCode = bucketScopeTrimmed;
-        this.smoothingWindowMillis = smoothingWindowMillis;
-        this.respectServerRateHeader = respectServerRateHeader;
-        this.credentialName = credentialName != null ? credentialName.trim() : null;
     }
 }
