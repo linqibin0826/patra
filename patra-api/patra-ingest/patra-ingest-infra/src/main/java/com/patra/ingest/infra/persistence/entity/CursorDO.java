@@ -2,7 +2,7 @@ package com.patra.ingest.infra.persistence.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.patra.starter.mybatis.entity.BaseDO.BaseDO;
+import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
