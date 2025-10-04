@@ -10,7 +10,6 @@ import java.time.LocalDate;
  */
 public record ExprCapabilityQuery(
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String fieldKey,
         String opsJson,
@@ -42,7 +41,6 @@ public record ExprCapabilityQuery(
 ) {
     public ExprCapabilityQuery {
         DomainValidationException.positive(provenanceId, "Provenance id");
-        scopeCode = DomainValidationException.notBlank(scopeCode, "Scope code");
         fieldKey = DomainValidationException.notBlank(fieldKey, "Field key");
         rangeKindCode = DomainValidationException.notBlank(rangeKindCode, "Range kind code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");

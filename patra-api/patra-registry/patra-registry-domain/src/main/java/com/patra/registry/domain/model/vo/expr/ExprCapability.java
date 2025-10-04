@@ -11,7 +11,6 @@ import java.time.LocalDate;
 public record ExprCapability(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         String fieldKey,
@@ -44,7 +43,6 @@ public record ExprCapability(
 ) {
     public ExprCapability(Long id,
                           Long provenanceId,
-                          String scopeCode,
                           String taskType,
                           String taskTypeKey,
                           String fieldKey,
@@ -76,14 +74,12 @@ public record ExprCapability(
                           String tokenValuePattern) {
         DomainValidationException.positive(id, "Capability id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
         String fieldKeyTrimmed = DomainValidationException.notBlank(fieldKey, "Field key");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
         String rangeKindTrimmed = DomainValidationException.notBlank(rangeKindCode, "Range kind code");
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.fieldKey = fieldKeyTrimmed;

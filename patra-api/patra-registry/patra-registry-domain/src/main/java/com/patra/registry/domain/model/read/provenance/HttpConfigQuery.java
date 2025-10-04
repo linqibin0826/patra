@@ -10,7 +10,6 @@ import java.time.Instant;
 public record HttpConfigQuery(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         Instant effectiveFrom,
@@ -36,16 +35,12 @@ public record HttpConfigQuery(
         if (provenanceId == null || provenanceId <= 0) {
             throw new DomainValidationException("Provenance id must be positive");
         }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new DomainValidationException("Scope code cannot be blank");
-        }
         if (retryAfterPolicyCode == null || retryAfterPolicyCode.isBlank()) {
             throw new DomainValidationException("Retry-after policy code cannot be blank");
         }
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;
         taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         baseUrlOverride = baseUrlOverride != null ? baseUrlOverride.trim() : null;

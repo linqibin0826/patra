@@ -9,7 +9,6 @@ import com.patra.registry.domain.exception.DomainValidationException;
 public record ExprRenderRule(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         String fieldKey,
@@ -32,7 +31,6 @@ public record ExprRenderRule(
 ) {
     public ExprRenderRule(Long id,
                           Long provenanceId,
-                          String scopeCode,
                           String taskType,
                           String taskTypeKey,
                           String fieldKey,
@@ -54,7 +52,6 @@ public record ExprRenderRule(
                           String functionCode) {
         if (id == null || id <= 0) throw new DomainValidationException("Render rule id must be positive");
         if (provenanceId == null || provenanceId <= 0) throw new DomainValidationException("Provenance id must be positive");
-        if (scopeCode == null || scopeCode.isBlank()) throw new DomainValidationException("Scope code cannot be blank");
         if (fieldKey == null || fieldKey.isBlank()) throw new DomainValidationException("Field key cannot be blank");
         if (opCode == null || opCode.isBlank()) throw new DomainValidationException("Operation code cannot be blank");
         if (emitTypeCode == null || emitTypeCode.isBlank()) throw new DomainValidationException("Emit type code cannot be blank");
@@ -65,7 +62,6 @@ public record ExprRenderRule(
 
         this.id = id;
         this.provenanceId = provenanceId;
-        this.scopeCode = scopeCode.trim();
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.fieldKey = fieldKey.trim();

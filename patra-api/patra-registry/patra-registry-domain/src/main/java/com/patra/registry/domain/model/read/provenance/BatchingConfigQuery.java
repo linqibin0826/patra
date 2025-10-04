@@ -10,7 +10,6 @@ import java.time.Instant;
 public record BatchingConfigQuery(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         Instant effectiveFrom,
@@ -35,9 +34,6 @@ public record BatchingConfigQuery(
         if (provenanceId == null || provenanceId <= 0) {
             throw new DomainValidationException("Provenance id must be positive");
         }
-        if (scopeCode == null || scopeCode.isBlank()) {
-            throw new DomainValidationException("Scope code cannot be blank");
-        }
         if (payloadCompressStrategyCode == null || payloadCompressStrategyCode.isBlank()) {
             throw new DomainValidationException("Payload compress strategy code cannot be blank");
         }
@@ -47,7 +43,6 @@ public record BatchingConfigQuery(
         if (effectiveFrom == null) {
             throw new DomainValidationException("Effective from cannot be null");
         }
-        scopeCode = scopeCode.trim();
         taskType = taskType != null ? taskType.trim() : null;
         taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         credentialName = credentialName != null ? credentialName.trim() : null;

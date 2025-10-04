@@ -9,7 +9,6 @@ import java.time.Instant;
 public record WindowOffsetConfig(
         Long id,
         Long provenanceId,
-        String scopeCode,
         String taskType,
         String taskTypeKey,
         Instant effectiveFrom,
@@ -32,7 +31,6 @@ public record WindowOffsetConfig(
 ) {
     public WindowOffsetConfig(Long id,
                               Long provenanceId,
-                              String scopeCode,
                               String taskType,
                               String taskTypeKey,
                               Instant effectiveFrom,
@@ -54,7 +52,6 @@ public record WindowOffsetConfig(
                               Integer maxWindowSpanSeconds) {
         DomainValidationException.positive(id, "Window offset config id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String scopeTrimmed = DomainValidationException.notBlank(scopeCode, "Scope code");
         String modeTrimmed = DomainValidationException.notBlank(windowModeCode, "Window mode code");
         String sizeUnitTrimmed = DomainValidationException.notBlank(windowSizeUnitCode, "Window size unit code");
         String offsetTypeTrimmed = DomainValidationException.notBlank(offsetTypeCode, "Offset type code");
@@ -62,7 +59,6 @@ public record WindowOffsetConfig(
 
         this.id = id; // 已验证
         this.provenanceId = provenanceId; // 已验证
-        this.scopeCode = scopeTrimmed;
         this.taskType = taskType != null ? taskType.trim() : null;
         this.taskTypeKey = taskTypeKey != null ? taskTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom; // 非 null 已验证

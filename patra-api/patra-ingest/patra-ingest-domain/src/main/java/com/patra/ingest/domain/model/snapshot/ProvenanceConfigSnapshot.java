@@ -51,7 +51,6 @@ public record ProvenanceConfigSnapshot(
     public record WindowOffsetConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 生效起（含） */ Instant effectiveFrom,
@@ -81,7 +80,6 @@ public record ProvenanceConfigSnapshot(
     public record PaginationConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 生效起（含） */ Instant effectiveFrom,
@@ -112,7 +110,6 @@ public record ProvenanceConfigSnapshot(
     public record HttpConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 生效起（含） */ Instant effectiveFrom,
@@ -140,7 +137,6 @@ public record ProvenanceConfigSnapshot(
     public record BatchingConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 生效起（含） */ Instant effectiveFrom,
@@ -167,7 +163,6 @@ public record ProvenanceConfigSnapshot(
     public record RetryConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 生效起（含） */ Instant effectiveFrom,
@@ -193,7 +188,6 @@ public record ProvenanceConfigSnapshot(
     public record RateLimitConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 生效起（含） */ Instant effectiveFrom,
@@ -218,7 +212,6 @@ public record ProvenanceConfigSnapshot(
     public record CredentialConfig(
             /* 主键ID */ Long id,
             /* 来源ID */ Long provenanceId,
-            /* 作用域 (scope: SOURCE|TASK) */ String scopeCode,
             /* 任务类型（可空） */ String taskType,
             /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
             /* 凭证名称（选择标签） */ String credentialName,

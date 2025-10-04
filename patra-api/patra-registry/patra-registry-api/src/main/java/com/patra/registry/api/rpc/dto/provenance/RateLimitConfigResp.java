@@ -9,7 +9,6 @@ import java.time.Instant;
  * <ul>
  *   <li>{@code id} 主键。</li>
  *   <li>{@code provenanceId} 来源 ID。</li>
- *   <li>{@code scopeCode} 作用域。</li>
  *   <li>{@code taskType} 任务类型。</li>
  *   <li>{@code taskTypeKey} 任务子键。</li>
  *   <li>{@code effectiveFrom} 生效起。</li>
@@ -29,8 +28,6 @@ public record RateLimitConfigResp(
         Long id,
         /** 来源 ID */
         Long provenanceId,
-        /** 作用域编码 */
-        String scopeCode,
         /** 任务类型 */
         String taskType,
         /** 任务子键 */

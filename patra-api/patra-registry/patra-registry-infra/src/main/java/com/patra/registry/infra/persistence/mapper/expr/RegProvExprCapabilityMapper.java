@@ -22,40 +22,44 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
             WHERE deleted = 0
               AND lifecycle_status_code = 'ACTIVE'
               AND provenance_id = #{provenanceId}
-              AND scope_code = #{scopeCode}
-              AND task_type_key = #{taskTypeKey}
+              AND task_type_key IN (#{taskTypeKey}, 'ALL')
               AND field_key = #{fieldKey}
               AND effective_from <= #{now}
               AND (effective_to IS NULL OR effective_to > #{now})
-            ORDER BY effective_from DESC, id DESC
+            ORDER BY
+              CASE WHEN task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+              effective_from DESC,
+              id DESC
             LIMIT 1
             """)
     Optional<RegProvExprCapabilityDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                   @Param("scopeCode") String scopeCode,
                                                    @Param("taskTypeKey") String taskTypeKey,
                                                    @Param("fieldKey") String fieldKey,
                                                    @Param("now") Instant now);
 
-    /** 查询指定维度下全部当前生效的字段能力。 */
+    /** 查询指定任务维度（含 ALL 回退）下全部当前生效的字段能力。 */
     @Select("""
             SELECT *
             FROM (
                 SELECT c.*,
-                       ROW_NUMBER() OVER (PARTITION BY c.scope_code, c.task_type_key, c.field_key
-                                          ORDER BY c.effective_from DESC, c.id DESC) AS rn
+                       ROW_NUMBER() OVER (
+                           PARTITION BY c.field_key
+                           ORDER BY CASE WHEN c.task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+                                    c.effective_from DESC,
+                                    c.id DESC
+                       ) AS rn
                 FROM reg_prov_expr_capability c
                 WHERE c.deleted = 0
                   AND c.lifecycle_status_code = 'ACTIVE'
                   AND c.provenance_id = #{provenanceId}
-                  AND c.scope_code = #{scopeCode}
-                  AND c.task_type_key = #{taskTypeKey}
+                  AND c.task_type_key IN (#{taskTypeKey}, 'ALL')
                   AND c.effective_from <= #{now}
                   AND (c.effective_to IS NULL OR c.effective_to > #{now})
             ) t
             WHERE t.rn = 1
+            ORDER BY t.field_key
             """)
-    List<RegProvExprCapabilityDO> selectActiveByScope(@Param("provenanceId") Long provenanceId,
-                                                      @Param("scopeCode") String scopeCode,
-                                                      @Param("taskTypeKey") String taskTypeKey,
-                                                      @Param("now") Instant now);
+    List<RegProvExprCapabilityDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
+                                                     @Param("taskTypeKey") String taskTypeKey,
+                                                     @Param("now") Instant now);
 }

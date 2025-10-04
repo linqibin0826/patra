@@ -22,8 +22,7 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
             WHERE deleted = 0
               AND lifecycle_status_code = 'ACTIVE'
               AND provenance_id = #{provenanceId}
-              AND scope_code = #{scopeCode}
-              AND task_type_key = #{taskTypeKey}
+              AND task_type_key IN (#{taskTypeKey}, 'ALL')
               AND field_key = #{fieldKey}
               AND op_code = #{opCode}
               AND match_type_key = #{matchTypeKey}
@@ -32,11 +31,13 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
               AND emit_type_code = #{emitTypeCode}
               AND effective_from <= #{now}
               AND (effective_to IS NULL OR effective_to > #{now})
-            ORDER BY effective_from DESC, id DESC
+            ORDER BY
+              CASE WHEN task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+              effective_from DESC,
+              id DESC
             LIMIT 1
             """)
     Optional<RegProvExprRenderRuleDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                   @Param("scopeCode") String scopeCode,
                                                    @Param("taskTypeKey") String taskTypeKey,
                                                    @Param("fieldKey") String fieldKey,
                                                    @Param("opCode") String opCode,
@@ -46,29 +47,29 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
                                                    @Param("emitTypeCode") String emitTypeCode,
                                                    @Param("now") Instant now);
 
-    /** 查询指定维度下全部当前生效的渲染规则。 */
+    /** 查询指定任务维度（含 ALL 回退）下全部当前生效的渲染规则。 */
     @Select("""
             SELECT *
             FROM (
                 SELECT r.*,
                        ROW_NUMBER() OVER (
-                           PARTITION BY r.scope_code, r.task_type_key, r.field_key,
-                                        r.op_code, r.match_type_key, r.negated_key, r.value_type_key, r.emit_type_code
-                           ORDER BY r.effective_from DESC, r.id DESC
+                           PARTITION BY r.field_key, r.op_code, r.match_type_key, r.negated_key, r.value_type_key, r.emit_type_code
+                           ORDER BY CASE WHEN r.task_type_key = #{taskTypeKey} THEN 1 ELSE 2 END,
+                                    r.effective_from DESC,
+                                    r.id DESC
                        ) AS rn
                 FROM reg_prov_expr_render_rule r
                 WHERE r.deleted = 0
                   AND r.lifecycle_status_code = 'ACTIVE'
                   AND r.provenance_id = #{provenanceId}
-                  AND r.scope_code = #{scopeCode}
-                  AND r.task_type_key = #{taskTypeKey}
+                  AND r.task_type_key IN (#{taskTypeKey}, 'ALL')
                   AND r.effective_from <= #{now}
                   AND (r.effective_to IS NULL OR r.effective_to > #{now})
             ) t
             WHERE t.rn = 1
+            ORDER BY t.field_key, t.op_code, t.match_type_key, t.negated_key, t.value_type_key, t.emit_type_code
             """)
-    List<RegProvExprRenderRuleDO> selectActiveByScope(@Param("provenanceId") Long provenanceId,
-                                                      @Param("scopeCode") String scopeCode,
-                                                      @Param("taskTypeKey") String taskTypeKey,
-                                                      @Param("now") Instant now);
+    List<RegProvExprRenderRuleDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
+                                                     @Param("taskTypeKey") String taskTypeKey,
+                                                     @Param("now") Instant now);
 }

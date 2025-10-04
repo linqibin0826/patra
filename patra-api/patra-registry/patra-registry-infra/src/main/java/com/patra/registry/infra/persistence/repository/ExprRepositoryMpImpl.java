@@ -1,13 +1,10 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.domain.support.RegistryKeyNormalizer;
-import com.patra.registry.domain.support.RegistryKeyPlaceholders;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
-import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper;
@@ -19,15 +16,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Expr 仓储 MyBatis 实现。
  * <p>职责：聚合 Expr 相关 DO（字段字典 / 能力 / 渲染规则 / 参数映射）并生成领域快照。</p>
- * <p>说明：按 SOURCE → TASK 作用域顺序合并，TASK 级覆盖同 key 的 SOURCE 级条目。</p>
+ * <p>说明：优先匹配精确 taskTypeKey，若不存在则回退到 ALL 默认配置。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -53,13 +47,12 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
         String taskKey = RegistryKeyNormalizer.normalizeTaskKey(taskType);
-        boolean hasTaskScope = !RegistryKeyPlaceholders.ALL.equals(taskKey);
         String normalizedOperation = RegistryKeyNormalizer.normalizeCode(operationCode);
 
         List<ExprField> fields = loadFields();
-        List<ExprCapability> capabilities = loadCapabilities(provenanceId, taskKey, hasTaskScope, timestamp);
-        List<ExprRenderRule> renderRules = loadRenderRules(provenanceId, taskKey, hasTaskScope, timestamp);
-        List<ApiParamMapping> apiParams = loadApiParamMappings(provenanceId, taskKey, normalizedOperation, hasTaskScope, timestamp);
+        List<ExprCapability> capabilities = loadCapabilities(provenanceId, taskKey, timestamp);
+        List<ExprRenderRule> renderRules = loadRenderRules(provenanceId, taskKey, timestamp);
+        List<ApiParamMapping> apiParams = loadApiParamMappings(provenanceId, taskKey, normalizedOperation, timestamp);
 
         return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
     }
@@ -72,45 +65,27 @@ public class ExprRepositoryMpImpl implements ExprRepository {
 
     private List<ExprCapability> loadCapabilities(Long provenanceId,
                                                    String taskKey,
-                                                   boolean hasTaskScope,
                                                    Instant timestamp) {
-        Map<String, ExprCapability> capabilityMap = new LinkedHashMap<>();
-        capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeyPlaceholders.ALL, timestamp)
-                .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
-        if (hasTaskScope) {
-            capabilityMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, timestamp)
-                    .forEach(entity -> capabilityMap.put(entity.getFieldKey(), converter.toDomain(entity)));
-        }
-        return new ArrayList<>(capabilityMap.values());
+        return capabilityMapper.selectActiveByTask(provenanceId, taskKey, timestamp).stream()
+                .map(converter::toDomain)
+                .toList();
     }
 
     private List<ExprRenderRule> loadRenderRules(Long provenanceId,
                                                  String taskKey,
-                                                 boolean hasTaskScope,
                                                  Instant timestamp) {
-        Map<String, ExprRenderRule> renderRuleMap = new LinkedHashMap<>();
-        renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeyPlaceholders.ALL, timestamp)
-                .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
-        if (hasTaskScope) {
-            renderRuleMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, timestamp)
-                    .forEach(entity -> renderRuleMap.put(renderRuleKey(entity), converter.toDomain(entity)));
-        }
-        return new ArrayList<>(renderRuleMap.values());
+        return renderRuleMapper.selectActiveByTask(provenanceId, taskKey, timestamp).stream()
+                .map(converter::toDomain)
+                .toList();
     }
 
     private List<ApiParamMapping> loadApiParamMappings(Long provenanceId,
                                                        String taskKey,
                                                        String normalizedOperation,
-                                                       boolean hasTaskScope,
                                                        Instant timestamp) {
-        Map<String, ApiParamMapping> paramMappings = new LinkedHashMap<>();
-        apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.SOURCE.code(), RegistryKeyPlaceholders.ALL, normalizedOperation, timestamp)
-                .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
-        if (hasTaskScope) {
-            apiParamMapMapper.selectActiveByScope(provenanceId, RegistryConfigScope.TASK.code(), taskKey, normalizedOperation, timestamp)
-                    .forEach(entity -> paramMappings.put(entity.getStdKey(), converter.toDomain(entity)));
-        }
-        return new ArrayList<>(paramMappings.values());
+        return apiParamMapMapper.selectActiveByTask(provenanceId, taskKey, normalizedOperation, timestamp).stream()
+                .map(converter::toDomain)
+                .toList();
     }
 
     private Instant atOrNow(Instant at) {
@@ -122,15 +97,5 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         return provenanceMapper.selectByCode(code)
                 .map(RegProvenanceDO::getId)
                 .orElseThrow(() -> new IllegalArgumentException("Provenance code not found: " + code));
-    }
-
-    private String renderRuleKey(RegProvExprRenderRuleDO entity) {
-        String field = RegistryKeyNormalizer.normalizeFieldKey(entity.getFieldKey());
-        String op = RegistryKeyNormalizer.normalizeCode(entity.getOpCode());
-        String matchKey = RegistryKeyNormalizer.normalizeMatchKey(entity.getMatchTypeKey());
-        String negatedKey = RegistryKeyNormalizer.normalizeNegatedKey(entity.getNegated());
-        String valueKey = RegistryKeyNormalizer.normalizeValueKey(entity.getValueTypeKey());
-        String emit = RegistryKeyNormalizer.normalizeCode(entity.getEmitTypeCode());
-        return String.join("|", field, op, matchKey, negatedKey, valueKey, emit);
     }
 }
