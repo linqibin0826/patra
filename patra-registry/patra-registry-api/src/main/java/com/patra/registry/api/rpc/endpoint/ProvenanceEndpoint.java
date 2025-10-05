@@ -11,26 +11,45 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Provenance 配置内部 API 契约。
+ * Internal API contract for provenance configuration.
+ *
+ * <p>Exposes endpoints for querying provenance metadata and effective configuration
+ * to internal microservices via Feign client integration.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public interface ProvenanceEndpoint {
 
     String BASE_PATH = "/_internal/provenances";
 
     /**
-     * 列出所有来源。
+     * Lists all available provenances.
+     *
+     * @return list of provenance response DTOs
      */
     @GetMapping(BASE_PATH)
     List<ProvenanceResp> listProvenances();
 
     /**
-     * 查询单个来源。
+     * Retrieves a single provenance by its code.
+     *
+     * @param code the provenance code to look up
+     * @return provenance response DTO
      */
     @GetMapping(BASE_PATH + "/{code}")
     ProvenanceResp getProvenance(@PathVariable("code") ProvenanceCode code);
 
     /**
-     * 加载来源配置聚合。
+     * Loads the aggregated configuration for a provenance.
+     *
+     * <p>Retrieves the effective configuration by resolving temporal slices
+     * and assembling all dimension configs into a unified view.</p>
+     *
+     * @param code the provenance code to load configuration for
+     * @param operationType the operation type discriminator (e.g., HARVEST/UPDATE); {@code null} means ALL
+     * @param at the instant to query effective configs; {@code null} defaults to current time
+     * @return provenance configuration response DTO
      */
     @GetMapping(BASE_PATH + "/{code}/config")
     ProvenanceConfigResp getConfiguration(@PathVariable("code") ProvenanceCode code,

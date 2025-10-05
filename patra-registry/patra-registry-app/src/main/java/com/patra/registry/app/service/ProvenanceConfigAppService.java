@@ -16,7 +16,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Provenance 配置查询应用服务。
+ * Application service for querying provenance configuration.
+ *
+ * <p>Orchestrates read operations on provenance metadata and effective configuration
+ * by assembling domain objects into query DTOs for consumption by external clients.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Service
@@ -26,21 +32,38 @@ public class ProvenanceConfigAppService {
     private final ProvenanceConfigRepository repository;
     private final ProvenanceQueryAssembler assembler;
 
-    /** 查询所有来源元数据。 */
+    /**
+     * Lists all available provenances.
+     *
+     * @return list of provenance query DTOs
+     */
     public List<ProvenanceQuery> listProvenances() {
         return repository.findAllProvenances().stream()
                 .map(assembler::toQuery)
                 .toList();
     }
 
-    /** 按编码查询来源元数据。 */
+    /**
+     * Finds a specific provenance by its code.
+     *
+     * @param provenanceCode the provenance code to look up
+     * @return optional containing the provenance query DTO if found
+     */
     public Optional<ProvenanceQuery> findProvenance(ProvenanceCode provenanceCode) {
         return repository.findProvenanceByCode(provenanceCode)
                 .map(assembler::toQuery);
     }
 
     /**
-     * 加载来源在指定操作语义下的聚合配置。
+     * Loads the aggregated configuration for a provenance under a specific operation type.
+     *
+     * <p>Retrieves the effective configuration by resolving temporal slices at the given instant
+     * and assembling all dimension configs (HTTP, pagination, retry, etc.) into a unified view.</p>
+     *
+     * @param provenanceCode the provenance code to load configuration for
+     * @param operationType  the operation type discriminator (e.g., HARVEST/UPDATE); {@code null} means ALL
+     * @param at             the instant to query effective configs; {@code null} defaults to current time
+     * @return optional containing the configuration query DTO if provenance exists
      */
     public Optional<ProvenanceConfigQuery> loadConfiguration(ProvenanceCode provenanceCode,
                                                              String operationType,

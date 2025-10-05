@@ -11,7 +11,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 /**
- * Expr 内部 API 实现。
+ * Implementation of the expression internal API (Feign client endpoint).
+ *
+ * <p>Exposes expression snapshot retrieval capabilities to other microservices
+ * via internal RPC contract, delegating to application service and converting
+ * query DTOs to API response DTOs.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @RestController
