@@ -15,6 +15,6 @@ public interface ExprRepository {
      */
     ExprSnapshot loadSnapshot(ProvenanceCode provenanceCode,
                               String operationType,
-                              String operationCode,
+                              String endpointName,
                               Instant at);
 }

@@ -42,18 +42,18 @@ public class ExprRepositoryMpImpl implements ExprRepository {
     @Override
     public ExprSnapshot loadSnapshot(ProvenanceCode provenanceCode,
                                      String operationType,
-                                     String operationCode,
+                                     String endpointName,
                                      Instant at) {
         Instant timestamp = atOrNow(at);
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
         String operationKey = RegistryKeyNormalizer.normalizeOperationKey(operationType);
-        String normalizedOperation = RegistryKeyNormalizer.normalizeCode(operationCode);
+        String normalizedEndpoint = RegistryKeyNormalizer.normalizeCode(endpointName);
 
         List<ExprField> fields = loadFields();
         List<ExprCapability> capabilities = loadCapabilities(provenanceId, operationKey, timestamp);
         List<ExprRenderRule> renderRules = loadRenderRules(provenanceId, operationKey, timestamp);
-        List<ApiParamMapping> apiParams = loadApiParamMappings(provenanceId, operationKey, normalizedOperation, timestamp);
+        List<ApiParamMapping> apiParams = loadApiParamMappings(provenanceId, operationKey, normalizedEndpoint, timestamp);
 
         return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
     }
@@ -82,9 +82,9 @@ public class ExprRepositoryMpImpl implements ExprRepository {
 
     private List<ApiParamMapping> loadApiParamMappings(Long provenanceId,
                                                        String operationKey,
-                                                       String normalizedOperation,
+                                                       String normalizedEndpoint,
                                                        Instant timestamp) {
-        return apiParamMapMapper.selectActiveByTask(provenanceId, operationKey, normalizedOperation, timestamp).stream()
+        return apiParamMapMapper.selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
     }

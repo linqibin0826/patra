@@ -9,7 +9,7 @@ import java.time.Instant;
 public record ApiParamMappingQuery(
         Long provenanceId,
         String operationType,
-        String operationCode,
+        String endpointName,
         String stdKey,
         String providerParamName,
         String transformCode,
@@ -19,10 +19,10 @@ public record ApiParamMappingQuery(
 ) {
     public ApiParamMappingQuery {
         DomainValidationException.positive(provenanceId, "Provenance id");
-        operationCode = DomainValidationException.notBlank(operationCode, "Operation code");
         stdKey = DomainValidationException.notBlank(stdKey, "Standard key");
         providerParamName = DomainValidationException.notBlank(providerParamName, "Provider param name");
         operationType = operationType != null ? operationType.trim() : null;
+        endpointName = endpointName != null ? endpointName.trim() : null;
         transformCode = transformCode != null ? transformCode.trim() : null;
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
     }

@@ -9,11 +9,12 @@
           AND lifecycle_status_code = 'ACTIVE'
           AND provenance_id = #{provenanceId}
           AND operation_type IN (#{operationType}, 'ALL')
-          AND operation_code = #{operationCode}
+          AND (endpoint_name = #{endpointName} OR endpoint_name IS NULL)
           AND std_key = #{stdKey}
           AND effective_from &lt;= #{now}
           AND (effective_to IS NULL OR effective_to &gt; #{now})
         ORDER BY
+          CASE WHEN endpoint_name = #{endpointName} THEN 0 WHEN endpoint_name IS NULL THEN 1 END,
           CASE WHEN operation_type = #{operationType} THEN 1 ELSE 2 END,
           effective_from DESC,
           id DESC
@@ -25,8 +26,9 @@
         FROM (
             SELECT m.*,
                    ROW_NUMBER() OVER (
-                       PARTITION BY m.operation_code, m.std_key
-                       ORDER BY CASE WHEN m.operation_type = #{operationType} THEN 1 ELSE 2 END,
+                       PARTITION BY m.endpoint_name, m.std_key
+                       ORDER BY CASE WHEN m.endpoint_name = #{endpointName} THEN 0 WHEN m.endpoint_name IS NULL THEN 1 END,
+                                CASE WHEN m.operation_type = #{operationType} THEN 1 ELSE 2 END,
                                 m.effective_from DESC,
                                 m.id DESC
                    ) AS rn
@@ -35,7 +37,7 @@
               AND m.lifecycle_status_code = 'ACTIVE'
               AND m.provenance_id = #{provenanceId}
               AND m.operation_type IN (#{operationType}, 'ALL')
-              AND m.operation_code = #{operationCode}
+              AND (m.endpoint_name = #{endpointName} OR m.endpoint_name IS NULL)
               AND m.effective_from &lt;= #{now}
               AND (m.effective_to IS NULL OR m.effective_to &gt; #{now})
         ) t
