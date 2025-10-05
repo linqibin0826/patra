@@ -20,6 +20,6 @@ public interface RegProvBatchingCfgMapper extends BaseMapper<RegProvBatchingCfgD
      * Returns the most specific batching configuration for the given provenance and operation scope.
      */
     Optional<RegProvBatchingCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                      @Param("operationTypeKey") String operationTypeKey,
+                                                      @Param("operationType") String operationType,
                                                       @Param("now") Instant now);
 }

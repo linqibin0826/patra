@@ -22,13 +22,13 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
      * Fetches the most specific active capability slice for the requested field.
      *
      * @param provenanceId      provenance identifier
-     * @param operationTypeKey  normalized operation type key (ALL fallback supported)
+     * @param operationType     normalized operation type (ALL fallback supported)
      * @param fieldKey          canonical field key
      * @param now               evaluation timestamp
      * @return optional capability effective at {@code now}
      */
     Optional<RegProvExprCapabilityDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                   @Param("operationTypeKey") String operationTypeKey,
+                                                   @Param("operationType") String operationType,
                                                    @Param("fieldKey") String fieldKey,
                                                    @Param("now") Instant now);
 
@@ -37,11 +37,11 @@ public interface RegProvExprCapabilityMapper extends BaseMapper<RegProvExprCapab
      * collapsing source-level rows with the same {@code field_key}.
      *
      * @param provenanceId      provenance identifier
-     * @param operationTypeKey  normalized operation type key (ALL fallback supported)
+     * @param operationType     normalized operation type (ALL fallback supported)
      * @param now               evaluation timestamp
      * @return list of capabilities, one per field
      */
     List<RegProvExprCapabilityDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
-                                                     @Param("operationTypeKey") String operationTypeKey,
+                                                     @Param("operationType") String operationType,
                                                      @Param("now") Instant now);
 }

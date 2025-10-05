@@ -11,7 +11,6 @@ public record RateLimitConfigQuery(
         Long id,
         Long provenanceId,
         String operationType,
-        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer maxConcurrentRequests,
@@ -28,6 +27,5 @@ public record RateLimitConfigQuery(
             throw new DomainValidationException("Effective from cannot be null");
         }
         operationType = operationType != null ? operationType.trim() : null;
-        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
     }
 }

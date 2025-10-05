@@ -76,12 +76,6 @@ public class RegProvBatchingCfgDO extends BaseDO {
     private Integer maxIdsPerRequest;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code, typically {@code ACTIVE} for effective rows.
      */
     @TableField("lifecycle_status_code")

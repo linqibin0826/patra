@@ -10,7 +10,6 @@ import java.time.Instant;
  *   <li>{@code id} 主键。</li>
  *   <li>{@code provenanceId} 来源 ID。</li>
  *   <li>{@code operationType} 操作类型。</li>
- *   <li>{@code operationTypeKey} 操作子键。</li>
  *   <li>{@code effectiveFrom} 生效起。</li>
  *   <li>{@code effectiveTo} 生效止。</li>
  *   <li>{@code paginationModeCode} 模式：PAGE_NUMBER / CURSOR / TOKEN / SCROLL。</li>
@@ -28,8 +27,6 @@ public record PaginationConfigResp(
         Long provenanceId,
         /** 操作类型 */
         String operationType,
-        /** 操作子键 */
-        String operationTypeKey,
         /** 生效起 */
         Instant effectiveFrom,
         /** 生效止（不含） */

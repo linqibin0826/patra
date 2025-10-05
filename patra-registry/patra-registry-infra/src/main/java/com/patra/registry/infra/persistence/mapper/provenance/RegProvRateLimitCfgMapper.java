@@ -20,6 +20,6 @@ public interface RegProvRateLimitCfgMapper extends BaseMapper<RegProvRateLimitCf
      * Retrieves the effective rate limit configuration scoped by provenance and operation.
      */
     Optional<RegProvRateLimitCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                       @Param("operationTypeKey") String operationTypeKey,
+                                                       @Param("operationType") String operationType,
                                                        @Param("now") Instant now);
 }

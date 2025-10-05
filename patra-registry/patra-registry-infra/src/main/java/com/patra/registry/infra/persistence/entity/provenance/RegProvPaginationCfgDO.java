@@ -82,12 +82,6 @@ public class RegProvPaginationCfgDO extends BaseDO {
     private Integer sortingDirection;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code, typically {@code ACTIVE} for valid records.
      */
     @TableField("lifecycle_status_code")

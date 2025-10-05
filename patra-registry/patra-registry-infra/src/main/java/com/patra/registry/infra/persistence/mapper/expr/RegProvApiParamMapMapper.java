@@ -21,14 +21,14 @@ public interface RegProvApiParamMapMapper extends BaseMapper<RegProvApiParamMapD
      * Fetches the most specific active mapping for the given provenance, operation and standard key.
      *
      * @param provenanceId      provenance identifier
-     * @param operationTypeKey  normalized operation type key (ALL fallback supported)
+     * @param operationType     normalized operation type (ALL fallback supported)
      * @param operationCode     internal operation code
      * @param stdKey            standardized parameter key
      * @param now               evaluation timestamp
      * @return optional mapping effective at {@code now}
      */
     Optional<RegProvApiParamMapDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                @Param("operationTypeKey") String operationTypeKey,
+                                                @Param("operationType") String operationType,
                                                 @Param("operationCode") String operationCode,
                                                 @Param("stdKey") String stdKey,
                                                 @Param("now") Instant now);
@@ -38,13 +38,13 @@ public interface RegProvApiParamMapMapper extends BaseMapper<RegProvApiParamMapD
      * {@code (operation_code, std_key)} signature.
      *
      * @param provenanceId      provenance identifier
-     * @param operationTypeKey  normalized operation type key
+     * @param operationType     normalized operation type
      * @param operationCode     internal operation code
      * @param now               evaluation timestamp
      * @return list of active mappings
      */
     List<RegProvApiParamMapDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
-                                                  @Param("operationTypeKey") String operationTypeKey,
+                                                  @Param("operationType") String operationType,
                                                   @Param("operationCode") String operationCode,
                                                   @Param("now") Instant now);
 }

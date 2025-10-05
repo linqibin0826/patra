@@ -11,7 +11,6 @@ public record WindowOffsetQuery(
         Long id,
         Long provenanceId,
         String operationType,
-        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         String windowModeCode,
@@ -50,7 +49,6 @@ public record WindowOffsetQuery(
             throw new DomainValidationException("Effective from cannot be null");
         }
         operationType = operationType != null ? operationType.trim() : null;
-        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         windowModeCode = windowModeCode.trim();
         windowSizeUnitCode = windowSizeUnitCode.trim();
         calendarAlignTo = calendarAlignTo != null ? calendarAlignTo.trim() : null;

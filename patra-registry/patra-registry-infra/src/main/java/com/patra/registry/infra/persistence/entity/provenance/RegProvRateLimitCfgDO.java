@@ -64,12 +64,6 @@ public class RegProvRateLimitCfgDO extends BaseDO {
     private Integer perCredentialQpsLimit;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code marking whether the configuration is active.
      */
     @TableField("lifecycle_status_code")

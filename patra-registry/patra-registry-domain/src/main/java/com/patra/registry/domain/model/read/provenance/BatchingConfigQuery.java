@@ -11,7 +11,6 @@ public record BatchingConfigQuery(
         Long id,
         Long provenanceId,
         String operationType,
-        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer detailFetchBatchSize,
@@ -30,7 +29,6 @@ public record BatchingConfigQuery(
             throw new DomainValidationException("Effective from cannot be null");
         }
         operationType = operationType != null ? operationType.trim() : null;
-        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         idsParamName = idsParamName != null ? idsParamName.trim() : null;
         idsJoinDelimiter = idsJoinDelimiter != null ? idsJoinDelimiter.trim() : null;
     }

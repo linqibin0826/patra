@@ -10,9 +10,9 @@
           AND provenance_id = #{provenanceId}
           AND effective_from &lt;= #{now}
           AND (effective_to IS NULL OR effective_to &gt; #{now})
-          AND operation_type_key IN (#{operationTypeKey}, 'ALL')
+          AND operation_type IN (#{operationType}, 'ALL')
         ORDER BY
-          CASE WHEN operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
+          CASE WHEN operation_type = #{operationType} THEN 1 ELSE 2 END,
           effective_from DESC,
           id DESC
         LIMIT 1
