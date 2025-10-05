@@ -6,7 +6,8 @@ import java.time.Instant;
 /**
  * Domain value object for {@code reg_prov_batching_cfg}.
  *
- * <p>Controls batched detail request shaping and related parameters.</p>
+ * <p>Define how to shape batched detail requests (ids parameter name, max batch size, concurrency,
+ * compression, backpressure, etc.). Combined with endpoint definition to generate batched detail requests.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,25 +15,40 @@ import java.time.Instant;
 public record BatchingConfig(
         /* Primary key; unique batching configuration identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+        /* Operation type discriminator (ALL/HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Inclusive timestamp marking when this batching configuration becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this batching configuration expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this batching configuration expires; null means open-ended */
         Instant effectiveTo,
-        /* Batch size for detail fetch operations; number of IDs to process per batch, {@code null} means no batching */
+        /* Batch size per detail fetch (rows); null uses application default */
         Integer detailFetchBatchSize,
-        /* Query parameter name for IDs list (e.g., ids, pmids); {@code null} means single ID per request */
+        /* Parameter name for ID list in batch detail requests; null decided by endpoint/app */
         String idsParamName,
-        /* Delimiter for joining multiple IDs (e.g., comma, pipe); {@code null} means use default comma */
+        /* Delimiter to join ID list (e.g., comma or plus) */
         String idsJoinDelimiter,
-        /* Maximum IDs allowed per single request; API-imposed limit, {@code null} means no limit */
+        /* Hard cap of IDs per HTTP request */
         Integer maxIdsPerRequest
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id unique configuration identifier, must be positive
+     * @param provenanceId provenance identifier, must be positive
+     * @param operationType operation type discriminator, nullable
+     * @param operationTypeKey normalized operation type key, defaults to "ALL"
+     * @param effectiveFrom effective start timestamp, must not be null
+     * @param effectiveTo effective end timestamp, nullable (open-ended)
+     * @param detailFetchBatchSize detail fetch batch size, nullable
+     * @param idsParamName IDs parameter name, nullable
+     * @param idsJoinDelimiter IDs join delimiter, nullable
+     * @param maxIdsPerRequest maximum IDs per request, nullable
+     * @throws DomainValidationException if validation fails
+     */
     public BatchingConfig(Long id,
                           Long provenanceId,
                           String operationType,

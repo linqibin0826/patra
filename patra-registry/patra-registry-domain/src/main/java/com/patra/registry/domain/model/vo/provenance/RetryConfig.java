@@ -6,7 +6,8 @@ import java.time.Instant;
 /**
  * Domain value object for {@code reg_prov_retry_cfg}.
  *
- * <p>Contains retry/backoff/jitter/circuit breaker policy at SOURCE/TASK scope.</p>
+ * <p>Configure retry attempts, backoff policy (fixed/exponential + jitter), circuit breaker threshold/cooldown,
+ * per error category (HTTP/network/client). Works with HTTP Retry-After policy; controls 429/5xx/network/client errors.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,17 +15,17 @@ import java.time.Instant;
 public record RetryConfig(
         /* Primary key; unique retry configuration identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Inclusive timestamp marking when this retry configuration becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this retry configuration expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this retry configuration expires; null means open-ended */
         Instant effectiveTo,
-        /* Maximum number of retry attempts; {@code 0} means no retry, {@code null} means use default */
+        /* Maximum number of retry attempts; 0 means no retry, null means use default */
         Integer maxRetryTimes,
         /* Backoff policy type code (DICT CODE: backoff_policy_type); defines strategy (FIXED/LINEAR/EXPONENTIAL) */
         String backoffPolicyTypeCode,
@@ -36,17 +37,39 @@ public record RetryConfig(
         Double expMultiplierValue,
         /* Jitter factor ratio (0.0-1.0); adds randomness to prevent thundering herd */
         Double jitterFactorRatio,
-        /* JSON array of HTTP status codes triggering retry (e.g., [429, 503]); {@code null} means use defaults */
+        /* JSON array of HTTP status codes triggering retry (e.g., [429, 503]); null means use defaults */
         String retryHttpStatusJson,
-        /* JSON array of HTTP status codes causing immediate give-up (e.g., [400, 401, 403]); {@code null} means none */
+        /* JSON array of HTTP status codes causing immediate give-up (e.g., [400, 401, 403]); null means none */
         String giveupHttpStatusJson,
-        /* Whether to retry on network-level errors (connection timeout/reset); {@code true}=retry, {@code false}=fail fast */
+        /* Whether to retry on network-level errors (connection timeout/reset); true=retry, false=fail fast */
         boolean retryOnNetworkError,
-        /* Circuit breaker failure threshold; opens circuit after N consecutive failures, {@code null} means disabled */
+        /* Circuit breaker failure threshold; opens circuit after N consecutive failures, null means disabled */
         Integer circuitBreakThreshold,
-        /* Circuit breaker cooldown period in milliseconds before half-open attempt; {@code null} means use default */
+        /* Circuit breaker cooldown period in milliseconds before half-open attempt; null means use default */
         Integer circuitCooldownMillis
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id unique configuration identifier, must be positive
+     * @param provenanceId provenance identifier, must be positive
+     * @param operationType operation type discriminator, nullable
+     * @param operationTypeKey normalized operation type key, defaults to "ALL"
+     * @param effectiveFrom effective start timestamp, must not be null
+     * @param effectiveTo effective end timestamp, nullable (open-ended)
+     * @param maxRetryTimes maximum retry attempts, nullable
+     * @param backoffPolicyTypeCode backoff policy type code from dictionary, must not be blank
+     * @param initialDelayMillis initial delay in milliseconds, nullable
+     * @param maxDelayMillis maximum delay in milliseconds, nullable
+     * @param expMultiplierValue exponential multiplier value, nullable
+     * @param jitterFactorRatio jitter factor ratio, nullable
+     * @param retryHttpStatusJson retryable HTTP statuses as JSON, nullable
+     * @param giveupHttpStatusJson give-up HTTP statuses as JSON, nullable
+     * @param retryOnNetworkError whether to retry on network errors
+     * @param circuitBreakThreshold circuit breaker threshold, nullable
+     * @param circuitCooldownMillis circuit breaker cooldown in milliseconds, nullable
+     * @throws DomainValidationException if validation fails
+     */
     public RetryConfig(Long id,
                        Long provenanceId,
                        String operationType,

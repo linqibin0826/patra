@@ -6,8 +6,9 @@ import java.time.Instant;
 /**
  * Domain value object for {@code reg_prov_http_cfg}.
  *
- * <p>Represents HTTP policy overrides (headers/timeouts/TLS/proxy/idempotency)
- * at SOURCE/TASK scope for a provenance.</p>
+ * <p>Configure base_url override, default headers, timeouts, TLS, proxy, Retry-After handling,
+ * idempotency, etc. Combined with endpoint/pagination/batching/retry/rate-limit to form
+ * the execution contract.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,37 +16,58 @@ import java.time.Instant;
 public record HttpConfig(
         /* Primary key; unique HTTP configuration identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+        /* Operation type discriminator (ALL/HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Inclusive timestamp marking when this HTTP configuration becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this HTTP configuration expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this HTTP configuration expires; null means open-ended */
         Instant effectiveTo,
-        /* JSON object containing default HTTP headers (e.g., {"User-Agent":"...", "Accept":"..."}) */
+        /* Default HTTP headers (JSON); merged with runtime request headers */
         String defaultHeadersJson,
-        /* Connection timeout in milliseconds; {@code null} means use client default */
+        /* Connect timeout (ms): establishing TCP/SSL */
         Integer timeoutConnectMillis,
-        /* Read timeout in milliseconds; {@code null} means use client default */
+        /* Read timeout (ms): reading response body */
         Integer timeoutReadMillis,
-        /* Total timeout in milliseconds for entire request/response cycle; {@code null} means no limit */
+        /* Total timeout (ms): request end-to-end cap */
         Integer timeoutTotalMillis,
-        /* Whether TLS certificate verification is enabled; {@code true}=verify, {@code false}=skip (use cautiously) */
+        /* Verify TLS certificates: true=on, false=off (test only) */
         boolean tlsVerifyEnabled,
-        /* Proxy URL (e.g., http://proxy.example.com:8080); {@code null} means direct connection */
+        /* Proxy URL: e.g., http://user:pass@host:port or socks5://host:port */
         String proxyUrlValue,
-        /* Retry-After header handling policy code (DICT CODE: retry_after_policy); defines how to parse/apply server backoff */
+        /* Retry-After policy code (DICT CODE: retry_after_policy): IGNORE/RESPECT/CLAMP */
         String retryAfterPolicyCode,
-        /* Maximum Retry-After delay cap in milliseconds; prevents excessively long server-suggested delays */
+        /* Max wait cap (ms) when RESPECT/CLAMP is used */
         Integer retryAfterCapMillis,
-        /* HTTP header name for idempotency key (e.g., Idempotency-Key); {@code null} means no idempotency header */
+        /* Idempotency header name (e.g., Idempotency-Key) to avoid duplicate submissions */
         String idempotencyHeaderName,
-        /* TTL in seconds for idempotency key caching/uniqueness window; {@code null} means use default TTL */
+        /* Idempotency key TTL (seconds); effective only when supported */
         Integer idempotencyTtlSeconds
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id unique configuration identifier, must be positive
+     * @param provenanceId provenance identifier, must be positive
+     * @param operationType operation type discriminator, nullable
+     * @param operationTypeKey normalized operation type key, defaults to "ALL"
+     * @param effectiveFrom effective start timestamp, must not be null
+     * @param effectiveTo effective end timestamp, nullable (open-ended)
+     * @param defaultHeadersJson default headers as JSON string, nullable
+     * @param timeoutConnectMillis connection timeout in milliseconds, nullable
+     * @param timeoutReadMillis read timeout in milliseconds, nullable
+     * @param timeoutTotalMillis total timeout in milliseconds, nullable
+     * @param tlsVerifyEnabled whether to verify TLS certificates
+     * @param proxyUrlValue proxy URL, nullable
+     * @param retryAfterPolicyCode retry-after policy code from dictionary, must not be blank
+     * @param retryAfterCapMillis retry-after cap in milliseconds, nullable
+     * @param idempotencyHeaderName idempotency header name, nullable
+     * @param idempotencyTtlSeconds idempotency TTL in seconds, nullable
+     * @throws DomainValidationException if validation fails
+     */
     public HttpConfig(Long id,
                       Long provenanceId,
                       String operationType,

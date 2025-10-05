@@ -6,7 +6,8 @@ import java.time.Instant;
 /**
  * Domain value object for {@code reg_prov_window_offset_cfg}.
  *
- * <p>Configures windowing and incremental offset tracking (DATE/ID/COMPOSITE).</p>
+ * <p>Configures how tasks segment time windows and advance incremental offsets (DATE/ID/COMPOSITE),
+ * supporting lookback/overlap/watermark lag strategies.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,47 +15,73 @@ import java.time.Instant;
 public record WindowOffsetConfig(
         /* Primary key; unique window offset configuration identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Inclusive timestamp marking when this window offset configuration becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this window offset configuration expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this window offset configuration expires; null means open-ended */
         Instant effectiveTo,
-        /* Window mode code (DICT CODE: window_mode); defines windowing strategy (SLIDING/TUMBLING/HOPPING) */
+        /* Window mode code (DICT CODE: window_mode); defines windowing strategy (SLIDING/CALENDAR) */
         String windowModeCode,
-        /* Size/length of each time window; must be positive */
+        /* Numeric part of window length; must be positive */
         Integer windowSizeValue,
-        /* Unit of {@code windowSizeValue} (DICT CODE: time_unit); e.g., SECOND/MINUTE/HOUR/DAY */
+        /* Unit of windowSizeValue (DICT CODE: time_unit); e.g., SECOND/MINUTE/HOUR/DAY */
         String windowSizeUnitCode,
-        /* Calendar alignment anchor (e.g., START_OF_DAY/START_OF_HOUR); {@code null} means no alignment */
+        /* Alignment granularity for CALENDAR mode (e.g., HOUR/DAY/WEEK/MONTH); null for SLIDING mode */
         String calendarAlignTo,
-        /* Lookback value for historical data; defines how far back to start from current time */
+        /* Lookback length value to compensate for late data */
         Integer lookbackValue,
-        /* Unit of {@code lookbackValue} (DICT CODE: time_unit); e.g., SECOND/MINUTE/HOUR/DAY */
+        /* Unit for lookback length (DICT CODE: time_unit) */
         String lookbackUnitCode,
-        /* Overlap value between consecutive windows; prevents data gaps in boundary conditions */
+        /* Overlap length value between adjacent windows */
         Integer overlapValue,
-        /* Unit of {@code overlapValue} (DICT CODE: time_unit); e.g., SECOND/MINUTE/HOUR */
+        /* Unit for window overlap (DICT CODE: time_unit) */
         String overlapUnitCode,
-        /* Watermark lag in seconds; delay before considering a window complete to handle late-arriving data */
+        /* Watermark lag in seconds; max allowed lateness for out-of-order data */
         Integer watermarkLagSeconds,
         /* Offset type code (DICT CODE: offset_type); defines tracking mechanism (DATE/ID/COMPOSITE) */
         String offsetTypeCode,
-        /* Field name used for offset tracking (e.g., updated_at, pmid); must match API response field */
+        /* Offset field name or JSONPath (DATE/ID field or composite key primary dimension) */
         String offsetFieldName,
-        /* Date format pattern for offset parsing (e.g., yyyy-MM-dd'T'HH:mm:ss); only applies to DATE offset type */
+        /* DATE offset format/semantics (e.g., ISO_INSTANT/epochMillis/YYYYMMDD) */
         String offsetDateFormat,
-        /* Default date field name when offset field is missing; fallback for offset extraction */
+        /* Default incremental date field (e.g., PubMed: EDAT/PDAT/MHDA; Crossref: indexed-date) */
         String defaultDateFieldName,
-        /* Maximum IDs to track per window; prevents unbounded state growth, {@code null} means no limit */
+        /* Maximum IDs per window; split window when exceeded */
         Integer maxIdsPerWindow,
-        /* Maximum window span in seconds; safety cap to prevent excessive time range queries */
+        /* Maximum span per window in seconds; overly long windows will be split */
         Integer maxWindowSpanSeconds
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id unique configuration identifier, must be positive
+     * @param provenanceId provenance identifier, must be positive
+     * @param operationType operation type discriminator, nullable
+     * @param operationTypeKey normalized operation type key, defaults to "ALL"
+     * @param effectiveFrom effective start timestamp, must not be null
+     * @param effectiveTo effective end timestamp, nullable (open-ended)
+     * @param windowModeCode window mode code from dictionary, must not be blank
+     * @param windowSizeValue window size numeric value, nullable
+     * @param windowSizeUnitCode window size unit code from dictionary, must not be blank
+     * @param calendarAlignTo calendar alignment anchor, nullable
+     * @param lookbackValue lookback length value, nullable
+     * @param lookbackUnitCode lookback unit code from dictionary, nullable
+     * @param overlapValue overlap length value, nullable
+     * @param overlapUnitCode overlap unit code from dictionary, nullable
+     * @param watermarkLagSeconds watermark lag in seconds, nullable
+     * @param offsetTypeCode offset type code from dictionary, must not be blank
+     * @param offsetFieldName offset field name or JSONPath, nullable
+     * @param offsetDateFormat date offset format, nullable
+     * @param defaultDateFieldName default date field name, nullable
+     * @param maxIdsPerWindow maximum IDs per window, nullable
+     * @param maxWindowSpanSeconds maximum window span in seconds, nullable
+     * @throws DomainValidationException if validation fails
+     */
     public WindowOffsetConfig(Long id,
                               Long provenanceId,
                               String operationType,
@@ -83,11 +110,11 @@ public record WindowOffsetConfig(
         String offsetTypeTrimmed = DomainValidationException.notBlank(offsetTypeCode, "Offset type code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // already validated
-        this.provenanceId = provenanceId; // already validated
+        this.id = id;
+        this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
         this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
-        this.effectiveFrom = effectiveFrom; // already validated as non-null
+        this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.windowModeCode = modeTrimmed;
         this.windowSizeValue = windowSizeValue;
