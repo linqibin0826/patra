@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
 
     `operation_type`      VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Task type: HARVEST/UPDATE/BACKFILL/SANDBOX/ALL; for task-level gray rollout',
 
-    `operation_code`      VARCHAR(32)     NOT NULL COMMENT 'Endpoint operation code (dict reg_operation): SEARCH/DETAIL/LOOKUP..., consistent with endpoint execution contract',
+    `endpoint_name`       VARCHAR(64)     NULL COMMENT 'Endpoint name: specific endpoint this mapping applies to; NULL means applies to all endpoints',
     `std_key`             VARCHAR(64)     NOT NULL COMMENT 'Standard key (unified internal semantic key): e.g., from/to/ti/ab; typically produced during rendering',
     `provider_param_name` VARCHAR(64)     NOT NULL COMMENT 'Provider parameter name: concrete HTTP parameter, e.g., mindate/maxdate/term/retmax',
     `transform_code`      VARCHAR(64)     NULL COMMENT 'Optional: value-level transform code (dict reg_transform), e.g., TO_EXCLUSIVE_MINUS_1D',
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
 
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_param_map__dim_from`
-        (`provenance_id`, `operation_type`, `operation_code`, `std_key`,
+        (`provenance_id`, `operation_type`, `endpoint_name`, `std_key`,
          `effective_from`) COMMENT 'Dimension uniqueness + start time to ensure at most one match at any time'
 ) ENGINE = InnoDB
   ROW_FORMAT = DYNAMIC

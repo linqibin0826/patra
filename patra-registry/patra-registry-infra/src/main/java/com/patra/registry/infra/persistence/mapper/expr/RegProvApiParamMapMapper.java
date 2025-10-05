@@ -18,33 +18,33 @@ import java.util.Optional;
 public interface RegProvApiParamMapMapper extends BaseMapper<RegProvApiParamMapDO> {
 
     /**
-     * Fetches the most specific active mapping for the given provenance, operation and standard key.
+     * Fetches the most specific active mapping for the given provenance, endpoint and standard key.
      *
      * @param provenanceId      provenance identifier
      * @param operationType     normalized operation type (ALL fallback supported)
-     * @param operationCode     internal operation code
+     * @param endpointName      endpoint name (NULL means all endpoints)
      * @param stdKey            standardized parameter key
      * @param now               evaluation timestamp
      * @return optional mapping effective at {@code now}
      */
     Optional<RegProvApiParamMapDO> selectActive(@Param("provenanceId") Long provenanceId,
                                                 @Param("operationType") String operationType,
-                                                @Param("operationCode") String operationCode,
+                                                @Param("endpointName") String endpointName,
                                                 @Param("stdKey") String stdKey,
                                                 @Param("now") Instant now);
 
     /**
      * Lists all active mappings for the specified scope, returning at most one row per
-     * {@code (operation_code, std_key)} signature.
+     * {@code (endpoint_name, std_key)} signature.
      *
      * @param provenanceId      provenance identifier
      * @param operationType     normalized operation type
-     * @param operationCode     internal operation code
+     * @param endpointName      endpoint name (NULL means all endpoints)
      * @param now               evaluation timestamp
      * @return list of active mappings
      */
     List<RegProvApiParamMapDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
                                                   @Param("operationType") String operationType,
-                                                  @Param("operationCode") String operationCode,
+                                                  @Param("endpointName") String endpointName,
                                                   @Param("now") Instant now);
 }

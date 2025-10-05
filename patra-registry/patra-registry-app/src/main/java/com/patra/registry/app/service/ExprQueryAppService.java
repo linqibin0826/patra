@@ -32,21 +32,21 @@ public class ExprQueryAppService {
      * Loads the aggregated expression snapshot for a specific provenance.
      *
      * <p>Retrieves effective expression configuration by resolving temporal slices
-     * at the given instant, filtered by operation type and operation code.</p>
+     * at the given instant, filtered by operation type and endpoint name.</p>
      *
      * @param provenanceCode the provenance code to load snapshot for
      * @param operationType  the operation type discriminator (e.g., HARVEST/UPDATE); {@code null} means ALL
-     * @param operationCode  the operation code (e.g., SEARCH/DETAIL)
+     * @param endpointName   the endpoint name (e.g., SEARCH/DETAIL); {@code null} means all endpoints
      * @param at             the instant to query effective configs; {@code null} defaults to current time
      * @return the expression snapshot query DTO
      */
     public ExprSnapshotQuery loadSnapshot(String provenanceCode,
                                           String operationType,
-                                          String operationCode,
+                                          String endpointName,
                                           Instant at) {
         ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
-        log.debug("[REGISTRY][APP] load expr snapshot provenanceCode={} operationType={} operationCode={}",
-                code, operationType, operationCode);
-        return assembler.toQuery(exprRepository.loadSnapshot(code, operationType, operationCode, at));
+        log.debug("[REGISTRY][APP] load expr snapshot provenanceCode={} operationType={} endpointName={}",
+                code, operationType, endpointName);
+        return assembler.toQuery(exprRepository.loadSnapshot(code, operationType, endpointName, at));
     }
 }

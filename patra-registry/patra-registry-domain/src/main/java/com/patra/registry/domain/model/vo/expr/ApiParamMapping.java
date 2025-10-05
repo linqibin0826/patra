@@ -19,8 +19,8 @@ public record ApiParamMapping(
         Long provenanceId,
         /* Operation type discriminator (HARVEST/UPDATE/BACKFILL/SANDBOX); null applies to all */
         String operationType,
-        /* Endpoint operation code (DICT CODE: reg_operation) such as SEARCH/DETAIL/LOOKUP */
-        String operationCode,
+        /* Endpoint name this mapping applies to; null means all endpoints */
+        String endpointName,
         /* Standard key (unified internal semantic key) typically produced during rendering (e.g., from/to/ti/ab) */
         String stdKey,
         /* Provider parameter name: concrete HTTP parameter (e.g., mindate/maxdate/term/retmax) */
@@ -40,7 +40,7 @@ public record ApiParamMapping(
      * @param id unique mapping identifier, must be positive
      * @param provenanceId provenance identifier, must be positive
      * @param operationType operation type discriminator, nullable
-     * @param operationCode operation code from dictionary, must not be blank
+     * @param endpointName endpoint name this mapping applies to, nullable (null means all endpoints)
      * @param stdKey standard key, must not be blank
      * @param providerParamName provider parameter name, must not be blank
      * @param transformCode transform code from dictionary, nullable
@@ -52,7 +52,7 @@ public record ApiParamMapping(
     public ApiParamMapping(Long id,
                            Long provenanceId,
                            String operationType,
-                           String operationCode,
+                           String endpointName,
                            String stdKey,
                            String providerParamName,
                            String transformCode,
@@ -61,7 +61,6 @@ public record ApiParamMapping(
                            Instant effectiveTo) {
         DomainValidationException.positive(id, "Mapping id");
         DomainValidationException.positive(provenanceId, "Provenance id");
-        String opTrimmed = DomainValidationException.notBlank(operationCode, "Operation code");
         String stdKeyTrimmed = DomainValidationException.notBlank(stdKey, "Standard key");
         String providerParamTrimmed = DomainValidationException.notBlank(providerParamName, "Provider param name");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
@@ -69,7 +68,7 @@ public record ApiParamMapping(
         this.id = id;
         this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationCode = opTrimmed;
+        this.endpointName = endpointName != null ? endpointName.trim() : null;
         this.stdKey = stdKeyTrimmed;
         this.providerParamName = providerParamTrimmed;
         this.transformCode = transformCode != null ? transformCode.trim() : null;

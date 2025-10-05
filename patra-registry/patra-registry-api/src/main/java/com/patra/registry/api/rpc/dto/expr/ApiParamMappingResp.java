@@ -8,7 +8,7 @@ import java.time.Instant;
 public record ApiParamMappingResp(
         Long provenanceId,
         String operationType,
-        String operationCode,
+        String endpointName,
         String stdKey,
         String providerParamName,
         String transformCode,

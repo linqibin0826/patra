@@ -46,10 +46,10 @@ public class RegProvApiParamMapDO extends BaseDO {
     private String lifecycleStatusCode;
 
     /**
-     * Internal operation code (e.g., SEARCH/DETAIL).
+     * Endpoint name this mapping applies to; {@code null} means all endpoints.
      */
-    @TableField("operation_code")
-    private String operationCode;
+    @TableField("endpoint_name")
+    private String endpointName;
 
     /**
      * Standardized key resolved by expression rendering (e.g., {@code from}, {@code term}).

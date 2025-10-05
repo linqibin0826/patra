@@ -19,6 +19,6 @@ public interface ExprEndpoint {
     @GetMapping(BASE_PATH + "/snapshot")
     ExprSnapshotResp getSnapshot(@RequestParam("provenanceCode") String provenanceCode,
                                  @RequestParam(value = "operationType", required = false) String operationType,
-                                 @RequestParam("operationCode") String operationCode,
+                                 @RequestParam(value = "endpointName", required = false) String endpointName,
                                  @RequestParam(value = "at", required = false) Instant at);
 }
