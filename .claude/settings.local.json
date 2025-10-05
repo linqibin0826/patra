@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Read(//Users/linqibin/IdeaProjects/**)",
+      "Bash(git checkout:*)",
+      "Bash(claude mcp)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "outputStyle": "default"
+}
