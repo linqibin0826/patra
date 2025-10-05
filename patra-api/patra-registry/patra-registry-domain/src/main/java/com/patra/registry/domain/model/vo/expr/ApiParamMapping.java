@@ -6,7 +6,8 @@ import java.time.Instant;
 /**
  * Domain value object for {@code reg_prov_api_param_map}.
  *
- * <p>Maps unified standard keys to provider-specific parameter names at SOURCE/TASK scope.</p>
+ * <p>Map unified standard keys to provider-specific parameter names at SOURCE/TASK scope.
+ * Only responsible for key-name mapping; value-level transform is declared via transform_code only.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,11 +15,11 @@ import java.time.Instant;
 public record ApiParamMapping(
         /* Primary key; unique mapping identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL/SANDBOX); {@code null} applies to all */
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL/SANDBOX); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Endpoint operation code (DICT CODE: reg_operation) such as SEARCH/DETAIL/LOOKUP */
         String operationCode,
@@ -32,9 +33,25 @@ public record ApiParamMapping(
         String notesJson,
         /* Inclusive timestamp marking when this mapping becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this mapping expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this mapping expires; null means open-ended */
         Instant effectiveTo
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id unique mapping identifier, must be positive
+     * @param provenanceId provenance identifier, must be positive
+     * @param operationType operation type discriminator, nullable
+     * @param operationTypeKey normalized operation type key, defaults to "ALL"
+     * @param operationCode operation code from dictionary, must not be blank
+     * @param stdKey standard key, must not be blank
+     * @param providerParamName provider parameter name, must not be blank
+     * @param transformCode transform code from dictionary, nullable
+     * @param notesJson additional notes as JSON, nullable
+     * @param effectiveFrom effective start timestamp, must not be null
+     * @param effectiveTo effective end timestamp, nullable (open-ended)
+     * @throws DomainValidationException if validation fails
+     */
     public ApiParamMapping(Long id,
                            Long provenanceId,
                            String operationType,
@@ -53,8 +70,8 @@ public record ApiParamMapping(
         String providerParamTrimmed = DomainValidationException.notBlank(providerParamName, "Provider param name");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // already validated
-        this.provenanceId = provenanceId; // already validated
+        this.id = id;
+        this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
         this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.operationCode = opTrimmed;
@@ -62,7 +79,7 @@ public record ApiParamMapping(
         this.providerParamName = providerParamTrimmed;
         this.transformCode = transformCode != null ? transformCode.trim() : null;
         this.notesJson = notesJson;
-        this.effectiveFrom = effectiveFrom; // already validated as non-null
+        this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
     }
 
@@ -70,8 +87,8 @@ public record ApiParamMapping(
      * Checks whether the mapping is effective at the given instant.
      *
      * @param instant the time point to check (must not be null)
-     * @return {@code true} if the mapping is effective at the given instant
-     * @throws DomainValidationException if {@code instant} is null
+     * @return true if the mapping is effective at the given instant
+     * @throws DomainValidationException if instant is null
      */
     public boolean isEffectiveAt(Instant instant) {
         DomainValidationException.nonNull(instant, "Instant");

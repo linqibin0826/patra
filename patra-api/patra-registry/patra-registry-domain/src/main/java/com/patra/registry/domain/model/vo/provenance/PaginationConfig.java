@@ -6,7 +6,8 @@ import java.time.Instant;
 /**
  * Domain value object for {@code reg_prov_pagination_cfg}.
  *
- * <p>Defines pagination strategy and key parameters at SOURCE/TASK scope.</p>
+ * <p>Configure page/cursor/token/scroll pagination params and response extraction rules (JSONPath/XPath).
+ * At most one currently effective row per endpoint definition; endpoint-level overrides take precedence.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,27 +15,43 @@ import java.time.Instant;
 public record PaginationConfig(
         /* Primary key; unique pagination configuration identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Inclusive timestamp marking when this pagination configuration becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this pagination configuration expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this pagination configuration expires; null means open-ended */
         Instant effectiveTo,
-        /* Pagination mode code (DICT CODE: pagination_mode); defines strategy (OFFSET/CURSOR/PAGE_NUMBER/LINK) */
+        /* Pagination mode code (DICT CODE: pagination_mode); PAGE_NUMBER/CURSOR/TOKEN/SCROLL */
         String paginationModeCode,
-        /* Number of records per page/batch; must be positive */
+        /* Page size for PAGE_NUMBER/SCROLL; null uses application default */
         Integer pageSizeValue,
-        /* Maximum pages to fetch per single execution; {@code null} means no limit (use cautiously) */
+        /* Maximum pages per single execution to cap deep pagination */
         Integer maxPagesPerExecution,
-        /* Query parameter name for sort field (e.g., sort_by, order); {@code null} means no sorting */
+        /* Sort field parameter name */
         String sortFieldParamName,
-        /* Sort direction indicator (1=ASC, -1=DESC, 0=unspecified); {@code null} means source default */
+        /* Sort order: 0=DESC, 1=ASC */
         Integer sortingDirection
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id unique configuration identifier, must be positive
+     * @param provenanceId provenance identifier, must be positive
+     * @param operationType operation type discriminator, nullable
+     * @param operationTypeKey normalized operation type key, defaults to "ALL"
+     * @param effectiveFrom effective start timestamp, must not be null
+     * @param effectiveTo effective end timestamp, nullable (open-ended)
+     * @param paginationModeCode pagination mode code from dictionary, must not be blank
+     * @param pageSizeValue page size value, nullable
+     * @param maxPagesPerExecution maximum pages per execution, nullable
+     * @param sortFieldParamName sort field parameter name, nullable
+     * @param sortingDirection sort direction (0=DESC, 1=ASC), nullable
+     * @throws DomainValidationException if validation fails
+     */
     public PaginationConfig(Long id,
                             Long provenanceId,
                             String operationType,

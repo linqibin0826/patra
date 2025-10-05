@@ -1,12 +1,14 @@
 package com.patra.registry.domain.model.vo.provenance;
 
 import com.patra.registry.domain.exception.DomainValidationException;
+
 import java.time.Instant;
 
 /**
  * Domain value object for {@code reg_prov_rate_limit_cfg}.
  *
- * <p>Captures concurrency limits and per-credential QPS caps at SOURCE/TASK scope.</p>
+ * <p>Configure QPS/token-bucket, burst capacity, max concurrency, by key/endpoint/IP/task granularity,
+ * smoothing/adaptive, etc. Combined with retry and HTTP; may respect server rate headers (Retry-After, RateLimit-*) for smoothing.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,21 +16,34 @@ import java.time.Instant;
 public record RateLimitConfig(
         /* Primary key; unique rate limit configuration identifier */
         Long id,
-        /* Foreign key referencing {@code reg_provenance.id} */
+        /* Foreign key referencing reg_provenance.id */
         Long provenanceId,
-        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
+        /* Normalized operation type key; defaults to ALL when operationType is null */
         String operationTypeKey,
         /* Inclusive timestamp marking when this rate limit configuration becomes effective */
         Instant effectiveFrom,
-        /* Exclusive timestamp marking when this rate limit configuration expires; {@code null} means open-ended */
+        /* Exclusive timestamp marking when this rate limit configuration expires; null means open-ended */
         Instant effectiveTo,
-        /* Maximum concurrent requests allowed globally; {@code null} means no concurrency limit */
+        /* Maximum concurrent requests allowed globally; null means no concurrency limit */
         Integer maxConcurrentRequests,
-        /* QPS (Queries Per Second) limit per credential/API key; {@code null} means no per-credential limit */
+        /* QPS (Queries Per Second) limit per credential/API key; null means no per-credential limit */
         Integer perCredentialQpsLimit
 ) {
+    /**
+     * Canonical constructor with validation.
+     *
+     * @param id                    unique configuration identifier, must be positive
+     * @param provenanceId          provenance identifier, must be positive
+     * @param operationType         operation type discriminator, nullable
+     * @param operationTypeKey      normalized operation type key, defaults to "ALL"
+     * @param effectiveFrom         effective start timestamp, must not be null
+     * @param effectiveTo           effective end timestamp, nullable (open-ended)
+     * @param maxConcurrentRequests maximum concurrent requests, nullable
+     * @param perCredentialQpsLimit per-credential QPS limit, nullable
+     * @throws DomainValidationException if validation fails
+     */
     public RateLimitConfig(Long id,
                            Long provenanceId,
                            String operationType,

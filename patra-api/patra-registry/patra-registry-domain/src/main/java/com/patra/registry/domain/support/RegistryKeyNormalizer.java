@@ -5,10 +5,13 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.util.Locale;
 
 /**
- * Registry 维度/条件 Key 的规范化工具。
- * <p>
- * 在仓储与快照装载流程中统一处理大小写、占位符与空值语义，保证不同来源数据能够正确合并。
- * </p>
+ * Normalization utility for Registry dimension/condition keys.
+ *
+ * <p>Ensures dimensional keys meet constraints across layers (operation_type/field_key/code/etc.),
+ * enabling stable hash/lookup, avoiding NULL ambiguity, and supporting schema versioning compatibility.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class RegistryKeyNormalizer {
 
@@ -16,7 +19,10 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * 操作类型 Key 规范化：null/blank → ALL，其余 trim，保留原大小写以兼容既有约定。
+ ALL, otherwise trim and preserve original case for backward compatibility.
+     *
+     * @param operationType the operation type value to normalize
+     * @return normalized operation type key, never null
      */
     public static String normalizeOperationKey(String operationType) {
         if (operationType == null || operationType.isBlank()) {
@@ -26,27 +32,38 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * 通用 code 规范化：非空断言 + trim + 转大写。
+     * Normalizes generic code: non-null assertion + trim + uppercase conversion.
+     *
+     * @param value the code value to normalize
+     * @return normalized code in uppercase
+     * @throws DomainValidationException if value is null
      */
     public static String normalizeCode(String value) {
         if (value == null) {
-            throw new DomainValidationException("value 不能为空");
+            throw new DomainValidationException("value cannot be null");
         }
         return value.trim().toUpperCase(Locale.ROOT);
     }
 
     /**
-     * 字段 Key 规范化：非空断言 + trim，保留原大小写。
+     * Normalizes field key: non-null assertion + trim, preserving original case.
+     *
+     * @param value the field key value to normalize
+     * @return normalized field key
+     * @throws DomainValidationException if value is null
      */
     public static String normalizeFieldKey(String value) {
         if (value == null) {
-            throw new DomainValidationException("value 不能为空");
+            throw new DomainValidationException("value cannot be null");
         }
         return value.trim();
     }
 
     /**
-     * 匹配类型 Key 规范化：null/blank → ANY，其余大写。
+ ANY, otherwise uppercase.
+     *
+     * @param matchTypeCode the match type code to normalize
+     * @return normalized match type key, never null
      */
     public static String normalizeMatchKey(String matchTypeCode) {
         if (matchTypeCode == null || matchTypeCode.isBlank()) {
@@ -56,7 +73,10 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * 取反标记规范化：null → ANY，true → T，false → F。
+ F.
+     *
+     * @param negated the negated flag to normalize
+     * @return normalized negated key (ANY/T/F), never null
      */
     public static String normalizeNegatedKey(Boolean negated) {
         if (negated == null) {
@@ -66,7 +86,10 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * 值类型 Key 规范化：null/blank → ANY，其余大写。
+ ANY, otherwise uppercase.
+     *
+     * @param valueTypeCode the value type code to normalize
+     * @return normalized value type key, never null
      */
     public static String normalizeValueKey(String valueTypeCode) {
         if (valueTypeCode == null || valueTypeCode.isBlank()) {
