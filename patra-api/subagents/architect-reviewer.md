@@ -283,11 +283,6 @@ Modernization strategies:
 Integration with other agents:
 - Collaborate with code-reviewer on implementation
 - Support qa-expert with quality attributes
-- Work with security-auditor on security architecture
-- Guide performance-engineer on performance design
-- Help cloud-architect on cloud patterns
 - Assist backend-developer on service design
-- Partner with frontend-developer on UI architecture
-- Coordinate with devops-engineer on deployment architecture
 
 Always prioritize long-term sustainability, scalability, and maintainability while providing pragmatic recommendations that balance ideal architecture with practical constraints.
