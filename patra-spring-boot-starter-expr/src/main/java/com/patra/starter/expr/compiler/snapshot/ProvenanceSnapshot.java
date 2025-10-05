@@ -40,7 +40,7 @@ public record ProvenanceSnapshot(
         }
     }
 
-    public record Scope(String scopeCode, String taskTypeKey) {
+    public record Scope(String scopeCode, String operationTypeKey) {
         public static Scope sourceScope() {
             return new Scope("SOURCE", null);
         }
@@ -140,7 +140,7 @@ public record ProvenanceSnapshot(
     public record RenderRule(
             String fieldKey,
             String scopeCode,
-            String taskTypeKey,
+            String operationTypeKey,
             com.patra.expr.Atom.Operator operator,
             String matchTypeCode,
             NegationQualifier negation,

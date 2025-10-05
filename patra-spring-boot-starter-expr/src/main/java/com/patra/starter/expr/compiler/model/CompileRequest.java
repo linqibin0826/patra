@@ -9,7 +9,7 @@ import java.util.Objects;
 public record CompileRequest(
         Expr expression,
         ProvenanceCode provenance,
-        String taskType,
+        String operationType,
         String operationCode,
         CompileOptions options
 ) {

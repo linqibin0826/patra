@@ -33,32 +33,32 @@ public interface ExprCompiler {
     }
     
     /**
-     * 便捷方法：编译指定任务类型的表达式。
-     * 
+     * 便捷方法：编译指定操作类型的表达式。
+     *
      * @param expression 表达式
      * @param provenance 数据来源
-     * @param taskType 任务类型
+     * @param operationType 操作类型（如 HARVEST/UPDATE；null 表示来源级配置）
      * @return 编译结果
      */
-    default CompileResult compile(Expr expression, ProvenanceCode provenance, String taskType) {
+    default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType) {
         CompileRequest request = CompileRequestBuilder.of(expression, provenance)
-            .forTask(taskType)
+            .forOperationType(operationType)
             .build();
         return compile(request);
     }
     
     /**
-     * 便捷方法：编译指定任务类型和操作的表达式。
-     * 
+     * 便捷方法：编译指定操作类型和操作代码的表达式。
+     *
      * @param expression 表达式
      * @param provenance 数据来源  
-     * @param taskType 任务类型
+     * @param operationType 操作类型（如 HARVEST/UPDATE；null 表示来源级配置）
      * @param operationCode 操作代码
      * @return 编译结果
      */
-    default CompileResult compile(Expr expression, ProvenanceCode provenance, String taskType, String operationCode) {
+    default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType, String operationCode) {
         CompileRequest request = CompileRequestBuilder.of(expression, provenance)
-            .forTask(taskType)
+            .forOperationType(operationType)
             .forOperation(operationCode)
             .build();
         return compile(request);

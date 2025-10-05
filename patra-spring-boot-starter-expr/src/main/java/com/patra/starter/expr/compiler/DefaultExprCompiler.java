@@ -40,7 +40,7 @@ public class DefaultExprCompiler implements ExprCompiler {
     public CompileResult compile(CompileRequest request) {
         Objects.requireNonNull(request, "request");
 
-        ProvenanceSnapshot snapshot = snapshotLoader.load(request.provenance(), request.taskType(), request.operationCode());
+        ProvenanceSnapshot snapshot = snapshotLoader.load(request.provenance(), request.operationType(), request.operationCode());
         Expr normalized = normalizer.normalize(request.expression(), request.options().strict());
 
         List<Issue> issues = capabilityChecker.check(normalized, snapshot, request.options().strict());

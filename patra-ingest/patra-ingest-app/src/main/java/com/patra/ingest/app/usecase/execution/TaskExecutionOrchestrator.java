@@ -395,9 +395,8 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
             throw new IllegalStateException("配置快照缺失");
         }
         String baseUrlDefault = snapshot.provenance() == null ? null : snapshot.provenance().baseUrlDefault();
-        String baseUrlOverride = snapshot.http() == null ? null : snapshot.http().baseUrlOverride();
-        if (isBlank(baseUrlDefault) && isBlank(baseUrlOverride)) {
-            throw new IllegalStateException("HTTP 基础地址缺失（baseUrlDefault/baseUrlOverride 均为空）");
+        if (isBlank(baseUrlDefault)) {
+            throw new IllegalStateException("HTTP 基础地址缺失（baseUrlDefault 为空）");
         }
 
         ProvenanceConfigSnapshot.PaginationConfig pagination = snapshot.pagination();
