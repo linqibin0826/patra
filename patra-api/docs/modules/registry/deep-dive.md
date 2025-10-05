@@ -37,11 +37,11 @@ Registry 服务 = Papertrace 平台“元数据与配置”的 **单一可信源
 组装算法（简化伪代码）：
 
 ```
-input: provenanceCode, taskType, operationCode, now
+input: provenanceCode, operationType, operationCode, now
 scope layers = [SOURCE, TASK]    // 先加载 SOURCE 层，再用 TASK 层覆盖
 for each sliceType in SLICES:
   rows = query DB where provenance = ? and effective_from <= now and (effective_to is null or effective_to > now)
-  map by (scope, taskType?, operation?)
+  map by (scope, operationType?, operation?)
   merge: SOURCE putIfAbsent; TASK 覆盖同 key
 build ProvenanceConfiguration { each slice pick merged map entries }
 ```
@@ -58,7 +58,7 @@ build ProvenanceConfiguration { each slice pick merged map entries }
 
 合成规则：
 
-1. 分别按 (scope, taskType?) 加载 SOURCE 层
+1. 分别按 (scope, operationType?) 加载 SOURCE 层
 2. 加载 TASK 层（存在则覆盖同 key）
 3. 形成 `ExprSnapshot`（内部 map 保留覆盖后的顺序，使用 LinkedHashMap）
 4. 查询调用链只读；不在 snapshot 中做计算副作用。
@@ -77,8 +77,8 @@ isEffectiveAt(t) = !t.isBefore(effectiveFrom) && (effectiveTo == null || t.isBef
 
 ```
 优先级：SOURCE < TASK
-合成：先插入 SOURCE，再用 TASK 覆盖同 key（key = scope|taskType|operation 可部分缺省）
-taskType / operationCode 允许占位 "ALL"（标准化阶段统一填充）
+合成：先插入 SOURCE，再用 TASK 覆盖同 key（key = scope|operationType|operation 可部分缺省）
+operationType / operationCode 允许占位 "ALL"（标准化阶段统一填充）
 ```
 
 ### 1.6 配置生效流程（摘要）
@@ -202,7 +202,7 @@ sequenceDiagram
 | 场景                      | 行为                                  |
 |-------------------------|-------------------------------------|
 | Scope 值                 | 空白 → 抛 `DomainValidationException`  |
-| taskType / operation 缺省 | 归一化为 "ALL"                          |
+| operationType / operation 缺省 | 归一化为 "ALL"                          |
 | key 大小写                 | 依据需要统一 `trim()` 并保留大小写（下游渲染敏感）      |
 | 时间窗口                    | `effectiveFrom` 必填；`effectiveTo` 可空 |
 
@@ -277,7 +277,7 @@ String opCodeTrimmed = DomainValidationException.notBlank(operationCode, "Operat
 | 目标            | 方案                                      | 优先级  |
 |---------------|-----------------------------------------|------|
 | 减少热查询 DB 压力   | Redis分布式缓存 + 定时刷新                       | HIGH |
-| 减少快照构建开销      | Snapshot 结构缓存（key: provenance+taskType） | HIGH |
+| 减少快照构建开销      | Snapshot 结构缓存（key: provenance+operationType） | HIGH |
 | 避免重复 JSON 解析  | 预编译渲染模板缓存                               | MID  |
 | 大字典分页下发       | Adapter 层分页接口                           | MID  |
 | 热 Key Metrics | Micrometer + percentiles                | MID  |

@@ -36,7 +36,7 @@ public class SnapshotAssembler {
 
     public ProvenanceSnapshot assemble(ProvenanceResp provenance,
                                        ExprSnapshotResp snapshot,
-                                       String taskType,
+                                       String operationType,
                                        String operationCode) {
         Objects.requireNonNull(provenance, "provenance");
         Map<String, ProvenanceSnapshot.FieldDefinition> fields = new HashMap<>();
@@ -72,9 +72,12 @@ public class SnapshotAssembler {
             renderRules.add(toRenderRule(rule));
         }
 
+        String normalizedOperationType = normalizeOperationType(operationType);
+        String scopeCode = normalizedOperationType == null ? RegistryConfigScope.SOURCE.code() : RegistryConfigScope.TASK.code();
+
         return new ProvenanceSnapshot(
                 new ProvenanceSnapshot.Identity(provenance.id(), provenance.code(), provenance.name()),
-                new ProvenanceSnapshot.Scope(RegistryConfigScope.SOURCE.code(), taskType),
+                new ProvenanceSnapshot.Scope(scopeCode, normalizedOperationType),
                 new ProvenanceSnapshot.Operation(operationCode, provenance.timezoneDefault()),
                 0L,
                 Instant.now(),
@@ -120,10 +123,13 @@ public class SnapshotAssembler {
 
     private ProvenanceSnapshot.RenderRule toRenderRule(ExprRenderRuleResp resp) {
         Map<String, String> params = parseParams(resp.paramsJson());
+        String normalizedOperationType = normalizeOperationType(resp.operationType());
+        String scopeCode = normalizedOperationType == null ? RegistryConfigScope.SOURCE.code() : RegistryConfigScope.TASK.code();
+
         return new ProvenanceSnapshot.RenderRule(
                 resp.fieldKey(),
-                resp.scopeCode(),
-                resp.taskType(),
+                scopeCode,
+                normalizedOperationType,
                 Atom.Operator.valueOf(resp.opCode().toUpperCase(Locale.ROOT)),
                 resp.matchTypeCode(),
                 toNegationQualifier(resp.negated()),
@@ -139,6 +145,13 @@ public class SnapshotAssembler {
                 resp.effectiveTo(),
                 0
         );
+    }
+
+    private String normalizeOperationType(String operationType) {
+        if (operationType == null || operationType.isBlank()) {
+            return null;
+        }
+        return operationType.trim().toUpperCase(Locale.ROOT);
     }
 
     private Map<String, String> parseParams(String paramsJson) {

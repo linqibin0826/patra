@@ -23,7 +23,7 @@ import java.util.Objects;
  * 
  * // 完整配置
  * CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.CROSSREF)
- *     .forTask(TaskTypes.UPDATE)
+ *     .forOperationType(OperationTypes.UPDATE)
  *     .forOperation(OperationCodes.SEARCH)
  *     .withOptions(CompileOptions.defaults().withStrict(false))
  *     .build();
@@ -38,7 +38,7 @@ public class CompileRequestBuilder {
     
     private final Expr expression;
     private final ProvenanceCode provenance;
-    private String taskType;
+    private String operationType;
     private String operationCode = OperationCodes.SEARCH; // 默认搜索操作
     private CompileOptions options = CompileOptions.defaults();
     
@@ -59,20 +59,21 @@ public class CompileRequestBuilder {
     }
     
     /**
-     * 设置任务类型。
-     * 
-     * <p>任务类型用于区分同一数据源的不同业务场景，例如：</p>
+     * 指定操作类型维度。
+     *
+     * <p>操作类型用于区分同一数据源在不同业务场景下的配置切片，例如：</p>
      * <ul>
-     *   <li>{@link TaskTypes#UPDATE} - 增量更新场景</li>
-     *   <li>{@link TaskTypes#FULL} - 全量同步场景</li>
-     *   <li>{@link TaskTypes#SEARCH} - 搜索场景</li>
+     *   <li>{@link OperationTypes#HARVEST} - 初始全量采集</li>
+     *   <li>{@link OperationTypes#BACKFILL} - 历史补采场景</li>
+     *   <li>{@link OperationTypes#UPDATE} - 增量更新场景</li>
+     *   <li>{@link OperationTypes#SEARCH} - 搜索场景</li>
      * </ul>
-     * 
-     * @param taskType 任务类型，null 表示使用来源级配置
+     *
+     * @param operationType 操作类型（期望大写，如 HARVEST/UPDATE；null 表示使用来源级配置）
      * @return 当前构建器实例
      */
-    public CompileRequestBuilder forTask(String taskType) {
-        this.taskType = taskType;
+    public CompileRequestBuilder forOperationType(String operationType) {
+        this.operationType = operationType;
         return this;
     }
     
@@ -156,6 +157,6 @@ public class CompileRequestBuilder {
      * @return 编译请求实例
      */
     public CompileRequest build() {
-        return new CompileRequest(expression, provenance, taskType, operationCode, options);
+        return new CompileRequest(expression, provenance, operationType, operationCode, options);
     }
 }

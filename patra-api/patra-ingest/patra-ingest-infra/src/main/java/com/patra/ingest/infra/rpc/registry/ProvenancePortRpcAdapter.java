@@ -53,33 +53,33 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
     public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, Endpoint endpointCode, OperationCode operationCode) {
         String code = provenanceCode.getCode();
         String endpoint = endpointCode.name();
-        String taskType = operationCode.name();
+        String operationType = operationCode.name();
         Instant queryTime = Instant.now();
 
-        log.debug("[INGEST][ADAPTER] Requesting provenance config, code={}, taskType={}, endpoint={}, at={}",
-                code, taskType, endpoint, queryTime);
+        log.debug("[INGEST][ADAPTER] Requesting provenance config, code={}, operationType={}, endpoint={}, at={}",
+                code, operationType, endpoint, queryTime);
 
         try {
-            ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, taskType, queryTime);
+            ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, operationType, queryTime);
 
             if (resp == null) {
-                log.warn("[INGEST][ADAPTER] Registry returned empty config, code={}, taskType={}, endpoint={}", code, taskType, endpoint);
+                log.warn("[INGEST][ADAPTER] Registry returned empty config, code={}, operationType={}, endpoint={}", code, operationType, endpoint);
                 return createMinimalSnapshot(code);
             }
 
             ProvenanceConfigSnapshot snapshot = converter.convert(resp);
 
-            // 日志输出转换结果哈希信息便于诊断（snapshot 本身含 toString）
+            // Log hash info of conversion result for diagnosis (snapshot itself includes toString)
             log.debug("[INGEST][ADAPTER] Provenance config loaded, code={}, snapshot={}", code, snapshot);
             return snapshot;
 
         } catch (RemoteCallException ex) {
-            return handleRemoteException(ex, code, taskType, endpoint);
+            return handleRemoteException(ex, code, operationType, endpoint);
         } catch (Exception ex) {
-            String msg = String.format("Unexpected error when fetching config, code=%s, taskType=%s, endpoint=%s",
-                    code, taskType, endpoint);
+            String msg = String.format("Unexpected error when fetching config, code=%s, operationType=%s, endpoint=%s",
+                    code, operationType, endpoint);
             log.error("[INGEST][ADAPTER] " + msg, ex);
-            throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
+            throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
         }
     }
 
@@ -88,12 +88,12 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
      */
     private ProvenanceConfigSnapshot handleRemoteException(RemoteCallException ex,
                                                            String code,
-                                                           String taskType,
+                                                           String operationType,
                                                            String endpoint) {
         if (RemoteErrorHelper.isNotFound(ex)) {
-            String msg = String.format("Provenance config not found, code=%s, taskType=%s, endpoint=%s", code, taskType, endpoint);
+            String msg = String.format("Provenance config not found, code=%s, operationType=%s, endpoint=%s", code, operationType, endpoint);
             log.warn("[INGEST][ADAPTER] {} (remoteCode={}, status={}, traceId={})", msg, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
-            throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
+            throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
         }
 
         if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
@@ -111,7 +111,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
                         ex.getTraceId(),
                         ex.getMessage());
         log.error("[INGEST][ADAPTER] " + msg);
-        throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
+        throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
     }
 
     /**

@@ -14,7 +14,7 @@ VALUES ('PUBMED', 'PubMed', 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', 'U
         0, INET6_ATON('192.168.1.11'), 0);
 
 
-INSERT INTO patra_registry.reg_prov_window_offset_cfg (id, provenance_id, scope_code, task_type, effective_from,
+INSERT INTO patra_registry.reg_prov_window_offset_cfg (id, provenance_id, scope_code, operation_type, effective_from,
                                                        effective_to, window_mode_code, window_size_value,
                                                        window_size_unit_code, calendar_align_to, lookback_value,
                                                        lookback_unit_code, overlap_value, overlap_unit_code,
@@ -32,7 +32,7 @@ VALUES (1, 1, 'TASK', 'HARVEST', '2025-09-01 00:00:00.000000', null, 'CALENDAR',
     }
   ]', '2025-09-24 21:47:47.971285', 1001, '系统管理员', '2025-09-24 21:53:41.720510', 1001, '系统管理员', 0, 0xC0A80114,
         0);
-INSERT INTO patra_registry.reg_prov_window_offset_cfg (id, provenance_id, scope_code, task_type, effective_from,
+INSERT INTO patra_registry.reg_prov_window_offset_cfg (id, provenance_id, scope_code, operation_type, effective_from,
                                                        effective_to, window_mode_code, window_size_value,
                                                        window_size_unit_code, calendar_align_to, lookback_value,
                                                        lookback_unit_code, overlap_value, overlap_unit_code,

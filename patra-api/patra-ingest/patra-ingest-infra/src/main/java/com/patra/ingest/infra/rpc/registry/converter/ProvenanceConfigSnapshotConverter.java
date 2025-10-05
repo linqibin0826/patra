@@ -6,9 +6,6 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-import java.util.Collections;
-import java.util.List;
-
 /**
  * Registry API DTO 到 Ingest 领域快照的转换器。
  *
@@ -56,7 +53,7 @@ public interface ProvenanceConfigSnapshotConverter {
     }
 
     /**
-     * 映射窗口/指针配置。
+     * Map window offset configuration.
      */
     default ProvenanceConfigSnapshot.WindowOffsetConfig mapWindowOffsetConfig(WindowOffsetResp source) {
         if (source == null) {
@@ -65,9 +62,8 @@ public interface ProvenanceConfigSnapshotConverter {
         return new ProvenanceConfigSnapshot.WindowOffsetConfig(
                 source.id(),
                 source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
+                source.operationType(),
+                source.operationTypeKey(),
                 source.effectiveFrom(),
                 source.effectiveTo(),
                 source.windowModeCode(),
@@ -89,7 +85,7 @@ public interface ProvenanceConfigSnapshotConverter {
     }
 
     /**
-     * 映射分页配置。
+     * Map pagination configuration.
      */
     default ProvenanceConfigSnapshot.PaginationConfig mapPaginationConfig(PaginationConfigResp source) {
         if (source == null) {
@@ -98,32 +94,20 @@ public interface ProvenanceConfigSnapshotConverter {
         return new ProvenanceConfigSnapshot.PaginationConfig(
                 source.id(),
                 source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
+                source.operationType(),
+                source.operationTypeKey(),
                 source.effectiveFrom(),
                 source.effectiveTo(),
                 source.paginationModeCode(),
                 source.pageSizeValue(),
                 source.maxPagesPerExecution(),
-                source.pageNumberParamName(),
-                source.pageSizeParamName(),
-                source.startPageNumber(),
                 source.sortFieldParamName(),
-                source.sortDirection(),
-                source.cursorParamName(),
-                source.initialCursorValue(),
-                source.nextCursorJsonpath(),
-                source.hasMoreJsonpath(),
-                source.totalCountJsonpath(),
-                source.nextCursorXpath(),
-                source.hasMoreXpath(),
-                source.totalCountXpath()
+                source.sortingDirection()
         );
     }
 
     /**
-     * 映射 HTTP 配置。
+     * Map HTTP configuration.
      */
     default ProvenanceConfigSnapshot.HttpConfig mapHttpConfig(HttpConfigResp source) {
         if (source == null) {
@@ -132,20 +116,16 @@ public interface ProvenanceConfigSnapshotConverter {
         return new ProvenanceConfigSnapshot.HttpConfig(
                 source.id(),
                 source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
+                source.operationType(),
+                source.operationTypeKey(),
                 source.effectiveFrom(),
                 source.effectiveTo(),
-                source.baseUrlOverride(),
                 source.defaultHeadersJson(),
                 source.timeoutConnectMillis(),
                 source.timeoutReadMillis(),
                 source.timeoutTotalMillis(),
                 source.tlsVerifyEnabled(),
                 source.proxyUrlValue(),
-                source.acceptCompressEnabled(),
-                source.preferHttp2Enabled(),
                 source.retryAfterPolicyCode(),
                 source.retryAfterCapMillis(),
                 source.idempotencyHeaderName(),
@@ -154,7 +134,7 @@ public interface ProvenanceConfigSnapshotConverter {
     }
 
     /**
-     * 映射批量配置。
+     * Map batching configuration.
      */
     default ProvenanceConfigSnapshot.BatchingConfig mapBatchingConfig(BatchingConfigResp source) {
         if (source == null) {
@@ -163,28 +143,19 @@ public interface ProvenanceConfigSnapshotConverter {
         return new ProvenanceConfigSnapshot.BatchingConfig(
                 source.id(),
                 source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
+                source.operationType(),
+                source.operationTypeKey(),
                 source.effectiveFrom(),
                 source.effectiveTo(),
                 source.detailFetchBatchSize(),
-                source.credentialName(),
                 source.idsParamName(),
                 source.idsJoinDelimiter(),
-                source.maxIdsPerRequest(),
-                source.preferCompactPayload(),
-                source.payloadCompressStrategyCode(),
-                source.appParallelismDegree(),
-                source.perHostConcurrencyLimit(),
-                source.httpConnPoolSize(),
-                source.backpressureStrategyCode(),
-                source.requestTemplateJson()
+                source.maxIdsPerRequest()
         );
     }
 
     /**
-     * 映射重试配置。
+     * Map retry configuration.
      */
     default ProvenanceConfigSnapshot.RetryConfig mapRetryConfig(RetryConfigResp source) {
         if (source == null) {
@@ -193,9 +164,8 @@ public interface ProvenanceConfigSnapshotConverter {
         return new ProvenanceConfigSnapshot.RetryConfig(
                 source.id(),
                 source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
+                source.operationType(),
+                source.operationTypeKey(),
                 source.effectiveFrom(),
                 source.effectiveTo(),
                 source.maxRetryTimes(),
@@ -213,7 +183,7 @@ public interface ProvenanceConfigSnapshotConverter {
     }
 
     /**
-     * 映射限流配置。
+     * Map rate limit configuration.
      */
     default ProvenanceConfigSnapshot.RateLimitConfig mapRateLimitConfig(RateLimitConfigResp source) {
         if (source == null) {
@@ -222,19 +192,12 @@ public interface ProvenanceConfigSnapshotConverter {
         return new ProvenanceConfigSnapshot.RateLimitConfig(
                 source.id(),
                 source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
+                source.operationType(),
+                source.operationTypeKey(),
                 source.effectiveFrom(),
                 source.effectiveTo(),
-                source.rateTokensPerSecond(),
-                source.burstBucketCapacity(),
                 source.maxConcurrentRequests(),
-                source.perCredentialQpsLimit(),
-                source.bucketGranularityScopeCode(),
-                source.smoothingWindowMillis(),
-                source.respectServerRateHeader(),
-                source.credentialName()
+                source.perCredentialQpsLimit()
         );
     }
 

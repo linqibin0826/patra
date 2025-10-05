@@ -47,10 +47,10 @@ class ProvenanceClientImpl implements ProvenanceClient {
 }
 
 // 上游（Ingest）示例：远端错误分类
-private ProvenanceConfigSnapshot handleRemote(RemoteCallException ex, String code, String taskType, String endpoint) {
+private ProvenanceConfigSnapshot handleRemote(RemoteCallException ex, String code, String operationType, String endpoint) {
     if (RemoteErrorHelper.isNotFound(ex)) {
-        String msg = String.format("Provenance config not found, code=%s, taskType=%s, endpoint=%s", code, taskType, endpoint);
-        throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
+        String msg = String.format("Provenance config not found, code=%s, operationType=%s, endpoint=%s", code, operationType, endpoint);
+        throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
     }
     if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
         return createMinimalSnapshot(code);
@@ -58,7 +58,7 @@ private ProvenanceConfigSnapshot handleRemote(RemoteCallException ex, String cod
     String msg = String.format(
             "Registry client error, code=%s, status=%d, remoteCode=%s, traceId=%s",
             code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId());
-    throw new IngestConfigurationException(code, taskType, endpoint, msg, ex);
+    throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
 }
 ```
 

@@ -167,9 +167,8 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
  * 语义：每个 slice 派生出一个可调度任务；绑定来源、操作、凭据与执行参数。
  * 关键点：
  *  - 逻辑关联 schedule_instance/plan/slice（不建 FK）；
- *  - credential_id 逻辑指向 reg_prov_credential.id（不建 FK，保留二级索引 idx_task_cred）；
  *  - 幂等键 idempotent_key 唯一，保证“同 slice+操作+参数+触发上下文”只建一条任务。
- * 索引：uk_task_idem / idx_task_slice / idx_task_src_op / idx_task_sched_at / idx_task_queue / idx_task_cred。
+ * 索引：uk_task_idem / idx_task_slice / idx_task_src_op / idx_task_sched_at / idx_task_queue。
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task`
 (
@@ -567,5 +566,5 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
     KEY `idx_outbox_created` (`created_at`),
     KEY `idx_outbox_deleted_upd` (`deleted`, `updated_at`)
 )
-    ENGINE = InnoDB COMMENT ='Outbox：通用出站消息表（任务推送/集成事件统一托管；与业务写入同事务，不含credential_id；Relay扫描并投递到MQ）';
+    ENGINE = InnoDB COMMENT ='Outbox：通用出站消息表（任务推送/集成事件统一托管；与业务写入同事务；Relay扫描并投递到MQ）';
 

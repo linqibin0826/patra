@@ -43,114 +43,92 @@ public record ProvenanceConfigSnapshot(
     }
 
     /**
-     * 时间窗口与增量指针（reg_prov_window_offset_cfg）。
-     * 字典：scope = SOURCE|TASK；window_mode = SLIDING|CALENDAR；time_unit = SECOND|MINUTE|HOUR|DAY；offset_type = DATE|ID|COMPOSITE；lifecycle_status 同上。
+     * Window & Offset configuration (reg_prov_window_offset_cfg).
+     * Dictionary: window_mode = SLIDING|CALENDAR; time_unit = SECOND|MINUTE|HOUR|DAY; offset_type = DATE|ID|COMPOSITE; lifecycle_status as above.
      */
     public record WindowOffsetConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 窗口模式 (window_mode: SLIDING|CALENDAR) */ String windowModeCode,
-            /* 窗口长度数值（示例 1/7/30） */ Integer windowSizeValue,
-            /* 窗口长度单位 (time_unit: SECOND|MINUTE|HOUR|DAY) */ String windowSizeUnitCode,
-            /* CALENDAR 对齐粒度（HOUR|DAY|WEEK|MONTH，可空） */ String calendarAlignTo,
-            /* 回看长度数值（补偿延迟数据） */ Integer lookbackValue,
-            /* 回看长度单位 (time_unit) */ String lookbackUnitCode,
-            /* 窗口重叠长度数值（迟到兜底） */ Integer overlapValue,
-            /* 窗口重叠单位 (time_unit) */ String overlapUnitCode,
-            /* 水位滞后秒（乱序允许延迟） */ Integer watermarkLagSeconds,
-            /* 指针类型 (offset_type: DATE|ID|COMPOSITE) */ String offsetTypeCode,
-            /* 指针字段或 JSONPath（依据指针类型解释） */ String offsetFieldName,
-            /* DATE 指针格式（如 ISO_INSTANT/epochMillis/yyyyMMdd） */ String offsetDateFormat,
-            /* 默认增量日期字段（多日期候选时） */ String defaultDateFieldName,
-            /* 单窗口最大 ID 数（超出可能二次切窗） */ Integer maxIdsPerWindow,
-            /* 单窗口最大跨度秒（超出强制切分） */ Integer maxWindowSpanSeconds
+            /* Primary key ID */ Long id,
+            /* Provenance ID */ Long provenanceId,
+            /* Operation type (nullable) */ String operationType,
+            /* Normalized operation key (NULL→ALL) */ String operationTypeKey,
+            /* Effective from (inclusive) */ Instant effectiveFrom,
+            /* Effective to (exclusive; NULL=long-term) */ Instant effectiveTo,
+            /* Window mode (window_mode: SLIDING|CALENDAR) */ String windowModeCode,
+            /* Window length value (e.g., 1/7/30) */ Integer windowSizeValue,
+            /* Window length unit (time_unit: SECOND|MINUTE|HOUR/DAY) */ String windowSizeUnitCode,
+            /* CALENDAR alignment granularity (HOUR|DAY|WEEK|MONTH, nullable) */ String calendarAlignTo,
+            /* Lookback length value (compensate for delayed data) */ Integer lookbackValue,
+            /* Lookback length unit (time_unit) */ String lookbackUnitCode,
+            /* Window overlap length value (late arrival coverage) */ Integer overlapValue,
+            /* Window overlap unit (time_unit) */ String overlapUnitCode,
+            /* Watermark lag seconds (out-of-order allowed delay) */ Integer watermarkLagSeconds,
+            /* Offset type (offset_type: DATE|ID|COMPOSITE) */ String offsetTypeCode,
+            /* Offset field or JSONPath (interpreted per offset type) */ String offsetFieldName,
+            /* DATE offset format (e.g., ISO_INSTANT/epochMillis/yyyyMMdd) */ String offsetDateFormat,
+            /* Default incremental date field (when multiple date candidates) */ String defaultDateFieldName,
+            /* Max IDs per window (may re-split if exceeded) */ Integer maxIdsPerWindow,
+            /* Max window span seconds (forced split if exceeded) */ Integer maxWindowSpanSeconds
     ) {
     }
 
     /**
-     * 分页 / 游标 / 令牌 / 滚动分页（reg_prov_pagination_cfg）。
-     * 字典：scope = SOURCE|TASK；pagination_mode = PAGE_NUMBER|CURSOR|TOKEN|SCROLL；lifecycle_status 同上。
+     * Pagination / Cursor / Token / Scroll configuration (reg_prov_pagination_cfg).
+     * Dictionary: pagination_mode = PAGE_NUMBER|CURSOR|TOKEN|SCROLL; lifecycle_status as above.
      */
     public record PaginationConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 分页模式 (pagination_mode: PAGE_NUMBER|CURSOR|TOKEN|SCROLL) */ String paginationModeCode,
-            /* 每页大小（PAGE_NUMBER/SCROLL 模式常用，NULL=应用默认） */ Integer pageSizeValue,
-            /* 单次执行最大翻页数（NULL=不限制或上层控制） */ Integer maxPagesPerExecution,
-            /* 页码参数名（如 page） */ String pageNumberParamName,
-            /* 每页大小参数名（如 pageSize / rows） */ String pageSizeParamName,
-            /* 起始页码（PAGE_NUMBER 起点，默认常用 1） */ Integer startPageNumber,
-            /* 排序字段参数名（如 sort） */ String sortFieldParamName,
-            /* 排序方向 (ASC|DESC) */ String sortDirection,
-            /* 游标/令牌参数名（如 cursor / next_token） */ String cursorParamName,
-            /* 初始游标值（可空：运行时确定） */ String initialCursorValue,
-            /* 提取下一页游标的 JSONPath/JMESPath */ String nextCursorJsonpath,
-            /* 判断是否还有下一页的 JSONPath（布尔） */ String hasMoreJsonpath,
-            /* 提取总条数的 JSONPath（可选） */ String totalCountJsonpath,
-            /* 提取下一页游标的 XPath（XML，可选） */ String nextCursorXpath,
-            /* 判断是否还有下一页的 XPath（布尔，可选） */ String hasMoreXpath,
-            /* 提取总条数的 XPath（可选） */ String totalCountXpath
+            /* Primary key ID */ Long id,
+            /* Provenance ID */ Long provenanceId,
+            /* Operation type (nullable) */ String operationType,
+            /* Normalized operation key (NULL→ALL) */ String operationTypeKey,
+            /* Effective from (inclusive) */ Instant effectiveFrom,
+            /* Effective to (exclusive; NULL=long-term) */ Instant effectiveTo,
+            /* Pagination mode (pagination_mode: PAGE_NUMBER|CURSOR|TOKEN|SCROLL) */ String paginationModeCode,
+            /* Page size value (PAGE_NUMBER/SCROLL mode, NULL=app default) */ Integer pageSizeValue,
+            /* Max pages per execution (NULL=no limit or upper control) */ Integer maxPagesPerExecution,
+            /* Sort field parameter name (e.g., sort) */ String sortFieldParamName,
+            /* Sort direction (1=ASC, 0=DESC) */ Integer sortingDirection
     ) {
     }
 
     /**
-     * HTTP 策略（reg_prov_http_cfg）。
-     * 字典：scope = SOURCE|TASK；retry_after_policy = IGNORE|RESPECT|CLAMP；lifecycle_status 同上。
+     * HTTP policy configuration (reg_prov_http_cfg).
+     * Dictionary: retry_after_policy = IGNORE|RESPECT|CLAMP; lifecycle_status as above.
      */
     public record HttpConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 基础URL覆盖（不为空时覆盖来源默认 baseUrl） */ String baseUrlOverride,
-            /* 默认 Headers JSON（运行时合并） */ String defaultHeadersJson,
-            /* 连接超时毫秒 */ Integer timeoutConnectMillis,
-            /* 读取超时毫秒 */ Integer timeoutReadMillis,
-            /* 总超时毫秒（请求整体上限） */ Integer timeoutTotalMillis,
-            /* 是否校验 TLS 证书 */ boolean tlsVerifyEnabled,
-            /* 代理地址（支持 http(s)/socks5） */ String proxyUrlValue,
-            /* 是否接受压缩（gzip/deflate/br 等） */ boolean acceptCompressEnabled,
-            /* 是否优先 HTTP/2 */ boolean preferHttp2Enabled,
-            /* Retry-After 处理策略 (retry_after_policy: IGNORE|RESPECT|CLAMP) */ String retryAfterPolicyCode,
-            /* Retry-After 最大等待上限毫秒（CLAMP/RESPECT 时可用） */ Integer retryAfterCapMillis,
-            /* 幂等性 Header 名（如 Idempotency-Key） */ String idempotencyHeaderName,
-            /* 幂等键 TTL 秒（客户端/服务端支持时生效） */ Integer idempotencyTtlSeconds
+            /* Primary key ID */ Long id,
+            /* Provenance ID */ Long provenanceId,
+            /* Operation type (nullable) */ String operationType,
+            /* Normalized operation key (NULL→ALL) */ String operationTypeKey,
+            /* Effective from (inclusive) */ Instant effectiveFrom,
+            /* Effective to (exclusive; NULL=long-term) */ Instant effectiveTo,
+            /* Default Headers JSON (merged at runtime) */ String defaultHeadersJson,
+            /* Connect timeout milliseconds */ Integer timeoutConnectMillis,
+            /* Read timeout milliseconds */ Integer timeoutReadMillis,
+            /* Total timeout milliseconds (overall request cap) */ Integer timeoutTotalMillis,
+            /* Whether to verify TLS certificates */ boolean tlsVerifyEnabled,
+            /* Proxy address (supports http(s)/socks5) */ String proxyUrlValue,
+            /* Retry-After handling policy (retry_after_policy: IGNORE|RESPECT|CLAMP) */ String retryAfterPolicyCode,
+            /* Retry-After max wait cap milliseconds (CLAMP/RESPECT) */ Integer retryAfterCapMillis,
+            /* Idempotency Header name (e.g., Idempotency-Key) */ String idempotencyHeaderName,
+            /* Idempotency key TTL seconds (if client/server supports) */ Integer idempotencyTtlSeconds
     ) {
     }
 
     /**
-     * 批量抓取与请求成型（reg_prov_batching_cfg）。
-     * 字典：scope = SOURCE|TASK；payload_compress_strategy = NONE|GZIP；backpressure_strategy = BLOCK|DROP|YIELD；lifecycle_status 同上。
+     * Batching & request shaping configuration (reg_prov_batching_cfg).
+     * Dictionary: lifecycle_status as above.
      */
     public record BatchingConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 详情抓取批大小（NULL=应用默认） */ Integer detailFetchBatchSize,
-            /* 指定凭证名（可空） */ String credentialName,
-            /* ID 参数名（可空） */ String idsParamName,
-            /* ID 拼接分隔符（默认 ,） */ String idsJoinDelimiter,
-            /* 单请求最大 ID 数（硬上限） */ Integer maxIdsPerRequest,
-            /* 是否偏好紧凑负载（压缩/去冗余） */ boolean preferCompactPayload,
-            /* 负载压缩策略 (payload_compress_strategy: NONE|GZIP) */ String payloadCompressStrategyCode,
-            /* 建议应用并行度 */ Integer appParallelismDegree,
-            /* 每主机并发限制 */ Integer perHostConcurrencyLimit,
-            /* HTTP 连接池大小 */ Integer httpConnPoolSize,
-            /* 背压策略 (backpressure_strategy: BLOCK|DROP|YIELD) */ String backpressureStrategyCode,
-            /* 请求模板 JSON（含占位符） */ String requestTemplateJson
+            /* Primary key ID */ Long id,
+            /* Provenance ID */ Long provenanceId,
+            /* Operation type (nullable) */ String operationType,
+            /* Normalized operation key (NULL→ALL) */ String operationTypeKey,
+            /* Effective from (inclusive) */ Instant effectiveFrom,
+            /* Effective to (exclusive; NULL=long-term) */ Instant effectiveTo,
+            /* Detail fetch batch size (NULL=app default) */ Integer detailFetchBatchSize,
+            /* IDs parameter name (nullable) */ String idsParamName,
+            /* IDs join delimiter (default comma) */ String idsJoinDelimiter,
+            /* Max IDs per request (hard limit) */ Integer maxIdsPerRequest
     ) {
     }
 
@@ -159,46 +137,38 @@ public record ProvenanceConfigSnapshot(
      * 字典：scope = SOURCE|TASK；backoff_policy_type = FIXED|EXP|EXP_JITTER|DECOR_JITTER；lifecycle_status 同上。
      */
     public record RetryConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 最大重试次数（NULL=默认；0=不重试） */ Integer maxRetryTimes,
-            /* 退避策略 (backoff_policy_type: FIXED|EXP|EXP_JITTER|DECOR_JITTER) */ String backoffPolicyTypeCode,
-            /* 初始延迟毫秒（首个��试） */ Integer initialDelayMillis,
-            /* 单次重试最大延迟毫秒 */ Integer maxDelayMillis,
-            /* 指数倍率（EXP 系列） */ Double expMultiplierValue,
-            /* 抖动因子（0~1） */ Double jitterFactorRatio,
-            /* 可重试 HTTP 状态码 JSON 数组 */ String retryHttpStatusJson,
-            /* 放弃 HTTP 状态码 JSON 数组 */ String giveupHttpStatusJson,
-            /* 网络错误是否重试 */ boolean retryOnNetworkError,
-            /* 断路器阈值（连续失败次数） */ Integer circuitBreakThreshold,
-            /* 断路器冷却毫秒（半开前等待） */ Integer circuitCooldownMillis
+            /* Primary key ID */ Long id,
+            /* Provenance ID */ Long provenanceId,
+            /* Operation type discriminator (nullable) */ String operationType,
+            /* Normalized operation key (NULL→ALL) */ String operationTypeKey,
+            /* Effective from (inclusive) */ Instant effectiveFrom,
+            /* Effective to (exclusive; NULL=long-term) */ Instant effectiveTo,
+            /* Max retry attempts (NULL=default; 0=disabled) */ Integer maxRetryTimes,
+            /* Backoff policy (FIXED|EXP|EXP_JITTER|DECOR_JITTER) */ String backoffPolicyTypeCode,
+            /* Initial delay milliseconds (first retry) */ Integer initialDelayMillis,
+            /* Max delay per retry */ Integer maxDelayMillis,
+            /* Exponential multiplier (EXP family) */ Double expMultiplierValue,
+            /* Jitter factor ratio (0~1) */ Double jitterFactorRatio,
+            /* Retry HTTP status list JSON */ String retryHttpStatusJson,
+            /* Give-up HTTP status list JSON */ String giveupHttpStatusJson,
+            /* Retry on network errors */ boolean retryOnNetworkError,
+            /* Circuit breaker threshold (consecutive failures) */ Integer circuitBreakThreshold,
+            /* Circuit breaker cool-down milliseconds */ Integer circuitCooldownMillis
     ) {
     }
 
     /**
-     * 限流与并发（reg_prov_rate_limit_cfg）。
-     * 字典：scope = SOURCE|TASK；bucket_granularity_scope = GLOBAL|PER_KEY|PER_ENDPOINT|PER_IP|PER_TASK；lifecycle_status 同上。
+     * Rate limiting and concurrency (reg_prov_rate_limit_cfg).
      */
     public record RateLimitConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 每秒令牌速率（QPS；NULL=默认/不限） */ Integer rateTokensPerSecond,
-            /* 突发桶容量（瞬时峰值缓冲） */ Integer burstBucketCapacity,
-            /* 最大并发请求数（NULL=默认） */ Integer maxConcurrentRequests,
-            /* 单凭证 QPS 上限（多凭证分摊） */ Integer perCredentialQpsLimit,
-            /* 令牌桶粒度 (bucket_granularity_scope: GLOBAL|PER_KEY|PER_ENDPOINT|PER_IP|PER_TASK) */
-                         String bucketGranularityScopeCode,
-            /* 平滑窗口毫秒（发放/统计平滑） */ Integer smoothingWindowMillis,
-            /* 是否遵守服务端 Rate 头 (Retry-After / X-RateLimit-*) */ boolean respectServerRateHeader,
-            /* 绑定凭证名（可空） */ String credentialName
+            /* Primary key ID */ Long id,
+            /* Provenance ID */ Long provenanceId,
+            /* Operation type discriminator (nullable) */ String operationType,
+            /* Normalized operation key (NULL→ALL) */ String operationTypeKey,
+            /* Effective from (inclusive) */ Instant effectiveFrom,
+            /* Effective to (exclusive; NULL=long-term) */ Instant effectiveTo,
+            /* Max concurrent HTTP requests (NULL=engine default) */ Integer maxConcurrentRequests,
+            /* Per credential QPS cap (nullable) */ Integer perCredentialQpsLimit
     ) {
     }
 
