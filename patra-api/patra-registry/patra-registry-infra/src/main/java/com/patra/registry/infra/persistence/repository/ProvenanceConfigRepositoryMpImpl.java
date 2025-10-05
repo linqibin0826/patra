@@ -40,85 +40,168 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     private final RegProvRateLimitCfgMapper rateLimitCfgMapper;
     private final ProvenanceEntityConverter converter;
 
+    /**
+     * Retrieves provenance by business code.
+     *
+     * @param provenanceCode the provenance code to query
+     * @return optional provenance domain object
+     */
     @Override
     public Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode) {
+        log.debug("Finding provenance by code: {}", provenanceCode.getCode());
         return provenanceMapper.selectByCode(provenanceCode.getCode())
                 .map(converter::toDomain);
     }
 
+    /**
+     * Lists all active provenances.
+     *
+     * @return list of active provenance domain objects
+     */
     @Override
     public List<Provenance> findAllProvenances() {
-        return provenanceMapper.selectAllActive().stream()
+        log.debug("Loading all active provenances");
+        List<Provenance> provenances = provenanceMapper.selectAllActive().stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} active provenances", provenances.size());
+        return provenances;
     }
 
+    /**
+     * Finds active window offset configuration for a provenance and operation.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional window offset configuration
+     */
     @Override
     public Optional<WindowOffsetConfig> findActiveWindowOffset(Long provenanceId,
                                                                String operationType,
                                                                Instant at) {
         Instant timestamp = atOrNow(at);
         String operationKey = normalizeOperationKey(operationType);
+        log.debug("Finding window offset config: provenanceId={}, operationKey={}, timestamp={}",
+                provenanceId, operationKey, timestamp);
         return windowOffsetCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
+    /**
+     * Finds active pagination configuration for a provenance and operation.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional pagination configuration
+     */
     @Override
     public Optional<PaginationConfig> findActivePagination(Long provenanceId,
                                                            String operationType,
                                                            Instant at) {
         Instant timestamp = atOrNow(at);
         String operationKey = normalizeOperationKey(operationType);
+        log.debug("Finding pagination config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return paginationCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
+    /**
+     * Finds active HTTP configuration for a provenance and operation.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional HTTP configuration
+     */
     @Override
     public Optional<HttpConfig> findActiveHttpConfig(Long provenanceId,
                                                      String operationType,
                                                      Instant at) {
         Instant timestamp = atOrNow(at);
         String operationKey = normalizeOperationKey(operationType);
+        log.debug("Finding HTTP config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return httpCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
+    /**
+     * Finds active batching configuration for a provenance and operation.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional batching configuration
+     */
     @Override
     public Optional<BatchingConfig> findActiveBatching(Long provenanceId,
                                                        String operationType,
                                                        Instant at) {
         Instant timestamp = atOrNow(at);
         String operationKey = normalizeOperationKey(operationType);
+        log.debug("Finding batching config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return batchingCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
+    /**
+     * Finds active retry configuration for a provenance and operation.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional retry configuration
+     */
     @Override
     public Optional<RetryConfig> findActiveRetry(Long provenanceId,
                                                  String operationType,
                                                  Instant at) {
         Instant timestamp = atOrNow(at);
         String operationKey = normalizeOperationKey(operationType);
+        log.debug("Finding retry config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return retryCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
+    /**
+     * Finds active rate limit configuration for a provenance and operation.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional rate limit configuration
+     */
     @Override
     public Optional<RateLimitConfig> findActiveRateLimit(Long provenanceId,
                                                          String operationType,
                                                          Instant at) {
         Instant timestamp = atOrNow(at);
         String operationKey = normalizeOperationKey(operationType);
+        log.debug("Finding rate limit config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return rateLimitCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
     }
 
+    /**
+     * Loads complete provenance configuration aggregate for a specific operation.
+     * Assembles all configuration slices (window, pagination, HTTP, batching, retry, rate limit)
+     * into a single aggregate, applying operation-specific overrides where available.
+     *
+     * @param provenanceId   the provenance identifier
+     * @param operationType  the operation type key
+     * @param at             the query timestamp (null for current time)
+     * @return optional complete configuration aggregate
+     */
     @Override
     public Optional<ProvenanceConfiguration> loadConfiguration(Long provenanceId,
                                                                String operationType,
                                                                Instant at) {
+        log.info("Loading configuration: provenanceId={}, operationType={}", provenanceId, operationType);
+
         Optional<Provenance> provenanceOpt = findProvenanceById(provenanceId);
         if (provenanceOpt.isEmpty()) {
+            log.warn("Provenance not found: provenanceId={}", provenanceId);
             return Optional.empty();
         }
         Instant timestamp = atOrNow(at);
@@ -139,9 +222,19 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                 batching.orElse(null),
                 retry.orElse(null),
                 rateLimit.orElse(null));
+
+        log.info("Configuration loaded successfully: provenanceId={}, operationType={}", provenanceId, operationType);
         return Optional.of(configuration);
     }
 
+    /**
+     * Normalizes operation type string to a standard key format.
+     * Converts to uppercase, replaces non-alphanumeric chars with underscores,
+     * and collapses multiple underscores. Returns "ALL" for null or empty input.
+     *
+     * @param operationType the raw operation type string
+     * @return normalized operation key
+     */
     private String normalizeOperationKey(String operationType) {
         if (operationType == null) {
             return RegistryKeyPlaceholders.ALL;
@@ -161,17 +254,31 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         return normalized;
     }
 
+    /**
+     * Finds provenance domain object by ID.
+     *
+     * @param provenanceId the provenance identifier
+     * @return optional provenance domain object
+     */
     private Optional<Provenance> findProvenanceById(Long provenanceId) {
         if (provenanceId == null) {
+            log.debug("Provenance ID is null");
             return Optional.empty();
         }
         RegProvenanceDO entity = provenanceMapper.selectById(provenanceId);
         if (entity == null) {
+            log.debug("Provenance entity not found: id={}", provenanceId);
             return Optional.empty();
         }
         return Optional.of(converter.toDomain(entity));
     }
 
+    /**
+     * Returns the provided instant or current time if null.
+     *
+     * @param at the instant to check
+     * @return the instant or current time
+     */
     private Instant atOrNow(Instant at) {
         return at != null ? at : Instant.now();
     }
