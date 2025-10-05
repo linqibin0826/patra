@@ -4,7 +4,13 @@ import java.time.Instant;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * 表 {@code reg_prov_expr_render_rule} 对应的领域值对象。
+ * Domain value object for {@code reg_prov_expr_render_rule}.
+ *
+ * <p>Defines how an expression atom (field/op/match/negation/value-type) is rendered
+ * into query fragments or standard parameters.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExprRenderRule(
         Long id,
@@ -83,7 +89,7 @@ public record ExprRenderRule(
         this.functionCode = functionCode != null ? functionCode.trim() : null;
     }
 
-    /** 判断是否在给定时间点生效。 */
+    /** Checks whether the render rule is effective at the given instant. */
     public boolean isEffectiveAt(Instant instant) {
         if (instant == null) {
             throw new DomainValidationException("Instant cannot be null");

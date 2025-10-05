@@ -4,7 +4,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * 表 {@code reg_prov_api_param_map} 的领域值对象。
+ * Domain value object for {@code reg_prov_api_param_map}.
+ *
+ * <p>Maps unified standard keys to provider-specific parameter names at SOURCE/TASK scope.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ApiParamMapping(
         Long id,
@@ -37,8 +42,8 @@ public record ApiParamMapping(
         String providerParamTrimmed = DomainValidationException.notBlank(providerParamName, "Provider param name");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // 已验证
-        this.provenanceId = provenanceId; // 已验证
+        this.id = id; // already validated
+        this.provenanceId = provenanceId; // already validated
         this.operationType = operationType != null ? operationType.trim() : null;
         this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.operationCode = opTrimmed;
@@ -50,7 +55,7 @@ public record ApiParamMapping(
         this.effectiveTo = effectiveTo;
     }
 
-    /** 判断当前记录是否在给定时间点生效。 */
+    /** Checks whether the mapping is effective at the given instant. */
     public boolean isEffectiveAt(Instant instant) {
         DomainValidationException.nonNull(instant, "Instant");
         boolean afterStart = !instant.isBefore(effectiveFrom);

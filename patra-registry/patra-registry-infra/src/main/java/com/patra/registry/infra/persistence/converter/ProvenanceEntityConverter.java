@@ -50,7 +50,6 @@ public interface ProvenanceEntityConverter {
 
     RateLimitConfig toDomain(RegProvRateLimitCfgDO entity);
 
-    // Credential table (reg_prov_credential) has been removed; corresponding mappings are deleted.
 
     /**
      * MapStruct helper: serialize JsonNode to compact JSON string for domain VOs that keep JSON as String.
