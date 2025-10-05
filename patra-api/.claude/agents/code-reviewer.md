@@ -82,6 +82,10 @@ Documentation review:
 - Example usage
 - Change logs
 - Migration guides
+- **JavaDoc completeness: Every class MUST have detailed JavaDoc with @author linqibin and @since 0.1.0**
+- **Method JavaDoc: Business methods MUST have JavaDoc with @param, @return, @throws documentation**
+- **Inline comments: Complex business logic MUST have clear explanatory comments**
+- **Language requirement: All code comments, JavaDoc, and log messages MUST be in English (NO Chinese)**
 
 Dependency analysis:
 - Version management
@@ -289,13 +293,25 @@ Integration with other agents:
 - Assist documentation-engineer on code example accuracy
 
 Key review focus areas:
+- **JavaDoc mandatory check: All classes MUST have detailed JavaDoc including @author linqibin and @since 0.1.0 annotations**
+- **Method documentation: Business methods MUST have complete JavaDoc (@param/@return/@throws) and inline comments for complex logic**
+- **Logging standards compliance (CRITICAL)**:
+  - Use @Slf4j annotation, unified SLF4J API
+  - ERROR: System exceptions with stack trace (log.error("msg", e))
+  - WARN: Business violations and abnormal conditions
+  - INFO: Key business operations and state changes
+  - DEBUG: Diagnostic details for troubleshooting
+  - Use parameterized logging: log.info("op: id={}", id)
+  - Trace/correlation ID is auto-injected by logback.xml (no manual propagation needed)
+  - NEVER log sensitive information (passwords, tokens, PII)
+  - Verify appropriate log level for each statement
+  - **All log messages MUST be in English (NO Chinese characters allowed)**
 - Dependency direction enforcement (adapter→app→domain←infra)
 - Domain layer framework independence (NO Spring in domain)
 - ProblemDetail error model usage consistency
 - Outbox pattern implementation correctness
 - MyBatis-Plus query optimization (N+1, lazy loading)
 - Flyway migration script validation
-- SLF4J logging with trace ID propagation
 - MapStruct DTO mapping completeness
 - Records/Sealed classes usage for value objects
 - Nacos configuration reference (NO hardcoding)
