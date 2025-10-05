@@ -12,16 +12,27 @@ import java.time.Instant;
  * @since 0.1.0
  */
 public record ApiParamMapping(
+        /* Primary key; unique mapping identifier */
         Long id,
+        /* Foreign key referencing {@code reg_provenance.id} */
         Long provenanceId,
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL/SANDBOX); {@code null} applies to all */
         String operationType,
+        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
         String operationTypeKey,
+        /* Endpoint operation code (DICT CODE: reg_operation) such as SEARCH/DETAIL/LOOKUP */
         String operationCode,
+        /* Standard key (unified internal semantic key) typically produced during rendering (e.g., from/to/ti/ab) */
         String stdKey,
+        /* Provider parameter name: concrete HTTP parameter (e.g., mindate/maxdate/term/retmax) */
         String providerParamName,
+        /* Optional value-level transform code (DICT CODE: reg_transform) such as TO_EXCLUSIVE_MINUS_1D */
         String transformCode,
+        /* Additional notes as JSON object for platform differences/boundaries */
         String notesJson,
+        /* Inclusive timestamp marking when this mapping becomes effective */
         Instant effectiveFrom,
+        /* Exclusive timestamp marking when this mapping expires; {@code null} means open-ended */
         Instant effectiveTo
 ) {
     public ApiParamMapping(Long id,
@@ -51,11 +62,17 @@ public record ApiParamMapping(
         this.providerParamName = providerParamTrimmed;
         this.transformCode = transformCode != null ? transformCode.trim() : null;
         this.notesJson = notesJson;
-        this.effectiveFrom = effectiveFrom; // 非 null 已验证
+        this.effectiveFrom = effectiveFrom; // already validated as non-null
         this.effectiveTo = effectiveTo;
     }
 
-    /** Checks whether the mapping is effective at the given instant. */
+    /**
+     * Checks whether the mapping is effective at the given instant.
+     *
+     * @param instant the time point to check (must not be null)
+     * @return {@code true} if the mapping is effective at the given instant
+     * @throws DomainValidationException if {@code instant} is null
+     */
     public boolean isEffectiveAt(Instant instant) {
         DomainValidationException.nonNull(instant, "Instant");
         boolean afterStart = !instant.isBefore(effectiveFrom);

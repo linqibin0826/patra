@@ -13,26 +13,47 @@ import com.patra.registry.domain.exception.DomainValidationException;
  * @since 0.1.0
  */
 public record ExprRenderRule(
+        /* Primary key; unique render rule identifier */
         Long id,
+        /* Foreign key referencing {@code reg_provenance.id} */
         Long provenanceId,
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
         String operationType,
+        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
         String operationTypeKey,
+        /* Unified internal field key (logical FK to {@code reg_expr_field_dict.field_key}) */
         String fieldKey,
+        /* Expression operator code (DICT CODE: reg_expr_op) such as TERM/IN/RANGE/EXISTS/TOKEN */
         String opCode,
+        /* Match type code (DICT CODE: reg_match_type; TERM only) such as PHRASE/EXACT/ANY; {@code null} means agnostic */
         String matchTypeCode,
+        /* Negation flag: {@code true} for NOT, {@code false} for non-NOT; {@code null} means agnostic */
         Boolean negated,
+        /* Value type code for RANGE etc. (STRING/DATE/DATETIME/NUMBER); {@code null} means agnostic */
         String valueTypeCode,
+        /* Emission type (DICT CODE: reg_emit_type): QUERY for query fragment, PARAMS for standard params */
         String emitTypeCode,
+        /* Normalization of {@code matchTypeCode}: {@code null} → {@code ANY} */
         String matchTypeKey,
+        /* Normalization of {@code negated}: {@code null} → {@code ANY}, {@code true} → {@code T}, {@code false} → {@code F} */
         String negatedKey,
+        /* Normalization of {@code valueTypeCode}: {@code null} → {@code ANY} */
         String valueTypeKey,
+        /* Inclusive timestamp marking when this rule becomes effective */
         Instant effectiveFrom,
+        /* Exclusive timestamp marking when this rule expires; {@code null} means open-ended */
         Instant effectiveTo,
+        /* Template to render query fragment when {@code emitTypeCode} is {@code QUERY}; supports helpers (e.g., {{q v}}/{{lower ...}}) */
         String template,
+        /* Template for each item when {@code emitTypeCode} is {@code QUERY} and {@code opCode} is {@code IN} */
         String itemTemplate,
+        /* Joiner for items when {@code emitTypeCode} is {@code QUERY} and {@code opCode} is {@code IN} (e.g., " OR " / " AND ") */
         String joiner,
+        /* Whether to wrap entire group in parentheses when {@code emitTypeCode} is {@code QUERY} and {@code opCode} is {@code IN} */
         boolean wrapGroup,
+        /* JSON of standard keys/template variables when {@code emitTypeCode} is {@code PARAMS} (e.g., {"from":"from","to":"to"}) */
         String paramsJson,
+        /* Template-level render function code (subset/extension of reg_transform); e.g., PUBMED_DATETYPE */
         String functionCode
 ) {
     public ExprRenderRule(Long id,
@@ -89,7 +110,13 @@ public record ExprRenderRule(
         this.functionCode = functionCode != null ? functionCode.trim() : null;
     }
 
-    /** Checks whether the render rule is effective at the given instant. */
+    /**
+     * Checks whether the render rule is effective at the given instant.
+     *
+     * @param instant the time point to check (must not be null)
+     * @return {@code true} if the rule is effective at the given instant
+     * @throws DomainValidationException if {@code instant} is null
+     */
     public boolean isEffectiveAt(Instant instant) {
         if (instant == null) {
             throw new DomainValidationException("Instant cannot be null");
