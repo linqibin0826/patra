@@ -2,7 +2,6 @@ package com.patra.registry.domain.model.read.provenance;
 
 import com.patra.registry.domain.exception.DomainValidationException;
 
-import java.util.List;
 
 /**
  * Provenance 聚合配置查询视图。
@@ -14,13 +13,11 @@ public record ProvenanceConfigQuery(
         HttpConfigQuery http,
         BatchingConfigQuery batching,
         RetryConfigQuery retry,
-        RateLimitConfigQuery rateLimit,
-        List<CredentialQuery> credentials
+        RateLimitConfigQuery rateLimit
 ) {
     public ProvenanceConfigQuery {
         if (provenance == null) {
             throw new DomainValidationException("Provenance cannot be null");
         }
-        credentials = credentials == null ? List.of() : List.copyOf(credentials);
     }
 }

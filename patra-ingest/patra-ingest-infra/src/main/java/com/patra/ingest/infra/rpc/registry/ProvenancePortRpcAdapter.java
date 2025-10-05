@@ -140,8 +140,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
                 null, // http
                 null, // batching
                 null, // retry
-                null, // rateLimit
-                Collections.emptyList() // credentials
+                null // rateLimit
         );
     }
 

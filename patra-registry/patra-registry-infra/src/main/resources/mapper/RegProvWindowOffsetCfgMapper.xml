@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.patra.registry.infra.persistence.mapper.provenance.RegProvWindowOffsetCfgMapper">
 
-    <!-- 合并查询：优先匹配 operationTypeKey，其次 ALL；按 effective_from DESC, id DESC 排序 -->
+    <!-- Merged selection: prefer exact operationTypeKey over ALL; order by effective_from DESC, id DESC -->
     <select id="selectActiveMerged" resultType="com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO">
         SELECT *
         FROM patra_registry.reg_prov_window_offset_cfg

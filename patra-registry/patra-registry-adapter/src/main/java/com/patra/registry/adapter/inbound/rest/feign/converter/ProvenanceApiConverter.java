@@ -1,7 +1,6 @@
 package com.patra.registry.adapter.inbound.rest.feign.converter;
 
 import com.patra.registry.api.rpc.dto.provenance.BatchingConfigResp;
-import com.patra.registry.api.rpc.dto.provenance.CredentialResp;
 import com.patra.registry.api.rpc.dto.provenance.HttpConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.PaginationConfigResp;
 import com.patra.registry.api.rpc.dto.provenance.ProvenanceConfigResp;
@@ -37,9 +36,7 @@ public interface ProvenanceApiConverter {
 
     RateLimitConfigResp toResp(RateLimitConfigQuery query);
 
-    CredentialResp toResp(CredentialQuery query);
-
-    List<CredentialResp> toCredentialResp(List<CredentialQuery> queries);
+    // Credential dimension removed
 
     ProvenanceConfigResp toResp(ProvenanceConfigQuery query);
 }

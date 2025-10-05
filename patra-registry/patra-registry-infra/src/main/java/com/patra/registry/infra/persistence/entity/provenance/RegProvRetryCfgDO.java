@@ -3,6 +3,7 @@ package com.patra.registry.infra.persistence.entity.provenance;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -91,13 +92,13 @@ public class RegProvRetryCfgDO extends BaseDO {
      * JSON array describing HTTP status codes that should trigger a retry.
      */
     @TableField("retry_http_status_json")
-    private String retryHttpStatusJson;
+    private JsonNode retryHttpStatusJson;
 
     /**
      * JSON array describing HTTP status codes that should skip retries.
      */
     @TableField("giveup_http_status_json")
-    private String giveupHttpStatusJson;
+    private JsonNode giveupHttpStatusJson;
 
     /**
      * Flag indicating whether network-level errors are eligible for retries.

@@ -34,7 +34,6 @@ public interface ProvenanceConfigSnapshotConverter {
     @Mapping(target = "batching", source = "batching")
     @Mapping(target = "retry", source = "retry")
     @Mapping(target = "rateLimit", source = "rateLimit")
-    @Mapping(target = "credentials", source = "credentials")
     ProvenanceConfigSnapshot convert(ProvenanceConfigResp resp);
 
     /**
@@ -239,50 +238,5 @@ public interface ProvenanceConfigSnapshotConverter {
         );
     }
 
-    /**
-     * 映射凭证配置列表。
-     */
-    default List<ProvenanceConfigSnapshot.CredentialConfig> mapCredentialConfigs(List<CredentialResp> source) {
-        if (source == null || source.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return source.stream()
-                .map(this::mapCredentialConfig)
-                .toList();
-    }
-
-    /**
-     * 映射单个凭证配置。
-     */
-    default ProvenanceConfigSnapshot.CredentialConfig mapCredentialConfig(CredentialResp source) {
-        if (source == null) {
-            return null;
-        }
-        return new ProvenanceConfigSnapshot.CredentialConfig(
-                source.id(),
-                source.provenanceId(),
-                source.scopeCode(),
-                source.taskType(),
-                source.taskTypeKey(),
-                source.credentialName(),
-                source.authType(),
-                source.inboundLocationCode(),
-                source.credentialFieldName(),
-                source.credentialValuePrefix(),
-                source.credentialValueRef(),
-                source.basicUsernameRef(),
-                source.basicPasswordRef(),
-                source.oauthTokenUrl(),
-                source.oauthClientIdRef(),
-                source.oauthClientSecretRef(),
-                source.oauthScope(),
-                source.oauthAudience(),
-                source.extraJson(),
-                source.effectiveFrom(),
-                source.effectiveTo(),
-                source.defaultPreferred(),
-                source.lifecycleStatusCode()
-        );
-    }
+    // Credential dimension removed from API and snapshot; related mappings deleted.
 }
