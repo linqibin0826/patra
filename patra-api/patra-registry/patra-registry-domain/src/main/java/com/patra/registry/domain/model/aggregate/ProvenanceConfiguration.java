@@ -12,12 +12,13 @@ import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 import java.util.Optional;
 
 /**
- * Provenance 配置聚合：封装来源及多维配置的组合视图。
+ * Provenance configuration aggregate: a consolidated read-only view over
+ * provenance and multiple configuration dimensions.
  *
- * <p>只读聚合，用于 CQRS 查询侧。封装特定来源在特定时间点的配置状态，
- * 包括 HTTP 配置、重试策略、限流配置等各个维度。</p>
+ * <p>Used on the CQRS read side to represent the effective configuration at a
+ * point in time, including HTTP policy, retry and rate limit settings, etc.</p>
  *
- * <p>支持SOURCE级别和TASK级别的配置组合，遵循"TASK优先，SOURCE回退"的策略。</p>
+ * <p>Scope precedence: TASK-specific slices override SOURCE-level defaults.</p>
  *
  * @author linqibin
  * @since 0.1.0

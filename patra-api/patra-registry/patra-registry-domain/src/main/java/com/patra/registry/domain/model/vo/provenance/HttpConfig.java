@@ -4,7 +4,13 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * {@code reg_prov_http_cfg} 的领域值对象。
+ * Domain value object for {@code reg_prov_http_cfg}.
+ *
+ * <p>Represents HTTP policy overrides (headers/timeouts/TLS/proxy/idempotency)
+ * at SOURCE/TASK scope for a provenance.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record HttpConfig(
         Long id,

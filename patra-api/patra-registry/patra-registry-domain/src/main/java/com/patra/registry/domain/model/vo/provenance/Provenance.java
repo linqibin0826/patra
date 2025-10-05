@@ -3,7 +3,12 @@ package com.patra.registry.domain.model.vo.provenance;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * {@code reg_provenance} 的领域值对象。
+ * Domain value object for {@code reg_provenance}.
+ *
+ * <p>Represents the root provenance entity referenced by all reg_prov_* configs.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record Provenance(
         Long id,
@@ -29,7 +34,7 @@ public record Provenance(
         String tzTrimmed = DomainValidationException.notBlank(timezoneDefault, "Timezone");
         String lifecycleTrimmed = DomainValidationException.notBlank(lifecycleStatusCode, "Lifecycle status code");
 
-        this.id = id; // 已验证为正
+        this.id = id; // already validated as positive
         this.code = codeTrimmed;
         this.name = nameTrimmed;
         this.baseUrlDefault = baseUrlDefault != null ? baseUrlDefault.trim() : null;
@@ -39,7 +44,7 @@ public record Provenance(
         this.lifecycleStatusCode = lifecycleTrimmed;
     }
 
-    /** 是否处于激活状态。 */
+    /** Indicates whether the provenance is active. */
     public boolean isActive() {
         return active;
     }

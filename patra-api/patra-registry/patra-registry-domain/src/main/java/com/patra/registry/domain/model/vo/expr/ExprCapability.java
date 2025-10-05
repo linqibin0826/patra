@@ -6,7 +6,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * 表 {@code reg_prov_expr_capability} 对应的领域值对象。
+ * Domain value object for {@code reg_prov_expr_capability}.
+ *
+ * <p>Declares allowed expression operators and constraints per field/key and scope.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExprCapability(
         Long id,

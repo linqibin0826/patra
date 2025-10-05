@@ -4,7 +4,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * {@code reg_prov_batching_cfg} 的领域值对象。
+ * Domain value object for {@code reg_prov_batching_cfg}.
+ *
+ * <p>Controls batched detail request shaping and related parameters.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record BatchingConfig(
         Long id,

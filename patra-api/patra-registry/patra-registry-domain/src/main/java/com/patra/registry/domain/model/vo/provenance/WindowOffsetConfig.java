@@ -4,7 +4,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * {@code reg_prov_window_offset_cfg} 的领域值对象。
+ * Domain value object for {@code reg_prov_window_offset_cfg}.
+ *
+ * <p>Configures windowing and incremental offset tracking (DATE/ID/COMPOSITE).</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record WindowOffsetConfig(
         Long id,
@@ -57,8 +62,8 @@ public record WindowOffsetConfig(
         String offsetTypeTrimmed = DomainValidationException.notBlank(offsetTypeCode, "Offset type code");
         DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
-        this.id = id; // 已验证
-        this.provenanceId = provenanceId; // 已验证
+        this.id = id; // already validated
+        this.provenanceId = provenanceId; // already validated
         this.operationType = operationType != null ? operationType.trim() : null;
         this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom; // 非 null 已验证

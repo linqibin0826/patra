@@ -4,7 +4,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * {@code reg_prov_rate_limit_cfg} 的领域值对象。
+ * Domain value object for {@code reg_prov_rate_limit_cfg}.
+ *
+ * <p>Captures concurrency limits and per-credential QPS caps at SOURCE/TASK scope.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record RateLimitConfig(
         Long id,

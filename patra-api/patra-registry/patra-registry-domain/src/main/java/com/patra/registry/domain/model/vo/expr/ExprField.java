@@ -4,10 +4,13 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.util.Objects;
 
 /**
- * Expr 统一字段字典（reg_expr_field_dict）的领域值对象。
+ * Domain value object for unified expression field dictionary (reg_expr_field_dict).
  *
- * <p>该对象描述了统一查询语义中的原子字段及其核心属性，
- * 用于表达式建模、能力声明与渲染规则的上游依赖。</p>
+ * <p>Describes canonical atom fields and core attributes used by expression
+ * modeling, capability declaration, and render rule selection.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExprField(
         Long id,
@@ -32,7 +35,7 @@ public record ExprField(
         String dtTrimmed = DomainValidationException.notBlank(dataTypeCode, "Expr field data type code");
         String cardinalityTrimmed = DomainValidationException.notBlank(cardinalityCode, "Expr field cardinality code");
 
-        this.id = id; // 已验证
+        this.id = id; // already validated
         this.fieldKey = keyTrimmed;
         this.displayName = displayName != null ? displayName.trim() : "";
         this.description = description != null ? description.trim() : "";
@@ -42,17 +45,17 @@ public record ExprField(
         this.dateField = dateField;
     }
 
-    /** 字段是否对外可暴露。 */
+    /** Whether the field is exposable to clients. */
     public boolean isExposable() {
         return exposable;
     }
 
-    /** 是否为日期字段（便于快速判断渲染与校验策略）。 */
+    /** Whether the field should be treated as date-like for rendering/validation branches. */
     public boolean isDateField() {
         return dateField;
     }
 
-    /** 判等只关心 fieldKey（稳定业务键）。 */
+    /** Equality is based only on fieldKey (stable business key). */
     @Override
     public boolean equals(Object o) {
         if (this == o) {
