@@ -16,7 +16,13 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * Expr 领域 Query -> API DTO 的转换器。
+ * MapStruct converter for transforming expression query DTOs to API response DTOs.
+ *
+ * <p>Maps read-side domain query objects to external API contract DTOs for
+ * consumption by Feign clients from other microservices.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface ExprApiConverter {

@@ -2,10 +2,8 @@ package com.patra.registry.config;
 
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.common.error.codes.HttpStdErrors;
-import com.patra.registry.api.error.RegistryErrorCode;
-import com.patra.registry.domain.exception.*;
 import com.patra.registry.domain.exception.DomainValidationException;
-import com.patra.registry.domain.exception.dictionary.*;
+import com.patra.registry.domain.exception.RegistryQuotaExceeded;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -16,10 +14,10 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 /**
- * Registry 专用错误映射贡献者：提供细粒度的异常→错误码映射。
+ * Registry-specific error mapping contributor for fine-grained exception to error code mapping.
  *
- * <p>覆盖 Registry 领域异常与数据层异常的显式映射。</p>
- * <p>已从 boot 模块迁移至 adapter，以避免 boot 直接依赖 domain/api。</p>
+ * <p>Provides explicit mappings for Registry domain exceptions and data layer exceptions.
+ * Migrated from boot module to adapter to avoid boot directly depending on domain/api.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -35,61 +33,27 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
     }
 
     /**
-     * 执行异常到错误码的映射。
+     * Maps an exception to an error code.
+     *
+     * @param exception the exception to map
+     * @return optional containing the mapped error code if a mapping exists
      */
     @Override
     public Optional<ErrorCodeLike> mapException(Throwable exception) {
         log.debug("[REGISTRY][ADAPTER] map exception start exception={} mapping=TRY", exception.getClass().getSimpleName());
 
-        // Dictionary-specific exceptions
+        // Domain validation exceptions
         if (exception instanceof DomainValidationException) {
-            // 通用领域参数校验 → 400
+            // General domain parameter validation → 400
             return Optional.of(http.BAD_REQUEST());
         }
 
-        if (exception instanceof DictionaryNotFoundException ex) {
-            // 区分类型缺失与条目缺失
-            if (ex.getItemCode() == null) {
-                return Optional.of(RegistryErrorCode.REG_1401); // Dictionary Type Not Found
-            } else {
-                return Optional.of(RegistryErrorCode.REG_1402); // Dictionary Item Not Found
-            }
-        }
-
-        if (exception instanceof DictionaryItemDisabled) {
-            return Optional.of(RegistryErrorCode.REG_1403);
-        }
-
-        if (exception instanceof DictionaryTypeAlreadyExists) {
-            return Optional.of(RegistryErrorCode.REG_1404);
-        }
-
-        if (exception instanceof DictionaryItemAlreadyExists) {
-            return Optional.of(RegistryErrorCode.REG_1405);
-        }
-
-        if (exception instanceof DictionaryTypeDisabled) {
-            return Optional.of(RegistryErrorCode.REG_1406);
-        }
-
-        if (exception instanceof DictionaryValidationException) {
-            return Optional.of(RegistryErrorCode.REG_1407);
-        }
-
-        if (exception instanceof DictionaryDefaultItemMissing) {
-            return Optional.of(RegistryErrorCode.REG_1408);
-        }
-
-        if (exception instanceof DictionaryRepositoryException) {
-            return Optional.of(RegistryErrorCode.REG_1409);
-        }
-
-        // Registry 通用异常
+        // Registry general exceptions
         if (exception instanceof RegistryQuotaExceeded) {
-            return Optional.of(RegistryErrorCode.REG_1501);
+            return Optional.of(http.CONFLICT()); // 409
         }
 
-        // 数据层异常
+        // Data layer exceptions
         if (exception instanceof DuplicateKeyException) {
             return Optional.of(http.CONFLICT());
         }

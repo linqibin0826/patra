@@ -16,7 +16,13 @@ import org.mapstruct.ReportingPolicy;
 import java.util.List;
 
 /**
- * Expr 领域对象 -> 契约 Query 的转换器。
+ * MapStruct assembler for converting expression domain objects to query DTOs.
+ *
+ * <p>Transforms domain value objects (fields, capabilities, render rules, mappings)
+ * into read-side contract DTOs for consumption by external clients.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface ExprQueryAssembler {
