@@ -9,7 +9,7 @@
 
   <select id="selectByTypeAndItemCode" resultMap="RegSysDictItemResultMap">
     SELECT di.* FROM patra_registry.sys_dict_item di
-    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
+    JOIN patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.item_code = #{itemCode}
       AND di.enabled = 1
@@ -19,7 +19,7 @@
 
   <select id="selectEnabledByTypeCode" resultMap="RegSysDictItemResultMap">
     SELECT di.* FROM patra_registry.sys_dict_item di
-    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
+    JOIN patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.enabled = 1
       AND di.deleted = 0
@@ -29,7 +29,7 @@
 
   <select id="selectDefaultByTypeCode" resultMap="RegSysDictItemResultMap">
     SELECT di.* FROM patra_registry.sys_dict_item di
-    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
+    JOIN patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.is_default = 1
       AND di.enabled = 1
@@ -48,7 +48,7 @@
 
   <select id="countEnabledByTypeCode" resultType="int">
     SELECT COUNT(*) FROM patra_registry.sys_dict_item di
-    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
+    JOIN patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE dt.type_code = #{typeCode}
       AND di.enabled = 1
       AND di.deleted = 0
@@ -57,7 +57,7 @@
 
   <select id="selectTypesWithMultipleDefaults" resultType="string">
     SELECT dt.type_code FROM patra_registry.sys_dict_item di
-    JOIN patra_registry.patra_registry.sys_dict_type dt ON dt.id = di.type_id
+    JOIN patra_registry.sys_dict_type dt ON dt.id = di.type_id
     WHERE di.is_default = 1
       AND di.enabled = 1
       AND di.deleted = 0
@@ -67,7 +67,7 @@
   </select>
 
   <select id="selectTypesWithoutDefaults" resultType="string">
-    SELECT dt.type_code FROM patra_registry.patra_registry.sys_dict_type dt
+    SELECT dt.type_code FROM patra_registry.sys_dict_type dt
     LEFT JOIN patra_registry.sys_dict_item di ON dt.id = di.type_id
       AND di.is_default = 1
       AND di.enabled = 1

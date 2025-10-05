@@ -38,7 +38,6 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     private final RegProvBatchingCfgMapper batchingCfgMapper;
     private final RegProvRetryCfgMapper retryCfgMapper;
     private final RegProvRateLimitCfgMapper rateLimitCfgMapper;
-    private final RegProvCredentialMapper credentialMapper;
     private final ProvenanceEntityConverter converter;
 
     @Override
@@ -115,18 +114,6 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     }
 
     @Override
-    public List<Credential> findActiveCredentials(Long provenanceId,
-                                                  String operationType,
-                                                  Instant at) {
-        Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
-        return credentialMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
-                .stream()
-                .map(converter::toDomain)
-                .toList();
-    }
-
-    @Override
     public Optional<ProvenanceConfiguration> loadConfiguration(Long provenanceId,
                                                                String operationType,
                                                                Instant at) {
@@ -143,7 +130,6 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         Optional<BatchingConfig> batching = findActiveBatching(provenanceId, operationType, timestamp);
         Optional<RetryConfig> retry = findActiveRetry(provenanceId, operationType, timestamp);
         Optional<RateLimitConfig> rateLimit = findActiveRateLimit(provenanceId, operationType, timestamp);
-        List<Credential> credentials = findActiveCredentials(provenanceId, operationType, timestamp);
 
         ProvenanceConfiguration configuration = new ProvenanceConfiguration(
                 provenance,
@@ -152,8 +138,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                 httpConfig.orElse(null),
                 batching.orElse(null),
                 retry.orElse(null),
-                rateLimit.orElse(null),
-                credentials);
+                rateLimit.orElse(null));
         return Optional.of(configuration);
     }
 

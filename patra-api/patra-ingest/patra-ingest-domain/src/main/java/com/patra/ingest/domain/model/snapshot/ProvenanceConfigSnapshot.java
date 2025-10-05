@@ -1,7 +1,6 @@
 package com.patra.ingest.domain.model.snapshot;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * 来源配置聚合快照（Domain Snapshot）。
@@ -12,7 +11,7 @@ import java.util.List;
  * <p>包含的维度（表 → 领域嵌套 record）：
  * reg_provenance → ProvenanceInfo；reg_prov_window_offset_cfg → WindowOffsetConfig；
  * reg_prov_pagination_cfg → PaginationConfig；reg_prov_http_cfg → HttpConfig；reg_prov_batching_cfg → BatchingConfig；
- * reg_prov_retry_cfg → RetryConfig；reg_prov_rate_limit_cfg → RateLimitConfig；reg_prov_credential → CredentialConfig。</p>
+ * reg_prov_retry_cfg → RetryConfig；reg_prov_rate_limit_cfg → RateLimitConfig。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -24,8 +23,7 @@ public record ProvenanceConfigSnapshot(
         /* HTTP 策略（可空） */ HttpConfig http,
         /* 批量 / 请求成型（可空） */ BatchingConfig batching,
         /* 重试与退避（可空） */ RetryConfig retry,
-        /* 限流与并发（可空） */ RateLimitConfig rateLimit,
-        /* 凭证集合（可空列表，可多条） */ List<CredentialConfig> credentials
+        /* 限流与并发（可空） */ RateLimitConfig rateLimit
 ) {
 
     /**
@@ -204,34 +202,5 @@ public record ProvenanceConfigSnapshot(
     ) {
     }
 
-    /**
-     * 凭证配置（reg_prov_credential）。
-     * 字典：scope = SOURCE|TASK；inbound_location = HEADER|QUERY|BODY；lifecycle_status = DRAFT|ACTIVE|DEPRECATED|RETIRED。
-     * auth_type 示例：API_KEY / BASIC / OAUTH2_CLIENT_CREDENTIALS（可扩展）��
-     */
-    public record CredentialConfig(
-            /* 主键ID */ Long id,
-            /* 来源ID */ Long provenanceId,
-            /* 任务类型（可空） */ String taskType,
-            /* 标准化任务键（NULL→ALL） */ String taskTypeKey,
-            /* 凭证名称（选择标签） */ String credentialName,
-            /* 认证类型（API_KEY/BASIC/OAUTH2_CLIENT_CREDENTIALS 等） */ String authType,
-            /* 注入位置 (inbound_location: HEADER|QUERY|BODY) */ String inboundLocationCode,
-            /* 注入字段名 */ String credentialFieldName,
-            /* 值前缀（如 Bearer） */ String credentialValuePrefix,
-            /* 密钥值引用（外部配置中心 Key） */ String credentialValueRef,
-            /* BASIC 用户名引用 */ String basicUsernameRef,
-            /* BASIC 密码引用 */ String basicPasswordRef,
-            /* OAuth Token URL */ String oauthTokenUrl,
-            /* OAuth clientId 引用 */ String oauthClientIdRef,
-            /* OAuth clientSecret 引用 */ String oauthClientSecretRef,
-            /* OAuth scope */ String oauthScope,
-            /* OAuth audience */ String oauthAudience,
-            /* 额外扩展 JSON */ String extraJson,
-            /* 生效起（含） */ Instant effectiveFrom,
-            /* 生效止（不含；NULL=长期） */ Instant effectiveTo,
-            /* 是否默认优先 */ boolean defaultPreferred,
-            /* 生命周期状态 (lifecycle_status: DRAFT|ACTIVE|DEPRECATED|RETIRED) */ String lifecycleStatusCode
-    ) {
-    }
+    // Credential dimension removed from snapshot.
 }

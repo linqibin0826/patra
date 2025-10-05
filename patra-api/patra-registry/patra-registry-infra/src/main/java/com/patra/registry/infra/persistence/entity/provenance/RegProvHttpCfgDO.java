@@ -3,6 +3,7 @@ package com.patra.registry.infra.persistence.entity.provenance;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -55,7 +56,7 @@ public class RegProvHttpCfgDO extends BaseDO {
      * JSON payload defining default headers to merge into outgoing requests.
      */
     @TableField("default_headers_json")
-    private String defaultHeadersJson;
+    private JsonNode defaultHeadersJson;
 
     /**
      * Connection timeout in milliseconds (TCP/TLS handshake).

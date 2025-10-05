@@ -1,6 +1,5 @@
 package com.patra.registry.api.rpc.dto.provenance;
 
-import java.util.List;
 
 /**
  * 数据来源（Provenance）完整配置聚合响应 DTO。<br>
@@ -16,7 +15,6 @@ import java.util.List;
  *   <li>{@code batching} → reg_prov_batching_cfg（批量 / 请求成型与并发组织，可选）</li>
  *   <li>{@code retry} → reg_prov_retry_cfg（错误重试与退避策略，可选）</li>
  *   <li>{@code rateLimit} → reg_prov_rate_limit_cfg（速率与并发限制，可选）</li>
- *   <li>{@code credentials} → reg_prov_credential（一个来源/端点下可能存在多条有效凭证）</li>
  * </ul>
  * “可选”表示该来源在当前 scope/operationType/operationTypeKey 与时间片内未配置或未生效时可返回 {@code null} 或空集合；业务方需做好空值兜底。</p>
  * <p>一致性说明：聚合生成时建议在同一事务 / 配置版本快照下查询，确保时间片（effective_from / effective_to）判定统一，否则可能出现跨片段撕裂。</p>
@@ -24,7 +22,7 @@ import java.util.List;
  * <ol>
  *   <li>获取后在调用方内做不可变缓存（key=provenance.code+scope+operationType+operationTypeKey），并结合配置版本或更新时间做失效。</li>
  *   <li>当某组件为 {@code null} 时按默认引擎策略（例如：无分页时视为单页；无限流时遵循调用方全局限流）。</li>
- *   <li>凭证数组可能包含多条：需按照 {@code defaultPreferred} / 生命周期状态过滤选择。</li>
+ *   <li>Credential dimension has been removed from API response.</li>
  * </ol>
  * </p>
  *
@@ -34,8 +32,7 @@ import java.util.List;
  * @param http         HTTP 基础策略（Header 默认值、超时、TLS 校验、代理、Idempotency Header 等）。未覆盖时使用引擎全局默认。
  * @param batching     批量抓取与请求成型策略（ID 聚合、并发度、连接池、背压策略、请求模板、压缩策略等）。无批量需求可为 null。
  * @param retry        重试与退避配置（最大重试次数、退避策略、白/黑名单状态码、网络错误是否重试、熔断阈值等）。缺省时按引擎默认策略执行。
- * @param rateLimit    限流与并发表面控制（令牌速率、突发桶容量、最大并发、按凭证粒度限制、服务器头遵守等）。未配置即不做来源专属限制。
- * @param credentials  鉴权凭证列表（可能多条：API Key / Basic / OAuth 等）。调用方需根据 endpoint.authRequired 与各凭证生命周期、默认偏好选择。允许为空列表表示开放或无需鉴权。</p>
+ * @param rateLimit    限流与并发表面控制（令牌速率、突发桶容量、最大并发、按凭证粒度限制、服务器头遵守等）。未配置即不做来源专属限制。</p>
  * @author linqibin
  * @since 0.1.0
  */
@@ -53,8 +50,6 @@ public record ProvenanceConfigResp(
         /* 重试与退避策略（reg_prov_retry_cfg），可能为空 */
         RetryConfigResp retry,
         /* 限流与并发策略（reg_prov_rate_limit_cfg），可能为空 */
-        RateLimitConfigResp rateLimit,
-        /* 凭证列表（reg_prov_credential），可为空列表 */
-        List<CredentialResp> credentials
+        RateLimitConfigResp rateLimit
 ) {
 }

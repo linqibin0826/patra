@@ -2,7 +2,6 @@ package com.patra.registry.domain.model.aggregate;
 
 import com.patra.registry.domain.exception.DomainValidationException;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
-import com.patra.registry.domain.model.vo.provenance.Credential;
 import com.patra.registry.domain.model.vo.provenance.HttpConfig;
 import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
 import com.patra.registry.domain.model.vo.provenance.Provenance;
@@ -10,7 +9,6 @@ import com.patra.registry.domain.model.vo.provenance.RateLimitConfig;
 import com.patra.registry.domain.model.vo.provenance.RetryConfig;
 import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -31,12 +29,10 @@ public record ProvenanceConfiguration(
         HttpConfig http,
         BatchingConfig batching,
         RetryConfig retry,
-        RateLimitConfig rateLimit,
-        List<Credential> credentials
+        RateLimitConfig rateLimit
 ) {
     public ProvenanceConfiguration {
         DomainValidationException.nonNull(provenance, "Provenance");
-        credentials = credentials == null ? List.of() : List.copyOf(credentials);
     }
 
     /** 是否配置了窗口策略。 */
@@ -69,33 +65,7 @@ public record ProvenanceConfiguration(
         return rateLimit != null;
     }
 
-    /** 是否有可用凭证。 */
-    public boolean hasCredentials() {
-        return !credentials.isEmpty();
-    }
-
-    /** 查找指定名称的凭证。 */
-    public Optional<Credential> findCredentialByName(String credentialName) {
-        if (credentialName == null || credentialName.trim().isEmpty()) {
-            return Optional.empty();
-        }
-        return credentials.stream()
-                .filter(cred -> credentialName.trim().equals(cred.credentialName()))
-                .findFirst();
-    }
-
-    /** 获取默认凭证（优先选择标记为默认的）。 */
-    public Optional<Credential> getDefaultCredential() {
-        // 先找标记为默认的
-        Optional<Credential> defaultCred = credentials.stream()
-                .filter(Credential::defaultPreferred)
-                .findFirst();
-        if (defaultCred.isPresent()) {
-            return defaultCred;
-        }
-        // 如果没有默认的，返回第一个
-        return credentials.isEmpty() ? Optional.empty() : Optional.of(credentials.get(0));
-    }
+    // Credential dimension has been removed from the aggregate.
 
     /** 是否为完整配置（包含所有必要的配置维度）。 */
     public boolean isComplete() {

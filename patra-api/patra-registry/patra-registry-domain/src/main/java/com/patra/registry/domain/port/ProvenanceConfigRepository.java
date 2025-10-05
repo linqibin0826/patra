@@ -3,7 +3,6 @@ package com.patra.registry.domain.port;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
-import com.patra.registry.domain.model.vo.provenance.Credential;
 import com.patra.registry.domain.model.vo.provenance.HttpConfig;
 import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
 import com.patra.registry.domain.model.vo.provenance.Provenance;
@@ -47,10 +46,6 @@ public interface ProvenanceConfigRepository {
     Optional<RateLimitConfig> findActiveRateLimit(Long provenanceId,
                                                   String operationType,
                                                   Instant at);
-
-    List<Credential> findActiveCredentials(Long provenanceId,
-                                           String operationType,
-                                           Instant at);
 
     Optional<ProvenanceConfiguration> loadConfiguration(Long provenanceId,
                                                         String operationType,

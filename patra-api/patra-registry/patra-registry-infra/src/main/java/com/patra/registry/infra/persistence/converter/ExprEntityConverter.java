@@ -9,6 +9,7 @@ import com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprCapabilityDO;
 import com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO;
 import org.mapstruct.Mapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
@@ -48,4 +49,11 @@ public interface ExprEntityConverter {
     @Mapping(target = "paramsJson", source = "params")
     @Mapping(target = "functionCode", source = "fnCode")
     ExprRenderRule toDomain(RegProvExprRenderRuleDO entity);
+
+    /**
+     * MapStruct helper: serialize JsonNode to compact JSON string for domain VOs that keep JSON as String.
+     */
+    default String map(JsonNode node) {
+        return node == null ? null : node.toString();
+    }
 }

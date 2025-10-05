@@ -3,6 +3,7 @@ package com.patra.registry.infra.persistence.entity.expr;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -74,13 +75,13 @@ public class RegProvExprCapabilityDO extends BaseDO {
      * JSON array enumerating supported expression operators.
      */
     @TableField("ops")
-    private String ops;
+    private JsonNode ops;
 
     /**
      * JSON array listing operators that support negation.
      */
     @TableField("negatable_ops")
-    private String negatableOps;
+    private JsonNode negatableOps;
 
     /**
      * Flag indicating whether the NOT operator is allowed globally.
@@ -92,7 +93,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
      * JSON array describing match strategies applicable to TERM operators.
      */
     @TableField("term_matches")
-    private String termMatches;
+    private JsonNode termMatches;
 
     /**
      * Flag denoting whether TERM matches can be case sensitive.
@@ -206,7 +207,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
      * JSON array describing supported token kinds for TOKEN operators.
      */
     @TableField("token_kinds")
-    private String tokenKinds;
+    private JsonNode tokenKinds;
 
     /**
      * Optional regex constraining token values.

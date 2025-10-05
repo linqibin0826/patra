@@ -3,6 +3,7 @@ package com.patra.registry.infra.persistence.entity.expr;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.patra.starter.mybatis.entity.BaseDO;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -144,7 +145,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
      * JSON structure containing emitted parameter mappings.
      */
     @TableField("params")
-    private String params;
+    private JsonNode params;
 
     /**
      * Optional custom function applied during rendering.
