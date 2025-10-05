@@ -8,13 +8,13 @@
         WHERE deleted = 0
           AND lifecycle_status_code = 'ACTIVE'
           AND provenance_id = #{provenanceId}
-          AND operation_type_key IN (#{operationTypeKey}, 'ALL')
+          AND operation_type IN (#{operationType}, 'ALL')
           AND operation_code = #{operationCode}
           AND std_key = #{stdKey}
           AND effective_from &lt;= #{now}
           AND (effective_to IS NULL OR effective_to &gt; #{now})
         ORDER BY
-          CASE WHEN operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
+          CASE WHEN operation_type = #{operationType} THEN 1 ELSE 2 END,
           effective_from DESC,
           id DESC
         LIMIT 1
@@ -26,7 +26,7 @@
             SELECT m.*,
                    ROW_NUMBER() OVER (
                        PARTITION BY m.operation_code, m.std_key
-                       ORDER BY CASE WHEN m.operation_type_key = #{operationTypeKey} THEN 1 ELSE 2 END,
+                       ORDER BY CASE WHEN m.operation_type = #{operationType} THEN 1 ELSE 2 END,
                                 m.effective_from DESC,
                                 m.id DESC
                    ) AS rn
@@ -34,7 +34,7 @@
             WHERE m.deleted = 0
               AND m.lifecycle_status_code = 'ACTIVE'
               AND m.provenance_id = #{provenanceId}
-              AND m.operation_type_key IN (#{operationTypeKey}, 'ALL')
+              AND m.operation_type IN (#{operationType}, 'ALL')
               AND m.operation_code = #{operationCode}
               AND m.effective_from &lt;= #{now}
               AND (m.effective_to IS NULL OR m.effective_to &gt; #{now})

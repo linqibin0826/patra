@@ -40,12 +40,6 @@ public class RegProvApiParamMapDO extends BaseDO {
     private String operationType;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code for the mapping record.
      */
     @TableField("lifecycle_status_code")

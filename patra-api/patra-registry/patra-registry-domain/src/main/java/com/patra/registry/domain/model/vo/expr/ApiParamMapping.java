@@ -19,8 +19,6 @@ public record ApiParamMapping(
         Long provenanceId,
         /* Operation type discriminator (HARVEST/UPDATE/BACKFILL/SANDBOX); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to ALL when operationType is null */
-        String operationTypeKey,
         /* Endpoint operation code (DICT CODE: reg_operation) such as SEARCH/DETAIL/LOOKUP */
         String operationCode,
         /* Standard key (unified internal semantic key) typically produced during rendering (e.g., from/to/ti/ab) */
@@ -42,7 +40,6 @@ public record ApiParamMapping(
      * @param id unique mapping identifier, must be positive
      * @param provenanceId provenance identifier, must be positive
      * @param operationType operation type discriminator, nullable
-     * @param operationTypeKey normalized operation type key, defaults to "ALL"
      * @param operationCode operation code from dictionary, must not be blank
      * @param stdKey standard key, must not be blank
      * @param providerParamName provider parameter name, must not be blank
@@ -55,7 +52,6 @@ public record ApiParamMapping(
     public ApiParamMapping(Long id,
                            Long provenanceId,
                            String operationType,
-                           String operationTypeKey,
                            String operationCode,
                            String stdKey,
                            String providerParamName,
@@ -73,7 +69,6 @@ public record ApiParamMapping(
         this.id = id;
         this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.operationCode = opTrimmed;
         this.stdKey = stdKeyTrimmed;
         this.providerParamName = providerParamTrimmed;

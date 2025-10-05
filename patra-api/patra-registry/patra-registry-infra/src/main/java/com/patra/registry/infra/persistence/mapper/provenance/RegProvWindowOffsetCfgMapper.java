@@ -22,6 +22,6 @@ public interface RegProvWindowOffsetCfgMapper extends BaseMapper<RegProvWindowOf
      * results even during overlapping slices.
      */
     Optional<RegProvWindowOffsetCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                          @Param("operationTypeKey") String operationTypeKey,
+                                                          @Param("operationType") String operationType,
                                                           @Param("now") Instant now);
 }

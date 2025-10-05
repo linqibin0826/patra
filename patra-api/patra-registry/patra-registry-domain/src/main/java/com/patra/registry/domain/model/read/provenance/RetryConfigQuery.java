@@ -11,7 +11,6 @@ public record RetryConfigQuery(
         Long id,
         Long provenanceId,
         String operationType,
-        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         Integer maxRetryTimes,
@@ -40,7 +39,6 @@ public record RetryConfigQuery(
             throw new DomainValidationException("Effective from cannot be null");
         }
         operationType = operationType != null ? operationType.trim() : null;
-        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         backoffPolicyTypeCode = backoffPolicyTypeCode.trim();
     }
 }

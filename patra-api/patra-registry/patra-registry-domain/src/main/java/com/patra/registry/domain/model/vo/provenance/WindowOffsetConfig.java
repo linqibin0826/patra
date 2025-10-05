@@ -19,8 +19,6 @@ public record WindowOffsetConfig(
         Long provenanceId,
         /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to ALL when operationType is null */
-        String operationTypeKey,
         /* Inclusive timestamp marking when this window offset configuration becomes effective */
         Instant effectiveFrom,
         /* Exclusive timestamp marking when this window offset configuration expires; null means open-ended */
@@ -62,7 +60,6 @@ public record WindowOffsetConfig(
      * @param id unique configuration identifier, must be positive
      * @param provenanceId provenance identifier, must be positive
      * @param operationType operation type discriminator, nullable
-     * @param operationTypeKey normalized operation type key, defaults to "ALL"
      * @param effectiveFrom effective start timestamp, must not be null
      * @param effectiveTo effective end timestamp, nullable (open-ended)
      * @param windowModeCode window mode code from dictionary, must not be blank
@@ -85,7 +82,6 @@ public record WindowOffsetConfig(
     public WindowOffsetConfig(Long id,
                               Long provenanceId,
                               String operationType,
-                              String operationTypeKey,
                               Instant effectiveFrom,
                               Instant effectiveTo,
                               String windowModeCode,
@@ -113,7 +109,6 @@ public record WindowOffsetConfig(
         this.id = id;
         this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.windowModeCode = modeTrimmed;

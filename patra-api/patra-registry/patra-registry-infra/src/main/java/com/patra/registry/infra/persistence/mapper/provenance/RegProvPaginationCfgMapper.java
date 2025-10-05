@@ -20,6 +20,6 @@ public interface RegProvPaginationCfgMapper extends BaseMapper<RegProvPagination
      * Returns the effective pagination configuration for the given scope, falling back to {@code ALL}.
      */
     Optional<RegProvPaginationCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                        @Param("operationTypeKey") String operationTypeKey,
+                                                        @Param("operationType") String operationType,
                                                         @Param("now") Instant now);
 }

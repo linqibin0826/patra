@@ -19,8 +19,6 @@ public record RetryConfig(
         Long provenanceId,
         /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to ALL when operationType is null */
-        String operationTypeKey,
         /* Inclusive timestamp marking when this retry configuration becomes effective */
         Instant effectiveFrom,
         /* Exclusive timestamp marking when this retry configuration expires; null means open-ended */
@@ -54,7 +52,6 @@ public record RetryConfig(
      * @param id unique configuration identifier, must be positive
      * @param provenanceId provenance identifier, must be positive
      * @param operationType operation type discriminator, nullable
-     * @param operationTypeKey normalized operation type key, defaults to "ALL"
      * @param effectiveFrom effective start timestamp, must not be null
      * @param effectiveTo effective end timestamp, nullable (open-ended)
      * @param maxRetryTimes maximum retry attempts, nullable
@@ -73,7 +70,6 @@ public record RetryConfig(
     public RetryConfig(Long id,
                        Long provenanceId,
                        String operationType,
-                       String operationTypeKey,
                        Instant effectiveFrom,
                        Instant effectiveTo,
                        Integer maxRetryTimes,
@@ -95,7 +91,6 @@ public record RetryConfig(
         this.id = id;
         this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.maxRetryTimes = maxRetryTimes;

@@ -142,12 +142,6 @@ public class RegProvWindowOffsetCfgDO extends BaseDO {
     private Integer maxWindowSpanSeconds;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code indicating whether the row is active.
      */
     @TableField("lifecycle_status_code")

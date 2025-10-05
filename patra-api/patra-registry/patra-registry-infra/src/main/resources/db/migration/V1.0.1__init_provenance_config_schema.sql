@@ -58,7 +58,7 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key: windowing & offset config id',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT 'FK: owning source id -> reg_provenance(id)',
-    `operation_type`          VARCHAR(32)     NULL COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
+    `operation_type`          VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT 'Effective from (inclusive); non-overlap ensured by application',
     `effective_to`            TIMESTAMP(6)    NULL COMMENT 'Effective to (exclusive); NULL means open-ended',
@@ -82,8 +82,6 @@ CREATE TABLE `reg_prov_window_offset_cfg`
     `max_ids_per_window`      INT             NULL COMMENT 'Max IDs per window; split window when exceeded',
     `max_window_span_seconds` INT             NULL COMMENT 'Max span per window (seconds): overly long windows will be split',
 
-    /* Generated columns */
-    `operation_type_key`      VARCHAR(16) AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Normalization: treat NULL operation_type as ALL',
     `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle',
 
     -- BaseDO (common auditing fields)
@@ -100,7 +98,7 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_window_offset_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
-    UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `operation_type_key`, `effective_from`)
+    UNIQUE KEY `uk_reg_prov_window_offset_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -120,7 +118,7 @@ CREATE TABLE `reg_prov_pagination_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key: pagination & cursor config id',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT 'FK: owning source id -> reg_provenance(id)',
-    `operation_type`          VARCHAR(32)     NULL COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
+    `operation_type`          VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT 'Effective from (inclusive)',
     `effective_to`            TIMESTAMP(6)    NULL COMMENT 'Effective to (exclusive); NULL means open-ended',
@@ -131,7 +129,6 @@ CREATE TABLE `reg_prov_pagination_cfg`
     `sort_field_param_name`   VARCHAR(128)    NULL COMMENT 'Sort field name',
     `sorting_direction`       TINYINT                  DEFAULT 1 NOT NULL COMMENT 'Sort order: 0=DESC, 1=ASC',
 
-    `operation_type_key`      VARCHAR(16) AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Normalization: treat NULL operation_type as ALL',
     `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     -- BaseDO (common auditing fields)
@@ -149,7 +146,7 @@ CREATE TABLE `reg_prov_pagination_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_pagination_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- Dictionaries by code: pagination_mode_code/lifecycle_status_code use sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `operation_type_key`, `effective_from`)
+    UNIQUE KEY `uk_reg_prov_pagination_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -169,7 +166,7 @@ CREATE TABLE `reg_prov_http_cfg`
 (
     `id`                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key: HTTP policy config id',
     `provenance_id`           BIGINT UNSIGNED NOT NULL COMMENT 'FK: owning source id -> reg_provenance(id)',
-    `operation_type`          VARCHAR(32)     NULL COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
+    `operation_type`          VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
 
     `effective_from`          TIMESTAMP(6)    NOT NULL COMMENT 'Effective from (inclusive)',
     `effective_to`            TIMESTAMP(6)    NULL COMMENT 'Effective to (exclusive); NULL means open-ended',
@@ -185,7 +182,6 @@ CREATE TABLE `reg_prov_http_cfg`
     `idempotency_header_name` VARCHAR(64)     NULL COMMENT 'Idempotency header name (e.g., Idempotency-Key) to avoid duplicate submissions',
     `idempotency_ttl_seconds` INT             NULL COMMENT 'Idempotency key TTL (seconds); effective only when supported',
 
-    `operation_type_key`      VARCHAR(16) AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Normalization: treat NULL operation_type as ALL',
     `lifecycle_status_code`   VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     -- BaseDO (common auditing fields)
@@ -203,7 +199,7 @@ CREATE TABLE `reg_prov_http_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_http_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- Dictionaries by code: retry_after_policy_code/lifecycle_status_code use sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `operation_type_key`, `effective_from`)
+    UNIQUE KEY `uk_reg_prov_http_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -223,7 +219,7 @@ CREATE TABLE `reg_prov_batching_cfg`
 (
     `id`                             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key: batching & shaping config id',
     `provenance_id`                  BIGINT UNSIGNED NOT NULL COMMENT 'FK: owning source id -> reg_provenance(id)',
-    `operation_type`                 VARCHAR(32)     NULL COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
+    `operation_type`                 VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
 
     `effective_from`                 TIMESTAMP(6)    NOT NULL COMMENT 'Effective from (inclusive)',
     `effective_to`                   TIMESTAMP(6)    NULL COMMENT 'Effective to (exclusive); NULL means open-ended',
@@ -233,7 +229,6 @@ CREATE TABLE `reg_prov_batching_cfg`
     `ids_join_delimiter`             VARCHAR(8)      NULL     DEFAULT ',' COMMENT 'Delimiter to join ID list (e.g., , or +)',
     `max_ids_per_request`            INT             NULL COMMENT 'Hard cap of IDs per HTTP request',
 
-    `operation_type_key`             VARCHAR(16) AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Normalization: treat NULL operation_type as ALL',
     `lifecycle_status_code`          VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     -- BaseDO (common auditing fields)
@@ -251,7 +246,7 @@ CREATE TABLE `reg_prov_batching_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_batching_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- Dictionaries by code: payload_compress_strategy_code/backpressure_strategy_code/lifecycle_status_code use sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `operation_type_key`, `effective_from`)
+    UNIQUE KEY `uk_reg_prov_batching_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -271,7 +266,7 @@ CREATE TABLE `reg_prov_retry_cfg`
 (
     `id`                       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key: retry & backoff config id',
     `provenance_id`            BIGINT UNSIGNED NOT NULL COMMENT 'FK: owning source id -> reg_provenance(id)',
-    `operation_type`           VARCHAR(32)     NULL COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
+    `operation_type`           VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
 
     `effective_from`           TIMESTAMP(6)    NOT NULL COMMENT 'Effective from (inclusive)',
     `effective_to`             TIMESTAMP(6)    NULL COMMENT 'Effective to (exclusive); NULL means open-ended',
@@ -288,7 +283,6 @@ CREATE TABLE `reg_prov_retry_cfg`
     `circuit_break_threshold`  INT             NULL COMMENT 'Circuit breaker threshold: consecutive failures to trip',
     `circuit_cooldown_millis`  INT             NULL COMMENT 'Circuit breaker cooldown (ms): allow half-open probe after',
 
-    `operation_type_key`       VARCHAR(16) AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Normalization: treat NULL operation_type as ALL',
     `lifecycle_status_code`    VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     -- BaseDO (common auditing fields)
@@ -306,7 +300,7 @@ CREATE TABLE `reg_prov_retry_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_retry_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- Dictionaries by code: backoff_policy_type_code/lifecycle_status_code use sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `operation_type_key`, `effective_from`)
+    UNIQUE KEY `uk_reg_prov_retry_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
@@ -324,14 +318,13 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
 (
     `id`                            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key: rate limit & concurrency config id',
     `provenance_id`                 BIGINT UNSIGNED NOT NULL COMMENT 'FK: owning source id -> reg_provenance(id)',
-    `operation_type`                VARCHAR(32)     NULL COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
+    `operation_type`                VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Operation type (ALL/HARVEST/UPDATE/BACKFILL)',
 
     `effective_from`                TIMESTAMP(6)    NOT NULL COMMENT 'Effective from (inclusive)',
     `effective_to`                  TIMESTAMP(6)    NULL COMMENT 'Effective to (exclusive); NULL means open-ended',
 
     `max_concurrent_requests`       INT             NULL COMMENT 'Global max concurrent requests (connections/requests); NULL uses default',
     `per_credential_qps_limit`      INT             NULL COMMENT 'QPS cap per credential/key; distribute load across multiple keys',
-    `operation_type_key`            VARCHAR(16) AS (IFNULL(CAST(`operation_type` AS CHAR), 'ALL')) STORED COMMENT 'Normalization: treat NULL operation_type as ALL',
     `lifecycle_status_code`         VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     -- BaseDO (common auditing fields)
@@ -349,7 +342,7 @@ CREATE TABLE `reg_prov_rate_limit_cfg`
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_reg_prov_rate_limit_cfg__provenance` FOREIGN KEY (`provenance_id`) REFERENCES `reg_provenance` (`id`),
     -- Dictionaries by code: bucket_granularity_lifecycle_status_code use sys_dict_item.item_code
-    UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `operation_type_key`, `effective_from`)
+    UNIQUE KEY `uk_reg_prov_rate_limit_cfg__dim_from` (`provenance_id`, `operation_type`, `effective_from`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci

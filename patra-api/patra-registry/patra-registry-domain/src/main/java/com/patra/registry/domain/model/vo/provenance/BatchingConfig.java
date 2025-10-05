@@ -19,8 +19,6 @@ public record BatchingConfig(
         Long provenanceId,
         /* Operation type discriminator (ALL/HARVEST/UPDATE/BACKFILL); null applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to ALL when operationType is null */
-        String operationTypeKey,
         /* Inclusive timestamp marking when this batching configuration becomes effective */
         Instant effectiveFrom,
         /* Exclusive timestamp marking when this batching configuration expires; null means open-ended */
@@ -40,7 +38,6 @@ public record BatchingConfig(
      * @param id unique configuration identifier, must be positive
      * @param provenanceId provenance identifier, must be positive
      * @param operationType operation type discriminator, nullable
-     * @param operationTypeKey normalized operation type key, defaults to "ALL"
      * @param effectiveFrom effective start timestamp, must not be null
      * @param effectiveTo effective end timestamp, nullable (open-ended)
      * @param detailFetchBatchSize detail fetch batch size, nullable
@@ -52,7 +49,6 @@ public record BatchingConfig(
     public BatchingConfig(Long id,
                           Long provenanceId,
                           String operationType,
-                          String operationTypeKey,
                           Instant effectiveFrom,
                           Instant effectiveTo,
                           Integer detailFetchBatchSize,
@@ -66,7 +62,6 @@ public record BatchingConfig(
         this.id = id;
         this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.effectiveFrom = effectiveFrom;
         this.effectiveTo = effectiveTo;
         this.detailFetchBatchSize = detailFetchBatchSize;

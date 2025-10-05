@@ -20,6 +20,6 @@ public interface RegProvRetryCfgMapper extends BaseMapper<RegProvRetryCfgDO> {
      * Fetches the retry configuration effective for the specified provenance/operation scope.
      */
     Optional<RegProvRetryCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                   @Param("operationTypeKey") String operationTypeKey,
+                                                   @Param("operationType") String operationType,
                                                    @Param("now") Instant now);
 }

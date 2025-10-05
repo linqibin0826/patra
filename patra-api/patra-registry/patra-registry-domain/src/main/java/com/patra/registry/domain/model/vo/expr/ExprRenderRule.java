@@ -19,8 +19,6 @@ public record ExprRenderRule(
         Long provenanceId,
         /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
-        String operationTypeKey,
         /* Unified internal field key (logical FK to {@code reg_expr_field_dict.field_key}) */
         String fieldKey,
         /* Expression operator code (DICT CODE: reg_expr_op) such as TERM/IN/RANGE/EXISTS/TOKEN */
@@ -59,7 +57,6 @@ public record ExprRenderRule(
     public ExprRenderRule(Long id,
                           Long provenanceId,
                           String operationType,
-                          String operationTypeKey,
                           String fieldKey,
                           String opCode,
                           String matchTypeCode,
@@ -90,7 +87,6 @@ public record ExprRenderRule(
         this.id = id;
         this.provenanceId = provenanceId;
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.fieldKey = fieldKey.trim();
         this.opCode = opCode.trim();
         this.matchTypeCode = matchTypeCode != null ? matchTypeCode.trim() : null;

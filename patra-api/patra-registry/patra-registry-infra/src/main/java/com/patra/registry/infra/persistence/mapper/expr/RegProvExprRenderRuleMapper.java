@@ -22,7 +22,7 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
      * Retrieves the most specific active render rule matching the supplied dimension.
      *
      * @param provenanceId      provenance identifier
-     * @param operationTypeKey  normalized operation key (ALL fallback supported)
+     * @param operationType     normalized operation type (ALL fallback supported)
      * @param fieldKey          canonical field key
      * @param opCode            expression operator code
      * @param matchTypeKey      normalized match type key
@@ -33,7 +33,7 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
      * @return optional render rule effective at {@code now}
      */
     Optional<RegProvExprRenderRuleDO> selectActive(@Param("provenanceId") Long provenanceId,
-                                                   @Param("operationTypeKey") String operationTypeKey,
+                                                   @Param("operationType") String operationType,
                                                    @Param("fieldKey") String fieldKey,
                                                    @Param("opCode") String opCode,
                                                    @Param("matchTypeKey") String matchTypeKey,
@@ -47,11 +47,11 @@ public interface RegProvExprRenderRuleMapper extends BaseMapper<RegProvExprRende
      * collapsing source-level fallbacks per rule signature.
      *
      * @param provenanceId      provenance identifier
-     * @param operationTypeKey  normalized operation type key
+     * @param operationType     normalized operation type
      * @param now               evaluation timestamp
      * @return list of render rules, one per unique rule signature
      */
     List<RegProvExprRenderRuleDO> selectActiveByTask(@Param("provenanceId") Long provenanceId,
-                                                     @Param("operationTypeKey") String operationTypeKey,
+                                                     @Param("operationType") String operationType,
                                                      @Param("now") Instant now);
 }

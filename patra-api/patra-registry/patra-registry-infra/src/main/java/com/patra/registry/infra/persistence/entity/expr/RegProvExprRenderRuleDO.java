@@ -40,12 +40,6 @@ public class RegProvExprRenderRuleDO extends BaseDO {
     private String operationType;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status flag for the render rule.
      */
     @TableField("lifecycle_status_code")

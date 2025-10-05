@@ -11,7 +11,6 @@ public record HttpConfigQuery(
         Long id,
         Long provenanceId,
         String operationType,
-        String operationTypeKey,
         Instant effectiveFrom,
         Instant effectiveTo,
         String defaultHeadersJson,
@@ -39,7 +38,6 @@ public record HttpConfigQuery(
             throw new DomainValidationException("Effective from cannot be null");
         }
         operationType = operationType != null ? operationType.trim() : null;
-        operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         proxyUrlValue = proxyUrlValue != null ? proxyUrlValue.trim() : null;
         retryAfterPolicyCode = retryAfterPolicyCode.trim();
         idempotencyHeaderName = idempotencyHeaderName != null ? idempotencyHeaderName.trim() : null;

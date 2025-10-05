@@ -119,12 +119,6 @@ public class RegProvRetryCfgDO extends BaseDO {
     private Integer circuitCooldownMillis;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code reflecting whether the policy is active.
      */
     @TableField("lifecycle_status_code")

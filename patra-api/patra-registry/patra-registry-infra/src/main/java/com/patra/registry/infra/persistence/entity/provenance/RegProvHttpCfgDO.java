@@ -113,12 +113,6 @@ public class RegProvHttpCfgDO extends BaseDO {
     private Integer idempotencyTtlSeconds;
 
     /**
-     * Normalized operation type key (defaults to {@code ALL}).
-     */
-    @TableField("operation_type_key")
-    private String operationTypeKey;
-
-    /**
      * Lifecycle status code marking whether the record is currently active.
      */
     @TableField("lifecycle_status_code")

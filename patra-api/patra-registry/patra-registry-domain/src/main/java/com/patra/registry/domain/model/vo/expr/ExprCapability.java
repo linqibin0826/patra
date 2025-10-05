@@ -20,8 +20,6 @@ public record ExprCapability(
         Long provenanceId,
         /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
         String operationType,
-        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
-        String operationTypeKey,
         /* Unified internal field key (logical FK to {@code reg_expr_field_dict.field_key}) */
         String fieldKey,
         /* Inclusive timestamp marking when this capability becomes effective */
@@ -80,7 +78,6 @@ public record ExprCapability(
     public ExprCapability(Long id,
                           Long provenanceId,
                           String operationType,
-                          String operationTypeKey,
                           String fieldKey,
                           Instant effectiveFrom,
                           Instant effectiveTo,
@@ -117,7 +114,6 @@ public record ExprCapability(
         this.id = id; // already validated
         this.provenanceId = provenanceId; // already validated
         this.operationType = operationType != null ? operationType.trim() : null;
-        this.operationTypeKey = operationTypeKey != null ? operationTypeKey.trim() : "ALL";
         this.fieldKey = fieldKeyTrimmed;
         this.effectiveFrom = effectiveFrom; // already validated as non-null
         this.effectiveTo = effectiveTo;

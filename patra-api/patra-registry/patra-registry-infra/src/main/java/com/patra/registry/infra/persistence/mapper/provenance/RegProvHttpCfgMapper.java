@@ -20,6 +20,6 @@ public interface RegProvHttpCfgMapper extends BaseMapper<RegProvHttpCfgDO> {
      * Retrieves the effective HTTP configuration for the given provenance and operation scope.
      */
     Optional<RegProvHttpCfgDO> selectActiveMerged(@Param("provenanceId") Long provenanceId,
-                                                  @Param("operationTypeKey") String operationTypeKey,
+                                                  @Param("operationType") String operationType,
                                                   @Param("now") Instant now);
 }
