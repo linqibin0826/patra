@@ -12,16 +12,27 @@ import java.time.Instant;
  * @since 0.1.0
  */
 public record PaginationConfig(
+        /* Primary key; unique pagination configuration identifier */
         Long id,
+        /* Foreign key referencing {@code reg_provenance.id} */
         Long provenanceId,
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
         String operationType,
+        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
         String operationTypeKey,
+        /* Inclusive timestamp marking when this pagination configuration becomes effective */
         Instant effectiveFrom,
+        /* Exclusive timestamp marking when this pagination configuration expires; {@code null} means open-ended */
         Instant effectiveTo,
+        /* Pagination mode code (DICT CODE: pagination_mode); defines strategy (OFFSET/CURSOR/PAGE_NUMBER/LINK) */
         String paginationModeCode,
+        /* Number of records per page/batch; must be positive */
         Integer pageSizeValue,
+        /* Maximum pages to fetch per single execution; {@code null} means no limit (use cautiously) */
         Integer maxPagesPerExecution,
+        /* Query parameter name for sort field (e.g., sort_by, order); {@code null} means no sorting */
         String sortFieldParamName,
+        /* Sort direction indicator (1=ASC, -1=DESC, 0=unspecified); {@code null} means source default */
         Integer sortingDirection
 ) {
     public PaginationConfig(Long id,

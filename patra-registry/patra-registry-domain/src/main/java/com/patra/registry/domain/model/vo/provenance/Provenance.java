@@ -11,13 +11,21 @@ import com.patra.registry.domain.exception.DomainValidationException;
  * @since 0.1.0
  */
 public record Provenance(
+        /* Primary key; unique source identifier referenced by all downstream configurations */
         Long id,
+        /* Source code: globally unique, stable (e.g., pubmed/crossref); used for lookups and constraints */
         String code,
+        /* Source display name (e.g., PubMed / Crossref) for human readability */
         String name,
+        /* Default base URL for this source; joined with endpoint paths to form complete API URLs */
         String baseUrlDefault,
+        /* Default timezone (IANA TZ, e.g., UTC/Asia/Shanghai): default for window calc/display */
         String timezoneDefault,
+        /* Official docs/reference URL: helps troubleshooting and API verification */
         String docsUrl,
+        /* Whether this source is active: {@code true}=active, {@code false}=inactive (read side may filter by this) */
         boolean active,
+        /* Lifecycle status code (DICT CODE: lifecycle_status); read side uses ACTIVE/valid only */
         String lifecycleStatusCode
 ) {
     public Provenance(Long id,
@@ -44,7 +52,11 @@ public record Provenance(
         this.lifecycleStatusCode = lifecycleTrimmed;
     }
 
-    /** Indicates whether the provenance is active. */
+    /**
+     * Indicates whether the provenance is active.
+     *
+     * @return {@code true} if the source is active, {@code false} otherwise
+     */
     public boolean isActive() {
         return active;
     }

@@ -12,13 +12,21 @@ import java.time.Instant;
  * @since 0.1.0
  */
 public record RateLimitConfig(
+        /* Primary key; unique rate limit configuration identifier */
         Long id,
+        /* Foreign key referencing {@code reg_provenance.id} */
         Long provenanceId,
+        /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
         String operationType,
+        /* Normalized operation type key; defaults to {@code ALL} when {@code operationType} is {@code null} */
         String operationTypeKey,
+        /* Inclusive timestamp marking when this rate limit configuration becomes effective */
         Instant effectiveFrom,
+        /* Exclusive timestamp marking when this rate limit configuration expires; {@code null} means open-ended */
         Instant effectiveTo,
+        /* Maximum concurrent requests allowed globally; {@code null} means no concurrency limit */
         Integer maxConcurrentRequests,
+        /* QPS (Queries Per Second) limit per credential/API key; {@code null} means no per-credential limit */
         Integer perCredentialQpsLimit
 ) {
     public RateLimitConfig(Long id,
