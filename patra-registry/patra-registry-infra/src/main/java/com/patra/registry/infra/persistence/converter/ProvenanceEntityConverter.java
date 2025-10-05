@@ -28,7 +28,7 @@ import java.util.List;
  * @author linqibin
  * @since 0.1.0
  */
-@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProvenanceEntityConverter {
 
     @Mapping(target = "code", source = "provenanceCode")

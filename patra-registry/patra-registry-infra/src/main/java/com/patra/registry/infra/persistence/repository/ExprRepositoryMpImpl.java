@@ -39,11 +39,24 @@ public class ExprRepositoryMpImpl implements ExprRepository {
     private final RegProvenanceMapper provenanceMapper;
     private final ExprEntityConverter converter;
 
+    /**
+     * Loads expression metadata snapshot for a specific provenance and operation.
+     * Aggregates field dictionaries, capabilities, render rules, and API parameter mappings.
+     *
+     * @param provenanceCode the provenance code
+     * @param operationType  the operation type key
+     * @param endpointName   the API endpoint name
+     * @param at             the query timestamp (null for current time)
+     * @return complete expression metadata snapshot
+     */
     @Override
     public ExprSnapshot loadSnapshot(ProvenanceCode provenanceCode,
                                      String operationType,
                                      String endpointName,
                                      Instant at) {
+        log.info("Loading expression snapshot: provenanceCode={}, operationType={}, endpoint={}",
+                provenanceCode.getCode(), operationType, endpointName);
+
         Instant timestamp = atOrNow(at);
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
@@ -55,6 +68,9 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         List<ExprRenderRule> renderRules = loadRenderRules(provenanceId, operationKey, timestamp);
         List<ApiParamMapping> apiParams = loadApiParamMappings(provenanceId, operationKey, normalizedEndpoint, timestamp);
 
+        log.info("Expression snapshot loaded: provenanceCode={}, fields={}, capabilities={}, renderRules={}, apiParams={}",
+                provenanceCode.getCode(), fields.size(), capabilities.size(), renderRules.size(), apiParams.size());
+
         return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
     }
 
@@ -65,8 +81,8 @@ public class ExprRepositoryMpImpl implements ExprRepository {
     }
 
     private List<ExprCapability> loadCapabilities(Long provenanceId,
-                                                   String operationKey,
-                                                   Instant timestamp) {
+                                                  String operationKey,
+                                                  Instant timestamp) {
         return capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
@@ -89,14 +105,31 @@ public class ExprRepositoryMpImpl implements ExprRepository {
                 .toList();
     }
 
+    /**
+     * Returns the provided instant or current time if null.
+     *
+     * @param at the instant to check
+     * @return the instant or current time
+     */
     private Instant atOrNow(Instant at) {
         return at != null ? at : Instant.now();
     }
 
+    /**
+     * Resolves provenance ID from business code.
+     *
+     * @param provenanceCode the provenance code
+     * @return provenance ID
+     * @throws IllegalArgumentException if provenance code not found
+     */
     private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
         String code = provenanceCode.getCode();
+        log.debug("Resolving provenance ID for code: {}", code);
         return provenanceMapper.selectByCode(code)
                 .map(RegProvenanceDO::getId)
-                .orElseThrow(() -> new IllegalArgumentException("Provenance code not found: " + code));
+                .orElseThrow(() -> {
+                    log.error("Provenance code not found: {}", code);
+                    return new IllegalArgumentException("Provenance code not found: " + code);
+                });
     }
 }
