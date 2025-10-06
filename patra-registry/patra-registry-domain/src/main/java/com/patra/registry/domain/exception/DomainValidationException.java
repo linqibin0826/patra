@@ -30,9 +30,11 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Convenience factory: throws when condition is false.
+     * Convenience factory method that throws an exception when the condition is false.
+     *
      * @param condition boolean condition to check
      * @param message error message when condition fails
+     * @throws DomainValidationException when condition is false
      */
     public static void require(boolean condition, String message) {
         if (!condition) {
@@ -41,9 +43,12 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Assert a string is non-null and non-blank.
+     * Asserts a string is non-null and non-blank, returning trimmed value.
+     *
      * @param value value to check
      * @param field field name (for message composition)
+     * @return trimmed value if validation passes
+     * @throws DomainValidationException when value is null or blank
      */
     public static String notBlank(String value, String field) {
         if (value == null || value.trim().isEmpty()) {
@@ -53,9 +58,13 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Assert an object is non-null.
+     * Asserts an object is non-null.
+     *
      * @param obj object to check
-     * @param field field name
+     * @param field field name for error message
+     * @param <T> type of the object
+     * @return the object if validation passes
+     * @throws DomainValidationException when object is null
      */
     public static <T> T nonNull(T obj, String field) {
         if (obj == null) {
@@ -65,9 +74,12 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Assert number is positive (> 0).
-     * @param number numeric value
-     * @param field field name
+     * Asserts a number is positive (greater than 0).
+     *
+     * @param number numeric value to check
+     * @param field field name for error message
+     * @return the number if validation passes
+     * @throws DomainValidationException when number is null or not positive
      */
     public static long positive(Long number, String field) {
         if (number == null || number <= 0) {
@@ -77,7 +89,12 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Assert integer is non-negative (>= 0).
+     * Asserts an integer is non-negative (greater than or equal to 0).
+     *
+     * @param number numeric value to check
+     * @param field field name for error message
+     * @return the number if validation passes
+     * @throws DomainValidationException when number is null or negative
      */
     public static int nonNegative(Integer number, String field) {
         if (number == null || number < 0) {
@@ -87,7 +104,13 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Assert array is not empty (checks only null/length==0).
+     * Asserts an array is not empty (checks only null or length == 0).
+     *
+     * @param arr array to check
+     * @param field field name for error message
+     * @param <T> type of array elements
+     * @return the array if validation passes
+     * @throws DomainValidationException when array is null or empty
      */
     public static <T> T[] notEmpty(T[] arr, String field) {
         if (arr == null || arr.length == 0) {
@@ -97,7 +120,14 @@ public class DomainValidationException extends RuntimeException {
     }
 
     /**
-     * Assert value is within the inclusive range [min, max].
+     * Asserts a value is within the inclusive range [min, max].
+     *
+     * @param value the value to check
+     * @param minInclusive minimum allowed value (inclusive)
+     * @param maxInclusive maximum allowed value (inclusive)
+     * @param field field name for error message
+     * @return the value if validation passes
+     * @throws DomainValidationException when value is outside the range
      */
     public static long withinRange(long value, long minInclusive, long maxInclusive, String field) {
         if (value < minInclusive || value > maxInclusive) {

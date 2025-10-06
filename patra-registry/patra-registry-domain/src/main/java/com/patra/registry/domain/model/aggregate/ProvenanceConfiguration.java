@@ -12,13 +12,24 @@ import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 import java.util.Optional;
 
 /**
- * Provenance configuration aggregate: a consolidated read-only view over
- * provenance and multiple configuration dimensions.
+ * Provenance configuration aggregate root providing a consolidated read-only view
+ * over provenance and multiple configuration dimensions.
  *
  * <p>Used on the CQRS read side to represent the effective configuration at a
- * point in time, including HTTP policy, retry and rate limit settings, etc.</p>
+ * point in time, including HTTP policy, retry, rate limit, and other operational settings.
  *
- * <p>Scope precedence: TASK-specific slices override SOURCE-level defaults.</p>
+ * <p>Scope precedence: TASK-specific slices override SOURCE-level defaults.
+ *
+ * <p>Field descriptions:
+ * <ol>
+ *   <li>provenance - core provenance entity containing source metadata; never null</li>
+ *   <li>windowOffset - window offset configuration for time-based segmentation; nullable</li>
+ *   <li>pagination - pagination strategy configuration; nullable</li>
+ *   <li>http - HTTP client configuration including timeouts and headers; nullable</li>
+ *   <li>batching - batching configuration for detail fetch operations; nullable</li>
+ *   <li>retry - retry policy configuration with backoff strategy; nullable</li>
+ *   <li>rateLimit - rate limiting configuration for API throttling; nullable</li>
+ * </ol>
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,43 +43,77 @@ public record ProvenanceConfiguration(
         RetryConfig retry,
         RateLimitConfig rateLimit
 ) {
+    /**
+     * Compact canonical constructor enforcing provenance non-null invariant.
+     *
+     * @throws DomainValidationException if provenance is null
+     */
     public ProvenanceConfiguration {
         DomainValidationException.nonNull(provenance, "Provenance");
     }
 
-    /** 是否配置了窗口策略。 */
+    /**
+     * Checks whether window offset configuration is present.
+     *
+     * @return true if window offset is configured
+     */
     public boolean hasWindowOffset() {
         return windowOffset != null;
     }
 
-    /** 是否配置了分页策略。 */
+    /**
+     * Checks whether pagination configuration is present.
+     *
+     * @return true if pagination is configured
+     */
     public boolean hasPagination() {
         return pagination != null;
     }
 
-    /** 是否配置了HTTP策略。 */
+    /**
+     * Checks whether HTTP configuration is present.
+     *
+     * @return true if HTTP config is present
+     */
     public boolean hasHttpConfig() {
         return http != null;
     }
 
-    /** 是否配置了批处理策略。 */
+    /**
+     * Checks whether batching configuration is present.
+     *
+     * @return true if batching is configured
+     */
     public boolean hasBatching() {
         return batching != null;
     }
 
-    /** 是否配置了重试策略。 */
+    /**
+     * Checks whether retry configuration is present.
+     *
+     * @return true if retry policy is configured
+     */
     public boolean hasRetry() {
         return retry != null;
     }
 
-    /** 是否配置了限流策略。 */
+    /**
+     * Checks whether rate limit configuration is present.
+     *
+     * @return true if rate limit is configured
+     */
     public boolean hasRateLimit() {
         return rateLimit != null;
     }
 
-    // Credential dimension has been removed from the aggregate.
-
-    /** 是否为完整配置（包含所有必要的配置维度）。 */
+    /**
+     * Checks whether the configuration is complete and active.
+     *
+     * <p>A configuration is considered complete if the provenance is non-null and active.
+     * Individual policy configurations (pagination, retry, etc.) are optional.
+     *
+     * @return true if provenance is present and active
+     */
     public boolean isComplete() {
         return provenance != null && provenance.isActive();
     }

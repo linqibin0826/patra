@@ -5,7 +5,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * 重试与退避配置查询视图。
+ * Retry configuration query view.
+ *
+ * <p>Read-optimized projection for querying retry policy configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record RetryConfigQuery(
         Long id,
