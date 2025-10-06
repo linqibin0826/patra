@@ -247,6 +247,368 @@ class HttpClientAdapterTest {
         assertThat(response.isSuccess()).isTrue();
     }
 
+    @Test
+    @DisplayName("应该支持 PATCH 请求")
+    void shouldSupportPatchRequest() {
+        // Given: Mock PATCH endpoint
+        String patchBody = "{\"status\":\"inactive\"}";
+        wireMockServer.stubFor(patch(urlEqualTo("/api/patch/123"))
+                .withRequestBody(equalToJson(patchBody))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("{\"id\":123,\"status\":\"inactive\"}")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/patch/123",
+                HttpMethod.PATCH,
+                Map.of("Content-Type", "application/json"),
+                patchBody
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify response
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("inactive");
+    }
+
+    @Test
+    @DisplayName("应该支持 HEAD 请求")
+    void shouldSupportHeadRequest() {
+        // Given: Mock HEAD endpoint
+        wireMockServer.stubFor(head(urlEqualTo("/api/resource"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Length", "1024")
+                        .withHeader("Last-Modified", "Mon, 01 Jan 2024 00:00:00 GMT")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/resource",
+                HttpMethod.HEAD,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify response (HEAD should have no body)
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.headers()).containsKey("content-length");
+        assertThat(response.headers()).containsKey("last-modified");
+    }
+
+    @Test
+    @DisplayName("应该支持 OPTIONS 请求")
+    void shouldSupportOptionsRequest() {
+        // Given: Mock OPTIONS endpoint
+        wireMockServer.stubFor(options(urlEqualTo("/api/resource"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Allow", "GET, POST, PUT, DELETE")
+                        .withHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/resource",
+                HttpMethod.OPTIONS,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify response
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.headers()).containsKey("allow");
+    }
+
+    @Test
+    @DisplayName("应该正确处理 429 限流响应")
+    void shouldHandleRateLimitResponse() {
+        // Given: Mock 429 rate limit response
+        wireMockServer.stubFor(get(urlEqualTo("/api/ratelimited"))
+                .willReturn(aResponse()
+                        .withStatus(429)
+                        .withHeader("Retry-After", "60")
+                        .withHeader("X-RateLimit-Limit", "100")
+                        .withHeader("X-RateLimit-Remaining", "0")
+                        .withHeader("X-RateLimit-Reset", "1696550400")
+                        .withBody("{\"error\":\"Rate limit exceeded\"}")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/ratelimited",
+                HttpMethod.GET,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify response and rate limit headers
+        assertThat(response.statusCode()).isEqualTo(429);
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.headers()).containsKey("retry-after");
+        assertThat(response.headers().get("retry-after")).containsExactly("60");
+        assertThat(response.headers()).containsKey("x-ratelimit-limit");
+        assertThat(response.headers().get("x-ratelimit-limit")).containsExactly("100");
+        assertThat(response.headers()).containsKey("x-ratelimit-remaining");
+        assertThat(response.headers().get("x-ratelimit-remaining")).containsExactly("0");
+    }
+
+    @Test
+    @DisplayName("应该正确传递自定义请求头")
+    void shouldPassCustomRequestHeaders() {
+        // Given: Mock endpoint that expects specific headers
+        wireMockServer.stubFor(get(urlEqualTo("/api/secured"))
+                .withHeader("Authorization", equalTo("Bearer test-token"))
+                .withHeader("X-Custom-Header", equalTo("custom-value"))
+                .withHeader("User-Agent", equalTo("Test-Client/1.0"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("Authorized")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/secured",
+                HttpMethod.GET,
+                Map.of(
+                        "Authorization", "Bearer test-token",
+                        "X-Custom-Header", "custom-value",
+                        "User-Agent", "Test-Client/1.0"
+                ),
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify request was accepted (headers matched)
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEqualTo("Authorized");
+
+        // Verify WireMock received the headers
+        wireMockServer.verify(getRequestedFor(urlEqualTo("/api/secured"))
+                .withHeader("Authorization", equalTo("Bearer test-token"))
+                .withHeader("X-Custom-Header", equalTo("custom-value")));
+    }
+
+    @Test
+    @DisplayName("应该正确处理空响应体")
+    void shouldHandleEmptyResponseBody() {
+        // Given: Mock endpoint with empty body
+        wireMockServer.stubFor(get(urlEqualTo("/api/empty"))
+                .willReturn(aResponse()
+                        .withStatus(200)));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/empty",
+                HttpMethod.GET,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify response with empty body
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("应该正确处理大型响应体")
+    void shouldHandleLargeResponseBody() {
+        // Given: Mock endpoint with large response
+        String largeBody = "x".repeat(10000); // 10KB response
+        wireMockServer.stubFor(get(urlEqualTo("/api/large"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/plain")
+                        .withBody(largeBody)));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/large",
+                HttpMethod.GET,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify large response is handled correctly
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).hasSize(10000);
+        assertThat(response.body()).isEqualTo(largeBody);
+    }
+
+    @Test
+    @DisplayName("应该正确处理 JSON 响应体中的特殊字符")
+    void shouldHandleSpecialCharactersInJsonResponse() {
+        // Given: Mock endpoint with special characters
+        String jsonWithSpecialChars = "{\"message\":\"Hello\\nWorld\",\"emoji\":\"😀\",\"chinese\":\"你好世界\"}";
+        wireMockServer.stubFor(get(urlEqualTo("/api/special"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json; charset=UTF-8")
+                        .withBody(jsonWithSpecialChars)));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/special",
+                HttpMethod.GET,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify special characters are preserved
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("Hello\\nWorld");
+        assertThat(response.body()).contains("😀");
+        assertThat(response.body()).contains("你好世界");
+    }
+
+    @Test
+    @DisplayName("应该正确处理 URL 查询参数")
+    void shouldHandleUrlQueryParameters() {
+        // Given: Mock endpoint with query parameters
+        wireMockServer.stubFor(get(urlPathEqualTo("/api/search"))
+                .withQueryParam("q", equalTo("cancer"))
+                .withQueryParam("limit", equalTo("10"))
+                .withQueryParam("offset", equalTo("0"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("{\"results\":[]}")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/search?q=cancer&limit=10&offset=0",
+                HttpMethod.GET,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify query parameters were sent
+        assertThat(response.statusCode()).isEqualTo(200);
+        wireMockServer.verify(getRequestedFor(urlPathEqualTo("/api/search"))
+                .withQueryParam("q", equalTo("cancer"))
+                .withQueryParam("limit", equalTo("10"))
+                .withQueryParam("offset", equalTo("0")));
+    }
+
+    @Test
+    @DisplayName("应该正确处理多值响应头")
+    void shouldHandleMultiValueResponseHeaders() {
+        // Given: Mock endpoint with multi-value headers
+        wireMockServer.stubFor(get(urlEqualTo("/api/multiheader"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Set-Cookie", "session1=abc123")
+                        .withHeader("Set-Cookie", "session2=xyz789")
+                        .withHeader("Cache-Control", "no-cache, no-store")
+                        .withBody("OK")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/multiheader",
+                HttpMethod.GET,
+                null,
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify multi-value headers are captured
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.headers()).containsKey("set-cookie");
+        // Multi-value headers should be in a list
+        List<String> setCookieValues = response.headers().get("set-cookie");
+        assertThat(setCookieValues).hasSize(2);
+        assertThat(setCookieValues).contains("session1=abc123", "session2=xyz789");
+    }
+
+    @Test
+    @DisplayName("应该正确处理 POST 请求的 Content-Type")
+    void shouldHandlePostRequestContentType() {
+        // Given: Mock endpoint expecting specific content type
+        wireMockServer.stubFor(post(urlEqualTo("/api/data"))
+                .withHeader("Content-Type", matching("application/json.*"))
+                .willReturn(aResponse()
+                        .withStatus(201)
+                        .withBody("{\"id\":1}")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/data",
+                HttpMethod.POST,
+                Map.of("Content-Type", "application/json; charset=UTF-8"),
+                "{\"name\":\"test\"}"
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify content type was sent correctly
+        assertThat(response.statusCode()).isEqualTo(201);
+        wireMockServer.verify(postRequestedFor(urlEqualTo("/api/data"))
+                .withHeader("Content-Type", matching("application/json.*")));
+    }
+
+    @Test
+    @DisplayName("应该正确处理无请求头的请求")
+    void shouldHandleRequestWithoutHeaders() {
+        // Given: Mock simple endpoint
+        wireMockServer.stubFor(get(urlEqualTo("/api/simple"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("Simple response")));
+
+        HttpRequest request = new HttpRequest(
+                baseUrl + "/api/simple",
+                HttpMethod.GET,
+                null,  // No headers
+                null
+        );
+
+        ResilienceConfig config = createDefaultConfig();
+
+        // When: Execute request
+        HttpResponse response = httpClientAdapter.call(request, config);
+
+        // Then: Verify request succeeds without headers
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEqualTo("Simple response");
+    }
+
     /**
      * Create default ResilienceConfig for testing
      */
