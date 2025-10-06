@@ -4,7 +4,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * API 参数映射查询视图。
+ * Query view for API parameter mappings.
+ *
+ * <p>Read-optimized projection for querying standard key to provider parameter mappings.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ApiParamMappingQuery(
         Long provenanceId,

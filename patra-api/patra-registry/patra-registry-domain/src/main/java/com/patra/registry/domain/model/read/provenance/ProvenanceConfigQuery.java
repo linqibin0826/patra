@@ -4,7 +4,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 
 
 /**
- * Provenance 聚合配置查询视图。
+ * Provenance configuration query view.
+ *
+ * <p>Read-optimized projection for querying complete provenance configuration aggregate.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ProvenanceConfigQuery(
         ProvenanceQuery provenance,
