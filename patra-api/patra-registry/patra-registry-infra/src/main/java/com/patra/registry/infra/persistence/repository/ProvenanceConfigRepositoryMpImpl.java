@@ -1,11 +1,10 @@
 package com.patra.registry.infra.persistence.repository;
 
-import com.patra.registry.domain.support.RegistryKeyPlaceholders;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.common.enums.RegistryConfigScope;
 import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.vo.provenance.*;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
+import com.patra.registry.domain.support.RegistryKeyStandardizer;
 import com.patra.registry.infra.persistence.converter.ProvenanceEntityConverter;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.provenance.*;
@@ -21,7 +20,7 @@ import java.util.Optional;
  * MyBatis-based read-side repository for provenance configuration aggregates.
  * <p>Applies the precedence hierarchy of operation scope over source scope, falling back to
  * source-level defaults when operation-specific slices are absent.</p>
- * <p>All scope keys are normalized via {@link RegistryConfigScope} constants to avoid string literals.</p>
+ * <p>All scope keys are normalized consistently to avoid string literal drift across components.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -81,7 +80,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                                String operationType,
                                                                Instant at) {
         Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
         log.debug("Finding window offset config: provenanceId={}, operationKey={}, timestamp={}",
                 provenanceId, operationKey, timestamp);
         return windowOffsetCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
@@ -101,7 +100,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                            String operationType,
                                                            Instant at) {
         Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
         log.debug("Finding pagination config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return paginationCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
@@ -120,7 +119,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                      String operationType,
                                                      Instant at) {
         Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
         log.debug("Finding HTTP config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return httpCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
@@ -139,7 +138,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                        String operationType,
                                                        Instant at) {
         Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
         log.debug("Finding batching config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return batchingCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
@@ -158,7 +157,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                  String operationType,
                                                  Instant at) {
         Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
         log.debug("Finding retry config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return retryCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
@@ -177,7 +176,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
                                                          String operationType,
                                                          Instant at) {
         Instant timestamp = atOrNow(at);
-        String operationKey = normalizeOperationKey(operationType);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
         log.debug("Finding rate limit config: provenanceId={}, operationKey={}", provenanceId, operationKey);
         return rateLimitCfgMapper.selectActiveMerged(provenanceId, operationKey, timestamp)
                 .map(converter::toDomain);
@@ -226,33 +225,7 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
         log.info("Configuration loaded successfully: provenanceId={}, operationType={}", provenanceId, operationType);
         return Optional.of(configuration);
     }
-
-    /**
-     * Normalizes operation type string to a standard key format.
-     * Converts to uppercase, replaces non-alphanumeric chars with underscores,
-     * and collapses multiple underscores. Returns "ALL" for null or empty input.
-     *
-     * @param operationType the raw operation type string
-     * @return normalized operation key
-     */
-    private String normalizeOperationKey(String operationType) {
-        if (operationType == null) {
-            return RegistryKeyPlaceholders.ALL;
-        }
-        String trimmed = operationType.trim();
-        if (trimmed.isEmpty()) {
-            return RegistryKeyPlaceholders.ALL;
-        }
-        // Replace non-alphanumeric characters with underscores and collapse consecutive underscores.
-        String upper = trimmed.toUpperCase();
-        String normalized = upper.replaceAll("[^A-Z0-9]", "_");
-        normalized = normalized.replaceAll("_+", "_");
-        normalized = normalized.replaceAll("^_+|_+$", "");
-        if (normalized.isEmpty()) {
-            return RegistryKeyPlaceholders.ALL;
-        }
-        return normalized;
-    }
+    
 
     /**
      * Finds provenance domain object by ID.

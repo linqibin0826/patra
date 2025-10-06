@@ -5,6 +5,12 @@ import java.util.Objects;
 
 /**
  * Aggregated expression snapshot query view.
+ *
+ * <p>Read-optimized projection that bundles fields, capabilities, render rules and
+ * API parameter mappings for expression-related configuration.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExprSnapshotQuery(
         List<ExprFieldQuery> fields,
