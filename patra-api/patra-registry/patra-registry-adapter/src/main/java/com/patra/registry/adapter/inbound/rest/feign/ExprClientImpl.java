@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+
 /**
  * Implementation of the expression internal API (Feign client endpoint).
  *
@@ -28,11 +29,22 @@ public class ExprClientImpl implements ExprClient {
     private final ExprQueryAppService exprQueryAppService;
     private final ExprApiConverter converter;
 
+    /**
+     * Loads an expression snapshot and converts it to API response DTO.
+     *
+     * @param provenanceCode the provenance code identifying the source system
+     * @param operationType the operation type discriminator; {@code null} means all operations
+     * @param endpointName the endpoint name filter; {@code null} means all endpoints
+     * @param at the instant used for temporal slicing; {@code null} defaults to current time
+     * @return the expression snapshot response DTO exposed by RPC contract
+     */
     @Override
     public ExprSnapshotResp getSnapshot(String provenanceCode,
                                         String operationType,
                                         String endpointName,
                                         Instant at) {
+        log.debug("[REGISTRY][ADAPTER] get expr snapshot provenanceCode={} operationType={} endpointName={} at={}",
+                provenanceCode, operationType, endpointName, at);
         ExprSnapshotQuery snapshot = exprQueryAppService.loadSnapshot(provenanceCode, operationType, endpointName, at);
         return converter.toResp(snapshot);
     }
