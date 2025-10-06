@@ -27,15 +27,51 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface ExprApiConverter {
 
+    /**
+     * Converts a single expression field query model to an API response DTO.
+     *
+     * @param query the field query model produced by application layer
+     * @return the response DTO exposed by the RPC contract
+     */
     ExprFieldResp toResp(ExprFieldQuery query);
 
+    /**
+     * Converts expression field query models to API response DTOs.
+     *
+     * @param queries the collection of field query models
+     * @return the list of response DTOs preserving iteration order
+     */
     List<ExprFieldResp> toResp(List<ExprFieldQuery> queries);
 
+    /**
+     * Converts an API parameter mapping query model to its response DTO.
+     *
+     * @param query the mapping query model produced by application layer
+     * @return the API response DTO reflecting the mapping configuration
+     */
     ApiParamMappingResp toResp(ApiParamMappingQuery query);
 
+    /**
+     * Converts an expression capability query model to an API response DTO.
+     *
+     * @param query the capability query model
+     * @return the response DTO consumed by downstream clients
+     */
     ExprCapabilityResp toResp(ExprCapabilityQuery query);
 
+    /**
+     * Converts an expression render rule query model to an API response DTO.
+     *
+     * @param query the render rule query model
+     * @return the render rule response DTO
+     */
     ExprRenderRuleResp toResp(ExprRenderRuleQuery query);
 
+    /**
+     * Converts an aggregated expression snapshot query model to an API response DTO.
+     *
+     * @param query the aggregated snapshot query model
+     * @return the snapshot response DTO distributed to callers
+     */
     ExprSnapshotResp toResp(ExprSnapshotQuery query);
 }

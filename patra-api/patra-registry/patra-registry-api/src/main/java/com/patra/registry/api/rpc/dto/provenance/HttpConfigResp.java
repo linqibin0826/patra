@@ -3,57 +3,45 @@ package com.patra.registry.api.rpc.dto.provenance;
 import java.time.Instant;
 
 /**
- * HTTP 基础通信策略配置响应 DTO。<br>
- * <p>对应表：reg_prov_http_cfg。定义单来源/任务在 HTTP 层面的默认细节。</p>
- * 字段说明：
- * <ul>
- *   <li>{@code id} 主键。</li>
- *   <li>{@code provenanceId} 来源 ID。</li>
- *   <li>{@code operationType} 操作类型。</li>
- *   <li>{@code effectiveFrom} 生效起。</li>
- *   <li>{@code effectiveTo} 生效止。</li>
- *   <li>{@code defaultHeadersJson} 默认公共 Header JSON（例如 Accept/User-Agent/Cache-Control 等）。</li>
- *   <li>{@code timeoutConnectMillis} 连接建立超时（毫秒）。</li>
- *   <li>{@code timeoutReadMillis} 单次读取 / 响应体获取超时（毫秒）。</li>
- *   <li>{@code timeoutTotalMillis} 整个请求生命周期上限（毫秒）。</li>
- *   <li>{@code tlsVerifyEnabled} 是否启用 TLS 证书校验（禁用仅限调试）。</li>
- *   <li>{@code proxyUrlValue} 代理服务器 URL（http(s)://host:port）。</li>
- *   <li>{@code retryAfterPolicyCode} 是否遵守服务端 Retry-After 头策略（IGNORE / HONOR / CAP）。</li>
- *   <li>{@code retryAfterCapMillis} 当策略为 CAP 时的最大等待毫秒数。</li>
- *   <li>{@code idempotencyHeaderName} 幂等性键 Header 名称（例如 Idempotency-Key）。为空表示不注入。</li>
- *   <li>{@code idempotencyTtlSeconds} 幂等 Key 服务端期望缓存的时间（秒），供生成策略参考。</li>
- * </ul>
+ * Response DTO describing baseline HTTP configuration for a provenance.
+ *
+ * <p>Field descriptions:
+ * <ol>
+ *   <li>id - primary identifier of the HTTP configuration row</li>
+ *   <li>provenanceId - provenance owning the configuration</li>
+ *   <li>operationType - operation discriminator (e.g., HARVEST/UPDATE)</li>
+ *   <li>effectiveFrom - timestamp from which the configuration becomes effective</li>
+ *   <li>effectiveTo - timestamp until which the configuration remains effective</li>
+ *   <li>defaultHeadersJson - serialized default headers applied to outbound calls</li>
+ *   <li>timeoutConnectMillis - connection timeout in milliseconds</li>
+ *   <li>timeoutReadMillis - read timeout in milliseconds</li>
+ *   <li>timeoutTotalMillis - overall request timeout in milliseconds</li>
+ *   <li>tlsVerifyEnabled - whether TLS certificate verification is enabled</li>
+ *   <li>proxyUrlValue - optional proxy URL used for outbound traffic</li>
+ *   <li>retryAfterPolicyCode - policy applied when handling Retry-After headers</li>
+ *   <li>retryAfterCapMillis - maximum wait time in milliseconds when honoring Retry-After</li>
+ *   <li>idempotencyHeaderName - header name injected for idempotency tracking</li>
+ *   <li>idempotencyTtlSeconds - expected TTL for idempotency tokens on provider side</li>
+ * </ol>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record HttpConfigResp(
-        /** 主键 ID */
         Long id,
-        /** 来源 ID */
         Long provenanceId,
-        /** 操作类型 */
         String operationType,
-        /** 生效起 */
         Instant effectiveFrom,
-        /** 生效止（不含） */
         Instant effectiveTo,
-        /** 默认 Header JSON */
         String defaultHeadersJson,
-        /** 连接超时毫秒 */
         Integer timeoutConnectMillis,
-        /** 读取超时毫秒 */
         Integer timeoutReadMillis,
-        /** 总超时毫秒 */
         Integer timeoutTotalMillis,
-        /** 是否校验 TLS */
         boolean tlsVerifyEnabled,
-        /** 代理 URL */
         String proxyUrlValue,
-        /** Retry-After 策略编码 */
         String retryAfterPolicyCode,
-        /** Retry-After 等待上限毫秒 */
         Integer retryAfterCapMillis,
-        /** 幂等 Header 名 */
         String idempotencyHeaderName,
-        /** 幂等 Key TTL 秒 */
         Integer idempotencyTtlSeconds
 ) {
 }
