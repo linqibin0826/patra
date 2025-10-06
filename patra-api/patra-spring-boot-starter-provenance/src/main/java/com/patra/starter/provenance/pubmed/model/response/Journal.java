@@ -5,6 +5,9 @@ import com.patra.starter.provenance.common.support.JsonHelpers;
 
 /**
  * Journal metadata derived from PubMed citation.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class Journal {
 
@@ -20,6 +23,12 @@ public final class Journal {
         this.isoAbbreviation = isoAbbreviation;
     }
 
+    /**
+     * Parse a journal node into a curated journal representation.
+     *
+     * @param node journal node from the Medline citation
+     * @return structured journal metadata
+     */
     public static Journal from(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return new Journal(null, null, null, null);
@@ -32,18 +41,38 @@ public final class Journal {
         return new Journal(issn, issnType, title, isoAbbreviation);
     }
 
+    /**
+     * Get the journal ISSN.
+     *
+     * @return ISSN value or {@code null}
+     */
     public String issn() {
         return issn;
     }
 
+    /**
+     * Get the ISSN type attribute.
+     *
+     * @return ISSN type or {@code null}
+     */
     public String issnType() {
         return issnType;
     }
 
+    /**
+     * Get the full journal title.
+     *
+     * @return journal title or {@code null}
+     */
     public String title() {
         return title;
     }
 
+    /**
+     * Get the ISO abbreviation for the journal.
+     *
+     * @return ISO abbreviation or {@code null}
+     */
     public String isoAbbreviation() {
         return isoAbbreviation;
     }

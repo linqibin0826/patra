@@ -6,16 +6,23 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * PubMed efetch API request parameters.
- * Based on <a href="https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.EFetch">PubMed E-utilities API documentation</a>
+ * PubMed EFetch API request parameters following the official E-utilities specification.
  *
- * Format support:
- * - rettype=abstract/medline/full: XML only, requires XmlToJsonConverter
- * - rettype=uilist: JSON supported, can use directly
+ * <p>Field descriptions:
+ * @param db database identifier (always "pubmed" for this starter)
+ * @param id comma separated list of article identifiers
+ * @param retmode response format (xml, json or text)
+ * @param rettype response type (abstract, medline, full, uilist)
+ * @param retstart offset used when paging through history server results
+ * @param retmax maximum records returned in a single call
+ * @param webenv WebEnv token acquired from a previous ESearch
+ * @param queryKey query key associated with the WebEnv session
+ * @param apiKey API key that unlocks higher request quotas
+ * @param tool tool identifier registered at NCBI
+ * @param email maintainer email for operational contact
  *
- * Recommended strategy:
- * - Get article details → use XML format (retmode=xml, rettype=abstract)
- * - Get ID list → use JSON format (retmode=json, rettype=uilist)
+ * <p>Use the XML defaults for retrieving detailed article structures and
+ * {@link #forUiList(String, String)} for lightweight identifier lists.
  *
  * @author linqibin
  * @since 0.1.0
@@ -42,14 +49,21 @@ public record EFetchRequest(
 ) implements ApiRequest {
 
     /**
-     * Default constructor: use XML format to get abstract
+     * Create a request configured for abstract retrieval via XML.
+     *
+     * @param db database identifier, typically "pubmed"
+     * @param id comma separated list of PubMed identifiers (max 200 per call)
      */
     public EFetchRequest(String db, String id) {
         this(db, id, "xml", "abstract", null, null, null, null, null, null, null);
     }
 
     /**
-     * JSON format constructor: get ID list
+     * Create a request tuned for retrieving identifier lists in JSON.
+     *
+     * @param db database identifier, typically "pubmed"
+     * @param id comma separated list of PubMed identifiers (max 200 per call)
+     * @return request configured to return the uilist JSON payload
      */
     public static EFetchRequest forUiList(String db, String id) {
         return new EFetchRequest(db, id, "json", "uilist", null, null, null, null, null, null, null);
@@ -72,6 +86,11 @@ public record EFetchRequest(
         }
     }
 
+    /**
+     * Compose the outbound query parameter map understood by the EFetch endpoint.
+     *
+     * @return parameter map ready for gateway submission
+     */
     @Override
     public Map<String, String> toQueryParams() {
         Map<String, String> params = new LinkedHashMap<>();
@@ -97,9 +116,9 @@ public record EFetchRequest(
     }
 
     /**
-     * Check if this request requires XML to JSON conversion
+     * Determine whether the caller must perform XML to JSON conversion locally.
      *
-     * @return true if XML conversion is needed
+     * @return {@code true} when XML is required and no JSON shortcut is available
      */
     public boolean requiresXmlConversion() {
         return "xml".equals(retmode) && !"uilist".equals(rettype);

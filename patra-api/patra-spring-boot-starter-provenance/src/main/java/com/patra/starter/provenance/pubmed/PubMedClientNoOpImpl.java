@@ -18,22 +18,26 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PubMedClientNoOpImpl implements PubMedClient {
 
+    /** {@inheritDoc} */
     @Override
     public ESearchResponse esearch(ESearchRequest request) {
         return esearch(request, null);
     }
 
+    /** {@inheritDoc} */
     @Override
     public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
         log.warn("[PROVENANCE][CORE] EgressGatewayClient not available, returning empty esearch response");
         return ESearchResponse.empty();
     }
 
+    /** {@inheritDoc} */
     @Override
     public EFetchResponse efetch(EFetchRequest request) {
         return efetch(request, null);
     }
 
+    /** {@inheritDoc} */
     @Override
     public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
         log.warn("[PROVENANCE][CORE] EgressGatewayClient not available, returning empty efetch response");

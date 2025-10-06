@@ -21,7 +21,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 /**
- * PubMed client implementation calling PubMed E-utilities via the egress gateway.
+ * PubMed client implementation calling E-utilities via the egress gateway.
+ *
+ * <p>Handles configuration precedence, optional Micrometer instrumentation and
+ * XML to JSON conversion for payloads lacking native JSON representations.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class PubMedClientImpl implements PubMedClient {
@@ -51,14 +57,17 @@ public class PubMedClientImpl implements PubMedClient {
         this.metrics = metrics;
     }
 
+    /** {@inheritDoc} */
     @Override
     public ESearchResponse esearch(ESearchRequest request) {
         return esearch(request, null);
     }
 
+    /** {@inheritDoc} */
     @Override
     public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
         if (metrics != null) {
+            // Capture latency and success metrics whenever Micrometer instrumentation is available.
             return metrics.recordApiCall(PROVENANCE, "esearch", () -> executeESearch(request, config));
         }
         return executeESearch(request, config);
@@ -91,14 +100,17 @@ public class PubMedClientImpl implements PubMedClient {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public EFetchResponse efetch(EFetchRequest request) {
         return efetch(request, null);
     }
 
+    /** {@inheritDoc} */
     @Override
     public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
         if (metrics != null) {
+            // Capture latency and success metrics whenever Micrometer instrumentation is available.
             return metrics.recordApiCall(PROVENANCE, "efetch", () -> executeEFetch(request, config));
         }
         return executeEFetch(request, config);

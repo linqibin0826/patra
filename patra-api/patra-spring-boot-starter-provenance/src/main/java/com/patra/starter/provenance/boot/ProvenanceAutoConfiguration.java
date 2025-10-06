@@ -42,30 +42,57 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "patra.provenance", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ProvenanceAutoConfiguration {
 
+    /**
+     * Create the gateway request builder used by all provenance clients.
+     *
+     * @return gateway request builder bean
+     */
     @Bean
     @ConditionalOnMissingBean
     public GatewayRequestBuilder gatewayRequestBuilder() {
         return new GatewayRequestBuilder();
     }
 
+    /**
+     * Create the default configuration provider that reads application properties.
+     *
+     * @param properties bound provenance properties
+     * @return default configuration provider
+     */
     @Bean
     @ConditionalOnMissingBean
     public DefaultConfigProvider defaultConfigProvider(ProvenanceProperties properties) {
         return new DefaultConfigProvider(properties);
     }
 
+    /**
+     * Create the XML to JSON converter used by PubMed EFetch.
+     *
+     * @return converter bean
+     */
     @Bean
     @ConditionalOnMissingBean
     public XmlToJsonConverter xmlToJsonConverter() {
         return new XmlToJsonConverter();
     }
 
+    /**
+     * Create the shared ObjectMapper for provenance clients.
+     *
+     * @return configured ObjectMapper bean
+     */
     @Bean(name = "provenanceObjectMapper")
     @ConditionalOnMissingBean(name = "provenanceObjectMapper")
     public ObjectMapper provenanceObjectMapper() {
         return ProvenanceObjectMapperFactory.createJsonMapper();
     }
 
+    /**
+     * Create the Micrometer-backed metrics recorder when a registry is present.
+     *
+     * @param meterRegistry Micrometer meter registry
+     * @return provenance metrics recorder
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(MeterRegistry.class)  // Only register when Micrometer is available
@@ -73,6 +100,17 @@ public class ProvenanceAutoConfiguration {
         return new ProvenanceMetrics(meterRegistry);
     }
 
+    /**
+     * Create the PubMed client backed by the egress gateway.
+     *
+     * @param gatewayClient optional egress gateway client
+     * @param requestBuilder gateway request builder bean
+     * @param configProvider default configuration provider
+     * @param xmlConverter XML to JSON converter
+     * @param provenanceObjectMapper shared ObjectMapper bean
+     * @param metrics optional metrics recorder
+     * @return configured PubMed client implementation
+     */
     @Bean
     @ConditionalOnMissingBean
     public PubMedClient pubMedClient(
@@ -91,6 +129,16 @@ public class ProvenanceAutoConfiguration {
         return new PubMedClientImpl(gatewayClient, requestBuilder, configProvider, xmlConverter, provenanceObjectMapper, metrics);
     }
 
+    /**
+     * Create the Europe PMC client backed by the egress gateway.
+     *
+     * @param gatewayClient optional egress gateway client
+     * @param requestBuilder gateway request builder bean
+     * @param configProvider default configuration provider
+     * @param provenanceObjectMapper shared ObjectMapper bean
+     * @param metrics optional metrics recorder
+     * @return configured Europe PMC client implementation
+     */
     @Bean
     @ConditionalOnMissingBean
     public EPMCClient epmcClient(
@@ -108,3 +156,4 @@ public class ProvenanceAutoConfiguration {
         return new EPMCClientImpl(gatewayClient, requestBuilder, configProvider, provenanceObjectMapper, metrics);
     }
 }
+

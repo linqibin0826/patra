@@ -9,6 +9,9 @@ import java.util.List;
 
 /**
  * Author extracted from PubMed citation.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class Author {
 
@@ -35,6 +38,12 @@ public final class Author {
         this.identifierSource = identifierSource;
     }
 
+    /**
+     * Parse an author node into a curated author representation.
+     *
+     * @param node author node
+     * @return structured author
+     */
     public static Author from(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return new Author(null, null, null, Collections.emptyList(), null, null);
@@ -74,26 +83,86 @@ public final class Author {
         return new Identifier(value, source);
     }
 
+    /**
+     * Get the author's last name.
+     *
+     * @return last name
+     */
+    /**
+     * Get the author's last name.
+     *
+     * @return last name
+     */
     public String lastName() {
         return lastName;
     }
 
+    /**
+     * Get the author's given name.
+     *
+     * @return given name
+     */
+    /**
+     * Get the author's given name.
+     *
+     * @return given name
+     */
     public String foreName() {
         return foreName;
     }
 
+    /**
+     * Get the author's initials.
+     *
+     * @return initials
+     */
+    /**
+     * Get the author's initials.
+     *
+     * @return initials
+     */
     public String initials() {
         return initials;
     }
 
+    /**
+     * Get the author's affiliations.
+     *
+     * @return immutable list of affiliations
+     */
+    /**
+     * Get the author's affiliations.
+     *
+     * @return immutable list of affiliations
+     */
     public List<String> affiliations() {
         return affiliations;
     }
 
+    /**
+     * Get the author identifier value.
+     *
+     * @return identifier value or {@code null}
+     */
+    /**
+     * Get the author identifier value.
+     *
+     * @return identifier value or {@code null}
+     */
     public String identifier() {
         return identifier;
     }
 
+    /**
+     * Get the source system of the identifier.
+     *
+     * @return identifier source or {@code null}
+     */
+    /**
+     * Get the source system of the identifier.
+     *
+     * @return identifier source or {@code null}
+     */
     public String identifierSource() {
         return identifierSource;
     }

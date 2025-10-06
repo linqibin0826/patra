@@ -16,11 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EPMCClientNoOpImpl implements EPMCClient {
 
+    /** {@inheritDoc} */
     @Override
     public SearchResponse search(SearchRequest request) {
         return search(request, null);
     }
 
+    /** {@inheritDoc} */
     @Override
     public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
         log.warn("[PROVENANCE][CORE] EgressGatewayClient not available, returning empty search response");

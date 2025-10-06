@@ -3,7 +3,13 @@ package com.patra.starter.provenance.common.config;
 import java.util.Map;
 
 /**
- * HTTP configuration.
+ * HTTP configuration for provenance API calls.
+ *
+ * <p>Field descriptions:
+ * @param defaultHeaders immutable HTTP headers appended to every request
+ * @param timeoutConnectMillis connection establishment timeout in milliseconds
+ * @param timeoutReadMillis socket read timeout in milliseconds
+ * @param timeoutTotalMillis overall request timeout in milliseconds
  *
  * @author linqibin
  * @since 0.1.0

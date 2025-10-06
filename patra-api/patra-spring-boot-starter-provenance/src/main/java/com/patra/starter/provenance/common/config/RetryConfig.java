@@ -1,7 +1,11 @@
 package com.patra.starter.provenance.common.config;
 
 /**
- * Retry configuration
+ * Retry configuration.
+ *
+ * <p>Field descriptions:
+ * @param maxRetryTimes maximum retry attempts delegated to the gateway
+ * @param initialDelayMillis initial backoff delay in milliseconds
  *
  * @author linqibin
  * @since 0.1.0

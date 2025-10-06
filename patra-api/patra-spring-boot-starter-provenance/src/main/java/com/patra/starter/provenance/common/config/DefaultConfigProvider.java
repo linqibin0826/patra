@@ -33,6 +33,8 @@ public class DefaultConfigProvider {
 
     /**
      * Get default configuration for PubMed source.
+     *
+     * @return immutable default configuration for PubMed
      */
     public ProvenanceConfig getPubMedDefaultConfig() {
         return buildConfig(properties.getPubmed(), "pubmed");
@@ -40,6 +42,8 @@ public class DefaultConfigProvider {
 
     /**
      * Get default configuration for Europe PMC source.
+     *
+     * @return immutable default configuration for Europe PMC
      */
     public ProvenanceConfig getEPMCDefaultConfig() {
         return buildConfig(properties.getEpmc(), "epmc");
