@@ -1,7 +1,6 @@
 ---
 name: code-reviewer
 description: Proactively review changed code for Papertrace (Java 21 / Spring Boot 3 / Spring Cloud / DDD + Hexagonal). Enforce architecture, security, performance, testing, and docs. Focus on changed files. MUST BE USED after implementing/refactoring/fixing.
-tools: Read, Grep, Glob, Bash
 model: sonnet
 color: red
 ---
