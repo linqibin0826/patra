@@ -375,7 +375,7 @@
   - 测试指标收集
   - _需求: 需求 6（可观测性）_
 
-- [ ] 10. 配置 Boot 层
+- [x] 10. 配置 Boot 层
   - 创建 Spring Boot 主类
   - 配置 application.yaml
   - 配置 egress-error-config.yaml
@@ -383,13 +383,14 @@
   - _需求: 需求 2（弹性配置管理）、需求 7（错误处理与标准化）_
 
 
-- [ ] 10.1 创建 Spring Boot 主类
+- [x] 10.1 创建 Spring Boot 主类
   - 创建 EgressGatewayApplication 类
   - 添加 @SpringBootApplication 注解
   - 配置组件扫描
   - _需求: 需求 8（多类型外部服务支持）_
+  - **已完成**: EgressGatewayApplication 主类，@SpringBootApplication + @ConfigurationPropertiesScan
 
-- [ ] 10.2 配置 application.yaml
+- [x] 10.2 配置 application.yaml
   - 配置服务端口（8083）
   - 配置 Nacos 注册和配置中心
   - 配置错误码前缀（EGR）
@@ -397,16 +398,19 @@
   - 配置弹性能力最大值和默认值
   - 配置日志级别
   - _需求: 需求 2（弹性配置管理）、需求 5（弹性能力实现）_
+  - **已完成**: application.yaml 完整配置，包含 Nacos、弹性配置、Actuator、日志格式
 
-- [ ] 10.3 配置 egress-error-config.yaml
+- [x] 10.3 配置 egress-error-config.yaml
   - 配置 HTTP 对齐错误（0xxx 段）
   - 配置业务错误（1xxx+ 段）
   - _需求: 需求 7（错误处理与标准化）_
+  - **已完成**: egress-error-config.yaml 包含错误处理配置和错误目录
 
-- [ ] 10.4 配置依赖注入
+- [x] 10.4 配置依赖注入
   - 确保所有 Port 接口有对应的实现 Bean
   - 配置条件装配（如 @ConditionalOnProperty）
   - _需求: 需求 3（配置源演进支持）_
+  - **已完成**: 所有组件已有 Spring 注解（@Repository, @Component, @Service, @RestController），依赖注入自动完成
 
 - [ ] 11. 端到端集成测试
   - 编写完整的端到端测试场景

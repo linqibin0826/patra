@@ -1,0 +1,93 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: patra-egress-gateway
+
+  config:
+    import:
+      - "classpath:egress-error-config.yaml"
+      - "optional:nacos:patra-egress-gateway.yaml?group=DEFAULT_GROUP&namespace=public"
+      - "optional:nacos:patra.yaml?group=DEFAULT_GROUP&namespace=public"
+
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        namespace: ${NACOS_NAMESPACE:public}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Egress Gateway Configuration
+patra:
+  egress:
+    global:
+      # Global rate limit: 1000 requests per second
+      rate-limit: 1000
+
+    resilience:
+      # Maximum allowed values (system caps)
+      max:
+        timeout-seconds: 60
+        max-retries: 5
+        retry-backoff-seconds: 10
+        rate-limit: 1000
+        circuit-breaker-threshold: 20
+        circuit-breaker-window-seconds: 120
+        response-header-whitelist:
+          - "Content-Type"
+          - "Content-Length"
+          - "X-RateLimit-Limit"
+          - "X-RateLimit-Remaining"
+          - "X-RateLimit-Reset"
+          - "Retry-After"
+          - "ETag"
+          - "Last-Modified"
+
+      # Default values (used when caller doesn't provide config)
+      default:
+        timeout-seconds: 30
+        max-retries: 3
+        retry-backoff-seconds: 1
+        rate-limit: 100
+        circuit-breaker-threshold: 10
+        circuit-breaker-window-seconds: 60
+        response-header-whitelist:
+          - "Content-Type"
+          - "Content-Length"
+          - "X-RateLimit-Limit"
+          - "X-RateLimit-Remaining"
+          - "X-RateLimit-Reset"
+          - "Retry-After"
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.patra.egress: DEBUG
+    org.springframework.web: INFO
+    org.springframework.cloud: INFO
+  pattern:
+    console: "[TID: %X{traceId:-N/A}] %d{yyyy-MM-dd HH:mm:ss.SSS} %5p [%-15.15t] %-40.40logger{39} : %m%n"
