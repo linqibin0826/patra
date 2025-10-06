@@ -8,6 +8,7 @@
 - **modules/**：各服务/组件的深入指南与 SQL/样例
 - **operations/**：部署、监控、故障排查与回放
 - **standards/**：跨服务规范（错误、命名、编码标准）
+- **architecture/**：架构决策记录（ADR）与设计演进
 - **templates/**：文档模板与写作规范
 
 ## 快速入口
@@ -19,8 +20,13 @@
 - 公共模块：`modules/common/deep-dive.md`、`modules/expr-kernel/deep-dive.md`
 - Starter 模块 README：`patra-spring-boot-starter-core/README.md`、`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`
 
+## 开发规范
 - 错误处理总览：`standards/platform-error-handling.md`
 - 日志规范：`standards/logging-convention.md`
+- **Feign API 设计指南**：`standards/feign-api-design-guide.md` - 微服务间 RPC 调用统一规范
+
+## 架构决策记录
+- **ADR-001: 统一 Feign API 设计模式**：`architecture/ADR-001-feign-api-unified-design.md` - Endpoint + Client 分离模式
 
 ## 维护指南
 - 新增文档时确认归属目录，并在此索引补充链接
