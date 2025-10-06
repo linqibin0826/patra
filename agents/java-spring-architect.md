@@ -10,7 +10,6 @@ description: Use this agent when working with Java Spring Boot microservices tha
   7) Implementing event-driven patterns with Outbox for eventual consistency, 
   8) Optimizing Spring Boot 3.2.4 applications with Java 21+ features, 
   9) Adding observability with SkyWalking tracing and structured logging.
-tools: *
 model: inherit
 color: green
 ---

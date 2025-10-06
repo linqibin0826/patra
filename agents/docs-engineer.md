@@ -1,7 +1,6 @@
 ---
 name: docs-engineer
 description: Use this agent when you need to create, update, or maintain technical documentation for the Papertrace microservices platform.
-tools: Read, Grep, Glob, Bash, Write
 model: inherit
 color: pink
 ---

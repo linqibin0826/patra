@@ -8,7 +8,6 @@ description: Use this agent when you need to transform functional code into prod
     5. Logging needs enhancement or standardization
     6. Complex business logic lacks explanatory comments
     7. Code works but doesn't meet production quality standards
-tools: Read, Edit, Write, Grep, Glob, Bash
 model: sonnet
 color: cyan
 ---
