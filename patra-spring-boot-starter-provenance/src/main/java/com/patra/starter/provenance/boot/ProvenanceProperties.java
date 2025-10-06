@@ -3,11 +3,15 @@ package com.patra.starter.provenance.boot;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Provenance starter configuration properties
+ * Provenance starter configuration properties.
+ *
+ * <p>Expose source specific configuration that can be overridden in Nacos or
+ * application.yml. Each nested properties object keeps optional fields nullable
+ * so that callers may decide which knobs to configure.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,66 +21,105 @@ import java.util.Map;
 public class ProvenanceProperties {
 
     /**
-     * Enable Provenance Client (default true)
+     * Whether to enable provenance clients (default true).
      */
     private boolean enabled = true;
 
     /**
-     * PubMed configuration
+     * PubMed configuration namespace.
      */
-    private PubMedProperties pubmed = new PubMedProperties();
+    private SourceProperties pubmed = SourceProperties.withDefaults(
+        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    );
 
     /**
-     * EPMC configuration
+     * Europe PMC configuration namespace.
      */
-    private EPMCProperties epmc = new EPMCProperties();
+    private SourceProperties epmc = SourceProperties.withDefaults(
+        "https://www.ebi.ac.uk/europepmc/webservices/rest"
+    );
 
+    /**
+     * Properties shared by each provenance source.
+     */
     @Data
-    public static class PubMedProperties {
-        /**
-         * PubMed base URL (default https://eutils.ncbi.nlm.nih.gov/entrez/eutils)
-         */
-        private String baseUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils";
+    public static class SourceProperties {
 
-        /**
-         * HTTP configuration
-         */
+        private String baseUrl;
         private HttpConfigProperties http = new HttpConfigProperties();
+        private PaginationProperties pagination = new PaginationProperties();
+        private WindowOffsetProperties windowOffset = new WindowOffsetProperties();
+        private BatchingProperties batching = new BatchingProperties();
+        private RetryProperties retry = new RetryProperties();
+        private RateLimitProperties rateLimit = new RateLimitProperties();
+
+        private static SourceProperties withDefaults(String baseUrl) {
+            SourceProperties properties = new SourceProperties();
+            properties.setBaseUrl(baseUrl);
+            return properties;
+        }
     }
 
-    @Data
-    public static class EPMCProperties {
-        /**
-         * EPMC base URL (default https://www.ebi.ac.uk/europepmc/webservices/rest)
-         */
-        private String baseUrl = "https://www.ebi.ac.uk/europepmc/webservices/rest";
-
-        /**
-         * HTTP configuration
-         */
-        private HttpConfigProperties http = new HttpConfigProperties();
-    }
-
+    /**
+     * HTTP configuration overrides.
+     */
     @Data
     public static class HttpConfigProperties {
-        /**
-         * Default headers
-         */
-        private Map<String, String> defaultHeaders = new HashMap<>();
+        private Map<String, String> defaultHeaders = new LinkedHashMap<>();
+        private Integer timeoutConnectMillis = 5_000;
+        private Integer timeoutReadMillis = 30_000;
+        private Integer timeoutTotalMillis = 60_000;
+    }
 
-        /**
-         * Connection timeout (milliseconds, default 5000)
-         */
-        private Integer timeoutConnectMillis = 5000;
+    /**
+     * Pagination defaults.
+     */
+    @Data
+    public static class PaginationProperties {
+        private Integer pageSizeValue;
+        private Integer maxPagesPerExecution;
+    }
 
-        /**
-         * Read timeout (milliseconds, default 30000)
-         */
-        private Integer timeoutReadMillis = 30000;
+    /**
+     * Window offset defaults for incremental harvest.
+     */
+    @Data
+    public static class WindowOffsetProperties {
+        private String windowModeCode;
+        private Integer windowSizeValue;
+        private String windowSizeUnitCode;
+        private Integer lookbackValue;
+        private String lookbackUnitCode;
+        private Integer overlapValue;
+        private String overlapUnitCode;
+        private String offsetTypeCode;
+        private Integer maxIdsPerWindow;
+    }
 
-        /**
-         * Total timeout (milliseconds, default 60000)
-         */
-        private Integer timeoutTotalMillis = 60000;
+    /**
+     * Batch handling defaults.
+     */
+    @Data
+    public static class BatchingProperties {
+        private Integer detailFetchBatchSize;
+        private Integer maxIdsPerRequest;
+    }
+
+    /**
+     * Retry policy defaults (delegated to gateway but overridable per client).
+     */
+    @Data
+    public static class RetryProperties {
+        private Integer maxRetryTimes;
+        private Integer initialDelayMillis;
+    }
+
+    /**
+     * Rate limit hints passed to the gateway.
+     */
+    @Data
+    public static class RateLimitProperties {
+        private Integer maxConcurrentRequests;
+        private Integer perCredentialQpsLimit;
     }
 }

@@ -5,7 +5,6 @@ import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 
 /**
  * No-op implementation of EPMCClient when EgressGatewayClient is not available.
@@ -25,6 +24,6 @@ public class EPMCClientNoOpImpl implements EPMCClient {
     @Override
     public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
         log.warn("[PROVENANCE][CORE] EgressGatewayClient not available, returning empty search response");
-        return new SearchResponse(0, null, List.of());
+        return SearchResponse.empty();
     }
 }

@@ -7,9 +7,14 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Objects;
+
 /**
  * XML to JSON converter.
- * Only used when API does not support JSON format natively.
+ *
+ * <p>Used only for APIs that lack native JSON support (e.g. PubMed EFetch).
+ * Converts the XML payload to {@link JsonNode} first and then maps it to the
+ * target response type via a shared {@link ObjectMapper}.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,42 +22,54 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class XmlToJsonConverter {
 
+    private static final int LOG_PAYLOAD_PREVIEW_LENGTH = 500;
+
     private final XmlMapper xmlMapper;
     private final ObjectMapper jsonMapper;
 
     public XmlToJsonConverter() {
-        // Configure XmlMapper to support complex XML structures
         this.xmlMapper = XmlMapper.builder()
-            .defaultUseWrapper(false)  // Don't automatically wrap root element
+            .defaultUseWrapper(false)
             .build();
         xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         xmlMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
         this.jsonMapper = new ObjectMapper();
+        jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     /**
-     * Convert XML string to JSON object.
-     * Only used when API does not support JSON format natively.
+     * Convert XML string to typed JSON object.
      *
-     * @param xml           XML string
-     * @param responseClass response type
-     * @param <T>          response type
-     * @return response object
-     * @throws ProvenanceClientException if conversion fails
+     * @param xml XML payload (mandatory)
+     * @param responseClass target response type
+     * @param <T> response type
+     * @return mapped response instance
      */
     public <T> T convert(String xml, Class<T> responseClass) {
-        try {
-            // 1. Parse XML to JsonNode
-            JsonNode jsonNode = xmlMapper.readTree(xml);
-
-            // 2. Convert to target type
-            return jsonMapper.treeToValue(jsonNode, responseClass);
-        } catch (Exception e) {
-            log.error("[PROVENANCE][INTERNAL] Failed to convert XML to JSON: xml={}",
-                xml.substring(0, Math.min(500, xml.length())), e);
+        Objects.requireNonNull(responseClass, "responseClass cannot be null");
+        if (xml == null || xml.isBlank()) {
             throw new ProvenanceClientException(
-                "UNKNOWN", "convert", "Failed to convert XML to JSON", e
+                "UNKNOWN",
+                "convert",
+                "XML payload is empty"
+            );
+        }
+
+        try {
+            JsonNode jsonNode = xmlMapper.readTree(xml);
+            return jsonMapper.treeToValue(jsonNode, responseClass);
+        } catch (Exception ex) {
+            String preview = xml.substring(0, Math.min(LOG_PAYLOAD_PREVIEW_LENGTH, xml.length()));
+            log.error("[PROVENANCE][INTERNAL] Failed to convert XML to JSON: preview={}", preview, ex);
+            throw new ProvenanceClientException(
+                "UNKNOWN",
+                "convert",
+                null,
+                null,
+                preview,
+                "Failed to convert XML to JSON",
+                ex
             );
         }
     }
