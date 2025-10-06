@@ -266,7 +266,7 @@ String opCodeTrimmed = DomainValidationException.notBlank(operationCode, "Operat
 | 字典查询    | `DictionaryRepository`       | 替换为带缓存实现（Caffeine + 版本号）        |
 | 来源配置合成  | `ProvenanceConfigRepository` | 增强切片合法性检测 / 冲突检测                |
 | 表达式渲染策略 | （未来）`ExprRenderEngine` 端口    | 支持多模板引擎 (Mustache / Handlebars) |
-| Key 归一化 | `RegistryKeyNormalizer`      | 添加大小写/分隔符策略                     |
+| Key 归一化 | `RegistryKeyStandardizer`    | 添加大小写/分隔符策略                     |
 | 错误映射    | `ErrorMappingContributor`    | 注册新领域异常 → 错误码                   |
 | 缓存失效广播  | Outbox / MQ 主题               | 数据修改后通知下游清缓存                    |
 
