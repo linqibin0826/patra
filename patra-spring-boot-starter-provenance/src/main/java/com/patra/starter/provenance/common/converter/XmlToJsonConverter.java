@@ -27,6 +27,9 @@ public class XmlToJsonConverter {
     private final XmlMapper xmlMapper;
     private final ObjectMapper jsonMapper;
 
+    /**
+     * Create a converter with tolerant XML and JSON mappers.
+     */
     public XmlToJsonConverter() {
         this.xmlMapper = XmlMapper.builder()
             .defaultUseWrapper(false)

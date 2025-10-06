@@ -6,8 +6,30 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * PubMed esearch API request parameters.
- * Based on <a href="https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch">PubMed E-utilities API documentation</a>
+ * PubMed ESearch API request parameters aligned with the official E-utilities documentation.
+ *
+ * <p>Field descriptions:
+ * @param db target database identifier (e.g. "pubmed")
+ * @param term Boolean query string sent to the ESearch API
+ * @param retstart zero-based offset for pagination
+ * @param retmax maximum records returned per invocation (max 10000)
+ * @param retmode response format (json or xml)
+ * @param rettype response type (uilist, count, etc.)
+ * @param sort ordering strategy applied by PubMed
+ * @param datetype publication date field evaluated for filtering
+ * @param mindate lower bound date constraint
+ * @param maxdate upper bound date constraint
+ * @param field field-specific search restriction
+ * @param reldate relative date filter expressed in days
+ * @param usehistory toggle for PubMed history server usage
+ * @param webenv history session WebEnv token
+ * @param queryKey numeric key pointing to a stored query
+ * @param apiKey API key granting elevated rate limits
+ * @param tool client identifier registered with NCBI
+ * @param email contact email for NCBI notifications
+ *
+ * <p>Prefer the convenience constructor when defaults are acceptable. Advanced callers may
+ * override optional parameters individually.
  *
  * @author linqibin
  * @since 0.1.0
@@ -43,7 +65,10 @@ public record ESearchRequest(
 ) implements ApiRequest {
 
     /**
-     * Default constructor: use JSON format
+     * Create a request that targets the PubMed database using JSON output.
+     *
+     * @param db database identifier, typically "pubmed"
+     * @param term Boolean query string that drives the search
      */
     public ESearchRequest(String db, String term) {
         this(db, term, null, null, "json", null, null, null, null, null, null, null, null, null, null, null, null, null);
@@ -63,6 +88,11 @@ public record ESearchRequest(
         }
     }
 
+    /**
+     * Compose the outbound query parameter map understood by the ESearch endpoint.
+     *
+     * @return parameter map ready for gateway submission
+     */
     @Override
     public Map<String, String> toQueryParams() {
         Map<String, String> params = new LinkedHashMap<>();

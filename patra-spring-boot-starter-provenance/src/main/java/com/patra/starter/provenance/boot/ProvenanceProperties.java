@@ -41,6 +41,9 @@ public class ProvenanceProperties {
 
     /**
      * Properties shared by each provenance source.
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class SourceProperties {
@@ -62,6 +65,9 @@ public class ProvenanceProperties {
 
     /**
      * HTTP configuration overrides.
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class HttpConfigProperties {
@@ -73,6 +79,9 @@ public class ProvenanceProperties {
 
     /**
      * Pagination defaults.
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class PaginationProperties {
@@ -82,6 +91,9 @@ public class ProvenanceProperties {
 
     /**
      * Window offset defaults for incremental harvest.
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class WindowOffsetProperties {
@@ -98,6 +110,9 @@ public class ProvenanceProperties {
 
     /**
      * Batch handling defaults.
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class BatchingProperties {
@@ -107,6 +122,9 @@ public class ProvenanceProperties {
 
     /**
      * Retry policy defaults (delegated to gateway but overridable per client).
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class RetryProperties {
@@ -116,6 +134,9 @@ public class ProvenanceProperties {
 
     /**
      * Rate limit hints passed to the gateway.
+     *
+     * @author linqibin
+     * @since 0.1.0
      */
     @Data
     public static class RateLimitProperties {

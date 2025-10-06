@@ -10,6 +10,9 @@ import java.util.Objects;
 
 /**
  * Strongly typed view of the PubMed ESearch response while preserving the raw payload.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class ESearchResponse {
 
@@ -23,6 +26,12 @@ public final class ESearchResponse {
         this.raw = raw;
     }
 
+    /**
+     * Parse the PubMed ESearch response tree into a structured representation.
+     *
+     * @param root response root node
+     * @return structured response view
+     */
     public static ESearchResponse from(JsonNode root) {
         Objects.requireNonNull(root, "root cannot be null");
 
@@ -49,6 +58,11 @@ public final class ESearchResponse {
         return new ESearchResponse(header, result, root.deepCopy());
     }
 
+    /**
+     * Create an empty response placeholder for no-op scenarios.
+     *
+     * @return empty response instance
+     */
     public static ESearchResponse empty() {
         return new ESearchResponse(
             new Header(null, null),
@@ -57,14 +71,29 @@ public final class ESearchResponse {
         );
     }
 
+    /**
+     * Get the response header block returned by PubMed.
+     *
+     * @return response header
+     */
     public Header header() {
         return header;
     }
 
+    /**
+     * Get the main search result payload.
+     *
+     * @return structured result view
+     */
     public Result result() {
         return result;
     }
 
+    /**
+     * Get the raw JSON payload for advanced consumers.
+     *
+     * @return raw response node or {@code null}
+     */
     public JsonNode raw() {
         return raw;
     }
@@ -128,9 +157,38 @@ public final class ESearchResponse {
         return JsonHelpers.textValue(node.get(field));
     }
 
+    /**
+     * Metadata header returned by the ESearch endpoint.
+     *
+     * <p>Field descriptions:
+     * @param type response type indicator
+     * @param version ESearch API version
+     *
+     * @author linqibin
+     * @since 0.1.0
+     */
     public record Header(String type, String version) {
     }
 
+    /**
+     * Search result payload summarising identifiers, translations and warnings.
+     *
+     * <p>Field descriptions:
+     * @param count total records matching the query
+     * @param retMax maximum records returned
+     * @param retStart offset for the current page
+     * @param idList identifiers returned by the call
+     * @param translationSet translation pairs applied by PubMed
+     * @param translationStack raw translation stack nodes
+     * @param webEnv history server WebEnv token
+     * @param queryKey query key for history server reuse
+     * @param queryTranslation translated query string
+     * @param errorPhrases reported error phrases
+     * @param warningMessages warning messages emitted by PubMed
+     *
+     * @author linqibin
+     * @since 0.1.0
+     */
     public record Result(
         int count,
         int retMax,
@@ -146,6 +204,16 @@ public final class ESearchResponse {
     ) {
     }
 
+    /**
+     * Query translation pair applied by PubMed.
+     *
+     * <p>Field descriptions:
+     * @param from original token
+     * @param to translated token applied to the query
+     *
+     * @author linqibin
+     * @since 0.1.0
+     */
     public record Translation(String from, String to) {
     }
 }

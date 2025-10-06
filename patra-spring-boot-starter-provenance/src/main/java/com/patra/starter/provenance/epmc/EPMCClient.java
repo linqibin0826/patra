@@ -15,21 +15,22 @@ import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 public interface EPMCClient {
 
     /**
-     * Call EPMC search API (search for literature)
+     * Call the Europe PMC search API for literature discovery.
      *
      * @param request search request parameters
      * @return search response
-     * @throws ProvenanceClientException if call fails
+     * @throws ProvenanceClientException if the gateway reports an error or parsing fails
      */
     SearchResponse search(SearchRequest request);
 
     /**
-     * Call EPMC search API with config override
+     * Call the Europe PMC search API using caller-supplied configuration overrides.
      *
      * @param request search request parameters
-     * @param config  config override (optional)
+     * @param config config override (optional)
      * @return search response
-     * @throws ProvenanceClientException if call fails
+     * @throws ProvenanceClientException if the gateway reports an error or parsing fails
      */
     SearchResponse search(SearchRequest request, ProvenanceConfig config);
 }
+

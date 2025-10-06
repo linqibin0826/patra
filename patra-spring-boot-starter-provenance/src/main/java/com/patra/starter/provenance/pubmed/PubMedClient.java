@@ -17,42 +17,43 @@ import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 public interface PubMedClient {
 
     /**
-     * Call PubMed esearch API (search for articles, returns ID list).
+     * Call the PubMed ESearch API to retrieve article identifiers.
      * Uses JSON format by default.
      *
      * @param request esearch request parameters
      * @return esearch response
-     * @throws ProvenanceClientException if call fails
+     * @throws ProvenanceClientException if the gateway reports an error or parsing fails
      */
     ESearchResponse esearch(ESearchRequest request);
 
     /**
-     * Call PubMed esearch API with config override.
+     * Call the PubMed ESearch API with caller-supplied configuration overrides.
      *
      * @param request esearch request parameters
-     * @param config  config override (optional)
+     * @param config config override (optional)
      * @return esearch response
-     * @throws ProvenanceClientException if call fails
+     * @throws ProvenanceClientException if the gateway reports an error or parsing fails
      */
     ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config);
 
     /**
-     * Call PubMed efetch API (fetch article details by ID).
+     * Call the PubMed EFetch API to retrieve article details by identifier.
      * Uses XML format by default for detailed article data.
      *
      * @param request efetch request parameters
      * @return efetch response
-     * @throws ProvenanceClientException if call fails
+     * @throws ProvenanceClientException if the gateway reports an error or parsing fails
      */
     EFetchResponse efetch(EFetchRequest request);
 
     /**
-     * Call PubMed efetch API with config override.
+     * Call the PubMed EFetch API with caller-supplied configuration overrides.
      *
      * @param request efetch request parameters
-     * @param config  config override (optional)
+     * @param config config override (optional)
      * @return efetch response
-     * @throws ProvenanceClientException if call fails
+     * @throws ProvenanceClientException if the gateway reports an error or parsing fails
      */
     EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config);
 }
+

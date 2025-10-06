@@ -18,7 +18,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
 /**
- * Europe PMC client implementation.
+ * Europe PMC client implementation delegating HTTP calls to the egress gateway.
+ *
+ * <p>Handles configuration prioritisation, optional Micrometer instrumentation
+ * and defensive response parsing.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class EPMCClientImpl implements EPMCClient {
@@ -45,14 +51,17 @@ public class EPMCClientImpl implements EPMCClient {
         this.metrics = metrics;
     }
 
+    /** {@inheritDoc} */
     @Override
     public SearchResponse search(SearchRequest request) {
         return search(request, null);
     }
 
+    /** {@inheritDoc} */
     @Override
     public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
         if (metrics != null) {
+            // Wrap the call to capture duration and success/failure counters when Micrometer is present.
             return metrics.recordApiCall(PROVENANCE, "search", () -> executeSearch(request, config));
         }
         return executeSearch(request, config);

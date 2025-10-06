@@ -20,14 +20,40 @@ public class ProvenanceClientException extends RuntimeException {
     private final String traceId;
     private final String responseBody;
 
+    /**
+     * Create an exception with minimal diagnostic information.
+     *
+     * @param provenanceCode provenance source identifier
+     * @param apiName API method name that failed
+     * @param message human readable message
+     */
     public ProvenanceClientException(String provenanceCode, String apiName, String message) {
         this(provenanceCode, apiName, null, null, null, message, null);
     }
 
+    /**
+     * Create an exception with a nested cause and message.
+     *
+     * @param provenanceCode provenance source identifier
+     * @param apiName API method name that failed
+     * @param message human readable message
+     * @param cause underlying exception
+     */
     public ProvenanceClientException(String provenanceCode, String apiName, String message, Throwable cause) {
         this(provenanceCode, apiName, null, null, null, message, cause);
     }
 
+    /**
+     * Create an exception enriched with HTTP metadata and the gateway trace identifier.
+     *
+     * @param provenanceCode provenance source identifier
+     * @param apiName API method name that failed
+     * @param statusCode optional downstream HTTP status code
+     * @param traceId optional gateway trace identifier
+     * @param responseBody optional raw response body for diagnostics
+     * @param message human readable message
+     * @param cause underlying exception, if any
+     */
     public ProvenanceClientException(
         String provenanceCode,
         String apiName,
@@ -61,22 +87,47 @@ public class ProvenanceClientException extends RuntimeException {
         return builder.toString();
     }
 
+    /**
+     * Get the provenance source identifier.
+     *
+     * @return provenance code string
+     */
     public String getProvenanceCode() {
         return provenanceCode;
     }
 
+    /**
+     * Get the API name associated with the failure.
+     *
+     * @return API name string
+     */
     public String getApiName() {
         return apiName;
     }
 
+    /**
+     * Get the downstream HTTP status code if provided.
+     *
+     * @return optional status code
+     */
     public Integer getStatusCode() {
         return statusCode;
     }
 
+    /**
+     * Get the trace identifier propagated by the gateway.
+     *
+     * @return trace identifier or {@code null}
+     */
     public String getTraceId() {
         return traceId;
     }
 
+    /**
+     * Get the raw response body captured from the gateway.
+     *
+     * @return response payload or {@code null}
+     */
     public String getResponseBody() {
         return responseBody;
     }

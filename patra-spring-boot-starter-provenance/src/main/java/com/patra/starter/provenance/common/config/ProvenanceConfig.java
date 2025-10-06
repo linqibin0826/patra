@@ -7,6 +7,15 @@ import java.util.Map;
 /**
  * Provenance data source configuration.
  *
+ * <p>Field descriptions:
+ * @param baseUrl canonical base URL of the upstream data source
+ * @param http HTTP client settings including timeouts and headers
+ * @param pagination default pagination hints for callers
+ * @param windowOffset sliding window defaults used during incremental harvest
+ * @param batching request batching parameters for bulk fetch operations
+ * @param retry retry strategy overrides forwarded to the gateway
+ * @param rateLimit rate limiting hints for credential-aware throttling
+ *
  * @author linqibin
  * @since 0.1.0
  */

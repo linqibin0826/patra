@@ -9,6 +9,9 @@ import java.util.List;
 
 /**
  * Simplified PubMed article metadata extracted from the Medline citation.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class Article {
 
@@ -35,6 +38,12 @@ public final class Article {
         this.publicationTypes = publicationTypes;
     }
 
+    /**
+     * Parse a PubMed article citation node into a curated metadata view.
+     *
+     * @param node article node from the Medline citation
+     * @return structured article metadata
+     */
     public static Article from(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return new Article(null, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList());
@@ -77,30 +86,100 @@ public final class Article {
         return Collections.unmodifiableList(authors);
     }
 
+    /**
+     * Get the journal information associated with the article.
+     *
+     * @return journal metadata
+     */
+    /**
+     * Get the journal information associated with the article.
+     *
+     * @return journal metadata
+     */
     public Journal journal() {
         return journal;
     }
 
+    /**
+     * Get the article title.
+     *
+     * @return article title
+     */
+    /**
+     * Get the article title.
+     *
+     * @return article title
+     */
     public String title() {
         return title;
     }
 
+    /**
+     * Get the abstract content split into labelled sections.
+     *
+     * @return immutable list of abstract sections
+     */
+    /**
+     * Get the abstract content split into labelled sections.
+     *
+     * @return immutable list of abstract sections
+     */
     public List<AbstractSection> abstractSections() {
         return abstractSections;
     }
 
+    /**
+     * Get the primary article language.
+     *
+     * @return language code or {@code null}
+     */
+    /**
+     * Get the primary article language.
+     *
+     * @return language code or {@code null}
+     */
     public String language() {
         return language;
     }
 
+    /**
+     * Get the list of parsed authors.
+     *
+     * @return immutable list of authors
+     */
+    /**
+     * Get the list of parsed authors.
+     *
+     * @return immutable list of authors
+     */
     public List<Author> authors() {
         return authors;
     }
 
+    /**
+     * Get the publication type identifiers.
+     *
+     * @return immutable list of publication types
+     */
+    /**
+     * Get the publication type identifiers.
+     *
+     * @return immutable list of publication types
+     */
     public List<String> publicationTypes() {
         return publicationTypes;
     }
 
+    /**
+     * Abstract section extracted from the citation.
+     *
+     * <p>Field descriptions:
+     * @param label optional section label
+     * @param text section content
+     *
+     * @author linqibin
+     * @since 0.1.0
+     */
     public record AbstractSection(String label, String text) {
     }
 }

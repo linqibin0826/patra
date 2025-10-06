@@ -6,7 +6,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * EPMC search API request parameters.
+ * Europe PMC search API request parameters.
+ *
+ * <p>Field descriptions:
+ * @param query Lucene-style search query string
+ * @param format response format (json or xml)
+ * @param pageSize number of records requested per page
+ * @param cursorMark cursor token for deep paging
+ * @param sort sorting strategy string supported by EPMC
+ * @param resultType result projection (lite, core, etc.)
+ * @param synonym whether to expand the query with synonyms
+ * @param fromSearchPost flag indicating POST based execution
+ * @param searchType optional search context modifier
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record SearchRequest(
     String query,
@@ -20,6 +34,11 @@ public record SearchRequest(
     String searchType
 ) implements ApiRequest {
 
+    /**
+     * Create a request using JSON output and default paging.
+     *
+     * @param query Lucene-style search query
+     */
     public SearchRequest(String query) {
         this(query, "json", null, null, null, null, null, null, null);
     }
@@ -33,6 +52,11 @@ public record SearchRequest(
         }
     }
 
+    /**
+     * Compose the outbound query parameter map understood by the Europe PMC endpoint.
+     *
+     * @return parameter map ready for gateway submission
+     */
     @Override
     public Map<String, String> toQueryParams() {
         Map<String, String> params = new LinkedHashMap<>();
