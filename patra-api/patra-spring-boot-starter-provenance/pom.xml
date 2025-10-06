@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.papertrace</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent</relativePath>
+    </parent>
+
+    <artifactId>patra-spring-boot-starter-provenance</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>patra-spring-boot-starter-provenance</name>
+    <description>Spring Boot Starter for Provenance API client (PubMed, EPMC)</description>
+
+    <dependencies>
+        <!-- ==================== Internal Dependencies ==================== -->
+
+        <!-- patra-common (required) -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common</artifactId>
+        </dependency>
+
+        <!-- patra-egress-gateway-api (optional - runtime check) -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-egress-gateway-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ==================== Spring Boot ==================== -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ==================== JSON/XML Processing ==================== -->
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+        </dependency>
+
+        <!-- ==================== Utility Libraries ==================== -->
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
+        </dependency>
+
+        <!-- ==================== Logging ==================== -->
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- ==================== Monitoring (optional - runtime check) ==================== -->
+
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ==================== Testing ==================== -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
