@@ -16,6 +16,7 @@ Papertrace is a medical literature data platform focused on unified collection, 
 
 - **patra-registry**: Configuration SSOT managing provenance, dictionaries, and expressions
 - **patra-ingest**: Collection planning engine handling scheduling, windowing, task assembly, and Outbox publishing
+- **patra-egress-gateway**: Egress gateway (南向网关) for unified external service calls with resilience capabilities (rate limiting, retry, circuit breaker, timeout)
 - **patra-gateway-boot**: API gateway for routing, authentication, and error alignment
 - **patra-common**: Cross-service domain base classes, error models, JSON utilities
 - **patra-expr-kernel**: Expression AST engine for deterministic rule evaluation
