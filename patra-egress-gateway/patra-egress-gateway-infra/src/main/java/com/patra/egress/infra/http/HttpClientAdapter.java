@@ -12,7 +12,10 @@ import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -84,9 +87,16 @@ public class HttpClientAdapter implements HttpClientPort {
 
         // Convert headers to Map<String, List<String>>
         Map<String, List<String>> headers = clientResponse.getHeaders().entrySet().stream()
+                .filter(entry -> entry.getKey() != null)
                 .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue
+                        entry -> entry.getKey().toLowerCase(Locale.ROOT),
+                        entry -> entry.getValue() != null ? List.copyOf(entry.getValue()) : List.of(),
+                        (left, right) -> {
+                            List<String> merged = new ArrayList<>(left);
+                            merged.addAll(right);
+                            return List.copyOf(merged);
+                        },
+                        LinkedHashMap::new
                 ));
 
         // Read response body
