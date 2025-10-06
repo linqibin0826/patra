@@ -75,10 +75,11 @@ public interface TaskConverter {
 
 All logs use two-segment prefix: `[MODULE][LAYER]`
 
-- **MODULE**: Service name (INGEST, REGISTRY, GATEWAY, COMMON)
+- **MODULE**: Service name (INGEST, REGISTRY, EGRESS, GATEWAY, COMMON)
 - **LAYER**: Architecture layer (ADAPTER, APP, DOMAIN, INFRA, API)
 
 Example: `[INGEST][APP] Task publish started (taskId=123)`
+Example: `[EGRESS][APP] External call started: url=https://api.example.com traceId=abc123`
 
 ### Log Levels
 

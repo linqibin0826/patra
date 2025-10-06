@@ -27,6 +27,7 @@ inclusion: always
 - **Lombok**: 1.18.38 (code generation)
 - **MapStruct**: 1.6.3 (object mapping)
 - **Hutool**: 5.8.22 (utilities)
+- **Resilience4j**: Resilience library for rate limiting, retry, circuit breaker (used in patra-egress-gateway)
 
 ## Build System
 
@@ -43,6 +44,7 @@ Maven is used for dependency management and builds. The repository includes Mave
 
 # Run specific boot module
 ./mvnw -pl patra-registry/patra-registry-boot spring-boot:run
+./mvnw -pl patra-egress-gateway/patra-egress-gateway-boot spring-boot:run
 
 # Package all modules
 ./mvnw clean package -DskipTests

@@ -30,6 +30,7 @@ adapter → app → domain ← infra
 - `patra-gateway-boot`: API gateway service
 - `patra-registry`: Configuration SSOT service
 - `patra-ingest`: Collection planning and task assembly service
+- `patra-egress-gateway`: Egress gateway service for unified external service calls
 - `patra-spring-boot-starter-*`: Auto-configuration starters (core, web, mybatis, expr)
 - `patra-spring-cloud-starter-feign`: Feign client auto-configuration
 
