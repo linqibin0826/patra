@@ -1,0 +1,12 @@
+# Test profile - disables Nacos and external dependencies for local testing
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+
+  config:
+    import:
+      - "classpath:egress-error-config.yaml"
