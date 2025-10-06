@@ -6,26 +6,26 @@
 
 ## 任务列表
 
-- [ ] 1. 创建项目骨架和模块结构
+- [x] 1. 创建项目骨架和模块结构
   - 创建 patra-spring-boot-starter-provenance 模块
   - 配置 Maven 依赖管理和编译插件
   - 创建基础包结构（pubmed/、epmc/、common/、boot/）
   - _需求: 需求 1（数据源 API 封装）_
 
-- [ ] 1.1 创建 Maven 模块
+- [x] 1.1 创建 Maven 模块
   - 在根 pom.xml 中添加 patra-spring-boot-starter-provenance 模块
   - 创建 patra-spring-boot-starter-provenance/pom.xml
   - 配置依赖（patra-common、patra-egress-gateway-api、Jackson、Micrometer 等）
   - _需求: 需求 1（数据源 API 封装）_
 
-- [ ] 1.2 创建基础包结构
+- [x] 1.2 创建基础包结构
   - 创建 com.patra.starter.provenance.pubmed 包
   - 创建 com.patra.starter.provenance.epmc 包
   - 创建 com.patra.starter.provenance.common 包（config/、gateway/、converter/、metrics/、exception/）
   - 创建 com.patra.starter.provenance.boot 包
   - _需求: 需求 1（数据源 API 封装）_
 
-- [ ] 2. 实现公共组件（common 包）
+- [x] 2. 实现公共组件（common 包）
   - 实现配置对象（ProvenanceConfig 及嵌套对象）
   - 实现异常类（ProvenanceClientException）
   - 实现网关请求构建器（GatewayRequestBuilder）
@@ -34,7 +34,7 @@
   - 实现性能指标记录器（ProvenanceMetrics）
   - _需求: 需求 4（网关调用封装）、需求 5（配置管理）、需求 12（性能指标记录）_
 
-- [ ] 2.1 实现配置对象
+- [x] 2.1 实现配置对象
   - 创建 ProvenanceConfig record
   - 创建 HttpConfig record
   - 创建 PaginationConfig record
@@ -44,13 +44,13 @@
   - 创建 RateLimitConfig record
   - _需求: 需求 5（配置管理）_
 
-- [ ] 2.2 实现异常类
+- [x] 2.2 实现异常类
   - 创建 ProvenanceClientException 类
   - 实现构造函数（provenanceCode、apiName、message、cause）
   - 实现 getter 方法
   - _需求: 需求 4（网关调用封装）_
 
-- [ ] 2.3 实现网关请求构建器
+- [x] 2.3 实现网关请求构建器
   - 创建 GatewayRequestBuilder 类
   - 实现 build() 方法（构建 ExternalCallRequestDTO）
   - 实现 URL 构建逻辑（baseUrl + path + query parameters）
@@ -58,21 +58,21 @@
   - 实现弹性配置转换逻辑（ProvenanceConfig → ResilienceConfigDTO）
   - _需求: 需求 4（网关调用封装）_
 
-- [ ] 2.4 实现默认配置提供者
+- [x] 2.4 实现默认配置提供者
   - 创建 DefaultConfigProvider 类
   - 实现 getPubMedDefaultConfig() 方法
   - 实现 getEPMCDefaultConfig() 方法
   - 从 ProvenanceProperties 构建默认配置
   - _需求: 需求 5（配置管理）_
 
-- [ ] 2.5 实现 XML 转 JSON 转换器
+- [x] 2.5 实现 XML 转 JSON 转换器
   - 创建 XmlToJsonConverter 类
   - 配置 XmlMapper 和 ObjectMapper
   - 实现 convert() 方法（XML 字符串 → JSON 对象）
   - 实现异常处理（解析失败时抛出 ProvenanceClientException）
   - _需求: 需求 1（数据源 API 封装）、需求 3（响应完整性）_
 
-- [ ] 2.6 实现性能指标记录器
+- [x] 2.6 实现性能指标记录器
   - 创建 ProvenanceMetrics 类
   - 实现 recordApiCall() 方法（记录 API 调用耗时和成功/失败次数）
   - 配置 Micrometer Timer（provenance.client.api.duration）
@@ -81,14 +81,14 @@
   - _需求: 需求 12（性能指标记录）_
 
 
-- [ ] 3. 实现 PubMed 数据源（pubmed 包）
+- [x] 3. 实现 PubMed 数据源（pubmed 包）
   - 定义 PubMed Request 对象（ESearchRequest、EFetchRequest）
   - 定义 PubMed Response 对象（ESearchResponse、EFetchResponse 及嵌套对象）
   - 定义 PubMedClient 接口
   - 实现 PubMedClientImpl 和 PubMedClientNoOpImpl
   - _需求: 需求 1（数据源 API 封装）、需求 2（参数完整性）、需求 3（响应完整性）_
 
-- [ ] 3.1 定义 PubMed Request 对象
+- [x] 3.1 定义 PubMed Request 对象
   - 创建 ESearchRequest record（db、term、retstart、retmax 等 18 个参数，包含 apiKey、tool、email 认证参数）
   - 实现 ApiRequest 接口（toQueryParams() 方法）
   - 实现紧凑构造器（校验必需参数 db 和 term，默认 JSON 格式）
@@ -96,7 +96,7 @@
   - 实现紧凑构造器（校验必需参数 db 和 id，默认 XML 格式）
   - _需求: 需求 2（参数完整性）_
 
-- [ ] 3.2 定义 PubMed Response 对象
+- [x] 3.2 定义 PubMed Response 对象
   - 创建 ESearchResponse record（count、retmax、retstart、idList 等 9 个字段）
   - 创建 EFetchResponse record（articles 列表）
   - 创建 PubmedArticle record（pmid、medlineCitation、pubmedData）
@@ -105,7 +105,7 @@
   - 创建其他嵌套对象（Journal、Author、MedlineJournalInfo、PubmedData 等）
   - _需求: 需求 3（响应完整性）_
 
-- [ ] 3.3 定义 PubMedClient 接口
+- [x] 3.3 定义 PubMedClient 接口
   - 定义 esearch(ESearchRequest) 方法
   - 定义 esearch(ESearchRequest, ProvenanceConfig) 方法
   - 定义 efetch(EFetchRequest) 方法
@@ -113,7 +113,7 @@
   - 添加 Javadoc 注释
   - _需求: 需求 1（数据源 API 封装）_
 
-- [ ] 3.4 实现 PubMedClientImpl
+- [x] 3.4 实现 PubMedClientImpl
   - 注入依赖（EgressGatewayClient、GatewayRequestBuilder、DefaultConfigProvider、XmlToJsonConverter、ProvenanceMetrics）
   - 实现 esearch() 方法（加载配置 → 构建请求 → 调用网关 → 转换响应 → 记录指标）
   - 实现 efetch() 方法（加载配置 → 构建请求 → 调用网关 → 转换响应 → 记录指标）
@@ -122,32 +122,32 @@
   - 实现 PubMedClientNoOpImpl 降级实现
   - _需求: 需求 1（数据源 API 封装）、需求 4（网关调用封装）、需求 8（可观测性）_
 
-- [ ] 4. 实现 EPMC 数据源（epmc 包）
+- [x] 4. 实现 EPMC 数据源（epmc 包）
   - 定义 EPMC Request 对象（SearchRequest）
   - 定义 EPMC Response 对象（SearchResponse 及嵌套对象）
   - 定义 EPMCClient 接口
   - 实现 EPMCClientImpl 和 EPMCClientNoOpImpl
   - _需求: 需求 1（数据源 API 封装）、需求 2（参数完整性）、需求 3（响应完整性）_
 
-- [ ] 4.1 定义 EPMC Request 对象
+- [x] 4.1 定义 EPMC Request 对象
   - 创建 SearchRequest record（query、format、pageSize、cursorMark 等 9 个参数）
   - 实现 ApiRequest 接口（toQueryParams() 方法）
   - 实现紧凑构造器（校验必需参数 query，默认 JSON 格式）
   - _需求: 需求 2（参数完整性）_
 
-- [ ] 4.2 定义 EPMC Response 对象
+- [x] 4.2 定义 EPMC Response 对象
   - 创建 SearchResponse record（hitCount、nextCursorMark、resultList）
   - 创建 Result record（id、source、pmid、pmcid、doi、title、authorString 等 15 个字段）
   - 创建 Author record（fullName、firstName、lastName、initials、affiliation）
   - _需求: 需求 3（响应完整性）_
 
-- [ ] 4.3 定义 EPMCClient 接口
+- [x] 4.3 定义 EPMCClient 接口
   - 定义 search(SearchRequest) 方法
   - 定义 search(SearchRequest, ProvenanceConfig) 方法
   - 添加 Javadoc 注释
   - _需求: 需求 1（数据源 API 封装）_
 
-- [ ] 4.4 实现 EPMCClientImpl
+- [x] 4.4 实现 EPMCClientImpl
   - 注入依赖（EgressGatewayClient、GatewayRequestBuilder、DefaultConfigProvider、ProvenanceMetrics）
   - 实现 search() 方法（加载配置 → 构建请求 → 调用网关 → 解析响应 → 记录指标）
   - 实现日志记录（API 调用开始、结束、失败）
@@ -155,13 +155,13 @@
   - 实现 EPMCClientNoOpImpl 降级实现
   - _需求: 需求 1（数据源 API 封装）、需求 4（网关调用封装）、需求 8（可观测性）_
 
-- [ ] 5. 实现自动配置（boot 包）
+- [x] 5. 实现自动配置（boot 包）
   - 创建 ProvenanceProperties 配置属性类
   - 创建 ProvenanceAutoConfiguration 自动配置类
   - 配置 META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
   - _需求: 需求 7（Starter 自动配置）_
 
-- [ ] 5.1 创建 ProvenanceProperties
+- [x] 5.1 创建 ProvenanceProperties
   - 使用 @ConfigurationProperties(prefix = "patra.provenance")
   - 定义 enabled 属性（默认 true）
   - 定义 PubMedProperties 嵌套类（baseUrl、http）
@@ -169,7 +169,7 @@
   - 定义 HttpConfigProperties 嵌套类（defaultHeaders、timeoutConnectMillis、timeoutReadMillis、timeoutTotalMillis）
   - _需求: 需求 5（配置管理）、需求 7（Starter 自动配置）_
 
-- [ ] 5.2 创建 ProvenanceAutoConfiguration
+- [x] 5.2 创建 ProvenanceAutoConfiguration
   - 使用 @AutoConfiguration 注解
   - 使用 @EnableConfigurationProperties(ProvenanceProperties.class)
   - 使用 @ConditionalOnClass(EgressGatewayClient.class) 检查网关依赖
@@ -182,18 +182,18 @@
   - 注册 EPMCClient Bean（网关不可用时使用 Noop 实现）
   - _需求: 需求 7（Starter 自动配置）_
 
-- [ ] 5.3 配置自动装配文件
+- [x] 5.3 配置自动装配文件
   - 创建 META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
   - 添加 com.patra.starter.provenance.boot.ProvenanceAutoConfiguration
   - _需求: 需求 7（Starter 自动配置）_
 
-- [ ] 6. 配置文档和示例
+- [x] 6. 配置文档和示例
   - 创建模块 README.md
   - 提供配置示例（application.yml）
   - 提供使用示例（基础使用、带配置覆盖）
   - _需求: 需求 1-12（所有需求）_
 
-- [ ] 6.1 创建模块 README.md
+- [x] 6.1 创建模块 README.md
   - 概述模块职责和核心功能
   - 说明依赖添加方式
   - 提供配置示例
@@ -202,11 +202,11 @@
   - 说明性能指标
   - _需求: 需求 1-12（所有需求）_
 
-- [ ] 6.2 更新根 pom.xml
+- [x] 6.2 更新根 pom.xml
   - 在 modules 中添加 patra-spring-boot-starter-provenance
   - _需求: 需求 1（数据源 API 封装）_
 
-- [ ] 6.3 更新 patra-parent 依赖管理
+- [x] 6.3 更新 patra-parent 依赖管理
   - 在 dependencyManagement 中添加 patra-spring-boot-starter-provenance
   - 添加 Jackson Dataformat XML 版本管理
   - _需求: 需求 1（数据源 API 封装）_
@@ -348,9 +348,9 @@
    - 实现弹性配置转换逻辑
 
 4. 实现配置加载器（任务 2.4）
-   - 创建 ConfigLoader 类
-   - 实现 loadConfig() 方法（按优先级加载配置）
-   - 实现 ProvenanceConfigResp → ProvenanceConfig 转换逻辑
+   - 扩展 DefaultConfigProvider 构建兜底配置
+   - 保障调用方传入配置优先级最高，其次读取本地配置
+   - 推荐在业务侧完成 ProvenanceConfigResp → ProvenanceConfig 转换
 
 5. 实现 XML 转 JSON 转换器（任务 2.5）
    - 创建 XmlToJsonConverter 类
@@ -395,7 +395,7 @@
    - 添加 Javadoc 注释
 
 4. 实现 PubMedClientImpl（任务 3.4）
-   - 注入依赖（EgressGatewayClient、GatewayRequestBuilder、ConfigLoader、XmlToJsonConverter、ProvenanceMetrics）
+   - 注入依赖（EgressGatewayClient、GatewayRequestBuilder、DefaultConfigProvider、XmlToJsonConverter、ProvenanceMetrics）
    - 实现 esearch() 方法（加载配置 → 构建请求 → 调用网关 → 转换响应 → 记录指标）
    - 实现 efetch() 方法（加载配置 → 构建请求 → 调用网关 → 转换响应 → 记录指标）
    - 实现日志记录（使用 @Slf4j）
@@ -431,7 +431,7 @@
    - 添加 Javadoc 注释
 
 4. 实现 EPMCClientImpl（任务 4.4）
-   - 注入依赖（EgressGatewayClient、GatewayRequestBuilder、ConfigLoader、ProvenanceMetrics）
+   - 注入依赖（EgressGatewayClient、GatewayRequestBuilder、DefaultConfigProvider、ProvenanceMetrics）
    - 实现 search() 方法（加载配置 → 构建请求 → 调用网关 → 解析响应 → 记录指标）
    - 实现日志记录
    - 实现异常处理
@@ -463,7 +463,7 @@
    - 使用 @EnableConfigurationProperties
    - 使用 @ConditionalOnBean(EgressGatewayClient.class)
    - 使用 @ConditionalOnProperty
-   - 注册所有 Bean（GatewayRequestBuilder、ConfigLoader、XmlToJsonConverter、ProvenanceMetrics、PubMedClient、EPMCClient）
+   - 注册所有 Bean（GatewayRequestBuilder、DefaultConfigProvider、XmlToJsonConverter、ProvenanceMetrics、PubMedClient、EPMCClient）
 
 3. 配置自动装配文件（任务 5.3）
    - 创建 META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
@@ -502,52 +502,50 @@
 ## 快速检查清单
 
 ### 项目骨架检查
-- [ ] Maven 模块创建完成
-- [ ] 包结构符合设计文档
-- [ ] 依赖配置正确
+- [x] Maven 模块创建完成（包含独立 pom 与父模块聚合）
+- [x] 包结构符合设计文档（pubmed/、epmc/、common/、boot 分层）
+- [x] 依赖配置正确（patra-common、egress-gateway、Jackson、Micrometer 等）
 
 ### 公共组件检查
-- [ ] 配置对象定义完整（ProvenanceConfig 及嵌套对象）
-- [ ] 异常类实现完整（ProvenanceClientException）
-- [ ] 网关请求构建器实现完整（GatewayRequestBuilder）
-- [ ] 默认配置提供者实现完整（DefaultConfigProvider）
-- [ ] XML 转 JSON 转换器实现完整（XmlToJsonConverter）
-- [ ] 性能指标记录器实现完整（ProvenanceMetrics）
-- [ ] ApiRequest 接口实现完整
+- [x] 配置对象定义完整（ProvenanceConfig 及 Http/Pagination/Retry 等嵌套对象）
+- [x] 异常体系完善（ProvenanceClientException 携带状态码、traceId、响应摘要）
+- [x] GatewayRequestBuilder 校验 URL/Query/Resilience 参数并复用默认 Header
+- [x] DefaultConfigProvider 提供兜底配置并完成 URL 归一化与 Map.copyOf
+- [x] XmlToJsonConverter 支持容错 XML→JSON 转换并抛出带上下文的异常
+- [x] ProvenanceMetrics 通过 Micrometer 记录延迟/成功/失败并按 ProvenanceCode 打标签
+- [x] ApiRequest 接口统一暴露 `toQueryParams()`，所有请求对象均实现
 
 ### PubMed 数据源检查
-- [ ] Request 对象定义完整（ESearchRequest、EFetchRequest，实现 ApiRequest 接口）
-- [ ] Response 对象定义完整（ESearchResponse、EFetchResponse 及嵌套对象）
-- [ ] PubMedClient 接口定义清晰
-- [ ] PubMedClientImpl 实现完整
-- [ ] PubMedClientNoOpImpl 降级实现完整
-- [ ] 日志记录符合规范（[PROVENANCE][CORE]）
+- [x] 请求对象 ESearchRequest/EFetchRequest 参数齐全且默认 JSON/XML 策略正确
+- [x] 响应模型 ESearchResponse/EFetchResponse 及 Article/Author/PubmedData 等解析准确并保留 raw
+- [x] PubMedClient 接口覆盖带/不带配置的 esearch、efetch 用例
+- [x] PubMedClientImpl 完成配置加载、网关调用、envelope 校验和 JSON/XML 解析
+- [x] PubMedClientNoOpImpl 在降级场景返回结构化空对象并打印诊断日志
+- [x] 核心日志使用 `[PROVENANCE][CORE]` 前缀，异常链路清晰
 
 ### EPMC 数据源检查
-- [ ] Request 对象定义完整（SearchRequest，实现 ApiRequest 接口）
-- [ ] Response 对象定义完整（SearchResponse、Result、Author）
-- [ ] EPMCClient 接口定义清晰
-- [ ] EPMCClientImpl 实现完整
-- [ ] EPMCClientNoOpImpl 降级实现完整
-- [ ] 日志记录符合规范（[PROVENANCE][CORE]）
+- [x] SearchRequest 实现 ApiRequest 并处理 cursor/synonym 等可选参数
+- [x] SearchResponse.from(JsonNode) 解析 resultList、request、raw 字段且保留原始数据
+- [x] EPMCClient 接口定义 search 方法的配置覆盖版本
+- [x] EPMCClientImpl 处理 envelope 校验、JSON 解析与指标记录
+- [x] EPMCClientNoOpImpl 降级返回空结果并输出警告日志
 
 ### 自动配置检查
-- [ ] ProvenanceProperties 配置属性类实现完整
-- [ ] ProvenanceAutoConfiguration 自动配置类实现完整
-- [ ] 自动装配文件配置正确
-- [ ] 所有 Bean 正确注册
-- [ ] 条件装配正确（@ConditionalOnClass、@ConditionalOnBean、@ConditionalOnProperty）
-- [ ] 降级逻辑正确（网关不可用时使用 Noop 实现）
+- [x] ProvenanceProperties 提供完整的 Source/Http/Retry/RateLimit 配置层级
+- [x] ProvenanceAutoConfiguration 注册 GatewayRequestBuilder、DefaultConfigProvider、XmlToJsonConverter、ObjectMapper、Metrics、Clients Bean
+- [x] AutoConfiguration.imports 已登记 `ProvenanceAutoConfiguration`
+- [x] 条件装配逻辑生效（`@ConditionalOnClass`、`@ConditionalOnProperty`、`@ConditionalOnBean`）
+- [x] 网关缺失时提供 NoOp 实现，Micrometer 缺失时优雅降级
 
-### 文档检查
-- [ ] 模块 README.md 完整清晰
-- [ ] 根 pom.xml 更新正确
-- [ ] patra-parent 依赖管理更新正确
+### 文档与协同检查
+- [x] 模块 README.md 与 provenance-client.md 反映最新 API/配置与调试说明
+- [x] `.kiro/specs/provenance/tasks.md` 状态与当前实现一致
+- [x] 阶段回顾与下一步建议已在任务追踪文档中记录
 
-### 编译和运行检查
-- [ ] 模块编译成功（mvn compile）
-- [ ] 所有依赖解析正确
-- [ ] 无编译错误和警告
+### 构建与测试检查
+- [x] 单元测试通过：`mvn -pl patra-spring-boot-starter-provenance -am test`
+- [x] 编译无警告：`mvn -pl patra-spring-boot-starter-provenance -am -DskipTests compile`
+- [x] 关键路径已有单元测试覆盖（GatewayRequestBuilder、Response Parser、DefaultConfigProvider、JsonHelpers）
 
 ---
 
@@ -560,7 +558,7 @@
 **A**: 使用反射遍历 Request 对象的字段，将非 null 字段添加到 Query Parameters。可以使用 Hutool 的 `BeanUtil` 或 Java 反射 API。
 
 ### Q3: 如何实现 ProvenanceConfigResp → ProvenanceConfig 转换？
-**A**: 在 ConfigLoader 中实现转换逻辑，手动映射字段。由于两个对象结构相似，可以使用 MapStruct 或手动转换。
+**A**: 优先在业务侧完成 ProvenanceConfigResp → ProvenanceConfig 的转换；Starter 提供 DefaultConfigProvider 负责生成兜底配置。
 
 ### Q4: 如何处理 XML 响应？
 **A**: 使用 Jackson Dataformat XML 的 XmlMapper 解析 XML 字符串为 JsonNode，然后使用 ObjectMapper 转换为目标类型。
@@ -569,10 +567,10 @@
 **A**: 使用 Micrometer 的 Timer 和 Counter。在 ProvenanceMetrics 中实现 recordApiCall() 方法，使用 Timer.Sample 记录耗时，使用 Counter 记录成功/失败次数。
 
 ### Q6: 如何处理配置优先级？
-**A**: 在 ConfigLoader 中按优先级加载配置：
-1. 如果调用方传递了配置，直接返回
-2. 尝试从数据库加载（通过 patra-registry Feign 客户端）
-3. 如果数据库没有，使用本地配置（ProvenanceProperties）
+**A**: 配置优先级为：
+1. 调用方传入的 ProvenanceConfig（最高优先级）
+2. 业务服务自行从 patra-registry 获取并转换的配置
+3. DefaultConfigProvider 基于本地配置生成的兜底项（ProvenanceProperties）
 
 ### Q7: 如何实现日志记录？
 **A**: 使用 @Slf4j 注解，在关键节点记录日志：
