@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.papertrace</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>patra-egress-gateway</artifactId>
+    <packaging>pom</packaging>
+    <name>Patra Egress Gateway</name>
+    <description>南向网关 - 统一管理所有出站外部服务调用</description>
+
+    <modules>
+        <module>patra-egress-gateway-api</module>
+        <module>patra-egress-gateway-domain</module>
+        <module>patra-egress-gateway-app</module>
+        <module>patra-egress-gateway-infra</module>
+        <module>patra-egress-gateway-adapter</module>
+        <module>patra-egress-gateway-boot</module>
+    </modules>
+
+</project>
