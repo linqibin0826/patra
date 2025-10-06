@@ -3,16 +3,23 @@ package com.patra.starter.provenance.common.gateway;
 import com.patra.egress.api.dto.ExternalCallRequestDTO;
 import com.patra.egress.api.dto.ResilienceConfigDTO;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
  * Gateway request builder.
- * Builds ExternalCallRequestDTO from API request and config.
+ *
+ * <p>Transforms provenance API requests into {@link ExternalCallRequestDTO}
+ * objects understood by the egress gateway. The builder normalises URLs,
+ * encodes query parameters, propagates default headers and translates
+ * provenance resilience hints to gateway overrides.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -20,13 +27,13 @@ import java.util.stream.Collectors;
 public class GatewayRequestBuilder {
 
     /**
-     * Build gateway request from API request and config.
+     * Build gateway request using HTTP GET.
      *
-     * @param baseUrl  data source base URL
-     * @param path     API path
-     * @param request  request parameters (must implement ApiRequest interface)
-     * @param config   provenance config
-     * @return gateway request DTO
+     * @param baseUrl provenance base URL (already normalised)
+     * @param path API path starting with '/'
+     * @param request request payload carrying query parameters
+     * @param config provenance configuration overrides
+     * @return external call request
      */
     public ExternalCallRequestDTO build(
         String baseUrl,
@@ -34,74 +41,81 @@ public class GatewayRequestBuilder {
         ApiRequest request,
         ProvenanceConfig config
     ) {
-        // 1. Build complete URL (baseUrl + path + query parameters)
-        Map<String, String> queryParams = request.toQueryParams();
-        String queryString = buildQueryString(queryParams);
-        String fullUrl = baseUrl + path + "?" + queryString;
+        Assert.hasText(baseUrl, "baseUrl must not be blank");
+        Assert.hasText(path, "path must not be blank");
+        Assert.notNull(request, "request must not be null");
+        Assert.notNull(config, "config must not be null");
 
-        // 2. Build HTTP Headers (User-Agent, API-Key, etc. from config)
-        Map<String, String> headers = new HashMap<>();
-        if (config.http() != null && config.http().defaultHeaders() != null) {
+        String normalizedPath = path.startsWith("/") ? path : "/" + path;
+        String fullUrl = baseUrl + normalizedPath;
+
+        Map<String, String> queryParams = request.toQueryParams();
+        if (queryParams != null && !queryParams.isEmpty()) {
+            String queryString = buildQueryString(queryParams);
+            if (StringUtils.hasText(queryString)) {
+                fullUrl = fullUrl + "?" + queryString;
+            }
+        }
+
+        Map<String, String> headers = new LinkedHashMap<>();
+        if (config.http() != null && !config.http().defaultHeaders().isEmpty()) {
             headers.putAll(config.http().defaultHeaders());
         }
 
-        // 3. Build resilience config (convert from ProvenanceConfig)
-        ResilienceConfigDTO resilienceConfig = convertToResilienceConfig(config);
-
-        // 4. Return ExternalCallRequestDTO
-        return new ExternalCallRequestDTO(fullUrl, "GET", headers, null, resilienceConfig);
+        return new ExternalCallRequestDTO(
+            fullUrl,
+            "GET",
+            headers.isEmpty() ? null : Map.copyOf(headers),
+            null,
+            convertToResilienceConfig(config)
+        );
     }
 
-    /**
-     * Build query string from parameters map
-     *
-     * @param params query parameters
-     * @return encoded query string
-     */
     private String buildQueryString(Map<String, String> params) {
         return params.entrySet().stream()
-            .map(e -> e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+            .filter(entry -> StringUtils.hasText(entry.getKey()) && entry.getValue() != null)
+            .map(entry -> entry.getKey() + "=" + URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
             .collect(Collectors.joining("&"));
     }
 
-    /**
-     * Convert ProvenanceConfig to ResilienceConfigDTO
-     *
-     * @param config provenance config
-     * @return resilience config DTO
-     */
     private ResilienceConfigDTO convertToResilienceConfig(ProvenanceConfig config) {
-        // Extract timeout in seconds (convert from milliseconds)
         Long timeoutSeconds = null;
         if (config.http() != null && config.http().timeoutTotalMillis() != null) {
-            timeoutSeconds = config.http().timeoutTotalMillis() / 1000L;
+            int millis = config.http().timeoutTotalMillis();
+            if (millis > 0) {
+                long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+                timeoutSeconds = Math.max(1L, seconds == 0 ? 1L : seconds);
+            }
         }
 
-        // Extract retry config
         Integer maxRetries = null;
         Long retryBackoffSeconds = null;
         if (config.retry() != null) {
             maxRetries = config.retry().maxRetryTimes();
             if (config.retry().initialDelayMillis() != null) {
-                retryBackoffSeconds = config.retry().initialDelayMillis() / 1000L;
+                long millis = config.retry().initialDelayMillis();
+                retryBackoffSeconds = millis > 0
+                    ? Math.max(1L, TimeUnit.MILLISECONDS.toSeconds(millis))
+                    : 0L;
             }
         }
 
-        // Extract rate limit
         Integer rateLimit = null;
         if (config.rateLimit() != null && config.rateLimit().perCredentialQpsLimit() != null) {
-            rateLimit = config.rateLimit().perCredentialQpsLimit();
+            int configuredLimit = config.rateLimit().perCredentialQpsLimit();
+            if (configuredLimit > 0) {
+                rateLimit = configuredLimit;
+            }
         }
 
-        // Use ResilienceConfigDTO record constructor
         return new ResilienceConfigDTO(
             timeoutSeconds,
             maxRetries,
             retryBackoffSeconds,
             rateLimit,
-            null,  // circuitBreakerThreshold - not configured locally
-            null,  // circuitBreakerWindowSeconds - not configured locally
-            null   // responseHeaderWhitelist - not configured locally
+            null,
+            null,
+            null
         );
     }
 }

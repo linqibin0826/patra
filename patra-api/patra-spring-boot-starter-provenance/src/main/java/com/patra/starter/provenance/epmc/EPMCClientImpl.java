@@ -1,9 +1,12 @@
 package com.patra.starter.provenance.epmc;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.egress.api.client.EgressGatewayClient;
 import com.patra.egress.api.dto.ExternalCallRequestDTO;
 import com.patra.egress.api.dto.ExternalCallResponseDTO;
+import com.patra.egress.api.dto.ResponseEnvelopeDTO;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -12,32 +15,33 @@ import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 /**
- * EPMC client implementation.
- * Calls EPMC API through egress gateway.
- *
- * @author linqibin
- * @since 0.1.0
+ * Europe PMC client implementation.
  */
 @Slf4j
 public class EPMCClientImpl implements EPMCClient {
 
+    private static final ProvenanceCode PROVENANCE = ProvenanceCode.EPMC;
+
     private final EgressGatewayClient gatewayClient;
     private final GatewayRequestBuilder requestBuilder;
     private final DefaultConfigProvider configProvider;
-    private final ProvenanceMetrics metrics;  // May be null
-    private final ObjectMapper jsonMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+    private final ProvenanceMetrics metrics;
 
     public EPMCClientImpl(
         EgressGatewayClient gatewayClient,
         GatewayRequestBuilder requestBuilder,
         DefaultConfigProvider configProvider,
-        ProvenanceMetrics metrics  // @Autowired(required = false)
+        ObjectMapper objectMapper,
+        ProvenanceMetrics metrics
     ) {
         this.gatewayClient = gatewayClient;
         this.requestBuilder = requestBuilder;
         this.configProvider = configProvider;
+        this.objectMapper = objectMapper;
         this.metrics = metrics;
     }
 
@@ -48,19 +52,14 @@ public class EPMCClientImpl implements EPMCClient {
 
     @Override
     public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
-        // Use metrics if available, otherwise execute directly
         if (metrics != null) {
-            return metrics.recordApiCall("EPMC", "search", () -> executeSearch(request, config));
-        } else {
-            return executeSearch(request, config);
+            return metrics.recordApiCall(PROVENANCE, "search", () -> executeSearch(request, config));
         }
+        return executeSearch(request, config);
     }
 
     private SearchResponse executeSearch(SearchRequest request, ProvenanceConfig config) {
-        // 1. Load config
         ProvenanceConfig finalConfig = config != null ? config : configProvider.getEPMCDefaultConfig();
-
-        // 2. Build gateway request
         ExternalCallRequestDTO gatewayRequest = requestBuilder.build(
             finalConfig.baseUrl(),
             "/search",
@@ -68,15 +67,67 @@ public class EPMCClientImpl implements EPMCClient {
             finalConfig
         );
 
-        // 3. Call gateway
-        ExternalCallResponseDTO response = gatewayClient.call(gatewayRequest);
-
-        // 4. Parse response (EPMC uses JSON natively, no XML conversion needed)
+        ExternalCallResponseDTO response = invokeGateway("search", gatewayRequest);
+        ResponseEnvelopeDTO envelope = response.envelope();
         try {
-            return jsonMapper.readValue(response.envelope().body(), SearchResponse.class);
-        } catch (Exception e) {
-            log.error("[PROVENANCE][CORE] Failed to parse EPMC search response", e);
-            throw new ProvenanceClientException("EPMC", "search", "Failed to parse JSON response", e);
+            JsonNode root = objectMapper.readTree(envelope.body());
+            return SearchResponse.from(root);
+        } catch (Exception ex) {
+            throw new ProvenanceClientException(
+                PROVENANCE.getCode(),
+                "search",
+                envelope.statusCode(),
+                response.traceId(),
+                envelope.body(),
+                "Failed to parse JSON response",
+                ex
+            );
         }
+    }
+
+    private ExternalCallResponseDTO invokeGateway(String apiName, ExternalCallRequestDTO request) {
+        ExternalCallResponseDTO response = gatewayClient.call(request);
+        if (response == null) {
+            throw new ProvenanceClientException(
+                PROVENANCE.getCode(),
+                apiName,
+                "Gateway returned null response"
+            );
+        }
+        ResponseEnvelopeDTO envelope = response.envelope();
+        if (envelope == null) {
+            throw new ProvenanceClientException(
+                PROVENANCE.getCode(),
+                apiName,
+                null,
+                response.traceId(),
+                null,
+                "Gateway returned empty envelope",
+                null
+            );
+        }
+        if (!envelope.success()) {
+            throw new ProvenanceClientException(
+                PROVENANCE.getCode(),
+                apiName,
+                envelope.statusCode(),
+                response.traceId(),
+                envelope.body(),
+                "Gateway reported failure status",
+                null
+            );
+        }
+        if (!StringUtils.hasText(envelope.body())) {
+            throw new ProvenanceClientException(
+                PROVENANCE.getCode(),
+                apiName,
+                envelope.statusCode(),
+                response.traceId(),
+                null,
+                "Gateway returned empty body",
+                null
+            );
+        }
+        return response;
     }
 }

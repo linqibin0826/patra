@@ -3,7 +3,7 @@ package com.patra.starter.provenance.common.config;
 import java.util.Map;
 
 /**
- * HTTP configuration
+ * HTTP configuration.
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,4 +14,7 @@ public record HttpConfig(
     Integer timeoutReadMillis,
     Integer timeoutTotalMillis
 ) {
+    public HttpConfig {
+        defaultHeaders = defaultHeaders == null ? Map.of() : Map.copyOf(defaultHeaders);
+    }
 }

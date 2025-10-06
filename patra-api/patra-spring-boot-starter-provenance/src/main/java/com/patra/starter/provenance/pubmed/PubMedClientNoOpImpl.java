@@ -7,7 +7,6 @@ import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
 
 /**
  * No-op implementation of PubMedClient when EgressGatewayClient is not available.
@@ -27,7 +26,7 @@ public class PubMedClientNoOpImpl implements PubMedClient {
     @Override
     public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
         log.warn("[PROVENANCE][CORE] EgressGatewayClient not available, returning empty esearch response");
-        return new ESearchResponse(0, 0, 0, List.of(), null, null, null, null, null);
+        return ESearchResponse.empty();
     }
 
     @Override
@@ -38,6 +37,6 @@ public class PubMedClientNoOpImpl implements PubMedClient {
     @Override
     public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
         log.warn("[PROVENANCE][CORE] EgressGatewayClient not available, returning empty efetch response");
-        return new EFetchResponse(List.of());
+        return EFetchResponse.empty();
     }
 }

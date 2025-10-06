@@ -12,7 +12,7 @@ Spring Boot Starter for literature data source client (PubMed, EPMC)
 
 1. **API Encapsulation**: Independent client interfaces for each data source (PubMedClient, EPMCClient)
 2. **Parameter Models**: Strongly-typed Request objects covering all API parameters (required and optional)
-3. **Response Models**: Strongly-typed Response objects preserving all data source response fields
+3. **Response Models**: Strongly typed Response objects exposing curated fields plus `raw()` access to the original payload
 4. **Gateway Calling**: Internally calls egress gateway via EgressGatewayClient
 5. **Configuration Management**: Supports 2-tier config priority (caller override > local config)
 6. **Auto-Configuration**: Spring Boot auto-configuration, just add dependency to use
@@ -87,8 +87,8 @@ public class LiteratureService {
         ESearchResponse response = pubMedClient.esearch(request);
 
         // 3. Process response
-        System.out.println("Total count: " + response.count());
-        System.out.println("ID list: " + response.idList());
+        System.out.println("Total count: " + response.result().count());
+        System.out.println("ID list: " + response.result().idList());
     }
 
     /**
@@ -117,7 +117,7 @@ public class LiteratureService {
 
         // 3. Process response
         System.out.println("Hit count: " + response.hitCount());
-        System.out.println("Results: " + response.resultList());
+        System.out.println("Results: " + response.results().size());
     }
 }
 ```
@@ -148,7 +148,7 @@ public class LiteratureService {
         ESearchResponse response = pubMedClient.esearch(request, config);
 
         // 5. Process response
-        System.out.println("Total count: " + response.count());
+        System.out.println("Total count: " + response.result().count());
     }
 
     private ProvenanceConfig convertToProvenanceConfig(ProvenanceConfigResp resp) {
@@ -241,6 +241,13 @@ patra-common (ProvenanceCode enum)
   ↓ optional dependency (runtime check)
 patra-egress-gateway-api (EgressGatewayClient)
 ```
+
+### Provided Beans
+- `GatewayRequestBuilder`: Builds `ExternalCallRequestDTO` with URL/headers/resilience hints.
+- `DefaultConfigProvider`: Supplies sanitized fallback configuration per data source.
+- `XmlToJsonConverter`: Converts PubMed XML payloads to JSON structures when required.
+- `provenanceObjectMapper` (`ObjectMapper`): Shared Jackson mapper configured for tolerant parsing.
+- `ProvenanceMetrics` (conditional): Micrometer wrapper for latency and success-rate metrics.
 
 ## Performance Metrics
 

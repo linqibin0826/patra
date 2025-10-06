@@ -1,10 +1,12 @@
 package com.patra.starter.provenance.boot;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.egress.api.client.EgressGatewayClient;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.converter.XmlToJsonConverter;
 import com.patra.starter.provenance.common.gateway.GatewayRequestBuilder;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
+import com.patra.starter.provenance.common.support.ProvenanceObjectMapperFactory;
 import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.epmc.EPMCClientNoOpImpl;
@@ -58,6 +60,12 @@ public class ProvenanceAutoConfiguration {
         return new XmlToJsonConverter();
     }
 
+    @Bean(name = "provenanceObjectMapper")
+    @ConditionalOnMissingBean(name = "provenanceObjectMapper")
+    public ObjectMapper provenanceObjectMapper() {
+        return ProvenanceObjectMapperFactory.createJsonMapper();
+    }
+
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(MeterRegistry.class)  // Only register when Micrometer is available
@@ -72,6 +80,7 @@ public class ProvenanceAutoConfiguration {
             GatewayRequestBuilder requestBuilder,
             DefaultConfigProvider configProvider,
             XmlToJsonConverter xmlConverter,
+            ObjectMapper provenanceObjectMapper,
             @Autowired(required = false) ProvenanceMetrics metrics
     ) {
         // Gateway unavailable, return noop implementation
@@ -79,7 +88,7 @@ public class ProvenanceAutoConfiguration {
             log.warn("[PROVENANCE][BOOT] EgressGatewayClient not available, using no-op PubMedClient");
             return new PubMedClientNoOpImpl();
         }
-        return new PubMedClientImpl(gatewayClient, requestBuilder, configProvider, xmlConverter, metrics);
+        return new PubMedClientImpl(gatewayClient, requestBuilder, configProvider, xmlConverter, provenanceObjectMapper, metrics);
     }
 
     @Bean
@@ -88,6 +97,7 @@ public class ProvenanceAutoConfiguration {
             @Autowired(required = false) EgressGatewayClient gatewayClient,
             GatewayRequestBuilder requestBuilder,
             DefaultConfigProvider configProvider,
+            ObjectMapper provenanceObjectMapper,
             @Autowired(required = false) ProvenanceMetrics metrics
     ) {
         // Gateway unavailable, return noop implementation
@@ -95,6 +105,6 @@ public class ProvenanceAutoConfiguration {
             log.warn("[PROVENANCE][BOOT] EgressGatewayClient not available, using no-op EPMCClient");
             return new EPMCClientNoOpImpl();
         }
-        return new EPMCClientImpl(gatewayClient, requestBuilder, configProvider, metrics);
+        return new EPMCClientImpl(gatewayClient, requestBuilder, configProvider, provenanceObjectMapper, metrics);
     }
 }
