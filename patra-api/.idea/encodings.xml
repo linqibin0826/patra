@@ -5,6 +5,20 @@
     <file url="file://$PROJECT_DIR$/patra-common-error/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-common/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-common/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-adapter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-adapter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-app/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-app/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-boot/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-infra/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/patra-egress-gateway-infra/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-egress-gateway/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-expr-compiler/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-expr-compiler/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-expr-kernel/src/main/java" charset="UTF-8" />
