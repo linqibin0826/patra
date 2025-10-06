@@ -1,5 +1,6 @@
 package com.patra.egress.adapter.rest;
 
+import com.patra.egress.api.client.EgressGatewayClient;
 import com.patra.egress.api.dto.ExternalCallRequestDTO;
 import com.patra.egress.api.dto.ExternalCallResponseDTO;
 import com.patra.egress.app.usecase.externalcall.ExternalCallCommand;
@@ -9,35 +10,33 @@ import com.patra.egress.app.usecase.externalcall.ExternalCallUseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * External call REST controller
- * Provides HTTP endpoint for calling external services through the egress gateway
+ * Implementation of the egress gateway internal API (Feign client endpoint).
+ *
+ * <p>Exposes external call capabilities to other microservices via internal
+ * RPC contract, delegating to application service and converting DTOs.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/egress")
 @RequiredArgsConstructor
-public class ExternalCallController {
+public class ExternalCallController implements EgressGatewayClient {
 
     private final ExternalCallUseCase externalCallUseCase;
 
     /**
-     * Call external service through egress gateway
+     * Execute an external HTTP call through the egress gateway.
      *
-     * @param request external call request DTO
-     * @return external call response DTO
+     * @param request the external call request DTO
+     * @return the external call response DTO exposed by RPC contract
      */
-    @PostMapping("/call")
-    public ResponseEntity<ExternalCallResponseDTO> call(@Valid @RequestBody ExternalCallRequestDTO request) {
+    @Override
+    public ExternalCallResponseDTO call(@Valid @RequestBody ExternalCallRequestDTO request) {
         log.info("[EGRESS][ADAPTER] Received external call request: url={} method={}",
                 request.url(), request.method());
 
@@ -53,6 +52,6 @@ public class ExternalCallController {
         log.info("[EGRESS][ADAPTER] External call completed: traceId={} statusCode={} duration={}ms",
                 result.traceId(), response.envelope().statusCode(), response.durationMs());
 
-        return ResponseEntity.ok(response);
+        return response;
     }
 }

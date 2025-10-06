@@ -19,10 +19,11 @@ public final class HeaderWhitelistFilter {
     /**
      * Filter response headers by whitelist (case-insensitive)
      * Converts multi-value headers to single-value by taking the first value
+     * Preserves the original casing from the whitelist for matched headers
      *
      * @param headers response headers (multi-value)
      * @param whitelist header names whitelist
-     * @return filtered headers (single-value)
+     * @return filtered headers (single-value) with casing from whitelist
      */
     public static Map<String, String> filter(Map<String, List<String>> headers, List<String> whitelist) {
         if (headers == null || headers.isEmpty()) {
@@ -32,15 +33,18 @@ public final class HeaderWhitelistFilter {
             return Map.of();
         }
 
-        // Convert whitelist to lowercase for case-insensitive comparison
-        List<String> lowerCaseWhitelist = whitelist.stream()
-                .map(String::toLowerCase)
-                .toList();
+        // Create a map from lowercase header names to original whitelist casing
+        Map<String, String> lowerToOriginalCase = whitelist.stream()
+                .collect(Collectors.toMap(
+                        String::toLowerCase,
+                        name -> name,
+                        (existing, replacement) -> existing  // Keep first if duplicates
+                ));
 
         return headers.entrySet().stream()
-                .filter(entry -> lowerCaseWhitelist.contains(entry.getKey().toLowerCase()))
+                .filter(entry -> lowerToOriginalCase.containsKey(entry.getKey().toLowerCase()))
                 .collect(Collectors.toMap(
-                        Map.Entry::getKey,
+                        entry -> lowerToOriginalCase.get(entry.getKey().toLowerCase()),  // Use whitelist casing
                         entry -> {
                             List<String> values = entry.getValue();
                             return values != null && !values.isEmpty() ? values.get(0) : "";

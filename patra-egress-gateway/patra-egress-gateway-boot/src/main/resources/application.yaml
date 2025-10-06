@@ -62,6 +62,7 @@ patra:
         circuit-breaker-window-seconds: 60
         response-header-whitelist:
           - "Content-Type"
+          - "Content-Length"
           - "X-RateLimit-Limit"
           - "X-RateLimit-Remaining"
           - "X-RateLimit-Reset"
@@ -76,9 +77,9 @@ management:
   endpoint:
     health:
       show-details: when-authorized
-  metrics:
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
 
 # Logging Configuration
