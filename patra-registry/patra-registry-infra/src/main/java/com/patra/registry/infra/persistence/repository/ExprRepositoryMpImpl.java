@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.registry.domain.support.RegistryKeyNormalizer;
+import com.patra.registry.domain.support.RegistryKeyStandardizer;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
@@ -11,6 +11,7 @@ import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper;
 import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
+import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -45,7 +46,7 @@ public class ExprRepositoryMpImpl implements ExprRepository {
      *
      * @param provenanceCode the provenance code
      * @param operationType  the operation type key
-     * @param endpointName   the API endpoint name
+     * @param endpointName   the API endpoint name (nullable for endpoint-agnostic queries)
      * @param at             the query timestamp (null for current time)
      * @return complete expression metadata snapshot
      */
@@ -60,8 +61,10 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         Instant timestamp = atOrNow(at);
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
-        String operationKey = RegistryKeyNormalizer.normalizeOperationKey(operationType);
-        String normalizedEndpoint = RegistryKeyNormalizer.normalizeCode(endpointName);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
+        String normalizedEndpoint = (endpointName == null || endpointName.isBlank())
+                ? null
+                : RegistryKeyStandardizer.toUppercaseCode(endpointName);
 
         List<ExprField> fields = loadFields();
         List<ExprCapability> capabilities = loadCapabilities(provenanceId, operationKey, timestamp);
@@ -131,7 +134,7 @@ public class ExprRepositoryMpImpl implements ExprRepository {
      *
      * @param provenanceId        the provenance ID
      * @param operationKey        the normalized operation key
-     * @param normalizedEndpoint  the normalized endpoint name
+     * @param normalizedEndpoint  the normalized endpoint name (nullable for endpoint-agnostic queries)
      * @param timestamp           the query timestamp
      * @return list of API parameter mappings
      */
@@ -163,7 +166,7 @@ public class ExprRepositoryMpImpl implements ExprRepository {
      *
      * @param provenanceCode the provenance code
      * @return provenance ID
-     * @throws IllegalArgumentException if provenance code not found
+     * @throws ProvenanceNotFoundException if provenance code not found
      */
     private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
         String code = provenanceCode.getCode();
@@ -171,8 +174,8 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         return provenanceMapper.selectByCode(code)
                 .map(RegProvenanceDO::getId)
                 .orElseThrow(() -> {
-                    log.error("Provenance code not found: {}", code);
-                    return new IllegalArgumentException("Provenance code not found: " + code);
+                    log.warn("Provenance code not found: {}", code);
+                    return new ProvenanceNotFoundException("Provenance code not found: " + code);
                 });
     }
 }
