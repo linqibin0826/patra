@@ -1,0 +1,57 @@
+# Egress Gateway error handling configuration
+patra:
+  error:
+    enabled: true
+    context-prefix: EGR
+    engine:
+      max-cause-depth: 10
+      enable-trait-mapping: true
+      enable-naming-heuristic: true
+    observation:
+      enabled: true
+      slow-threshold-ms: 200
+      log-slow-resolution: true
+    circuit-breaker:
+      enabled: true
+      failure-rate-threshold: 50.0
+      minimum-number-of-calls: 20
+      sliding-window-size: 50
+      permitted-calls-in-half-open-state: 5
+      wait-duration-in-open-state: PT30S
+
+  web:
+    problem:
+      enabled: true
+      type-base-url: "https://errors.papertrace.com"
+      include-stack: false
+
+  feign:
+    problem:
+      enabled: true
+      tolerant: true
+      max-error-body-size: 65536
+      include-stack-trace: false
+      observation:
+        enabled: true
+        slow-parsing-threshold-ms: 150
+        log-slow-parsing: true
+        slow-body-reading-threshold-ms: 80
+        log-slow-body-reading: true
+        log-tolerant-usage: true
+
+# Egress Gateway Error Catalog
+egress:
+  error-catalog:
+    # HTTP-aligned errors (0xxx segment)
+    bad-request: EGR-0400
+    unprocessable-entity: EGR-0422
+    rate-limit-exceeded: EGR-0429
+    internal-server-error: EGR-0500
+    circuit-breaker-open: EGR-0503
+    gateway-timeout: EGR-0504
+
+    # Business errors (1xxx+ segment)
+    config-load-failed: EGR-1001
+    config-validation-failed: EGR-1002
+    external-call-failed: EGR-1003
+    response-envelope-failed: EGR-1004

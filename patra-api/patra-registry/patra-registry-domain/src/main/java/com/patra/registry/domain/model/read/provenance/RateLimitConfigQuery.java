@@ -5,7 +5,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * 限流与并发配置查询视图。
+ * Rate limit configuration query view.
+ *
+ * <p>Read-optimized projection for querying rate limiting configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record RateLimitConfigQuery(
         Long id,

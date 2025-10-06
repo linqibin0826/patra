@@ -1,0 +1,27 @@
+package com.patra.egress;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+
+/**
+ * Egress Gateway Application
+ * Entry point for the egress gateway microservice
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+@SpringBootApplication(scanBasePackages = {
+        "com.patra.egress",
+        "com.patra.starter"
+})
+@ConfigurationPropertiesScan(basePackages = {
+        "com.patra.egress",
+        "com.patra.starter"
+})
+public class EgressGatewayApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(EgressGatewayApplication.class, args);
+    }
+}
