@@ -19,10 +19,12 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
- ALL, otherwise trim and preserve original case for backward compatibility.
+     * Normalizes operation type: null/blank maps to ALL, otherwise trim and preserve original case.
+     *
+     * <p>Preserves original case for backward compatibility with existing configuration.
      *
      * @param operationType the operation type value to normalize
-     * @return normalized operation type key, never null
+     * @return normalized operation type key, never null (returns ALL for null/blank)
      */
     public static String normalizeOperationKey(String operationType) {
         if (operationType == null || operationType.isBlank()) {
@@ -32,9 +34,11 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * Normalizes generic code: non-null assertion + trim + uppercase conversion.
+     * Normalizes generic code by trimming and converting to uppercase.
      *
-     * @param value the code value to normalize
+     * <p>Used for dictionary codes and status codes that require case-insensitive comparison.
+     *
+     * @param value the code value to normalize; must not be null
      * @return normalized code in uppercase
      * @throws DomainValidationException if value is null
      */
@@ -46,10 +50,13 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
-     * Normalizes field key: non-null assertion + trim, preserving original case.
+     * Normalizes field key by trimming while preserving original case.
      *
-     * @param value the field key value to normalize
-     * @return normalized field key
+     * <p>Field keys are case-sensitive and should match the canonical definitions
+     * in the expression field dictionary.
+     *
+     * @param value the field key value to normalize; must not be null
+     * @return normalized field key with original case preserved
      * @throws DomainValidationException if value is null
      */
     public static String normalizeFieldKey(String value) {
@@ -60,10 +67,12 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
- ANY, otherwise uppercase.
+     * Normalizes match type code: null/blank maps to ANY, otherwise trim and uppercase.
+     *
+     * <p>Used for TERM match strategies (PHRASE, EXACT, ANY) in expression render rules.
      *
      * @param matchTypeCode the match type code to normalize
-     * @return normalized match type key, never null
+     * @return normalized match type key, never null (returns ANY for null/blank)
      */
     public static String normalizeMatchKey(String matchTypeCode) {
         if (matchTypeCode == null || matchTypeCode.isBlank()) {
@@ -73,7 +82,9 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
- F.
+     * Normalizes negated flag: null maps to ANY, true to T, false to F.
+     *
+     * <p>Used for NOT operator handling in expression render rule selection.
      *
      * @param negated the negated flag to normalize
      * @return normalized negated key (ANY/T/F), never null
@@ -86,10 +97,12 @@ public final class RegistryKeyNormalizer {
     }
 
     /**
- ANY, otherwise uppercase.
+     * Normalizes value type code: null/blank maps to ANY, otherwise trim and uppercase.
+     *
+     * <p>Used for RANGE value types (STRING/DATE/DATETIME/NUMBER) in expression render rules.
      *
      * @param valueTypeCode the value type code to normalize
-     * @return normalized value type key, never null
+     * @return normalized value type key, never null (returns ANY for null/blank)
      */
     public static String normalizeValueKey(String valueTypeCode) {
         if (valueTypeCode == null || valueTypeCode.isBlank()) {

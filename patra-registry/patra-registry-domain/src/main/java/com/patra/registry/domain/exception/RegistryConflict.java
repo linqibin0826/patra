@@ -6,36 +6,39 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Registry 资源冲突（Conflict）语义的基类异常。
+ * Base exception class for Registry resource conflicts.
  *
- * <p>表示因与现有资源或规则冲突（如重名、版本冲突）而无法完成操作。</p>
+ * <p>Represents operations that cannot complete due to conflicts with existing
+ * resources or rules (e.g., duplicate names, version conflicts).
  *
  * @author linqibin
  * @since 0.1.0
  */
 public abstract class RegistryConflict extends RegistryException implements HasErrorTraits {
-    
+
     /**
-     * 使用消息构造异常。
+     * Creates an exception with a message.
      *
-     * @param message 详情消息
+     * @param message detail message
      */
     protected RegistryConflict(String message) {
         super(message);
     }
-    
+
     /**
-     * 使用消息与原因构造异常。
+     * Creates an exception with a message and root cause.
      *
-     * @param message 详情消息
-     * @param cause 异常原因
+     * @param message detail message
+     * @param cause root cause
      */
     protected RegistryConflict(String message, Throwable cause) {
         super(message, cause);
     }
-    
+
     /**
-     * 返回该异常的错误特征集合（恒为 CONFLICT）。
+     * Returns the error traits for this exception (always CONFLICT).
+     *
+     * @return set containing CONFLICT trait
      */
     @Override
     public Set<ErrorTrait> getErrorTraits() {

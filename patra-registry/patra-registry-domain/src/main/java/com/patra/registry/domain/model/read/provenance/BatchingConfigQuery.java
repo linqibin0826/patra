@@ -5,7 +5,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * 批量抓取与请求成型配置查询视图。
+ * Batching configuration query view.
+ *
+ * <p>Read-optimized projection for querying batching policy configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record BatchingConfigQuery(
         Long id,

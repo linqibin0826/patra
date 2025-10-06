@@ -7,32 +7,25 @@ import java.util.Objects;
  * Aggregated expression snapshot for a provenance scope.
  *
  * <p>This record captures a complete, immutable snapshot of all expression-related
- * configuration for a specific provenance at a given point in time. It includes:
- * <ul>
- *   <li>Field dictionary entries - canonical field definitions</li>
- *   <li>Field capabilities - allowed operations and constraints per field</li>
- *   <li>Render rules - how to transform expression atoms into query fragments or parameters</li>
- *   <li>API parameter mappings - standard key to provider parameter name mappings</li>
- * </ul>
+ * configuration for a specific provenance at a given point in time. It is typically used by
+ * the expression rendering engine to validate user input expressions, select appropriate render
+ * rules, and transform standard keys into provider-specific parameter names.
  *
- * <p>This snapshot is typically used by the expression rendering engine to:
+ * <p>Field descriptions:
  * <ol>
- *   <li>Validate user input expressions against declared capabilities</li>
- *   <li>Select appropriate render rules based on field/operation/match/negation/value-type dimensions</li>
- *   <li>Transform rendered standard keys into provider-specific parameter names</li>
+ *   <li>fields - canonical expression field definitions; never null, may be empty</li>
+ *   <li>capabilities - field capability declarations specifying allowed operations and constraints; never null</li>
+ *   <li>renderRules - render rules for transforming expression atoms into query fragments or parameters; never null</li>
+ *   <li>apiParamMappings - mappings from standard keys to provider-specific parameter names; never null</li>
  * </ol>
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record ExprSnapshot(
-        /* List of canonical expression field definitions; never {@code null}, may be empty */
         List<ExprField> fields,
-        /* List of field capability declarations; never {@code null}, may be empty */
         List<ExprCapability> capabilities,
-        /* List of render rules for expression atoms; never {@code null}, may be empty */
         List<ExprRenderRule> renderRules,
-        /* List of API parameter name mappings; never {@code null}, may be empty */
         List<ApiParamMapping> apiParamMappings
 ) {
     /**
