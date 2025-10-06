@@ -6,36 +6,39 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Registry 领域规则违反（Rule Violation）语义的基类异常。
+ * Base exception class for Registry rule violation semantics.
  *
- * <p>表示操作违反业务规则/校验约束/数据完整性等（如格式非法、约束冲突）。</p>
+ * <p>Represents operations that violate business rules, validation constraints,
+ * or data integrity (e.g., invalid format, constraint conflicts).
  *
  * @author linqibin
  * @since 0.1.0
  */
 public abstract class RegistryRuleViolation extends RegistryException implements HasErrorTraits {
-    
+
     /**
-     * 使用消息构造异常。
+     * Creates an exception with a message.
      *
-     * @param message 详情消息
+     * @param message detail message
      */
     protected RegistryRuleViolation(String message) {
         super(message);
     }
-    
+
     /**
-     * 使用消息与原因构造异常。
+     * Creates an exception with a message and root cause.
      *
-     * @param message 详情消息
-     * @param cause 异常原因
+     * @param message detail message
+     * @param cause root cause
      */
     protected RegistryRuleViolation(String message, Throwable cause) {
         super(message, cause);
     }
-    
+
     /**
-     * 返回该异常的错误特征集合（恒为 RULE_VIOLATION）。
+     * Returns the error traits for this exception (always RULE_VIOLATION).
+     *
+     * @return set containing RULE_VIOLATION trait
      */
     @Override
     public Set<ErrorTrait> getErrorTraits() {

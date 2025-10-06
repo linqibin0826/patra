@@ -5,7 +5,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * HTTP 策略配置查询视图。
+ * HTTP configuration query view.
+ *
+ * <p>Read-optimized projection for querying HTTP client configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record HttpConfigQuery(
         Long id,

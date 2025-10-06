@@ -6,36 +6,39 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Registry 配额/限流/容量超限语义的基类异常。
+ * Base exception class for Registry quota/rate limit/capacity exceeded semantics.
  *
- * <p>表示操作因超过配额、速率限制或容量约束而失败（如数量/大小超限）。</p>
+ * <p>Represents operations that fail due to exceeding quotas, rate limits, or capacity
+ * constraints (e.g., count or size limits).
  *
  * @author linqibin
  * @since 0.1.0
  */
 public abstract class RegistryQuotaExceeded extends RegistryException implements HasErrorTraits {
-    
+
     /**
-     * 使用消息构造异常。
+     * Creates an exception with a message.
      *
-     * @param message 详情消息
+     * @param message detail message
      */
     protected RegistryQuotaExceeded(String message) {
         super(message);
     }
-    
+
     /**
-     * 使用消息与原因构造异常。
+     * Creates an exception with a message and root cause.
      *
-     * @param message 详情消息
-     * @param cause 异常原因
+     * @param message detail message
+     * @param cause root cause
      */
     protected RegistryQuotaExceeded(String message, Throwable cause) {
         super(message, cause);
     }
-    
+
     /**
-     * 返回该异常的错误特征集合（恒为 QUOTA_EXCEEDED）。
+     * Returns the error traits for this exception (always QUOTA_EXCEEDED).
+     *
+     * @return set containing QUOTA_EXCEEDED trait
      */
     @Override
     public Set<ErrorTrait> getErrorTraits() {

@@ -6,7 +6,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * 字段能力查询视图。
+ * Expression capability query view.
+ *
+ * <p>Read-optimized projection for querying field operation capabilities and constraints.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExprCapabilityQuery(
         Long provenanceId,

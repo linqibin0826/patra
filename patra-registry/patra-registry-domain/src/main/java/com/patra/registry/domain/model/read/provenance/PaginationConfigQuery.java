@@ -5,7 +5,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * 分页配置查询视图。
+ * Pagination configuration query view.
+ *
+ * <p>Read-optimized projection for querying pagination strategy configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record PaginationConfigQuery(
         Long id,

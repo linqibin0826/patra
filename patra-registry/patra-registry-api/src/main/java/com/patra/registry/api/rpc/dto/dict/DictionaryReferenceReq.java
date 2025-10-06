@@ -2,15 +2,26 @@ package com.patra.registry.api.rpc.dto.dict;
 
 /**
  * Request payload representing a dictionary reference that needs validation.
- * <p>
- * The request mirrors the structure of the domain {@code DictionaryReference}
- * value object but stays independent from the contract module to keep the
- * HTTP layer decoupled from internal representations.
+ *
+ * <p>Field descriptions:
+ * <ol>
+ *   <li>typeCode - dictionary type identifier being referenced</li>
+ *   <li>itemCode - dictionary item identifier being referenced</li>
+ * </ol>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record DictionaryReferenceReq(
         String typeCode,
         String itemCode
 ) {
+    /**
+     * Canonical constructor performing null/blank validation and trimming.
+     *
+     * @param typeCode dictionary type identifier being referenced
+     * @param itemCode dictionary item identifier being referenced
+     */
     public DictionaryReferenceReq {
         if (typeCode == null || typeCode.trim().isEmpty()) {
             throw new IllegalArgumentException("Dictionary type code cannot be null or empty");

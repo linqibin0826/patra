@@ -3,7 +3,12 @@ package com.patra.registry.domain.model.read.expr;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * Expr 统一字段的查询视图。
+ * Query view for unified expression fields.
+ *
+ * <p>Read-optimized projection for querying expression field definitions from the dictionary.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExprFieldQuery(
         String fieldKey,

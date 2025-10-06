@@ -3,7 +3,12 @@ package com.patra.registry.domain.model.read.provenance;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * Provenance 基础信息查询视图。
+ * Provenance query view.
+ *
+ * <p>Read-optimized projection for querying provenance metadata.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ProvenanceQuery(
         Long id,

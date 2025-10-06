@@ -1,7 +1,7 @@
 package com.patra.registry.infra.persistence.repository;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.registry.domain.support.RegistryKeyNormalizer;
+import com.patra.registry.domain.support.RegistryKeyStandardizer;
 import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
@@ -11,6 +11,7 @@ import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper;
 import com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper;
+import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -45,7 +46,7 @@ public class ExprRepositoryMpImpl implements ExprRepository {
      *
      * @param provenanceCode the provenance code
      * @param operationType  the operation type key
-     * @param endpointName   the API endpoint name
+     * @param endpointName   the API endpoint name (nullable for endpoint-agnostic queries)
      * @param at             the query timestamp (null for current time)
      * @return complete expression metadata snapshot
      */
@@ -60,8 +61,10 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         Instant timestamp = atOrNow(at);
         Long provenanceId = resolveProvenanceId(provenanceCode);
 
-        String operationKey = RegistryKeyNormalizer.normalizeOperationKey(operationType);
-        String normalizedEndpoint = RegistryKeyNormalizer.normalizeCode(endpointName);
+        String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
+        String normalizedEndpoint = (endpointName == null || endpointName.isBlank())
+                ? null
+                : RegistryKeyStandardizer.toUppercaseCode(endpointName);
 
         List<ExprField> fields = loadFields();
         List<ExprCapability> capabilities = loadCapabilities(provenanceId, operationKey, timestamp);
@@ -74,35 +77,78 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
     }
 
+    /**
+     * Loads all active expression fields from the field dictionary.
+     *
+     * @return list of active expression fields
+     */
     private List<ExprField> loadFields() {
-        return fieldDictMapper.selectAllActive().stream()
+        log.debug("Loading all active expression fields");
+        List<ExprField> fields = fieldDictMapper.selectAllActive().stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} expression fields", fields.size());
+        return fields;
     }
 
+    /**
+     * Loads expression capabilities for a specific provenance and operation.
+     *
+     * @param provenanceId  the provenance ID
+     * @param operationKey  the normalized operation key
+     * @param timestamp     the query timestamp
+     * @return list of expression capabilities
+     */
     private List<ExprCapability> loadCapabilities(Long provenanceId,
                                                   String operationKey,
                                                   Instant timestamp) {
-        return capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
+        log.debug("Loading capabilities: provenanceId={}, operationKey={}", provenanceId, operationKey);
+        List<ExprCapability> capabilities = capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} capabilities", capabilities.size());
+        return capabilities;
     }
 
+    /**
+     * Loads expression render rules for a specific provenance and operation.
+     *
+     * @param provenanceId  the provenance ID
+     * @param operationKey  the normalized operation key
+     * @param timestamp     the query timestamp
+     * @return list of expression render rules
+     */
     private List<ExprRenderRule> loadRenderRules(Long provenanceId,
                                                  String operationKey,
                                                  Instant timestamp) {
-        return renderRuleMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
+        log.debug("Loading render rules: provenanceId={}, operationKey={}", provenanceId, operationKey);
+        List<ExprRenderRule> renderRules = renderRuleMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} render rules", renderRules.size());
+        return renderRules;
     }
 
+    /**
+     * Loads API parameter mappings for a specific provenance, operation, and endpoint.
+     *
+     * @param provenanceId        the provenance ID
+     * @param operationKey        the normalized operation key
+     * @param normalizedEndpoint  the normalized endpoint name (nullable for endpoint-agnostic queries)
+     * @param timestamp           the query timestamp
+     * @return list of API parameter mappings
+     */
     private List<ApiParamMapping> loadApiParamMappings(Long provenanceId,
                                                        String operationKey,
                                                        String normalizedEndpoint,
                                                        Instant timestamp) {
-        return apiParamMapMapper.selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp).stream()
+        log.debug("Loading API parameter mappings: provenanceId={}, operationKey={}, endpoint={}",
+                provenanceId, operationKey, normalizedEndpoint);
+        List<ApiParamMapping> apiParams = apiParamMapMapper.selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} API parameter mappings", apiParams.size());
+        return apiParams;
     }
 
     /**
@@ -120,7 +166,7 @@ public class ExprRepositoryMpImpl implements ExprRepository {
      *
      * @param provenanceCode the provenance code
      * @return provenance ID
-     * @throws IllegalArgumentException if provenance code not found
+     * @throws ProvenanceNotFoundException if provenance code not found
      */
     private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
         String code = provenanceCode.getCode();
@@ -128,8 +174,8 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         return provenanceMapper.selectByCode(code)
                 .map(RegProvenanceDO::getId)
                 .orElseThrow(() -> {
-                    log.error("Provenance code not found: {}", code);
-                    return new IllegalArgumentException("Provenance code not found: " + code);
+                    log.warn("Provenance code not found: {}", code);
+                    return new ProvenanceNotFoundException("Provenance code not found: " + code);
                 });
     }
 }

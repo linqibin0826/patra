@@ -5,7 +5,12 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * 时间窗口与增量指针配置查询视图。
+ * Window offset configuration query view.
+ *
+ * <p>Read-optimized projection for querying time window and offset configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public record WindowOffsetQuery(
         Long id,
