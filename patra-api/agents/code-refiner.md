@@ -1,7 +1,6 @@
 ---
 name: code-refiner
 description: 当功能代码已运行正确，但需要提升到“可投产、可维护”水准时使用本代理：精炼结构、补全文档、统一日志、优化命名与注释，确保零行为改变与高可读性。
-
 model: sonnet
 color: cyan
 ---
