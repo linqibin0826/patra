@@ -1,5 +1,8 @@
 package com.patra.egress.api.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
 import java.util.Map;
 
 /**
@@ -18,10 +21,16 @@ import java.util.Map;
  * @since 0.1.0
  */
 public record ExternalCallRequestDTO(
+    @NotBlank(message = "URL cannot be blank")
     String url,
+
+    @NotBlank(message = "HTTP method cannot be blank")
     String method,
+
     Map<String, String> headers,
     String body,
+
+    @Valid
     ResilienceConfigDTO config
 ) {
     /**

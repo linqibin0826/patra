@@ -20,8 +20,17 @@ public record RetryAdvice(
     String reason
 ) {
     /**
+     * 创建不可重试的建议
+     *
+     * @return 不可重试的 RetryAdvice
+     */
+    public static RetryAdvice notRetryable() {
+        return new RetryAdvice(false, Duration.ZERO, "Not retryable");
+    }
+
+    /**
      * 根据响应和配置生成重试建议
-     * 
+     *
      * @param response HTTP响应
      * @param config 弹性配置
      * @return 重试建议

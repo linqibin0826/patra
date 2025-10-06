@@ -1,5 +1,8 @@
 package com.patra.egress.api.dto;
 
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.util.List;
 
 /**
@@ -20,12 +23,24 @@ import java.util.List;
  * @since 0.1.0
  */
 public record ResilienceConfigDTO(
+    @Positive(message = "Timeout must be positive")
     Long timeoutSeconds,
+
+    @PositiveOrZero(message = "MaxRetries cannot be negative")
     Integer maxRetries,
+
+    @PositiveOrZero(message = "RetryBackoff cannot be negative")
     Long retryBackoffSeconds,
+
+    @Positive(message = "RateLimit must be positive")
     Integer rateLimit,
+
+    @Positive(message = "CircuitBreakerThreshold must be positive")
     Integer circuitBreakerThreshold,
+
+    @Positive(message = "CircuitBreakerWindow must be positive")
     Long circuitBreakerWindowSeconds,
+
     List<String> responseHeaderWhitelist
 ) {
     /**
