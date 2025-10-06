@@ -74,35 +74,78 @@ public class ExprRepositoryMpImpl implements ExprRepository {
         return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
     }
 
+    /**
+     * Loads all active expression fields from the field dictionary.
+     *
+     * @return list of active expression fields
+     */
     private List<ExprField> loadFields() {
-        return fieldDictMapper.selectAllActive().stream()
+        log.debug("Loading all active expression fields");
+        List<ExprField> fields = fieldDictMapper.selectAllActive().stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} expression fields", fields.size());
+        return fields;
     }
 
+    /**
+     * Loads expression capabilities for a specific provenance and operation.
+     *
+     * @param provenanceId  the provenance ID
+     * @param operationKey  the normalized operation key
+     * @param timestamp     the query timestamp
+     * @return list of expression capabilities
+     */
     private List<ExprCapability> loadCapabilities(Long provenanceId,
                                                   String operationKey,
                                                   Instant timestamp) {
-        return capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
+        log.debug("Loading capabilities: provenanceId={}, operationKey={}", provenanceId, operationKey);
+        List<ExprCapability> capabilities = capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} capabilities", capabilities.size());
+        return capabilities;
     }
 
+    /**
+     * Loads expression render rules for a specific provenance and operation.
+     *
+     * @param provenanceId  the provenance ID
+     * @param operationKey  the normalized operation key
+     * @param timestamp     the query timestamp
+     * @return list of expression render rules
+     */
     private List<ExprRenderRule> loadRenderRules(Long provenanceId,
                                                  String operationKey,
                                                  Instant timestamp) {
-        return renderRuleMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
+        log.debug("Loading render rules: provenanceId={}, operationKey={}", provenanceId, operationKey);
+        List<ExprRenderRule> renderRules = renderRuleMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} render rules", renderRules.size());
+        return renderRules;
     }
 
+    /**
+     * Loads API parameter mappings for a specific provenance, operation, and endpoint.
+     *
+     * @param provenanceId        the provenance ID
+     * @param operationKey        the normalized operation key
+     * @param normalizedEndpoint  the normalized endpoint name
+     * @param timestamp           the query timestamp
+     * @return list of API parameter mappings
+     */
     private List<ApiParamMapping> loadApiParamMappings(Long provenanceId,
                                                        String operationKey,
                                                        String normalizedEndpoint,
                                                        Instant timestamp) {
-        return apiParamMapMapper.selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp).stream()
+        log.debug("Loading API parameter mappings: provenanceId={}, operationKey={}, endpoint={}",
+                provenanceId, operationKey, normalizedEndpoint);
+        List<ApiParamMapping> apiParams = apiParamMapMapper.selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp).stream()
                 .map(converter::toDomain)
                 .toList();
+        log.debug("Loaded {} API parameter mappings", apiParams.size());
+        return apiParams;
     }
 
     /**
