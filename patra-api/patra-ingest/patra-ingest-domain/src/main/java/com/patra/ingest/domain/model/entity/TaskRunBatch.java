@@ -150,4 +150,52 @@ public class TaskRunBatch {
         this.error = err;
         this.committedAt = now;
     }
+
+    /**
+     * 创建批次执行结果记录（简化工厂方法）。
+     * <p>
+     * 用于任务执行引擎在批次执行完成后创建记录。
+     * </p>
+     *
+     * @param runId 运行ID
+     * @param batchNo 批次序号
+     * @param success 是否成功
+     * @param fetchedCount 获取的记录数
+     * @param nextCursorToken 下一个游标token
+     * @param errorMessage 错误信息
+     * @param storageKey 存储键
+     * @return TaskRunBatch 实例
+     */
+    public static TaskRunBatch create(Long runId,
+                                      int batchNo,
+                                      boolean success,
+                                      int fetchedCount,
+                                      String nextCursorToken,
+                                      String errorMessage,
+                                      String storageKey) {
+        BatchStatus status = success ? BatchStatus.SUCCEEDED : BatchStatus.FAILED;
+        BatchStats stats = BatchStats.of(fetchedCount);
+        Instant now = Instant.now();
+
+        return new TaskRunBatch(
+            null,  // id - 由数据库生成
+            runId,
+            null,  // taskId - 可选
+            null,  // sliceId - 可选
+            null,  // planId - 可选
+            null,  // provenanceCode - 可选
+            null,  // operationCode - 可选
+            batchNo,
+            null,  // pageNo - 可选
+            null,  // pageSize - 可选
+            null,  // beforeToken
+            nextCursorToken,  // afterToken
+            null,  // exprHash - 可选
+            null,  // idempotentKey - 可选
+            status,
+            stats,
+            now,   // committedAt
+            errorMessage
+        );
+    }
 }
