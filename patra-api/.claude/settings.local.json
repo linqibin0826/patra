@@ -18,12 +18,12 @@
       "Bash(fi)",
       "Bash(done)",
       "mcp__mcp-router__write_memory",
-      "mcp__mcp-router__sequentialthinking"
+      "mcp__mcp-router__sequentialthinking",
+      "mcp__sequential-thinking__sequentialthinking"
     ],
     "deny": [],
     "ask": []
   },
-  "outputStyle": "default",
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "mcp-server-time",
@@ -33,5 +33,6 @@
     "serena",
     "mysql",
     "playwright"
-  ]
+  ],
+  "outputStyle": "default"
 }
