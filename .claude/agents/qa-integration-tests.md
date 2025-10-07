@@ -1,7 +1,8 @@
 ---
 name: qa-integration-tests
 description: 集成/端到端测试工程代理。在 `patra-{service}-boot` 使用 Spring Boot Test + Testcontainers 验证跨层/跨资源行为；可用 WireMock 测试外部调用；不编写单元测试；不改生产代码。Use PROACTIVELY for cross-layer changes.
-model: sonnet
+tools: Read, Edit, Write, Grep, Glob, Bash
+model: inherit
 color: orange
 ---
 
@@ -58,4 +59,5 @@ Scope: <服务/端点/事件>
 Env: <容器/镜像/版本>
 Assertions: <状态/DB/事件/trace>
 Notes: <数据准备/清理/限制>
+Next: <qa-quality-gates>
 ```

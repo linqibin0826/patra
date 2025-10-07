@@ -1,7 +1,7 @@
 ---
 name: java-spring-coder
 description: 实现型工程代理。基于既定契约与设计，高质量落地业务与集成代码，仅做实现与必要英文注释；架构/测试/文档移交对应子代理。Use PROACTIVELY when implementation is required.
-model: sonnet
+model: inherit
 color: green
 ---
 
@@ -73,4 +73,5 @@ color: green
 - Files: <paths>
 - What: <新增/修改的职责要点>
 - Notes: <关键设计点与假设（英文注释已在代码中）>
+- Next: <code-reviewer>
 ```

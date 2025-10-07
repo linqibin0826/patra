@@ -1,7 +1,7 @@
 ---
 name: architecture-designer
 description: 架构设计专家。将业务目标转化为可落地的架构方案与 ADR 草案：服务边界、端口/适配器、一致性与幂等、可观测与安全基线、演进与权衡。Use PROACTIVELY when a design is needed.
-model: sonnet
+model: inherit
 color: teal
 ---
 
@@ -90,6 +90,7 @@ color: teal
 - Constraints: <时限/依赖/合规/预算>
 - Quality: <R/S/M/Sec>
 - Decision: <Recommended | Alternatives>
+- Next: <architecture-reviewer | java-spring-coder | docs-engineer>
 
 ### Design Highlights
 - Boundaries: <服务边界与上下文>
