@@ -24,20 +24,48 @@ Papertrace是医学文献数据平台，目标：
 2. 以SSOT（单一可信源patra-registry）管理配置/词典/元数据
 3. 对原始文献数据解析、清洗与标准化
 4. 通过南向网关（patra-egress-gateway）统一管理所有出站外部服务调用，提供弹性能力
-5. 后续提供搜索与智能分析
+5. 通过数据源客户端 Starter（patra-spring-boot-starter-provenance）封装文献数据源 API
+6. 后续提供搜索与智能分析
 
 当前重点：
+- ✅ 已完成：南向网关（patra-egress-gateway）核心功能
+- 🔄 进行中：文献数据源客户端 Starter（patra-spring-boot-starter-provenance）
 - 保证数据"可靠落地"（采集→解析/清洗→入库）
 - 统一外部服务调用的弹性能力（限流、重试、熔断、超时）
 
 ## 依赖方向（严格遵守）
 
+### 服务模块依赖
 ```
 adapter → app + api (+ web starters)
 app → domain + patra-common + core starter
 infra → domain + mybatis starter + core starter
 domain → 仅 patra-common（禁止引入Spring/框架）
 api → 不依赖框架（对外暴露）
+```
+
+### Starter 模块依赖
+```
+业务方
+  ↓ 依赖
+patra-spring-boot-starter-provenance
+  ↓ 依赖
+patra-egress-gateway-api (EgressGatewayClient)
+  ↓ 依赖
+patra-registry-api (ProvenanceConfigResp)
+  ↓ 依赖
+patra-common
+```
+
+### Starter 内部分层
+```
+boot (auto-configuration)
+  ↓ 依赖
+{datasource}/client (PubMedClient, EPMCClient)
+  ↓ 依赖
+common (GatewayRequestBuilder, ConfigLoader, etc.)
+  ↓ 依赖
+patra-egress-gateway-api + patra-registry-api + patra-common
 ```
 
 ## 开发命令优先级
@@ -197,3 +225,79 @@ mvn clean package -DskipTests
 - 显式说明假设与权衡
 - 小步提交
 - 任何"跨层/跨聚合"的变更要先给出影响面评估与回滚策略
+
+
+## Starter 模块开发规范
+
+### 模块结构
+- **数据源包**（如 `pubmed/`, `epmc/`）：每个数据源独立包，包含 Client 接口、实现类、Request/Response 模型
+- **公共包**（`common/`）：跨数据源共享的组件（网关请求构建器、配置加载器、转换器、指标记录器、异常定义）
+- **自动配置包**（`boot/`）：Spring Boot 自动配置类
+
+### 命名约定
+- **Client 接口**：`{DataSource}Client`（如 `PubMedClient`, `EPMCClient`）
+- **Client 实现**：`{DataSource}ClientImpl`（如 `PubMedClientImpl`, `EPMCClientImpl`）
+- **Request 模型**：`{API}Request`（如 `ESearchRequest`, `EFetchRequest`）
+- **Response 模型**：`{API}Response`（如 `ESearchResponse`, `EFetchResponse`）
+- **异常类**：`ProvenanceClientException`（统一异常类）
+
+### 模型定义
+- **使用 Record**：所有 Request 和 Response 对象使用 Java Record 定义
+- **不可变性**：Record 天然不可变，线程安全
+- **参数校验**：在 Record 的紧凑构造器中进行参数校验
+- **不使用 Lombok**：Record 内不使用 Lombok 注解
+
+### 配置管理
+- **三级优先级**：
+  1. 运行时传递（最高优先级）
+  2. 数据库配置（patra-registry）
+  3. 本地配置（Nacos / application.yml）
+- **动态加载**：每次 API 调用时动态加载配置，不做缓存
+- **配置前缀**：`patra.provenance`
+
+### 日志规范
+- **日志前缀**：`[PROVENANCE][LAYER]`
+- **层次标识**：
+  - `CORE`：核心业务层（Client 实现）
+  - `INTERNAL`：内部实现层（ConfigLoader, XmlToJsonConverter）
+  - `BOOT`：自动配置层（AutoConfiguration）
+  - `GATEWAY`：网关调用层（GatewayRequestBuilder）
+
+### 指标记录
+- **Timer 指标**：`provenance.client.api.duration`（按 provenance、api 分组）
+- **Counter 指标**：`provenance.client.api.success` / `provenance.client.api.failure`
+- **使用 Micrometer**：通过 `MeterRegistry` 记录指标
+
+### 异常处理
+- **统一异常**：所有异常统一抛出 `ProvenanceClientException`
+- **异常信息**：包含数据源名称、API 名称、错误原因、原始异常
+- **不吞噬异常**：所有异常必须向上抛出或记录日志
+
+### 测试约束
+- **首期不实现**：单元测试和集成测试在后续迭代补充
+- **测试任务标记**：任务列表中测试相关子任务标记为可选（后缀 `*`）
+- **测试框架**：JUnit 5 + Mockito + AssertJ
+
+## 当前开发任务
+
+### patra-spring-boot-starter-provenance 实施计划
+
+#### Phase 1: 项目骨架和公共组件 (8-11 小时)
+- 任务 1: 创建项目结构和 Maven 配置
+- 任务 2: 实现公共组件（GatewayRequestBuilder, ConfigLoader, XmlToJsonConverter, ProvenanceMetrics, ProvenanceClientException）
+
+#### Phase 2: PubMed 数据源实现 (6-8 小时)
+- 任务 3: 实现 PubMed ESearch API
+- 任务 4: 实现 PubMed EFetch API
+
+#### Phase 3: EPMC 数据源实现 (4-5 小时)
+- 任务 5: 实现 EPMC Search API
+
+#### Phase 4: 自动配置和文档 (5-7 小时)
+- 任务 6: 实现 Spring Boot 自动配置和文档
+
+### 执行原则
+- **一次一个任务**：只执行一个任务，完成后停止，等待用户审查
+- **按顺序执行**：按照任务列表顺序执行，不跳过
+- **跳过可选测试**：标记为 `*` 的测试子任务不实现
+- **参考规范文档**：执行任务前必须阅读 requirements.md、design.md、tasks.md

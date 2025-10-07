@@ -31,8 +31,33 @@ adapter → app → domain ← infra
 - `patra-registry`: Configuration SSOT service
 - `patra-ingest`: Collection planning and task assembly service
 - `patra-egress-gateway`: Egress gateway service for unified external service calls
-- `patra-spring-boot-starter-*`: Auto-configuration starters (core, web, mybatis, expr)
+- `patra-spring-boot-starter-*`: Auto-configuration starters (core, web, mybatis, expr, provenance)
 - `patra-spring-cloud-starter-feign`: Feign client auto-configuration
+
+### Starter Module Structure
+
+Starter modules follow a simplified structure pattern:
+
+```
+patra-spring-boot-starter-{name}/
+├── src/main/java/com/patra/{name}/
+│   ├── {datasource}/              # Data source-specific packages (e.g., pubmed/, epmc/)
+│   │   ├── client/                # Client interfaces and implementations
+│   │   ├── model/                 # Request and response models
+│   │   └── ...                    # Other data source-specific components
+│   ├── common/                    # Common components shared across data sources
+│   │   ├── gateway/               # Gateway request builder
+│   │   ├── config/                # Configuration loader
+│   │   ├── converter/             # XML to JSON converter
+│   │   ├── metrics/               # Performance metrics recorder
+│   │   └── exception/             # Exception definitions
+│   └── boot/                      # Auto-configuration
+│       └── autoconfigure/         # Spring Boot auto-configuration classes
+└── src/main/resources/
+    └── META-INF/
+        └── spring/
+            └── org.springframework.boot.autoconfigure.AutoConfiguration.imports
+```
 
 ### Service Module Structure
 
