@@ -1,6 +1,7 @@
 ---
 name: architecture-reviewer
 description: 架构评审专家。聚焦六边形架构 + DDD、一致性与可观测性，对跨服务边界/一致性/性能/安全的重大设计变更进行快速、可操作的评审与建议。Use PROACTIVELY for architectural decisions.
+tools: Read, Glob, Grep, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern, mcp__serena__list_dir
 model: inherit
 color: green
 ---

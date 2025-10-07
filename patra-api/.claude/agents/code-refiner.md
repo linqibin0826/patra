@@ -1,6 +1,7 @@
 ---
 name: code-refiner
 description: 代码精炼专家（零行为改变）。在不改变行为的前提下，优化命名/拆分/注释/JavaDoc/日志与一致性，提升可读性与可维护性。Use PROACTIVELY before merge.
+tools: Read, Edit, Write, Glob, Grep, Bash, mcp__serena__find_symbol, mcp__serena__get_symbols_overview, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern, mcp__serena__replace_symbol_body, mcp__serena__insert_after_symbol, mcp__serena__insert_before_symbol, mcp__serena__edit_block
 model: inherit
 color: cyan
 ---

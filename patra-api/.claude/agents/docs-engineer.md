@@ -1,6 +1,7 @@
 ---
 name: docs-engineer
 description: 文档工程代理（Documentation Only）。以 Documentation‑as‑Code 持续产出与维护技术文档与 ADR；不改业务代码/测试/配置。Use PROACTIVELY to keep docs in sync.
+tools: Read, Edit, Write, Glob, Grep, Bash
 model: inherit
 color: pink
 ---
