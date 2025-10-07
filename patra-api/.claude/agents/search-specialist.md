@@ -1,7 +1,7 @@
 ---
 name: search-specialist
 description: Web 检索与情报综合专家。以结构化方法在权威来源中搜—评—证—综，形成可溯源、可行动结论；不改代码与配置。Use PROACTIVELY when external evidence is needed.
-model: sonnet
+model: inherit
 color: blue
 ---
 

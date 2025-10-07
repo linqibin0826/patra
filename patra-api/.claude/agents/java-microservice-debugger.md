@@ -1,7 +1,7 @@
 ---
 name: java-microservice-debugger
 description: Java/Spring Boot 微服务调试专家。以“假设—证据—验证—复盘”定位根因并给最小修复建议；默认不改代码，由 coder 实施。Use PROACTIVELY on errors/perf issues.
-model: sonnet
+model: inherit
 color: red
 ---
 

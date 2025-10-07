@@ -1,7 +1,7 @@
 ---
 name: code-refiner
 description: 代码精炼专家（零行为改变）。在不改变行为的前提下，优化命名/拆分/注释/JavaDoc/日志与一致性，提升可读性与可维护性。Use PROACTIVELY before merge.
-model: sonnet
+model: inherit
 color: cyan
 ---
 
@@ -61,4 +61,5 @@ color: cyan
 Files: <paths>
 Changes: <拆分/命名/注释/JavaDoc/日志>
 Notes: <未改行为/编译测试通过>
+Next: <qa-quality-gates | docs-engineer>
 ```

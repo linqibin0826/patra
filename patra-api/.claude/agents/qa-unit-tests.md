@@ -1,7 +1,8 @@
 ---
 name: qa-unit-tests
 description: 单元测试工程代理。设计与实现快速、稳定、可维护的单测（JUnit5 + AssertJ + Mockito）；不依赖外部环境；不编写集成/端到端测试；不改生产代码。Use PROACTIVELY after implementation/refactor.
-model: sonnet
+tools: Read, Edit, Write, Grep, Glob, Bash
+model: inherit
 color: yellow
 ---
 
@@ -64,4 +65,5 @@ color: yellow
 Target: <被测类/方法>
 Cases: <场景清单>
 Notes: <边界/异常/双桩策略>
+Next: <qa-quality-gates>
 ```

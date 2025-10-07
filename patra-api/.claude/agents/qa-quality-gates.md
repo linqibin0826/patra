@@ -1,7 +1,8 @@
 ---
 name: qa-quality-gates
 description: 质量门禁与度量专家。汇总测试与覆盖、静态检查与构建结果，给出 PASS/FAIL 结论与补救建议；不编写测试与不改生产代码。Use PROACTIVELY before merge/release.
-model: sonnet
+tools: Read, Grep, Glob, Bash
+model: inherit
 color: red
 ---
 

@@ -1,7 +1,8 @@
 ---
 name: mermaid-expert
 description: Mermaid 图表专家。将复杂概念转化为清晰的流程/时序/ERD/状态/架构/甘特图；交付“基础版 + 样式版”源码与渲染说明。Use PROACTIVELY for visualization.
-model: sonnet
+tools: Read, Edit, Write, Grep, Glob, Bash
+model: inherit
 color: purple
 ---
 
@@ -59,4 +60,5 @@ Type: <flowchart/sequence/...>
 Scope: <对象/关系/时序>
 Notes: <结构/样式/可访问性>
 Artifacts: <基础版 + 样式版 Mermaid 源码>
+Next: <docs-engineer>
 ```
