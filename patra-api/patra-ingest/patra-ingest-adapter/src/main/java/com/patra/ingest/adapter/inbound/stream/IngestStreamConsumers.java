@@ -74,7 +74,6 @@ public class IngestStreamConsumers {
                 TaskReadyCommand command = parsePayload(message.getPayload(), message.getHeaders());
 
                 // 调用应用层用例
-                taskExecutionUseCase.startFromReady(command);
 
             } catch (Exception e) {
                 log.error("[INGEST][ADAPTER] failed to consume message, will retry", e);
