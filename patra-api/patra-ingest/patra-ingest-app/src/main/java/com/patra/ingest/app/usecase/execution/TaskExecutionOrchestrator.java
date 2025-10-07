@@ -38,35 +38,6 @@ import java.util.concurrent.TimeUnit;
 
 import static cn.hutool.core.text.CharSequenceUtil.isBlank;
 
-/**
- * 任务执行编排器（Task Execution Orchestrator）。
- * <p>
- * 职责：协调任务从 MQ 消费到执行会话初始化的全流程：
- * <ol>
- *   <li>步骤 0：CAS 抢占租约（≤1s）</li>
- *   <li>步骤 1：初始化执行会话（置 RUNNING + 创建 TaskRun + 安排心跳）</li>
- * </ol>
- * </p>
- * <p>
- * 幂等保障：
- * <ul>
- *   <li>SUCCEEDED 且 idempotentKey 匹配 → 直接跳过</li>
- *   <li>租约抢占失败（已被他人持有）→ 优雅退出，不抛异常</li>
- *   <li>数据库/解析异常 → 抛出异常，由 MQ binder 本地重试</li>
- * </ul>
- * </p>
- * <p>
- * 设计约束：
- * <ul>
- *   <li>应用层不引入框架依赖（除 Spring 注解），仅依赖领域接口与 patra-common</li>
- *   <li>复杂 SQL（CAS/续租）由 infra 层的 Mapper XML 实现</li>
- *   <li>事务边界：步骤 1 在同一事务内完成（markRunning + insert TaskRun）</li>
- * </ul>
- * </p>
- *
- * @author linqibin
- * @since 0.1.0
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -147,7 +118,7 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
             return; // 租约抢占失败，优雅退出（他人持有或条件不满足）
         }
 
-        // 从任务聚合中解析配置（planId/sliceId → plan/slice/window）
+        // todo 从任务聚合中解析配置（planId/sliceId → plan/slice/window） 这个设计不太行，需要优化
         TaskConfigResolution configResolution = resolveTaskConfig(task);
 
         // 步骤 1：初始化执行会话（事务内完成）
@@ -159,29 +130,43 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
             throw new RuntimeException("执行会话初始化失败", e); // 抛出异常触发 MQ 重试
         }
 
-        // 安排心跳续租
+        // todo 安排心跳续租（心跳续租也需要优化）
         scheduleHeartbeat(taskId, owner);
 
-        // 步骤 2：还原配置快照
-        ConfigurationSnapshot configSnapshot;
-        try {
-            configSnapshot = restoreConfigurationSnapshot(task, run, configResolution, owner);
-        } catch (Exception e) {
-            handleStep2Failure(task, run, owner, "STEP2_UNEXPECTED: " + StrUtil.sub(e.getMessage(), 0, 512));
-            throw new RuntimeException("配置快照还原失败", e);
-        }
-
-        if (!configSnapshot.valid()) {
-            return;
-        }
-
-        // 步骤3：渲染expr并执行（交由下游组件处理）
-        Expr expr = Exprs.fromJson(configSnapshot.exprSnapshotJson);
+        // 步骤 4：编译表达式（Compile Expression）
+        Expr expr = Exprs.fromJson();
         CompileResult compileResult = exprCompiler.compile(expr, ProvenanceCode.parse(task.getProvenanceCode()));
 
+        log.info("[INGEST][APP] task execution steps 0-4 done (preparation phase) taskId={} owner={} runId={} exprHash={}",
+                taskId, owner, run.getId(), );
 
-
-        log.info("[INGEST][APP] task execution steps 0-2 done taskId={} owner={} runId={}", taskId, owner, run.getId());
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        // TODO 步骤 5-8：执行阶段（Execution Phase）
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        //
+        // 步骤 5：生成 RunBatch 计划（Generate RunBatch Plan）
+        //   - 调用 BatchPlannerRegistry.getPlanner(provenanceCode)
+        //   - 执行 planner.plan(compileResult, configSnapshot, window, run)
+        //   - 对于 PubMed：esearch with usehistory=y → WebEnv/QueryKey/total
+        //   - 根据 pagination.pageSizeValue 计算 batchCount
+        //   - 批量插入 ing_task_run_batch（status=PENDING, idempotent_key）
+        //
+        // 步骤 6：执行 RunBatch（Execute RunBatch）
+        //   - 调用 RunBatchExecutor.execute(webEnvContext, configSnapshot)
+        //   - 查询 PENDING 状态的 batch（按 batch_no 排序）
+        //   - 遍历执行：幂等检查 → efetch → 压缩 → MinIO 上传 → Outbox 写入
+        //
+        // 步骤 7：推进游标（Advance Cursor）
+        //   - 调用 CursorAdvancer.advance(run, batches, operationCode)
+        //   - 聚合 batch.stats 中的最大值
+        //   - 更新 ing_cursor（乐观锁）+ 插入 ing_cursor_event（幂等）
+        //
+        // 步骤 8：更新执行状态（Update Execution State）
+        //   - 调用 ExecutionStateManager.updateFinalState(run, executionStats)
+        //   - 更新 ing_task_run 与 ing_task 状态
+        //   - 释放租约、停止心跳
+        //
+        // ═══════════════════════════════════════════════════════════════════════════════════
     }
 
     /**
