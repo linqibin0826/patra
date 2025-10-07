@@ -50,38 +50,40 @@
 2. WHEN 创建 TaskRun 记录 THEN 系统 SHALL 设置 attemptNo = 上次 attemptNo + 1
 3. WHEN 创建 TaskRun 记录 THEN 系统 SHALL 绑定 correlationId 和 schedulerRunId 用于分布式追踪
 4. WHEN 事务提交成功 THEN 系统 SHALL 启动心跳续租定时任务
-5. WHEN 心跳定时任务执行 THEN 系统 SHALL 每隔 20 秒（租约时长的 1/3）更新 leased_until 字段
+5. WHEN 心跳定时任务执行 THEN 系统 SHALL 按 renewalInterval 秒（默认 20，约为租约时长的 1/3）更新 leased_until 字段
 6. WHEN 心跳续租 THEN 系统 SHALL 验证 lease_owner 仍为当前节点，防止租约被其他节点接管
-7. IF 心跳续租失败（网络故障、节点崩溃） THEN 租约 SHALL 在 60 秒后自动过期，允许其他节点接管
-8. WHEN 任务执行完成或失败 THEN 系统 SHALL 停止心跳定时任务并释放资源
+7. WHEN 心跳续租连续失败达到阈值（默认 3 次） THEN 系统 SHALL 主动执行租约验证 validateLease；若被接管则抛出 LeaseRevokedException 并终止任务
+8. WHEN 启用批量心跳续租 THEN 系统 SHALL 对当前节点持有的任务按批量执行续租并记录指标（ingest.heartbeat.batch.renewal）
+9. IF 心跳续租持续失败（网络故障、节点崩溃） THEN 租约 SHALL 在过期后允许其他节点接管
+10. WHEN 任务执行完成或失败 THEN 系统 SHALL 停止心跳定时任务并释放资源
 
-### Requirement 4: 配置快照还原与哈希校验
+### Requirement 4: 执行上下文加载（配置快照 + 表达式 + 编译）
 
-**User Story:** 作为任务执行引擎，我希望从任务计划时保存的配置快照中还原执行参数，并通过哈希校验确保配置完整性，以保证任务按创建时的配置执行，实现幂等性。
-
-#### Acceptance Criteria
-
-1. WHEN 执行会话初始化完成 THEN 系统 SHALL 从任务记录中加载 provenance_config_snapshot 和 expr_snapshot
-2. WHEN 加载 provenance_config_snapshot THEN 系统 SHALL 解析出 API 基础地址、HTTP 超时/重试/代理设置、分页模式、每页大小、批处理策略
-3. WHEN 加载 expr_snapshot THEN 系统 SHALL 解析出搜索条件（关键词、时间范围、字段过滤等）和表达式哈希值
-4. WHEN 加载配置快照 THEN 系统 SHALL 计算配置的哈希值并与保存的哈希值对比
-5. IF 哈希值不匹配 THEN 系统 SHALL 抛出 ConfigurationTamperedException 并标记任务为 FAILED
-6. IF 哈希值匹配 THEN 系统 SHALL 继续执行后续步骤
-7. WHEN 配置加载耗时超过租约时长的 1/3 THEN 系统 SHALL 主动执行心跳续租
-8. WHEN 配置加载完成 THEN 系统 SHALL 刷新心跳时间戳
-
-### Requirement 5: 查询表达式编译
-
-**User Story:** 作为任务执行引擎，我希望将保存的查询表达式（JSON 格式）编译成目标数据源能理解的查询参数，以支持不同数据源的统一表达式管理。
+**User Story:** 作为任务执行引擎，我希望通过统一的执行上下文加载器将任务所需的配置快照与表达式一并还原并完成编译，以保证按计划时的配置稳定、可追溯、可幂等地执行。
 
 #### Acceptance Criteria
 
-1. WHEN 配置快照还原完成 THEN 系统 SHALL 调用表达式编译器编译 expr_snapshot
-2. WHEN 编译表达式 THEN 系统 SHALL 根据 provenanceCode 选择对应的编译器实现
-3. WHEN 编译 PubMed 表达式 THEN 系统 SHALL 生成 term、retmax、sort 等 ESearch API 参数
-4. WHEN 编译 EPMC 表达式 THEN 系统 SHALL 生成 query、pageSize、sort 等 Search API 参数
-5. IF 表达式编译失败（语法错误、不支持的操作符） THEN 系统 SHALL 抛出 ExpressionCompilationException 并标记任务为 FAILED
-6. IF 表达式编译成功 THEN 系统 SHALL 返回编译后的查询参数对象
+1. WHEN 执行会话初始化完成 THEN 系统 SHALL 通过 ExecutionContextLoader 从 Task → Slice → Plan 链路加载执行上下文
+2. WHEN 加载 Plan 快照 THEN 系统 SHALL 反序列化 provenance_config_snapshot，解析出 API 基础地址、HTTP 超时/重试/代理、分页模式、每页大小、批处理策略
+3. WHEN 加载 Slice 快照 THEN 系统 SHALL 使用 patra-expr-kernel 的 ExprJsonCodec 反序列化 expr_snapshot，并提取表达式哈希
+4. WHEN 恢复上下文 THEN 系统 SHALL 校验快照哈希（如 exprHash/configHash）与任务保存值一致
+5. IF 哈希校验失败 THEN 系统 SHALL 抛出 ConfigurationTamperedException 并标记任务为 FAILED
+6. WHEN 表达式加载完成 THEN 系统 SHALL 通过领域端口 ExpressionCompilerPort 编译表达式，产出 query/params/normalizedExpression
+7. IF 编译结果 isValid = false THEN 系统 SHALL 抛出 ExpressionCompilationException 并标记任务为 FAILED
+8. WHEN 上下文加载与编译耗时超过租约时长的 1/3 THEN 系统 SHALL 主动执行心跳续租；完成后刷新心跳时间戳
+
+### Requirement 5: 查询表达式编译（领域端口）
+
+**User Story:** 作为任务执行引擎，我希望通过领域端口统一编译查询表达式为目标数据源可执行的查询参数，确保与数据源和操作类型解耦，便于替换实现与测试。
+
+#### Acceptance Criteria
+
+1. WHEN 需要编译表达式 THEN 系统 SHALL 通过 ExpressionCompilerPort.compile(request) 执行编译
+2. WHEN 选择编译策略 THEN 系统 SHALL 基于 provenanceCode/operationType/operationCode 由基础设施适配器选择具体实现
+3. WHEN 编译 PubMed 表达式 THEN 系统 SHALL 生成用于 ESearch/EFetch 的 term 与 params，并返回 normalizedExpression
+4. WHEN 编译 EPMC 表达式 THEN 系统 SHALL 生成用于 Search API 的 query/cursor/pageSize/sort 等参数
+5. IF 编译过程抛出异常或返回 isValid = false THEN 系统 SHALL 记录错误并在 Orchestrator 层抛出 ExpressionCompilationException，标记任务为 FAILED
+6. IF 编译成功 THEN 系统 SHALL 返回 query、params、normalizedExpression、isValid=true、validationMessage
 
 ### Requirement 6: 批次规划与批次记录生成
 
@@ -95,9 +97,10 @@
 4. WHEN 计算批次数 THEN 系统 SHALL 使用公式：批次数 = min(总量 ÷ 每批大小, maxBatchesPerExecution)
 5. WHEN 生成批次记录 THEN 系统 SHALL 为每批生成唯一的幂等键（如 SHA256(runId + ":" + batchNo)）
 6. WHEN 生成批次记录 THEN 系统 SHALL 设置批次状态为 PENDING、记录批次参数（起始位置、游标 token、时间范围等）
-7. WHEN 批量插入批次记录 THEN 系统 SHALL 在一个事务内插入所有批次到 ing_task_run_batch 表
-8. IF 批次规划失败（API 调用失败、网络超时） THEN 系统 SHALL 抛出 BatchPlanningException 并标记任务为 FAILED
-9. WHEN 批次规划完成 THEN 系统 SHALL 记录 INFO 级别日志说明生成的批次数和总记录数
+7. WHEN 批量插入批次记录 THEN 系统 SHALL 按照 insertChunkSize 配置进行分批插入；每一批插入在独立事务中完成并记录 DEBUG 日志
+8. IF 计算得到的批次数 > maxBatchesPerExecution THEN 系统 SHALL 记录 WARN 日志并仅生成前 N 批次的记录
+9. IF 批次规划失败（API 调用失败、网络超时） THEN 系统 SHALL 抛出 BatchPlanningException 并标记任务为 FAILED
+10. WHEN 批次规划完成 THEN 系统 SHALL 记录 INFO 级别日志说明生成的批次数和总记录数
 
 ### Requirement 7: 批次执行与数据采集
 
@@ -125,17 +128,18 @@
 #### Acceptance Criteria
 
 1. WHEN 所有批次执行完成 THEN 系统 SHALL 根据 operation_type 判断是否需要推进游标
-2. IF operation_type = HARVEST 且游标类型 = 时间型 THEN 系统 SHALL 从所有 SUCCEEDED 批次的 stats 中提取最大时间戳
-3. IF operation_type = HARVEST 且游标类型 = ID 型 THEN 系统 SHALL 从所有 SUCCEEDED 批次的 stats 中提取最大记录 ID
-4. IF operation_type = BACKFILL THEN 系统 SHALL 记录已完成的时间窗口范围
-5. IF operation_type = UPDATE THEN 系统 SHALL 根据业务规则决定是否推进游标
-6. WHEN 计算新游标值 THEN 系统 SHALL 聚合所有 SUCCEEDED 批次的统计信息计算全局最大值
-7. WHEN 更新游标表 THEN 系统 SHALL 使用乐观锁（version 字段）更新 ing_cursor 表
-8. WHEN 更新游标表 THEN 系统 SHALL 记录推进后的值和规范化时间（normalized_instant）
-9. WHEN 游标更新成功 THEN 系统 SHALL 插入游标事件到 ing_cursor_event 表，记录推进历史（从哪到哪、操作类型、关联的 run_id）
-10. WHEN 插入游标事件 THEN 系统 SHALL 使用幂等键防止重复推进
-11. IF 游标更新失败（乐观锁冲突） THEN 系统 SHALL 重试最多 3 次
-12. IF 游标更新仍失败 THEN 系统 SHALL 记录 ERROR 日志但不影响任务状态（游标推进失败不应导致任务失败）
+2. WHEN 需要推进游标 THEN 系统 SHALL 通过 CursorAdvancerRegistry.getAdvancer(operation_type) 选择对应推进策略
+3. IF operation_type = HARVEST 且游标类型 = 时间型 THEN 系统 SHALL 从所有 SUCCEEDED 批次的 stats 中提取最大时间戳
+4. IF operation_type = HARVEST 且游标类型 = ID 型 THEN 系统 SHALL 从所有 SUCCEEDED 批次的 stats 中提取最大记录 ID
+5. IF operation_type = BACKFILL THEN 系统 SHALL 记录已完成的时间窗口范围
+6. IF operation_type = UPDATE THEN 系统 SHALL 根据业务规则决定是否推进游标
+7. WHEN 计算新游标值 THEN 系统 SHALL 聚合所有 SUCCEEDED 批次的统计信息计算全局最大值
+8. WHEN 更新游标表 THEN 系统 SHALL 使用乐观锁（version 字段）更新 ing_cursor 表
+9. WHEN 更新游标表 THEN 系统 SHALL 记录推进后的值和规范化时间（normalized_instant）
+10. WHEN 游标更新成功 THEN 系统 SHALL 插入游标事件到 ing_cursor_event 表，记录推进历史（从哪到哪、操作类型、关联的 run_id）
+11. WHEN 插入游标事件 THEN 系统 SHALL 使用幂等键防止重复推进
+12. IF 游标更新失败（乐观锁冲突） THEN 系统 SHALL 重试最多 3 次
+13. IF 游标更新仍失败 THEN 系统 SHALL 记录 ERROR 日志但不影响任务状态（游标推进失败不应导致任务失败）
 
 ### Requirement 9: 执行状态更新与任务收尾
 
@@ -196,3 +200,5 @@
 8. WHEN 心跳续租 THEN 系统 SHALL 记录 DEBUG 级别日志说明续租结果
 9. WHEN 租约抢占失败 THEN 系统 SHALL 记录 INFO 级别日志说明其他节点正在执行
 10. WHEN 批次跳过（幂等） THEN 系统 SHALL 记录 DEBUG 级别日志说明跳过原因
+11. WHEN 租约被接管 THEN 系统 SHALL 递增 metric ingest.lease.revoked 并记录 WARN 日志
+12. WHEN 批量心跳续租执行 THEN 系统 SHALL 记录 metric ingest.heartbeat.batch.renewal（含批量大小与续租成功数）
