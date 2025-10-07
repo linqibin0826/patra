@@ -231,6 +231,16 @@ public class TaskAggregate extends AggregateRoot<Long> {
         this.status = TaskStatus.FAILED;
     }
 
+    public void markPartial(Instant finishedAt) {
+        this.executionTimeline = executionTimeline.onFinish(finishedAt);
+        this.status = TaskStatus.PARTIAL;
+    }
+
+    public void markCursorPending(Instant finishedAt) {
+        this.executionTimeline = executionTimeline.onFinish(finishedAt);
+        this.status = TaskStatus.CURSOR_PENDING;
+    }
+
     public void markCancelled(Instant finishedAt) {
         this.executionTimeline = executionTimeline.onFinish(finishedAt);
         this.status = TaskStatus.CANCELLED;

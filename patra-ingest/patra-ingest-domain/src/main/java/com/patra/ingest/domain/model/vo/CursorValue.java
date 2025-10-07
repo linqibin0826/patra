@@ -36,4 +36,11 @@ public record CursorValue(CursorType type, String raw, Instant instant, BigDecim
     public static CursorValue token(String token) {
         return new CursorValue(CursorType.TOKEN, token, null, null);
     }
+
+    /**
+     * 构建空游标值
+     */
+    public static CursorValue empty() {
+        return new CursorValue(CursorType.TIME, null, null, null);
+    }
 }

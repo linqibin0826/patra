@@ -27,6 +27,28 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
     private final TaskRunBatchConverter converter;
 
     /**
+     * 保存单个运行批次（insert or update）。
+     * @param batch 批次实体
+     */
+    @Override
+    public void save(TaskRunBatch batch) {
+        TaskRunBatchDO dto = converter.toDO(batch);
+        if (dto.getId() == null) {
+            mapper.insert(dto);
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][INFRA] task run batch insert runId={} batchNo={} status={}",
+                          dto.getRunId(), dto.getBatchNo(), dto.getStatusCode());
+            }
+        } else {
+            mapper.updateById(dto);
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][INFRA] task run batch update id={} runId={} batchNo={} status={}",
+                          dto.getId(), dto.getRunId(), dto.getBatchNo(), dto.getStatusCode());
+            }
+        }
+    }
+
+    /**
      * 批量保存运行批次（insert or update）。
      * @param batches 批次集合
      */

@@ -143,4 +143,15 @@ public class TaskRun {
         error = err;
         finishedAt = now;
     }
+
+    public void markPartial(String err, Instant now) {
+        status = TaskRunStatus.PARTIAL;
+        error = err;
+        finishedAt = now;
+    }
+
+    public void markCursorPending(Instant now) {
+        status = TaskRunStatus.CURSOR_PENDING;
+        finishedAt = now;
+    }
 }

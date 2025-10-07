@@ -13,6 +13,13 @@ import java.util.List;
 public interface TaskRunBatchRepository {
 
     /**
+     * 保存单个任务运行批次记录。
+     *
+     * @param batch 批次实体
+     */
+    void save(TaskRunBatch batch);
+
+    /**
      * 批量写入任务运行批次记录。
      *
      * @param batches 批次实体集合，包含批次状态与统计信息

@@ -80,4 +80,52 @@ public class Cursor {
     public void updateObservedMax(String observedMax) {
         this.watermark = new CursorWatermark(observedMax, watermark.normalizedInstant(), watermark.normalizedNumeric());
     }
+
+    /**
+     * 创建新游标（时间类型）。
+     */
+    public static Cursor create(String provenanceCode,
+                                String operationCode,
+                                String cursorKey,
+                                String namespaceScope,
+                                String namespaceKey,
+                                java.time.Instant watermark) {
+        NamespaceScope scope = NamespaceScope.fromCode(namespaceScope);
+        CursorType type = CursorType.TIME;
+        CursorValue value = CursorValue.empty();
+        CursorWatermark watermarkVO = new CursorWatermark(
+            watermark == null ? null : watermark.toString(),
+            watermark,
+            null
+        );
+        return new Cursor(null, provenanceCode, operationCode, cursorKey, scope, namespaceKey,
+                         type, value, watermarkVO, CursorLineage.empty(), null);
+    }
+
+    /**
+     * 推进游标到新水位（仅时间类型）。
+     */
+    public void advanceTo(java.time.Instant newWatermark) {
+        if (newWatermark == null) {
+            throw new IllegalArgumentException("新水位不能为空");
+        }
+        // 检查水位不倒退
+        if (watermark.normalizedInstant() != null && newWatermark.isBefore(watermark.normalizedInstant())) {
+            throw new IllegalArgumentException(
+                "游标水位不能倒退 current=" + watermark.normalizedInstant() + " new=" + newWatermark
+            );
+        }
+        this.watermark = new CursorWatermark(
+            newWatermark.toString(),
+            newWatermark,
+            null
+        );
+    }
+
+    /**
+     * 获取当前水位（时间类型）。
+     */
+    public java.time.Instant getCurrentWatermark() {
+        return watermark.normalizedInstant();
+    }
 }

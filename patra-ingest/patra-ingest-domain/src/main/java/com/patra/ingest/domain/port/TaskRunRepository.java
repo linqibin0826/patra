@@ -83,4 +83,12 @@ public interface TaskRunRepository {
      * @return 是否更新成功
      */
     boolean markFailed(Long runId, String errorMessage, Instant now);
+
+    /**
+     * 检查任务是否存在成功的运行记录（用于幂等判断）。
+     *
+     * @param taskId 任务 ID
+     * @return true 表示已有 SUCCEEDED 状态的运行记录
+     */
+    boolean hasSucceededRun(Long taskId);
 }

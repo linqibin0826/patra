@@ -26,6 +26,14 @@ public enum TaskStatus {
      */
     FAILED("FAILED", "失败"),
     /**
+     * 部分批次失败
+     */
+    PARTIAL("PARTIAL", "部分失败"),
+    /**
+     * 批次全部成功但游标推进失败，等待异步重试
+     */
+    CURSOR_PENDING("CURSOR_PENDING", "游标推进待重试"),
+    /**
      * 被主动终止或条件不满足取消
      */
     CANCELLED("CANCELLED", "已取消");

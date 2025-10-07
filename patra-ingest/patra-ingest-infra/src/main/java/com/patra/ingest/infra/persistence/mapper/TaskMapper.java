@@ -92,4 +92,22 @@ public interface TaskMapper extends BaseMapper<TaskDO> {
                    @Param("owner") String owner,
                    @Param("now") Instant now,
                    @Param("ttlSec") int ttlSec);
+
+    /**
+     * 批量心跳续租（性能优化）。
+     * <p>
+     * 前置条件：WHERE id IN (taskIds) AND lease_owner=#{owner}
+     * 实现位于：TaskMapper.xml#batchRenewLeases
+     * </p>
+     *
+     * @param taskIds 任务ID列表
+     * @param owner 租约持有者
+     * @param now 当前时间
+     * @param ttlSec 租约 TTL（秒）
+     * @return 受影响行数（成功续租的任务数）
+     */
+    int batchRenewLeases(@Param("taskIds") java.util.List<Long> taskIds,
+                         @Param("owner") String owner,
+                         @Param("now") Instant now,
+                         @Param("ttlSec") int ttlSec);
 }

@@ -3,15 +3,18 @@ package com.patra.ingest.app.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.time.Clock;
 
 /**
- * 任务执行配置（Task Execution Config）。
+ * 任务执行引擎配置类。
  * <p>
- * 职责：提供任务执行相关的基础设施 Bean，包括：
+ * 职责：提供任务执行引擎所需的基础 Bean（Clock、Executor 等）。
+ * </p>
+ * <p>
+ * 设计要点：
  * <ul>
- *   <li>心跳调度器（ScheduledExecutorService）：用于定时续租</li>
+ *   <li>Clock：提供统一的时间源，便于测试时 Mock。</li>
+ *   <li>可扩展：后续可添加线程池、限流器等配置。</li>
  * </ul>
  * </p>
  *
@@ -22,22 +25,13 @@ import java.util.concurrent.ScheduledExecutorService;
 public class TaskExecutionConfig {
 
     /**
-     * 心跳调度器（用于租约续租）。
+     * 提供系统时钟（UTC）。
      * <p>
-     * 使用单线程调度器，避免并发续租导致的资源浪费。
-     * 每个任务启动时注册一个定时任务，任务完成后需手动取消。
+     * 使用 Clock.systemUTC() 作为默认时钟源，便于测试时替换为固定时钟。
      * </p>
-     *
-     * @return ScheduledExecutorService
      */
-    @Bean(destroyMethod = "shutdown")
-    public ScheduledExecutorService heartbeatScheduler() {
-        return Executors.newScheduledThreadPool(
-                Runtime.getRuntime().availableProcessors(),
-                r -> {
-                    Thread thread = new Thread(r, "heartbeat-scheduler");
-                    thread.setDaemon(true);
-                    return thread;
-                });
+    @Bean
+    public Clock clock() {
+        return Clock.systemUTC();
     }
 }

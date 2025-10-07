@@ -11,6 +11,8 @@ public enum TaskRunStatus {
     RUNNING("RUNNING", "运行中"),
     SUCCEEDED("SUCCEEDED", "成功"),
     FAILED("FAILED", "失败"),
+    PARTIAL("PARTIAL", "部分失败"),
+    CURSOR_PENDING("CURSOR_PENDING", "游标推进待重试"),
     CANCELLED("CANCELLED", "已取消");
 
     private final String code; private final String description;

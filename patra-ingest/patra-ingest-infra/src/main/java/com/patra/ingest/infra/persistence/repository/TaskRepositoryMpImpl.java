@@ -196,4 +196,30 @@ public class TaskRepositoryMpImpl implements TaskRepository {
         }
         return affected > 0;
     }
+
+    /**
+     * 批量心跳续租（性能优化）。
+     * @param taskIds 任务ID列表
+     * @param owner 租约持有者
+     * @param now 当前时间
+     * @param ttlSeconds 租约 TTL（秒）
+     * @return 成功续租的任务数
+     */
+    @Override
+    public int batchRenewLeases(List<Long> taskIds, String owner, Instant now, int ttlSeconds) {
+        if (taskIds == null || taskIds.isEmpty()) {
+            return 0;
+        }
+        int affected = mapper.batchRenewLeases(taskIds, owner, now, ttlSeconds);
+        if (affected > 0) {
+            if (log.isDebugEnabled()) {
+                log.debug("[INGEST][INFRA] batch lease renewed count={} owner={} requestedCount={}",
+                          affected, owner, taskIds.size());
+            }
+        } else {
+            log.warn("[INGEST][INFRA] batch lease renewal failed owner={} requestedCount={}",
+                     owner, taskIds.size());
+        }
+        return affected;
+    }
 }

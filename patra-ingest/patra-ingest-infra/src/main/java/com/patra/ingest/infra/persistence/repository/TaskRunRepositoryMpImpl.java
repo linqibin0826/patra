@@ -137,4 +137,15 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
         }
         return updated > 0;
     }
+
+    @Override
+    public boolean hasSucceededRun(Long taskId) {
+        if (taskId == null) {
+            return false;
+        }
+        Long count = mapper.selectCount(new QueryWrapper<TaskRunDO>()
+            .eq("task_id", taskId)
+            .eq("status_code", "SUCCEEDED"));
+        return count != null && count > 0;
+    }
 }

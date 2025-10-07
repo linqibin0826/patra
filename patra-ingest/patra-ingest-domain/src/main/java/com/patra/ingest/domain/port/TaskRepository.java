@@ -107,4 +107,19 @@ public interface TaskRepository {
      * @return true 表示续租成功，false 表示租约已丢失
      */
     boolean renewLease(Long taskId, String owner, Instant now, int ttlSeconds);
+
+    /**
+     * 批量心跳续租（性能优化）。
+     * <p>
+     * 前置条件：WHERE id IN (taskIds) AND lease_owner=#{owner}
+     * 更新字段：leased_until、last_heartbeat_at、lease_count+1
+     * </p>
+     *
+     * @param taskIds 任务ID列表
+     * @param owner 租约持有者
+     * @param now 当前时间
+     * @param ttlSeconds 租约 TTL（秒）
+     * @return 成功续租的任务数
+     */
+    int batchRenewLeases(List<Long> taskIds, String owner, Instant now, int ttlSeconds);
 }

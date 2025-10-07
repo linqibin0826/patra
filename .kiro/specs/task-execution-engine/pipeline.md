@@ -38,7 +38,7 @@
 
 | 阶段 | 负责子代理 | 职责 | 输出 |
 |------|-----------|------|------|
-| **实现** | architecture-designer → java-spring-coder | 架构设计 + 编码实现 | 可编译的代码 |
+| **实现** | architecture-designer → java-developer | 架构设计 + 编码实现 | 可编译的代码 |
 | **评审** | architecture-reviewer + code-reviewer | 架构合规 + 代码质量 | 评审报告 + 问题清单 |
 | **单测** | qa-unit-tests | JUnit5单元测试 | 单元测试代码 + 覆盖率报告 |
 | **集成** | qa-integration-tests | Spring Boot Test + Testcontainers | 集成测试代码 + 测试报告 |
@@ -62,7 +62,7 @@
 
 ### 阶段1：实现阶段
 
-**子代理**：`architecture-designer`（先出设计方案）→ `java-spring-coder`（落地实现）
+**子代理**：`architecture-designer`（先出设计方案）→ `java-developer`（落地实现）
 
 #### 产出清单
 
@@ -274,7 +274,7 @@
 
 ### 阶段1：实现阶段
 
-**子代理**：`java-spring-coder`
+**子代理**：`java-developer`
 
 #### 产出清单
 
@@ -497,7 +497,7 @@
 
 ### 阶段1：实现阶段
 
-**子代理**：`java-spring-coder`
+**子代理**：`java-developer`
 
 #### 产出清单
 
@@ -772,7 +772,7 @@
 
 ### 阶段1：实现阶段
 
-**子代理**：`java-spring-coder`
+**子代理**：`java-developer`
 
 #### 产出清单
 
@@ -1244,7 +1244,7 @@
 
 3. **开始批次1实现**：
    - 调用 `architecture-designer` 子代理出设计方案
-   - 调用 `java-spring-coder` 子代理实现Domain层和Repository层
+   - 调用 `java-developer` 子代理实现Domain层和Repository层
    - 按流水线顺序完成6个阶段
 
 ### 跟踪与反馈
