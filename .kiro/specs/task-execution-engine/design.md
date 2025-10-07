@@ -145,16 +145,106 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
     private final IdempotencyChecker idempotencyChecker;
     private final LeaseAcquisitionService leaseAcquisitionService;
     private final ExecutionSessionInitializer sessionInitializer;
-    private final ConfigSnapshotRestorer configRestorer;
-    private final ExpressionCompiler expressionCompiler;
+    private final ExecutionContextLoader contextLoader; // 替换了 ConfigSnapshotRestorer 和 ExpressionCompiler
     private final BatchPlannerRegistry batchPlannerRegistry;
     private final BatchExecutorRegistry batchExecutorRegistry;
     private final CursorAdvancerRegistry cursorAdvancerRegistry;
     private final ExecutionFinalizer executionFinalizer;
-    
+
     @Override
     public TaskExecutionResult execute(TaskExecutionCommand command) {
-        // 步骤 0-8 的编排逻辑
+        Long taskId = command.taskId();
+        String idempotentKey = command.idempotentKey();
+
+        log.info("[INGEST][APP] Task execution start: taskId={} idempotentKey={}", taskId, idempotentKey);
+
+        try {
+            // 步骤 0: 幂等检查
+            if (idempotencyChecker.isAlreadyCompleted(taskId, idempotentKey)) {
+                log.info("[INGEST][APP] Task already completed, skip: taskId={}", taskId);
+                return TaskExecutionResult.skipped(taskId);
+            }
+
+            // 步骤 1: 租约抢占
+            LeaseAcquisitionResult leaseResult = leaseAcquisitionService.tryAcquire(
+                    taskId,
+                    generateLeaseOwner(),
+                    60 // 租约时长（秒）
+            );
+            if (!leaseResult.isSuccess()) {
+                log.info("[INGEST][APP] Lease acquisition failed: taskId={} reason={}",
+                        taskId, leaseResult.getReason());
+                return TaskExecutionResult.leaseFailed(taskId, leaseResult.getReason());
+            }
+
+            // 步骤 2: 会话初始化（创建 TaskRun + 启动心跳）
+            ExecutionSession session = sessionInitializer.initialize(
+                    ExecutionContext.of(taskId, leaseResult.getLeaseOwner())
+            );
+            ScheduledFuture<?> heartbeat = session.getHeartbeatHandle();
+
+            try {
+                // 步骤 3-4: 加载执行上下文（配置快照 + 表达式 + 编译）
+                ExecutionContext context = contextLoader.load(taskId);
+
+                // 步骤 5: 批次规划
+                BatchPlanner planner = batchPlannerRegistry.getPlanner(
+                        context.task().getProvenanceCode().getCode()
+                );
+                BatchPlan batchPlan = planner.plan(context, session.getRunId());
+
+                // 步骤 6: 批次执行
+                BatchExecutor executor = batchExecutorRegistry.getExecutor(
+                        context.task().getProvenanceCode().getCode()
+                );
+                BatchExecutionResult batchResult = executor.execute(
+                        context,
+                        batchPlan,
+                        session.getRunId()
+                );
+
+                // 步骤 7: 游标推进
+                CursorAdvancer advancer = cursorAdvancerRegistry.getAdvancer(
+                        context.task().getOperationCode().getType()
+                );
+                CursorAdvancementResult cursorResult = advancer.advance(
+                        context,
+                        batchResult,
+                        session.getRunId()
+                );
+
+                // 步骤 8: 状态更新
+                FinalizationResult finalizationResult = executionFinalizer.finalize(
+                        context,
+                        batchResult,
+                        cursorResult,
+                        session.getRunId()
+                );
+
+                log.info("[INGEST][APP] Task execution completed: taskId={} status={}",
+                        taskId, finalizationResult.getStatus());
+                return TaskExecutionResult.success(taskId, finalizationResult);
+
+            } finally {
+                // 停止心跳续租
+                sessionInitializer.stopHeartbeat(heartbeat);
+            }
+
+        } catch (LeaseRevokedException e) {
+            // 租约被接管，快速失败
+            log.warn("[INGEST][APP] Lease revoked: taskId={} expectedOwner={} actualOwner={}",
+                    taskId, e.getExpectedOwner(), e.getActualOwner());
+            return TaskExecutionResult.leaseRevoked(taskId);
+
+        } catch (Exception e) {
+            log.error("[INGEST][APP] Task execution failed: taskId={}", taskId, e);
+            return TaskExecutionResult.failed(taskId, e.getMessage());
+        }
+    }
+
+    private String generateLeaseOwner() {
+        // 生成租约持有者标识：nodeId:randomId
+        return LeaseOwner.generate(getNodeId()).toString();
     }
 }
 ```
@@ -407,70 +497,132 @@ public interface TaskRepository {
  */
 ```
 
-### 5. 配置快照还原器 (ConfigSnapshotRestorer)
+### 5. 执行上下文加载器 (ExecutionContextLoader)
 
-**职责**：从任务记录中还原配置快照并校验哈希。
+**职责**：从 Task → Slice → Plan 链路加载完整的执行上下文（配置快照 + 表达式 + 编译结果）。
+
+**设计说明**：
+
+- Task 本身不存储完整的配置和表达式，只存储关联 ID（planId、sliceId）和哈希（exprHash）
+- 需要通过关联关系向上游加载：Task → Slice（表达式快照）→ Plan（配置快照）
+- 使用 `patra-expr-kernel` 的 `ExprJsonCodec` 反序列化表达式
+- 使用 `patra-spring-boot-starter-expr` 的 `ExprCompiler` 编译表达式
 
 **接口定义**：
 
 ```java
-public interface ConfigSnapshotRestorer {
+public interface ExecutionContextLoader {
     /**
-     * 还原配置快照
+     * 加载执行上下文
      * @param taskId 任务 ID
-     * @return 配置快照
+     * @return 执行上下文
      */
-    ConfigSnapshot restore(Long taskId);
+    ExecutionContext load(Long taskId);
 }
 
-public record ConfigSnapshot(
-    ProvenanceConfig provenanceConfig,
-    ExprSnapshot exprSnapshot,
-    String configHash
-) {
-    public void validateHash() {
-        String calculatedHash = calculateHash();
-        if (!calculatedHash.equals(configHash)) {
-            throw new ConfigurationTamperedException("配置哈希不匹配");
+@Service
+@RequiredArgsConstructor
+public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
+    private final TaskRepository taskRepository;
+    private final PlanSliceRepository sliceRepository;
+    private final PlanRepository planRepository;
+    private final ExprCompiler exprCompiler; // 由 patra-spring-boot-starter-expr 提供
+    private final ObjectMapper objectMapper;
+
+    @Override
+    public ExecutionContext load(Long taskId) {
+        // 1. 加载 Task 聚合
+        TaskAggregate task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        // 2. 加载 Slice（获取表达式快照）
+        PlanSliceAggregate slice = sliceRepository.findById(task.getSliceId())
+                .orElseThrow(() -> new SliceNotFoundException(task.getSliceId()));
+
+        // 3. 加载 Plan（获取配置快照）
+        PlanAggregate plan = planRepository.findById(task.getPlanId())
+                .orElseThrow(() -> new PlanNotFoundException(task.getPlanId()));
+
+        // 4. 反序列化配置快照（ProvenanceConfigSnapshot）
+        ProvenanceConfigSnapshot configSnapshot = objectMapper.readValue(
+                plan.getProvenanceConfigSnapshotJson(),
+                ProvenanceConfigSnapshot.class
+        );
+
+        // 5. 反序列化表达式（Expr）- 使用 patra-expr-kernel 的 ExprJsonCodec
+        Expr expression = ExprJsonCodec.fromJson(slice.getExprSnapshotJson());
+
+        // 6. 编译表达式为查询 - 使用 patra-spring-boot-starter-expr 的 ExprCompiler
+        CompileRequest compileRequest = CompileRequestBuilder
+                .of(expression, task.getProvenanceCode())
+                .forOperationType(task.getOperationCode().getType())
+                .forOperation(task.getOperationCode().getCode())
+                .build();
+        CompileResult compileResult = exprCompiler.compile(compileRequest);
+
+        // 7. 验证编译结果
+        if (!compileResult.report().isValid()) {
+            throw new ExpressionCompilationException(
+                    "Expression validation failed: " + compileResult.report().summary()
+            );
         }
+
+        // 8. 组装执行上下文
+        return new ExecutionContext(task, configSnapshot, expression, compileResult);
+    }
+}
+
+/**
+ * 执行上下文（值对象）
+ */
+public record ExecutionContext(
+    TaskAggregate task,
+    ProvenanceConfigSnapshot configSnapshot,
+    Expr expression,
+    CompileResult compileResult
+) {
+    /**
+     * 获取编译后的查询字符串
+     */
+    public String getQuery() {
+        return compileResult.query();
+    }
+
+    /**
+     * 获取查询参数
+     */
+    public Map<String, String> getQueryParams() {
+        return compileResult.params();
+    }
+
+    /**
+     * 获取规范化后的表达式
+     */
+    public Expr getNormalizedExpression() {
+        return compileResult.normalized();
     }
 }
 ```
 
-### 6. 表达式编译器 (ExpressionCompiler)
+**关键依赖**：
 
-**职责**：将表达式快照编译为目标数据源的查询参数。
+- `ExprJsonCodec`（`patra-expr-kernel`）：提供 `Expr` 的 JSON 序列化/反序列化
+  - `ExprJsonCodec.fromJson(String)` → `Expr`
+  - `ExprJsonCodec.toJson(Expr)` → `String`
 
-**接口定义**：
+- `ExprCompiler`（`patra-spring-boot-starter-expr`）：将 `Expr` 编译为目标数据源的查询
+  - 输入：`CompileRequest`（Expr + ProvenanceCode + operationType + operationCode）
+  - 输出：`CompileResult`（query + params + normalized + validation report）
 
-```java
-public interface ExpressionCompiler {
-    /**
-     * 编译表达式
-     * @param exprSnapshot 表达式快照
-     * @param provenanceCode 数据源代码
-     * @return 编译后的查询参数
-     */
-    QueryParameters compile(ExprSnapshot exprSnapshot, String provenanceCode);
-}
-
-// 策略接口
-public interface ExpressionCompilerStrategy {
-    /**
-     * 是否支持该数据源
-     */
-    boolean supports(String provenanceCode);
-    
-    /**
-     * 编译表达式
-     */
-    QueryParameters compile(ExprSnapshot exprSnapshot);
-}
-```
-
-### 7. 批次规划器注册表 (BatchPlannerRegistry)
+### 6. 批次规划器注册表 (BatchPlannerRegistry)
 
 **职责**：根据数据源代码选择对应的批次规划器。
+
+**设计说明**：
+
+- 批次规划器接收 ExecutionContext（包含编译后的 query 和 params）
+- 根据 ProvenanceConfigSnapshot 中的 PaginationConfig 规划批次
+- 批次规划结果包含批次记录（RunBatchAggregate）和总数统计
 
 **接口定义**：
 
@@ -488,16 +640,18 @@ public interface BatchPlannerRegistry {
 public interface BatchPlanner {
     /**
      * 规划批次
-     * @param context 规划上下文
+     * @param context 执行上下文（包含编译后的查询、配置快照等）
+     * @param runId 执行记录 ID
      * @return 批次计划
      */
-    BatchPlan plan(BatchPlanningContext context);
+    BatchPlan plan(ExecutionContext context, Long runId);
 }
 
 // PubMed 实现（包含批次数限制和分批插入 - 解决 Critical-5）
 @Component
 public class PubMedBatchPlanner implements BatchPlanner {
     private final BatchRepository batchRepository;
+    private final PubMedClient pubMedClient; // HTTP 客户端（调用 ESearch API）
 
     @Value("${patra.ingest.task-execution.batch.max-batches-per-execution:1000}")
     private int maxBatchesPerExecution;
@@ -506,29 +660,40 @@ public class PubMedBatchPlanner implements BatchPlanner {
     private int insertChunkSize; // 批次记录分批插入的大小
 
     @Override
-    public BatchPlan plan(BatchPlanningContext context) {
-        // 1. 调用 ESearch API 获取总数和 WebEnv
-        ESearchResult searchResult = pubMedClient.search(context.getQueryParams());
+    public BatchPlan plan(ExecutionContext context, Long runId) {
+        // 1. 获取配置
+        ProvenanceConfigSnapshot.PaginationConfig paginationConfig =
+                context.configSnapshot().pagination();
+        int pageSize = paginationConfig.pageSizeValue() != null
+                ? paginationConfig.pageSizeValue()
+                : 500; // 默认值
+
+        // 2. 调用 ESearch API 获取总数和 WebEnv
+        // query 和 params 已经由 ExprCompiler 编译完成
+        ESearchRequest searchRequest = buildSearchRequest(
+                context.getQuery(),
+                context.getQueryParams()
+        );
+        ESearchResult searchResult = pubMedClient.search(searchRequest);
         int totalRecords = searchResult.getTotalCount();
         String webEnv = searchResult.getWebEnv();
 
-        // 2. 计算批次数，增加上限检查
-        int pageSize = context.getPageSize();
+        // 3. 计算批次数，增加上限检查
         int calculatedBatches = (int) Math.ceil((double) totalRecords / pageSize);
         int actualBatches = Math.min(calculatedBatches, maxBatchesPerExecution);
 
-        // 3. 检查批次数是否超过限制
+        // 4. 检查批次数是否超过限制
         if (calculatedBatches > maxBatchesPerExecution) {
             log.warn("[INGEST][APP] Batch count exceeds limit: calculated={} limit={} taskId={}",
-                    calculatedBatches, maxBatchesPerExecution, context.getTaskId());
+                    calculatedBatches, maxBatchesPerExecution, context.task().getId());
             // 可以选择：1) 拒绝任务 2) 拆分为多个子任务 3) 只执行前 N 批（当前采用）
         }
 
-        // 4. 生成批次记录
+        // 5. 生成批次记录
         List<RunBatchAggregate> batches = new ArrayList<>(actualBatches);
         for (int i = 0; i < actualBatches; i++) {
             batches.add(createBatch(
-                    context.getRunId(),
+                    runId,
                     i + 1,
                     i * pageSize,
                     pageSize,
@@ -536,15 +701,25 @@ public class PubMedBatchPlanner implements BatchPlanner {
             ));
         }
 
-        // 5. 分批插入数据库（避免单次插入过多）
+        // 6. 分批插入数据库（避免单次插入过多）
         List<List<RunBatchAggregate>> chunks = Lists.partition(batches, insertChunkSize);
         for (List<RunBatchAggregate> chunk : chunks) {
             batchRepository.batchInsert(chunk);
             log.debug("[INGEST][APP] Batch records inserted: count={} runId={}",
-                    chunk.size(), context.getRunId());
+                    chunk.size(), runId);
         }
 
         return new BatchPlan(actualBatches, totalRecords, webEnv);
+    }
+
+    private ESearchRequest buildSearchRequest(String query, Map<String, String> params) {
+        // 将编译后的 query 和 params 组装为 PubMed ESearch API 请求
+        return ESearchRequest.builder()
+                .term(query)
+                .params(params)
+                .retmode("json")
+                .usehistory("y") // 使用 WebEnv 机制
+                .build();
     }
 
     private RunBatchAggregate createBatch(Long runId, int batchNo, int retstart, int retmax, String webEnv) {
@@ -561,11 +736,19 @@ public class PubMedBatchPlanner implements BatchPlanner {
 // EPMC 实现
 @Component
 public class EpmcBatchPlanner implements BatchPlanner {
+    private final BatchRepository batchRepository;
+    private final EpmcClient epmcClient;
+
     @Override
-    public BatchPlan plan(BatchPlanningContext context) {
+    public BatchPlan plan(ExecutionContext context, Long runId) {
         // 1. 调用初始 Search API 获取第一页和 cursor
+        // 使用 context.getQuery() 和 context.getQueryParams()
+        String initialCursor = epmcClient.search(context.getQuery(), context.getQueryParams())
+                .getNextCursorMark();
+
         // 2. 生成批次记录（每批使用上一批的 cursor）
-        // 3. 同样实施批次数限制和分批插入
+        // 3. 同样实施批次数限制和分批插入（参考 PubMedBatchPlanner）
+        return BatchPlan.empty(); // 实现略
     }
 }
 ```
@@ -590,11 +773,25 @@ public interface BatchExecutorRegistry {
 public interface BatchExecutor {
     /**
      * 执行批次
-     * @param context 执行上下文
+     * @param context 全局执行上下文（包含配置快照、编译结果等）
+     * @param batchPlan 批次计划
+     * @param runId 执行记录 ID
      * @return 批次执行结果
      */
-    BatchExecutionResult execute(BatchExecutionContext context);
+    BatchExecutionResult execute(ExecutionContext context, BatchPlan batchPlan, Long runId);
 }
+
+/**
+ * 批次执行结果
+ */
+public record BatchExecutionResult(
+    int totalBatches,
+    int succeededBatches,
+    int failedBatches,
+    List<Long> succeededBatchIds,
+    List<Long> failedBatchIds,
+    ExecutionStats stats
+) {}
 
 // PubMed 实现
 @Component
@@ -602,17 +799,136 @@ public class PubMedBatchExecutor implements BatchExecutor {
     private final PubMedClient pubMedClient;
     private final MinIOStorageAdapter storageAdapter;
     private final OutboxPublisher outboxPublisher;
-    
+    private final BatchRepository batchRepository;
+    private final MeterRegistry meterRegistry;
+
     @Override
-    public BatchExecutionResult execute(BatchExecutionContext context) {
-        // 1. 幂等检查
-        // 2. 更新批次状态为 RUNNING
-        // 3. 调用 EFetch API
-        // 4. 解析响应
-        // 5. 压缩数据
-        // 6. 上传 MinIO
-        // 7. 写入 Outbox（事务）
-        // 8. 更新批次状态为 SUCCEEDED
+    public BatchExecutionResult execute(ExecutionContext context, BatchPlan batchPlan, Long runId) {
+        // 获取配置
+        ProvenanceConfigSnapshot.HttpConfig httpConfig = context.configSnapshot().http();
+        ProvenanceConfigSnapshot.BatchingConfig batchingConfig = context.configSnapshot().batching();
+
+        // 查询所有待执行批次
+        List<RunBatchAggregate> batches = batchRepository.findByRunIdAndStatus(
+            runId, BatchStatus.PENDING
+        );
+
+        int succeeded = 0;
+        int failed = 0;
+        List<Long> succeededBatchIds = new ArrayList<>();
+        List<Long> failedBatchIds = new ArrayList<>();
+
+        for (RunBatchAggregate batch : batches) {
+            try {
+                // 1. 幂等检查（如果批次已完成则跳过）
+                if (batch.isCompleted()) {
+                    log.info("[INGEST][APP] Batch already completed, skip: batchId={} batchNo={}",
+                        batch.getId(), batch.getBatchNo());
+                    if (batch.isSucceeded()) {
+                        succeeded++;
+                        succeededBatchIds.add(batch.getId());
+                    }
+                    continue;
+                }
+
+                // 2. 更新批次状态为 RUNNING
+                batch.start();
+                batchRepository.updateStatus(batch.getId(), BatchStatus.RUNNING);
+
+                // 3. 调用 EFetch API（使用编译后的查询参数）
+                EFetchRequest request = EFetchRequest.builder()
+                    .webEnv(batch.getBeforeToken()) // WebEnv from batch params
+                    .queryKey(batchPlan.getQueryKey())
+                    .retstart(batch.getPageNo() * batch.getPageSize())
+                    .retmax(batch.getPageSize())
+                    .retmode("json")
+                    .build();
+
+                EFetchResult result = pubMedClient.fetch(request);
+
+                // 4. 解析响应
+                List<PubMedArticle> articles = result.getArticles();
+
+                // 5. 压缩数据
+                String jsonData = objectMapper.writeValueAsString(articles);
+                byte[] compressedData = GzipUtil.compress(jsonData.getBytes(StandardCharsets.UTF_8));
+
+                // 6. 上传 MinIO
+                String storagePath = buildStoragePath(context, runId, batch.getBatchNo());
+                storageAdapter.upload(compressedData, storagePath);
+
+                // 7. 写入 Outbox（事务）
+                OutboxMessage outboxMessage = buildOutboxMessage(context, batch, storagePath);
+                outboxPublisher.publish(outboxMessage);
+
+                // 8. 更新批次状态为 SUCCEEDED
+                BatchStats stats = new BatchStats(
+                    articles.size(),
+                    (long) compressedData.length,
+                    storagePath,
+                    extractMaxTimestamp(articles),
+                    extractMaxRecordId(articles),
+                    Duration.between(batch.getCreatedAt(), Instant.now())
+                );
+                batch.complete(stats, Instant.now());
+                batchRepository.update(batch);
+
+                succeeded++;
+                succeededBatchIds.add(batch.getId());
+
+                log.info("[INGEST][APP] Batch execution succeeded: batchId={} batchNo={} recordCount={}",
+                    batch.getId(), batch.getBatchNo(), articles.size());
+
+            } catch (Exception e) {
+                // 标记批次失败，但继续执行其他批次（部分失败容忍）
+                batch.fail(e.getMessage(), Instant.now());
+                batchRepository.update(batch);
+
+                failed++;
+                failedBatchIds.add(batch.getId());
+
+                log.error("[INGEST][APP] Batch execution failed: batchId={} batchNo={}",
+                    batch.getId(), batch.getBatchNo(), e);
+
+                meterRegistry.counter("ingest.batch.execution.failed",
+                    Tags.of("provenance", context.task().getProvenanceCode().getCode()))
+                    .increment();
+            }
+        }
+
+        // 聚合统计信息
+        ExecutionStats stats = calculateExecutionStats(batches);
+
+        return new BatchExecutionResult(
+            batches.size(),
+            succeeded,
+            failed,
+            succeededBatchIds,
+            failedBatchIds,
+            stats
+        );
+    }
+
+    private String buildStoragePath(ExecutionContext context, Long runId, Integer batchNo) {
+        return String.format("papertrace-ingest/%s/%s/run_%d/batch_%03d.json.gz",
+            context.task().getProvenanceCode().getCode().toLowerCase(),
+            LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM")),
+            runId,
+            batchNo
+        );
+    }
+
+    private OutboxMessage buildOutboxMessage(ExecutionContext context, RunBatchAggregate batch, String storagePath) {
+        // 构建 Outbox 消息（用于后续数据解析/清洗流程）
+        return OutboxMessage.builder()
+            .aggregateType("BATCH")
+            .aggregateId(batch.getId())
+            .channel("ingest.data." + context.task().getProvenanceCode().getCode().toLowerCase())
+            .opType("BATCH_COMPLETED")
+            .partitionKey(context.task().getProvenanceCode().getCode() + ":" + context.task().getOperationCode().getCode())
+            .dedupKey(batch.getIdempotentKey())
+            .payload(buildPayload(batch, storagePath))
+            .build();
     }
 }
 ```
@@ -630,38 +946,238 @@ public interface CursorAdvancerRegistry {
      * @param operationType 操作类型
      * @return 游标推进器
      */
-    CursorAdvancer getAdvancer(OperationType operationType);
+    CursorAdvancer getAdvancer(String operationType);
 }
 
 // 策略接口
 public interface CursorAdvancer {
     /**
      * 推进游标
-     * @param context 推进上下文
+     * @param context 全局执行上下文
+     * @param batchResult 批次执行结果
+     * @param runId 执行记录 ID
      * @return 推进结果
      */
-    CursorAdvancementResult advance(CursorAdvancementContext context);
+    CursorAdvancementResult advance(ExecutionContext context, BatchExecutionResult batchResult, Long runId);
+}
+
+/**
+ * 游标推进结果
+ */
+public record CursorAdvancementResult(
+    boolean success,
+    String oldValue,
+    String newValue,
+    Long cursorId,
+    String reason
+) {
+    public static CursorAdvancementResult success(Long cursorId, String oldValue, String newValue) {
+        return new CursorAdvancementResult(true, oldValue, newValue, cursorId, null);
+    }
+
+    public static CursorAdvancementResult failed(String reason) {
+        return new CursorAdvancementResult(false, null, null, null, reason);
+    }
 }
 
 // 时间型游标推进器
 @Component
 public class TimestampCursorAdvancer implements CursorAdvancer {
+    private final CursorRepository cursorRepository;
+    private final CursorEventRepository cursorEventRepository;
+    private final BatchRepository batchRepository;
+
     @Override
-    public CursorAdvancementResult advance(CursorAdvancementContext context) {
-        // 1. 从所有 SUCCEEDED 批次的 stats 中提取最大时间戳
-        // 2. 使用乐观锁更新游标表
-        // 3. 插入游标事件
+    public CursorAdvancementResult advance(ExecutionContext context, BatchExecutionResult batchResult, Long runId) {
+        try {
+            // 1. 从所有 SUCCEEDED 批次的 stats 中提取最大时间戳
+            List<RunBatchAggregate> succeededBatches = batchRepository.findByIds(batchResult.succeededBatchIds());
+
+            Instant maxTimestamp = succeededBatches.stream()
+                .map(batch -> batch.getStats())
+                .filter(Objects::nonNull)
+                .map(stats -> stats.getMaxTimestamp())
+                .filter(Objects::nonNull)
+                .max(Instant::compareTo)
+                .orElse(null);
+
+            if (maxTimestamp == null) {
+                return CursorAdvancementResult.failed("No valid timestamp found in succeeded batches");
+            }
+
+            // 2. 查询或创建游标记录
+            CursorAggregate cursor = cursorRepository.findOrCreate(
+                context.task().getProvenanceCode().getCode(),
+                context.task().getOperationCode().getCode(),
+                "updated_at", // cursor key
+                "GLOBAL",     // namespace scope
+                "0".repeat(64) // global namespace key
+            );
+
+            String oldValue = cursor.getCursorValue();
+            String newValue = maxTimestamp.toString();
+
+            // 3. 使用乐观锁更新游标表
+            CursorLineage lineage = new CursorLineage(
+                context.task().getScheduleInstanceId(),
+                context.task().getPlanId(),
+                context.task().getSliceId(),
+                context.task().getId(),
+                runId,
+                succeededBatches.get(0).getId(), // 取第一个批次 ID 作为代表
+                context.task().getExprHash()
+            );
+
+            cursor.advance(newValue, maxTimestamp, null, lineage);
+            int updated = cursorRepository.updateWithOptimisticLock(cursor);
+
+            if (updated == 0) {
+                // 乐观锁冲突，游标已被其他任务推进
+                return CursorAdvancementResult.failed("Optimistic lock conflict");
+            }
+
+            // 4. 插入游标事件（幂等键防重）
+            CursorEvent event = CursorEvent.builder()
+                .provenanceCode(cursor.getProvenanceCode())
+                .operationCode(cursor.getOperationCode())
+                .cursorKey(cursor.getCursorKey())
+                .namespaceScopeCode(cursor.getNamespaceScopeCode())
+                .namespaceKey(cursor.getNamespaceKey())
+                .cursorTypeCode("TIME")
+                .prevValue(oldValue)
+                .newValue(newValue)
+                .prevInstant(oldValue != null ? Instant.parse(oldValue) : null)
+                .newInstant(maxTimestamp)
+                .idempotentKey(generateIdempotentKey(cursor, runId, oldValue, newValue))
+                .lineage(lineage)
+                .build();
+
+            cursorEventRepository.insert(event);
+
+            log.info("[INGEST][APP] Cursor advanced: cursorId={} old={} new={}",
+                cursor.getId(), oldValue, newValue);
+
+            return CursorAdvancementResult.success(cursor.getId(), oldValue, newValue);
+
+        } catch (Exception e) {
+            log.error("[INGEST][APP] Cursor advancement failed: taskId={} runId={}",
+                context.task().getId(), runId, e);
+            return CursorAdvancementResult.failed(e.getMessage());
+        }
+    }
+
+    private String generateIdempotentKey(CursorAggregate cursor, Long runId, String oldValue, String newValue) {
+        String raw = String.format("%s:%s:%s:%s:%s:%s->%s:%d",
+            cursor.getProvenanceCode(),
+            cursor.getOperationCode(),
+            cursor.getCursorKey(),
+            cursor.getNamespaceScopeCode(),
+            cursor.getNamespaceKey(),
+            oldValue,
+            newValue,
+            runId
+        );
+        return DigestUtil.sha256Hex(raw);
     }
 }
 
 // ID 型游标推进器
 @Component
 public class IdCursorAdvancer implements CursorAdvancer {
+    private final CursorRepository cursorRepository;
+    private final CursorEventRepository cursorEventRepository;
+    private final BatchRepository batchRepository;
+
     @Override
-    public CursorAdvancementResult advance(CursorAdvancementContext context) {
-        // 1. 从所有 SUCCEEDED 批次的 stats 中提取最大 ID
-        // 2. 使用乐观锁更新游标表
-        // 3. 插入游标事件
+    public CursorAdvancementResult advance(ExecutionContext context, BatchExecutionResult batchResult, Long runId) {
+        try {
+            // 1. 从所有 SUCCEEDED 批次的 stats 中提取最大 ID
+            List<RunBatchAggregate> succeededBatches = batchRepository.findByIds(batchResult.succeededBatchIds());
+
+            Long maxRecordId = succeededBatches.stream()
+                .map(batch -> batch.getStats())
+                .filter(Objects::nonNull)
+                .map(stats -> stats.getMaxRecordId())
+                .filter(Objects::nonNull)
+                .max(Long::compareTo)
+                .orElse(null);
+
+            if (maxRecordId == null) {
+                return CursorAdvancementResult.failed("No valid record ID found in succeeded batches");
+            }
+
+            // 2. 查询或创建游标记录
+            CursorAggregate cursor = cursorRepository.findOrCreate(
+                context.task().getProvenanceCode().getCode(),
+                context.task().getOperationCode().getCode(),
+                "record_id",  // cursor key
+                "GLOBAL",     // namespace scope
+                "0".repeat(64) // global namespace key
+            );
+
+            String oldValue = cursor.getCursorValue();
+            String newValue = maxRecordId.toString();
+
+            // 3. 使用乐观锁更新游标表
+            CursorLineage lineage = new CursorLineage(
+                context.task().getScheduleInstanceId(),
+                context.task().getPlanId(),
+                context.task().getSliceId(),
+                context.task().getId(),
+                runId,
+                succeededBatches.get(0).getId(),
+                context.task().getExprHash()
+            );
+
+            cursor.advance(newValue, null, new BigDecimal(maxRecordId), lineage);
+            int updated = cursorRepository.updateWithOptimisticLock(cursor);
+
+            if (updated == 0) {
+                return CursorAdvancementResult.failed("Optimistic lock conflict");
+            }
+
+            // 4. 插入游标事件
+            CursorEvent event = CursorEvent.builder()
+                .provenanceCode(cursor.getProvenanceCode())
+                .operationCode(cursor.getOperationCode())
+                .cursorKey(cursor.getCursorKey())
+                .namespaceScopeCode(cursor.getNamespaceScopeCode())
+                .namespaceKey(cursor.getNamespaceKey())
+                .cursorTypeCode("ID")
+                .prevValue(oldValue)
+                .newValue(newValue)
+                .prevNumeric(oldValue != null ? new BigDecimal(oldValue) : null)
+                .newNumeric(new BigDecimal(maxRecordId))
+                .idempotentKey(generateIdempotentKey(cursor, runId, oldValue, newValue))
+                .lineage(lineage)
+                .build();
+
+            cursorEventRepository.insert(event);
+
+            log.info("[INGEST][APP] Cursor advanced: cursorId={} old={} new={}",
+                cursor.getId(), oldValue, newValue);
+
+            return CursorAdvancementResult.success(cursor.getId(), oldValue, newValue);
+
+        } catch (Exception e) {
+            log.error("[INGEST][APP] Cursor advancement failed: taskId={} runId={}",
+                context.task().getId(), runId, e);
+            return CursorAdvancementResult.failed(e.getMessage());
+        }
+    }
+
+    private String generateIdempotentKey(CursorAggregate cursor, Long runId, String oldValue, String newValue) {
+        String raw = String.format("%s:%s:%s:%s:%s:%s->%s:%d",
+            cursor.getProvenanceCode(),
+            cursor.getOperationCode(),
+            cursor.getCursorKey(),
+            cursor.getNamespaceScopeCode(),
+            cursor.getNamespaceKey(),
+            oldValue,
+            newValue,
+            runId
+        );
+        return DigestUtil.sha256Hex(raw);
     }
 }
 ```
@@ -749,10 +1265,126 @@ public record CursorRetryStats(
 public interface ExecutionFinalizer {
     /**
      * 完成执行
-     * @param context 收尾上下文
+     * @param context 全局执行上下文
+     * @param batchResult 批次执行结果
+     * @param cursorResult 游标推进结果
+     * @param runId 执行记录 ID
      * @return 收尾结果
      */
-    FinalizationResult finalize(FinalizationContext context);
+    FinalizationResult finalize(
+        ExecutionContext context,
+        BatchExecutionResult batchResult,
+        CursorAdvancementResult cursorResult,
+        Long runId
+    );
+}
+
+/**
+ * 收尾结果
+ */
+public record FinalizationResult(
+    TaskStatus status,
+    ExecutionStats stats,
+    String reason
+) {}
+
+@Service
+@RequiredArgsConstructor
+public class ExecutionFinalizerImpl implements ExecutionFinalizer {
+    private final TaskRepository taskRepository;
+    private final TaskRunRepository taskRunRepository;
+
+    @Override
+    public FinalizationResult finalize(
+        ExecutionContext context,
+        BatchExecutionResult batchResult,
+        CursorAdvancementResult cursorResult,
+        Long runId
+    ) {
+        TaskAggregate task = context.task();
+
+        // 1. 判断最终状态
+        TaskStatus finalStatus = determineFinalStatus(batchResult, cursorResult);
+
+        // 2. 更新 TaskRun 状态
+        TaskRunAggregate taskRun = taskRunRepository.findById(runId)
+            .orElseThrow(() -> new TaskRunNotFoundException(runId));
+
+        if (finalStatus == TaskStatus.SUCCEEDED) {
+            taskRun.complete(batchResult.stats(), Instant.now());
+        } else if (finalStatus == TaskStatus.CURSOR_PENDING) {
+            // 批次成功但游标推进失败，标记为 CURSOR_PENDING
+            taskRun.complete(batchResult.stats(), Instant.now());
+        } else {
+            taskRun.fail(buildFailureReason(batchResult, cursorResult), Instant.now());
+        }
+        taskRunRepository.update(taskRun);
+
+        // 3. 更新 Task 状态
+        switch (finalStatus) {
+            case SUCCEEDED:
+                task.markAsSucceeded(Instant.now());
+                break;
+            case FAILED:
+                task.markAsFailed(Instant.now(), "ING-1005", buildFailureReason(batchResult, cursorResult));
+                break;
+            case PARTIAL:
+                task.markAsPartial(Instant.now());
+                break;
+            case CURSOR_PENDING:
+                task.markAsCursorPending();
+                break;
+            default:
+                throw new IllegalStateException("Unexpected status: " + finalStatus);
+        }
+        taskRepository.update(task);
+
+        log.info("[INGEST][APP] Task execution finalized: taskId={} runId={} status={} succeededBatches={} failedBatches={}",
+            task.getId(), runId, finalStatus, batchResult.succeededBatches(), batchResult.failedBatches());
+
+        return new FinalizationResult(finalStatus, batchResult.stats(), null);
+    }
+
+    /**
+     * 判断最终状态（决策逻辑）
+     */
+    private TaskStatus determineFinalStatus(BatchExecutionResult batchResult, CursorAdvancementResult cursorResult) {
+        // 1. 如果所有批次都失败 → FAILED
+        if (batchResult.succeededBatches() == 0) {
+            return TaskStatus.FAILED;
+        }
+
+        // 2. 如果部分批次失败 → PARTIAL
+        if (batchResult.failedBatches() > 0) {
+            return TaskStatus.PARTIAL;
+        }
+
+        // 3. 如果所有批次成功但游标推进失败 → CURSOR_PENDING
+        if (!cursorResult.success()) {
+            return TaskStatus.CURSOR_PENDING;
+        }
+
+        // 4. 所有批次成功且游标推进成功 → SUCCEEDED
+        return TaskStatus.SUCCEEDED;
+    }
+
+    /**
+     * 构建失败原因
+     */
+    private String buildFailureReason(BatchExecutionResult batchResult, CursorAdvancementResult cursorResult) {
+        List<String> reasons = new ArrayList<>();
+
+        if (batchResult.failedBatches() > 0) {
+            reasons.add(String.format("批次失败: %d/%d",
+                batchResult.failedBatches(), batchResult.totalBatches()));
+        }
+
+        if (!cursorResult.success()) {
+            reasons.add("游标推进失败: " + cursorResult.reason());
+        }
+
+        return String.join("; ", reasons);
+    }
 }
 ```
 
@@ -1566,216 +2198,6 @@ public enum TaskExecutionErrorCode {
     
     private final String code;
     private final String message;
-}
-```
-
-
-## Testing Strategy
-
-### 1. 单元测试
-
-#### Domain Layer 测试
-
-**测试目标**：验证聚合根的业务不变性和领域逻辑
-
-```java
-// TaskAggregate 测试
-@Test
-void shouldAcquireLease_whenLeaseIsAvailable() {
-    TaskAggregate task = new TaskAggregate();
-    LeaseOwner owner = LeaseOwner.generate("node-1");
-    
-    task.acquireLease(owner.toString(), Duration.ofSeconds(60));
-    
-    assertThat(task.getLeaseOwner()).isEqualTo(owner.toString());
-    assertThat(task.getLeasedUntil()).isAfter(Instant.now());
-}
-
-@Test
-void shouldThrowException_whenAcquiringExpiredLease() {
-    TaskAggregate task = new TaskAggregate();
-    task.setLeasedUntil(Instant.now().minusSeconds(10));
-    
-    assertThatThrownBy(() -> task.acquireLease("node-2", Duration.ofSeconds(60)))
-        .isInstanceOf(LeaseExpiredException.class);
-}
-
-// ExecutionStats 测试
-@Test
-void shouldDetermineStatusAsSucceeded_whenAllBatchesSucceeded() {
-    ExecutionStats stats = new ExecutionStats(10, 10, 0, 5000, 1024000L, Duration.ofMinutes(5));
-    
-    assertThat(stats.determineStatus()).isEqualTo(TaskStatus.SUCCEEDED);
-}
-
-@Test
-void shouldDetermineStatusAsPartial_whenSomeBatchesFailed() {
-    ExecutionStats stats = new ExecutionStats(10, 7, 3, 3500, 716800L, Duration.ofMinutes(5));
-    
-    assertThat(stats.determineStatus()).isEqualTo(TaskStatus.PARTIAL);
-}
-```
-
-#### Application Layer 测试
-
-**测试目标**：验证用例编排逻辑和事务边界
-
-```java
-@Test
-void shouldExecuteTaskSuccessfully_whenAllStepsSucceed() {
-    // Given
-    TaskExecutionCommand command = new TaskExecutionCommand(taskId, idempotentKey);
-    when(idempotencyChecker.isAlreadyCompleted(taskId, idempotentKey)).thenReturn(false);
-    when(leaseAcquisitionService.tryAcquire(any(), any(), anyInt())).thenReturn(LeaseAcquisitionResult.success());
-    
-    // When
-    TaskExecutionResult result = orchestrator.execute(command);
-    
-    // Then
-    assertThat(result.isSuccess()).isTrue();
-    verify(executionFinalizer).finalize(any());
-}
-
-@Test
-void shouldSkipExecution_whenTaskAlreadyCompleted() {
-    // Given
-    TaskExecutionCommand command = new TaskExecutionCommand(taskId, idempotentKey);
-    when(idempotencyChecker.isAlreadyCompleted(taskId, idempotentKey)).thenReturn(true);
-    
-    // When
-    TaskExecutionResult result = orchestrator.execute(command);
-    
-    // Then
-    assertThat(result.isSkipped()).isTrue();
-    verify(leaseAcquisitionService, never()).tryAcquire(any(), any(), anyInt());
-}
-```
-
-#### Infrastructure Layer 测试
-
-**测试目标**：验证仓储实现和外部集成
-
-```java
-@Test
-void shouldAcquireLeaseSuccessfully_whenLeaseIsAvailable() {
-    // Given
-    Long taskId = 1L;
-    String leaseOwner = "node-1:uuid";
-    
-    // When
-    int affectedRows = taskMapper.tryAcquireLease(taskId, leaseOwner, Instant.now().plusSeconds(60));
-    
-    // Then
-    assertThat(affectedRows).isEqualTo(1);
-}
-
-@Test
-void shouldUploadToMinIO_andReturnStoragePath() {
-    // Given
-    byte[] compressedData = gzipCompress(rawData);
-    String expectedPath = "papertrace-ingest/pubmed/2024/01/run_12345/batch_001.json.gz";
-    
-    // When
-    String actualPath = minioAdapter.upload(compressedData, expectedPath);
-    
-    // Then
-    assertThat(actualPath).isEqualTo(expectedPath);
-}
-```
-
-### 2. 集成测试
-
-#### 端到端流程测试
-
-```java
-@SpringBootTest
-@Testcontainers
-class TaskExecutionIntegrationTest {
-    
-    @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
-    
-    @Container
-    static GenericContainer<?> minio = new GenericContainer<>("minio/minio:latest");
-    
-    @Autowired
-    private TaskExecutionOrchestrator orchestrator;
-    
-    @Test
-    void shouldExecuteTaskEndToEnd_withPubMedDataSource() {
-        // Given: 准备任务数据
-        TaskAggregate task = createPubMedTask();
-        taskRepository.save(task);
-        
-        // When: 执行任务
-        TaskExecutionCommand command = new TaskExecutionCommand(task.getId(), task.getIdempotentKey());
-        TaskExecutionResult result = orchestrator.execute(command);
-        
-        // Then: 验证结果
-        assertThat(result.isSuccess()).isTrue();
-        
-        // 验证任务状态
-        TaskAggregate updatedTask = taskRepository.findById(task.getId()).orElseThrow();
-        assertThat(updatedTask.getStatus()).isEqualTo(TaskStatus.SUCCEEDED);
-        
-        // 验证批次记录
-        List<RunBatchAggregate> batches = batchRepository.findByRunId(result.getRunId());
-        assertThat(batches).allMatch(b -> b.getStatus() == BatchStatus.SUCCEEDED);
-        
-        // 验证游标推进
-        CursorAggregate cursor = cursorRepository.findByProvenanceCode("PUBMED").orElseThrow();
-        assertThat(cursor.getCursorValue()).isNotNull();
-        
-        // 验证 Outbox 消息
-        List<OutboxMessage> messages = outboxRepository.findByChannel("ingest.data.pubmed");
-        assertThat(messages).hasSize(batches.size());
-    }
-    
-    @Test
-    void shouldHandlePartialFailure_andContinueExecution() {
-        // Given: 准备任务数据，模拟部分批次失败
-        TaskAggregate task = createTaskWithFailingBatches();
-        taskRepository.save(task);
-        
-        // When: 执行任务
-        TaskExecutionResult result = orchestrator.execute(command);
-        
-        // Then: 验证部分成功
-        assertThat(result.getStatus()).isEqualTo(TaskStatus.PARTIAL);
-        
-        List<RunBatchAggregate> batches = batchRepository.findByRunId(result.getRunId());
-        assertThat(batches).anyMatch(b -> b.getStatus() == BatchStatus.SUCCEEDED);
-        assertThat(batches).anyMatch(b -> b.getStatus() == BatchStatus.FAILED);
-    }
-}
-```
-
-### 3. 性能测试
-
-```java
-@Test
-void shouldHandleConcurrentTaskExecution_withoutLeaseConflict() throws Exception {
-    // Given: 准备 10 个任务
-    List<TaskAggregate> tasks = IntStream.range(0, 10)
-        .mapToObj(i -> createTask())
-        .collect(Collectors.toList());
-    tasks.forEach(taskRepository::save);
-    
-    // When: 并发执行
-    ExecutorService executor = Executors.newFixedThreadPool(10);
-    List<Future<TaskExecutionResult>> futures = tasks.stream()
-        .map(task -> executor.submit(() -> orchestrator.execute(
-            new TaskExecutionCommand(task.getId(), task.getIdempotentKey()))))
-        .collect(Collectors.toList());
-    
-    // Then: 验证所有任务都成功执行
-    List<TaskExecutionResult> results = futures.stream()
-        .map(f -> {
-            try { return f.get(); } catch (Exception e) { throw new RuntimeException(e); }
-        })
-        .collect(Collectors.toList());
-    
-    assertThat(results).allMatch(TaskExecutionResult::isSuccess);
 }
 ```
 
