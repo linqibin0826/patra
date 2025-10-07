@@ -37,7 +37,7 @@
 2. WHEN 执行 CAS 更新 THEN 系统 SHALL 设置 lease_owner = "节点ID:随机标识" 且 leased_until = 当前时间 + 60秒
 3. WHEN CAS 更新条件为 WHERE id=? AND (lease_owner IS NULL OR leased_until < NOW()) THEN 系统 SHALL 仅在租约为空或已过期时成功抢占
 4. IF CAS 更新影响行数 = 1 THEN 系统 SHALL 认为抢占成功并继续执行
-5. IF CAS 更新影响行数 = 0 THEN 系统 SHALL 认为抢占失败并优雅退出，不抛出异常
+5. IF CAS 更新影响行数 = 0 THEN 系统 SHALL 认为抢占失败并优雅退出，不触发 MQ 重试；允许在应用层抛出 LeaseAcquisitionFailedException 用于流程控制，但不得作为系统异常冒泡
 6. WHEN 抢占失败 THEN 系统 SHALL 记录 INFO 级别日志说明其他节点正在执行
 
 ### Requirement 3: 执行会话初始化与心跳续租
@@ -120,6 +120,8 @@
 10. IF API 调用失败 THEN 系统 SHALL 标记批次为 FAILED、记录错误信息、继续执行下一批次
 11. IF 对象存储上传失败 THEN 系统 SHALL 重试 3 次（指数退避），仍失败则标记批次为 FAILED
 12. IF 数据库异常 THEN 系统 SHALL 抛出异常，任务整体失败，等待 MQ 重试
+13. WHEN 执行批次 THEN 系统 SHALL 支持通过配置 batch.execution-mode = SEQUENTIAL | PARALLEL 控制执行模式
+14. WHEN execution-mode = PARALLEL THEN 系统 SHALL 使用 batch.parallel-threads 控制并发度，并保障批次级幂等与线程安全
 
 ### Requirement 8: 游标推进与水位线更新
 
@@ -138,8 +140,8 @@
 9. WHEN 更新游标表 THEN 系统 SHALL 记录推进后的值和规范化时间（normalized_instant）
 10. WHEN 游标更新成功 THEN 系统 SHALL 插入游标事件到 ing_cursor_event 表，记录推进历史（从哪到哪、操作类型、关联的 run_id）
 11. WHEN 插入游标事件 THEN 系统 SHALL 使用幂等键防止重复推进
-12. IF 游标更新失败（乐观锁冲突） THEN 系统 SHALL 重试最多 3 次
-13. IF 游标更新仍失败 THEN 系统 SHALL 记录 ERROR 日志但不影响任务状态（游标推进失败不应导致任务失败）
+12. IF 游标更新失败（乐观锁冲突或数据库异常） THEN 系统 SHALL 标记任务状态为 CURSOR_PENDING，并触发 CursorAdvancementRetryService 异步重试（最多 5 次，超过阈值触发告警）
+13. WHEN 异步重试成功 THEN 系统 SHALL 正常完成游标表更新与游标事件插入，并清除 CURSOR_PENDING 状态
 
 ### Requirement 9: 执行状态更新与任务收尾
 
@@ -148,13 +150,14 @@
 #### Acceptance Criteria
 
 1. WHEN 所有批次执行完成且游标推进完成 THEN 系统 SHALL 聚合统计信息：总批次数、成功批次数、失败批次数、总采集记录数、总文件大小、执行耗时
-2. WHEN 判断最终状态 THEN 系统 SHALL 使用规则：IF 全部批次成功 THEN SUCCEEDED；IF 有失败批次 THEN FAILED；IF 部分成功 THEN PARTIAL
+2. WHEN 判断最终状态 THEN 系统 SHALL 使用规则：IF 全部批次成功且游标推进成功 THEN SUCCEEDED；IF 有失败批次 THEN FAILED；IF 部分成功 THEN PARTIAL；IF 游标推进失败且已触发异步重试 THEN CURSOR_PENDING
 3. WHEN 更新执行记录 THEN 系统 SHALL 在一个事务内更新 ing_task_run 表：状态、统计信息（stats JSON）、完成时间、错误信息（如果失败）
 4. WHEN 更新任务记录 THEN 系统 SHALL 在同一事务内更新 ing_task 表：状态、完成时间、清空租约（lease_owner = NULL, leased_until = NULL）
 5. IF 任务状态 = FAILED THEN 系统 SHALL 更新重试计数和错误码
 6. WHEN 数据库更新完成 THEN 系统 SHALL 停止心跳定时任务并释放资源
 7. WHEN 任务收尾完成 THEN 系统 SHALL 记录 INFO 级别日志说明任务执行结果和统计信息
 8. IF 状态更新失败（数据库异常） THEN 系统 SHALL 抛出异常并触发 MQ 重试
+9. IF 任务状态 = CURSOR_PENDING THEN 系统 SHALL 记录错误码 ING-1006，并由游标推进重试服务处理直至成功或超过阈值告警
 
 ### Requirement 10: 多层幂等保障
 
@@ -202,3 +205,15 @@
 10. WHEN 批次跳过（幂等） THEN 系统 SHALL 记录 DEBUG 级别日志说明跳过原因
 11. WHEN 租约被接管 THEN 系统 SHALL 递增 metric ingest.lease.revoked 并记录 WARN 日志
 12. WHEN 批量心跳续租执行 THEN 系统 SHALL 记录 metric ingest.heartbeat.batch.renewal（含批量大小与续租成功数）
+13. WHEN 游标推进成功 THEN 系统 SHALL 递增 metric ingest.cursor.advancement
+
+
+### Requirement 13: 孤儿批次清理与一致性保障（运维型）
+
+**User Story:** 作为运维人员，我希望定期清理无效/孤儿批次记录，保持批次表与任务运行记录一致，降低存储占用与后续执行干扰。
+
+#### Acceptance Criteria
+
+1. WHEN 扫描批次表 THEN 系统 SHALL 识别 runId 不存在或关联任务不在活动窗口的批次并标记为可清理对象（不影响进行中的任务）
+2. WHEN 执行清理 THEN 系统 SHALL 采用限速与分批策略（如每批 N 条），记录清理数量与耗时指标，确保对线上负载影响可控
+3. WHEN 清理完成 THEN 系统 SHALL 记录审计日志（操作者/作业 ID/清理数量/时间窗口/关联条件），并输出 INFO 级别汇总日志
