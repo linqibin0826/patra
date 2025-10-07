@@ -225,17 +225,6 @@ public class TaskOutboxPublisher {
         if (CharSequenceUtil.isNotBlank(event.paramsJson())) {
             payload.set("params", readJsonNode(event.paramsJson()));
         }
-        payload.put("planKey", plan.getPlanKey());
-        if (plan.getWindowFrom() != null) {
-            payload.put("planWindowFrom", plan.getWindowFrom().toString());
-        }
-        if (plan.getWindowTo() != null) {
-            payload.put("planWindowTo", plan.getWindowTo().toString());
-        }
-        payload.put("planSliceStrategy", plan.getSliceStrategyCode());
-        if (CharSequenceUtil.isNotBlank(plan.getSliceParamsJson())) {
-            payload.set("planSliceParams", readJsonNode(plan.getSliceParamsJson()));
-        }
         return payload;
     }
 

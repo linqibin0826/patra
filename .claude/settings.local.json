@@ -16,7 +16,9 @@
       "Bash(if python3 -c \"import re; f=open(''$f'',''r'',encoding=''utf-8''); exit(0 if any(re.search(r''[\\u4e00-\\u9fa5]'', line) for line in f) else 1)\")",
       "Bash(then)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "mcp__mcp-router__write_memory",
+      "mcp__mcp-router__sequentialthinking"
     ],
     "deny": [],
     "ask": []
