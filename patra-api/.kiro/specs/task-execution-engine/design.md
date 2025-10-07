@@ -120,11 +120,206 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Use Case Decomposition Design（用例拆分设计）
+
+### 设计考虑
+
+**设计挑战**：
+
+1. **单一用例过载**：若将所有步骤放在 `TaskExecutionOrchestrator.execute()` 中（幂等检查 → 租约抢占 → 会话初始化 → 配置加载 → 表达式编译 → 批次规划 → 批次执行 → 游标推进 → 状态更新），会导致单方法 ~250 行代码，职责过重
+
+2. **职责混杂**：编排器会同时负责步骤协调、租约管理、心跳监控、批次执行、异常处理等多种关注点，违反单一职责原则
+
+3. **事务边界模糊**：不同步骤的事务需求不同（如批次规划需要独立事务，批次执行需要按批次分事务），若耦合在一个方法中，难以精细控制
+
+4. **可测试性差**：单一方法过长，难以单独测试各个步骤；Mock 依赖过多（8+ 个依赖注入）
+
+5. **可维护性低**：代码组织不清晰，修改一个步骤可能影响其他步骤；难以理解和扩展
+
+**设计目标**：
+
+1. **职责分离**：将编排器拆分为轻量级协调器 + 独立用例 + 可复用支持服务
+2. **事务边界清晰**：每个用例独立管理事务，按业务需求选择事务传播策略
+3. **可测试性提升**：每个组件可独立单元测试，Mock 依赖减少
+4. **可维护性提升**：代码组织清晰（按阶段分包），职责单一（每个类 < 100 行）
+5. **可扩展性提升**：支持服务可复用，用例可独立演进
+
+### 设计方案
+
+#### 拆分策略：3 层架构
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                    TaskExecutionOrchestrator                  │
+│                    （轻量级编排器，~30 行）                    │
+│  职责：协调 3 个用例，处理顶层异常，管理资源清理                │
+└────────────┬──────────────────┬──────────────────┬────────────┘
+             │                  │                  │
+             ▼                  ▼                  ▼
+  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+  │ PrepareTask      │ │ ExecuteTask      │ │ CompleteTask     │
+  │ ExecutionUseCase │ │ BatchesUseCase   │ │ ExecutionUseCase │
+  │ （准备阶段）      │ │ （执行阶段）      │ │ （完成阶段）      │
+  │ ~80 行           │ │ ~60 行           │ │ ~50 行           │
+  └────────┬─────────┘ └────────┬─────────┘ └────────┬─────────┘
+           │                    │                    │
+           └────────────────────┴────────────────────┘
+                                │
+                ┌───────────────┴───────────────┐
+                │       支持服务层（可复用）       │
+                ├────────────────────────────────┤
+                │ • LeaseManagementService       │
+                │ • ExecutionSessionManager      │
+                │ • ExecutionContextLoader       │
+                └────────────────────────────────┘
+```
+
+#### 组件职责划分
+
+**1. TaskExecutionOrchestrator（轻量级编排器）**
+- **职责**：协调 3 个用例，处理顶层异常，管理资源清理
+- **代码量**：~30 行
+- **依赖**：3 个用例接口
+- **事务**：不管理事务
+
+**2. PrepareTaskExecutionUseCase（准备用例）**
+- **职责**：准备执行（幂等检查 → 租约抢占 → 会话初始化 → 上下文加载）
+- **代码量**：~80 行
+- **输出**：`PrepareTaskResult`（session + context + taskAggregate + leaseOwner）
+- **事务**：独立事务（`REQUIRES_NEW`），失败不影响任务状态
+
+**3. ExecuteTaskBatchesUseCase（执行用例）**
+- **职责**：执行批次（批次规划 → 批次执行）
+- **代码量**：~60 行
+- **输入**：`PrepareTaskResult`
+- **输出**：`ExecuteBatchesResult`（batchPlan + batchResult）
+- **事务**：批次规划独立事务，批次执行按批次分事务
+
+**4. CompleteTaskExecutionUseCase（完成用例）**
+- **职责**：完成执行（游标推进 → 状态更新）
+- **代码量**：~50 行
+- **输入**：`PrepareTaskResult` + `ExecuteBatchesResult`
+- **输出**：`TaskExecutionResult`
+- **事务**：独立事务（`REQUIRES_NEW`），游标推进与状态更新原子性
+
+**5. 支持服务（可复用）**
+- **LeaseManagementService**：封装租约操作（抢占/续租/验证/释放）
+- **ExecutionSessionManager**：会话生命周期管理（创建/心跳启动/心跳停止/清理）
+- **ExecutionContextLoader**：上下文加载（已存在，保持不变）
+
+#### 数据传递模型
+
+```java
+// 准备用例输出
+public record PrepareTaskResult(
+    ExecutionSession session,      // 执行会话（含 runId、心跳句柄、租约撤销标志）
+    ExecutionContext context,      // 执行上下文（含 task、配置快照、表达式、编译结果）
+    TaskAggregate taskAggregate,   // 任务聚合根（用于后续状态更新）
+    String leaseOwner              // 租约持有者
+) {}
+
+// 执行用例输出
+public record ExecuteBatchesResult(
+    BatchPlan batchPlan,              // 批次计划
+    BatchExecutionResult batchResult   // 批次执行结果
+) {}
+```
+
+#### 目录结构
+
+```
+patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/
+├── execution/                           # 任务执行用例包
+│   ├── TaskExecutionOrchestrator.java   # 轻量级编排器（Application 层）
+│   │
+│   ├── prepare/                         # 准备阶段用例
+│   │   ├── PrepareTaskExecutionUseCase.java      # 用例接口（Domain 层端口）
+│   │   ├── PrepareTaskExecutionUseCaseImpl.java  # 用例实现（Application 层）
+│   │   └── PrepareTaskResult.java                # 输出模型（Application 层）
+│   │
+│   ├── execute/                         # 执行阶段用例
+│   │   ├── ExecuteTaskBatchesUseCase.java        # 用例接口（Domain 层端口）
+│   │   ├── ExecuteTaskBatchesUseCaseImpl.java    # 用例实现（Application 层）
+│   │   └── ExecuteBatchesResult.java             # 输出模型（Application 层）
+│   │
+│   ├── complete/                        # 完成阶段用例
+│   │   ├── CompleteTaskExecutionUseCase.java     # 用例接口（Domain 层端口）
+│   │   └── CompleteTaskExecutionUseCaseImpl.java # 用例实现（Application 层）
+│   │
+│   ├── support/                         # 支持服务（可复用步骤）
+│   │   ├── LeaseManagementService.java
+│   │   ├── ExecutionSessionManager.java
+│   │   └── ExecutionContextLoader.java
+│   │
+│   └── command/                         # 命令与模型
+│       ├── TaskExecutionCommand.java
+│       └── TaskExecutionResult.java
+```
+
+### 架构决策记录（ADR）
+
+**ADR-001: 将 TaskExecutionOrchestrator 拆分为 3 个独立用例**
+
+**状态**: Proposed
+
+**上下文**:
+- 任务执行流程包含 8 个步骤（幂等检查 → 租约抢占 → 会话初始化 → 配置加载 → 表达式编译 → 批次规划 → 批次执行 → 游标推进 → 状态更新）
+- 职责涉及编排、租约管理、心跳监控、异常处理等多个关注点
+- 事务需求不同（批次规划需独立事务，批次执行需按批次分事务）
+- 需要保证可测试性、可维护性和可扩展性
+
+**决策**:
+将编排器设计为：
+1. 轻量级编排器（TaskExecutionOrchestrator）：仅负责用例协调
+2. 3 个独立用例（PrepareTaskExecutionUseCase、ExecuteTaskBatchesUseCase、CompleteTaskExecutionUseCase）
+3. 3 个支持服务（LeaseManagementService、ExecutionSessionManager、ExecutionContextLoader）
+
+**考虑的替代方案**:
+1. **方案 A**: 按执行阶段拆分（7 个用例，每个步骤一个用例）
+   - 优点：粒度最细，职责最单一
+   - 缺点：用例过多，协调复杂度高，事务管理困难
+
+2. **方案 B**: 按事务边界拆分（3 个用例）- **选择此方案**
+   - 优点：事务边界清晰，职责适中，易于理解
+   - 缺点：每个用例仍包含多个步骤
+
+3. **方案 C**: 单一编排器包含所有步骤
+   - 优点：实现最简单，所有逻辑集中
+   - 缺点：职责臃肿，事务边界难以精细控制，可测试性差
+
+**后果**:
+
+**正面**：
+- 职责分离：每个组件职责单一（编排器 ~30 行，用例 ~50-80 行）
+- 事务边界清晰：3 个独立事务，可精细控制
+- 可测试性提升：每个组件可独立单元测试
+- 可维护性提升：代码组织清晰，易于理解和修改
+- 可扩展性提升：支持服务可复用，用例可独立演进
+
+**负面**：
+- 事务数量增加：3 个独立事务 vs 1 个大事务，性能影响 < 50ms（可接受）
+- 失败恢复复杂度：部分用例失败需要补偿（通过幂等缓解）
+- 实现复杂度：需要设计数据传递模型和用例间协调机制
+
+**缓解措施**：
+1. 每个用例实现幂等，支持失败重试
+2. 设计清晰的数据传递模型（PrepareTaskResult、ExecuteBatchesResult）
+3. 在编排器中统一处理资源清理和异常处理
+
+---
+
 ## Components and Interfaces
 
-### 1. 核心编排器 (TaskExecutionOrchestrator)
+### 1. 核心编排器
 
-**职责**：协调整个任务执行流程的 8 个步骤，处理异常和事务边界。
+#### 1.1 轻量级编排器 (TaskExecutionOrchestrator)
+
+**职责**：协调 3 个用例，处理顶层异常，管理资源清理。
+
+**设计特点**：
+- **代码量**：单方法 ~30 行
+- **依赖**：仅依赖 3 个用例接口
+- **职责**：用例协调、顶层异常处理、资源清理
 
 **接口定义**：
 
@@ -138,139 +333,488 @@ public interface TaskExecutionUseCase {
     TaskExecutionResult execute(TaskExecutionCommand command);
 }
 
+// ===== 轻量级编排器（~30 行）=====
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
-    private final IdempotencyChecker idempotencyChecker;
-    private final LeaseAcquisitionService leaseAcquisitionService;
-    private final ExecutionSessionInitializer sessionInitializer;
-    private final ExecutionContextLoader contextLoader; // 替换了 ConfigSnapshotRestorer 和 ExpressionCompiler
-    private final BatchPlannerRegistry batchPlannerRegistry;
-    private final BatchExecutorRegistry batchExecutorRegistry;
-    private final CursorAdvancerRegistry cursorAdvancerRegistry;
-    private final ExecutionFinalizer executionFinalizer;
+    // ✅ 仅依赖 3 个用例接口（依赖大幅减少）
+    private final PrepareTaskExecutionUseCase prepareUseCase;
+    private final ExecuteTaskBatchesUseCase executeUseCase;
+    private final CompleteTaskExecutionUseCase completeUseCase;
+
+    private final MeterRegistry meterRegistry; // 指标收集
 
     @Override
+    @Timed(value = "ingest.task.execution.duration", description = "任务执行耗时")
+    @Counted(value = "ingest.task.execution.total", description = "任务执行总数")
     public TaskExecutionResult execute(TaskExecutionCommand command) {
-        Long taskId = command.taskId();
-        String idempotentKey = command.idempotentKey();
-
-        log.info("[INGEST][APP] Task execution start: taskId={} idempotentKey={}", taskId, idempotentKey);
+        log.info("[INGEST][APP] Task execution start: taskId={} idempotentKey={}",
+                command.taskId(), command.idempotentKey());
 
         try {
-            // 步骤 0: 幂等检查
-            if (idempotencyChecker.isAlreadyCompleted(taskId, idempotentKey)) {
-                log.info("[INGEST][APP] Task already completed, skip: taskId={}", taskId);
-                return TaskExecutionResult.skipped(taskId);
-            }
-
-            // 步骤 1: 租约抢占
-            LeaseAcquisitionResult leaseResult = leaseAcquisitionService.tryAcquire(
-                    taskId,
-                    generateLeaseOwner(),
-                    60 // 租约时长（秒）
-            );
-            if (!leaseResult.isSuccess()) {
-                log.info("[INGEST][APP] Lease acquisition failed: taskId={} reason={}",
-                        taskId, leaseResult.getReason());
-                return TaskExecutionResult.leaseFailed(taskId, leaseResult.getReason());
-            }
-
-            // 步骤 2: 会话初始化（创建 TaskRun + 启动心跳）
-            ExecutionSession session = sessionInitializer.initialize(
-                    ExecutionContext.of(taskId, leaseResult.getLeaseOwner())
-            );
-            ScheduledFuture<?> heartbeat = session.getHeartbeatHandle();
+            // 步骤 1: 准备执行（幂等检查 + 租约抢占 + 会话初始化 + 上下文加载）
+            PrepareTaskResult prepareResult = prepareUseCase.prepare(command);
 
             try {
-                // ✅ 步骤 3-4: 加载执行上下文（配置快照 + 表达式 + 编译）
-                checkLeaseValidity(session, taskId); // 检查租约
-                ExecutionContext context = contextLoader.load(taskId);
+                // 步骤 2: 执行批次（批次规划 + 批次执行）
+                ExecuteBatchesResult executeResult = executeUseCase.execute(prepareResult);
 
-                // ✅ 步骤 5: 批次规划
-                checkLeaseValidity(session, taskId); // 检查租约
-                BatchPlanner planner = batchPlannerRegistry.getPlanner(
-                        context.task().getProvenanceCode().getCode()
-                );
-                BatchPlan batchPlan = planner.plan(context, session.getRunId());
-
-                // ✅ 步骤 6: 批次执行
-                checkLeaseValidity(session, taskId); // 检查租约
-                BatchExecutor executor = batchExecutorRegistry.getExecutor(
-                        context.task().getProvenanceCode().getCode()
-                );
-                BatchExecutionResult batchResult = executor.execute(
-                        context,
-                        batchPlan,
-                        session.getRunId()
-                );
-
-                // ✅ 步骤 7: 游标推进
-                checkLeaseValidity(session, taskId); // 检查租约
-                CursorAdvancer advancer = cursorAdvancerRegistry.getAdvancer(
-                        context.task().getOperationCode().getType()
-                );
-                CursorAdvancementResult cursorResult = advancer.advance(
-                        context,
-                        batchResult,
-                        session.getRunId()
-                );
-
-                // ✅ 步骤 8: 状态更新
-                checkLeaseValidity(session, taskId); // 检查租约
-                FinalizationResult finalizationResult = executionFinalizer.finalize(
-                        context,
-                        batchResult,
-                        cursorResult,
-                        session.getRunId()
-                );
+                // 步骤 3: 完成执行（游标推进 + 状态更新）
+                TaskExecutionResult result = completeUseCase.complete(prepareResult, executeResult);
 
                 log.info("[INGEST][APP] Task execution completed: taskId={} status={}",
-                        taskId, finalizationResult.getStatus());
-                return TaskExecutionResult.success(taskId, finalizationResult);
+                        command.taskId(), result.getStatus());
+
+                // 记录成功指标
+                meterRegistry.counter("ingest.task.execution.result",
+                        Tags.of("status", result.getStatus().name()))
+                        .increment();
+
+                return result;
 
             } finally {
-                // 停止心跳续租
-                sessionInitializer.stopHeartbeat(heartbeat);
+                // 清理会话资源（停止心跳）
+                prepareResult.session().cleanup();
             }
 
         } catch (LeaseRevokedException e) {
             // 租约被接管，快速失败
             log.warn("[INGEST][APP] Lease revoked: taskId={} expectedOwner={} actualOwner={}",
-                    taskId, e.getExpectedOwner(), e.getActualOwner());
-            return TaskExecutionResult.leaseRevoked(taskId);
+                    command.taskId(), e.getExpectedOwner(), e.getActualOwner());
+            return TaskExecutionResult.leaseRevoked(command.taskId());
 
         } catch (Exception e) {
-            log.error("[INGEST][APP] Task execution failed: taskId={}", taskId, e);
-            return TaskExecutionResult.failed(taskId, e.getMessage());
-        }
-    }
+            log.error("[INGEST][APP] Task execution failed: taskId={}", command.taskId(), e);
 
-    /**
-     * 检查租约有效性（租约被撤销时快速失败）
-     * @param session 执行会话
-     * @param taskId 任务 ID
-     * @throws LeaseRevokedException 如果租约已被撤销
-     */
-    private void checkLeaseValidity(ExecutionSession session, Long taskId) {
-        if (session.isLeaseRevoked()) {
-            throw new LeaseRevokedException(
-                taskId,
-                session.getLeaseOwner(), // 需要从 session 中获取，或从 context 传入
-                "Lease revoked by heartbeat failure"
-            );
-        }
-    }
+            // 记录失败指标
+            meterRegistry.counter("ingest.task.execution.result",
+                    Tags.of("status", "ERROR"))
+                    .increment();
 
-    private String generateLeaseOwner() {
-        // 生成租约持有者标识：nodeId:randomId
-        return LeaseOwner.generate(getNodeId()).toString();
+            return TaskExecutionResult.failed(command.taskId(), e.getMessage());
+        }
     }
 }
 ```
 
-### 2. 幂等检查器 (IdempotencyChecker)
+#### 1.2 准备用例 (PrepareTaskExecutionUseCase)
+
+**职责**：准备执行（幂等检查 → 租约抢占 → 会话初始化 → 上下文加载）
+
+**事务边界**：独立事务（`REQUIRES_NEW`），失败不影响任务状态
+
+**接口定义**：
+
+```java
+// ===== Domain 层：用例端口 =====
+// 位置：patra-ingest-domain/.../domain/port/usecase/PrepareTaskExecutionUseCase.java
+public interface PrepareTaskExecutionUseCase {
+    /**
+     * 准备任务执行
+     * @param command 任务执行命令
+     * @return 准备结果（session + context + task + leaseOwner）
+     */
+    PrepareTaskResult prepare(TaskExecutionCommand command);
+}
+
+// ===== Application 层：用例实现 =====
+// 位置：patra-ingest-app/.../execution/prepare/PrepareTaskExecutionUseCaseImpl.java
+@Service
+@Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+@RequiredArgsConstructor
+public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseCase {
+    private final IdempotencyChecker idempotencyChecker;
+    private final LeaseManagementService leaseManagementService;
+    private final ExecutionSessionManager sessionManager;
+    private final ExecutionContextLoader contextLoader;
+    private final TaskRepository taskRepository;
+
+    @Override
+    public PrepareTaskResult prepare(TaskExecutionCommand command) {
+        Long taskId = command.taskId();
+        String idempotentKey = command.idempotentKey();
+
+        // 1. 幂等检查
+        if (idempotencyChecker.isAlreadyCompleted(taskId, idempotentKey)) {
+            throw new TaskAlreadyCompletedException(taskId);
+        }
+
+        // 2. 租约抢占
+        String leaseOwner = LeaseOwner.generate().toString();
+        LeaseAcquisitionResult leaseResult = leaseManagementService.tryAcquire(
+                taskId, leaseOwner, 60 // 租约时长（秒）
+        );
+        if (!leaseResult.isSuccess()) {
+            throw new LeaseAcquisitionFailedException(taskId, leaseResult.getReason());
+        }
+
+        // 3. 会话初始化 + 心跳启动
+        ExecutionSession session = sessionManager.create(taskId, leaseOwner);
+
+        // 4. 上下文加载（配置快照 + 表达式编译）
+        ExecutionContext context = contextLoader.load(taskId);
+
+        // 5. 加载任务聚合根
+        TaskAggregate taskAggregate = taskRepository.findById(taskId)
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+        log.info("[INGEST][APP] Task prepared: taskId={} runId={} leaseOwner={}",
+                taskId, session.runId(), leaseOwner);
+
+        return new PrepareTaskResult(session, context, taskAggregate, leaseOwner);
+    }
+}
+
+// ===== Application 层：输出模型 =====
+// 位置：patra-ingest-app/.../execution/prepare/PrepareTaskResult.java
+public record PrepareTaskResult(
+    ExecutionSession session,      // 执行会话（含 runId、心跳句柄、租约撤销标志）
+    ExecutionContext context,      // 执行上下文（含 task、配置快照、表达式、编译结果）
+    TaskAggregate taskAggregate,   // 任务聚合根（用于后续状态更新）
+    String leaseOwner              // 租约持有者
+) {
+    public Long getTaskId() {
+        return context.task().getId();
+    }
+
+    public Long getRunId() {
+        return session.runId();
+    }
+}
+```
+
+---
+
+#### 1.3 执行用例 (ExecuteTaskBatchesUseCase)
+
+**职责**：执行批次（批次规划 → 批次执行）
+
+**事务边界**：批次规划独立事务（`@Transactional`），批次执行按批次分事务
+
+**接口定义**：
+
+```java
+// ===== Domain 层：用例端口 =====
+// 位置：patra-ingest-domain/.../domain/port/usecase/ExecuteTaskBatchesUseCase.java
+public interface ExecuteTaskBatchesUseCase {
+    /**
+     * 执行任务批次
+     * @param prepareResult 准备结果
+     * @return 执行结果（batchPlan + batchResult）
+     */
+    ExecuteBatchesResult execute(PrepareTaskResult prepareResult);
+}
+
+// ===== Application 层：用例实现 =====
+// 位置：patra-ingest-app/.../execution/execute/ExecuteTaskBatchesUseCaseImpl.java
+@Service
+@RequiredArgsConstructor
+public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
+    private final BatchPlannerRegistry plannerRegistry;
+    private final BatchExecutorRegistry executorRegistry;
+
+    @Override
+    public ExecuteBatchesResult execute(PrepareTaskResult prepareResult) {
+        ExecutionContext context = prepareResult.context();
+        Long runId = prepareResult.getRunId();
+
+        // 检查租约有效性
+        checkLeaseValidity(prepareResult.session());
+
+        // 1. 批次规划（独立事务，由 BatchPlanner 实现类管理）
+        BatchPlanner planner = plannerRegistry.getPlanner(
+                context.task().getProvenanceCode().getCode()
+        );
+        BatchPlan batchPlan = planner.plan(context, runId);
+
+        log.info("[INGEST][APP] Batch plan generated: runId={} totalBatches={}",
+                runId, batchPlan.getTotalBatches());
+
+        // 检查租约有效性
+        checkLeaseValidity(prepareResult.session());
+
+        // 2. 批次执行（按批次分事务，由 BatchExecutor 实现类管理）
+        BatchExecutor executor = executorRegistry.getExecutor(
+                context.task().getProvenanceCode().getCode()
+        );
+        BatchExecutionResult batchResult = executor.execute(context, batchPlan, runId);
+
+        log.info("[INGEST][APP] Batches executed: runId={} succeeded={} failed={}",
+                runId, batchResult.succeededBatches(), batchResult.failedBatches());
+
+        return new ExecuteBatchesResult(batchPlan, batchResult);
+    }
+
+    private void checkLeaseValidity(ExecutionSession session) {
+        if (session.isLeaseRevoked()) {
+            throw new LeaseRevokedException(
+                    session.taskId(),
+                    session.leaseOwner(),
+                    "Lease revoked by heartbeat failure"
+            );
+        }
+    }
+}
+
+// ===== Application 层：输出模型 =====
+// 位置：patra-ingest-app/.../execution/execute/ExecuteBatchesResult.java
+public record ExecuteBatchesResult(
+    BatchPlan batchPlan,              // 批次计划
+    BatchExecutionResult batchResult   // 批次执行结果
+) {
+    public int getTotalBatches() {
+        return batchResult.totalBatches();
+    }
+
+    public int getSucceededBatches() {
+        return batchResult.succeededBatches();
+    }
+
+    public int getFailedBatches() {
+        return batchResult.failedBatches();
+    }
+}
+```
+
+---
+
+#### 1.4 完成用例 (CompleteTaskExecutionUseCase)
+
+**职责**：完成执行（游标推进 → 状态更新）
+
+**事务边界**：独立事务（`REQUIRES_NEW`），游标推进与状态更新原子性
+
+**接口定义**：
+
+```java
+// ===== Domain 层：用例端口 =====
+// 位置：patra-ingest-domain/.../domain/port/usecase/CompleteTaskExecutionUseCase.java
+public interface CompleteTaskExecutionUseCase {
+    /**
+     * 完成任务执行
+     * @param prepareResult 准备结果
+     * @param executeResult 执行结果
+     * @return 任务执行结果
+     */
+    TaskExecutionResult complete(PrepareTaskResult prepareResult, ExecuteBatchesResult executeResult);
+}
+
+// ===== Application 层：用例实现 =====
+// 位置：patra-ingest-app/.../execution/complete/CompleteTaskExecutionUseCaseImpl.java
+@Service
+@Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+@RequiredArgsConstructor
+public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUseCase {
+    private final CursorAdvancerRegistry advancerRegistry;
+    private final ExecutionFinalizer finalizer;
+
+    @Override
+    public TaskExecutionResult complete(PrepareTaskResult prepareResult, ExecuteBatchesResult executeResult) {
+        ExecutionContext context = prepareResult.context();
+        Long runId = prepareResult.getRunId();
+
+        // 检查租约有效性
+        checkLeaseValidity(prepareResult.session());
+
+        // 1. 游标推进
+        CursorAdvancer advancer = advancerRegistry.getAdvancer(
+                context.task().getOperationCode().getType()
+        );
+        CursorAdvancementResult cursorResult = advancer.advance(
+                context,
+                executeResult.batchResult(),
+                runId
+        );
+
+        log.info("[INGEST][APP] Cursor advanced: taskId={} oldValue={} newValue={}",
+                context.task().getId(), cursorResult.oldValue(), cursorResult.newValue());
+
+        // 检查租约有效性
+        checkLeaseValidity(prepareResult.session());
+
+        // 2. 状态更新
+        FinalizationResult finalizationResult = finalizer.finalize(
+                context,
+                executeResult.batchResult(),
+                cursorResult,
+                runId
+        );
+
+        log.info("[INGEST][APP] Task finalized: taskId={} runId={} status={}",
+                context.task().getId(), runId, finalizationResult.getStatus());
+
+        return TaskExecutionResult.success(context.task().getId(), finalizationResult);
+    }
+
+    private void checkLeaseValidity(ExecutionSession session) {
+        if (session.isLeaseRevoked()) {
+            throw new LeaseRevokedException(
+                    session.taskId(),
+                    session.leaseOwner(),
+                    "Lease revoked by heartbeat failure"
+            );
+        }
+    }
+}
+```
+
+---
+
+### 2. 支持服务（可复用组件）
+
+#### 2.1 租约管理服务 (LeaseManagementService)
+
+**职责**：封装租约操作（抢占/续租/验证/释放）
+
+**接口定义**：
+
+```java
+// ===== Application 层：支持服务 =====
+// 位置：patra-ingest-app/.../execution/support/LeaseManagementService.java
+@Service
+@RequiredArgsConstructor
+public class LeaseManagementService {
+    private final TaskRepository taskRepository;
+    private final MeterRegistry meterRegistry;
+
+    /**
+     * 尝试抢占租约
+     */
+    public LeaseAcquisitionResult tryAcquire(Long taskId, String leaseOwner, int durationSeconds) {
+        Instant leasedUntil = Instant.now().plusSeconds(durationSeconds);
+
+        try {
+            TaskAggregate task = taskRepository.findById(taskId)
+                    .orElseThrow(() -> new TaskNotFoundException(taskId));
+
+            task.acquireLease(leaseOwner, leasedUntil);
+            taskRepository.update(task);
+
+            meterRegistry.counter("ingest.lease.acquisition",
+                    Tags.of("result", "success"))
+                    .increment();
+
+            return LeaseAcquisitionResult.success(leaseOwner, leasedUntil);
+
+        } catch (Exception e) {
+            meterRegistry.counter("ingest.lease.acquisition",
+                    Tags.of("result", "failed"))
+                    .increment();
+
+            return LeaseAcquisitionResult.failed(e.getMessage());
+        }
+    }
+
+    /**
+     * 续租（心跳调用）
+     */
+    public boolean renewLease(Long taskId, String leaseOwner, Duration extension) {
+        // 实现略（与原 LeaseAcquisitionService 类似）
+    }
+
+    /**
+     * 验证租约有效性
+     */
+    public LeaseValidationResult validate(Long taskId, String expectedOwner) throws LeaseRevokedException {
+        // 实现略（与原 HeartbeatRenewalService.validateLease 类似）
+    }
+
+    /**
+     * 释放租约
+     */
+    public void release(Long taskId, String leaseOwner) {
+        // 实现略
+    }
+}
+```
+
+---
+
+#### 2.2 执行会话管理器 (ExecutionSessionManager)
+
+**职责**：会话生命周期管理（创建/心跳启动/心跳停止/清理）
+
+**接口定义**：
+
+```java
+// ===== Application 层：支持服务 =====
+// 位置：patra-ingest-app/.../execution/support/ExecutionSessionManager.java
+@Service
+@RequiredArgsConstructor
+public class ExecutionSessionManager {
+    private final TaskRunRepository runRepository;
+    private final HeartbeatRenewalService heartbeatService;
+    private final LeaseManagementService leaseManagementService;
+
+    /**
+     * 创建执行会话（创建 TaskRun + 启动心跳）
+     */
+    public ExecutionSession create(Long taskId, String leaseOwner) {
+        // 1. 创建 TaskRun 记录
+        TaskRunAggregate taskRun = TaskRunAggregate.builder()
+                .taskId(taskId)
+                .attemptNo(1) // 简化，实际需要查询最大 attemptNo + 1
+                .status(TaskRunStatus.RUNNING)
+                .startedAt(Instant.now())
+                .build();
+
+        runRepository.insert(taskRun);
+
+        // 2. 启动心跳续租
+        AtomicBoolean leaseRevoked = new AtomicBoolean(false);
+        ScheduledFuture<?> heartbeatHandle = heartbeatService.startHeartbeat(
+                taskId, leaseOwner, 20, leaseRevoked // 每 20 秒续租一次
+        );
+
+        return new ExecutionSession(
+                taskRun.getId(),
+                taskId,
+                leaseOwner,
+                heartbeatHandle,
+                leaseRevoked
+        );
+    }
+
+    /**
+     * 停止心跳续租
+     */
+    public void stopHeartbeat(ScheduledFuture<?> heartbeatHandle) {
+        if (heartbeatHandle != null && !heartbeatHandle.isCancelled()) {
+            heartbeatHandle.cancel(false);
+        }
+    }
+
+    /**
+     * 清理会话资源（停止心跳 + 释放租约）
+     */
+    public void cleanup(ExecutionSession session) {
+        stopHeartbeat(session.heartbeatHandle());
+        leaseManagementService.release(session.taskId(), session.leaseOwner());
+    }
+}
+
+// 执行会话（增强版，包含 taskId 和 leaseOwner）
+public record ExecutionSession(
+    Long runId,
+    Long taskId,
+    String leaseOwner,
+    ScheduledFuture<?> heartbeatHandle,
+    AtomicBoolean leaseRevoked  // 心跳线程通知主线程租约已被撤销
+) {
+    public boolean isLeaseRevoked() {
+        return leaseRevoked.get();
+    }
+
+    public void cleanup() {
+        // 由 ExecutionSessionManager 统一清理
+    }
+}
+```
+
+---
+
+### 3. 幂等检查器 (IdempotencyChecker)
 
 **职责**：检查任务是否已成功完成，避免重复执行。
 
