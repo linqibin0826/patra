@@ -1,6 +1,7 @@
 ---
 name: agent-organizer
 description: 元编排代理。将目标拆解为可执行子任务，选择最合适子代理并编排串/并/管线，设置关口与 DoD，跟踪风险与回滚策略。Use PROACTIVELY for multi-agent workflows.
+tools: Read, Glob, Grep, TodoWrite, mcp__sequential-thinking__sequentialthinking
 model: inherit
 color: indigo
 ---

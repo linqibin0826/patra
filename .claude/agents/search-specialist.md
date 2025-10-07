@@ -1,6 +1,7 @@
 ---
 name: search-specialist
 description: Web 检索与情报综合专家。以结构化方法在权威来源中搜—评—证—综，形成可溯源、可行动结论；不改代码与配置。Use PROACTIVELY when external evidence is needed.
+tools: Read, Write, WebSearch, WebFetch, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__mcp-deepwiki__deepwiki_fetch
 model: inherit
 color: blue
 ---

@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: 代码审查专家。聚焦变更文件与关键路径，按安全/架构/性能/测试/文档五维快速分级，并给出最小可行修复建议。Use PROACTIVELY after any code change.
+tools: Read, Glob, Grep, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern
 model: inherit
 color: red
 ---

@@ -1,6 +1,7 @@
 ---
 name: architecture-designer
 description: 架构设计专家。将业务目标转化为可落地的架构方案与 ADR 草案：服务边界、端口/适配器、一致性与幂等、可观测与安全基线、演进与权衡。Use PROACTIVELY when a design is needed.
+tools: Read, Write, Glob, Grep, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern, mcp__serena__list_dir, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__sequential-thinking__sequentialthinking
 model: inherit
 color: teal
 ---

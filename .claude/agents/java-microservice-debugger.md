@@ -1,6 +1,7 @@
 ---
 name: java-microservice-debugger
-description: Java/Spring Boot 微服务调试专家。以“假设—证据—验证—复盘”定位根因并给最小修复建议；默认不改代码，由 coder 实施。Use PROACTIVELY on errors/perf issues.
+description: Java/Spring Boot 微服务调试专家。以"假设—证据—验证—复盘"定位根因并给最小修复建议；默认不改代码，由 coder 实施。Use PROACTIVELY on errors/perf issues.
+tools: Read, Glob, Grep, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__search_for_pattern, mcp__mysql__execute_sql
 model: inherit
 color: red
 ---
