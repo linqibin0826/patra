@@ -506,7 +506,7 @@ public interface TaskRepository {
 - Task 本身不存储完整的配置和表达式，只存储关联 ID（planId、sliceId）和哈希（exprHash）
 - 需要通过关联关系向上游加载：Task → Slice（表达式快照）→ Plan（配置快照）
 - 使用 `patra-expr-kernel` 的 `ExprJsonCodec` 反序列化表达式
-- 使用 `patra-spring-boot-starter-expr` 的 `ExprCompiler` 编译表达式
+- 使用领域端口 `ExpressionCompilerPort` 编译表达式（**遵循六边形架构的 Port-Adapter 模式**）
 
 **接口定义**：
 
@@ -526,7 +526,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     private final TaskRepository taskRepository;
     private final PlanSliceRepository sliceRepository;
     private final PlanRepository planRepository;
-    private final ExprCompiler exprCompiler; // 由 patra-spring-boot-starter-expr 提供
+    private final ExpressionCompilerPort expressionCompiler; // 依赖领域端口（Domain Port）
     private final ObjectMapper objectMapper;
 
     @Override
@@ -552,23 +552,24 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         // 5. 反序列化表达式（Expr）- 使用 patra-expr-kernel 的 ExprJsonCodec
         Expr expression = ExprJsonCodec.fromJson(slice.getExprSnapshotJson());
 
-        // 6. 编译表达式为查询 - 使用 patra-spring-boot-starter-expr 的 ExprCompiler
-        CompileRequest compileRequest = CompileRequestBuilder
-                .of(expression, task.getProvenanceCode())
-                .forOperationType(task.getOperationCode().getType())
-                .forOperation(task.getOperationCode().getCode())
-                .build();
-        CompileResult compileResult = exprCompiler.compile(compileRequest);
+        // 6. 编译表达式为查询 - 通过领域端口
+        ExprCompilationRequest compileRequest = new ExprCompilationRequest(
+                expression,
+                task.getProvenanceCode().getCode(),
+                task.getOperationCode().getType(),
+                task.getOperationCode().getCode()
+        );
+        ExprCompilationResult compilationResult = expressionCompiler.compile(compileRequest);
 
         // 7. 验证编译结果
-        if (!compileResult.report().isValid()) {
+        if (!compilationResult.isValid()) {
             throw new ExpressionCompilationException(
-                    "Expression validation failed: " + compileResult.report().summary()
+                    "Expression validation failed: " + compilationResult.validationMessage()
             );
         }
 
         // 8. 组装执行上下文
-        return new ExecutionContext(task, configSnapshot, expression, compileResult);
+        return new ExecutionContext(task, configSnapshot, expression, compilationResult);
     }
 }
 
@@ -579,27 +580,27 @@ public record ExecutionContext(
     TaskAggregate task,
     ProvenanceConfigSnapshot configSnapshot,
     Expr expression,
-    CompileResult compileResult
+    ExprCompilationResult compilationResult
 ) {
     /**
      * 获取编译后的查询字符串
      */
     public String getQuery() {
-        return compileResult.query();
+        return compilationResult.query();
     }
 
     /**
      * 获取查询参数
      */
     public Map<String, String> getQueryParams() {
-        return compileResult.params();
+        return compilationResult.params();
     }
 
     /**
      * 获取规范化后的表达式
      */
     public Expr getNormalizedExpression() {
-        return compileResult.normalized();
+        return compilationResult.normalizedExpression();
     }
 }
 ```
@@ -610,9 +611,159 @@ public record ExecutionContext(
   - `ExprJsonCodec.fromJson(String)` → `Expr`
   - `ExprJsonCodec.toJson(Expr)` → `String`
 
-- `ExprCompiler`（`patra-spring-boot-starter-expr`）：将 `Expr` 编译为目标数据源的查询
-  - 输入：`CompileRequest`（Expr + ProvenanceCode + operationType + operationCode）
-  - 输出：`CompileResult`（query + params + normalized + validation report）
+- `ExpressionCompilerPort`（Domain Port）：表达式编译领域端口
+  - 输入：`ExprCompilationRequest`（领域模型：Expr + provenanceCode + operationType + operationCode）
+  - 输出：`ExprCompilationResult`（领域模型：query + params + normalizedExpression + isValid + validationMessage）
+  - 实现：由 Infrastructure 层的 `ExpressionCompilerAdapter` 适配 `patra-spring-boot-starter-expr` 的能力
+
+#### 5.1 领域端口：ExpressionCompilerPort
+
+**位置**：`patra-ingest-domain` 模块（Domain 层）
+
+**职责**：定义表达式编译的领域契约，实现依赖倒置原则。
+
+**接口定义**：
+
+```java
+/**
+ * 表达式编译器端口（领域接口）
+ * 位置：patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/ExpressionCompilerPort.java
+ */
+public interface ExpressionCompilerPort {
+    /**
+     * 编译表达式
+     * @param request 编译请求（领域模型）
+     * @return 编译结果（领域模型）
+     */
+    ExprCompilationResult compile(ExprCompilationRequest request);
+}
+
+/**
+ * 表达式编译请求（领域模型 - 值对象）
+ */
+public record ExprCompilationRequest(
+    Expr expression,              // patra-expr-kernel 的核心类型
+    String provenanceCode,        // 数据源代码（如 "PUBMED"）
+    String operationType,         // 操作类型（如 "HARVEST"）
+    String operationCode          // 操作代码（如 "SEARCH"）
+) {}
+
+/**
+ * 表达式编译结果（领域模型 - 值对象）
+ */
+public record ExprCompilationResult(
+    String query,                 // 编译后的查询字符串
+    Map<String, String> params,   // 查询参数
+    Expr normalizedExpression,    // 规范化后的表达式
+    boolean isValid,              // 验证是否通过
+    String validationMessage      // 验证信息（失败时说明原因）
+) {}
+```
+
+**设计要点**：
+
+- 领域模型纯粹：不依赖任何外部框架或技术实现
+- 值对象不可变：使用 `record` 保证不可变性
+- 职责单一：仅定义编译契约，不涉及具体实现
+
+#### 5.2 基础设施适配器：ExpressionCompilerAdapter
+
+**位置**：`patra-ingest-infra` 模块（Infrastructure 层）
+
+**职责**：将领域端口适配到 `patra-spring-boot-starter-expr` 的具体实现。
+
+**实现定义**：
+
+```java
+/**
+ * 表达式编译器适配器（Infrastructure 层实现）
+ * 位置：patra-ingest-infra/src/main/java/com/patra/ingest/infra/adapter/ExpressionCompilerAdapter.java
+ */
+@Component
+@RequiredArgsConstructor
+public class ExpressionCompilerAdapter implements ExpressionCompilerPort {
+
+    // 依赖 patra-spring-boot-starter-expr 提供的编译器（Infrastructure 层可以依赖外部框架）
+    private final com.patra.starter.expr.compiler.ExprCompiler starterExprCompiler;
+
+    @Override
+    public ExprCompilationResult compile(ExprCompilationRequest domainRequest) {
+        try {
+            // 1. 将领域请求转换为 starter-expr 的请求模型
+            com.patra.starter.expr.compiler.model.CompileRequest starterRequest =
+                com.patra.starter.expr.compiler.model.CompileRequestBuilder
+                    .of(domainRequest.expression(),
+                        ProvenanceCode.valueOf(domainRequest.provenanceCode()))
+                    .forOperationType(domainRequest.operationType())
+                    .forOperation(domainRequest.operationCode())
+                    .build();
+
+            // 2. 调用 starter-expr 的编译器
+            com.patra.starter.expr.compiler.model.CompileResult starterResult =
+                starterExprCompiler.compile(starterRequest);
+
+            // 3. 将 starter-expr 的结果转换为领域模型
+            return new ExprCompilationResult(
+                starterResult.query(),
+                starterResult.params(),
+                starterResult.normalized(),
+                starterResult.report().isValid(),
+                starterResult.report().summary()
+            );
+
+        } catch (Exception e) {
+            log.error("[INGEST][INFRA] Expression compilation failed: provenance={} operation={}",
+                domainRequest.provenanceCode(), domainRequest.operationCode(), e);
+
+            // 编译失败时返回无效结果
+            return new ExprCompilationResult(
+                "",
+                Map.of(),
+                domainRequest.expression(),
+                false,
+                "Compilation error: " + e.getMessage()
+            );
+        }
+    }
+}
+```
+
+**设计要点**：
+
+- 模型转换：在领域模型和技术模型之间进行双向转换
+- 异常处理：捕获技术层异常，转换为领域友好的验证失败结果
+- 日志记录：在基础设施层记录技术细节日志
+- 依赖注入：通过 Spring 容器注入 starter-expr 的实现
+
+**架构优势**：
+
+```
+┌─────────────────────────────────────────────────┐
+│  Application Layer (patra-ingest-app)          │
+│  ┌──────────────────────────────────────────┐  │
+│  │ ExecutionContextLoaderImpl               │  │
+│  │   ↓ 依赖（接口）                          │  │
+│  │ ExpressionCompilerPort (Domain)          │  │
+│  └──────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+                      ↑
+                      │ 实现
+                      │
+┌─────────────────────────────────────────────────┐
+│  Infrastructure Layer (patra-ingest-infra)      │
+│  ┌──────────────────────────────────────────┐  │
+│  │ ExpressionCompilerAdapter                │  │
+│  │   ↓ 调用                                  │  │
+│  │ patra-spring-boot-starter-expr           │  │
+│  │   .ExprCompiler                          │  │
+│  └──────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+```
+
+1. **依赖倒置**：Application 依赖 Domain 抽象，Infrastructure 实现 Domain 接口
+2. **可测试性**：Application 层可 Mock ExpressionCompilerPort 进行单元测试
+3. **可替换性**：未来更换编译实现只需修改 Adapter，不影响业务逻辑
+4. **边界清晰**：领域纯粹，技术细节封装在 Infrastructure 层
 
 ### 6. 批次规划器注册表 (BatchPlannerRegistry)
 
