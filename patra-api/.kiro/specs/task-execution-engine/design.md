@@ -184,16 +184,19 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
             ScheduledFuture<?> heartbeat = session.getHeartbeatHandle();
 
             try {
-                // 步骤 3-4: 加载执行上下文（配置快照 + 表达式 + 编译）
+                // ✅ 步骤 3-4: 加载执行上下文（配置快照 + 表达式 + 编译）
+                checkLeaseValidity(session, taskId); // 检查租约
                 ExecutionContext context = contextLoader.load(taskId);
 
-                // 步骤 5: 批次规划
+                // ✅ 步骤 5: 批次规划
+                checkLeaseValidity(session, taskId); // 检查租约
                 BatchPlanner planner = batchPlannerRegistry.getPlanner(
                         context.task().getProvenanceCode().getCode()
                 );
                 BatchPlan batchPlan = planner.plan(context, session.getRunId());
 
-                // 步骤 6: 批次执行
+                // ✅ 步骤 6: 批次执行
+                checkLeaseValidity(session, taskId); // 检查租约
                 BatchExecutor executor = batchExecutorRegistry.getExecutor(
                         context.task().getProvenanceCode().getCode()
                 );
@@ -203,7 +206,8 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
                         session.getRunId()
                 );
 
-                // 步骤 7: 游标推进
+                // ✅ 步骤 7: 游标推进
+                checkLeaseValidity(session, taskId); // 检查租约
                 CursorAdvancer advancer = cursorAdvancerRegistry.getAdvancer(
                         context.task().getOperationCode().getType()
                 );
@@ -213,7 +217,8 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
                         session.getRunId()
                 );
 
-                // 步骤 8: 状态更新
+                // ✅ 步骤 8: 状态更新
+                checkLeaseValidity(session, taskId); // 检查租约
                 FinalizationResult finalizationResult = executionFinalizer.finalize(
                         context,
                         batchResult,
@@ -239,6 +244,22 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
         } catch (Exception e) {
             log.error("[INGEST][APP] Task execution failed: taskId={}", taskId, e);
             return TaskExecutionResult.failed(taskId, e.getMessage());
+        }
+    }
+
+    /**
+     * 检查租约有效性（租约被撤销时快速失败）
+     * @param session 执行会话
+     * @param taskId 任务 ID
+     * @throws LeaseRevokedException 如果租约已被撤销
+     */
+    private void checkLeaseValidity(ExecutionSession session, Long taskId) {
+        if (session.isLeaseRevoked()) {
+            throw new LeaseRevokedException(
+                taskId,
+                session.getLeaseOwner(), // 需要从 session 中获取，或从 context 传入
+                "Lease revoked by heartbeat failure"
+            );
         }
     }
 
@@ -303,15 +324,32 @@ public interface ExecutionSessionInitializer {
     ExecutionSession initialize(ExecutionContext context);
 }
 
+/**
+ * 执行会话（包含租约撤销标志位）
+ */
+public record ExecutionSession(
+    Long runId,
+    ScheduledFuture<?> heartbeatHandle,
+    AtomicBoolean leaseRevoked  // ✅ 新增：用于心跳线程通知主线程租约已被撤销
+) {
+    /**
+     * 检查租约是否已被撤销
+     */
+    public boolean isLeaseRevoked() {
+        return leaseRevoked.get();
+    }
+}
+
 public interface HeartbeatRenewalService {
     /**
      * 启动心跳续租
      * @param taskId 任务 ID
      * @param leaseOwner 租约持有者
      * @param renewalInterval 续租间隔（秒）
+     * @param leaseRevoked 租约撤销标志位（用于通知主线程）✅ 新增
      * @return 心跳任务句柄
      */
-    ScheduledFuture<?> startHeartbeat(Long taskId, String leaseOwner, int renewalInterval);
+    ScheduledFuture<?> startHeartbeat(Long taskId, String leaseOwner, int renewalInterval, AtomicBoolean leaseRevoked);
 
     /**
      * 停止心跳续租
@@ -356,7 +394,7 @@ public class LeaseRevokedException extends RuntimeException {
 }
 
 /**
- * 心跳续租实现示例（包含失败容忍与主动验证）
+ * 心跳续租实现示例（包含失败容忍与主动验证 + 标志位通知）
  */
 @Service
 public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
@@ -365,12 +403,18 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
     private final ScheduledExecutorService heartbeatExecutor;
 
     @Override
-    public ScheduledFuture<?> startHeartbeat(Long taskId, String leaseOwner, int renewalInterval) {
+    public ScheduledFuture<?> startHeartbeat(Long taskId, String leaseOwner, int renewalInterval, AtomicBoolean leaseRevoked) {
         AtomicInteger consecutiveFailures = new AtomicInteger(0);
         final int MAX_CONSECUTIVE_FAILURES = 3; // 连续失败阈值
 
         return heartbeatExecutor.scheduleAtFixedRate(() -> {
             try {
+                // ✅ 优先检查标志位，避免无效续租
+                if (leaseRevoked.get()) {
+                    log.warn("[INGEST][INFRA] Lease already revoked, stop heartbeat: taskId={} owner={}", taskId, leaseOwner);
+                    return;
+                }
+
                 // 尝试续租
                 boolean renewed = taskRepository.renewLease(taskId, leaseOwner, Duration.ofSeconds(60));
 
@@ -384,9 +428,21 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
 
                     // 达到失败阈值，主动验证租约
                     if (failures >= MAX_CONSECUTIVE_FAILURES) {
-                        validateLease(taskId, leaseOwner); // 如果租约被接管，会抛出 LeaseRevokedException
+                        LeaseValidationResult result = validateLease(taskId, leaseOwner);
+                        if (!result.isValid()) {
+                            // ✅ 租约被接管，设置标志位通知主线程
+                            leaseRevoked.set(true);
+                            log.error("[INGEST][INFRA] Lease revoked: taskId={} expectedOwner={} actualOwner={}",
+                                    taskId, leaseOwner, result.currentOwner());
+                            throw new LeaseRevokedException(taskId, leaseOwner, result.currentOwner());
+                        }
                     }
                 }
+            } catch (LeaseRevokedException e) {
+                // ✅ 确保标志位被设置
+                leaseRevoked.set(true);
+                log.error("[INGEST][INFRA] Lease revoked exception: taskId={} owner={}", taskId, leaseOwner, e);
+                throw e;
             } catch (Exception e) {
                 int failures = consecutiveFailures.incrementAndGet();
                 log.error("[INGEST][INFRA] Heartbeat renewal error: taskId={} owner={} failures={}",
@@ -394,9 +450,13 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
 
                 if (failures >= MAX_CONSECUTIVE_FAILURES) {
                     try {
-                        validateLease(taskId, leaseOwner);
+                        LeaseValidationResult result = validateLease(taskId, leaseOwner);
+                        if (!result.isValid()) {
+                            leaseRevoked.set(true); // ✅ 设置标志位
+                            throw new LeaseRevokedException(taskId, leaseOwner, result.currentOwner());
+                        }
                     } catch (LeaseRevokedException ex) {
-                        // 租约被接管，快速失败（由上层捕获并终止任务）
+                        leaseRevoked.set(true); // ✅ 确保标志位被设置
                         throw ex;
                     }
                 }
@@ -777,17 +837,26 @@ public class ExpressionCompilerAdapter implements ExpressionCompilerPort {
 
 **接口定义**：
 
-```java
-public interface BatchPlannerRegistry {
-    /**
-     * 获取批次规划器
-     * @param provenanceCode 数据源代码
-     * @return 批次规划器
-     */
-    BatchPlanner getPlanner(String provenanceCode);
-}
+**✅ High-3 修复：策略组件层次划分说明**
 
-// 策略接口
+- **策略接口**（`BatchPlanner`、`BatchExecutor`、`CursorAdvancer`）位于 **Domain 层**
+  - 路径：`patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/strategy/`
+  - 职责：定义批次规划/执行/游标推进的领域契约
+  - 依赖：仅依赖领域模型（聚合、值对象）
+
+- **策略注册表**（`BatchPlannerRegistry`、`BatchExecutorRegistry`、`CursorAdvancerRegistry`）位于 **Domain 层**
+  - 路径：`patra-ingest-domain/src/main/java/com/patra/ingest/domain/service/`
+  - 职责：策略选择与路由
+  - 实现：由 Application 层注入具体实现（依赖倒置）
+
+- **策略实现**（`PubMedBatchPlanner`、`EpmcBatchPlanner` 等）位于 **Infrastructure 层**
+  - 路径：`patra-ingest-infra/src/main/java/com/patra/ingest/infra/strategy/`
+  - 职责：适配特定数据源的批次规划/执行逻辑
+  - 依赖：可依赖外部 HTTP 客户端、仓储等基础设施
+
+```java
+// ===== Domain 层：策略接口定义 =====
+// 位置：patra-ingest-domain/.../domain/port/strategy/BatchPlanner.java
 public interface BatchPlanner {
     /**
      * 规划批次
@@ -798,7 +867,20 @@ public interface BatchPlanner {
     BatchPlan plan(ExecutionContext context, Long runId);
 }
 
-// PubMed 实现（包含批次数限制和分批插入 - 解决 Critical-5）
+// ===== Domain 层：策略注册表接口 =====
+// 位置：patra-ingest-domain/.../domain/service/BatchPlannerRegistry.java
+public interface BatchPlannerRegistry {
+    /**
+     * 获取批次规划器
+     * @param provenanceCode 数据源代码
+     * @return 批次规划器
+     */
+    BatchPlanner getPlanner(String provenanceCode);
+}
+
+// ===== Infrastructure 层：PubMed 策略实现 =====
+// 位置：patra-ingest-infra/.../infra/strategy/pubmed/PubMedBatchPlanner.java
+// 包含批次数限制和分批插入 - 解决 Critical-5
 @Component
 public class PubMedBatchPlanner implements BatchPlanner {
     private final BatchRepository batchRepository;
@@ -810,7 +892,16 @@ public class PubMedBatchPlanner implements BatchPlanner {
     @Value("${patra.ingest.task-execution.batch.insert-chunk-size:100}")
     private int insertChunkSize; // 批次记录分批插入的大小
 
+    /**
+     * 规划批次（事务边界）
+     *
+     * ✅ Critical-2 修复：添加事务边界保证原子性
+     * - 批次规划失败时，已插入的批次记录会自动回滚
+     * - 避免孤儿批次数据
+     * - 事务传播：默认 REQUIRED（与调用方共享事务）
+     */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public BatchPlan plan(ExecutionContext context, Long runId) {
         // 1. 获取配置
         ProvenanceConfigSnapshot.PaginationConfig paginationConfig =
@@ -831,18 +922,24 @@ public class PubMedBatchPlanner implements BatchPlanner {
 
         // 3. 计算批次数，增加上限检查
         int calculatedBatches = (int) Math.ceil((double) totalRecords / pageSize);
-        int actualBatches = Math.min(calculatedBatches, maxBatchesPerExecution);
 
-        // 4. 检查批次数是否超过限制
+        // 4. ✅ Critical-3 修复：批次数超限时拒绝任务，避免静默部分执行导致数据丢失
         if (calculatedBatches > maxBatchesPerExecution) {
-            log.warn("[INGEST][APP] Batch count exceeds limit: calculated={} limit={} taskId={}",
-                    calculatedBatches, maxBatchesPerExecution, context.task().getId());
-            // 可以选择：1) 拒绝任务 2) 拆分为多个子任务 3) 只执行前 N 批（当前采用）
+            String errorMsg = String.format(
+                "批次数超限: calculated=%d, limit=%d, totalRecords=%d, pageSize=%d, taskId=%d",
+                calculatedBatches, maxBatchesPerExecution, totalRecords, pageSize, context.task().getId()
+            );
+            log.error("[INGEST][APP] {}", errorMsg);
+            throw new BatchPlanningException(errorMsg, null);
+            // 替代方案：
+            // 1) 拒绝任务（当前采用） - 最安全，避免数据丢失
+            // 2) 拆分为多个子任务 - 需要额外的任务拆分机制
+            // 3) 只执行前 N 批 - 已废弃，会导致数据静默丢失
         }
 
         // 5. 生成批次记录
-        List<RunBatchAggregate> batches = new ArrayList<>(actualBatches);
-        for (int i = 0; i < actualBatches; i++) {
+        List<RunBatchAggregate> batches = new ArrayList<>(calculatedBatches);
+        for (int i = 0; i < calculatedBatches; i++) {
             batches.add(createBatch(
                     runId,
                     i + 1,
@@ -860,7 +957,7 @@ public class PubMedBatchPlanner implements BatchPlanner {
                     chunk.size(), runId);
         }
 
-        return new BatchPlan(actualBatches, totalRecords, webEnv);
+        return new BatchPlan(calculatedBatches, totalRecords, webEnv);
     }
 
     private ESearchRequest buildSearchRequest(String query, Map<String, String> params) {
@@ -910,7 +1007,19 @@ public class EpmcBatchPlanner implements BatchPlanner {
 
 **接口定义**：
 
+**✅ High-3 修复：策略组件层次划分说明（同 BatchPlanner）**
+
+- **策略接口**（`BatchExecutor`）位于 **Domain 层**
+  - 路径：`patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/strategy/`
+
+- **策略注册表**（`BatchExecutorRegistry`）位于 **Domain 层**
+  - 路径：`patra-ingest-domain/src/main/java/com/patra/ingest/domain/service/`
+
+- **策略实现**（`PubMedBatchExecutor`、`EpmcBatchExecutor`）位于 **Infrastructure 层**
+  - 路径：`patra-ingest-infra/src/main/java/com/patra/ingest/infra/strategy/`
+
 ```java
+// ===== Domain 层：策略注册表接口 =====
 public interface BatchExecutorRegistry {
     /**
      * 获取批次执行器
@@ -920,7 +1029,7 @@ public interface BatchExecutorRegistry {
     BatchExecutor getExecutor(String provenanceCode);
 }
 
-// 策略接口
+// ===== Domain 层：策略接口 =====
 public interface BatchExecutor {
     /**
      * 执行批次
@@ -944,7 +1053,8 @@ public record BatchExecutionResult(
     ExecutionStats stats
 ) {}
 
-// PubMed 实现
+// ===== Infrastructure 层：PubMed 策略实现 =====
+// 位置：patra-ingest-infra/.../infra/strategy/pubmed/PubMedBatchExecutor.java
 @Component
 public class PubMedBatchExecutor implements BatchExecutor {
     private final PubMedClient pubMedClient;
@@ -1090,7 +1200,19 @@ public class PubMedBatchExecutor implements BatchExecutor {
 
 **接口定义**：
 
+**✅ High-3 修复：策略组件层次划分说明（同 BatchPlanner/BatchExecutor）**
+
+- **策略接口**（`CursorAdvancer`）位于 **Domain 层**
+  - 路径：`patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/strategy/`
+
+- **策略注册表**（`CursorAdvancerRegistry`）位于 **Domain 层**
+  - 路径：`patra-ingest-domain/src/main/java/com/patra/ingest/domain/service/`
+
+- **策略实现**（`TimestampCursorAdvancer`、`IdCursorAdvancer`、`TokenCursorAdvancer`）位于 **Infrastructure 层**
+  - 路径：`patra-ingest-infra/src/main/java/com/patra/ingest/infra/strategy/cursor/`
+
 ```java
+// ===== Domain 层：策略注册表接口 =====
 public interface CursorAdvancerRegistry {
     /**
      * 获取游标推进器
@@ -1100,7 +1222,7 @@ public interface CursorAdvancerRegistry {
     CursorAdvancer getAdvancer(String operationType);
 }
 
-// 策略接口
+// ===== Domain 层：策略接口 =====
 public interface CursorAdvancer {
     /**
      * 推进游标
@@ -1131,7 +1253,8 @@ public record CursorAdvancementResult(
     }
 }
 
-// 时间型游标推进器
+// ===== Infrastructure 层：时间型游标推进器实现 =====
+// 位置：patra-ingest-infra/.../infra/strategy/cursor/TimestampCursorAdvancer.java
 @Component
 public class TimestampCursorAdvancer implements CursorAdvancer {
     private final CursorRepository cursorRepository;
@@ -1232,7 +1355,8 @@ public class TimestampCursorAdvancer implements CursorAdvancer {
     }
 }
 
-// ID 型游标推进器
+// ===== Infrastructure 层：ID 型游标推进器实现 =====
+// 位置：patra-ingest-infra/.../infra/strategy/cursor/IdCursorAdvancer.java
 @Component
 public class IdCursorAdvancer implements CursorAdvancer {
     private final CursorRepository cursorRepository;
