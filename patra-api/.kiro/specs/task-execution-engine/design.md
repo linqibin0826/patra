@@ -178,26 +178,22 @@
 
 **1. TaskExecutionOrchestrator（轻量级编排器）**
 - **职责**：协调 3 个用例，处理顶层异常，管理资源清理
-- **代码量**：~30 行
 - **依赖**：3 个用例接口
 - **事务**：不管理事务
 
 **2. PrepareTaskExecutionUseCase（准备用例）**
 - **职责**：准备执行（幂等检查 → 租约抢占 → 会话初始化 → 上下文加载）
-- **代码量**：~80 行
 - **输出**：`PrepareTaskResult`（session + context + taskAggregate + leaseOwner）
 - **事务**：独立事务（`REQUIRES_NEW`），失败不影响任务状态
 
 **3. ExecuteTaskBatchesUseCase（执行用例）**
 - **职责**：执行批次（批次规划 → 批次执行）
-- **代码量**：~60 行
 - **输入**：`PrepareTaskResult`
 - **输出**：`ExecuteBatchesResult`（batchPlan + batchResult）
 - **事务**：批次规划独立事务，批次执行按批次分事务
 
 **4. CompleteTaskExecutionUseCase（完成用例）**
 - **职责**：完成执行（游标推进 → 状态更新）
-- **代码量**：~50 行
 - **输入**：`PrepareTaskResult` + `ExecuteBatchesResult`
 - **输出**：`TaskExecutionResult`
 - **事务**：独立事务（`REQUIRES_NEW`），游标推进与状态更新原子性
