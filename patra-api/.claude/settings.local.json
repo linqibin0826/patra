@@ -23,5 +23,15 @@
     "deny": [],
     "ask": []
   },
-  "outputStyle": "default"
+  "outputStyle": "default",
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "mcp-server-time",
+    "context7",
+    "mcp-deepwiki",
+    "desktop-commander",
+    "serena",
+    "mysql",
+    "playwright"
+  ]
 }
