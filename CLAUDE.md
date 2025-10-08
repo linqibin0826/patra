@@ -13,12 +13,12 @@
 ### 工作流程
 
 ```
-需求理解 → [复杂设计？→ architecture-designer]
+需求理解 → [复杂设计评审？→ architecture-reviewer]
 → 你自己编码实现
 → code-reviewer审查
 → [需要提高代码可读性/优化命名/拆分/注释/JavaDoc？→ code-refiner]
 → qa-*测试
-→ [修复复杂bug？→ java-debugger]
+→ [修复复杂bug？→ java-microservice-debugger]
 → [需要文档？→ docs-engineer]
 ```
 
@@ -182,16 +182,16 @@ patra-{service}/
 **委派给子代理（专人做专事）**：
 
 **1. 编排与协调**：
-- **agent-organizer**：复杂多代理任务编排、任务拆解、关口设置
+- **meta-orchestrator**：复杂多代理任务编排、任务拆解、关口设置、DoD定义
 
 **2. 架构与设计**：
-- **architecture-designer**：复杂架构方案设计、端口契约定义、事件驱动方案
 - **architecture-reviewer**：重大设计变更评审、跨服务边界评审、架构合规检查
 
-**3. 代码质量**：
+**3. 代码质量与调试**：
 - **code-reviewer**：每次代码变更后的审查、问题定位与修复建议
 - **code-refiner**：零行为改变的重构（拆分长方法、命名优化、注释完善）
-- **java-debugger**：复杂问题根因分析（性能问题、偶发bug、系统异常）
+- **java-microservice-debugger**：复杂问题根因分析（性能问题、偶发bug、系统异常）
+- **business-trace-analyzer**：业务流程追踪分析、执行路径可视化
 
 **4. 测试与质量**：
 - **qa-unit-tests**：单元测试编写（JUnit5 + AssertJ + Mockito）
@@ -210,7 +210,7 @@ patra-{service}/
 **完整开发流程（新功能/复杂变更）**：
 ```
 1. 需求澄清（主代理）
-2. [复杂架构？] → architecture-designer → architecture-reviewer
+2. [复杂设计？] → architecture-reviewer 评审
 3. [需要调研？] → search-specialist（查询最佳实践）
 4. 代码实现（主代理）
 5. 自检编译（mvn -q -DskipTests compile）
@@ -234,28 +234,28 @@ patra-{service}/
 
 **问题修复流程**：
 ```
-1. 问题诊断 → java-debugger（系统化根因分析）
-2. 修复实现（主代理根据诊断建议）
-3. code-reviewer 审查
-4. qa-unit-tests（回归测试）
-5. qa-integration-tests（相关场景验证）
+1. 问题诊断 → java-microservice-debugger（系统化根因分析）
+2. [需要业务流程追踪？] → business-trace-analyzer（执行路径分析）
+3. 修复实现（主代理根据诊断建议）
+4. code-reviewer 审查
+5. qa-unit-tests（回归测试）
+6. qa-integration-tests（相关场景验证）
 ```
 
 **架构变更流程**：
 ```
-1. 方案设计 → architecture-designer
-2. 合规评审 → architecture-reviewer
-3. [需要调研？] → search-specialist
-4. 实现（主代理）
-5. code-reviewer → code-refiner
-6. qa-* 全流程测试
-7. docs-engineer + mermaid-expert（文档与图表）
-8. qa-quality-gates（最终验证）
+1. 架构评审 → architecture-reviewer（合规评审）
+2. [需要调研？] → search-specialist
+3. 实现（主代理）
+4. code-reviewer → code-refiner
+5. qa-* 全流程测试
+6. docs-engineer + mermaid-expert（文档与图表）
+7. qa-quality-gates（最终验证）
 ```
 
 **多代理复杂任务**：
 ```
-1. agent-organizer 编排（任务拆解 + 关口设置 + DoD 定义）
+1. meta-orchestrator 编排（任务拆解 + 关口设置 + DoD 定义）
 2. 按编排顺序执行各子代理
 3. 关键关口验证（架构评审/代码审查/质量门禁）
 4. 产出汇总与交付
