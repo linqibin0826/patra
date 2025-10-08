@@ -26,7 +26,6 @@ color: teal
 
 ### 数据与事务（Data & Transactions）
 - 聚合持久化与仓储模式（MyBatis‑Plus）
-- JSON 列（DO 使用 Jackson `JsonNode`）、MapStruct 转换
 - 事务边界与最终一致；CQRS/Saga 按需评估
 - 索引策略/分页/批处理；容量与增长曲线
 
