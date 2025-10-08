@@ -174,49 +174,89 @@ patra-{service}/
 ### 10.1 何时调用子代理
 
 **主代理自己完成**：
-- Java 代码实现（Domain/App/Infra/Adapter）
-- 技术选型与简单设计决策
-- 代码自检（编译通过、基本质量）
+- ✅ Java 代码实现（Domain/App/Infra/Adapter/Api/Boot 各层）
+- ✅ 技术选型与简单设计决策（不涉及架构调整）
+- ✅ 代码自检（编译通过、基本质量、简单问题修复）
+- ✅ 简单的性能优化（索引添加、查询优化等）
 
-**委派给子代理**：
-- **架构设计**：复杂架构方案 → architecture-designer
-- **架构评审**：重大变更合规评审 → architecture-reviewer
-- **代码审查**：变更审查与问题定位 → code-reviewer
-- **代码重构**：零行为改变的优化 → code-refiner
-- **调试诊断**：复杂问题根因分析 → java-debugger
-- **单元测试**：JUnit5 测试编写 → qa-unit-tests
-- **集成测试**：跨层/E2E 测试 → qa-integration-tests
-- **质量门禁**：测试/覆盖/构建汇总 → qa-quality-gates
-- **文档维护**：API/架构文档同步 → docs-engineer
-- **图表绘制**：流程/架构图 → mermaid-expert
-- **资料检索**：权威来源查询 → search-specialist
+**委派给子代理（专人做专事）**：
+
+**1. 编排与协调**：
+- **agent-organizer**：复杂多代理任务编排、任务拆解、关口设置
+
+**2. 架构与设计**：
+- **architecture-designer**：复杂架构方案设计、端口契约定义、事件驱动方案
+- **architecture-reviewer**：重大设计变更评审、跨服务边界评审、架构合规检查
+
+**3. 代码质量**：
+- **code-reviewer**：每次代码变更后的审查、问题定位与修复建议
+- **code-refiner**：零行为改变的重构（拆分长方法、命名优化、注释完善）
+- **java-debugger**：复杂问题根因分析（性能问题、偶发bug、系统异常）
+
+**4. 测试与质量**：
+- **qa-unit-tests**：单元测试编写（JUnit5 + AssertJ + Mockito）
+- **qa-integration-tests**：集成/E2E 测试（Spring Boot Test + Testcontainers）
+- **qa-quality-gates**：质量门禁检查、覆盖率汇总、发布前验证
+
+**5. 文档与可视化**：
+- **docs-engineer**：API/架构/数据/运维文档同步、ADR 维护
+- **mermaid-expert**：流程图/时序图/ERD/架构图绘制
+
+**6. 外部资源**：
+- **search-specialist**：权威来源检索、最佳实践调研、技术选型对比
 
 ### 10.2 典型工作流
 
-**标准开发流程**：
+**完整开发流程（新功能/复杂变更）**：
 ```
-1. 需求分析（主代理）
-2. [复杂架构] → architecture-designer → architecture-reviewer
-3. 代码实现（主代理）
-4. 代码审查 → code-reviewer
-5. [需要重构] → code-refiner
-6. 单元测试 → qa-unit-tests
-7. 集成测试 → qa-integration-tests
-8. [需要文档] → docs-engineer
+1. 需求澄清（主代理）
+2. [复杂架构？] → architecture-designer → architecture-reviewer
+3. [需要调研？] → search-specialist（查询最佳实践）
+4. 代码实现（主代理）
+5. 自检编译（mvn -q -DskipTests compile）
+6. code-reviewer 审查
+7. [需要重构？] → code-refiner（优化可读性）
+8. qa-unit-tests（单元测试）
+9. qa-integration-tests（集成测试）
+10. qa-quality-gates（质量门禁）
+11. [需要文档？] → mermaid-expert + docs-engineer
+12. 合并与发布
 ```
 
-**快速开发流程**（简单功能）：
+**快速开发流程（简单功能）**：
 ```
-1. 代码实现
-2. 自检编译（修改代码后，一定要确保当前模块编译通过）
+1. 代码实现（主代理）
+2. 自检编译（mvn -q -DskipTests compile）✅ 确保编译通过
 3. code-reviewer 审查
 4. qa-unit-tests 测试
+5. 合并
 ```
 
 **问题修复流程**：
 ```
-1. 问题诊断 → java-debugger
-2. 修复实现（主代理）
+1. 问题诊断 → java-debugger（系统化根因分析）
+2. 修复实现（主代理根据诊断建议）
 3. code-reviewer 审查
-4. qa-* 回归测试
+4. qa-unit-tests（回归测试）
+5. qa-integration-tests（相关场景验证）
+```
+
+**架构变更流程**：
+```
+1. 方案设计 → architecture-designer
+2. 合规评审 → architecture-reviewer
+3. [需要调研？] → search-specialist
+4. 实现（主代理）
+5. code-reviewer → code-refiner
+6. qa-* 全流程测试
+7. docs-engineer + mermaid-expert（文档与图表）
+8. qa-quality-gates（最终验证）
+```
+
+**多代理复杂任务**：
+```
+1. agent-organizer 编排（任务拆解 + 关口设置 + DoD 定义）
+2. 按编排顺序执行各子代理
+3. 关键关口验证（架构评审/代码审查/质量门禁）
+4. 产出汇总与交付
 ```

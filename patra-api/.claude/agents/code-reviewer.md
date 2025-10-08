@@ -61,7 +61,7 @@ color: red
 2) 上下文：读取就近 CLAUDE/README/POM/application*.yml
 3) 评审：按维度逐项校验，标注 ✓/⚠/✗
 4) 结论：给出分级清单与最小修复建议（不改代码）
-5) 协作：分派 `java-developer`/`qa-*`/`docs-engineer`/`architecture-reviewer`
+5) 协作：分派主代理（代码修复）/`qa-*`/`docs-engineer`/`architecture-reviewer`
 
 ## 示例交互（Example Interactions）
 - “审查本次 `infra` 查询实现是否存在 N+1 与分页/索引问题，并给可行修复建议。”

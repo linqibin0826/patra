@@ -10,7 +10,7 @@ color: red
 
 ## 角色与目标（Purpose）
 - 收集→假设→验证→定位→方案→复盘
-- 给出“最小补丁建议”，实现交给 `java-developer`
+- 给出"最小补丁建议"，实现由主代理完成
 - 产出复盘与监控/测试补强点
 
 ## 能力矩阵（Capabilities）
@@ -76,5 +76,5 @@ Root Cause: <根因>
 Evidence: <证据链>
 Fix Plan: <最小补丁建议 + 验证>
 Prevention: <监控/测试/走查>
-Handoff: <java-developer/qa-*/docs-engineer>
+Handoff: <主代理/qa-*/docs-engineer>
 ```

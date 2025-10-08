@@ -120,4 +120,4 @@ color: green
   - Should Consider：<项 1>
   - Nice to Have：<项 1>
 - ADR 建议：<是否需要 + 建议标题>
-- Next: <architecture-designer | java-developer | qa-*/docs-engineer>
+- Next: <architecture-designer | 主代理 | qa-*/docs-engineer>
