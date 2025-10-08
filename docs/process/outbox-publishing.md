@@ -176,10 +176,10 @@ private OutboxMessage createOutboxMessage(TaskQueuedEvent event, OutboxPublishCo
     
     // 4. 构建OutboxMessage
     return OutboxMessage.builder()
-        .aggregateType("Task")
+        .aggregateType(getAggregateType().getCode())  // 使用枚举方法获取类型代码
         .aggregateId(event.taskId())
-        .channel("task-queue")
-        .opType("CREATED")
+        .channel(getChannel().getCode())              // 使用枚举方法获取通道代码
+        .opType(getOperationType(event).getCode())    // 使用枚举方法获取操作类型代码
         .partitionKey(String.valueOf(event.taskId())) // 保证顺序
         .dedupKey("task-queue:" + event.taskId() + ":CREATED") // 幂等键
         .payloadJson(payloadJson)

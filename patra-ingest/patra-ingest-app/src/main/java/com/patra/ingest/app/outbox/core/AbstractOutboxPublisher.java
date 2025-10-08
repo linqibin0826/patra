@@ -28,13 +28,13 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li><b>Must Implement</b>:
  *     <ul>
- *       <li>{@link #getAggregateType()} - Returns {@link com.patra.ingest.app.outbox.constants.OutboxAggregateTypes} code</li>
- *       <li>{@link #getChannel()} - Returns {@link com.patra.ingest.app.outbox.constants.OutboxChannels} code</li>
+ *       <li>{@link #getAggregateType()} - Returns {@link OutboxAggregateTypes} enum</li>
+ *       <li>{@link #getChannel()} - Returns {@link OutboxChannels} enum</li>
  *       <li>{@link #buildPayload} - Constructs business payload JSON</li>
  *       <li>{@link #buildHeaders} - Constructs message headers JSON</li>
  *       <li>{@link #buildPartitionKey} - Defines partition strategy</li>
  *       <li>{@link #buildDedupKey} - Defines idempotency key</li>
- *       <li>{@link #getOperationType} - Returns {@link com.patra.ingest.app.outbox.constants.OutboxBusinessTags} code</li>
+ *       <li>{@link #getOperationType} - Returns {@link OutboxBusinessTags} enum</li>
  *       <li>{@link #getAggregateId} - Extracts aggregate ID from event</li>
  *     </ul>
  *   </li>
@@ -52,18 +52,18 @@ import java.util.stream.Collectors;
  * public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent, TaskPayload, TaskHeaders> {
  *
  *     @Override
- *     protected String getAggregateType() {
- *         return OutboxAggregateTypes.TASK.getCode();
+ *     protected OutboxAggregateTypes getAggregateType() {
+ *         return OutboxAggregateTypes.TASK;
  *     }
  *
  *     @Override
- *     protected String getChannel() {
- *         return OutboxChannels.INGEST_TASK_READY.getCode();
+ *     protected OutboxChannels getChannel() {
+ *         return OutboxChannels.INGEST_TASK_READY;
  *     }
  *
  *     @Override
- *     protected String getOperationType(TaskQueuedEvent event) {
- *         return OutboxBusinessTags.TASK_READY.getCode();
+ *     protected OutboxBusinessTags getOperationType(TaskQueuedEvent event) {
+ *         return OutboxBusinessTags.TASK_READY;
  *     }
  *
  *     @Override

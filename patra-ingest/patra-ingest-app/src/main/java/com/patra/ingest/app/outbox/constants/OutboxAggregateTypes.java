@@ -1,5 +1,7 @@
 package com.patra.ingest.app.outbox.constants;
 
+import lombok.Getter;
+
 /**
  * Outbox aggregate type enum.
  * <p>Defines all valid aggregate types used in the Outbox framework for:</p>
@@ -12,8 +14,8 @@ package com.patra.ingest.app.outbox.constants;
  * <h3>Usage Example</h3>
  * <pre>{@code
  * @Override
- * protected String getAggregateType() {
- *     return OutboxAggregateTypes.TASK.getCode();
+ * protected OutboxAggregateTypes getAggregateType() {
+ *     return OutboxAggregateTypes.TASK;
  * }
  * }</pre>
  *
@@ -25,14 +27,13 @@ package com.patra.ingest.app.outbox.constants;
  *     publisher:
  *       allowed-aggregate-types:
  *         - Task
- *         - Plan
- *         - LiteratureData
  * </pre>
  *
  * @author linqibin
  * @since 0.1.0
  * @see com.patra.ingest.app.outbox.config.OutboxPublisherProperties#getAllowedAggregateTypes()
  */
+@Getter
 public enum OutboxAggregateTypes {
 
     /**
@@ -41,43 +42,25 @@ public enum OutboxAggregateTypes {
      */
     TASK("Task", "Task aggregate - for task queue events"),
 
+    ;
     /**
-     * Plan aggregate type.
-     * <p>Used for ingestion plan lifecycle events (plan creation, state transitions).</p>
+     * -- GETTER --
+     *  Returns the aggregate type code.
+     *  <p>This value is stored in
+     *  field.</p>
+     *
      */
-    PLAN("Plan", "Plan aggregate - for ingestion plan lifecycle events"),
-
-    /**
-     * Literature data aggregate type.
-     * <p>Used for literature data processing events (parsing, cleansing, storage).</p>
-     */
-    LITERATURE_DATA("LiteratureData", "Literature data aggregate - for data processing events");
-
     private final String code;
+    /**
+     * -- GETTER --
+     *  Returns the human-readable description.
+     *
+     */
     private final String description;
 
     OutboxAggregateTypes(String code, String description) {
         this.code = code;
         this.description = description;
-    }
-
-    /**
-     * Returns the aggregate type code.
-     * <p>This value is stored in {@code ing_outbox_message.aggregate_type} field.</p>
-     *
-     * @return Aggregate type code (e.g., "Task", "Plan", "LiteratureData")
-     */
-    public String getCode() {
-        return code;
-    }
-
-    /**
-     * Returns the human-readable description.
-     *
-     * @return Description of this aggregate type
-     */
-    public String getDescription() {
-        return description;
     }
 
     /**

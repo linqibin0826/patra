@@ -36,13 +36,13 @@ erDiagram
         varchar trigger_type_code "SCHEDULE/MANUAL"
         timestamp triggered_at
         json trigger_params
-        varchar provenance_code FK_LOGICAL
+        varchar provenance_code FK
         timestamp created_at
     }
 
     ing_plan {
         bigint id PK
-        bigint schedule_instance_id FK_LOGICAL
+        bigint schedule_instance_id FK
         varchar plan_key UK "human-readable identifier"
         varchar provenance_code
         varchar operation_code "HARVEST/BACKFILL/UPDATE"
@@ -60,10 +60,10 @@ erDiagram
 
     ing_plan_slice {
         bigint id PK
-        bigint plan_id FK_LOGICAL
+        bigint plan_id FK
         varchar provenance_code
-        int slice_no UK_WITH_PLAN
-        char slice_signature_hash UK_WITH_PLAN
+        int slice_no UK "unique with plan_id"
+        char slice_signature_hash UK "unique with plan_id"
         json slice_spec "boundary definition"
         char expr_hash "localized expr"
         json expr_snapshot "executable AST"
@@ -73,9 +73,9 @@ erDiagram
 
     ing_task {
         bigint id PK
-        bigint schedule_instance_id FK_LOGICAL
-        bigint plan_id FK_LOGICAL
-        bigint slice_id FK_LOGICAL
+        bigint schedule_instance_id FK
+        bigint plan_id FK
+        bigint slice_id FK
         varchar provenance_code
         varchar operation_code
         json params
@@ -97,8 +97,8 @@ erDiagram
 
     ing_task_run {
         bigint id PK
-        bigint task_id FK_LOGICAL
-        int attempt_no UK_WITH_TASK
+        bigint task_id FK
+        int attempt_no UK "unique with task_id"
         varchar provenance_code
         varchar operation_code
         varchar status_code "PLANNED/RUNNING/SUCCEEDED/FAILED"
@@ -114,17 +114,17 @@ erDiagram
 
     ing_task_run_batch {
         bigint id PK
-        bigint run_id FK_LOGICAL
-        bigint task_id FK_LOGICAL
-        bigint slice_id FK_LOGICAL
-        bigint plan_id FK_LOGICAL
+        bigint run_id FK
+        bigint task_id FK
+        bigint slice_id FK
+        bigint plan_id FK
         char expr_hash
         varchar provenance_code
         varchar operation_code
-        int batch_no UK_WITH_RUN
+        int batch_no UK "unique with run_id"
         int page_no
         int page_size
-        varchar before_token UK_WITH_RUN
+        varchar before_token UK "unique with run_id"
         varchar after_token
         char idempotent_key UK "SHA256(run+before_token)"
         int record_count
@@ -140,7 +140,7 @@ erDiagram
         varchar operation_code
         varchar cursor_key
         varchar namespace_scope_code "GLOBAL/EXPR/CUSTOM"
-        char namespace_key UK_WITH_PROV_OP "expr_hash or zeros"
+        char namespace_key UK "expr_hash or zeros"
         varchar cursor_type_code "TIME/ID/TOKEN"
         varchar cursor_value
         varchar observed_max_value
@@ -193,8 +193,8 @@ erDiagram
         bigint aggregate_id
         varchar channel "ingest.task"
         varchar op_type "TASK_READY"
-        varchar partition_key UK_WITH_CHANNEL "provenance:operation"
-        varchar dedup_key UK_WITH_CHANNEL "task.idempotent_key"
+        varchar partition_key UK "provenance:operation"
+        varchar dedup_key UK "task.idempotent_key"
         json payload_json "minimal necessary data"
         json headers_json "correlationId"
         timestamp not_before
@@ -230,7 +230,7 @@ erDiagram
         varchar trigger_type_code "DICT: ing_trigger_type"
         timestamp triggered_at
         json trigger_params
-        varchar provenance_code "FK_LOGICAL: reg_provenance.provenance_code"
+        varchar provenance_code "FK: reg_provenance.provenance_code"
         json record_remarks
         bigint version
         varbinary ip_address
@@ -248,7 +248,7 @@ erDiagram
 
     ing_plan {
         bigint id PK
-        bigint schedule_instance_id FK_LOGICAL
+        bigint schedule_instance_id FK
         varchar plan_key UK "globally unique, human-readable"
         varchar provenance_code
         varchar operation_code "DICT: ing_operation"
@@ -282,7 +282,7 @@ erDiagram
 
     ing_plan_slice {
         bigint id PK
-        bigint plan_id FK_LOGICAL
+        bigint plan_id FK
         varchar provenance_code
         int slice_no
         char slice_signature_hash "SHA256(slice_spec)"
@@ -309,9 +309,9 @@ erDiagram
 
     ing_task {
         bigint id PK
-        bigint schedule_instance_id FK_LOGICAL
-        bigint plan_id FK_LOGICAL
-        bigint slice_id FK_LOGICAL
+        bigint schedule_instance_id FK
+        bigint plan_id FK
+        bigint slice_id FK
         varchar provenance_code
         varchar operation_code
         json params
@@ -350,7 +350,7 @@ erDiagram
 
     ing_task_run {
         bigint id PK
-        bigint task_id FK_LOGICAL
+        bigint task_id FK
         int attempt_no
         varchar provenance_code
         varchar operation_code
@@ -383,10 +383,10 @@ erDiagram
 
     ing_task_run_batch {
         bigint id PK
-        bigint run_id FK_LOGICAL
-        bigint task_id FK_LOGICAL
-        bigint slice_id FK_LOGICAL
-        bigint plan_id FK_LOGICAL
+        bigint run_id FK
+        bigint task_id FK
+        bigint slice_id FK
+        bigint plan_id FK
         char expr_hash
         varchar provenance_code
         varchar operation_code
@@ -616,8 +616,8 @@ erDiagram
         int max_delay_millis
         double exp_multiplier_value
         double jitter_factor_ratio
-        json retry_http_status_json "[429,500,503]"
-        json giveup_http_status_json "[400,401,403,404]"
+        json retry_http_status_json "HTTP status codes: 429,500,503"
+        json giveup_http_status_json "HTTP status codes: 400,401,403,404"
         tinyint retry_on_network_error
         int circuit_break_threshold
         int circuit_cooldown_millis
@@ -704,8 +704,8 @@ erDiagram
         bigint id PK
         varchar capability_name UK "PubMed-Search/EPMC-Query"
         varchar provenance_code
-        json supported_fields_json "[\"datetype\",\"mindate\",\"maxdate\"]"
-        json default_values_json "{\"datetype\":\"edat\",\"retmax\":100}"
+        json supported_fields_json "datetype, mindate, maxdate"
+        json default_values_json "JSON defaults: datetype=edat, retmax=100"
         varchar lifecycle_status_code
         timestamp created_at
     }

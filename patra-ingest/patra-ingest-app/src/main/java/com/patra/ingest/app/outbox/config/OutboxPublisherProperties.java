@@ -19,8 +19,6 @@ import java.util.Set;
  *       max-batch-size: 500
  *       allowed-aggregate-types:
  *         - Task
- *         - LiteratureData
- *         - Plan
  *       metrics:
  *         enabled: true
  * </pre>
@@ -30,7 +28,7 @@ import java.util.Set;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "papertrace.outbox.publisher")
+@ConfigurationProperties(prefix = "papertrace.outbox.publisher") // TODO 更换前缀并修改相关代码和注释、文档信息。
 public class OutboxPublisherProperties {
 
     /**
@@ -51,9 +49,7 @@ public class OutboxPublisherProperties {
      * @see OutboxAggregateTypes
      */
     private Set<String> allowedAggregateTypes = new HashSet<>(Set.of(
-            OutboxAggregateTypes.TASK.getCode(),
-            OutboxAggregateTypes.PLAN.getCode(),
-            OutboxAggregateTypes.LITERATURE_DATA.getCode()
+            OutboxAggregateTypes.TASK.getCode()
     ));
 
     /**
