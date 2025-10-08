@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * Ingest 配置异常。
  *
- * <p>触发条件：从 Registry / 配置中心加载来源(Provenance) 或 操作(Operation) / 端点(Endpoint) 元数据时缺失、格式不符合约束或引用未解。
+ * <p>触发条件：从 Registry / 配置中心加载来源(Provenance) 或 操作(Operation) 元数据时缺失、格式不符合约束或引用未解。
  * 与 {@link PlanValidationException} 区别：本异常侧重 <strong>平台配置层</strong> 缺陷，而非运行期参数。</p>
  * <p>处理建议：
  * <ul>
@@ -17,7 +17,7 @@ import java.util.Set;
  *   <li>配置格式不合规：阻断执行链，返回明确字段路径与期望格式。</li>
  * </ul>
  * </p>
- * <p>可观测性：建议在日志中附带 provenanceCode/operationCode/endpointName 以支持快速聚合统计。</p>
+ * <p>可观测性：建议在日志中附带 provenanceCode/operationCode 以支持快速聚合统计。</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -28,8 +28,6 @@ public class IngestConfigurationException extends IngestException implements Has
     private final String provenanceCode;
     /** 操作代码（业务操作/任务类型）。 */
     private final String operationCode;
-    /** 端点名称（具体采集/交互的末端资源标识）。 */
-    private final String endpointName;
 
     /**
      * 构造配置异常（无底层异常包装）。
@@ -37,14 +35,12 @@ public class IngestConfigurationException extends IngestException implements Has
      *
      * @param provenanceCode 来源代码
      * @param operationCode  操作代码
-     * @param endpointName   端点名称
      * @param message        异常消息（应包含缺失字段/校验路径）
      */
-    public IngestConfigurationException(String provenanceCode, String operationCode, String endpointName, String message) {
+    public IngestConfigurationException(String provenanceCode, String operationCode, String message) {
         super(message);
         this.provenanceCode = provenanceCode;
         this.operationCode = operationCode;
-        this.endpointName = endpointName;
     }
 
     /**
@@ -53,15 +49,13 @@ public class IngestConfigurationException extends IngestException implements Has
      *
      * @param provenanceCode 来源代码
      * @param operationCode  操作代码
-     * @param endpointName   端点名称
      * @param message        异常消息
      * @param cause          底层原因
      */
-    public IngestConfigurationException(String provenanceCode, String operationCode, String endpointName, String message, Throwable cause) {
+    public IngestConfigurationException(String provenanceCode, String operationCode, String message, Throwable cause) {
         super(message, cause);
         this.provenanceCode = provenanceCode;
         this.operationCode = operationCode;
-        this.endpointName = endpointName;
     }
 
     @Override
@@ -83,13 +77,5 @@ public class IngestConfigurationException extends IngestException implements Has
      */
     public String getOperationCode() {
         return operationCode;
-    }
-
-    /**
-     * 获取端点名称。
-     * @return 端点名称
-     */
-    public String getEndpointName() {
-        return endpointName;
     }
 }

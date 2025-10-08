@@ -4,7 +4,6 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.infra.rpc.registry.converter.ProvenanceConfigSnapshotConverter;
 import com.patra.ingest.domain.port.PatraRegistryPort;
 import com.patra.ingest.domain.exception.IngestConfigurationException;
-import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.registry.api.rpc.client.ProvenanceClient;
@@ -50,20 +49,19 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
      * 调用 Registry 获取来源配置。
      */
     @Override
-    public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, Endpoint endpointCode, OperationCode operationCode) {
+    public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, OperationCode operationCode) {
         String code = provenanceCode.getCode();
-        String endpoint = endpointCode.name();
         String operationType = operationCode.name();
         Instant queryTime = Instant.now();
 
-        log.debug("[INGEST][ADAPTER] Requesting provenance config, code={}, operationType={}, endpoint={}, at={}",
-                code, operationType, endpoint, queryTime);
+        log.debug("[INGEST][ADAPTER] Requesting provenance config, code={}, operationType={}, at={}",
+                code, operationType, queryTime);
 
         try {
             ProvenanceConfigResp resp = provenanceClient.getConfiguration(provenanceCode, operationType, queryTime);
 
             if (resp == null) {
-                log.warn("[INGEST][ADAPTER] Registry returned empty config, code={}, operationType={}, endpoint={}", code, operationType, endpoint);
+                log.warn("[INGEST][ADAPTER] Registry returned empty config, code={}, operationType={}", code, operationType);
                 return createMinimalSnapshot(code);
             }
 
@@ -74,12 +72,12 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
             return snapshot;
 
         } catch (RemoteCallException ex) {
-            return handleRemoteException(ex, code, operationType, endpoint);
+            return handleRemoteException(ex, code, operationType);
         } catch (Exception ex) {
-            String msg = String.format("Unexpected error when fetching config, code=%s, operationType=%s, endpoint=%s",
-                    code, operationType, endpoint);
+            String msg = String.format("Unexpected error when fetching config, code=%s, operationType=%s",
+                    code, operationType);
             log.error("[INGEST][ADAPTER] " + msg, ex);
-            throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
+            throw new IngestConfigurationException(code, operationType, msg, ex);
         }
     }
 
@@ -88,12 +86,11 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
      */
     private ProvenanceConfigSnapshot handleRemoteException(RemoteCallException ex,
                                                            String code,
-                                                           String operationType,
-                                                           String endpoint) {
+                                                           String operationType) {
         if (RemoteErrorHelper.isNotFound(ex)) {
-            String msg = String.format("Provenance config not found, code=%s, operationType=%s, endpoint=%s", code, operationType, endpoint);
+            String msg = String.format("Provenance config not found, code=%s, operationType=%s", code, operationType);
             log.warn("[INGEST][ADAPTER] {} (remoteCode={}, status={}, traceId={})", msg, ex.getErrorCode(), ex.getHttpStatus(), ex.getTraceId());
-            throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
+            throw new IngestConfigurationException(code, operationType, msg, ex);
         }
 
         if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
@@ -111,7 +108,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
                         ex.getTraceId(),
                         ex.getMessage());
         log.error("[INGEST][ADAPTER] " + msg);
-        throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
+        throw new IngestConfigurationException(code, operationType, msg, ex);
     }
 
     /**

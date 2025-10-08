@@ -63,9 +63,8 @@ public class TimeSlicePlanner implements SlicePlanner {
         // 解析时间字段：优先使用 offsetFieldName（仅 DATE 模式），否则回退到 defaultDateFieldName
         String timeField = resolveTimeField(context.configSnapshot());
         if (timeField == null) {
-            log.error("[INGEST][APP] Cannot resolve time field from provenance snapshot, provenanceCode={}, endpoint={}, operation={}",
+            log.error("[INGEST][APP] Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
                     context.norm().provenanceCode(),
-                    context.norm().endpoint() == null ? null : context.norm().endpoint().name(),
                     context.norm().operationCode());
             return result;
         }

@@ -30,7 +30,7 @@ class IngestErrorMappingContributorTest {
         RemoteCallException remote = new RemoteCallException("REG-0404", 404, "not found",
                 "ProvenanceClient#getConfiguration", "trace-1", Map.of());
         IngestConfigurationException exception = new IngestConfigurationException(
-                "PUBMED", "SEARCH", "SEARCH", "config not found", remote);
+                "PUBMED", "HARVEST", "config not found", remote);
 
         assertThat(contributor.mapException(exception))
                 .contains(IngestErrorCode.ING_1201);
@@ -42,7 +42,7 @@ class IngestErrorMappingContributorTest {
         RemoteCallException remote = new RemoteCallException("REG-0500", 502, "bad gateway",
                 "ProvenanceClient#getConfiguration", "trace-2", Map.of());
         IngestConfigurationException exception = new IngestConfigurationException(
-                "PUBMED", "SEARCH", "SEARCH", "registry unavailable", remote);
+                "PUBMED", "HARVEST", "registry unavailable", remote);
 
         assertThat(contributor.mapException(exception))
                 .contains(IngestErrorCode.ING_1203);

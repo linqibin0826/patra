@@ -38,10 +38,6 @@ public class PlanDO extends BaseDO {
     @TableField("provenance_code")
     private String provenanceCode;
 
-    /** 来源端点标识（如 search/detail/metrics） */
-    @TableField("endpoint_name")
-    private String endpointName;
-
     /** 操作类型编码（DICT：ing_operation） */
     @TableField("operation_code")
     private String operationCode;

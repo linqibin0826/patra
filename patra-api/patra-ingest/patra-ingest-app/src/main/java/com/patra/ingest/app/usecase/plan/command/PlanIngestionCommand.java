@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.plan.command;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
@@ -23,7 +22,7 @@ import java.util.Objects;
  * </p>
  * <h4>字段语义 & 约束</h4>
  * <ul>
- *   <li><b>provenanceCode / endpoint / operationCode</b>：定义业务来源 + 端点 + 操作三元组，组成后续幂等与分区计算的重要组成；其中 provenanceCode 与 operationCode 为必填（不可为 null）。</li>
+ *   <li><b>provenanceCode / operationCode</b>：定义业务来源 + 操作二元组，组成后续幂等与分区计算的重要组成；其中 provenanceCode 与 operationCode 为必填（不可为 null）。</li>
  *   <li><b>step</b>：切片步长，采用 ISO-8601 Duration 字符串（如 {@code PT1H}、{@code P1D}）；允许为空（由策略决定是否需要），若提供需满足 {@code java.time.Duration.parse(step)} 可解析。</li>
  *   <li><b>windowFrom/windowTo</b>：计划时间窗口的上下界（半开区间假设：含 from 不含 to，若 to = null 代表“无上界”）；可同时为空，表示交由窗口解析器基于业务策略推导；若仅一端为空，以业务模式（如 HARVEST / BACKFILL / UPDATE）补全。</li>
  *   <li><b>priority</b>：调度优先级；允许为空，默认回退到 {@link com.patra.common.enums.Priority#NORMAL}。</li>
@@ -48,7 +47,6 @@ import java.util.Objects;
  * <p>record 不可变（内部未暴露可变集合引用），可在多线程间安全共享。</p>
  *
  * @param provenanceCode 来源编码（必填）
- * @param endpoint 采集端点（可选，某些操作可能不需要具体 endpoint）
  * @param operationCode 操作类型（必填）
  * @param step 切片步长（ISO-8601 持续时间，允许为空）
  * @param triggerType 触发类型（必填）
@@ -63,7 +61,6 @@ import java.util.Objects;
  */
 public record PlanIngestionCommand(
         ProvenanceCode provenanceCode,
-        Endpoint endpoint,
         OperationCode operationCode,
         String step,
         TriggerType triggerType,

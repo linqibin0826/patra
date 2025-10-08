@@ -2,7 +2,6 @@ package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.PlanStatus;
-import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 
 import java.time.Instant;
@@ -34,10 +33,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
      * 来源编码（如：PUBMED）
      */
     private final String provenanceCode;
-    /**
-     * 来源端点（枚举：区分同一来源下不同数据子域）
-     */
-    private final Endpoint endpoint;
     /**
      * 操作类型（枚举：全量、增量、补偿等）
      */
@@ -83,7 +78,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
                           Long scheduleInstanceId,
                           String planKey,
                           String provenanceCode,
-                          Endpoint endpoint,
                           OperationCode operationCode,
                           String exprProtoHash,
                           String exprProtoSnapshotJson,
@@ -98,7 +92,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
         this.scheduleInstanceId = Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId不能为空");
         this.planKey = Objects.requireNonNull(planKey, "planKey不能为空");
         this.provenanceCode = provenanceCode;
-        this.endpoint = endpoint;
         this.operationCode = operationCode;
         this.exprProtoHash = exprProtoHash;
         this.exprProtoSnapshotJson = exprProtoSnapshotJson;
@@ -117,7 +110,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
      * @param scheduleInstanceId           调度实例 ID
      * @param planKey                      幂等键
      * @param provenanceCode               来源编码
-     * @param endpointName                 端点字符串（将解析为枚举）
      * @param operationCode                操作码字符串（将解析为枚举）
      * @param exprProtoHash                表达式原型哈希
      * @param exprProtoSnapshotJson        表达式原型快照 JSON
@@ -132,7 +124,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
     public static PlanAggregate create(Long scheduleInstanceId,
                                        String planKey,
                                        String provenanceCode,
-                                       String endpointName,
                                        String operationCode,
                                        String exprProtoHash,
                                        String exprProtoSnapshotJson,
@@ -143,13 +134,11 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                        String sliceStrategyCode,
                                        String sliceParamsJson) {
         // 解析为领域内枚举，统一大小写/空白处理
-        Endpoint endpoint = endpointName == null ? null : Endpoint.fromCode(endpointName);
         OperationCode op = operationCode == null ? null : OperationCode.fromCode(operationCode);
         return new PlanAggregate(null,
                 scheduleInstanceId,
                 planKey,
                 provenanceCode,
-                endpoint,
                 op,
                 exprProtoHash,
                 exprProtoSnapshotJson,
@@ -169,7 +158,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
      * @param scheduleInstanceId           调度实例 ID
      * @param planKey                      计划幂等键
      * @param provenanceCode               来源编码
-     * @param endpointName                 端点字符串
      * @param operationCode                操作码字符串
      * @param exprProtoHash                表达式哈希
      * @param exprProtoSnapshotJson        表达式快照 JSON
@@ -187,7 +175,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                         Long scheduleInstanceId,
                                         String planKey,
                                         String provenanceCode,
-                                        String endpointName,
                                         String operationCode,
                                         String exprProtoHash,
                                         String exprProtoSnapshotJson,
@@ -199,13 +186,11 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                         String sliceParamsJson,
                                         PlanStatus status,
                                         long version) {
-        Endpoint endpoint = endpointName == null ? null : Endpoint.fromCode(endpointName);
         OperationCode op = operationCode == null ? null : OperationCode.fromCode(operationCode);
         PlanAggregate aggregate = new PlanAggregate(id,
                 scheduleInstanceId,
                 planKey,
                 provenanceCode,
-                endpoint,
                 op,
                 exprProtoHash,
                 exprProtoSnapshotJson,
@@ -273,15 +258,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
     }
 
     /**
-     * 获取端点名称（可能为 null）。
-     *
-     * @return endpoint name 或 null
-     */
-    public String getEndpointName() {
-        return endpoint == null ? null : endpoint.name();
-    }
-
-    /**
      * 获取操作码（可能为 null）。
      *
      * @return operation code 或 null
@@ -291,10 +267,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
     }
 
     // ========== 枚举原始访问器（领域内部使用） ==========
-    public Endpoint getEndpoint() {
-        return endpoint;
-    }
-
     public OperationCode getOperation() {
         return operationCode;
     }

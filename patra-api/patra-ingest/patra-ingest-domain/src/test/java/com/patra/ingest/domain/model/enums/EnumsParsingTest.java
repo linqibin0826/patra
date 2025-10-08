@@ -11,14 +11,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class EnumsParsingTest {
 
     @Test
-    @DisplayName("Endpoint.fromCode 空/未知值抛出异常；忽略大小写与空白")
-    void endpointFromCode() {
-        assertThrows(IllegalArgumentException.class, () -> Endpoint.fromCode(null));
-        assertEquals(Endpoint.SEARCH, Endpoint.fromCode(" search "));
-        assertThrows(IllegalArgumentException.class, () -> Endpoint.fromCode("unknown"));
-    }
-
-    @Test
     @DisplayName("OperationCode.fromCode 空/未知值抛出异常；忽略大小写与空白")
     void operationCodeFromCode() {
         assertThrows(IllegalArgumentException.class, () -> OperationCode.fromCode(null));

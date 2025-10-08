@@ -132,7 +132,6 @@ public class PlanAssemblerImpl implements PlanAssembler {
                 norm.scheduleInstanceId(),
                 planKey,
                 norm.provenanceCode().getCode(),
-                norm.endpoint() == null ? null : norm.endpoint().name(),
                 norm.operationCode() == null ? null : norm.operationCode().name(),
                 planExpression.hash(),
                 planExpression.jsonSnapshot(),
@@ -239,9 +238,6 @@ public class PlanAssemblerImpl implements PlanAssembler {
     private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
         StringBuilder builder = new StringBuilder();
         builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationCode().name());
-        if (norm.endpoint() != null) {
-            builder.append(":").append(norm.endpoint().name().toLowerCase());
-        }
         if (window.from() != null && window.to() != null) {
             builder.append(":").append(window.from().toEpochMilli()).append("-").append(window.to().toEpochMilli());
         }
@@ -262,6 +258,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
      * 生成策略参数 JSON：保持稳定序列化（例如{"strategy":"time"}）。
      */
     private String buildSliceParams(SliceStrategy sliceStrategy) {
+        // TODO does not need to keep the strategy field, there is a strategy field in the plan, and the parameters only need to contain specific configurations,
+        //  such as step, etc., values passed by the user or configured in the registry database.
         JsonNormalizer.Result normalized = DEFAULT_NORMALIZER.normalize(Map.of("strategy", sliceStrategy.getCode()));
         return normalized.getCanonicalJson();
     }

@@ -36,7 +36,6 @@ public interface PlanConverter {
                 entity.getScheduleInstanceId(),
                 entity.getPlanKey(),
                 entity.getProvenanceCode(),
-                entity.getEndpointName(),
                 entity.getOperationCode(),
                 entity.getExprProtoHash(),
                 JsonNodeMappings.jsonNodeToString(entity.getExprProtoSnapshot()),
