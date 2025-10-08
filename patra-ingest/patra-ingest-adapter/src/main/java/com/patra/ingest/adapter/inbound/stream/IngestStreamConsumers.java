@@ -74,6 +74,7 @@ public class IngestStreamConsumers {
                 TaskReadyCommand command = parsePayload(message.getPayload(), message.getHeaders());
 
                 // 调用应用层用例
+                taskExecutionUseCase.execute(command);
 
             } catch (Exception e) {
                 log.error("[INGEST][ADAPTER] failed to consume message, will retry", e);
@@ -83,32 +84,26 @@ public class IngestStreamConsumers {
     }
 
     /**
-     * 解析 payload 为 TaskReadyCommand。
+     * Parses payload to TaskReadyCommand (simplified).
      *
-     * @param payload JSON 字符串
-     * @param headers 消息头
+     * @param payload JSON string
+     * @param headers Message headers
      * @return TaskReadyCommand
-     * @throws Exception 解析失败时抛出异常
+     * @throws Exception when parsing fails
      */
     private TaskReadyCommand parsePayload(String payload, Map<String, Object> headers) throws Exception {
-        // 解析 payload 为 POJO
+        // Parse payload to POJO
         TaskReadyPayload dto = objectMapper.readValue(payload, TaskReadyPayload.class);
 
-        // 校验必需字段
+        // Validate required fields
         dto.validate();
 
-        // 合并 headers（用于追踪与审计）
+        // Merge headers (for tracing and auditing)
         Map<String, Object> allHeaders = new HashMap<>(headers);
 
         return new TaskReadyCommand(
                 dto.getTaskId(),
                 dto.getIdempotentKey(),
-                dto.getProvenance(),
-                dto.getOperation(),
-                dto.getPriority(),
-                dto.getScheduledAt(),
-                dto.getPlanWindowFrom(),
-        dto.getPlanWindowTo(),
                 allHeaders
         );
     }

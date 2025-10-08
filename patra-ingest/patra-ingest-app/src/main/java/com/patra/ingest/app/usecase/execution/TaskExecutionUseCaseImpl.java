@@ -56,8 +56,8 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
         long taskId = command.taskId();
         String idempotentKey = command.idempotentKey();
 
-        log.info("[INGEST][APP] task execution start taskId={} idemKey={} provenance={} operation={}",
-                 taskId, idempotentKey, command.provenance(), command.operation());
+        log.info("[INGEST][APP] task execution start taskId={} idemKey={}",
+                 taskId, idempotentKey);
 
         ExecutionSession session = null;
         ExecutionContext context = null;
@@ -70,8 +70,8 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
                 session = prepareResult.session();
                 context = prepareResult.context();
 
-                log.info("[INGEST][APP] prepare phase completed taskId={} runId={}",
-                         taskId, session.runId());
+                log.info("[INGEST][APP] prepare phase completed taskId={} runId={} provenance={} operation={}",
+                         taskId, session.runId(), context.provenanceCode(), context.operationCode());
 
             } catch (PrepareTaskExecutionUseCase.TaskAlreadySucceededException e) {
                 // 幂等跳过：任务已成功执行

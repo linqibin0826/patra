@@ -1,52 +1,35 @@
 package com.patra.ingest.app.usecase.plan.publisher;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.ingest.domain.outbox.OutboxPayload;
 
-import java.time.Instant;
+import java.util.Objects;
 
 /**
- * Task Outbox message payload.
- * <p>Contains business data required by downstream task consumers.</p>
+ * Task Outbox message payload (simplified).
+ * <p>
+ * Contains only essential data required by downstream consumers.
+ * All other business data (provenance, operation, params, etc.) should be queried
+ * from the database using the taskId.
+ * </p>
  *
- * @param taskId        Task identifier (must not be null)
- * @param planId        Plan identifier
- * @param sliceId       Slice identifier (null if not sliced)
- * @param provenance    Provenance code (data source identifier)
- * @param operation     Operation code (e.g., FETCH, PARSE)
- * @param idempotentKey Idempotent key for deduplication
- * @param priority      Task priority (null for default)
- * @param scheduledAt   Scheduled execution time (null for immediate)
- * @param params        Task parameters as JSON (null if no params)
+ * @param taskId        Task identifier (required for context loading and lease acquisition)
+ * @param idempotentKey Idempotent key (required for deduplication and idempotency check)
  * @author linqibin
  * @since 0.1.0
  */
 public record TaskPayload(
         Long taskId,
-        Long planId,
-        Long sliceId,
-        String provenance,
-        String operation,
-        String idempotentKey,
-        Integer priority,
-        Instant scheduledAt,
-        JsonNode params
+        String idempotentKey
 ) implements OutboxPayload {
 
     /**
-     * Creates a TaskPayload with all fields.
+     * Compact constructor with validation.
      *
-     * @param taskId        Task ID (required)
-     * @param planId        Plan ID
-     * @param sliceId       Slice ID (nullable)
-     * @param provenance    Provenance code
-     * @param operation     Operation code
-     * @param idempotentKey Idempotent key
-     * @param priority      Priority (nullable)
-     * @param scheduledAt   Scheduled time (nullable)
-     * @param params        Parameters JSON (nullable)
+     * @param taskId        Task ID (must not be null)
+     * @param idempotentKey Idempotent key (must not be null)
      */
     public TaskPayload {
-        // Compact constructor - validation can be added here if needed
+        Objects.requireNonNull(taskId, "taskId must not be null");
+        Objects.requireNonNull(idempotentKey, "idempotentKey must not be null");
     }
 }

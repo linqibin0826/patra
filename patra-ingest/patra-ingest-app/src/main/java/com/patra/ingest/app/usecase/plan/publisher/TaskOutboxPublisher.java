@@ -1,8 +1,6 @@
 package com.patra.ingest.app.usecase.plan.publisher;
 
-import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.core.util.StrUtil;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
@@ -117,30 +115,11 @@ public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent
 
     @Override
     protected TaskPayload buildPayload(TaskQueuedEvent event, OutboxPublishContext ctx) {
-        // TODO taskPayload 需要简化，不需要那么多参数，只需包含 taskId 和 idempotentKey 即可，消费方应该自己去查询
-        PlanAggregate plan = ctx.get("plan", PlanAggregate.class);
-
-        // Parse params JSON to JsonNode if present
-        JsonNode paramsNode = null;
-        if (CharSequenceUtil.isNotBlank(event.paramsJson())) {
-            try {
-                paramsNode = objectMapper.readTree(event.paramsJson());
-            } catch (Exception e) {
-                log.warn("[INGEST][APP] Failed to parse params JSON for taskId={}, will set to null",
-                        event.taskId(), e);
-            }
-        }
-
+        // Simplified payload: only taskId and idempotentKey
+        // Consumer will query database for all other data (provenance, operation, params, etc.)
         return new TaskPayload(
                 event.taskId(),
-                event.planId(),
-                event.sliceId(),
-                event.provenanceCode(),
-                event.operationCode(),
-                event.idempotentKey(),
-                event.priority(),
-                event.scheduledAt(),
-                paramsNode
+                event.idempotentKey()
         );
     }
 

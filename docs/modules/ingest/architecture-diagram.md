@@ -25,22 +25,22 @@ graph TB
     end
     
     subgraph "Application Layer (Use Cases)"
-        PlanOrch[PlanIngestionOrchestrator<br/>• Validate plan params<br/>• Generate slices<br/>• Publish tasks to Outbox]
-        ExecOrch[TaskExecutionUseCase<br/>• Prepare execution context<br/>• Execute batches<br/>• Complete & checkpoint]
-        RelayOrch[OutboxRelayOrchestrator<br/>• Scan pending outbox<br/>• Publish to MQ<br/>• Mark as published]
+        PlanOrch[PlanIngestionOrchestrator<br/>- Validate plan params<br/>- Generate slices<br/>- Publish tasks to Outbox]
+        ExecOrch[TaskExecutionUseCase<br/>- Prepare execution context<br/>- Execute batches<br/>- Complete & checkpoint]
+        RelayOrch[OutboxRelayOrchestrator<br/>- Scan pending outbox<br/>- Publish to MQ<br/>- Mark as published]
     end
     
     subgraph "Domain Layer (Core Business Logic)"
-        Plan[Plan Aggregate<br/>• Plan metadata<br/>• Slice strategy<br/>• Expr proto]
-        Task[Task Aggregate<br/>• Task lifecycle<br/>• Lease management<br/>• Idempotent key]
-        Cursor[Cursor Entity<br/>• Watermark tracking<br/>• Lineage to Plan/Task<br/>• Normalized values]
-        Outbox[OutboxMessage Entity<br/>• Channel & dedup_key<br/>• Partition key<br/>• Payload JSON]
+        Plan[Plan Aggregate<br/>- Plan metadata<br/>- Slice strategy<br/>- Expr proto]
+        Task[Task Aggregate<br/>- Task lifecycle<br/>- Lease management<br/>- Idempotent key]
+        Cursor[Cursor Entity<br/>- Watermark tracking<br/>- Lineage to Plan/Task<br/>- Normalized values]
+        Outbox[OutboxMessage Entity<br/>- Channel & dedup_key<br/>- Partition key<br/>- Payload JSON]
         
-        RegistryPort[«Port»<br/>PatraRegistryPort<br/>• getProvenanceSnapshot]
-        OutboxPort[«Port»<br/>OutboxPublisherPort<br/>• save & publish]
-        PlanRepo[«Port»<br/>PlanRepository<br/>• save/findByKey]
-        TaskRepo[«Port»<br/>TaskRepository<br/>• save/findByIdempotentKey]
-        CursorRepo[«Port»<br/>CursorRepository<br/>• upsert/findByCursor]
+        RegistryPort[«Port»<br/>PatraRegistryPort<br/>- getProvenanceSnapshot]
+        OutboxPort[«Port»<br/>OutboxPublisherPort<br/>- save & publish]
+        PlanRepo[«Port»<br/>PlanRepository<br/>- save/findByKey]
+        TaskRepo[«Port»<br/>TaskRepository<br/>- save/findByIdempotentKey]
+        CursorRepo[«Port»<br/>CursorRepository<br/>- upsert/findByCursor]
     end
     
     subgraph "Infrastructure Layer (Outbound Adapters)"
@@ -114,34 +114,34 @@ graph TB
     subgraph "Application Layer - Use Cases (应用层编排)"
         direction TB
         subgraph "Plan Use Case"
-            P1[PlanIngestionOrchestrator<br/>• execute PlanIngestionCommand<br/>• validate via PlannerValidator<br/>• assemble via PlanAssembler<br/>• slice via SlicePlannerRegistry<br/>• publish via TaskOutboxPublisher]
-            P2[SlicePlannerRegistry<br/>• TimeSlicePlanner<br/>• SingleSlicePlanner]
+            P1[PlanIngestionOrchestrator<br/>- execute PlanIngestionCommand<br/>- validate via PlannerValidator<br/>- assemble via PlanAssembler<br/>- slice via SlicePlannerRegistry<br/>- publish via TaskOutboxPublisher]
+            P2[SlicePlannerRegistry<br/>- TimeSlicePlanner<br/>- SingleSlicePlanner]
         end
         
         subgraph "Execution Use Case"
-            E1[TaskExecutionUseCase<br/>• prepare: load context & acquire lease<br/>• execute: BatchPlannerRegistry → BatchExecutorRegistry<br/>• complete: update cursor & release lease]
-            E2[BatchPlannerRegistry<br/>• DefaultBatchPlanner]
-            E3[BatchExecutorRegistry<br/>• DefaultBatchExecutor]
+            E1[TaskExecutionUseCase<br/>- prepare: load context & acquire lease<br/>- execute: BatchPlannerRegistry → BatchExecutorRegistry<br/>- complete: update cursor & release lease]
+            E2[BatchPlannerRegistry<br/>- DefaultBatchPlanner]
+            E3[BatchExecutorRegistry<br/>- DefaultBatchExecutor]
         end
         
         subgraph "Relay Use Case"
-            R1[OutboxRelayOrchestrator<br/>• scan pending outbox messages<br/>• publish via RelayEventPublisher<br/>• mark as PUBLISHED<br/>• retry failed messages]
+            R1[OutboxRelayOrchestrator<br/>- scan pending outbox messages<br/>- publish via RelayEventPublisher<br/>- mark as PUBLISHED<br/>- retry failed messages]
         end
     end
     
     subgraph "Domain Layer - Core (领域核心)"
         direction TB
         subgraph "Aggregates"
-            A1[PlanAggregate<br/>• planKey, provenanceCode<br/>• exprProtoHash, exprProtoSnapshot<br/>• provenanceConfigSnapshot<br/>• sliceStrategy, sliceParams<br/>• window from/to, statusCode]
-            A2[TaskAggregate<br/>• idempotentKey, exprHash<br/>• params, priority<br/>• lease: owner/until/count<br/>• retry, lastError<br/>• statusCode, timeline]
-            A3[PlanSliceAggregate<br/>• sliceNo, sliceSignatureHash<br/>• sliceSpec, exprSnapshot<br/>• statusCode]
-            A4[ScheduleInstanceAggregate<br/>• schedulerCode, jobId, logId<br/>• triggerType, triggeredAt<br/>• triggerParams, provenanceCode]
+            A1[PlanAggregate<br/>- planKey, provenanceCode<br/>- exprProtoHash, exprProtoSnapshot<br/>- provenanceConfigSnapshot<br/>- sliceStrategy, sliceParams<br/>- window from/to, statusCode]
+            A2[TaskAggregate<br/>- idempotentKey, exprHash<br/>- params, priority<br/>- lease: owner/until/count<br/>- retry, lastError<br/>- statusCode, timeline]
+            A3[PlanSliceAggregate<br/>- sliceNo, sliceSignatureHash<br/>- sliceSpec, exprSnapshot<br/>- statusCode]
+            A4[ScheduleInstanceAggregate<br/>- schedulerCode, jobId, logId<br/>- triggerType, triggeredAt<br/>- triggerParams, provenanceCode]
         end
         
         subgraph "Entities"
-            E_Outbox[OutboxMessage<br/>• aggregateType/Id<br/>• channel, opType<br/>• partitionKey, dedupKey<br/>• payloadJson, headersJson<br/>• status, retryCount]
-            E_Cursor[Cursor<br/>• provenanceCode, operationCode<br/>• cursorKey, namespaceScope/Key<br/>• cursorType, cursorValue<br/>• normalizedInstant/Numeric<br/>• lineage to Plan/Task/Run/Batch]
-            E_TaskRun[TaskRun<br/>• taskId, attemptNo<br/>• status, checkpoint, stats<br/>• window, timeline]
+            E_Outbox[OutboxMessage<br/>- aggregateType/Id<br/>- channel, opType<br/>- partitionKey, dedupKey<br/>- payloadJson, headersJson<br/>- status, retryCount]
+            E_Cursor[Cursor<br/>- provenanceCode, operationCode<br/>- cursorKey, namespaceScope/Key<br/>- cursorType, cursorValue<br/>- normalizedInstant/Numeric<br/>- lineage to Plan/Task/Run/Batch]
+            E_TaskRun[TaskRun<br/>- taskId, attemptNo<br/>- status, checkpoint, stats<br/>- window, timeline]
         end
         
         subgraph "Ports (出站端口)"
