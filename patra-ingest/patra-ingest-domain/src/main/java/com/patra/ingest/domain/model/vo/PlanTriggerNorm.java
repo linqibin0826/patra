@@ -2,7 +2,6 @@ package com.patra.ingest.domain.model.vo;
 
 import com.patra.common.enums.Priority;
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
@@ -16,7 +15,6 @@ import java.util.Objects;
  *
  * @param scheduleInstanceId 调度实例 ID
  * @param provenanceCode 来源编码
- * @param endpoint 来源端点
  * @param operationCode 操作类型
  * @param step 切片步长
  * @param triggerType 触发类型
@@ -31,7 +29,6 @@ import java.util.Objects;
 public record PlanTriggerNorm(
         Long scheduleInstanceId,
         ProvenanceCode provenanceCode,
-        Endpoint endpoint,
         OperationCode operationCode,
         String step,
         TriggerType triggerType,

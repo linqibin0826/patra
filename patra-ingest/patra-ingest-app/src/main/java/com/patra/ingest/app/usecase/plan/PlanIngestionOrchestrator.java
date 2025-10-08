@@ -127,7 +127,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
      * </ol>
      * 异常治理：将运行期异常转换为语义化 Plan*Exception，供上层统一映射错误码。</p>
      *
-     * @param request 调度请求（包含 provenance、endpoint、operation、窗口边界、优先级、触发信息等）
+     * @param request 调度请求（包含 provenance、operation、窗口边界、优先级、触发信息等）
      * @return 计划执行结果摘要
      */
     @Override
@@ -142,7 +142,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         // Phase 1: 调度实例 + 来源配置快照
         ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
         ProvenanceConfigSnapshot configSnapshot = patraRegistryPort.fetchConfig(
-                provenanceCode, request.endpoint(), operationCode
+                provenanceCode, operationCode
         );
         PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
 
@@ -380,7 +380,6 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         return new PlanTriggerNorm(
                 schedule.getId(),
                 request.provenanceCode(),
-                request.endpoint(),
                 request.operationCode(),
                 request.step(),
                 request.triggerType(),

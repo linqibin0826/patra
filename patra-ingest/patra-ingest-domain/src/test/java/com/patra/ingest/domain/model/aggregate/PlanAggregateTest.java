@@ -16,20 +16,18 @@ class PlanAggregateTest {
     @Test
     @DisplayName("create/restore：枚举解析与默认状态")
     void createAndRestore() {
-        PlanAggregate agg = PlanAggregate.create(1L, "k", "PUBMED", "search", "harvest",
+        PlanAggregate agg = PlanAggregate.create(1L, "k", "PUBMED", "harvest",
                 "h", "{}", "{}", "ch", Instant.now(), Instant.now(), "TIME", "{}");
         assertEquals(PlanStatus.DRAFT, agg.getStatus());
-        assertEquals("SEARCH", agg.getEndpointName());
         assertEquals("HARVEST", agg.getOperationCode());
 
         // null 时保持为 null
-        PlanAggregate agg2 = PlanAggregate.create(1L, "k", "PUBMED", null, null,
+        PlanAggregate agg2 = PlanAggregate.create(1L, "k", "PUBMED", null,
                 null, null, null, null, null, null, null, null);
-        assertNull(agg2.getEndpoint());
         assertNull(agg2.getOperation());
 
         // restore 会回填版本
-        PlanAggregate agg3 = PlanAggregate.restore(10L, 2L, "k", "P", "SEARCH", "UPDATE",
+        PlanAggregate agg3 = PlanAggregate.restore(10L, 2L, "k", "P", "UPDATE",
                 "h", "{}", "{}", "ch", null, null, null, null, PlanStatus.READY, 7L);
         assertEquals(7L, agg3.getVersion());
         assertEquals("UPDATE", agg3.getOperationCode());
@@ -38,7 +36,7 @@ class PlanAggregateTest {
     @Test
     @DisplayName("状态机：仅 DRAFT 可进入 SLICING；其他状态标记直接赋值")
     void stateTransitions() {
-        PlanAggregate agg = PlanAggregate.create(1L, "k", "PUBMED", "SEARCH", "HARVEST",
+        PlanAggregate agg = PlanAggregate.create(1L, "k", "PUBMED", "HARVEST",
                 null, null, null, null, null, null, null, null);
         // DRAFT 首次可进入 SLICING
         agg.startSlicing();

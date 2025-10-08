@@ -10,7 +10,6 @@ import com.patra.ingest.app.usecase.plan.PlanIngestionUseCase;
 import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.domain.exception.IngestScheduleParameterException;
-import com.patra.ingest.domain.model.enums.Endpoint;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
@@ -24,8 +23,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 调度任务抽象基类：为“来源 + 操作”类型任务提供统一模板（参数解析 → 编排调用 → 结果/异常上报）。
- * <p>抽象出公共逻辑，子类仅需固化 {@link #getProvenanceCode()}、{@link #getOperationCode()} 以及可选覆盖 {@link #getEndpoint()}。</p>
+ * 调度任务抽象基类：为"来源 + 操作"类型任务提供统一模板（参数解析 → 编排调用 → 结果/异常上报）。
+ * <p>抽象出公共逻辑，子类仅需固化 {@link #getProvenanceCode()} 和 {@link #getOperationCode()}。</p>
  * <p>默认行为与约束：
  * <ul>
  *   <li>XXL 参数为空时使用默认窗口 & 默认周期（当前固定 step=PT6H，可后续外部化配置）。</li>
@@ -62,14 +61,6 @@ public abstract class AbstractProvenanceScheduleJob {
     protected abstract OperationCode getOperationCode();
 
     /**
-     * 获取端点名称，默认 SEARCH；子类可覆盖扩展如 STATUS、UPDATE 等。
-     * @return 端点枚举
-     */
-    protected Endpoint getEndpoint() {
-        return Endpoint.SEARCH;
-    }
-
-    /**
      * 解析 XXL-Job 参数 JSON，构建应用层请求对象。
      * <p>支持字段：windowFrom、windowTo、priority、step、schedulerLogId、triggeredAt 以及任意扩展字段（透传为 triggerParams）。</p>
      * <p>失败策略：结构非法或 JSON 读取失败抛出 {@link IngestScheduleParameterException}，由调度入口捕获并标记失败。</p>
@@ -103,7 +94,6 @@ public abstract class AbstractProvenanceScheduleJob {
         Map<String, Object> nonNullTriggerParams = triggerParams == null ? Map.of() : triggerParams;
         return new PlanIngestionCommand(
                 getProvenanceCode(),
-                getEndpoint(),
                 getOperationCode(),
                 resolveStep(nonNullParam.step()),
                 TriggerType.SCHEDULE,
@@ -165,23 +155,23 @@ public abstract class AbstractProvenanceScheduleJob {
     long startTime = System.currentTimeMillis();
 
         try {
-        log.info("[INGEST][ADAPTER] Starting scheduled job, provenance={}, endpoint={}, operation={}, rawParam={}",
-                    getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), paramStr);
+        log.info("[INGEST][ADAPTER] Starting scheduled job, provenance={}, operation={}, rawParam={}",
+                    getProvenanceCode().getCode(), getOperationCode(), paramStr);
 
             PlanIngestionCommand command = parseJobParam(paramStr);
             PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
 
             long duration = System.currentTimeMillis() - startTime;
-        log.info("[INGEST][ADAPTER] Scheduled job completed, provenance={}, endpoint={}, operation={}, durationMs={}, planId={}, taskCount={}",
-                    getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, result.planId(), result.taskCount());
+        log.info("[INGEST][ADAPTER] Scheduled job completed, provenance={}, operation={}, durationMs={}, planId={}, taskCount={}",
+                    getProvenanceCode().getCode(), getOperationCode(), duration, result.planId(), result.taskCount());
 
             XxlJobHelper.handleSuccess(String.format("Job succeeded in %dms, planId=%s, taskCount=%d",
                     duration, result.planId(), result.taskCount()));
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-        log.error("[INGEST][ADAPTER] Scheduled job failed, provenance={}, endpoint={}, operation={}, durationMs={}, error={}",
-                    getProvenanceCode().getCode(), getEndpoint(), getOperationCode(), duration, e.getMessage(), e);
+        log.error("[INGEST][ADAPTER] Scheduled job failed, provenance={}, operation={}, durationMs={}, error={}",
+                    getProvenanceCode().getCode(), getOperationCode(), duration, e.getMessage(), e);
 
             XxlJobHelper.handleFail(String.format("Job failed: %s", e.getMessage()));
             throw e;

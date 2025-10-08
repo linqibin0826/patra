@@ -24,7 +24,7 @@ class PlanRepositoryMpImplTest {
         PlanConverter converter = mock(PlanConverter.class);
         PlanRepositoryMpImpl repo = new PlanRepositoryMpImpl(mapper, converter);
 
-        PlanAggregate agg = PlanAggregate.create(1L, "k", "P", "SEARCH", "HARVEST", null, null, null, null, null, null, null, null);
+        PlanAggregate agg = PlanAggregate.create(1L, "k", "P", "HARVEST", null, null, null, null, null, null, null, null);
         PlanDO entity = new PlanDO();
         when(converter.toEntity(agg)).thenReturn(entity);
         when(converter.toAggregate(entity)).thenReturn(agg);
@@ -50,7 +50,7 @@ class PlanRepositoryMpImplTest {
         assertTrue(repo.findByPlanKey("k").isEmpty());
 
         PlanDO entity = new PlanDO();
-        PlanAggregate agg = PlanAggregate.create(1L, "k", "P", "SEARCH", "HARVEST", null, null, null, null, null, null, null, null);
+        PlanAggregate agg = PlanAggregate.create(1L, "k", "P", "HARVEST", null, null, null, null, null, null, null, null);
         when(mapper.findByPlanKey("k")).thenReturn(entity);
         when(converter.toAggregate(entity)).thenReturn(agg);
         Optional<PlanAggregate> res = repo.findByPlanKey("k");

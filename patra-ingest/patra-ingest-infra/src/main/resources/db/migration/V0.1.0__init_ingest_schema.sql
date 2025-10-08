@@ -66,7 +66,6 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `plan_key`                   VARCHAR(128)    NOT NULL COMMENT '人类可读/外部幂等键（唯一）',
 
     `provenance_code`            VARCHAR(64)     NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（便于按来源聚合）',
-    `endpoint_name`              VARCHAR(64)     NULL COMMENT '来源端点标识（search/detail/metrics 等），辅助区分多端点策略',
     `operation_code`             VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation)：采集类型 HARVEST/BACKFILL/UPDATE/METRICS',
 
     `expr_proto_hash`            CHAR(64)        NOT NULL COMMENT '表达式原型哈希：对“规范化后的原型AST”计算出的指纹；用于幂等/快速比较；与 expr_proto_snapshot 一一对应',
@@ -96,7 +95,6 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     UNIQUE KEY `uk_plan_key` (`plan_key`),
     KEY `idx_plan_sched` (`schedule_instance_id`),
     KEY `idx_plan_prov_op` (`provenance_code`, `operation_code`),
-    KEY `idx_plan_endpoint` (`endpoint_name`),
     KEY `idx_plan_status` (`status_code`),
     KEY `idx_plan_expr` (`expr_proto_hash`),
     KEY `idx_plan_prov_config_hash` (`provenance_config_hash`),

@@ -22,7 +22,7 @@ public enum SliceStrategy {
     }
 
     /**
-     * 返回策略编码，供持久化与 JSON 表达使用。
+     * 返回策略编码，供持久化与 JSON 表达使用。 TODO Needs to be replaced with an enumeration implementation
      */
     public String getCode() {
         return code;
