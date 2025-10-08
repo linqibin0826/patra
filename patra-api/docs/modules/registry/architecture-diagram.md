@@ -24,18 +24,18 @@ graph TB
     end
     
     subgraph "Application Layer (Use Cases)"
-        ProvAppSvc[ProvenanceConfigAppService<br/>• Query effective config snapshot<br/>• Assemble multi-dimension configs<br/>• Convert to neutral model]
-        ExprAppSvc[ExprQueryAppService<br/>• Query expression definitions<br/>• Resolve capabilities<br/>• Build API param mappings]
+        ProvAppSvc[ProvenanceConfigAppService<br/>- Query effective config snapshot<br/>- Assemble multi-dimension configs<br/>- Convert to neutral model]
+        ExprAppSvc[ExprQueryAppService<br/>- Query expression definitions<br/>- Resolve capabilities<br/>- Build API param mappings]
     end
     
     subgraph "Domain Layer (Core Business Logic)"
-        ProvConfig[ProvenanceConfiguration Aggregate<br/>• Provenance metadata<br/>• HTTP/Pagination/Retry/RateLimit<br/>• Window/Offset/Batching configs<br/>• Effective time intervals]
+        ProvConfig[ProvenanceConfiguration Aggregate<br/>- Provenance metadata<br/>- HTTP/Pagination/Retry/RateLimit<br/>- Window/Offset/Batching configs<br/>- Effective time intervals]
         
-        ExprSnapshot[ExprSnapshot Entity<br/>• Expression AST<br/>• Field dictionary<br/>• Render rules<br/>• API param mappings]
+        ExprSnapshot[ExprSnapshot Entity<br/>- Expression AST<br/>- Field dictionary<br/>- Render rules<br/>- API param mappings]
         
-        ProvRepo[«Port»<br/>ProvenanceConfigRepository<br/>• findByCode<br/>• findEffectiveConfig]
+        ProvRepo[<Port> <br/>ProvenanceConfigRepository<br/>- findByCode<br/>- findEffectiveConfig]
         
-        ExprRepo[«Port»<br/>ExprRepository<br/>• findByKey<br/>• findCapabilities]
+        ExprRepo[<Port> <br/>ExprRepository<br/>- findByKey<br/>- findCapabilities]
     end
     
     subgraph "Infrastructure Layer (Outbound Adapters)"
@@ -76,42 +76,42 @@ graph TB
 graph TB
     subgraph "Adapter Layer - Inbound (入站适配器)"
         direction LR
-        A1[rest/feign/<br/>ProvenanceClientImpl<br/>• GET /provenance/{code}/snapshot<br/>• GET /provenance/{code}/config]
-        A2[rest/feign/<br/>ExprClientImpl<br/>• GET /expr/capabilities<br/>• GET /expr/render-rules]
+        A1[rest/feign/<br/>ProvenanceClientImpl<br/>- GET /provenance/{code}/snapshot<br/>- GET /provenance/{code}/config]
+        A2[rest/feign/<br/>ExprClientImpl<br/>- GET /expr/capabilities<br/>- GET /expr/render-rules]
     end
     
     subgraph "Application Layer - Use Cases (应用层服务)"
         direction TB
         subgraph "Provenance Query"
-            P1[ProvenanceConfigAppService<br/>• queryEffectiveSnapshot<br/>• assembleFromMultiDimensions<br/>• convertToNeutralModel]
-            P2[ProvenanceQueryAssembler<br/>• buildHttpConfigQuery<br/>• buildPaginationConfigQuery<br/>• buildRetryConfigQuery<br/>• buildRateLimitConfigQuery<br/>• buildWindowOffsetQuery<br/>• buildBatchingConfigQuery]
+            P1[ProvenanceConfigAppService<br/>- queryEffectiveSnapshot<br/>- assembleFromMultiDimensions<br/>- convertToNeutralModel]
+            P2[ProvenanceQueryAssembler<br/>- buildHttpConfigQuery<br/>- buildPaginationConfigQuery<br/>- buildRetryConfigQuery<br/>- buildRateLimitConfigQuery<br/>- buildWindowOffsetQuery<br/>- buildBatchingConfigQuery]
         end
         
         subgraph "Expression Query"
-            E1[ExprQueryAppService<br/>• findExprSnapshot<br/>• findCapabilities<br/>• resolveApiParamMappings]
-            E2[ExprQueryAssembler<br/>• assembleExprFields<br/>• assembleRenderRules]
+            E1[ExprQueryAppService<br/>- findExprSnapshot<br/>- findCapabilities<br/>- resolveApiParamMappings]
+            E2[ExprQueryAssembler<br/>- assembleExprFields<br/>- assembleRenderRules]
         end
     end
     
     subgraph "Domain Layer - Core (领域核心)"
         direction TB
         subgraph "Aggregates"
-            Agg1[ProvenanceConfiguration<br/>• Provenance identity<br/>• baseUrlDefault, timezone<br/>• docsUrl, isActive<br/>• lifecycleStatus]
+            Agg1[ProvenanceConfiguration<br/>- Provenance identity<br/>- baseUrlDefault, timezone<br/>- docsUrl, isActive<br/>- lifecycleStatus]
         end
         
         subgraph "Value Objects (配置维度)"
-            VO1[HttpConfig<br/>• defaultHeaders<br/>• timeout: connect/read/total<br/>• tlsVerify, proxyUrl<br/>• retryAfterPolicy, idempotency]
-            VO2[PaginationConfig<br/>• paginationMode<br/>• pageSize, maxPages<br/>• sortField, direction]
-            VO3[RetryConfig<br/>• maxRetryTimes<br/>• backoffPolicy, delays<br/>• retryHttpStatus, circuitBreaker]
-            VO4[RateLimitConfig<br/>• maxConcurrent<br/>• perCredentialQps]
-            VO5[WindowOffsetConfig<br/>• windowMode, size, unit<br/>• lookback, overlap, watermark<br/>• offsetType, fieldName, format]
-            VO6[BatchingConfig<br/>• batchSize, idsParamName<br/>• idsJoinDelimiter<br/>• maxIdsPerRequest]
+            VO1[HttpConfig<br/>- defaultHeaders<br/>- timeout: connect/read/total<br/>- tlsVerify, proxyUrl<br/>- retryAfterPolicy, idempotency]
+            VO2[PaginationConfig<br/>- paginationMode<br/>- pageSize, maxPages<br/>- sortField, direction]
+            VO3[RetryConfig<br/>- maxRetryTimes<br/>- backoffPolicy, delays<br/>- retryHttpStatus, circuitBreaker]
+            VO4[RateLimitConfig<br/>- maxConcurrent<br/>- perCredentialQps]
+            VO5[WindowOffsetConfig<br/>- windowMode, size, unit<br/>- lookback, overlap, watermark<br/>- offsetType, fieldName, format]
+            VO6[BatchingConfig<br/>- batchSize, idsParamName<br/>- idsJoinDelimiter<br/>- maxIdsPerRequest]
         end
         
         subgraph "Expression Models"
-            Expr1[ExprSnapshot<br/>• exprKey, version<br/>• exprAst, fields<br/>• renderRules]
-            Expr2[ExprCapability<br/>• capability name<br/>• supported fields<br/>• default values]
-            Expr3[ApiParamMapping<br/>• paramName, sourceField<br/>• transformation, defaultValue]
+            Expr1[ExprSnapshot<br/>- exprKey, version<br/>- exprAst, fields<br/>- renderRules]
+            Expr2[ExprCapability<br/>- capability name<br/>- supported fields<br/>- default values]
+            Expr3[ApiParamMapping<br/>- paramName, sourceField<br/>- transformation, defaultValue]
         end
         
         subgraph "Ports (出站端口)"
@@ -122,8 +122,8 @@ graph TB
     
     subgraph "Infrastructure Layer - Outbound (出站适配器)"
         direction LR
-        I1[persistence/repository/<br/>ProvenanceConfigRepositoryMpImpl<br/>• Join queries across:<br/>&nbsp;&nbsp;reg_provenance<br/>&nbsp;&nbsp;reg_prov_http_cfg<br/>&nbsp;&nbsp;reg_prov_pagination_cfg<br/>&nbsp;&nbsp;reg_prov_retry_cfg<br/>&nbsp;&nbsp;reg_prov_rate_limit_cfg<br/>&nbsp;&nbsp;reg_prov_window_offset_cfg<br/>&nbsp;&nbsp;reg_prov_batching_cfg]
-        I2[persistence/repository/<br/>ExprRepositoryMpImpl<br/>• Query:<br/>&nbsp;&nbsp;reg_expr_field_dict<br/>&nbsp;&nbsp;reg_prov_expr_capability<br/>&nbsp;&nbsp;reg_prov_expr_render_rule<br/>&nbsp;&nbsp;reg_prov_api_param_map]
+        I1[persistence/repository/<br/>ProvenanceConfigRepositoryMpImpl<br/>- Join queries across:<br/>&nbsp;&nbsp;reg_provenance<br/>&nbsp;&nbsp;reg_prov_http_cfg<br/>&nbsp;&nbsp;reg_prov_pagination_cfg<br/>&nbsp;&nbsp;reg_prov_retry_cfg<br/>&nbsp;&nbsp;reg_prov_rate_limit_cfg<br/>&nbsp;&nbsp;reg_prov_window_offset_cfg<br/>&nbsp;&nbsp;reg_prov_batching_cfg]
+        I2[persistence/repository/<br/>ExprRepositoryMpImpl<br/>- Query:<br/>&nbsp;&nbsp;reg_expr_field_dict<br/>&nbsp;&nbsp;reg_prov_expr_capability<br/>&nbsp;&nbsp;reg_prov_expr_render_rule<br/>&nbsp;&nbsp;reg_prov_api_param_map]
     end
     
     A1 -->|Invoke| P1
@@ -148,8 +148,8 @@ graph TB
     Port1 -.->|Impl| I1
     Port2 -.->|Impl| I2
     
-    I1 -->|MyBatis-Plus + Join| Ext1[(MySQL 8.0<br/>patra_registry_db<br/>• reg_provenance<br/>• reg_prov_*_cfg)]
-    I2 -->|MyBatis-Plus| Ext2[(MySQL 8.0<br/>patra_registry_db<br/>• reg_expr_*<br/>• reg_prov_expr_*)]
+    I1 -->|MyBatis-Plus + Join| Ext1[(MySQL 8.0<br/>patra_registry_db<br/>- reg_provenance<br/>- reg_prov_*_cfg)]
+    I2 -->|MyBatis-Plus| Ext2[(MySQL 8.0<br/>patra_registry_db<br/>- reg_expr_*<br/>- reg_prov_expr_*)]
     
     style A1 fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
     style A2 fill:#e1f5ff,stroke:#0066cc,stroke-width:2px

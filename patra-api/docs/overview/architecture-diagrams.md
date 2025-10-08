@@ -75,17 +75,17 @@ C4Container
     Person(user, "API Consumer", "External dashboards, CLI tools, monitoring systems")
     
     Container_Boundary(papertrace, "Papertrace Medical Literature Platform") {
-        Container(gateway, "API Gateway", "Spring Cloud Gateway 4.1.3", "• Route forwarding<br/>• Authentication/Authorization<br/>• Rate limiting<br/>• CORS handling")
+        Container(gateway, "API Gateway", "Spring Cloud Gateway 4.1.3", "- Route forwarding<br/>- Authentication/Authorization<br/>- Rate limiting<br/>- CORS handling")
         
-        Container(registry, "patra-registry", "Spring Boot 3.2.4<br/>Hexagonal Architecture", "• Provenance config management<br/>• Dictionary/metadata SSOT<br/>• Expression definitions<br/>• Config snapshots")
+        Container(registry, "patra-registry", "Spring Boot 3.2.4<br/>Hexagonal Architecture", "- Provenance config management<br/>- Dictionary/metadata SSOT<br/>- Expression definitions<br/>- Config snapshots")
         
-        Container(ingest, "patra-ingest", "Spring Boot 3.2.4<br/>Event-Driven + Hexagonal", "• Plan orchestration<br/>• Task scheduling & execution<br/>• Idempotency & retry<br/>• Cursor management<br/>• Outbox pattern")
+        Container(ingest, "patra-ingest", "Spring Boot 3.2.4<br/>Event-Driven + Hexagonal", "- Plan orchestration<br/>- Task scheduling & execution<br/>- Idempotency & retry<br/>- Cursor management<br/>- Outbox pattern")
         
-        Container(egress, "patra-egress-gateway", "Spring Boot 3.2.4<br/>Reactive WebClient", "• Unified HTTP client<br/>• Protocol adaptation<br/>• Response parsing<br/>• Error handling")
+        Container(egress, "patra-egress-gateway", "Spring Boot 3.2.4<br/>Reactive WebClient", "- Unified HTTP client<br/>- Protocol adaptation<br/>- Response parsing<br/>- Error handling")
         
-        Container(parse, "patra-parse", "Spring Boot (Future)", "• XML/JSON parsing<br/>• Data cleansing<br/>• Schema normalization", "Planned")
+        Container(parse, "patra-parse", "Spring Boot (Future)", "- XML/JSON parsing<br/>- Data cleansing<br/>- Schema normalization", "Planned")
         
-        Container(search, "patra-search", "Spring Boot + ES (Future)", "• Full-text search<br/>• Faceted queries<br/>• Analytics", "Planned")
+        Container(search, "patra-search", "Spring Boot + ES (Future)", "- Full-text search<br/>- Faceted queries<br/>- Analytics", "Planned")
     }
     
     System_Ext(pubmed, "PubMed API", "NCBI biomedical literature database")
@@ -93,15 +93,15 @@ C4Container
     System_Ext(crossref, "Crossref API", "Scholarly metadata registry")
     System_Ext(xxl_job, "XXL-Job 3.2.0", "Distributed task scheduler with admin UI")
     
-    ContainerDb(mysql_registry, "MySQL - Registry", "MySQL 8.0<br/>InnoDB + utf8mb4", "• reg_provenance<br/>• reg_prov_*_cfg<br/>• reg_sys_dict_*")
-    ContainerDb(mysql_ingest, "MySQL - Ingest", "MySQL 8.0<br/>InnoDB + utf8mb4", "• ing_plan<br/>• ing_task<br/>• ing_cursor<br/>• ing_outbox_message")
-    ContainerDb(redis, "Redis Cluster", "Redis 7.0", "• Config cache<br/>• Distributed locks<br/>• Session storage")
-    ContainerDb(es, "Elasticsearch", "ES 8.14", "• Literature index<br/>• Search analytics", "Future")
+    ContainerDb(mysql_registry, "MySQL - Registry", "MySQL 8.0<br/>InnoDB + utf8mb4", "- reg_provenance<br/>- reg_prov_*_cfg<br/>- reg_sys_dict_*")
+    ContainerDb(mysql_ingest, "MySQL - Ingest", "MySQL 8.0<br/>InnoDB + utf8mb4", "- ing_plan<br/>- ing_task<br/>- ing_cursor<br/>- ing_outbox_message")
+    ContainerDb(redis, "Redis Cluster", "Redis 7.0", "- Config cache<br/>- Distributed locks<br/>- Session storage")
+    ContainerDb(es, "Elasticsearch", "ES 8.14", "- Literature index<br/>- Search analytics", "Future")
     
-    ContainerQueue(mq, "RocketMQ", "RocketMQ 4.x", "• Task events (ingest.task)<br/>• Cursor events<br/>• Integration events")
+    ContainerQueue(mq, "RocketMQ", "RocketMQ 4.x", "- Task events (ingest.task)<br/>- Cursor events<br/>- Integration events")
     
-    Container_Ext(nacos, "Nacos", "Alibaba Nacos 2.3.x", "• Service registry<br/>• Config management<br/>• Dynamic routing")
-    Container_Ext(skywalking, "SkyWalking OAP", "SkyWalking 10.2", "• Distributed tracing<br/>• Metrics aggregation<br/>• Alerting")
+    Container_Ext(nacos, "Nacos", "Alibaba Nacos 2.3.x", "- Service registry<br/>- Config management<br/>- Dynamic routing")
+    Container_Ext(skywalking, "SkyWalking OAP", "SkyWalking 10.2", "- Distributed tracing<br/>- Metrics aggregation<br/>- Alerting")
     
     Rel(user, gateway, "HTTPS/REST", "API requests")
     Rel(gateway, registry, "Feign + LB", "GET /provenance/{code}")
