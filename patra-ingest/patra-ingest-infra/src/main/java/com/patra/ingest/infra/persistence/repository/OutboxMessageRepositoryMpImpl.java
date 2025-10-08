@@ -17,42 +17,55 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Outbox 消息持久化实现（MyBatis-Plus）。
- * <p>职责：</p>
+ * MyBatis-Plus implementation for Outbox message persistence.
+ *
+ * <h3>Responsibilities</h3>
  * <ul>
- *   <li>消息初始写入（PENDING 状态）与幂等去重（基于 channel + dedupKey 上层控制）。</li>
- *   <li>按通道+可用时间窗口拉取待发布消息（不加锁，仅过滤状态= PENDING 且 availableAt &lt;= now）。</li>
- *   <li>通过乐观锁 + 租约字段（leaseOwner / leaseExpireAt / version）竞争获取分布式“发布权”。</li>
- *   <li>根据发布结果推进状态：PUBLISHED / DEFERRED（重试回退到 PENDING）/ FAILED（终止）。</li>
+ *   <li>Initial message write (PENDING state) with idempotency via (channel, dedupKey) uniqueness</li>
+ *   <li>Fetch publishable messages by channel and availability window (no locking, filter by status=PENDING and availableAt &lt;= now)</li>
+ *   <li>Compete for distributed "publish rights" via optimistic locking + lease fields (leaseOwner/leaseExpireAt/version)</li>
+ *   <li>Advance state based on publish results: PUBLISHED / DEFERRED (retry back to PENDING) / FAILED (terminal)</li>
  * </ul>
- * <p>状态机（简化）：</p>
+ *
+ * <h3>State Machine (Simplified)</h3>
  * <pre>
- *   PENDING --(acquireLease 成功)--> LEASED --(markPublished)--> PUBLISHED (终态)
- *             |                                
- *             |--(发布失败且可重试 markDeferred)--> PENDING (retryCount+1，等待 nextRetryAt)
- *             |--(发布失败且超限 markFailed)------> FAILED   (终态)
- * 
- * 说明：本实现不显式存储 “LEASED” 中间状态（由 leaseOwner!=null & leaseExpireAt 未过期 + version 条件隐式表示）。
- *       fetchPending 仅返回未被“有效租约”占用的记录（SQL 中过滤租约已过期或空）。
+ *   PENDING --(acquireLease success)--> LEASED --(markPublished)--> PUBLISHED (terminal)
+ *             |
+ *             |--(publish fail, retryable → markDeferred)--> PENDING (retryCount+1, wait until nextRetryAt)
+ *             |--(publish fail, exhausted → markFailed)-----> FAILED (terminal)
+ *
+ * Note: "LEASED" intermediate state is not explicitly stored (implicitly represented by leaseOwner!=null
+ *       & leaseExpireAt not expired + version condition). fetchPending only returns records not held by
+ *       "active leases" (SQL filters expired or null leases).
  * </pre>
- * <p>并发控制：</p>
+ *
+ * <h3>Concurrency Control</h3>
  * <ul>
- *   <li>版本号 version 通过条件更新防止并发覆盖；acquireLease / mark* 均以 version 作为乐观锁。</li>
- *   <li>租约二要素：leaseOwner / leaseExpireAt，获取成功后在过期前其他消费者拉取不到该消息。</li>
- *   <li>当发布进程崩溃或超时，租约过期后消息再次可见，允许新的消费者接手。</li>
+ *   <li>Version number prevents concurrent overwrites via conditional updates; acquireLease/mark* use version as optimistic lock</li>
+ *   <li>Lease consists of two elements: leaseOwner/leaseExpireAt; once acquired, message is invisible to other consumers until expiry</li>
+ *   <li>If publish process crashes or times out, expired lease allows new consumer to take over</li>
  * </ul>
- * <p>幂等性：</p>
+ *
+ * <h3>Idempotency</h3>
  * <ul>
- *   <li>上游业务在入箱阶段通过 (channel, dedupKey) 保证不重复写入；本仓储提供查询方法以支撑。</li>
- *   <li>publish 成功后 markPublished 只在 version 匹配时生效；重复调用（版本已变化）将触发异常，交由上层处理为幂等确认。</li>
+ *   <li>Upstream ensures no duplicate writes via (channel, dedupKey) during Outbox insertion; this repository provides query support</li>
+ *   <li>After successful publish, markPublished only takes effect when version matches; duplicate calls (version changed) trigger exception for upstream idempotent confirmation</li>
  * </ul>
- * <p>错误处理策略：</p>
+ *
+ * <h3>Error Handling Strategy</h3>
  * <ul>
- *   <li>影响行数 != 1 说明版本冲突或记录缺失：抛出 {@link OutboxPersistenceException}，由上层判定是否忽略/告警。</li>
- *   <li>不对正常高频路径打印 INFO；仅在 DEBUG 下输出调试信息。</li>
+ *   <li>Affected rows != 1 indicates version conflict or missing record: throws {@link OutboxPersistenceException} for upstream decision (ignore/alert)</li>
+ *   <li>No INFO logging on high-frequency paths; DEBUG only for key state transitions</li>
  * </ul>
- * <p>日志策略：DEBUG 级别记录关键状态转换（acquire 成功、publish/defer/fail），避免批量循环内高噪声；无业务 WARN 输出。</p>
- * <p>线程安全：无共享可变状态（Mapper / Converter 为无状态或线程安全），实例可被多线程复用。</p>
+ *
+ * <h3>Logging Strategy</h3>
+ * <p>DEBUG level records key state transitions (acquire success, publish/defer/fail) to avoid noise in batch loops; no business WARN output.</p>
+ *
+ * <h3>Thread Safety</h3>
+ * <p>No shared mutable state (Mapper/Converter are stateless or thread-safe); instance can be reused across threads.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Repository
@@ -63,10 +76,11 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     private final OutboxMessageConverter converter;
 
     /**
-     * 批量保存（仅插入）PENDING 状态 Outbox 消息。
-     * <p>不做去重：调用方需在写入前完成 (channel, dedupKey) 幂等控制。</p>
-     * <p>日志：为降低噪声，仅在 DEBUG 记录批次大小，不逐条记录。</p>
-     * @param messages 消息集合（允许 null/empty 忽略）
+     * Batch saves (insert-only) Outbox messages in PENDING state.
+     * <p>No deduplication performed: caller must handle (channel, dedupKey) idempotency before insertion.</p>
+     * <p>Logging: DEBUG level records batch size to reduce noise; no per-message logging.</p>
+     *
+     * @param messages Message collection (null/empty ignored)
      */
     @Override
     public void saveAll(List<OutboxMessage> messages) {
@@ -74,19 +88,21 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
             return;
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] outbox batch insert size={} firstChannel={}", messages.size(), messages.get(0).getChannel());
+            log.debug("[INGEST][INFRA] Outbox batch insert size={} firstChannel={}",
+                    messages.size(), messages.get(0).getChannel());
         }
         for (OutboxMessage message : messages) {
-            // 转换为数据对象，使用 MyBatis-Plus insert 写入单条记录
+            // Convert to data object and insert via MyBatis-Plus
             OutboxMessageDO entity = converter.toEntity(message);
             mapper.insert(entity);
         }
     }
 
     /**
-     * 插入或更新单条 Outbox 消息。
-     * <p>使用场景：补偿写入或需要更新非状态字段（极少）。常规状态推进请使用专用 mark* 方法保证版本语义。</p>
-     * @param message 消息（null 忽略）
+     * Inserts or updates a single Outbox message.
+     * <p>Use cases: Compensatory writes or updating non-state fields (rare). For regular state transitions, use dedicated mark* methods to ensure version semantics.</p>
+     *
+     * @param message Message (null ignored)
      */
     @Override
     public void saveOrUpdate(OutboxMessage message) {
@@ -97,22 +113,25 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         if (entity.getId() == null) {
             mapper.insert(entity);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][INFRA] outbox insert channel={} dedupKey={} id={}", message.getChannel(), message.getDedupKey(), entity.getId());
+                log.debug("[INGEST][INFRA] Outbox insert channel={} dedupKey={} id={}",
+                        message.getChannel(), message.getDedupKey(), entity.getId());
             }
         } else {
-            // 仅更新非状态字段（如 payload/header），状态推进由专用 mark* 方法承担
+            // Update non-state fields only (e.g., payload/headers); state transitions handled by mark* methods
             mapper.updateById(entity);
             if (log.isDebugEnabled()) {
-                log.debug("[INGEST][INFRA] outbox update id={} channel={} version={} (non-state fields)", entity.getId(), message.getChannel(), message.getVersion());
+                log.debug("[INGEST][INFRA] Outbox update id={} channel={} version={} (non-state fields)",
+                        entity.getId(), message.getChannel(), message.getVersion());
             }
         }
     }
 
     /**
-     * 根据 (channel, dedupKey) 精确定位一条消息用于幂等判断。
-     * @param channel 通道（不能为空）
-     * @param dedupKey 去重键（不能为空）
-     * @return 消息 Optional（不存在返回 empty）
+     * Finds a message by (channel, dedupKey) for idempotency checks.
+     *
+     * @param channel  Channel identifier (must not be null)
+     * @param dedupKey Deduplication key (must not be null)
+     * @return Optional containing message if found, empty otherwise
      */
     @Override
     public Optional<OutboxMessage> findByChannelAndDedup(String channel, String dedupKey) {
@@ -120,21 +139,22 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         return Optional.ofNullable(entity).map(converter::toDomain);
     }
 
-    // ===== OutboxRelayStore =====
+    // ==================== OutboxRelayStore Implementation ====================
 
     /**
-     * 拉取待发布消息。
-     * <p>支持按频道过滤或拉取所有频道：</p>
+     * Fetches pending messages ready for publishing.
+     * <p>Supports channel filtering or fetching from all channels:</p>
      * <ul>
-     *   <li>当 channel 非 null 时，仅拉取指定频道的消息</li>
-     *   <li>当 channel 为 null 时，拉取所有频道的消息</li>
+     *   <li>When channel is non-null, fetches messages from specified channel only</li>
+     *   <li>When channel is null, fetches messages from all channels</li>
      * </ul>
-     * <p>过滤条件示意：state=PENDING AND available_at &lt;= :availableTime AND (lease_owner IS NULL OR lease_expire_at &lt; NOW)。</p>
-     * <p>不加排序保证：由 Mapper 层定义（建议按 available_at, id ASC）。</p>
-     * @param channel 通道，为 null 时拉取所有通道
-     * @param availableTime 可用时间上限（<=），通常为当前时间
-     * @param limit 最大条数（<=0 返回空）
-     * @return 待处理消息集合（可能为空）
+     * <p>Filter criteria: state=PENDING AND available_at &lt;= :availableTime AND (lease_owner IS NULL OR lease_expire_at &lt; NOW).</p>
+     * <p>No ordering guarantee enforced here; defined by Mapper layer (recommended: available_at, id ASC).</p>
+     *
+     * @param channel       Channel identifier, null to fetch from all channels
+     * @param availableTime Availability time upper bound (<=), typically current time
+     * @param limit         Maximum number of messages (&lt;=0 returns empty list)
+     * @return List of pending messages (may be empty)
      */
     @Override
     public List<OutboxMessage> fetchPending(String channel, Instant availableTime, int limit) {
@@ -145,95 +165,194 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
         if (entities == null || entities.isEmpty()) {
             return Collections.emptyList();
         }
-        // 映射为领域对象供上层 Relay 处理
+        // Map to domain objects for upstream Relay processing
         return entities.stream().map(converter::toDomain).toList();
     }
 
     /**
-     * 通过乐观锁获取租约。
-     * <p>条件：id = ? AND version = :expectedVersion AND (lease_owner IS NULL OR lease_expire_at &lt; NOW)。</p>
-     * <p>成功：更新 leaseOwner / leaseExpireAt / version=version+1，返回 true；失败：返回 false（可能已被他人获取或版本冲突）。</p>
-     * <p>日志：仅在成功时 DEBUG 记录，失败属常态竞争不记录。</p>
-     * @param id 消息 ID
-     * @param expectedVersion 期望版本（调用前需读取当前值）
-     * @param leaseOwner 租约所有者（建议使用实例 ID）
-     * @param leaseExpireAt 过期时间点
-     * @return 是否成功获取
+     * Acquires lease via optimistic locking.
+     * <p>Condition: id = ? AND version = :expectedVersion AND (lease_owner IS NULL OR lease_expire_at &lt; NOW).</p>
+     * <p>Success: Updates leaseOwner/leaseExpireAt/version=version+1, returns true; Failure: Returns false (possibly acquired by others or version conflict).</p>
+     * <p>Logging: DEBUG on success only; failure is normal competition, not logged.</p>
+     *
+     * @param id              Message ID
+     * @param expectedVersion Expected version (must read current value before calling)
+     * @param leaseOwner      Lease owner identifier (recommended: instance ID)
+     * @param leaseExpireAt   Lease expiration timestamp
+     * @return true if lease acquired successfully, false otherwise
      */
     @Override
     public boolean acquireLease(Long id, Long expectedVersion, String leaseOwner, Instant leaseExpireAt) {
-        int updated = mapper.acquireLease(id, expectedVersion, leaseOwner, leaseExpireAt);
-        boolean success = updated == 1;
-        if (success && log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] outbox lease acquire id={} owner={} expireAt={}", id, leaseOwner, leaseExpireAt);
+        int affectedRows = mapper.acquireLease(id, expectedVersion, leaseOwner, leaseExpireAt);
+        boolean isSuccess = affectedRows == 1;
+        if (isSuccess && log.isDebugEnabled()) {
+            log.debug("[INGEST][INFRA] Outbox lease acquired id={} owner={} expireAt={}",
+                    id, leaseOwner, leaseExpireAt);
         }
-        return success;
+        return isSuccess;
     }
 
     /**
-     * 标记发布成功。
-     * <p>要求当前版本 == expectedVersion；更新字段：state=PUBLISHED, published_at, broker_message_id, version=version+1。</p>
-     * @param id 消息ID
-     * @param expectedVersion 期望版本（含租约后版本）
-     * @param messageId Broker 返回的消息 ID（可用于幂等确认）
-     * @throws OutboxPersistenceException 版本冲突或行不存在
+     * Marks message as successfully published.
+     * <p>Requires current version == expectedVersion; updates fields: state=PUBLISHED, published_at, broker_message_id, version=version+1.</p>
+     *
+     * @param id              Message ID
+     * @param expectedVersion Expected version (includes post-lease version)
+     * @param messageId       Broker-returned message ID (for idempotent confirmation)
+     * @throws OutboxPersistenceException if version conflict or row not found
      */
     @Override
     public void markPublished(Long id, Long expectedVersion, String messageId) {
-        int updated = mapper.markPublished(id, expectedVersion, messageId);
-        if (updated != 1) {
+        int affectedRows = mapper.markPublished(id, expectedVersion, messageId);
+        if (affectedRows != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_PUBLISHED,
-                    "更新 Outbox 状态失败，id=" + id);
+                    "Failed to update Outbox state to PUBLISHED, id=" + id);
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] outbox published id={} brokerMsgId={}", id, messageId);
+            log.debug("[INGEST][INFRA] Outbox published id={} brokerMsgId={}", id, messageId);
         }
     }
 
     /**
-     * 标记延迟重试：状态回退为 PENDING（或逻辑上仍为 PENDING），写入 nextRetryAt 及错误信息并 version+1。
-     * <p>上层需已决定仍可重试（retryCount 未超阈值）。</p>
-     * @param id 消息ID
-     * @param expectedVersion 期望版本
-     * @param retryCount 新的重试次数
-     * @param nextRetryAt 下次重试可用时间
-     * @param errorCode 错误代码（可选）
-     * @param errorMessage 错误消息（可截断）
-     * @throws OutboxPersistenceException 版本冲突或写入失败
+     * Marks message for deferred retry: state reverts to PENDING (or logically remains PENDING),
+     * records nextRetryAt and error info, increments version.
+     * <p>Upstream must have already decided retry is allowed (retryCount not exceeded threshold).</p>
+     *
+     * @param id              Message ID
+     * @param expectedVersion Expected version
+     * @param retryCount      New retry count
+     * @param nextRetryAt     Next retry availability time
+     * @param errorCode       Error code (optional)
+     * @param errorMessage    Error message (may be truncated)
+     * @throws OutboxPersistenceException if version conflict or write failure
      */
     @Override
-    public void markDeferred(Long id, Long expectedVersion, int retryCount, Instant nextRetryAt, String errorCode, String errorMessage) {
-        // 使用乐观锁条件更新，将状态回退并记录下一次重试计划
-        int updated = mapper.markDeferred(id, expectedVersion, retryCount, nextRetryAt, errorCode, errorMessage);
-        if (updated != 1) {
+    public void markDeferred(Long id, Long expectedVersion, int retryCount, Instant nextRetryAt,
+                             String errorCode, String errorMessage) {
+        // Use optimistic lock conditional update to revert state and record next retry plan
+        int affectedRows = mapper.markDeferred(id, expectedVersion, retryCount, nextRetryAt, errorCode, errorMessage);
+        if (affectedRows != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_RETRY,
-                    "写回 Outbox 重试失败，id=" + id);
+                    "Failed to mark Outbox for retry, id=" + id);
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] outbox deferred id={} retryCount={} nextRetryAt={} errCode={}", id, retryCount, nextRetryAt, errorCode);
+            log.debug("[INGEST][INFRA] Outbox deferred id={} retryCount={} nextRetryAt={} errCode={}",
+                    id, retryCount, nextRetryAt, errorCode);
         }
     }
 
     /**
-     * 标记最终失败（FAILED / DEAD）。
-     * <p>终态：不再被拉取；上层可选择后续人工补偿或搬运到死信库。</p>
-     * @param id 消息ID
-     * @param expectedVersion 期望版本
-     * @param retryCount 最终重试次数（记录审计）
-     * @param errorCode 错误代码
-     * @param errorMessage 错误消息
-     * @throws OutboxPersistenceException 版本冲突或行不存在
+     * Marks message as permanently failed (FAILED/DEAD state).
+     * <p>Terminal state: no longer fetched; upstream may choose manual compensation or move to dead-letter store.</p>
+     *
+     * @param id              Message ID
+     * @param expectedVersion Expected version
+     * @param retryCount      Final retry count (for audit)
+     * @param errorCode       Error code
+     * @param errorMessage    Error message
+     * @throws OutboxPersistenceException if version conflict or row not found
      */
     @Override
     public void markFailed(Long id, Long expectedVersion, int retryCount, String errorCode, String errorMessage) {
-        int updated = mapper.markFailed(id, expectedVersion, retryCount, errorCode, errorMessage);
-        if (updated != 1) {
+        int affectedRows = mapper.markFailed(id, expectedVersion, retryCount, errorCode, errorMessage);
+        if (affectedRows != 1) {
             throw new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_DEAD,
-                    "标记 Outbox DEAD 失败，id=" + id);
+                    "Failed to mark Outbox as DEAD, id=" + id);
         }
         if (log.isDebugEnabled()) {
-            log.debug("[INGEST][INFRA] outbox failed id={} retryCount={} errCode={} errMsgLen={}", id, retryCount, errorCode,
-                errorMessage == null ? 0 : errorMessage.length());
+            int errorMsgLength = errorMessage == null ? 0 : errorMessage.length();
+            log.debug("[INGEST][INFRA] Outbox failed id={} retryCount={} errCode={} errMsgLen={}",
+                    id, retryCount, errorCode, errorMsgLength);
+        }
+    }
+
+    // ==================== OutboxMessageRepository: Batch Operations ====================
+
+    /**
+     * Batch queries Outbox messages by channel and deduplication keys.
+     * <p>Used for batch idempotency checks in publishRetry scenarios.</p>
+     *
+     * @param channel   Channel identifier
+     * @param dedupKeys Deduplication key collection (recommended &lt;=500 to avoid IN clause performance issues)
+     * @return List of matching messages, empty list if no matches
+     */
+    @Override
+    public List<OutboxMessage> findByChannelAndDedupIn(String channel, List<String> dedupKeys) {
+        if (dedupKeys == null || dedupKeys.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("[INGEST][INFRA] Outbox batch query channel={} dedupKeyCount={}",
+                    channel, dedupKeys.size());
+        }
+
+        List<OutboxMessageDO> entities = mapper.findByChannelAndDedupIn(channel, dedupKeys);
+        if (entities == null || entities.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return entities.stream().map(converter::toDomain).toList();
+    }
+
+    /**
+     * Batch updates Outbox messages (for compensatory publish scenarios with state refresh).
+     * <p>Typical scenario: Retry resets existing message state to PENDING, updates payload/headers, resets retry count.</p>
+     * <p>Note: Uses MyBatis-Plus updateById per-record; suitable for small batches (&lt;100 messages).</p>
+     *
+     * @param messages Message collection to update (must contain valid IDs)
+     */
+    @Override
+    public void updateBatch(List<OutboxMessage> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("[INGEST][INFRA] Outbox batch update size={}", messages.size());
+        }
+
+        for (OutboxMessage message : messages) {
+            OutboxMessageDO entity = converter.toEntity(message);
+            if (entity.getId() == null) {
+                throw new IllegalArgumentException(
+                        "Cannot update Outbox message without ID, dedupKey=" + message.getDedupKey());
+            }
+            mapper.updateById(entity);
+        }
+    }
+
+    /**
+     * Batch inserts or updates Outbox messages (UPSERT semantics).
+     * <p>Implements idempotency via unique constraint (channel + dedupKey):</p>
+     * <ul>
+     *   <li>If message does not exist, inserts new record</li>
+     *   <li>If message exists (dedupKey conflict), updates payload/headers/status and resets retryCount</li>
+     * </ul>
+     * <p>Solves publishRetry concurrency race conditions (two instances retrying same message simultaneously).</p>
+     *
+     * @param messages Message collection to insert or update
+     */
+    @Override
+    public void upsertBatch(List<OutboxMessage> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("[INGEST][INFRA] Outbox upsert batch size={} firstChannel={}",
+                    messages.size(), messages.get(0).getChannel());
+        }
+
+        List<OutboxMessageDO> entities = messages.stream()
+                .map(converter::toEntity)
+                .toList();
+
+        int affectedRows = mapper.upsertBatch(entities);
+
+        if (log.isDebugEnabled()) {
+            log.debug("[INGEST][INFRA] Outbox upsert batch completed size={} affectedRows={}",
+                    messages.size(), affectedRows);
         }
     }
 }

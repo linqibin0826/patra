@@ -12,6 +12,7 @@
     </select>
 
     <select id="fetchPending" resultType="com.patra.ingest.infra.persistence.entity.OutboxMessageDO">
+        <!-- Expected index: idx_outbox_status_time (status_code, not_before, id) -->
         SELECT
         *
         FROM patra_ingest.ing_outbox_message
@@ -21,6 +22,7 @@
         </if>
         AND (not_before IS NULL OR not_before &lt;= #{available})
         AND (next_retry_at IS NULL OR next_retry_at &lt;= #{available})
+        AND (pub_lease_owner IS NULL OR pub_leased_until &lt; NOW(6))
         <choose>
             <when test="channel != null and channel != ''">
                 ORDER BY id
@@ -30,7 +32,6 @@
             </otherwise>
         </choose>
         LIMIT #{limit}
-        FOR UPDATE SKIP LOCKED
     </select>
 
     <update id="acquireLease">
@@ -106,5 +107,70 @@
               OR version = #{expectedVersion}
           )
     </update>
+
+    <!-- Batch query by channel and dedupKey IN clause -->
+    <select id="findByChannelAndDedupIn" resultType="com.patra.ingest.infra.persistence.entity.OutboxMessageDO">
+        SELECT *
+        FROM patra_ingest.ing_outbox_message
+        WHERE channel = #{channel}
+          AND dedup_key IN
+        <foreach collection="dedupKeys" item="dedupKey" open="(" separator="," close=")">
+            #{dedupKey}
+        </foreach>
+    </select>
+
+    <!-- Batch UPSERT (INSERT ... ON DUPLICATE KEY UPDATE) -->
+    <insert id="upsertBatch" useGeneratedKeys="false">
+        INSERT INTO patra_ingest.ing_outbox_message
+        (
+            aggregate_type,
+            aggregate_id,
+            channel,
+            op_type,
+            partition_key,
+            dedup_key,
+            payload_json,
+            headers_json,
+            not_before,
+            status_code,
+            retry_count,
+            created_at,
+            updated_at,
+            version
+        )
+        VALUES
+        <foreach collection="messages" item="msg" separator=",">
+            (
+                #{msg.aggregateType},
+                #{msg.aggregateId},
+                #{msg.channel},
+                #{msg.opType},
+                #{msg.partitionKey},
+                #{msg.dedupKey},
+                #{msg.payloadJson},
+                #{msg.headersJson},
+                #{msg.notBefore},
+                'PENDING',
+                0,
+                NOW(6),
+                NOW(6),
+                0
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            payload_json = VALUES(payload_json),
+            headers_json = VALUES(headers_json),
+            not_before = VALUES(not_before),
+            status_code = 'PENDING',
+            retry_count = 0,
+            next_retry_at = NULL,
+            error_code = NULL,
+            error_msg = NULL,
+            pub_lease_owner = NULL,
+            pub_leased_until = NULL,
+            msg_id = NULL,
+            updated_at = NOW(6),
+            version = version + 1
+    </insert>
 
 </mapper>

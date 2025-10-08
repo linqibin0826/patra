@@ -175,6 +175,26 @@ public final class OutboxMessage {
                 .msgId(msgId);
     }
 
+    /**
+     * Create a refreshed message for retry scenario.
+     * <p>Resets status to PENDING, clears retry count and error info, updates payload/headers.</p>
+     *
+     * @param newPayloadJson Updated payload JSON
+     * @param newHeadersJson Updated headers JSON
+     * @return Refreshed OutboxMessage instance
+     */
+    public OutboxMessage refreshForRetry(String newPayloadJson, String newHeadersJson) {
+        return toBuilder()
+                .payloadJson(newPayloadJson)
+                .headersJson(newHeadersJson)
+                .statusCode("PENDING")
+                .retryCount(0)
+                .nextRetryAt(null)
+                .errorCode(null)
+                .errorMsg(null)
+                .build();
+    }
+
     public static final class Builder {
         private Long id;
         private Long version;

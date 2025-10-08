@@ -206,7 +206,8 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
         taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
 
-        log.info("[INGEST][APP] plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})", persistedPlan.getId(), persistedSlices.size(), persistedTasks.size(), window == null ? null : window.from(), window == null ? null : window.to());
+        log.info("[INGEST][APP] plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})",
+                persistedPlan.getId(), persistedSlices.size(), persistedTasks.size(), window == null ? null : window.from(), window == null ? null : window.to());
 
         return new PlanIngestionResult(
                 schedule.getId(),
