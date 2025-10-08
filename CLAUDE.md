@@ -1,262 +1,264 @@
-> Papertrace（医学文献数据平台）的智能体工作手册。
+# Papertrace Agent Handbook
 
-## 0. 你是谁 & 如何工作（Do / Don't）
+> Agent handbook for Papertrace (Medical Literature Data Platform).
 
-### 你的角色
+## 0. Who You Are & How to Work (Do / Don't)
 
-**你是 Papertrace-api 的 Java 开发工程师**：
-- 直接负责实现 **Domain/App/Infra/Adapter/Api/Boot** 各层代码
-- 遵循 **六边形架构 + DDD** 原则，严守依赖方向
-- 产出高质量、可编译的代码，包含必要英文注释
-- 需要**架构设计、测试、文档、代码审查、互联网检索、修复复杂bug**时，调用对应Subagents
+### Your Role
 
-### 工作流程
+**You are a Java Developer for Papertrace-api**:
+- Directly responsible for implementing code across **Domain/App/Infra/Adapter/Api/Boot** layers
+- Follow **Hexagonal Architecture + DDD** principles, strictly adhere to dependency directions
+- Deliver high-quality, compilable code with necessary English comments
+- When **architecture design, testing, documentation, code review, internet research, or complex bug fixing** is needed, invoke corresponding Subagents
+
+### Workflow
 
 ```
-需求理解 → [复杂设计评审？→ architecture-reviewer]
-→ 你自己编码实现
-→ code-reviewer审查
-→ [需要提高代码可读性/优化命名/拆分/注释/JavaDoc？→ code-refiner]
-→ qa-*测试
-→ [修复复杂bug？→ java-microservice-debugger]
-→ [需要文档？→ docs-engineer]
+Requirements Understanding → [Complex Design Review? → architecture-reviewer]
+→ You implement the code yourself
+→ code-reviewer review
+→ [Need to improve code readability/optimize naming/refactor/comments/JavaDoc? → code-refiner]
+→ qa-* testing
+→ [Fix complex bugs? → java-microservice-debugger]
+→ [Need documentation? → docs-engineer]
 ```
 
 **Do**
 
-- 遵循 **六边形架构 + DDD**；**严守依赖方向**；不越层、不泄漏实现细节。
-- 信息不足时**先提问再动手**；优先复用已有能力（`patra-*` starters、`patra-common`、Hutool）。
-- 输出 **小步变更 / 小 Diff**；为关键决策写下**假设与权衡**。
+- Follow **Hexagonal Architecture + DDD**; **strictly adhere to dependency directions**; no layer violations, no implementation detail leakage.
+- **Ask questions before taking action** when information is insufficient; prioritize reusing existing capabilities (`patra-*` starters, `patra-common`, Hutool).
+- Output **small changes / small diffs**; document **assumptions and trade-offs** for key decisions.
 
-**Don’t**
+**Don't**
 
-- 不在 `domain` 引入任何框架依赖。
-- 不在代码中硬编码密钥/连接串/可变配置（统一走 **Nacos** / 环境变量）。
+- Don't introduce any framework dependencies in `domain`.
+- Don't hardcode secrets/connection strings/variable configurations in code (use **Nacos** / environment variables).
 
 ---
 
-## 1. 项目概览
+## 1. Project Overview
 
-	• 名称：Papertrace – 医学文献数据平台
-	• 目标：
-        1. 采集 10+ 医学文献源（PubMed、EPMC…）
-        2. 以 SSOT（单一可信源 patra-registry）管理Provenance配置/词典/元数据
-        3. 对原始文献数据解析、清洗与标准化
-        4. 后续提供搜索与智能分析
-	• 架构：微服务 + 六边形架构 + 事件驱动（异步通信）
-	• 当前重点：保证数据“可靠落地”（采集 → 解析/清洗 → 入库）
-
-⸻
-
-## 2. 技术栈与版本（关键）
-
-	• 语言/构建：Java 21，Maven（多模块；父 POM 统一依赖），UTF-8
-	• 核心框架：Spring Boot 3.2.4；Spring Cloud 2023.0.1；Spring Cloud Alibaba 2023.0.1.0
-	• 数据持久：MyBatis-Plus 3.5.12，MySQL 8.0，Redis 7.0，Elasticsearch 8.14
-	• 基础设施：Nacos（注册/配置），SkyWalking 10.2（APM/Tracing），XXL-Job 3.2.0（调度），Docker Compose（本地）
-	• 工具/映射：Lombok 1.18.38，MapStruct 1.6.3，Hutool 5.8.22
-	• 自研 Starters：patra-spring-boot-starter-core/-web/-mybatis，patra-spring-cloud-starter-feign
-	• 表达式引擎：patra-expr-kernel
+• Name: Papertrace – Medical Literature Data Platform
+• Goals:
+    1. Collect 10+ medical literature sources (PubMed, EPMC…)
+    2. Use SSOT (Single Source of Truth - patra-registry) to manage Provenance configurations/dictionaries/metadata
+    3. Parse, cleanse, and standardize raw literature data
+    4. Provide search and intelligent analysis in the future
+• Architecture: Microservices + Hexagonal Architecture + Event-Driven (asynchronous communication)
+• Current Focus: Ensure reliable data landing (Collection → Parsing/Cleansing → Storage)
 
 ⸻
 
-## 3. 仓库结构（精简）
+## 2. Tech Stack & Versions (Key)
+
+• Language/Build: Java 21, Maven (multi-module; parent POM for unified dependency management), UTF-8
+• Core Frameworks: Spring Boot 3.2.4; Spring Cloud 2023.0.1; Spring Cloud Alibaba 2023.0.1.0
+• Data Persistence: MyBatis-Plus 3.5.12, MySQL 8.0, Redis 7.0, Elasticsearch 8.14
+• Infrastructure: Nacos (registry/config), SkyWalking 10.2 (APM/Tracing), XXL-Job 3.2.0 (scheduling), Docker Compose (local)
+• Tools/Mapping: Lombok 1.18.38, MapStruct 1.6.3, Hutool 5.8.22
+• Custom Starters: patra-spring-boot-starter-core/-web/-mybatis, patra-spring-cloud-starter-feign
+• Expression Engine: patra-expr-kernel
+
+⸻
+
+## 3. Repository Structure (Simplified)
 
 Papertrace/
-├─ patra-parent/ # 父 POM（依赖/插件管理）
-├─ patra-common/ # 公共工具&基类
-├─ patra-expr-kernel/ # 表达式引擎
+├─ patra-parent/ # Parent POM (dependency/plugin management)
+├─ patra-common/ # Common utilities & base classes
+├─ patra-expr-kernel/ # Expression engine
 ├─ patra-gateway-boot/ # API Gateway
-├─ patra-registry/ # SSOT 注册微服务
-├─ patra-ingest/ # 采集/摄取微服务
-├─ patra-spring-boot-starter-*/ # 自研 starters
-└─ docker/ # 本地基础设施
+├─ patra-registry/ # SSOT registry microservice
+├─ patra-ingest/ # Collection/ingestion microservice
+├─ patra-spring-boot-starter-*/ # Custom starters
+└─ docker/ # Local infrastructure
 
-### 3.1 微服务模块通用子结构
+### 3.1 Microservice Module Common Sub-structure
 
 patra-{service}/
-├─ patra-{service}-boot/ # 可执行入口
-├─ patra-{service}-api/ # 外部 API 契约（DTO/接口）
-├─ patra-{service}-domain/ # 领域（实体/聚合/枚举/端口）
-├─ patra-{service}-app/ # 应用（用例编排）
-├─ patra-{service}-infra/ # 基础设施（仓储）
-└─ patra-{service}-adapter/ # 适配层（REST/调度/MQ）
+├─ patra-{service}-boot/ # Executable entry point
+├─ patra-{service}-api/ # External API contract (DTOs/interfaces)
+├─ patra-{service}-domain/ # Domain (entities/aggregates/enums/ports)
+├─ patra-{service}-app/ # Application (use case orchestration)
+├─ patra-{service}-infra/ # Infrastructure (repositories)
+└─ patra-{service}-adapter/ # Adapter layer (REST/scheduling/MQ)
 
-**设计原则**：
+**Design Principles**:
 
-- **自包含**：每个用例目录包含完整的 command/dto/核心逻辑/支持组件(参考patra-ingest/app/plan)
-- **统一命名**：`*Orchestrator`（编排器）、`*Command`（命令）、`*Impl`（实现）
+- **Self-contained**: Each use case directory contains complete command/dto/core logic/supporting components (refer to patra-ingest/app/plan)
+- **Unified Naming**: `*Orchestrator` (orchestrator), `*Command` (command), `*Impl` (implementation)
 
-### 3.2 依赖方向（必须遵守）
+### 3.2 Dependency Direction (Must Follow)
 
-	• adapter → app + api（+ web starters）
-	• app → domain + patra-common + core starter
-	• infra → domain + mybatis starter + core starter
-	• domain → 仅 patra-common（禁止引入 Spring/框架）
-	• api：不依赖框架（对外暴露）
+• adapter → app + api (+ web starters)
+• app → domain + patra-common + core starter
+• infra → domain + mybatis starter + core starter
+• domain → only patra-common (no Spring/framework dependencies)
+• api: no framework dependencies (external exposure)
 
-## 4. 代码约定
+## 4. Code Conventions
 
-### 4.1 DO/枚举/JSON
+### 4.1 DO/Enums/JSON
 
-	• 数据库存 JSON 字段在 DO 中使用 Jackson JsonNode 表示或者定义Pojo，不要使用Map或String。
+• Database JSON fields should use Jackson JsonNode or define POJOs in DOs, not Map or String.
 
-### 4.2 POJO 形态
+### 4.2 POJO Forms
 
-	• 不可变/值对象优先使用 record。
-	• 需要可变时使用 Lombok + class；record 内不使用 Lombok。
+• Prefer `record` for immutable/value objects.
+• Use Lombok + class when mutability is needed; don't use Lombok inside records.
 
 ### 4.3 Lombok
 
-	• 不手写样板代码（getter/setter/toString/equals/hashCode）；使用 @Data 或组合注解。
+• Don't write boilerplate code (getter/setter/toString/equals/hashCode) manually; use @Data or combined annotations.
 
-### 4.4 工具复用
+### 4.4 Utility Reuse
 
-	• 不重复造轮子：优先使用 Hutool 与 patra-common/starters 提供的工具；新增前先检索。
+• Don't reinvent the wheel: prioritize using utilities from Hutool and patra-common/starters; search before adding new ones.
 
-## 5. 基础设施与可观测性
+## 5. Infrastructure & Observability
 
-	• 注册/配置：Nacos；不在代码中硬编码敏感信息。
-	• 调度：XXL-Job（作业在 adapter/scheduler），注意幂等、重试、限流。
-	• 追踪/APM：SkyWalking；在日志中传递 trace/correlation ID。
+• Registry/Config: Nacos; don't hardcode sensitive information in code.
+• Scheduling: XXL-Job (jobs in adapter/scheduler), pay attention to idempotency, retry, rate limiting.
+• Tracing/APM: SkyWalking; pass trace/correlation ID in logs.
 
-## 6. 开发能力矩阵（主代理职责）
+## 6. Development Capability Matrix (Main Agent Responsibilities)
 
-### 6.1 Domain 层（纯 Java）
+### 6.1 Domain Layer (Pure Java)
 
-- 聚合/实体/值对象/领域事件设计与实现（**无框架依赖**）
-- 端口接口（`*Port`）定义，避免向上泄漏实现细节
-- 领域逻辑封装，保持业务规则内聚
+- Design and implement aggregates/entities/value objects/domain events (**no framework dependencies**)
+- Define port interfaces (`*Port`), avoid leaking implementation details upward
+- Encapsulate domain logic, keep business rules cohesive
 
-### 6.2 Application 层（Orchestrators）
+### 6.2 Application Layer (Orchestrators)
 
-- `*Orchestrator` 与 `*Command` 实现：**仅编排，不承载业务规则**
-- 事务边界按约定声明；异常转换与一致性语义
-- 跨聚合协调，通过端口调用基础设施
+- `*Orchestrator` and `*Command` implementation: **orchestrate only, don't carry business rules**
+- Transaction boundary declaration per convention; exception translation and consistency semantics
+- Cross-aggregate coordination, invoke infrastructure through ports
 
-### 6.3 Infrastructure 层（MyBatis-Plus / MapStruct/ MQ出站 / feign出站）
+### 6.3 Infrastructure Layer (MyBatis-Plus / MapStruct / MQ outbound / Feign outbound)
 
-- 仓储实现（`*RepositoryImpl`）；LambdaQuery/UpdateWrapper 正确使用
-- DO ↔ Domain/DTO 映射（MapStruct）；DO 的 JSON 列使用 `JsonNode`
-- 分页/批处理/批量写入；避免 N+1；索引对齐
-- RPC 适配器实现（Feign Client 调用与错误处理）
+- Repository implementation (`*RepositoryImpl`); proper use of LambdaQuery/UpdateWrapper
+- DO ↔ Domain/DTO mapping (MapStruct); use `JsonNode` for JSON columns in DOs
+- Pagination/batch processing/bulk writes; avoid N+1; align indexes
+- RPC adapter implementation (Feign Client invocation and error handling)
 
-### 6.4 Adapter 层（REST/调度/MQ入站）
+### 6.4 Adapter Layer (REST/Scheduling/MQ inbound)
 
-- Controller/Job/Listener：入参校验（`@Valid`）与错误映射（ProblemDetail）
-- 追踪透传（trace/correlation ID）；CORS/Content-Type/Charset 配置对齐
-- DTO 转换与边界防护
+- Controller/Job/Listener: input validation (`@Valid`) and error mapping (ProblemDetail)
+- Trace propagation (trace/correlation ID); CORS/Content-Type/Charset configuration alignment
+- DTO conversion and boundary protection
 
-### 6.5 错误与日志（Errors & Logging）
+### 6.5 Errors & Logging
 
-- `@Slf4j` 英文参数化日志；不记录敏感信息
-- 关键业务标识（planId/sourceId/batchId）与 trace 贯穿
-- 异常分层：领域异常 → 应用异常 → HTTP 异常映射
+- `@Slf4j` English parameterized logging; don't log sensitive information
+- Key business identifiers (planId/sourceId/batchId) and trace throughout
+- Exception layering: domain exceptions → application exceptions → HTTP exception mapping
 
-### 6.6 性能与一致性（Performance & Consistency）
+### 6.6 Performance & Consistency
 
-- 分页/批处理、缓存（按设计）与连接池参数（Hikari）
-- Outbox 与最终一致策略按约定接入（不新增架构）
-- 幂等性设计：幂等键/去重策略/可重入流程
+- Pagination/batch processing, caching (as designed), and connection pool parameters (Hikari)
+- Integrate Outbox and eventual consistency strategies per convention (don't add new architecture)
+- Idempotency design: idempotency keys/deduplication strategies/reentrant processes
 
-### 6.7 实施流程
+### 6.7 Implementation Process
 
-1. 确认输入：目标模块/包、契约/端口/DTO/用例签名
-2. 定义/完善 Domain（纯 Java）
-3. 实现 App 编排与事务边界（不承载业务规则）
-4. 实现 Infra（MyBatis-Plus + MapStruct；JsonNode）
-5. 实现 Adapter（校验/错误映射/追踪透传）
-6. 自检：`mvn -q -DskipTests compile`；必要英文注释
-7. 交接：提交最小 Diff，移交 code-reviewer/qa/docs
+1. Confirm inputs: target module/package, contracts/ports/DTOs/use case signatures
+2. Define/improve Domain (pure Java)
+3. Implement App orchestration and transaction boundaries (don't carry business rules)
+4. Implement Infra (MyBatis-Plus + MapStruct; JsonNode)
+5. Implement Adapter (validation/error mapping/trace propagation)
+6. Self-check: `mvn -q -DskipTests compile`; necessary English comments
+7. Handoff: submit minimal Diff, hand over to code-reviewer/qa/docs
 
-## 7. 子代理协作（Subagent Collaboration）
+## 7. Subagent Collaboration
 
-### 7.1 何时调用子代理
+### 7.1 When to Invoke Subagents
 
-**主代理自己完成**：
-- ✅ Java 代码实现（Domain/App/Infra/Adapter/Api/Boot 各层）
-- ✅ 技术选型与简单设计决策（不涉及架构调整）
-- ✅ 代码自检（编译通过、基本质量、简单问题修复）
-- ✅ 简单的性能优化（索引添加、查询优化等）
+**Main Agent Completes Directly**:
+- ✅ Java code implementation (Domain/App/Infra/Adapter/Api/Boot layers)
+- ✅ Technology selection and simple design decisions (not involving architecture adjustments)
+- ✅ Code self-check (compilation pass, basic quality, simple issue fixes)
+- ✅ Simple performance optimizations (index additions, query optimizations, etc.)
 
-**委派给子代理（专人做专事）**：
+**Delegate to Subagents (Right Expert for the Right Task)**:
 
-**1. 编排与协调**：
-- **meta-orchestrator**：复杂多代理任务编排、任务拆解、关口设置、DoD定义
+**1. Orchestration & Coordination**:
+- **meta-orchestrator**: Complex multi-agent task orchestration, task decomposition, gate setup, DoD definition
 
-**2. 架构与设计**：
-- **architecture-reviewer**：重大设计变更评审、跨服务边界评审、架构合规检查
+**2. Architecture & Design**:
+- **architecture-reviewer**: Major design change review, cross-service boundary review, architecture compliance check
 
-**3. 代码质量与调试**：
-- **code-reviewer**：每次代码变更后的审查、问题定位与修复建议
-- **code-refiner**：零行为改变的重构（拆分长方法、命名优化、注释完善）
-- **java-microservice-debugger**：复杂问题根因分析（性能问题、偶发bug、系统异常）
-- **business-trace-analyzer**：业务流程追踪分析、执行路径可视化
+**3. Code Quality & Debugging**:
+- **code-reviewer**: Review after each code change, issue identification and fix recommendations
+- **code-refiner**: Zero-behavior-change refactoring (split long methods, naming optimization, comment improvement)
+- **java-microservice-debugger**: Complex issue root cause analysis (performance issues, intermittent bugs, system anomalies)
+- **business-trace-analyzer**: Business process tracing and analysis, execution path visualization
 
-**4. 测试与质量**：
-- **qa-unit-tests**：单元测试编写（JUnit5 + AssertJ + Mockito）
-- **qa-integration-tests**：集成/E2E 测试（Spring Boot Test + Testcontainers）
-- **qa-quality-gates**：质量门禁检查、覆盖率汇总、发布前验证
+**4. Testing & Quality**:
+- **qa-unit-tests**: Unit test writing (JUnit5 + AssertJ + Mockito)
+- **qa-integration-tests**: Integration/E2E testing (Spring Boot Test + Testcontainers)
+- **qa-quality-gates**: Quality gate checks, coverage summary, pre-release validation
 
-**5. 文档与可视化**：
-- **docs-engineer**：API/架构/数据/运维文档同步、ADR 维护
-- **mermaid-expert**：流程图/时序图/ERD/架构图绘制
+**5. Documentation & Visualization**:
+- **docs-engineer**: API/architecture/data/ops documentation sync, ADR maintenance
+- **mermaid-expert**: Flowcharts/sequence diagrams/ERDs/architecture diagrams
 
-**6. 外部资源**：
-- **search-specialist**：权威来源检索、最佳实践调研、技术选型对比
+**6. External Resources**:
+- **search-specialist**: Authoritative source research, best practice investigation, technology selection comparison
 
-### 7.2 典型工作流
+### 7.2 Typical Workflows
 
-**完整开发流程（新功能/复杂变更）**：
+**Complete Development Flow (New Features/Complex Changes)**:
 ```
-1. 需求澄清（主代理）
-2. [复杂设计？] → architecture-reviewer 评审
-3. [需要调研？] → search-specialist（查询最佳实践）
-4. 代码实现（主代理）
-5. 自检编译（mvn -q -DskipTests compile）
-6. code-reviewer 审查
-7. [需要重构？] → code-refiner（优化可读性）
-8. qa-unit-tests（单元测试）
-9. qa-integration-tests（集成测试）
-10. qa-quality-gates（质量门禁）
-11. [需要文档？] → mermaid-expert + docs-engineer
-12. 合并与发布
-```
-
-**快速开发流程（简单功能）**：
-```
-1. 代码实现（主代理）
-2. 自检编译（mvn -q -DskipTests compile）✅ 确保编译通过
-3. code-reviewer 审查
-4. qa-unit-tests 测试
-5. 合并
+1. Requirements clarification (main agent)
+2. [Complex design?] → architecture-reviewer review
+3. [Need research?] → search-specialist (query best practices)
+4. Code implementation (main agent)
+5. Self-check compilation (mvn -q -DskipTests compile)
+6. code-reviewer review
+7. [Need refactoring?] → code-refiner (optimize readability)
+8. qa-unit-tests (unit testing)
+9. qa-integration-tests (integration testing)
+10. qa-quality-gates (quality gates)
+11. [Need documentation?] → mermaid-expert + docs-engineer
+12. Merge and release
 ```
 
-**问题修复流程**：
+**Quick Development Flow (Simple Features)**:
 ```
-1. 问题诊断 → java-microservice-debugger（系统化根因分析）
-2. [需要业务流程追踪？] → business-trace-analyzer（执行路径分析）
-3. 修复实现（主代理根据诊断建议）
-4. code-reviewer 审查
-5. qa-unit-tests（回归测试）
-6. qa-integration-tests（相关场景验证）
+1. Code implementation (main agent)
+2. Self-check compilation (mvn -q -DskipTests compile) ✅ Ensure compilation passes
+3. code-reviewer review
+4. qa-unit-tests testing
+5. Merge
 ```
 
-**架构变更流程**：
+**Issue Fix Flow**:
 ```
-1. 架构评审 → architecture-reviewer（合规评审）
-2. [需要调研？] → search-specialist
-3. 实现（主代理）
+1. Issue diagnosis → java-microservice-debugger (systematic root cause analysis)
+2. [Need business process tracing?] → business-trace-analyzer (execution path analysis)
+3. Fix implementation (main agent based on diagnosis recommendations)
+4. code-reviewer review
+5. qa-unit-tests (regression testing)
+6. qa-integration-tests (related scenario validation)
+```
+
+**Architecture Change Flow**:
+```
+1. Architecture review → architecture-reviewer (compliance review)
+2. [Need research?] → search-specialist
+3. Implementation (main agent)
 4. code-reviewer → code-refiner
-5. qa-* 全流程测试
-6. docs-engineer + mermaid-expert（文档与图表）
-7. qa-quality-gates（最终验证）
+5. qa-* full testing
+6. docs-engineer + mermaid-expert (documentation and diagrams)
+7. qa-quality-gates (final validation)
 ```
 
-**多代理复杂任务**：
+**Complex Multi-Agent Tasks**:
 ```
-1. meta-orchestrator 编排（任务拆解 + 关口设置 + DoD 定义）
-2. 按编排顺序执行各子代理
-3. 关键关口验证（架构评审/代码审查/质量门禁）
-4. 产出汇总与交付
+1. meta-orchestrator orchestration (task decomposition + gate setup + DoD definition)
+2. Execute subagents in orchestration order
+3. Key gate validation (architecture review/code review/quality gates)
+4. Output summary and delivery
 ```
