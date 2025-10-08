@@ -1,13 +1,26 @@
 package com.patra.ingest.app.usecase.relay.support;
 
 /**
- * Outbox 频道常量集合。
- * <p>命名约定：使用层次化下划线结构（模块_语义_状态），便于 MQ / Topic / 指标标签统一管理。</p>
+ * Outbox channel constants.
+ * <p><b>DEPRECATED</b>: This class has been moved to {@code com.patra.ingest.app.outbox.constants.OutboxChannels}.
+ * Please update your imports to use the new location.</p>
+ * <p>This class will be removed in a future version.</p>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ * @deprecated Use {@link com.patra.ingest.app.outbox.constants.OutboxChannels} instead
  */
+@Deprecated(since = "0.1.0", forRemoval = true)
 public final class OutboxChannels {
 
-    /** 任务已准备就绪（调度生成的 Task 入队等待执行）。 */
-    public static final String INGEST_TASK_READY = "INGEST_TASK_READY";
+    /**
+     * Ingest task ready channel.
+     * @deprecated Use {@link com.patra.ingest.app.outbox.constants.OutboxChannels#INGEST_TASK_READY} instead
+     */
+    @Deprecated(since = "0.1.0", forRemoval = true)
+    public static final String INGEST_TASK_READY = com.patra.ingest.app.outbox.constants.OutboxChannels.INGEST_TASK_READY;
 
-    private OutboxChannels() { }
+    private OutboxChannels() {
+        throw new UnsupportedOperationException("Constants class cannot be instantiated");
+    }
 }

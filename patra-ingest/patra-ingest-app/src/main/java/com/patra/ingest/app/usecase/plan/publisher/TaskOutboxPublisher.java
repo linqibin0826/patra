@@ -5,10 +5,12 @@ import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
+import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
+import com.patra.ingest.app.outbox.constants.OutboxChannels;
+import com.patra.ingest.app.outbox.constants.OutboxOperationTypes;
 import com.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
 import com.patra.ingest.app.outbox.core.OutboxPublishContext;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
-import com.patra.ingest.app.usecase.relay.support.OutboxChannels;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
@@ -42,10 +44,6 @@ import java.util.Objects;
 @Slf4j
 @Component
 public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent, TaskPayload, TaskHeaders> {
-
-    private static final String AGGREGATE_TYPE_TASK = "Task";
-    private static final String OUTBOX_CHANNEL = OutboxChannels.INGEST_TASK_READY;
-    private static final String OPERATION_TYPE_TASK_READY = "TASK_READY";
 
     private final ObjectMapper objectMapper;
 
@@ -108,16 +106,18 @@ public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent
 
     @Override
     protected String getAggregateType() {
-        return AGGREGATE_TYPE_TASK;
+        return OutboxAggregateTypes.TASK;
     }
 
     @Override
     protected String getChannel() {
-        return OUTBOX_CHANNEL;
+        return OutboxChannels.INGEST_TASK_READY;
     }
+
 
     @Override
     protected TaskPayload buildPayload(TaskQueuedEvent event, OutboxPublishContext ctx) {
+        // TODO taskPayload 需要简化，不需要那么多参数，只需包含 taskId 和 idempotentKey 即可，消费方应该自己去查询
         PlanAggregate plan = ctx.get("plan", PlanAggregate.class);
 
         // Parse params JSON to JsonNode if present
@@ -183,7 +183,7 @@ public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent
 
     @Override
     protected String getOperationType(TaskQueuedEvent event) {
-        return OPERATION_TYPE_TASK_READY;
+        return OutboxOperationTypes.TASK_READY;
     }
 
     @Override

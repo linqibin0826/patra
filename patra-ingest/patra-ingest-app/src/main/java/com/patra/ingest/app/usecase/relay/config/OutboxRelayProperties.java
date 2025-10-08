@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.relay.config;
 
-import com.patra.ingest.app.usecase.relay.support.OutboxChannels;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

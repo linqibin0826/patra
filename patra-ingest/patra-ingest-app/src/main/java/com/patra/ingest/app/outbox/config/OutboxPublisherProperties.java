@@ -1,5 +1,6 @@
 package com.patra.ingest.app.outbox.config;
 
+import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -47,8 +48,13 @@ public class OutboxPublisherProperties {
     /**
      * Allowed aggregate types for Micrometer metrics tag cardinality control.
      * <p>Prevents metric label cardinality explosion in Prometheus.</p>
+     * @see OutboxAggregateTypes
      */
-    private Set<String> allowedAggregateTypes = new HashSet<>(Set.of("Task", "LiteratureData", "Plan"));
+    private Set<String> allowedAggregateTypes = new HashSet<>(Set.of(
+            OutboxAggregateTypes.TASK,
+            OutboxAggregateTypes.PLAN,
+            OutboxAggregateTypes.LITERATURE_DATA
+    ));
 
     /**
      * Metrics configuration.
