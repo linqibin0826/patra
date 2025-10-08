@@ -76,7 +76,7 @@ graph TB
 graph TB
     subgraph "Adapter Layer - Inbound (入站适配器)"
         direction LR
-        A1[rest/feign/<br/>ProvenanceClientImpl<br/>- GET /provenance/{code}/snapshot<br/>- GET /provenance/{code}/config]
+        A1[rest/feign/<br/>ProvenanceClientImpl<br/>- GET /provenance/:code/snapshot<br/>- GET /provenance/:code/config]
         A2[rest/feign/<br/>ExprClientImpl<br/>- GET /expr/capabilities<br/>- GET /expr/render-rules]
     end
     
