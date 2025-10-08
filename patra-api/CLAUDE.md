@@ -48,7 +48,7 @@
 
 ⸻
 
-## 3. 技术栈与版本（关键）
+## 2. 技术栈与版本（关键）
 
 	• 语言/构建：Java 21，Maven（多模块；父 POM 统一依赖），UTF-8
 	• 核心框架：Spring Boot 3.2.4；Spring Cloud 2023.0.1；Spring Cloud Alibaba 2023.0.1.0
@@ -60,7 +60,7 @@
 
 ⸻
 
-## 4. 仓库结构（精简）
+## 3. 仓库结构（精简）
 
 Papertrace/
 ├─ patra-parent/ # 父 POM（依赖/插件管理）
@@ -72,7 +72,7 @@ Papertrace/
 ├─ patra-spring-boot-starter-*/ # 自研 starters
 └─ docker/ # 本地基础设施
 
-### 4.1 微服务模块通用子结构
+### 3.1 微服务模块通用子结构
 
 patra-{service}/
 ├─ patra-{service}-boot/ # 可执行入口
@@ -87,7 +87,7 @@ patra-{service}/
 - **自包含**：每个用例目录包含完整的 command/dto/核心逻辑/支持组件(参考patra-ingest/app/plan)
 - **统一命名**：`*Orchestrator`（编排器）、`*Command`（命令）、`*Impl`（实现）
 
-### 4.2 依赖方向（必须遵守）
+### 3.2 依赖方向（必须遵守）
 
 	• adapter → app + api（+ web starters）
 	• app → domain + patra-common + core starter
@@ -95,71 +95,71 @@ patra-{service}/
 	• domain → 仅 patra-common（禁止引入 Spring/框架）
 	• api：不依赖框架（对外暴露）
 
-## 6. 代码约定
+## 4. 代码约定
 
-### 6.1 DO/枚举/JSON
+### 4.1 DO/枚举/JSON
 
 	• 数据库存 JSON 字段在 DO 中使用 Jackson JsonNode 表示或者定义Pojo，不要使用Map或String。
 
-### 6.2 POJO 形态
+### 4.2 POJO 形态
 
 	• 不可变/值对象优先使用 record。
 	• 需要可变时使用 Lombok + class；record 内不使用 Lombok。
 
-### 6.3 Lombok
+### 4.3 Lombok
 
 	• 不手写样板代码（getter/setter/toString/equals/hashCode）；使用 @Data 或组合注解。
 
-### 6.4 工具复用
+### 4.4 工具复用
 
 	• 不重复造轮子：优先使用 Hutool 与 patra-common/starters 提供的工具；新增前先检索。
 
-## 8. 基础设施与可观测性
+## 5. 基础设施与可观测性
 
 	• 注册/配置：Nacos；不在代码中硬编码敏感信息。
 	• 调度：XXL-Job（作业在 adapter/scheduler），注意幂等、重试、限流。
 	• 追踪/APM：SkyWalking；在日志中传递 trace/correlation ID。
 
-## 9. 开发能力矩阵（主代理职责）
+## 6. 开发能力矩阵（主代理职责）
 
-### 9.1 Domain 层（纯 Java）
+### 6.1 Domain 层（纯 Java）
 
 - 聚合/实体/值对象/领域事件设计与实现（**无框架依赖**）
 - 端口接口（`*Port`）定义，避免向上泄漏实现细节
 - 领域逻辑封装，保持业务规则内聚
 
-### 9.2 Application 层（Orchestrators）
+### 6.2 Application 层（Orchestrators）
 
 - `*Orchestrator` 与 `*Command` 实现：**仅编排，不承载业务规则**
 - 事务边界按约定声明；异常转换与一致性语义
 - 跨聚合协调，通过端口调用基础设施
 
-### 9.3 Infrastructure 层（MyBatis-Plus / MapStruct/ MQ出站 / feign出站）
+### 6.3 Infrastructure 层（MyBatis-Plus / MapStruct/ MQ出站 / feign出站）
 
 - 仓储实现（`*RepositoryImpl`）；LambdaQuery/UpdateWrapper 正确使用
 - DO ↔ Domain/DTO 映射（MapStruct）；DO 的 JSON 列使用 `JsonNode`
 - 分页/批处理/批量写入；避免 N+1；索引对齐
 - RPC 适配器实现（Feign Client 调用与错误处理）
 
-### 9.4 Adapter 层（REST/调度/MQ入站）
+### 6.4 Adapter 层（REST/调度/MQ入站）
 
 - Controller/Job/Listener：入参校验（`@Valid`）与错误映射（ProblemDetail）
 - 追踪透传（trace/correlation ID）；CORS/Content-Type/Charset 配置对齐
 - DTO 转换与边界防护
 
-### 9.5 错误与日志（Errors & Logging）
+### 6.5 错误与日志（Errors & Logging）
 
 - `@Slf4j` 英文参数化日志；不记录敏感信息
 - 关键业务标识（planId/sourceId/batchId）与 trace 贯穿
 - 异常分层：领域异常 → 应用异常 → HTTP 异常映射
 
-### 9.6 性能与一致性（Performance & Consistency）
+### 6.6 性能与一致性（Performance & Consistency）
 
 - 分页/批处理、缓存（按设计）与连接池参数（Hikari）
 - Outbox 与最终一致策略按约定接入（不新增架构）
 - 幂等性设计：幂等键/去重策略/可重入流程
 
-### 9.7 实施流程
+### 6.7 实施流程
 
 1. 确认输入：目标模块/包、契约/端口/DTO/用例签名
 2. 定义/完善 Domain（纯 Java）
@@ -169,9 +169,9 @@ patra-{service}/
 6. 自检：`mvn -q -DskipTests compile`；必要英文注释
 7. 交接：提交最小 Diff，移交 code-reviewer/qa/docs
 
-## 10. 子代理协作（Subagent Collaboration）
+## 7. 子代理协作（Subagent Collaboration）
 
-### 10.1 何时调用子代理
+### 7.1 何时调用子代理
 
 **主代理自己完成**：
 - ✅ Java 代码实现（Domain/App/Infra/Adapter/Api/Boot 各层）
@@ -205,7 +205,7 @@ patra-{service}/
 **6. 外部资源**：
 - **search-specialist**：权威来源检索、最佳实践调研、技术选型对比
 
-### 10.2 典型工作流
+### 7.2 典型工作流
 
 **完整开发流程（新功能/复杂变更）**：
 ```
