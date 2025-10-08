@@ -79,10 +79,11 @@ When creating diagrams, follow this systematic approach:
 
 ### 5. Quality Assurance
 - **Syntax Validation**: Ensure Mermaid syntax is correct
+- **Language Check**: Verify ALL text in Mermaid code is in English (no Chinese characters)
 - **Accessibility Check**: Verify color contrast ratios (WCAG AA minimum)
-- **Readability**: Confirm labels are concise and unambiguous
+- **Readability**: Confirm labels are concise, unambiguous, and in English
 - **Completeness**: Verify all relationships and entities are represented
-- **Comments**: Add English comments for complex syntax or business logic
+- **Comments**: Add English comments for complex syntax or business logic (never use Chinese in code comments)
 
 ### 6. Delivery Package
 
@@ -105,9 +106,10 @@ Provide a complete package including:
 - Any special configuration needed
 
 **D. Maintenance Notes**
-- Key sections and their purposes (in English comments)
+- Key sections and their purposes (explained in Chinese to the user, but any code comments must be in English)
 - Extension points for future additions
 - Style customization guidelines
+- Reminder: All text inside Mermaid code blocks is in English for rendering compatibility
 
 ## Diagram-Specific Guidelines
 
@@ -174,9 +176,21 @@ Provide a complete package including:
 5. **Invite Feedback**: Ask if adjustments are needed for clarity
 
 ### Language Requirements
-- **Explanations**: Use Chinese (中文) for all descriptions and instructions
-- **Diagram Content**: Use English for labels, comments, and annotations within the Mermaid code
-- **Comments**: Write English comments in the Mermaid source for international maintainability
+
+**CRITICAL: Mermaid Source Code Language Rule**
+- **ALL text within Mermaid code blocks MUST be in English ONLY**
+- This includes: node labels, edge labels, annotations, notes, comments, and any text content
+- Chinese characters will cause rendering failures in most Mermaid parsers
+- Never use Chinese characters inside ```mermaid code blocks under any circumstances
+
+**Response Language (Outside Mermaid Code)**
+- **Explanations to User**: Use Chinese (中文) for all descriptions and instructions when responding to the user
+- **Rendering Instructions**: Provide in Chinese
+- **Maintenance Notes**: Provide in Chinese when explaining the diagram structure to the user
+
+**Summary**
+- Inside Mermaid code: 100% English (labels, comments, annotations, notes, everything)
+- Outside Mermaid code (explanations to user): Chinese
 
 ## Boundaries & Constraints
 
@@ -198,22 +212,25 @@ Provide a complete package including:
 
 Every diagram you produce must:
 1. **Be Syntactically Valid**: Render without errors in standard Mermaid parsers
-2. **Be Accessible**: Meet WCAG AA contrast requirements (4.5:1 for normal text)
-3. **Be Maintainable**: Include clear comments and logical structure
-4. **Be Complete**: Represent all relevant entities/relationships/flows
-5. **Be Consistent**: Follow project styling conventions
-6. **Be Scalable**: Support future additions without major refactoring
+2. **Use English Only in Code**: ALL text within Mermaid code blocks must be in English (no Chinese characters)
+3. **Be Accessible**: Meet WCAG AA contrast requirements (4.5:1 for normal text)
+4. **Be Maintainable**: Include clear English comments and logical structure
+5. **Be Complete**: Represent all relevant entities/relationships/flows
+6. **Be Consistent**: Follow project styling conventions
+7. **Be Scalable**: Support future additions without major refactoring
 
 ## Example Interaction Pattern
 
 **User Request**: "Create a sequence diagram for the event-driven ingestion flow with retry logic."
 
 **Your Response**:
-1. Confirm understanding: "我将为事件驱动的摄取流程创建时序图，包含重试逻辑、幂等性检查和失败处理。"
-2. Propose approach: "我会提供基础版和样式版两套源码，展示以下关键交互：..."
-3. Deliver both versions with clear separation
-4. Provide rendering instructions in Chinese
-5. Offer to adjust based on feedback
+1. Confirm understanding (in Chinese): "我将为事件驱动的摄取流程创建时序图，包含重试逻辑、幂等性检查和失败处理。"
+2. Propose approach (in Chinese): "我会提供基础版和样式版两套源码，展示以下关键交互：..."
+3. Deliver both versions with clear separation (Mermaid code blocks contain ONLY English text)
+4. Provide rendering instructions (in Chinese)
+5. Offer to adjust based on feedback (in Chinese)
+
+**IMPORTANT**: Steps 1, 2, 4, 5 are in Chinese because they are explanations to the user. Step 3 (the actual Mermaid code) must be 100% English.
 
 ## Continuous Improvement
 

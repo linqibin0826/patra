@@ -1,7 +1,7 @@
 package com.patra.ingest.app.outbox.constants;
 
 /**
- * Outbox aggregate type constants.
+ * Outbox aggregate type enum.
  * <p>Defines all valid aggregate types used in the Outbox framework for:</p>
  * <ul>
  *   <li>Micrometer metrics tag cardinality control</li>
@@ -13,7 +13,7 @@ package com.patra.ingest.app.outbox.constants;
  * <pre>{@code
  * @Override
  * protected String getAggregateType() {
- *     return OutboxAggregateTypes.TASK;
+ *     return OutboxAggregateTypes.TASK.getCode();
  * }
  * }</pre>
  *
@@ -33,27 +33,66 @@ package com.patra.ingest.app.outbox.constants;
  * @since 0.1.0
  * @see com.patra.ingest.app.outbox.config.OutboxPublisherProperties#getAllowedAggregateTypes()
  */
-public final class OutboxAggregateTypes {
+public enum OutboxAggregateTypes {
 
     /**
      * Task aggregate type.
      * <p>Used for task queue events (task creation, scheduling, execution).</p>
      */
-    public static final String TASK = "Task";
+    TASK("Task", "Task aggregate - for task queue events"),
 
     /**
      * Plan aggregate type.
      * <p>Used for ingestion plan lifecycle events (plan creation, state transitions).</p>
      */
-    public static final String PLAN = "Plan";
+    PLAN("Plan", "Plan aggregate - for ingestion plan lifecycle events"),
 
     /**
      * Literature data aggregate type.
      * <p>Used for literature data processing events (parsing, cleansing, storage).</p>
      */
-    public static final String LITERATURE_DATA = "LiteratureData";
+    LITERATURE_DATA("LiteratureData", "Literature data aggregate - for data processing events");
 
-    private OutboxAggregateTypes() {
-        throw new UnsupportedOperationException("Constants class cannot be instantiated");
+    private final String code;
+    private final String description;
+
+    OutboxAggregateTypes(String code, String description) {
+        this.code = code;
+        this.description = description;
+    }
+
+    /**
+     * Returns the aggregate type code.
+     * <p>This value is stored in {@code ing_outbox_message.aggregate_type} field.</p>
+     *
+     * @return Aggregate type code (e.g., "Task", "Plan", "LiteratureData")
+     */
+    public String getCode() {
+        return code;
+    }
+
+    /**
+     * Returns the human-readable description.
+     *
+     * @return Description of this aggregate type
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * Finds enum by code.
+     *
+     * @param code Aggregate type code
+     * @return Matching enum value
+     * @throws IllegalArgumentException if code is not found
+     */
+    public static OutboxAggregateTypes fromCode(String code) {
+        for (OutboxAggregateTypes type : values()) {
+            if (type.code.equals(code)) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Unknown aggregate type code: " + code);
     }
 }

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
+import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
 import com.patra.ingest.app.outbox.constants.OutboxChannels;
-import com.patra.ingest.app.outbox.constants.OutboxOperationTypes;
 import com.patra.ingest.app.outbox.core.AbstractOutboxPublisher;
 import com.patra.ingest.app.outbox.core.OutboxPublishContext;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
@@ -105,12 +105,12 @@ public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent
     // ==================== Extension Point Implementations ====================
 
     @Override
-    protected String getAggregateType() {
+    protected OutboxAggregateTypes getAggregateType() {
         return OutboxAggregateTypes.TASK;
     }
 
     @Override
-    protected String getChannel() {
+    protected OutboxChannels getChannel() {
         return OutboxChannels.INGEST_TASK_READY;
     }
 
@@ -182,8 +182,8 @@ public class TaskOutboxPublisher extends AbstractOutboxPublisher<TaskQueuedEvent
     }
 
     @Override
-    protected String getOperationType(TaskQueuedEvent event) {
-        return OutboxOperationTypes.TASK_READY;
+    protected OutboxBusinessTags getOperationType(TaskQueuedEvent event) {
+        return OutboxBusinessTags.TASK_READY;
     }
 
     @Override
