@@ -192,7 +192,7 @@ graph TB
     Port5 -.->|Impl| I3
     Port6 -.->|Impl| I3
     
-    I1 -->|Feign RPC| Ext1[patra-registry<br/>GET /provenance/{code}/snapshot]
+    I1 -->|Feign RPC| Ext1[patra-registry<br/>GET /provenance/:code/snapshot]
     I2 -->|Publish Message| Ext2[RocketMQ<br/>Topic: ingest.task]
     I3 -->|JDBC/MyBatis-Plus| Ext3[(MySQL 8.0<br/>patra_ingest_db)]
     

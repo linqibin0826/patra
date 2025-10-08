@@ -147,6 +147,25 @@ Provide a complete package including:
 - Include technology stack labels where relevant
 - Use color coding for different layers/boundaries
 
+## Common Syntax Pitfalls
+
+### ER Diagrams - Field Modifiers
+- Use ONLY standard modifiers: `PK`, `FK`, `UK` (no custom ones like FK_LOGICAL, UK_WITH_PLAN)
+- Put semantic information in comment strings: `FK "logical reference"`
+- Avoid escaped quotes (`\"`) in field descriptions - use plain text instead
+
+### Graph Diagrams - Special Characters
+- Replace bullet points `•` with `-` or `*` in node labels
+- Avoid curly braces `{}` in node labels (e.g., REST paths: use `/api/:code` not `/api/{code}`)
+- Note: `{}` are valid in class diagrams for member definitions
+
+### General Rules
+- All text in Mermaid code blocks must be in English (no Chinese characters)
+- No backslash-escaped quotes in any descriptions
+- Test diagrams in Mermaid Live Editor before committing
+
+---
+
 ## Style Standards
 
 ### Color Palette (Light Mode)

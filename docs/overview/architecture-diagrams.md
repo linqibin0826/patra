@@ -104,7 +104,7 @@ C4Container
     Container_Ext(skywalking, "SkyWalking OAP", "SkyWalking 10.2", "- Distributed tracing<br/>- Metrics aggregation<br/>- Alerting")
     
     Rel(user, gateway, "HTTPS/REST", "API requests")
-    Rel(gateway, registry, "Feign + LB", "GET /provenance/{code}")
+    Rel(gateway, registry, "Feign + LB", "GET /provenance/:code")
     Rel(gateway, ingest, "Feign + LB", "POST /plans, GET /tasks")
     
     Rel(xxl_job, ingest, "HTTP POST", "Trigger: PubmedHarvestJob")
