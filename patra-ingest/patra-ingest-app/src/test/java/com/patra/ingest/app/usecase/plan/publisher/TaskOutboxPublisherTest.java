@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
+import com.patra.ingest.app.outbox.constants.OutboxChannels;
 import com.patra.ingest.app.outbox.core.OutboxPublishContext;
 import com.patra.ingest.app.outbox.core.OutboxPublishResult;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
-import com.patra.ingest.app.usecase.relay.support.OutboxChannels;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
@@ -134,7 +134,7 @@ class TaskOutboxPublisherTest {
 
         OutboxMessage message = messages.get(0);
         assertThat(message.getAggregateType()).isEqualTo("Task");
-        assertThat(message.getChannel()).isEqualTo(OutboxChannels.INGEST_TASK_READY);
+        assertThat(message.getChannel()).isEqualTo(OutboxChannels.INGEST_TASK_READY.getCode());
     }
 
     @Test

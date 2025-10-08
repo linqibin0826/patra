@@ -1,7 +1,7 @@
 package com.patra.ingest.app.outbox.constants;
 
 /**
- * Outbox channel constants.
+ * Outbox channel enum.
  * <p>Defines messaging channels used in the Outbox framework for:</p>
  * <ul>
  *   <li>Message routing and topic mapping</li>
@@ -11,17 +11,12 @@ package com.patra.ingest.app.outbox.constants;
  *
  * <h3>Naming Convention</h3>
  * <p>Channels follow hierarchical underscore structure: {@code MODULE_SEMANTIC_STATE}</p>
- * <ul>
- *   <li><b>MODULE</b>: Service module name (e.g., INGEST, REGISTRY)</li>
- *   <li><b>SEMANTIC</b>: Business semantic (e.g., TASK, PLAN, LITERATURE)</li>
- *   <li><b>STATE</b>: State or action (e.g., READY, CREATED, UPDATED)</li>
- * </ul>
  *
  * <h3>Usage Example</h3>
  * <pre>{@code
  * @Override
  * protected String getChannel() {
- *     return OutboxChannels.INGEST_TASK_READY;
+ *     return OutboxChannels.INGEST_TASK_READY.getCode();
  * }
  * }</pre>
  *
@@ -35,33 +30,72 @@ package com.patra.ingest.app.outbox.constants;
  * @author linqibin
  * @since 0.1.0
  */
-public final class OutboxChannels {
+public enum OutboxChannels {
 
     /**
      * Ingest task ready channel.
-     * <p>Used when scheduler generates tasks that are queued and ready for execution.</p>
-     * <p><b>Business Flow</b>: Schedule trigger → Task creation → Task queue → Task execution</p>
-     * <p><b>Consumers</b>: Task execution workers</p>
      */
-    public static final String INGEST_TASK_READY = "INGEST_TASK_READY";
+    INGEST_TASK_READY(
+            "INGEST_TASK_READY",
+            "Ingest task ready - scheduler created task and queued for execution"
+    ),
 
     /**
      * Ingest plan created channel.
-     * <p>Used when a new ingestion plan is created.</p>
-     * <p><b>Business Flow</b>: Plan creation → Event publishing → Downstream processing</p>
-     * <p><b>Consumers</b>: Audit service, monitoring dashboard</p>
      */
-    public static final String INGEST_PLAN_CREATED = "INGEST_PLAN_CREATED";
+    INGEST_PLAN_CREATED(
+            "INGEST_PLAN_CREATED",
+            "Ingest plan created - new ingestion plan persisted"
+    ),
 
     /**
      * Ingest plan updated channel.
-     * <p>Used when an ingestion plan state transitions or configuration changes.</p>
-     * <p><b>Business Flow</b>: Plan state change → Event publishing → Downstream sync</p>
-     * <p><b>Consumers</b>: Audit service, monitoring dashboard</p>
      */
-    public static final String INGEST_PLAN_UPDATED = "INGEST_PLAN_UPDATED";
+    INGEST_PLAN_UPDATED(
+            "INGEST_PLAN_UPDATED",
+            "Ingest plan updated - plan state or configuration changed"
+    );
 
-    private OutboxChannels() {
-        throw new UnsupportedOperationException("Constants class cannot be instantiated");
+    private final String code;
+    private final String description;
+
+    OutboxChannels(String code, String description) {
+        this.code = code;
+        this.description = description;
+    }
+
+    /**
+     * Returns the channel code.
+     * <p>This value is stored in {@code ing_outbox_message.channel} field.</p>
+     *
+     * @return Channel code (e.g., "INGEST_TASK_READY")
+     */
+    public String getCode() {
+        return code;
+    }
+
+    /**
+     * Returns the human-readable description.
+     *
+     * @return Description of this channel
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * Finds enum by code.
+     *
+     * @param code Channel code
+     * @return Matching enum value
+     * @throws IllegalArgumentException if code is not found
+     */
+    public static OutboxChannels fromCode(String code) {
+        for (OutboxChannels channel : values()) {
+            if (channel.code.equals(code)) {
+                return channel;
+            }
+        }
+        throw new IllegalArgumentException("Unknown channel code: " + code);
     }
 }

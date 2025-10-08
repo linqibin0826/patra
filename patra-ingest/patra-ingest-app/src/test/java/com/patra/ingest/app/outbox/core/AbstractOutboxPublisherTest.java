@@ -2,6 +2,9 @@ package com.patra.ingest.app.outbox.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
+import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
+import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
+import com.patra.ingest.app.outbox.constants.OutboxChannels;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.outbox.OutboxHeaders;
@@ -97,8 +100,8 @@ class AbstractOutboxPublisherTest {
         assertThat(savedMessages.get(0).getAggregateId()).isEqualTo(1L);
         assertThat(savedMessages.get(1).getAggregateId()).isEqualTo(2L);
 
-        verify(metrics).recordPublish(eq("TestAggregate"), eq("batch"), eq(true), any(Duration.class));
-        verify(metrics).recordBatchSize("TestAggregate", 2);
+        verify(metrics).recordPublish(eq("Task"), eq("batch"), eq(true), any(Duration.class));
+        verify(metrics).recordBatchSize("Task", 2);
     }
 
     @Test
@@ -159,7 +162,7 @@ class AbstractOutboxPublisherTest {
         verify(repository).saveAll(messagesCaptor.capture());
         assertThat(messagesCaptor.getValue()).hasSize(1);
 
-        verify(metrics).recordPublish(eq("TestAggregate"), eq("TEST_OPERATION"), eq(false), any(Duration.class));
+        verify(metrics).recordPublish(eq("Task"), eq("TASK_READY"), eq(false), any(Duration.class));
     }
 
     @Test
@@ -179,7 +182,7 @@ class AbstractOutboxPublisherTest {
         assertThat(result.getFailures()).hasSize(1);
         assertThat(result.getFailures().get(0).errorMessage()).contains("Database connection failed");
 
-        verify(metrics).recordPublish(eq("TestAggregate"), eq("batch"), eq(false), any(Duration.class));
+        verify(metrics).recordPublish(eq("Task"), eq("batch"), eq(false), any(Duration.class));
     }
 
     @Test
@@ -205,8 +208,8 @@ class AbstractOutboxPublisherTest {
         verify(repository, times(3)).saveAll(any());
 
         // Should record batch size metrics 3 times: twice with size=2, once with size=1
-        verify(metrics, times(2)).recordBatchSize("TestAggregate", 2);
-        verify(metrics).recordBatchSize("TestAggregate", 1);
+        verify(metrics, times(2)).recordBatchSize("Task", 2);
+        verify(metrics).recordBatchSize("Task", 1);
     }
 
     @Test
@@ -247,7 +250,7 @@ class AbstractOutboxPublisherTest {
         verify(repository).upsertBatch(messagesCaptor.capture());
         assertThat(messagesCaptor.getValue()).hasSize(2);
 
-        verify(metrics).recordPublish(eq("TestAggregate"), eq("retry"), eq(true), any(Duration.class));
+        verify(metrics).recordPublish(eq("Task"), eq("retry"), eq(true), any(Duration.class));
     }
 
     @Test
@@ -270,7 +273,7 @@ class AbstractOutboxPublisherTest {
                 .contains("Retry batch size 3 exceeds max 2");
 
         verify(repository, never()).upsertBatch(any());
-        verify(metrics).recordPublish(eq("TestAggregate"), eq("retry"), eq(false), any(Duration.class));
+        verify(metrics).recordPublish(eq("Task"), eq("retry"), eq(false), any(Duration.class));
     }
 
     @Test
@@ -320,7 +323,7 @@ class AbstractOutboxPublisherTest {
         assertThat(result.hasFailures()).isTrue();
         assertThat(result.getFailures().get(0).errorMessage()).contains("Upsert failed");
 
-        verify(metrics).recordPublish(eq("TestAggregate"), eq("retry"), eq(false), any(Duration.class));
+        verify(metrics).recordPublish(eq("Task"), eq("retry"), eq(false), any(Duration.class));
     }
 
     // ==================== Extension Point Tests ====================
@@ -340,9 +343,9 @@ class AbstractOutboxPublisherTest {
         OutboxMessage message = messagesCaptor.getValue().get(0);
 
         // Verify all extension points were called correctly
-        assertThat(message.getAggregateType()).isEqualTo("TestAggregate");
-        assertThat(message.getChannel()).isEqualTo("test-channel");
-        assertThat(message.getOpType()).isEqualTo("TEST_OPERATION");
+        assertThat(message.getAggregateType()).isEqualTo("Task");
+        assertThat(message.getChannel()).isEqualTo("INGEST_TASK_READY");
+        assertThat(message.getOpType()).isEqualTo("TASK_READY");
         assertThat(message.getPartitionKey()).isEqualTo("partition-1");
         assertThat(message.getDedupKey()).isEqualTo("dedup-1");
         assertThat(message.getAggregateId()).isEqualTo(1L);
@@ -420,13 +423,13 @@ class AbstractOutboxPublisherTest {
         }
 
         @Override
-        protected String getAggregateType() {
-            return "TestAggregate";
+        protected OutboxAggregateTypes getAggregateType() {
+            return OutboxAggregateTypes.TASK;
         }
 
         @Override
-        protected String getChannel() {
-            return "test-channel";
+        protected OutboxChannels getChannel() {
+            return OutboxChannels.INGEST_TASK_READY;
         }
 
         @Override
@@ -453,8 +456,8 @@ class AbstractOutboxPublisherTest {
         }
 
         @Override
-        protected String getOperationType(TestEvent event) {
-            return "TEST_OPERATION";
+        protected OutboxBusinessTags getOperationType(TestEvent event) {
+            return OutboxBusinessTags.TASK_READY;
         }
 
         @Override

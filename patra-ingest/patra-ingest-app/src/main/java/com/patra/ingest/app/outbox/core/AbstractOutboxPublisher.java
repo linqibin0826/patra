@@ -2,6 +2,9 @@ package com.patra.ingest.app.outbox.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
+import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
+import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
+import com.patra.ingest.app.outbox.constants.OutboxChannels;
 import com.patra.ingest.app.outbox.metrics.OutboxMetrics;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.outbox.OutboxHeaders;
@@ -25,13 +28,13 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li><b>Must Implement</b>:
  *     <ul>
- *       <li>{@link #getAggregateType()} - Aggregate type identifier (e.g., "Task")</li>
- *       <li>{@link #getChannel()} - Messaging channel (e.g., "task-queue")</li>
+ *       <li>{@link #getAggregateType()} - Returns {@link com.patra.ingest.app.outbox.constants.OutboxAggregateTypes} code</li>
+ *       <li>{@link #getChannel()} - Returns {@link com.patra.ingest.app.outbox.constants.OutboxChannels} code</li>
  *       <li>{@link #buildPayload} - Constructs business payload JSON</li>
  *       <li>{@link #buildHeaders} - Constructs message headers JSON</li>
  *       <li>{@link #buildPartitionKey} - Defines partition strategy</li>
  *       <li>{@link #buildDedupKey} - Defines idempotency key</li>
- *       <li>{@link #getOperationType} - Returns operation type</li>
+ *       <li>{@link #getOperationType} - Returns {@link com.patra.ingest.app.outbox.constants.OutboxBusinessTags} code</li>
  *       <li>{@link #getAggregateId} - Extracts aggregate ID from event</li>
  *     </ul>
  *   </li>
@@ -50,7 +53,17 @@ import java.util.stream.Collectors;
  *
  *     @Override
  *     protected String getAggregateType() {
- *         return "Task";
+ *         return OutboxAggregateTypes.TASK.getCode();
+ *     }
+ *
+ *     @Override
+ *     protected String getChannel() {
+ *         return OutboxChannels.INGEST_TASK_READY.getCode();
+ *     }
+ *
+ *     @Override
+ *     protected String getOperationType(TaskQueuedEvent event) {
+ *         return OutboxBusinessTags.TASK_READY.getCode();
  *     }
  *
  *     @Override
@@ -112,7 +125,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     @Transactional(rollbackFor = Exception.class)
     public OutboxPublishResult publish(List<E> events, OutboxPublishContext ctx) {
         Instant startTime = Instant.now();
-        String aggregateType = getAggregateType();
+        String aggregateType = getAggregateType().getCode();
 
         try {
             // Validate and filter events
@@ -159,7 +172,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     @Transactional(rollbackFor = Exception.class)
     public OutboxPublishResult publishRetry(List<E> events, OutboxPublishContext ctx) {
         Instant startTime = Instant.now();
-        String aggregateType = getAggregateType();
+        String aggregateType = getAggregateType().getCode();
 
         try {
             // Validate batch size constraints
@@ -196,16 +209,20 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     // ==================== Abstract Methods (Extension Points) ====================
 
     /**
-     * Returns the aggregate type identifier (e.g., "Task", "LiteratureData").
+     * Returns the aggregate type enum.
      * <p>Used for metrics tagging and database partitioning.</p>
+     *
+     * @return Aggregate type from {@link OutboxAggregateTypes}
      */
-    protected abstract String getAggregateType();
+    protected abstract OutboxAggregateTypes getAggregateType();
 
     /**
-     * Returns the messaging channel name (e.g., "task-queue", "literature-data").
-     * <p>Used for routing and deduplication scoping.</p>
+     * Returns the messaging channel enum.
+     * <p>Used for routing and deduplication scoping (unique constraint: channel + dedupKey).</p>
+     *
+     * @return Channel from {@link OutboxChannels}
      */
-    protected abstract String getChannel();
+    protected abstract OutboxChannels getChannel();
 
     /**
      * Builds the message payload from the event.
@@ -248,12 +265,14 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     protected abstract String buildDedupKey(E event, OutboxPublishContext ctx);
 
     /**
-     * Returns the operation type for the event (e.g., "CREATED", "UPDATED", "DELETED").
+     * Returns the business semantic tag for the event.
+     * <p>Represents "what happened" from a business perspective (e.g., TASK_READY, PLAN_CREATED),
+     * NOT generic CRUD operations.</p>
      *
      * @param event Domain event
-     * @return Operation type string
+     * @return Business tag from {@link OutboxBusinessTags}
      */
-    protected abstract String getOperationType(E event);
+    protected abstract OutboxBusinessTags getOperationType(E event);
 
     /**
      * Extracts aggregate ID from the event.
@@ -304,10 +323,10 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
             String headersJson = objectMapper.writeValueAsString(headers);
 
             return OutboxMessage.builder()
-                    .aggregateType(getAggregateType())
+                    .aggregateType(getAggregateType().getCode())
                     .aggregateId(getAggregateId(event))
-                    .channel(getChannel())
-                    .opType(getOperationType(event))
+                    .channel(getChannel().getCode())
+                    .opType(getOperationType(event).getCode())
                     .partitionKey(partitionKey)
                     .dedupKey(dedupKey)
                     .payloadJson(payloadJson)
@@ -398,7 +417,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
         failures.add(new OutboxPublishResult.FailureDetail(
                 null, dedupKey, exception.getMessage(), "BUILD_ERROR"));
 
-        metrics.recordPublish(aggregateType, getOperationType(event), false, Duration.ZERO);
+        metrics.recordPublish(aggregateType, getOperationType(event).getCode(), false, Duration.ZERO);
     }
 
     /**

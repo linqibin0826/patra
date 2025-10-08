@@ -51,9 +51,9 @@ public class OutboxPublisherProperties {
      * @see OutboxAggregateTypes
      */
     private Set<String> allowedAggregateTypes = new HashSet<>(Set.of(
-            OutboxAggregateTypes.TASK,
-            OutboxAggregateTypes.PLAN,
-            OutboxAggregateTypes.LITERATURE_DATA
+            OutboxAggregateTypes.TASK.getCode(),
+            OutboxAggregateTypes.PLAN.getCode(),
+            OutboxAggregateTypes.LITERATURE_DATA.getCode()
     ));
 
     /**
