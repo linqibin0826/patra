@@ -132,7 +132,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
                 norm.scheduleInstanceId(),
                 planKey,
                 norm.provenanceCode().getCode(),
-                norm.operationCode() == null ? null : norm.operationCode().name(),
+                norm.operationCode() == null ? null : norm.operationCode().getCode(),
                 planExpression.hash(),
                 planExpression.jsonSnapshot(),
                 configSnapshotJson,
@@ -207,7 +207,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
                     null,
                     (long) slice.getSliceNo(),
                     norm.provenanceCode().getCode(),
-                    norm.operationCode().name(),
+                    norm.operationCode().getCode(),
                     buildTaskParamsJson(slice.getSliceNo()),
                     idemKey,
                     slice.getExprHash(),
@@ -237,7 +237,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
      */
     private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
         StringBuilder builder = new StringBuilder();
-        builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationCode().name());
+        builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationCode().getCode());
         if (window.from() != null && window.to() != null) {
             builder.append(":").append(window.from().toEpochMilli()).append("-").append(window.to().toEpochMilli());
         }
@@ -288,7 +288,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     private String computeSignature(PlanTriggerNorm norm, String payload) {
         String material = CharSequenceUtil.join("|",
                 norm.provenanceCode().getCode(),
-                norm.operationCode().name(),
+                norm.operationCode().getCode(),
                 payload == null ? CharSequenceUtil.EMPTY : payload);
         byte[] digest = HashUtils.sha256(material);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);

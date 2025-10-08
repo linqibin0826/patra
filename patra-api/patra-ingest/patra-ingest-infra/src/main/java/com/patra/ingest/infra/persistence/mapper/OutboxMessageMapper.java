@@ -103,4 +103,27 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
                    @Param("retryCount") int retryCount,
                    @Param("errorCode") String errorCode,
                    @Param("errorMsg") String errorMsg);
+
+    /**
+     * 批量查询指定频道和幂等键集合的 Outbox 消息。
+     * <p>用于 publishRetry 场景的批量幂等性检查。</p>
+     * @param channel 通道
+     * @param dedupKeys 幂等键集合（建议 ≤500）
+     * @return 匹配的消息列表（可能为空）
+     */
+    List<OutboxMessageDO> findByChannelAndDedupIn(@Param("channel") String channel,
+                                                   @Param("dedupKeys") List<String> dedupKeys);
+
+    /**
+     * 批量插入或更新 Outbox 消息（UPSERT 语义）。
+     * <p>基于唯一约束 (channel, dedup_key) 实现幂等性：</p>
+     * <ul>
+     *   <li>若消息不存在，则插入新记录</li>
+     *   <li>若消息已存在（dedupKey 冲突），则更新 payload_json/headers_json/status_code，并重置 retry_count</li>
+     * </ul>
+     * <p>此方法解决 publishRetry 并发场景的 race condition 问题（两个实例同时 retry 同一消息）。</p>
+     * @param messages 待插入或更新的消息集合
+     * @return 影响行数（MySQL INSERT ... ON DUPLICATE KEY UPDATE 返回值语义：插入=1行，更新=2行）
+     */
+    int upsertBatch(@Param("messages") List<OutboxMessageDO> messages);
 }
