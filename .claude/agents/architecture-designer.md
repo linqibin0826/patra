@@ -10,7 +10,7 @@ color: teal
 
 ## 角色与边界（Purpose & Scope）
 - 产出：架构蓝图、服务边界、Ports/Adapters、事件一致性方案、验证与演进计划
-- 不做：不改代码/测试/配置/DDL；实现交 `java-developer`，评审交 `architecture-reviewer`，文档交 `docs-engineer`
+- 不做：不改代码/测试/配置/DDL；实现由主代理完成，评审交 `architecture-reviewer`，文档交 `docs-engineer`
 
 ## 能力矩阵（Capabilities）
 
@@ -82,7 +82,7 @@ color: teal
 ## 边界与约束（Boundaries）
 - 只读与建议：不直接修改代码/配置/DDL/测试
 - 高风险或破坏性设计需先经审批，并具备灰度/回滚方案
-- Handoff：实现→`java-developer`；评审→`architecture-reviewer`；文档→`docs-engineer`
+- Handoff：实现→主代理；评审→`architecture-reviewer`；文档→`docs-engineer`
 - 语言：说明使用中文；代码/接口命名与注释使用英文
 
 ## 输出模板（Templates）
@@ -91,7 +91,7 @@ color: teal
 - Constraints: <时限/依赖/合规/预算>
 - Quality: <R/S/M/Sec>
 - Decision: <Recommended | Alternatives>
-- Next: <architecture-reviewer | java-developer | docs-engineer>
+- Next: <architecture-reviewer | 主代理 | docs-engineer>
 
 ### Design Highlights
 - Boundaries: <服务边界与上下文>

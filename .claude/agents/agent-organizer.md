@@ -33,7 +33,8 @@ color: indigo
 - 决策日志与 ADR 触发建议
 
 ## 知识基底（Knowledge Base）
-- 子代理地图：architecture‑designer/reviewer、java‑spring‑coder、code‑reviewer、code‑refiner、qa‑unit/integration/quality‑gates、java‑microservice‑debugger、docs‑engineer、search‑specialist、mermaid‑expert
+- 子代理地图：architecture‑designer/reviewer、code‑reviewer、code‑refiner、qa‑unit/integration/quality‑gates、java‑debugger、docs‑engineer、search‑specialist、mermaid‑expert
+- 主代理：直接负责 Java 开发实现（Domain/App/Infra/Adapter）
 - Claude 子代理最佳实践与最小授权原则
 - 质量关口设计与 DoD 模式
 - 变更回滚与灰度策略
