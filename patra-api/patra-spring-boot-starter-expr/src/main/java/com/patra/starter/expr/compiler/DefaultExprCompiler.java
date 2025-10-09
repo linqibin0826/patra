@@ -40,6 +40,7 @@ public class DefaultExprCompiler implements ExprCompiler {
     public CompileResult compile(CompileRequest request) {
         Objects.requireNonNull(request, "request");
 
+        // TODO operationCode 需要全都重命名为 endpointName， 上游数据库已变更该字段名称 避免与operationType混淆
         ProvenanceSnapshot snapshot = snapshotLoader.load(request.provenance(), request.operationType(), request.operationCode());
         Expr normalized = normalizer.normalize(request.expression(), request.options().strict());
 

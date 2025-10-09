@@ -59,7 +59,6 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
      * TODO 有两个参数并没有被使用到，评估一下，如果没有使用，就移除
      * @param taskId 任务ID
      * @param leaseOwner 租约持有者
-     * @param schedulerRunId 调度运行ID
      * @param correlationId 关联ID
      * @return 执行会话
      */
@@ -68,15 +67,34 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
                                           String leaseOwner,
                                           String schedulerRunId,
                                           String correlationId) {
-        // 1. 读取任务聚合，获取来源/操作编码
+        // Query task and delegate to overloaded method
         TaskAggregate task = taskRepository.findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
 
-        // 2. 获取最新 attemptNo，生成新的 attemptNo
+        return createSession(task, leaseOwner, schedulerRunId, correlationId);
+    }
+
+    /**
+     * 创建执行会话（含TaskRun创建、心跳启动）- 优化版本，避免重复查询Task。
+     * TODO 有两个参数并没有被使用到，评估一下，如果没有使用，就移除
+     * @param task 任务聚合（已查询）
+     * @param leaseOwner 租约持有者
+     * @param schedulerRunId 调度运行ID（TODO: 未使用，待评估）
+     * @param correlationId 关联ID（TODO: 未使用，待评估）
+     * @return 执行会话
+     */
+    @Override
+    public ExecutionSession createSession(TaskAggregate task,
+                                          String leaseOwner,
+                                          String schedulerRunId,
+                                          String correlationId) {
+        Long taskId = task.getId();
+
+        // 1. 获取最新 attemptNo，生成新的 attemptNo
         int latestAttemptNo = taskRunRepository.getLatestAttemptNo(taskId);
         int newAttemptNo = latestAttemptNo + 1;
 
-        // 3. 创建 TaskRun 实体
+        // 2. 创建 TaskRun 实体
         TaskRun taskRun = new TaskRun(
             null,  // id 为空，insert 时由数据库生成
             taskId,
@@ -85,14 +103,14 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
             task.getOperationCode()
         );
 
-        // 4. 保存 TaskRun，获取生成的 runId
+        // 3. 保存 TaskRun，获取生成的 runId
         TaskRun savedRun = taskRunRepository.save(taskRun);
         Long runId = savedRun.getId();
 
         log.info("[INGEST][APP] execution session created taskId={} runId={} attemptNo={} owner={}",
                  taskId, runId, newAttemptNo, leaseOwner);
 
-        // 5. 启动心跳续租
+        // 4. 启动心跳续租
         Duration leaseDuration = Duration.ofSeconds(leaseDurationSeconds);
         Duration renewalInterval = Duration.ofSeconds(renewalIntervalSeconds);
         ExecutionSession.HeartbeatHandle heartbeatHandle = heartbeatRenewalService.startHeartbeat(
@@ -102,7 +120,7 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
             renewalInterval
         );
 
-        // 6. 返回执行会话
+        // 5. 返回执行会话
         return new ExecutionSession(
             taskId,
             runId,

@@ -19,7 +19,7 @@ import java.time.Instant;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record SliceSpecDefinition(
-        String strategy,
+        String strategy, // TODO 枚举化
         WindowDefinition window
 ) {
 

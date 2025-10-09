@@ -3,36 +3,66 @@ package com.patra.ingest.domain.model.vo;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * 表达式编译结果。
+ * Expression compilation result.
+ * <p>
+ * Aligned with CompileResult from patra-spring-boot-starter-expr but adapted for domain layer:
+ * <ul>
+ *   <li>query - Compiled query string (e.g., PubMed term)</li>
+ *   <li>params - Compiled parameters as JSON (e.g., retmax, sort)</li>
+ *   <li>normalizedExpression - Normalized expression JSON</li>
+ *   <li>errors - Validation error messages (empty if valid)</li>
+ *   <li>warnings - Validation warning messages</li>
+ * </ul>
+ * </p>
  *
- * @param isValid 是否编译成功
- * @param query 编译后的查询字符串（如PubMed的term）
- * @param params 编译后的参数（如retmax、sort等，JSON格式）
- * @param normalizedExpression 规范化表达式
- * @param validationMessage 验证消息（失败时）
+ * @param query compiled query string
+ * @param params compiled parameters as JSON
+ * @param normalizedExpression normalized expression JSON
+ * @param errors validation errors (empty if compilation succeeded)
+ * @param warnings validation warnings
  * @author linqibin
  * @since 0.1.0
  */
 public record ExprCompilationResult(
-        boolean isValid,
         String query,
         JsonNode params,
         String normalizedExpression,
-        String validationMessage
+        String errors,
+        String warnings
 ) {
     /**
-     * 成功结果。
+     * Check if compilation succeeded (no errors).
      */
-    public static ExprCompilationResult success(String query,
-                                                JsonNode params,
-                                                String normalizedExpression) {
-        return new ExprCompilationResult(true, query, params, normalizedExpression, null);
+    public boolean isValid() {
+        return errors == null || errors.isBlank();
     }
 
     /**
-     * 失败结果。
+     * Get validation message (errors + warnings).
      */
-    public static ExprCompilationResult failure(String validationMessage) {
-        return new ExprCompilationResult(false, null, null, null, validationMessage);
+    public String validationMessage() {
+        if (errors != null && !errors.isBlank()) {
+            return warnings != null && !warnings.isBlank()
+                ? "Errors: " + errors + "; Warnings: " + warnings
+                : errors;
+        }
+        return warnings != null && !warnings.isBlank() ? "Warnings: " + warnings : null;
+    }
+
+    /**
+     * Create success result.
+     */
+    public static ExprCompilationResult success(String query,
+                                                JsonNode params,
+                                                String normalizedExpression,
+                                                String warnings) {
+        return new ExprCompilationResult(query, params, normalizedExpression, null, warnings);
+    }
+
+    /**
+     * Create failure result.
+     */
+    public static ExprCompilationResult failure(String errors) {
+        return new ExprCompilationResult(null, null, null, errors, null);
     }
 }

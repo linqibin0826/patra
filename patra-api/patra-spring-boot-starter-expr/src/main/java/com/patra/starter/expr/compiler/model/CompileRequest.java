@@ -10,6 +10,7 @@ public record CompileRequest(
         Expr expression,
         ProvenanceCode provenance,
         String operationType,
+        // TODO operationCode 需要全都重命名为 endpointName， 上游数据库已变更该字段名称 避免与operationType混淆
         String operationCode,
         CompileOptions options
 ) {

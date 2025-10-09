@@ -6,10 +6,10 @@ import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.model.vo.ExecutionWindow;
 import com.patra.ingest.domain.model.vo.ExprCompilationRequest;
 import com.patra.ingest.domain.model.vo.ExprCompilationResult;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.port.ExpressionCompilerPort;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
@@ -17,6 +17,8 @@ import com.patra.ingest.domain.port.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 /**
  * 执行上下文加载器实现。
@@ -69,9 +71,23 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
      */
     @Override
     public ExecutionContext loadContext(Long taskId, Long runId) {
-        // 1. 读取 Task
+        // Query task and delegate to overloaded method
         TaskAggregate task = taskRepository.findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
+
+        return loadContext(task, runId);
+    }
+
+    /**
+     * 加载执行上下文（配置还原 + 表达式编译）- 优化版本，避免重复查询Task。
+     *
+     * @param task 任务聚合（已查询）
+     * @param runId 运行ID
+     * @return 执行上下文
+     */
+    @Override
+    public ExecutionContext loadContext(TaskAggregate task, Long runId) {
+        Long taskId = task.getId();
 
         // 2. 读取 Slice
         PlanSliceAggregate slice = sliceRepository.findById(task.getSliceId())
@@ -81,20 +97,28 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         PlanAggregate plan = planRepository.findById(slice.getPlanId())
             .orElseThrow(() -> new IllegalArgumentException("计划不存在 planId=" + slice.getPlanId()));
 
-        // 4. 解析配置快照 TODO 替换掉jsonNode 为具体的配置对象 ProvenanceConfigSnapshot, 在数据写入阶段用的就是这个对象
-        JsonNode configSnapshot = parseJson(plan.getProvenanceConfigSnapshotJson());
+        // 4. 解析配置快照为 ProvenanceConfigSnapshot 对象
+        ProvenanceConfigSnapshot configSnapshot = parseConfigSnapshot(plan.getProvenanceConfigSnapshotJson());
 
         JsonNode paramsJson = parseJson(task.getParamsJson());
 
-        // 5. 编译表达式
+        // 5. Compile expression
+        // Expression compilation is delegated to ExpressionCompilerPort (implemented in infra layer)
+        // The port implementation converts JSON expression snapshot to Expr object and invokes ExprCompiler
+        // Use slice's expression snapshot (after plan_slice), not plan's original snapshot
+        String exprSnapshotJson = slice.getExprSnapshotJson();
+        if (exprSnapshotJson == null || exprSnapshotJson.isBlank()) {
+            log.warn("[INGEST][APP] slice exprSnapshotJson is null, fallback to plan's original snapshot sliceId={}", slice.getId());
+            exprSnapshotJson = plan.getExprProtoSnapshotJson();
+        }
+
         ExprCompilationRequest compilationRequest = new ExprCompilationRequest(
             task.getProvenanceCode(),
             task.getOperationCode(),
-            plan.getExprProtoSnapshotJson(),  // 原始表达式快照 TODO 这里不应该使用 plan 的表达式快照（这是未进行plan_slice之前的），应该使用 plan_slice 的表达式快照,
-            paramsJson,  // 任务参数（JsonNode）
-            configSnapshot  // 配置快照（JsonNode）
+            exprSnapshotJson  // Use slice's expression snapshot
         );
 
+        // Compile expression and validate result
         ExprCompilationResult compilationResult = expressionCompiler.compile(compilationRequest);
 
         if (!compilationResult.isValid()) {
@@ -104,15 +128,18 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
             );
         }
 
-        // 6. 校验 exprHash（可选：根据业务需求决定是否严格校验）
-        // 注意：这里简化处理，实际可能需要重新计算哈希并比对
-        if (!task.getExprHash().equals(plan.getExprProtoHash())) {
-            log.warn("[INGEST][APP] expr hash mismatch taskId={} taskHash={} planHash={}",
-                     taskId, task.getExprHash(), plan.getExprProtoHash());
-            // 根据业务需求决定是否抛异常或继续执行
+        // 6. 校验 exprHash：确保表达式未被篡改
+        // Compare task's exprHash with slice's exprHash (not plan's)
+        if (!task.getExprHash().equals(slice.getExprHash())) {
+            throw new IllegalStateException(
+                String.format(
+                    "表达式哈希不匹配，拒绝执行 taskId=%d expected=%s actual=%s",
+                    taskId, slice.getExprHash(), task.getExprHash()
+                )
+            );
         }
 
-        // 7. 解析执行窗口（从 sliceSpecJson 中提取）
+        // 7. TODO 解析执行窗口（从 sliceSpecJson 中提取, 应该使用 com.patra.ingest.domain.model.vo.SliceSpecDefinition, 不能写死时间窗口。
         ExecutionWindow executionWindow =
             parseExecutionWindow(slice.getSliceSpecJson());
 
@@ -137,22 +164,22 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     /**
      * 从 sliceSpecJson 中解析执行窗口。
      */
-    private com.patra.ingest.domain.model.vo.ExecutionWindow parseExecutionWindow(String sliceSpecJson) {
+    private ExecutionWindow parseExecutionWindow(String sliceSpecJson) {
         if (sliceSpecJson == null || sliceSpecJson.isBlank()) {
-            return com.patra.ingest.domain.model.vo.ExecutionWindow.empty();
+            return ExecutionWindow.empty();
         }
         try {
             JsonNode spec = objectMapper.readTree(sliceSpecJson);
             java.time.Instant windowFrom = spec.has("windowFrom") && !spec.get("windowFrom").isNull()
-                ? java.time.Instant.parse(spec.get("windowFrom").asText())
+                ? Instant.parse(spec.get("windowFrom").asText())
                 : null;
             java.time.Instant windowTo = spec.has("windowTo") && !spec.get("windowTo").isNull()
                 ? java.time.Instant.parse(spec.get("windowTo").asText())
                 : null;
-            return new com.patra.ingest.domain.model.vo.ExecutionWindow(windowFrom, windowTo);
+            return new ExecutionWindow(windowFrom, windowTo);
         } catch (Exception e) {
             log.error("[INGEST][APP] failed to parse execution window from sliceSpecJson: {}", sliceSpecJson, e);
-            return com.patra.ingest.domain.model.vo.ExecutionWindow.empty();
+            return ExecutionWindow.empty();
         }
     }
 
@@ -168,6 +195,21 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         } catch (Exception e) {
             log.error("[INGEST][APP] failed to parse json: {}", json, e);
             throw new IllegalStateException("JSON 解析失败", e);
+        }
+    }
+
+    /**
+     * 解析 JSON 字符串为 ProvenanceConfigSnapshot 对象。
+     */
+    private ProvenanceConfigSnapshot parseConfigSnapshot(String json) {
+        if (json == null || json.isBlank()) {
+            throw new IllegalStateException("配置快照 JSON 不能为空");
+        }
+        try {
+            return objectMapper.readValue(json, ProvenanceConfigSnapshot.class);
+        } catch (Exception e) {
+            log.error("[INGEST][APP] failed to parse config snapshot from json: {}", json, e);
+            throw new IllegalStateException("配置快照解析失败", e);
         }
     }
 }
