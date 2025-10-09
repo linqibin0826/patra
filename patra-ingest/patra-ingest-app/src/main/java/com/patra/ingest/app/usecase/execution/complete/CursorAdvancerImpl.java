@@ -19,7 +19,7 @@ import java.util.Optional;
  * <p>
  * 设计要点：
  * <ul>
- *   <li>查询游标：根据 provenanceCode/operationCode/cursorKey/namespace 查询当前游标。</li>
+ *   <li>查询游标：根据 provenanceCode/endpointName/cursorKey/namespace 查询当前游标。</li>
  *   <li>计算新水位：从 ExecutionWindow.windowTo 获取新水位。</li>
  *   <li>乐观锁更新：调用 Cursor.advanceTo() 更新水位，保存时触发版本校验。</li>
  *   <li>异常处理：捕获 OptimisticLockingFailureException，返回 false 表示需重试。</li>
@@ -95,14 +95,14 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                 Instant oldWatermark = cursor.getCurrentWatermark();
 
                 if (log.isDebugEnabled()) {
-                    log.debug("[INGEST][APP] cursor found provenanceCode={} operationCode={} currentWatermark={}",
+                    log.debug("[INGEST][APP] cursor found provenanceCode={} endpointName={} currentWatermark={}",
                              provenanceCode, operationCode, oldWatermark);
                 }
 
                 // 推进水位（领域方法会校验水位不倒退）
                 cursor.advanceTo(newWatermark);
 
-                log.info("[INGEST][APP] cursor advanced provenanceCode={} operationCode={} from={} to={} taskId={} runId={}",
+                log.info("[INGEST][APP] cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={}",
                          provenanceCode, operationCode, oldWatermark, newWatermark, taskId, runId);
             } else {
                 // 3.2 游标不存在：创建新游标
@@ -115,7 +115,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                     newWatermark
                 );
 
-                log.info("[INGEST][APP] cursor created provenanceCode={} operationCode={} watermark={} taskId={} runId={}",
+                log.info("[INGEST][APP] cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={}",
                          provenanceCode, operationCode, newWatermark, taskId, runId);
             }
 
@@ -125,12 +125,12 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         } catch (OptimisticLockingFailureException e) {
             // 乐观锁冲突（version 不匹配）
-            log.warn("[INGEST][APP] cursor advance conflict provenanceCode={} operationCode={} taskId={} runId={}",
+            log.warn("[INGEST][APP] cursor advance conflict provenanceCode={} endpointName={} taskId={} runId={}",
                      provenanceCode, operationCode, taskId, runId);
             return false;  // 返回 false 表示需重试
 
         } catch (Exception e) {
-            log.error("[INGEST][APP] cursor advance failed provenanceCode={} operationCode={} taskId={} runId={}",
+            log.error("[INGEST][APP] cursor advance failed provenanceCode={} endpointName={} taskId={} runId={}",
                       provenanceCode, operationCode, taskId, runId, e);
             throw new IllegalStateException("游标推进失败", e);
         }

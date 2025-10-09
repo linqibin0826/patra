@@ -22,7 +22,7 @@ import java.util.Objects;
  * </p>
  * <h4>字段语义 & 约束</h4>
  * <ul>
- *   <li><b>provenanceCode / operationCode</b>：定义业务来源 + 操作二元组，组成后续幂等与分区计算的重要组成；其中 provenanceCode 与 operationCode 为必填（不可为 null）。</li>
+ *   <li><b>provenanceCode / endpointName</b>：定义业务来源 + 操作二元组，组成后续幂等与分区计算的重要组成；其中 provenanceCode 与 endpointName 为必填（不可为 null）。</li>
  *   <li><b>step</b>：切片步长，采用 ISO-8601 Duration 字符串（如 {@code PT1H}、{@code P1D}）；允许为空（由策略决定是否需要），若提供需满足 {@code java.time.Duration.parse(step)} 可解析。</li>
  *   <li><b>windowFrom/windowTo</b>：计划时间窗口的上下界（半开区间假设：含 from 不含 to，若 to = null 代表“无上界”）；可同时为空，表示交由窗口解析器基于业务策略推导；若仅一端为空，以业务模式（如 HARVEST / BACKFILL / UPDATE）补全。</li>
  *   <li><b>priority</b>：调度优先级；允许为空，默认回退到 {@link com.patra.common.enums.Priority#NORMAL}。</li>
@@ -33,7 +33,7 @@ import java.util.Objects;
  * <h4>不变式 (Invariants)</h4>
  * <ul>
  *   <li>{@code provenanceCode != null}</li>
- *   <li>{@code operationCode != null}</li>
+ *   <li>{@code endpointName != null}</li>
  *   <li>{@code triggerType != null}</li>
  *   <li>{@code scheduler != null}</li>
  *   <li>priority 总是非 null（构造时回退）</li>
@@ -75,7 +75,7 @@ public record PlanIngestionCommand(
 ) {
     public PlanIngestionCommand {
         Objects.requireNonNull(provenanceCode, "provenanceCode must not be null");
-        Objects.requireNonNull(operationCode, "operationCode must not be null");
+        Objects.requireNonNull(operationCode, "endpointName must not be null");
         Objects.requireNonNull(triggerType, "triggerType must not be null");
         Objects.requireNonNull(scheduler, "scheduler must not be null");
         priority = priority == null ? Priority.NORMAL : priority;

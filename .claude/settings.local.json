@@ -25,7 +25,15 @@
       "mcp__serena__activate_project",
       "mcp__serena__find_symbol",
       "mcp__serena__search_for_pattern",
-      "Read(//Users/linqibin/.claude/**)"
+      "Read(//Users/linqibin/.claude/**)",
+      "mcp__desktop-commander__get_file_info",
+      "mcp__desktop-commander__list_directory",
+      "mcp__desktop-commander__read_file",
+      "mcp__desktop-commander__start_search",
+      "mcp__desktop-commander__get_more_search_results",
+      "mcp__desktop-commander__read_multiple_files",
+      "mcp__desktop-commander__stop_search",
+      "mcp__serena__find_referencing_symbols"
     ],
     "deny": [],
     "ask": []

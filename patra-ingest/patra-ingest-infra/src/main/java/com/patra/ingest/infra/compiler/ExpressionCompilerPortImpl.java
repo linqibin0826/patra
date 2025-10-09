@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -67,8 +66,9 @@ public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
             ProvenanceCode provenanceCode = ProvenanceCode.valueOf(request.provenanceCode());
 
             // 3. Build CompileRequest using builder
+            // Pass endpointName directly; CompileRequest normalizes null/blank to "SEARCH"
             CompileRequest compileRequest = CompileRequestBuilder.of(expression, provenanceCode)
-                .forOperation(request.operationCode())
+                .forOperation(request.endpointName())
                 .build();
 
             // 4. Invoke ExprCompiler
