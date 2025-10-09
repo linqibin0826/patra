@@ -120,8 +120,8 @@ graph TB
         
         subgraph "Execution Use Case"
             E1[TaskExecutionUseCase<br/>- prepare: load context & acquire lease<br/>- execute: BatchPlannerRegistry → BatchExecutorRegistry<br/>- complete: update cursor & release lease]
-            E2[BatchPlannerRegistry<br/>- DefaultBatchPlanner]
-            E3[BatchExecutorRegistry<br/>- DefaultBatchExecutor]
+            E2[BatchPlannerRegistry<br/>- PubMedBatchPlanner<br/>- EpmcBatchPlanner]
+            E3[BatchExecutorRegistry<br/>- PubMedBatchExecutor<br/>- EpmcBatchExecutor]
         end
         
         subgraph "Relay Use Case"
