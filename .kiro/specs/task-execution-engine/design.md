@@ -1399,6 +1399,12 @@ public class ExpressionCompilerAdapter implements ExpressionCompilerPort {
 // 位置：patra-ingest-domain/.../domain/port/strategy/BatchPlanner.java
 public interface BatchPlanner {
     /**
+     * Get provenance code for this planner
+     * @return ProvenanceCode enum value
+     */
+    ProvenanceCode getProvenanceCode();
+
+    /**
      * 规划批次
      * @param context 执行上下文（包含编译后的查询、配置快照等）
      * @param runId 执行记录 ID
@@ -1431,6 +1437,11 @@ public class PubMedBatchPlanner implements BatchPlanner {
 
     @Value("${patra.ingest.task-execution.batch.insert-chunk-size:100}")
     private int insertChunkSize; // 批次记录分批插入的大小
+
+    @Override
+    public ProvenanceCode getProvenanceCode() {
+        return ProvenanceCode.PUBMED;
+    }
 
     /**
      * 规划批次（事务边界）
@@ -1572,6 +1583,12 @@ public interface BatchExecutorRegistry {
 // ===== Domain 层：策略接口 =====
 public interface BatchExecutor {
     /**
+     * Get provenance code for this executor
+     * @return ProvenanceCode enum value
+     */
+    ProvenanceCode getProvenanceCode();
+
+    /**
      * 执行批次
      * @param context 全局执行上下文（包含配置快照、编译结果等）
      * @param batchPlan 批次计划
@@ -1602,6 +1619,11 @@ public class PubMedBatchExecutor implements BatchExecutor {
     private final OutboxPublisher outboxPublisher;
     private final BatchRepository batchRepository;
     private final MeterRegistry meterRegistry;
+
+    @Override
+    public ProvenanceCode getProvenanceCode() {
+        return ProvenanceCode.PUBMED;
+    }
 
     @Override
     public BatchExecutionResult execute(ExecutionContext context, BatchPlan batchPlan, Long runId) {
@@ -3220,9 +3242,14 @@ public class TaskExecutionOrchestrator implements TaskExecutionUseCase {
 // Infrastructure 层 - 批次执行指标
 @Component
 public class PubMedBatchExecutor implements BatchExecutor {
-    
+
     private final MeterRegistry meterRegistry;
-    
+
+    @Override
+    public ProvenanceCode getProvenanceCode() {
+        return ProvenanceCode.PUBMED;
+    }
+
     @Override
     public BatchExecutionResult execute(BatchExecutionContext context) {
         Instant start = Instant.now();
