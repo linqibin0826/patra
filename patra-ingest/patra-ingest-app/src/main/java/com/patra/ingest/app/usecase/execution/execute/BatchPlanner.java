@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.execute;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.BatchPlan;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
@@ -31,9 +32,9 @@ public interface BatchPlanner {
     /**
      * 获取支持的数据源编码。
      *
-     * @return 数据源编码（如 "PUBMED", "EPMC"）
+     * @return 数据源编码枚举
      */
-    String getProvenanceCode();
+    ProvenanceCode getProvenanceCode();
 
     /**
      * 规划批次。

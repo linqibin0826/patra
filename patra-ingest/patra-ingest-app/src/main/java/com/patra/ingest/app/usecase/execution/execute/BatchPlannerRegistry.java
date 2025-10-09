@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.execute;
 
+import com.patra.common.enums.ProvenanceCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -37,13 +38,14 @@ public class BatchPlannerRegistry {
      */
     public BatchPlannerRegistry(List<BatchPlanner> plannerList) {
         for (BatchPlanner planner : plannerList) {
-            String provenanceCode = planner.getProvenanceCode();
-            if (planners.containsKey(provenanceCode)) {
-                log.warn("[INGEST][APP] duplicate batch planner for provenanceCode={}", provenanceCode);
+            ProvenanceCode provenanceCode = planner.getProvenanceCode();
+            String code = provenanceCode.getCode();
+            if (planners.containsKey(code)) {
+                log.warn("[INGEST][APP] duplicate batch planner for provenanceCode={}", code);
             }
-            planners.put(provenanceCode, planner);
+            planners.put(code, planner);
             log.info("[INGEST][APP] registered batch planner provenanceCode={} class={}",
-                     provenanceCode, planner.getClass().getSimpleName());
+                     code, planner.getClass().getSimpleName());
         }
     }
 

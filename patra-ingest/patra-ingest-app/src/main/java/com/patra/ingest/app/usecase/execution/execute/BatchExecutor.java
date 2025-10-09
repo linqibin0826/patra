@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.execute;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.Batch;
 import com.patra.ingest.domain.model.vo.BatchResult;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
@@ -33,9 +34,9 @@ public interface BatchExecutor {
     /**
      * 获取支持的数据源编码。
      *
-     * @return 数据源编码（如 "PUBMED", "EPMC"） TODO 改成 common保中的枚举
+     * @return 数据源编码枚举
      */
-    String getProvenanceCode();
+    ProvenanceCode getProvenanceCode();
 
     /**
      * 执行批次。

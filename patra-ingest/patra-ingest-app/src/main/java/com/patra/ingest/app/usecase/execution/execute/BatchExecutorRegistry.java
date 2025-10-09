@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.execute;
 
+import com.patra.common.enums.ProvenanceCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -37,13 +38,14 @@ public class BatchExecutorRegistry {
      */
     public BatchExecutorRegistry(List<BatchExecutor> executorList) {
         for (BatchExecutor executor : executorList) {
-            String provenanceCode = executor.getProvenanceCode();
-            if (executors.containsKey(provenanceCode)) {
-                log.warn("[INGEST][APP] duplicate batch executor for provenanceCode={}", provenanceCode);
+            ProvenanceCode provenanceCode = executor.getProvenanceCode();
+            String code = provenanceCode.getCode();
+            if (executors.containsKey(code)) {
+                log.warn("[INGEST][APP] duplicate batch executor for provenanceCode={}", code);
             }
-            executors.put(provenanceCode, executor);
+            executors.put(code, executor);
             log.info("[INGEST][APP] registered batch executor provenanceCode={} class={}",
-                     provenanceCode, executor.getClass().getSimpleName());
+                     code, executor.getClass().getSimpleName());
         }
     }
 
