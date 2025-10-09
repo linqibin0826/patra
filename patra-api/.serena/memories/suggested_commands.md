@@ -1,22 +1,142 @@
-环境检查：
-- `java -version`（要求 Java 21）
-- `mvn -v`
+# Suggested Commands
 
-全仓快速编译（不打包）：
-- `mvn -q -T 1C -DskipTests compile`
+## Build Commands
 
-单模块开发：
-- 进入子模块目录后：`mvn -q -DskipTests compile`
-- 单元测试：`mvn -q test`
-- 快速回归（含检查）：`mvn -q -DskipITs test`
+### Full Repository Compilation
+```bash
+./mvnw -q -DskipTests compile
+```
+Compile all modules without running tests. Use this for quick compilation checks.
 
-打包：
-- `mvn clean package -DskipTests`（如需跑测移除 `-DskipTests`）
+### Full Repository Build with Tests
+```bash
+./mvnw clean install
+```
+Full build including tests for all modules.
 
-示例：
-- patra-registry：`cd patra-registry && mvn -q clean test`
+### Single Module Build
+```bash
+cd patra-registry
+./mvnw clean test
+```
+Build and test a specific module.
 
-常见服务：
-- Spring Boot 本地启动（按模块）：`mvn spring-boot:run`
+### Skip Tests Compilation
+```bash
+./mvnw -q -DskipTests clean package
+```
+Package without running tests (for local verification).
 
-注意：优先单模块构建与测试，只有明确需要时使用全仓命令。
+## Testing Commands
+
+### Run All Tests
+```bash
+./mvnw test
+```
+
+### Run Specific Module Tests
+```bash
+./mvnw -pl patra-registry test
+```
+
+### Run with Coverage
+```bash
+./mvnw test jacoco:report
+```
+
+## Infrastructure Commands
+
+### Start Local Infrastructure
+```bash
+cd docker/compose
+docker compose up -d
+```
+Starts MySQL, Redis, Elasticsearch, Nacos, SkyWalking, XXL-Job.
+
+### Stop Local Infrastructure
+```bash
+cd docker/compose
+docker compose down
+```
+
+### View Infrastructure Logs
+```bash
+cd docker/compose
+docker compose logs -f [service-name]
+```
+
+## Development Workflow Commands
+
+### After Code Changes (Quick Check)
+```bash
+./mvnw -q -DskipTests compile
+```
+
+### Before Committing
+```bash
+./mvnw clean test
+```
+
+### Check for Dependency Issues
+```bash
+./mvnw dependency:tree
+```
+
+### Clean Build Artifacts
+```bash
+./mvnw clean
+```
+
+## Service-Specific Commands
+
+### Run Registry Service Locally
+```bash
+cd patra-registry/patra-registry-boot
+./mvnw spring-boot:run
+```
+
+### Run Ingest Service Locally
+```bash
+cd patra-ingest/patra-ingest-boot
+./mvnw spring-boot:run
+```
+
+## Git Commands (macOS)
+
+### Standard Git Operations
+```bash
+git status
+git add .
+git commit -m "message"
+git push
+```
+
+### Check Recent Commits
+```bash
+git log --oneline -10
+```
+
+## Troubleshooting
+
+### Check Java Version
+```bash
+java -version
+# Should be Java 21
+```
+
+### Check Maven Version
+```bash
+./mvnw -version
+```
+
+### Clean Maven Cache (if build issues)
+```bash
+rm -rf ~/.m2/repository/com/papertrace
+./mvnw clean install -U
+```
+
+## macOS-Specific Notes
+- Use `brew` for package management
+- Python command is `python3` not `python`
+- Use `open` command to open files/applications
+- Use `mdfind` for fast file search (Spotlight CLI)
