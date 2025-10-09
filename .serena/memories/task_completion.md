@@ -1,7 +1,82 @@
-完成任务后的常规动作：
-- 本地编译与单测：进入相关子模块执行 `mvn -q -DskipTests compile` 或 `mvn -q test`；必要时在 {service}-boot 做集成测试。
-- 代码审查：遵循六边形架构与依赖方向；小步变更，写下关键假设与权衡；避免在 domain 引入框架依赖；敏感信息不硬编码。
-- 质量检查：检查日志级别与参数化写法；确保异常处理与幂等逻辑覆盖核心路径；SQL/Flyway 脚本命名规范。
-- 打包：`mvn clean package -DskipTests`（如需跑测移除 `-DskipTests`）。
-- 观察性：确保关键路径打点与 trace 贯穿（SkyWalking），必要时添加 INFO/DEBUG。
-- 文档：关键类/方法补充 JavaDoc（作者/版本/用途）与中文注释；更新 README/变更说明（如涉及数据链路）。
+# Task Completion Checklist
+
+When completing a development task, follow these steps:
+
+## 1. Self-Check Compilation
+```bash
+./mvnw -q -DskipTests compile
+```
+**Must pass** before submitting code. Ensures no compilation errors.
+
+## 2. Code Review
+- Invoke `code-reviewer` agent for thorough review
+- Address Critical and High priority issues
+- Consider Medium/Low issues for quality improvement
+
+## 3. Code Refactoring (If Needed)
+- If code needs readability improvements, naming optimization, or comment enhancement
+- Invoke `code-refiner` agent for zero-behavior-change refactoring
+- Examples: split long methods, improve naming, add JavaDoc
+
+## 4. Unit Testing
+- Invoke `qa-unit-tests` agent to write/update unit tests
+- Target: JUnit5 + AssertJ + Mockito
+- No external dependencies (mock all infrastructure)
+
+## 5. Integration Testing (For Cross-Layer Changes)
+- Invoke `qa-integration-tests` agent for E2E scenarios
+- Use: Spring Boot Test + Testcontainers + WireMock
+- Verify cross-layer/cross-resource behavior
+
+## 6. Quality Gates (Before Merge/Release)
+- Invoke `qa-quality-gates` agent for comprehensive quality check
+- Verify: test coverage, build status, static analysis
+- Target coverage: Overall ≥85%, Domain ≥95%, Key paths ≥90%
+
+## 7. Documentation (If Needed)
+- For API changes: Invoke `docs-engineer` to sync OpenAPI/SpringDoc
+- For architecture changes: Invoke `mermaid-expert` for diagrams + `docs-engineer` for ADR
+- For domain model changes: Update module README and deep-dive docs
+
+## Minimal Flow (Simple Features)
+```
+1. Code implementation (main agent)
+2. ./mvnw -q -DskipTests compile ✅
+3. code-reviewer review
+4. qa-unit-tests
+5. Merge
+```
+
+## Complete Flow (Complex Features/Architecture Changes)
+```
+1. Requirements clarification
+2. [Complex design?] → architecture-reviewer
+3. [Need research?] → search-specialist
+4. Code implementation (main agent)
+5. ./mvnw -q -DskipTests compile ✅
+6. code-reviewer review
+7. [Need refactoring?] → code-refiner
+8. qa-unit-tests
+9. qa-integration-tests
+10. qa-quality-gates
+11. [Need documentation?] → mermaid-expert + docs-engineer
+12. Merge and release
+```
+
+## Bug Fix Flow
+```
+1. Issue diagnosis → java-microservice-debugger
+2. [Need tracing?] → business-trace-analyzer
+3. Fix implementation (main agent)
+4. ./mvnw -q -DskipTests compile ✅
+5. code-reviewer review
+6. qa-unit-tests (regression tests)
+7. qa-integration-tests (scenario validation)
+```
+
+## Key Principles
+- **Always compile-check** before delegating to other agents
+- **Small diffs**: Make incremental, focused changes
+- **Document assumptions**: Explain key decisions and trade-offs
+- **No hardcoded secrets**: Use Nacos or environment variables
+- **English comments**: All code comments and logs in English

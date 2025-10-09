@@ -33,11 +33,16 @@
       "mcp__desktop-commander__get_more_search_results",
       "mcp__desktop-commander__read_multiple_files",
       "mcp__desktop-commander__stop_search",
-      "mcp__serena__find_referencing_symbols"
+      "mcp__serena__find_referencing_symbols",
+      "WebFetch(domain:github.com)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "mcp__mcp-router__list_memories"
     ],
     "deny": [],
     "ask": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking",
     "mcp-server-time",
