@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.persistence.repository;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import com.patra.ingest.infra.persistence.converter.TaskRunConverter;
@@ -72,9 +72,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
      */
     @Override
     public Optional<TaskRun> findLatest(Long taskId) {
-        TaskRunDO one = mapper.selectOne(new QueryWrapper<TaskRunDO>()
-            .eq("task_id", taskId)
-            .orderByDesc("attempt_no")
+        TaskRunDO one = mapper.selectOne(new LambdaQueryWrapper<TaskRunDO>()
+            .eq(TaskRunDO::getTaskId, taskId)
+            .orderByDesc(TaskRunDO::getAttemptNo)
             .last("limit 1"));
         return Optional.ofNullable(one).map(converter::toDomain);
     }
@@ -86,9 +86,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
      */
     @Override
     public List<TaskRun> findAll(Long taskId) {
-        return mapper.selectList(new QueryWrapper<TaskRunDO>()
-            .eq("task_id", taskId)
-            .orderByAsc("attempt_no"))
+        return mapper.selectList(new LambdaQueryWrapper<TaskRunDO>()
+            .eq(TaskRunDO::getTaskId, taskId)
+            .orderByAsc(TaskRunDO::getAttemptNo))
                 .stream().map(converter::toDomain).collect(Collectors.toList());
     }
 
@@ -143,9 +143,9 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
         if (taskId == null) {
             return false;
         }
-        Long count = mapper.selectCount(new QueryWrapper<TaskRunDO>()
-            .eq("task_id", taskId)
-            .eq("status_code", "SUCCEEDED"));
+        Long count = mapper.selectCount(new LambdaQueryWrapper<TaskRunDO>()
+            .eq(TaskRunDO::getTaskId, taskId)
+            .eq(TaskRunDO::getStatusCode, "SUCCEEDED")); // TODO 不要硬编码，改成枚举，让DO、domain公用枚举
         return count != null && count > 0;
     }
 }

@@ -13,10 +13,20 @@ import com.patra.ingest.domain.model.vo.ExprCompilationResult;
 public interface ExpressionCompilerPort {
 
     /**
-     * 编译表达式。 TODO 调用 patra-spring-boot-starter-expr 模块的 compile方法。
+     * Compile expression.
+     * <p>
+     * Implementation delegates to patra-spring-boot-starter-expr module's ExprCompiler.
+     * The infra layer implementation (ExpressionCompilerPortImpl) handles:
+     * <ul>
+     *   <li>Converting JSON expression snapshot to Expr object using ExprJsonCodec</li>
+     *   <li>Building CompileRequest with appropriate options</li>
+     *   <li>Invoking ExprCompiler.compile()</li>
+     *   <li>Converting CompileResult back to domain ExprCompilationResult</li>
+     * </ul>
+     * </p>
      *
-     * @param request 编译请求
-     * @return 编译结果（包含成功/失败标志、查询、参数、错误信息等）
+     * @param request compilation request
+     * @return compilation result (with success/failure flag, query, params, error messages, etc.)
      */
     ExprCompilationResult compile(ExprCompilationRequest request);
 }

@@ -1,32 +1,25 @@
 package com.patra.ingest.domain.model.vo;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
- * 表达式编译请求。
+ * Expression compilation request.
+ * <p>
+ * Contains the minimal information needed for expression compilation:
+ * <ul>
+ *   <li>provenanceCode - Data source identifier (e.g., PUBMED, EPMC)</li>
+ *   <li>operationCode - Operation identifier (e.g., SEARCH, DETAIL)</li>
+ *   <li>rawExpression - JSON expression snapshot to compile</li>
+ * </ul>
+ * </p>
  *
- * @param provenanceCode 数据源编码（如 PUBMED、EPMC）
- * @param operationCode 操作编码（如 INCREMENTAL、BACKFILL）
- * @param rawExpression 原始表达式字符串
- * @param paramsJson 参数JSON（可为null）
- * @param configSnapshot 配置快照JSON（可为null）
+ * @param provenanceCode data source code
+ * @param operationCode operation code
+ * @param rawExpression raw expression JSON string
  * @author linqibin
  * @since 0.1.0
  */
 public record ExprCompilationRequest(
         String provenanceCode,
         String operationCode,
-        String rawExpression,
-        JsonNode paramsJson,
-        JsonNode configSnapshot
+        String rawExpression
 ) {
-    /**
-     * 快捷构造（无配置快照）。
-     */
-    public static ExprCompilationRequest of(String provenanceCode,
-                                            String operationCode,
-                                            String rawExpression,
-                                            JsonNode paramsJson) {
-        return new ExprCompilationRequest(provenanceCode, operationCode, rawExpression, paramsJson, null);
-    }
 }

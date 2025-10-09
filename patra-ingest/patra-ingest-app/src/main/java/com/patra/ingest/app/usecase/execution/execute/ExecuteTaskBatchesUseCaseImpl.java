@@ -73,7 +73,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         log.info("[INGEST][APP] execute batches start taskId={} runId={} provenanceCode={}",
                  taskId, runId, context.provenanceCode());
 
-        // 1. 批次规划
+        // 1. 批次规划 TODO 实现BatchPlanner
         BatchPlanner planner = plannerRegistry.get(context.provenanceCode());
         BatchPlan plan = planner.plan(context, maxBatches);
 

@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.support;
 
+import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
 /**
@@ -19,4 +20,13 @@ public interface ExecutionContextLoader {
      * @return 执行上下文
      */
     ExecutionContext loadContext(Long taskId, Long runId);
+
+    /**
+     * 加载执行上下文（配置还原 + 表达式编译）- 优化版本，避免重复查询Task。
+     *
+     * @param task 任务聚合（已查询）
+     * @param runId 运行ID
+     * @return 执行上下文
+     */
+    ExecutionContext loadContext(TaskAggregate task, Long runId);
 }

@@ -24,6 +24,16 @@
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
 
+        <!-- Expression compiler support -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-expr-kernel</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-expr</artifactId>
+        </dependency>
+
         <!-- 出站 RPC（Feign）能力与共享契约 -->
         <dependency>
             <groupId>com.papertrace</groupId>

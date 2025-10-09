@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.vo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 
 /**
  * 执行上下文（配置快照、编译表达式）。
@@ -9,7 +10,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * @param runId 运行ID
  * @param provenanceCode 数据源编码
  * @param operationCode 操作编码
- * @param configSnapshot 配置快照
+ * @param configSnapshot 配置快照（使用领域快照对象）
  * @param exprHash 表达式哈希
  * @param compiledQuery 编译后的查询
  * @param compiledParams 编译后的参数
@@ -23,7 +24,7 @@ public record ExecutionContext(
         Long runId,
         String provenanceCode,
         String operationCode,
-        JsonNode configSnapshot,
+        ProvenanceConfigSnapshot configSnapshot,
         String exprHash,
         String compiledQuery,
         JsonNode compiledParams,
