@@ -152,12 +152,13 @@ taskExecutionUseCase.execute(command);
 ```java
 @Component
 public class PubMedBatchPlanner implements BatchPlanner {
-    
+
+
     @Override
-    public String getProvenanceCode() {
-        return "PUBMED";
+    public ProvenanceCode getProvenanceCode() {
+        return ProvenanceCode.PUBMED;
     }
-    
+
     @Override
     public BatchPlan plan(ExecutionContext context, int maxBatches) {
         // 根据游标和执行窗口生成批次计划
@@ -171,12 +172,13 @@ public class PubMedBatchPlanner implements BatchPlanner {
 ```java
 @Component
 public class PubMedBatchExecutor implements BatchExecutor {
-    
+
+
     @Override
-    public String getProvenanceCode() {
-        return "PUBMED";
+    public ProvenanceCode getProvenanceCode() {
+        return ProvenanceCode.PUBMED;
     }
-    
+
     @Override
     public BatchResult execute(ExecutionContext context, Batch batch) {
         // 调用 PubMed API
