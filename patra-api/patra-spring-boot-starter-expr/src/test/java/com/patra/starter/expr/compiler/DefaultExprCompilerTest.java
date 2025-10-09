@@ -134,7 +134,7 @@ class DefaultExprCompilerTest {
 
     private record StubSnapshotLoader(ProvenanceSnapshot snapshot) implements RuleSnapshotLoader {
         @Override
-        public ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operationType, String operationCode) {
+        public ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operationType, String endpointName) {
             return snapshot;
         }
     }

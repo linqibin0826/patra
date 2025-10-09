@@ -48,18 +48,18 @@ public interface ExprCompiler {
     }
     
     /**
-     * 便捷方法：编译指定操作类型和操作代码的表达式。
+     * 便捷方法：编译指定操作类型和端点名称的表达式。
      *
      * @param expression 表达式
-     * @param provenance 数据来源  
+     * @param provenance 数据来源
      * @param operationType 操作类型（如 HARVEST/UPDATE；null 表示来源级配置）
-     * @param operationCode 操作代码
+     * @param endpointName 端点名称
      * @return 编译结果
      */
-    default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType, String operationCode) {
+    default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType, String endpointName) {
         CompileRequest request = CompileRequestBuilder.of(expression, provenance)
             .forOperationType(operationType)
-            .forOperation(operationCode)
+            .forOperation(endpointName)
             .build();
         return compile(request);
     }

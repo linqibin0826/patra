@@ -28,7 +28,7 @@ import java.time.Instant;
  * <p>
  * 设计要点：
  * <ul>
- *   <li>读取 Task：获取 sliceId、exprHash、paramsJson、provenanceCode、operationCode。</li>
+ *   <li>读取 Task：获取 sliceId、exprHash、paramsJson、provenanceCode、endpointName。</li>
  *   <li>读取 Slice：获取 planId、窗口信息（executionWindow）。</li>
  *   <li>读取 Plan：获取 provenanceConfigSnapshotJson 配置快照。</li>
  *   <li>调用 ExpressionCompilerPort 编译表达式，获取 query/params/normalizedExpression。</li>
@@ -66,14 +66,14 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
      * 加载执行上下文（配置还原 + 表达式编译）。
      *
      * @param taskId 任务ID
-     * @param runId 运行ID
+     * @param runId  运行ID
      * @return 执行上下文
      */
     @Override
     public ExecutionContext loadContext(Long taskId, Long runId) {
         // Query task and delegate to overloaded method
         TaskAggregate task = taskRepository.findById(taskId)
-            .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
+                .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
 
         return loadContext(task, runId);
     }
@@ -81,7 +81,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     /**
      * 加载执行上下文（配置还原 + 表达式编译）- 优化版本，避免重复查询Task。
      *
-     * @param task 任务聚合（已查询）
+     * @param task  任务聚合（已查询）
      * @param runId 运行ID
      * @return 执行上下文
      */
@@ -91,16 +91,14 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
 
         // 2. 读取 Slice
         PlanSliceAggregate slice = sliceRepository.findById(task.getSliceId())
-            .orElseThrow(() -> new IllegalArgumentException("切片不存在 sliceId=" + task.getSliceId()));
+                .orElseThrow(() -> new IllegalArgumentException("切片不存在 sliceId=" + task.getSliceId()));
 
         // 3. 读取 Plan
         PlanAggregate plan = planRepository.findById(slice.getPlanId())
-            .orElseThrow(() -> new IllegalArgumentException("计划不存在 planId=" + slice.getPlanId()));
+                .orElseThrow(() -> new IllegalArgumentException("计划不存在 planId=" + slice.getPlanId()));
 
         // 4. 解析配置快照为 ProvenanceConfigSnapshot 对象
         ProvenanceConfigSnapshot configSnapshot = parseConfigSnapshot(plan.getProvenanceConfigSnapshotJson());
-
-        JsonNode paramsJson = parseJson(task.getParamsJson());
 
         // 5. Compile expression
         // Expression compilation is delegated to ExpressionCompilerPort (implemented in infra layer)
@@ -112,10 +110,10 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
             exprSnapshotJson = plan.getExprProtoSnapshotJson();
         }
 
+        // Create compilation request without endpointName (defaults to null)
         ExprCompilationRequest compilationRequest = new ExprCompilationRequest(
-            task.getProvenanceCode(),
-            task.getOperationCode(),
-            exprSnapshotJson  // Use slice's expression snapshot
+                task.getProvenanceCode(),
+                exprSnapshotJson  // Use slice's expression snapshot
         );
 
         // Compile expression and validate result
@@ -123,8 +121,8 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
 
         if (!compilationResult.isValid()) {
             throw new IllegalStateException(
-                "表达式编译失败 taskId=" + taskId
-                + " reason=" + compilationResult.validationMessage()
+                    "表达式编译失败 taskId=" + taskId
+                            + " reason=" + compilationResult.validationMessage()
             );
         }
 
@@ -132,32 +130,32 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         // Compare task's exprHash with slice's exprHash (not plan's)
         if (!task.getExprHash().equals(slice.getExprHash())) {
             throw new IllegalStateException(
-                String.format(
-                    "表达式哈希不匹配，拒绝执行 taskId=%d expected=%s actual=%s",
-                    taskId, slice.getExprHash(), task.getExprHash()
-                )
+                    String.format(
+                            "表达式哈希不匹配，拒绝执行 taskId=%d expected=%s actual=%s",
+                            taskId, slice.getExprHash(), task.getExprHash()
+                    )
             );
         }
 
         // 7. TODO 解析执行窗口（从 sliceSpecJson 中提取, 应该使用 com.patra.ingest.domain.model.vo.SliceSpecDefinition, 不能写死时间窗口。
         ExecutionWindow executionWindow =
-            parseExecutionWindow(slice.getSliceSpecJson());
+                parseExecutionWindow(slice.getSliceSpecJson());
 
         // 8. 构建 ExecutionContext
-        log.info("[INGEST][APP] execution context loaded taskId={} runId={} provenanceCode={} operationCode={}",
-                 taskId, runId, task.getProvenanceCode(), task.getOperationCode());
+        log.info("[INGEST][APP] execution context loaded taskId={} runId={} provenanceCode={} endpointName={}",
+                taskId, runId, task.getProvenanceCode(), task.getOperationCode());
 
         return new ExecutionContext(
-            taskId,
-            runId,
-            task.getProvenanceCode(),
-            task.getOperationCode(),
-            configSnapshot,
-            task.getExprHash(),
-            compilationResult.query(),
-            compilationResult.params(),
-            compilationResult.normalizedExpression(),
-            executionWindow
+                taskId,
+                runId,
+                task.getProvenanceCode(),
+                task.getOperationCode(),
+                configSnapshot,
+                task.getExprHash(),
+                compilationResult.query(),
+                compilationResult.params(),
+                compilationResult.normalizedExpression(),
+                executionWindow
         );
     }
 
@@ -171,11 +169,11 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         try {
             JsonNode spec = objectMapper.readTree(sliceSpecJson);
             java.time.Instant windowFrom = spec.has("windowFrom") && !spec.get("windowFrom").isNull()
-                ? Instant.parse(spec.get("windowFrom").asText())
-                : null;
+                    ? Instant.parse(spec.get("windowFrom").asText())
+                    : null;
             java.time.Instant windowTo = spec.has("windowTo") && !spec.get("windowTo").isNull()
-                ? java.time.Instant.parse(spec.get("windowTo").asText())
-                : null;
+                    ? java.time.Instant.parse(spec.get("windowTo").asText())
+                    : null;
             return new ExecutionWindow(windowFrom, windowTo);
         } catch (Exception e) {
             log.error("[INGEST][APP] failed to parse execution window from sliceSpecJson: {}", sliceSpecJson, e);

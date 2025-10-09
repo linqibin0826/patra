@@ -16,15 +16,15 @@ import java.util.Objects;
  * CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.PUBMED)
  *     .build();
  * 
- * // 指定操作类型的请求  
+ * // 指定操作类型的请求
  * CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.PUBMED)
- *     .forOperation(OperationCodes.DETAIL)
+ *     .forOperation(EndpointNames.DETAIL)
  *     .build();
- * 
+ *
  * // 完整配置
  * CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.CROSSREF)
  *     .forOperationType(OperationTypes.UPDATE)
- *     .forOperation(OperationCodes.SEARCH)
+ *     .forOperation(EndpointNames.SEARCH)
  *     .withOptions(CompileOptions.defaults().withStrict(false))
  *     .build();
  * }</pre>
@@ -39,7 +39,7 @@ public class CompileRequestBuilder {
     private final Expr expression;
     private final ProvenanceCode provenance;
     private String operationType;
-    private String operationCode = OperationCodes.SEARCH; // 默认搜索操作
+    private String endpointName = EndpointNames.SEARCH; // 默认搜索操作
     private CompileOptions options = CompileOptions.defaults();
     
     private CompileRequestBuilder(Expr expression, ProvenanceCode provenance) {
@@ -78,21 +78,21 @@ public class CompileRequestBuilder {
     }
     
     /**
-     * 设置操作代码。
-     * 
-     * <p>操作代码定义了具体的 API 操作类型，常用值：</p>
+     * 设置端点名称。
+     *
+     * <p>端点名称定义了具体的 API 操作类型，常用值：</p>
      * <ul>
-     *   <li>{@link OperationCodes#SEARCH} - 搜索操作（默认）</li>
-     *   <li>{@link OperationCodes#DETAIL} - 详情获取</li>
-     *   <li>{@link OperationCodes#LIST} - 列表查询</li>
-     *   <li>{@link OperationCodes#COUNT} - 计数查询</li>
+     *   <li>{@link EndpointNames#SEARCH} - 搜索操作（默认）</li>
+     *   <li>{@link EndpointNames#DETAIL} - 详情获取</li>
+     *   <li>{@link EndpointNames#LIST} - 列表查询</li>
+     *   <li>{@link EndpointNames#COUNT} - 计数查询</li>
      * </ul>
-     * 
-     * @param operationCode 操作代码，会自动转换为大写
+     *
+     * @param endpointName 端点名称，会自动转换为大写
      * @return 当前构建器实例
      */
-    public CompileRequestBuilder forOperation(String operationCode) {
-        this.operationCode = operationCode;
+    public CompileRequestBuilder forOperation(String endpointName) {
+        this.endpointName = endpointName;
         return this;
     }
     
@@ -153,10 +153,10 @@ public class CompileRequestBuilder {
     
     /**
      * 构建 {@link CompileRequest} 实例。
-     * 
+     *
      * @return 编译请求实例
      */
     public CompileRequest build() {
-        return new CompileRequest(expression, provenance, operationType, operationCode, options);
+        return new CompileRequest(expression, provenance, operationType, endpointName, options);
     }
 }

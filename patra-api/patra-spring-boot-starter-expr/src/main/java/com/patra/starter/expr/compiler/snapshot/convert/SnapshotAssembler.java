@@ -37,7 +37,7 @@ public class SnapshotAssembler {
     public ProvenanceSnapshot assemble(ProvenanceResp provenance,
                                        ExprSnapshotResp snapshot,
                                        String operationType,
-                                       String operationCode) {
+                                       String endpointName) {
         Objects.requireNonNull(provenance, "provenance");
         Map<String, ProvenanceSnapshot.FieldDefinition> fields = new HashMap<>();
         for (ExprFieldResp field : nullSafe(snapshot != null ? snapshot.fields() : null)) {
@@ -78,7 +78,7 @@ public class SnapshotAssembler {
         return new ProvenanceSnapshot(
                 new ProvenanceSnapshot.Identity(provenance.id(), provenance.code(), provenance.name()),
                 new ProvenanceSnapshot.Scope(scopeCode, normalizedOperationType),
-                new ProvenanceSnapshot.Operation(operationCode, provenance.timezoneDefault()),
+                new ProvenanceSnapshot.Operation(endpointName, provenance.timezoneDefault()),
                 0L,
                 Instant.now(),
                 fields,

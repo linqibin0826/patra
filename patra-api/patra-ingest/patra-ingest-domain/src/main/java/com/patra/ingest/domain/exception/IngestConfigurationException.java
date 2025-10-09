@@ -17,7 +17,7 @@ import java.util.Set;
  *   <li>配置格式不合规：阻断执行链，返回明确字段路径与期望格式。</li>
  * </ul>
  * </p>
- * <p>可观测性：建议在日志中附带 provenanceCode/operationCode 以支持快速聚合统计。</p>
+ * <p>可观测性：建议在日志中附带 provenanceCode/endpointName 以支持快速聚合统计。</p>
  *
  * @author linqibin
  * @since 0.1.0

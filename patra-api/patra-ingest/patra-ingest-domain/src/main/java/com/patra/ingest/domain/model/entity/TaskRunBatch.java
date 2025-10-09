@@ -184,7 +184,7 @@ public class TaskRunBatch {
             null,  // sliceId - 可选
             null,  // planId - 可选
             null,  // provenanceCode - 可选
-            null,  // operationCode - 可选
+            null,  // endpointName - 可选
             batchNo,
             null,  // pageNo - 可选
             null,  // pageSize - 可选

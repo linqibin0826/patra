@@ -40,8 +40,7 @@ public class DefaultExprCompiler implements ExprCompiler {
     public CompileResult compile(CompileRequest request) {
         Objects.requireNonNull(request, "request");
 
-        // TODO operationCode 需要全都重命名为 endpointName， 上游数据库已变更该字段名称 避免与operationType混淆
-        ProvenanceSnapshot snapshot = snapshotLoader.load(request.provenance(), request.operationType(), request.operationCode());
+        ProvenanceSnapshot snapshot = snapshotLoader.load(request.provenance(), request.operationType(), request.endpointName());
         Expr normalized = normalizer.normalize(request.expression(), request.options().strict());
 
         List<Issue> issues = capabilityChecker.check(normalized, snapshot, request.options().strict());
@@ -57,7 +56,7 @@ public class DefaultExprCompiler implements ExprCompiler {
         ValidationReport report = new ValidationReport(warnings, errors);
 
         if (!errors.isEmpty()) {
-            return new CompileResult("", Map.of(), normalized, report, toRef(snapshot, request.operationCode()), request.options().traceEnabled() ? new RenderTrace(List.of()) : null);
+            return new CompileResult("", Map.of(), normalized, report, toRef(snapshot, request.endpointName()), request.options().traceEnabled() ? new RenderTrace(List.of()) : null);
         }
 
         ExprRenderer.RenderOutcome outcome = renderer.render(normalized, snapshot, request.options().traceEnabled());
@@ -71,15 +70,15 @@ public class DefaultExprCompiler implements ExprCompiler {
                     "Rendered query exceeds length budget",
                     Map.of("max", request.options().maxQueryLength(), "actual", outcome.query().length())));
             ValidationReport finalReport = new ValidationReport(mergedWarnings, mergedErrors);
-            return new CompileResult("", Map.of(), normalized, finalReport, toRef(snapshot, request.operationCode()), outcome.trace());
+            return new CompileResult("", Map.of(), normalized, finalReport, toRef(snapshot, request.endpointName()), outcome.trace());
         }
 
         ValidationReport finalReport = new ValidationReport(mergedWarnings, mergedErrors);
-        return new CompileResult(outcome.query(), outcome.params(), normalized, finalReport, toRef(snapshot, request.operationCode()), outcome.trace());
+        return new CompileResult(outcome.query(), outcome.params(), normalized, finalReport, toRef(snapshot, request.endpointName()), outcome.trace());
     }
 
-    private SnapshotRef toRef(ProvenanceSnapshot snapshot, String operationCode) {
+    private SnapshotRef toRef(ProvenanceSnapshot snapshot, String endpointName) {
         ProvenanceSnapshot.Identity id = snapshot.identity();
-        return new SnapshotRef(id.provenanceId(), id.code(), operationCode, snapshot.version(), snapshot.capturedAt());
+        return new SnapshotRef(id.provenanceId(), id.code(), endpointName, snapshot.version(), snapshot.capturedAt());
     }
 }

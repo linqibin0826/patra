@@ -5,12 +5,12 @@ import java.util.Objects;
 
 public record SnapshotRef(Long provenanceId, // TODO 这里不要使用provenanceId，统一用provenanceCode，可以删除这个字段
                           String provenanceCode,
-                          String operationCode,
+                          String endpointName,
                           long version,
                           Instant capturedAt) {
     public SnapshotRef {
         Objects.requireNonNull(provenanceCode, "provenanceCode");
-        Objects.requireNonNull(operationCode, "operationCode");
+        Objects.requireNonNull(endpointName, "endpointName");
         Objects.requireNonNull(capturedAt, "capturedAt");
     }
 }
