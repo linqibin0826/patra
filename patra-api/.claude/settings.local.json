@@ -37,7 +37,8 @@
       "WebFetch(domain:github.com)",
       "Bash(cat:*)",
       "Bash(mkdir:*)",
-      "mcp__mcp-router__list_memories"
+      "mcp__mcp-router__list_memories",
+      "Read(//Users/linqibin/.serena/**)"
     ],
     "deny": [],
     "ask": []
