@@ -44,7 +44,7 @@
 
 ### 开发指南
 - [CLAUDE.md](../../CLAUDE.md) - Claude 开发规范
-- [AGENTS.md](../../AGENTS.md) - Agent 协作手册
+- [AGENTS.md](../../AGENTS_BACK.md) - Agent 协作手册
 
 ---
 
