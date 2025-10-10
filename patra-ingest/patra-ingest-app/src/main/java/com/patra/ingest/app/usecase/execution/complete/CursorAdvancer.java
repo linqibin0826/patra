@@ -12,7 +12,7 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
  * <ul>
  *   <li>幂等性：使用乐观锁（version）确保同一水位不会被重复推进。</li>
  *   <li>原子性：推进失败时抛出异常，由上层决定重试策略。</li>
- *   <li>窗口感知：根据 ExecutionWindow 确定推进后的新水位。</li>
+ *   <li>窗口感知：根据 WindowSpec 策略确定推进后的新水位。</li>
  *   <li>命名空间：支持 GLOBAL/TASK/PLAN 等不同粒度的游标。</li>
  * </ul>
  * </p>

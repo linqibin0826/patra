@@ -1,7 +1,9 @@
 package com.patra.ingest.app.usecase.execution.complete;
 
 import com.patra.ingest.domain.model.entity.Cursor;
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.domain.port.CursorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +22,7 @@ import java.util.Optional;
  * 设计要点：
  * <ul>
  *   <li>查询游标：根据 provenanceCode/endpointName/cursorKey/namespace 查询当前游标。</li>
- *   <li>计算新水位：从 ExecutionWindow.windowTo 获取新水位。</li>
+ *   <li>计算新水位：从 WindowSpec 根据策略提取新水位（TIME策略使用windowTo）。</li>
  *   <li>乐观锁更新：调用 Cursor.advanceTo() 更新水位，保存时触发版本校验。</li>
  *   <li>异常处理：捕获 OptimisticLockingFailureException，返回 false 表示需重试。</li>
  *   <li>首次推进：游标不存在时创建新游标。</li>
@@ -66,20 +68,30 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         // 1. 提取游标参数
         String provenanceCode = context.provenanceCode();
         String operationCode = context.operationCode();
-        String cursorKey = "TIME";  // 默认时间类型游标
-        String namespaceScope = "GLOBAL";  // 默认 GLOBAL 命名空间
-        String namespaceKey = null;  // GLOBAL 命名空间无业务键
 
-        // 2. 计算新水位（从 ExecutionWindow.windowTo 获取）
-        Instant newWatermark = context.executionWindow().windowTo();
-        if (newWatermark == null) {
-            log.warn("[INGEST][APP] cursor advance skipped: windowTo is null taskId={} runId={}",
+        WindowSpec windowSpec = context.windowSpec();
+        if (windowSpec == null) {
+            log.debug("[INGEST][APP] cursor advance skipped: no window spec taskId={} runId={}",
                      taskId, runId);
-            return true;  // 无窗口边界，跳过推进（视为成功）
+            return true;  // 无窗口规格，跳过推进
         }
 
+        // 2. 策略感知的水位提取
+        Instant newWatermark = extractWatermark(windowSpec, taskId, runId);
+        if (newWatermark == null) {
+            log.debug("[INGEST][APP] cursor advance skipped: non-TIME strategy or no watermark " +
+                     "strategy={} taskId={} runId={}",
+                     windowSpec.strategy(), taskId, runId);
+            return true;  // 非TIME策略暂不支持水位推进
+        }
+
+        // 3. 确定游标键和命名空间
+        String cursorKey = determineCursorKey(windowSpec);
+        String namespaceScope = "GLOBAL";
+        String namespaceKey = null;
+
         try {
-            // 3. 查询当前游标
+            // 4. 查询当前游标
             Optional<Cursor> cursorOpt = cursorRepository.find(
                 provenanceCode,
                 operationCode,
@@ -90,7 +102,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
             Cursor cursor;
             if (cursorOpt.isPresent()) {
-                // 3.1 游标存在：更新水位
+                // 4.1 游标存在：更新水位
                 cursor = cursorOpt.get();
                 Instant oldWatermark = cursor.getCurrentWatermark();
 
@@ -105,7 +117,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                 log.info("[INGEST][APP] cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={}",
                          provenanceCode, operationCode, oldWatermark, newWatermark, taskId, runId);
             } else {
-                // 3.2 游标不存在：创建新游标
+                // 4.2 游标不存在：创建新游标
                 cursor = Cursor.create(
                     provenanceCode,
                     operationCode,
@@ -119,7 +131,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                          provenanceCode, operationCode, newWatermark, taskId, runId);
             }
 
-            // 4. 保存游标（乐观锁校验）
+            // 5. 保存游标（乐观锁校验）
             cursorRepository.save(cursor);
             return true;
 
@@ -134,5 +146,49 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                       provenanceCode, operationCode, taskId, runId, e);
             throw new IllegalStateException("游标推进失败", e);
         }
+    }
+
+    /**
+     * 从WindowSpec提取水位（策略感知）。
+     * <p>目前仅TIME策略支持基于时间戳的水位推进。</p>
+     *
+     * @param windowSpec 窗口规格
+     * @param taskId 任务ID（用于日志）
+     * @param runId 运行ID（用于日志）
+     * @return 水位时间戳，如果策略不支持水位则返回null
+     */
+    private Instant extractWatermark(WindowSpec windowSpec, Long taskId, Long runId) {
+        return switch (windowSpec.strategy()) {
+            case TIME -> {
+                WindowSpec.Time timeSpec = (WindowSpec.Time) windowSpec;
+                yield timeSpec.to();  // TIME策略：使用窗口终点作为水位
+            }
+            case ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE -> {
+                // 这些策略暂不使用基于时间的水位
+                // 未来：ID_RANGE可实现基于数值ID的水位推进
+                yield null;
+            }
+            case HYBRID -> {
+                // 未来：从HYBRID规格中提取时间分量
+                log.warn("[INGEST][APP] HYBRID strategy watermark extraction not yet implemented " +
+                        "taskId={} runId={}", taskId, runId);
+                yield null;
+            }
+        };
+    }
+
+    /**
+     * 根据窗口策略确定游标键。
+     *
+     * @param windowSpec 窗口规格
+     * @return 游标键标识
+     */
+    private String determineCursorKey(WindowSpec windowSpec) {
+        return switch (windowSpec.strategy()) {
+            case TIME -> "TIME";
+            case ID_RANGE -> "ID";
+            case CURSOR_LANDMARK -> "CURSOR";
+            case VOLUME_BUDGET, SINGLE, HYBRID -> "GLOBAL";
+        };
     }
 }

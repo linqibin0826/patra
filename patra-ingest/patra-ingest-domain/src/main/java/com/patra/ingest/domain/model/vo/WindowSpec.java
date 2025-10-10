@@ -49,21 +49,7 @@ public sealed interface WindowSpec permits
      * @return JSON-serializable map containing strategy code and strategy-specific fields
      */
     Map<String, Object> toMap();
-    
-    /**
-     * Convert to ExecutionWindow (compatibility method).
-     * Only valid for TIME strategy; returns empty window for other strategies.
-     *
-     * @return ExecutionWindow for TIME strategy, or empty window otherwise
-     */
-    default ExecutionWindow toExecutionWindow() {
-        // TODO ExecutionWindow需要支持ID_RANGE等其他类型
-        if (this instanceof Time timeSpec) {
-            return new ExecutionWindow(timeSpec.from(), timeSpec.to());
-        }
-        return ExecutionWindow.empty();
-    }
-    
+
     // ============ Strategy Implementations ============
     
     /**

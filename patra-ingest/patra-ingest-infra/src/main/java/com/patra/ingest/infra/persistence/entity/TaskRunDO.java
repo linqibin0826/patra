@@ -76,18 +76,6 @@ public class TaskRunDO extends BaseDO {
     private String error;
 
     /**
-     * 窗口起点（UTC，含）
-     */
-    @TableField("window_from")
-    private Instant windowFrom;
-
-    /**
-     * 窗口终点（UTC，不含）
-     */
-    @TableField("window_to")
-    private Instant windowTo;
-
-    /**
      * 实际开始时间
      */
     @TableField("started_at")
