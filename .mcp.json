@@ -1,15 +1,32 @@
 {
   "mcpServers": {
-    "mcp-router": {
+    "sequential-thinking": {
       "command": "npx",
       "args": [
         "-y",
-        "@mcp_router/cli@latest",
-        "connect"
+        "@modelcontextprotocol/server-sequential-thinking"
       ],
-      "env": {
-        "MCPR_TOKEN": "mcpr_YJ3-JiIFk5Ci1JFz0LawHBu7g1o38e7E"
-      }
+      "env": {}
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {}
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant"
+      ],
+      "env": {}
     }
   }
 }
