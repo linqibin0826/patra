@@ -10,6 +10,7 @@ import com.patra.expr.Exprs;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 
 import java.time.Duration;
@@ -109,9 +110,7 @@ public class TimeSlicePlanner implements SlicePlanner {
                     index,
                     signatureHash,
                     specJson,
-                    combined,
-                    cursor,
-                    upper));
+                    combined));
 
             log.debug("[INGEST][APP] Time slice prepared, sliceNo={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
 

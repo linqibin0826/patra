@@ -1,13 +1,18 @@
 package com.patra.ingest.infra.persistence.converter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
+import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
+
+import java.util.Map;
 
 /**
  * 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 转换器。
@@ -19,6 +24,7 @@ public interface PlanConverter {
     @Mapping(target = "provenanceConfigSnapshot", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getProvenanceConfigSnapshotJson()))")
     @Mapping(target = "sliceParams", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceParamsJson()))")
     @Mapping(target = "statusCode", source = "status", qualifiedByName = "planStatusToCode")
+    @Mapping(target = "windowSpec", source = "windowSpec", qualifiedByName = "windowSpecToJson")
     PlanDO toEntity(PlanAggregate aggregate);
 
     default PlanAggregate toAggregate(PlanDO entity) {
@@ -31,6 +37,7 @@ public interface PlanConverter {
         }
         PlanStatus status = planStatusFromCode(entity.getStatusCode());
         long version = entity.getVersion() == null ? 0L : entity.getVersion();
+        WindowSpec windowSpec = jsonToWindowSpec(entity.getWindowSpec());
         return PlanAggregate.restore(
                 entity.getId(),
                 entity.getScheduleInstanceId(),
@@ -41,8 +48,7 @@ public interface PlanConverter {
                 JsonNodeMappings.jsonNodeToString(entity.getExprProtoSnapshot()),
                 JsonNodeMappings.jsonNodeToString(entity.getProvenanceConfigSnapshot()),
                 entity.getProvenanceConfigHash(),
-                entity.getWindowFrom(),
-                entity.getWindowTo(),
+                windowSpec,
                 entity.getSliceStrategyCode(),
                 JsonNodeMappings.jsonNodeToString(entity.getSliceParams()),
                 status,
@@ -56,5 +62,24 @@ public interface PlanConverter {
 
     static PlanStatus planStatusFromCode(String code) {
         return code == null ? PlanStatus.DRAFT : PlanStatus.fromCode(code);
+    }
+
+    @Named("windowSpecToJson")
+    static com.fasterxml.jackson.databind.JsonNode windowSpecToJson(WindowSpec spec) {
+        if (spec == null) {
+            return null;
+        }
+        ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
+        return mapper.valueToTree(spec.toMap());
+    }
+
+    static WindowSpec jsonToWindowSpec(com.fasterxml.jackson.databind.JsonNode json) {
+        if (json == null || json.isNull()) {
+            return null;
+        }
+        ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> map = mapper.convertValue(json, Map.class);
+        return WindowSpec.fromMap(map);
     }
 }

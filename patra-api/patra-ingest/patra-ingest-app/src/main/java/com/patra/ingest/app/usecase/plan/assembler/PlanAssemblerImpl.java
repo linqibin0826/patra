@@ -10,7 +10,7 @@ import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import com.patra.ingest.app.usecase.plan.slicer.SlicePlanner;
 import com.patra.ingest.app.usecase.plan.slicer.SlicePlannerRegistry;
-import com.patra.ingest.app.usecase.plan.slicer.SliceStrategy;
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
@@ -19,6 +19,8 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
+import com.patra.ingest.domain.model.vo.WindowSpec;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -57,6 +59,7 @@ import java.util.Map;
  * @author linqibin
  * @since 0.1.0
  */
+@Slf4j
 @Component
 public class PlanAssemblerImpl implements PlanAssembler {
 
@@ -128,6 +131,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         String configSnapshotHash = configSnapshot == null ? null : HashUtils.sha256Hex(configSnapshot.getHashMaterial());
 
         String sliceStrategyCode = sliceStrategy.getCode();
+        WindowSpec windowSpec = WindowSpec.ofTime(window.from(), window.to());
         return PlanAggregate.create(
                 norm.scheduleInstanceId(),
                 planKey,
@@ -137,8 +141,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
                 planExpression.jsonSnapshot(),
                 configSnapshotJson,
                 configSnapshotHash,
-                window.from(),
-                window.to(),
+                windowSpec,
                 sliceStrategyCode,
                 buildSliceParams(sliceStrategy)
         );
@@ -173,7 +176,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
                     norm.provenanceCode().getCode(),
                     draft.sliceNo(),
                     draft.sliceSignatureSeed(),
-                    draft.sliceSpecJson(),
+                    draft.windowSpecJson(),
                     sliceSnapshot.hash(),
                     sliceSnapshot.canonicalJson()
             ));
@@ -219,17 +222,37 @@ public class PlanAssemblerImpl implements PlanAssembler {
     }
 
     /**
-     * 计算任务调度时间：优先切片 windowFrom，其次总窗口 from，最后即时 now。
+     * 计算任务调度时间：优先切片 windowFrom（从 windowSpecJson 解析），其次总窗口 from，最后即时 now。
      */
     private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
-        if (draft.windowFrom() != null) {
-            return draft.windowFrom();
+        // Try to extract windowFrom from windowSpecJson
+        Instant windowFrom = extractWindowFrom(draft.windowSpecJson());
+        if (windowFrom != null) {
+            return windowFrom;
         }
         if (window != null && window.from() != null) {
             return window.from();
         }
         // 无窗口时回退当前时间，保持调度及时性
         return Instant.now();
+    }
+
+    /**
+     * 从 windowSpecJson 中提取 window.from 时间（如果存在）。
+     */
+    private Instant extractWindowFrom(String windowSpecJson) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(windowSpecJson);
+            com.fasterxml.jackson.databind.JsonNode window = root.get("window");
+            if (window != null && window.has("from")) {
+                String fromStr = window.get("from").asText();
+                return Instant.parse(fromStr);
+            }
+        } catch (Exception e) {
+            log.warn("[INGEST][APP] Failed to parse windowFrom from windowSpecJson: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**

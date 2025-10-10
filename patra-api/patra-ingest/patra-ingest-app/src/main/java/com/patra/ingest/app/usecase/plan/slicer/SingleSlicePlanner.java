@@ -5,6 +5,7 @@ import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,24 @@ public class SingleSlicePlanner implements SlicePlanner {
     public List<SlicePlan> slice(SlicePlanningContext context) {
         // UPDATE / ID 驱动场景：不补充额外窗口约束，遵循 Plan 原有业务表达式
         Expr baseExpr = context.planExpression().expr();
-        JsonNormalizer.Result specNormalized = JsonNormalizer.normalizeDefault(Map.of("strategy", code().getCode()));
+
+        // Build window spec JSON including window information if present
+        Map<String, Object> specMap = new java.util.HashMap<>();
+        specMap.put("strategy", code().getCode());
+        if (context.window() != null) {
+            Map<String, String> windowMap = new java.util.HashMap<>();
+            if (context.window().from() != null) {
+                windowMap.put("from", context.window().from().toString());
+            }
+            if (context.window().to() != null) {
+                windowMap.put("to", context.window().to().toString());
+            }
+            if (!windowMap.isEmpty()) {
+                specMap.put("window", windowMap);
+            }
+        }
+
+        JsonNormalizer.Result specNormalized = JsonNormalizer.normalizeDefault(specMap);
         String specJson = specNormalized.getCanonicalJson();
         String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
@@ -50,8 +68,6 @@ public class SingleSlicePlanner implements SlicePlanner {
                 1,
                 signatureHash,
                 specJson,
-                baseExpr,
-                context.window() == null ? null : context.window().from(),
-                context.window() == null ? null : context.window().to()));
+                baseExpr));
     }
 }

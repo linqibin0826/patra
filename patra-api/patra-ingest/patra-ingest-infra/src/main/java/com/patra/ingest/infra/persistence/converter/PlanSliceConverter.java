@@ -15,7 +15,7 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlanSliceConverter {
 
-    @Mapping(target = "sliceSpec", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getSliceSpecJson()))")
+    @Mapping(target = "windowSpec", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getWindowSpecJson()))")
     @Mapping(target = "exprSnapshot", expression = "java(com.patra.common.json.JsonNodeMappings.jsonStringToNode(aggregate.getExprSnapshotJson()))")
     @Mapping(target = "statusCode", source = "status", qualifiedByName = "sliceStatusToCode")
     PlanSliceDO toEntity(PlanSliceAggregate aggregate);
@@ -36,7 +36,7 @@ public interface PlanSliceConverter {
                 entity.getProvenanceCode(),
                 entity.getSliceNo() == null ? 0 : entity.getSliceNo(),
                 entity.getSliceSignatureHash(),
-                JsonNodeMappings.jsonNodeToString(entity.getSliceSpec()),
+                JsonNodeMappings.jsonNodeToString(entity.getWindowSpec()),
                 entity.getExprHash(),
                 JsonNodeMappings.jsonNodeToString(entity.getExprSnapshot()),
                 status,

@@ -3,12 +3,13 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.enums.OperationCode;
+import com.patra.ingest.domain.model.vo.WindowSpec;
 
 import java.time.Instant;
 import java.util.Objects;
 
 /**
- * 计划聚合根：封装一次采集计划的“蓝图”与状态流转逻辑。
+ * 计划聚合根：封装一次采集计划的"蓝图"与状态流转逻辑。
  * <p>包含窗口信息、表达式/配置快照、切片策略与当前状态；提供有限状态迁移方法，
  * 不直接承担持久化逻辑（由 Repository 负责）。</p>
  * <p>幂等：通过 planKey（来源 + 操作 + 窗口 + 策略 哈希）在仓储层实现复用。</p>
@@ -54,13 +55,9 @@ public class PlanAggregate extends AggregateRoot<Long> {
      */
     private final String provenanceConfigHash;
     /**
-     * 窗口开始（半开区间左边界）
+     * 窗口边界规格（支持TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE等策略）
      */
-    private final Instant windowFrom;
-    /**
-     * 窗口结束（半开区间右边界）
-     */
-    private final Instant windowTo;
+    private final WindowSpec windowSpec;
     /**
      * 切片策略编码（如 TIME / SINGLE 等）
      */
@@ -83,8 +80,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
                           String exprProtoSnapshotJson,
                           String provenanceConfigSnapshotJson,
                           String provenanceConfigHash,
-                          Instant windowFrom,
-                          Instant windowTo,
+                          WindowSpec windowSpec,
                           String sliceStrategyCode,
                           String sliceParamsJson,
                           PlanStatus status) {
@@ -97,8 +93,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
         this.exprProtoSnapshotJson = exprProtoSnapshotJson;
         this.provenanceConfigSnapshotJson = provenanceConfigSnapshotJson;
         this.provenanceConfigHash = provenanceConfigHash;
-        this.windowFrom = windowFrom;
-        this.windowTo = windowTo;
+        this.windowSpec = Objects.requireNonNull(windowSpec, "windowSpec不能为空");
         this.sliceStrategyCode = sliceStrategyCode;
         this.sliceParamsJson = sliceParamsJson;
         this.status = status == null ? PlanStatus.DRAFT : status;
@@ -115,8 +110,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
      * @param exprProtoSnapshotJson        表达式原型快照 JSON
      * @param provenanceConfigSnapshotJson 来源配置快照 JSON
      * @param provenanceConfigHash         来源配置快照哈希
-     * @param windowFrom                   窗口起始
-     * @param windowTo                     窗口结束
+     * @param windowSpec                   窗口边界规格
      * @param sliceStrategyCode            切片策略编码
      * @param sliceParamsJson              切片策略参数 JSON
      * @return 新的计划聚合
@@ -129,8 +123,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                        String exprProtoSnapshotJson,
                                        String provenanceConfigSnapshotJson,
                                        String provenanceConfigHash,
-                                       Instant windowFrom,
-                                       Instant windowTo,
+                                       WindowSpec windowSpec,
                                        String sliceStrategyCode,
                                        String sliceParamsJson) {
         // 解析为领域内枚举，统一大小写/空白处理
@@ -144,8 +137,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
                 exprProtoSnapshotJson,
                 provenanceConfigSnapshotJson,
                 provenanceConfigHash,
-                windowFrom,
-                windowTo,
+                windowSpec,
                 sliceStrategyCode,
                 sliceParamsJson,
                 PlanStatus.DRAFT);
@@ -163,8 +155,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
      * @param exprProtoSnapshotJson        表达式快照 JSON
      * @param provenanceConfigSnapshotJson 配置快照 JSON
      * @param provenanceConfigHash         配置快照哈希
-     * @param windowFrom                   窗口开始
-     * @param windowTo                     窗口结束
+     * @param windowSpec                   窗口边界规格
      * @param sliceStrategyCode            切片策略编码
      * @param sliceParamsJson              切片策略参数 JSON
      * @param status                       当前状态
@@ -180,8 +171,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
                                         String exprProtoSnapshotJson,
                                         String provenanceConfigSnapshotJson,
                                         String provenanceConfigHash,
-                                        Instant windowFrom,
-                                        Instant windowTo,
+                                        WindowSpec windowSpec,
                                         String sliceStrategyCode,
                                         String sliceParamsJson,
                                         PlanStatus status,
@@ -196,8 +186,7 @@ public class PlanAggregate extends AggregateRoot<Long> {
                 exprProtoSnapshotJson,
                 provenanceConfigSnapshotJson,
                 provenanceConfigHash,
-                windowFrom,
-                windowTo,
+                windowSpec,
                 sliceStrategyCode,
                 sliceParamsJson,
                 status);
@@ -287,12 +276,39 @@ public class PlanAggregate extends AggregateRoot<Long> {
         return provenanceConfigHash;
     }
 
-    public Instant getWindowFrom() {
-        return windowFrom;
+    /**
+     * 获取窗口边界规格。
+     *
+     * @return window specification
+     */
+    public WindowSpec getWindowSpec() {
+        return windowSpec;
     }
 
+    /**
+     * 获取窗口开始时间（兼容性方法，仅对TIME策略有效）。
+     * 如果不是TIME策略，返回null。
+     *
+     * @return 窗口起始时间或null
+     */
+    public Instant getWindowFrom() {
+        if (windowSpec instanceof WindowSpec.Time timeSpec) {
+            return timeSpec.from();
+        }
+        return null;
+    }
+
+    /**
+     * 获取窗口结束时间（兼容性方法，仅对TIME策略有效）。
+     * 如果不是TIME策略，返回null。
+     *
+     * @return 窗口结束时间或null
+     */
     public Instant getWindowTo() {
-        return windowTo;
+        if (windowSpec instanceof WindowSpec.Time timeSpec) {
+            return timeSpec.to();
+        }
+        return null;
     }
 
     public String getSliceStrategyCode() {

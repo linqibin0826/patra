@@ -10,6 +10,7 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.model.vo.ExecutionWindow;
 import com.patra.ingest.domain.model.vo.ExprCompilationRequest;
 import com.patra.ingest.domain.model.vo.ExprCompilationResult;
+import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.domain.port.ExpressionCompilerPort;
 import com.patra.ingest.domain.port.PlanRepository;
 import com.patra.ingest.domain.port.PlanSliceRepository;
@@ -17,6 +18,8 @@ import com.patra.ingest.domain.port.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 import java.time.Instant;
 
@@ -137,9 +140,9 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
             );
         }
 
-        // 7. TODO 解析执行窗口（从 sliceSpecJson 中提取, 应该使用 com.patra.ingest.domain.model.vo.SliceSpecDefinition, 不能写死时间窗口。
+        // 7. Parse execution window from window spec JSON using WindowSpec
         ExecutionWindow executionWindow =
-                parseExecutionWindow(slice.getSliceSpecJson());
+                parseExecutionWindow(slice.getWindowSpecJson());
 
         // 8. 构建 ExecutionContext
         log.info("[INGEST][APP] execution context loaded taskId={} runId={} provenanceCode={} endpointName={}",
@@ -160,23 +163,30 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     }
 
     /**
-     * 从 sliceSpecJson 中解析执行窗口。
+     * Parse execution window from slice spec JSON using WindowSpec.
+     * <p>
+     * This method uses the polymorphic WindowSpec value object to handle
+     * different window types (TIME, ID_RANGE, CURSOR_LANDMARK, etc.).
+     * Only TIME strategy windows are converted to ExecutionWindow.
+     * </p>
+     *
+     * @param windowSpecJson window specification JSON
+     * @return ExecutionWindow (only for TIME strategy), or empty window for other strategies
      */
-    private ExecutionWindow parseExecutionWindow(String sliceSpecJson) {
-        if (sliceSpecJson == null || sliceSpecJson.isBlank()) {
+    private ExecutionWindow parseExecutionWindow(String windowSpecJson) {
+        if (windowSpecJson == null || windowSpecJson.isBlank()) {
             return ExecutionWindow.empty();
         }
         try {
-            JsonNode spec = objectMapper.readTree(sliceSpecJson);
-            java.time.Instant windowFrom = spec.has("windowFrom") && !spec.get("windowFrom").isNull()
-                    ? Instant.parse(spec.get("windowFrom").asText())
-                    : null;
-            java.time.Instant windowTo = spec.has("windowTo") && !spec.get("windowTo").isNull()
-                    ? java.time.Instant.parse(spec.get("windowTo").asText())
-                    : null;
-            return new ExecutionWindow(windowFrom, windowTo);
+            JsonNode spec = objectMapper.readTree(windowSpecJson);
+            // Use WindowSpec to handle polymorphic window types
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = objectMapper.convertValue(spec, Map.class);
+            WindowSpec windowSpec = WindowSpec.fromMap(map);
+            // Convert to ExecutionWindow (only valid for TIME strategy)
+            return windowSpec.toExecutionWindow();
         } catch (Exception e) {
-            log.error("[INGEST][APP] failed to parse execution window from sliceSpecJson: {}", sliceSpecJson, e);
+            log.error("[INGEST][APP] failed to parse execution window from windowSpecJson: {}", windowSpecJson, e);
             return ExecutionWindow.empty();
         }
     }

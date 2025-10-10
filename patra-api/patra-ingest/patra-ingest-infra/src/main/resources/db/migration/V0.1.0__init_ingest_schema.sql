@@ -75,8 +75,25 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT '切片策略：TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID 等；决定如何从原型生成多个 slice',
     `slice_params`               JSON            NULL COMMENT '切片参数：与切片策略配套的细节（如步长、时间区、landmark、预算上限等）；仅用于生成 slice，不直接参与执行',
 
-    `window_from`                TIMESTAMP(6)    NULL COMMENT '总窗起(含,UTC)',
-    `window_to`                  TIMESTAMP(6)    NULL COMMENT '总窗止(不含,UTC)',
+    `window_spec`                JSON            NOT NULL COMMENT 'Window boundary specification (Format B: nested JSON with strategy-specific structure). Schema varies by slice_strategy_code: TIME contains nested window object with from/to timestamps; ID_RANGE contains nested window object with from/to numeric IDs; CURSOR_LANDMARK contains nested window object with from/to cursor tokens; VOLUME_BUDGET contains flat limit/unit fields; SINGLE contains only strategy field. Examples: TIME: {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}, ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}, CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}, VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}, SINGLE: {"strategy":"SINGLE"}',
+    `window_from_time`           TIMESTAMP(6) GENERATED ALWAYS AS (
+        CASE
+            -- Extract start timestamp from nested window.from field when strategy is TIME
+            -- Path: window_spec.strategy (check) -> window_spec.window.from (extract)
+            WHEN JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.strategy')) = 'TIME'
+            THEN STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.window.from')), '%Y-%m-%dT%H:%i:%s.%f')
+            ELSE NULL
+        END
+    ) VIRTUAL COMMENT 'Virtual column for time-range queries on window start boundary. Only populated when strategy=TIME, extracted from window_spec.window.from (Format B nested path). Used for indexing time-based plan queries.',
+    `window_to_time`             TIMESTAMP(6) GENERATED ALWAYS AS (
+        CASE
+            -- Extract end timestamp from nested window.to field when strategy is TIME
+            -- Path: window_spec.strategy (check) -> window_spec.window.to (extract)
+            WHEN JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.strategy')) = 'TIME'
+            THEN STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.window.to')), '%Y-%m-%dT%H:%i:%s.%f')
+            ELSE NULL
+        END
+    ) VIRTUAL COMMENT 'Virtual column for time-range queries on window end boundary. Only populated when strategy=TIME, extracted from window_spec.window.to (Format B nested path). Used for indexing time-based plan queries.',
     `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status)：DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED',
 
     -- 审计字段
@@ -98,6 +115,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_plan_status` (`status_code`),
     KEY `idx_plan_expr` (`expr_proto_hash`),
     KEY `idx_plan_prov_config_hash` (`provenance_config_hash`),
+    KEY `idx_window_time_range` (`window_from_time`, `window_to_time`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
@@ -123,9 +141,9 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     `provenance_code`      VARCHAR(64)     NULL COMMENT '冗余：来源代码，与 reg_provenance.provenance_code 一致（加速按来源过滤）',
 
     `slice_no`             INT             NOT NULL COMMENT '切片序号(0..N)',
-    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '切片签名哈希：仅对 slice_spec（边界JSON）做规范化后计算；用于判重/去重（同一 plan 下相同边界不重复生成）',
-    `slice_spec`           JSON            NOT NULL COMMENT '切片边界说明（JSON）：声明本 slice 的执行范围与约束（时间窗口/ID 区间/游标landmark/预算等），不含业务表达式逻辑',
-    `expr_hash`            CHAR(64)        NOT NULL COMMENT '局部化表达式哈希：对“规范化后的局部化AST”计算出的指纹；通常与 slice_signature_hash 一起变化',
+    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT '切片签名哈希：仅对 window_spec（边界JSON）做规范化后计算；用于判重/去重（同一 plan 下相同边界不重复生成）',
+    `window_spec`          JSON            NOT NULL COMMENT 'Window boundary specification for this slice (Format B: nested JSON structure matching plan.window_spec but potentially narrowed for this slice). Declares the execution scope and constraints (time window/ID range/cursor landmarks/volume budget) without business expression logic. Schema varies by strategy: TIME uses nested window.from/to, ID_RANGE uses nested window.from/to, CURSOR_LANDMARK uses nested window.from/to, VOLUME_BUDGET uses flat limit/unit, SINGLE has only strategy. Examples: TIME: {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-01-02T00:00:00Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}, ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}, CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}, VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}, SINGLE: {"strategy":"SINGLE"}',
+    `expr_hash`            CHAR(64)        NOT NULL COMMENT '局部化表达式哈希：对"规范化后的局部化AST"计算出的指纹；通常与 slice_signature_hash 一起变化',
 
     `expr_snapshot`        JSON            NULL COMMENT '局部化表达式快照（AST，JSON）：在 plan 的原型上注入本 slice 的边界条件后的“可直接执行表达式树”；slice 自带可重放语义',
     `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_slice_status)：PENDING/DISPATCHED/EXECUTING/SUCCEEDED/FAILED/PARTIAL/CANCELLED',
@@ -258,9 +276,6 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `checkpoint`       JSON            NULL COMMENT '运行级检查点（如 nextHint / resumeToken 等）',
     `stats`            JSON            NULL COMMENT '统计：fetched/upserted/failed/pages 等',
     `error`            TEXT            NULL COMMENT '失败原因',
-
-    `window_from`      TIMESTAMP(6)    NULL COMMENT '时间型切片时冗余窗口起(UTC)[含]',
-    `window_to`        TIMESTAMP(6)    NULL COMMENT '时间型切片时冗余窗口止(UTC)[不含]',
 
     `started_at`       TIMESTAMP(6)    NULL,
     `finished_at`      TIMESTAMP(6)    NULL,
@@ -462,9 +477,6 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `prev_numeric`         DECIMAL(38, 0)  NULL,
     `new_numeric`          DECIMAL(38, 0)  NULL,
 
-    `window_from`          TIMESTAMP(6)    NULL COMMENT '覆盖窗口起(UTC)[含]',
-    `window_to`            TIMESTAMP(6)    NULL COMMENT '覆盖窗口止(UTC)[不含]',
-
     `direction_code`       VARCHAR(16)     NULL COMMENT 'DICT CODE(type=ing_cursor_direction)：FORWARD/BACKFILL',
 
     `idempotent_key`       CHAR(64)        NOT NULL COMMENT '事件幂等键：SHA256(source,op,key,ns_scope,ns_key,prev->new,ingestWindow,run_id,...)',
@@ -495,7 +507,6 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
 
     KEY `idx_cur_evt_timeline` (`provenance_code`, `operation_code`, `cursor_key`, `namespace_scope_code`,
                                 `namespace_key`),
-    KEY `idx_cur_evt_window` (`window_from`, `window_to`),
     KEY `idx_cur_evt_instant` (`cursor_type_code`, `new_instant`),
     KEY `idx_cur_evt_numeric` (`cursor_type_code`, `new_numeric`),
     KEY `idx_cur_evt_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `run_id`, `batch_id`),
