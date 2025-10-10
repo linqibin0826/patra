@@ -219,7 +219,7 @@ patra-{service}/
 4. **Implement Infra**: MyBatis-Plus + MapStruct; JsonNode handling
 5. **Implement Adapter**: Validation (`@Valid`)/error mapping/trace propagation
 6. **Self-check**: `mvn -q -DskipTests compile`; necessary English comments
-7. **Handoff**: Submit minimal Diff; hand over to code-reviewer/qa/docs
+7. **Handoff**: Submit minimal Diff for review
 
 ### 4.6 Layer Implementation Details
 
