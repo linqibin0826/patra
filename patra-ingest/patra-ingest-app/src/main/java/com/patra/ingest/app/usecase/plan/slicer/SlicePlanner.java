@@ -2,6 +2,7 @@ package com.patra.ingest.app.usecase.plan.slicer;
 
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import java.util.List;
 
 /**

@@ -12,6 +12,13 @@
   - **patra-registry 数据模型**：Provenance + 多维配置 + 表达式
   - 包含表关系说明、索引设计、约束规则
 
+### JSON Schema 文档
+- **[window_spec JSON Schema](./window_spec_schema.md)** - Window boundary specification schema
+  - Format B nested JSON structure for all 5 strategies (TIME, ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE)
+  - Virtual column implementation for efficient time-range queries
+  - Query examples and optimization tips
+  - See also: [WindowSpec Domain Model](../domain/WindowSpec.md)
+
 ---
 
 ## 🔗 相关文档
@@ -158,6 +165,7 @@ WHERE table_schema = 'papertrace'
 
 | 版本 | 日期 | 变更说明 | 作者 |
 |-----|------|---------|------|
+| 1.1 | 2025-10-10 | 增加 window_spec JSON Schema 文档链接 | docs-engineer |
 | 1.0 | 2025-10-08 | 初始版本：数据库文档索引 | docs-engineer |
 
 ---

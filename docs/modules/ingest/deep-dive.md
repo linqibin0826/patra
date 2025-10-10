@@ -162,7 +162,7 @@ usecase/relay/
 
 ## 4. 窗口与切片
 
-窗口模式：
+### 窗口模式（Operation Types）
 
 | 模式 | 用途 | 关键参数 | 保护策略 |
 | ---- | ---- | -------- | -------- |
@@ -170,12 +170,27 @@ usecase/relay/
 | BACKFILL | 历史回填 | from / to / alignment | 跨度上限控制 |
 | UPDATE | 选择性更新 | 输入窗口或游标 | 空或过小窗口跳过 |
 
-切片策略：
+### 切片策略（WindowSpec Strategies）
 
-| 策略 | 行为 | 场景 |
-| ---- | ---- | ---- |
-| TIME | 按时间步长拆分多个子窗口 | 大跨度/并行 |
-| SINGLE | 不拆分 | 小窗口或轻量操作 |
+切片策略定义如何对数据采集任务进行边界划分。详见 [WindowSpec 领域模型文档](../../domain/WindowSpec.md)。
+
+| 策略 | 行为 | 场景 | JSON 格式 |
+| ---- | ---- | ---- | -------- |
+| TIME | 按时间步长拆分多个子窗口 | 大跨度/并行 | `{"strategy":"TIME","window":{"from":"...","to":"..."}}` |
+| ID_RANGE | 按 ID 范围拆分子窗口 | 顺序 ID 采集 | `{"strategy":"ID_RANGE","window":{"from":N,"to":M}}` |
+| CURSOR_LANDMARK | 基于游标/分页标记的窗口 | 分页 API | `{"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}` |
+| VOLUME_BUDGET | 容量预算限制 | 配额控制 | `{"strategy":"VOLUME_BUDGET","limit":N,"unit":"RECORDS"}` |
+| SINGLE | 不拆分 | 小窗口或轻量操作 | `{"strategy":"SINGLE"}` |
+
+**WindowSpec JSON 格式**（Format B - 嵌套结构）：
+- 所有策略使用统一的 `"strategy"` 键（而非 `"type"`）
+- TIME/ID_RANGE/CURSOR_LANDMARK 使用嵌套 `"window"` 对象
+- VOLUME_BUDGET 使用扁平 `limit` + `unit` 字段
+- SINGLE 仅包含 `"strategy"` 字段
+
+详细 JSON Schema 与查询示例参见：
+- [WindowSpec 领域模型文档](../../domain/WindowSpec.md)
+- [window_spec 数据库 Schema](../../database/window_spec_schema.md)
 
 ## 5. 计划装配与错误分类
 

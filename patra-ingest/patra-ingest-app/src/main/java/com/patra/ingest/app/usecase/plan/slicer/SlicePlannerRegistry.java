@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.plan.slicer;
 
+import com.patra.ingest.domain.model.enums.SliceStrategy;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;

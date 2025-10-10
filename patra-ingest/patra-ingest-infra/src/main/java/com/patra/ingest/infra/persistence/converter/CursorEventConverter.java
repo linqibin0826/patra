@@ -53,8 +53,6 @@ public interface CursorEventConverter {
                 type,
                 entity.getPrevValue(),
                 entity.getNewValue(),
-                entity.getWindowFrom(),
-                entity.getWindowTo(),
                 direction,
                 entity.getIdempotentKey(),
                 entity.getObservedMaxValue(),
