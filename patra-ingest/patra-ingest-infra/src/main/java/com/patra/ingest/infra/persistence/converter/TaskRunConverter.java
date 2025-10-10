@@ -42,7 +42,7 @@ public interface TaskRunConverter {
         TaskRunStatus status = taskRunStatusFromCode(entity.getStatusCode());
         RunStats stats = deriveStats(entity.getStats());
         TaskRunCheckpoint checkpoint = checkpointFromNode(entity.getCheckpoint());
-        ExecutionWindow window = new ExecutionWindow(entity.getWindowFrom(), entity.getWindowTo());
+        ExecutionWindow window = ExecutionWindow.empty();
         RunContext context = new RunContext(entity.getSchedulerRunId(), entity.getCorrelationId());
         return TaskRun.restore(
                 entity.getId(),

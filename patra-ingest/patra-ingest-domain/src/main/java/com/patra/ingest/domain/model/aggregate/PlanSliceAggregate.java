@@ -21,8 +21,8 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     private final int sliceNo;
     /** 切片签名哈希 */
     private final String sliceSignatureHash;
-    /** 切片规格 JSON */
-    private final String sliceSpecJson;
+    /** 窗口规格 JSON */
+    private final String windowSpecJson;
     /** 局部表达式哈希 */
     private final String exprHash;
     /** 局部表达式快照 JSON */
@@ -35,7 +35,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
                                String provenanceCode,
                                int sliceNo,
                                String sliceSignatureHash,
-                               String sliceSpecJson,
+                               String windowSpecJson,
                                String exprHash,
                                String exprSnapshotJson,
                                SliceStatus status) {
@@ -44,7 +44,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
         this.provenanceCode = provenanceCode;
         this.sliceNo = sliceNo;
         this.sliceSignatureHash = sliceSignatureHash;
-        this.sliceSpecJson = sliceSpecJson;
+        this.windowSpecJson = windowSpecJson;
         this.exprHash = exprHash;
         this.exprSnapshotJson = exprSnapshotJson;
         this.status = status == null ? SliceStatus.PENDING : status;
@@ -54,7 +54,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
                                             String provenanceCode,
                                             int sliceNo,
                                             String sliceSignatureHash,
-                                            String sliceSpecJson,
+                                            String windowSpecJson,
                                             String exprHash,
                                             String exprSnapshotJson) {
         Objects.requireNonNull(sliceSignatureHash, "sliceSignatureHash不能为空");
@@ -63,7 +63,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
                 provenanceCode,
                 sliceNo,
                 sliceSignatureHash,
-                sliceSpecJson,
+                windowSpecJson,
                 exprHash,
                 exprSnapshotJson,
                 SliceStatus.PENDING);
@@ -74,7 +74,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
                                              String provenanceCode,
                                              int sequence,
                                              String sliceSignatureHash,
-                                             String sliceSpecJson,
+                                             String windowSpecJson,
                                              String exprHash,
                                              String exprSnapshotJson,
                                              SliceStatus status,
@@ -84,7 +84,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
                 provenanceCode,
                 sequence,
                 sliceSignatureHash,
-                sliceSpecJson,
+                windowSpecJson,
                 exprHash,
                 exprSnapshotJson,
                 status);
@@ -135,8 +135,8 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
         return sliceSignatureHash;
     }
 
-    public String getSliceSpecJson() {
-        return sliceSpecJson;
+    public String getWindowSpecJson() {
+        return windowSpecJson;
     }
 
     public String getExprHash() {

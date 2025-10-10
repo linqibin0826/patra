@@ -34,6 +34,14 @@
 
 - **[数据库文档索引](./database/README.md)** - 数据库设计与迁移文档
 - **[核心数据模型 ER 图](./database/er-diagrams.md)** - 完整的表关系图
+- **[window_spec JSON Schema](./database/window_spec_schema.md)** - Window boundary specification schema
+
+### 🧬 领域模型
+
+- **[WindowSpec 领域模型](./domain/WindowSpec.md)** - Window boundary specification value object
+  - 5种切片策略（TIME, ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE）
+  - Format B nested JSON serialization
+  - Database virtual column integration
 
 ### 📡 API 文档
 
@@ -196,6 +204,7 @@ mmdc -i docs/database/er-diagrams.md -o er-diagrams.pdf
 
 | 版本 | 日期 | 变更说明 | 作者 |
 |-----|------|---------|------|
+| 1.2 | 2025-10-10 | 新增领域模型章节，增加 WindowSpec 和 window_spec Schema 文档 | docs-engineer |
 | 1.1 | 2025-10-08 | 新增模块深入指南、完善文档索引结构 | docs-engineer |
 | 1.0 | 2025-10-08 | 初始版本：系统架构图、六边形架构图、ER 图 | System |
 

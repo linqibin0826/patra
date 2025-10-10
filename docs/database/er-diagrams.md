@@ -52,8 +52,9 @@ erDiagram
         char provenance_config_hash "SHA256(config)"
         varchar slice_strategy_code "TIME/ID_RANGE/CURSOR"
         json slice_params
-        timestamp window_from
-        timestamp window_to
+        json window_spec "Format B: nested JSON with strategy-specific structure"
+        timestamp window_from_time "VIRTUAL: extracted from window_spec"
+        timestamp window_to_time "VIRTUAL: extracted from window_spec"
         varchar status_code "DRAFT/READY/COMPLETED"
         timestamp created_at
     }
@@ -64,7 +65,7 @@ erDiagram
         varchar provenance_code
         int slice_no UK "unique with plan_id"
         char slice_signature_hash UK "unique with plan_id"
-        json slice_spec "boundary definition"
+        json window_spec "Format B: slice-specific window boundary"
         char expr_hash "localized expr"
         json expr_snapshot "executable AST"
         varchar status_code "PENDING/DISPATCHED/SUCCEEDED"
@@ -797,6 +798,30 @@ cat patra-registry/patra-registry-infra/src/main/resources/db/migration/V1.0.*.s
 
 ---
 
+## WindowSpec JSON Format
+
+The `window_spec` column in `ing_plan` and `ing_plan_slice` tables uses **Format B (nested JSON)** to store window boundary specifications. See detailed documentation:
+- **Domain Model**: [docs/domain/WindowSpec.md](../domain/WindowSpec.md)
+- **Database Schema**: [docs/database/window_spec_schema.md](./window_spec_schema.md)
+
+**Quick Reference**:
+
+| Strategy | Example JSON (Format B) |
+|----------|------------------------|
+| TIME | `{"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}` |
+| ID_RANGE | `{"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}` |
+| CURSOR_LANDMARK | `{"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}` |
+| VOLUME_BUDGET | `{"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}` |
+| SINGLE | `{"strategy":"SINGLE"}` |
+
+**Virtual Columns for TIME Strategy**:
+- `window_from_time`: Extracted from `$.window.from` (enables indexed queries)
+- `window_to_time`: Extracted from `$.window.to` (enables indexed queries)
+
+These virtual columns are `NULL` for non-TIME strategies.
+
+---
+
 ## 关键设计原则
 
 ### 1. 无物理外键约束
@@ -845,4 +870,5 @@ cat patra-registry/patra-registry-infra/src/main/resources/db/migration/V1.0.*.s
 
 | 版本 | 日期 | 变更说明 | 作者 |
 |-----|------|---------|------|
+| 1.1 | 2025-10-10 | 更新 window_spec 字段为 Format B，增加虚拟列说明和 WindowSpec 文档链接 | docs-engineer |
 | 1.0 | 2025-10-08 | 初始版本:Ingest/Registry ER 图、关系说明、设计原则 | System |

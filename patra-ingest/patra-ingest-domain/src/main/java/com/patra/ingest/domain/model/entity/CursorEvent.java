@@ -40,10 +40,6 @@ public class CursorEvent {
     private final String prevValue;
     /** 新值（原始字符串表示）。 */
     private final String newValue;
-    /** 窗口起（若推进基于窗口）。 */
-    private final Instant windowFrom;
-    /** 窗口止（半开区间右边界）。 */
-    private final Instant windowTo;
     /** 推进方向（前进 / 回退）。 */
     private final CursorDirection direction;
     /** 幂等键（防重复写入）。 */
@@ -72,8 +68,6 @@ public class CursorEvent {
                         CursorType cursorType,
                         String prevValue,
                         String newValue,
-                        Instant windowFrom,
-                        Instant windowTo,
                         CursorDirection direction,
                         String idempotentKey,
                         String observedMaxValue,
@@ -92,8 +86,6 @@ public class CursorEvent {
         this.cursorType = cursorType;
         this.prevValue = prevValue;
         this.newValue = newValue;
-        this.windowFrom = windowFrom;
-        this.windowTo = windowTo;
         this.direction = direction;
         this.idempotentKey = idempotentKey;
         this.observedMaxValue = observedMaxValue;
@@ -116,8 +108,6 @@ public class CursorEvent {
      * @param cursorType 游标类型
      * @param prevValue 旧值(字符串)
      * @param newValue 新值(字符串)
-     * @param windowFrom 窗口起
-     * @param windowTo 窗口止
      * @param direction 推进方向
      * @param idempotentKey 幂等键
      * @param observedMaxValue 观察最大值
@@ -138,8 +128,6 @@ public class CursorEvent {
                                       CursorType cursorType,
                                       String prevValue,
                                       String newValue,
-                                      Instant windowFrom,
-                                      Instant windowTo,
                                       CursorDirection direction,
                                       String idempotentKey,
                                       String observedMaxValue,
@@ -158,8 +146,6 @@ public class CursorEvent {
                 cursorType,
                 prevValue,
                 newValue,
-                windowFrom,
-                windowTo,
                 direction,
                 idempotentKey,
                 observedMaxValue,

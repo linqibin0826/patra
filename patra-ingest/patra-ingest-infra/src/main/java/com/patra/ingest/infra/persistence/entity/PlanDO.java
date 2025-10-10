@@ -8,8 +8,6 @@ import com.patra.starter.mybatis.entity.BaseDO;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.time.Instant;
-
 /**
  * <p><b>计划蓝图 DO</b> —— 映射表：<code>ing_plan</code></p>
  * <p>语义：一次采集批次的蓝图，固化来源配置、表达式原型与切片策略。</p>
@@ -18,6 +16,7 @@ import java.time.Instant;
  *   <li><code>plan_key</code> 对外可读且幂等（UK：uk_plan_key）。</li>
  *   <li><code>expr_proto_snapshot</code> / <code>provenance_config_snapshot</code> 以 JSON 存储快照，允许回放与比对。</li>
  *   <li><code>slice_strategy_code</code> + <code>slice_params</code> 决定如何派生子切片。</li>
+ *   <li><code>window_spec</code> 以 JSON 存储窗口边界规格，支持多种策略（TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE）。</li>
  * </ul>
  * </p>
  */
@@ -66,13 +65,9 @@ public class PlanDO extends BaseDO {
     @TableField(value = "slice_params", typeHandler = JacksonTypeHandler.class)
     private JsonNode sliceParams;
 
-    /** 总窗口起点（UTC，含） */
-    @TableField("window_from")
-    private Instant windowFrom;
-
-    /** 总窗口终点（UTC，不含） */
-    @TableField("window_to")
-    private Instant windowTo;
+    /** 窗口边界规格（JSON，schema varies by slice_strategy_code） */
+    @TableField(value = "window_spec", typeHandler = JacksonTypeHandler.class)
+    private JsonNode windowSpec;
 
     /** 状态编码（DICT：ing_plan_status） */
     @TableField("status_code")
