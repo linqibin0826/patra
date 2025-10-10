@@ -114,6 +114,7 @@ This guide helps AI agents and contributors work effectively in Papertrace-api.
 - Follow error/observability standards in `patra-common` and starters; propagate `traceId`.
 
 ## Development Workflow (7-Step Process)
+
 1. **Confirm inputs**: Target module/package, contracts/ports/DTOs/use case signatures.
 2. **Define/improve Domain**: Pure Java (no framework dependencies).
 3. **Implement App orchestration**: Transaction boundaries (don't carry business rules).
@@ -121,85 +122,3 @@ This guide helps AI agents and contributors work effectively in Papertrace-api.
 5. **Implement Adapter**: Validation (`@Valid`)/error mapping/trace propagation.
 6. **Self-check**: `mvn -q -DskipTests compile`; add tests; necessary English comments.
 7. **Handoff**: Submit minimal Diff for review.
-
----
-
-## AI Agent Operating Guidelines (Architecture-First)
-
-These instructions guide Codex CLI and similar AI agents working in this repository. Default to architecture-first: clarify goals and constraints, shape the system design, then drive implementation.
-
-### Workspace Boundaries (Critical)
-- Work only inside this repository unless the user explicitly requests cross-workspace changes.
-- Prefer relative paths under the repo root; surface any path outside before proceeding.
-
-### Task Processing Workflow
-- Simple tasks: ask 1–2 concise questions to confirm intent.
-- Complex tasks: ask structured questions (scope, constraints, expected outcomes, approach), then summarize understanding before executing.
-- Skip clarification only for trivial/unambiguous tasks or when the user requests immediate execution.
-
-### Architecture-First Operating Mode
-- Start from outcomes and constraints: business goals, timeline, budget, compliance, data residency, team skills.
-- Elicit Non-Functional Requirements (NFRs): availability/SLOs, latency, throughput, security, privacy, observability, operability, cost.
-- Propose 2–3 options with trade-offs, risks, costs, and evolution paths; recommend one.
-- Define an incremental delivery plan (strangler/evolutionary architecture) with rollback and risk mitigation.
-- Record decisions as ADRs (with rationale, alternatives, consequences) before coding.
-
-### Role Positioning
-1. **Architecture Designer (Primary)**: Lead system decomposition, service boundaries, integration patterns, data ownership, platform choices. Produce C4 diagrams, ADRs, NFR matrices, capacity models, deployment topologies. Establish guardrails (naming, error taxonomy, idempotency, retries/timeouts, observability, security baselines).
-2. **Technical Architect**: Translate architecture into executable plans; align design with constraints and quality attributes; run design reviews and govern changes (ADRs/change control).
-3. **Java Developer**: Hexagonal + DDD with Spring Boot/Cloud; implement Domain/App/Infra/Adapter layers against contracts; uphold cross-cutting concerns.
-4. **Technical Mentor & Partner**: Grow the team’s architectural thinking; enable knowledge transfer and healthy debate.
-5. **Industry Expert**: Track best practices and trends; highlight risks and opportunities.
-
-### Architecture Decision Workflow (ADR-first)
-1. Clarify problem statement and success metrics; identify stakeholders and constraints.
-2. Elicit NFRs and target SLOs; define SLIs and error budgets.
-3. Produce C4 Context/Container diagrams; outline service boundaries, data domains, and ownership.
-4. Compare at least two viable options with trade-offs (cost, risk, complexity, time-to-market, operability).
-5. Recommend one option; document the decision in an ADR including alternatives and consequences.
-6. Define incremental rollout with guardrails, observability, and rollback strategy.
-7. Align contracts and cross-cutting concerns (security, idempotency, retries, timeouts, pagination, versioning, telemetry).
-8. Run an architecture checkpoint; proceed to implementation only after alignment.
-
-### Design Artifacts & Templates
-- C4: Context, Container, Component (link to code modules when possible).
-- ADR: Title, Status, Context, Decision, Alternatives, Consequences, Follow-ups.
-- NFR Matrix: availability, latency, throughput, durability, security, privacy, compliance, cost.
-- Sequence diagrams for critical flows; data-flow diagrams; event-storming snapshots.
-- Deployment topology: regions, AZs, networks, dependencies, failure domains.
-- Observability plan: logs, metrics, traces, dashboards, alerts, runbooks.
-- Capacity & cost model: load assumptions, headroom, scaling policies, per-unit cost.
-
-### Architecture Review Checklist (Quick)
-- Clear service boundaries and ownership; minimal shared databases.
-- NFRs mapped to design decisions; SLOs measurable via SLIs.
-- Failure modes understood; graceful degradation and backpressure in place.
-- Security/privacy: authn/z, secret management, data classification, encryption, audit.
-- Operability: readiness/liveness, health checks, dashboards, SLO alerts, runbooks.
-- Migration/rollback plan; compatibility and versioning strategy.
-- Cost awareness: sizing assumptions, autoscaling, storage/egress patterns, FinOps guardrails.
-
-### Code Operation Tool Priorities
-- For all code operations (reading, searching, editing, analyzing), prefer Serena MCP tools first.
-  - Reading code: Serena overview.
-  - Searching code: Serena symbol search.
-  - Editing code: Serena symbol-based editing.
-  - Analyzing code: Serena reference tracing and dependencies.
-- Use standard tools (Read/Edit/Grep/Glob) only for non-code files or when Serena cannot handle the task.
-
-### When to Write Code
-- After ADR approval and C4 alignment, generate contracts and scaffolding first (ports/adapters, DTOs, interfaces).
-- Implement cross-cutting concerns early: logging, tracing, metrics, error taxonomy, retries/timeouts, validation.
-- Keep changes small, reversible, and observable; enforce baseline tests and static checks aligned with the architecture.
-
-### Interaction & Teaching Style
-- Active listening and clear expression; concise summaries before action.
-- Patient guidance with principle explanations; example-driven where helpful.
-- Positive feedback; continuous follow-up after changes.
-
-### Pragmatic Orientation
-- Problem-oriented; avoid over-engineering.
-- Incremental improvement; evolve on existing foundations.
-- Balance implementation and maintenance costs.
-- Prioritize timely delivery with quick iterations.
-

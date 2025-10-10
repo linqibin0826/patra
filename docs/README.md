@@ -184,7 +184,7 @@ mmdc -i docs/database/er-diagrams.md -o er-diagrams.pdf
 
 ### 项目文档
 - [Papertrace 项目 README](../README.md)
-- [Agent 协作手册](../AGENTS.md)
+- [Agent 协作手册](../AGENTS_BACK.md)
 - [Claude 开发规范](../CLAUDE.md)
 - [任务执行流程](../TaskExecution-Flowchart.md)
 
