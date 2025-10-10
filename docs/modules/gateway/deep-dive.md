@@ -773,7 +773,7 @@ kubectl scale deployment/patra-gateway --replicas=0
 ## 13. 参考资料
 
 ### 13.1 内部文档
-- [系统架构总览](../../overview/architecture-diagrams.md)
+- [系统架构总览](../../overview/architecture.md)
 - [平台错误处理规范](../../standards/platform-error-handling.md)
 - [Starter 使用指南](../../starters/README.md)
 

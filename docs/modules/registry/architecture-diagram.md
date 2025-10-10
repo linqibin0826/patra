@@ -448,7 +448,7 @@ patra-registry 采用**多维度配置策略**,每个维度在独立表中存储
 
 ## 相关文档
 
-- [系统架构总览](../../overview/architecture-diagrams.md)
+- [系统架构总览](../../overview/architecture.md)
 - [patra-ingest 六边形架构图](../ingest/architecture-diagram.md)
 - [核心数据模型 ER 图](../../database/er-diagrams.md)
 - [patra-registry API 文档](../../../patra-registry/patra-registry-api/README.md)

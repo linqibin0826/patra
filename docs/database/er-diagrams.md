@@ -859,7 +859,7 @@ These virtual columns are `NULL` for non-TIME strategies.
 
 ## 相关文档
 
-- [系统架构总览](../overview/architecture-diagrams.md)
+- [系统架构总览](../overview/architecture.md)
 - [patra-ingest 六边形架构图](../modules/ingest/architecture-diagram.md)
 - [patra-registry 六边形架构图](../modules/registry/architecture-diagram.md)
 - [Flyway 迁移脚本](../../patra-ingest/patra-ingest-infra/src/main/resources/db/migration/)

@@ -1582,7 +1582,7 @@ patra:
 ### 附录 C:相关文档
 
 - [平台级错误处理规范](../standards/platform-error-handling.md)
-- [跨服务错误链路最佳实践](../standards/cross-service-error-best-practices.md)
+- [跨服务错误链路最佳实践](../standards/platform-error-handling.md#11-跨服务错误链路最佳实践整合)
 - [Ingest 数据流程](./ingest-dataflow.md)
 - [Outbox 发布流程](./outbox-publishing.md)
 - [RFC 7807: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc7807)

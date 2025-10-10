@@ -268,32 +268,7 @@ public class ProvenanceClientImpl implements ProvenanceClient {
 
 **决策理由**：可作为未来优化方向，但不能替代当前的手动设计模式。
 
-## 实施计划（Implementation Plan）
 
-### 阶段 1: 规范制定（已完成）
-- ✅ 完成架构评审和决策文档（本 ADR）
-- ✅ 编写 [Feign API 设计规范](../standards/feign-api-design-guide.md)
-- ✅ 创建 [Feign API Checklist](../templates/feign-api-checklist.md)
-
-### 阶段 2: 试点实施（2025-10-07 ~ 2025-10-14）
-- [ ] patra-egress-gateway 模块重构（已部分完成）
-- [ ] patra-registry 模块验证（已符合规范）
-- [ ] 收集反馈，优化规范细节
-
-### 阶段 3: 全面推广（2025-10-15 ~ 2025-10-31）
-- [ ] patra-ingest 模块迁移
-- [ ] 其他微服务模块逐步迁移
-- [ ] 团队培训和知识分享
-
-### 阶段 4: 持续改进（2025-11-01 ~ 2025-12-31）
-- [ ] 收集使用反馈
-- [ ] 优化工具链（如 IDEA 插件、代码模板）
-- [ ] 探索自动化生成方案
-
-### 阶段 5: 复审与迭代（2025-12-31）
-- [ ] 评估实施效果
-- [ ] 总结经验教训
-- [ ] 决定是否需要调整规范
 
 ## 成功指标（Success Metrics）
 
@@ -307,15 +282,11 @@ public class ProvenanceClientImpl implements ProvenanceClient {
    - 目标：所有 Feign API 都有对应的单元测试和契约测试
    - 测量：代码覆盖率工具统计
 
-3. **迁移进度**
-   - 目标：2025-10-31 前完成所有核心微服务迁移
-   - 测量：迁移完成的服务数量 / 总服务数量
+
 
 ### 定性指标
 
-1. **开发效率**
-   - 目标：重构时间减少 30% 以上
-   - 测量：团队反馈和实际案例统计
+
 
 2. **故障率降低**
    - 目标：API 不一致导致的故障降至 0
@@ -327,16 +298,7 @@ public class ProvenanceClientImpl implements ProvenanceClient {
 
 ## 风险与缓解措施（Risks and Mitigation）
 
-### 风险 1: 迁移成本高于预期
 
-**影响**：中等
-**概率**：中等
-
-**缓解措施**：
-- 制定详细的迁移指南和 Checklist
-- 提供代码模板和自动化工具
-- 优先迁移高频使用的核心服务
-- 允许新老模式共存，逐步过渡
 
 ### 风险 2: 团队接受度低
 

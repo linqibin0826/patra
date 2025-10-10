@@ -66,9 +66,9 @@
 ## 🔗 相关文档
 
 ### 系统架构
-- [系统架构总览](../overview/architecture-diagrams.md)
-- [C4 容器架构图](../overview/architecture-diagrams.md#c4-container-diagram)
-- [数据流部署视图](../overview/architecture-diagrams.md#deployment-diagram)
+- [系统架构总览](../overview/architecture.md)
+- [C4 容器架构图](../overview/architecture.md#1-c4-container-架构图系统总览)
+- [数据流部署视图](../overview/architecture.md#3-数据流部署视图)
 
 ### 业务流程
 - [采集数据流](../process/ingest-dataflow.md)

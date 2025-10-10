@@ -167,6 +167,68 @@ class DemoMappingContributor implements ErrorMappingContributor {
 - **配置约束**：`application.yaml` 经由 `spring.config.import` 引入新的 `registry-error-config.yaml`，本地即可启用统一引擎、观测与熔断策略。
 - **后续建议**：补充字典查询/校验用例的 ProblemDetail 集成测试，与 `patra-registry` 未来的错误码注册中心实现联动校验。
 
-## 11. 参考资料
+## 11. 跨服务错误链路最佳实践
 
-- 跨服务错误链路最佳实践：`docs/cross-service-error-best-practices.md`
+目标：确保“抛错一致、出形一致、消费一致”，形成可观测、可治理、可回归的跨服务错误闭环。
+
+### 11.1 端到端流程（建议）
+- 服务端（下游）
+  - 控制器/适配层：禁止返回 null；遇到“未找到/校验失败/冲突/限流/不可用”抛出相应领域异常；
+  - 错误出形：统一由 Web 适配层输出 RFC7807 `ProblemDetail`，其中 `status = errorCode.httpStatus()`，`code = <CTX>-NNNN`；
+  - 0xxx 段：使用 `HttpStdErrors.Group` 获取（按 `patra.error.context-prefix` 绑定），不在枚举维护。
+- 客户端（上游）
+  - Feign：`ProblemDetailErrorDecoder` 将下游错误解码为 `RemoteCallException`；
+  - 语义判断：使用 `RemoteErrorHelper`（`isNotFound/isClientError/isServerError/isRetryable`）分类处理；
+  - 降级与重试：404 直接失败；5xx/429/网络错误按策略重试/熔断；其他 4xx 抛本地领域异常。
+
+### 11.2 错误码与状态
+- 错误码接口：`ErrorCodeLike` 必须实现 `httpStatus()`；
+- HTTP 对齐段（0xxx）：统一用 `HttpStdErrors`；
+- 业务段（1xxx）：在各模块枚举中维护，明确 `httpStatus()`。
+
+### 11.3 Do / Don’t
+- Do：注入 `HttpStdErrors.Group`；在 Adapter 层抛领域异常；保持 ProblemDetail 的 `code/path/timestamp/traceId` 字段；
+  在 Ingest 侧使用 `RemoteErrorHelper` 分类决定降级/抛错。
+- Don’t：在枚举维护 0xxx；实现/依赖已废弃的 `StatusMappingStrategy`；在领域模型中硬编码 HTTP 概念；吞异常导致 200 + 空体。
+
+### 11.4 最小示例
+
+```java
+// 下游（Registry）示例：未找到 → 抛领域异常 → REG-0404（http 404）
+@RestController
+@RequiredArgsConstructor
+class ProvenanceClientImpl implements ProvenanceClient {
+    private final ProvenanceConfigAppService appService; private final ProvenanceApiConverter converter;
+    @Override public ProvenanceResp getProvenance(ProvenanceCode code) {
+        return appService.findProvenance(code)
+            .map(converter::toResp)
+            .orElseThrow(() -> new ProvenanceNotFoundException("Provenance not found: code=" + code));
+    }
+}
+
+// 上游（Ingest）示例：远端错误分类
+private ProvenanceConfigSnapshot handleRemote(RemoteCallException ex, String code, String operationType, String endpoint) {
+    if (RemoteErrorHelper.isNotFound(ex)) {
+        String msg = String.format("Provenance config not found, code=%s, operationType=%s, endpoint=%s", code, operationType, endpoint);
+        throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
+    }
+    if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
+        return createMinimalSnapshot(code);
+    }
+    String msg = String.format(
+            "Registry client error, code=%s, status=%d, remoteCode=%s, traceId=%s",
+            code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId());
+    throw new IngestConfigurationException(code, operationType, endpoint, msg, ex);
+}
+```
+
+### 11.5 配置要点与观测
+- `patra.error.context-prefix`：各服务必须配置（如 REG/ING）。
+- `patra.feign.problem.*`：宽容模式、响应体大小与观测阈值按需设置。
+- `patra.tracing.header-names`：统一 TraceId 读取顺序。
+- 指标命名：`papertrace.error.*`；建议通过 Prometheus/Grafana 监控端到端错误链路。
+
+## 12. 参考资料
+
+
+- 相关：Feign API 设计指南、日志规范。

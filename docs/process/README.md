@@ -23,8 +23,8 @@
 ## 🔗 相关文档
 
 ### 系统架构
-- [系统架构总览](../overview/architecture-diagrams.md)
-- [C4 容器架构图](../overview/architecture-diagrams.md#c4-container-diagram)
+- [系统架构总览](../overview/architecture.md)
+- [C4 容器架构图](../overview/architecture.md#1-c4-container-架构图系统总览)
 
 ### 微服务架构
 - [patra-ingest 六边形架构](../modules/ingest/architecture-diagram.md)

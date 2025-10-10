@@ -217,44 +217,7 @@
 
 ---
 
-## 6. 迁移检查清单（现有代码重构）
 
-### 6.1 识别待迁移代码
-
-- [ ] **查找 Feign Client**：`grep -r "@FeignClient" --include="*.java"`
-- [ ] **识别 Controller**：找到对应的 REST 控制器
-- [ ] **评估影响范围**：确定调用方和被调用方
-
-### 6.2 重构步骤
-
-- [ ] **Step 1: 创建 Endpoint 接口**
-  - [ ] 在 API 模块创建 `{Service}Endpoint`
-  - [ ] 定义 `BASE_PATH` 常量
-  - [ ] 添加方法签名和注解
-- [ ] **Step 2: 重构 Client 接口**
-  - [ ] 修改为 `extends {Service}Endpoint`
-  - [ ] 保留 `@FeignClient` 注解
-  - [ ] 移除重复的方法定义
-- [ ] **Step 3: Controller 实现 Client**
-  - [ ] 添加 `implements {Service}Client`
-  - [ ] 使用 `@Override` 标记方法
-  - [ ] 验证编译通过
-- [ ] **Step 4: 验证测试**
-  - [ ] 运行单元测试
-  - [ ] 运行集成测试
-  - [ ] 运行契约测试
-
-### 6.3 验证和部署
-
-- [ ] **编译检查**：`mvn clean compile`
-- [ ] **测试覆盖**：`mvn test`
-- [ ] **集成测试**：`mvn verify`
-- [ ] **本地验证**：启动服务，手动测试关键路径
-- [ ] **文档更新**：更新模块 README 和 API 文档
-- [ ] **Code Review**：提交 PR，团队评审
-- [ ] **灰度发布**：小流量验证，逐步放量
-
----
 
 ## 7. 常见问题检查
 

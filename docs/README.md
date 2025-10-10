@@ -9,7 +9,7 @@
 
 ### 🏗️ 系统架构
 
-- **[系统架构总览](./overview/architecture-diagrams.md)**
+- **[系统架构总览](./overview/architecture.md)**
   - C4 Container 架构图（基础版 & 详细版）
   - 微服务交互序列图（采集任务执行流程）
   - 数据流部署视图（物理拓扑）
@@ -47,7 +47,7 @@
 
 - **[API 文档索引](./api/README.md)** - API 设计规范与文档
 - **[Feign API 设计指南](./standards/feign-api-design-guide.md)** - 内部 RPC 契约设计
-- **[跨服务错误处理](./standards/cross-service-error-best-practices.md)** - 错误传播策略
+- **[跨服务错误处理](./standards/platform-error-handling.md)** - 错误传播策略
 
 ### ⚙️ 运维文档
 
@@ -79,7 +79,7 @@
 
 ```bash
 # 推荐阅读顺序
-1. docs/overview/architecture-diagrams.md       # 系统整体架构
+1. docs/overview/architecture.md       # 系统整体架构
 2. docs/modules/ingest/architecture-diagram.md  # 采集引擎详解
 3. docs/modules/registry/architecture-diagram.md # 配置中心详解
 4. docs/database/er-diagrams.md                 # 数据模型深入
@@ -104,7 +104,7 @@
 npm install -g @mermaid-js/mermaid-cli
 
 # 导出为 PNG (透明背景)
-mmdc -i docs/overview/architecture-diagrams.md -o architecture.png -b transparent
+mmdc -i docs/overview/architecture.md -o architecture.png -b transparent
 
 # 导出为 SVG (矢量图)
 mmdc -i docs/modules/ingest/architecture-diagram.md -o ingest-hexagonal.svg
@@ -134,7 +134,7 @@ mmdc -i docs/database/er-diagrams.md -o er-diagrams.pdf
 ### C4 Container Diagram
 - **用途**: 系统容器级架构视图
 - **优势**: 清晰展示微服务边界、外部系统、技术栈
-- **文件**: `overview/architecture-diagrams.md`
+- **文件**: `overview/architecture.md`
 
 ### Hexagonal Architecture Diagram
 - **用途**: 六边形架构分层视图
@@ -149,7 +149,7 @@ mmdc -i docs/database/er-diagrams.md -o er-diagrams.pdf
 ### Sequence Diagram
 - **用途**: 时序交互流程
 - **优势**: 展示微服务间调用顺序、消息传递
-- **文件**: `overview/architecture-diagrams.md`
+- **文件**: `overview/architecture.md`
 
 ### Class Diagram
 - **用途**: 领域模型与端口接口

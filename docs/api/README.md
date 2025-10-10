@@ -12,7 +12,7 @@
   - SpringDoc 注解使用（@Operation、@Schema、@ApiResponse）
   - 错误处理与响应封装
 
-- **[跨服务错误处理最佳实践](../standards/cross-service-error-best-practices.md)** - 错误传播与处理策略
+- **[跨服务错误处理最佳实践](../standards/platform-error-handling.md#11-跨服务错误链路最佳实践整合)** - 错误传播与处理策略
   - ProblemDetail 统一错误格式
   - 错误码规范、重试策略
   - Feign 异常映射
