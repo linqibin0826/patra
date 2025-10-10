@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.model.entity;
 
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
-import com.patra.ingest.domain.model.vo.ExecutionWindow;
+import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.domain.model.vo.RunContext;
 import com.patra.ingest.domain.model.vo.RunStats;
 import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
@@ -24,7 +24,7 @@ public class TaskRun {
     private Instant lastHeartbeat;
     private String error;
     private TaskRunCheckpoint checkpoint;
-    private ExecutionWindow executionWindow;
+    private WindowSpec windowSpec;
     private RunContext runContext;
 
     public TaskRun(Long id, Long taskId, int attemptNo, String provenanceCode, String operationCode) {
@@ -36,7 +36,7 @@ public class TaskRun {
                 TaskRunStatus.PLANNED,
                 RunStats.empty(),
                 TaskRunCheckpoint.empty(),
-                ExecutionWindow.empty(),
+                null,
                 null,
                 null,
                 null,
@@ -52,7 +52,7 @@ public class TaskRun {
                     TaskRunStatus status,
                     RunStats stats,
                     TaskRunCheckpoint checkpoint,
-                    ExecutionWindow executionWindow,
+                    WindowSpec windowSpec,
                     Instant startedAt,
                     Instant finishedAt,
                     Instant lastHeartbeat,
@@ -66,7 +66,7 @@ public class TaskRun {
         this.status = status;
         this.stats = stats == null ? RunStats.empty() : stats;
         this.checkpoint = checkpoint == null ? TaskRunCheckpoint.empty() : checkpoint;
-        this.executionWindow = executionWindow == null ? ExecutionWindow.empty() : executionWindow;
+        this.windowSpec = windowSpec;
         this.startedAt = startedAt;
         this.finishedAt = finishedAt;
         this.lastHeartbeat = lastHeartbeat;
@@ -85,7 +85,7 @@ public class TaskRun {
                                   Instant finishedAt,
                                   Instant lastHeartbeat,
                                   TaskRunCheckpoint checkpoint,
-                                  ExecutionWindow window,
+                                  WindowSpec windowSpec,
                                   RunContext runContext,
                                   String error) {
         return new TaskRun(id,
@@ -96,7 +96,7 @@ public class TaskRun {
                 status,
                 stats,
                 checkpoint,
-                window,
+                windowSpec,
                 startedAt,
                 finishedAt,
                 lastHeartbeat,
@@ -111,8 +111,8 @@ public class TaskRun {
         }
     }
 
-    public void assignWindow(ExecutionWindow window) {
-        this.executionWindow = window == null ? ExecutionWindow.empty() : window;
+    public void assignWindow(WindowSpec windowSpec) {
+        this.windowSpec = windowSpec;
     }
 
     public void updateCheckpoint(TaskRunCheckpoint checkpoint) {

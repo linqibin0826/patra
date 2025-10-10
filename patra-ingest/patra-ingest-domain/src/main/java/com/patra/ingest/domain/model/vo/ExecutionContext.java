@@ -15,7 +15,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
  * @param compiledQuery 编译后的查询
  * @param compiledParams 编译后的参数
  * @param normalizedExpression 规范化表达式
- * @param executionWindow 执行窗口
+ * @param windowSpec 窗口规格
  * @author linqibin
  * @since 0.1.0
  */
@@ -29,6 +29,6 @@ public record ExecutionContext(
         String compiledQuery,
         JsonNode compiledParams,
         String normalizedExpression,
-        ExecutionWindow executionWindow
+        WindowSpec windowSpec
 ) {
 }
