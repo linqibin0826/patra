@@ -420,7 +420,7 @@ mmdc -i architecture-diagram.md -o hexagonal-arch.png -b transparent
 
 ## 相关文档
 
-- [系统架构总览](../../overview/architecture-diagrams.md)
+- [系统架构总览](../../overview/architecture.md)
 - [核心数据模型 ER 图](../../database/er-diagrams.md)
 - [任务执行流程文档](../../../TaskExecution-Flowchart.md)
 - [patra-ingest README](../../../patra-ingest/README.md)

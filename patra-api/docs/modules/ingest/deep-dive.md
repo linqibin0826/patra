@@ -105,12 +105,12 @@ usecase/relay/
 2. **一致性**：与 `PlanAssembly`（非聚合但命名特殊）形成一致的命名风格
 3. **明确边界**：在六边形架构中清晰标识聚合边界
 
-**包组织原则**（v0.1.0 重构）：
+**包组织原则**：
 - 领域事件统一在 `domain/event/`（避免重复目录）
 - 值对象统一在 `domain/model/vo/`（如 `PlanTriggerNorm`，从 `command/` 重新分类）
 - Command/Query 对象属于应用层关注点，不应出现在 domain 层
 
-> 相关重构详情见仓库根目录 `DOMAIN_REFACTORING_REPORT.md`
+
 
 ### 聚合根与实体
 

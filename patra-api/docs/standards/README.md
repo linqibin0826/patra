@@ -21,10 +21,7 @@
   - 错误码规范、错误分类
   - 异常映射、重试策略
 
-- **[跨服务错误最佳实践](./cross-service-error-best-practices.md)** - 错误传播与处理
-  - Feign 异常解码
-  - 错误上下文传递
-  - 降级与熔断
+
 
 ### 日志规范
 - **[日志规范](./logging-convention.md)** - 统一日志格式与级别
@@ -38,9 +35,9 @@
 ## 🔗 相关文档
 
 ### 架构文档
-- [系统架构总览](../overview/architecture-diagrams.md)
+- [系统架构总览](../overview/architecture.md)
 - [六边形架构图](../modules/ingest/architecture-diagram.md)
-- [ADR 索引](../architecture/README.md)
+- [ADR-001: 统一 Feign API 设计模式](../architecture/ADR-001-feign-api-unified-design.md)
 
 ### 开发指南
 - [CLAUDE.md](../../CLAUDE.md) - Claude 开发规范
