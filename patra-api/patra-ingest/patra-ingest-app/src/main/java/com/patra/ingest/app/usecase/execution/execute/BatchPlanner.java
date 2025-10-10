@@ -15,7 +15,7 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
  *   <li>策略模式：不同数据源（provenanceCode）可有不同的规划策略。</li>
  *   <li>批次限制：规划时检查批次数是否超过上限，超限则抛异常或标记 exceedsLimit。</li>
  *   <li>游标支持：支持基于游标的分页规划（如 token-based pagination）。</li>
- *   <li>窗口感知：根据 ExecutionWindow 调整查询范围。</li>
+ *   <li>窗口感知：根据 WindowSpec 策略调整查询范围（TIME/ID_RANGE/CURSOR_LANDMARK等）。</li>
  * </ul>
  * </p>
  * <p>

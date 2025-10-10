@@ -6,7 +6,6 @@ import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
-import com.patra.ingest.domain.model.vo.ExecutionWindow;
 import com.patra.ingest.domain.model.vo.RunContext;
 import com.patra.ingest.domain.model.vo.RunStats;
 import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
@@ -24,8 +23,6 @@ public interface TaskRunConverter {
 
     @Mapping(target = "statusCode", source = "status", qualifiedByName = "taskRunStatusToCode")
     @Mapping(target = "stats", source = "stats", qualifiedByName = "runStatsToJson")
-    @Mapping(target = "windowFrom", source = "executionWindow.windowFrom")
-    @Mapping(target = "windowTo", source = "executionWindow.windowTo")
     @Mapping(target = "checkpoint", source = "checkpoint", qualifiedByName = "checkpointToJson")
     @Mapping(target = "schedulerRunId", source = "runContext.schedulerRunId")
     @Mapping(target = "correlationId", source = "runContext.correlationId")
@@ -42,7 +39,6 @@ public interface TaskRunConverter {
         TaskRunStatus status = taskRunStatusFromCode(entity.getStatusCode());
         RunStats stats = deriveStats(entity.getStats());
         TaskRunCheckpoint checkpoint = checkpointFromNode(entity.getCheckpoint());
-        ExecutionWindow window = ExecutionWindow.empty();
         RunContext context = new RunContext(entity.getSchedulerRunId(), entity.getCorrelationId());
         return TaskRun.restore(
                 entity.getId(),
@@ -56,7 +52,7 @@ public interface TaskRunConverter {
                 entity.getFinishedAt(),
                 entity.getLastHeartbeat(),
                 checkpoint,
-                window,
+                null,
                 context,
                 entity.getError());
     }
