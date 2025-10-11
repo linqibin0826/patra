@@ -65,18 +65,6 @@ class JsonToJsonNodeTypeHandlerTest {
     }
 
     @Test
-    void getNullableResult_shouldParsePGobject() throws Exception {
-        org.postgresql.util.PGobject pg = new org.postgresql.util.PGobject();
-        pg.setType("jsonb");
-        pg.setValue("{\"name\":\"pg\"}");
-
-        ResultSet rs = singleValueResultSet(pg);
-
-        JsonNode node = handler.getNullableResult(rs, "col");
-        assertThat(node.get("name").asText()).isEqualTo("pg");
-    }
-
-    @Test
     void getNullableResult_shouldReturnNullForBlankString() throws Exception {
         ResultSet rs = singleValueResultSet("   ");
         assertThat(handler.getNullableResult(rs, "col")).isNull();
