@@ -15,7 +15,7 @@ class HttpStdErrorsTest {
         assertThat(g1.NOT_FOUND().code()).isEqualTo("ING-0404");
         assertThat(g1.NOT_FOUND().httpStatus()).isEqualTo(404);
 
-        // null/blank 回退 UNKNOWN
+        // Null/blank prefixes fall back to UNKNOWN
         assertThat(HttpStdErrors.of(null).BAD_REQUEST().code()).isEqualTo("UNKNOWN-0400");
         assertThat(HttpStdErrors.of(" ").INTERNAL_ERROR().httpStatus()).isEqualTo(500);
     }

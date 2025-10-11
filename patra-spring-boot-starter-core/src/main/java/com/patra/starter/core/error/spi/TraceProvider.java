@@ -3,20 +3,15 @@ package com.patra.starter.core.error.spi;
 import java.util.Optional;
 
 /**
- * 从当前执行上下文提取 TraceId 的提供者接口。
- *
- * <p>可支持多种追踪系统与上下文（MDC、请求头等）。
- *
- * @author linqibin
- * @since 0.1.0
- * @see com.patra.starter.core.error.pipeline.ErrorResolutionPipeline
+ * SPI for retrieving the current trace identifier from the execution context.
+ * <p>Implementations may consult MDC, request headers, or other tracing systems.</p>
  */
 public interface TraceProvider {
-    
+
     /**
-     * 从执行上下文中获取当前 TraceId。
+     * Extracts the trace identifier from the current execution context.
      *
-     * @return 若可用则返回 TraceId，否则为空
+     * @return the trace identifier if available; otherwise empty
      */
     Optional<String> getCurrentTraceId();
 }

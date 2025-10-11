@@ -7,71 +7,71 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 全局（非 Spring）{@link ObjectMapper} 持有与获取器。
- * <p>
- * 设计目标：
+ * Global (non-Spring) holder for a shared {@link ObjectMapper}.
+ * <p>Goals:</p>
  * <ul>
- *   <li>为 <b>不依赖 Spring</b> 的基础设施/工具类提供统一的 JSON 序列化配置来源；</li>
- *   <li>避免在每个调用点反复 new {@code ObjectMapper} 带来的性能与配置漂移；</li>
- *   <li>保持与 Spring 环境的配置一致性——当存在 Spring 时，通过桥接在启动期注入应用内的{@code ObjectMapper}。</li>
+ *   <li>Provide infrastructure and utility code that runs outside Spring with a
+ *       consistent JSON configuration.</li>
+ *   <li>Avoid repeatedly instantiating {@code ObjectMapper}, which leads to
+ *       divergent configuration and unnecessary cost.</li>
+ *   <li>Stay aligned with the Spring-managed mapper by allowing the starter to
+ *       bridge the container instance into this holder.</li>
  * </ul>
  *
- * <h3>与 Spring 中的注入方式的区别</h3>
- * <p>
- * 在 Spring 环境中，推荐的做法是 <b>依赖注入（DI）</b>：
+ * <h3>Relationship to Spring dependency injection</h3>
+ * <p>Within Spring, prefer constructor injection:</p>
  * <pre>{@code
  * @Autowired
  * private ObjectMapper objectMapper;
  * }</pre>
- * 这种方式由 Spring 管理生命周期、配置与范围，具备天然的可测试性与可替换性。
- * </p>
- * <p>
- * 本类则是 <b>静态全局持有者</b>（不依赖 Spring）。关键差异：
+ * <p>The container manages lifecycle, configuration, and scope, keeping code
+ * testable and replaceable.</p>
+ * <p>This class is a static holder for contexts where DI is unavailable. Key
+ * differences:</p>
  * <ul>
- *   <li><b>来源</b>：DI 由容器提供；Holder 来自 <em>显式注册</em> 或 <em>懒加载默认值</em>。</li>
- *   <li><b>生命周期</b>：DI 由容器管理；Holder 的实例在首次获取时初始化或被注册时覆盖。</li>
- *   <li><b>一致性</b>：DI 与应用配置完全一致；Holder 的默认实例仅通过 {@link JsonMapper#builder()} + {@link JsonMapper.Builder#findAndAddModules()}，可能与应用自定义配置有差异。</li>
- *   <li><b>使用场景</b>：
- *     <ul>
- *       <li>推荐：在 <b>非 Spring</b> 代码路径（例如通用工具、SDK、驱动层）需要 JSON 能力时使用。</li>
- *       <li>不推荐：在业务服务/组件里替代 DI 使用，避免破坏可测试性与配置隔离。</li>
- *     </ul>
- *   </li>
- * </ul>
- * </p>
- *
- * <h3>与 Spring 的桥接</h3>
- * <p>
- * 当项目启用了 {@code patra-spring-boot-starter-core}，其 {@code JacksonProvider}
- * 会在 {@code ApplicationContext} 就绪后调用 {@link #register(ObjectMapper)}，
- * 将 Spring 管理的 {@code ObjectMapper} 注入到本 Holder 中，实现两套世界的配置统一。
- * 没有 Spring 时，{@link #getObjectMapper()} 会按需创建一个默认的 {@code ObjectMapper}。
- * </p>
- *
- * <h3>线程安全</h3>
- * <p>
- * 通过 {@link AtomicReference} 实现 <b>安全发布</b> 与 <b>懒加载</b>。首次获取时使用 CAS
- *（Compare-And-Set）写入默认实例；随后所有线程可见同一实例。显式调用 {@link #register(ObjectMapper)}
- * 会用提供的实例替换当前实例。
- * </p>
- *
- * <h3>使用建议</h3>
- * <ul>
- *   <li>Spring 环境优先使用 <b>依赖注入</b> 的 {@code ObjectMapper}；仅在无法注入的静态/基础设施代码中使用本 Holder。</li>
- *   <li>务必在应用启动早期完成 {@link #register(ObjectMapper)}，以避免先取到默认实例、后又被覆盖导致行为不一致。</li>
- *   <li>本类 <b>不提供 reset</b> 接口，避免运行期被随意切换实例；测试中如需隔离，可在套件级别注册测试专用实例并在结束后再注册回原实例。</li>
+ *   <li><b>Source</b>: DI supplies the mapper; the holder relies on explicit
+ *       registration or lazy fallback.</li>
+ *   <li><b>Lifecycle</b>: DI is container-managed; the holder initializes on
+ *       first access or when {@link #register(ObjectMapper)} is invoked.</li>
+ *   <li><b>Consistency</b>: The fallback mapper is built with
+ *       {@link JsonMapper#builder()} and may diverge from custom application
+ *       settings; register early if you need parity.</li>
+ *   <li><b>Use cases</b>: Suitable for static helpers, SDKs, or driver code that
+ *       cannot rely on DI. Avoid using it inside business services to preserve
+ *       testability.</li>
  * </ul>
  *
- * <h3>示例</h3>
+ * <h3>Bridging from Spring</h3>
+ * <p>When {@code patra-spring-boot-starter-core} is on the classpath, its
+ * {@code JacksonProvider} registers the container-managed mapper once the
+ * {@code ApplicationContext} is ready. Outside Spring, {@link #getObjectMapper()}
+ * lazily creates a default mapper.</p>
+ *
+ * <h3>Thread safety</h3>
+ * <p>An {@link AtomicReference} provides safe publication and lazy
+ * initialization. The first access creates the default mapper via CAS; explicit
+ * registration replaces the current instance.</p>
+ *
+ * <h3>Usage guidelines</h3>
+ * <ul>
+ *   <li>Prefer DI in Spring-managed code; fall back to this holder only where
+ *       injection is impossible.</li>
+ *   <li>Register the container-managed mapper early in application startup to
+ *       avoid switching from the fallback instance later.</li>
+ *   <li>No reset method is provided to prevent accidental runtime switching. For
+ *       tests, register a test mapper at suite setup and restore afterwards.</li>
+ * </ul>
+ *
+ * <h3>Example</h3>
  * <pre>{@code
- * // 非 Spring 环境
+ * // Non-Spring usage
  * ObjectMapper om = JsonMapperHolder.getObjectMapper();
- * String json = om.writeValueAsString(somePojo);
+ * String json = om.writeValueAsString(payload);
  *
- * // Spring 环境（在 JacksonProvider 中会自动 register）
+ * // Spring usage (registration happens in JacksonProvider)
  * @Service
  * public class FooService {
- *   private final ObjectMapper om; // 仍推荐注入
+ *   private final ObjectMapper om; // still recommended via DI
  *   public FooService(ObjectMapper om) { this.om = om; }
  * }
  * }</pre>
@@ -79,22 +79,19 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class JsonMapperHolder {
 
     /**
-     * 全局唯一的 {@link ObjectMapper} 持有者。
-     * <p>
-     * 为空表示尚未注册；{@link #getObjectMapper()} 将在首次访问时用默认配置创建并 CAS 设置。
+     * Global {@link ObjectMapper} reference. {@code null} indicates that no
+     * instance has been registered yet.
      */
     private static final AtomicReference<ObjectMapper> HOLDER = new AtomicReference<>();
 
-    private JsonMapperHolder() { }
+    private JsonMapperHolder() {
+    }
 
     /**
-     * 获取全局 {@link ObjectMapper}。
-     * <p>
-     * 优先返回已注册实例；若尚未注册，则创建一个 <b>默认配置</b> 的 {@link JsonMapper}：
-     * <ul>
-     *   <li>启用 {@link JsonMapper.Builder#findAndAddModules()}，自动发现并注册模块（如 jsr310 等）。</li>
-     * </ul>
-     * 注意：默认实例可能与应用在 Spring 中的自定义配置不一致，<b>如需一致性请在启动期调用 {@link #register(ObjectMapper)}</b>。
+     * Returns the shared {@link ObjectMapper}.
+     * <p>Registered instances take precedence. If none is registered, a default
+     * {@link JsonMapper} is lazily created with
+     * {@link JsonMapper.Builder#findAndAddModules()}.</p>
      */
     public static ObjectMapper getObjectMapper() {
         ObjectMapper mapper = HOLDER.get();
@@ -109,22 +106,19 @@ public final class JsonMapperHolder {
     }
 
     /**
-     * 注册（或覆盖）全局 {@link ObjectMapper}。
-     * <p>
-     * 典型调用方：
+     * Registers (or replaces) the global {@link ObjectMapper}.
+     * <p>Typical callers:</p>
      * <ul>
-     *   <li>Spring 启动完成后，由 {@code JacksonProvider} 将容器内的 {@code ObjectMapper} 注册进来；</li>
-     *   <li>非 Spring 环境的引导代码，在应用入口处注册自定义配置的 {@code ObjectMapper}。</li>
+     *   <li>Spring's {@code JacksonProvider} after the context is ready.</li>
+     *   <li>Bootstrap code in non-Spring environments.</li>
      * </ul>
-     * <b>警告：</b>不建议在业务运行期频繁变更注册的实例，以免造成行为漂移。
+     * <p>Avoid frequent changes at runtime to prevent configuration drift.</p>
      */
     public static void register(ObjectMapper objectMapper) {
-        HOLDER.set(Objects.requireNonNull(objectMapper, "objectMapper 不能为空"));
+        HOLDER.set(Objects.requireNonNull(objectMapper, "objectMapper must not be null"));
     }
 
-    /**
-     * 创建一个默认的 {@link ObjectMapper}，仅在未注册时作为回退使用。
-     */
+    /** Creates the fallback {@link ObjectMapper} used when none is registered. */
     private static ObjectMapper createDefault() {
         return JsonMapper.builder()
                 .findAndAddModules()

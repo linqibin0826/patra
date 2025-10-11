@@ -7,21 +7,20 @@ import com.patra.common.json.JsonMapperHolder;
 import org.springframework.util.StringUtils;
 
 /**
- * <p><b>JSON 节点转换支撑</b></p>
- * <p>为 MapStruct 默认方法复用的 JSON 解析/序列化工具，统一复用平台级 {@link ObjectMapper}。</p>
+ * Helper interface for MapStruct default methods to reuse the platform-configured {@link ObjectMapper}.
  */
 public interface JsonNodeSupport {
 
-    /** 获取平台统一配置的 {@link ObjectMapper}。 */
+    /** Returns the shared {@link ObjectMapper}. */
     private ObjectMapper jsonMapper() {
         return JsonMapperHolder.getObjectMapper();
     }
 
     /**
-     * 字符串转 {@link JsonNode}。
+     * Converts a JSON string to a {@link JsonNode}.
      *
-     * @param json 原始 JSON 字符串
-     * @return JsonNode 或 null
+     * @param json source JSON string
+     * @return parsed node or {@code null} if blank
      */
     default JsonNode readJsonNode(String json) {
         if (!StringUtils.hasText(json)) {
@@ -30,15 +29,15 @@ public interface JsonNodeSupport {
         try {
             return jsonMapper().readTree(json);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("JSON 解析失败", e);
+            throw new IllegalArgumentException("Unable to parse JSON", e);
         }
     }
 
     /**
-     * {@link JsonNode} 转字符串。
+     * Converts a {@link JsonNode} to its JSON string representation.
      *
-     * @param node JsonNode 对象
-     * @return JSON 字符串或 null
+     * @param node node to serialize
+     * @return JSON string or {@code null} if the node is {@code null}
      */
     default String writeJsonString(JsonNode node) {
         if (node == null || node.isNull()) {
@@ -47,7 +46,7 @@ public interface JsonNodeSupport {
         try {
             return jsonMapper().writeValueAsString(node);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("JSON 序列化失败", e);
+            throw new IllegalArgumentException("Unable to serialize JsonNode", e);
         }
     }
 }

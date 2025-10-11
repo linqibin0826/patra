@@ -11,14 +11,16 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 通用聚合根抽象基类。
- * <p>
- * 约束与约定：
- * - 仅依赖 JDK，domain 层零框架污染。
- * - 外部只能通过聚合根暴露的方法改变聚合内部状态，保持不变量。
- * - 领域事件只挂在聚合根上，由应用层拉取并转发到 Outbox/消息总线。
+ * Abstract base class for aggregate roots.
+ * <p>Constraints and conventions:</p>
+ * <ul>
+ *   <li>Depends solely on the JDK; the domain layer stays framework-free.</li>
+ *   <li>State changes must occur through aggregate behaviors to preserve invariants.</li>
+ *   <li>Domain events remain attached to the aggregate and are pulled by the
+ *       application layer for publication (e.g., outbox or message bus).</li>
+ * </ul>
  *
- * @param <ID> 聚合根ID类型（值对象或基本类型封装）
+ * @param <ID> aggregate identifier type (value object or wrapped primitive)
  */
 public abstract class AggregateRoot<ID> implements Serializable {
 
@@ -26,25 +28,21 @@ public abstract class AggregateRoot<ID> implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 聚合根标识。由仓储在首次持久化时产生或赋值。
-     * -- GETTER --
-     *  获取聚合根ID（可能为 null，表示尚未持久化）。
-
+     * Aggregate identifier assigned by the repository during initial persistence.
+     * <p>Getter returns {@code null} while the aggregate has not been persisted.</p>
      */
     @Getter
     private ID id;
 
     /**
-     * 乐观锁版本（可选）：由基础设施层在持久化时维护；domain 可只读或参与简单校验。
-     * -- GETTER --
-     *  获取乐观锁版本。
-
+     * Optional optimistic-lock version maintained by the infrastructure layer.
+     * <p>Exposed primarily for read-only checks within the domain.</p>
      */
     @Getter
     private long version;
 
     /**
-     * 暂存的领域事件，等待应用层拉取并发布。
+     * Pending domain events awaiting collection by the application layer.
      */
     private final transient List<DomainEvent> domainEvents = new ArrayList<>();
 
@@ -56,14 +54,16 @@ public abstract class AggregateRoot<ID> implements Serializable {
     }
 
     /**
-     * 仅供仓储在重建或首次保存时设置 ID。应用代码不要调用。
+     * Assigns the identifier when rebuilding or persisting for the first time.
+     * Intended for repository use only.
      */
     public void assignId(ID id) {
         this.id = Objects.requireNonNull(id, "aggregate id must not be null");
     }
 
     /**
-     * 仅供基础设施层在持久化时回填版本。
+     * Sets the optimistic-lock version. Infrastructure should call this when
+     * persisting updates.
      */
     public void assignVersion(long version) {
         if (version < 0) {
@@ -73,14 +73,14 @@ public abstract class AggregateRoot<ID> implements Serializable {
     }
 
     /**
-     * 是否为瞬态对象（未持久化）。
+     * Indicates whether the aggregate has not yet been persisted.
      */
     public boolean isTransient() {
         return this.id == null;
     }
 
     /**
-     * 聚合根添加领域事件（由聚合内部行为在完成状态变更后调用）。
+     * Registers a domain event produced by aggregate behavior after state changes.
      */
     protected void addDomainEvent(DomainEvent event) {
         if (event == null) return;
@@ -88,8 +88,8 @@ public abstract class AggregateRoot<ID> implements Serializable {
     }
 
     /**
-     * 拉取并清空事件（应用层在事务边界内调用，随后发布到 Outbox）。
-     * 一次性取走，保证不会重复发布。
+     * Drains and clears staged domain events. The application layer should call
+     * this inside the transaction boundary before publishing to the outbox.
      */
     public List<DomainEvent> pullDomainEvents() {
         if (domainEvents.isEmpty()) {
@@ -101,24 +101,26 @@ public abstract class AggregateRoot<ID> implements Serializable {
     }
 
     /**
-     * 只读查看事件（调试或测试用）。
+     * Returns an immutable view of staged domain events (for debugging or tests).
      */
     public List<DomainEvent> peekDomainEvents() {
         return Collections.unmodifiableList(domainEvents);
     }
 
     /**
-     * 领域不变量校验钩子：在关键状态变更后调用，抛出 IllegalStateException 终止非法状态。
-     * 子类可覆写并在用例中显式调用，或在每个行为方法末尾调用。
+     * Hook for domain invariant checks. Override to validate state after critical
+     * transitions and throw {@link IllegalStateException} when invariants are
+     * violated.
      */
     protected void assertInvariants() {
-        // 默认空实现；子类自行校验（如状态机合法性、值对象一致性等）
+        // Default no-op; subclasses should enforce invariants such as state-machine
+        // validity or value-object consistency.
     }
 
-    /* ========== 可选辅助：为事件赋默认发生时间 ========== */
+    /* ========== Optional helper to assign default timestamps to events ========== */
 
     /**
-     * 工具：如果事件没有发生时间，补上当前时间（子类可用）。
+     * Supplies the current time when an event timestamp is missing.
      */
     protected static Instant nowIfNull(Instant t) {
         return (t == null) ? Instant.now() : t;

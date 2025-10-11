@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="60 seconds">
 
-    <!-- 保留 Spring Boot 默认转换（提供 %clr 等） -->
+    <!-- Keep Spring Boot defaults (provides %clr and related converters) -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- SkyWalking 转换词（可用 %tid / %sw_ctx；当前 Pattern 里用的是 %X{tid}） -->
+    <!-- SkyWalking converters (support %tid / %sw_ctx; the pattern below uses %X{tid}) -->
     <conversionRule conversionWord="tid"
                     converterClass="org.apache.skywalking.apm.toolkit.log.logback.v1.x.LogbackPatternConverter"/>
     <conversionRule conversionWord="sw_ctx"
                     converterClass="org.apache.skywalking.apm.toolkit.log.logback.v1.x.LogbackSkyWalkingContextPatternConverter"/>
 
-    <!-- 通用参数（去掉环境依赖，统一落 ./logs/app） -->
+    <!-- Shared properties (write logs to ./logs/app regardless of environment) -->
     <property name="LOG_DIR" value="${LOG_PATH:-./logs}/app"/>
     <property name="MAX_HISTORY" value="30"/>
     <property name="TOTAL_SIZE_CAP" value="10GB"/>
     <property name="MAX_FILE_SIZE" value="200MB"/>
 
-    <!-- 控制台彩色 Pattern（尾部追加 TraceId） -->
+    <!-- Console pattern with color and appended trace identifier -->
     <property name="CONSOLE_LOG_PATTERN"
               value="%clr([%X{tid:-N/A}]){yellow} %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%-15.15thread]){magenta} %clr(%logger{20}){cyan} : %msg%n%wEx"/>
 
-    <!-- 文件 Pattern（纯文本） -->
+    <!-- Plain-text pattern used for file appenders -->
     <property name="FILE_LOG_PATTERN"
               value="[TID=%X{tid:-N/A}] %d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread]
                  %-50.50logger{50} - %msg%n"/>
 
-    <!-- 控制台：使用 SkyWalking 的 TraceIdMDCPatternLogbackLayout -->
+    <!-- Console appender leveraging SkyWalking's TraceIdMDCPatternLogbackLayout -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
             <layout class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.mdc.TraceIdMDCPatternLogbackLayout">
@@ -35,7 +35,7 @@
         </encoder>
     </appender>
 
-    <!-- 业务日志文件 -->
+    <!-- Rolling application log file -->
     <appender name="APP_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/application.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
@@ -52,7 +52,7 @@
         </encoder>
     </appender>
 
-    <!-- 错误日志文件 -->
+    <!-- Rolling error log file -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/error.log</file>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
@@ -70,7 +70,7 @@
         </encoder>
     </appender>
 
-    <!-- SkyWalking：gRPC 直传到 OAP（建议从 WARN 起步） -->
+    <!-- SkyWalking gRPC exporter (recommend WARN and above) -->
     <appender name="SW_GRPC" class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.log.GRPCLogClientAppender">
         <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
             <layout class="org.apache.skywalking.apm.toolkit.log.logback.v1.x.mdc.TraceIdMDCPatternLogbackLayout">
@@ -82,7 +82,7 @@
         </filter>
     </appender>
 
-    <!-- 异步包装 -->
+    <!-- Async wrappers -->
     <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
         <queueSize>8192</queueSize>
         <discardingThreshold>0</discardingThreshold>
@@ -108,14 +108,14 @@
     </appender>
 
     <logger name="com.patra" level="DEBUG"/>
-    <!-- 降噪 -->
+    <!-- Noise reduction -->
     <logger name="com.baomidou" level="WARN"/>
     <logger name="org.mybatis" level="WARN"/>
     <logger name="com.zaxxer.hikari" level="INFO"/>
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.boot.autoconfigure" level="INFO"/>
 
-    <!-- 单一 root（无环境区分） -->
+    <!-- Single root logger (no environment-specific configuration) -->
     <root level="INFO">
         <appender-ref ref="ASYNC_CONSOLE"/>
         <appender-ref ref="ASYNC_APP_FILE"/>

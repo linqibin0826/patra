@@ -15,7 +15,7 @@ class ErrorResolutionPipelineTest {
     static class I1 implements ResolutionInterceptor {
         @Override public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
             ErrorResolution r = invocation.proceed(exception);
-            // 不改变结果，仅用于排序验证
+            // Keep the result unchanged; this interceptor only validates ordering
             return r;
         }
     }
@@ -34,7 +34,7 @@ class ErrorResolutionPipelineTest {
             @Override public int httpStatus() { return 404; }
         }, 404);
         ErrorResolutionPipeline p = new ErrorResolutionPipeline(engine, List.of(new I1(), new I0()));
-        // getInterceptors 返回排序后的不可变列表
+        // getInterceptors returns a sorted, immutable list
         assertThat(p.getInterceptors()).hasSize(2);
         assertThat(p.getInterceptors().get(0)).isInstanceOf(I0.class);
 

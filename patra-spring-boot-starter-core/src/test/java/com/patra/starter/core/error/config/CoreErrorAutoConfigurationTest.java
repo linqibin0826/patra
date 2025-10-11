@@ -25,11 +25,11 @@ class CoreErrorAutoConfigurationTest {
         props.getObservation().setEnabled(false);
         assertThat(conf.errorObservationRecorder(props, emptyProvider())).isSameAs(ErrorObservationRecorder.NO_OP);
 
-        // enabled 且无 meter → NO_OP
+        // enabled but registry missing → NO_OP
         props.getObservation().setEnabled(true);
         assertThat(conf.errorObservationRecorder(props, emptyProvider())).isSameAs(ErrorObservationRecorder.NO_OP);
 
-        // enabled 且有 meter → Micrometer 实现
+        // enabled and registry present → Micrometer-backed implementation
         ErrorObservationRecorder rec = conf.errorObservationRecorder(props, of(new SimpleMeterRegistry()));
         assertThat(rec).isNotSameAs(ErrorObservationRecorder.NO_OP);
     }
@@ -64,7 +64,7 @@ class CoreErrorAutoConfigurationTest {
         assertThat(conf.tracingInterceptor(() -> java.util.Optional.empty())).isNotNull();
     }
 
-    // 简易 ObjectProvider 工具
+    // Minimal ObjectProvider utilities used in tests
     private static <T> ObjectProvider<T> of(T value) {
         return new ObjectProvider<>() {
             @Override public T getObject(Object... args) { return value; }

@@ -6,19 +6,17 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 文献数据常见日期类型（用于区分不同日期字段，如 PubMed 中的 PDAT/EDAT/MHDA）。
+ * Common ingest date types used by literature sources (for example, PubMed's
+ * PDAT/EDAT/MHDA fields).
  *
- * <p>示例含义：
+ * <p>Examples:</p>
  * <ul>
- *   <li><b>PDAT</b>（Publication Date）：论文正式发表日期，常用于检索过滤。</li>
- *   <li><b>EDAT</b>（Entrez Date）：论文被收录至数据库的日期，反映抓取/入库时间。</li>
- *   <li><b>MHDA</b>（MeSH Date）：论文被分配 MeSH 主题词的日期，表示主题标注完成。</li>
+ *   <li><b>PDAT</b> – Publication Date, the official publication date often used for filtering.</li>
+ *   <li><b>EDAT</b> – Entrez Date, when the record was ingested into the database.</li>
+ *   <li><b>MHDA</b> – MeSH Date, when MeSH subject terms were assigned.</li>
  * </ul>
  *
- * <p>引用：PubMed 帮助文档等。</p>
- *
- * @author linqibin
- * @since 0.1.0
+ * <p>Reference: PubMed help documentation.</p>
  */
 @Getter
 @RequiredArgsConstructor
@@ -28,18 +26,16 @@ public enum IngestDateType {
     EDAT("EDAT", "Entrez Date", "The date when the article was entered into PubMed"),
     MHDA("MHDA", "MeSH Date", "The date when MeSH indexing was assigned to the article");
 
-    /** PubMed 中用于标识该日期类型的代码（如 "PDAT"）。 */
+    /** Source-specific code identifying the date type (for example, {@code PDAT}). */
     private final String code;
 
-    /** 日期类型短名称（例如 “Publication Date”）。 */
+    /** Short display name, such as {@code Publication Date}. */
     private final String name;
 
-    /** 该日期类型的详细说明。 */
+    /** Human-readable description of the date type. */
     private final String description;
 
-    /**
-     * 工厂方法：由字符串 code 创建枚举（@JsonCreator）。
-     */
+    /** Factory method used by Jackson to create an enum from a code. */
     @JsonCreator
     public static IngestDateType fromCode(String code) {
         for (IngestDateType type : IngestDateType.values()) {
@@ -50,12 +46,9 @@ public enum IngestDateType {
         throw new IllegalArgumentException("Unknown code: " + code);
     }
 
-    /**
-     * JSON 序列化输出 code（@JsonValue）。
-     */
+    /** Serializes the enum back to its code for JSON output. */
     @JsonValue
     public String toCode() {
         return this.code;
     }
-
 }

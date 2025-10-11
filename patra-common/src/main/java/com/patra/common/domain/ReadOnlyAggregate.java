@@ -7,91 +7,74 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * 只读聚合根抽象基类。
- * <p>
- * 专为 CQRS 查询侧设计的轻量级聚合根基类，提供基本的标识管理功能，
- * 但不包含领域事件、版本控制等写操作相关的复杂性。
- * </p>
- * 
- * <p>
- * 约束与约定：
- * - 仅依赖 JDK，domain 层零框架污染
- * - 专注于数据查询和业务规则验证
- * - 不支持状态变更和事件发布
- * - 适用于配置、字典、视图等只读聚合
- * </p>
+ * Abstract base class for read-only aggregates.
+ * <p>Designed for the CQRS query side, it manages identifiers without bringing
+ * in write-side concerns such as domain events or versioning.</p>
+ * <p>Constraints:</p>
+ * <ul>
+ *   <li>Depends solely on the JDK; the domain layer remains framework-free.</li>
+ *   <li>Focuses on data retrieval and validation of business rules.</li>
+ *   <li>Does not support state mutations or event publication.</li>
+ *   <li>Well suited for configuration, dictionary, and view-style aggregates.</li>
+ * </ul>
  *
- * @param <ID> 聚合根ID类型（值对象或基本类型封装）
- * @author linqibin
- * @since 0.1.0
+ * @param <ID> aggregate identifier type (value object or wrapped primitive)
  */
 public abstract class ReadOnlyAggregate<ID> implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 聚合根标识。
-     * -- GETTER --
-     *  获取聚合根ID。
-     */
+    /** Aggregate identifier. */
     @Getter
     private final ID id;
 
-    /**
-     * 构造函数（带ID）。
-     */
     protected ReadOnlyAggregate(ID id) {
-        this.id = id;
+        this.id = Objects.requireNonNull(id, "aggregate id must not be null");
     }
 
-    /**
-     * 构造函数（无ID，用于工厂方法中后续设置）。
-     */
     protected ReadOnlyAggregate() {
         this.id = null;
     }
 
-    /**
-     * 是否为瞬态对象（无ID）。
-     */
+    /** Indicates whether the aggregate is transient (identifier not assigned). */
     public boolean isTransient() {
         return this.id == null;
     }
 
     /**
-     * 领域不变量校验钩子：在构造或查询时调用，抛出 IllegalStateException 终止非法状态。
-     * 子类可覆写并在需要时显式调用。
+     * Hook for invariant checks. Override to validate state during construction
+     * or query-time operations and throw {@link IllegalStateException} when
+     * invariants do not hold.
      */
     protected void assertInvariants() {
-        // 默认空实现；子类自行校验（如数据完整性、业务规则等）
+        // Default no-op; subclasses should enforce data integrity and business rules.
     }
 
-    /**
-     * 基于ID的相等性比较。
-     */
+    /** Equality based on the aggregate identifier. */
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        
-        ReadOnlyAggregate<?> that = (ReadOnlyAggregate<?>) obj;
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        ReadOnlyAggregate<?> that = (ReadOnlyAggregate<?>) o;
         return Objects.equals(id, that.id);
     }
 
-    /**
-     * 基于ID的哈希码。
-     */
+    /** Hash code derived from the aggregate identifier. */
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hashCode(id);
     }
 
-    /**
-     * 字符串表示。
-     */
+    /** Human-readable representation including the identifier. */
     @Override
     public String toString() {
-        return String.format("%s{id=%s}", getClass().getSimpleName(), id);
+        return getClass().getSimpleName() + "{" +
+                "id=" + id +
+                '}';
     }
 }
