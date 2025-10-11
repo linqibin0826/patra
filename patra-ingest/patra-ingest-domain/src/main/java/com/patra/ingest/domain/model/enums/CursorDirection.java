@@ -2,13 +2,13 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/** 游标推进方向（DICT：ing_cursor_direction）。
- * <p>字段映射：ing_cursor_event.direction_code → FORWARD/BACKFILL。</p>
+/** Cursor advancement direction (DICT: ing_cursor_direction).
+ * <p>Field mapping: {@code ing_cursor_event.direction_code → FORWARD/BACKFILL}.</p>
  */
 @Getter
 public enum CursorDirection {
-    FORWARD("FORWARD", "向前推进"),
-    BACKFILL("BACKFILL", "回灌回溯");
+    FORWARD("FORWARD", "Forward"),
+    BACKFILL("BACKFILL", "Backfill");
 
     private final String code; private final String description;
     CursorDirection(String code, String description){ this.code=code; this.description=description; }

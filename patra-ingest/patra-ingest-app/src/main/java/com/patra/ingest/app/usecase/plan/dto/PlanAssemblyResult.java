@@ -8,18 +8,16 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 计划装配结果，封装装配过程产生的聚合集合与状态。
- * <p>
- * 这是应用层的 DTO，用于在 PlanAssembler 和 PlanIngestionOrchestrator 之间传递装配结果。
- * 它不是领域层的聚合根，而是多个聚合根的组合视图。
- * </p>
+ * Application-layer DTO describing the outcome of plan assembly. It combines the
+ * aggregates produced during assembly (plan, slices, tasks) with an overall status.
  *
- * @param plan   计划聚合根
- * @param slices 切片聚合根集合
- * @param tasks  任务聚合根集合
- * @param status 装配状态（READY/PARTIAL/FAILED）
- * @author linqibin
- * @since 0.1.0
+ * <p>This is not a domain aggregate itself; it is a composite view passed between
+ * {@code PlanAssembler} and {@code PlanIngestionOrchestrator}.</p>
+ *
+ * @param plan   assembled plan aggregate
+ * @param slices assembled slice aggregates
+ * @param tasks  assembled task aggregates
+ * @param status assembly status (READY/PARTIAL/FAILED)
  */
 public record PlanAssemblyResult(PlanAggregate plan,
                                  List<PlanSliceAggregate> slices,
@@ -27,21 +25,21 @@ public record PlanAssemblyResult(PlanAggregate plan,
                                  AssemblyStatus status) {
 
     public PlanAssemblyResult {
-        Objects.requireNonNull(plan, "plan不能为空");
+        Objects.requireNonNull(plan, "plan must not be null");
         slices = slices == null ? List.of() : List.copyOf(slices);
         tasks = tasks == null ? List.of() : List.copyOf(tasks);
         status = status == null ? AssemblyStatus.READY : status;
     }
 
     /**
-     * 装配状态枚举
+     * Assembly status.
      */
     public enum AssemblyStatus {
-        /** 装配成功，所有任务就绪 */
+        /** Assembly succeeded; all tasks are ready. */
         READY,
-        /** 部分装配成功 */
+        /** Partially assembled; some artefacts are missing or deferred. */
         PARTIAL,
-        /** 装配失败 */
+        /** Assembly failed. */
         FAILED
     }
 }

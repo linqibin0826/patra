@@ -11,20 +11,20 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 触发命令归一化后的领域对象。
+ * Domain record representing a normalized trigger command.
  *
- * @param scheduleInstanceId 调度实例 ID
- * @param provenanceCode 来源编码
- * @param operationCode 操作类型
- * @param step 切片步长
- * @param triggerType 触发类型
- * @param scheduler 调度器类型
- * @param schedulerJobId 调度任务 ID
- * @param schedulerLogId 调度日志 ID
- * @param requestedWindowFrom 指定窗口开始
- * @param requestedWindowTo 指定窗口结束
- * @param priority 优先级
- * @param triggerParams 其他触发参数
+ * @param scheduleInstanceId scheduler instance identifier
+ * @param provenanceCode     provenance code
+ * @param operationCode      operation type
+ * @param step               slice planning step
+ * @param triggerType        trigger type
+ * @param scheduler          scheduler type
+ * @param schedulerJobId     scheduler job identifier
+ * @param schedulerLogId     scheduler log identifier
+ * @param requestedWindowFrom requested window start
+ * @param requestedWindowTo   requested window end
+ * @param priority           priority level
+ * @param triggerParams      additional trigger parameters
  */
 public record PlanTriggerNorm(
         Long scheduleInstanceId,
@@ -41,11 +41,11 @@ public record PlanTriggerNorm(
         Map<String, Object> triggerParams
 ) {
     public PlanTriggerNorm {
-        Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId不能为空");
-        Objects.requireNonNull(provenanceCode, "provenanceCode不能为空");
-        Objects.requireNonNull(operationCode, "operationCode不能为空");
-        Objects.requireNonNull(triggerType, "triggerType不能为空");
-        Objects.requireNonNull(scheduler, "schedulerCode不能为空");
+        Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId must not be null");
+        Objects.requireNonNull(provenanceCode, "provenanceCode must not be null");
+        Objects.requireNonNull(operationCode, "operationCode must not be null");
+        Objects.requireNonNull(triggerType, "triggerType must not be null");
+        Objects.requireNonNull(scheduler, "scheduler must not be null");
     }
 
     public boolean isHarvest() {

@@ -6,36 +6,37 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Ingest 配置异常。
+ * Exception thrown when ingestion configuration is invalid.
  *
- * <p>触发条件：从 Registry / 配置中心加载来源(Provenance) 或 操作(Operation) 元数据时缺失、格式不符合约束或引用未解。
- * 与 {@link PlanValidationException} 区别：本异常侧重 <strong>平台配置层</strong> 缺陷，而非运行期参数。</p>
- * <p>处理建议：
+ * <p>Trigger: raised when provenance or operation metadata cannot be loaded from Registry/config center, or the
+ * payload violates schema constraints. Compared with {@link PlanValidationException}, this focuses on platform
+ * configuration defects rather than runtime parameters.</p>
+ * <p>Handling guidance:
  * <ul>
- *   <li>如果是暂时性拉取失败（网络/超时），应用层可限次重试。</li>
- *   <li>配置缺失：记录 ERROR 并触发告警，提示补齐配置。</li>
- *   <li>配置格式不合规：阻断执行链，返回明确字段路径与期望格式。</li>
+ *   <li>Temporary fetch failures (network/timeouts): retry a limited number of times at the application layer.</li>
+ *   <li>Missing configuration: log at ERROR level, raise alerts, and request the data to be populated.</li>
+ *   <li>Malformed configuration: stop execution and describe the offending field path and expected format.</li>
  * </ul>
  * </p>
- * <p>可观测性：建议在日志中附带 provenanceCode/endpointName 以支持快速聚合统计。</p>
+ * <p>Observability: include {@code provenanceCode} / {@code endpointName} in logs to aid aggregation.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
 public class IngestConfigurationException extends IngestException implements HasErrorTraits {
 
-    /** 来源代码（上游数据来源标识）。 */
+    /** Provenance code that identifies the upstream data source. */
     private final String provenanceCode;
-    /** 操作代码（业务操作/任务类型）。 */
+    /** Operation code representing the business action or task type. */
     private final String operationCode;
 
     /**
-     * 构造配置异常（无底层异常包装）。
-     * <p>适用于直接检测到缺失或不合规立即抛出。</p>
+     * Construct the exception without an underlying cause.
+     * <p>Use when the configuration defect is detected immediately.</p>
      *
-     * @param provenanceCode 来源代码
-     * @param operationCode  操作代码
-     * @param message        异常消息（应包含缺失字段/校验路径）
+     * @param provenanceCode provenance code
+     * @param operationCode  operation code
+     * @param message        error message detailing the missing or invalid fields
      */
     public IngestConfigurationException(String provenanceCode, String operationCode, String message) {
         super(message);
@@ -44,13 +45,13 @@ public class IngestConfigurationException extends IngestException implements Has
     }
 
     /**
-     * 构造配置异常（带底层异常）。
-     * <p>用于包装：远程调用失败 / JSON 解析错误 / 映射转换异常等。</p>
+     * Construct the exception with an underlying cause.
+     * <p>Use to wrap remote call failures, JSON parsing problems, or mapping conversions.</p>
      *
-     * @param provenanceCode 来源代码
-     * @param operationCode  操作代码
-     * @param message        异常消息
-     * @param cause          底层原因
+     * @param provenanceCode provenance code
+     * @param operationCode  operation code
+     * @param message        error message
+     * @param cause          root cause
      */
     public IngestConfigurationException(String provenanceCode, String operationCode, String message, Throwable cause) {
         super(message, cause);
@@ -64,16 +65,16 @@ public class IngestConfigurationException extends IngestException implements Has
     }
 
     /**
-     * 获取来源代码。
-     * @return 来源代码
+     * Expose the provenance code.
+     * @return provenance code
      */
     public String getProvenanceCode() {
         return provenanceCode;
     }
 
     /**
-     * 获取操作代码。
-     * @return 操作代码
+     * Expose the operation code.
+     * @return operation code
      */
     public String getOperationCode() {
         return operationCode;

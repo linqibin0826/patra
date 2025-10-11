@@ -8,20 +8,20 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Ingest 模块对外发布的消息通道目录（Domain 层枚举）。
+ * Catalog of message channels published by the ingest domain.
  * <p>
- * 职责：
+ * Responsibilities:
  * <ul>
- *   <li>定义模块内部发布的所有消息通道（强类型枚举）</li>
- *   <li>提供通道解析和查询能力（fromChannel）</li>
- *   <li>关联 payload 类型，便于运行时校验</li>
+ *   <li>Define all outbound channels via a strongly typed enumeration.</li>
+ *   <li>Provide lookup helpers such as {@link #fromChannel(String)}.</li>
+ *   <li>Associate each channel with its payload type for validation.</li>
  * </ul>
  * </p>
  *
- * <p><b>使用指南</b>：
+ * <p><b>Usage</b>:
  * <ul>
- *   <li><b>内部发送侧</b>：使用枚举实例 {@code IngestPublishingChannels.TASK_READY.channel()}</li>
- *   <li><b>外部消费侧</b>：引用 API 契约 {@code IngestPublishedChannels.TASK_READY}</li>
+ *   <li><b>Internal publishers</b>: call {@code IngestPublishingChannels.TASK_READY.channel()}.</li>
+ *   <li><b>External consumers</b>: reference the API contract {@code IngestPublishedChannels.TASK_READY}.</li>
  * </ul>
  * </p>
  *
@@ -30,7 +30,7 @@ import java.util.Optional;
  */
 public enum IngestPublishingChannels implements ChannelKey {
     
-    /** 调度任务准备就绪事件 */
+    /** Task scheduling ready event. */
     TASK_READY("INGEST", "TASK", "READY", TaskReadyMessage.class);
 
     private final String domain;
@@ -49,14 +49,14 @@ public enum IngestPublishingChannels implements ChannelKey {
     @Override public String resource() { return resource; }
     @Override public String event() { return event; }
 
-    /** 约定的 payload 类型（可用于编译期/运行期校验）。 */
+    /** Declared payload type for compile-time or runtime validation. */
     public Class<?> payloadType() { return payloadType; }
 
     /**
-     * 将规范化字符串（例如 "INGEST_TASK_READY"）解析为通道枚举。
+     * Parse the normalized channel string (for example {@code INGEST_TASK_READY}) into an enumeration value.
      *
-     * @param channel 通道字符串（大写下划线分段）
-     * @return 匹配的枚举实例，若无匹配则返回 empty
+     * @param channel channel string using uppercase snake case
+     * @return matching enum instance, or {@link Optional#empty()} if none matches
      */
     public static Optional<IngestPublishingChannels> fromChannel(String channel) {
         if (channel == null || channel.isBlank()) return Optional.empty();
@@ -64,4 +64,3 @@ public enum IngestPublishingChannels implements ChannelKey {
         return Arrays.stream(values()).filter(it -> it.channel().equals(ch)).findFirst();
     }
 }
-

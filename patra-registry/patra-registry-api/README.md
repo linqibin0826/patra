@@ -3,14 +3,14 @@
 `patra-registry-api` provides the public contracts and error codes for the Registry service. It shields downstream services from internal evolution by exposing stable DTOs and exception semantics.
 
 ## 1. Module Scope
-- **Responsibilities** – Package Registry error codes, Feign interfaces, and shared DTOs for compile-time reuse.
-- **Primary consumers** – `patra-ingest`, `patra-gateway-boot`, and internal tooling/SDKs.
-- **Boundaries** – Pure contract module. No Spring wiring, no business logic, and no infrastructure dependencies.
+- **Responsibilities** - Package Registry error codes, Feign interfaces, and shared DTOs for compile-time reuse.
+- **Primary consumers** - `patra-ingest`, `patra-gateway-boot`, and internal tooling/SDKs.
+- **Boundaries** - Pure contract module. No Spring wiring, no business logic, and no infrastructure dependencies.
 
 ## 2. Core Capabilities
-- **`RegistryErrorCode` enum** – Defines the `REG-NNNN` taxonomy covering dictionary, configuration, and generic failures.
-- **Documentation** – `package-info` notes and `ERROR_CODE_CATALOG.md` record canonical identifiers.
-- **Reusable interfaces** – Feign contracts and DTOs that expand alongside service capabilities.
+- **`RegistryErrorCode` enum** - Defines the `REG-NNNN` taxonomy covering dictionary, configuration, and generic failures.
+- **Documentation** - `package-info` notes and `ERROR_CODE_CATALOG.md` record canonical identifiers.
+- **Reusable interfaces** - Feign contracts and DTOs that expand alongside service capabilities.
 
 ## 3. Structure and Dependencies
 - Layout: `error/` (codes) and `dto/` (data structures).

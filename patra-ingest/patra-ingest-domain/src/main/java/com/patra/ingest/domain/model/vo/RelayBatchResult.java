@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Relay 批次执行结果。
+ * Result summary for a relay batch execution.
  */
 public record RelayBatchResult(
         ChannelKey channel,

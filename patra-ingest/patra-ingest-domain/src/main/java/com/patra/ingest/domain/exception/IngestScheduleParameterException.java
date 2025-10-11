@@ -6,32 +6,33 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * 调度任务参数异常。
+ * Exception raised when scheduler parameters are invalid.
  *
- * <p>场景：XXL-Job / 内部调度触发执行时，传入的 handler 参数（JSON / KV）缺失必填字段、格式不合法、数值越界或与当前操作类型不匹配。
- * 出现即表明调用方输入错误，可直接返回并记录 WARN，无需重试。</p>
- * <p>补救建议：
+ * <p>Scenario: XXL-Job or internal schedulers invoke handlers with JSON/KV parameters that miss required
+ * fields, violate format constraints, exceed limits, or conflict with the current operation type. The error is
+ * attributable to caller input; return immediately and log a warning rather than retrying.</p>
+ * <p>Remediation suggestions:
  * <ul>
- *   <li>检查调度中心任务配置与模板是否同步。</li>
- *   <li>对 JSON 参数进行 schema 校验前置失败（可在 adapter 层增加校验）。</li>
- *   <li>增加监控统计字段缺失次数以发现潜在模板迭代遗漏。</li>
+ *   <li>Verify the scheduler task configuration and templates remain aligned.</li>
+ *   <li>Apply schema validation to JSON parameters in the adapter layer to fail fast.</li>
+ *   <li>Instrument metrics counting missing fields to detect template drift.</li>
  * </ul>
  * </p>
  */
 public class IngestScheduleParameterException extends IngestException implements HasErrorTraits {
 
     /**
-     * 仅携带描述消息构造。
-     * @param message 可读描述
+     * Construct the exception with a human-readable message.
+     * @param message descriptive message
      */
     public IngestScheduleParameterException(String message) {
         super(message);
     }
 
     /**
-     * 携带描述消息与底层异常构造（用于 JSON 解析/转换异常包装）。
-     * @param message 描述
-     * @param cause   底层异常
+     * Construct the exception with a message and underlying cause (for example, JSON parsing failures).
+     * @param message descriptive message
+     * @param cause   underlying exception
      */
     public IngestScheduleParameterException(String message, Throwable cause) {
         super(message, cause);

@@ -2,15 +2,15 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/** 触发器类型（DICT：ing_trigger_type）。
- * <p>字段映射：ing_schedule_instance.trigger_type_code → SCHEDULE/MANUAL/API</p>
+/** Trigger type (DICT: ing_trigger_type).
+ * <p>Field mapping: {@code ing_schedule_instance.trigger_type_code → SCHEDULE/MANUAL/API}</p>
  */
 @Getter
 public enum TriggerType {
 
-    SCHEDULE("SCHEDULE", "定时调度"),
-    MANUAL("MANUAL", "手动触发"),
-    API("API", "API调用");
+    SCHEDULE("SCHEDULE", "Scheduled trigger"),
+    MANUAL("MANUAL", "Manual trigger"),
+    API("API", "API invocation");
 
     private final String code;
     private final String description;

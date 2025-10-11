@@ -1,120 +1,127 @@
 # patra-ingest
 
-计划式文献采集与任务装配引擎，负责调度解析、切片、任务生成与 Outbox 发布。
+The ingest service orchestrates scheduled literature collection for Papertrace. It plans ingestion windows, slices work into tasks, persists results, and publishes outbox events for downstream processing.
 
-## 最近更新（2025-10-02）
+## Recent Highlights (2025-10-02)
 
-### 🔧 代码优化
-- **合并 Outbox 查询方法**：将 `fetchPending` 和 `fetchPendingAllChannels` 合并为单一方法，通过 `channel` 参数是否为 `null` 来控制查询范围
-  - 接口层：`OutboxRelayStore.fetchPending(String channel, Instant availableTime, int limit)`
-  - Mapper 层：使用 MyBatis 动态 SQL（`<if>` 和 `<choose>`）实现条件装配
-  - 优势：减少代码重复，提升可维护性，保持 SQL 性能
-  
-### 🚀 功能落地
-- **RocketMQ 出站发布回归**
-  - 接入 `spring-cloud-starter-stream-rocketmq`，实现 `RocketMqOutboxPublisher` 通过 StreamBridge 动态目的地发布
-  - 新增 `papertrace.ingest.outbox` 白名单配置，支持 `strict-channel-whitelist` Fail Fast 与运行期校验
-  - Adapter 增加 `ingestTaskReadyConsumer` 函数式消费者验证链路，日志输出 KEYS/TAGS/partitionKey
+### 🔧 Code Improvements
+- **Unified Outbox retrieval** – Consolidated `fetchPending` and `fetchPendingAllChannels` into a single API that accepts an optional channel filter.<br>
+  - Application port: `OutboxRelayStore.fetchPending(String channel, Instant availableTime, int limit)`<br>
+  - MyBatis implementation: uses dynamic SQL (`<if>` / `<choose>`) to compose predicates.<br>
+  - Benefit: eliminates duplicate logic while preserving SQL performance characteristics.
 
-## 1. 模块定位
-- **服务/组件作用**：围绕来源 (provenance) 与操作 (operation) 生成采集计划，保证链路幂等、可回放、可观测
-- **主要消费者**：调度中心（XXL-Job）、下游解析/清洗服务、后续异步处理通道（待 MQ 对接）
-- **架构边界**：遵循六边形分层——`adapter`(Inbound：调度/监听，仅入站)、`app`(Planning/Relay 用例编排)、`domain`(Plan/Task 聚合/领域端口)、`infra`(Outbound：仓储/消息/RPC)、`boot`(启动装配)
+### 🚀 Feature Delivery
+- **RocketMQ publisher reinstated**<br>
+  - Integrated `spring-cloud-starter-stream-rocketmq` with `RocketMqOutboxPublisher` using `StreamBridge` for dynamic destinations.<br>
+  - Added `papertrace.ingest.outbox` whitelist configuration, supporting fail-fast enforcement and runtime validation.<br>
+  - Adapter module now includes `ingestTaskReadyConsumer` for end-to-end verification with structured logging of KEYS/TAGS/partition keys.
 
-## 2. 核心能力
-- **窗口策略**：HARVEST / BACKFILL / UPDATE，控制齐次校验与滞后安全
-- **切片策略**：TIME/SINGLE，可通过 `SlicePlannerRegistry` 扩展
-- **计划装配**：Plan → PlanSlice → Task 原子生成，支持部分失败降级
-- **幂等体系**：表达式、配置、切片规范化哈希；任务幂等键 `provenance:operation:sliceHash:exprHash`
-- **Outbox 发布**：租约 + 指数退避 + 分区顺序，确保可靠投递与可重试
+## 1. Module Scope
+- **Responsibilities** – Generate ingestion plans per provenance and operation, ensuring idempotence, replayability, and observability across the pipeline.
+- **Primary consumers** – Job scheduler (XXL-Job), downstream parsing/cleansing services, and asynchronous delivery channels.
+- **Architecture boundary** – Hexagonal layering:
+  - `adapter`: inbound scheduler/listener entry points
+  - `app`: orchestration for planning and relay use cases
+  - `domain`: aggregates, value objects, and domain ports
+  - `infra`: persistence, messaging, and RPC adapters
+  - `boot`: Spring Boot wiring
 
-> 深度说明与表格详见 `docs/modules/ingest/deep-dive.md`。
+## 2. Core Capabilities
+- **Window strategies** – HARVEST / BACKFILL / UPDATE with guard rails for lag and overlap.
+- **Slice strategies** – TIME and SINGLE (extensible via `SlicePlannerRegistry`).
+- **Plan assembly** – Produces Plan → PlanSlice → Task hierarchies with partial failure handling.
+- **Idempotence** – Canonical hashing for expressions, configuration, and slices; task idempotency key format `provenance:operation:sliceHash:exprHash`.
+- **Outbox publishing** – Lease-based retrieval with exponential backoff and ordered partitioning for reliable delivery.
 
-## 3. 分层结构与依赖
-- 子模块概览：
-  | 子模块 | 职责 |
-  |--------|------|
-  | `patra-ingest-api` | 错误码、外部 DTO |
-  | `patra-ingest-adapter` | XXL-Job 入站（Inbound Only）、Outbox Relay 调度入口 |
-  | `patra-ingest-app` | **用例层**：`usecase/plan`（计划编排用例）与 `usecase/relay`（Outbox 转发用例） |
-  | `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule 聚合与端口<br>**包结构**（v0.1.0 重构）：<br>- `domain/event/` 统一事件目录<br>- `domain/model/aggregate/` 聚合根（保留 Aggregate 后缀）<br>- `domain/model/vo/` 值对象（含 PlanTriggerNorm） |
-  | `patra-ingest-infra` | MyBatis-Plus DO、Mapper、仓储实现、RPC 出站（`infra.rpc.registry.*`） |
-  | `patra-ingest-boot` | Spring Boot 启动、错误码映射 |
+> Deep design notes and schema details: `docs/modules/ingest/deep-dive.md`.
 
-- **app 层架构**（遵循 DDD + 六边形架构）：
-  ```
-  app/
-  ├── config/                       # 应用层配置
-  └── usecase/                      # 用例层
-      ├── plan/                     # 计划编排用例
-      │   ├── PlanIngestionUseCase.java          # 用例接口
-      │   ├── PlanIngestionOrchestrator.java     # 编排器
-      │   ├── command/              # 命令对象
-      │   ├── dto/                  # 结果 DTO
-      │   ├── assembler/            # 计划组装器
-      │   ├── slicer/               # 切片策略
-      │   ├── window/               # 窗口解析
-      │   ├── expression/           # 表达式构建
-      │   ├── validator/            # 前置验证
-      │   └── publisher/            # Outbox 发布
-      │
-      └── relay/                    # Outbox 转发用例
-          ├── OutboxRelayUseCase.java            # 用例接口
-          ├── OutboxRelayOrchestrator.java       # 编排器
-          ├── command/              # 命令对象
-          ├── dto/                  # 结果 DTO
-          ├── executor/             # 转发执行器
-          ├── planner/              # 计划构建
-          ├── policy/               # 错误分类策略
-          ├── publisher/            # 事件发布
-          ├── config/               # Relay 配置
-          └── support/              # 支持工具
-  ```
+## 3. Module Breakdown
 
-- 关键依赖：`patra-common`、`patra-expr-kernel`、MyBatis-Plus、XXL-Job、Nacos
-- 禁止事项：在 domain 层引入框架；在 adapter 中写业务逻辑
+| Submodule | Responsibility |
+|-----------|----------------|
+| `patra-ingest-api` | Public DTOs and error codes. |
+| `patra-ingest-adapter` | XXL-Job inbound jobs and Outbox relay schedulers (inbound only). |
+| `patra-ingest-app` | Use cases (`usecase/plan` for planning, `usecase/relay` for outbox relay). |
+| `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule aggregates and domain ports.<br>Structure v0.1.0:<br>- `domain/event/` domain events<br>- `domain/model/aggregate/` aggregates<br>- `domain/model/vo/` value objects (incl. PlanTriggerNorm) |
+| `patra-ingest-infra` | MyBatis-Plus DOs, mappers, repository implementations, and outbound RPC (`infra.rpc.registry.*`). |
+| `patra-ingest-boot` | Spring Boot launcher, error catalog mapping. |
 
-## 4. 运行与配置
-- **调度入口**：继承 `AbstractProvenanceScheduleJob`，由 XXL-Job 触发；参数包含 `provenanceCode`、`operationCode`、窗口定义
-- **配置来源**：通过 `patra-registry` 拉取 provenance/expr 快照；本地配置使用 Nacos
-- **Outbox 属性**（摘录）：
-  | Key | 默认 | 说明 |
-  |-----|------|------|
-  | `patra.ingest.outbox-relay.enabled` | `true` | 是否启用 Relay |
-  | `patra.ingest.outbox-relay.batch-size` | `200` | 扫描批次 |
-  | `patra.ingest.outbox-relay.max-retry` | `8` | 最大重试次数 |
-  | `patra.ingest.planner.queue-threshold` | `10000` | 队列压力阈值 |
+### Application Layer Layout
+```
+app/
+├── config/                         # Application-level configuration
+└── usecase/
+    ├── plan/                       # Planning use cases
+    │   ├── PlanIngestionUseCase.java        # Use-case contract
+    │   ├── PlanIngestionOrchestrator.java   # Orchestrator
+    │   ├── command/                 # Command models
+    │   ├── dto/                     # Result DTOs
+    │   ├── assembler/               # Plan assembly helpers
+    │   ├── slicer/                  # Slice planners
+    │   ├── window/                  # Window resolvers
+    │   ├── expression/              # Expression builders
+    │   ├── validator/               # Preflight validators
+    │   └── publisher/               # Outbox publishers
+    │
+    └── relay/                       # Outbox relay use cases
+        ├── OutboxRelayUseCase.java          # Use-case contract
+        ├── OutboxRelayOrchestrator.java     # Orchestrator
+        ├── command/                 # Command models
+        ├── dto/                     # Result DTOs
+        ├── executor/                # Relay executors
+        ├── planner/                 # Relay plan builders
+        ├── policy/                  # Error classification policies
+        ├── publisher/               # Event publishers
+        ├── config/                  # Relay configuration objects
+        └── support/                 # Supporting utilities
+```
 
-## 5. 观测与运维
-- 推荐指标：`ingest.plan.created`、`ingest.plan.slice.count`、`ingest.outbox.publish.duration`
-- 日志关键字段：`planKey`、`sliceSignatureHash`、`taskIdempotentKey`、`traceId`
-- 运维速查：
-  | 现象 | 排查路径 |
-  |------|----------|
-  | 无任务生成 | 查看 `ing_plan` 表，关注 ING-12xx 日志 |
-  | Outbox 堆积 | 查询 `ing_outbox_message` 状态，分析重试/死信 |
-  | 发布抖动 | 检查 `retry_count` 与消息通道可用性，必要时调节 backoff |
+Key dependencies: `patra-common`, `patra-expr-kernel`, MyBatis-Plus, XXL-Job, Nacos. Domain layer must remain framework-free; adapters may not embed business rules.
 
-## 6. 测试策略
-- Domain：验证 Plan/PlanSlice/Task 聚合不变量、幂等键生成
-- App：对窗口解析、切片组合、部分失败场景编写用例
-- Adapter：调度参数解析、Outbox Relay 调度流程模拟
-- Infra：仓储持久化、批量插入、索引策略
-- 集成建议：模拟 MQ 不可用、配置缺失、窗口跨越上限等异常
+## 4. Operation & Configuration
+- **Scheduler entry point** – Extend `AbstractProvenanceScheduleJob` for XXL-Job integration. Parameters include `provenanceCode`, `operationCode`, and window descriptors.
+- **Configuration source** – Fetch provenance/expression snapshots from `patra-registry`; local overrides via Nacos.
+- **Outbox settings** (excerpt):
 
-## 7. Roadmap 与风险
-| 项目 | 优先级 | 风险/备注 |
-|------|--------|-----------|
-| CURSOR / ID_RANGE 切片策略 | High | 需定义新幂等键与切片拆分逻辑 |
-| 指标与健康探针 | High | 未落地前难以及时发现堆积与租约异常 |
-| 批量插入优化 | Mid | 需验证数据库锁与写放大影响 |
-| 任务执行端协议 | Mid | 执行链路尚未闭环，需明确消息规范 |
-| Relay 熔断/限速 | Low | 防重试风暴，需结合监控阈值 |
+| Property | Default | Description |
+|----------|---------|-------------|
+| `patra.ingest.outbox-relay.enabled` | `true` | Toggle relay pipeline. |
+| `patra.ingest.outbox-relay.batch-size` | `200` | Scan batch size per lease. |
+| `patra.ingest.outbox-relay.max-retry` | `8` | Maximum retry attempts. |
+| `patra.ingest.planner.queue-threshold` | `10000` | Queue pressure threshold for throttling. |
 
-主要风险：配置不一致、窗口越界、Outbox 重试风暴、消息通道不可用。建议配合 `docs/process/ingest-dataflow.md` 端到端排查。
+## 5. Observability & Operations
+- Recommended metrics: `ingest.plan.created`, `ingest.plan.slice.count`, `ingest.outbox.publish.duration`.
+- Log key fields: `planKey`, `sliceSignatureHash`, `taskIdempotentKey`, `traceId`.
+- Troubleshooting quick reference:
 
-## 8. 参考资料
-- 深入文档：`docs/modules/ingest/deep-dive.md`
-- 端到端流程：`docs/process/ingest-dataflow.md`
-- Registry 配置：`docs/modules/registry/deep-dive.md`
-- 错误规范：`docs/standards/platform-error-handling.md`
+| Symptom | Diagnostic Path |
+|---------|-----------------|
+| No tasks generated | Inspect `ing_plan` table, check ING-12xx logs for validation failures. |
+| Outbox backlog | Query `ing_outbox_message` status, review retry/dead-letter counts. |
+| Publish jitter | Inspect `retry_count` and channel health; adjust backoff if needed. |
+
+## 6. Testing Strategy
+- **Domain** – Validate Plan/PlanSlice/Task invariants and idempotency key derivation.
+- **App** – Cover window resolution, slice partitioning, and partial-failure recovery paths.
+- **Adapter** – Verify scheduler parameter parsing and relay scheduling flow.
+- **Infra** – Exercise repositories, batch inserts, and indexing strategies.
+- **Integration** – Simulate MQ outages, missing configuration, and window boundary violations.
+
+## 7. Roadmap & Risks
+
+| Initiative | Priority | Notes / Risks |
+|------------|----------|---------------|
+| CURSOR / ID_RANGE slicing strategies | High | Requires new idempotent keys and slice decomposition logic. |
+| Metrics & health probes | High | Without them, backlog and lease anomalies are hard to detect. |
+| Batch insert optimisation | Medium | Must evaluate database locking and write amplification. |
+| Task execution contract | Medium | Downstream execution path still evolving; need clear message format. |
+| Relay circuit breaking / throttling | Low | Prevent retry storms once monitoring thresholds are defined. |
+
+Primary risks: configuration drift, window boundary errors, outbox retry storms, and channel outages. Use `docs/process/ingest-dataflow.md` for end-to-end diagnosis.
+
+## 8. References
+- Ingest deep dive: `docs/modules/ingest/deep-dive.md`
+- End-to-end flow: `docs/process/ingest-dataflow.md`
+- Registry configuration: `docs/modules/registry/deep-dive.md`
+- Error handling standard: `docs/standards/platform-error-handling.md`

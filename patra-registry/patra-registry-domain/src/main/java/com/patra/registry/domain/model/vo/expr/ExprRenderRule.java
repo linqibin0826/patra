@@ -31,11 +31,11 @@ public record ExprRenderRule(
         String valueTypeCode,
         /* Emission type (DICT CODE: reg_emit_type): QUERY for query fragment, PARAMS for standard params */
         String emitTypeCode,
-        /* Normalization of {@code matchTypeCode}: {@code null} → {@code ANY} */
+        /* Normalization of {@code matchTypeCode}: {@code null} -> {@code ANY} */
         String matchTypeKey,
-        /* Normalization of {@code negated}: {@code null} → {@code ANY}, {@code true} → {@code T}, {@code false} → {@code F} */
+        /* Normalization of {@code negated}: {@code null} -> {@code ANY}, {@code true} -> {@code T}, {@code false} -> {@code F} */
         String negatedKey,
-        /* Normalization of {@code valueTypeCode}: {@code null} → {@code ANY} */
+        /* Normalization of {@code valueTypeCode}: {@code null} -> {@code ANY} */
         String valueTypeKey,
         /* Inclusive timestamp marking when this rule becomes effective */
         Instant effectiveFrom,

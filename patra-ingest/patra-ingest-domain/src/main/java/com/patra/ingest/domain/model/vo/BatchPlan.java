@@ -3,21 +3,18 @@ package com.patra.ingest.domain.model.vo;
 import java.util.List;
 
 /**
- * 批次规划结果值对象。
- * <p>
- * 职责：封装批次规划器返回的批次列表，包含总批次数、是否超限等信息。
- * </p>
- * <p>
- * 不变式：
+ * Value object representing a batch planning outcome.
+ * <p>Encapsulates the batches produced by the planner along with the total count and limit flags.</p>
+ * <p>Invariants:
  * <ul>
- *   <li>batches 不能为 null（但可以为空列表）。</li>
- *   <li>totalBatches >= 0。</li>
+ *   <li>{@code batches} must not be {@code null} (but may be empty).</li>
+ *   <li>{@code totalBatches} must be greater than or equal to zero.</li>
  * </ul>
  * </p>
  *
- * @param batches 批次列表
- * @param totalBatches 总批次数
- * @param exceedsLimit 是否超过批次数限制
+ * @param batches      batch list
+ * @param totalBatches total number of batches
+ * @param exceedsLimit whether the batch limit has been exceeded
  * @author linqibin
  * @since 0.1.0
  */
@@ -28,29 +25,29 @@ public record BatchPlan(
 ) {
     public BatchPlan {
         if (batches == null) {
-            throw new IllegalArgumentException("batches 不能为 null");
+            throw new IllegalArgumentException("batches must not be null");
         }
         if (totalBatches < 0) {
-            throw new IllegalArgumentException("totalBatches 不能为负数");
+            throw new IllegalArgumentException("totalBatches must not be negative");
         }
     }
 
     /**
-     * 创建空的批次规划（无批次）。
+     * Create an empty batch plan.
      */
     public static BatchPlan empty() {
         return new BatchPlan(List.of(), 0, false);
     }
 
     /**
-     * 创建单批次规划。
+     * Create a plan containing a single batch.
      */
     public static BatchPlan single(Batch batch) {
         return new BatchPlan(List.of(batch), 1, false);
     }
 
     /**
-     * 是否有批次。
+     * Returns {@code true} when the plan contains at least one batch.
      */
     public boolean hasBatches() {
         return !batches.isEmpty();

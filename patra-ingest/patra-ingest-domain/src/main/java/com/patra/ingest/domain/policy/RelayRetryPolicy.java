@@ -3,7 +3,7 @@ package com.patra.ingest.domain.policy;
 import java.time.Duration;
 
 /**
- * 指数退避策略（纯领域策略）。
+ * Pure domain policy implementing exponential backoff.
  */
 public class RelayRetryPolicy {
 
@@ -13,13 +13,13 @@ public class RelayRetryPolicy {
 
     public RelayRetryPolicy(Duration base, double multiplier, Duration max) {
         if (base == null || base.isZero() || base.isNegative()) {
-            throw new IllegalArgumentException("base backoff 必须为正值");
+            throw new IllegalArgumentException("base backoff must be positive");
         }
         if (max == null || max.isZero() || max.isNegative()) {
-            throw new IllegalArgumentException("max backoff 必须为正值");
+            throw new IllegalArgumentException("max backoff must be positive");
         }
         if (multiplier < 1.0d) {
-            throw new IllegalArgumentException("multiplier 不能小于 1");
+            throw new IllegalArgumentException("multiplier must not be less than 1");
         }
         this.base = base;
         this.multiplier = multiplier;
@@ -27,7 +27,7 @@ public class RelayRetryPolicy {
     }
 
     /**
-     * 计算第 {@code attempt} 次失败后的退避时间（attempt 从 1 开始）。
+     * Compute the backoff delay after the given attempt (attempt numbers start at 1).
      */
     public Duration computeDelay(int attempt) {
         if (attempt <= 1) {

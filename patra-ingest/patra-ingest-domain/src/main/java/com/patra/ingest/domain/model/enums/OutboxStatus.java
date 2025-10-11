@@ -1,34 +1,24 @@
 package com.patra.ingest.domain.model.enums;
 
 /**
- * Outbox 消息状态：统一消息可靠投递状态机。
+ * Outbox message status representing the reliable delivery state machine.
  * <ul>
- *   <li>PENDING：待发布（可被扫描）</li>
- *   <li>PUBLISHING：发布中（持有租约）</li>
- *   <li>PUBLISHED：已成功发布到下游（记录外部消息 ID）</li>
- *   <li>FAILED：发布失败（可进入重试或最终转 DEAD）</li>
- *   <li>DEAD：死亡消息（超过最大重试或人为冻结）</li>
+ *   <li>PENDING: ready to be scanned for publishing</li>
+ *   <li>PUBLISHING: currently held by a lease during publish</li>
+ *   <li>PUBLISHED: successfully delivered downstream (broker id recorded)</li>
+ *   <li>FAILED: failed publish eligible for retry or eventual DEAD</li>
+ *   <li>DEAD: retries exhausted or manually quarantined</li>
  * </ul>
  */
 public enum OutboxStatus {
-    /**
-     * 待发布
-     */
+    /** Pending publish. */
     PENDING,
-    /**
-     * 发布中（租约持有期间避免并发）
-     */
+    /** Publishing in progress; lease prevents concurrency. */
     PUBLISHING,
-    /**
-     * 已发布成功
-     */
+    /** Successfully published. */
     PUBLISHED,
-    /**
-     * 失败（仍在策略管控周期内）
-     */
+    /** Failed but still within retry strategy. */
     FAILED,
-    /**
-     * 死亡（不再尝试）
-     */
+    /** Dead and no longer retried. */
     DEAD
 }

@@ -3,40 +3,26 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * 任务状态（DICT：ing_task_status）。
- * <p>字段映射：ing_task.status_code → QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED</p>
- * <p>状态流转示例：QUEUED → RUNNING → SUCCEEDED｜FAILED｜CANCELLED</p>
+ * Task status (DICT: ing_task_status).
+ * <p>Field mapping: {@code ing_task.status_code → QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED}</p>
+ * <p>Example transitions: {@code QUEUED → RUNNING → SUCCEEDED | FAILED | CANCELLED}</p>
  */
 @Getter
 public enum TaskStatus {
-    /**
-     * 等待执行（已入队未被消费）
-     */
-    QUEUED("QUEUED", "排队中"),
-    /**
-     * 消费执行中（不可重复启动）
-     */
-    RUNNING("RUNNING", "运行中"),
-    /**
-     * 成功完成
-     */
-    SUCCEEDED("SUCCEEDED", "成功"),
-    /**
-     * 执行失败（可触发补偿或重试策略）
-     */
-    FAILED("FAILED", "失败"),
-    /**
-     * 部分批次失败
-     */
-    PARTIAL("PARTIAL", "部分失败"),
-    /**
-     * 批次全部成功但游标推进失败，等待异步重试
-     */
-    CURSOR_PENDING("CURSOR_PENDING", "游标推进待重试"),
-    /**
-     * 被主动终止或条件不满足取消
-     */
-    CANCELLED("CANCELLED", "已取消");
+    /** Queued and awaiting execution. */
+    QUEUED("QUEUED", "Queued"),
+    /** Currently running (not idempotent to re-run). */
+    RUNNING("RUNNING", "Running"),
+    /** Completed successfully. */
+    SUCCEEDED("SUCCEEDED", "Succeeded"),
+    /** Failed execution (eligible for compensation or retry). */
+    FAILED("FAILED", "Failed"),
+    /** Partially failed batches. */
+    PARTIAL("PARTIAL", "Partially failed"),
+    /** Batches succeeded but cursor advancement pending retry. */
+    CURSOR_PENDING("CURSOR_PENDING", "Cursor pending"),
+    /** Cancelled by operator or unmet conditions. */
+    CANCELLED("CANCELLED", "Cancelled");
 
     private final String code;
     private final String description;

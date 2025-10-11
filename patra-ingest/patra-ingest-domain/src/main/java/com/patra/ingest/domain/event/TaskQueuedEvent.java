@@ -5,62 +5,62 @@ import com.patra.common.domain.DomainEvent;
 import java.time.Instant;
 
 /**
- * 任务入队领域事件。
+ * Domain event emitted when a task enters the execution queue.
  *
- * <p>触发：任务被成功创建并进入待执行队列（或持久化为可调度状态）后发布。</p>
- * <p>用途：
+ * <p>Trigger: fired after a task is successfully created and persisted in a schedulable state.</p>
+ * <p>Usage:
  * <ul>
- *   <li>指标：统计 provenance / operation 维度的任务新增速率。</li>
- *   <li>审计：追踪调度实例与切片到任务的映射链路。</li>
- *   <li>下游：可驱动实时监控面板刷新。</li>
+ *   <li>Metrics: measure task creation rate by provenance and operation dimensions.</li>
+ *   <li>Audit: trace scheduling instances and slices through to concrete tasks.</li>
+ *   <li>Downstream: update real-time monitoring dashboards.</li>
  * </ul>
  * </p>
- * <p>幂等：以 {@code taskId} 为唯一键；重复发布视为异常，应在上游避免。</p>
+ * <p>Idempotency: {@code taskId} acts as the unique key. Duplicate emissions indicate an upstream issue.</p>
  */
 public record TaskQueuedEvent(
-        /*任务主键 ID。 */
+        /* Primary identifier of the task. */
         Long taskId,
-        /*所属计划 ID。 */
+        /* Identifier of the owning plan. */
         Long planId,
-        /*所属切片 ID。 */
+        /* Identifier of the owning slice. */
         Long sliceId,
-        /*调度实例 ID。 */
+        /* Scheduling instance identifier. */
         Long scheduleInstanceId,
-        /*来源代码。 */
+        /* Provenance code. */
         String provenanceCode,
-        /*操作代码。 */
+        /* Operation code. */
         String operationCode,
-        /*幂等键（去重语义）。 */
+        /* Idempotency key for deduplication. */
         String idempotentKey,
-        /*任务参数 JSON。 */
+        /* Task parameters serialized as JSON. */
         String paramsJson,
-        /*优先级（数值越大优先级可能越高，视实现）。 */
+        /* Scheduling priority (higher numbers typically mean higher priority). */
         Integer priority,
-        /*计划调度执行时间。 */
+        /* Planned execution timestamp. */
         Instant scheduledAt,
-        /*事件发生时间。 */
+        /* Timestamp when the event occurred. */
         Instant occurredAt
 ) implements DomainEvent {
 
     public TaskQueuedEvent {
-        // 保障事件发生时间非空，缺失则补当前时间
+        // Ensure the event timestamp is always populated.
         occurredAt = occurredAt == null ? Instant.now() : occurredAt;
     }
 
     /**
-     * 工厂方法：使用必需上下文创建事件，并自动填充 occurredAt。
+     * Factory method that creates the event with mandatory context and auto-populates {@code occurredAt}.
      *
-     * @param taskId             任务 ID
-     * @param planId             计划 ID
-     * @param sliceId            切片 ID
-     * @param scheduleInstanceId 调度实例 ID
-     * @param provenanceCode     来源代码
-     * @param operationCode      操作代码
-     * @param idempotentKey      幂等键
-     * @param paramsJson         参数 JSON
-     * @param priority           优先级
-     * @param scheduledAt        计划执行时间
-     * @return 事件实例
+     * @param taskId             task identifier
+     * @param planId             plan identifier
+     * @param sliceId            slice identifier
+     * @param scheduleInstanceId scheduling instance identifier
+     * @param provenanceCode     provenance code
+     * @param operationCode      operation code
+     * @param idempotentKey      idempotency key
+     * @param paramsJson         task parameters JSON
+     * @param priority           scheduling priority
+     * @param scheduledAt        planned execution timestamp
+     * @return event instance
      */
     public static TaskQueuedEvent of(Long taskId,
                                      Long planId,

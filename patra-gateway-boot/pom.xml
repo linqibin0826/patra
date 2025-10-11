@@ -20,7 +20,6 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
-        <!-- 网关（Reactive 版） -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
@@ -31,7 +30,6 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
-        <!-- Nacos 注册/配置（Spring Cloud Alibaba） -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>

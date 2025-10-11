@@ -4,8 +4,9 @@ import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import java.util.List;
 
 /**
- * 任务运行批次仓储端口。
- * <p>调度运行时一个任务可能被拆分为多个批次（分页/令牌），该端口负责批次层面的持久化与查询。</p>
+ * Repository port for task execution batches.
+ * <p>Tasks can be split into batches (pagination/tokenization) during execution; this port persists and queries
+ * batch-level state.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -13,24 +14,24 @@ import java.util.List;
 public interface TaskRunBatchRepository {
 
     /**
-     * 保存单个任务运行批次记录。
+     * Persist a single task run batch.
      *
-     * @param batch 批次实体
+     * @param batch batch entity
      */
     void save(TaskRunBatch batch);
 
     /**
-     * 批量写入任务运行批次记录。
+     * Persist multiple task run batches at once.
      *
-     * @param batches 批次实体集合，包含批次状态与统计信息
+     * @param batches batch entities including status and metrics
      */
     void saveAll(List<TaskRunBatch> batches);
 
     /**
-     * 按运行 ID 查询关联的批次记录。
+     * Retrieve batches by run identifier.
      *
-     * @param runId 运行 ID
-     * @return 该运行下的批次列表
+     * @param runId run identifier
+     * @return batches belonging to the run
      */
     List<TaskRunBatch> findByRunId(Long runId);
 }

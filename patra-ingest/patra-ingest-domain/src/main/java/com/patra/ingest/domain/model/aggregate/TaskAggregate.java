@@ -10,49 +10,50 @@ import com.patra.ingest.domain.model.vo.TaskSchedulerContext;
 import java.time.Instant;
 
 /**
- * 采集任务聚合根，封装调度、执行、租约等状态信息。
- * <p>支持幂等键生成、运行状态管理以及重试补偿。</p>
+ * Aggregate root for ingestion tasks. Encapsulates scheduling metadata, execution progress, lease ownership,
+ * and retry bookkeeping required to orchestrate task lifecycles.
+ * <p>Supports idempotency key generation, execution state transitions, and compensation flows.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
 public class TaskAggregate extends AggregateRoot<Long> {
 
-    /** 调度实例 ID */
+    /** Scheduler instance identifier. */
     private Long scheduleInstanceId;
-    /** 计划 ID */
+    /** Owning plan identifier. */
     private Long planId;
-    /** 切片 ID */
+    /** Owning slice identifier. */
     private Long sliceId;
-    /** 来源编码 */
+    /** Provenance/source code. */
     private final String provenanceCode;
-    /** 操作编码 */
+    /** Operation code. */
     private final String operationCode;
-    /** 任务参数 JSON */
+    /** Task parameter payload in JSON. */
     private final String paramsJson;
-    /** 幂等键 */
+    /** Idempotency key. */
     private final String idempotentKey;
-    /** 表达式哈希 */
+    /** Expression hash. */
     private final String exprHash;
-    /** 调度优先级 */
+    /** Scheduling priority. */
     private final Integer priority;
-    /** 计划执行时间 */
+    /** Scheduled execution time. */
     private final Instant scheduledAt;
-    /** 最近心跳时间 */
+    /** Timestamp of the last heartbeat. */
     private final Instant lastHeartbeatAt;
-    /** 重试次数 */
+    /** Retry count. */
     private final Integer retryCount;
-    /** 最近错误码 */
+    /** Most recent error code. */
     private final String lastErrorCode;
-    /** 最近错误信息 */
+    /** Most recent error message. */
     private final String lastErrorMsg;
-    /** 任务状态 */
+    /** Current task status. */
     private TaskStatus status;
-    /** 租约信息 */
+    /** Lease ownership metadata. */
     private LeaseInfo leaseInfo;
-    /** 执行时间线 */
+    /** Execution timeline markers. */
     private ExecutionTimeline executionTimeline;
-    /** 调度上下文 */
+    /** Scheduler context propagated with the task. */
     private TaskSchedulerContext schedulerContext;
 
     private TaskAggregate(Long id,
@@ -96,19 +97,19 @@ public class TaskAggregate extends AggregateRoot<Long> {
     }
 
     /**
-     * 创建新的任务聚合。
+     * Create a new task aggregate in the queued state.
      *
-     * @param scheduleInstanceId 调度实例 ID
-     * @param planId 计划 ID
-     * @param sliceId 切片 ID 占位
-     * @param provenanceCode 来源编码
-     * @param operationCode 操作编码
-     * @param paramsJson 参数 JSON
-     * @param idempotentKey 幂等键
-     * @param exprHash 表达式哈希
-     * @param priority 优先级
-     * @param scheduledAt 计划执行时间
-     * @return 新任务聚合
+     * @param scheduleInstanceId scheduler instance identifier
+     * @param planId             owning plan identifier
+     * @param sliceId            owning slice identifier placeholder
+     * @param provenanceCode     provenance/source code
+     * @param operationCode      operation code
+     * @param paramsJson         task parameter payload in JSON
+     * @param idempotentKey      idempotency key
+     * @param exprHash           expression hash
+     * @param priority           scheduling priority
+     * @param scheduledAt        scheduled execution time
+     * @return new task aggregate ready for persistence
      */
     public static TaskAggregate create(Long scheduleInstanceId,
                                        Long planId,
@@ -142,7 +143,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
     }
 
     /**
-     * 从持久化记录重建任务聚合。
+     * Rebuild an existing task aggregate from persisted state.
      */
     public static TaskAggregate restore(Long id,
                                         Long scheduleInstanceId,
@@ -193,7 +194,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
     }
 
     /**
-     * 聚合准备入队时生成领域事件，供应用层出箱。
+     * Emit a domain event when the task is ready to be queued so the application layer can publish it.
      */
     public TaskQueuedEvent raiseQueuedEvent() {
         TaskQueuedEvent event = TaskQueuedEvent.of(
@@ -259,7 +260,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
     }
 
     /**
-     * 在补偿场景下重置任务状态，回退到排队态。
+     * Reset the task for compensation by clearing runtime context and returning to the queued state.
      */
     public void prepareForRetry() {
         releaseLease();

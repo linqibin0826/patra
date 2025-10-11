@@ -3,20 +3,22 @@ package com.patra.ingest.domain.exception;
 import com.patra.common.error.DomainException;
 
 /**
- * Ingest 领域异常基类。
+ * Base class for ingestion domain exceptions.
  *
- * <p>语义：统一承载“领域显式失败”与“与领域强相关的持久化/依赖故障包装”，保证应用层（App / Adapter）可以：
+ * <p>Purpose: encapsulates explicit domain failures together with persistence or dependency issues that are
+ * tightly coupled to the domain. This allows application and adapter layers to:
  * <ul>
- *   <li>区分可重试与不可重试（结合具体子类的 {@code ErrorTrait}）。</li>
- *   <li>统一日志结构与告警降噪（只需匹配继承层次）。</li>
- *   <li>在 Outbox / 调度回调中进行细粒度统计与指标聚合。</li>
+ *   <li>Differentiate retryable and non-retryable errors (combined with {@code ErrorTrait} of subclasses).</li>
+ *   <li>Enforce consistent logging and reduce alert noise by matching on the inheritance hierarchy.</li>
+ *   <li>Produce granular metrics within outbox flows or scheduler callbacks.</li>
  * </ul>
  * </p>
- * <p>使用约定：
+ * <p>Usage guidelines:
  * <ul>
- *   <li>新增任何 Ingest 领域异常需继承本类并实现 {@code HasErrorTraits}（若需暴露错误特征）。</li>
- *   <li>避免在外层直接抛出通用 RuntimeException，应转换为语义明确的子类。</li>
- *   <li>日志中需包含关键上下文（计划 key / provenance / operation / window），以支持排查。</li>
+ *   <li>All new ingestion domain exceptions should extend this class and implement {@code HasErrorTraits} when
+ *   error traits are exposed.</li>
+ *   <li>Avoid throwing generic {@code RuntimeException}; convert to a meaningful subclass instead.</li>
+ *   <li>Include key context (plan key, provenance, operation, window) in logs to speed up investigations.</li>
  * </ul>
  * </p>
  *
@@ -26,19 +28,19 @@ import com.patra.common.error.DomainException;
 public abstract class IngestException extends DomainException {
 
     /**
-     * 使用消息构造异常。
+     * Construct the exception with a message.
      *
-     * @param message 详情消息
+     * @param message detailed message
      */
     protected IngestException(String message) {
         super(message);
     }
 
     /**
-     * 使用消息与原因构造异常。
+     * Construct the exception with a message and cause.
      *
-     * @param message 详情消息
-     * @param cause   异常原因
+     * @param message detailed message
+     * @param cause   root cause
      */
     protected IngestException(String message, Throwable cause) {
         super(message, cause);

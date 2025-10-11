@@ -3,15 +3,15 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * 运行批次状态（DICT：ing_batch_status）。
- * <p>字段映射：ing_task_run_batch.status_code → RUNNING/SUCCEEDED/FAILED/SKIPPED</p>
+ * Batch execution status (DICT: ing_batch_status).
+ * <p>Field mapping: {@code ing_task_run_batch.status_code → RUNNING/SUCCEEDED/FAILED/SKIPPED}</p>
  */
 @Getter
 public enum BatchStatus {
-    RUNNING("RUNNING", "运行中"),
-    SUCCEEDED("SUCCEEDED", "成功"),
-    FAILED("FAILED", "失败"),
-    SKIPPED("SKIPPED", "跳过");
+    RUNNING("RUNNING", "Running"),
+    SUCCEEDED("SUCCEEDED", "Succeeded"),
+    FAILED("FAILED", "Failed"),
+    SKIPPED("SKIPPED", "Skipped");
 
     private final String code;
     private final String description;

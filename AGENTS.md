@@ -162,13 +162,14 @@ These instructions guide Codex CLI and similar AI agents working in this reposit
 8. Run an architecture checkpoint; proceed to implementation only after alignment.
 
 ### Design Artifacts & Templates
-- C4: Context, Container, Component (link to code modules when possible).
-- ADR: Title, Status, Context, Decision, Alternatives, Consequences, Follow-ups.
-- NFR Matrix: availability, latency, throughput, durability, security, privacy, compliance, cost.
-- Sequence diagrams for critical flows; data-flow diagrams; event-storming snapshots.
-- Deployment topology: regions, AZs, networks, dependencies, failure domains.
-- Observability plan: logs, metrics, traces, dashboards, alerts, runbooks.
-- Capacity & cost model: load assumptions, headroom, scaling policies, per-unit cost.
+
+* C4: Keep only Context and Container levels to describe system boundaries and main modules (link to code directories such as `patra-ingest`, `patra-registry`).
+* ADR: Title, Status, Context, Decision, Alternatives, Consequences; record all in a single simplified file.
+* NFR Matrix: availability, performance, latency, security, privacy, compliance, cost; focus on key constraints and targets.
+* Sequence / Data Flow: create concise sequence or data-flow diagrams for complex business or cross-module interactions.
+* Deployment Topology: describe the current runtime environment (e.g., Docker Compose, local dependencies) without cloud region details.
+* Observability Plan: define logs, metrics, traces, and basic alerting setup (e.g., SkyWalking, XXL-Job).
+* Capacity & Cost Model: note basic resource requirements and scaling strategy; refine cost models in later stages.
 
 ### Architecture Review Checklist (Quick)
 - Clear service boundaries and ownership; minimal shared databases.
@@ -180,12 +181,12 @@ These instructions guide Codex CLI and similar AI agents working in this reposit
 - Cost awareness: sizing assumptions, autoscaling, storage/egress patterns, FinOps guardrails.
 
 ### Code Operation Tool Priorities
-- For all code operations (reading, searching, editing, analyzing), prefer Serena MCP tools first.
-  - Reading code: Serena overview.
-  - Searching code: Serena symbol search.
-  - Editing code: Serena symbol-based editing.
-  - Analyzing code: Serena reference tracing and dependencies.
-- Use standard tools (Read/Edit/Grep/Glob) only for non-code files or when Serena cannot handle the task.
+- For all code operations (reading, searching, writing, analyzing), prefer IntelliJ MCP tools first.
+  - Reading code: `get_file_text_by_path` for file content, `get_symbol_info` for symbol details.
+  - Searching code: `find_files_by_name_keyword` (fastest), `search_in_files_by_text`, `search_in_files_by_regex`.
+  - Editing code: `replace_text_in_file` for targeted edits, `rename_refactoring` for symbol renames.
+  - Analyzing code: `search_in_files_by_text/regex` for references, `get_file_problems` for errors/warnings.
+- Use standard tools (Read/Edit/Grep/Glob) only for non-code files or when IntelliJ MCP cannot handle the task.
 
 ### When to Write Code
 - After ADR approval and C4 alignment, generate contracts and scaffolding first (ports/adapters, DTOs, interfaces).

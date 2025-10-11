@@ -3,10 +3,10 @@ package com.patra.ingest.domain.model.vo;
 import java.time.Instant;
 
 /**
- * INGEST_TASK_READY 消息载体。
+ * Message payload for the {@code INGEST_TASK_READY} channel.
  *
- * @param payload 消息主体
- * @param header 消息头部
+ * @param payload message body
+ * @param header message headers
  */
 public record TaskReadyMessage(
         Payload payload,
@@ -14,7 +14,7 @@ public record TaskReadyMessage(
 ) {
 
     /**
-     * 任务消息主体。
+     * Task message body.
      */
     public record Payload(
             Long taskId,
@@ -35,8 +35,7 @@ public record TaskReadyMessage(
     }
 
     /**
-     * 任务参数。
-     * <p>包含任务执行所需的具体参数。</p>
+     * Task-specific parameters required for execution.
      */
     public record TaskParams(
             Integer sliceNo
@@ -44,8 +43,7 @@ public record TaskReadyMessage(
     }
 
     /**
-     * 计划切片参数。
-     * <p>描述切片策略的具体参数。</p>
+     * Plan slice parameters describing the applied slicing strategy.
      */
     public record PlanSliceParams(
             String strategy

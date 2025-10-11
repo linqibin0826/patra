@@ -7,68 +7,71 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * 计划编排前置验证异常。
+ * Exception thrown when pre-assembly validation fails for a plan.
  *
- * <p>产生阶段：计划进入装配/切片之前的 <strong>前置校验链</strong>（窗口有效性校验、窗口跨度边界、队列背压、能力匹配等）。
- * 一旦抛出说明当前请求不满足业务前提，<strong>无需重试</strong>，应通过调整调度参数 / 时间窗口 / 系统配置后重新提交。</p>
+ * <p>Raised during the pre-flight validation chain executed before slicing or assembly (window validity,
+ * boundary checks, queue backpressure, capability alignment, and so on). Once thrown, the request does not meet
+ * business prerequisites and should not be retried. Adjust scheduler parameters, time windows, or system
+ * configuration before resubmitting.</p>
  *
- * <p>异常处理建议：
+ * <p>Handling guidelines:
  * <ul>
- *   <li>应用层：捕获后记录 INFO 或 WARN（视可预期程度），向上游返回可读提示；不做重试。</li>
- *   <li>监控层：统计 {@link Reason} 分布，辅助发现调度策略与配置缺陷。</li>
- *   <li>排查指引：结合窗口起止时间、计划 key 与背压指标定位。</li>
+ *   <li>Application layer: log at INFO/WARN depending on expectations, return a readable message upstream, and
+ *   do not retry.</li>
+ *   <li>Monitoring: aggregate {@link Reason} to uncover scheduling or configuration gaps.</li>
+ *   <li>Diagnosis: correlate with window start/end, plan key, and backpressure metrics.</li>
  * </ul>
  * </p>
  */
 public class PlanValidationException extends IngestException implements HasErrorTraits {
 
     /**
-     * 验证失败原因分类。
-     * <p>所有枚举值均属于“请求侧可修复”范畴，出现后不应进行自动重试。</p>
+     * Reason categories for validation failure.
+     * <p>All values represent caller-correctable issues; automatic retries are not appropriate.</p>
      */
     public enum Reason {
-        /** 调度未提供窗口，无法继续。 */
+        /** Scheduler did not provide a window. */
         WINDOW_MISSING,
-        /** 窗口起止非法（起 >= 止 / 与基准对齐失败 / 超出允许边界）。 */
+        /** Invalid window boundaries (start >= end, misaligned, or out of range). */
         WINDOW_INVALID,
-        /** 窗口跨度超过最大限制（需拆分或缩小）。 */
+        /** Window span exceeds the allowed maximum (needs splitting or reduction). */
         WINDOW_TOO_LARGE,
-        /** 窗口跨度过小，无法形成有效切片或浪费资源。 */
+        /** Window span is too small to generate efficient slices. */
         WINDOW_TOO_SMALL,
-        /** 下游（任务/消息）队列存在背压，暂不接受新计划。 */
+        /** Downstream queues are back-pressured; reject new plans for now. */
         QUEUE_BACKPRESSURE,
-        /** 能力/来源/端点组合与平台能力矩阵不匹配。 */
+        /** Capability/provenance/endpoint combination is unsupported by the platform. */
         CAPABILITY_MISMATCH
     }
 
-    /** 验证失败原因，可能为 null（表示未细分或通用失败）。 */
+    /** Specific reason for the failure; {@code null} when not distinguished. */
     private final Reason reason;
 
     /**
-     * 使用消息构造（未细分原因）。
+     * Create the exception with a message and no explicit reason.
      *
-     * @param message 人类可读的失败描述
+     * @param message human-readable failure description
      */
     public PlanValidationException(String message) {
         this(message, null, null);
     }
 
     /**
-     * 使用消息与原因构造。
+     * Create the exception with a message and reason.
      *
-     * @param message 失败描述
-     * @param reason  失败细分原因
+     * @param message failure description
+     * @param reason  failure reason
      */
     public PlanValidationException(String message, Reason reason) {
         this(message, reason, null);
     }
 
     /**
-     * 使用消息、原因与底层异常构造。
+     * Create the exception with a message, reason, and underlying cause.
      *
-     * @param message 失败描述
-     * @param reason  失败细分原因
-     * @param cause   底层触发异常（可为空）
+     * @param message failure description
+     * @param reason  failure reason
+     * @param cause   underlying exception (optional)
      */
     public PlanValidationException(String message, Reason reason, Throwable cause) {
         super(message, cause);
@@ -76,19 +79,19 @@ public class PlanValidationException extends IngestException implements HasError
     }
 
     /**
-     * 使用消息与底层异常构造（未细分原因）。
+     * Create the exception with a message and underlying cause without specifying the reason.
      *
-     * @param message 失败描述
-     * @param cause   底层异常
+     * @param message failure description
+     * @param cause   underlying exception
      */
     public PlanValidationException(String message, Throwable cause) {
         this(message, null, cause);
     }
 
     /**
-     * 获取验证失败原因。
+     * Expose the validation failure reason.
      *
-     * @return 失败原因；可能为 null
+     * @return failure reason, possibly {@code null}
      */
     public Reason getReason() {
         return reason;

@@ -1,12 +1,12 @@
 package com.patra.ingest.domain.model.vo;
 
 /**
- * 对象存储上传请求。
+ * Request payload for uploading content to object storage.
  *
- * @param bucket 存储桶名称
- * @param objectPath 对象路径（不含bucket）
- * @param content 文件内容（字节数组）
- * @param contentType 内容类型（如 application/gzip）
+ * @param bucket      storage bucket name
+ * @param objectPath  object key (without bucket)
+ * @param content     file content
+ * @param contentType MIME type (for example {@code application/gzip})
  * @author linqibin
  * @since 0.1.0
  */
@@ -17,7 +17,7 @@ public record StorageUploadRequest(
         String contentType
 ) {
     /**
-     * 快捷构造（默认gzip类型）。
+     * Convenience factory that defaults the content type to {@code application/gzip}.
      */
     public static StorageUploadRequest gzip(String bucket, String objectPath, byte[] content) {
         return new StorageUploadRequest(bucket, objectPath, content, "application/gzip");

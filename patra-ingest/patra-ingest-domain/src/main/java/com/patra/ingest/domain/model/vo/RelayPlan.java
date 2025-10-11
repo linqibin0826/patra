@@ -7,8 +7,8 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Outbox Relay 执行计划。
- * <p>channel 为 null 时表示处理所有 channel 的消息。</p>
+ * Execution plan for the outbox relay.
+ * <p>A {@code null} channel indicates that all channels should be processed.</p>
  */
 public record RelayPlan(
         ChannelKey channel,
@@ -22,20 +22,20 @@ public record RelayPlan(
         String leaseOwner
 ) {
     public RelayPlan {
-        // channel 允许为 null，表示处理所有 channel
-        Objects.requireNonNull(triggeredAt, "triggeredAt 必填");
-        Objects.requireNonNull(leaseDuration, "leaseDuration 必填");
-        Objects.requireNonNull(initialBackoff, "initialBackoff 必填");
-        Objects.requireNonNull(maxBackoff, "maxBackoff 必填");
-        Objects.requireNonNull(leaseOwner, "leaseOwner 必填");
+        // channel may be null to indicate "all channels"
+        Objects.requireNonNull(triggeredAt, "triggeredAt must not be null");
+        Objects.requireNonNull(leaseDuration, "leaseDuration must not be null");
+        Objects.requireNonNull(initialBackoff, "initialBackoff must not be null");
+        Objects.requireNonNull(maxBackoff, "maxBackoff must not be null");
+        Objects.requireNonNull(leaseOwner, "leaseOwner must not be null");
         if (batchSize <= 0) {
-            throw new IllegalArgumentException("batchSize 必须为正数");
+            throw new IllegalArgumentException("batchSize must be positive");
         }
         if (maxAttempts <= 0) {
-            throw new IllegalArgumentException("maxAttempts 必须为正数");
+            throw new IllegalArgumentException("maxAttempts must be positive");
         }
         if (backoffMultiplier < 1.0d) {
-            throw new IllegalArgumentException("backoffMultiplier 不能小于 1");
+            throw new IllegalArgumentException("backoffMultiplier must be at least 1");
         }
     }
 

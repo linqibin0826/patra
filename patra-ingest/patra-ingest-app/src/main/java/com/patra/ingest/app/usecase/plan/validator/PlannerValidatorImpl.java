@@ -10,14 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 默认计划器验证器实现：提供窗口背压 + 来源能力 + 窗口合理性等基础校验。
- * <p>阈值策略：
+ * Default implementation of {@link PlannerValidator}. Performs baseline checks
+ * including window sanity, queue backpressure, and source capability validation.
+ *
+ * <p>Threshold policy:</p>
  * <ul>
- *   <li>DEFAULT_QUEUE_THRESHOLD=50：超出判定为背压，需暂缓触发。</li>
- *   <li>MAX_REASONABLE_WINDOW=30d：防止一次性规划过大时间跨度导致任务膨胀。</li>
- *   <li>MIN_REASONABLE_WINDOW=1min：避免毫秒级或过小切片浪费。</li>
+ *   <li>{@code DEFAULT_QUEUE_THRESHOLD = 50}: apply backpressure when the backlog exceeds this value.</li>
+ *   <li>{@code MAX_REASONABLE_WINDOW = 30 days}: prevent oversized windows that inflate task volume.</li>
+ *   <li>{@code MIN_REASONABLE_WINDOW = 1 minute}: avoid extremely small slices that waste resources.</li>
  * </ul>
- * UPDATE 操作允许缺失窗口；HARVEST 操作需确保窗口或增量能力配置完整。</p>
+ * UPDATE operations may omit a window; HARVEST operations must provide either an explicit window
+ * or incremental capability configuration.</p>
  */
 @Slf4j
 @Component
@@ -32,50 +35,51 @@ public class PlannerValidatorImpl implements PlannerValidator {
                                        ProvenanceConfigSnapshot snapshot,
                                        PlannerWindow window,
                                        long currentQueuedTasks) {
-    log.debug("[INGEST][APP] Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
+        log.debug("[INGEST][APP] Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
                 triggerNorm.provenanceCode(), triggerNorm.operationCode(), window, currentQueuedTasks);
 
-        // 1. 验证窗口合理性
+        // Step 1: validate window sanity.
         validateWindow(triggerNorm, window);
         
-        // 2. 验证队列背压
+        // Step 2: enforce queue backpressure.
         validateQueueBackpressure(currentQueuedTasks);
         
-        // 3. 验证来源配置能力
+        // Step 3: ensure provenance capabilities align with the trigger.
         validateSourceCapabilities(triggerNorm, snapshot, window);
         
-    log.debug("[INGEST][APP] Plan assembly validation passed");
+        log.debug("[INGEST][APP] Plan assembly validation passed");
     }
 
     /**
-     * 验证窗口合理性：存在性/时间顺序/跨度上下限。
+     * Validate the ingestion window: presence, ordering, and duration boundaries.
      */
     private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
-        // UPDATE 操作允许空窗口
+        // UPDATE operations may proceed without a window.
         if (triggerNorm.isUpdate()) {
             log.debug("[INGEST][APP] Update operation detected, allowing null window");
             return;
         }
 
         if (window == null) {
-            throw new PlanValidationException("计划窗口不能为空", PlanValidationException.Reason.WINDOW_MISSING);
+            throw new PlanValidationException("Plan window must not be null",
+                    PlanValidationException.Reason.WINDOW_MISSING);
         }
 
-        // 非 UPDATE 操作需要有效窗口
+        // Non-UPDATE operations require fully populated bounds.
         if (window.from() == null || window.to() == null) {
             throw new PlanValidationException(
                     String.format("Time window is required for %s operation", triggerNorm.operationCode()),
                     PlanValidationException.Reason.WINDOW_MISSING);
         }
 
-        // 验证窗口时间顺序
+        // Enforce chronological ordering.
         if (!window.from().isBefore(window.to())) {
             throw new PlanValidationException(
                     String.format("Invalid window: from=%s must be before to=%s", window.from(), window.to()),
                     PlanValidationException.Reason.WINDOW_INVALID);
         }
 
-        // 验证窗口大小合理性
+        // Ensure the window duration is within reasonable bounds.
         Duration windowDuration = Duration.between(window.from(), window.to());
         if (windowDuration.compareTo(MAX_REASONABLE_WINDOW) > 0) {
             throw new PlanValidationException(
@@ -91,11 +95,11 @@ public class PlannerValidatorImpl implements PlannerValidator {
                     PlanValidationException.Reason.WINDOW_TOO_SMALL);
         }
 
-    log.debug("[INGEST][APP] Window validation passed, duration={}min", windowDuration.toMinutes());
+        log.debug("[INGEST][APP] Window validation passed, duration={}min", windowDuration.toMinutes());
     }
 
     /**
-     * 验证队列背压：当前排队任务超过阈值阻断新规划，避免系统过载。
+     * Enforce queue backpressure: halt planning when queued tasks exceed the threshold.
      */
     private void validateQueueBackpressure(long currentQueuedTasks) {
         if (currentQueuedTasks > DEFAULT_QUEUE_THRESHOLD) {
@@ -104,12 +108,11 @@ public class PlannerValidatorImpl implements PlannerValidator {
                             currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD),
                     PlanValidationException.Reason.QUEUE_BACKPRESSURE);
         }
-        
-    log.debug("[INGEST][APP] Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
+        log.debug("[INGEST][APP] Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
     }
 
     /**
-     * 验证来源能力与偏移、窗口配置完整性。
+     * Validate source capabilities along with offset/window completeness.
      */
     private void validateSourceCapabilities(PlanTriggerNorm triggerNorm, 
                                             ProvenanceConfigSnapshot snapshot, 
@@ -120,19 +123,20 @@ public class PlannerValidatorImpl implements PlannerValidator {
             return;
         }
 
-        // 检查 HARVEST 操作的增量能力
+        // Validate incremental capability for HARVEST operations.
         if (triggerNorm.isHarvest()) {
             validateIncrementalCapability(triggerNorm, snapshot, window);
         }
 
-        // 检查窗口配置完整性
+        // Validate window-related configuration if a window is present.
         if (!triggerNorm.isUpdate() && window != null && window.from() != null && window.to() != null) {
             validateWindowConfigCompleteness(snapshot);
         }
     }
 
     /**
-     * 验证增量采集能力：若声明支持增量（非 FULL），需具备偏移字段；否则要求显式窗口。
+     * Validate incremental collection capabilities. If the source advertises incremental
+     * mode (non-FULL), it must expose offset configuration; otherwise an explicit window is required.
      */
     private void validateIncrementalCapability(PlanTriggerNorm triggerNorm,
                                                ProvenanceConfigSnapshot snapshot,
@@ -140,7 +144,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
         
         ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
         
-        // 如果没有窗口配置，但要求时间窗口，则需要手动指定窗口
+        // If no incremental capability is configured, require an explicit window.
         if (windowOffset == null || StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
             if (triggerNorm.requestedWindowFrom() == null && window != null && window.from() != null) {
                 throw new PlanValidationException(
@@ -150,7 +154,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
             }
         }
 
-        // 检查偏移字段配置
+        // Verify offset-field configuration for date/composite offsets.
         if (windowOffset != null &&
                 (StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "DATE")
                         || StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "COMPOSITE"))) {
@@ -163,22 +167,22 @@ public class PlannerValidatorImpl implements PlannerValidator {
             }
         }
 
-    log.debug("[INGEST][APP] Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
+        log.debug("[INGEST][APP] Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
     }
 
     /**
-     * 验证窗口模式相关配置（窗口尺寸、最大跨度等）；仅警告，不中断。
+     * Issue warnings when optional window configuration (size/span) is invalid.
      */
     private void validateWindowConfigCompleteness(ProvenanceConfigSnapshot snapshot) {
         ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
         
         if (windowOffset != null && !StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
-            // 验证窗口大小配置
+            // Warn when window size is missing or invalid.
             if (windowOffset.windowSizeValue() == null || windowOffset.windowSizeValue() <= 0) {
                 log.warn("[INGEST][APP] window size not configured or invalid, fallback to defaults");
             }
 
-            // 验证最大窗口跨度
+            // Warn when the maximum window span is invalid.
             if (windowOffset.maxWindowSpanSeconds() != null && windowOffset.maxWindowSpanSeconds() <= 0) {
                 log.warn("[INGEST][APP] invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
             }

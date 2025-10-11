@@ -1,25 +1,22 @@
 package com.patra.ingest.domain.model.vo;
 
 /**
- * 批次执行结果值对象。
- * <p>
- * 职责：封装批次执行的结果，包含成功标志、数据量、游标令牌、错误信息等。
- * </p>
- * <p>
- * 不变式：
+ * Value object describing the outcome of a batch execution.
+ * <p>Captures success flag, row counts, cursor token, error message, and storage key.</p>
+ * <p>Invariants:
  * <ul>
- *   <li>batchNo >= 1。</li>
- *   <li>fetchedCount >= 0。</li>
- *   <li>若 success = false，errorMessage 不能为空。</li>
+ *   <li>{@code batchNo} >= 1</li>
+ *   <li>{@code fetchedCount} >= 0</li>
+ *   <li>When {@code success} is {@code false}, {@code errorMessage} must be present</li>
  * </ul>
  * </p>
  *
- * @param batchNo 批次序号
- * @param success 是否成功
- * @param fetchedCount 实际抓取数据量
- * @param nextCursorToken 下一个游标令牌（用于后续批次）
- * @param errorMessage 错误信息（失败时）
- * @param storageKey 数据存储键（如 OSS 路径）
+ * @param batchNo         batch sequence number
+ * @param success         success flag
+ * @param fetchedCount    number of records fetched
+ * @param nextCursorToken cursor token for the next batch
+ * @param errorMessage    error details when {@code success} is false
+ * @param storageKey      storage location (e.g., object storage path)
  * @author linqibin
  * @since 0.1.0
  */
@@ -33,32 +30,32 @@ public record BatchResult(
 ) {
     public BatchResult {
         if (batchNo < 1) {
-            throw new IllegalArgumentException("batchNo 必须 >= 1");
+            throw new IllegalArgumentException("batchNo must be >= 1");
         }
         if (fetchedCount < 0) {
-            throw new IllegalArgumentException("fetchedCount 不能为负数");
+            throw new IllegalArgumentException("fetchedCount must not be negative");
         }
         if (!success && (errorMessage == null || errorMessage.isBlank())) {
-            throw new IllegalArgumentException("失败时 errorMessage 不能为空");
+            throw new IllegalArgumentException("errorMessage must be provided when success is false");
         }
     }
 
     /**
-     * 创建成功的批次结果。
+     * Factory for a successful batch result.
      */
     public static BatchResult success(int batchNo, int fetchedCount, String nextCursorToken, String storageKey) {
         return new BatchResult(batchNo, true, fetchedCount, nextCursorToken, null, storageKey);
     }
 
     /**
-     * 创建失败的批次结果。
+     * Factory for a failed batch result.
      */
     public static BatchResult failure(int batchNo, String errorMessage) {
         return new BatchResult(batchNo, false, 0, null, errorMessage, null);
     }
 
     /**
-     * 是否有下一个游标（继续分页）。
+     * Returns {@code true} when a cursor token is available for further pagination.
      */
     public boolean hasNextCursor() {
         return nextCursorToken != null && !nextCursorToken.isBlank();

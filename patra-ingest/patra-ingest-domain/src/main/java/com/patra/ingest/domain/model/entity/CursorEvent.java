@@ -8,55 +8,54 @@ import java.math.BigDecimal;
 import lombok.Getter;
 
 /**
- * 游标推进事件（append-only）。
+ * Append-only cursor advancement event.
  *
- * <p>用于记录某一命名空间下特定游标的推进（或回退）操作轨迹，支撑：
+ * <p>Captures forward or backward movements for a cursor within a namespace to support:</p>
  * <ul>
- *   <li>审计：追踪每次窗口推进来源与值变化。</li>
- *   <li>重建：在需要恢复游标状态时回放事件。</li>
- *   <li>监控：分析推进速度、回退比例、滞后情况。</li>
+ *   <li>Audit: trace the source and value changes for each window advancement.</li>
+ *   <li>Rebuild: replay events when restoring cursor state.</li>
+ *   <li>Monitoring: analyze advancement speed, rollback ratio, and lag.</li>
  * </ul>
- * </p>
- * <p>设计原则：不可变；不修改历史记录；必要字段覆盖字符串/时间/数值多类型表示，避免类型切换损失精度。</p>
+ * <p>Design principles: immutable; historical records are never mutated; fields cover string/time/numeric representations to avoid precision loss.</p>
  */
 @SuppressWarnings("unused")
 @Getter
 public class CursorEvent {
-    /** 主键 ID。 */
+    /** Primary key ID. */
     private final Long id;
-    /** 来源代码。 */
+    /** Provenance code. */
     private final String provenanceCode;
-    /** 操作代码。 */
+    /** Operation code. */
     private final String operationCode;
-    /** 游标逻辑键（区分同一来源下不同维度）。 */
+    /** Logical cursor key (distinguishes dimensions within a provenance). */
     private final String cursorKey;
-    /** 命名空间范围代码（如租户 / 数据域）。 */
+    /** Namespace scope code (e.g., tenant or data domain). */
     private final String namespaceScopeCode;
-    /** 命名空间业务键。 */
+    /** Namespace business key. */
     private final String namespaceKey;
-    /** 游标类型（时间 / 数值 / 字典序等）。 */
+    /** Cursor type (time, numeric, lexicographic, etc.). */
     private final CursorType cursorType;
-    /** 旧值（原始字符串表示）。 */
+    /** Previous value (raw string). */
     private final String prevValue;
-    /** 新值（原始字符串表示）。 */
+    /** New value (raw string). */
     private final String newValue;
-    /** 推进方向（前进 / 回退）。 */
+    /** Advancement direction (forward or rollback). */
     private final CursorDirection direction;
-    /** 幂等键（防重复写入）。 */
+    /** Idempotency key used to guard against duplicates. */
     private final String idempotentKey;
-    /** 在推进时观察到的最大可能值（用于延迟评估）。 */
+    /** Observed maximum value during advancement (for lag assessment). */
     private final String observedMaxValue;
-    /** 旧值解析出的时间表示（若适用）。 */
+    /** Parsed instant for the previous value (if applicable). */
     private final Instant prevInstant;
-    /** 新值解析出的时间表示（若适用）。 */
+    /** Parsed instant for the new value (if applicable). */
     private final Instant newInstant;
-    /** 旧值解析出的数值表示（若适用）。 */
+    /** Parsed numeric value for the previous cursor (if applicable). */
     private final BigDecimal prevNumeric;
-    /** 新值解析出的数值表示（若适用）。 */
+    /** Parsed numeric value for the new cursor (if applicable). */
     private final BigDecimal newNumeric;
-    /** 血缘信息（表达式依赖链）。 */
+    /** Lineage information describing expression dependencies. */
     private final CursorLineage lineage;
-    /** 推进表达式哈希（用于追踪策略变更）。 */
+    /** Hash of the expression used during advancement (tracks strategy changes). */
     private final String exprHash;
 
     private CursorEvent(Long id,
@@ -98,26 +97,26 @@ public class CursorEvent {
     }
 
     /**
-     * 还原（反序列化）事件对象。
-     * @param id 主键ID
-     * @param provenanceCode 来源代码
-     * @param operationCode 操作代码
-     * @param cursorKey 游标键
-     * @param namespaceScopeCode 命名空间范围
-     * @param namespaceKey 命名空间键
-     * @param cursorType 游标类型
-     * @param prevValue 旧值(字符串)
-     * @param newValue 新值(字符串)
-     * @param direction 推进方向
-     * @param idempotentKey 幂等键
-     * @param observedMaxValue 观察最大值
-     * @param prevInstant 旧时间值
-     * @param newInstant 新时间值
-     * @param prevNumeric 旧数值
-     * @param newNumeric 新数值
-     * @param lineage 血缘
-     * @param exprHash 表达式哈希
-     * @return 事件实例
+     * Restore (deserialize) a cursor event from persisted fields.
+     * @param id primary key
+     * @param provenanceCode provenance code
+     * @param operationCode operation code
+     * @param cursorKey cursor key
+     * @param namespaceScopeCode namespace scope code
+     * @param namespaceKey namespace key
+     * @param cursorType cursor type
+     * @param prevValue previous value (string)
+     * @param newValue new value (string)
+     * @param direction advancement direction
+     * @param idempotentKey idempotency key
+     * @param observedMaxValue observed maximum value
+     * @param prevInstant previous instant
+     * @param newInstant new instant
+     * @param prevNumeric previous numeric value
+     * @param newNumeric new numeric value
+     * @param lineage lineage metadata
+     * @param exprHash expression hash
+     * @return {@link CursorEvent} instance
      */
     public static CursorEvent restore(Long id,
                                       String provenanceCode,

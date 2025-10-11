@@ -1,31 +1,31 @@
 package com.patra.ingest.domain.model.vo;
 
 /**
- * Task Run 上下文信息（运行期关联元数据）。
- * <p>与 {@link TaskSchedulerContext} 类似，但聚焦单次 TaskRun 维度。</p>
+ * Context metadata captured for a single task run.
+ * <p>Similar to {@link TaskSchedulerContext} but scoped to an individual run.</p>
  * <ul>
- *   <li>schedulerRunId：调度批次标识</li>
- *   <li>correlationId：跨系统追踪 ID</li>
+ *   <li>{@code schedulerRunId}: scheduler batch identifier</li>
+ *   <li>{@code correlationId}: cross-system correlation id</li>
  * </ul>
  */
 public record RunContext(String schedulerRunId, String correlationId) {
 
     /**
-     * 空上下文
+     * Create an empty run context.
      */
     public static RunContext empty() {
         return new RunContext(null, null);
     }
 
     /**
-     * 派生新的上下文（更新 schedulerRunId）。
+     * Derive a new context with the provided {@code schedulerRunId}.
      */
     public RunContext withSchedulerRun(String runId) {
         return new RunContext(runId, correlationId);
     }
 
     /**
-     * 派生新的上下文（更新 correlationId）。
+     * Derive a new context with the provided {@code correlationId}.
      */
     public RunContext withCorrelation(String corrId) {
         return new RunContext(schedulerRunId, corrId);

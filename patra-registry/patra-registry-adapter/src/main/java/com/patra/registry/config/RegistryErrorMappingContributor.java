@@ -44,7 +44,7 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
 
         // Domain validation exceptions
         if (exception instanceof DomainValidationException) {
-            // General domain parameter validation → 400
+            // General domain parameter validation -> 400
             return Optional.of(http.BAD_REQUEST());
         }
 

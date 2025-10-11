@@ -2,18 +2,18 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/** 计划切片状态（DICT：ing_slice_status）。
- * <p>字段映射：ing_plan_slice.status_code。</p>
+/** Plan slice status (DICT: ing_slice_status).
+ * <p>Field mapping: {@code ing_plan_slice.status_code}.</p>
  */
 @Getter
 public enum SliceStatus {
-    PENDING("PENDING", "待处理"),
-    DISPATCHED("DISPATCHED", "已下发"),
-    EXECUTING("EXECUTING", "执行中"),
-    SUCCEEDED("SUCCEEDED", "成功"),
-    FAILED("FAILED", "失败"),
-    PARTIAL("PARTIAL", "部分成功"),
-    CANCELLED("CANCELLED", "已取消");
+    PENDING("PENDING", "Pending"),
+    DISPATCHED("DISPATCHED", "Dispatched"),
+    EXECUTING("EXECUTING", "Executing"),
+    SUCCEEDED("SUCCEEDED", "Succeeded"),
+    FAILED("FAILED", "Failed"),
+    PARTIAL("PARTIAL", "Partially succeeded"),
+    CANCELLED("CANCELLED", "Cancelled");
 
     private final String code; private final String description;
     SliceStatus(String code, String description){ this.code=code; this.description=description; }

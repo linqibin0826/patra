@@ -5,41 +5,45 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 
 /**
- * Patra Registry 访问端口（领域层 Port）。
+ * Domain port used to access Patra Registry.
  *
- * <p>用途：
+ * <p>Responsibilities:
  * <ul>
- *   <li>为应用层（App）提供访问 Registry 服务（patra-registry）的统一入口；</li>
- *   <li>按来源（provenance）与操作类型（operation）拉取"来源配置快照"；</li>
- *   <li>屏蔽具体调用协议与客户端技术（Feign/HTTP/gRPC 等），保持领域与技术解耦。</li>
+ *   <li>Provide a single entry point for application services to call the registry.</li>
+ *   <li>Fetch provenance configuration snapshots per provenance/operation combination.</li>
+ *   <li>Hide protocol/client details (Feign/HTTP/gRPC) so the domain layer remains decoupled.</li>
  * </ul>
  *
- * <p>分层约束：该接口定义在领域层，具体实现位于基础设施层（infra.rpc.registry）。
- * 应用服务仅依赖本接口进行编排，避免引入任何外部系统细节。</p>
+ * <p>Layering: the interface lives in the domain layer; infrastructure implementations reside under
+ * {@code infra.rpc.registry}. Application services orchestrate through this port only.</p>
  *
- * <p>错误语义（建议）：
+ * <p>Error semantics (guidance):
  * <ul>
- *   <li>外部 4xx/数据缺失等不可恢复错误，建议转换为领域/应用异常（例如 IngestConfigurationException）；</li>
- *   <li>外部 5xx/网络超时等可恢复错误，可在实现层做重试/降级（返回最小可用快照）或上抛由上层策略处理；</li>
- *   <li>实现层应记录 traceId/远端错误码，便于问题追踪；本接口不限定具体异常类型，保持调用方灵活性。</li>
+ *   <li>Non-recoverable issues such as 4xx or missing data should be converted to domain/application exceptions
+ *   (e.g., {@code IngestConfigurationException}).</li>
+ *   <li>Recoverable issues such as 5xx or timeouts may retry/degrade (return a minimal snapshot) or surface to the
+ *   caller for higher-level handling.</li>
+ *   <li>Implementations should log trace ids and remote error codes for troubleshooting; the interface leaves
+ *   specific exception types to the caller.</li>
  * </ul>
  *
- * <p>线程安全：实现需为无状态或可并发复用；配置型依赖通过 Spring 管理。</p>
+ * <p>Thread safety: implementations must be stateless or safe for concurrent reuse; configuration dependencies are
+ * managed by Spring.</p>
  */
 public interface PatraRegistryPort {
 
     /**
-     * 获取指定来源在某一操作类型下的"配置快照"。
+     * Retrieve the configuration snapshot for a provenance/operation pair.
      *
-     * <p>约定：快照应包含调用 Registry 所需的分页/窗口/HTTP/重试/限流等静态参数；
-     * 对于临时不可用的场景，允许实现返回"最小可用快照"，但必须在日志中记录降级信息。</p>
+     * <p>The snapshot should include static parameters required by registry integrations (windowing, pagination,
+     * HTTP retry, rate limiting, and so on). Implementations may return a minimal snapshot when the registry is
+     * temporarily unavailable but must log the degradation.</p>
      *
-     * @param provenanceCode 来源代码（如 PUBMED/EPMC）
-     * @param operationCode  业务操作类型（如 HARVEST/BACKFILL/UPDATE）
-     * @return Registry 配置快照（不应为 null；必要时可返回最小快照以支撑有限功能）
-     * @throws RuntimeException 当出现不可恢复的配置/语义问题时，由实现抛出领域/应用异常
+     * @param provenanceCode provenance identifier (e.g., PUBMED/EPMC)
+     * @param operationCode  operation type (e.g., HARVEST/BACKFILL/UPDATE)
+     * @return registry configuration snapshot (never {@code null}; fallback snapshots allowed with reduced scope)
+     * @throws RuntimeException when unrecoverable configuration issues occur
      */
     ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode,
                                          OperationCode operationCode);
 }
-

@@ -2,18 +2,18 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/** 任务运行(Attempt)状态（DICT：ing_task_run_status）。
- * <p>字段映射：ing_task_run.status_code → PLANNED/RUNNING/SUCCEEDED/FAILED/CANCELLED</p>
+/** Task run (attempt) status (DICT: ing_task_run_status).
+ * <p>Field mapping: {@code ing_task_run.status_code → PLANNED/RUNNING/SUCCEEDED/FAILED/CANCELLED}</p>
  */
 @Getter
 public enum TaskRunStatus {
-    PLANNED("PLANNED", "已规划"),
-    RUNNING("RUNNING", "运行中"),
-    SUCCEEDED("SUCCEEDED", "成功"),
-    FAILED("FAILED", "失败"),
-    PARTIAL("PARTIAL", "部分失败"),
-    CURSOR_PENDING("CURSOR_PENDING", "游标推进待重试"),
-    CANCELLED("CANCELLED", "已取消");
+    PLANNED("PLANNED", "Planned"),
+    RUNNING("RUNNING", "Running"),
+    SUCCEEDED("SUCCEEDED", "Succeeded"),
+    FAILED("FAILED", "Failed"),
+    PARTIAL("PARTIAL", "Partially failed"),
+    CURSOR_PENDING("CURSOR_PENDING", "Cursor pending"),
+    CANCELLED("CANCELLED", "Cancelled");
 
     private final String code; private final String description;
     TaskRunStatus(String code, String description){ this.code=code; this.description=description; }

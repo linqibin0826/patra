@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * 游标仓储端口。
- * <p>负责游标的查询与持久化，用于记录采集/清洗流程的推进水位，防止重复处理与窗口错位。</p>
+ * Repository port for ingestion cursors.
+ * <p>Persists and retrieves cursor watermarks so ingestion/cleansing flows avoid duplication or window drift.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,14 +15,14 @@ import java.util.Optional;
 public interface CursorRepository {
 
     /**
-     * 根据游标的业务唯一键查询当前状态。
+     * Retrieve the cursor by its business key.
      *
-     * @param provenanceCode 来源编码
-     * @param operationCode  操作编码，可为空表示不过滤
-     * @param cursorKey      游标键，标识某类游标（如数据域、资源类型）
-     * @param namespaceScope 命名空间范围代码
-     * @param namespaceKey   命名空间业务键
-     * @return 匹配的游标实体，不存在返回 empty
+     * @param provenanceCode provenance code
+     * @param operationCode  operation code (nullable filter)
+     * @param cursorKey      cursor identifier (for example data domain or resource type)
+     * @param namespaceScope namespace scope code
+     * @param namespaceKey   namespace business key
+     * @return matching cursor or {@link Optional#empty()}
      */
     Optional<Cursor> find(String provenanceCode,
                           String operationCode,
@@ -31,19 +31,19 @@ public interface CursorRepository {
                           String namespaceKey);
 
     /**
-     * 保存或更新游标状态。
+     * Persist or update the cursor state.
      *
-     * @param cursor 游标实体，包含当前水位、命名空间与版本信息
-     * @return 持久化后的游标实体
+     * @param cursor cursor entity with current watermark, namespace, and version info
+     * @return persisted cursor
      */
     Cursor save(Cursor cursor);
 
     /**
-     * 查询 GLOBAL 命名空间、时间类型游标的最新标准化时间水位。
+     * Fetch the latest normalized time watermark for the GLOBAL namespace/time cursor.
      *
-     * @param provenanceCode 来源编码
-     * @param operationCode  操作编码，可为空表示不过滤
-     * @return 最新的 GLOBAL 时间水位，不存在则返回 empty
+     * @param provenanceCode provenance code
+     * @param operationCode  operation code filter (nullable)
+     * @return most recent GLOBAL time watermark or {@link Optional#empty()}
      */
     Optional<Instant> findLatestGlobalTimeWatermark(String provenanceCode, String operationCode);
 }
