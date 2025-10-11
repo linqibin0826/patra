@@ -23,10 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Outbox Relay 执行器：负责在单次触发周期内完成 Outbox 消息的拉取、租约校验、发布与状态回写。
- * <p>幂等保障：依赖租约获取 + 版本号自增；失败回写持久化错误信息防止重复处理；延期重试通过 nextRetryAt 控制。</p>
- * <p>异常分类：使用 {@link RelayErrorClassifier} 区分 FATAL / TRANSIENT，指导 markFailed 与 markDeferred 的分支选择。</p>
- * <p>日志策略：DEBUG 精准诊断（可选开启）；WARN 记录可重试失败；ERROR 记录永久失败。</p>
+ * Outbox Relay executor: completes message retrieval, lease validation, publishing, and state updates within a single
+ * trigger cycle.
+ * <p>Idempotency: relies on lease acquisition plus version increments; failures persist durable error information to
+ * prevent reprocessing; deferred retries are controlled via {@code nextRetryAt}.</p>
+ * <p>Error classification: delegates to {@link RelayErrorClassifier} to distinguish FATAL and TRANSIENT cases and route
+ * them to {@code markFailed} or {@code markDeferred}.</p>
+ * <p>Logging strategy: DEBUG for diagnostics (opt-in), WARN for retryable failures, and ERROR for permanent failures.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -53,20 +56,20 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 执行单批次发布。
+     * Execute a single batch publication.
      * <ol>
-     *   <li>fetchPending 按计划条件拉取候选消息（支持单 channel 或全部 channel）</li>
-     *   <li>逐条 acquireLease（乐观并发控制）</li>
-     *   <li>publish → markPublished / classify exception → markFailed / markDeferred</li>
-     *   <li>累计事件与统计信息</li>
+     *   <li>{@code fetchPending} fetches candidate messages according to the plan (single channel or all channels).</li>
+     *   <li>Attempt {@code acquireLease} per message (optimistic concurrency control).</li>
+     *   <li>Publish -> {@code markPublished}; on exception classify and invoke {@code markFailed} or {@code markDeferred}.</li>
+     *   <li>Accumulate domain events and batch statistics.</li>
      * </ol>
      *
-     * @param plan 发布计划
-     * @return 批次结果统计
+     * @param plan publication plan
+     * @return batch-level metrics
      */
     public RelayBatchResult execute(RelayPlan plan) {
-        // 按计划批量拉取待发送消息，受租约与批大小约束
-        // 如果 plan.channel() 为 null，则获取所有 channel 的消息
+        // Fetch pending messages according to the plan, subject to lease and batch limits
+        // When plan.channel() is null we fetch messages across every channel
         List<OutboxMessage> messages = fetchMessages(plan);
         if (messages.isEmpty()) {
             if (log.isDebugEnabled()) {
@@ -83,22 +86,23 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 根据计划从存储层拉取待发布消息。
+     * Fetch pending messages from the persistence layer as instructed by the plan.
      *
-     * @param plan 转发计划，包含频道过滤、可用时间和批次大小信息
-     * @return 待发布消息集合，空集合表示无消息可发
+     * @param plan relay plan with channel filter, availability window, and batch size
+     * @return pending messages; empty collection indicates nothing eligible
      */
     private List<OutboxMessage> fetchMessages(RelayPlan plan) {
-        // channel 为 null 时，fetchPending 会拉取所有频道的消息
+        // Null channel means all channels are eligible
         String channel = plan.channel() != null ? plan.channel().channel() : null;
         return relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
     }
 
     /**
-     * 处理单条消息的完整转发表达：先尝试获取租约，成功后进行发布并依据结果写回状态。
+     * Execute the relay pipeline for a single message: lease acquisition, publish attempt, and state update according
+     * to the outcome.
      *
-     * @param message 待处理的 Outbox 消息
-     * @param context 批次上下文，负责累计统计与事件
+     * @param message Outbox message to process
+     * @param context batch context that accumulates statistics and domain events
      */
     private void processMessage(OutboxMessage message, RelayContext context) {
         if (!tryAcquireLease(message, context)) {
@@ -110,17 +114,17 @@ public class OutboxRelayExecutor {
             relayStore.markPublished(message.getId(), publishingVersion, publishResult.messageId());
             context.onPublished(message, publishResult);
         } catch (Exception ex) {
-            // 将异常统一交由失败决策模块评估（重试 / 失败）
+            // Delegate exception classification to the failure decision module (retry vs fail)
             handleFailure(message, context, publishingVersion, ex);
         }
     }
 
     /**
-     * 尝试为消息抢占租约；若失败则直接记录租约失效事件并跳过后续处理。
+     * Attempt to acquire a lease; record the miss and skip processing when another worker already owns it.
      *
-     * @param message 待抢占租约的消息
-     * @param context 批次上下文
-     * @return true 表示获取成功
+     * @param message message whose lease is requested
+     * @param context batch context
+     * @return {@code true} when the lease is acquired successfully
      */
     private boolean tryAcquireLease(OutboxMessage message, RelayContext context) {
         RelayPlan plan = context.plan();
@@ -137,12 +141,13 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 根据异常决定失败处理路径：永久失败直接落盘，暂时性失败按策略推算重试时间。
+     * Route failure handling based on the classified exception: permanent failures persist immediately, while transient
+     * ones are rescheduled according to the retry policy.
      *
-     * @param message           当前处理的消息
-     * @param context           批次上下文
-     * @param publishingVersion 发布时预期写入的版本号
-     * @param exception         发布阶段抛出的异常
+     * @param message           current message
+     * @param context           batch context
+     * @param publishingVersion version written alongside the status update
+     * @param exception         exception thrown during publish
      */
     private void handleFailure(OutboxMessage message,
                                RelayContext context,
@@ -175,7 +180,7 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 汇总异常相关属性，判断最终处理策略并封装返回，避免在主流程中散落多处局部变量。
+     * Aggregate exception information, determine the handling strategy, and wrap the decision for the main flow.
      */
     private FailureDecision decideFailure(OutboxMessage message, RelayPlan plan, Exception exception) {
         RelayErrorKind kind = errorClassifier.classify(exception);
@@ -187,7 +192,7 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 根据异常类型及下一次重试计数，判断应当立即失败还是进入重试流程。
+     * Decide whether the failure should terminate processing or re-enter the retry flow.
      */
     private FailureHandling determineFailureHandling(RelayPlan plan, RelayErrorKind kind, int nextRetry) {
         if (kind == RelayErrorKind.FATAL) {
@@ -200,7 +205,7 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 计算下一次写库时的版本号（null 视为 0 处理）。
+     * Calculate the next persisted version (treat {@code null} as zero).
      */
     private long nextVersionOf(OutboxMessage message) {
         long currentVersion = message.getVersion() == null ? 0L : message.getVersion();
@@ -208,7 +213,7 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 计算下一次重试计数，后续会写回数据库作为最新 retryCount。
+     * Calculate the next retry count; later persisted as {@code retryCount}.
      */
     private int nextRetryCount(OutboxMessage message) {
         int currentRetry = message.getRetryCount() == null ? 0 : message.getRetryCount();
@@ -216,14 +221,14 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 提取异常类型名称，用作错误码字段。
+     * Use the exception type name as the error code field.
      */
     private String errorCode(Exception exception) {
         return exception.getClass().getSimpleName();
     }
 
     /**
-     * 截断异常消息，避免过长内容撑爆存储字段。
+     * Trim the exception message to keep stored fields within length limits.
      */
     private String errorMessage(Exception exception) {
         String message = exception.getMessage();
@@ -234,7 +239,7 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 失败决策快照：承载异常分类后的处理方式与关键元数据。
+     * Snapshot of the failure decision, carrying the handling mode and key metadata.
      */
     private record FailureDecision(FailureHandling handling, int nextRetry, String errorCode, String errorMessage) {
     }
@@ -244,7 +249,7 @@ public class OutboxRelayExecutor {
     }
 
     /**
-     * 批次上下文：封装统计计数、事件列表与日志输出，保证循环体语义清晰。
+     * Batch context: encapsulates statistics, domain events, and log output to keep the loop readable.
      */
     private static final class RelayContext {
         private final RelayPlan plan;
@@ -259,14 +264,14 @@ public class OutboxRelayExecutor {
         }
 
         /**
-         * 供外层读取当前批次计划。
+         * Expose the current plan to outer layers.
          */
         private RelayPlan plan() {
             return plan;
         }
 
         /**
-         * 租约抢占失败：记录日志并积累业务事件。
+         * Lease acquisition failed: log and register the domain event.
          */
         private void onLeaseMissed(OutboxMessage message) {
             leaseMissed++;
@@ -284,7 +289,7 @@ public class OutboxRelayExecutor {
         }
 
         /**
-         * 发布成功：记录外部消息 ID 并累计成功计数。
+         * Publish succeeded: record the external message identifier and increment counters.
          */
         private void onPublished(OutboxMessage message, OutboxPublisherPort.PublishResult publishResult) {
             if (log.isDebugEnabled()) {
@@ -302,7 +307,7 @@ public class OutboxRelayExecutor {
         }
 
         /**
-         * 永久失败：输出错误日志并记录领域事件。
+         * Permanent failure: emit an error log and register the domain event.
          */
         private void onFailed(OutboxMessage message,
                               int nextRetry,
@@ -323,7 +328,7 @@ public class OutboxRelayExecutor {
         }
 
         /**
-         * 延迟重试：以 WARN 级别输出并记录重试计划。
+         * Deferred retry: log at WARN level and register the retry schedule.
          */
         private void onDeferred(OutboxMessage message,
                                 int nextRetry,
@@ -346,7 +351,7 @@ public class OutboxRelayExecutor {
         }
 
         /**
-         * 汇总最终批次结果，为调用方返回统计数据与事件列表。
+         * Assemble the final batch result with statistics and domain events.
          */
         private RelayBatchResult toBatchResult(int totalMessages) {
             return new RelayBatchResult(

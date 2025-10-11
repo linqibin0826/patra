@@ -3,17 +3,17 @@ package com.patra.ingest.app.usecase.relay.dto;
 import com.patra.common.messaging.ChannelKey;
 
 /**
- * Relay 执行统计结果（单次批量发布维度）。
- * <p>字段语义：
+ * Aggregated metrics for a single relay batch.
+ * <p>Field semantics:
  * <ul>
- *   <li>channel：本次操作的 Outbox 频道。</li>
- *   <li>fetched：本批次尝试处理的消息条数（含租约失败的）。</li>
- *   <li>published：成功发布并标记完成的条数。</li>
- *   <li>retried：被延期以待重试的条数。</li>
- *   <li>failed：判定为永久失败的条数。</li>
- *   <li>leaseMissed：租约竞争失败（被其他实例占用）的条数。</li>
+ *   <li>{@code channel}: Outbox channel processed in this run.</li>
+ *   <li>{@code fetched}: total messages attempted in the batch (including those with lease misses).</li>
+ *   <li>{@code published}: messages successfully published and marked complete.</li>
+ *   <li>{@code retried}: messages deferred for retry.</li>
+ *   <li>{@code failed}: messages marked as permanently failed.</li>
+ *   <li>{@code leaseMissed}: messages skipped because another instance acquired the lease.</li>
  * </ul>
- * 用途：日志观测 / 调度平台展示 / 指标上报聚合。
+ * Usage: logging, scheduler dashboards, and metric aggregation.
  */
 public record RelayReport(
         ChannelKey channel,
@@ -23,7 +23,7 @@ public record RelayReport(
         int failed,
         int leaseMissed
 ) {
-    /** 返回空统计（用于功能关闭场景）。 */
+    /** Empty report used when the feature is disabled. */
     public static RelayReport empty(ChannelKey channel) {
         return new RelayReport(channel, 0, 0, 0, 0, 0);
     }

@@ -19,9 +19,10 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 /**
- * Ingest 模块错误映射贡献者。
+ * Contributes ingest-specific exception to error-code mappings.
  *
- * <p>为平台错误解析引擎提供 Ingest 领域专属的异常→错误码映射。</p>
+ * <p>Registers the domain exceptions emitted by the ingest service so the platform error parsing
+ * engine can convert them into consistent {@link IngestErrorCode} responses.</p>
  */
 @Slf4j
 @Component

@@ -7,20 +7,20 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Clock;
 
 /**
- * Outbox Relay Bean 注册配置。
- * <p>职责：提供统一注入的系统时钟与基于配置的重试策略。</p>
+ * Bean registration for the Outbox Relay use case.
+ * <p>Responsibilities: expose the shared system clock and the retry policy backed by configuration.</p>
  */
 @Configuration
 public class OutboxRelayConfiguration {
 
-    /** 系统 UTC 时钟（可测试时通过覆盖 Bean 注入固定时钟）。 */
+    /** System UTC clock (overrideable in tests to inject a fixed clock). */
     @Bean
     public Clock systemClock() {
         return Clock.systemUTC();
     }
 
     /**
-     * 构建重试策略：指数退避 + 上限控制。
+     * Build the retry policy: exponential backoff with an upper bound.
      */
     @Bean
     public RelayRetryPolicy relayRetryPolicy(OutboxRelayProperties properties) {

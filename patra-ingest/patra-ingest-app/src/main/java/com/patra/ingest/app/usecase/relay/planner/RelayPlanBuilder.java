@@ -14,9 +14,11 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * RelayPlan 构建器：合并调度指令与默认配置，生成领域执行所需的不可变计划对象。
- * <p>覆盖规则：指令字段优先；为空/非法则回退到 {@link OutboxRelayProperties} 对应默认值。</p>
- * <p>channel 为 null 时表示处理所有 channel 的消息。</p>
+ * Builder for {@link RelayPlan}: merges the scheduling instruction with default configuration to produce the immutable
+ * plan consumed by the domain layer.
+ * <p>Rule precedence: instruction fields win; blank or invalid values fall back to {@link OutboxRelayProperties}
+ * defaults.</p>
+ * <p>{@code channel == null} indicates that all channels should be processed.</p>
  */
 @Component
 public class RelayPlanBuilder {
@@ -30,14 +32,15 @@ public class RelayPlanBuilder {
     }
 
     /**
-     * 构建 RelayPlan。
-     * <p>如果 instruction.channel() 为 null 且配置中也未指定默认 channel，则 channel 保持为 null，表示处理所有 channel。</p>
+     * Build the relay plan.
+     * <p>If {@code instruction.channel()} is {@code null} and no default channel is configured, the plan keeps the
+     * channel {@code null} to signal broadcast processing.</p>
      *
-     * @param instruction 指令（可能为空字段）
-     * @return 计划对象
+     * @param instruction instruction payload (fields may be blank)
+     * @return immutable plan instance
      */
     public RelayPlan build(OutboxRelayCommand instruction) {
-        // channel 可以为 null，表示处理所有 channel
+        // Channel may be null to indicate all channels
         ChannelKey channelKey = resolveChannelKey(instruction);
         Instant triggeredAt = instruction.triggeredAt() != null ? instruction.triggeredAt() : Instant.now(clock);
         int batchSize = normalizePositive(instruction.batchSize(), properties.getBatchSize());
@@ -61,19 +64,15 @@ public class RelayPlanBuilder {
     }
 
     /**
-     * 解析得到 ChannelKey：
-     * <ul>
-     *   <li>如果指令提供了 channel，则使用指令的 channel</li>
-     *   <li>否则返回 null，表示处理所有 channel</li>
-     * </ul>
+     * Resolve the {@link ChannelKey} from the instruction; {@code null} means all channels.
      */
     private ChannelKey resolveChannelKey(OutboxRelayCommand instruction) {
-        // 直接返回指令中的 channel，可能为 null（表示处理所有 channel）
+        // Return the channel from the instruction directly; may be null to process all channels
         return instruction.channel();
     }
 
     /**
-     * 如果 candidate 非正或为空则使用 fallback。
+     * Use the fallback when the candidate is {@code null} or non-positive.
      */
     private int normalizePositive(Integer candidate, int fallback) {
         if (candidate == null || candidate <= 0) {
@@ -83,7 +82,7 @@ public class RelayPlanBuilder {
     }
 
     /**
-     * 如果 candidate 为空或非正（<=0）则回退。
+     * Use the fallback when the candidate is {@code null}, negative, or zero.
      */
     private Duration normalizeDuration(Duration candidate, Duration fallback) {
         if (candidate == null || candidate.isNegative() || candidate.isZero()) {
@@ -93,7 +92,7 @@ public class RelayPlanBuilder {
     }
 
     /**
-     * 构造租约持有者：host + 触发毫秒 + 随机 UUID。
+     * Compose the lease owner identifier as host + trigger epoch millis + random UUID.
      */
     private String buildLeaseOwner(Instant timestamp) {
         String host = StrUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");

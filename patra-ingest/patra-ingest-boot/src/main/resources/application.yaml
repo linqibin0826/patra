@@ -20,64 +20,63 @@ spring:
       discovery:
         namespace: ${NACOS_NAMESPACE:public}
         group: ${NACOS_GROUP:DEFAULT_GROUP}
-  datasource: # 数据库连接的 JDBC URL
-    # - 3306 是 MySQL 的默认端口
-    # - my_database 是你的数据库名
-    # - ?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Tokyo 是为了保证字符编码正确和时区设置正确（推荐配置）
+  datasource: # JDBC URL for the ingest database
+    # - 3306 is the default MySQL port
+    # - Replace my_database with the schema name for this environment
+    # - ?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Tokyo keeps encoding and timezone aligned (recommended)
     url: jdbc:mysql://127.0.0.1:13306/patra_ingest?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
-    # 数据库用户名
+    # Database username
     username: root
-    # 数据库密码
+    # Database password
     password: 123456
-    # JDBC 驱动类名 (对于新版 Spring Boot 和 JDBC 驱动，此项通常可以省略，它会自动推断)
+    # Explicit JDBC driver (Spring Boot can usually infer this automatically)
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # 配置 HikariCP 连接池 (默认的连接池, 以下为可选的性能调优配置)
+    # HikariCP connection pool tuning (defaults are usually sufficient; override only when necessary)
     hikari:
-      # 连接池中允许的最大连接数
+      # Maximum number of connections in the pool
       maximum-pool-size: 10
-      # 连接池中保持的最小空闲连接数
+      # Minimum number of idle connections to retain
       minimum-idle: 5
-      # 等待数据库连接的最大时长，单位毫秒
+      # Maximum wait time for a connection request in milliseconds
       connection-timeout: 30000
-      # 一个连接在池中空闲的最长时长，单位毫秒
+      # Maximum idle time for a pooled connection in milliseconds
       idle-timeout: 600000
-      # 一个连接的最长生命周期，单位毫秒
+      # Maximum lifetime for a pooled connection in milliseconds
       max-lifetime: 1800000
-  flyway: # 是否启用 Flyway (默认为 true, 如果添加了 flyway-core 依赖)
+  flyway: # Flyway migration settings (enabled by default when flyway-core is on the classpath)
     enabled: true
-    # SQL 迁移脚本的位置, 多个位置用逗号隔开 (默认就是这个路径)
+    # Locations for SQL migration scripts; comma separate multiple paths (defaults to this path)
     locations: classpath:db/migration
-    # 当迁移发现非空数据库时，是否自动执行 baseline (基线)，对于已存在的项目很有用
+    # Automatically baseline when migrations discover a non-empty schema (useful for existing deployments)
     baseline-on-migrate: true
-    # 设置基线版本号，所有版本低于或等于此版本的迁移都将被忽略
+    # Baseline version; migrations at or below this value are ignored
     baseline-version: 0.1.0
   data:
     redis:
       url: redis://localhost:16379
 
-# Papertrace Ingest 执行配置
+# Papertrace ingest execution settings
 papertrace:
   ingest:
     exec:
-      # 租约 TTL（秒），默认 60 秒
+      # Lease TTL in seconds (defaults to 60)
       lease-ttl-seconds: ${INGEST_LEASE_TTL:60}
-      # 心跳间隔（秒），默认为 TTL 的 1/3
+      # Heartbeat interval in seconds (defaults to TTL / 3)
       heartbeat-interval-seconds: ${INGEST_HEARTBEAT_INTERVAL:20}
 
-# 任务执行引擎配置
+# Task execution engine configuration
 task:
   execution:
-    # 租约配置
+    # Lease handling
     lease:
-      # 租约持续时间（秒），默认 60 秒
+      # Lease duration in seconds (defaults to 60)
       duration: ${TASK_EXECUTION_LEASE_DURATION:60}
-      # 租约续约间隔（秒），默认 20 秒（建议为 duration 的 1/3）
+      # Lease renewal cadence in seconds (defaults to 20; aim for ~duration / 3)
       renewal-interval: ${TASK_EXECUTION_LEASE_RENEWAL_INTERVAL:20}
-    # 心跳配置
+    # Heartbeat monitoring
     heartbeat:
-      # 心跳连续失败阈值，达到阈值后触发租约验证，默认 3 次
+      # Consecutive heartbeat failures that trigger a lease validation (default 3)
       failure-threshold: ${TASK_EXECUTION_HEARTBEAT_FAILURE_THRESHOLD:3}
-    # 批次执行配置
-    max-batches: ${TASK_EXECUTION_MAX_BATCHES:1000}  # 最大批次数限制
-    fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}     # 批次失败是否立即中断
-
+    # Batch execution safeguards
+    max-batches: ${TASK_EXECUTION_MAX_BATCHES:1000}  # Upper bound on batches processed per run
+    fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}     # Abort immediately when a batch fails

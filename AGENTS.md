@@ -181,12 +181,12 @@ These instructions guide Codex CLI and similar AI agents working in this reposit
 - Cost awareness: sizing assumptions, autoscaling, storage/egress patterns, FinOps guardrails.
 
 ### Code Operation Tool Priorities
-- For all code operations (reading, searching, writing, analyzing), prefer IntelliJ MCP tools first.
-  - Reading code: `get_file_text_by_path` for file content, `get_symbol_info` for symbol details.
-  - Searching code: `find_files_by_name_keyword` (fastest), `search_in_files_by_text`, `search_in_files_by_regex`.
-  - Editing code: `replace_text_in_file` for targeted edits, `rename_refactoring` for symbol renames.
-  - Analyzing code: `search_in_files_by_text/regex` for references, `get_file_problems` for errors/warnings.
-- Use standard tools (Read/Edit/Grep/Glob) only for non-code files or when IntelliJ MCP cannot handle the task.
+- For all code operations (reading, searching, editing, analyzing), prefer Serena MCP tools first.
+  - Reading code: Serena overview.
+  - Searching code: Serena symbol search.
+  - Editing code: Serena symbol-based editing.
+  - Analyzing code: Serena reference tracing and dependencies.
+- Use standard tools (Read/Edit/Grep/Glob) only for non-code files or when Serena cannot handle the task.
 
 ### When to Write Code
 - After ADR approval and C4 alignment, generate contracts and scaffolding first (ports/adapters, DTOs, interfaces).
