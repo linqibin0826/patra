@@ -34,10 +34,10 @@ public record ExternalCallRequestDTO(
     ResilienceConfigDTO config
 ) {
     /**
-     * Compact constructor for immutability
+     * Compact constructor for immutability.
      */
     public ExternalCallRequestDTO {
-        // 创建不可变副本
+        // Create an immutable defensive copy of the headers map.
         headers = headers != null ? Map.copyOf(headers) : null;
     }
 }

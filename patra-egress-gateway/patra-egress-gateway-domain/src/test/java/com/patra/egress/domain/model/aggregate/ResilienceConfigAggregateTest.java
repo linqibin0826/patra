@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("ResilienceConfigAggregate 聚合根测试")
+@DisplayName("ResilienceConfigAggregate aggregate tests")
 class ResilienceConfigAggregateTest {
 
     private static final ResilienceConfig DEFAULT_CONFIG = new ResilienceConfig(
@@ -41,7 +41,7 @@ class ResilienceConfigAggregateTest {
     );
 
     /**
-     * 简单的 ConfigPort Mock 实现
+     * Simple {@link ConfigPort} mock implementation used for test scenarios.
      */
     private static class MockConfigPort implements ConfigPort {
         private final ResilienceConfig defaultConfig;
@@ -64,7 +64,7 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("loadSystemConfig() - 应该成功加载系统配置")
+    @DisplayName("loadSystemConfig() should load the system configuration")
     void loadSystemConfig_shouldLoadSuccessfully() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
@@ -79,9 +79,9 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("loadSystemConfig() - 应该在默认配置无效时抛出异常")
+    @DisplayName("loadSystemConfig() should throw when the default configuration is invalid")
     void loadSystemConfig_shouldThrowException_whenDefaultConfigInvalid() {
-        // Given - 超时时间为负数的无效配置
+        // Given an invalid configuration with a negative timeout
         ResilienceConfig invalidConfig = new ResilienceConfig(
             Duration.ofSeconds(-1),
             3,
@@ -100,14 +100,14 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("loadSystemConfig() - 应该在最大配置无效时抛出异常")
+    @DisplayName("loadSystemConfig() should throw when the max configuration is invalid")
     void loadSystemConfig_shouldThrowException_whenMaxConfigInvalid() {
-        // Given - 限流速率为0的无效配置
+        // Given an invalid maximum configuration with a zero rate limit
         ResilienceConfig invalidMaxConfig = new ResilienceConfig(
             Duration.ofSeconds(60),
             5,
             Duration.ofSeconds(10),
-            0, // 无效：限流速率必须为正数
+            0, // Invalid: rate limit must be positive
             20,
             Duration.ofSeconds(60),
             List.of("Content-Type")
@@ -121,7 +121,7 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("mergeWithCallerConfig() - 应该在调用方未传递配置时返回系统默认配置")
+    @DisplayName("mergeWithCallerConfig() should return the system default when the caller omits configuration")
     void mergeWithCallerConfig_shouldReturnDefaultConfig_whenCallerConfigIsNull() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
@@ -135,19 +135,19 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("mergeWithCallerConfig() - 应该使用调用方配置，如果未超过最大值")
+    @DisplayName("mergeWithCallerConfig() should honour caller configuration when it respects max constraints")
     void mergeWithCallerConfig_shouldUseCallerConfig_whenNotExceedingMax() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
         ResilienceConfigAggregate aggregate = ResilienceConfigAggregate.loadSystemConfig(configPort);
 
         ResilienceConfig callerConfig = new ResilienceConfig(
-            Duration.ofSeconds(10), // 小于最大值60
-            2,                      // 小于最大值5
-            Duration.ofSeconds(1),  // 小于最大值10
-            50,                     // 小于最大值1000
-            5,                      // 小于最大值20
-            Duration.ofSeconds(15), // 小于最大值60
+            Duration.ofSeconds(10), // Below the 60-second ceiling
+            2,                      // Below the maximum of 5
+            Duration.ofSeconds(1),  // Below the 10-second ceiling
+            50,                     // Below the maximum rate of 1000
+            5,                      // Below the maximum threshold of 20
+            Duration.ofSeconds(15), // Below the 60-second circuit window
             List.of("Custom-Header")
         );
 
@@ -165,26 +165,26 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("mergeWithCallerConfig() - 应该限制调用方配置不超过最大值")
+    @DisplayName("mergeWithCallerConfig() should cap caller configuration at the system maxima")
     void mergeWithCallerConfig_shouldLimitCallerConfig_whenExceedingMax() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
         ResilienceConfigAggregate aggregate = ResilienceConfigAggregate.loadSystemConfig(configPort);
 
         ResilienceConfig callerConfig = new ResilienceConfig(
-            Duration.ofSeconds(90),  // 超过最大值60
-            10,                      // 超过最大值5
-            Duration.ofSeconds(20),  // 超过最大值10
-            2000,                    // 超过最大值1000
-            30,                      // 超过最大值20
-            Duration.ofSeconds(120), // 超过最大值60
+            Duration.ofSeconds(90),  // Above the maximum of 60 seconds
+            10,                      // Above the maximum of 5 retries
+            Duration.ofSeconds(20),  // Above the maximum of 10 seconds
+            2000,                    // Above the maximum rate of 1000
+            30,                      // Above the maximum threshold of 20
+            Duration.ofSeconds(120), // Above the maximum window of 60 seconds
             List.of("Custom-Header")
         );
 
         // When
         ResilienceConfig merged = aggregate.mergeWithCallerConfig(callerConfig);
 
-        // Then - 应该使用最大值
+        // Then the result should respect the maximum constraints
         assertThat(merged.timeout()).isEqualTo(Duration.ofSeconds(60));
         assertThat(merged.maxRetries()).isEqualTo(5);
         assertThat(merged.retryBackoff()).isEqualTo(Duration.ofSeconds(10));
@@ -194,7 +194,7 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("mergeWithCallerConfig() - 应该在调用方配置无效时抛出异常")
+    @DisplayName("mergeWithCallerConfig() should throw when the caller configuration is invalid")
     void mergeWithCallerConfig_shouldThrowException_whenCallerConfigInvalid() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
@@ -202,7 +202,7 @@ class ResilienceConfigAggregateTest {
 
         ResilienceConfig invalidCallerConfig = new ResilienceConfig(
             Duration.ofSeconds(30),
-            -1, // 无效：重试次数不能为负数
+            -1, // Invalid: retry count cannot be negative
             Duration.ofSeconds(2),
             100,
             10,
@@ -217,7 +217,7 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("mergeWithCallerConfig() - 应该使用调用方的白名单，如果提供了")
+    @DisplayName("mergeWithCallerConfig() should use the caller whitelist when provided")
     void mergeWithCallerConfig_shouldUseCallerWhitelist_whenProvided() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
@@ -242,7 +242,7 @@ class ResilienceConfigAggregateTest {
     }
 
     @Test
-    @DisplayName("mergeWithCallerConfig() - 应该使用系统最大白名单，如果调用方未提供")
+    @DisplayName("mergeWithCallerConfig() should fall back to the system whitelist when the caller omits it")
     void mergeWithCallerConfig_shouldUseMaxWhitelist_whenCallerWhitelistEmpty() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
@@ -255,25 +255,25 @@ class ResilienceConfigAggregateTest {
             100,
             10,
             Duration.ofSeconds(30),
-            List.of() // 空白名单
+            List.of() // Empty whitelist from caller
         );
 
         // When
         ResilienceConfig merged = aggregate.mergeWithCallerConfig(callerConfig);
 
-        // Then - 应该使用最大配置的白名单
+        // Then the merged configuration should reuse the system-wide whitelist
         assertThat(merged.responseHeaderWhitelist())
             .containsExactly("Content-Type", "Content-Length", "X-RateLimit-Limit");
     }
 
     @Test
-    @DisplayName("validate() - 应该在配置有效时不抛出异常")
+    @DisplayName("validate() should pass when the configuration is valid")
     void validate_shouldNotThrowException_whenConfigValid() {
         // Given
         ConfigPort configPort = new MockConfigPort(DEFAULT_CONFIG, MAX_CONFIG);
         ResilienceConfigAggregate aggregate = ResilienceConfigAggregate.loadSystemConfig(configPort);
 
-        // When & Then - 不应该抛出任何异常
+        // When & Then - no exceptions should be thrown
         aggregate.validate();
     }
 }

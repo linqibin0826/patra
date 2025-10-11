@@ -12,10 +12,10 @@
 
     <artifactId>patra-egress-gateway-app</artifactId>
     <name>Patra Egress Gateway App</name>
-    <description>Use case 编排</description>
+    <description>Use case orchestration</description>
 
     <dependencies>
-        <!-- 内部依赖 -->
+        <!-- Internal modules -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-egress-gateway-api</artifactId>

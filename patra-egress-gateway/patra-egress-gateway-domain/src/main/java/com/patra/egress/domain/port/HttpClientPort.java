@@ -5,20 +5,19 @@ import com.patra.egress.domain.model.vo.HttpResponse;
 import com.patra.egress.domain.model.vo.ResilienceConfig;
 
 /**
- * HTTP客户端端口接口
- * 定义外部HTTP调用的抽象接口
- * 
+ * Domain port that abstracts the HTTP client used for outbound calls.
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public interface HttpClientPort {
     
     /**
-     * 执行HTTP调用
-     * 
-     * @param request HTTP请求
-     * @param config 弹性配置（包含超时等设置）
-     * @return HTTP响应
+     * Execute an outbound HTTP call using the provided resilience configuration.
+     *
+     * @param request immutable HTTP request envelope
+     * @param config  resilience configuration (timeouts, retries, etc.)
+     * @return immutable HTTP response envelope
      */
     HttpResponse call(HttpRequest request, ResilienceConfig config);
 }

@@ -15,11 +15,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("ResilienceConfig 值对象测试")
+@DisplayName("ResilienceConfig value object tests")
 class ResilienceConfigTest {
 
     @Test
-    @DisplayName("validate() - 应该在超时时间为负值时抛出异常")
+    @DisplayName("validate() should throw when the timeout is negative")
     void validate_shouldThrowException_whenTimeoutIsNegative() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -39,7 +39,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在超时时间为零时抛出异常")
+    @DisplayName("validate() should throw when the timeout is zero")
     void validate_shouldThrowException_whenTimeoutIsZero() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -59,7 +59,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在最大重试次数为负值时抛出异常")
+    @DisplayName("validate() should throw when max retries is negative")
     void validate_shouldThrowException_whenMaxRetriesIsNegative() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -79,7 +79,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在重试退避时间为负值时抛出异常")
+    @DisplayName("validate() should throw when retry backoff is negative")
     void validate_shouldThrowException_whenRetryBackoffIsNegative() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -99,7 +99,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在限流速率小于等于0时抛出异常")
+    @DisplayName("validate() should throw when rate limit is non-positive")
     void validate_shouldThrowException_whenRateLimitIsNotPositive() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -119,7 +119,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在熔断阈值小于等于0时抛出异常")
+    @DisplayName("validate() should throw when the circuit breaker threshold is non-positive")
     void validate_shouldThrowException_whenCircuitBreakerThresholdIsNotPositive() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -139,7 +139,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在熔断时间窗口为零或负值时抛出异常")
+    @DisplayName("validate() should throw when the circuit breaker window is zero or negative")
     void validate_shouldThrowException_whenCircuitBreakerWindowIsZeroOrNegative() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -159,7 +159,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("validate() - 应该在所有配置都有效时不抛出异常")
+    @DisplayName("validate() should pass when every value is valid")
     void validate_shouldNotThrowException_whenAllConfigIsValid() {
         // Given
         ResilienceConfig config = new ResilienceConfig(
@@ -172,16 +172,16 @@ class ResilienceConfigTest {
             List.of("Content-Type")
         );
 
-        // When & Then - 不应该抛出任何异常
+        // When & Then - no exception should be raised
         config.validate();
     }
 
     @Test
-    @DisplayName("mergeWithMax() - 应该限制超时时间不超过最大值")
+    @DisplayName("mergeWithMax() should cap the timeout at the maximum")
     void mergeWithMax_shouldLimitTimeout_whenExceedingMax() {
         // Given
         ResilienceConfig caller = new ResilienceConfig(
-            Duration.ofSeconds(90), // 超过最大值
+            Duration.ofSeconds(90), // Above the maximum value
             3,
             Duration.ofSeconds(2),
             100,
@@ -208,12 +208,12 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("mergeWithMax() - 应该限制重试次数不超过最大值")
+    @DisplayName("mergeWithMax() should cap the retry count at the maximum")
     void mergeWithMax_shouldLimitMaxRetries_whenExceedingMax() {
         // Given
         ResilienceConfig caller = new ResilienceConfig(
             Duration.ofSeconds(30),
-            10, // 超过最大值
+            10, // Above the maximum value
             Duration.ofSeconds(2),
             100,
             10,
@@ -239,14 +239,14 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("mergeWithMax() - 应该限制限流速率不超过最大值")
+    @DisplayName("mergeWithMax() should cap the rate limit at the maximum")
     void mergeWithMax_shouldLimitRateLimit_whenExceedingMax() {
         // Given
         ResilienceConfig caller = new ResilienceConfig(
             Duration.ofSeconds(30),
             3,
             Duration.ofSeconds(2),
-            2000, // 超过最大值
+            2000, // Above the maximum value
             10,
             Duration.ofSeconds(30),
             List.of("Content-Type")
@@ -270,7 +270,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("mergeWithMax() - 应该使用调用方配置，如果未超过最大值")
+    @DisplayName("mergeWithMax() should honour caller settings when they are within bounds")
     void mergeWithMax_shouldUseCallerConfig_whenNotExceedingMax() {
         // Given
         ResilienceConfig caller = new ResilienceConfig(
@@ -306,7 +306,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("mergeWithMax() - 应该使用调用方的响应头白名单，如果提供了")
+    @DisplayName("mergeWithMax() should use the caller whitelist when provided")
     void mergeWithMax_shouldUseCallerWhitelist_whenProvided() {
         // Given
         ResilienceConfig caller = new ResilienceConfig(
@@ -338,7 +338,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("mergeWithMax() - 应该使用最大配置的响应头白名单，如果调用方未提供")
+    @DisplayName("mergeWithMax() should fall back to the system whitelist when the caller omits it")
     void mergeWithMax_shouldUseMaxWhitelist_whenCallerWhitelistIsEmpty() {
         // Given
         ResilienceConfig caller = new ResilienceConfig(
@@ -348,7 +348,7 @@ class ResilienceConfigTest {
             100,
             10,
             Duration.ofSeconds(30),
-            List.of() // 空白名单
+            List.of() // Caller did not provide a whitelist
         );
 
         ResilienceConfig max = new ResilienceConfig(
@@ -370,7 +370,7 @@ class ResilienceConfigTest {
     }
 
     @Test
-    @DisplayName("构造函数 - 应该创建不可变的响应头白名单副本")
+    @DisplayName("Constructor should create an immutable copy of the whitelist")
     void constructor_shouldCreateImmutableCopyOfWhitelist() {
         // Given
         List<String> whitelist = new java.util.ArrayList<>();
@@ -388,10 +388,10 @@ class ResilienceConfigTest {
             whitelist
         );
 
-        // 修改原始列表
+        // Mutate the original list
         whitelist.add("Header-3");
 
-        // Then - 配置中的白名单应该不受影响
+        // Then - the whitelist inside the configuration should remain unchanged
         assertThat(config.responseHeaderWhitelist()).hasSize(2);
         assertThat(config.responseHeaderWhitelist()).containsExactly("Header-1", "Header-2");
     }

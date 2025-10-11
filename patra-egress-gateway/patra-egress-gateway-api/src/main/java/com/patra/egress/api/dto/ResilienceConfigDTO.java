@@ -44,10 +44,10 @@ public record ResilienceConfigDTO(
     List<String> responseHeaderWhitelist
 ) {
     /**
-     * Compact constructor for validation
+     * Compact constructor for validation.
      */
     public ResilienceConfigDTO {
-        // 创建不可变副本
+        // Create an immutable defensive copy of the whitelist values.
         responseHeaderWhitelist = responseHeaderWhitelist != null
             ? List.copyOf(responseHeaderWhitelist)
             : null;
