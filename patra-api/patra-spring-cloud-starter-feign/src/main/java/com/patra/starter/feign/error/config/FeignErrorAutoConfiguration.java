@@ -19,7 +19,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * Feign 错误处理自动装配。
+ * Auto-configuration for Feign error handling: registers the error decoder, trace propagation
+ * interceptor, and optional observation recorder.
  */
 @Slf4j
 @AutoConfiguration
@@ -42,12 +43,12 @@ public class FeignErrorAutoConfiguration {
     public FeignErrorObservationRecorder feignErrorObservationRecorder(FeignErrorProperties properties,
                                                                        ObjectProvider<MeterRegistry> meterRegistryProvider) {
         if (!properties.getObservation().isEnabled()) {
-            log.info("Feign 错误观测已关闭，使用 NoOp 观测器");
+            log.info("Feign error observation disabled; falling back to NO_OP recorder");
             return FeignErrorObservationRecorder.NO_OP;
         }
         MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
         if (meterRegistry == null) {
-            log.warn("Micrometer MeterRegistry 不存在，Feign 错误观测降级为 NoOp");
+            log.warn("Micrometer MeterRegistry not available, Feign error observation degrades to NO_OP");
             return FeignErrorObservationRecorder.NO_OP;
         }
         return new MicrometerFeignErrorObservationRecorder(meterRegistry, properties);
@@ -58,7 +59,7 @@ public class FeignErrorAutoConfiguration {
     public ErrorDecoder problemDetailErrorDecoder(ObjectMapper objectMapper,
                                                  FeignErrorProperties properties,
                                                  FeignErrorObservationRecorder observationRecorder) {
-        log.info("配置 ProblemDetailErrorDecoder, tolerant={}", properties.isTolerant());
+        log.info("Configuring ProblemDetailErrorDecoder (tolerant mode enabled: {})", properties.isTolerant());
         return new ProblemDetailErrorDecoder(objectMapper, properties, observationRecorder);
     }
 
@@ -66,7 +67,7 @@ public class FeignErrorAutoConfiguration {
     @ConditionalOnMissingBean(TraceIdRequestInterceptor.class)
     public TraceIdRequestInterceptor traceIdRequestInterceptor(TraceProvider traceProvider,
                                                               TracingProperties tracingProperties) {
-        log.info("配置 TraceIdRequestInterceptor, headers={}", tracingProperties.getHeaderNames());
+        log.info("Configuring TraceIdRequestInterceptor with headers {}", tracingProperties.getHeaderNames());
         return new TraceIdRequestInterceptor(traceProvider, tracingProperties);
     }
 }

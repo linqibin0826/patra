@@ -9,50 +9,46 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 通过 Feign 调用远端服务时产生的错误所对应的异常类型。
+ * Exception raised when a Feign client receives an error response from a downstream service.
  *
- * <p>定位：仅用于适配器层（adapter），不应穿透至应用/领域层。
+ * <p>Intended for adapter-layer code only; application and domain layers should translate it into
+ * context-specific failures. The exception exposes downstream metadata such as business error code,
+ * HTTP status, trace identifier, and the {@link ProblemDetail} extension map.</p>
  *
- * <p>能力：可结构化地访问远端错误信息，包括业务错误码、HTTP 状态码、TraceId，
- * 以及 {@link org.springframework.http.ProblemDetail} 的扩展属性集合。
- *
- * <p>相关：
- * - 由 {@link com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder} 负责构造
- * - 可搭配 {@link com.patra.starter.feign.error.util.RemoteErrorHelper} 进行语义判断
- *
- * @author linqibin
- * @since 0.1.0
+ * <p>Constructed by {@link com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder} and often
+ * inspected via {@link com.patra.starter.feign.error.util.RemoteErrorHelper}.</p>
  */
 @Getter
 public class RemoteCallException extends RuntimeException {
     
-    /** 远端返回的业务错误码（可能为空） */
+    /** Business error code returned by the downstream service (may be {@code null}). */
     private final String errorCode;
-    
-    /** 远端响应的 HTTP 状态码 */
+
+    /** HTTP status code of the downstream response. */
     private final int httpStatus;
-    
-    /** 触发本次调用的 Feign 方法键 */
+
+    /** Feign method key that triggered the call. */
     private final String methodKey;
-    
-    /** 用于跨服务关联的 TraceId（可能为空） */
+
+    /** Trace identifier extracted from downstream headers or payload (may be {@code null}). */
     private final String traceId;
-    
-    /** 从 ProblemDetail 扩展出来的附加属性 */
+
+    /** Additional ProblemDetail extension attributes returned by the downstream service. */
     private final Map<String, Object> extensions;
-    
+
     /**
-     * 基于 {@link ProblemDetail} 构造异常，提取错误码、TraceId 与扩展属性。
+     * Build an exception from a downstream {@link ProblemDetail}, extracting the error code, trace identifier,
+     * and extension properties.
      *
-     * @param problemDetail 下游服务返回的 ProblemDetail
-     * @param methodKey 本次调用的 Feign 方法键
+     * @param problemDetail ProblemDetail returned by the downstream service
+     * @param methodKey Feign method key associated with the call
      */
     public RemoteCallException(ProblemDetail problemDetail, String methodKey) {
         super(problemDetail.getDetail());
         this.httpStatus = problemDetail.getStatus();
         this.methodKey = methodKey;
-        
-        // 从 ProblemDetail 扩展属性中提取错误码与 TraceId
+
+        // Extract error code and trace information from the extension map.
         Map<String, Object> properties = problemDetail.getProperties();
         if (properties == null) {
             properties = Collections.emptyMap();
@@ -60,17 +56,17 @@ public class RemoteCallException extends RuntimeException {
         this.errorCode = (String) properties.get(ErrorKeys.CODE);
         this.traceId = (String) properties.get(ErrorKeys.TRACE_ID);
 
-        // 复制所有扩展字段，保留以备后续使用
+        // Copy all extension fields for later inspection.
         this.extensions = new HashMap<>(properties);
     }
-    
+
     /**
-     * 针对非 ProblemDetail 的错误响应构造异常（例如严格模式回退、宽容模式兜底场景）。
+     * Build an exception for non-ProblemDetail responses (strict mode fallback or tolerant-mode scenarios).
      *
-     * @param httpStatus 响应的 HTTP 状态码
-     * @param message 错误消息（可能来自响应原因短语）
-     * @param methodKey Feign 方法键
-     * @param traceId 如可从响应头获取则填充，否则为空
+     * @param httpStatus HTTP status returned by the downstream service
+     * @param message Reason phrase or synthesized error message
+     * @param methodKey Feign method key
+     * @param traceId Trace identifier extracted from response headers, if any
      */
     public RemoteCallException(int httpStatus, String message, String methodKey, String traceId) {
         super(message);
@@ -82,16 +78,16 @@ public class RemoteCallException extends RuntimeException {
     }
     
     /**
-     * 完整参数构造函数，适用于需要显式设置全部字段的高级用法。
+     * Construct an exception with explicit values for all fields.
      *
-     * @param errorCode 业务错误码（可空）
-     * @param httpStatus HTTP 状态码
-     * @param message 错误消息
-     * @param methodKey Feign 方法键
-     * @param traceId TraceId（可空）
-     * @param extensions ProblemDetail 扩展属性（可为空/空集）
+     * @param errorCode Business error code (optional)
+     * @param httpStatus HTTP status code
+     * @param message Error message
+     * @param methodKey Feign method key
+     * @param traceId Trace identifier (optional)
+     * @param extensions ProblemDetail extensions (nullable)
      */
-    public RemoteCallException(String errorCode, int httpStatus, String message, 
+    public RemoteCallException(String errorCode, int httpStatus, String message,
                              String methodKey, String traceId, Map<String, Object> extensions) {
         super(message);
         this.errorCode = errorCode;
@@ -101,41 +97,33 @@ public class RemoteCallException extends RuntimeException {
         this.extensions = extensions != null ? new HashMap<>(extensions) : Collections.emptyMap();
     }
     
-    /**
-     * 是否包含业务错误码。
-     *
-     * @return 含有非空错误码返回 true，否则返回 false
-     */
+    /** @return {@code true} if a non-empty business error code is present. */
     public boolean hasErrorCode() {
         return errorCode != null && !errorCode.trim().isEmpty();
     }
-    
-    /**
-     * 是否包含 TraceId。
-     *
-     * @return 含有非空 TraceId 返回 true，否则返回 false
-     */
+
+    /** @return {@code true} if a trace identifier is available. */
     public boolean hasTraceId() {
         return traceId != null && !traceId.trim().isEmpty();
     }
-    
+
     /**
-     * 按 key 读取扩展属性值。
+     * Retrieve a ProblemDetail extension value.
      *
-     * @param key 扩展属性键
-     * @return 对应的扩展值；不存在则为 null
+     * @param key Extension key
+     * @return Extension value or {@code null} when not present
      */
     public Object getExtension(String key) {
         return extensions.get(key);
     }
-    
+
     /**
-     * 带类型转换地按 key 读取扩展属性值。
+     * Retrieve a typed ProblemDetail extension value.
      *
-     * @param key 扩展属性键
-     * @param type 期望返回值类型
-     * @param <T> 类型参数
-     * @return 转换后的值；不存在或类型不匹配时为 null
+     * @param key Extension key
+     * @param type Desired value type
+     * @param <T> Type parameter
+     * @return Converted value, or {@code null} when absent or type mismatch
      */
     @SuppressWarnings("unchecked")
     public <T> T getExtension(String key, Class<T> type) {
@@ -145,11 +133,9 @@ public class RemoteCallException extends RuntimeException {
         }
         return null;
     }
-    
+
     /**
-     * 返回扩展属性的不可变拷贝。
-     *
-     * @return 不可变映射视图
+     * @return An immutable copy of the ProblemDetail extensions.
      */
     public Map<String, Object> getAllExtensions() {
         return Collections.unmodifiableMap(extensions);

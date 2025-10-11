@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 基于 Micrometer 的 Feign 错误解码观测实现。
+ * Micrometer-backed implementation of {@link FeignErrorObservationRecorder}.
  */
 @Slf4j
 public class MicrometerFeignErrorObservationRecorder implements FeignErrorObservationRecorder {
@@ -34,11 +34,11 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
 
         if (observationProperties.isLogSlowParsing()
                 && durationMs >= observationProperties.getSlowParsingThresholdMs()) {
-            log.warn("Feign ProblemDetail 解析耗时较长: method={} status={} duration={}ms", methodKey, status, durationMs);
+            log.warn("Feign ProblemDetail parsing was slow: method={} status={} duration={}ms", methodKey, status, durationMs);
         }
 
         if (!success) {
-            log.debug("Feign ProblemDetail 解析失败: method={} status={} duration={}ms", methodKey, status, durationMs);
+            log.debug("Feign ProblemDetail parsing failed: method={} status={} duration={}ms", methodKey, status, durationMs);
         }
     }
 
@@ -53,7 +53,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
                 .increment();
 
         if (tolerantMode && observationProperties.isLogTolerantUsage()) {
-            log.info("Feign 错误解码触发宽容模式: method={} status={}", methodKey, status);
+            log.info("Feign error decoding invoked tolerant mode: method={} status={}", methodKey, status);
         }
     }
 
@@ -67,7 +67,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
 
         if (observationProperties.isLogSlowBodyReading()
                 && durationMs >= observationProperties.getSlowBodyReadingThresholdMs()) {
-            log.warn("Feign 响应体读取耗时较长: method={} size={} duration={}ms truncated={}",
+            log.warn("Feign response body read was slow: method={} size={} duration={}ms truncated={}",
                     methodKey, bodySize, durationMs, truncated);
         }
     }
@@ -82,9 +82,9 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
                 .increment();
 
         if (found) {
-            log.debug("Feign 响应头提取 TraceId 成功: method={} header={}", methodKey, headerName);
+            log.debug("Feign response headers contained TraceId: method={} header={}", methodKey, headerName);
         } else {
-            log.debug("Feign 响应头未包含 TraceId: method={}", methodKey);
+            log.debug("Feign response headers did not include TraceId: method={}", methodKey);
         }
     }
 }
