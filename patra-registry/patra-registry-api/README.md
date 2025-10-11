@@ -44,5 +44,5 @@
 
 ## 8. References
 - Error catalog: `ERROR_CODE_CATALOG.md`
-- Registry deep dive: `docs/modules/registry/deep-dive.md`
-- Platform error standard: `docs/standards/platform-error-handling.md`
+- Service README: `../README.md`
+- Conventions: `docs/conventions/README.md`
