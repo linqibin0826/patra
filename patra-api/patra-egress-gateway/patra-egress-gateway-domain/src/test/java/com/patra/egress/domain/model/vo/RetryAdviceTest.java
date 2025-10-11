@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("RetryAdvice 值对象测试")
+@DisplayName("RetryAdvice value object tests")
 class RetryAdviceTest {
 
     private static final ResilienceConfig DEFAULT_CONFIG = new ResilienceConfig(
@@ -29,7 +29,7 @@ class RetryAdviceTest {
     );
 
     @Test
-    @DisplayName("fromResponse() - 应该对429状态码建议重试")
+    @DisplayName("fromResponse() should recommend retrying on HTTP 429")
     void fromResponse_shouldSuggestRetry_when429TooManyRequests() {
         // Given
         HttpResponse response = new HttpResponse(
@@ -48,7 +48,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该对503状态码建议重试")
+    @DisplayName("fromResponse() should recommend retrying on HTTP 503")
     void fromResponse_shouldSuggestRetry_when503ServiceUnavailable() {
         // Given
         HttpResponse response = new HttpResponse(
@@ -67,7 +67,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该对408状态码建议重试")
+    @DisplayName("fromResponse() should recommend retrying on HTTP 408")
     void fromResponse_shouldSuggestRetry_when408RequestTimeout() {
         // Given
         HttpResponse response = new HttpResponse(
@@ -86,7 +86,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该对5xx状态码建议重试")
+    @DisplayName("fromResponse() should recommend retrying on 5xx responses")
     void fromResponse_shouldSuggestRetry_when5xxServerError() {
         // Given
         HttpResponse response500 = new HttpResponse(500, Map.of(), "Internal server error");
@@ -110,7 +110,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该对2xx状态码不建议重试")
+    @DisplayName("fromResponse() should not recommend retrying on 2xx responses")
     void fromResponse_shouldNotSuggestRetry_when2xxSuccess() {
         // Given
         HttpResponse response200 = new HttpResponse(200, Map.of(), "OK");
@@ -130,7 +130,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该对4xx状态码（除408/429）不建议重试")
+    @DisplayName("fromResponse() should not recommend retrying on other 4xx responses")
     void fromResponse_shouldNotSuggestRetry_when4xxClientError() {
         // Given
         HttpResponse response400 = new HttpResponse(400, Map.of(), "Bad request");
@@ -149,12 +149,12 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该使用Retry-After响应头作为建议延迟")
+    @DisplayName("fromResponse() should use the Retry-After header as the suggested delay")
     void fromResponse_shouldUseRetryAfterHeader_whenPresent() {
         // Given
         HttpResponse response = new HttpResponse(
             429,
-            Map.of("Retry-After", List.of("10")), // 10秒后重试
+            Map.of("Retry-After", List.of("10")), // Retry suggested after ten seconds
             "Rate limit exceeded"
         );
 
@@ -168,7 +168,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该在Retry-After头不是数字时使用默认退避时间")
+    @DisplayName("fromResponse() should fall back to the default delay when Retry-After is not numeric")
     void fromResponse_shouldUseDefaultBackoff_whenRetryAfterIsNotNumeric() {
         // Given
         HttpResponse response = new HttpResponse(
@@ -182,16 +182,16 @@ class RetryAdviceTest {
 
         // Then
         assertThat(advice.retryable()).isTrue();
-        assertThat(advice.suggestedDelay()).isEqualTo(Duration.ofSeconds(2)); // 使用配置的退避时间
+        assertThat(advice.suggestedDelay()).isEqualTo(Duration.ofSeconds(2)); // Falls back to configured backoff
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该忽略大小写匹配Retry-After响应头")
+    @DisplayName("fromResponse() should match the Retry-After header case-insensitively")
     void fromResponse_shouldMatchRetryAfterHeaderCaseInsensitive() {
         // Given
         HttpResponse response = new HttpResponse(
             429,
-            Map.of("retry-after", List.of("5")), // 小写
+            Map.of("retry-after", List.of("5")), // Lowercase header name
             "Rate limit exceeded"
         );
 
@@ -204,7 +204,7 @@ class RetryAdviceTest {
     }
 
     @Test
-    @DisplayName("fromResponse() - 应该在503响应中使用Retry-After头")
+    @DisplayName("fromResponse() should honour Retry-After on HTTP 503 responses")
     void fromResponse_shouldUseRetryAfterHeader_when503WithRetryAfter() {
         // Given
         HttpResponse response = new HttpResponse(

@@ -15,11 +15,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("ExternalRateLimitInfo 值对象测试")
+@DisplayName("ExternalRateLimitInfo value object tests")
 class ExternalRateLimitInfoTest {
 
     @Test
-    @DisplayName("fromHeaders() - 应该正确提取标准格式的限流响应头")
+    @DisplayName("fromHeaders() should extract standard rate limit headers")
     void fromHeaders_shouldExtractRateLimitHeaders_withStandardFormat() {
         // Given
         Map<String, List<String>> headers = Map.of(
@@ -39,7 +39,7 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该忽略大小写提取响应头（小写）")
+    @DisplayName("fromHeaders() should perform case-insensitive header lookup (lowercase)")
     void fromHeaders_shouldExtractRateLimitHeaders_withLowercaseHeaders() {
         // Given
         Map<String, List<String>> headers = Map.of(
@@ -59,7 +59,7 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该忽略大小写提取响应头（混合大小写）")
+    @DisplayName("fromHeaders() should perform case-insensitive header lookup (mixed case)")
     void fromHeaders_shouldExtractRateLimitHeaders_withMixedCaseHeaders() {
         // Given
         Map<String, List<String>> headers = Map.of(
@@ -79,9 +79,9 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该在只有部分限流头时返回部分信息")
+    @DisplayName("fromHeaders() should return partial data when only some headers are present")
     void fromHeaders_shouldReturnPartialInfo_whenOnlySomeHeadersPresent() {
-        // Given - 只有 limit 和 remaining
+        // Given - only the limit and remaining headers are present
         Map<String, List<String>> headers = Map.of(
             "X-RateLimit-Limit", List.of("100"),
             "X-RateLimit-Remaining", List.of("75")
@@ -98,7 +98,7 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该在没有限流头时返回null")
+    @DisplayName("fromHeaders() should return null when no rate limit headers exist")
     void fromHeaders_shouldReturnNull_whenNoRateLimitHeaders() {
         // Given
         Map<String, List<String>> headers = Map.of(
@@ -114,7 +114,7 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该在响应头为空时返回null")
+    @DisplayName("fromHeaders() should return null when headers are empty")
     void fromHeaders_shouldReturnNull_whenHeadersEmpty() {
         // Given
         Map<String, List<String>> headers = Map.of();
@@ -127,7 +127,7 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该在响应头为null时返回null")
+    @DisplayName("fromHeaders() should return null when headers are null")
     void fromHeaders_shouldReturnNull_whenHeadersNull() {
         // When
         ExternalRateLimitInfo info = ExternalRateLimitInfo.fromHeaders(null);
@@ -137,7 +137,7 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该在响应头值为非数字时忽略该字段")
+    @DisplayName("fromHeaders() should ignore fields with non-numeric values")
     void fromHeaders_shouldIgnoreInvalidValue_whenHeaderValueIsNotNumeric() {
         // Given
         Map<String, List<String>> headers = Map.of(
@@ -151,13 +151,13 @@ class ExternalRateLimitInfoTest {
 
         // Then
         assertThat(info).isNotNull();
-        assertThat(info.limit()).isNull(); // 解析失败，应该为null
+        assertThat(info.limit()).isNull(); // Parsing failed, should be null
         assertThat(info.remaining()).isEqualTo(75);
         assertThat(info.resetTimestamp()).isEqualTo(1672531200L);
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该在响应头值列表为空时返回null")
+    @DisplayName("fromHeaders() should return null when header values are empty")
     void fromHeaders_shouldReturnNull_whenHeaderValueListIsEmpty() {
         // Given
         Map<String, List<String>> headers = new HashMap<>();
@@ -171,11 +171,11 @@ class ExternalRateLimitInfoTest {
     }
 
     @Test
-    @DisplayName("fromHeaders() - 应该取第一个值，如果响应头有多个值")
+    @DisplayName("fromHeaders() should use the first value when multiple values exist")
     void fromHeaders_shouldUseFirstValue_whenHeaderHasMultipleValues() {
         // Given
         Map<String, List<String>> headers = Map.of(
-            "X-RateLimit-Limit", List.of("100", "200"), // 多个值，应该取第一个
+            "X-RateLimit-Limit", List.of("100", "200"), // Multiple values, should use the first
             "X-RateLimit-Remaining", List.of("75"),
             "X-RateLimit-Reset", List.of("1672531200")
         );
@@ -185,7 +185,7 @@ class ExternalRateLimitInfoTest {
 
         // Then
         assertThat(info).isNotNull();
-        assertThat(info.limit()).isEqualTo(100); // 应该是第一个值
+        assertThat(info.limit()).isEqualTo(100); // Should equal the first value
         assertThat(info.remaining()).isEqualTo(75);
         assertThat(info.resetTimestamp()).isEqualTo(1672531200L);
     }

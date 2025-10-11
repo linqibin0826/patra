@@ -4,15 +4,15 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * 弹性配置值对象
- * 
- * @param timeout 超时时间
- * @param maxRetries 最大重试次数
- * @param retryBackoff 重试退避时间
- * @param rateLimit 限流速率（每秒请求数）
- * @param circuitBreakerThreshold 熔断阈值（失败次数）
- * @param circuitBreakerWindow 熔断时间窗口
- * @param responseHeaderWhitelist 响应头白名单
+ * Resilience configuration value object that captures the guardrails applied to outbound calls.
+ *
+ * @param timeout                  request timeout
+ * @param maxRetries               maximum number of retries
+ * @param retryBackoff             backoff interval between retries
+ * @param rateLimit                allowed requests per second
+ * @param circuitBreakerThreshold  number of failures that trigger circuit breaking
+ * @param circuitBreakerWindow     evaluation window for the circuit breaker
+ * @param responseHeaderWhitelist  headers that can flow back to the caller
  * @author linqibin
  * @since 0.1.0
  */
@@ -26,19 +26,19 @@ public record ResilienceConfig(
     List<String> responseHeaderWhitelist
 ) {
     /**
-     * 构造函数，确保不可变性
+     * Canonical constructor that guarantees immutability for internal collections.
      */
     public ResilienceConfig {
-        // 创建不可变副本
+        // Create an immutable defensive copy of the whitelist to prevent accidental mutation.
         responseHeaderWhitelist = responseHeaderWhitelist != null 
             ? List.copyOf(responseHeaderWhitelist) 
             : List.of();
     }
     
     /**
-     * 校验配置有效性
-     * 
-     * @throws IllegalArgumentException 如果配置无效
+     * Validate the configuration to ensure every value falls within an acceptable range.
+     *
+     * @throws IllegalArgumentException when any field contains an invalid value
      */
     public void validate() {
         if (timeout == null || timeout.isNegative() || timeout.isZero()) {
@@ -62,10 +62,10 @@ public record ResilienceConfig(
     }
     
     /**
-     * 合并配置（不超过最大值）
-     * 
-     * @param max 最大配置限制
-     * @return 合并后的配置
+     * Merge the current configuration with the system-wide maximums to enforce guardrails.
+     *
+     * @param max system-wide maxima used as upper bounds
+     * @return a new configuration where each value respects the maximum constraints
      */
     public ResilienceConfig mergeWithMax(ResilienceConfig max) {
         return new ResilienceConfig(

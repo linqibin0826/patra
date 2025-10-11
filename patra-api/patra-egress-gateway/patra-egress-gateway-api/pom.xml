@@ -12,10 +12,10 @@
 
     <artifactId>patra-egress-gateway-api</artifactId>
     <name>Patra Egress Gateway API</name>
-    <description>错误码、外部 DTOs</description>
+    <description>Error codes and external-facing DTOs</description>
 
     <dependencies>
-        <!-- 内部依赖 -->
+        <!-- Internal modules -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>

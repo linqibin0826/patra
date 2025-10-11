@@ -14,7 +14,7 @@
     <artifactId>patra-egress-gateway</artifactId>
     <packaging>pom</packaging>
     <name>Patra Egress Gateway</name>
-    <description>南向网关 - 统一管理所有出站外部服务调用</description>
+    <description>Southbound gateway responsible for orchestrating every outbound external service call</description>
 
     <modules>
         <module>patra-egress-gateway-api</module>

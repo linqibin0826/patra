@@ -12,10 +12,10 @@
 
     <artifactId>patra-egress-gateway-boot</artifactId>
     <name>Patra Egress Gateway Boot</name>
-    <description>Spring Boot 应用启动模块</description>
+    <description>Spring Boot bootstrap module</description>
 
     <dependencies>
-        <!-- 内部依赖 -->
+        <!-- Internal modules -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-egress-gateway-adapter</artifactId>

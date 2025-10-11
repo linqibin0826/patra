@@ -12,10 +12,10 @@
 
     <artifactId>patra-egress-gateway-domain</artifactId>
     <name>Patra Egress Gateway Domain</name>
-    <description>聚合根、实体、值对象、领域端口</description>
+    <description>Aggregates, entities, value objects, and domain ports</description>
 
     <dependencies>
-        <!-- 内部依赖 -->
+        <!-- Internal modules -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
@@ -34,7 +34,7 @@
             <artifactId>hutool-core</artifactId>
         </dependency>
 
-        <!-- 测试依赖 -->
+        <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

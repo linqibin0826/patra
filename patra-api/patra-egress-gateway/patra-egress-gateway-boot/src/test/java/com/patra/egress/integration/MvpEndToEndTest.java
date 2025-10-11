@@ -22,15 +22,15 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * MVP 端到端测试 - 使用 WireMock 模拟外部服务，验证完整调用流程
+ * MVP end-to-end tests using WireMock to emulate external services and validate the full invocation flow
  * 
- * <p>测试场景：
+ * <p>Test scenarios:
  * <ul>
- *   <li>场景1：成功调用外部 API（PubMed 模拟）</li>
- *   <li>场景2：处理外部服务限流（429 响应）</li>
- *   <li>场景3：处理外部服务错误（500 响应）</li>
- *   <li>场景4：配置覆盖测试（业务方自定义超时）</li>
- *   <li>场景5：响应头白名单过滤</li>
+ *   <li>Scenario 1: successful external API call (PubMed simulation)</li>
+ *   <li>Scenario 2: handle provider throttling (429 response)</li>
+ *   <li>Scenario 3: handle provider errors (500 response)</li>
+ *   <li>Scenario 4: configuration override (custom timeout)</li>
+ *   <li>Scenario 5: response header whitelist filtering</li>
  * </ul>
  * 
  * @author Papertrace Team
@@ -51,21 +51,21 @@ class MvpEndToEndTest {
 
     @BeforeAll
     void setupWireMock() {
-        // 启动 WireMock 服务器
+        // Start the WireMock server
         wireMockServer = new WireMockServer(WireMockConfiguration.options()
                 .dynamicPort()
                 .dynamicHttpsPort());
         wireMockServer.start();
         wireMockBaseUrl = "http://localhost:" + wireMockServer.port();
         
-        System.out.println("WireMock 服务器启动成功，端口: " + wireMockServer.port());
+        System.out.println("WireMock server started successfully on port " + wireMockServer.port());
     }
 
     @AfterAll
     void teardownWireMock() {
         if (wireMockServer != null && wireMockServer.isRunning()) {
             wireMockServer.stop();
-            System.out.println("WireMock 服务器已停止");
+            System.out.println("WireMock server stopped");
         }
     }
 
@@ -75,12 +75,12 @@ class MvpEndToEndTest {
     }
 
     /**
-     * 场景1：成功调用外部 API（模拟 PubMed 搜索）
+     * Scenario 1: successful external API call (simulated PubMed search)
      */
     @Test
-    @DisplayName("场景1：成功调用外部 API - PubMed 搜索文献")
+    @DisplayName("Scenario 1: successful external API call - PubMed search")
     void testSuccessfulExternalCall_PubMed() throws Exception {
-        // 1. 准备 WireMock stub - 模拟 PubMed API 成功响应
+        // Step 1: configure WireMock stub to simulate a successful PubMed API response
         String pubmedResponse = """
                 {
                     "header": {
@@ -107,7 +107,7 @@ class MvpEndToEndTest {
                         .withHeader("X-RateLimit-Reset", "1696550400")
                         .withBody(pubmedResponse)));
 
-        // 2. 构建网关请求
+        // Step 2: build the gateway request
         ExternalCallRequestDTO request = new ExternalCallRequestDTO(
                 wireMockBaseUrl + "/entrez/eutils/esearch.fcgi?db=pubmed&term=cancer",
                 "GET",
@@ -115,40 +115,40 @@ class MvpEndToEndTest {
                         "User-Agent", "Papertrace/0.1.0",
                         "Accept", "application/json"
                 ),
-                null, // GET 请求无 body
-                null  // 使用系统默认配置
+                null, // GET request has no body
+                null  // Use the system default configuration
         );
 
-        // 3. 调用网关 API
+        // Step 3: invoke the gateway API
         ResponseEntity<ExternalCallResponseDTO> response = restTemplate.postForEntity(
                 "/api/egress/call",
                 request,
                 ExternalCallResponseDTO.class
         );
 
-        // 4. 验证响应
+        // Step 4: validate the response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
 
         ExternalCallResponseDTO result = response.getBody();
         ResponseEnvelopeDTO envelope = result.envelope();
 
-        // 4.1 验证成功标识
+        // 4.1 Verify success indicator
         assertThat(envelope.success()).isTrue();
         assertThat(envelope.statusCode()).isEqualTo(200);
 
-        // 4.2 验证响应体内容
+        // 4.2 Verify response body contents
         assertThat(envelope.body()).contains("esearchresult");
         assertThat(envelope.body()).contains("38234567");
 
-        // 4.3 验证响应体哈希
+        // 4.3 Verify response body hash
         assertThat(envelope.bodyHash()).isNotEmpty();
 
-        // 4.4 验证响应头白名单过滤
+        // 4.4 Verify response header whitelisting
         assertThat(envelope.headers()).containsKey("Content-Type");
         assertThat(envelope.headers().get("Content-Type")).isEqualTo("application/json");
 
-        // 4.5 验证外部服务限流信息提取
+        // 4.5 Verify extraction of external rate limit information
         RateLimitStatusDTO rateLimitStatus = envelope.rateLimitStatus();
         assertThat(rateLimitStatus).isNotNull();
         ExternalRateLimitInfoDTO externalInfo = rateLimitStatus.externalInfo();
@@ -157,31 +157,31 @@ class MvpEndToEndTest {
         assertThat(externalInfo.remaining()).isEqualTo(9);
         assertThat(externalInfo.resetTimestamp()).isEqualTo(1696550400L);
 
-        // 4.6 验证重试建议（成功调用不建议重试）
+        // 4.6 Verify retry advice (successful call should not retry)
         RetryAdviceDTO retryAdvice = envelope.retryAdvice();
         assertThat(retryAdvice).isNotNull();
         assertThat(retryAdvice.retryable()).isFalse();
 
-        // 5. 验证 WireMock 收到了正确的请求
+        // 5. Verify WireMock received the expected request
         wireMockServer.verify(getRequestedFor(urlPathEqualTo("/entrez/eutils/esearch.fcgi"))
                 .withQueryParam("db", equalTo("pubmed"))
                 .withQueryParam("term", equalTo("cancer"))
                 .withHeader("User-Agent", equalTo("Papertrace/0.1.0"))
                 .withHeader("Accept", equalTo("application/json")));
 
-        System.out.println("✅ 场景1 通过：成功调用外部 API 并正确封装响应");
-        System.out.println("   - 响应状态码: " + envelope.statusCode());
-        System.out.println("   - 响应体哈希: " + envelope.bodyHash());
-        System.out.println("   - 外部限流: " + externalInfo.remaining() + "/" + externalInfo.limit());
+        System.out.println("✅ Scenario 1 passed: successful external call and proper response envelope");
+        System.out.println("   - Response status code: " + envelope.statusCode());
+        System.out.println("   - Response body hash: " + envelope.bodyHash());
+        System.out.println("   - External rate limit: " + externalInfo.remaining() + "/" + externalInfo.limit());
     }
 
     /**
-     * 场景2：处理外部服务限流（429 响应）
+     * Scenario 2: handle provider throttling (429 response)
      */
     @Test
-    @DisplayName("场景2：处理外部服务限流 - 429 Too Many Requests")
+    @DisplayName("Scenario 2: handle provider throttling - 429 Too Many Requests")
     void testExternalServiceRateLimited() throws Exception {
-        // 1. 准备 WireMock stub - 模拟外部服务限流
+        // Step 1: configure WireMock stub to simulate provider throttling
         wireMockServer.stubFor(get(urlPathEqualTo("/api/data"))
                 .willReturn(aResponse()
                         .withStatus(429)
@@ -191,7 +191,7 @@ class MvpEndToEndTest {
                         .withHeader("X-RateLimit-Remaining", "0")
                         .withBody("{\"error\": \"Rate limit exceeded\"}")));
 
-        // 2. 构建网关请求
+        // Step 2: build the gateway request
         ExternalCallRequestDTO request = new ExternalCallRequestDTO(
                 wireMockBaseUrl + "/api/data",
                 "GET",
@@ -200,56 +200,56 @@ class MvpEndToEndTest {
                 null
         );
 
-        // 3. 调用网关 API
+        // Step 3: invoke the gateway API
         ResponseEntity<ExternalCallResponseDTO> response = restTemplate.postForEntity(
                 "/api/egress/call",
                 request,
                 ExternalCallResponseDTO.class
         );
 
-        // 4. 验证响应
+        // Step 4: validate the response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ExternalCallResponseDTO result = response.getBody();
         ResponseEnvelopeDTO envelope = result.envelope();
 
-        // 4.1 验证失败标识
+        // 4.1 Verify failure indicator
         assertThat(envelope.success()).isFalse();
         assertThat(envelope.statusCode()).isEqualTo(429);
 
-        // 4.2 验证响应体
+        // 4.2 Inspect the response body
         assertThat(envelope.body()).contains("Rate limit exceeded");
 
-        // 4.3 验证外部服务限流信息
+        // 4.3 Verify extracted external rate limit information
         ExternalRateLimitInfoDTO externalInfo = envelope.rateLimitStatus().externalInfo();
         assertThat(externalInfo.limit()).isEqualTo(100);
         assertThat(externalInfo.remaining()).isEqualTo(0);
 
-        // 4.4 验证重试建议（429 应该建议重试）
+        // 4.4 Validate retry advice (429 should recommend retry)
         RetryAdviceDTO retryAdvice = envelope.retryAdvice();
         assertThat(retryAdvice.retryable()).isTrue();
-        assertThat(retryAdvice.suggestedDelaySeconds()).isEqualTo(60); // 60秒
+        assertThat(retryAdvice.suggestedDelaySeconds()).isEqualTo(60); // 60 seconds
         assertThat(retryAdvice.reason()).contains("Rate limited");
 
-        System.out.println("✅ 场景2 通过：正确处理外部服务限流");
-        System.out.println("   - 识别 429 状态码");
-        System.out.println("   - 提取 Retry-After 头: " + retryAdvice.suggestedDelaySeconds() + "秒");
-        System.out.println("   - 建议重试: " + retryAdvice.retryable());
+        System.out.println("✅ Scenario 2 passed: provider throttling handled correctly");
+        System.out.println("   - Recognised 429 status code");
+        System.out.println("   - Extracted Retry-After header: " + retryAdvice.suggestedDelaySeconds() + " seconds");
+        System.out.println("   - Retry recommended: " + retryAdvice.retryable());
     }
 
     /**
-     * 场景3：处理外部服务错误（500 响应）
+     * Scenario 3: handle provider errors (500 response)
      */
     @Test
-    @DisplayName("场景3：处理外部服务错误 - 500 Internal Server Error")
+    @DisplayName("Scenario 3: handle provider error - 500 Internal Server Error")
     void testExternalServiceError() throws Exception {
-        // 1. 准备 WireMock stub - 模拟外部服务错误
+        // Step 1: configure WireMock stub to simulate provider error
         wireMockServer.stubFor(post(urlPathEqualTo("/api/upload"))
                 .willReturn(aResponse()
                         .withStatus(500)
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"error\": \"Internal server error\", \"message\": \"Database connection failed\"}")));
 
-        // 2. 构建网关请求（模拟 OSS 上传）
+        // Step 2: build the gateway request (simulate OSS upload)
         ExternalCallRequestDTO request = new ExternalCallRequestDTO(
                 wireMockBaseUrl + "/api/upload",
                 "POST",
@@ -261,57 +261,57 @@ class MvpEndToEndTest {
                 null
         );
 
-        // 3. 调用网关 API
+        // Step 3: invoke the gateway API
         ResponseEntity<ExternalCallResponseDTO> response = restTemplate.postForEntity(
                 "/api/egress/call",
                 request,
                 ExternalCallResponseDTO.class
         );
 
-        // 4. 验证响应
+        // Step 4: validate the response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ExternalCallResponseDTO result = response.getBody();
         ResponseEnvelopeDTO envelope = result.envelope();
 
-        // 4.1 验证失败标识
+        // 4.1 Verify failure indicator
         assertThat(envelope.success()).isFalse();
         assertThat(envelope.statusCode()).isEqualTo(500);
 
-        // 4.2 验证错误信息
+        // 4.2 Verify error details
         assertThat(envelope.body()).contains("Internal server error");
 
-        // 4.3 验证重试建议（5xx 应该建议重试）
+        // 4.3 Verify retry advice (5xx responses should recommend retry)
         RetryAdviceDTO retryAdvice = envelope.retryAdvice();
         assertThat(retryAdvice.retryable()).isTrue();
         assertThat(retryAdvice.reason()).contains("Server error");
 
-        System.out.println("✅ 场景3 通过：正确处理外部服务错误");
-        System.out.println("   - 识别 500 状态码");
-        System.out.println("   - 建议重试: " + retryAdvice.retryable());
+        System.out.println("✅ Scenario 3 passed: provider error handled correctly");
+        System.out.println("   - Recognised 500 status code");
+        System.out.println("   - Retry recommended: " + retryAdvice.retryable());
     }
 
     /**
-     * 场景4：配置覆盖测试 - 业务方自定义超时
+     * Scenario 4: configuration override with caller-defined timeout
      */
     @Test
-    @DisplayName("场景4：配置覆盖 - 业务方自定义超时时间")
+    @DisplayName("Scenario 4: configuration override - caller-defined timeout")
     void testConfigOverride_CustomTimeout() throws Exception {
-        // 1. 准备 WireMock stub - 快速响应
+        // Step 1: configure WireMock stub for a fast response
         wireMockServer.stubFor(get(urlPathEqualTo("/api/fast"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "text/plain")
                         .withBody("OK")));
 
-        // 2. 构建网关请求 - 使用自定义配置（更短的超时）
+        // Step 2: build the gateway request using the shorter custom configuration
         ResilienceConfigDTO customConfig = new ResilienceConfigDTO(
-                5L,        // 5秒超时（短于系统默认的30秒）
-                2,         // 最大重试2次
-                1L,        // 1秒退避
-                100,       // 限流配置（可选）
-                5,         // 熔断阈值（可选）
-                30L,       // 熔断窗口（可选）
-                null       // 使用默认白名单
+                5L,        // 5-second timeout (shorter than the 30-second default)
+                2,         // Maximum of 2 retries
+                1L,        // 1-second backoff
+                100,       // Optional rate limit override
+                5,         // Optional circuit breaker threshold
+                30L,       // Optional circuit breaker window
+                null       // Use the default whitelist
         );
 
         ExternalCallRequestDTO request = new ExternalCallRequestDTO(
@@ -322,85 +322,85 @@ class MvpEndToEndTest {
                 customConfig
         );
 
-        // 3. 调用网关 API
+        // Step 3: invoke the gateway API
         ResponseEntity<ExternalCallResponseDTO> response = restTemplate.postForEntity(
                 "/api/egress/call",
                 request,
                 ExternalCallResponseDTO.class
         );
 
-        // 4. 验证响应
+        // Step 4: validate the response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ExternalCallResponseDTO result = response.getBody();
         
-        // 验证调用成功（说明自定义超时生效，5秒内完成）
+        // Confirm the call succeeded within the custom timeout window
         assertThat(result.envelope().success()).isTrue();
         assertThat(result.envelope().statusCode()).isEqualTo(200);
 
-        System.out.println("✅ 场景4 通过：配置覆盖正常工作");
-        System.out.println("   - 使用自定义超时: 5秒");
-        System.out.println("   - 调用耗时: " + result.durationMs() + "ms");
+        System.out.println("✅ Scenario 4 passed: configuration override worked as expected");
+        System.out.println("   - Custom timeout used: 5 seconds");
+        System.out.println("   - Call duration: " + result.durationMs() + "ms");
     }
 
     /**
-     * 场景5：响应头白名单过滤
+     * Scenario 5: response header whitelist filtering
      */
     @Test
-    @DisplayName("场景5：响应头白名单过滤 - 只保留白名单中的响应头")
+    @DisplayName("Scenario 5: response header whitelist - retain only allowed headers")
     void testResponseHeaderWhitelistFilter() throws Exception {
-        // 1. 准备 WireMock stub - 返回多个响应头
+        // Step 1: configure WireMock stub to return multiple headers
         wireMockServer.stubFor(get(urlPathEqualTo("/api/test"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withHeader("Content-Length", "100")
                         .withHeader("X-RateLimit-Limit", "1000")
-                        .withHeader("X-Custom-Internal-Header", "internal-value")  // 不在白名单中
-                        .withHeader("Set-Cookie", "session=abc123")                // 敏感头
+                        .withHeader("X-Custom-Internal-Header", "internal-value")  // Not on the whitelist
+                        .withHeader("Set-Cookie", "session=abc123")                // Sensitive header
                         .withBody("{\"data\": \"test\"}")));
 
-        // 2. 构建网关请求
+        // Step 2: build the gateway request
         ExternalCallRequestDTO request = new ExternalCallRequestDTO(
                 wireMockBaseUrl + "/api/test",
                 "GET",
                 Map.of(),
                 null,
-                null  // 使用系统默认白名单
+                null  // Use the system whitelist
         );
 
-        // 3. 调用网关 API
+        // Step 3: invoke the gateway API
         ResponseEntity<ExternalCallResponseDTO> response = restTemplate.postForEntity(
                 "/api/egress/call",
                 request,
                 ExternalCallResponseDTO.class
         );
 
-        // 4. 验证响应头过滤
+        // Step 4: validate the response and header filtering
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ResponseEnvelopeDTO envelope = response.getBody().envelope();
 
-        // 4.1 验证白名单内的响应头保留
+        // 4.1 Verify whitelisted headers are preserved
         assertThat(envelope.headers()).containsKey("Content-Type");
         // Note: Content-Length may not be present due to HTTP client implementation details (e.g., chunked transfer)
         // We verify it's either present or absent based on the actual response
         assertThat(envelope.headers()).containsKey("X-RateLimit-Limit");
 
-        // 4.2 验证不在白名单内的响应头被过滤
+        // 4.2 Verify non-whitelisted headers are removed
         assertThat(envelope.headers()).doesNotContainKey("X-Custom-Internal-Header");
         assertThat(envelope.headers()).doesNotContainKey("Set-Cookie");
 
-        System.out.println("✅ 场景5 通过：响应头白名单过滤正常工作");
-        System.out.println("   - 保留的响应头: " + envelope.headers().keySet());
-        System.out.println("   - 敏感头已过滤");
+        System.out.println("✅ Scenario 5 passed: response header whitelist enforced");
+        System.out.println("   - Retained headers: " + envelope.headers().keySet());
+        System.out.println("   - Sensitive headers removed");
     }
 
     /**
-     * 综合场景：完整调用流程演示
+     * Comprehensive scenario: full invocation walkthrough
      */
     @Test
-    @DisplayName("综合场景：完整调用流程 - PubMed 搜索 + 配置覆盖 + 白名单过滤")
+    @DisplayName("Comprehensive scenario: PubMed search + configuration override + whitelist filtering")
     void testCompleteFlow() throws Exception {
-        // 1. 准备 WireMock stub
+        // Step 1: configure WireMock stub
         String responseBody = """
                 {
                     "header": {"type": "esearch"},
@@ -419,15 +419,15 @@ class MvpEndToEndTest {
                         .withHeader("X-RateLimit-Remaining", "5")
                         .withBody(responseBody)));
 
-        // 2. 构建网关请求 - 使用自定义配置和白名单
+        // Step 2: build the gateway request with custom configuration and whitelist
         ResilienceConfigDTO customConfig = new ResilienceConfigDTO(
-                10L,       // 10秒超时
-                3,         // 最大重试3次
-                2L,        // 2秒退避
-                100,       // 限流配置
-                10,        // 熔断阈值
-                30L,       // 熔断窗口
-                java.util.List.of("Content-Type", "X-RateLimit-Limit", "X-RateLimit-Remaining") // 自定义白名单
+                10L,       // 10-second timeout
+                3,         // Maximum of 3 retries
+                2L,        // 2-second backoff
+                100,       // Rate limit override
+                10,        // Circuit breaker threshold
+                30L,       // Circuit breaker window
+                java.util.List.of("Content-Type", "X-RateLimit-Limit", "X-RateLimit-Remaining") // Custom whitelist
         );
 
         ExternalCallRequestDTO request = new ExternalCallRequestDTO(
@@ -438,46 +438,46 @@ class MvpEndToEndTest {
                 customConfig
         );
 
-        // 3. 调用网关 API
+        // Step 3: invoke the gateway API
         ResponseEntity<ExternalCallResponseDTO> response = restTemplate.postForEntity(
                 "/api/egress/call",
                 request,
                 ExternalCallResponseDTO.class
         );
 
-        // 4. 全面验证
+        // Step 4: perform comprehensive assertions
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ExternalCallResponseDTO result = response.getBody();
         ResponseEnvelopeDTO envelope = result.envelope();
 
-        // 验证成功
+        // Confirm the call succeeded
         assertThat(envelope.success()).isTrue();
         assertThat(envelope.statusCode()).isEqualTo(200);
 
-        // 验证响应体
+        // Inspect the response body
         assertThat(envelope.body()).contains("12345678");
         assertThat(envelope.bodyHash()).isNotEmpty();
 
-        // 验证自定义白名单生效
+        // Validate the custom whitelist
         assertThat(envelope.headers()).hasSize(3);
         assertThat(envelope.headers()).containsKeys("Content-Type", "X-RateLimit-Limit", "X-RateLimit-Remaining");
 
-        // 验证限流信息
+        // Validate rate limit data
         assertThat(envelope.rateLimitStatus().externalInfo().limit()).isEqualTo(10);
         assertThat(envelope.rateLimitStatus().externalInfo().remaining()).isEqualTo(5);
 
-        // 验证追踪ID
+        // Validate trace identifier
         assertThat(result.traceId()).isNotEmpty();
 
-        // 验证调用耗时
+        // Validate call duration
         assertThat(result.durationMs()).isGreaterThan(0);
 
-        System.out.println("✅ 综合场景通过：完整调用流程验证成功");
-        System.out.println("   - 响应状态: " + envelope.statusCode());
-        System.out.println("   - 响应哈希: " + envelope.bodyHash());
-        System.out.println("   - 限流状态: " + envelope.rateLimitStatus().externalInfo().remaining() + "/" + envelope.rateLimitStatus().externalInfo().limit());
-        System.out.println("   - 白名单响应头: " + envelope.headers().keySet());
-        System.out.println("   - 调用耗时: " + result.durationMs() + "ms");
-        System.out.println("   - 追踪ID: " + result.traceId());
+        System.out.println("✅ Comprehensive scenario passed: full invocation validated successfully");
+        System.out.println("   - Response status: " + envelope.statusCode());
+        System.out.println("   - Response hash: " + envelope.bodyHash());
+        System.out.println("   - Rate limit status: " + envelope.rateLimitStatus().externalInfo().remaining() + "/" + envelope.rateLimitStatus().externalInfo().limit());
+        System.out.println("   - Whitelisted headers: " + envelope.headers().keySet());
+        System.out.println("   - Call duration: " + result.durationMs() + "ms");
+        System.out.println("   - Trace ID: " + result.traceId());
     }
 }

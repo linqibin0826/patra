@@ -3,12 +3,12 @@ package com.patra.egress.domain.model.vo;
 import java.util.Map;
 
 /**
- * HTTP请求值对象
+ * Immutable HTTP request value object.
  *
- * @param url 目标URL
- * @param method HTTP方法
- * @param headers 请求头
- * @param body 请求体
+ * @param url     target URL of the outbound call
+ * @param method  HTTP method to execute
+ * @param headers request headers sent to the provider
+ * @param body    request payload serialized as text
  * @author linqibin
  * @since 0.1.0
  */
@@ -19,7 +19,7 @@ public record HttpRequest(
     String body
 ) {
     /**
-     * 构造函数，确保不可变性
+     * Canonical constructor that enforces immutability and validates input.
      */
     public HttpRequest {
         if (url == null || url.isBlank()) {
@@ -28,7 +28,7 @@ public record HttpRequest(
         if (method == null) {
             throw new IllegalArgumentException("HTTP method cannot be null");
         }
-        // 创建不可变副本
+        // Create an immutable defensive copy to avoid accidental mutation downstream.
         headers = headers != null ? Map.copyOf(headers) : Map.of();
     }
 }

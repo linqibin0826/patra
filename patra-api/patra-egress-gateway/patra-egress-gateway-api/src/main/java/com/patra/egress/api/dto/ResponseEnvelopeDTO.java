@@ -30,10 +30,10 @@ public record ResponseEnvelopeDTO(
     String snapshotMode
 ) {
     /**
-     * Compact constructor for immutability
+     * Compact constructor for immutability.
      */
     public ResponseEnvelopeDTO {
-        // 创建不可变副本
+        // Create an immutable defensive copy of the response headers.
         headers = headers != null ? Map.copyOf(headers) : Map.of();
     }
 }

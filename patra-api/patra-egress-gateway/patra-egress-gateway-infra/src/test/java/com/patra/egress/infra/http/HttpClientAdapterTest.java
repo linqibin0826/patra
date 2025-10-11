@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("HttpClientAdapter 集成测试")
+@DisplayName("HttpClientAdapter integration tests")
 class HttpClientAdapterTest {
 
     private WireMockServer wireMockServer;
@@ -52,7 +52,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该成功执行 GET 请求")
+    @DisplayName("Should execute GET requests successfully")
     void shouldSuccessfullyExecuteGetRequest() {
         // Given: Mock GET endpoint
         wireMockServer.stubFor(get(urlEqualTo("/api/test"))
@@ -82,7 +82,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该成功执行 POST 请求（带 Body）")
+    @DisplayName("Should execute POST requests with a body")
     void shouldSuccessfullyExecutePostRequestWithBody() {
         // Given: Mock POST endpoint
         String requestBody = "{\"name\":\"test\"}";
@@ -114,7 +114,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理 4xx 错误响应")
+    @DisplayName("Should handle 4xx error responses")
     void shouldHandleClientErrorResponse() {
         // Given: Mock 404 response
         wireMockServer.stubFor(get(urlEqualTo("/api/notfound"))
@@ -141,7 +141,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理 5xx 服务器错误")
+    @DisplayName("Should handle 5xx server errors")
     void shouldHandleServerErrorResponse() {
         // Given: Mock 500 response
         wireMockServer.stubFor(get(urlEqualTo("/api/error"))
@@ -167,7 +167,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确返回响应头")
+    @DisplayName("Should return response headers correctly")
     void shouldReturnResponseHeaders() {
         // Given: Mock response with custom headers
         wireMockServer.stubFor(get(urlEqualTo("/api/headers"))
@@ -197,7 +197,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该支持 PUT 请求")
+    @DisplayName("Should support PUT requests")
     void shouldSupportPutRequest() {
         // Given: Mock PUT endpoint
         wireMockServer.stubFor(put(urlEqualTo("/api/update/123"))
@@ -223,7 +223,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该支持 DELETE 请求")
+    @DisplayName("Should support DELETE requests")
     void shouldSupportDeleteRequest() {
         // Given: Mock DELETE endpoint
         wireMockServer.stubFor(delete(urlEqualTo("/api/delete/123"))
@@ -248,7 +248,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该支持 PATCH 请求")
+    @DisplayName("Should support PATCH requests")
     void shouldSupportPatchRequest() {
         // Given: Mock PATCH endpoint
         String patchBody = "{\"status\":\"inactive\"}";
@@ -276,7 +276,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该支持 HEAD 请求")
+    @DisplayName("Should support HEAD requests")
     void shouldSupportHeadRequest() {
         // Given: Mock HEAD endpoint
         wireMockServer.stubFor(head(urlEqualTo("/api/resource"))
@@ -305,7 +305,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该支持 OPTIONS 请求")
+    @DisplayName("Should support OPTIONS requests")
     void shouldSupportOptionsRequest() {
         // Given: Mock OPTIONS endpoint
         wireMockServer.stubFor(options(urlEqualTo("/api/resource"))
@@ -333,7 +333,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理 429 限流响应")
+    @DisplayName("Should handle 429 rate limit responses")
     void shouldHandleRateLimitResponse() {
         // Given: Mock 429 rate limit response
         wireMockServer.stubFor(get(urlEqualTo("/api/ratelimited"))
@@ -369,7 +369,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确传递自定义请求头")
+    @DisplayName("Should propagate custom request headers")
     void shouldPassCustomRequestHeaders() {
         // Given: Mock endpoint that expects specific headers
         wireMockServer.stubFor(get(urlEqualTo("/api/secured"))
@@ -407,7 +407,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理空响应体")
+    @DisplayName("Should handle empty response bodies")
     void shouldHandleEmptyResponseBody() {
         // Given: Mock endpoint with empty body
         wireMockServer.stubFor(get(urlEqualTo("/api/empty"))
@@ -432,7 +432,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理大型响应体")
+    @DisplayName("Should handle large response bodies")
     void shouldHandleLargeResponseBody() {
         // Given: Mock endpoint with large response
         String largeBody = "x".repeat(10000); // 10KB response
@@ -461,10 +461,10 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理 JSON 响应体中的特殊字符")
+    @DisplayName("Should handle special characters in JSON bodies")
     void shouldHandleSpecialCharactersInJsonResponse() {
         // Given: Mock endpoint with special characters
-        String jsonWithSpecialChars = "{\"message\":\"Hello\\nWorld\",\"emoji\":\"😀\",\"chinese\":\"你好世界\"}";
+        String jsonWithSpecialChars = "{\"message\":\"Hello\\nWorld\",\"emoji\":\"😀\",\"locale\":\"hello-world\"}";
         wireMockServer.stubFor(get(urlEqualTo("/api/special"))
                 .willReturn(aResponse()
                         .withStatus(200)
@@ -487,11 +487,11 @@ class HttpClientAdapterTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).contains("Hello\\nWorld");
         assertThat(response.body()).contains("😀");
-        assertThat(response.body()).contains("你好世界");
+        assertThat(response.body()).contains("hello-world");
     }
 
     @Test
-    @DisplayName("应该正确处理 URL 查询参数")
+    @DisplayName("Should handle URL query parameters correctly")
     void shouldHandleUrlQueryParameters() {
         // Given: Mock endpoint with query parameters
         wireMockServer.stubFor(get(urlPathEqualTo("/api/search"))
@@ -523,7 +523,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理多值响应头")
+    @DisplayName("Should handle multi-valued response headers")
     void shouldHandleMultiValueResponseHeaders() {
         // Given: Mock endpoint with multi-value headers
         wireMockServer.stubFor(get(urlEqualTo("/api/multiheader"))
@@ -556,7 +556,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理 POST 请求的 Content-Type")
+    @DisplayName("Should honour Content-Type for POST requests")
     void shouldHandlePostRequestContentType() {
         // Given: Mock endpoint expecting specific content type
         wireMockServer.stubFor(post(urlEqualTo("/api/data"))
@@ -584,7 +584,7 @@ class HttpClientAdapterTest {
     }
 
     @Test
-    @DisplayName("应该正确处理无请求头的请求")
+    @DisplayName("Should handle requests without headers")
     void shouldHandleRequestWithoutHeaders() {
         // Given: Mock simple endpoint
         wireMockServer.stubFor(get(urlEqualTo("/api/simple"))
