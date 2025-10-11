@@ -18,7 +18,7 @@ class JsonNodeSupportTest {
         assertThat(h.writeJsonString(null)).isNull();
         assertThatThrownBy(() -> h.readJsonNode("{oops"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("JSON 解析失败");
+                .hasMessageContaining("Unable to parse JSON");
     }
 }
 

@@ -3,16 +3,17 @@ package com.patra.starter.core.error.pipeline;
 import com.patra.starter.core.error.model.ErrorResolution;
 
 /**
- * 解析调用链，用于在拦截器之间传递执行控制权。
+ * Represents the execution chain within the error-resolution pipeline and allows interceptors to
+ * delegate control to the next step.
  */
 @FunctionalInterface
 public interface ResolutionInvocation {
 
     /**
-     * 执行链路中的下一个步骤。
+     * Proceeds to the next step in the interceptor chain.
      *
-     * @param exception 当前处理的异常
-     * @return 解析结果
+     * @param exception the exception currently being resolved
+     * @return the resolved error representation
      */
     ErrorResolution proceed(Throwable exception);
 }

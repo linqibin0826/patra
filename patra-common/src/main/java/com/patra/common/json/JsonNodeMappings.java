@@ -9,7 +9,8 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * JSON 与 {@link JsonNode} 映射辅助，统一复用平台配置的 {@link ObjectMapper}。
+ * Helper utilities for converting between JSON structures and {@link JsonNode}
+ * while reusing the platform-configured {@link ObjectMapper}.
  */
 public final class JsonNodeMappings {
 
@@ -20,10 +21,10 @@ public final class JsonNodeMappings {
     }
 
     /**
-     * 字符串转 {@link JsonNode}。
+     * Converts a JSON string into a {@link JsonNode}.
      *
-     * @param json 原始 JSON 字符串
-     * @return 解析后的节点，空白字符串返回 null
+     * @param json source JSON string
+     * @return parsed node, or {@code null} if the input is blank
      */
     public static JsonNode jsonStringToNode(String json) {
         if (json == null || json.isBlank()) {
@@ -32,36 +33,33 @@ public final class JsonNodeMappings {
         try {
             return MAPPER.readTree(json);
         } catch (JsonProcessingException ex) {
-            throw new IllegalArgumentException("JSON 解析失败", ex);
+            throw new IllegalArgumentException("Unable to parse JSON", ex);
         }
     }
 
     /**
-     * {@link JsonNode} 转字符串。
+     * Converts a {@link JsonNode} back to its string representation.
      *
-     * @param node JsonNode 对象
-     * @return 字符串表现形式，null 节点返回 null
+     * @param node JSON node to serialize
+     * @return JSON string, or {@code null} if the node itself is {@code null}
      */
     public static String jsonNodeToString(JsonNode node) {
         if (node == null) {
             return null;
         }
-        // 注意：isNull() 检查的是 JSON null 值，不是 Java null
-        // 例如：ObjectMapper.readTree("null") 会返回一个 isNull()=true 的 NullNode
-        // 但我们仍然应该序列化它为字符串 "null"
-        // 所以移除 isNull() 检查，让所有非 null 的 JsonNode 都进行序列化
         try {
             return MAPPER.writeValueAsString(node);
         } catch (JsonProcessingException ex) {
-            throw new IllegalArgumentException("JSON 序列化失败: " + node.getClass().getSimpleName(), ex);
+            throw new IllegalArgumentException(
+                    "Unable to serialize JsonNode: " + node.getClass().getSimpleName(), ex);
         }
     }
 
     /**
-     * Map 转 {@link JsonNode}。
+     * Converts a {@link Map} into a {@link JsonNode}.
      *
-     * @param map 原始 Map
-     * @return 对应节点，空 Map 返回 null
+     * @param map source map
+     * @return corresponding node, or {@code null} for {@code null}/empty input
      */
     public static JsonNode mapToJsonNode(Map<String, ?> map) {
         if (map == null || map.isEmpty()) {
@@ -71,10 +69,10 @@ public final class JsonNodeMappings {
     }
 
     /**
-     * {@link JsonNode} 转 Map。
+     * Converts a {@link JsonNode} into a {@link Map} view.
      *
-     * @param node JsonNode 对象
-     * @return Map 表现形式，null 节点返回空 Map
+     * @param node JSON node to convert
+     * @return map representation, or an empty map if the node is {@code null} or JSON {@code null}
      */
     public static Map<String, Object> jsonNodeToMap(JsonNode node) {
         if (node == null || node.isNull()) {

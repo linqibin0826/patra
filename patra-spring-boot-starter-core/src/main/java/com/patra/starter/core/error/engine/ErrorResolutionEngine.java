@@ -3,18 +3,15 @@ package com.patra.starter.core.error.engine;
 import com.patra.starter.core.error.model.ErrorResolution;
 
 /**
- * 错误解析引擎接口，负责将任意异常转换为平台统一的错误码与 HTTP 状态。
- *
- * @author linqibin
- * @since 0.2.0
+ * Engine interface that converts arbitrary exceptions into the platform's unified error representation.
  */
 public interface ErrorResolutionEngine {
 
     /**
-     * 解析异常并返回平台统一的错误表示。
+     * Resolves the supplied exception into a structured error.
      *
-     * @param exception 待解析的异常，不能为空
-     * @return 解析结果
+     * @param exception exception to resolve (never {@code null})
+     * @return resolved error result
      */
     ErrorResolution resolve(Throwable exception);
 }

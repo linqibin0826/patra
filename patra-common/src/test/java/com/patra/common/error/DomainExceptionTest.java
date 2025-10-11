@@ -19,17 +19,17 @@ class DomainExceptionTest {
 
     @Test
     void constructor_shouldKeepMessage() {
-        DomainException ex = new TestDomainException("领域错误");
+        DomainException ex = new TestDomainException("Domain failure");
         assertThat(ex).isInstanceOf(RuntimeException.class);
-        assertThat(ex.getMessage()).isEqualTo("领域错误");
+        assertThat(ex.getMessage()).isEqualTo("Domain failure");
         assertThat(ex.getCause()).isNull();
     }
 
     @Test
     void constructor_withCause_shouldExposeCause() {
         Throwable cause = new IllegalArgumentException("bad");
-        DomainException ex = new TestDomainException("出错", cause);
-        assertThat(ex.getMessage()).isEqualTo("出错");
+        DomainException ex = new TestDomainException("Something went wrong", cause);
+        assertThat(ex.getMessage()).isEqualTo("Something went wrong");
         assertThat(ex.getCause()).isSameAs(cause);
     }
 }

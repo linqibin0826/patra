@@ -29,9 +29,8 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
- * 平台级错误处理自动装配。
- *
- * <p>提供默认的解析引擎、拦截器与观测能力，业务方可通过自定义 Bean 覆盖。</p>
+ * Auto-configuration for platform error handling.
+ * <p>Provides default engine, interceptors, and observation beans which can be overridden by applications.</p>
  */
 @Slf4j
 @Configuration
@@ -39,11 +38,10 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "patra.error", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CoreErrorAutoConfiguration {
 
-
     @Bean
     @ConditionalOnMissingBean
     public TraceProvider defaultTraceProvider(TracingProperties tracingProperties) {
-        log.debug("使用默认的基于请求头的 TraceProvider: {}", tracingProperties.getHeaderNames());
+        log.debug("Using default header-based TraceProvider: {}", tracingProperties.getHeaderNames());
         return new HeaderBasedTraceProvider(tracingProperties);
     }
 
@@ -52,12 +50,12 @@ public class CoreErrorAutoConfiguration {
     public ErrorObservationRecorder errorObservationRecorder(ErrorProperties errorProperties,
                                                              ObjectProvider<MeterRegistry> meterRegistryProvider) {
         if (!errorProperties.getObservation().isEnabled()) {
-            log.info("错误解析观测已关闭，注入 NoOp 观测器");
+            log.info("Error observation disabled; injecting NO_OP recorder");
             return ErrorObservationRecorder.NO_OP;
         }
         MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
         if (meterRegistry == null) {
-            log.warn("Micrometer MeterRegistry 不存在，观测自动降级为 NoOp");
+            log.warn("Micrometer MeterRegistry not available; degrading observation to NO_OP");
             return ErrorObservationRecorder.NO_OP;
         }
         return new MicrometerErrorObservationRecorder(meterRegistry, errorProperties);
@@ -68,7 +66,7 @@ public class CoreErrorAutoConfiguration {
     public ErrorResolutionEngine errorResolutionEngine(ErrorProperties errorProperties,
                                                        List<ErrorMappingContributor> mappingContributors) {
         if (errorProperties.getContextPrefix() == null || errorProperties.getContextPrefix().isBlank()) {
-            log.warn("patra.error.context-prefix 未配置，统一错误码将使用 UNKNOWN 前缀");
+            log.warn("patra.error.context-prefix is not configured; using UNKNOWN as the unified error prefix");
         }
         return new DefaultErrorResolutionEngine(errorProperties, mappingContributors);
     }
@@ -77,7 +75,7 @@ public class CoreErrorAutoConfiguration {
     public ErrorResolutionPipeline errorResolutionPipeline(ErrorResolutionEngine engine,
                                                            ObjectProvider<ResolutionInterceptor> interceptorsProvider) {
         List<ResolutionInterceptor> interceptors = interceptorsProvider.orderedStream().toList();
-        log.info("构建错误解析管线，拦截器数量: {}", interceptors.size());
+        log.info("Building error-resolution pipeline with {} interceptors", interceptors.size());
         return new ErrorResolutionPipeline(engine, interceptors);
     }
 
@@ -105,7 +103,7 @@ public class CoreErrorAutoConfiguration {
                 .permittedNumberOfCallsInHalfOpenState(cb.getPermittedCallsInHalfOpenState())
                 .waitDurationInOpenState(cb.getWaitDurationInOpenState())
                 .build();
-        log.info("创建错误解析熔断器配置: failureRate={} slidingWindow={}",
+        log.info("Creating error-resolution circuit breaker: failureRate={} slidingWindow={}",
                 cb.getFailureRateThreshold(), cb.getSlidingWindowSize());
         return CircuitBreaker.of("patra-error-resolution", config);
     }

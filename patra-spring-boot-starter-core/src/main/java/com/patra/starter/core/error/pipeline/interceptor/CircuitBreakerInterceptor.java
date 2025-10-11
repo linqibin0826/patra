@@ -1,5 +1,6 @@
 package com.patra.starter.core.error.pipeline.interceptor;
 
+import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
 import com.patra.starter.core.error.observation.ErrorObservationRecorder;
@@ -12,7 +13,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 /**
- * 熔断拦截器：使用 Resilience4j 对解析过程进行保护。
+ * Interceptor that safeguards the error-resolution pipeline with a Resilience4j circuit breaker.
+ * When the breaker is open a synthetic 503 error code is returned to prevent cascading failures.
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
@@ -37,8 +39,9 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
             return circuitBreaker.executeSupplier(() -> invocation.proceed(exception));
         } catch (CallNotPermittedException ex) {
             observationRecorder.recordCircuitBreakerFallback(exception);
-            log.warn("错误解析熔断器开启，使用兜底错误码。原因: {}", ex.getMessage());
-            return new ErrorResolution(new com.patra.common.error.codes.ErrorCodeLike() {
+            log.warn("Circuit breaker opened during error resolution; using fallback error code. reason={}",
+                    ex.getMessage());
+            return new ErrorResolution(new ErrorCodeLike() {
                 @Override public String code() { return contextPrefix + "-0503"; }
                 @Override public int httpStatus() { return 503; }
                 @Override public String toString() { return code(); }

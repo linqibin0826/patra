@@ -14,7 +14,7 @@
     <artifactId>patra-common</artifactId>
     <version>0.1.0-SNAPSHOT</version>
 
-  <dependencies>
+    <dependencies>
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-core</artifactId>
@@ -43,7 +43,7 @@
         </dependency>
     </dependencies>
 
-    <!-- 测试依赖（仅单元测试，不引入 spring-boot-starter-test） -->
+    <!-- Test-only dependencies; keep the footprint light without spring-boot-starter-test. -->
     <build>
         <plugins>
             <plugin>

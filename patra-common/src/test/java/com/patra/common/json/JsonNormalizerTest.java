@@ -27,11 +27,11 @@ class JsonNormalizerTest {
         JsonNormalizer normalizer = JsonNormalizer.withConfig(cfg);
 
         Map<String, Object> input = new LinkedHashMap<>();
-        input.put("name", "  Alice  "); // 会 trim + lowercase
-        input.put("desc", "a   b\t c\n"); // 会 collapse 空白
-        input.put("emptyStr", "  "); // -> 空串，经 removeEmpty 被移除
-        input.put("keep", ""); // 白名单保留
-        input.put("meta", Map.of()); // 空对象白名单保留
+        input.put("name", "  Alice  "); // Should be trimmed and lowercased
+        input.put("desc", "a   b\t c\n"); // Collapses repeated whitespace
+        input.put("emptyStr", "  "); // -> empty string, removed by removeEmpty
+        input.put("keep", ""); // Whitelisted field stays
+        input.put("meta", Map.of()); // Whitelisted empty object stays
 
         JsonNormalizer.Result r = normalizer.normalize(input);
         String json0 = r.getCanonicalJson();
@@ -47,7 +47,7 @@ class JsonNormalizerTest {
     @Test
     void normalize_array_dedup_sort_vs_sequence_whitelist() {
         JsonNormalizer.Config cfg = JsonNormalizer.Config.builder()
-                .sequenceFieldWhitelist(Set.of("seq")) // seq 数组保持原顺序，不去重/不全局排序
+                .sequenceFieldWhitelist(Set.of("seq")) // Keep seq array order; skip dedupe/global sort
                 .coerceTime(false)
                 .coerceNumber(false)
                 .coerceBoolean(JsonNormalizer.Config.CoerceBoolean.NONE)
@@ -60,10 +60,10 @@ class JsonNormalizerTest {
 
         JsonNormalizer.Result r = normalizer.normalize(input);
         String canonicalJson = r.getCanonicalJson();
-        // seq: 原样（不去重）
+        // seq: preserved as-is (no dedupe)
         assertThat(canonicalJson).contains("\"seq\":[3,2,2,1]");
 
-        // mix: 去重 + 先按类型标签、再按序列化值排序 -> 数字(1,2) 然后 字符串(a,b) 然后 对象
+        // mix: deduped and sorted by type tag then serialized value -> numbers(1,2), strings(a,b), object
         assertThat(canonicalJson).contains("\"mix\":[1,2,\"a\",\"b\",{\"k\":1}]");
     }
 
@@ -76,19 +76,19 @@ class JsonNormalizerTest {
                 .build();
         JsonNormalizer normalizer = JsonNormalizer.withConfig(cfg);
 
-        // 禁用键
+        // Forbidden key
         Map<String, Object> input1 = Map.of("forbidden", 1);
         assertThatThrownBy(() -> normalizer.normalize(input1))
                 .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
                 .hasMessageContaining("Forbidden key");
 
-        // 深度越界（根 depth=1，再下一层即越界）
+        // Depth overflow (root depth=1, next level exceeds limit)
         Map<String, Object> input2 = Map.of("a", Map.of("b", 1));
         assertThatThrownBy(() -> normalizer.normalize(input2))
                 .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
                 .hasMessageContaining("Max depth exceeded");
 
-        // 字符串长度越界（包含 UTF-8 字节计算）——使用更大的深度限制以避开深度检查
+        // String length overflow (UTF-8 bytes) — use greater depth limit to avoid depth failure
         JsonNormalizer normalizer2 = JsonNormalizer.withConfig(JsonNormalizer.Config.builder()
                 .forbidKeys(Set.of("forbidden"))
                 .maxDepth(3)
@@ -113,8 +113,8 @@ class JsonNormalizerTest {
         JsonNode node = om.readTree("{\n" +
                 "  \"tTrue\": \"YES\",\n" +
                 "  \"tFalse\": \"0\",\n" +
-                "  \"ts1\": \"1700000000\",\n" +   // epoch 秒
-                "  \"ts2\": \"1700000000000\",\n" + // epoch 毫秒
+                "  \"ts1\": \"1700000000\",\n" +   // epoch seconds
+                "  \"ts2\": \"1700000000000\",\n" + // epoch milliseconds
                 "  \"fmt\": \"2024-05-01T12:34:56Z\",\n" +
                 "  \"num\": \"001.2300\",\n" +
                 "  \"num2\": 1,\n" +
@@ -123,19 +123,18 @@ class JsonNormalizerTest {
 
         JsonNormalizer.Result r = normalizer.normalize(node);
         String json = r.getCanonicalJson();
-        // 布尔被规整
+        // Booleans are coerced
         assertThat(json).contains("\"tTrue\":true");
         assertThat(json).contains("\"tFalse\":false");
-        // 时间被格式化为 UTC 毫秒精度
+        // Time fields formatted to UTC with millisecond precision
         assertThat(json).containsPattern("\"ts1\":\"\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\"");
         assertThat(json).contains("\"fmt\":\"2024-05-01T12:34:56.000Z\"");
-        // 数字字符串被 BigDecimal 化并去除尾随 0
+        // Numeric strings normalized via BigDecimal and stripped of trailing zeros
         assertThat(json).contains("\"num\":1.23");
-        // 数字 0/1 在 LOOSE 模式下会被当作布尔
+        // Numeric 0/1 treated as booleans in LOOSE mode
         assertThat(json).contains("\"num2\":true");
 
-        // binary：输入是 base64 → Jackson 解析为文本节点；此处不触发 binary 分支。
-        // 为了覆盖 binary 分支，我们直接构造二进制节点
+        // Binary: base64 input parses to text node, so manually build a binary node to cover the branch
         JsonNormalizer.Result r2 = normalizer.normalize(JsonNodeFactory.instance.binaryNode(new byte[]{1,2,3}));
         assertThat(r2.getCanonicalJson()).isEqualTo("\"AQID\"");
     }
@@ -143,12 +142,12 @@ class JsonNormalizerTest {
     @Test
     void nonFinite_number_should_throw_and_epoch_range_guard() {
         JsonNormalizer normalizer = JsonNormalizer.usingDefault();
-        // 非有限浮点数
+        // Non-finite floating point number
         assertThatThrownBy(() -> normalizer.normalize(JsonNodeFactory.instance.numberNode(Double.NaN)))
                 .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
                 .hasMessageContaining("Non-finite number");
 
-        // epoch 过大触发保护
+        // Oversized epoch triggers guardrail
         JsonNormalizer.Config cfg = JsonNormalizer.Config.builder()
                 .coerceTime(true)
                 .build();

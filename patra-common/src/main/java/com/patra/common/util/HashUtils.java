@@ -6,20 +6,64 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 
 /**
- * 通用 Hash 工具（目前仅封装 SHA-256），供各模块复用。
- * 保持与原 starter-core 版本功能一致，避免模块间循环依赖。
+ * Shared hashing utilities currently wrapping SHA-256 for reuse across modules.
+ * <p>Behavior mirrors the original starter-core implementation to avoid
+ * introducing inter-module dependencies.</p>
  */
 public final class HashUtils {
     private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
     private HashUtils() {}
 
-    public static byte[] sha256(String source) { return sha256(source == null ? new byte[0] : source.getBytes(StandardCharsets.UTF_8)); }
-    public static byte[] sha256(byte[] source) { return digest("SHA-256", source == null ? new byte[0] : source); }
-    public static String sha256Hex(String source) { return sha256Hex(source == null ? new byte[0] : source.getBytes(StandardCharsets.UTF_8)); }
-    public static String sha256Hex(byte[] source) { return toHex(sha256(source)); }
+    /**
+     * Computes a SHA-256 digest for the provided string.
+     *
+     * @param source input string; {@code null} is treated as an empty string
+     * @return raw 32-byte SHA-256 digest
+     */
+    public static byte[] sha256(String source) {
+        return sha256(source == null ? new byte[0] : source.getBytes(StandardCharsets.UTF_8));
+    }
 
+    /**
+     * Computes a SHA-256 digest for the provided byte array.
+     *
+     * @param source input bytes; {@code null} is treated as an empty array
+     * @return raw 32-byte SHA-256 digest
+     */
+    public static byte[] sha256(byte[] source) {
+        return digest("SHA-256", source == null ? new byte[0] : source);
+    }
+
+    /**
+     * Computes a SHA-256 digest for the provided string and returns a hex string.
+     *
+     * @param source input string; {@code null} is treated as an empty string
+     * @return lowercase hexadecimal representation of the digest
+     */
+    public static String sha256Hex(String source) {
+        return sha256Hex(source == null ? new byte[0] : source.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Computes a SHA-256 digest for the provided byte array and returns a hex string.
+     *
+     * @param source input bytes; {@code null} is treated as an empty array
+     * @return lowercase hexadecimal representation of the digest
+     */
+    public static String sha256Hex(byte[] source) {
+        return toHex(sha256(source));
+    }
+
+    /**
+     * Converts raw bytes into a lowercase hexadecimal string.
+     *
+     * @param data bytes to convert
+     * @return hexadecimal representation; empty string if the input is {@code null} or empty
+     */
     public static String toHex(byte[] data) {
-        if (data == null || data.length == 0) return "";
+        if (data == null || data.length == 0) {
+            return "";
+        }
         char[] chars = new char[data.length * 2];
         for (int i = 0; i < data.length; i++) {
             int v = data[i] & 0xFF;
@@ -29,6 +73,13 @@ public final class HashUtils {
         return new String(chars);
     }
 
+    /**
+     * Computes a message digest with the given algorithm.
+     *
+     * @param algorithm digest algorithm name
+     * @param input input bytes; {@code null} is treated as an empty array
+     * @return digest result
+     */
     private static byte[] digest(String algorithm, byte[] input) {
         Objects.requireNonNull(algorithm, "algorithm");
         try {
