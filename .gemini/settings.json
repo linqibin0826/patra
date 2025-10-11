@@ -25,5 +25,6 @@
         "ide-assistant"
       ]
     }
-  }
+  },
+  "proxy": "http://localhost:7890"
 }
