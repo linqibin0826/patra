@@ -5,8 +5,8 @@ import com.patra.ingest.app.usecase.execution.support.ExecutionSession;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
 /**
- * 完成任务执行用例（Complete阶段）。
- * <p>职责：游标推进 + 状态更新（SUCCEEDED/PARTIAL/CURSOR_PENDING/FAILED）。</p>
+ * Complete phase use case.
+ * <p>Responsibility: cursor advancement + status update (SUCCEEDED/PARTIAL/CURSOR_PENDING/FAILED).</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,11 +14,11 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
 public interface CompleteTaskExecutionUseCase {
 
     /**
-     * 完成执行（游标推进 + 状态更新）。
+     * Completes execution (advance cursor + update status).
      *
-     * @param session 执行会话
-     * @param context 执行上下文
-     * @param executeResult 执行结果
+     * @param session execution session
+     * @param context execution context
+     * @param executeResult execute results
      */
     void complete(ExecutionSession session,
                   ExecutionContext context,

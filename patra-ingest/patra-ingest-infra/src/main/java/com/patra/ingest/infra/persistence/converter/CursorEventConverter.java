@@ -11,7 +11,7 @@ import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * CursorEvent（游标推进事件）聚合 ↔ DO 转换器。
+ * CursorEvent aggregate ↔ DO converter.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CursorEventConverter {

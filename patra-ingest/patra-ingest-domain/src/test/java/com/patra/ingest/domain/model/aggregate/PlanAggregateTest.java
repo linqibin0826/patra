@@ -9,24 +9,24 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link PlanAggregate} 的单元测试。
+ * Unit tests for {@link PlanAggregate}.
  */
 class PlanAggregateTest {
 
     @Test
-    @DisplayName("create/restore：枚举解析与默认状态")
+    @DisplayName("create/restore: enum parsing and default state")
     void createAndRestore() {
         PlanAggregate agg = PlanAggregate.create(1L, "k", "PUBMED", "harvest",
                 "h", "{}", "{}", "ch", Instant.now(), Instant.now(), "TIME", "{}");
         assertEquals(PlanStatus.DRAFT, agg.getStatus());
         assertEquals("HARVEST", agg.getOperationCode());
 
-        // null 时保持为 null
+        // keep null when input is null
         PlanAggregate agg2 = PlanAggregate.create(1L, "k", "PUBMED", null,
                 null, null, null, null, null, null, null, null);
         assertNull(agg2.getOperation());
 
-        // restore 会回填版本
+        // restore should backfill version
         PlanAggregate agg3 = PlanAggregate.restore(10L, 2L, "k", "P", "UPDATE",
                 "h", "{}", "{}", "ch", null, null, null, null, PlanStatus.READY, 7L);
         assertEquals(7L, agg3.getVersion());
@@ -34,11 +34,11 @@ class PlanAggregateTest {
     }
 
     @Test
-    @DisplayName("状态机：仅 DRAFT 可进入 SLICING；其他状态标记直接赋值")
+    @DisplayName("state machine: only DRAFT can enter SLICING; other status marks assign directly")
     void stateTransitions() {
         PlanAggregate agg = PlanAggregate.create(1L, "k", "PUBMED", "HARVEST",
                 null, null, null, null, null, null, null, null);
-        // DRAFT 首次可进入 SLICING
+        // DRAFT can enter SLICING once
         agg.startSlicing();
         assertEquals(PlanStatus.SLICING, agg.getStatus());
 
@@ -51,7 +51,7 @@ class PlanAggregateTest {
         agg.markCompleted();
         assertEquals(PlanStatus.COMPLETED, agg.getStatus());
 
-        // 非 DRAFT 再次 startSlicing 抛错
+        // non-DRAFT cannot startSlicing again
         assertThrows(IllegalStateException.class, agg::startSlicing);
     }
 }

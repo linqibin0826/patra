@@ -15,13 +15,14 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
- * 计划窗口计算通用辅助类。
+ * Common utilities for planning window calculations.
  * <p>
- * 聚合 WindowOffset 配置与时间工具方法，供应用层窗口解析策略复用。
- * 所有方法均为纯函数，便于单元测试与重用。
+ * Aggregates WindowOffset configuration helpers and time utilities for reuse by
+ * application-layer window resolution strategies. All methods are pure functions
+ * to make unit testing and reuse straightforward.
  * </p>
  *
- * <p>该类保持无状态，禁止实例化。</p>
+ * <p>This class is stateless and not instantiable.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,12 +33,13 @@ public final class PlanningWindowSupport {
     }
 
     /**
-     * 计算安全时间戳：now 减去配置中的 watermark lag，再减去默认兜底 lag。
+     * Compute a "lagged now": subtract the configured watermark lag from 'now', and then subtract the
+     * default floor lag.
      *
-     * @param currentTime  当前时间
-     * @param offsetConfig 来源配置中的窗口偏移设置
-     * @param defaultLag   默认兜底延迟
-     * @return 安全时间戳（用于窗口上界）
+     * @param currentTime  current time
+     * @param offsetConfig window offset settings from the provenance/source configuration
+     * @param defaultLag   default floor/safety lag
+     * @return a capped current-time instant (used as the window upper bound)
      */
     public static Instant computeLaggedNow(Instant currentTime,
                                            ProvenanceConfigSnapshot.WindowOffsetConfig offsetConfig,
@@ -52,11 +54,11 @@ public final class PlanningWindowSupport {
     }
 
     /**
-     * 解析窗口尺寸（为空使用默认值）。
+     * Resolve the window size (fallback to a default when absent).
      *
-     * @param offsetConfig WindowOffset 配置
-     * @param defaultSize  默认窗口大小
-     * @return 有效窗口大小
+     * @param offsetConfig WindowOffset configuration
+     * @param defaultSize  default window size
+     * @return effective window size
      */
     public static Duration resolveWindowSize(ProvenanceConfigSnapshot.WindowOffsetConfig offsetConfig,
                                              Duration defaultSize) {
@@ -67,12 +69,12 @@ public final class PlanningWindowSupport {
     }
 
     /**
-     * 解析持续时间配置；value 空或 unit 未识别时返回默认值。
+     * Resolve a duration from value/unit; returns the default when value is null or unit is unknown.
      *
-     * @param value        数值
-     * @param unitCode     单位编码（秒/分/小时/天）
-     * @param defaultValue 默认值
-     * @return 解析后的 Duration
+     * @param value        numeric value
+     * @param unitCode     unit code (second/minute/hour/day)
+     * @param defaultValue default duration
+     * @return parsed Duration
      */
     public static Duration resolveDuration(Integer value, String unitCode, Duration defaultValue) {
         if (value == null) {
@@ -89,30 +91,30 @@ public final class PlanningWindowSupport {
     }
 
     /**
-     * 返回给定时间集合的最小值（忽略 null）。
+     * Return the minimum of the given instants, ignoring nulls.
      *
-     * @param instants 时间集合
-     * @return 最小时间；若集合为空返回 null
+     * @param instants collection of instants
+     * @return minimum instant; null when all are null
      */
     public static Instant minInstant(Instant... instants) {
         return stream(instants).filter(Objects::nonNull).min(Instant::compareTo).orElse(null);
     }
 
     /**
-     * 返回给定时间集合的最大值（忽略 null）。
+     * Return the maximum of the given instants, ignoring nulls.
      *
-     * @param instants 时间集合
-     * @return 最大时间；若集合为空返回 null
+     * @param instants collection of instants
+     * @return maximum instant; null when all are null
      */
     public static Instant maxInstant(Instant... instants) {
         return stream(instants).filter(Objects::nonNull).max(Instant::compareTo).orElse(null);
     }
 
     /**
-     * 解析时区标识，无法解析时回退到 UTC。
+     * Resolve ZoneId from a textual id; fallback to UTC when it cannot be parsed.
      *
-     * @param timezoneId 时区字符串
-     * @return ZoneId 实例
+     * @param timezoneId textual timezone id
+     * @return ZoneId instance
      */
     public static ZoneId resolveZone(String timezoneId) {
         if (StrUtil.isBlank(timezoneId)) {
@@ -126,22 +128,22 @@ public final class PlanningWindowSupport {
     }
 
     /**
-     * 判断窗口模式是否为日历模式。
+     * Whether the window mode is calendar-based.
      *
-     * @param offsetConfig WindowOffset 配置
-     * @return true 表示日历模式
+     * @param offsetConfig WindowOffset configuration
+     * @return true if calendar mode
      */
     public static boolean isCalendarMode(ProvenanceConfigSnapshot.WindowOffsetConfig offsetConfig) {
         return offsetConfig != null && StrUtil.equalsIgnoreCase(offsetConfig.windowModeCode(), "CALENDAR");
     }
 
     /**
-     * 将时间向下对齐到指定的日历边界。
+     * Align an instant downwards to the specified calendar boundary.
      *
-     * @param instant 原始时间
-     * @param alignTo 对齐单位（小时/天/周/月）
-     * @param zone    时区
-     * @return 对齐后的时间
+     * @param instant original instant
+     * @param alignTo alignment unit (hour/day/week/month)
+     * @param zone    timezone
+     * @return aligned instant
      */
     public static Instant alignFloor(Instant instant, String alignTo, ZoneId zone) {
         String normalized = StrUtil.blankToDefault(alignTo, "HOUR").trim().toUpperCase(Locale.ROOT);
@@ -157,7 +159,7 @@ public final class PlanningWindowSupport {
     }
 
     /**
-     * 将数组包装成 Stream，便于统一处理空值。
+     * Wrap an array into a stream so null can be handled uniformly.
      */
     private static Stream<Instant> stream(Instant... instants) {
         return instants == null ? Stream.empty() : Stream.of(instants);

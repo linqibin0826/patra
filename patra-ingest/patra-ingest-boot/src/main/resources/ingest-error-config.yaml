@@ -1,4 +1,4 @@
-# Ingest 模块本地错误处理配置，后续可迁移到 Nacos。
+# Local error-handling configuration for the Ingest module; can be migrated to Nacos later.
 patra:
   error:
     enabled: true
@@ -33,7 +33,7 @@ patra:
         log-slow-body-reading: true
         log-tolerant-usage: true
 
-# 错误码目录仅用于文档化，便于后续同步到配置中心。
+# Error code catalog is for documentation only; intended to sync to the configuration center later.
 ingest:
   error-catalog:
     registry-config-not-found: ING-1201

@@ -28,7 +28,7 @@ import java.util.Set;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "papertrace.outbox.publisher") // TODO 更换前缀并修改相关代码和注释、文档信息。
+@ConfigurationProperties(prefix = "papertrace.outbox.publisher") // Ensure this prefix matches your configuration source; update docs if changed.
 public class OutboxPublisherProperties {
 
     /**

@@ -11,13 +11,14 @@ import lombok.EqualsAndHashCode;
 import java.time.Instant;
 
 /**
- * <p><b>采集任务 DO</b> —— 映射表：<code>ing_task</code></p>
- * <p>语义：每个计划切片派生出的执行任务，绑定来源、操作、幂等键与租约。</p>
- * <p>要点：
+ * <p><b>Ingestion task DO</b> — table: <code>ing_task</code></p>
+ * <p>Represents an executable task derived from a plan slice, bound to provenance,
+ * operation, idempotent key, and lease.</p>
+ * <p>Notes:
  * <ul>
- *   <li><code>idempotent_key</code> 全局唯一（UK：uk_task_idem），保障重复调度不会生成重复任务。</li>
- *   <li><code>params</code> 保存规范化任务参数，配合 {@link JacksonTypeHandler} 保留结构。</li>
- *   <li>租约字段（<code>lease_owner</code>/<code>leased_until</code>/<code>lease_count</code>）支撑抢占与续租模型。</li>
+ *   <li><code>idempotent_key</code> is globally unique (UK: uk_task_idem) to prevent duplicate tasks.</li>
+ *   <li><code>params</code> stores normalized task params; persisted with {@link JacksonTypeHandler}.</li>
+ *   <li>Lease fields (<code>lease_owner</code>/<code>leased_until</code>/<code>lease_count</code>) support preempt/renew models.</li>
  * </ul>
  * </p>
  */
@@ -26,87 +27,87 @@ import java.time.Instant;
 @TableName(value = "ing_task", autoResultMap = true)
 public class TaskDO extends BaseDO {
 
-    /** 调度实例 ID（冗余） */
+    /** Schedule instance ID (redundant). */
     @TableField("schedule_instance_id")
     private Long scheduleInstanceId;
 
-    /** 关联计划 ID */
+    /** Associated plan ID. */
     @TableField("plan_id")
     private Long planId;
 
-    /** 关联切片 ID */
+    /** Associated slice ID. */
     @TableField("slice_id")
     private Long sliceId;
 
-    /** 来源代码（DICT：ing_provenance） */
+    /** Provenance code (DICT: ing_provenance). */
     @TableField("provenance_code")
     private String provenanceCode;
 
-    /** 操作类型编码（DICT：ing_operation） */
+    /** Operation type code (DICT: ing_operation). */
     @TableField("operation_code")
     private String operationCode;
 
-    /** 任务参数（JSON，规范化后持久化） */
+    /** Task parameters (JSON; normalized and persisted). */
     @TableField(value = "params", typeHandler = JacksonTypeHandler.class)
     private JsonNode params;
 
-    /** 幂等键（UK：uk_task_idem） */
+    /** Idempotent key (UK: uk_task_idem). */
     @TableField("idempotent_key")
     private String idempotentKey;
 
-    /** 执行表达式哈希 */
+    /** Execution expression hash. */
     @TableField("expr_hash")
     private String exprHash;
 
-    /** 调度优先级（1高→9低） */
+    /** Scheduling priority (1 high → 9 low). */
     @TableField("priority")
     private Integer priority;
 
-    /** 租约持有者 */
+    /** Lease owner. */
     @TableField("lease_owner")
     private String leaseOwner;
 
-    /** 租约到期时间（UTC） */
+    /** Lease expiration time (UTC). */
     @TableField("leased_until")
     private Instant leasedUntil;
 
-    /** 租约抢占 / 续租次数 */
+    /** Lease preemption/renewal count. */
     @TableField("lease_count")
     private Integer leaseCount;
 
-    /** 执行期心跳时间 */
+    /** Heartbeat time during execution. */
     @TableField("last_heartbeat_at")
     private Instant lastHeartbeatAt;
 
-    /** 重试次数 */
+    /** Retry count. */
     @TableField("retry_count")
     private Integer retryCount;
 
-    /** 最近错误码 */
+    /** Last error code. */
     @TableField("last_error_code")
     private String lastErrorCode;
 
-    /** 最近错误信息 */
+    /** Last error message. */
     @TableField("last_error_msg")
     private String lastErrorMsg;
 
-    /** 任务状态（DICT：ing_task_status） */
+    /** Task status (DICT: ing_task_status). */
     @TableField("status_code")
     private String statusCode;
 
-    /** 计划开始时间 */
+    /** Scheduled start time. */
     @TableField("scheduled_at")
     private Instant scheduledAt;
 
-    /** 实际开始时间 */
+    /** Actual start time. */
     @TableField("started_at")
     private Instant startedAt;
 
-    /** 结束时间 */
+    /** Finish time. */
     @TableField("finished_at")
     private Instant finishedAt;
 
-    /** 调度器运行 ID（逐片触发时使用） */
+    /** Scheduler run id (used when triggering per-slice). */
     @TableField("scheduler_run_id")
     private String schedulerRunId;
 

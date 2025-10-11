@@ -16,7 +16,7 @@ spring:
                       secret-key: ${ROCKETMQ_SK:}
       default:
         producer:
-          # Boot 会将此字符串转换为 SpEL 并注入 ProducerProperties#setPartitionKeyExpression
+          # Boot converts this string to SpEL and injects it into ProducerProperties#setPartitionKeyExpression
           partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
           partition-count: 8
       bindings:

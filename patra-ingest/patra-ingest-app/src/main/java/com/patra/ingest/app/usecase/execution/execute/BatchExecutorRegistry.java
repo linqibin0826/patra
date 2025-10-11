@@ -9,16 +9,16 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 批次执行器注册表。
+ * Registry for BatchExecutor implementations.
  * <p>
- * 职责：管理所有 BatchExecutor 实例，按 provenanceCode 路由到对应的执行器。
+ * Responsibility: manage all BatchExecutor instances and route by provenanceCode.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>自动注册：通过 Spring 构造函数注入所有 BatchExecutor 实例。</li>
- *   <li>线程安全：使用 ConcurrentHashMap 存储映射关系。</li>
- *   <li>异常处理：找不到执行器时抛出 IllegalArgumentException。</li>
+ *   <li>Auto-registration via Spring constructor injection.</li>
+ *   <li>Thread-safe using ConcurrentHashMap.</li>
+ *   <li>Throws IllegalArgumentException when executor not found.</li>
  * </ul>
  * </p>
  *
@@ -32,9 +32,9 @@ public class BatchExecutorRegistry {
     private final Map<String, BatchExecutor> executors = new ConcurrentHashMap<>();
 
     /**
-     * 构造函数：自动注册所有 BatchExecutor 实例。
+     * Constructor: auto-register all BatchExecutor instances.
      *
-     * @param executorList Spring 注入的所有 BatchExecutor 实例
+     * @param executorList all BatchExecutor instances injected by Spring
      */
     public BatchExecutorRegistry(List<BatchExecutor> executorList) {
         for (BatchExecutor executor : executorList) {
@@ -50,25 +50,25 @@ public class BatchExecutorRegistry {
     }
 
     /**
-     * 根据数据源编码获取批次执行器。
+     * Gets the batch executor by provenance code.
      *
-     * @param provenanceCode 数据源编码
-     * @return 批次执行器
-     * @throws IllegalArgumentException 找不到执行器时抛出
+     * @param provenanceCode provenance code
+     * @return batch executor
+     * @throws IllegalArgumentException when executor is not found
      */
     public BatchExecutor get(String provenanceCode) {
         BatchExecutor executor = executors.get(provenanceCode);
         if (executor == null) {
             throw new IllegalArgumentException(
-                "未找到批次执行器 provenanceCode=" + provenanceCode
-                + " 可用执行器: " + executors.keySet()
+                "Batch executor not found for provenanceCode=" + provenanceCode
+                + "; available executors: " + executors.keySet()
             );
         }
         return executor;
     }
 
     /**
-     * 检查是否存在指定数据源的执行器。
+     * Checks whether an executor exists for the given provenanceCode.
      */
     public boolean contains(String provenanceCode) {
         return executors.containsKey(provenanceCode);

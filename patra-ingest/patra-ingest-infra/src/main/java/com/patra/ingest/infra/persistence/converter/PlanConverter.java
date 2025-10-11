@@ -15,7 +15,7 @@ import org.mapstruct.ReportingPolicy;
 import java.util.Map;
 
 /**
- * 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 转换器。
+ * Plan aggregate {@link PlanAggregate} ↔ data object {@link PlanDO} converter.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlanConverter {

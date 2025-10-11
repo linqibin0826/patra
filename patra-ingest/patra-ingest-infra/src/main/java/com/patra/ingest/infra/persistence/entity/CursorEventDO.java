@@ -10,14 +10,15 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * <p><b>游标推进事件 DO</b> —— 映射表：<code>ing_cursor_event</code></p>
- * <p>语义：Append-only 审计事件，记录游标从旧值到新值的每次推进，支持回放与全链路追踪。</p>
- * <p>要点：
+ * <p><b>Cursor advancement event DO</b> — table: <code>ing_cursor_event</code></p>
+ * <p>Append-only audit trail recording each advancement from old to new cursor values,
+ * supporting replay and end-to-end tracing.</p>
+ * <p>Notes:
  * <ul>
- *   <li><code>idempotent_key</code> 唯一（UK：uk_cur_evt_idem），防止重复写入同一事件。</li>
- *   <li>同时持久化时间 / 数值归一值（prev/new + observed），便于跨类型排序与统计。</li>
- *   <li>链路冗余字段串联 schedule → plan → slice → task → run → batch，支持问题回溯。</li>
- *   <li>方向 <code>direction_code</code> 允许标记回填（BACKFILL）与正常前进（FORWARD）。</li>
+ *   <li><code>idempotent_key</code> is unique (UK: uk_cur_evt_idem) to prevent duplicate writes.</li>
+ *   <li>Persist both time/numeric normalized values (prev/new + observed) for cross-type ordering and statistics.</li>
+ *   <li>Redundant lineage fields chain schedule → plan → slice → task → run → batch for troubleshooting.</li>
+ *   <li><code>direction_code</code> marks BACKFILL vs FORWARD progression.</li>
  * </ul>
  * </p>
  */
@@ -26,99 +27,99 @@ import java.time.Instant;
 @TableName("ing_cursor_event")
 public class CursorEventDO extends BaseDO {
 
-    /** 来源代码 */
+    /** Provenance code. */
     @TableField("provenance_code")
     private String provenanceCode;
 
-    /** 操作类型编码 */
+    /** Operation type code. */
     @TableField("operation_code")
     private String operationCode;
 
-    /** 游标逻辑键 */
+    /** Cursor logical key. */
     @TableField("cursor_key")
     private String cursorKey;
 
-    /** 命名空间作用域 */
+    /** Namespace scope. */
     @TableField("namespace_scope_code")
     private String namespaceScopeCode;
 
-    /** 命名空间键 */
+    /** Namespace key. */
     @TableField("namespace_key")
     private String namespaceKey;
 
-    /** 游标类型（DICT：ing_cursor_type） */
+    /** Cursor type (DICT: ing_cursor_type). */
     @TableField("cursor_type_code")
     private String cursorTypeCode;
 
-    /** 推进前的原始值 */
+    /** Raw value before advancement. */
     @TableField("prev_value")
     private String prevValue;
 
-    /** 推进后的原始值 */
+    /** Raw value after advancement. */
     @TableField("new_value")
     private String newValue;
 
-    /** 推进过程观测到的最大值 */
+    /** Maximum observed value during advancement. */
     @TableField("observed_max_value")
     private String observedMaxValue;
 
-    /** 推进前的归一化时间 */
+    /** Normalized time before advancement. */
     @TableField("prev_instant")
     private Instant prevInstant;
 
-    /** 推进后的归一化时间 */
+    /** Normalized time after advancement. */
     @TableField("new_instant")
     private Instant newInstant;
 
-    /** 推进前的归一化数值 */
+    /** Normalized numeric value before advancement. */
     @TableField("prev_numeric")
     private BigDecimal prevNumeric;
 
-    /** 推进后的归一化数值 */
+    /** Normalized numeric value after advancement. */
     @TableField("new_numeric")
     private BigDecimal newNumeric;
 
-    /** 覆盖窗口起点（UTC，含） */
+    /** Covered window start (UTC, inclusive). */
     @TableField("window_from")
     private Instant windowFrom;
 
-    /** 覆盖窗口终点（UTC，不含） */
+    /** Covered window end (UTC, exclusive). */
     @TableField("window_to")
     private Instant windowTo;
 
-    /** 推进方向（FORWARD/BACKFILL） */
+    /** Advancement direction (FORWARD/BACKFILL). */
     @TableField("direction_code")
     private String directionCode;
 
-    /** 事件幂等键（UK：uk_cur_evt_idem） */
+    /** Event idempotent key (UK: uk_cur_evt_idem). */
     @TableField("idempotent_key")
     private String idempotentKey;
 
-    /** 最近推进关联的调度实例 */
+    /** Most recent associated schedule instance. */
     @TableField("schedule_instance_id")
     private Long scheduleInstanceId;
 
-    /** 最近推进关联的计划 */
+    /** Most recent associated plan. */
     @TableField("plan_id")
     private Long planId;
 
-    /** 最近推进关联的切片 */
+    /** Most recent associated slice. */
     @TableField("slice_id")
     private Long sliceId;
 
-    /** 最近推进关联的任务 */
+    /** Most recent associated task. */
     @TableField("task_id")
     private Long taskId;
 
-    /** 最近推进关联的运行 */
+    /** Most recent associated run. */
     @TableField("run_id")
     private Long runId;
 
-    /** 最近推进关联的批次 */
+    /** Most recent associated batch. */
     @TableField("batch_id")
     private Long batchId;
 
-    /** 推进时的表达式哈希 */
+    /** Expression hash used during advancement. */
     @TableField("expr_hash")
     private String exprHash;
 }

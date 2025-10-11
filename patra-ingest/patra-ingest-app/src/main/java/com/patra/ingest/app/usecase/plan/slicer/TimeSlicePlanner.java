@@ -22,27 +22,29 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 基于时间窗口的切片策略（Application Layer · Policy）。
+ * Time-window based slicing strategy (Application Layer · Policy).
  * <p>
- * 将上游计划窗口 [from, to) 按固定步长切分为若干半开区间子窗口；每个子窗口融合业务表达式生成独立 Slice。
+ * Splits the upstream planning window [from, to) into several half-open sub-windows using
+ * a fixed step; each sub-window is paired with the business expression to form an independent Slice.
  * </p>
- * <p>设计要点：
+ * <p>Design notes:
  * <ul>
- *   <li>步长配置：优先使用规范化上下文中的 step（ISO-8601 Duration），非法则回退默认 1h。</li>
- *   <li>时间字段解析：offsetFieldName (DATE 模式) > defaultDateFieldName。</li>
- *   <li>幂等性：对规格 JSON 规范化后取 sha256，重复规划得到相同签名。</li>
- *   <li>边界：最后一个切片不足步长直接对齐窗口终点。</li>
- *   <li>复杂度：O(n)，n = ceil((to-from)/step)。</li>
+ *   <li>Step configuration: prefer the normalized step from the trigger context (ISO-8601 Duration);
+ *       fallback to the default 1h when invalid.</li>
+ *   <li>Time field resolution: offsetFieldName (DATE mode) > defaultDateFieldName.</li>
+ *   <li>Idempotence: build a canonical JSON and take sha256; repeated planning yields identical signatures.</li>
+ *   <li>Boundary: the last slice aligns to the window end if it is shorter than the step.</li>
+ *   <li>Complexity: O(n), n = ceil((to - from) / step).</li>
  * </ul>
  * </p>
- * <p>失败返回空列表：窗口缺失；from>=to；无法解析时间字段。</p>
+ * <p>Return empty list when: window missing; from >= to; or the time field cannot be resolved.</p>
  */
 @Slf4j
 @Component
 public class TimeSlicePlanner implements SlicePlanner {
 
     /**
-     * 默认切片步长（1 小时）。
+     * Default slice step (1 hour).
      */
     private static final Duration DEFAULT_STEP = Duration.ofHours(1);
 
@@ -53,15 +55,15 @@ public class TimeSlicePlanner implements SlicePlanner {
 
     @Override
     public List<SlicePlan> slice(SlicePlanningContext context) {
-        // 初始化返回集合，保持顺序稳定
+        // Initialize the result to keep ordering stable even on early returns
         List<SlicePlan> result = new ArrayList<>();
         if (context.window() == null || context.window().from() == null || context.window().to() == null) {
-            log.warn("[INGEST][APP] Skip time slicing because planning window is missing: norm={}, window={}.",
+            log.warn("[INGEST][APP] Skip time slicing because planning window is missing: norm={}, window=.",
                     context.norm(), context.window());
             return result;
         }
 
-        // 解析时间字段：优先使用 offsetFieldName（仅 DATE 模式），否则回退到 defaultDateFieldName
+        // Resolve time field: prefer offsetFieldName (DATE mode), otherwise fallback to defaultDateFieldName
         String timeField = resolveTimeField(context.configSnapshot());
         if (timeField == null) {
             log.error("[INGEST][APP] Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
@@ -73,17 +75,17 @@ public class TimeSlicePlanner implements SlicePlanner {
         Instant from = context.window().from();
         Instant to = context.window().to();
         if (!from.isBefore(to)) {
-            log.warn("[INGEST][APP] Skip time slicing because window is not forward, from={} to={}.", from, to);
+            log.warn("[INGEST][APP] Skip time slicing because window is not forward, from={} to=.", from, to);
             return result;
         }
 
-        // 使用 norm 中自定义步长，否则回落到默认步长
+        // Use custom step from norm when present; otherwise fallback to the default
         Duration step = DEFAULT_STEP;
         if (StrUtil.isNotBlank(context.norm().step())) {
             try {
                 step = Duration.parse(context.norm().step().trim());
             } catch (Exception e) {
-                log.warn("[INGEST][APP] Invalid step format, fallback to default, stepString={}.", context.norm().step(), e);
+                log.warn("[INGEST][APP] Invalid step format, fallback to default, stepString=.", context.norm().step(), e);
             }
         }
 
@@ -91,18 +93,18 @@ public class TimeSlicePlanner implements SlicePlanner {
         int index = 1;
         PlanExpressionDescriptor planExpr = context.planExpression();
         while (cursor.isBefore(to)) {
-            // 计算当前切片的上界，确保最后一个切片对齐到窗口终点
+            // Compute the current slice upper bound; ensure the last slice aligns to the window end
             Instant upper = cursor.plus(step);
             if (upper.isAfter(to)) {
                 upper = to;
             }
 
-            // 构造切片规格并生成稳定签名
+            // Build the slice spec and generate a stable signature
             JsonNormalizer.Result specNormalized = buildSpec(context, cursor, upper);
             String specJson = specNormalized.getCanonicalJson();
             String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
-            // 合并计划表达式与时间窗口约束
+            // Combine the plan expression with the time-window constraint
             Expr timeConstraint = buildTimeWindowConstraint(timeField, cursor, upper);
             Expr combined = Exprs.and(List.of(planExpr.expr(), timeConstraint));
 
@@ -112,7 +114,7 @@ public class TimeSlicePlanner implements SlicePlanner {
                     specJson,
                     combined));
 
-            log.debug("[INGEST][APP] Time slice prepared, sliceNo={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
+            log.debug("[INGEST][APP] Time slice prepared, sliceNo={}, from={}, to={}, hash=", index, cursor, upper, signatureHash);
 
             cursor = upper;
             index++;
@@ -121,22 +123,22 @@ public class TimeSlicePlanner implements SlicePlanner {
     }
 
     /**
-     * 构建时间窗口约束表达式。半开区间约定：from 含，to 开。
+     * Build the time-window constraint expression. Half-open interval semantics: from is inclusive, to is exclusive.
      *
-     * @param field 时间字段名
-     * @param from  切片起点（含）
-     * @param to    切片终点（开）
-     * @return 时间范围表达式
+     * @param field time field name
+     * @param from  slice start (inclusive)
+     * @param to    slice end (exclusive)
+     * @return range expression
      */
     private Expr buildTimeWindowConstraint(String field, Instant from, Instant to) {
         return Exprs.rangeDateTime(field, from, to);
     }
 
     /**
-     * 从配置快照中解析时间字段。优先级：DATE 模式 offsetFieldName > defaultDateFieldName。
+     * Resolve the time field from the configuration snapshot. Priority: DATE mode offsetFieldName > defaultDateFieldName.
      *
-     * @param snapshot 来源配置快照
-     * @return 可用于范围过滤的字段名，无法解析返回 null
+     * @param snapshot provenance/source configuration snapshot
+     * @return field name usable for range filtering; null when it cannot be resolved
      */
     private String resolveTimeField(ProvenanceConfigSnapshot snapshot) {
         if (snapshot == null) {
@@ -157,20 +159,20 @@ public class TimeSlicePlanner implements SlicePlanner {
     }
 
     /**
-     * 构建切片规格 JSON，并执行规范化。字段：strategy、window(from/to + boundary + timezone)。
-     * 规范化失败回退最小 JSON 保证哈希仍可用。
+     * Build the slice spec JSON and normalize it. Fields: strategy, window (from/to + boundary + timezone).
+     * On normalization failure, fallback to a minimal JSON to keep hashing available.
      *
-     * @param context 切片上下文
-     * @param from    切片起点
-     * @param to      切片终点
-     * @return 规范化结果（canonical JSON + 哈希素材）
+     * @param context slice context
+     * @param from    window start
+     * @param to      window end
+     * @return normalization result (canonical JSON + hash material)
      */
     private JsonNormalizer.Result buildSpec(SlicePlanningContext context, Instant from, Instant to) {
         ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
         ObjectNode root = JsonNodeFactory.instance.objectNode();
         root.put("strategy", code().getCode());
 
-        // 构造 window 节点，确保时区信息与边界语义可溯源
+        // Build the window node with timezone and boundary semantics for auditability
         ObjectNode window = root.putObject("window");
         window.put("from", from.toString());
         window.put("to", to.toString());
@@ -186,7 +188,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         try {
             return JsonNormalizer.normalizeDefault(root);
         } catch (JsonNormalizer.JsonNormalizationException ex) {
-            log.error("[INGEST][APP] Failed to normalize slice spec, fallback to minimal payload, from={}, to={}", from, to, ex);
+            log.error("[INGEST][APP] Failed to normalize slice spec, fallback to minimal payload, from={}, to=", from, to, ex);
             String fallback = "{\"strategy\":\"" + code().getCode() + "\"}";
             try {
                 return JsonNormalizer.normalizeDefault(fallback);

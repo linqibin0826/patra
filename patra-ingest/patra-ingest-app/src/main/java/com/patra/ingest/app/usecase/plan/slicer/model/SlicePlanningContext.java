@@ -7,38 +7,38 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import java.util.Objects;
 
 /**
- * 切片策略执行上下文（Application 级输入模型）。
+ * Slicing strategy execution context (Application-layer input model).
  * <p>
- * 由计划装配阶段集中构建，确保在进入 {@code SlicePlanner} 时：
+ * Constructed centrally during plan assembly to ensure that when entering {@code SlicePlanner}:
  * <ul>
- *   <li>触发规范（模式 / 步长 / 操作）已被归一化</li>
- *   <li>计划窗口已最终确定（UTC，半开区间语义 [from, to)）</li>
- *   <li>业务表达式已编译（含 JSON 快照与哈希，便于幂等与调试）</li>
- *   <li>来源配置快照（若存在）与表达式逻辑一致</li>
+ *   <li>the trigger norm (mode/step/operation) is normalized;</li>
+ *   <li>the planning window is finalized (UTC half-open semantics [from, to));</li>
+ *   <li>the business expression is compiled (with JSON snapshot and hash for idempotency and debugging);</li>
+ *   <li>the provenance snapshot (if any) matches the expression logic.</li>
  * </ul>
  * </p>
- * <h4>语义说明</h4>
+ * <h4>Semantics</h4>
  * <ul>
- *   <li><b>norm</b>：保证非 null；封装触发模式（如 HARVEST / BACKFILL / UPDATE）、切片步长、优先级等。</li>
- *   <li><b>window</b>：非 null；半开区间；若 window.to() 为空表示“开放式上界”。</li>
- *   <li><b>planExpression</b>：非 null；其哈希在后续切片签名/任务幂等中可用。</li>
- *   <li><b>configSnapshot</b>：可为 null；表示某些测试或临时场景未携带来源配置（策略需对 null 做降级处理）。</li>
+ *   <li><b>norm</b>: non-null; encapsulates trigger mode (e.g., HARVEST/BACKFILL/UPDATE), slicing step, and precedence.</li>
+ *   <li><b>window</b>: non-null; half-open interval; when window.to() is null it indicates an open upper bound.</li>
+ *   <li><b>planExpression</b>: non-null; its hash is used in slice signatures/idempotency later.</li>
+ *   <li><b>configSnapshot</b>: nullable; some tests or temporary scenarios may omit provenance config (strategy should handle nulls gracefully).</li>
  * </ul>
- * <h4>不变式</h4>
+ * <h4>Invariants</h4>
  * <ul>
  *   <li>{@code norm != null}</li>
  *   <li>{@code window != null}</li>
  *   <li>{@code planExpression != null}</li>
  * </ul>
- * <h4>线程安全</h4>
- * <p>record 不可变；内部不暴露可变集合，安全跨线程。</p>
- * <h4>扩展点提示</h4>
- * <p>未来若要添加租约 / 限流信息，可通过新增字段并保持 record 向后兼容（或迁移为类）。</p>
+ * <h4>Thread-safety</h4>
+ * <p>Record is immutable; does not expose mutable collections; safe across threads.</p>
+ * <h4>Extension</h4>
+ * <p>If lease/ratelimiting information is needed in the future, add new fields while preserving record compatibility (or migrate to a class).</p>
  *
- * @param norm            触发规范，包含计划模式、步长等信息（必填）
- * @param window          计划窗口，统一采用 UTC 半开区间（必填）
- * @param planExpression  计划表达式描述，含 Expr、快照 JSON 与哈希（必填）
- * @param configSnapshot  来源配置快照，可选（为空时策略应回退至内置默认）
+ * @param norm            trigger norm including mode, step, etc. (required)
+ * @param window          planning window using UTC half-open semantics (required)
+ * @param planExpression  compiled expression descriptor with Expr, snapshot JSON, and hash (required)
+ * @param configSnapshot  provenance/source configuration snapshot; optional (strategy should fallback to defaults when null)
  *
  * @author linqibin
  * @since 0.1.0
@@ -48,9 +48,9 @@ public record SlicePlanningContext(PlanTriggerNorm norm,
                                    PlanExpressionDescriptor planExpression,
                                    ProvenanceConfigSnapshot configSnapshot) {
     public SlicePlanningContext {
-        Objects.requireNonNull(norm, "norm不能为空");
-        Objects.requireNonNull(window, "window不能为空");
-        Objects.requireNonNull(planExpression, "planExpression不能为空");
-        // configSnapshot 允许为空（某些测试或调用场景下可能未提供）
+        Objects.requireNonNull(norm, "norm must not be null");
+        Objects.requireNonNull(window, "window must not be null");
+        Objects.requireNonNull(planExpression, "planExpression must not be null");
+        // configSnapshot may be null (some tests or invocations might not provide it)
     }
 }

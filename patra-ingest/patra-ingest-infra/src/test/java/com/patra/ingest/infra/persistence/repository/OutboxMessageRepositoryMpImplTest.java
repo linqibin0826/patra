@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * {@link OutboxMessageRepositoryMpImpl} 的单元测试（全 Mock）。
+ * Unit tests for {@link OutboxMessageRepositoryMpImpl} (full mocks).
  */
 class OutboxMessageRepositoryMpImplTest {
 
@@ -33,16 +33,16 @@ class OutboxMessageRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("saveAll 空列表/正常插入")
+    @DisplayName("saveAll empty list / normal insert")
     void saveAll_shouldInsertEach() {
         OutboxMessageMapper mapper = mock(OutboxMessageMapper.class);
         OutboxMessageConverter converter = mock(OutboxMessageConverter.class);
         OutboxMessageRepositoryMpImpl repo = new OutboxMessageRepositoryMpImpl(mapper, converter);
-        // 空输入直接返回
+        // Empty input: no-op
         repo.saveAll(null);
         repo.saveAll(List.of());
 
-        // 非空逐条 insert
+        // Non-empty: insert each
         OutboxMessage msg = base().build();
         OutboxMessageDO entity = new OutboxMessageDO();
         when(converter.toEntity(msg)).thenReturn(entity);
@@ -51,7 +51,7 @@ class OutboxMessageRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("saveOrUpdate 根据 id 判定 insert/update")
+    @DisplayName("saveOrUpdate insert/update decided by id presence")
     void saveOrUpdate_shouldInsertOrUpdate() {
         OutboxMessageMapper mapper = mock(OutboxMessageMapper.class);
         OutboxMessageConverter converter = mock(OutboxMessageConverter.class);
@@ -67,13 +67,13 @@ class OutboxMessageRepositoryMpImplTest {
         repo.saveOrUpdate(msg);
         verify(mapper).updateById(entity);
 
-        // null 忽略分支
+        // Null input branch
         repo.saveOrUpdate(null);
         verifyNoMoreInteractions(mapper);
     }
 
     @Test
-    @DisplayName("findByChannelAndDedup 正常/空返回")
+    @DisplayName("findByChannelAndDedup normal/empty")
     void findByChannelAndDedup() {
         OutboxMessageMapper mapper = mock(OutboxMessageMapper.class);
         OutboxMessageConverter converter = mock(OutboxMessageConverter.class);
@@ -92,7 +92,7 @@ class OutboxMessageRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("fetchPending limit<=0/空/正常映射")
+    @DisplayName("fetchPending limit<=0 / empty / normal mapping")
     void fetchPending_shouldHandleLimitAndEmpty() {
         OutboxMessageMapper mapper = mock(OutboxMessageMapper.class);
         OutboxMessageConverter converter = mock(OutboxMessageConverter.class);
@@ -112,7 +112,7 @@ class OutboxMessageRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("acquireLease 返回影响行数判定成功与否")
+    @DisplayName("acquireLease uses affected row count to determine success")
     void acquireLease_branch() {
         OutboxMessageMapper mapper = mock(OutboxMessageMapper.class);
         OutboxMessageConverter converter = mock(OutboxMessageConverter.class);
@@ -125,7 +125,7 @@ class OutboxMessageRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("markPublished/markDeferred/markFailed 影响行数!=1 抛异常")
+    @DisplayName("markPublished/markDeferred/markFailed throws when affected!=1")
     void markOps_shouldThrowOnConflict() {
         OutboxMessageMapper mapper = mock(OutboxMessageMapper.class);
         OutboxMessageConverter converter = mock(OutboxMessageConverter.class);
@@ -140,7 +140,7 @@ class OutboxMessageRepositoryMpImplTest {
         when(mapper.markFailed(anyLong(), anyLong(), anyInt(), anyString(), anyString())).thenReturn(0);
         assertThrows(OutboxPersistenceException.class, () -> repo.markFailed(1L, 1L, 3, "E", "err"));
 
-        // 成功路径
+        // Success paths
         when(mapper.markPublished(anyLong(), anyLong(), anyString())).thenReturn(1);
         repo.markPublished(1L, 1L, "m");
         when(mapper.markDeferred(anyLong(), anyLong(), anyInt(), any(), anyString(), anyString())).thenReturn(1);

@@ -11,13 +11,13 @@ import lombok.EqualsAndHashCode;
 import java.time.Instant;
 
 /**
- * <p><b>任务运行 DO</b> —— 映射表：<code>ing_task_run</code></p>
- * <p>语义：描述一次 Task 的具体尝试（attempt），包含重试信息与运行快照。</p>
- * <p>要点：
+ * <p><b>Task run DO</b> — table: <code>ing_task_run</code></p>
+ * <p>Represents a single attempt of a Task, including retry information and run snapshots.</p>
+ * <p>Notes:
  * <ul>
- *   <li><code>attempt_no</code> 在同一任务内唯一（UK：uk_task_run_attempt），记录第几次尝试。</li>
- *   <li><code>checkpoint</code>/<code>stats</code> 使用 JSON 存储断点与统计指标。</li>
- *   <li>时间字段追踪开始/结束节点并支持心跳超时判定。</li>
+ *   <li><code>attempt_no</code> unique per task (UK: uk_task_run_attempt) tracks attempt sequence.</li>
+ *   <li><code>checkpoint</code>/<code>stats</code> are JSON snapshots for resume points and metrics.</li>
+ *   <li>Time fields track start/finish and support heartbeat timeout checks.</li>
  * </ul>
  * </p>
  */
@@ -26,76 +26,54 @@ import java.time.Instant;
 @TableName(value = "ing_task_run", autoResultMap = true)
 public class TaskRunDO extends BaseDO {
 
-    /**
-     * 关联任务 ID
-     */
+    /** Associated task id. */
     @TableField("task_id")
     private Long taskId;
 
-    /**
-     * 第几次尝试（1 起）
-     */
+    /** Attempt sequence number (1-based). */
     @TableField("attempt_no")
     private Integer attemptNo;
 
-    /**
-     * 来源代码冗余
-     */
+    /** Provenance code (redundant). */
     @TableField("provenance_code")
     private String provenanceCode;
 
-    /**
-     * 操作类型冗余
-     */
+    /** Operation code (redundant). */
     @TableField("operation_code")
     private String operationCode;
 
     /**
-     * 运行状态（DICT：ing_task_run_status）
-     * TODO 不变的应该设成枚举
+     * Run status (DICT: ing_task_run_status)
+     * TODO Consider using an enum for immutable values.
      */
     @TableField("status_code")
     private String statusCode;
 
-    /**
-     * 运行检查点（JSON，例如 nextToken / resumeHint）
-     */
+    /** Run checkpoint (JSON; e.g., nextToken/resumeHint). */
     @TableField(value = "checkpoint", typeHandler = JacksonTypeHandler.class)
     private JsonNode checkpoint;
 
-    /**
-     * 统计指标（JSON，如 fetched/upserted 等）
-     */
+    /** Run statistics (JSON; e.g., fetched/upserted). */
     @TableField(value = "stats", typeHandler = JacksonTypeHandler.class)
     private JsonNode stats;
 
-    /**
-     * 失败原因（TEXT，必要时截断）
-     */
+    /** Error reason (TEXT; truncated when necessary). */
     @TableField("error")
     private String error;
 
-    /**
-     * 实际开始时间
-     */
+    /** Actual start time. */
     @TableField("started_at")
     private Instant startedAt;
 
-    /**
-     * 完成时间
-     */
+    /** Finish time. */
     @TableField("finished_at")
     private Instant finishedAt;
 
-    /**
-     * 最近心跳
-     */
+    /** Last heartbeat time. */
     @TableField("last_heartbeat")
     private Instant lastHeartbeat;
 
-    /**
-     * 调度器运行 ID（用于回溯外部执行记录）
-     */
+    /** Scheduler run id (for tracing external execution record). */
     @TableField("scheduler_run_id")
     private String schedulerRunId;
 

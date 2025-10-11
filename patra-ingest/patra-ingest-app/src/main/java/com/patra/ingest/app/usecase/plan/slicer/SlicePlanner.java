@@ -6,14 +6,15 @@ import com.patra.ingest.domain.model.enums.SliceStrategy;
 import java.util.List;
 
 /**
- * 切片策略接口。
- * <p>定义不同切片策略的通用能力，包括策略编码以及根据上下文拆分窗口的逻辑。</p>
+ * Slice planning strategy interface.
+ * <p>Defines common capabilities for different slicing strategies, including the
+ * strategy code/enum and the logic to break a window into slices based on context.</p>
  *
- * <p>策略实现需满足：
+ * <p>Implementations must ensure:
  * <ul>
- *   <li>code 唯一，用于在注册表中定位实现类；</li>
- *   <li>slice 返回的切片集合必须按顺序排列，sliceNo 从 1 开始递增；</li>
- *   <li>遇到无法切片的场景返回空集合，并由上层处理。</li>
+ *   <li>code is unique so the strategy can be located from a registry;</li>
+ *   <li>the returned slices are sorted and sliceNo starts from 1 and increments by 1;</li>
+ *   <li>return an empty collection when slicing is not possible; the caller will handle it.</li>
  * </ul></p>
  *
  * @author linqibin
@@ -22,17 +23,17 @@ import java.util.List;
 public interface SlicePlanner {
 
     /**
-     * 返回策略枚举，通常对应配置中的 strategy 标识。
+     * Return the strategy identifier, typically aligned with the configured strategy code.
      *
-     * @return 策略枚举
+     * @return strategy enum
      */
     SliceStrategy code();
 
     /**
-     * 根据上下文拆分计划窗口，生成切片列表。
+     * Split the planning window into ordered slices using the provided context.
      *
-     * @param context 切片策略上下文，包含窗口、表达式与配置快照
-     * @return 切片集合，按顺序排列；无法切片时返回空集合
+     * @param context slicing context including window, expressions, and configuration snapshot
+     * @return ordered list of slices; empty when slicing is not possible
      */
     List<SlicePlan> slice(SlicePlanningContext context);
 }

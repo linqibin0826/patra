@@ -16,7 +16,7 @@ import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * TaskRun（单次任务运行）聚合 ↔ DO 转换器。
+ * TaskRun (single task run) aggregate ↔ DO converter.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskRunConverter {
@@ -87,7 +87,7 @@ public interface TaskRunConverter {
         try {
             return JsonMapperHolder.getObjectMapper().readTree(checkpoint.raw());
         } catch (Exception ex) {
-            throw new TaskCheckpointException(TaskCheckpointException.Type.PARSE, "Checkpoint JSON 解析失败", ex);
+            throw new TaskCheckpointException(TaskCheckpointException.Type.PARSE, "Failed to parse checkpoint JSON", ex);
         }
     }
 
@@ -110,7 +110,7 @@ public interface TaskRunConverter {
             String raw = JsonMapperHolder.getObjectMapper().writeValueAsString(node);
             return new TaskRunCheckpoint(raw);
         } catch (Exception ex) {
-            throw new TaskCheckpointException(TaskCheckpointException.Type.SERIALIZE, "Checkpoint JSON 序列化失败", ex);
+            throw new TaskCheckpointException(TaskCheckpointException.Type.SERIALIZE, "Failed to serialize checkpoint JSON", ex);
         }
     }
 }

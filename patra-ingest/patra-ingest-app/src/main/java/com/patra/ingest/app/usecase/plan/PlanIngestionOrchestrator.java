@@ -37,19 +37,19 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 采集计划编排核心应用服务：承接调度层（调度任务 / 手动触发）调用，完成
+ * Core application service for plan orchestration. Handles calls from the
+ * scheduling layer (cron/manual triggers) and performs:
  * <ul>
- *     <li>调度实例落库与来源配置快照读取</li>
- *     <li>游标水位查询与窗口解析（时间窗口策略）</li>
- *     <li>计划表达式（Plan Expression）构建与前置校验</li>
- *     <li>计划 / 切片 / 任务装配与持久化（含幂等去重与补偿）</li>
- *     <li>任务入队事件收集并通过 Outbox 模式发布</li>
+ *   <li>Persist schedule instance and load provenance config snapshot</li>
+ *   <li>Query cursor watermark and resolve execution window (time-window strategy)</li>
+ *   <li>Build plan expression and run pre-validations</li>
+ *   <li>Assemble and persist plan/slices/tasks (with idempotency and compensation)</li>
+ *   <li>Collect task enqueued events and publish via the Outbox pattern</li>
  * </ul>
- * 该服务是“计划编排”入口的核心编排器（Application Service），不承载具体领域规则细节，
- * 主要负责：流程编排、异常语义转换、幂等及日志可观测性。所有领域约束交由领域对象或校验器完成。
- * <p>日志规范：INFO 级别输出一次性流程结果 / 关键分支命中；DEBUG 级别记录窗口与表达式调试信息。</p>
- * <p>
- * 线程安全说明：该服务无内部可变共享状态，仅依赖线程安全的 Spring Bean（Repository/Builder），可并发调用。
+ * This orchestrator (Application Service) focuses on flow orchestration, exception mapping,
+ * idempotency, and observability. Domain rules are enforced by domain objects and validators.
+ * <p>Logging: INFO for one-shot results and key branch hits; DEBUG for window/expression diagnostics.</p>
+ * <p>Thread-safety: no shared mutable state; relies on thread-safe Spring beans (repositories/builders) and is safe for concurrent use.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -60,75 +60,75 @@ import java.util.stream.Collectors;
 public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
     /**
-     * 来源配置查询端口（上游 provenance 服务访问抽象）。
+     * Port for querying provenance configuration from the upstream registry service.
      */
     private final PatraRegistryPort patraRegistryPort;
 
     /**
-     * 游标仓储：用于查询最近一次全局时间水位（推进窗口起点）。
+     * Cursor repository: retrieves the latest global time watermark (window starting point).
      */
     private final CursorRepository cursorRepository;
 
     /**
-     * 任务仓储：支撑任务去重统计与批量保存。
+     * Task repository: supports deduplication statistics and batch persistence.
      */
     private final TaskRepository taskRepository;
 
     /**
-     * 计划窗口解析策略：根据调度规范、配置与游标水位计算本次执行窗口。
+     * Planning window resolver: computes this run's window from trigger spec, config, and cursor watermark.
      */
     private final PlanningWindowResolver planningWindowResolver;
 
     /**
-     * 编排前置校验器：集中校验窗口合理性、排队压力、能力边界等。
+     * Pre-orchestration validator: validates window sanity, queue pressure, and capacity constraints.
      */
     private final PlannerValidator plannerValidator;
 
     /**
-     * 计划装配服务：负责 Plan / Slice / Task 蓝图组装（不含持久化）。
+     * Plan assembler: assembles Plan / Slice / Task blueprints (without persistence).
      */
     private final PlanAssembler planAssembler;
 
     /**
-     * 任务 Outbox 发布器：将入队事件转换为 Outbox 消息并持久化 / 发布。
+     * Outbox publisher for tasks: converts queued events to Outbox messages and persists/publishes them.
      */
     private final TaskOutboxPublisher taskOutboxPublisher;
 
     /**
-     * 计划表达式构建器：生成计划级表达式描述（未编译，仅快照与哈希）。
+     * Plan expression builder: generates plan-level expression descriptors (uncompiled snapshot and hash only).
      */
     private final PlanExpressionBuilder planExpressionBuilder;
 
     /**
-     * 调度实例仓储：保存 / 更新调度触发记录，支撑幂等追踪。
+     * Schedule instance repository: saves/updates trigger records to support idempotency tracking.
      */
     private final ScheduleInstanceRepository scheduleInstanceRepository;
 
     /**
-     * 计划仓储：保存或查询计划聚合，支持 planKey 幂等判断。
+     * Plan repository: persist or load plan aggregates; supports idempotency by planKey.
      */
     private final PlanRepository planRepository;
 
     /**
-     * 切片仓储：批量持久化计划切片聚合。
+     * Plan-slice repository: batch-persist plan slice aggregates.
      */
     private final PlanSliceRepository planSliceRepository;
 
     /**
-     * 计划编排主流程（入口方法）。
-     * <p>整体包含 6 个阶段：
+     * Main plan orchestration flow (entry method).
+     * <p>Consists of six phases:
      * <ol>
-     *     <li>调度实例落库 & 来源配置快照读取</li>
-     *     <li>游标水位查询 & 时间窗口解析</li>
-     *     <li>计划表达式构建</li>
-     *     <li>前置校验（窗口 / 压力 / 能力）</li>
-     *     <li>计划装配（含幂等复用与补偿重试）</li>
-     *     <li>持久化并发布任务入队事件</li>
+     *   <li>Persist schedule instance and load provenance config snapshot</li>
+     *   <li>Query cursor watermark and resolve time window</li>
+     *   <li>Build plan expression</li>
+     *   <li>Pre-validation (window / backpressure / capacity)</li>
+     *   <li>Assemble plan (with idempotent reuse and compensation retries)</li>
+     *   <li>Persist and publish task enqueued events</li>
      * </ol>
-     * 异常治理：将运行期异常转换为语义化 Plan*Exception，供上层统一映射错误码。</p>
+     * Exception handling: convert runtime exceptions into semantic Plan*Exception types for uniform error-code mapping.</p>
      *
-     * @param request 调度请求（包含 provenance、operation、窗口边界、优先级、触发信息等）
-     * @return 计划执行结果摘要
+     * @param request scheduling request (provenance, operation, window bounds, priority, trigger info, etc.)
+     * @return summary of plan execution
      */
     @Override
     @Transactional
@@ -156,18 +156,18 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         PlanExpressionDescriptor expressionDescriptor = planExpressionBuilder.build(norm, configSnapshot);
         log.debug("[INGEST][APP] plan-ingest expr built hash={} jsonSize={}", expressionDescriptor.hash(), expressionDescriptor.jsonSnapshot().length());
 
-        // Phase 4: 前置验证（窗口合理性 / 背压 / 能力）
+        // Phase 4: pre-validation (window sanity / backpressure / capacity)
         long queuedTasks = taskRepository.countQueuedTasks(
                 provenanceCode.getCode(), opCode(operationCode));
         validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
         log.debug("[INGEST][APP] plan-ingest validation passed queuedTasks={}", queuedTasks);
 
-        // Phase 5: 组装蓝图
+        // Phase 5: assemble blueprints
         PlanAssemblyRequest assemblyRequest = new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
         PlanAssemblyResult assembly = assemblePlan(assemblyRequest);
 
         PlanAggregate draftPlan = assembly.plan();
-        // 幂等复用：若 planKey 已存在，直接走补偿/重试分支
+        // Idempotent reuse: if planKey already exists, directly take the compensation/retry path
         PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
         if (existingPlan != null) {
             log.info("[INGEST][APP] plan-ingest dedup hit existing planKey={}, reuse planId={}", draftPlan.getPlanKey(), existingPlan.getId());
@@ -177,7 +177,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
             List<TaskAggregate> retryTasks = new ArrayList<>();
             for (TaskAggregate task : existingTasks) {
                 if (shouldRetry(task)) {
-                    // 重置失败/取消任务，准备重新排队
+                    // Reset failed/canceled tasks and prepare to re-queue
                     task.prepareForRetry();
                     saveTaskSafely(task);
                     retryTasks.add(task);
@@ -198,7 +198,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
                     existingPlan.getStatus().name());
         }
 
-        // Phase 6: 持久化 Plan / Slice / Task
+        // Phase 6: persist Plan / Slice / Task
         PlanAggregate persistedPlan = savePlanSafely(draftPlan);
         List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
         List<TaskAggregate> persistedTasks = persistTasks(persistedPlan, persistedSlices, assembly.tasks());
@@ -219,22 +219,22 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
 
     /**
-     * 获取操作码字符串表示。
+     * Returns the operation code string.
      *
-     * @param op 领域操作枚举
-     * @return 操作码；若 null 返回 null
+     * @param op domain operation enum
+     * @return operation code; null when op is null
      */
     private String opCode(OperationCode op) {
         return op == null ? null : op.getCode();
     }
 
     /**
-     * 查询最近一次全局时间游标水位。
+     * Queries the latest global time cursor watermark.
      *
-     * @param provenanceCode 来源编码
-     * @param operationCode  操作枚举
-     * @return 最新水位（可能为 null 表示首次执行）
-     * @throws PlanPersistenceException 仓储访问失败
+     * @param provenanceCode provenance code
+     * @param operationCode  operation enum
+     * @return latest watermark (null indicates first run)
+     * @throws PlanPersistenceException when repository access fails
      */
     private Instant lookupCursorWatermark(ProvenanceCode provenanceCode, OperationCode operationCode) {
         try {
@@ -247,14 +247,14 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     }
 
     /**
-     * 解析计划执行窗口。
+     * Resolves the execution window for the plan.
      *
-     * @param norm            触发规范
-     * @param configSnapshot  来源配置快照
-     * @param cursorWatermark 游标水位（可为空）
-     * @param now             当前触发时间
-     * @return 规划窗口（可为空表示无需生成计划）
-     * @throws PlanValidationException 解析或逻辑校验失败
+     * @param norm            trigger spec
+     * @param configSnapshot  provenance configuration snapshot
+     * @param cursorWatermark cursor watermark (nullable)
+     * @param now             current trigger time
+     * @return planning window (nullable when no plan should be generated)
+     * @throws PlanValidationException when parsing or validation fails
      */
     private PlannerWindow resolvePlannerWindow(PlanTriggerNorm norm,
                                                ProvenanceConfigSnapshot configSnapshot,

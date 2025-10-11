@@ -13,7 +13,7 @@
 
     <artifactId>patra-ingest-domain</artifactId>
     <name>patra-ingest-domain</name>
-    <description>数据采集领域模块 - 核心业务逻辑和领域模型</description>
+    <description>Ingestion domain module - core business logic and domain model</description>
 
     <dependencies>
         <dependency>

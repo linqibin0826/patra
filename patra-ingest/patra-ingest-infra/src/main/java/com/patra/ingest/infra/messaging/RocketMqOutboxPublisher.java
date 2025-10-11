@@ -25,7 +25,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * RocketMQ Outbox 发布实现：使用 StreamBridge 动态目的地发布消息。
+ * RocketMQ Outbox publisher implementation using StreamBridge with dynamic destinations.
  */
 @Slf4j
 @Component

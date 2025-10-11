@@ -4,8 +4,8 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
 /**
- * 执行上下文加载器。
- * <p>从Task→Slice→Plan还原配置快照与表达式快照，校验哈希，编译表达式。</p>
+ * Execution context loader.
+ * <p>Restores config and expression snapshots (Task → Slice → Plan), validates hashes, and compiles expressions.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -13,20 +13,20 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
 public interface ExecutionContextLoader {
 
     /**
-     * 加载执行上下文（配置还原 + 表达式编译）。
+     * Loads execution context (config restore + expression compile).
      *
-     * @param taskId 任务ID
-     * @param runId 运行ID
-     * @return 执行上下文
+     * @param taskId task id
+     * @param runId run id
+     * @return execution context
      */
     ExecutionContext loadContext(Long taskId, Long runId);
 
     /**
-     * 加载执行上下文（配置还原 + 表达式编译）- 优化版本，避免重复查询Task。
+     * Loads execution context (config restore + expression compile) — optimized to avoid reloading Task.
      *
-     * @param task 任务聚合（已查询）
-     * @param runId 运行ID
-     * @return 执行上下文
+     * @param task task aggregate (already loaded)
+     * @param runId run id
+     * @return execution context
      */
     ExecutionContext loadContext(TaskAggregate task, Long runId);
 }

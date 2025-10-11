@@ -7,12 +7,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * XXL-Job 执行器配置。
+ * XXL-Job executor configuration.
  *
- * <p>为 Patra-Ingest 服务配置 XXL-Job 执行器，包含：
- * - 执行器注册和心跳配置
- * - 日志路径和访问令牌配置
- * - 任务处理器自动扫描配置</p>
+ * <p>Configures the XXL-Job executor for the Patra-Ingest service, including:
+ * - Executor registration and heartbeat
+ * - Log path and access token
+ * - Task handler auto-scan</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -21,30 +21,30 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class XxlJobConfig {
     
-    /** 调度中心地址 */
+    /** Admin server addresses */
     @Value("${xxl.job.admin.addresses}")
     private String adminAddresses;
-    /** 执行器绑定 IP */
+    /** Executor bind IP */
     @Value("${xxl.job.executor.ip:}")
     private String ip;
-    /** 调度访问令牌 */
+    /** Access token */
     @Value("${xxl.job.accessToken:}")
     private String accessToken;
-    /** 执行器日志路径 */
+    /** Executor log path */
     @Value("${xxl.job.executor.logpath:logs/xxl-job}")
     private String logPath;
-    /** 日志保留天数 */
+    /** Log retention days */
     @Value("${xxl.job.executor.logretentiondays:30}")
     private int logRetentionDays;
-    /** 应用服务端口 */
+    /** Application server port */
     @Value("${server.port}")
     private int serverPort;
-    /** 应用名称 */
+    /** Application name */
     @Value("${spring.application.name}")
     private String appName;
     
     /**
-     * 配置 XXL-Job 执行器。
+     * Configures the XXL-Job executor bean.
      */
     @Bean
     public XxlJobSpringExecutor xxlJobExecutor() {
@@ -54,7 +54,7 @@ public class XxlJobConfig {
         xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
         xxlJobSpringExecutor.setAppname(appName);
         xxlJobSpringExecutor.setIp(ip);
-    // 调度执行端口约定为应用端口 + 1，避免与主服务冲突
+        // Convention: executor port = server port + 1 to avoid conflicts with the main service
         int executorPort = serverPort + 1;
         xxlJobSpringExecutor.setPort(executorPort);
         xxlJobSpringExecutor.setAccessToken(accessToken);

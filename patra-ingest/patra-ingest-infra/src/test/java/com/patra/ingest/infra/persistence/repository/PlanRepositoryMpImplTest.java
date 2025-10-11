@@ -13,12 +13,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * {@link PlanRepositoryMpImpl} 的单元测试。
+ * Unit tests for {@link PlanRepositoryMpImpl}.
  */
 class PlanRepositoryMpImplTest {
 
     @Test
-    @DisplayName("save 根据是否有 id 选择 insert 或 update 并回转聚合")
+    @DisplayName("save chooses insert or update by id presence and returns aggregate")
     void save_shouldInsertOrUpdate() {
         PlanMapper mapper = mock(PlanMapper.class);
         PlanConverter converter = mock(PlanConverter.class);
@@ -39,7 +39,7 @@ class PlanRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("findByPlanKey 空字符串返回 empty；正常映射 Optional")
+    @DisplayName("findByPlanKey blank returns empty; normal mapping to Optional")
     void findByPlanKey_shouldHandleBlank() {
         PlanMapper mapper = mock(PlanMapper.class);
         PlanConverter converter = mock(PlanConverter.class);
@@ -58,7 +58,7 @@ class PlanRepositoryMpImplTest {
     }
 
     @Test
-    @DisplayName("existsByPlanKey 空/正常分支")
+    @DisplayName("existsByPlanKey blank/normal branches")
     void existsByPlanKey_shouldHandleBlank() {
         PlanMapper mapper = mock(PlanMapper.class);
         PlanRepositoryMpImpl repo = new PlanRepositoryMpImpl(mapper, mock(PlanConverter.class));

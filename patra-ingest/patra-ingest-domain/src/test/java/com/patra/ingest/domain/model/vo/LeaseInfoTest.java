@@ -8,12 +8,12 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link LeaseInfo} 的单元测试，覆盖获取/续约/释放全路径。
+ * Unit tests for {@link LeaseInfo}, covering acquire/renew/release flows.
  */
 class LeaseInfoTest {
 
     @Test
-    @DisplayName("构造/快照归一化与非法参数校验")
+    @DisplayName("constructor/snapshot normalization and invalid-parameter validation")
     void ctorAndSnapshot() {
         assertThrows(IllegalArgumentException.class, () -> new LeaseInfo("a", Instant.now(), -1));
 
@@ -26,7 +26,7 @@ class LeaseInfoTest {
     }
 
     @Test
-    @DisplayName("首次获取租约必须指定 owner/until，且当前未被持有")
+    @DisplayName("acquire: must provide owner/until on first acquire and must not already be held")
     void acquireValidation() {
         LeaseInfo none = LeaseInfo.none();
         assertThrows(IllegalArgumentException.class, () -> none.acquire(null, Instant.now()));
@@ -41,7 +41,7 @@ class LeaseInfoTest {
     }
 
     @Test
-    @DisplayName("续约：仅原持有者可续约，参数校验严格")
+    @DisplayName("renew: only the current owner can renew; strict parameter validation")
     void renewValidation() {
         LeaseInfo none = LeaseInfo.none();
         assertThrows(IllegalStateException.class, () -> none.renew("owner", Instant.now()));
@@ -58,7 +58,7 @@ class LeaseInfoTest {
     }
 
     @Test
-    @DisplayName("释放：无持有者返回自身；有持有者清空 owner/时间但保留计数")
+    @DisplayName("release: returns self when not held; when held, clears owner/time but keeps count")
     void releaseBehavior() {
         LeaseInfo none = LeaseInfo.none();
         assertSame(none, none.release());

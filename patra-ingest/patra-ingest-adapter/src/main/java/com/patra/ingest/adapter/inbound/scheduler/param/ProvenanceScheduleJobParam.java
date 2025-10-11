@@ -3,14 +3,15 @@ package com.patra.ingest.adapter.inbound.scheduler.param;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * 基于来源调度任务的通用参数模型，对齐 XXL-Job 传入的 JSON 结构。
- * <p>字段均为可选：
+ * Common param model for provenance-based scheduled jobs, aligned with the JSON
+ * structure passed by XXL-Job.
+ * <p>All fields are optional:
  * <ul>
- *   <li>windowFrom/windowTo：时间窗口边界，ISO-8601 Instant 字符串。</li>
- *   <li>priority：调度优先级，忽略大小写的枚举名。</li>
- *   <li>step：切片步长，ISO-8601 Duration 字符串。</li>
- *   <li>schedulerLogId：调度日志标识，缺省时回退为 0。</li>
- *   <li>triggeredAt：触发时间戳，ISO-8601 Instant 字符串。</li>
+ *   <li>windowFrom/windowTo: time window boundaries in ISO-8601 Instant format</li>
+ *   <li>priority: scheduling priority, case-insensitive enum name</li>
+ *   <li>step: slice step as ISO-8601 Duration string</li>
+ *   <li>schedulerLogId: scheduler log id, defaults to 0</li>
+ *   <li>triggeredAt: trigger timestamp in ISO-8601 Instant format</li>
  * </ul>
  * </p>
  *
@@ -28,9 +29,9 @@ public record ProvenanceScheduleJobParam(
 ) {
 
     /**
-     * 构造空参数实例，便于统一回退逻辑。
+     * Creates an empty param instance for unified fallback handling.
      *
-     * @return 空参数对象
+     * @return empty param instance
      */
     public static ProvenanceScheduleJobParam empty() {
         return new ProvenanceScheduleJobParam(null, null, null, null, null, null);

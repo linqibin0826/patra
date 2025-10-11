@@ -5,10 +5,11 @@ import com.patra.ingest.infra.persistence.entity.CursorEventDO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 游标事件（CursorEvent）表 Mapper。
+ * Mapper for cursor events (CursorEvent).
  * <p>
- * 用途：记录游标推进过程中的事件轨迹（检测 / 回退 / 推进），用于审计与问题排查。
- * 仅做单表操作，不在此层拼接复杂历史统计逻辑。
+ * Purpose: record the timeline of cursor advancement events (detect/rollback/advance) for auditing and
+ * troubleshooting. Only single-table operations are performed here; do not stitch complex history
+ * aggregation logic at the mapper layer.
  * </p>
  */
 @Mapper

@@ -8,80 +8,49 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Outbox 消息 Mapper 接口。
- * <p>包含针对 Outbox 状态推进、租约获取、重试/失败标记的精确条件更新方法。</p>
- * <p>并发控制：所有写操作依赖 <code>expectedVersion</code> 实现乐观锁；调用方需根据返回影响行数判定是否重试。</p>
- * <p>索引假设（供 SQL 优化参考）：
+ * Outbox message Mapper interface.
+ * <p>Contains conditional updates for state progression, lease acquisition, retry/failure marking.</p>
+ * <p>Concurrency: all writes rely on <code>expectedVersion</code> for optimistic locking; callers must check affected rows.</p>
+ * <p>Index assumptions (for SQL optimization):
  * <ul>
- *   <li><code>uk_outbox_channel_dedup(channel, dedup_key)</code> 幂等唯一约束。</li>
- *   <li><code>idx_outbox_status_time(status_code, not_before, id)</code> 批量扫描待发布。</li>
- *   <li><code>idx_outbox_lease(status_code, pub_leased_until)</code> 租约过期过滤。</li>
- *   <li><code>idx_outbox_partition(channel, partition_key, status_code)</code> 分区/保序。</li>
+ *   <li><code>uk_outbox_channel_dedup(channel, dedup_key)</code> idempotent unique constraint</li>
+ *   <li><code>idx_outbox_status_time(status_code, not_before, id)</code> batch scan pending</li>
+ *   <li><code>idx_outbox_lease(status_code, pub_leased_until)</code> lease expiry filter</li>
+ *   <li><code>idx_outbox_partition(channel, partition_key, status_code)</code> partition/order</li>
  * </ul>
  * </p>
  */
 public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
 
     /**
-     * 幂等查询：按 (channel, dedupKey) 精确定位记录。
-     * @param channel 通道
-     * @param dedupKey 去重键
-     * @return 匹配记录或 null
+     * Idempotent lookup by (channel, dedupKey).
      */
     OutboxMessageDO findByChannelAndDedup(@Param("channel") String channel,
                                           @Param("dedupKey") String dedupKey);
 
     /**
-     * 拉取可发布（PENDING 且到达可用时间 & 未被有效租约占用）的消息列表。
-     * <p>支持按频道过滤或拉取所有频道：</p>
-     * <ul>
-     *   <li>当 channel 非 null 时，仅拉取指定频道的消息</li>
-     *   <li>当 channel 为 null 时，拉取所有频道的消息</li>
-     * </ul>
-     * @param channel 通道，为 null 时拉取所有频道
-     * @param available 可用时间上限（通常为当前时间）
-     * @param limit 限制条数
-     * @return 消息集合（可能为空）
+     * Fetch publishable messages (PENDING and time-eligible and not leased).
+     * <p>If channel is not null, only fetch for that channel; otherwise fetch for all channels.</p>
      */
     List<OutboxMessageDO> fetchPending(@Param("channel") String channel,
                                        @Param("available") Instant available,
                                        @Param("limit") int limit);
 
     /**
-     * 通过乐观锁获取租约并自增版本。
-     * 条件（示例）：id=? AND version=:expectedVersion AND (pub_lease_owner IS NULL OR pub_leased_until < NOW).
-     * @param id 主键
-     * @param expectedVersion 期望版本
-     * @param leaseOwner 租约持有者（实例 ID）
-     * @param leaseExpireAt 过期时间
-     * @return 影响行数（1=成功,0=失败）
+     * Acquire lease with optimistic locking and increment version.
+     * Condition example: id=? AND version=:expectedVersion AND (pub_lease_owner IS NULL OR pub_leased_until < NOW).
      */
     int acquireLease(@Param("id") Long id,
                      @Param("expectedVersion") Long expectedVersion,
                      @Param("leaseOwner") String leaseOwner,
                      @Param("leaseExpireAt") Instant leaseExpireAt);
 
-    /**
-     * 标记发布成功：更新状态、消息 ID、发布时间并自增版本。
-     * @param id 主键
-     * @param expectedVersion 期望版本
-     * @param msgId Broker 消息 ID
-     * @return 影响行数
-     */
+    /** Marks as published and increments version. */
     int markPublished(@Param("id") Long id,
                       @Param("expectedVersion") Long expectedVersion,
                       @Param("msgId") String msgId);
 
-    /**
-     * 标记延迟重试：写入重试计数、下一次时间、错误信息并自增版本。
-     * @param id 主键
-     * @param expectedVersion 期望版本
-     * @param retryCount 新的重试次数
-     * @param nextRetryAt 下次重试时间
-     * @param errorCode 错误码
-     * @param errorMsg 错误消息
-     * @return 影响行数
-     */
+    /** Marks as deferred (retry) and increments version. */
     int markDeferred(@Param("id") Long id,
                      @Param("expectedVersion") Long expectedVersion,
                      @Param("retryCount") int retryCount,
@@ -89,41 +58,22 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
                      @Param("errorCode") String errorCode,
                      @Param("errorMsg") String errorMsg);
 
-    /**
-     * 标记终态失败（FAILED/DEAD）：写入最终重试次数与错误信息并自增版本。
-     * @param id 主键
-     * @param expectedVersion 期望版本
-     * @param retryCount 最终重试次数
-     * @param errorCode 错误码
-     * @param errorMsg 错误消息
-     * @return 影响行数
-     */
+    /** Marks as terminal failure (FAILED/DEAD) and increments version. */
     int markFailed(@Param("id") Long id,
                    @Param("expectedVersion") Long expectedVersion,
                    @Param("retryCount") int retryCount,
                    @Param("errorCode") String errorCode,
                    @Param("errorMsg") String errorMsg);
 
-    /**
-     * 批量查询指定频道和幂等键集合的 Outbox 消息。
-     * <p>用于 publishRetry 场景的批量幂等性检查。</p>
-     * @param channel 通道
-     * @param dedupKeys 幂等键集合（建议 ≤500）
-     * @return 匹配的消息列表（可能为空）
-     */
+    /** Batch query messages by channel and a set of dedup keys (≤500 recommended). */
     List<OutboxMessageDO> findByChannelAndDedupIn(@Param("channel") String channel,
                                                    @Param("dedupKeys") List<String> dedupKeys);
 
     /**
-     * 批量插入或更新 Outbox 消息（UPSERT 语义）。
-     * <p>基于唯一约束 (channel, dedup_key) 实现幂等性：</p>
-     * <ul>
-     *   <li>若消息不存在，则插入新记录</li>
-     *   <li>若消息已存在（dedupKey 冲突），则更新 payload_json/headers_json/status_code，并重置 retry_count</li>
-     * </ul>
-     * <p>此方法解决 publishRetry 并发场景的 race condition 问题（两个实例同时 retry 同一消息）。</p>
-     * @param messages 待插入或更新的消息集合
-     * @return 影响行数（MySQL INSERT ... ON DUPLICATE KEY UPDATE 返回值语义：插入=1行，更新=2行）
+     * Batch UPSERT for Outbox messages.
+     * <p>Idempotent by unique constraint (channel, dedup_key).
+     * Inserts when missing; updates payload_json/headers_json/status_code and resets retry_count on conflict.
+     * Solves race conditions in publishRetry (two instances retrying the same message).</p>
      */
     int upsertBatch(@Param("messages") List<OutboxMessageDO> messages);
 }

@@ -13,10 +13,10 @@
 
     <artifactId>patra-ingest-app</artifactId>
     <name>patra-ingest-app</name>
-    <description>数据采集应用模块 - 应用服务和用例编排</description>
+    <description>Ingestion application module - application services and use case orchestration</description>
 
     <dependencies>
-        <!-- 公共类型（ProvenanceCode 等） -->
+        <!-- Common types (ProvenanceCode, etc.) -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
@@ -42,7 +42,7 @@
             <artifactId>patra-spring-boot-starter-expr</artifactId>
         </dependency>
 
-        <!-- 直接使用表达式内核 API（com.patra.expr.*） -->
+        <!-- Direct use of expression kernel API (com.patra.expr.*) -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-expr-kernel</artifactId>

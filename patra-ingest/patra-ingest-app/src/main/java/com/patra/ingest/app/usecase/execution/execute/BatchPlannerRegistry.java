@@ -9,16 +9,16 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 批次规划器注册表。
+ * Registry for BatchPlanner implementations.
  * <p>
- * 职责：管理所有 BatchPlanner 实例，按 provenanceCode 路由到对应的规划器。
+ * Responsibility: manage all BatchPlanner instances and route by provenanceCode.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>自动注册：通过 Spring 构造函数注入所有 BatchPlanner 实例。</li>
- *   <li>线程安全：使用 ConcurrentHashMap 存储映射关系。</li>
- *   <li>异常处理：找不到规划器时抛出 IllegalArgumentException。</li>
+ *   <li>Auto-registration via Spring constructor injection.</li>
+ *   <li>Thread-safe using ConcurrentHashMap.</li>
+ *   <li>Throws IllegalArgumentException when planner not found.</li>
  * </ul>
  * </p>
  *
@@ -32,9 +32,9 @@ public class BatchPlannerRegistry {
     private final Map<String, BatchPlanner> planners = new ConcurrentHashMap<>();
 
     /**
-     * 构造函数：自动注册所有 BatchPlanner 实例。
+     * Constructor: auto-register all BatchPlanner instances.
      *
-     * @param plannerList Spring 注入的所有 BatchPlanner 实例
+     * @param plannerList all BatchPlanner instances injected by Spring
      */
     public BatchPlannerRegistry(List<BatchPlanner> plannerList) {
         for (BatchPlanner planner : plannerList) {
@@ -50,25 +50,25 @@ public class BatchPlannerRegistry {
     }
 
     /**
-     * 根据数据源编码获取批次规划器。
+     * Gets the batch planner by provenance code.
      *
-     * @param provenanceCode 数据源编码
-     * @return 批次规划器
-     * @throws IllegalArgumentException 找不到规划器时抛出
+     * @param provenanceCode provenance code
+     * @return batch planner
+     * @throws IllegalArgumentException when planner is not found
      */
     public BatchPlanner get(String provenanceCode) {
         BatchPlanner planner = planners.get(provenanceCode);
         if (planner == null) {
             throw new IllegalArgumentException(
-                "未找到批次规划器 provenanceCode=" + provenanceCode
-                + " 可用规划器: " + planners.keySet()
+                "Batch planner not found for provenanceCode=" + provenanceCode
+                + "; available planners: " + planners.keySet()
             );
         }
         return planner;
     }
 
     /**
-     * 检查是否存在指定数据源的规划器。
+     * Checks whether a planner exists for the given provenanceCode.
      */
     public boolean contains(String provenanceCode) {
         return planners.containsKey(provenanceCode);

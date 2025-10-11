@@ -1,14 +1,14 @@
 package com.patra.ingest.adapter.inbound.scheduler.param;
 
 /**
- * Outbox Relay 任务参数（由 XXL-Job JSON 传入）。
- * <p>所有字段可选，空值由业务层使用默认配置回退：</p>
+ * Outbox Relay job parameters (passed via XXL-Job JSON).
+ * <p>All fields are optional; null values fall back to defaults in the business layer:</p>
  * <ul>
- *   <li>channel：消息通道；为空使用配置默认通道。</li>
- *   <li>batchSize：单次抓取数量；为空采用默认批次（配置决定）。</li>
- *   <li>leaseDuration：租约持续时间；支持 ISO-8601（PT15S）或纯秒数；为空使用默认。</li>
- *   <li>maxAttempts：最大尝试次数（含首次）；为空使用默认（通常 >=3）。</li>
- *   <li>initialBackoff：初始退避时长；同 leaseDuration 格式。</li>
+ *   <li>channel: message channel; blank uses configured default</li>
+ *   <li>batchSize: number of records to fetch per attempt; blank uses configured default</li>
+ *   <li>leaseDuration: lease duration; supports ISO-8601 (e.g., PT15S) or plain seconds; blank uses default</li>
+ *   <li>maxAttempts: maximum attempts (including the first); blank uses default (typically >= 3)</li>
+ *   <li>initialBackoff: initial backoff duration; same formats as leaseDuration</li>
  * </ul>
  */
 public record OutboxRelayJobParam(

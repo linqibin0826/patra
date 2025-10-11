@@ -11,13 +11,13 @@ import lombok.EqualsAndHashCode;
 import java.time.Instant;
 
 /**
- * <p><b>任务运行批次 DO</b> —— 映射表：<code>ing_task_run_batch</code></p>
- * <p>语义：Task Run 在执行过程中的分页/令牌步进账目，是断点续跑与去重的最小颗粒。</p>
- * <p>要点：
+ * <p><b>Task run batch DO</b> — table: <code>ing_task_run_batch</code></p>
+ * <p>Represents per-batch accounting (page/token steps) during a Task Run; the smallest unit for resume/dedup.</p>
+ * <p>Notes:
  * <ul>
- *   <li><code>idempotent_key</code> 唯一（UK：uk_batch_idem），保证重复回写不会产生重复批次。</li>
- *   <li><code>before_token</code>/<code>after_token</code> 记录分页游标；配合唯一索引回溯。</li>
- *   <li><code>stats</code> 用 JSON 存储批次级指标（fetched/upserted 等）。</li>
+ *   <li><code>idempotent_key</code> unique (UK: uk_batch_idem) to avoid duplicate batches on retries.</li>
+ *   <li><code>before_token</code>/<code>after_token</code> capture pagination cursors for backtracking.</li>
+ *   <li><code>stats</code> stores batch-level metrics (fetched/upserted, etc.) in JSON.</li>
  * </ul>
  * </p>
  */
@@ -26,75 +26,75 @@ import java.time.Instant;
 @TableName(value = "ing_task_run_batch", autoResultMap = true)
 public class TaskRunBatchDO extends BaseDO {
 
-    /** 关联运行 ID */
+    /** Associated run id. */
     @TableField("run_id")
     private Long runId;
 
-    /** 关联任务 ID（冗余） */
+    /** Associated task id (redundant). */
     @TableField("task_id")
     private Long taskId;
 
-    /** 关联切片 ID（冗余） */
+    /** Associated slice id (redundant). */
     @TableField("slice_id")
     private Long sliceId;
 
-    /** 关联计划 ID（冗余） */
+    /** Associated plan id (redundant). */
     @TableField("plan_id")
     private Long planId;
 
-    /** 执行表达式哈希（冗余） */
+    /** Execution expression hash (redundant). */
     @TableField("expr_hash")
     private String exprHash;
 
-    /** 来源代码冗余 */
+    /** Provenance code (redundant). */
     @TableField("provenance_code")
     private String provenanceCode;
 
-    /** 操作类型冗余 */
+    /** Operation code (redundant). */
     @TableField("operation_code")
     private String operationCode;
 
-    /** 批次序号（1 起，连续） */
+    /** Batch number (1-based, sequential). */
     @TableField("batch_no")
     private Integer batchNo;
 
-    /** 页码（token 分页时为空） */
+    /** Page number (null for token-based pagination). */
     @TableField("page_no")
     private Integer pageNo;
 
-    /** 页大小 */
+    /** Page size. */
     @TableField("page_size")
     private Integer pageSize;
 
-    /** 批次开始前的位置 token */
+    /** Token before batch start. */
     @TableField("before_token")
     private String beforeToken;
 
-    /** 批次结束后的位置 token */
+    /** Token after batch end. */
     @TableField("after_token")
     private String afterToken;
 
-    /** 批次幂等键（UK：uk_batch_idem） */
+    /** Batch idempotent key (UK: uk_batch_idem). */
     @TableField("idempotent_key")
     private String idempotentKey;
 
-    /** 记录数 */
+    /** Record count. */
     @TableField("record_count")
     private Integer recordCount;
 
-    /** 批次状态（DICT：ing_batch_status） */
+    /** Batch status (DICT: ing_batch_status). */
     @TableField("status_code")
     private String statusCode;
 
-    /** 批次提交时间 */
+    /** Batch commit time. */
     @TableField("committed_at")
     private Instant committedAt;
 
-    /** 失败原因（TEXT） */
+    /** Failure reason (TEXT). */
     @TableField("error")
     private String error;
 
-    /** 统计指标（JSON） */
+    /** Batch-level statistics (JSON). */
     @TableField(value = "stats", typeHandler = JacksonTypeHandler.class)
     private JsonNode stats;
 }

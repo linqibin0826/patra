@@ -24,10 +24,10 @@ import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 public interface PlanAssembler {
 
     /**
-     * 执行装配流程：生成 Plan、派生切片并创建任务。
+     * Executes assembly flow: create Plan, derive slices, and create tasks.
      *
-     * @param request 装配请求（非 null）
-     * @return 聚合装配结果（含状态）
+     * @param request assembly request (non-null)
+     * @return assembly result (with status)
      */
     PlanAssemblyResult assemble(PlanAssemblyRequest request);
 }

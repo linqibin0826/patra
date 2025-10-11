@@ -6,20 +6,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * 幂等检查器实现。
+ * Idempotency checker implementation.
  * <p>
- * 职责：查询 TaskRun 表，检查指定任务是否已有 SUCCEEDED 状态的运行记录，避免重复执行。
+ * Responsibility: query TaskRun to check if a SUCCEEDED run already exists for the task to avoid duplicate execution.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>幂等键（idempotentKey）已在任务创建时绑定到 Task，无需在运行层重复校验。</li>
- *   <li>仅需判断 taskId 对应的 TaskRun 中是否存在 SUCCEEDED 状态。</li>
- *   <li>调用 TaskRunRepository.hasSucceededRun() 进行高效存在性查询。</li>
+ *   <li>Idempotent key is bound to Task at creation; run layer does not re-validate it.</li>
+ *   <li>Only need to check if any TaskRun for the taskId is in SUCCEEDED status.</li>
+ *   <li>Use TaskRunRepository.hasSucceededRun() for efficient existence check.</li>
  * </ul>
  * </p>
  * <p>
- * 日志策略：INFO 记录跳过执行的情况，便于审计与排障。
+ * Logging: INFO when skipping execution for auditability.
  * </p>
  *
  * @author linqibin
@@ -33,11 +33,11 @@ public class IdempotencyCheckerImpl implements IdempotencyChecker {
     private final TaskRunRepository taskRunRepository;
 
     /**
-     * 检查任务是否已经成功执行。
+     * Checks whether the task has already succeeded.
      *
-     * @param taskId 任务ID
-     * @param idempotentKey 幂等键（用于日志记录，实际查询仅依赖 taskId）
-     * @return true表示已成功执行，无需重复执行
+     * @param taskId task id
+     * @param idempotentKey idempotent key (for logging; query relies on taskId only)
+     * @return true if already succeeded
      */
     @Override
     public boolean isAlreadySucceeded(Long taskId, String idempotentKey) {
