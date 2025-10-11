@@ -14,16 +14,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Outbox Relay 应用服务：对外暴露单次批量发布编排入口。
- * <p>流程：
+ * Application service for the Outbox Relay use case: exposes the orchestration entry for a single batch publication.
+ * <p>Flow:
  * <ol>
- *   <li>特性开关校验（disabled 直接返回空报告）</li>
- *   <li>构建 {@link RelayPlan}</li>
- *   <li>委派执行器发布并收集 {@link RelayBatchResult}</li>
- *   <li>发布领域事件（用于审计/监控）</li>
- *   <li>组装并返回 {@link RelayReport}</li>
+ *   <li>Check the feature toggle (disabled -> return an empty report to avoid scheduler errors).</li>
+ *   <li>Build a {@link RelayPlan}.</li>
+ *   <li>Delegate to the executor and gather the {@link RelayBatchResult}.</li>
+ *   <li>Publish domain events for auditing and monitoring.</li>
+ *   <li>Assemble and return the {@link RelayReport}.</li>
  * </ol>
- * 事务：方法标注 @Transactional（默认单库写入原子性），执行器内部按消息更新状态。</p>
+ * Transaction semantics: the method is annotated with {@code @Transactional} (single-database write atomicity), while the
+ * executor updates message state inside the same boundary.</p>
  */
 @Slf4j
 @Service
@@ -36,11 +37,11 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
     private final RelayEventPublisher eventPublisher;
 
     /**
-     * 执行一次 Relay。关闭状态下返回空统计，避免调度报错。
-     * <p>支持指定 channel 或处理所有 channel（instruction.channel() 为 null）。</p>
+     * Execute one relay run. When the feature flag is off, return an empty report to keep the scheduler healthy.
+     * <p>Supports targeting a specific channel or processing all channels when {@code instruction.channel()} is {@code null}.</p>
      *
-     * @param instruction 指令（可空字段）
-     * @return 执行报告
+     * @param instruction instruction payload allowing optional overrides
+     * @return execution report
      */
     @Override
     @Transactional
@@ -48,12 +49,12 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
         if (!properties.isEnabled()) {
             var channelKey = instruction.channel() != null
                     ? instruction.channel()
-                    : null;  // null 表示所有 channel
+                    : null;  // null means all channels
             String channelDesc = channelKey != null ? channelKey.channel() : "ALL_CHANNELS";
             log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channelDesc);
             return RelayReport.empty(channelKey);
         }
-        // 记录执行起始时间，用于生成耗时指标
+        // Record start timestamp to compute latency metrics
         long start = System.currentTimeMillis();
 
         RelayPlan plan = planBuilder.build(instruction);

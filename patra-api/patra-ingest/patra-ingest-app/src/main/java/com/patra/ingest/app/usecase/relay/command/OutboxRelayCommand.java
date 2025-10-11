@@ -6,18 +6,19 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * 外部调度触发的 Relay 指令，可覆盖默认参数（为空时由配置回退）。
- * <p>字段说明：
+ * Relay instruction emitted by external schedulers; optional fields override defaults (blank values fall back to
+ * configuration).
+ * <p>Field notes:
  * <ul>
- *   <li>channel：目标 Outbox 频道；为空使用默认频道。</li>
- *   <li>triggeredAt：触发时间基准；为空取当前时间。</li>
- *   <li>batchSize：拉取待发布消息的最大条数；<=0 或 null 回退默认。</li>
- *   <li>leaseDuration：单条消息租约时长；null/非正值回退默认。</li>
- *   <li>maxAttempts：最大尝试次数（含首次）；null/<=0 回退默认。</li>
- *   <li>initialBackoff：首次重试等待时长。</li>
- *   <li>leaseOwner：租约持有者标识；为空时由 PlanBuilder 动态生成（含 host+时间戳+uuid）。</li>
+ *   <li>{@code channel}: target Outbox channel; {@code null} lets the plan choose the configured default or all channels.</li>
+ *   <li>{@code triggeredAt}: trigger timestamp; {@code null} resolves to the current time.</li>
+ *   <li>{@code batchSize}: maximum number of pending messages fetched in a batch; {@code null} or {@code <= 0} reverts to the default.</li>
+ *   <li>{@code leaseDuration}: lease duration per message; {@code null} or non-positive falls back to the default.</li>
+ *   <li>{@code maxAttempts}: maximum attempts (including the first run); {@code null} or {@code <= 0} uses the default.</li>
+ *   <li>{@code initialBackoff}: initial delay before the first retry.</li>
+ *   <li>{@code leaseOwner}: lease owner identifier; when blank the plan builder generates one (host + epoch millis + UUID).</li>
  * </ul>
- * 不变式：该对象为不可变结构，供后续构建 {@code RelayPlan} 使用。
+ * Immutable contract consumed by {@link RelayPlan} construction.
  */
 public record OutboxRelayCommand(
         ChannelKey channel,

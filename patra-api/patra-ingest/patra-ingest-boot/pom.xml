@@ -12,7 +12,7 @@
 
     <artifactId>patra-ingest-boot</artifactId>
     <name>patra-ingest-boot</name>
-    <description>数据采集启动模块 - Spring Boot应用入口</description>
+    <description>Ingestion launcher module - Spring Boot entry point</description>
 
     <dependencies>
         <dependency>
@@ -51,7 +51,7 @@
 
     <build>
         <plugins>
-            <!-- 生成可执行的 Spring Boot Fat Jar -->
+            <!-- Produce an executable Spring Boot fat JAR -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

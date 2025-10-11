@@ -5,7 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
- * Patra采集模块启动类
+ * Spring Boot entry point for the Patra ingest service.
+ *
+ * <p>Enables Feign clients under {@code com.patra.registry.api.rpc.client} so the service can query
+ * provenance metadata from the registry.</p>
  *
  * @author linqibin
  * @since 0.1.0

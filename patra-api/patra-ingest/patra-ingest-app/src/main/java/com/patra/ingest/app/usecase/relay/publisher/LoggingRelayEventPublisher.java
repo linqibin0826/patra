@@ -7,8 +7,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 日志型事件发布器：将事件以 DEBUG 级别输出，供开发与诊断使用。
- * <p>生产环境可通过提高日志级别或替换为复合发布器，写入指标系统。</p>
+ * Logging-based event publisher: emits events at DEBUG level for development and diagnostics.
+ * <p>Production deployments can increase the log level or replace this publisher with one that forwards metrics.</p>
  */
 @Slf4j
 @Component
@@ -19,7 +19,7 @@ public class LoggingRelayEventPublisher implements RelayEventPublisher {
         if (events == null || events.isEmpty()) {
             return;
         }
-        // 仅在 DEBUG 级别打印事件快照，避免生产环境噪音
+        // Emit event snapshots only at DEBUG level to avoid production noise
         events.forEach(event -> log.debug("[INGEST][APP] relay-event: {}", event));
     }
 }

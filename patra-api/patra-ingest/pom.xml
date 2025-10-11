@@ -15,11 +15,11 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>patra-ingest (Aggregator)</name>
-    <description>数据采集聚合模块: api/domain/infra/app/adapter</description>
+    <description>Ingestion module aggregate: api/domain/infra/app/adapter</description>
 
     <dependencyManagement>
         <dependencies>
-            <!-- ingest 内部子模块版本统一管理（供互相依赖时省略 version） -->
+            <!-- Centralise ingest submodule versions so internal dependencies can omit explicit version tags -->
             <dependency>
                 <groupId>com.papertrace</groupId>
                 <artifactId>patra-ingest-api</artifactId>

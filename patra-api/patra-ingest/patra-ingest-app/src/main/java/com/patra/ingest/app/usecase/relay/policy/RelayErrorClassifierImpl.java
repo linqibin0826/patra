@@ -8,14 +8,15 @@ import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import org.springframework.stereotype.Component;
 
 /**
- * 默认异常分类策略：最小但实用的 FATAL / TRANSIENT 判定规则。
- * <p>归类标准：
+ * Default exception classification strategy: minimal yet practical rules for deciding between FATAL and TRANSIENT.
+ * <p>Classification rules:
  * <ul>
- *   <li>配置/非法状态/参数问题（IllegalArgument / IllegalState / OutboxRelayExecutionException） → FATAL</li>
- *   <li>JSON 序列化解析失败 → FATAL（通常数据不可恢复）</li>
- *   <li>其余全部 → TRANSIENT，交给重试策略（网络 / 下游短暂故障等）</li>
+ *   <li>Configuration, illegal state, or parameter issues (IllegalArgument, IllegalState, OutboxRelayExecutionException) -> FATAL.</li>
+ *   <li>JSON serialization or deserialization failure -> FATAL (data typically unrecoverable).</li>
+ *   <li>All other cases -> TRANSIENT and delegated to retry policies (network hiccups, downstream outages, etc.).</li>
  * </ul>
- * 扩展：可用组合模式替换本实现，注入更细粒度匹配（如根据异常 errorCode）。
+ * Extensibility: replace this implementation with composed strategies to support finer-grained matching (for example by
+ * error code).</p>
  */
 @Component
 public class RelayErrorClassifierImpl implements RelayErrorClassifier {
