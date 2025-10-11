@@ -19,20 +19,20 @@
             <artifactId>patra-common</artifactId>
         </dependency>
 
-        <!-- 只允许 DTO 校验注解 -->
+        <!-- Allow DTO validation annotations without pulling in full Spring dependencies. -->
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
 
-        <!-- 提供 @RequestMapping / @GetMapping 等注解，定义 HTTP 契约接口时需要 -->
+        <!-- Provide @RequestMapping/@GetMapping annotations when defining HTTP contracts. -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- 定义 Feign 接口时需要，用于 @FeignClient 注解 -->
+        <!-- Expose @FeignClient and related annotations for contract definitions. -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-openfeign-core</artifactId>
