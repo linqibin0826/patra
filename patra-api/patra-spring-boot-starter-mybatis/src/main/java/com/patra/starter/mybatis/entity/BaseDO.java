@@ -12,8 +12,14 @@ import java.io.Serializable;
 import java.time.Instant;
 
 /**
- * BaseDO：所有数据对象的基类，包含审计字段、乐观锁、逻辑删除等通用属性。
- * 使用 MyBatis-Plus 插件注解支持自动填充。
+ * Abstract base class for Data Objects (DOs) providing common fields for auditing,
+ * optimistic locking, and soft deletion.
+ * <p>
+ * This class is intended to be extended by all persistent entities (DOs)
+ * to ensure consistent handling of common concerns like tracking creation/update metadata,
+ * managing concurrent modifications, and supporting logical deletion.
+ * It integrates with MyBatis-Plus's automatic field population features.
+ * </p>
  */
 @Data
 @SuperBuilder
@@ -25,68 +31,113 @@ public abstract class BaseDO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * The primary key for the entity.
+     * <p>
+     * It uses MyBatis-Plus's {@link IdType#ASSIGN_ID}, which is typically configured
+     * with a distributed ID generator (e.g., Snowflake) to ensure uniqueness across the system.
+     * </p>
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
-     * JSON 数组，备注/变更说明。
-     * 例如：[{"time":"2025-08-18 15:00:00","by":"王五","note":"xxx"}]
-     * 推荐结合 Jackson JsonNode + TypeHandler 使用。
+     * A JSON-formatted string for storing remarks or an audit trail of changes.
+     * <p>
+     * This field can be used to log significant events or comments related to the entity's lifecycle.
+     * For example: {@code [{"timestamp":"2025-10-11T10:00:00Z","user":"admin","action":"Created"}]}
+     * </p>
+     * It is recommended to manage this field using a Jackson {@code JsonNode} coupled with a custom TypeHandler.
      */
     @TableField(value = "record_remarks")
     private String recordRemarks;
 
     /**
-     * 创建时间（自动填充）
+     * The timestamp indicating when the entity was created.
+     * <p>
+     * This field is automatically populated by the {@link MetaObjectHandler} upon insertion.
+     * </p>
      */
     @TableField(value = "created_at", fill = FieldFill.INSERT)
     private Instant createdAt;
 
     /**
-     * 创建人ID（自动填充）
+     * The identifier of the user who created the entity.
+     * <p>
+     * This field should be populated by the {@link MetaObjectHandler} upon insertion,
+     * typically by retrieving the current user's ID from the security context.
+     * </p>
      */
     @TableField(value = "created_by", fill = FieldFill.INSERT)
     private Long createdBy;
 
     /**
-     * 创建人姓名（自动填充）
+     * The name of the user who created the entity.
+     * <p>
+     * This field provides a denormalized, human-readable name for the creator,
+     * which can be useful for display purposes and avoids extra lookups.
+     * It should be populated by the {@link MetaObjectHandler} upon insertion.
+     * </p>
      */
     @TableField(value = "created_by_name", fill = FieldFill.INSERT)
     private String createdByName;
 
     /**
-     * 更新时间（自动填充）
+     * The timestamp indicating when the entity was last updated.
+     * <p>
+     * This field is automatically populated by the {@link MetaObjectHandler} upon both insertion and update.
+     * </p>
      */
     @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private Instant updatedAt;
 
     /**
-     * 更新人ID（自动填充）
+     * The identifier of the user who last updated the entity.
+     * <p>
+     * This field should be populated by the {@link MetaObjectHandler} upon insertion and update,
+     * typically by retrieving the current user's ID from the security context.
+     * </p>
      */
     @TableField(value = "updated_by", fill = FieldFill.INSERT_UPDATE)
     private Long updatedBy;
 
     /**
-     * 更新人姓名（自动填充）
+     * The name of the user who last updated the entity.
+     * <p>
+     * This field provides a denormalized, human-readable name for the last modifier.
+     * It should be populated by the {@link MetaObjectHandler} upon insertion and update.
+     * </p>
      */
     @TableField(value = "updated_by_name", fill = FieldFill.INSERT_UPDATE)
     private String updatedByName;
 
     /**
-     * 乐观锁版本号
+     * The version number used for optimistic locking.
+     * <p>
+     * This field is managed by MyBatis-Plus's {@link OptimisticLockerInnerInterceptor}
+     * to prevent concurrent update conflicts. It is automatically incremented on each update.
+     * </p>
      */
     @Version
     @TableField(value = "version")
     private Long version;
 
     /**
-     * 请求方 IP（二进制，支持 IPv4/IPv6）
+     * The IP address of the client that initiated the request, stored in a binary format.
+     * <p>
+     * Storing the IP address as a byte array allows for efficient storage of both IPv4 and IPv6 addresses.
+     * </p>
      */
     @TableField(value = "ip_address")
     private byte[] ipAddress;
 
     /**
-     * 逻辑删除标记：0=未删除，1=已删除
+     * A flag indicating whether the entity has been logically deleted.
+     * <p>
+     * This field enables soft deletion. A value of {@code true} (or 1) means the entity is deleted,
+     * while {@code false} (or 0) means it is active. MyBatis-Plus queries will automatically
+     * filter for non-deleted records.
+     * </p>
      */
     @TableLogic
     @TableField(value = "deleted")

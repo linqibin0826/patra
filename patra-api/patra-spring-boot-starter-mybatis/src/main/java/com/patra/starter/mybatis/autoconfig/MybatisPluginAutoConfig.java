@@ -1,70 +1,75 @@
 package com.patra.starter.mybatis.autoconfig;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.util.Objects;
-
-import org.apache.ibatis.reflection.MetaObject;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.lang.Nullable;
-
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
-
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.reflection.MetaObject;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.lang.Nullable;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Objects;
 
 /**
- * MyBatis-Plus 插件自动配置。
+ * Auto-configuration for MyBatis-Plus plugins.
  *
- * <p>启用分页、乐观锁与防全表操作插件，并提供简易元数据填充器。</p>
+ * <p>This class enables essential plugins for pagination, optimistic locking, and protection against full table operations.
+ * It also provides a simple metadata handler for auditing purposes.</p>
  */
 @Slf4j
 @AutoConfiguration
 public class MybatisPluginAutoConfig {
 
+    /**
+     * Configures the MyBatis-Plus interceptor chain.
+     *
+     * @return The configured {@link MybatisPlusInterceptor}.
+     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 分页插件
+        // Add the pagination plugin for MySQL.
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-        // 乐观锁插件
+        // Add the optimistic locker plugin to manage versioned data.
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
-        // 防止全表更新与删除插件
+        // Add the block attack plugin to prevent full table updates and deletes.
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
         return interceptor;
     }
 
+    /**
+     * Provides a {@link MetaObjectHandler} to automatically populate audit fields.
+     *
+     * @param clock An optional {@link Clock} for time-sensitive testing.
+     * @return The configured {@link MetaObjectHandler}.
+     */
     @Bean
     public MetaObjectHandler metaObjectHandler(@Nullable Clock clock) {
-        log.info("Initialize MyBatis-Plus MetaObjectHandler");
+        log.info("Initializing MyBatis-Plus MetaObjectHandler.");
         return new MetaObjectHandler() {
             @Override
             public void insertFill(MetaObject metaObject) {
-                // 填充创建和更新时间
-                this.strictInsertFill(
-                        metaObject,
-                        "createdAt",
-                        () -> Objects.isNull(clock) ? Instant.now() : Instant.now(clock),
-                        Instant.class);
-                this.strictInsertFill(
-                        metaObject,
-                        "updatedAt",
-                        () -> Objects.isNull(clock) ? Instant.now() : Instant.now(clock),
-                        Instant.class);
+                // Populate createdAt and updatedAt fields on insertion.
+                Instant now = Objects.isNull(clock) ? Instant.now() : Instant.now(clock);
+                this.strictInsertFill(metaObject, "createdAt", () -> now, Instant.class);
+                this.strictInsertFill(metaObject, "updatedAt", () -> now, Instant.class);
 
-                // 填充创建人和更新人信息
+                // TODO: Populate createdBy and updatedBy fields with user information from the current security context.
             }
 
             @Override
             public void updateFill(MetaObject metaObject) {
-                // 填充更新时间
-                this.strictUpdateFill(metaObject, "updatedAt", () -> Objects.isNull(clock) ? Instant.now() : Instant.now(clock), Instant.class);
+                // Populate the updatedAt field on update.
+                Instant now = Objects.isNull(clock) ? Instant.now() : Instant.now(clock);
+                this.strictUpdateFill(metaObject, "updatedAt", () -> now, Instant.class);
 
+                // TODO: Populate the updatedBy field with user information from the current security context.
             }
         };
     }

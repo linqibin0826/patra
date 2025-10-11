@@ -11,14 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  * @author linqibin
  * @since 0.1.0
  */
-@SpringBootApplication(scanBasePackages = {
-        "com.patra.egress",
-        "com.patra.starter"
-})
-@ConfigurationPropertiesScan(basePackages = {
-        "com.patra.egress",
-        "com.patra.starter"
-})
+@SpringBootApplication
 public class EgressGatewayApplication {
 
     public static void main(String[] args) {
