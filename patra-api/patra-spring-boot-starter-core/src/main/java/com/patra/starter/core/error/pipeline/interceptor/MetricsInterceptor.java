@@ -12,7 +12,8 @@ import org.springframework.core.annotation.Order;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 指标拦截器：记录解析耗时、慢调用与总量指标。
+ * Interceptor that records timing information, slow invocations, and aggregate metrics for the
+ * error-resolution pipeline.
  */
 @Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE - 10)
@@ -37,7 +38,7 @@ public class MetricsInterceptor implements ResolutionInterceptor {
         observationRecorder.recordResolution(exception, resolution, durationMs, slow);
 
         if (slow && observationProperties.isLogSlowResolution()) {
-            log.warn("错误解析耗时较长: {} ms, 异常={}, 错误码={}", durationMs,
+            log.warn("Slow error resolution detected: {} ms, exception={}, errorCode={}", durationMs,
                     exception == null ? "Null" : exception.getClass().getSimpleName(),
                     resolution.errorCode().code());
         }

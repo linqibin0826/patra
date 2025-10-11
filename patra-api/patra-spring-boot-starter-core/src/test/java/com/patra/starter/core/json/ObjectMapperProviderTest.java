@@ -24,10 +24,10 @@ class ObjectMapperProviderTest {
         previous = JsonMapperHolder.getObjectMapper();
 
         ObjectMapperProvider provider = new ObjectMapperProvider();
-        // 容器未就绪，走 Holder
+        // Container not ready yet → fall back to the holder
         assertThat(ObjectMapperProvider.getObjectMapper()).isNotNull();
 
-        // 使用 StaticApplicationContext 注册一个 ObjectMapper bean
+        // Register an ObjectMapper bean in a StaticApplicationContext
         StaticApplicationContext ctx = new StaticApplicationContext();
         ObjectMapper custom = new ObjectMapper();
         ctx.getBeanFactory().registerSingleton("objectMapper", custom);

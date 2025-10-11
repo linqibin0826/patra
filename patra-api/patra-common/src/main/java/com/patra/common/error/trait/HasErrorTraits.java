@@ -3,9 +3,10 @@ package com.patra.common.error.trait;
 import java.util.Set;
 
 /**
- * 提供错误语义特征（ErrorTrait）的异常接口。
+ * Marker interface for exceptions that expose semantic {@link ErrorTrait}s.
  *
- * <p>使错误解析算法可依据语义而非仅类名映射到合适的 HTTP 状态与错误响应。</p>
+ * <p>Enables the error-resolution pipeline to rely on semantics rather than
+ * class-name heuristics when deriving HTTP status codes and response payloads.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -13,9 +14,10 @@ import java.util.Set;
 public interface HasErrorTraits {
     
     /**
-     * 返回该异常的语义特征集合。
+     * Returns the semantic traits associated with this exception.
      *
-     * <p>可包含多个特征以便于丰富分类处理。</p>
+     * @return a set of traits; multiple traits may be provided to drive
+     *     fine-grained classification.
      */
     Set<ErrorTrait> getErrorTraits();
 }

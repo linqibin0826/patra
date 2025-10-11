@@ -9,7 +9,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 /**
- * 追踪拦截器：记录当前 TraceId，便于日志关联。
+ * Interceptor that enriches debug logs with the current trace identifier to improve correlation.
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -24,7 +24,7 @@ public class TracingInterceptor implements ResolutionInterceptor {
     @Override
     public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
         traceProvider.getCurrentTraceId().ifPresent(traceId ->
-                log.debug("解析异常时附带 TraceId: {}", traceId));
+                log.debug("Error resolution invoked with traceId {}", traceId));
         return invocation.proceed(exception);
     }
 }

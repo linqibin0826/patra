@@ -37,16 +37,16 @@ class AggregateRootTest {
     @Test
     void domain_events_pull_and_peek() {
         TestAgg agg = new TestAgg();
-        // 添加两条事件，其中一条补当前时间
+        // Add two events, one of which backfills the current timestamp
         agg.addEvt(null);
         agg.addEvt(Instant.EPOCH);
 
         assertThat(agg.peekDomainEvents()).hasSize(2);
         List<DomainEvent> pulled = agg.pullDomainEvents();
         assertThat(pulled).hasSize(2);
-        // 再拉取应为空
+        // Pulling again should be empty
         assertThat(agg.pullDomainEvents()).isEmpty();
-        // peek 为不可修改视图
+        // peek returns an unmodifiable view
         assertThat(agg.peekDomainEvents()).isEmpty();
     }
 }

@@ -9,7 +9,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 错误解析管线，按照拦截器顺序执行最终得到统一错误表示。
+ * Executes the configured {@link ResolutionInterceptor} chain and delegates to the
+ * {@link ErrorResolutionEngine} to obtain a normalized error representation.
  */
 public class ErrorResolutionPipeline {
 
@@ -29,7 +30,10 @@ public class ErrorResolutionPipeline {
     }
 
     /**
-     * 执行解析管线。
+     * Resolves the supplied exception through the interceptor pipeline.
+     *
+     * @param exception the exception to resolve
+     * @return the normalized error representation
      */
     public ErrorResolution resolve(Throwable exception) {
         ResolutionInvocation invocation = buildInvocationChain();
@@ -46,6 +50,11 @@ public class ErrorResolutionPipeline {
         return tail;
     }
 
+    /**
+     * Returns the interceptor list in the order in which it will be applied.
+     *
+     * @return ordered and immutable interceptor list
+     */
     public List<ResolutionInterceptor> getInterceptors() {
         return interceptors;
     }

@@ -35,16 +35,16 @@ class DefaultErrorResolutionEngineTest {
                 ex instanceof IllegalArgumentException ? Optional.of(code("0400")) : Optional.empty();
         DefaultErrorResolutionEngine engine = new DefaultErrorResolutionEngine(props, List.of(contributor));
 
-        // null → 兜底 500
+        // null → fallback to 500
         assertThat(engine.resolve(null).httpStatus()).isEqualTo(500);
 
-        // ApplicationException 直通
+        // ApplicationException should be returned as-is
         ApplicationException app = new ApplicationException(code("0409"), "conflict");
         ErrorResolution er = engine.resolve(app);
         assertThat(er.errorCode().code()).isEqualTo("ING-0409");
         assertThat(er.httpStatus()).isEqualTo(409);
 
-        // 映射器命中
+        // Mapping contributor hit
         assertThat(engine.resolve(new IllegalArgumentException("bad"))).extracting(ErrorResolution::httpStatus).isEqualTo(400);
     }
 
@@ -52,23 +52,23 @@ class DefaultErrorResolutionEngineTest {
     void trait_mapping_naming_heuristic_cause_chain_and_fallbacks() {
         DefaultErrorResolutionEngine engine = new DefaultErrorResolutionEngine(props, List.of());
 
-        // Trait 映射
+        // Trait-based mapping
         class NotFoundEx extends RuntimeException implements HasErrorTraits {
             @Override public Set<ErrorTrait> getErrorTraits() { return Set.of(ErrorTrait.NOT_FOUND); }
         }
         assertThat(engine.resolve(new NotFoundEx()).httpStatus()).isEqualTo(404);
 
-        // 命名启发式
+        // Naming heuristic
         class UserAlreadyExists extends RuntimeException {}
         assertThat(engine.resolve(new UserAlreadyExists()).httpStatus()).isEqualTo(409);
 
-        // 由 cause 解析
+        // Resolve via cause chain
         RuntimeException cause = new RuntimeException("Validation");
         RuntimeException outer = new RuntimeException("wrapper", cause);
-        // 当前实现只基于类名匹配，无法从 cause 消息解析，预期兜底 500
+        // Current implementation matches by type only, so we expect the 500 fallback
         assertThat(engine.resolve(outer).httpStatus()).isEqualTo(500);
 
-        // 超过最大深度 → 500
+        // Exceeding max depth → 500
         props.getEngine().setMaxCauseDepth(0);
         DefaultErrorResolutionEngine engine2 = new DefaultErrorResolutionEngine(props, List.of());
         assertThat(engine2.resolve(new RuntimeException(new RuntimeException())).httpStatus()).isEqualTo(500);

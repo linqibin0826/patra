@@ -45,57 +45,56 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * JSON 规范化/标准化工具，用于将任意输入（POJO/JsonNode/字符串等）
- * 转换为 <b>确定性（deterministic）</b> 的 JSON 结构与文本表示。
- * <p>
- * 特性概览：
+ * JSON normalization utility that converts arbitrary inputs (POJOs, {@link JsonNode}s,
+ * strings, etc.) into deterministic structures and canonical JSON text.
+ *
+ * <p>Key features:</p>
  * <ul>
- *   <li><b>键排序</b>：对象键按可选比较器（ASCII/UNICODE）稳定排序；</li>
- *   <li><b>数组处理</b>：默认去重+排序（按类型标签与序列化值）；对配置的“序列化字段”保留原顺序；</li>
- *   <li><b>空值策略</b>：按配置移除空对象/空数组/空字符串，支持白名单保留；</li>
- *   <li><b>类型规整</b>：布尔/数字/时间的宽松或严格规整；BigDecimal 去除尾随 0 与负 scale；</li>
- *   <li><b>字符串规整</b>：可裁剪首尾空白、折叠多空格、按字段/路径小写化；</li>
- *   <li><b>时间规整</b>：多格式解析（含时间戳秒/毫秒），规范化为 UTC 毫秒精度格式
- *       {@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}；</li>
- *   <li><b>边界保护</b>：字符串 UTF-8 字节数上限检查、最大深度限制、非法数值（NaN/Inf）拒绝；</li>
- *   <li><b>确定性文本</b>：使用 {@code ObjectWriter} 关闭缩进并启用
- *       {@link com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN}
- *       生成稳定的 canonical JSON 文本。</li>
+ *   <li><b>Key ordering</b>: stable object-key sorting with optional ASCII/Unicode comparators.</li>
+ *   <li><b>Array handling</b>: deduplicates and orders arrays by type tag and serialized value while
+ *       preserving the order of configured sequence fields.</li>
+ *   <li><b>Empty value policy</b>: removes empty objects/arrays/strings with whitelist support.</li>
+ *   <li><b>Type coercion</b>: normalizes booleans, numbers, and timestamps; strips trailing zeros from
+ *       {@link BigDecimal} values.</li>
+ *   <li><b>String cleanup</b>: optional trim, whitespace collapse, and field/path-level lowercasing.</li>
+ *   <li><b>Time normalization</b>: parses multiple formats (including second/millisecond epochs) and
+ *       emits UTC timestamps with millisecond precision ({@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}).</li>
+ *   <li><b>Safety guards</b>: enforces UTF-8 byte limits, maximum depth, and rejects non-finite numbers.</li>
+ *   <li><b>Deterministic output</b>: writes canonical JSON using an {@link ObjectWriter} configured with
+ *       {@link com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN}.</li>
  * </ul>
  *
- * <h3>与 Spring 注入的区别</h3>
- * <p>
- * 本类<b>不依赖 Spring</b>。它通过 {@link JsonMapperHolder} 取得全局 {@link ObjectMapper}：
+ * <h3>Relationship with Spring injection</h3>
+ * <p>This class does <b>not</b> depend on Spring. It obtains the global {@link ObjectMapper} via
+ * {@link JsonMapperHolder}:</p>
  * <ul>
- *   <li>若存在 Spring 环境，Starter 中的 {@code JacksonProvider} 会在容器就绪后调用
- *       {@link JsonMapperHolder#register(com.fasterxml.jackson.databind.ObjectMapper)}，
- *       从而让本类复用 <b>容器内</b>的 {@code ObjectMapper} 配置；</li>
- *   <li>无 Spring 时，本类按需懒加载一个默认的 {@code JsonMapper}（自动发现模块）。</li>
+ *   <li>In Spring applications the starter's {@code JacksonProvider} registers the container-managed
+ *       mapper, keeping configuration consistent.</li>
+ *   <li>Outside Spring the holder lazily creates a default {@code JsonMapper} with auto-discovered modules.</li>
  * </ul>
- * 在业务代码中，<b>推荐优先使用 DI 注入</b>的 {@code ObjectMapper}，或直接注入一个
- * 领域服务使用它；仅当处于无法注入的静态/公共库/非 Spring 路径时，使用本工具的静态工厂方法
- *（如 {@link #usingDefault()} / {@link #withConfig(Config)}）。
- * </p>
+ * <p>In business code prefer dependency-injecting an {@code ObjectMapper} (or a service that wraps it)
+ * and compose this utility where needed. Resort to the static factories—such as {@link #usingDefault()}
+ * or {@link #withConfig(Config)}—only when DI is not available.</p>
  *
- * <h3>典型用途</h3>
+ * <h3>Typical use cases</h3>
  * <ul>
- *   <li>为签名/去重/缓存键生成稳定的 canonical JSON 及其字节材料；</li>
- *   <li>多来源 JSON 数据清洗与规范化；</li>
- *   <li>表达式/规则/配置的标准形态固化（与哈希绑定）。</li>
+ *   <li>Produce stable canonical JSON (and byte material) for signing, deduplication, or cache keys.</li>
+ *   <li>Normalize heterogeneous JSON payloads collected from multiple sources.</li>
+ *   <li>Persist canonical forms of expressions, rules, or configuration alongside hashes.</li>
  * </ul>
  *
- * <h3>线程安全</h3>
- * 本类是<b>不可变</b>对象；其依赖的 {@link ObjectMapper} 由 {@link JsonMapperHolder} 保证
- * 单例可见性；内部使用的 {@link ObjectWriter} 亦为线程安全的共享快照，可跨线程复用。
+ * <h3>Thread safety</h3>
+ * <p>The normalizer is immutable. {@link JsonMapperHolder} ensures safe publication of the underlying
+ * {@link ObjectMapper}, and the shared {@link ObjectWriter} snapshot is thread-safe.</p>
  *
- * <h3>示例</h3>
+ * <h3>Examples</h3>
  * <pre>{@code
- * // 快速规范化（使用全局 ObjectMapper 与默认配置）
+ * // Quick normalization using the global ObjectMapper and default configuration
  * JsonNormalizer.Result r = JsonNormalizer.normalizeDefault(input);
  * String canonical = r.getCanonicalJson();
  * byte[] material = r.getHashMaterial();
  *
- * // 自定义配置
+ * // Custom configuration
  * JsonNormalizer normalizer = JsonNormalizer.withConfig(
  *     JsonNormalizer.Config.builder()
  *         .coerceNumber(true)
@@ -142,49 +141,45 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 使用全局 {@link ObjectMapper}（来自 {@link JsonMapperHolder}，在 Spring 环境下由
-     * Starter 桥接到容器实例）与默认 {@link Config} 执行一次性规范化。
+     * Normalizes the given input using the global {@link ObjectMapper} supplied by
+     * {@link JsonMapperHolder} (bridged from Spring when available) and the default {@link Config}.
      */
     public static Result normalizeDefault(Object input) {
         return usingDefault().normalize(input);
     }
 
     /**
-     * 使用全局 {@link ObjectMapper} 与默认 {@link Config} 构造一个可复用实例。
-     * 适用于同一配置下的多次规范化调用（减少构造开销）。
+     * Creates a reusable normalizer backed by the global {@link ObjectMapper} and
+     * the default {@link Config}. Ideal when multiple inputs share the same settings.
      */
     public static JsonNormalizer usingDefault() {
         return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), Config.builder().build());
     }
 
     /**
-     * 使用全局 {@link ObjectMapper} 与给定 {@link Config} 构造实例。
-     * 若需手动指定 {@link ObjectMapper}，请使用 {@link #withMapper(ObjectMapper, Config)}。
+     * Creates a normalizer backed by the global {@link ObjectMapper} and the
+     * provided {@link Config}. Use {@link #withMapper(ObjectMapper, Config)} to
+     * supply a custom mapper.
      */
     public static JsonNormalizer withConfig(Config config) {
         return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), config);
     }
 
     /**
-     * 显式提供 {@link ObjectMapper} 与配置进行构造。
-     * <p>
-     * 提示：在 Spring/DI 场景更建议注入 {@code ObjectMapper} 到你的服务层，再在该层组合使用本类，
-     * 而不是将本类当作服务定位器替代 DI。
-     * </p>
+     * Builds a normalizer with the supplied {@link ObjectMapper} and configuration.
+     * <p>Prefer injecting the mapper into your service layer and composing this
+     * utility there rather than treating it as a service locator.</p>
      */
     public static JsonNormalizer withMapper(ObjectMapper objectMapper, Config config) {
         return new JsonNormalizer(objectMapper, config);
     }
 
     /**
-     * 执行规范化：
-     * <ol>
-     *   <li>将入参转为 {@link JsonNode}（字符串会先解析；POJO 通过 {@link ObjectMapper#valueToTree(Object)}）；</li>
-     *   <li>按配置递归规整对象/数组/标量（键排序、数组去重与排序/保序、空值处理、数值与时间与布尔规整、字符串处理等）；</li>
-     *   <li>使用 canonical {@link ObjectWriter} 生成稳定 JSON 文本，作为哈希材料；</li>
-     *   <li>返回 {@link Result}：包含 canonical 值对象、文本与字节材料。</li>
-     * </ol>
-     * 失败时抛出 {@link JsonNormalizationException}（如深度超限、非法数、字符串超限等）。
+     * Executes normalization by converting the input to a {@link JsonNode},
+     * recursively cleaning it according to the configured policies, rendering
+     * canonical JSON, and returning the structured {@link Result}.
+     * <p>Throws {@link JsonNormalizationException} for violations such as excessive
+     * depth, illegal numbers, or oversized strings.</p>
      */
     public Result normalize(Object input) {
         JsonNode root = toJsonNode(input);
@@ -565,12 +560,8 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 规范化结果载体：
-     * <ul>
-     *   <li>{@code canonicalValue}：规范化后的 Java 值（不可变集合视图）；</li>
-     *   <li>{@code canonicalJson}：确定性 JSON 文本；</li>
-     *   <li>{@code hashMaterial}：用于签名/去重/缓存键的字节材料（UTF-8 编码）。</li>
-     * </ul>
+     * Container for normalization results. Provides access to the canonical
+     * value, canonical JSON text, and the UTF-8 bytes used for hashing.
      */
     public static final class Result {
         private final Object canonicalValue;
@@ -597,18 +588,10 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 规范化行为配置。
-     * <p>关键选项：</p>
-     * <ul>
-     *   <li>{@code removeEmpty}/{@code keepEmptyWhitelist}：空值移除与白名单；</li>
-     *   <li>{@code coerceBoolean}/{@code coerceNumber}/{@code coerceTime}：类型规整策略；</li>
-     *   <li>{@code defaultZoneId}：仅解析到本地时间时的默认时区；</li>
-     *   <li>{@code sequenceFieldWhitelist}：这些路径/字段的数组保序，不做去重与全局排序；</li>
-     *   <li>{@code arrayDeduplicate}：数组是否去重；</li>
-     *   <li>{@code trimStrings}/{@code collapseSpaces}/{@code lowercaseFields}：字符串处理；</li>
-     *   <li>{@code sortComparator}：对象键排序策略；</li>
-     *   <li>{@code maxDepth}/{@code maxStringBytes}/{@code forbidKeys}：安全边界与禁用键。</li>
-     * </ul>
+     * Configuration governing normalization behavior. Tunable options include
+     * empty-value removal, type coercion strategies, default time zone,
+     * sequence-field preservation, array deduplication, string cleanup, key
+     * sorting, and safety guards (depth, string byte length, forbidden keys).
      */
     public static final class Config {
         private final boolean removeEmpty;
@@ -667,8 +650,9 @@ public final class JsonNormalizer {
         }
 
         /**
-         * {@link Config} 构建器。默认偏向“稳态、宽松、可去噪”。
-         * 按需覆盖以适配更严格或更宽松的需求。
+         * Builder for {@link Config}. Defaults favor stable yet lenient
+         * normalization with noise reduction; override options as needed for
+         * stricter or more permissive behavior.
          */
         public static final class Builder {
             private boolean removeEmpty = true;
@@ -857,7 +841,8 @@ public final class JsonNormalizer {
     }
 
     /**
-     * 规范化失败异常：包含解析失败、非法数值、时间/深度/长度越界、遇到禁用键等错误场景。
+     * Exception thrown when normalization fails due to issues such as parsing
+     * errors, illegal numeric values, depth or length limits, or forbidden keys.
      */
     public static class JsonNormalizationException extends RuntimeException {
         public JsonNormalizationException(String message) {

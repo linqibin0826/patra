@@ -12,7 +12,7 @@ class MetricsInterceptorTest {
     @Test
     void should_record_metrics_and_delegate() {
         ErrorProperties.ObservationProperties op = new ErrorProperties.ObservationProperties();
-        op.setSlowThresholdMs(0); // 任何耗时都视为慢
+        op.setSlowThresholdMs(0); // treat every invocation as slow
         op.setLogSlowResolution(false);
 
         final boolean[] called = {false};

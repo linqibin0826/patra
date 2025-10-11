@@ -3,20 +3,21 @@ package com.patra.common.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * 应用层异常：承载业务错误码。
+ * Application-layer exception that carries a structured business error code.
  *
- * <p>用于在应用层封装领域异常，或表示带结构化错误码的应用错误。
- * 内嵌的 ErrorCodeLike 将用于错误解析算法判定 HTTP 状态与错误响应。</p>
+ * <p>Used to wrap domain exceptions or represent application errors enriched with
+ * an {@link ErrorCodeLike}. The embedded code guides the error-resolution
+ * algorithm when determining the HTTP status and serialized response.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
 public class ApplicationException extends RuntimeException {
     
-    /** 本异常关联的业务错误码 */
+    /** Business error code associated with this exception. */
     private final ErrorCodeLike errorCode;
     
-    /** 构造函数（错误码 + 消息）。 */
+    /** Creates an exception with the provided error code and message. */
     public ApplicationException(ErrorCodeLike errorCode, String message) {
         super(message);
         if (errorCode == null) {
@@ -25,7 +26,7 @@ public class ApplicationException extends RuntimeException {
         this.errorCode = errorCode;
     }
     
-    /** 构造函数（错误码 + 消息 + 原因）。 */
+    /** Creates an exception with the provided error code, message, and root cause. */
     public ApplicationException(ErrorCodeLike errorCode, String message, Throwable cause) {
         super(message, cause);
         if (errorCode == null) {
@@ -34,7 +35,7 @@ public class ApplicationException extends RuntimeException {
         this.errorCode = errorCode;
     }
     
-    /** 返回关联的业务错误码。 */
+    /** Returns the associated business error code. */
     public ErrorCodeLike getErrorCode() {
         return errorCode;
     }

@@ -22,7 +22,7 @@ class JsonNodeMappingsTest {
         assertThat(JsonNodeMappings.jsonNodeToString(null)).isNull();
         assertThatThrownBy(() -> JsonNodeMappings.jsonStringToNode("{oops"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("JSON 解析失败");
+                .hasMessageContaining("Unable to parse JSON");
     }
 
     @Test

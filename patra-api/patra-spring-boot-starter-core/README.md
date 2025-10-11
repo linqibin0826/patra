@@ -1,28 +1,28 @@
 # patra-spring-boot-starter-core
 
-平台级错误解析与观测基础 Starter，为所有微服务提供统一错误码、Trace 与熔断能力。
+Platform-level starter that delivers unified error resolution, tracing, and circuit-breaker capabilities for every microservice.
 
-## 1. 模块定位
-- **服务/组件作用**：将异常解析为结构化 `ErrorResolution`，并通过拦截器注入 Trace、指标、熔断保护
-- **主要消费者**：所有 Spring Boot 服务（adapter 层）、web/feign/mybatis 等扩展 Starter
-- **架构边界**：专注横切能力；业务定制通过 SPI 扩展，不应在 Starter 中编写具体业务逻辑
+## 1. Module Scope
+- **Responsibilities**: Resolve exceptions into structured `ErrorResolution` objects and enrich them with tracing, metrics, and circuit-breaker interceptors.
+- **Primary Consumers**: All Spring Boot services (adapter layer) and extension starters (web/feign/mybatis).
+- **Boundaries**: Focus on cross-cutting concerns. Business-specific logic should live in SPI extensions, not inside the starter.
 
-## 2. 核心能力
-- **错误解析引擎**：ApplicationException → ErrorMappingContributor → Trait → 命名启发式 → 兜底
-- **解析管线**：Tracing、CircuitBreaker、Metrics 拦截器，可按 `@Order` 扩展
-- **SPI 扩展**：`ErrorMappingContributor`、`ProblemFieldContributor`、`TraceProvider`、`ResolutionInterceptor`
-- **观测指标**：Micrometer 计数/耗时/慢解析/熔断指标
-- **ObjectMapper 桥接**：统一 `JsonMapperHolder` 与 Spring `ObjectMapper`
+## 2. Core Capabilities
+- **Error Resolution Engine**: `ApplicationException` → `ErrorMappingContributor` → trait matching → naming heuristics → fallback.
+- **Resolution Pipeline**: Tracing, circuit-breaker, and metrics interceptors with `@Order`-based extensibility.
+- **SPI Extension Points**: `ErrorMappingContributor`, `ProblemFieldContributor`, `TraceProvider`, `ResolutionInterceptor`.
+- **Observability**: Micrometer metrics for count, duration, slow resolutions, and circuit breakers.
+- **ObjectMapper Bridge**: Synchronizes `JsonMapperHolder` with the Spring-managed `ObjectMapper`.
 
-> 本页包含配置表、示例代码与 FAQ；如需对比其它 Starter，请参考各 Starter 模块 README（`patra-spring-boot-starter-*`、`patra-spring-cloud-starter-feign`）。
+> See configuration tables, examples, and FAQ below. For comparisons with other starters, consult their READMEs (`patra-spring-boot-starter-*`, `patra-spring-cloud-starter-feign`).
 
-## 3. 分层结构与依赖
-- 主要包：`error`（解析引擎）、`pipeline`（拦截器）、`spi`（扩展接口）、`tracing`、`observation`
-- 依赖：`patra-common`、Spring Boot、Micrometer、Resilience4j、Jackson
-- 禁止事项：在 Starter 中硬编码业务错误码或下游服务逻辑
+## 3. Packages & Dependencies
+- Packages: `error` (engine), `pipeline` (interceptors), `spi` (extension interfaces), `tracing`, `observation`.
+- Dependencies: `patra-common`, Spring Boot, Micrometer, Resilience4j, Jackson.
+- Avoid: Hardcoding business error codes or downstream service behavior inside the starter.
 
-## 4. 运行与配置
-- Maven 引入：
+## 4. Usage & Configuration
+- Maven dependency:
   ```xml
   <dependency>
     <groupId>com.papertrace</groupId>
@@ -30,38 +30,38 @@
     <version>0.1.0-SNAPSHOT</version>
   </dependency>
   ```
-- 必要配置：
+- Required configuration:
   ```yaml
   patra:
     error:
-      context-prefix: REG   # 必填：服务级错误码前缀（REG/ING/GATE 等）
+      context-prefix: REG   # Required: service-level error prefix (REG/ING/GATE/etc.)
     tracing:
       header-names: [traceId, X-B3-TraceId, traceparent]
   ```
-- 典型用法：在 `@RestControllerAdvice` 中注入 `ErrorResolutionPipeline` 并将结果组装为 ProblemDetail
+- Typical usage: inject `ErrorResolutionPipeline` in `@RestControllerAdvice` and render a `ProblemDetail` response.
 
-## 5. 观测与运维
-- 指标：`papertrace.error.resolution.duration/count/slow/circuit_breaker`
-- 慢解析监控：通过 `patra.error.observation.slow-threshold-ms` 调整阈值，并可启用 WARN 日志
-- 熔断保护：避免异常风暴；关注 `circuit_breaker` 指标并调整 `failure-rate-threshold`
+## 5. Observability & Operations
+- Metrics: `papertrace.error.resolution.duration/count/slow/circuit_breaker`.
+- Slow-resolution monitoring: adjust `patra.error.observation.slow-threshold-ms` and optionally enable WARN logging.
+- Circuit breaker: prevent error storms; monitor `circuit_breaker` metrics and tune `failure-rate-threshold`.
 
-## 6. 测试策略
-- Spring Boot Test 注入 `ErrorResolutionPipeline`，验证 ApplicationException/Trait/命名启发式路径
-- 模拟 Contributor 覆盖率：自定义异常映射、TraceProvider、拦截器
-- 性能基线：对高频异常执行基准，必要时缓存解析结果
+## 6. Testing Strategy
+- Spring Boot tests injecting `ErrorResolutionPipeline` to verify ApplicationException/trait/heuristic flows.
+- Simulate contributors: custom exception mappings, `TraceProvider`, interceptors.
+- Performance baseline: benchmark high-frequency exceptions; add caching if necessary.
 
-## 7. Roadmap 与风险
-| 项目 | 状态 | 风险/备注 |
-|------|------|-----------|
-| Web ProblemDetail 集成 | 进行中 | 确保字段一致性并与前端协议同步 |
-| ErrorResolution 缓存 | 规划 | 注意内存占用与过期策略 |
-| Trait → 状态动态配置 | 规划 | 需要配置中心支持与灰度验证 |
-| TraceProvider 扩展 | 规划 | 支持 SkyWalking/OpenTelemetry 上下文提取 |
+## 7. Roadmap & Risks
+| Initiative | Status | Notes |
+|------------|--------|-------|
+| Web `ProblemDetail` integration | In progress | Keep response fields aligned with frontend contracts. |
+| ErrorResolution caching | Planned | Watch memory usage and eviction policy. |
+| Trait → status dynamic configuration | Planned | Requires config center support and gradual rollout. |
+| TraceProvider extensions | Planned | Support SkyWalking/OpenTelemetry context extraction. |
 
-主要风险：context-prefix 漏配导致 UNKNOWN 错误码、过度熔断影响解析、扩展 SPI 未注册顺序导致优先级异常。
+Key risks: missing `context-prefix` yields UNKNOWN codes, aggressive circuit breaking impacts resolution, misordered SPI registrations alter priority.
 
-## 8. 参考资料
-- 其他 Starter：`patra-spring-boot-starter-web/README.md`、`patra-spring-cloud-starter-feign/README.md`、`patra-spring-boot-starter-mybatis/README.md`、`patra-spring-boot-starter-expr/README.md`
-- Web 层落地：`patra-spring-boot-starter-web/README.md`
-- Feign 错误处理：`patra-spring-cloud-starter-feign/README.md`
-- 错误规范：`docs/standards/platform-error-handling.md`
+## 8. References
+- Other starters: `patra-spring-boot-starter-web/README.md`, `patra-spring-cloud-starter-feign/README.md`, `patra-spring-boot-starter-mybatis/README.md`, `patra-spring-boot-starter-expr/README.md`
+- Web integration: `patra-spring-boot-starter-web/README.md`
+- Feign error handling: `patra-spring-cloud-starter-feign/README.md`
+- Error-handling guidelines: `docs/standards/platform-error-handling.md`

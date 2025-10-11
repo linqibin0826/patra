@@ -30,14 +30,14 @@ class CircuitBreakerInterceptorTest {
         props.setContextPrefix("ING");
         CircuitBreakerInterceptor interceptor = new CircuitBreakerInterceptor(cb, recorder, props);
 
-        // 正常路径：返回下游结果
+        // Closed state: delegate to downstream supplier
         ErrorResolution ok = interceptor.intercept(new RuntimeException(), ex -> new ErrorResolution(new com.patra.common.error.codes.ErrorCodeLike() {
             @Override public String code() { return "ING-0404"; }
             @Override public int httpStatus() { return 404; }
         }, 404));
         assertThat(ok.httpStatus()).isEqualTo(404);
 
-        // 打开熔断后：返回 503 兜底
+        // Open state: return fallback 503 response
         cb.transitionToOpenState();
         ErrorResolution fb = interceptor.intercept(new RuntimeException(), ex -> new ErrorResolution(new com.patra.common.error.codes.ErrorCodeLike() {
             @Override public String code() { return "ING-0404"; }

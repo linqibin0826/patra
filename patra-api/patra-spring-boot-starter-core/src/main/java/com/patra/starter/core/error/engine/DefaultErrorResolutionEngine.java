@@ -13,17 +13,16 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 默认错误解析引擎实现，负责将异常映射到统一错误码与 HTTP 状态。
+ * Default implementation of {@link ErrorResolutionEngine} that maps exceptions to unified error codes and HTTP statuses.
  *
- * <p>解析顺序：
- * 1. {@link com.patra.common.error.ApplicationException}
- * 2. {@link com.patra.starter.core.error.spi.ErrorMappingContributor}
- * 3. {@link com.patra.common.error.trait.HasErrorTraits}
- * 4. 命名启发式
- * 5. 兜底策略</p>
- *
- * @author linqibin
- * @since 0.2.0
+ * <p>Resolution order:</p>
+ * <ol>
+ *   <li>{@link ApplicationException}</li>
+ *   <li>{@link ErrorMappingContributor}</li>
+ *   <li>{@link HasErrorTraits}</li>
+ *   <li>Naming heuristics</li>
+ *   <li>Fallback strategy</li>
+ * </ol>
  */
 @Slf4j
 public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
@@ -48,7 +47,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     @Override
     public ErrorResolution resolve(Throwable exception) {
         if (exception == null) {
-            log.warn("收到空异常，使用兜底错误码");
+            log.warn("Received null exception, returning fallback error code");
             return fallbackServerError();
         }
         return resolveWithCause(exception, 0);
@@ -56,14 +55,14 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
     private ErrorResolution resolveWithCause(Throwable exception, int depth) {
         if (depth > maxCauseDepth) {
-            log.warn("超过最大因果链深度 {}，直接返回服务器错误", maxCauseDepth);
+            log.warn("Exceeded max cause depth {} — returning server error", maxCauseDepth);
             ErrorCodeLike code = createCode("0500");
             return new ErrorResolution(code, code.httpStatus());
         }
 
         if (exception instanceof ApplicationException appEx) {
             ErrorCodeLike errorCode = appEx.getErrorCode();
-            log.debug("按 ApplicationException 直接解析 -> {}", errorCode.code());
+            log.debug("Resolved via ApplicationException -> {}", errorCode.code());
             return new ErrorResolution(errorCode, errorCode.httpStatus());
         }
 
@@ -72,11 +71,13 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
                 var mapped = contributor.mapException(exception);
                 if (mapped.isPresent()) {
                     ErrorCodeLike code = mapped.get();
-                    log.debug("通过 ErrorMappingContributor({}) 解析成功 -> {}", contributor.getClass().getSimpleName(), code.code());
+                    log.debug("Resolved by ErrorMappingContributor({}) -> {}",
+                            contributor.getClass().getSimpleName(), code.code());
                     return new ErrorResolution(code, code.httpStatus());
                 }
             } catch (Exception ex) {
-                log.warn("ErrorMappingContributor({}) 处理异常失败: {}", contributor.getClass().getSimpleName(), ex.getMessage());
+                log.warn("ErrorMappingContributor({}) failed to process exception: {}",
+                        contributor.getClass().getSimpleName(), ex.getMessage());
             }
         }
 
@@ -84,7 +85,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
             Set<ErrorTrait> traits = hasErrorTraits.getErrorTraits();
             if (traits != null && !traits.isEmpty()) {
                 ErrorCodeLike code = mapTraitsToCode(traits);
-                log.debug("通过 Trait 解析 -> {}", code.code());
+                log.debug("Resolved via traits -> {}", code.code());
                 return new ErrorResolution(code, code.httpStatus());
             }
         }
@@ -93,7 +94,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
             String className = exception.getClass().getSimpleName();
             ErrorResolution resolution = resolveByNamingConvention(className);
             if (resolution != null) {
-                log.debug("通过命名启发式解析 {} -> {}", className, resolution.errorCode().code());
+                log.debug("Resolved via naming heuristic {} -> {}", className, resolution.errorCode().code());
                 return resolution;
             }
         }
@@ -113,6 +114,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         }
         return fallbackServerError();
     }
+
     private ErrorCodeLike mapTraitsToCode(Set<ErrorTrait> traits) {
         if (traits.contains(ErrorTrait.NOT_FOUND)) { return createCode("0404"); }
         if (traits.contains(ErrorTrait.CONFLICT)) { return createCode("0409"); }

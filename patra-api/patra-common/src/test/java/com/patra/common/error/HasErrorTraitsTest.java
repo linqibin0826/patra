@@ -25,13 +25,13 @@ class HasErrorTraitsTest {
 
     @Test
     void getErrorTraits_shouldExposeSemanticClassifications() {
-        HasErrorTraits ex = new TraitException("资源不存在");
+        HasErrorTraits ex = new TraitException("Resource not found");
         assertThat(ex.getErrorTraits()).containsExactlyInAnyOrder(ErrorTrait.NOT_FOUND, ErrorTrait.TIMEOUT);
     }
 
     @Test
     void getErrorTraits_shouldBeImmutableSet() {
-        HasErrorTraits ex = new TraitException("资源不存在");
+        HasErrorTraits ex = new TraitException("Resource not found");
         assertThatThrownBy(() -> ex.getErrorTraits().add(ErrorTrait.CONFLICT))
                 .isInstanceOf(UnsupportedOperationException.class);
     }

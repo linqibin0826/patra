@@ -9,13 +9,19 @@ import io.micrometer.core.instrument.Timer;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 基于 Micrometer 的观测实现。
+ * {@link ErrorObservationRecorder} backed by Micrometer metrics.
  */
 public class MicrometerErrorObservationRecorder implements ErrorObservationRecorder {
 
     private final MeterRegistry meterRegistry;
     private final String contextPrefix;
 
+    /**
+     * Creates a recorder that publishes metrics using the supplied {@link MeterRegistry}.
+     *
+     * @param meterRegistry    registry used to publish metrics
+     * @param errorProperties  configuration providing the context prefix for metric tags
+     */
     public MicrometerErrorObservationRecorder(MeterRegistry meterRegistry, ErrorProperties errorProperties) {
         this.meterRegistry = meterRegistry;
         String prefix = errorProperties.getContextPrefix();
@@ -23,6 +29,7 @@ public class MicrometerErrorObservationRecorder implements ErrorObservationRecor
     }
 
     @Override
+    @SuppressWarnings("resource")
     public void recordResolution(Throwable exception, ErrorResolution resolution, long durationMs, boolean slow) {
         String exceptionName = exception == null ? "Null" : exception.getClass().getSimpleName();
         Timer.builder("papertrace.error.resolution.duration")

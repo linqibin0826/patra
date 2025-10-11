@@ -4,10 +4,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * HTTP 对齐类（0xxx 段）标准错误码工厂。
+ * Factory for HTTP-aligned standard error codes (the 0xxx segment).
  *
- * <p>动机：不同服务的错误码前缀不同（如 ING/REG），但 0xxx 与 HTTP 语义一一对应，
- * 因此提供一个通用工厂按前缀生成标准错误码对象，避免在各模块复制粘贴。</p>
+ * <p>Each service owns a distinct prefix (for example, ING or REG) while the
+ * 0xxx suffixes map directly to HTTP semantics. This factory generates
+ * prefixed error-code objects to avoid duplication across modules.</p>
  */
 public final class HttpStdErrors {
 
@@ -16,9 +17,11 @@ public final class HttpStdErrors {
     private static final Map<String, Group> CACHE = new ConcurrentHashMap<>();
 
     /**
-     * 获取某个前缀（如 "ING"、"REG"）对应的一组标准 HTTP 错误码。
+     * Returns a lazily cached group of standard HTTP error codes for the given prefix.
      *
-     * @param prefix 错误码前缀，空或空白将回退为 "UNKNOWN"
+     * @param prefix error-code prefix (for example, {@code ING} or {@code REG});
+     *     blank values fall back to {@code UNKNOWN}
+     * @return group of prefixed standard HTTP error codes
      */
     public static Group of(String prefix) {
         String p = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;
@@ -26,7 +29,7 @@ public final class HttpStdErrors {
     }
 
     /**
-     * 标准 HTTP 错误码集合（绑定指定前缀）。
+     * Group of standard HTTP error codes bound to a specific prefix.
      */
     public static final class Group {
         private final String prefix;
