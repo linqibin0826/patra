@@ -12,10 +12,10 @@
 
     <artifactId>patra-egress-gateway-infra</artifactId>
     <name>Patra Egress Gateway Infra</name>
-    <description>Outbound 实现（HTTP 客户端、弹性能力、配置加载）</description>
+    <description>Outbound implementations (HTTP client, resilience capabilities, configuration loading)</description>
 
     <dependencies>
-        <!-- 内部依赖 -->
+        <!-- Internal modules -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-egress-gateway-domain</artifactId>

@@ -13,11 +13,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("SensitiveHeaderMasker 单元测试")
+@DisplayName("SensitiveHeaderMasker unit tests")
 class SensitiveHeaderMaskerTest {
 
     @Test
-    @DisplayName("应该脱敏 Authorization 头")
+    @DisplayName("Should mask the Authorization header")
     void shouldMaskAuthorizationHeader() {
         // Given
         Map<String, String> headers = Map.of(
@@ -34,7 +34,7 @@ class SensitiveHeaderMaskerTest {
     }
 
     @Test
-    @DisplayName("应该脱敏 API-Key 头（不区分大小写）")
+    @DisplayName("Should mask API-Key headers regardless of case")
     void shouldMaskApiKeyHeaderCaseInsensitive() {
         // Given
         Map<String, String> headers = Map.of(
@@ -53,7 +53,7 @@ class SensitiveHeaderMaskerTest {
     }
 
     @Test
-    @DisplayName("应该脱敏 Cookie 和 Set-Cookie 头")
+    @DisplayName("Should mask Cookie and Set-Cookie headers")
     void shouldMaskCookieHeaders() {
         // Given
         Map<String, String> headers = Map.of(
@@ -70,7 +70,7 @@ class SensitiveHeaderMaskerTest {
     }
 
     @Test
-    @DisplayName("应该脱敏所有已知的敏感头")
+    @DisplayName("Should mask all known sensitive headers")
     void shouldMaskAllKnownSensitiveHeaders() {
         // Given
         Map<String, String> headers = Map.of(
@@ -93,7 +93,7 @@ class SensitiveHeaderMaskerTest {
     }
 
     @Test
-    @DisplayName("应该保留非敏感头的原始值")
+    @DisplayName("Should retain original values for non-sensitive headers")
     void shouldPreserveNonSensitiveHeaders() {
         // Given
         Map<String, String> headers = Map.of(
@@ -114,7 +114,7 @@ class SensitiveHeaderMaskerTest {
     }
 
     @Test
-    @DisplayName("应该处理 null 和空 map")
+    @DisplayName("Should handle null and empty maps")
     void shouldHandleNullAndEmptyMap() {
         // When & Then: null map
         Map<String, String> maskedNull = SensitiveHeaderMasker.mask(null);
@@ -126,7 +126,7 @@ class SensitiveHeaderMaskerTest {
     }
 
     @Test
-    @DisplayName("应该处理混合敏感和非敏感头")
+    @DisplayName("Should handle mixes of sensitive and non-sensitive headers")
     void shouldHandleMixedHeaders() {
         // Given
         Map<String, String> headers = Map.of(

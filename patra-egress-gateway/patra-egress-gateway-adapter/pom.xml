@@ -15,7 +15,7 @@
     <description>Inbound adapters (REST Controller)</description>
 
     <dependencies>
-        <!-- 内部依赖 -->
+        <!-- Internal modules -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-egress-gateway-api</artifactId>

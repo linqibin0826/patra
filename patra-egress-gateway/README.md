@@ -1,29 +1,29 @@
 # patra-egress-gateway
 
-## 概述
+## Overview
 
-patra-egress-gateway（南向网关）是 Papertrace 项目中负责统一管理所有出站外部服务调用的微服务。它为上游业务方提供标准化的外部服务访问能力，包括医学文献数据源（PubMed/PMC/Crossref等）、对象存储服务（OSS/MinIO/S3等）、邮件服务、短信/验证码服务等。
+`patra-egress-gateway` (the southbound gateway) is the Papertrace microservice responsible for centrally orchestrating every outbound call to external systems. It offers upstream services a uniform façade for interacting with medical literature data sources (PubMed/PMC/Crossref, etc.), object storage services (OSS/MinIO/S3, etc.), email providers, SMS/OTP gateways, and more.
 
-## 核心职责
+## Core Responsibilities
 
-1. **透传外部服务调用**：接收业务方的请求参数和认证信息，原样透传给外部服务
-2. **弹性能力提供**：提供限流、重试、熔断、超时等通用弹性能力
-3. **响应语义统一**：将外部服务的响应封装为统一的语义结构
-4. **配置管理**：管理系统级弹性配置，支持业务方覆盖（不超过最大值）
-5. **可观测性**：记录每次外部调用的详细日志和指标
+1. **Proxy external requests**: Accept request payloads and authentication material from upstream systems and relay them transparently.
+2. **Provide resilience**: Offer shared capabilities such as rate limiting, retries, circuit breaking, and timeout management.
+3. **Normalize responses**: Wrap provider-specific responses in a consistent semantic model.
+4. **Manage configuration**: Maintain system-wide defaults while allowing bounded overrides per consumer.
+5. **Enable observability**: Capture detailed logs, metrics, and traces for every outbound invocation.
 
-## 非职责
+## Out of Scope
 
-- 不进行业务数据转换和处理
-- 不包含业务规则判断
-- 不持久化业务数据
-- 不解析外部服务的业务数据内容
+- Performing business-level data transformation.
+- Embedding domain-specific decision logic.
+- Persisting business data.
+- Parsing or interpreting provider response payloads.
 
-## 模块结构
+## Module Layout
 
 ```
 patra-egress-gateway/
-├── patra-egress-gateway-api/          # 错误码、外部 DTOs
+├── patra-egress-gateway-api/          # Error codes and external DTOs
 ├── patra-egress-gateway-adapter/      # Inbound adapters (REST)
 ├── patra-egress-gateway-app/          # Use case orchestration
 ├── patra-egress-gateway-domain/       # Aggregates, entities, domain ports
@@ -31,39 +31,37 @@ patra-egress-gateway/
 └── patra-egress-gateway-boot/         # Spring Boot application
 ```
 
-## 技术栈
+## Technology Stack
 
 - **Java**: 21
 - **Spring Boot**: 3.2.4
 - **Spring Cloud**: 2023.0.1
-- **Resilience4j**: 弹性能力实现（限流、重试、熔断）
-- **Spring RestClient**: HTTP 客户端
-- **Micrometer**: 指标收集
-- **Lombok**: 代码生成
-- **Hutool**: 工具类库
+- **Resilience4j**: Resilience primitives (rate limiters, retries, circuit breakers)
+- **Spring RestClient**: Declarative HTTP client
+- **Micrometer**: Metrics export
+- **Lombok**: Boilerplate reduction
+- **Hutool**: Utility toolkit
 
-## 快速开始
+## Getting Started
 
-### 编译
+### Build
 
 ```bash
-# 编译模块
 mvn -q -DskipTests compile
 
-# 打包
+# Package the module
 mvn clean package -DskipTests
 ```
 
-### 运行
+### Run
 
 ```bash
-# 运行 Boot 模块
 mvn -pl patra-egress-gateway/patra-egress-gateway-boot spring-boot:run
 ```
 
-### 配置
+### Configuration
 
-主要配置项在 `application.yaml` 中：
+Key settings live in `application.yaml`:
 
 ```yaml
 patra:
@@ -79,9 +77,9 @@ patra:
         rateLimit: 100
 ```
 
-## 使用示例
+## Usage Examples
 
-### 调用 PubMed API
+### Call the PubMed API
 
 ```java
 ExternalCallRequest request = ExternalCallRequest.builder()
@@ -98,7 +96,7 @@ ExternalCallRequest request = ExternalCallRequest.builder()
 ExternalCallResponse response = egressClient.call(request);
 ```
 
-### 调用 OSS API
+### Call the OSS API
 
 ```java
 ExternalCallRequest request = ExternalCallRequest.builder()
@@ -118,22 +116,22 @@ ExternalCallRequest request = ExternalCallRequest.builder()
 ExternalCallResponse response = egressClient.call(request);
 ```
 
-## 详细文档
+## Further Reading
 
-更多详细信息请参考：
+For additional context, consult:
 
-- [需求文档](.kiro/specs/patra-egress-gateway/requirements.md)
-- [设计文档](.kiro/specs/patra-egress-gateway/design.md)
-- [任务列表](.kiro/specs/patra-egress-gateway/tasks.md)
+- [Requirements](.kiro/specs/patra-egress-gateway/requirements.md)
+- [Design](.kiro/specs/patra-egress-gateway/design.md)
+- [Task Tracker](.kiro/specs/patra-egress-gateway/tasks.md)
 
-## 版本
+## Versioning
 
-当前版本：0.1.0-SNAPSHOT
+Current version: `0.1.0-SNAPSHOT`
 
-## 作者
+## Authors
 
 @linqibin
 
-## 许可
+## License
 
 Copyright © 2025 Papertrace

@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(classes = {YamlConfigRepository.class})
 @EnableConfigurationProperties(EgressProperties.class)
 @ActiveProfiles("test")
-@DisplayName("YamlConfigRepository 集成测试")
+@DisplayName("YamlConfigRepository integration tests")
 class YamlConfigRepositoryTest {
 
     @Autowired
@@ -33,7 +33,7 @@ class YamlConfigRepositoryTest {
     private EgressProperties egressProperties;
 
     @Test
-    @DisplayName("loadSystemDefaultConfig() - 应该从YAML加载系统默认配置")
+    @DisplayName("loadSystemDefaultConfig() should load the system defaults from YAML")
     void loadSystemDefaultConfig_shouldLoadFromYaml() {
         // When
         ResilienceConfig config = yamlConfigRepository.loadSystemDefaultConfig();
@@ -51,7 +51,7 @@ class YamlConfigRepositoryTest {
     }
 
     @Test
-    @DisplayName("loadSystemMaxConfig() - 应该从YAML加载系统最大配置")
+    @DisplayName("loadSystemMaxConfig() should load the system maxima from YAML")
     void loadSystemMaxConfig_shouldLoadFromYaml() {
         // When
         ResilienceConfig config = yamlConfigRepository.loadSystemMaxConfig();
@@ -72,7 +72,7 @@ class YamlConfigRepositoryTest {
     }
 
     @Test
-    @DisplayName("loadSystemDefaultConfig() - 应该返回不可变的白名单列表")
+    @DisplayName("loadSystemDefaultConfig() should return an immutable whitelist")
     void loadSystemDefaultConfig_shouldReturnImmutableWhitelist() {
         // When
         ResilienceConfig config = yamlConfigRepository.loadSystemDefaultConfig();
@@ -83,7 +83,7 @@ class YamlConfigRepositoryTest {
     }
 
     @Test
-    @DisplayName("loadSystemMaxConfig() - 应该返回不可变的白名单列表")
+    @DisplayName("loadSystemMaxConfig() should return an immutable whitelist")
     void loadSystemMaxConfig_shouldReturnImmutableWhitelist() {
         // When
         ResilienceConfig config = yamlConfigRepository.loadSystemMaxConfig();
@@ -94,7 +94,7 @@ class YamlConfigRepositoryTest {
     }
 
     @Test
-    @DisplayName("EgressProperties - 应该正确加载全局配置")
+    @DisplayName("EgressProperties should load global configuration correctly")
     void egressProperties_shouldLoadGlobalConfig() {
         // Then
         assertThat(egressProperties).isNotNull();
@@ -103,7 +103,7 @@ class YamlConfigRepositoryTest {
     }
 
     @Test
-    @DisplayName("配置加载 - 默认配置的超时应小于最大配置")
+    @DisplayName("Configuration loading - default timeout should be less than the maximum")
     void configLoading_defaultTimeoutShouldBeLessThanMax() {
         // When
         ResilienceConfig defaultConfig = yamlConfigRepository.loadSystemDefaultConfig();
@@ -114,7 +114,7 @@ class YamlConfigRepositoryTest {
     }
 
     @Test
-    @DisplayName("配置加载 - 默认配置的重试次数应小于等于最大配置")
+    @DisplayName("Configuration loading - default retries should be less than or equal to the maximum")
     void configLoading_defaultRetriesShouldBeLessThanOrEqualToMax() {
         // When
         ResilienceConfig defaultConfig = yamlConfigRepository.loadSystemDefaultConfig();

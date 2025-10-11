@@ -4,9 +4,8 @@ import com.patra.egress.domain.model.vo.ResilienceConfig;
 import com.patra.egress.domain.port.ConfigPort;
 
 /**
- * 弹性配置聚合根
- * 管理弹性配置的加载、合并和校验
- * 
+ * Aggregate responsible for loading, validating, and merging resilience configuration.
+ *
  * @author linqibin
  * @since 0.1.0
  */
@@ -16,10 +15,10 @@ public class ResilienceConfigAggregate {
     private final ResilienceConfig systemMaxConfig;
     
     /**
-     * 私有构造函数，通过静态工厂方法创建
-     * 
-     * @param systemDefaultConfig 系统默认配置
-     * @param systemMaxConfig 系统最大配置
+     * Private constructor invoked by {@link #loadSystemConfig(ConfigPort)}.
+     *
+     * @param systemDefaultConfig system-wide default configuration
+     * @param systemMaxConfig     system-wide maximum configuration
      */
     private ResilienceConfigAggregate(
         ResilienceConfig systemDefaultConfig,
@@ -30,16 +29,16 @@ public class ResilienceConfigAggregate {
     }
     
     /**
-     * 加载系统级配置（静态工厂方法）
-     * 
-     * @param configPort 配置端口
-     * @return 弹性配置聚合根
+     * Load both default and maximum resilience configurations from the provided port.
+     *
+     * @param configPort domain port used to access configuration sources
+     * @return aggregate encapsulating the resolved configurations
      */
     public static ResilienceConfigAggregate loadSystemConfig(ConfigPort configPort) {
         ResilienceConfig defaultConfig = configPort.loadSystemDefaultConfig();
         ResilienceConfig maxConfig = configPort.loadSystemMaxConfig();
         
-        // 校验系统配置
+        // Validate the resolved system-level configuration values.
         defaultConfig.validate();
         maxConfig.validate();
         
@@ -47,28 +46,28 @@ public class ResilienceConfigAggregate {
     }
     
     /**
-     * 合并业务方配置（不超过系统最大值）
-     * 
-     * @param callerConfig 业务方传递的配置，可以为null
-     * @return 合并后的配置
+     * Merge caller-provided configuration while enforcing system maximums.
+     *
+     * @param callerConfig configuration overrides supplied by the caller; may be {@code null}
+     * @return merged configuration bounded by the system maxima
      */
     public ResilienceConfig mergeWithCallerConfig(ResilienceConfig callerConfig) {
-        // 如果业务方未传递配置，使用系统默认配置
+        // Fall back to the system default when no caller override is supplied.
         if (callerConfig == null) {
             return systemDefaultConfig;
         }
         
-        // 校验业务方配置
+        // Validate caller overrides before merging.
         callerConfig.validate();
         
-        // 合并配置，确保不超过系统最大值
+        // Merge with the system maxima to stay within allowed guardrails.
         return callerConfig.mergeWithMax(systemMaxConfig);
     }
     
     /**
-     * 校验配置有效性
-     * 
-     * @throws IllegalArgumentException 如果配置无效
+     * Validate both system-level configurations.
+     *
+     * @throws IllegalArgumentException when either configuration is invalid
      */
     public void validate() {
         systemDefaultConfig.validate();
@@ -76,18 +75,18 @@ public class ResilienceConfigAggregate {
     }
     
     /**
-     * 获取系统默认配置
-     * 
-     * @return 系统默认配置
+     * Retrieve the system default configuration.
+     *
+     * @return default resilience configuration
      */
     public ResilienceConfig getSystemDefaultConfig() {
         return systemDefaultConfig;
     }
     
     /**
-     * 获取系统最大配置
-     * 
-     * @return 系统最大配置
+     * Retrieve the system maximum configuration.
+     *
+     * @return maximum resilience configuration
      */
     public ResilienceConfig getSystemMaxConfig() {
         return systemMaxConfig;

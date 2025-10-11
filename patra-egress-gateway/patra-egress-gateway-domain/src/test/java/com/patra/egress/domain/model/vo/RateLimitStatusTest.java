@@ -14,11 +14,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("RateLimitStatus 值对象测试")
+@DisplayName("RateLimitStatus value object tests")
 class RateLimitStatusTest {
 
     @Test
-    @DisplayName("isLimited() - 应该在remaining为0时返回true")
+    @DisplayName("isLimited() should return true when remaining is zero")
     void isLimited_shouldReturnTrue_whenRemainingIsZero() {
         // Given
         RateLimitStatus status = new RateLimitStatus(
@@ -33,12 +33,12 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("isLimited() - 应该在remaining为负数时返回true")
+    @DisplayName("isLimited() should return true when remaining is negative")
     void isLimited_shouldReturnTrue_whenRemainingIsNegative() {
         // Given
         RateLimitStatus status = new RateLimitStatus(
             100,
-            0, // 不能为负数，构造函数会校验
+            0, // Cannot be negative; the constructor validates this
             Duration.ofSeconds(60),
             null
         );
@@ -48,7 +48,7 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("isLimited() - 应该在remaining大于0时返回false")
+    @DisplayName("isLimited() should return false when remaining is greater than zero")
     void isLimited_shouldReturnFalse_whenRemainingIsPositive() {
         // Given
         RateLimitStatus status = new RateLimitStatus(
@@ -63,7 +63,7 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("构造函数 - 应该在limit为负数时抛出异常")
+    @DisplayName("Constructor should throw when limit is negative")
     void constructor_shouldThrowException_whenLimitIsNegative() {
         // When & Then
         assertThatThrownBy(() -> new RateLimitStatus(
@@ -77,7 +77,7 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("构造函数 - 应该在remaining为负数时抛出异常")
+    @DisplayName("Constructor should throw when remaining is negative")
     void constructor_shouldThrowException_whenRemainingIsNegative() {
         // When & Then
         assertThatThrownBy(() -> new RateLimitStatus(
@@ -91,7 +91,7 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("构造函数 - 应该在resetAfter为null时抛出异常")
+    @DisplayName("Constructor should throw when resetAfter is null")
     void constructor_shouldThrowException_whenResetAfterIsNull() {
         // When & Then
         assertThatThrownBy(() -> new RateLimitStatus(
@@ -105,7 +105,7 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("构造函数 - 应该在resetAfter为负数时抛出异常")
+    @DisplayName("Constructor should throw when resetAfter is negative")
     void constructor_shouldThrowException_whenResetAfterIsNegative() {
         // When & Then
         assertThatThrownBy(() -> new RateLimitStatus(
@@ -119,7 +119,7 @@ class RateLimitStatusTest {
     }
 
     @Test
-    @DisplayName("构造函数 - 应该在所有参数有效时创建成功")
+    @DisplayName("Constructor should succeed when all parameters are valid")
     void constructor_shouldCreateSuccessfully_whenAllParametersValid() {
         // Given
         ExternalRateLimitInfo externalInfo = new ExternalRateLimitInfo(200, 150, 1672531200L);

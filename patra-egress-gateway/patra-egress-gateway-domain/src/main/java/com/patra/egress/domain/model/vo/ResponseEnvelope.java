@@ -3,17 +3,16 @@ package com.patra.egress.domain.model.vo;
 import java.util.Map;
 
 /**
- * 响应封装值对象
- * 统一的响应语义结构
- * 
- * @param success 成功/失败标识（基于HTTP状态码）
- * @param statusCode HTTP状态码
- * @param headers 白名单过滤后的响应头
- * @param body 原始响应Body
- * @param bodyHash 响应Body的哈希值
- * @param rateLimitStatus 限流状态
- * @param retryAdvice 重试建议
- * @param snapshotMode 快照模式
+ * Unified response envelope returned by the egress gateway.
+ *
+ * @param success         indicates whether the call succeeded (based on HTTP status code)
+ * @param statusCode      HTTP status code returned by the provider
+ * @param headers         response headers filtered through the whitelist
+ * @param body            provider response body
+ * @param bodyHash        SHA-256 hash of the response body for auditing
+ * @param rateLimitStatus gateway and provider rate limit information
+ * @param retryAdvice     retry recommendation for the caller
+ * @param snapshotMode    snapshot mode indicator (e.g. metadata only vs. metadata plus body)
  * @author linqibin
  * @since 0.1.0
  */
@@ -28,10 +27,10 @@ public record ResponseEnvelope(
     String snapshotMode
 ) {
     /**
-     * 构造函数，确保不可变性
+     * Canonical constructor that ensures header immutability.
      */
     public ResponseEnvelope {
-        // 创建不可变副本
+        // Create an immutable defensive copy of the headers to avoid mutation.
         headers = headers != null ? Map.copyOf(headers) : Map.of();
     }
 }

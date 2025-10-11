@@ -5,12 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 重试建议值对象
- * 根据响应状态码和Retry-After头生成重试建议
- * 
- * @param retryable 是否可重试
- * @param suggestedDelay 建议延迟时间
- * @param reason 重试建议原因
+ * Value object describing whether an outbound call should be retried and when.
+ *
+ * @param retryable      indicates if a retry is recommended
+ * @param suggestedDelay backoff duration before attempting the retry
+ * @param reason         rationale for the recommendation
  * @author linqibin
  * @since 0.1.0
  */
@@ -20,25 +19,25 @@ public record RetryAdvice(
     String reason
 ) {
     /**
-     * 创建不可重试的建议
+     * Create a default recommendation indicating the request should not be retried.
      *
-     * @return 不可重试的 RetryAdvice
+     * @return {@link RetryAdvice} representing a non-retryable outcome
      */
     public static RetryAdvice notRetryable() {
         return new RetryAdvice(false, Duration.ZERO, "Not retryable");
     }
 
     /**
-     * 根据响应和配置生成重试建议
+     * Build a retry recommendation based on the provider response and resilience configuration.
      *
-     * @param response HTTP响应
-     * @param config 弹性配置
-     * @return 重试建议
+     * @param response HTTP response returned by the provider
+     * @param config   resilience configuration applied to the call
+     * @return retry recommendation tailored to the response
      */
     public static RetryAdvice fromResponse(HttpResponse response, ResilienceConfig config) {
         int statusCode = response.statusCode();
         
-        // 429 Too Many Requests 或 503 Service Unavailable
+        // Treat 429 Too Many Requests and 503 Service Unavailable as transient errors.
         if (statusCode == 429 || statusCode == 503) {
             Duration delay = extractRetryAfter(response.headers())
                 .orElse(config.retryBackoff());
@@ -48,26 +47,25 @@ public record RetryAdvice(
             return new RetryAdvice(true, delay, reason);
         }
         
-        // 5xx 服务器错误（除了503已处理）
+        // All other 5xx responses are considered retryable server errors.
         if (statusCode >= 500) {
             return new RetryAdvice(true, config.retryBackoff(), "Server error");
         }
         
-        // 408 Request Timeout
+        // Propagate retry advice for 408 Request Timeout as well.
         if (statusCode == 408) {
             return new RetryAdvice(true, config.retryBackoff(), "Request timeout");
         }
         
-        // 其他状态码不建议重试
+        // Other status codes are not retried.
         return new RetryAdvice(false, Duration.ZERO, "Not retryable");
     }
     
     /**
-     * 从响应头中提取Retry-After值
-     * HTTP响应头是大小写不敏感的
+     * Extract the {@code Retry-After} header in a case-insensitive manner.
      *
-     * @param headers 响应头
-     * @return 延迟时间，如果没有Retry-After头则返回空
+     * @param headers response headers
+     * @return optional delay derived from the header
      */
     private static java.util.Optional<Duration> extractRetryAfter(Map<String, List<String>> headers) {
         if (headers == null || headers.isEmpty()) {
@@ -82,31 +80,30 @@ public record RetryAdvice(
         String retryAfter = retryAfterValues.get(0);
 
         try {
-            // 尝试解析为秒数
+            // First attempt to parse the header as a numeric second value.
             long seconds = Long.parseLong(retryAfter);
             return java.util.Optional.of(Duration.ofSeconds(seconds));
         } catch (NumberFormatException e) {
-            // 如果不是数字，可能是HTTP日期格式，暂不支持
+            // If the header is not numeric, it may use HTTP date syntax, which is intentionally not parsed yet.
             return java.util.Optional.empty();
         }
     }
 
     /**
-     * 忽略大小写获取响应头值
-     * HTTP响应头名称是大小写不敏感的
+     * Retrieve a header value using a case-insensitive lookup.
      *
-     * @param headers 响应头映射
-     * @param headerName 响应头名称
-     * @return 响应头值列表，如果不存在则返回null
+     * @param headers    response headers
+     * @param headerName header key to retrieve
+     * @return list of header values or {@code null} when absent
      */
     private static List<String> getHeaderIgnoreCase(Map<String, List<String>> headers, String headerName) {
-        // 先尝试精确匹配（性能优化）
+        // Prefer an exact key match for performance reasons.
         List<String> values = headers.get(headerName);
         if (values != null) {
             return values;
         }
 
-        // 如果精确匹配失败，进行忽略大小写匹配
+        // Fall back to a case-insensitive iteration when casing differs.
         for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
             if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(headerName)) {
                 return entry.getValue();

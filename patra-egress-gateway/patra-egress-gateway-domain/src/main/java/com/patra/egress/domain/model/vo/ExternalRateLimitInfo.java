@@ -4,12 +4,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 外部服务限流信息值对象
- * 从外部服务响应头中提取限流信息
- * 
- * @param limit 限流上限（X-RateLimit-Limit）
- * @param remaining 剩余配额（X-RateLimit-Remaining）
- * @param resetTimestamp 重置时间戳（X-RateLimit-Reset）
+ * Value object representing rate limit details returned by an external provider.
+ *
+ * @param limit          maximum allowed requests (X-RateLimit-Limit)
+ * @param remaining      remaining quota (X-RateLimit-Remaining)
+ * @param resetTimestamp epoch second when the quota resets (X-RateLimit-Reset)
  * @author linqibin
  * @since 0.1.0
  */
@@ -19,11 +18,10 @@ public record ExternalRateLimitInfo(
     Long resetTimestamp
 ) {
     /**
-     * 从响应头提取限流信息
-     * HTTP响应头是大小写不敏感的，需要进行忽略大小写的匹配
+     * Derive rate limit information from HTTP response headers. Header names are treated case-insensitively.
      *
-     * @param headers 响应头
-     * @return 外部限流信息，如果响应头中没有限流信息则返回null
+     * @param headers response headers returned by the provider
+     * @return populated {@link ExternalRateLimitInfo} or {@code null} when no limit information is present
      */
     public static ExternalRateLimitInfo fromHeaders(Map<String, List<String>> headers) {
         if (headers == null || headers.isEmpty()) {
@@ -34,7 +32,7 @@ public record ExternalRateLimitInfo(
         Integer remaining = extractIntHeader(headers, "X-RateLimit-Remaining");
         Long resetTimestamp = extractLongHeader(headers, "X-RateLimit-Reset");
 
-        // 如果所有字段都为null，返回null
+        // If the provider does not supply any rate limit hints, return null to signal absence.
         if (limit == null && remaining == null && resetTimestamp == null) {
             return null;
         }
@@ -43,11 +41,11 @@ public record ExternalRateLimitInfo(
     }
 
     /**
-     * 从响应头中提取整数值（忽略大小写）
+     * Extract an integer header value using a case-insensitive lookup.
      *
-     * @param headers 响应头映射
-     * @param headerName 响应头名称
-     * @return 提取的整数值，如果不存在或解析失败则返回null
+     * @param headers    response headers
+     * @param headerName header key to retrieve
+     * @return parsed integer value or {@code null} when unavailable or invalid
      */
     private static Integer extractIntHeader(Map<String, List<String>> headers, String headerName) {
         List<String> values = getHeaderIgnoreCase(headers, headerName);
@@ -63,11 +61,11 @@ public record ExternalRateLimitInfo(
     }
 
     /**
-     * 从响应头中提取长整数值（忽略大小写）
+     * Extract a long header value using a case-insensitive lookup.
      *
-     * @param headers 响应头映射
-     * @param headerName 响应头名称
-     * @return 提取的长整数值，如果不存在或解析失败则返回null
+     * @param headers    response headers
+     * @param headerName header key to retrieve
+     * @return parsed long value or {@code null} when unavailable or invalid
      */
     private static Long extractLongHeader(Map<String, List<String>> headers, String headerName) {
         List<String> values = getHeaderIgnoreCase(headers, headerName);
@@ -83,21 +81,20 @@ public record ExternalRateLimitInfo(
     }
 
     /**
-     * 忽略大小写获取响应头值
-     * HTTP响应头名称是大小写不敏感的
+     * Retrieve a header value while ignoring the case of the header name.
      *
-     * @param headers 响应头映射
-     * @param headerName 响应头名称
-     * @return 响应头值列表，如果不存在则返回null
+     * @param headers    response headers
+     * @param headerName header key to retrieve
+     * @return list of header values or {@code null} when the header is absent
      */
     private static List<String> getHeaderIgnoreCase(Map<String, List<String>> headers, String headerName) {
-        // 先尝试精确匹配（性能优化）
+        // Prefer a direct lookup for performance.
         List<String> values = headers.get(headerName);
         if (values != null) {
             return values;
         }
 
-        // 如果精确匹配失败，进行忽略大小写匹配
+        // Fallback to a case-insensitive scan when the header key differs in case.
         for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
             if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(headerName)) {
                 return entry.getValue();

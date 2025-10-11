@@ -3,13 +3,12 @@ package com.patra.egress.domain.model.vo;
 import java.time.Duration;
 
 /**
- * 限流状态值对象
- * 区分网关自身限流和外部服务限流
- * 
- * @param limit 限流上限
- * @param remaining 剩余配额
- * @param resetAfter 重置时间
- * @param externalInfo 外部服务返回的限流信息
+ * Value object describing the gateway's current rate limit state, including external provider hints.
+ *
+ * @param limit        configured gateway quota
+ * @param remaining    remaining quota for the current window
+ * @param resetAfter   duration until the quota resets
+ * @param externalInfo optional rate limit metadata returned by the provider
  * @author linqibin
  * @since 0.1.0
  */
@@ -20,7 +19,7 @@ public record RateLimitStatus(
     ExternalRateLimitInfo externalInfo
 ) {
     /**
-     * 构造函数，确保参数有效性
+     * Canonical constructor that validates the integrity of the rate limit metrics.
      */
     public RateLimitStatus {
         if (limit < 0) {
@@ -35,9 +34,9 @@ public record RateLimitStatus(
     }
 
     /**
-     * 判断是否已达到限流阈值
+     * Determine whether the gateway has exhausted the configured quota.
      *
-     * @return true表示已达到限流阈值
+     * @return {@code true} when no remaining tokens are available; {@code false} otherwise
      */
     public boolean isLimited() {
         return remaining <= 0;
