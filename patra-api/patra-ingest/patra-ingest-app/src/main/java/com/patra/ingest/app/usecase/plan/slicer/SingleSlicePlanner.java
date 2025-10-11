@@ -12,17 +12,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 单切片策略（Application Layer · Policy）。
+ * Single-slice strategy (Application Layer · Policy).
  * <p>
- * 场景：无需再对窗口做时间/范围分割，或业务表达式已内嵌足够过滤条件（例如：全量回放、按外部 ID 列表驱动）。
- * 该策略仅生成序号=1 的唯一切片，并复用上游 Plan 构建好的业务表达式，保证：
+ * Use when the window does not need to be further partitioned or the business expression already
+ * embeds sufficient filtering (e.g., full replay or driven by an external ID list). This strategy
+ * produces exactly one slice with sliceNo = 1 and reuses the upstream plan expression. Guarantees:
  * <ul>
- *   <li>幂等性：通过 spec 的规范化 JSON + 哈希(signatureHash) 固定；</li>
- *   <li>最小额外开销：不引入循环，算法复杂度 O(1)；</li>
- *   <li>窗口语义：若上游仍传入窗口，会在切片上保留 from/to 以便后续统计。</li>
+ *   <li>Idempotence: stable signature via canonical JSON spec + hash.</li>
+ *   <li>Minimal overhead: no loops; O(1) complexity.</li>
+ *   <li>Window semantics: if a window is provided upstream, the from/to will be recorded in the slice spec for auditing.</li>
  * </ul>
  * </p>
- * <p>边界：若 window 为空，不影响切片生成（依旧返回单条），由上层判定是否允许无窗口执行。</p>
+ * <p>Boundary: if the window is null, slicing still returns a single item; the caller decides whether
+ * windowless execution is allowed.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -38,7 +40,7 @@ public class SingleSlicePlanner implements SlicePlanner {
 
     @Override
     public List<SlicePlan> slice(SlicePlanningContext context) {
-        // UPDATE / ID 驱动场景：不补充额外窗口约束，遵循 Plan 原有业务表达式
+        // UPDATE / ID-driven cases: do not add extra window constraints here; respect the plan's base expression
         Expr baseExpr = context.planExpression().expr();
 
         // Build window spec JSON including window information if present
@@ -61,8 +63,7 @@ public class SingleSlicePlanner implements SlicePlanner {
         String specJson = specNormalized.getCanonicalJson();
         String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
-        log.debug("[INGEST][APP] Single slice planned, provenance={}, hash={}",
-                context.norm().provenanceCode(), signatureHash);
+        log.debug("[INGEST][APP] Single slice planned, provenance={}, hash=",\n                context.norm().provenanceCode(), signatureHash);
 
         return List.of(new SlicePlan(
                 1,

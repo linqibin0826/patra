@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 数据采集应用层配置
+ * Ingestion application-layer configuration.
  *
  * @author linqibin
  * @since 0.1.0
@@ -12,6 +12,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class IngestAppConfig {
 
-    // 组件扫描会注册 @Component/@Service 的实现，此处无需显式声明 Bean
+    // Component scanning registers @Component/@Service implementations; no explicit bean definitions required here.
 
 }

@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-ingest-infra</artifactId>
-    <description>数据采集基础设施模块 - 数据持久化和外部系统适配</description>
+    <description>Ingestion infrastructure module - data persistence and external integrations</description>
 
     <dependencies>
         <dependency>
@@ -34,7 +34,7 @@
             <artifactId>patra-spring-boot-starter-expr</artifactId>
         </dependency>
 
-        <!-- 出站 RPC（Feign）能力与共享契约 -->
+        <!-- Outbound RPC (Feign) capability and shared contracts -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-cloud-starter-feign</artifactId>

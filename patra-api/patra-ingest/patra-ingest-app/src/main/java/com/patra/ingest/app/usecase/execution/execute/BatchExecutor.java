@@ -6,25 +6,25 @@ import com.patra.ingest.domain.model.vo.BatchResult;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
 /**
- * 批次执行器接口。
+ * Batch executor interface.
  * <p>
- * 职责：执行单个批次，调用数据源 API，处理数据并上传到存储。
+ * Responsibility: execute a single batch, call the data source API, process data, and upload to storage.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>策略模式：不同数据源（provenanceCode）可有不同的执行策略。</li>
- *   <li>数据流处理：API 调用 → 数据清洗 → 上传存储 → 返回结果。</li>
- *   <li>异常处理：执行失败时捕获异常，返回 BatchResult.failure()。</li>
- *   <li>游标支持：执行成功后从响应中提取 nextCursorToken。</li>
- *   <li>存储上传：通过 StorageAdapter 上传数据到 OSS，返回 storageKey。</li>
+ *   <li>Strategy: different provenanceCodes may have different execution strategies.</li>
+ *   <li>Pipeline: API call → data cleansing → upload to storage → return result.</li>
+ *   <li>Error handling: on failure, catch exceptions and return BatchResult.failure().</li>
+ *   <li>Cursor support: on success, extract nextCursorToken from the response.</li>
+ *   <li>Storage upload: use StorageAdapter to upload to object storage and return storageKey.</li>
  * </ul>
  * </p>
  * <p>
- * 实现类应注册到 BatchExecutorRegistry，按 provenanceCode 路由。
+ * Implementations should be registered in BatchExecutorRegistry and routed by provenanceCode.
  * </p>
  *
- * TODO 新增一个pubmed的实现
+ * TODO Add a PubMed implementation
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,18 +32,18 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
 public interface BatchExecutor {
 
     /**
-     * 获取支持的数据源编码。
+     * Returns the supported provenance code.
      *
-     * @return 数据源编码枚举
+     * @return provenance code
      */
     ProvenanceCode getProvenanceCode();
 
     /**
-     * 执行批次。
+     * Executes a batch.
      *
-     * @param context 执行上下文（包含配置快照、窗口等）
-     * @param batch 批次信息（包含查询、参数、游标）
-     * @return 批次执行结果
+     * @param context execution context (config snapshot, window, etc.)
+     * @param batch batch information (query, parameters, cursor)
+     * @return batch result
      */
     BatchResult execute(ExecutionContext context, Batch batch);
 }

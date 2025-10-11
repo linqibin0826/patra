@@ -23,31 +23,32 @@ import java.util.Map;
 import java.time.Instant;
 
 /**
- * 执行上下文加载器实现。
+ * Execution context loader implementation.
  * <p>
- * 职责：从 Task → Slice → Plan 还原配置快照与表达式快照，校验哈希，编译表达式。
+ * Responsibility: restore config and expression snapshots (Task → Slice → Plan), validate hashes,
+ * and compile expressions.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>读取 Task：获取 sliceId、exprHash、paramsJson、provenanceCode、endpointName。</li>
- *   <li>读取 Slice：获取 planId、窗口信息（executionWindow）。</li>
- *   <li>读取 Plan：获取 provenanceConfigSnapshotJson 配置快照。</li>
- *   <li>调用 ExpressionCompilerPort 编译表达式，获取 query/params/normalizedExpression。</li>
- *   <li>校验 exprHash：确保配置未被篡改。</li>
- *   <li>返回 ExecutionContext，包含所有执行所需的上下文信息。</li>
+ *   <li>Read Task: obtain sliceId, exprHash, paramsJson, provenanceCode, endpointName.</li>
+ *   <li>Read Slice: obtain planId and execution window info.</li>
+ *   <li>Read Plan: obtain provenanceConfigSnapshotJson.</li>
+ *   <li>Compile expression via ExpressionCompilerPort → query/params/normalizedExpression.</li>
+ *   <li>Validate exprHash to ensure configuration integrity.</li>
+ *   <li>Return ExecutionContext with all necessary execution info.</li>
  * </ul>
  * </p>
  * <p>
- * 异常处理：
+ * Error handling:
  * <ul>
- *   <li>Task/Slice/Plan 不存在：抛出 IllegalArgumentException。</li>
- *   <li>表达式编译失败：抛出 IllegalStateException。</li>
- *   <li>exprHash 不匹配：抛出 IllegalStateException（配置被篡改）。</li>
+ *   <li>Missing Task/Slice/Plan → IllegalArgumentException.</li>
+ *   <li>Expression compilation failure → IllegalStateException.</li>
+ *   <li>exprHash mismatch → IllegalStateException (integrity violation).</li>
  * </ul>
  * </p>
  * <p>
- * 日志策略：INFO 记录上下文加载关键信息；WARN 记录哈希校验失败。
+ * Logging: INFO on successful context load; WARN when hash validation fails.
  * </p>
  *
  * @author linqibin
@@ -65,41 +66,33 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     private final ObjectMapper objectMapper;
 
     /**
-     * 加载执行上下文（配置还原 + 表达式编译）。
-     *
-     * @param taskId 任务ID
-     * @param runId  运行ID
-     * @return 执行上下文
+     * Loads execution context (config restore + expression compile).
      */
     @Override
     public ExecutionContext loadContext(Long taskId, Long runId) {
         // Query task and delegate to overloaded method
         TaskAggregate task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
+                .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
 
         return loadContext(task, runId);
     }
 
     /**
-     * 加载执行上下文（配置还原 + 表达式编译）- 优化版本，避免重复查询Task。
-     *
-     * @param task  任务聚合（已查询）
-     * @param runId 运行ID
-     * @return 执行上下文
+     * Loads execution context (config restore + expression compile) — optimized to avoid reloading Task.
      */
     @Override
     public ExecutionContext loadContext(TaskAggregate task, Long runId) {
         Long taskId = task.getId();
 
-        // 2. 读取 Slice
+        // 2) Read Slice
         PlanSliceAggregate slice = sliceRepository.findById(task.getSliceId())
-                .orElseThrow(() -> new IllegalArgumentException("切片不存在 sliceId=" + task.getSliceId()));
+                .orElseThrow(() -> new IllegalArgumentException("Slice not found sliceId=" + task.getSliceId()));
 
-        // 3. 读取 Plan
+        // 3) Read Plan
         PlanAggregate plan = planRepository.findById(slice.getPlanId())
-                .orElseThrow(() -> new IllegalArgumentException("计划不存在 planId=" + slice.getPlanId()));
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found planId=" + slice.getPlanId()));
 
-        // 4. 解析配置快照为 ProvenanceConfigSnapshot 对象
+        // 4) Parse config snapshot into ProvenanceConfigSnapshot
         ProvenanceConfigSnapshot configSnapshot = parseConfigSnapshot(plan.getProvenanceConfigSnapshotJson());
 
         // 5. Compile expression
@@ -123,26 +116,26 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
 
         if (!compilationResult.isValid()) {
             throw new IllegalStateException(
-                    "表达式编译失败 taskId=" + taskId
+                    "Expression compilation failed taskId=" + taskId
                             + " reason=" + compilationResult.validationMessage()
             );
         }
 
-        // 6. 校验 exprHash：确保表达式未被篡改
+        // 6) Validate exprHash to ensure integrity
         // Compare task's exprHash with slice's exprHash (not plan's)
         if (!task.getExprHash().equals(slice.getExprHash())) {
             throw new IllegalStateException(
                     String.format(
-                            "表达式哈希不匹配，拒绝执行 taskId=%d expected=%s actual=%s",
+                            "Expression hash mismatch; aborting taskId=%d expected=%s actual=%s",
                             taskId, slice.getExprHash(), task.getExprHash()
                     )
             );
         }
 
-        // 7. Parse window spec from JSON
+        // 7) Parse window spec from JSON
         WindowSpec windowSpec = parseWindowSpec(slice.getWindowSpecJson());
 
-        // 8. 构建 ExecutionContext
+        // 8) Build ExecutionContext
         log.info("[INGEST][APP] execution context loaded taskId={} runId={} provenanceCode={} endpointName={}",
                 taskId, runId, task.getProvenanceCode(), task.getOperationCode());
 
@@ -186,9 +179,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         }
     }
 
-    /**
-     * 解析 JSON 字符串为 JsonNode。
-     */
+    /** Parses a JSON string into JsonNode. */
     private JsonNode parseJson(String json) {
         if (json == null || json.isBlank()) {
             return objectMapper.createObjectNode();
@@ -197,22 +188,20 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
             return objectMapper.readTree(json);
         } catch (Exception e) {
             log.error("[INGEST][APP] failed to parse json: {}", json, e);
-            throw new IllegalStateException("JSON 解析失败", e);
+            throw new IllegalStateException("Failed to parse JSON", e);
         }
     }
 
-    /**
-     * 解析 JSON 字符串为 ProvenanceConfigSnapshot 对象。
-     */
+    /** Parses a JSON string into a ProvenanceConfigSnapshot. */
     private ProvenanceConfigSnapshot parseConfigSnapshot(String json) {
         if (json == null || json.isBlank()) {
-            throw new IllegalStateException("配置快照 JSON 不能为空");
+            throw new IllegalStateException("Config snapshot JSON must not be blank");
         }
         try {
             return objectMapper.readValue(json, ProvenanceConfigSnapshot.class);
         } catch (Exception e) {
             log.error("[INGEST][APP] failed to parse config snapshot from json: {}", json, e);
-            throw new IllegalStateException("配置快照解析失败", e);
+            throw new IllegalStateException("Failed to parse config snapshot", e);
         }
     }
 }

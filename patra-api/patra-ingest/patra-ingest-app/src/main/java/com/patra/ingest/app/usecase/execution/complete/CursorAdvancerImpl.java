@@ -14,34 +14,35 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * 游标推进器实现。
+ * Cursor advancer implementation.
  * <p>
- * 职责：根据批次执行结果推进游标水位，使用乐观锁防止并发冲突。
+ * Responsibility: advance the cursor watermark based on batch results using optimistic locking
+ * to avoid concurrent conflicts.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>查询游标：根据 provenanceCode/endpointName/cursorKey/namespace 查询当前游标。</li>
- *   <li>计算新水位：从 WindowSpec 根据策略提取新水位（TIME策略使用windowTo）。</li>
- *   <li>乐观锁更新：调用 Cursor.advanceTo() 更新水位，保存时触发版本校验。</li>
- *   <li>异常处理：捕获 OptimisticLockingFailureException，返回 false 表示需重试。</li>
- *   <li>首次推进：游标不存在时创建新游标。</li>
+ *   <li>Query cursor by provenanceCode/operationCode/cursorKey/namespace.</li>
+ *   <li>Compute new watermark from WindowSpec strategy (TIME uses windowTo).</li>
+ *   <li>Update cursor via Cursor.advanceTo(); version checked on save.</li>
+ *   <li>Catch OptimisticLockingFailureException; return false to signal retry.</li>
+ *   <li>Create a new cursor on first advancement when none exists.</li>
  * </ul>
  * </p>
  * <p>
- * 命名空间策略：
+ * Namespace strategy:
  * <ul>
- *   <li>GLOBAL：全局游标（跨任务共享）。</li>
- *   <li>TASK：任务粒度游标（按 taskId 隔离）。</li>
- *   <li>PLAN：计划粒度游标（按 planId 隔离）。</li>
+ *   <li>GLOBAL: global cursor shared across tasks</li>
+ *   <li>TASK: per-task cursor (isolated by taskId)</li>
+ *   <li>PLAN: per-plan cursor (isolated by planId)</li>
  * </ul>
  * </p>
  * <p>
- * 日志策略：
+ * Logging:
  * <ul>
- *   <li>INFO：游标推进成功（记录 from/to 水位）。</li>
- *   <li>WARN：乐观锁冲突（需重试）。</li>
- *   <li>DEBUG：查询游标、创建新游标。</li>
+ *   <li>INFO: advancement success (from/to).</li>
+ *   <li>WARN: optimistic conflict (retry).</li>
+ *   <li>DEBUG: cursor lookup, creation.</li>
  * </ul>
  * </p>
  *
@@ -55,17 +56,10 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
     private final CursorRepository cursorRepository;
 
-    /**
-     * 推进游标水位。
-     *
-     * @param context 执行上下文
-     * @param taskId 任务ID
-     * @param runId 运行ID
-     * @return true 表示推进成功，false 表示乐观锁冲突（需重试）
-     */
+    /** Advances the cursor watermark. */
     @Override
     public boolean advance(ExecutionContext context, Long taskId, Long runId) {
-        // 1. 提取游标参数
+        // 1) Extract cursor parameters
         String provenanceCode = context.provenanceCode();
         String operationCode = context.operationCode();
 
@@ -73,25 +67,25 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         if (windowSpec == null) {
             log.debug("[INGEST][APP] cursor advance skipped: no window spec taskId={} runId={}",
                      taskId, runId);
-            return true;  // 无窗口规格，跳过推进
+            return true;  // no window spec, skip advancement
         }
 
-        // 2. 策略感知的水位提取
+        // 2) Strategy-aware watermark extraction
         Instant newWatermark = extractWatermark(windowSpec, taskId, runId);
         if (newWatermark == null) {
             log.debug("[INGEST][APP] cursor advance skipped: non-TIME strategy or no watermark " +
                      "strategy={} taskId={} runId={}",
                      windowSpec.strategy(), taskId, runId);
-            return true;  // 非TIME策略暂不支持水位推进
+            return true;  // non-TIME strategies currently do not advance watermark
         }
 
-        // 3. 确定游标键和命名空间
+        // 3) Determine cursor key and namespace
         String cursorKey = determineCursorKey(windowSpec);
         String namespaceScope = "GLOBAL";
         String namespaceKey = null;
 
         try {
-            // 4. 查询当前游标
+            // 4) Lookup current cursor
             Optional<Cursor> cursorOpt = cursorRepository.find(
                 provenanceCode,
                 operationCode,
@@ -102,7 +96,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
             Cursor cursor;
             if (cursorOpt.isPresent()) {
-                // 4.1 游标存在：更新水位
+                // 4.1 Cursor exists: update watermark
                 cursor = cursorOpt.get();
                 Instant oldWatermark = cursor.getCurrentWatermark();
 
@@ -111,13 +105,13 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                              provenanceCode, operationCode, oldWatermark);
                 }
 
-                // 推进水位（领域方法会校验水位不倒退）
+                // Advance watermark (domain ensures monotonicity)
                 cursor.advanceTo(newWatermark);
 
                 log.info("[INGEST][APP] cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={}",
                          provenanceCode, operationCode, oldWatermark, newWatermark, taskId, runId);
             } else {
-                // 4.2 游标不存在：创建新游标
+                // 4.2 Cursor missing: create
                 cursor = Cursor.create(
                     provenanceCode,
                     operationCode,
@@ -131,45 +125,45 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                          provenanceCode, operationCode, newWatermark, taskId, runId);
             }
 
-            // 5. 保存游标（乐观锁校验）
+            // 5) Save cursor (optimistic lock check)
             cursorRepository.save(cursor);
             return true;
 
         } catch (OptimisticLockingFailureException e) {
-            // 乐观锁冲突（version 不匹配）
+            // Optimistic conflict (version mismatch)
             log.warn("[INGEST][APP] cursor advance conflict provenanceCode={} endpointName={} taskId={} runId={}",
                      provenanceCode, operationCode, taskId, runId);
-            return false;  // 返回 false 表示需重试
+            return false;  // signal retry
 
         } catch (Exception e) {
             log.error("[INGEST][APP] cursor advance failed provenanceCode={} endpointName={} taskId={} runId={}",
                       provenanceCode, operationCode, taskId, runId, e);
-            throw new IllegalStateException("游标推进失败", e);
+            throw new IllegalStateException("Cursor advancement failed", e);
         }
     }
 
     /**
-     * 从WindowSpec提取水位（策略感知）。
-     * <p>目前仅TIME策略支持基于时间戳的水位推进。</p>
+     * Extracts watermark from WindowSpec (strategy-aware).
+     * <p>Currently only the TIME strategy supports timestamp-based watermark advancement.</p>
      *
-     * @param windowSpec 窗口规格
-     * @param taskId 任务ID（用于日志）
-     * @param runId 运行ID（用于日志）
-     * @return 水位时间戳，如果策略不支持水位则返回null
+     * @param windowSpec window specification
+     * @param taskId task id (for logs)
+     * @param runId run id (for logs)
+     * @return watermark timestamp, or null when not supported by the strategy
      */
     private Instant extractWatermark(WindowSpec windowSpec, Long taskId, Long runId) {
         return switch (windowSpec.strategy()) {
             case TIME -> {
                 WindowSpec.Time timeSpec = (WindowSpec.Time) windowSpec;
-                yield timeSpec.to();  // TIME策略：使用窗口终点作为水位
+                yield timeSpec.to();  // TIME: use window end as watermark
             }
             case ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE -> {
-                // 这些策略暂不使用基于时间的水位
-                // 未来：ID_RANGE可实现基于数值ID的水位推进
+                // These strategies currently do not use time-based watermark
+                // Future: ID_RANGE may use numeric-ID-based watermark
                 yield null;
             }
             case HYBRID -> {
-                // 未来：从HYBRID规格中提取时间分量
+                // Future: extract time component from HYBRID spec
                 log.warn("[INGEST][APP] HYBRID strategy watermark extraction not yet implemented " +
                         "taskId={} runId={}", taskId, runId);
                 yield null;
@@ -178,10 +172,10 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     }
 
     /**
-     * 根据窗口策略确定游标键。
+     * Determines the cursor key based on the window strategy.
      *
-     * @param windowSpec 窗口规格
-     * @return 游标键标识
+     * @param windowSpec window specification
+     * @return cursor key identifier
      */
     private String determineCursorKey(WindowSpec windowSpec) {
         return switch (windowSpec.strategy()) {

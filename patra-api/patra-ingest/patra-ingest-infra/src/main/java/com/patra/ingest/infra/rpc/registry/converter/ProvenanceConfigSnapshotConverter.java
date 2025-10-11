@@ -7,10 +7,10 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Registry API DTO 到 Ingest 领域快照的转换器。
+ * Converter from Registry API DTOs to Ingest domain configuration snapshots.
  *
- * <p>负责将从 patra-registry 获取的配置响应转换为 Ingest 领域层所需的快照对象。
- * 遵循 MapStruct 最佳实践，提供类型安全的映射转换。</p>
+ * <p>Converts configuration responses from patra-registry to the snapshot objects required by the Ingest domain.
+ * Follows MapStruct best practices for type-safe mapping.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -19,10 +19,10 @@ import org.mapstruct.ReportingPolicy;
 public interface ProvenanceConfigSnapshotConverter {
 
     /**
-     * 转换完整的配置响应为快照。
+     * Converts the full configuration response into a snapshot.
      *
-     * @param resp 配置响应
-     * @return 配置快照
+     * @param resp configuration response
+     * @return snapshot
      */
     @Mapping(target = "provenance", source = "provenance")
     @Mapping(target = "windowOffset", source = "windowOffset")
@@ -33,9 +33,7 @@ public interface ProvenanceConfigSnapshotConverter {
     @Mapping(target = "rateLimit", source = "rateLimit")
     ProvenanceConfigSnapshot convert(ProvenanceConfigResp resp);
 
-    /**
-     * 映射来源基础信息。
-     */
+    /** Maps provenance base info. */
     default ProvenanceConfigSnapshot.ProvenanceInfo mapProvenanceInfo(ProvenanceResp source) {
         if (source == null) {
             return null;

@@ -3,8 +3,8 @@ package com.patra.ingest.app.usecase.execution.support;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 
 /**
- * 执行会话管理器。
- * <p>创建TaskRun、启动心跳续租、封装清理（停止心跳+释放租约）。</p>
+ * Execution session manager.
+ * <p>Creates TaskRun, starts heartbeat renewal, and encapsulates cleanup (stop heartbeat + release lease).</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -12,13 +12,13 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 public interface ExecutionSessionManager {
 
     /**
-     * 创建执行会话（含TaskRun创建、心跳启动）。
+     * Creates an execution session (creates TaskRun and starts heartbeat).
      *
-     * @param taskId 任务ID
-     * @param leaseOwner 租约持有者
-     * @param schedulerRunId 调度运行ID
-     * @param correlationId 关联ID
-     * @return 执行会话
+     * @param taskId task id
+     * @param leaseOwner lease owner
+     * @param schedulerRunId scheduler run id
+     * @param correlationId correlation id
+     * @return execution session
      */
     ExecutionSession createSession(Long taskId,
                                     String leaseOwner,
@@ -26,13 +26,13 @@ public interface ExecutionSessionManager {
                                     String correlationId);
 
     /**
-     * 创建执行会话（含TaskRun创建、心跳启动）- 优化版本，避免重复查询Task。
+     * Creates an execution session (TaskRun + heartbeat) — optimized to avoid reloading Task.
      *
-     * @param task 任务聚合（已查询）
-     * @param leaseOwner 租约持有者
-     * @param schedulerRunId 调度运行ID
-     * @param correlationId 关联ID
-     * @return 执行会话
+     * @param task task aggregate (already loaded)
+     * @param leaseOwner lease owner
+     * @param schedulerRunId scheduler run id
+     * @param correlationId correlation id
+     * @return execution session
      */
     ExecutionSession createSession(TaskAggregate task,
                                     String leaseOwner,

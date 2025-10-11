@@ -4,11 +4,11 @@
 <mapper namespace="com.patra.ingest.infra.persistence.mapper.TaskRunMapper">
 
     <!--
-        获取任务的最新 attemptNo
-        
-        用途：生成下一次尝试编号（latestAttemptNo + 1）
-        
-        返回：最大 attemptNo，若无记录则返回 0
+        Get the latest attemptNo for a task
+
+        Use: generate the next attempt number (latestAttemptNo + 1)
+
+        Return: maximum attemptNo; 0 when no record exists
     -->
     <select id="selectLatestAttemptNo" resultType="int">
         SELECT IFNULL(MAX(attempt_no), 0)
@@ -17,8 +17,8 @@
     </select>
 
     <!--
-        覆盖写入检查点并刷新心跳时间。
-        空字符串或 null 表示清空 checkpoint。
+        Overwrite checkpoint and refresh heartbeat.
+        Empty string or null clears the checkpoint.
     -->
     <update id="updateCheckpointAndHeartbeat">
         UPDATE patra_ingest.ing_task_run
@@ -38,7 +38,7 @@
     </update>
 
     <!--
-        仅刷新心跳时间，不修改 checkpoint。
+        Refresh heartbeat only, do not modify the checkpoint.
     -->
     <update id="touchHeartbeat">
         UPDATE patra_ingest.ing_task_run
@@ -49,7 +49,7 @@
     </update>
 
     <!--
-        将运行记录标记为失败并记录错误信息。
+        Mark the run as FAILED and save the error message.
     -->
     <update id="markFailed">
         UPDATE patra_ingest.ing_task_run

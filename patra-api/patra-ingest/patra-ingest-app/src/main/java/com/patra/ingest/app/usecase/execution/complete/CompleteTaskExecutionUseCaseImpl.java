@@ -16,31 +16,31 @@ import java.time.Clock;
 import java.time.Instant;
 
 /**
- * 完成任务执行用例实现。
+ * Complete phase use case implementation.
  * <p>
- * 职责：游标推进 → 状态判断 → Task/TaskRun 更新 → 资源清理（心跳/租约）。
+ * Responsibility: cursor advancement → status decision → Task/TaskRun update → resource cleanup (heartbeat/lease).
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>状态判断逻辑：
+ *   <li>Status decision:
  *     <ul>
- *       <li>全部成功 + 游标推进成功 → SUCCEEDED</li>
- *       <li>全部成功 + 游标推进失败 → CURSOR_PENDING</li>
- *       <li>部分成功（failedBatches > 0 && succeededBatches > 0）→ PARTIAL</li>
- *       <li>全部失败（succeededBatches == 0）→ FAILED</li>
+ *       <li>all succeeded + cursor advanced → SUCCEEDED</li>
+ *       <li>all succeeded + cursor failed → CURSOR_PENDING</li>
+ *       <li>partial success (failed > 0 && succeeded > 0) → PARTIAL</li>
+ *       <li>all failed (succeeded == 0) → FAILED</li>
  *     </ul>
  *   </li>
- *   <li>游标推进：仅在全部批次成功时推进，失败时记录原因。</li>
- *   <li>乐观锁冲突：游标推进失败时标记为 CURSOR_PENDING，由后台异步重试。</li>
- *   <li>资源清理：停止心跳、释放租约（无论成功或失败）。</li>
+ *   <li>Advance cursor only when all batches succeeded; record reason on failure.</li>
+ *   <li>On optimistic conflict, mark CURSOR_PENDING for async retry.</li>
+ *   <li>Cleanup: stop heartbeat and release lease regardless of outcome.</li>
  * </ul>
  * </p>
  * <p>
- * 日志策略：
+ * Logging:
  * <ul>
- *   <li>INFO：游标推进成功、任务完成（记录最终状态）。</li>
- *   <li>WARN：游标推进失败、部分失败、全部失败。</li>
+ *   <li>INFO: cursor advanced, task completed (final status).</li>
+ *   <li>WARN: cursor failed, partial/failed states.</li>
  * </ul>
  * </p>
  *
@@ -58,13 +58,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     private final LeaseManagementService leaseManagementService;
     private final Clock clock;
 
-    /**
-     * 完成执行（游标推进 + 状态更新）。
-     *
-     * @param session 执行会话
-     * @param context 执行上下文
-     * @param executeResult 执行结果
-     */
+    /** Completes execution (advance cursor + update status). */
     @Override
     public void complete(ExecutionSession session,
                          ExecutionContext context,
@@ -78,15 +72,15 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
                  executeResult.succeededBatches(), executeResult.failedBatches());
 
         try {
-            // 1. 读取 Task 聚合
+            // 1) Load Task aggregate
             TaskAggregate task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new IllegalStateException("任务不存在 taskId=" + taskId));
+                .orElseThrow(() -> new IllegalStateException("Task not found taskId=" + taskId));
 
-            // 2. 读取 TaskRun
+            // 2) Load TaskRun
             TaskRun taskRun = taskRunRepository.findById(runId)
-                .orElseThrow(() -> new IllegalStateException("运行记录不存在 runId=" + runId));
+                .orElseThrow(() -> new IllegalStateException("Run record not found runId=" + runId));
 
-            // 3. 判断执行结果并决定最终状态
+            // 3) Decide final status
             boolean allSucceeded = executeResult.failedBatches() == 0
                 && executeResult.succeededBatches() > 0;
             boolean partialSuccess = executeResult.succeededBatches() > 0
@@ -94,7 +88,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
             boolean allFailed = executeResult.succeededBatches() == 0;
 
             if (allSucceeded) {
-                // 3.1 全部成功：推进游标
+                // 3.1 All succeeded: advance cursor
                 boolean cursorAdvanced = false;
                 try {
                     cursorAdvanced = cursorAdvancer.advance(context, taskId, runId);
@@ -104,37 +98,37 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
                 }
 
                 if (cursorAdvanced) {
-                    // 游标推进成功 → SUCCEEDED
+                    // Cursor ok → SUCCEEDED
                     task.markSucceeded(now);
                     taskRun.succeed(now);
                     log.info("[INGEST][APP] task succeeded taskId={} runId={}", taskId, runId);
                 } else {
-                    // 游标推进失败 → CURSOR_PENDING
+                    // Cursor failed → CURSOR_PENDING
                     task.markCursorPending(now);
                     taskRun.markCursorPending(now);
                     log.warn("[INGEST][APP] task marked CURSOR_PENDING taskId={} runId={}", taskId, runId);
                 }
 
             } else if (partialSuccess) {
-                // 3.2 部分成功 → PARTIAL
+                // 3.2 Partial → PARTIAL
                 task.markPartial(now);
-                taskRun.markPartial("部分批次失败", now);
+                taskRun.markPartial("Some batches failed", now);
                 log.warn("[INGEST][APP] task marked PARTIAL taskId={} runId={}", taskId, runId);
 
             } else if (allFailed) {
-                // 3.3 全部失败 → FAILED
+                // 3.3 All failed → FAILED
                 task.markFailed(now);
-                taskRun.fail("全部批次失败", now);
+                taskRun.fail("All batches failed", now);
                 log.warn("[INGEST][APP] task marked FAILED taskId={} runId={}", taskId, runId);
 
             } else {
-                // 3.4 无批次执行（totalBatches == 0）→ FAILED
+                // 3.4 No batches executed (totalBatches == 0) → FAILED
                 task.markFailed(now);
-                taskRun.fail("无批次执行", now);
+                taskRun.fail("No batches executed", now);
                 log.warn("[INGEST][APP] task marked FAILED (no batches) taskId={} runId={}", taskId, runId);
             }
 
-            // 4. 保存 Task 和 TaskRun
+            // 4) Persist Task and TaskRun
             taskRepository.save(task);
             taskRunRepository.save(taskRun);
 
@@ -142,30 +136,30 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
                      taskId, runId, task.getStatus());
 
         } finally {
-            // 5. 资源清理（无论成功或失败）
+            // 5) Cleanup regardless of outcome
             cleanupResources(session);
         }
     }
 
     /**
-     * 清理资源（停止心跳、释放租约）。
+     * Cleanup resources (stop heartbeat, release lease).
      */
     private void cleanupResources(ExecutionSession session) {
         Long taskId = session.taskId();
         String leaseOwner = session.leaseOwner();
 
         try {
-            // 停止心跳
+            // Stop heartbeat
             session.cleanup();
             log.info("[INGEST][APP] heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
 
-            // 释放租约
+            // Release lease
             leaseManagementService.releaseLease(taskId);
             log.info("[INGEST][APP] lease released taskId={} owner={}", taskId, leaseOwner);
 
         } catch (Exception e) {
             log.error("[INGEST][APP] cleanup failed taskId={} owner={}", taskId, leaseOwner, e);
-            // 清理失败不影响任务完成，仅记录错误
+            // Cleanup failure does not affect completion; log only
         }
     }
 }

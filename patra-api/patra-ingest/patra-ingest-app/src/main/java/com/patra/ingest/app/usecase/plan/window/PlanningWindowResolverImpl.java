@@ -22,54 +22,57 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 默认计划窗口解析实现（HARVEST / BACKFILL / UPDATE）。
+ * Default planning-window resolver implementation (HARVEST / BACKFILL / UPDATE).
  * <p>
- * 聚焦“计划级”窗口（非切片级）；不处理 overlap（切片阶段处理）与跨多游标高级策略。
+ * Focuses on the "plan-level" window (not the slicing stage). It does not handle
+ * slice overlaps or multi-cursor advanced strategies.
  * </p>
- * <h4>公共规则</h4>
+ * <h4>Common rules</h4>
  * <ul>
- *   <li>nowSafe = min(currentTime - watermarkLag, currentTime)（若配置为空则不减）</li>
- *   <li>窗口半开区间 [from, to)，对齐日历后如 from == to → 视为空窗口（返回最小兜底窗）</li>
- *   <li>若无法判定模式或模式不支持 → 返回 full()（上游可按全量处理）</li>
- *   <li>最小非空长度：小于 1s 时扩展为 1s，避免下游创建 0 时长任务</li>
+ *   <li>nowSafe = min(currentTime - watermarkLag, currentTime) (no subtraction when config is absent)</li>
+ *   <li>Windows are half-open intervals [from, to). After calendar alignment, if from == to, treat as an empty window.</li>
+ *   <li>If the mode cannot be determined or is not supported, return full() so upstream can decide to do a full scan.</li>
+ *   <li>Minimum non-empty length: if the span is less than 1s, expand to 1s to avoid zero-length tasks downstream.</li>
  * </ul>
  * <h4>HARVEST</h4>
  * <pre>
  * toCandidate   = min(user.to?, nowSafe)
  * fromCandidate = harvestWM? max(user.from?, harvestWM - lookback) : (user.from? | toCandidate - windowSize)
- * CALENDAR 对齐 → 空窗检测
+ * CALENDAR align -> empty-window check
  * </pre>
  * <h4>BACKFILL</h4>
  * <pre>
- * upperAnchor   = min(user.to?, forwardWM?, nowSafe)  // forwardWM 目前未注入，留扩展
+ * upperAnchor   = min(user.to?, forwardWM?, nowSafe)  // forwardWM is reserved, not currently injected
  * fromCandidate = backfillWM? max(backfillWM, user.from?) : (user.from? | upperAnchor - windowSize)
- * 边界矫正：fromCandidate 不得 > upperAnchor
- * CALENDAR 对齐 → 空窗检测
+ * Boundary correction: fromCandidate must not be > upperAnchor
+ * CALENDAR align -> empty-window check
  * </pre>
  * <h4>UPDATE</h4>
  * <pre>
- * timeDriven = (offsetType=DATE 且存在用户窗口) 或 (任一用户窗口给定)
+ * timeDriven = (offsetType=DATE and a user window exists) OR (any user window provided)
  * if timeDriven:
- *   toCandidate   = min(user.to?, nowSafe) (缺省回退 nowSafe)
- *   fromCandidate = 有 updateWM 与 user.from? → max(updateWM, user.from?)
- *                | 仅 updateWM → updateWM（并与 user.from? 比较）
- *                | 仅 user.from → user.from
- *                | 否则 nowSafe - windowSize
- * else (ID 驱动):
- *   若无用户窗口: [nowSafe - windowSize, nowSafe]
- *   否则与 timeDriven 类似，但 fromCandidate = user.from? | (toCandidate - windowSize)
- * CALENDAR 对齐 → 空窗检测
+ *   toCandidate   = min(user.to?, nowSafe) (defaults to nowSafe)
+ *   fromCandidate = if updateWM and user.from? -> max(updateWM, user.from?)
+ *                |  only updateWM           -> updateWM (then compare with user.from?)
+ *                |  only user.from          -> user.from
+ *                |  otherwise               -> nowSafe - windowSize
+ * else (ID-driven):
+ *   if user window exists: toCandidate = min(user.to?, nowSafe) (defaults to nowSafe)
+ *                          fromCandidate = user.from? | (toCandidate - windowSize)
+ *   else:                  [nowSafe - windowSize, nowSafe]
+ * CALENDAR align -> empty-window check
  * </pre>
- * <h4>设计取舍</h4>
+ * <h4>Design trade-offs</h4>
  * <ul>
- *   <li>forwardWM 暂未暴露；需要时可扩接口或在 triggerNorm.embed()</li>
- *   <li>maxWindowSpanSeconds 未强行截断：交由切片阶段（TimeSlicePlanner）精细化控制</li>
- *   <li>空窗处理返回“最小有效窗”而非 null：简化调用方判空逻辑，但仍可通过 from==to(+1s 扩展) 识别</li>
+ *   <li>forwardWM is not exposed for now; can be added via interface extension or embedded in triggerNorm when needed.</li>
+ *   <li>maxWindowSpanSeconds is not hard-limited here; slicing stage (TimeSlicePlanner) should control granularity.</li>
+ *   <li>When encountering an empty window after alignment, return the "minimal effective window" instead of null to
+ *       simplify upstream checks; the original empty state can still be detected via from==to (plus the +1s expansion).</li>
  * </ul>
- * <h4>复杂度</h4>
- * <p>所有分支 O(1)，无外部 IO。</p>
- * <h4>线程安全</h4>
- * <p>无状态，可单例。</p>
+ * <h4>Complexity</h4>
+ * <p>All branches are O(1) and perform no external IO.</p>
+ * <h4>Thread-safety</h4>
+ * <p>Stateless; safe to reuse as a singleton.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -79,15 +82,15 @@ import org.springframework.stereotype.Component;
 public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
     /**
-     * 默认总窗口跨度（24 小时）。
+     * Default total window span (24 hours).
      */
     private static final Duration DEFAULT_WINDOW_SIZE = Duration.ofHours(24);
     /**
-     * 默认安全延迟，用于修剪“当前时间”。
+     * Default safety lag used to cap "current time" when computing nowSafe.
      */
     private static final Duration DEFAULT_SAFETY_LAG = Duration.ZERO;
     /**
-     * 最小有效窗口长度（>0 秒，避免产生空窗）。
+     * Minimum effective window length (> 0 seconds) to avoid empty windows.
      */
     private static final Duration MIN_EFFECTIVE_WINDOW = Duration.ofSeconds(1);
 
@@ -107,7 +110,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
         Instant userFrom = triggerNorm.requestedWindowFrom();
         Instant userTo = triggerNorm.requestedWindowTo();
 
-        // 根据配置的安全延迟修剪当前时间，避免未落库数据被纳入
+        // Trim the current time using the configured safety lag to avoid ingesting not-yet-stable data
         Instant nowSafe = computeLaggedNow(currentTime, cfg, DEFAULT_SAFETY_LAG);
 
         if (triggerNorm.isHarvest()) {
@@ -123,8 +126,10 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     /* ===================== HARVEST ===================== */
 
     /**
-     * 解析 HARVEST 模式窗口。
-     * <p>利用当前 HARVEST 游标（harvestWM）+ lookback 回退以避免漏数据；无游标视为首次，从用户 from 或默认跨度推导。</p>
+     * Resolve window for HARVEST mode.
+     * <p>Uses the current HARVEST watermark (harvestWM) and a configurable lookback to avoid misses.
+     * When no watermark exists, treat as the first run and derive from the user-provided lower bound
+     * or by rolling back from the upper bound using the default window span.</p>
      */
     private PlannerWindow resolveHarvest(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                          Instant harvestWM,
@@ -138,7 +143,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
         Instant toCandidate = minInstant(userTo, nowSafe);
         if (toCandidate == null) {
-            toCandidate = nowSafe; // 没有用户上界 → 使用 nowSafe
+            toCandidate = nowSafe; // No user upper bound -> use nowSafe
         }
 
         Instant fromCandidate;
@@ -148,7 +153,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
         } else if (userFrom != null) {
             fromCandidate = userFrom;
         } else {
-            fromCandidate = toCandidate.minus(windowSize); // 默认回退一窗
+            fromCandidate = toCandidate.minus(windowSize); // Default: roll back one window
         }
 
         if (isCalendarMode(cfg) && cfg != null) {
@@ -167,8 +172,9 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     /* ===================== BACKFILL ===================== */
 
     /**
-     * 解析 BACKFILL 模式窗口。
-     * <p>BACKFILL 游标（backfillWM）控制最小 from，上界受用户 to / nowSafe 约束；forwardWM 预留。</p>
+     * Resolve window for BACKFILL mode.
+     * <p>The BACKFILL watermark (backfillWM) controls the minimal lower bound. The upper bound is limited by
+     * user-provided 'to' and nowSafe. forwardWM is reserved for future use.</p>
      */
     private PlannerWindow resolveBackfill(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                           Instant backfillWM,
@@ -179,9 +185,10 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
                                           String timezone) {
         Duration windowSize = resolveWindowSize(cfg, DEFAULT_WINDOW_SIZE);
 
-        // forwardWM = harvestWM 作为 upperAnchor 候选，这里 cursorWatermark 已按调用方传入对应 BACKFILL 游标；需要读取前向水位？
-        // 设计中 forwardWM 来源 HARVEST 水位：此策略接口当前只拿到单一 cursorWatermark。为了不扩接口，这里假设传入的是 BACKFILL 游标；
-        // 若需要 forwardWM 需扩展接口或在上层额外查询后放入 triggerParams；暂以 cursorWatermark 仅当 backfillWM 使用。
+        // forwardWM as an upperAnchor candidate (e.g., HARVEST watermark). This resolver gets a single
+        // cursorWatermark according to the selected mode. To avoid expanding the interface for now,
+        // assume the provided watermark corresponds to BACKFILL. If forwardWM is ever needed, it can be
+        // passed via an extended contract or via enriched trigger parameters.
         Instant upperAnchor = minInstant(userTo, forwardWM, nowSafe);
         if (upperAnchor == null) {
             upperAnchor = nowSafe;
@@ -196,7 +203,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
             fromCandidate = upperAnchor.minus(windowSize);
         }
         if (fromCandidate.isAfter(upperAnchor)) {
-            fromCandidate = upperAnchor; // 防越界
+            fromCandidate = upperAnchor; // prevent crossing the upper bound
         }
 
         if (isCalendarMode(cfg) && cfg != null) {
@@ -214,8 +221,9 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     /* ===================== UPDATE ===================== */
 
     /**
-     * 解析 UPDATE 模式窗口。
-     * <p>区分 timeDriven 和 ID 驱动；timeDriven 依赖用户窗口或日期型 offsetType。</p>
+     * Resolve window for UPDATE mode.
+     * <p>Distinguishes between time-driven and ID-driven flows; time-driven requires a user window
+     * or an offsetType of DATE.</p>
      */
     private PlannerWindow resolveUpdate(ProvenanceConfigSnapshot.WindowOffsetConfig cfg,
                                         Instant updateWM,
@@ -246,7 +254,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
             } else {
                 fromCandidate = nowSafe.minus(windowSize);
             }
-        } else { // ID 驱动
+        } else { // ID-driven
             if (userFrom != null || userTo != null) {
                 toCandidate = minInstant(userTo, nowSafe);
                 if (toCandidate == null) {
@@ -274,7 +282,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     /* ===================== Helpers ===================== */
 
     /**
-     * 构造安全窗口：若长度 < 最小阈值则扩展 to，避免 0 时长。
+     * Construct a safe window: if the length is below the minimal threshold, expand 'to' to avoid a zero-length window.
      */
     private PlannerWindow safeWindow(Instant from, Instant to) {
         if (Duration.between(from, to).compareTo(MIN_EFFECTIVE_WINDOW) < 0) {
@@ -284,10 +292,12 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     }
 
     /**
-     * 空窗兜底：对齐后 from >= to 时，返回 from → from+MIN_EFFECTIVE_WINDOW，供上游继续流程，同时可检测“原始空窗”。
+     * Minimal-window fallback: when alignment makes from >= to, return [from, from + MIN_EFFECTIVE_WINDOW]
+     * so the caller can keep a linear flow while still being able to detect the original emptiness.
      */
     private PlannerWindow nullWindowIfEmpty(Instant from, Instant to) {
-        // 返回一个最小窗口以便上层可感知 empty，再由 validator 处理；避免 IllegalArgumentException
+        // Return a minimal window so upstream can proceed and validators can handle the empty case;
+        // avoids throwing IllegalArgumentException during planning.
         return new PlannerWindow(from, from.plus(MIN_EFFECTIVE_WINDOW));
     }
 }

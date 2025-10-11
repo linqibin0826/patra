@@ -7,31 +7,32 @@ import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
 import java.util.Objects;
 
 /**
- * 计划装配阶段输入（Application → Assembly）。
+ * Input for plan assembly (Application → Assembly).
  * <p>
- * 将窗口解析、表达式构建、触发规范归一化与配置快照提取后的结果集中封装，供装配服务生成：
+ * Packages results of window resolution, expression build, trigger normalization,
+ * and configuration snapshot extraction for the assembler to produce:
  * <ol>
- *   <li>Plan 聚合根（含配置 / 表达式快照签名）</li>
- *   <li>PlanSlice 聚合集合（由切片策略派生）</li>
- *   <li>Task 聚合集合（由切片再派生）</li>
+ *   <li>Plan aggregate root (with config/expression snapshot signatures)</li>
+ *   <li>PlanSlice aggregates (derived by slicing strategy)</li>
+ *   <li>Task aggregates (derived from slices)</li>
  * </ol>
  * </p>
- * <h4>不变式</h4>
+ * <h4>Invariants</h4>
  * <ul>
  *   <li>{@code triggerNorm != null}</li>
  *   <li>{@code window != null}</li>
  *   <li>{@code configSnapshot != null}</li>
  *   <li>{@code planExpression != null}</li>
  * </ul>
- * <h4>线程安全</h4>
- * <p>record 不可变，可安全复用。</p>
- * <h4>扩展点</h4>
- * <p>后续可加入：租约信息 / 限流配置 / feature overrides；需保证向后兼容。</p>
+ * <h4>Thread safety</h4>
+ * <p>Record is immutable and safe for reuse.</p>
+ * <h4>Extension</h4>
+ * <p>May include: lease info / rate-limit config / feature overrides; must remain backward compatible.</p>
  *
- * @param triggerNorm 触发规范（模式、优先级、用户窗口等）
- * @param window 计划窗口（UTC 半开区间）
- * @param configSnapshot 配置快照（用于 canonical / 哈希）
- * @param planExpression 计划表达式描述（expr + json + hash）
+ * @param triggerNorm trigger normalization (mode, priority, user window, etc.)
+ * @param window plan window (UTC half-open interval)
+ * @param configSnapshot config snapshot (for canonical/hash)
+ * @param planExpression plan expression descriptor (expr + json + hash)
  */
 public record PlanAssemblyRequest(
         PlanTriggerNorm triggerNorm,

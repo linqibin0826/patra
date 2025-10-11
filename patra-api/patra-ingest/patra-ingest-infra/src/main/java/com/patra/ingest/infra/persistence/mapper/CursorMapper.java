@@ -5,10 +5,11 @@ import com.patra.ingest.infra.persistence.entity.CursorDO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 游标（Cursor）表 Mapper。
+ * Mapper for cursor table.
  * <p>
- * 语义：存放外部数据源增量同步位置（offset / watermark），支撑幂等与断点续传。
- * 后续如需按来源+操作维度查询，请新增方法并保持命名清晰（findByProvenanceAndOperation）。
+ * Stores incremental synchronization positions from external data sources (offset/watermark),
+ * supporting idempotency and resume-from-checkpoint flows. If queries by provenance+operation are needed
+ * later, add methods with clear names (e.g., findByProvenanceAndOperation).
  * </p>
  */
 @Mapper

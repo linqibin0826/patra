@@ -14,12 +14,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * {@link TaskAggregate} 的单元测试。
+ * Unit tests for {@link TaskAggregate}.
  */
 class TaskAggregateTest {
 
     @Test
-    @DisplayName("创建默认状态与 raiseQueuedEvent 事件挂载")
+    @DisplayName("create default state and raiseQueuedEvent attaches event")
     void createAndRaiseEvent() {
         TaskAggregate task = TaskAggregate.create(1L, 2L, 3L, "P", "O", "{}", "K", "EH", 1, Instant.now());
         assertNotNull(task);
@@ -33,7 +33,7 @@ class TaskAggregateTest {
     }
 
     @Test
-    @DisplayName("状态切换与租约/时间线/上下文变换")
+    @DisplayName("state transitions and lease/timeline/context changes")
     void statusLeaseTimelineContext() {
         TaskAggregate task = TaskAggregate.create(1L, 2L, 3L, "P", "O", "{}", "K", "EH", 1, Instant.now());
         // running
@@ -57,7 +57,7 @@ class TaskAggregateTest {
         task.releaseLease();
         assertFalse(task.getLeaseInfo().isHeld());
 
-        // retry 准备：清空上下文/时间线并回队列
+        // retry preparation: clear context/timeline and requeue
         task.prepareForRetry();
         ExecutionTimeline tl = task.getExecutionTimeline();
         TaskSchedulerContext sc = task.getSchedulerContext();

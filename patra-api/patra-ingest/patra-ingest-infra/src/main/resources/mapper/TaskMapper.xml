@@ -4,16 +4,16 @@
 <mapper namespace="com.patra.ingest.infra.persistence.mapper.TaskMapper">
 
     <!--
-        CAS 抢占租约（步骤 0）
-        
-        策略：仅针对 QUEUED 状态且满足以下条件的任务进行 CAS 更新：
+        CAS lease acquisition (step 0)
+
+        Strategy: perform a CAS update only for tasks in QUEUED status that meet:
         1. status_code='QUEUED' AND idempotent_key=#{idem}
-        2. scheduled_at IS NULL OR scheduled_at <= #{now}（尊重 notBefore）
-        3. leased_until IS NULL OR leased_until <= #{now} OR lease_owner=#{owner}（可接管）
-        
-        更新字段：lease_owner、leased_until、lease_count+1
-        
-        返回：受影响行数（1=成功，0=失败）
+        2. scheduled_at IS NULL OR scheduled_at <= #{now} (honors notBefore)
+        3. leased_until IS NULL OR leased_until <= #{now} OR lease_owner=#{owner} (stealable)
+
+        Updates: lease_owner, leased_until, lease_count+1
+
+        Returns: number of affected rows (1=success, 0=failed)
     -->
     <update id="tryAcquireLease">
         UPDATE patra_ingest.ing_task
@@ -28,12 +28,12 @@
     </update>
 
     <!--
-        置任务为 RUNNING 状态并更新租约（步骤 1）
-        
-        前置条件：WHERE lease_owner=#{owner}（防止被窃取）
-        更新字段：status_code='RUNNING'、started_at、last_heartbeat_at、leased_until
-        
-        返回：受影响行数（1=成功，0=租约丢失）
+        Mark task RUNNING and update lease (step 1)
+
+        Preconditions: WHERE lease_owner=#{owner} (prevent theft)
+        Updates: status_code='RUNNING', started_at, last_heartbeat_at, leased_until
+
+        Returns: affected rows (1=success, 0=lease lost)
     -->
     <update id="markRunningWithLease">
         UPDATE ing_task
@@ -46,12 +46,12 @@
     </update>
 
     <!--
-        心跳续租
+        Heartbeat lease renewal
 
-        前置条件：WHERE lease_owner=#{owner}
-        更新字段：leased_until、last_heartbeat_at、lease_count+1
+        Preconditions: WHERE lease_owner=#{owner}
+        Updates: leased_until, last_heartbeat_at, lease_count+1
 
-        返回：受影响行数（1=成功，0=租约丢失）
+        Returns: affected rows (1=success, 0=lease lost)
     -->
     <update id="renewLease">
         UPDATE ing_task
@@ -63,18 +63,18 @@
     </update>
 
     <!--
-        批量心跳续租（性能优化）
+        Batch heartbeat lease renewal (performance optimization)
 
-        策略：对当前节点持有的多个任务批量续租，减少往返次数
-        前置条件：WHERE id IN (taskIds) AND lease_owner=#{owner}
-        更新字段：leased_until、last_heartbeat_at、lease_count+1
+        Strategy: renew leases in batch for multiple tasks owned by the current node to reduce round-trips
+        Preconditions: WHERE id IN (taskIds) AND lease_owner=#{owner}
+        Updates: leased_until, last_heartbeat_at, lease_count+1
 
-        返回：受影响行数（成功续租的任务数）
+        Returns: affected rows (number of tasks renewed)
 
-        性能考量：
-        - 使用IN子句批量匹配，适用于小批量（建议不超过100个任务/批）
-        - 仅更新仍持有租约的任务（lease_owner校验）
-        - 利用idx_task_queue覆盖索引（status_code, leased_until, ...）加速定位
+        Performance considerations:
+        - Use IN clause for small batches (recommend <= 100 tasks/batch)
+        - Update only tasks still owned (lease_owner check)
+        - Use covering index idx_task_queue (status_code, leased_until, ...) for faster lookups
     -->
     <update id="batchRenewLeases">
         UPDATE ing_task

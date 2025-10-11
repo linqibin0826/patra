@@ -17,8 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Plan 业务表达式构建器，负责根据触发命令与来源配置生成 canonical 表达式。
- * <p>在计划装配阶段使用，可扩展外部自定义规则。</p>
+ * Plan business expression builder, responsible for producing a canonical expression
+ * from the trigger norm and the provenance configuration.
+ * <p>Used during plan assembly; can be extended to plug in external/custom rules.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -28,11 +29,11 @@ import org.springframework.stereotype.Component;
 public class PlanExpressionBuilder {
 
     /**
-     * 构造计划级表达式描述对象（含原始表达式、规范化 JSON 与哈希）。
+     * Construct the plan-level expression descriptor (original expression, canonical JSON, and hash).
      *
-     * @param norm           触发规范
-     * @param configSnapshot 来源配置快照
-     * @return 计划表达式描述
+     * @param norm           trigger norm
+     * @param configSnapshot provenance configuration snapshot
+     * @return plan expression descriptor
      */
     public PlanExpressionDescriptor build(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         Expr businessExpr = buildBusinessExpression(norm, configSnapshot);
@@ -41,12 +42,12 @@ public class PlanExpressionBuilder {
     }
 
     /**
-     * 构建计划业务表达式。
+     * Build the business expression for the plan.
      */
     private Expr buildBusinessExpression(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         log.debug("[INGEST][APP] Building plan business expression, operation={}", norm.operationCode());
 
-        // 基于触发规范与配置先构建内置约束
+        // Start with internal constraints derived from the trigger norm and configuration
         List<Expr> constraints = buildBusinessConstraints(norm, configSnapshot);
         Expr external = buildExternalConditionsExpr(norm);
         if (external != null) {
@@ -67,14 +68,14 @@ public class PlanExpressionBuilder {
     }
 
     /**
-     * 预留外部条件拼接入口，后续可接入管理员自定义规则。
+     * Reserved hook for external condition composition (e.g., admin-configured rules).
      */
     private Expr buildExternalConditionsExpr(PlanTriggerNorm norm) {
         return null;
     }
 
     /**
-     * 构建基础约束列表。
+     * Build base constraints.
      */
     private List<Expr> buildBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         List<Expr> constraints = new ArrayList<>();
@@ -85,7 +86,7 @@ public class PlanExpressionBuilder {
     }
 
     /**
-     * 构建 UPDATE 操作相关约束。
+     * Build constraints specific to UPDATE operations.
      */
     private List<Expr> buildUpdateBusinessConstraints(PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
         return new ArrayList<>();

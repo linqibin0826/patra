@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 计划 Mapper - 提供计划表的数据访问操作。
+ * Plan Mapper - data access operations for the plan table.
  * 
  * @author linqibin
  * @since 0.1.0
@@ -16,17 +16,17 @@ import java.util.List;
 public interface PlanMapper extends BaseMapper<PlanDO> {
     
     /**
-     * 根据计划键查找计划。
+     * Find a plan by its plan key.
      */
     PlanDO findByPlanKey(@Param("planKey") String planKey);
     
     /**
-     * 根据调度实例ID查找计划列表。
+     * Find plans by schedule instance id.
      */
     List<PlanDO> findByScheduleInstanceId(@Param("scheduleInstanceId") Long scheduleInstanceId);
     
     /**
-     * 查找指定数据源和操作类型的活跃计划。
+     * Find active plans for a given provenance and operation type.
      */
     List<PlanDO> findActiveByProvenanceAndOperation(
             @Param("provenanceCode") String provenanceCode,
@@ -34,12 +34,12 @@ public interface PlanMapper extends BaseMapper<PlanDO> {
             @Param("statusCodes") List<String> statusCodes);
     
     /**
-     * 检查计划键是否存在。
+     * Count if a plan key exists.
      */
     int countByPlanKey(@Param("planKey") String planKey);
     
     /**
-     * 统计指定状态的计划数量。
+     * Count plans by status for a given provenance and operation.
      */
     long countByProvenanceAndOperationAndStatus(
             @Param("provenanceCode") String provenanceCode,
@@ -47,7 +47,7 @@ public interface PlanMapper extends BaseMapper<PlanDO> {
             @Param("statusCode") String statusCode);
     
     /**
-     * 批量更新计划状态。
+     * Batch update plan status.
      */
     int batchUpdateStatus(
             @Param("planIds") List<Long> planIds,
@@ -55,7 +55,7 @@ public interface PlanMapper extends BaseMapper<PlanDO> {
             @Param("remarks") String remarks);
     
     /**
-     * 软删除计划。
+     * Soft-delete a plan by id.
      */
     int softDeleteById(@Param("planId") Long planId);
 }

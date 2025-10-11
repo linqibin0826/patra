@@ -30,31 +30,31 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 计划装配实现类。
+ * Plan assembler implementation.
  * <p>
- * 负责将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssemblyResult} 聚合集合：
+ * Transforms {@link PlanAssemblyRequest} into {@link PlanAssemblyResult} aggregates:
  * <ol>
- *   <li>确定切片策略（UPDATE → SINGLE；否则 TIME）</li>
- *   <li>规范化配置（canonical JSON + hash material）</li>
- *   <li>创建 Plan 聚合（含表达式快照 / 配置签名 / 窗口 / 策略编码）</li>
- *   <li>调用切片策略生成草稿（SlicePlan）并转为 PlanSlice 聚合（表达式 canonical + hash）</li>
- *   <li>为每个切片派生 Task 聚合（幂等键、优先级、计划执行时间）</li>
- *   <li>根据切片 / 任务是否为空标记 Plan 状态（FAILED 或 READY）</li>
+ *   <li>Decide slice strategy (UPDATE → SINGLE; otherwise TIME)</li>
+ *   <li>Canonicalize configuration (canonical JSON + hash material)</li>
+ *   <li>Create Plan aggregate (expr snapshot / config signature / window / strategy code)</li>
+ *   <li>Invoke slicing to produce SlicePlan drafts and convert to PlanSlice aggregates (canonical expr + hash)</li>
+ *   <li>Derive Task aggregates per slice (idempotent key, priority, scheduled time)</li>
+ *   <li>Mark Plan status as FAILED or READY based on presence of slices/tasks</li>
  * </ol>
  * </p>
- * <h4>幂等策略</h4>
- * <p>PlanKey 在 createPlanAggregate 内基于（provenance, operation, endpoint?, windowFrom-windowTo?）生成；任务幂等键使用（provenance | operation | sliceSignatureHash）。
- * 该类不做重复检测，由上层持久化与唯一索引确保。</p>
- * <h4>失败条件</h4>
+ * <h4>Idempotency</h4>
+ * <p>PlanKey is generated in createPlanAggregate from (provenance, operation, endpoint?, windowFrom-windowTo?).
+ * Task idempotent key uses (provenance | operation | sliceSignatureHash). This class does not duplicate-check; upper layers enforce via persistence and unique indexes.</p>
+ * <h4>Failure conditions</h4>
  * <ul>
- *   <li>未找到切片策略实现（registry 返回 null） → 返回 FAILED（空集合）</li>
- *   <li>切片策略返回空列表 → FAILED</li>
- *   <li>切片存在但派生任务为空（理论不应出现）→ FAILED</li>
+ *   <li>No slice strategy implementation (registry returns null) → FAILED (empty collections)</li>
+ *   <li>Slice strategy returns empty list → FAILED</li>
+ *   <li>Slices exist but derived tasks are empty (should not happen) → FAILED</li>
  * </ul>
- * <h4>复杂度</h4>
- * <p>O(n) n=切片数；规范化与哈希为线性。</p>
- * <h4>线程安全</h4>
- * <p>无共享可变状态；registry 只读查找，可单例。</p>
+ * <h4>Complexity</h4>
+ * <p>O(n), n = number of slices; canonicalization and hashing are linear.</p>
+ * <h4>Thread safety</h4>
+ * <p>No shared mutable state; registry lookups are read-only and singleton-safe.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -63,14 +63,10 @@ import java.util.Map;
 @Component
 public class PlanAssemblerImpl implements PlanAssembler {
 
-    /**
-     * 默认 JSON 规范化器，用于保持配置与策略参数的稳定序列化形态。
-     */
+    /** Default JSON normalizer for stable serialization of config and strategy params. */
     private static final JsonNormalizer DEFAULT_NORMALIZER = JsonNormalizer.usingDefault();
 
-    /**
-     * 任务参数专用规范化器：关闭布尔、时间的强制推断，避免序号 0/1 被自动转为布尔或时间戳。
-     */
+    /** Normalizer for task params: disable boolean/time coercion to avoid 0/1 becoming booleans or timestamps. */
     private static final JsonNormalizer TASK_PARAM_NORMALIZER = JsonNormalizer.withConfig(
             JsonNormalizer.Config.builder()
                     .coerceBoolean(JsonNormalizer.Config.CoerceBoolean.NONE)
@@ -85,11 +81,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
     }
 
     /**
-     * 装配入口。
-     * <p>无副作用（除时间调用 Instant.now 与规范化过程），不持久化。</p>
-     *
-     * @param request 装配请求
-     * @return PlanAssemblyResult（READY 或 FAILED）
+     * Assembly entrypoint.
+     * <p>Side-effect free (apart from Instant.now and canonicalization); no persistence here.</p>
      */
     @Override
     public PlanAssemblyResult assemble(PlanAssemblyRequest request) {
@@ -222,7 +215,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     }
 
     /**
-     * 计算任务调度时间：优先切片 windowFrom（从 windowSpecJson 解析），其次总窗口 from，最后即时 now。
+     * Compute task scheduled time: prefer slice windowFrom (parsed), else overall window.from, else now.
      */
     private Instant determineScheduledAt(SlicePlan draft, PlannerWindow window) {
         // Try to extract windowFrom from windowSpecJson
@@ -233,13 +226,11 @@ public class PlanAssemblerImpl implements PlanAssembler {
         if (window != null && window.from() != null) {
             return window.from();
         }
-        // 无窗口时回退当前时间，保持调度及时性
+        // Fallback to now when no window is available
         return Instant.now();
     }
 
-    /**
-     * 从 windowSpecJson 中提取 window.from 时间（如果存在）。
-     */
+    /** Extracts window.from from windowSpecJson when present. */
     private Instant extractWindowFrom(String windowSpecJson) {
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
@@ -255,9 +246,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         return null;
     }
 
-    /**
-     * 计算 PlanKey：provenance:operation[:endpoint][:from-toMillis]。
-     */
+    /** Builds PlanKey: provenance:operation[:endpoint][:from-toMillis]. */
     private String buildPlanKey(PlanTriggerNorm norm, PlannerWindow window) {
         StringBuilder builder = new StringBuilder();
         builder.append(norm.provenanceCode().getCode()).append(":").append(norm.operationCode().getCode());
@@ -267,9 +256,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         return builder.toString();
     }
 
-    /**
-     * 选择切片策略（扩展点）：目前 UPDATE → SINGLE，其他 → TIME。
-     */
+    /** Selects slice strategy (extension point): UPDATE → SINGLE, otherwise TIME. */
     private SliceStrategy determineSliceStrategy(PlanTriggerNorm norm) {
         if (norm.isUpdate()) {
             return SliceStrategy.SINGLE;
@@ -277,9 +264,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         return SliceStrategy.TIME;
     }
 
-    /**
-     * 生成策略参数 JSON：保持稳定序列化（例如{"strategy":"time"}）。
-     */
+    /** Builds slice params JSON with stable serialization (e.g., {"strategy":"time"}). */
     private String buildSliceParams(SliceStrategy sliceStrategy) {
         // TODO does not need to keep the strategy field, there is a strategy field in the plan, and the parameters only need to contain specific configurations,
         //  such as step, etc., values passed by the user or configured in the registry database.
@@ -287,17 +272,13 @@ public class PlanAssemblerImpl implements PlanAssembler {
         return normalized.getCanonicalJson();
     }
 
-    /**
-     * 构造任务参数 JSON：仅包含 sliceNo；使用定制 normalizer 防止类型歧义。
-     */
+    /** Builds task params JSON: only sliceNo; use custom normalizer to avoid type ambiguity. */
     private String buildTaskParamsJson(int sliceSequence) {
         JsonNormalizer.Result normalized = TASK_PARAM_NORMALIZER.normalize(Map.of("sliceNo", sliceSequence));
         return normalized.getCanonicalJson();
     }
 
-    /**
-     * 配置快照 canonical 化：返回 null 表示无配置（允许 UPDATE 等模式）。
-     */
+    /** Canonicalizes config snapshot; returns null when no config (allowed in UPDATE mode). */
     private JsonNormalizer.Result normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
         if (snapshot == null) {
             return null;
@@ -305,9 +286,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         return DEFAULT_NORMALIZER.normalize(snapshot);
     }
 
-    /**
-     * 生成任务幂等键：sha256(provenance|operation|sliceHash) → Base64Url 无填充。
-     */
+    /** Builds task idempotent key: sha256(provenance|operation|sliceHash) → Base64Url without padding. */
     private String computeSignature(PlanTriggerNorm norm, String payload) {
         String material = CharSequenceUtil.join("|",
                 norm.provenanceCode().getCode(),

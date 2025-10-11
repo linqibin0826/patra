@@ -3,8 +3,8 @@ package com.patra.ingest.app.usecase.execution;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 
 /**
- * 任务执行用例（顶层编排器）。
- * <p>协调prepare→execute→complete三个子用例，处理顶层异常与资源清理。</p>
+ * Task execution use case (top-level orchestrator).
+ * <p>Coordinates prepare → execute → complete and handles top-level exceptions and cleanup.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -12,9 +12,9 @@ import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 public interface TaskExecutionUseCase {
 
     /**
-     * 执行任务（完整流程：准备→执行→收尾）。
+     * Executes the task (full flow: prepare → execute → complete).
      *
-     * @param command 任务就绪命令
+     * @param command task-ready command
      */
     void execute(TaskReadyCommand command);
 }

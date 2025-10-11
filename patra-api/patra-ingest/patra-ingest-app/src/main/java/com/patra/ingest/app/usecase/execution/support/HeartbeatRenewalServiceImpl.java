@@ -14,32 +14,33 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 心跳续租服务实现。
+ * Heartbeat renewal service implementation.
  * <p>
- * 职责：使用 ScheduledExecutorService 定期续租，连续失败阈值后主动校验租约，检测租约丢失。
+ * Responsibility: periodically renew the lease using ScheduledExecutorService. After reaching the
+ * consecutive failure threshold, validate the lease to detect revocation.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>使用单线程 ScheduledExecutorService 调度定时任务，避免并发问题。</li>
- *   <li>每次续租调用 LeaseManagementService.renewLease()。</li>
- *   <li>连续失败阈值（默认 3 次）后，调用 validateLease() 确认租约是否丢失。</li>
- *   <li>若租约丢失，设置 leaseRevoked 标志，执行层可据此中断任务。</li>
- *   <li>返回 HeartbeatHandle，用于停止心跳和查询租约状态。</li>
+ *   <li>Use a small ScheduledExecutorService for periodic renewal tasks.</li>
+ *   <li>Each renewal invokes LeaseManagementService.renewLease().</li>
+ *   <li>After N consecutive failures (default 3), call validateLease() to confirm revocation.</li>
+ *   <li>If revoked, set leaseRevoked flag so executors can abort.</li>
+ *   <li>Return a HeartbeatHandle to stop heartbeat and query lease status.</li>
  * </ul>
  * </p>
  * <p>
- * 配置项：
+ * Config:
  * <ul>
- *   <li>task.execution.heartbeat.failure-threshold：连续失败阈值，默认 3。</li>
+ *   <li>task.execution.heartbeat.failure-threshold: consecutive failure threshold (default 3)</li>
  * </ul>
  * </p>
  * <p>
- * 日志策略：
+ * Logging:
  * <ul>
- *   <li>DEBUG：每次续租操作。</li>
- *   <li>WARN：续租失败、租约丢失。</li>
- *   <li>INFO：心跳启动、停止。</li>
+ *   <li>DEBUG: each renewal</li>
+ *   <li>WARN: renewal failure, lease revoked</li>
+ *   <li>INFO: heartbeat start/stop</li>
  * </ul>
  * </p>
  *
@@ -53,29 +54,21 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
 
     private final LeaseManagementService leaseManagementService;
 
-    /** 连续失败阈值（默认 3 次） */
+    /** Consecutive failure threshold (default 3). */
     @Value("${task.execution.heartbeat.failure-threshold:3}")
     private int failureThreshold;
 
-    /** 全局调度器（单线程，足够处理所有心跳任务） */
+    /** Global scheduler (small pool; sufficient for heartbeat tasks). */
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(
-        2,  // 使用 2 个线程，避免单线程阻塞
+        2,  // Use 2 threads to avoid single-thread starvation
         r -> {
             Thread t = new Thread(r, "heartbeat-renewal");
-            t.setDaemon(true);  // 设置为守护线程，JVM 关闭时自动退出
+            t.setDaemon(true);  // Daemon thread; exits on JVM shutdown
             return t;
         }
     );
 
-    /**
-     * 启动心跳续租。
-     *
-     * @param taskId 任务ID
-     * @param leaseOwner 租约持有者
-     * @param leaseDuration 租约时长
-     * @param renewalInterval 续租间隔
-     * @return 心跳句柄（用于停止心跳）
-     */
+    /** Starts heartbeat-based lease renewal. */
     @Override
     public ExecutionSession.HeartbeatHandle startHeartbeat(Long taskId,
                                                             String leaseOwner,
@@ -85,7 +78,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
         AtomicBoolean leaseRevoked = new AtomicBoolean(false);
         AtomicInteger consecutiveFailures = new AtomicInteger(0);
 
-        // 定时续租任务
+        // Periodic renewal task
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
             () -> {
                 if (stopped.get()) {
@@ -96,7 +89,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                     boolean renewed = leaseManagementService.renewLease(taskId, leaseOwner, leaseDuration);
 
                     if (renewed) {
-                        consecutiveFailures.set(0);  // 重置失败计数
+                        consecutiveFailures.set(0);  // reset failures
                         if (log.isDebugEnabled()) {
                             log.debug("[INGEST][APP] heartbeat renewed taskId={} owner={}", taskId, leaseOwner);
                         }
@@ -105,14 +98,14 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                         log.warn("[INGEST][APP] heartbeat renewal failed taskId={} owner={} consecutiveFailures={}",
                                  taskId, leaseOwner, failures);
 
-                        // 达到失败阈值，主动验证租约
+                        // Upon reaching threshold, validate lease proactively
                         if (failures >= failureThreshold) {
                             boolean valid = leaseManagementService.validateLease(taskId, leaseOwner);
                             if (!valid) {
                                 leaseRevoked.set(true);
                                 log.warn("[INGEST][APP] lease revoked detected taskId={} owner={}",
                                          taskId, leaseOwner);
-                                stopped.set(true);  // 停止心跳
+                                stopped.set(true);  // stop heartbeat
                             }
                         }
                     }
@@ -126,8 +119,8 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                     }
                 }
             },
-            renewalInterval.toMillis(),  // 初始延迟
-            renewalInterval.toMillis(),  // 周期
+            renewalInterval.toMillis(),  // initial delay
+            renewalInterval.toMillis(),  // period
             TimeUnit.MILLISECONDS
         );
 
@@ -137,9 +130,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
         return new HeartbeatHandleImpl(taskId, leaseOwner, future, stopped, leaseRevoked);
     }
 
-    /**
-     * 心跳句柄实现。
-     */
+    /** Heartbeat handle implementation. */
     private static class HeartbeatHandleImpl implements ExecutionSession.HeartbeatHandle {
         private final Long taskId;
         private final String leaseOwner;
@@ -162,7 +153,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
         @Override
         public void stop() {
             if (stopped.compareAndSet(false, true)) {
-                future.cancel(false);  // 不中断正在执行的任务
+                future.cancel(false);  // do not interrupt running task
                 log.info("[INGEST][APP] heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
             }
         }

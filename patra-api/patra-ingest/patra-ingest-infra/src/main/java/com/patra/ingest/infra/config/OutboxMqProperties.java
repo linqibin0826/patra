@@ -13,8 +13,8 @@ import java.util.Set;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 /**
- * Outbox MQ 发布属性。
- * <p>用于约束发布实现的装配策略，并在启动阶段进行 fail-fast 校验。</p>
+ * Outbox MQ publishing properties.
+ * <p>Constrain publisher implementation wiring and perform fail-fast validation at startup.</p>
  */
 @ConfigurationProperties(prefix = "papertrace.ingest.outbox")
 @Validated

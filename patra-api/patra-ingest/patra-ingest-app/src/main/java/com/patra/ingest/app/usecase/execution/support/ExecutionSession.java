@@ -1,13 +1,13 @@
 package com.patra.ingest.app.usecase.execution.support;
 
 /**
- * 执行会话（封装租约、心跳、撤销标志）。
+ * Execution session (wraps lease, heartbeat, and revocation flag).
  *
- * @param taskId 任务ID
- * @param runId 运行ID
- * @param leaseOwner 租约持有者
- * @param heartbeatHandle 心跳句柄（用于停止心跳）
- * @param leaseRevoked 租约是否被撤销（volatile标志位）
+ * @param taskId task id
+ * @param runId run id
+ * @param leaseOwner lease owner
+ * @param heartbeatHandle heartbeat handle (to stop heartbeat)
+ * @param leaseRevoked whether the lease has been revoked (volatile flag)
  * @author linqibin
  * @since 0.1.0
  */
@@ -18,27 +18,19 @@ public record ExecutionSession(
         HeartbeatHandle heartbeatHandle,
         boolean leaseRevoked
 ) {
-    /**
-     * 清理资源（停止心跳 + 释放租约）。
-     */
+    /** Cleans up resources (stop heartbeat + release lease). */
     public void cleanup() {
         if (heartbeatHandle != null) {
             heartbeatHandle.stop();
         }
     }
 
-    /**
-     * 心跳句柄（用于停止心跳）。
-     */
+    /** Heartbeat handle (to stop heartbeat). */
     public interface HeartbeatHandle {
-        /**
-         * 停止心跳。
-         */
+        /** Stops the heartbeat. */
         void stop();
 
-        /**
-         * 检查租约是否被撤销。
-         */
+        /** Returns whether the lease has been revoked. */
         boolean isLeaseRevoked();
     }
 }

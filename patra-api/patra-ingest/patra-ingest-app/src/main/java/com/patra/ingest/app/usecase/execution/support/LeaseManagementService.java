@@ -3,8 +3,8 @@ package com.patra.ingest.app.usecase.execution.support;
 import java.time.Duration;
 
 /**
- * 租约管理服务。
- * <p>封装租约抢占、续租、释放逻辑（基于TaskRepository）。</p>
+ * Lease management service.
+ * <p>Encapsulates lease acquire/renew/release logic (backed by TaskRepository).</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -12,38 +12,38 @@ import java.time.Duration;
 public interface LeaseManagementService {
 
     /**
-     * 尝试抢占租约。
+     * Attempts to acquire a lease.
      *
-     * @param taskId 任务ID
-     * @param owner 租约持有者
-     * @param leaseDuration 租约时长
-     * @return true表示抢占成功
+     * @param taskId task id
+     * @param owner lease owner
+     * @param leaseDuration lease duration
+     * @return true if acquired
      */
     boolean tryAcquireLease(Long taskId, String owner, Duration leaseDuration);
 
     /**
-     * 续租。
+     * Renews a lease.
      *
-     * @param taskId 任务ID
-     * @param owner 租约持有者
-     * @param leaseDuration 租约时长
-     * @return true表示续租成功
+     * @param taskId task id
+     * @param owner lease owner
+     * @param leaseDuration lease duration
+     * @return true if renewed
      */
     boolean renewLease(Long taskId, String owner, Duration leaseDuration);
 
     /**
-     * 释放租约。
+     * Releases a lease.
      *
-     * @param taskId 任务ID
+     * @param taskId task id
      */
     void releaseLease(Long taskId);
 
     /**
-     * 验证租约（检查owner是否仍为当前节点）。
+     * Validates a lease (owner still current node).
      *
-     * @param taskId 任务ID
-     * @param owner 租约持有者
-     * @return true表示租约仍然有效
+     * @param taskId task id
+     * @param owner lease owner
+     * @return true if lease is still valid
      */
     boolean validateLease(Long taskId, String owner);
 }

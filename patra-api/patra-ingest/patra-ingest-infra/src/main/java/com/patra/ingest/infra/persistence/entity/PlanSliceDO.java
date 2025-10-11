@@ -9,12 +9,12 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <p><b>计划切片 DO</b> —— 映射表：<code>ing_plan_slice</code></p>
- * <p>语义：将计划蓝图按策略切分出的最小幂等执行单元；每个切片派生一个任务。</p>
- * <p>要点：
+ * <p><b>Plan slice DO</b> — table: <code>ing_plan_slice</code></p>
+ * <p>Represents the smallest idempotent execution unit derived from a plan by strategy. One task per slice.</p>
+ * <p>Notes:
  * <ul>
- *   <li><code>slice_signature_hash</code> 对 <code>window_spec</code> 做规范化哈希（UK：uk_slice_signature），防止重复生成。</li>
- *   <li><code>window_spec</code>、<code>expr_snapshot</code> 均为 JSON AST，使用 {@link JacksonTypeHandler} 保持结构化。</li>
+ *   <li><code>slice_signature_hash</code> is a normalized hash of <code>window_spec</code> (UK: uk_slice_signature) to prevent duplicates.</li>
+ *   <li><code>window_spec</code> and <code>expr_snapshot</code> are JSON ASTs stored via {@link JacksonTypeHandler}.</li>
  * </ul>
  * </p>
  */
@@ -23,35 +23,35 @@ import lombok.EqualsAndHashCode;
 @TableName(value = "ing_plan_slice", autoResultMap = true)
 public class PlanSliceDO extends BaseDO {
 
-    /** 关联计划 ID */
+    /** Associated plan id. */
     @TableField("plan_id")
     private Long planId;
 
-    /** 冗余的来源代码 */
+    /** Redundant provenance code. */
     @TableField("provenance_code")
     private String provenanceCode;
 
-    /** 切片序号（0..N） */
+    /** Slice sequence number (0..N). */
     @TableField("slice_no")
     private Integer sliceNo;
 
-    /** 切片签名哈希（基于规范化 window_spec） */
+    /** Slice signature hash (based on normalized window_spec). */
     @TableField("slice_signature_hash")
     private String sliceSignatureHash;
 
-    /** 窗口边界规格（JSON） */
+    /** Window boundary spec (JSON). */
     @TableField(value = "window_spec", typeHandler = JacksonTypeHandler.class)
     private JsonNode windowSpec;
 
-    /** 局部化表达式哈希 */
+    /** Localized expression hash. */
     @TableField("expr_hash")
     private String exprHash;
 
-    /** 局部化表达式快照（JSON AST，可重放） */
+    /** Localized expression snapshot (JSON AST; replayable). */
     @TableField(value = "expr_snapshot", typeHandler = JacksonTypeHandler.class)
     private JsonNode exprSnapshot;
 
-    /** 切片状态（DICT：ing_slice_status） */
+    /** Slice status (DICT: ing_slice_status). */
     @TableField("status_code")
     private String statusCode;
 }

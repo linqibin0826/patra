@@ -24,10 +24,11 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Outbox Relay 调度作业：负责周期性扫描 Outbox 表，获取可投递消息并尝试发布。
- * <p>工作流：参数解析 → 构造指令（含租约/重试配置）→ 调用应用用例 → 上报结果。</p>
- * <p>幂等性：租约拥有者标识包含 host + jobId + threadId + uuid，保障并发实例区分。</p>
- * <p>失败模式：业务失败封装为 {@link OutboxRelayExecutionException} 抛出，XXL 标记失败。</p>
+ * Outbox Relay scheduled job. Periodically scans the Outbox table to fetch deliverable
+ * messages and attempts to publish them.
+ * <p>Workflow: parse params → build command (with lease/retry settings) → invoke use case → report result.</p>
+ * <p>Idempotency: the lease owner identifier includes host + jobId + threadId + uuid to distinguish concurrent instances.</p>
+ * <p>Failure mode: business failures are wrapped into {@link OutboxRelayExecutionException} and rethrown; XXL marks the job failed.</p>
  */
 @Slf4j
 @Component
@@ -40,12 +41,12 @@ public class OutboxRelayJob {
     private final Clock clock;
 
     /**
-     * XXL-Job 入口。解析参数执行 relay，并将统计结果写入调度日志。
-     * <p>支持指定 channel 或处理所有 channel（参数为空时）。</p>
+     * XXL-Job entrypoint. Parses params, performs relay, and writes statistics to the scheduler log.
+     * <p>Supports a specific channel or all channels when param is blank.</p>
      */
     @XxlJob("ingestOutboxRelayJob")
     public void execute() {
-        // 使用注入时钟生成一致的执行时间，方便测试控制
+        // Use injected Clock to produce deterministic execution time for testing
         Instant now = Instant.now(clock);
         try {
             OutboxRelayJobParam jobParam = parseParam(XxlJobHelper.getJobParam());
@@ -69,11 +70,11 @@ public class OutboxRelayJob {
     }
 
     /**
-     * 构建 relay 命令：封装目标通道、时间基准、批大小、租约配置与重试策略。
+     * Builds the relay command: target channel, time base, batch size, lease configuration, and retry policy.
      *
-     * @param param 任务参数（可能部分字段为空）
-     * @param now   当前时间（注入 Clock 便于测试）
-     * @return OutboxRelayCommand
+     * @param param job parameters (fields may be null)
+     * @param now   current time (from injected Clock for testability)
+     * @return relay command
      */
     private OutboxRelayCommand buildInstruction(OutboxRelayJobParam param, Instant now) {
         return new OutboxRelayCommand(
@@ -88,11 +89,11 @@ public class OutboxRelayJob {
     }
 
     /**
-     * 解析通道：为空时回退配置默认值。
+     * Parses the channel; null/blank falls back to default configured channel.
      */
     private ChannelKey resolveChannel(String channel) {
         if (CharSequenceUtil.isBlank(channel)) {
-            return null; // 交由 Builder 回退到默认值
+            return null; // Let the builder fall back to its default value
         }
         String trimmed = CharSequenceUtil.trim(channel);
         var byChannel = IngestPublishingChannels.fromChannel(trimmed);
@@ -107,11 +108,11 @@ public class OutboxRelayJob {
     }
 
     /**
-     * 解析持续时间：支持 ISO-8601（以 PT 开头）或纯秒数字串。
+     * Parses a duration string: supports ISO-8601 (starting with PT) or a plain numeric seconds string.
      *
-     * @param value 持续时间字符串
-     * @return Duration 或 null
-     * @throws IngestScheduleParameterException 非法格式
+     * @param value duration string
+     * @return Duration or null when blank
+     * @throws IngestScheduleParameterException when format is illegal
      */
     private Duration parseDuration(String value) {
         if (CharSequenceUtil.isBlank(value)) {
@@ -129,7 +130,7 @@ public class OutboxRelayJob {
     }
 
     /**
-     * 解析 JSON 参数，失败抛出调度参数异常。
+     * Parses JSON param; throws schedule parameter exception on failure.
      */
     private OutboxRelayJobParam parseParam(String param) {
         if (CharSequenceUtil.isBlank(param)) {
@@ -143,7 +144,7 @@ public class OutboxRelayJob {
     }
 
     /**
-     * 构造租约 owner 标识：host + jobId + threadId + uuid，避免冲突并便于追踪。
+     * Builds the lease owner id: host + jobId + threadId + uuid to avoid collisions and aid traceability.
      */
     private String buildLeaseOwner() {
         String host = CharSequenceUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");

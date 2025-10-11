@@ -5,10 +5,11 @@ import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 调度实例（ScheduleInstance）表 Mapper。
+ * Mapper for schedule instance (ScheduleInstance) table.
  * <p>
- * 语义：一次调度触发（人工 / 定时 / API）形成一个实例，用于串联本次下发 Plan / Task / Slice 的全链路追踪。
- * 说明：仅提供单表 CRUD；若未来需要按照时间+调度器分页检索，请新增方法（如 findBySchedulerAndTimeRange）。
+ * Semantics: each scheduling trigger (manual/cron/API) creates an instance that links
+ * the full chain of Plan/Task/Slice for this dispatch. CRUD only; for future time+scheduler
+ * range queries, add dedicated methods (e.g., findBySchedulerAndTimeRange).
  * </p>
  */
 @Mapper

@@ -51,12 +51,6 @@ Papertrace 聚焦医学科研文献的统一采集、标准化与智能分析，
 - 调度：XXL-Job 负责计划触发，调度参数与执行状态需在 `schedule_instance` 表留痕
 - 故障案例沉淀至 `docs/operations/troubleshooting.md`
 
-## Roadmap 与贡献
-- 当前高优先级：完善采集链路监控、补充 Registry 配置巡检、搭建 Docs-as-Code 门户
-- 中期计划：引入执行端闭环、扩展切片策略（CURSOR/ID_RANGE）、完善错误指标看板
-- 贡献要求：小步提交，描述变更目的/风险/回滚方案，领域层新增需说明不变量
-- 建议在 PR 中附带验证步骤，测试覆盖核心逻辑与边界条件
-
 ## 文档索引
 - 统一索引：`docs/README.md`
 - 架构专题：`docs/overview/architecture.md`

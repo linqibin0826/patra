@@ -15,23 +15,23 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * RocketMQ 消费者配置：订阅 INGEST_TASK_READY 主题并启动任务执行。
+ * RocketMQ consumer configuration: subscribes to the INGEST_TASK_READY topic and starts task execution.
  * <p>
- * 职责：
+ * Responsibilities:
  * <ul>
- *   <li>解析 MQ 消息的 payload 与 headers</li>
- *   <li>组装 {@link TaskReadyCommand} 并调用应用层用例</li>
- *   <li>处理解析异常（抛出异常触发 MQ 重试）</li>
+ *   <li>Parse MQ message payload and headers</li>
+ *   <li>Assemble {@link TaskReadyCommand} and invoke the application use case</li>
+ *   <li>Handle parsing failures (throwing triggers MQ retry)</li>
  * </ul>
  * </p>
  * <p>
- * Spring Cloud Stream RocketMQ Binder 使用的 header keys:
+ * Header keys used by Spring Cloud Stream RocketMQ Binder:
  * <ul>
- *   <li>ROCKET_KEYS: 消息业务键（对应 RocketMQ 的 KEYS 属性）</li>
- *   <li>ROCKET_TAGS: 消息标签（对应 RocketMQ 的 TAGS 属性）</li>
- *   <li>ROCKET_MQ_TOPIC: Topic 名称</li>
- *   <li>ROCKET_MQ_MESSAGE_ID: 消息 ID</li>
- *   <li>partitionKey: 分区键（自定义 header）</li>
+ *   <li>ROCKET_KEYS: business key (RocketMQ KEYS)</li>
+ *   <li>ROCKET_TAGS: message tags (RocketMQ TAGS)</li>
+ *   <li>ROCKET_MQ_TOPIC: topic name</li>
+ *   <li>ROCKET_MQ_MESSAGE_ID: message id</li>
+ *   <li>partitionKey: partition key (custom header)</li>
  * </ul>
  * </p>
  *
@@ -55,12 +55,12 @@ public class IngestStreamConsumers {
     public Consumer<Message<String>> ingestTaskReadyConsumer() {
         return message -> {
             try {
-                // DEBUG 日志：打印所有 headers 用于诊断
+                // DEBUG: print all headers for diagnostics
                 if (log.isDebugEnabled()) {
                     log.debug("[INGEST][ADAPTER] Received headers: {}", message.getHeaders());
                 }
 
-                // 读取 RocketMQ 相关 headers
+                // Read RocketMQ-related headers
                 String topic = (String) message.getHeaders().getOrDefault(HEADER_TOPIC, "unknown");
                 String keys = (String) message.getHeaders().get(HEADER_KEYS);
                 String tags = (String) message.getHeaders().get(HEADER_TAGS);
@@ -70,15 +70,16 @@ public class IngestStreamConsumers {
                 log.info("[INGEST][ADAPTER] consume topic={} KEYS={} TAGS={} msgId={} partitionKey={}",
                         topic, keys, tags, messageId, partitionKey);
 
-                // 解析 payload 为 TaskReadyCommand
+                // Parse payload to TaskReadyCommand
                 TaskReadyCommand command = parsePayload(message.getPayload(), message.getHeaders());
 
-                // 调用应用层用例
+                // Invoke application use case
                 taskExecutionUseCase.execute(command);
 
             } catch (Exception e) {
                 log.error("[INGEST][ADAPTER] failed to consume message, will retry", e);
-                throw new RuntimeException("消息消费失败", e); // 抛出异常触发 MQ 重试
+                // Throw to trigger MQ retry
+                throw new RuntimeException("Message consumption failed", e);
             }
         };
     }

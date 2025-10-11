@@ -43,11 +43,11 @@ public record TaskReadyCommand(
     }
 
     public String getCorrelationId() {
-        return resolveHeaderAsString("correlationId"); // TODO 修改发送者，让其携带这个值
+        return resolveHeaderAsString("correlationId"); // TODO Update producer to include this value
     }
 
     public String getSchedulerRunId() {
-        return resolveHeaderAsString("scheduler"); // TODO 去掉这个没有用的值
+        return resolveHeaderAsString("scheduler"); // TODO Remove if not used
     }
 
     private String resolveHeaderAsString(String key) {
@@ -62,4 +62,3 @@ public record TaskReadyCommand(
         return value instanceof String ? (String) value : value.toString();
     }
 }
-

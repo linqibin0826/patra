@@ -1,242 +1,216 @@
-# 任务执行引擎（Task Execution Engine）
+# Task Execution Engine
 
-## 概述
+## Overview
 
-任务执行引擎是 Papertrace 数据摄取系统的核心组件，负责可靠、幂等、可观测地执行数据采集任务。
+The Task Execution Engine is a core component of the Papertrace ingestion system. It executes ingestion tasks reliably, idempotently, and with observability.
 
-### 核心特性
+### Key Features
 
-- **三阶段编排**：Prepare → Execute → Complete（遵循 ADR-001）
-- **分布式租约管理**：基于 CAS 的乐观锁租约机制，支持心跳续约
-- **幂等保障**：基于 idempotentKey 的去重机制
-- **批次执行**：支持可配置的批次规划与执行策略
-- **游标推进**：带乐观锁的游标管理，保证增量采集的一致性
-- **优雅降级**：租约撤销自动检测、心跳失败阈值控制
+- Three-phase orchestration: Prepare → Execute → Complete (follows ADR-001)
+- Distributed lease management: CAS-based optimistic lease with heartbeat renewal
+- Idempotency: deduplication based on idempotentKey
+- Batch execution: configurable batch planning and execution strategies
+- Cursor advancement: optimistic cursor management for consistent incremental ingestion
+- Graceful degradation: automatic lease revocation detection and heartbeat failure thresholds
 
 ---
 
-## 架构设计
+## Architecture
 
-### 整体流程
+### End-to-End Flow
 
 ```
 TaskReadyCommand (MQ/Scheduler)
     ↓
-TaskExecutionUseCase (顶层编排器)
+TaskExecutionUseCase (top-level orchestrator)
     ↓
 ┌─────────────────────────────────────────────────────────┐
 │  Prepare Phase (PrepareTaskExecutionUseCase)            │
-│  - 幂等检查 (IdempotencyChecker)                         │
-│  - 租约抢占 (LeaseManagementService)                     │
-│  - 会话初始化 (ExecutionSessionManager → TaskRun + 心跳) │
-│  - 上下文加载 (ExecutionContextLoader → Config + Expr)   │
+│  - Idempotency check (IdempotencyChecker)               │
+│  - Lease acquisition (LeaseManagementService)           │
+│  - Session init (ExecutionSessionManager → TaskRun + HB)│
+│  - Context load (ExecutionContextLoader → Config + Expr)│
 └─────────────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────────────┐
 │  Execute Phase (ExecuteTaskBatchesUseCase)              │
-│  - 批次规划 (BatchPlanner)                               │
-│  - 批次执行 (BatchExecutor)                              │
-│  - 结果持久化 (TaskRunBatch)                             │
-│  - 租约验证 (HeartbeatHandle.isLeaseRevoked)            │
+│  - Batch planning (BatchPlanner)                        │
+│  - Batch execution (BatchExecutor)                      │
+│  - Persist results (TaskRunBatch)                       │
+│  - Lease verification (HeartbeatHandle.isLeaseRevoked)  │
 └─────────────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────────────┐
 │  Complete Phase (CompleteTaskExecutionUseCase)          │
-│  - 游标推进 (CursorAdvancer)                             │
-│  - 状态判断 (SUCCEEDED/FAILED/PARTIAL/CURSOR_PENDING)   │
-│  - 资源清理 (停止心跳 + 释放租约)                        │
+│  - Cursor advancement (CursorAdvancer)                  │
+│  - Final status (SUCCEEDED/FAILED/PARTIAL/CURSOR_PENDING)│
+│  - Cleanup (stop heartbeat + release lease)             │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 核心组件
+### Core Components
 
-#### 1. 顶层编排器
+1) Top-level orchestrator
+- TaskExecutionUseCaseImpl: single entrypoint; orchestrates three sub-use-cases; handles top-level exceptions and cleanup
 
-- **TaskExecutionUseCaseImpl**: 统一入口，编排三个子用例，处理顶层异常与资源清理
+2) Prepare phase
+- IdempotencyChecker: determines if task already completed
+- LeaseManagementService: acquire/release lease (DB optimistic locking)
+- ExecutionSessionManager: create TaskRun, start heartbeat, return session
+- ExecutionContextLoader: load task config, compile expressions, build execution context
 
-#### 2. Prepare 阶段
+3) Execute phase
+- BatchPlannerRegistry: select planner by provenanceCode
+- BatchPlanner: build batch plan (supports pagination/token cursors)
+- BatchExecutorRegistry: select executor by provenanceCode
+- BatchExecutor: execute a batch (calls external API/SDK)
+- HeartbeatRenewalService: renew lease via heartbeat; detect lease revocation
 
-- **IdempotencyChecker**: 检查任务是否已成功执行（幂等保障）
-- **LeaseManagementService**: 租约抢占与释放（基于 DB 乐观锁）
-- **ExecutionSessionManager**: 创建 TaskRun、启动心跳、返回 ExecutionSession
-- **ExecutionContextLoader**: 加载任务配置、编译表达式、构建执行上下文
-
-#### 3. Execute 阶段
-
-- **BatchPlannerRegistry**: 根据 provenanceCode 选择批次规划器
-- **BatchPlanner**: 生成批次计划（支持分页/token cursor）
-- **BatchExecutorRegistry**: 根据 provenanceCode 选择批次执行器
-- **BatchExecutor**: 执行单个批次（调用外部 API/SDK）
-- **HeartbeatRenewalService**: 定期续约心跳，检测租约撤销
-
-#### 4. Complete 阶段
-
-- **CursorAdvancer**: 推进游标水位（带乐观锁，失败返回 false）
-- **CompleteTaskExecutionUseCase**: 根据批次执行结果判断最终状态，清理资源
+4) Complete phase
+- CursorAdvancer: advance cursor watermark (optimistic lock; returns false on conflict)
+- CompleteTaskExecutionUseCase: determine final status based on batch results; cleanup resources
 
 ---
 
-## 状态流转
+## States
 
-### Task 状态
+### Task status
 
 ```
-QUEUED (初始) 
-  ↓ 
-RUNNING (执行中)
+QUEUED (initial)
+  ↓
+RUNNING (in progress)
   ↓
 ┌─────────────┬──────────────┬───────────────┬─────────────────┐
 │  SUCCEEDED  │   PARTIAL    │    FAILED     │ CURSOR_PENDING  │
-│ (全部成功)   │ (部分成功)    │ (全部失败)     │ (游标待重试)     │
 └─────────────┴──────────────┴───────────────┴─────────────────┘
 ```
 
-- **SUCCEEDED**: 全部批次成功 + 游标推进成功
-- **CURSOR_PENDING**: 全部批次成功 + 游标推进失败（乐观锁冲突）
-- **PARTIAL**: 部分批次成功、部分失败
-- **FAILED**: 全部批次失败或无批次执行
+- SUCCEEDED: all batches succeeded and cursor advanced
+- CURSOR_PENDING: all batches succeeded but cursor advancement failed (optimistic conflict)
+- PARTIAL: some batches succeeded, some failed
+- FAILED: all batches failed or none executed
 
-### TaskRun 状态
-
-与 Task 状态一致，但针对单次运行记录。
+TaskRun status mirrors Task status but applies to a single attempt record.
 
 ---
 
-## 配置说明
+## Configuration
 
-### application.yaml
+Example (application.yaml):
 
 ```yaml
 task:
   execution:
     lease:
-      duration: 60                 # 租约持续时间（秒）
-      renewal-interval: 20         # 租约续约间隔（秒，建议为 duration 的 1/3）
+      duration: 60                 # lease duration (seconds)
+      renewal-interval: 20         # heartbeat renewal interval (seconds), ~1/3 of duration
     heartbeat:
-      failure-threshold: 3         # 心跳连续失败阈值（次）
-    max-batches: 1000              # 最大批次数限制
-    fail-fast: false               # 批次失败是否立即中断（true=中断，false=继续）
+      failure-threshold: 3         # consecutive heartbeat failure threshold
+    max-batches: 1000              # upper bound on batch count
+    fail-fast: false               # stop on first batch failure or continue
 ```
 
-### 配置说明
-
-- **lease.duration**: 租约有效期，超期后其他节点可抢占
-- **lease.renewal-interval**: 心跳续约间隔，过短增加 DB 压力，过长可能导致租约过期
-- **heartbeat.failure-threshold**: 连续失败 N 次后触发租约验证，防止僵尸任务
-- **max-batches**: 防止批次数过多导致执行时间过长
-- **fail-fast**: 决定批次执行策略（快速失败 vs 尽力而为）
+Notes:
+- lease.duration: after expiry others may acquire
+- lease.renewal-interval: too short stresses DB; too long risks expiry
+- heartbeat.failure-threshold: prevents zombie tasks
+- max-batches: bound execution time
+- fail-fast: controls execution strategy (fail-fast vs best-effort)
 
 ---
 
-## 使用示例
+## Usage Examples
 
-### 1. 发送任务就绪命令（通过 MQ）
+1) Send TaskReadyCommand (via MQ or direct call)
 
 ```java
 TaskReadyCommand command = new TaskReadyCommand(
     taskId,
     idempotentKey,
-    provenance,
-    operation,
-    schedulerRunId,
-    correlationId,
     headers
 );
 
-// 通过 MQ 发送或直接调用
 taskExecutionUseCase.execute(command);
 ```
 
-### 2. 实现自定义 BatchPlanner
+2) Implement a custom BatchPlanner
 
 ```java
 @Component
 public class PubMedBatchPlanner implements BatchPlanner {
-
-
     @Override
-    public ProvenanceCode getProvenanceCode() {
-        return ProvenanceCode.PUBMED;
-    }
+    public ProvenanceCode getProvenanceCode() { return ProvenanceCode.PUBMED; }
 
     @Override
     public BatchPlan plan(ExecutionContext context, int maxBatches) {
-        // 根据游标和执行窗口生成批次计划
-        // 返回 BatchPlan(batches, totalBatches, exceedsLimit)
+        // Build batch plan from cursor and execution window
+        // return new BatchPlan(batches, totalBatches, exceedsLimit);
     }
 }
 ```
 
-### 3. 实现自定义 BatchExecutor
+3) Implement a custom BatchExecutor
 
 ```java
 @Component
 public class PubMedBatchExecutor implements BatchExecutor {
-
-
     @Override
-    public ProvenanceCode getProvenanceCode() {
-        return ProvenanceCode.PUBMED;
-    }
+    public ProvenanceCode getProvenanceCode() { return ProvenanceCode.PUBMED; }
 
     @Override
     public BatchResult execute(ExecutionContext context, Batch batch) {
-        // 调用 PubMed API
-        // 返回 BatchResult.success(batchNo, fetchedCount, nextCursor, storageKey)
-        // 或 BatchResult.failure(batchNo, errorMessage)
+        // Call PubMed API
+        // return BatchResult.success(batchNo, fetchedCount, nextCursor, storageKey);
+        // or return BatchResult.failure(batchNo, errorMessage);
     }
 }
 ```
 
-### 4. 处理 CURSOR_PENDING 状态
+4) Handling CURSOR_PENDING
 
-游标推进失败（乐观锁冲突）时，任务状态标记为 `CURSOR_PENDING`。建议：
-
-- 由后台定时任务扫描 `CURSOR_PENDING` 状态的任务
-- 重新尝试推进游标（调用 `CursorAdvancer.advance()`）
-- 成功后更新任务状态为 `SUCCEEDED`
-
----
-
-## 关键设计决策
-
-### 1. 为什么使用三阶段编排？
-
-- **关注点分离**: Prepare/Execute/Complete 各司其职，降低单个用例复杂度
-- **可测试性**: 每个阶段可独立测试
-- **可扩展性**: 新增数据源只需实现 BatchPlanner 和 BatchExecutor
-
-### 2. 为什么引入 CURSOR_PENDING 状态？
-
-- **乐观锁冲突**: 多节点同时推进同一游标时，只有一个成功
-- **解耦重试**: 批次执行成功但游标失败时，不应重新执行批次
-- **可观测性**: 明确标识需要异步重试的任务
-
-### 3. 为什么使用分布式租约而非分布式锁？
-
-- **非阻塞**: 租约抢占失败时直接跳过，不阻塞其他任务
-- **续约机制**: 通过心跳续约，防止任务执行时间过长导致租约过期
-- **自动撤销**: 节点宕机后租约自动过期，其他节点可接管
-
-### 4. 为什么批次执行支持 fail-fast 和 continue-on-error？
-
-- **数据完整性优先**: fail-fast=true，任何批次失败立即中断
-- **尽力而为**: fail-fast=false，尽可能多地采集数据，适合大规模采集场景
+When cursor advancement fails due to optimistic conflict, the task is marked CURSOR_PENDING.
+Recommended:
+- Background job scans CURSOR_PENDING tasks
+- Retry advancing the cursor (CursorAdvancer.advance())
+- On success mark task SUCCEEDED
 
 ---
 
-## 监控与可观测性
+## Key Design Decisions
 
-### 关键日志
+1) Why three-phase orchestration?
+- Separation of concerns lowers complexity
+- Testability: each phase is testable in isolation
+- Extensibility: new sources implement BatchPlanner and BatchExecutor
 
-- **[INGEST][APP] task execution start**: 任务执行开始
-- **[INGEST][APP] lease acquired**: 租约抢占成功
-- **[INGEST][APP] session created**: 会话创建成功
-- **[INGEST][APP] batch plan created**: 批次规划完成
-- **[INGEST][APP] batch succeeded/failed**: 批次执行结果
-- **[INGEST][APP] task succeeded/marked PARTIAL/marked FAILED**: 任务最终状态
+2) Why CURSOR_PENDING?
+- Optimistic concurrency: only one node advances
+- Decoupled retries: batches succeeded but cursor failed shouldn’t re-execute batches
+- Observability: clearly marks asynchronous follow-up work
 
-### 关键指标
+3) Why distributed leases instead of distributed locks?
+- Non-blocking: failed acquisition skips work rather than blocking
+- Renewal: heartbeat prevents long-running tasks from lease expiry
+- Auto revoke: crashed nodes lose lease automatically
+
+4) Why support both fail-fast and continue-on-error?
+- Data integrity first (fail-fast=true)
+- Best-effort collection at scale (fail-fast=false)
+
+---
+
+## Observability
+
+Key logs:
+- [INGEST][APP] task execution start
+- [INGEST][APP] lease acquired
+- [INGEST][APP] session created
+- [INGEST][APP] batch plan created
+- [INGEST][APP] batch succeeded/failed
+- [INGEST][APP] task succeeded/marked PARTIAL/marked FAILED
+
+Key metrics: to be defined per service SLOs.
 
 - 任务执行耗时（P50/P95/P99）
 - 批次执行成功率

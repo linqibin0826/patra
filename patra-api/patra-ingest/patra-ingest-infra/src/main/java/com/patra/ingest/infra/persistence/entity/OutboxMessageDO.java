@@ -10,38 +10,38 @@ import lombok.EqualsAndHashCode;
 import java.time.Instant;
 
 /**
- * <p><b>Outbox 消息 DO</b> —— 映射表：<code>ing_outbox_message</code></p>
+ * <p><b>Outbox message DO</b> — table: <code>ing_outbox_message</code></p>
  * <p>
- * 语义：与业务数据<strong>同一事务</strong>落库的通用出站消息（任务推送 / 集成事件统一托管）。
- * Relay 仅扫描本表并发布到外部通道（如 MQ/Webhook），不扫描业务热表，确保写侧最小侵入与发布解耦。
+ * Semantics: Generic outbound messages persisted in the <strong>same transaction</strong> as business data
+ * (task notifications / integration events). The relay scans this table only and publishes to external
+ * channels (MQ/Webhook), avoiding hot business tables to ensure minimal write-side intrusion and decoupled publishing.
  * </p>
  * <p>
- * 关键规则：
+ * Key rules:
  * <ul>
- *   <li>幂等：(<code>channel</code>, <code>dedup_key</code>) 唯一（UK：uk_outbox_channel_dedup），保障源端去重；可安全重试。</li>
- *   <li>顺序/分区：<code>partition_key</code> 建议取值 "<code>provenance:operation</code>"，
- *       通过索引 <code>idx_outbox_partition(channel, partition_key, status_code)</code> 控制并发与保序（例如：<code>PUBMED:HARVEST</code>）。</li>
- *   <li>定时/延时：<code>not_before</code> 为最早可发布时间（UTC），NULL 表示随时可发；
- *       Relay 扫描通常按 <code>status_code</code> + 时间游标（<code>idx_outbox_status_time</code>）批量拉取。</li>
- *   <li>租约：<code>pub_lease_owner</code>/<code>pub_leased_until</code> 防止多 Relay 并发同一行；
- *       过期可被其他发布器接管（<code>idx_outbox_lease</code>）。</li>
+ *   <li>Idempotency: (<code>channel</code>, <code>dedup_key</code>) is unique (UK: uk_outbox_channel_dedup) to enable source-side dedup and safe retries.</li>
+ *   <li>Ordering/partitioning: <code>partition_key</code> is recommended as "<code>provenance:operation</code>"
+ *       and leveraged by index <code>idx_outbox_partition(channel, partition_key, status_code)</code> to control parallelism and preserve order (e.g., <code>PUBMED:HARVEST</code>).</li>
+ *   <li>Scheduling/delay: <code>not_before</code> is the earliest publish time (UTC); NULL means publishable anytime.
+ *       Relay scans typically by <code>status_code</code> + time cursor (<code>idx_outbox_status_time</code>).</li>
+ *   <li>Lease: <code>pub_lease_owner</code>/<code>pub_leased_until</code> prevent concurrent relays from processing the same row;
+ *       after expiry, another publisher may take over (<code>idx_outbox_lease</code>).
  * </ul>
  * </p>
  * <p>
- * 状态机（建议）：
- * <code>PENDING → PUBLISHING → PUBLISHED</code>；失败进入 <code>FAILED</code>，
- * 根据退避计算 <code>next_retry_at</code> 重新回到 <code>PENDING</code> 或在策略判定后标记为 <code>DEAD</code>。
+ * Suggested state machine: <code>PENDING → PUBLISHING → PUBLISHED</code>; failures go to <code>FAILED</code>.
+ * Based on backoff, compute <code>next_retry_at</code> to return to <code>PENDING</code>, or mark as <code>DEAD</code> per policy.
  * </p>
  * <p>
- * 字段说明：JSON 列（<code>payload_json</code>/<code>headers_json</code>）使用
- * {@link com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler JsonToJsonNodeTypeHandler} 与 Jackson {@link com.fasterxml.jackson.databind.JsonNode JsonNode}
- * 进行无模式（schemaless）存储；仅放置<strong>最小必要</strong>信息（如 taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore 等），
- * 体积较大的原始内容不得入队。
+ * Fields: JSON columns (<code>payload_json</code>/<code>headers_json</code>) use
+ * {@link com.patra.starter.mybatis.type.JsonToJsonNodeTypeHandler JsonToJsonNodeTypeHandler} with Jackson {@link com.fasterxml.jackson.databind.JsonNode JsonNode}
+ * for schemaless storage. Store only the <strong>minimum necessary</strong> information (e.g., taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore);
+ * do not enqueue large raw contents.
  * </p>
  * <p>
- * 审计与通用字段（如 <code>created_at</code>/<code>version</code> 等）继承自 {@link BaseDO BaseDO}。
+ * Audit/common fields (e.g., <code>created_at</code>/<code>version</code>) are inherited from {@link BaseDO BaseDO}.
  * </p>
- * <p>分层定位：Hexagonal 的 <em>infra / persistence DO</em>，仅承担持久化映射，不包含领域行为。</p>
+ * <p>Layering: an <em>infra/persistence DO</em> in a hexagonal architecture; contains no domain behavior.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -52,128 +52,122 @@ import java.time.Instant;
 public class OutboxMessageDO extends BaseDO {
 
     /**
-     * 聚合类型（如：TASK/PLAN/...）。
-     * <p>用途：审计与回放定位；帮助下游快速按聚合家族做度量或分流。</p>
-     * <p>约束：NOT NULL；建议取值来源于受控字典，避免自由拼写。</p>
+     * Aggregate type (e.g., TASK/PLAN/...).
+     * <p>Used for audit/replay and downstream grouping.</p>
+     * <p>Constraint: NOT NULL; recommended values from a controlled dictionary.</p>
      */
     @TableField("aggregate_type")
     private String aggregateType;
 
     /**
-     * 聚合根 ID。
-     * <p>任务场景：等于 <code>ing_task.id</code>；其他聚合场景与各自主键保持一致。</p>
-     * <p>用途：回放/对账/排障时的主关联键。</p>
+     * Aggregate root ID.
+     * <p>Task scenario: equals <code>ing_task.id</code>; other aggregates use their own primary key.</p>
+     * <p>Used as the main correlation key for replay/reconciliation/diagnostics.</p>
      */
     @TableField("aggregate_id")
     private Long aggregateId;
 
     /**
-     * 逻辑通道 = 目标 Topic（例如：<code>INGEST_TASK</code>）。
-     * <p>与 {@link #dedupKey} 组成唯一键保障幂等（UK：uk_outbox_channel_dedup）。</p>
-     * <p>建议：通道种类保持稳定且数量可控，由适配层进行路由与鉴权。</p>
+     * Logical channel = target topic (e.g., <code>INGEST_TASK</code>).
+     * <p>Combined with {@link #dedupKey} to form a unique key (UK: uk_outbox_channel_dedup).</p>
+     * <p>Recommendation: keep channel taxonomy stable and limited; routing/auth handled by the adapter.</p>
      */
     @TableField("channel")
     private String channel;
 
     /**
-     * 业务语义标签（Operation Type），如：<code>TASK_READY</code>、<code>EVENT_PUBLISHED</code> 等。
-     * <p>用途：供订阅方做业务分流/指标聚合；不参与幂等键计算。</p>
-     */
+        * Semantic operation tag, e.g., <code>TASK_READY</code>, <code>EVENT_PUBLISHED</code>.
+        * <p>Used by subscribers for routing/metrics; not part of the idempotent key.</p>
+        */
     @TableField("op_type")
     private String opType;
 
     /**
-     * 分片/顺序路由键。
-     * <p>建议格式：<code>"provenance:operation"</code>，例如 <code>PUBMED:HARVEST</code>。</p>
-     * <p>用途：在相同 <code>channel</code> 下控制分区并发与<strong>保序</strong>发布；
-     * 命中索引 <code>idx_outbox_partition(channel, partition_key, status_code)</code>。</p>
-     * <p>注意：不参与唯一去重；与 {@link #dedupKey} 语义独立。</p>
+     * Partition/order routing key.
+     * <p>Recommended format: <code>"provenance:operation"</code>, e.g., <code>PUBMED:HARVEST</code>.</p>
+     * <p>Controls partition concurrency and ordered publishing under the same <code>channel</code> via index
+     * <code>idx_outbox_partition(channel, partition_key, status_code)</code>.</p>
+     * <p>Note: not part of the uniqueness constraint; independent of {@link #dedupKey}.</p>
      */
     @TableField("partition_key")
     private String partitionKey;
 
     /**
-     * 幂等键（Dedup Key）。
-     * <p>唯一性约束：在同一 {@link #channel} 下必须唯一（UK：uk_outbox_channel_dedup）。</p>
-     * <p>任务场景：建议等于 <code>ing_task.idempotent_key</code>；其他场景可采用 <code>requestId</code> 或内容哈希。</p>
-     * <p>作用：源端去重与安全重试；消费者即便重复投递也能在源端屏蔽。</p>
+     * Deduplication key.
+     * <p>Uniqueness constraint: must be unique within the same {@link #channel} (UK: uk_outbox_channel_dedup).</p>
+     * <p>Task scenario: recommended to equal <code>ing_task.idempotent_key</code>; other scenarios may use a <code>requestId</code> or content hash.</p>
+     * <p>Purpose: source-side dedup and safe retries; even if consumers receive duplicates, the source suppresses them.</p>
      */
     @TableField("dedup_key")
     private String dedupKey;
 
     /**
-     * 最小必要载荷（JSON）。
-     * <p>典型字段：<code>taskId</code>/<code>sliceKey</code>/<code>planKey</code>/<code>provenance</code>/<code>operation</code>/<code>endpoint</code>/<code>priority</code>/<code>notBefore</code> 等。</p>
-     * <p>约束：仅承载业务发布所需的<strong>精简</strong>信息；大字段/原始文档不得入队。</p>
+     * Minimal payload (JSON).
+     * <p>Typical fields: <code>taskId</code>/<code>sliceKey</code>/<code>planKey</code>/<code>provenance</code>/<code>operation</code>/<code>endpoint</code>/<code>priority</code>/<code>notBefore</code>.</p>
+     * <p>Constraint: only store <strong>minimal</strong> info required for publishing; large/raw documents must not be enqueued.</p>
      */
     @TableField("payload_json")
     private JsonNode payloadJson;
 
     /**
-     * 扩展头（JSON），例如 <code>correlationId</code>、追踪上下文等。
-     * <p>可空；用于跨系统链路对齐与排障。</p>
+     * Extended headers (JSON), e.g., <code>correlationId</code>, tracing context.
+     * <p>Optional; used for cross-system correlation and troubleshooting.</p>
      */
     @TableField("headers_json")
     private JsonNode headersJson;
 
     /**
-     * 最早可发布时间（UTC）。
-     * <p>NULL = 随时可发；用于定时/延时发布与速率整形。</p>
+     * Earliest publish time (UTC).
+     * <p>NULL = publishable anytime; used for scheduling/delay and rate shaping.</p>
      */
     @TableField("not_before")
     private Instant notBefore;
 
     /**
-     * 发布状态码。
-     * <p>取值集合：<code>PENDING</code>/<code>PUBLISHING</code>/<code>PUBLISHED</code>/<code>FAILED</code>/<code>DEAD</code>。</p>
-     * <p>扫描策略：通常按 (<code>status_code</code>, <code>not_before</code>, <code>id</code>) 走索引批量提取。</p>
+     * Publish status code.
+     * <p>Values: <code>PENDING</code>/<code>PUBLISHING</code>/<code>PUBLISHED</code>/<code>FAILED</code>/<code>DEAD</code>.</p>
+     * <p>Scan strategy: typically bulk-extract by index (<code>status_code</code>, <code>not_before</code>, <code>id</code>).</p>
      */
     @TableField("status_code")
     private String statusCode;
 
     /**
-     * 发布重试次数（失败则 +1）。
-     * <p>可配合退避策略（指数/斐波那契等）计算 {@link #nextRetryAt}。</p>
+     * Publish retry count (incremented on failures).
+     * <p>Use with backoff policy (exponential/Fibonacci, etc.) to compute {@link #nextRetryAt}.</p>
      */
     @TableField("retry_count")
     private Integer retryCount;
 
     /**
-     * 下次尝试发布时间（UTC）。
-     * <p>当 <code>now &gt;= next_retry_at</code> 且状态允许时可被 Relay 重新提取。</p>
+     * Next retry publish time (UTC).
+     * <p>When <code>now &gt;= next_retry_at</code> and status allows, the relay can re-fetch the record.</p>
      */
     @TableField("next_retry_at")
     private Instant nextRetryAt;
 
-    /**
-     * 最近一次发布错误码（由 MQ SDK 或内部策略给出）。
-     */
+    /** Last publish error code (from MQ SDK or internal policy). */
     @TableField("error_code")
     private String errorCode;
 
-    /**
-     * 最近一次发布错误详情（截断存储）。
-     */
+    /** Last publish error detail (truncated). */
     @TableField("error_msg")
     private String errorMsg;
 
     /**
-     * 发布器租约持有者（实例 ID / workerId）。
-     * <p>用途：多 Relay 并行时避免同一记录重复发布。</p>
+     * Publisher lease owner (instance id / workerId).
+     * <p>Prevents duplicate publishing with multiple relay workers.</p>
      */
     @TableField("pub_lease_owner")
     private String pubLeaseOwner;
 
     /**
-     * 发布器租约到期时间（UTC）。
-     * <p>到期前仅允许租约持有者处理；过期后可被其他发布器接管。</p>
+     * Publisher lease expiry time (UTC).
+     * <p>Only the lease owner may process before expiry; after expiry another publisher may take over.</p>
      */
     @TableField("pub_leased_until")
     private Instant pubLeasedUntil;
 
-    /**
-     * Broker 返回的消息 ID（用于对账 / 回放标识）。
-     */
+    /** Message ID returned by the broker (for reconciliation/replay identification). */
     @TableField("msg_id")
     private String msgId;
 }

@@ -12,37 +12,37 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 /**
- * 计划仓储 MyBatis-Plus 实现（Infra Layer）。
+ * MyBatis-Plus implementation of PlanRepository (Infrastructure layer).
  * <p>
- * 职责：
+ * Responsibilities:
  * <ul>
- *   <li>PlanAggregate ↔ PlanDO 映射</li>
- *   <li>按 planKey 幂等查询 / 存在性判断</li>
- *   <li>插入 / 更新（无复杂条件更新，乐观锁交由 MP 版本字段维护）</li>
+ *   <li>Mapping between PlanAggregate and PlanDO</li>
+ *   <li>Idempotent query by planKey / existence check</li>
+ *   <li>Insert / update (no complex conditional updates; optimistic locking via MP version field)</li>
  * </ul>
  * </p>
- * 日志策略：
+ * Logging strategy:
  * <ul>
- *   <li>DEBUG：insert / update 关键字段（id, planKey）</li>
- *   <li>INFO：避免高频 CRUD 噪声，不打印</li>
+ *   <li>DEBUG: log key fields on insert/update (id, planKey)</li>
+ *   <li>INFO: avoid noisy high-frequency CRUD logs</li>
  * </ul>
- * 线程安全：无状态，依赖注入单例。
+ * Thread-safety: stateless singleton via dependency injection.
  */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class PlanRepositoryMpImpl implements PlanRepository {
 
-    /** 计划 Mapper */
+    /** Plan mapper. */
     private final PlanMapper planMapper;
-    /** 聚合与 DO 转换器 */
+    /** Aggregate-to-DO converter. */
     private final PlanConverter planConverter;
 
     /**
-     * 保存 Plan：根据是否有 ID 决定 insert 或 update。
-     * <p>聚合到 DO 再回转，保证版本 / 自增主键回写。</p>
-     * @param plan 聚合（必填）
-     * @return 持久化后聚合
+     * Saves a Plan: insert or update based on presence of ID.
+     * <p>Converts aggregate to DO and back to ensure version/auto-increment fields are reflected.</p>
+     * @param plan aggregate (required)
+     * @return persisted aggregate
      */
     @Override
     public PlanAggregate save(PlanAggregate plan) {
@@ -62,8 +62,8 @@ public class PlanRepositoryMpImpl implements PlanRepository {
     }
 
     /**
-     * 按 planKey 查询。
-     * @param planKey 幂等键（为空返回 empty）
+     * Finds a plan by planKey.
+     * @param planKey idempotent key (empty returns empty)
      */
     @Override
     public Optional<PlanAggregate> findByPlanKey(String planKey) {
@@ -75,8 +75,8 @@ public class PlanRepositoryMpImpl implements PlanRepository {
     }
 
     /**
-     * 判断 planKey 是否存在。
-     * @param planKey 幂等键
+     * Checks whether a planKey exists.
+     * @param planKey idempotent key
      */
     @Override
     public boolean existsByPlanKey(String planKey) {

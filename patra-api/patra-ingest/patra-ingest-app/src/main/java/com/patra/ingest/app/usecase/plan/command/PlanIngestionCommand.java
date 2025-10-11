@@ -11,53 +11,54 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 计划编排入口命令（Adapter → Application 的指令模型）。
+ * Plan orchestration command (Adapter → Application).
  * <p>
- * 由调度作业或外部调用方组装，经 Adapter 层（参数解析 / 默认值填充）后传递给应用层，用于：
+ * Built by a scheduler job or external caller; after parsing/defaulting in the Adapter,
+ * it is passed to the application layer to:
  * <ol>
- *   <li>解析计划窗口（若 windowFrom / windowTo 缺省，将由窗口解析器推导）</li>
- *   <li>构建触发规范 {@code PlanTriggerNorm}（包含模式、步长、优先级等）</li>
- *   <li>驱动计划装配（表达式、切片策略、任务生成）</li>
+ *   <li>Resolve the plan window (windowFrom/windowTo may be derived)</li>
+ *   <li>Build {@code PlanTriggerNorm} (mode, step, priority, etc.)</li>
+ *   <li>Drive plan assembly (expression, slicing strategy, task generation)</li>
  * </ol>
  * </p>
- * <h4>字段语义 & 约束</h4>
+ * <h4>Field semantics & constraints</h4>
  * <ul>
- *   <li><b>provenanceCode / endpointName</b>：定义业务来源 + 操作二元组，组成后续幂等与分区计算的重要组成；其中 provenanceCode 与 endpointName 为必填（不可为 null）。</li>
- *   <li><b>step</b>：切片步长，采用 ISO-8601 Duration 字符串（如 {@code PT1H}、{@code P1D}）；允许为空（由策略决定是否需要），若提供需满足 {@code java.time.Duration.parse(step)} 可解析。</li>
- *   <li><b>windowFrom/windowTo</b>：计划时间窗口的上下界（半开区间假设：含 from 不含 to，若 to = null 代表“无上界”）；可同时为空，表示交由窗口解析器基于业务策略推导；若仅一端为空，以业务模式（如 HARVEST / BACKFILL / UPDATE）补全。</li>
- *   <li><b>priority</b>：调度优先级；允许为空，默认回退到 {@link com.patra.common.enums.Priority#NORMAL}。</li>
- *   <li><b>triggeredAt</b>：触发发生时间，一般由调度器传入；为空时应用层会补写当前时间（由上游保证正确性优先）。</li>
- *   <li><b>scheduler/schedulerJobId/schedulerLogId</b>：调度器维度上下文，便于追踪和回放；日志 ID 可能为空。</li>
- *   <li><b>triggerParams</b>：透传的可选附加参数（如强制窗口、特殊过滤标志）；值需为 Jackson 可序列化类型；空 map 与 null 语义一致。</li>
+ *   <li><b>provenanceCode / operationCode</b>: define the business pair; required.</li>
+ *   <li><b>step</b>: ISO-8601 Duration (e.g., {@code PT1H}, {@code P1D}); optional and strategy-dependent.</li>
+ *   <li><b>windowFrom/windowTo</b>: half-open interval [from, to); both may be null for resolver to infer.</li>
+ *   <li><b>priority</b>: scheduling priority; defaults to {@link com.patra.common.enums.Priority#NORMAL}.</li>
+ *   <li><b>triggeredAt</b>: trigger time; defaults to now when null.</li>
+ *   <li><b>scheduler/schedulerJobId/schedulerLogId</b>: scheduler context for tracking; log id may be null.</li>
+ *   <li><b>triggerParams</b>: optional user params; must be Jackson-serializable; empty map equals null.</li>
  * </ul>
- * <h4>不变式 (Invariants)</h4>
+ * <h4>Invariants</h4>
  * <ul>
  *   <li>{@code provenanceCode != null}</li>
- *   <li>{@code endpointName != null}</li>
+ *   <li>{@code operationCode != null}</li>
  *   <li>{@code triggerType != null}</li>
  *   <li>{@code scheduler != null}</li>
- *   <li>priority 总是非 null（构造时回退）</li>
+ *   <li>{@code priority != null} (coerced in constructor)</li>
  * </ul>
- * <h4>边界与错误处理</h4>
+ * <h4>Validation</h4>
  * <ul>
- *   <li>不在此处做 {@code step} 语法校验（延迟到使用处 / 策略）</li>
- *   <li>窗口上下界未做先后顺序校验（由窗口解析器或后续验证器负责）</li>
+ *   <li>Step syntax is validated by downstream strategy when applicable.</li>
+ *   <li>Window ordering is validated by the window resolver/validators.</li>
  * </ul>
- * <h4>线程安全</h4>
- * <p>record 不可变（内部未暴露可变集合引用），可在多线程间安全共享。</p>
+ * <h4>Thread-safety</h4>
+ * <p>Record is immutable (no exposed mutable collection references) and safe to share across threads.</p>
  *
- * @param provenanceCode 来源编码（必填）
- * @param operationCode 操作类型（必填）
- * @param step 切片步长（ISO-8601 持续时间，允许为空）
- * @param triggerType 触发类型（必填）
- * @param scheduler 调度器类型（必填）
- * @param schedulerJobId 调度任务 ID（可为空）
- * @param schedulerLogId 调度日志 ID（可为空）
- * @param windowFrom 窗口开始（可为空）
- * @param windowTo 窗口结束（可为空）
- * @param priority 调度优先级（为空时回退 NORMAL）
- * @param triggeredAt 触发时间（可为空）
- * @param triggerParams 额外触发参数（可为空）
+ * @param provenanceCode provenance code (required)
+ * @param operationCode operation code (required)
+ * @param step slice step (ISO-8601 duration; optional)
+ * @param triggerType trigger type (required)
+ * @param scheduler scheduler type (required)
+ * @param schedulerJobId scheduler job id (nullable)
+ * @param schedulerLogId scheduler log id (nullable)
+ * @param windowFrom window start (nullable)
+ * @param windowTo window end (nullable)
+ * @param priority priority (defaults to NORMAL when null)
+ * @param triggeredAt trigger time (nullable)
+ * @param triggerParams extra trigger params (nullable)
  */
 public record PlanIngestionCommand(
         ProvenanceCode provenanceCode,

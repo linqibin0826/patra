@@ -13,7 +13,7 @@ package com.patra.ingest.app.outbox.constants;
  *
  * <h3>SQL Field Reference</h3>
  * <pre>
- * `op_type` VARCHAR(32) NOT NULL COMMENT '业务语义标签：如 TASK_READY / EVENT_PUBLISHED'
+ * `op_type` VARCHAR(32) NOT NULL COMMENT 'Business semantic tag, e.g., TASK_READY / EVENT_PUBLISHED'
  * </pre>
  *
  * <h3>Usage Example</h3>

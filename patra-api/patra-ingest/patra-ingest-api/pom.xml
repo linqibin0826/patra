@@ -13,7 +13,7 @@
 
     <artifactId>patra-ingest-api</artifactId>
     <name>patra-ingest-api</name>
-    <description>数据采集API模块 - 对外发布的事件和接口定义</description>
+    <description>Ingestion API module - public events and interface definitions</description>
 
     <dependencies>
         <dependency>

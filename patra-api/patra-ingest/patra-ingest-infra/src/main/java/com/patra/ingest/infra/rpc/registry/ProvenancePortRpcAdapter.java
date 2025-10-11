@@ -18,15 +18,15 @@ import java.time.Instant;
 import java.util.Collections;
 
 /**
- * 调用 patra-registry 的出站适配器，实现来源配置查询。
+ * Outbound adapter that calls patra-registry to fetch provenance configuration.
  *
- * <p>遵循六边形架构模式，作为基础设施层组件实现应用层端口。
- * 负责从 Registry 服务获取完整的 Provenance 配置快照，支持失败重试和错误处理。</p>
+ * <p>Follows hexagonal architecture: infrastructure component implementing an application port.
+ * Retrieves a complete Provenance configuration snapshot from the Registry service with robust error handling.</p>
  *
- * <p>特性：
- * - 完整的错误处理和日志记录
- * - 使用 MapStruct 进行类型安全的数据转换
- * - 优雅降级，返回最小可用配置</p>
+ * <p>Highlights:
+ * - Comprehensive error handling and logging
+ * - Type-safe conversion using MapStruct
+ * - Graceful degradation by returning a minimal usable snapshot</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -36,18 +36,12 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class ProvenancePortRpcAdapter implements PatraRegistryPort {
 
-    /**
-     * Registry RPC 客户端
-     */
+    /** Registry RPC client. */
     private final ProvenanceClient provenanceClient;
-    /**
-     * 配置快照转换器
-     */
+    /** Converter for configuration snapshots. */
     private final ProvenanceConfigSnapshotConverter converter;
 
-    /**
-     * 调用 Registry 获取来源配置。
-     */
+    /** Calls the Registry to fetch provenance configuration. */
     @Override
     public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode provenanceCode, OperationCode operationCode) {
         String code = provenanceCode.getCode();
@@ -81,9 +75,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
         }
     }
 
-    /**
-     * 处理远端 ProblemDetail 异常。
-     */
+    /** Handles remote ProblemDetail exceptions. */
     private ProvenanceConfigSnapshot handleRemoteException(RemoteCallException ex,
                                                            String code,
                                                            String operationType) {
@@ -111,13 +103,11 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
         throw new IngestConfigurationException(code, operationType, msg, ex);
     }
 
-    /**
-     * 创建最小可用配置快照。
-     */
+    /** Creates a minimal usable configuration snapshot. */
     private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
         log.info("[INGEST][ADAPTER] Creating minimal provenance snapshot, code={}", provenanceCode);
 
-        // 创建最小的 ProvenanceInfo
+        // Create a minimal ProvenanceInfo
         ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance =
                 new ProvenanceConfigSnapshot.ProvenanceInfo(
                         null, // id

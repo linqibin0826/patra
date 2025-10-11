@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Outbox 消息发布配置入口。
+ * Configuration entrypoint for Outbox message publishing.
  */
 @Configuration
 @EnableConfigurationProperties(OutboxMqProperties.class)

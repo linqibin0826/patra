@@ -8,15 +8,15 @@ import org.apache.ibatis.annotations.Param;
 import java.time.Instant;
 
 /**
- * 任务执行（TaskRun）表 Mapper。
+ * Mapper for task execution records (TaskRun).
  * <p>
- * 主要用于：
+ * Responsibilities:
  * <ul>
- *   <li>记录单次任务运行（含开始 / 结束 / 状态 / 统计指标）。</li>
- *   <li>查询最新 attemptNo（用于生成下一次尝试编号）。</li>
- *   <li>后续可扩展根据任务 / 批次 / 状态的查询。</li>
+ *   <li>Persist a single task execution attempt (start/end/state/metrics).</li>
+ *   <li>Query the latest attemptNo (to derive the next attempt number).</li>
+ *   <li>Future: queries by task/batch/state can be added as needed.</li>
  * </ul>
- * 不在此处加入跨表统计逻辑，保持 Mapper 纯粹。
+ * Keep this mapper focused; avoid cross-table aggregation logic here.
  * </p>
  *
  * @author linqibin
@@ -26,31 +26,31 @@ import java.time.Instant;
 public interface TaskRunMapper extends BaseMapper<TaskRunDO> {
 
     /**
-     * 获取任务的最新 attemptNo。
+     * Get the latest attempt number for a task.
      * <p>
-     * 实现位于：TaskRunMapper.xml#selectLatestAttemptNo
+     * Implemented in: TaskRunMapper.xml#selectLatestAttemptNo
      * </p>
      *
-     * @param taskId 任务 ID
-     * @return 最大 attemptNo，若无记录则返回 0
+     * @param taskId task id
+     * @return max attemptNo, or 0 when there is no record
      */
     int selectLatestAttemptNo(@Param("taskId") Long taskId);
 
     /**
-     * 覆盖检查点并刷新心跳时间。
+     * Overwrite the checkpoint and refresh the heartbeat timestamp.
      */
     int updateCheckpointAndHeartbeat(@Param("runId") Long runId,
                                      @Param("checkpointJson") String checkpointJson,
                                      @Param("now") Instant now);
 
     /**
-    * 刷新心跳时间。
+    * Refresh the heartbeat timestamp.
     */
     int touchHeartbeat(@Param("runId") Long runId,
                    @Param("now") Instant now);
 
     /**
-     * 将运行记录标记为失败。
+     * Mark a run record as failed.
      */
     int markFailed(@Param("runId") Long runId,
                    @Param("errorMsg") String errorMsg,

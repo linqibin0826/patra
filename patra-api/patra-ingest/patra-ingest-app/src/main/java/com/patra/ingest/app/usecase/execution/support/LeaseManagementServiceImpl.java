@@ -11,21 +11,21 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * 租约管理服务实现。
+ * Lease management service implementation.
  * <p>
- * 职责：封装任务租约相关的仓储操作，提供统一的租约管理接口。
+ * Responsibility: wrap repository operations related to task leases and provide a unified API.
  * </p>
  * <p>
- * 设计要点：
+ * Design notes:
  * <ul>
- *   <li>tryAcquireLease：调用 TaskRepository.tryAcquireLease() 进行 CAS 抢占。</li>
- *   <li>renewLease：调用 TaskRepository.renewLease() 进行续租。</li>
- *   <li>releaseLease：读取任务聚合，调用 leaseInfo.release() 后保存。</li>
- *   <li>validateLease：读取任务聚合，检查 leaseInfo.owner 是否匹配。</li>
+ *   <li>tryAcquireLease: delegate to TaskRepository.tryAcquireLease() for CAS acquisition.</li>
+ *   <li>renewLease: delegate to TaskRepository.renewLease().</li>
+ *   <li>releaseLease: load aggregate, call releaseLease(), then save.</li>
+ *   <li>validateLease: load aggregate and check leaseInfo.owner.</li>
  * </ul>
  * </p>
  * <p>
- * 日志策略：INFO 记录租约关键操作（抢占、释放、验证失败）。
+ * Logging: INFO for key lease operations (acquire, release, validation failures).
  * </p>
  *
  * @author linqibin
@@ -40,18 +40,13 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
     private final Clock clock;
 
     /**
-     * 尝试抢占租约。
-     *
-     * @param taskId 任务ID
-     * @param owner 租约持有者
-     * @param leaseDuration 租约时长
-     * @return true表示抢占成功
+     * Attempts to acquire a lease.
      */
     @Override
     public boolean tryAcquireLease(Long taskId, String owner, Duration leaseDuration) {
-        // 先读取任务获取幂等键（tryAcquireLease 需要幂等键参数）
+        // Load task to obtain idempotent key (required by tryAcquireLease)
         TaskAggregate task = taskRepository.findById(taskId)
-            .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
+            .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
 
         Instant now = clock.instant();
         int ttlSeconds = (int) leaseDuration.toSeconds();
@@ -69,14 +64,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
         return acquired;
     }
 
-    /**
-     * 续租。
-     *
-     * @param taskId 任务ID
-     * @param owner 租约持有者
-     * @param leaseDuration 租约时长
-     * @return true表示续租成功
-     */
+    /** Renews a lease. */
     @Override
     public boolean renewLease(Long taskId, String owner, Duration leaseDuration) {
         Instant now = clock.instant();
@@ -84,29 +72,19 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
         return taskRepository.renewLease(taskId, owner, now, ttlSeconds);
     }
 
-    /**
-     * 释放租约。
-     *
-     * @param taskId 任务ID
-     */
+    /** Releases a lease. */
     @Override
     public void releaseLease(Long taskId) {
         TaskAggregate task = taskRepository.findById(taskId)
-            .orElseThrow(() -> new IllegalArgumentException("任务不存在 taskId=" + taskId));
+            .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
 
-        // 调用领域对象的 release 方法，然后保存
+        // Call domain object's release method and then save
         task.releaseLease();
         taskRepository.save(task);
         log.info("[INGEST][APP] lease released taskId={}", taskId);
     }
 
-    /**
-     * 验证租约（检查owner是否仍为当前节点）。
-     *
-     * @param taskId 任务ID
-     * @param owner 租约持有者
-     * @return true表示租约仍然有效
-     */
+    /** Validates a lease (owner still current node). */
     @Override
     public boolean validateLease(Long taskId, String owner) {
         TaskAggregate task = taskRepository.findById(taskId)
