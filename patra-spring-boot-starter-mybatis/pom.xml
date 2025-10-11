@@ -25,25 +25,25 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
-        <!-- DO中统一使用jackson或pojo表示数据库中的json字段 -->
+        <!-- Uniformly use Jackson or POJOs in DOs to represent JSON fields in the database -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- 让这是一个“真正的 Spring Boot Starter”（提供自动配置能力） -->
+        <!-- This makes it a "true Spring Boot Starter" (provides auto-configuration capabilities) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
-        <!-- MyBatis-Plus：版本由 parent 的 dependencyManagement 统一 -->
+        <!-- MyBatis-Plus: Version is managed by the parent's dependencyManagement -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
 
-        <!-- 3.5.9+ 分页等功能所需的 SQL 解析模块 -->
+        <!-- SQL parsing module required for pagination and other features in 3.5.9+ -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser</artifactId>
@@ -51,7 +51,7 @@
         </dependency>
 
 
-        <!-- 可选：生成配置 metadata，方便 IDE 智能提示；不参与运行时 -->
+        <!-- Optional: Generate configuration metadata for IDE smart hints; not used at runtime -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
