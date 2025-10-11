@@ -11,34 +11,32 @@ import java.util.List;
 public interface ExprCompiler {
 
     /**
-     * 编译表达式为查询语句和参数。
-     * 
-     * @param request 编译请求
-     * @return 编译结果
+     * Compiles an expression into provider-specific query text and parameter bindings.
+     *
+     * @param request compile request
+     * @return compilation outcome
      */
     CompileResult compile(CompileRequest request);
-    
+
     /**
-     * 便捷方法：使用默认参数编译表达式。
-     * 
-     * <p>使用 SEARCH 操作和默认编译选项。</p>
-     * 
-     * @param expression 表达式
-     * @param provenance 数据来源
-     * @return 编译结果
+     * Convenience overload that uses default compile options and the SEARCH operation type.
+     *
+     * @param expression expression to compile
+     * @param provenance provenance code identifying the data source
+     * @return compilation outcome
      */
     default CompileResult compile(Expr expression, ProvenanceCode provenance) {
         CompileRequest request = CompileRequestBuilder.of(expression, provenance).build();
         return compile(request);
     }
-    
+
     /**
-     * 便捷方法：编译指定操作类型的表达式。
+     * Convenience overload that selects a custom operation type while keeping default options.
      *
-     * @param expression 表达式
-     * @param provenance 数据来源
-     * @param operationType 操作类型（如 HARVEST/UPDATE；null 表示来源级配置）
-     * @return 编译结果
+     * @param expression expression to compile
+     * @param provenance provenance code identifying the data source
+     * @param operationType operation slice (e.g. HARVEST/UPDATE; {@code null} defers to provenance defaults)
+     * @return compilation outcome
      */
     default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType) {
         CompileRequest request = CompileRequestBuilder.of(expression, provenance)
@@ -46,15 +44,15 @@ public interface ExprCompiler {
             .build();
         return compile(request);
     }
-    
+
     /**
-     * 便捷方法：编译指定操作类型和端点名称的表达式。
+     * Convenience overload that specifies both operation type and endpoint name.
      *
-     * @param expression 表达式
-     * @param provenance 数据来源
-     * @param operationType 操作类型（如 HARVEST/UPDATE；null 表示来源级配置）
-     * @param endpointName 端点名称
-     * @return 编译结果
+     * @param expression expression to compile
+     * @param provenance provenance code identifying the data source
+     * @param operationType operation slice (e.g. HARVEST/UPDATE; {@code null} defers to provenance defaults)
+     * @param endpointName endpoint identifier
+     * @return compilation outcome
      */
     default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType, String endpointName) {
         CompileRequest request = CompileRequestBuilder.of(expression, provenance)
