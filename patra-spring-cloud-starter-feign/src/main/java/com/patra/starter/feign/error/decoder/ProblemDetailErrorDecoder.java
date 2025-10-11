@@ -18,7 +18,8 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 基于 {@link ProblemDetail} 的 Feign 错误解码器。
+ * Feign {@link ErrorDecoder} implementation that prefers {@link ProblemDetail} error payloads and
+ * degrades gracefully when tolerant mode is enabled.
  */
 @Slf4j
 public class ProblemDetailErrorDecoder implements ErrorDecoder {
@@ -44,7 +45,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
         try {
             String contentType = getContentType(response);
             boolean isProblemDetail = isProblemDetailResponse(contentType);
-            log.debug("解码远端错误: method={} status={} contentType={}", methodKey, response.status(), contentType);
+            log.debug("Decoding remote error: method={} status={} contentType={}", methodKey, response.status(), contentType);
 
             if (isProblemDetail) {
                 bodyBuffer = readResponseBody(methodKey, response);
@@ -77,11 +78,11 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
                 return handleTolerantMode(methodKey, response, bodyBuffer);
             }
 
-            log.debug("严格模式：回退为 FeignException，method={}", methodKey);
+            log.debug("Strict mode active; delegating to FeignException for method={}", methodKey);
             return FeignException.errorStatus(methodKey, response);
 
         } catch (Exception ex) {
-            log.warn("解码远端错误失败: method={} status={} error={}",
+            log.warn("Failed to decode remote error: method={} status={} error={}",
                     methodKey, response.status(), ex.getMessage());
 
             if (properties.isTolerant()) {
@@ -91,7 +92,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
                         bodyBuffer = readResponseBody(methodKey, response);
                     }
                 } catch (IOException ioException) {
-                    log.debug("宽容模式下读取响应体失败: method={} error={}", methodKey, ioException.getMessage());
+                    log.debug("Tolerant mode failed to read response body: method={} error={}", methodKey, ioException.getMessage());
                 }
                 return handleTolerantMode(methodKey, response, bodyBuffer);
             }
@@ -120,11 +121,11 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
         try {
             ProblemDetail problemDetail = objectMapper.readValue(bodyBuffer.content(), ProblemDetail.class);
             long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-            log.debug("成功解析 ProblemDetail，status={}", problemDetail.getStatus());
+            log.debug("Parsed ProblemDetail successfully: status={}", problemDetail.getStatus());
             return new ParsingResult(problemDetail, durationMs, true);
         } catch (Exception ex) {
             long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-            log.debug("ProblemDetail 解析失败: {}", ex.getMessage());
+            log.debug("ProblemDetail parsing failed: {}", ex.getMessage());
             return new ParsingResult(null, durationMs, false);
         }
     }

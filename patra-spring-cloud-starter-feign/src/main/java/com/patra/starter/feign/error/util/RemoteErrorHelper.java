@@ -3,141 +3,100 @@ package com.patra.starter.feign.error.util;
 import com.patra.starter.feign.error.exception.RemoteCallException;
 
 /**
- * {@link com.patra.starter.feign.error.exception.RemoteCallException} 辅助工具类。
+ * Helper utilities for working with {@link com.patra.starter.feign.error.exception.RemoteCallException}.
  *
- * <p>提供对常见 HTTP 状态与错误模式的语义判断，便于适配器层进行简洁的错误分支处理。
- *
- * @author linqibin
- * @since 0.1.0
- * @see com.patra.starter.feign.error.exception.RemoteCallException
+ * <p>Provides semantic checks for the most common HTTP / business error patterns so adapter code can remain
+ * concise and expressive.</p>
  */
 public final class RemoteErrorHelper {
-    
+
     private RemoteErrorHelper() { }
-    
+
     /**
-     * 是否为“未找到”语义（HTTP 404 或错误码以 -0404 结尾）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * Determine whether the error indicates a not-found condition (HTTP 404 or error code ending with {@code -0404}).
      */
     public static boolean isNotFound(RemoteCallException ex) {
-        return ex.getHttpStatus() == 404 || 
+        return ex.getHttpStatus() == 404 ||
                (ex.getErrorCode() != null && ex.getErrorCode().endsWith("-0404"));
     }
-    
+
     /**
-     * 是否为“冲突”语义（HTTP 409 或错误码以 -0409 结尾）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * Determine whether the error indicates a conflict (HTTP 409 or error code ending with {@code -0409}).
      */
     public static boolean isConflict(RemoteCallException ex) {
-        return ex.getHttpStatus() == 409 || 
+        return ex.getHttpStatus() == 409 ||
                (ex.getErrorCode() != null && ex.getErrorCode().endsWith("-0409"));
     }
-    
+
     /**
-     * 是否为“未授权”语义（HTTP 401 或错误码以 -0401 结尾）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * Determine whether the error indicates an unauthorized request (HTTP 401 or error code ending with {@code -0401}).
      */
     public static boolean isUnauthorized(RemoteCallException ex) {
-        return ex.getHttpStatus() == 401 || 
+        return ex.getHttpStatus() == 401 ||
                (ex.getErrorCode() != null && ex.getErrorCode().endsWith("-0401"));
     }
-    
+
     /**
-     * 是否为“禁止访问”语义（HTTP 403 或错误码以 -0403 结尾）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * Determine whether the error indicates a forbidden request (HTTP 403 or error code ending with {@code -0403}).
      */
     public static boolean isForbidden(RemoteCallException ex) {
-        return ex.getHttpStatus() == 403 || 
+        return ex.getHttpStatus() == 403 ||
                (ex.getErrorCode() != null && ex.getErrorCode().endsWith("-0403"));
     }
-    
+
     /**
-     * 是否为“不可处理实体”语义（HTTP 422 或错误码以 -0422 结尾）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * Determine whether the error indicates an unprocessable entity (HTTP 422 or error code ending with {@code -0422}).
      */
     public static boolean isUnprocessableEntity(RemoteCallException ex) {
-        return ex.getHttpStatus() == 422 || 
+        return ex.getHttpStatus() == 422 ||
                (ex.getErrorCode() != null && ex.getErrorCode().endsWith("-0422"));
     }
-    
+
     /**
-     * 是否为“请求过多”语义（HTTP 429 或错误码以 -0429 结尾）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * Determine whether the error indicates a rate-limit breach (HTTP 429 or error code ending with {@code -0429}).
      */
     public static boolean isTooManyRequests(RemoteCallException ex) {
-        return ex.getHttpStatus() == 429 || 
+        return ex.getHttpStatus() == 429 ||
                (ex.getErrorCode() != null && ex.getErrorCode().endsWith("-0429"));
     }
-    
+
     /**
-     * 是否为客户端错误（4xx）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * @return {@code true} if the downstream call resulted in a 4xx status code.
      */
     public static boolean isClientError(RemoteCallException ex) {
         return ex.getHttpStatus() >= 400 && ex.getHttpStatus() < 500;
     }
-    
+
     /**
-     * 是否为服务端错误（5xx）。
-     *
-     * @param ex 远端调用异常
-     * @return 是则 true，否则 false
+     * @return {@code true} if the downstream call resulted in a 5xx status code.
      */
     public static boolean isServerError(RemoteCallException ex) {
         return ex.getHttpStatus() >= 500 && ex.getHttpStatus() < 600;
     }
-    
+
     /**
-     * 错误码是否等于指定值（精确匹配）。
-     *
-     * @param ex 远端调用异常
-     * @param errorCode 期望错误码
-     * @return 匹配则 true，否则 false
+     * Check whether the downstream business error code matches the supplied value.
      */
     public static boolean is(RemoteCallException ex, String errorCode) {
         return errorCode != null && errorCode.equals(ex.getErrorCode());
     }
-    
+
     /**
-     * 是否包含任何业务错误码。
-     *
-     * @param ex 远端调用异常
-     * @return 含有非空错误码则 true，否则 false
+     * @return {@code true} if a downstream business error code is present.
      */
     public static boolean hasErrorCode(RemoteCallException ex) {
         return ex.hasErrorCode();
     }
-    
+
     /**
-     * 是否包含 TraceId。
-     *
-     * @param ex 远端调用异常
-     * @return 含有非空 TraceId 则 true，否则 false
+     * @return {@code true} if a downstream trace identifier is present.
      */
     public static boolean hasTraceId(RemoteCallException ex) {
         return ex.hasTraceId();
     }
-    
+
     /**
-     * 错误码是否属于给定集合之一。
-     *
-     * @param ex 远端调用异常
-     * @param errorCodes 候选错误码集合
-     * @return 匹配任一则 true，否则 false
+     * Check whether the downstream business error code is one of the provided values.
      */
     public static boolean isAnyOf(RemoteCallException ex, String... errorCodes) {
         if (errorCodes == null || errorCodes.length == 0) {
@@ -156,12 +115,10 @@ public final class RemoteErrorHelper {
         }
         return false;
     }
-    
+
     /**
-     * 是否属于可重试的临时性失败（如 5xx、429/408/503/504 等）。
-     *
-     * @param ex 远端调用异常
-     * @return 可能可重试则 true，否则 false
+     * Determine whether the error represents a potentially retryable transient failure
+     * (e.g. 5xx, 429, 408, 503, 504).
      */
     public static boolean isRetryable(RemoteCallException ex) {
         int status = ex.getHttpStatus();

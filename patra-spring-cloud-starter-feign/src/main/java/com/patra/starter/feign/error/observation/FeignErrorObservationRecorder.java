@@ -1,11 +1,11 @@
 package com.patra.starter.feign.error.observation;
 
 /**
- * Feign 错误解码观测记录接口。
+ * Abstraction for recording observations while decoding Feign error responses.
  */
 public interface FeignErrorObservationRecorder {
 
-    /** 空实现，便于在未启用观测时降级。 */
+    /** No-op implementation used when observation is disabled. */
     FeignErrorObservationRecorder NO_OP = new FeignErrorObservationRecorder() {
         @Override
         public void recordProblemDetailParsing(String methodKey, int status, long durationMs, boolean success) {
@@ -28,23 +28,15 @@ public interface FeignErrorObservationRecorder {
         }
     };
 
-    /**
-     * 记录 ProblemDetail 解析情况。
-     */
+    /** Record the outcome and latency of parsing the downstream {@code ProblemDetail}. */
     void recordProblemDetailParsing(String methodKey, int status, long durationMs, boolean success);
 
-    /**
-     * 记录整体解码结果。
-     */
+    /** Record whether decoding succeeded and whether tolerant mode was used. */
     void recordDecodingOutcome(String methodKey, int status, boolean success, boolean tolerantMode);
 
-    /**
-     * 记录响应体读取情况。
-     */
+    /** Record how long the response body took to read and whether it was truncated. */
     void recordResponseBodyRead(String methodKey, int bodySize, long durationMs, boolean truncated);
 
-    /**
-     * 记录 TraceId 提取情况。
-     */
+    /** Record whether the trace identifier was present in the downstream response headers. */
     void recordTraceIdExtraction(String methodKey, boolean found, String headerName);
 }
