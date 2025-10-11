@@ -1,116 +1,95 @@
-# patra-ingest
+Purpose and Responsibilities
+- Orchestrate scheduled literature ingestion: plan windows/slices, enqueue tasks, execute batches, and publish outbox events with strong idempotency and observability.
 
-The ingest service orchestrates scheduled literature collection for Papertrace. It plans ingestion windows, slices work into tasks, persists results, and publishes outbox events for downstream processing.
+Package Layout
+- Adapter: inbound schedulers (XXL-Job) and RocketMQ consumers
+- App: use cases for planning, execution, and outbox relay
+- Domain: aggregates, VOs, ports, and domain events (pure Java)
+- Infra: MyBatis-Plus mappers/repos, MQ publisher, RPC adapters, config
+- Boot: Spring Boot app and baseline configs
 
-## Recent Highlights (2025-10-02)
+Core Flows
+1) Plan Ingestion
+   - Entrypoints: scheduler jobs subclassing `AbstractProvenanceScheduleJob` (e.g., `PubmedHarvestJob`).
+   - Orchestrator: `PlanIngestionOrchestrator` performs schedule persist → config snapshot → window resolve → expression build → validations → assemble → persist → outbox publish.
+   - Outbox: publishes TaskReady messages by channel/partition key for ordered execution.
+2) Execute Task
+   - Consumer: `ingestTaskReadyConsumer` parses payload to `TaskReadyCommand` and invokes `TaskExecutionUseCase`.
+   - Orchestrator: `TaskExecutionUseCaseImpl` runs Prepare → Execute → Complete with leases, heartbeats, and checkpointing.
+3) Outbox Relay
+   - Orchestrator: `OutboxRelayOrchestrator` builds a relay plan, executes a batch publish, emits audit events.
+   - Publisher: `RocketMqOutboxPublisher` uses `StreamBridge` to deliver messages with KEYS/TAGS and partitionKey.
 
-### 🔧 Code Improvements
-- **Unified Outbox retrieval** – Consolidated `fetchPending` and `fetchPendingAllChannels` into a single API that accepts an optional channel filter.<br>
-  - Application port: `OutboxRelayStore.fetchPending(String channel, Instant availableTime, int limit)`<br>
-  - MyBatis implementation: uses dynamic SQL (`<if>` / `<choose>`) to compose predicates.<br>
-  - Benefit: eliminates duplicate logic while preserving SQL performance characteristics.
+Domain Model
+- Aggregates: `PlanAggregate`, `PlanSliceAggregate`, `TaskAggregate`, `ScheduleInstanceAggregate`.
+- Key VOs: `WindowSpec`, `SliceSpec`, `PlannerWindow`, `IdempotentKey`, `ExecutionTimeline`, `TaskReadyMessage`, `RelayPlan`.
+- Ports (selected): `PatraRegistryPort`, `ExpressionCompilerPort`, `TaskRepository`, `PlanRepository`, `PlanSliceRepository`, `OutboxPublisherPort`, `OutboxRelayStore`.
 
-### 🚀 Feature Delivery
-- **RocketMQ publisher reinstated**<br>
-  - Integrated `spring-cloud-starter-stream-rocketmq` with `RocketMqOutboxPublisher` using `StreamBridge` for dynamic destinations.<br>
-  - Added `papertrace.ingest.outbox` whitelist configuration, supporting fail-fast enforcement and runtime validation.<br>
-  - Adapter module now includes `ingestTaskReadyConsumer` for end-to-end verification with structured logging of KEYS/TAGS/partition keys.
+Database Schema (Flyway)
+- Migration file: `patra-ingest-infra/src/main/resources/db/migration/V0.1.0__init_ingest_schema.sql`
+- Tables (excerpt):
+  - `ing_schedule_instance`: one external trigger; stores scheduler identifiers and params.
+  - `ing_plan`: plan blueprint; includes window/time indexes, expression snapshot/hash, status.
+  - `ing_plan_slice`: slice inventory with `slice_signature_hash` and expr hash; unique per plan.
+  - `ing_task`: tasks by slice with idempotency key, lease/heartbeat/retry/status fields.
+  - `ing_task_run`: attempt records per task (retries and replays are new attempts).
+  - `ing_task_run_batch`: fine-grained page/token batches with separate idempotency key.
+  - `ing_outbox_message`: generic outbox with channel/opType/dedupKey, partitioning/lease indexes.
+  - `ing_cursor_event`: cursor change events for watermarks and lineage.
 
-## 1. Module Scope
-- **Responsibilities** – Generate ingestion plans per provenance and operation, ensuring idempotence, replayability, and observability across the pipeline.
-- **Primary consumers** – Job scheduler (XXL-Job), downstream parsing/cleansing services, and asynchronous delivery channels.
-- **Architecture boundary** – Hexagonal layering:
-  - `adapter`: inbound scheduler/listener entry points
-  - `app`: orchestration for planning and relay use cases
-  - `domain`: aggregates, value objects, and domain ports
-  - `infra`: persistence, messaging, and RPC adapters
-  - `boot`: Spring Boot wiring
+Scheduling Jobs (XXL-Job)
+- Base: `AbstractProvenanceScheduleJob` handles param parsing, orchestration, and result reporting.
+- Example: `PubmedHarvestJob` binds `ProvenanceCode.PUBMED` + `OperationCode.HARVEST` and delegates to base execution.
+- Param JSON (supported fields): `windowFrom`, `windowTo`, `priority`, `step`, `schedulerLogId`, `triggeredAt`, plus arbitrary pass-through fields → `triggerParams`.
 
-## 2. Core Capabilities
-- **Window strategies** – HARVEST / BACKFILL / UPDATE with guard rails for lag and overlap.
-- **Slice strategies** – TIME and SINGLE (extensible via `SlicePlannerRegistry`).
-- **Plan assembly** – Produces Plan → PlanSlice → Task hierarchies with partial failure handling.
-- **Idempotence** – Canonical hashing for expressions, configuration, and slices; task idempotency key format `provenance:operation:sliceHash:exprHash`.
-- **Outbox publishing** – Lease-based retrieval with exponential backoff and ordered partitioning for reliable delivery.
+Planning Use Case
+- `PlanIngestionOrchestrator#ingestPlan` phases:
+  1. Persist schedule instance; load `ProvenanceConfigSnapshot` via `PatraRegistryPort`.
+  2. Resolve planner window from cursor watermark + config + trigger.
+  3. Build plan-level expression descriptor (hash and JSON snapshot only).
+  4. Validate window sanity, queue pressure, and capacity.
+  5. Assemble plan/slices/tasks blueprints.
+  6. Persist aggregates and publish `TaskQueuedEvent`s via `TaskOutboxPublisher`.
+- Idempotency: de-dup by `planKey`; reuse and retry failed tasks when a plan already exists.
 
-> Deep design notes and schema details: `docs/modules/ingest/deep-dive.md`.
+Execution Use Case
+- `TaskExecutionUseCaseImpl#execute` orchestrates Prepare → Execute → Complete with structured logging and cleanup.
+- Prepare: lease acquisition, idempotent skip if already succeeded.
+- Execute: batched processing with `BatchExecutor` (paged/tokenized), stats, and per-batch idempotency.
+- Complete: cursor advance and result persistence.
 
-## 3. Module Breakdown
+Outbox Relay
+- Toggle: `patra.ingest.outbox-relay.enabled` (see app properties).
+- `OutboxRelayOrchestrator#relay` builds plan (channel filter, batch size, lease owner) and updates message states atomically.
+- Publisher: `RocketMqOutboxPublisher` enforces channel whitelist; publishes with headers: `KEYS`, `TAGS`, and `partitionKey`.
 
-| Submodule | Responsibility |
-|-----------|----------------|
-| `patra-ingest-api` | Public DTOs and error codes. |
-| `patra-ingest-adapter` | XXL-Job inbound jobs and Outbox relay schedulers (inbound only). |
-| `patra-ingest-app` | Use cases (`usecase/plan` for planning, `usecase/relay` for outbox relay). |
-| `patra-ingest-domain` | Plan/PlanSlice/Task/Schedule aggregates and domain ports.<br>Structure v0.1.0:<br>- `domain/event/` domain events<br>- `domain/model/aggregate/` aggregates<br>- `domain/model/vo/` value objects (incl. PlanTriggerNorm) |
-| `patra-ingest-infra` | MyBatis-Plus DOs, mappers, repository implementations, and outbound RPC (`infra.rpc.registry.*`). |
-| `patra-ingest-boot` | Spring Boot launcher, error catalog mapping. |
+Streaming Contracts
+- Consumer: `ingestTaskReadyConsumer` listens to `INGEST_TASK_READY` with concurrency/backoff configured in `ingest-mq-config.yaml`.
+- Payload DTO: `TaskReadyPayload` contains `taskId` and `idempotentKey`; headers include RocketMQ KEYS/TAGS/topic/messageId and `partitionKey`.
+- See `docs/contracts/events/task-ready.md` for event contract.
 
-### Application Layer Layout
-```
-app/
-├── config/                         # Application-level configuration
-└── usecase/
-    ├── plan/                       # Planning use cases
-    │   ├── PlanIngestionUseCase.java        # Use-case contract
-    │   ├── PlanIngestionOrchestrator.java   # Orchestrator
-    │   ├── command/                 # Command models
-    │   ├── dto/                     # Result DTOs
-    │   ├── assembler/               # Plan assembly helpers
-    │   ├── slicer/                  # Slice planners
-    │   ├── window/                  # Window resolvers
-    │   ├── expression/              # Expression builders
-    │   ├── validator/               # Preflight validators
-    │   └── publisher/               # Outbox publishers
-    │
-    └── relay/                       # Outbox relay use cases
-        ├── OutboxRelayUseCase.java          # Use-case contract
-        ├── OutboxRelayOrchestrator.java     # Orchestrator
-        ├── command/                 # Command models
-        ├── dto/                     # Result DTOs
-        ├── executor/                # Relay executors
-        ├── planner/                 # Relay plan builders
-        ├── policy/                  # Error classification policies
-        ├── publisher/               # Event publishers
-        ├── config/                  # Relay configuration objects
-        └── support/                 # Supporting utilities
-```
+Configuration
+- Boot `application.yaml` includes:
+  - MySQL/Flyway: datasource + baseline settings.
+  - Redis: `spring.data.redis.url` for leases and heartbeats.
+  - Nacos: config/discovery imports for `patra-ingest.yaml` and `patra.yaml`.
+  - Execution defaults: `papertrace.ingest.exec.lease-ttl-seconds`, `heartbeat-interval-seconds`.
+  - Task execution: `task.execution.*` for lease duration/renewal, heartbeat thresholds, batch caps.
+- MQ binding: `ingest-mq-config.yaml` defines binder, destination `INGEST_TASK_READY`, group, concurrency, and backoff.
+- Outbox publisher: `papertrace.ingest.outbox.publisher` and `allowed-channels` whitelist.
 
-Key dependencies: `patra-common`, `patra-expr-kernel`, MyBatis-Plus, XXL-Job, Nacos. Domain layer must remain framework-free; adapters may not embed business rules.
+Observability
+- Logging: include trace/correlation IDs and keys (planId, sliceId, taskId, idempotentKey, sliceSignatureHash).
+- Metrics (recommend): plan creation counts, slice/task counts, outbox publish/relay timers, execution success/failure counters, MQ consumer lag.
 
-## 4. Operation & Configuration
-- **Scheduler entry point** – Extend `AbstractProvenanceScheduleJob` for XXL-Job integration. Parameters include `provenanceCode`, `operationCode`, and window descriptors.
-- **Configuration source** – Fetch provenance/expression snapshots from `patra-registry`; local overrides via Nacos.
-- **Outbox settings** (excerpt):
+Testing Strategy
+- Domain: invariants for plan/slice/task, idempotency keys, window calculations.
+- App: window resolution, expression hashing, idempotent plan reuse, relay execution planning.
+- Adapter: XXL-Job param parsing, MQ consumer header handling and error path (retries).
+- Infra: MyBatis mappers, RocketMQ publishing, and repository behaviors.
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `patra.ingest.outbox-relay.enabled` | `true` | Toggle relay pipeline. |
-| `patra.ingest.outbox-relay.batch-size` | `200` | Scan batch size per lease. |
-| `patra.ingest.outbox-relay.max-retry` | `8` | Maximum retry attempts. |
-| `patra.ingest.planner.queue-threshold` | `10000` | Queue pressure threshold for throttling. |
+Run Locally
+- `./mvnw -pl patra-ingest/patra-ingest-boot -am spring-boot:run`
 
-## 5. Observability & Operations
-- Recommended metrics: `ingest.plan.created`, `ingest.plan.slice.count`, `ingest.outbox.publish.duration`.
-- Log key fields: `planKey`, `sliceSignatureHash`, `taskIdempotentKey`, `traceId`.
-- Troubleshooting quick reference:
-
-| Symptom | Diagnostic Path |
-|---------|-----------------|
-| No tasks generated | Inspect `ing_plan` table, check ING-12xx logs for validation failures. |
-| Outbox backlog | Query `ing_outbox_message` status, review retry/dead-letter counts. |
-| Publish jitter | Inspect `retry_count` and channel health; adjust backoff if needed. |
-
-## 6. Testing Strategy
-- **Domain** – Validate Plan/PlanSlice/Task invariants and idempotency key derivation.
-- **App** – Cover window resolution, slice partitioning, and partial-failure recovery paths.
-- **Adapter** – Verify scheduler parameter parsing and relay scheduling flow.
-- **Infra** – Exercise repositories, batch inserts, and indexing strategies.
-- **Integration** – Simulate MQ outages, missing configuration, and window boundary violations.
-
-
-## 8. References
-- Ingest deep dive: `docs/modules/ingest/deep-dive.md`
-- End-to-end flow: `docs/process/ingest-dataflow.md`
-- Registry configuration: `docs/modules/registry/deep-dive.md`
-- Error handling standard: `docs/standards/platform-error-handling.md`
+Open TODOs
+- Add failure-queue metrics and dead-letter handling; expand slicers and backpressure; refine cursor lineage audits.

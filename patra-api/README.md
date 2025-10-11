@@ -16,7 +16,7 @@ documentation is required to maintain long‑term clarity and operability.
 - **Core stack**: Java 21, Spring Boot 3.2.4, Spring Cloud 2023.0.1, Spring Cloud Alibaba 2023.0.1.0, MyBatis‑Plus
   3.5.12, MySQL 8.0, Redis 7.0, Elasticsearch 8.14, Nacos, SkyWalking, XXL‑Job
 
-> For architectural details, see `docs/overview/architecture.md`.
+For architectural details, see `docs/architecture/C4-Context.md` and `docs/architecture/C4-Container.md`.
 
 ## Quick Start
 
@@ -33,23 +33,21 @@ documentation is required to maintain long‑term clarity and operability.
 
 ## Module Quick Reference
 
-| Module               | Responsibility                                                        | Deep Dive                                                                                                                                               |
-|----------------------|-----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `patra-ingest`       | Ingestion plan assembly, window slicing, Outbox publishing            | [README](patra-ingest/README.md) · [Ingestion Dataflow](docs/process/ingest-dataflow.md)                                                                |
-| `patra-registry`     | SSOT for configs/dictionaries/expressions; provides snapshot services | [README](patra-registry/README.md) · [Deep Dive](docs/modules/registry/deep-dive.md)                                                                    |
-| `patra-gateway-boot` | API gateway, routing, auth, and error alignment                       | [README](patra-gateway-boot/README.md)                                                                                                                  |
-| `patra-common`       | Cross‑service base types, error model, JSON normalization             | [README](patra-common/README.md)                                                                                                                        |
-| `patra-expr-kernel`  | Expression AST and normalization engine                               | [README](patra-expr-kernel/README.md)                                                                                                                   |
-| `patra-parent`       | Maven parent POM for unified dependencies and plugins                 | [README](patra-parent/README.md)                                                                                                                        |
-| Starters series      | Auto‑config for Core/Web/Feign/MyBatis                                | [core](patra-spring-boot-starter-core/README.md) · [web](patra-spring-boot-starter-web/README.md) · [feign](patra-spring-cloud-starter-feign/README.md) |
+| Module                  | Responsibility                                                        | Links                                                                                                            |
+|-------------------------|-----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
+| `patra-ingest`          | Ingestion plan assembly, window slicing, Outbox publishing            | patra-ingest/README.md                                                                                           |
+| `patra-registry`        | SSOT for provenance/expressions; snapshot services                    | patra-registry/README.md                                                                                         |
+| `patra-egress-gateway`  | Outbound HTTP with resilience envelope                                | patra-egress-gateway/README.md                                                                                   |
+| `patra-gateway-boot`    | API gateway entrypoint                                                | patra-gateway-boot/README.md                                                                                     |
+| `patra-common`          | Cross‑service base types, error model, JSON normalization             | patra-common/README.md                                                                                           |
+| `patra-expr-kernel`     | Expression AST and normalization engine                               | patra-expr-kernel/README.md                                                                                      |
+| Starters series         | Auto‑config for Core/Web/Feign/MyBatis/Provenance/Expr                | core/web/feign/mybatis/provenance/expr starter READMEs                                                          |
 
 ## Business & Process Entry Points
 
-- **Ingest → Plan → Outbox**: see `docs/process/ingest-dataflow.md`.
-- **Error standards & cross‑service handling**: see `docs/standards/platform-error-handling.md` and
-  `docs/standards/cross-service-error-best-practices.md`.
+See `docs/services/index.md` for the catalog and `docs/contracts/` for API and event contracts.
 
-More process documentation will be added under `docs/process/`.
+More process documentation will be added incrementally under `docs/`.
 
 ## Development Guidelines at a Glance
 
@@ -59,7 +57,7 @@ More process documentation will be added under `docs/process/`.
 - Prefer reusing `patra-common` and custom Starters for common capabilities—avoid reinventing wheels.
 - Use `ProblemDetail` for error output; manage error code ranges via `patra.error.context-prefix`.
 - Manage configuration and secrets via Nacos/environment variables; never commit them to the repository.
-- See `docs/standards/platform-error-handling.md` and module‑specific deep dives for more conventions.
+- See `docs/conventions/README.md` for shared conventions.
 
 ## Observability & Operations
 
@@ -69,13 +67,14 @@ More process documentation will be added under `docs/process/`.
   sensitive data.
 - **Scheduling**: XXL‑Job triggers plans; scheduling parameters and execution states must be recorded in the
   `schedule_instance` table.
-- Capture incident case studies under `docs/operations/troubleshooting.md`.
+- See `docs/operations/Local-Dev-Runbook.md` for local workflows.
 
 ## Documentation Index
 
-- Unified index: `docs/README.md`
-- Architecture: `docs/overview/architecture.md`
-- Processes: `docs/process/`
-- Module deep dives: `docs/modules/`
-- Operations handbook: `docs/operations/`
-- Standards & templates: `docs/standards/`, `docs/templates/`
+Unified index: docs/README.md
+Architecture: docs/architecture/
+Services catalog: docs/services/index.md
+Contracts: docs/contracts/
+Operations: docs/operations/
+Testing: docs/testing/README.md
+Conventions: docs/conventions/README.md

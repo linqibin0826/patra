@@ -1,70 +1,47 @@
-# patra-registry
+Purpose and Responsibilities
+- Single source of truth for provenance metadata and time-aware configuration (HTTP, pagination, retry, limits, offsets) plus expression snapshots used by ingest/expression compiler.
 
-The registry service is the single source of truth for Papertrace configuration and metadata. It maintains time-aware snapshots consumed by ingestion, expression rendering, and downstream analytics teams.
+Package Layout
+- Adapter: Feign-style controllers implementing internal endpoints
+- App: read-model services to assemble snapshots/configs
+- Domain: read models (Query DTOs), VO types, ports, and validation exceptions
+- Infra: MyBatis-Plus mappers/repos and converters; DB migrations
+- Boot: Spring Boot app, error mapping, and runtime config
 
-## 1. Module Scope
-- **Responsibilities** - Own configuration for Dictionary, Provenance, and Expression subdomains, producing scope-aware (SOURCE/TASK) snapshots.
-- **Primary consumers** - `patra-ingest`, `patra-spring-boot-starter-expr`, and upcoming search/persona services.
-- **Architecture guardrails** - Hexagonal design with CQRS. The domain layer stays framework-free while the read side may project cached snapshots.
+APIs and Contracts (internal)
+- Provenance endpoints (`/_internal/provenances`):
+  - `GET /_internal/provenances` → list of supported provenances.
+  - `GET /_internal/provenances/{code}` → a single provenance by code.
+  - `GET /_internal/provenances/{code}/config?operationType=&at=` → aggregated effective configuration.
+- Expression endpoint (service layer): load expression snapshot (provenance + operation + endpoint + at) via `ExprQueryAppService` for compiler usage.
+- Client interfaces: `ProvenanceClient`, `ExprClient` in `patra-registry-api` for type-safe Feign usage.
 
-## 2. Core Capabilities
-- **Dictionary subdomain** - Normalizes dictionary types/items/aliases, enforces single defaults, and performs status filtering.
-- **Provenance subdomain** - Composes multi-slice configuration (windowing, pagination, rate limits, credentials) per scope.
-- **Expression subdomain** - Aggregates field capabilities, templates, and API parameter mappings into `ExprSnapshot` outputs.
-- **Effective-time model** - Every rule supports `effective_from` / `effective_to`; merge priority is `SOURCE < TASK`.
-- **Error taxonomy** - Uses `REG-1xxx` (business) and `REG-0xxx` (HTTP-aligned) codes, emitted as RFC 7807 ProblemDetail payloads through the core starter.
+Domain Model (read side)
+- Aggregate: `ProvenanceConfiguration` composes `HttpConfig`, `PaginationConfig`, `RetryConfig`, `RateLimitConfig`, `WindowOffsetConfig`.
+- VOs: `Provenance`, `ExprSnapshot`, `ExprCapability`, `ExprField`, `ExprRenderRule`, `ApiParamMapping`.
+- Ports: `ProvenanceConfigRepository`, `ExprRepository` abstract infra data access.
 
-> Detailed design notes, schema diagrams, and extension guidance live in `docs/modules/registry/deep-dive.md`.
+Application Services
+- `ProvenanceConfigAppService#listProvenances` and `#findProvenance` → metadata.
+- `#loadConfiguration(code, operationType, at)` → effective configuration for a provenance/operation/instant.
+- `ExprQueryAppService#loadSnapshot(provenanceCode, operationType, endpointName, at)` → expression snapshot for compilers.
 
-## 3. Submodules and Dependencies
-- Modules: `api` (contracts and error codes), `adapter` (REST/MQ/Scheduler), `app` (use cases), `domain` (aggregates), `infra` (MyBatis-Plus implementations), `boot` (Spring Boot entry point).
-- Dependencies: `patra-common`, `patra-spring-boot-starter-mybatis`, Nacos, MySQL, with Caffeine caching planned.
-- Anti-patterns: the domain layer must not import frameworks; adapters must not depend on infra; avoid cross-layer shortcuts.
+Infrastructure
+- DB: MySQL; Flyway migrations under `patra-registry-infra/src/main/resources/db/migration`.
+- Mappers: e.g., `RegProvPaginationCfgMapper` with XML under `resources/mapper/` for efficient reads.
+- Boot config: `patra-registry-boot/src/main/resources/application.yaml` imports `registry-error-config.yaml` and Nacos config.
 
-## 4. Running and Configuration
-- **Maven inclusion**:
-  ```xml
-  <dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-registry-boot</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-  </dependency>
-  ```
-- **Data onboarding** - Authoritative data resides in MySQL. Seed via admin tooling or the SQL bundles under `docs/modules/registry/sql`. Service configuration is sourced from Nacos.
-- **Developer commands**:
-  ```bash
-  # Run module tests
-  ./mvnw -pl patra-registry -am test
-  # Launch the service locally
-  ./mvnw -pl patra-registry/patra-registry-boot spring-boot:run
-  ```
+Error Mapping
+- Error catalog and mapping live under `patra-registry-api` and boot error config; expose RFC7807 ProblemDetail via the web/core starters.
 
-## 5. Observability and Operations
-- Suggested metrics: `registry.validation.errors.count`, `registry.snapshot.build.duration`, and database latency/row-count dashboards.
-- Caching roadmap: Introduce Caffeine with versioned invalidation via Outbox broadcasts; monitor current MySQL load closely.
-- Health automation: Plan automated checks for scope overlap and default-item conflicts.
-- Common incidents: overlapping effective windows, mis-ordered scope precedence, and stale cache snapshots. Document remediation steps in `docs/operations/troubleshooting.md`.
+Observability
+- Logs include provenance code/operationType and query context; trace IDs are propagated.
+- Metrics (recommend): snapshot build time, query latency, size/shape of returned configs.
 
-## 6. Testing Strategy
-- **Domain** - Assert invariants (single defaults, non-overlapping windows, correct scope merge logic).
-- **Infra** - Validate snapshot queries, MyBatis mappings, and pagination/rate-limit slice composition.
-- **App** - Cover orchestration, transactional boundaries, and event publication.
-- **Adapter** - Verify DTO serialization, error-code mapping, and REST/MQ contracts.
-- **Performance** - Benchmark cold/warm snapshot construction and track latency regressions.
+How to Run
+- Tests: `./mvnw -pl patra-registry -am test`
+- Local service: `./mvnw -pl patra-registry/patra-registry-boot -am spring-boot:run`
 
-## 7. Roadmap and Risks
-| Initiative | Priority | Notes / Risks |
-|------------|----------|---------------|
-| Caffeine cache with versioned invalidation | High | Guarantee snapshot consistency while broadcasting cache evictions. |
-| Snapshot pre-compilation | High | Improve expression-rendering latency; ensure backward compatibility. |
-| Outbox-driven cache refresh | Medium | Coordinate with ingest to avoid traffic amplification. |
-| JSON Schema validation for `paramsJson` | Medium | Introduces schema management and validation cost. |
-| Automated health inspections | Medium | Catch configuration conflicts before they reach production. |
-
-Primary risks include overlapping time windows, incorrect scope precedence, and stale cache entries. Establish monitoring and automated audits accordingly.
-
-## 8. References
-- Deep dive: `docs/modules/registry/deep-dive.md`
-- Seed SQL: `docs/modules/registry/sql/`
-- Error handling standard: `docs/standards/platform-error-handling.md`
-- Ingestion dataflow overview: `docs/process/ingest-dataflow.md`
+Open TODOs
+- Add a caching layer (e.g., Caffeine) with versioned invalidation and outbox-driven refresh strategy.
+- Validate JSON structures for param mappings using JSON Schema where appropriate.
