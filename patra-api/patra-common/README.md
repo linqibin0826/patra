@@ -47,14 +47,6 @@ patra-common/
 - Error Codes: Assert that `HttpStdErrors` produces the expected HTTP status and domain-specific code segments.
 - Core Enums: Test alias parsing and fallbacks for invalid input.
 
-## 7. Roadmap & Risks
-| Initiative | Status | Notes |
-|------------|--------|-------|
-| Move trait → HTTP mappings into the starter | Planned | Coordinate with web/feign starters to avoid duplicated configuration. |
-| JsonNormalizer plugin hooks | Planned | Mind performance and thread safety; extend via SPI. |
-| Additional hash algorithms (MD5/SHA-1/Blake3) | Planned | Assess security posture and compatibility before adding. |
-| Canonical JSON benchmarking | Planned | Requires JMH; watch the test dependency footprint. |
-
 ## 8. Further Reading
 - Deep dive: `docs/modules/common/deep-dive.md`
 - Error-handling standard: `docs/standards/platform-error-handling.md`
