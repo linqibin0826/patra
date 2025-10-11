@@ -1,11 +1,11 @@
 package com.patra.expr;
 
 /**
- * 访问者接口：与表达式模型解耦，便于在内核外扩展实现（如 JSON 序列化、渲染器等）。
- * 所有实现要求线程安全；建议实现为无状态或只读状态对象。
+ * Visitor contract decoupled from the expression model so that codecs, renderers, and other
+ * translators can live outside the kernel while still traversing the tree safely. Implementations
+ * are expected to be thread-safe; prefer stateless or read-only designs.
  *
- * @author linqibin
- * @since 0.1.0
+ * @param <R> visitor return type
  */
 public interface ExprVisitor<R> {
     R visitAnd(And andExpr);

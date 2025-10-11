@@ -1,13 +1,19 @@
 package com.patra.expr;
 
 /**
- * 抽象语法树（AST）根接口：仅表达“布尔逻辑 + 叶子原子”，不携带任何“平台/数据源”信息。
- * <p>约定：AST 不负责渲染与转义；渲染由 Translator 在“规范化/降级/能力检查”之后完成。</p>
- * Root interface of the expression abstract syntax tree used by the Papertrace platform.
+ * Root interface for the expression abstract syntax tree used across the Papertrace platform.
  * <p>
- * 线程安全性：所有实现类型（record/enum）均为不可变对象；可安全在多线程间共享。
- * 资源与事务：不持有任何外部资源；不涉及事务边界。
- * 典型用法：通过 {@link Exprs} 工厂方法构造表达式树，再交由规范化与校验流程处理。
+ * The tree models boolean logic with immutable leaf atoms only; it deliberately avoids any
+ * platform- or data-source-specific details. Rendering and escaping are delegated to translators
+ * that run after normalization, degradation, and capability checks.
+ * </p>
+ * <p>
+ * Thread safety: all implementations (records/enums) are immutable and can be freely shared across
+ * threads. Resource usage: nodes never hold external resources nor participate in transactional
+ * boundaries.
+ * Typical usage: construct expression trees via {@link Exprs} factory methods before handing them to
+ * normalization and validation pipelines.
+ * </p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,12 +21,18 @@ package com.patra.expr;
 public sealed interface Expr permits And, Or, Not, Const, Atom {
 
     /**
-     * Accept a visitor and delegate to the corresponding handler.
+     * Accepts the supplied visitor and delegates to the matching handler.
+     *
+     * @param visitor visitor to invoke
+     * @param <R>     visitor return type
+     * @return visitor result
      */
     <R> R accept(ExprVisitor<R> visitor);
 
     /**
      * Convenience shortcut for {@code this == Const.TRUE}.
+     *
+     * @return {@code true} when this node is the boolean constant TRUE
      */
     default boolean isConstTrue() {
         return this == Const.TRUE;
@@ -28,10 +40,11 @@ public sealed interface Expr permits And, Or, Not, Const, Atom {
 
     /**
      * Convenience shortcut for {@code this == Const.FALSE}.
+     *
+     * @return {@code true} when this node is the boolean constant FALSE
      */
     default boolean isConstFalse() {
         return this == Const.FALSE;
     }
 
 }
-

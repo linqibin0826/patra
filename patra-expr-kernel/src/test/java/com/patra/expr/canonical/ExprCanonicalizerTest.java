@@ -13,7 +13,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * ExprCanonicalizer 的兼容性校验，确保输出与既有规范化策略保持一致。
+ * Regression coverage to ensure {@link ExprCanonicalizer} stays aligned with the shared JSON
+ * normalizer used elsewhere in the platform.
  */
 class ExprCanonicalizerTest {
 

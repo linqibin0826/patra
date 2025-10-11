@@ -5,12 +5,13 @@ import com.patra.expr.Expr;
 import java.util.Objects;
 
 /**
- * 表达式的规范化快照，封装原始表达式与其确定性 JSON 及散列值。
+ * Immutable snapshot that captures the original expression together with its canonical JSON payload
+ * and hash digest.
  */
 public record ExprCanonicalSnapshot(Expr expr, String canonicalJson, String hash) {
     public ExprCanonicalSnapshot {
-        Objects.requireNonNull(expr, "expr不能为空");
+        Objects.requireNonNull(expr, "expr must not be null");
         canonicalJson = canonicalJson == null ? "{}" : canonicalJson;
-        Objects.requireNonNull(hash, "hash不能为空");
+        Objects.requireNonNull(hash, "hash must not be null");
     }
 }
