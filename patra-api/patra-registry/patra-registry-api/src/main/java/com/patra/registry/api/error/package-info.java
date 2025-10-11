@@ -8,14 +8,14 @@
  * <h2>Error Code Format</h2>
  * All error codes follow {@code REG-NNNN}:
  * <ul>
- *   <li>{@code REG} — Registry service prefix</li>
- *   <li>{@code NNNN} — four-digit numeric code</li>
+ *   <li>{@code REG} - Registry service prefix</li>
+ *   <li>{@code NNNN} - four-digit numeric code</li>
  * </ul>
  *
  * <h2>Series Definition</h2>
  * <ul>
- *   <li>{@code 0xxx} — generic HTTP-aligned errors produced via {@code HttpStdErrors}</li>
- *   <li>{@code 1xxx} — domain or business-specific errors maintained in the catalog</li>
+ *   <li>{@code 0xxx} - generic HTTP-aligned errors produced via {@code HttpStdErrors}</li>
+ *   <li>{@code 1xxx} - domain or business-specific errors maintained in the catalog</li>
  * </ul>
  *
  * <h2>Append-Only Maintenance</h2>

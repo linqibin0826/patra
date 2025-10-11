@@ -18,14 +18,14 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@link IngestErrorMappingContributor} 单元测试。
+ * Unit tests for {@link IngestErrorMappingContributor}.
  */
 class IngestErrorMappingContributorTest {
 
     private final IngestErrorMappingContributor contributor = new IngestErrorMappingContributor();
 
     @Test
-    @DisplayName("Registry 未找到时映射到 ING-1201")
+    @DisplayName("Maps missing Registry configuration to ING-1201")
     void shouldMapConfigurationNotFound() {
         RemoteCallException remote = new RemoteCallException("REG-0404", 404, "not found",
                 "ProvenanceClient#getConfiguration", "trace-1", Map.of());
@@ -37,7 +37,7 @@ class IngestErrorMappingContributorTest {
     }
 
     @Test
-    @DisplayName("Registry 服务端错误降级为 ING-1203")
+    @DisplayName("Maps Registry server-side failure to ING-1203")
     void shouldMapConfigurationServerError() {
         RemoteCallException remote = new RemoteCallException("REG-0500", 502, "bad gateway",
                 "ProvenanceClient#getConfiguration", "trace-2", Map.of());
@@ -49,7 +49,7 @@ class IngestErrorMappingContributorTest {
     }
 
     @Test
-    @DisplayName("调度参数解析失败映射到 ING-1401")
+    @DisplayName("Maps scheduler parameter parsing failure to ING-1401")
     void shouldMapSchedulerArgumentErrors() {
         IngestScheduleParameterException exception = new IngestScheduleParameterException("Failed to parse relay param: boom");
 
@@ -58,27 +58,29 @@ class IngestErrorMappingContributorTest {
     }
 
     @Test
-    @DisplayName("Outbox 状态写回失败映射到 ING-1302")
+    @DisplayName("Maps outbox state update failure to ING-1302")
     void shouldMapOutboxStateErrors() {
-        OutboxPersistenceException exception = new OutboxPersistenceException(OutboxPersistenceException.Stage.MARK_PUBLISHED,
-                "更新 Outbox 状态失败，id=1");
+        OutboxPersistenceException exception = new OutboxPersistenceException(
+                OutboxPersistenceException.Stage.MARK_PUBLISHED,
+                "Failed to update outbox status, id=1");
 
         assertThat(contributor.mapException(exception))
                 .contains(IngestErrorCode.ING_1302);
     }
 
     @Test
-    @DisplayName("Checkpoint 解析失败映射到 ING-1501")
+    @DisplayName("Maps checkpoint parsing failure to ING-1501")
     void shouldMapCheckpointParseError() {
-        TaskCheckpointException exception = new TaskCheckpointException(TaskCheckpointException.Type.PARSE,
-                "Checkpoint JSON 解析失败", new RuntimeException("boom"));
+        TaskCheckpointException exception = new TaskCheckpointException(
+                TaskCheckpointException.Type.PARSE,
+                "Checkpoint JSON parsing failed", new RuntimeException("boom"));
 
         assertThat(contributor.mapException(exception))
                 .contains(IngestErrorCode.ING_1501);
     }
 
     @Test
-    @DisplayName("Outbox Relay 执行异常映射到 ING-1402")
+    @DisplayName("Maps outbox relay execution exception to ING-1402")
     void shouldMapRelayExecutionError() {
         OutboxRelayExecutionException exception = new OutboxRelayExecutionException("Relay failed", new RuntimeException("boom"));
 
@@ -87,7 +89,7 @@ class IngestErrorMappingContributorTest {
     }
 
     @Test
-    @DisplayName("计划验证异常映射到 ING-1403")
+    @DisplayName("Maps plan validation exception to ING-1403")
     void shouldMapPlanValidationError() {
         PlanValidationException exception = new PlanValidationException("window invalid", PlanValidationException.Reason.WINDOW_INVALID);
 
@@ -96,7 +98,7 @@ class IngestErrorMappingContributorTest {
     }
 
     @Test
-    @DisplayName("计划装配异常映射到 ING-1601")
+    @DisplayName("Maps plan assembly exception to ING-1601")
     void shouldMapPlanAssemblyError() {
         PlanAssemblyException exception = new PlanAssemblyException("assembly failed", PlanAssemblyException.Reason.EMPTY_RESULT);
 
@@ -105,7 +107,7 @@ class IngestErrorMappingContributorTest {
     }
 
     @Test
-    @DisplayName("计划持久化异常映射到 ING-1503")
+    @DisplayName("Maps plan persistence exception to ING-1503")
     void shouldMapPlanPersistenceError() {
         PlanPersistenceException exception = new PlanPersistenceException(PlanPersistenceException.Stage.PLAN,
                 "persist plan failed");

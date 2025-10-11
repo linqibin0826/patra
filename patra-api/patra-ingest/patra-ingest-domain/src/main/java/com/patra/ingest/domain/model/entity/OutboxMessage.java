@@ -4,61 +4,61 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Outbox 消息领域对象，封装基础字段。
+ * Domain object representing an outbox message with core fields.
  *
  * @author linqibin
  * @since 0.1.0
  */
 public final class OutboxMessage {
 
-    /** 主键 */
+    /** Primary key. */
     private final Long id;
-    /** 乐观锁版本 */
+    /** Optimistic lock version. */
     private final Long version;
-    /** 聚合类型 */
+    /** Aggregate type. */
     private final String aggregateType;
-    /** 聚合 ID */
+    /** Aggregate identifier. */
     private final Long aggregateId;
-    /** 逻辑通道 */
+    /** Logical channel. */
     private final String channel;
-    /** 业务操作类型 */
+    /** Business operation type. */
     private final String opType;
-    /** 分区键 */
+    /** Partition key. */
     private final String partitionKey;
-    /** 幂等键 */
+    /** Idempotency key. */
     private final String dedupKey;
-    /** 负载 JSON */
+    /** Payload JSON. */
     private final String payloadJson;
-    /** 头部 JSON */
+    /** Headers JSON. */
     private final String headersJson;
-    /** 最早可发布时间 */
+    /** Earliest publish time. */
     private final Instant notBefore;
-    /** 状态码 */
+    /** Status code. */
     private final String statusCode;
-    /** 重试次数 */
+    /** Retry count. */
     private final Integer retryCount;
-    /** 下次重试时间 */
+    /** Next retry timestamp. */
     private final Instant nextRetryAt;
-    /** 错误码 */
+    /** Error code. */
     private final String errorCode;
-    /** 错误信息 */
+    /** Error message. */
     private final String errorMsg;
-    /** 租约持有者 */
+    /** Lease owner. */
     private final String leaseOwner;
-    /** 租约到期时间 */
+    /** Lease expiration time. */
     private final Instant leaseExpireAt;
-    /** 消息 ID */
+    /** Broker message identifier. */
     private final String msgId;
 
     private OutboxMessage(Builder builder) {
         this.id = builder.id;
         this.version = builder.version;
-        this.aggregateType = Objects.requireNonNull(builder.aggregateType, "aggregateType 必填");
-        this.aggregateId = Objects.requireNonNull(builder.aggregateId, "aggregateId 必填");
-        this.channel = Objects.requireNonNull(builder.channel, "channel 必填");
-        this.opType = Objects.requireNonNull(builder.opType, "opType 必填");
-        this.partitionKey = Objects.requireNonNull(builder.partitionKey, "partitionKey 必填");
-        this.dedupKey = Objects.requireNonNull(builder.dedupKey, "dedupKey 必填");
+        this.aggregateType = Objects.requireNonNull(builder.aggregateType, "aggregateType must not be null");
+        this.aggregateId = Objects.requireNonNull(builder.aggregateId, "aggregateId must not be null");
+        this.channel = Objects.requireNonNull(builder.channel, "channel must not be null");
+        this.opType = Objects.requireNonNull(builder.opType, "opType must not be null");
+        this.partitionKey = Objects.requireNonNull(builder.partitionKey, "partitionKey must not be null");
+        this.dedupKey = Objects.requireNonNull(builder.dedupKey, "dedupKey must not be null");
         this.payloadJson = builder.payloadJson;
         this.headersJson = builder.headersJson;
         this.notBefore = builder.notBefore;

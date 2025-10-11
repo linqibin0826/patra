@@ -2,14 +2,14 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/** 命名空间作用域（DICT：ing_namespace_scope）。
- * <p>用于区分游标命名空间：GLOBAL/EXPR/CUSTOM；映射字段 namespace_scope_code。</p>
+/** Namespace scope (DICT: ing_namespace_scope).
+ * <p>Distinguishes cursor namespaces: GLOBAL/EXPR/CUSTOM; mapped to {@code namespace_scope_code}.</p>
  */
 @Getter
 public enum NamespaceScope {
-    GLOBAL("GLOBAL", "全局命名空间"),
-    EXPR("EXPR", "表达式哈希命名空间"),
-    CUSTOM("CUSTOM", "自定义命名空间");
+    GLOBAL("GLOBAL", "Global namespace"),
+    EXPR("EXPR", "Expression-hash namespace"),
+    CUSTOM("CUSTOM", "Custom namespace");
 
     private final String code; private final String description;
     NamespaceScope(String code, String description){ this.code=code; this.description=description; }

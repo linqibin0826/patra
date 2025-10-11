@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 计划切片（Plan Slice）仓储端口。
- * <p>负责持久化规划阶段生成的切片结果，便于任务装配与回放窗口时进行精确查询。</p>
+ * Repository port for plan slices.
+ * <p>Persists slices generated during planning so task assembly and replay can query precise windows.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,34 +15,34 @@ import java.util.Optional;
 public interface PlanSliceRepository {
 
     /**
-     * 保存或更新单个计划切片。
+     * Persist or update a single plan slice.
      *
-     * @param slice 计划切片聚合，包含窗口、过滤条件等信息
-     * @return 持久化后的计划切片
+     * @param slice plan slice aggregate containing window and filter context
+     * @return persisted slice
      */
     PlanSliceAggregate save(PlanSliceAggregate slice);
 
     /**
-     * 批量保存计划切片。
+     * Persist multiple plan slices at once.
      *
-     * @param slices 切片集合
-     * @return 持久化后的切片集合
+     * @param slices slices to persist
+     * @return persisted slices
      */
     List<PlanSliceAggregate> saveAll(List<PlanSliceAggregate> slices);
 
     /**
-     * 按计划 ID 查询全部切片。
+     * Retrieve all slices for a plan.
      *
-     * @param planId 计划 ID
-     * @return 该计划对应的切片列表
+     * @param planId plan identifier
+     * @return list of slices
      */
     List<PlanSliceAggregate> findByPlanId(Long planId);
 
     /**
-     * 根据切片 ID 查询切片聚合。
+     * Retrieve a slice by identifier.
      *
-     * @param sliceId 切片 ID
-     * @return 若存在返回切片聚合，否则返回 empty
+     * @param sliceId slice identifier
+     * @return slice or {@link Optional#empty()}
      */
     Optional<PlanSliceAggregate> findById(Long sliceId);
 }

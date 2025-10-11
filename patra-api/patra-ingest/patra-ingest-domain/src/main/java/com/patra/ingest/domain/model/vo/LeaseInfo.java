@@ -3,81 +3,81 @@ package com.patra.ingest.domain.model.vo;
 import java.time.Instant;
 
 /**
- * 任务租约信息（Lease Info）。
- * <p>用于分布式竞争执行时标记当前持有者与到期时间，支持获取 / 续约 / 释放。</p>
+ * Value object describing the lease assigned to a task.
+ * <p>Tracks the current holder and expiration for distributed execution, supporting acquire/renew/release flows.</p>
  * <ul>
- *   <li>owner：租约持有者（实例/节点标识）</li>
- *   <li>leasedUntil：租约到期时间（UTC）</li>
- *   <li>leaseCount：累计获取/续约次数（>=0）</li>
+ *   <li>{@code owner}: lease holder (instance/node identifier)</li>
+ *   <li>{@code leasedUntil}: lease expiration in UTC</li>
+ *   <li>{@code leaseCount}: number of acquisitions/renewals (>= 0)</li>
  * </ul>
- * 不变式：leaseCount 不可为负。
+ * Invariant: {@code leaseCount} must not be negative.
  */
 public record LeaseInfo(String owner, Instant leasedUntil, int leaseCount) {
 
     public LeaseInfo {
         if (leaseCount < 0) {
-            throw new IllegalArgumentException("leaseCount 不能为负数");
+            throw new IllegalArgumentException("leaseCount must not be negative");
         }
     }
 
     /**
-     * 无租约实例（空持有者 / 到期 / 次数 0）。
+     * Lease information for an unassigned task (no owner, no expiry, zero count).
      */
     public static LeaseInfo none() {
         return new LeaseInfo(null, null, 0);
     }
 
     /**
-     * 快照构造：将可能为 null 的 leaseCount 归一化为 0。
+     * Snapshot helper that normalizes a nullable {@code leaseCount} to zero.
      */
     public static LeaseInfo snapshotOf(String owner, Instant leasedUntil, Integer leaseCount) {
         return new LeaseInfo(owner, leasedUntil, leaseCount == null ? 0 : leaseCount);
     }
 
     /**
-     * 是否已有持有者。
+     * Whether the lease currently has a holder.
      */
     public boolean isHeld() {
         return owner != null && !owner.isBlank();
     }
 
     /**
-     * 首次获取租约（当前必须未被持有）。
+     * Acquire the lease for the first time; requires the lease to be unheld.
      */
     public LeaseInfo acquire(String newOwner, Instant until) {
         if (newOwner == null || newOwner.isBlank()) {
-            throw new IllegalArgumentException("租约持有者不能为空");
+            throw new IllegalArgumentException("Lease owner must not be blank");
         }
         if (until == null) {
-            throw new IllegalArgumentException("租约到期时间不能为空");
+            throw new IllegalArgumentException("Lease expiration must not be null");
         }
         if (isHeld()) {
-            throw new IllegalStateException("租约已被占用，无法重新获取");
+            throw new IllegalStateException("Lease is already held and cannot be reacquired");
         }
         return new LeaseInfo(newOwner, until, leaseCount + 1);
     }
 
     /**
-     * 续约（仅原持有者可续约）。
+     * Renew the lease; only the current holder may renew.
      */
     public LeaseInfo renew(String holder, Instant until) {
         if (!isHeld()) {
-            throw new IllegalStateException("当前无租约持有者，无法续约");
+            throw new IllegalStateException("Cannot renew because no lease holder is present");
         }
         if (holder == null || holder.isBlank()) {
-            throw new IllegalArgumentException("续约的租约持有者不能为空");
+            throw new IllegalArgumentException("Lease holder used for renewal must not be blank");
         }
         if (!owner.equals(holder)) {
-            throw new IllegalArgumentException("租约持有者不匹配，拒绝续约");
+            throw new IllegalArgumentException("Lease holder mismatch; renewal rejected");
         }
         if (until == null) {
-            throw new IllegalArgumentException("租约到期时间不能为空");
+            throw new IllegalArgumentException("Lease expiration must not be null");
         }
         return new LeaseInfo(holder, until, leaseCount + 1);
     }
 
     /**
-     * 释放租约（无持有者时返回自身）。
+     * Release the lease (returns {@code this} when already unheld).
      */
     public LeaseInfo release() {
         if (!isHeld()) {

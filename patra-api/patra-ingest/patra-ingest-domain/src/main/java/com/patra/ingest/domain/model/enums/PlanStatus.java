@@ -4,44 +4,32 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 
 /**
- * 计划状态（DICT：ing_plan_status）。
- * <p>字段映射：ing_plan.status_code → DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED</p>
- * <p>状态机语义：</p>
+ * Plan status (DICT: ing_plan_status).
+ * <p>Field mapping: {@code ing_plan.status_code → DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED}</p>
+ * <p>State machine semantics:</p>
  * <ul>
- *   <li>DRAFT → 初始创建（尚未切片）</li>
- *   <li>SLICING → 正在生成切片/任务</li>
- *   <li>READY → 切片与任务全部生成成功</li>
- *   <li>PARTIAL → 部分生成成功（允许补偿重试）</li>
- *   <li>FAILED → 装配失败或关键持久化失败</li>
- *   <li>COMPLETED → 运行生命周期闭合（全部任务完成）</li>
+ *   <li>DRAFT → newly created, slicing not started</li>
+ *   <li>SLICING → slices/tasks are being generated</li>
+ *   <li>READY → slices and tasks created successfully</li>
+ *   <li>PARTIAL → partially generated, compensation may proceed</li>
+ *   <li>FAILED → assembly or critical persistence failed</li>
+ *   <li>COMPLETED → lifecycle closed, all tasks finished</li>
  * </ul>
  */
 @Getter
 public enum PlanStatus {
-    /**
-     * 草稿（尚未进入切片阶段）
-     */
-    DRAFT("DRAFT", "草稿"),
-    /**
-     * 切片进行中（不可重复进入）
-     */
-    SLICING("SLICING", "切片中"),
-    /**
-     * 切片生成完毕，可调度任务
-     */
-    READY("READY", "就绪"),
-    /**
-     * 部分生成成功（后续可能补偿）
-     */
-    PARTIAL("PARTIAL", "部分完成"),
-    /**
-     * 失败（需要人工或系统补偿）
-     */
-    FAILED("FAILED", "失败"),
-    /**
-     * 全生命周期完成（统计收敛状态）
-     */
-    COMPLETED("COMPLETED", "已完成");
+    /** Draft; slicing has not started yet. */
+    DRAFT("DRAFT", "Draft"),
+    /** Slicing in progress (non-repeatable transition). */
+    SLICING("SLICING", "Slicing"),
+    /** Slices generated and tasks ready for scheduling. */
+    READY("READY", "Ready"),
+    /** Partially successful; additional compensation may occur. */
+    PARTIAL("PARTIAL", "Partially completed"),
+    /** Failed and requires manual/system recovery. */
+    FAILED("FAILED", "Failed"),
+    /** Fully completed lifecycle. */
+    COMPLETED("COMPLETED", "Completed");
 
     private final String code;
     private final String description;

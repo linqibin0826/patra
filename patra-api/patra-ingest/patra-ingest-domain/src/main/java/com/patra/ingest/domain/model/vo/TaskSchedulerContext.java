@@ -1,39 +1,39 @@
 package com.patra.ingest.domain.model.vo;
 
 /**
- * 任务调度上下文（Scheduler Context）。
- * <p>封装调度器一次运行链路标识（runId）与跨组件关联 ID（correlationId）。</p>
+ * Scheduler context attached to a task.
+ * <p>Stores the scheduler batch identifier ({@code schedulerRunId}) and cross-component correlation id.</p>
  * <ul>
- *   <li>schedulerRunId：同一调度触发批次统一标识（用于聚合统计）</li>
- *   <li>correlationId：跨系统 Trace / 日志串联</li>
+ *   <li>{@code schedulerRunId}: shared id for a scheduler-triggered batch (used for aggregation)</li>
+ *   <li>{@code correlationId}: cross-system trace/log identifier</li>
  * </ul>
- * 提供不可变便捷变换方法（with*）。
+ * Immutable convenience methods prefixed with {@code with*} return new instances.
  */
 public record TaskSchedulerContext(String schedulerRunId, String correlationId) {
 
     /**
-     * 空上下文（两个标识皆为空）
+     * Create an empty scheduler context (both identifiers {@code null}).
      */
     public static TaskSchedulerContext empty() {
         return new TaskSchedulerContext(null, null);
     }
 
     /**
-     * 派生一个变更 schedulerRunId 的新上下文。
+     * Derive a new context with the provided {@code schedulerRunId}.
      */
     public TaskSchedulerContext withSchedulerRun(String runId) {
         return new TaskSchedulerContext(runId, correlationId);
     }
 
     /**
-     * 派生一个变更 correlationId 的新上下文。
+     * Derive a new context with the provided {@code correlationId}.
      */
     public TaskSchedulerContext withCorrelation(String corrId) {
         return new TaskSchedulerContext(schedulerRunId, corrId);
     }
 
     /**
-     * 是否包含有效的调度运行标识。
+     * Returns {@code true} when a scheduler run identifier is present.
      */
     public boolean hasSchedulerRun() {
         return schedulerRunId != null && !schedulerRunId.isBlank();

@@ -7,37 +7,38 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Outbox 状态持久化异常。
+ * Exception raised when the outbox state cannot be persisted.
  *
- * <p>封装 Outbox 消息状态流转（已发布 / 重试 / 死信）时对存储的 <strong>写入 / 条件更新</strong> 失败。
- * 通常成因：并发竞争（版本号/条件更新影响行数为0）、数据库临时不可用、序列获取失败。</p>
- * <p>处理建议：
+ * <p>Wraps failures that occur while transitioning outbox messages between {@code PUBLISHED}, retry, and
+ * dead-letter states. Typical root causes include concurrent updates (optimistic locking updating zero rows),
+ * temporary database unavailability, or sequence generation failures.</p>
+ * <p>Recovery guidance:
  * <ul>
- *   <li>并发冲突：基于重试次数 + 指数退避再次获取并尝试。</li>
- *   <li>连接/超时：标记为可重试并交由调度再次拉起。</li>
- *   <li>持续失败（超过阈值）：告警并人工排查（库可用性 / 表锁）。</li>
+ *   <li>Concurrency conflicts: retry with exponential backoff keyed by the retry count.</li>
+ *   <li>Connection/timeouts: classify as retryable so the scheduler can reattempt.</li>
+ *   <li>Sustained failures (beyond thresholds): trigger alerts and investigate database health or table locks.</li>
  * </ul>
  * </p>
  */
 public class OutboxPersistenceException extends IngestException implements HasErrorTraits {
 
     public enum Stage {
-        /** 将消息标记为已发布（成功投递）阶段失败。 */
+        /** Failure while marking a message as published. */
         MARK_PUBLISHED,
-        /** 将消息标记为需重试阶段失败（可能是并发写）。 */
+        /** Failure while marking a message for retry (often due to concurrent writes). */
         MARK_RETRY,
-        /** 将消息标记为死信阶段失败。 */
+        /** Failure while marking a message as dead-lettered. */
         MARK_DEAD
     }
 
-    /** 失败阶段。 */
+    /** Stage at which persistence failed. */
     private final Stage stage;
 
     /**
-     * 使用阶段与消息构造。
+     * Create the exception with the failure stage and message.
      *
-     * @param stage   失败阶段
-     * @param message 描述消息
+     * @param stage   stage that failed
+     * @param message descriptive message
      */
     public OutboxPersistenceException(Stage stage, String message) {
         super(message);
@@ -45,11 +46,11 @@ public class OutboxPersistenceException extends IngestException implements HasEr
     }
 
     /**
-     * 使用阶段、消息与底层原因构造。
+     * Create the exception with the failure stage, message, and underlying cause.
      *
-     * @param stage   失败阶段
-     * @param message 描述消息
-     * @param cause   底层异常
+     * @param stage   stage that failed
+     * @param message descriptive message
+     * @param cause   underlying cause
      */
     public OutboxPersistenceException(Stage stage, String message, Throwable cause) {
         super(message, cause);
@@ -57,9 +58,9 @@ public class OutboxPersistenceException extends IngestException implements HasEr
     }
 
     /**
-     * 获取失败阶段。
+     * Expose the stage where persistence failed.
      *
-     * @return 阶段枚举
+     * @return stage enumeration
      */
     public Stage getStage() {
         return stage;

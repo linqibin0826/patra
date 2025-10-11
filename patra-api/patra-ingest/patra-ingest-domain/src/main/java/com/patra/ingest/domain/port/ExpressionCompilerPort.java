@@ -4,8 +4,7 @@ import com.patra.ingest.domain.model.vo.ExprCompilationRequest;
 import com.patra.ingest.domain.model.vo.ExprCompilationResult;
 
 /**
- * 表达式编译端口（Port）。
- * <p>将原始表达式编译为数据源可执行的查询与参数。</p>
+ * Port that compiles ingestion expressions into executable queries and parameters.
  *
  * @author linqibin
  * @since 0.1.0

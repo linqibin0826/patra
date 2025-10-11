@@ -4,18 +4,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 
 /**
- * 执行上下文（配置快照、编译表达式）。
+ * Execution context capturing configuration snapshots and compiled expressions for a task run.
  *
- * @param taskId 任务ID
- * @param runId 运行ID
- * @param provenanceCode 数据源编码
- * @param operationCode 操作编码
- * @param configSnapshot 配置快照（使用领域快照对象）
- * @param exprHash 表达式哈希
- * @param compiledQuery 编译后的查询
- * @param compiledParams 编译后的参数
- * @param normalizedExpression 规范化表达式
- * @param windowSpec 窗口规格
+ * @param taskId               task identifier
+ * @param runId                run identifier
+ * @param provenanceCode       provenance code
+ * @param operationCode        operation code
+ * @param configSnapshot       configuration snapshot
+ * @param exprHash             expression hash
+ * @param compiledQuery        compiled query
+ * @param compiledParams       compiled query parameters
+ * @param normalizedExpression normalized expression string
+ * @param windowSpec           window specification
  * @author linqibin
  * @since 0.1.0
  */

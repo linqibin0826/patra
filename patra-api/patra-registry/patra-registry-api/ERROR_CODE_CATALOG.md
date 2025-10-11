@@ -72,11 +72,11 @@ All Registry service errors follow the RFC 7807 ProblemDetail format:
 
 This error catalog follows an **append-only principle** to ensure API stability:
 
-- ✅ **Allowed**: Adding new error codes
-- ✅ **Allowed**: Adding new documentation or examples
-- ❌ **Forbidden**: Removing existing error codes
-- ❌ **Forbidden**: Changing the meaning of existing error codes
-- ❌ **Forbidden**: Modifying existing error code strings
+- Allowed: Adding new error codes
+- Allowed: Adding new documentation or examples
+- Forbidden: Removing existing error codes
+- Forbidden: Changing the meaning of existing error codes
+- Forbidden: Modifying existing error code strings
 
 ## Integration Examples
 

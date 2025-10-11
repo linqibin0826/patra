@@ -7,7 +7,7 @@ import com.patra.ingest.domain.model.vo.CursorValue;
 import com.patra.ingest.domain.model.vo.CursorWatermark;
 import lombok.Getter;
 
-/** 当前游标。 */
+/** Domain entity representing the current cursor state. */
 @SuppressWarnings("unused")
 @Getter
 public class Cursor {
@@ -63,7 +63,7 @@ public class Cursor {
 
     public void advance(CursorValue newValue, CursorWatermark newWatermark, CursorLineage newLineage, String newExprHash) {
         if (newValue == null) {
-            throw new IllegalArgumentException("游标值不能为空");
+            throw new IllegalArgumentException("Cursor value must not be null");
         }
         this.value = newValue;
         if (newWatermark != null) {
@@ -82,7 +82,7 @@ public class Cursor {
     }
 
     /**
-     * 创建新游标（时间类型）。
+     * Factory method creating a time-based cursor.
      */
     public static Cursor create(String provenanceCode,
                                 String operationCode,
@@ -103,16 +103,16 @@ public class Cursor {
     }
 
     /**
-     * 推进游标到新水位（仅时间类型）。
+     * Advance the cursor to the supplied time watermark.
      */
     public void advanceTo(java.time.Instant newWatermark) {
         if (newWatermark == null) {
-            throw new IllegalArgumentException("新水位不能为空");
+            throw new IllegalArgumentException("New watermark must not be null");
         }
-        // 检查水位不倒退
+        // Ensure the watermark never moves backwards
         if (watermark.normalizedInstant() != null && newWatermark.isBefore(watermark.normalizedInstant())) {
             throw new IllegalArgumentException(
-                "游标水位不能倒退 current=" + watermark.normalizedInstant() + " new=" + newWatermark
+                "Cursor watermark cannot move backwards current=" + watermark.normalizedInstant() + " new=" + newWatermark
             );
         }
         this.watermark = new CursorWatermark(
@@ -123,7 +123,7 @@ public class Cursor {
     }
 
     /**
-     * 获取当前水位（时间类型）。
+     * Return the current time-based watermark.
      */
     public java.time.Instant getCurrentWatermark() {
         return watermark.normalizedInstant();

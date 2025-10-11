@@ -6,8 +6,8 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Outbox 发布阶段的异常封装。
- * <p>携带 {@link Reason} 区分可重试与不可重试场景，供上层错误分类器做细粒度判定。</p>
+ * Exception wrapper for failures during outbox publishing.
+ * <p>Includes a {@link Reason} so callers can classify retryable versus non-retryable scenarios.</p>
  */
 public class OutboxPublishException extends OutboxRelayExecutionException {
 
@@ -35,7 +35,7 @@ public class OutboxPublishException extends OutboxRelayExecutionException {
         return EnumSet.of(ErrorTrait.DEP_UNAVAILABLE);
     }
 
-    /** 发布异常类型。 */
+    /** Root cause classification for publishing failures. */
     public enum Reason {
         CHANNEL_NOT_ALLOWED(true),
         HEADERS_INVALID(true),

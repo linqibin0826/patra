@@ -1,12 +1,12 @@
 package com.patra.ingest.domain.model.vo;
 
 /**
- * 单批次处理统计。
- * <p>recordCount：本批处理（抓取或写入）记录数，调用方保证非负。</p>
+ * Statistics for a single batch execution.
+ * <p>{@code recordCount}: number of records processed (caller guarantees non-negative).</p>
  */
 public record BatchStats(int recordCount) {
     /**
-     * 快捷构造。
+     * Convenience factory method.
      */
     public static BatchStats of(int count) {
         return new BatchStats(count);

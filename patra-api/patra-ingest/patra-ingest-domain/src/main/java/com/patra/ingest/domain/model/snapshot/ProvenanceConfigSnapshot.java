@@ -3,42 +3,41 @@ package com.patra.ingest.domain.model.snapshot;
 import java.time.Instant;
 
 /**
- * 来源配置聚合快照（Domain Snapshot）。
- * <p>聚合 Registry 子域多维度配置于单一不可变视图，保证单次调度/执行期内配置一致性与可重放。</p>
- * <p>时间片选择规则统一：同维度按 NOW() 命中 [effective_from, effective_to) 且 lifecycle=ACTIVE 且 deleted=0 的最新一条（按 effective_from DESC,id DESC）。
- * 凭证维度可多条。</p>
+ * Aggregated snapshot of provenance configuration.
+ * <p>Combines multiple registry sub-domain tables into a single immutable view so a scheduler execution observes a consistent, replayable configuration.</p>
+ * <p>Selection rule: for each dimension choose the latest row where {@code NOW()} falls within {@code [effective_from, effective_to)} and {@code lifecycle=ACTIVE} and {@code deleted=0} (ordered by {@code effective_from DESC}, {@code id DESC}). Credential dimensions may return multiple rows.</p>
  *
- * <p>包含的维度（表 → 领域嵌套 record）：
- * reg_provenance → ProvenanceInfo；reg_prov_window_offset_cfg → WindowOffsetConfig；
- * reg_prov_pagination_cfg → PaginationConfig；reg_prov_http_cfg → HttpConfig；reg_prov_batching_cfg → BatchingConfig；
- * reg_prov_retry_cfg → RetryConfig；reg_prov_rate_limit_cfg → RateLimitConfig。</p>
+ * <p>Included dimensions (table → nested record):
+ * reg_provenance → ProvenanceInfo; reg_prov_window_offset_cfg → WindowOffsetConfig;
+ * reg_prov_pagination_cfg → PaginationConfig; reg_prov_http_cfg → HttpConfig; reg_prov_batching_cfg → BatchingConfig;
+ * reg_prov_retry_cfg → RetryConfig; reg_prov_rate_limit_cfg → RateLimitConfig.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record ProvenanceConfigSnapshot(
-        /* 来源基础信息 */ ProvenanceInfo provenance,
-        /* 时间窗口 / 增量指针（可空） */ WindowOffsetConfig windowOffset,
-        /* 分页 / 游标（可空） */ PaginationConfig pagination,
-        /* HTTP 策略（可空） */ HttpConfig http,
-        /* 批量 / 请求成型（可空） */ BatchingConfig batching,
-        /* 重试与退避（可空） */ RetryConfig retry,
-        /* 限流与并发（可空） */ RateLimitConfig rateLimit
+        /* Source metadata */ ProvenanceInfo provenance,
+        /* Time window / incremental offset (nullable) */ WindowOffsetConfig windowOffset,
+        /* Pagination / cursor (nullable) */ PaginationConfig pagination,
+        /* HTTP policy (nullable) */ HttpConfig http,
+        /* Batching / request shaping (nullable) */ BatchingConfig batching,
+        /* Retry and backoff (nullable) */ RetryConfig retry,
+        /* Rate limiting and concurrency (nullable) */ RateLimitConfig rateLimit
 ) {
 
     /**
-     * 来源基础信息（reg_provenance）。
-     * 字典：lifecycle_status = DRAFT|ACTIVE|DEPRECATED|RETIRED
+     * Provenance metadata (reg_provenance).
+     * Dictionary: lifecycle_status = DRAFT|ACTIVE|DEPRECATED|RETIRED
      */
     public record ProvenanceInfo(
-            /* 主键ID */ Long id,
-            /* 来源编码（全局唯一稳定；如 pubmed / crossref） */ String code,
-            /* 来源名称（人类可读） */ String name,
-            /* 默认基础URL（端点 path 拼接基线，HTTP 配置未覆盖时生效） */ String baseUrlDefault,
-            /* 默认时区（IANA，如 UTC/Asia/Shanghai） */ String timezoneDefault,
-            /* 官方/文档 URL（调试引用） */ String docsUrl,
-            /* 是否启用（快速开关） */ boolean active,
-            /* 生命周期状态 (lifecycle_status: DRAFT|ACTIVE|DEPRECATED|RETIRED) */ String lifecycleStatusCode
+            /* Primary key ID */ Long id,
+            /* Provenance code (globally unique, for example pubmed/crossref) */ String code,
+            /* Human-readable provenance name */ String name,
+            /* Default base URL (used when HTTP config does not override) */ String baseUrlDefault,
+            /* Default timezone (IANA, e.g., UTC/Asia/Shanghai) */ String timezoneDefault,
+            /* Documentation / official URL (for debugging references) */ String docsUrl,
+            /* Active flag (quick toggle) */ boolean active,
+            /* Lifecycle status (lifecycle_status: DRAFT|ACTIVE|DEPRECATED|RETIRED) */ String lifecycleStatusCode
     ) {
     }
 
@@ -129,8 +128,8 @@ public record ProvenanceConfigSnapshot(
     }
 
     /**
-     * 重试与退避（reg_prov_retry_cfg）。
-     * 字典：scope = SOURCE|TASK；backoff_policy_type = FIXED|EXP|EXP_JITTER|DECOR_JITTER；lifecycle_status 同上。
+     * Retry and backoff configuration (reg_prov_retry_cfg).
+     * Dictionary: scope = SOURCE|TASK; backoff_policy_type = FIXED|EXP|EXP_JITTER|DECOR_JITTER; lifecycle_status as above.
      */
     public record RetryConfig(
             /* Primary key ID */ Long id,

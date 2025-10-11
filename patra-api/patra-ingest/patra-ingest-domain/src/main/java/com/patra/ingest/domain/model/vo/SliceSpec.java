@@ -4,14 +4,14 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * 切片边界规范（Slice Specification）。
- * <p>统一抽象多种切片维度：时间窗口 / ID 区间 / Token 分段 / 其它扩展参数。</p>
+ * Slice boundary specification value object.
+ * <p>Abstracts different slicing dimensions such as time windows, ID ranges, token segments, and additional parameters.</p>
  * <ul>
- *   <li>windowFrom / windowTo：时间维度边界（半开区间）</li>
- *   <li>idRangeFrom / idRangeTo：主键或业务 ID 范围（闭区间语义，具体由策略解析）</li>
- *   <li>extra：扩展键值（只读防变异）</li>
+ *   <li>{@code windowFrom}/{@code windowTo}: half-open time boundaries</li>
+ *   <li>{@code idRangeFrom}/{@code idRangeTo}: identifier range (semantics interpreted by the strategy)</li>
+ *   <li>{@code extra}: read-only extension map</li>
  * </ul>
- * 不变式：extra 永远非 null 且不可修改（CopyOf）。
+ * Invariant: {@code extra} is never {@code null} and is defensively copied.
  */
 public record SliceSpec(
         Instant windowFrom,

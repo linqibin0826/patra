@@ -6,28 +6,28 @@ import com.patra.ingest.domain.model.enums.SliceStatus;
 import java.util.Objects;
 
 /**
- * 计划切片聚合根，描述计划切片的签名与状态流转。
+ * Aggregate root that models the signature and lifecycle of an ingestion plan slice.
  *
  * @author linqibin
  * @since 0.1.0
  */
 public class PlanSliceAggregate extends AggregateRoot<Long> {
 
-    /** 关联计划 ID */
+    /** Identifier of the plan this slice belongs to. */
     private Long planId;
-    /** 来源编码 */
+    /** Provenance/source code. */
     private final String provenanceCode;
-    /** 切片序号 */
+    /** Slice sequence number. */
     private final int sliceNo;
-    /** 切片签名哈希 */
+    /** Slice signature hash. */
     private final String sliceSignatureHash;
-    /** 窗口规格 JSON */
+    /** Window specification serialized as JSON. */
     private final String windowSpecJson;
-    /** 局部表达式哈希 */
+    /** Hash of the slice-scoped expression. */
     private final String exprHash;
-    /** 局部表达式快照 JSON */
+    /** Slice-scoped expression snapshot JSON. */
     private final String exprSnapshotJson;
-    /** 切片状态 */
+    /** Current status of the slice. */
     private SliceStatus status;
 
     private PlanSliceAggregate(Long id,
@@ -57,7 +57,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
                                             String windowSpecJson,
                                             String exprHash,
                                             String exprSnapshotJson) {
-        Objects.requireNonNull(sliceSignatureHash, "sliceSignatureHash不能为空");
+        Objects.requireNonNull(sliceSignatureHash, "sliceSignatureHash must not be null");
         return new PlanSliceAggregate(null,
                 planId,
                 provenanceCode,
@@ -94,7 +94,7 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
 
     public void bindPlan(Long planId) {
         if (planId == null) {
-            throw new IllegalArgumentException("planId不能为空");
+            throw new IllegalArgumentException("planId must not be null");
         }
         this.planId = planId;
     }

@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 调度实例聚合根：记录一次计划触发及其初始快照。
+ * Aggregate root representing a scheduling trigger together with its initial snapshot.
  *
  * @author linqibin
  * @since 0.1.0
@@ -21,19 +21,19 @@ import java.util.Objects;
 @Data
 public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
 
-    /** 调度器类型 */
+    /** Scheduler type. */
     private final Scheduler scheduler;
-    /** 调度任务 ID */
+    /** Scheduler job identifier. */
     private final String schedulerJobId;
-    /** 调度日志 ID */
+    /** Scheduler log identifier. */
     private final String schedulerLogId;
-    /** 触发类型 */
+    /** Trigger type. */
     private final TriggerType triggerType;
-    /** 触发时间 */
+    /** Trigger timestamp. */
     private final Instant triggeredAt;
-    /** 来源编码 */
+    /** Provenance/source code. */
     private final ProvenanceCode provenanceCode;
-    /** 触发参数 */
+    /** Trigger parameters delivered by the scheduler. */
     private final Map<String, Object> triggerParams;
 
     private ScheduleInstanceAggregate(Long id,
@@ -46,14 +46,14 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
                                       ProvenanceCode provenanceCode
     ) {
         super(id);
-        this.scheduler = Objects.requireNonNull(scheduler, "schedulerCode不能为空");
+        this.scheduler = Objects.requireNonNull(scheduler, "schedulerCode must not be null");
         this.schedulerJobId = schedulerJobId;
         this.schedulerLogId = schedulerLogId;
-        this.triggerType = Objects.requireNonNull(triggerType, "triggerType不能为空");
+        this.triggerType = Objects.requireNonNull(triggerType, "triggerType must not be null");
         this.triggeredAt = triggeredAt == null ? Instant.now() : triggeredAt;
         this.triggerParams = triggerParams;
         this.provenanceCode = provenanceCode;
-        // exprProto* 不再在调度实例层面保存（留空，Plan 层保存）
+        // Expression prototypes are no longer stored at the scheduling layer; plan aggregates keep them instead.
     }
 
     public static ScheduleInstanceAggregate start(Scheduler scheduler,
@@ -94,7 +94,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
         return aggregate;
     }
 
-    // 目前无需额外快照记录；如未来需要可扩展方法
+    // Placeholder: extend with additional snapshot recording when future requirements emerge.
     public void recordSnapshots() {
     }
 }

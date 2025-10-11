@@ -6,30 +6,35 @@ import com.patra.ingest.domain.model.vo.PlannerWindow;
 import com.patra.ingest.domain.exception.PlanValidationException;
 
 /**
- * 计划装配前置验证器契约。
- * <p>负责在构建 Plan / Slice / Task 之前进行输入与环境健康检查，防止后续产生大量无效任务。</p>
- * <p>典型校验纬度（实现可按需扩展）：
+ * Contract for pre-flight plan validation.
+ *
+ * <p>Implementations analyse inputs and environment before plan/slice/task assembly,
+ * preventing downstream execution of invalid workloads.</p>
+ *
+ * <p>Typical validation dimensions (implementations may extend):</p>
  * <ul>
- *   <li>窗口合法性（存在性、时间顺序、跨度上下限）</li>
- *   <li>队列背压（当前排队任务阈值）</li>
- *   <li>来源能力匹配（增量/全量、偏移字段配置完整性）</li>
- *   <li>配置快照完整性（必要字段是否缺失）</li>
+ *   <li>Window sanity (presence, chronological order, duration bounds)</li>
+ *   <li>Queue backpressure (queued task thresholds)</li>
+ *   <li>Provenance capability alignment (incremental vs. full, offset configuration)</li>
+ *   <li>Configuration snapshot completeness</li>
  * </ul>
- * 失败策略：违反约束抛出 {@link PlanValidationException}，调用方应捕获并记录业务级告警而非系统异常。
+ *
+ * <p>Violations should throw {@link PlanValidationException}. Callers are expected to surface
+ * business-level warnings instead of system errors.</p>
  */
 public interface PlannerValidator {
 
     /**
-     * 在计划装配前执行验证。
-     * @param triggerNorm 触发归一化对象（含来源/操作/请求窗口）
-     * @param snapshot 来源配置快照（可能为空）
-     * @param window 归一化后的计划窗口（可能为空：UPDATE 等操作）
-     * @param currentQueuedTasks 当前排队任务数，用于背压判断
-     * @throws PlanValidationException 校验失败时抛出
+     * Execute validation prior to plan assembly.
+     *
+     * @param triggerNorm         normalised trigger (provenance/operation/requested window)
+     * @param snapshot            provenance configuration snapshot (may be {@code null})
+     * @param window              normalised plan window (may be {@code null} for UPDATE operations)
+     * @param currentQueuedTasks  current queued task count used for backpressure checks
+     * @throws PlanValidationException when validation fails
      */
     void validateBeforeAssemble(PlanTriggerNorm triggerNorm,
                                 ProvenanceConfigSnapshot snapshot,
                                 PlannerWindow window,
                                 long currentQueuedTasks);
 }
-

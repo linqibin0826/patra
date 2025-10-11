@@ -3,42 +3,34 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * 采集操作类型（DICT：ing_operation）。
- * <p><b>持久化字段映射</b></p>
+ * Ingestion operation type (DICT: ing_operation).
+ * <p><b>Persistence mapping</b></p>
  * <ul>
  *   <li>ing_plan.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
  *   <li>ing_task.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
  *   <li>ing_cursor.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
  *   <li>ing_cursor_event.operation_code → HARVEST/BACKFILL/UPDATE/METRICS</li>
  * </ul>
- * <p><b>解析与输出约定</b></p>
+ * <p><b>Parsing/output contract</b></p>
  * <ul>
- *   <li>输出统一使用大写 {@link #getCode()}</li>
- *   <li>解析使用 {@link #fromCode(String)} 忽略大小写与首尾空白；未知值抛出 IllegalArgumentException</li>
+ *   <li>Always emit uppercase values via {@link #getCode()}.</li>
+ *   <li>Parse using {@link #fromCode(String)} which trims and uppercases; unknown values raise {@link IllegalArgumentException}.</li>
  * </ul>
- * <p>扩展策略：新增操作类型需同步更新上游配置与字典表；保持向后兼容。</p>
+ * <p>Extension strategy: update upstream configuration and dictionary tables when adding new operation types to remain backward compatible.</p>
  *
  * @author linqibin
  * @since 0.1.0
  */
 @Getter
 public enum OperationCode {
-    /**
-     * 初始全量采集（通常为首次或窗口重建）
-     */
-    HARVEST("HARVEST", "全量采集"),
-    /**
-     * 历史数据回补（弥补缺口或修正）
-     */
-    BACKFILL("BACKFILL", "回灌补采"),
-    /**
-     * 增量更新（基于游标推进）
-     */
-    UPDATE("UPDATE", "增量更新"),
-    /**
-     * 指标/统计类操作（读取型，无数据主写）
-     */
-    METRICS("METRICS", "指标统计");
+    /** Initial full ingestion (first run or rebuilt windows). */
+    HARVEST("HARVEST", "Full ingestion"),
+    /** Historical backfill to close gaps or correct data. */
+    BACKFILL("BACKFILL", "Backfill ingestion"),
+    /** Incremental updates driven by cursor progression. */
+    UPDATE("UPDATE", "Incremental update"),
+    /** Metrics/statistics-oriented operations (read-heavy). */
+    METRICS("METRICS", "Metrics collection");
 
     private final String code;
     private final String description;
@@ -49,11 +41,11 @@ public enum OperationCode {
     }
 
     /**
-     * 解析编码为枚举。
+     * Parse the provided code into the enumeration.
      *
-     * @param value 字符串编码（如 "harvest"/" UPDATE ")
-     * @return 对应枚举
-     * @throws IllegalArgumentException 当为空或不识别时抛出
+     * @param value string code (e.g., {@code "harvest"} or {@code " UPDATE "})
+     * @return matching enum
+     * @throws IllegalArgumentException when the value is null or unknown
      */
     public static OperationCode fromCode(String value) {
         if (value == null) {

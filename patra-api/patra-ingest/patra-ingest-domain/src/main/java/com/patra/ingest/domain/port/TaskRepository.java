@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 任务聚合仓储端口定义。
- * <p>用于持久化任务聚合（包含计划、切片、运行配置等上下文），并提供按计划维度的查询能力以及排队任务数量统计，
- * 帮助应用层完成调度决策与容量管理。</p>
+ * Repository port for task aggregates.
+ * <p>Persists tasks together with their plan/slice configuration and exposes plan-scoped queries plus queue
+ * statistics to support scheduling and capacity management.</p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,109 +17,109 @@ import java.util.Optional;
 public interface TaskRepository {
 
     /**
-     * 保存或更新单个任务聚合。
+     * Persist or update a single task aggregate.
      *
-     * @param task 任务聚合，包含任务元数据、执行策略与初始状态
-     * @return 持久化后的任务聚合，一般会补齐数据库主键
+     * @param task task aggregate containing metadata, execution strategy, and initial state
+     * @return persisted aggregate with identifiers populated
      */
     TaskAggregate save(TaskAggregate task);
 
     /**
-     * 批量保存任务聚合，常用于计划切片生成后的一次性落库。
+     * Persist multiple task aggregates, typically after slicing.
      *
-     * @param tasks 任务聚合集合
-     * @return 持久化后的任务聚集列表，顺序与入参一致
+     * @param tasks task aggregates
+     * @return persisted aggregates retaining input order
      */
     List<TaskAggregate> saveAll(List<TaskAggregate> tasks);
 
     /**
-     * 按计划 ID 查询全部任务。
+     * Retrieve all tasks belonging to a plan.
      *
-     * @param planId 计划 ID
-     * @return 归属该计划的任务列表
+     * @param planId plan identifier
+     * @return tasks for the plan
      */
     List<TaskAggregate> findByPlanId(Long planId);
 
     /**
-     * 按任务 ID 查询任务聚合。
+     * Retrieve a task aggregate by identifier.
      *
-     * @param taskId 任务 ID
-     * @return 任务聚合，不存在则返回 empty
+     * @param taskId task identifier
+     * @return aggregate or {@link Optional#empty()}
      */
     Optional<TaskAggregate> findById(Long taskId);
 
     /**
-     * 统计处于排队状态（状态码为 QUEUED）的任务数量。
+     * Count tasks in the {@code QUEUED} state.
      *
-     * @param provenanceCode 来源编码，可为空表示不过滤
-     * @param operationCode  操作编码，可为空表示不过滤
-     * @return 满足条件的排队任务数量
+     * @param provenanceCode provenance filter (nullable)
+     * @param operationCode  operation filter (nullable)
+     * @return queued task count
      */
     long countQueuedTasks(String provenanceCode, String operationCode);
 
     /**
-     * CAS 抢占租约（步骤 0）。
+     * Attempt to acquire a lease via compare-and-set (step 0).
      * <p>
-     * 仅针对 QUEUED 状态且满足调度时间、租约可接管条件的任务进行 CAS 更新：
+     * Applies to {@code QUEUED} tasks that satisfy schedule and lease takeover conditions:
      * <ul>
-     *   <li>条件：status_code='QUEUED' AND idempotent_key=#{idem}</li>
-     *   <li>条件：scheduled_at IS NULL OR scheduled_at <= #{now}（尊重 notBefore）</li>
-     *   <li>条件：leased_until IS NULL OR leased_until <= #{now} OR lease_owner=#{owner}（可接管）</li>
+     *   <li>{@code status_code='QUEUED' AND idempotent_key=#{idem}}</li>
+     *   <li>{@code scheduled_at IS NULL OR scheduled_at <= #{now}}</li>
+     *   <li>{@code leased_until IS NULL OR leased_until <= #{now} OR lease_owner=#{owner}}</li>
      * </ul>
-     * 更新字段：lease_owner、leased_until、lease_count+1
+     * Updated fields: {@code lease_owner}, {@code leased_until}, {@code lease_count}+1.
      * </p>
      *
-     * @param taskId 任务 ID
-     * @param owner 租约持有者标识（workerId:execId 或 execId）
-     * @param now 当前时间（UTC）
-     * @param ttlSeconds 租约 TTL（秒）
-     * @param idempotentKey 幂等键（用于防御性校验）
-     * @return true 表示抢占成功，false 表示他人持有或条件不满足
+     * @param taskId        task identifier
+     * @param owner         lease owner (workerId:execId or execId)
+     * @param now           current timestamp (UTC)
+     * @param ttlSeconds    lease time-to-live in seconds
+     * @param idempotentKey defensive idempotency key check
+     * @return {@code true} if acquired; {@code false} otherwise
      */
     boolean tryAcquireLease(Long taskId, String owner, Instant now, int ttlSeconds, String idempotentKey);
 
     /**
-     * 置任务为 RUNNING 状态并更新租约（步骤 1）。
+     * Move the task to {@code RUNNING} and refresh the lease (step 1).
      * <p>
-     * 前置条件：WHERE lease_owner=#{owner}（防止被窃取）
-     * 更新字段：status_code='RUNNING'、started_at、last_heartbeat_at、leased_until
+     * Precondition: {@code WHERE lease_owner=#{owner}}. Updates {@code status_code='RUNNING'},
+     * {@code started_at}, {@code last_heartbeat_at}, {@code leased_until}.
      * </p>
      *
-     * @param taskId 任务 ID
-     * @param owner 租约持有者
-     * @param now 当前时间
-     * @param ttlSeconds 租约 TTL（秒）
-     * @return true 表示更新成功，false 表示租约已丢失
+     * @param taskId     task identifier
+     * @param owner      lease owner
+     * @param now        current timestamp
+     * @param ttlSeconds lease time-to-live in seconds
+     * @return {@code true} if updated; {@code false} if the lease was lost
      */
     boolean markRunningWithLease(Long taskId, String owner, Instant now, int ttlSeconds);
 
     /**
-     * 心跳续租。
+     * Renew the lease via heartbeat.
      * <p>
-     * 前置条件：WHERE lease_owner=#{owner}
-     * 更新字段：leased_until、last_heartbeat_at、lease_count+1
+     * Precondition: {@code WHERE lease_owner=#{owner}}. Updates {@code leased_until},
+     * {@code last_heartbeat_at}, {@code lease_count}+1.
      * </p>
      *
-     * @param taskId 任务 ID
-     * @param owner 租约持有者
-     * @param now 当前时间
-     * @param ttlSeconds 租约 TTL（秒）
-     * @return true 表示续租成功，false 表示租约已丢失
+     * @param taskId     task identifier
+     * @param owner      lease owner
+     * @param now        current timestamp
+     * @param ttlSeconds lease time-to-live in seconds
+     * @return {@code true} if renewed; {@code false} if the lease was lost
      */
     boolean renewLease(Long taskId, String owner, Instant now, int ttlSeconds);
 
     /**
-     * 批量心跳续租（性能优化）。
+     * Batch heartbeat renewal for performance.
      * <p>
-     * 前置条件：WHERE id IN (taskIds) AND lease_owner=#{owner}
-     * 更新字段：leased_until、last_heartbeat_at、lease_count+1
+     * Precondition: {@code WHERE id IN (taskIds) AND lease_owner=#{owner}}. Updates {@code leased_until},
+     * {@code last_heartbeat_at}, {@code lease_count}+1.
      * </p>
      *
-     * @param taskIds 任务ID列表
-     * @param owner 租约持有者
-     * @param now 当前时间
-     * @param ttlSeconds 租约 TTL（秒）
-     * @return 成功续租的任务数
+     * @param taskIds    task identifiers
+     * @param owner      lease owner
+     * @param now        current timestamp
+     * @param ttlSeconds lease time-to-live in seconds
+     * @return count of tasks successfully renewed
      */
     int batchRenewLeases(List<Long> taskIds, String owner, Instant now, int ttlSeconds);
 }

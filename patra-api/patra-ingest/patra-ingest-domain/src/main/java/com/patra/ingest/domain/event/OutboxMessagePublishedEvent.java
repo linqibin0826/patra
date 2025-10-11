@@ -3,28 +3,30 @@ package com.patra.ingest.domain.event;
 import java.time.Instant;
 
 /**
- * 消息发布成功事件。
+ * Domain event emitted when an outbox message is successfully published.
  *
- * <p>触发：Outbox 消息成功发送至消息中枢并被标记为 PUBLISHED 后立即发布。</p>
- * <p>用途：
+ * <p>Trigger: fired immediately after the outbox record is delivered to the message broker and marked as
+ * {@code PUBLISHED}.</p>
+ * <p>Usage:
  * <ul>
- *   <li>指标：统计各 channel 成功率、分区分布。</li>
- *   <li>审计：关联 messageId 与 brokerMessageId 追踪链路。</li>
- *   <li>下游：可选消费做二级分发或缓存填充。</li>
+ *   <li>Metrics: measure success rates and partition distribution for each channel.</li>
+ *   <li>Audit: correlate {@code messageId} with {@code brokerMessageId} to trace broker flows.</li>
+ *   <li>Downstream: optional consumers can build second-stage fan-out or populate caches.</li>
  * </ul>
  * </p>
- * <p>幂等性：同一 messageId 理论上仅发布一次；若监听器侧需防重，可用 messageId 作为幂等键。</p>
+ * <p>Idempotency: each {@code messageId} should emit this event once; listeners that require additional
+ * idempotency can reuse {@code messageId} as their key.</p>
  */
 public record OutboxMessagePublishedEvent(
-        /** Outbox 表中的消息主键。 */
+        /** Primary identifier of the outbox record. */
         Long messageId,
-        /** 发布使用的逻辑通道（主题 / topic / stream）。 */
+        /** Logical channel (topic/stream) used during publishing. */
         String channel,
-        /** 分区路由键（可能被消息中枢哈希）。 */
+        /** Partition routing key, potentially hashed by the broker. */
         String partitionKey,
-        /** 消息中枢返回的消息 ID（便于跨系统追踪）。 */
+        /** Broker-provided message identifier for cross-system tracking. */
         String brokerMessageId,
-        /** 事件发生时间（UTC）。 */
+        /** UTC timestamp when the event occurred. */
         Instant occurredAt
 ) implements OutboxRelayDomainEvent {
 }

@@ -2,14 +2,14 @@ package com.patra.ingest.domain.model.enums;
 
 import lombok.Getter;
 
-/** 游标类型（DICT：ing_cursor_type）。
- * <p>字段映射：cursor_type_code → TIME/ID/TOKEN。</p>
+/** Cursor type (DICT: ing_cursor_type).
+ * <p>Field mapping: {@code cursor_type_code → TIME/ID/TOKEN}.</p>
  */
 @Getter
 public enum CursorType {
-    TIME("TIME", "时间型"),
-    ID("ID", "ID型"),
-    TOKEN("TOKEN", "令牌型");
+    TIME("TIME", "Time-based"),
+    ID("ID", "Identifier-based"),
+    TOKEN("TOKEN", "Token-based");
 
     private final String code; private final String description;
     CursorType(String code, String description){ this.code=code; this.description=description; }

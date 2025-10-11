@@ -8,7 +8,7 @@ import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
 import java.time.Instant;
 import lombok.Getter;
 
-/** 任务运行 Attempt。 */
+/** Entity representing a single task run attempt. */
 @SuppressWarnings("unused")
 @Getter
 public class TaskRun {
