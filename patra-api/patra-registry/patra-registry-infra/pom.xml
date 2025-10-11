@@ -19,7 +19,7 @@
             <artifactId>patra-registry-domain</artifactId>
         </dependency>
 
-        <!-- 依赖 patra-registry-domain 的占位符/归一化工具与 patra-common 枚举语义 -->
+        <!-- Consume domain placeholders/normalizers and shared enums from patra-common. -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
