@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 构建 RFC 7807 {@link org.springframework.http.ProblemDetail} 响应的构造器。
+ * Builder for RFC 7807 {@link org.springframework.http.ProblemDetail} responses.
  *
- * <p>特性：
- * - 支持敏感信息脱敏
- * - 代理友好的路径提取（Forwarded / X-Forwarded-Uri 等）
- * - 同时处理核心与 Web 维度的扩展字段
+ * <p>Features include:</p>
+ * <ul>
+ *     <li>Masking of sensitive information before it leaves the service.</li>
+ *     <li>Proxy-aware path extraction (Forwarded / X-Forwarded-* headers).</li>
+ *     <li>Support for both core and Web-specific extension field contributors.</li>
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -56,12 +58,12 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * 根据解析结果与 HTTP 上下文构建 ProblemDetail。
+     * Build a {@link ProblemDetail} instance from the resolved error metadata and HTTP context.
      *
-     * @param resolution 解析结果（含错误码与状态码）
-     * @param exception 当前处理的异常
-     * @param request HTTP 请求
-     * @return 填充完成的 ProblemDetail
+     * @param resolution error resolution containing code and status
+     * @param exception  exception being handled
+     * @param request    HTTP request associated with the failure
+     * @return fully populated {@link ProblemDetail}
      */
     public ProblemDetail build(ErrorResolution resolution, Throwable exception, HttpServletRequest request) {
         log.debug("Building ProblemDetail: errorCode={}, httpStatus={}", 
@@ -81,9 +83,9 @@ public class ProblemDetailBuilder {
         problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
         problemDetail.setProperty(ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
 
-        // 读取 web 配置以决定是否附加其他通用字段（此处仅作为引用，避免未使用字段告警）
+        // Reference the Web configuration to illustrate stack-trace behaviour (avoids unused warnings).
         if (!webProperties.isIncludeStack()) {
-            // 当不包含堆栈时，不额外添加 detailStack 字段
+            // Stack traces are disabled; the detailStack property is intentionally omitted.
         }
         
         // Add trace ID if available
@@ -124,11 +126,11 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * 代理友好地提取请求路径。
-     * 优先级：Forwarded > X-Forwarded-* > requestURI。
+     * Extract the request path in a proxy-aware fashion using the following precedence:
+     * {@code Forwarded} header, {@code X-Forwarded-*} headers, then {@code requestURI}.
      *
-     * @param request HTTP 请求
-     * @return 路径字符串
+     * @param request HTTP request context
+     * @return resolved path value
      */
     private String extractPath(HttpServletRequest request) {
         // Priority: Standard Forwarded header > X-Forwarded-* > requestURI
@@ -159,10 +161,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * 从标准 Forwarded 头中解析 path 字段（for/ proto/ host/ path）。
+     * Parse the {@code path} attribute from an RFC 7239 {@code Forwarded} header value.
      *
-     * @param forwarded Forwarded 头值
-     * @return 解析出的路径；未找到返回 null
+     * @param forwarded header value
+     * @return extracted path or {@code null} when absent
      */
     private String parseForwardedPath(String forwarded) {
         String[] parts = forwarded.split(";");
@@ -176,10 +178,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * 将 int 状态码转换为 HttpStatus（非法值回退 500）。
+     * Convert the integer status code into {@link HttpStatus}, defaulting to {@code 500} when invalid.
      *
-     * @param status 整型状态码
-     * @return HttpStatus
+     * @param status resolved integer status
+     * @return matching {@link HttpStatus}
      */
     private HttpStatus convertToHttpStatus(int status) {
         try {
@@ -191,10 +193,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * 对错误消息中的敏感信息进行脱敏。
+     * Apply lightweight masking to sensitive key-value pairs embedded in error messages.
      *
-     * @param message 原始消息
-     * @return 脱敏后的消息
+     * @param message original detail message
+     * @return masked message when sensitive tokens are present
      */
     private String maskSensitiveData(String message) {
         if (message == null) {
@@ -208,10 +210,10 @@ public class ProblemDetailBuilder {
     }
     
     /**
-     * 根据错误码构建 ProblemDetail 的 type URI。
+     * Construct the {@code ProblemDetail#type} URI from the logical error code.
      *
-     * @param errorCode 错误码
-     * @return type URI
+     * @param errorCode platform error code abstraction
+     * @return fully-qualified type URI
      */
     private URI buildTypeUri(ErrorCodeLike errorCode) {
         String baseUrl = webProperties.getTypeBaseUrl();

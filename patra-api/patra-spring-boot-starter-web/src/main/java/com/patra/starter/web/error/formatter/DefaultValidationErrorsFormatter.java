@@ -12,9 +12,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 默认的校验错误格式化器，带敏感字段脱敏与数量限制。
- *
- * <p>功能：对常见敏感字段进行掩码处理，并对错误条数施加上限，避免响应体过大。</p>
+ * Default {@link ValidationErrorsFormatter} that masks sensitive values and caps the number of
+ * validation errors returned to clients.
  *
  * @author linqibin
  * @since 0.1.0
@@ -23,10 +22,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatter {
     
-    /** 响应中包含的校验错误上限 */
+    /** Maximum number of validation errors included in the response. */
     private static final int MAX_ERRORS = 100;
     
-    /** 需要脱敏的字段名模式（忽略大小写，包含匹配） */
+    /** Field name patterns (case insensitive, substring match) that should be masked. */
     private static final Set<String> SENSITIVE_PATTERNS = Set.of(
         "password", "token", "secret", "key", "credential", "auth", 
         "pin", "ssn", "credit", "card", "account"
@@ -50,10 +49,10 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
     }
     
     /**
-     * 将 Spring 的 ObjectError 映射为 ValidationError（带脱敏）。
+     * Map Spring's {@link ObjectError} to a {@link ValidationError} and mask sensitive values.
      *
-     * @param error Spring 校验错误对象
-     * @return 转换后的校验错误
+     * @param error binding error reported by Spring Validation
+     * @return sanitized validation error
      */
     private ValidationError mapToValidationError(ObjectError error) {
         if (error instanceof FieldError fieldError) {
@@ -73,11 +72,11 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
     }
     
     /**
-     * 根据字段名模式对敏感值进行脱敏。
+     * Mask sensitive field values based on the configured name patterns.
      *
-     * @param fieldName 字段名
-     * @param value 字段值
-     * @return 脱敏后的值；非敏感则原样返回
+     * @param fieldName logical field name
+     * @param value     rejected value supplied by the client
+     * @return masked value when considered sensitive; original value otherwise
      */
     private Object maskSensitiveValue(String fieldName, Object value) {
         if (fieldName == null || value == null) {

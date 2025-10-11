@@ -1,12 +1,12 @@
 package com.patra.starter.web.error.model;
 
 /**
- * 表示单条校验错误（包含字段名、值与消息；敏感值已脱敏）。
- * 用于 ProblemDetail 的扩展字段，便于前端精确提示。
+ * Immutable representation of a validation error entry exposed through ProblemDetail extensions.
+ * Sensitive values are pre-masked to avoid leaking confidential data.
  *
- * @param field 出错字段名
- * @param rejectedValue 被拒绝的值（可能已脱敏）
- * @param message 错误消息
+ * @param field         logical field name
+ * @param rejectedValue sanitized rejected value, when available
+ * @param message       human-readable validation message
  *
  * @author linqibin
  * @since 0.1.0

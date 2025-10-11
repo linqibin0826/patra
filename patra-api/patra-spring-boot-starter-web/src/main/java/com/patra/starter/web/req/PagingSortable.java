@@ -1,7 +1,7 @@
 package com.patra.starter.web.req;
 
 /**
- * 便捷组合（可选）：既分页又排序
+ * Convenience contract that combines both pagination and sorting capabilities.
  *
  * @author linqibin
  * @since 0.1.0
