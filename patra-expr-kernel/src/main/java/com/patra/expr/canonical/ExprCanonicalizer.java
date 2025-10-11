@@ -24,7 +24,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * 提供表达式的规范化 JSON 及散列计算能力，供各模块复用。
+ * Produces deterministic JSON snapshots and hashes for expressions so downstream services can cache,
+ * deduplicate, or audit requests consistently.
  */
 public final class ExprCanonicalizer {
     private static final ObjectMapper OBJECT_MAPPER;
@@ -42,13 +43,14 @@ public final class ExprCanonicalizer {
     }
 
     /**
-     * 对表达式进行规范化，返回包含确定性 JSON 文本与 SHA-256 散列的快照。
+     * Normalizes the supplied expression and returns a snapshot containing deterministic JSON text
+     * and its SHA-256 digest.
      *
-     * @param expr 需要规范化的表达式
-     * @return 规范化快照
+     * @param expr expression to normalize
+     * @return canonical snapshot
      */
     public static ExprCanonicalSnapshot canonicalize(Expr expr) {
-        Objects.requireNonNull(expr, "expr不能为空");
+        Objects.requireNonNull(expr, "expr must not be null");
         try {
             JsonNode raw = OBJECT_MAPPER.readTree(Exprs.toJson(expr));
             JsonNode canonical = canonicalizeNode(raw);
@@ -56,9 +58,10 @@ public final class ExprCanonicalizer {
             String hash = HashUtils.sha256Hex(canonicalJson.getBytes(StandardCharsets.UTF_8));
             return new ExprCanonicalSnapshot(expr, canonicalJson, hash);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("表达式规范化失败", ex);
+            throw new IllegalStateException("Failed to canonicalize expression", ex);
         }
     }
+
     private static JsonNode canonicalizeNode(JsonNode node) {
         if (node == null || node.isNull() || node.isMissingNode()) {
             return NullNode.getInstance();
@@ -77,6 +80,7 @@ public final class ExprCanonicalizer {
         }
         return node;
     }
+
     private static JsonNode canonicalizeObject(ObjectNode objectNode) {
         List<String> fieldNames = new ArrayList<>();
         objectNode.fieldNames().forEachRemaining(fieldNames::add);
@@ -91,6 +95,7 @@ public final class ExprCanonicalizer {
         }
         return canonical;
     }
+
     private static JsonNode canonicalizeArray(ArrayNode arrayNode) {
         List<CanonicalElement> elements = new ArrayList<>();
         for (JsonNode element : arrayNode) {
@@ -120,6 +125,7 @@ public final class ExprCanonicalizer {
         }
         return canonical.isEmpty() ? NullNode.getInstance() : canonical;
     }
+
     private static JsonNode canonicalizeText(String text) {
         if (text == null) {
             return NullNode.getInstance();
@@ -131,6 +137,7 @@ public final class ExprCanonicalizer {
         String collapsed = SPACE_PATTERN.matcher(trimmed).replaceAll(" ");
         return NODE_FACTORY.textNode(collapsed);
     }
+
     private static JsonNode canonicalizeNumber(JsonNode node) {
         if (!node.isNumber()) {
             return node;
@@ -141,6 +148,7 @@ public final class ExprCanonicalizer {
         }
         return NODE_FACTORY.numberNode(decimal);
     }
+
     private static boolean isEmpty(JsonNode node) {
         if (node == null || node.isNull() || node.isMissingNode()) {
             return true;
@@ -156,6 +164,7 @@ public final class ExprCanonicalizer {
         }
         return false;
     }
+
     private static String typeTag(JsonNode node) {
         if (node == null || node.isNull() || node.isMissingNode()) {
             return "0";
@@ -182,14 +191,15 @@ public final class ExprCanonicalizer {
         try {
             return CANONICAL_WRITER.writeValueAsString(node);
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("写入 JSON 失败", ex);
+            throw new IllegalStateException("Failed to write canonical JSON", ex);
         }
     }
+
     private record CanonicalElement(JsonNode value, String typeTag, String serialized) {
         private CanonicalElement {
-            Objects.requireNonNull(value, "value不能为空");
-            Objects.requireNonNull(typeTag, "typeTag不能为空");
-            Objects.requireNonNull(serialized, "serialized不能为空");
+            Objects.requireNonNull(value, "value must not be null");
+            Objects.requireNonNull(typeTag, "typeTag must not be null");
+            Objects.requireNonNull(serialized, "serialized must not be null");
         }
     }
 }

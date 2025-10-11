@@ -17,23 +17,28 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * JSON 编解码：提供 Expr -> JSON 以及 JSON -> Expr 的 Jackson 支持。
- * 设计目标：
- * 1. 明确、稳定的结构，便于跨语言消费
- * 2. 无需在模型上增加 Jackson 注解，保持内核纯净
- * 3. 前向兼容：保留未知字段时忽略
- * <p>
- * JSON 结构示例：
+ * Jackson codec for the expression model. It provides both {@code Expr → JSON} and {@code JSON → Expr}
+ * conversions without polluting the model classes with Jackson annotations. The goals are:
+ * <ol>
+ *     <li>Expose a clear, stable structure suitable for cross-language consumers.</li>
+ *     <li>Keep the kernel free from framework annotations.</li>
+ *     <li>Remain forward compatible by ignoring unknown properties.</li>
+ * </ol>
+ * Example payloads:
+ * <pre>
  * {"type":"AND","children":[ ... ]}
  * {"type":"ATOM","field":"title","op":"TERM","value":{"kind":"TERM","text":"heart", "match":"ANY","case":"INSENSITIVE"}}
  * {"type":"CONST","value":true}
+ * </pre>
  */
 public final class ExprJsonCodec {
     private ExprJsonCodec() {
     }
 
     /**
-     * 注册 serializer / deserializer 的模块
+     * Creates a module that registers the serializer and deserializer for {@link Expr}.
+     *
+     * @return module instance
      */
     public static com.fasterxml.jackson.databind.Module module() {
         SimpleModule m = new SimpleModule("expr-json-module");
@@ -43,7 +48,9 @@ public final class ExprJsonCodec {
     }
 
     /**
-     * 创建绑定了本模块的 ObjectMapper
+     * Builds an {@link ObjectMapper} pre-configured with the expression module.
+     *
+     * @return configured mapper
      */
     public static ObjectMapper mapper() {
         ObjectMapper om = new ObjectMapper();
@@ -303,7 +310,7 @@ public final class ExprJsonCodec {
         }
     }
 
-    // =============== 公共 API ===============
+    // =============== Public helpers ===============
     public static String toJson(Expr expr) {
         try {
             return mapper().writeValueAsString(expr);
