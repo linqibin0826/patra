@@ -6,8 +6,10 @@ import com.patra.expr.Expr;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlanningContext;
 import com.patra.ingest.domain.model.enums.SliceStrategy;
+
 import java.util.List;
 import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -63,7 +65,8 @@ public class SingleSlicePlanner implements SlicePlanner {
         String specJson = specNormalized.getCanonicalJson();
         String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
-        log.debug("[INGEST][APP] Single slice planned, provenance={}, hash=",\n                context.norm().provenanceCode(), signatureHash);
+        log.debug("[INGEST][APP] Single slice planned, provenance={}, hash={}",
+                context.norm().provenanceCode(), signatureHash);
 
         return List.of(new SlicePlan(
                 1,

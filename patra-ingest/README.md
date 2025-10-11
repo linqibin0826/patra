@@ -108,17 +108,6 @@ Key dependencies: `patra-common`, `patra-expr-kernel`, MyBatis-Plus, XXL-Job, Na
 - **Infra** – Exercise repositories, batch inserts, and indexing strategies.
 - **Integration** – Simulate MQ outages, missing configuration, and window boundary violations.
 
-## 7. Roadmap & Risks
-
-| Initiative | Priority | Notes / Risks |
-|------------|----------|---------------|
-| CURSOR / ID_RANGE slicing strategies | High | Requires new idempotent keys and slice decomposition logic. |
-| Metrics & health probes | High | Without them, backlog and lease anomalies are hard to detect. |
-| Batch insert optimisation | Medium | Must evaluate database locking and write amplification. |
-| Task execution contract | Medium | Downstream execution path still evolving; need clear message format. |
-| Relay circuit breaking / throttling | Low | Prevent retry storms once monitoring thresholds are defined. |
-
-Primary risks: configuration drift, window boundary errors, outbox retry storms, and channel outages. Use `docs/process/ingest-dataflow.md` for end-to-end diagnosis.
 
 ## 8. References
 - Ingest deep dive: `docs/modules/ingest/deep-dive.md`
