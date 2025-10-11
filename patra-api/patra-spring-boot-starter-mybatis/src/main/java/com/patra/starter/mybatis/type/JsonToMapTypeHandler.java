@@ -6,15 +6,21 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.ibatis.type.*;
 
-import java.sql.*;
+import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
 
 /**
- * MySQL 专用：JSON(Map) ↔ JSON/TEXT/VARCHAR
+ * A TypeHandler for converting between a {@code Map<String, Object>} and a JSON string stored in a database column (e.g., JSON, TEXT, or VARCHAR).
  *
- * - 写入：Map -> JSON 字符串，用 setString
- * - 读取：getString -> Map
- * - 轻量校验：必须以 '{' 开头，保证顶层是对象
+ * <p><b>Functionality:</b></p>
+ * <ul>
+ *   <li><b>Writing:</b> Serializes a {@code Map<String, Object>} into a JSON string using {@code setString}.</li>
+ *   <li><b>Reading:</b> Deserializes a JSON string from the database into a {@code Map<String, Object>} using {@code getString}.</li>
+ *   <li><b>Validation:</b> Performs a lightweight check to ensure the JSON string represents an object (i.e., starts with '{').</li>
+ * </ul>
  */
 @MappedTypes(Map.class)
 @MappedJdbcTypes(
@@ -23,8 +29,7 @@ import java.util.Map;
 )
 public class JsonToMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE =
-            new TypeReference<Map<String, Object>>() {};
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private final ObjectReader reader;
     private final ObjectWriter writer;
 
@@ -33,16 +38,13 @@ public class JsonToMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
         this.writer = objectMapper.writerFor(MAP_TYPE);
     }
 
-    // 写入：Map -> JSON 字符串
     @Override
-    public void setNonNullParameter(PreparedStatement ps, int i,
-                                    Map<String, Object> parameter,
-                                    JdbcType jdbcType) throws SQLException {
+    public void setNonNullParameter(PreparedStatement ps, int i, Map<String, Object> parameter,JdbcType jdbcType) throws SQLException {
         final String json;
         try {
             json = writer.writeValueAsString(parameter);
         } catch (Exception e) {
-            throw new SQLException("Serialize Map to JSON failed", e);
+            throw new SQLException("Failed to serialize Map to JSON", e);
         }
         if (jdbcType != null) {
             ps.setObject(i, json, jdbcType.TYPE_CODE);
@@ -51,7 +53,6 @@ public class JsonToMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
         }
     }
 
-    // 读取：JDBC -> Map
     @Override
     public Map<String, Object> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         return parse(rs.getString(columnName));
@@ -69,21 +70,23 @@ public class JsonToMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
 
     private Map<String, Object> parse(String json) throws SQLException {
         if (json == null) return null;
-        String s = json.trim();
-        if (s.isEmpty()) return null;
-        if (s.charAt(0) != '{') {
-            throw new SQLException("JSON value is not an object: " + preview(s));
+        String trimmed = json.trim();
+        if (trimmed.isEmpty()) return null;
+
+        if (trimmed.charAt(0) != '{') {
+            throw new SQLException("The retrieved JSON value is not an object: " + preview(trimmed));
         }
+
         try {
-            return reader.readValue(s);
+            return reader.readValue(trimmed);
         } catch (Exception e) {
-            throw new SQLException("Parse JSON to Map failed: " + preview(s), e);
+            throw new SQLException("Failed to parse JSON string into a Map: " + preview(trimmed), e);
         }
     }
 
     private String preview(String s) {
         s = s.replace('\n', ' ').replace('\r', ' ');
-        final int N = 160;
-        return s.length() <= N ? s : s.substring(0, N) + "...(" + s.length() + " chars)";
+        final int maxLength = 160;
+        return s.length() <= maxLength ? s : s.substring(0, maxLength) + "...(" + s.length() + " chars)";
     }
 }

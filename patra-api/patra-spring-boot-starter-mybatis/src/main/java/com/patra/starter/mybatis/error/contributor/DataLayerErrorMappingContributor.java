@@ -12,9 +12,13 @@ import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.Optional;
 
 /**
- * MyBatis-Plus/数据库层异常的错误映射贡献者。
- *
- * <p>通过统一的错误解析通道，将 MyBatis-Plus 及数据库异常映射为合适的业务错误码。</p>
+ * An {@link ErrorMappingContributor} that translates exceptions from the data access layer
+ * (specifically MyBatis-Plus and underlying JDBC drivers) into standardized platform error codes.
+ * <p>
+ * This component plays a crucial role in the global error handling strategy by ensuring that
+ * low-level database errors are converted into meaningful, consistent HTTP response codes.
+ * It handles common issues like data conflicts, constraint violations, and connectivity problems.
+ * </p>
  */
 @Slf4j
 @Component
@@ -26,56 +30,68 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
         this.http = http;
     }
 
+    /**
+     * Maps a given {@link Throwable} to a corresponding {@link ErrorCodeLike} if it originates
+     * from the data access layer.
+     *
+     * @param exception The exception to map.
+     * @return An {@link Optional} containing the mapped {@link ErrorCodeLike}, or an empty optional
+     * if the exception is not handled by this contributor.
+     */
     @Override
     public Optional<ErrorCodeLike> mapException(Throwable exception) {
-        // MyBatis-Plus 异常 → 500
+        // Generic MyBatis-Plus exceptions are treated as internal server errors,
+        // as they often indicate configuration or mapping problems.
         if (exception instanceof MybatisPlusException) {
-            log.debug("Mapping MyBatis-Plus exception to server error: exception={}",
-                    exception.getClass().getSimpleName());
+            log.debug("Mapping generic MyBatis-Plus exception to an internal server error.", exception);
             return Optional.of(http.INTERNAL_ERROR());
         }
 
-        // 约束类异常 → 409
+        // SQLIntegrityConstraintViolationException indicates a conflict, such as a duplicate key.
         if (exception instanceof SQLIntegrityConstraintViolationException sqlEx) {
-            String sqlState = sqlEx.getSQLState();
-            if ("23000".equals(sqlState)) { // MySQL duplicate entry
-                log.debug("Mapping SQL duplicate key violation to conflict: sqlState={}", sqlState);
-                return Optional.of(http.CONFLICT());
-            }
-            log.debug("Mapping SQL integrity constraint violation to conflict: sqlState={}", sqlState);
+            log.debug("Mapping SQL integrity constraint violation (SQLState: {}) to a conflict error.",
+                    sqlEx.getSQLState(), sqlEx);
             return Optional.of(http.CONFLICT());
         }
 
-        // 通用 SQL 异常分类
+        // Handle other common SQL exceptions by examining their SQLState and vendor-specific error codes.
         if (exception instanceof SQLException sqlEx) {
-            String sqlState = sqlEx.getSQLState();
-            int errorCode = sqlEx.getErrorCode();
-
-            // MySQL 常见错误码 → 409
-            if (errorCode == 1062) { // Duplicate entry
-                log.debug("Mapping MySQL duplicate entry error to conflict: errorCode={}", errorCode);
-                return Optional.of(http.CONFLICT());
-            }
-            if (errorCode == 1452) { // Foreign key constraint fails
-                log.debug("Mapping MySQL foreign key constraint error to conflict: errorCode={}", errorCode);
-                return Optional.of(http.CONFLICT());
-            }
-            if (errorCode == 1451) { // Cannot delete or update a parent row
-                log.debug("Mapping MySQL parent row constraint error to conflict: errorCode={}", errorCode);
-                return Optional.of(http.CONFLICT());
-            }
-
-            // 连接/超时类 → 503
-            if (sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("HY"))) {
-                log.debug("Mapping SQL connection/timeout error to service unavailable: sqlState={}", sqlState);
-                return Optional.of(http.UNAVAILABLE());
-            }
-
-            // 其它 → 500
-            log.debug("Mapping general SQL exception to server error: sqlState={}, errorCode={}", sqlState, errorCode);
-            return Optional.of(http.INTERNAL_ERROR());
+            return mapCommonSqlExceptions(sqlEx);
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Analyzes a {@link SQLException} to determine the most appropriate error code.
+     *
+     * @param sqlEx The SQL exception.
+     * @return An optional containing the mapped error code.
+     */
+    private Optional<ErrorCodeLike> mapCommonSqlExceptions(SQLException sqlEx) {
+        int errorCode = sqlEx.getErrorCode();
+        String sqlState = sqlEx.getSQLState();
+
+        // Specific MySQL error codes are mapped to HTTP 409 Conflict.
+        switch (errorCode) {
+            case 1062: // ER_DUP_ENTRY: Duplicate entry for a unique key.
+                log.debug("Mapping MySQL duplicate entry error ({}) to a conflict.", errorCode, sqlEx);
+                return Optional.of(http.CONFLICT());
+            case 1451: // ER_ROW_IS_REFERENCED_2: Cannot delete or update a parent row (foreign key constraint).
+            case 1452: // ER_NO_REFERENCED_ROW_2: Cannot add or update a child row (foreign key constraint fails).
+                log.debug("Mapping MySQL foreign key constraint error ({}) to a conflict.", errorCode, sqlEx);
+                return Optional.of(http.CONFLICT());
+        }
+
+        // SQLState prefixes '08' (connection exception) and 'HY' (timeout) indicate service unavailability.
+        if (sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("HY"))) {
+            log.warn("Mapping SQL connection/timeout error (SQLState: {}) to service unavailable.", sqlState, sqlEx);
+            return Optional.of(http.UNAVAILABLE());
+        }
+
+        // As a fallback, other SQL exceptions are treated as internal server errors.
+        log.error("Mapping unhandled SQL exception (SQLState: {}, ErrorCode: {}) to an internal server error.",
+                sqlState, errorCode, sqlEx);
+        return Optional.of(http.INTERNAL_ERROR());
     }
 }
