@@ -31,7 +31,7 @@ class GlobalRestExceptionHandlerTest {
 
     @Test
     void handleException_shouldReturnAdaptedProblemDetail() throws Exception {
-        ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "系统错误");
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "System error");
         detail.setProperty(ErrorKeys.PATH, "/demo");
         ProblemDetailResponse response = new ProblemDetailResponse(
                 detail,
@@ -59,7 +59,7 @@ class GlobalRestExceptionHandlerTest {
         MethodParameter parameter = methodParameter();
         MethodArgumentNotValidException ex = new MethodArgumentNotValidException(parameter, bindingResult);
 
-        ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "校验失败");
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Validation failed");
         ProblemDetailResponse response = new ProblemDetailResponse(
                 detail,
                 HttpStatus.BAD_REQUEST,

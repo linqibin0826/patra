@@ -4,16 +4,16 @@ import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * ProblemDetail 适配器接口，用于将异常转换为统一的 ProblemDetail 响应。
+ * Adapter that translates exceptions into consistent {@code ProblemDetail} responses.
  */
 public interface ProblemDetailAdapter {
 
     /**
-     * 将异常适配为 ProblemDetail 响应。
+     * Convert the supplied exception into a {@link ProblemDetailResponse}.
      *
-     * @param exception 当前异常
-     * @param request HTTP 请求，允许为空（例如非 Servlet 场景）
-     * @return ProblemDetail 适配结果
+     * @param exception exception being processed
+     * @param request   HTTP request context; may be {@code null} in non-servlet flows
+     * @return resolved ProblemDetail metadata and HTTP status
      */
     ProblemDetailResponse adapt(Throwable exception, HttpServletRequest request);
 }

@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
 /**
- * ProblemDetail 适配结果，封装解析后的错误信息与 HTTP 状态。
+ * Holder for the resolved {@link ProblemDetail}, HTTP status, and error metadata.
  */
 public record ProblemDetailResponse(
         ProblemDetail problemDetail,

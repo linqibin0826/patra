@@ -1,0 +1,1 @@
+After implementing changes, run ./mvnw -q -DskipTests compile or relevant module tests to ensure builds succeed. Provide clear diff summaries referencing files and line numbers, suggest next steps like running full test suites or preparing commits. Follow Conventional Commits and update docs under docs/ if APIs or behavior change.

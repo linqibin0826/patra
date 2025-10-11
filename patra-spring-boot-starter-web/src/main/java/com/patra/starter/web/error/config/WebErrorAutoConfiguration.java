@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
 import java.util.List;
 
 /**
- * Web 端错误处理自动装配。
+ * Auto-configuration for Web-layer error handling components.
  */
 @Slf4j
 @AutoConfiguration
@@ -34,7 +34,7 @@ public class WebErrorAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ValidationErrorsFormatter defaultValidationErrorsFormatter() {
-        log.debug("创建默认 ValidationErrorsFormatter");
+        log.debug("Creating default ValidationErrorsFormatter");
         return new DefaultValidationErrorsFormatter();
     }
 
@@ -45,7 +45,7 @@ public class WebErrorAutoConfiguration {
                                                      TraceProvider traceProvider,
                                                      List<ProblemFieldContributor> coreFieldContributors,
                                                      List<WebProblemFieldContributor> webFieldContributors) {
-        log.debug("创建 ProblemDetailBuilder：coreContributors={} webContributors={}",
+        log.debug("Creating ProblemDetailBuilder: coreContributors={} webContributors={}",
                 coreFieldContributors.size(), webFieldContributors.size());
         return new ProblemDetailBuilder(errorProperties, webProperties, traceProvider,
                 coreFieldContributors, webFieldContributors);
@@ -55,7 +55,7 @@ public class WebErrorAutoConfiguration {
     @ConditionalOnMissingBean
     public ProblemDetailAdapter problemDetailAdapter(ErrorResolutionPipeline pipeline,
                                                      ProblemDetailBuilder problemDetailBuilder) {
-        log.debug("创建默认 ProblemDetailAdapter");
+        log.debug("Creating default ProblemDetailAdapter");
         return new DefaultProblemDetailAdapter(pipeline, problemDetailBuilder);
     }
 
@@ -63,7 +63,7 @@ public class WebErrorAutoConfiguration {
     @ConditionalOnMissingBean
     public GlobalRestExceptionHandler globalRestExceptionHandler(ProblemDetailAdapter problemDetailAdapter,
                                                                  ValidationErrorsFormatter validationErrorsFormatter) {
-        log.debug("创建全局 REST 异常处理器");
+        log.debug("Creating global REST exception handler");
         return new GlobalRestExceptionHandler(problemDetailAdapter, validationErrorsFormatter);
     }
 }

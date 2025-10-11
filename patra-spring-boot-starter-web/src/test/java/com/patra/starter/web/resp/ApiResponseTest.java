@@ -27,10 +27,10 @@ class ApiResponseTest {
 
     @Test
     void error_shouldKeepCustomCodeAndMessage() {
-        ApiResponse<Void> response = ApiResponse.error(503, "服务不可用");
+        ApiResponse<Void> response = ApiResponse.error(503, "Service unavailable");
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getCode()).isEqualTo(503);
-        assertThat(response.getMessage()).isEqualTo("服务不可用");
+        assertThat(response.getMessage()).isEqualTo("Service unavailable");
         assertThat(response.getData()).isNull();
     }
 }

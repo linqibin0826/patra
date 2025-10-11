@@ -4,9 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
- * Web 端为 {@link org.springframework.http.ProblemDetail} 提供扩展字段的 SPI 接口。
- *
- * <p>提供 {@link jakarta.servlet.http.HttpServletRequest}，便于提取与请求相关的上下文字段。</p>
+ * SPI for contributing Web-specific extension fields to {@link org.springframework.http.ProblemDetail}.
+ * Provides access to {@link jakarta.servlet.http.HttpServletRequest} so implementations can extract
+ * request context for diagnostics.
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,11 +15,11 @@ import java.util.Map;
 public interface WebProblemFieldContributor {
     
     /**
-     * 贡献 ProblemDetail 扩展字段（包含 Web 上下文）。
+     * Contribute extension fields to the {@code ProblemDetail}, including Web-specific context.
      *
-     * @param fields 可变字典
-     * @param exception 当前异常
-     * @param request HTTP 请求
+     * @param fields    mutable map that will be merged into the response
+     * @param exception current exception
+     * @param request   HTTP request
      */
     void contribute(Map<String, Object> fields, Throwable exception, HttpServletRequest request);
 }

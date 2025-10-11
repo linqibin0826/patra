@@ -2,10 +2,10 @@ package com.patra.starter.web.resp;
 
 import lombok.Getter;
 
-@Getter
 /**
- * Web 层通用结果码（示例）。
+ * Representative Web-layer result codes used by the shared API response helpers.
  */
+@Getter
 public enum ResultCode {
 
     OK(0, "OK"),
@@ -20,8 +20,10 @@ public enum ResultCode {
     INTERNAL_ERROR(5500, "Internal Server Error"),
     SERVICE_UNAVAILABLE(5503, "Service Unavailable");
 
+    /** Numeric code exposed to clients. */
     private final int code;
 
+    /** Human-readable description associated with the code. */
     private final String message;
 
     ResultCode(int code, String message) {

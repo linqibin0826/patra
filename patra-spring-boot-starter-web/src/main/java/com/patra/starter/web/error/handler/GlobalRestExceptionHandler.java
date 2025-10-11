@@ -21,14 +21,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import java.util.List;
 
 /**
- * 全局 REST 异常处理器：基于平台统一错误解析输出 RFC 7807 ProblemDetail。
+ * Global REST exception handler that renders RFC 7807 {@link ProblemDetail} documents
+ * using the shared platform error resolution pipeline.
  */
 @Slf4j
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
-    /** ProblemDetail 中校验错误数组的最大长度 */
+    /** Maximum number of validation errors attached to the ProblemDetail payload. */
     private static final int MAX_VALIDATION_ERRORS = 100;
 
     private final ProblemDetailAdapter problemDetailAdapter;
@@ -41,7 +42,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * 兜底异常处理：对任意异常输出统一 ProblemDetail。
+     * Fallback handler that converts any uncaught exception into a ProblemDetail document.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
@@ -62,7 +63,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * 参数校验异常处理，附带校验错误数组。
+     * Handles validation failures and appends sanitized field errors to the response payload.
      */
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(

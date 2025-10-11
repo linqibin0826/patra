@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
 /**
- * 默认 ProblemDetail 适配器，基于核心错误解析管线输出统一错误响应。
+ * Default {@link ProblemDetailAdapter} backed by the core error-resolution pipeline.
  */
 @Slf4j
 public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
@@ -27,7 +27,7 @@ public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
     public ProblemDetailResponse adapt(Throwable exception, HttpServletRequest request) {
         ErrorResolution resolution = pipeline.resolve(exception);
         HttpStatus httpStatus = safeHttpStatus(resolution.httpStatus());
-        log.debug("ProblemDetail 适配：exception={} status={} errorCode={}",
+        log.debug("ProblemDetail adaptation: exception={} status={} errorCode={}",
                 exception == null ? "null" : exception.getClass().getSimpleName(),
                 httpStatus.value(), resolution.errorCode().code());
 
@@ -42,7 +42,7 @@ public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
         try {
             return HttpStatus.valueOf(status);
         } catch (IllegalArgumentException ex) {
-            log.warn("解析得到的 HTTP 状态码非法: {}，回退 500", status);
+            log.warn("Resolved HTTP status is invalid: {}, falling back to 500", status);
             return HttpStatus.INTERNAL_SERVER_ERROR;
         }
     }
