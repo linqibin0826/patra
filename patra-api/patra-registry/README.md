@@ -1,47 +1,75 @@
-Purpose and Responsibilities
-- Single source of truth for provenance metadata and time-aware configuration (HTTP, pagination, retry, limits, offsets) plus expression snapshots used by ingest/expression compiler.
+# patra-registry
 
-Package Layout
-- Adapter: Feign-style controllers implementing internal endpoints
+## Purpose and Responsibilities
+Single source of truth for provenance metadata and time-aware configuration (HTTP, pagination, retry, rate limits, window offsets) plus expression snapshots used by ingest and the expression compiler.
+
+## Module Layout (Hexagonal)
+- Adapter: Feign-style REST controllers exposing internal RPC endpoints
 - App: read-model services to assemble snapshots/configs
-- Domain: read models (Query DTOs), VO types, ports, and validation exceptions
-- Infra: MyBatis-Plus mappers/repos and converters; DB migrations
-- Boot: Spring Boot app, error mapping, and runtime config
+- Domain: read models (Query DTOs), VOs, ports, validation exceptions
+- Infra: MyBatis-Plus repositories/mappers and DO↔Domain converters; Flyway migrations
+- Boot: Spring Boot app, error mapping defaults, Nacos import
 
-APIs and Contracts (internal)
-- Provenance endpoints (`/_internal/provenances`):
-  - `GET /_internal/provenances` → list of supported provenances.
-  - `GET /_internal/provenances/{code}` → a single provenance by code.
-  - `GET /_internal/provenances/{code}/config?operationType=&at=` → aggregated effective configuration.
-- Expression endpoint (service layer): load expression snapshot (provenance + operation + endpoint + at) via `ExprQueryAppService` for compiler usage.
-- Client interfaces: `ProvenanceClient`, `ExprClient` in `patra-registry-api` for type-safe Feign usage.
+## Internal APIs (RPC)
+Consumer contracts (endpoints, DTOs, Feign clients) are documented in the API module:
+- patra-registry/patra-registry-api/README.md
+- docs/contracts/api/registry-internal.md
 
-Domain Model (read side)
+Type-safe Feign clients are provided by the API module: `ProvenanceClient`, `ExprClient`.
+
+## Domain Model (Read Side)
 - Aggregate: `ProvenanceConfiguration` composes `HttpConfig`, `PaginationConfig`, `RetryConfig`, `RateLimitConfig`, `WindowOffsetConfig`.
 - VOs: `Provenance`, `ExprSnapshot`, `ExprCapability`, `ExprField`, `ExprRenderRule`, `ApiParamMapping`.
-- Ports: `ProvenanceConfigRepository`, `ExprRepository` abstract infra data access.
+- Ports: `ProvenanceConfigRepository`, `ExprRepository` (infra implements with MyBatis-Plus).
 
-Application Services
-- `ProvenanceConfigAppService#listProvenances` and `#findProvenance` → metadata.
-- `#loadConfiguration(code, operationType, at)` → effective configuration for a provenance/operation/instant.
-- `ExprQueryAppService#loadSnapshot(provenanceCode, operationType, endpointName, at)` → expression snapshot for compilers.
+## Application Services
+- `ProvenanceConfigAppService`
+  - `listProvenances()` → metadata
+  - `findProvenance(code)` → single metadata
+  - `loadConfiguration(code, operationType, at)` → effective config at time `at`
+- `ExprQueryAppService`
+  - `loadSnapshot(provenanceCode, operationType, endpointName, at)` → expression snapshot for compilers
 
-Infrastructure
-- DB: MySQL; Flyway migrations under `patra-registry-infra/src/main/resources/db/migration`.
-- Mappers: e.g., `RegProvPaginationCfgMapper` with XML under `resources/mapper/` for efficient reads.
+## Infrastructure
+- MySQL with Flyway migrations under:
+  - `patra-registry-infra/src/main/resources/db/migration`
+- Mappers and entities:
+  - Provenance: `RegProvenanceMapper`, `RegProv*CfgMapper`, DOs under `infra/persistence/entity/provenance`
+  - Expression: `RegProvExpr*Mapper`, `RegExprFieldDictMapper`, DOs under `infra/persistence/entity/expr`
 - Boot config: `patra-registry-boot/src/main/resources/application.yaml` imports `registry-error-config.yaml` and Nacos config.
 
-Error Mapping
-- Error catalog and mapping live under `patra-registry-api` and boot error config; expose RFC7807 ProblemDetail via the web/core starters.
+## Configuration (excerpt)
+```yaml
+spring:
+  application.name: patra-registry
+  datasource:
+    url: jdbc:mysql://127.0.0.1:13306/patra_registry?...  # see file for details
+    username: root
+    password: 123456
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+patra:
+  error.context-prefix: REG
+  web.problem.enabled: true
+  feign.problem.enabled: true
+```
 
-Observability
-- Logs include provenance code/operationType and query context; trace IDs are propagated.
-- Metrics (recommend): snapshot build time, query latency, size/shape of returned configs.
+## Error Handling
+- Core/Web starters provide RFC7807 responses.
+- Registry error defaults in `patra-registry-boot/src/main/resources/registry-error-config.yaml` set the context prefix (`REG`) and observation/circuit settings.
 
-How to Run
+## Observability
+- Logging: include `provenanceCode`, `operationType`, and query params; propagate trace IDs.
+- Metrics (recommend):
+  - Snapshot build time
+  - Query latency by endpoint
+  - Result size/shape (e.g., fields/capabilities count)
+
+## How to Run
 - Tests: `./mvnw -pl patra-registry -am test`
-- Local service: `./mvnw -pl patra-registry/patra-registry-boot -am spring-boot:run`
+- Service: `./mvnw -pl patra-registry/patra-registry-boot -am spring-boot:run`
 
-Open TODOs
-- Add a caching layer (e.g., Caffeine) with versioned invalidation and outbox-driven refresh strategy.
+## Open TODOs
+- Add a caching layer (e.g., Caffeine) with versioned invalidation and outbox-driven refresh.
 - Validate JSON structures for param mappings using JSON Schema where appropriate.

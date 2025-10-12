@@ -1,6 +1,6 @@
 Guiding Principles
 
-- Minimal overhead: short, focused docs that evolve quickly.
+- short, focused docs that evolve quickly.
 - Docs-as-code: Markdown in docs/ + per-service READMEs.
 - Architecture-first: capture decisions (ADRs), C4 context/container, contracts.
 - Authoritative sources: API/event contracts are the truth; everything else references them.
@@ -25,6 +25,7 @@ Per-Service Docs Placement
 
 - patra-<service>/README.md — a single service doc covering *-api, *-domain, *-app, *-infra, *-adapter, *-boot.
 - docs/services/index.md — brief catalog describing each service and linking to its README.
+ - Optional: patra-<service>-api/README.md, consumer-focused doc about contracts and Feign clients; avoid duplicating the service README.
 
 Required Documents (MVP)
 
@@ -34,6 +35,7 @@ Required Documents (MVP)
 - docs/contracts/api/openapi.yaml — generated contracts or pointers to them.
 - docs/contracts/events/ — producer/consumer event specs and schemas.
 - patra-<service>/README.md — responsibilities, boundaries, interfaces for each service.
+ - Optional: patra-<service>-api/README.md — quickstart for consumers (endpoints, DTOs, Feign usage), links to contracts.
 
 Lightweight Templates (Fields Only)
 
@@ -101,7 +103,7 @@ Lightweight Templates (Fields Only)
 
 Contracts and Generation
 
-- API: generate OpenAPI into docs/contracts/api/openapi.yaml via a Maven plugin or manual export; add a short README
+- API: generate OpenAPI into docs/contracts/api/openapi.yaml via a Maven plugin or manual export; add a README
   explaining the command to regenerate.
 - Events: store JSON Schemas in docs/contracts/events/schemas/ and keep producer/consumer docs in
   docs/contracts/events/.
