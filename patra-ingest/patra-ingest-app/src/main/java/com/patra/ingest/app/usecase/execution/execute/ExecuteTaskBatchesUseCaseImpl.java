@@ -52,9 +52,6 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     private final BatchExecutorRegistry executorRegistry;
     private final TaskRunBatchRepository batchRepository;
 
-    @Value("${task.execution.max-batches:1000}")
-    private int maxBatches;
-
     @Value("${task.execution.fail-fast:false}")
     private boolean failFast;
 
@@ -76,13 +73,12 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         // 1) Plan batches.
         // TODO: implement concrete BatchPlanner(s) —— PubmedBatchPlanner
         BatchPlanner planner = plannerRegistry.get(context.provenanceCode());
-        BatchPlan plan = planner.plan(context, maxBatches);
+        BatchPlan plan = planner.plan(context);
 
         if (plan.exceedsLimit()) {
             throw new BatchLimitExceededException(
                 "Batch count exceeds limit taskId=" + taskId + 
-                " totalBatches=" + plan.totalBatches() +
-                " maxBatches=" + maxBatches
+                " totalBatches=" + plan.totalBatches()
             );
         }
 
