@@ -37,6 +37,26 @@
 - Testing Strategy: [testing/README.md](testing/README.md)
 - Conventions & Standards: [conventions/README.md](conventions/README.md)
 
+## Team & Process
+- Roles/RACI: [team/Roles-and-Responsibilities.md](team/Roles-and-Responsibilities.md)
+- Workflow: [process/Workflow.md](process/Workflow.md)
+- Definition of Done: [process/Definition-of-Done.md](process/Definition-of-Done.md)
+
+## Delivery
+- Roadmap: [delivery/Roadmap.md](delivery/Roadmap.md)
+- Backlog: [delivery/Backlog.md](delivery/Backlog.md)
+
+## Templates
+- Design RFC: [templates/Design-RFC-Template.md](templates/Design-RFC-Template.md)
+- Runbook: [templates/Runbook-Template.md](templates/Runbook-Template.md)
+- Test Plan: [testing/Test-Plan-Template.md](testing/Test-Plan-Template.md)
+- QA Sign-off: [testing/QA-Signoff-Checklist.md](testing/QA-Signoff-Checklist.md)
+- Traceability Matrix: [testing/Traceability-Matrix-Template.md](testing/Traceability-Matrix-Template.md)
+
+## Release
+- Release Versioning: [operations/Release-Versioning.md](operations/Release-Versioning.md)
+- Release Checklist: [release/Release-Checklist.md](release/Release-Checklist.md)
+
 ## Changelog
 - [changelog/CHANGELOG.md](changelog/CHANGELOG.md)
 

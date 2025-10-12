@@ -2,7 +2,6 @@
 
 ## Guiding Principles
 
-- short, focused docs that evolve quickly.
 - Docs-as-code: Markdown in docs/ + per-service READMEs.
 - Architecture-first: capture decisions (ADRs), C4 context/container, contracts.
 - Authoritative sources: API/event contracts are the truth; everything else references them.
@@ -12,7 +11,7 @@
 
 - docs/README.md — index and table of contents.
 - docs/adr/ — decision records using numbered files 0001-<slug>.md.
-- docs/architecture/ — C4 Context/Container, deployment, modules map.
+- docs/architecture/ — C4 Context/Container, deployment, modules map, sequences.
 - docs/contracts/api/ — OpenAPI/HTTP contracts and generation instructions.
 - docs/contracts/events/ — event contracts, topics, schemas, and conventions.
 - docs/services/ — service catalog overview linking to per-service READMEs.
@@ -21,15 +20,22 @@
 - docs/operations/ — local dev, runbooks, release/versioning, environment notes.
 - docs/testing/ — test strategy by layer, naming, how to run.
 - docs/conventions/ — coding, naming, logging, error taxonomy, links to repo guidelines.
+- docs/delivery/ — roadmap, backlog, milestones (Architect-owned).
+- docs/process/ — lifecycle workflow, Definition of Done (DoD), reviews and gates.
+- docs/team/ — roles, responsibilities, and RACI.
+- docs/templates/ — reusable templates (RFC, story, runbook, test plan).
 - docs/changelog/CHANGELOG.md — pre-release running log of noteworthy changes.
 
 ## Per-Service Docs Placement
 
 - patra-<service>/README.md — a single service doc covering *-api, *-domain, *-app, *-infra, *-adapter, *-boot.
 - docs/services/index.md — brief catalog describing each service and linking to its README.
- - Optional: patra-<service>-api/README.md, consumer-focused doc about contracts and Feign clients; avoid duplicating the service README.
+- Optional: patra-<service>-api/README.md, consumer-focused doc about contracts and Feign clients; avoid duplicating the
+  service README.
+- Note: For standalone executables (e.g., `patra-gateway-boot`) without a parent multi-module directory, place the
+  README at the module root and link it from the services catalog.
 
-## Required Documents (MVP)
+## Required Documents
 
 - docs/adr/ — capture real decisions; target 10–20 minutes per ADR.
 - docs/architecture/C4-Context.md — what the system is and integrates with.
@@ -37,9 +43,11 @@
 - docs/contracts/api/openapi.yaml — generated contracts or pointers to them.
 - docs/contracts/events/ — producer/consumer event specs and schemas.
 - patra-<service>/README.md — responsibilities, boundaries, interfaces for each service.
- - Optional: patra-<service>-api/README.md — quickstart for consumers (endpoints, DTOs, Feign usage), links to contracts.
+- patra-<service>-api/README.md — quickstart for consumers (endpoints, DTOs, Feign usage), links to contracts.
+- docs/process/Workflow.md and docs/process/Definition-of-Done.md.
+- docs/delivery/Roadmap.md and docs/delivery/Backlog.md.
 
-## Lightweight Templates (Fields Only)
+## Lightweight Templates
 
 - ADR (docs/adr/ADR-Template.md)
     - Title
@@ -106,7 +114,8 @@
 ## Contracts and Generation
 
 - API: generate OpenAPI into docs/contracts/api/openapi.yaml via a Maven plugin or manual export; add a README
-  explaining the command to regenerate.
+  explaining the command to regenerate. When API-module READMEs exist (e.g., `*-api/README.md`), add links to them in
+  `docs/README.md` under Contracts for discoverability.
 - Events: store JSON Schemas in docs/contracts/events/schemas/ and keep producer/consumer docs in
   docs/contracts/events/.
 
