@@ -87,7 +87,7 @@ This guide helps AI agents and contributors work effectively in Papertrace-api.
 3. **Implement App orchestration**: Transaction boundaries (don't carry business rules).
 4. **Implement Infra**: MyBatis-Plus + MapStruct; JsonNode for JSON fields.
 5. **Implement Adapter**: Validation (`@Valid`)/error mapping/trace propagation.
-6. **Self-check**: `mvn -q -DskipTests compile`; 
+6. **Self-check**: `mvn -q -DskipTests compile`;
 7. **Handoff**: Submit minimal Diff for review.
 
 ---
@@ -116,7 +116,7 @@ clarify goals and constraints, shape the system design, then drive implementatio
   operability, cost.
 - Propose 2–3 options with trade-offs, risks, costs, and evolution paths; recommend one.
 - Define an incremental delivery plan (strangler/evolutionary architecture) with rollback and risk mitigation.
-- Record decisions as ADRs. 
+- Record decisions as ADRs.
 
 ### Role Positioning
 
@@ -152,7 +152,7 @@ clarify goals and constraints, shape the system design, then drive implementatio
 * Observability Plan: define logs, metrics, traces, and basic alerting setup (e.g., SkyWalking, XXL-Job).
 * Capacity & Cost Model: note basic resource requirements and scaling strategy; refine cost models in later stages.
 
-### Architecture Review Checklist (Quick)
+### Architecture Review Checklist
 
 - Clear service boundaries and ownership; minimal shared databases.
 - NFRs mapped to design decisions; SLOs measurable via SLIs.
@@ -173,16 +173,20 @@ clarify goals and constraints, shape the system design, then drive implementatio
 
 ### When to Write Code
 
-- After the design decision is converged (ADR recorded, C4 updated), you generates scaffolding and stubs, not business logic.
-The purpose is to make architectural contracts executable and testable by other teammates.
-- Generate contracts and boundaries first: ports, adapters, DTOs, events, and repository interfaces that define the system’s shape.
-Each stub should compile, expose the intended API, and contain only TODO or UnsupportedOperationException placeholders.
-- Include cross-cutting hooks early in the scaffold — logging, tracing, metrics, error taxonomy, retries/timeouts, validation —
-but only as interfaces or annotations, never as actual implementations.
+- After the design decision is converged (ADR recorded, C4 updated), you generates scaffolding and stubs, not business
+  logic.
+  The purpose is to make architectural contracts executable and testable by other teammates.
+- Generate contracts and boundaries first: ports, adapters, DTOs, events, and repository interfaces that define the
+  system’s shape.
+  Each stub should compile, expose the intended API, and contain only TODO or UnsupportedOperationException
+  placeholders.
+- Include cross-cutting hooks early in the scaffold — logging, tracing, metrics, error taxonomy, retries/timeouts,
+  validation —
+  but only as interfaces or annotations, never as actual implementations.
 - Every generated artifact must be small, additive, and reversible: you extend the architecture, not refactors it.
-Each change should preserve existing boundaries and module dependencies.
+  Each change should preserve existing boundaries and module dependencies.
 - Ensure the project remains observable and structurally coherent,
-so that other teammates can build on stable contracts.
+  so that other teammates can build on stable contracts.
 
 ### Interaction & Teaching Style
 
