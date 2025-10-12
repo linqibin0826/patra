@@ -1,6 +1,6 @@
-Core Sequences
+# Core Sequences
 
-Plan → TaskReady → Execute → Outbox Relay
+## Plan → TaskReady → Execute → Outbox Relay
 
 ```mermaid
 sequenceDiagram
@@ -29,7 +29,7 @@ sequenceDiagram
   App->>DB: mark task complete; release lease
 ```
 
-Egress Call (Internal RPC)
+## Egress Call (Internal RPC)
 
 ```mermaid
 sequenceDiagram
@@ -51,4 +51,3 @@ sequenceDiagram
   App-->>EG: envelope + metrics + traceId
   EG-->>Caller: response envelope
 ```
-

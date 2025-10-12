@@ -1,30 +1,36 @@
-Purpose and Responsibilities
-- Provide a unified gateway for outbound HTTP calls. Applies standardized envelope, logging, and future resilience (retry, circuit breaker, rate limit) while keeping callers simple.
+# patra-egress-gateway
 
-Package Layout
-- Adapter (inbound): `patra-egress-gateway-adapter`
-- Application: `patra-egress-gateway-app`
-- Domain: `patra-egress-gateway-domain`
-- Infrastructure: `patra-egress-gateway-infra`
-- Boot: `patra-egress-gateway-boot`
+## Overview
+- Provides a unified gateway for outbound HTTP calls. Applies standardized envelope, logging, and future resilience (retry, circuit breaker, rate limit) while keeping callers simple.
 
-Domain Model
-- Aggregate: `ResilienceConfigAggregate` merges caller overrides with system defaults/max (domain aggregate for guardrails).
-- VOs: `HttpRequest`, `HttpResponse`, `ResilienceConfig`, `RateLimitStatus`, `RetryAdvice`, `ResponseEnvelope`.
+## Module Layout
+- `patra-egress-gateway-adapter` — inbound REST (internal RPC endpoint)
+- `patra-egress-gateway-app` — orchestration of external calls and envelope building
+- `patra-egress-gateway-domain` — VOs and aggregate for resilience config
+- `patra-egress-gateway-infra` — HTTP client adapter, properties, and masking
+- `patra-egress-gateway-boot` — Spring Boot app and config
 
-Application Flow
+## Core Flow
 1) Adapter receives RPC request and validates DTOs.
 2) Orchestrator loads system config via `ConfigPort`, merges with caller config, executes `HttpClientPort`.
 3) Builds `ResponseEnvelope` with whitelisted headers and retry advice; returns `ExternalCallResponseDTO` including traceId and duration.
 
-APIs and Contracts
-- Interface: `EgressEndpoint` exposes `POST /api/egress/call` for internal RPC.
-- Feign client: `EgressGatewayClient` for in-repo consumers.
-- DTOs: `ExternalCallRequestDTO` (url, method, headers, body, optional `ResilienceConfigDTO`) and `ExternalCallResponseDTO` (envelope, durationMs, retryCount, traceId).
+Code Anchors
+- REST endpoint: `patra-egress-gateway/patra-egress-gateway-adapter/src/main/java/com/patra/egress/adapter/rest/ExternalCallController.java:1`
+- Use case orchestrator: `patra-egress-gateway/patra-egress-gateway-app/src/main/java/com/patra/egress/app/usecase/externalcall/ExternalCallOrchestrator.java:1`
+- HTTP client adapter: `patra-egress-gateway/patra-egress-gateway-infra/src/main/java/com/patra/egress/infra/http/HttpClientAdapter.java:1`
+- Boot config: `patra-egress-gateway/patra-egress-gateway-boot/src/main/resources/application.yaml:1`
 
-Example Request
-```
+## APIs and Contracts
+- Endpoint: `POST /api/egress/call` via internal RPC interface `EgressEndpoint` and Feign client `EgressGatewayClient`.
+- DTOs: `ExternalCallRequestDTO` (url, method, headers, body, optional `ResilienceConfigDTO`) and `ExternalCallResponseDTO` (envelope, durationMs, retryCount, traceId).
+- Contract: see `docs/contracts/api/egress-gateway.md:1` (avoid duplication here).
+
+## Example Request
+```http
 POST /api/egress/call
+Content-Type: application/json
+
 {
   "url": "https://api.example.com/data",
   "method": "GET",
@@ -34,9 +40,8 @@ POST /api/egress/call
 }
 ```
 
-Example Response (happy path)
-```
-200 OK
+## Example Response (happy path)
+```json
 {
   "envelope": {
     "success": true,
@@ -53,32 +58,37 @@ Example Response (happy path)
 }
 ```
 
-Configuration
+## Configuration
 - Properties root: `patra.egress.*`
-  - `patra.egress.global.rateLimit` → global RPS cap.
-  - `patra.egress.resilience.defaultConfig.*` → default timeout, retries, retryBackoff, rateLimit, circuitBreaker*, whitelist headers.
+  - `patra.egress.global.rate-limit` → global RPS cap.
+  - `patra.egress.resilience.default.*` → default timeout, retries, retryBackoff, rateLimit, circuitBreaker*, whitelist headers.
   - `patra.egress.resilience.max.*` → caps for the same fields.
-- Beans:
+- Beans
   - Rest client: `HttpClientConfig#restClient` with base timeouts (overridden per request).
   - Properties: `EgressProperties` encapsulates `GlobalProperties` + `ResilienceProperties` with nested `ResilienceConfigProperties`.
 
-Error Handling
-- Validation: `ExternalCallRequestDTO` requires non-blank `url` and `method`; invalid `ResilienceConfigDTO` yields 400 (adapter-level validation).
-- Remote errors are returned as non-success envelopes (e.g., statusCode 500) with retry advice; ProblemDetail may be added via starters in future.
+## Error Handling
+- Validation: `ExternalCallRequestDTO` requires non-blank `url` and `method`; invalid `ResilienceConfigDTO` yields 400.
+- Remote errors are returned as non-success envelopes (e.g., statusCode 500) with retry advice; ProblemDetail integration can be added via starters.
 
-Observability
+## Observability
 - Logs: traceId, URL, method, statusCode, durationMs. Sensitive headers are masked by `SensitiveHeaderMasker`.
-- Metrics (recommend): 
-  - Timer for end-to-end call duration.
-  - Counters for statusCode classes and retry attempts.
+- Metrics (recommend): timer for end-to-end duration; counters for statusCode classes and retry attempts.
 
-Testing
-- Adapter: `ExternalCallControllerTest` covers validation and response shape.
-- Infra: `HttpClientAdapterTest`, `SensitiveHeaderMaskerTest` validate HTTP adapter and masking.
+## Testing
+- Adapter: controller tests for validation and response shape.
+- Infra: HTTP adapter and header masking tests.
 - Domain: value object tests for envelope/rate-limit/retry advice.
 
-Run Locally
-- `./mvnw -pl patra-egress-gateway/patra-egress-gateway-boot -am spring-boot:run`
+## Run Locally
+```bash
+./mvnw -pl patra-egress-gateway/patra-egress-gateway-boot -am spring-boot:run
+```
 
-Open TODOs
+## Related Docs
+- API contract: `docs/contracts/api/egress-gateway.md:1`
+- Service catalog: `docs/services/index.md:1`
+- Runbook: `docs/operations/Egress-Runbook.md:1`
+
+## Open TODOs
 - Implement circuit breaker, retries with backoff, and rate limiting; propagate upstream-provided rate-limit hints into envelope.

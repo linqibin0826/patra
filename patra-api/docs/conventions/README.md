@@ -1,4 +1,4 @@
-Conventions & Standards
+# Conventions & Standards
 
 - Language/Format: Java 21, UTF-8, 4-space indent, 120-char line width.
 - Packages: com.patra.*; Maven groupId com.papertrace.
@@ -10,20 +10,20 @@ Conventions & Standards
 
 See repository root README.md and AGENTS.md for full guidelines.
 
-Logging Standards
+## Logging Standards
 - Use parameterized format: `log.info("Processing plan {}", planId)`
 - Include: `traceId`, and key IDs (planId, sliceId, taskId, batchId)
 - Mask secrets and sensitive headers; centralize masking in adapters
 
-Error Mapping
+## Error Mapping
 - Use RFC7807 ProblemDetail at adapters; map domain/app exceptions to typed problems
 - Do not leak internal stack traces or secrets; include correlation IDs
 
-Events & Contracts
+## Events & Contracts
 - Event naming: `<Domain><Action>` with version suffix (e.g., `TaskReady v1`)
 - Versioning: additive changes do not bump version; breaking changes → new versioned topic/schema
 - JSON Schemas stored under `docs/contracts/events/schemas/`
 
-Commits & Docs
+## Commits & Docs
 - Conventional Commits; keep diffs focused
 - Definition of done includes ADR/service README/contracts updates

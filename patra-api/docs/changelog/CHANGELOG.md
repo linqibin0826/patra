@@ -16,3 +16,14 @@
 - Refined conventions and testing docs
  - Removed proposed OutboxPublished event/docs to reflect current code
  - Added Observability metrics glossary and dashboards; expanded Outbox relay metrics and troubleshooting
+ - Rewrote patra-ingest/README.md in Markdown with code-backed references
+ - Added patra-ingest-api/README.md (consumer-facing error codes) and linked from services catalog
+ - Fixed Ingest runbook to remove outdated OutboxPublished event reference
+ - Rewrote patra-egress-gateway/README.md in Markdown with code-backed references
+ - Added patra-egress-gateway-api/README.md and linked from services catalog
+- Rewrote patra-gateway-boot/README.md in Markdown with routes/config highlights
+- Added patra-registry-api/README.md link to services catalog
+ - Cleaned Feign starter README properties example (single patra.feign tree)
+  - Corrected Egress API contract to match ResilienceConfigDTO (seconds-based fields)
+  - Updated ADR template to Markdown sections and bolded metadata
+ - Added API module README links to docs/README.md Contracts section

@@ -1,20 +1,23 @@
-Title: <Concise decision title>
-Status: Proposed | Accepted | Superseded
-Date: <YYYY-MM-DD>
+# ADR Template
 
-Context
+**Status**: Proposed | Accepted | Superseded  
+**Date**: <YYYY-MM-DD>
+
+## Title
+<Concise decision title>
+
+## Context
 - Why is this decision needed? What constraints apply?
 
-Decision
+## Decision
 - The choice made and scope of applicability.
 
-Alternatives
+## Alternatives
 - Option A — pros/cons
 - Option B — pros/cons
 
-Consequences
+## Consequences
 - Positive and negative outcomes and follow-ups.
 
-References
+## References
 - Links to issues/PRs, benchmarks, docs.
-
