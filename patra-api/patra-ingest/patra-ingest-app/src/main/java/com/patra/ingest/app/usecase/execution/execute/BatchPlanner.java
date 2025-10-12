@@ -38,8 +38,7 @@ public interface BatchPlanner {
      * Plans batches.
      *
      * @param context execution context (query/params/window/configSnapshot)
-     * @param maxBatches maximum number of batches
      * @return batch plan
      */
-    BatchPlan plan(ExecutionContext context, int maxBatches);
+    BatchPlan plan(ExecutionContext context);
 }

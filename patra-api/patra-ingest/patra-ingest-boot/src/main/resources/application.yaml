@@ -78,5 +78,4 @@ task:
       # Consecutive heartbeat failures that trigger a lease validation (default 3)
       failure-threshold: ${TASK_EXECUTION_HEARTBEAT_FAILURE_THRESHOLD:3}
     # Batch execution safeguards
-    max-batches: ${TASK_EXECUTION_MAX_BATCHES:1000}  # Upper bound on batches processed per run
     fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}     # Abort immediately when a batch fails
