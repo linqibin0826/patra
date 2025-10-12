@@ -8,11 +8,11 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g   # ← 建议
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
       - TZ=Asia/Shanghai
     ports:
-      - "9200:9200"     # 开发环境仅本机
-    ulimits:                      # 提升文件句柄与锁内存
+      - "9200:9200"
+    ulimits:
       memlock:
         soft: -1
         hard: -1
@@ -26,7 +26,6 @@ services:
       interval: 20s
       timeout: 10s
       retries: 10
-    # Linux 宿主建议提前执行：sysctl -w vm.max_map_count=262144
 
   skywalking-oap:
     image: apache/skywalking-oap-server:10.2.0
@@ -90,7 +89,7 @@ services:
     image: mysql:8.0.36
     container_name: patra-mysql
     restart: unless-stopped
-    ports: [ "13306:3306" ]     # 仅本机
+    ports: [ "13306:3306" ]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
       TZ: Asia/Shanghai
@@ -115,7 +114,7 @@ services:
     image: redis:7.0.15
     container_name: patra-redis
     restart: unless-stopped
-    ports: [ "16379:6379" ]     # 仅本机
+    ports: [ "16379:6379" ]
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     volumes:
       - ../redis/data:/data
@@ -157,7 +156,6 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
-      # 通过 PARAMS 传 Spring Boot 启动参数（官方镜像推荐做法）
       PARAMS: >
         --server.port=8080
         --server.servlet.context-path=/xxl-job-admin
@@ -168,7 +166,7 @@ services:
     volumes:
       - ../xxl-job-admin/logs:/data/applogs
     ports:
-      - "7070:8080"         # 本机访问 http://localhost:7070/xxl-job-admin
+      - "7070:8080"         # http://localhost:7070/xxl-job-admin
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
       interval: 15s
@@ -188,7 +186,7 @@ services:
       TZ: Asia/Shanghai
     command: [ "sh", "mqnamesrv" ]
     ports:
-      - "9876:9876"           # NameServer，建议开发期只暴露本机
+      - "9876:9876"           # NameServer
     volumes:
       - ../rocketmq/namesrv/logs:/home/rocketmq/logs
       - ../rocketmq/namesrv/store:/home/rocketmq/store
@@ -205,8 +203,8 @@ services:
     environment:
       TZ: Asia/Shanghai
       NAMESRV_ADDR: rocketmq-namesrv:9876
-      JAVA_OPT_EXT: "-Xint"  # 避免 JDK 8u372 JIT 崩溃，开发环境可用，性能会下降
-      # 如客户端在宿主机/外网访问，请在 broker.conf 里设置 brokerIP1=宿主机IP
+      JAVA_OPT_EXT: "-Xint"  # Avoid JDK 8u372 JIT crashes, development environments are available, performance will be degraded
+      # If the client is accessing from the host/external network, set brokerIP1=host IP in broker.conf
     command: >
       sh mqbroker --enable-proxy
       -c /home/rocketmq/rocketmq-5.1.4/conf/broker.conf
@@ -215,7 +213,7 @@ services:
       - "10911:10911"         # remoting
       - "10912:10912"         # HA
       - "7071:8080"           # proxy (HTTP)
-      - "8081:8081"           # proxy (gRPC/HTTP2) —— 5.x 客户端默认连这个
+      - "8081:8081"           # proxy (gRPC/HTTP2)
     volumes:
       - ../rocketmq/broker/logs:/home/rocketmq/logs
       - ../rocketmq/broker/store:/home/rocketmq/store
