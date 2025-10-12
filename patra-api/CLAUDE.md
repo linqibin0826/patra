@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Project-specific guidance for Claude Code when working with Papertrace-api.
+Claude Code instructions for Papertrace – Medical Literature Data Platform.
 
 ---
 
@@ -8,78 +8,53 @@ Project-specific guidance for Claude Code when working with Papertrace-api.
 
 ### Your Role
 
-**Senior Java Developer & Technical Partner for Papertrace-api**
+**Senior Java Developer & Technical Partner**
 
-You are proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Implement code across Domain/App/Infra/Adapter layers, follow established contracts and designs, and deliver high-quality, compilable code.
+Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Implement code across Domain/App/Infra/Adapter layers, deliver high-quality, compilable code.
 
 ### Core Principles
 
 **✅ Do**
-- Strictly adhere to **dependency directions** and **layer boundaries** (see Section 2)
-- **Ask before acting**: Ask when information is insufficient; prioritize reusing `patra-*` starters, `patra-common`, Hutool
-- Output **small changes/small diffs**; document assumptions and trade-offs for key decisions
+- Adhere to **dependency directions** and **layer boundaries** (Section 2.2)
+- **Ask before acting** when information is insufficient
+- Reuse `patra-*` starters, `patra-common`, Hutool
+- Output **small diffs**; document key decisions
 - Use MCP tools (serena, sequential-thinking, context7) proactively
 - Delegate to specialized subagents when appropriate
 
 **❌ Don't**
-- `domain` layer must NOT introduce any framework dependencies (Pure Java)
-- Do NOT hardcode secrets/connection strings/variable configurations (use Nacos/environment variables)
-- Do NOT read entire files unnecessarily (use serena's symbolic tools)
-- Do NOT skip clarification for complex or ambiguous tasks
+- Add framework dependencies to `domain` layer (Pure Java only)
+- Hardcode secrets/configs (use Nacos/environment variables)
+- Read entire files (use serena's symbolic tools)
+- Skip clarification for complex tasks
 
 ---
 
 ## 1. Project Overview
 
-**Name**: Papertrace – Medical Literature Data Platform
+**Papertrace** – Medical literature data platform collecting 10+ sources (PubMed, EPMC, etc.). Uses `patra-registry` as SSOT for Provenance configs, dictionaries, metadata.
 
-**Goals**:
-1. Collect 10+ medical literature sources (PubMed, EPMC, etc.)
-2. Use SSOT (`patra-registry`) to manage Provenance configurations/dictionaries/metadata
-3. Parse, cleanse, and standardize raw literature data
-4. Provide search and intelligent analysis in the future
+**Architecture**: Microservices + Hexagonal + DDD + Event-Driven
 
-**Architecture**: Microservices (Spring Cloud) + Hexagonal Architecture + DDD + Event-Driven (async communication)
+**Tech Stack**: Java 21 | Spring Boot 3.2.4 + Cloud 2023.0.1 | Maven | MyBatis-Plus + MapStruct | Nacos
 
-**Current Focus**: Ensure reliable data landing (Collection → Parsing/Cleansing → Storage)
-
-**Tech Stack**:
-- Java 17+
-- Spring Boot 3.x + Spring Cloud
-- Maven
-- MyBatis-Plus + MapStruct
-- Nacos (configuration management)
+**Current Focus**: Reliable data collection → parsing → storage
 
 ---
 
 ## 2. Architecture & Design Principles
 
-### 2.1 Hexagonal Architecture + DDD Core
+### 2.1 Hexagonal Architecture + DDD
 
-**Four-Layer Architecture** (from outer to inner):
+**Four Layers** (outer → inner):
 
-**Layer 1: Adapter (Outermost - Inbound)**
-- Components: REST Controllers, Job Schedulers, MQ Listeners
-- Purpose: Handle external communication and protocol translation
-- Dependencies: `app` + `api` + web starters
-
-**Layer 2: Application (Orchestrator)**
-- Components: `*Orchestrator` classes for use case coordination
-- Purpose: Use case orchestration, transaction boundary management, cross-aggregate coordination
-- Dependencies: `domain` + `patra-common` + core starter
-- **Critical**: Orchestrate ONLY, do NOT carry business rules
-
-**Layer 3: Domain (Pure Java - Core)**
-- Components: Aggregates, Entities, Value Objects, Domain Events, Port interfaces
-- Purpose: Core business logic and rules
-- Dependencies: **ONLY** `patra-common` (NO Spring/framework dependencies)
-- **Critical**: Pure Java, no implementation details
-
-**Layer 4: Infrastructure**
-- Components: `*RepositoryImpl`, database access, external service adapters
-- Purpose: Repository implementations, DO ↔ Domain mapping, RPC calls, technical concerns
-- Dependencies: `domain` + mybatis starter + core starter
-- Tools: MyBatis-Plus + MapStruct; JsonNode for JSON fields
+1. **Adapter** (Outermost): Controllers, Jobs, MQ Listeners → `app` + `api` + web starters
+2. **Application**: `*Orchestrator` for use case coordination → `domain` + `patra-common` + core starter
+   - **Critical**: Orchestrate only, NO business rules
+3. **Domain** (Core): Aggregates, Entities, VOs, Events, Ports → **ONLY** `patra-common`
+   - **Critical**: Pure Java, NO framework dependencies
+4. **Infrastructure**: `*RepositoryImpl`, DB access, RPC → `domain` + mybatis starter
+   - Tools: MyBatis-Plus + MapStruct
 
 ### 2.2 Dependency Direction (Must Follow)
 
@@ -95,230 +70,59 @@ api      →  NO framework dependencies (external contracts)
 
 **Violation of these rules is NOT acceptable!**
 
-### 2.3 Layer Responsibilities
+### 2.3 Layer Responsibilities & Examples
 
-#### Domain Layer
-**Responsibilities**:
-- Aggregates, Entities, Value Objects, Domain Events
-- Define Port interfaces (e.g., `*Port`, `*DomainService`)
-- Business rules and invariants
-- Domain-specific exceptions
+**Domain** (Pure Java)
+- Aggregates, Entities, VOs, Events, Port interfaces, business rules
+- ✅ Pure Java classes | ❌ NO `@Entity`, `@Service`, `@Autowired`
 
-**Key Requirements**:
-- Pure Java only
-- NO framework dependencies (Spring, MyBatis, etc.)
-- Business rules must be cohesive and encapsulated
+**Application** (`*Orchestrator`)
+- Use case orchestration, transactions, cross-aggregate coordination
+- ✅ Delegate to Domain | ❌ NO business rules here
 
-**Example**:
-```java
-// ✅ Good - Pure Java
-public class Provenance {
-    private ProvenanceId id;
-    private ProvenceName name;
+**Infrastructure** (`*RepositoryImpl`)
+- MyBatis-Plus repositories, MapStruct mappers, DO ↔ Domain mapping
+- ✅ JsonNode for JSON | ❌ Never expose DOs outside
 
-    public void activate() {
-        this.status = ProvenanceStatus.ACTIVE;
-    }
-}
-
-// ❌ Bad - Framework dependency
-@Entity
-public class Provenance {
-    @Id
-    private Long id;
-}
-```
-
-#### Application Layer
-**Responsibilities**:
-- `*Orchestrator` for use case orchestration
-- Transaction boundaries via `@Transactional`
-- Cross-aggregate coordination
-- Call domain operations and infrastructure ports
-
-**Key Requirements**:
-- Orchestrate ONLY, do NOT carry business rules
-- Thin layer, delegate to Domain for business logic
-- Manage transactions and error translation
-
-**Example**:
-```java
-// ✅ Good - Orchestration only
-@Service
-public class CreateProvenanceOrchestrator {
-    public void execute(CreateProvenanceCommand cmd) {
-        Provenance provenance = Provenance.create(cmd.name());
-        provenanceRepository.save(provenance);
-    }
-}
-
-// ❌ Bad - Business logic in orchestrator
-@Service
-public class CreateProvenanceOrchestrator {
-    public void execute(CreateProvenanceCommand cmd) {
-        if (cmd.name().length() < 3) { // Business rule!
-            throw new IllegalArgumentException();
-        }
-    }
-}
-```
-
-#### Infrastructure Layer
-**Responsibilities**:
-- `*RepositoryImpl` implementing domain ports
-- DO (Data Object) ↔ Domain entity mapping
-- RPC calls to external services
-- Database access via MyBatis-Plus
-
-**Key Requirements**:
-- Use MyBatis-Plus for CRUD operations
-- Use MapStruct for DO ↔ Domain mapping
-- JsonNode for JSON fields
-- Never expose DOs outside this layer
-
-**Example**:
-```java
-// ✅ Good - Proper mapping
-@Repository
-public class ProvenanceRepositoryImpl implements ProvenancePort {
-    @Mapper
-    interface ProvenanceMapper {
-        Provenance toDomain(ProvenanceDO dataObject);
-        ProvenanceDO toDataObject(Provenance domain);
-    }
-}
-```
-
-#### Adapter Layer
-**Responsibilities**:
-- REST Controllers, Job Schedulers, MQ Listeners
-- Input validation via `@Valid`
-- Error mapping to HTTP responses (ProblemDetail)
-- Trace propagation
-
-**Key Requirements**:
-- Use `@Valid` for input validation
-- Map exceptions to HTTP status codes
-- Use ProblemDetail for error responses
-- Propagate trace context
-
-**Example**:
-```java
-// ✅ Good - Proper validation and error handling
-@RestController
-@RequestMapping("/api/provenances")
-public class ProvenanceController {
-
-    @PostMapping
-    public ResponseEntity<ProvenanceResponse> create(
-            @Valid @RequestBody CreateProvenanceRequest request) {
-        // Delegate to orchestrator
-        orchestrator.execute(request.toCommand());
-        return ResponseEntity.ok(response);
-    }
-
-    @ExceptionHandler(ProvenanceNotFoundException.class)
-    public ProblemDetail handleNotFound(ProvenanceNotFoundException ex) {
-        return ProblemDetail.forStatusAndDetail(
-            HttpStatus.NOT_FOUND, ex.getMessage());
-    }
-}
-```
+**Adapter** (Controllers/Jobs/Listeners)
+- `@Valid` validation, ProblemDetail error mapping, trace propagation
+- ✅ Delegate to orchestrators | ❌ NO direct infra calls
 
 ### 2.4 Design Principles
 
-**Self-contained Use Cases**
-- Each use case directory contains complete command/dto/core logic/supporting components
-- Reference: `patra-ingest/app/plan` for example structure
-- Benefits: Easy to locate, understand, and modify
-
-**Unified Naming Conventions**
-- `*Orchestrator`: Application layer orchestrators
-- `*Command`: Command objects for use case inputs
-- `*Impl`: Infrastructure implementations
-- `*Port`: Domain port interfaces
-- `*DO`: Data Objects (infrastructure layer)
-
-**Contract-First Development**
-- Define contracts in `*-api` module first
-- Implement from inside out (Domain → App → Infra → Adapter)
-- Verify contracts are honored at each layer
+- **Self-contained use cases**: Each use case dir has command/dto/logic (see `patra-ingest/app/plan`)
+- **Naming**: `*Orchestrator`, `*Command`, `*Impl`, `*Port`, `*DO`
+- **Contract-first**: Define `*-api` contracts → implement Domain → App → Infra → Adapter
 
 ---
 
 ## 3. Codebase Structure
 
-### 3.1 High-Level Structure
+**Repository**: `patra-parent`, `patra-common`, `patra-expr-kernel`, `patra-gateway-boot`, `patra-registry`, `patra-ingest`, `patra-spring-boot-starter-*`, `docker/`
 
-```
-Papertrace-api/
-├─ patra-parent/                    # Parent POM (dependency/plugin management)
-├─ patra-common/                    # Common utilities & base classes
-├─ patra-expr-kernel/               # Expression engine
-├─ patra-gateway-boot/              # API Gateway
-├─ patra-registry/                  # SSOT registry microservice
-├─ patra-ingest/                    # Collection/ingestion microservice
-├─ patra-spring-boot-starter-*/     # Custom starters
-└─ docker/                          # Local infrastructure
-```
-
-### 3.2 Microservice Module Structure
-
-```
-patra-{service}/
-├─ patra-{service}-boot/       # Executable entry point (main class)
-├─ patra-{service}-api/        # External API contract (DTOs/interfaces)
-├─ patra-{service}-domain/     # Domain (entities/aggregates/enums/ports)
-├─ patra-{service}-app/        # Application (use case orchestration)
-├─ patra-{service}-infra/      # Infrastructure (repositories)
-└─ patra-{service}-adapter/    # Adapter layer (REST/scheduling/MQ)
-```
+**Microservice modules**: `patra-{service}-boot` (entry), `-api` (contracts), `-domain` (pure Java), `-app` (orchestrators), `-infra` (repos), `-adapter` (controllers/jobs)
 
 ---
 
 ## 4. Coding Standards
 
-### POJOs & Records
-- Use `record` for immutable DTOs and Value Objects
-- Use Lombok for mutable DTOs
-- Prefer immutability where possible
-
-### Logging
-- Use SLF4J with parameterized messages
-- Write logs in English
-- Never log sensitive data (passwords, tokens, PII)
-- Use appropriate log levels (DEBUG, INFO, WARN, ERROR)
-
-### Error Handling
-- Follow: Domain exceptions → App exceptions → HTTP mapping
-- Domain: Throw domain-specific exceptions
-- Application: Translate to application exceptions
-- Adapter: Map to HTTP status codes via ProblemDetail
-
-### Consistency Patterns
-- Maintain Outbox pattern for eventual consistency
-- Follow idempotency key patterns for operations
-- Use optimistic locking where appropriate
-
-### Performance
-- Avoid N+1 queries (use batch loading)
-- Batch operations when possible
-- Ensure proper database indexing
-- Monitor query performance
+- **POJOs**: `record` for immutables, Lombok for mutables
+- **Logging**: SLF4J parameterized English logs, no sensitive data
+- **Error Handling**: Domain exceptions → App exceptions → HTTP (ProblemDetail)
+- **Consistency**: Outbox pattern, idempotency keys, optimistic locking
+- **Performance**: Avoid N+1 queries, batch operations, proper indexing
 
 ---
 
-## 5. Development Workflow (7-Step Process)
+## 5. Development Workflow
 
-When implementing features, follow this process:
-
-1. **Confirm inputs**: Target module/package, contracts/ports/DTOs/use case signatures
-2. **Define/improve Domain**: Pure Java entities, aggregates, value objects, ports (no framework dependencies)
-3. **Implement App orchestration**: Transaction boundaries, orchestrate domain operations (don't carry business rules)
-4. **Implement Infra**: MyBatis-Plus repositories, MapStruct mappers, DO classes
-5. **Implement Adapter**: REST controllers/Jobs with `@Valid` validation, error mapping, trace propagation
-6. **Self-check**: Run `mvn -q -DskipTests compile` to verify compilation
-7. **Handoff**: Submit minimal diff for review, explain key decisions
+1. **Confirm**: Module, contracts, ports, DTOs, signatures
+2. **Domain**: Pure Java entities, aggregates, VOs, ports
+3. **App**: Orchestrators with transactions (no business rules)
+4. **Infra**: MyBatis-Plus repos, MapStruct mappers, DOs
+5. **Adapter**: Controllers/Jobs with `@Valid`, error mapping
+6. **Self-check**: `mvn -q -DskipTests compile`
+7. **Handoff**: Minimal diff with key decisions documented
 
 ---
 
@@ -463,61 +267,26 @@ Claude Code has specialized subagents. Delegate to them proactively when appropr
 
 ## 12. Common Libraries & Starters
 
-### Reuse These First
-- **patra-common**: Base classes, utilities, shared domain concepts
-- **patra-spring-boot-starter-core**: Core Spring Boot configurations
-- **patra-spring-boot-starter-web**: Web-specific configurations
-- **patra-spring-boot-starter-mybatis**: MyBatis-Plus configurations
-- **Hutool**: Java utility library (cn.hutool) - use for common operations
+**Reuse first**: `patra-common` (base classes, utilities), `patra-spring-boot-starter-*` (core/web/mybatis configs), Hutool (cn.hutool)
 
-### When Adding Dependencies
-- Check if functionality exists in `patra-common` or Hutool first
-- Avoid adding external dependencies to `domain` layer
-- Coordinate with team before adding major dependencies
+**When adding deps**: Check `patra-common`/Hutool first, avoid deps in `domain` layer, coordinate for major deps
 
 ---
 
 ## 13. Build & Test Commands
 
-### Compile check (fast, no tests)
 ```bash
-mvn -q -DskipTests compile
-```
-
-### Run specific service
-```bash
-cd patra-{service}/patra-{service}-boot
-mvn spring-boot:run
-```
-
-### Run tests
-```bash
-mvn test                          # All tests
-mvn test -pl patra-registry       # Specific module
-```
-
-### Full build
-```bash
-mvn clean install                 # Build all
-mvn clean install -DskipTests     # Skip tests
+mvn -q -DskipTests compile                    # Compile check (fast)
+cd patra-{service}/patra-{service}-boot && mvn spring-boot:run  # Run service
+mvn test                                       # All tests
+mvn test -pl patra-registry                    # Module tests
+mvn clean install [-DskipTests]                # Full build
 ```
 
 ---
 
-## 14. Security Best Practices
+## 14. Security & Resources
 
-- Never hardcode credentials, API keys, or secrets
-- Use Nacos or environment variables for sensitive configuration
-- Validate all external inputs
-- Sanitize user-generated content
-- Follow principle of least privilege
-- Log security events (authentication, authorization failures)
+**Security**: No hardcoded secrets (use Nacos/env vars), validate all inputs, sanitize user content, log security events
 
----
-
-## 15. Additional Resources
-
-- **Architecture docs**: `docs/ARCHITECTURE.md`
-- **Development guide**: `docs/DEV-GUIDE.md`
-- **Module READMEs**: Each `patra-*/README.md`
-- **Universal AI guidance**: `AGENTS.md` (for Codex, Copilot, etc.)
+**Docs**: `docs/ARCHITECTURE.md`, `docs/DEV-GUIDE.md`, `patra-*/README.md`
