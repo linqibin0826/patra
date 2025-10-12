@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://papertrace.dev/contracts/events/task-ready.v1.schema.json",
+  "title": "TaskReady v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "taskId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "idempotentKey": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["taskId", "idempotentKey"]
+}
+

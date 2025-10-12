@@ -11,6 +11,7 @@ Producer and Consumers
 Schema (JSON)
 - taskId: number (required)
 - idempotentKey: string (required)
+- See JSON Schema: [schemas/task-ready.v1.schema.json](schemas/task-ready.v1.schema.json)
 
 Semantics and Ordering
 - Signals a task is ready to execute; consumers load full context by `taskId`.
