@@ -27,7 +27,6 @@ patra:
     service-header: X-Service-Name
     max-error-body-size: 65536
     redact-keys: [token, password, secret, apiKey]
-  feign:
     problem:
       enabled: true
       tolerant: true

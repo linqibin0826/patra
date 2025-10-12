@@ -1,6 +1,6 @@
-Dashboards
+# Dashboards
 
-Core Panels (Recommended)
+## Core Panels (Recommended)
 - Outbox Relay
   - Publish rate by channel (counter rate of `papertrace.outbox.publish.total{status=success}`)
   - Relay duration p95 (timer `ingest.relay.duration`)
@@ -13,9 +13,8 @@ Core Panels (Recommended)
   - Call duration p95 (`egress.call.duration`)
   - Retry count by reason (`egress.call.retry.count`)
 
-Trace Heatmaps
+## Trace Heatmaps
 - `ingest.plan`, `ingest.execute`, `ingest.relay`, `egress.call` spans
 
-Alert Hooks
+## Alert Hooks
 - MQ lag sustained over threshold; error spikes; DB pool saturation
-

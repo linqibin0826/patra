@@ -1,29 +1,31 @@
-Egress Gateway API Contract
+# Egress Gateway API Contract
 
-Endpoint
+## Endpoint
 - `POST /api/egress/call`
 
-Method
+## Method
 - HTTP POST (internal RPC via gateway or direct service-to-service)
 
-Request Schema and Validation
+## Request Schema and Validation
 ```json
 {
   "url": "https://host/path",        // required, non-blank
   "method": "GET|POST|...",          // required, non-blank
   "headers": {"Accept": "..."},     // optional, sanitized
   "body": "...",                     // optional
-  "config": {                          // optional resilience overrides
-    "timeoutMs": 1000,
-    "retries": 0,
-    "retryBackoffMs": 0,
-    "rateLimitRps": 10,
-    "circuitBreaker": {"enabled": false}
+  "config": {                          // optional resilience overrides (seconds-based)
+    "timeoutSeconds": 30,
+    "maxRetries": 0,
+    "retryBackoffSeconds": 0,
+    "rateLimit": 10,
+    "circuitBreakerThreshold": 10,
+    "circuitBreakerWindowSeconds": 60,
+    "responseHeaderWhitelist": ["Content-Type", "Retry-After"]
   }
 }
 ```
 
-Response Schema
+## Response Schema
 ```json
 {
   "envelope": {
@@ -41,16 +43,17 @@ Response Schema
 }
 ```
 
-Error Mapping
+## Error Mapping
 - 400: invalid `url`/`method` or malformed overrides
 - 5xx in envelope: remote error captured; map to `success=false` with `statusCode` and optional retry advice
 
-Idempotency/Timeout/Retry/Rate Limits
+## Idempotency/Timeout/Retry/Rate Limits
 - Idempotency is not enforced at this layer; callers must ensure safe semantics if required.
-- Timeouts default from `patra.egress.resilience.defaultConfig.timeoutMs` with optional per-call override.
-- Retries disabled by default; caps are enforced by `max.*` properties.
-- Rate limits are applied globally per configuration; per-caller limits are planned.
+- Timeouts default from `patra.egress.resilience.default.timeout-seconds` with optional per-call override; capped by `patra.egress.resilience.max.timeout-seconds`.
+- Retries default from `patra.egress.resilience.default.max-retries`; capped by `patra.egress.resilience.max.max-retries`.
+- Backoff defaults from `patra.egress.resilience.default.retry-backoff-seconds`; capped by `patra.egress.resilience.max.retry-backoff-seconds`.
+- Circuit breaker thresholds/windows default from corresponding `default.*` keys; capped by `max.*` keys.
+- Rate limits apply globally per configuration; per-caller limits are planned (`patra.egress.global.rate-limit`).
 
-Notes
+## Notes
 - See `patra-egress-gateway/README.md` for orchestration and DTO types.
-

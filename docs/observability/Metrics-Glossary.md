@@ -1,4 +1,4 @@
-Metrics Glossary
+# Metrics Glossary
 
 - `ingest.plan.duration` (timer, ms)
   - Tags: `service=patra-ingest`, `result`
@@ -39,4 +39,3 @@ Metrics Glossary
 - `db.pool.active` (gauge)
   - Tags: `service`, `pool`
   - Description: active DB connections per pool
-
