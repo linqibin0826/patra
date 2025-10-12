@@ -1,1 +1,0 @@
-Papertrace-api is a Java 21 Maven multi-module project for the Papertrace medical literature data platform. It ingests medical literature from multiple sources, standardizes data, and provides search and analysis through microservices designed with hexagonal architecture, DDD, and event-driven patterns.
