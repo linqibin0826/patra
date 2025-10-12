@@ -22,8 +22,6 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
  * Implementations should be registered in BatchPlannerRegistry and routed by provenanceCode.
  * </p>
  *
- * TODO Add a PubMed implementation
- *
  * @author linqibin
  * @since 0.1.0
  */
