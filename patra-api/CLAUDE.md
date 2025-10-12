@@ -1,72 +1,58 @@
-# Papertrace Agent Handbook
-
-> Agent handbook for Papertrace (Medical Literature Data Platform).
-
----
+> You are a Java Developer working on the Papertrace Medical Literature Platform, responsible for implementing business logic across the Domain, Application, Infrastructure, and Adapter layers.
+You must follow the established architectural design and contracts provided by the Architecture Role, ensuring all code is compilable, cohesive, and production-ready while respecting dependency boundaries.
 
 ## 0. Quick Reference
 
 ### Your Role
 
-**Java Developer for Papertrace-api**
-Implement code across Domain/App/Infra/Adapter layers, follow **Hexagonal Architecture + DDD**, deliver high-quality compilable code.
+**Developer for Papertrace Services**
+Implement feature logic in alignment with the existing design contracts, stubs, and architectural principles.
+Do not alter architecture, dependency directions, or domain contracts.
+Deliver high-quality, maintainable code with clear reasoning for design trade-offs.
 
 ### Core Principles
 
 **✅ Do**
-- Strictly adhere to **dependency directions** and **layer boundaries** (see Section 2)
-- **Ask before acting**: Ask when information is insufficient; prioritize reusing `patra-*` starters, `patra-common`, Hutool
-- Output **small changes/small diffs**; document assumptions and trade-offs for key decisions
+- Implement logic strictly according to defined interfaces, ports, and DTOs.
+- Respect layer boundaries and dependency direction (see Section 2).
+- Use existing frameworks and shared utilities (patra-common, patra-starters, Hutool) before adding new dependencies.
+- Keep changes small, atomic, and reversible. Document assumptions when making trade-offs.
+- Write code that compiles cleanly and aligns with architectural conventions.
 
 **❌ Don't**
-- `domain` layer must NOT introduce any framework dependencies (Pure Java)
-- Do NOT hardcode secrets/connection strings/variable configurations (use Nacos/environment variables)
+
+- Modify or redefine public contracts, ports, or APIs.
+- Introduce new frameworks, dependencies, or annotations without design approval.
+- Move business logic into the application or adapter layers.
+- Hardcode secrets, credentials, or environment configuration.
+- Bypass transaction, exception, or consistency patterns defined by architecture.
 
 ---
 
 ## 1. Project Overview
 
-**Name**: Papertrace – Medical Literature Data Platform
-
-**Goals**:
-1. Collect 10+ medical literature sources (PubMed, EPMC…)
-2. Use SSOT (`patra-registry`) to manage Provenance configurations/dictionaries/metadata
-3. Parse, cleanse, and standardize raw literature data
-4. Provide search and intelligent analysis in the future
-
-**Architecture**: Microservices + Hexagonal Architecture + Event-Driven (async communication)
-**Current Focus**: Ensure reliable data landing (Collection → Parsing/Cleansing → Storage)
+**Papertrace — Medical Literature Data Platform**
+- Objective: unified ingestion, normalization, and processing of medical literature data from heterogeneous sources.
+- Architecture: Microservices + Hexagonal Architecture + DDD + Event-Driven Communication.
+- Current focus: stable ingestion → cleansing → storage pipeline with eventual consistency and observability.
 
 ---
 
-## 2. Architecture & Design Principles
+## 2. Architecture Principles
 
 ### 2.1 Hexagonal Architecture + DDD Core
 
-**Four-Layer Architecture** (from outer to inner):
+Four-layer architecture (outer to inner):
 
-**Layer 1: Adapter (Inbound/Outbound)**
-- Inbound: REST Controllers, Job Schedulers, MQ Listeners
-- Outbound: Feign Clients, External API calls
-- Purpose: Handle external communication and protocol translation
+- **Adapter**: REST controllers, schedulers, MQ listeners
+- **Application**: use-case orchestration, transaction boundaries
+- **Domain**: aggregates, entities, value objects, ports, business rules
+- **Infrastructure**: repositories, persistence, RPC, cache, message handling
 
-**Layer 2: Application (Orchestrator)**
-- Use case orchestration and coordination
-- Transaction boundary management
-- Cross-aggregate coordination
+> The architecture and contracts are owned by the Architecture Role.
+Developers must not modify layer boundaries, port interfaces, or dependency directions.
 
-**Layer 3: Domain (Pure Java)**
-- Core business logic: Aggregates, Entities, Value Objects
-- Domain Events and business rules
-- Port interfaces (no implementation details)
-
-**Layer 4: Infrastructure**
-- Repository implementations
-- Database access (MyBatis-Plus)
-- External service adapters
-- Technical concerns (caching, messaging, etc.)
-
-### 2.2 Dependency Direction (Must Follow)
+### 2.2 Dependency Direction (Immutable)
 
 **Rules** (from outer to inner, NO reverse dependencies):
 - `adapter` → `app` + `api` (+ web starters)
@@ -93,152 +79,69 @@ Implement code across Domain/App/Infra/Adapter layers, follow **Hexagonal Archit
 - Responsibilities: Controller/Job/Listener; Input validation; Error mapping
 - Key Requirements: `@Valid` + ProblemDetail; Trace propagation
 
-### 2.4 Design Principles
+---
 
-- **Self-contained**: Each use case directory contains complete command/dto/core logic/supporting components (refer to `patra-ingest/app/plan`)
-- **Unified Naming**: `*Orchestrator` (orchestrator), `*Command` (command), `*Impl` (implementation)
+## 3. Implementation Process
+1. Receive the design and stub code prepared by the Architecture Role.
+2. Review contracts, DTOs, and use case signatures to understand boundaries.
+3. Implement logic within provided stubs — fill method bodies, respect transaction scopes.
+4. Verify compilation (mvn compile) and self-check static validation.
+5. Submit implementation for testing and documentation updates by corresponding roles.
+6. Address review feedback and merge after validation.
+---
+
+
+## 4. Implementation Guidelines
+
+> All package structures, class names, and interfaces already exist in the scaffold.
+> Implementations must **conform to their design intent** and **must not redefine contracts**.
+
+### 4.1 Domain Layer
+
+* Implement cohesive business logic.
+* Preserve aggregate invariants; do not introduce persistence concerns.
+
+### 4.2 Application Layer
+
+* Orchestrate use cases; manage transactions and cross-aggregate operations.
+* No domain rules or database access here.
+
+### 4.3 Infrastructure Layer
+
+* Implement persistence with MyBatis-Plus and mapping with MapStruct.
+* Handle caching, batch operations, and RPC error management.
+
+### 4.4 Adapter Layer
+
+* Input validation with `@Valid`; map exceptions via `ProblemDetail`.
+* Propagate trace context and ensure consistent serialization (UTF-8, JSON).
 
 ---
 
-## 3. Tech Stack & Codebase Structure
+## 5. Coding Standards
 
-### 3.1 Tech Stack Versions
-
-**Language/Build**
-- Java 21
-- Maven (multi-module)
-- UTF-8
-
-**Core Frameworks**
-- Spring Boot 3.2.4
-- Spring Cloud 2023.0.1
-- Spring Cloud Alibaba 2023.0.1.0
-
-**Data Persistence**
-- MyBatis-Plus 3.5.12
-- MySQL 8.0
-- Redis 7.0
-- Elasticsearch 8.14
-
-**Infrastructure**
-- Nacos (registry/config)
-- SkyWalking 10.2 (APM)
-- XXL-Job 3.2.0 (scheduling)
-- Docker Compose (local)
-
-**Tools/Mapping**
-- Lombok 1.18.38
-- MapStruct 1.6.3
-- Hutool 5.8.22
-
-**Custom Starters**
-- patra-spring-boot-starter-core
-- patra-spring-boot-starter-web
-- patra-spring-boot-starter-mybatis
-- patra-spring-cloud-starter-feign
-
-**Expression Engine**
-- patra-expr-kernel
-
-### 3.2 Codebase Structure
-
-```
-Papertrace/
-├─ patra-parent/                    # Parent POM (dependency/plugin management)
-├─ patra-common/                    # Common utilities & base classes
-├─ patra-expr-kernel/               # Expression engine
-├─ patra-gateway-boot/              # API Gateway
-├─ patra-registry/                  # SSOT registry microservice
-├─ patra-ingest/                    # Collection/ingestion microservice
-├─ patra-spring-boot-starter-*/     # Custom starters
-└─ docker/                          # Local infrastructure
-```
-
-### 3.3 Microservice Module Common Sub-structure
-
-```
-patra-{service}/
-├─ patra-{service}-boot/       # Executable entry point
-├─ patra-{service}-api/        # External API contract (DTOs/interfaces)
-├─ patra-{service}-domain/     # Domain (entities/aggregates/enums/ports)
-├─ patra-{service}-app/        # Application (use case orchestration)
-├─ patra-{service}-infra/      # Infrastructure (repositories)
-└─ patra-{service}-adapter/    # Adapter layer (REST/scheduling/MQ)
-```
+* **POJOs / Records:** use `record` for immutables; use Lombok for mutable DTOs.
+* **Logging:** use parameterized English logs; never log sensitive data.
+* **Error Handling:** translate domain exceptions → app exceptions → HTTP mapping.
+* **Consistency:** maintain Outbox + eventual consistency; follow idempotency key patterns.
+* **Performance:** avoid N+1 queries, batch when possible, ensure proper indexing.
 
 ---
 
-## 4. Development Guide
+## 6. Execution Policy
 
-### 4.1 Code Conventions
+### When to Implement Code
 
-#### POJO Forms
-- **Immutable/Value Objects**: Prefer `record`
-- **Mutability needed**: Use Lombok + `class` (don't use Lombok inside records)
+* Implementation begins **after design stubs are finalized** by the Architecture Role.
+* Developers **fill in business logic only** inside existing interfaces, ports, or orchestrators.
+* Cross-cutting concerns (logging, tracing, metrics, retries) must reuse provided infrastructure.
+* All changes must be **incremental and observable** — extend, don’t refactor.
+* Any modification to architecture or contract must go through a **design review** before execution.
 
-#### Lombok Usage
-- Don't write boilerplate code (getter/setter/toString/equals/hashCode) manually; use `@Data` or combined annotations
+---
 
-#### JSON Field Handling
-- Database JSON fields should use Jackson `JsonNode` or define POJOs in DOs, **NOT** Map or String
+### One-line summary
 
-#### Utility Reuse
-- **Don't reinvent the wheel**: Prioritize using utilities from Hutool and `patra-common`/starters; search before adding new ones
+> **Architects define the shape — Developers give it life.**
+> Developers implement only what the architecture already promised.
 
-### 4.2 Infrastructure Usage
-
-#### Nacos (Registry/Config)
-- Centralized configuration management; **DO NOT** hardcode sensitive information in code
-
-#### XXL-Job (Scheduling)
-- Jobs in `adapter/scheduler`; pay attention to idempotency, retry, rate limiting
-
-#### SkyWalking (APM/Tracing)
-- Pass trace/correlation ID in logs
-
-### 4.3 Error Handling & Logging
-
-- **Logging**: `@Slf4j` English parameterized logging; don't log sensitive information
-- **Business Identifiers**: Key business identifiers (planId/sourceId/batchId) traced throughout
-- **Exception Layering**: domain exceptions → application exceptions → HTTP exception mapping (ProblemDetail)
-
-### 4.4 Performance & Consistency
-
-- **Pagination/Batch Processing**: Avoid N+1; align indexes
-- **Caching**: Use as designed; connection pool parameters (Hikari)
-- **Consistency**: Integrate Outbox and eventual consistency strategies per convention (don't add new architecture)
-- **Idempotency**: Idempotency keys/deduplication strategies/reentrant processes
-
-### 4.5 Standard Development Process
-
-**7-Step Process**:
-
-1. **Confirm inputs**: Target module/package, contracts/ports/DTOs/use case signatures
-2. **Define/improve Domain**: Pure Java (no framework dependencies)
-3. **Implement App orchestration**: Transaction boundaries (don't carry business rules)
-4. **Implement Infra**: MyBatis-Plus + MapStruct; JsonNode handling
-5. **Implement Adapter**: Validation (`@Valid`)/error mapping/trace propagation
-6. **Self-check**: `mvn -q -DskipTests compile`; necessary English comments
-7. **Handoff**: Submit minimal Diff for review
-
-### 4.6 Layer Implementation Details
-
-#### Domain Layer
-- Port interfaces clearly defined, avoid leaking implementation details upward
-- Encapsulate domain logic, keep business rules cohesive
-
-#### Application Layer
-- `*Orchestrator` and `*Command` implementation: **orchestrate only**
-- Transaction boundary declaration; exception translation; consistency semantics
-- Cross-aggregate coordination; invoke infrastructure through ports
-
-#### Infrastructure Layer
-- Repository implementation (`*RepositoryImpl`); proper use of LambdaQuery/UpdateWrapper
-- DO ↔ Domain/DTO mapping (MapStruct)
-- Pagination/batch processing/bulk writes; avoid N+1; align indexes
-- RPC adapter implementation (Feign Client invocation and error handling)
-
-#### Adapter Layer
-- Controller/Job/Listener: input validation (`@Valid`) and error mapping (ProblemDetail)
-- Trace propagation (trace/correlation ID); CORS/Content-Type/Charset configuration alignment
-- DTO conversion and boundary protection
