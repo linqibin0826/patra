@@ -10,3 +10,20 @@ Conventions & Standards
 
 See repository root README.md and AGENTS.md for full guidelines.
 
+Logging Standards
+- Use parameterized format: `log.info("Processing plan {}", planId)`
+- Include: `traceId`, and key IDs (planId, sliceId, taskId, batchId)
+- Mask secrets and sensitive headers; centralize masking in adapters
+
+Error Mapping
+- Use RFC7807 ProblemDetail at adapters; map domain/app exceptions to typed problems
+- Do not leak internal stack traces or secrets; include correlation IDs
+
+Events & Contracts
+- Event naming: `<Domain><Action>` with version suffix (e.g., `TaskReady v1`)
+- Versioning: additive changes do not bump version; breaking changes → new versioned topic/schema
+- JSON Schemas stored under `docs/contracts/events/schemas/`
+
+Commits & Docs
+- Conventional Commits; keep diffs focused
+- Definition of done includes ADR/service README/contracts updates

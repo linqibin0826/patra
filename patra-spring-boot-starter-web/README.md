@@ -1,14 +1,50 @@
-Purpose and Responsibilities
-- Web error handling, pagination/sorting request models, and API response wrappers.
+# patra-spring-boot-starter-web
 
-Key Components
-- GlobalRestExceptionHandler transforms exceptions to RFC 7807 ProblemDetail via DefaultProblemDetailAdapter.
-- ProblemDetailBuilder and WebProblemFieldContributor SPI to enrich responses.
-- Request models: Pageable, Sortable, PagingSortable.
-- Response models: ApiResponse, PageResult, ResultCode.
-- Auto-config: WebErrorAutoConfiguration and WebConversionAutoConfiguration.
+## Purpose
+Web-layer conveniences: RFC7807 error responses, validation formatting, pagination/sorting request models, and response wrappers.
 
-Configuration Properties
-- `patra.web.problem.enabled` (default true)
-- `patra.web.problem.type-base-url` (default https://errors.example.com/)
-- `patra.web.problem.include-stack` (default false)
+## Auto-Configuration
+Registered via imports:
+- `com.patra.starter.web.error.config.WebErrorAutoConfiguration`
+- `com.patra.starter.web.autoconfig.WebConversionAutoConfiguration`
+
+## Beans and Responsibilities
+- `GlobalRestExceptionHandler`
+  - Converts exceptions to `ProblemDetail` using the core error pipeline.
+  - Adds sanitized validation errors (capped at 100) when applicable.
+- `ProblemDetailAdapter` → `DefaultProblemDetailAdapter`
+- `ProblemDetailBuilder` (composes core + web field contributors)
+- `ValidationErrorsFormatter` → `DefaultValidationErrorsFormatter`
+- MVC conversion: `Converter<String, ProvenanceCode>` for `@PathVariable`/`@RequestParam` binding
+
+## Request/Response Models
+- Requests: `Pageable`, `Sortable`, `PagingSortable`
+- Responses: `ApiResponse<T>`, `PageResult<T>`, `ResultCode`
+
+## Properties
+```yaml
+patra:
+  web:
+    problem:
+      enabled: true
+      type-base-url: https://errors.example.com/
+      include-stack: false
+```
+
+## Usage Example
+```java
+@RestController
+class DemoController {
+  private final HttpStdErrors.Group http = HttpStdErrors.of("ING");
+
+  @GetMapping("/boom")
+  ApiResponse<Void> boom() {
+    throw new ApplicationException(http.CONFLICT(), "Conflict");
+  }
+}
+```
+The handler returns a `ProblemDetail` with an HTTP 409 status. Validation failures are formatted and attached to the `errors` property.
+
+## Extensibility
+- Implement `WebProblemFieldContributor` or `ProblemFieldContributor` to add custom fields.
+- Override beans via `@Primary` or define your own `ProblemDetailAdapter`/`ValidationErrorsFormatter`.
