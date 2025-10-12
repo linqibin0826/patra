@@ -15,6 +15,7 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 ### Core Principles
 
 **✅ Do**
+- **Read module README.md FIRST** before reading or modifying any module's code
 - Adhere to **dependency directions** and **layer boundaries** (Section 2.2)
 - **Ask before acting** when information is insufficient
 - Reuse `patra-*` starters, `patra-common`, Hutool
@@ -115,6 +116,8 @@ api      →  NO framework dependencies (external contracts)
 ---
 
 ## 5. Development Workflow
+
+**⚠️ IMPORTANT**: Read target module's README.md FIRST before any code reading/modification!
 
 1. **Confirm**: Module, contracts, ports, DTOs, signatures
 2. **Domain**: Pure Java entities, aggregates, VOs, ports
