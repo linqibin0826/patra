@@ -177,12 +177,60 @@ api      →  NO framework dependencies (external contracts)
 3. **App**: Orchestrators with transactions (no business rules)
 4. **Infra**: MyBatis-Plus repos, MapStruct mappers, DOs
 5. **Adapter**: Controllers/Jobs with `@Valid`, error mapping
-6. **Self-check**: `mvn -q -DskipTests compile`
+6. **Self-check**: `mvn -q compile && mvn test`
 7. **Handoff**: Minimal diff with key decisions documented
 
 ---
 
-## 6. Task Processing Workflow
+## 6. Testing Strategy
+
+### Unit Tests (Domain & Application)
+
+**Domain Layer** (`patra-{service}-domain`)
+- Test in isolation, pure Java, NO mocks needed
+- Focus: Aggregate behavior, business rules, value object validation
+- Example: `ProvenanceTest`, `BatchPlanTest`
+
+**Application Layer** (`patra-{service}-app`)
+- Test orchestration logic
+- Mock domain and infrastructure ports
+- Verify transaction boundaries and error translation
+
+### Integration Tests (Boot Module ONLY)
+
+**Integration Tests** (`patra-{service}-boot`)
+- **Location**: Only in boot module (has main application class and full context)
+- **Infrastructure tests**: Use TestContainers for DB/Redis/MQ
+- **API tests**: Use MockMvc or RestAssured
+- Test repository implementations, DO ↔ Domain mapping
+- Verify `@Valid` constraints and error mapping
+
+**Why boot module?**: Main application class in boot assembles full Spring context needed for integration tests
+
+### Architecture Validation
+
+**ArchUnit** (recommend in boot module)
+- Enforce layer dependency rules (Adapter → App → Domain ← Infra)
+- Verify no framework dependencies in domain layer
+- Check naming conventions (`*Orchestrator`, `*Port`, `*RepositoryImpl`)
+
+### Test Organization
+
+```
+patra-{service}/
+├─ patra-{service}-domain/
+│  └─ src/test/java/          # Unit tests (pure Java)
+├─ patra-{service}-app/
+│  └─ src/test/java/          # Unit tests (mock ports)
+├─ patra-{service}-infra/
+│  └─ src/test/java/          # Optional: mapper tests
+└─ patra-{service}-boot/
+   └─ src/test/java/          # Integration tests + ArchUnit
+```
+
+---
+
+## 7. Task Processing Workflow
 
 ### Before Executing Tasks
 
@@ -200,7 +248,7 @@ Then summarize understanding before proceeding.
 
 ---
 
-## 7. Thinking & Analysis Mode
+## 8. Thinking & Analysis Mode
 
 ### Deep Analysis Requirements
 
@@ -218,7 +266,7 @@ Then summarize understanding before proceeding.
 
 ---
 
-## 8. Solution & Guidance Approach
+## 9. Solution & Guidance Approach
 
 ### Multi-solution Analysis
 
@@ -238,7 +286,7 @@ When faced with technical decisions:
 
 ---
 
-## 9. Interaction Style
+## 10. Interaction Style
 
 ### Communication Approach
 
@@ -265,7 +313,7 @@ When faced with technical decisions:
 
 ---
 
-## 10. Available MCP Tools
+## 11. Available MCP Tools
 
 Claude Code has access to these MCP (Model Context Protocol) tools. Use them proactively!
 
@@ -297,7 +345,7 @@ Claude Code has access to these MCP (Model Context Protocol) tools. Use them pro
 
 ---
 
-## 11. Subagent Operational Priorities
+## 12. Subagent Operational Priorities
 
 Claude Code has specialized subagents. Delegate to them proactively when appropriate!
 
@@ -315,7 +363,7 @@ Claude Code has specialized subagents. Delegate to them proactively when appropr
 
 ---
 
-## 12. Common Libraries & Starters
+## 13. Common Libraries & Starters
 
 **Reuse first**: `patra-common` (base classes, utilities), `patra-spring-boot-starter-*` (core/web/mybatis configs), Hutool (cn.hutool)
 
@@ -323,7 +371,7 @@ Claude Code has specialized subagents. Delegate to them proactively when appropr
 
 ---
 
-## 13. Build & Test Commands
+## 14. Build & Test Commands
 
 ```bash
 mvn -q -DskipTests compile                    # Compile check (fast)
@@ -335,7 +383,7 @@ mvn clean install [-DskipTests]                # Full build
 
 ---
 
-## 14. Security & Resources
+## 15. Security & Resources
 
 **Security**: No hardcoded secrets (use Nacos/env vars), validate all inputs, sanitize user content, log security events
 
