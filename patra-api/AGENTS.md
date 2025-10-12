@@ -152,7 +152,6 @@ api      →  NO framework dependencies (external contracts)
 ## 3. Codebase Structure
 
 **Repository**: `patra-parent`, `patra-common`, `patra-expr-kernel`, `patra-gateway-boot`, `patra-registry`, `patra-ingest`, `patra-spring-boot-starter-*`, `docker/`
-
 **Microservice modules**: `patra-{service}-boot` (entry), `-api` (contracts), `-domain` (pure Java), `-app` (orchestrators), `-infra` (repos), `-adapter` (controllers/jobs)
 
 ---
