@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
  * <p>
  * Config:
  * <ul>
- *   <li>task.execution.max-batches: default 1000.</li>
  *   <li>task.execution.fail-fast: default false (continue).</li>
  * </ul>
  * </p>
