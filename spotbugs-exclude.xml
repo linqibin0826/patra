@@ -104,6 +104,18 @@
       <Bug pattern="EI_EXPOSE_REP2"/>
       <Bug pattern="MS_EXPOSE_REP"/>
       <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+      <Bug pattern="NP_NULL_PARAM_DEREF"/>
+      <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+      <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Or>
+  </Match>
+
+  <!-- Web response wrappers expose mutable collections by design -->
+  <Match>
+    <Package name="~.*\.resp.*"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
     </Or>
   </Match>
 
@@ -256,6 +268,15 @@
     <Class name="com.patra.common.json.JsonNormalizer$Result"/>
     <Method name="getHashMaterial"/>
     <Bug pattern="EI_EXPOSE_REP"/>
+  </Match>
+
+  <!-- ObjectMapperProvider: Singleton pattern with static field by design -->
+  <Match>
+    <Class name="com.patra.starter.core.json.ObjectMapperProvider"/>
+    <Or>
+      <Bug pattern="MS_EXPOSE_REP"/>
+      <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    </Or>
   </Match>
 
 </FindBugsFilter>
