@@ -13,27 +13,27 @@ import java.util.HexFormat;
  */
 public final class ResponseHashCalculator {
 
-    private ResponseHashCalculator() {
-        // Utility class, prevent instantiation
+  private ResponseHashCalculator() {
+    // Utility class, prevent instantiation
+  }
+
+  /**
+   * Calculate SHA-256 hash of response body
+   *
+   * @param body response body
+   * @return hex-encoded hash string
+   */
+  public static String calculateHash(String body) {
+    if (body == null || body.isEmpty()) {
+      return "";
     }
 
-    /**
-     * Calculate SHA-256 hash of response body
-     *
-     * @param body response body
-     * @return hex-encoded hash string
-     */
-    public static String calculateHash(String body) {
-        if (body == null || body.isEmpty()) {
-            return "";
-        }
-
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(body.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(body.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(hash);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("SHA-256 algorithm not available", e);
     }
+  }
 }

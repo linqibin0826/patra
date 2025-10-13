@@ -22,4 +22,3 @@ patra:
       enabled: true
       batch-size: 200
       lease-duration: PT30S
-

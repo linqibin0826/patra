@@ -8,33 +8,34 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * PubMed HARVEST scheduled job. Binds the PUBMED provenance with the HARVEST operation
- * and delegates parameter parsing and plan orchestration to the base class.
- * <p>This class does not handle business details; it declares provenance/operation
- * and exposes the XXL execution entrypoint.</p>
+ * PubMed HARVEST scheduled job. Binds the PUBMED provenance with the HARVEST operation and
+ * delegates parameter parsing and plan orchestration to the base class.
+ *
+ * <p>This class does not handle business details; it declares provenance/operation and exposes the
+ * XXL execution entrypoint.
  */
 @Slf4j
 @Component
 public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
 
-    /** Fixed PUBMED provenance. */
-    @Override
-    protected ProvenanceCode getProvenanceCode() {
-        return ProvenanceCode.PUBMED;
-    }
+  /** Fixed PUBMED provenance. */
+  @Override
+  protected ProvenanceCode getProvenanceCode() {
+    return ProvenanceCode.PUBMED;
+  }
 
-    /** Fixed HARVEST operation. */
-    @Override
-    protected OperationCode getOperationCode() {
-        return OperationCode.HARVEST;
-    }
+  /** Fixed HARVEST operation. */
+  @Override
+  protected OperationCode getOperationCode() {
+    return OperationCode.HARVEST;
+  }
 
-    /**
-     * XXL-Job entrypoint: fetch scheduler param and delegate to {@link #executeScheduleJob(String)}.
-     */
-    @XxlJob("pubmedHarvest")
-    public void run() {
-        // Pass XXL param through to the common scheduling logic
-        executeScheduleJob(XxlJobHelper.getJobParam());
-    }
+  /**
+   * XXL-Job entrypoint: fetch scheduler param and delegate to {@link #executeScheduleJob(String)}.
+   */
+  @XxlJob("pubmedHarvest")
+  public void run() {
+    // Pass XXL param through to the common scheduling logic
+    executeScheduleJob(XxlJobHelper.getJobParam());
+  }
 }

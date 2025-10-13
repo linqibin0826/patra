@@ -25,50 +25,69 @@ import org.springframework.context.annotation.Bean;
 @EnableConfigurationProperties(CompilerProperties.class)
 public class ExprCompilerAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean(RuleSnapshotLoader.class)
-    @ConditionalOnBean({ProvenanceClient.class, ExprClient.class})
-    @ConditionalOnProperty(prefix = "patra.expr.compiler.registry-api", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public SnapshotAssembler exprSnapshotAssembler(ObjectMapper objectMapper) {
-        return new SnapshotAssembler(objectMapper);
-    }
+  @Bean
+  @ConditionalOnMissingBean(RuleSnapshotLoader.class)
+  @ConditionalOnBean({ProvenanceClient.class, ExprClient.class})
+  @ConditionalOnProperty(
+      prefix = "patra.expr.compiler.registry-api",
+      name = "enabled",
+      havingValue = "true",
+      matchIfMissing = true)
+  public SnapshotAssembler exprSnapshotAssembler(ObjectMapper objectMapper) {
+    return new SnapshotAssembler(objectMapper);
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(RuleSnapshotLoader.class)
-    @ConditionalOnBean({ProvenanceClient.class, ExprClient.class, SnapshotAssembler.class})
-    @ConditionalOnProperty(prefix = "patra.expr.compiler.registry-api", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RuleSnapshotLoader registryRuleSnapshotLoader(ProvenanceClient provenanceClient,
-                                                         ExprClient exprClient,
-                                                         SnapshotAssembler snapshotAssembler) {
-        return new RegistryRuleSnapshotLoader(provenanceClient, exprClient, snapshotAssembler);
-    }
+  @Bean
+  @ConditionalOnMissingBean(RuleSnapshotLoader.class)
+  @ConditionalOnBean({ProvenanceClient.class, ExprClient.class, SnapshotAssembler.class})
+  @ConditionalOnProperty(
+      prefix = "patra.expr.compiler.registry-api",
+      name = "enabled",
+      havingValue = "true",
+      matchIfMissing = true)
+  public RuleSnapshotLoader registryRuleSnapshotLoader(
+      ProvenanceClient provenanceClient,
+      ExprClient exprClient,
+      SnapshotAssembler snapshotAssembler) {
+    return new RegistryRuleSnapshotLoader(provenanceClient, exprClient, snapshotAssembler);
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(CapabilityChecker.class)
-    public CapabilityChecker capabilityChecker() {
-        return new DefaultCapabilityChecker();
-    }
+  @Bean
+  @ConditionalOnMissingBean(CapabilityChecker.class)
+  public CapabilityChecker capabilityChecker() {
+    return new DefaultCapabilityChecker();
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(ExprNormalizer.class)
-    public ExprNormalizer exprNormalizer() {
-        return new DefaultExprNormalizer();
-    }
+  @Bean
+  @ConditionalOnMissingBean(ExprNormalizer.class)
+  public ExprNormalizer exprNormalizer() {
+    return new DefaultExprNormalizer();
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(ExprRenderer.class)
-    public ExprRenderer exprRenderer() {
-        return new DefaultExprRenderer();
-    }
+  @Bean
+  @ConditionalOnMissingBean(ExprRenderer.class)
+  public ExprRenderer exprRenderer() {
+    return new DefaultExprRenderer();
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(ExprCompiler.class)
-    @ConditionalOnBean({RuleSnapshotLoader.class, CapabilityChecker.class, ExprNormalizer.class, ExprRenderer.class})
-    @ConditionalOnProperty(prefix = "patra.expr.compiler", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public ExprCompiler exprCompiler(RuleSnapshotLoader loader,
-                                     CapabilityChecker checker,
-                                     ExprNormalizer normalizer,
-                                     ExprRenderer renderer) {
-        return new DefaultExprCompiler(loader, checker, normalizer, renderer);
-    }
+  @Bean
+  @ConditionalOnMissingBean(ExprCompiler.class)
+  @ConditionalOnBean({
+    RuleSnapshotLoader.class,
+    CapabilityChecker.class,
+    ExprNormalizer.class,
+    ExprRenderer.class
+  })
+  @ConditionalOnProperty(
+      prefix = "patra.expr.compiler",
+      name = "enabled",
+      havingValue = "true",
+      matchIfMissing = true)
+  public ExprCompiler exprCompiler(
+      RuleSnapshotLoader loader,
+      CapabilityChecker checker,
+      ExprNormalizer normalizer,
+      ExprRenderer renderer) {
+    return new DefaultExprCompiler(loader, checker, normalizer, renderer);
+  }
 }

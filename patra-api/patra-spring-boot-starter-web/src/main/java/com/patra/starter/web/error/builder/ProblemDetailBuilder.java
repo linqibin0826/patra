@@ -9,25 +9,25 @@ import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.web.error.config.WebErrorProperties;
 import com.patra.starter.web.error.spi.WebProblemFieldContributor;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-
 import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 
 /**
  * Builder for RFC 7807 {@link org.springframework.http.ProblemDetail} responses.
  *
- * <p>Features include:</p>
+ * <p>Features include:
+ *
  * <ul>
- *     <li>Masking of sensitive information before it leaves the service.</li>
- *     <li>Proxy-aware path extraction (Forwarded / X-Forwarded-* headers).</li>
- *     <li>Support for both core and Web-specific extension field contributors.</li>
+ *   <li>Masking of sensitive information before it leaves the service.
+ *   <li>Proxy-aware path extraction (Forwarded / X-Forwarded-* headers).
+ *   <li>Support for both core and Web-specific extension field contributors.
  * </ul>
  *
  * @author linqibin
@@ -36,190 +36,206 @@ import java.util.Map;
  */
 @Slf4j
 public class ProblemDetailBuilder {
-    
-    @SuppressWarnings("unused")
-    private final ErrorProperties errorProperties;
-    private final WebErrorProperties webProperties;
-    private final TraceProvider traceProvider;
-    private final List<ProblemFieldContributor> coreFieldContributors;
-    private final List<WebProblemFieldContributor> webFieldContributors;
-    
-    public ProblemDetailBuilder(
-            ErrorProperties errorProperties,
-            WebErrorProperties webProperties,
-            TraceProvider traceProvider,
-            List<ProblemFieldContributor> coreFieldContributors,
-            List<WebProblemFieldContributor> webFieldContributors) {
-        this.errorProperties = errorProperties;
-        this.webProperties = webProperties;
-        this.traceProvider = traceProvider;
-        this.coreFieldContributors = coreFieldContributors;
-        this.webFieldContributors = webFieldContributors;
-    }
-    
-    /**
-     * Build a {@link ProblemDetail} instance from the resolved error metadata and HTTP context.
-     *
-     * @param resolution error resolution containing code and status
-     * @param exception  exception being handled
-     * @param request    HTTP request associated with the failure
-     * @return fully populated {@link ProblemDetail}
-     */
-    public ProblemDetail build(ErrorResolution resolution, Throwable exception, HttpServletRequest request) {
-        log.debug("Building ProblemDetail: errorCode={}, httpStatus={}", 
-                resolution.errorCode().code(), resolution.httpStatus());
-        
-        // Convert int status to HttpStatus for ProblemDetail creation
-        HttpStatus httpStatus = convertToHttpStatus(resolution.httpStatus());
-        ProblemDetail problemDetail = ProblemDetail.forStatus(httpStatus);
-        
-        // Standard RFC 7807 fields
-        problemDetail.setType(buildTypeUri(resolution.errorCode()));
-        problemDetail.setTitle(resolution.errorCode().code());
-        problemDetail.setDetail(maskSensitiveData(exception.getMessage()));
-        
-        // Extension fields
-        problemDetail.setProperty(ErrorKeys.CODE, resolution.errorCode().code());
-        problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
-        problemDetail.setProperty(ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
 
-        // Reference the Web configuration to illustrate stack-trace behaviour (avoids unused warnings).
-        if (!webProperties.isIncludeStack()) {
-            // Stack traces are disabled; the detailStack property is intentionally omitted.
-        }
-        
-        // Add trace ID if available
-        traceProvider.getCurrentTraceId()
-            .ifPresent(traceId -> {
-                log.debug("Adding traceId to ProblemDetail: traceId={}", traceId);
-                problemDetail.setProperty(ErrorKeys.TRACE_ID, traceId);
+  @SuppressWarnings("unused")
+  private final ErrorProperties errorProperties;
+
+  private final WebErrorProperties webProperties;
+  private final TraceProvider traceProvider;
+  private final List<ProblemFieldContributor> coreFieldContributors;
+  private final List<WebProblemFieldContributor> webFieldContributors;
+
+  public ProblemDetailBuilder(
+      ErrorProperties errorProperties,
+      WebErrorProperties webProperties,
+      TraceProvider traceProvider,
+      List<ProblemFieldContributor> coreFieldContributors,
+      List<WebProblemFieldContributor> webFieldContributors) {
+    this.errorProperties = errorProperties;
+    this.webProperties = webProperties;
+    this.traceProvider = traceProvider;
+    this.coreFieldContributors = coreFieldContributors;
+    this.webFieldContributors = webFieldContributors;
+  }
+
+  /**
+   * Build a {@link ProblemDetail} instance from the resolved error metadata and HTTP context.
+   *
+   * @param resolution error resolution containing code and status
+   * @param exception exception being handled
+   * @param request HTTP request associated with the failure
+   * @return fully populated {@link ProblemDetail}
+   */
+  public ProblemDetail build(
+      ErrorResolution resolution, Throwable exception, HttpServletRequest request) {
+    log.debug(
+        "Building ProblemDetail: errorCode={}, httpStatus={}",
+        resolution.errorCode().code(),
+        resolution.httpStatus());
+
+    // Convert int status to HttpStatus for ProblemDetail creation
+    HttpStatus httpStatus = convertToHttpStatus(resolution.httpStatus());
+    ProblemDetail problemDetail = ProblemDetail.forStatus(httpStatus);
+
+    // Standard RFC 7807 fields
+    problemDetail.setType(buildTypeUri(resolution.errorCode()));
+    problemDetail.setTitle(resolution.errorCode().code());
+    problemDetail.setDetail(maskSensitiveData(exception.getMessage()));
+
+    // Extension fields
+    problemDetail.setProperty(ErrorKeys.CODE, resolution.errorCode().code());
+    problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
+    problemDetail.setProperty(
+        ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
+
+    // Reference the Web configuration to illustrate stack-trace behaviour (avoids unused warnings).
+    if (!webProperties.isIncludeStack()) {
+      // Stack traces are disabled; the detailStack property is intentionally omitted.
+    }
+
+    // Add trace ID if available
+    traceProvider
+        .getCurrentTraceId()
+        .ifPresent(
+            traceId -> {
+              log.debug("Adding traceId to ProblemDetail: traceId={}", traceId);
+              problemDetail.setProperty(ErrorKeys.TRACE_ID, traceId);
             });
-        
-        // Core field contributors (no request dependency)
-        Map<String, Object> coreFields = new HashMap<>();
-        coreFieldContributors.forEach(contributor -> {
-            try {
-                contributor.contribute(coreFields, exception);
-            } catch (Exception e) {
-                log.warn("Core field contributor failed: contributor={}, error={}", 
-                        contributor.getClass().getSimpleName(), e.getMessage());
-            }
+
+    // Core field contributors (no request dependency)
+    Map<String, Object> coreFields = new HashMap<>();
+    coreFieldContributors.forEach(
+        contributor -> {
+          try {
+            contributor.contribute(coreFields, exception);
+          } catch (Exception e) {
+            log.warn(
+                "Core field contributor failed: contributor={}, error={}",
+                contributor.getClass().getSimpleName(),
+                e.getMessage());
+          }
         });
-        coreFields.forEach(problemDetail::setProperty);
-        
-        // Web-specific field contributors (with request access)
-        Map<String, Object> webFields = new HashMap<>();
-        webFieldContributors.forEach(contributor -> {
-            try {
-                contributor.contribute(webFields, exception, request);
-            } catch (Exception e) {
-                log.warn("Web field contributor failed: contributor={}, error={}", 
-                        contributor.getClass().getSimpleName(), e.getMessage());
-            }
+    coreFields.forEach(problemDetail::setProperty);
+
+    // Web-specific field contributors (with request access)
+    Map<String, Object> webFields = new HashMap<>();
+    webFieldContributors.forEach(
+        contributor -> {
+          try {
+            contributor.contribute(webFields, exception, request);
+          } catch (Exception e) {
+            log.warn(
+                "Web field contributor failed: contributor={}, error={}",
+                contributor.getClass().getSimpleName(),
+                e.getMessage());
+          }
         });
-        webFields.forEach(problemDetail::setProperty);
-        
-        log.debug("ProblemDetail built successfully: type={}, code={}", 
-                problemDetail.getType(), resolution.errorCode().code());
-        
-        return problemDetail;
+    webFields.forEach(problemDetail::setProperty);
+
+    log.debug(
+        "ProblemDetail built successfully: type={}, code={}",
+        problemDetail.getType(),
+        resolution.errorCode().code());
+
+    return problemDetail;
+  }
+
+  /**
+   * Extract the request path in a proxy-aware fashion using the following precedence: {@code
+   * Forwarded} header, {@code X-Forwarded-*} headers, then {@code requestURI}.
+   *
+   * @param request HTTP request context
+   * @return resolved path value
+   */
+  private String extractPath(HttpServletRequest request) {
+    // Priority: Standard Forwarded header > X-Forwarded-* > requestURI
+    String forwarded = request.getHeader("Forwarded");
+    if (forwarded != null && !forwarded.isEmpty()) {
+      String path = parseForwardedPath(forwarded);
+      if (path != null) {
+        log.debug("Extracted path from Forwarded header: path={}", path);
+        return path;
+      }
     }
-    
-    /**
-     * Extract the request path in a proxy-aware fashion using the following precedence:
-     * {@code Forwarded} header, {@code X-Forwarded-*} headers, then {@code requestURI}.
-     *
-     * @param request HTTP request context
-     * @return resolved path value
-     */
-    private String extractPath(HttpServletRequest request) {
-        // Priority: Standard Forwarded header > X-Forwarded-* > requestURI
-        String forwarded = request.getHeader("Forwarded");
-        if (forwarded != null && !forwarded.isEmpty()) {
-            String path = parseForwardedPath(forwarded);
-            if (path != null) {
-                log.debug("Extracted path from Forwarded header: path={}", path);
-                return path;
-            }
-        }
-        
-        String forwardedPath = request.getHeader("X-Forwarded-Path");
-        if (forwardedPath != null && !forwardedPath.isEmpty()) {
-            log.debug("Extracted path from X-Forwarded-Path: path={}", forwardedPath);
-            return forwardedPath;
-        }
-        
-        String forwardedUri = request.getHeader("X-Forwarded-Uri");
-        if (forwardedUri != null && !forwardedUri.isEmpty()) {
-            log.debug("Extracted path from X-Forwarded-Uri: path={}", forwardedUri);
-            return forwardedUri;
-        }
-        
-        String requestUri = request.getRequestURI();
-        log.debug("Using request URI as path: path={}", requestUri);
-        return requestUri;
+
+    String forwardedPath = request.getHeader("X-Forwarded-Path");
+    if (forwardedPath != null && !forwardedPath.isEmpty()) {
+      log.debug("Extracted path from X-Forwarded-Path: path={}", forwardedPath);
+      return forwardedPath;
     }
-    
-    /**
-     * Parse the {@code path} attribute from an RFC 7239 {@code Forwarded} header value.
-     *
-     * @param forwarded header value
-     * @return extracted path or {@code null} when absent
-     */
-    private String parseForwardedPath(String forwarded) {
-        String[] parts = forwarded.split(";");
-        for (String part : parts) {
-            String trimmed = part.trim();
-            if (trimmed.startsWith("path=")) {
-                return trimmed.substring(5).replaceAll("^\"|\"$", "");
-            }
-        }
-        return null;
+
+    String forwardedUri = request.getHeader("X-Forwarded-Uri");
+    if (forwardedUri != null && !forwardedUri.isEmpty()) {
+      log.debug("Extracted path from X-Forwarded-Uri: path={}", forwardedUri);
+      return forwardedUri;
     }
-    
-    /**
-     * Convert the integer status code into {@link HttpStatus}, defaulting to {@code 500} when invalid.
-     *
-     * @param status resolved integer status
-     * @return matching {@link HttpStatus}
-     */
-    private HttpStatus convertToHttpStatus(int status) {
-        try {
-            return HttpStatus.valueOf(status);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid HTTP status code: {}, falling back to 500", status);
-            return HttpStatus.INTERNAL_SERVER_ERROR;
-        }
+
+    String requestUri = request.getRequestURI();
+    log.debug("Using request URI as path: path={}", requestUri);
+    return requestUri;
+  }
+
+  /**
+   * Parse the {@code path} attribute from an RFC 7239 {@code Forwarded} header value.
+   *
+   * @param forwarded header value
+   * @return extracted path or {@code null} when absent
+   */
+  private String parseForwardedPath(String forwarded) {
+    String[] parts = forwarded.split(";");
+    for (String part : parts) {
+      String trimmed = part.trim();
+      if (trimmed.startsWith("path=")) {
+        return trimmed.substring(5).replaceAll("^\"|\"$", "");
+      }
     }
-    
-    /**
-     * Apply lightweight masking to sensitive key-value pairs embedded in error messages.
-     *
-     * @param message original detail message
-     * @return masked message when sensitive tokens are present
-     */
-    private String maskSensitiveData(String message) {
-        if (message == null) {
-            return null;
-        }
-        
-        // Mask common sensitive patterns
-        return message
-            .replaceAll("(?i)(password|token|secret|key)=[^\\s,}]+", "$1=***")
-            .replaceAll("(?i)(password|token|secret|key)\":\\s*\"[^\"]+\"", "$1\":\"***\"");
+    return null;
+  }
+
+  /**
+   * Convert the integer status code into {@link HttpStatus}, defaulting to {@code 500} when
+   * invalid.
+   *
+   * @param status resolved integer status
+   * @return matching {@link HttpStatus}
+   */
+  private HttpStatus convertToHttpStatus(int status) {
+    try {
+      return HttpStatus.valueOf(status);
+    } catch (IllegalArgumentException e) {
+      log.warn("Invalid HTTP status code: {}, falling back to 500", status);
+      return HttpStatus.INTERNAL_SERVER_ERROR;
     }
-    
-    /**
-     * Construct the {@code ProblemDetail#type} URI from the logical error code.
-     *
-     * @param errorCode platform error code abstraction
-     * @return fully-qualified type URI
-     */
-    private URI buildTypeUri(ErrorCodeLike errorCode) {
-        String baseUrl = webProperties.getTypeBaseUrl();
-        if (!baseUrl.endsWith("/")) {
-            baseUrl += "/";
-        }
-        return URI.create(baseUrl + errorCode.code().toLowerCase());
+  }
+
+  /**
+   * Apply lightweight masking to sensitive key-value pairs embedded in error messages.
+   *
+   * @param message original detail message
+   * @return masked message when sensitive tokens are present
+   */
+  private String maskSensitiveData(String message) {
+    if (message == null) {
+      return null;
     }
+
+    // Mask common sensitive patterns
+    return message
+        .replaceAll("(?i)(password|token|secret|key)=[^\\s,}]+", "$1=***")
+        .replaceAll("(?i)(password|token|secret|key)\":\\s*\"[^\"]+\"", "$1\":\"***\"");
+  }
+
+  /**
+   * Construct the {@code ProblemDetail#type} URI from the logical error code.
+   *
+   * @param errorCode platform error code abstraction
+   * @return fully-qualified type URI
+   */
+  private URI buildTypeUri(ErrorCodeLike errorCode) {
+    String baseUrl = webProperties.getTypeBaseUrl();
+    if (!baseUrl.endsWith("/")) {
+      baseUrl += "/";
+    }
+    return URI.create(baseUrl + errorCode.code().toLowerCase());
+  }
 }

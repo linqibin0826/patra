@@ -1,5 +1,6 @@
 package com.patra.registry.infra.persistence.converter;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.registry.domain.model.vo.provenance.BatchingConfig;
 import com.patra.registry.domain.model.vo.provenance.HttpConfig;
 import com.patra.registry.domain.model.vo.provenance.PaginationConfig;
@@ -15,15 +16,12 @@ import com.patra.registry.infra.persistence.entity.provenance.RegProvRetryCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvWindowOffsetCfgDO;
 import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import org.mapstruct.Mapper;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
-import java.util.List;
-
 /**
- * MapStruct converter turning provenance-related persistence entities into domain view models.
- * Used exclusively on the query side to assemble provenance configuration snapshots.
+ * MapStruct converter turning provenance-related persistence entities into domain view models. Used
+ * exclusively on the query side to assemble provenance configuration snapshots.
  *
  * @author linqibin
  * @since 0.1.0
@@ -31,30 +29,34 @@ import java.util.List;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProvenanceEntityConverter {
 
-    @Mapping(target = "code", source = "provenanceCode")
-    @Mapping(target = "name", source = "provenanceName")
-    @Mapping(target = "active", expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
-    Provenance toDomain(RegProvenanceDO entity);
+  @Mapping(target = "code", source = "provenanceCode")
+  @Mapping(target = "name", source = "provenanceName")
+  @Mapping(target = "active", expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
+  Provenance toDomain(RegProvenanceDO entity);
 
-    WindowOffsetConfig toDomain(RegProvWindowOffsetCfgDO entity);
+  WindowOffsetConfig toDomain(RegProvWindowOffsetCfgDO entity);
 
-    PaginationConfig toDomain(RegProvPaginationCfgDO entity);
+  PaginationConfig toDomain(RegProvPaginationCfgDO entity);
 
-    @Mapping(target = "tlsVerifyEnabled", expression = "java(Boolean.TRUE.equals(entity.getTlsVerifyEnabled()))")
-    HttpConfig toDomain(RegProvHttpCfgDO entity);
+  @Mapping(
+      target = "tlsVerifyEnabled",
+      expression = "java(Boolean.TRUE.equals(entity.getTlsVerifyEnabled()))")
+  HttpConfig toDomain(RegProvHttpCfgDO entity);
 
-    BatchingConfig toDomain(RegProvBatchingCfgDO entity);
+  BatchingConfig toDomain(RegProvBatchingCfgDO entity);
 
-    @Mapping(target = "retryOnNetworkError", expression = "java(Boolean.TRUE.equals(entity.getRetryOnNetworkError()))")
-    RetryConfig toDomain(RegProvRetryCfgDO entity);
+  @Mapping(
+      target = "retryOnNetworkError",
+      expression = "java(Boolean.TRUE.equals(entity.getRetryOnNetworkError()))")
+  RetryConfig toDomain(RegProvRetryCfgDO entity);
 
-    RateLimitConfig toDomain(RegProvRateLimitCfgDO entity);
+  RateLimitConfig toDomain(RegProvRateLimitCfgDO entity);
 
-
-    /**
-     * MapStruct helper: serialize JsonNode to compact JSON string for domain VOs that keep JSON as String.
-     */
-    default String map(JsonNode node) {
-        return node == null ? null : node.toString();
-    }
+  /**
+   * MapStruct helper: serialize JsonNode to compact JSON string for domain VOs that keep JSON as
+   * String.
+   */
+  default String map(JsonNode node) {
+    return node == null ? null : node.toString();
+  }
 }

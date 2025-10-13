@@ -8,9 +8,9 @@ package com.patra.starter.web.req;
  */
 public interface Pageable {
 
-    /** Page index (1-based). */
-    Integer getPageNo();
+  /** Page index (1-based). */
+  Integer getPageNo();
 
-    /** Page size requested by the client. */
-    Integer getPageSize();
+  /** Page size requested by the client. */
+  Integer getPageSize();
 }

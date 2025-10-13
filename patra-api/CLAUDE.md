@@ -21,7 +21,7 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 
 **✅ Do**
 - **Read module README.md FIRST** before reading or modifying any module's code
-- Adhere to **dependency directions** and **layer boundaries** 
+- Adhere to **dependency directions** and **layer boundaries**
 - **Ask before acting** when information is insufficient
 - Reuse `patra-*` starters, `patra-common`, Hutool
 - Output **small diffs**; document key decisions

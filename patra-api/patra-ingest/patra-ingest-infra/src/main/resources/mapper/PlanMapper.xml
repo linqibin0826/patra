@@ -13,21 +13,21 @@
   </select>
 
   <select id="findByScheduleInstanceId" resultMap="PlanResultMap">
-    SELECT * FROM ing_plan 
-    WHERE schedule_instance_id = #{scheduleInstanceId} 
-      AND deleted = 0 
+    SELECT * FROM ing_plan
+    WHERE schedule_instance_id = #{scheduleInstanceId}
+      AND deleted = 0
     ORDER BY created_at
   </select>
 
   <select id="findActiveByProvenanceAndOperation" resultMap="PlanResultMap">
-    SELECT * FROM ing_plan 
-    WHERE provenance_code = #{provenanceCode} 
-      AND operation_code = #{operationCode} 
-      AND status_code IN 
+    SELECT * FROM ing_plan
+    WHERE provenance_code = #{provenanceCode}
+      AND operation_code = #{operationCode}
+      AND status_code IN
       <foreach collection="statusCodes" item="status" open="(" separator="," close=")">
         #{status}
       </foreach>
-      AND deleted = 0 
+      AND deleted = 0
     ORDER BY created_at DESC
   </select>
 
@@ -36,20 +36,20 @@
   </select>
 
   <select id="countByProvenanceAndOperationAndStatus" resultType="long">
-    SELECT COUNT(1) FROM ing_plan 
-    WHERE provenance_code = #{provenanceCode} 
-      AND operation_code = #{operationCode} 
-      AND status_code = #{statusCode} 
+    SELECT COUNT(1) FROM ing_plan
+    WHERE provenance_code = #{provenanceCode}
+      AND operation_code = #{operationCode}
+      AND status_code = #{statusCode}
       AND deleted = 0
   </select>
 
   <update id="batchUpdateStatus">
-    UPDATE ing_plan 
-    SET status_code = #{statusCode}, 
+    UPDATE ing_plan
+    SET status_code = #{statusCode},
         record_remarks = JSON_SET(COALESCE(record_remarks, '{}'), '$.batchUpdateReason', #{remarks}),
         updated_at = NOW(),
         version = version + 1
-    WHERE id IN 
+    WHERE id IN
     <foreach collection="planIds" item="planId" open="(" separator="," close=")">
       #{planId}
     </foreach>
@@ -57,8 +57,8 @@
   </update>
 
   <update id="softDeleteById">
-    UPDATE ing_plan 
-    SET deleted = 1, 
+    UPDATE ing_plan
+    SET deleted = 1,
         updated_at = NOW(),
         version = version + 1
     WHERE id = #{planId}

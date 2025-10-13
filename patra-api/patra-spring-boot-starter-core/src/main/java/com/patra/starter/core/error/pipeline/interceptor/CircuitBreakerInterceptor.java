@@ -20,32 +20,47 @@ import org.springframework.core.annotation.Order;
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 public class CircuitBreakerInterceptor implements ResolutionInterceptor {
 
-    private final CircuitBreaker circuitBreaker;
-    private final ErrorObservationRecorder observationRecorder;
-    private final String contextPrefix;
+  private final CircuitBreaker circuitBreaker;
+  private final ErrorObservationRecorder observationRecorder;
+  private final String contextPrefix;
 
-    public CircuitBreakerInterceptor(CircuitBreaker circuitBreaker,
-                                     ErrorObservationRecorder observationRecorder,
-                                     ErrorProperties errorProperties) {
-        this.circuitBreaker = circuitBreaker;
-        this.observationRecorder = observationRecorder;
-        String prefix = errorProperties.getContextPrefix();
-        this.contextPrefix = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;
-    }
+  public CircuitBreakerInterceptor(
+      CircuitBreaker circuitBreaker,
+      ErrorObservationRecorder observationRecorder,
+      ErrorProperties errorProperties) {
+    this.circuitBreaker = circuitBreaker;
+    this.observationRecorder = observationRecorder;
+    String prefix = errorProperties.getContextPrefix();
+    this.contextPrefix = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;
+  }
 
-    @Override
-    public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
-        try {
-            return circuitBreaker.executeSupplier(() -> invocation.proceed(exception));
-        } catch (CallNotPermittedException ex) {
-            observationRecorder.recordCircuitBreakerFallback(exception);
-            log.warn("Circuit breaker opened during error resolution; using fallback error code. reason={}",
-                    ex.getMessage());
-            return new ErrorResolution(new ErrorCodeLike() {
-                @Override public String code() { return contextPrefix + "-0503"; }
-                @Override public int httpStatus() { return 503; }
-                @Override public String toString() { return code(); }
-            }, 503);
-        }
+  @Override
+  public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
+    try {
+      return circuitBreaker.executeSupplier(() -> invocation.proceed(exception));
+    } catch (CallNotPermittedException ex) {
+      observationRecorder.recordCircuitBreakerFallback(exception);
+      log.warn(
+          "Circuit breaker opened during error resolution; using fallback error code. reason={}",
+          ex.getMessage());
+      return new ErrorResolution(
+          new ErrorCodeLike() {
+            @Override
+            public String code() {
+              return contextPrefix + "-0503";
+            }
+
+            @Override
+            public int httpStatus() {
+              return 503;
+            }
+
+            @Override
+            public String toString() {
+              return code();
+            }
+          },
+          503);
     }
+  }
 }

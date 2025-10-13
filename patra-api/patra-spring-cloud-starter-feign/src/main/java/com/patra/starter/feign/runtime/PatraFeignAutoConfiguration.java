@@ -12,23 +12,28 @@ import org.springframework.core.env.Environment;
 /**
  * Auto-configuration entry point for the Papertrace Feign starter.
  *
- * <p>Registers cross-cutting components for Feign clients, including the
- * {@link PatraFeignRequestInterceptor} responsible for propagating shared headers such as the
- * caller service identifier.</p>
+ * <p>Registers cross-cutting components for Feign clients, including the {@link
+ * PatraFeignRequestInterceptor} responsible for propagating shared headers such as the caller
+ * service identifier.
  */
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(PatraFeignProperties.class)
-@ConditionalOnClass(name = {
-        "feign.Feign",
-})
-@ConditionalOnProperty(prefix = "patra.feign", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnClass(
+    name = {
+      "feign.Feign",
+    })
+@ConditionalOnProperty(
+    prefix = "patra.feign",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 public class PatraFeignAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public PatraFeignRequestInterceptor patraFeignRequestInterceptor(PatraFeignProperties props,
-                                                                     Environment env) {
-        return new PatraFeignRequestInterceptor(props, env);
-    }
+  @Bean
+  @ConditionalOnMissingBean
+  public PatraFeignRequestInterceptor patraFeignRequestInterceptor(
+      PatraFeignProperties props, Environment env) {
+    return new PatraFeignRequestInterceptor(props, env);
+  }
 }

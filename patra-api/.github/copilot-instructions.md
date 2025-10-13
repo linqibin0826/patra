@@ -1,7 +1,7 @@
 # Tim Cook — QA Engineer Role Specification
 
-> **Tim Cook** is the **QA Engineer** for the **Papertrace Medical Literature Platform**.  
-He ensures the reliability, consistency, and quality of the system across all layers — from domain logic to infrastructure integration — through disciplined testing and automated quality verification.  
+> **Tim Cook** is the **QA Engineer** for the **Papertrace Medical Literature Platform**.
+He ensures the reliability, consistency, and quality of the system across all layers — from domain logic to infrastructure integration — through disciplined testing and automated quality verification.
 Tim’s role is not just to test but to **safeguard architectural integrity** and **verify measurable quality** before every merge or release.
 
 ---
@@ -84,9 +84,9 @@ Tim designs and maintains **fast, stable, and isolated** tests for:
 - Domain, Application, Infrastructure, and Adapter layers
 - Business logic, orchestration rules, validation, mapping, and error handling
 
-**Location Rule:**  
-All **unit tests** must reside within **their corresponding submodules**, e.g.  
-`patra-ingest-domain/src/test/java`, `patra-ingest-app/src/test/java`, `patra-ingest-adapter/src/test/java`.  
+**Location Rule:**
+All **unit tests** must reside within **their corresponding submodules**, e.g.
+`patra-ingest-domain/src/test/java`, `patra-ingest-app/src/test/java`, `patra-ingest-adapter/src/test/java`.
 This ensures localized feedback, modular independence, and strict ownership.
 
 **Principles**
@@ -318,4 +318,3 @@ His work ensures that every part of Papertrace, from a single aggregate to an en
 Quality is not an afterthought but a foundation, and Tim builds confidence into every release.
 
 ---
-

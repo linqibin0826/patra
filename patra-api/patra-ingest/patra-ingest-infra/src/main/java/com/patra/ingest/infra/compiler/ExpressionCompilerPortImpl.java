@@ -13,31 +13,30 @@ import com.patra.starter.expr.compiler.model.CompileRequest;
 import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
 import com.patra.starter.expr.compiler.model.CompileResult;
 import com.patra.starter.expr.compiler.model.ValidationReport;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.stream.Collectors;
-
 /**
  * Expression compiler port implementation.
- * <p>
- * Responsibilities:
+ *
+ * <p>Responsibilities:
+ *
  * <ul>
- *   <li>Convert domain ExprCompilationRequest to starter CompileRequest</li>
- *   <li>Deserialize JSON expression snapshot to Expr object</li>
- *   <li>Invoke ExprCompiler from patra-spring-boot-starter-expr</li>
- *   <li>Convert CompileResult back to domain ExprCompilationResult</li>
+ *   <li>Convert domain ExprCompilationRequest to starter CompileRequest
+ *   <li>Deserialize JSON expression snapshot to Expr object
+ *   <li>Invoke ExprCompiler from patra-spring-boot-starter-expr
+ *   <li>Convert CompileResult back to domain ExprCompilationResult
  * </ul>
- * </p>
- * <p>
- * Design principles:
+ *
+ * <p>Design principles:
+ *
  * <ul>
- *   <li>Isolate JSON-to-Expr conversion in infrastructure layer</li>
- *   <li>Keep domain layer independent of expression implementation details</li>
- *   <li>Use ExprJsonCodec from patra-expr-kernel for stable serialization</li>
+ *   <li>Isolate JSON-to-Expr conversion in infrastructure layer
+ *   <li>Keep domain layer independent of expression implementation details
+ *   <li>Use ExprJsonCodec from patra-expr-kernel for stable serialization
  * </ul>
- * </p>
  *
  * @author linqibin
  * @since 0.1.0
@@ -47,76 +46,79 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
 
-    private final ExprCompiler exprCompiler;
-    private final ObjectMapper objectMapper;
+  private final ExprCompiler exprCompiler;
+  private final ObjectMapper objectMapper;
 
-    /**
-     * Compile expression from domain request.
-     *
-     * @param request domain compilation request
-     * @return domain compilation result
-     */
-    @Override
-    public ExprCompilationResult compile(ExprCompilationRequest request) {
-        try {
-            // 1. Parse JSON expression to Expr object using ExprJsonCodec
-            Expr expression = ExprJsonCodec.fromJson(request.rawExpression());
+  /**
+   * Compile expression from domain request.
+   *
+   * @param request domain compilation request
+   * @return domain compilation result
+   */
+  @Override
+  public ExprCompilationResult compile(ExprCompilationRequest request) {
+    try {
+      // 1. Parse JSON expression to Expr object using ExprJsonCodec
+      Expr expression = ExprJsonCodec.fromJson(request.rawExpression());
 
-            // 2. Convert provenanceCode string to enum
-            ProvenanceCode provenanceCode = ProvenanceCode.valueOf(request.provenanceCode());
+      // 2. Convert provenanceCode string to enum
+      ProvenanceCode provenanceCode = ProvenanceCode.valueOf(request.provenanceCode());
 
-            // 3. Build CompileRequest using builder
-            // Pass endpointName directly; CompileRequest normalizes null/blank to "SEARCH"
-            CompileRequest compileRequest = CompileRequestBuilder.of(expression, provenanceCode)
-                .forOperation(request.endpointName())
-                .build();
+      // 3. Build CompileRequest using builder
+      // Pass endpointName directly; CompileRequest normalizes null/blank to "SEARCH"
+      CompileRequest compileRequest =
+          CompileRequestBuilder.of(expression, provenanceCode)
+              .forOperation(request.endpointName())
+              .build();
 
-            // 4. Invoke ExprCompiler
-            CompileResult compileResult = exprCompiler.compile(compileRequest);
+      // 4. Invoke ExprCompiler
+      CompileResult compileResult = exprCompiler.compile(compileRequest);
 
-            // 5. Convert CompileResult to ExprCompilationResult
-            return convertToExprCompilationResult(compileResult);
+      // 5. Convert CompileResult to ExprCompilationResult
+      return convertToExprCompilationResult(compileResult);
 
-        } catch (Exception e) {
-            log.error("[INGEST][INFRA] expression compilation failed: {}", e.getMessage(), e);
-            return ExprCompilationResult.failure("Expression compilation failed: " + e.getMessage());
-        }
+    } catch (Exception e) {
+      log.error("[INGEST][INFRA] expression compilation failed: {}", e.getMessage(), e);
+      return ExprCompilationResult.failure("Expression compilation failed: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Convert CompileResult to ExprCompilationResult.
+   *
+   * @param result compile result from starter
+   * @return domain compilation result
+   */
+  private ExprCompilationResult convertToExprCompilationResult(CompileResult result) {
+    ValidationReport report = result.report();
+
+    // Extract error and warning messages
+    String errors =
+        report.errors().isEmpty()
+            ? null
+            : report.errors().stream()
+                .map(issue -> issue.code() + ": " + issue.message())
+                .collect(Collectors.joining("; "));
+
+    String warnings =
+        report.warnings().isEmpty()
+            ? null
+            : report.warnings().stream()
+                .map(issue -> issue.code() + ": " + issue.message())
+                .collect(Collectors.joining("; "));
+
+    // If compilation failed, return failure result
+    if (!report.ok()) {
+      return ExprCompilationResult.failure(errors);
     }
 
-    /**
-     * Convert CompileResult to ExprCompilationResult.
-     *
-     * @param result compile result from starter
-     * @return domain compilation result
-     */
-    private ExprCompilationResult convertToExprCompilationResult(CompileResult result) {
-        ValidationReport report = result.report();
+    // Convert Map<String, String> params to JsonNode
+    JsonNode paramsJson = objectMapper.valueToTree(result.params());
 
-        // Extract error and warning messages
-        String errors = report.errors().isEmpty() ? null : report.errors().stream()
-            .map(issue -> issue.code() + ": " + issue.message())
-            .collect(Collectors.joining("; "));
+    // Convert Expr normalized to JSON string
+    String normalizedExpression = ExprJsonCodec.toJson(result.normalized());
 
-        String warnings = report.warnings().isEmpty() ? null : report.warnings().stream()
-            .map(issue -> issue.code() + ": " + issue.message())
-            .collect(Collectors.joining("; "));
-
-        // If compilation failed, return failure result
-        if (!report.ok()) {
-            return ExprCompilationResult.failure(errors);
-        }
-
-        // Convert Map<String, String> params to JsonNode
-        JsonNode paramsJson = objectMapper.valueToTree(result.params());
-
-        // Convert Expr normalized to JSON string
-        String normalizedExpression = ExprJsonCodec.toJson(result.normalized());
-
-        return ExprCompilationResult.success(
-            result.query(),
-            paramsJson,
-            normalizedExpression,
-            warnings
-        );
-    }
+    return ExprCompilationResult.success(
+        result.query(), paramsJson, normalizedExpression, warnings);
+  }
 }

@@ -1,14 +1,12 @@
 package com.patra.ingest.domain.policy;
 
-/**
- * Classifies relay failures into retryable or fatal categories.
- */
+/** Classifies relay failures into retryable or fatal categories. */
 public interface RelayErrorClassifier {
 
-    RelayErrorKind classify(Throwable cause);
+  RelayErrorKind classify(Throwable cause);
 
-    enum RelayErrorKind {
-        TRANSIENT,
-        FATAL
-    }
+  enum RelayErrorKind {
+    TRANSIENT,
+    FATAL
+  }
 }

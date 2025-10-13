@@ -1,6 +1,5 @@
 package com.patra.ingest.app.config;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -12,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class IngestAppConfig {
 
-    // Component scanning registers @Component/@Service implementations; no explicit bean definitions required here.
+  // Component scanning registers @Component/@Service implementations; no explicit bean definitions
+  // required here.
 
 }

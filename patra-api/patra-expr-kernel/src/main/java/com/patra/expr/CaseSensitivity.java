@@ -1,17 +1,15 @@
 package com.patra.expr;
 
-/**
- * Represents whether a text-based comparison is case-sensitive.
- */
+/** Represents whether a text-based comparison is case-sensitive. */
 public enum CaseSensitivity {
-    INSENSITIVE,
-    SENSITIVE;
+  INSENSITIVE,
+  SENSITIVE;
 
-    public static CaseSensitivity of(boolean caseSensitive) {
-        return caseSensitive ? SENSITIVE : INSENSITIVE;
-    }
+  public static CaseSensitivity of(boolean caseSensitive) {
+    return caseSensitive ? SENSITIVE : INSENSITIVE;
+  }
 
-    public boolean isSensitive() {
-        return this == SENSITIVE;
-    }
+  public boolean isSensitive() {
+    return this == SENSITIVE;
+  }
 }

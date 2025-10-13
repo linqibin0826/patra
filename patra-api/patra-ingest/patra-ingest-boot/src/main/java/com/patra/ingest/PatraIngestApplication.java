@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * Spring Boot entry point for the Patra ingest service.
  *
  * <p>Enables Feign clients under {@code com.patra.registry.api.rpc.client} so the service can query
- * provenance metadata from the registry.</p>
+ * provenance metadata from the registry.
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,7 +17,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 public class PatraIngestApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(PatraIngestApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(PatraIngestApplication.class, args);
+  }
 }

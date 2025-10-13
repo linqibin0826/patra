@@ -9,7 +9,7 @@ repos:
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
-      - id: mixed-line-endings
+      - id: mixed-line-ending
       - id: detect-private-key
       - id: check-added-large-files
         args: ["--maxkb=2000"]
@@ -23,7 +23,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-        args: ["-S", "target,*.min.js,*generated*,*.lock", "-L", "nd,te,crate,clas"]
+        args: ["-S", "target,*.min.js,*generated*,*.lock", "-L", "nd,te,crate,clas,AfterAll,renderIn"]
 
   # 4) Secret scanning (no baseline required)
   - repo: https://github.com/gitleaks/gitleaks
@@ -49,4 +49,4 @@ repos:
         entry: scripts/git/mvn_test_changed_modules.sh
         language: system
         pass_filenames: false
-        stages: [push]
+        stages: [pre-push]

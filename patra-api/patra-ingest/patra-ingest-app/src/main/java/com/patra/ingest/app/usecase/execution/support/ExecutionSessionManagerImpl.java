@@ -4,37 +4,35 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-
 /**
  * Execution session manager implementation.
- * <p>
- * Responsibility: create TaskRun, start heartbeat renewal, and encapsulate session cleanup logic.
- * </p>
- * <p>
- * Design notes:
+ *
+ * <p>Responsibility: create TaskRun, start heartbeat renewal, and encapsulate session cleanup
+ * logic.
+ *
+ * <p>Design notes:
+ *
  * <ul>
- *   <li>Fetch latest attemptNo, then create new TaskRun (attemptNo + 1).</li>
- *   <li>Persist TaskRun to obtain runId.</li>
- *   <li>Start heartbeat renewal via HeartbeatRenewalService.</li>
- *   <li>Return ExecutionSession with taskId/runId/leaseOwner/heartbeatHandle.</li>
+ *   <li>Fetch latest attemptNo, then create new TaskRun (attemptNo + 1).
+ *   <li>Persist TaskRun to obtain runId.
+ *   <li>Start heartbeat renewal via HeartbeatRenewalService.
+ *   <li>Return ExecutionSession with taskId/runId/leaseOwner/heartbeatHandle.
  * </ul>
- * </p>
- * <p>
- * Config:
+ *
+ * <p>Config:
+ *
  * <ul>
- *   <li>lease.duration: lease duration seconds (default 60).</li>
- *   <li>lease.renewal-interval: renewal interval seconds (default 20).</li>
+ *   <li>lease.duration: lease duration seconds (default 60).
+ *   <li>lease.renewal-interval: renewal interval seconds (default 20).
  * </ul>
- * </p>
- * <p>
- * Logging: INFO for session creation (taskId/runId/attemptNo).
- * </p>
+ *
+ * <p>Logging: INFO for session creation (taskId/runId/attemptNo).
  *
  * @author linqibin
  * @since 0.1.0
@@ -44,80 +42,74 @@ import java.time.Duration;
 @Slf4j
 public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
 
-    private final TaskRepository taskRepository;
-    private final TaskRunRepository taskRunRepository;
-    private final HeartbeatRenewalService heartbeatRenewalService;
+  private final TaskRepository taskRepository;
+  private final TaskRunRepository taskRunRepository;
+  private final HeartbeatRenewalService heartbeatRenewalService;
 
-    @Value("${task.execution.lease.duration:60}")
-    private int leaseDurationSeconds;
+  @Value("${task.execution.lease.duration:60}")
+  private int leaseDurationSeconds;
 
-    @Value("${task.execution.lease.renewal-interval:20}")
-    private int renewalIntervalSeconds;
+  @Value("${task.execution.lease.renewal-interval:20}")
+  private int renewalIntervalSeconds;
 
-    /**
-     * Creates an execution session (TaskRun + heartbeat).
-     * TODO Two parameters are currently unused; consider removing if not needed.
-     */
-    @Override
-    public ExecutionSession createSession(Long taskId,
-                                          String leaseOwner,
-                                          String schedulerRunId,
-                                          String correlationId) {
-        // Query task and delegate to overloaded method
-        TaskAggregate task = taskRepository.findById(taskId)
+  /**
+   * Creates an execution session (TaskRun + heartbeat). TODO Two parameters are currently unused;
+   * consider removing if not needed.
+   */
+  @Override
+  public ExecutionSession createSession(
+      Long taskId, String leaseOwner, String schedulerRunId, String correlationId) {
+    // Query task and delegate to overloaded method
+    TaskAggregate task =
+        taskRepository
+            .findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
 
-        return createSession(task, leaseOwner, schedulerRunId, correlationId);
-    }
+    return createSession(task, leaseOwner, schedulerRunId, correlationId);
+  }
 
-    /**
-     * Creates an execution session (TaskRun + heartbeat), optimized to avoid reloading Task.
-     * TODO Two parameters are currently unused; consider removing if not needed.
-     */
-    @Override
-    public ExecutionSession createSession(TaskAggregate task,
-                                          String leaseOwner,
-                                          String schedulerRunId,
-                                          String correlationId) {
-        Long taskId = task.getId();
+  /**
+   * Creates an execution session (TaskRun + heartbeat), optimized to avoid reloading Task. TODO Two
+   * parameters are currently unused; consider removing if not needed.
+   */
+  @Override
+  public ExecutionSession createSession(
+      TaskAggregate task, String leaseOwner, String schedulerRunId, String correlationId) {
+    Long taskId = task.getId();
 
-        // 1) Get latest attemptNo and compute next
-        int latestAttemptNo = taskRunRepository.getLatestAttemptNo(taskId);
-        int newAttemptNo = latestAttemptNo + 1;
+    // 1) Get latest attemptNo and compute next
+    int latestAttemptNo = taskRunRepository.getLatestAttemptNo(taskId);
+    int newAttemptNo = latestAttemptNo + 1;
 
-        // 2) Create TaskRun entity
-        TaskRun taskRun = new TaskRun(
-            null,  // id null; generated by DB on insert
+    // 2) Create TaskRun entity
+    TaskRun taskRun =
+        new TaskRun(
+            null, // id null; generated by DB on insert
             taskId,
             newAttemptNo,
             task.getProvenanceCode(),
-            task.getOperationCode()
+            task.getOperationCode());
+
+    // 3) Persist TaskRun and get generated runId
+    TaskRun savedRun = taskRunRepository.save(taskRun);
+    Long runId = savedRun.getId();
+
+    log.info(
+        "[INGEST][APP] execution session created taskId={} runId={} attemptNo={} owner={}",
+        taskId,
+        runId,
+        newAttemptNo,
+        leaseOwner);
+
+    // 4) Start heartbeat renewal
+    Duration leaseDuration = Duration.ofSeconds(leaseDurationSeconds);
+    Duration renewalInterval = Duration.ofSeconds(renewalIntervalSeconds);
+    ExecutionSession.HeartbeatHandle heartbeatHandle =
+        heartbeatRenewalService.startHeartbeat(taskId, leaseOwner, leaseDuration, renewalInterval);
+
+    // 5) Return execution session
+    return new ExecutionSession(
+        taskId, runId, leaseOwner, heartbeatHandle, false // 初始状态：租约未撤销
         );
-
-        // 3) Persist TaskRun and get generated runId
-        TaskRun savedRun = taskRunRepository.save(taskRun);
-        Long runId = savedRun.getId();
-
-        log.info("[INGEST][APP] execution session created taskId={} runId={} attemptNo={} owner={}",
-                 taskId, runId, newAttemptNo, leaseOwner);
-
-        // 4) Start heartbeat renewal
-        Duration leaseDuration = Duration.ofSeconds(leaseDurationSeconds);
-        Duration renewalInterval = Duration.ofSeconds(renewalIntervalSeconds);
-        ExecutionSession.HeartbeatHandle heartbeatHandle = heartbeatRenewalService.startHeartbeat(
-            taskId,
-            leaseOwner,
-            leaseDuration,
-            renewalInterval
-        );
-
-        // 5) Return execution session
-        return new ExecutionSession(
-            taskId,
-            runId,
-            leaseOwner,
-            heartbeatHandle,
-            false  // 初始状态：租约未撤销
-        );
-    }
+  }
 }

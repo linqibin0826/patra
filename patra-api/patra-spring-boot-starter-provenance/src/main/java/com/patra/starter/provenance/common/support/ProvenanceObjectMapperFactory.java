@@ -12,20 +12,19 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
  */
 public final class ProvenanceObjectMapperFactory {
 
-    private ProvenanceObjectMapperFactory() {
-    }
+  private ProvenanceObjectMapperFactory() {}
 
-    /**
-     * Build an {@link ObjectMapper} that tolerates lenient upstream payloads.
-     *
-     * @return shared mapper instance with relaxed deserialization settings
-     */
-    public static ObjectMapper createJsonMapper() {
-        return JsonMapper.builder()
-            .findAndAddModules()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
-            .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-            .build();
-    }
+  /**
+   * Build an {@link ObjectMapper} that tolerates lenient upstream payloads.
+   *
+   * @return shared mapper instance with relaxed deserialization settings
+   */
+  public static ObjectMapper createJsonMapper() {
+    return JsonMapper.builder()
+        .findAndAddModules()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
+        .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+        .build();
+  }
 }

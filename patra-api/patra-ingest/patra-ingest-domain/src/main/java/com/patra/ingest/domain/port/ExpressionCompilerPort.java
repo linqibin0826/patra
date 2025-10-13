@@ -11,21 +11,21 @@ import com.patra.ingest.domain.model.vo.ExprCompilationResult;
  */
 public interface ExpressionCompilerPort {
 
-    /**
-     * Compile expression.
-     * <p>
-     * Implementation delegates to patra-spring-boot-starter-expr module's ExprCompiler.
-     * The infra layer implementation (ExpressionCompilerPortImpl) handles:
-     * <ul>
-     *   <li>Converting JSON expression snapshot to Expr object using ExprJsonCodec</li>
-     *   <li>Building CompileRequest with appropriate options</li>
-     *   <li>Invoking ExprCompiler.compile()</li>
-     *   <li>Converting CompileResult back to domain ExprCompilationResult</li>
-     * </ul>
-     * </p>
-     *
-     * @param request compilation request
-     * @return compilation result (with success/failure flag, query, params, error messages, etc.)
-     */
-    ExprCompilationResult compile(ExprCompilationRequest request);
+  /**
+   * Compile expression.
+   *
+   * <p>Implementation delegates to patra-spring-boot-starter-expr module's ExprCompiler. The infra
+   * layer implementation (ExpressionCompilerPortImpl) handles:
+   *
+   * <ul>
+   *   <li>Converting JSON expression snapshot to Expr object using ExprJsonCodec
+   *   <li>Building CompileRequest with appropriate options
+   *   <li>Invoking ExprCompiler.compile()
+   *   <li>Converting CompileResult back to domain ExprCompilationResult
+   * </ul>
+   *
+   * @param request compilation request
+   * @return compilation result (with success/failure flag, query, params, error messages, etc.)
+   */
+  ExprCompilationResult compile(ExprCompilationRequest request);
 }

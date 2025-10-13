@@ -25,49 +25,50 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(FeignErrorProperties.class)
-@ConditionalOnClass(name = {
-        "feign.Feign",
-        "feign.codec.ErrorDecoder",
-        "org.springframework.http.ProblemDetail"
-})
+@ConditionalOnClass(
+    name = {"feign.Feign", "feign.codec.ErrorDecoder", "org.springframework.http.ProblemDetail"})
 @ConditionalOnProperty(
-        prefix = "patra.feign.problem",
-        name = "enabled",
-        havingValue = "true",
-        matchIfMissing = true
-)
+    prefix = "patra.feign.problem",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 public class FeignErrorAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public FeignErrorObservationRecorder feignErrorObservationRecorder(FeignErrorProperties properties,
-                                                                       ObjectProvider<MeterRegistry> meterRegistryProvider) {
-        if (!properties.getObservation().isEnabled()) {
-            log.info("Feign error observation disabled; falling back to NO_OP recorder");
-            return FeignErrorObservationRecorder.NO_OP;
-        }
-        MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
-        if (meterRegistry == null) {
-            log.warn("Micrometer MeterRegistry not available, Feign error observation degrades to NO_OP");
-            return FeignErrorObservationRecorder.NO_OP;
-        }
-        return new MicrometerFeignErrorObservationRecorder(meterRegistry, properties);
+  @Bean
+  @ConditionalOnMissingBean
+  public FeignErrorObservationRecorder feignErrorObservationRecorder(
+      FeignErrorProperties properties, ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    if (!properties.getObservation().isEnabled()) {
+      log.info("Feign error observation disabled; falling back to NO_OP recorder");
+      return FeignErrorObservationRecorder.NO_OP;
     }
+    MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
+    if (meterRegistry == null) {
+      log.warn("Micrometer MeterRegistry not available, Feign error observation degrades to NO_OP");
+      return FeignErrorObservationRecorder.NO_OP;
+    }
+    return new MicrometerFeignErrorObservationRecorder(meterRegistry, properties);
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(ErrorDecoder.class)
-    public ErrorDecoder problemDetailErrorDecoder(ObjectMapper objectMapper,
-                                                 FeignErrorProperties properties,
-                                                 FeignErrorObservationRecorder observationRecorder) {
-        log.info("Configuring ProblemDetailErrorDecoder (tolerant mode enabled: {})", properties.isTolerant());
-        return new ProblemDetailErrorDecoder(objectMapper, properties, observationRecorder);
-    }
+  @Bean
+  @ConditionalOnMissingBean(ErrorDecoder.class)
+  public ErrorDecoder problemDetailErrorDecoder(
+      ObjectMapper objectMapper,
+      FeignErrorProperties properties,
+      FeignErrorObservationRecorder observationRecorder) {
+    log.info(
+        "Configuring ProblemDetailErrorDecoder (tolerant mode enabled: {})",
+        properties.isTolerant());
+    return new ProblemDetailErrorDecoder(objectMapper, properties, observationRecorder);
+  }
 
-    @Bean
-    @ConditionalOnMissingBean(TraceIdRequestInterceptor.class)
-    public TraceIdRequestInterceptor traceIdRequestInterceptor(TraceProvider traceProvider,
-                                                              TracingProperties tracingProperties) {
-        log.info("Configuring TraceIdRequestInterceptor with headers {}", tracingProperties.getHeaderNames());
-        return new TraceIdRequestInterceptor(traceProvider, tracingProperties);
-    }
+  @Bean
+  @ConditionalOnMissingBean(TraceIdRequestInterceptor.class)
+  public TraceIdRequestInterceptor traceIdRequestInterceptor(
+      TraceProvider traceProvider, TracingProperties tracingProperties) {
+    log.info(
+        "Configuring TraceIdRequestInterceptor with headers {}",
+        tracingProperties.getHeaderNames());
+    return new TraceIdRequestInterceptor(traceProvider, tracingProperties);
+  }
 }

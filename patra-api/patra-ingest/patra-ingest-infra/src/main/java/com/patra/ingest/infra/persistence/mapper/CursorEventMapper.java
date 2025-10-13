@@ -6,12 +6,10 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * Mapper for cursor events (CursorEvent).
- * <p>
- * Purpose: record the timeline of cursor advancement events (detect/rollback/advance) for auditing and
- * troubleshooting. Only single-table operations are performed here; do not stitch complex history
- * aggregation logic at the mapper layer.
- * </p>
+ *
+ * <p>Purpose: record the timeline of cursor advancement events (detect/rollback/advance) for
+ * auditing and troubleshooting. Only single-table operations are performed here; do not stitch
+ * complex history aggregation logic at the mapper layer.
  */
 @Mapper
-public interface CursorEventMapper extends BaseMapper<CursorEventDO> {
-}
+public interface CursorEventMapper extends BaseMapper<CursorEventDO> {}

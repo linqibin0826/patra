@@ -4,7 +4,7 @@ package com.patra.egress.api.dto;
  * External rate limit information DTO
  *
  * <p>Contains rate limit information extracted from external service response headers
- * (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset).</p>
+ * (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset).
  *
  * @param limit rate limit cap from external service
  * @param remaining remaining quota from external service
@@ -12,9 +12,4 @@ package com.patra.egress.api.dto;
  * @author linqibin
  * @since 0.1.0
  */
-public record ExternalRateLimitInfoDTO(
-    Integer limit,
-    Integer remaining,
-    Long resetTimestamp
-) {
-}
+public record ExternalRateLimitInfoDTO(Integer limit, Integer remaining, Long resetTimestamp) {}

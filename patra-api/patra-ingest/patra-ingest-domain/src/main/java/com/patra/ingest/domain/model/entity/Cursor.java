@@ -11,121 +11,141 @@ import lombok.Getter;
 @SuppressWarnings("unused")
 @Getter
 public class Cursor {
-    private final Long id;
-    private final String provenanceCode;
-    private final String operationCode;
-    private final String cursorKey;
-    private final NamespaceScope namespaceScope;
-    private final String namespaceKey;
-    private final CursorType cursorType;
-    private CursorValue value;
-    private CursorWatermark watermark;
-    private CursorLineage lineage;
-    private String exprHash;
+  private final Long id;
+  private final String provenanceCode;
+  private final String operationCode;
+  private final String cursorKey;
+  private final NamespaceScope namespaceScope;
+  private final String namespaceKey;
+  private final CursorType cursorType;
+  private CursorValue value;
+  private CursorWatermark watermark;
+  private CursorLineage lineage;
+  private String exprHash;
 
-    private Cursor(Long id,
-                   String provenanceCode,
-                   String operationCode,
-                   String cursorKey,
-                   NamespaceScope namespaceScope,
-                   String namespaceKey,
-                   CursorType cursorType,
-                   CursorValue value,
-                   CursorWatermark watermark,
-                   CursorLineage lineage,
-                   String exprHash) {
-        this.id = id;
-        this.provenanceCode = provenanceCode;
-        this.operationCode = operationCode;
-        this.cursorKey = cursorKey;
-        this.namespaceScope = namespaceScope;
-        this.namespaceKey = namespaceKey;
-        this.cursorType = cursorType;
-        this.value = value;
-        this.watermark = watermark == null ? CursorWatermark.empty() : watermark;
-        this.lineage = lineage == null ? CursorLineage.empty() : lineage;
-        this.exprHash = exprHash;
-    }
+  private Cursor(
+      Long id,
+      String provenanceCode,
+      String operationCode,
+      String cursorKey,
+      NamespaceScope namespaceScope,
+      String namespaceKey,
+      CursorType cursorType,
+      CursorValue value,
+      CursorWatermark watermark,
+      CursorLineage lineage,
+      String exprHash) {
+    this.id = id;
+    this.provenanceCode = provenanceCode;
+    this.operationCode = operationCode;
+    this.cursorKey = cursorKey;
+    this.namespaceScope = namespaceScope;
+    this.namespaceKey = namespaceKey;
+    this.cursorType = cursorType;
+    this.value = value;
+    this.watermark = watermark == null ? CursorWatermark.empty() : watermark;
+    this.lineage = lineage == null ? CursorLineage.empty() : lineage;
+    this.exprHash = exprHash;
+  }
 
-    public static Cursor restore(Long id,
-                                 String provenanceCode,
-                                 String operationCode,
-                                 String cursorKey,
-                                 NamespaceScope namespaceScope,
-                                 String namespaceKey,
-                                 CursorType cursorType,
-                                 CursorValue value,
-                                 CursorWatermark watermark,
-                                 CursorLineage lineage,
-                                 String exprHash) {
-        return new Cursor(id, provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey, cursorType, value, watermark, lineage, exprHash);
-    }
+  public static Cursor restore(
+      Long id,
+      String provenanceCode,
+      String operationCode,
+      String cursorKey,
+      NamespaceScope namespaceScope,
+      String namespaceKey,
+      CursorType cursorType,
+      CursorValue value,
+      CursorWatermark watermark,
+      CursorLineage lineage,
+      String exprHash) {
+    return new Cursor(
+        id,
+        provenanceCode,
+        operationCode,
+        cursorKey,
+        namespaceScope,
+        namespaceKey,
+        cursorType,
+        value,
+        watermark,
+        lineage,
+        exprHash);
+  }
 
-    public void advance(CursorValue newValue, CursorWatermark newWatermark, CursorLineage newLineage, String newExprHash) {
-        if (newValue == null) {
-            throw new IllegalArgumentException("Cursor value must not be null");
-        }
-        this.value = newValue;
-        if (newWatermark != null) {
-            this.watermark = newWatermark;
-        }
-        if (newLineage != null) {
-            this.lineage = newLineage;
-        }
-        if (newExprHash != null && !newExprHash.isBlank()) {
-            this.exprHash = newExprHash;
-        }
+  public void advance(
+      CursorValue newValue,
+      CursorWatermark newWatermark,
+      CursorLineage newLineage,
+      String newExprHash) {
+    if (newValue == null) {
+      throw new IllegalArgumentException("Cursor value must not be null");
     }
+    this.value = newValue;
+    if (newWatermark != null) {
+      this.watermark = newWatermark;
+    }
+    if (newLineage != null) {
+      this.lineage = newLineage;
+    }
+    if (newExprHash != null && !newExprHash.isBlank()) {
+      this.exprHash = newExprHash;
+    }
+  }
 
-    public void updateObservedMax(String observedMax) {
-        this.watermark = new CursorWatermark(observedMax, watermark.normalizedInstant(), watermark.normalizedNumeric());
-    }
+  public void updateObservedMax(String observedMax) {
+    this.watermark =
+        new CursorWatermark(
+            observedMax, watermark.normalizedInstant(), watermark.normalizedNumeric());
+  }
 
-    /**
-     * Factory method creating a time-based cursor.
-     */
-    public static Cursor create(String provenanceCode,
-                                String operationCode,
-                                String cursorKey,
-                                String namespaceScope,
-                                String namespaceKey,
-                                java.time.Instant watermark) {
-        NamespaceScope scope = NamespaceScope.fromCode(namespaceScope);
-        CursorType type = CursorType.TIME;
-        CursorValue value = CursorValue.empty();
-        CursorWatermark watermarkVO = new CursorWatermark(
-            watermark == null ? null : watermark.toString(),
-            watermark,
-            null
-        );
-        return new Cursor(null, provenanceCode, operationCode, cursorKey, scope, namespaceKey,
-                         type, value, watermarkVO, CursorLineage.empty(), null);
-    }
+  /** Factory method creating a time-based cursor. */
+  public static Cursor create(
+      String provenanceCode,
+      String operationCode,
+      String cursorKey,
+      String namespaceScope,
+      String namespaceKey,
+      java.time.Instant watermark) {
+    NamespaceScope scope = NamespaceScope.fromCode(namespaceScope);
+    CursorType type = CursorType.TIME;
+    CursorValue value = CursorValue.empty();
+    CursorWatermark watermarkVO =
+        new CursorWatermark(watermark == null ? null : watermark.toString(), watermark, null);
+    return new Cursor(
+        null,
+        provenanceCode,
+        operationCode,
+        cursorKey,
+        scope,
+        namespaceKey,
+        type,
+        value,
+        watermarkVO,
+        CursorLineage.empty(),
+        null);
+  }
 
-    /**
-     * Advance the cursor to the supplied time watermark.
-     */
-    public void advanceTo(java.time.Instant newWatermark) {
-        if (newWatermark == null) {
-            throw new IllegalArgumentException("New watermark must not be null");
-        }
-        // Ensure the watermark never moves backwards
-        if (watermark.normalizedInstant() != null && newWatermark.isBefore(watermark.normalizedInstant())) {
-            throw new IllegalArgumentException(
-                "Cursor watermark cannot move backwards current=" + watermark.normalizedInstant() + " new=" + newWatermark
-            );
-        }
-        this.watermark = new CursorWatermark(
-            newWatermark.toString(),
-            newWatermark,
-            null
-        );
+  /** Advance the cursor to the supplied time watermark. */
+  public void advanceTo(java.time.Instant newWatermark) {
+    if (newWatermark == null) {
+      throw new IllegalArgumentException("New watermark must not be null");
     }
+    // Ensure the watermark never moves backwards
+    if (watermark.normalizedInstant() != null
+        && newWatermark.isBefore(watermark.normalizedInstant())) {
+      throw new IllegalArgumentException(
+          "Cursor watermark cannot move backwards current="
+              + watermark.normalizedInstant()
+              + " new="
+              + newWatermark);
+    }
+    this.watermark = new CursorWatermark(newWatermark.toString(), newWatermark, null);
+  }
 
-    /**
-     * Return the current time-based watermark.
-     */
-    public java.time.Instant getCurrentWatermark() {
-        return watermark.normalizedInstant();
-    }
+  /** Return the current time-based watermark. */
+  public java.time.Instant getCurrentWatermark() {
+    return watermark.normalizedInstant();
+  }
 }

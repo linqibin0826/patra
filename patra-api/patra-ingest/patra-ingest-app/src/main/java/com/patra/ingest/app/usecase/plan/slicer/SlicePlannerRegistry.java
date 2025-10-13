@@ -8,47 +8,47 @@ import org.springframework.stereotype.Component;
 
 /**
  * Slice strategy registry (Application layer registry).
- * <p>
- * Responsibility: collect and index {@link SlicePlanner} implementations by {@link SliceStrategy}.
- * Provides O(1) lookup during planning to avoid if-else/switch explosion.
- * </p>
+ *
+ * <p>Responsibility: collect and index {@link SlicePlanner} implementations by {@link
+ * SliceStrategy}. Provides O(1) lookup during planning to avoid if-else/switch explosion.
+ *
  * <p>Design & constraints:
+ *
  * <ul>
- *   <li>Batch-register via constructor with all Spring-injected {@link SlicePlanner} beans; read-only afterwards.</li>
- *   <li>Ignore nulls; on conflicts, later registration overwrites earlier (supports gray replacement).</li>
- *   <li>Uses {@link EnumMap} for constant-time access and low memory.</li>
- *   <li>Thread-safe: no concurrent writes at runtime; reads only.</li>
- *   <li>Extensible: add a strategy by adding a Spring bean implementation.</li>
- *   <li>Failure mode: returns null when strategy not found (caller decides fallback/error).</li>
+ *   <li>Batch-register via constructor with all Spring-injected {@link SlicePlanner} beans;
+ *       read-only afterwards.
+ *   <li>Ignore nulls; on conflicts, later registration overwrites earlier (supports gray
+ *       replacement).
+ *   <li>Uses {@link EnumMap} for constant-time access and low memory.
+ *   <li>Thread-safe: no concurrent writes at runtime; reads only.
+ *   <li>Extensible: add a strategy by adding a Spring bean implementation.
+ *   <li>Failure mode: returns null when strategy not found (caller decides fallback/error).
  * </ul>
- * </p>
  */
 @Component
 public class SlicePlannerRegistry {
 
-    /** Strategy → implementation mapping; read-only at runtime. */
-    private final Map<SliceStrategy, SlicePlanner> registry = new EnumMap<>(SliceStrategy.class);
+  /** Strategy → implementation mapping; read-only at runtime. */
+  private final Map<SliceStrategy, SlicePlanner> registry = new EnumMap<>(SliceStrategy.class);
 
-    /**
-     * Constructor that batch-registers all discovered {@link SlicePlanner} beans.
-     */
-    public SlicePlannerRegistry(List<SlicePlanner> planners) {
-        if (planners == null) {
-            return;
-        }
-        for (SlicePlanner planner : planners) {
-            if (planner == null || planner.code() == null) {
-                continue;
-            }
-            registry.put(planner.code(), planner);
-        }
+  /** Constructor that batch-registers all discovered {@link SlicePlanner} beans. */
+  public SlicePlannerRegistry(List<SlicePlanner> planners) {
+    if (planners == null) {
+      return;
     }
+    for (SlicePlanner planner : planners) {
+      if (planner == null || planner.code() == null) {
+        continue;
+      }
+      registry.put(planner.code(), planner);
+    }
+  }
 
-    /** Returns the planner for the given strategy or null when missing. */
-    public SlicePlanner get(SliceStrategy strategy) {
-        if (strategy == null) {
-            return null;
-        }
-        return registry.get(strategy);
+  /** Returns the planner for the given strategy or null when missing. */
+  public SlicePlanner get(SliceStrategy strategy) {
+    if (strategy == null) {
+      return null;
     }
+    return registry.get(strategy);
+  }
 }

@@ -6,6 +6,4 @@ package com.patra.starter.web.req;
  * @author linqibin
  * @since 0.1.0
  */
-public interface PagingSortable extends Pageable, Sortable {
-
-}
+public interface PagingSortable extends Pageable, Sortable {}
