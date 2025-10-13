@@ -185,12 +185,17 @@
        CUSTOM EXCLUSIONS (Add project-specific exclusions below)
        ======================================================================== -->
 
-  <!-- Example: Exclude specific bug in specific class
+  <!-- ApplicationException: Constructor throws by design (exception class) -->
   <Match>
-    <Class name="com.patra.ingest.infra.SomeClass"/>
-    <Method name="someMethod"/>
-    <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+    <Class name="com.patra.common.error.ApplicationException"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
-  -->
+
+  <!-- JsonNormalizer.Result: Internal result class, exposing hash material is intentional -->
+  <Match>
+    <Class name="com.patra.common.json.JsonNormalizer$Result"/>
+    <Method name="getHashMaterial"/>
+    <Bug pattern="EI_EXPOSE_REP"/>
+  </Match>
 
 </FindBugsFilter>

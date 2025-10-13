@@ -2,36 +2,28 @@
 # JaCoCo utilities for layer-specific coverage thresholds
 # Usage: source scripts/git/lib/jacoco_utils.sh
 
-# Layer-specific coverage thresholds (percentage)
-# Based on hexagonal architecture layers
-# Note: Declared separately to avoid 'set -u' issues with inline initialization
-declare -A COVERAGE_THRESHOLDS
-COVERAGE_THRESHOLDS["domain"]=85    # Core business logic - highest coverage required
-COVERAGE_THRESHOLDS["app"]=75       # Orchestration layer - high coverage
-COVERAGE_THRESHOLDS["infra"]=70     # Infrastructure - moderate coverage
-COVERAGE_THRESHOLDS["adapter"]=60   # Adapters - lower coverage (integration-heavy)
-COVERAGE_THRESHOLDS["default"]=70   # Default for other modules
-
 # Get coverage threshold for a module
 # Args:
 #   $1 - Module path (e.g., "patra-ingest/patra-ingest-domain")
 # Returns: Coverage threshold percentage
+# Note: Uses pattern matching instead of associative arrays for Bash 3.2 compatibility
 get_coverage_threshold() {
   local module_path="$1"
   local module_name
   module_name=$(basename "$module_path")
 
-  # Determine layer from module name
+  # Determine layer from module name and return threshold
+  # Based on hexagonal architecture layers
   if [[ "$module_name" == *"-domain" ]]; then
-    echo "${COVERAGE_THRESHOLDS[domain]}"
+    echo "85"  # Core business logic - highest coverage required
   elif [[ "$module_name" == *"-app" ]]; then
-    echo "${COVERAGE_THRESHOLDS[app]}"
+    echo "75"  # Orchestration layer - high coverage
   elif [[ "$module_name" == *"-infra" ]]; then
-    echo "${COVERAGE_THRESHOLDS[infra]}"
+    echo "70"  # Infrastructure - moderate coverage
   elif [[ "$module_name" == *"-adapter" ]]; then
-    echo "${COVERAGE_THRESHOLDS[adapter]}"
+    echo "60"  # Adapters - lower coverage (integration-heavy)
   else
-    echo "${COVERAGE_THRESHOLDS[default]}"
+    echo "70"  # Default for other modules
   fi
 }
 
