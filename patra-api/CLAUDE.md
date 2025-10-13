@@ -5,6 +5,7 @@ Claude Code instructions for Papertrace – Medical Literature Data Platform.
 - **Architecture & Design Patterns**: @.claude/AGENTS-architecture.md
 - **Development Guidelines**: @.claude/AGENTS-development.md
 - **Testing Strategy**: @.claude/AGENTS-testing.md
+- **MCP Tools**: @.claude/AGENTS-mcp-tools.md
 
 ---
 
