@@ -90,6 +90,32 @@
     <Bug pattern="EI_EXPOSE_REP"/>
   </Match>
 
+  <!-- Domain aggregates and VOs intentionally expose internal representation -->
+  <Match>
+    <Or>
+      <Class name="~.*\.domain\.model\.aggregate\..*"/>
+      <Class name="~.*\.domain\.model\.vo\..*"/>
+      <Class name="~.*\.domain\.model\.entity\..*"/>
+    </Or>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+      <Bug pattern="SE_BAD_FIELD"/>
+    </Or>
+  </Match>
+
+  <!-- Domain policies may validate in constructors (throw by design) -->
+  <Match>
+    <Class name="~.*\.domain\.policy\..*"/>
+    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+  </Match>
+
+  <!-- Boxing inefficiencies in domain models are acceptable for clarity -->
+  <Match>
+    <Package name="~.*\.domain\..*"/>
+    <Bug pattern="BX_UNBOXING_IMMEDIATELY_REBOXED"/>
+  </Match>
+
   <!-- ========================================================================
        JACKSON/JSON SERIALIZATION
        ======================================================================== -->
