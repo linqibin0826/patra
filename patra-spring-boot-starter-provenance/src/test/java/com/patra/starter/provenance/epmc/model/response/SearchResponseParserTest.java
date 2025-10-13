@@ -1,17 +1,18 @@
 package com.patra.starter.provenance.epmc.model.response;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class SearchResponseParserTest {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    @Test
-    void shouldParseResultsAndRequest() throws Exception {
-        String payload = """
+  @Test
+  void shouldParseResultsAndRequest() throws Exception {
+    String payload =
+        """
             {
               \"version\": \"6.9\",
               \"hitCount\": 10,
@@ -44,15 +45,18 @@ class SearchResponseParserTest {
             }
             """;
 
-        SearchResponse response = SearchResponse.from(MAPPER.readTree(payload));
-        assertThat(response.hitCount()).isEqualTo(10);
-        assertThat(response.version()).isEqualTo("6.9");
-        assertThat(response.request().queryString()).isEqualTo("cancer");
-        assertThat(response.request().pageSize()).isEqualTo(2);
-        assertThat(response.results()).singleElement().satisfies(result -> {
-            assertThat(result.id()).isEqualTo("41043451");
-            assertThat(result.doi()).isEqualTo("10.1016/j.lanplh.2025.101332");
-            assertThat(result.abstractText()).isEqualTo("Sample abstract");
-        });
-    }
+    SearchResponse response = SearchResponse.from(MAPPER.readTree(payload));
+    assertThat(response.hitCount()).isEqualTo(10);
+    assertThat(response.version()).isEqualTo("6.9");
+    assertThat(response.request().queryString()).isEqualTo("cancer");
+    assertThat(response.request().pageSize()).isEqualTo(2);
+    assertThat(response.results())
+        .singleElement()
+        .satisfies(
+            result -> {
+              assertThat(result.id()).isEqualTo("41043451");
+              assertThat(result.doi()).isEqualTo("10.1016/j.lanplh.2025.101332");
+              assertThat(result.abstractText()).isEqualTo("Sample abstract");
+            });
+  }
 }

@@ -6,15 +6,11 @@ import org.springframework.cloud.openfeign.FeignClient;
 /**
  * Feign client definition for invoking registry provenance internal API.
  *
- * <p>Extends {@link ProvenanceEndpoint} to provide type-safe RPC integration via
- * Spring Cloud OpenFeign.</p>
+ * <p>Extends {@link ProvenanceEndpoint} to provide type-safe RPC integration via Spring Cloud
+ * OpenFeign.
  *
  * @author linqibin
  * @since 0.1.0
  */
-@FeignClient(
-        name = "patra-registry",
-        contextId = "provenanceClient"
-)
-public interface ProvenanceClient extends ProvenanceEndpoint {
-}
+@FeignClient(name = "patra-registry", contextId = "provenanceClient")
+public interface ProvenanceClient extends ProvenanceEndpoint {}

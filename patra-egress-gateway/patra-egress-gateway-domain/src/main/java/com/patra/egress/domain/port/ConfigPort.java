@@ -9,18 +9,18 @@ import com.patra.egress.domain.model.vo.ResilienceConfig;
  * @since 0.1.0
  */
 public interface ConfigPort {
-    
-    /**
-     * Load the system-wide default configuration applied to every outbound call.
-     *
-     * @return default resilience configuration
-     */
-    ResilienceConfig loadSystemDefaultConfig();
-    
-    /**
-     * Load the maximum allowable configuration values enforced as guardrails.
-     *
-     * @return maximum resilience configuration
-     */
-    ResilienceConfig loadSystemMaxConfig();
+
+  /**
+   * Load the system-wide default configuration applied to every outbound call.
+   *
+   * @return default resilience configuration
+   */
+  ResilienceConfig loadSystemDefaultConfig();
+
+  /**
+   * Load the maximum allowable configuration values enforced as guardrails.
+   *
+   * @return maximum resilience configuration
+   */
+  ResilienceConfig loadSystemMaxConfig();
 }

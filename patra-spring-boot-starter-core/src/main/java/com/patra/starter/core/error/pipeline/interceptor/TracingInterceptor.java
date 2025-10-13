@@ -15,16 +15,17 @@ import org.springframework.core.annotation.Order;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class TracingInterceptor implements ResolutionInterceptor {
 
-    private final TraceProvider traceProvider;
+  private final TraceProvider traceProvider;
 
-    public TracingInterceptor(TraceProvider traceProvider) {
-        this.traceProvider = traceProvider;
-    }
+  public TracingInterceptor(TraceProvider traceProvider) {
+    this.traceProvider = traceProvider;
+  }
 
-    @Override
-    public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
-        traceProvider.getCurrentTraceId().ifPresent(traceId ->
-                log.debug("Error resolution invoked with traceId {}", traceId));
-        return invocation.proceed(exception);
-    }
+  @Override
+  public ErrorResolution intercept(Throwable exception, ResolutionInvocation invocation) {
+    traceProvider
+        .getCurrentTraceId()
+        .ifPresent(traceId -> log.debug("Error resolution invoked with traceId {}", traceId));
+    return invocation.proceed(exception);
+  }
 }

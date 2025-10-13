@@ -20,15 +20,17 @@ else
   DIFF_RANGE="HEAD~1..HEAD"
 fi
 
-readarray -t FILES < <(git diff --name-only $DIFF_RANGE | sed '/^$/d' | sort -u)
+FILES_TMP=$(mktemp)
+git diff --name-only $DIFF_RANGE | sed '/^$/d' | sort -u >"$FILES_TMP"
 
-if [[ ${#FILES[@]} -eq 0 ]]; then
+if [ ! -s "$FILES_TMP" ]; then
   echo "[pre-push] No changes detected relative to upstream; skipping tests."
   exit 0
 fi
 
 # Reuse module detection logic inline to keep this script standalone.
-declare -A MODULES=()
+MODULES_TMP=$(mktemp)
+>"$MODULES_TMP"
 find_module_for_file() {
   local f="$1"
   [[ -e "$f" || -L "$f" ]] || return 0
@@ -39,11 +41,10 @@ find_module_for_file() {
       if [[ "$dir" == "$ROOT_DIR" ]]; then
         printf '.'
       else
-        python3 - <<'PY'
-import os,sys
+        python3 - "$dir" "$ROOT_DIR" <<'PY'
+import os, sys
 print(os.path.relpath(sys.argv[1], sys.argv[2]))
 PY
- "$dir" "$ROOT_DIR"
       fi
       return 0
     fi
@@ -52,24 +53,30 @@ PY
   done
 }
 
-for f in "${FILES[@]}"; do
+while IFS= read -r f; do
   mod=$(find_module_for_file "$f" || true)
-  [[ -z "${mod:-}" ]] && continue
-  MODULES["$mod"]=1
-done
+  [ -z "$mod" ] && continue
+  printf '%s\n' "$mod" >>"$MODULES_TMP"
+done <"$FILES_TMP"
+sort -u "$MODULES_TMP" -o "$MODULES_TMP"
 
-if [[ ${#MODULES[@]} -eq 0 ]]; then
+if [ ! -s "$MODULES_TMP" ]; then
   echo "[pre-push] No Maven modules affected; skipping tests."
   exit 0
 fi
 
-if [[ -n "${MODULES[.]:-}" ]]; then
+if grep -qxF '.' "$MODULES_TMP"; then
+  echo "[pre-push] Running: ./mvnw -q -T1C com.spotify.fmt:fmt-maven-plugin:check"
+  ./mvnw -q -T1C com.spotify.fmt:fmt-maven-plugin:check
   echo "[pre-push] Running: ./mvnw -q -T1C -DfailIfNoTests=false test"
   ./mvnw -q -T1C -DfailIfNoTests=false test
   exit 0
 fi
 
-MODULE_LIST=$(printf '%s\n' "${!MODULES[@]}" | sort -u | paste -sd, -)
+MODULE_LIST=$(paste -sd, "$MODULES_TMP")
+echo "[pre-push] Running: ./mvnw -q -T1C -pl ${MODULE_LIST} -am com.spotify.fmt:fmt-maven-plugin:check"
+./mvnw -q -T1C -pl "${MODULE_LIST}" -am com.spotify.fmt:fmt-maven-plugin:check
 echo "[pre-push] Running: ./mvnw -q -T1C -DfailIfNoTests=false -pl ${MODULE_LIST} -am test"
 ./mvnw -q -T1C -DfailIfNoTests=false -pl "${MODULE_LIST}" -am test
 
+rm -f "$FILES_TMP" "$MODULES_TMP" 2>/dev/null || true

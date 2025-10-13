@@ -14,8 +14,8 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class EgressGatewayApplicationTest {
 
-    @Test
-    void contextLoads() {
-        // Verify that the application context loads successfully
-    }
+  @Test
+  void contextLoads() {
+    // Verify that the application context loads successfully
+  }
 }

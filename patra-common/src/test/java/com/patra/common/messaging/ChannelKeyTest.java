@@ -1,51 +1,53 @@
 package com.patra.common.messaging;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 
 class ChannelKeyTest {
 
-    private final ChannelKey normalKey = new ChannelKey() {
+  private final ChannelKey normalKey =
+      new ChannelKey() {
         @Override
         public String domain() {
-            return "ingest";
+          return "ingest";
         }
 
         @Override
         public String resource() {
-            return "task";
+          return "task";
         }
 
         @Override
         public String event() {
-            return "ready";
+          return "ready";
         }
-    };
+      };
 
-    @Test
-    void channel_shouldJoinSegmentsWithUnderscore() {
-        assertThat(normalKey.channel()).isEqualTo("INGEST_TASK_READY");
-    }
+  @Test
+  void channel_shouldJoinSegmentsWithUnderscore() {
+    assertThat(normalKey.channel()).isEqualTo("INGEST_TASK_READY");
+  }
 
-    @Test
-    void channel_shouldRespectOriginalCasing() {
-        ChannelKey mixed = new ChannelKey() {
-            @Override
-            public String domain() {
-                return "Registry";
-            }
+  @Test
+  void channel_shouldRespectOriginalCasing() {
+    ChannelKey mixed =
+        new ChannelKey() {
+          @Override
+          public String domain() {
+            return "Registry";
+          }
 
-            @Override
-            public String resource() {
-                return "Config";
-            }
+          @Override
+          public String resource() {
+            return "Config";
+          }
 
-            @Override
-            public String event() {
-                return "Updated";
-            }
+          @Override
+          public String event() {
+            return "Updated";
+          }
         };
-        assertThat(mixed.channel()).isEqualTo("REGISTRY_CONFIG_UPDATED");
-    }
+    assertThat(mixed.channel()).isEqualTo("REGISTRY_CONFIG_UPDATED");
+  }
 }

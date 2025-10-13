@@ -13,7 +13,7 @@ import org.springframework.util.StringUtils;
  * Auto-configuration for common Web converters.
  *
  * <p>Registers a global {@code String -> ProvenanceCode} converter so that {@code @PathVariable}
- * and {@code @RequestParam} bindings resolve provenance identifiers consistently.</p>
+ * and {@code @RequestParam} bindings resolve provenance identifiers consistently.
  *
  * @author linqibin
  * @since 0.1.0
@@ -23,21 +23,22 @@ import org.springframework.util.StringUtils;
 @ConditionalOnClass(Converter.class)
 public class WebConversionAutoConfiguration {
 
-    /**
-     * Registers a converter that resolves textual provenance identifiers to {@link ProvenanceCode} values,
-     * enabling Spring MVC to bind enum-friendly values for request parameters and path variables.
-     *
-     * @return converter bean exposed to the Spring conversion service
-     */
-    @Bean
-    @ConditionalOnMissingBean(name = "provenanceCodeConverter")
-    public Converter<String, ProvenanceCode> provenanceCodeConverter() {
-        log.info("[WEB][AUTO-CONFIG] Registering provenanceCodeConverter bean");
-        return source -> {
-            if (!StringUtils.hasText(source)) {
-                return null;
-            }
-            return ProvenanceCode.parse(source);
-        };
-    }
+  /**
+   * Registers a converter that resolves textual provenance identifiers to {@link ProvenanceCode}
+   * values, enabling Spring MVC to bind enum-friendly values for request parameters and path
+   * variables.
+   *
+   * @return converter bean exposed to the Spring conversion service
+   */
+  @Bean
+  @ConditionalOnMissingBean(name = "provenanceCodeConverter")
+  public Converter<String, ProvenanceCode> provenanceCodeConverter() {
+    log.info("[WEB][AUTO-CONFIG] Registering provenanceCodeConverter bean");
+    return source -> {
+      if (!StringUtils.hasText(source)) {
+        return null;
+      }
+      return ProvenanceCode.parse(source);
+    };
+  }
 }

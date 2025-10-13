@@ -13,22 +13,22 @@ import com.patra.registry.domain.exception.RegistryNotFound;
  */
 public class ProvenanceNotFoundException extends RegistryNotFound {
 
-    /**
-     * Creates an exception with a detail message.
-     *
-     * @param message detail message
-     */
-    public ProvenanceNotFoundException(String message) {
-        super(message);
-    }
+  /**
+   * Creates an exception with a detail message.
+   *
+   * @param message detail message
+   */
+  public ProvenanceNotFoundException(String message) {
+    super(message);
+  }
 
-    /**
-     * Creates an exception with a detail message and root cause.
-     *
-     * @param message detail message
-     * @param cause root cause
-     */
-    public ProvenanceNotFoundException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  /**
+   * Creates an exception with a detail message and root cause.
+   *
+   * @param message detail message
+   * @param cause root cause
+   */
+  public ProvenanceNotFoundException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }

@@ -4,14 +4,17 @@ import lombok.Getter;
 
 /**
  * Outbox aggregate type enum.
- * <p>Defines all valid aggregate types used in the Outbox framework for:</p>
+ *
+ * <p>Defines all valid aggregate types used in the Outbox framework for:
+ *
  * <ul>
- *   <li>Micrometer metrics tag cardinality control</li>
- *   <li>Database partitioning and indexing strategies</li>
- *   <li>Message routing and filtering</li>
+ *   <li>Micrometer metrics tag cardinality control
+ *   <li>Database partitioning and indexing strategies
+ *   <li>Message routing and filtering
  * </ul>
  *
  * <h3>Usage Example</h3>
+ *
  * <pre>{@code
  * @Override
  * protected OutboxAggregateTypes getAggregateType() {
@@ -20,7 +23,9 @@ import lombok.Getter;
  * }</pre>
  *
  * <h3>Configuration Reference</h3>
- * <p>These values must match the allowed aggregate types in Nacos configuration:</p>
+ *
+ * <p>These values must match the allowed aggregate types in Nacos configuration:
+ *
  * <pre>
  * papertrace:
  *   outbox:
@@ -36,46 +41,42 @@ import lombok.Getter;
 @Getter
 public enum OutboxAggregateTypes {
 
-    /**
-     * Task aggregate type.
-     * <p>Used for task queue events (task creation, scheduling, execution).</p>
-     */
-    TASK("Task", "Task aggregate - for task queue events"),
+  /**
+   * Task aggregate type.
+   *
+   * <p>Used for task queue events (task creation, scheduling, execution).
+   */
+  TASK("Task", "Task aggregate - for task queue events"),
+  ;
 
-    ;
-    /**
-     * -- GETTER --
-     *  Returns the aggregate type code.
-     *  <p>This value is stored in
-     *  field.</p>
-     *
-     */
-    private final String code;
-    /**
-     * -- GETTER --
-     *  Returns the human-readable description.
-     *
-     */
-    private final String description;
+  /**
+   * -- GETTER -- Returns the aggregate type code.
+   *
+   * <p>This value is stored in field.
+   */
+  private final String code;
 
-    OutboxAggregateTypes(String code, String description) {
-        this.code = code;
-        this.description = description;
+  /** -- GETTER -- Returns the human-readable description. */
+  private final String description;
+
+  OutboxAggregateTypes(String code, String description) {
+    this.code = code;
+    this.description = description;
+  }
+
+  /**
+   * Finds enum by code.
+   *
+   * @param code Aggregate type code
+   * @return Matching enum value
+   * @throws IllegalArgumentException if code is not found
+   */
+  public static OutboxAggregateTypes fromCode(String code) {
+    for (OutboxAggregateTypes type : values()) {
+      if (type.code.equals(code)) {
+        return type;
+      }
     }
-
-    /**
-     * Finds enum by code.
-     *
-     * @param code Aggregate type code
-     * @return Matching enum value
-     * @throws IllegalArgumentException if code is not found
-     */
-    public static OutboxAggregateTypes fromCode(String code) {
-        for (OutboxAggregateTypes type : values()) {
-            if (type.code.equals(code)) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Unknown aggregate type code: " + code);
-    }
+    throw new IllegalArgumentException("Unknown aggregate type code: " + code);
+  }
 }

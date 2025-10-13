@@ -4,12 +4,11 @@ import com.patra.common.domain.AggregateRoot;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * Aggregate root representing a scheduling trigger together with its initial snapshot.
@@ -21,80 +20,91 @@ import java.util.Objects;
 @Data
 public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
 
-    /** Scheduler type. */
-    private final Scheduler scheduler;
-    /** Scheduler job identifier. */
-    private final String schedulerJobId;
-    /** Scheduler log identifier. */
-    private final String schedulerLogId;
-    /** Trigger type. */
-    private final TriggerType triggerType;
-    /** Trigger timestamp. */
-    private final Instant triggeredAt;
-    /** Provenance/source code. */
-    private final ProvenanceCode provenanceCode;
-    /** Trigger parameters delivered by the scheduler. */
-    private final Map<String, Object> triggerParams;
+  /** Scheduler type. */
+  private final Scheduler scheduler;
 
-    private ScheduleInstanceAggregate(Long id,
-                                      Scheduler scheduler,
-                                      String schedulerJobId,
-                                      String schedulerLogId,
-                                      TriggerType triggerType,
-                                      Instant triggeredAt,
-                                      Map<String, Object> triggerParams,
-                                      ProvenanceCode provenanceCode
-    ) {
-        super(id);
-        this.scheduler = Objects.requireNonNull(scheduler, "schedulerCode must not be null");
-        this.schedulerJobId = schedulerJobId;
-        this.schedulerLogId = schedulerLogId;
-        this.triggerType = Objects.requireNonNull(triggerType, "triggerType must not be null");
-        this.triggeredAt = triggeredAt == null ? Instant.now() : triggeredAt;
-        this.triggerParams = triggerParams;
-        this.provenanceCode = provenanceCode;
-        // Expression prototypes are no longer stored at the scheduling layer; plan aggregates keep them instead.
-    }
+  /** Scheduler job identifier. */
+  private final String schedulerJobId;
 
-    public static ScheduleInstanceAggregate start(Scheduler scheduler,
-                                                  String schedulerJobId,
-                                                  String schedulerLogId,
-                                                  TriggerType triggerType,
-                                                  Instant triggeredAt,
-                                                  Map<String, Object> triggerParams,
-                                                  ProvenanceCode provenanceCode) {
-        return new ScheduleInstanceAggregate(null,
-                scheduler,
-                schedulerJobId,
-                schedulerLogId,
-                triggerType,
-                triggeredAt,
-                triggerParams,
-                provenanceCode);
-    }
+  /** Scheduler log identifier. */
+  private final String schedulerLogId;
 
-    public static ScheduleInstanceAggregate restore(Long id,
-                                                    Scheduler scheduler,
-                                                    String schedulerJobId,
-                                                    String schedulerLogId,
-                                                    TriggerType triggerType,
-                                                    Instant triggeredAt,
-                                                    Map<String, Object> triggerParams,
-                                                    ProvenanceCode provenanceCode,
-                                                    long version) {
-        ScheduleInstanceAggregate aggregate = new ScheduleInstanceAggregate(id,
-                scheduler,
-                schedulerJobId,
-                schedulerLogId,
-                triggerType,
-                triggeredAt,
-                triggerParams,
-                provenanceCode);
-        aggregate.assignVersion(version);
-        return aggregate;
-    }
+  /** Trigger type. */
+  private final TriggerType triggerType;
 
-    // Placeholder: extend with additional snapshot recording when future requirements emerge.
-    public void recordSnapshots() {
-    }
+  /** Trigger timestamp. */
+  private final Instant triggeredAt;
+
+  /** Provenance/source code. */
+  private final ProvenanceCode provenanceCode;
+
+  /** Trigger parameters delivered by the scheduler. */
+  private final Map<String, Object> triggerParams;
+
+  private ScheduleInstanceAggregate(
+      Long id,
+      Scheduler scheduler,
+      String schedulerJobId,
+      String schedulerLogId,
+      TriggerType triggerType,
+      Instant triggeredAt,
+      Map<String, Object> triggerParams,
+      ProvenanceCode provenanceCode) {
+    super(id);
+    this.scheduler = Objects.requireNonNull(scheduler, "schedulerCode must not be null");
+    this.schedulerJobId = schedulerJobId;
+    this.schedulerLogId = schedulerLogId;
+    this.triggerType = Objects.requireNonNull(triggerType, "triggerType must not be null");
+    this.triggeredAt = triggeredAt == null ? Instant.now() : triggeredAt;
+    this.triggerParams = triggerParams;
+    this.provenanceCode = provenanceCode;
+    // Expression prototypes are no longer stored at the scheduling layer; plan aggregates keep them
+    // instead.
+  }
+
+  public static ScheduleInstanceAggregate start(
+      Scheduler scheduler,
+      String schedulerJobId,
+      String schedulerLogId,
+      TriggerType triggerType,
+      Instant triggeredAt,
+      Map<String, Object> triggerParams,
+      ProvenanceCode provenanceCode) {
+    return new ScheduleInstanceAggregate(
+        null,
+        scheduler,
+        schedulerJobId,
+        schedulerLogId,
+        triggerType,
+        triggeredAt,
+        triggerParams,
+        provenanceCode);
+  }
+
+  public static ScheduleInstanceAggregate restore(
+      Long id,
+      Scheduler scheduler,
+      String schedulerJobId,
+      String schedulerLogId,
+      TriggerType triggerType,
+      Instant triggeredAt,
+      Map<String, Object> triggerParams,
+      ProvenanceCode provenanceCode,
+      long version) {
+    ScheduleInstanceAggregate aggregate =
+        new ScheduleInstanceAggregate(
+            id,
+            scheduler,
+            schedulerJobId,
+            schedulerLogId,
+            triggerType,
+            triggeredAt,
+            triggerParams,
+            provenanceCode);
+    aggregate.assignVersion(version);
+    return aggregate;
+  }
+
+  // Placeholder: extend with additional snapshot recording when future requirements emerge.
+  public void recordSnapshots() {}
 }

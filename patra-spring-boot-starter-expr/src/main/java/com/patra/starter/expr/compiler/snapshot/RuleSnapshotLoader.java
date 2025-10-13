@@ -4,5 +4,5 @@ import com.patra.common.enums.ProvenanceCode;
 
 public interface RuleSnapshotLoader {
 
-    ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operationType, String endpointName);
+  ProvenanceSnapshot load(ProvenanceCode provenanceCode, String operationType, String endpointName);
 }

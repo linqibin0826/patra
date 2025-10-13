@@ -11,11 +11,11 @@ import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
  */
 public interface PlanIngestionUseCase {
 
-    /**
-     * Orchestrates and persists plan/slices/tasks and triggers outbox publishing.
-     *
-     * @param request scheduling request
-     * @return summary of orchestration result
-     */
-    PlanIngestionResult ingestPlan(PlanIngestionCommand request);
+  /**
+   * Orchestrates and persists plan/slices/tasks and triggers outbox publishing.
+   *
+   * @param request scheduling request
+   * @return summary of orchestration result
+   */
+  PlanIngestionResult ingestPlan(PlanIngestionCommand request);
 }

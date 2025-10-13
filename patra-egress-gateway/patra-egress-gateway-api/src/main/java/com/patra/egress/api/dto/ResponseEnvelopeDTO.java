@@ -5,8 +5,8 @@ import java.util.Map;
 /**
  * Response envelope DTO
  *
- * <p>Unified response structure that wraps external service responses
- * with standardized metadata (rate limit status, retry advice, etc.).</p>
+ * <p>Unified response structure that wraps external service responses with standardized metadata
+ * (rate limit status, retry advice, etc.).
  *
  * @param success whether the call succeeded (based on HTTP status code)
  * @param statusCode HTTP status code from external service
@@ -27,13 +27,10 @@ public record ResponseEnvelopeDTO(
     String bodyHash,
     RateLimitStatusDTO rateLimitStatus,
     RetryAdviceDTO retryAdvice,
-    String snapshotMode
-) {
-    /**
-     * Compact constructor for immutability.
-     */
-    public ResponseEnvelopeDTO {
-        // Create an immutable defensive copy of the response headers.
-        headers = headers != null ? Map.copyOf(headers) : Map.of();
-    }
+    String snapshotMode) {
+  /** Compact constructor for immutability. */
+  public ResponseEnvelopeDTO {
+    // Create an immutable defensive copy of the response headers.
+    headers = headers != null ? Map.copyOf(headers) : Map.of();
+  }
 }

@@ -12,25 +12,24 @@ package com.patra.ingest.app.usecase.execution.support;
  * @since 0.1.0
  */
 public record ExecutionSession(
-        Long taskId,
-        Long runId,
-        String leaseOwner,
-        HeartbeatHandle heartbeatHandle,
-        boolean leaseRevoked
-) {
-    /** Cleans up resources (stop heartbeat + release lease). */
-    public void cleanup() {
-        if (heartbeatHandle != null) {
-            heartbeatHandle.stop();
-        }
+    Long taskId,
+    Long runId,
+    String leaseOwner,
+    HeartbeatHandle heartbeatHandle,
+    boolean leaseRevoked) {
+  /** Cleans up resources (stop heartbeat + release lease). */
+  public void cleanup() {
+    if (heartbeatHandle != null) {
+      heartbeatHandle.stop();
     }
+  }
 
-    /** Heartbeat handle (to stop heartbeat). */
-    public interface HeartbeatHandle {
-        /** Stops the heartbeat. */
-        void stop();
+  /** Heartbeat handle (to stop heartbeat). */
+  public interface HeartbeatHandle {
+    /** Stops the heartbeat. */
+    void stop();
 
-        /** Returns whether the lease has been revoked. */
-        boolean isLeaseRevoked();
-    }
+    /** Returns whether the lease has been revoked. */
+    boolean isLeaseRevoked();
+  }
 }

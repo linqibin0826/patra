@@ -12,13 +12,15 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * Persistence entity mapped to {@code sys_dict_type}.
- * <p>Exposes dictionary type metadata to the query side of the CQRS stack.</p>
  *
- * <p>Important invariants enforced at the database layer:</p>
+ * <p>Exposes dictionary type metadata to the query side of the CQRS stack.
+ *
+ * <p>Important invariants enforced at the database layer:
+ *
  * <ul>
- *   <li>{@code type_code} is unique across all types and acts as the business key.</li>
- *   <li>System types ({@code is_system = 1}) are managed by the platform and typically immutable.</li>
- *   <li>Types flagged with {@code allow_custom_items = 1} may be extended by business users.</li>
+ *   <li>{@code type_code} is unique across all types and acts as the business key.
+ *   <li>System types ({@code is_system = 1}) are managed by the platform and typically immutable.
+ *   <li>Types flagged with {@code allow_custom_items = 1} may be extended by business users.
  * </ul>
  *
  * @author linqibin
@@ -32,40 +34,33 @@ import lombok.experimental.SuperBuilder;
 @TableName("sys_dict_type")
 public class RegSysDictTypeDO extends BaseDO {
 
-    /**
-     * Stable business key for the dictionary type (e.g., {@code http_method}).
-     * Expected format is lower-case snake case.
-     */
-    @TableField("type_code")
-    private String typeCode;
+  /**
+   * Stable business key for the dictionary type (e.g., {@code http_method}). Expected format is
+   * lower-case snake case.
+   */
+  @TableField("type_code")
+  private String typeCode;
 
-    /**
-     * Human-readable display name used by UI components.
-     */
-    @TableField("type_name")
-    private String typeName;
+  /** Human-readable display name used by UI components. */
+  @TableField("type_name")
+  private String typeName;
 
-    /**
-     * Optional free-form description that documents usage guidelines.
-     */
-    @TableField("description")
-    private String description;
+  /** Optional free-form description that documents usage guidelines. */
+  @TableField("description")
+  private String description;
 
-    /**
-     * Flag indicating whether business users are allowed to create custom items.
-     */
-    @TableField("allow_custom_items")
-    private Boolean allowCustomItems;
+  /** Flag indicating whether business users are allowed to create custom items. */
+  @TableField("allow_custom_items")
+  private Boolean allowCustomItems;
 
-    /**
-     * Flag marking whether this dictionary type is managed by the platform ({@code true}) or business ({@code false}).
-     */
-    @TableField("is_system")
-    private Boolean isSystem;
+  /**
+   * Flag marking whether this dictionary type is managed by the platform ({@code true}) or business
+   * ({@code false}).
+   */
+  @TableField("is_system")
+  private Boolean isSystem;
 
-    /**
-     * Optional JSON payload for additional metadata (e.g., colour, icon stereotypes).
-     */
-    @TableField("reserved_json")
-    private JsonNode reservedJson;
+  /** Optional JSON payload for additional metadata (e.g., colour, icon stereotypes). */
+  @TableField("reserved_json")
+  private JsonNode reservedJson;
 }

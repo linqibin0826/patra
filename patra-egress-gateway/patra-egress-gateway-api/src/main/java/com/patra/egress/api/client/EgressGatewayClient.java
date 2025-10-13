@@ -6,10 +6,11 @@ import org.springframework.cloud.openfeign.FeignClient;
 /**
  * Feign client definition for invoking egress gateway internal API.
  *
- * <p>Extends {@link EgressEndpoint} to provide type-safe RPC integration via
- * Spring Cloud OpenFeign.</p>
+ * <p>Extends {@link EgressEndpoint} to provide type-safe RPC integration via Spring Cloud
+ * OpenFeign.
  *
- * <p>Usage example:</p>
+ * <p>Usage example:
+ *
  * <pre>{@code
  * @Autowired
  * private EgressGatewayClient egressGatewayClient;
@@ -28,9 +29,5 @@ import org.springframework.cloud.openfeign.FeignClient;
  * @author linqibin
  * @since 0.1.0
  */
-@FeignClient(
-        name = "patra-egress-gateway",
-        contextId = "egressGatewayClient"
-)
-public interface EgressGatewayClient extends EgressEndpoint {
-}
+@FeignClient(name = "patra-egress-gateway", contextId = "egressGatewayClient")
+public interface EgressGatewayClient extends EgressEndpoint {}

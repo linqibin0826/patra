@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Implementation of the egress gateway internal API (Feign client endpoint).
  *
- * <p>Exposes external call capabilities to other microservices via internal
- * RPC contract, delegating to application service and converting DTOs.</p>
+ * <p>Exposes external call capabilities to other microservices via internal RPC contract,
+ * delegating to application service and converting DTOs.
  *
  * @author linqibin
  * @since 0.1.0
@@ -27,31 +27,36 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ExternalCallController implements EgressGatewayClient {
 
-    private final ExternalCallUseCase externalCallUseCase;
+  private final ExternalCallUseCase externalCallUseCase;
 
-    /**
-     * Execute an external HTTP call through the egress gateway.
-     *
-     * @param request the external call request DTO
-     * @return the external call response DTO exposed by RPC contract
-     */
-    @Override
-    public ExternalCallResponseDTO call(@Valid @RequestBody ExternalCallRequestDTO request) {
-        log.info("[EGRESS][ADAPTER] Received external call request: url={} method={}",
-                request.url(), request.method());
+  /**
+   * Execute an external HTTP call through the egress gateway.
+   *
+   * @param request the external call request DTO
+   * @return the external call response DTO exposed by RPC contract
+   */
+  @Override
+  public ExternalCallResponseDTO call(@Valid @RequestBody ExternalCallRequestDTO request) {
+    log.info(
+        "[EGRESS][ADAPTER] Received external call request: url={} method={}",
+        request.url(),
+        request.method());
 
-        // Convert DTO to Command
-        ExternalCallCommand command = ExternalCallConverter.toCommand(request);
+    // Convert DTO to Command
+    ExternalCallCommand command = ExternalCallConverter.toCommand(request);
 
-        // Execute use case
-        ExternalCallResult result = externalCallUseCase.execute(command);
+    // Execute use case
+    ExternalCallResult result = externalCallUseCase.execute(command);
 
-        // Convert Result to DTO
-        ExternalCallResponseDTO response = ExternalCallConverter.toResponseDTO(result);
+    // Convert Result to DTO
+    ExternalCallResponseDTO response = ExternalCallConverter.toResponseDTO(result);
 
-        log.info("[EGRESS][ADAPTER] External call completed: traceId={} statusCode={} duration={}ms",
-                result.traceId(), response.envelope().statusCode(), response.durationMs());
+    log.info(
+        "[EGRESS][ADAPTER] External call completed: traceId={} statusCode={} duration={}ms",
+        result.traceId(),
+        response.envelope().statusCode(),
+        response.durationMs());
 
-        return response;
-    }
+    return response;
+  }
 }

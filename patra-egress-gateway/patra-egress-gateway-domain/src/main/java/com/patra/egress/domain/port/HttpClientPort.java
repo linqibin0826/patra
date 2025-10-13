@@ -11,13 +11,13 @@ import com.patra.egress.domain.model.vo.ResilienceConfig;
  * @since 0.1.0
  */
 public interface HttpClientPort {
-    
-    /**
-     * Execute an outbound HTTP call using the provided resilience configuration.
-     *
-     * @param request immutable HTTP request envelope
-     * @param config  resilience configuration (timeouts, retries, etc.)
-     * @return immutable HTTP response envelope
-     */
-    HttpResponse call(HttpRequest request, ResilienceConfig config);
+
+  /**
+   * Execute an outbound HTTP call using the provided resilience configuration.
+   *
+   * @param request immutable HTTP request envelope
+   * @param config resilience configuration (timeouts, retries, etc.)
+   * @return immutable HTTP response envelope
+   */
+  HttpResponse call(HttpRequest request, ResilienceConfig config);
 }

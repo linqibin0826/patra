@@ -522,4 +522,3 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
     KEY `idx_outbox_deleted_upd` (`deleted`, `updated_at`)
 )
     ENGINE = InnoDB;
-

@@ -200,6 +200,34 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>com.spotify.fmt</groupId>
+                <artifactId>fmt-maven-plugin</artifactId>
+                <version>2.29</version> <!-- 2025-09 在中央仓库最新 -->
+                <!-- 锁定 google-java-format 版本，确保与 IDE 插件一致 -->
+                <dependencies>
+                    <dependency>
+                        <groupId>com.google.googlejavaformat</groupId>
+                        <artifactId>google-java-format</artifactId>
+                        <version>1.29.0</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <!-- 构建时仅校验，不自动改动源码；想自动改可把 check 改成 format -->
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- 可选：AOSP/GOOGLE 风格（默认 GOOGLE） -->
+                    <style>GOOGLE</style>
+                    <!-- 是否跳过长字符串重排、排序/清理 import 等，默认即可 -->
+                    <!-- <skipReflowingLongStrings>true</skipReflowingLongStrings> -->
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>

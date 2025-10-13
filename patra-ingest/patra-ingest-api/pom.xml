@@ -20,13 +20,13 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
         </dependency>
-        
+
         <!-- Validation API -->
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
-        
+
         <!-- Lombok for annotations -->
         <dependency>
             <groupId>org.projectlombok</groupId>

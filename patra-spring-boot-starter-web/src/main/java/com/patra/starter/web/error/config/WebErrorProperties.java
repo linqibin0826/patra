@@ -13,13 +13,13 @@ import org.springframework.http.ProblemDetail;
 @Data
 @ConfigurationProperties(prefix = "patra.web.problem")
 public class WebErrorProperties {
-    
-    /** Whether Web-specific error handling is enabled. */
-    private boolean enabled = true;
-    
-    /** Base URL used to construct the {@code ProblemDetail#type} attribute. */
-    private String typeBaseUrl = "https://errors.example.com/";
-    
-    /** Whether stack traces should be included in the response (debug purposes only). */
-    private boolean includeStack = false;
+
+  /** Whether Web-specific error handling is enabled. */
+  private boolean enabled = true;
+
+  /** Base URL used to construct the {@code ProblemDetail#type} attribute. */
+  private String typeBaseUrl = "https://errors.example.com/";
+
+  /** Whether stack traces should be included in the response (debug purposes only). */
+  private boolean includeStack = false;
 }

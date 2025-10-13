@@ -23,8 +23,8 @@ import org.springframework.util.StringUtils;
 /**
  * PubMed client implementation calling E-utilities via the egress gateway.
  *
- * <p>Handles configuration precedence, optional Micrometer instrumentation and
- * XML to JSON conversion for payloads lacking native JSON representations.</p>
+ * <p>Handles configuration precedence, optional Micrometer instrumentation and XML to JSON
+ * conversion for payloads lacking native JSON representations.
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,166 +32,151 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class PubMedClientImpl implements PubMedClient {
 
-    private static final ProvenanceCode PROVENANCE = ProvenanceCode.PUBMED;
+  private static final ProvenanceCode PROVENANCE = ProvenanceCode.PUBMED;
 
-    private final EgressGatewayClient gatewayClient;
-    private final GatewayRequestBuilder requestBuilder;
-    private final DefaultConfigProvider configProvider;
-    private final XmlToJsonConverter xmlConverter;
-    private final ObjectMapper objectMapper;
-    private final ProvenanceMetrics metrics;
+  private final EgressGatewayClient gatewayClient;
+  private final GatewayRequestBuilder requestBuilder;
+  private final DefaultConfigProvider configProvider;
+  private final XmlToJsonConverter xmlConverter;
+  private final ObjectMapper objectMapper;
+  private final ProvenanceMetrics metrics;
 
-    public PubMedClientImpl(
-        EgressGatewayClient gatewayClient,
-        GatewayRequestBuilder requestBuilder,
-        DefaultConfigProvider configProvider,
-        XmlToJsonConverter xmlConverter,
-        ObjectMapper objectMapper,
-        ProvenanceMetrics metrics
-    ) {
-        this.gatewayClient = gatewayClient;
-        this.requestBuilder = requestBuilder;
-        this.configProvider = configProvider;
-        this.xmlConverter = xmlConverter;
-        this.objectMapper = objectMapper;
-        this.metrics = metrics;
+  public PubMedClientImpl(
+      EgressGatewayClient gatewayClient,
+      GatewayRequestBuilder requestBuilder,
+      DefaultConfigProvider configProvider,
+      XmlToJsonConverter xmlConverter,
+      ObjectMapper objectMapper,
+      ProvenanceMetrics metrics) {
+    this.gatewayClient = gatewayClient;
+    this.requestBuilder = requestBuilder;
+    this.configProvider = configProvider;
+    this.xmlConverter = xmlConverter;
+    this.objectMapper = objectMapper;
+    this.metrics = metrics;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public ESearchResponse esearch(ESearchRequest request) {
+    return esearch(request, null);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
+    if (metrics != null) {
+      // Capture latency and success metrics whenever Micrometer instrumentation is available.
+      return metrics.recordApiCall(PROVENANCE, "esearch", () -> executeESearch(request, config));
     }
+    return executeESearch(request, config);
+  }
 
-    /** {@inheritDoc} */
-    @Override
-    public ESearchResponse esearch(ESearchRequest request) {
-        return esearch(request, null);
+  private ESearchResponse executeESearch(ESearchRequest request, ProvenanceConfig config) {
+    ProvenanceConfig finalConfig =
+        config != null ? config : configProvider.getPubMedDefaultConfig();
+    ExternalCallRequestDTO gatewayRequest =
+        requestBuilder.build(finalConfig.baseUrl(), "/esearch.fcgi", request, finalConfig);
+
+    ExternalCallResponseDTO response = invokeGateway("esearch", gatewayRequest);
+    ResponseEnvelopeDTO envelope = response.envelope();
+    try {
+      JsonNode root = objectMapper.readTree(envelope.body());
+      return ESearchResponse.from(root);
+    } catch (Exception ex) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(),
+          "esearch",
+          envelope.statusCode(),
+          response.traceId(),
+          envelope.body(),
+          "Failed to parse JSON response",
+          ex);
     }
+  }
 
-    /** {@inheritDoc} */
-    @Override
-    public ESearchResponse esearch(ESearchRequest request, ProvenanceConfig config) {
-        if (metrics != null) {
-            // Capture latency and success metrics whenever Micrometer instrumentation is available.
-            return metrics.recordApiCall(PROVENANCE, "esearch", () -> executeESearch(request, config));
-        }
-        return executeESearch(request, config);
+  /** {@inheritDoc} */
+  @Override
+  public EFetchResponse efetch(EFetchRequest request) {
+    return efetch(request, null);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
+    if (metrics != null) {
+      // Capture latency and success metrics whenever Micrometer instrumentation is available.
+      return metrics.recordApiCall(PROVENANCE, "efetch", () -> executeEFetch(request, config));
     }
+    return executeEFetch(request, config);
+  }
 
-    private ESearchResponse executeESearch(ESearchRequest request, ProvenanceConfig config) {
-        ProvenanceConfig finalConfig = config != null ? config : configProvider.getPubMedDefaultConfig();
-        ExternalCallRequestDTO gatewayRequest = requestBuilder.build(
-            finalConfig.baseUrl(),
-            "/esearch.fcgi",
-            request,
-            finalConfig
-        );
+  private EFetchResponse executeEFetch(EFetchRequest request, ProvenanceConfig config) {
+    ProvenanceConfig finalConfig =
+        config != null ? config : configProvider.getPubMedDefaultConfig();
+    ExternalCallRequestDTO gatewayRequest =
+        requestBuilder.build(finalConfig.baseUrl(), "/efetch.fcgi", request, finalConfig);
 
-        ExternalCallResponseDTO response = invokeGateway("esearch", gatewayRequest);
-        ResponseEnvelopeDTO envelope = response.envelope();
-        try {
-            JsonNode root = objectMapper.readTree(envelope.body());
-            return ESearchResponse.from(root);
-        } catch (Exception ex) {
-            throw new ProvenanceClientException(
-                PROVENANCE.getCode(),
-                "esearch",
-                envelope.statusCode(),
-                response.traceId(),
-                envelope.body(),
-                "Failed to parse JSON response",
-                ex
-            );
-        }
+    ExternalCallResponseDTO response = invokeGateway("efetch", gatewayRequest);
+    ResponseEnvelopeDTO envelope = response.envelope();
+    try {
+      if (request.requiresXmlConversion()) {
+        JsonNode root = xmlConverter.convert(envelope.body(), JsonNode.class);
+        return EFetchResponse.from(root);
+      }
+      JsonNode root = objectMapper.readTree(envelope.body());
+      return EFetchResponse.from(root);
+    } catch (ProvenanceClientException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(),
+          "efetch",
+          envelope.statusCode(),
+          response.traceId(),
+          envelope.body(),
+          "Failed to parse EFetch response",
+          ex);
     }
+  }
 
-    /** {@inheritDoc} */
-    @Override
-    public EFetchResponse efetch(EFetchRequest request) {
-        return efetch(request, null);
+  private ExternalCallResponseDTO invokeGateway(String apiName, ExternalCallRequestDTO request) {
+    ExternalCallResponseDTO response = gatewayClient.call(request);
+    if (response == null) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(), apiName, "Gateway returned null response");
     }
-
-    /** {@inheritDoc} */
-    @Override
-    public EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config) {
-        if (metrics != null) {
-            // Capture latency and success metrics whenever Micrometer instrumentation is available.
-            return metrics.recordApiCall(PROVENANCE, "efetch", () -> executeEFetch(request, config));
-        }
-        return executeEFetch(request, config);
+    ResponseEnvelopeDTO envelope = response.envelope();
+    if (envelope == null) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(),
+          apiName,
+          null,
+          response.traceId(),
+          null,
+          "Gateway returned empty envelope",
+          null);
     }
-
-    private EFetchResponse executeEFetch(EFetchRequest request, ProvenanceConfig config) {
-        ProvenanceConfig finalConfig = config != null ? config : configProvider.getPubMedDefaultConfig();
-        ExternalCallRequestDTO gatewayRequest = requestBuilder.build(
-            finalConfig.baseUrl(),
-            "/efetch.fcgi",
-            request,
-            finalConfig
-        );
-
-        ExternalCallResponseDTO response = invokeGateway("efetch", gatewayRequest);
-        ResponseEnvelopeDTO envelope = response.envelope();
-        try {
-            if (request.requiresXmlConversion()) {
-                JsonNode root = xmlConverter.convert(envelope.body(), JsonNode.class);
-                return EFetchResponse.from(root);
-            }
-            JsonNode root = objectMapper.readTree(envelope.body());
-            return EFetchResponse.from(root);
-        } catch (ProvenanceClientException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new ProvenanceClientException(
-                PROVENANCE.getCode(),
-                "efetch",
-                envelope.statusCode(),
-                response.traceId(),
-                envelope.body(),
-                "Failed to parse EFetch response",
-                ex
-            );
-        }
+    if (!envelope.success()) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(),
+          apiName,
+          envelope.statusCode(),
+          response.traceId(),
+          envelope.body(),
+          "Gateway reported failure status",
+          null);
     }
-
-    private ExternalCallResponseDTO invokeGateway(String apiName, ExternalCallRequestDTO request) {
-        ExternalCallResponseDTO response = gatewayClient.call(request);
-        if (response == null) {
-            throw new ProvenanceClientException(
-                PROVENANCE.getCode(),
-                apiName,
-                "Gateway returned null response"
-            );
-        }
-        ResponseEnvelopeDTO envelope = response.envelope();
-        if (envelope == null) {
-            throw new ProvenanceClientException(
-                PROVENANCE.getCode(),
-                apiName,
-                null,
-                response.traceId(),
-                null,
-                "Gateway returned empty envelope",
-                null
-            );
-        }
-        if (!envelope.success()) {
-            throw new ProvenanceClientException(
-                PROVENANCE.getCode(),
-                apiName,
-                envelope.statusCode(),
-                response.traceId(),
-                envelope.body(),
-                "Gateway reported failure status",
-                null
-            );
-        }
-        if (!StringUtils.hasText(envelope.body())) {
-            throw new ProvenanceClientException(
-                PROVENANCE.getCode(),
-                apiName,
-                envelope.statusCode(),
-                response.traceId(),
-                null,
-                "Gateway returned empty body",
-                null
-            );
-        }
-        return response;
+    if (!StringUtils.hasText(envelope.body())) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(),
+          apiName,
+          envelope.statusCode(),
+          response.traceId(),
+          null,
+          "Gateway returned empty body",
+          null);
     }
+    return response;
+  }
 }

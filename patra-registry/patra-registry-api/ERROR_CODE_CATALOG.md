@@ -94,13 +94,13 @@ throw new DictionaryTypeAlreadyExists("sources"); // Maps to REG-1404
 public class RegistryErrorCodeMapper {
     public static RegistryErrorCode mapException(RegistryException exception) {
         return switch (exception) {
-            case DictionaryNotFoundException dnf when dnf.getItemCode() == null -> 
+            case DictionaryNotFoundException dnf when dnf.getItemCode() == null ->
                 RegistryErrorCode.REG_1401;
-            case DictionaryNotFoundException dnf when dnf.getItemCode() != null -> 
+            case DictionaryNotFoundException dnf when dnf.getItemCode() != null ->
                 RegistryErrorCode.REG_1402;
-            case DictionaryItemDisabled did -> 
+            case DictionaryItemDisabled did ->
                 RegistryErrorCode.REG_1403;
-            case DictionaryTypeAlreadyExists dtae -> 
+            case DictionaryTypeAlreadyExists dtae ->
                 RegistryErrorCode.REG_1404;
             // ... other mappings
             default -> RegistryErrorCode.REG_0500; // fallback

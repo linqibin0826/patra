@@ -7,11 +7,11 @@ package com.patra.egress.domain.model.vo;
  * @since 0.1.0
  */
 public enum HttpMethod {
-    GET,
-    POST,
-    PUT,
-    DELETE,
-    PATCH,
-    HEAD,
-    OPTIONS
+  GET,
+  POST,
+  PUT,
+  DELETE,
+  PATCH,
+  HEAD,
+  OPTIONS
 }

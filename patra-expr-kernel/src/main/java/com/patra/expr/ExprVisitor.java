@@ -8,22 +8,47 @@ package com.patra.expr;
  * @param <R> visitor return type
  */
 public interface ExprVisitor<R> {
-    R visitAnd(And andExpr);
+  R visitAnd(And andExpr);
 
-    R visitOr(Or orExpr);
+  R visitOr(Or orExpr);
 
-    R visitNot(Not notExpr);
+  R visitNot(Not notExpr);
 
-    R visitConst(Const constantExpr);
+  R visitConst(Const constantExpr);
 
-    R visitAtom(Atom atomExpr);
+  R visitAtom(Atom atomExpr);
 
-    abstract class NoReturn implements ExprVisitor<java.lang.Void> {
-        @Override public final java.lang.Void visitAnd(And andExpr) { visit(andExpr); return null; }
-        @Override public final java.lang.Void visitOr(Or orExpr) { visit(orExpr); return null; }
-        @Override public final java.lang.Void visitNot(Not notExpr) { visit(notExpr); return null; }
-        @Override public final java.lang.Void visitConst(Const constantExpr) { visit(constantExpr); return null; }
-        @Override public final java.lang.Void visitAtom(Atom atomExpr) { visit(atomExpr); return null; }
-        protected abstract void visit(Expr expr);
+  abstract class NoReturn implements ExprVisitor<java.lang.Void> {
+    @Override
+    public final java.lang.Void visitAnd(And andExpr) {
+      visit(andExpr);
+      return null;
     }
+
+    @Override
+    public final java.lang.Void visitOr(Or orExpr) {
+      visit(orExpr);
+      return null;
+    }
+
+    @Override
+    public final java.lang.Void visitNot(Not notExpr) {
+      visit(notExpr);
+      return null;
+    }
+
+    @Override
+    public final java.lang.Void visitConst(Const constantExpr) {
+      visit(constantExpr);
+      return null;
+    }
+
+    @Override
+    public final java.lang.Void visitAtom(Atom atomExpr) {
+      visit(atomExpr);
+      return null;
+    }
+
+    protected abstract void visit(Expr expr);
+  }
 }

@@ -6,12 +6,10 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * Mapper for schedule instance (ScheduleInstance) table.
- * <p>
- * Semantics: each scheduling trigger (manual/cron/API) creates an instance that links
- * the full chain of Plan/Task/Slice for this dispatch. CRUD only; for future time+scheduler
- * range queries, add dedicated methods (e.g., findBySchedulerAndTimeRange).
- * </p>
+ *
+ * <p>Semantics: each scheduling trigger (manual/cron/API) creates an instance that links the full
+ * chain of Plan/Task/Slice for this dispatch. CRUD only; for future time+scheduler range queries,
+ * add dedicated methods (e.g., findBySchedulerAndTimeRange).
  */
 @Mapper
-public interface ScheduleInstanceMapper extends BaseMapper<ScheduleInstanceDO> {
-}
+public interface ScheduleInstanceMapper extends BaseMapper<ScheduleInstanceDO> {}

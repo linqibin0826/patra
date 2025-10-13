@@ -3,7 +3,7 @@ package com.patra.egress.api.dto;
 /**
  * Rate limit status DTO
  *
- * <p>Represents both gateway-level and external service rate limit status.</p>
+ * <p>Represents both gateway-level and external service rate limit status.
  *
  * @param limit gateway rate limit cap
  * @param remaining gateway remaining quota
@@ -13,9 +13,4 @@ package com.patra.egress.api.dto;
  * @since 0.1.0
  */
 public record RateLimitStatusDTO(
-    int limit,
-    int remaining,
-    long resetAfterSeconds,
-    ExternalRateLimitInfoDTO externalInfo
-) {
-}
+    int limit, int remaining, long resetAfterSeconds, ExternalRateLimitInfoDTO externalInfo) {}

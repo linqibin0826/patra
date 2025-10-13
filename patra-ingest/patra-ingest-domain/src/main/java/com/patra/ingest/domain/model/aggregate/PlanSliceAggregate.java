@@ -2,7 +2,6 @@ package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.SliceStatus;
-
 import java.util.Objects;
 
 /**
@@ -13,141 +12,154 @@ import java.util.Objects;
  */
 public class PlanSliceAggregate extends AggregateRoot<Long> {
 
-    /** Identifier of the plan this slice belongs to. */
-    private Long planId;
-    /** Provenance/source code. */
-    private final String provenanceCode;
-    /** Slice sequence number. */
-    private final int sliceNo;
-    /** Slice signature hash. */
-    private final String sliceSignatureHash;
-    /** Window specification serialized as JSON. */
-    private final String windowSpecJson;
-    /** Hash of the slice-scoped expression. */
-    private final String exprHash;
-    /** Slice-scoped expression snapshot JSON. */
-    private final String exprSnapshotJson;
-    /** Current status of the slice. */
-    private SliceStatus status;
+  /** Identifier of the plan this slice belongs to. */
+  private Long planId;
 
-    private PlanSliceAggregate(Long id,
-                               Long planId,
-                               String provenanceCode,
-                               int sliceNo,
-                               String sliceSignatureHash,
-                               String windowSpecJson,
-                               String exprHash,
-                               String exprSnapshotJson,
-                               SliceStatus status) {
-        super(id);
-        this.planId = planId;
-        this.provenanceCode = provenanceCode;
-        this.sliceNo = sliceNo;
-        this.sliceSignatureHash = sliceSignatureHash;
-        this.windowSpecJson = windowSpecJson;
-        this.exprHash = exprHash;
-        this.exprSnapshotJson = exprSnapshotJson;
-        this.status = status == null ? SliceStatus.PENDING : status;
-    }
+  /** Provenance/source code. */
+  private final String provenanceCode;
 
-    public static PlanSliceAggregate create(Long planId,
-                                            String provenanceCode,
-                                            int sliceNo,
-                                            String sliceSignatureHash,
-                                            String windowSpecJson,
-                                            String exprHash,
-                                            String exprSnapshotJson) {
-        Objects.requireNonNull(sliceSignatureHash, "sliceSignatureHash must not be null");
-        return new PlanSliceAggregate(null,
-                planId,
-                provenanceCode,
-                sliceNo,
-                sliceSignatureHash,
-                windowSpecJson,
-                exprHash,
-                exprSnapshotJson,
-                SliceStatus.PENDING);
-    }
+  /** Slice sequence number. */
+  private final int sliceNo;
 
-    public static PlanSliceAggregate restore(Long id,
-                                             Long planId,
-                                             String provenanceCode,
-                                             int sequence,
-                                             String sliceSignatureHash,
-                                             String windowSpecJson,
-                                             String exprHash,
-                                             String exprSnapshotJson,
-                                             SliceStatus status,
-                                             long version) {
-        PlanSliceAggregate aggregate = new PlanSliceAggregate(id,
-                planId,
-                provenanceCode,
-                sequence,
-                sliceSignatureHash,
-                windowSpecJson,
-                exprHash,
-                exprSnapshotJson,
-                status);
-        aggregate.assignVersion(version);
-        return aggregate;
-    }
+  /** Slice signature hash. */
+  private final String sliceSignatureHash;
 
-    public void bindPlan(Long planId) {
-        if (planId == null) {
-            throw new IllegalArgumentException("planId must not be null");
-        }
-        this.planId = planId;
-    }
+  /** Window specification serialized as JSON. */
+  private final String windowSpecJson;
 
-    public void markDispatched() {
-        this.status = SliceStatus.DISPATCHED;
-    }
+  /** Hash of the slice-scoped expression. */
+  private final String exprHash;
 
-    public void markExecuting() {
-        this.status = SliceStatus.EXECUTING;
-    }
+  /** Slice-scoped expression snapshot JSON. */
+  private final String exprSnapshotJson;
 
-    public void markSucceeded() {
-        this.status = SliceStatus.SUCCEEDED;
-    }
+  /** Current status of the slice. */
+  private SliceStatus status;
 
-    public void markFailed() {
-        this.status = SliceStatus.FAILED;
-    }
+  private PlanSliceAggregate(
+      Long id,
+      Long planId,
+      String provenanceCode,
+      int sliceNo,
+      String sliceSignatureHash,
+      String windowSpecJson,
+      String exprHash,
+      String exprSnapshotJson,
+      SliceStatus status) {
+    super(id);
+    this.planId = planId;
+    this.provenanceCode = provenanceCode;
+    this.sliceNo = sliceNo;
+    this.sliceSignatureHash = sliceSignatureHash;
+    this.windowSpecJson = windowSpecJson;
+    this.exprHash = exprHash;
+    this.exprSnapshotJson = exprSnapshotJson;
+    this.status = status == null ? SliceStatus.PENDING : status;
+  }
 
-    public void markPartial() {
-        this.status = SliceStatus.PARTIAL;
-    }
+  public static PlanSliceAggregate create(
+      Long planId,
+      String provenanceCode,
+      int sliceNo,
+      String sliceSignatureHash,
+      String windowSpecJson,
+      String exprHash,
+      String exprSnapshotJson) {
+    Objects.requireNonNull(sliceSignatureHash, "sliceSignatureHash must not be null");
+    return new PlanSliceAggregate(
+        null,
+        planId,
+        provenanceCode,
+        sliceNo,
+        sliceSignatureHash,
+        windowSpecJson,
+        exprHash,
+        exprSnapshotJson,
+        SliceStatus.PENDING);
+  }
 
-    public Long getPlanId() {
-        return planId;
-    }
+  public static PlanSliceAggregate restore(
+      Long id,
+      Long planId,
+      String provenanceCode,
+      int sequence,
+      String sliceSignatureHash,
+      String windowSpecJson,
+      String exprHash,
+      String exprSnapshotJson,
+      SliceStatus status,
+      long version) {
+    PlanSliceAggregate aggregate =
+        new PlanSliceAggregate(
+            id,
+            planId,
+            provenanceCode,
+            sequence,
+            sliceSignatureHash,
+            windowSpecJson,
+            exprHash,
+            exprSnapshotJson,
+            status);
+    aggregate.assignVersion(version);
+    return aggregate;
+  }
 
-    public String getProvenanceCode() {
-        return provenanceCode;
+  public void bindPlan(Long planId) {
+    if (planId == null) {
+      throw new IllegalArgumentException("planId must not be null");
     }
+    this.planId = planId;
+  }
 
-    public int getSliceNo() {
-        return sliceNo;
-    }
+  public void markDispatched() {
+    this.status = SliceStatus.DISPATCHED;
+  }
 
-    public String getSliceSignatureHash() {
-        return sliceSignatureHash;
-    }
+  public void markExecuting() {
+    this.status = SliceStatus.EXECUTING;
+  }
 
-    public String getWindowSpecJson() {
-        return windowSpecJson;
-    }
+  public void markSucceeded() {
+    this.status = SliceStatus.SUCCEEDED;
+  }
 
-    public String getExprHash() {
-        return exprHash;
-    }
+  public void markFailed() {
+    this.status = SliceStatus.FAILED;
+  }
 
-    public String getExprSnapshotJson() {
-        return exprSnapshotJson;
-    }
+  public void markPartial() {
+    this.status = SliceStatus.PARTIAL;
+  }
 
-    public SliceStatus getStatus() {
-        return status;
-    }
+  public Long getPlanId() {
+    return planId;
+  }
+
+  public String getProvenanceCode() {
+    return provenanceCode;
+  }
+
+  public int getSliceNo() {
+    return sliceNo;
+  }
+
+  public String getSliceSignatureHash() {
+    return sliceSignatureHash;
+  }
+
+  public String getWindowSpecJson() {
+    return windowSpecJson;
+  }
+
+  public String getExprHash() {
+    return exprHash;
+  }
+
+  public String getExprSnapshotJson() {
+    return exprSnapshotJson;
+  }
+
+  public SliceStatus getStatus() {
+    return status;
+  }
 }

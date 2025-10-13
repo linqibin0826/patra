@@ -1,14 +1,12 @@
 package com.patra.expr;
 
-/**
- * Boolean constant expression.
- */
+/** Boolean constant expression. */
 public enum Const implements Expr {
-    TRUE,
-    FALSE;
+  TRUE,
+  FALSE;
 
-    @Override
-    public <R> R accept(ExprVisitor<R> visitor) {
-        return visitor.visitConst(this);
-    }
+  @Override
+  public <R> R accept(ExprVisitor<R> visitor) {
+    return visitor.visitConst(this);
+  }
 }
