@@ -157,7 +157,7 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 - [**Architecture**](./docs/ARCHITECTURE.md) — Hexagonal + DDD principles, dependency rules, design patterns
 - [**Development Guide**](./docs/DEV-GUIDE.md) — Code recipes for adding use cases, aggregates, endpoints
-- [**CLAUDE.md**](./CLAUDE.md) — Instructions for AI assistants working with this codebase
+- [**CLAUDE.md**](.claude/CLAUDE.md) — Instructions for AI assistants working with this codebase
 
 ### Module READMEs
 
