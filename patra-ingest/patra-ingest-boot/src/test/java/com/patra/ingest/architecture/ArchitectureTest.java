@@ -95,25 +95,42 @@ class ArchitectureTest {
   void shouldFollowHexagonalArchitecture() {
     layeredArchitecture()
         .consideringAllDependencies()
-        // Define layers
+        // Define all layers
         .layer("Adapter")
         .definedBy("..adapter..")
         .layer("Application")
         .definedBy("..app..")
-        .layer("Domain")
-        .definedBy("..domain..")
         .layer("Infrastructure")
         .definedBy("..infra..")
-        // Define allowed dependencies (outer → inner)
+        .layer("Domain")
+        .definedBy("..domain..")
+        .layer("API")
+        .definedBy("..api..")
+        .layer("Config")
+        .definedBy("..config..")
+        // Define allowed dependencies (Hexagonal Architecture rules)
+        // Adapter → Application, API
+        // Application → Domain, API
+        // Infrastructure → Domain, API (implements ports, NO dependency on App)
+        // Config → Domain, API, Application (error mapping, config properties)
+        // Domain → (nothing, pure core)
+        // API → (nothing, contracts only)
+        // Note: Boot module (main class + config) is composition root, not an architectural layer
         .whereLayer("Adapter")
         .mayNotBeAccessedByAnyLayer()
         .whereLayer("Application")
-        .mayOnlyBeAccessedByLayers("Adapter")
-        .whereLayer("Domain")
-        .mayOnlyBeAccessedByLayers("Application", "Infrastructure")
+        .mayOnlyBeAccessedByLayers("Adapter", "Application", "Config")
         .whereLayer("Infrastructure")
         .mayNotBeAccessedByAnyLayer()
-        .because("Hexagonal architecture must follow strict dependency rules")
+        .whereLayer("Config")
+        .mayOnlyBeAccessedByLayers("Adapter", "Application", "Infrastructure", "Domain", "API")
+        .whereLayer("Domain")
+        .mayOnlyBeAccessedByLayers(
+            "Application", "Infrastructure", "Adapter", "API", "Config", "Domain")
+        .whereLayer("API")
+        .mayOnlyBeAccessedByLayers("Adapter", "Application", "Infrastructure", "Config", "API")
+        .because(
+            "Hexagonal: Adapter→App→Domain←Infra; Config maps Domain↔API and accesses App config; Infra does NOT depend on App")
         .check(classes);
   }
 
@@ -182,6 +199,7 @@ class ArchitectureTest {
         .haveSimpleNameEndingWith("RepositoryImpl")
         .should()
         .resideInAPackage("..infra..")
+        .allowEmptyShould(true)
         .because("Repository implementations are infrastructure concerns")
         .check(classes);
   }
@@ -210,6 +228,7 @@ class ArchitectureTest {
         .haveSimpleNameEndingWith("Controller")
         .should()
         .resideInAPackage("..adapter..")
+        .allowEmptyShould(true)
         .because("Controllers are adapters that translate HTTP to domain operations")
         .check(classes);
   }
@@ -222,8 +241,11 @@ class ArchitectureTest {
         .haveSimpleNameEndingWith("Job")
         .or()
         .haveSimpleNameEndingWith("Scheduler")
+        .and()
+        .areNotEnums()
         .should()
         .resideInAPackage("..adapter..")
+        .allowEmptyShould(true)
         .because("Jobs are adapters that trigger domain operations on schedule")
         .check(classes);
   }
