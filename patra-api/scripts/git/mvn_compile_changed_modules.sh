@@ -5,79 +5,80 @@ set -euo pipefail
 # Usage: invoked by pre-commit with the list of changed files, but can also
 # be run manually without args (falls back to staged changes).
 
+# Get repository root
 ROOT_DIR=$(git rev-parse --show-toplevel)
 cd "$ROOT_DIR"
 
+# Source shared utilities
+# shellcheck source=scripts/git/lib/maven_utils.sh
+source "$ROOT_DIR/scripts/git/lib/maven_utils.sh"
+
+# Create temp files for processing
 FILES_TMP=$(mktemp)
+MODULES_TMP=$(mktemp)
+
+# Ensure cleanup on exit, error, or interrupt
+trap 'rm -f "$FILES_TMP" "$MODULES_TMP"' EXIT ERR INT TERM
+
+# Collect changed files
 if [ "$#" -gt 0 ]; then
-  for f in "$@"; do
-    printf '%s\n' "$f" >>"$FILES_TMP"
-  done
+  # Files passed as arguments (from pre-commit)
+  printf '%s\n' "$@" >"$FILES_TMP"
 else
-  git diff --cached --name-only --diff-filter=ACMR >>"$FILES_TMP"
+  # Fallback: get staged changes
+  git diff --cached --name-only --diff-filter=ACMR >"$FILES_TMP"
 fi
-sed -i '' -e '/^$/d' "$FILES_TMP" 2>/dev/null || sed -e '/^$/d' -i "$FILES_TMP" 2>/dev/null || true
+
+# Remove empty lines using portable grep
+if [[ -s "$FILES_TMP" ]]; then
+  grep -v '^$' "$FILES_TMP" > "${FILES_TMP}.tmp" && mv "${FILES_TMP}.tmp" "$FILES_TMP" || true
+fi
+
+# Sort and deduplicate
 sort -u "$FILES_TMP" -o "$FILES_TMP"
 
-MODULES_TMP=$(mktemp)
->"$MODULES_TMP"
+# Collect affected modules
+if [[ -s "$FILES_TMP" ]]; then
+  collect_affected_modules "$ROOT_DIR" < "$FILES_TMP" > "$MODULES_TMP"
+else
+  touch "$MODULES_TMP"
+fi
 
-find_module_for_file() {
-  local f="$1"
-  # Skip deleted files or paths outside repo
-  [[ -e "$f" || -L "$f" ]] || return 0
-
-  local dir
-  dir=$(dirname -- "$f")
-  # Walk up until we find a pom.xml or reach repo root
-  while true; do
-    if [[ -f "$dir/pom.xml" ]]; then
-      # If the module is the repo root, mark as '.' (compile all)
-      if [[ "$dir" == "$ROOT_DIR" ]]; then
-        printf '.\n'
-      else
-        # Print relative path to root
-        python3 - "$dir" "$ROOT_DIR" <<'PY'
-import os, sys
-print(os.path.relpath(sys.argv[1], sys.argv[2]))
-PY
-      fi
-      return 0
-    fi
-    [[ "$dir" == "/" || "$dir" == "." || "$dir" == "$ROOT_DIR" ]] && break
-    dir=$(dirname -- "$dir")
-  done
-}
-
-while IFS= read -r f; do
-  mod=$(find_module_for_file "$f" || true)
-  [ -z "$mod" ] && continue
-  printf '%s\n' "$mod" >>"$MODULES_TMP"
-done <"$FILES_TMP"
-sort -u "$MODULES_TMP" -o "$MODULES_TMP"
-
-if [ ! -s "$MODULES_TMP" ]; then
+# Check if any modules were affected
+if [[ ! -s "$MODULES_TMP" ]]; then
   echo "[pre-commit] No Maven modules affected; skipping compile."
   exit 0
 fi
 
-# If root aggregator is affected, compile everything once.
+# Display affected modules
+echo "[pre-commit] Affected modules:"
+sed 's/^/  - /' "$MODULES_TMP"
+
+# Run fmt:format to auto-format Java sources
+echo ""
+echo "[pre-commit] Step 1/2: Auto-formatting Java sources..."
 if grep -qxF '.' "$MODULES_TMP"; then
-  echo "[pre-commit] Running: ./mvnw -q -T1C com.spotify.fmt:fmt-maven-plugin:format"
-  ./mvnw -q -T1C com.spotify.fmt:fmt-maven-plugin:format
-  echo "[pre-commit] Running: ./mvnw -q -DskipTests -T1C compile"
-  ./mvnw -q -DskipTests -T1C compile
-  exit 0
+  # Root module affected - format entire project
+  run_maven_on_modules "$ROOT_DIR" "$MODULES_TMP" \
+    com.spotify.fmt:fmt-maven-plugin:format
+else
+  # Format only affected modules
+  run_maven_on_modules "$ROOT_DIR" "$MODULES_TMP" \
+    com.spotify.fmt:fmt-maven-plugin:format
 fi
 
-MODULE_LIST=$(paste -sd, "$MODULES_TMP")
+# Run compile phase
+echo ""
+echo "[pre-commit] Step 2/2: Compiling..."
+if grep -qxF '.' "$MODULES_TMP"; then
+  # Root module affected - compile entire project
+  run_maven_on_modules "$ROOT_DIR" "$MODULES_TMP" \
+    -DskipTests compile
+else
+  # Compile only affected modules
+  run_maven_on_modules "$ROOT_DIR" "$MODULES_TMP" \
+    -DskipTests compile
+fi
 
-# First auto-format Java sources to align with patra-parent fmt plugin
-echo "[pre-commit] Running: ./mvnw -q -T1C -pl ${MODULE_LIST} -am com.spotify.fmt:fmt-maven-plugin:format"
-./mvnw -q -T1C -pl "${MODULE_LIST}" -am com.spotify.fmt:fmt-maven-plugin:format
-
-# Then compile (validate phase will re-run fmt:check if bound there)
-echo "[pre-commit] Running: ./mvnw -q -DskipTests -T1C -pl ${MODULE_LIST} -am compile"
-./mvnw -q -DskipTests -T1C -pl "${MODULE_LIST}" -am compile
-
-rm -f "$FILES_TMP" "$MODULES_TMP" 2>/dev/null || true
+echo ""
+echo "✅ Pre-commit checks passed!"
