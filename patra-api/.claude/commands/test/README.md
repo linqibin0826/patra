@@ -1,23 +1,19 @@
 # Papertrace Testing Commands
 
-> **Comprehensive testing command system** for automated test creation, execution, and quality validation.
+> **Streamlined test generation system** for automatic test creation with smart skip-existing logic.
 
 ---
 
 ## 📋 Overview
 
-This testing command system provides **12 slash commands** organized into 3 categories:
-
-1. **Test Creation** (4 commands) - Auto-generate unit and integration tests
-2. **Test Execution** (4 commands) - Run tests with various scopes
-3. **Quality Gates** (4 commands) - Validate quality thresholds
+This testing command system provides **5 slash commands** for intelligent test generation:
 
 **Key Features**:
 - ✅ **Auto-detects git diff** (current branch vs main)
 - ✅ **Layer-aware** (domain/app → unit, infra/adapter/boot → integration)
 - ✅ **Module-scoped** (test only changed modules)
-- ✅ **Coverage-integrated** (JaCoCo reports)
-- ✅ **Quality gates** (thresholds, standards, CI/CD readiness)
+- ✅ **Smart skip-existing** (never regenerate existing tests)
+- ✅ **Detailed reporting** (shows created vs skipped tests)
 
 ---
 
@@ -26,43 +22,65 @@ This testing command system provides **12 slash commands** organized into 3 cate
 ### After Coding
 
 ```bash
-# 1. Auto-generate all tests for changed files
-/auto
+# Auto-generate all missing tests for changed files
+/test:auto
 
-# 2. Run all tests
-/run-all
-
-# 3. Check quality gate
-/gate-check
+# Output example:
+# ✅ Tests Created: 8 (new)
+# ⏭️  Tests Skipped: 5 (already exist)
+# 📊 Total Coverage: 13 tests
 ```
 
-### Before Committing
+### For Specific Layers
 
 ```bash
-# Fast pre-commit validation
-/pre-commit
+# Generate only unit tests (domain/app)
+/test:unit
 
-# If passed, commit
-git commit -am "feat: your feature with tests"
-```
+# Generate only integration tests (infra/adapter/boot)
+/test:integration
 
-### Before Pushing
-
-```bash
-# Full CI/CD readiness check
-/gate-ci
-
-# If passed, push
-git push origin $(git branch --show-current)
+# Generate for specific module
+/test:auto patra-ingest
 ```
 
 ---
 
 ## 📦 Commands Reference
 
-### Test Creation Commands
+### `/test:auto [module-filter]`
 
-#### `/unit [module-filter]`
+**Purpose**: Auto-detect all changes and create both unit and integration tests (one command for complete coverage)
+
+**Best for**: Complete test coverage in one command
+
+**Usage**:
+```bash
+# Generate all tests for all changed files
+/test:auto
+
+# Generate all tests for specific module
+/test:auto patra-ingest
+
+# Output:
+# Unit Tests:
+#   Created: 8 (new)
+#   Skipped: 3 (existing)
+# Integration Tests:
+#   Created: 6 (new)
+#   Skipped: 4 (existing)
+# Total Coverage: 21 tests
+```
+
+**Smart Logic**:
+- ✅ Checks if test already exists before generating
+- ✅ Skips existing tests (no regeneration)
+- ✅ Only creates missing tests
+- ✅ Reports both created and skipped
+
+---
+
+### `/test:unit [module-filter]`
 
 **Purpose**: Create unit tests for changed domain/app classes
 
@@ -76,16 +94,20 @@ git push origin $(git branch --show-current)
 **Usage**:
 ```bash
 # Generate unit tests for all changed domain/app files
-/unit
+/test:unit
 
 # Generate unit tests for specific module
-/unit patra-ingest
+/test:unit patra-ingest
 
 # Output:
-# - Created 15 unit tests
-# - patra-ingest-domain/src/test/java/.../PlanAggregateTest.java
-# - patra-ingest-app/src/test/java/.../PlanOrchestratorTest.java
-# - Coverage estimate: ~85%
+# Created (NEW):
+#   - patra-ingest-domain/src/test/java/.../PlanAggregateTest.java
+#   - patra-ingest-app/src/test/java/.../PlanOrchestratorTest.java
+#   Total Created: 8 tests
+#
+# Skipped (EXISTING):
+#   - patra-ingest-domain/src/test/java/.../TaskAggregateTest.java
+#   Total Skipped: 3 tests
 ```
 
 **Example Generated Test**:
@@ -108,7 +130,7 @@ class PlanAggregateTest {
 
 ---
 
-#### `/integration [module-filter]`
+### `/test:integration [module-filter]`
 
 **Purpose**: Create integration tests for changed infra/adapter/boot classes
 
@@ -122,16 +144,20 @@ class PlanAggregateTest {
 **Usage**:
 ```bash
 # Generate integration tests for all changed infra/adapter/boot files
-/integration
+/test:integration
 
 # Generate integration tests for specific module
-/integration patra-registry
+/test:integration patra-registry
 
 # Output:
-# - Created 12 integration tests
-# - patra-registry-infra/src/test/java/.../ProvenanceRepositoryMpImplTest.java
-# - patra-registry-adapter/src/test/java/.../ProvenanceControllerTest.java
-# - patra-registry-boot/src/test/java/.../ProvenanceIntegrationTest.java
+# Created (NEW):
+#   - patra-registry-infra/src/test/java/.../ProvenanceRepositoryMpImplTest.java
+#   - patra-registry-adapter/src/test/java/.../ProvenanceControllerTest.java
+#   Total Created: 6 tests
+#
+# Skipped (EXISTING):
+#   - patra-registry-boot/src/test/java/.../ProvenanceIntegrationTest.java
+#   Total Skipped: 2 tests
 ```
 
 **Example Generated Test**:
@@ -154,30 +180,25 @@ class ProvenanceRepositoryMpImplTest {
 
 ---
 
-#### `/auto [module-filter]`
+### `/test:orchestrator [orchestrator-class-path]`
 
-**Purpose**: Auto-detect all changes and create both unit and integration tests
-
-**Best for**: Complete test coverage in one command
+**Purpose**: Create orchestrator test with mocked dependencies (app layer)
 
 **Usage**:
 ```bash
-# Generate all tests for all changed files
-/auto
-
-# Generate all tests for specific module
-/auto patra-ingest
+# Generate test for specific orchestrator
+/test:orchestrator com.patra.ingest.app.plan.PlanOrchestrator
 
 # Output:
-# Unit Tests Generated: 15
-# Integration Tests Generated: 12
-# Total Coverage: ~82%
-# Execution: mvn test (unit), mvn verify (integration)
+# ✅ Created: PlanOrchestratorTest.java
+# 📍 Location: patra-ingest-app/src/test/java/.../PlanOrchestratorTest.java
 ```
+
+**Focus**: Use case orchestration, port mocking, transaction boundaries
 
 ---
 
-#### `/analyze [module-name]`
+### `/test:analyze [module-name]`
 
 **Purpose**: Analyze test coverage gaps and provide actionable recommendations
 
@@ -190,197 +211,24 @@ class ProvenanceRepositoryMpImplTest {
 **Usage**:
 ```bash
 # Analyze all changed modules
-/analyze
+/test:analyze
 
 # Analyze specific module
-/analyze patra-ingest-domain
+/test:analyze patra-ingest-domain
 
 # Output:
 # Missing Tests: 3 (HIGH priority)
-# Incomplete Tests: 5 (MEDIUM priority)
+#   - PlanAggregate.java → needs PlanAggregateTest.java
+#   - TaskAggregate.java → needs TaskAggregateTest.java
+#
+# Incomplete Tests: 2 (MEDIUM priority)
+#   - PlanOrchestratorTest.java (only 45% coverage)
+#
 # Well-Tested: 12 (complete coverage)
-# Action Plan: [prioritized list]
-```
-
----
-
-### Test Execution Commands
-
-#### `/run-unit [module-filter]`
-
-**Purpose**: Run unit tests (domain/app layers) with optional module filter
-
-**Usage**:
-```bash
-# Run all unit tests
-/run-unit
-
-# Run unit tests for specific service
-/run-unit patra-ingest
-
-# Output:
-# ✅ Unit Tests PASSED
-# Tests run: 127, Failures: 0, Duration: 12.5s
-```
-
----
-
-#### `/run-integration [module-filter]`
-
-**Purpose**: Run integration tests (infra/adapter/boot layers)
-
-**Usage**:
-```bash
-# Run all integration tests
-/run-integration
-
-# Run integration tests for specific service
-/run-integration patra-registry
-
-# Output:
-# ✅ Integration Tests PASSED
-# Tests run: 84, Failures: 0, Duration: 45.8s
-```
-
----
-
-#### `/run-module <module-name>`
-
-**Purpose**: Run all tests (unit + integration) for a specific module
-
-**Required Argument**: Module name (e.g., `patra-ingest`)
-
-**Usage**:
-```bash
-# Run all tests for patra-ingest
-/run-module patra-ingest
-
-# Output:
-# ✅ All Tests PASSED for patra-ingest
-# Unit Tests: 83 passed
-# Integration Tests: 62 passed
-# Coverage: 87% line, 78% branch
-```
-
----
-
-#### `/run-all`
-
-**Purpose**: Run all tests across entire project with coverage report
-
-**Best for**: Full validation before commit/push
-
-**Usage**:
-```bash
-# Run complete test suite
-/run-all
-
-# Output:
-# ✅ ALL TESTS PASSED
-# Total Tests: 298, Duration: 107s
-# Coverage: 82% line, 73% branch, 87% method
-# Report: target/site/jacoco-aggregate/index.html
-```
-
----
-
-### Quality Gate Commands
-
-#### `/gate-check`
-
-**Purpose**: Run complete quality gate validation (tests + coverage + standards)
-
-**Validates**:
-- Gate 1: Test Success Rate (must be 100%)
-- Gate 2: Coverage Thresholds (75% line, 65% branch, 80% method)
-- Gate 3: Code Compilation (all modules compile)
-- Gate 4: Code Quality (no TODOs, System.out, @Ignore)
-
-**Usage**:
-```bash
-# Run full quality gate
-/gate-check
-
-# Output:
-# ✅ QUALITY GATE: PASSED
-# Quality Score: 100/100
-# Ready for production
-```
-
----
-
-#### `/gate-coverage`
-
-**Purpose**: Check coverage thresholds and generate detailed coverage report
-
-**Best for**: Focused coverage analysis
-
-**Usage**:
-```bash
-# Validate coverage
-/gate-coverage
-
-# Output:
-# ✅ COVERAGE GATE PASSED
-# Line: 82% >= 75% ✅
-# Branch: 73% >= 65% ✅
-# Method: 87% >= 80% ✅
-# Report: target/site/jacoco-aggregate/index.html
-```
-
----
-
-#### `/pre-commit`
-
-**Purpose**: Fast quality checks before committing (~30 seconds)
-
-**Validates**:
-- Compilation (10s)
-- Changed module tests only (15s)
-- Code quality (5s)
-
-**Best for**: Quick validation before git commit
-
-**Usage**:
-```bash
-# Fast pre-commit check
-/pre-commit
-
-# If passed:
-# ✅ PRE-COMMIT GATE PASSED (28s)
-# Ready to commit
-
-# Then:
-git commit -am "your message"
-```
-
----
-
-#### `/gate-ci`
-
-**Purpose**: CI/CD readiness check (comprehensive validation for pipeline)
-
-**Validates**:
-- Build success (clean build from scratch)
-- Test success (100%, no flaky tests)
-- Coverage (meets thresholds, no regression)
-- Code quality (no warnings, TODOs, debugging code)
-- Dependency security (no critical vulnerabilities)
-- Build performance (< 10 minutes)
-
-**Best for**: Final validation before push to trigger CI/CD
-
-**Usage**:
-```bash
-# CI/CD readiness check
-/gate-ci
-
-# If passed:
-# ✅ CI/CD READINESS: APPROVED
-# Ready for deployment
-
-# Then:
-git push origin $(git branch --show-current)
+#
+# Action Plan:
+#   1. Create missing tests: /test:unit patra-ingest-domain
+#   2. Enhance incomplete tests manually
 ```
 
 ---
@@ -390,20 +238,17 @@ git push origin $(git branch --show-current)
 ### Workflow 1: TDD (Test-Driven Development)
 
 ```bash
-# 1. Write failing test
-/unit patra-ingest-domain
+# 1. Write failing test (manually or generate skeleton)
+/test:unit patra-ingest-domain
 
 # 2. Implement feature
 # ... code changes ...
 
 # 3. Run tests
-/run-unit patra-ingest-domain
+mvn test -pl patra-ingest-domain
 
 # 4. Refine until green
 # ... repeat 2-3 ...
-
-# 5. Run full validation
-/gate-check
 ```
 
 ### Workflow 2: Feature Development
@@ -412,70 +257,34 @@ git push origin $(git branch --show-current)
 # 1. Implement feature
 # ... code changes ...
 
-# 2. Auto-generate all tests
-/auto
+# 2. Auto-generate all missing tests
+/test:auto
 
 # 3. Run all tests
-/run-all
+mvn test
 
-# 4. Check coverage
-/gate-coverage
+# 4. Check for gaps
+/test:analyze
 
-# 5. If gaps exist, analyze and fix
-/analyze
-/unit [module-with-gaps]
-
-# 6. Final validation
-/gate-check
-
-# 7. Commit
-/pre-commit
-git commit -am "feat: your feature"
-
-# 8. Push
-/gate-ci
-git push
+# 5. Commit
+git add .
+git commit -m "feat: your feature with tests"
 ```
 
 ### Workflow 3: Bug Fix
 
 ```bash
 # 1. Write failing test that reproduces bug
-/integration patra-ingest-infra
+/test:integration patra-ingest-infra
 
 # 2. Fix bug
 # ... code changes ...
 
 # 3. Verify fix
-/run-module patra-ingest
+mvn test -pl patra-ingest
 
-# 4. Fast commit
-/pre-commit
-git commit -am "fix: bug description"
-
-# 5. Push
-/gate-ci
-git push
-```
-
-### Workflow 4: Refactoring
-
-```bash
-# 1. Ensure existing tests pass
-/run-all
-
-# 2. Refactor code
-# ... code changes ...
-
-# 3. Run tests (should still pass)
-/run-all
-
-# 4. Check for coverage regression
-/gate-coverage
-
-# 5. Commit if no regression
-/pre-commit
-git commit -am "refactor: description"
+# 4. Commit
+git commit -am "fix: bug description with test"
 ```
 
 ---
@@ -484,169 +293,104 @@ git commit -am "refactor: description"
 
 ### DO ✅
 
-1. **Run `/auto` after feature implementation** - Complete test coverage in one command
-2. **Run `/pre-commit` before every commit** - Catch issues early (30s check)
-3. **Run `/gate-ci` before every push** - Ensure CI/CD readiness
-4. **Use module filters** - Test only changed code for speed (`/unit patra-ingest`)
-5. **Review generated tests** - AI generates good tests, but review for completeness
-6. **Fix flaky tests immediately** - Don't ignore with `@Ignore`
-7. **Keep coverage above thresholds** - 75% line, 65% branch, 80% method
+1. **Run `/test:auto` after feature implementation** - Complete test coverage in one command
+2. **Review generated tests** - AI generates good tests, but review for completeness
+3. **Use module filters** - Test only changed code for speed (`/test:unit patra-ingest`)
+4. **Trust skip logic** - Existing tests won't be overwritten
+5. **Use `/test:analyze` to find gaps** - Identify missing coverage
 
 ### DON'T ❌
 
-1. **Don't commit without `/pre-commit` passing** - Breaks CI/CD
-2. **Don't push without `/gate-ci` passing** - Deployment will fail
-3. **Don't ignore failing tests with `@Ignore`** - Fix or delete
+1. **Don't manually regenerate existing tests** - The system skips them automatically
+2. **Don't commit without tests** - Use `/test:auto` before committing
+3. **Don't ignore test failures** - Fix or delete failing tests, don't use `@Ignore`
 4. **Don't skip test generation** - Tests are not optional
-5. **Don't manually write all tests** - Use `/auto` for efficiency
-6. **Don't commit with coverage regression** - Coverage must not decrease
-7. **Don't merge with TODOs** - Complete or remove before merge
 
 ---
 
-## 📊 Coverage Thresholds
+## 📊 Test Structure
 
-**Defined Thresholds**:
-- Line Coverage: ≥ 75%
-- Branch Coverage: ≥ 65%
-- Method Coverage: ≥ 80%
+**Unit Tests** (domain/app):
+```
+patra-{service}-domain/src/test/java/
+├── aggregate/{Class}Test.java       # State transitions, business rules
+├── vo/{Class}Test.java              # Validation, immutability
+└── event/{Class}Test.java           # Domain events
 
-**Why These Numbers**:
-- **75% line**: Industry standard for good coverage
-- **65% branch**: All major code paths tested
-- **80% method**: Most public methods tested
-
-**Coverage by Layer** (typical):
-- Domain Layer: ~90% (critical business logic)
-- App Layer: ~85% (use case orchestration)
-- Infra Layer: ~78% (persistence logic)
-- Adapter Layer: ~74% (HTTP endpoints)
-
----
-
-## 🔧 Configuration
-
-### JaCoCo Configuration
-
-Located in: `patra-parent/pom.xml`
-
-```xml
-<plugin>
-    <groupId>org.jacoco</groupId>
-    <artifactId>jacoco-maven-plugin</artifactId>
-    <version>0.8.11</version>
-    <configuration>
-        <rules>
-            <rule>
-                <limits>
-                    <limit>
-                        <counter>LINE</counter>
-                        <value>COVEREDRATIO</value>
-                        <minimum>0.75</minimum>
-                    </limit>
-                </limits>
-            </rule>
-        </rules>
-    </configuration>
-</plugin>
+patra-{service}-app/src/test/java/
+└── usecase/{Orchestrator}Test.java  # Use case orchestration
 ```
 
-**To adjust thresholds**: Modify `<minimum>0.75</minimum>` in parent POM.
+**Integration Tests** (infra/adapter/boot):
+```
+patra-{service}-infra/src/test/java/
+└── repository/{Repo}Test.java       # CRUD, optimistic locking
+
+patra-{service}-adapter/src/test/java/
+├── rest/{Controller}Test.java       # HTTP contracts, validation
+└── scheduler/{Job}Test.java         # Job execution
+
+patra-{service}-boot/src/test/java/
+└── {Feature}IntegrationTest.java    # End-to-end flows
+```
 
 ---
 
-## 📝 Command Aliases
-
-Create shell aliases for frequently used commands:
+## 🔧 Running Tests
 
 ```bash
-# Add to ~/.bashrc or ~/.zshrc
+# Run all unit tests
+mvn test
 
-alias tc-unit='/unit'
-alias tc-int='/integration'
-alias tc-auto='/auto'
-alias tc-run='/run-all'
-alias tc-check='/gate-check'
-alias tc-pre='/pre-commit'
-alias tc-ci='/gate-ci'
+# Run all integration tests
+mvn verify
+
+# Run tests for specific module
+mvn test -pl patra-ingest-domain
+
+# Run with coverage report
+mvn clean verify
+# Report: target/site/jacoco/index.html
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Tests fail with "Database connection error"
+### "Test already exists" but I want to regenerate
 
-**Solution**: Ensure test database is configured
+**Solution**: Manually delete the existing test file first, then run command
 ```bash
-# Check test application.yaml
-cat */src/test/resources/application*.yaml | grep datasource
-
-# H2 should be configured for tests
-spring:
-  datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb
+rm patra-ingest-domain/src/test/java/.../PlanAggregateTest.java
+/test:unit patra-ingest-domain
 ```
 
-### Coverage report not generated
+### No tests generated
 
-**Solution**: Run with JaCoCo enabled
-```bash
-mvn clean verify -Djacoco.skip=false
-```
+**Cause**: All tests already exist (working as designed)
 
-### Tests are too slow
+**Solution**: Check output for "Skipped" section, or use `/test:analyze` to find gaps
 
-**Solution**: Enable parallel execution
-```bash
-# Add to pom.xml
-<configuration>
-    <parallel>classes</parallel>
-    <threadCount>4</threadCount>
-</configuration>
-```
+### Tests are too basic
 
-### Flaky tests detected
+**Cause**: AI generates templates based on code structure
 
-**Solution**: Fix or delete (don't ignore)
-1. Identify root cause (race condition, timing, external dependency)
-2. Fix with proper synchronization or test isolation
-3. If unfixable, delete (don't use `@Ignore`)
+**Solution**: Review and enhance generated tests with edge cases and business logic verification
 
 ---
 
-## 📚 Additional Resources
+## 📝 Command Summary
 
-- [JUnit 5 Documentation](https://junit.org/junit5/docs/current/user-guide/)
-- [Mockito Documentation](https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html)
-- [Spring Boot Testing](https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.testing)
-- [JaCoCo Maven Plugin](https://www.jacoco.org/jacoco/trunk/doc/maven.html)
-
----
-
-## 🎓 Learning Path
-
-**Beginner**:
-1. Start with `/auto` to generate tests
-2. Review generated tests to learn patterns
-3. Use `/run-all` to execute
-4. Use `/gate-check` to validate
-
-**Intermediate**:
-1. Use `/unit` and `/integration` separately
-2. Customize generated tests
-3. Use `/analyze` to find gaps
-4. Use `/run-module` for targeted testing
-
-**Advanced**:
-1. Create tests manually following patterns
-2. Use `/pre-commit` for fast feedback
-3. Use `/gate-ci` for deployment readiness
-4. Optimize test performance
+| Command | Purpose | Scope |
+|---------|---------|-------|
+| `/test:auto` | Generate all missing tests | All layers |
+| `/test:unit` | Generate unit tests | domain/app |
+| `/test:integration` | Generate integration tests | infra/adapter/boot |
+| `/test:orchestrator` | Generate orchestrator test | Specific class |
+| `/test:analyze` | Analyze coverage gaps | Module/all |
 
 ---
 
-**Last Updated**: 2025-01-12
-**Commands Version**: 1.0.0
-**Total Commands**: 12 (4 create + 4 run + 4 gate)
+**Last Updated**: 2025-01-13
+**Commands Version**: 2.0.0 (Simplified)
+**Total Commands**: 5
