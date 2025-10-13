@@ -4,13 +4,13 @@
 
 # Layer-specific coverage thresholds (percentage)
 # Based on hexagonal architecture layers
-declare -A COVERAGE_THRESHOLDS=(
-  ["domain"]=85    # Core business logic - highest coverage required
-  ["app"]=75       # Orchestration layer - high coverage
-  ["infra"]=70     # Infrastructure - moderate coverage
-  ["adapter"]=60   # Adapters - lower coverage (integration-heavy)
-  ["default"]=70   # Default for other modules
-)
+# Note: Declared separately to avoid 'set -u' issues with inline initialization
+declare -A COVERAGE_THRESHOLDS
+COVERAGE_THRESHOLDS["domain"]=85    # Core business logic - highest coverage required
+COVERAGE_THRESHOLDS["app"]=75       # Orchestration layer - high coverage
+COVERAGE_THRESHOLDS["infra"]=70     # Infrastructure - moderate coverage
+COVERAGE_THRESHOLDS["adapter"]=60   # Adapters - lower coverage (integration-heavy)
+COVERAGE_THRESHOLDS["default"]=70   # Default for other modules
 
 # Get coverage threshold for a module
 # Args:

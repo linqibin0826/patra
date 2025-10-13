@@ -321,7 +321,7 @@
                     <effort>Max</effort>
                     <threshold>Medium</threshold> <!-- Report Medium and High severity bugs -->
                     <failOnError>true</failOnError>
-                    <excludeFilterFile>${project.basedir}/../../spotbugs-exclude.xml</excludeFilterFile>
+                    <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
                     <xmlOutput>true</xmlOutput>
                     <htmlOutput>true</htmlOutput>
                     <xmlOutputDirectory>${project.build.directory}/spotbugs</xmlOutputDirectory>
