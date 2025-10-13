@@ -2,6 +2,10 @@
 
 Claude Code instructions for Papertrace – Medical Literature Data Platform.
 
+- **Architecture & Design Patterns**: @.claude/AGENTS-architecture.md
+- **Development Guidelines**: @.claude/AGENTS-development.md
+- **Testing Strategy**: @.claude/AGENTS-testing.md
+
 ---
 
 ## Quick Reference
@@ -35,7 +39,9 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 
 **Papertrace** – Medical literature data platform collecting 10+ sources (PubMed, EPMC, etc.). Uses `patra-registry` as SSOT for Provenance configs, dictionaries, metadata.
 **Architecture**: Microservices + Hexagonal + DDD + Event-Driven
+
 **Tech Stack**: Java 21 | Spring Boot 3.2.4 + Cloud 2023.0.1 | Maven | MyBatis-Plus + MapStruct | Nacos
+
 **Current Focus**: Reliable data collection → parsing → storage
 
 ---
@@ -50,14 +56,5 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 ## Security & Resources
 
 **Security**: No hardcoded secrets (use Nacos/env vars), validate all inputs, sanitize user content, log security events
+
 **Docs**: `docs/ARCHITECTURE.md`, `docs/DEV-GUIDE.md`, `patra-*/README.md`
-
----
-
-## Detailed Documentation
-
-For detailed information, see the following documents:
-
-- **Architecture & Design Patterns**: @.claude/AGENTS-architecture.md
-- **Development Guidelines**: @.claude/AGENTS-development.md
-- **Testing Strategy**: @.claude/AGENTS-testing.md
