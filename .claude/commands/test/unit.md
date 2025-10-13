@@ -20,9 +20,11 @@ description: Create unit tests for changed domain/app classes (auto-detects git 
 
 Generate comprehensive **unit tests** for all changed Java classes in domain and app layers.
 
-### Step 1: Identify Target Classes
+### Step 1: Identify Target Classes and Check Existing Tests
 
 From the git diff above, identify all Java classes that need unit tests:
+
+**Target Layers**:
 - **Domain layer**: `*-domain/src/main/java/.../domain/`
   - Aggregates (extends `AggregateRoot`)
   - Value Objects (records)
@@ -35,11 +37,20 @@ From the git diff above, identify all Java classes that need unit tests:
 
 **Exclude**: Interfaces (ports), DTOs without logic, simple POJOs.
 
+**CRITICAL - Check Existing Tests**:
+For each candidate class:
+1. Derive expected test file path:
+   - Source: `src/main/java/.../Foo.java`
+   - Test: `src/test/java/.../FooTest.java`
+2. Check if test file exists: `test -f {test-path}`
+3. **Skip if exists** (do NOT regenerate)
+4. **Generate only if missing**
+
 **Filter**: $ARGUMENTS (if provided, only generate tests for modules matching this pattern)
 
-### Step 2: Analyze Each Class
+### Step 2: Analyze Each Missing Test Class
 
-For each target class:
+For each class **without an existing test**:
 1. Read the source file
 2. Identify:
    - Public methods (behavior to test)
@@ -152,11 +163,33 @@ Ensure tests cover:
 ### Step 5: Summary
 
 After generating all tests, provide:
-1. **List of generated test files** (with file paths)
-2. **Coverage estimate** (methods tested / total methods)
-3. **Test execution command**: `mvn test -pl {module}`
+
+**Tests Created (NEW)**:
+```
+- patra-{service}-domain/src/test/java/.../PlanAggregateTest.java
+- patra-{service}-app/src/test/java/.../PlanOrchestratorTest.java
+Total Created: X unit tests
+```
+
+**Tests Skipped (EXISTING)**:
+```
+- patra-{service}-domain/src/test/java/.../TaskAggregateTest.java (already exists)
+- patra-{service}-app/src/test/java/.../TaskOrchestratorTest.java (already exists)
+Total Skipped: Y unit tests
+```
+
+**Summary**:
+- Total classes changed: N
+- Tests created: X (new)
+- Tests skipped: Y (existing)
+- Total test coverage: X + Y tests
+
+**Test execution command**: `mvn test -pl {module}`
 
 **Important Notes**:
+- **CRITICAL**: Skip existing tests (do NOT regenerate)
+- Only create missing tests
+- Report both created and skipped tests in summary
 - Do NOT create tests for:
   - Simple getters/setters
   - DTOs without logic

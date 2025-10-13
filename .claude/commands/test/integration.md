@@ -20,9 +20,11 @@ description: Create integration tests for changed infra/adapter/boot classes (au
 
 Generate comprehensive **integration tests** for all changed Java classes in infra, adapter, and boot layers.
 
-### Step 1: Identify Target Classes
+### Step 1: Identify Target Classes and Check Existing Tests
 
 From the git diff above, identify all Java classes that need integration tests:
+
+**Target Layers**:
 - **Infra layer**: `*-infra/src/main/java/.../infra/`
   - Repository implementations (*RepositoryMpImpl.java)
   - External service adapters
@@ -38,11 +40,20 @@ From the git diff above, identify all Java classes that need integration tests:
 
 **Exclude**: Simple converters, mappers, DTOs.
 
+**CRITICAL - Check Existing Tests**:
+For each candidate class:
+1. Derive expected test file path:
+   - Source: `src/main/java/.../FooRepository.java`
+   - Test: `src/test/java/.../FooRepositoryTest.java`
+2. Check if test file exists: `test -f {test-path}`
+3. **Skip if exists** (do NOT regenerate)
+4. **Generate only if missing**
+
 **Filter**: $ARGUMENTS (if provided, only generate tests for modules matching this pattern)
 
-### Step 2: Analyze Each Class
+### Step 2: Analyze Each Missing Test Class
 
-For each target class:
+For each class **without an existing test**:
 1. Read the source file
 2. Identify:
    - Integration points (database, HTTP, MQ)
@@ -302,13 +313,37 @@ Ensure tests cover:
 ### Step 6: Summary
 
 After generating all tests, provide:
-1. **List of generated test files** (with file paths and layer)
-2. **Test execution command**:
-   - Repository tests: `mvn test -pl {service}-infra`
-   - Controller tests: `mvn test -pl {service}-adapter`
-   - Boot tests: `mvn verify -pl {service}-boot`
+
+**Tests Created (NEW)**:
+```
+- patra-{service}-infra/src/test/java/.../PlanRepositoryMpImplTest.java
+- patra-{service}-adapter/src/test/java/.../PlanControllerTest.java
+- patra-{service}-boot/src/test/java/.../PlanIntegrationTest.java
+Total Created: X integration tests
+```
+
+**Tests Skipped (EXISTING)**:
+```
+- patra-{service}-infra/src/test/java/.../TaskRepositoryMpImplTest.java (already exists)
+- patra-{service}-adapter/src/test/java/.../TaskControllerTest.java (already exists)
+Total Skipped: Y integration tests
+```
+
+**Summary**:
+- Total classes changed: N
+- Tests created: X (new)
+- Tests skipped: Y (existing)
+- Total test coverage: X + Y tests
+
+**Test execution commands**:
+- Repository tests: `mvn test -pl {service}-infra`
+- Controller tests: `mvn test -pl {service}-adapter`
+- Boot tests: `mvn verify -pl {service}-boot`
 
 **Important Notes**:
+- **CRITICAL**: Skip existing tests (do NOT regenerate)
+- Only create missing tests
+- Report both created and skipped tests in summary
 - Integration tests use Spring context (@SpringBootTest, @WebMvcTest)
 - Use @Transactional for automatic database rollback
 - Mock only external systems, not internal beans
