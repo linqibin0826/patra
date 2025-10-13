@@ -40,6 +40,8 @@ repos:
   # 5) Local Maven hooks for fast feedback on code changes
   - repo: local
     hooks:
+      # ========== PRE-COMMIT STAGE (Fast feedback before commit) ==========
+
       # Fast compile of only the changed Maven modules at commit time
       # Auto-formats Java code with fmt-maven-plugin before compilation
       - id: mvn-compile-changed-modules
@@ -50,11 +52,47 @@ repos:
         files: "(pom\\.xml|.*\\.java)$"
         verbose: true
 
+      # Validate hexagonal architecture rules with ArchUnit (commit time)
+      # Ensures Domain layer stays pure Java with no framework dependencies
+      # Enforces layer boundaries and naming conventions
+      - id: mvn-archunit-changed-modules
+        name: ArchUnit validation (changed modules)
+        entry: scripts/git/mvn_archunit_changed_modules.sh
+        language: system
+        pass_filenames: true
+        files: ".*\\.java$"
+        verbose: true
+
+      # ========== COMMIT-MSG STAGE (Validate commit message) ==========
+
+      # Validate commit message format (Conventional Commits)
+      # Format: <type>(<scope>): <subject>
+      # Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build
+      - id: commit-msg-validation
+        name: Commit message format validation
+        entry: scripts/git/validate_commit_msg.sh
+        language: system
+        stages: [commit-msg]
+
+      # ========== PRE-PUSH STAGE (Comprehensive checks before push) ==========
+
       # Run unit tests for changed modules on push (keeps commit-time fast)
       # Validates formatting compliance with fmt:check before running tests
+      # Optionally enforces test coverage thresholds (set CHECK_COVERAGE=1)
       - id: mvn-test-changed-modules-on-push
         name: mvn test (changed modules on push)
         entry: scripts/git/mvn_test_changed_modules.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        verbose: true
+
+      # Run SpotBugs static analysis on changed modules (pre-push only)
+      # Detects bugs, security vulnerabilities, and code quality issues
+      # Reports: target/spotbugs/*.html
+      - id: mvn-spotbugs-changed-modules
+        name: SpotBugs static analysis (changed modules)
+        entry: scripts/git/mvn_spotbugs_changed_modules.sh
         language: system
         pass_filenames: false
         stages: [pre-push]
