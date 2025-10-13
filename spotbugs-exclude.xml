@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs exclusion filter for Papertrace project.
+
+  This file excludes false positives and known safe patterns from SpotBugs analysis.
+  Customize as needed based on your project's specific requirements.
+
+  Documentation: https://spotbugs.readthedocs.io/en/stable/filter.html
+-->
+<FindBugsFilter>
+
+  <!-- ========================================================================
+       GENERATED CODE EXCLUSIONS
+       ======================================================================== -->
+
+  <!-- Exclude Lombok-generated code -->
+  <Match>
+    <Class name="~.*\..*_\$.*"/>
+    <Bug pattern="NP_NULL_PARAM_DEREF_ALL_TARGETS_DANGEROUS"/>
+  </Match>
+
+  <!-- Exclude MapStruct-generated mappers -->
+  <Match>
+    <Class name="~.*MapperImpl$"/>
+  </Match>
+
+  <!-- Exclude Spring Boot generated configuration metadata -->
+  <Match>
+    <Class name="~.*ConfigurationProperties.*"/>
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- ========================================================================
+       DATA OBJECTS (DO) AND DTOs
+       ======================================================================== -->
+
+  <!-- Data Objects are simple data containers - serialization warnings OK -->
+  <Match>
+    <Class name="~.*DO$"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+      <Bug pattern="SE_BAD_FIELD"/>
+    </Or>
+  </Match>
+
+  <!-- DTOs may have mutable fields for flexibility -->
+  <Match>
+    <Class name="~.*DTO$"/>
+    <Or>
+      <Bug pattern="EI_EXPOSE_REP"/>
+      <Bug pattern="EI_EXPOSE_REP2"/>
+    </Or>
+  </Match>
+
+  <!-- ========================================================================
+       SPRING FRAMEWORK PATTERNS
+       ======================================================================== -->
+
+  <!-- Spring autowired fields (constructor injection preferred, but field injection used) -->
+  <Match>
+    <Or>
+      <Class name="~.*Controller$"/>
+      <Class name="~.*Orchestrator$"/>
+      <Class name="~.*Job$"/>
+    </Or>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+  </Match>
+
+  <!-- Spring @Value injected fields -->
+  <Match>
+    <Bug pattern="UWF_NULL_FIELD"/>
+    <Field name="~.*" annotation="org.springframework.beans.factory.annotation.Value"/>
+  </Match>
+
+  <!-- ========================================================================
+       INTENTIONAL DESIGN PATTERNS
+       ======================================================================== -->
+
+  <!-- Builder pattern intentionally returns mutable object -->
+  <Match>
+    <Class name="~.*Builder$"/>
+    <Method name="build"/>
+    <Bug pattern="EI_EXPOSE_REP"/>
+  </Match>
+
+  <!-- Factory methods may intentionally expose internal representation -->
+  <Match>
+    <Method name="~create.*|~build.*|~of"/>
+    <Bug pattern="EI_EXPOSE_REP"/>
+  </Match>
+
+  <!-- ========================================================================
+       JACKSON/JSON SERIALIZATION
+       ======================================================================== -->
+
+  <!-- Jackson requires default constructors for deserialization -->
+  <Match>
+    <Or>
+      <Class name="~.*Request$"/>
+      <Class name="~.*Response$"/>
+      <Class name="~.*DTO$"/>
+    </Or>
+    <Bug pattern="UWF_UNREAD_PUBLIC_OR_PROTECTED_FIELD"/>
+  </Match>
+
+  <!-- ========================================================================
+       TEST CODE
+       ======================================================================== -->
+
+  <!-- Test fixtures may have unused fields -->
+  <Match>
+    <Class name="~.*Test$"/>
+    <Or>
+      <Bug pattern="UWF_UNREAD_FIELD"/>
+      <Bug pattern="URF_UNREAD_FIELD"/>
+      <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+    </Or>
+  </Match>
+
+  <!-- Test helper classes -->
+  <Match>
+    <Class name="~.*TestUtil$"/>
+    <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
+  </Match>
+
+  <!-- ========================================================================
+       MYBATIS-PLUS AND PERSISTENCE
+       ======================================================================== -->
+
+  <!-- MyBatis-Plus entity fields are accessed via reflection -->
+  <Match>
+    <Class name="~.*DO$"/>
+    <Or>
+      <Bug pattern="UWF_UNREAD_FIELD"/>
+      <Bug pattern="URF_UNREAD_FIELD"/>
+    </Or>
+  </Match>
+
+  <!-- Repository implementations may have seemingly unused methods (called by framework) -->
+  <Match>
+    <Class name="~.*RepositoryImpl$"/>
+    <Bug pattern="UPM_UNCALLED_PRIVATE_METHOD"/>
+  </Match>
+
+  <!-- ========================================================================
+       PERFORMANCE FALSE POSITIVES
+       ======================================================================== -->
+
+  <!-- String concatenation in logging (guarded by isDebugEnabled in code) -->
+  <Match>
+    <Or>
+      <Class name="~.*Orchestrator$"/>
+      <Class name="~.*Controller$"/>
+    </Or>
+    <Bug pattern="SBSC_USE_STRINGBUFFER_CONCATENATION"/>
+  </Match>
+
+  <!-- ========================================================================
+       SECURITY: INTENTIONAL EXCLUSIONS
+       ======================================================================== -->
+
+  <!-- Exclude SQL injection warnings for MyBatis-Plus (uses parameterized queries) -->
+  <Match>
+    <Class name="~.*RepositoryImpl$"/>
+    <Bug pattern="SQL_INJECTION_HIBERNATE"/>
+  </Match>
+
+  <!-- ========================================================================
+       KNOWN SAFE PATTERNS
+       ======================================================================== -->
+
+  <!-- Immutable value objects intentionally return same instance -->
+  <Match>
+    <Package name="~.*\.domain\.model\.vo.*"/>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+  </Match>
+
+  <!-- Hutool utilities may have "dangerous" methods that are safe in context -->
+  <Match>
+    <Class name="~cn\.hutool\..*"/>
+  </Match>
+
+  <!-- ========================================================================
+       CUSTOM EXCLUSIONS (Add project-specific exclusions below)
+       ======================================================================== -->
+
+  <!-- Example: Exclude specific bug in specific class
+  <Match>
+    <Class name="com.patra.ingest.infra.SomeClass"/>
+    <Method name="someMethod"/>
+    <Bug pattern="NP_NULL_ON_SOME_PATH"/>
+  </Match>
+  -->
+
+</FindBugsFilter>
