@@ -78,7 +78,7 @@ How this affects the overall architecture:
 # Memory: refactor-repository-layer-mapstruct
 
 # After adding new hexagonal layer enforcement
-# git diff shows: ArchUnit tests, hooks
+# git diff shows: ArchUnit tests, git hooks
 # Memory: arch-layer-validation-enforcement
 ```
 

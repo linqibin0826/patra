@@ -229,7 +229,7 @@ Processing: architecture-overview (45 days old)
 
 ### Weekly Maintenance
 ```bash
-1. Start session → SessionStart hook auto-activates Serena
+1. Start session
 2. Run: /serena:health
 3. If stale memories: /serena:memory:sync
 ```
@@ -271,22 +271,6 @@ Processing: architecture-overview (45 days old)
 
 ---
 
-## Integration with Hooks
-
-These commands work seamlessly with hooks:
-
-**SessionStart Hook** → Auto-activates Serena
-↓
-**You run**: `/serena:health` → Check status
-↓
-**Read Hook** → Warns on large files, suggests Serena
-↓
-**You run**: `/serena:memory:from-diff` → Document work
-↓
-**Edit/Write Hook** → Validates architecture
-
----
-
 ## Best Practices
 
 1. **Health Check First**: Always run `/serena:health` at session start
@@ -318,5 +302,4 @@ These commands work seamlessly with hooks:
 ## Resources
 
 - [Serena MCP Tools](../../AGENTS-mcp-tools.md)
-- [Claude Code Hooks](../hooks/README.md)
 - [Serena Documentation](https://github.com/serena-ai/serena)
