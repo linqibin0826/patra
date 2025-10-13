@@ -1,5 +1,5 @@
 repos:
-  # 1) Fast, language-agnostic hygiene
+  # 1) Fast, language-agnostic hygiene checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
@@ -14,16 +14,21 @@ repos:
       - id: check-added-large-files
         args: ["--maxkb=2000"]
 
-  # 2) Java formatting — intentionally omitted
-  # Using IntelliJ IDEA’s built-in formatter; pre-commit cannot run IntelliJ headless.
-  # If you want CLI-enforced formatting, I can wire Spotless (eclipse-jdt) or another tool.
+  # 2) Java formatting — automated via fmt-maven-plugin in hooks below
+  # Using com.spotify.fmt (Google Java Format) configured in patra-parent.
+  # IntelliJ users should install the google-java-format plugin for IDE consistency.
+  # Pre-commit hook runs fmt:format (auto-fixes), pre-push runs fmt:check (validation).
 
-  # 3) Spelling for docs and code comments
+  # 3) Spelling checker for docs and code comments
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
       - id: codespell
-        args: ["-S", "target,*.min.js,*generated*,*.lock", "-L", "nd,te,crate,clas,AfterAll,renderIn"]
+        args:
+          - "-S"
+          - "target,*.min.js,*generated*,*.lock"
+          - "-L"
+          - "nd,te,crate,clas,AfterAll,renderIn"
 
   # 4) Secret scanning (no baseline required)
   - repo: https://github.com/gitleaks/gitleaks
@@ -32,21 +37,25 @@ repos:
       - id: gitleaks
         args: ["protect", "--verbose", "--redact", "--staged"]
 
-  # 5) Local hooks for Maven fast feedback
+  # 5) Local Maven hooks for fast feedback on code changes
   - repo: local
     hooks:
       # Fast compile of only the changed Maven modules at commit time
+      # Auto-formats Java code with fmt-maven-plugin before compilation
       - id: mvn-compile-changed-modules
         name: mvn compile (changed modules)
         entry: scripts/git/mvn_compile_changed_modules.sh
         language: system
         pass_filenames: true
         files: "(pom\\.xml|.*\\.java)$"
+        verbose: true
 
-      # Run unit tests for changed modules on push (keeps commit-time snappy)
+      # Run unit tests for changed modules on push (keeps commit-time fast)
+      # Validates formatting compliance with fmt:check before running tests
       - id: mvn-test-changed-modules-on-push
         name: mvn test (changed modules on push)
         entry: scripts/git/mvn_test_changed_modules.sh
         language: system
         pass_filenames: false
         stages: [pre-push]
+        verbose: true
