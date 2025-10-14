@@ -41,7 +41,7 @@ INSERT INTO patra_registry.reg_prov_window_offset_cfg (id, provenance_id, operat
                                                        max_window_span_seconds, lifecycle_status_code, record_remarks,
                                                        created_at, created_by, created_by_name, updated_at, updated_by,
                                                        updated_by_name, version, ip_address, deleted)
-VALUES (2, 1, null, '2025-09-01 00:00:00.000000', null, 'CALENDAR', 7, 'DAY', 'DAY', 1, 'DAY', null, null,
+VALUES (2, 1, 'ALL', '2025-09-01 00:00:00.000000', null, 'CALENDAR', 7, 'DAY', 'DAY', 1, 'DAY', null, null,
         86400, 'DATE', 'PDAT', 'YYYYMMDD', 'PDAT', null, 7776000, 'ACTIVE', '[
     {
       "by": "系统管理员",

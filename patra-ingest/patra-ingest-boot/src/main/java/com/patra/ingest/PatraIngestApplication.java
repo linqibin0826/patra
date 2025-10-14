@@ -2,18 +2,16 @@ package com.patra.ingest;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
  * Spring Boot entry point for the Patra ingest service.
  *
- * <p>Enables Feign clients under {@code com.patra.registry.api.rpc.client} so the service can query
- * provenance metadata from the registry.
+ * <p>Feign clients are automatically discovered via {@code patra-spring-cloud-starter-feign} which
+ * scans all packages matching {@code com.patra.*.api.rpc.client}.
  *
  * @author linqibin
  * @since 0.1.0
  */
-@EnableFeignClients(basePackages = {"com.patra.registry.api.rpc.client"})
 @SpringBootApplication
 public class PatraIngestApplication {
 

@@ -539,12 +539,32 @@ mvn verify -pl patra-ingest-infra
 - **DEBUG**: Diagnostic details (e.g., "Window resolved: [2025-01-01, 2025-01-10)")
 - **ERROR**: Failures (e.g., "Plan assembly failed: WINDOW_INVALID")
 
-### Metrics (Planned)
+### Metrics
 
+**Dependencies**: `spring-boot-starter-actuator` is included in `patra-ingest-boot` for Micrometer metrics support.
+
+**Outbox Metrics** (published by `OutboxMetrics`):
+- `papertrace.outbox.publish.total` (Counter) — Total publish attempts with `aggregateType`, `opType`, `status` tags
+- `papertrace.outbox.publish.duration` (Timer) — Publish operation duration
+- `papertrace.outbox.publish.batch.size` (DistributionSummary) — Batch size distribution
+
+**Planned Metrics**:
 - `plan.ingestion.duration` (histogram)
 - `task.queue.size` (gauge)
 - `cursor.watermark.lag` (gauge) — Time between now and watermark
 - `outbox.relay.lag` (gauge) — Number of pending outbox messages
+
+**Access metrics**:
+```bash
+# Health check
+curl http://localhost:8082/actuator/health
+
+# View all metrics
+curl http://localhost:8082/actuator/metrics
+
+# View specific outbox metrics
+curl http://localhost:8082/actuator/metrics/papertrace.outbox.publish.total
+```
 
 ---
 
@@ -575,4 +595,4 @@ mvn spring-boot:run
 
 ---
 
-**Last Updated**: 2025-01-12
+**Last Updated**: 2025-01-14
