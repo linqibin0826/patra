@@ -19,7 +19,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -28,8 +27,9 @@ import org.springframework.context.annotation.Bean;
  * <p>Auto-configures PubMed and Europe PMC clients backed by the egress gateway. The egress gateway
  * API is a required dependency for this starter.
  *
- * <p>Automatically enables Feign client scanning for {@code com.patra.egress.api.client} to
- * register the {@link EgressGatewayClient} bean.
+ * <p>The {@link EgressGatewayClient} is automatically discovered via {@code
+ * patra-spring-cloud-starter-feign} which scans all {@code @FeignClient} interfaces under {@code
+ * com.patra} package.
  *
  * <p>Configuration properties: Use {@code patra.provenance.enabled=false} to disable this
  * auto-configuration if needed.
@@ -40,7 +40,6 @@ import org.springframework.context.annotation.Bean;
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(ProvenanceProperties.class)
-@EnableFeignClients(basePackages = "com.patra.egress.api.client")
 @ConditionalOnProperty(
     prefix = "patra.provenance",
     name = "enabled",

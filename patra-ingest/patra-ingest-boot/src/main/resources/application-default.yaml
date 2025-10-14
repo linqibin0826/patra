@@ -10,7 +10,7 @@ feign:
 xxl:
   job:
     admin:
-      addresses: http://papertrace.com:7070/xxl-job-admin   # Admin externally accessible URL
+      addresses: http://localhost:7070/xxl-job-admin   # Admin externally accessible URL
     executor:
       ip: host.docker.internal
       logpath: ${PAPERTRACE_LOG_DIR:/Users/linqibin/IdeaProjects/medoc/Papertrace-api/logs}/patra-ingest/xxl-job

@@ -1,10 +1,11 @@
 # patra-spring-boot-starter-expr
 
-> Expression engine integration — auto-configures expression builders and validators.
+> Expression engine integration — auto-configures expression builders, validators, and rule snapshot loaders.
 
 ## 📌 Purpose
 
 Integrates **patra-expr-kernel** with Spring Boot:
+- Expression compiler with rule snapshot loading
 - Expression builder beans
 - Canonicalizer auto-configured
 - Expression validation support
@@ -12,10 +13,31 @@ Integrates **patra-expr-kernel** with Spring Boot:
 
 ## 🔧 Auto-Configurations
 
+### ExprCompiler (Registry-Backed)
+
+When `patra-registry-api` is on classpath, auto-configures:
+- `SnapshotAssembler` - Converts registry DTOs to rule snapshots
+- `RuleSnapshotLoader` - Loads rules from `patra-registry` via Feign clients
+- `ExprCompiler` - Main expression compiler with rule validation
+
+**Requirements:**
+- `ProvenanceClient` and `ExprClient` Feign interfaces present (automatically discovered via `patra-spring-cloud-starter-feign`)
+- `patra.expr.compiler.registry-api.enabled=true` (default)
+
+**Configuration:**
+```yaml
+patra:
+  expr:
+    compiler:
+      enabled: true  # Enable compiler
+      registry-api:
+        enabled: true  # Enable registry-backed rule loading
+```
+
 ### Expression Utilities
-- `ExprCanonicalizer` bean (singleton)
-- `ExprJsonCodec` bean
-- Expression validator beans
+- `CapabilityChecker` - Validates expression capabilities
+- `ExprNormalizer` - Normalizes expressions
+- `ExprRenderer` - Renders expressions to various formats
 
 ## 🔗 Dependencies
 
@@ -29,6 +51,24 @@ Integrates **patra-expr-kernel** with Spring Boot:
 Includes: `patra-expr-kernel`, Jackson
 
 ## 🚀 Usage
+
+### Using ExprCompiler
+
+```java
+@Component
+@RequiredArgsConstructor
+public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
+
+    private final ExprCompiler compiler;  // Auto-wired
+
+    @Override
+    public CompileResult compile(String exprJson, ProvenanceCode code) {
+        return compiler.compile(exprJson, code);
+    }
+}
+```
+
+### Using Expression Utilities
 
 ```java
 @Service
@@ -46,6 +86,12 @@ public class PlanExpressionBuilder {
 }
 ```
 
+## 🔗 Related Documentation
+
+- [Main README](../README.md)
+- [patra-spring-cloud-starter-feign](../patra-spring-cloud-starter-feign/README.md) - Feign client auto-configuration
+- [patra-expr-kernel](../patra-expr-kernel/README.md) - Expression engine core
+
 ---
 
-**Last Updated**: 2025-01-12
+**Last Updated**: 2025-10-14
