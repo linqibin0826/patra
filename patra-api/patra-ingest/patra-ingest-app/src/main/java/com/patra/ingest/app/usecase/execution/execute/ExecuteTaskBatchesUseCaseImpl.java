@@ -72,7 +72,6 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         context.provenanceCode());
 
     // 1) Plan batches.
-    // TODO: implement concrete BatchPlanner(s) —— PubmedBatchPlanner
     BatchPlanner planner = plannerRegistry.get(context.provenanceCode());
     BatchPlan plan = planner.plan(context);
 
