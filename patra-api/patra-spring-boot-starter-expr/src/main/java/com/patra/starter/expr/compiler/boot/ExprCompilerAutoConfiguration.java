@@ -15,19 +15,22 @@ import com.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
+@AutoConfigureAfter(FeignAutoConfiguration.class)
 @EnableConfigurationProperties(CompilerProperties.class)
 public class ExprCompilerAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
-  @ConditionalOnBean({ProvenanceClient.class, ExprClient.class})
   @ConditionalOnProperty(
       prefix = "patra.expr.compiler.registry-api",
       name = "enabled",
@@ -39,7 +42,11 @@ public class ExprCompilerAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
-  @ConditionalOnBean({ProvenanceClient.class, ExprClient.class, SnapshotAssembler.class})
+  @ConditionalOnClass(
+      name = {
+        "com.patra.registry.api.rpc.client.ProvenanceClient",
+        "com.patra.registry.api.rpc.client.ExprClient"
+      })
   @ConditionalOnProperty(
       prefix = "patra.expr.compiler.registry-api",
       name = "enabled",

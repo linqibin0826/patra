@@ -1,6 +1,5 @@
 package com.patra.starter.feign.runtime;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -18,16 +17,16 @@ import org.springframework.core.env.Environment;
  * service identifier.
  *
  * <p><b>Convention-based Feign Client Scanning:</b> Automatically enables Feign client scanning for
- * all packages matching {@code com.patra.*.api.rpc.client}. This convention applies to standard
- * inter-service RPC clients (e.g., registry, business services).
+ * all {@code @FeignClient} annotated interfaces under {@code com.patra} package. By convention,
+ * standard RPC clients should be placed in {@code com.patra.{module}.api.rpc.client} packages.
  *
  * <p><b>Note:</b> Specialized infrastructure clients (e.g., egress gateway) may define their own
- * {@code @EnableFeignClients} in their specific starters if they don't follow this convention.
+ * {@code @EnableFeignClients} in their specific starters if they need custom scanning
+ * configuration.
  */
-@Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(PatraFeignProperties.class)
-@EnableFeignClients(basePackages = "com.patra.*.api.rpc.client")
+@EnableFeignClients(basePackages = "com.patra")
 @ConditionalOnClass(
     name = {
       "feign.Feign",

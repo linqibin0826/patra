@@ -210,6 +210,42 @@ patra-{service}/
 
 **Trade-off**: More boilerplate (mappers, DO classes), but better performance and flexibility.
 
+### 5. Why Centralized Feign Client Scanning?
+
+**Problem**: Each service manually configuring `@EnableFeignClients` leads to:
+- Scattered configuration across services
+- Inconsistent scanning patterns
+- Duplication of Feign client setup
+
+**Solution**: Centralized scanning in `patra-spring-cloud-starter-feign` with convention-based discovery.
+
+**Pattern**:
+- Feign starter scans all `@FeignClient` interfaces under `com.patra` package
+- Convention: Place RPC clients in `com.patra.{module}.api.rpc.client` packages
+- Services automatically discover all Feign clients without manual configuration
+
+**Benefits**:
+- **DRY**: No repeated `@EnableFeignClients` annotations
+- **Convention over Configuration**: Follow package structure → automatic discovery
+- **Consistency**: All services use same pattern
+- **Maintainability**: Add new Feign clients without updating service configurations
+
+**Example**:
+```java
+// Client definition (in patra-registry-api)
+package com.patra.registry.api.rpc.client;
+
+@FeignClient(name = "patra-registry", contextId = "provenanceClient")
+public interface ProvenanceClient extends ProvenanceEndpoint {}
+
+// Usage (in any service - automatically injected)
+@Component
+@RequiredArgsConstructor
+public class MyService {
+    private final ProvenanceClient client;  // Auto-discovered, no config needed!
+}
+```
+
 ---
 
 ## Anti-Patterns to Avoid
@@ -319,5 +355,5 @@ patra-parent (root POM)
 
 ---
 
-**Last Updated**: 2025-01-12
+**Last Updated**: 2025-10-14
 **Author**: Claude (via Papertrace documentation project)

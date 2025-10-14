@@ -55,6 +55,18 @@ Auto-configures **provenance clients** for accessing external medical literature
 
 ## 🔧 Auto-Configuration
 
+### Feign Client Discovery
+
+The `EgressGatewayClient` is **automatically discovered** via `patra-spring-cloud-starter-feign`, which scans all `@FeignClient` interfaces under the `com.patra` package.
+
+**No manual configuration needed:**
+```java
+// ✅ Just add the provenance starter dependency
+// EgressGatewayClient is automatically discovered and injected
+@SpringBootApplication
+public class MyApplication {}
+```
+
 ### Beans Provided
 
 | Bean | Type | Scope | Description |
@@ -64,10 +76,11 @@ Auto-configures **provenance clients** for accessing external medical literature
 | `provenanceMetrics` | `ProvenanceMetrics` | Singleton | Metrics recorder (if `MeterRegistry` available) |
 | `gatewayRequestBuilder` | `GatewayRequestBuilder` | Singleton | Gateway request construction utility |
 | `xmlToJsonConverter` | `XmlToJsonConverter` | Singleton | PubMed XML response converter |
+| `EgressGatewayClient` | Feign proxy | Singleton | Auto-registered Feign client for egress gateway |
 
 ### Required Beans (Must Be Available)
 
-- `EgressGatewayClient` (from `patra-egress-gateway` or mock in tests)
+- `EgressGatewayClient` (automatically registered via Feign client scanning)
 - `ProvenanceProperties` (auto-configured from `application.yml`)
 
 ### Optional Beans
@@ -282,4 +295,4 @@ try {
 
 ---
 
-**Last Updated**: 2025-01-14
+**Last Updated**: 2025-10-14
