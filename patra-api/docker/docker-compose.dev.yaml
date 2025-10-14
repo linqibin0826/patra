@@ -1,0 +1,20 @@
+version: "3.9"
+
+# Main development environment - includes all services
+# Composed from modular service stacks for flexible startup
+
+include:
+  - docker-compose.core.yaml          # MySQL, Redis, Nacos
+  - docker-compose.observability.yaml # Elasticsearch, SkyWalking
+  - docker-compose.jobs.yaml          # XXL-Job, RocketMQ
+
+# This file serves as the entry point for full development environment
+# Individual stacks can be started separately for faster startup:
+#   docker compose -f docker-compose.core.yaml up          # Core services only
+#   docker compose -f docker-compose.observability.yaml up # Monitoring stack only
+#   docker compose -f docker-compose.jobs.yaml up          # Job/message services only
+#   docker compose -f docker-compose.dev.yaml up           # All services (this file)
+
+networks:
+  default:
+    name: patra-net
