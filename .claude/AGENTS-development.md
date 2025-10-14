@@ -6,11 +6,26 @@ This file contains coding standards, development workflow, common libraries, and
 
 ## Coding Standards
 
+- **Code Style**: All code MUST follow [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
 - **POJOs**: `record` for immutables, Lombok for mutables
-- **Logging**: SLF4J parameterized English logs, no sensitive data
 - **Error Handling**: Domain exceptions → App exceptions → HTTP (ProblemDetail)
 - **Consistency**: Outbox pattern, idempotency keys, optimistic locking
 - **Performance**: Avoid N+1 queries, batch operations, proper indexing
+
+---
+
+## Logging Standards
+
+- **Framework**: SLF4J parameterized English logs, no sensitive data (passwords, tokens, PII)
+- **Log Levels**: ERROR (failures), WARN (recoverable issues), INFO (key events), DEBUG (detailed flow), TRACE (diagnostics)
+- **Always Log**:
+  - Application startup/shutdown events
+  - All exceptions with full context (ERROR level)
+  - External API calls (request/response at DEBUG, errors at ERROR)
+  - Database operations failures
+  - Authentication/authorization events (success at INFO, failures at WARN)
+  - Key business operations (batch processing, data ingestion, parsing results)
+- **Troubleshooting**: Include sufficient DEBUG/TRACE logs for method entry/exit, decision branches, and variable states
 
 ---
 
