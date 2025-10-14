@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_api_param_map`
     `provenance_id`       BIGINT UNSIGNED NOT NULL COMMENT 'Source ID (logical FK -> reg_provenance.id) to distinguish providers',
 
     `operation_type`      VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Task type: HARVEST/UPDATE/BACKFILL/SANDBOX/ALL; for task-level gray rollout',
+    `lifecycle_status_code` VARCHAR(32)   NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     `endpoint_name`       VARCHAR(64)     NULL COMMENT 'Endpoint name: specific endpoint this mapping applies to; NULL means applies to all endpoints',
     `std_key`             VARCHAR(64)     NOT NULL COMMENT 'Standard key (unified internal semantic key): e.g., from/to/ti/ab; typically produced during rendering',
@@ -92,6 +93,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_capability`
     `provenance_id`               BIGINT UNSIGNED NOT NULL COMMENT 'Source ID (logical FK -> reg_provenance.id)',
 
     `operation_type`              VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Task type: HARVEST/UPDATE/BACKFILL/ALL',
+    `lifecycle_status_code`       VARCHAR(32)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     `field_key`                   VARCHAR(64)     NOT NULL COMMENT 'Unified internal field key (logical FK -> reg_expr_field_dict.field_key)',
 
@@ -163,6 +165,7 @@ CREATE TABLE IF NOT EXISTS `reg_prov_expr_render_rule`
     `provenance_id`   BIGINT UNSIGNED NOT NULL COMMENT 'Source ID (logical FK -> reg_provenance.id)',
 
     `operation_type`  VARCHAR(32)     NOT NULL DEFAULT 'ALL' COMMENT 'Task type: HARVEST/UPDATE/BACKFILL/ALL',
+    `lifecycle_status_code` VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' COMMENT 'DICT CODE(type=lifecycle_status): lifecycle; read side uses ACTIVE only',
 
     `field_key`       VARCHAR(64)     NOT NULL COMMENT 'Unified internal field key (logical FK -> reg_expr_field_dict.field_key)',
     `op_code`         VARCHAR(16)     NOT NULL COMMENT 'Expression operator code (dict reg_expr_op): TERM/IN/RANGE/EXISTS/TOKEN',
