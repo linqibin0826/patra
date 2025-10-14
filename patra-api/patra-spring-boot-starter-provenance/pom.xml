@@ -25,18 +25,22 @@
             <artifactId>patra-common</artifactId>
         </dependency>
 
-        <!-- patra-egress-gateway-api (optional - runtime check) -->
+        <!-- patra-egress-gateway-api (required for functional provenance clients) -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-egress-gateway-api</artifactId>
-            <optional>true</optional>
         </dependency>
 
-        <!-- ==================== Spring Boot ==================== -->
+        <!-- ==================== Spring Boot & Cloud ==================== -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-openfeign-core</artifactId>
         </dependency>
 
         <dependency>
