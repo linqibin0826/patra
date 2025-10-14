@@ -8,8 +8,10 @@ import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import java.util.Map;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
@@ -32,6 +34,29 @@ public interface PlanConverter {
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "planStatusToCode")
   @Mapping(target = "windowSpec", source = "windowSpec", qualifiedByName = "windowSpecToJson")
   PlanDO toEntity(PlanAggregate aggregate);
+
+  /**
+   * Post-mapping hook to populate denormalized timestamp fields for TIME strategy.
+   *
+   * <p>This method extracts {@code from} and {@code to} timestamps from {@link WindowSpec.Time} and
+   * populates the {@code windowFromTs} and {@code windowToTs} fields for query optimization. For
+   * non-TIME strategies, these fields are set to {@code null}.
+   *
+   * @param aggregate source aggregate
+   * @param entity target DO (will be mutated)
+   */
+  @AfterMapping
+  default void populateDenormalizedTimestamps(
+      PlanAggregate aggregate, @MappingTarget PlanDO entity) {
+    WindowSpec windowSpec = aggregate.getWindowSpec();
+    if (windowSpec instanceof WindowSpec.Time timeWindow) {
+      entity.setWindowFromTs(timeWindow.from());
+      entity.setWindowToTs(timeWindow.to());
+    } else {
+      entity.setWindowFromTs(null);
+      entity.setWindowToTs(null);
+    }
+  }
 
   default PlanAggregate toAggregate(PlanDO entity) {
     return toPlanAggregate(entity);

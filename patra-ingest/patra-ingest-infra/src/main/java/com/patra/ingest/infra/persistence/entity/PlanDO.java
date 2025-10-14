@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.starter.mybatis.entity.BaseDO;
+import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -74,6 +75,26 @@ public class PlanDO extends BaseDO {
   /** Window boundary spec (JSON; schema varies by slice_strategy_code). */
   @TableField(value = "window_spec", typeHandler = JacksonTypeHandler.class)
   private JsonNode windowSpec;
+
+  /**
+   * Denormalized window start timestamp for TIME strategy (application-maintained).
+   *
+   * <p>This field is populated by the application layer when {@code slice_strategy_code = "TIME"}
+   * to enable efficient time-range queries. It should be set to {@code null} for non-TIME
+   * strategies.
+   */
+  @TableField("window_from_ts")
+  private Instant windowFromTs;
+
+  /**
+   * Denormalized window end timestamp for TIME strategy (application-maintained).
+   *
+   * <p>This field is populated by the application layer when {@code slice_strategy_code = "TIME"}
+   * to enable efficient time-range queries. It should be set to {@code null} for non-TIME
+   * strategies.
+   */
+  @TableField("window_to_ts")
+  private Instant windowToTs;
 
   /** Status code (DICT: ing_plan_status). */
   @TableField("status_code")

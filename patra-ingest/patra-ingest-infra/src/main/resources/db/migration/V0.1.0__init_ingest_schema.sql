@@ -75,27 +75,11 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `slice_strategy_code`        VARCHAR(32)     NOT NULL COMMENT 'Slicing strategy: TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/HYBRID etc; determines how to generate multiple slices from prototype',
     `slice_params`               JSON            NULL COMMENT 'Slicing parameters: Details matching the slicing strategy (e.g. step size, time zone, landmark, budget limit etc); only used to generate slices, not directly in execution',
 
-    `window_from`                TIMESTAMP(6)    NULL COMMENT 'Overall window start (inclusive, UTC)',
-    `window_to`                  TIMESTAMP(6)    NULL COMMENT 'Overall window end (exclusive, UTC)',
     `window_spec`                JSON            NOT NULL COMMENT 'Window boundary specification (Format B: nested JSON with strategy-specific structure). Schema varies by slice_strategy_code: TIME contains nested window object with from/to timestamps; ID_RANGE contains nested window object with from/to numeric IDs; CURSOR_LANDMARK contains nested window object with from/to cursor tokens; VOLUME_BUDGET contains flat limit/unit fields; SINGLE contains only strategy field. Examples: TIME: {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-12-31T23:59:59Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}, ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}, CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}, VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}, SINGLE: {"strategy":"SINGLE"}',
-    `window_from_time`           TIMESTAMP(6) GENERATED ALWAYS AS (
-        CASE
-            -- Extract start timestamp from nested window.from field when strategy is TIME
-            -- Path: window_spec.strategy (check) -> window_spec.window.from (extract)
-            WHEN JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.strategy')) = 'TIME'
-                THEN STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.window.from')), '%Y-%m-%dT%H:%i:%s.%f')
-            ELSE NULL
-            END
-        ) VIRTUAL COMMENT 'Virtual column for time-range queries on window start boundary. Only populated when strategy=TIME, extracted from window_spec.window.from (Format B nested path). Used for indexing time-based plan queries.',
-    `window_to_time`             TIMESTAMP(6) GENERATED ALWAYS AS (
-        CASE
-            -- Extract end timestamp from nested window.to field when strategy is TIME
-            -- Path: window_spec.strategy (check) -> window_spec.window.to (extract)
-            WHEN JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.strategy')) = 'TIME'
-                THEN STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(`window_spec`, '$.window.to')), '%Y-%m-%dT%H:%i:%s.%f')
-            ELSE NULL
-            END
-        ) VIRTUAL COMMENT 'Virtual column for time-range queries on window end boundary. Only populated when strategy=TIME, extracted from window_spec.window.to (Format B nested path). Used for indexing time-based plan queries.',
+    -- Denormalized fields for TIME strategy query optimization (application-maintained)
+    `window_from_ts`             TIMESTAMP(6)    NULL COMMENT 'Denormalized: TIME strategy window start (inclusive, UTC). Populated by application layer when slice_strategy_code=TIME for efficient time-range queries. NULL for non-TIME strategies.',
+    `window_to_ts`               TIMESTAMP(6)    NULL COMMENT 'Denormalized: TIME strategy window end (exclusive, UTC). Populated by application layer when slice_strategy_code=TIME for efficient time-range queries. NULL for non-TIME strategies.',
+
     `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status): DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED',
 
     -- Audit fields
@@ -117,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     KEY `idx_plan_status` (`status_code`),
     KEY `idx_plan_expr` (`expr_proto_hash`),
     KEY `idx_plan_prov_config_hash` (`provenance_config_hash`),
-    KEY `idx_window_time_range` (`window_from_time`, `window_to_time`),
+    KEY `idx_window_time_range` (`window_from_ts`, `window_to_ts`),
     KEY `idx_audit_deleted_upd` (`deleted`, `updated_at`),
     KEY `idx_audit_created_by` (`created_by`),
     KEY `idx_audit_updated_by` (`updated_by`)
@@ -143,8 +127,8 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     `provenance_code`      VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code, aligns with reg_provenance.provenance_code (accelerates filtering by source)',
 
     `slice_no`             INT             NOT NULL COMMENT 'Slice sequence number (0..N)',
-    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT 'Slice signature hash: Calculated only from normalized slice_spec (boundary JSON); used for deduplication (same boundaries under same plan not generated repeatedly)',
-    `slice_spec`           JSON            NOT NULL COMMENT 'Slice boundary specification (JSON): Declares this slice execution scope and constraints (time window/ID range/cursor landmark/budget etc), without business expression logic',
+    `slice_signature_hash` CHAR(64)        NOT NULL COMMENT 'Slice signature hash: computed only after normalization of window_spec (boundary JSON); used for weighting/de-weighting (same boundary not generated repeatedly under same plan)',
+    `window_spec`          JSON            NOT NULL COMMENT 'Window boundary specification for this slice (Format B: nested JSON structure matching plan.window_spec but potentially narrowed for this slice). Declares the execution scope and constraints (time window/ID range/cursor landmarks/volume budget) without business expression logic. Schema varies by strategy: TIME uses nested window.from/to, ID_RANGE uses nested window.from/to, CURSOR_LANDMARK uses nested window.from/to, VOLUME_BUDGET uses flat limit/unit, SINGLE has only strategy. Examples: TIME: {"strategy":"TIME","window":{"from":"2024-01-01T00:00:00Z","to":"2024-01-02T00:00:00Z","boundary":{"from":"CLOSED","to":"OPEN"},"timezone":"UTC"}}, ID_RANGE: {"strategy":"ID_RANGE","window":{"from":1000000,"to":2000000}}, CURSOR_LANDMARK: {"strategy":"CURSOR_LANDMARK","window":{"from":"token1","to":"token2"}}, VOLUME_BUDGET: {"strategy":"VOLUME_BUDGET","limit":100000,"unit":"RECORDS"}, SINGLE: {"strategy":"SINGLE"}',
     `expr_hash`            CHAR(64)        NOT NULL COMMENT 'Localized expression hash: Fingerprint calculated from "normalized localized AST"; typically changes together with slice_signature_hash',
 
     `expr_snapshot`        JSON            NULL COMMENT 'Localized expression snapshot (AST, JSON): "Directly executable expression tree" after injecting this slice boundary conditions into plan prototype; slice carries replay semantics',
@@ -278,9 +262,6 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `checkpoint`       JSON            NULL COMMENT 'Run-level checkpoint (e.g. nextHint / resumeToken etc)',
     `stats`            JSON            NULL COMMENT 'Statistics: fetched/upserted/failed/pages etc',
     `error`            TEXT            NULL COMMENT 'Failure reason',
-
-    `window_from`      TIMESTAMP(6)    NULL COMMENT 'Redundant window start for time-based slice (UTC)[inclusive]',
-    `window_to`        TIMESTAMP(6)    NULL COMMENT 'Redundant window end for time-based slice (UTC)[exclusive]',
 
     `started_at`       TIMESTAMP(6)    NULL,
     `finished_at`      TIMESTAMP(6)    NULL,
@@ -482,9 +463,6 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `prev_numeric`         DECIMAL(38, 0)  NULL,
     `new_numeric`          DECIMAL(38, 0)  NULL,
 
-    `window_from`          TIMESTAMP(6)    NULL COMMENT 'Coverage window start (UTC)[inclusive]',
-    `window_to`            TIMESTAMP(6)    NULL COMMENT 'Coverage window end (UTC)[exclusive]',
-
     `direction_code`       VARCHAR(16)     NULL COMMENT 'DICT CODE(type=ing_cursor_direction): FORWARD/BACKFILL',
 
     `idempotent_key`       CHAR(64)        NOT NULL COMMENT 'Event idempotency key: SHA256(source,op,key,ns_scope,ns_key,prev->new,ingestWindow,run_id,...)',
@@ -515,7 +493,6 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
 
     KEY `idx_cur_evt_timeline` (`provenance_code`, `operation_code`, `cursor_key`, `namespace_scope_code`,
                                 `namespace_key`),
-    KEY `idx_cur_evt_window` (`window_from`, `window_to`),
     KEY `idx_cur_evt_instant` (`cursor_type_code`, `new_instant`),
     KEY `idx_cur_evt_numeric` (`cursor_type_code`, `new_numeric`),
     KEY `idx_cur_evt_lineage` (`schedule_instance_id`, `plan_id`, `slice_id`, `task_id`, `run_id`, `batch_id`),
