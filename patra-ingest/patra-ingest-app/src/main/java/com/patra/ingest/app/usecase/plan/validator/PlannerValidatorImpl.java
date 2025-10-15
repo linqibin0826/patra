@@ -165,8 +165,8 @@ public class PlannerValidatorImpl implements PlannerValidator {
         && (StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "DATE")
             || StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "COMPOSITE"))) {
 
-      if (StrUtil.isBlank(windowOffset.offsetFieldName())
-          && StrUtil.isBlank(windowOffset.defaultDateFieldName())) {
+      if (StrUtil.isBlank(windowOffset.offsetFieldKey())
+          && StrUtil.isBlank(windowOffset.windowDateFieldKey())) {
         throw new PlanValidationException(
             String.format(
                 "Source %s configured for %s offset but missing date field configuration",

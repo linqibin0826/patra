@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>Step configuration: prefer the normalized step from the trigger context (ISO-8601
  *       Duration); fallback to the default 1h when invalid.
- *   <li>Time field resolution: offsetFieldName (DATE mode) > defaultDateFieldName.
+ *   <li>Time field resolution: offsetFieldKey (DATE mode) > windowDateFieldKey.
  *   <li>Idempotence: build a canonical JSON and take sha256; repeated planning yields identical
  *       signatures.
  *   <li>Boundary: the last slice aligns to the window end if it is shorter than the step.
@@ -65,8 +65,8 @@ public class TimeSlicePlanner implements SlicePlanner {
       return result;
     }
 
-    // Resolve time field: prefer offsetFieldName (DATE mode), otherwise fallback to
-    // defaultDateFieldName
+    // Resolve time field: prefer offsetFieldKey (DATE mode), otherwise fallback to
+    // windowDateFieldKey
     String timeField = resolveTimeField(context.configSnapshot());
     if (timeField == null) {
       log.error(
@@ -145,8 +145,8 @@ public class TimeSlicePlanner implements SlicePlanner {
   }
 
   /**
-   * Resolve the time field from the configuration snapshot. Priority: DATE mode offsetFieldName >
-   * defaultDateFieldName.
+   * Resolve the time field from the configuration snapshot. Priority: DATE mode offsetFieldKey >
+   * windowDateFieldKey.
    *
    * @param snapshot provenance/source configuration snapshot
    * @return field name usable for range filtering; null when it cannot be resolved
@@ -160,11 +160,11 @@ public class TimeSlicePlanner implements SlicePlanner {
       return null;
     }
     if (StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "DATE")
-        && StrUtil.isNotBlank(windowOffset.offsetFieldName())) {
-      return windowOffset.offsetFieldName();
+        && StrUtil.isNotBlank(windowOffset.offsetFieldKey())) {
+      return windowOffset.offsetFieldKey();
     }
-    if (StrUtil.isNotBlank(windowOffset.defaultDateFieldName())) {
-      return windowOffset.defaultDateFieldName();
+    if (StrUtil.isNotBlank(windowOffset.windowDateFieldKey())) {
+      return windowOffset.windowDateFieldKey();
     }
     return null;
   }

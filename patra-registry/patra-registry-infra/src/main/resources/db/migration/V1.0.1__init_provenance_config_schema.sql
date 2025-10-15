@@ -76,9 +76,9 @@ CREATE TABLE `reg_prov_window_offset_cfg`
 
     /* Offset definition */
     `offset_type_code`        VARCHAR(16)     NOT NULL COMMENT 'DICT CODE(type=offset_type): DATE/ID/COMPOSITE',
-    `offset_field_name`       VARCHAR(128)    NULL COMMENT 'Offset field name or JSONPath (DATE/ID field or composite key primary dimension)',
+    `offset_field_key`        VARCHAR(64)     NULL COMMENT 'Unified field key (std_key, FK-like to reg_expr_field_dict.field_key) for offset tracking',
     `offset_date_format`      VARCHAR(64)     NULL COMMENT 'DATE offset format/semantics: ISO_INSTANT/epochMillis/YYYYMMDD, etc.',
-    `default_date_field_name` VARCHAR(64)     NULL COMMENT 'Default incremental date field (e.g., PubMed: EDAT/PDAT/MHDA; Crossref: indexed-date)',
+    `window_date_field_key`   VARCHAR(64)     NULL COMMENT 'Unified date field key (std_key) used for time slicing when DATE/COMPOSITE',
     `max_ids_per_window`      INT             NULL COMMENT 'Max IDs per window; split window when exceeded',
     `max_window_span_seconds` INT             NULL COMMENT 'Max span per window (seconds): overly long windows will be split',
 

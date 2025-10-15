@@ -43,12 +43,12 @@ public record WindowOffsetConfig(
     Integer watermarkLagSeconds,
     /* Offset type code (DICT CODE: offset_type); defines tracking mechanism (DATE/ID/COMPOSITE) */
     String offsetTypeCode,
-    /* Offset field name or JSONPath (DATE/ID field or composite key primary dimension) */
-    String offsetFieldName,
+    /* Unified field key (std_key) used as the offset pivot */
+    String offsetFieldKey,
     /* DATE offset format/semantics (e.g., ISO_INSTANT/epochMillis/YYYYMMDD) */
     String offsetDateFormat,
-    /* Default incremental date field (e.g., PubMed: EDAT/PDAT/MHDA; Crossref: indexed-date) */
-    String defaultDateFieldName,
+    /* Unified date field key (std_key) used for time slicing when DATE/COMPOSITE */
+    String windowDateFieldKey,
     /* Maximum IDs per window; split window when exceeded */
     Integer maxIdsPerWindow,
     /* Maximum span per window in seconds; overly long windows will be split */
@@ -71,9 +71,9 @@ public record WindowOffsetConfig(
    * @param overlapUnitCode overlap unit code from dictionary, nullable
    * @param watermarkLagSeconds watermark lag in seconds, nullable
    * @param offsetTypeCode offset type code from dictionary, must not be blank
-   * @param offsetFieldName offset field name or JSONPath, nullable
+   * @param offsetFieldKey unified offset field key, nullable
    * @param offsetDateFormat date offset format, nullable
-   * @param defaultDateFieldName default date field name, nullable
+   * @param windowDateFieldKey unified window date field key, nullable
    * @param maxIdsPerWindow maximum IDs per window, nullable
    * @param maxWindowSpanSeconds maximum window span in seconds, nullable
    * @throws DomainValidationException if validation fails
@@ -94,9 +94,9 @@ public record WindowOffsetConfig(
       String overlapUnitCode,
       Integer watermarkLagSeconds,
       String offsetTypeCode,
-      String offsetFieldName,
+      String offsetFieldKey,
       String offsetDateFormat,
-      String defaultDateFieldName,
+      String windowDateFieldKey,
       Integer maxIdsPerWindow,
       Integer maxWindowSpanSeconds) {
     DomainValidationException.positive(id, "Window offset config id");
@@ -122,10 +122,30 @@ public record WindowOffsetConfig(
     this.overlapValue = overlapValue;
     this.overlapUnitCode = overlapUnitCode != null ? overlapUnitCode.trim() : null;
     this.watermarkLagSeconds = watermarkLagSeconds;
+
+    String offsetFieldKeyNormalized = offsetFieldKey != null ? offsetFieldKey.trim() : null;
+    if (offsetFieldKeyNormalized != null && offsetFieldKeyNormalized.isEmpty()) {
+      offsetFieldKeyNormalized = null;
+    }
+    String windowDateFieldKeyNormalized =
+        windowDateFieldKey != null ? windowDateFieldKey.trim() : null;
+    if (windowDateFieldKeyNormalized != null && windowDateFieldKeyNormalized.isEmpty()) {
+      windowDateFieldKeyNormalized = null;
+    }
+    boolean requiresDateKey =
+        "DATE".equalsIgnoreCase(offsetTypeTrimmed)
+            || "COMPOSITE".equalsIgnoreCase(offsetTypeTrimmed);
+    if (requiresDateKey
+        && offsetFieldKeyNormalized == null
+        && windowDateFieldKeyNormalized == null) {
+      throw new DomainValidationException(
+          "DATE/COMPOSITE offset requires at least one std_key (offset or window date)");
+    }
+
     this.offsetTypeCode = offsetTypeTrimmed;
-    this.offsetFieldName = offsetFieldName != null ? offsetFieldName.trim() : null;
+    this.offsetFieldKey = offsetFieldKeyNormalized;
     this.offsetDateFormat = offsetDateFormat != null ? offsetDateFormat.trim() : null;
-    this.defaultDateFieldName = defaultDateFieldName != null ? defaultDateFieldName.trim() : null;
+    this.windowDateFieldKey = windowDateFieldKeyNormalized;
     this.maxIdsPerWindow = maxIdsPerWindow;
     this.maxWindowSpanSeconds = maxWindowSpanSeconds;
   }

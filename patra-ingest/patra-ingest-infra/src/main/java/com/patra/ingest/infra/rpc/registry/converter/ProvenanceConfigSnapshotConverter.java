@@ -71,9 +71,9 @@ public interface ProvenanceConfigSnapshotConverter {
         source.overlapUnitCode(),
         source.watermarkLagSeconds(),
         source.offsetTypeCode(),
-        source.offsetFieldName(),
+        source.offsetFieldKey(),
         source.offsetDateFormat(),
-        source.defaultDateFieldName(),
+        source.windowDateFieldKey(),
         source.maxIdsPerWindow(),
         source.maxWindowSpanSeconds());
   }
