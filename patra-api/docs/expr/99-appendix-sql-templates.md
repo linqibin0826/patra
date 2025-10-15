@@ -15,7 +15,7 @@ INSERT INTO patra_registry.reg_prov_api_param_map
    created_at, created_by, created_by_name,
    updated_at, updated_by, updated_by_name, deleted)
 VALUES
-  (900310, /* PUBMED id here */, 'ALL', 'ACTIVE',
+  (900310, (SELECT id FROM patra_registry.reg_provenance WHERE code='PUBMED'), 'ALL', 'ACTIVE',
    NULL, 'query', 'term', NULL, NULL,
    TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
    JSON_ARRAY(JSON_OBJECT('note','std query → term')), 0, INET6_ATON('0.0.0.0'),
@@ -45,7 +45,7 @@ INSERT INTO patra_registry.reg_prov_expr_render_rule
    created_at, created_by, created_by_name,
    updated_at, updated_by, updated_by_name, deleted)
 VALUES
-  (910201, /* EPMC id */, 'ALL', 'ACTIVE',
+  (910201, (SELECT id FROM patra_registry.reg_provenance WHERE code='EPMC'), 'ALL', 'ACTIVE',
    'publication_date', 'RANGE', NULL, NULL, 'DATE', 'QUERY',
    TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
    'FIRST_PDATE:[{{from}} TO {{to}}]', NULL, NULL, 0,
@@ -67,7 +67,7 @@ INSERT INTO patra_registry.reg_prov_expr_render_rule
    created_at, created_by, created_by_name,
    updated_at, updated_by, updated_by_name, deleted)
 VALUES
-  (920201, /* CROSSREF id */, 'ALL', 'ACTIVE',
+  (920201, (SELECT id FROM patra_registry.reg_provenance WHERE code='CROSSREF'), 'ALL', 'ACTIVE',
    'publication_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
    TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
    NULL, NULL, NULL, 0,

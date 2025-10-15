@@ -34,12 +34,12 @@ Today, the boolean query is not routed via the registry’s `std_key` mapping. I
 
 - Renderer:
   - Renders atoms into query fragments (`emit=QUERY`) and emits std_key/value pairs for `emit=PARAMS` (using `{{...}}` placeholders).
-  - Adds OR/NOT support; uses rule selection’s `negation`/`match`/`valueType` keys.
-  - Executes `fn_code` before final param value substitution (rule scope).
+  - Adds OR/NOT support; uses rule selection’s `negation`/`match`/`valueType` keys; renderer does not map provider parameter names.
+  - Executes `fn_code` before final param value substitution at std_key stage (rule scope).
 
 - Compiler:
   - Bridges the aggregated boolean query into the output params by looking up `std_key=query` in the snapshot’s param map and setting the provider param name to the boolean query value.
-  - Applies `transform_code` to all mapped params (including the bridged query) prior to returning the final output.
+  - Maps all std_keys to provider names and applies `transform_code` to mapped params (including the bridged query) prior to returning the final output.
 
 This keeps rendering and provider naming concerns separate while making everything configurable via the registry.
 
@@ -51,6 +51,7 @@ This keeps rendering and provider naming concerns separate while making everythi
 - QUERY rule: render rule with `emit=QUERY` that produces a boolean query fragment string.
 - fn_code: rule‑level function applied during PARAMS rendering (template scope).
 - transform_code: param‑level transform applied after std_key → provider mapping (value scope).
+- Cardinality: whether a std_key is `SINGLE` (one value) or `MULTI` (many). `MULTI` may be joined via transforms or emitted as repeated provider parameters.
 
 
 ## 1.6 Success Criteria

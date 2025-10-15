@@ -50,11 +50,14 @@ Add at minimum:
 - EPMC: `query→query`, `limit→pageSize` (cursor optional)
 - Crossref: `query→query`, `filter→filter`, `limit→rows`, `offset→offset`
 
+Implementation tip:
+- Resolve `provenance_id` via subqueries by `code` (e.g., `(SELECT id FROM reg_provenance WHERE code='PUBMED')`) to avoid environment‑specific numeric IDs.
 
 ## 7.4 Effective Times & Temporal Slices
 
 - Use a single effective_from baseline (e.g., `TIMESTAMP('2025-10-14 00:00:00.000000')`) for the initial seeds.
 - Leave `effective_to` NULL for open‑ended configs.
+- CI Consideration: Using a fixed timestamp ensures deterministic ordering across environments; if you choose `NOW(6)`, document the rationale and verify ordering in tests.
 
 
 ## 7.5 Verification Queries (Manual)
@@ -79,3 +82,10 @@ WHERE  provenance_id = (SELECT id FROM patra_registry.reg_provenance WHERE code=
 ## 7.6 Rollback
 
 - Since this is seed‑only and no live data, rollback is simply re‑applying the previous seed version (if kept) or re‑creating from VCS.
+
+## 7.7 Flyway/DB Hygiene Notes
+
+- The plan assumes a clean database (no historical data). If Flyway has recorded prior migrations, either:
+  - Drop and recreate the schema (dev only), or
+  - Bump seed versions and avoid editing existing applied migrations.
+- Ensure `baselineOnMigrate=false` (default); do not baseline over existing data for these changes.

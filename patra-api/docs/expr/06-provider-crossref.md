@@ -9,6 +9,7 @@ Date: 2025-10-15
 - Boolean query carrier: `query`
 - Filters: `filter` parameter combines comma‑separated key:value pairs (e.g., `from-pub-date:YYYY-MM-DD,until-pub-date:YYYY-MM-DD`)
 - Pagination: `rows` (limit), `offset` (offset)
+- Invariant: Renderer must not map provider parameter names; compiler performs std_key→provider mapping and query bridging.
 
 
 ## 6.2 std_key Mapping (param map)
@@ -58,6 +59,17 @@ Result:
 - std_key params → `{filter:"from-pub-date:2022-01-01,until-pub-date:2022-12-31"}`
 - Mapped → `{query:"\"machine learning\"", filter:"from-pub-date:2022-01-01,until-pub-date:2022-12-31", rows:..., offset:...}`
 
+NOT/OR example:
+```
+{
+  "or": [
+    { "term": { "field": "text", "value": "AI", "match": "ANY" } },
+    { "not": { "term": { "field": "text", "value": "survey", "match": "ANY" } } }
+  ]
+}
+```
+Aggregated: `("AI" OR NOT("survey"))`
+Mapped: `{query:"(\"AI\" OR NOT(\"survey\"))"}`
 
 ## 6.6 Seed Migration (New)
 

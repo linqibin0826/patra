@@ -10,6 +10,7 @@ Date: 2025-10-15
 - Date filters: `datetype` + `mindate` + `maxdate`
 - Pagination: `retmax` (limit), `retstart` (offset)
 - Common field qualifier: `[TIAB]` for title/abstract (examples)
+- Invariant: Renderer must not map provider parameter names; compiler performs std_key→provider mapping and query bridging.
 
 
 ## 4.2 std_key Mapping (param map)
@@ -60,6 +61,23 @@ Result:
 - Query fragments → `"heart failure"[TIAB]`
 - std_key params → `{from:"2023-01-01", to:"2023-12-31", datetype:"pdat"}`
 - Mapped params → `{term:"\"heart failure\"[TIAB]", mindate:"2023-01-01", maxdate:"2023-12-30", datetype:"pdat"}`
+
+NOT/OR example:
+```
+{
+  "and": [
+    { "term": { "field": "tiab", "value": "cancer", "match": "ANY" } },
+    {
+      "or": [
+        { "term": { "field": "tiab", "value": "therapy", "match": "ANY" } },
+        { "not": { "term": { "field": "tiab", "value": "surgery", "match": "ANY" } } }
+      ]
+    }
+  ]
+}
+```
+Aggregated query (template-dependent):
+`cancer[TIAB] AND ("therapy"[TIAB] OR NOT("surgery"[TIAB]))`
 
 
 ## 4.6 Seed Migration Edits

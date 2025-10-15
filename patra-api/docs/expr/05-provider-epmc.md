@@ -9,6 +9,7 @@ Date: 2025-10-15
 - Boolean query carrier: `query` (Lucene‑like syntax)
 - Date filters: commonly fielded within the query (e.g., `FIRST_PDATE:[YYYY-MM-DD TO YYYY-MM-DD]`); may vary by dataset/scope
 - Pagination: `pageSize`, and optionally `cursorMark` (endpoint‑specific)
+- Invariant: Renderer must not map provider parameter names; compiler performs std_key→provider mapping and query bridging.
 
 
 ## 5.2 std_key Mapping (param map)
@@ -56,6 +57,21 @@ Result:
 - Aggregated → `cancer AND FIRST_PDATE:[2024-01-01 TO 2024-06-01]`
 - Mapped params → `{query:"cancer AND FIRST_PDATE:[2024-01-01 TO 2024-06-01]", pageSize:...}`
 
+NOT/OR example:
+```
+{
+  "and": [
+    { "term": { "field": "text", "value": "neoplasm", "match": "ANY" } },
+    {
+      "or": [
+        { "term": { "field": "text", "value": "gene", "match": "ANY" } },
+        { "not": { "term": { "field": "text", "value": "mouse", "match": "ANY" } } }
+      ]
+    }
+  ]
+}
+```
+Aggregated (template-dependent): `neoplasm AND ("gene" OR NOT("mouse"))`
 
 ## 5.6 Seed Migration (New)
 

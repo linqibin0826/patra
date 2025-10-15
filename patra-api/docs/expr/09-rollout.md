@@ -25,8 +25,10 @@ Date: 2025-10-15
 
 ## 9.2 Observability During Rollout
 
-- Enable DEBUG temporarily for `com.patra.starter.expr.compiler` to confirm bridges and transforms.
+- Enable DEBUG temporarily for `com.patra.starter.expr.compiler` in non‑prod to confirm bridges and transforms.
+- INFO logs must redact/hash queries (e.g., `queryHash`); do not log full queries at INFO in prod.
 - Capture counts of rule/param map misses; they should be zero for the seeded providers.
+- Correlate provider HTTP error rates (4xx/5xx) with bridge enabled flag and rule versions during smoke tests.
 
 
 ## 9.3 Fallback
@@ -42,3 +44,4 @@ Date: 2025-10-15
   2) Add render rules,
   3) Add param maps (including `query`),
   4) Smoke test via snapshot + compile + adapter assembly.
+  5) Observe logs/metrics; ensure no rule/param map misses and provider error rates are normal.

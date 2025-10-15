@@ -24,12 +24,17 @@ Renderer
 - NOT: `NOT(A)` selects `negation=TRUE` rule or templated negation
 - PARAMS placeholders: `{{from}}/{{to}}/{{datetype}}` replaced
 - `fn_code`: `PUBMED_DATETYPE` returns `pdat`
+- Cardinality:
+  - SINGLE std_key emitted multiple times → last‑write‑wins by rule priority
+  - MULTI std_key emits multiple values → verify collection at renderer output (std_keys only)
 
 Compiler
 - Bridge: `query` present → mapped to provider name (`term` or `query`)
 - Transform: `TO_EXCLUSIVE_MINUS_1D` converts `to` before mapping
 - Missing param map: warning `W-PARAM-MAP-MISSING`
 - Query length guard: `E-QUERY-LEN-MAX`
+- MULTI join: apply `LIST_JOIN`/`FILTER_JOIN` transform; verify final single provider param value
+- MULTI repeat (if/when supported): verify repeated provider parameters or internal representation
 
 
 ## 8.3 Integration Tests (Boot)
@@ -59,8 +64,10 @@ Ingest
 - Logs:
   - Renderer: rule hits and misses
   - Compiler: query bridge log line; transform applications
+  - Redaction: INFO logs redact/hash queries; full payloads only at DEBUG in non‑prod
 - Metrics (if present):
   - `expr.render.rules.miss`, `expr.param.map.miss`, `expr.transform.applied`
+  - `expr.render.rule_hits`, `expr.param.map_hit`, `expr.compile.errors{code}`
 
 
 ## 8.6 Performance
