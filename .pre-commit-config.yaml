@@ -5,6 +5,7 @@ repos:
     hooks:
       - id: check-merge-conflict
       - id: check-yaml
+        exclude: ^specs/
       - id: check-json
       - id: check-toml
       - id: end-of-file-fixer

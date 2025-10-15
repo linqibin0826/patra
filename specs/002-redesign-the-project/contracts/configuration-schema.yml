@@ -74,7 +74,7 @@ logging:
       queueSize: 1024  # Larger queue for high throughput
       discardingThreshold: 200  # Allow discarding DEBUG logs if queue 80% full
 
----
+# ---
 
 # Schema Validation Rules
 # ======================
@@ -125,7 +125,7 @@ logging:
 #     max: 365
 #     description: Number of archived log files to keep
 
----
+# ---
 
 # Configuration Precedence (highest to lowest)
 # =============================================
@@ -134,7 +134,7 @@ logging:
 # 3. Common config (logging-common.yml)
 # 4. Application defaults (logback-spring.xml in starter)
 
----
+# ---
 
 # Dynamic Update Behavior
 # ========================
@@ -144,7 +144,7 @@ logging:
 # - No service restart required
 # - Audit log written at INFO level when levels change
 
----
+# ---
 
 # Example: Temporary DEBUG for Production Troubleshooting
 # ========================================================
@@ -163,7 +163,7 @@ logging:
   level:
     com.papertrace.ingest.infra.client.PubMedClient: INFO
 
----
+# ---
 
 # Best Practices
 # ===============
