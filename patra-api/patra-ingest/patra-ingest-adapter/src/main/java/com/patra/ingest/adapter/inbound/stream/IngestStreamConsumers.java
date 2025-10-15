@@ -83,8 +83,8 @@ public class IngestStreamConsumers {
 
       } catch (Exception e) {
         log.error("[INGEST][ADAPTER] failed to consume message, will retry", e);
-        // Throw to trigger MQ retry
-        throw new RuntimeException("Message consumption failed", e);
+        // TODO Throw to trigger MQ retry
+        //        throw new RuntimeException("Message consumption failed", e);
       }
     };
   }
