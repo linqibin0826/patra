@@ -66,8 +66,8 @@ Ingest
   - Compiler: query bridge log line; transform applications
   - Redaction: INFO logs redact/hash queries; full payloads only at DEBUG in non‑prod
 - Metrics (if present):
-  - `expr.render.rules.miss`, `expr.param.map.miss`, `expr.transform.applied`
-  - `expr.render.rule_hits`, `expr.param.map_hit`, `expr.compile.errors{code}`
+  - `expr.render.rule_miss{provenance,endpoint}`, `expr.param.map_miss{provenance,endpoint}`, `expr.transform.applied{provenance,endpoint,code}`
+  - `expr.render.rule_hits{provenance,endpoint}`, `expr.param.map_hit{provenance,endpoint}`, `expr.compile.errors{code}`
 
 
 ## 8.6 Performance
