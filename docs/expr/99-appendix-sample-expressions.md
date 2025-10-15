@@ -53,3 +53,23 @@ Expected:
 - query: `"machine learning"`
 - std_key `filter`: `from-pub-date:2022-01-01,until-pub-date:2022-12-31`
 - mapped: `query`, `filter`
+
+## B.4 Multiple Filters (MULTI with Join)
+
+```
+{
+  "and": [
+    { "term": { "field": "text", "value": "genomics", "match": "ANY" } },
+    { "range": { "field": "publication_date", "from": "2021-01-01", "to": "2021-12-31" } },
+    { "term": { "field": "journal", "value": "Nature", "match": "ANY" } }
+  ]
+}
+```
+Example strategy:
+- Emit std_key `filter` twice via PARAMS rules:
+  - `from-pub-date:{{from}},until-pub-date:{{to}}`
+  - `container-title:{{v}}` (from `journal` term)
+- Define `filter` as MULTI.
+- Apply a join transform (e.g., `FILTER_JOIN` → comma‑separated) in the compiler mapping stage.
+Expected provider params:
+`{ query:"genomics", filter:"from-pub-date:2021-01-01,until-pub-date:2021-12-31,container-title:Nature" }`

@@ -23,12 +23,14 @@ This index anchors the full documentation set for the compiler‑bridge variant 
 - 11 Acceptance Criteria & Checklists — `docs/expr/11-acceptance-criteria.md`
 - 99 Appendix: SQL Templates — `docs/expr/99-appendix-sql-templates.md`
 - 99 Appendix: Sample Expressions — `docs/expr/99-appendix-sample-expressions.md`
+- 12 Provider Checklist — `docs/expr/12-provider-checklist.md`
+- 12 Golden Test Harness — `docs/expr/12-golden-test-harness.md`
 
 
 ## Executive Summary
 
 We will:
-- Promote the boolean query to a first-class std_key `query` and bridge it to provider parameters in the compiler (not in the renderer or adapter code).
+- Promote the boolean query to a first-class std_key `query` and bridge it to provider parameters in the compiler only (renderer never maps provider names; adapters remain thin).
 - Enable OR/NOT rendering and rule-driven negation so boolean logic works across providers.
 - Execute `fn_code` and `transform_code` to handle provider-specific quirks without code branching.
 - Normalize PARAMS placeholders to the engine’s `{{...}}` convention.

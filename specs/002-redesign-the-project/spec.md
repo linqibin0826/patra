@@ -1,6 +1,6 @@
 # Feature Specification: Enhanced Logging System Redesign
 
-**Feature Branch**: `001-redesign-the-project`
+**Feature Branch**: `002-redesign-the-project`
 **Created**: 2025-10-15
 **Status**: Draft
 **Input**: User description: "Redesign the project's logging system to achieve the following goals: High readability and well-defined log levels, Improved problem diagnosis in both development and production, Enhanced traceability across request chains for easier debugging, After finalizing the new design, update the existing log output to align with the new structure, Integrate @XSlf4j to unify and enhance the log output format, ensuring consistent and developer-friendly logging across all modules."
@@ -156,7 +156,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 ## Assumptions
 
 - The project currently uses SLF4J as the logging facade, allowing integration of enhanced logging without replacing the underlying framework
-- The project has distributed tracing infrastructure in place or can integrate one (e.g., Spring Cloud Sleuth, OpenTelemetry) for trace ID propagation
+- The project uses Apache SkyWalking for distributed tracing infrastructure, which handles trace ID and span propagation automatically
 - Log aggregation and centralized log management tools (e.g., ELK stack, Splunk) are available in production for log analysis
 - Developers have access to production logs through appropriate tools and permissions for troubleshooting
 - The current logging implementation lacks structured context, consistent formatting, and trace propagation, requiring systematic updates
@@ -174,7 +174,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 ## Dependencies
 
 - SLF4J logging facade (already in use)
-- Distributed tracing library (e.g., Spring Cloud Sleuth, Micrometer Tracing, or OpenTelemetry) for trace ID generation and propagation
+- Apache SkyWalking for trace ID generation and span propagation (already integrated)
 - Log aggregation infrastructure (e.g., Logstash, Fluentd) for centralized log collection and analysis
 - Configuration management system (Nacos) for dynamic log level configuration
 - Existing microservices must adopt the new logging utilities and standards through coordinated updates
