@@ -1,15 +1,28 @@
 package com.patra.ingest.infra.rpc.pubmed;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.exception.BatchPlanningException;
+import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.port.PubmedSearchPort;
+import com.patra.starter.provenance.common.config.BatchingConfig;
+import com.patra.starter.provenance.common.config.HttpConfig;
+import com.patra.starter.provenance.common.config.PaginationConfig;
+import com.patra.starter.provenance.common.config.ProvenanceConfig;
+import com.patra.starter.provenance.common.config.RateLimitConfig;
+import com.patra.starter.provenance.common.config.RetryConfig;
+import com.patra.starter.provenance.common.config.WindowOffsetConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
+import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 /** Infra adapter for {@link PubmedSearchPort} using {@link PubMedClient}. */
 @Component
@@ -18,12 +31,17 @@ import org.springframework.stereotype.Component;
 public class PubmedSearchPortImpl implements PubmedSearchPort {
 
   private final PubMedClient pubMedClient;
+  private static final PubMedESearchRequestAssembler ASSEMBLER =
+      new PubMedESearchRequestAssembler();
 
   @Override
-  public int estimateCount(String query, JsonNode params) {
+  public int estimateCount(
+      String query, JsonNode params, ProvenanceConfigSnapshot provenanceConfigSnapshot) {
     try {
-      ESearchRequest request = buildCountRequest(query, params);
-      ESearchResponse response = pubMedClient.esearch(request);
+      ESearchRequest request = ASSEMBLER.buildCount(query, params);
+      ProvenanceConfig config = toProvenanceConfig(provenanceConfigSnapshot);
+      ESearchResponse response =
+          config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
       int count = response != null && response.result() != null ? response.result().count() : 0;
       log.info("[INGEST][INFRA] pubmed esearch count termHash={} count={}", safeHash(query), count);
       return Math.max(count, 0);
@@ -38,47 +56,149 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
     }
   }
 
+  private ProvenanceConfig toProvenanceConfig(ProvenanceConfigSnapshot snapshot) {
+    if (snapshot == null || snapshot.provenance() == null) {
+      return null;
+    }
+    String baseUrl = snapshot.provenance().baseUrlDefault();
+    if (!StringUtils.hasText(baseUrl)) {
+      log.debug(
+          "[INGEST][INFRA] provenance snapshot missing baseUrl, fallback to default config. provenanceId={}",
+          snapshot.provenance().id());
+      return null;
+    }
+
+    HttpConfig http = toHttpConfig(snapshot.http());
+    PaginationConfig pagination = toPaginationConfig(snapshot.pagination());
+    WindowOffsetConfig windowOffset = toWindowOffsetConfig(snapshot.windowOffset());
+    BatchingConfig batching = toBatchingConfig(snapshot.batching());
+    RetryConfig retry = toRetryConfig(snapshot.retry());
+    RateLimitConfig rateLimit = toRateLimitConfig(snapshot.rateLimit());
+
+    try {
+      return new ProvenanceConfig(
+          baseUrl.trim(), http, pagination, windowOffset, batching, retry, rateLimit);
+    } catch (IllegalArgumentException ex) {
+      log.warn(
+          "[INGEST][INFRA] failed to build provenance config override, fallback to default config. provenanceId={}",
+          snapshot.provenance().id(),
+          ex);
+      return null;
+    }
+  }
+
+  private HttpConfig toHttpConfig(ProvenanceConfigSnapshot.HttpConfig source) {
+    if (source == null) {
+      return null;
+    }
+    Map<String, String> headers = parseHeaders(source.defaultHeadersJson());
+    return new HttpConfig(
+        headers,
+        source.timeoutConnectMillis(),
+        source.timeoutReadMillis(),
+        source.timeoutTotalMillis());
+  }
+
+  private PaginationConfig toPaginationConfig(ProvenanceConfigSnapshot.PaginationConfig source) {
+    if (source == null) {
+      return null;
+    }
+    if (source.pageSizeValue() == null && source.maxPagesPerExecution() == null) {
+      return null;
+    }
+    return new PaginationConfig(source.pageSizeValue(), source.maxPagesPerExecution());
+  }
+
+  private WindowOffsetConfig toWindowOffsetConfig(
+      ProvenanceConfigSnapshot.WindowOffsetConfig source) {
+    if (source == null) {
+      return null;
+    }
+    if (source.windowModeCode() == null
+        && source.windowSizeValue() == null
+        && source.windowSizeUnitCode() == null
+        && source.lookbackValue() == null
+        && source.lookbackUnitCode() == null
+        && source.overlapValue() == null
+        && source.overlapUnitCode() == null
+        && source.offsetTypeCode() == null
+        && source.maxIdsPerWindow() == null) {
+      return null;
+    }
+    return new WindowOffsetConfig(
+        source.windowModeCode(),
+        source.windowSizeValue(),
+        source.windowSizeUnitCode(),
+        source.lookbackValue(),
+        source.lookbackUnitCode(),
+        source.overlapValue(),
+        source.overlapUnitCode(),
+        source.offsetTypeCode(),
+        source.maxIdsPerWindow());
+  }
+
+  private BatchingConfig toBatchingConfig(ProvenanceConfigSnapshot.BatchingConfig source) {
+    if (source == null) {
+      return null;
+    }
+    if (source.detailFetchBatchSize() == null && source.maxIdsPerRequest() == null) {
+      return null;
+    }
+    return new BatchingConfig(source.detailFetchBatchSize(), source.maxIdsPerRequest());
+  }
+
+  private RetryConfig toRetryConfig(ProvenanceConfigSnapshot.RetryConfig source) {
+    if (source == null) {
+      return null;
+    }
+    if (source.maxRetryTimes() == null && source.initialDelayMillis() == null) {
+      return null;
+    }
+    return new RetryConfig(source.maxRetryTimes(), source.initialDelayMillis());
+  }
+
+  private RateLimitConfig toRateLimitConfig(ProvenanceConfigSnapshot.RateLimitConfig source) {
+    if (source == null) {
+      return null;
+    }
+    if (source.maxConcurrentRequests() == null && source.perCredentialQpsLimit() == null) {
+      return null;
+    }
+    return new RateLimitConfig(source.maxConcurrentRequests(), source.perCredentialQpsLimit());
+  }
+
+  private Map<String, String> parseHeaders(String headersJson) {
+    if (!StringUtils.hasText(headersJson)) {
+      return Map.of();
+    }
+    try {
+      JsonNode node = JsonMapperHolder.getObjectMapper().readTree(headersJson);
+      if (!node.isObject()) {
+        return Map.of();
+      }
+      Map<String, String> headers = new LinkedHashMap<>();
+      node.fields()
+          .forEachRemaining(
+              entry -> {
+                JsonNode value = entry.getValue();
+                if (value != null && !value.isNull()) {
+                  headers.put(
+                      entry.getKey(), value.isTextual() ? value.asText() : value.toString());
+                }
+              });
+      return headers;
+    } catch (Exception ex) {
+      log.warn(
+          "[INGEST][INFRA] Failed to parse provenance default headers JSON, ignoring overrides. length={}",
+          headersJson.length(),
+          ex);
+      return Map.of();
+    }
+  }
+
   private static String safeHash(String s) {
     if (s == null) return "null";
     int h = s.hashCode();
     return Integer.toHexString(h);
-  }
-
-  private static ESearchRequest buildCountRequest(String term, JsonNode params) {
-    // Pull a few relevant filters from compiled params (if present)
-    String sort = getText(params, "sort");
-    String datetype = getText(params, "datetype");
-    String mindate = getText(params, "mindate");
-    String maxdate = getText(params, "maxdate");
-    String field = getText(params, "field");
-    String reldate = getText(params, "reldate");
-
-    // Build a count-only ESearchRequest (retmode=json, rettype=count)
-    return new ESearchRequest(
-        "pubmed",
-        term,
-        null, // retstart
-        null, // retmax
-        "json",
-        "count",
-        sort,
-        datetype,
-        mindate,
-        maxdate,
-        field,
-        reldate,
-        null, // usehistory
-        null, // webenv
-        null, // queryKey
-        null, // apiKey
-        null, // tool
-        null // email
-        );
-  }
-
-  private static String getText(JsonNode node, String field) {
-    if (node == null || node.isNull()) return null;
-    JsonNode v = node.get(field);
-    return (v != null && !v.isNull() && v.isTextual()) ? v.asText() : null;
   }
 }

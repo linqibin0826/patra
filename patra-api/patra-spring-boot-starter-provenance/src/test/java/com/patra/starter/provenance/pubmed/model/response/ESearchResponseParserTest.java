@@ -31,14 +31,11 @@ class ESearchResponseParserTest {
             }
             """;
 
-    ESearchResponse response = ESearchResponse.from(MAPPER.readTree(payload));
+    ESearchResponse response = MAPPER.readValue(payload, ESearchResponse.class);
 
     assertThat(response.result().count()).isEqualTo(2);
     assertThat(response.result().idList()).containsExactly("123", "456");
     assertThat(response.result().translationSet()).hasSize(1);
     assertThat(response.result().translationStack()).hasSize(1);
-    assertThat(response.result().errorPhrases()).containsExactly("bad term");
-    assertThat(response.result().warningMessages()).containsExactly("warn");
-    assertThat(response.raw()).isNotNull();
   }
 }

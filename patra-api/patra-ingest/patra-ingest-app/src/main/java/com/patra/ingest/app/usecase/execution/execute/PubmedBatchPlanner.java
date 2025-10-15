@@ -12,21 +12,40 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.port.PubmedSearchPort;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /** PubMed-specific batch planner that creates page-based batches using ESearch count. */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class PubmedBatchPlanner implements BatchPlanner {
 
-  private static final int DEFAULT_PAGE_SIZE = 500; // as agreed
-  private static final int PUBMED_RETMAX_LIMIT = 10_000;
-
   private final PubmedSearchPort searchPort;
   private final ObjectMapper objectMapper;
+  private final int pubmedRetmaxLimit;
+
+  /**
+   * Constructor with mandatory configuration validation.
+   *
+   * @param searchPort PubMed search port
+   * @param objectMapper JSON object mapper
+   * @param pubmedRetmaxLimit PubMed API retmax limit (must be configured)
+   * @throws IllegalArgumentException if pubmedRetmaxLimit is not positive
+   */
+  public PubmedBatchPlanner(
+      PubmedSearchPort searchPort,
+      ObjectMapper objectMapper,
+      @Value("${patra.ingest.pubmed.retmax-limit}") int pubmedRetmaxLimit) {
+    if (pubmedRetmaxLimit <= 0) {
+      throw new IllegalArgumentException(
+          "patra.ingest.pubmed.retmax-limit must be configured and positive, got: "
+              + pubmedRetmaxLimit);
+    }
+    this.searchPort = searchPort;
+    this.objectMapper = objectMapper;
+    this.pubmedRetmaxLimit = pubmedRetmaxLimit;
+  }
 
   @Override
   public ProvenanceCode getProvenanceCode() {
@@ -43,7 +62,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
 
     ObjectNode baseParams = toObjectNode(ctx.compiledParams());
 
-    int total = searchPort.estimateCount(compiledQuery, baseParams);
+    int total = searchPort.estimateCount(compiledQuery, ctx.compiledParams(), ctx.configSnapshot());
     if (total <= 0) {
       log.info("[INGEST][APP] pubmed planner: no results termHash={}", safeHash(compiledQuery));
       return BatchPlan.empty();
@@ -95,7 +114,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
       return objectMapper.createObjectNode();
     }
     if (node.isObject()) {
-      return ((ObjectNode) node).deepCopy();
+      return node.deepCopy();
     }
     return objectMapper.valueToTree(node);
   }
@@ -107,15 +126,26 @@ public class PubmedBatchPlanner implements BatchPlanner {
             ? snapshot.pagination().pageSizeValue()
             : null;
 
-    int pageSize =
-        fromParams != null ? fromParams : (fromCfg != null ? fromCfg : DEFAULT_PAGE_SIZE);
-    if (pageSize <= 0) pageSize = DEFAULT_PAGE_SIZE;
-    if (pageSize > PUBMED_RETMAX_LIMIT) {
+    // Both sources missing - configuration is mandatory
+    if (fromParams == null && fromCfg == null) {
+      throw new BatchPlanningException(
+          "Page size configuration is mandatory: neither 'retmax' parameter nor pagination.pageSizeValue is configured");
+    }
+
+    int pageSize = fromParams != null ? fromParams : fromCfg;
+
+    // Validate positive
+    if (pageSize <= 0) {
+      throw new BatchPlanningException("Page size must be positive, got: " + pageSize);
+    }
+
+    // Clamp to PubMed API limit
+    if (pageSize > pubmedRetmaxLimit) {
       log.warn(
           "[INGEST][APP] pubmed planner: retmax clamped to {} from {}",
-          PUBMED_RETMAX_LIMIT,
+          pubmedRetmaxLimit,
           pageSize);
-      pageSize = PUBMED_RETMAX_LIMIT;
+      pageSize = pubmedRetmaxLimit;
     }
     return pageSize;
   }
