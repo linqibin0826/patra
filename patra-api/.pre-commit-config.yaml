@@ -85,7 +85,7 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
-        verbose: true
+        verbose: false
 
       # Run SpotBugs static analysis on changed modules (pre-push only)
       # Detects bugs, security vulnerabilities, and code quality issues
