@@ -54,7 +54,7 @@ services:
     environment:
       TZ: Asia/Shanghai
       NAMESRV_ADDR: rocketmq-namesrv:9876
-      JAVA_OPT_EXT: "-Xint"  # Avoid JDK 8u372 JIT crashes, development environments are available, performance will be degraded
+      JAVA_OPT_EXT: "-Xms512m -Xmx2g -XX:+UseG1GC"  # Optimized JVM settings for development
       # If the client is accessing from the host/external network, set brokerIP1=host IP in broker.conf
     command: >
       sh mqbroker --enable-proxy
