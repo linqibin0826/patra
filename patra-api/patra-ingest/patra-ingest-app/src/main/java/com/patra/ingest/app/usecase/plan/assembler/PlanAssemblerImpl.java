@@ -158,7 +158,6 @@ public class PlanAssemblerImpl implements PlanAssembler {
         buildSliceParams(sliceStrategy));
   }
 
-  /** 触发对应的切片规划器生成切片草稿，并转为聚合。 */
   /** 生成切片：调用策略 → SlicePlan 列表 → canonical 表达式快照 → PlanSlice 聚合。 */
   private SliceGenerationResult createSlices(
       PlanTriggerNorm norm,

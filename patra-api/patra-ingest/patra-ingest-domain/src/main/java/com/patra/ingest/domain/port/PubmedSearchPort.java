@@ -12,11 +12,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 public interface PubmedSearchPort {
 
   /**
-   * Estimate total result count for the given PubMed term and parameters.
+   * Estimate total result count for the given PubMed query and parameters.
    *
-   * @param term compiled Boolean query string
+   * @param query compiled Boolean query string
    * @param params compiled parameters JSON (e.g., datetype/mindate/maxdate/reldate/sort)
    * @return total number of matching records (0 when none or unknown)
    */
-  int estimateCount(String term, JsonNode params);
+  int estimateCount(String query, JsonNode params);
 }

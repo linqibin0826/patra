@@ -35,24 +35,22 @@ public class PubmedBatchPlanner implements BatchPlanner {
 
   @Override
   public BatchPlan plan(ExecutionContext ctx) {
-    String term = ctx.compiledQuery();
-    if (term == null || term.isBlank()) {
-      throw new BatchPlanningException("Compiled query (term) is blank for PubMed batch planning");
+    String compiledQuery = ctx.compiledQuery();
+    if (compiledQuery == null || compiledQuery.isBlank()) {
+      throw new BatchPlanningException(
+          "Compiled query (compiledQuery) is blank for PubMed batch planning");
     }
 
     ObjectNode baseParams = toObjectNode(ctx.compiledParams());
 
-    int pageSize = resolvePageSize(baseParams, ctx.configSnapshot());
-    int maxPages = resolveMaxPages(ctx.configSnapshot());
-
-    int total = searchPort.estimateCount(term, baseParams);
+    int total = searchPort.estimateCount(compiledQuery, baseParams);
     if (total <= 0) {
-      log.info(
-          "[INGEST][APP] pubmed planner: no results termHash={} pageSize={}",
-          safeHash(term),
-          pageSize);
+      log.info("[INGEST][APP] pubmed planner: no results termHash={}", safeHash(compiledQuery));
       return BatchPlan.empty();
     }
+
+    int pageSize = resolvePageSize(baseParams, ctx.configSnapshot());
+    int maxPages = resolveMaxPages(ctx.configSnapshot());
 
     int pagesNeeded = (int) Math.ceil(total / (double) pageSize);
     if (pagesNeeded > maxPages) {
@@ -60,7 +58,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
           "[INGEST][APP] pubmed planner fail-fast: pagesNeeded={} > maxPages={} termHash={} pageSize={} total={}",
           pagesNeeded,
           maxPages,
-          safeHash(term),
+          safeHash(compiledQuery),
           pageSize,
           total);
       return new BatchPlan(List.of(), pagesNeeded, true);
@@ -80,13 +78,13 @@ public class PubmedBatchPlanner implements BatchPlanner {
         batchParams.remove("rettype");
       }
 
-      batches.add(new Batch(i + 1, term, batchParams, null, null));
+      batches.add(new Batch(i + 1, compiledQuery, batchParams, null, null));
     }
 
     log.info(
         "[INGEST][APP] pubmed planner: planned {} batches termHash={} pageSize={} total={}",
         pages,
-        safeHash(term),
+        safeHash(compiledQuery),
         pageSize,
         total);
     return new BatchPlan(batches, pages, false);
