@@ -36,7 +36,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
   public PubmedBatchPlanner(
       PubmedSearchPort searchPort,
       ObjectMapper objectMapper,
-      @Value("${patra.ingest.pubmed.retmax-limit}") int pubmedRetmaxLimit) {
+      @Value("${patra.ingest.pubmed.retmax-limit:10000}") int pubmedRetmaxLimit) {
     if (pubmedRetmaxLimit <= 0) {
       throw new IllegalArgumentException(
           "patra.ingest.pubmed.retmax-limit must be configured and positive, got: "
