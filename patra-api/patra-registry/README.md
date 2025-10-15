@@ -392,6 +392,9 @@ public record ProvenanceConfigResp(
 | `reg_sys_dict_item` | Dictionary items |
 | `reg_sys_dict_item_alias` | Dictionary item aliases |
 
+> `reg_prov_window_offset_cfg.offset_field_key` and `reg_prov_window_offset_cfg.window_date_field_key` store unified
+> semantic keys (`std_key` matching `reg_expr_field_dict.field_key`) rather than provider-specific parameter names.
+
 **Key Relationships**:
 - All `reg_prov_*_cfg` tables have FK → `reg_provenance.id`
 - All temporal configs have `effective_from` and `effective_until` columns

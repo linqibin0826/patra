@@ -27,9 +27,9 @@ public record WindowOffsetQuery(
     String overlapUnitCode,
     Integer watermarkLagSeconds,
     String offsetTypeCode,
-    String offsetFieldName,
+    String offsetFieldKey,
     String offsetDateFormat,
-    String defaultDateFieldName,
+    String windowDateFieldKey,
     Integer maxIdsPerWindow,
     Integer maxWindowSpanSeconds) {
   public WindowOffsetQuery {
@@ -58,8 +58,14 @@ public record WindowOffsetQuery(
     lookbackUnitCode = lookbackUnitCode != null ? lookbackUnitCode.trim() : null;
     overlapUnitCode = overlapUnitCode != null ? overlapUnitCode.trim() : null;
     offsetTypeCode = offsetTypeCode.trim();
-    offsetFieldName = offsetFieldName != null ? offsetFieldName.trim() : null;
+    offsetFieldKey = offsetFieldKey != null ? offsetFieldKey.trim() : null;
+    if (offsetFieldKey != null && offsetFieldKey.isEmpty()) {
+      offsetFieldKey = null;
+    }
     offsetDateFormat = offsetDateFormat != null ? offsetDateFormat.trim() : null;
-    defaultDateFieldName = defaultDateFieldName != null ? defaultDateFieldName.trim() : null;
+    windowDateFieldKey = windowDateFieldKey != null ? windowDateFieldKey.trim() : null;
+    if (windowDateFieldKey != null && windowDateFieldKey.isEmpty()) {
+      windowDateFieldKey = null;
+    }
   }
 }

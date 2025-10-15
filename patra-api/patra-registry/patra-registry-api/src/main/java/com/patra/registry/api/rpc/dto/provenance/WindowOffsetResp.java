@@ -23,9 +23,9 @@ import java.time.Instant;
  *   <li>overlapUnitCode - temporal unit for overlap value
  *   <li>watermarkLagSeconds - allowed lag when computing watermark in seconds
  *   <li>offsetTypeCode - offset evaluation strategy discriminator
- *   <li>offsetFieldName - payload field containing incremental pointer
+ *   <li>offsetFieldKey - unified std_key used as incremental pointer
  *   <li>offsetDateFormat - optional date format for offset parsing
- *   <li>defaultDateFieldName - fallback date field name when primary is absent
+ *   <li>windowDateFieldKey - unified std_key used for time slicing fallback
  *   <li>maxIdsPerWindow - safety cap for IDs processed per window
  *   <li>maxWindowSpanSeconds - maximum allowed window span in seconds
  * </ol>
@@ -49,8 +49,8 @@ public record WindowOffsetResp(
     String overlapUnitCode,
     Integer watermarkLagSeconds,
     String offsetTypeCode,
-    String offsetFieldName,
+    String offsetFieldKey,
     String offsetDateFormat,
-    String defaultDateFieldName,
+    String windowDateFieldKey,
     Integer maxIdsPerWindow,
     Integer maxWindowSpanSeconds) {}

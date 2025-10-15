@@ -83,17 +83,17 @@ public class RegProvWindowOffsetCfgDO extends BaseDO {
   @TableField("offset_type_code")
   private String offsetTypeCode;
 
-  /** Name or JSON path of the field used as the offset pivot. */
-  @TableField("offset_field_name")
-  private String offsetFieldName;
+  /** Unified field key (std_key) used as the offset pivot. */
+  @TableField("offset_field_key")
+  private String offsetFieldKey;
 
   /** Date format used when the offset type is date-based. */
   @TableField("offset_date_format")
   private String offsetDateFormat;
 
-  /** Default date field referenced when deriving incremental windows. */
-  @TableField("default_date_field_name")
-  private String defaultDateFieldName;
+  /** Unified date field key used when deriving incremental windows. */
+  @TableField("window_date_field_key")
+  private String windowDateFieldKey;
 
   /** Maximum number of IDs allowed within a single window; {@code null} uses engine defaults. */
   @TableField("max_ids_per_window")

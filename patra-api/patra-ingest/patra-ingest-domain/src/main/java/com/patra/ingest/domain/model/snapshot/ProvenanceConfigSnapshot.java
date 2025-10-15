@@ -66,10 +66,10 @@ public record ProvenanceConfigSnapshot(
       /* Window overlap unit (time_unit) */ String overlapUnitCode,
       /* Watermark lag seconds (out-of-order allowed delay) */ Integer watermarkLagSeconds,
       /* Offset type (offset_type: DATE|ID|COMPOSITE) */ String offsetTypeCode,
-      /* Offset field or JSONPath (interpreted per offset type) */ String offsetFieldName,
+      /* Unified field key (std_key) interpreted per offset type */ String offsetFieldKey,
       /* DATE offset format (e.g., ISO_INSTANT/epochMillis/yyyyMMdd) */ String offsetDateFormat,
-      /* Default incremental date field (when multiple date candidates) */ String
-          defaultDateFieldName,
+      /* Unified date field key (std_key) when multiple candidates exist */ String
+          windowDateFieldKey,
       /* Max IDs per window (may re-split if exceeded) */ Integer maxIdsPerWindow,
       /* Max window span seconds (forced split if exceeded) */ Integer maxWindowSpanSeconds) {}
 
