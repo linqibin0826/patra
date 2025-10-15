@@ -20,20 +20,20 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
   private final PubMedClient pubMedClient;
 
   @Override
-  public int estimateCount(String term, JsonNode params) {
+  public int estimateCount(String query, JsonNode params) {
     try {
-      ESearchRequest request = buildCountRequest(term, params);
+      ESearchRequest request = buildCountRequest(query, params);
       ESearchResponse response = pubMedClient.esearch(request);
       int count = response != null && response.result() != null ? response.result().count() : 0;
-      log.info("[INGEST][INFRA] pubmed esearch count termHash={} count={}", safeHash(term), count);
+      log.info("[INGEST][INFRA] pubmed esearch count termHash={} count={}", safeHash(query), count);
       return Math.max(count, 0);
     } catch (ProvenanceClientException ex) {
       String msg = String.format("PubMed count lookup failed: %s", ex.getMessage());
-      log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(term), ex);
+      log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(query), ex);
       throw new BatchPlanningException(msg, ex);
     } catch (Exception ex) {
       String msg = String.format("PubMed count lookup unexpected error: %s", ex.getMessage());
-      log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(term), ex);
+      log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(query), ex);
       throw new BatchPlanningException(msg, ex);
     }
   }
