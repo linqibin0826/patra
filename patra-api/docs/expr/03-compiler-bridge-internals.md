@@ -118,10 +118,32 @@ public interface TransformRegistry {
 
 ## 3.4 Error Handling & Reporting
 
-- Missing param map for a std_key → warning `W-PARAM-MAP-MISSING` (result param omitted).
-- Missing render rule for an atom → warning `W-RENDER-RULE-MISSING` (fragment skip).
-- Query length overflow → error `E-QUERY-LEN-MAX` (empty result returned as error state).
-- Transform/function code not found → warning `W-FN-OR-TRANSFORM-NOTFOUND` and proceed without applying.
+### 3.4.1 Error/Warning Codes
+
+| Code | Severity | Description | STRICT Mode Behavior | Operator Action |
+|------|----------|-------------|----------------------|-----------------|
+| `E-QUERY-LEN-MAX` | ERROR | Query exceeds maxQueryLength | Always error | Refactor expression or increase limit |
+| `E-NOT-UNSUPPORTED` | ERROR | Provider doesn't support NOT | Error if strict=true | Use provider-specific negation template |
+| `E-FN-NOTFOUND` | ERROR | Function code not found | Error if strict=true | Fix seed configuration |
+| `E-TRANSFORM-NOTFOUND` | ERROR | Transform code not found | Error if strict=true | Fix seed configuration |
+| `E-PARAM-COUNT-LIMIT` | ERROR | Parameters exceed hard limit | Always error (if configured) | Reduce params via MULTI+join |
+| `W-PARAM-MAP-MISSING` | WARNING | No mapping for std_key | Warning always | Add param map in seeds |
+| `W-RENDER-RULE-MISSING` | WARNING | No render rule for atom | Warning always | Add render rule in seeds |
+| `W-NOT-SKIPPED` | WARNING | NOT skipped (unsupported) | Warn if strict=false | Review query semantics |
+| `W-FN-OR-TRANSFORM-NOTFOUND` | WARNING | Function/transform not found | Warn if strict=false | Fix seed configuration |
+| `W-PARAM-COUNT-LIMIT` | WARNING | Parameters exceed soft limit | Warning always | Consider MULTI+join strategy |
+
+### 3.4.2 STRICT Mode Behavior
+
+When `expr.strict=true`:
+- Compilation fails fast on missing functions/transforms or unsupported capabilities
+- Ensures deterministic behavior across environments
+- Recommended for production
+
+When `expr.strict=false` (default):
+- Gracefully degrade with warnings
+- Continue compilation with best effort
+- Useful during development/migration
 
 
 ## 3.5 Logging & Metrics
@@ -135,7 +157,11 @@ public interface TransformRegistry {
 ## 3.6 Configuration
 
 - `patra.expr.compiler.query-param-bridge.enabled` (bool, default true): toggle bridging behavior.
-- `patra.expr.compiler.max-query-length` (int, default 0=disabled): optional global fallback if caller doesn’t set.
+- `patra.expr.compiler.max-query-length` (int, default 0=disabled): optional global fallback if caller doesn't set.
+- `expr.strict` (bool, default false): enable STRICT mode for fail-fast behavior on missing capabilities.
+- `expr.multi.repeat.enabled` (bool, default false): allow MULTI std_keys to emit repeated parameters (requires adapter support).
+- `patra.expr.compiler.warn-param-count` (int, optional): soft limit for parameter count warnings (W-PARAM-COUNT-LIMIT).
+- `patra.expr.compiler.max-param-count` (int, optional): hard limit for parameter count errors (E-PARAM-COUNT-LIMIT).
 
 
 ## 3.7 Thread Safety & Performance
@@ -148,12 +174,12 @@ public interface TransformRegistry {
 ## 3.8 Merge Policy Details (SINGLE vs MULTI)
 
 - SINGLE: std_key accepts one value. When multiple emissions occur:
-  - Prefer the value emitted by the highest‑priority rule (or last by stable ordering).
-  - Example: two date ranges for the same field → last‑write‑wins; earlier ones are superseded.
+  - Prefer the value emitted by the highest‑priority rule. For rules with equal priority, apply deterministic ordering: `rule_priority DESC, field_key ASC, op_code ASC, rule_id ASC`.
+  - Example: two date ranges for the same field → last‑write‑wins by this ordering; earlier ones are superseded.
 - MULTI: std_key collects many values.
-  - Repeat strategy: compiler maintains a Map<String,List<String>> internally and a provider encoder repeats parameters.
-  - Join strategy: a transform (e.g., `LIST_JOIN(';')` or `FILTER_JOIN`) converts the list into one string before mapping or after mapping (depending on transform design).
-  - Recommendation: start with Join strategy for Crossref `filter` and EPMC multi‑term cases; introduce Repeat later if required by a provider.
+  - Join strategy (default): a transform (e.g., `LIST_JOIN(';')` or `FILTER_JOIN`) converts the list into one string before mapping or after mapping (depending on transform design).
+  - Repeat strategy (gated): compiler maintains a Map<String,List<String>> internally and a provider encoder repeats parameters. Requires `expr.multi.repeat.enabled=true` configuration.
+  - Recommendation: use Join strategy for Crossref `filter` and EPMC multi‑term cases; Repeat strategy disabled by default until adapter serialization is documented.
 
 ## 3.9 Limits & Bounds
 

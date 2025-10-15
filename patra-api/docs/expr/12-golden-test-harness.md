@@ -26,14 +26,22 @@ patra-spring-boot-starter-expr/
       expected-phrase-date.json
       expr-or-not.json
       expected-or-not.json
+      expr-deep-or-not.json          # Required: deep OR/NOT nesting
+      expected-deep-or-not.json
+      expr-strict-mode-error.json    # Required: STRICT mode error case
+      expected-strict-mode-error.json
     epmc/
       snapshot.json
       expr-date-query.json
       expected-date-query.json
+      expr-multi-join.json           # Required: MULTI with join transform
+      expected-multi-join.json
     crossref/
       snapshot.json
       expr-filter.json
       expected-filter.json
+      expr-warning-codes.json        # Required: warning code scenarios
+      expected-warning-codes.json
 ```
 
 
@@ -76,7 +84,21 @@ Avoid automatic “accept all” updates to keep signal high.
 - The harness does not hit real provider endpoints (no network). It validates compile‑time outputs only.
 
 
-## Extensions (Optional)
+## Required Test Coverage
 
-- Add a “coverage” report: which std_keys/rules are exercised by the golden set per provider.
-- Add parameterized runs for MULTI std_key joins and OR/NOT depth to stress parentheses generation.
+The following scenarios MUST be covered in the golden test set:
+- Deep OR/NOT nesting (at least 3 levels) to validate parentheses generation
+- MULTI std_key joins with different transform configurations
+- STRICT mode error scenarios (missing functions, unsupported NOT)
+- Warning code generation (W-PARAM-MAP-MISSING, W-FN-OR-TRANSFORM-NOTFOUND)
+- Error code generation (E-QUERY-LEN-MAX, E-NOT-UNSUPPORTED with STRICT mode)
+- Deterministic merge ordering for SINGLE std_key collisions
+- Each provider's specific edge cases documented in their provider docs
+
+## Coverage Reporting
+
+Generate a coverage report showing:
+- Which std_keys/rules are exercised by the golden set per provider
+- Percentage of error/warning codes tested
+- Function and transform code coverage
+- Provider-specific capability coverage

@@ -31,10 +31,10 @@ Step‑by‑step recipe to add or refine a provider’s expression support using
 - [ ] Add rules for OR/NOT sensitivity if provider needs special negation templates.
 
 5) Param Map (std_key → provider parameter)
-- [ ] Always add `std_key='query'` mapping to the provider’s boolean query parameter (e.g., PubMed `term`, EPMC `query`, Crossref `query`).
+- [ ] Always add `std_key='query'` mapping to the provider's boolean query parameter (e.g., PubMed `term`, EPMC `query`, Crossref `query`).
 - [ ] Map other std_keys: `from`, `to`, `datetype`, `limit`, `offset`, `filter`, etc.
 - [ ] Add `transform_code` where necessary (e.g., `TO_EXCLUSIVE_MINUS_1D`, `RFC3339_DATE`).
-- [ ] If a std_key is MULTI (e.g., `filter`), decide join vs repeat strategy. Prefer join via a transform.
+- [ ] If a std_key is MULTI (e.g., `filter`), decide join vs repeat strategy. Use join transforms by default (repeat requires `expr.multi.repeat.enabled=true`).
 
 6) Effective Times & Scoping
 - [ ] Use consistent `effective_from` across inserts (fixed timestamp for deterministic ordering).
@@ -57,7 +57,15 @@ Step‑by‑step recipe to add or refine a provider’s expression support using
 - [ ] INFO logs redact/hash queries; DEBUG only in non‑prod.
 - [ ] Metrics: rule hits/misses, mapping hits/misses, transform applied, compile errors.
 
-10) Rollout
+10) STRICT Mode & MULTI Validation
+- [ ] Test provider with STRICT mode enabled (`expr.strict=true`) to ensure all functions/transforms exist.
+- [ ] Verify NOT behavior: if provider doesn't support NOT, ensure proper error in STRICT mode or warning in non-STRICT.
+- [ ] For MULTI std_keys, verify join transforms work correctly with default config (`expr.multi.repeat.enabled=false`).
+- [ ] Document any provider-specific STRICT mode considerations.
+
+11) Rollout
 - [ ] Toggle bridge (keep enabled by default).
+- [ ] Test with both STRICT and non-STRICT modes in staging.
 - [ ] Smoke test with real or stubbed endpoints.
 - [ ] Monitor provider error rates; adjust seeds (no code changes) as needed.
+- [ ] Verify metrics are reporting with correct names and labels.

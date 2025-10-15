@@ -68,13 +68,13 @@ Expr engine integration resides in the starter (`patra-spring-boot-starter-expr`
 ### 2.5.1 std_key Cardinality & Merge Policy
 
 - Cardinality:
-  - `SINGLE` (default): std_key holds a single value; if multiple atoms emit the same std_key, the engine applies a deterministic last‑write‑wins policy by rule priority (higher priority wins; if equal, stable order by field/op).
+  - `SINGLE` (default): std_key holds a single value; if multiple atoms emit the same std_key, the engine applies a deterministic last‑write‑wins policy (see §3.8 in 03-compiler-bridge-internals.md for exact ordering).
   - `MULTI`: std_key may collect multiple values. Mapping to provider params proceeds by:
-    - Repeat strategy: emit repeated provider parameters (requires HTTP layer support), or
-    - Join strategy: apply a transform (e.g., `LIST_JOIN`, `FILTER_JOIN`) to produce a single provider value.
+    - Join strategy (default): apply a transform (e.g., `LIST_JOIN`, `FILTER_JOIN`) to produce a single provider value.
+    - Repeat strategy (gated): emit repeated provider parameters (requires `expr.multi.repeat.enabled=true` and HTTP layer support).
 - Configuration:
   - Cardinality originates from field dictionary or rule hints (when absent, treat as `SINGLE`).
-  - The chosen strategy (repeat vs join) is expressed via transforms on the std_key’s mapped parameter.
+  - The chosen strategy depends on `expr.multi.repeat.enabled` config (see §2.8.2) and transform configuration.
 
 ## 2.6 Observability
 
@@ -95,4 +95,23 @@ Expr engine integration resides in the starter (`patra-spring-boot-starter-expr`
 
 - AND: join with ` AND `.
 - OR: join child fragments with ` OR ` and wrap in parentheses when nested inside AND or NOT contexts to preserve precedence.
-- NOT: pass `negated=true` into rule selection for the NOT subtree; use negation‑aware templates or rules. If a provider lacks NOT semantics, emit warning and skip (configurable) to avoid semantic corruption.
+- NOT: pass `negated=true` into rule selection for the NOT subtree; use negation‑aware templates or rules. If a provider lacks NOT semantics, behavior depends on STRICT mode (see §2.8).
+
+## 2.8 Configuration & Safety Modes
+
+### 2.8.1 STRICT Mode
+- Configuration: `expr.strict=true|false` (default: false)
+- When `expr.strict=true`:
+  - NOT unsupported by provider → compilation error (E-NOT-UNSUPPORTED)
+  - Missing function code (`fn_code`) → compilation error (E-FN-NOTFOUND)
+  - Missing transform code (`transform_code`) → compilation error (E-TRANSFORM-NOTFOUND)
+- When `expr.strict=false`:
+  - NOT unsupported → warning (W-NOT-SKIPPED) and skip fragment
+  - Missing function/transform → warning (W-FN-OR-TRANSFORM-NOTFOUND) and proceed without applying
+- Use STRICT mode in production for deterministic behavior; use non-strict during development/migration
+
+### 2.8.2 MULTI Parameter Strategy
+- Configuration: `expr.multi.repeat.enabled=false` (default: false)
+- When false: MULTI std_keys must use join transforms (LIST_JOIN, FILTER_JOIN) to produce single values
+- When true: MULTI std_keys may emit repeated provider parameters (requires adapter serialization support)
+- Keep disabled until adapter serialization for repeated parameters is formally documented
