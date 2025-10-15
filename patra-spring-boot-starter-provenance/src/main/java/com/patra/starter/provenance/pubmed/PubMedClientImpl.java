@@ -81,8 +81,7 @@ public class PubMedClientImpl implements PubMedClient {
     ExternalCallResponseDTO response = invokeGateway("esearch", gatewayRequest);
     ResponseEnvelopeDTO envelope = response.envelope();
     try {
-      JsonNode root = objectMapper.readTree(envelope.body());
-      return ESearchResponse.from(root);
+      return objectMapper.readValue(envelope.body(), ESearchResponse.class);
     } catch (Exception ex) {
       throw new ProvenanceClientException(
           PROVENANCE.getCode(),

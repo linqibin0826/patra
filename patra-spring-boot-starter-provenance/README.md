@@ -110,6 +110,33 @@ patra:
 
 ## 🚀 Usage
 
+### Request Assembly（避免重复造轮子）
+
+`PubMedESearchRequestAssembler` 用于从“已渲染为 PubMed 参数”的 `JsonNode` 构建
+`ESearchRequest`。也就是说，传入的 `params` 已是诸如 `mindate/maxdate/retmax/retstart` 等
+PubMed 官方参数名，装配器只做安全解析与绑定，不再进行标准键映射。
+
+参数名统一在常量类维护：`com.patra.starter.provenance.pubmed.request.PubMedParamKeys`，避免
+在业务代码中分散硬编码。
+
+用法：
+
+```java
+@Component
+@RequiredArgsConstructor
+public class PubmedSearchPortImpl implements PubmedSearchPort {
+  private final PubMedClient pubMedClient;
+  private static final PubMedESearchRequestAssembler ASSEMBLER = new PubMedESearchRequestAssembler();
+
+  @Override
+  public int estimateCount(String query, JsonNode pubmedParams) {
+    ESearchRequest request = ASSEMBLER.buildCount(query, pubmedParams);
+    ESearchResponse response = pubMedClient.esearch(request);
+    return response != null && response.result() != null ? response.result().count() : 0;
+  }
+}
+```
+
 ### Example: PubMed Count Lookup
 
 ```java

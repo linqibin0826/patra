@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.port;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 
 /**
  * Domain port for PubMed search metadata.
@@ -16,7 +17,9 @@ public interface PubmedSearchPort {
    *
    * @param query compiled Boolean query string
    * @param params compiled parameters JSON (e.g., datetype/mindate/maxdate/reldate/sort)
+   * @param provenanceConfigSnapshot configuration snapshot for the current execution
    * @return total number of matching records (0 when none or unknown)
    */
-  int estimateCount(String query, JsonNode params);
+  int estimateCount(
+      String query, JsonNode params, ProvenanceConfigSnapshot provenanceConfigSnapshot);
 }
