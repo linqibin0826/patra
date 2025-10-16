@@ -13,13 +13,13 @@ This document provides an actionable, dependency-ordered task breakdown for impl
 | Phase | User Story | Task Count | Parallel Tasks | Status |
 |-------|------------|------------|----------------|--------|
 | Phase 1 | Setup | 12 | 8 | Pending |
-| Phase 2 | Foundational | 8 | 6 | Pending |
-| Phase 3 | US1 (P1) - Production Diagnosis | 22 | 8 | Pending |
+| Phase 2 | Foundational | 10 | 6 | Pending |
+| Phase 3 | US1 (P1) - Production Diagnosis | 23 | 9 | Pending |
 | Phase 4 | US2 (P1) - Dynamic Log Levels | 10 | 5 | Pending |
 | Phase 5 | US3 (P2) - Request Tracing | 12 | 6 | Pending |
 | Phase 6 | US4 (P2) - Consistent Logging | 20 | 13 | Pending |
-| Phase 7 | Polish & Cross-Cutting | 18 | 13 | Pending |
-| **Total** | - | **102** | **59** | - |
+| Phase 7 | Polish & Cross-Cutting | 19 | 14 | Pending |
+| **Total** | - | **105** | **61** | - |
 
 ---
 
@@ -42,10 +42,13 @@ Phase 6 (US4) ←─ MEDIUM PRIORITY (P2)
 Phase 7 (Polish)
 ```
 
-### User Story Independence
-- **US1** and **US2** are independent (can be developed in parallel after Phase 2)
-- **US3** depends on US1 (trace context infrastructure)
-- **US4** depends on US1 and US2 (utilities and log levels established)
+### User Story Execution Order
+- **US1** (Phase 3) executes first to establish trace context infrastructure and validate approach in pilot service before broader rollout
+- **US2** (Phase 4) follows US1 to enable dynamic log level testing on the validated pilot service (patra-registry)
+- **US3** (Phase 5) depends on US1 (requires trace context infrastructure)
+- **US4** (Phase 6) depends on US1 and US2 (requires utilities and log levels established)
+
+**Rationale for sequential execution**: While US1 and US2 are technically independent, executing them sequentially reduces integration risk and allows validation of each capability in isolation before combining them.
 
 ---
 
@@ -99,6 +102,9 @@ Phase 7 (Polish)
 - [ ] T018 [P] Implement DefaultTraceContextHolder with SkyWalking integration in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/context/DefaultTraceContextHolder.java
 - [ ] T019 [P] Implement DefaultLogContextEnricher with MDC management in patra-common/src/main/java/com/papertrace/common/logging/context/DefaultLogContextEnricher.java
 - [ ] T020 [P] Implement MdcTaskDecorator for async MDC propagation in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/async/MdcTaskDecorator.java
+- [ ] T020a Create LoggingAutoConfiguration base class with @EnableAspectJAutoProxy in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/LoggingAutoConfiguration.java
+
+**⚠️ BLOCKING GATE**: Phase 2 MUST be fully completed before proceeding. After completing all Phase 2 tasks, build and install the logging starter module to local Maven repository using `mvn clean install -pl patra-spring-boot-starter-logging`. This ensures the starter is available for pilot service integration in Phase 3.
 
 ---
 
@@ -123,12 +129,13 @@ Phase 7 (Polish)
 
 ### Async Context Propagation (FR-004)
 
-- [ ] T025 [P] [US1] Implement AsyncConfiguration with MdcTaskDecorator in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/AsyncAutoConfiguration.java
+- [ ] T025 [P] [US1] Implement AsyncAutoConfiguration with MdcTaskDecorator in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/AsyncAutoConfiguration.java
 - [ ] T026 [P] [US1] Implement RocketMQMessageListenerDecorator for MQ trace propagation in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/mq/RocketMQMessageListenerDecorator.java
+- [ ] T026a [P] [US1] Implement XxlJobTraceContextDecorator for XXL-Job scheduled task trace propagation (MDC + SkyWalking context) in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/xxljob/XxlJobTraceContextDecorator.java
 
 ### Enhanced Logback Configuration (FR-002, FR-005, FR-015)
 
-- [ ] T027 [US1] Create enhanced logback-spring.xml with MDC pattern and a consistent service/module identifier segment (FR-015) in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
+- [ ] T027 [US1] Create enhanced logback-spring.xml with MDC pattern, ISO-8601 timestamp format, and a consistent service/module identifier segment (FR-015: [service=X][layer=Y]) in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
 - [ ] T028 [P] [US1] Configure async appenders with proper queue settings (neverBlock=false for ERROR/WARN, discardingThreshold for DEBUG/TRACE) in logback-spring.xml
 - [ ] T029 [P] [US1] Configure dual output: console and rolling file appenders (both with trace context pattern) to ensure logs persist locally regardless of external log aggregation availability in logback-spring.xml
 
@@ -153,7 +160,7 @@ Phase 7 (Polish)
 
 **Parallel Execution Opportunities**:
 - T021, T022, T023 (different interceptors)
-- T025, T026 (async and MQ)
+- T025, T026, T026a (async, MQ, and XXL-Job trace propagation)
 - T028, T029 (appender configs)
 - T032-T037 (pilot service updates - different modules)
 - T039a, T039b (ArchUnit tests - different validation rules)
@@ -216,7 +223,7 @@ Phase 7 (Polish)
 
 - [ ] T050 [P] [US3] Integrate logging starter in patra-gateway-boot/pom.xml
 - [ ] T051 [P] [US3] Configure TraceContextFilter at highest precedence in gateway
-- [ ] T052 [P] [US3] Add service identifier "[patra-gateway]" to logback pattern
+- [ ] T052 [P] [US3] Add service identifier using canonical format "[service=patra-gateway][layer=adapter]" to logback pattern
 - [ ] T053 [US3] Read patra-gateway-boot/README.md, then update gateway controllers with trace-aware logging
 
 ### Ingest Service Integration (High-Volume)
@@ -304,7 +311,7 @@ Phase 7 (Polish)
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-**Goal**: Complete remaining microservices migration, testing, and performance validation
+**Goal**: Complete remaining microservices migration, testing, performance validation, and security enforcement
 **Duration Estimate**: 6-8 days
 
 ### Remaining Microservices Migration (FR-014)
@@ -332,6 +339,7 @@ Phase 7 (Polish)
 - [ ] T089 [P] Establish baseline throughput and latency metrics from current production or staging (before logging enhancement)
 - [ ] T090 [P] Conduct performance testing to verify <5% throughput impact compared to baseline (SC-004)
 - [ ] T091 [P] Run automated PII scanning to verify zero sensitive data in logs (SC-006)
+- [ ] T091a [P] Create static analysis rule (SpotBugs/Error Prone/custom ArchUnit) to detect potential sensitive data patterns in log statements without sanitization wrapper (e.g., variable names containing 'password', 'token', 'ssn', 'apiKey', 'secret') and integrate into CI pipeline to enforce FR-008
 - [ ] T092 [P] Validate 40% log volume reduction at INFO level compared to baseline (SC-004)
 - [ ] T093 Design and execute controlled incident response test (before/after comparison) to measure time-to-resolution improvement (target 50% reduction per SC-005)
 
@@ -344,7 +352,7 @@ Phase 7 (Polish)
 **Parallel Execution Opportunities**:
 - T082, T083, T084 (different microservices and layers)
 - T086, T087, T088 (different test suites)
-- T089, T091 (baseline and scanning - can run independently)
+- T089, T091, T091a (baseline metrics, PII scanning, and static analysis - can run independently)
 
 ---
 

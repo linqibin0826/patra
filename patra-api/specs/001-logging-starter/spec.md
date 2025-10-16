@@ -52,7 +52,7 @@ A developer debugging a cross-service issue needs to follow a single user reques
 
 1. **Given** a REST API call is made to ingest PubMed data, **When** the request flows through gateway → orchestrator → repository → external API, **Then** all logs contain the same trace ID and correlation ID for easy filtering
 2. **Given** a request involves asynchronous processing, **When** events are published and consumed, **Then** logs maintain trace context across message queue boundaries
-3. **Given** a developer searches logs by trace ID, **When** viewing results, **Then** logs are ordered chronologically and show clear service boundaries (e.g., "[patra-ingest]", "[patra-registry]")
+3. **Given** a developer searches logs by trace ID, **When** viewing results, **Then** logs are ordered chronologically and show clear service boundaries using the canonical format (e.g., "[service=patra-ingest][layer=adapter]", "[service=patra-registry][layer=app]")
 
 ---
 
@@ -100,21 +100,21 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - **FR-003**: System MUST automatically propagate trace and correlation IDs across all layers (Adapter → Application → Domain → Infrastructure) without manual intervention by developers
 
-- **FR-004**: System MUST maintain trace context across asynchronous boundaries including thread pools, scheduled tasks, and message queue operations
+- **FR-004**: System MUST maintain trace context across asynchronous boundaries including thread pools, scheduled tasks (Spring @Scheduled and XXL-Job), and message queue operations (RocketMQ)
 
 - **FR-005**: All exception logs MUST include the full stack trace, exception type, exception message, and contextual information about the operation being performed
 
 - **FR-006**: System MUST log all external API calls including: endpoint URL, HTTP method, request headers (excluding authorization), response status code, response time, and error details if applicable
 
-- **FR-007**: System MUST log all database operations failures including: query type (select/insert/update/delete), affected table/entity, exception details, and transaction context
+- **FR-007**: System MUST log all database operation failures at ERROR level including: query type (select/insert/update/delete), affected table/entity, exception details, and transaction context. Successful database operations MAY be logged at DEBUG level with query type and execution time for troubleshooting purposes
 
-- **FR-008**: System MUST provide utilities to sanitize sensitive data in logs including passwords, API tokens, authorization headers, and personally identifiable information (PII). Developers MUST use these utilities when logging data that may contain sensitive information. External API call and database operation logging utilities MUST automatically apply sanitization
+- **FR-008**: System MUST provide utilities to sanitize sensitive data in logs including passwords, API tokens, authorization headers, and personally identifiable information (PII: email addresses, phone numbers, credit card numbers, social security numbers). Developers MUST use these utilities when logging data that may contain sensitive information. External API call and database operation logging utilities MUST automatically apply sanitization
 
 - **FR-009**: All authentication and authorization events MUST be logged at appropriate levels: successful authentication (INFO), failed authentication (WARN), authorization failures (WARN), security violations (ERROR)
 
 - **FR-010**: Key business operations MUST be logged with sufficient context including: batch processing start/end with counts, data ingestion results with success/failure tallies, parsing results with validation errors, and provenance updates with affected records. **Key operations are defined as**: (1) Operations modifying >100 records, (2) External API calls to third-party services, (3) Authentication/authorization events, (4) Scheduled job executions, (5) Message queue publishing/consumption, (6) Critical business state transitions (e.g., batch status changes, provenance updates)
 
-- **FR-011**: System MUST support dynamic log level configuration per module/package without requiring application restart
+- **FR-011**: System MUST support dynamic log level configuration per Java package (e.g., `com.papertrace.registry.adapter`, `com.papertrace.ingest.app`) without requiring application restart
 
 - **FR-012**: All log entries MUST use English language with parameterized messages (SLF4J style: `log.info("Processing batch {}", batchId)`) to avoid string concatenation overhead
 
@@ -147,7 +147,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - **SC-003**: Code reviews identify consistent logging patterns across new features with 100% of new code using the unified logging utilities and adhering to defined log level guidelines
 
-- **SC-004**: Production log volume is reduced by 40% at INFO level compared to baseline (measured over 7-day period in production patra-registry before enhancement) while maintaining complete visibility into business operations and system health by eliminating redundant or verbose logging
+- **SC-004**: Production log volume is reduced by 40% at INFO level compared to baseline (measured from current production patra-registry implementation over 7 consecutive days immediately before implementing Phase 3 tasks) while maintaining complete visibility into business operations and system health by eliminating redundant or verbose logging
 
 - **SC-005**: Time to identify root cause during incident response is reduced by 50% compared to current logging implementation due to improved log structure and traceability
 

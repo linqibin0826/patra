@@ -91,9 +91,11 @@ patra-common/
         │   └── DefaultLogSanitizer.java   # Implementation with regex patterns
         ├── context/                # Trace context utilities
         │   ├── DistributedTraceContext.java  # Record for trace data
-        │   ├── TraceContextHolder.java       # Interface (no framework deps)
-        │   ├── LogContextEnricher.java       # Interface (MDC-safe)
+        │   ├── TraceContextHolder.java       # Interface: reads trace context from tracing system (no framework deps)
+        │   ├── LogContextEnricher.java       # Interface: writes trace context to MDC (MDC-safe)
         │   └── DefaultLogContextEnricher.java # MDC management (slf4j-api only)
+        │   # Note: TraceContextHolder impl (DefaultTraceContextHolder) is in starter due to SkyWalking dependency
+        │   # LogContextEnricher impl stays in common since it only needs slf4j-api MDC
         ├── ApiCallLogger.java      # External API call logging utility
         └── BatchProcessingLogger.java # Batch operation logging utility
 
@@ -120,6 +122,8 @@ patra-spring-boot-starter-logging/
     │   │   └── ExceptionLoggingAspect.java      # Automatic exception context capture
     │   ├── async/
     │   │   └── MdcTaskDecorator.java            # Async MDC propagation
+    │   ├── xxljob/
+    │   │   └── XxlJobTraceContextDecorator.java # XXL-Job scheduled task trace propagation
     │   ├── mq/
     │   │   └── RocketMQMessageListenerDecorator.java # MQ trace propagation
     │   ├── persistence/
