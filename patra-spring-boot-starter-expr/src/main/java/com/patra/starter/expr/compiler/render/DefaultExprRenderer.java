@@ -114,20 +114,45 @@ public class DefaultExprRenderer implements ExprRenderer {
       List<RenderTrace.Hit> hits) {
 
     if (node instanceof And andExpr) {
-      andExpr
-          .children()
-          .forEach(
-              child ->
-                  renderNode(
-                      child,
-                      snapshot,
-                      labels,
-                      RenderContext.AND,
-                      negated,
-                      fragments,
-                      stdKeys,
-                      warnings,
-                      hits));
+      if (context == RenderContext.AND) {
+        andExpr
+            .children()
+            .forEach(
+                child ->
+                    renderNode(
+                        child,
+                        snapshot,
+                        labels,
+                        RenderContext.AND,
+                        negated,
+                        fragments,
+                        stdKeys,
+                        warnings,
+                        hits));
+      } else {
+        List<String> nested = new ArrayList<>();
+        andExpr
+            .children()
+            .forEach(
+                child ->
+                    renderNode(
+                        child,
+                        snapshot,
+                        labels,
+                        RenderContext.AND,
+                        negated,
+                        nested,
+                        stdKeys,
+                        warnings,
+                        hits));
+        if (!nested.isEmpty()) {
+          String joined = String.join(" AND ", nested);
+          if (context == RenderContext.OR) {
+            joined = "(" + joined + ")";
+          }
+          fragments.add(joined);
+        }
+      }
       return;
     }
 
@@ -340,8 +365,15 @@ public class DefaultExprRenderer implements ExprRenderer {
       String value = applyTemplate(template, enrichedPlaceholders);
 
       // Emit std_key directly (no provider naming here!)
+      boolean multi = isMulti(snapshot, atom.fieldKey(), stdKey);
       stdKeys.add(
-          stdKey, value, rule.priority(), atom.fieldKey(), atom.operator().name(), ruleId(rule));
+          stdKey,
+          value,
+          multi,
+          rule.priority(),
+          atom.fieldKey(),
+          atom.operator().name(),
+          ruleId(rule));
 
       if (hits != null) {
         hits.add(
@@ -404,6 +436,19 @@ public class DefaultExprRenderer implements ExprRenderer {
     return rule.valueType() == type;
   }
 
+  private boolean isMulti(
+      ProvenanceSnapshot snapshot, String fieldKey, String stdKeyOrFieldFallback) {
+    ProvenanceSnapshot.FieldDefinition fieldDefinition = snapshot.fieldDictionary().get(fieldKey);
+    if (fieldDefinition != null
+        && fieldDefinition.cardinality() == ProvenanceSnapshot.Cardinality.MULTI) {
+      return true;
+    }
+    ProvenanceSnapshot.FieldDefinition stdKeyDefinition =
+        snapshot.fieldDictionary().get(stdKeyOrFieldFallback);
+    return stdKeyDefinition != null
+        && stdKeyDefinition.cardinality() == ProvenanceSnapshot.Cardinality.MULTI;
+  }
+
   private String applyTemplate(String template, PlaceholderMap placeholders) {
     if (template == null || template.isBlank()) {
       return "";
@@ -452,65 +497,113 @@ public class DefaultExprRenderer implements ExprRenderer {
     private final Map<String, StdKeyEntry> entries = new LinkedHashMap<>();
 
     void add(
-        String stdKey, String value, int priority, String fieldKey, String opCode, String ruleId) {
-      StdKeyEntry existing = entries.get(stdKey);
-      if (existing == null) {
-        // First emission for this std_key
-        entries.put(stdKey, new StdKeyEntry(stdKey, value, priority, fieldKey, opCode, ruleId));
-      } else {
-        // Subsequent emission - apply merge policy
-        // For now, treat all as SINGLE with deterministic ordering
-        // TODO: Read cardinality from field dictionary to distinguish SINGLE vs MULTI
-        int cmp = compareEntries(priority, fieldKey, opCode, ruleId, existing);
-        if (cmp > 0) {
-          // New entry wins (higher priority or better ordering)
-          entries.put(stdKey, new StdKeyEntry(stdKey, value, priority, fieldKey, opCode, ruleId));
-          log.debug(
-              "SINGLE std_key collision: stdKey={}, replaced (new priority={} > old priority={})",
-              stdKey,
-              priority,
-              existing.priority);
+        String stdKey,
+        String value,
+        boolean multi,
+        int priority,
+        String fieldKey,
+        String opCode,
+        String ruleId) {
+      StdKeyValue candidate = new StdKeyValue(value, priority, fieldKey, opCode, ruleId);
+      StdKeyEntry entry = entries.computeIfAbsent(stdKey, StdKeyEntry::new);
+      entry.add(candidate, multi);
+    }
+
+    Map<String, String> toMap() {
+      return entries.entrySet().stream()
+          .collect(
+              Collectors.toMap(
+                  Map.Entry::getKey,
+                  entry -> entry.getValue().renderedValue(),
+                  (a, b) -> a,
+                  LinkedHashMap::new));
+    }
+
+    private static boolean shouldReplace(StdKeyValue candidate, StdKeyValue current) {
+      if (candidate.priority() != current.priority()) {
+        return candidate.priority() > current.priority();
+      }
+      int fieldCmp = candidate.fieldKey().compareTo(current.fieldKey());
+      if (fieldCmp != 0) {
+        return fieldCmp < 0;
+      }
+      int opCmp = candidate.opCode().compareTo(current.opCode());
+      if (opCmp != 0) {
+        return opCmp < 0;
+      }
+      return candidate.ruleId().compareTo(current.ruleId()) < 0;
+    }
+
+    private static int compareForOrdering(StdKeyValue left, StdKeyValue right) {
+      if (left.priority() != right.priority()) {
+        return Integer.compare(right.priority(), left.priority());
+      }
+      int fieldCmp = left.fieldKey().compareTo(right.fieldKey());
+      if (fieldCmp != 0) {
+        return fieldCmp;
+      }
+      int opCmp = left.opCode().compareTo(right.opCode());
+      if (opCmp != 0) {
+        return opCmp;
+      }
+      return left.ruleId().compareTo(right.ruleId());
+    }
+
+    private static class StdKeyEntry {
+      private final String stdKey;
+      private boolean multi;
+      private StdKeyValue winner;
+      private final List<StdKeyValue> values = new ArrayList<>();
+
+      StdKeyEntry(String stdKey) {
+        this.stdKey = stdKey;
+      }
+
+      void add(StdKeyValue candidate, boolean candidateMulti) {
+        if (candidateMulti || multi) {
+          if (!multi) {
+            multi = true;
+            if (winner != null) {
+              values.add(winner);
+              winner = null;
+            }
+          }
+          values.add(candidate);
+          values.sort(StdKeyAccumulator::compareForOrdering);
+          log.debug("MULTI std_key accumulation: stdKey={}, valueCount={}", stdKey, values.size());
+          return;
+        }
+
+        if (winner == null || shouldReplace(candidate, winner)) {
+          if (winner != null) {
+            log.debug(
+                "SINGLE std_key collision: stdKey={}, replaced (new priority={} > old priority={})",
+                stdKey,
+                candidate.priority(),
+                winner.priority());
+          }
+          winner = candidate;
         } else {
           log.debug(
               "SINGLE std_key collision: stdKey={}, kept existing (priority={})",
               stdKey,
-              existing.priority);
+              winner.priority());
         }
-        // MULTI accumulation would be: existing.value += MULTI_DELIMITER + value
+      }
+
+      String renderedValue() {
+        if (multi) {
+          return values.stream()
+              .sorted(StdKeyAccumulator::compareForOrdering)
+              .map(StdKeyValue::value)
+              .collect(Collectors.joining(MULTI_DELIMITER));
+        }
+        return winner == null ? "" : winner.value();
       }
     }
 
-    /**
-     * Compare entries by deterministic ordering: priority DESC, fieldKey ASC, opCode ASC, ruleId
-     * ASC Returns positive if new entry wins, negative if existing wins, zero if equal
-     */
-    private int compareEntries(
-        int newPriority,
-        String newFieldKey,
-        String newOpCode,
-        String newRuleId,
-        StdKeyEntry existing) {
-      int cmp = Integer.compare(newPriority, existing.priority);
-      if (cmp != 0) return cmp; // Higher priority wins
-
-      cmp = newFieldKey.compareTo(existing.fieldKey);
-      if (cmp != 0) return -cmp; // Lower fieldKey wins (ascending)
-
-      cmp = newOpCode.compareTo(existing.opCode);
-      if (cmp != 0) return -cmp; // Lower opCode wins (ascending)
-
-      return -newRuleId.compareTo(existing.ruleId); // Lower ruleId wins (ascending)
-    }
-
-    Map<String, String> toMap() {
-      return entries.values().stream()
-          .collect(
-              Collectors.toMap(
-                  entry -> entry.stdKey, entry -> entry.value, (a, b) -> a, LinkedHashMap::new));
-    }
-
-    private record StdKeyEntry(
-        String stdKey, String value, int priority, String fieldKey, String opCode, String ruleId) {}
+    private record StdKeyValue(
+        String value, int priority, String fieldKey, String opCode, String ruleId) {}
   }
 
   private record PlaceholderMap(Map<String, String> delegate) {

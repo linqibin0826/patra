@@ -156,14 +156,14 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P4.1.1** | Test AND-only: two TERM atoms produce `fragA AND fragB` | `RendererAndTest.java` | TODO | P1.3.1, docs/expr/08 §8.2 |
-| **P4.1.2** | Test OR-only: two TERM atoms produce `(fragA OR fragB)` | `RendererOrTest.java` | TODO | P1.3.1, docs/expr/08 §8.2 |
-| **P4.1.3** | Test mixed AND/OR: `A AND (B OR C)` with correct parentheses | `RendererMixedBooleanTest.java` | TODO | P1.3.3, docs/expr/08 §8.2 |
-| **P4.1.4** | Test NOT: `NOT(A)` selects negated=true rule | `RendererNotTest.java` | TODO | P1.3.2, docs/expr/08 §8.2 |
-| **P4.1.5** | Test PARAMS placeholders: `{{from}}/{{to}}/{{datetype}}` expansion | `RendererPlaceholdersTest.java` | TODO | P1.3.4, docs/expr/08 §8.2 |
-| **P4.1.6** | Test fn_code: `PUBMED_DATETYPE` returns "pdat" | `RendererFunctionTest.java` | TODO | P1.1.5, P1.3.4, docs/expr/08 §8.2 |
-| **P4.1.7** | Test SINGLE std_key collision: deterministic merge by rule priority ordering | `RendererSingleMergeTest.java` | TODO | P1.3.6, docs/expr/08 §8.2 |
-| **P4.1.8** | Test MULTI std_key: verify list accumulation at renderer output | `RendererMultiCollectionTest.java` | TODO | P1.3.7, docs/expr/08 §8.2 |
+| **P4.1.1** | Test AND-only: two TERM atoms produce `fragA AND fragB` | `RendererAndTest.java` | DONE   | P1.3.1, docs/expr/08 §8.2 |
+| **P4.1.2** | Test OR-only: two TERM atoms produce `(fragA OR fragB)` | `RendererOrTest.java` | DONE   | P1.3.1, docs/expr/08 §8.2 |
+| **P4.1.3** | Test mixed AND/OR: `A AND (B OR C)` with correct parentheses | `RendererMixedBooleanTest.java` | DONE   | P1.3.3, docs/expr/08 §8.2 |
+| **P4.1.4** | Test NOT: `NOT(A)` selects negated=true rule | `RendererNotTest.java` | DONE   | P1.3.2, docs/expr/08 §8.2 |
+| **P4.1.5** | Test PARAMS placeholders: `{{from}}/{{to}}/{{datetype}}` expansion | `RendererPlaceholdersTest.java` | DONE   | P1.3.4, docs/expr/08 §8.2 |
+| **P4.1.6** | Test fn_code: `PUBMED_DATETYPE` returns "pdat" | `RendererFunctionTest.java` | DONE   | P1.1.5, P1.3.4, docs/expr/08 §8.2 |
+| **P4.1.7** | Test SINGLE std_key collision: deterministic merge by rule priority ordering | `RendererSingleMergeTest.java` | DONE   | P1.3.6, docs/expr/08 §8.2 |
+| **P4.1.8** | Test MULTI std_key: verify list accumulation at renderer output | `RendererMultiCollectionTest.java` | DONE   | P1.3.7, docs/expr/08 §8.2 |
 
 ### P4.2 Unit Tests - Compiler
 
@@ -297,7 +297,7 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 - **Phase 5 (Documentation)**: 8 tasks
 - **Phase 6 (Rollout)**: 14 tasks
 
-**Current Status**: 67 TODO, 0 IN_PROGRESS, 65 DONE, 0 BLOCKED
+**Current Status**: 62 TODO, 0 IN_PROGRESS, 70 DONE, 0 BLOCKED
 
 ---
 
@@ -305,11 +305,11 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 Update this section as tasks are completed:
 
-**Last Updated**: 2025-10-16
-**Completed Tasks**: 70 / 132 (53.0%)
-**Current Phase**: Phase 3 - Integration & Adapters
-**Current Milestone**: Phase 2.3 COMPLETE ✅ (Crossref Seed Creation)
-**Next Milestone**: Phase 3.1 (Adapter Refactoring)
+**Last Updated**: 2025-10-16 22:05
+**Completed Tasks**: 75 / 132 (56.8%)
+**Current Phase**: Phase 4 - Testing (Renderer)
+**Current Milestone**: Phase 4.2 Unit Tests - Compiler (P4.2.1 kickoff)
+**Next Milestone**: Phase 4.3 Integration Tests - Registry
 
 ---
 
@@ -329,6 +329,8 @@ Update this section as tasks are completed:
 - **2025-10-16 20:35**: Phase 2.2 COMPLETE - EPMC seed created (V1.1.2__seed_epmc_expr_config.sql). Added EPMC provenance to V1.1.0. Created field dictionary (publication_date, text), capabilities (RANGE/TERM/IN), render rules (QUERY-based for text and date with `FIRST_PDATE` syntax), param map (`query→query`, `limit→pageSize`). Cursor mapping commented for future.
 - **2025-10-16 20:40**: Phase 2.3 COMPLETE - Crossref seed created (V1.1.3__seed_crossref_expr_config.sql). Added CROSSREF provenance to V1.1.0. Created field dictionary (text, reused publication_date), capabilities (RANGE/TERM/IN), render rules (QUERY for text, PARAMS for date filter with `filter` std_key MULTI), param map (`query→query`, `filter→filter`, `limit→rows`, `offset→offset`). Compilation verified successfully (mvn -q -DskipTests compile).
 - **2025-10-16 21:10**: Phase 3.1 adapters refactored to consume provider-named params. PubMed assembler now reads `term` from compiled params, PubMed infra logs hashed provider term, and new EPMC/Crossref assemblers plus request models bind compiled params without manual query/filter construction.
+- **2025-10-16 21:45**: Phase 4.1 renderer unit tests added (P4.1.1–P4.1.7). Covered NOT negation rule selection, PARAM placeholder expansion, PUBMED_DATETYPE fn_code, and SINGLE std_key merge ordering. P4.1.8 (MULTI accumulation) queued next.
+- **2025-10-16 22:05**: Phase 4.1 renderer unit tests complete (P4.1.1–P4.1.8). MULTI std_key accumulation now validated via renderer output joining with the internal delimiter.
 
 ---
 
