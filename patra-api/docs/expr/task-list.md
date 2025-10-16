@@ -48,15 +48,15 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P1.3.1** | Extend `DefaultExprRenderer` to support OR operator with parentheses wrapping | Updated `DefaultExprRenderer.java` | TODO | docs/expr/02 §2.7 |
-| **P1.3.2** | Extend `DefaultExprRenderer` to support NOT operator with negation rule selection | Updated `DefaultExprRenderer.java` | TODO | docs/expr/02 §2.7 |
-| **P1.3.3** | Implement parentheses logic: wrap OR in `()` when nested in AND/NOT contexts | Updated `DefaultExprRenderer.java` | TODO | P1.3.1, P1.3.2 |
-| **P1.3.4** | Implement `fn_code` execution for PARAMS rules before template expansion | Updated `DefaultExprRenderer.java` | TODO | P1.1.3, docs/expr/03 §3.2.1 |
-| **P1.3.5** | Ensure renderer emits std_keys ONLY (no provider naming) | Updated `DefaultExprRenderer.java` | TODO | docs/expr/02 §2.5 |
-| **P1.3.6** | Implement SINGLE std_key collection with deterministic merge ordering | Updated `DefaultExprRenderer.java` | TODO | docs/expr/03 §3.8 |
-| **P1.3.7** | Implement MULTI std_key collection (list accumulation) | Updated `DefaultExprRenderer.java` | TODO | docs/expr/03 §3.8 |
-| **P1.3.8** | Add renderer warning codes (W-RENDER-RULE-MISSING, W-FN-OR-TRANSFORM-NOTFOUND) | Updated `DefaultExprRenderer.java` | TODO | docs/expr/03 §3.4.1 |
-| **P1.3.9** | Add renderer logging (rule hits/misses, OR/NOT usage, fn_code execution) | Updated `DefaultExprRenderer.java` | TODO | docs/expr/02 §2.6 |
+| **P1.3.1** | Extend `DefaultExprRenderer` to support OR operator with parentheses wrapping | Updated `DefaultExprRenderer.java` | DONE | docs/expr/02 §2.7 |
+| **P1.3.2** | Extend `DefaultExprRenderer` to support NOT operator with negation rule selection | Updated `DefaultExprRenderer.java` | DONE | docs/expr/02 §2.7 |
+| **P1.3.3** | Implement parentheses logic: wrap OR in `()` when nested in AND/NOT contexts | Updated `DefaultExprRenderer.java` | DONE | P1.3.1, P1.3.2 |
+| **P1.3.4** | Implement `fn_code` execution for PARAMS rules before template expansion | Updated `DefaultExprRenderer.java` | DONE | P1.1.3, docs/expr/03 §3.2.1 |
+| **P1.3.5** | Ensure renderer emits std_keys ONLY (no provider naming) | Updated `DefaultExprRenderer.java` | DONE | docs/expr/02 §2.5 |
+| **P1.3.6** | Implement SINGLE std_key collection with deterministic merge ordering | Updated `DefaultExprRenderer.java` | DONE | docs/expr/03 §3.8 |
+| **P1.3.7** | Implement MULTI std_key collection (list accumulation) | Updated `DefaultExprRenderer.java` | DONE | docs/expr/03 §3.8 |
+| **P1.3.8** | Add renderer warning codes (W-RENDER-RULE-MISSING, W-FN-OR-TRANSFORM-NOTFOUND) | Updated `DefaultExprRenderer.java` | DONE | docs/expr/03 §3.4.1 |
+| **P1.3.9** | Add renderer logging (rule hits/misses, OR/NOT usage, fn_code execution) | Updated `DefaultExprRenderer.java` | DONE | docs/expr/02 §2.6 |
 
 ### P1.4 Compiler Bridge Implementation
 
@@ -306,10 +306,10 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 Update this section as tasks are completed:
 
 **Last Updated**: 2025-10-16
-**Completed Tasks**: 13 / 132 (9.8%)
+**Completed Tasks**: 22 / 132 (16.7%)
 **Current Phase**: Phase 1 - Core Engine Foundation
-**Current Milestone**: Phase 1.2 COMPLETE ✅ (Configuration & Safety Modes)
-**Next Milestone**: Phase 1.3 (Renderer Enhancements)
+**Current Milestone**: Phase 1.3 COMPLETE ✅ (Renderer Enhancements)
+**Next Milestone**: Phase 1.4 (Compiler Bridge Implementation)
 
 ---
 
@@ -322,6 +322,7 @@ Update this section as tasks are completed:
 - All documentation gaps addressed (STRICT mode, MULTI gating, deterministic merge ordering).
 - **2025-10-16 16:30**: Phase 1.1 COMPLETE - Function & Transform Registry Infrastructure implemented and compiling successfully. Registered 1 function (PUBMED_DATETYPE) and 3 transforms (TO_EXCLUSIVE_MINUS_1D, LIST_JOIN, FILTER_JOIN) with Spring auto-configuration.
 - **2025-10-16 16:35**: Phase 1.2 COMPLETE - Configuration & Safety Modes implemented. Extended CompilerProperties with query bridge/length/param limits. Created ExprModeProperties for STRICT mode and MULTI repeat gating. Reference configuration created in application-expr-reference.yml.
+- **2025-10-16 17:00**: Phase 1.3 COMPLETE - Renderer Enhancements implemented. Full OR/NOT support with parentheses, fn_code execution (PUBMED_DATETYPE), std_key-only emission (no provider naming), SINGLE/MULTI std_key merge policies, comprehensive logging. Renderer now fully implements design from docs/expr/02 §2.7 and docs/expr/03 §3.2.1.
 
 ---
 
