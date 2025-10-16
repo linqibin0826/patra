@@ -222,6 +222,39 @@ run_maven_on_modules() {
     return 1
   }
 
+  # Force Java 21 for Maven execution (prevent hooks from using wrong Java version)
+  # This is critical because IDEs and git hooks may have different Java versions
+  local ORIGINAL_JAVA_HOME="${JAVA_HOME:-}"
+
+  # macOS: use java_home utility to find Java 21
+  if command -v /usr/libexec/java_home >/dev/null 2>&1; then
+    local JAVA_21_HOME
+    JAVA_21_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null || echo "")
+
+    if [[ -n "$JAVA_21_HOME" ]]; then
+      export JAVA_HOME="$JAVA_21_HOME"
+      export PATH="$JAVA_HOME/bin:$PATH"
+      echo "[maven] Using Java 21: $JAVA_HOME" >&2
+    else
+      echo "[ERROR] Java 21 not found! Please install Java 21." >&2
+      echo "[ERROR] Available Java versions:" >&2
+      /usr/libexec/java_home -V 2>&1 | head -10 >&2
+      return 1
+    fi
+  fi
+
+  # Verify Java version being used
+  local actual_java_version
+  actual_java_version=$(java -version 2>&1 | head -n 1)
+  echo "[maven] Java version: $actual_java_version" >&2
+
+  if ! echo "$actual_java_version" | grep -q 'version "21'; then
+    echo "[ERROR] Maven will use wrong Java version!" >&2
+    echo "[ERROR] Expected: Java 21" >&2
+    echo "[ERROR] Actual: $actual_java_version" >&2
+    return 1
+  fi
+
   if [[ ! -s "$modules_file" ]]; then
     return 0  # No modules affected
   fi
