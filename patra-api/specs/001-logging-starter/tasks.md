@@ -14,12 +14,12 @@ This document provides an actionable, dependency-ordered task breakdown for impl
 |-------|------------|------------|----------------|--------|
 | Phase 1 | Setup | 12 | 3 | Pending |
 | Phase 2 | Foundational | 8 | 4 | Pending |
-| Phase 3 | US1 (P1) - Production Diagnosis | 19 | 8 | Pending |
+| Phase 3 | US1 (P1) - Production Diagnosis | 21 | 10 | Pending |
 | Phase 4 | US2 (P1) - Dynamic Log Levels | 10 | 5 | Pending |
 | Phase 5 | US3 (P2) - Request Tracing | 12 | 6 | Pending |
 | Phase 6 | US4 (P2) - Consistent Logging | 19 | 10 | Pending |
-| Phase 7 | Polish & Cross-Cutting | 10 | 4 | Pending |
-| **Total** | - | **90** | **40** | - |
+| Phase 7 | Polish & Cross-Cutting | 8 | 3 | Pending |
+| **Total** | - | **90** | **41** | - |
 
 ---
 
@@ -129,13 +129,14 @@ Phase 7 (Polish)
 ### Enhanced Logback Configuration (FR-002, FR-005)
 
 - [ ] T027 [US1] Create enhanced logback-spring.xml with MDC pattern in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
-- [ ] T028 [P] [US1] Configure async appenders with proper queue settings in logback-spring.xml
-- [ ] T029 [P] [US1] Configure console and file appenders with trace context pattern in logback-spring.xml
+- [ ] T028 [P] [US1] Configure async appenders with proper queue settings (neverBlock=false for ERROR/WARN, discardingThreshold for DEBUG/TRACE) in logback-spring.xml
+- [ ] T029 [P] [US1] Configure dual output: console and rolling file appenders (both with trace context pattern) to ensure logs persist locally regardless of external log aggregation availability in logback-spring.xml
 
 ### Exception Logging Standards (FR-005)
 
 - [ ] T030 [US1] Document exception logging standards in docs/logging/exception-logging-guide.md
 - [ ] T031 [US1] Create ExceptionLoggingAspect for automatic context capture in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/aspect/ExceptionLoggingAspect.java
+- [ ] T031a [US1] Register ExceptionLoggingAspect as @Bean in LoggingAutoConfiguration with @EnableAspectJAutoProxy in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/LoggingAutoConfiguration.java
 
 ### Pilot Service Integration (patra-registry)
 
@@ -147,12 +148,15 @@ Phase 7 (Polish)
 - [ ] T037 [US1] Read patra-registry-domain/README.md, then verify domain layer uses plain Logger (no Lombok)
 - [ ] T038 [US1] Implement trace context fallback: generate new trace ID with WARN log when context missing from request in TraceContextFilter
 - [ ] T039 [US1] Test trace context propagation end-to-end in patra-registry integration tests and validate fallback behavior
+- [ ] T039a [US1] Create ArchUnit tests to verify domain layer purity (no Lombok, no Spring) and @Slf4j usage in adapter/app/infra layers in patra-registry/patra-registry-boot/src/test/java/ to catch architectural violations early
+- [ ] T039b [P] [US1] Create ArchUnit test to verify FR-012 parameterized logging: detect string concatenation in log calls in patra-registry/patra-registry-boot/src/test/java/
 
 **Parallel Execution Opportunities**:
 - T021, T022, T023 (different interceptors)
 - T025, T026 (async and MQ)
 - T028, T029 (appender configs)
 - T032-T037 (pilot service updates - different modules)
+- T039a, T039b (ArchUnit tests - different validation rules)
 
 ---
 
@@ -314,7 +318,6 @@ Phase 7 (Polish)
 
 - [ ] T086 [P] Create unit tests for DefaultLogSanitizer with known sensitive patterns in patra-common/src/test/java/
 - [ ] T087 [P] Create integration tests for trace context propagation in patra-spring-boot-starter-logging/src/test/java/
-- [ ] T088 Create ArchUnit tests to verify domain layer purity (no Lombok, no Spring) and @Slf4j usage in other layers in patra-registry/patra-registry-boot/src/test/java/
 
 ### Performance & Compliance
 

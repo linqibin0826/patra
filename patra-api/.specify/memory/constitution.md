@@ -38,8 +38,10 @@ Dependencies MUST flow unidirectionally from outer to inner layers. Inner layers
 - `adapter` → `app` + `api` (+ web starters)
 - `app` → `domain` + `patra-common` + core starter
 - `infra` → `domain` + mybatis starter + core starter
-- `domain` → ONLY `patra-common` (NO Spring/framework dependencies)
+- `domain` → ONLY `patra-common` + SLF4J API (slf4j-api) (NO Spring/framework implementation dependencies)
 - `api` → NO framework dependencies (pure contracts)
+
+**SLF4J Exception**: The SLF4J API (slf4j-api) is permitted in the domain layer as it provides an interface-only logging facade with no implementation dependencies. This is the ONLY logging dependency allowed in domain. Use plain `Logger` declarations (no Lombok @Slf4j annotation in domain).
 
 **Critical constraints**:
 - Domain layer = Pure Java (no `@Entity`, `@Service`, `@Autowired`, `@Component`)
