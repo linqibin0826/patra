@@ -210,7 +210,7 @@ public interface TraceContextHolder {
      *
      * @return current trace context, or empty if not available
      */
-    Optional<TraceContext> current();
+    Optional<DistributedTraceContext> current();
 
     /**
      * Extracts current trace context, generating new one if not available.
@@ -218,14 +218,14 @@ public interface TraceContextHolder {
      * @return current or newly generated trace context
      */
     @NonNull
-    TraceContext currentOrGenerate();
+    DistributedTraceContext currentOrGenerate();
 
     /**
      * Populates SLF4J MDC with trace context fields.
      *
      * @param context the trace context to populate
      */
-    void populateMDC(@NonNull TraceContext context);
+    void populateMDC(@NonNull DistributedTraceContext context);
 
     /**
      * Clears trace context from MDC.
@@ -240,7 +240,7 @@ public interface TraceContextHolder {
      * @return newly generated trace context
      */
     @NonNull
-    TraceContext generateNew();
+    DistributedTraceContext generateNew();
 
     /**
      * Creates trace context with specific correlation ID.
@@ -250,11 +250,11 @@ public interface TraceContextHolder {
      * @return trace context with specified correlation ID
      */
     @NonNull
-    TraceContext withCorrelationId(@NonNull String correlationId);
+    DistributedTraceContext withCorrelationId(@NonNull String correlationId);
 }
 ```
 
-### Value Object: TraceContext
+### Value Object: DistributedTraceContext
 
 ```java
 package com.papertrace.common.logging.context;
@@ -269,7 +269,7 @@ import lombok.NonNull;
  * @param spanId current operation identifier (optional)
  * @param parentSpanId parent operation identifier (optional)
  */
-public record TraceContext(
+public record DistributedTraceContext(
     @NonNull String traceId,
     String correlationId,
     String spanId,
@@ -278,15 +278,15 @@ public record TraceContext(
     /**
      * Creates minimal trace context with only trace ID.
      */
-    public static TraceContext minimal(String traceId) {
-        return new TraceContext(traceId, null, null, null);
+    public static DistributedTraceContext minimal(String traceId) {
+        return new DistributedTraceContext(traceId, null, null, null);
     }
 
     /**
      * Creates trace context with trace ID and correlation ID.
      */
-    public static TraceContext withCorrelation(String traceId, String correlationId) {
-        return new TraceContext(traceId, correlationId, null, null);
+    public static DistributedTraceContext withCorrelation(String traceId, String correlationId) {
+        return new DistributedTraceContext(traceId, correlationId, null, null);
     }
 }
 ```
@@ -306,7 +306,7 @@ import java.util.UUID;
 public class DefaultTraceContextHolder implements TraceContextHolder {
 
     @Override
-    public Optional<TraceContext> current() {
+    public Optional<DistributedTraceContext> current() {
         String traceId = TraceContext.traceId();
         if (traceId == null || traceId.isEmpty() || "N/A".equals(traceId)) {
             return Optional.empty();
@@ -316,22 +316,25 @@ public class DefaultTraceContextHolder implements TraceContextHolder {
         String spanId = TraceContext.spanId();
         String parentSpanId = MDC.get("parentSpanId");
 
-        return Optional.of(new TraceContext(traceId, correlationId, spanId, parentSpanId));
+        return Optional.of(new DistributedTraceContext(traceId, correlationId, spanId, parentSpanId));
     }
 
     @Override
-    public TraceContext currentOrGenerate() {
+    public DistributedTraceContext currentOrGenerate() {
         return current().orElseGet(this::generateNew);
     }
 
     @Override
-    public void populateMDC(TraceContext context) {
+    public void populateMDC(DistributedTraceContext context) {
         MDC.put("traceId", context.traceId());
         if (context.correlationId() != null) {
             MDC.put("correlationId", context.correlationId());
         }
         if (context.spanId() != null) {
             MDC.put("spanId", context.spanId());
+        }
+        if (context.parentSpanId() != null) {
+            MDC.put("parentSpanId", context.parentSpanId());
         }
     }
 
@@ -344,18 +347,18 @@ public class DefaultTraceContextHolder implements TraceContextHolder {
     }
 
     @Override
-    public TraceContext generateNew() {
+    public DistributedTraceContext generateNew() {
         String traceId = UUID.randomUUID().toString();
-        return TraceContext.minimal(traceId);
+        return DistributedTraceContext.minimal(traceId);
     }
 
     @Override
-    public TraceContext withCorrelationId(String correlationId) {
+    public DistributedTraceContext withCorrelationId(String correlationId) {
         String traceId = TraceContext.traceId();
         if (traceId == null || "N/A".equals(traceId)) {
             traceId = UUID.randomUUID().toString();
         }
-        return TraceContext.withCorrelation(traceId, correlationId);
+        return DistributedTraceContext.withCorrelation(traceId, correlationId);
     }
 }
 ```
@@ -372,7 +375,7 @@ public class BatchOrchestrator {
     @Async
     public void processBatchAsync(String batchId) {
         // Generate trace context with correlation ID
-        TraceContext context = traceContextHolder.withCorrelationId(batchId);
+        DistributedTraceContext context = traceContextHolder.withCorrelationId(batchId);
         traceContextHolder.populateMDC(context);
 
         try {

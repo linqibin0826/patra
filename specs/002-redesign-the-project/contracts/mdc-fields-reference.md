@@ -14,7 +14,7 @@ This document defines standard MDC (Mapped Diagnostic Context) field names used 
 
 | Field Name | Type | Required | Source | Description | Example |
 |------------|------|----------|--------|-------------|---------|
-| `traceId` | String (UUID or SkyWalking format) | YES | SkyWalking `TraceContext.traceId()` | Unique identifier for entire request flow across all services | `abc123-def456-ghi789` |
+| `traceId` | String (UUID or tracing vendor format) | YES | Tracing library API (e.g., SkyWalking) | Unique identifier for entire request flow across all services | `abc123-def456-ghi789` |
 | `correlationId` | String (UUID) | NO | HTTP header `X-Correlation-ID` or generated | Business operation identifier (batch ID, idempotency key) | `batch-20251015-001` |
 | `spanId` | String (SkyWalking format) | NO | SkyWalking `ActiveSpan.getSpanId()` | Current operation identifier within the trace | `0.1.2` |
 | `parentSpanId` | String (SkyWalking format) | NO | SkyWalking `ActiveSpan.getParentSpanId()` | Parent operation identifier for nested calls | `0.1` |
@@ -47,8 +47,9 @@ This document defines standard MDC (Mapped Diagnostic Context) field names used 
 ### Automatic Population (TraceContextFilter)
 
 Fields automatically populated by `TraceContextFilter` at servlet boundary:
-- `traceId` (from SkyWalking or generated)
+- `traceId` (from tracing library or generated)
 - `correlationId` (from header or generated)
+- `spanId` and `parentSpanId` (if available from tracing library)
 - `service` (from Spring config)
 - `environment` (from Spring profile)
 - `hostname` (from system)
@@ -81,6 +82,15 @@ try {
 ```
 
 TraceContextFilter handles cleanup of automatic fields.
+
+---
+
+## MDC Key Remapping
+
+Default MDC keys are defined above. Keys can be remapped via Spring properties under `papertrace.logging.mdc.field-names.*` (see `spring-boot-properties.md`).
+
+- All framework components (TraceContextFilter, interceptors, utilities) must honor the active mapping when reading/writing MDC.
+- If remapped, update logback patterns and log queries accordingly.
 
 ---
 
@@ -152,7 +162,7 @@ public class BatchOrchestrator {
 
     public void processBatch(String batchId) {
         // Set correlation ID to batch ID
-        TraceContext context = traceContextHolder.withCorrelationId(batchId);
+        DistributedTraceContext context = traceContextHolder.withCorrelationId(batchId);
         traceContextHolder.populateMDC(context);
 
         MDC.put("batchId", batchId);
@@ -264,7 +274,7 @@ public class TaskEventListener implements RocketMQListener<TaskEvent> {
         String traceId = event.getHeader("traceId");
         String correlationId = event.getHeader("correlationId");
 
-        TraceContext context = TraceContext.withCorrelation(traceId, correlationId);
+        DistributedTraceContext context = DistributedTraceContext.withCorrelation(traceId, correlationId);
         traceContextHolder.populateMDC(context);
 
         MDC.put("taskId", event.getTaskId());
@@ -336,6 +346,8 @@ externalService:* AND level:(INFO OR WARN OR ERROR)
 - Use inconsistent field names across services
 - Add redundant fields already in log message
 
+Note: Fields like `externalService` shown in examples are not part of the standard set; treat them as example-only unless standardized in your service.
+
 ---
 
 ## Field Naming Conventions
@@ -358,5 +370,7 @@ externalService:* AND level:(INFO OR WARN OR ERROR)
 ## Related Documents
 
 - [utility-api.md](./utility-api.md) - Java API for trace context management
-- [configuration-schema.yml](./configuration-schema.yml) - Log level configuration
+- [integrations/trace-context-filter.md](./integrations/trace-context-filter.md) - HTTP boundary filter contract
+- [integrations/feign-interceptor-contract.md](./integrations/feign-interceptor-contract.md) - Outbound call propagation
 - [spring-boot-properties.md](./spring-boot-properties.md) - Spring Boot logging properties
+- [schemas/logging-config.schema.yml](./schemas/logging-config.schema.yml) - Nacos logging schema

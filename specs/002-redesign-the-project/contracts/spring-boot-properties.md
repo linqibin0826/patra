@@ -166,6 +166,29 @@ papertrace:
 
 ---
 
+### MDC Key Remapping
+
+You can remap MDC key names via `papertrace.logging.mdc.field-names.*`. All framework components (filters/interceptors/utilities) must read and write MDC using this mapping. If you change keys, update:
+- Logback patterns (e.g., `%X{serviceName}` instead of `%X{service}`)
+- Queries/dashboards in your log aggregation tool
+
+Default mapping:
+- `service` → `service`
+- `environment` → `environment`
+- `hostname` → `hostname`
+- `client-ip` → `clientIp`
+- `request-uri` → `requestUri`
+- `http-method` → `httpMethod`
+- Trace keys (`traceId`, `correlationId`, `spanId`, `parentSpanId`) are also respected if remapped under `field-names`.
+
+---
+
+### Standard vs Example‑Only Fields
+
+The standardized MDC keys are defined in `mdc-fields-reference.md`. Some examples (e.g., `externalService`) illustrate patterns but are not standardized. Treat them as service‑local unless explicitly adopted in your service’s standards.
+
+---
+
 ### 4. Async Logging Configuration
 
 ```yaml
@@ -433,8 +456,10 @@ Expected: integer between 64 and 8192.
 **POST** `/actuator/loggers/{loggerName}`
 - Change log level dynamically (alternative to Nacos)
 
+Optional custom endpoint (if enabled by the starter):
+
 **GET** `/actuator/loggers/trace-context`
-- View current trace context status
+- View current trace context status (implementation-defined payload)
 
 **Example**:
 ```bash
@@ -459,6 +484,6 @@ curl -X POST http://localhost:8080/actuator/loggers/com.papertrace.ingest \
 
 ## Related Documents
 
-- [configuration-schema.yml](./configuration-schema.yml) - Nacos configuration schema
+- [schemas/logging-config.schema.yml](./schemas/logging-config.schema.yml) - Nacos configuration schema
 - [utility-api.md](./utility-api.md) - Java API specifications
 - [mdc-fields-reference.md](./mdc-fields-reference.md) - MDC field standards

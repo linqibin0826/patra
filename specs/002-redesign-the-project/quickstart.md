@@ -189,7 +189,7 @@ public class BatchProcessingJob {
         String batchId = "batch-" + LocalDate.now().format(DateTimeFormatter.ISO_DATE);
 
         // Generate trace context for batch
-        TraceContext context = traceContextHolder.withCorrelationId(batchId);
+        DistributedTraceContext context = traceContextHolder.withCorrelationId(batchId);
         traceContextHolder.populateMDC(context);
 
         MDC.put("batchId", batchId);
@@ -229,7 +229,7 @@ public class TaskEventListener implements RocketMQListener<TaskEvent> {
         String traceId = event.getTraceId();
         String correlationId = event.getCorrelationId();
 
-        TraceContext context = TraceContext.withCorrelation(traceId, correlationId);
+        DistributedTraceContext context = DistributedTraceContext.withCorrelation(traceId, correlationId);
         traceContextHolder.populateMDC(context);
 
         MDC.put("taskId", event.getTaskId());
@@ -271,7 +271,7 @@ public class CreatePlanOrchestrator {
     private ProvenanceRepository provenanceRepository;
 
     public CreatePlanResult execute(CreatePlanCommand command) {
-        // TraceContext already populated by adapter layer
+        // DistributedTraceContext already populated by adapter layer
 
         log.info("Creating plan: source={}, window={}", command.getSource(), command.getWindow());
 
@@ -691,7 +691,7 @@ public class ApiClient {
 // For scheduled jobs, manually generate trace context
 @Scheduled(cron = "0 0 * * * ?")
 public void scheduledTask() {
-    TraceContext context = traceContextHolder.currentOrGenerate();
+    DistributedTraceContext context = traceContextHolder.currentOrGenerate();
     traceContextHolder.populateMDC(context);
     try {
         // ... task logic

@@ -1,0 +1,14 @@
+logging:
+  level:
+    root: INFO
+    com.papertrace: DEBUG
+    com.papertrace.domain: INFO
+    org.springframework.web: WARN
+    org.mybatis: WARN
+    com.zaxxer.hikari: INFO
+
+  appender:
+    async:
+      queueSize: 512
+      discardingThreshold: 0
+      neverBlock: false
