@@ -25,7 +25,7 @@ This document defines the conceptual data model for the enhanced logging system.
                           │
                           ▼
                   ┌─────────────────────┐
-                  │  TraceContext       │  (Value Object)
+                  │  DistributedTraceContext │  (Value Object)
                   │─────────────────────│
                   │ traceId             │
                   │ correlationId       │
@@ -71,7 +71,7 @@ This document defines the conceptual data model for the enhanced logging system.
 | `level` | `LogLevel` | NOT NULL | Severity level (ERROR, WARN, INFO, DEBUG, TRACE) |
 | `logger` | `String` | NOT NULL, max 255 chars | Fully qualified class name or logger name |
 | `thread` | `String` | NOT NULL, max 100 chars | Name of the thread that generated the log |
-| `traceContext` | `TraceContext` | NULLABLE | Distributed tracing context (trace ID, correlation ID, span ID) |
+| `traceContext` | `DistributedTraceContext` | NULLABLE | Distributed tracing context (trace ID, correlation ID, span ID) |
 | `message` | `String` | NOT NULL | The actual log message (sanitized if contains sensitive data) |
 | `exception` | `ThrowableProxy` | NULLABLE | Exception details including stack trace if applicable |
 | `mdc` | `Map<String, String>` | NULLABLE | Additional Mapped Diagnostic Context key-value pairs |
@@ -90,7 +90,7 @@ This document defines the conceptual data model for the enhanced logging system.
 
 ---
 
-## 2. TraceContext (Value Object)
+## 2. DistributedTraceContext (Value Object)
 
 **Type**: Immutable Value Object
 
@@ -112,7 +112,7 @@ This document defines the conceptual data model for the enhanced logging system.
  * Immutable value object representing distributed tracing context.
  * Integrates with Apache SkyWalking for trace ID generation and propagation.
  */
-public record TraceContext(
+public record DistributedTraceContext(
     @NonNull String traceId,
     String correlationId,
     String spanId,
@@ -121,13 +121,13 @@ public record TraceContext(
     /**
      * Extracts trace context from current SkyWalking trace and MDC.
      */
-    public static TraceContext fromCurrent() {
-        String traceId = TraceContext.traceId();  // SkyWalking API
+    public static DistributedTraceContext fromCurrent() {
+        String traceId = org.apache.skywalking.apm.toolkit.trace.TraceContext.traceId();  // SkyWalking API
         String correlationId = MDC.get("correlationId");
         String spanId = ActiveSpan.getSpanId();    // SkyWalking API
         String parentSpanId = ActiveSpan.getParentSpanId();
 
-        return new TraceContext(
+        return new DistributedTraceContext(
             traceId != null ? traceId : UUID.randomUUID().toString(),
             correlationId,
             spanId,
@@ -151,8 +151,8 @@ public record TraceContext(
     /**
      * Creates minimal trace context with only trace ID (for external boundaries).
      */
-    public static TraceContext minimal(String traceId) {
-        return new TraceContext(traceId, null, null, null);
+    public static DistributedTraceContext minimal(String traceId) {
+        return new DistributedTraceContext(traceId, null, null, null);
     }
 }
 ```
@@ -462,7 +462,7 @@ log.error("Batch item failed: batchId={}, itemId={}, error={}",
 | Entity | Persistence | Storage Location | Mutability |
 |--------|-------------|------------------|------------|
 | `LogEntry` | Transient (written to logs) | Log files/aggregator | Immutable |
-| `TraceContext` | Transient (in MDC) | Thread-local storage | Immutable |
+| `DistributedTraceContext` | Transient (in MDC) | Thread-local storage | Immutable |
 | `SanitizationRule` | Configuration | `patra-common` constants (initially) | Read-only at runtime |
 | `LogLevelConfig` | Configuration | Nacos config server | Dynamic (hot reload) |
 | `ApiCallLog` | Transient (logged) | Log files/aggregator | Immutable |
@@ -472,7 +472,7 @@ log.error("Batch item failed: batchId={}, itemId={}, error={}",
 
 ## State Transitions
 
-### TraceContext Lifecycle
+### Trace Context Lifecycle
 
 ```
 [Request Arrives] → [TraceContextFilter extracts/generates trace ID]

@@ -27,10 +27,14 @@ Auto-configuration classes and properties for Spring Boot starter integration
 ## Files in This Directory
 
 - `utility-api.md` - Java API specifications for logging utilities
-- `configuration-schema.yml` - Nacos configuration YAML schema
 - `spring-boot-properties.md` - Spring Boot configuration properties reference
-- `feign-interceptor-contract.md` - Feign client integration contract
 - `mdc-fields-reference.md` - Standard MDC field names and meanings
+- `integrations/trace-context-filter.md` - HTTP boundary filter contract for trace context
+- `integrations/feign-interceptor-contract.md` - Feign client propagation and logging contract
+- `integrations/sanitization-aspect.md` - Optional AOP-based sanitization contract (AUTO mode)
+- `schemas/logging-config.schema.yml` - JSON Schema for Nacos logging config
+- `schemas/README.md` - Schema usage, precedence, and validation
+- `schemas/examples/` - Validated example YAMLs (common/service/env)
 
 ---
 
@@ -41,7 +45,7 @@ These contracts follow semantic versioning:
 - **MINOR**: Backward-compatible additions (new utility methods, new MDC fields)
 - **PATCH**: Bug fixes, documentation clarifications
 
-**Current Version**: 1.0.0 (initial release)
+**Current Version**: 1.0.1 (docs normalized; integrations + schema added)
 
 ---
 
@@ -49,9 +53,9 @@ These contracts follow semantic versioning:
 
 Developers integrating the new logging system should:
 1. Read `utility-api.md` to understand available logging utilities
-2. Check `mdc-fields-reference.md` for standard trace context fields
+2. Check `mdc-fields-reference.md` for standard trace context fields and remapping
 3. Review `spring-boot-properties.md` for configuration options
-4. Refer to `configuration-schema.yml` for Nacos log level management
+4. Validate Nacos YAML against `schemas/logging-config.schema.yml` and use examples under `schemas/examples/`
 
 ---
 

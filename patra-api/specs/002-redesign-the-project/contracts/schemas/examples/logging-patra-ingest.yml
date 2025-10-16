@@ -1,0 +1,11 @@
+logging:
+  level:
+    com.papertrace.ingest: DEBUG
+    com.papertrace.ingest.adapter.job: DEBUG
+    com.papertrace.ingest.infra.client: INFO
+    com.papertrace.ingest.app.orchestrator: INFO
+
+  file:
+    name: /var/log/papertrace/patra-ingest.log
+    max-size: 100MB
+    max-history: 30
