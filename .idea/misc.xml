@@ -12,16 +12,6 @@
         <option value="$PROJECT_DIR$/patra-ingest/pom.xml" />
       </list>
     </option>
-    <option name="ignoredFiles">
-      <set>
-        <option value="$PROJECT_DIR$/patra-ingest/patra-ingest-contract/pom.xml" />
-        <option value="$PROJECT_DIR$/patra-registry/patra-registry-contract/pom.xml" />
-        <option value="$PROJECT_DIR$/patra-shared-kernel/pom.xml" />
-        <option value="$PROJECT_DIR$/patra-spring-boot-starter-observability/pom.xml" />
-        <option value="$PROJECT_DIR$/patra-spring-boot-starter-rocketmq/pom.xml" />
-        <option value="$PROJECT_DIR$/patra-starter-query/pom.xml" />
-      </set>
-    </option>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="ms-21" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
