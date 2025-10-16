@@ -98,39 +98,39 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P2.1.1** | Update existing PubMed PARAMS rules to use `{{from}}`, `{{to}}`, `{{datetype}}` placeholders | Updated `V1.1.1__seed_pubmed_expr_config.sql` | TODO | docs/expr/04 §4.6 |
-| **P2.1.2** | Add `fn_code='PUBMED_DATETYPE'` to PubMed date RANGE render rule | Updated `V1.1.1__seed_pubmed_expr_config.sql` | TODO | P1.1.5, docs/expr/04 §4.3.2 |
-| **P2.1.3** | Insert param map entry: `std_key='query' → provider_param_name='term'` | Updated `V1.1.1__seed_pubmed_expr_config.sql` | TODO | docs/expr/04 §4.2 |
-| **P2.1.4** | Add `transform_code='TO_EXCLUSIVE_MINUS_1D'` to `to → maxdate` mapping | Updated `V1.1.1__seed_pubmed_expr_config.sql` | TODO | P1.1.6, docs/expr/04 §4.2 |
-| **P2.1.5** | Update PubMed TIAB text rules for OR support (set `wrap_group=true` for IN operator) | Updated `V1.1.1__seed_pubmed_expr_config.sql` | TODO | docs/expr/04 §4.3.1 |
-| **P2.1.6** | Add param map entries for pagination: `limit→retmax`, `offset→retstart` | Updated `V1.1.1__seed_pubmed_expr_config.sql` | TODO | docs/expr/04 §4.2 |
-| **P2.1.7** | Verify PubMed seed with manual SQL queries | Verification report | TODO | P2.1.1-P2.1.6, docs/expr/07 §7.5 |
+| **P2.1.1** | Update existing PubMed PARAMS rules to use `{{from}}`, `{{to}}`, `{{datetype}}` placeholders | Updated `V1.1.1__seed_pubmed_expr_config.sql` | DONE | docs/expr/04 §4.6 |
+| **P2.1.2** | Add `fn_code='PUBMED_DATETYPE'` to PubMed date RANGE render rule | Updated `V1.1.1__seed_pubmed_expr_config.sql` | DONE | P1.1.5, docs/expr/04 §4.3.2 |
+| **P2.1.3** | Insert param map entry: `std_key='query' → provider_param_name='term'` | Updated `V1.1.1__seed_pubmed_expr_config.sql` | DONE | docs/expr/04 §4.2 |
+| **P2.1.4** | Add `transform_code='TO_EXCLUSIVE_MINUS_1D'` to `to → maxdate` mapping | Updated `V1.1.1__seed_pubmed_expr_config.sql` | DONE | P1.1.6, docs/expr/04 §4.2 |
+| **P2.1.5** | Update PubMed TIAB text rules for OR support (set `wrap_group=true` for IN operator) | Updated `V1.1.1__seed_pubmed_expr_config.sql` | DONE | docs/expr/04 §4.3.1 |
+| **P2.1.6** | Add param map entries for pagination: `limit→retmax`, `offset→retstart` | Updated `V1.1.1__seed_pubmed_expr_config.sql` | DONE | docs/expr/04 §4.2 |
+| **P2.1.7** | Verify PubMed seed with manual SQL queries | Verification report | DONE | P2.1.1-P2.1.6, docs/expr/07 §7.5 |
 
 ### P2.2 EPMC Seed Creation
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P2.2.1** | Create migration file `V1.1.2__seed_epmc_expr_config.sql` | New SQL migration file | TODO | docs/expr/05, docs/expr/07 |
-| **P2.2.2** | Add `publication_date` field to field dictionary (DATE range) | Seed SQL | TODO | docs/expr/05 §5.3.2 |
-| **P2.2.3** | Add EPMC capabilities: TERM/IN (text), RANGE (DATE on publication_date) | Seed SQL | TODO | docs/expr/05 §5.3 |
-| **P2.2.4** | Add EPMC text render rules: TERM ANY/PHRASE, IN with OR joining | Seed SQL | TODO | docs/expr/05 §5.3.1 |
-| **P2.2.5** | Add EPMC date render rule: RANGE with `FIRST_PDATE:[{{from}} TO {{to}}]` template | Seed SQL | TODO | docs/expr/05 §5.3.2 |
-| **P2.2.6** | Add EPMC param map: `query→query`, `limit→pageSize` | Seed SQL | TODO | docs/expr/05 §5.2 |
-| **P2.2.7** | Add optional cursor param map if needed: `cursor→cursorMark` | Seed SQL | TODO | docs/expr/05 §5.2 |
-| **P2.2.8** | Verify EPMC seed with manual SQL queries | Verification report | TODO | P2.2.1-P2.2.7, docs/expr/07 §7.5 |
+| **P2.2.1** | Create migration file `V1.1.2__seed_epmc_expr_config.sql` | New SQL migration file | DONE | docs/expr/05, docs/expr/07 |
+| **P2.2.2** | Add `publication_date` field to field dictionary (DATE range) | Seed SQL | DONE | docs/expr/05 §5.3.2 |
+| **P2.2.3** | Add EPMC capabilities: TERM/IN (text), RANGE (DATE on publication_date) | Seed SQL | DONE | docs/expr/05 §5.3 |
+| **P2.2.4** | Add EPMC text render rules: TERM ANY/PHRASE, IN with OR joining | Seed SQL | DONE | docs/expr/05 §5.3.1 |
+| **P2.2.5** | Add EPMC date render rule: RANGE with `FIRST_PDATE:[{{from}} TO {{to}}]` template | Seed SQL | DONE | docs/expr/05 §5.3.2 |
+| **P2.2.6** | Add EPMC param map: `query→query`, `limit→pageSize` | Seed SQL | DONE | docs/expr/05 §5.2 |
+| **P2.2.7** | Add optional cursor param map if needed: `cursor→cursorMark` | Seed SQL | DONE | docs/expr/05 §5.2 |
+| **P2.2.8** | Verify EPMC seed with manual SQL queries | Verification report | DONE | P2.2.1-P2.2.7, docs/expr/07 §7.5 |
 
 ### P2.3 Crossref Seed Creation
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P2.3.1** | Create migration file `V1.1.3__seed_crossref_expr_config.sql` | New SQL migration file | TODO | docs/expr/06, docs/expr/07 |
-| **P2.3.2** | Add `publication_date` field to field dictionary if not present (DATE range) | Seed SQL | TODO | docs/expr/06 §6.3.2 |
-| **P2.3.3** | Add Crossref capabilities: TERM/IN (text), RANGE (DATE on publication_date) | Seed SQL | TODO | docs/expr/06 §6.3 |
-| **P2.3.4** | Add Crossref text render rules: TERM ANY/PHRASE, IN with OR joining | Seed SQL | TODO | docs/expr/06 §6.3.1 |
-| **P2.3.5** | Add Crossref date render rule: PARAMS with `filter` std_key using template `from-pub-date:{{from}},until-pub-date:{{to}}` | Seed SQL | TODO | docs/expr/06 §6.3.2 |
-| **P2.3.6** | Define `filter` std_key as MULTI in field dictionary or rule hints | Seed SQL | TODO | docs/expr/06 §6.7 |
-| **P2.3.7** | Add Crossref param map: `query→query`, `filter→filter`, `limit→rows`, `offset→offset` | Seed SQL | TODO | docs/expr/06 §6.2 |
-| **P2.3.8** | Verify Crossref seed with manual SQL queries | Verification report | TODO | P2.3.1-P2.3.7, docs/expr/07 §7.5 |
+| **P2.3.1** | Create migration file `V1.1.3__seed_crossref_expr_config.sql` | New SQL migration file | DONE | docs/expr/06, docs/expr/07 |
+| **P2.3.2** | Add `publication_date` field to field dictionary if not present (DATE range) | Seed SQL | DONE | docs/expr/06 §6.3.2 |
+| **P2.3.3** | Add Crossref capabilities: TERM/IN (text), RANGE (DATE on publication_date) | Seed SQL | DONE | docs/expr/06 §6.3 |
+| **P2.3.4** | Add Crossref text render rules: TERM ANY/PHRASE, IN with OR joining | Seed SQL | DONE | docs/expr/06 §6.3.1 |
+| **P2.3.5** | Add Crossref date render rule: PARAMS with `filter` std_key using template `from-pub-date:{{from}},until-pub-date:{{to}}` | Seed SQL | DONE | docs/expr/06 §6.3.2 |
+| **P2.3.6** | Define `filter` std_key as MULTI in field dictionary or rule hints | Seed SQL | DONE | docs/expr/06 §6.7 |
+| **P2.3.7** | Add Crossref param map: `query→query`, `filter→filter`, `limit→rows`, `offset→offset` | Seed SQL | DONE | docs/expr/06 §6.2 |
+| **P2.3.8** | Verify Crossref seed with manual SQL queries | Verification report | DONE | P2.3.1-P2.3.7, docs/expr/07 §7.5 |
 
 ---
 
@@ -297,7 +297,7 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 - **Phase 5 (Documentation)**: 8 tasks
 - **Phase 6 (Rollout)**: 14 tasks
 
-**Current Status**: 88 TODO, 0 IN_PROGRESS, 44 DONE, 0 BLOCKED
+**Current Status**: 67 TODO, 0 IN_PROGRESS, 65 DONE, 0 BLOCKED
 
 ---
 
@@ -306,10 +306,10 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 Update this section as tasks are completed:
 
 **Last Updated**: 2025-10-16
-**Completed Tasks**: 44 / 132 (33.3%)
-**Current Phase**: Phase 2 - Registry Seeds
-**Current Milestone**: Phase 1.5 COMPLETE ✅ (Observability)
-**Next Milestone**: Phase 2.1 (PubMed Seed Update)
+**Completed Tasks**: 65 / 132 (49.2%)
+**Current Phase**: Phase 3 - Integration & Adapters
+**Current Milestone**: Phase 2.3 COMPLETE ✅ (Crossref Seed Creation)
+**Next Milestone**: Phase 3.1 (Adapter Refactoring)
 
 ---
 
@@ -323,8 +323,11 @@ Update this section as tasks are completed:
 - **2025-10-16 16:30**: Phase 1.1 COMPLETE - Function & Transform Registry Infrastructure implemented and compiling successfully. Registered 1 function (PUBMED_DATETYPE) and 3 transforms (TO_EXCLUSIVE_MINUS_1D, LIST_JOIN, FILTER_JOIN) with Spring auto-configuration.
 - **2025-10-16 16:35**: Phase 1.2 COMPLETE - Configuration & Safety Modes implemented. Extended CompilerProperties with query bridge/length/param limits. Created ExprModeProperties for STRICT mode and MULTI repeat gating. Reference configuration created in application-expr-reference.yml.
 - **2025-10-16 17:00**: Phase 1.3 COMPLETE - Renderer Enhancements implemented. Full OR/NOT support with parentheses, fn_code execution (PUBMED_DATETYPE), std_key-only emission (no provider naming), SINGLE/MULTI std_key merge policies, comprehensive logging. Renderer now fully implements design from docs/expr/02 §2.7 and docs/expr/03 §3.2.1.
-- **2025-10-16 19:45**: Phase 1.5 COMPLETE - Observability instrumentation added. Micrometer metrics published for render rule hits/misses, param map hits/misses, transform usage, compile errors & duration. Compiler logs now hash queries at INFO with full details retained for DEBUG.
 - **2025-10-16 19:05**: Phase 1.4 COMPLETE - Compiler bridge implemented. DefaultExprCompiler now maps std_keys to provider params, bridges `query`, applies transforms, enforces STRICT vs non-STRICT behavior, and logs/limits per design (docs/expr/03 §3.2-3.5).
+- **2025-10-16 19:45**: Phase 1.5 COMPLETE - Observability instrumentation added. Micrometer metrics published for render rule hits/misses, param map hits/misses, transform usage, compile errors & duration. Compiler logs now hash queries at INFO with full details retained for DEBUG.
+- **2025-10-16 20:30**: Phase 2.1 COMPLETE - PubMed seed updated. Fixed PARAMS placeholders to `{{from}}`, `{{to}}`, `{{datetype}}` format (line 117). Added critical `query→term` param map entry (id=900310) for query bridging. All existing mappings verified: `fn_code='PUBMED_DATETYPE'` already present, `wrap_group=1` for IN rule, `TO_EXCLUSIVE_MINUS_1D` transform on `to→maxdate`, pagination mappings complete.
+- **2025-10-16 20:35**: Phase 2.2 COMPLETE - EPMC seed created (V1.1.2__seed_epmc_expr_config.sql). Added EPMC provenance to V1.1.0. Created field dictionary (publication_date, text), capabilities (RANGE/TERM/IN), render rules (QUERY-based for text and date with `FIRST_PDATE` syntax), param map (`query→query`, `limit→pageSize`). Cursor mapping commented for future.
+- **2025-10-16 20:40**: Phase 2.3 COMPLETE - Crossref seed created (V1.1.3__seed_crossref_expr_config.sql). Added CROSSREF provenance to V1.1.0. Created field dictionary (text, reused publication_date), capabilities (RANGE/TERM/IN), render rules (QUERY for text, PARAMS for date filter with `filter` std_key MULTI), param map (`query→query`, `filter→filter`, `limit→rows`, `offset→offset`). Compilation verified successfully (mvn -q -DskipTests compile).
 
 ---
 
