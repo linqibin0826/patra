@@ -9,6 +9,7 @@ import com.patra.expr.TextMatch;
 import com.patra.starter.expr.compiler.boot.CompilerProperties;
 import com.patra.starter.expr.compiler.boot.ExprModeProperties;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
+import com.patra.starter.expr.compiler.metrics.ExprMetrics;
 import com.patra.starter.expr.compiler.model.CompileRequest;
 import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
 import com.patra.starter.expr.compiler.model.CompileResult;
@@ -100,7 +101,8 @@ class DefaultExprCompilerTest {
             new StubRenderer("query", Map.of(), List.of(), null),
             transformRegistry,
             compilerProperties,
-            modeProperties);
+            modeProperties,
+            ExprMetrics.noop());
 
     CompileRequest request =
         CompileRequestBuilder.of(
@@ -125,7 +127,8 @@ class DefaultExprCompilerTest {
             new StubRenderer("title:hello", Map.of("q", "hello"), List.of(warn), trace),
             transformRegistry,
             compilerProperties,
-            modeProperties);
+            modeProperties,
+            ExprMetrics.noop());
 
     CompileRequest request =
         CompileRequestBuilder.of(
@@ -151,7 +154,8 @@ class DefaultExprCompilerTest {
             new StubRenderer("a".repeat(50), Map.of(), List.of(), null),
             transformRegistry,
             compilerProperties,
-            modeProperties);
+            modeProperties,
+            ExprMetrics.noop());
 
     CompileRequest request =
         CompileRequestBuilder.of(
