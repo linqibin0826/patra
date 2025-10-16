@@ -6,6 +6,8 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.expr.TextMatch;
+import com.patra.starter.expr.compiler.boot.CompilerProperties;
+import com.patra.starter.expr.compiler.boot.ExprModeProperties;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
 import com.patra.starter.expr.compiler.model.CompileRequest;
 import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
@@ -15,6 +17,7 @@ import com.patra.starter.expr.compiler.model.RenderTrace;
 import com.patra.starter.expr.compiler.render.ExprRenderer;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
+import com.patra.starter.expr.compiler.transform.TransformRegistry;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,9 @@ import org.junit.jupiter.api.Test;
 class DefaultExprCompilerTest {
 
   private ProvenanceSnapshot snapshot;
+  private TransformRegistry transformRegistry;
+  private CompilerProperties compilerProperties;
+  private ExprModeProperties modeProperties;
 
   @BeforeEach
   void setUp() {
@@ -63,6 +69,10 @@ class DefaultExprCompilerTest {
             true,
             Set.of(),
             null);
+    Map<String, ProvenanceSnapshot.ApiParameter> apiParams =
+        Map.of(
+            "q", new ProvenanceSnapshot.ApiParameter("q", "q", null, null),
+            "query", new ProvenanceSnapshot.ApiParameter("query", "query", null, null));
     snapshot =
         new ProvenanceSnapshot(
             new ProvenanceSnapshot.Identity(1L, "PUBMED", "PubMed"),
@@ -72,8 +82,11 @@ class DefaultExprCompilerTest {
             Instant.parse("2024-05-01T00:00:00Z"),
             Map.of("title", field),
             Map.of("title", capability),
-            Map.of(),
+            apiParams,
             List.of());
+    transformRegistry = code -> java.util.Optional.empty();
+    compilerProperties = new CompilerProperties();
+    modeProperties = new ExprModeProperties();
   }
 
   @Test
@@ -84,7 +97,10 @@ class DefaultExprCompilerTest {
             new StubSnapshotLoader(snapshot),
             new StubCapabilityChecker(List.of(error)),
             new IdentityNormalizer(),
-            new StubRenderer("query", Map.of(), List.of(), null));
+            new StubRenderer("query", Map.of(), List.of(), null),
+            transformRegistry,
+            compilerProperties,
+            modeProperties);
 
     CompileRequest request =
         CompileRequestBuilder.of(
@@ -106,7 +122,10 @@ class DefaultExprCompilerTest {
             new StubSnapshotLoader(snapshot),
             new StubCapabilityChecker(List.of()),
             new IdentityNormalizer(),
-            new StubRenderer("title:hello", Map.of("q", "hello"), List.of(warn), trace));
+            new StubRenderer("title:hello", Map.of("q", "hello"), List.of(warn), trace),
+            transformRegistry,
+            compilerProperties,
+            modeProperties);
 
     CompileRequest request =
         CompileRequestBuilder.of(
@@ -117,6 +136,7 @@ class DefaultExprCompilerTest {
 
     assertThat(result.query()).isEqualTo("title:hello");
     assertThat(result.params()).containsEntry("q", "hello");
+    assertThat(result.params()).containsEntry("query", "title:hello");
     assertThat(result.report().warnings()).containsExactly(warn);
     assertThat(result.trace()).isEqualTo(trace);
   }
@@ -128,7 +148,10 @@ class DefaultExprCompilerTest {
             new StubSnapshotLoader(snapshot),
             new StubCapabilityChecker(List.of()),
             new IdentityNormalizer(),
-            new StubRenderer("a".repeat(50), Map.of(), List.of(), null));
+            new StubRenderer("a".repeat(50), Map.of(), List.of(), null),
+            transformRegistry,
+            compilerProperties,
+            modeProperties);
 
     CompileRequest request =
         CompileRequestBuilder.of(
