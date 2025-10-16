@@ -8,6 +8,7 @@ import com.patra.starter.expr.compiler.ExprCompiler;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
 import com.patra.starter.expr.compiler.check.DefaultCapabilityChecker;
 import com.patra.starter.expr.compiler.function.FunctionRegistry;
+import com.patra.starter.expr.compiler.metrics.ExprMetrics;
 import com.patra.starter.expr.compiler.normalize.DefaultExprNormalizer;
 import com.patra.starter.expr.compiler.normalize.ExprNormalizer;
 import com.patra.starter.expr.compiler.render.DefaultExprRenderer;
@@ -16,6 +17,8 @@ import com.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import com.patra.starter.expr.compiler.transform.TransformRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -74,9 +77,16 @@ public class ExprCompilerAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(ExprMetrics.class)
+  public ExprMetrics exprMetrics(ObjectProvider<MeterRegistry> meterRegistryProvider) {
+    MeterRegistry registry = meterRegistryProvider.getIfAvailable();
+    return registry != null ? ExprMetrics.of(registry) : ExprMetrics.noop();
+  }
+
+  @Bean
   @ConditionalOnMissingBean(ExprRenderer.class)
-  public ExprRenderer exprRenderer(FunctionRegistry functionRegistry) {
-    return new DefaultExprRenderer(functionRegistry);
+  public ExprRenderer exprRenderer(FunctionRegistry functionRegistry, ExprMetrics exprMetrics) {
+    return new DefaultExprRenderer(functionRegistry, exprMetrics);
   }
 
   @Bean
@@ -100,7 +110,8 @@ public class ExprCompilerAutoConfiguration {
       ExprRenderer renderer,
       TransformRegistry transformRegistry,
       CompilerProperties compilerProperties,
-      ExprModeProperties modeProperties) {
+      ExprModeProperties modeProperties,
+      ExprMetrics exprMetrics) {
     return new DefaultExprCompiler(
         loader,
         checker,
@@ -108,6 +119,7 @@ public class ExprCompilerAutoConfiguration {
         renderer,
         transformRegistry,
         compilerProperties,
-        modeProperties);
+        modeProperties,
+        exprMetrics);
   }
 }

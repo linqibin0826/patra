@@ -8,6 +8,7 @@ import com.patra.expr.Not;
 import com.patra.expr.Or;
 import com.patra.starter.expr.compiler.function.FunctionRegistry;
 import com.patra.starter.expr.compiler.function.RenderFunction;
+import com.patra.starter.expr.compiler.metrics.ExprMetrics;
 import com.patra.starter.expr.compiler.model.Issue;
 import com.patra.starter.expr.compiler.model.RenderTrace;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
@@ -50,13 +51,19 @@ public class DefaultExprRenderer implements ExprRenderer {
   private static final String MULTI_DELIMITER = "||";
 
   private final FunctionRegistry functionRegistry;
+  private final ExprMetrics metrics;
 
   public DefaultExprRenderer() {
-    this(null);
+    this(null, ExprMetrics.noop());
   }
 
   public DefaultExprRenderer(FunctionRegistry functionRegistry) {
+    this(functionRegistry, ExprMetrics.noop());
+  }
+
+  public DefaultExprRenderer(FunctionRegistry functionRegistry, ExprMetrics metrics) {
     this.functionRegistry = functionRegistry;
+    this.metrics = metrics == null ? ExprMetrics.noop() : metrics;
   }
 
   @Override
@@ -69,9 +76,12 @@ public class DefaultExprRenderer implements ExprRenderer {
     List<Issue> warnings = new ArrayList<>();
     List<RenderTrace.Hit> hits = traceEnabled ? new ArrayList<>() : null;
 
+    RenderLabels labels = RenderLabels.from(snapshot);
+
     renderNode(
         expression,
         snapshot,
+        labels,
         RenderContext.AND,
         false,
         queryFragments,
@@ -95,6 +105,7 @@ public class DefaultExprRenderer implements ExprRenderer {
   private void renderNode(
       Expr node,
       ProvenanceSnapshot snapshot,
+      RenderLabels labels,
       RenderContext context,
       boolean negated,
       List<String> fragments,
@@ -110,6 +121,7 @@ public class DefaultExprRenderer implements ExprRenderer {
                   renderNode(
                       child,
                       snapshot,
+                      labels,
                       RenderContext.AND,
                       negated,
                       fragments,
@@ -128,6 +140,7 @@ public class DefaultExprRenderer implements ExprRenderer {
                   renderNode(
                       child,
                       snapshot,
+                      labels,
                       RenderContext.OR,
                       negated,
                       orFragments,
@@ -155,6 +168,7 @@ public class DefaultExprRenderer implements ExprRenderer {
       renderNode(
           notExpr.child(),
           snapshot,
+          labels,
           RenderContext.NOT,
           true,
           notFragments,
@@ -178,13 +192,14 @@ public class DefaultExprRenderer implements ExprRenderer {
     }
 
     if (node instanceof Atom atom) {
-      renderAtom(atom, snapshot, negated, fragments, stdKeys, warnings, hits);
+      renderAtom(atom, snapshot, labels, negated, fragments, stdKeys, warnings, hits);
     }
   }
 
   private void renderAtom(
       Atom atom,
       ProvenanceSnapshot snapshot,
+      RenderLabels labels,
       boolean negated,
       List<String> fragments,
       StdKeyAccumulator stdKeys,
@@ -204,6 +219,7 @@ public class DefaultExprRenderer implements ExprRenderer {
             ctx.valueType());
 
     if (queryRule != null && queryRule.template() != null) {
+      metrics.renderRuleHit(labels.provenance(), labels.endpoint());
       String fragment = buildQuery(queryRule, ctx);
       if (!fragment.isBlank()) {
         fragments.add(fragment);
@@ -223,6 +239,7 @@ public class DefaultExprRenderer implements ExprRenderer {
             queryRule.priority());
       }
     } else {
+      metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
       warnings.add(
           Issue.warn(
               "W-RENDER-RULE-MISSING",
@@ -252,7 +269,10 @@ public class DefaultExprRenderer implements ExprRenderer {
             ctx.valueType());
 
     if (paramRule != null && !paramRule.params().isEmpty()) {
+      metrics.renderRuleHit(labels.provenance(), labels.endpoint());
       applyParams(paramRule, ctx, snapshot, stdKeys, warnings, hits, atom);
+    } else if (paramRule == null) {
+      metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
     }
   }
 
@@ -397,6 +417,20 @@ public class DefaultExprRenderer implements ExprRenderer {
 
   private String ruleId(ProvenanceSnapshot.RenderRule rule) {
     return rule.fieldKey() + "|" + rule.operator().name() + "|" + rule.emitType();
+  }
+
+  private record RenderLabels(String provenance, String endpoint) {
+    private static RenderLabels from(ProvenanceSnapshot snapshot) {
+      String provenance =
+          snapshot != null && snapshot.identity() != null
+              ? defaultString(snapshot.identity().code())
+              : "UNKNOWN";
+      String endpoint =
+          snapshot != null && snapshot.operation() != null
+              ? defaultString(snapshot.operation().code())
+              : "UNKNOWN";
+      return new RenderLabels(provenance, endpoint);
+    }
   }
 
   /** Render context for tracking expression nesting to determine parentheses requirements. */

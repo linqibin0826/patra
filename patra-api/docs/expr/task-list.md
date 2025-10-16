@@ -62,33 +62,33 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P1.4.1** | Implement fragment aggregation with boolean operators (AND/OR/NOT) | Updated `DefaultExprCompiler.java` | TODO | P1.3.1, P1.3.2 |
-| **P1.4.2** | Implement query bridging: lookup `std_key=query` in param map and set provider param | Updated `DefaultExprCompiler.java` | TODO | docs/expr/03 §3.2 |
-| **P1.4.3** | Implement std_key to provider param mapping for all std_keys | Updated `DefaultExprCompiler.java` | TODO | docs/expr/03 §3.2 |
-| **P1.4.4** | Apply `transform_code` to each mapped value (including bridged query) | Updated `DefaultExprCompiler.java` | TODO | P1.1.4, P1.4.3 |
-| **P1.4.5** | Implement SINGLE merge policy with deterministic ordering (rule_priority DESC, field_key ASC, op_code ASC, rule_id ASC) | Updated `DefaultExprCompiler.java` | TODO | docs/expr/03 §3.8 |
-| **P1.4.6** | Implement MULTI join strategy (default: apply join transforms) | Updated `DefaultExprCompiler.java` | TODO | P1.1.7, P1.1.8 |
-| **P1.4.7** | Implement MULTI repeat strategy (gated by config, initially disabled) | Updated `DefaultExprCompiler.java` | TODO | P1.2.2, P1.4.6 |
-| **P1.4.8** | Enforce `maxQueryLength` with E-QUERY-LEN-MAX error | Updated `DefaultExprCompiler.java` | TODO | P1.2.1, docs/expr/03 §3.9 |
-| **P1.4.9** | Implement STRICT mode behavior (fail on missing fn/transform/NOT support) | Updated `DefaultExprCompiler.java` | TODO | P1.2.2, docs/expr/03 §3.4.2 |
-| **P1.4.10** | Implement non-STRICT mode behavior (warn and degrade gracefully) | Updated `DefaultExprCompiler.java` | TODO | P1.2.2, docs/expr/03 §3.4.2 |
-| **P1.4.11** | Merge renderer warnings with validation warnings in CompileResult | Updated `DefaultExprCompiler.java` | TODO | P1.3.8 |
-| **P1.4.12** | Add compiler logging (bridge operations, transform applications, query hash/redaction) | Updated `DefaultExprCompiler.java` | TODO | docs/expr/02 §2.6, docs/expr/03 §3.5 |
-| **P1.4.13** | Add warning for missing param map (W-PARAM-MAP-MISSING) | Updated `DefaultExprCompiler.java` | TODO | docs/expr/03 §3.4.1 |
+| **P1.4.1** | Implement fragment aggregation with boolean operators (AND/OR/NOT) | Updated `DefaultExprCompiler.java` | DONE | P1.3.1, P1.3.2 |
+| **P1.4.2** | Implement query bridging: lookup `std_key=query` in param map and set provider param | Updated `DefaultExprCompiler.java` | DONE | docs/expr/03 §3.2 |
+| **P1.4.3** | Implement std_key to provider param mapping for all std_keys | Updated `DefaultExprCompiler.java` | DONE | docs/expr/03 §3.2 |
+| **P1.4.4** | Apply `transform_code` to each mapped value (including bridged query) | Updated `DefaultExprCompiler.java` | DONE | P1.1.4, P1.4.3 |
+| **P1.4.5** | Implement SINGLE merge policy with deterministic ordering (rule_priority DESC, field_key ASC, op_code ASC, rule_id ASC) | Updated `DefaultExprCompiler.java` | DONE | docs/expr/03 §3.8 |
+| **P1.4.6** | Implement MULTI join strategy (default: apply join transforms) | Updated `DefaultExprCompiler.java` | DONE | P1.1.7, P1.1.8 |
+| **P1.4.7** | Implement MULTI repeat strategy (gated by config, initially disabled) | Updated `DefaultExprCompiler.java` | DONE | P1.2.2, P1.4.6 |
+| **P1.4.8** | Enforce `maxQueryLength` with E-QUERY-LEN-MAX error | Updated `DefaultExprCompiler.java` | DONE | P1.2.1, docs/expr/03 §3.9 |
+| **P1.4.9** | Implement STRICT mode behavior (fail on missing fn/transform/NOT support) | Updated `DefaultExprCompiler.java` | DONE | P1.2.2, docs/expr/03 §3.4.2 |
+| **P1.4.10** | Implement non-STRICT mode behavior (warn and degrade gracefully) | Updated `DefaultExprCompiler.java` | DONE | P1.2.2, docs/expr/03 §3.4.2 |
+| **P1.4.11** | Merge renderer warnings with validation warnings in CompileResult | Updated `DefaultExprCompiler.java` | DONE | P1.3.8 |
+| **P1.4.12** | Add compiler logging (bridge operations, transform applications, query hash/redaction) | Updated `DefaultExprCompiler.java` | DONE | docs/expr/02 §2.6, docs/expr/03 §3.5 |
+| **P1.4.13** | Add warning for missing param map (W-PARAM-MAP-MISSING) | Updated `DefaultExprCompiler.java` | DONE | docs/expr/03 §3.4.1 |
 
 ### P1.5 Observability
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P1.5.1** | Add Micrometer metrics: `expr.render.rule_hits{provenance,endpoint}` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.2** | Add Micrometer metrics: `expr.render.rule_miss{provenance,endpoint}` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.3** | Add Micrometer metrics: `expr.param.map_hit{provenance,endpoint}` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.4** | Add Micrometer metrics: `expr.param.map_miss{provenance,endpoint}` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.5** | Add Micrometer metrics: `expr.transform.applied{provenance,endpoint,code}` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.6** | Add Micrometer metrics: `expr.compile.errors{code}` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.7** | Add Micrometer histogram: `expr.compile.duration_ms` | Metrics instrumentation | TODO | docs/expr/02 §2.6 |
-| **P1.5.8** | Implement query redaction for INFO logs (hash or truncate) | Logging utilities | TODO | docs/expr/03 §3.5 |
-| **P1.5.9** | Configure DEBUG-only full query logging for non-prod environments | Logging configuration | TODO | docs/expr/03 §3.5 |
+| **P1.5.1** | Add Micrometer metrics: `expr.render.rule_hits{provenance,endpoint}` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.2** | Add Micrometer metrics: `expr.render.rule_miss{provenance,endpoint}` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.3** | Add Micrometer metrics: `expr.param.map_hit{provenance,endpoint}` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.4** | Add Micrometer metrics: `expr.param.map_miss{provenance,endpoint}` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.5** | Add Micrometer metrics: `expr.transform.applied{provenance,endpoint,code}` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.6** | Add Micrometer metrics: `expr.compile.errors{code}` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.7** | Add Micrometer histogram: `expr.compile.duration_ms` | Metrics instrumentation | DONE | docs/expr/02 §2.6 |
+| **P1.5.8** | Implement query redaction for INFO logs (hash or truncate) | Logging utilities | DONE | docs/expr/03 §3.5 |
+| **P1.5.9** | Configure DEBUG-only full query logging for non-prod environments | Logging configuration | DONE | docs/expr/03 §3.5 |
 
 ---
 
@@ -297,7 +297,7 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 - **Phase 5 (Documentation)**: 8 tasks
 - **Phase 6 (Rollout)**: 14 tasks
 
-**Current Status**: 0 TODO, 0 IN_PROGRESS, 0 DONE, 0 BLOCKED
+**Current Status**: 88 TODO, 0 IN_PROGRESS, 44 DONE, 0 BLOCKED
 
 ---
 
@@ -306,10 +306,10 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 Update this section as tasks are completed:
 
 **Last Updated**: 2025-10-16
-**Completed Tasks**: 22 / 132 (16.7%)
-**Current Phase**: Phase 1 - Core Engine Foundation
-**Current Milestone**: Phase 1.3 COMPLETE ✅ (Renderer Enhancements)
-**Next Milestone**: Phase 1.4 (Compiler Bridge Implementation)
+**Completed Tasks**: 44 / 132 (33.3%)
+**Current Phase**: Phase 2 - Registry Seeds
+**Current Milestone**: Phase 1.5 COMPLETE ✅ (Observability)
+**Next Milestone**: Phase 2.1 (PubMed Seed Update)
 
 ---
 
@@ -323,6 +323,8 @@ Update this section as tasks are completed:
 - **2025-10-16 16:30**: Phase 1.1 COMPLETE - Function & Transform Registry Infrastructure implemented and compiling successfully. Registered 1 function (PUBMED_DATETYPE) and 3 transforms (TO_EXCLUSIVE_MINUS_1D, LIST_JOIN, FILTER_JOIN) with Spring auto-configuration.
 - **2025-10-16 16:35**: Phase 1.2 COMPLETE - Configuration & Safety Modes implemented. Extended CompilerProperties with query bridge/length/param limits. Created ExprModeProperties for STRICT mode and MULTI repeat gating. Reference configuration created in application-expr-reference.yml.
 - **2025-10-16 17:00**: Phase 1.3 COMPLETE - Renderer Enhancements implemented. Full OR/NOT support with parentheses, fn_code execution (PUBMED_DATETYPE), std_key-only emission (no provider naming), SINGLE/MULTI std_key merge policies, comprehensive logging. Renderer now fully implements design from docs/expr/02 §2.7 and docs/expr/03 §3.2.1.
+- **2025-10-16 19:45**: Phase 1.5 COMPLETE - Observability instrumentation added. Micrometer metrics published for render rule hits/misses, param map hits/misses, transform usage, compile errors & duration. Compiler logs now hash queries at INFO with full details retained for DEBUG.
+- **2025-10-16 19:05**: Phase 1.4 COMPLETE - Compiler bridge implemented. DefaultExprCompiler now maps std_keys to provider params, bridges `query`, applies transforms, enforces STRICT vs non-STRICT behavior, and logs/limits per design (docs/expr/03 §3.2-3.5).
 
 ---
 
