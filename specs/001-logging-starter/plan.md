@@ -1,7 +1,7 @@
 # Implementation Plan: Enhanced Logging System Redesign
 
-**Branch**: `002-redesign-the-project` | **Date**: 2025-10-15 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/002-redesign-the-project/spec.md`
+**Branch**: `001-logging-starter` | **Date**: 2025-10-15 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/001-logging-starter/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 

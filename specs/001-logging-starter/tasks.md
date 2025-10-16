@@ -1,6 +1,6 @@
 # Implementation Tasks: Enhanced Logging System Redesign
 
-**Feature**: 002-redesign-the-project | **Branch**: `002-redesign-the-project` | **Date**: 2025-10-16
+**Feature**: 001-logging-starter | **Branch**: `001-logging-starter` | **Date**: 2025-10-16
 
 ## Overview
 
@@ -269,7 +269,7 @@ Phase 7 (Polish)
 
 ### Developer Documentation
 
-- [ ] T070 [P] [US4] Create comprehensive quickstart guide (migration checklist) - ALREADY CREATED at specs/002-redesign-the-project/quickstart.md
+- [ ] T070 [P] [US4] Create comprehensive quickstart guide (migration checklist) - ALREADY CREATED at specs/001-logging-starter/quickstart.md
 - [ ] T071 [P] [US4] Create layer-specific logging examples in docs/logging/layer-specific-examples.md
 - [ ] T072 [P] [US4] Create common patterns guide in docs/logging/common-patterns.md
 - [ ] T073 [US4] Create troubleshooting guide in docs/logging/troubleshooting.md

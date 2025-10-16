@@ -790,7 +790,7 @@ A: SkyWalking handles trace ID generation automatically. Our system just extract
 
 ## Getting Help
 
-- **Documentation**: See `specs/002-redesign-the-project/` for detailed specifications
+- **Documentation**: See `specs/001-logging-starter/` for detailed specifications
 - **Examples**: Check migrated services (e.g., `patra-registry`) for patterns
 - **Questions**: Ask in #dev-logging Slack channel
 

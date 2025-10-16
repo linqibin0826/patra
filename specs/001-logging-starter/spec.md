@@ -1,6 +1,6 @@
 # Feature Specification: Enhanced Logging System Redesign
 
-**Feature Branch**: `002-redesign-the-project`
+**Feature Branch**: `001-logging-starter`
 **Created**: 2025-10-15
 **Status**: Draft
 **Input**: User description: "Redesign the project's logging system to achieve the following goals: High readability and well-defined log levels, Improved problem diagnosis in both development and production, Enhanced traceability across request chains for easier debugging, After finalizing the new design, update the existing log output to align with the new structure, Integrate @XSlf4j to unify and enhance the log output format, ensuring consistent and developer-friendly logging across all modules."
