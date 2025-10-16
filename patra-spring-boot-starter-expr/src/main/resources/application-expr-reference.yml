@@ -1,0 +1,109 @@
+# Expression Compiler Configuration Reference
+# This file documents available configuration properties for the expr compiler.
+# Copy relevant sections to your application.yml or application-{profile}.yml
+
+# ============================================================================
+# EXPR COMPILER CONFIGURATION
+# ============================================================================
+patra:
+  expr:
+    compiler:
+      # Enable/disable the expression compiler (default: true)
+      enabled: true
+
+      # Query parameter bridging configuration
+      query-param-bridge:
+        # Enable query bridging via std_key=query mapping (default: true)
+        # When enabled, aggregated boolean query is bridged to provider parameter
+        # See: docs/expr/03-compiler-bridge-internals.md §3.2, §3.6
+        enabled: true
+
+      # Maximum query length in characters (default: 0 = disabled)
+      # When exceeded, compilation fails with E-QUERY-LEN-MAX error
+      # Example: 5000 for production safety
+      # See: docs/expr/03-compiler-bridge-internals.md §3.9
+      max-query-length: 0
+
+      # Soft limit for parameter count that triggers W-PARAM-COUNT-LIMIT warning
+      # (default: 0 = disabled)
+      # Use to detect parameter explosion and prompt optimization
+      # See: docs/expr/03-compiler-bridge-internals.md §3.9
+      warn-param-count: 0
+
+      # Hard limit for parameter count that triggers E-PARAM-COUNT-LIMIT error
+      # (default: 0 = disabled)
+      # Use for provider-specific hard limits
+      # See: docs/expr/03-compiler-bridge-internals.md §3.9
+      max-param-count: 0
+
+      # Registry API configuration
+      registry-api:
+        enabled: true
+        operation-default: "SEARCH"
+
+# ============================================================================
+# EXPR SAFETY MODES
+# ============================================================================
+expr:
+  # STRICT mode: fail-fast vs graceful degradation (default: false)
+  # When true:
+  #   - Missing fn_code/transform_code → compilation error (E-FN-NOTFOUND, E-TRANSFORM-NOTFOUND)
+  #   - Unsupported NOT operator → compilation error (E-NOT-UNSUPPORTED)
+  # When false:
+  #   - Missing fn_code/transform_code → warning (W-FN-OR-TRANSFORM-NOTFOUND)
+  #   - Unsupported NOT operator → warning (W-NOT-SKIPPED) and skip fragment
+  #
+  # Recommended: false for dev/staging, true for production
+  # See: docs/expr/02-architecture.md §2.8.1, docs/expr/03-compiler-bridge-internals.md §3.4.2
+  strict: false
+
+  # MULTI std_key strategy configuration
+  multi:
+    # Enable repeated parameter emission for MULTI std_keys (default: false)
+    # When false (default):
+    #   - MULTI std_keys must use join transforms (LIST_JOIN, FILTER_JOIN)
+    # When true:
+    #   - MULTI std_keys may emit repeated provider parameters
+    #   - Requires adapter serialization support
+    #
+    # Keep disabled until adapter serialization for repeated parameters is documented
+    # See: docs/expr/02-architecture.md §2.8.2, docs/expr/03-compiler-bridge-internals.md §3.8
+    repeat-enabled: false
+
+# ============================================================================
+# PROFILE-SPECIFIC EXAMPLES
+# ============================================================================
+
+# Development profile example
+#spring:
+#  config:
+#    activate:
+#      on-profile: dev
+#
+#expr:
+#  strict: false  # Graceful degradation for development
+#  multi:
+#    repeat-enabled: false
+#
+#patra:
+#  expr:
+#    compiler:
+#      max-query-length: 0  # No limits in dev
+
+# Production profile example
+#spring:
+#  config:
+#    activate:
+#      on-profile: prod
+#
+#expr:
+#  strict: true  # Fail-fast for deterministic behavior
+#  multi:
+#    repeat-enabled: false  # Keep disabled
+#
+#patra:
+#  expr:
+#    compiler:
+#      max-query-length: 5000  # Enforce 5KB query limit
+#      warn-param-count: 50    # Warn above 50 params
+#      max-param-count: 100    # Error above 100 params

@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
 @AutoConfigureAfter(FeignAutoConfiguration.class)
-@EnableConfigurationProperties(CompilerProperties.class)
+@EnableConfigurationProperties({CompilerProperties.class, ExprModeProperties.class})
 public class ExprCompilerAutoConfiguration {
 
   @Bean
