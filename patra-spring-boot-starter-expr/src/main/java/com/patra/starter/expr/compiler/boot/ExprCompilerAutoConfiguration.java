@@ -15,6 +15,7 @@ import com.patra.starter.expr.compiler.render.ExprRenderer;
 import com.patra.starter.expr.compiler.snapshot.RegistryRuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
+import com.patra.starter.expr.compiler.transform.TransformRegistry;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -84,7 +85,8 @@ public class ExprCompilerAutoConfiguration {
     RuleSnapshotLoader.class,
     CapabilityChecker.class,
     ExprNormalizer.class,
-    ExprRenderer.class
+    ExprRenderer.class,
+    TransformRegistry.class
   })
   @ConditionalOnProperty(
       prefix = "patra.expr.compiler",
@@ -95,7 +97,17 @@ public class ExprCompilerAutoConfiguration {
       RuleSnapshotLoader loader,
       CapabilityChecker checker,
       ExprNormalizer normalizer,
-      ExprRenderer renderer) {
-    return new DefaultExprCompiler(loader, checker, normalizer, renderer);
+      ExprRenderer renderer,
+      TransformRegistry transformRegistry,
+      CompilerProperties compilerProperties,
+      ExprModeProperties modeProperties) {
+    return new DefaultExprCompiler(
+        loader,
+        checker,
+        normalizer,
+        renderer,
+        transformRegistry,
+        compilerProperties,
+        modeProperties);
   }
 }
