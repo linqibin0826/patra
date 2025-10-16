@@ -6,6 +6,14 @@ INSERT INTO patra_registry.`reg_provenance` (provenance_code, provenance_name, b
 VALUES ('PUBMED', 'PubMed', 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/', 'UTC',
         'https://www.ncbi.nlm.nih.gov/books/NBK25501/', 1, 'ACTIVE',
         JSON_ARRAY(JSON_OBJECT('time', '2025-09-01 10:30:00', 'by', '系统管理员', 'note', '初始化注册 PubMed 来源')),
+        NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), 0),
+       ('EPMC', 'Europe PMC', 'https://www.ebi.ac.uk/europepmc/webservices/rest/', 'UTC',
+        'https://europepmc.org/RestfulWebService', 1, 'ACTIVE',
+        JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Europe PMC 来源')),
+        NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), 0),
+       ('CROSSREF', 'Crossref', 'https://api.crossref.org/', 'UTC',
+        'https://api.crossref.org/swagger-ui/index.html', 1, 'ACTIVE',
+        JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', '初始化注册 Crossref 来源')),
         NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0, INET6_ATON('192.168.1.10'), 0);
 
 

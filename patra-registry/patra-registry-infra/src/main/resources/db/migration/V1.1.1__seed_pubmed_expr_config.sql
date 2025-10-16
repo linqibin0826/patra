@@ -114,9 +114,9 @@ VALUES (900201, 1, 'ALL', 'ACTIVE',
         'entrez_date', 'RANGE', NULL, NULL, 'DATE', 'PARAMS',
         TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
         NULL, NULL, NULL, 0,
-        JSON_OBJECT('from', 'from', 'to', 'to', 'datetype', 'datetype'), 'PUBMED_DATETYPE',
+        JSON_OBJECT('from', '{{from}}', 'to', '{{to}}', 'datetype', '{{datetype}}'), 'PUBMED_DATETYPE',
         JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                               'Emit std params for PubMed date filtering')),
+                               'Emit std params for PubMed date filtering with {{...}} placeholders')),
         0, INET6_ATON('0.0.0.0'),
         NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
@@ -191,6 +191,14 @@ INSERT INTO patra_registry.reg_prov_api_param_map
  created_at, created_by, created_by_name,
  updated_at, updated_by, updated_by_name, deleted)
 VALUES
+    -- Boolean query bridging: std 'query' -> provider 'term'
+    (900310, 1, 'ALL', 'ACTIVE',
+     NULL, 'query', 'term', NULL, NULL,
+     TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
+     JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note', 'std query -> term (query bridging)')), 0,
+     INET6_ATON('0.0.0.0'),
+     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0),
+
     -- Date window lower bound
     (900301, 1, 'ALL', 'ACTIVE',
      NULL, 'from', 'mindate', NULL, NULL,
