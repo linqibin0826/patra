@@ -130,7 +130,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
 
   @Override
   public int estimateCount(String query, JsonNode pubmedParams) {
-    ESearchRequest request = ASSEMBLER.buildCount(query, pubmedParams);
+    ESearchRequest request = ASSEMBLER.buildCount(pubmedParams);
     ESearchResponse response = pubMedClient.esearch(request);
     return response != null && response.result() != null ? response.result().count() : 0;
   }
@@ -148,14 +148,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
 
     @Override
     public int estimateCount(String term, JsonNode params) {
-        ESearchRequest request = new ESearchRequest(
-            "pubmed",
-            term,
-            null, null,  // retstart, retmax
-            "json",
-            "count",     // rettype for count-only
-            null, null, null, null, null, null, null, null, null, null, null, null
-        );
+        ESearchRequest request = ASSEMBLER.buildCount(params);
 
         ESearchResponse response = pubMedClient.esearch(request);
         return response != null && response.result() != null
@@ -173,16 +166,11 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
 public class EpmcSearchPortImpl implements EpmcSearchPort {
 
     private final EPMCClient epmcClient;  // Auto-injected
+    private static final EpmcSearchRequestAssembler ASSEMBLER = new EpmcSearchRequestAssembler();
 
     @Override
-    public List<Article> search(String query, int pageSize) {
-        SearchRequest request = new SearchRequest(
-            query,
-            "json",
-            1,  // page
-            pageSize,
-            "CORE"  // resultType
-        );
+    public List<Article> search(JsonNode compiledParams) {
+        SearchRequest request = ASSEMBLER.build(compiledParams);
 
         SearchResponse response = epmcClient.search(request);
         return convertToArticles(response);

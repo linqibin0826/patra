@@ -13,6 +13,7 @@ public final class PubMedParamKeys {
   public static final String RETTYPE = "rettype"; // uilist/count
 
   // Sorting and filtering
+  public static final String TERM = "term";
   public static final String SORT = "sort";
   public static final String DATETYPE = "datetype"; // pdat/edat/mdat
   public static final String MINDATE = "mindate";

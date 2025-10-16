@@ -38,12 +38,13 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
   public int estimateCount(
       String query, JsonNode params, ProvenanceConfigSnapshot provenanceConfigSnapshot) {
     try {
-      ESearchRequest request = ASSEMBLER.buildCount(query, params);
+      ESearchRequest request = ASSEMBLER.buildCount(params);
+      String termHash = safeHash(request.term());
       ProvenanceConfig config = toProvenanceConfig(provenanceConfigSnapshot);
       ESearchResponse response =
           config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
       int count = response != null && response.result() != null ? response.result().count() : 0;
-      log.info("[INGEST][INFRA] pubmed esearch count termHash={} count={}", safeHash(query), count);
+      log.info("[INGEST][INFRA] pubmed esearch count termHash={} count={}", termHash, count);
       return Math.max(count, 0);
     } catch (ProvenanceClientException ex) {
       String msg = String.format("PubMed count lookup failed: %s", ex.getMessage());

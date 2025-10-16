@@ -142,11 +142,11 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 |---------|-------------|-----------------|--------|--------------|
 | **P3.1.1** | Remove manual `term` query construction from PubMed adapter | Updated PubMed adapter | TODO | P1.4.2, P2.1.3 |
 | **P3.1.2** | Bind PubMed request params from compiled `params` map only | Updated PubMed adapter | TODO | P3.1.1 |
-| **P3.1.3** | Remove manual `query` construction from EPMC adapter (if exists) | Updated EPMC adapter | TODO | P1.4.2, P2.2.6 |
-| **P3.1.4** | Bind EPMC request params from compiled `params` map only | Updated EPMC adapter | TODO | P3.1.3 |
-| **P3.1.5** | Remove manual `query`/`filter` construction from Crossref adapter (if exists) | Updated Crossref adapter | TODO | P1.4.2, P2.3.7 |
-| **P3.1.6** | Bind Crossref request params from compiled `params` map only | Updated Crossref adapter | TODO | P3.1.5 |
-| **P3.1.7** | Verify HTTP client/request models accept provider-named params directly | Adapter validation | TODO | P3.1.2, P3.1.4, P3.1.6 |
+| **P3.1.3** | Remove manual `query` construction from EPMC adapter (if exists) | Updated EPMC adapter | DONE | P1.4.2, P2.2.6 |
+| **P3.1.4** | Bind EPMC request params from compiled `params` map only | Updated EPMC adapter | DONE | P3.1.3 |
+| **P3.1.5** | Remove manual `query`/`filter` construction from Crossref adapter (if exists) | Updated Crossref adapter | DONE | P1.4.2, P2.3.7 |
+| **P3.1.6** | Bind Crossref request params from compiled `params` map only | Updated Crossref adapter | DONE | P3.1.5 |
+| **P3.1.7** | Verify HTTP client/request models accept provider-named params directly | Adapter validation | DONE | P3.1.2, P3.1.4, P3.1.6 |
 
 ---
 
@@ -306,7 +306,7 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 Update this section as tasks are completed:
 
 **Last Updated**: 2025-10-16
-**Completed Tasks**: 65 / 132 (49.2%)
+**Completed Tasks**: 70 / 132 (53.0%)
 **Current Phase**: Phase 3 - Integration & Adapters
 **Current Milestone**: Phase 2.3 COMPLETE ✅ (Crossref Seed Creation)
 **Next Milestone**: Phase 3.1 (Adapter Refactoring)
@@ -328,6 +328,7 @@ Update this section as tasks are completed:
 - **2025-10-16 20:30**: Phase 2.1 COMPLETE - PubMed seed updated. Fixed PARAMS placeholders to `{{from}}`, `{{to}}`, `{{datetype}}` format (line 117). Added critical `query→term` param map entry (id=900310) for query bridging. All existing mappings verified: `fn_code='PUBMED_DATETYPE'` already present, `wrap_group=1` for IN rule, `TO_EXCLUSIVE_MINUS_1D` transform on `to→maxdate`, pagination mappings complete.
 - **2025-10-16 20:35**: Phase 2.2 COMPLETE - EPMC seed created (V1.1.2__seed_epmc_expr_config.sql). Added EPMC provenance to V1.1.0. Created field dictionary (publication_date, text), capabilities (RANGE/TERM/IN), render rules (QUERY-based for text and date with `FIRST_PDATE` syntax), param map (`query→query`, `limit→pageSize`). Cursor mapping commented for future.
 - **2025-10-16 20:40**: Phase 2.3 COMPLETE - Crossref seed created (V1.1.3__seed_crossref_expr_config.sql). Added CROSSREF provenance to V1.1.0. Created field dictionary (text, reused publication_date), capabilities (RANGE/TERM/IN), render rules (QUERY for text, PARAMS for date filter with `filter` std_key MULTI), param map (`query→query`, `filter→filter`, `limit→rows`, `offset→offset`). Compilation verified successfully (mvn -q -DskipTests compile).
+- **2025-10-16 21:10**: Phase 3.1 adapters refactored to consume provider-named params. PubMed assembler now reads `term` from compiled params, PubMed infra logs hashed provider term, and new EPMC/Crossref assemblers plus request models bind compiled params without manual query/filter construction.
 
 ---
 

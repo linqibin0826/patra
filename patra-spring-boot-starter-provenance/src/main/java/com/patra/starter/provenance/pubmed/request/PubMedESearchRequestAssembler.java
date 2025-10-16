@@ -12,8 +12,9 @@ import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 public class PubMedESearchRequestAssembler {
 
   /** Build a count-only ESearch request (rettype=count). */
-  public ESearchRequest buildCount(String term, JsonNode params) {
+  public ESearchRequest buildCount(JsonNode params) {
     Values v = extract(params);
+    String term = requireTerm(v.term);
     return new ESearchRequest(
         "pubmed",
         term,
@@ -36,8 +37,9 @@ public class PubMedESearchRequestAssembler {
   }
 
   /** Build a list request (uilist) honoring pagination. */
-  public ESearchRequest buildList(String term, JsonNode params) {
+  public ESearchRequest buildList(JsonNode params) {
     Values v = extract(params);
+    String term = requireTerm(v.term);
     return new ESearchRequest(
         "pubmed",
         term,
@@ -61,6 +63,7 @@ public class PubMedESearchRequestAssembler {
 
   private Values extract(JsonNode p) {
     Values v = new Values();
+    v.term = text(p, PubMedParamKeys.TERM);
     v.retstart = integer(p, PubMedParamKeys.RETSTART);
     v.retmax = integer(p, PubMedParamKeys.RETMAX);
     v.retmode = text(p, PubMedParamKeys.RETMODE);
@@ -79,6 +82,14 @@ public class PubMedESearchRequestAssembler {
     v.tool = text(p, PubMedParamKeys.TOOL);
     v.email = text(p, PubMedParamKeys.EMAIL);
     return v;
+  }
+
+  private static String requireTerm(String term) {
+    if (term == null || term.isBlank()) {
+      throw new IllegalArgumentException(
+          "PubMed params must include provider key 'term' after compiler mapping");
+    }
+    return term;
   }
 
   private static String text(JsonNode node, String key) {
@@ -108,6 +119,7 @@ public class PubMedESearchRequestAssembler {
   }
 
   private static final class Values {
+    String term;
     Integer retstart;
     Integer retmax;
     String retmode;
