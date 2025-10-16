@@ -7,7 +7,7 @@
 
 ## Summary
 
-Redesign the project's logging system to provide high readability, well-defined log levels (ERROR/WARN/INFO/DEBUG/TRACE), improved production problem diagnosis, and enhanced cross-service traceability. The implementation will integrate structured logging with Apache SkyWalking trace context propagation, implement automatic sensitive data sanitization, enable dynamic log level configuration via Nacos, and systematically update all existing log output across microservices to conform to new standards. The approach leverages existing SLF4J facade and integrates @XSlf4j from Lombok for unified logging utilities.
+Redesign the project's logging system to provide high readability, well-defined log levels (ERROR/WARN/INFO/DEBUG/TRACE), improved production problem diagnosis, and enhanced cross-service traceability. The implementation will integrate structured logging with Apache SkyWalking trace context propagation, implement automatic sensitive data sanitization, enable dynamic log level configuration via Nacos, and systematically update all existing log output across microservices to conform to new standards. The approach leverages existing SLF4J facade and integrates @Slf4j from Lombok for unified logging utilities (note: domain layer continues using plain SLF4J Logger declaration without Lombok to maintain pure Java compliance).
 
 ## Technical Context
 
@@ -87,12 +87,19 @@ patra-common/
 └── src/main/java/com/papertrace/common/
     └── logging/
         ├── sanitizer/              # Sensitive data sanitization
-        │   ├── SanitizationRule.java
-        │   ├── FieldSanitizer.java
-        │   └── LogSanitizer.java
-        └── context/                # Trace context utilities
-            ├── TraceContextHolder.java
-            └── LogContextEnricher.java
+        │   ├── LogSanitizer.java          # Interface
+        │   └── DefaultLogSanitizer.java   # Implementation with regex patterns
+        ├── context/                # Trace context utilities
+        │   ├── DistributedTraceContext.java  # Record for trace data
+        │   ├── TraceContextHolder.java       # Interface
+        │   ├── DefaultTraceContextHolder.java # SkyWalking integration
+        │   ├── LogContextEnricher.java       # Interface
+        │   └── DefaultLogContextEnricher.java # MDC management
+        ├── persistence/            # Database logging utilities
+        │   ├── DbFailureLogger.java          # DB failure utility
+        │   └── DbFailureLoggingInterceptor.java # MyBatis-Plus interceptor
+        ├── ApiCallLogger.java      # External API call logging utility
+        └── BatchProcessingLogger.java # Batch operation logging utility
 
 # Logging-specific Spring Boot starter (NEW)
 patra-spring-boot-starter-logging/
@@ -102,13 +109,24 @@ patra-spring-boot-starter-logging/
     │   ├── autoconfigure/
     │   │   ├── LoggingAutoConfiguration.java
     │   │   ├── TraceContextAutoConfiguration.java
-    │   │   └── SanitizationAutoConfiguration.java
+    │   │   ├── SanitizationAutoConfiguration.java
+    │   │   ├── AsyncAutoConfiguration.java         # Async MDC propagation
+    │   │   └── DynamicLoggingConfiguration.java    # Nacos log level listeners
     │   ├── filter/
-    │   │   └── TraceContextFilter.java          # Propagate trace to MDC
+    │   │   ├── TraceContextFilter.java          # Propagate trace to MDC
+    │   │   └── SamplingFilter.java              # Log sampling for high-frequency events
     │   ├── interceptor/
-    │   │   └── TraceContextInterceptor.java     # Feign/RestTemplate trace
-    │   └── aspect/
-    │       └── LoggingAspect.java               # Optional: auto-log entry/exit
+    │   │   ├── TraceContextInterceptor.java     # Feign trace propagation
+    │   │   └── RestTemplateInterceptor.java     # RestTemplate trace propagation
+    │   ├── aspect/
+    │   │   └── ExceptionLoggingAspect.java      # Automatic exception context capture
+    │   ├── async/
+    │   │   └── MdcTaskDecorator.java            # Async MDC propagation
+    │   ├── mq/
+    │   │   └── RocketMQMessageListenerDecorator.java # MQ trace propagation
+    │   └── security/
+    │       ├── SecurityEventLogger.java         # Utility for auth/authz logging
+    │       └── AuthenticationEventLogger.java   # Spring Security event listener
     └── resources/
         ├── META-INF/spring.factories
         ├── logback-spring.xml                    # Enhanced pattern layout
