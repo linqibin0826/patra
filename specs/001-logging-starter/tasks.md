@@ -12,14 +12,14 @@ This document provides an actionable, dependency-ordered task breakdown for impl
 
 | Phase | User Story | Task Count | Parallel Tasks | Status |
 |-------|------------|------------|----------------|--------|
-| Phase 1 | Setup | 12 | 3 | Pending |
-| Phase 2 | Foundational | 8 | 4 | Pending |
-| Phase 3 | US1 (P1) - Production Diagnosis | 21 | 10 | Pending |
+| Phase 1 | Setup | 12 | 8 | Pending |
+| Phase 2 | Foundational | 8 | 6 | Pending |
+| Phase 3 | US1 (P1) - Production Diagnosis | 22 | 8 | Pending |
 | Phase 4 | US2 (P1) - Dynamic Log Levels | 10 | 5 | Pending |
 | Phase 5 | US3 (P2) - Request Tracing | 12 | 6 | Pending |
-| Phase 6 | US4 (P2) - Consistent Logging | 19 | 10 | Pending |
-| Phase 7 | Polish & Cross-Cutting | 8 | 3 | Pending |
-| **Total** | - | **90** | **41** | - |
+| Phase 6 | US4 (P2) - Consistent Logging | 20 | 13 | Pending |
+| Phase 7 | Polish & Cross-Cutting | 18 | 13 | Pending |
+| **Total** | - | **102** | **59** | - |
 
 ---
 
@@ -86,17 +86,17 @@ Phase 7 (Polish)
 
 **⚠️ CRITICAL**: This phase MUST be completed before any user story implementation begins. All user stories depend on these foundational components.
 
-### Core Value Objects
+### Core Value Objects (FR-013)
 
 - [ ] T013 Implement DistributedTraceContext record in patra-common/src/main/java/com/papertrace/common/logging/context/DistributedTraceContext.java
 - [ ] T014 [P] Implement LogSanitizer interface in patra-common/src/main/java/com/papertrace/common/logging/sanitizer/LogSanitizer.java
 - [ ] T015 [P] Implement TraceContextHolder interface in patra-common/src/main/java/com/papertrace/common/logging/context/TraceContextHolder.java
 - [ ] T016 [P] Implement LogContextEnricher interface in patra-common/src/main/java/com/papertrace/common/logging/context/LogContextEnricher.java
 
-### Default Implementations
+### Default Implementations (FR-013)
 
 - [ ] T017 Implement DefaultLogSanitizer with regex patterns in patra-common/src/main/java/com/papertrace/common/logging/sanitizer/DefaultLogSanitizer.java
-- [ ] T018 [P] Implement DefaultTraceContextHolder with SkyWalking integration in patra-common/src/main/java/com/papertrace/common/logging/context/DefaultTraceContextHolder.java
+- [ ] T018 [P] Implement DefaultTraceContextHolder with SkyWalking integration in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/context/DefaultTraceContextHolder.java
 - [ ] T019 [P] Implement DefaultLogContextEnricher with MDC management in patra-common/src/main/java/com/papertrace/common/logging/context/DefaultLogContextEnricher.java
 - [ ] T020 [P] Implement MdcTaskDecorator for async MDC propagation in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/async/MdcTaskDecorator.java
 
@@ -126,9 +126,9 @@ Phase 7 (Polish)
 - [ ] T025 [P] [US1] Implement AsyncConfiguration with MdcTaskDecorator in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/AsyncAutoConfiguration.java
 - [ ] T026 [P] [US1] Implement RocketMQMessageListenerDecorator for MQ trace propagation in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/mq/RocketMQMessageListenerDecorator.java
 
-### Enhanced Logback Configuration (FR-002, FR-005)
+### Enhanced Logback Configuration (FR-002, FR-005, FR-015)
 
-- [ ] T027 [US1] Create enhanced logback-spring.xml with MDC pattern in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
+- [ ] T027 [US1] Create enhanced logback-spring.xml with MDC pattern and a consistent service/module identifier segment (FR-015) in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
 - [ ] T028 [P] [US1] Configure async appenders with proper queue settings (neverBlock=false for ERROR/WARN, discardingThreshold for DEBUG/TRACE) in logback-spring.xml
 - [ ] T029 [P] [US1] Configure dual output: console and rolling file appenders (both with trace context pattern) to ensure logs persist locally regardless of external log aggregation availability in logback-spring.xml
 
@@ -138,7 +138,7 @@ Phase 7 (Polish)
 - [ ] T031 [US1] Create ExceptionLoggingAspect for automatic context capture in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/aspect/ExceptionLoggingAspect.java
 - [ ] T031a [US1] Register ExceptionLoggingAspect as @Bean in LoggingAutoConfiguration with @EnableAspectJAutoProxy in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/LoggingAutoConfiguration.java
 
-### Pilot Service Integration (patra-registry)
+### Pilot Service Integration (patra-registry) (FR-014)
 
 - [ ] T032 [US1] Add logging starter dependency to patra-registry-boot/pom.xml
 - [ ] T033 [US1] Remove legacy logback.xml from patra-registry-boot/src/main/resources/
@@ -269,8 +269,8 @@ Phase 7 (Polish)
 
 ### Database Failures Logging (FR-007, SC-008)
 
-- [ ] T069 [P] [US4] Create DbFailureLogger utility in patra-common/src/main/java/com/papertrace/common/logging/persistence/DbFailureLogger.java
-- [ ] T070 [US4] Implement MyBatis-Plus interceptor for logging failed DB operations in patra-common/src/main/java/com/papertrace/common/logging/persistence/DbFailureLoggingInterceptor.java
+- [ ] T069 [P] [US4] Create DbFailureLogger utility in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/persistence/DbFailureLogger.java
+- [ ] T070 [US4] Implement MyBatis-Plus interceptor for logging failed DB operations in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/persistence/DbFailureLoggingInterceptor.java
 
 ### Authentication & Authorization Logging (FR-009, SC-008)
 
@@ -291,7 +291,7 @@ Phase 7 (Polish)
 
 - [ ] T077 [P] [US4] Verify quickstart guide completeness - ALREADY CREATED at specs/001-logging-starter/quickstart.md (mark complete if satisfactory)
 - [ ] T078 [P] [US4] Create layer-specific logging examples in docs/logging/layer-specific-examples.md
-- [ ] T079 [P] [US4] Create common patterns guide in docs/logging/common-patterns.md
+- [ ] T079 [P] [US4] Create common patterns guide in docs/logging/common-patterns.md (FR-015)
 - [ ] T080 [US4] Create troubleshooting guide in docs/logging/troubleshooting.md
 - [ ] T081 [US4] Create FAQ document in docs/logging/faq.md
 
@@ -307,7 +307,7 @@ Phase 7 (Polish)
 **Goal**: Complete remaining microservices migration, testing, and performance validation
 **Duration Estimate**: 6-8 days
 
-### Remaining Microservices Migration
+### Remaining Microservices Migration (FR-014)
 
 - [ ] T082 [P] Read each module's README.md first, then migrate remaining microservices (patra-egress-gateway, patra-provenance, etc.) following established pattern
 - [ ] T083 [P] Read adapter README.md for each service, then update all adapter layers with @Slf4j and sanitization
@@ -318,6 +318,14 @@ Phase 7 (Polish)
 
 - [ ] T086 [P] Create unit tests for DefaultLogSanitizer with known sensitive patterns in patra-common/src/test/java/
 - [ ] T087 [P] Create integration tests for trace context propagation in patra-spring-boot-starter-logging/src/test/java/
+
+- [ ] T088 [P] Add ArchUnit rules across all services to enforce unified logging utilities usage (FR-013) and forbid Lombok in domain modules; integrate into CI
+
+### FR-012 Global Enforcement (FR-012)
+
+- [ ] T097 [P] [US4] Add repository-wide ArchUnit rule to detect non-parameterized logging (string concatenation in log calls) across all modules; fail build on violations
+- [ ] T098 [P] [US4] Integrate SpotBugs/Checkstyle rules for non-parameterized logging and disallow System.out logging across services; wire into CI pipeline
+- [ ] T099 [P] [US4] Add CI gate to run FR-012 checks on all patra-*-modules and block PRs with violations
 
 ### Performance & Compliance
 

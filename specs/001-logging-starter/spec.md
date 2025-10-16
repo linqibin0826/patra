@@ -122,7 +122,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - **FR-014**: All existing log output across the codebase MUST be reviewed and updated to conform to the new logging standards and structure. This includes: controllers, orchestrators, repository implementations, scheduled jobs, message queue listeners, global exception handlers, and all adapter/app/infra layer components
 
-- **FR-015**: System MUST use consistent service/module identifiers in logs to clearly indicate which microservice or layer generated each log entry
+- **FR-015**: System MUST use consistent service/module identifiers in logs to clearly indicate which microservice or layer generated each log entry. Identifiers MUST follow a canonical format (e.g., `[service=patra-registry][layer=adapter]`) and be emitted by default via the starter’s Logback pattern (e.g., property or MDC key such as `service.name`/`layer`).
 
 ### Key Entities
 
@@ -171,9 +171,13 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - All logging must remain compatible with existing SLF4J-based infrastructure and log aggregation tools
 - Logging enhancements must not introduce significant performance overhead (< 5% impact on throughput) in production workloads
-- Sensitive data sanitization must be foolproof and cannot rely on developers remembering to manually sanitize logs
+- Sensitive data sanitization must achieve SC-006 (zero instances of sensitive data in production logs) and cannot rely on developers remembering to manually sanitize logs
 - Trace context propagation must work seamlessly across all existing and future microservices without requiring significant refactoring of business logic
 - Log level configuration must be externalized (e.g., Nacos configuration) and support per-environment settings (dev, staging, production)
+
+### Architecture Compliance (Constitution Alignment)
+
+- `patra-common` remains framework-free (pure Java + slf4j-api only). Any framework-dependent integrations (e.g., Spring, SkyWalking, MyBatis-Plus) MUST be implemented in starters/adapters (e.g., `patra-spring-boot-starter-logging`). This prevents transitive framework leakage into the domain layer and upholds dependency direction rules.
 
 ## Dependencies
 

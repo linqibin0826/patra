@@ -91,13 +91,9 @@ patra-common/
         │   └── DefaultLogSanitizer.java   # Implementation with regex patterns
         ├── context/                # Trace context utilities
         │   ├── DistributedTraceContext.java  # Record for trace data
-        │   ├── TraceContextHolder.java       # Interface
-        │   ├── DefaultTraceContextHolder.java # SkyWalking integration
-        │   ├── LogContextEnricher.java       # Interface
-        │   └── DefaultLogContextEnricher.java # MDC management
-        ├── persistence/            # Database logging utilities
-        │   ├── DbFailureLogger.java          # DB failure utility
-        │   └── DbFailureLoggingInterceptor.java # MyBatis-Plus interceptor
+        │   ├── TraceContextHolder.java       # Interface (no framework deps)
+        │   ├── LogContextEnricher.java       # Interface (MDC-safe)
+        │   └── DefaultLogContextEnricher.java # MDC management (slf4j-api only)
         ├── ApiCallLogger.java      # External API call logging utility
         └── BatchProcessingLogger.java # Batch operation logging utility
 
@@ -112,6 +108,8 @@ patra-spring-boot-starter-logging/
     │   │   ├── SanitizationAutoConfiguration.java
     │   │   ├── AsyncAutoConfiguration.java         # Async MDC propagation
     │   │   └── DynamicLoggingConfiguration.java    # Nacos log level listeners
+    │   ├── context/
+    │   │   └── DefaultTraceContextHolder.java      # SkyWalking integration (FR-002/FR-003)
     │   ├── filter/
     │   │   ├── TraceContextFilter.java          # Propagate trace to MDC
     │   │   └── SamplingFilter.java              # Log sampling for high-frequency events
@@ -124,12 +122,15 @@ patra-spring-boot-starter-logging/
     │   │   └── MdcTaskDecorator.java            # Async MDC propagation
     │   ├── mq/
     │   │   └── RocketMQMessageListenerDecorator.java # MQ trace propagation
+    │   ├── persistence/
+    │   │   ├── DbFailureLogger.java             # DB failure utility (MyBatis+)
+    │   │   └── DbFailureLoggingInterceptor.java # MyBatis-Plus interceptor
     │   └── security/
     │       ├── SecurityEventLogger.java         # Utility for auth/authz logging
     │       └── AuthenticationEventLogger.java   # Spring Security event listener
     └── resources/
         ├── META-INF/spring.factories
-        ├── logback-spring.xml                    # Enhanced pattern layout
+        ├── logback-spring.xml                    # Enhanced pattern layout incl. FR-015 identifiers
         └── application-logging.yml               # Default log levels
 
 # Updated microservices (EXISTING - changes needed)
@@ -187,7 +188,7 @@ This follows the existing pattern established by `patra-spring-boot-starter-core
 ### ✅ Principle II: Dependency Direction Rules
 - **Status**: COMPLIANT (Confirmed)
 - **Validation**:
-  - `patra-common` utilities (sanitization, trace context) are pure Java with minimal SLF4J dependency
+  - `patra-common` utilities (sanitization, trace context) are pure Java with minimal SLF4J dependency; framework-dependent defaults (DefaultTraceContextHolder, DbFailureLogger, DbFailureLoggingInterceptor) moved to the starter
   - Starter depends on Spring Boot + SLF4J (adapter/infra concern, NOT domain)
   - Domain layer continues using `Logger` declaration (no Lombok, no Spring)
   - Trace context propagation implemented via filters/interceptors (adapter layer)
