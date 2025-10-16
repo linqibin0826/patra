@@ -14,12 +14,12 @@ This document provides an actionable, dependency-ordered task breakdown for impl
 |-------|------------|------------|----------------|--------|
 | Phase 1 | Setup | 12 | 3 | Pending |
 | Phase 2 | Foundational | 8 | 4 | Pending |
-| Phase 3 | US1 (P1) - Production Diagnosis | 18 | 8 | Pending |
+| Phase 3 | US1 (P1) - Production Diagnosis | 19 | 8 | Pending |
 | Phase 4 | US2 (P1) - Dynamic Log Levels | 10 | 5 | Pending |
 | Phase 5 | US3 (P2) - Request Tracing | 12 | 6 | Pending |
-| Phase 6 | US4 (P2) - Consistent Logging | 14 | 7 | Pending |
-| Phase 7 | Polish & Cross-Cutting | 8 | 3 | Pending |
-| **Total** | - | **82** | **36** | - |
+| Phase 6 | US4 (P2) - Consistent Logging | 19 | 10 | Pending |
+| Phase 7 | Polish & Cross-Cutting | 10 | 4 | Pending |
+| **Total** | - | **90** | **40** | - |
 
 ---
 
@@ -141,11 +141,12 @@ Phase 7 (Polish)
 
 - [ ] T032 [US1] Add logging starter dependency to patra-registry-boot/pom.xml
 - [ ] T033 [US1] Remove legacy logback.xml from patra-registry-boot/src/main/resources/
-- [ ] T034 [US1] Update adapter layer logging with trace context in patra-registry-adapter/
-- [ ] T035 [US1] Update application layer logging with trace context in patra-registry-app/
-- [ ] T036 [US1] Update infrastructure layer logging with trace context in patra-registry-infra/
-- [ ] T037 [US1] Verify domain layer uses plain Logger (no Lombok) in patra-registry-domain/
-- [ ] T038 [US1] Test trace context propagation end-to-end in patra-registry integration tests
+- [ ] T034 [US1] Read patra-registry-adapter/README.md, then update adapter layer logging with trace context
+- [ ] T035 [US1] Read patra-registry-app/README.md, then update application layer logging with trace context
+- [ ] T036 [US1] Read patra-registry-infra/README.md, then update infrastructure layer logging with trace context
+- [ ] T037 [US1] Read patra-registry-domain/README.md, then verify domain layer uses plain Logger (no Lombok)
+- [ ] T038 [US1] Implement trace context fallback: generate new trace ID with WARN log when context missing from request in TraceContextFilter
+- [ ] T039 [US1] Test trace context propagation end-to-end in patra-registry integration tests and validate fallback behavior
 
 **Parallel Execution Opportunities**:
 - T021, T022, T023 (different interceptors)
@@ -169,27 +170,27 @@ Phase 7 (Polish)
 
 ### Nacos Integration (FR-011, SC-007)
 
-- [ ] T039 [P] [US2] Create logging-common.yml Nacos config with default levels in docker/nacos/config/logging/logging-common.yml
-- [ ] T040 [P] [US2] Create logging-patra-registry.yml service-specific config in docker/nacos/config/logging/logging-patra-registry.yml
-- [ ] T041 [P] [US2] Create logging-patra-ingest.yml service-specific config in docker/nacos/config/logging/logging-patra-ingest.yml
-- [ ] T042 [US2] Implement DynamicLoggingConfiguration with Nacos listeners in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/DynamicLoggingConfiguration.java
+- [ ] T040 [P] [US2] Create logging-common.yml Nacos config with default levels in docker/nacos/config/logging/logging-common.yml
+- [ ] T041 [P] [US2] Create logging-patra-registry.yml service-specific config in docker/nacos/config/logging/logging-patra-registry.yml
+- [ ] T042 [P] [US2] Create logging-patra-ingest.yml service-specific config in docker/nacos/config/logging/logging-patra-ingest.yml
+- [ ] T043 [US2] Implement DynamicLoggingConfiguration with Nacos listeners in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/DynamicLoggingConfiguration.java
 
 ### Log Level Semantic Guidelines (FR-001)
 
-- [ ] T043 [P] [US2] Document log level semantic guidelines in docs/logging/log-level-guidelines.md
-- [ ] T044 [P] [US2] Create log level usage examples for each layer in docs/logging/log-level-examples.md
+- [ ] T044 [P] [US2] Document log level semantic guidelines in docs/logging/log-level-guidelines.md
+- [ ] T045 [P] [US2] Create log level usage examples for each layer in docs/logging/log-level-examples.md
 
 ### Testing & Validation
 
-- [ ] T045 [US2] Implement LogLevelConfigurationTest for Nacos integration in patra-spring-boot-starter-logging/src/test/java/
-- [ ] T046 [US2] Test dynamic log level change in patra-registry (INFO → DEBUG → INFO)
-- [ ] T047 [US2] Verify log level changes take effect within 60 seconds (SC-007)
-- [ ] T048 [US2] Document troubleshooting guide for log level issues in docs/logging/troubleshooting-log-levels.md
+- [ ] T046 [US2] Implement LogLevelConfigurationTest for Nacos integration in patra-spring-boot-starter-logging/src/test/java/
+- [ ] T047 [US2] Test dynamic log level change in patra-registry (INFO → DEBUG → INFO)
+- [ ] T048 [US2] Verify log level changes take effect within 60 seconds (SC-007)
+- [ ] T049 [US2] Document troubleshooting guide for log level issues in docs/logging/troubleshooting-log-levels.md
 
 **Parallel Execution Opportunities**:
-- T039, T040, T041 (Nacos config files)
-- T043, T044 (documentation)
-- T045, T046, T047 (testing tasks)
+- T040, T041, T042 (Nacos config files)
+- T044, T045 (documentation)
+- T046, T047, T048 (testing tasks)
 
 ---
 
@@ -209,30 +210,30 @@ Phase 7 (Polish)
 
 ### Gateway Integration (Entry Point)
 
-- [ ] T049 [P] [US3] Integrate logging starter in patra-gateway-boot/pom.xml
-- [ ] T050 [P] [US3] Configure TraceContextFilter at highest precedence in gateway
-- [ ] T051 [P] [US3] Add service identifier "[patra-gateway]" to logback pattern
-- [ ] T052 [US3] Update gateway controllers with trace-aware logging
+- [ ] T050 [P] [US3] Integrate logging starter in patra-gateway-boot/pom.xml
+- [ ] T051 [P] [US3] Configure TraceContextFilter at highest precedence in gateway
+- [ ] T052 [P] [US3] Add service identifier "[patra-gateway]" to logback pattern
+- [ ] T053 [US3] Read patra-gateway-boot/README.md, then update gateway controllers with trace-aware logging
 
 ### Ingest Service Integration (High-Volume)
 
-- [ ] T053 [P] [US3] Integrate logging starter in patra-ingest-boot/pom.xml
-- [ ] T054 [P] [US3] Update batch processing jobs with correlation ID in patra-ingest-adapter/
-- [ ] T055 [P] [US3] Update orchestrators with trace context in patra-ingest-app/
-- [ ] T056 [US3] Update external API clients with trace propagation in patra-ingest-infra/
+- [ ] T054 [P] [US3] Integrate logging starter in patra-ingest-boot/pom.xml
+- [ ] T055 [P] [US3] Read patra-ingest-adapter/README.md, then update batch processing jobs with correlation ID
+- [ ] T056 [P] [US3] Read patra-ingest-app/README.md, then update orchestrators with trace context
+- [ ] T057 [US3] Read patra-ingest-infra/README.md, then update external API clients with trace propagation
 
 ### Cross-Service Trace Validation
 
-- [ ] T057 [US3] Create end-to-end trace test spanning gateway → registry → ingest
-- [ ] T058 [US3] Verify trace ID propagation across synchronous calls
-- [ ] T059 [US3] Verify correlation ID propagation across async boundaries (RocketMQ)
-- [ ] T060 [US3] Document trace context troubleshooting in docs/logging/trace-context-troubleshooting.md
+- [ ] T058 [US3] Create end-to-end trace test spanning gateway → registry → ingest
+- [ ] T059 [US3] Verify trace ID propagation across synchronous calls
+- [ ] T060 [US3] Verify correlation ID propagation across async boundaries (RocketMQ)
+- [ ] T061 [US3] Document trace context troubleshooting in docs/logging/trace-context-troubleshooting.md
 
 **Parallel Execution Opportunities**:
-- T049, T053 (different services)
-- T050, T054 (different components)
-- T051, T055 (different configurations)
-- T058, T059 (different test scenarios)
+- T050, T054 (different services)
+- T051, T055 (different components)
+- T052, T056 (different configurations)
+- T059, T060 (different test scenarios)
 
 ---
 
@@ -251,34 +252,49 @@ Phase 7 (Polish)
 
 ### Sensitive Data Sanitization (FR-008, SC-006)
 
-- [ ] T061 [P] [US4] Implement hardcoded sanitization rules in DefaultLogSanitizer (email, phone, credit card, SSN, auth headers)
-- [ ] T062 [P] [US4] Implement sanitizeJson() method for JSON-specific sanitization
-- [ ] T063 [P] [US4] Implement sanitizeObject() method for DTO/entity sanitization
-- [ ] T064 [US4] Create SanitizationAutoConfiguration to register sanitizer bean in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/SanitizationAutoConfiguration.java
+- [ ] T062 [P] [US4] Implement hardcoded sanitization rules in DefaultLogSanitizer (email, phone, credit card, SSN, auth headers)
+- [ ] T063 [P] [US4] Implement sanitizeJson() method for JSON-specific sanitization
+- [ ] T064 [P] [US4] Implement sanitizeObject() method for DTO/entity sanitization
+- [ ] T065 [US4] Create SanitizationAutoConfiguration to register sanitizer bean in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/SanitizationAutoConfiguration.java
 
 ### External API Call Logging (FR-006, SC-008)
 
-- [ ] T065 [P] [US4] Create ApiCallLogger utility in patra-common/src/main/java/com/papertrace/common/logging/ApiCallLogger.java
-- [ ] T066 [P] [US4] Implement Feign RequestInterceptor with ApiCallLogger
-- [ ] T067 [P] [US4] Implement RestTemplate ClientHttpRequestInterceptor with ApiCallLogger
+- [ ] T066 [P] [US4] Create ApiCallLogger utility in patra-common/src/main/java/com/papertrace/common/logging/ApiCallLogger.java
+- [ ] T067 [P] [US4] Implement Feign RequestInterceptor with ApiCallLogger
+- [ ] T068 [P] [US4] Implement RestTemplate ClientHttpRequestInterceptor with ApiCallLogger
+
+### Database Failures Logging (FR-007, SC-008)
+
+- [ ] T069 [P] [US4] Create DbFailureLogger utility in patra-common/src/main/java/com/papertrace/common/logging/persistence/DbFailureLogger.java
+- [ ] T070 [US4] Implement MyBatis-Plus interceptor for logging failed DB operations in patra-common/src/main/java/com/papertrace/common/logging/persistence/DbFailureLoggingInterceptor.java
+
+### Authentication & Authorization Logging (FR-009, SC-008)
+
+- [ ] T071 [P] [US4] Create SecurityEventLogger utility in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/security/SecurityEventLogger.java
+- [ ] T072 [US4] Implement Spring Security AuthenticationEventPublisher listener to log auth events in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/security/AuthenticationEventLogger.java
 
 ### Batch Processing Logging (FR-010)
 
-- [ ] T068 [P] [US4] Create BatchProcessingLogger utility in patra-common/src/main/java/com/papertrace/common/logging/BatchProcessingLogger.java
-- [ ] T069 [US4] Document batch logging patterns (summary at INFO, details at DEBUG) in docs/logging/batch-logging-guide.md
+- [ ] T073 [P] [US4] Create BatchProcessingLogger utility in patra-common/src/main/java/com/papertrace/common/logging/BatchProcessingLogger.java
+- [ ] T074 [US4] Document batch logging patterns (summary at INFO, details at DEBUG) in docs/logging/batch-logging-guide.md
+
+### Log Sampling for High-Frequency Events (Edge Case Handling)
+
+- [ ] T075 [P] [US4] Implement SamplingFilter for DEBUG/TRACE logs with configurable threshold (default 100 logs/sec) in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/filter/SamplingFilter.java
+- [ ] T076 [US4] Document log sampling configuration and usage in docs/logging/log-sampling-guide.md
 
 ### Developer Documentation
 
-- [ ] T070 [P] [US4] Create comprehensive quickstart guide (migration checklist) - ALREADY CREATED at specs/001-logging-starter/quickstart.md
-- [ ] T071 [P] [US4] Create layer-specific logging examples in docs/logging/layer-specific-examples.md
-- [ ] T072 [P] [US4] Create common patterns guide in docs/logging/common-patterns.md
-- [ ] T073 [US4] Create troubleshooting guide in docs/logging/troubleshooting.md
-- [ ] T074 [US4] Create FAQ document in docs/logging/faq.md
+- [ ] T077 [P] [US4] Verify quickstart guide completeness - ALREADY CREATED at specs/001-logging-starter/quickstart.md (mark complete if satisfactory)
+- [ ] T078 [P] [US4] Create layer-specific logging examples in docs/logging/layer-specific-examples.md
+- [ ] T079 [P] [US4] Create common patterns guide in docs/logging/common-patterns.md
+- [ ] T080 [US4] Create troubleshooting guide in docs/logging/troubleshooting.md
+- [ ] T081 [US4] Create FAQ document in docs/logging/faq.md
 
 **Parallel Execution Opportunities**:
-- T061, T062, T063 (sanitization methods)
-- T065, T066, T067 (API logging components)
-- T070, T071, T072, T073, T074 (documentation)
+- T062, T063, T064 (sanitization methods)
+- T066, T067, T068, T069, T071, T073, T075 (utility classes)
+- T077, T078, T079, T080, T081 (documentation)
 
 ---
 
@@ -289,34 +305,35 @@ Phase 7 (Polish)
 
 ### Remaining Microservices Migration
 
-- [ ] T075 [P] Migrate remaining microservices (patra-egress-gateway, patra-provenance, etc.) following established pattern
-- [ ] T076 [P] Update all adapter layers with @Slf4j and sanitization
-- [ ] T077 [P] Update all application layers with trace context
-- [ ] T078 Keep all domain layers with plain Logger (validate no Lombok)
+- [ ] T082 [P] Read each module's README.md first, then migrate remaining microservices (patra-egress-gateway, patra-provenance, etc.) following established pattern
+- [ ] T083 [P] Read adapter README.md for each service, then update all adapter layers with @Slf4j and sanitization
+- [ ] T084 [P] Read app README.md for each service, then update all application layers with trace context
+- [ ] T085 Read domain README.md for each service, then validate all domain layers use plain Logger (no Lombok)
 
 ### Testing & Validation
 
-- [ ] T079 [P] Create unit tests for DefaultLogSanitizer with known sensitive patterns in patra-common/src/test/java/
-- [ ] T080 [P] Create integration tests for trace context propagation in patra-spring-boot-starter-logging/src/test/java/
-- [ ] T081 Create ArchUnit tests to verify domain layer purity (no Lombok, no Spring) in patra-registry/patra-registry-boot/src/test/java/
+- [ ] T086 [P] Create unit tests for DefaultLogSanitizer with known sensitive patterns in patra-common/src/test/java/
+- [ ] T087 [P] Create integration tests for trace context propagation in patra-spring-boot-starter-logging/src/test/java/
+- [ ] T088 Create ArchUnit tests to verify domain layer purity (no Lombok, no Spring) and @Slf4j usage in other layers in patra-registry/patra-registry-boot/src/test/java/
 
 ### Performance & Compliance
 
-- [ ] T082 [P] Conduct performance testing to verify <5% throughput impact (SC-004)
-- [ ] T083 [P] Run automated PII scanning to verify zero sensitive data in logs (SC-006)
-- [ ] T084 [P] Validate 40% log volume reduction at INFO level (SC-004)
-- [ ] T085 Measure incident response time improvement (target 50% reduction per SC-005)
+- [ ] T089 [P] Establish baseline throughput and latency metrics from current production or staging (before logging enhancement)
+- [ ] T090 [P] Conduct performance testing to verify <5% throughput impact compared to baseline (SC-004)
+- [ ] T091 [P] Run automated PII scanning to verify zero sensitive data in logs (SC-006)
+- [ ] T092 [P] Validate 40% log volume reduction at INFO level compared to baseline (SC-004)
+- [ ] T093 Design and execute controlled incident response test (before/after comparison) to measure time-to-resolution improvement (target 50% reduction per SC-005)
 
 ### Final Documentation
 
-- [ ] T086 Update all module READMEs with logging examples
-- [ ] T087 Create operations guide for log level management in docs/logging/operations-guide.md
-- [ ] T088 Create security audit checklist for sanitization rules in docs/logging/security-audit-checklist.md
+- [ ] T094 Update all module READMEs with logging examples
+- [ ] T095 Create operations guide for log level management in docs/logging/operations-guide.md
+- [ ] T096 Create security audit checklist for sanitization rules in docs/logging/security-audit-checklist.md
 
 **Parallel Execution Opportunities**:
-- T075, T076, T077 (different microservices)
-- T079, T080, T081 (different test suites)
-- T082, T083, T084 (different validation metrics)
+- T082, T083, T084 (different microservices and layers)
+- T086, T087, T088 (different test suites)
+- T089, T091 (baseline and scanning - can run independently)
 
 ---
 
@@ -375,16 +392,16 @@ Phase 7 (Polish)
 
 Track these metrics during and after implementation:
 
-| Metric | Target | User Story | Validation Method |
-|--------|--------|------------|-------------------|
-| SC-001 | Diagnose issues in <10 min (90% cases) | US1 | Time developers during incident response |
-| SC-002 | 100% trace ID coverage (sync), 95% (async) | US1, US3 | Automated log analysis |
-| SC-003 | 100% code using unified utilities | US4 | Code review + ArchUnit |
-| SC-004 | 40% log volume reduction at INFO | US1, US2 | Log aggregation metrics |
-| SC-005 | 50% faster root cause identification | US1 | Incident response time tracking |
-| SC-006 | Zero sensitive data in logs | US4 | Automated PII scanning |
-| SC-007 | Log level changes within 60s | US2 | Manual testing |
-| SC-008 | 100% audit logging (API/DB/auth) | US4 | Code coverage analysis |
+| Metric | Target | User Story | Validation Task |
+|--------|--------|------------|-----------------|
+| SC-001 | Diagnose issues in <10 min (90% cases) | US1 | T093 - Controlled incident response test |
+| SC-002 | 100% trace ID coverage (sync), 95% (async) | US1, US3 | T058, T059, T060 - Automated log analysis |
+| SC-003 | 100% code using unified utilities | US4 | T088 - ArchUnit tests |
+| SC-004 | 40% log volume reduction at INFO | US1, US2 | T089, T092 - Log aggregation metrics comparison |
+| SC-005 | 50% faster root cause identification | US1 | T093 - Before/after incident response timing |
+| SC-006 | Zero sensitive data in logs | US4 | T091 - Automated PII scanning |
+| SC-007 | Log level changes within 60s | US2 | T048 - Manual testing |
+| SC-008 | 100% audit logging (API/DB/auth) | US4 | T066-T072 - Implementation validation |
 
 ---
 
