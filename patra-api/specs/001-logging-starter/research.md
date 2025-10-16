@@ -1,6 +1,6 @@
 # Research: Enhanced Logging System
 
-**Feature**: 002-redesign-the-project | **Date**: 2025-10-15
+**Feature**: 001-logging-starter | **Date**: 2025-10-15
 
 ## Overview
 
