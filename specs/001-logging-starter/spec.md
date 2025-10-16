@@ -67,7 +67,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 **Acceptance Scenarios**:
 
 1. **Given** a developer adds logging to a new orchestrator method, **When** they use the provided logging utility, **Then** logs automatically include method name, class name, and trace context without manual configuration
-2. **Given** sensitive data (passwords, tokens, PII) exists in the code, **When** a developer attempts to log it, **Then** the logging utility automatically sanitizes or masks the sensitive fields
+2. **Given** sensitive data (passwords, tokens, PII) exists in the code, **When** a developer logs it using the provided sanitization utilities (LogSanitizer.sanitize()), **Then** the sensitive fields are masked or removed from the log output. External API and database logging utilities apply sanitization automatically
 3. **Given** an external API call is made, **When** the developer logs the request/response, **Then** logs capture request URL, HTTP status, response time, and error details (if any) in a standardized format
 
 ---
@@ -79,8 +79,9 @@ A developer adds new features or modifies existing code and needs clear guidelin
   - Critical ERROR and WARN logs must never be dropped
 
 - How does the system handle logging when external logging infrastructure (e.g., log aggregation service) is unavailable?
-  - Logs should fallback to local file system with rotation policies
-  - System should continue operating without blocking on logging failures
+  - Logs are ALWAYS written to both local file system (with rotation policies) AND sent to external log aggregation (dual output)
+  - If external log aggregation fails, Logback async appenders will queue logs and retry automatically without blocking application threads
+  - System continues operating without blocking on logging failures (async appenders prevent blocking)
 
 - What happens when trace context is missing (e.g., requests from external systems without trace headers)?
   - System should generate new trace IDs and log a WARN indicating trace context was not propagated
@@ -93,7 +94,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 ### Functional Requirements
 
-- **FR-001**: System MUST define five distinct log levels with clear usage guidelines: ERROR (system failures requiring immediate attention), WARN (recoverable issues or degraded functionality), INFO (key business events and state changes), DEBUG (detailed processing flow for troubleshooting), TRACE (fine-grained diagnostics including variable states)
+- **FR-001**: System MUST define five distinct log levels with clear usage guidelines documented in `docs/logging/log-level-guidelines.md`: ERROR (system failures requiring immediate attention), WARN (recoverable issues or degraded functionality), INFO (key business events and state changes), DEBUG (detailed processing flow for troubleshooting), TRACE (fine-grained diagnostics including variable states)
 
 - **FR-002**: All log entries MUST include structured context containing: timestamp (ISO-8601 format), log level, logger name (fully qualified class name), thread name, trace ID, correlation ID, and message
 
@@ -107,11 +108,11 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - **FR-007**: System MUST log all database operations failures including: query type (select/insert/update/delete), affected table/entity, exception details, and transaction context
 
-- **FR-008**: System MUST automatically sanitize sensitive data in logs including passwords, API tokens, authorization headers, and personally identifiable information (PII)
+- **FR-008**: System MUST provide utilities to sanitize sensitive data in logs including passwords, API tokens, authorization headers, and personally identifiable information (PII). Developers MUST use these utilities when logging data that may contain sensitive information. External API call and database operation logging utilities MUST automatically apply sanitization
 
 - **FR-009**: All authentication and authorization events MUST be logged at appropriate levels: successful authentication (INFO), failed authentication (WARN), authorization failures (WARN), security violations (ERROR)
 
-- **FR-010**: Key business operations MUST be logged with sufficient context including: batch processing start/end with counts, data ingestion results with success/failure tallies, parsing results with validation errors, and provenance updates with affected records
+- **FR-010**: Key business operations MUST be logged with sufficient context including: batch processing start/end with counts, data ingestion results with success/failure tallies, parsing results with validation errors, and provenance updates with affected records. **Key operations are defined as**: (1) Operations modifying >100 records, (2) External API calls to third-party services, (3) Authentication/authorization events, (4) Scheduled job executions, (5) Message queue publishing/consumption, (6) Critical business state transitions (e.g., batch status changes, provenance updates)
 
 - **FR-011**: System MUST support dynamic log level configuration per module/package without requiring application restart
 
@@ -119,7 +120,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - **FR-013**: System MUST provide unified logging utilities that developers can use consistently across all modules, abstracting away boilerplate context propagation
 
-- **FR-014**: All existing log output across the codebase MUST be reviewed and updated to conform to the new logging standards and structure
+- **FR-014**: All existing log output across the codebase MUST be reviewed and updated to conform to the new logging standards and structure. This includes: controllers, orchestrators, repository implementations, scheduled jobs, message queue listeners, global exception handlers, and all adapter/app/infra layer components
 
 - **FR-015**: System MUST use consistent service/module identifiers in logs to clearly indicate which microservice or layer generated each log entry
 
@@ -140,13 +141,13 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 ### Measurable Outcomes
 
-- **SC-001**: Developers can diagnose production issues using logs alone in under 10 minutes for 90% of common failure scenarios without requiring additional debugging tools or log analysis scripts
+- **SC-001**: Developers can diagnose production issues using logs alone in under 10 minutes for 90% of common failure scenarios (external API timeout, database deadlock, parsing error, authentication failure, message queue unavailability) without requiring additional debugging tools or log analysis scripts
 
 - **SC-002**: All log entries across all microservices contain trace IDs enabling complete request flow reconstruction with 100% coverage for synchronous operations and 95% coverage for asynchronous operations
 
 - **SC-003**: Code reviews identify consistent logging patterns across new features with 100% of new code using the unified logging utilities and adhering to defined log level guidelines
 
-- **SC-004**: Production log volume is reduced by 40% at INFO level while maintaining complete visibility into business operations and system health by eliminating redundant or verbose logging
+- **SC-004**: Production log volume is reduced by 40% at INFO level compared to baseline (measured over 7-day period in production patra-registry before enhancement) while maintaining complete visibility into business operations and system health by eliminating redundant or verbose logging
 
 - **SC-005**: Time to identify root cause during incident response is reduced by 50% compared to current logging implementation due to improved log structure and traceability
 
@@ -194,7 +195,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
   - **Mitigation**: Implement log sampling for high-frequency events; use appropriate log levels in production (default INFO); monitor log volume and adjust retention policies
 
 - **Risk**: Sensitive data sanitization rules may not cover all edge cases, leading to potential data leaks in logs
-  - **Mitigation**: Implement comprehensive sanitization library with regex patterns and field name matching; conduct security reviews and automated scanning of production logs; establish process for updating sanitization rules
+  - **Mitigation**: Implement comprehensive sanitization library with regex patterns and field name matching; provide clear developer guidelines on when to use sanitization utilities; ensure ApiCallLogger and DbFailureLogger automatically sanitize output; conduct security reviews and automated scanning of production logs; establish process for updating sanitization rules
 
 - **Risk**: Dynamic log level changes may be overused in production, leading to excessive DEBUG/TRACE logging impacting performance
   - **Mitigation**: Implement log level change auditing; require justification and automatic reversion policies; monitor performance metrics when log levels change

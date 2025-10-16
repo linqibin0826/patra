@@ -137,10 +137,10 @@ patra-registry/
 ├── patra-registry-boot/
 │   └── src/main/resources/
 │       └── logback-spring.xml                    # Import starter config
-├── patra-registry-adapter/                       # Update: @XSlf4j + sanitize
-├── patra-registry-app/                           # Update: @XSlf4j + trace context
+├── patra-registry-adapter/                       # Update: @Slf4j + sanitize
+├── patra-registry-app/                           # Update: @Slf4j + trace context
 ├── patra-registry-domain/                        # Keep: Plain SLF4J only
-└── patra-registry-infra/                         # Update: @XSlf4j + query logging
+└── patra-registry-infra/                         # Update: @Slf4j + query logging
 
 patra-ingest/                                      # Same structure as registry
 patra-gateway-boot/                                # Same structure as registry
