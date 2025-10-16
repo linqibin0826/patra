@@ -7,6 +7,7 @@ import com.patra.starter.expr.compiler.DefaultExprCompiler;
 import com.patra.starter.expr.compiler.ExprCompiler;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
 import com.patra.starter.expr.compiler.check.DefaultCapabilityChecker;
+import com.patra.starter.expr.compiler.function.FunctionRegistry;
 import com.patra.starter.expr.compiler.normalize.DefaultExprNormalizer;
 import com.patra.starter.expr.compiler.normalize.ExprNormalizer;
 import com.patra.starter.expr.compiler.render.DefaultExprRenderer;
@@ -73,8 +74,8 @@ public class ExprCompilerAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(ExprRenderer.class)
-  public ExprRenderer exprRenderer() {
-    return new DefaultExprRenderer();
+  public ExprRenderer exprRenderer(FunctionRegistry functionRegistry) {
+    return new DefaultExprRenderer(functionRegistry);
   }
 
   @Bean
