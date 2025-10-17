@@ -1,0 +1,8 @@
+{
+  "query": "genomics",
+  "params": {
+    "filters": "facet:open_access,facet:has_full_text"
+  },
+  "warnings": [],
+  "errors": []
+}
