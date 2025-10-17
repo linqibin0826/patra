@@ -1,3 +1,6 @@
+Quick reference: ../04-providers-quickref.md
+
+
 # 06 — Provider: Crossref
 
 Status: Documentation only (pre‑implementation)

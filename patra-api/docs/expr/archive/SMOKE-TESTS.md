@@ -1,3 +1,6 @@
+Replaced by: ../08-testing-and-smoke.md
+
+
 # Smoke Tests — Phase 6
 
 Status: Ready to run (requires running registry + dev DB)

@@ -1,3 +1,6 @@
+Replaced by: ../08-testing-and-smoke.md
+
+
 # 12 — Golden Test Harness
 
 Status: Documentation only (pre‑implementation)

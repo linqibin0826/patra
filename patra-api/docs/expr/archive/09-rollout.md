@@ -1,3 +1,6 @@
+Replaced by: ../07-migration-rollout.md
+
+
 # 09 — Rollout & Operations
 
 Status: Documentation only (pre‑implementation)

@@ -1,3 +1,6 @@
+Quick reference: ../04-providers-quickref.md
+
+
 # 04 — Provider: PubMed
 
 Status: Documentation only (pre‑implementation)

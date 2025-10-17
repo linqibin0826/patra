@@ -1,3 +1,6 @@
+Replaced by: ../08-testing-and-smoke.md
+
+
 # 08 — Testing & Validation
 
 Status: Documentation only (pre‑implementation)

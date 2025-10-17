@@ -1,3 +1,6 @@
+Note: This document was moved to docs/expr/archive on 2025-10-17 as part of consolidation.
+For current guidance, start with docs/expr/START-HERE.md.
+
 # Expression Compiler–Bridge Design — Peer Review
 
 Date: 2025-10-15
@@ -19,7 +22,7 @@ Verdict: ⚠️ Needs adjustments before implementation (small doc fixes and gua
 - Boolean logic fidelity: explicit OR/NOT/parentheses rules and negation‑aware selection (02-architecture.md §2.7; 04/05/06-provider docs examples).
 - Observability guardrails: INFO redaction/hashing of queries, bounded metric labels, and explicit warnings/errors (02-architecture.md §2.6; 03-compiler-bridge-internals.md §3.4).
 - Migration/rollout discipline and provider onboarding checklist (07-migration-plan.md; 09-rollout.md; 12-provider-checklist.md).
-- Golden test harness design with fixtures and CI triggers (12-golden-test-harness.md).
+- Golden test harness design with fixtures and CI triggers (./08-testing-and-smoke.md).
 
 ## Issues / Concerns
 
@@ -51,8 +54,8 @@ Each item is labeled Blocker / Warning / Suggestion.
 
 - Renderer/Compiler Boundary — Largely justified: invariants consistently restated across 01/02/03/04/05/06. Minor risk remains if code paths consult param maps in the renderer; ensure tests protect this invariant.
 - Observability & Security — Mostly justified but metric name inconsistencies remain. Recommend “Pass after fix” once names are unified and label cardinality guidance is finalized.
-- Migration Safety — Reasonable: clean DB assumption, effective_from guidance, rollback notes (07-migration-plan.md). Add notes for non‑clean DBs (new seed versions only) — already implied.
-- Golden Tests — Harness design is good; ensure fixtures cover OR/NOT depth, MULTI join, date transforms, and error/warning codes (12-golden-test-harness.md).
+- Migration Safety — Reasonable: clean DB assumption, effective_from guidance, rollback notes (./07-migration-rollout.md). Add notes for non‑clean DBs (new seed versions only) — already implied.
+- Golden Tests — Harness design is good; ensure fixtures cover OR/NOT depth, MULTI join, date transforms, and error/warning codes (./08-testing-and-smoke.md).
 - Performance & Limits — Guardrails present: maxQueryLength, perf target <50ms typical (03 internals; 08-testing.md). Consider adding param‑count thresholds to acceptance criteria.
 
 Conclusion on “Go”: With the small adjustments in this review, “Go” becomes justified.
@@ -68,12 +71,12 @@ Design & Contracts
 - Gate MULTI=repeat behind a feature flag until adapter serialization is formally documented; prefer join transforms by default (03-compiler-bridge-internals.md §3.8).
 
 Testing & Golden Harness
-- Add golden cases for: deep OR/NOT nesting, MULTI join with different delimiters, fn_code+transform_code composition, query length boundary, param‑count threshold crossing (12-golden-test-harness.md).
-- Include a coverage report per provider: exercised std_keys and rules; fail PR if coverage drops below an agreed threshold (12-golden-test-harness.md).
+- Add golden cases for: deep OR/NOT nesting, MULTI join with different delimiters, fn_code+transform_code composition, query length boundary, param‑count threshold crossing (./08-testing-and-smoke.md).
+- Include a coverage report per provider: exercised std_keys and rules; fail PR if coverage drops below an agreed threshold (./08-testing-and-smoke.md).
 
 Migration & Rollout
 - State explicit policy for non‑clean databases: never edit applied seeds; always add new versions; include sample Flyway versioning table (07-migration-plan.md; 09-rollout.md).
-- Mandate a fixed `effective_from` in the seeds for ordering determinism; include the exact timestamp used in examples (07-migration-plan.md).
+- Mandate a fixed `effective_from` in the seeds for ordering determinism; include the exact timestamp used in examples (./07-migration-rollout.md).
 
 Observability & Security
 - Publish a minimal metric set with stable names: `expr.render.rule_hit`, `expr.render.rule_miss`, `expr.param.map_hit`, `expr.param.map_miss`, `expr.transform.applied`, `expr.compile.error{code}`, `expr.compile.duration_ms` (histogram). Define label keys and bounds.
