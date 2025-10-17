@@ -373,4 +373,4 @@ Note: Fields like `externalService` shown in examples are not part of the standa
 - [integrations/trace-context-filter.md](./integrations/trace-context-filter.md) - HTTP boundary filter contract
 - [integrations/feign-interceptor-contract.md](./integrations/feign-interceptor-contract.md) - Outbound call propagation
 - [spring-boot-properties.md](./spring-boot-properties.md) - Spring Boot logging properties
-- [schemas/logging-config.schema.yml](./schemas/logging-config.schema.yml) - Nacos logging schema
+- [schemas/logging-config.schema.yml](../03-schemas/logging-config.schema.yml) - Nacos logging schema
