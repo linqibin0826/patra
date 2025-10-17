@@ -75,7 +75,8 @@ Phase 7 (Polish)
 
 - [x] T008 Create Nacos configuration directory in docker/nacos/config/logging/
 - [x] T009 [P] Create logback-spring.xml template in patra-spring-boot-starter-logging/src/main/resources/
-- [x] T010 [P] Create spring.factories for auto-configuration in patra-spring-boot-starter-logging/src/main/resources/META-INF/
+- [x] T010 [P] Create AutoConfiguration import file for Spring Boot 3:
+  `patra-spring-boot-starter-logging/src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`
 - [x] T011 [P] Create application-logging.yml with default properties in patra-spring-boot-starter-logging/src/main/resources/
 - [x] T012 Update parent pom.xml to include new starter module in dependency management
 

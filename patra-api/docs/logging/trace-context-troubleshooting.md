@@ -45,10 +45,15 @@ Use this checklist to quickly identify common trace context issues:
    curl http://localhost:8081/actuator/beans | grep -i "traceContext"
    ```
 
-   **Solution**: Ensure `TraceContextAutoConfiguration` is loaded. Check `spring.factories`:
-   ```properties
-   org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-     com.patra.starter.logging.autoconfigure.TraceContextAutoConfiguration
+   **Solution**: Ensure `TraceContextAutoConfiguration` is loaded (Spring Boot 3).
+   Check the Boot 3 import file:
+
+   `src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`
+
+   It should contain:
+
+   ```
+   com.patra.starter.logging.autoconfigure.TraceContextAutoConfiguration
    ```
 
 3. **External client (Postman, curl) not sending trace headers**

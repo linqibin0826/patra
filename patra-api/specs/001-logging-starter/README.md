@@ -6,6 +6,10 @@ Start Here
 - 01-overview/spec.md — Feature Specification (authoritative requirements)
 - 01-overview/quickstart.md — Quick Start for adopters
 
+Compatibility
+- Spring Boot 3.x only (baseline 3.2.4). Auto-configuration uses
+  `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`.
+
 Sections
 - 01-overview/ — Context and entry points
   - spec.md — goals, scope, acceptance criteria
