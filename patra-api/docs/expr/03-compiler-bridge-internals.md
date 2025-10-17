@@ -46,7 +46,7 @@ compile(request):
             value = transformRegistry.apply(mapping.transformCode, "query", value, snapshot)
          mapped.put(mapping.providerParamName, value)
       else if mapping != null:
-         warn "W-QUERY-BRIDGE-DUP", mapping.providerParamName
+         error "E-QUERY-BRIDGE-DUP", mapping.providerParamName
 
   // 3) Enforce query length budget if provided
   if request.options.maxQueryLength > 0 and length(outcome.query) > request.options.maxQueryLength:
@@ -134,7 +134,7 @@ public interface TransformRegistry {
 | `W-NOT-SKIPPED` | WARNING | NOT skipped (unsupported) | Warn if strict=false | Review query semantics |
 | `W-FN-OR-TRANSFORM-NOTFOUND` | WARNING | Function/transform not found | Warn if strict=false | Fix seed configuration |
 | `W-PARAM-COUNT-LIMIT` | WARNING | Parameters exceed soft limit | Warning always | Consider MULTI+join strategy |
-| `W-QUERY-BRIDGE-DUP` | WARNING | Query bridging skipped because provider param already populated | Warning always | Remove duplicate provider-side mapping if bridging should win |
+| `E-QUERY-BRIDGE-DUP` | ERROR | Query bridging conflicted with an already populated provider parameter | Always error | Remove duplicate provider-side mapping or drop conflicting rule |
 | `W-MULTI-REPEAT-NOTSUPPORTED` | WARNING | MULTI repeat requested but not yet supported; compiler falls back to join encoding | Warning always | Provide join transform or delay enabling repeat until adapters support it |
 
 ### 3.4.2 STRICT Mode Behavior

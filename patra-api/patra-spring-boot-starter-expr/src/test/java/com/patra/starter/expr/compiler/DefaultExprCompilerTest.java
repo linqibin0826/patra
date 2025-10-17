@@ -211,7 +211,7 @@ class DefaultExprCompilerTest {
   }
 
   @Test
-  void bridgeQuery_shouldNotOverrideExistingProviderParam() {
+  void bridgeQuery_shouldErrorWhenExistingProviderParamPresent() {
     Map<String, ProvenanceSnapshot.ApiParameter> apiParams =
         Map.of("query", new ProvenanceSnapshot.ApiParameter("query", "term", null, null));
     ProvenanceSnapshot customSnapshot =
@@ -243,9 +243,10 @@ class DefaultExprCompilerTest {
             .build();
     CompileResult result = compiler.compile(request);
 
+    // Keep the manually populated provider param and surface a compile error
     assertThat(result.params()).containsEntry("term", "manual-term");
-    assertThat(result.report().warnings())
-        .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("W-QUERY-BRIDGE-DUP"));
+    assertThat(result.report().errors())
+        .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("E-QUERY-BRIDGE-DUP"));
   }
 
   private record StubSnapshotLoader(ProvenanceSnapshot snapshot) implements RuleSnapshotLoader {

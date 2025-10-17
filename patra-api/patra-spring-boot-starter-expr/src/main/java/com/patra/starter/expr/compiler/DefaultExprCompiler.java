@@ -248,13 +248,15 @@ public class DefaultExprCompiler implements ExprCompiler {
     }
     String providerName = mapping.providerParamName();
     if (providerParams.containsKey(providerName)) {
-      warnings.add(
-          Issue.warn(
-              "W-QUERY-BRIDGE-DUP",
-              "Query bridging skipped because provider parameter already populated",
+      // Duplicate population of the provider param indicates a configuration conflict between
+      // renderer-emitted std_keys and query bridging. Treat as an error to avoid ambiguous output.
+      errors.add(
+          Issue.error(
+              "E-QUERY-BRIDGE-DUP",
+              "Query bridging conflicted with an already populated provider parameter",
               Map.of("param", providerName)));
       log.warn(
-          "Query bridging skipped - provider param {} already populated (provenance={})",
+          "Query bridging conflict - provider param {} already populated (provenance={})",
           providerName,
           snapshot.identity().code());
       return;
@@ -271,7 +273,7 @@ public class DefaultExprCompiler implements ExprCompiler {
             strictMode,
             warnings,
             errors);
-    // Always set/overwrite the provider param with the bridged query to ensure determinism
+    // Set the provider param with the bridged query (no conflict detected above)
     providerParams.put(providerName, bridged);
     log.debug("Bridged query into provider param {}", providerName);
     metrics.paramMapHit(provenanceCode, endpointName);
