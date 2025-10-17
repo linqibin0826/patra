@@ -142,6 +142,7 @@ test(domain): add unit tests for BatchPlan aggregate
 
 ---
 
+<a id="skip-flags"></a>
 ### 2. Skip Flags - Developer Flexibility
 
 **Environment variables** to bypass checks during fast iteration:
