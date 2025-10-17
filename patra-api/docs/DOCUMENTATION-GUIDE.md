@@ -527,8 +527,8 @@ Use tables for comparisons, reference lists:
 
 **Internal links** (relative paths):
 ```markdown
-[Architecture Guide](./docs/ARCHITECTURE.md)
-[patra-registry README](./patra-registry/README.md)
+[Architecture Guide](./ARCHITECTURE.md)
+[patra-registry README](../patra-registry/README.md)
 ```
 
 **Anchor links** (within same file):
