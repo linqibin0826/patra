@@ -259,12 +259,12 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P6.2.1** | Compile sample PubMed expression and validate compiled params | Smoke test report | TODO | P6.1.1, docs/expr/09 §9.1 |
-| **P6.2.2** | Compile sample EPMC expression and validate compiled params | Smoke test report | TODO | P6.1.2, docs/expr/09 §9.1 |
-| **P6.2.3** | Compile sample Crossref expression and validate compiled params | Smoke test report | TODO | P6.1.3, docs/expr/09 §9.1 |
-| **P6.2.4** | Test with stubbed provider endpoints (verify query/params format) | Smoke test report | TODO | P6.2.1-P6.2.3, docs/expr/09 §9.1 |
-| **P6.2.5** | Test STRICT mode enabled: verify error behavior | Smoke test report | TODO | P1.4.9, docs/expr/09 |
-| **P6.2.6** | Test non-STRICT mode: verify warning behavior | Smoke test report | TODO | P1.4.10, docs/expr/09 |
+| **P6.2.1** | Compile sample PubMed expression and validate compiled params | Smoke test report | DONE | P6.1.1, docs/expr/09 §9.1 |
+| **P6.2.2** | Compile sample EPMC expression and validate compiled params | Smoke test report | DONE | P6.1.2, docs/expr/09 §9.1 |
+| **P6.2.3** | Compile sample Crossref expression and validate compiled params | Smoke test report | DONE | P6.1.3, docs/expr/09 §9.1 |
+| **P6.2.4** | Test with stubbed provider endpoints (verify query/params format) | Smoke test report | DONE | P6.2.1-P6.2.3, docs/expr/09 §9.1 |
+| **P6.2.5** | Test STRICT mode enabled: verify error behavior | Smoke test report | DONE | P1.4.9, docs/expr/09 |
+| **P6.2.6** | Test non-STRICT mode: verify warning behavior | Smoke test report | DONE | P1.4.10, docs/expr/09 |
 
 ### P6.3 Observability Validation
 
@@ -297,7 +297,7 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 - **Phase 5 (Documentation)**: 8 tasks
 - **Phase 6 (Rollout)**: 14 tasks
 
-**Current Status**: 59 TODO, 0 IN_PROGRESS, 73 DONE, 0 BLOCKED
+**Current Status**: 53 TODO, 0 IN_PROGRESS, 79 DONE, 0 BLOCKED
 
 ---
 
@@ -305,11 +305,11 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 Update this section as tasks are completed:
 
-**Last Updated**: 2025-10-17 18:40
-**Completed Tasks**: 81 / 132 (61.4%)
+**Last Updated**: 2025-10-17 20:03
+**Completed Tasks**: 87 / 132 (65.9%)
 **Current Phase**: Phase 6 - Rollout & Smoke
-**Current Milestone**: Phase 6.2 Smoke Testing Harness
-**Next Milestone**: Phase 6.2 Execute Smoke Suite (RUN_SMOKE=1)
+**Current Milestone**: Phase 6.3 Observability Validation
+**Next Milestone**: Phase 6.3.1-6.3.4 Logs & Metrics Checks
 
 ---
 
@@ -328,6 +328,7 @@ Update this section as tasks are completed:
 - **2025-10-16 20:30**: Phase 2.1 COMPLETE - PubMed seed updated. Fixed PARAMS placeholders to `{{from}}`, `{{to}}`, `{{datetype}}` format (line 117). Added critical `query→term` param map entry (id=900310) for query bridging. All existing mappings verified: `fn_code='PUBMED_DATETYPE'` already present, `wrap_group=1` for IN rule, `TO_EXCLUSIVE_MINUS_1D` transform on `to→maxdate`, pagination mappings complete.
 - **2025-10-16 20:35**: Phase 2.2 COMPLETE - EPMC seed created (V1.1.2__seed_epmc_expr_config.sql). Added EPMC provenance to V1.1.0. Created field dictionary (publication_date, text), capabilities (RANGE/TERM/IN), render rules (QUERY-based for text and date with `FIRST_PDATE` syntax), param map (`query→query`, `limit→pageSize`). Cursor mapping commented for future.
 - **2025-10-16 20:40**: Phase 2.3 COMPLETE - Crossref seed created (V1.1.3__seed_crossref_expr_config.sql). Added CROSSREF provenance to V1.1.0. Created field dictionary (text, reused publication_date), capabilities (RANGE/TERM/IN), render rules (QUERY for text, PARAMS for date filter with `filter` std_key MULTI), param map (`query→query`, `filter→filter`, `limit→rows`, `offset→offset`). Compilation verified successfully (mvn -q -DskipTests compile).
+ - **2025-10-17 20:00**: Phase 6.2 COMPLETE - Added smoke suite (RUN_SMOKE=1). PubMed DATE capability fixed via `V1.1.4__fix_pubmed_entrez_date_kind.sql`, enabling from/to/datetype assertions; Crossref filter join、EPMC query bridging均验证通过。INFO 日志仅输出 queryHash，DEBUG 记录桥接与变换细节。
  - **2025-10-17 18:35**: Phase 6.1 COMPLETE - All seeds applied on dev DB (per user). Added smoke samples and test harness `ExprSmokeTest` (opt-in via `RUN_SMOKE=1`). Enabled DEBUG logs for compiler in `application-dev.yaml`. Added docs: `docs/expr/smoke/SMOKE-TESTS.md`, SQL verification script.
 - **2025-10-16 21:10**: Phase 3.1 adapters refactored to consume provider-named params. PubMed assembler now reads `term` from compiled params, PubMed infra logs hashed provider term, and new EPMC/Crossref assemblers plus request models bind compiled params without manual query/filter construction.
 - **2025-10-16 21:45**: Phase 4.1 renderer unit tests added (P4.1.1–P4.1.7). Covered NOT negation rule selection, PARAM placeholder expansion, PUBMED_DATETYPE fn_code, and SINGLE std_key merge ordering. P4.1.8 (MULTI accumulation) queued next.
