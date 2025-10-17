@@ -154,7 +154,7 @@ Phase 7 (Polish)
 - [ ] T036 [US1] Read patra-registry-infra/README.md, then update infrastructure layer logging with trace context
 - [ ] T037 [US1] Read patra-registry-domain/README.md, then verify domain layer uses plain Logger (no Lombok)
 - [ ] T038 [US1] Implement trace context fallback: generate new trace ID with WARN log when context missing from request in TraceContextFilter
-- [ ] T039 [US1] Test trace context propagation end-to-end in patra-registry integration tests and validate fallback behavior
+- [ ] T039 [US1] Test trace context propagation end-to-end in patra-registry integration tests and validate: (1) trace ID search retrieves complete request chain across all layers, (2) correlation ID filtering distinguishes between different processing batches, (3) exception logs include full stack trace + business operation context, and (4) fallback behavior generates new trace ID with WARN when context missing
 - [ ] T039a [US1] Create ArchUnit tests to verify domain layer purity (no Lombok, no Spring) and @Slf4j usage in adapter/app/infra layers in patra-registry/patra-registry-boot/src/test/java/ to catch architectural violations early
 - [ ] T039b [P] [US1] Create ArchUnit test to verify FR-012 parameterized logging: detect string concatenation in log calls in patra-registry/patra-registry-boot/src/test/java/
 
