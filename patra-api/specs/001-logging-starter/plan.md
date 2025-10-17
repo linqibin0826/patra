@@ -110,7 +110,7 @@ patra-spring-boot-starter-logging/
     │   └── aspect/
     │       └── LoggingAspect.java               # Optional: auto-log entry/exit
     └── resources/
-        ├── META-INF/spring.factories
+        ├── META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
         ├── logback-spring.xml                    # Enhanced pattern layout
         └── application-logging.yml               # Default log levels
 
