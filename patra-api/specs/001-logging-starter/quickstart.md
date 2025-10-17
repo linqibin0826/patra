@@ -673,6 +673,49 @@ public class ApiClient {
 }
 ```
 
+### Pattern 5: Service and Layer Identifiers (FR-015)
+
+All log entries MUST include consistent service and layer identifiers following the canonical format to enable clear service boundary identification in distributed traces.
+
+**Canonical Format**: `[service=<service-name>][layer=<layer-name>]`
+
+**Pattern**: `\[service=[a-z][a-z0-9-]*\]\[layer=(adapter|app|domain|infra)\]`
+
+**Configuration**: Service identifiers are automatically emitted by the logging starter's Logback pattern. Configure in `application.yml`:
+
+```yaml
+spring:
+  application:
+    name: patra-registry  # Becomes [service=patra-registry]
+
+papertrace:
+  logging:
+    layer: adapter  # Becomes [layer=adapter] (auto-detected if not specified)
+```
+
+**Example Log Output**:
+```
+2025-10-17T10:23:45.123+08:00 INFO [patra-registry-boot] [http-nio-8080-exec-1] [traceId=abc123][correlationId=xyz789][service=patra-registry][layer=adapter] c.p.r.a.ProvenanceController : Fetching provenance: source=PubMed
+```
+
+**Valid Service Names**:
+- `patra-registry`
+- `patra-ingest`
+- `patra-gateway`
+- Format: lowercase, alphanumeric with hyphens, must start with letter
+
+**Valid Layer Names**:
+- `adapter` - Controllers, Jobs, Message Listeners
+- `app` - Orchestrators, Use Case coordinators
+- `domain` - Pure Java business logic (rare logging)
+- `infra` - Repositories, External API clients
+
+**Anti-Pattern** (inconsistent naming):
+```
+❌ [service=PatraRegistry][layer=controller]  # Wrong: camelCase, non-standard layer
+❌ [service=registry][layer=web]              # Wrong: missing prefix, non-standard layer
+```
+
 ---
 
 ## Troubleshooting

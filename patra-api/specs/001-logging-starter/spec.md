@@ -75,7 +75,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 ### Edge Cases
 
 - What happens when log volume exceeds storage capacity or ingestion rate limits?
-  - System should implement log sampling or rate limiting for high-frequency events (e.g., DEBUG logs in tight loops)
+  - System should implement log sampling or rate limiting for high-frequency events (>100 logs/sec, e.g., DEBUG logs in tight loops)
   - Critical ERROR and WARN logs must never be dropped
 
 - How does the system handle logging when external logging infrastructure (e.g., log aggregation service) is unavailable?
@@ -94,7 +94,7 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 ### Functional Requirements
 
-- **FR-001**: System MUST define five distinct log levels with clear usage guidelines documented in `docs/logging/log-level-guidelines.md`: ERROR (system failures requiring immediate attention), WARN (recoverable issues or degraded functionality), INFO (key business events and state changes), DEBUG (detailed processing flow for troubleshooting), TRACE (fine-grained diagnostics including variable states)
+- **FR-001**: System MUST define five distinct log levels with clear usage guidelines documented in `docs/logging/log-level-guidelines.md`: ERROR (system failures requiring immediate attention), WARN (recoverable issues or degraded functionality), INFO (key business events and state changes), DEBUG (detailed processing flow for troubleshooting), TRACE (fine-grained diagnostics including variable states). Guidelines MUST include: (1) decision tree for level selection, (2) code examples for each level and layer, (3) anti-patterns to avoid (e.g., logging in tight loops, sensitive data without sanitization)
 
 - **FR-002**: All log entries MUST include structured context containing: timestamp (ISO-8601 format), log level, logger name (fully qualified class name), thread name, trace ID, correlation ID, and message
 
@@ -112,7 +112,15 @@ A developer adds new features or modifies existing code and needs clear guidelin
 
 - **FR-009**: All authentication and authorization events MUST be logged at appropriate levels: successful authentication (INFO), failed authentication (WARN), authorization failures (WARN), security violations (ERROR)
 
-- **FR-010**: Key business operations MUST be logged with sufficient context including: batch processing start/end with counts, data ingestion results with success/failure tallies, parsing results with validation errors, and provenance updates with affected records. **Key operations are defined as**: (1) Operations modifying >100 records, (2) External API calls to third-party services, (3) Authentication/authorization events, (4) Scheduled job executions, (5) Message queue publishing/consumption, (6) Critical business state transitions (e.g., batch status changes, provenance updates)
+- **FR-010**: Key business operations MUST be logged with sufficient context including: batch processing start/end with counts, data ingestion results with success/failure tallies, parsing results with validation errors, and provenance updates with affected records.
+
+  **Key operations are defined as**:
+  1. Operations modifying >100 records
+  2. External API calls to third-party services
+  3. Authentication/authorization events
+  4. Scheduled job executions
+  5. Message queue publishing/consumption
+  6. Critical business state transitions (e.g., batch status changes, provenance updates)
 
 - **FR-011**: System MUST support dynamic log level configuration per Java package (e.g., `com.papertrace.registry.adapter`, `com.papertrace.ingest.app`) without requiring application restart
 
