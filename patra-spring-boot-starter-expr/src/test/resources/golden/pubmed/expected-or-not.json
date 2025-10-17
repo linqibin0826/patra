@@ -1,0 +1,6 @@
+{
+  "query": "\"cancer\"[TIAB] AND (\"therapy\"[TIAB] OR \"surgery\"[TIAB])",
+  "params": { "term": "\"cancer\"[TIAB] AND (\"therapy\"[TIAB] OR \"surgery\"[TIAB])" },
+  "warnings": ["W-NOT-SKIPPED"],
+  "errors": []
+}

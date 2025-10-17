@@ -1,0 +1,16 @@
+{
+  "and": [
+    { "term": { "field": "tiab", "value": "ai", "match": "PHRASE" } },
+    {
+      "or": [
+        { "term": { "field": "tiab", "value": "ml", "match": "PHRASE" } },
+        {
+          "and": [
+            { "term": { "field": "tiab", "value": "cv", "match": "PHRASE" } },
+            { "not": { "term": { "field": "tiab", "value": "survey", "match": "PHRASE" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

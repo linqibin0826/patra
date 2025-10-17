@@ -1,0 +1,7 @@
+{
+  "and": [
+    { "term": { "field": "text", "value": "genomics", "match": "ANY" } },
+    { "term": { "field": "facet", "value": "open_access", "match": "ANY" } },
+    { "term": { "field": "facet", "value": "has_full_text", "match": "ANY" } }
+  ]
+}

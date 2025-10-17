@@ -1,0 +1,6 @@
+{
+  "query": "\"ai\"[TIAB] AND (\"ml\"[TIAB] OR (\"cv\"[TIAB] AND \"survey\"[TIAB]))",
+  "params": { "term": "\"ai\"[TIAB] AND (\"ml\"[TIAB] OR (\"cv\"[TIAB] AND \"survey\"[TIAB]))" },
+  "warnings": ["W-NOT-SKIPPED"],
+  "errors": []
+}

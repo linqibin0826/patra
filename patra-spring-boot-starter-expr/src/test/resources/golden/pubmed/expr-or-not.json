@@ -1,0 +1,11 @@
+{
+  "and": [
+    { "term": { "field": "tiab", "value": "cancer", "match": "PHRASE" } },
+    {
+      "or": [
+        { "term": { "field": "tiab", "value": "therapy", "match": "PHRASE" } },
+        { "not": { "term": { "field": "tiab", "value": "surgery", "match": "PHRASE" } } }
+      ]
+    }
+  ]
+}

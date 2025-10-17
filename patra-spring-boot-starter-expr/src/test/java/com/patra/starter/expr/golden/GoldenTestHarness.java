@@ -32,8 +32,12 @@ import com.patra.starter.expr.compiler.transform.ToExclusiveMinus1DTransform;
 import com.patra.starter.expr.compiler.transform.TransformRegistry;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -72,6 +76,85 @@ class GoldenTestHarness {
   }
 
   @Test
+  @DisplayName("Golden Coverage — std_keys/rules/codes summary (stdout)")
+  void golden_coverage_report() throws Exception {
+    Map<String, Coverage> byProvider = new HashMap<>();
+    for (String provider : List.of("pubmed", "epmc", "crossref")) {
+      Coverage cov = runCoverageForProvider(provider);
+      byProvider.put(provider, cov);
+    }
+    System.out.println("===== Golden Coverage Summary =====");
+    byProvider.forEach(
+        (prov, cov) -> {
+          System.out.printf(
+              "%s: rulesHit=%d, warnCodes=%s, errCodes=%s, transforms=%s, fns=%s%n",
+              prov, cov.ruleIds.size(), cov.warnCodes, cov.errCodes, cov.transforms, cov.functions);
+        });
+  }
+
+  private Coverage runCoverageForProvider(String provider) throws Exception {
+    ProvenanceSnapshot snapshot = loadSnapshot(provider + "/snapshot.json");
+    DefaultExprCompiler compiler = compiler(snapshot);
+
+    Set<String> ruleIds = new HashSet<>();
+    Set<String> warnCodes = new HashSet<>();
+    Set<String> errCodes = new HashSet<>();
+    Set<String> transforms =
+        snapshot.apiParameterMap().values().stream()
+            .map(ProvenanceSnapshot.ApiParameter::transformCode)
+            .filter(Objects::nonNull)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toSet());
+    Set<String> functions =
+        snapshot.renderRules().stream()
+            .map(ProvenanceSnapshot.RenderRule::functionCode)
+            .filter(Objects::nonNull)
+            .filter(s -> !s.isBlank())
+            .collect(Collectors.toSet());
+
+    for (String name :
+        List.of(
+            "phrase-date",
+            "strict-mode-error",
+            "or-not",
+            "deep-or-not",
+            "date-query",
+            "multi-join",
+            "filter",
+            "warning-codes")) {
+      String exprPath = String.format("%s/expr-%s.json", provider, name);
+      String expectedPath = String.format("%s/expected-%s.json", provider, name);
+      try {
+        Expr expr = loadExpr(exprPath);
+        Expected expected = loadExpected(expectedPath);
+        CompileRequest req =
+            CompileRequestBuilder.of(expr, ProvenanceCode.valueOf(provider.toUpperCase()))
+                .withStrict(false)
+                .withTraceEnabled(true)
+                .build();
+        CompileResult out = compiler.compile(req);
+        if (out.trace() != null) {
+          for (com.patra.starter.expr.compiler.model.RenderTrace.Hit h : out.trace().hits()) {
+            ruleIds.add(h.ruleId());
+          }
+        }
+        warnCodes.addAll(expected.warnings);
+        errCodes.addAll(expected.errors);
+      } catch (Exception ignore) {
+        // skip missing pairs
+      }
+    }
+    return new Coverage(ruleIds, warnCodes, errCodes, transforms, functions);
+  }
+
+  private record Coverage(
+      Set<String> ruleIds,
+      Set<String> warnCodes,
+      Set<String> errCodes,
+      Set<String> transforms,
+      Set<String> functions) {}
+
+  @Test
   @DisplayName("PubMed — phrase + date (deterministic query/params)")
   void pubmed_phrase_date() throws Exception {
     runCase("pubmed", "expr-phrase-date.json", "expected-phrase-date.json", false);
@@ -81,6 +164,18 @@ class GoldenTestHarness {
   @DisplayName("PubMed — STRICT mode error (NOT unsupported)")
   void pubmed_strict_error() throws Exception {
     runCase("pubmed", "expr-strict-mode-error.json", "expected-strict-mode-error.json", true);
+  }
+
+  @Test
+  @DisplayName("PubMed — OR + NOT (non-STRICT, NOT skipped with warning)")
+  void pubmed_or_not_non_strict() throws Exception {
+    runCase("pubmed", "expr-or-not.json", "expected-or-not.json", false);
+  }
+
+  @Test
+  @DisplayName("PubMed — Deep OR/NOT nesting (3+ levels, non-STRICT)")
+  void pubmed_deep_or_not_non_strict() throws Exception {
+    runCase("pubmed", "expr-deep-or-not.json", "expected-deep-or-not.json", /* strict= */ false);
   }
 
   @Test
@@ -99,6 +194,12 @@ class GoldenTestHarness {
   @DisplayName("EPMC — date in query")
   void epmc_date_query() throws Exception {
     runCase("epmc", "expr-date-query.json", "expected-date-query.json", false);
+  }
+
+  @Test
+  @DisplayName("EPMC — MULTI join transform → single provider param value")
+  void epmc_multi_join() throws Exception {
+    runCase("epmc", "expr-multi-join.json", "expected-multi-join.json", false);
   }
 
   private void runCase(String provider, String exprFile, String expectedFile, boolean strict)
