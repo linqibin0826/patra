@@ -1,4 +1,2 @@
-# Phase 1: Auto-configuration placeholder
-# Auto-configuration classes will be registered here in Phase 2
-# Format: Fully qualified class name, one per line
-# Example: com.patra.starter.logging.autoconfigure.LoggingAutoConfiguration
+# Phase 2: Foundational auto-configuration
+com.patra.starter.logging.autoconfigure.LoggingAutoConfiguration
