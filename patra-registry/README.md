@@ -464,6 +464,48 @@ mvn spring-boot:run
 
 ---
 
+## 📦 Expression Seeds Management
+
+All expression behavior (fields/capabilities/rules/param maps) is delivered via Flyway seed SQL. Follow the checklist below when adding/updating providers.
+
+Files (examples):
+- `patra-registry-infra/src/main/resources/db/migration/V1.1.1__seed_pubmed_expr_config.sql`
+- `patra-registry-infra/src/main/resources/db/migration/V1.1.2__seed_epmc_expr_config.sql`
+- `patra-registry-infra/src/main/resources/db/migration/V1.1.3__seed_crossref_expr_config.sql`
+
+Principles:
+- No schema change required; seeds are safe to rewrite in a clean dev DB.
+- Prefer provider‑agnostic std_keys in rules; map to provider params via `reg_prov_api_param_map`.
+- Use consistent `effective_from` timestamps; leave `effective_until` NULL.
+
+Minimum param maps to include:
+- PubMed: `query→term`, `from→mindate`, `to→maxdate (TO_EXCLUSIVE_MINUS_1D)`, `datetype→datetype`, `limit→retmax`, `offset→retstart`
+- EPMC: `query→query`, `limit→pageSize`
+- Crossref: `query→query`, `filter→filter`, `limit→rows`, `offset→offset`
+
+Verification (manual SQL):
+```sql
+-- Param map has query mapping for PubMed
+SELECT std_key, provider_param_name, transform_code
+FROM   reg_prov_api_param_map
+WHERE  provenance_id = (SELECT id FROM reg_provenance WHERE code='PUBMED')
+  AND  std_key IN ('query','from','to','datetype');
+
+-- Render rules for PubMed date PARAMS
+SELECT field_key, op_code, emit_type_code, params, fn_code
+FROM   reg_prov_expr_render_rule
+WHERE  provenance_id = (SELECT id FROM reg_provenance WHERE code='PUBMED')
+  AND  field_key='entrez_date' AND op_code='RANGE';
+```
+
+STRICT Mode Readiness:
+- Run compiler tests with `expr.strict=true` to ensure all fn_code/transform_code exist.
+- Keep MULTI repeat disabled (`expr.multi.repeat-enabled=false`) unless repeated serialization is verified end‑to‑end.
+
+More details: `docs/expr/07-migration-plan.md` and `docs/expr/12-provider-checklist.md`.
+
+---
+
 ## 🔗 Related Documentation
 
 - [Main README](../README.md)

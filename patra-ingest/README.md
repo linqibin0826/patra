@@ -348,6 +348,42 @@ taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
 
 ## 🔌 Cross-Module Integration
 
+### Expression Compiler Integration (Adapter Binding)
+
+`patra-ingest` compiles expressions at execution time and binds the compiled output (provider‑named params) directly into provider request models. No manual string concatenation.
+
+Flow:
+- `ExecutionContextLoader` restores snapshots (Task → Slice → Plan) and compiles the expression via `ExpressionCompilerPort`.
+- The compiled result provides:
+  - `compiledQuery` — aggregated boolean query string (bridged via `std_key=query`)
+  - `compiledParams` — provider‑named params map (e.g., PubMed `mindate/maxdate/datetype`, Crossref `query/filter`)
+- Provider adapters/assemblers read only from `compiledParams` (and `compiledQuery` when appropriate).
+
+Example (PubMed count planning):
+
+```java
+// ExecutionContextLoaderImpl.loadContext(...) builds the context
+return new ExecutionContext(
+    taskId, runId, task.getProvenanceCode(), task.getOperationCode(),
+    configSnapshot,
+    task.getExprHash(),
+    compilationResult.query(),        // compiledQuery (bridged via std_key=query)
+    compilationResult.params(),       // compiledParams (provider-named)
+    compilationResult.normalizedExpression(),
+    windowSpec);
+
+// PubmedBatchPlanner uses compiled outputs
+int total = searchPort.estimateCount(compiledQuery, compiledParams, configSnapshot);
+
+// Infra adapter builds request from provider-named params only
+ESearchRequest request = PubMedESearchRequestAssembler.buildCount(compiledParams);
+```
+
+Rules of engagement:
+- Do not reconstruct `query`/`filter` in adapters — always use compiler output.
+- MULTI std_keys use join transforms by default. Repeated params require enabling `expr.multi.repeat-enabled=true` (not recommended by default).
+- Respect STRICT mode in prod (`expr.strict=true`) to catch incomplete seed configs early.
+
 ### Calling patra-registry
 
 **Port Interface**: [`PatraRegistryPort`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/PatraRegistryPort.java)
