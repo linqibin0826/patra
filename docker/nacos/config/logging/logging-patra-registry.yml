@@ -21,32 +21,32 @@ logging:
     # Adapter layer - HTTP controllers, REST endpoints, scheduled jobs
     # Default: INFO (key business events like batch start/complete)
     # Troubleshooting: DEBUG (detailed request/response, validation errors)
-    com.papertrace.registry.adapter: INFO
+    com.patra.registry.adapter: INFO
 
     # Application layer - Orchestrators, use case coordination
     # Default: INFO (business operation start/complete with context)
     # Troubleshooting: DEBUG (orchestration flow, cross-aggregate operations)
-    com.papertrace.registry.app: INFO
+    com.patra.registry.app: INFO
 
     # Infrastructure layer - Repositories, MyBatis mappers, external API clients
     # Default: INFO (external API calls with FR-006 context)
     # Troubleshooting: DEBUG (database queries, API response details)
-    com.papertrace.registry.infra: INFO
+    com.patra.registry.infra: INFO
 
     # Domain layer - Business logic (pure Java, no framework dependencies)
     # Default: WARN (domain events, validation failures)
     # Troubleshooting: DEBUG (business rule evaluation, state transitions)
     # Note: Domain layer uses plain SLF4J Logger (no Lombok @Slf4j)
-    com.papertrace.registry.domain: WARN
+    com.patra.registry.domain: WARN
 
     # Example: Enable DEBUG logging for specific package during troubleshooting
     # Uncomment to debug provenance batch processing:
-    # com.papertrace.registry.app.batch: DEBUG
-    # com.papertrace.registry.infra.provenance: DEBUG
+    # com.patra.registry.app.batch: DEBUG
+    # com.patra.registry.infra.provenance: DEBUG
 
     # Example: Enable TRACE logging for fine-grained diagnostics
     # Uncomment to trace provenance selection logic:
-    # com.papertrace.registry.app.provenance.select: TRACE
+    # com.patra.registry.app.provenance.select: TRACE
 
     # MyBatis Plus - database query logging for patra-registry
     # Default: WARN (errors only)
@@ -60,26 +60,26 @@ logging:
 # Dynamic Log Level Use Cases (FR-011):
 #
 # 1. Production Issue - External API Timeout:
-#    Set com.papertrace.registry.infra.client: DEBUG
+#    Set com.patra.registry.infra.client: DEBUG
 #    → Logs detailed HTTP request/response, retry attempts (FR-006)
 #
 # 2. Batch Processing Failure:
-#    Set com.papertrace.registry.app.batch: DEBUG
-#    Set com.papertrace.registry.adapter.job: DEBUG
+#    Set com.patra.registry.app.batch: DEBUG
+#    Set com.patra.registry.adapter.job: DEBUG
 #    → Logs batch start/complete, record counts, error details (FR-010)
 #
 # 3. Trace Context Missing:
-#    Set com.papertrace.starter.logging.filter.TraceContextFilter: DEBUG
+#    Set com.patra.starter.logging.filter.TraceContextFilter: DEBUG
 #    → Logs trace ID generation, MDC population, missing context warnings
 #
 # 4. Database Query Performance:
 #    Set com.baomidou.mybatisplus.core.mapper: DEBUG
-#    Set com.papertrace.registry.infra: DEBUG
+#    Set com.patra.registry.infra: DEBUG
 #    → Logs SQL statements, execution time, affected rows (FR-007)
 #
 # 5. Authentication/Authorization Issues:
 #    Set org.springframework.security: DEBUG
-#    Set com.papertrace.starter.logging.security: DEBUG
+#    Set com.patra.starter.logging.security: DEBUG
 #    → Logs auth events with sanitized details (FR-009)
 
 # Performance Considerations:

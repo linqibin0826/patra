@@ -16,7 +16,7 @@
 # Dynamic Log Level Changes (FR-011, SC-007):
 # - Changes take effect within 60 seconds via Nacos push notification
 # - No application restart required
-# - Per-package configuration supported (e.g., com.papertrace.registry.adapter: DEBUG)
+# - Per-package configuration supported (e.g., com.patra.registry.adapter: DEBUG)
 
 logging:
   level:
@@ -47,13 +47,13 @@ logging:
 
     # Papertrace application packages - default to INFO
     # Service-specific overrides can be defined in logging-{service}.yml
-    com.papertrace: INFO
+    com.patra: INFO
 
     # Papertrace common utilities (logging, sanitization, trace context)
-    com.papertrace.common.logging: INFO
+    com.patra.common.logging: INFO
 
     # Papertrace logging starter (filters, interceptors, aspects)
-    com.papertrace.starter.logging: INFO
+    com.patra.starter.logging: INFO
 
 # Log pattern configuration (applied via logback-spring.xml)
 # Note: Actual pattern is defined in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
@@ -78,7 +78,7 @@ logging:
 # Log sampling for high-frequency events (Edge Case Handling)
 # - Applied automatically for DEBUG/TRACE logs exceeding 100 logs/sec
 # - ERROR/WARN logs never sampled
-# - Configuration: com.papertrace.starter.logging.filter.SamplingFilter
+# - Configuration: com.patra.starter.logging.filter.SamplingFilter
 
 # Sensitive data sanitization (FR-008, SC-006)
 # - Automatic sanitization for: passwords, API tokens, auth headers, PII

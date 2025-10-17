@@ -98,13 +98,13 @@ class DynamicLoggingConfigurationTest {
   @DisplayName("Should update package-specific logger level from Nacos config (FR-011)")
   void shouldUpdatePackageLoggerLevel() {
     // Given: Nacos config with package-specific level
-    addLoggingProperty("logging.level.com.papertrace.registry.adapter", "DEBUG");
+    addLoggingProperty("logging.level.com.patra.registry.adapter", "DEBUG");
 
     // When: EnvironmentChangeEvent is fired
-    fireEnvironmentChangeEvent("logging.level.com.papertrace.registry.adapter");
+    fireEnvironmentChangeEvent("logging.level.com.patra.registry.adapter");
 
     // Then: Package logger level should be updated to DEBUG
-    Logger logger = loggerContext.getLogger("com.papertrace.registry.adapter");
+    Logger logger = loggerContext.getLogger("com.patra.registry.adapter");
     assertThat(logger.getLevel()).isEqualTo(Level.DEBUG);
   }
 
@@ -113,24 +113,23 @@ class DynamicLoggingConfigurationTest {
   void shouldUpdateMultipleLoggerLevels() {
     // Given: Nacos config with multiple logger levels
     addLoggingProperty("logging.level.root", "WARN");
-    addLoggingProperty("logging.level.com.papertrace.registry.adapter", "DEBUG");
-    addLoggingProperty("logging.level.com.papertrace.registry.app", "INFO");
-    addLoggingProperty("logging.level.com.papertrace.registry.infra", "TRACE");
+    addLoggingProperty("logging.level.com.patra.registry.adapter", "DEBUG");
+    addLoggingProperty("logging.level.com.patra.registry.app", "INFO");
+    addLoggingProperty("logging.level.com.patra.registry.infra", "TRACE");
 
     // When: EnvironmentChangeEvent is fired for all keys
     fireEnvironmentChangeEvent(
         "logging.level.root",
-        "logging.level.com.papertrace.registry.adapter",
-        "logging.level.com.papertrace.registry.app",
-        "logging.level.com.papertrace.registry.infra");
+        "logging.level.com.patra.registry.adapter",
+        "logging.level.com.patra.registry.app",
+        "logging.level.com.patra.registry.infra");
 
     // Then: All logger levels should be updated
     assertThat(loggerContext.getLogger(Logger.ROOT_LOGGER_NAME).getLevel()).isEqualTo(Level.WARN);
-    assertThat(loggerContext.getLogger("com.papertrace.registry.adapter").getLevel())
+    assertThat(loggerContext.getLogger("com.patra.registry.adapter").getLevel())
         .isEqualTo(Level.DEBUG);
-    assertThat(loggerContext.getLogger("com.papertrace.registry.app").getLevel())
-        .isEqualTo(Level.INFO);
-    assertThat(loggerContext.getLogger("com.papertrace.registry.infra").getLevel())
+    assertThat(loggerContext.getLogger("com.patra.registry.app").getLevel()).isEqualTo(Level.INFO);
+    assertThat(loggerContext.getLogger("com.patra.registry.infra").getLevel())
         .isEqualTo(Level.TRACE);
   }
 
@@ -138,13 +137,13 @@ class DynamicLoggingConfigurationTest {
   @DisplayName("Should handle invalid log level gracefully (WARN logged, no crash)")
   void shouldHandleInvalidLogLevelGracefully() {
     // Given: Nacos config with invalid log level
-    addLoggingProperty("logging.level.com.papertrace.registry.adapter", "INVALID_LEVEL");
+    addLoggingProperty("logging.level.com.patra.registry.adapter", "INVALID_LEVEL");
 
     // When: EnvironmentChangeEvent is fired
-    fireEnvironmentChangeEvent("logging.level.com.papertrace.registry.adapter");
+    fireEnvironmentChangeEvent("logging.level.com.patra.registry.adapter");
 
     // Then: Logger level should remain unchanged (null = inherit from parent)
-    Logger logger = loggerContext.getLogger("com.papertrace.registry.adapter");
+    Logger logger = loggerContext.getLogger("com.patra.registry.adapter");
     assertThat(logger.getLevel()).isNull(); // Not updated due to invalid level
   }
 
@@ -152,7 +151,7 @@ class DynamicLoggingConfigurationTest {
   @DisplayName("Should ignore non-logging property changes")
   void shouldIgnoreNonLoggingPropertyChanges() {
     // Given: Initial logger level = INFO
-    Logger logger = loggerContext.getLogger("com.papertrace.registry.adapter");
+    Logger logger = loggerContext.getLogger("com.patra.registry.adapter");
     logger.setLevel(Level.INFO);
 
     // When: EnvironmentChangeEvent with non-logging keys
@@ -192,22 +191,22 @@ class DynamicLoggingConfigurationTest {
   @DisplayName("Should update logger level dynamically (simulate runtime config change)")
   void shouldUpdateLoggerLevelDynamically() {
     // Given: Initial logger level = INFO
-    addLoggingProperty("logging.level.com.papertrace.registry.adapter", "INFO");
-    fireEnvironmentChangeEvent("logging.level.com.papertrace.registry.adapter");
+    addLoggingProperty("logging.level.com.patra.registry.adapter", "INFO");
+    fireEnvironmentChangeEvent("logging.level.com.patra.registry.adapter");
 
-    Logger logger = loggerContext.getLogger("com.papertrace.registry.adapter");
+    Logger logger = loggerContext.getLogger("com.patra.registry.adapter");
     assertThat(logger.getLevel()).isEqualTo(Level.INFO);
 
     // When: Nacos config updated to DEBUG (simulating runtime change)
-    addLoggingProperty("logging.level.com.papertrace.registry.adapter", "DEBUG");
-    fireEnvironmentChangeEvent("logging.level.com.papertrace.registry.adapter");
+    addLoggingProperty("logging.level.com.patra.registry.adapter", "DEBUG");
+    fireEnvironmentChangeEvent("logging.level.com.patra.registry.adapter");
 
     // Then: Logger level should be updated to DEBUG immediately (SC-007: <60s)
     assertThat(logger.getLevel()).isEqualTo(Level.DEBUG);
 
     // When: Nacos config updated back to INFO
-    addLoggingProperty("logging.level.com.papertrace.registry.adapter", "INFO");
-    fireEnvironmentChangeEvent("logging.level.com.papertrace.registry.adapter");
+    addLoggingProperty("logging.level.com.patra.registry.adapter", "INFO");
+    fireEnvironmentChangeEvent("logging.level.com.patra.registry.adapter");
 
     // Then: Logger level should revert to INFO
     assertThat(logger.getLevel()).isEqualTo(Level.INFO);
@@ -217,13 +216,13 @@ class DynamicLoggingConfigurationTest {
   @DisplayName("Should handle case-insensitive log level values")
   void shouldHandleCaseInsensitiveLogLevels() {
     // Given: Nacos config with lowercase log level
-    addLoggingProperty("logging.level.com.papertrace.test", "debug");
+    addLoggingProperty("logging.level.com.patra.test", "debug");
 
     // When: EnvironmentChangeEvent is fired
-    fireEnvironmentChangeEvent("logging.level.com.papertrace.test");
+    fireEnvironmentChangeEvent("logging.level.com.patra.test");
 
     // Then: Logger level should be set correctly (Logback is case-insensitive)
-    Logger logger = loggerContext.getLogger("com.papertrace.test");
+    Logger logger = loggerContext.getLogger("com.patra.test");
     assertThat(logger.getLevel()).isEqualTo(Level.DEBUG);
   }
 
