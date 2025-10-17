@@ -484,6 +484,6 @@ curl -X POST http://localhost:8080/actuator/loggers/com.papertrace.ingest \
 
 ## Related Documents
 
-- [schemas/logging-config.schema.yml](./schemas/logging-config.schema.yml) - Nacos configuration schema
+- [schemas/logging-config.schema.yml](../03-schemas/logging-config.schema.yml) - Nacos configuration schema
 - [utility-api.md](./utility-api.md) - Java API specifications
 - [mdc-fields-reference.md](./mdc-fields-reference.md) - MDC field standards

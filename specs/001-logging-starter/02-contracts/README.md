@@ -32,9 +32,12 @@ Auto-configuration classes and properties for Spring Boot starter integration
 - `integrations/trace-context-filter.md` - HTTP boundary filter contract for trace context
 - `integrations/feign-interceptor-contract.md` - Feign client propagation and logging contract
 - `integrations/sanitization-aspect.md` - Optional AOP-based sanitization contract (AUTO mode)
-- `schemas/logging-config.schema.yml` - JSON Schema for Nacos logging config
-- `schemas/README.md` - Schema usage, precedence, and validation
-- `schemas/examples/` - Validated example YAMLs (common/service/env)
+
+## Related Files
+
+- [../03-schemas/logging-config.schema.yml](../03-schemas/logging-config.schema.yml) — JSON Schema for Nacos logging config
+- [../03-schemas/README.md](../03-schemas/README.md) — Schema usage, precedence, and validation
+- [../03-schemas/examples/](../03-schemas/examples/) — Validated YAML examples (common/service/env)
 
 ---
 
@@ -54,8 +57,8 @@ These contracts follow semantic versioning:
 Developers integrating the new logging system should:
 1. Read `utility-api.md` to understand available logging utilities
 2. Check `mdc-fields-reference.md` for standard trace context fields and remapping
+
 3. Review `spring-boot-properties.md` for configuration options
-4. Validate Nacos YAML against `schemas/logging-config.schema.yml` and use examples under `schemas/examples/`
 
 ---
 
