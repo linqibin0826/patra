@@ -58,7 +58,7 @@ papertrace:
   logging:
     sanitization:
       enabled: true  # Enable/disable sensitive data sanitization
-      mode: AUTO  # AUTO | MANUAL | DISABLED
+      mode: MANUAL  # AUTO | MANUAL | DISABLED
       patterns:
         - field-name:password
         - field-name:token
@@ -79,7 +79,7 @@ papertrace:
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `papertrace.logging.sanitization.enabled` | Boolean | `true` | Enable sanitization |
-| `papertrace.logging.sanitization.mode` | Enum | `AUTO` | AUTO (aspect-based), MANUAL (explicit calls), DISABLED |
+| `papertrace.logging.sanitization.mode` | Enum | `MANUAL` | AUTO (aspect-based), MANUAL (explicit calls), DISABLED |
 | `papertrace.logging.sanitization.patterns` | List<String> | See below | Predefined patterns to enable |
 | `papertrace.logging.sanitization.custom-patterns` | List<Pattern> | Empty | Custom sanitization patterns |
 | `papertrace.logging.sanitization.performance.cache-results` | Boolean | `true` | Cache sanitized messages |
