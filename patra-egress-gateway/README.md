@@ -351,6 +351,23 @@ log.debug("Request headers: {}", maskedHeaders);
 // Output: {"Authorization": "***MASKED***", "Content-Type": "application/json"}
 ```
 
+#### 🪵 Logging (Starter v1.0)
+
+`patra-egress-gateway` adopts `patra-spring-boot-starter-logging`:
+- Trace context MDC: `traceId`/`correlationId` automatically populated
+- Sanitization: mask sensitive headers/bodies via `LogSanitizer`
+- Dynamic levels via Nacos
+
+Nacos example (`logging-patra-egress-gateway.yml`):
+```yaml
+logging.level:
+  root: INFO
+  com.patra.starter.logging.interceptor: DEBUG
+  com.patra.egress.gateway.adapter: DEBUG
+```
+
+References: docs/logging/operations-guide.md, specs/001-logging-starter/quickstart.md
+
 ---
 
 ## 🔒 Security
