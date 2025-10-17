@@ -8,3 +8,14 @@ com.patra.starter.logging.autoconfigure.DynamicLoggingConfiguration
 
 # Phase 5: Gateway Trace Context (WebFlux)
 com.patra.starter.logging.autoconfigure.GatewayTraceContextAutoConfiguration
+
+# Phase 6: Sensitive Data Sanitization (US4)
+com.patra.starter.logging.autoconfigure.SanitizationAutoConfiguration
+
+# Phase 6: Database Failure Logging (US4 - T069-T070)
+# Conditionally activated when MyBatis-Plus is on classpath
+com.patra.starter.logging.autoconfigure.DbFailureLoggingAutoConfiguration
+
+# Phase 6: Security Event Logging (US4 - T071-T072)
+# Conditionally activated when Spring Security is on classpath
+com.patra.starter.logging.autoconfigure.SecurityEventLoggingAutoConfiguration

@@ -114,6 +114,30 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Phase 6: Database failure logging (T069-T070) -->
+        <!-- MyBatis-Plus Extension (optional - for DbFailureLoggingInterceptor) -->
+        <!-- Note: mybatis-plus-extension includes mybatis-plus-core transitively -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-extension</artifactId>
+            <version>3.5.5</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Phase 6: Security event logging (T071-T072) -->
+        <!-- Spring Security (optional - for AuthenticationEventLogger) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
