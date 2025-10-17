@@ -20,6 +20,12 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
+        <!-- Phase 5: Enhanced logging with trace context (T054) -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-logging</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-ingest-api</artifactId>
