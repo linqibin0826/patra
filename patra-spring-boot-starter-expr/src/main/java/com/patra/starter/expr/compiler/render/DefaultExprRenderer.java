@@ -190,21 +190,39 @@ public class DefaultExprRenderer implements ExprRenderer {
     }
 
     if (node instanceof Not notExpr) {
+      Expr child = notExpr.child();
+      boolean compositeChild = child instanceof And || child instanceof Or;
       List<String> notFragments = new ArrayList<>();
       renderNode(
-          notExpr.child(),
+          child,
           snapshot,
           labels,
           RenderContext.NOT,
-          true,
+          !compositeChild,
           notFragments,
           stdKeys,
           warnings,
           hits);
 
       if (!notFragments.isEmpty()) {
-        // NOT fragments should use negated rules; the rule template handles NOT syntax
-        fragments.addAll(notFragments);
+        if (compositeChild) {
+          String inner =
+              notFragments.size() == 1
+                  ? notFragments.getFirst()
+                  : String.join(" AND ", notFragments);
+          String trimmed = inner.trim();
+          if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) {
+            trimmed = "(" + trimmed + ")";
+          }
+          fragments.add("NOT" + trimmed);
+          log.debug(
+              "Rendered NOT composite: childType={}, fragment={}",
+              child.getClass().getSimpleName(),
+              trimmed);
+        } else {
+          // NOT fragments should use negated rules; the rule template handles NOT syntax
+          fragments.addAll(notFragments);
+        }
         log.debug("Rendered NOT with {} fragments", notFragments.size());
       }
       return;

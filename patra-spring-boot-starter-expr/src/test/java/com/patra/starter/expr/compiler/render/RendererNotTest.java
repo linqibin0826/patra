@@ -102,4 +102,21 @@ class RendererNotTest {
     assertThat(outcome.params()).isEmpty();
     assertThat(outcome.warnings()).isEmpty();
   }
+
+  @Test
+  @DisplayName("NOT over AND should wrap composite according to PubMed syntax")
+  void testNotWrapsComposite() {
+    Expr expr =
+        Exprs.not(
+            Exprs.and(
+                List.of(
+                    Exprs.term("title", "cancer", TextMatch.ANY),
+                    Exprs.term("title", "therapy", TextMatch.ANY))));
+
+    ExprRenderer.RenderOutcome outcome = renderer.render(expr, snapshot, false);
+
+    assertThat(outcome.query()).isEqualTo("NOT(cancer[TIAB] AND therapy[TIAB])");
+    assertThat(outcome.params()).isEmpty();
+    assertThat(outcome.warnings()).isEmpty();
+  }
 }
