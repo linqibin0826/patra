@@ -35,7 +35,7 @@ Each item is labeled Blocker / Warning / Suggestion.
 - 02-architecture.md allows “emit warning and skip” when a provider lacks true NOT. Skipping can silently weaken filters (e.g., A AND NOT(B) → A), especially when nested under OR. Recommend a STRICT mode (configurable) that fails compilation or requires an explicit provider‑specific negation template (02-architecture.md §2.7; 06-provider-crossref.md examples).
 
 4) MULTI=repeat path is under‑specified (Warning)
-- Docs prefer join transforms for MULTI but mention a “repeat” strategy later. Repeated param serialization belongs to adapters; until those docs exist, mandate join or disable repeat via feature flag to avoid transport ambiguity (02-architecture.md §2.5; 03-compiler-bridge-internals.md §3.8; doc-qa-report.md §A.5 notes).
+- Docs prefer join transforms for MULTI but mention a “repeat” strategy later. Repeated param serialization belongs to adapters; until those docs exist, mandate join or disable repeat via feature flag to avoid transport ambiguity (02-architecture.md §2.5; 03-compiler-bridge-internals.md §3.8).
 
 5) Param‑count guardrails are advisory only (Suggestion)
 - 03 recommends W‑PARAM‑COUNT‑LIMIT/E‑PARAM‑COUNT‑LIMIT. Define default thresholds and env keys in one place, and add acceptance criteria around them (03-compiler-bridge-internals.md §3.8; 11-acceptance-criteria.md).
@@ -49,12 +49,10 @@ Each item is labeled Blocker / Warning / Suggestion.
 8) Escaping/quoting responsibility (Suggestion)
 - Renderer “handles quoting/escaping” for fragments, but consider adding explicit rules for double‑escaping risk with nested templates or provider‑specific syntaxes (03-compiler-bridge-internals.md notes on quoting; 02-architecture.md renderer responsibilities).
 
-## Cross‑check of doc-qa-report.md “Go” status
-
-- Renderer/Compiler Boundary — Largely justified: invariants consistently restated across 01/02/03/04/05/06 (doc-qa-report.md §A.3). Minor risk remains if code paths consult param maps in the renderer; ensure tests protect this invariant.
-- Observability & Security — Mostly justified but metric name inconsistencies remain (doc-qa-report.md §A.6). Recommend “Pass after fix” once names are unified and label cardinality guidance is finalized.
-- Migration Safety — Reasonable: clean DB assumption, effective_from guidance, rollback notes (07-migration-plan.md; doc-qa-report.md §A.7). Add notes for non‑clean DBs (new seed versions only) — already implied.
-- Golden Tests — Harness design is good; ensure fixtures cover OR/NOT depth, MULTI join, date transforms, and error/warning codes (12-golden-test-harness.md; doc-qa-report.md §A.8).
+- Renderer/Compiler Boundary — Largely justified: invariants consistently restated across 01/02/03/04/05/06. Minor risk remains if code paths consult param maps in the renderer; ensure tests protect this invariant.
+- Observability & Security — Mostly justified but metric name inconsistencies remain. Recommend “Pass after fix” once names are unified and label cardinality guidance is finalized.
+- Migration Safety — Reasonable: clean DB assumption, effective_from guidance, rollback notes (07-migration-plan.md). Add notes for non‑clean DBs (new seed versions only) — already implied.
+- Golden Tests — Harness design is good; ensure fixtures cover OR/NOT depth, MULTI join, date transforms, and error/warning codes (12-golden-test-harness.md).
 - Performance & Limits — Guardrails present: maxQueryLength, perf target <50ms typical (03 internals; 08-testing.md). Consider adding param‑count thresholds to acceptance criteria.
 
 Conclusion on “Go”: With the small adjustments in this review, “Go” becomes justified.
@@ -83,29 +81,10 @@ Observability & Security
 
 Documentation Clarity
 - Add a compact “value lifecycle” diagram showing data shapes at each step of the execution order (03-compiler-bridge-internals.md §3.2.1).
-- Provide a single “Error/Warning Codes → Operator Action” table (codes, severity, message, typical fixes) and reference it from adapter runbooks (03-compiler-bridge-internals.md §3.4; doc-qa-report.md §A.10).
+- Provide a single “Error/Warning Codes → Operator Action” table (codes, severity, message, typical fixes) and reference it from adapter runbooks (03-compiler-bridge-internals.md §3.4).
 
 ## Verdict
 
 ⚠️ Needs adjustments before implementation
 
 The design is close to ready. Resolve the metric naming inconsistencies, harden tie‑breakers, define STRICT mode for NOT/transform/function failures, and gate MULTI repeat behavior. These are small, documentation‑level changes that will significantly reduce integration risk and improve operability. Once addressed, proceed to implementation with the proposed golden tests and observability baselines.
-
-## Addendum — Cross‑Check Against doc-qa-report.md
-
-Summary: All items remain Go after the following documentation‑only fixes are merged. No architectural redesign is required.
-
-- 1) Link & Anchor Integrity — Pass (no anchor moves). See `docs/expr/doc-qa-report.md` §A.1.
-- 2) Terminology & Contracts — Pass after clarifying execution order pointer and deterministic tie‑breakers. See `docs/expr/03-compiler-bridge-internals.md` §3.2.1; `docs/expr/03-compiler-bridge-internals.md` §3.8; `docs/expr/doc-qa-report.md` §A.2.
-- 3) Renderer/Compiler Boundary — Pass. Add test note to prevent renderer from consulting param map. See `docs/expr/doc-qa-report.md` §A.3.
-- 4) Examples Round‑Trip — Pass (validated via goldens). See `docs/expr/12-golden-test-harness.md`; `docs/expr/doc-qa-report.md` §A.4.
-- 5) Provider Checklist Applied — Pass with additions: STRICT and MULTI gating checks. See `docs/expr/12-provider-checklist.md`; `docs/expr/doc-qa-report.md` §A.5.
-- 6) Observability & Security — Pass after unifying metric names/labels across `docs/expr/02-architecture.md`, `docs/expr/08-testing.md`, `docs/expr/09-rollout.md`. See `docs/expr/doc-qa-report.md` §A.6.
-- 7) Migration Safety — Pass (clean DB assumption; new versions on dirty DB). See `docs/expr/07-migration-plan.md`; `docs/expr/doc-qa-report.md` §A.7.
-- 8) Golden Tests — Pass (expand fixtures for warnings/errors, deep OR/NOT, MULTI join). See `docs/expr/12-golden-test-harness.md`; `docs/expr/doc-qa-report.md` §A.8.
-- 9) Performance & Limits — Pass (retain <50ms target; document param‑count thresholds). See `docs/expr/08-testing.md`; `docs/expr/03-compiler-bridge-internals.md` §3.8; `docs/expr/doc-qa-report.md` §A.9.
-- 10) Failure Modes & Operator Action — Pass after adding a single consolidated table and STRICT mode behavior. See `docs/expr/03-compiler-bridge-internals.md` §3.4; `docs/expr/doc-qa-report.md` §A.10.
-- 11) Backwards/Compatibility — Pass; gate MULTI=repeat until adapter serialization is defined. See `docs/expr/02-architecture.md`; `docs/expr/doc-qa-report.md` §A.11.
-- 12) Concurrency/Ordering — Pass after specifying the exact SINGLE collision order: `rule_priority DESC, field_key ASC, op_code ASC, rule_id ASC`. See `docs/expr/03-compiler-bridge-internals.md` §3.8; `docs/expr/07-migration-plan.md`; `docs/expr/doc-qa-report.md` §A.12.
-
-Post‑fix Go/No‑Go: Go remains justified once the above doc updates are merged; mark all items Pass (final) in `docs/expr/doc-qa-report.md` §C.
