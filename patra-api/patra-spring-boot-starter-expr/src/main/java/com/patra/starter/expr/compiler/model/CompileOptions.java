@@ -3,7 +3,7 @@ package com.patra.starter.expr.compiler.model;
 public record CompileOptions(
     boolean strict, int maxQueryLength, String timezone, boolean traceEnabled) {
   public static CompileOptions defaults() {
-    return new CompileOptions(true, 0, "UTC", false);
+    return new CompileOptions(false, 0, "UTC", false);
   }
 
   public CompileOptions withStrict(boolean value) {

@@ -169,6 +169,85 @@ class DefaultExprCompilerTest {
         .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("E-QUERY-LEN-MAX"));
   }
 
+  @Test
+  void compile_defaultStrictModeTreatsMissingTransformAsWarning() {
+    Map<String, ProvenanceSnapshot.ApiParameter> apiParams =
+        Map.of(
+            "q", new ProvenanceSnapshot.ApiParameter("q", "q", "UNKNOWN_TRANSFORM", null),
+            "query", new ProvenanceSnapshot.ApiParameter("query", "query", null, null));
+    ProvenanceSnapshot customSnapshot =
+        new ProvenanceSnapshot(
+            snapshot.identity(),
+            snapshot.scope(),
+            snapshot.operation(),
+            snapshot.version(),
+            snapshot.capturedAt(),
+            snapshot.fieldDictionary(),
+            snapshot.capabilityMatrix(),
+            apiParams,
+            snapshot.renderRules());
+
+    DefaultExprCompiler compiler =
+        new DefaultExprCompiler(
+            new StubSnapshotLoader(customSnapshot),
+            new StubCapabilityChecker(List.of()),
+            new IdentityNormalizer(),
+            new StubRenderer("title:hello", Map.of("q", "hello"), List.of(), null),
+            code -> java.util.Optional.empty(),
+            compilerProperties,
+            modeProperties,
+            ExprMetrics.noop());
+
+    CompileRequest request =
+        CompileRequestBuilder.of(
+                Exprs.term("title", "hello", TextMatch.PHRASE), ProvenanceCode.PUBMED)
+            .build();
+    CompileResult result = compiler.compile(request);
+
+    assertThat(result.report().errors()).isEmpty();
+    assertThat(result.report().warnings())
+        .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("W-FN-OR-TRANSFORM-NOTFOUND"));
+    assertThat(result.params()).containsEntry("q", "hello");
+  }
+
+  @Test
+  void bridgeQuery_shouldNotOverrideExistingProviderParam() {
+    Map<String, ProvenanceSnapshot.ApiParameter> apiParams =
+        Map.of("query", new ProvenanceSnapshot.ApiParameter("query", "term", null, null));
+    ProvenanceSnapshot customSnapshot =
+        new ProvenanceSnapshot(
+            snapshot.identity(),
+            snapshot.scope(),
+            snapshot.operation(),
+            snapshot.version(),
+            snapshot.capturedAt(),
+            snapshot.fieldDictionary(),
+            snapshot.capabilityMatrix(),
+            apiParams,
+            snapshot.renderRules());
+
+    DefaultExprCompiler compiler =
+        new DefaultExprCompiler(
+            new StubSnapshotLoader(customSnapshot),
+            new StubCapabilityChecker(List.of()),
+            new IdentityNormalizer(),
+            new StubRenderer("foo:bar", Map.of("query", "manual-term"), List.of(), null),
+            transformRegistry,
+            compilerProperties,
+            modeProperties,
+            ExprMetrics.noop());
+
+    CompileRequest request =
+        CompileRequestBuilder.of(
+                Exprs.term("title", "hello", TextMatch.PHRASE), ProvenanceCode.PUBMED)
+            .build();
+    CompileResult result = compiler.compile(request);
+
+    assertThat(result.params()).containsEntry("term", "manual-term");
+    assertThat(result.report().warnings())
+        .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("W-QUERY-BRIDGE-DUP"));
+  }
+
   private record StubSnapshotLoader(ProvenanceSnapshot snapshot) implements RuleSnapshotLoader {
     @Override
     public ProvenanceSnapshot load(
