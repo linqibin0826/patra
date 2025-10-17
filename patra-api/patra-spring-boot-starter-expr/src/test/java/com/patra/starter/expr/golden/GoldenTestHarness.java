@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.expr.Expr;
 import com.patra.expr.json.ExprJsonCodec;
@@ -49,7 +50,7 @@ import org.junit.jupiter.api.Test;
 @DisplayName("P4.5 — Golden Harness")
 class GoldenTestHarness {
 
-  private final ObjectMapper mapper = new ObjectMapper();
+  private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
   private DefaultExprCompiler compiler(ProvenanceSnapshot snapshot) {
     FunctionRegistry fn = new DefaultFunctionRegistry(List.of(new PubmedDatetypeFunction()));

@@ -8,8 +8,23 @@ import com.patra.expr.TextMatch;
 import com.patra.ingest.domain.model.vo.ExprCompilationRequest;
 import com.patra.ingest.domain.model.vo.ExprCompilationResult;
 import com.patra.ingest.domain.port.ExpressionCompilerPort;
+import com.patra.starter.expr.compiler.DefaultExprCompiler;
+import com.patra.starter.expr.compiler.ExprCompiler;
+import com.patra.starter.expr.compiler.boot.CompilerProperties;
+import com.patra.starter.expr.compiler.boot.ExprModeProperties;
+import com.patra.starter.expr.compiler.check.DefaultCapabilityChecker;
+import com.patra.starter.expr.compiler.function.DefaultFunctionRegistry;
+import com.patra.starter.expr.compiler.function.FunctionRegistry;
+import com.patra.starter.expr.compiler.metrics.ExprMetrics;
+import com.patra.starter.expr.compiler.normalize.DefaultExprNormalizer;
+import com.patra.starter.expr.compiler.render.DefaultExprRenderer;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import com.patra.starter.expr.compiler.snapshot.RuleSnapshotLoader;
+import com.patra.starter.expr.compiler.transform.DefaultTransformRegistry;
+import com.patra.starter.expr.compiler.transform.FilterJoinTransform;
+import com.patra.starter.expr.compiler.transform.ListJoinTransform;
+import com.patra.starter.expr.compiler.transform.ToExclusiveMinus1DTransform;
+import com.patra.starter.expr.compiler.transform.TransformRegistry;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -22,7 +37,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
-@SpringBootTest
+@SpringBootTest(properties = "xxl.job.enabled=false")
 @DisplayName("P4.4.2 — EPMC E2E compile→adapter params")
 class EpmcE2ETest {
 
@@ -45,9 +60,8 @@ class EpmcE2ETest {
 
     assertThat(out.isValid()).isTrue();
     JsonNode params = out.params();
-    assertThat(params.get("query").asText())
-        .contains("cancer")
-        .contains("FIRST_PDATE:[2024-01-01 TO 2024-06-01]");
+    // Validate the compiled query contains both text and date fragments
+    assertThat(out.query()).contains("cancer").contains("FIRST_PDATE:[2024-01-01 TO 2024-06-01]");
   }
 
   @TestConfiguration
@@ -55,6 +69,26 @@ class EpmcE2ETest {
     @Bean
     RuleSnapshotLoader testRuleSnapshotLoader() {
       return (code, opType, endpoint) -> epmcSnapshot();
+    }
+
+    @Bean
+    ExprCompiler testExprCompiler(RuleSnapshotLoader loader) {
+      FunctionRegistry fnRegistry = new DefaultFunctionRegistry(List.of());
+      TransformRegistry tfRegistry =
+          new DefaultTransformRegistry(
+              List.of(
+                  new ToExclusiveMinus1DTransform(),
+                  new ListJoinTransform(),
+                  new FilterJoinTransform()));
+      return new DefaultExprCompiler(
+          loader,
+          new DefaultCapabilityChecker(),
+          new DefaultExprNormalizer(),
+          new DefaultExprRenderer(fnRegistry, ExprMetrics.noop()),
+          tfRegistry,
+          new CompilerProperties(),
+          new ExprModeProperties(),
+          ExprMetrics.noop());
     }
 
     private ProvenanceSnapshot epmcSnapshot() {

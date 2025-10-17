@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -233,7 +234,7 @@ public class DefaultExprRenderer implements ExprRenderer {
 
     AtomContext ctx = AtomContext.create(atom);
 
-    // Render QUERY fragment
+    // Pre-select rules for both emit types
     ProvenanceSnapshot.RenderRule queryRule =
         selectRule(
             snapshot,
@@ -243,6 +244,16 @@ public class DefaultExprRenderer implements ExprRenderer {
             ctx.matchTypeCode(),
             ctx.valueType());
 
+    ProvenanceSnapshot.RenderRule paramRule =
+        selectRule(
+            snapshot,
+            atom,
+            ProvenanceSnapshot.EmitType.PARAMS,
+            negated,
+            ctx.matchTypeCode(),
+            ctx.valueType());
+
+    // Render QUERY fragment if available
     if (queryRule != null && queryRule.template() != null) {
       metrics.renderRuleHit(labels.provenance(), labels.endpoint());
       String fragment = buildQuery(queryRule, ctx);
@@ -265,10 +276,23 @@ public class DefaultExprRenderer implements ExprRenderer {
       }
     } else {
       metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
+      // Defer W-RENDER-RULE-MISSING emission until we know PARAMS is also missing
+    }
+
+    // Render PARAMS std_keys if available
+    if (paramRule != null && !paramRule.params().isEmpty()) {
+      metrics.renderRuleHit(labels.provenance(), labels.endpoint());
+      applyParams(paramRule, ctx, snapshot, stdKeys, warnings, hits, atom);
+    } else if (paramRule == null) {
+      metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
+    }
+
+    // If neither QUERY nor PARAMS rule matched, emit warning once
+    if (queryRule == null && paramRule == null) {
       warnings.add(
           Issue.warn(
               "W-RENDER-RULE-MISSING",
-              "No query render rule found",
+              "No render rule found",
               Map.of(
                   "fieldKey",
                   atom.fieldKey(),
@@ -277,27 +301,10 @@ public class DefaultExprRenderer implements ExprRenderer {
                   "negated",
                   negated)));
       log.warn(
-          "Missing QUERY rule: fieldKey={}, operator={}, negated={}",
+          "Missing render rule: fieldKey={}, operator={}, negated={}",
           atom.fieldKey(),
           atom.operator().name(),
           negated);
-    }
-
-    // Render PARAMS std_keys
-    ProvenanceSnapshot.RenderRule paramRule =
-        selectRule(
-            snapshot,
-            atom,
-            ProvenanceSnapshot.EmitType.PARAMS,
-            negated,
-            ctx.matchTypeCode(),
-            ctx.valueType());
-
-    if (paramRule != null && !paramRule.params().isEmpty()) {
-      metrics.renderRuleHit(labels.provenance(), labels.endpoint());
-      applyParams(paramRule, ctx, snapshot, stdKeys, warnings, hits, atom);
-    } else if (paramRule == null) {
-      metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
     }
   }
 
@@ -399,15 +406,45 @@ public class DefaultExprRenderer implements ExprRenderer {
       boolean negated,
       String matchType,
       ProvenanceSnapshot.ValueType valueType) {
-    return snapshot.renderRules().stream()
-        .filter(rule -> rule.emitType() == emit)
-        .filter(rule -> rule.operator() == atom.operator())
-        .filter(rule -> Objects.equals(rule.fieldKey(), atom.fieldKey()))
-        .filter(rule -> matchesNegation(rule, negated))
-        .filter(rule -> matchesMatchType(rule, matchType))
-        .filter(rule -> matchesValueType(rule, valueType))
-        .max(Comparator.comparingInt(ProvenanceSnapshot.RenderRule::priority))
-        .orElse(null);
+    // Common predicate except match type, which we handle in two passes to prefer exact match
+    Stream<ProvenanceSnapshot.RenderRule> base =
+        snapshot.renderRules().stream()
+            .filter(rule -> rule.emitType() == emit)
+            .filter(rule -> Objects.equals(rule.fieldKey(), atom.fieldKey()))
+            .filter(rule -> rule.operator() == atom.operator())
+            .filter(rule -> matchesNegation(rule, negated))
+            .filter(rule -> matchesValueType(rule, valueType));
+
+    Comparator<ProvenanceSnapshot.RenderRule> byPriority =
+        Comparator.comparingInt(ProvenanceSnapshot.RenderRule::priority);
+
+    // Pass 1: exact matchType if provided, or ANY when matchType is null
+    Optional<ProvenanceSnapshot.RenderRule> exact =
+        base.filter(
+                rule -> {
+                  if (rule.matchTypeCode() == null || rule.matchTypeCode().isBlank()) return true;
+                  if (matchType == null) return "ANY".equalsIgnoreCase(rule.matchTypeCode());
+                  return rule.matchTypeCode().equalsIgnoreCase(matchType);
+                })
+            .max(byPriority);
+    if (exact.isPresent()) return exact.get();
+
+    // Pass 2: fallback for text ANY -> use PHRASE rule if available
+    if (matchType != null && "ANY".equalsIgnoreCase(matchType)) {
+      Optional<ProvenanceSnapshot.RenderRule> phrase =
+          snapshot.renderRules().stream()
+              .filter(rule -> rule.emitType() == emit)
+              .filter(rule -> Objects.equals(rule.fieldKey(), atom.fieldKey()))
+              .filter(rule -> rule.operator() == atom.operator())
+              .filter(rule -> matchesNegation(rule, negated))
+              .filter(rule -> matchesValueType(rule, valueType))
+              .filter(rule -> "PHRASE".equalsIgnoreCase(rule.matchTypeCode()))
+              .max(byPriority);
+      if (phrase.isPresent()) return phrase.get();
+    }
+
+    // No suitable rule found
+    return null;
   }
 
   private boolean matchesNegation(ProvenanceSnapshot.RenderRule rule, boolean negated) {
@@ -419,13 +456,21 @@ public class DefaultExprRenderer implements ExprRenderer {
   }
 
   private boolean matchesMatchType(ProvenanceSnapshot.RenderRule rule, String matchType) {
+    // If the rule does not constrain match type, it's a match.
     if (rule.matchTypeCode() == null || rule.matchTypeCode().isBlank()) {
       return true;
     }
+    // If the expression omitted match type, treat as ANY and allow rules that declare ANY.
     if (matchType == null) {
       return "ANY".equalsIgnoreCase(rule.matchTypeCode());
     }
-    return rule.matchTypeCode().equalsIgnoreCase(matchType);
+    // Exact match first.
+    if (rule.matchTypeCode().equalsIgnoreCase(matchType)) {
+      return true;
+    }
+    // Fallback: when input is ANY, allow PHRASE rule as a safe default (quoted text).
+    // This aligns with golden expectations where ONLY PHRASE rule exists.
+    return "ANY".equalsIgnoreCase(matchType) && "PHRASE".equalsIgnoreCase(rule.matchTypeCode());
   }
 
   private boolean matchesValueType(

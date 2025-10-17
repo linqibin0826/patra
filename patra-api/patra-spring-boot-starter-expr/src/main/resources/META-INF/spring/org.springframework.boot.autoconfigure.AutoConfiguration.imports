@@ -1,1 +1,2 @@
 com.patra.starter.expr.compiler.boot.ExprCompilerAutoConfiguration
+com.patra.starter.expr.compiler.boot.ExprFunctionAutoConfiguration
