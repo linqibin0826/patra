@@ -148,4 +148,50 @@ spring:
 
 ---
 
+## 🪵 Logging (Starter v1.0)
+
+This service uses `patra-spring-boot-starter-logging` for unified logging, trace context, and dynamic log levels.
+
+- Dependency (already included):
+  ```xml
+  <dependency>
+      <groupId>com.papertrace</groupId>
+      <artifactId>patra-spring-boot-starter-logging</artifactId>
+  </dependency>
+  ```
+
+- Minimal configuration (application.yml):
+  ```yaml
+  spring:
+    application:
+      name: patra-gateway
+
+  papertrace:
+    logging:
+      trace.enabled: true   # TraceContextGlobalFilter enabled by auto-config
+  ```
+
+- Log pattern includes MDC fields: `traceId`, `correlationId`, `service`, `environment`.
+
+- Dynamic log levels via Nacos (propagates ≤60s):
+  ```yaml
+  # logging-patra-gateway.yml (Nacos)
+  logging:
+    level:
+      root: INFO
+      com.patra.starter.logging.gateway: DEBUG   # TraceContextGlobalFilter
+      org.springframework.cloud.gateway: INFO
+  ```
+
+- Example output (trimmed):
+  ```
+  2025-10-17T10:30:45Z [traceId=...][correlationId=...] [service=patra-gateway] INFO  route=/ingest/** status=200 duration=53ms
+  ```
+
+References:
+- docs/logging/operations-guide.md (how to change log levels)
+- specs/001-logging-starter/quickstart.md (developer quickstart)
+- specs/001-logging-starter/contracts/mdc-fields-reference.md
+
+
 **Last Updated**: 2025-01-12
