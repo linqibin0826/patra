@@ -1,0 +1,6 @@
+{
+  "query": "\"machine learning\"",
+  "params": {"query": "\"machine learning\"", "filter": "from-pub-date:2022-01-01,until-pub-date:2022-12-31"},
+  "warnings": [],
+  "errors": []
+}

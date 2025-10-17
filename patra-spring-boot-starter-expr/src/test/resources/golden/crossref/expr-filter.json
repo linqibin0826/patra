@@ -1,0 +1,7 @@
+{
+  "type": "AND",
+  "children": [
+    {"type": "ATOM", "field": "text", "op": "TERM", "value": {"kind": "TERM", "text": "machine learning", "match": "PHRASE", "case": "INSENSITIVE"}},
+    {"type": "ATOM", "field": "publication_date", "op": "RANGE", "value": {"kind": "RANGE", "rangeType": "DATE", "from": "2022-01-01", "to": "2022-12-31", "fromBoundary": "CLOSED", "toBoundary": "CLOSED"}}
+  ]
+}

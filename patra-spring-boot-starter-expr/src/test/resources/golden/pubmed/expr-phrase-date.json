@@ -1,0 +1,24 @@
+{
+  "type": "AND",
+  "children": [
+    {
+      "type": "ATOM",
+      "field": "tiab",
+      "op": "TERM",
+      "value": {"kind": "TERM", "text": "heart failure", "match": "PHRASE", "case": "INSENSITIVE"}
+    },
+    {
+      "type": "ATOM",
+      "field": "entrez_date",
+      "op": "RANGE",
+      "value": {
+        "kind": "RANGE",
+        "rangeType": "DATE",
+        "from": "2023-01-01",
+        "to": "2023-12-31",
+        "fromBoundary": "CLOSED",
+        "toBoundary": "CLOSED"
+      }
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "query": "\"ai\"",
+  "params": {"query": "\"ai\""},
+  "warnings": ["W-PARAM-MAP-MISSING", "W-FN-OR-TRANSFORM-NOTFOUND"],
+  "errors": []
+}

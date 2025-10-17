@@ -192,24 +192,24 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P4.4.1** | Test PubMed E2E: phrase + date range → compiled params with `term`, `mindate/maxdate/datetype` | `PubmedE2ETest.java` | TODO | P3.1.2, docs/expr/08 §8.3 |
-| **P4.4.2** | Test EPMC E2E: text + date → compiled params with `query` containing date fragment | `EpmcE2ETest.java` | TODO | P3.1.4, docs/expr/08 §8.3 |
-| **P4.4.3** | Test Crossref E2E: phrase + date → compiled params with `query` and `filter` | `CrossrefE2ETest.java` | TODO | P3.1.6, docs/expr/08 §8.3 |
+| **P4.4.1** | Test PubMed E2E: phrase + date range → compiled params with `term`, `mindate/maxdate/datetype` | `PubmedE2ETest.java` | DONE | P3.1.2, docs/expr/08 §8.3 |
+| **P4.4.2** | Test EPMC E2E: text + date → compiled params with `query` containing date fragment | `EpmcE2ETest.java` | DONE | P3.1.4, docs/expr/08 §8.3 |
+| **P4.4.3** | Test Crossref E2E: phrase + date → compiled params with `query` and `filter` | `CrossrefE2ETest.java` | DONE | P3.1.6, docs/expr/08 §8.3 |
 
 ### P4.5 Golden Test Harness
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P4.5.1** | Create golden test directory structure under `src/test/resources/golden/` | Directory structure | TODO | docs/expr/12-golden-test-harness.md |
-| **P4.5.2** | Create PubMed golden fixtures: snapshot.json, expr-phrase-date.json, expected-phrase-date.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 |
+| **P4.5.1** | Create golden test directory structure under `src/test/resources/golden/` | Directory structure | DONE | docs/expr/12-golden-test-harness.md |
+| **P4.5.2** | Create PubMed golden fixtures: snapshot.json, expr-phrase-date.json, expected-phrase-date.json | Golden fixtures | DONE | P4.5.1, docs/expr/12 |
 | **P4.5.3** | Create PubMed golden fixtures: expr-or-not.json, expected-or-not.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 |
 | **P4.5.4** | Create PubMed golden fixtures: expr-deep-or-not.json (3+ levels), expected-deep-or-not.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 (Required) |
-| **P4.5.5** | Create PubMed golden fixtures: expr-strict-mode-error.json, expected-strict-mode-error.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 (Required) |
-| **P4.5.6** | Create EPMC golden fixtures: snapshot.json, expr-date-query.json, expected-date-query.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 |
+| **P4.5.5** | Create PubMed golden fixtures: expr-strict-mode-error.json, expected-strict-mode-error.json | Golden fixtures | DONE | P4.5.1, docs/expr/12 (Required) |
+| **P4.5.6** | Create EPMC golden fixtures: snapshot.json, expr-date-query.json, expected-date-query.json | Golden fixtures | DONE | P4.5.1, docs/expr/12 |
 | **P4.5.7** | Create EPMC golden fixtures: expr-multi-join.json, expected-multi-join.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 (Required) |
-| **P4.5.8** | Create Crossref golden fixtures: snapshot.json, expr-filter.json, expected-filter.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 |
-| **P4.5.9** | Create Crossref golden fixtures: expr-warning-codes.json, expected-warning-codes.json | Golden fixtures | TODO | P4.5.1, docs/expr/12 (Required) |
-| **P4.5.10** | Implement golden test harness runner with normalization and assertion logic | `GoldenTestHarness.java` | TODO | P4.5.2-P4.5.9, docs/expr/12 |
+| **P4.5.8** | Create Crossref golden fixtures: snapshot.json, expr-filter.json, expected-filter.json | Golden fixtures | DONE | P4.5.1, docs/expr/12 |
+| **P4.5.9** | Create Crossref golden fixtures: expr-warning-codes.json, expected-warning-codes.json | Golden fixtures | DONE | P4.5.1, docs/expr/12 (Required) |
+| **P4.5.10** | Implement golden test harness runner with normalization and assertion logic | `GoldenTestHarness.java` | DONE | P4.5.2-P4.5.9, docs/expr/12 |
 | **P4.5.11** | Generate coverage report: std_keys/rules exercised, error/warning codes tested | Coverage report | TODO | P4.5.10, docs/expr/12 §Coverage |
 
 ### P4.6 Architecture Tests
