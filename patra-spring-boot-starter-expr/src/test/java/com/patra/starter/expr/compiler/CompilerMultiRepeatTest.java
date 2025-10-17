@@ -110,6 +110,8 @@ class CompilerMultiRepeatTest {
     // Since repeat is enabled and no transform exists, value is preserved for adapter to expand
     assertThat(result.params()).containsEntry("filter", "OPEN_ACCESS:yes||HAS_PDF:true");
     assertThat(result.report().errors()).isEmpty();
+    assertThat(result.report().warnings())
+        .anySatisfy(issue -> assertThat(issue.code()).isEqualTo("W-MULTI-REPEAT-NOTSUPPORTED"));
   }
 
   private record StubSnapshotLoader(ProvenanceSnapshot snapshot) implements RuleSnapshotLoader {

@@ -2,6 +2,7 @@ package com.patra.ingest.infra.rpc.pubmed;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.common.util.HashUtils;
 import com.patra.ingest.domain.exception.BatchPlanningException;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.port.PubmedSearchPort;
@@ -198,8 +199,9 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
   }
 
   private static String safeHash(String s) {
-    if (s == null) return "null";
-    int h = s.hashCode();
-    return Integer.toHexString(h);
+    if (s == null) {
+      return "null";
+    }
+    return HashUtils.sha256Hex(s);
   }
 }

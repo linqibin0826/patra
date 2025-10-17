@@ -106,7 +106,7 @@ Expr engine integration resides in the starter (`patra-spring-boot-starter-expr`
   - Missing function code (`fn_code`) → compilation error (E-FN-NOTFOUND)
   - Missing transform code (`transform_code`) → compilation error (E-TRANSFORM-NOTFOUND)
 - When `expr.strict=false`:
-  - NOT unsupported → warning (W-NOT-SKIPPED) and skip fragment
+  - NOT unsupported → warning (W-NOT-SKIPPED); negation is dropped and child fragment renders positively
   - Missing function/transform → warning (W-FN-OR-TRANSFORM-NOTFOUND) and proceed without applying
 - Use STRICT mode in production for deterministic behavior; use non-strict during development/migration
 

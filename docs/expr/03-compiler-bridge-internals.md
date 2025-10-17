@@ -45,6 +45,8 @@ compile(request):
          if mapping.transformCode != null:
             value = transformRegistry.apply(mapping.transformCode, "query", value, snapshot)
          mapped.put(mapping.providerParamName, value)
+      else if mapping != null:
+         warn "W-QUERY-BRIDGE-DUP", mapping.providerParamName
 
   // 3) Enforce query length budget if provided
   if request.options.maxQueryLength > 0 and length(outcome.query) > request.options.maxQueryLength:
@@ -132,6 +134,8 @@ public interface TransformRegistry {
 | `W-NOT-SKIPPED` | WARNING | NOT skipped (unsupported) | Warn if strict=false | Review query semantics |
 | `W-FN-OR-TRANSFORM-NOTFOUND` | WARNING | Function/transform not found | Warn if strict=false | Fix seed configuration |
 | `W-PARAM-COUNT-LIMIT` | WARNING | Parameters exceed soft limit | Warning always | Consider MULTI+join strategy |
+| `W-QUERY-BRIDGE-DUP` | WARNING | Query bridging skipped because provider param already populated | Warning always | Remove duplicate provider-side mapping if bridging should win |
+| `W-MULTI-REPEAT-NOTSUPPORTED` | WARNING | MULTI repeat requested but not yet supported; compiler falls back to join encoding | Warning always | Provide join transform or delay enabling repeat until adapters support it |
 
 ### 3.4.2 STRICT Mode Behavior
 
@@ -178,8 +182,8 @@ When `expr.strict=false` (default):
   - Example: two date ranges for the same field → last‑write‑wins by this ordering; earlier ones are superseded.
 - MULTI: std_key collects many values.
   - Join strategy (default): a transform (e.g., `LIST_JOIN(';')` or `FILTER_JOIN`) converts the list into one string before mapping or after mapping (depending on transform design).
-  - Repeat strategy (gated): compiler maintains a Map<String,List<String>> internally and a provider encoder repeats parameters. Requires `expr.multi.repeat.enabled=true` configuration.
-  - Recommendation: use Join strategy for Crossref `filter` and EPMC multi‑term cases; Repeat strategy disabled by default until adapter serialization is documented.
+  - Repeat strategy (gated): compiler maintains a Map<String,List<String>> internally and a provider encoder repeats parameters. Requires `expr.multi.repeat.enabled=true` configuration. Until provider adapters implement repeat encoding, the compiler logs `W-MULTI-REPEAT-NOTSUPPORTED` and falls back to join-style encoding of the `||`-delimited value.
+  - Recommendation: use Join strategy for Crossref `filter` and EPMC multi-term cases; Repeat strategy disabled by default until adapter serialization is documented.
 
 ## 3.9 Limits & Bounds
 

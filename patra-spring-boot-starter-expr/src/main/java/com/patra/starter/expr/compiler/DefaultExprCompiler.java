@@ -247,6 +247,18 @@ public class DefaultExprCompiler implements ExprCompiler {
       return;
     }
     String providerName = mapping.providerParamName();
+    if (providerParams.containsKey(providerName)) {
+      warnings.add(
+          Issue.warn(
+              "W-QUERY-BRIDGE-DUP",
+              "Query bridging skipped because provider parameter already populated",
+              Map.of("param", providerName)));
+      log.warn(
+          "Query bridging skipped - provider param {} already populated (provenance={})",
+          providerName,
+          snapshot.identity().code());
+      return;
+    }
     String bridged =
         applyTransformIfNeeded(
             "query",
@@ -299,8 +311,8 @@ public class DefaultExprCompiler implements ExprCompiler {
       String providerName = mapping.providerParamName();
       String preparedValue = value == null ? "" : value;
 
-      // MULTI repeat strategy placeholder: keep internal delimiter when repeat is enabled and no
-      // transform is provided. Adapter layer will expand repeated params.
+      // MULTI repeat strategy is not yet implemented. Record warning and fall back to join encoding
+      // so callers receive deterministic output.
       ProvenanceSnapshot.FieldDefinition fieldDefinition = snapshot.fieldDictionary().get(stdKey);
       boolean multi =
           fieldDefinition != null
@@ -308,14 +320,16 @@ public class DefaultExprCompiler implements ExprCompiler {
       if (multi
           && repeatEnabled
           && (mapping.transformCode() == null || mapping.transformCode().isBlank())) {
-        log.debug(
-            "MULTI repeat enabled for stdKey={}, providerParam={}, rawValue={}",
+        Map<String, Object> context = Map.of("stdKey", stdKey, "param", providerName);
+        warnings.add(
+            Issue.warn(
+                "W-MULTI-REPEAT-NOTSUPPORTED",
+                "MULTI repeat strategy not available; falling back to join encoding",
+                context));
+        log.warn(
+            "MULTI repeat requested but not supported yet: stdKey={}, providerParam={}",
             stdKey,
-            providerName,
-            preparedValue);
-        providerParams.put(providerName, preparedValue);
-        metrics.paramMapHit(provenanceCode, endpointName);
-        continue;
+            providerName);
       }
 
       String finalValue =
