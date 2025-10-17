@@ -184,9 +184,9 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P4.3.1** | Test PubMed snapshot load: verify fields, capabilities, rules, param maps | `PubmedSnapshotLoadTest.java` | TODO | P2.1.7, docs/expr/08 §8.3 |
-| **P4.3.2** | Test EPMC snapshot load: verify fields, capabilities, rules, param maps | `EpmcSnapshotLoadTest.java` | TODO | P2.2.8, docs/expr/08 §8.3 |
-| **P4.3.3** | Test Crossref snapshot load: verify fields, capabilities, rules, param maps | `CrossrefSnapshotLoadTest.java` | TODO | P2.3.8, docs/expr/08 §8.3 |
+| **P4.3.1** | Test PubMed snapshot load: verify fields, capabilities, rules, param maps | `PubmedSnapshotLoadTest.java` | DONE | P2.1.7, docs/expr/08 §8.3 |
+| **P4.3.2** | Test EPMC snapshot load: verify fields, capabilities, rules, param maps | `EpmcSnapshotLoadTest.java` | DONE | P2.2.8, docs/expr/08 §8.3 |
+| **P4.3.3** | Test Crossref snapshot load: verify fields, capabilities, rules, param maps | `CrossrefSnapshotLoadTest.java` | DONE | P2.3.8, docs/expr/08 §8.3 |
 
 ### P4.4 Integration Tests - End-to-End
 
@@ -307,8 +307,8 @@ Update this section as tasks are completed:
 
 **Last Updated**: 2025-10-17 00:47
 **Completed Tasks**: 75 / 132 (56.8%)
-**Current Phase**: Phase 4 - Testing (Compiler)
-**Current Milestone**: Phase 4.2 Unit Tests - Compiler (P4.2.1 kickoff)
+**Current Phase**: Phase 4 - Testing (Integration)
+**Current Milestone**: Phase 4.4 Integration Tests - End-to-End
 **Next Milestone**: Phase 4.3 Integration Tests - Registry
 
 ---
@@ -332,6 +332,8 @@ Update this section as tasks are completed:
 - **2025-10-16 21:45**: Phase 4.1 renderer unit tests added (P4.1.1–P4.1.7). Covered NOT negation rule selection, PARAM placeholder expansion, PUBMED_DATETYPE fn_code, and SINGLE std_key merge ordering. P4.1.8 (MULTI accumulation) queued next.
 - **2025-10-16 22:05**: Phase 4.1 renderer unit tests complete (P4.1.1–P4.1.8). MULTI std_key accumulation now validated via renderer output joining with the internal delimiter.
 - **2025-10-17 00:47**: Verified all P4.1 renderer unit tests pass locally (offline Maven). Proceeding to Phase 4.2 compiler unit tests per docs/expr/08-testing.md and docs/expr/03-compiler-bridge-internals.md.
+- **2025-10-17 08:28**: Phase 4.2 compiler unit tests complete (P4.2.1–P4.2.10). Added bridge, transform, missing map, query length, MULTI join/repeat, STRICT and non-STRICT behavior tests. Fixed LIST_JOIN/FILTER_JOIN delimiter bug discovered by tests.
+- **2025-10-17 08:35**: Phase 4.3 registry integration tests added (P4.3.1–P4.3.3) using Testcontainers MySQL and MockMvc. Verified test compilation; container execution requires local Docker.
 
 ---
 

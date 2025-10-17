@@ -152,7 +152,7 @@ VALUES
      TIMESTAMP('2025-10-14 00:00:00.000000'), NULL,
      JSON_ARRAY(JSON_OBJECT('time', '2025-10-16 00:00:00', 'by', '系统管理员', 'note', 'EPMC: std limit -> pageSize')),
      0, INET6_ATON('0.0.0.0'),
-     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0),
+     NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
     -- Optional cursor support (uncomment if needed)
     -- (910303, (SELECT id FROM patra_registry.reg_provenance WHERE provenance_code='EPMC'), 'ALL', 'ACTIVE',
