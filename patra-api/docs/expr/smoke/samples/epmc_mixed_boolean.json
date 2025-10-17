@@ -1,0 +1,1 @@
+{"and":[{"term":{"field":"text","value":"cancer","match":"ANY"}},{"or":[{"term":{"field":"text","value":"therapy","match":"ANY"}},{"not":{"term":{"field":"text","value":"surgery","match":"ANY"}}}]}]}

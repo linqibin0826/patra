@@ -1,0 +1,1 @@
+{"and":[{"term":{"field":"tiab","value":"heart failure","match":"PHRASE"}},{"range":{"field":"entrez_date","from":"2023-01-01","to":"2023-12-31"}}]}
