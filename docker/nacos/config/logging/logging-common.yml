@@ -1,0 +1,87 @@
+# Common Logging Configuration
+# Data ID: logging-common.yml
+# Group: DEFAULT_GROUP
+# Description: Shared log level configuration for all Papertrace microservices
+#
+# This configuration defines default log levels across all services.
+# Service-specific configurations (logging-{service}.yml) can override these defaults.
+#
+# Log Level Semantic Guidelines (FR-001):
+# - ERROR: System failures requiring immediate attention (e.g., external API unavailable, DB connection lost)
+# - WARN:  Recoverable issues or degraded functionality (e.g., retry attempts, missing optional config)
+# - INFO:  Key business events and state changes (e.g., batch start/complete, API calls)
+# - DEBUG: Detailed processing flow for troubleshooting (e.g., method entry/exit, decision branches)
+# - TRACE: Fine-grained diagnostics including variable states (e.g., parameter values, loop iterations)
+#
+# Dynamic Log Level Changes (FR-011, SC-007):
+# - Changes take effect within 60 seconds via Nacos push notification
+# - No application restart required
+# - Per-package configuration supported (e.g., com.papertrace.registry.adapter: DEBUG)
+
+logging:
+  level:
+    # Root logger - applies to all loggers unless overridden
+    root: INFO
+
+    # Spring Framework - reduce verbosity in production
+    org.springframework: WARN
+    org.springframework.boot: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+
+    # MyBatis Plus - database query logging
+    com.baomidou.mybatisplus: WARN
+    org.apache.ibatis: WARN
+
+    # Feign HTTP clients - external API call logging
+    feign: INFO
+
+    # Apache SkyWalking - distributed tracing
+    org.apache.skywalking: WARN
+
+    # RocketMQ - message queue
+    org.apache.rocketmq: WARN
+
+    # Nacos client - configuration management
+    com.alibaba.nacos: WARN
+
+    # Papertrace application packages - default to INFO
+    # Service-specific overrides can be defined in logging-{service}.yml
+    com.papertrace: INFO
+
+    # Papertrace common utilities (logging, sanitization, trace context)
+    com.papertrace.common.logging: INFO
+
+    # Papertrace logging starter (filters, interceptors, aspects)
+    com.papertrace.starter.logging: INFO
+
+# Log pattern configuration (applied via logback-spring.xml)
+# Note: Actual pattern is defined in patra-spring-boot-starter-logging/src/main/resources/logback-spring.xml
+# This section is for reference only - pattern changes require code update
+#
+# Pattern includes (FR-002, FR-015):
+# - ISO-8601 timestamp
+# - Log level with color (console) or plain (file)
+# - Thread name
+# - Logger name (fully qualified class name)
+# - Service identifier: [service=X][layer=Y]
+# - Trace context: [traceId=X][correlationId=Y]
+# - Message with optional exception stack trace
+
+# Async appender configuration (via logback-spring.xml)
+# - Non-blocking log writes to prevent application thread blocking
+# - Queue size: 256 (sufficient for burst logging)
+# - Discard threshold: 20% for DEBUG/TRACE (drops low-priority logs under pressure)
+# - Never discard: ERROR/WARN logs (always persisted)
+# - Performance target: <5% throughput impact (SC-004)
+
+# Log sampling for high-frequency events (Edge Case Handling)
+# - Applied automatically for DEBUG/TRACE logs exceeding 100 logs/sec
+# - ERROR/WARN logs never sampled
+# - Configuration: com.papertrace.starter.logging.filter.SamplingFilter
+
+# Sensitive data sanitization (FR-008, SC-006)
+# - Automatic sanitization for: passwords, API tokens, auth headers, PII
+# - Applied by: ApiCallLogger, DbFailureLogger, SecurityEventLogger
+# - Manual sanitization: LogSanitizer.sanitize(data)
+# - Zero tolerance policy: SC-006 requires zero sensitive data in production logs

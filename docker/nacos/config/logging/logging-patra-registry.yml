@@ -1,0 +1,98 @@
+# Service-Specific Logging Configuration: patra-registry
+# Data ID: logging-patra-registry.yml
+# Group: DEFAULT_GROUP
+# Description: Log level overrides for patra-registry microservice
+#
+# This configuration overrides logging-common.yml defaults for patra-registry service only.
+# Useful for enabling DEBUG/TRACE logging in specific modules during troubleshooting.
+#
+# Pilot Service Note (Phase 3):
+# patra-registry is the pilot service for testing enhanced logging infrastructure.
+# This configuration enables detailed logging during initial rollout for validation.
+
+logging:
+  level:
+    # Root logger inherits from logging-common.yml (INFO)
+    # Uncomment to override: root: DEBUG
+
+    # Patra Registry Service - Application Layers
+    # Adjust these levels during troubleshooting without redeployment (FR-011)
+
+    # Adapter layer - HTTP controllers, REST endpoints, scheduled jobs
+    # Default: INFO (key business events like batch start/complete)
+    # Troubleshooting: DEBUG (detailed request/response, validation errors)
+    com.papertrace.registry.adapter: INFO
+
+    # Application layer - Orchestrators, use case coordination
+    # Default: INFO (business operation start/complete with context)
+    # Troubleshooting: DEBUG (orchestration flow, cross-aggregate operations)
+    com.papertrace.registry.app: INFO
+
+    # Infrastructure layer - Repositories, MyBatis mappers, external API clients
+    # Default: INFO (external API calls with FR-006 context)
+    # Troubleshooting: DEBUG (database queries, API response details)
+    com.papertrace.registry.infra: INFO
+
+    # Domain layer - Business logic (pure Java, no framework dependencies)
+    # Default: WARN (domain events, validation failures)
+    # Troubleshooting: DEBUG (business rule evaluation, state transitions)
+    # Note: Domain layer uses plain SLF4J Logger (no Lombok @Slf4j)
+    com.papertrace.registry.domain: WARN
+
+    # Example: Enable DEBUG logging for specific package during troubleshooting
+    # Uncomment to debug provenance batch processing:
+    # com.papertrace.registry.app.batch: DEBUG
+    # com.papertrace.registry.infra.provenance: DEBUG
+
+    # Example: Enable TRACE logging for fine-grained diagnostics
+    # Uncomment to trace provenance selection logic:
+    # com.papertrace.registry.app.provenance.select: TRACE
+
+    # MyBatis Plus - database query logging for patra-registry
+    # Default: WARN (errors only)
+    # Troubleshooting: DEBUG (SQL statements, query execution time per FR-007)
+    com.baomidou.mybatisplus.core.mapper.LoggingMapper: WARN
+
+    # Spring components specific to patra-registry
+    # Adjust if needed for troubleshooting Spring configuration issues
+    org.springframework.web.servlet.mvc: WARN
+
+# Dynamic Log Level Use Cases (FR-011):
+#
+# 1. Production Issue - External API Timeout:
+#    Set com.papertrace.registry.infra.client: DEBUG
+#    → Logs detailed HTTP request/response, retry attempts (FR-006)
+#
+# 2. Batch Processing Failure:
+#    Set com.papertrace.registry.app.batch: DEBUG
+#    Set com.papertrace.registry.adapter.job: DEBUG
+#    → Logs batch start/complete, record counts, error details (FR-010)
+#
+# 3. Trace Context Missing:
+#    Set com.papertrace.starter.logging.filter.TraceContextFilter: DEBUG
+#    → Logs trace ID generation, MDC population, missing context warnings
+#
+# 4. Database Query Performance:
+#    Set com.baomidou.mybatisplus.core.mapper: DEBUG
+#    Set com.papertrace.registry.infra: DEBUG
+#    → Logs SQL statements, execution time, affected rows (FR-007)
+#
+# 5. Authentication/Authorization Issues:
+#    Set org.springframework.security: DEBUG
+#    Set com.papertrace.starter.logging.security: DEBUG
+#    → Logs auth events with sanitized details (FR-009)
+
+# Performance Considerations:
+# - INFO level is production-safe with <5% throughput impact (SC-004)
+# - DEBUG level acceptable for short-term troubleshooting (<1 hour)
+# - TRACE level only for specific packages during active debugging
+# - Revert to INFO after troubleshooting to maintain log volume targets (SC-004)
+
+# Pilot Service Validation (Phase 3 - User Story 1):
+# This configuration enables testing of:
+# - Trace context propagation (FR-003, FR-004)
+# - Dynamic log level changes via Nacos (FR-011, SC-007)
+# - Exception logging with full context (FR-005)
+# - External API call logging (FR-006)
+# - Database failure logging (FR-007)
+# - Sensitive data sanitization (FR-008, SC-006)

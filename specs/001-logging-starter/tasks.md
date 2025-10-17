@@ -181,22 +181,22 @@ Phase 7 (Polish)
 
 ### Nacos Integration (FR-011, SC-007)
 
-- [ ] T040 [P] [US2] Create logging-common.yml Nacos config with default levels in docker/nacos/config/logging/logging-common.yml
-- [ ] T041 [P] [US2] Create logging-patra-registry.yml service-specific config in docker/nacos/config/logging/logging-patra-registry.yml
-- [ ] T042 [P] [US2] Create logging-patra-ingest.yml service-specific config in docker/nacos/config/logging/logging-patra-ingest.yml
-- [ ] T043 [US2] Implement DynamicLoggingConfiguration with Nacos listeners in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/DynamicLoggingConfiguration.java
+- [X] T040 [P] [US2] Create logging-common.yml Nacos config with default levels in docker/nacos/config/logging/logging-common.yml
+- [X] T041 [P] [US2] Create logging-patra-registry.yml service-specific config in docker/nacos/config/logging/logging-patra-registry.yml
+- [X] T042 [P] [US2] Create logging-patra-ingest.yml service-specific config in docker/nacos/config/logging/logging-patra-ingest.yml
+- [X] T043 [US2] Implement DynamicLoggingConfiguration with Nacos listeners in patra-spring-boot-starter-logging/src/main/java/com/papertrace/starter/logging/autoconfigure/DynamicLoggingConfiguration.java
 
 ### Log Level Semantic Guidelines (FR-001)
 
-- [ ] T044 [P] [US2] Document log level semantic guidelines in docs/logging/log-level-guidelines.md
-- [ ] T045 [P] [US2] Create log level usage examples for each layer in docs/logging/log-level-examples.md
+- [X] T044 [P] [US2] Document log level semantic guidelines in docs/logging/log-level-guidelines.md
+- [X] T045 [P] [US2] Create log level usage examples for each layer in docs/logging/log-level-examples.md
 
 ### Testing & Validation
 
-- [ ] T046 [US2] Implement LogLevelConfigurationTest for Nacos integration in patra-spring-boot-starter-logging/src/test/java/
+- [X] T046 [US2] Implement LogLevelConfigurationTest for Nacos integration in patra-spring-boot-starter-logging/src/test/java/
 - [ ] T047 [US2] Test dynamic log level change in patra-registry (INFO → DEBUG → INFO)
 - [ ] T048 [US2] Verify log level changes take effect within 60 seconds (SC-007)
-- [ ] T049 [US2] Document troubleshooting guide for log level issues in docs/logging/troubleshooting-log-levels.md
+- [X] T049 [US2] Document troubleshooting guide for log level issues in docs/logging/troubleshooting-log-levels.md
 
 **Parallel Execution Opportunities**:
 - T040, T041, T042 (Nacos config files)
