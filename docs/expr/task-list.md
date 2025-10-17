@@ -169,16 +169,16 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P4.2.1** | Test query bridging: aggregated query → provider param via `std_key=query` mapping | `CompilerBridgeTest.java` | TODO | P1.4.2, docs/expr/08 §8.2 |
-| **P4.2.2** | Test transform: `TO_EXCLUSIVE_MINUS_1D` converts `to` value | `CompilerTransformTest.java` | TODO | P1.1.6, P1.4.4, docs/expr/08 §8.2 |
-| **P4.2.3** | Test missing param map: warning W-PARAM-MAP-MISSING | `CompilerMissingMapTest.java` | TODO | P1.4.13, docs/expr/08 §8.2 |
-| **P4.2.4** | Test query length enforcement: E-QUERY-LEN-MAX error | `CompilerQueryLengthTest.java` | TODO | P1.4.8, docs/expr/08 §8.2 |
-| **P4.2.5** | Test MULTI join: `LIST_JOIN`/`FILTER_JOIN` transforms produce single value | `CompilerMultiJoinTest.java` | TODO | P1.4.6, docs/expr/08 §8.2 |
-| **P4.2.6** | Test MULTI repeat (if enabled): verify repeated provider parameters | `CompilerMultiRepeatTest.java` | TODO | P1.4.7, docs/expr/08 §8.2 |
-| **P4.2.7** | Test STRICT mode: error on missing fn_code | `CompilerStrictFunctionTest.java` | TODO | P1.4.9, docs/expr/08 §8.2 |
-| **P4.2.8** | Test STRICT mode: error on missing transform_code | `CompilerStrictTransformTest.java` | TODO | P1.4.9, docs/expr/08 §8.2 |
-| **P4.2.9** | Test STRICT mode: error on unsupported NOT | `CompilerStrictNotTest.java` | TODO | P1.4.9, docs/expr/08 §8.2 |
-| **P4.2.10** | Test non-STRICT mode: warnings instead of errors | `CompilerNonStrictTest.java` | TODO | P1.4.10, docs/expr/08 §8.2 |
+| **P4.2.1** | Test query bridging: aggregated query → provider param via `std_key=query` mapping | `CompilerBridgeTest.java` | DONE | P1.4.2, docs/expr/08 §8.2 |
+| **P4.2.2** | Test transform: `TO_EXCLUSIVE_MINUS_1D` converts `to` value | `CompilerTransformTest.java` | DONE | P1.1.6, P1.4.4, docs/expr/08 §8.2 |
+| **P4.2.3** | Test missing param map: warning W-PARAM-MAP-MISSING | `CompilerMissingMapTest.java` | DONE | P1.4.13, docs/expr/08 §8.2 |
+| **P4.2.4** | Test query length enforcement: E-QUERY-LEN-MAX error | `CompilerQueryLengthTest.java` | DONE | P1.4.8, docs/expr/08 §8.2 |
+| **P4.2.5** | Test MULTI join: `LIST_JOIN`/`FILTER_JOIN` transforms produce single value | `CompilerMultiJoinTest.java` | DONE | P1.4.6, docs/expr/08 §8.2 |
+| **P4.2.6** | Test MULTI repeat (if enabled): verify repeated provider parameters | `CompilerMultiRepeatTest.java` | DONE | P1.4.7, docs/expr/08 §8.2 |
+| **P4.2.7** | Test STRICT mode: error on missing fn_code | `CompilerStrictFunctionTest.java` | DONE | P1.4.9, docs/expr/08 §8.2 |
+| **P4.2.8** | Test STRICT mode: error on missing transform_code | `CompilerStrictTransformTest.java` | DONE | P1.4.9, docs/expr/08 §8.2 |
+| **P4.2.9** | Test STRICT mode: error on unsupported NOT | `CompilerStrictNotTest.java` | DONE | P1.4.9, docs/expr/08 §8.2 |
+| **P4.2.10** | Test non-STRICT mode: warnings instead of errors | `CompilerNonStrictTest.java` | DONE | P1.4.10, docs/expr/08 §8.2 |
 
 ### P4.3 Integration Tests - Registry
 
@@ -305,9 +305,9 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 Update this section as tasks are completed:
 
-**Last Updated**: 2025-10-16 22:05
+**Last Updated**: 2025-10-17 00:47
 **Completed Tasks**: 75 / 132 (56.8%)
-**Current Phase**: Phase 4 - Testing (Renderer)
+**Current Phase**: Phase 4 - Testing (Compiler)
 **Current Milestone**: Phase 4.2 Unit Tests - Compiler (P4.2.1 kickoff)
 **Next Milestone**: Phase 4.3 Integration Tests - Registry
 
@@ -331,6 +331,7 @@ Update this section as tasks are completed:
 - **2025-10-16 21:10**: Phase 3.1 adapters refactored to consume provider-named params. PubMed assembler now reads `term` from compiled params, PubMed infra logs hashed provider term, and new EPMC/Crossref assemblers plus request models bind compiled params without manual query/filter construction.
 - **2025-10-16 21:45**: Phase 4.1 renderer unit tests added (P4.1.1–P4.1.7). Covered NOT negation rule selection, PARAM placeholder expansion, PUBMED_DATETYPE fn_code, and SINGLE std_key merge ordering. P4.1.8 (MULTI accumulation) queued next.
 - **2025-10-16 22:05**: Phase 4.1 renderer unit tests complete (P4.1.1–P4.1.8). MULTI std_key accumulation now validated via renderer output joining with the internal delimiter.
+- **2025-10-17 00:47**: Verified all P4.1 renderer unit tests pass locally (offline Maven). Proceeding to Phase 4.2 compiler unit tests per docs/expr/08-testing.md and docs/expr/03-compiler-bridge-internals.md.
 
 ---
 
