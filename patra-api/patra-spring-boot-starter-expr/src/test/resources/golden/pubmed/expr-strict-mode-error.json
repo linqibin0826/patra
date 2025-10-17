@@ -1,0 +1,9 @@
+{
+  "type": "NOT",
+  "child": {
+    "type": "ATOM",
+    "field": "tiab",
+    "op": "TERM",
+    "value": {"kind": "TERM", "text": "survey", "match": "ANY", "case": "INSENSITIVE"}
+  }
+}

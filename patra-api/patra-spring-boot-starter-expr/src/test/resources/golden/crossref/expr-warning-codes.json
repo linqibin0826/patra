@@ -1,0 +1,7 @@
+{
+  "type": "AND",
+  "children": [
+    {"type": "ATOM", "field": "text", "op": "TERM", "value": {"kind": "TERM", "text": "ai", "match": "ANY", "case": "INSENSITIVE"}},
+    {"type": "ATOM", "field": "limit_selector", "op": "TERM", "value": {"kind": "TERM", "text": "50", "match": "ANY", "case": "INSENSITIVE"}}
+  ]
+}

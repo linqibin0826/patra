@@ -1,0 +1,20 @@
+{
+  "identity": {"provenanceId": 2, "code": "EPMC", "name": "Europe PMC"},
+  "scope": {"scopeCode": "SOURCE", "operationTypeKey": null},
+  "operation": {"code": "SEARCH", "defaultTimezone": "UTC"},
+  "version": 1,
+  "capturedAt": "2025-10-16T00:00:00Z",
+  "fieldDictionary": {
+    "text": {"fieldKey": "text", "displayName": "Text", "description": "", "dataType": "TEXT", "cardinality": "SINGLE", "exposable": true, "dateField": false},
+    "publication_date": {"fieldKey": "publication_date", "displayName": "Publication Date", "description": "", "dataType": "DATE", "cardinality": "SINGLE", "exposable": true, "dateField": true}
+  },
+  "capabilityMatrix": {
+    "text": {"ops": ["TERM"], "negatableOps": [], "supportsNot": true, "termMatches": ["ANY", "PHRASE"], "termCaseSensitiveAllowed": false, "termAllowBlank": true, "termMinLength": 0, "termMaxLength": 200, "termPattern": null, "inMaxSize": 100, "inCaseSensitiveAllowed": true, "rangeKind": "NONE", "rangeAllowOpenStart": true, "rangeAllowOpenEnd": true, "rangeAllowClosedAtInfinity": false, "dateMin": null, "dateMax": null, "datetimeMin": null, "datetimeMax": null, "numberMin": null, "numberMax": null, "existsSupported": true, "tokenKinds": [], "tokenValuePattern": null},
+    "publication_date": {"ops": ["RANGE"], "negatableOps": [], "supportsNot": true, "termMatches": [], "termCaseSensitiveAllowed": false, "termAllowBlank": true, "termMinLength": 0, "termMaxLength": 0, "termPattern": null, "inMaxSize": 0, "inCaseSensitiveAllowed": true, "rangeKind": "DATE", "rangeAllowOpenStart": true, "rangeAllowOpenEnd": true, "rangeAllowClosedAtInfinity": false, "dateMin": "1900-01-01", "dateMax": "2100-12-31", "datetimeMin": null, "datetimeMax": null, "numberMin": null, "numberMax": null, "existsSupported": true, "tokenKinds": [], "tokenValuePattern": null}
+  },
+  "apiParameterMap": {"query": {"stdKey": "query", "providerParamName": "query", "transformCode": null, "notesJson": null}},
+  "renderRules": [
+    {"fieldKey": "text", "scopeCode": "SOURCE", "operationTypeKey": null, "operator": "TERM", "matchTypeCode": "ANY", "negation": "ANY", "valueType": "STRING", "emitType": "QUERY", "template": "{{v}}", "itemTemplate": null, "joiner": null, "wrapGroup": false, "params": null, "functionCode": null, "effectiveFrom": null, "effectiveTo": null, "priority": 100},
+    {"fieldKey": "publication_date", "scopeCode": "SOURCE", "operationTypeKey": null, "operator": "RANGE", "matchTypeCode": null, "negation": "ANY", "valueType": "DATE", "emitType": "QUERY", "template": "FIRST_PDATE:[{{from}} TO {{to}}]", "itemTemplate": null, "joiner": null, "wrapGroup": false, "params": null, "functionCode": null, "effectiveFrom": null, "effectiveTo": null, "priority": 100}
+  ]
+}
