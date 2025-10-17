@@ -24,10 +24,14 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * Integration test for async trace context propagation.
@@ -58,7 +62,8 @@ import org.springframework.test.context.ContextConfiguration;
       LoggingAutoConfiguration.class,
       TraceContextAutoConfiguration.class,
       AsyncAutoConfiguration.class,
-      AsyncTraceContextPropagationTest.AsyncTestService.class
+      AsyncTraceContextPropagationTest.AsyncTestService.class,
+      AsyncTraceContextPropagationTest.AsyncExecutorConfiguration.class
     })
 @ContextConfiguration
 @EnableAsync
@@ -73,11 +78,21 @@ class AsyncTraceContextPropagationTest {
 
   @Autowired private AsyncTestService asyncTestService;
 
+  @Autowired private ThreadPoolTaskExecutor taskExecutor;
+
   @BeforeEach
   void setUp() {
     traceContextHolder.clearContext();
     logContextEnricher.clear();
     MDC.clear();
+  }
+
+  @Test
+  @DisplayName("Async executor should automatically receive MdcTaskDecorator")
+  void shouldDecorateThreadPoolTaskExecutor() {
+    assertThat(resolveTaskDecorator(taskExecutor))
+        .as("ThreadPoolTaskExecutor must use MdcTaskDecorator for MDC propagation")
+        .isInstanceOf(MdcTaskDecorator.class);
   }
 
   @AfterEach
@@ -285,5 +300,33 @@ class AsyncTraceContextPropagationTest {
 
       return CompletableFuture.completedFuture(null);
     }
+  }
+
+  /**
+   * Provides a ThreadPoolTaskExecutor bean to emulate host application async configuration. The
+   * auto-configuration should decorate this executor with {@link MdcTaskDecorator} without
+   * modifying its sizing parameters.
+   */
+  @TestConfiguration
+  static class AsyncExecutorConfiguration {
+
+    @Bean
+    ThreadPoolTaskExecutor taskExecutor() {
+      ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+      executor.setCorePoolSize(4);
+      executor.setMaxPoolSize(8);
+      executor.setQueueCapacity(64);
+      executor.setThreadNamePrefix("async-mdc-test-");
+      return executor;
+    }
+  }
+
+  private static Object resolveTaskDecorator(ThreadPoolTaskExecutor executor) {
+    var field = ReflectionUtils.findField(ThreadPoolTaskExecutor.class, "taskDecorator");
+    if (field == null) {
+      return null;
+    }
+    ReflectionUtils.makeAccessible(field);
+    return ReflectionUtils.getField(field, executor);
   }
 }

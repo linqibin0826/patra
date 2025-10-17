@@ -5,6 +5,7 @@ import com.patra.common.logging.context.LogContextEnricher;
 import com.patra.common.logging.context.TraceContextHolder;
 import java.util.Optional;
 import java.util.UUID;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -14,6 +15,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Signal;
+import reactor.core.publisher.SignalType;
+import reactor.util.context.ContextView;
 
 /**
  * WebFlux-compatible global filter for Spring Cloud Gateway trace context propagation.
@@ -83,6 +87,8 @@ public class TraceContextGlobalFilter implements GlobalFilter, Ordered {
   private static final String HEADER_SPAN_ID = "X-Span-Id";
   private static final String HEADER_PARENT_SPAN_ID = "X-Parent-Span-Id";
   private static final String HEADER_CORRELATION_ID = "X-Correlation-Id";
+  private static final String REACTOR_TRACE_CONTEXT_KEY =
+      "papertrace.logging.traceContext"; // ensures per-subscriber context isolation
 
   private final TraceContextHolder traceContextHolder;
   private final LogContextEnricher logContextEnricher;
@@ -185,15 +191,15 @@ public class TraceContextGlobalFilter implements GlobalFilter, Ordered {
     // Replace request in exchange
     ServerWebExchange mutatedExchange = exchange.mutate().request(mutatedRequest).build();
 
-    // Continue filter chain with enriched context
+    // Continue filter chain with enriched context and Reactor context propagation
     return chain
         .filter(mutatedExchange)
+        .contextWrite(ctx -> ctx.put(REACTOR_TRACE_CONTEXT_KEY, traceContext))
+        .doOnEach(this::restoreTraceContextFromSignal)
         .doFinally(
             signalType -> {
-              // Cleanup: Clear trace context after request completes (prevent leakage)
               traceContextHolder.clearContext();
               logContextEnricher.clear();
-
               log.trace(
                   "Gateway trace context cleared: traceId={}, signal={}", traceId, signalType);
             });
@@ -209,6 +215,37 @@ public class TraceContextGlobalFilter implements GlobalFilter, Ordered {
   private String extractHeader(ServerHttpRequest request, String headerName) {
     HttpHeaders headers = request.getHeaders();
     return headers.getFirst(headerName);
+  }
+
+  /**
+   * Restores MDC/trace context for each Reactor signal based on subscriber-specific context.
+   *
+   * <p>This ensures trace identifiers survive thread hops introduced by asynchronous operators.
+   */
+  private void restoreTraceContextFromSignal(Signal<?> signal) {
+    SignalType type = signal.getType();
+    ContextView contextView = signal.getContextView();
+    contextView
+        .<DistributedTraceContext>getOrEmpty(REACTOR_TRACE_CONTEXT_KEY)
+        .ifPresentOrElse(
+            ctx -> {
+              traceContextHolder.clearContext();
+              logContextEnricher.clear();
+              traceContextHolder.setContext(ctx);
+              logContextEnricher.enrich(ctx);
+
+              if (type == SignalType.ON_SUBSCRIBE) {
+                Subscription subscription = signal.getSubscription();
+                log.trace(
+                    "Reactor trace context restored on subscription: traceId={}, subscription={}",
+                    ctx.traceId(),
+                    subscription);
+              }
+            },
+            () -> {
+              traceContextHolder.clearContext();
+              logContextEnricher.clear();
+            });
   }
 
   /**

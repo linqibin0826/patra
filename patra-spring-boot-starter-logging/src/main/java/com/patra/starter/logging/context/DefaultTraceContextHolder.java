@@ -50,6 +50,15 @@ import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 public class DefaultTraceContextHolder implements TraceContextHolder {
 
   private static final ThreadLocal<DistributedTraceContext> CONTEXT_HOLDER = new ThreadLocal<>();
+  private final TraceContextExtractor traceContextExtractor;
+
+  public DefaultTraceContextHolder() {
+    this(new SkyWalkingTraceContextExtractor());
+  }
+
+  DefaultTraceContextHolder(TraceContextExtractor traceContextExtractor) {
+    this.traceContextExtractor = traceContextExtractor;
+  }
 
   @Override
   public Optional<DistributedTraceContext> getContext() {
@@ -86,18 +95,13 @@ public class DefaultTraceContextHolder implements TraceContextHolder {
    */
   private Optional<DistributedTraceContext> createContextFromSkyWalking() {
     try {
-      String traceId = TraceContext.traceId();
-      String segmentId = TraceContext.segmentId();
+      String traceId = traceContextExtractor.currentTraceId();
+      String spanId = traceContextExtractor.currentSpanId();
 
       // SkyWalking returns "N/A" when agent is not active or no trace exists
-      if (traceId != null
-          && !traceId.isEmpty()
-          && !"N/A".equals(traceId)
-          && segmentId != null
-          && !segmentId.isEmpty()
-          && !"N/A".equals(segmentId)) {
+      if (traceId != null && !traceId.isEmpty() && !"N/A".equals(traceId) && spanId != null) {
 
-        return Optional.of(DistributedTraceContext.of(traceId, segmentId));
+        return Optional.of(DistributedTraceContext.of(traceId, spanId));
       }
     } catch (Exception e) {
       // SkyWalking toolkit may throw exceptions if agent is not properly initialized
@@ -105,5 +109,25 @@ public class DefaultTraceContextHolder implements TraceContextHolder {
     }
 
     return Optional.empty();
+  }
+
+  interface TraceContextExtractor {
+    String currentTraceId();
+
+    String currentSpanId();
+  }
+
+  private static final class SkyWalkingTraceContextExtractor implements TraceContextExtractor {
+
+    @Override
+    public String currentTraceId() {
+      return TraceContext.traceId();
+    }
+
+    @Override
+    public String currentSpanId() {
+      int spanId = TraceContext.spanId();
+      return spanId >= 0 ? String.valueOf(spanId) : null;
+    }
   }
 }
