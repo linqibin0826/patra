@@ -1,3 +1,6 @@
+Replaced by: ../12-provider-onboarding.md
+
+
 # How To Add a New Provider (Recipe)
 
 Status: Ready to use

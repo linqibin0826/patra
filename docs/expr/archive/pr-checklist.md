@@ -1,3 +1,6 @@
+Note: This document was moved to docs/expr/archive on 2025-10-17 as part of consolidation.
+For current guidance, start with docs/expr/START-HERE.md.
+
 # Compiler–Bridge Docs Fix PR Checklist (Documentation‑Only)
 
 Owner: Registry Docs Team

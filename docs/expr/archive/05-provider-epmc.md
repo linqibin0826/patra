@@ -1,3 +1,6 @@
+Quick reference: ../04-providers-quickref.md
+
+
 # 05 — Provider: Europe PMC
 
 Status: Documentation only (pre‑implementation)

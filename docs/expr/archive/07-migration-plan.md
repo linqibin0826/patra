@@ -1,3 +1,6 @@
+Replaced by: ../07-migration-rollout.md
+
+
 # 07 — Migration Plan (DDL/Seeds)
 
 Status: Documentation only (pre‑implementation)

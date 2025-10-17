@@ -1,3 +1,6 @@
+Note: This document was moved to docs/expr/archive on 2025-10-17 as part of consolidation.
+For current guidance, start with docs/expr/START-HERE.md.
+
 # 10 — Risks & Mitigations
 
 Status: Documentation only (pre‑implementation)

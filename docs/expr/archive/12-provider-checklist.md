@@ -1,3 +1,6 @@
+Replaced by: ../12-provider-onboarding.md
+
+
 # 12 — Provider Onboarding Checklist (One‑Pager)
 
 Status: Documentation only (pre‑implementation)
