@@ -34,7 +34,7 @@ import org.springframework.context.annotation.Configuration;
  * applications.
  */
 @Slf4j
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ErrorProperties.class, TracingProperties.class})
 @ConditionalOnProperty(
     prefix = "patra.error",

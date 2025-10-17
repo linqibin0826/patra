@@ -29,10 +29,10 @@ public final class HttpStdErrors {
   }
 
   /** Group of standard HTTP error codes bound to a specific prefix. */
-  public static final class Group {
+  public static class Group {
     private final String prefix;
 
-    private Group(String prefix) {
+    Group(String prefix) {
       this.prefix = prefix;
     }
 
