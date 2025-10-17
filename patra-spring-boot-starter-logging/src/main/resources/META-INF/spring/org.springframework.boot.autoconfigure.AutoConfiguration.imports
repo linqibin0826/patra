@@ -1,2 +1,4 @@
-# Phase 2: Foundational auto-configuration
+# Phase 2-3: Foundational + Trace Context Auto-configuration
 com.patra.starter.logging.autoconfigure.LoggingAutoConfiguration
+com.patra.starter.logging.autoconfigure.TraceContextAutoConfiguration
+com.patra.starter.logging.autoconfigure.AsyncAutoConfiguration
