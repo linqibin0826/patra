@@ -15,15 +15,6 @@
     <description>Ingestion launcher module - Spring Boot entry point</description>
 
     <dependencies>
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-core</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-ingest-api</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
@@ -51,12 +42,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-        </dependency>
-        <!-- Bring expression starter classes onto test classpath for local test wiring -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-expr</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 

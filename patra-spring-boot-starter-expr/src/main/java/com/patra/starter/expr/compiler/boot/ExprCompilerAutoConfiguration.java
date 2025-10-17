@@ -30,7 +30,7 @@ import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration
-@AutoConfigureAfter(FeignAutoConfiguration.class)
+@AutoConfigureAfter({FeignAutoConfiguration.class, ExprFunctionAutoConfiguration.class})
 @EnableConfigurationProperties({CompilerProperties.class, ExprModeProperties.class})
 public class ExprCompilerAutoConfiguration {
 
@@ -85,6 +85,7 @@ public class ExprCompilerAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(ExprRenderer.class)
+  @ConditionalOnBean(FunctionRegistry.class)
   public ExprRenderer exprRenderer(FunctionRegistry functionRegistry, ExprMetrics exprMetrics) {
     return new DefaultExprRenderer(functionRegistry, exprMetrics);
   }
