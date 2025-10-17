@@ -243,7 +243,7 @@ public class TraceContextAutoConfiguration {
    * pre-commit incremental compiles. Functionally equivalent to
    * ApiCallLoggingFeignInterceptor.ApiCallLoggingFeignErrorDecoder.
    */
-  static final class DelegatingApiCallLoggingErrorDecoder implements ErrorDecoder {
+  static class DelegatingApiCallLoggingErrorDecoder implements ErrorDecoder {
     private final com.patra.common.logging.ApiCallLogger apiCallLogger;
     private final ErrorDecoder delegate;
 
