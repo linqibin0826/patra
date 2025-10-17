@@ -2,6 +2,11 @@
 
 **Version**: 1.0.0 | **Last Updated**: 2025-10-15
 
+Runtime Requirement
+- Spring Boot 3.x only (project baseline: 3.2.4). Auto-configuration is registered via
+  `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`.
+  Spring Boot 2.x `spring.factories` is not used/supported.
+
 ## Overview
 
 This guide helps developers adopt the enhanced logging system across Papertrace microservices. It covers migration steps, best practices, and common patterns for structured logging with trace context propagation.

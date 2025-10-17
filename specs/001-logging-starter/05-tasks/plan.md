@@ -133,7 +133,9 @@ patra-spring-boot-starter-logging/
     │       ├── SecurityEventLogger.java         # Utility for auth/authz logging
     │       └── AuthenticationEventLogger.java   # Spring Security event listener
     └── resources/
-        ├── META-INF/spring.factories
+        ├── META-INF/
+        │   └── spring/
+        │       └── org.springframework.boot.autoconfigure.AutoConfiguration.imports
         ├── logback-spring.xml                    # Enhanced pattern layout incl. FR-015 identifiers
         └── application-logging.yml               # Default log levels
 
