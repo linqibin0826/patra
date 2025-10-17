@@ -19,6 +19,12 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
+        <!-- Phase 3 (T032): Logging starter with trace context support -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-logging</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-web</artifactId>

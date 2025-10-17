@@ -5,6 +5,7 @@ import com.patra.common.logging.context.LogContextEnricher;
 import com.patra.common.logging.context.TraceContextHolder;
 import com.patra.common.logging.sanitizer.DefaultLogSanitizer;
 import com.patra.common.logging.sanitizer.LogSanitizer;
+import com.patra.starter.logging.aspect.ExceptionLoggingAspect;
 import com.patra.starter.logging.context.DefaultTraceContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +23,13 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  *   <li>{@link TraceContextHolder}: Manages distributed trace context
  *   <li>{@link LogContextEnricher}: Enriches MDC with trace information
  *   <li>{@link LogSanitizer}: Sanitizes sensitive data from logs
+ *   <li>{@link ExceptionLoggingAspect}: Automatic exception logging (Phase 3)
  * </ul>
  *
  * <p>All beans are registered with {@code @ConditionalOnMissingBean} to allow custom
  * implementations.
  *
- * <p>AspectJ proxy support is enabled for future Phase 3 exception logging aspect.
+ * <p>AspectJ proxy support is enabled for exception logging aspect.
  *
  * @since 0.1.0
  */
@@ -38,7 +40,7 @@ public class LoggingAutoConfiguration {
   private static final Logger log = LoggerFactory.getLogger(LoggingAutoConfiguration.class);
 
   public LoggingAutoConfiguration() {
-    log.info("Initializing Papertrace Logging Starter (Phase 2 - Foundational Components)");
+    log.info("Initializing Papertrace Logging Starter (Phase 2-3 - Foundational + US1)");
   }
 
   /**
@@ -81,5 +83,20 @@ public class LoggingAutoConfiguration {
   public LogSanitizer logSanitizer() {
     log.debug("Registering DefaultLogSanitizer bean");
     return new DefaultLogSanitizer();
+  }
+
+  /**
+   * Registers the exception logging aspect (T031a).
+   *
+   * <p>Automatically logs all exceptions with context capture.
+   *
+   * @param sanitizer Log sanitizer for argument sanitization
+   * @return Exception logging aspect bean
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public ExceptionLoggingAspect exceptionLoggingAspect(LogSanitizer sanitizer) {
+    log.debug("Registering ExceptionLoggingAspect bean");
+    return new ExceptionLoggingAspect(sanitizer);
   }
 }

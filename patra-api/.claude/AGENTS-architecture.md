@@ -11,8 +11,8 @@ This file contains architectural patterns, design principles, and layer responsi
 1. **Adapter** (Outermost): Controllers, Jobs, MQ Listeners → `app` + `api` + web starters
 2. **Application**: `*Orchestrator` for use case coordination → `domain` + `patra-common` + core starter
    - **Critical**: Orchestrate only, NO business rules
-3. **Domain** (Core): Aggregates, Entities, VOs, Events, Ports → **ONLY** `patra-common`
-   - **Critical**: Pure Java, NO framework dependencies
+3. **Domain** (Core): Aggregates, Entities, VOs, Events, Ports → `patra-common` + Lombok + Hutool
+   - **Critical**: Pure Java with Lombok/Hutool support, NO Spring/framework dependencies
 4. **Infrastructure**: `*RepositoryImpl`, DB access, RPC → `domain` + mybatis starter
    - Tools: MyBatis-Plus + MapStruct
 
@@ -26,7 +26,7 @@ This file contains architectural patterns, design principles, and layer responsi
 adapter  →  app + api (+ web starters)
 app      →  domain + patra-common + core starter
 infra    →  domain + mybatis starter + core starter
-domain   →  ONLY patra-common (NO Spring/framework dependencies)
+domain   →  patra-common + Lombok + Hutool (NO Spring/framework dependencies)
 api      →  NO framework dependencies (external contracts)
 ```
 
@@ -36,9 +36,10 @@ api      →  NO framework dependencies (external contracts)
 
 ## Layer Responsibilities & Examples
 
-**Domain** (Pure Java)
+**Domain** (Pure Java with Lombok/Hutool)
 - Aggregates, Entities, VOs, Events, Port interfaces, business rules
-- ✅ Pure Java classes | ❌ NO `@Entity`, `@Service`, `@Autowired`
+- ✅ Pure Java classes, Lombok annotations (@Slf4j, @Data, etc.), Hutool utilities
+- ❌ NO Spring framework annotations (`@Entity`, `@Service`, `@Autowired`, etc.)
 
 **Application** (`*Orchestrator`)
 - Use case orchestration, transactions, cross-aggregate coordination
