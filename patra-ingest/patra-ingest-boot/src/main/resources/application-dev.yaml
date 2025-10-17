@@ -30,3 +30,8 @@ patra:
       max-query-length: 0
       warn-param-count: 0
       max-param-count: 0
+
+# Verbose compiler logs in dev to aid smoke testing
+logging:
+  level:
+    com.patra.starter.expr.compiler: DEBUG
