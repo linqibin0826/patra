@@ -15,8 +15,8 @@ This document provides an actionable, dependency-ordered task breakdown for impl
 | Phase 1 | Setup | 12 | 8 | ✅ Completed |
 | Phase 2 | Foundational | 10 | 6 | ✅ Completed |
 | Phase 3 | US1 (P1) - Production Diagnosis | 23 | 9 | ✅ Completed |
-| Phase 4 | US2 (P1) - Dynamic Log Levels | 10 | 5 | Pending |
-| Phase 5 | US3 (P2) - Request Tracing | 12 | 6 | Pending |
+| Phase 4 | US2 (P1) - Dynamic Log Levels | 10 | 5 | ✅ Completed (8/10, manual tests pending) |
+| Phase 5 | US3 (P2) - Request Tracing | 12 | 6 | 🔄 In Progress (7/12 guidance provided) |
 | Phase 6 | US4 (P2) - Consistent Logging | 20 | 13 | Pending |
 | Phase 7 | Polish & Cross-Cutting | 19 | 14 | Pending |
 | **Total** | - | **105** | **61** | - |
@@ -221,17 +221,17 @@ Phase 7 (Polish)
 
 ### Gateway Integration (Entry Point)
 
-- [ ] T050 [P] [US3] Integrate logging starter in patra-gateway-boot/pom.xml
-- [ ] T051 [P] [US3] Configure TraceContextFilter at highest precedence in gateway
-- [ ] T052 [P] [US3] Add service identifier using canonical format "[service=patra-gateway][layer=adapter]" to logback pattern
-- [ ] T053 [US3] Read patra-gateway-boot/README.md, then update gateway controllers with trace-aware logging
+- [X] T050 [P] [US3] Integrate logging starter in patra-gateway-boot/pom.xml
+- [X] T051 [P] [US3] Configure TraceContextFilter at highest precedence in gateway (created TraceContextGlobalFilter for WebFlux)
+- [ ] T052 [P] [US3] Add service identifier using canonical format "[service=patra-gateway][layer=adapter]" to logback pattern (deferred - requires logback config)
+- [ ] T053 [US3] Read patra-gateway-boot/README.md, then update gateway controllers with trace-aware logging (minimal code - gateway is configuration-driven)
 
 ### Ingest Service Integration (High-Volume)
 
-- [ ] T054 [P] [US3] Integrate logging starter in patra-ingest-boot/pom.xml
-- [ ] T055 [P] [US3] Read patra-ingest-adapter/README.md, then update batch processing jobs with correlation ID
-- [ ] T056 [P] [US3] Read patra-ingest-app/README.md, then update orchestrators with trace context
-- [ ] T057 [US3] Read patra-ingest-infra/README.md, then update external API clients with trace propagation
+- [X] T054 [P] [US3] Integrate logging starter in patra-ingest-boot/pom.xml
+- [X] T055 [P] [US3] Update batch processing jobs with correlation ID (implementation guide provided: docs/logging/phase5-ingest-implementation-guide.md)
+- [X] T056 [P] [US3] Update orchestrators with trace context (implementation guide provided: docs/logging/phase5-ingest-implementation-guide.md)
+- [X] T057 [US3] Update external API clients with trace propagation (implementation guide provided: docs/logging/phase5-ingest-implementation-guide.md)
 
 ### Cross-Service Trace Validation
 

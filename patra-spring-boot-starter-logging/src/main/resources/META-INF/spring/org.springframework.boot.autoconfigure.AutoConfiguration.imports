@@ -2,3 +2,9 @@
 com.patra.starter.logging.autoconfigure.LoggingAutoConfiguration
 com.patra.starter.logging.autoconfigure.TraceContextAutoConfiguration
 com.patra.starter.logging.autoconfigure.AsyncAutoConfiguration
+
+# Phase 4: Dynamic Log Level Configuration
+com.patra.starter.logging.autoconfigure.DynamicLoggingConfiguration
+
+# Phase 5: Gateway Trace Context (WebFlux)
+com.patra.starter.logging.autoconfigure.GatewayTraceContextAutoConfiguration

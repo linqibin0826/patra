@@ -106,6 +106,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Phase 5: Gateway trace context propagation (T051) -->
+        <!-- Spring Cloud Gateway (provided - for TraceContextGlobalFilter) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
