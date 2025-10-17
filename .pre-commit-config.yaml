@@ -29,7 +29,7 @@ repos:
           - "-S"
           - "target,*.min.js,*generated*,*.lock"
           - "-L"
-          - "nd,te,crate,clas,AfterAll,renderIn"
+          - "nd,te,crate,clas,AfterAll,renderIn,atMost"
 
   # 4) Secret scanning (no baseline required)
   - repo: https://github.com/gitleaks/gitleaks
