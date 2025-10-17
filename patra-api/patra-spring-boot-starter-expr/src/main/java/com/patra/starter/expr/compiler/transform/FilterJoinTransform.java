@@ -2,6 +2,7 @@ package com.patra.starter.expr.compiler.transform;
 
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ public class FilterJoinTransform implements ValueTransform {
     // Split by internal delimiter and join with output separator
     // Each segment is expected to be a filter key:value pair
     String result =
-        Arrays.stream(value.split(INTERNAL_DELIMITER))
+        Arrays.stream(value.split(Pattern.quote(INTERNAL_DELIMITER)))
             .filter(s -> !s.isBlank())
             .collect(Collectors.joining(OUTPUT_SEPARATOR));
 
@@ -52,7 +53,7 @@ public class FilterJoinTransform implements ValueTransform {
         stdKey,
         value.length(),
         result.length(),
-        value.split(INTERNAL_DELIMITER).length);
+        value.split(Pattern.quote(INTERNAL_DELIMITER)).length);
     return result;
   }
 }
