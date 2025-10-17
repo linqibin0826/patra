@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Phase 1: Basic console appender with safe defaults -->
+    <!-- Full pattern with trace context, service identifier, and structured format will be added in Phase 2+ -->
+
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- Console appender (safe by default) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Reduce noise from common frameworks -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.apache" level="INFO"/>
+    <logger name="com.alibaba" level="INFO"/>
+    <logger name="io.lettuce" level="WARN"/>
+    <logger name="org.mybatis" level="INFO"/>
+
+    <!-- Papertrace application logging - default INFO -->
+    <logger name="com.patra" level="INFO"/>
+</configuration>
