@@ -98,6 +98,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Phase 4: Dynamic log level configuration (T043) -->
+        <!-- Spring Cloud Context (provided - for EnvironmentChangeEvent from Nacos) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-context</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
