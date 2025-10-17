@@ -52,6 +52,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
+        <!-- Bring expression starter classes onto test classpath for local test wiring -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-expr</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

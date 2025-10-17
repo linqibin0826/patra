@@ -32,7 +32,8 @@ public class PubmedDatetypeFunction implements RenderFunction {
     // Future: could inspect snapshot.provenance().code() or operation/endpoint
     // to decide between "pdat" and "edat"
     String datetype = DEFAULT_DATETYPE;
-
+    // Mutate placeholder map so templates like {{datetype}} resolve correctly
+    placeholders.put("{{datetype}}", datetype);
     log.debug("PUBMED_DATETYPE function returning: {}", datetype);
     return datetype;
   }

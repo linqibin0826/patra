@@ -112,8 +112,6 @@ public class DefaultExprCompiler implements ExprCompiler {
       ExprRenderer.RenderOutcome outcome =
           renderer.render(normalized, snapshot, request.options().traceEnabled());
 
-      mergeRendererWarnings(outcome.warnings(), warnings, errors, strictMode);
-
       String renderedQuery = outcome.query() == null ? "" : outcome.query();
 
       if (queryLengthLimit > 0 && renderedQuery.length() > queryLengthLimit) {
@@ -157,6 +155,10 @@ public class DefaultExprCompiler implements ExprCompiler {
             errors,
             providerParams);
       }
+
+      // Merge renderer warnings after mapping/bridging to achieve deterministic code ordering
+      // expected by golden tests (param-map issues first, then fn/transform issues).
+      mergeRendererWarnings(outcome.warnings(), warnings, errors, strictMode);
 
       applyParamCountLimits(providerParams, warnParamCount, maxParamCount, warnings, errors);
 
@@ -245,10 +247,6 @@ public class DefaultExprCompiler implements ExprCompiler {
       return;
     }
     String providerName = mapping.providerParamName();
-    if (providerParams.containsKey(providerName)) {
-      log.debug("Query bridging skipped - provider param already set: {}", providerName);
-      return;
-    }
     String bridged =
         applyTransformIfNeeded(
             "query",
@@ -261,6 +259,7 @@ public class DefaultExprCompiler implements ExprCompiler {
             strictMode,
             warnings,
             errors);
+    // Always set/overwrite the provider param with the bridged query to ensure determinism
     providerParams.put(providerName, bridged);
     log.debug("Bridged query into provider param {}", providerName);
     metrics.paramMapHit(provenanceCode, endpointName);
