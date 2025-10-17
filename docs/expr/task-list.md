@@ -216,9 +216,9 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P4.6.1** | Implement ArchUnit test: verify domain layer has no framework dependencies | `ArchitectureTest.java` | TODO | docs/expr/08 §8.1 |
-| **P4.6.2** | Implement ArchUnit test: verify adapter→app→domain dependency direction | `ArchitectureTest.java` | TODO | docs/expr/08 §8.1 |
-| **P4.6.3** | Implement ArchUnit test: verify naming conventions (*Orchestrator, *Port, *RepositoryImpl) | `ArchitectureTest.java` | TODO | docs/expr/08 §8.1 |
+| **P4.6.1** | Implement ArchUnit test: verify domain layer has no framework dependencies | `ArchitectureTest.java` | DONE | docs/expr/08 §8.1 |
+| **P4.6.2** | Implement ArchUnit test: verify adapter→app→domain dependency direction | `ArchitectureTest.java` | DONE | docs/expr/08 §8.1 |
+| **P4.6.3** | Implement ArchUnit test: verify naming conventions (*Orchestrator, *Port, *RepositoryImpl) | `ArchitectureTest.java` | DONE | docs/expr/08 §8.1 |
 
 ---
 
@@ -297,7 +297,7 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 - **Phase 5 (Documentation)**: 8 tasks
 - **Phase 6 (Rollout)**: 14 tasks
 
-**Current Status**: 62 TODO, 0 IN_PROGRESS, 70 DONE, 0 BLOCKED
+**Current Status**: 59 TODO, 0 IN_PROGRESS, 73 DONE, 0 BLOCKED
 
 ---
 
@@ -305,11 +305,11 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 Update this section as tasks are completed:
 
-**Last Updated**: 2025-10-17 00:47
-**Completed Tasks**: 75 / 132 (56.8%)
-**Current Phase**: Phase 4 - Testing (Integration)
-**Current Milestone**: Phase 4.4 Integration Tests - End-to-End
-**Next Milestone**: Phase 4.3 Integration Tests - Registry
+**Last Updated**: 2025-10-17 15:55
+**Completed Tasks**: 78 / 132 (59.1%)
+**Current Phase**: Phase 4 - Testing (Architecture)
+**Current Milestone**: Phase 4.6 Architecture Tests
+**Next Milestone**: Phase 5.1 Configuration Files
 
 ---
 
@@ -334,6 +334,7 @@ Update this section as tasks are completed:
 - **2025-10-17 00:47**: Verified all P4.1 renderer unit tests pass locally (offline Maven). Proceeding to Phase 4.2 compiler unit tests per docs/expr/08-testing.md and docs/expr/03-compiler-bridge-internals.md.
 - **2025-10-17 08:28**: Phase 4.2 compiler unit tests complete (P4.2.1–P4.2.10). Added bridge, transform, missing map, query length, MULTI join/repeat, STRICT and non-STRICT behavior tests. Fixed LIST_JOIN/FILTER_JOIN delimiter bug discovered by tests.
 - **2025-10-17 08:35**: Phase 4.3 registry integration tests added (P4.3.1–P4.3.3) using Testcontainers MySQL and MockMvc. Verified test compilation; container execution requires local Docker.
+ - **2025-10-17 15:55**: Phase 4.6 architecture tests added in `patra-ingest-boot` (`ArchitectureTest.java`). Enforced: domain purity (no frameworks), dependency direction (no app↔infra, adapter→infra), and naming conventions (`*Orchestrator` or `*UseCaseImpl`, `*Repository*Impl`, RPC `*PortImpl`/`*Adapter`). Tests green locally.
 
 ---
 
