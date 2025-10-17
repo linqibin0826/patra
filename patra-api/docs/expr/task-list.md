@@ -228,19 +228,19 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P5.1.1** | Add expr configuration to `application.yml` for dev environment (strict=false) | `application-dev.yml` | TODO | P1.2.3 |
-| **P5.1.2** | Add expr configuration to `application.yml` for prod environment (strict=true) | `application-prod.yml` | TODO | P1.2.3 |
-| **P5.1.3** | Document MULTI repeat disabled by default in configuration comments | Configuration docs | TODO | P1.2.2 |
-| **P5.1.4** | Set up query length limits in configuration (e.g., 5000 chars) | Configuration values | TODO | P1.2.1 |
+| **P5.1.1** | Add expr configuration to `application.yml` for dev environment (strict=false) | `application-dev.yaml` | DONE | P1.2.3 |
+| **P5.1.2** | Add expr configuration to `application.yml` for prod environment (strict=true) | `application-prod.yaml` | DONE | P1.2.3 |
+| **P5.1.3** | Document MULTI repeat disabled by default in configuration comments | Configuration docs | DONE | P1.2.2 |
+| **P5.1.4** | Set up query length limits in configuration (e.g., 5000 chars) | Configuration values | DONE | P1.2.1 |
 
 ### P5.2 Service Documentation
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P5.2.1** | Update `patra-spring-boot-starter-expr/README.md` with std_key approach overview | Updated README | TODO | docs/expr/01, docs/expr/02 |
-| **P5.2.2** | Update `patra-ingest/README.md` with adapter integration guide | Updated README | TODO | docs/expr/04, docs/expr/05, docs/expr/06 |
-| **P5.2.3** | Update `patra-registry/README.md` with seed management instructions | Updated README | TODO | docs/expr/07 |
-| **P5.2.4** | Create "How to add a new provider" recipe document | `docs/expr/HOW-TO-ADD-PROVIDER.md` | TODO | docs/expr/12-provider-checklist.md |
+| **P5.2.1** | Update `patra-spring-boot-starter-expr/README.md` with std_key approach overview | Updated README | DONE | docs/expr/01, docs/expr/02 |
+| **P5.2.2** | Update `patra-ingest/README.md` with adapter integration guide | Updated README | DONE | docs/expr/04, docs/expr/05, docs/expr/06 |
+| **P5.2.3** | Update `patra-registry/README.md` with seed management instructions | Updated README | DONE | docs/expr/07 |
+| **P5.2.4** | Create "How to add a new provider" recipe document | `docs/expr/HOW-TO-ADD-PROVIDER.md` | DONE | docs/expr/12-provider-checklist.md |
 
 ---
 
@@ -335,6 +335,8 @@ Update this section as tasks are completed:
 - **2025-10-17 08:28**: Phase 4.2 compiler unit tests complete (P4.2.1–P4.2.10). Added bridge, transform, missing map, query length, MULTI join/repeat, STRICT and non-STRICT behavior tests. Fixed LIST_JOIN/FILTER_JOIN delimiter bug discovered by tests.
 - **2025-10-17 08:35**: Phase 4.3 registry integration tests added (P4.3.1–P4.3.3) using Testcontainers MySQL and MockMvc. Verified test compilation; container execution requires local Docker.
  - **2025-10-17 15:55**: Phase 4.6 architecture tests added in `patra-ingest-boot` (`ArchitectureTest.java`). Enforced: domain purity (no frameworks), dependency direction (no app↔infra, adapter→infra), and naming conventions (`*Orchestrator` or `*UseCaseImpl`, `*Repository*Impl`, RPC `*PortImpl`/`*Adapter`). Tests green locally.
+
+- **2025-10-17 17:30**: Phase 5 COMPLETE (P5.1, P5.2). Added `application-dev.yaml` and `application-prod.yaml` under `patra-ingest-boot` with expr config. STRICT=false for dev, STRICT=true for prod; MULTI repeat explicitly disabled by default; prod guardrails set (`maxQueryLength=5000`, `warnParamCount=50`, `maxParamCount=100`). Updated READMEs: starter (std_key overview), ingest (adapter binding guide), registry (seed management). Added `docs/expr/HOW-TO-ADD-PROVIDER.md` recipe.
 
 ---
 
