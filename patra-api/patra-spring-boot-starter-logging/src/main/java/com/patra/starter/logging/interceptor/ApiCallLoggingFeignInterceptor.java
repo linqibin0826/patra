@@ -115,11 +115,24 @@ public class ApiCallLoggingFeignInterceptor implements RequestInterceptor {
   public static class ApiCallLoggingFeignErrorDecoder implements ErrorDecoder {
 
     private final ApiCallLogger apiCallLogger;
-    private final ErrorDecoder defaultDecoder = new Default();
+    private final ErrorDecoder delegate;
 
     public ApiCallLoggingFeignErrorDecoder(LogSanitizer sanitizer) {
       Logger errorLog = LoggerFactory.getLogger("FeignClientErrors");
       this.apiCallLogger = new ApiCallLogger(errorLog, sanitizer);
+      this.delegate = new Default();
+    }
+
+    /**
+     * Creates an error decoder that logs failures and then delegates to the provided decoder.
+     *
+     * @param sanitizer Log sanitizer
+     * @param delegate The underlying ErrorDecoder to delegate to (e.g., Spring Cloud's default)
+     */
+    public ApiCallLoggingFeignErrorDecoder(LogSanitizer sanitizer, ErrorDecoder delegate) {
+      Logger errorLog = LoggerFactory.getLogger("FeignClientErrors");
+      this.apiCallLogger = new ApiCallLogger(errorLog, sanitizer);
+      this.delegate = delegate != null ? delegate : new Default();
     }
 
     @Override
@@ -142,8 +155,8 @@ public class ApiCallLoggingFeignInterceptor implements RequestInterceptor {
             new FeignApiException("HTTP " + status + ": " + response.reason()));
       }
 
-      // Delegate to default decoder for exception creation
-      return defaultDecoder.decode(methodKey, response);
+      // Delegate to underlying decoder for exception creation
+      return delegate.decode(methodKey, response);
     }
 
     private long extractStartTime(Request request) {
