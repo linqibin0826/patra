@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Phase 3: Enhanced Logback Configuration (T027-T029) -->
+    <!-- Includes MDC trace context, service/layer identifiers, async appenders, and dual output -->
+
+    <springProperty scope="context" name="SERVICE_NAME" source="spring.application.name" defaultValue="unknown"/>
+    <springProperty scope="context" name="LAYER_NAME" source="logging.layer" defaultValue="adapter"/>
+
+    <!-- Pattern with MDC trace context and layer identifier (T027, FR-015) -->
+    <property name="ENHANCED_LOG_PATTERN"
+              value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} [%thread] %-5level %logger{36} [traceId=%X{traceId:-N/A}][spanId=%X{spanId:-N/A}][correlationId=%X{correlationId:-N/A}][service=${SERVICE_NAME}][layer=%X{layer:-${LAYER_NAME}}] - %msg%n"/>
+
+    <!-- Console appender with async wrapper (T028) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${ENHANCED_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CONSOLE" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>false</neverBlock>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+
+    <!-- Rolling file appender with async wrapper (T029) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/${SERVICE_NAME}.log</file>
+        <encoder>
+            <pattern>${ENHANCED_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/${SERVICE_NAME}-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>false</neverBlock>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+
+    <!-- Root logger configuration (dual output: console + file) -->
+    <root level="INFO">
+        <appender-ref ref="ASYNC_CONSOLE" />
+        <appender-ref ref="ASYNC_FILE" />
+    </root>
+
+    <!-- Reduce noise from common frameworks -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.apache" level="INFO"/>
+    <logger name="com.alibaba" level="INFO"/>
+    <logger name="io.lettuce" level="WARN"/>
+    <logger name="org.mybatis" level="INFO"/>
+
+    <!-- Papertrace application logging - default INFO -->
+    <logger name="com.patra" level="INFO"/>
+</configuration>

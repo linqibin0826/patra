@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import java.time.Clock;
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.lang.Nullable;
@@ -31,7 +33,8 @@ public class MybatisPluginAutoConfig {
    * @return The configured {@link MybatisPlusInterceptor}.
    */
   @Bean
-  public MybatisPlusInterceptor mybatisPlusInterceptor() {
+  public MybatisPlusInterceptor mybatisPlusInterceptor(
+      ObjectProvider<InnerInterceptor> additionalInterceptorsProvider) {
     MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
     // Add the pagination plugin for MySQL.
     interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
@@ -39,6 +42,27 @@ public class MybatisPluginAutoConfig {
     interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
     // Add the block attack plugin to prevent full table updates and deletes.
     interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+
+    // Collect and register any additional InnerInterceptor beans (e.g.,
+    // DbFailureLoggingInterceptor)
+    // This allows other starters (logging, audit, etc.) to plug into MyBatis-Plus seamlessly.
+    additionalInterceptorsProvider
+        .orderedStream()
+        .forEach(
+            inner -> {
+              // Avoid double-adding identical instances (defensive)
+              try {
+                interceptor.addInnerInterceptor(inner);
+                log.debug(
+                    "Registered additional MyBatis-Plus InnerInterceptor: {}",
+                    inner.getClass().getName());
+              } catch (Exception e) {
+                log.warn(
+                    "Failed to register additional InnerInterceptor {}: {}",
+                    inner.getClass().getName(),
+                    e.getMessage());
+              }
+            });
     return interceptor;
   }
 

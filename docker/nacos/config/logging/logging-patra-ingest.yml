@@ -1,0 +1,137 @@
+# Service-Specific Logging Configuration: patra-ingest
+# Data ID: logging-patra-ingest.yml
+# Group: DEFAULT_GROUP
+# Description: Log level overrides for patra-ingest microservice
+#
+# This configuration overrides logging-common.yml defaults for patra-ingest service only.
+# Optimized for high-throughput batch processing with aggregated logging (FR-010).
+
+logging:
+  level:
+    # Root logger inherits from logging-common.yml (INFO)
+    # Uncomment to override: root: DEBUG
+
+    # Patra Ingest Service - Application Layers
+    # High-volume service: prioritize performance and log volume reduction (SC-004)
+
+    # Adapter layer - Batch job controllers, schedulers, MQ listeners
+    # Default: INFO (batch start/complete with summary counts per FR-010)
+    # Troubleshooting: DEBUG (per-record details - use sparingly due to volume)
+    com.patra.ingest.adapter: INFO
+
+    # Application layer - Batch processing orchestrators, data transformation
+    # Default: INFO (aggregated batch results: 10k processed, 9.5k success, 500 errors)
+    # Troubleshooting: DEBUG (transformation logic, validation errors)
+    com.patra.ingest.app: INFO
+
+    # Infrastructure layer - External API clients (PubMed, EPMC, etc.), repositories
+    # Default: INFO (external API calls with FR-006 context: URL, status, duration)
+    # Troubleshooting: DEBUG (API response payloads, parsing details)
+    com.patra.ingest.infra: INFO
+
+    # Domain layer - Data parsing, validation, business rules
+    # Default: WARN (parsing errors, validation failures)
+    # Troubleshooting: DEBUG (field extraction, data transformation)
+    # Note: Domain layer uses plain SLF4J Logger (no Lombok @Slf4j)
+    com.patra.ingest.domain: WARN
+
+    # Batch Processing Specific Packages
+    # Adjust these for troubleshooting batch job issues
+
+    # PubMed data ingestion
+    # Default: INFO (batch summary only)
+    # Troubleshooting: DEBUG (per-article processing, API pagination)
+    com.patra.ingest.app.pubmed: INFO
+    com.patra.ingest.infra.pubmed: INFO
+
+    # EPMC (Europe PMC) data ingestion
+    # Default: INFO (batch summary only)
+    # Troubleshooting: DEBUG (per-article processing, fulltext retrieval)
+    com.patra.ingest.app.epmc: INFO
+    com.patra.ingest.infra.epmc: INFO
+
+    # Data parsing and validation
+    # Default: WARN (parsing errors only)
+    # Troubleshooting: DEBUG (field-by-field parsing, validation rules)
+    com.patra.ingest.domain.parser: WARN
+
+    # MyBatis Plus - database query logging for patra-ingest
+    # Default: WARN (errors only)
+    # Troubleshooting: DEBUG (SQL statements, batch insert performance)
+    # Note: Batch inserts can generate high log volume at DEBUG
+    com.baomidou.mybatisplus.core.mapper.LoggingMapper: WARN
+
+    # RocketMQ - message queue for async processing
+    # Default: WARN (connection issues, message send failures)
+    # Troubleshooting: INFO (message publish/consume events)
+    org.apache.rocketmq: WARN
+
+    # XXL-Job - scheduled task execution
+    # Default: INFO (job start/complete with execution time)
+    # Troubleshooting: DEBUG (job parameter resolution, handler details)
+    com.xxl.job: INFO
+
+# High-Throughput Optimization (Edge Case: 10k+ records/minute):
+#
+# - Batch operation logs use aggregated summaries at INFO (FR-010):
+#   "Processed PubMed batch: 10,000 articles, 9,500 success, 500 errors"
+#   NOT per-record logs: "Processing article ID 12345678"
+#
+# - Per-record details only at DEBUG level for troubleshooting
+#
+# - Async appenders with tuned queue size (512 for high-volume services)
+#
+# - Log sampling applied automatically for DEBUG/TRACE if >100 logs/sec
+#   (see SamplingFilter configuration)
+#
+# - Performance target: <5% throughput impact even during batch processing (SC-004)
+
+# Dynamic Log Level Use Cases (FR-011):
+#
+# 1. External API Integration Issue (PubMed/EPMC):
+#    Set com.patra.ingest.infra.pubmed: DEBUG
+#    → Logs detailed API request/response, retry attempts, rate limiting (FR-006)
+#
+# 2. Data Parsing Errors:
+#    Set com.patra.ingest.domain.parser: DEBUG
+#    → Logs field-by-field parsing, validation errors, malformed data
+#
+# 3. Batch Processing Performance:
+#    Set com.patra.ingest.app: DEBUG
+#    Set com.baomidou.mybatisplus.core.mapper: DEBUG
+#    → Logs batch breakdown by stage, database insert performance
+#
+# 4. Message Queue Issues:
+#    Set org.apache.rocketmq: INFO
+#    Set com.patra.starter.logging.mq: DEBUG
+#    → Logs message publish/consume, trace context propagation across MQ (FR-004)
+#
+# 5. Scheduled Job Failures (XXL-Job):
+#    Set com.xxl.job: DEBUG
+#    Set com.patra.ingest.adapter.job: DEBUG
+#    → Logs job execution parameters, handler details, trace context (FR-004)
+
+# Log Volume Management (SC-004):
+#
+# Baseline Measurement (before enhancement):
+# - Measure current production log volume over 7 days
+# - Target: 40% reduction at INFO level while maintaining visibility
+#
+# Strategies:
+# 1. Replace per-record logs with aggregated batch summaries
+# 2. Move verbose details to DEBUG level (disabled by default in production)
+# 3. Use structured log formats (avoid repetitive field names)
+# 4. Apply log sampling for high-frequency events (>100 logs/sec)
+# 5. Eliminate redundant logs (e.g., "method entry" without useful context)
+#
+# Production Monitoring:
+# - Track log volume metrics via log aggregation tool
+# - Alert if volume increases >20% from baseline
+# - Review and adjust log levels if target not met
+
+# Sensitive Data Sanitization (FR-008, SC-006):
+# - Automatic sanitization in ApiCallLogger for external API calls
+# - Automatic sanitization in DbFailureLogger for database errors
+# - Manual sanitization required if logging raw external API responses:
+#   Use: LogSanitizer.sanitize(responseBody)
+# - Zero tolerance: SC-006 mandates zero sensitive data in production logs

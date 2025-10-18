@@ -438,6 +438,61 @@ mvn verify -pl patra-registry-adapter
 - **DEBUG**: Query details (e.g., "Found 3 active configs for provenanceId=1")
 - **ERROR**: Failures (e.g., "Provenance not found: code=INVALID")
 
+### 🪵 Logging (Starter v1.0)
+
+`patra-registry` integrates `patra-spring-boot-starter-logging` to provide:
+- Trace context propagation (traceId/correlationId in MDC) via `TraceContextFilter`
+- Sensitive data sanitization via `LogSanitizer`
+- Dynamic log levels via Nacos (≤60s)
+
+Minimal setup (already applied):
+```xml
+<dependency>
+  <groupId>com.papertrace</groupId>
+  <artifactId>patra-spring-boot-starter-logging</artifactId>
+</dependency>
+```
+
+application.yml:
+```yaml
+spring:
+  application.name: patra-registry
+
+papertrace.logging.trace.enabled: true
+```
+
+Adapter example (sanitize + business MDC):
+```java
+@RestController
+@Slf4j
+public class ProvenanceController {
+  @Autowired LogSanitizer sanitizer;
+  @Autowired LogContextEnricher enricher;
+
+  @GetMapping("/provenance/{code}")
+  public ResponseEntity<?> get(@PathVariable String code) {
+    enricher.enrich("operation", "GET_PROVENANCE");
+    try {
+      log.info("Load provenance: code={}", sanitizer.sanitize(code));
+      // delegate to app layer
+      return ResponseEntity.ok().build();
+    } finally {
+      enricher.clearEnriched();
+    }
+  }
+}
+```
+
+Dynamic levels (Nacos `logging-patra-registry.yml`):
+```yaml
+logging.level:
+  root: INFO
+  com.patra.registry.app: DEBUG
+  com.patra.registry.infra: DEBUG
+```
+
+References: docs/logging/operations-guide.md, specs/001-logging-starter/quickstart.md
+
 ### Metrics (Planned)
 
 - `provenance.config.query.duration` (histogram)

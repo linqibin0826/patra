@@ -575,6 +575,49 @@ mvn verify -pl patra-ingest-infra
 - **DEBUG**: Diagnostic details (e.g., "Window resolved: [2025-01-01, 2025-01-10)")
 - **ERROR**: Failures (e.g., "Plan assembly failed: WINDOW_INVALID")
 
+### 🪵 Logging (Starter v1.0)
+
+`patra-ingest` uses `patra-spring-boot-starter-logging` for trace-aware, consistent logs and dynamic log levels.
+
+Dependency (already included):
+```xml
+<dependency>
+  <groupId>com.papertrace</groupId>
+  <artifactId>patra-spring-boot-starter-logging</artifactId>
+</dependency>
+```
+
+Batch orchestration example (correlationId + MDC):
+```java
+@Slf4j
+@Service
+public class PlanIngestionOrchestrator {
+  @Autowired TraceContextHolder traceContextHolder;
+
+  public void ingestPlan(String planKey) {
+    var ctx = traceContextHolder.withCorrelationId(planKey);
+    traceContextHolder.populateMDC(ctx);
+    try {
+      log.info("Plan ingestion started: planKey={}", planKey);
+      // ...
+      log.info("Plan ingestion completed: planKey={}", planKey);
+    } finally {
+      traceContextHolder.clearMDC();
+    }
+  }
+}
+```
+
+Dynamic levels (Nacos `logging-patra-ingest.yml`):
+```yaml
+logging.level:
+  root: INFO
+  com.patra.ingest.app: DEBUG
+  com.patra.ingest.infra: DEBUG
+```
+
+More examples: docs/logging/layer-specific-examples.md, specs/001-logging-starter/quickstart.md
+
 ### Metrics
 
 **Dependencies**: `spring-boot-starter-actuator` is included in `patra-ingest-boot` for Micrometer metrics support.
