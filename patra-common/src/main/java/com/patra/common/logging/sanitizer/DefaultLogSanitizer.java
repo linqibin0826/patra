@@ -168,14 +168,73 @@ public class DefaultLogSanitizer implements LogSanitizer {
       return null;
     }
 
+    // Handle primitives and simple types early
+    if (isPrimitiveOrWrapper(obj)) {
+      return obj.toString();
+    }
+
+    // Skip Spring proxies and reflection objects to prevent circular references
+    if (isSpringProxy(obj) || isReflectionObject(obj)) {
+      return obj.getClass().getSimpleName()
+          + "@"
+          + Integer.toHexString(System.identityHashCode(obj));
+    }
+
     try {
+      // Configure ObjectMapper to handle circular references
+      ObjectMapper mapper = new ObjectMapper();
+      mapper.configure(
+          com.fasterxml.jackson.databind.SerializationFeature.FAIL_ON_SELF_REFERENCES, false);
+
       // Convert object to JSON for sanitization
-      String json = OBJECT_MAPPER.writeValueAsString(obj);
+      String json = mapper.writeValueAsString(obj);
       return sanitizeJson(json);
     } catch (JsonProcessingException e) {
       // Fallback: use reflection to create safe string representation
       return sanitizeViaReflection(obj);
     }
+  }
+
+  /**
+   * Checks if an object is a primitive type or wrapper.
+   *
+   * @param obj The object to check
+   * @return true if primitive or wrapper
+   */
+  private boolean isPrimitiveOrWrapper(Object obj) {
+    return obj instanceof String
+        || obj instanceof Number
+        || obj instanceof Boolean
+        || obj instanceof Character;
+  }
+
+  /**
+   * Checks if an object is a Spring proxy (CGLIB or JDK dynamic proxy).
+   *
+   * @param obj The object to check
+   * @return true if it's a Spring proxy
+   */
+  private boolean isSpringProxy(Object obj) {
+    Class<?> clazz = obj.getClass();
+    // Check for CGLIB proxy (class name contains "$$")
+    if (clazz.getName().contains("$$")) {
+      return true;
+    }
+    // Check for JDK dynamic proxy
+    return java.lang.reflect.Proxy.isProxyClass(clazz);
+  }
+
+  /**
+   * Checks if an object is a reflection object that should not be serialized.
+   *
+   * @param obj The object to check
+   * @return true if it's a reflection object
+   */
+  private boolean isReflectionObject(Object obj) {
+    return obj instanceof java.lang.reflect.Method
+        || obj instanceof java.lang.reflect.Field
+        || obj instanceof java.lang.reflect.Constructor
+        || obj instanceof Class;
   }
 
   /**
@@ -185,36 +244,95 @@ public class DefaultLogSanitizer implements LogSanitizer {
    * @return A safe string representation
    */
   private String sanitizeViaReflection(Object obj) {
-    Class<?> clazz = obj.getClass();
-    StringBuilder result = new StringBuilder(clazz.getSimpleName()).append("{");
+    return sanitizeViaReflection(obj, 0, new java.util.HashSet<>());
+  }
 
-    Field[] fields = clazz.getDeclaredFields();
-    boolean first = true;
-
-    for (Field field : fields) {
-      if (!first) {
-        result.append(", ");
-      }
-      first = false;
-
-      String fieldName = field.getName();
-      result.append(fieldName).append("=");
-
-      if (isSensitiveKey(fieldName)) {
-        result.append(REDACTED);
-      } else {
-        try {
-          field.setAccessible(true);
-          Object value = field.get(obj);
-          result.append(value != null ? value.toString() : "null");
-        } catch (IllegalAccessException e) {
-          result.append("???");
-        }
-      }
+  /**
+   * Sanitizes an object using reflection with circular reference detection and depth limit.
+   *
+   * @param obj The object to sanitize
+   * @param depth Current recursion depth
+   * @param visited Set of already visited objects (by identity)
+   * @return A safe string representation
+   */
+  private String sanitizeViaReflection(Object obj, int depth, java.util.Set<Object> visited) {
+    // Depth limit to prevent stack overflow
+    if (depth > 3) {
+      return "...";
     }
 
-    result.append("}");
-    return result.toString();
+    if (obj == null) {
+      return "null";
+    }
+
+    // Check for circular references using identity hash
+    if (visited.contains(obj)) {
+      return "(circular-ref)";
+    }
+
+    // Handle primitives and wrappers
+    if (isPrimitiveOrWrapper(obj)) {
+      return obj.toString();
+    }
+
+    // Skip Spring proxies and reflection objects
+    if (isSpringProxy(obj) || isReflectionObject(obj)) {
+      return obj.getClass().getSimpleName()
+          + "@"
+          + Integer.toHexString(System.identityHashCode(obj));
+    }
+
+    // Mark as visited
+    visited.add(obj);
+
+    try {
+      Class<?> clazz = obj.getClass();
+      StringBuilder result = new StringBuilder(clazz.getSimpleName()).append("{");
+
+      Field[] fields = clazz.getDeclaredFields();
+      boolean first = true;
+
+      for (Field field : fields) {
+        // Skip static and synthetic fields
+        if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
+          continue;
+        }
+
+        if (!first) {
+          result.append(", ");
+        }
+        first = false;
+
+        String fieldName = field.getName();
+        result.append(fieldName).append("=");
+
+        if (isSensitiveKey(fieldName)) {
+          result.append(REDACTED);
+        } else {
+          try {
+            field.setAccessible(true);
+            Object value = field.get(obj);
+
+            if (value == null) {
+              result.append("null");
+            } else if (isPrimitiveOrWrapper(value)) {
+              result.append(value.toString());
+            } else {
+              // Recurse with depth+1
+              result.append(sanitizeViaReflection(value, depth + 1, visited));
+            }
+          } catch (IllegalAccessException e) {
+            result.append("???");
+          }
+        }
+      }
+
+      result.append("}");
+      return result.toString();
+    } finally {
+      // Remove from visited set for this branch
+      visited.remove(obj);
+    }
   }
 
   @Override
