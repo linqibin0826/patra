@@ -4,37 +4,27 @@ server:
 spring:
   application:
     name: patra-egress-gateway
-
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     import:
       - "classpath:egress-error-config.yaml"
-      - "optional:nacos:patra-egress-gateway.yaml?group=DEFAULT_GROUP&namespace=public"
-      - "optional:nacos:patra.yaml?group=DEFAULT_GROUP&namespace=public"
-
+      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
   cloud:
     nacos:
       server-addr: ${NACOS_ADDR:127.0.0.1:8848}
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
-        namespace: ${NACOS_NAMESPACE:public}
-        group: ${NACOS_GROUP:DEFAULT_GROUP}
+        namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
+        group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
 
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
-
-# Egress Gateway Configuration
 patra:
   egress:
     global:
-      # Global rate limit: 1000 requests per second
-      rate-limit: 1000
-
+      rate-limit: ${EGRESS_GLOBAL_RATE_LIMIT:1000}
     resilience:
-      # Maximum allowed values (system caps)
       max:
         timeout-seconds: 60
         max-retries: 5
@@ -51,8 +41,6 @@ patra:
           - "Retry-After"
           - "ETag"
           - "Last-Modified"
-
-      # Default values (used when caller doesn't provide config)
       default:
         timeout-seconds: 30
         max-retries: 3
@@ -68,7 +56,6 @@ patra:
           - "X-RateLimit-Reset"
           - "Retry-After"
 
-# Actuator Configuration
 management:
   endpoints:
     web:
@@ -82,11 +69,10 @@ management:
       export:
         enabled: true
 
-# Logging Configuration
 logging:
   level:
     root: INFO
-    com.patra.egress: DEBUG
+    com.patra.egress: INFO
     org.springframework.web: INFO
     org.springframework.cloud: INFO
   pattern:

@@ -1,0 +1,70 @@
+server:
+  port: 6100
+
+spring:
+  application:
+    name: patra-ingest
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import:
+      - "classpath:ingest-error-config.yaml"
+      - "classpath:ingest-mq-config.yaml"
+      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
+        group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0.1.0
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
+    executor:
+      ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PAPERTRACE_LOG_DIR:/Users/linqibin/IdeaProjects/medoc/Papertrace-api/logs}/patra-ingest/xxl-job}
+      logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
+
+papertrace:
+  ingest:
+    exec:
+      lease-ttl-seconds: ${INGEST_LEASE_TTL:60}
+      heartbeat-interval-seconds: ${INGEST_HEARTBEAT_INTERVAL:20}
+    outbox-relay:
+      enabled: true
+      batch-size: 200
+      lease-duration: PT30S
+
+task:
+  execution:
+    lease:
+      duration: ${TASK_EXECUTION_LEASE_DURATION:60}
+      renewal-interval: ${TASK_EXECUTION_LEASE_RENEWAL_INTERVAL:20}
+    heartbeat:
+      failure-threshold: ${TASK_EXECUTION_HEARTBEAT_FAILURE_THRESHOLD:3}
+    fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}

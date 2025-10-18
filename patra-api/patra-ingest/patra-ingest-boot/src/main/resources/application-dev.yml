@@ -1,0 +1,32 @@
+# Development profile overrides
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://127.0.0.1:13306/patra_ingest?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    username: root
+    password: 123456
+  data:
+    redis:
+      url: redis://localhost:16379
+
+expr:
+  strict: false
+  multi:
+    repeat-enabled: false
+
+patra:
+  expr:
+    compiler:
+      enabled: true
+      query-param-bridge:
+        enabled: true
+      max-query-length: 0
+      warn-param-count: 0
+      max-param-count: 0
+
+logging:
+  level:
+    com.patra: DEBUG
+    com.patra.starter.expr.compiler: DEBUG

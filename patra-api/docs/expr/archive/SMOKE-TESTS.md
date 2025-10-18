@@ -45,7 +45,7 @@ What it checks
 P6.3 — Observability Validation
 Dev profile now enables DEBUG logging for the compiler:
 ```
-patra-ingest/patra-ingest-boot/src/main/resources/application-dev.yaml
+patra-ingest/patra-ingest-boot/src/main/resources/application-dev.yml
 logging.level.com.patra.starter.expr.compiler=DEBUG
 ```
 Check logs while running smoke suite:

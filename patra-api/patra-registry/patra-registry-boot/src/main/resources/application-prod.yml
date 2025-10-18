@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${REGISTRY_DB_URL}
+    username: ${REGISTRY_DB_USERNAME}
+    password: ${REGISTRY_DB_PASSWORD}
+  data:
+    redis:
+      url: ${REGISTRY_REDIS_URL}

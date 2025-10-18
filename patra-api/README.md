@@ -149,6 +149,13 @@ curl http://localhost:8081/actuator/health   # Registry
 curl http://localhost:8082/actuator/health   # Ingest
 ```
 
+## 🔧 Environment Profiles
+
+- Spring profiles: `dev` (default) for local Docker Compose stack and `prod` reserved for future cloud deployment. Base configs set `SPRING_PROFILES_ACTIVE` to `dev` by default; export `SPRING_PROFILES_ACTIVE=prod` (or another profile) when you deploy.
+- Each `*-boot` module now uses `application.yml` + `application-{profile}.yml`. Put shared settings (ports, starters, Jackson) in the base file, override environment specifics (datasources, redis, logging) in the profile file.
+- Config center (Nacos) DataIds follow `<service-name>-<profile>.yaml` plus optional shared `papertrace-<profile>.yaml`. Namespace/group come from `NACOS_NAMESPACE_ID`/`NACOS_CONFIG_GROUP` (fallbacks keep the old `NACOS_NAMESPACE`/`NACOS_GROUP` values).
+- Sensitive values (DB/Redis credentials, API keys) live in environment variables consumed inside `application-prod.yml` (e.g., `REGISTRY_DB_URL`, `INGEST_DB_URL`). Commit dev defaults only for local bootstrap.
+
 ---
 
 ## 📚 Documentation

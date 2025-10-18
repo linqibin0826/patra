@@ -231,8 +231,8 @@ This checklist tracks all implementation tasks for the Expression Compiler-Bridg
 
 | Task ID | Description | Expected Output | Status | Dependencies |
 |---------|-------------|-----------------|--------|--------------|
-| **P5.1.1** | Add expr configuration to `application.yml` for dev environment (strict=false) | `application-dev.yaml` | DONE | P1.2.3 |
-| **P5.1.2** | Add expr configuration to `application.yml` for prod environment (strict=true) | `application-prod.yaml` | DONE | P1.2.3 |
+| **P5.1.1** | Add expr configuration to `application.yml` for dev environment (strict=false) | `application-dev.yml` | DONE | P1.2.3 |
+| **P5.1.2** | Add expr configuration to `application.yml` for prod environment (strict=true) | `application-prod.yml` | DONE | P1.2.3 |
 | **P5.1.3** | Document MULTI repeat disabled by default in configuration comments | Configuration docs | DONE | P1.2.2 |
 | **P5.1.4** | Set up query length limits in configuration (e.g., 5000 chars) | Configuration values | DONE | P1.2.1 |
 
@@ -332,7 +332,7 @@ Update this section as tasks are completed:
 - **2025-10-16 20:35**: Phase 2.2 COMPLETE - EPMC seed created (V1.1.2__seed_epmc_expr_config.sql). Added EPMC provenance to V1.1.0. Created field dictionary (publication_date, text), capabilities (RANGE/TERM/IN), render rules (QUERY-based for text and date with `FIRST_PDATE` syntax), param map (`query→query`, `limit→pageSize`). Cursor mapping commented for future.
 - **2025-10-16 20:40**: Phase 2.3 COMPLETE - Crossref seed created (V1.1.3__seed_crossref_expr_config.sql). Added CROSSREF provenance to V1.1.0. Created field dictionary (text, reused publication_date), capabilities (RANGE/TERM/IN), render rules (QUERY for text, PARAMS for date filter with `filter` std_key MULTI), param map (`query→query`, `filter→filter`, `limit→rows`, `offset→offset`). Compilation verified successfully (mvn -q -DskipTests compile).
  - **2025-10-17 20:00**: Phase 6.2 COMPLETE - Added smoke suite (RUN_SMOKE=1). PubMed DATE capability fixed via `V1.1.4__fix_pubmed_entrez_date_kind.sql`, enabling from/to/datetype assertions; Crossref filter join、EPMC query bridging均验证通过。INFO 日志仅输出 queryHash，DEBUG 记录桥接与变换细节。
- - **2025-10-17 18:35**: Phase 6.1 COMPLETE - All seeds applied on dev DB (per user). Added smoke samples and test harness `ExprSmokeTest` (opt-in via `RUN_SMOKE=1`). Enabled DEBUG logs for compiler in `application-dev.yaml`. Added docs: `docs/expr/smoke/SMOKE-TESTS.md`, SQL verification script.
+- **2025-10-17 18:35**: Phase 6.1 COMPLETE - All seeds applied on dev DB (per user). Added smoke samples and test harness `ExprSmokeTest` (opt-in via `RUN_SMOKE=1`). Enabled DEBUG logs for compiler in `application-dev.yml`. Added docs: `docs/expr/smoke/SMOKE-TESTS.md`, SQL verification script.
  - **2025-10-17 20:12**: Phase 6.4 initiated (skip 6.3 per instruction). Added performance & memory benchmark harness `ExprCompilerPerfTest` (opt-in via `RUN_BENCH=1`). Created `docs/expr/final-acceptance.md` to track acceptance criteria and record benchmark results. Updated task statuses to IN PROGRESS for P6.4.2–P6.4.4.
  - **2025-10-17 22:44**: Phase 6.3 COMPLETE — 新增 `ExprObservabilityTest` 覆盖 INFO 脱敏与 DEBUG 明细、Micrometer 指标与标签边界、miss 计数。产出 `docs/expr/smoke/OBSERVABILITY-VALIDATION.md`。注意：render.rule_miss>0 属预期（字段只配置单一发射类型）；param.map_miss=0。
  - **2025-10-17 22:15**: Phase 6.4 results recorded — 全量测试（排除 IT）通过；基准 avg=0.06ms / p95=0.08ms（atoms≈91），200 次编译内存增量≈0MB。已将 P6.4.1–P6.4.4 标记为 DONE；6.3 可观测性验证仍按指示延后，待完成后进入 P6.4.5 最终评审。
@@ -344,7 +344,7 @@ Update this section as tasks are completed:
 - **2025-10-17 08:35**: Phase 4.3 registry integration tests added (P4.3.1–P4.3.3) using Testcontainers MySQL and MockMvc. Verified test compilation; container execution requires local Docker.
  - **2025-10-17 15:55**: Phase 4.6 architecture tests added in `patra-ingest-boot` (`ArchitectureTest.java`). Enforced: domain purity (no frameworks), dependency direction (no app↔infra, adapter→infra), and naming conventions (`*Orchestrator` or `*UseCaseImpl`, `*Repository*Impl`, RPC `*PortImpl`/`*Adapter`). Tests green locally.
 
-- **2025-10-17 17:30**: Phase 5 COMPLETE (P5.1, P5.2). Added `application-dev.yaml` and `application-prod.yaml` under `patra-ingest-boot` with expr config. STRICT=false for dev, STRICT=true for prod; MULTI repeat explicitly disabled by default; prod guardrails set (`maxQueryLength=5000`, `warnParamCount=50`, `maxParamCount=100`). Updated READMEs: starter (std_key overview), ingest (adapter binding guide), registry (seed management). Added `docs/expr/HOW-TO-ADD-PROVIDER.md` recipe.
+- **2025-10-17 17:30**: Phase 5 COMPLETE (P5.1, P5.2). Added `application-dev.yml` and `application-prod.yml` under `patra-ingest-boot` with expr config. STRICT=false for dev, STRICT=true for prod; MULTI repeat explicitly disabled by default; prod guardrails set (`maxQueryLength=5000`, `warnParamCount=50`, `maxParamCount=100`). Updated READMEs: starter (std_key overview), ingest (adapter binding guide), registry (seed management). Added `docs/expr/HOW-TO-ADD-PROVIDER.md` recipe.
 
 ---
 
