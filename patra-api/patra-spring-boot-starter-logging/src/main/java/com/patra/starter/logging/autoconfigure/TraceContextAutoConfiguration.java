@@ -135,8 +135,7 @@ public class TraceContextAutoConfiguration {
   @Bean
   @ConditionalOnClass(RestTemplate.class)
   public RestTemplateCustomizer restTemplateLoggingCustomizer(
-      org.springframework.http.client.ClientHttpRequestInterceptor traceInterceptor,
-      LogSanitizer sanitizer) {
+      RestTemplateInterceptor traceInterceptor, LogSanitizer sanitizer) {
     return restTemplate -> {
       // Detect existing trace interceptor by identity (works with JDK/CGLIB proxies)
       boolean hasTrace = restTemplate.getInterceptors().contains(traceInterceptor);
