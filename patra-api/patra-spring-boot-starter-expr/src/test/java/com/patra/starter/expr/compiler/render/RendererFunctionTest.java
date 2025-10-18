@@ -97,7 +97,7 @@ class RendererFunctionTest {
   }
 
   @Test
-  @DisplayName("PUBMED_DATETYPE function should emit 'pdat'")
+  @DisplayName("PUBMED_DATETYPE function should emit 'edat' for entrez_date")
   void testFunctionPopulatesDatetype() {
     Expr expr =
         Exprs.rangeDate("entrez_date", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
@@ -107,7 +107,66 @@ class RendererFunctionTest {
     assertThat(outcome.params())
         .containsEntry("from", "2024-01-01")
         .containsEntry("to", "2024-12-31")
-        .containsEntry("datetype", "pdat");
+        .containsEntry("datetype", "edat"); // entrez_date maps to edat (Entry Date)
+    assertThat(outcome.query()).isEmpty();
+    assertThat(outcome.warnings()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("PUBMED_DATETYPE function should emit 'pdat' for publication_date")
+  void testFunctionPopulatesDatetypeForPublicationDate() {
+    // Add publication_date field and rule
+    FieldDefinition pubDateField =
+        new FieldDefinition(
+            "publication_date",
+            "Publication Date",
+            "",
+            DataType.DATE,
+            Cardinality.SINGLE,
+            true,
+            true);
+
+    RenderRule pubDateRule =
+        new RenderRule(
+            "publication_date",
+            "SOURCE",
+            null,
+            com.patra.expr.Atom.Operator.RANGE,
+            null,
+            NegationQualifier.ANY,
+            ValueType.DATE,
+            EmitType.PARAMS,
+            null,
+            null,
+            null,
+            false,
+            Map.of("from", "{{from}}", "to", "{{to}}", "datetype", "{{datetype}}"),
+            "PUBMED_DATETYPE",
+            Instant.parse("2000-01-01T00:00:00Z"),
+            null,
+            150);
+
+    ProvenanceSnapshot snapshotWithPubDate =
+        new ProvenanceSnapshot(
+            new ProvenanceSnapshot.Identity(1L, "PUBMED", "PubMed"),
+            ProvenanceSnapshot.Scope.sourceScope(),
+            new ProvenanceSnapshot.Operation("SEARCH", "UTC"),
+            1L,
+            Instant.now(),
+            Map.of("publication_date", pubDateField),
+            Map.of(),
+            Map.of(),
+            List.of(pubDateRule));
+
+    Expr expr =
+        Exprs.rangeDate("publication_date", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+
+    ExprRenderer.RenderOutcome outcome = renderer.render(expr, snapshotWithPubDate, false);
+
+    assertThat(outcome.params())
+        .containsEntry("from", "2024-01-01")
+        .containsEntry("to", "2024-12-31")
+        .containsEntry("datetype", "pdat"); // publication_date maps to pdat (Publication Date)
     assertThat(outcome.query()).isEmpty();
     assertThat(outcome.warnings()).isEmpty();
   }

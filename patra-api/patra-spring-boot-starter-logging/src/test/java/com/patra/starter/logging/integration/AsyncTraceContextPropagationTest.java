@@ -64,7 +64,8 @@ import org.springframework.util.ReflectionUtils;
       AsyncAutoConfiguration.class,
       AsyncTraceContextPropagationTest.AsyncTestService.class,
       AsyncTraceContextPropagationTest.AsyncExecutorConfiguration.class
-    })
+    },
+    webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ContextConfiguration
 @EnableAsync
 @DisplayName("Async Trace Context Propagation Test (T060)")

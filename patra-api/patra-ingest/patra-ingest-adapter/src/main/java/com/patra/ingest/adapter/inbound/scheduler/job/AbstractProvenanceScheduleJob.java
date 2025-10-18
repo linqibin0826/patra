@@ -37,7 +37,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {
 
-  private static final String DEFAULT_STEP = "PT6H";
+  private static final String DEFAULT_STEP =
+      "P1D"; // Default to 1 day for DATE-based slicing (e.g., PubMed)
   private static final String DEFAULT_SCHEDULER_LOG_ID = "0";
 
   /** Plan orchestration application service (application layer entry). */

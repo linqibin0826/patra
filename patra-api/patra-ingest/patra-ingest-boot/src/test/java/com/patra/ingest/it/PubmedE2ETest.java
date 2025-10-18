@@ -66,7 +66,7 @@ class PubmedE2ETest {
     assertThat(params.get("mindate").asText()).isEqualTo("2023-01-01");
     // exclusive minus 1d transform → 2023-12-30
     assertThat(params.get("maxdate").asText()).isEqualTo("2023-12-30");
-    assertThat(params.get("datetype").asText()).isEqualTo("pdat");
+    assertThat(params.get("datetype").asText()).isEqualTo("edat"); // entrez_date → edat
   }
 
   @TestConfiguration

@@ -18,8 +18,17 @@ spring:
         producer:
           # Boot converts this string to SpEL and injects it into ProducerProperties#setPartitionKeyExpression
           partition-key-expression: "headers['partitionKey'] != null ? headers['partitionKey'] : headers['KEYS']"
-          partition-count: 8
+          partition-count: 4
       bindings:
+        # Producer binding for StreamBridge
+        INGEST_TASK_READY-out-0:
+          binder: rocketmq
+          destination: INGEST_TASK_READY
+          content-type: application/json
+          producer:
+            partition-key-expression: "headers['partitionKey']"
+            partition-count: 4
+        # Consumer binding
         ingestTaskReadyConsumer-in-0:
           binder: rocketmq
           destination: INGEST_TASK_READY

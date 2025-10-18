@@ -86,7 +86,7 @@ class ExprSmokeTest {
     if (seedSupportsDate) {
       assertEquals("2023-01-01", params.path("mindate").asText());
       assertEquals("2023-12-30", params.path("maxdate").asText());
-      assertEquals("pdat", params.path("datetype").asText());
+      assertEquals("edat", params.path("datetype").asText()); // entrez_date → edat
     }
 
     // Adapter assembly (count request) + gateway URL build (format only)
@@ -105,7 +105,7 @@ class ExprSmokeTest {
     Map<String, String> qs2 = parseQuery(call.url());
     assertEquals(result.query(), qs2.get("term"), () -> call.url());
     if (seedSupportsDate) {
-      assertEquals("pdat", qs2.get("datetype"));
+      assertEquals("edat", qs2.get("datetype")); // entrez_date → edat
       assertEquals("2023-01-01", qs2.get("mindate"));
       assertEquals("2023-12-30", qs2.get("maxdate"));
     }
