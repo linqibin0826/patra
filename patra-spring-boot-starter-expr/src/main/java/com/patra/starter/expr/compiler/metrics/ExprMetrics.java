@@ -23,13 +23,20 @@ import java.util.Objects;
  *   <li>{@code expr.compile.duration_ms{provenance,endpoint}}
  * </ul>
  *
+ * <p>Note: Not final to allow Spring AOP CGLIB proxying.
+ *
  * @since 1.0.0
  */
-public final class ExprMetrics {
+public class ExprMetrics {
 
   private static final ExprMetrics NO_OP = new ExprMetrics(null);
 
   private final MeterRegistry meterRegistry;
+
+  /** Protected no-arg constructor for CGLIB proxying. */
+  protected ExprMetrics() {
+    this(null);
+  }
 
   private ExprMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
