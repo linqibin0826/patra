@@ -130,8 +130,8 @@ DRAFT → SLICING → READY → COMPLETED
 - `planKey` (String): Idempotency key = hash(provenance + operation + window + strategy)
 - `provenanceCode` (String): Source code (e.g., `"pubmed"`)
 - `operationCode` (OperationCode): HARVEST/UPDATE/COMPENSATION
-- `windowSpec` (WindowSpec): Window boundary (TIME/CURSOR/VOLUME/SINGLE)
-- `sliceStrategyCode` (String): How to break plan into slices (e.g., `"TIME"`, `"SINGLE"`)
+- `windowSpec` (WindowSpec): Window boundary (TIME/DATE/CURSOR/VOLUME/SINGLE)
+- `sliceStrategyCode` (String): How to break plan into slices (e.g., `"TIME"`, `"DATE"`, `"SINGLE"`)
 - `exprProtoSnapshotJson` (String): Captured expression prototype
 - `provenanceConfigSnapshotJson` (String): Captured config snapshot
 

@@ -279,6 +279,23 @@ public sealed interface WindowSpec
 
         yield new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
       }
+      case DATE -> {
+        // DATE strategy uses the same Time window structure internally for now
+        // The difference is in how the expression is generated (date-only vs datetime)
+        Map<String, Object> windowMap = extractRequiredWindowMap(map, "DATE");
+        Object fromObj = windowMap.get("from");
+        Object toObj = windowMap.get("to");
+
+        if (fromObj == null || toObj == null) {
+          throw new IllegalArgumentException("DATE window requires both 'from' and 'to' fields");
+        }
+        if (!(fromObj instanceof String) || !(toObj instanceof String)) {
+          throw new IllegalArgumentException(
+              "DATE window 'from' and 'to' must be ISO-8601 timestamp strings");
+        }
+
+        yield new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
+      }
       case ID_RANGE -> {
         Map<String, Object> windowMap = extractRequiredWindowMap(map, "ID_RANGE");
         Object fromObj = windowMap.get("from");

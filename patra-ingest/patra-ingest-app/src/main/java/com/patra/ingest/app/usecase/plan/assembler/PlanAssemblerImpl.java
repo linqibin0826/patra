@@ -104,7 +104,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     PlanExpressionDescriptor planExpression = request.planExpression();
     ProvenanceConfigSnapshot configSnapshot = request.configSnapshot();
 
-    SliceStrategy sliceStrategy = determineSliceStrategy(norm);
+    SliceStrategy sliceStrategy = determineSliceStrategy(norm, configSnapshot);
     JsonNormalizer.Result configCanonical = normalizeConfigSnapshot(configSnapshot);
 
     PlanAggregate plan =
@@ -278,12 +278,77 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return builder.toString();
   }
 
-  /** Selects slice strategy (extension point): UPDATE → SINGLE, otherwise TIME. */
-  private SliceStrategy determineSliceStrategy(PlanTriggerNorm norm) {
+  /**
+   * Selects slice strategy based on operation type and data source configuration.
+   *
+   * <p>Strategy selection logic:
+   *
+   * <ul>
+   *   <li>UPDATE operations → SINGLE (no partitioning)
+   *   <li>DATE-only data sources (e.g., PubMed) → DATE (day-level granularity)
+   *   <li>Other sources → DATE (default, safer and more compatible)
+   * </ul>
+   *
+   * <p>Date-only detection: checks {@code offsetDateFormat} for date-only patterns (yyyyMMdd,
+   * yyyy-MM-dd) vs timestamp patterns (ISO_INSTANT, epochMillis).
+   *
+   * @param norm plan trigger norm containing operation type
+   * @param configSnapshot provenance configuration snapshot (nullable)
+   * @return selected slice strategy
+   */
+  private SliceStrategy determineSliceStrategy(
+      PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     if (norm.isUpdate()) {
       return SliceStrategy.SINGLE;
     }
-    return SliceStrategy.TIME;
+
+    // Check if the data source only supports date-level queries (no time component)
+    if (configSnapshot != null && configSnapshot.windowOffset() != null) {
+      String dateFormat = configSnapshot.windowOffset().offsetDateFormat();
+      if (supportsDateOnly(dateFormat)) {
+        log.debug(
+            "[INGEST][APP] Selected DATE strategy for provenance={}, offsetDateFormat={}",
+            norm.provenanceCode(),
+            dateFormat);
+        return SliceStrategy.DATE;
+      }
+    }
+
+    // Default to DATE strategy (safer and more compatible with most data sources)
+    log.debug(
+        "[INGEST][APP] Selected DATE strategy (default) for provenance={}", norm.provenanceCode());
+    return SliceStrategy.DATE;
+  }
+
+  /**
+   * Determines if the data source only supports date-level queries (no time component).
+   *
+   * <p>Detection heuristic:
+   *
+   * <ul>
+   *   <li>If offsetDateFormat is blank/null → default to DATE-only (safer)
+   *   <li>If contains timestamp indicators (INSTANT, MILLIS, HH, SS) → supports TIME
+   *   <li>If contains only date patterns (YYYY, MM, DD) → DATE-only
+   * </ul>
+   *
+   * @param offsetDateFormat date format string from configuration
+   * @return true if only date-level queries are supported, false if time precision is supported
+   */
+  private boolean supportsDateOnly(String offsetDateFormat) {
+    if (offsetDateFormat == null || offsetDateFormat.isBlank()) {
+      return true; // Default to DATE-only for safety
+    }
+    String normalized = offsetDateFormat.trim().toUpperCase();
+    // Check for timestamp indicators (time precision supported)
+    if (normalized.contains("INSTANT")
+        || normalized.contains("MILLIS")
+        || normalized.contains("HH")
+        || normalized.contains("SS")
+        || normalized.contains("TIMESTAMP")) {
+      return false;
+    }
+    // If it contains date patterns and no time patterns, it's date-only
+    return normalized.matches(".*(?:YYYY|YY|MM|DD).*");
   }
 
   /** Builds slice params JSON with stable serialization (e.g., {"strategy":"time"}). */

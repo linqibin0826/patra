@@ -27,10 +27,10 @@ INSERT INTO patra_registry.reg_prov_window_offset_cfg (id, provenance_id, operat
                                                        created_at, created_by, created_by_name, updated_at, updated_by,
                                                        updated_by_name, version, ip_address, deleted)
 VALUES (1, 1, 'ALL', '2025-09-01 00:00:00.000000', null, 'CALENDAR', 1, 'DAY', 'DAY', 2, 'HOUR', 1, 'HOUR',
-        3600, 'DATE', 'entrez_date', 'YYYYMMDD', 'entrez_date', 50000, 2592000, 'ACTIVE', '[
+        3600, 'DATE', 'entrez_date', 'yyyy-MM-dd', 'entrez_date', 50000, 2592000, 'ACTIVE', '[
     {
       "by": "系统管理员",
-      "note": "PubMed Harvest 任务窗口配置",
+      "note": "PubMed Harvest 任务窗口配置 - 仅支持日期级别查询（无时间组件）",
       "time": "2025-09-01 12:00:00"
     }
   ]', '2025-09-24 21:47:47.971285', 1001, '系统管理员', '2025-09-24 21:53:41.720510', 1001, '系统管理员', 0, 0xC0A80114,

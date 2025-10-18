@@ -16,7 +16,7 @@ import com.patra.ingest.domain.model.vo.ExecutionContext;
  *   <li>Batch limit: enforce max batch count; throw or mark exceedsLimit accordingly.
  *   <li>Cursor support: support cursor-based pagination (e.g., token-based).
  *   <li>Window-aware: adjust query range based on WindowSpec strategy
- *       (TIME/ID_RANGE/CURSOR_LANDMARK/etc.).
+ *       (TIME/DATE/ID_RANGE/CURSOR_LANDMARK/etc.).
  * </ul>
  *
  * <p>Implementations should be registered in BatchPlannerRegistry and routed by provenanceCode.
