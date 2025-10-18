@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>patra-ingest-api</artifactId>
-    <name>patra-ingest-api</name>
+    <name>Papertrace Ingest API</name>
     <description>Ingestion API module - public events and interface definitions</description>
 
     <dependencies>

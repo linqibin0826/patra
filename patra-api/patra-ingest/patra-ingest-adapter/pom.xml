@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>patra-ingest-adapter</artifactId>
-    <name>patra-ingest-adapter</name>
+    <name>Papertrace Ingest Adapter</name>
     <description>Ingestion adapter module - Web controllers, message queues, scheduled jobs</description>
 
     <dependencies>

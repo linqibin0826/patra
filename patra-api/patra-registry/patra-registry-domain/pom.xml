@@ -11,7 +11,7 @@
     </parent>
     <artifactId>patra-registry-domain</artifactId>
     <packaging>jar</packaging>
-    <name>patra-registry-domain</name>
+    <name>Papertrace Registry Domain</name>
 
     <dependencies>
         <dependency>

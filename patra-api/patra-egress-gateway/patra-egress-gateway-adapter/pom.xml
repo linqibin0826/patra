@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-egress-gateway-adapter</artifactId>
-    <name>Patra Egress Gateway Adapter</name>
+    <name>Papertrace Egress Gateway Adapter</name>
     <description>Inbound adapters (REST Controller)</description>
 
     <dependencies>

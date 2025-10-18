@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>patra-ingest-app</artifactId>
-    <name>patra-ingest-app</name>
+    <name>Papertrace Ingest Application</name>
     <description>Ingestion application module - application services and use case orchestration</description>
 
     <dependencies>

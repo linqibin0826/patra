@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-egress-gateway-boot</artifactId>
-    <name>Patra Egress Gateway Boot</name>
+    <name>Papertrace Egress Gateway Boot</name>
     <description>Spring Boot bootstrap module</description>
 
     <dependencies>

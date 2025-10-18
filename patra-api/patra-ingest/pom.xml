@@ -14,7 +14,7 @@
     <artifactId>patra-ingest</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>patra-ingest (Aggregator)</name>
+    <name>Papertrace Ingest</name>
     <description>Ingestion module aggregate: api/domain/infra/app/adapter</description>
 
     <dependencyManagement>

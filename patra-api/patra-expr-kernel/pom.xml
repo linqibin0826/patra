@@ -12,6 +12,7 @@
 
     <artifactId>patra-expr-kernel</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <name>Papertrace Expression Kernel</name>
 
     <dependencies>
         <dependency>

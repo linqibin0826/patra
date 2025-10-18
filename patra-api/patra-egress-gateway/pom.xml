@@ -13,7 +13,7 @@
 
     <artifactId>patra-egress-gateway</artifactId>
     <packaging>pom</packaging>
-    <name>Patra Egress Gateway</name>
+    <name>Papertrace Egress Gateway</name>
     <description>Southbound gateway responsible for orchestrating every outbound external service call</description>
 
     <modules>

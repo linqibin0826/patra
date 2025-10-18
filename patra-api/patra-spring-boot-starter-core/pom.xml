@@ -11,6 +11,7 @@
     <artifactId>patra-spring-boot-starter-core</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+    <name>Papertrace Spring Boot Starter - Core</name>
 
     <dependencies>
         <!-- Internal shared library: utilities/exceptions -->

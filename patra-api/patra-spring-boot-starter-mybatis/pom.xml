@@ -13,6 +13,7 @@
     <artifactId>patra-spring-boot-starter-mybatis</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+    <name>Papertrace Spring Boot Starter - MyBatis</name>
 
     <dependencies>
         <dependency>

@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-egress-gateway-app</artifactId>
-    <name>Patra Egress Gateway App</name>
+    <name>Papertrace Egress Gateway Application</name>
     <description>Use case orchestration</description>
 
     <dependencies>

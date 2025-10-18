@@ -11,6 +11,7 @@
     </parent>
     <artifactId>patra-spring-boot-starter-logging</artifactId>
     <packaging>jar</packaging>
+    <name>Papertrace Spring Boot Starter - Logging</name>
 
     <dependencies>
         <!-- Depend on patra-common for shared logging utilities -->

@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>patra-ingest-domain</artifactId>
-    <name>patra-ingest-domain</name>
+    <name>Papertrace Ingest Domain</name>
     <description>Ingestion domain module - core business logic and domain model</description>
 
     <dependencies>

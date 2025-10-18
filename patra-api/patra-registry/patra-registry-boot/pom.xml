@@ -12,6 +12,7 @@
 
     <artifactId>patra-registry-boot</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <name>Papertrace Registry Boot</name>
 
     <dependencies>
         <dependency>
