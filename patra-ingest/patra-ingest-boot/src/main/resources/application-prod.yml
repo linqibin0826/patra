@@ -1,0 +1,26 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${INGEST_DB_URL}
+    username: ${INGEST_DB_USERNAME}
+    password: ${INGEST_DB_PASSWORD}
+  data:
+    redis:
+      url: ${INGEST_REDIS_URL}
+
+expr:
+  strict: true
+  multi:
+    repeat-enabled: false
+
+patra:
+  expr:
+    compiler:
+      enabled: true
+      query-param-bridge:
+        enabled: true
+      max-query-length: 5000
+      warn-param-count: 50
+      max-param-count: 100

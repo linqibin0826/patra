@@ -220,16 +220,21 @@ if (!callerConfig.equals(merged)) {
 
 ## ⚙️ Configuration
 
-### application.yaml
+### application.yml
 
 ```yaml
-server:
-  port: 8083
-
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import:
+      - "classpath:egress-error-config.yaml"
+      - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
 patra:
   egress:
     global:
-      rate-limit: 1000  # Global gateway rate limit
+      rate-limit: ${EGRESS_GLOBAL_RATE_LIMIT:1000}
 
     resilience:
       # System maximum (upper bounds)
@@ -266,6 +271,23 @@ patra:
           - "X-RateLimit-Reset"
           - "Retry-After"
 ```
+
+### application-dev.yml
+
+```yaml
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.patra.egress: DEBUG
+```
+
+### application-prod.yml
+
+Used for cloud deployment overrides. Add environment-specific limits or endpoint settings if they differ from the defaults.
 
 **Why two-tier config?**
 - **Default**: Sensible defaults for most use cases

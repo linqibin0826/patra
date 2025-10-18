@@ -73,8 +73,8 @@ WHERE provenance_id = (SELECT id FROM reg_provenance WHERE code='SCOPUS')
 
 ## 9) Configure Runtime Guardrails
 
-- Dev (`application-dev.yaml`): `expr.strict=false`, no query/param limits.
-- Prod (`application-prod.yaml`): `expr.strict=true`, `max-query-length: 5000`, `warn-param-count: 50`, `max-param-count: 100`.
+- Dev (`application-dev.yml`): `expr.strict=false`, no query/param limits.
+- Prod (`application-prod.yml`): `expr.strict=true`, `max-query-length: 5000`, `warn-param-count: 50`, `max-param-count: 100`.
 
 ## 10) Roll Out
 

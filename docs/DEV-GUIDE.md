@@ -577,6 +577,13 @@ public class {Entity}ClientImpl implements {Entity}Client {
 
 ## 6. Adding Configuration Support
 
+### Profile Layout
+
+- Base config lives in `application.yml`; override environment-specific values in `application-dev.yml` (local Docker Compose) and `application-prod.yml` (cloud). Keep servers, Jackson, starters in the base file.
+- Each base file sets `spring.profiles.active=${SPRING_PROFILES_ACTIVE:dev}` so the dev profile is chosen automatically unless you export a different value when deploying.
+- Config center imports use `optional:nacos:${spring.application.name}-${spring.profiles.active}.yaml` and the optional shared `papertrace-${spring.profiles.active}.yaml`. The namespace/group placeholders resolve from `NACOS_NAMESPACE_ID` / `NACOS_CONFIG_GROUP` with fallbacks to the legacy env variables.
+- Production secrets (datasource URLs, Redis endpoints, API keys) are referenced as environment variables (`REGISTRY_DB_URL`, `INGEST_DB_URL`, etc.); never hardcode them in Git.
+
 For new **operational configurations** (like HTTP timeouts, retry policies):
 
 ### Recipe
