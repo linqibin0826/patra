@@ -21,4 +21,27 @@ public record Issue(
   public static Issue warn(String code, String message, Map<String, Object> context) {
     return new Issue(IssueSeverity.WARN, code, message, context);
   }
+
+  /**
+   * Custom toString to prevent infinite recursion when context contains complex objects.
+   *
+   * <p>Avoids calling toString() on context values, which may contain Expr or other objects with
+   * deep/circular references that cause StackOverflowError during debugging.
+   */
+  @Override
+  public String toString() {
+    String contextSummary =
+        context == null
+            ? "null"
+            : "Map{size=" + context.size() + ", keys=" + context.keySet() + "}";
+    return "Issue[severity="
+        + severity
+        + ", code="
+        + code
+        + ", message="
+        + message
+        + ", context="
+        + contextSummary
+        + "]";
+  }
 }
