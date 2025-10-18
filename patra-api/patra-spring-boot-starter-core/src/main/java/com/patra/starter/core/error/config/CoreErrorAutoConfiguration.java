@@ -20,12 +20,12 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * Auto-configuration for platform error handling.
@@ -34,7 +34,7 @@ import org.springframework.context.annotation.Bean;
  * applications.
  */
 @Slf4j
-@AutoConfiguration
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({ErrorProperties.class, TracingProperties.class})
 @ConditionalOnProperty(
     prefix = "patra.error",

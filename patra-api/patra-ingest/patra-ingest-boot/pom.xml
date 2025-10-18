@@ -15,6 +15,12 @@
     <description>Ingestion launcher module - Spring Boot entry point</description>
 
     <dependencies>
+        <!-- Phase 5: Enhanced logging with trace context (T054) -->
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-logging</artifactId>
+        </dependency>
+
 
         <dependency>
             <groupId>com.alibaba.cloud</groupId>

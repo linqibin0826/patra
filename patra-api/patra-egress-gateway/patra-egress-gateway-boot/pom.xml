@@ -38,6 +38,16 @@
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-logging</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-cloud-starter-feign</artifactId>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
