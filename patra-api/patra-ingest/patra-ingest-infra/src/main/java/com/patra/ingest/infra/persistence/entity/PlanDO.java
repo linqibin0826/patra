@@ -24,7 +24,7 @@ import lombok.EqualsAndHashCode;
  *   <li><code>slice_strategy_code</code> + <code>slice_params</code> determine how child slices are
  *       derived.
  *   <li><code>window_spec</code> stores window boundaries as JSON; supports multiple strategies
- *       (TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE).
+ *       (TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE).
  * </ul>
  */
 @Data
@@ -64,7 +64,7 @@ public class PlanDO extends BaseDO {
   @TableField("provenance_config_hash")
   private String provenanceConfigHash;
 
-  /** Slice strategy code (TIME/ID_RANGE/CURSOR, etc.). */
+  /** Slice strategy code (TIME/DATE/ID_RANGE/CURSOR, etc.). */
   @TableField("slice_strategy_code")
   private String sliceStrategyCode;
 

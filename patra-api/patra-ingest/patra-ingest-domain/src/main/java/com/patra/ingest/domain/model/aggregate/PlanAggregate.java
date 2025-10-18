@@ -54,12 +54,12 @@ public class PlanAggregate extends AggregateRoot<Long> {
   private final String provenanceConfigHash;
 
   /**
-   * Window boundary specification (supports TIME/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE
+   * Window boundary specification (supports TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE
    * strategies).
    */
   private final WindowSpec windowSpec;
 
-  /** Slicing strategy code (for example TIME or SINGLE). */
+  /** Slicing strategy code (for example TIME, DATE, or SINGLE). */
   private final String sliceStrategyCode;
 
   /** JSON payload containing slicing strategy parameters. */

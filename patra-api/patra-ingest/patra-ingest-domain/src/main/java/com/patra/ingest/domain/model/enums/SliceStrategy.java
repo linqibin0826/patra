@@ -10,7 +10,9 @@ import java.util.Optional;
  * <p>Strategy types:
  *
  * <ul>
- *   <li>TIME: Time-based windowing (e.g., 2024-01-01 to 2024-12-31)
+ *   <li>TIME: Time-based windowing with timestamp precision (e.g., 2024-01-01T00:00:00Z to
+ *       2024-12-31T23:59:59Z)
+ *   <li>DATE: Date-only windowing without time component (e.g., 2024-01-01 to 2024-12-31)
  *   <li>ID_RANGE: ID range windowing (e.g., ID 1000000 to 2000000)
  *   <li>CURSOR_LANDMARK: Cursor/token-based windowing (e.g., pagination tokens)
  *   <li>VOLUME_BUDGET: Volume-based windowing (e.g., fetch up to 100k records)
@@ -23,8 +25,11 @@ import java.util.Optional;
  */
 public enum SliceStrategy {
 
-  /** Time-based windowing strategy. */
+  /** Time-based windowing strategy (includes timestamp with time component). */
   TIME("TIME"),
+
+  /** Date-only windowing strategy (day-level granularity, no time component). */
+  DATE("DATE"),
 
   /** ID range windowing strategy. */
   ID_RANGE("ID_RANGE"),

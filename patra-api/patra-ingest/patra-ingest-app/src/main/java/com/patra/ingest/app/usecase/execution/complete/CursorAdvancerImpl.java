@@ -173,9 +173,10 @@ public class CursorAdvancerImpl implements CursorAdvancer {
    */
   private Instant extractWatermark(WindowSpec windowSpec, Long taskId, Long runId) {
     return switch (windowSpec.strategy()) {
-      case TIME -> {
+      case TIME, DATE -> {
+        // Both TIME and DATE strategies use time-based windows
         WindowSpec.Time timeSpec = (WindowSpec.Time) windowSpec;
-        yield timeSpec.to(); // TIME: use window end as watermark
+        yield timeSpec.to(); // Use window end as watermark
       }
       case ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE -> {
         // These strategies currently do not use time-based watermark
@@ -202,7 +203,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
    */
   private String determineCursorKey(WindowSpec windowSpec) {
     return switch (windowSpec.strategy()) {
-      case TIME -> "TIME";
+      case TIME, DATE -> "TIME"; // Both TIME and DATE use time-based cursor key
       case ID_RANGE -> "ID";
       case CURSOR_LANDMARK -> "CURSOR";
       case VOLUME_BUDGET, SINGLE, HYBRID -> "GLOBAL";

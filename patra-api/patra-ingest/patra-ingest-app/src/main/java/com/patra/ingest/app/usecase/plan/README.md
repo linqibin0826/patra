@@ -207,7 +207,7 @@ if (existingPlan != null) {
 
 **Components**:
 - `PlanAssembler`: Main assembly logic
-- `SlicingStrategy` implementations: TIME, SINGLE, etc.
+- `SlicingStrategy` implementations: TIME, DATE, SINGLE, etc.
 
 ---
 
