@@ -45,6 +45,12 @@ public class DefaultLogSanitizer implements LogSanitizer {
 
   private static final int MAX_DEPTH = 6;
 
+  /**
+   * Maximum number of elements to process in collections (arrays, maps, iterables) to prevent
+   * excessive recursion.
+   */
+  private static final int MAX_COLLECTION_SIZE = 50;
+
   /** Sensitive field names for JSON and object sanitization (case-insensitive). */
   private static final Set<String> SENSITIVE_KEYS =
       Set.of(
@@ -187,6 +193,27 @@ public class DefaultLogSanitizer implements LogSanitizer {
   }
 
   /**
+   * Checks if an object is a dangerous type that should not be serialized to prevent infinite
+   * recursion or security issues.
+   *
+   * @param obj The object to check
+   * @return true if it's a dangerous type
+   */
+  private boolean isDangerousType(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    Class<?> clazz = obj.getClass();
+    return obj instanceof ClassLoader
+        || obj instanceof Thread
+        || obj instanceof ThreadLocal
+        || obj instanceof java.lang.ref.Reference
+        || obj instanceof java.io.InputStream
+        || obj instanceof java.io.OutputStream
+        || obj instanceof java.nio.channels.Channel;
+  }
+
+  /**
    * Checks if an object is a Spring proxy (CGLIB or JDK dynamic proxy).
    *
    * @param obj The object to check
@@ -225,12 +252,18 @@ public class DefaultLogSanitizer implements LogSanitizer {
    * @return A sanitized object suitable for JSON serialization
    */
   private Object buildSanitizedStructure(Object obj, int depth, Set<Object> visited) {
+    // CRITICAL: Check depth FIRST before any other operations
+    if (depth > MAX_DEPTH) {
+      return "...(max depth)";
+    }
+
     if (obj == null) {
       return null;
     }
 
-    if (depth > MAX_DEPTH) {
-      return "...";
+    // Early rejection of dangerous types that can cause infinite recursion
+    if (isDangerousType(obj)) {
+      return "(dangerous-type:" + obj.getClass().getSimpleName() + ")";
     }
 
     if (isSimpleValue(obj)) {
@@ -243,6 +276,7 @@ public class DefaultLogSanitizer implements LogSanitizer {
           + Integer.toHexString(System.identityHashCode(obj));
     }
 
+    // Circular reference detection
     if (!visited.add(obj)) {
       return "(circular-ref)";
     }
@@ -252,36 +286,56 @@ public class DefaultLogSanitizer implements LogSanitizer {
 
       if (clazz.isArray()) {
         int length = java.lang.reflect.Array.getLength(obj);
-        List<Object> sanitizedElements = new ArrayList<>(length);
-        for (int i = 0; i < length; i++) {
+        int limit = Math.min(length, MAX_COLLECTION_SIZE);
+        List<Object> sanitizedElements = new ArrayList<>(limit);
+        for (int i = 0; i < limit; i++) {
           Object element = java.lang.reflect.Array.get(obj, i);
           sanitizedElements.add(buildSanitizedStructure(element, depth + 1, visited));
+        }
+        if (length > MAX_COLLECTION_SIZE) {
+          sanitizedElements.add("...(" + (length - MAX_COLLECTION_SIZE) + " more items)");
         }
         return sanitizedElements;
       }
 
       if (obj instanceof Map<?, ?> map) {
         Map<String, Object> sanitizedMap = new LinkedHashMap<>();
+        int count = 0;
+        int totalSize = map.size();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
+          if (count >= MAX_COLLECTION_SIZE) {
+            sanitizedMap.put("...(truncated)", (totalSize - MAX_COLLECTION_SIZE) + " more entries");
+            break;
+          }
           String key = stringifyKey(entry.getKey());
           if (isSensitiveKey(key)) {
             sanitizedMap.put(key, REDACTED);
           } else {
             sanitizedMap.put(key, buildSanitizedStructure(entry.getValue(), depth + 1, visited));
           }
+          count++;
         }
         return sanitizedMap;
       }
 
       if (obj instanceof Iterable<?> iterable) {
         List<Object> sanitizedList = new ArrayList<>();
+        int count = 0;
         for (Object element : iterable) {
+          if (count >= MAX_COLLECTION_SIZE) {
+            sanitizedList.add("...(truncated at " + MAX_COLLECTION_SIZE + " items)");
+            break;
+          }
           sanitizedList.add(buildSanitizedStructure(element, depth + 1, visited));
+          count++;
         }
         return sanitizedList;
       }
 
       return sanitizePojo(obj, depth, visited);
+    } catch (Exception e) {
+      // Catch any unexpected exceptions during serialization to prevent recursive logging
+      return "(error:" + e.getClass().getSimpleName() + ")";
     } finally {
       visited.remove(obj);
     }
@@ -368,14 +422,22 @@ public class DefaultLogSanitizer implements LogSanitizer {
     Class<?> clazz = obj.getClass();
 
     Field[] fields = clazz.getDeclaredFields();
+    int fieldCount = 0;
     for (Field field : fields) {
       if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
         continue;
       }
 
+      // Limit number of fields to prevent excessive processing
+      if (fieldCount >= MAX_COLLECTION_SIZE) {
+        result.put("...(truncated)", (fields.length - fieldCount) + " more fields");
+        break;
+      }
+
       String fieldName = field.getName();
       if (isSensitiveKey(fieldName)) {
         result.put(fieldName, REDACTED);
+        fieldCount++;
         continue;
       }
 
@@ -383,9 +445,13 @@ public class DefaultLogSanitizer implements LogSanitizer {
         field.setAccessible(true);
         Object value = field.get(obj);
         result.put(fieldName, buildSanitizedStructure(value, depth + 1, visited));
-      } catch (IllegalAccessException e) {
-        result.put(fieldName, "???");
+      } catch (Throwable e) {
+        // Catch ALL exceptions including IllegalAccessException, NPE, InvocationTargetException,
+        // etc. This prevents recursive logging when field.get() fails in Spring proxies or lazy
+        // loaders
+        result.put(fieldName, "(field-access-error:" + e.getClass().getSimpleName() + ")");
       }
+      fieldCount++;
     }
     return result;
   }
@@ -409,14 +475,22 @@ public class DefaultLogSanitizer implements LogSanitizer {
     if (key == null) {
       return "null";
     }
-    if (key instanceof CharSequence
-        || key instanceof Number
-        || key instanceof Boolean
-        || key instanceof Character
-        || key instanceof Enum<?>) {
-      return key.toString();
+    try {
+      if (key instanceof CharSequence
+          || key instanceof Number
+          || key instanceof Boolean
+          || key instanceof Character
+          || key instanceof Enum<?>) {
+        return key.toString();
+      }
+      // For complex objects, avoid calling toString() which might trigger recursion
+      return key.getClass().getSimpleName()
+          + "@"
+          + Integer.toHexString(System.identityHashCode(key));
+    } catch (Exception e) {
+      // Catch any exception from toString() or getClass()
+      return "(key-error)";
     }
-    return key.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(key));
   }
 
   /**

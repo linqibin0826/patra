@@ -107,6 +107,16 @@ public class TimeSlicePlanner implements SlicePlanner {
         upper = to;
       }
 
+      // Prevent infinite loop: ensure cursor can advance (upper must be after cursor)
+      if (!cursor.isBefore(upper)) {
+        log.warn(
+            "[INGEST][APP] Stopping time slicing: cursor cannot advance, cursor={}, upper={}, to={}",
+            cursor,
+            upper,
+            to);
+        break;
+      }
+
       // Build the slice spec and generate a stable signature
       JsonNormalizer.Result specNormalized = buildSpec(context, cursor, upper);
       String specJson = specNormalized.getCanonicalJson();
