@@ -123,6 +123,16 @@ public class DateSlicePlanner implements SlicePlanner {
         upper = endDate;
       }
 
+      // Prevent infinite loop: ensure cursor can advance (upper must be after cursor)
+      if (!cursor.isBefore(upper)) {
+        log.warn(
+            "[INGEST][APP] Stopping date slicing: cursor cannot advance, cursor={}, upper={}, endDate={}",
+            cursor,
+            upper,
+            endDate);
+        break;
+      }
+
       // Build the slice spec and generate a stable signature
       JsonNormalizer.Result specNormalized =
           buildSpec(
