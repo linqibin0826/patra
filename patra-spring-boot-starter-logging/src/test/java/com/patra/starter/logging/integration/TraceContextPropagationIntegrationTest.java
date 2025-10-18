@@ -47,7 +47,8 @@ import org.springframework.test.context.ContextConfiguration;
     classes = {
       LoggingAutoConfiguration.class,
       TraceContextAutoConfiguration.class,
-    })
+    },
+    webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @ContextConfiguration
 @DisplayName("Trace Context Propagation Integration Test (T058, T059)")
 class TraceContextPropagationIntegrationTest {

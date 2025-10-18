@@ -102,6 +102,13 @@ public class DateSlicePlanner implements SlicePlanner {
     if (StrUtil.isNotBlank(context.norm().step())) {
       try {
         step = Duration.parse(context.norm().step().trim());
+        // Validate: DATE strategy requires step >= 1 day to prevent infinite loop
+        if (step.toDays() < 1) {
+          log.warn(
+              "[INGEST][APP] Step too small for DATE strategy (< 1 day), fallback to default, stepString={}",
+              context.norm().step());
+          step = DEFAULT_STEP;
+        }
       } catch (Exception e) {
         log.warn(
             "[INGEST][APP] Invalid step format, fallback to default, stepString={}",

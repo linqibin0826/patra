@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.web.client.RestTemplate;
@@ -135,7 +136,7 @@ public class TraceContextAutoConfiguration {
   @Bean
   @ConditionalOnClass(RestTemplate.class)
   public RestTemplateCustomizer restTemplateLoggingCustomizer(
-      RestTemplateInterceptor traceInterceptor, LogSanitizer sanitizer) {
+      @Lazy RestTemplateInterceptor traceInterceptor, LogSanitizer sanitizer) {
     return restTemplate -> {
       // Detect existing trace interceptor by identity (works with JDK/CGLIB proxies)
       boolean hasTrace = restTemplate.getInterceptors().contains(traceInterceptor);

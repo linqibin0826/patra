@@ -171,8 +171,23 @@ public class DefaultExprCompiler implements ExprCompiler {
             endpointName,
             errors.size());
         recordCompileErrors(errors);
+        // Return empty params for render/transform errors, but preserve params for mapping/bridge
+        // errors
+        boolean hasRenderError =
+            errors.stream()
+                .anyMatch(
+                    e ->
+                        e.code().equals("E-FN-NOTFOUND")
+                            || e.code().equals("E-TRANSFORM-NOTFOUND")
+                            || e.code().equals("E-TRANSFORM-EXEC"));
+        Map<String, String> errorParams = hasRenderError ? Map.of() : providerParams;
         return new CompileResult(
-            "", Map.of(), normalized, finalReport, toRef(snapshot, endpointName), outcome.trace());
+            "",
+            errorParams,
+            normalized,
+            finalReport,
+            toRef(snapshot, endpointName),
+            outcome.trace());
       }
 
       log.info(
