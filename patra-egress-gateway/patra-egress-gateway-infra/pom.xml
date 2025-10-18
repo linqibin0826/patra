@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-egress-gateway-infra</artifactId>
-    <name>Patra Egress Gateway Infra</name>
+    <name>Papertrace Egress Gateway Infrastructure</name>
     <description>Outbound implementations (HTTP client, resilience capabilities, configuration loading)</description>
 
     <dependencies>

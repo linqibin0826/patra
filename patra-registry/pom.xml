@@ -14,7 +14,7 @@
     <artifactId>patra-registry</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>patra-registry (Aggregator)</name>
+    <name>Papertrace Registry</name>
     <description>Registry aggregator POM composing the api, domain, infra, app, and adapter modules.</description>
 
     <dependencyManagement>

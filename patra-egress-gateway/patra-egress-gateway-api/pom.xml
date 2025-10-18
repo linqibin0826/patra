@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-egress-gateway-api</artifactId>
-    <name>Patra Egress Gateway API</name>
+    <name>Papertrace Egress Gateway API</name>
     <description>Error codes and external-facing DTOs</description>
 
     <dependencies>

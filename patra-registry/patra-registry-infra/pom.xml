@@ -11,7 +11,7 @@
     </parent>
     <artifactId>patra-registry-infra</artifactId>
     <packaging>jar</packaging>
-    <name>patra-registry-infra</name>
+    <name>Papertrace Registry Infrastructure</name>
 
     <dependencies>
         <dependency>

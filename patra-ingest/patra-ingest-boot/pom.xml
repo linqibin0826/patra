@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-ingest-boot</artifactId>
-    <name>patra-ingest-boot</name>
+    <name>Papertrace Ingest Boot</name>
     <description>Ingestion launcher module - Spring Boot entry point</description>
 
     <dependencies>

@@ -13,6 +13,7 @@
 
     <artifactId>patra-spring-boot-starter-expr</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <name>Papertrace Spring Boot Starter - Expression</name>
 
     <dependencies>
         <dependency>

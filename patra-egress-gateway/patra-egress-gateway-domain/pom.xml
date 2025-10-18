@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>patra-egress-gateway-domain</artifactId>
-    <name>Patra Egress Gateway Domain</name>
+    <name>Papertrace Egress Gateway Domain</name>
     <description>Aggregates, entities, value objects, and domain ports</description>
 
     <dependencies>

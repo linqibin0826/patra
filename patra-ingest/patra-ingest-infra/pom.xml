@@ -11,6 +11,7 @@
     </parent>
 
     <artifactId>patra-ingest-infra</artifactId>
+    <name>Papertrace Ingest Infrastructure</name>
     <description>Ingestion infrastructure module - data persistence and external integrations</description>
 
     <dependencies>

@@ -6,7 +6,7 @@
     <artifactId>patra-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>patra-parent</name>
+    <name>Papertrace Parent</name>
 
     <properties>
         <java.version>21</java.version>

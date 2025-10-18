@@ -13,7 +13,7 @@
     <artifactId>patra-spring-boot-starter-provenance</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>patra-spring-boot-starter-provenance</name>
+    <name>Papertrace Spring Boot Starter - Provenance</name>
     <description>Spring Boot Starter for Provenance API client (PubMed, EPMC)</description>
 
     <dependencies>

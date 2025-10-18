@@ -13,6 +13,7 @@
 
     <artifactId>patra-common</artifactId>
     <version>0.1.0-SNAPSHOT</version>
+    <name>Papertrace Common</name>
 
     <dependencies>
         <dependency>
