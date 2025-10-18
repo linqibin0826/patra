@@ -65,11 +65,11 @@ VALUES (900101, 1, 'ALL', 'ACTIVE',
         JSON_ARRAY('RANGE'), NULL, 0,
         NULL, 0, 0, 0, 0, NULL,
         0, 0,
-        'DATETIME', 1, 1, 0,
+        'DATE', 1, 1, 0,
         DATE '1900-01-01', NULL, NULL, NULL, NULL, NULL,
         0, NULL, NULL,
         JSON_ARRAY(JSON_OBJECT('time', '2025-10-14 00:00:00', 'by', '系统管理员', 'note',
-                               'PubMed: entrez_date supports RANGE[DATETIME]')),
+                               'PubMed: entrez_date supports RANGE[DATE]')),
         0, INET6_ATON('0.0.0.0'),
         NOW(6), 1001, '系统管理员', NOW(6), 1001, '系统管理员', 0);
 
