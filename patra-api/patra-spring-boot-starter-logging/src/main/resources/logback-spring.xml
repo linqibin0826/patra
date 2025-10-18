@@ -8,14 +8,18 @@
     <springProperty scope="context" name="SERVICE_NAME" source="spring.application.name" defaultValue="unknown"/>
     <springProperty scope="context" name="LAYER_NAME" source="logging.layer" defaultValue="adapter"/>
 
-    <!-- Pattern with MDC trace context and layer identifier (T027, FR-015) -->
-    <property name="ENHANCED_LOG_PATTERN"
+    <!-- Console pattern with color for local development (aligned with starter-core style) -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%clr([%X{traceId:-N/A}]){yellow} %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%-15.15thread]){magenta} %clr(%logger{36}){cyan} %clr([service=${SERVICE_NAME}]){blue} %clr([layer=%X{layer:-${LAYER_NAME}}]){green} : %msg%n%wEx"/>
+
+    <!-- File pattern with full context (plain text for production log aggregation) -->
+    <property name="FILE_LOG_PATTERN"
               value="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} [%thread] %-5level %logger{36} [traceId=%X{traceId:-N/A}][spanId=%X{spanId:-N/A}][correlationId=%X{correlationId:-N/A}][service=${SERVICE_NAME}][layer=%X{layer:-${LAYER_NAME}}] - %msg%n"/>
 
-    <!-- Console appender with async wrapper (T028) -->
+    <!-- Console appender with color output (T028) -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${ENHANCED_LOG_PATTERN}</pattern>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
@@ -32,7 +36,7 @@
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/${SERVICE_NAME}.log</file>
         <encoder>
-            <pattern>${ENHANCED_LOG_PATTERN}</pattern>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
