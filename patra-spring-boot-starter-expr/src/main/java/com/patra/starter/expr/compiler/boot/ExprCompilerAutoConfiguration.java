@@ -1,8 +1,8 @@
 package com.patra.starter.expr.compiler.boot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.registry.api.rpc.client.ExprClient;
-import com.patra.registry.api.rpc.client.ProvenanceClient;
+import com.patra.registry.api.client.ExprClient;
+import com.patra.registry.api.client.ProvenanceClient;
 import com.patra.starter.expr.compiler.DefaultExprCompiler;
 import com.patra.starter.expr.compiler.ExprCompiler;
 import com.patra.starter.expr.compiler.check.CapabilityChecker;
@@ -49,8 +49,8 @@ public class ExprCompilerAutoConfiguration {
   @ConditionalOnMissingBean(RuleSnapshotLoader.class)
   @ConditionalOnClass(
       name = {
-        "com.patra.registry.api.rpc.client.ProvenanceClient",
-        "com.patra.registry.api.rpc.client.ExprClient"
+        "com.patra.registry.api.client.ProvenanceClient",
+        "com.patra.registry.api.client.ExprClient"
       })
   @ConditionalOnProperty(
       prefix = "patra.expr.compiler.registry-api",

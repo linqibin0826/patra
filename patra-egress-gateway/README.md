@@ -120,7 +120,7 @@ Duration delay = extractRetryAfter(response.headers())
 ### EgressEndpoint
 
 ```java
-@PostMapping("/api/egress/call")
+@PostMapping("/_internal/egress/call")
 ExternalCallResponseDTO call(@Valid @RequestBody ExternalCallRequestDTO request);
 ```
 

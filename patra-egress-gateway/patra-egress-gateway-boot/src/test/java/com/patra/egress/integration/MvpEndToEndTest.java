@@ -116,7 +116,8 @@ class MvpEndToEndTest {
 
     // Step 3: invoke the gateway API
     ResponseEntity<ExternalCallResponseDTO> response =
-        restTemplate.postForEntity("/api/egress/call", request, ExternalCallResponseDTO.class);
+        restTemplate.postForEntity(
+            "/_internal/egress/call", request, ExternalCallResponseDTO.class);
 
     // Step 4: validate the response
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -197,7 +198,8 @@ class MvpEndToEndTest {
 
     // Step 3: invoke the gateway API
     ResponseEntity<ExternalCallResponseDTO> response =
-        restTemplate.postForEntity("/api/egress/call", request, ExternalCallResponseDTO.class);
+        restTemplate.postForEntity(
+            "/_internal/egress/call", request, ExternalCallResponseDTO.class);
 
     // Step 4: validate the response
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -256,7 +258,8 @@ class MvpEndToEndTest {
 
     // Step 3: invoke the gateway API
     ResponseEntity<ExternalCallResponseDTO> response =
-        restTemplate.postForEntity("/api/egress/call", request, ExternalCallResponseDTO.class);
+        restTemplate.postForEntity(
+            "/_internal/egress/call", request, ExternalCallResponseDTO.class);
 
     // Step 4: validate the response
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -311,7 +314,8 @@ class MvpEndToEndTest {
 
     // Step 3: invoke the gateway API
     ResponseEntity<ExternalCallResponseDTO> response =
-        restTemplate.postForEntity("/api/egress/call", request, ExternalCallResponseDTO.class);
+        restTemplate.postForEntity(
+            "/_internal/egress/call", request, ExternalCallResponseDTO.class);
 
     // Step 4: validate the response
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -352,7 +356,8 @@ class MvpEndToEndTest {
 
     // Step 3: invoke the gateway API
     ResponseEntity<ExternalCallResponseDTO> response =
-        restTemplate.postForEntity("/api/egress/call", request, ExternalCallResponseDTO.class);
+        restTemplate.postForEntity(
+            "/_internal/egress/call", request, ExternalCallResponseDTO.class);
 
     // Step 4: validate the response and header filtering
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -424,7 +429,8 @@ class MvpEndToEndTest {
 
     // Step 3: invoke the gateway API
     ResponseEntity<ExternalCallResponseDTO> response =
-        restTemplate.postForEntity("/api/egress/call", request, ExternalCallResponseDTO.class);
+        restTemplate.postForEntity(
+            "/_internal/egress/call", request, ExternalCallResponseDTO.class);
 
     // Step 4: perform comprehensive assertions
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
