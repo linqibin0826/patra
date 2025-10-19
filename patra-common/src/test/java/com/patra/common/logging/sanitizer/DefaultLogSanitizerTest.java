@@ -496,6 +496,123 @@ class DefaultLogSanitizerTest {
   }
 
   @Nested
+  @DisplayName("JsonNode Handling")
+  class JsonNodeHandlingTests {
+
+    @Test
+    @DisplayName("Should correctly serialize ObjectNode with nested structure")
+    void shouldSerializeObjectNode() throws Exception {
+      String json =
+          """
+          {
+            "mindate": "2025-10-17",
+            "datetype": "edat",
+            "maxdate": "2025-10-17"
+          }
+          """;
+      var node = objectMapper.readTree(json);
+
+      String result = sanitizer.sanitizeObject(node);
+
+      // Should preserve JSON structure, not return [[], [], []]
+      assertTrue(result.contains("mindate"), "Should contain key 'mindate'");
+      assertTrue(result.contains("2025-10-17"), "Should contain date value");
+      assertTrue(result.contains("datetype"), "Should contain key 'datetype'");
+      assertTrue(result.contains("edat"), "Should contain datetype value");
+      assertFalse(result.contains("[["), "Should not contain nested empty arrays");
+    }
+
+    @Test
+    @DisplayName("Should sanitize sensitive fields in JsonNode")
+    void shouldSanitizeSensitiveJsonNodeFields() throws Exception {
+      String json =
+          """
+          {
+            "username": "john",
+            "password": "secret123",
+            "apiKey": "sk-abc123"
+          }
+          """;
+      var node = objectMapper.readTree(json);
+
+      String result = sanitizer.sanitizeObject(node);
+
+      assertTrue(result.contains("john"), "Non-sensitive field should be preserved");
+      assertFalse(result.contains("secret123"), "Password should be redacted");
+      assertFalse(result.contains("sk-abc123"), "API key should be redacted");
+      assertTrue(result.contains(REDACTED), "Should contain redaction marker");
+    }
+
+    @Test
+    @DisplayName("Should handle ArrayNode correctly")
+    void shouldHandleArrayNode() throws Exception {
+      String json =
+          """
+          ["value1", "value2", "value3"]
+          """;
+      var node = objectMapper.readTree(json);
+
+      String result = sanitizer.sanitizeObject(node);
+
+      assertTrue(result.contains("value1"), "Should contain array element");
+      assertTrue(result.contains("value2"), "Should contain array element");
+      assertTrue(result.contains("value3"), "Should contain array element");
+      assertFalse(result.contains("[["), "Should not return nested empty arrays");
+    }
+
+    @Test
+    @DisplayName("Should handle nested JsonNode structures")
+    void shouldHandleNestedJsonNode() throws Exception {
+      String json =
+          """
+          {
+            "user": {
+              "name": "John",
+              "password": "secret123"
+            },
+            "metadata": {
+              "created": "2025-10-17",
+              "apiKey": "sk-abc123"
+            }
+          }
+          """;
+      var node = objectMapper.readTree(json);
+
+      String result = sanitizer.sanitizeObject(node);
+
+      assertTrue(result.contains("user"), "Should contain 'user' key");
+      assertTrue(result.contains("name"), "Should contain nested 'name' key");
+      assertTrue(result.contains("John"), "Should contain name value");
+      assertTrue(result.contains("metadata"), "Should contain 'metadata' key");
+      assertFalse(result.contains("secret123"), "Password should be redacted");
+      assertFalse(result.contains("sk-abc123"), "API key should be redacted");
+      assertTrue(result.contains(REDACTED), "Should redact sensitive data");
+    }
+
+    @Test
+    @DisplayName("Should handle JsonNode in ExecutionContext-like POJO")
+    void shouldHandleJsonNodeInPojo() throws Exception {
+      // Simulate ExecutionContext with JsonNode field
+      String json =
+          """
+          {"mindate":"2025-10-17","datetype":"edat","maxdate":"2025-10-17"}
+          """;
+      var jsonNode = objectMapper.readTree(json);
+      var ctx = new TestContext("PUBMED", jsonNode);
+
+      String result = sanitizer.sanitizeObject(ctx);
+
+      assertTrue(result.contains("PUBMED"), "Should contain provenanceCode");
+      assertTrue(result.contains("mindate"), "Should contain JsonNode key");
+      assertTrue(result.contains("2025-10-17"), "Should contain date value");
+      assertFalse(result.contains("[["), "Should not serialize as nested empty arrays");
+    }
+
+    /** Test helper class simulating ExecutionContext structure. */
+    record TestContext(String provenanceCode, com.fasterxml.jackson.databind.JsonNode params) {}
+  }
+
+  @Nested
   @DisplayName("Thread Safety")
   class ThreadSafetyTests {
 

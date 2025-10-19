@@ -318,6 +318,13 @@ public class DefaultLogSanitizer implements LogSanitizer {
         return sanitizedMap;
       }
 
+      // Handle JsonNode before Iterable (since JsonNode implements Iterable)
+      // ⚠️ CRITICAL: Must check JsonNode BEFORE Iterable to prevent incorrect iteration
+      // ObjectNode.iterator() only returns values without keys, causing data loss
+      if (obj instanceof JsonNode jsonNode) {
+        return sanitizeJsonNode(jsonNode);
+      }
+
       if (obj instanceof Iterable<?> iterable) {
         List<Object> sanitizedList = new ArrayList<>();
         int count = 0;

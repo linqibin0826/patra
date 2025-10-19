@@ -55,12 +55,19 @@ public class PubmedBatchPlanner implements BatchPlanner {
   @Override
   public BatchPlan plan(ExecutionContext ctx) {
     String compiledQuery = ctx.compiledQuery();
-    if (compiledQuery == null || compiledQuery.isBlank()) {
+    JsonNode compiledParams = ctx.compiledParams();
+
+    // Allow either query or params to be non-empty
+    // For DATE RANGE queries, query may be empty while params contain from/to/datetype
+    boolean hasQuery = compiledQuery != null && !compiledQuery.isBlank();
+    boolean hasParams = compiledParams != null && !compiledParams.isEmpty();
+
+    if (!hasQuery && !hasParams) {
       throw new BatchPlanningException(
-          "Compiled query (compiledQuery) is blank for PubMed batch planning");
+          "Both compiledQuery and compiledParams are empty for PubMed batch planning");
     }
 
-    ObjectNode baseParams = toObjectNode(ctx.compiledParams());
+    ObjectNode baseParams = toObjectNode(compiledParams);
 
     int total = searchPort.estimateCount(compiledQuery, ctx.compiledParams(), ctx.configSnapshot());
     if (total <= 0) {
