@@ -11,13 +11,16 @@ import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
  */
 public class PubMedESearchRequestAssembler {
 
-  /** Build a count-only ESearch request (rettype=count). */
+  /**
+   * Build a count-only ESearch request (rettype=count).
+   *
+   * <p>Note: term is optional when date filters (mindate/maxdate/datetype) are provided.
+   */
   public ESearchRequest buildCount(JsonNode params) {
     Values v = extract(params);
-    String term = requireTerm(v.term);
     return new ESearchRequest(
         "pubmed",
-        term,
+        v.term, // term is optional, date filters can be used instead
         null, // retstart ignored for count
         null, // retmax ignored for count
         v.retmode != null ? v.retmode : "json",
@@ -36,13 +39,16 @@ public class PubMedESearchRequestAssembler {
         v.email);
   }
 
-  /** Build a list request (uilist) honoring pagination. */
+  /**
+   * Build a list request (uilist) honoring pagination.
+   *
+   * <p>Note: term is optional when date filters (mindate/maxdate/datetype) are provided.
+   */
   public ESearchRequest buildList(JsonNode params) {
     Values v = extract(params);
-    String term = requireTerm(v.term);
     return new ESearchRequest(
         "pubmed",
-        term,
+        v.term, // term is optional, date filters can be used instead
         v.retstart,
         v.retmax,
         v.retmode != null ? v.retmode : "json",
@@ -82,14 +88,6 @@ public class PubMedESearchRequestAssembler {
     v.tool = text(p, PubMedParamKeys.TOOL);
     v.email = text(p, PubMedParamKeys.EMAIL);
     return v;
-  }
-
-  private static String requireTerm(String term) {
-    if (term == null || term.isBlank()) {
-      throw new IllegalArgumentException(
-          "PubMed params must include provider key 'term' after compiler mapping");
-    }
-    return term;
   }
 
   private static String text(JsonNode node, String key) {

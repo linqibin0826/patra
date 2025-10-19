@@ -1,6 +1,8 @@
 # Phase 2-3: Foundational + Trace Context Auto-configuration
 com.patra.starter.logging.autoconfigure.LoggingAutoConfiguration
 com.patra.starter.logging.autoconfigure.TraceContextAutoConfiguration
+com.patra.starter.logging.autoconfigure.ServletTraceContextAutoConfiguration
+com.patra.starter.logging.autoconfigure.FeignTraceContextAutoConfiguration
 com.patra.starter.logging.autoconfigure.AsyncAutoConfiguration
 
 # Phase 4: Dynamic Log Level Configuration

@@ -10,7 +10,7 @@ import java.util.Map;
  * <p>Field descriptions:
  *
  * @param db target database identifier (e.g. "pubmed")
- * @param term Boolean query string sent to the ESearch API
+ * @param term Boolean query string sent to the ESearch API (optional when date filters are used)
  * @param retstart zero-based offset for pagination
  * @param retmax maximum records returned per invocation (max 10000)
  * @param retmode response format (json or xml)
@@ -35,7 +35,9 @@ import java.util.Map;
 public record ESearchRequest(
     // Required parameters
     String db, // Database name (e.g., "pubmed")
-    String term, // Search term
+
+    // Search term (optional when date filters mindate/maxdate/datetype are provided)
+    String term,
 
     // Optional parameters - Basic control
     Integer retstart, // Start position (default 0)
@@ -79,9 +81,7 @@ public record ESearchRequest(
     if (db == null || db.isBlank()) {
       throw new IllegalArgumentException("db cannot be null or blank");
     }
-    if (term == null || term.isBlank()) {
-      throw new IllegalArgumentException("term cannot be null or blank");
-    }
+    // Note: term is optional when date filters (mindate/maxdate/datetype) are provided
     // Default to JSON format
     if (retmode == null || retmode.isBlank()) {
       retmode = "json";
@@ -97,7 +97,10 @@ public record ESearchRequest(
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
     params.put("db", db);
-    params.put("term", term);
+    // term is optional - only add when present (date filters can be used instead)
+    if (term != null && !term.isBlank()) {
+      params.put("term", term);
+    }
 
     // Basic control
     if (retstart != null) params.put("retstart", retstart.toString());
