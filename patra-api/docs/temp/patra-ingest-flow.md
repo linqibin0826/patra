@@ -333,7 +333,7 @@ flowchart TD
 
 ### Phase 1: Execute (Execution Phase)
 - **Batch Planning**: Select appropriate `BatchPlanner` based on provenance
-  - e.g., `PubmedBatchPlanner` calls count API first to estimate total, then splits into batches
+  - e.g., `PubmedBatchPlanner` requests planning metadata (count + WebEnv/QueryKey) so Execute stage can reuse PubMed History Server caches instead of re-running ESearch for every batch
 - **Batch Execution**: Call external APIs (PubMed/EPMC/Crossref) to fetch data
 - **Data Storage**: Save to corresponding business tables (literature/provenance, etc.)
 

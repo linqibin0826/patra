@@ -1,10 +1,12 @@
 package com.patra.ingest.infra.rpc.pubmed;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.util.HashUtils;
 import com.patra.ingest.domain.exception.BatchPlanningException;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import com.patra.ingest.domain.model.vo.PlanMetadata;
 import com.patra.ingest.domain.port.PubmedSearchPort;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
@@ -36,23 +38,49 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
       new PubMedESearchRequestAssembler();
 
   @Override
-  public int estimateCount(
+  public PlanMetadata preparePlanMetadata(
       String query, JsonNode params, ProvenanceConfigSnapshot provenanceConfigSnapshot) {
     try {
-      ESearchRequest request = ASSEMBLER.buildCount(params);
+      JsonNode enrichedParams = addUseHistory(params);
+      ESearchRequest request = ASSEMBLER.buildList(enrichedParams);
       String termHash = safeHash(request.term());
       ProvenanceConfig config = toProvenanceConfig(provenanceConfigSnapshot);
       ESearchResponse response =
           config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
-      int count = response != null && response.result() != null ? response.result().count() : 0;
-      log.info("[INGEST][INFRA] pubmed esearch count termHash={} count={}", termHash, count);
-      return Math.max(count, 0);
+      if (response == null || response.result() == null) {
+        log.warn("[INGEST][INFRA] pubmed esearch metadata returned null termHash={}", termHash);
+        return PlanMetadata.empty();
+      }
+
+      ESearchResponse.Result result = response.result();
+      int count = Math.max(result.count(), 0);
+      String webEnv = result.webEnv();
+      String queryKey = result.queryKey();
+
+      boolean hasWebEnv = StringUtils.hasText(webEnv);
+      boolean hasQueryKey = StringUtils.hasText(queryKey);
+
+      log.info(
+          "[INGEST][INFRA] pubmed esearch metadata termHash={} count={} webEnv={} queryKey={}",
+          termHash,
+          count,
+          hasWebEnv ? "present" : "absent",
+          hasQueryKey ? "present" : "absent");
+
+      if (hasWebEnv && !hasQueryKey) {
+        log.warn(
+            "[INGEST][INFRA] pubmed esearch returned WebEnv without QueryKey termHash={} count={}",
+            termHash,
+            count);
+      }
+
+      return new PlanMetadata(count, webEnv, queryKey);
     } catch (ProvenanceClientException ex) {
-      String msg = String.format("PubMed count lookup failed: %s", ex.getMessage());
+      String msg = String.format("PubMed metadata lookup failed: %s", ex.getMessage());
       log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(query), ex);
       throw new BatchPlanningException(msg, ex);
     } catch (Exception ex) {
-      String msg = String.format("PubMed count lookup unexpected error: %s", ex.getMessage());
+      String msg = String.format("PubMed metadata lookup unexpected error: %s", ex.getMessage());
       log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(query), ex);
       throw new BatchPlanningException(msg, ex);
     }
@@ -196,6 +224,24 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
           ex);
       return Map.of();
     }
+  }
+
+  private JsonNode addUseHistory(JsonNode params) {
+    ObjectNode node;
+    if (params == null || params.isNull()) {
+      node = JsonMapperHolder.getObjectMapper().createObjectNode();
+    } else if (params.isObject()) {
+      node = ((ObjectNode) params).deepCopy();
+    } else {
+      throw new IllegalArgumentException("params must be an object node");
+    }
+
+    if (!node.has("usehistory")) {
+      node.put("usehistory", "y");
+    }
+    node.put("retmax", 0);
+
+    return node;
   }
 
   private static String safeHash(String s) {

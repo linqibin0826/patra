@@ -373,10 +373,12 @@ return new ExecutionContext(
     windowSpec);
 
 // PubmedBatchPlanner uses compiled outputs
-int total = searchPort.estimateCount(compiledQuery, compiledParams, configSnapshot);
+PlanMetadata metadata =
+    searchPort.preparePlanMetadata(compiledQuery, compiledParams, configSnapshot);
+int total = metadata.totalCount();
 
 // Infra adapter builds request from provider-named params only
-ESearchRequest request = PubMedESearchRequestAssembler.buildCount(compiledParams);
+ESearchRequest request = PubMedESearchRequestAssembler.buildList(compiledParams);
 ```
 
 Rules of engagement:

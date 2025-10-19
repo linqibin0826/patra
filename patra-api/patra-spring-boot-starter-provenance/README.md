@@ -129,10 +129,14 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
   private static final PubMedESearchRequestAssembler ASSEMBLER = new PubMedESearchRequestAssembler();
 
   @Override
-  public int estimateCount(String query, JsonNode pubmedParams) {
-    ESearchRequest request = ASSEMBLER.buildCount(pubmedParams);
+  public PlanMetadata preparePlanMetadata(String query, JsonNode pubmedParams) {
+    ESearchRequest request = ASSEMBLER.buildList(pubmedParams);
     ESearchResponse response = pubMedClient.esearch(request);
-    return response != null && response.result() != null ? response.result().count() : 0;
+    if (response == null || response.result() == null) {
+      return PlanMetadata.empty();
+    }
+    var result = response.result();
+    return new PlanMetadata(result.count(), result.webEnv(), result.queryKey());
   }
 }
 ```
@@ -147,13 +151,15 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
     private final PubMedClient pubMedClient;  // Auto-injected
 
     @Override
-    public int estimateCount(String term, JsonNode params) {
-        ESearchRequest request = ASSEMBLER.buildCount(params);
+    public PlanMetadata preparePlanMetadata(String term, JsonNode params) {
+        ESearchRequest request = ASSEMBLER.buildList(params);
 
         ESearchResponse response = pubMedClient.esearch(request);
-        return response != null && response.result() != null
-            ? response.result().count()
-            : 0;
+        if (response == null || response.result() == null) {
+            return PlanMetadata.empty();
+        }
+        var result = response.result();
+        return new PlanMetadata(result.count(), result.webEnv(), result.queryKey());
     }
 }
 ```
