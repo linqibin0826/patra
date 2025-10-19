@@ -9,6 +9,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.Batch;
 import com.patra.ingest.domain.model.vo.BatchPlan;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.PlanMetadata;
 import com.patra.ingest.domain.port.PubmedSearchPort;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +70,9 @@ public class PubmedBatchPlanner implements BatchPlanner {
 
     ObjectNode baseParams = toObjectNode(compiledParams);
 
-    int total = searchPort.estimateCount(compiledQuery, ctx.compiledParams(), ctx.configSnapshot());
+    PlanMetadata metadata =
+        searchPort.preparePlanMetadata(compiledQuery, ctx.compiledParams(), ctx.configSnapshot());
+    int total = metadata.totalCount();
     if (total <= 0) {
       log.info("[INGEST][APP] pubmed planner: no results termHash={}", safeHash(compiledQuery));
       return BatchPlan.empty();
@@ -103,16 +106,21 @@ public class PubmedBatchPlanner implements BatchPlanner {
       if (batchParams.has("rettype")) {
         batchParams.remove("rettype");
       }
+      if (metadata.hasWebEnv()) {
+        batchParams.put("WebEnv", metadata.webEnv());
+        batchParams.put("query_key", metadata.queryKey());
+      }
 
       batches.add(new Batch(i + 1, compiledQuery, batchParams, null, null));
     }
 
     log.info(
-        "[INGEST][APP] pubmed planner: planned {} batches termHash={} pageSize={} total={}",
+        "[INGEST][APP] pubmed planner: planned {} batches termHash={} pageSize={} total={} webEnv={}",
         pages,
         safeHash(compiledQuery),
         pageSize,
-        total);
+        total,
+        metadata.hasWebEnv() ? "enabled" : "disabled");
     return new BatchPlan(batches, pages, false);
   }
 
