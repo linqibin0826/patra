@@ -1,10 +1,10 @@
 package com.patra.starter.expr.compiler.snapshot;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.registry.api.rpc.client.ExprClient;
-import com.patra.registry.api.rpc.client.ProvenanceClient;
-import com.patra.registry.api.rpc.dto.expr.ExprSnapshotResp;
-import com.patra.registry.api.rpc.dto.provenance.ProvenanceResp;
+import com.patra.registry.api.client.ExprClient;
+import com.patra.registry.api.client.ProvenanceClient;
+import com.patra.registry.api.dto.expr.ExprSnapshotResp;
+import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.starter.expr.compiler.snapshot.convert.SnapshotAssembler;
 import java.util.Objects;
 

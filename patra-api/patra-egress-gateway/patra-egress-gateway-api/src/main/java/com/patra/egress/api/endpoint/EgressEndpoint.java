@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  */
 public interface EgressEndpoint {
 
-  String BASE_PATH = "/api/egress";
+  String BASE_PATH = "/_internal/egress";
 
   /**
    * Execute an external HTTP call through the egress gateway.

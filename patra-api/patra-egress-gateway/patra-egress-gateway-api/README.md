@@ -35,7 +35,7 @@ patra-egress-gateway-api/
    │  └─ ExternalRateLimitInfoDTO.java  # Provider rate limit
    │
    ├─ endpoint/                      # Endpoint Interfaces
-   │  └─ EgressEndpoint.java            # POST /api/egress/call
+   │  └─ EgressEndpoint.java            # POST /_internal/egress/call
    │
    ├─ client/                        # Feign Clients
    │  └─ EgressGatewayClient.java       # Feign client for RPC
@@ -59,14 +59,14 @@ patra-egress-gateway-api/
 
 ```java
 public interface EgressEndpoint {
-    String BASE_PATH = "/api/egress";
+    String BASE_PATH = "/_internal/egress";
 
     @PostMapping(BASE_PATH + "/call")
     ExternalCallResponseDTO call(@Valid @RequestBody ExternalCallRequestDTO request);
 }
 ```
 
-**POST /api/egress/call**
+**POST /_internal/egress/call**
 - **Purpose**: Execute external HTTP call with resilience patterns
 - **Request**: `ExternalCallRequestDTO`
 - **Response**: `ExternalCallResponseDTO`
