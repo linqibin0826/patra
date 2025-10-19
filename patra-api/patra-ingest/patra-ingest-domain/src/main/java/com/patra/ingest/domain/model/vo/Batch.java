@@ -28,9 +28,6 @@ public record Batch(
     if (batchNo < 1) {
       throw new IllegalArgumentException("batchNo must be >= 1");
     }
-    if (query == null || query.isBlank()) {
-      throw new IllegalArgumentException("query must not be blank");
-    }
   }
 
   /** Create the first batch without a cursor. */
