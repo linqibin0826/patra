@@ -16,6 +16,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class PatraIngestApplication {
 
   public static void main(String[] args) {
+    // Set default active profile to 'dev' if not already set via env or system property
+    if (System.getProperty("spring.profiles.active") == null
+        && System.getenv("SPRING_PROFILES_ACTIVE") == null) {
+      System.setProperty("spring.profiles.active", "dev");
+    }
     SpringApplication.run(PatraIngestApplication.class, args);
   }
 }
