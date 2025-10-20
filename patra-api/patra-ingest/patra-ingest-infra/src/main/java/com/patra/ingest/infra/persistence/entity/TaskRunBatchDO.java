@@ -98,6 +98,10 @@ public class TaskRunBatchDO extends BaseDO {
   @TableField("error")
   private String error;
 
+  /** Object storage reference for batch payload. */
+  @TableField("storage_key")
+  private String storageKey;
+
   /** Batch-level statistics (JSON). */
   @TableField(value = "stats", typeHandler = JacksonTypeHandler.class)
   private JsonNode stats;

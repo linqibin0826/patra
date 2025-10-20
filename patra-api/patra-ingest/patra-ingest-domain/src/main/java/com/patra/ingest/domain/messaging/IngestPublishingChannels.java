@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.messaging;
 
 import com.patra.common.messaging.ChannelKey;
+import com.patra.ingest.domain.model.vo.LiteratureReadyMessage;
 import com.patra.ingest.domain.model.vo.TaskReadyMessage;
 import java.util.Arrays;
 import java.util.Locale;
@@ -31,7 +32,10 @@ import java.util.Optional;
 public enum IngestPublishingChannels implements ChannelKey {
 
   /** Task scheduling ready event. */
-  TASK_READY("INGEST", "TASK", "READY", TaskReadyMessage.class);
+  TASK_READY("INGEST", "TASK", "READY", TaskReadyMessage.class),
+
+  /** Literature data ready event targeting catalog ingestion. */
+  LITERATURE_DATA_READY("INGEST", "LITERATURE", "DATA_READY", LiteratureReadyMessage.class);
 
   private final String domain;
   private final String resource;

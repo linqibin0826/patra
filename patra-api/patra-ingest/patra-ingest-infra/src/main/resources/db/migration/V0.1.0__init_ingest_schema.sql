@@ -330,6 +330,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run_batch`
     `status_code`     VARCHAR(32)     NOT NULL DEFAULT 'RUNNING' COMMENT 'DICT CODE(type=ing_batch_status): RUNNING/SUCCEEDED/FAILED/SKIPPED',
     `committed_at`    TIMESTAMP(6)    NULL,
     `error`           TEXT            NULL,
+    `storage_key`     VARCHAR(512)    NULL COMMENT 'Object storage reference for batch payload',
     `stats`           JSON            NULL,
 
     -- Audit fields

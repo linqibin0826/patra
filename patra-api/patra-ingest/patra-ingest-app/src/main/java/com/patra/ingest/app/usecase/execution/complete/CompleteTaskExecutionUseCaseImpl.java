@@ -1,18 +1,29 @@
 package com.patra.ingest.app.usecase.execution.complete;
 
+import com.patra.ingest.app.usecase.execution.complete.publisher.LiteratureEventPublisher;
 import com.patra.ingest.app.usecase.execution.execute.ExecuteTaskBatchesUseCase;
 import com.patra.ingest.app.usecase.execution.support.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.support.LeaseManagementService;
+import com.patra.ingest.domain.event.LiteratureDataReadyEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
+import com.patra.ingest.domain.model.entity.TaskRunBatch;
+import com.patra.ingest.domain.model.enums.BatchStatus;
+import com.patra.ingest.domain.model.vo.BatchStats;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.port.TaskRepository;
+import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 /**
  * Complete phase use case implementation.
@@ -52,12 +63,15 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
 
   private final TaskRepository taskRepository;
   private final TaskRunRepository taskRunRepository;
+  private final TaskRunBatchRepository taskRunBatchRepository;
   private final CursorAdvancer cursorAdvancer;
   private final LeaseManagementService leaseManagementService;
+  private final LiteratureEventPublisher literatureEventPublisher;
   private final Clock clock;
 
   /** Completes execution (advance cursor + update status). */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void complete(
       ExecutionSession session,
       ExecutionContext context,
@@ -138,6 +152,10 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
       taskRepository.save(task);
       taskRunRepository.save(taskRun);
 
+      if (executeResult.succeededBatches() > 0) {
+        publishLiteratureReadyEvent(taskId, runId, context);
+      }
+
       log.info(
           "[INGEST][APP] complete task execution finished taskId={} runId={} finalStatus={}",
           taskId,
@@ -145,9 +163,68 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
           task.getStatus());
 
     } finally {
-      // 5) Cleanup regardless of outcome
+      // 6) Cleanup regardless of outcome
       cleanupResources(session);
     }
+  }
+
+  private void publishLiteratureReadyEvent(Long taskId, Long runId, ExecutionContext context) {
+    List<TaskRunBatch> batches = taskRunBatchRepository.findByRunId(runId);
+    if (batches == null || batches.isEmpty()) {
+      return;
+    }
+
+    List<TaskRunBatch> succeededBatches =
+        batches.stream()
+            .filter(batch -> batch.getStatus() == BatchStatus.SUCCEEDED)
+            .filter(batch -> StringUtils.hasText(batch.getStorageKey()))
+            .collect(Collectors.toList());
+
+    if (succeededBatches.isEmpty()) {
+      return;
+    }
+
+    List<String> storageKeys =
+        succeededBatches.stream()
+            .map(TaskRunBatch::getStorageKey)
+            .filter(StringUtils::hasText)
+            .distinct()
+            .collect(Collectors.toList());
+
+    if (storageKeys.isEmpty()) {
+      return;
+    }
+
+    int totalLiteratureCount =
+        succeededBatches.stream()
+            .map(TaskRunBatch::getStats)
+            .filter(Objects::nonNull)
+            .mapToInt(BatchStats::recordCount)
+            .sum();
+
+    int failedBatchCount =
+        (int) batches.stream().filter(batch -> batch.getStatus() == BatchStatus.FAILED).count();
+
+    LiteratureDataReadyEvent event =
+        LiteratureDataReadyEvent.builder()
+            .taskId(taskId)
+            .runId(runId)
+            .provenanceCode(context.provenanceCode())
+            .storageKeys(List.copyOf(storageKeys))
+            .totalLiteratureCount(totalLiteratureCount)
+            .successBatchCount(succeededBatches.size())
+            .failedBatchCount(failedBatchCount)
+            .timestamp(clock.instant().toEpochMilli())
+            .build();
+
+    literatureEventPublisher.publish(event);
+
+    log.info(
+        "[INGEST][APP] literature data ready event queued taskId={} runId={} storageKeyCount={} totalCount={}",
+        taskId,
+        runId,
+        storageKeys.size(),
+        totalLiteratureCount);
   }
 
   /** Cleanup resources (stop heartbeat, release lease). */

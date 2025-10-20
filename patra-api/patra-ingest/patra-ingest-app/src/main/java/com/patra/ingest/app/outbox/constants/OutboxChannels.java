@@ -46,7 +46,12 @@ public enum OutboxChannels {
 
   /** Ingest plan updated channel. */
   INGEST_PLAN_UPDATED(
-      "INGEST_PLAN_UPDATED", "Ingest plan updated - plan state or configuration changed");
+      "INGEST_PLAN_UPDATED", "Ingest plan updated - plan state or configuration changed"),
+
+  /** Literature data ready channel. */
+  LITERATURE_DATA_READY(
+      "LITERATURE_DATA_READY",
+      "Literature data ready - ingestion batches committed to object storage");
 
   private final String code;
   private final String description;

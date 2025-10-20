@@ -22,6 +22,11 @@
 
         <dependency>
             <groupId>com.papertrace</groupId>
+            <artifactId>patra-catalog-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
 

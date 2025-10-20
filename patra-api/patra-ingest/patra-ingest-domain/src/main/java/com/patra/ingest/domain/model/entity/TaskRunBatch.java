@@ -28,6 +28,7 @@ public class TaskRunBatch {
   private Instant committedAt;
   private String afterToken;
   private String error;
+  private final String storageKey;
 
   public TaskRunBatch(
       Long id,
@@ -61,6 +62,7 @@ public class TaskRunBatch {
         BatchStatus.RUNNING,
         BatchStats.of(0),
         null,
+        null,
         null);
   }
 
@@ -82,7 +84,8 @@ public class TaskRunBatch {
       BatchStatus status,
       BatchStats stats,
       Instant committedAt,
-      String error) {
+      String error,
+      String storageKey) {
     this.id = id;
     this.runId = runId;
     this.taskId = taskId;
@@ -101,6 +104,7 @@ public class TaskRunBatch {
     this.stats = stats == null ? BatchStats.of(0) : stats;
     this.committedAt = committedAt;
     this.error = error;
+    this.storageKey = storageKey;
   }
 
   public static TaskRunBatch restore(
@@ -121,7 +125,8 @@ public class TaskRunBatch {
       BatchStatus status,
       BatchStats stats,
       Instant committedAt,
-      String error) {
+      String error,
+      String storageKey) {
     return new TaskRunBatch(
         id,
         runId,
@@ -140,7 +145,8 @@ public class TaskRunBatch {
         status,
         stats,
         committedAt,
-        error);
+        error,
+        storageKey);
   }
 
   public void succeed(int count, String afterTok, Instant now) {
@@ -200,6 +206,7 @@ public class TaskRunBatch {
         status,
         stats,
         now, // committedAt
-        errorMessage);
+        errorMessage,
+        storageKey);
   }
 }
