@@ -28,6 +28,13 @@ spring:
           producer:
             partition-key-expression: "headers['partitionKey']"
             partition-count: 4
+        LITERATURE_DATA_READY-out-0:
+          binder: rocketmq
+          destination: papertrace.catalog.literature.ready
+          content-type: application/json
+          producer:
+            partition-key-expression: "headers['partitionKey']"
+            partition-count: 4
         # Consumer binding
         ingestTaskReadyConsumer-in-0:
           binder: rocketmq
@@ -48,3 +55,4 @@ papertrace:
       strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
       allowed-channels:
         - INGEST_TASK_READY
+        - LITERATURE_DATA_READY

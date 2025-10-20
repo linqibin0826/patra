@@ -67,6 +67,11 @@ public enum OutboxBusinessTags {
   /** Literature data stored. */
   LITERATURE_STORED("LITERATURE_STORED", "Literature stored - data persisted to target storage"),
 
+  /** Literature data ready for catalog ingestion. */
+  LITERATURE_DATA_READY(
+      "LITERATURE_DATA_READY",
+      "Literature data ready - aggregated object storage payload available"),
+
   // ==================== Generic Events ====================
 
   /** Generic event published. */

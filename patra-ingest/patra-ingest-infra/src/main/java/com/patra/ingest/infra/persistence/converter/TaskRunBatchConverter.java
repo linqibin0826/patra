@@ -24,6 +24,7 @@ public interface TaskRunBatchConverter {
   @Mapping(target = "recordCount", source = "stats", qualifiedByName = "statsToRecordCount")
   @Mapping(target = "stats", source = "stats", qualifiedByName = "statsToJson")
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "batchStatusToCode")
+  @Mapping(target = "storageKey", source = "storageKey")
   TaskRunBatchDO toDO(TaskRunBatch source);
 
   default TaskRunBatch toDomain(TaskRunBatchDO entity) {
@@ -54,7 +55,8 @@ public interface TaskRunBatchConverter {
         status,
         stats,
         entity.getCommittedAt(),
-        entity.getError());
+        entity.getError(),
+        entity.getStorageKey());
   }
 
   @Named("batchStatusToCode")
