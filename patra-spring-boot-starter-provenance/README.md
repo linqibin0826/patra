@@ -1,14 +1,13 @@
 # patra-spring-boot-starter-provenance
 
-> Spring Boot starter for PubMed and Europe PMC client integration.
+> Spring Boot starter for PubMed and Europe PMC client integration (direct HTTP).
 
 ## 📌 Purpose
 
-Auto-configures **provenance clients** for accessing external medical literature APIs:
-- **PubMed** client (ESearch, EFetch operations)
-- **Europe PMC** client (search operations)
-- Backed by `patra-egress-gateway` for resilient external calls
-- Micrometer metrics integration (optional)
+Auto-configures **provenance clients** for accessing external medical literature APIs（直连模式）:
+- **PubMed** client（ESearch、EFetch）
+- **Europe PMC** client（Search）
+- 可选：Micrometer 指标集成
 
 ## 🏗️ Architecture
 
@@ -18,25 +17,16 @@ Auto-configures **provenance clients** for accessing external medical literature
 ┌─────────────────────────────────────┐
 │   PubMedClient / EPMCClient         │  ← Domain interface
 ├─────────────────────────────────────┤
-│   PubMedClientImpl / EPMCClientImpl │  ← Implementation
-├─────────────────────────────────────┤
-│   EgressGatewayClient (Feign)       │  ← Gateway abstraction
+│   PubMedClientImpl / EPMCClientImpl │  ← Implementation (SimpleHttpClient)
 ├─────────────────────────────────────┤
 │   External APIs (PubMed, EPMC)      │  ← Remote services
 └─────────────────────────────────────┘
 ```
 
-### Design Pattern: **Fail-Fast Required Dependencies**
+### 直连模式说明
 
-- **Egress Gateway API is required** (not optional)
-- If `EgressGatewayClient` bean is missing, Spring fails at startup with clear error
-- No silent no-op fallbacks (removed in v0.1.0)
-
-**Why fail-fast?**
-- ✅ Clear error messages at compile/startup time
-- ✅ No silent failures with empty responses
-- ✅ Simpler configuration (no conditional logic)
-- ✅ Follows Spring Boot starter conventions
+- 不依赖独立的出站网关服务；出站由启动器内置 `SimpleHttpClient` 完成
+- 支持超时、简单重试和本地 QPS 节流（轻量级，非分布式）
 
 ## 🔗 Dependencies
 
@@ -47,25 +37,14 @@ Auto-configures **provenance clients** for accessing external medical literature
 </dependency>
 ```
 
-**Transitive dependencies** (automatically included):
-- `patra-egress-gateway-api` (Feign client contracts)
-- `patra-common` (base domain classes)
-- Jackson (JSON/XML processing)
-- Micrometer (optional, for metrics)
+**Transitive dependencies**：
+- `patra-common`
+- Jackson（JSON/XML）
+- Micrometer（可选）
 
 ## 🔧 Auto-Configuration
 
-### Feign Client Discovery
-
-The `EgressGatewayClient` is **automatically discovered** via `patra-spring-cloud-starter-feign`, which scans all `@FeignClient` interfaces under the `com.patra` package.
-
-**No manual configuration needed:**
-```java
-// ✅ Just add the provenance starter dependency
-// EgressGatewayClient is automatically discovered and injected
-@SpringBootApplication
-public class MyApplication {}
-```
+（无 Feign 依赖，无需配置额外的网关客户端）
 
 ### Beans Provided
 
@@ -74,14 +53,11 @@ public class MyApplication {}
 | `pubMedClient` | `PubMedClient` | Singleton | PubMed ESearch/EFetch client |
 | `epmcClient` | `EPMCClient` | Singleton | Europe PMC search client |
 | `provenanceMetrics` | `ProvenanceMetrics` | Singleton | Metrics recorder (if `MeterRegistry` available) |
-| `gatewayRequestBuilder` | `GatewayRequestBuilder` | Singleton | Gateway request construction utility |
 | `xmlToJsonConverter` | `XmlToJsonConverter` | Singleton | PubMed XML response converter |
-| `EgressGatewayClient` | Feign proxy | Singleton | Auto-registered Feign client for egress gateway |
 
-### Required Beans (Must Be Available)
+### Required Beans
 
-- `EgressGatewayClient` (automatically registered via Feign client scanning)
-- `ProvenanceProperties` (auto-configured from `application.yml`)
+- `ProvenanceProperties`（由 `application.yml` 绑定）
 
 ### Optional Beans
 
@@ -184,34 +160,9 @@ public class EpmcSearchPortImpl implements EpmcSearchPort {
 }
 ```
 
-### Testing with Mock Gateway
+### Testing
 
-```java
-@SpringBootTest
-@MockBean(EgressGatewayClient.class)  // Mock the gateway
-class PubMedClientIntegrationTest {
-
-    @Autowired
-    private PubMedClient pubMedClient;  // Starter provides this
-
-    @Autowired
-    private EgressGatewayClient mockGateway;
-
-    @Test
-    void shouldCallPubMedViaGateway() {
-        // Given: Mock gateway response
-        when(mockGateway.call(any())).thenReturn(/* mock response */);
-
-        // When: Call PubMed client
-        ESearchResponse response = pubMedClient.esearch(request);
-
-        // Then: Verify gateway was called
-        verify(mockGateway).call(argThat(req ->
-            req.getUrl().contains("eutils.ncbi.nlm.nih.gov")
-        ));
-    }
-}
-```
+建议使用 WireMock/MockWebServer stub 外部服务响应，验证请求路径与参数编码是否正确。
 
 ## 📊 Metrics (Optional)
 
@@ -257,37 +208,17 @@ Then manually configure beans:
 public class CustomProvenanceConfig {
 
     @Bean
-    public PubMedClient customPubMedClient(EgressGatewayClient gateway) {
+    public PubMedClient customPubMedClient() {
         return new PubMedClientImpl(
-            gateway,
-            new GatewayRequestBuilder(),
+            new SimpleHttpClient(),
             customConfigProvider(),
             new XmlToJsonConverter(),
             objectMapper(),
-            null  // No metrics
+            null
         );
     }
 }
 ```
-
-## 🔄 Migration Guide
-
-### From v0.0.x (Optional Dependency) → v0.1.0 (Required Dependency)
-
-**Before (v0.0.x)**:
-- `patra-egress-gateway-api` was optional
-- No-op implementations returned empty results if gateway missing
-- Silent failures at runtime
-
-**After (v0.1.0)**:
-- `patra-egress-gateway-api` is **required** (transitive)
-- No no-op fallbacks (fail-fast at startup)
-- Clear error messages
-
-**Action Required**:
-- ✅ No changes needed if `patra-egress-gateway` is already in your dependency tree
-- ✅ For tests: Use `@MockBean(EgressGatewayClient.class)` to provide mock implementation
-- ❌ If you relied on no-op behavior, you must now provide a real or mock gateway bean
 
 ## 🛡️ Error Handling
 
@@ -303,14 +234,13 @@ try {
 ```
 
 **Common error scenarios:**
-- Gateway timeout → `ProvenanceClientException` with timeout details
+- Request timeout → `ProvenanceClientException` with timeout details
 - Rate limit exceeded → `ProvenanceClientException` with 429 status code
 - Invalid API key → `ProvenanceClientException` with authentication error
 
 ## 🔗 Related Documentation
 
 - [Main README](../README.md)
-- [patra-egress-gateway](../patra-egress-gateway/README.md) - Gateway implementation
 - [patra-ingest](../patra-ingest/README.md) - Consumer example
 - [Architecture Guide](../docs/ARCHITECTURE.md) - System design patterns
 

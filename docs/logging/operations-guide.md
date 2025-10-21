@@ -35,8 +35,7 @@ nacos/
         ├── logging-common.yml          # Global defaults for all services
         ├── logging-patra-registry.yml  # Service-specific overrides
         ├── logging-patra-ingest.yml
-        ├── logging-patra-gateway.yml
-        └── logging-patra-egress-gateway.yml
+        └── logging-patra-gateway.yml
 ```
 
 ### Changing Log Levels (Nacos UI)
@@ -490,7 +489,6 @@ rate(logback_events_total{level="WARN", logger="SecurityEventLogger"}[1h]) > 5
 | patra-gateway | INFO | DEBUG | DEBUG |
 | patra-registry | INFO | INFO | DEBUG |
 | patra-ingest | INFO | DEBUG | DEBUG |
-| patra-egress-gateway | INFO | DEBUG | DEBUG |
 
 ### Contact Information
 

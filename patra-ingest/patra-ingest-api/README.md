@@ -194,7 +194,7 @@ public class TaskWorkerApplication {
 public class PubMedTaskWorker {
 
     private final TaskWorkerClient taskWorkerClient;
-    private final EgressGatewayClient egressClient;
+    private final PubMedClient pubMedClient;
 
     @Scheduled(fixedDelay = 5000)
     public void pollAndExecute() {
@@ -231,16 +231,9 @@ public class PubMedTaskWorker {
         // Parse task params
         TaskParams params = parseTaskParams(task.paramsJson());
 
-        // Call external API via egress gateway
-        ExternalCallResponseDTO response = egressClient.call(
-            new ExternalCallRequestDTO(
-                params.url(),
-                "GET",
-                params.headers(),
-                null,
-                params.resilienceConfig()
-            )
-        );
+        // Call external API directly via provenance starter
+        ESearchRequest req = new PubMedESearchRequestAssembler().buildList(params.toJson());
+        ESearchResponse resp = pubMedClient.esearch(req);
 
         // Process response
         // ...

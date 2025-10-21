@@ -53,10 +53,8 @@ public class MyApplication {
 
 ### All Feign Clients Discovered
 
-This starter discovers **all** `@FeignClient` interfaces under `com.patra`, including:
-
-- **Business RPC clients**: `com.patra.{module}.api.rpc.client.*` (following convention)
-- **Infrastructure clients**: `com.patra.egress.api.client.EgressGatewayClient` (specialized)
+This starter discovers **all** `@FeignClient` interfaces under `com.patra`, including business RPC
+clients placed under `com.patra.{module}.api.rpc.client.*` (following the convention).
 
 **No need for individual starters to declare `@EnableFeignClients`** - this starter handles it centrally.
 

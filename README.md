@@ -35,12 +35,6 @@ Papertrace is a **medical literature data platform** designed to:
       • Expression metadata                   │
       • Dictionary management                 │
                                               │
-                                     ┌────────▼──────────┐
-                                     │ patra-egress-     │
-                                     │   gateway         │
-                                     │ (Southbound)      │
-                                     └────────┬──────────┘
-                                              │
                                               ▼
                                       External APIs
                                 (PubMed, EPMC, Crossref, etc.)
@@ -67,7 +61,7 @@ See [Architecture Documentation](./docs/ARCHITECTURE.md) for deep dive.
 | [**patra-registry**](./patra-registry/README.md) | SSOT for provenance configs, expressions, dictionaries | `patra-registry-boot` |
 | [**patra-ingest**](./patra-ingest/README.md) | Orchestrates collection plans, manages task lifecycle | `patra-ingest-boot` |
 | [**patra-gateway-boot**](./patra-gateway-boot/README.md) | API Gateway (ingress) with routing and auth | `patra-gateway-boot` |
-| [**patra-egress-gateway**](./patra-egress-gateway/README.md) | Southbound gateway for all outbound external service calls | `patra-egress-gateway-boot` |
+
 
 ### Shared Libraries
 

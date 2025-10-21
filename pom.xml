@@ -14,7 +14,6 @@
         <module>patra-registry</module>
         <module>patra-ingest</module>
         <module>patra-catalog</module>
-        <module>patra-egress-gateway</module>
 
         <module>patra-expr-kernel</module>
         <module>patra-spring-boot-starter-expr</module>

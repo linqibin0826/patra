@@ -20,7 +20,7 @@ import org.springframework.core.env.Environment;
  * all {@code @FeignClient} annotated interfaces under {@code com.patra} package. By convention,
  * standard RPC clients should be placed in {@code com.patra.{module}.api.rpc.client} packages.
  *
- * <p><b>Note:</b> Specialized infrastructure clients (e.g., egress gateway) may define their own
+ * <p><b>Note:</b> Specialized infrastructure clients may define their own
  * {@code @EnableFeignClients} in their specific starters if they need custom scanning
  * configuration.
  */

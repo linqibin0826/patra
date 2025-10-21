@@ -39,7 +39,7 @@ This checklist ensures the Papertrace logging system maintains compliance with s
 
 - [ ] **Sample 1000 random log lines from each service**
   ```bash
-  for service in registry ingest gateway egress-gateway; do
+  for service in registry ingest gateway; do
     shuf -n 1000 /var/log/patra/patra-$service.log > /tmp/sample-$service.txt
   done
   ```
@@ -105,9 +105,9 @@ This checklist ensures the Papertrace logging system maintains compliance with s
 
 #### 2.2 API Call Logging
 
-- [ ] **Verify external API calls logged**
+- [ ] **Verify external API calls logged (if applicable)**
   ```bash
-  grep "ApiCallLogger" /var/log/patra/patra-egress-gateway.log | head -5
+  grep "ApiCallLogger" /var/log/patra/*.log | head -5
   # Check format: [API_CALL] method=GET url=https://... status=200 duration=523ms
   ```
 

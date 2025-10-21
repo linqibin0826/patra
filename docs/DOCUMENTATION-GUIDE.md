@@ -62,11 +62,9 @@ Tier 2: Module Documentation (Service/Shared/API READMEs)
   ├─ Service READMEs
   │  ├─ patra-registry/README.md
   │  ├─ patra-ingest/README.md
-  │  ├─ patra-gateway-boot/README.md
-  │  └─ patra-egress-gateway/README.md
+  │  └─ patra-gateway-boot/README.md
   │
   ├─ API Module READMEs
-  │  ├─ patra-egress-gateway/patra-egress-gateway-api/README.md
   │  ├─ patra-registry/patra-registry-api/README.md
   │  └─ patra-ingest/patra-ingest-api/README.md
   │
@@ -236,20 +234,19 @@ Tier 3: Package-Level Documentation (Complex Areas Only)
 
 #### Scenario 2: Adding a New API Endpoint
 
-**Example**: Adding `POST /api/egress/batch-call` to egress gateway.
+**Example**: Adding `POST /api/provenance/plan` to registry service.
 
 **Steps**:
 
 1. **Update API module README**:
-   - File: `patra-egress-gateway/patra-egress-gateway-api/README.md`
-   - Add new endpoint to "API Contracts" section
-   - Add new DTO examples
-   - Update usage examples
+   - File: `patra-registry/patra-registry-api/README.md`
+   - Add new endpoint到“API Contracts”
+   - 增加 DTO 示例与用法
 
 2. **Update service README**:
-   - File: `patra-egress-gateway/README.md`
-   - Add to "API Contract" section
-   - Update integration examples if needed
+   - File: `patra-registry/README.md`
+   - 在“API Contract”章节补充
+   - 如需，更新集成示例
 
 3. **Update consuming service READMEs**:
    - If pattern changes, update consumer examples
@@ -257,11 +254,8 @@ Tier 3: Package-Level Documentation (Complex Areas Only)
 
 4. **Verify**:
    ```bash
-   # Search for old endpoint references
-   grep -r "POST /api/egress/call" .
-
-   # Ensure new endpoint documented
-   grep -r "POST /api/egress/batch-call" .
+   # 确认文档一致
+   grep -r "POST /api/provenance/plan" .
    ```
 
 ---
@@ -550,10 +544,10 @@ Use tables for comparisons, reference lists:
 - **Helpful**: Explain "why", not just "what"
 
 **Example (Good)**:
-> The egress gateway centralizes all outbound API calls. This ensures consistent resilience patterns (retry, rate limit) and provides a standardized response format.
+> The provenance starter centralizes provider-specific parameter mapping and adds minimal resilience. This keeps calling code simple and consistent.
 
 **Example (Bad)**:
-> The egress gateway is a thing that we use to call external APIs and stuff. It's pretty cool because it does retries and things like that.
+> It calls some external APIs and it's kinda robust.
 
 ### File Naming
 
