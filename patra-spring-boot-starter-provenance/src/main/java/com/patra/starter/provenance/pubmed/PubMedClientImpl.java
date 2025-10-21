@@ -14,8 +14,10 @@ import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.gateway.GatewayRequestBuilder;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
+import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
+import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -135,6 +137,55 @@ public class PubMedClientImpl implements PubMedClient {
           response.traceId(),
           envelope.body(),
           "Failed to parse EFetch response",
+          ex);
+    }
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public EPostResponse epost(EPostRequest request) {
+    return epost(request, null);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public EPostResponse epost(EPostRequest request, ProvenanceConfig config) {
+    if (metrics != null) {
+      // Capture latency and success metrics whenever Micrometer instrumentation is available.
+      return metrics.recordApiCall(PROVENANCE, "epost", () -> executeEPost(request, config));
+    }
+    return executeEPost(request, config);
+  }
+
+  private EPostResponse executeEPost(EPostRequest request, ProvenanceConfig config) {
+    ProvenanceConfig finalConfig =
+        config != null ? config : configProvider.getPubMedDefaultConfig();
+    ExternalCallRequestDTO gatewayRequest =
+        requestBuilder.build(finalConfig.baseUrl(), "/epost.fcgi", request, finalConfig);
+
+    ExternalCallResponseDTO response = invokeGateway("epost", gatewayRequest);
+    ResponseEnvelopeDTO envelope = response.envelope();
+    try {
+      JsonNode root = objectMapper.readTree(envelope.body());
+      EPostResponse epostResponse = EPostResponse.from(root);
+
+      log.debug(
+          "[PUBMED] EPost success: idCount={}, WebEnv={}, QueryKey={}",
+          request.getIdCount(),
+          epostResponse.getTruncatedWebEnv(),
+          epostResponse.queryKey());
+
+      return epostResponse;
+    } catch (ProvenanceClientException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new ProvenanceClientException(
+          PROVENANCE.getCode(),
+          "epost",
+          envelope.statusCode(),
+          response.traceId(),
+          envelope.body(),
+          "Failed to parse EPost response",
           ex);
     }
   }
