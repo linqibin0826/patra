@@ -58,4 +58,4 @@ Metrics (if a MeterRegistry is present):
 
 Notes
 - The smoke suite is intentionally lightweight and read-only: it compiles expressions and constructs request URLs but does not call upstream providers.
-- For end-to-end request stubbing, consider adding WireMock in a follow-up to assert egress request-lines.
+- For end-to-end request stubbing, consider adding WireMock in a follow-up to assert HTTP request-lines.

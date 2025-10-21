@@ -45,7 +45,7 @@
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-cloud-starter-feign</artifactId>
         </dependency>
-        <!-- Provenance client starter (PubMed/EPMC clients, includes egress gateway API) -->
+        <!-- Provenance client starter (PubMed/EPMC clients) -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-spring-boot-starter-provenance</artifactId>

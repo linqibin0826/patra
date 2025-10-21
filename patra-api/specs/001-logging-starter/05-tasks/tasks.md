@@ -317,7 +317,7 @@ Phase 7 (Polish)
 
 ### Remaining Microservices Migration (FR-014)
 
-- [X] T082 [P] Read each module's README.md first, then migrate remaining microservices (patra-egress-gateway) following established pattern - patra-egress-gateway already uses @Slf4j across adapter/app/infra layers
+- [X] T082 [P] Read each module's README.md first, then migrate remaining microservices following established pattern
 - [X] T083 [P] Read adapter README.md for each service, then update all adapter layers with @Slf4j and sanitization - Already covered in Phase 3-6
 - [X] T084 [P] Read app README.md for each service, then update all application layers with trace context - Already covered in Phase 3-6
 - [X] T085 Read domain README.md for each service, then validate all domain layers use plain Logger (no Lombok) - Already verified in Phase 3

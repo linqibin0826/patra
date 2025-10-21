@@ -25,11 +25,6 @@
             <artifactId>patra-common</artifactId>
         </dependency>
 
-        <!-- patra-egress-gateway-api (required for functional provenance clients) -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-egress-gateway-api</artifactId>
-        </dependency>
 
         <!-- ==================== Spring Boot ==================== -->
 

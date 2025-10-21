@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.egress.api.dto.ExternalCallRequestDTO;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
 import com.patra.expr.TextMatch;
@@ -100,7 +99,7 @@ class ExprSmokeTest {
             null,
             null,
             null);
-    ExternalCallRequestDTO call =
+    com.patra.starter.provenance.common.gateway.GatewayRequestBuilder.BuiltRequest call =
         new GatewayRequestBuilder().build(cfg.baseUrl(), "/esearch.fcgi", req, cfg);
     Map<String, String> qs2 = parseQuery(call.url());
     assertEquals(result.query(), qs2.get("term"), () -> call.url());
@@ -135,7 +134,7 @@ class ExprSmokeTest {
             null,
             null,
             null);
-    ExternalCallRequestDTO call =
+    com.patra.starter.provenance.common.gateway.GatewayRequestBuilder.BuiltRequest call =
         new GatewayRequestBuilder().build(cfg.baseUrl(), "/search", req, cfg);
     Map<String, String> qs = parseQuery(call.url());
     assertTrue(qs.containsKey("query"), () -> call.url());
@@ -165,7 +164,7 @@ class ExprSmokeTest {
             null,
             null,
             null);
-    ExternalCallRequestDTO call =
+    com.patra.starter.provenance.common.gateway.GatewayRequestBuilder.BuiltRequest call =
         new GatewayRequestBuilder().build(cfg.baseUrl(), "/works", req, cfg);
     Map<String, String> qs = parseQuery(call.url());
     assertEquals("\"machine learning\"", qs.get("query"));

@@ -111,11 +111,6 @@ patra-{service}/
   • Configuration slicing        │
   • Expression metadata          │
   • Dictionary management        │
-                         ┌───────▼──────────────┐
-                         │ patra-egress-gateway │
-                         │ (Southbound Gateway) │
-                         └───────┬──────────────┘
-                                 │
                                  ▼
                          External APIs
                       (PubMed, EPMC, etc.)
@@ -125,10 +120,7 @@ patra-{service}/
 - **patra-gateway-boot**: Northbound/ingress gateway (external clients → microservices)
 - **patra-registry**: SSOT for provenance configs, expressions, dictionaries
 - **patra-ingest**: Plan orchestration, task generation, outbox relay
-- **patra-egress-gateway**: Southbound/egress gateway (microservices → external APIs)
-  - Centralized resilience (retry, rate limit, circuit breaker)
-  - Standardized response format
-  - Audit trail (bodyHash, traceId)
+  
 
 ### Data Flow
 
@@ -147,23 +139,18 @@ patra-{service}/
    ↓
 7. Task workers consume from MQ
    ↓
-8. Task workers call patra-egress-gateway (via EgressGatewayClient)
+8. Task workers call external provider APIs (via provenance starter HTTP clients)
    ↓
-9. Egress gateway applies resilience patterns & calls external APIs
+9. External APIs return data
    ↓
-10. External APIs return data
+10. Task workers parse, cleanse, store data
    ↓
-11. Egress gateway returns ResponseEnvelope (with retry advice, rate limits)
-   ↓
-12. Task workers parse, cleanse, store data
-   ↓
-13. Update task status (SUCCEEDED/FAILED)
+11. Update task status (SUCCEEDED/FAILED)
 ```
 
 **Key Integration Points**:
 - **patra-ingest → patra-registry**: Fetch config snapshots (Feign)
-- **Task workers → patra-egress-gateway**: All external API calls routed through egress gateway
-- **patra-egress-gateway → External APIs**: Centralized resilience patterns applied
+ 
 
 ---
 
@@ -309,8 +296,6 @@ patra-registry (api, boot)
     ↓
 patra-ingest (api, boot)
     ↓
-patra-egress-gateway (api, boot)
-    ↓
 patra-common
     ↓
 patra-spring-boot-starter-* (core, web, mybatis, feign, provenance, expr)
@@ -323,7 +308,7 @@ patra-parent (root POM)
 
 **Key points**:
 - `patra-gateway-boot`: Ingress gateway (external → services)
-- `patra-egress-gateway`: Egress gateway (services → external APIs)
+ 
 - `patra-common`: Shared base classes (AggregateRoot, DomainEvent, ErrorCodes)
 - `patra-spring-boot-starter-*`: Custom auto-configuration (Jackson, error handling, MyBatis)
 - `patra-expr-kernel`: Expression engine (for dynamic API parameter mapping)
