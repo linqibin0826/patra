@@ -3,8 +3,10 @@ package com.patra.starter.provenance.pubmed;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
+import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
+import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 
 /**
@@ -53,4 +55,30 @@ public interface PubMedClient {
    * @throws ProvenanceClientException if the gateway reports an error or parsing fails
    */
   EFetchResponse efetch(EFetchRequest request, ProvenanceConfig config);
+
+  /**
+   * Call the PubMed EPost API to upload ID list to History Server.
+   *
+   * <p>EPost is the recommended approach for handling large ID lists (>200 UIDs). It uploads the
+   * UIDs to NCBI's History Server and returns a WebEnv token and query_key that can be used in
+   * subsequent EFetch or other E-utility calls.
+   *
+   * <p><b>NCBI Best Practice:</b> Use EPost when you need to fetch more than 200 records to avoid
+   * URL length limitations.
+   *
+   * @param request epost request with ID list
+   * @return epost response containing WebEnv and QueryKey
+   * @throws ProvenanceClientException if the gateway reports an error or parsing fails
+   */
+  EPostResponse epost(EPostRequest request);
+
+  /**
+   * Call the PubMed EPost API with caller-supplied configuration overrides.
+   *
+   * @param request epost request with ID list
+   * @param config config override (optional)
+   * @return epost response containing WebEnv and QueryKey
+   * @throws ProvenanceClientException if the gateway reports an error or parsing fails
+   */
+  EPostResponse epost(EPostRequest request, ProvenanceConfig config);
 }

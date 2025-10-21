@@ -17,8 +17,10 @@ import com.patra.starter.provenance.common.config.RetryConfig;
 import com.patra.starter.provenance.common.config.WindowOffsetConfig;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
+import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
+import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import com.patra.starter.provenance.pubmed.model.response.PubmedArticle;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
@@ -52,6 +54,13 @@ public class PubmedBatchExecutor implements BatchExecutor {
   private static final String PROVENANCE_DB = "pubmed";
   private static final PubMedESearchRequestAssembler ASSEMBLER =
       new PubMedESearchRequestAssembler();
+
+  /**
+   * Threshold for switching to EPost strategy.
+   *
+   * <p>NCBI recommends using EPost when fetching >200 records to avoid URL length limitations.
+   */
+  private static final int EPOST_THRESHOLD = 200;
 
   private final PubMedClient pubMedClient;
   private final LiteraturePublisherPort literaturePublisherPort;
@@ -149,12 +158,109 @@ public class PubmedBatchExecutor implements BatchExecutor {
     return params;
   }
 
-  private List<PubmedArticle> fetchArticles(
-      List<String> pmids, ProvenanceConfig config) {
+  /**
+   * Fetch articles from PubMed using intelligent routing strategy.
+   *
+   * <p>Routes based on ID count:
+   *
+   * <ul>
+   *   <li>≤200 IDs: Direct EFetch (simple, single API call)
+   *   <li>>200 IDs: EPost + WebEnv (avoids URL length limits, NCBI best practice)
+   * </ul>
+   *
+   * @param pmids list of PubMed identifiers
+   * @param config provenance configuration
+   * @return list of fetched articles
+   */
+  private List<PubmedArticle> fetchArticles(List<String> pmids, ProvenanceConfig config) {
+    if (pmids.size() <= EPOST_THRESHOLD) {
+      log.debug("[INGEST][APP] Using direct EFetch for {} PMIDs", pmids.size());
+      return fetchArticlesDirectly(pmids, config);
+    } else {
+      log.info(
+          "[INGEST][APP] Using EPost+WebEnv for {} PMIDs (threshold: {})",
+          pmids.size(),
+          EPOST_THRESHOLD);
+      return fetchArticlesViaEPost(pmids, config);
+    }
+  }
+
+  /**
+   * Fetch articles directly via EFetch (for small batches ≤200 PMIDs).
+   *
+   * <p>This is the original approach: concatenate IDs into a comma-separated string and pass
+   * directly to EFetch. Gateway will automatically use POST if URL exceeds length limit.
+   *
+   * @param pmids list of PubMed identifiers
+   * @param config provenance configuration
+   * @return list of fetched articles
+   */
+  private List<PubmedArticle> fetchArticlesDirectly(List<String> pmids, ProvenanceConfig config) {
     String idParam = String.join(",", pmids);
     EFetchRequest request = new EFetchRequest(PROVENANCE_DB, idParam);
     EFetchResponse response =
         config != null ? pubMedClient.efetch(request, config) : pubMedClient.efetch(request);
+    if (response == null || response.articles() == null) {
+      return List.of();
+    }
+    return response.articles();
+  }
+
+  /**
+   * Fetch articles via EPost + WebEnv (for large batches >200 PMIDs).
+   *
+   * <p>NCBI recommended approach for large ID lists:
+   *
+   * <ol>
+   *   <li>Upload IDs to History Server via EPost → get WebEnv token
+   *   <li>Fetch articles via EFetch using WebEnv (no ID list in URL)
+   * </ol>
+   *
+   * @param pmids list of PubMed identifiers
+   * @param config provenance configuration
+   * @return list of fetched articles
+   */
+  private List<PubmedArticle> fetchArticlesViaEPost(List<String> pmids, ProvenanceConfig config) {
+    // Step 1: Upload ID list to History Server
+    String idParam = String.join(",", pmids);
+    EPostRequest postReq = new EPostRequest(PROVENANCE_DB, idParam, null, null, null);
+    EPostResponse postResp =
+        config != null ? pubMedClient.epost(postReq, config) : pubMedClient.epost(postReq);
+
+    if (!postResp.isValid()) {
+      log.error(
+          "[INGEST][APP] EPost returned invalid WebEnv/QueryKey: webEnv={}, queryKey={}",
+          postResp.webEnv(),
+          postResp.queryKey());
+      throw new RuntimeException(
+          "EPost failed to return valid WebEnv for " + pmids.size() + " PMIDs");
+    }
+
+    log.debug(
+        "[INGEST][APP] EPost success: WebEnv={}, QueryKey={}, count={}",
+        postResp.getTruncatedWebEnv(),
+        postResp.queryKey(),
+        postResp.count());
+
+    // Step 2: Fetch articles using WebEnv (ID list is empty!)
+    EFetchRequest fetchReq =
+        new EFetchRequest(
+            PROVENANCE_DB,
+            "", // ID留空，使用WebEnv
+            "xml", // retmode
+            "abstract", // rettype
+            0, // retstart
+            pmids.size(), // retmax（一次性取全部）
+            postResp.webEnv(), // WebEnv令牌
+            postResp.queryKey(), // QueryKey
+            null,
+            null,
+            null // apiKey, tool, email
+            );
+
+    EFetchResponse response =
+        config != null ? pubMedClient.efetch(fetchReq, config) : pubMedClient.efetch(fetchReq);
+
     if (response == null || response.articles() == null) {
       return List.of();
     }
