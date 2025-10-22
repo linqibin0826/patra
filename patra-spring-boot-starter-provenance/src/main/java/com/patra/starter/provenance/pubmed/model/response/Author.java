@@ -1,172 +1,98 @@
 package com.patra.starter.provenance.pubmed.model.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.provenance.common.support.JsonHelpers;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * Author extracted from PubMed citation.
+ * Author extracted from the PubMed citation.
  *
- * @author linqibin
- * @since 0.1.0
+ * @author
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class Author {
 
-  private final String lastName;
-  private final String foreName;
-  private final String initials;
-  private final List<String> affiliations;
-  private final String identifier;
-  private final String identifierSource;
+  @JacksonXmlProperty(localName = "LastName")
+  private String lastName;
 
-  private Author(
-      String lastName,
-      String foreName,
-      String initials,
-      List<String> affiliations,
-      String identifier,
-      String identifierSource) {
-    this.lastName = lastName;
-    this.foreName = foreName;
-    this.initials = initials;
-    this.affiliations = affiliations;
-    this.identifier = identifier;
-    this.identifierSource = identifierSource;
-  }
+  @JacksonXmlProperty(localName = "ForeName")
+  private String foreName;
 
-  /**
-   * Parse an author node into a curated author representation.
-   *
-   * @param node author node
-   * @return structured author
-   */
-  public static Author from(JsonNode node) {
-    if (node == null || node.isMissingNode() || node.isNull()) {
-      return new Author(null, null, null, Collections.emptyList(), null, null);
-    }
-    String lastName = JsonHelpers.textValue(node.path("LastName"));
-    String foreName = JsonHelpers.textValue(node.path("ForeName"));
-    String initials = JsonHelpers.textValue(node.path("Initials"));
-    List<String> affiliations = parseAffiliations(node.path("AffiliationInfo"));
-    Identifier identifier = parseIdentifier(node.path("Identifier"));
-    return new Author(
-        lastName, foreName, initials, affiliations, identifier.value, identifier.source);
-  }
+  @JacksonXmlProperty(localName = "Initials")
+  private String initials;
 
-  private static List<String> parseAffiliations(JsonNode affiliationNode) {
-    if (affiliationNode == null || affiliationNode.isMissingNode() || affiliationNode.isNull()) {
-      return Collections.emptyList();
-    }
-    List<String> affiliations = new ArrayList<>();
-    for (JsonNode node : JsonHelpers.toNodeList(affiliationNode)) {
-      String affiliation = JsonHelpers.textValue(node.path("Affiliation"));
-      if (affiliation == null) {
-        affiliation = JsonHelpers.textValue(node);
-      }
-      if (affiliation != null && !affiliation.isBlank()) {
-        affiliations.add(affiliation);
-      }
-    }
-    return Collections.unmodifiableList(affiliations);
-  }
+  @JacksonXmlElementWrapper(useWrapping = false)
+  @JacksonXmlProperty(localName = "AffiliationInfo")
+  private List<AffiliationInfo> affiliationInfo;
 
-  private static Identifier parseIdentifier(JsonNode identifierNode) {
-    if (identifierNode == null || identifierNode.isMissingNode() || identifierNode.isNull()) {
-      return Identifier.EMPTY;
-    }
-    JsonNode selected = identifierNode.isArray() ? identifierNode.get(0) : identifierNode;
-    String value = JsonHelpers.textValue(selected);
-    String source = JsonHelpers.textValue(selected.path("@Source"));
-    return new Identifier(value, source);
-  }
+  @JacksonXmlProperty(localName = "Identifier")
+  private Identifier identifier;
 
-  /**
-   * Get the author's last name.
-   *
-   * @return last name
-   */
-  /**
-   * Get the author's last name.
-   *
-   * @return last name
-   */
+  public Author() {}
+
   public String lastName() {
     return lastName;
   }
 
-  /**
-   * Get the author's given name.
-   *
-   * @return given name
-   */
-  /**
-   * Get the author's given name.
-   *
-   * @return given name
-   */
   public String foreName() {
     return foreName;
   }
 
-  /**
-   * Get the author's initials.
-   *
-   * @return initials
-   */
-  /**
-   * Get the author's initials.
-   *
-   * @return initials
-   */
   public String initials() {
     return initials;
   }
 
-  /**
-   * Get the author's affiliations.
-   *
-   * @return immutable list of affiliations
-   */
-  /**
-   * Get the author's affiliations.
-   *
-   * @return immutable list of affiliations
-   */
   public List<String> affiliations() {
-    return affiliations;
+    if (affiliationInfo == null || affiliationInfo.isEmpty()) {
+      return List.of();
+    }
+    List<String> affiliations = new ArrayList<>(affiliationInfo.size());
+    for (AffiliationInfo info : affiliationInfo) {
+      String value = info.value();
+      if (value != null && !value.isBlank()) {
+        affiliations.add(value);
+      }
+    }
+    return List.copyOf(affiliations);
   }
 
-  /**
-   * Get the author identifier value.
-   *
-   * @return identifier value or {@code null}
-   */
-  /**
-   * Get the author identifier value.
-   *
-   * @return identifier value or {@code null}
-   */
   public String identifier() {
-    return identifier;
+    return identifier != null ? identifier.value : null;
   }
 
-  /**
-   * Get the source system of the identifier.
-   *
-   * @return identifier source or {@code null}
-   */
-  /**
-   * Get the source system of the identifier.
-   *
-   * @return identifier source or {@code null}
-   */
   public String identifierSource() {
-    return identifierSource;
+    return identifier != null ? identifier.source : null;
   }
 
-  private record Identifier(String value, String source) {
-    private static final Identifier EMPTY = new Identifier(null, null);
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class AffiliationInfo {
+
+    @JacksonXmlProperty(localName = "Affiliation")
+    private String affiliation;
+
+    @JacksonXmlText private String value;
+
+    private AffiliationInfo() {}
+
+    private String value() {
+      if (affiliation != null && !affiliation.isBlank()) {
+        return affiliation;
+      }
+      return value;
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class Identifier {
+
+    @JacksonXmlText private String value;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "Source")
+    private String source;
+
+    private Identifier() {}
   }
 }

@@ -1,12 +1,11 @@
 package com.patra.starter.provenance.pubmed;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.converter.ProvenanceConfigConverter;
-import com.patra.starter.provenance.common.converter.XmlToJsonConverter;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.http.HttpResilienceConfig;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
@@ -17,13 +16,14 @@ import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * PubMed client implementation calling E-utilities directly via HTTP.
  *
- * <p>Handles configuration precedence, optional Micrometer instrumentation and XML to JSON
- * conversion for payloads lacking native JSON representations.
+ * <p>Handles configuration precedence, optional Micrometer instrumentation and strongly typed
+ * parsing for both JSON and XML PubMed payloads.
  */
 @Slf4j
 public class PubMedClientImpl implements PubMedClient {
@@ -32,20 +32,20 @@ public class PubMedClientImpl implements PubMedClient {
 
   private final SimpleHttpClient httpClient;
   private final DefaultConfigProvider configProvider;
-  private final XmlToJsonConverter xmlConverter;
   private final ObjectMapper objectMapper;
+  private final XmlMapper xmlMapper;
   private final ProvenanceMetrics metrics;
 
   public PubMedClientImpl(
       SimpleHttpClient httpClient,
       DefaultConfigProvider configProvider,
-      XmlToJsonConverter xmlConverter,
       ObjectMapper objectMapper,
+      XmlMapper xmlMapper,
       ProvenanceMetrics metrics) {
     this.httpClient = httpClient;
     this.configProvider = configProvider;
-    this.xmlConverter = xmlConverter;
     this.objectMapper = objectMapper;
+    this.xmlMapper = xmlMapper;
     this.metrics = metrics;
   }
 
@@ -71,7 +71,6 @@ public class PubMedClientImpl implements PubMedClient {
 
     String baseUrl = finalConfig.baseUrl();
     String path = "/esearch.fcgi";
-    String fullUrl = baseUrl + path;
 
     java.util.Map<String, String> queryParams = request.toQueryParams();
     java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
@@ -108,7 +107,6 @@ public class PubMedClientImpl implements PubMedClient {
 
     String baseUrl = finalConfig.baseUrl();
     String path = "/efetch.fcgi";
-    String fullUrl = baseUrl + path;
 
     java.util.Map<String, String> queryParams = request.toQueryParams();
     java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
@@ -116,15 +114,17 @@ public class PubMedClientImpl implements PubMedClient {
 
     String body = httpClient.get(baseUrl, path, queryParams, headers, rc);
     try {
-      if (request.requiresXmlConversion()) {
-        JsonNode root = xmlConverter.convert(body, JsonNode.class);
-        return EFetchResponse.from(root);
+      String retmode = request.retmode();
+      if (retmode == null || retmode.equalsIgnoreCase("xml")) {
+        return EFetchResponse.fromXml(xmlMapper, body);
       }
-      JsonNode root = objectMapper.readTree(body);
-      return EFetchResponse.from(root);
-    } catch (ProvenanceClientException ex) {
-      throw ex;
-    } catch (Exception ex) {
+      if ("uilist".equalsIgnoreCase(request.rettype()) && retmode.equalsIgnoreCase("text")) {
+        return EFetchResponse.fromUidListText(body);
+      }
+      throw new IllegalArgumentException(
+          "Unsupported EFetch combination: rettype=%s, retmode=%s"
+              .formatted(request.rettype(), retmode));
+    } catch (IOException | IllegalArgumentException ex) {
       throw new ProvenanceClientException(
           PROVENANCE.getCode(), "efetch", null, null, body, "Failed to parse EFetch response", ex);
     }
@@ -152,7 +152,6 @@ public class PubMedClientImpl implements PubMedClient {
 
     String baseUrl = finalConfig.baseUrl();
     String path = "/epost.fcgi";
-    String fullUrl = baseUrl + path;
 
     java.util.Map<String, String> queryParams = request.toQueryParams();
     java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
@@ -160,19 +159,19 @@ public class PubMedClientImpl implements PubMedClient {
 
     String body = httpClient.postForm(baseUrl, path, queryParams, headers, rc);
     try {
-      JsonNode root = objectMapper.readTree(body);
-      EPostResponse epostResponse = EPostResponse.from(root);
+      EPostResponse response = xmlMapper.readValue(body, EPostResponse.class);
+      if (!response.isValid()) {
+        throw new IllegalArgumentException("EPost response missing WebEnv/QueryKey");
+      }
 
       log.debug(
           "[PUBMED] EPost success: idCount={}, WebEnv={}, QueryKey={}",
           request.getIdCount(),
-          epostResponse.getTruncatedWebEnv(),
-          epostResponse.queryKey());
+          response.getTruncatedWebEnv(),
+          response.queryKey());
 
-      return epostResponse;
-    } catch (ProvenanceClientException ex) {
-      throw ex;
-    } catch (Exception ex) {
+      return response;
+    } catch (IOException | IllegalArgumentException ex) {
       throw new ProvenanceClientException(
           PROVENANCE.getCode(), "epost", null, null, body, "Failed to parse EPost response", ex);
     }

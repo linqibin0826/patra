@@ -1,97 +1,133 @@
 package com.patra.starter.provenance.pubmed.model.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.provenance.common.support.JsonHelpers;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * Supplemental PubMed data block.
+ * Supplemental PubMed data block parsed directly from XML.
  *
- * @author linqibin
- * @since 0.1.0
+ * @author
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class PubmedData {
 
-  private final String publicationStatus;
-  private final List<HistoryEvent> history;
-  private final JsonNode raw;
+  @JacksonXmlProperty(localName = "PublicationStatus")
+  private String publicationStatus;
 
-  private PubmedData(String publicationStatus, List<HistoryEvent> history, JsonNode raw) {
-    this.publicationStatus = publicationStatus;
-    this.history = history;
-    this.raw = raw;
-  }
+  @JacksonXmlProperty(localName = "History")
+  private History history;
 
-  /**
-   * Parse the PubMed data node into a curated representation.
-   *
-   * @param node PubMed data node
-   * @return structured PubMed data
-   */
-  public static PubmedData from(JsonNode node) {
-    if (node == null || node.isMissingNode() || node.isNull()) {
-      return new PubmedData(null, Collections.emptyList(), null);
-    }
-    String status = JsonHelpers.textValue(node.path("PublicationStatus"));
-    List<HistoryEvent> history = parseHistory(node.path("History"));
-    return new PubmedData(status, history, node.deepCopy());
-  }
+  @JacksonXmlProperty(localName = "ArticleIdList")
+  private ArticleIdList articleIdList;
 
-  private static List<HistoryEvent> parseHistory(JsonNode historyNode) {
-    if (historyNode == null || historyNode.isMissingNode() || historyNode.isNull()) {
-      return Collections.emptyList();
-    }
-    List<HistoryEvent> events = new ArrayList<>();
-    for (JsonNode dateNode : JsonHelpers.toNodeList(historyNode.path("PubMedPubDate"))) {
-      String status = JsonHelpers.textValue(dateNode.path("@PubStatus"));
-      String year = JsonHelpers.textValue(dateNode.path("Year"));
-      String month = JsonHelpers.textValue(dateNode.path("Month"));
-      String day = JsonHelpers.textValue(dateNode.path("Day"));
-      events.add(new HistoryEvent(status, year, month, day));
-    }
-    return Collections.unmodifiableList(events);
-  }
+  public PubmedData() {}
 
-  /**
-   * Get the publication status reported by PubMed.
-   *
-   * @return publication status or {@code null}
-   */
+  /** Publication status reported by PubMed. */
   public String publicationStatus() {
     return publicationStatus;
   }
 
-  /**
-   * Get the list of PubMed history events.
-   *
-   * @return immutable list of history events
-   */
+  /** Immutable list of history events describing publication timeline. */
   public List<HistoryEvent> history() {
-    return history;
+    return history != null ? history.events() : List.of();
   }
 
-  /**
-   * Get the raw PubMed data node for advanced consumers.
-   *
-   * @return raw PubMed data node or {@code null}
-   */
-  public JsonNode raw() {
-    return raw;
+  /** Immutable list of article identifiers (e.g., DOI, PMC). */
+  public List<ArticleId> articleIds() {
+    return articleIdList != null ? articleIdList.articleIds() : List.of();
   }
 
-  /**
-   * History event describing a key publication milestone.
-   *
-   * <p>Field descriptions:
-   *
-   * @param status status tag assigned by PubMed
-   * @param year year component
-   * @param month month component
-   * @param day day component
-   * @author linqibin
-   * @since 0.1.0
-   */
+  @JsonIgnore
+  public boolean hasArticleIds() {
+    return !articleIds().isEmpty();
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class History {
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "PubMedPubDate")
+    private List<PubDate> events;
+
+    private History() {}
+
+    private List<HistoryEvent> events() {
+      if (events == null || events.isEmpty()) {
+        return List.of();
+      }
+      List<HistoryEvent> mapped = new ArrayList<>(events.size());
+      for (PubDate event : events) {
+        mapped.add(event.toHistoryEvent());
+      }
+      return List.copyOf(mapped);
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class PubDate {
+
+    @JacksonXmlProperty(isAttribute = true, localName = "PubStatus")
+    private String status;
+
+    @JacksonXmlProperty(localName = "Year")
+    private String year;
+
+    @JacksonXmlProperty(localName = "Month")
+    private String month;
+
+    @JacksonXmlProperty(localName = "Day")
+    private String day;
+
+    private PubDate() {}
+
+    private HistoryEvent toHistoryEvent() {
+      return new HistoryEvent(status, year, month, day);
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class ArticleIdList {
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "ArticleId")
+    private List<ArticleId> articleIds;
+
+    private ArticleIdList() {}
+
+    private List<ArticleId> articleIds() {
+      if (articleIds == null || articleIds.isEmpty()) {
+        return List.of();
+      }
+      return List.copyOf(articleIds);
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public static final class ArticleId {
+
+    @JacksonXmlText private String value;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "IdType")
+    private String type;
+
+    public ArticleId() {}
+
+    /** Identifier value (e.g., DOI, PMC). */
+    public String value() {
+      return value;
+    }
+
+    /** Identifier type reported by PubMed (e.g., doi, pmc, pubmed). */
+    public String type() {
+      return type;
+    }
+  }
+
+  /** History event describing a key publication milestone. */
   public record HistoryEvent(String status, String year, String month, String day) {}
 }

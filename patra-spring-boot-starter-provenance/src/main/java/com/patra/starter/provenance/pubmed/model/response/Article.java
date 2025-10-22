@@ -1,189 +1,117 @@
 package com.patra.starter.provenance.pubmed.model.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.provenance.common.support.JsonHelpers;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * Simplified PubMed article metadata extracted from the Medline citation.
  *
- * @author linqibin
- * @since 0.1.0
+ * @author
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class Article {
 
-  private final Journal journal;
-  private final String title;
-  private final List<AbstractSection> abstractSections;
-  private final String language;
-  private final List<Author> authors;
-  private final List<String> publicationTypes;
+  @JacksonXmlProperty(localName = "Journal")
+  private Journal journal;
 
-  private Article(
-      Journal journal,
-      String title,
-      List<AbstractSection> abstractSections,
-      String language,
-      List<Author> authors,
-      List<String> publicationTypes) {
-    this.journal = journal;
-    this.title = title;
-    this.abstractSections = abstractSections;
-    this.language = language;
-    this.authors = authors;
-    this.publicationTypes = publicationTypes;
-  }
+  @JacksonXmlProperty(localName = "ArticleTitle")
+  private String title;
 
-  /**
-   * Parse a PubMed article citation node into a curated metadata view.
-   *
-   * @param node article node from the Medline citation
-   * @return structured article metadata
-   */
-  public static Article from(JsonNode node) {
-    if (node == null || node.isMissingNode() || node.isNull()) {
-      return new Article(
-          null,
-          null,
-          Collections.emptyList(),
-          null,
-          Collections.emptyList(),
-          Collections.emptyList());
-    }
-    Journal journal = Journal.from(node.path("Journal"));
-    String title = JsonHelpers.textValue(node.path("ArticleTitle"));
-    List<AbstractSection> abstracts = parseAbstract(node.path("Abstract"));
-    String language = JsonHelpers.textValue(node.path("Language"));
-    if (language == null && node.has("Language") && node.path("Language").isArray()) {
-      language = JsonHelpers.textValue(node.path("Language").get(0));
-    }
-    List<Author> authors = parseAuthors(node.path("AuthorList"));
-    List<String> publicationTypes =
-        JsonHelpers.toStringList(node.path("PublicationTypeList").path("PublicationType"));
-    return new Article(journal, title, abstracts, language, authors, publicationTypes);
-  }
+  @JacksonXmlProperty(localName = "Abstract")
+  private AbstractContent abstractContent;
 
-  private static List<AbstractSection> parseAbstract(JsonNode abstractNode) {
-    if (abstractNode == null || abstractNode.isMissingNode() || abstractNode.isNull()) {
-      return Collections.emptyList();
-    }
-    List<AbstractSection> sections = new ArrayList<>();
-    for (JsonNode entry : JsonHelpers.toNodeList(abstractNode.path("AbstractText"))) {
-      String label = JsonHelpers.textValue(entry.path("@Label"));
-      String text = JsonHelpers.textValue(entry);
-      if (text != null && !text.isBlank()) {
-        sections.add(new AbstractSection(label, text));
-      }
-    }
-    return Collections.unmodifiableList(sections);
-  }
+  @JacksonXmlElementWrapper(useWrapping = false)
+  @JacksonXmlProperty(localName = "Language")
+  private List<String> languages;
 
-  private static List<Author> parseAuthors(JsonNode authorListNode) {
-    if (authorListNode == null || authorListNode.isMissingNode() || authorListNode.isNull()) {
-      return Collections.emptyList();
-    }
-    List<Author> authors = new ArrayList<>();
-    for (JsonNode authorNode : JsonHelpers.toNodeList(authorListNode.path("Author"))) {
-      authors.add(Author.from(authorNode));
-    }
-    return Collections.unmodifiableList(authors);
-  }
+  @JacksonXmlElementWrapper(localName = "AuthorList")
+  @JacksonXmlProperty(localName = "Author")
+  private List<Author> authors;
 
-  /**
-   * Get the journal information associated with the article.
-   *
-   * @return journal metadata
-   */
-  /**
-   * Get the journal information associated with the article.
-   *
-   * @return journal metadata
-   */
+  @JacksonXmlElementWrapper(localName = "PublicationTypeList")
+  @JacksonXmlProperty(localName = "PublicationType")
+  private List<String> publicationTypes;
+
+  public Article() {}
+
+  /** Journal metadata associated with the article. */
   public Journal journal() {
     return journal;
   }
 
-  /**
-   * Get the article title.
-   *
-   * @return article title
-   */
-  /**
-   * Get the article title.
-   *
-   * @return article title
-   */
+  /** Article title. */
   public String title() {
     return title;
   }
 
-  /**
-   * Get the abstract content split into labelled sections.
-   *
-   * @return immutable list of abstract sections
-   */
-  /**
-   * Get the abstract content split into labelled sections.
-   *
-   * @return immutable list of abstract sections
-   */
-  public List<AbstractSection> abstractSections() {
-    return abstractSections;
-  }
-
-  /**
-   * Get the primary article language.
-   *
-   * @return language code or {@code null}
-   */
-  /**
-   * Get the primary article language.
-   *
-   * @return language code or {@code null}
-   */
+  /** Primary language reported by PubMed. */
   public String language() {
-    return language;
+    if (languages == null || languages.isEmpty()) {
+      return null;
+    }
+    return languages.get(0);
   }
 
-  /**
-   * Get the list of parsed authors.
-   *
-   * @return immutable list of authors
-   */
-  /**
-   * Get the list of parsed authors.
-   *
-   * @return immutable list of authors
-   */
+  /** Abstract sections (label + text). */
+  public List<AbstractSection> abstractSections() {
+    return abstractContent != null ? abstractContent.sections() : List.of();
+  }
+
+  /** List of parsed authors. */
   public List<Author> authors() {
-    return authors;
+    if (authors == null || authors.isEmpty()) {
+      return List.of();
+    }
+    return List.copyOf(authors);
   }
 
-  /**
-   * Get the publication type identifiers.
-   *
-   * @return immutable list of publication types
-   */
-  /**
-   * Get the publication type identifiers.
-   *
-   * @return immutable list of publication types
-   */
+  /** Publication type identifiers assigned by PubMed. */
   public List<String> publicationTypes() {
-    return publicationTypes;
+    if (publicationTypes == null || publicationTypes.isEmpty()) {
+      return List.of();
+    }
+    return List.copyOf(publicationTypes);
   }
 
-  /**
-   * Abstract section extracted from the citation.
-   *
-   * <p>Field descriptions:
-   *
-   * @param label optional section label
-   * @param text section content
-   * @author linqibin
-   * @since 0.1.0
-   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class AbstractContent {
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "AbstractText")
+    private List<AbstractText> sections;
+
+    private AbstractContent() {}
+
+    private List<AbstractSection> sections() {
+      if (sections == null || sections.isEmpty()) {
+        return List.of();
+      }
+      List<AbstractSection> result = new ArrayList<>(sections.size());
+      for (AbstractText section : sections) {
+        String text = section.value;
+        if (text != null && !text.isBlank()) {
+          result.add(new AbstractSection(section.label, text));
+        }
+      }
+      return List.copyOf(result);
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class AbstractText {
+
+    @JacksonXmlText private String value;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "Label")
+    private String label;
+
+    private AbstractText() {}
+  }
+
+  /** Abstract section extracted from the citation with optional label. */
   public record AbstractSection(String label, String text) {}
 }
