@@ -1,15 +1,16 @@
 package com.patra.ingest.app.usecase.execution.execute;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.ingest.domain.model.vo.StandardLiterature;
 import com.patra.ingest.domain.model.vo.StandardLiterature.StandardAuthor;
 import com.patra.ingest.domain.model.vo.StandardLiterature.StandardJournal;
-import com.patra.starter.provenance.common.support.JsonHelpers;
 import com.patra.starter.provenance.pubmed.model.response.Article;
 import com.patra.starter.provenance.pubmed.model.response.Author;
 import com.patra.starter.provenance.pubmed.model.response.Journal;
+import com.patra.starter.provenance.pubmed.model.response.Journal.JournalIssue;
+import com.patra.starter.provenance.pubmed.model.response.Journal.PubDate;
 import com.patra.starter.provenance.pubmed.model.response.MedlineJournalInfo;
 import com.patra.starter.provenance.pubmed.model.response.PubmedArticle;
+import com.patra.starter.provenance.pubmed.model.response.PubmedData.ArticleId;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
@@ -17,7 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -115,39 +115,44 @@ public class PubmedArticleConverter {
     if (StringUtils.hasText(article.pmid())) {
       identifiers.put("pmid", article.pmid());
     }
-    extractArticleId(article.rawCitation(), "doi").ifPresent(doi -> identifiers.put("doi", doi));
-    extractArticleId(article.rawCitation(), "pmc").ifPresent(pmc -> identifiers.put("pmc", pmc));
-    return identifiers;
-  }
-
-  private Optional<String> extractArticleId(JsonNode citationNode, String idType) {
-    if (citationNode == null || idType == null) {
-      return Optional.empty();
-    }
-    JsonNode articleIdNode = citationNode.path("ArticleIdList").path("ArticleId");
-    for (JsonNode node : JsonHelpers.toNodeList(articleIdNode)) {
-      String type = JsonHelpers.textValue(node.path("@IdType"));
-      if (idType.equalsIgnoreCase(type)) {
-        String value = JsonHelpers.textValue(node);
-        if (StringUtils.hasText(value)) {
-          return Optional.of(value);
+    for (ArticleId id : article.articleIds()) {
+      if (!StringUtils.hasText(id.type()) || !StringUtils.hasText(id.value())) {
+        continue;
+      }
+      String type = id.type().toLowerCase(Locale.ROOT);
+      switch (type) {
+        case "doi" -> identifiers.putIfAbsent("doi", id.value());
+        case "pmc", "pmcid" -> identifiers.putIfAbsent("pmc", id.value());
+        default -> {
+          // Ignore other identifier types for now.
         }
       }
     }
-    return Optional.empty();
+    return identifiers;
   }
 
   private LocalDate extractPublicationDate(PubmedArticle article) {
-    JsonNode pubDateNode =
-        article.rawCitation().path("Article").path("Journal").path("JournalIssue").path("PubDate");
-    String year = JsonHelpers.textValue(pubDateNode.path("Year"));
-    if (!StringUtils.hasText(year)) {
+    Article citation = article.article();
+    if (citation == null) {
       return null;
     }
-    String month = JsonHelpers.textValue(pubDateNode.path("Month"));
-    String day = JsonHelpers.textValue(pubDateNode.path("Day"));
+    Journal journal = citation.journal();
+    if (journal == null) {
+      return null;
+    }
+    JournalIssue issue = journal.journalIssue();
+    if (issue == null) {
+      return null;
+    }
+    PubDate pubDate = issue.pubDate();
+    if (pubDate == null || !StringUtils.hasText(pubDate.year())) {
+      return null;
+    }
+    String year = pubDate.year();
+    String month = pubDate.month();
+    String day = pubDate.day();
     try {
-      int yearValue = Integer.parseInt(year);
+      int yearValue = Integer.parseInt(year.trim());
       int monthValue = resolveMonth(month);
       int dayValue = resolveDay(day);
       return LocalDate.of(yearValue, monthValue, dayValue);
@@ -185,9 +190,8 @@ public class PubmedArticleConverter {
   }
 
   private List<String> extractKeywords(PubmedArticle article) {
-    JsonNode keywordNode = article.rawCitation().path("KeywordList").path("Keyword");
-    List<String> keywords = JsonHelpers.toStringList(keywordNode);
-    if (keywords == null) {
+    List<String> keywords = article.keywords();
+    if (CollectionUtils.isEmpty(keywords)) {
       return List.of();
     }
     List<String> normalized = new ArrayList<>();

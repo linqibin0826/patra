@@ -53,7 +53,7 @@ Auto-configures **provenance clients** for accessing external medical literature
 | `pubMedClient` | `PubMedClient` | Singleton | PubMed ESearch/EFetch client |
 | `epmcClient` | `EPMCClient` | Singleton | Europe PMC search client |
 | `provenanceMetrics` | `ProvenanceMetrics` | Singleton | Metrics recorder (if `MeterRegistry` available) |
-| `xmlToJsonConverter` | `XmlToJsonConverter` | Singleton | PubMed XML response converter |
+| `provenanceXmlMapper` | `XmlMapper` | Singleton | PubMed XML payload mapper |
 
 ### Required Beans
 
@@ -208,14 +208,25 @@ Then manually configure beans:
 public class CustomProvenanceConfig {
 
     @Bean
-    public PubMedClient customPubMedClient() {
+    public PubMedClient customPubMedClient(ObjectMapper objectMapper) {
         return new PubMedClientImpl(
             new SimpleHttpClient(),
             customConfigProvider(),
-            new XmlToJsonConverter(),
-            objectMapper(),
+            objectMapper,
+            xmlMapper(),
             null
         );
+    }
+
+    private XmlMapper xmlMapper() {
+        return XmlMapper.builder()
+            .findAndAddModules()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
+            .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+            .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+            .defaultUseWrapper(false)
+            .build();
     }
 }
 ```

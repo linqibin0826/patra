@@ -11,7 +11,7 @@ import java.util.Map;
  *
  * @param db database identifier (always "pubmed" for this starter)
  * @param id comma separated list of article identifiers
- * @param retmode response format (xml, json or text)
+ * @param retmode response format (xml or text)
  * @param rettype response type (abstract, medline, full, uilist)
  * @param retstart offset used when paging through history server results
  * @param retmax maximum records returned in a single call
@@ -31,7 +31,7 @@ public record EFetchRequest(
     String id, // Article ID list (comma-separated, max 200)
 
     // Optional parameters - Basic control
-    String retmode, // Return mode (xml/json/text, default xml)
+    String retmode, // Return mode (xml/text, default xml)
     String rettype, // Return type (abstract/medline/full/uilist, default abstract)
     Integer retstart, // Start position (only for history queries)
     Integer retmax, // Return count (default 20, max 10000)
@@ -57,14 +57,14 @@ public record EFetchRequest(
   }
 
   /**
-   * Create a request tuned for retrieving identifier lists in JSON.
+   * Create a request tuned for retrieving identifier lists in plain text.
    *
    * @param db database identifier, typically "pubmed"
    * @param id comma separated list of PubMed identifiers (max 200 per call)
-   * @return request configured to return the uilist JSON payload
+   * @return request configured to return the uilist plain-text payload
    */
   public static EFetchRequest forUiList(String db, String id) {
-    return new EFetchRequest(db, id, "json", "uilist", null, null, null, null, null, null, null);
+    return new EFetchRequest(db, id, "text", "uilist", null, null, null, null, null, null, null);
   }
 
   // Compact constructor: validate required parameters
@@ -111,14 +111,5 @@ public record EFetchRequest(
     if (email != null) params.put("email", email);
 
     return params;
-  }
-
-  /**
-   * Determine whether the caller must perform XML to JSON conversion locally.
-   *
-   * @return {@code true} when XML is required and no JSON shortcut is available
-   */
-  public boolean requiresXmlConversion() {
-    return "xml".equals(retmode) && !"uilist".equals(rettype);
   }
 }

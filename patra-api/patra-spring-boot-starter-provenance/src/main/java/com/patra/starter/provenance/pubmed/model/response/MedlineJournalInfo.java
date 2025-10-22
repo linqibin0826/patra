@@ -1,78 +1,46 @@
 package com.patra.starter.provenance.pubmed.model.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.provenance.common.support.JsonHelpers;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 /**
- * Additional journal information supplied by Medline.
+ * Additional journal metadata supplied by Medline.
  *
- * @author linqibin
- * @since 0.1.0
+ * @author
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class MedlineJournalInfo {
 
-  private final String medlineTa;
-  private final String country;
-  private final String nlmUniqueId;
-  private final String issnLinking;
+  @JacksonXmlProperty(localName = "MedlineTA")
+  private String medlineTa;
 
-  private MedlineJournalInfo(
-      String medlineTa, String country, String nlmUniqueId, String issnLinking) {
-    this.medlineTa = medlineTa;
-    this.country = country;
-    this.nlmUniqueId = nlmUniqueId;
-    this.issnLinking = issnLinking;
-  }
+  @JacksonXmlProperty(localName = "Country")
+  private String country;
 
-  /**
-   * Parse the Medline journal info node into a curated representation.
-   *
-   * @param node Medline journal info node
-   * @return structured journal info
-   */
-  public static MedlineJournalInfo from(JsonNode node) {
-    if (node == null || node.isMissingNode() || node.isNull()) {
-      return new MedlineJournalInfo(null, null, null, null);
-    }
-    return new MedlineJournalInfo(
-        JsonHelpers.textValue(node.path("MedlineTA")),
-        JsonHelpers.textValue(node.path("Country")),
-        JsonHelpers.textValue(node.path("NlmUniqueID")),
-        JsonHelpers.textValue(node.path("ISSNLinking")));
-  }
+  @JacksonXmlProperty(localName = "NlmUniqueID")
+  private String nlmUniqueId;
 
-  /**
-   * Get the Medline TA abbreviation.
-   *
-   * @return Medline TA value or {@code null}
-   */
+  @JacksonXmlProperty(localName = "ISSNLinking")
+  private String issnLinking;
+
+  public MedlineJournalInfo() {}
+
+  /** Medline TA abbreviation. */
   public String medlineTa() {
     return medlineTa;
   }
 
-  /**
-   * Get the country associated with the journal.
-   *
-   * @return country or {@code null}
-   */
+  /** Country associated with the journal. */
   public String country() {
     return country;
   }
 
-  /**
-   * Get the NLM unique identifier.
-   *
-   * @return NLM unique identifier or {@code null}
-   */
+  /** NLM unique identifier for the journal. */
   public String nlmUniqueId() {
     return nlmUniqueId;
   }
 
-  /**
-   * Get the linking ISSN value.
-   *
-   * @return linking ISSN or {@code null}
-   */
+  /** Linking ISSN value. */
   public String issnLinking() {
     return issnLinking;
   }

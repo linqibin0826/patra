@@ -1,143 +1,138 @@
 package com.patra.starter.provenance.pubmed.model.response;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.starter.provenance.common.support.JsonHelpers;
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Simplified view over a PubMed article with access to the raw citation nodes.
+ * Simplified view over a PubMed article parsed directly from XML.
  *
- * @author linqibin
- * @since 0.1.0
+ * @author
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public final class PubmedArticle {
 
-  private final String pmid;
-  private final Article article;
-  private final MedlineJournalInfo journalInfo;
-  private final PubmedData pubmedData;
-  private final JsonNode rawCitation;
-  private final JsonNode rawPubmedData;
+  private static final PubmedData EMPTY_PUBMED_DATA = new PubmedData();
 
-  private PubmedArticle(
-      String pmid,
-      Article article,
-      MedlineJournalInfo journalInfo,
-      PubmedData pubmedData,
-      JsonNode rawCitation,
-      JsonNode rawPubmedData) {
-    this.pmid = pmid;
-    this.article = article;
-    this.journalInfo = journalInfo;
-    this.pubmedData = pubmedData;
-    this.rawCitation = rawCitation;
-    this.rawPubmedData = rawPubmedData;
-  }
+  @JacksonXmlProperty(localName = "MedlineCitation")
+  private MedlineCitation medlineCitation;
 
-  /**
-   * Parse a PubMed article node into a curated representation.
-   *
-   * @param articleNode raw article node
-   * @return structured article view
-   */
-  public static PubmedArticle from(JsonNode articleNode) {
-    Objects.requireNonNull(articleNode, "articleNode cannot be null");
-    JsonNode citationNode = articleNode.path("MedlineCitation");
-    String pmid = JsonHelpers.textValue(citationNode.path("PMID"));
-    Article article = Article.from(citationNode.path("Article"));
-    MedlineJournalInfo journalInfo =
-        MedlineJournalInfo.from(citationNode.path("MedlineJournalInfo"));
-    PubmedData pubmedData = PubmedData.from(articleNode.path("PubmedData"));
-    return new PubmedArticle(
-        pmid,
-        article,
-        journalInfo,
-        pubmedData,
-        citationNode.deepCopy(),
-        articleNode.path("PubmedData").deepCopy());
-  }
+  @JacksonXmlProperty(localName = "PubmedData")
+  private PubmedData pubmedData;
 
-  /**
-   * Get the PubMed identifier.
-   *
-   * @return PubMed identifier
-   */
-  /**
-   * Get the PubMed identifier.
-   *
-   * @return PubMed identifier
-   */
+  public PubmedArticle() {}
+
+  /** PubMed identifier (PMID). */
   public String pmid() {
-    return pmid;
+    return medlineCitation != null ? medlineCitation.pmid() : null;
   }
 
-  /**
-   * Get the curated article metadata.
-   *
-   * @return article metadata
-   */
-  /**
-   * Get the curated article metadata.
-   *
-   * @return article metadata
-   */
+  /** Core article metadata. */
   public Article article() {
-    return article;
+    return medlineCitation != null ? medlineCitation.article() : null;
   }
 
-  /**
-   * Get the journal metadata.
-   *
-   * @return journal information
-   */
-  /**
-   * Get the journal metadata block.
-   *
-   * @return journal information
-   */
+  /** Journal information reported by Medline. */
   public MedlineJournalInfo journalInfo() {
-    return journalInfo;
+    return medlineCitation != null ? medlineCitation.journalInfo() : null;
   }
 
-  /**
-   * Get additional PubMed data such as history events.
-   *
-   * @return supplemental PubMed data
-   */
-  /**
-   * Get the supplemental PubMed data block.
-   *
-   * @return supplemental PubMed data
-   */
+  /** Supplemental PubMed data such as history events and article identifiers. */
   public PubmedData pubmedData() {
-    return pubmedData;
+    return pubmedData != null ? pubmedData : EMPTY_PUBMED_DATA;
   }
 
-  /**
-   * Get the raw Medline citation node.
-   *
-   * @return raw citation node
-   */
-  /**
-   * Get the raw Medline citation node for advanced parsing.
-   *
-   * @return raw citation node
-   */
-  public JsonNode rawCitation() {
-    return rawCitation;
+  /** Keyword list merged from all keyword blocks. */
+  public List<String> keywords() {
+    return medlineCitation != null ? medlineCitation.keywords() : List.of();
   }
 
-  /**
-   * Get the raw PubMed data node.
-   *
-   * @return raw PubMed data node
-   */
-  /**
-   * Get the raw PubMed data node for advanced parsing.
-   *
-   * @return raw PubMed data node
-   */
-  public JsonNode rawPubmedData() {
-    return rawPubmedData;
+  /** Convenience accessor for article identifiers (e.g., DOI, PMC). */
+  public List<PubmedData.ArticleId> articleIds() {
+    return pubmedData != null ? pubmedData.articleIds() : List.of();
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class MedlineCitation {
+
+    @JacksonXmlProperty(localName = "PMID")
+    private Pmid pmid;
+
+    @JacksonXmlProperty(localName = "Article")
+    private Article article;
+
+    @JacksonXmlProperty(localName = "MedlineJournalInfo")
+    private MedlineJournalInfo journalInfo;
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "KeywordList")
+    private List<KeywordList> keywordLists;
+
+    private MedlineCitation() {}
+
+    private String pmid() {
+      return pmid != null ? pmid.value : null;
+    }
+
+    private Article article() {
+      return article;
+    }
+
+    private MedlineJournalInfo journalInfo() {
+      return journalInfo;
+    }
+
+    private List<String> keywords() {
+      if (keywordLists == null || keywordLists.isEmpty()) {
+        return List.of();
+      }
+      List<String> values = new ArrayList<>();
+      for (KeywordList list : keywordLists) {
+        values.addAll(list.values());
+      }
+      return List.copyOf(values);
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class KeywordList {
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "Keyword")
+    private List<Keyword> keywords;
+
+    private KeywordList() {}
+
+    private List<String> values() {
+      if (keywords == null || keywords.isEmpty()) {
+        return List.of();
+      }
+      List<String> values = new ArrayList<>(keywords.size());
+      for (Keyword keyword : keywords) {
+        if (keyword.value != null && !keyword.value.isBlank()) {
+          values.add(keyword.value);
+        }
+      }
+      return values;
+    }
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class Keyword {
+
+    @JacksonXmlText private String value;
+
+    private Keyword() {}
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static final class Pmid {
+
+    @JacksonXmlText private String value;
+
+    private Pmid() {}
   }
 }

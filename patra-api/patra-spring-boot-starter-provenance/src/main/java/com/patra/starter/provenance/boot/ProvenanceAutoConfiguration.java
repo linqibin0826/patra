@@ -1,11 +1,10 @@
 package com.patra.starter.provenance.boot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
-import com.patra.starter.provenance.common.converter.XmlToJsonConverter;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
-import com.patra.starter.provenance.common.support.ProvenanceObjectMapperFactory;
 import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
@@ -55,28 +54,6 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * Create the XML to JSON converter used by PubMed EFetch.
-   *
-   * @return converter bean
-   */
-  @Bean
-  @ConditionalOnMissingBean
-  public XmlToJsonConverter xmlToJsonConverter() {
-    return new XmlToJsonConverter();
-  }
-
-  /**
-   * Create the shared ObjectMapper for provenance clients.
-   *
-   * @return configured ObjectMapper bean
-   */
-  @Bean(name = "provenanceObjectMapper")
-  @ConditionalOnMissingBean(name = "provenanceObjectMapper")
-  public ObjectMapper provenanceObjectMapper() {
-    return ProvenanceObjectMapperFactory.createJsonMapper();
-  }
-
-  /**
    * Create the Micrometer-backed metrics recorder when a registry is present.
    *
    * @param meterRegistry Micrometer meter registry
@@ -94,11 +71,11 @@ public class ProvenanceAutoConfiguration {
   @ConditionalOnMissingBean
   public PubMedClient pubMedClient(
       DefaultConfigProvider configProvider,
-      XmlToJsonConverter xmlConverter,
-      ObjectMapper provenanceObjectMapper,
+      XmlMapper xmlMapper,
+      ObjectMapper objectMapper,
       @Autowired(required = false) ProvenanceMetrics metrics) {
     return new PubMedClientImpl(
-        new SimpleHttpClient(), configProvider, xmlConverter, provenanceObjectMapper, metrics);
+        new SimpleHttpClient(), configProvider, objectMapper, xmlMapper, metrics);
   }
 
   /** Create the Europe PMC client (direct HTTP). */
@@ -106,9 +83,8 @@ public class ProvenanceAutoConfiguration {
   @ConditionalOnMissingBean
   public EPMCClient epmcClient(
       DefaultConfigProvider configProvider,
-      ObjectMapper provenanceObjectMapper,
+      ObjectMapper objectMapper,
       @Autowired(required = false) ProvenanceMetrics metrics) {
-    return new EPMCClientImpl(
-        new SimpleHttpClient(), configProvider, provenanceObjectMapper, metrics);
+    return new EPMCClientImpl(new SimpleHttpClient(), configProvider, objectMapper, metrics);
   }
 }
