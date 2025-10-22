@@ -32,6 +32,13 @@
             <artifactId>spring-boot-starter-json</artifactId>
         </dependency>
 
+        <!-- Jackson XML (optional): enables XmlMapper auto-config when present -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Micrometer metrics -->
         <dependency>
             <groupId>io.micrometer</groupId>

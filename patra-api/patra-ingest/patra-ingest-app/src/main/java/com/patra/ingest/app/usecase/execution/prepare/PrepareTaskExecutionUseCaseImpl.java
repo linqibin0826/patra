@@ -3,12 +3,16 @@ package com.patra.ingest.app.usecase.execution.prepare;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.app.usecase.execution.support.*;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
+import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.port.TaskRepository;
+import com.patra.ingest.domain.port.TaskRunRepository;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +64,8 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
   private final LeaseManagementService leaseManagementService;
   private final ExecutionSessionManager sessionManager;
   private final ExecutionContextLoader contextLoader;
+  private final TaskRunRepository taskRunRepository;
+  private final Clock clock;
 
   @Value("${task.execution.lease.duration:60}")
   private int leaseDurationSeconds;
@@ -119,19 +125,26 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
               schedulerRunId,
               correlationId);
 
+      Long runId = session.runId();
       log.info(
-          "[INGEST][APP] session created taskId={} runId={} owner={}",
-          taskId,
-          session.runId(),
-          leaseOwner);
+          "[INGEST][APP] session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
 
       // 6) Load execution context (restore config, compile expressions)
-      ExecutionContext context = contextLoader.loadContext(task, session.runId());
+      ExecutionContext context = contextLoader.loadContext(task, runId);
 
-      log.info(
-          "[INGEST][APP] prepare task execution completed taskId={} runId={}",
-          taskId,
-          session.runId());
+      // 7) Mark task/run as RUNNING
+      TaskRun taskRun =
+          taskRunRepository
+              .findById(runId)
+              .orElseThrow(() -> new IllegalStateException("TaskRun not found runId=" + runId));
+      Instant now = clock.instant();
+      taskRun.bindRunContext(schedulerRunId, correlationId);
+      taskRun.start(now);
+      taskRunRepository.save(taskRun);
+      task.markRunning(now, schedulerRunId, correlationId);
+      taskRepository.save(task);
+
+      log.info("[INGEST][APP] prepare task execution completed taskId={} runId={}", taskId, runId);
 
       return new PrepareResult(session, context);
 

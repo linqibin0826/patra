@@ -46,7 +46,20 @@ spring:
 
 ---
 
-### 2. CoreErrorAutoConfiguration
+### 2. XmlAutoConfiguration
+
+**Purpose**: Provide a project-level `XmlMapper` for modules that process XML (e.g., PubMed payloads).
+
+**What it does**:
+- Exposes a singleton `XmlMapper` built from Spring Boot's `Jackson2ObjectMapperBuilder`
+- Activates only when `jackson-dataformat-xml` is on the classpath
+- Shares the same global Jackson modules and settings as JSON
+
+No extra configuration is required; simply inject `XmlMapper` where needed.
+
+---
+
+### 3. CoreErrorAutoConfiguration
 
 **Purpose**: Unified error handling with extensible resolution pipeline.
 

@@ -3,6 +3,7 @@ package com.patra.starter.provenance.pubmed.model.request;
 import com.patra.starter.provenance.common.gateway.ApiRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.util.StringUtils;
 
 /**
  * PubMed EFetch API request parameters following the official E-utilities specification.
@@ -69,17 +70,30 @@ public record EFetchRequest(
 
   // Compact constructor: validate required parameters
   public EFetchRequest {
-    if (db == null || db.isBlank()) {
+    db = db != null ? db.trim() : null;
+    if (!StringUtils.hasText(db)) {
       throw new IllegalArgumentException("db cannot be null or blank");
     }
-    if (id == null || id.isBlank()) {
-      throw new IllegalArgumentException("id cannot be null or blank");
+
+    id = id != null ? id.trim() : null;
+    webenv = webenv != null ? webenv.trim() : null;
+    queryKey = queryKey != null ? queryKey.trim() : null;
+    boolean hasId = StringUtils.hasText(id);
+    boolean hasHistory = StringUtils.hasText(webenv) && StringUtils.hasText(queryKey);
+    if (!hasId && !hasHistory) {
+      throw new IllegalArgumentException("Either id or (WebEnv + queryKey) must be provided");
     }
+    if (!hasId) {
+      id = "";
+    }
+
     // Default to XML format (since most rettype only support XML)
-    if (retmode == null || retmode.isBlank()) {
+    retmode = retmode != null ? retmode.trim() : null;
+    if (!StringUtils.hasText(retmode)) {
       retmode = "xml";
     }
-    if (rettype == null || rettype.isBlank()) {
+    rettype = rettype != null ? rettype.trim() : null;
+    if (!StringUtils.hasText(rettype)) {
       rettype = "abstract";
     }
   }
@@ -93,7 +107,9 @@ public record EFetchRequest(
   public Map<String, String> toQueryParams() {
     Map<String, String> params = new LinkedHashMap<>();
     params.put("db", db);
-    params.put("id", id);
+    if (StringUtils.hasText(id)) {
+      params.put("id", id);
+    }
 
     // Basic control
     params.put("retmode", retmode != null ? retmode : "xml");

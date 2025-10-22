@@ -129,15 +129,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       }
 
       // 2.3 Persist batch result
-      TaskRunBatch batchEntity =
-          TaskRunBatch.create(
-              runId,
-              batch.batchNo(),
-              result.success(),
-              result.fetchedCount(),
-              result.nextCursorToken(),
-              result.errorMessage(),
-              result.storageKey());
+      TaskRunBatch batchEntity = TaskRunBatch.create(context, batch, result);
       batchRepository.save(batchEntity);
 
       // 2.4 Update statistics
