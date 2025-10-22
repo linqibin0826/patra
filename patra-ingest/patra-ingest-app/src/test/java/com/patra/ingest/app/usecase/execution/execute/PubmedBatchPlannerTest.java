@@ -79,6 +79,8 @@ class PubmedBatchPlannerTest {
     return new ExecutionContext(
         1L,
         1L,
+        2L,
+        3L,
         "PUBMED",
         "HARVEST",
         snapshot,

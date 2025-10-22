@@ -27,6 +27,7 @@ import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -260,6 +261,12 @@ public class PubmedBatchExecutor implements BatchExecutor {
 
     EFetchResponse response =
         config != null ? pubMedClient.efetch(fetchReq, config) : pubMedClient.efetch(fetchReq);
+    // TODO for the time being, we'll be accessing the stream-limiting starter.
+    try {
+      TimeUnit.MILLISECONDS.sleep(600L);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
 
     if (response == null || response.articles() == null) {
       return List.of();

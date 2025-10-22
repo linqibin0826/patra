@@ -8,6 +8,8 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
  *
  * @param taskId task identifier
  * @param runId run identifier
+ * @param planId owning plan identifier
+ * @param sliceId owning slice identifier
  * @param provenanceCode provenance code
  * @param operationCode operation code
  * @param configSnapshot configuration snapshot
@@ -22,6 +24,8 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 public record ExecutionContext(
     Long taskId,
     Long runId,
+    Long planId,
+    Long sliceId,
     String provenanceCode,
     String operationCode,
     ProvenanceConfigSnapshot configSnapshot,

@@ -27,13 +27,12 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 - Ask before acting when information is insufficient
 - Reuse `patra-*` starters, `patra-common`, Hutool
 - Output small diffs; document key decisions
-- Use MCP tools (serena, sequential-thinking, context7) proactively
+- Use MCP tools (sequential-thinking, context7) proactively
 - Apply appropriate design patterns for the problem at hand
 
 ❌ Don't
 - Add framework dependencies to `domain` layer (Pure Java only)
 - Hardcode secrets/configs (use Nacos/environment variables)
-- Read entire files (use serena's symbolic tools)
 - Skip clarification for complex tasks
 
 ---
@@ -118,6 +117,11 @@ When faced with technical decisions:
 2. Incremental Improvement: Optimize gradually; avoid starting from scratch
 3. Cost-benefit Balance: Balance implementation and maintenance cost
 4. Timely Delivery: Prioritize urgent problems; iterate quickly
+
+### Language Rule
+
+1. Use Chinese for communication with Chinese users
+2. Use English for code, comments, documentation, and logs
 
 ---
 
@@ -321,20 +325,6 @@ Use them proactively!
 - Use when: Need current API references, version-specific documentation, or best practices
 - Benefits: Always current information beyond model knowledge cutoff; verified technical details
 - How: Use `resolve-library-id` then `get-library-docs`
-
-### serena
-- Purpose: Semantic code navigation and intelligent editing
-- Use when: Understanding codebase structure, finding symbols, analyzing dependencies, or making precise code modifications
-- Benefits: Token-efficient code exploration; symbol-based editing; avoid reading entire files unnecessarily
-- Key capabilities: Overview files, find symbols by name path, search patterns, trace references, edit by symbol
-- How: Use tools like:
-  - `get_symbols_overview`: Get file overview
-  - `find_symbol`: Find symbols by name path
-  - `find_referencing_symbols`: Find references
-  - `replace_symbol_body`: Replace symbol implementation
-  - `search_for_pattern`: Search for patterns
-
-IMPORTANT: Use serena tools to avoid reading entire files. Start with `get_symbols_overview`, then use `find_symbol` for targeted reads.
 
 ---
 

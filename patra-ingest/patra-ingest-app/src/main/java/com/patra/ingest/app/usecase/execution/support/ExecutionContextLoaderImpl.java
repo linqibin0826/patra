@@ -151,6 +151,8 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     return new ExecutionContext(
         taskId,
         runId,
+        plan.getId(),
+        slice.getId(),
         task.getProvenanceCode(),
         task.getOperationCode(),
         configSnapshot,
