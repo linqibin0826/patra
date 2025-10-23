@@ -14,18 +14,131 @@ This file contains coding standards, development workflow, common libraries, and
 
 ---
 
+## Naming Conventions
+
+| Element | Convention | Example | Notes |
+|---------|-----------|---------|-------|
+| **Package** | lowercase, no separator | `com.papertrace.ingest.domain` | - |
+| **Class** | UpperCamelCase, noun | `BatchPlan`, `Provenance` | - |
+| **Interface** | UpperCamelCase, noun/adjective | `ProvenancePort`, `Serializable` | No `I` prefix |
+| **Method** | lowerCamelCase, verb | `createPlan()`, `isEnabled()` | Boolean: `is/has/can` |
+| **Variable** | lowerCamelCase, noun | `provenanceId`, `batchSize` | - |
+| **Constant** | UPPER_SNAKE_CASE | `MAX_BATCH_SIZE`, `DEFAULT_TIMEOUT` | `static final` immutable |
+| **Enum Type** | UpperCamelCase | `BatchStatus` | - |
+| **Enum Value** | UPPER_SNAKE_CASE | `PENDING`, `RUNNING`, `COMPLETED` | - |
+
+**DDD/Hexagonal Naming Patterns:**
+
+| Layer | Pattern | Example |
+|-------|---------|---------|
+| Domain | No suffix | `BatchPlan`, `Provenance`, `LiteratureId` |
+| Domain - Port | `Port` | `ProvenancePort`, `LiteraturePort` |
+| Application | `Orchestrator` | `BatchPlanOrchestrator` |
+| Infrastructure | `RepositoryImpl` | `ProvenanceRepositoryImpl` |
+| Adapter - Controller | `Controller` | `ProvenanceController` |
+| Adapter - Job | `Job` | `IngestScheduledJob` |
+| DTO | `DTO/Command/Request/Response` | `CreateProvenanceCommand` |
+| DO | `DO` | `ProvenanceDO` |
+
+---
+
 ## Logging Standards
 
-- **Framework**: SLF4J parameterized English logs, no sensitive data (passwords, tokens, PII)
-- **Log Levels**: ERROR (failures), WARN (recoverable issues), INFO (key events), DEBUG (detailed flow), TRACE (diagnostics)
-- **Always Log**:
-  - Application startup/shutdown events
-  - All exceptions with full context (ERROR level)
-  - External API calls (request/response at DEBUG, errors at ERROR)
-  - Database operations failures
-  - Authentication/authorization events (success at INFO, failures at WARN)
-  - Key business operations (batch processing, data ingestion, parsing results)
-- **Troubleshooting**: Include sufficient DEBUG/TRACE logs for method entry/exit, decision branches, and variable states
+**Framework:** SLF4J with parameterized messages, English only, NO sensitive data (passwords, tokens, PII)
+
+**Log Level Usage:**
+
+| Level | When to Use | Production | Example |
+|-------|-------------|-----------|---------|
+| **ERROR** | Business failures, exceptions, data inconsistency | ✅ ON | External API fails after retries |
+| **WARN** | Recoverable issues, degradation, deprecated usage | ✅ ON | Circuit breaker opens, retry triggered |
+| **INFO** | Key business events, app lifecycle | ✅ ON | Batch completed, user registered |
+| **DEBUG** | Method flow, decisions, cache hits | ⚠️ On-demand | Creating plan with params X, Y |
+| **TRACE** | Detailed execution path, loop internals | ❌ OFF | Processing element [i], state=X |
+
+**Must Always Log:**
+- Application startup/shutdown
+- All exceptions with **full stack trace** (ERROR)
+- External API calls (DEBUG: request/response, ERROR: failures)
+- Database operation failures (ERROR)
+- Authentication/authorization events (INFO: success, WARN: failure)
+- Batch/job results with counts and duration (INFO)
+
+**Examples:**
+
+```java
+// ✅ Good: Structured, parameterized, includes context
+log.info("Batch processing completed: batchId={}, records={}, duration={}ms",
+    batchId, recordCount, duration);
+
+log.error("Failed to fetch from PubMed: pmid={}, attempt={}/3",
+    pmid, attemptCount, exception);
+
+// ❌ Bad: String concatenation, missing context
+log.info("Batch completed");  // Which batch? How many records?
+log.error("Error: " + e.getMessage());  // No stack trace!
+```
+
+**Distributed Tracing:** Always include `traceId` and `spanId` in log pattern:
+```yaml
+logging:
+  pattern:
+    level: '%5p [${spring.application.name},%X{traceId},%X{spanId}]'
+```
+
+---
+
+## JavaDoc & Comments
+
+**When JavaDoc is Required:**
+- ✅ All `public` classes
+- ✅ All `public`/`protected` methods
+- ⚠️ Simple getters/setters can omit
+- ⚠️ Override methods can omit if no new behavior
+
+**Format (tag order matters):**
+
+```java
+/**
+ * Brief summary in one sentence ending with period.
+ *
+ * Optional detailed description in multiple paragraphs.
+ * Explain WHY, not WHAT.
+ *
+ * @param paramName parameter description
+ * @return return value description
+ * @throws ExceptionType when this exception is thrown
+ * @since 1.0
+ */
+public BatchPlan createPlan(String provenanceId) {
+    // Implementation
+}
+```
+
+**Inline Comments (explain WHY, not WHAT):**
+
+```java
+// ✅ Good: Explains reasoning
+// Retry 3 times to handle transient network failures
+@Retry(maxAttempts = 3)
+
+// Use LinkedHashMap to preserve insertion order for display
+Map<String, String> metadata = new LinkedHashMap<>();
+
+// ❌ Bad: States the obvious
+// Set name to "PubMed"
+String name = "PubMed";
+
+// Loop through list
+for (Literature lit : literatureList) { }
+```
+
+**TODO Format:**
+
+```java
+// TODO: https://github.com/papertrace/api/issues/123 - Add pagination support
+// TODO: JIRA-456 - Replace with async processing after Q2 2025
+```
 
 ---
 

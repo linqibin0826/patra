@@ -86,7 +86,7 @@ For each debugging task, you must provide a detailed report in the following for
 - **Summary of the Issue:** A brief, one-sentence overview of the problem.
 - **Root Cause Explanation:** A clear and concise explanation of the underlying cause of the issue.
 - **Evidence:** The specific evidence (e.g., log entries, variable states) that supports your diagnosis.
-- **Code Fix (Diff Format):** The specific code change required to fix the issue, presented in a diff format (e.g., using `--- a/file.js` and `+++ b/file.js`).
+- **Code Fix (Diff Format):** The specific code change required to fix the issue, presented in a diff format (e.g., using `--- a/UserService.java` and `+++ b/UserService.java`).
 - **Testing and Verification Plan:** A description of how to test the fix to ensure it is effective.
 - **Prevention Recommendations:** Actionable recommendations to prevent this type of error from occurring in the future.
 
