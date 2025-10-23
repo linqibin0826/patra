@@ -49,7 +49,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, Task, mcp__sequential-thinking__sequ
 | Infrastructure | Integration | ✅ | ❌ | ✅ TestContainers |
 | Adapter | Integration | ✅ | ✅ Orchestrator | ❌ |
 
-## Test Writing Templates
+## Test Templates
 
 ### 1. Domain Layer (Pure Unit Test)
 
@@ -218,12 +218,12 @@ class ProvenanceControllerTest {
 ### Naming Convention
 
 ```java
-// ✅ Good
+// ✅ Good: BDD style with DisplayName
 @Test
 @DisplayName("Should create plan when provenance is enabled")
 void shouldCreatePlanWhenProvenanceIsEnabled() { }
 
-// ❌ Bad
+// ❌ Bad: Generic names
 @Test
 void test1() { }
 ```
@@ -231,26 +231,26 @@ void test1() { }
 ### AAA Pattern (Mandatory)
 
 ```java
-// Arrange (Given) - 准备数据
+// Arrange (Given) - Setup test data
 Provenance provenance = createProvenance();
 
-// Act (When) - 执行方法
+// Act (When) - Execute method under test
 BatchPlan plan = orchestrator.createPlan(command);
 
-// Assert (Then) - 验证结果
+// Assert (Then) - Verify results
 assertThat(plan).isNotNull();
 ```
 
 ### AssertJ Assertions
 
 ```java
-// ✅ Recommended
+// ✅ Recommended: Fluent and readable
 assertThat(provenances)
     .hasSize(3)
     .extracting(Provenance::getName)
     .containsExactly("PubMed", "EPMC", "CrossRef");
 
-// ❌ Old style
+// ❌ Old style: Less readable
 assertEquals(3, provenances.size());
 ```
 
@@ -265,35 +265,11 @@ For each method, write tests for:
 - [ ] Exception scenarios
 - [ ] Edge cases
 
-## Output Format
-
-```markdown
-## Test Coverage Report
-
-**Module:** patra-ingest
-
-### Coverage Summary
-| Layer | Coverage | Target | Status |
-|-------|----------|--------|--------|
-| Domain | 92% | 90% | ✅ |
-| Application | 87% | 85% | ✅ |
-| Infrastructure | 73% | 70% | ✅ |
-| Adapter | 78% | 75% | ✅ |
-
-### Tests Written: 34
-- Domain: 15 tests
-- Application: 8 tests
-- Infrastructure: 5 tests
-- Adapter: 6 tests
-
-✅ All tests passed (4.2s)
-```
-
 ## Constraints
 
 - ✅ **Always use AAA pattern**
-- ✅ **Always use descriptive names**
-- ✅ **One assertion per test**
+- ✅ **Always use descriptive names with @DisplayName**
+- ✅ **One logical assertion per test**
 - ❌ **Never test implementation details**
 - ❌ **Never write flaky tests**
 - ❌ **Never skip edge cases**
