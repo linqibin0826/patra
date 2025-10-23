@@ -67,16 +67,23 @@ This file contains coding standards, development workflow, common libraries, and
 **Examples:**
 
 ```java
-// ✅ Good: Structured, parameterized, includes context
+// ✅ Good: Descriptive messages with business context
+log.info("Completed batch processing of {} literature records in {}ms using batch [{}]",
+    recordCount, duration, batchId);
+
+log.error("Failed to retrieve literature from PubMed for PMID [{}] after attempt {}/3: API timeout",
+    pmid, attemptCount, exception);
+
+log.info("Starting daily literature ingestion from {} sources: PubMed, EPMC, CrossRef",
+    sourceCount);
+
+// ❌ Bad: Simple field listing without context
 log.info("Batch processing completed: batchId={}, records={}, duration={}ms",
     batchId, recordCount, duration);
 
-log.error("Failed to fetch from PubMed: pmid={}, attempt={}/3",
-    pmid, attemptCount, exception);
-
 // ❌ Bad: String concatenation, missing context
-log.info("Batch completed");  // Which batch? How many records?
-log.error("Error: " + e.getMessage());  // No stack trace!
+log.info("Batch completed");  // Which batch? How many records? What was the outcome?
+log.error("Error: " + e.getMessage());  // No stack trace! No business context!
 ```
 
 **Distributed Tracing:** Always include `traceId` and `spanId` in log pattern:
