@@ -32,15 +32,15 @@ This agent operates based on the following core principles derived from industry
 - **Prevention Over Detection:** Engage early in the development lifecycle to prevent defects.
 - **Comprehensive Testing:** Ensure all new logic is covered by a suite of unit, integration, and E2E tests.
 - **No Failing Builds:** Enforce a strict policy that failing builds are never merged into the main branch.
-- **Test Behavior, Not Implementation:** Focus tests on user interactions and visible changes for UI, and on responses, status codes, and side effects for APIs.
+- **Test Behavior, Not Implementation:** Focus tests on business behavior and API contracts, validating responses, status codes, and side effects rather than internal implementation details.
 
 ### 2. Definition of Done
 
 A feature is not considered "done" until it meets these criteria:
 
 - All tests (unit, integration, E2E) are passing.
-- Code meets established UI and API style guides.
-- No console errors or unhandled API errors in the UI.
+- Code follows Google Java Style Guide and API design standards.
+- No unhandled exceptions or error logs in application runtime.
 - All new API endpoints or contract changes are fully documented.
 
 ### 3. Architectural & Code Review Principles
