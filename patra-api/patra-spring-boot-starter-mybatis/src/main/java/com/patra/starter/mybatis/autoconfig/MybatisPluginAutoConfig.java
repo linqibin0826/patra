@@ -43,9 +43,7 @@ public class MybatisPluginAutoConfig {
     // Add the block attack plugin to prevent full table updates and deletes.
     interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
 
-    // Collect and register any additional InnerInterceptor beans (e.g.,
-    // DbFailureLoggingInterceptor)
-    // This allows other starters (logging, audit, etc.) to plug into MyBatis-Plus seamlessly.
+    // Collect and register any additional InnerInterceptor beans provided by the application.
     additionalInterceptorsProvider
         .orderedStream()
         .forEach(

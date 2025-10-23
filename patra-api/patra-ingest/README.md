@@ -579,13 +579,13 @@ mvn verify -pl patra-ingest-infra
 
 ### 🪵 Logging (Starter v1.0)
 
-`patra-ingest` uses `patra-spring-boot-starter-logging` for trace-aware, consistent logs and dynamic log levels.
+`patra-ingest` uses Spring Boot default logging; tracing is provided by SkyWalking agent.
 
 Dependency (already included):
 ```xml
 <dependency>
   <groupId>com.papertrace</groupId>
-  <artifactId>patra-spring-boot-starter-logging</artifactId>
+  <!-- logging handled by defaults -->
 </dependency>
 ```
 

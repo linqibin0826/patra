@@ -58,7 +58,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- SkyWalking removed - already in patra-spring-boot-starter-logging -->
+        <!-- SkyWalking toolkits may be added by services directly when needed -->
 
         <!-- Test dependencies (keep the suite lightweight; no spring-boot-starter-test) -->
         <dependency>

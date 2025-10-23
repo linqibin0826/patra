@@ -440,16 +440,14 @@ mvn verify -pl patra-registry-adapter
 
 ### 🪵 Logging (Starter v1.0)
 
-`patra-registry` integrates `patra-spring-boot-starter-logging` to provide:
-- Trace context propagation (traceId/correlationId in MDC) via `TraceContextFilter`
-- Sensitive data sanitization via `LogSanitizer`
+`patra-registry` uses Spring Boot default logging. Distributed tracing is handled by SkyWalking agent.
 - Dynamic log levels via Nacos (≤60s)
 
 Minimal setup (already applied):
 ```xml
 <dependency>
   <groupId>com.papertrace</groupId>
-  <artifactId>patra-spring-boot-starter-logging</artifactId>
+  <!-- logging handled by service-specific config or defaults -->
 </dependency>
 ```
 
@@ -466,7 +464,7 @@ Adapter example (sanitize + business MDC):
 @RestController
 @Slf4j
 public class ProvenanceController {
-  @Autowired LogSanitizer sanitizer;
+  // logging example removed; use standard logging APIs
   @Autowired LogContextEnricher enricher;
 
   @GetMapping("/provenance/{code}")
