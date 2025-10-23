@@ -88,7 +88,7 @@ public class TraceContextGlobalFilter implements GlobalFilter, Ordered {
   private static final String HEADER_PARENT_SPAN_ID = "X-Parent-Span-Id";
   private static final String HEADER_CORRELATION_ID = "X-Correlation-Id";
   private static final String REACTOR_TRACE_CONTEXT_KEY =
-      "papertrace.logging.traceContext"; // ensures per-subscriber context isolation
+      "patra.logging.traceContext"; // ensures per-subscriber context isolation
 
   private final TraceContextHolder traceContextHolder;
   private final LogContextEnricher logContextEnricher;
