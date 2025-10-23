@@ -7,20 +7,15 @@ import com.patra.starter.core.error.observation.ErrorObservationRecorder;
 import com.patra.starter.core.error.observation.MicrometerErrorObservationRecorder;
 import com.patra.starter.core.error.pipeline.ErrorResolutionPipeline;
 import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
-import com.patra.starter.core.error.pipeline.interceptor.CircuitBreakerInterceptor;
 import com.patra.starter.core.error.pipeline.interceptor.MetricsInterceptor;
 import com.patra.starter.core.error.pipeline.interceptor.TracingInterceptor;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.core.error.trace.HeaderBasedTraceProvider;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -101,38 +96,6 @@ public class CoreErrorAutoConfiguration {
   @ConditionalOnMissingBean
   public TracingInterceptor tracingInterceptor(TraceProvider traceProvider) {
     return new TracingInterceptor(traceProvider);
-  }
-
-  @Bean(name = "errorResolutionCircuitBreaker")
-  @ConditionalOnProperty(
-      prefix = "patra.error.circuit-breaker",
-      name = "enabled",
-      havingValue = "true",
-      matchIfMissing = true)
-  public CircuitBreaker errorResolutionCircuitBreaker(ErrorProperties errorProperties) {
-    ErrorProperties.CircuitBreakerProperties cb = errorProperties.getCircuitBreaker();
-    CircuitBreakerConfig config =
-        CircuitBreakerConfig.custom()
-            .failureRateThreshold(cb.getFailureRateThreshold())
-            .minimumNumberOfCalls(cb.getMinimumNumberOfCalls())
-            .slidingWindowSize(cb.getSlidingWindowSize())
-            .permittedNumberOfCallsInHalfOpenState(cb.getPermittedCallsInHalfOpenState())
-            .waitDurationInOpenState(cb.getWaitDurationInOpenState())
-            .build();
-    log.info(
-        "Creating error-resolution circuit breaker: failureRate={} slidingWindow={}",
-        cb.getFailureRateThreshold(),
-        cb.getSlidingWindowSize());
-    return CircuitBreaker.of("patra-error-resolution", config);
-  }
-
-  @Bean
-  @ConditionalOnBean(name = "errorResolutionCircuitBreaker")
-  public CircuitBreakerInterceptor circuitBreakerInterceptor(
-      @Qualifier("errorResolutionCircuitBreaker") CircuitBreaker circuitBreaker,
-      ErrorObservationRecorder observationRecorder,
-      ErrorProperties errorProperties) {
-    return new CircuitBreakerInterceptor(circuitBreaker, observationRecorder, errorProperties);
   }
 
   @Bean

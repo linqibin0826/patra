@@ -45,10 +45,11 @@
             <artifactId>micrometer-core</artifactId>
         </dependency>
 
-        <!-- Resilience4j circuit breaker -->
+        <!-- Resilience4j circuit breaker (optional: only needed if error-pipeline circuit breaker is enabled) -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-circuitbreaker</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Configuration metadata (IDE hints during development; not used at runtime) -->
@@ -58,13 +59,14 @@
             <optional>true</optional>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.skywalking</groupId>
-            <artifactId>apm-toolkit-logback-1.x</artifactId>
-            <version>9.5.0</version>
-        </dependency>
+        <!-- SkyWalking removed - already in patra-spring-boot-starter-logging -->
 
         <!-- Test dependencies (keep the suite lightweight; no spring-boot-starter-test) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -82,20 +84,8 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.11</version>
+                <!-- Version and base executions inherited from parent pluginManagement -->
                 <executions>
-                    <execution>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
                     <execution>
                         <id>check</id>
                         <phase>verify</phase>

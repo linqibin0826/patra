@@ -6,7 +6,6 @@ import com.patra.common.error.codes.HttpStdErrors;
 import com.patra.starter.core.error.engine.ErrorResolutionEngine;
 import com.patra.starter.core.error.observation.ErrorObservationRecorder;
 import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -56,11 +55,6 @@ class CoreErrorAutoConfigurationTest {
     ErrorResolutionEngine engine = conf.errorResolutionEngine(p, List.of());
     assertThat(engine).isNotNull();
     assertThat(conf.errorResolutionPipeline(engine, ofList())).isNotNull();
-
-    // circuit breaker & interceptor
-    CircuitBreaker cb = conf.errorResolutionCircuitBreaker(p);
-    assertThat(cb).isNotNull();
-    assertThat(conf.circuitBreakerInterceptor(cb, ErrorObservationRecorder.NO_OP, p)).isNotNull();
 
     // tracing
     assertThat(conf.tracingInterceptor(() -> java.util.Optional.empty())).isNotNull();

@@ -23,6 +23,11 @@
 
         <!-- Test dependencies -->
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <scope>test</scope>
@@ -34,21 +39,58 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <!-- Version and executions inherited from parent pluginManagement -->
+            </plugin>
+
+            <!-- Enforce domain layer purity (Hexagonal Architecture) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <!-- Version inherited from parent pluginManagement -->
                 <executions>
                     <execution>
+                        <id>enforce-domain-layer-purity</id>
                         <goals>
-                            <goal>prepare-agent</goal>
+                            <goal>enforce</goal>
                         </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                    </execution>
+                        <phase>validate</phase>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <excludes>
+                                        <!-- Ban Spring Framework -->
+                                        <exclude>org.springframework:*</exclude>
+                                        <exclude>org.springframework.boot:*</exclude>
+                                        <exclude>org.springframework.cloud:*</exclude>
+                                        <exclude>org.springframework.data:*</exclude>
 
+                                        <!-- Ban Jakarta EE / JPA -->
+                                        <exclude>jakarta.persistence:*</exclude>
+                                        <exclude>jakarta.validation:*</exclude>
+                                        <exclude>jakarta.annotation:*</exclude>
+                                        <exclude>jakarta.servlet:*</exclude>
+
+                                        <!-- Ban persistence frameworks -->
+                                        <exclude>com.baomidou:*</exclude>
+                                        <exclude>org.mybatis:*</exclude>
+                                        <exclude>org.hibernate:*</exclude>
+
+                                        <!-- Ban web/servlet -->
+                                        <exclude>org.apache.tomcat:*</exclude>
+                                        <exclude>io.netty:*</exclude>
+                                    </excludes>
+                                    <searchTransitive>true</searchTransitive>
+                                    <message>
+❌ Domain layer MUST be framework-free (Hexagonal Architecture)!
+   Only allowed: patra-common, Lombok, Hutool, Jackson
+
+   Violated by this dependency. Domain layer should contain pure business logic.
+                                    </message>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

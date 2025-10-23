@@ -14,44 +14,46 @@
     <name>Papertrace Spring Boot Starter - Logging</name>
 
     <dependencies>
-        <!-- Depend on patra-common for shared logging utilities -->
+        <!-- ========================================
+             Internal Dependencies
+             ======================================== -->
         <dependency>
             <groupId>com.papertrace</groupId>
             <artifactId>patra-common</artifactId>
         </dependency>
 
-        <!-- Depend on core starter for base configurations -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-core</artifactId>
-        </dependency>
-
-        <!-- SLF4J API (T002) -->
+        <!-- ========================================
+             Core Logging Dependencies
+             ======================================== -->
+        <!-- SLF4J API -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
-        <!-- Logback Classic (T002) -->
+        <!-- Logback Classic -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
 
-        <!-- SkyWalking Toolkit for trace context integration (T003) -->
+        <!-- ========================================
+             APM & Distributed Tracing
+             ======================================== -->
+        <!-- SkyWalking Toolkit for trace context integration -->
         <dependency>
             <groupId>org.apache.skywalking</groupId>
             <artifactId>apm-toolkit-logback-1.x</artifactId>
-            <version>9.3.0</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.skywalking</groupId>
             <artifactId>apm-toolkit-trace</artifactId>
-            <version>9.3.0</version>
         </dependency>
 
-        <!-- Spring Boot Auto-configuration (T004) -->
+        <!-- ========================================
+             Spring Boot Autoconfiguration
+             ======================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -63,15 +65,18 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Phase 3: Trace context propagation dependencies -->
-        <!-- Servlet API (provided - for TraceContextFilter) -->
+        <!-- ========================================
+             Provided Dependencies
+             Runtime environment provides these
+             ======================================== -->
+        <!-- Servlet API - For trace context filter in web applications -->
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Spring Web (provided - for filters and interceptors) -->
+        <!-- Spring Web - For filters and interceptors -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
@@ -84,49 +89,48 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Feign (provided - for TraceContextInterceptor) -->
+        <!-- Feign - For trace context propagation in Feign clients -->
         <dependency>
             <groupId>io.github.openfeign</groupId>
             <artifactId>feign-core</artifactId>
-            <version>13.1</version>
             <scope>provided</scope>
         </dependency>
 
-        <!-- AspectJ (provided - for ExceptionLoggingAspect) -->
+        <!-- AspectJ - For exception logging aspect -->
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Phase 4: Dynamic log level configuration (T043) -->
-        <!-- Spring Cloud Context (provided - for EnvironmentChangeEvent from Nacos) -->
+        <!-- Spring Cloud Context - For dynamic log level configuration via Nacos -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-context</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Phase 5: Gateway trace context propagation (T051) -->
-        <!-- Spring Cloud Gateway (provided - for TraceContextGlobalFilter) -->
+        <!-- Spring Cloud Gateway - For trace context propagation in gateway -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Phase 6: Database failure logging (T069-T070) -->
-        <!-- MyBatis-Plus Extension (optional - for DbFailureLoggingInterceptor) -->
-        <!-- Note: mybatis-plus-extension includes mybatis-plus-core transitively -->
+        <!-- ========================================
+             Optional Dependencies
+             Only required for specific features
+             ======================================== -->
+        <!-- MyBatis-Plus Extension - For database failure logging interceptor -->
+        <!-- Note: Version inherited from parent's mybatis-plus.version property -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-extension</artifactId>
-            <version>3.5.5</version>
+            <version>${mybatis-plus.version}</version>
             <optional>true</optional>
         </dependency>
 
-        <!-- Phase 6: Security event logging (T071-T072) -->
-        <!-- Spring Security (optional - for AuthenticationEventLogger) -->
+        <!-- Spring Security - For authentication and authorization event logging -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-core</artifactId>
@@ -139,7 +143,9 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Test dependencies -->
+        <!-- ========================================
+             Test Dependencies
+             ======================================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -158,6 +164,8 @@
             <artifactId>awaitility</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- WebFlux for testing reactive components -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
