@@ -43,7 +43,7 @@ public class ExprQueryAppService {
       String provenanceCode, String operationType, String endpointName, Instant at) {
     ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
     log.debug(
-        "[REGISTRY][APP] load expr snapshot provenanceCode={} operationType={} endpointName={}",
+        "load expr snapshot provenanceCode={} operationType={} endpointName={}",
         code,
         operationType,
         endpointName);

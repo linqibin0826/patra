@@ -172,7 +172,7 @@ public class TaskOutboxPublisher
     // Skip events without taskId (task not persisted successfully)
     if (event == null || event.taskId() == null) {
       if (event != null) {
-        log.warn("[INGEST][APP] Skip task event without persistence, planId={}", event.planId());
+        log.warn("Skip task event without persistence, planId={}", event.planId());
       }
       return false;
     }

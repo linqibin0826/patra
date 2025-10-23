@@ -48,7 +48,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
     Instant queryTime = Instant.now();
 
     log.debug(
-        "[INGEST][ADAPTER] Requesting provenance config, code={}, operationType={}, at={}",
+        "Requesting provenance config, code={}, operationType={}, at={}",
         code,
         operationType,
         queryTime);
@@ -59,7 +59,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
 
       if (resp == null) {
         log.warn(
-            "[INGEST][ADAPTER] Registry returned empty config, code={}, operationType={}",
+            "Registry returned empty config, code={}, operationType={}",
             code,
             operationType);
         return createMinimalSnapshot(code);
@@ -68,7 +68,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
       ProvenanceConfigSnapshot snapshot = converter.convert(resp);
 
       // Log hash info of conversion result for diagnosis (snapshot itself includes toString)
-      log.debug("[INGEST][ADAPTER] Provenance config loaded, code={}, snapshot={}", code, snapshot);
+      log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
       return snapshot;
 
     } catch (RemoteCallException ex) {
@@ -78,7 +78,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
           String.format(
               "Unexpected error when fetching config, code=%s, operationType=%s",
               code, operationType);
-      log.error("[INGEST][ADAPTER] " + msg, ex);
+      log.error("" + msg, ex);
       throw new IngestConfigurationException(code, operationType, msg, ex);
     }
   }
@@ -91,7 +91,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
           String.format(
               "Provenance config not found, code=%s, operationType=%s", code, operationType);
       log.warn(
-          "[INGEST][ADAPTER] {} (remoteCode={}, status={}, traceId={})",
+          "{} (remoteCode={}, status={}, traceId={})",
           msg,
           ex.getErrorCode(),
           ex.getHttpStatus(),
@@ -101,7 +101,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
 
     if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
       log.warn(
-          "[INGEST][ADAPTER] Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
+          "Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
           code,
           ex.getHttpStatus(),
           ex.getTraceId());
@@ -113,13 +113,13 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
             + String.format(
                 ", code=%s, status=%d, remoteCode=%s, traceId=%s, detail=%s",
                 code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId(), ex.getMessage());
-    log.error("[INGEST][ADAPTER] " + msg);
+    log.error("" + msg);
     throw new IngestConfigurationException(code, operationType, msg, ex);
   }
 
   /** Creates a minimal usable configuration snapshot. */
   private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode) {
-    log.info("[INGEST][ADAPTER] Creating minimal provenance snapshot, code={}", provenanceCode);
+    log.info("Creating minimal provenance snapshot, code={}", provenanceCode);
 
     // Create a minimal ProvenanceInfo
     ProvenanceConfigSnapshot.ProvenanceInfo minimalProvenance =

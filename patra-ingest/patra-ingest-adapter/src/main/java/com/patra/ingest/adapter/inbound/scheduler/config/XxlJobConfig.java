@@ -56,7 +56,7 @@ public class XxlJobConfig {
   /** Configures the XXL-Job executor bean. */
   @Bean
   public XxlJobSpringExecutor xxlJobExecutor() {
-    log.info("[INGEST][ADAPTER] Initializing XXL-Job executor configuration...");
+    log.info("Initializing XXL-Job executor configuration...");
 
     XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
     xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
@@ -70,7 +70,7 @@ public class XxlJobConfig {
     xxlJobSpringExecutor.setLogRetentionDays(logRetentionDays);
 
     log.info(
-        "[INGEST][ADAPTER] XXL-Job executor initialized, appName={}, adminAddresses={}, port={}",
+        "XXL-Job executor initialized, appName={}, adminAddresses={}, port={}",
         appName,
         adminAddresses,
         executorPort);

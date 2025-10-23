@@ -50,7 +50,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     if (StringUtils.hasText(message.getMsgId())) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] Skip publishing message id={} channel={} because msgId already present",
+            "Skip publishing message id={} channel={} because msgId already present",
             message.getId(),
             message.getChannel());
       }
@@ -70,7 +70,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
       }
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] Published message id={} channel={} dedupKey={} opType={} partitionKey={}",
+            "Published message id={} channel={} dedupKey={} opType={} partitionKey={}",
             message.getId(),
             channel,
             message.getDedupKey(),

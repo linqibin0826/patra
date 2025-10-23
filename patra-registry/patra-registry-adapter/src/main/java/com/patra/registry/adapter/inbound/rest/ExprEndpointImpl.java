@@ -40,7 +40,7 @@ public class ExprEndpointImpl implements ExprEndpoint {
   public ExprSnapshotResp getSnapshot(
       String provenanceCode, String operationType, String endpointName, Instant at) {
     log.debug(
-        "[REGISTRY][ADAPTER] get expr snapshot provenanceCode={} operationType={} endpointName={} at={}",
+        "get expr snapshot provenanceCode={} operationType={} endpointName={} at={}",
         provenanceCode,
         operationType,
         endpointName,

@@ -54,7 +54,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
     long taskId = command.taskId();
     String idempotentKey = command.idempotentKey();
 
-    log.info("[INGEST][APP] task execution start taskId={} idemKey={}", taskId, idempotentKey);
+    log.info("task execution start taskId={} idemKey={}", taskId, idempotentKey);
 
     ExecutionSession session = null;
     ExecutionContext context = null;
@@ -68,7 +68,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
         context = prepareResult.context();
 
         log.info(
-            "[INGEST][APP] prepare phase completed taskId={} runId={} provenance={} operation={}",
+            "prepare phase completed taskId={} runId={} provenance={} operation={}",
             taskId,
             session.runId(),
             context.provenanceCode(),
@@ -77,14 +77,14 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
       } catch (PrepareTaskExecutionUseCase.TaskAlreadySucceededException e) {
         // Idempotent skip: already succeeded
         log.warn(
-            "[INGEST][APP] task already succeeded, skip execution taskId={} idemKey={}",
+            "task already succeeded, skip execution taskId={} idemKey={}",
             taskId,
             idempotentKey);
         return;
 
       } catch (PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException e) {
         // Lease acquisition failed (owned by another worker)
-        log.warn("[INGEST][APP] lease acquisition failed, skip execution taskId={}", taskId);
+        log.warn("lease acquisition failed, skip execution taskId={}", taskId);
         return;
       }
 
@@ -93,7 +93,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
           executeUseCase.execute(session, context);
 
       log.info(
-          "[INGEST][APP] execute phase completed taskId={} runId={} total={} succeeded={} failed={}",
+          "execute phase completed taskId={} runId={} total={} succeeded={} failed={}",
           taskId,
           session.runId(),
           executeResult.totalBatches(),
@@ -104,19 +104,19 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
       completeUseCase.complete(session, context, executeResult);
 
       log.info(
-          "[INGEST][APP] task execution completed taskId={} runId={}", taskId, session.runId());
+          "task execution completed taskId={} runId={}", taskId, session.runId());
 
     } catch (Exception e) {
       log.error(
-          "[INGEST][APP] task execution failed taskId={} idemKey={}", taskId, idempotentKey, e);
+          "task execution failed taskId={} idemKey={}", taskId, idempotentKey, e);
 
       // On failure, try to cleanup resources (if session was created)
       if (session != null) {
         try {
           session.cleanup();
-          log.info("[INGEST][APP] session cleanup on failure taskId={}", taskId);
+          log.info("session cleanup on failure taskId={}", taskId);
         } catch (Exception cleanupEx) {
-          log.error("[INGEST][APP] session cleanup failed taskId={}", taskId, cleanupEx);
+          log.error("session cleanup failed taskId={}", taskId, cleanupEx);
         }
       }
 

@@ -81,7 +81,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     Instant now = clock.instant();
 
     log.info(
-        "[INGEST][APP] complete task execution start taskId={} runId={} total={} succeeded={} failed={}",
+        "complete task execution start taskId={} runId={} total={} succeeded={} failed={}",
         taskId,
         runId,
         executeResult.totalBatches(),
@@ -114,38 +114,38 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
         try {
           cursorAdvanced = cursorAdvancer.advance(context, taskId, runId);
         } catch (Exception e) {
-          log.error("[INGEST][APP] cursor advance failed taskId={} runId={}", taskId, runId, e);
+          log.error("cursor advance failed taskId={} runId={}", taskId, runId, e);
         }
 
         if (cursorAdvanced) {
           // Cursor ok → SUCCEEDED
           task.markSucceeded(now);
           taskRun.succeed(now);
-          log.info("[INGEST][APP] task succeeded taskId={} runId={}", taskId, runId);
+          log.info("task succeeded taskId={} runId={}", taskId, runId);
         } else {
           // Cursor failed → CURSOR_PENDING
           task.markCursorPending(now);
           taskRun.markCursorPending(now);
-          log.warn("[INGEST][APP] task marked CURSOR_PENDING taskId={} runId={}", taskId, runId);
+          log.warn("task marked CURSOR_PENDING taskId={} runId={}", taskId, runId);
         }
 
       } else if (partialSuccess) {
         // 3.2 Partial → PARTIAL
         task.markPartial(now);
         taskRun.markPartial("Some batches failed", now);
-        log.warn("[INGEST][APP] task marked PARTIAL taskId={} runId={}", taskId, runId);
+        log.warn("task marked PARTIAL taskId={} runId={}", taskId, runId);
 
       } else if (allFailed) {
         // 3.3 All failed → FAILED
         task.markFailed(now);
         taskRun.fail("All batches failed", now);
-        log.warn("[INGEST][APP] task marked FAILED taskId={} runId={}", taskId, runId);
+        log.warn("task marked FAILED taskId={} runId={}", taskId, runId);
 
       } else {
         // 3.4 No batches executed (totalBatches == 0) → FAILED
         task.markFailed(now);
         taskRun.fail("No batches executed", now);
-        log.warn("[INGEST][APP] task marked FAILED (no batches) taskId={} runId={}", taskId, runId);
+        log.warn("task marked FAILED (no batches) taskId={} runId={}", taskId, runId);
       }
 
       // 4) Persist Task and TaskRun
@@ -157,7 +157,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
       }
 
       log.info(
-          "[INGEST][APP] complete task execution finished taskId={} runId={} finalStatus={}",
+          "complete task execution finished taskId={} runId={} finalStatus={}",
           taskId,
           runId,
           task.getStatus());
@@ -220,7 +220,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     literatureEventPublisher.publish(event);
 
     log.info(
-        "[INGEST][APP] literature data ready event queued taskId={} runId={} storageKeyCount={} totalCount={}",
+        "literature data ready event queued taskId={} runId={} storageKeyCount={} totalCount={}",
         taskId,
         runId,
         storageKeys.size(),
@@ -235,14 +235,14 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     try {
       // Stop heartbeat
       session.cleanup();
-      log.info("[INGEST][APP] heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
+      log.info("heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
 
       // Release lease
       leaseManagementService.releaseLease(taskId);
-      log.info("[INGEST][APP] lease released taskId={} owner={}", taskId, leaseOwner);
+      log.info("lease released taskId={} owner={}", taskId, leaseOwner);
 
     } catch (Exception e) {
-      log.error("[INGEST][APP] cleanup failed taskId={} owner={}", taskId, leaseOwner, e);
+      log.error("cleanup failed taskId={} owner={}", taskId, leaseOwner, e);
       // Cleanup failure does not affect completion; log only
     }
   }

@@ -39,11 +39,11 @@ public class BatchPlannerRegistry {
       ProvenanceCode provenanceCode = planner.getProvenanceCode();
       String code = provenanceCode.getCode();
       if (planners.containsKey(code)) {
-        log.warn("[INGEST][APP] duplicate batch planner for provenanceCode={}", code);
+        log.warn("duplicate batch planner for provenanceCode={}", code);
       }
       planners.put(code, planner);
       log.info(
-          "[INGEST][APP] registered batch planner provenanceCode={} class={}",
+          "registered batch planner provenanceCode={} class={}",
           code,
           planner.getClass().getSimpleName());
     }

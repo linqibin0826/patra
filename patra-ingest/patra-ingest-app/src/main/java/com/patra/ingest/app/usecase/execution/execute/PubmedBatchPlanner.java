@@ -74,7 +74,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
         searchPort.preparePlanMetadata(compiledQuery, ctx.compiledParams(), ctx.configSnapshot());
     int total = metadata.totalCount();
     if (total <= 0) {
-      log.info("[INGEST][APP] pubmed planner: no results termHash={}", safeHash(compiledQuery));
+      log.info("pubmed planner: no results termHash={}", safeHash(compiledQuery));
       return BatchPlan.empty();
     }
 
@@ -84,7 +84,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
     int pagesNeeded = (int) Math.ceil(total / (double) pageSize);
     if (pagesNeeded > maxPages) {
       log.warn(
-          "[INGEST][APP] pubmed planner fail-fast: pagesNeeded={} > maxPages={} termHash={} pageSize={} total={}",
+          "pubmed planner fail-fast: pagesNeeded={} > maxPages={} termHash={} pageSize={} total={}",
           pagesNeeded,
           maxPages,
           safeHash(compiledQuery),
@@ -115,7 +115,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
     }
 
     log.info(
-        "[INGEST][APP] pubmed planner: planned {} batches termHash={} pageSize={} total={} webEnv={}",
+        "pubmed planner: planned {} batches termHash={} pageSize={} total={} webEnv={}",
         pages,
         safeHash(compiledQuery),
         pageSize,
@@ -157,7 +157,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
     // Clamp to PubMed API limit
     if (pageSize > pubmedRetmaxLimit) {
       log.warn(
-          "[INGEST][APP] pubmed planner: retmax clamped to {} from {}",
+          "pubmed planner: retmax clamped to {} from {}",
           pubmedRetmaxLimit,
           pageSize);
       pageSize = pubmedRetmaxLimit;

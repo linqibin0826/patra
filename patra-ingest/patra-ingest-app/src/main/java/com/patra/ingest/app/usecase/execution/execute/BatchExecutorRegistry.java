@@ -39,11 +39,11 @@ public class BatchExecutorRegistry {
       ProvenanceCode provenanceCode = executor.getProvenanceCode();
       String code = provenanceCode.getCode();
       if (executors.containsKey(code)) {
-        log.warn("[INGEST][APP] duplicate batch executor for provenanceCode={}", code);
+        log.warn("duplicate batch executor for provenanceCode={}", code);
       }
       executors.put(code, executor);
       log.info(
-          "[INGEST][APP] registered batch executor provenanceCode={} class={}",
+          "registered batch executor provenanceCode={} class={}",
           code,
           executor.getClass().getSimpleName());
     }

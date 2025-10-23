@@ -184,7 +184,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
 
     if (!toCandidate.isAfter(fromCandidate)) {
       log.debug(
-          "[INGEST][APP] HARVEST window empty after alignment: {} >= {}",
+          "HARVEST window empty after alignment: {} >= {}",
           fromCandidate,
           toCandidate);
       return nullWindowIfEmpty(fromCandidate, toCandidate);
@@ -237,7 +237,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
       upperAnchor = alignFloor(upperAnchor, cfg.calendarAlignTo(), zone);
     }
     if (!upperAnchor.isAfter(fromCandidate)) {
-      log.debug("[INGEST][APP] BACKFILL window empty: {} >= {}", fromCandidate, upperAnchor);
+      log.debug("BACKFILL window empty: {} >= {}", fromCandidate, upperAnchor);
       return nullWindowIfEmpty(fromCandidate, upperAnchor);
     }
     return safeWindow(fromCandidate, upperAnchor);
@@ -303,7 +303,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
       toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
     }
     if (!toCandidate.isAfter(fromCandidate)) {
-      log.debug("[INGEST][APP] UPDATE window empty: {} >= {}", fromCandidate, toCandidate);
+      log.debug("UPDATE window empty: {} >= {}", fromCandidate, toCandidate);
       return nullWindowIfEmpty(fromCandidate, toCandidate);
     }
     return safeWindow(fromCandidate, toCandidate);

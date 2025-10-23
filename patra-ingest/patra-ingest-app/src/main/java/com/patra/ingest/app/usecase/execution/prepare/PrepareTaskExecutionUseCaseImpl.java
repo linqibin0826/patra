@@ -86,7 +86,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
     String idempotentKey = command.idempotentKey();
 
     log.info(
-        "[INGEST][APP] prepare task execution start taskId={} idemKey={}", taskId, idempotentKey);
+        "prepare task execution start taskId={} idemKey={}", taskId, idempotentKey);
 
     // 1) Idempotency check
     if (idempotencyChecker.isAlreadySucceeded(taskId, idempotentKey)) {
@@ -105,7 +105,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
           "Lease acquisition failed taskId=" + taskId + " owner=" + leaseOwner);
     }
 
-    log.info("[INGEST][APP] lease acquired taskId={} owner={}", taskId, leaseOwner);
+    log.info("lease acquired taskId={} owner={}", taskId, leaseOwner);
 
     // 4) Load Task (single read to avoid repetition)
     TaskAggregate task =
@@ -127,7 +127,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
 
       Long runId = session.runId();
       log.info(
-          "[INGEST][APP] session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
+          "session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
 
       // 6) Load execution context (restore config, compile expressions)
       ExecutionContext context = contextLoader.loadContext(task, runId);
@@ -144,7 +144,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       task.markRunning(now, schedulerRunId, correlationId);
       taskRepository.save(task);
 
-      log.info("[INGEST][APP] prepare task execution completed taskId={} runId={}", taskId, runId);
+      log.info("prepare task execution completed taskId={} runId={}", taskId, runId);
 
       return new PrepareResult(session, context);
 
@@ -152,7 +152,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       // Resource cleanup on failure
       if (session != null) {
         log.warn(
-            "[INGEST][APP] prepare failed, cleaning up resources taskId={} runId={}",
+            "prepare failed, cleaning up resources taskId={} runId={}",
             taskId,
             session.runId(),
             e);
@@ -163,7 +163,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
           leaseManagementService.releaseLease(taskId);
         } catch (Exception cleanupEx) {
           log.error(
-              "[INGEST][APP] resource cleanup failed taskId={} runId={}",
+              "resource cleanup failed taskId={} runId={}",
               taskId,
               session.runId(),
               cleanupEx);
@@ -189,7 +189,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       return String.format("%s:%s:%s", hostname, pid, execId);
     } catch (UnknownHostException e) {
       // Fallback: use "unknown" as hostname if unable to resolve
-      log.warn("[INGEST][APP] unable to resolve hostname, using fallback", e);
+      log.warn("unable to resolve hostname, using fallback", e);
       String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
       String execId = UUID.randomUUID().toString().substring(0, 8);
       return String.format("unknown:%s:%s", pid, execId);

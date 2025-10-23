@@ -63,7 +63,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     WindowSpec windowSpec = context.windowSpec();
     if (windowSpec == null) {
       log.debug(
-          "[INGEST][APP] cursor advance skipped: no window spec taskId={} runId={}", taskId, runId);
+          "cursor advance skipped: no window spec taskId={} runId={}", taskId, runId);
       return true; // no window spec, skip advancement
     }
 
@@ -71,7 +71,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     Instant newWatermark = extractWatermark(windowSpec, taskId, runId);
     if (newWatermark == null) {
       log.debug(
-          "[INGEST][APP] cursor advance skipped: non-TIME strategy or no watermark "
+          "cursor advance skipped: non-TIME strategy or no watermark "
               + "strategy={} taskId={} runId={}",
           windowSpec.strategy(),
           taskId,
@@ -98,7 +98,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         if (log.isDebugEnabled()) {
           log.debug(
-              "[INGEST][APP] cursor found provenanceCode={} endpointName={} currentWatermark={}",
+              "cursor found provenanceCode={} endpointName={} currentWatermark={}",
               provenanceCode,
               operationCode,
               oldWatermark);
@@ -108,7 +108,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         cursor.advanceTo(newWatermark);
 
         log.info(
-            "[INGEST][APP] cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={}",
+            "cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={}",
             provenanceCode,
             operationCode,
             oldWatermark,
@@ -127,7 +127,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                 newWatermark);
 
         log.info(
-            "[INGEST][APP] cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={}",
+            "cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={}",
             provenanceCode,
             operationCode,
             newWatermark,
@@ -142,7 +142,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     } catch (OptimisticLockingFailureException e) {
       // Optimistic conflict (version mismatch)
       log.warn(
-          "[INGEST][APP] cursor advance conflict provenanceCode={} endpointName={} taskId={} runId={}",
+          "cursor advance conflict provenanceCode={} endpointName={} taskId={} runId={}",
           provenanceCode,
           operationCode,
           taskId,
@@ -151,7 +151,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
     } catch (Exception e) {
       log.error(
-          "[INGEST][APP] cursor advance failed provenanceCode={} endpointName={} taskId={} runId={}",
+          "cursor advance failed provenanceCode={} endpointName={} taskId={} runId={}",
           provenanceCode,
           operationCode,
           taskId,
@@ -186,7 +186,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       case HYBRID -> {
         // Future: extract time component from HYBRID spec
         log.warn(
-            "[INGEST][APP] HYBRID strategy watermark extraction not yet implemented "
+            "HYBRID strategy watermark extraction not yet implemented "
                 + "taskId={} runId={}",
             taskId,
             runId);

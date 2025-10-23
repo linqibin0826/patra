@@ -37,7 +37,7 @@ public class CursorEventRepositoryMpImpl implements CursorEventRepository {
       mapper.insert(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] cursor event insert cursorKey={} wm={}",
+            "cursor event insert cursorKey={} wm={}",
             dto.getCursorKey(),
             dto.getNewInstant());
       }
@@ -45,7 +45,7 @@ public class CursorEventRepositoryMpImpl implements CursorEventRepository {
       mapper.updateById(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] cursor event update id={} cursorKey={} wm={}",
+            "cursor event update id={} cursorKey={} wm={}",
             dto.getId(),
             dto.getCursorKey(),
             dto.getNewInstant());

@@ -139,7 +139,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
     Instant now = request.triggeredAt();
     log.info(
-        "[INGEST][APP] plan-ingest start, provenance={}, op={}, triggeredAt={}",
+        "plan-ingest start, provenance={}, op={}, triggeredAt={}",
         provenanceCode,
         operationCode,
         now);
@@ -154,7 +154,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     Instant cursorWatermark = lookupCursorWatermark(provenanceCode, operationCode);
     PlannerWindow window = resolvePlannerWindow(norm, configSnapshot, cursorWatermark, now);
     log.debug(
-        "[INGEST][APP] plan-ingest window resolved provenance={} op={} cursorWatermark={} window=[{}, {})",
+        "plan-ingest window resolved provenance={} op={} cursorWatermark={} window=[{}, {})",
         provenanceCode,
         operationCode,
         cursorWatermark,
@@ -165,7 +165,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     PlanExpressionDescriptor expressionDescriptor =
         planExpressionBuilder.build(norm, configSnapshot);
     log.debug(
-        "[INGEST][APP] plan-ingest expr built hash={} jsonSize={}",
+        "plan-ingest expr built hash={} jsonSize={}",
         expressionDescriptor.hash(),
         expressionDescriptor.jsonSnapshot().length());
 
@@ -173,7 +173,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     long queuedTasks =
         taskRepository.countQueuedTasks(provenanceCode.getCode(), opCode(operationCode));
     validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
-    log.debug("[INGEST][APP] plan-ingest validation passed queuedTasks={}", queuedTasks);
+    log.debug("plan-ingest validation passed queuedTasks={}", queuedTasks);
 
     // Phase 5: assemble blueprints
     PlanAssemblyRequest assemblyRequest =
@@ -185,7 +185,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
     if (existingPlan != null) {
       log.info(
-          "[INGEST][APP] plan-ingest dedup hit existing planKey={}, reuse planId={}",
+          "plan-ingest dedup hit existing planKey={}, reuse planId={}",
           draftPlan.getPlanKey(),
           existingPlan.getId());
       List<PlanSliceAggregate> existingSlices =
@@ -226,7 +226,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
 
     log.info(
-        "[INGEST][APP] plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})",
+        "plan-ingest success, planId={}, sliceCount={}, taskCount={}, window=[{}, {})",
         persistedPlan.getId(),
         persistedSlices.size(),
         persistedTasks.size(),

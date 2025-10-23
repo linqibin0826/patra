@@ -90,12 +90,12 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                   consecutiveFailures.set(0); // reset failures
                   if (log.isDebugEnabled()) {
                     log.debug(
-                        "[INGEST][APP] heartbeat renewed taskId={} owner={}", taskId, leaseOwner);
+                        "heartbeat renewed taskId={} owner={}", taskId, leaseOwner);
                   }
                 } else {
                   int failures = consecutiveFailures.incrementAndGet();
                   log.warn(
-                      "[INGEST][APP] heartbeat renewal failed taskId={} owner={} consecutiveFailures={}",
+                      "heartbeat renewal failed taskId={} owner={} consecutiveFailures={}",
                       taskId,
                       leaseOwner,
                       failures);
@@ -106,7 +106,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                     if (!valid) {
                       leaseRevoked.set(true);
                       log.warn(
-                          "[INGEST][APP] lease revoked detected taskId={} owner={}",
+                          "lease revoked detected taskId={} owner={}",
                           taskId,
                           leaseOwner);
                       stopped.set(true); // stop heartbeat
@@ -115,7 +115,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                 }
               } catch (Exception e) {
                 log.error(
-                    "[INGEST][APP] heartbeat renewal error taskId={} owner={}",
+                    "heartbeat renewal error taskId={} owner={}",
                     taskId,
                     leaseOwner,
                     e);
@@ -131,7 +131,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
             TimeUnit.MILLISECONDS);
 
     log.info(
-        "[INGEST][APP] heartbeat started taskId={} owner={} interval={}ms",
+        "heartbeat started taskId={} owner={} interval={}ms",
         taskId,
         leaseOwner,
         renewalInterval.toMillis());
@@ -164,7 +164,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
     public void stop() {
       if (stopped.compareAndSet(false, true)) {
         future.cancel(false); // do not interrupt running task
-        log.info("[INGEST][APP] heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
+        log.info("heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
       }
     }
 

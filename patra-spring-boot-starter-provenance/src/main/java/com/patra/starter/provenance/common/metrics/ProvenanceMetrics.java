@@ -51,7 +51,7 @@ public class ProvenanceMetrics {
       incrementCounter(
           "provenance.client.api.failure", provenanceCode, apiName, ex.getClass().getSimpleName());
       log.debug(
-          "[PROVENANCE][METRICS] API call failed: provenance={} api={} error={}",
+          "API call failed: provenance={} api={} error={}",
           provenanceCode.getCode(),
           apiName,
           ex.getClass().getSimpleName());

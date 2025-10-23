@@ -45,7 +45,7 @@ public class ScheduleInstanceRepositoryMpImpl implements ScheduleInstanceReposit
     if (instance.getId() != null) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] schedule instance update id={} triggerType={}",
+            "schedule instance update id={} triggerType={}",
             instance.getId(),
             instance.getTriggerType());
       }
@@ -55,7 +55,7 @@ public class ScheduleInstanceRepositoryMpImpl implements ScheduleInstanceReposit
     mapper.insert(entity);
     if (log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] schedule instance insert triggeredAt={} id={} (post-insert)",
+          "schedule instance insert triggeredAt={} id={} (post-insert)",
           entity.getTriggeredAt(),
           entity.getId());
     }

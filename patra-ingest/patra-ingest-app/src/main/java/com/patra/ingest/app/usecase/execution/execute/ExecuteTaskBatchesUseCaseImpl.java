@@ -66,7 +66,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     Long runId = session.runId();
 
     log.info(
-        "[INGEST][APP] execute batches start taskId={} runId={} provenanceCode={}",
+        "execute batches start taskId={} runId={} provenanceCode={}",
         taskId,
         runId,
         context.provenanceCode());
@@ -81,12 +81,12 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     }
 
     if (!plan.hasBatches()) {
-      log.warn("[INGEST][APP] no batches planned taskId={} runId={}", taskId, runId);
+      log.warn("no batches planned taskId={} runId={}", taskId, runId);
       return new ExecuteResult(0, 0, 0);
     }
 
     log.info(
-        "[INGEST][APP] batch plan created taskId={} runId={} totalBatches={}",
+        "batch plan created taskId={} runId={} totalBatches={}",
         taskId,
         runId,
         plan.totalBatches());
@@ -100,7 +100,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       // 2.1 Check lease revocation
       if (session.heartbeatHandle() != null && session.heartbeatHandle().isLeaseRevoked()) {
         log.warn(
-            "[INGEST][APP] lease revoked, abort batch execution taskId={} runId={} batchNo={}",
+            "lease revoked, abort batch execution taskId={} runId={} batchNo={}",
             taskId,
             runId,
             batch.batchNo());
@@ -109,7 +109,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
       // 2.2 Execute single batch
       log.info(
-          "[INGEST][APP] execute batch start taskId={} runId={} batchNo={}/{}",
+          "execute batch start taskId={} runId={} batchNo={}/{}",
           taskId,
           runId,
           batch.batchNo(),
@@ -120,7 +120,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         result = executor.execute(context, batch);
       } catch (Exception e) {
         log.error(
-            "[INGEST][APP] batch execution failed taskId={} runId={} batchNo={}",
+            "batch execution failed taskId={} runId={} batchNo={}",
             taskId,
             runId,
             batch.batchNo(),
@@ -136,7 +136,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       if (result.success()) {
         succeededCount++;
         log.info(
-            "[INGEST][APP] batch succeeded taskId={} runId={} batchNo={} fetchedCount={}",
+            "batch succeeded taskId={} runId={} batchNo={} fetchedCount={}",
             taskId,
             runId,
             batch.batchNo(),
@@ -144,7 +144,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       } else {
         failedCount++;
         log.warn(
-            "[INGEST][APP] batch failed taskId={} runId={} batchNo={} error={}",
+            "batch failed taskId={} runId={} batchNo={} error={}",
             taskId,
             runId,
             batch.batchNo(),
@@ -153,7 +153,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         // fail-fast: abort immediately
         if (failFast) {
           log.warn(
-              "[INGEST][APP] fail-fast enabled, abort remaining batches taskId={} runId={}",
+              "fail-fast enabled, abort remaining batches taskId={} runId={}",
               taskId,
               runId);
           break;
@@ -162,7 +162,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     }
 
     log.info(
-        "[INGEST][APP] execute batches completed taskId={} runId={} total={} succeeded={} failed={}",
+        "execute batches completed taskId={} runId={} total={} succeeded={} failed={}",
         taskId,
         runId,
         plan.totalBatches(),

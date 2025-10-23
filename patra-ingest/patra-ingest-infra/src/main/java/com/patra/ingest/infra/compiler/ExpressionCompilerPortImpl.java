@@ -78,7 +78,7 @@ public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
       return convertToExprCompilationResult(compileResult);
 
     } catch (Exception e) {
-      log.error("[INGEST][INFRA] expression compilation failed: {}", e.getMessage(), e);
+      log.error("expression compilation failed: {}", e.getMessage(), e);
       return ExprCompilationResult.failure("Expression compilation failed: " + e.getMessage());
     }
   }
