@@ -15,12 +15,11 @@
     <description>Ingestion launcher module - Spring Boot entry point</description>
 
     <dependencies>
-        <!-- Phase 5: Enhanced logging with trace context (T054) -->
+        <!-- Web starter includes core + logging + web + validation -->
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-logging</artifactId>
+            <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
-
 
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
@@ -48,6 +47,15 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ArchUnit for architecture validation tests -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <!-- Version inherited from parent dependencyManagement -->
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
