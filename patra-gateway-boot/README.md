@@ -150,13 +150,13 @@ spring:
 
 ## 🪵 Logging (Starter v1.0)
 
-This service uses `patra-spring-boot-starter-logging` for unified logging, trace context, and dynamic log levels.
+This service uses Spring Boot default logging; distributed tracing is handled by SkyWalking agent.
 
 - Dependency (already included):
   ```xml
   <dependency>
       <groupId>com.papertrace</groupId>
-      <artifactId>patra-spring-boot-starter-logging</artifactId>
+      <!-- logging handled by service-specific config or defaults -->
   </dependency>
   ```
 
@@ -168,7 +168,7 @@ This service uses `patra-spring-boot-starter-logging` for unified logging, trace
 
   papertrace:
     logging:
-      trace.enabled: true   # TraceContextGlobalFilter enabled by auto-config
+      # logging/tracing handled by SkyWalking agent + Spring Boot defaults
   ```
 
 - Log pattern includes MDC fields: `traceId`, `correlationId`, `service`, `environment`.
@@ -179,7 +179,7 @@ This service uses `patra-spring-boot-starter-logging` for unified logging, trace
   logging:
     level:
       root: INFO
-      com.patra.starter.logging.gateway: DEBUG   # TraceContextGlobalFilter
+      # adjust package log levels as needed
       org.springframework.cloud.gateway: INFO
   ```
 

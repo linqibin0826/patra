@@ -166,12 +166,6 @@
 
             <dependency>
                 <groupId>com.papertrace</groupId>
-                <artifactId>patra-spring-boot-starter-logging</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.papertrace</groupId>
                 <artifactId>patra-expr-kernel</artifactId>
                 <version>${project.version}</version>
             </dependency>

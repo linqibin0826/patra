@@ -21,17 +21,7 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
-        <!-- Phase 5: Enhanced logging with trace context (T050) -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-logging</artifactId>
-        </dependency>
-
-        <!-- AOP support required by logging-starter's ExceptionLoggingAspect -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
+        <!-- logging-starter removed; rely on SkyWalking agent + Boot defaults -->
 
         <dependency>
             <groupId>org.springframework.cloud</groupId>

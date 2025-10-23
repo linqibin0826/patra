@@ -25,11 +25,7 @@
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 
-        <!-- Unified logging configuration with trace context support -->
-        <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-spring-boot-starter-logging</artifactId>
-        </dependency>
+        <!-- Logging starter removed: rely on Spring Boot defaults or service-specific config -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
