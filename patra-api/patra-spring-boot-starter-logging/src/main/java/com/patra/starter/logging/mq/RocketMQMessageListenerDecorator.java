@@ -21,27 +21,34 @@ import org.slf4j.LoggerFactory;
  *   <li><b>correlationId</b>: Business correlation identifier
  * </ul>
  *
- * <p>Usage: Wrap message listener logic with trace context restoration.
+ * <p><b>Auto-Configuration:</b> This decorator is automatically registered as a Spring Bean when
+ * RocketMQ is on the classpath. Access via dependency injection:
  *
  * <pre>{@code
  * @RocketMQMessageListener(topic = "my-topic", consumerGroup = "my-group")
- * public class MyConsumer implements RocketMQListener<String> {
+ * public class MyConsumer implements RocketMQListener<MessageExt> {
  *
- *     @Autowired private TraceContextHolder holder;
- *     @Autowired private LogContextEnricher enricher;
+ *     @Autowired
+ *     private RocketMQMessageListenerDecorator decorator;
  *
  *     @Override
- *     public void onMessage(String message) {
- *         RocketMQMessageListenerDecorator.withTraceContext(
- *             holder, enricher, messageExt,
- *             () -> {
- *                 // Process message with trace context
- *                 log.info("Processing message: {}", message);
- *             }
- *         );
+ *     public void onMessage(MessageExt messageExt) {
+ *         decorator.withTraceContext(messageExt.getUserProperties(), () -> {
+ *             // Process message with trace context
+ *             log.info("Processing message: {}", new String(messageExt.getBody()));
+ *         });
  *     }
  * }
  * }</pre>
+ *
+ * <p><b>Legacy Static Usage:</b> For compatibility, static methods are still available:
+ *
+ * <pre>
+ * RocketMQMessageListenerDecorator.withTraceContext(
+ *     holder, enricher, messageExt.getUserProperties(),
+ *     () -&gt; processMessage()
+ * );
+ * </pre>
  *
  * @see TraceContextHolder
  * @see LogContextEnricher
@@ -55,8 +62,37 @@ public class RocketMQMessageListenerDecorator {
   private static final String PROPERTY_SPAN_ID = "spanId";
   private static final String PROPERTY_CORRELATION_ID = "correlationId";
 
+  private final TraceContextHolder holder;
+  private final LogContextEnricher enricher;
+
   /**
-   * Executes a task with trace context restored from RocketMQ message properties.
+   * Constructs a new RocketMQ message listener decorator.
+   *
+   * <p>This constructor is used by Spring auto-configuration to create a managed bean.
+   *
+   * @param holder Trace context holder
+   * @param enricher Log context enricher
+   */
+  public RocketMQMessageListenerDecorator(TraceContextHolder holder, LogContextEnricher enricher) {
+    this.holder = holder;
+    this.enricher = enricher;
+  }
+
+  /**
+   * Executes a task with trace context restored from RocketMQ message properties (instance method).
+   *
+   * <p>Use this method when the decorator is injected as a Spring bean.
+   *
+   * @param messageProperties Message properties (user properties from MessageExt)
+   * @param task The task to execute
+   */
+  public void withTraceContext(java.util.Map<String, String> messageProperties, Runnable task) {
+    withTraceContext(holder, enricher, messageProperties, task);
+  }
+
+  /**
+   * Executes a task with trace context restored from RocketMQ message properties (static method for
+   * legacy usage).
    *
    * @param holder Trace context holder
    * @param enricher Log context enricher

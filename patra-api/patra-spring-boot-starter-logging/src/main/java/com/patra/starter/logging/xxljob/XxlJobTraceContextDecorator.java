@@ -22,22 +22,35 @@ import org.slf4j.LoggerFactory;
  *   <li>Integrates with SkyWalking (if agent is active)
  * </ul>
  *
- * <p>Usage: Wrap XXL-Job handler logic with trace context generation.
+ * <p><b>Auto-Configuration:</b> This decorator is automatically registered as a Spring Bean when
+ * XXL-Job is on the classpath. Access via dependency injection:
  *
  * <pre>{@code
- * @XxlJob("myScheduledJob")
- * public void execute() {
- *     XxlJobTraceContextDecorator.withTraceContext(
- *         traceContextHolder,
- *         logContextEnricher,
- *         "myScheduledJob",
- *         () -> {
+ * @Component
+ * public class MyScheduledJob {
+ *     @Autowired
+ *     private XxlJobTraceContextDecorator decorator;
+ *
+ *     @XxlJob("myScheduledJob")
+ *     public void execute() {
+ *         decorator.withTraceContext("myScheduledJob", () -> {
  *             // Job logic with trace context
  *             log.info("Executing scheduled job"); // [traceId=xxx][correlationId=job-xxx]
- *         }
- *     );
+ *         });
+ *     }
  * }
  * }</pre>
+ *
+ * <p><b>Legacy Static Usage:</b> For compatibility, static methods are still available:
+ *
+ * <pre>
+ * XxlJobTraceContextDecorator.withTraceContext(
+ *     traceContextHolder,
+ *     logContextEnricher,
+ *     "myScheduledJob",
+ *     () -&gt; executeJobLogic()
+ * );
+ * </pre>
  *
  * @see TraceContextHolder
  * @see LogContextEnricher
@@ -47,8 +60,36 @@ public class XxlJobTraceContextDecorator {
 
   private static final Logger log = LoggerFactory.getLogger(XxlJobTraceContextDecorator.class);
 
+  private final TraceContextHolder holder;
+  private final LogContextEnricher enricher;
+
   /**
-   * Executes an XXL-Job task with generated trace context.
+   * Constructs a new XXL-Job trace context decorator.
+   *
+   * <p>This constructor is used by Spring auto-configuration to create a managed bean.
+   *
+   * @param holder Trace context holder
+   * @param enricher Log context enricher
+   */
+  public XxlJobTraceContextDecorator(TraceContextHolder holder, LogContextEnricher enricher) {
+    this.holder = holder;
+    this.enricher = enricher;
+  }
+
+  /**
+   * Executes an XXL-Job task with generated trace context (instance method).
+   *
+   * <p>Use this method when the decorator is injected as a Spring bean.
+   *
+   * @param jobName The XXL-Job handler name
+   * @param task The task to execute
+   */
+  public void withTraceContext(String jobName, Runnable task) {
+    withTraceContext(holder, enricher, jobName, task);
+  }
+
+  /**
+   * Executes an XXL-Job task with generated trace context (static method for legacy usage).
    *
    * @param holder Trace context holder
    * @param enricher Log context enricher
