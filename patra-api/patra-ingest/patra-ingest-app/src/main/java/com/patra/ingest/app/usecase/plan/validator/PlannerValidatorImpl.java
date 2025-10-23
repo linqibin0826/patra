@@ -42,7 +42,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
       PlannerWindow window,
       long currentQueuedTasks) {
     log.debug(
-        "[INGEST][APP] Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
+        "Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
         triggerNorm.provenanceCode(),
         triggerNorm.operationCode(),
         window,
@@ -57,14 +57,14 @@ public class PlannerValidatorImpl implements PlannerValidator {
     // Step 3: ensure provenance capabilities align with the trigger.
     validateSourceCapabilities(triggerNorm, snapshot, window);
 
-    log.debug("[INGEST][APP] Plan assembly validation passed");
+    log.debug("Plan assembly validation passed");
   }
 
   /** Validate the ingestion window: presence, ordering, and duration boundaries. */
   private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
     // UPDATE operations may proceed without a window.
     if (triggerNorm.isUpdate()) {
-      log.debug("[INGEST][APP] Update operation detected, allowing null window");
+      log.debug("Update operation detected, allowing null window");
       return;
     }
 
@@ -105,7 +105,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
           PlanValidationException.Reason.WINDOW_TOO_SMALL);
     }
 
-    log.debug("[INGEST][APP] Window validation passed, duration={}min", windowDuration.toMinutes());
+    log.debug("Window validation passed, duration={}min", windowDuration.toMinutes());
   }
 
   /** Enforce queue backpressure: halt planning when queued tasks exceed the threshold. */
@@ -117,7 +117,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
               currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD),
           PlanValidationException.Reason.QUEUE_BACKPRESSURE);
     }
-    log.debug("[INGEST][APP] Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
+    log.debug("Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
   }
 
   /** Validate source capabilities along with offset/window completeness. */
@@ -125,7 +125,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
       PlanTriggerNorm triggerNorm, ProvenanceConfigSnapshot snapshot, PlannerWindow window) {
 
     if (snapshot == null) {
-      log.warn("[INGEST][APP] Provenance config snapshot is missing, skip capability validation");
+      log.warn("Provenance config snapshot is missing, skip capability validation");
       return;
     }
 
@@ -176,7 +176,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
     }
 
     log.debug(
-        "[INGEST][APP] Incremental capability validation passed, source={}",
+        "Incremental capability validation passed, source={}",
         triggerNorm.provenanceCode());
   }
 
@@ -187,13 +187,13 @@ public class PlannerValidatorImpl implements PlannerValidator {
     if (windowOffset != null && !StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
       // Warn when window size is missing or invalid.
       if (windowOffset.windowSizeValue() == null || windowOffset.windowSizeValue() <= 0) {
-        log.warn("[INGEST][APP] window size not configured or invalid, fallback to defaults");
+        log.warn("window size not configured or invalid, fallback to defaults");
       }
 
       // Warn when the maximum window span is invalid.
       if (windowOffset.maxWindowSpanSeconds() != null && windowOffset.maxWindowSpanSeconds() <= 0) {
         log.warn(
-            "[INGEST][APP] invalid max window span configuration: {}",
+            "invalid max window span configuration: {}",
             windowOffset.maxWindowSpanSeconds());
       }
     }

@@ -256,7 +256,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
         return Instant.parse(fromStr);
       }
     } catch (Exception e) {
-      log.warn("[INGEST][APP] Failed to parse windowFrom from windowSpecJson: {}", e.getMessage());
+      log.warn("Failed to parse windowFrom from windowSpecJson: {}", e.getMessage());
     }
     return null;
   }
@@ -307,7 +307,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
       String dateFormat = configSnapshot.windowOffset().offsetDateFormat();
       if (supportsDateOnly(dateFormat)) {
         log.debug(
-            "[INGEST][APP] Selected DATE strategy for provenance={}, offsetDateFormat={}",
+            "Selected DATE strategy for provenance={}, offsetDateFormat={}",
             norm.provenanceCode(),
             dateFormat);
         return SliceStrategy.DATE;
@@ -316,7 +316,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
 
     // Default to DATE strategy (safer and more compatible with most data sources)
     log.debug(
-        "[INGEST][APP] Selected DATE strategy (default) for provenance={}", norm.provenanceCode());
+        "Selected DATE strategy (default) for provenance={}", norm.provenanceCode());
     return SliceStrategy.DATE;
   }
 

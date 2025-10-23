@@ -60,7 +60,7 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
     if (entity.getId() == null) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] slice insert planId={} hash={}",
+            "slice insert planId={} hash={}",
             entity.getPlanId(),
             entity.getExprHash());
       }
@@ -68,7 +68,7 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
     } else {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] slice update id={} planId={} hash={}",
+            "slice update id={} planId={} hash={}",
             entity.getId(),
             entity.getPlanId(),
             entity.getExprHash());

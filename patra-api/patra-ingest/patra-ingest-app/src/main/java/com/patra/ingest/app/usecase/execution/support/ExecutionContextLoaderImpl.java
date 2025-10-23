@@ -106,7 +106,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     String exprSnapshotJson = slice.getExprSnapshotJson();
     if (exprSnapshotJson == null || exprSnapshotJson.isBlank()) {
       log.warn(
-          "[INGEST][APP] slice exprSnapshotJson is null, fallback to plan's original snapshot sliceId={}",
+          "slice exprSnapshotJson is null, fallback to plan's original snapshot sliceId={}",
           slice.getId());
       exprSnapshotJson = plan.getExprProtoSnapshotJson();
     }
@@ -142,7 +142,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
 
     // 8) Build ExecutionContext
     log.info(
-        "[INGEST][APP] execution context loaded taskId={} runId={} provenanceCode={} endpointName={}",
+        "execution context loaded taskId={} runId={} provenanceCode={} endpointName={}",
         taskId,
         runId,
         task.getProvenanceCode(),
@@ -183,7 +183,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
       Map<String, Object> map = objectMapper.convertValue(spec, Map.class);
       return WindowSpec.fromMap(map);
     } catch (Exception e) {
-      log.error("[INGEST][APP] failed to parse WindowSpec from JSON: {}", windowSpecJson, e);
+      log.error("failed to parse WindowSpec from JSON: {}", windowSpecJson, e);
       throw new IllegalStateException("WindowSpec parsing failed for JSON: " + windowSpecJson, e);
     }
   }
@@ -196,7 +196,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     try {
       return objectMapper.readTree(json);
     } catch (Exception e) {
-      log.error("[INGEST][APP] failed to parse json: {}", json, e);
+      log.error("failed to parse json: {}", json, e);
       throw new IllegalStateException("Failed to parse JSON", e);
     }
   }
@@ -209,7 +209,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     try {
       return objectMapper.readValue(json, ProvenanceConfigSnapshot.class);
     } catch (Exception e) {
-      log.error("[INGEST][APP] failed to parse config snapshot from json: {}", json, e);
+      log.error("failed to parse config snapshot from json: {}", json, e);
       throw new IllegalStateException("Failed to parse config snapshot", e);
     }
   }

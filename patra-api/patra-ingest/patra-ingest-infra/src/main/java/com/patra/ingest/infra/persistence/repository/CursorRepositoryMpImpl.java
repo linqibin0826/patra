@@ -48,7 +48,7 @@ public class CursorRepositoryMpImpl implements CursorRepository {
       mapper.insert(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] cursor insert provenance={} operation={} key={} scope={} ns={}",
+            "cursor insert provenance={} operation={} key={} scope={} ns={}",
             dto.getProvenanceCode(),
             dto.getOperationCode(),
             dto.getCursorKey(),
@@ -59,7 +59,7 @@ public class CursorRepositoryMpImpl implements CursorRepository {
       mapper.updateById(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] cursor update id={} key={} scope={} ns={} watermark={}",
+            "cursor update id={} key={} scope={} ns={} watermark={}",
             dto.getId(),
             dto.getCursorKey(),
             dto.getNamespaceScopeCode(),

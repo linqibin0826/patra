@@ -108,7 +108,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
     if (log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] Outbox batch insert size={} firstChannel={}",
+          "Outbox batch insert size={} firstChannel={}",
           messages.size(),
           messages.get(0).getChannel());
     }
@@ -137,7 +137,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
       mapper.insert(entity);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] Outbox insert channel={} dedupKey={} id={}",
+            "Outbox insert channel={} dedupKey={} id={}",
             message.getChannel(),
             message.getDedupKey(),
             entity.getId());
@@ -148,7 +148,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
       mapper.updateById(entity);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] Outbox update id={} channel={} version={} (non-state fields)",
+            "Outbox update id={} channel={} version={} (non-state fields)",
             entity.getId(),
             message.getChannel(),
             message.getVersion());
@@ -229,7 +229,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     boolean isSuccess = affectedRows == 1;
     if (isSuccess && log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] Outbox lease acquired id={} owner={} expireAt={}",
+          "Outbox lease acquired id={} owner={} expireAt={}",
           id,
           leaseOwner,
           leaseExpireAt);
@@ -257,7 +257,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
           "Failed to update Outbox state to PUBLISHED, id=" + id);
     }
     if (log.isDebugEnabled()) {
-      log.debug("[INGEST][INFRA] Outbox published id={} brokerMsgId={}", id, messageId);
+      log.debug("Outbox published id={} brokerMsgId={}", id, messageId);
     }
   }
 
@@ -292,7 +292,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
     if (log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] Outbox deferred id={} retryCount={} nextRetryAt={} errCode={}",
+          "Outbox deferred id={} retryCount={} nextRetryAt={} errCode={}",
           id,
           retryCount,
           nextRetryAt,
@@ -324,7 +324,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     if (log.isDebugEnabled()) {
       int errorMsgLength = errorMessage == null ? 0 : errorMessage.length();
       log.debug(
-          "[INGEST][INFRA] Outbox failed id={} retryCount={} errCode={} errMsgLen={}",
+          "Outbox failed id={} retryCount={} errCode={} errMsgLen={}",
           id,
           retryCount,
           errorCode,
@@ -352,7 +352,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] Outbox batch query channel={} dedupKeyCount={}",
+          "Outbox batch query channel={} dedupKeyCount={}",
           channel,
           dedupKeys.size());
     }
@@ -383,7 +383,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
 
     if (log.isDebugEnabled()) {
-      log.debug("[INGEST][INFRA] Outbox batch update size={}", messages.size());
+      log.debug("Outbox batch update size={}", messages.size());
     }
 
     for (OutboxMessage message : messages) {
@@ -420,7 +420,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] Outbox upsert batch size={} firstChannel={}",
+          "Outbox upsert batch size={} firstChannel={}",
           messages.size(),
           messages.get(0).getChannel());
     }
@@ -431,7 +431,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "[INGEST][INFRA] Outbox upsert batch completed size={} affectedRows={}",
+          "Outbox upsert batch completed size={} affectedRows={}",
           messages.size(),
           affectedRows);
     }

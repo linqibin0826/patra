@@ -40,7 +40,7 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
       String storageKey = generateStorageKey(context);
 
       log.info(
-          "[INGEST][INFRA] literature payload prepared runId={} batchNo={} provenance={} size={} bytes entries={}",
+          "literature payload prepared runId={} batchNo={} provenance={} size={} bytes entries={}",
           context.runId(),
           context.batchNo(),
           context.provenanceCode(),

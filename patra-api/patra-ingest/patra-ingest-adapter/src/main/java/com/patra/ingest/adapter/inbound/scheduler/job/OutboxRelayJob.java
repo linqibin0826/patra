@@ -72,7 +72,7 @@ public class OutboxRelayJob {
                   report.leaseMissed()));
 
       log.info(
-          "[INGEST][ADAPTER] Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
+          "Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
           channelDesc,
           report.fetched(),
           report.published(),
@@ -82,7 +82,7 @@ public class OutboxRelayJob {
     } catch (OutboxRelayExecutionException ex) {
       throw ex;
     } catch (Exception ex) {
-      log.error("[INGEST][ADAPTER] Outbox relay execution failed", ex);
+      log.error("Outbox relay execution failed", ex);
       XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
       throw new OutboxRelayExecutionException("Outbox relay execution failed", ex);
     }

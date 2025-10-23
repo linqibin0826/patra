@@ -44,7 +44,7 @@ public class PlanExpressionBuilder {
   private Expr buildBusinessExpression(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     log.debug(
-        "[INGEST][APP] Building plan business expression, operation={}", norm.operationCode());
+        "Building plan business expression, operation={}", norm.operationCode());
 
     // Start with internal constraints derived from the trigger norm and configuration
     List<Expr> constraints = buildBusinessConstraints(norm, configSnapshot);

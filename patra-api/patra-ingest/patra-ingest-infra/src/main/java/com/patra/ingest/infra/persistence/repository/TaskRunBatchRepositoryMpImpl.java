@@ -39,7 +39,7 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
       mapper.insert(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] task run batch insert runId={} batchNo={} status={}",
+            "task run batch insert runId={} batchNo={} status={}",
             dto.getRunId(),
             dto.getBatchNo(),
             dto.getStatusCode());
@@ -48,7 +48,7 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
       mapper.updateById(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] task run batch update id={} runId={} batchNo={} status={}",
+            "task run batch update id={} runId={} batchNo={} status={}",
             dto.getId(),
             dto.getRunId(),
             dto.getBatchNo(),
@@ -70,7 +70,7 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
         mapper.insert(dto);
         if (log.isDebugEnabled()) {
           log.debug(
-              "[INGEST][INFRA] task run batch insert runId={} size={} status={}",
+              "task run batch insert runId={} size={} status={}",
               dto.getRunId(),
               dto.getRecordCount(),
               dto.getStatusCode());
@@ -79,7 +79,7 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
         mapper.updateById(dto);
         if (log.isDebugEnabled()) {
           log.debug(
-              "[INGEST][INFRA] task run batch update id={} runId={} size={} status={}",
+              "task run batch update id={} runId={} size={} status={}",
               dto.getId(),
               dto.getRunId(),
               dto.getRecordCount(),

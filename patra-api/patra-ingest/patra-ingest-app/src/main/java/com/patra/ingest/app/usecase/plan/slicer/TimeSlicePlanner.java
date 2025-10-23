@@ -59,7 +59,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         || context.window().from() == null
         || context.window().to() == null) {
       log.warn(
-          "[INGEST][APP] Skip time slicing because planning window is missing: norm={}, window=.",
+          "Skip time slicing because planning window is missing: norm={}, window=.",
           context.norm(),
           context.window());
       return result;
@@ -70,7 +70,7 @@ public class TimeSlicePlanner implements SlicePlanner {
     String timeField = resolveTimeField(context.configSnapshot());
     if (timeField == null) {
       log.error(
-          "[INGEST][APP] Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
+          "Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
           context.norm().provenanceCode(),
           context.norm().operationCode());
       return result;
@@ -80,7 +80,7 @@ public class TimeSlicePlanner implements SlicePlanner {
     Instant to = context.window().to();
     if (!from.isBefore(to)) {
       log.warn(
-          "[INGEST][APP] Skip time slicing because window is not forward, from={} to=.", from, to);
+          "Skip time slicing because window is not forward, from={} to=.", from, to);
       return result;
     }
 
@@ -91,7 +91,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         step = Duration.parse(context.norm().step().trim());
       } catch (Exception e) {
         log.warn(
-            "[INGEST][APP] Invalid step format, fallback to default, stepString=.",
+            "Invalid step format, fallback to default, stepString=.",
             context.norm().step(),
             e);
       }
@@ -110,7 +110,7 @@ public class TimeSlicePlanner implements SlicePlanner {
       // Prevent infinite loop: ensure cursor can advance (upper must be after cursor)
       if (!cursor.isBefore(upper)) {
         log.warn(
-            "[INGEST][APP] Stopping time slicing: cursor cannot advance, cursor={}, upper={}, to={}",
+            "Stopping time slicing: cursor cannot advance, cursor={}, upper={}, to={}",
             cursor,
             upper,
             to);
@@ -129,7 +129,7 @@ public class TimeSlicePlanner implements SlicePlanner {
       result.add(new SlicePlan(index, signatureHash, specJson, combined));
 
       log.debug(
-          "[INGEST][APP] Time slice prepared, sliceNo={}, from={}, to={}, hash=",
+          "Time slice prepared, sliceNo={}, from={}, to={}, hash=",
           index,
           cursor,
           upper,
@@ -211,7 +211,7 @@ public class TimeSlicePlanner implements SlicePlanner {
       return JsonNormalizer.normalizeDefault(root);
     } catch (JsonNormalizer.JsonNormalizationException ex) {
       log.error(
-          "[INGEST][APP] Failed to normalize slice spec, fallback to minimal payload, from={}, to=",
+          "Failed to normalize slice spec, fallback to minimal payload, from={}, to=",
           from,
           to,
           ex);

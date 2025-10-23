@@ -95,7 +95,7 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
     Long runId = savedRun.getId();
 
     log.info(
-        "[INGEST][APP] execution session created taskId={} runId={} attemptNo={} owner={}",
+        "execution session created taskId={} runId={} attemptNo={} owner={}",
         taskId,
         runId,
         newAttemptNo,

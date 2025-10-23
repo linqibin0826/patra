@@ -54,13 +54,13 @@ public class PlanRepositoryMpImpl implements PlanRepository {
     PlanDO entity = planConverter.toEntity(plan);
     if (entity.getId() == null) {
       if (log.isDebugEnabled()) {
-        log.debug("[INGEST][INFRA] plan insert planKey={}", entity.getPlanKey());
+        log.debug("plan insert planKey={}", entity.getPlanKey());
       }
       planMapper.insert(entity);
     } else {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] plan update id={} planKey={}", entity.getId(), entity.getPlanKey());
+            "plan update id={} planKey={}", entity.getId(), entity.getPlanKey());
       }
       planMapper.updateById(entity);
     }

@@ -57,7 +57,7 @@ public class IngestStreamConsumers {
       try {
         // DEBUG: print all headers for diagnostics
         if (log.isDebugEnabled()) {
-          log.debug("[INGEST][ADAPTER] Received headers: {}", message.getHeaders());
+          log.debug("Received headers: {}", message.getHeaders());
         }
 
         // Read RocketMQ-related headers
@@ -68,7 +68,7 @@ public class IngestStreamConsumers {
         String partitionKey = (String) message.getHeaders().get("partitionKey");
 
         log.info(
-            "[INGEST][ADAPTER] consume topic={} KEYS={} TAGS={} msgId={} partitionKey={}",
+            "consume topic={} KEYS={} TAGS={} msgId={} partitionKey={}",
             topic,
             keys,
             tags,
@@ -82,7 +82,7 @@ public class IngestStreamConsumers {
         taskExecutionUseCase.execute(command);
 
       } catch (Exception e) {
-        log.error("[INGEST][ADAPTER] failed to consume message, will retry", e);
+        log.error("failed to consume message, will retry", e);
         // TODO Throw to trigger MQ retry
         //        throw new RuntimeException("Message consumption failed", e);
       }

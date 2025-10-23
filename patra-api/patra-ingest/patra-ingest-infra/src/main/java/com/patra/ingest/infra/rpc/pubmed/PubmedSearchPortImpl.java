@@ -48,7 +48,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
       ESearchResponse response =
           config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
       if (response == null || response.result() == null) {
-        log.warn("[INGEST][INFRA] pubmed esearch metadata returned null termHash={}", termHash);
+        log.warn("pubmed esearch metadata returned null termHash={}", termHash);
         return PlanMetadata.empty();
       }
 
@@ -61,7 +61,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
       boolean hasQueryKey = StringUtils.hasText(queryKey);
 
       log.info(
-          "[INGEST][INFRA] pubmed esearch metadata termHash={} count={} webEnv={} queryKey={}",
+          "pubmed esearch metadata termHash={} count={} webEnv={} queryKey={}",
           termHash,
           count,
           hasWebEnv ? "present" : "absent",
@@ -69,7 +69,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
 
       if (hasWebEnv && !hasQueryKey) {
         log.warn(
-            "[INGEST][INFRA] pubmed esearch returned WebEnv without QueryKey termHash={} count={}",
+            "pubmed esearch returned WebEnv without QueryKey termHash={} count={}",
             termHash,
             count);
       }
@@ -77,11 +77,11 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
       return new PlanMetadata(count, webEnv, queryKey);
     } catch (ProvenanceClientException ex) {
       String msg = String.format("PubMed metadata lookup failed: %s", ex.getMessage());
-      log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(query), ex);
+      log.error("{} termHash={}", msg, safeHash(query), ex);
       throw new BatchPlanningException(msg, ex);
     } catch (Exception ex) {
       String msg = String.format("PubMed metadata lookup unexpected error: %s", ex.getMessage());
-      log.error("[INGEST][INFRA] {} termHash={}", msg, safeHash(query), ex);
+      log.error("{} termHash={}", msg, safeHash(query), ex);
       throw new BatchPlanningException(msg, ex);
     }
   }
@@ -93,7 +93,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
     String baseUrl = snapshot.provenance().baseUrlDefault();
     if (!StringUtils.hasText(baseUrl)) {
       log.debug(
-          "[INGEST][INFRA] provenance snapshot missing baseUrl, fallback to default config. provenanceId={}",
+          "provenance snapshot missing baseUrl, fallback to default config. provenanceId={}",
           snapshot.provenance().id());
       return null;
     }
@@ -110,7 +110,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
           baseUrl.trim(), http, pagination, windowOffset, batching, retry, rateLimit);
     } catch (IllegalArgumentException ex) {
       log.warn(
-          "[INGEST][INFRA] failed to build provenance config override, fallback to default config. provenanceId={}",
+          "failed to build provenance config override, fallback to default config. provenanceId={}",
           snapshot.provenance().id(),
           ex);
       return null;
@@ -219,7 +219,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
       return headers;
     } catch (Exception ex) {
       log.warn(
-          "[INGEST][INFRA] Failed to parse provenance default headers JSON, ignoring overrides. length={}",
+          "Failed to parse provenance default headers JSON, ignoring overrides. length={}",
           headersJson.length(),
           ex);
       return Map.of();

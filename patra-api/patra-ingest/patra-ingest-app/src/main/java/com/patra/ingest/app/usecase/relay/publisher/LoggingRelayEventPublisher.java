@@ -21,6 +21,6 @@ public class LoggingRelayEventPublisher implements RelayEventPublisher {
       return;
     }
     // Emit event snapshots only at DEBUG level to avoid production noise
-    events.forEach(event -> log.debug("[INGEST][APP] relay-event: {}", event));
+    events.forEach(event -> log.debug("relay-event: {}", event));
   }
 }

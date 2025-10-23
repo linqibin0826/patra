@@ -43,7 +43,7 @@ public class IdempotencyCheckerImpl implements IdempotencyChecker {
     boolean succeeded = taskRunRepository.hasSucceededRun(taskId);
     if (succeeded) {
       log.info(
-          "[INGEST][APP] task already succeeded, skip execution taskId={} idemKey={}",
+          "task already succeeded, skip execution taskId={} idemKey={}",
           taskId,
           idempotentKey);
     }

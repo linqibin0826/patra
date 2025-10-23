@@ -51,7 +51,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
         taskRepository.tryAcquireLease(taskId, owner, now, ttlSeconds, task.getIdempotentKey());
 
     if (acquired) {
-      log.info("[INGEST][APP] lease acquired taskId={} owner={}", taskId, owner);
+      log.info("lease acquired taskId={} owner={}", taskId, owner);
     }
     return acquired;
   }
@@ -75,7 +75,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
     // Call domain object's release method and then save
     task.releaseLease();
     taskRepository.save(task);
-    log.info("[INGEST][APP] lease released taskId={}", taskId);
+    log.info("lease released taskId={}", taskId);
   }
 
   /** Validates a lease (owner still current node). */
@@ -84,7 +84,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
     TaskAggregate task = taskRepository.findById(taskId).orElse(null);
 
     if (task == null) {
-      log.warn("[INGEST][APP] lease validation failed: task not found taskId={}", taskId);
+      log.warn("lease validation failed: task not found taskId={}", taskId);
       return false;
     }
 
@@ -92,7 +92,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
 
     if (!valid) {
       log.warn(
-          "[INGEST][APP] lease validation failed taskId={} expectedOwner={} actualOwner={}",
+          "lease validation failed taskId={} expectedOwner={} actualOwner={}",
           taskId,
           owner,
           task.getLeaseInfo().owner());

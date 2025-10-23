@@ -56,7 +56,7 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     if (entity.getId() == null) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] task insert planId={} idemKey={}",
+            "task insert planId={} idemKey={}",
             entity.getPlanId(),
             entity.getIdempotentKey());
       }
@@ -65,7 +65,7 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     } else {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] task update id={} planId={} status={}",
+            "task update id={} planId={} status={}",
             entity.getId(),
             entity.getPlanId(),
             entity.getStatusCode());
@@ -164,10 +164,10 @@ public class TaskRepositoryMpImpl implements TaskRepository {
       Long taskId, String owner, Instant now, int ttlSeconds, String idempotentKey) {
     int affected = mapper.tryAcquireLease(taskId, owner, now, ttlSeconds, idempotentKey);
     if (affected > 0) {
-      log.info("[INGEST][INFRA] task lease acquired taskId={} owner={}", taskId, owner);
+      log.info("task lease acquired taskId={} owner={}", taskId, owner);
     } else {
       if (log.isDebugEnabled()) {
-        log.debug("[INGEST][INFRA] task lease miss taskId={} owner={}", taskId, owner);
+        log.debug("task lease miss taskId={} owner={}", taskId, owner);
       }
     }
     return affected > 0;
@@ -186,9 +186,9 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   public boolean markRunningWithLease(Long taskId, String owner, Instant now, int ttlSeconds) {
     int affected = mapper.markRunningWithLease(taskId, owner, now, ttlSeconds);
     if (affected > 0) {
-      log.info("[INGEST][INFRA] task marked RUNNING taskId={} owner={}", taskId, owner);
+      log.info("task marked RUNNING taskId={} owner={}", taskId, owner);
     } else {
-      log.warn("[INGEST][INFRA] task lease lost on markRunning taskId={} owner={}", taskId, owner);
+      log.warn("task lease lost on markRunning taskId={} owner={}", taskId, owner);
     }
     return affected > 0;
   }
@@ -207,10 +207,10 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     int affected = mapper.renewLease(taskId, owner, now, ttlSeconds);
     if (affected > 0) {
       if (log.isDebugEnabled()) {
-        log.debug("[INGEST][INFRA] task lease renewed taskId={} owner={}", taskId, owner);
+        log.debug("task lease renewed taskId={} owner={}", taskId, owner);
       }
     } else {
-      log.warn("[INGEST][INFRA] task lease lost on renew taskId={} owner={}", taskId, owner);
+      log.warn("task lease lost on renew taskId={} owner={}", taskId, owner);
     }
     return affected > 0;
   }
@@ -233,14 +233,14 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     if (affected > 0) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] batch lease renewed count={} owner={} requestedCount={}",
+            "batch lease renewed count={} owner={} requestedCount={}",
             affected,
             owner,
             taskIds.size());
       }
     } else {
       log.warn(
-          "[INGEST][INFRA] batch lease renewal failed owner={} requestedCount={}",
+          "batch lease renewal failed owner={} requestedCount={}",
           owner,
           taskIds.size());
     }

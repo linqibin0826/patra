@@ -72,7 +72,7 @@ public class DateSlicePlanner implements SlicePlanner {
         || context.window().from() == null
         || context.window().to() == null) {
       log.warn(
-          "[INGEST][APP] Skip date slicing because planning window is missing: norm={}, window={}",
+          "Skip date slicing because planning window is missing: norm={}, window={}",
           context.norm(),
           context.window());
       return result;
@@ -83,7 +83,7 @@ public class DateSlicePlanner implements SlicePlanner {
     String timeField = resolveTimeField(context.configSnapshot());
     if (timeField == null) {
       log.error(
-          "[INGEST][APP] Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
+          "Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
           context.norm().provenanceCode(),
           context.norm().operationCode());
       return result;
@@ -93,7 +93,7 @@ public class DateSlicePlanner implements SlicePlanner {
     Instant to = context.window().to();
     if (!from.isBefore(to)) {
       log.warn(
-          "[INGEST][APP] Skip date slicing because window is not forward, from={} to={}", from, to);
+          "Skip date slicing because window is not forward, from={} to={}", from, to);
       return result;
     }
 
@@ -105,13 +105,13 @@ public class DateSlicePlanner implements SlicePlanner {
         // Validate: DATE strategy requires step >= 1 day to prevent infinite loop
         if (step.toDays() < 1) {
           log.warn(
-              "[INGEST][APP] Step too small for DATE strategy (< 1 day), fallback to default, stepString={}",
+              "Step too small for DATE strategy (< 1 day), fallback to default, stepString={}",
               context.norm().step());
           step = DEFAULT_STEP;
         }
       } catch (Exception e) {
         log.warn(
-            "[INGEST][APP] Invalid step format, fallback to default, stepString={}",
+            "Invalid step format, fallback to default, stepString={}",
             context.norm().step(),
             e);
       }
@@ -133,7 +133,7 @@ public class DateSlicePlanner implements SlicePlanner {
       // Prevent infinite loop: ensure cursor can advance (upper must be after cursor)
       if (!cursor.isBefore(upper)) {
         log.warn(
-            "[INGEST][APP] Stopping date slicing: cursor cannot advance, cursor={}, upper={}, endDate={}",
+            "Stopping date slicing: cursor cannot advance, cursor={}, upper={}, endDate={}",
             cursor,
             upper,
             endDate);
@@ -157,7 +157,7 @@ public class DateSlicePlanner implements SlicePlanner {
       result.add(new SlicePlan(index, signatureHash, specJson, combined));
 
       log.debug(
-          "[INGEST][APP] Date slice prepared, sliceNo={}, from={}, to={}, hash={}",
+          "Date slice prepared, sliceNo={}, from={}, to={}, hash={}",
           index,
           cursor,
           upper,
@@ -242,7 +242,7 @@ public class DateSlicePlanner implements SlicePlanner {
       return JsonNormalizer.normalizeDefault(root);
     } catch (JsonNormalizer.JsonNormalizationException ex) {
       log.error(
-          "[INGEST][APP] Failed to normalize slice spec, fallback to minimal payload, from={}, to={}",
+          "Failed to normalize slice spec, fallback to minimal payload, from={}, to={}",
           from,
           to,
           ex);

@@ -83,7 +83,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
     String queryHash = safeHash(batch.query());
 
     log.info(
-        "[INGEST][APP] pubmed batch start runId={} batchNo={} provenance={} queryHash={}",
+        "pubmed batch start runId={} batchNo={} provenance={} queryHash={}",
         runId,
         batchNo,
         provenance,
@@ -96,7 +96,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
       List<String> pmids = executeSearch(batch, config);
       if (CollectionUtils.isEmpty(pmids)) {
         log.info(
-            "[INGEST][APP] pubmed batch empty result runId={} batchNo={} queryHash={}",
+            "pubmed batch empty result runId={} batchNo={} queryHash={}",
             runId,
             batchNo,
             queryHash);
@@ -117,7 +117,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
       LiteraturePublisherPort.PublishResult publishResult = publish(literature, context, batchNo);
 
       log.info(
-          "[INGEST][APP] pubmed batch done runId={} batchNo={} fetchedCount={} storageKey={}",
+          "pubmed batch done runId={} batchNo={} fetchedCount={} storageKey={}",
           runId,
           batchNo,
           publishResult.publishedCount(),
@@ -128,7 +128,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
 
     } catch (Exception ex) {
       log.error(
-          "[INGEST][APP] pubmed batch failed runId={} batchNo={} provenance={} queryHash={}",
+          "pubmed batch failed runId={} batchNo={} provenance={} queryHash={}",
           runId,
           batchNo,
           provenance,
@@ -175,11 +175,11 @@ public class PubmedBatchExecutor implements BatchExecutor {
    */
   private List<PubmedArticle> fetchArticles(List<String> pmids, ProvenanceConfig config) {
     if (pmids.size() <= EPOST_THRESHOLD) {
-      log.debug("[INGEST][APP] Using direct EFetch for {} PMIDs", pmids.size());
+      log.debug("Using direct EFetch for {} PMIDs", pmids.size());
       return fetchArticlesDirectly(pmids, config);
     } else {
       log.info(
-          "[INGEST][APP] Using EPost+WebEnv for {} PMIDs (threshold: {})",
+          "Using EPost+WebEnv for {} PMIDs (threshold: {})",
           pmids.size(),
           EPOST_THRESHOLD);
       return fetchArticlesViaEPost(pmids, config);
@@ -230,7 +230,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
 
     if (!postResp.isValid()) {
       log.error(
-          "[INGEST][APP] EPost returned invalid WebEnv/QueryKey: webEnv={}, queryKey={}",
+          "EPost returned invalid WebEnv/QueryKey: webEnv={}, queryKey={}",
           postResp.webEnv(),
           postResp.queryKey());
       throw new RuntimeException(
@@ -238,7 +238,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
     }
 
     log.debug(
-        "[INGEST][APP] EPost success: WebEnv={}, QueryKey={}, count={}",
+        "EPost success: WebEnv={}, QueryKey={}, count={}",
         postResp.getTruncatedWebEnv(),
         postResp.queryKey(),
         postResp.count());
@@ -312,7 +312,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
           toRateLimitConfig(snapshot.rateLimit()));
     } catch (IllegalArgumentException ex) {
       log.warn(
-          "[INGEST][APP] failed to build provenance override provenanceId={} message={}",
+          "failed to build provenance override provenanceId={} message={}",
           snapshot.provenance().id(),
           ex.getMessage());
       return null;

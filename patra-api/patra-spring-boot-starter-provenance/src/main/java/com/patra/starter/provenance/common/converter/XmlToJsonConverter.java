@@ -55,7 +55,7 @@ public class XmlToJsonConverter {
       return jsonMapper.treeToValue(jsonNode, responseClass);
     } catch (Exception ex) {
       String preview = xml.substring(0, Math.min(LOG_PAYLOAD_PREVIEW_LENGTH, xml.length()));
-      log.error("[PROVENANCE][INTERNAL] Failed to convert XML to JSON: preview={}", preview, ex);
+      log.error("Failed to convert XML to JSON: preview={}", preview, ex);
       throw new ProvenanceClientException(
           "UNKNOWN", "convert", null, null, preview, "Failed to convert XML to JSON", ex);
     }

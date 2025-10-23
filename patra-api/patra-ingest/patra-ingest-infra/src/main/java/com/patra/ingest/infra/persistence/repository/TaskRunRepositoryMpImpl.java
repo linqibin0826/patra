@@ -56,7 +56,7 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
       mapper.insert(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] task run insert taskId={} attemptNo={}",
+            "task run insert taskId={} attemptNo={}",
             dto.getTaskId(),
             dto.getAttemptNo());
       }
@@ -64,7 +64,7 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
       mapper.updateById(dto);
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][INFRA] task run update id={} attemptNo={} status={}",
+            "task run update id={} attemptNo={} status={}",
             dto.getId(),
             dto.getAttemptNo(),
             dto.getStatusCode());
@@ -134,7 +134,7 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   public boolean updateCheckpointAndHeartbeat(Long runId, String checkpointJson, Instant now) {
     int updated = mapper.updateCheckpointAndHeartbeat(runId, checkpointJson, now);
     if (updated == 0) {
-      log.warn("[INGEST][INFRA] task run checkpoint update missed runId={}", runId);
+      log.warn("task run checkpoint update missed runId={}", runId);
     }
     return updated > 0;
   }
@@ -143,7 +143,7 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   public boolean touchHeartbeat(Long runId, Instant now) {
     int updated = mapper.touchHeartbeat(runId, now);
     if (updated == 0) {
-      log.warn("[INGEST][INFRA] task run heartbeat touch missed runId={}", runId);
+      log.warn("task run heartbeat touch missed runId={}", runId);
     }
     return updated > 0;
   }
@@ -152,7 +152,7 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   public boolean markFailed(Long runId, String errorMessage, Instant now) {
     int updated = mapper.markFailed(runId, errorMessage, now);
     if (updated == 0) {
-      log.warn("[INGEST][INFRA] task run markFailed missed runId={}", runId);
+      log.warn("task run markFailed missed runId={}", runId);
     }
     return updated > 0;
   }

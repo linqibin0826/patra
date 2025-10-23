@@ -57,7 +57,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
       var channelKey =
           instruction.channel() != null ? instruction.channel() : null; // null means all channels
       String channelDesc = channelKey != null ? channelKey.channel() : "ALL_CHANNELS";
-      log.info("[INGEST][APP] Outbox relay disabled, skip channel={}", channelDesc);
+      log.info("Outbox relay disabled, skip channel={}", channelDesc);
       return RelayReport.empty(channelKey);
     }
     // Record start timestamp to compute latency metrics
@@ -67,7 +67,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
     if (log.isDebugEnabled()) {
       String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
       log.debug(
-          "[INGEST][APP] relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
+          "relay plan built channel={} batchSize={} leaseOwner={} leaseExpireAt={}",
           channelDesc,
           plan.batchSize(),
           plan.leaseOwner(),
@@ -80,7 +80,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
     long elapsed = System.currentTimeMillis() - start;
     String channelDesc = result.channel() != null ? result.channel().channel() : "ALL_CHANNELS";
     log.info(
-        "[INGEST][APP] relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
+        "relay completed channel={} fetched={} published={} retried={} failed={} leaseMissed={} costMs={}",
         channelDesc,
         result.fetched(),
         result.published(),

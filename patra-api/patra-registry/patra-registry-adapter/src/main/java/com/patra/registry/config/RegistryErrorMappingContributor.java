@@ -40,7 +40,7 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {
     log.debug(
-        "[REGISTRY][ADAPTER] map exception start exception={} mapping=TRY",
+        "map exception start exception={} mapping=TRY",
         exception.getClass().getSimpleName());
 
     // Domain validation exceptions
@@ -68,7 +68,7 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
     }
 
     log.debug(
-        "[REGISTRY][ADAPTER] map exception miss exception={}",
+        "map exception miss exception={}",
         exception.getClass().getSimpleName());
     return Optional.empty();
   }

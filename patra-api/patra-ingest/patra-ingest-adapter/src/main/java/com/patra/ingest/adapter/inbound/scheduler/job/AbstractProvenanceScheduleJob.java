@@ -136,7 +136,7 @@ public abstract class AbstractProvenanceScheduleJob {
     try {
       return Priority.valueOf(normalized);
     } catch (IllegalArgumentException ex) {
-      log.warn("[INGEST][ADAPTER] Ignoring illegal priority value: {}", priority);
+      log.warn("Ignoring illegal priority value: {}", priority);
       return null;
     }
   }
@@ -173,7 +173,7 @@ public abstract class AbstractProvenanceScheduleJob {
 
     try {
       log.info(
-          "[INGEST][ADAPTER] Starting scheduled job, provenance={}, operation={}, rawParam={}",
+          "Starting scheduled job, provenance={}, operation={}, rawParam={}",
           getProvenanceCode().getCode(),
           getOperationCode(),
           paramStr);
@@ -183,7 +183,7 @@ public abstract class AbstractProvenanceScheduleJob {
 
       long duration = System.currentTimeMillis() - startTime;
       log.info(
-          "[INGEST][ADAPTER] Scheduled job completed, provenance={}, operation={}, durationMs={}, planId={}, taskCount={}",
+          "Scheduled job completed, provenance={}, operation={}, durationMs={}, planId={}, taskCount={}",
           getProvenanceCode().getCode(),
           getOperationCode(),
           duration,
@@ -198,7 +198,7 @@ public abstract class AbstractProvenanceScheduleJob {
     } catch (Exception e) {
       long duration = System.currentTimeMillis() - startTime;
       log.error(
-          "[INGEST][ADAPTER] Scheduled job failed, provenance={}, operation={}, durationMs={}, error={}",
+          "Scheduled job failed, provenance={}, operation={}, durationMs={}, error={}",
           getProvenanceCode().getCode(),
           getOperationCode(),
           duration,

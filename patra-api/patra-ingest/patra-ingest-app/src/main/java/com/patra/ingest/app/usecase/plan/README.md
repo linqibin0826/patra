@@ -393,13 +393,13 @@ if (queuedTasks > MAX_QUEUED_TASKS) {
 ### Logging
 
 ```java
-log.info("[INGEST][APP] plan-ingest start, provenance={}, op={}",
+log.info("plan-ingest start, provenance={}, op={}",
     provenanceCode, operationCode);
 
-log.debug("[INGEST][APP] plan-ingest window resolved=[{}, {})",
+log.debug("plan-ingest window resolved=[{}, {})",
     window.from(), window.to());
 
-log.info("[INGEST][APP] plan-ingest success, planId={}, taskCount={}",
+log.info("plan-ingest success, planId={}, taskCount={}",
     planId, taskCount);
 ```
 

@@ -83,7 +83,7 @@ public class OutboxRelayExecutor {
       if (log.isDebugEnabled()) {
         String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
         log.debug(
-            "[INGEST][APP] relay executor no-pending channel={} triggeredAt={}",
+            "relay executor no-pending channel={} triggeredAt={}",
             channelDesc,
             plan.triggeredAt());
       }
@@ -279,7 +279,7 @@ public class OutboxRelayExecutor {
       leaseMissed++;
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][APP] relay lease-missed messageId={} channel={} existingLeaseOwner={}",
+            "relay lease-missed messageId={} channel={} existingLeaseOwner={}",
             message.getId(),
             message.getChannel(),
             message.getLeaseOwner());
@@ -298,7 +298,7 @@ public class OutboxRelayExecutor {
         OutboxMessage message, OutboxPublisherPort.PublishResult publishResult) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "[INGEST][APP] relay published messageId={} channel={} externalMsgId={}",
+            "relay published messageId={} channel={} externalMsgId={}",
             message.getId(),
             message.getChannel(),
             publishResult.messageId());
@@ -322,7 +322,7 @@ public class OutboxRelayExecutor {
         Exception exception) {
       failed++;
       log.error(
-          "[INGEST][APP] Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
+          "Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
           message.getId(),
           message.getChannel(),
           nextRetry,
@@ -348,7 +348,7 @@ public class OutboxRelayExecutor {
         Exception exception) {
       retried++;
       log.warn(
-          "[INGEST][APP] Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
+          "Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
           message.getId(),
           message.getChannel(),
           nextRetry,

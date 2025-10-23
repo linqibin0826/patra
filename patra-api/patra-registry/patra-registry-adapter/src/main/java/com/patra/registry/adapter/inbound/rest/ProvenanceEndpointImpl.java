@@ -41,7 +41,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public List<ProvenanceResp> listProvenances() {
-    log.debug("[REGISTRY][ADAPTER] list provenances");
+    log.debug("list provenances");
     return converter.toResp(appService.listProvenances());
   }
 
@@ -54,7 +54,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public ProvenanceResp getProvenance(ProvenanceCode code) {
-    log.debug("[REGISTRY][ADAPTER] get provenance code={}", code);
+    log.debug("get provenance code={}", code);
     Optional<ProvenanceQuery> result = appService.findProvenance(code);
     return result
         .map(converter::toResp)
@@ -74,7 +74,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   public ProvenanceConfigResp getConfiguration(
       ProvenanceCode code, String operationType, Instant at) {
     log.debug(
-        "[REGISTRY][ADAPTER] get provenance config code={} operationType={} at={}",
+        "get provenance config code={} operationType={} at={}",
         code,
         operationType,
         at);
