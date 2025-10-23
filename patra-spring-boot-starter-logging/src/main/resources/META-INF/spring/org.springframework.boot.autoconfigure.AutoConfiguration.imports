@@ -21,3 +21,10 @@ com.patra.starter.logging.autoconfigure.DbFailureLoggingAutoConfiguration
 # Phase 6: Security Event Logging (US4 - T071-T072)
 # Conditionally activated when Spring Security is on classpath
 com.patra.starter.logging.autoconfigure.SecurityEventLoggingAutoConfiguration
+
+# Phase 6: Message Queue Trace Context Support
+# Conditionally activated when XXL-Job is on classpath
+com.patra.starter.logging.autoconfigure.XxlJobTraceContextAutoConfiguration
+
+# Conditionally activated when RocketMQ is on classpath
+com.patra.starter.logging.autoconfigure.RocketMQTraceContextAutoConfiguration

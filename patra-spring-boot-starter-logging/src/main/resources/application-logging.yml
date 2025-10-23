@@ -35,3 +35,11 @@ patra:
     # Phase 2: Dynamic log level management via Nacos
     dynamic:
       enabled: false
+
+    # Phase 6: XXL-Job trace context support
+    xxljob:
+      enabled: true
+
+    # Phase 6: RocketMQ trace context support
+    rocketmq:
+      enabled: true
