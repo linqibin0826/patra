@@ -37,6 +37,10 @@
         <archunit.version>1.3.0</archunit.version>
         <spotbugs.plugin.version>4.8.6.4</spotbugs.plugin.version>
         <jacoco.version>0.8.12</jacoco.version>
+
+        <!-- Testing -->
+        <junit.version>5.10.2</junit.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -101,6 +105,15 @@
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bom</artifactId>
                 <version>${resilience4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Testcontainers BOM -->
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -209,7 +222,7 @@
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
-                <version>5.10.2</version>
+                <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
 

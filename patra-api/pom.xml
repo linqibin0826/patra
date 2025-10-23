@@ -6,6 +6,8 @@
     <artifactId>Papertrace</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <name>Papertrace</name>
+    <description>Medical Literature Data Platform - Aggregator POM for all modules</description>
 
     <modules>
         <module>patra-parent</module>
