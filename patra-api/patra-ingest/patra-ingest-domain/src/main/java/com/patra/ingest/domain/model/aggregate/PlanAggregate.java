@@ -198,6 +198,11 @@ public class PlanAggregate extends AggregateRoot<Long> {
     return aggregate;
   }
 
+  /**
+   * Transitions the plan from DRAFT to SLICING status.
+   *
+   * @throws IllegalStateException if plan is not in DRAFT status
+   */
   public void startSlicing() {
     if (this.status != PlanStatus.DRAFT) {
       throw new IllegalStateException("Invalid plan status; slicing cannot start.");
@@ -205,22 +210,22 @@ public class PlanAggregate extends AggregateRoot<Long> {
     this.status = PlanStatus.SLICING;
   }
 
-  /** Mark the plan as ready after all slices are generated. */
+  /** Marks the plan as ready after all slices are generated. */
   public void markReady() {
     this.status = PlanStatus.READY;
   }
 
-  /** Mark the plan as partially successful (some slices are still retrying). */
+  /** Marks the plan as partially successful (some slices are still retrying). */
   public void markPartial() {
     this.status = PlanStatus.PARTIAL;
   }
 
-  /** Mark the plan as failed, indicating termination or the need for compensation. */
+  /** Marks the plan as failed, indicating termination or need for compensation. */
   public void markFailed() {
     this.status = PlanStatus.FAILED;
   }
 
-  /** Mark the plan as completed after all tasks finish successfully. */
+  /** Marks the plan as completed after all tasks finish successfully. */
   public void markCompleted() {
     this.status = PlanStatus.COMPLETED;
   }

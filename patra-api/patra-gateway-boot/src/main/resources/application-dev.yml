@@ -1,8 +1,18 @@
+# ============================================================================
+# Papertrace API Gateway - Development Environment Configuration
+# ============================================================================
+# Enhanced logging for development and debugging purposes.
+# ============================================================================
+
 spring:
   config:
     activate:
       on-profile: dev
 
+# ----------------------------------------------------------------------------
+# Development Logging Configuration
+# ----------------------------------------------------------------------------
+# DEBUG level for detailed gateway routing and load balancing information
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG

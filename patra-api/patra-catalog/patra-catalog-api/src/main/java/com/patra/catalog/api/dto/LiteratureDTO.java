@@ -27,29 +27,29 @@ import lombok.Builder;
  */
 @Builder
 public record LiteratureDTO(
-    /** Literature title */
+    /** The primary title of the literature article */
     @NotBlank String title,
 
-    /** Abstract text */
+    /** The abstract text summarizing the literature content */
     String abstractText,
 
-    /** Author list */
+    /** List of authors who contributed to this literature */
     @Valid List<AuthorDTO> authors,
 
-    /** Journal information */
+    /** Journal metadata where this literature was published */
     @Valid JournalDTO journal,
 
-    /** Identifier map (pmid, doi, pmc, etc.) */
+    /** Map of external identifiers (pmid, doi, pmc, etc.) */
     Map<String, String> identifiers,
 
-    /** Publication date */
+    /** The date when this literature was published */
     LocalDate publicationDate,
 
-    /** Keywords or MeSH terms */
+    /** Keywords or MeSH terms associated with this literature */
     List<String> keywords,
 
-    /** Language code (ISO 639-1) */
+    /** Language code (ISO 639-1) of the literature content */
     String language,
 
-    /** Publication types */
+    /** Publication type classifications (e.g., Journal Article, Review) */
     List<String> publicationTypes) {}

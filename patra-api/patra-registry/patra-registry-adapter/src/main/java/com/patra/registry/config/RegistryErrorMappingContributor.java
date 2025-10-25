@@ -39,17 +39,17 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
    */
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {
-    log.debug("map exception start exception={} mapping=TRY", exception.getClass().getSimpleName());
+    String exceptionType = exception.getClass().getSimpleName();
+    log.debug("Attempting to map Registry exception [{}] to HTTP error code", exceptionType);
 
     // Domain validation exceptions
     if (exception instanceof DomainValidationException) {
-      // General domain parameter validation -> 400
       return Optional.of(http.BAD_REQUEST());
     }
 
     // Registry general exceptions
     if (exception instanceof RegistryQuotaExceeded) {
-      return Optional.of(http.CONFLICT()); // 409
+      return Optional.of(http.CONFLICT());
     }
 
     // Data layer exceptions
@@ -58,14 +58,16 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
     }
 
     if (exception instanceof DataIntegrityViolationException) {
-      return Optional.of(http.UNPROCESSABLE()); // 422
+      return Optional.of(http.UNPROCESSABLE());
     }
 
     if (exception instanceof OptimisticLockingFailureException) {
       return Optional.of(http.CONFLICT());
     }
 
-    log.debug("map exception miss exception={}", exception.getClass().getSimpleName());
+    log.debug(
+        "No mapping found for Registry exception [{}], delegating to default handler",
+        exceptionType);
     return Optional.empty();
   }
 }

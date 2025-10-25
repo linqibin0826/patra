@@ -10,10 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Application service for querying expression configurations.
+ * Orchestrates expression configuration query operations.
  *
- * <p>Assembles expression snapshots from the domain layer into query DTOs for external consumption,
- * encapsulating field dictionaries, capabilities, render rules, and API parameter mappings.
+ * <p>Coordinates retrieval of expression snapshots from the domain layer and conversion to query
+ * DTOs for external consumption. Handles field dictionaries, capabilities, render rules, and API
+ * parameter mappings.
  *
  * @author linqibin
  * @since 0.1.0
@@ -21,7 +22,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ExprQueryAppService {
+public class ExprQueryOrchestrator {
 
   private final ExprRepository exprRepository;
   private final ExprQueryAssembler assembler;
@@ -42,11 +43,23 @@ public class ExprQueryAppService {
   public ExprSnapshotQuery loadSnapshot(
       String provenanceCode, String operationType, String endpointName, Instant at) {
     ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
-    log.debug(
+    log.info(
         "Loading expression snapshot for provenance [{}] with operationType [{}] and endpoint [{}]",
         code.getCode(),
         operationType,
         endpointName);
-    return assembler.toQuery(exprRepository.loadSnapshot(code, operationType, endpointName, at));
+
+    ExprSnapshotQuery snapshot =
+        assembler.toQuery(exprRepository.loadSnapshot(code, operationType, endpointName, at));
+
+    log.info(
+        "Successfully loaded expression snapshot for provenance [{}]: {} fields, {} capabilities, {} render rules, {} API parameter mappings",
+        code.getCode(),
+        snapshot.fields().size(),
+        snapshot.capabilities().size(),
+        snapshot.renderRules().size(),
+        snapshot.apiParamMappings().size());
+
+    return snapshot;
   }
 }

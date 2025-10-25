@@ -46,15 +46,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, request);
 
-    Object path =
-        response.problemDetail().getProperties() == null
-            ? null
-            : response.problemDetail().getProperties().get(ErrorKeys.PATH);
-    log.info(
-        "Exception handled: errorCode={} status={} path={}",
-        response.errorResolution().errorCode().code(),
-        response.httpStatus().value(),
-        path);
+    logExceptionHandled(response);
 
     return ResponseEntity.status(response.httpStatus())
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -69,39 +61,97 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
       @NonNull org.springframework.http.HttpStatusCode status,
       @NonNull org.springframework.web.context.request.WebRequest request) {
 
-    HttpServletRequest servletRequest = null;
-    if (request
-        instanceof org.springframework.web.context.request.ServletWebRequest servletWebRequest) {
-      servletRequest = servletWebRequest.getRequest();
-    }
-
+    HttpServletRequest servletRequest = extractServletRequest(request);
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, servletRequest);
-    ProblemDetail problemDetail = response.problemDetail();
 
-    List<ValidationError> errors =
-        validationErrorsFormatter.formatWithMasking(ex.getBindingResult());
-    if (errors.size() > MAX_VALIDATION_ERRORS) {
-      log.warn(
-          "Validation errors truncated: total={}, included={}",
-          errors.size(),
-          MAX_VALIDATION_ERRORS);
-      errors = errors.subList(0, MAX_VALIDATION_ERRORS);
-    }
-    problemDetail.setProperty(ErrorKeys.ERRORS, errors);
+    List<ValidationError> errors = formatAndTruncateValidationErrors(ex);
+    response.problemDetail().setProperty(ErrorKeys.ERRORS, errors);
 
-    Object path =
-        problemDetail.getProperties() == null
-            ? null
-            : problemDetail.getProperties().get(ErrorKeys.PATH);
-    log.info(
-        "Validation exception handled: errorCode={} validationErrors={} path={} status={}",
-        response.errorResolution().errorCode().code(),
-        errors.size(),
-        path,
-        response.httpStatus().value());
+    logValidationExceptionHandled(response, errors);
 
     return ResponseEntity.status(response.httpStatus())
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-        .body(problemDetail);
+        .body(response.problemDetail());
+  }
+
+  /**
+   * Extracts HttpServletRequest from Spring's WebRequest wrapper.
+   *
+   * @param request web request wrapper
+   * @return servlet request or null if not available
+   */
+  private HttpServletRequest extractServletRequest(
+      org.springframework.web.context.request.WebRequest request) {
+    if (request
+        instanceof org.springframework.web.context.request.ServletWebRequest servletWebRequest) {
+      return servletWebRequest.getRequest();
+    }
+    return null;
+  }
+
+  /**
+   * Formats validation errors with masking and truncates to maximum allowed count.
+   *
+   * @param ex validation exception containing binding results
+   * @return formatted and truncated validation error list
+   */
+  private List<ValidationError> formatAndTruncateValidationErrors(
+      MethodArgumentNotValidException ex) {
+    List<ValidationError> errors =
+        validationErrorsFormatter.formatWithMasking(ex.getBindingResult());
+
+    if (errors.size() > MAX_VALIDATION_ERRORS) {
+      log.warn(
+          "Validation errors exceeded maximum limit: total={}, truncated to {}",
+          errors.size(),
+          MAX_VALIDATION_ERRORS);
+      return errors.subList(0, MAX_VALIDATION_ERRORS);
+    }
+
+    return errors;
+  }
+
+  /**
+   * Logs general exception handling with error code, status, and request path.
+   *
+   * @param response problem detail response containing error metadata
+   */
+  private void logExceptionHandled(ProblemDetailResponse response) {
+    Object path = extractPathFromProblemDetail(response.problemDetail());
+    log.info(
+        "Exception handled: error code [{}], HTTP status {}, request path [{}]",
+        response.errorResolution().errorCode().code(),
+        response.httpStatus().value(),
+        path);
+  }
+
+  /**
+   * Logs validation exception handling with validation error count and metadata.
+   *
+   * @param response problem detail response
+   * @param errors validation errors included in response
+   */
+  private void logValidationExceptionHandled(
+      ProblemDetailResponse response, List<ValidationError> errors) {
+    Object path = extractPathFromProblemDetail(response.problemDetail());
+    log.info(
+        "Validation exception handled: error code [{}], {} validation errors, "
+            + "HTTP status {}, request path [{}]",
+        response.errorResolution().errorCode().code(),
+        errors.size(),
+        response.httpStatus().value(),
+        path);
+  }
+
+  /**
+   * Safely extracts path property from ProblemDetail.
+   *
+   * @param problemDetail problem detail instance
+   * @return path value or null if not present
+   */
+  private Object extractPathFromProblemDetail(ProblemDetail problemDetail) {
+    return problemDetail.getProperties() == null
+        ? null
+        : problemDetail.getProperties().get(ErrorKeys.PATH);
   }
 }

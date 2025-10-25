@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.expr;
 import java.time.Instant;
 
 /**
- * Response DTO describing render rules for expression output templating.
+ * Render rules for expression output templating.
  *
  * <p>Field descriptions:
  *

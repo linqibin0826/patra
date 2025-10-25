@@ -8,13 +8,9 @@ import java.time.Instant;
  * <p>Tracks the current holder and expiration for distributed execution, supporting
  * acquire/renew/release flows.
  *
- * <ul>
- *   <li>{@code owner}: lease holder (instance/node identifier)
- *   <li>{@code leasedUntil}: lease expiration in UTC
- *   <li>{@code leaseCount}: number of acquisitions/renewals (>= 0)
- * </ul>
- *
- * Invariant: {@code leaseCount} must not be negative.
+ * @param owner lease holder (instance/node identifier)
+ * @param leasedUntil lease expiration in UTC
+ * @param leaseCount number of acquisitions/renewals (must be >= 0)
  */
 public record LeaseInfo(String owner, Instant leasedUntil, int leaseCount) {
 
@@ -24,22 +20,45 @@ public record LeaseInfo(String owner, Instant leasedUntil, int leaseCount) {
     }
   }
 
-  /** Lease information for an unassigned task (no owner, no expiry, zero count). */
+  /**
+   * Creates lease information for an unassigned task.
+   *
+   * @return empty lease with no owner, no expiry, and zero count
+   */
   public static LeaseInfo none() {
     return new LeaseInfo(null, null, 0);
   }
 
-  /** Snapshot helper that normalizes a nullable {@code leaseCount} to zero. */
+  /**
+   * Creates lease information from nullable lease count.
+   *
+   * @param owner lease owner
+   * @param leasedUntil lease expiration
+   * @param leaseCount lease count (null treated as zero)
+   * @return lease information with normalized count
+   */
   public static LeaseInfo snapshotOf(String owner, Instant leasedUntil, Integer leaseCount) {
     return new LeaseInfo(owner, leasedUntil, leaseCount == null ? 0 : leaseCount);
   }
 
-  /** Whether the lease currently has a holder. */
+  /**
+   * Checks whether the lease currently has a holder.
+   *
+   * @return true if lease has a non-blank owner
+   */
   public boolean isHeld() {
     return owner != null && !owner.isBlank();
   }
 
-  /** Acquire the lease for the first time; requires the lease to be unheld. */
+  /**
+   * Acquires the lease for the first time.
+   *
+   * @param newOwner new lease owner identifier
+   * @param until lease expiration time
+   * @return new lease information with incremented count
+   * @throws IllegalArgumentException if newOwner or until is null/blank
+   * @throws IllegalStateException if lease is already held
+   */
   public LeaseInfo acquire(String newOwner, Instant until) {
     if (newOwner == null || newOwner.isBlank()) {
       throw new IllegalArgumentException("Lease owner must not be blank");
@@ -53,7 +72,15 @@ public record LeaseInfo(String owner, Instant leasedUntil, int leaseCount) {
     return new LeaseInfo(newOwner, until, leaseCount + 1);
   }
 
-  /** Renew the lease; only the current holder may renew. */
+  /**
+   * Renews the existing lease.
+   *
+   * @param holder current lease holder identifier
+   * @param until new lease expiration time
+   * @return new lease information with incremented count
+   * @throws IllegalStateException if no lease is currently held
+   * @throws IllegalArgumentException if holder is null/blank, null until, or holder mismatch
+   */
   public LeaseInfo renew(String holder, Instant until) {
     if (!isHeld()) {
       throw new IllegalStateException("Cannot renew because no lease holder is present");
@@ -70,7 +97,12 @@ public record LeaseInfo(String owner, Instant leasedUntil, int leaseCount) {
     return new LeaseInfo(holder, until, leaseCount + 1);
   }
 
-  /** Release the lease (returns {@code this} when already unheld). */
+  /**
+   * Releases the lease.
+   *
+   * @return new lease information with cleared owner and expiration (returns this if already
+   *     unheld)
+   */
   public LeaseInfo release() {
     if (!isHeld()) {
       return this;

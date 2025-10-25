@@ -10,17 +10,17 @@ import lombok.Builder;
  */
 @Builder
 public record JournalDTO(
-    /** Journal title or abbreviated title */
+    /** The journal title or abbreviated title */
     String title,
 
-    /** International Standard Serial Number */
+    /** The International Standard Serial Number (ISSN) */
     String issn,
 
-    /** Type of ISSN (print/electronic/linking) */
+    /** The type of ISSN (print, electronic, or linking) */
     String issnType,
 
-    /** Publisher name */
+    /** The name of the publisher */
     String publisher,
 
-    /** Country of publication */
+    /** The country where this journal is published */
     String country) {}

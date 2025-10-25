@@ -136,4 +136,16 @@ public class DomainValidationException extends RuntimeException {
     }
     return value;
   }
+
+  /**
+   * Returns trimmed string or null if input is null.
+   *
+   * <p>Utility method for normalizing nullable string fields.
+   *
+   * @param value string to trim
+   * @return trimmed string or null
+   */
+  public static String trimOrNull(String value) {
+    return value != null ? value.trim() : null;
+  }
 }

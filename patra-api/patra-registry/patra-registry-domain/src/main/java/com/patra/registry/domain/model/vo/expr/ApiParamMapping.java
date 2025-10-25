@@ -1,6 +1,7 @@
 package com.patra.registry.domain.model.vo.expr;
 
 import com.patra.registry.domain.exception.DomainValidationException;
+import com.patra.registry.domain.support.TemporalEntity;
 import java.time.Instant;
 
 /**
@@ -32,7 +33,8 @@ public record ApiParamMapping(
     /* Inclusive timestamp marking when this mapping becomes effective */
     Instant effectiveFrom,
     /* Exclusive timestamp marking when this mapping expires; null means open-ended */
-    Instant effectiveTo) {
+    Instant effectiveTo)
+    implements TemporalEntity {
   /**
    * Canonical constructor with validation.
    *
@@ -76,19 +78,5 @@ public record ApiParamMapping(
     this.notesJson = notesJson;
     this.effectiveFrom = effectiveFrom;
     this.effectiveTo = effectiveTo;
-  }
-
-  /**
-   * Checks whether the mapping is effective at the given instant.
-   *
-   * @param instant the time point to check (must not be null)
-   * @return true if the mapping is effective at the given instant
-   * @throws DomainValidationException if instant is null
-   */
-  public boolean isEffectiveAt(Instant instant) {
-    DomainValidationException.nonNull(instant, "Instant");
-    boolean afterStart = !instant.isBefore(effectiveFrom);
-    boolean beforeEnd = effectiveTo == null || instant.isBefore(effectiveTo);
-    return afterStart && beforeEnd;
   }
 }

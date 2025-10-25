@@ -25,14 +25,19 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 public class XmlAutoConfiguration {
 
   /**
-   * Registers a singleton {@link XmlMapper} built from the shared Jackson builder so that JSON
-   * customizations (modules, date/time, naming strategy) also apply to XML mapping.
+   * Registers a singleton {@link XmlMapper} built from the shared Jackson builder.
+   *
+   * <p>JSON customizations (modules, date/time, naming strategy) also apply to XML mapping through
+   * the shared builder configuration.
+   *
+   * @param builder the shared Jackson object mapper builder
+   * @return configured XML mapper instance
    */
   @Bean
   @ConditionalOnBean(Jackson2ObjectMapperBuilder.class)
   @ConditionalOnMissingBean(XmlMapper.class)
   public XmlMapper xmlMapper(Jackson2ObjectMapperBuilder builder) {
-    log.debug("loaded XmlAutoConfiguration.xmlMapper()");
+    log.debug("Loaded XmlAutoConfiguration.xmlMapper()");
     return builder.createXmlMapper(true).build();
   }
 }

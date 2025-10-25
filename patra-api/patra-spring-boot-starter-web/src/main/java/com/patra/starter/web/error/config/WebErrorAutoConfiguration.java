@@ -35,7 +35,7 @@ public class WebErrorAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public ValidationErrorsFormatter defaultValidationErrorsFormatter() {
-    log.debug("Creating default ValidationErrorsFormatter");
+    log.debug("Registering default ValidationErrorsFormatter for validation error masking");
     return new DefaultValidationErrorsFormatter();
   }
 
@@ -48,7 +48,7 @@ public class WebErrorAutoConfiguration {
       List<ProblemFieldContributor> coreFieldContributors,
       List<WebProblemFieldContributor> webFieldContributors) {
     log.debug(
-        "Creating ProblemDetailBuilder: coreContributors={} webContributors={}",
+        "Registering ProblemDetailBuilder with {} core contributors and {} web contributors",
         coreFieldContributors.size(),
         webFieldContributors.size());
     return new ProblemDetailBuilder(
@@ -59,7 +59,7 @@ public class WebErrorAutoConfiguration {
   @ConditionalOnMissingBean
   public ProblemDetailAdapter problemDetailAdapter(
       ErrorResolutionPipeline pipeline, ProblemDetailBuilder problemDetailBuilder) {
-    log.debug("Creating default ProblemDetailAdapter");
+    log.debug("Registering default ProblemDetailAdapter for exception-to-ProblemDetail conversion");
     return new DefaultProblemDetailAdapter(pipeline, problemDetailBuilder);
   }
 
@@ -68,7 +68,7 @@ public class WebErrorAutoConfiguration {
   public GlobalRestExceptionHandler globalRestExceptionHandler(
       ProblemDetailAdapter problemDetailAdapter,
       ValidationErrorsFormatter validationErrorsFormatter) {
-    log.debug("Creating global REST exception handler");
+    log.debug("Registering GlobalRestExceptionHandler for RFC 7807 ProblemDetail error responses");
     return new GlobalRestExceptionHandler(problemDetailAdapter, validationErrorsFormatter);
   }
 }

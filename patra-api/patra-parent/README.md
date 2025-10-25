@@ -26,7 +26,7 @@ Provides **consistent** dependency versions and build configuration:
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-dependencies</artifactId>
-            <version>3.2.1</version>
+            <version>3.2.4</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -35,7 +35,7 @@ Provides **consistent** dependency versions and build configuration:
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-dependencies</artifactId>
-            <version>2023.0.0</version>
+            <version>2023.0.1</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>

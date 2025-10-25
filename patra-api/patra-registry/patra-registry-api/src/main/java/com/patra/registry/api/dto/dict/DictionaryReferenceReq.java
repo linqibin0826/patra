@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Request payload representing a dictionary reference that needs validation.
+ * Dictionary reference requiring validation.
  *
  * <p>Field descriptions:
  *

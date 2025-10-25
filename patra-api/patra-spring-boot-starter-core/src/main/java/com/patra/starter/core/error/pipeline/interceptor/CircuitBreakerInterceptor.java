@@ -3,6 +3,7 @@ package com.patra.starter.core.error.pipeline.interceptor;
 import com.patra.common.error.codes.ErrorCodeLike;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
+import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.observation.ErrorObservationRecorder;
 import com.patra.starter.core.error.pipeline.ResolutionInterceptor;
 import com.patra.starter.core.error.pipeline.ResolutionInvocation;
@@ -43,24 +44,8 @@ public class CircuitBreakerInterceptor implements ResolutionInterceptor {
       log.warn(
           "Circuit breaker opened during error resolution; using fallback error code. reason={}",
           ex.getMessage());
-      return new ErrorResolution(
-          new ErrorCodeLike() {
-            @Override
-            public String code() {
-              return contextPrefix + "-0503";
-            }
-
-            @Override
-            public int httpStatus() {
-              return 503;
-            }
-
-            @Override
-            public String toString() {
-              return code();
-            }
-          },
-          503);
+      ErrorCodeLike code = SimpleErrorCode.create(contextPrefix, "0503");
+      return new ErrorResolution(code, code.httpStatus());
     }
   }
 }

@@ -11,20 +11,20 @@ import lombok.Builder;
  */
 @Builder
 public record AuthorDTO(
-    /** Author last name */
+    /** The author's last name or family name */
     String lastName,
 
-    /** Author given name */
+    /** The author's given name or first name */
     String foreName,
 
-    /** Author initials */
+    /** The author's name initials */
     String initials,
 
-    /** Author affiliations (institutional) */
+    /** List of institutional affiliations for this author */
     List<String> affiliations,
 
-    /** Author identifier (e.g., ORCID) */
+    /** The author's unique identifier (e.g., ORCID) */
     String identifier,
 
-    /** Source of the identifier */
+    /** The source system of the author identifier */
     String identifierSource) {}

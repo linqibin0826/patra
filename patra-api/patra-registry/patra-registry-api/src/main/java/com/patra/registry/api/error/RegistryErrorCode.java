@@ -3,7 +3,7 @@ package com.patra.registry.api.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * Registry service error code catalog implementing {@link ErrorCodeLike}.
+ * Registry service error code catalog.
  *
  * <p>Error codes follow the {@code REG-NNNN} format (prefix + numeric code) and are added in an
  * append-only fashion to preserve API compatibility.
@@ -64,7 +64,7 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   private final int httpStatus;
 
   /**
-   * Constructs the enum constant with code and HTTP status mapping.
+   * Constructs an error code with HTTP status mapping.
    *
    * @param code error code in {@code REG-NNNN} format
    * @param httpStatus associated HTTP status code
@@ -75,9 +75,9 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the error code string (REG-NNNN).
+   * Returns the error code string.
    *
-   * @return error code
+   * @return error code in {@code REG-NNNN} format
    */
   @Override
   public String code() {
@@ -85,7 +85,7 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the mapped HTTP status.
+   * Returns the associated HTTP status code.
    *
    * @return HTTP status code
    */

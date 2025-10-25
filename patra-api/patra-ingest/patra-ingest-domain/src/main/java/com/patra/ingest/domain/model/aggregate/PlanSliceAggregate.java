@@ -104,6 +104,12 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     return aggregate;
   }
 
+  /**
+   * Binds this slice to a specific plan after persistence.
+   *
+   * @param planId plan identifier
+   * @throws IllegalArgumentException if planId is null
+   */
   public void bindPlan(Long planId) {
     if (planId == null) {
       throw new IllegalArgumentException("planId must not be null");
@@ -111,22 +117,27 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     this.planId = planId;
   }
 
+  /** Marks the slice as dispatched. */
   public void markDispatched() {
     this.status = SliceStatus.DISPATCHED;
   }
 
+  /** Marks the slice as executing. */
   public void markExecuting() {
     this.status = SliceStatus.EXECUTING;
   }
 
+  /** Marks the slice as succeeded. */
   public void markSucceeded() {
     this.status = SliceStatus.SUCCEEDED;
   }
 
+  /** Marks the slice as failed. */
   public void markFailed() {
     this.status = SliceStatus.FAILED;
   }
 
+  /** Marks the slice as partially completed. */
   public void markPartial() {
     this.status = SliceStatus.PARTIAL;
   }

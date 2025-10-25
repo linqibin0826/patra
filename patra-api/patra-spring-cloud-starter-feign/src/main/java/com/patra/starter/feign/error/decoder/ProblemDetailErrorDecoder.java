@@ -38,9 +38,7 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
 
   @Override
   public Exception decode(String methodKey, Response response) {
-    boolean decodingSuccess = false;
-    boolean tolerantModeUsed = false;
-    BodyBuffer bodyBuffer = null;
+    DecodingState state = new DecodingState();
 
     try {
       String contentType = getContentType(response);
@@ -52,66 +50,100 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
           contentType);
 
       if (isProblemDetail) {
-        bodyBuffer = readResponseBody(methodKey, response);
-        ParsingResult parsingResult = parseProblemDetail(bodyBuffer);
-        observationRecorder.recordProblemDetailParsing(
-            methodKey, response.status(), parsingResult.durationMs(), parsingResult.success());
-
-        if (parsingResult.success() && parsingResult.problemDetail() != null) {
-          ProblemDetail problemDetail = parsingResult.problemDetail();
-          decodingSuccess = true;
-
-          TraceExtraction traceExtraction = extractTraceId(response);
-          observationRecorder.recordTraceIdExtraction(
-              methodKey, traceExtraction.traceId() != null, traceExtraction.headerName());
-          if (traceExtraction.traceId() != null
-              && (problemDetail.getProperties() == null
-                  || problemDetail.getProperties().get(ErrorKeys.TRACE_ID) == null)) {
-            problemDetail.setProperty(ErrorKeys.TRACE_ID, traceExtraction.traceId());
-          }
-
-          return new RemoteCallException(problemDetail, methodKey);
+        DecodingResult result = decodeProblemDetailResponse(methodKey, response);
+        state.bodyBuffer = result.bodyBuffer();
+        state.decodingSuccess = result.success();
+        if (result.exception() != null) {
+          return result.exception();
         }
       }
 
       if (properties.isTolerant()) {
-        tolerantModeUsed = true;
-        if (bodyBuffer == null) {
-          bodyBuffer = readResponseBody(methodKey, response);
+        state.tolerantModeUsed = true;
+        if (state.bodyBuffer == null) {
+          state.bodyBuffer = readResponseBody(methodKey, response);
         }
-        return handleTolerantMode(methodKey, response, bodyBuffer);
+        return handleTolerantMode(methodKey, response, state.bodyBuffer);
       }
 
       log.debug("Strict mode active; delegating to FeignException for method={}", methodKey);
       return FeignException.errorStatus(methodKey, response);
 
     } catch (Exception ex) {
-      log.warn(
-          "Failed to decode remote error: method={} status={} error={}",
-          methodKey,
-          response.status(),
-          ex.getMessage());
-
-      if (properties.isTolerant()) {
-        tolerantModeUsed = true;
-        try {
-          if (bodyBuffer == null) {
-            bodyBuffer = readResponseBody(methodKey, response);
-          }
-        } catch (IOException ioException) {
-          log.debug(
-              "Tolerant mode failed to read response body: method={} error={}",
-              methodKey,
-              ioException.getMessage());
-        }
-        return handleTolerantMode(methodKey, response, bodyBuffer);
-      }
-
-      return FeignException.errorStatus(methodKey, response);
+      return handleDecodingException(methodKey, response, state, ex);
     } finally {
       observationRecorder.recordDecodingOutcome(
-          methodKey, response.status(), decodingSuccess, tolerantModeUsed);
+          methodKey, response.status(), state.decodingSuccess, state.tolerantModeUsed);
     }
+  }
+
+  /**
+   * Attempts to decode a ProblemDetail response.
+   *
+   * @param methodKey Feign method key
+   * @param response Feign response object
+   * @return decoding result containing success status, body buffer, and exception if successful
+   * @throws IOException if response body reading fails
+   */
+  private DecodingResult decodeProblemDetailResponse(String methodKey, Response response)
+      throws IOException {
+    BodyBuffer bodyBuffer = readResponseBody(methodKey, response);
+    ParsingResult parsingResult = parseProblemDetail(bodyBuffer);
+    observationRecorder.recordProblemDetailParsing(
+        methodKey, response.status(), parsingResult.durationMs(), parsingResult.success());
+
+    if (parsingResult.success() && parsingResult.problemDetail() != null) {
+      ProblemDetail problemDetail = parsingResult.problemDetail();
+
+      TraceExtraction traceExtraction = extractTraceId(response);
+      observationRecorder.recordTraceIdExtraction(
+          methodKey, traceExtraction.traceId() != null, traceExtraction.headerName());
+      if (traceExtraction.traceId() != null
+          && (problemDetail.getProperties() == null
+              || problemDetail.getProperties().get(ErrorKeys.TRACE_ID) == null)) {
+        problemDetail.setProperty(ErrorKeys.TRACE_ID, traceExtraction.traceId());
+      }
+
+      return new DecodingResult(
+          bodyBuffer, true, new RemoteCallException(problemDetail, methodKey));
+    }
+
+    return new DecodingResult(bodyBuffer, false, null);
+  }
+
+  /**
+   * Handles exceptions during error decoding, applying tolerant mode if enabled.
+   *
+   * @param methodKey Feign method key
+   * @param response Feign response object
+   * @param state decoding state tracking success and buffers
+   * @param ex exception that occurred during decoding
+   * @return exception to throw (RemoteCallException or FeignException)
+   */
+  private Exception handleDecodingException(
+      String methodKey, Response response, DecodingState state, Exception ex) {
+    log.warn(
+        "Failed to decode remote error: method={} status={} error={}",
+        methodKey,
+        response.status(),
+        ex.getMessage());
+
+    if (properties.isTolerant()) {
+      state.tolerantModeUsed = true;
+      try {
+        if (state.bodyBuffer == null) {
+          state.bodyBuffer = readResponseBody(methodKey, response);
+        }
+      } catch (IOException ioException) {
+        log.debug(
+            "Tolerant mode failed to read response body: method={} error={}",
+            methodKey,
+            ioException.getMessage());
+      }
+      return handleTolerantMode(methodKey, response, state.bodyBuffer);
+    }
+
+    return FeignException.errorStatus(methodKey, response);
   }
 
   private RemoteCallException handleTolerantMode(
@@ -211,13 +243,26 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return contentType != null && contentType.toLowerCase().contains("application/problem+json");
   }
 
+  /** Holds response body content and metadata. */
   private record BodyBuffer(String content, int length, boolean truncated) {
     static BodyBuffer empty() {
       return new BodyBuffer(null, 0, false);
     }
   }
 
+  /** Result of ProblemDetail parsing operation. */
   private record ParsingResult(ProblemDetail problemDetail, long durationMs, boolean success) {}
 
+  /** Trace identifier extraction result. */
   private record TraceExtraction(String traceId, String headerName) {}
+
+  /** Result of ProblemDetail decoding operation. */
+  private record DecodingResult(BodyBuffer bodyBuffer, boolean success, Exception exception) {}
+
+  /** Mutable state holder for tracking decoding progress. */
+  private static class DecodingState {
+    boolean decodingSuccess = false;
+    boolean tolerantModeUsed = false;
+    BodyBuffer bodyBuffer = null;
+  }
 }

@@ -56,6 +56,58 @@ public class SimpleHttpClient {
       HttpResilienceConfig rc) {
     Objects.requireNonNull(url, "url");
 
+    ResilienceParams params = extractResilienceParams(rc);
+    int attempt = 0;
+
+    while (true) {
+      attempt++;
+      try {
+        applyRateLimit(params.rateLimitQps);
+        HttpRequest request = buildHttpRequest(method, url, body, headers, params.timeout);
+        HttpResponse<String> response = executeHttpRequest(request, method, url);
+
+        String result =
+            handleHttpResponse(response, attempt, params.maxRetries, params.backoffSeconds);
+        if (result != null) {
+          return result;
+        }
+      } catch (IOException | InterruptedException ex) {
+        if (!handleHttpException(ex, attempt, params.maxRetries, params.backoffSeconds)) {
+          handleExecutionFailure(ex, attempt);
+        }
+      }
+    }
+  }
+
+  private String handleHttpResponse(
+      HttpResponse<String> response, int attempt, int maxRetries, long backoffSeconds)
+      throws IOException {
+    if (isSuccessStatus(response.statusCode())) {
+      return response.body() == null ? "" : response.body();
+    }
+
+    if (shouldRetry(response.statusCode()) && attempt <= maxRetries) {
+      log.debug(
+          "[HTTP] retryable status={} attempt={}/{}", response.statusCode(), attempt, maxRetries);
+      sleep(backoffSeconds);
+      return null;
+    }
+
+    throw new IOException(
+        "HTTP status " + response.statusCode() + " body=" + truncate(response.body()));
+  }
+
+  private boolean handleHttpException(
+      Exception ex, int attempt, int maxRetries, long backoffSeconds) {
+    if (attempt <= maxRetries) {
+      log.debug("[HTTP] exception, retrying attempt={}/{}: {}", attempt, maxRetries, ex);
+      sleep(backoffSeconds);
+      return true;
+    }
+    return false;
+  }
+
+  private ResilienceParams extractResilienceParams(HttpResilienceConfig rc) {
     int maxRetries = rc != null && rc.maxRetries() != null ? Math.max(rc.maxRetries(), 0) : 0;
     long backoffSeconds =
         rc != null && rc.retryBackoffSeconds() != null ? rc.retryBackoffSeconds() : 0L;
@@ -63,62 +115,65 @@ public class SimpleHttpClient {
         rc != null && rc.timeoutSeconds() != null
             ? Duration.ofSeconds(Math.max(rc.timeoutSeconds(), 1L))
             : Duration.ofSeconds(30);
+    Integer rateLimitQps = rc != null ? rc.rateLimitQps() : null;
 
-    int attempt = 0;
-    while (true) {
-      attempt++;
+    return new ResilienceParams(maxRetries, backoffSeconds, timeout, rateLimitQps);
+  }
+
+  private void applyRateLimit(Integer rateLimitQps) {
+    if (rateLimitQps == null || rateLimitQps <= 0) {
+      return;
+    }
+
+    long sleepMillis = 1000L / Math.max(1, rateLimitQps);
+    if (sleepMillis > 0) {
       try {
-        if (rc != null && rc.rateLimitQps() != null && rc.rateLimitQps() > 0) {
-          // Best-effort local throttle: sleep to approximate QPS (not distributed).
-          long sleepMillis = 1000L / Math.max(1, rc.rateLimitQps());
-          if (sleepMillis > 0) {
-            try {
-              Thread.sleep(sleepMillis);
-            } catch (InterruptedException ignored) {
-              Thread.currentThread().interrupt();
-            }
-          }
-        }
-
-        HttpRequest.Builder b = HttpRequest.newBuilder().uri(URI.create(url)).timeout(timeout);
-        if (headers != null) headers.forEach(b::header);
-        if ("GET".equals(method)) {
-          b.GET();
-        } else if ("POST".equals(method)) {
-          b.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : ""));
-        } else {
-          throw new IllegalArgumentException("Unsupported method: " + method);
-        }
-
-        long t0 = System.nanoTime();
-        HttpResponse<String> resp = client.send(b.build(), HttpResponse.BodyHandlers.ofString());
-        long tookMs = (System.nanoTime() - t0) / 1_000_000;
-        int status = resp.statusCode();
-        log.debug("[HTTP] {} {} -> {} ({} ms)", method, url, status, tookMs);
-
-        if (status >= 200 && status < 300) {
-          return resp.body() == null ? "" : resp.body();
-        }
-
-        if (shouldRetry(status) && attempt <= maxRetries) {
-          log.debug("[HTTP] retryable status={} attempt={}/{}", status, attempt, maxRetries);
-          sleep(backoffSeconds);
-          continue;
-        }
-
-        throw new IOException("HTTP status " + status + " body=" + truncate(resp.body()));
-      } catch (IOException | InterruptedException ex) {
-        if (attempt <= maxRetries) {
-          log.debug(
-              "[HTTP] exception, retrying attempt={}/{}: {}", attempt, maxRetries, ex.toString());
-          sleep(backoffSeconds);
-          continue;
-        }
-        if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
-        throw new RuntimeException(
-            "HTTP call failed after attempts=" + attempt + ": " + ex.getMessage(), ex);
+        Thread.sleep(sleepMillis);
+      } catch (InterruptedException ignored) {
+        Thread.currentThread().interrupt();
       }
     }
+  }
+
+  private HttpRequest buildHttpRequest(
+      String method, String url, String body, Map<String, String> headers, Duration timeout) {
+    HttpRequest.Builder builder = HttpRequest.newBuilder().uri(URI.create(url)).timeout(timeout);
+
+    if (headers != null) {
+      headers.forEach(builder::header);
+    }
+
+    if ("GET".equals(method)) {
+      builder.GET();
+    } else if ("POST".equals(method)) {
+      builder.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : ""));
+    } else {
+      throw new IllegalArgumentException("Unsupported method: " + method);
+    }
+
+    return builder.build();
+  }
+
+  private HttpResponse<String> executeHttpRequest(HttpRequest request, String method, String url)
+      throws IOException, InterruptedException {
+    long startTime = System.nanoTime();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    long durationMs = (System.nanoTime() - startTime) / 1_000_000;
+
+    log.debug("[HTTP] {} {} -> {} ({} ms)", method, url, response.statusCode(), durationMs);
+    return response;
+  }
+
+  private boolean isSuccessStatus(int status) {
+    return status >= 200 && status < 300;
+  }
+
+  private void handleExecutionFailure(Exception ex, int attempt) {
+    if (ex instanceof InterruptedException) {
+      Thread.currentThread().interrupt();
+    }
+    throw new RuntimeException(
+        "HTTP call failed after attempts=" + attempt + ": " + ex.getMessage(), ex);
   }
 
   private static Map<String, String> mergeHeaders(
@@ -186,4 +241,8 @@ public class SimpleHttpClient {
     if (s == null) return "";
     return s.length() > 512 ? s.substring(0, 512) + "..." : s;
   }
+
+  /** Holds resilience parameters extracted from configuration. */
+  private record ResilienceParams(
+      int maxRetries, long backoffSeconds, Duration timeout, Integer rateLimitQps) {}
 }

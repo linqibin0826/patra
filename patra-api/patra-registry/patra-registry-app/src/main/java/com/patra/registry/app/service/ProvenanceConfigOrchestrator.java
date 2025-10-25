@@ -2,10 +2,8 @@ package com.patra.registry.app.service;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.converter.ProvenanceQueryAssembler;
-import com.patra.registry.domain.model.aggregate.ProvenanceConfiguration;
 import com.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
 import com.patra.registry.domain.model.read.provenance.ProvenanceQuery;
-import com.patra.registry.domain.model.vo.provenance.Provenance;
 import com.patra.registry.domain.port.ProvenanceConfigRepository;
 import java.time.Instant;
 import java.util.List;
@@ -15,10 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Application service for querying provenance configuration.
+ * Orchestrates provenance configuration query operations.
  *
- * <p>Orchestrates read operations on provenance metadata and effective configuration by assembling
- * domain objects into query DTOs for consumption by external clients.
+ * <p>Coordinates read operations on provenance metadata and effective configuration by delegating
+ * to domain repositories and converting results to query DTOs for external clients.
  *
  * @author linqibin
  * @since 0.1.0
@@ -26,7 +24,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProvenanceConfigAppService {
+public class ProvenanceConfigOrchestrator {
 
   private final ProvenanceConfigRepository repository;
   private final ProvenanceQueryAssembler assembler;
@@ -37,7 +35,11 @@ public class ProvenanceConfigAppService {
    * @return list of provenance query DTOs
    */
   public List<ProvenanceQuery> listProvenances() {
-    return repository.findAllProvenances().stream().map(assembler::toQuery).toList();
+    log.info("Listing all available provenances");
+    List<ProvenanceQuery> provenances =
+        repository.findAllProvenances().stream().map(assembler::toQuery).toList();
+    log.info("Successfully retrieved {} provenances", provenances.size());
+    return provenances;
   }
 
   /**
@@ -47,7 +49,17 @@ public class ProvenanceConfigAppService {
    * @return optional containing the provenance query DTO if found
    */
   public Optional<ProvenanceQuery> findProvenance(ProvenanceCode provenanceCode) {
-    return repository.findProvenanceByCode(provenanceCode).map(assembler::toQuery);
+    log.info("Finding provenance by code [{}]", provenanceCode.getCode());
+    Optional<ProvenanceQuery> result =
+        repository.findProvenanceByCode(provenanceCode).map(assembler::toQuery);
+
+    if (result.isPresent()) {
+      log.info("Successfully found provenance [{}]", provenanceCode.getCode());
+    } else {
+      log.warn("Provenance not found for code [{}]", provenanceCode.getCode());
+    }
+
+    return result;
   }
 
   /**
@@ -64,22 +76,33 @@ public class ProvenanceConfigAppService {
    */
   public Optional<ProvenanceConfigQuery> loadConfiguration(
       ProvenanceCode provenanceCode, String operationType, Instant at) {
-    log.debug(
+    log.info(
         "Loading configuration for provenance [{}] with operationType [{}]",
         provenanceCode.getCode(),
         operationType);
 
-    Optional<Provenance> provenanceOpt = repository.findProvenanceByCode(provenanceCode);
-    if (provenanceOpt.isEmpty()) {
-      log.warn("Provenance not found for code [{}]", provenanceCode.getCode());
-      return Optional.empty();
+    Instant effectiveTime = at != null ? at : Instant.now();
+    Optional<ProvenanceConfigQuery> result =
+        repository
+            .findProvenanceByCode(provenanceCode)
+            .flatMap(
+                provenance ->
+                    repository
+                        .loadConfiguration(provenance.id(), operationType, effectiveTime)
+                        .map(assembler::toQuery));
+
+    if (result.isPresent()) {
+      log.info(
+          "Successfully loaded configuration for provenance [{}] with operationType [{}]",
+          provenanceCode.getCode(),
+          operationType);
+    } else {
+      log.warn(
+          "Configuration not found for provenance [{}] with operationType [{}]",
+          provenanceCode.getCode(),
+          operationType);
     }
 
-    Provenance provenance = provenanceOpt.get();
-    Optional<ProvenanceConfiguration> configuration =
-        repository.loadConfiguration(
-            provenance.id(), operationType, at != null ? at : Instant.now());
-
-    return configuration.map(assembler::toQuery);
+    return result;
   }
 }

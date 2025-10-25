@@ -7,19 +7,25 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Converter between provenance-specific configuration and HTTP resilience configuration used by the
- * built-in simple HTTP client（直连外部 API 场景）。
+ * built-in simple HTTP client.
+ *
+ * <p>This converter is used in direct HTTP access scenarios (non-gateway mode) to extract retry,
+ * timeout, and rate limit settings from provenance configuration.
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-public class ProvenanceConfigConverter {
+public final class ProvenanceConfigConverter {
 
   private ProvenanceConfigConverter() {
     // Utility class
   }
 
   /**
-   * Convert ProvenanceConfig to lightweight HTTP resilience configuration.
+   * Converts ProvenanceConfig to lightweight HTTP resilience configuration.
    *
    * @param config provenance configuration
-   * @return resilience configuration for the simple HTTP client
+   * @return resilience configuration for the simple HTTP client, never null
    */
   public static HttpResilienceConfig toHttpResilienceConfig(ProvenanceConfig config) {
     if (config == null) {
@@ -35,10 +41,10 @@ public class ProvenanceConfigConverter {
   }
 
   /**
-   * Extract default headers from ProvenanceConfig.
+   * Extracts default headers from ProvenanceConfig.
    *
    * @param config provenance configuration
-   * @return immutable map of default headers, empty if none configured
+   * @return immutable map of default headers, empty if none configured, never null
    */
   public static Map<String, String> extractHeaders(ProvenanceConfig config) {
     if (config == null || config.http() == null || config.http().defaultHeaders() == null) {

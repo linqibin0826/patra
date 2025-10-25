@@ -33,7 +33,7 @@ public class WebConversionAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(name = "provenanceCodeConverter")
   public Converter<String, ProvenanceCode> provenanceCodeConverter() {
-    log.info("[WEB][AUTO-CONFIG] Registering provenanceCodeConverter bean");
+    log.info("Registering String-to-ProvenanceCode converter for request parameter binding");
     return source -> {
       if (!StringUtils.hasText(source)) {
         return null;

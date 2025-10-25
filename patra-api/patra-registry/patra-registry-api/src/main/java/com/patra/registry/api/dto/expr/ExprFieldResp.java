@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.expr;
 
 /**
- * Response DTO describing a single expression field definition exposed to RPC clients.
+ * Expression field definition exposed to RPC clients.
  *
  * <p>Field descriptions:
  *

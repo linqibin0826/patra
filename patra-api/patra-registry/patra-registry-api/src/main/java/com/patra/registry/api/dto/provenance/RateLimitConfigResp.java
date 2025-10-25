@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.provenance;
 import java.time.Instant;
 
 /**
- * Response DTO describing rate limiting and concurrency configuration.
+ * Rate limiting and concurrency configuration.
  *
  * <p>Field descriptions:
  *

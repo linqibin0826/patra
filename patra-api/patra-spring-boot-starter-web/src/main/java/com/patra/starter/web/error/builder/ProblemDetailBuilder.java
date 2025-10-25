@@ -8,6 +8,7 @@ import com.patra.starter.core.error.spi.ProblemFieldContributor;
 import com.patra.starter.core.error.spi.TraceProvider;
 import com.patra.starter.web.error.config.WebErrorProperties;
 import com.patra.starter.web.error.spi.WebProblemFieldContributor;
+import com.patra.starter.web.error.util.HttpStatusConverter;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
@@ -69,68 +70,17 @@ public class ProblemDetailBuilder {
   public ProblemDetail build(
       ErrorResolution resolution, Throwable exception, HttpServletRequest request) {
     log.debug(
-        "Building ProblemDetail: errorCode={}, httpStatus={}",
+        "Building ProblemDetail for error [{}] with HTTP status {}",
         resolution.errorCode().code(),
         resolution.httpStatus());
 
-    // Convert int status to HttpStatus for ProblemDetail creation
-    HttpStatus httpStatus = convertToHttpStatus(resolution.httpStatus());
+    HttpStatus httpStatus = HttpStatusConverter.toHttpStatus(resolution.httpStatus());
     ProblemDetail problemDetail = ProblemDetail.forStatus(httpStatus);
 
-    // Standard RFC 7807 fields
-    problemDetail.setType(buildTypeUri(resolution.errorCode()));
-    problemDetail.setTitle(resolution.errorCode().code());
-    problemDetail.setDetail(maskSensitiveData(exception.getMessage()));
-
-    // Extension fields
-    problemDetail.setProperty(ErrorKeys.CODE, resolution.errorCode().code());
-    problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
-    problemDetail.setProperty(
-        ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
-
-    // Reference the Web configuration to illustrate stack-trace behaviour (avoids unused warnings).
-    if (!webProperties.isIncludeStack()) {
-      // Stack traces are disabled; the detailStack property is intentionally omitted.
-    }
-
-    // Add trace ID if available
-    traceProvider
-        .getCurrentTraceId()
-        .ifPresent(
-            traceId -> {
-              log.debug("Adding traceId to ProblemDetail: traceId={}", traceId);
-              problemDetail.setProperty(ErrorKeys.TRACE_ID, traceId);
-            });
-
-    // Core field contributors (no request dependency)
-    Map<String, Object> coreFields = new HashMap<>();
-    coreFieldContributors.forEach(
-        contributor -> {
-          try {
-            contributor.contribute(coreFields, exception);
-          } catch (Exception e) {
-            log.warn(
-                "Core field contributor failed: contributor={}, error={}",
-                contributor.getClass().getSimpleName(),
-                e.getMessage());
-          }
-        });
-    coreFields.forEach(problemDetail::setProperty);
-
-    // Web-specific field contributors (with request access)
-    Map<String, Object> webFields = new HashMap<>();
-    webFieldContributors.forEach(
-        contributor -> {
-          try {
-            contributor.contribute(webFields, exception, request);
-          } catch (Exception e) {
-            log.warn(
-                "Web field contributor failed: contributor={}, error={}",
-                contributor.getClass().getSimpleName(),
-                e.getMessage());
-          }
-        });
-    webFields.forEach(problemDetail::setProperty);
+    setupStandardFields(problemDetail, resolution, exception, request);
+    addTraceIdIfAvailable(problemDetail);
+    contributeCoreProblemFields(problemDetail, exception);
+    contributeWebProblemFields(problemDetail, exception, request);
 
     log.debug(
         "ProblemDetail built successfully: type={}, code={}",
@@ -141,42 +91,125 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Extract the request path in a proxy-aware fashion using the following precedence: {@code
-   * Forwarded} header, {@code X-Forwarded-*} headers, then {@code requestURI}.
+   * Populates standard RFC 7807 fields and common extension properties.
+   *
+   * @param problemDetail target problem detail instance
+   * @param resolution error resolution metadata
+   * @param exception source exception
+   * @param request HTTP request context
+   */
+  private void setupStandardFields(
+      ProblemDetail problemDetail,
+      ErrorResolution resolution,
+      Throwable exception,
+      HttpServletRequest request) {
+    problemDetail.setType(buildTypeUri(resolution.errorCode()));
+    problemDetail.setTitle(resolution.errorCode().code());
+    problemDetail.setDetail(maskSensitiveData(exception.getMessage()));
+
+    problemDetail.setProperty(ErrorKeys.CODE, resolution.errorCode().code());
+    problemDetail.setProperty(ErrorKeys.PATH, extractPath(request));
+    problemDetail.setProperty(
+        ErrorKeys.TIMESTAMP, Instant.now().atOffset(ZoneOffset.UTC).toString());
+  }
+
+  /**
+   * Adds trace ID to problem detail when available from the trace provider.
+   *
+   * @param problemDetail target problem detail instance
+   */
+  private void addTraceIdIfAvailable(ProblemDetail problemDetail) {
+    traceProvider
+        .getCurrentTraceId()
+        .ifPresent(
+            traceId -> {
+              log.debug("Adding distributed trace ID [{}] to ProblemDetail", traceId);
+              problemDetail.setProperty(ErrorKeys.TRACE_ID, traceId);
+            });
+  }
+
+  /**
+   * Invokes core field contributors to add platform-wide extension fields.
+   *
+   * @param problemDetail target problem detail instance
+   * @param exception source exception
+   */
+  private void contributeCoreProblemFields(ProblemDetail problemDetail, Throwable exception) {
+    Map<String, Object> coreFields = new HashMap<>();
+    coreFieldContributors.forEach(
+        contributor -> {
+          try {
+            contributor.contribute(coreFields, exception);
+          } catch (Exception e) {
+            log.warn(
+                "Core field contributor [{}] failed with error: {}",
+                contributor.getClass().getSimpleName(),
+                e.getMessage());
+          }
+        });
+    coreFields.forEach(problemDetail::setProperty);
+  }
+
+  /**
+   * Invokes web-specific field contributors to add HTTP context extension fields.
+   *
+   * @param problemDetail target problem detail instance
+   * @param exception source exception
+   * @param request HTTP request context
+   */
+  private void contributeWebProblemFields(
+      ProblemDetail problemDetail, Throwable exception, HttpServletRequest request) {
+    Map<String, Object> webFields = new HashMap<>();
+    webFieldContributors.forEach(
+        contributor -> {
+          try {
+            contributor.contribute(webFields, exception, request);
+          } catch (Exception e) {
+            log.warn(
+                "Web field contributor [{}] failed with error: {}",
+                contributor.getClass().getSimpleName(),
+                e.getMessage());
+          }
+        });
+    webFields.forEach(problemDetail::setProperty);
+  }
+
+  /**
+   * Extracts request path in proxy-aware fashion using precedence: Forwarded header, X-Forwarded-*
+   * headers, then requestURI.
    *
    * @param request HTTP request context
    * @return resolved path value
    */
   private String extractPath(HttpServletRequest request) {
-    // Priority: Standard Forwarded header > X-Forwarded-* > requestURI
     String forwarded = request.getHeader("Forwarded");
     if (forwarded != null && !forwarded.isEmpty()) {
       String path = parseForwardedPath(forwarded);
       if (path != null) {
-        log.debug("Extracted path from Forwarded header: path={}", path);
+        log.debug("Extracted request path from Forwarded header: path={}", path);
         return path;
       }
     }
 
     String forwardedPath = request.getHeader("X-Forwarded-Path");
     if (forwardedPath != null && !forwardedPath.isEmpty()) {
-      log.debug("Extracted path from X-Forwarded-Path: path={}", forwardedPath);
+      log.debug("Extracted request path from X-Forwarded-Path header: path={}", forwardedPath);
       return forwardedPath;
     }
 
     String forwardedUri = request.getHeader("X-Forwarded-Uri");
     if (forwardedUri != null && !forwardedUri.isEmpty()) {
-      log.debug("Extracted path from X-Forwarded-Uri: path={}", forwardedUri);
+      log.debug("Extracted request path from X-Forwarded-Uri header: path={}", forwardedUri);
       return forwardedUri;
     }
 
     String requestUri = request.getRequestURI();
-    log.debug("Using request URI as path: path={}", requestUri);
+    log.debug("Using direct request URI as path: path={}", requestUri);
     return requestUri;
   }
 
   /**
-   * Parse the {@code path} attribute from an RFC 7239 {@code Forwarded} header value.
+   * Parses path attribute from RFC 7239 Forwarded header value.
    *
    * @param forwarded header value
    * @return extracted path or {@code null} when absent
@@ -193,23 +226,7 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Convert the integer status code into {@link HttpStatus}, defaulting to {@code 500} when
-   * invalid.
-   *
-   * @param status resolved integer status
-   * @return matching {@link HttpStatus}
-   */
-  private HttpStatus convertToHttpStatus(int status) {
-    try {
-      return HttpStatus.valueOf(status);
-    } catch (IllegalArgumentException e) {
-      log.warn("Invalid HTTP status code: {}, falling back to 500", status);
-      return HttpStatus.INTERNAL_SERVER_ERROR;
-    }
-  }
-
-  /**
-   * Apply lightweight masking to sensitive key-value pairs embedded in error messages.
+   * Applies lightweight masking to sensitive key-value pairs in error messages.
    *
    * @param message original detail message
    * @return masked message when sensitive tokens are present
@@ -219,14 +236,13 @@ public class ProblemDetailBuilder {
       return null;
     }
 
-    // Mask common sensitive patterns
     return message
         .replaceAll("(?i)(password|token|secret|key)=[^\\s,}]+", "$1=***")
         .replaceAll("(?i)(password|token|secret|key)\":\\s*\"[^\"]+\"", "$1\":\"***\"");
   }
 
   /**
-   * Construct the {@code ProblemDetail#type} URI from the logical error code.
+   * Constructs ProblemDetail type URI from logical error code.
    *
    * @param errorCode platform error code abstraction
    * @return fully-qualified type URI

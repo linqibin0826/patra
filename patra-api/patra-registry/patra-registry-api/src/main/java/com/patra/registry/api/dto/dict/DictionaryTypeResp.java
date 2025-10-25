@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Response DTO for dictionary type metadata exposed via the internal HTTP API.
+ * Dictionary type metadata exposed via internal HTTP API.
  *
  * <p>Field descriptions:
  *

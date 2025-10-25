@@ -115,51 +115,44 @@ public class DefaultExprRenderer implements ExprRenderer {
       List<RenderTrace.Hit> hits) {
 
     if (node instanceof And andExpr) {
-      if (context == RenderContext.AND) {
-        andExpr
-            .children()
-            .forEach(
-                child ->
-                    renderNode(
-                        child,
-                        snapshot,
-                        labels,
-                        RenderContext.AND,
-                        negated,
-                        fragments,
-                        stdKeys,
-                        warnings,
-                        hits));
-      } else {
-        List<String> nested = new ArrayList<>();
-        andExpr
-            .children()
-            .forEach(
-                child ->
-                    renderNode(
-                        child,
-                        snapshot,
-                        labels,
-                        RenderContext.AND,
-                        negated,
-                        nested,
-                        stdKeys,
-                        warnings,
-                        hits));
-        if (!nested.isEmpty()) {
-          String joined = String.join(" AND ", nested);
-          if (context == RenderContext.OR) {
-            joined = "(" + joined + ")";
-          }
-          fragments.add(joined);
-        }
-      }
+      renderAndNode(
+          andExpr, snapshot, labels, context, negated, fragments, stdKeys, warnings, hits);
       return;
     }
 
     if (node instanceof Or orExpr) {
-      List<String> orFragments = new ArrayList<>();
-      orExpr
+      renderOrNode(orExpr, snapshot, labels, context, negated, fragments, stdKeys, warnings, hits);
+      return;
+    }
+
+    if (node instanceof Not notExpr) {
+      renderNotNode(
+          notExpr, snapshot, labels, context, negated, fragments, stdKeys, warnings, hits);
+      return;
+    }
+
+    if (node instanceof Const constant) {
+      renderConstNode(constant, warnings);
+      return;
+    }
+
+    if (node instanceof Atom atom) {
+      renderAtom(atom, snapshot, labels, negated, fragments, stdKeys, warnings, hits);
+    }
+  }
+
+  private void renderAndNode(
+      And andExpr,
+      ProvenanceSnapshot snapshot,
+      RenderLabels labels,
+      RenderContext context,
+      boolean negated,
+      List<String> fragments,
+      StdKeyAccumulator stdKeys,
+      List<Issue> warnings,
+      List<RenderTrace.Hit> hits) {
+    if (context == RenderContext.AND) {
+      andExpr
           .children()
           .forEach(
               child ->
@@ -167,76 +160,133 @@ public class DefaultExprRenderer implements ExprRenderer {
                       child,
                       snapshot,
                       labels,
-                      RenderContext.OR,
+                      RenderContext.AND,
                       negated,
-                      orFragments,
+                      fragments,
                       stdKeys,
                       warnings,
                       hits));
-
-      if (!orFragments.isEmpty()) {
-        String joined = String.join(" OR ", orFragments);
-        // Wrap in parentheses when OR is nested inside AND or NOT
-        if (context != RenderContext.OR) {
+    } else {
+      List<String> nested = new ArrayList<>();
+      andExpr
+          .children()
+          .forEach(
+              child ->
+                  renderNode(
+                      child,
+                      snapshot,
+                      labels,
+                      RenderContext.AND,
+                      negated,
+                      nested,
+                      stdKeys,
+                      warnings,
+                      hits));
+      if (!nested.isEmpty()) {
+        String joined = String.join(" AND ", nested);
+        if (context == RenderContext.OR) {
           joined = "(" + joined + ")";
         }
         fragments.add(joined);
-        log.debug(
-            "Rendered OR with {} children, wrapped={}",
-            orFragments.size(),
-            context != RenderContext.OR);
       }
-      return;
+    }
+  }
+
+  private void renderOrNode(
+      Or orExpr,
+      ProvenanceSnapshot snapshot,
+      RenderLabels labels,
+      RenderContext context,
+      boolean negated,
+      List<String> fragments,
+      StdKeyAccumulator stdKeys,
+      List<Issue> warnings,
+      List<RenderTrace.Hit> hits) {
+    List<String> orFragments = new ArrayList<>();
+    orExpr
+        .children()
+        .forEach(
+            child ->
+                renderNode(
+                    child,
+                    snapshot,
+                    labels,
+                    RenderContext.OR,
+                    negated,
+                    orFragments,
+                    stdKeys,
+                    warnings,
+                    hits));
+
+    if (!orFragments.isEmpty()) {
+      String joined = String.join(" OR ", orFragments);
+      if (context != RenderContext.OR) {
+        joined = "(" + joined + ")";
+      }
+      fragments.add(joined);
+      log.debug(
+          "Rendered OR expression with {} children, wrapped={}",
+          orFragments.size(),
+          context != RenderContext.OR);
+    }
+  }
+
+  private void renderNotNode(
+      Not notExpr,
+      ProvenanceSnapshot snapshot,
+      RenderLabels labels,
+      RenderContext context,
+      boolean negated,
+      List<String> fragments,
+      StdKeyAccumulator stdKeys,
+      List<Issue> warnings,
+      List<RenderTrace.Hit> hits) {
+    Expr child = notExpr.child();
+    boolean compositeChild = child instanceof And || child instanceof Or;
+    List<String> notFragments = new ArrayList<>();
+
+    renderNode(
+        child,
+        snapshot,
+        labels,
+        RenderContext.NOT,
+        !compositeChild,
+        notFragments,
+        stdKeys,
+        warnings,
+        hits);
+
+    if (!notFragments.isEmpty()) {
+      if (compositeChild) {
+        String fragment = buildNotCompositeFragment(notFragments, child);
+        fragments.add(fragment);
+      } else {
+        fragments.addAll(notFragments);
+      }
+      log.debug("Rendered NOT expression with {} fragments", notFragments.size());
+    }
+  }
+
+  private String buildNotCompositeFragment(List<String> notFragments, Expr child) {
+    String inner =
+        notFragments.size() == 1 ? notFragments.getFirst() : String.join(" AND ", notFragments);
+    String trimmed = inner.trim();
+
+    if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) {
+      trimmed = "(" + trimmed + ")";
     }
 
-    if (node instanceof Not notExpr) {
-      Expr child = notExpr.child();
-      boolean compositeChild = child instanceof And || child instanceof Or;
-      List<String> notFragments = new ArrayList<>();
-      renderNode(
-          child,
-          snapshot,
-          labels,
-          RenderContext.NOT,
-          !compositeChild,
-          notFragments,
-          stdKeys,
-          warnings,
-          hits);
+    log.debug(
+        "Built NOT composite fragment: childType={}, result=NOT{}",
+        child.getClass().getSimpleName(),
+        trimmed);
 
-      if (!notFragments.isEmpty()) {
-        if (compositeChild) {
-          String inner =
-              notFragments.size() == 1
-                  ? notFragments.getFirst()
-                  : String.join(" AND ", notFragments);
-          String trimmed = inner.trim();
-          if (!trimmed.startsWith("(") || !trimmed.endsWith(")")) {
-            trimmed = "(" + trimmed + ")";
-          }
-          fragments.add("NOT" + trimmed);
-          log.debug(
-              "Rendered NOT composite: childType={}, fragment={}",
-              child.getClass().getSimpleName(),
-              trimmed);
-        } else {
-          // NOT fragments should use negated rules; the rule template handles NOT syntax
-          fragments.addAll(notFragments);
-        }
-        log.debug("Rendered NOT with {} fragments", notFragments.size());
-      }
-      return;
-    }
+    return "NOT" + trimmed;
+  }
 
-    if (node instanceof Const constant) {
-      if (constant == Const.FALSE) {
-        warnings.add(Issue.warn("W-CONST-FALSE", "Expression is unsatisfiable", Map.of()));
-      }
-      return;
-    }
-
-    if (node instanceof Atom atom) {
-      renderAtom(atom, snapshot, labels, negated, fragments, stdKeys, warnings, hits);
+  private void renderConstNode(Const constant, List<Issue> warnings) {
+    if (constant == Const.FALSE) {
+      warnings.add(Issue.warn("W-CONST-FALSE", "Expression is unsatisfiable", Map.of()));
     }
   }
 

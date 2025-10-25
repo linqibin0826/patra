@@ -5,7 +5,7 @@ import com.patra.registry.adapter.inbound.rest.converter.ProvenanceApiConverter;
 import com.patra.registry.api.dto.provenance.ProvenanceConfigResp;
 import com.patra.registry.api.dto.provenance.ProvenanceResp;
 import com.patra.registry.api.endpoint.ProvenanceEndpoint;
-import com.patra.registry.app.service.ProvenanceConfigAppService;
+import com.patra.registry.app.service.ProvenanceConfigOrchestrator;
 import com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException;
 import com.patra.registry.domain.model.read.provenance.ProvenanceConfigQuery;
 import com.patra.registry.domain.model.read.provenance.ProvenanceQuery;
@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Implementation of the provenance internal API endpoint.
  *
  * <p>Exposes provenance metadata and configuration retrieval capabilities to other microservices
- * via internal RPC contract, delegating to application service and converting query DTOs to API
- * response DTOs.
+ * via internal RPC contract, delegating to orchestrator and converting query DTOs to API response
+ * DTOs.
  *
  * @author linqibin
  * @since 0.1.0
@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
 
-  private final ProvenanceConfigAppService appService;
+  private final ProvenanceConfigOrchestrator orchestrator;
   private final ProvenanceApiConverter converter;
 
   /**
@@ -41,10 +41,7 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public List<ProvenanceResp> listProvenances() {
-    log.debug("Listing all available provenances");
-    List<ProvenanceResp> provenances = converter.toResp(appService.listProvenances());
-    log.debug("Retrieved {} provenances", provenances.size());
-    return provenances;
+    return converter.toResp(orchestrator.listProvenances());
   }
 
   /**
@@ -56,9 +53,8 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public ProvenanceResp getProvenance(ProvenanceCode code) {
-    log.debug("Retrieving provenance by code [{}]", code.getCode());
-    Optional<ProvenanceQuery> result = appService.findProvenance(code);
-    return result
+    return orchestrator
+        .findProvenance(code)
         .map(converter::toResp)
         .orElseThrow(
             () ->
@@ -78,13 +74,8 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   @Override
   public ProvenanceConfigResp getConfiguration(
       ProvenanceCode code, String operationType, Instant at) {
-    log.debug(
-        "Retrieving provenance configuration for code [{}] with operationType [{}] at timestamp [{}]",
-        code.getCode(),
-        operationType,
-        at);
-    Optional<ProvenanceConfigQuery> result = appService.loadConfiguration(code, operationType, at);
-    return result
+    return orchestrator
+        .loadConfiguration(code, operationType, at)
         .map(converter::toResp)
         .orElseThrow(
             () ->

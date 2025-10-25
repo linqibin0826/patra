@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Response DTO representing the validation result for a dictionary reference.
+ * Validation result for a dictionary reference.
  *
  * <p>Field descriptions:
  *

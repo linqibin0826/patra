@@ -168,45 +168,55 @@ public abstract class AbstractProvenanceScheduleJob {
    * @param paramStr XXL-Job JSON param string (may be blank)
    */
   protected void executeScheduleJob(String paramStr) {
-    // Record start time for SLA metrics
     long startTime = System.currentTimeMillis();
+    logJobStart(paramStr);
 
     try {
-      log.info(
-          "Starting scheduled job, provenance={}, operation={}, rawParam={}",
-          getProvenanceCode().getCode(),
-          getOperationCode(),
-          paramStr);
-
       PlanIngestionCommand command = parseJobParam(paramStr);
       PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
-
-      long duration = System.currentTimeMillis() - startTime;
-      log.info(
-          "Scheduled job completed, provenance={}, operation={}, durationMs={}, planId={}, taskCount={}",
-          getProvenanceCode().getCode(),
-          getOperationCode(),
-          duration,
-          result.planId(),
-          result.taskCount());
-
-      XxlJobHelper.handleSuccess(
-          String.format(
-              "Job succeeded in %dms, planId=%s, taskCount=%d",
-              duration, result.planId(), result.taskCount()));
-
+      handleJobSuccess(result, startTime);
     } catch (Exception e) {
-      long duration = System.currentTimeMillis() - startTime;
-      log.error(
-          "Scheduled job failed, provenance={}, operation={}, durationMs={}, error={}",
-          getProvenanceCode().getCode(),
-          getOperationCode(),
-          duration,
-          e.getMessage(),
-          e);
-
-      XxlJobHelper.handleFail(String.format("Job failed: %s", e.getMessage()));
+      handleJobFailure(e, startTime);
       throw e;
     }
+  }
+
+  /** Logs job start with provenance and operation context. */
+  private void logJobStart(String rawParam) {
+    log.info(
+        "Starting ingestion plan creation for provenance [{}] with operation [{}] using parameters: {}",
+        getProvenanceCode().getCode(),
+        getOperationCode(),
+        rawParam);
+  }
+
+  /** Handles successful job execution with result reporting and logging. */
+  private void handleJobSuccess(PlanIngestionResult result, long startTime) {
+    long duration = System.currentTimeMillis() - startTime;
+    log.info(
+        "Completed ingestion plan [{}] for provenance [{}] with {} tasks scheduled in {}ms",
+        result.planId(),
+        getProvenanceCode().getCode(),
+        result.taskCount(),
+        duration);
+
+    XxlJobHelper.handleSuccess(
+        String.format(
+            "Job succeeded in %dms, planId=%s, taskCount=%d",
+            duration, result.planId(), result.taskCount()));
+  }
+
+  /** Handles job failure with error logging and reporting. */
+  private void handleJobFailure(Exception e, long startTime) {
+    long duration = System.currentTimeMillis() - startTime;
+    log.error(
+        "Failed to execute scheduled job for provenance [{}] with operation [{}] after {}ms: {}",
+        getProvenanceCode().getCode(),
+        getOperationCode(),
+        duration,
+        e.getMessage(),
+        e);
+
+    XxlJobHelper.handleFail(String.format("Job failed: %s", e.getMessage()));
   }
 }

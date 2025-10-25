@@ -15,23 +15,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * 基于 MyBatis-Plus 的任务仓储实现。
+ * MyBatis-Plus implementation of TaskRepository.
  *
- * <p>职责：
+ * <p>Responsibilities:
  *
  * <ul>
- *   <li>任务聚合（TaskAggregate）的持久化与回读。
- *   <li>按计划 ID 查询任务集合（用于切片回放 / 统计）。
- *   <li>统计排队状态的任务数量（队列背压判断输入来源）。
- *   <li>支持租约相关操作（CAS 抢占、续租、置 RUNNING）。
+ *   <li>Persisting and retrieving TaskAggregate entities.
+ *   <li>Querying tasks by plan ID for slice replay and statistics.
+ *   <li>Counting queued tasks for queue backpressure detection by provenance source.
+ *   <li>Supporting lease operations including CAS acquisition, renewal, and marking as RUNNING.
  * </ul>
  *
- * 日志策略：
+ * <p>Logging strategy:
  *
  * <ul>
- *   <li>DEBUG：插入 / 更新操作（含 id / planId）。
- *   <li>INFO：租约抢占与续租关键节点。
- *   <li>不打印高频查询日志，减少 I/O。
+ *   <li>DEBUG: insert/update operations including id and planId.
+ *   <li>INFO: lease acquisition and renewal key events.
+ *   <li>No logging for high-frequency query operations to reduce I/O.
  * </ul>
  */
 @Repository
@@ -39,16 +39,16 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 public class TaskRepositoryMpImpl implements TaskRepository {
 
-  /** 任务 Mapper */
+  /** Task mapper. */
   private final TaskMapper mapper;
 
-  /** 任务转换器 */
+  /** Task converter. */
   private final TaskConverter converter;
 
   /**
-   * 保存任务（insert 或 update）。
+   * Saves a task by inserting or updating based on ID presence.
    *
-   * <p>回写自增 ID 与版本字段；DEBUG 打印操作类型。
+   * <p>Auto-generated ID and version fields are written back; operation type logged at DEBUG level.
    */
   @Override
   public TaskAggregate save(TaskAggregate task) {
@@ -76,10 +76,12 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 批量保存任务（顺序调用 {@link #save(TaskAggregate)}，确保版本/ID 写回一致性）。
+   * Batch saves tasks by sequentially calling {@link #save(TaskAggregate)}.
    *
-   * @param tasks 任务列表
-   * @return 持久化后任务集合
+   * <p>Ensures version and ID write-back consistency.
+   *
+   * @param tasks task list
+   * @return persisted task collection
    */
   @Override
   public List<TaskAggregate> saveAll(List<TaskAggregate> tasks) {
@@ -91,10 +93,10 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 根据计划 ID 查询任务集合。
+   * Finds tasks by plan ID.
    *
-   * @param planId 计划 ID
-   * @return 任务聚合列表（无则空列表）
+   * @param planId plan ID
+   * @return list of task aggregates, empty if none found
    */
   @Override
   public List<TaskAggregate> findByPlanId(Long planId) {
@@ -113,10 +115,10 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 按任务 ID 查询任务聚合。
+   * Finds a task by task ID.
    *
-   * @param taskId 任务 ID
-   * @return 任务聚合，不存在则返回 empty
+   * @param taskId task ID
+   * @return task aggregate, empty if not found
    */
   @Override
   public Optional<TaskAggregate> findById(Long taskId) {
@@ -128,11 +130,11 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 统计处于 QUEUED 状态的任务数量（可选按来源 / 操作过滤）。
+   * Counts tasks in QUEUED status with optional filtering by provenance and operation.
    *
-   * @param provenanceCode 来源代码，可空
-   * @param operationCode 操作代码，可空
-   * @return 数量
+   * @param provenanceCode provenance code, nullable for no filtering
+   * @param operationCode operation code, nullable for no filtering
+   * @return count of queued tasks
    */
   @Override
   public long countQueuedTasks(String provenanceCode, String operationCode) {
@@ -148,14 +150,14 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * CAS 抢占租约（步骤 0）。
+   * Attempts to acquire lease using CAS operation.
    *
-   * @param taskId 任务 ID
-   * @param owner 租约持有者标识
-   * @param now 当前时间（UTC）
-   * @param ttlSeconds 租约 TTL（秒）
-   * @param idempotentKey 幂等键（用于防御性校验）
-   * @return true 表示抢占成功，false 表示他人持有或条件不满足
+   * @param taskId task ID
+   * @param owner lease owner identifier
+   * @param now current time (UTC)
+   * @param ttlSeconds lease TTL in seconds
+   * @param idempotentKey idempotency key for defensive validation
+   * @return true if lease acquired successfully, false if held by others or conditions not met
    */
   @Override
   public boolean tryAcquireLease(
@@ -172,13 +174,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 置任务为 RUNNING 状态并更新租约（步骤 1）。
+   * Marks task as RUNNING and updates lease.
    *
-   * @param taskId 任务 ID
-   * @param owner 租约持有者
-   * @param now 当前时间
-   * @param ttlSeconds 租约 TTL（秒）
-   * @return true 表示更新成功，false 表示租约已丢失
+   * @param taskId task ID
+   * @param owner lease owner
+   * @param now current time
+   * @param ttlSeconds lease TTL in seconds
+   * @return true if update succeeded, false if lease lost
    */
   @Override
   public boolean markRunningWithLease(Long taskId, String owner, Instant now, int ttlSeconds) {
@@ -192,13 +194,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 心跳续租。
+   * Renews lease via heartbeat.
    *
-   * @param taskId 任务 ID
-   * @param owner 租约持有者
-   * @param now 当前时间
-   * @param ttlSeconds 租约 TTL（秒）
-   * @return true 表示续租成功，false 表示租约已丢失
+   * @param taskId task ID
+   * @param owner lease owner
+   * @param now current time
+   * @param ttlSeconds lease TTL in seconds
+   * @return true if renewal succeeded, false if lease lost
    */
   @Override
   public boolean renewLease(Long taskId, String owner, Instant now, int ttlSeconds) {
@@ -214,13 +216,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * 批量心跳续租（性能优化）。
+   * Batch renews leases via heartbeat for performance optimization.
    *
-   * @param taskIds 任务ID列表
-   * @param owner 租约持有者
-   * @param now 当前时间
-   * @param ttlSeconds 租约 TTL（秒）
-   * @return 成功续租的任务数
+   * @param taskIds list of task IDs
+   * @param owner lease owner
+   * @param now current time
+   * @param ttlSeconds lease TTL in seconds
+   * @return count of successfully renewed tasks
    */
   @Override
   public int batchRenewLeases(List<Long> taskIds, String owner, Instant now, int ttlSeconds) {

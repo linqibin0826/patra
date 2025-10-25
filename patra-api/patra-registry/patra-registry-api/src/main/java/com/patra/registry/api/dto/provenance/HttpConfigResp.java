@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.provenance;
 import java.time.Instant;
 
 /**
- * Response DTO describing baseline HTTP configuration for a provenance.
+ * Baseline HTTP configuration for provenance API calls.
  *
  * <p>Field descriptions:
  *

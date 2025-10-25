@@ -164,7 +164,31 @@ public class TaskAggregate extends AggregateRoot<Long> {
         TaskSchedulerContext.empty());
   }
 
-  /** Rebuild an existing task aggregate from persisted state. */
+  /**
+   * Rebuilds an existing task aggregate from persisted state.
+   *
+   * @param id task identifier
+   * @param scheduleInstanceId scheduler instance identifier
+   * @param planId owning plan identifier
+   * @param sliceId owning slice identifier
+   * @param provenanceCode provenance/source code
+   * @param operationCode operation code
+   * @param paramsJson task parameter payload in JSON
+   * @param idempotentKey idempotency key
+   * @param exprHash expression hash
+   * @param priority scheduling priority
+   * @param scheduledAt scheduled execution time
+   * @param lastHeartbeatAt timestamp of last heartbeat
+   * @param retryCount retry count
+   * @param lastErrorCode most recent error code
+   * @param lastErrorMsg most recent error message
+   * @param status current task status
+   * @param leaseInfo lease ownership metadata
+   * @param executionTimeline execution timeline markers
+   * @param schedulerContext scheduler context
+   * @param version optimistic locking version
+   * @return restored task aggregate
+   */
   public static TaskAggregate restore(
       Long id,
       Long scheduleInstanceId,
@@ -187,7 +211,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
       TaskSchedulerContext schedulerContext,
       long version) {
     TaskAggregate aggregate =
-        new TaskAggregate(
+        createRestoredInstance(
             id,
             scheduleInstanceId,
             planId,
@@ -211,14 +235,65 @@ public class TaskAggregate extends AggregateRoot<Long> {
     return aggregate;
   }
 
+  private static TaskAggregate createRestoredInstance(
+      Long id,
+      Long scheduleInstanceId,
+      Long planId,
+      Long sliceId,
+      String provenanceCode,
+      String operationCode,
+      String paramsJson,
+      String idempotentKey,
+      String exprHash,
+      Integer priority,
+      Instant scheduledAt,
+      Instant lastHeartbeatAt,
+      Integer retryCount,
+      String lastErrorCode,
+      String lastErrorMsg,
+      TaskStatus status,
+      LeaseInfo leaseInfo,
+      ExecutionTimeline executionTimeline,
+      TaskSchedulerContext schedulerContext) {
+    return new TaskAggregate(
+        id,
+        scheduleInstanceId,
+        planId,
+        sliceId,
+        provenanceCode,
+        operationCode,
+        paramsJson,
+        idempotentKey,
+        exprHash,
+        priority,
+        scheduledAt,
+        lastHeartbeatAt,
+        retryCount,
+        lastErrorCode,
+        lastErrorMsg,
+        status,
+        leaseInfo,
+        executionTimeline,
+        schedulerContext);
+  }
+
+  /**
+   * Binds this task to a specific plan and slice after persistence.
+   *
+   * @param planId plan identifier
+   * @param sliceId slice identifier
+   */
   public void bindPlanAndSlice(Long planId, Long sliceId) {
     this.planId = planId;
     this.sliceId = sliceId;
   }
 
   /**
-   * Emit a domain event when the task is ready to be queued so the application layer can publish
-   * it.
+   * Emits a domain event when the task is ready to be queued.
+   *
+   * <p>Application layer should publish this event to the message queue.
+   *
+   * @return task queued event
    */
   public TaskQueuedEvent raiseQueuedEvent() {
     TaskQueuedEvent event =
@@ -237,10 +312,18 @@ public class TaskAggregate extends AggregateRoot<Long> {
     return event;
   }
 
+  /** Marks the task as queued. */
   public void markQueued() {
     this.status = TaskStatus.QUEUED;
   }
 
+  /**
+   * Marks the task as running and records execution context.
+   *
+   * @param startedAt execution start time
+   * @param schedulerRunId scheduler run identifier
+   * @param correlationId correlation identifier for tracing
+   */
   public void markRunning(Instant startedAt, String schedulerRunId, String correlationId) {
     this.executionTimeline = executionTimeline.onStart(startedAt);
     this.schedulerContext =
@@ -248,45 +331,85 @@ public class TaskAggregate extends AggregateRoot<Long> {
     this.status = TaskStatus.RUNNING;
   }
 
+  /**
+   * Marks the task as succeeded.
+   *
+   * @param finishedAt execution finish time
+   */
   public void markSucceeded(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.SUCCEEDED;
   }
 
+  /**
+   * Marks the task as failed.
+   *
+   * @param finishedAt execution finish time
+   */
   public void markFailed(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.FAILED;
   }
 
+  /**
+   * Marks the task as partially completed.
+   *
+   * @param finishedAt execution finish time
+   */
   public void markPartial(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.PARTIAL;
   }
 
+  /**
+   * Marks the task as pending cursor advancement.
+   *
+   * @param finishedAt execution finish time
+   */
   public void markCursorPending(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.CURSOR_PENDING;
   }
 
+  /**
+   * Marks the task as cancelled.
+   *
+   * @param finishedAt cancellation time
+   */
   public void markCancelled(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.CANCELLED;
   }
 
+  /**
+   * Acquires a lease for this task.
+   *
+   * @param owner lease owner identifier
+   * @param leasedUntil lease expiration time
+   */
   public void acquireLease(String owner, Instant leasedUntil) {
     this.leaseInfo = leaseInfo.acquire(owner, leasedUntil);
   }
 
+  /**
+   * Renews the existing lease.
+   *
+   * @param owner lease owner identifier
+   * @param leasedUntil new lease expiration time
+   */
   public void renewLease(String owner, Instant leasedUntil) {
     this.leaseInfo = leaseInfo.renew(owner, leasedUntil);
   }
 
+  /** Releases the current lease. */
   public void releaseLease() {
     this.leaseInfo = leaseInfo.release();
   }
 
   /**
-   * Reset the task for compensation by clearing runtime context and returning to the queued state.
+   * Resets the task for retry by clearing runtime context.
+   *
+   * <p>Releases lease, clears execution timeline and scheduler context, then marks as queued.
    */
   public void prepareForRetry() {
     releaseLease();
