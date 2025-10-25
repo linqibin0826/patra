@@ -26,6 +26,8 @@
         <hutool.version>5.8.25</hutool.version>
         <xxl-job.version>3.2.0</xxl-job.version>
         <rocketmq.version>5.1.4</rocketmq.version>
+        <guava.version>31.1-jre</guava.version>
+        <okio.version>3.6.0</okio.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <skywalking.version>9.5.0</skywalking.version>
         <feign.version>13.1</feign.version>
@@ -196,6 +198,19 @@
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-core</artifactId>
                 <version>${hutool.version}</version>
+            </dependency>
+
+            <!-- Enforce convergence for common transitive libs pulled by RocketMQ/OTLP stack -->
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio-jvm</artifactId>
+                <version>${okio.version}</version>
             </dependency>
 
             <!-- SkyWalking APM Toolkit -->

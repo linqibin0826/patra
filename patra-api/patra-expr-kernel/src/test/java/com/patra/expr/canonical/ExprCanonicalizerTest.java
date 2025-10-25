@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonNormalizer;
+import com.patra.common.json.JsonNormalizerConfig;
+import com.patra.common.json.JsonNormalizerResult;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
@@ -28,8 +30,8 @@ class ExprCanonicalizerTest {
     ExprCanonicalSnapshot snapshot = ExprCanonicalizer.canonicalize(expr);
 
     JsonNormalizer normalizer =
-        JsonNormalizer.withMapper(new ObjectMapper(), JsonNormalizer.Config.builder().build());
-    JsonNormalizer.Result expected = normalizer.normalize(Exprs.toJson(expr));
+        JsonNormalizer.withMapper(new ObjectMapper(), JsonNormalizerConfig.builder().build());
+    JsonNormalizerResult expected = normalizer.normalize(Exprs.toJson(expr));
 
     assertEquals(expected.getCanonicalJson(), snapshot.canonicalJson());
     assertEquals(HashUtils.sha256Hex(expected.getHashMaterial()), snapshot.hash());

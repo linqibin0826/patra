@@ -18,8 +18,8 @@ class JsonNormalizerTest {
 
   @Test
   void normalize_basic_object_and_string_policies() {
-    JsonNormalizer.Config cfg =
-        JsonNormalizer.Config.builder()
+    JsonNormalizerConfig cfg =
+        JsonNormalizerConfig.builder()
             .lowercaseFields(Set.of("name"))
             .keepEmptyWhitelist(Set.of("$.keep", "meta"))
             .build();
@@ -32,7 +32,7 @@ class JsonNormalizerTest {
     input.put("keep", ""); // Whitelisted field stays
     input.put("meta", Map.of()); // Whitelisted empty object stays
 
-    JsonNormalizer.Result r = normalizer.normalize(input);
+    JsonNormalizerResult r = normalizer.normalize(input);
     String json0 = r.getCanonicalJson();
     assertThat(json0)
         .contains("\"desc\":\"a b c\"")
@@ -46,12 +46,12 @@ class JsonNormalizerTest {
 
   @Test
   void normalize_array_dedup_sort_vs_sequence_whitelist() {
-    JsonNormalizer.Config cfg =
-        JsonNormalizer.Config.builder()
+    JsonNormalizerConfig cfg =
+        JsonNormalizerConfig.builder()
             .sequenceFieldWhitelist(Set.of("seq")) // Keep seq array order; skip dedupe/global sort
             .coerceTime(false)
             .coerceNumber(false)
-            .coerceBoolean(JsonNormalizer.Config.CoerceBoolean.NONE)
+            .coerceBoolean(JsonNormalizerConfig.CoerceBoolean.NONE)
             .build();
     JsonNormalizer normalizer = JsonNormalizer.withConfig(cfg);
 
@@ -59,7 +59,7 @@ class JsonNormalizerTest {
     input.put("seq", List.of(3, 2, 2, 1));
     input.put("mix", List.of("b", "a", 2, 1, 1, Map.of("k", 1)));
 
-    JsonNormalizer.Result r = normalizer.normalize(input);
+    JsonNormalizerResult r = normalizer.normalize(input);
     String canonicalJson = r.getCanonicalJson();
     // seq: preserved as-is (no dedupe)
     assertThat(canonicalJson).contains("\"seq\":[3,2,2,1]");
@@ -71,8 +71,8 @@ class JsonNormalizerTest {
 
   @Test
   void forbidden_key_and_maxDepth_and_string_limit() throws Exception {
-    JsonNormalizer.Config cfg =
-        JsonNormalizer.Config.builder()
+    JsonNormalizerConfig cfg =
+        JsonNormalizerConfig.builder()
             .forbidKeys(Set.of("forbidden"))
             .maxDepth(1)
             .maxStringBytes(4)
@@ -82,34 +82,34 @@ class JsonNormalizerTest {
     // Forbidden key
     Map<String, Object> input1 = Map.of("forbidden", 1);
     assertThatThrownBy(() -> normalizer.normalize(input1))
-        .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
+        .isInstanceOf(JsonNormalizationException.class)
         .hasMessageContaining("Forbidden key");
 
     // Depth overflow (root depth=1, next level exceeds limit)
     Map<String, Object> input2 = Map.of("a", Map.of("b", 1));
     assertThatThrownBy(() -> normalizer.normalize(input2))
-        .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
+        .isInstanceOf(JsonNormalizationException.class)
         .hasMessageContaining("Max depth exceeded");
 
     // String length overflow (UTF-8 bytes) — use greater depth limit to avoid depth failure
     JsonNormalizer normalizer2 =
         JsonNormalizer.withConfig(
-            JsonNormalizer.Config.builder()
+            JsonNormalizerConfig.builder()
                 .forbidKeys(Set.of("forbidden"))
                 .maxDepth(3)
                 .maxStringBytes(4)
                 .build());
     Map<String, Object> input3 = Map.of("long", "hello");
     assertThatThrownBy(() -> normalizer2.normalize(input3))
-        .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
+        .isInstanceOf(JsonNormalizationException.class)
         .hasMessageContaining("String length exceeds limit");
   }
 
   @Test
   void coerce_boolean_number_time_and_sanitize_decimal() throws Exception {
-    JsonNormalizer.Config cfg =
-        JsonNormalizer.Config.builder()
-            .coerceBoolean(JsonNormalizer.Config.CoerceBoolean.LOOSE)
+    JsonNormalizerConfig cfg =
+        JsonNormalizerConfig.builder()
+            .coerceBoolean(JsonNormalizerConfig.CoerceBoolean.LOOSE)
             .coerceNumber(true)
             .coerceTime(true)
             .defaultZoneId(ZoneId.of("UTC"))
@@ -131,7 +131,7 @@ class JsonNormalizerTest {
                 + "  \"bin\": \"AQID\"\n"
                 + "}");
 
-    JsonNormalizer.Result r = normalizer.normalize(node);
+    JsonNormalizerResult r = normalizer.normalize(node);
     String json = r.getCanonicalJson();
     // Booleans are coerced
     assertThat(json).contains("\"tTrue\":true");
@@ -146,7 +146,7 @@ class JsonNormalizerTest {
     assertThat(json).contains("\"num2\":true");
 
     // Binary: base64 input parses to text node, so manually build a binary node to cover the branch
-    JsonNormalizer.Result r2 =
+    JsonNormalizerResult r2 =
         normalizer.normalize(JsonNodeFactory.instance.binaryNode(new byte[] {1, 2, 3}));
     assertThat(r2.getCanonicalJson()).isEqualTo("\"AQID\"");
   }
@@ -156,28 +156,28 @@ class JsonNormalizerTest {
     JsonNormalizer normalizer = JsonNormalizer.usingDefault();
     // Non-finite floating point number
     assertThatThrownBy(() -> normalizer.normalize(JsonNodeFactory.instance.numberNode(Double.NaN)))
-        .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
+        .isInstanceOf(JsonNormalizationException.class)
         .hasMessageContaining("Non-finite number");
 
     // Oversized epoch triggers guardrail
-    JsonNormalizer.Config cfg = JsonNormalizer.Config.builder().coerceTime(true).build();
+    JsonNormalizerConfig cfg = JsonNormalizerConfig.builder().coerceTime(true).build();
     JsonNormalizer n2 = JsonNormalizer.withConfig(cfg);
     assertThatThrownBy(() -> n2.normalize(Map.of("t", "99999999999999")))
-        .isInstanceOf(JsonNormalizer.JsonNormalizationException.class)
+        .isInstanceOf(JsonNormalizationException.class)
         .hasMessageContaining("Epoch value out of range");
   }
 
   @Test
   void matches_field_and_path_should_work_with_arrays() {
-    JsonNormalizer.Config cfg =
-        JsonNormalizer.Config.builder()
+    JsonNormalizerConfig cfg =
+        JsonNormalizerConfig.builder()
             .lowercaseFields(Set.of("items", "items.name", "$.items[].name"))
             .build();
     JsonNormalizer normalizer = JsonNormalizer.withConfig(cfg);
 
     Map<String, Object> input =
         Map.of("items", List.of(Map.of("name", " A "), Map.of("name", "B ")));
-    JsonNormalizer.Result r = normalizer.normalize(input);
+    JsonNormalizerResult r = normalizer.normalize(input);
     assertThat(r.getCanonicalJson()).contains("\"name\":\"a\"").contains("\"name\":\"b\"");
   }
 }

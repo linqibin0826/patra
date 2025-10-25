@@ -3,7 +3,9 @@ package com.patra.ingest.app.usecase.plan.slicer;
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.json.JsonNormalizationException;
 import com.patra.common.json.JsonNormalizer;
+import com.patra.common.json.JsonNormalizerResult;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.expr.Exprs;
@@ -138,7 +140,7 @@ public class DateSlicePlanner implements SlicePlanner {
       }
 
       // Build the slice spec and generate a stable signature
-      JsonNormalizer.Result specNormalized =
+      JsonNormalizerResult specNormalized =
           buildSpec(
               context,
               cursor.atStartOfDay(ZoneOffset.UTC).toInstant(),
@@ -215,7 +217,7 @@ public class DateSlicePlanner implements SlicePlanner {
    * @param to window end (Instant for auditability)
    * @return normalization result (canonical JSON + hash material)
    */
-  private JsonNormalizer.Result buildSpec(SlicePlanningContext context, Instant from, Instant to) {
+  private JsonNormalizerResult buildSpec(SlicePlanningContext context, Instant from, Instant to) {
     ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
     ObjectNode root = JsonNodeFactory.instance.objectNode();
     root.put("strategy", code().getCode());
@@ -237,7 +239,7 @@ public class DateSlicePlanner implements SlicePlanner {
 
     try {
       return JsonNormalizer.normalizeDefault(root);
-    } catch (JsonNormalizer.JsonNormalizationException ex) {
+    } catch (JsonNormalizationException ex) {
       log.error(
           "Failed to normalize slice spec, fallback to minimal payload, from={}, to={}",
           from,
@@ -246,7 +248,7 @@ public class DateSlicePlanner implements SlicePlanner {
       String fallback = "{\"strategy\":\"" + code().getCode() + "\"}";
       try {
         return JsonNormalizer.normalizeDefault(fallback);
-      } catch (JsonNormalizer.JsonNormalizationException ignored) {
+      } catch (JsonNormalizationException ignored) {
         throw ex;
       }
     }
