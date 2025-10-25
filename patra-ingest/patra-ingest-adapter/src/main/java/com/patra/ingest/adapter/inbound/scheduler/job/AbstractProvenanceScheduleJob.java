@@ -75,10 +75,8 @@ public abstract class AbstractProvenanceScheduleJob {
    * @throws IngestScheduleParameterException when parameters are invalid
    */
   protected PlanIngestionCommand parseJobParam(String paramStr) {
-    log.debug("Parsing job parameters from XXL-Job: {}", paramStr);
-
     if (CharSequenceUtil.isBlank(paramStr)) {
-      log.debug("No parameters provided, using default configuration with step [{}]", DEFAULT_STEP);
+      log.debug("Using default job configuration with step [{}]", DEFAULT_STEP);
       return buildPlanIngestionCommand(ProvenanceScheduleJobParam.empty(), Map.of());
     }
     try {
@@ -90,14 +88,6 @@ public abstract class AbstractProvenanceScheduleJob {
       if (jobParam == null) {
         jobParam = ProvenanceScheduleJobParam.empty();
       }
-      log.debug(
-          "Extracted job parameters: windowFrom [{}], windowTo [{}], priority [{}], step [{}], schedulerLogId [{}], triggeredAt [{}]",
-          jobParam.windowFrom(),
-          jobParam.windowTo(),
-          jobParam.priority(),
-          jobParam.step(),
-          jobParam.schedulerLogId(),
-          jobParam.triggeredAt());
 
       Map<String, Object> triggerParams =
           (rawParams == null || rawParams.isEmpty())
@@ -130,14 +120,15 @@ public abstract class AbstractProvenanceScheduleJob {
             resolveTriggeredAt(nonNullParam.triggeredAt()),
             nonNullTriggerParams);
 
-    log.debug(
-        "Built PlanIngestionCommand: provenance [{}], operation [{}], step [{}], windowFrom [{}], windowTo [{}], priority [{}]",
-        command.provenanceCode(),
-        command.operationCode(),
-        command.step(),
-        command.windowFrom(),
-        command.windowTo(),
-        command.priority());
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Parsed job command: provenance [{}] operation [{}] window [{}, {}) priority [{}]",
+          command.provenanceCode(),
+          command.operationCode(),
+          command.windowFrom(),
+          command.windowTo(),
+          command.priority());
+    }
 
     return command;
   }

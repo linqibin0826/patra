@@ -55,18 +55,8 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
     TaskRunDO dto = converter.toDO(run);
     if (dto.getId() == null) {
       mapper.insert(dto);
-      if (log.isDebugEnabled()) {
-        log.debug("task run insert taskId={} attemptNo={}", dto.getTaskId(), dto.getAttemptNo());
-      }
     } else {
       mapper.updateById(dto);
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "task run update id={} attemptNo={} status={}",
-            dto.getId(),
-            dto.getAttemptNo(),
-            dto.getStatusCode());
-      }
     }
     // Return re-mapped latest database state including generated ID
     TaskRunDO persisted = mapper.selectById(dto.getId());

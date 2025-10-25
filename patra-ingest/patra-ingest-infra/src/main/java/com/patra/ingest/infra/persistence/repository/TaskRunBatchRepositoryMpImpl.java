@@ -39,23 +39,8 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
     TaskRunBatchDO dto = converter.toDO(batch);
     if (dto.getId() == null) {
       mapper.insert(dto);
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "task run batch insert runId={} batchNo={} status={}",
-            dto.getRunId(),
-            dto.getBatchNo(),
-            dto.getStatusCode());
-      }
     } else {
       mapper.updateById(dto);
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "task run batch update id={} runId={} batchNo={} status={}",
-            dto.getId(),
-            dto.getRunId(),
-            dto.getBatchNo(),
-            dto.getStatusCode());
-      }
     }
   }
 
@@ -66,32 +51,12 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
    */
   @Override
   public void saveAll(List<TaskRunBatch> batches) {
-    if (log.isDebugEnabled()) {
-      log.debug("batch save {} TaskRunBatch records", batches.size());
-    }
     for (TaskRunBatch batch : batches) {
       TaskRunBatchDO dto = converter.toDO(batch);
       if (dto.getId() == null) {
         mapper.insert(dto);
-        if (log.isDebugEnabled()) {
-          log.debug(
-              "task run batch insert runId={} batchNo={} recordCount={} status={}",
-              dto.getRunId(),
-              dto.getBatchNo(),
-              dto.getRecordCount(),
-              dto.getStatusCode());
-        }
       } else {
         mapper.updateById(dto);
-        if (log.isDebugEnabled()) {
-          log.debug(
-              "task run batch update id={} runId={} batchNo={} recordCount={} status={}",
-              dto.getId(),
-              dto.getRunId(),
-              dto.getBatchNo(),
-              dto.getRecordCount(),
-              dto.getStatusCode());
-        }
       }
     }
   }

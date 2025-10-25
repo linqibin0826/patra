@@ -45,7 +45,6 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
       ProvenanceCode provenanceCode, OperationCode operationCode) {
     String code = provenanceCode.getCode();
     String operationType = operationCode.name();
-    logConfigRequest(code, operationType);
 
     try {
       ProvenanceConfigResp resp = callRegistry(provenanceCode, operationType);
@@ -57,15 +56,6 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
     }
   }
 
-  /** Logs the configuration request for debugging. */
-  private void logConfigRequest(String code, String operationType) {
-    log.debug(
-        "Requesting provenance config, code={}, operationType={}, at={}",
-        code,
-        operationType,
-        Instant.now());
-  }
-
   /** Calls the registry service to retrieve configuration. */
   private ProvenanceConfigResp callRegistry(ProvenanceCode provenanceCode, String operationType) {
     long startTime = System.currentTimeMillis();
@@ -74,10 +64,10 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
     long duration = System.currentTimeMillis() - startTime;
     if (log.isDebugEnabled()) {
       log.debug(
-          "RPC call to registry for provenance config completed in {}ms, code={}, operationType={}",
-          duration,
+          "Loaded provenance config for code [{}] operation [{}] in {}ms",
           provenanceCode.getCode(),
-          operationType);
+          operationType,
+          duration);
     }
     return resp;
   }
@@ -90,9 +80,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
       return createMinimalSnapshot(code);
     }
 
-    ProvenanceConfigSnapshot snapshot = converter.convert(resp);
-    log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
-    return snapshot;
+    return converter.convert(resp);
   }
 
   /** Handles unexpected exceptions during configuration retrieval. */
@@ -148,9 +136,9 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
       RemoteCallException ex, String code, String operationType) {
     String msg =
         String.format(
-            "Registry client error, code=%s, status=%d, remoteCode=%s, traceId=%s, detail=%s",
-            code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId(), ex.getMessage());
-    log.error(msg);
+            "Registry client error for provenance [%s] operation [%s]: httpStatus=%d, errorCode=%s, traceId=%s",
+            code, operationType, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId());
+    log.error(msg, ex);
     return new IngestConfigurationException(code, operationType, msg, ex);
   }
 
