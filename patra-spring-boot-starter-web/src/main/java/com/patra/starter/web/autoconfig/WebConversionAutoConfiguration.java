@@ -34,11 +34,14 @@ public class WebConversionAutoConfiguration {
   @ConditionalOnMissingBean(name = "provenanceCodeConverter")
   public Converter<String, ProvenanceCode> provenanceCodeConverter() {
     log.info("Registering String-to-ProvenanceCode converter for request parameter binding");
-    return source -> {
-      if (!StringUtils.hasText(source)) {
-        return null;
+    return new Converter<String, ProvenanceCode>() {
+      @Override
+      public ProvenanceCode convert(String source) {
+        if (!StringUtils.hasText(source)) {
+          return null;
+        }
+        return ProvenanceCode.parse(source);
       }
-      return ProvenanceCode.parse(source);
     };
   }
 }
