@@ -77,7 +77,9 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   @Override
   public ErrorResolution resolve(Throwable exception) {
     if (exception == null) {
-      log.warn("Received null exception, returning fallback error code");
+      log.warn(
+          "Received null exception, returning fallback error code",
+          new IllegalStateException("Null exception trace"));
       return fallbackServerError();
     }
     return resolveWithCause(exception, 0);
