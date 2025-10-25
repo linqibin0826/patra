@@ -228,11 +228,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     int affectedRows = mapper.acquireLease(id, expectedVersion, leaseOwner, leaseExpireAt);
     boolean isSuccess = affectedRows == 1;
     if (isSuccess && log.isDebugEnabled()) {
-      log.debug(
-          "Outbox lease acquired id={} owner={} expireAt={}",
-          id,
-          leaseOwner,
-          leaseExpireAt);
+      log.debug("Outbox lease acquired id={} owner={} expireAt={}", id, leaseOwner, leaseExpireAt);
     }
     return isSuccess;
   }
@@ -351,10 +347,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
 
     if (log.isDebugEnabled()) {
-      log.debug(
-          "Outbox batch query channel={} dedupKeyCount={}",
-          channel,
-          dedupKeys.size());
+      log.debug("Outbox batch query channel={} dedupKeyCount={}", channel, dedupKeys.size());
     }
 
     List<OutboxMessageDO> entities = mapper.findByChannelAndDedupIn(channel, dedupKeys);
@@ -431,9 +424,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "Outbox upsert batch completed size={} affectedRows={}",
-          messages.size(),
-          affectedRows);
+          "Outbox upsert batch completed size={} affectedRows={}", messages.size(), affectedRows);
     }
   }
 }

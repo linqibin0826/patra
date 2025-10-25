@@ -83,9 +83,7 @@ public class OutboxRelayExecutor {
       if (log.isDebugEnabled()) {
         String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
         log.debug(
-            "relay executor no-pending channel={} triggeredAt={}",
-            channelDesc,
-            plan.triggeredAt());
+            "relay executor no-pending channel={} triggeredAt={}", channelDesc, plan.triggeredAt());
       }
       return RelayBatchResult.empty(plan.channel());
     }

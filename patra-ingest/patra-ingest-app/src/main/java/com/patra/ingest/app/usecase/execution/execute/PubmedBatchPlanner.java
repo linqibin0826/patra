@@ -156,10 +156,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
 
     // Clamp to PubMed API limit
     if (pageSize > pubmedRetmaxLimit) {
-      log.warn(
-          "pubmed planner: retmax clamped to {} from {}",
-          pubmedRetmaxLimit,
-          pageSize);
+      log.warn("pubmed planner: retmax clamped to {} from {}", pubmedRetmaxLimit, pageSize);
       pageSize = pubmedRetmaxLimit;
     }
     return pageSize;

@@ -99,54 +99,92 @@ public record WindowOffsetConfig(
       String windowDateFieldKey,
       Integer maxIdsPerWindow,
       Integer maxWindowSpanSeconds) {
-    DomainValidationException.positive(id, "Window offset config id");
-    DomainValidationException.positive(provenanceId, "Provenance id");
+    validateRequiredFields(id, provenanceId, effectiveFrom);
     String modeTrimmed = DomainValidationException.notBlank(windowModeCode, "Window mode code");
     String sizeUnitTrimmed =
         DomainValidationException.notBlank(windowSizeUnitCode, "Window size unit code");
     String offsetTypeTrimmed =
         DomainValidationException.notBlank(offsetTypeCode, "Offset type code");
-    DomainValidationException.nonNull(effectiveFrom, "Effective from");
 
     this.id = id;
     this.provenanceId = provenanceId;
-    this.operationType = operationType != null ? operationType.trim() : null;
+    this.operationType = trimOrNull(operationType);
     this.effectiveFrom = effectiveFrom;
     this.effectiveTo = effectiveTo;
     this.windowModeCode = modeTrimmed;
     this.windowSizeValue = windowSizeValue;
     this.windowSizeUnitCode = sizeUnitTrimmed;
-    this.calendarAlignTo = calendarAlignTo != null ? calendarAlignTo.trim() : null;
+    this.calendarAlignTo = trimOrNull(calendarAlignTo);
     this.lookbackValue = lookbackValue;
-    this.lookbackUnitCode = lookbackUnitCode != null ? lookbackUnitCode.trim() : null;
+    this.lookbackUnitCode = trimOrNull(lookbackUnitCode);
     this.overlapValue = overlapValue;
-    this.overlapUnitCode = overlapUnitCode != null ? overlapUnitCode.trim() : null;
+    this.overlapUnitCode = trimOrNull(overlapUnitCode);
     this.watermarkLagSeconds = watermarkLagSeconds;
 
-    String offsetFieldKeyNormalized = offsetFieldKey != null ? offsetFieldKey.trim() : null;
-    if (offsetFieldKeyNormalized != null && offsetFieldKeyNormalized.isEmpty()) {
-      offsetFieldKeyNormalized = null;
-    }
-    String windowDateFieldKeyNormalized =
-        windowDateFieldKey != null ? windowDateFieldKey.trim() : null;
-    if (windowDateFieldKeyNormalized != null && windowDateFieldKeyNormalized.isEmpty()) {
-      windowDateFieldKeyNormalized = null;
-    }
-    boolean requiresDateKey =
-        "DATE".equalsIgnoreCase(offsetTypeTrimmed)
-            || "COMPOSITE".equalsIgnoreCase(offsetTypeTrimmed);
-    if (requiresDateKey
-        && offsetFieldKeyNormalized == null
-        && windowDateFieldKeyNormalized == null) {
-      throw new DomainValidationException(
-          "DATE/COMPOSITE offset requires at least one std_key (offset or window date)");
-    }
+    String offsetFieldKeyNormalized = normalizeToNullIfEmpty(offsetFieldKey);
+    String windowDateFieldKeyNormalized = normalizeToNullIfEmpty(windowDateFieldKey);
+    validateDateOffsetKeys(
+        offsetTypeTrimmed, offsetFieldKeyNormalized, windowDateFieldKeyNormalized);
 
     this.offsetTypeCode = offsetTypeTrimmed;
     this.offsetFieldKey = offsetFieldKeyNormalized;
-    this.offsetDateFormat = offsetDateFormat != null ? offsetDateFormat.trim() : null;
+    this.offsetDateFormat = trimOrNull(offsetDateFormat);
     this.windowDateFieldKey = windowDateFieldKeyNormalized;
     this.maxIdsPerWindow = maxIdsPerWindow;
     this.maxWindowSpanSeconds = maxWindowSpanSeconds;
+  }
+
+  /**
+   * Validates required fields for the configuration.
+   *
+   * @param id configuration identifier
+   * @param provenanceId provenance identifier
+   * @param effectiveFrom effective start timestamp
+   */
+  private static void validateRequiredFields(Long id, Long provenanceId, Instant effectiveFrom) {
+    DomainValidationException.positive(id, "Window offset config id");
+    DomainValidationException.positive(provenanceId, "Provenance id");
+    DomainValidationException.nonNull(effectiveFrom, "Effective from");
+  }
+
+  /**
+   * Validates that DATE/COMPOSITE offset types have required field keys.
+   *
+   * @param offsetTypeCode offset type code
+   * @param offsetFieldKey normalized offset field key
+   * @param windowDateFieldKey normalized window date field key
+   */
+  private static void validateDateOffsetKeys(
+      String offsetTypeCode, String offsetFieldKey, String windowDateFieldKey) {
+    boolean requiresDateKey =
+        "DATE".equalsIgnoreCase(offsetTypeCode) || "COMPOSITE".equalsIgnoreCase(offsetTypeCode);
+    if (requiresDateKey && offsetFieldKey == null && windowDateFieldKey == null) {
+      throw new DomainValidationException(
+          "DATE/COMPOSITE offset requires at least one std_key (offset or window date)");
+    }
+  }
+
+  /**
+   * Trims string and returns null if the input is null.
+   *
+   * @param value string to trim
+   * @return trimmed string or null
+   */
+  private static String trimOrNull(String value) {
+    return value != null ? value.trim() : null;
+  }
+
+  /**
+   * Normalizes string to null if empty after trimming.
+   *
+   * @param value string to normalize
+   * @return trimmed string or null if empty
+   */
+  private static String normalizeToNullIfEmpty(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 }

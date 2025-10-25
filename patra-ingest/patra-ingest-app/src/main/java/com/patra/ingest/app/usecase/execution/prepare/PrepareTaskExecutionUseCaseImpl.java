@@ -85,8 +85,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
     long taskId = command.taskId();
     String idempotentKey = command.idempotentKey();
 
-    log.info(
-        "prepare task execution start taskId={} idemKey={}", taskId, idempotentKey);
+    log.info("prepare task execution start taskId={} idemKey={}", taskId, idempotentKey);
 
     // 1) Idempotency check
     if (idempotencyChecker.isAlreadySucceeded(taskId, idempotentKey)) {
@@ -126,8 +125,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
               correlationId);
 
       Long runId = session.runId();
-      log.info(
-          "session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
+      log.info("session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
 
       // 6) Load execution context (restore config, compile expressions)
       ExecutionContext context = contextLoader.loadContext(task, runId);
@@ -152,10 +150,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       // Resource cleanup on failure
       if (session != null) {
         log.warn(
-            "prepare failed, cleaning up resources taskId={} runId={}",
-            taskId,
-            session.runId(),
-            e);
+            "prepare failed, cleaning up resources taskId={} runId={}", taskId, session.runId(), e);
         try {
           // Stop heartbeat
           session.heartbeatHandle().stop();
@@ -163,10 +158,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
           leaseManagementService.releaseLease(taskId);
         } catch (Exception cleanupEx) {
           log.error(
-              "resource cleanup failed taskId={} runId={}",
-              taskId,
-              session.runId(),
-              cleanupEx);
+              "resource cleanup failed taskId={} runId={}", taskId, session.runId(), cleanupEx);
         }
       }
       throw e;

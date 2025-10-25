@@ -127,9 +127,10 @@ public class PlanAssemblerImpl implements PlanAssembler {
   }
 
   /**
-   * 构建 Plan 聚合根。
+   * Creates plan aggregate root.
    *
-   * <p>包含：表达式哈希、表达式 JSON 快照、配置 canonical JSON + hash、窗口、切片策略、切片参数 JSON。
+   * <p>Contains: expression hash, expression JSON snapshot, config canonical JSON + hash, window,
+   * slice strategy, slice params JSON.
    */
   private PlanAggregate createPlanAggregate(
       PlanTriggerNorm norm,
@@ -192,11 +193,11 @@ public class PlanAssemblerImpl implements PlanAssembler {
     return new SliceGenerationResult(slices, drafts);
   }
 
-  /** 为每个切片派生任务。此处暂以切片序号作为占位 sliceId，后续持久化时再绑定真实 ID。 */
   /**
-   * 生成任务：一切片一任务。
+   * Generates tasks: one task per slice.
    *
-   * <p>任务幂等键 material = provenance | operation | sliceSignatureHash → sha256 → Base64Url。
+   * <p>Task idempotent key material = provenance | operation | sliceSignatureHash → sha256 →
+   * Base64Url.
    */
   private List<TaskAggregate> createTasks(
       PlanTriggerNorm norm, PlannerWindow window, SliceGenerationResult sliceResult) {
@@ -315,8 +316,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     }
 
     // Default to DATE strategy (safer and more compatible with most data sources)
-    log.debug(
-        "Selected DATE strategy (default) for provenance={}", norm.provenanceCode());
+    log.debug("Selected DATE strategy (default) for provenance={}", norm.provenanceCode());
     return SliceStrategy.DATE;
   }
 

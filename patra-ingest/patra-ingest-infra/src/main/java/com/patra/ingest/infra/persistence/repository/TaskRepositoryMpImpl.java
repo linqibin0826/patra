@@ -56,9 +56,7 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     if (entity.getId() == null) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "task insert planId={} idemKey={}",
-            entity.getPlanId(),
-            entity.getIdempotentKey());
+            "task insert planId={} idemKey={}", entity.getPlanId(), entity.getIdempotentKey());
       }
       mapper.insert(entity);
       task.assignId(entity.getId());
@@ -239,10 +237,7 @@ public class TaskRepositoryMpImpl implements TaskRepository {
             taskIds.size());
       }
     } else {
-      log.warn(
-          "batch lease renewal failed owner={} requestedCount={}",
-          owner,
-          taskIds.size());
+      log.warn("batch lease renewal failed owner={} requestedCount={}", owner, taskIds.size());
     }
     return affected;
   }

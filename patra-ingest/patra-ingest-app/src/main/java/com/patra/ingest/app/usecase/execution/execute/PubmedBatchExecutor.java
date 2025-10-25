@@ -178,10 +178,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
       log.debug("Using direct EFetch for {} PMIDs", pmids.size());
       return fetchArticlesDirectly(pmids, config);
     } else {
-      log.info(
-          "Using EPost+WebEnv for {} PMIDs (threshold: {})",
-          pmids.size(),
-          EPOST_THRESHOLD);
+      log.info("Using EPost+WebEnv for {} PMIDs (threshold: {})", pmids.size(), EPOST_THRESHOLD);
       return fetchArticlesViaEPost(pmids, config);
     }
   }
