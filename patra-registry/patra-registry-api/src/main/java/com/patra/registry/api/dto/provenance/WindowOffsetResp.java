@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.provenance;
 import java.time.Instant;
 
 /**
- * Response DTO describing window and offset configuration for incremental harvesting.
+ * Window and offset configuration for incremental harvesting.
  *
  * <p>Field descriptions:
  *

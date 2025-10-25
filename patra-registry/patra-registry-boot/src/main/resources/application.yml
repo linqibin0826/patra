@@ -1,39 +1,82 @@
+# ========================================
+# Papertrace Registry Service Configuration
+# ========================================
+# Single Source of Truth for provenance metadata, operational configurations,
+# expressions, and dictionaries. Other services query this via Feign RPC.
+
+# ========================================
+# Server Configuration
+# ========================================
 server:
   port: 6000
 
+# ========================================
+# Spring Application Configuration
+# ========================================
 spring:
   application:
     name: patra-registry
+
+  # Active profile (dev/prod), overridable via environment variable
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Configuration imports (order matters: later configs override earlier ones)
   config:
     import:
+      # Local error-handling configuration
       - "classpath:registry-error-config.yaml"
+      # Service-specific Nacos config (environment-aware)
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      # Shared platform config from Nacos (environment-aware)
       - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+
+  # ========================================
+  # Nacos Configuration & Service Discovery
+  # ========================================
   cloud:
     nacos:
+      # Nacos server address (default: localhost for dev)
       server-addr: ${NACOS_ADDR:127.0.0.1:8848}
       username: ${NACOS_USERNAME:nacos}
       password: ${NACOS_PASSWORD:nacos}
       discovery:
+        # Service discovery namespace (multi-tenant isolation)
         namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
+        # Service discovery group
         group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+
+  # ========================================
+  # JSON Serialization Configuration
+  # ========================================
   jackson:
     serialization:
+      # Use ISO-8601 format for dates instead of timestamps
       write-dates-as-timestamps: false
     deserialization:
+      # Tolerate unknown properties for forward compatibility
       fail-on-unknown-properties: false
+
+  # ========================================
+  # Database Configuration
+  # ========================================
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # URL, username, password are profile-specific (see application-dev.yml, application-prod.yml)
     hikari:
+      # Connection pool settings
       maximum-pool-size: 10
       minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      connection-timeout: 30000    # 30 seconds
+      idle-timeout: 600000          # 10 minutes
+      max-lifetime: 1800000         # 30 minutes
+
+  # ========================================
+  # Flyway Database Migration
+  # ========================================
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Allow Flyway to baseline existing databases
     baseline-on-migrate: true
     baseline-version: 0.1.0

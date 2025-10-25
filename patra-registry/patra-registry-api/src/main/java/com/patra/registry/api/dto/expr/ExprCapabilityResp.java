@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * Response DTO capturing capability metadata for expression fields.
+ * Capability metadata for expression fields.
  *
  * <p>Field descriptions:
  *

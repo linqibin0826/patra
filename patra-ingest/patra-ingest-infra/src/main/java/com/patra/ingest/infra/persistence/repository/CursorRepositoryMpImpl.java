@@ -13,19 +13,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * 游标（Cursor）仓储实现。
+ * MyBatis-Plus implementation of CursorRepository.
  *
- * <p>职责：
+ * <p>Responsibilities:
  *
  * <ul>
- *   <li>增量游标插入 / 更新（含规范化 instant/numeric）。
- *   <li>按（provenance, operation, key, scope, namespace）组合键查找。
- *   <li>查询特定来源/操作的全局时间型游标最新水位（监控 / 回放起点）。
+ *   <li>Insert and update incremental cursors with normalized instant/numeric values.
+ *   <li>Find cursors by composite key (provenance, operation, key, scope, namespace).
+ *   <li>Query latest global time cursor watermark for specific provenance/operation (for monitoring
+ *       and replay starting point).
  * </ul>
  *
- * <p>设计：更新后立即 selectById 以获取数据库派生字段（如 normalizedInstant）。
+ * <p>Design: After update, immediately selectById to retrieve database-derived fields such as
+ * normalizedInstant.
  *
- * <p>日志策略：DEBUG 输出 insert/update 关键标识；不打印查询日志。
+ * <p>Logging strategy: DEBUG for insert/update with key identifiers; no query logging.
  */
 @Repository
 @RequiredArgsConstructor
@@ -36,10 +38,10 @@ public class CursorRepositoryMpImpl implements CursorRepository {
   private final CursorConverter converter;
 
   /**
-   * 保存游标。
+   * Saves a cursor.
    *
-   * @param cursor 游标聚合
-   * @return 持久化后最新聚合
+   * @param cursor cursor entity
+   * @return persisted cursor with database-generated fields
    */
   @Override
   public Cursor save(Cursor cursor) {
@@ -71,7 +73,7 @@ public class CursorRepositoryMpImpl implements CursorRepository {
     return converter.toDomain(persisted);
   }
 
-  /** 组合键查找游标。 */
+  /** Finds cursor by composite key. */
   @Override
   public Optional<Cursor> find(
       String provenanceCode,
@@ -90,7 +92,7 @@ public class CursorRepositoryMpImpl implements CursorRepository {
     return Optional.ofNullable(found).map(converter::toDomain);
   }
 
-  /** 查询来源 / 操作的最新全局 TIME 类型游标水位（标准化时间）。 */
+  /** Finds latest global TIME cursor watermark for provenance/operation (normalized timestamp). */
   @Override
   public Optional<Instant> findLatestGlobalTimeWatermark(
       String provenanceCode, String operationCode) {

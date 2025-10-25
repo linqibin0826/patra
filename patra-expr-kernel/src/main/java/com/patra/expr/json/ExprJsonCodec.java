@@ -16,20 +16,22 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Jackson codec for the expression model. It provides both {@code Expr → JSON} and {@code JSON →
- * Expr} conversions without polluting the model classes with Jackson annotations. The goals are:
+ * Jackson codec for the expression model.
  *
- * <ol>
- *   <li>Expose a clear, stable structure suitable for cross-language consumers.
- *   <li>Keep the kernel free from framework annotations.
- *   <li>Remain forward compatible by ignoring unknown properties.
- * </ol>
+ * <p>Provides bidirectional JSON conversion without polluting model classes with Jackson
+ * annotations. Design goals:
  *
- * Example payloads:
+ * <ul>
+ *   <li>Expose a clear, stable structure suitable for cross-language consumers
+ *   <li>Keep the kernel free from framework annotations
+ *   <li>Remain forward compatible by ignoring unknown properties
+ * </ul>
+ *
+ * <p>Example payloads:
  *
  * <pre>
  * {"type":"AND","children":[ ... ]}
- * {"type":"ATOM","field":"title","op":"TERM","value":{"kind":"TERM","text":"heart", "match":"ANY","case":"INSENSITIVE"}}
+ * {"type":"ATOM","field":"title","op":"TERM","value":{"kind":"TERM","text":"heart","match":"ANY","case":"INSENSITIVE"}}
  * {"type":"CONST","value":true}
  * </pre>
  */
@@ -73,130 +75,177 @@ public final class ExprJsonCodec {
 
     @Override
     public java.lang.Void visitAnd(And andExpr) {
-      try {
-        gen.writeStartObject();
-        gen.writeStringField("type", "AND");
-        gen.writeArrayFieldStart("children");
-        for (Expr c : andExpr.children()) {
-          c.accept(this);
-        }
-        gen.writeEndArray();
-        gen.writeEndObject();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
+      return wrapIOException(() -> writeAndExpression(andExpr));
     }
 
     @Override
     public java.lang.Void visitOr(Or orExpr) {
-      try {
-        gen.writeStartObject();
-        gen.writeStringField("type", "OR");
-        gen.writeArrayFieldStart("children");
-        for (Expr c : orExpr.children()) {
-          c.accept(this);
-        }
-        gen.writeEndArray();
-        gen.writeEndObject();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
+      return wrapIOException(() -> writeOrExpression(orExpr));
     }
 
     @Override
     public java.lang.Void visitNot(Not notExpr) {
-      try {
-        gen.writeStartObject();
-        gen.writeStringField("type", "NOT");
-        gen.writeFieldName("child");
-        notExpr.child().accept(this);
-        gen.writeEndObject();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
+      return wrapIOException(() -> writeNotExpression(notExpr));
     }
 
     @Override
     public java.lang.Void visitConst(Const constantExpr) {
-      try {
-        gen.writeStartObject();
-        gen.writeStringField("type", "CONST");
-        gen.writeBooleanField("value", constantExpr == Const.TRUE);
-        gen.writeEndObject();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-      return null;
+      return wrapIOException(() -> writeConstExpression(constantExpr));
     }
 
     @Override
     public java.lang.Void visitAtom(Atom atomExpr) {
-      try {
-        gen.writeStartObject();
-        gen.writeStringField("type", "ATOM");
-        gen.writeStringField("field", atomExpr.fieldKey());
-        gen.writeStringField("op", atomExpr.operator().name());
-        gen.writeFieldName("value");
-        writeAtomValue(atomExpr.value());
-        gen.writeEndObject();
-      } catch (IOException e) {
-        throw new RuntimeException(e);
+      return wrapIOException(() -> writeAtomExpression(atomExpr));
+    }
+
+    private void writeAndExpression(And andExpr) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("type", "AND");
+      gen.writeArrayFieldStart("children");
+      for (Expr c : andExpr.children()) {
+        c.accept(this);
       }
-      return null;
+      gen.writeEndArray();
+      gen.writeEndObject();
+    }
+
+    private void writeOrExpression(Or orExpr) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("type", "OR");
+      gen.writeArrayFieldStart("children");
+      for (Expr c : orExpr.children()) {
+        c.accept(this);
+      }
+      gen.writeEndArray();
+      gen.writeEndObject();
+    }
+
+    private void writeNotExpression(Not notExpr) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("type", "NOT");
+      gen.writeFieldName("child");
+      notExpr.child().accept(this);
+      gen.writeEndObject();
+    }
+
+    private void writeConstExpression(Const constantExpr) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("type", "CONST");
+      gen.writeBooleanField("value", constantExpr == Const.TRUE);
+      gen.writeEndObject();
+    }
+
+    private void writeAtomExpression(Atom atomExpr) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("type", "ATOM");
+      gen.writeStringField("field", atomExpr.fieldKey());
+      gen.writeStringField("op", atomExpr.operator().name());
+      gen.writeFieldName("value");
+      writeAtomValue(atomExpr.value());
+      gen.writeEndObject();
+    }
+
+    private java.lang.Void wrapIOException(IOAction action) {
+      try {
+        action.run();
+        return null;
+      } catch (IOException e) {
+        throw new RuntimeException("JSON serialization failed", e);
+      }
+    }
+
+    @FunctionalInterface
+    private interface IOAction {
+      void run() throws IOException;
     }
 
     private void writeAtomValue(Atom.Value v) throws IOException {
       if (v instanceof TermValue tv) {
-        gen.writeStartObject();
-        gen.writeStringField("kind", "TERM");
-        gen.writeStringField("text", tv.text());
-        gen.writeStringField("match", tv.match().name());
-        gen.writeStringField("case", tv.caseSensitivity().name());
-        gen.writeEndObject();
+        writeTermValue(tv);
       } else if (v instanceof InValues iv) {
-        gen.writeStartObject();
-        gen.writeStringField("kind", "IN");
-        gen.writeArrayFieldStart("values");
-        for (String s : iv.values()) gen.writeString(s);
-        gen.writeEndArray();
-        gen.writeStringField("case", iv.caseSensitivity().name());
-        gen.writeEndObject();
+        writeInValues(iv);
       } else if (v instanceof RangeValue rv) {
-        gen.writeStartObject();
-        gen.writeStringField("kind", "RANGE");
-        if (rv instanceof DateRange dr) {
-          gen.writeStringField("rangeType", "DATE");
-          if (dr.from() != null) gen.writeStringField("from", dr.from().toString());
-          if (dr.to() != null) gen.writeStringField("to", dr.to().toString());
-        } else if (rv instanceof DateTimeRange dtr) {
-          gen.writeStringField("rangeType", "DATETIME");
-          if (dtr.from() != null) gen.writeStringField("from", dtr.from().toString());
-          if (dtr.to() != null) gen.writeStringField("to", dtr.to().toString());
-        } else if (rv instanceof NumberRange nr) {
-          gen.writeStringField("rangeType", "NUMBER");
-          if (nr.from() != null) gen.writeStringField("from", nr.from().toPlainString());
-          if (nr.to() != null) gen.writeStringField("to", nr.to().toPlainString());
-        }
-        gen.writeStringField("fromBoundary", rv.fromBoundary().name());
-        gen.writeStringField("toBoundary", rv.toBoundary().name());
-        gen.writeEndObject();
+        writeRangeValue(rv);
       } else if (v instanceof ExistsFlag ef) {
-        gen.writeStartObject();
-        gen.writeStringField("kind", "EXISTS");
-        gen.writeBooleanField("shouldExist", ef.shouldExist());
-        gen.writeEndObject();
+        writeExistsFlag(ef);
       } else if (v instanceof TokenValue tv) {
-        gen.writeStartObject();
-        gen.writeStringField("kind", "TOKEN");
-        gen.writeStringField("tokenType", tv.tokenType());
-        gen.writeStringField("tokenValue", tv.tokenValue());
-        gen.writeEndObject();
+        writeTokenValue(tv);
       } else {
         throw new IllegalArgumentException("Unsupported atom value type: " + v.getClass());
       }
+    }
+
+    private void writeTermValue(TermValue tv) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("kind", "TERM");
+      gen.writeStringField("text", tv.text());
+      gen.writeStringField("match", tv.match().name());
+      gen.writeStringField("case", tv.caseSensitivity().name());
+      gen.writeEndObject();
+    }
+
+    private void writeInValues(InValues iv) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("kind", "IN");
+      gen.writeArrayFieldStart("values");
+      for (String s : iv.values()) {
+        gen.writeString(s);
+      }
+      gen.writeEndArray();
+      gen.writeStringField("case", iv.caseSensitivity().name());
+      gen.writeEndObject();
+    }
+
+    private void writeRangeValue(RangeValue rv) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("kind", "RANGE");
+      writeRangeTypeAndBounds(rv);
+      gen.writeStringField("fromBoundary", rv.fromBoundary().name());
+      gen.writeStringField("toBoundary", rv.toBoundary().name());
+      gen.writeEndObject();
+    }
+
+    private void writeRangeTypeAndBounds(RangeValue rv) throws IOException {
+      if (rv instanceof DateRange dr) {
+        gen.writeStringField("rangeType", "DATE");
+        if (dr.from() != null) {
+          gen.writeStringField("from", dr.from().toString());
+        }
+        if (dr.to() != null) {
+          gen.writeStringField("to", dr.to().toString());
+        }
+      } else if (rv instanceof DateTimeRange dtr) {
+        gen.writeStringField("rangeType", "DATETIME");
+        if (dtr.from() != null) {
+          gen.writeStringField("from", dtr.from().toString());
+        }
+        if (dtr.to() != null) {
+          gen.writeStringField("to", dtr.to().toString());
+        }
+      } else if (rv instanceof NumberRange nr) {
+        gen.writeStringField("rangeType", "NUMBER");
+        if (nr.from() != null) {
+          gen.writeStringField("from", nr.from().toPlainString());
+        }
+        if (nr.to() != null) {
+          gen.writeStringField("to", nr.to().toPlainString());
+        }
+      }
+    }
+
+    private void writeExistsFlag(ExistsFlag ef) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("kind", "EXISTS");
+      gen.writeBooleanField("shouldExist", ef.shouldExist());
+      gen.writeEndObject();
+    }
+
+    private void writeTokenValue(TokenValue tv) throws IOException {
+      gen.writeStartObject();
+      gen.writeStringField("kind", "TOKEN");
+      gen.writeStringField("tokenType", tv.tokenType());
+      gen.writeStringField("tokenValue", tv.tokenValue());
+      gen.writeEndObject();
     }
   }
 
@@ -204,57 +253,73 @@ public final class ExprJsonCodec {
   static class ExprDeserializer extends JsonDeserializer<Expr> {
     @Override
     public Expr deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      validateParserState(p, ctxt);
+      ObjectMapper mapper = mapper();
+      JsonNode root = mapper.readTree(p);
+      String type = getText(root, "type");
+      return parseExprByType(root, type, mapper, ctxt);
+    }
+
+    private void validateParserState(JsonParser p, DeserializationContext ctxt) throws IOException {
       if (p.currentToken() == null) {
         p.nextToken();
       }
       if (p.currentToken() != JsonToken.START_OBJECT) {
         ctxt.reportInputMismatch(Expr.class, "Expected START_OBJECT, got %s", p.currentToken());
       }
-      String type = null;
-      List<Expr> children = null;
-      Expr child = null;
-      Boolean constValue = null;
-      String field = null;
-      String op = null;
-      JsonNode valueNode = null;
-      ObjectMapper mapper = mapper();
-      JsonNode root = mapper.readTree(p);
-      type = getText(root, "type");
-      switch (type) {
-        case "AND" -> {
-          JsonNode arr = root.get("children");
-          children = parseChildren(arr);
-          return new And(children);
-        }
-        case "OR" -> {
-          JsonNode arr = root.get("children");
-          children = parseChildren(arr);
-          return new Or(children);
-        }
-        case "NOT" -> {
-          JsonNode c = root.get("child");
-          if (c == null) ctxt.reportInputMismatch(Expr.class, "NOT missing child");
-          child = mapper.treeToValue(c, Expr.class);
-          return new Not(child);
-        }
-        case "CONST" -> {
-          constValue = root.get("value").asBoolean();
-          return constValue ? Const.TRUE : Const.FALSE;
-        }
-        case "ATOM" -> {
-          field = getText(root, "field");
-          op = getText(root, "op");
-          valueNode = root.get("value");
-          if (valueNode == null || !valueNode.isObject()) {
-            ctxt.reportInputMismatch(Expr.class, "ATOM missing value");
-          }
-          Atom.Value val = parseAtomValue(valueNode, ctxt);
-          Atom.Operator operator = Atom.Operator.valueOf(op);
-          return new Atom(field, operator, val);
-        }
-        default -> ctxt.reportInputMismatch(Expr.class, "Unknown type %s", type);
+    }
+
+    private Expr parseExprByType(
+        JsonNode root, String type, ObjectMapper mapper, DeserializationContext ctxt)
+        throws IOException {
+      return switch (type) {
+        case "AND" -> parseAndExpression(root);
+        case "OR" -> parseOrExpression(root);
+        case "NOT" -> parseNotExpression(root, mapper, ctxt);
+        case "CONST" -> parseConstExpression(root);
+        case "ATOM" -> parseAtomExpression(root, ctxt);
+        default -> throw new IllegalArgumentException("Unknown type: " + type);
+      };
+    }
+
+    private Expr parseAndExpression(JsonNode root) throws IOException {
+      JsonNode arr = root.get("children");
+      List<Expr> children = parseChildren(arr);
+      return new And(children);
+    }
+
+    private Expr parseOrExpression(JsonNode root) throws IOException {
+      JsonNode arr = root.get("children");
+      List<Expr> children = parseChildren(arr);
+      return new Or(children);
+    }
+
+    private Expr parseNotExpression(JsonNode root, ObjectMapper mapper, DeserializationContext ctxt)
+        throws IOException {
+      JsonNode c = root.get("child");
+      if (c == null) {
+        ctxt.reportInputMismatch(Expr.class, "NOT missing child");
       }
-      return null; // unreachable
+      Expr child = mapper.treeToValue(c, Expr.class);
+      return new Not(child);
+    }
+
+    private Expr parseConstExpression(JsonNode root) {
+      Boolean constValue = root.get("value").asBoolean();
+      return constValue ? Const.TRUE : Const.FALSE;
+    }
+
+    private Expr parseAtomExpression(JsonNode root, DeserializationContext ctxt)
+        throws IOException {
+      String field = getText(root, "field");
+      String op = getText(root, "op");
+      JsonNode valueNode = root.get("value");
+      if (valueNode == null || !valueNode.isObject()) {
+        ctxt.reportInputMismatch(Expr.class, "ATOM missing value");
+      }
+      Atom.Value val = parseAtomValue(valueNode, ctxt);
+      Atom.Operator operator = Atom.Operator.valueOf(op);
+      return new Atom(field, operator, val);
     }
 
     private List<Expr> parseChildren(JsonNode arr) throws IOException {
@@ -271,54 +336,85 @@ public final class ExprJsonCodec {
         throws IOException {
       String kind = getText(node, "kind");
       return switch (kind) {
-        case "TERM" ->
-            new TermValue(
-                getText(node, "text"),
-                TextMatch.valueOf(getText(node, "match")),
-                CaseSensitivity.valueOf(getText(node, "case")));
-        case "IN" -> {
-          List<String> vals = new ArrayList<>();
-          JsonNode vs = node.get("values");
-          if (vs != null && vs.isArray()) {
-            vs.forEach(v -> vals.add(v.asText()));
-          }
-          CaseSensitivity cs = CaseSensitivity.valueOf(getText(node, "case"));
-          yield new InValues(vals, cs);
-        }
+        case "TERM" -> parseTermValue(node);
+        case "IN" -> parseInValues(node);
         case "RANGE" -> parseRange(node, ctxt);
-        case "EXISTS" -> new ExistsFlag(node.get("shouldExist").asBoolean());
-        case "TOKEN" -> new TokenValue(getText(node, "tokenType"), getText(node, "tokenValue"));
+        case "EXISTS" -> parseExistsFlag(node);
+        case "TOKEN" -> parseTokenValue(node);
         default -> throw new IllegalArgumentException("Unknown atom value kind: " + kind);
       };
     }
 
+    private TermValue parseTermValue(JsonNode node) {
+      return new TermValue(
+          getText(node, "text"),
+          TextMatch.valueOf(getText(node, "match")),
+          CaseSensitivity.valueOf(getText(node, "case")));
+    }
+
+    private InValues parseInValues(JsonNode node) {
+      List<String> vals = new ArrayList<>();
+      JsonNode vs = node.get("values");
+      if (vs != null && vs.isArray()) {
+        vs.forEach(v -> vals.add(v.asText()));
+      }
+      CaseSensitivity cs = CaseSensitivity.valueOf(getText(node, "case"));
+      return new InValues(vals, cs);
+    }
+
+    private ExistsFlag parseExistsFlag(JsonNode node) {
+      return new ExistsFlag(node.get("shouldExist").asBoolean());
+    }
+
+    private TokenValue parseTokenValue(JsonNode node) {
+      return new TokenValue(getText(node, "tokenType"), getText(node, "tokenValue"));
+    }
+
     private Atom.Value parseRange(JsonNode node, DeserializationContext ctxt) {
       String rangeType = getText(node, "rangeType");
-      Atom.RangeValue.Boundary fb = Atom.RangeValue.Boundary.valueOf(getText(node, "fromBoundary"));
-      Atom.RangeValue.Boundary tb = Atom.RangeValue.Boundary.valueOf(getText(node, "toBoundary"));
-      JsonNode fromN = node.get("from");
-      JsonNode toN = node.get("to");
+      Atom.RangeValue.Boundary fromBoundary =
+          Atom.RangeValue.Boundary.valueOf(getText(node, "fromBoundary"));
+      Atom.RangeValue.Boundary toBoundary =
+          Atom.RangeValue.Boundary.valueOf(getText(node, "toBoundary"));
+      JsonNode fromNode = node.get("from");
+      JsonNode toNode = node.get("to");
+
       return switch (rangeType) {
-        case "DATE" ->
-            new Atom.DateRange(
-                fromN == null ? null : LocalDate.parse(fromN.asText()),
-                toN == null ? null : LocalDate.parse(toN.asText()),
-                fb,
-                tb);
-        case "DATETIME" ->
-            new Atom.DateTimeRange(
-                fromN == null ? null : Instant.parse(fromN.asText()),
-                toN == null ? null : Instant.parse(toN.asText()),
-                fb,
-                tb);
-        case "NUMBER" ->
-            new Atom.NumberRange(
-                fromN == null ? null : new BigDecimal(fromN.asText()),
-                toN == null ? null : new BigDecimal(toN.asText()),
-                fb,
-                tb);
+        case "DATE" -> parseDateRange(fromNode, toNode, fromBoundary, toBoundary);
+        case "DATETIME" -> parseDateTimeRange(fromNode, toNode, fromBoundary, toBoundary);
+        case "NUMBER" -> parseNumberRange(fromNode, toNode, fromBoundary, toBoundary);
         default -> throw new IllegalArgumentException("Unknown rangeType: " + rangeType);
       };
+    }
+
+    private Atom.DateRange parseDateRange(
+        JsonNode fromNode,
+        JsonNode toNode,
+        Atom.RangeValue.Boundary fromBoundary,
+        Atom.RangeValue.Boundary toBoundary) {
+      LocalDate from = fromNode == null ? null : LocalDate.parse(fromNode.asText());
+      LocalDate to = toNode == null ? null : LocalDate.parse(toNode.asText());
+      return new Atom.DateRange(from, to, fromBoundary, toBoundary);
+    }
+
+    private Atom.DateTimeRange parseDateTimeRange(
+        JsonNode fromNode,
+        JsonNode toNode,
+        Atom.RangeValue.Boundary fromBoundary,
+        Atom.RangeValue.Boundary toBoundary) {
+      Instant from = fromNode == null ? null : Instant.parse(fromNode.asText());
+      Instant to = toNode == null ? null : Instant.parse(toNode.asText());
+      return new Atom.DateTimeRange(from, to, fromBoundary, toBoundary);
+    }
+
+    private Atom.NumberRange parseNumberRange(
+        JsonNode fromNode,
+        JsonNode toNode,
+        Atom.RangeValue.Boundary fromBoundary,
+        Atom.RangeValue.Boundary toBoundary) {
+      BigDecimal from = fromNode == null ? null : new BigDecimal(fromNode.asText());
+      BigDecimal to = toNode == null ? null : new BigDecimal(toNode.asText());
+      return new Atom.NumberRange(from, to, fromBoundary, toBoundary);
     }
 
     private String getText(JsonNode node, String field) {
@@ -328,21 +424,34 @@ public final class ExprJsonCodec {
     }
   }
 
-  // =============== Public helpers ===============
+  /**
+   * Serializes an expression tree to JSON.
+   *
+   * @param expr expression to serialize
+   * @return JSON string representation
+   * @throws RuntimeException if serialization fails
+   */
   public static String toJson(Expr expr) {
     try {
       return mapper().writeValueAsString(expr);
     } catch (IOException e) {
-      throw new RuntimeException("Serialize expr failed", e);
+      throw new RuntimeException("Failed to serialize expression to JSON", e);
     }
   }
 
+  /**
+   * Deserializes JSON into an expression tree.
+   *
+   * @param json JSON string to parse
+   * @return expression tree
+   * @throws RuntimeException if deserialization fails
+   */
   public static Expr fromJson(String json) {
     Objects.requireNonNull(json, "json");
     try {
       return mapper().readValue(json, Expr.class);
     } catch (IOException e) {
-      throw new RuntimeException("Deserialize expr failed", e);
+      throw new RuntimeException("Failed to deserialize JSON to expression", e);
     }
   }
 }

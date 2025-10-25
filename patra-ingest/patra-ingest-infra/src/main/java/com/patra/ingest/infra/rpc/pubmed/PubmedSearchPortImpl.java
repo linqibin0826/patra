@@ -41,49 +41,81 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
   public PlanMetadata preparePlanMetadata(
       String query, JsonNode params, ProvenanceConfigSnapshot provenanceConfigSnapshot) {
     try {
-      JsonNode enrichedParams = addUseHistory(params);
-      ESearchRequest request = ASSEMBLER.buildList(enrichedParams);
-      String termHash = safeHash(request.term());
-      ProvenanceConfig config = toProvenanceConfig(provenanceConfigSnapshot);
-      ESearchResponse response =
-          config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
-      if (response == null || response.result() == null) {
-        log.warn("pubmed esearch metadata returned null termHash={}", termHash);
-        return PlanMetadata.empty();
-      }
-
-      ESearchResponse.Result result = response.result();
-      int count = Math.max(result.count(), 0);
-      String webEnv = result.webEnv();
-      String queryKey = result.queryKey();
-
-      boolean hasWebEnv = StringUtils.hasText(webEnv);
-      boolean hasQueryKey = StringUtils.hasText(queryKey);
-
-      log.info(
-          "pubmed esearch metadata termHash={} count={} webEnv={} queryKey={}",
-          termHash,
-          count,
-          hasWebEnv ? "present" : "absent",
-          hasQueryKey ? "present" : "absent");
-
-      if (hasWebEnv && !hasQueryKey) {
-        log.warn(
-            "pubmed esearch returned WebEnv without QueryKey termHash={} count={}",
-            termHash,
-            count);
-      }
-
-      return new PlanMetadata(count, webEnv, queryKey);
+      ESearchRequest request = buildESearchRequest(params);
+      ESearchResponse response = executeESearch(request, provenanceConfigSnapshot);
+      return extractPlanMetadata(response, request.term());
     } catch (ProvenanceClientException ex) {
-      String msg = String.format("PubMed metadata lookup failed: %s", ex.getMessage());
-      log.error("{} termHash={}", msg, safeHash(query), ex);
-      throw new BatchPlanningException(msg, ex);
+      throw handleProvenanceClientError(ex, query);
     } catch (Exception ex) {
-      String msg = String.format("PubMed metadata lookup unexpected error: %s", ex.getMessage());
-      log.error("{} termHash={}", msg, safeHash(query), ex);
-      throw new BatchPlanningException(msg, ex);
+      throw handleUnexpectedError(ex, query);
     }
+  }
+
+  /** Builds ESearch request with required parameters. */
+  private ESearchRequest buildESearchRequest(JsonNode params) {
+    JsonNode enrichedParams = addUseHistory(params);
+    return ASSEMBLER.buildList(enrichedParams);
+  }
+
+  /** Executes ESearch request with optional config override. */
+  private ESearchResponse executeESearch(
+      ESearchRequest request, ProvenanceConfigSnapshot snapshot) {
+    ProvenanceConfig config = toProvenanceConfig(snapshot);
+    return config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
+  }
+
+  /** Extracts plan metadata from ESearch response. */
+  private PlanMetadata extractPlanMetadata(ESearchResponse response, String term) {
+    String termHash = safeHash(term);
+
+    if (response == null || response.result() == null) {
+      log.warn("pubmed esearch metadata returned null termHash={}", termHash);
+      return PlanMetadata.empty();
+    }
+
+    ESearchResponse.Result result = response.result();
+    validateAndLogMetadata(result, termHash);
+    return buildPlanMetadata(result);
+  }
+
+  /** Validates and logs metadata from ESearch result. */
+  private void validateAndLogMetadata(ESearchResponse.Result result, String termHash) {
+    int count = Math.max(result.count(), 0);
+    boolean hasWebEnv = StringUtils.hasText(result.webEnv());
+    boolean hasQueryKey = StringUtils.hasText(result.queryKey());
+
+    log.info(
+        "pubmed esearch metadata termHash={} count={} webEnv={} queryKey={}",
+        termHash,
+        count,
+        hasWebEnv ? "present" : "absent",
+        hasQueryKey ? "present" : "absent");
+
+    if (hasWebEnv && !hasQueryKey) {
+      log.warn(
+          "pubmed esearch returned WebEnv without QueryKey termHash={} count={}", termHash, count);
+    }
+  }
+
+  /** Builds PlanMetadata from ESearch result. */
+  private PlanMetadata buildPlanMetadata(ESearchResponse.Result result) {
+    int count = Math.max(result.count(), 0);
+    return new PlanMetadata(count, result.webEnv(), result.queryKey());
+  }
+
+  /** Handles provenance client errors. */
+  private BatchPlanningException handleProvenanceClientError(
+      ProvenanceClientException ex, String query) {
+    String msg = String.format("PubMed metadata lookup failed: %s", ex.getMessage());
+    log.error("{} termHash={}", msg, safeHash(query), ex);
+    return new BatchPlanningException(msg, ex);
+  }
+
+  /** Handles unexpected errors. */
+  private BatchPlanningException handleUnexpectedError(Exception ex, String query) {
+    String msg = String.format("PubMed metadata lookup unexpected error: %s", ex.getMessage());
+    log.error("{} termHash={}", msg, safeHash(query), ex);
+    return new BatchPlanningException(msg, ex);
   }
 
   private ProvenanceConfig toProvenanceConfig(ProvenanceConfigSnapshot snapshot) {

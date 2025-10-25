@@ -8,9 +8,12 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     import:
+      # Local configuration files (error handling and message queue)
       - "classpath:ingest-error-config.yaml"
       - "classpath:ingest-mq-config.yaml"
+      # Service-specific configuration from Nacos
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      # Shared platform configuration from Nacos
       - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
   cloud:
     nacos:
@@ -47,24 +50,33 @@ xxl:
       addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:7070/xxl-job-admin}
     executor:
       ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
-      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PAPERTRACE_LOG_DIR:/Users/linqibin/IdeaProjects/medoc/Papertrace-api/logs}/patra-ingest/xxl-job}
+      # Log directory defaults to ./logs/patra-ingest/xxl-job in development
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PAPERTRACE_LOG_DIR:./logs}/patra-ingest/xxl-job}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
 
 papertrace:
   ingest:
     exec:
+      # Lease time-to-live in seconds for execution lock
       lease-ttl-seconds: ${INGEST_LEASE_TTL:60}
+      # Heartbeat interval to maintain lease
       heartbeat-interval-seconds: ${INGEST_HEARTBEAT_INTERVAL:20}
     outbox-relay:
       enabled: true
+      # Number of outbox records to process per batch
       batch-size: 200
+      # Duration to hold relay execution lease (ISO-8601 format)
       lease-duration: PT30S
 
 task:
   execution:
     lease:
+      # Task execution lease duration in seconds
       duration: ${TASK_EXECUTION_LEASE_DURATION:60}
+      # Lease renewal interval in seconds
       renewal-interval: ${TASK_EXECUTION_LEASE_RENEWAL_INTERVAL:20}
     heartbeat:
+      # Number of consecutive heartbeat failures before task is considered dead
       failure-threshold: ${TASK_EXECUTION_HEARTBEAT_FAILURE_THRESHOLD:3}
+    # When true, fail immediately on first error instead of continuing
     fail-fast: ${TASK_EXECUTION_FAIL_FAST:false}

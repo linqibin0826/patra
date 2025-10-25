@@ -1,4 +1,16 @@
+# ============================================================================
+# Papertrace API Gateway - Production Environment Configuration
+# ============================================================================
+# Production-specific settings override main configuration as needed.
+# Most production configurations are managed via Nacos for security.
+# ============================================================================
+
 spring:
   config:
     activate:
       on-profile: prod
+
+# ----------------------------------------------------------------------------
+# Production Configuration
+# ----------------------------------------------------------------------------
+# Additional production settings can be added here or managed via Nacos

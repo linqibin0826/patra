@@ -26,23 +26,31 @@ public class DefaultConfigProvider {
 
   private final ProvenanceProperties properties;
 
+  /**
+   * Creates a new configuration provider with the specified properties.
+   *
+   * @param properties provenance properties bound from application configuration
+   * @throws NullPointerException if properties is null
+   */
   public DefaultConfigProvider(ProvenanceProperties properties) {
     this.properties = Objects.requireNonNull(properties, "properties cannot be null");
   }
 
   /**
-   * Get default configuration for PubMed source.
+   * Gets default configuration for PubMed source.
    *
    * @return immutable default configuration for PubMed
+   * @throws IllegalStateException if PubMed configuration is missing or invalid
    */
   public ProvenanceConfig getPubMedDefaultConfig() {
     return buildConfig(properties.getPubmed(), "pubmed");
   }
 
   /**
-   * Get default configuration for Europe PMC source.
+   * Gets default configuration for Europe PMC source.
    *
    * @return immutable default configuration for Europe PMC
+   * @throws IllegalStateException if EPMC configuration is missing or invalid
    */
   public ProvenanceConfig getEPMCDefaultConfig() {
     return buildConfig(properties.getEpmc(), "epmc");
@@ -91,28 +99,18 @@ public class DefaultConfigProvider {
   }
 
   private PaginationConfig toPaginationConfig(PaginationProperties props) {
-    if (props == null) {
-      return null;
-    }
-    if (props.getPageSizeValue() == null && props.getMaxPagesPerExecution() == null) {
+    if (props == null || !hasAnyPaginationValue(props)) {
       return null;
     }
     return new PaginationConfig(props.getPageSizeValue(), props.getMaxPagesPerExecution());
   }
 
+  private boolean hasAnyPaginationValue(PaginationProperties props) {
+    return props.getPageSizeValue() != null || props.getMaxPagesPerExecution() != null;
+  }
+
   private WindowOffsetConfig toWindowOffsetConfig(WindowOffsetProperties props) {
-    if (props == null) {
-      return null;
-    }
-    if (props.getWindowModeCode() == null
-        && props.getWindowSizeValue() == null
-        && props.getWindowSizeUnitCode() == null
-        && props.getLookbackValue() == null
-        && props.getLookbackUnitCode() == null
-        && props.getOverlapValue() == null
-        && props.getOverlapUnitCode() == null
-        && props.getOffsetTypeCode() == null
-        && props.getMaxIdsPerWindow() == null) {
+    if (props == null || !hasAnyWindowOffsetValue(props)) {
       return null;
     }
     return new WindowOffsetConfig(
@@ -127,33 +125,48 @@ public class DefaultConfigProvider {
         props.getMaxIdsPerWindow());
   }
 
+  private boolean hasAnyWindowOffsetValue(WindowOffsetProperties props) {
+    return props.getWindowModeCode() != null
+        || props.getWindowSizeValue() != null
+        || props.getWindowSizeUnitCode() != null
+        || props.getLookbackValue() != null
+        || props.getLookbackUnitCode() != null
+        || props.getOverlapValue() != null
+        || props.getOverlapUnitCode() != null
+        || props.getOffsetTypeCode() != null
+        || props.getMaxIdsPerWindow() != null;
+  }
+
   private BatchingConfig toBatchingConfig(BatchingProperties props) {
-    if (props == null) {
-      return null;
-    }
-    if (props.getDetailFetchBatchSize() == null && props.getMaxIdsPerRequest() == null) {
+    if (props == null || !hasAnyBatchingValue(props)) {
       return null;
     }
     return new BatchingConfig(props.getDetailFetchBatchSize(), props.getMaxIdsPerRequest());
   }
 
+  private boolean hasAnyBatchingValue(BatchingProperties props) {
+    return props.getDetailFetchBatchSize() != null || props.getMaxIdsPerRequest() != null;
+  }
+
   private RetryConfig toRetryConfig(RetryProperties props) {
-    if (props == null) {
-      return null;
-    }
-    if (props.getMaxRetryTimes() == null && props.getInitialDelayMillis() == null) {
+    if (props == null || !hasAnyRetryValue(props)) {
       return null;
     }
     return new RetryConfig(props.getMaxRetryTimes(), props.getInitialDelayMillis());
   }
 
+  private boolean hasAnyRetryValue(RetryProperties props) {
+    return props.getMaxRetryTimes() != null || props.getInitialDelayMillis() != null;
+  }
+
   private RateLimitConfig toRateLimitConfig(RateLimitProperties props) {
-    if (props == null) {
-      return null;
-    }
-    if (props.getMaxConcurrentRequests() == null && props.getPerCredentialQpsLimit() == null) {
+    if (props == null || !hasAnyRateLimitValue(props)) {
       return null;
     }
     return new RateLimitConfig(props.getMaxConcurrentRequests(), props.getPerCredentialQpsLimit());
+  }
+
+  private boolean hasAnyRateLimitValue(RateLimitProperties props) {
+    return props.getMaxConcurrentRequests() != null || props.getPerCredentialQpsLimit() != null;
   }
 }

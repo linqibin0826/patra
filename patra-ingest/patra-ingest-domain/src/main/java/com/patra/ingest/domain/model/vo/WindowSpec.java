@@ -245,6 +245,27 @@ public sealed interface WindowSpec
       throw new IllegalArgumentException("Window spec map cannot be null or empty");
     }
 
+    SliceStrategy strategy = extractAndValidateStrategy(map);
+
+    return switch (strategy) {
+      case TIME -> parseTimeWindow(map, "TIME");
+      case DATE -> parseTimeWindow(map, "DATE");
+      case ID_RANGE -> parseIdRangeWindow(map);
+      case CURSOR_LANDMARK -> parseCursorLandmarkWindow(map);
+      case VOLUME_BUDGET -> parseVolumeBudgetWindow(map);
+      case SINGLE -> new Single();
+      case HYBRID -> throw new UnsupportedOperationException("HYBRID strategy not yet implemented");
+    };
+  }
+
+  /**
+   * Extracts and validates the strategy code from the map.
+   *
+   * @param map window spec map
+   * @return validated SliceStrategy enum
+   * @throws IllegalArgumentException if strategy is missing, invalid type, or unknown code
+   */
+  private static SliceStrategy extractAndValidateStrategy(Map<String, Object> map) {
     Object strategyObj = map.get("strategy");
     if (strategyObj == null) {
       throw new IllegalArgumentException("Window spec map must contain 'strategy' key");
@@ -256,98 +277,103 @@ public sealed interface WindowSpec
     }
 
     String strategyCode = (String) strategyObj;
-    SliceStrategy strategy =
-        SliceStrategy.fromCode(strategyCode)
-            .orElseThrow(
-                () ->
-                    new IllegalArgumentException(
-                        "Unknown slice strategy code: '" + strategyCode + "'"));
+    return SliceStrategy.fromCode(strategyCode)
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "Unknown slice strategy code: '" + strategyCode + "'"));
+  }
 
-    return switch (strategy) {
-      case TIME -> {
-        Map<String, Object> windowMap = extractRequiredWindowMap(map, "TIME");
-        Object fromObj = windowMap.get("from");
-        Object toObj = windowMap.get("to");
+  /**
+   * Parses a TIME or DATE window from the map.
+   *
+   * @param map window spec map
+   * @param strategyName strategy name for error messages
+   * @return Time window specification
+   */
+  private static Time parseTimeWindow(Map<String, Object> map, String strategyName) {
+    Map<String, Object> windowMap = extractRequiredWindowMap(map, strategyName);
+    Object fromObj = windowMap.get("from");
+    Object toObj = windowMap.get("to");
 
-        if (fromObj == null || toObj == null) {
-          throw new IllegalArgumentException("TIME window requires both 'from' and 'to' fields");
-        }
-        if (!(fromObj instanceof String) || !(toObj instanceof String)) {
-          throw new IllegalArgumentException(
-              "TIME window 'from' and 'to' must be ISO-8601 timestamp strings");
-        }
+    if (fromObj == null || toObj == null) {
+      throw new IllegalArgumentException(
+          strategyName + " window requires both 'from' and 'to' fields");
+    }
+    if (!(fromObj instanceof String) || !(toObj instanceof String)) {
+      throw new IllegalArgumentException(
+          strategyName + " window 'from' and 'to' must be ISO-8601 timestamp strings");
+    }
 
-        yield new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
-      }
-      case DATE -> {
-        // DATE strategy uses the same Time window structure internally for now
-        // The difference is in how the expression is generated (date-only vs datetime)
-        Map<String, Object> windowMap = extractRequiredWindowMap(map, "DATE");
-        Object fromObj = windowMap.get("from");
-        Object toObj = windowMap.get("to");
+    return new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
+  }
 
-        if (fromObj == null || toObj == null) {
-          throw new IllegalArgumentException("DATE window requires both 'from' and 'to' fields");
-        }
-        if (!(fromObj instanceof String) || !(toObj instanceof String)) {
-          throw new IllegalArgumentException(
-              "DATE window 'from' and 'to' must be ISO-8601 timestamp strings");
-        }
+  /**
+   * Parses an ID_RANGE window from the map.
+   *
+   * @param map window spec map
+   * @return IdRange window specification
+   */
+  private static IdRange parseIdRangeWindow(Map<String, Object> map) {
+    Map<String, Object> windowMap = extractRequiredWindowMap(map, "ID_RANGE");
+    Object fromObj = windowMap.get("from");
+    Object toObj = windowMap.get("to");
 
-        yield new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
-      }
-      case ID_RANGE -> {
-        Map<String, Object> windowMap = extractRequiredWindowMap(map, "ID_RANGE");
-        Object fromObj = windowMap.get("from");
-        Object toObj = windowMap.get("to");
+    if (fromObj == null || toObj == null) {
+      throw new IllegalArgumentException("ID_RANGE window requires both 'from' and 'to' fields");
+    }
+    if (!(fromObj instanceof Number) || !(toObj instanceof Number)) {
+      throw new IllegalArgumentException("ID_RANGE window 'from' and 'to' must be numeric values");
+    }
 
-        if (fromObj == null || toObj == null) {
-          throw new IllegalArgumentException(
-              "ID_RANGE window requires both 'from' and 'to' fields");
-        }
-        if (!(fromObj instanceof Number) || !(toObj instanceof Number)) {
-          throw new IllegalArgumentException(
-              "ID_RANGE window 'from' and 'to' must be numeric values");
-        }
+    return new IdRange(((Number) fromObj).longValue(), ((Number) toObj).longValue());
+  }
 
-        yield new IdRange(((Number) fromObj).longValue(), ((Number) toObj).longValue());
-      }
-      case CURSOR_LANDMARK -> {
-        Map<String, Object> windowMap = extractRequiredWindowMap(map, "CURSOR_LANDMARK");
-        Object fromObj = windowMap.get("from");
-        Object toObj = windowMap.get("to");
+  /**
+   * Parses a CURSOR_LANDMARK window from the map.
+   *
+   * @param map window spec map
+   * @return CursorLandmark window specification
+   */
+  private static CursorLandmark parseCursorLandmarkWindow(Map<String, Object> map) {
+    Map<String, Object> windowMap = extractRequiredWindowMap(map, "CURSOR_LANDMARK");
+    Object fromObj = windowMap.get("from");
+    Object toObj = windowMap.get("to");
 
-        if (fromObj == null || toObj == null) {
-          throw new IllegalArgumentException(
-              "CURSOR_LANDMARK window requires both 'from' and 'to' fields");
-        }
-        if (!(fromObj instanceof String) || !(toObj instanceof String)) {
-          throw new IllegalArgumentException(
-              "CURSOR_LANDMARK window 'from' and 'to' must be string values");
-        }
+    if (fromObj == null || toObj == null) {
+      throw new IllegalArgumentException(
+          "CURSOR_LANDMARK window requires both 'from' and 'to' fields");
+    }
+    if (!(fromObj instanceof String) || !(toObj instanceof String)) {
+      throw new IllegalArgumentException(
+          "CURSOR_LANDMARK window 'from' and 'to' must be string values");
+    }
 
-        yield new CursorLandmark((String) fromObj, (String) toObj);
-      }
-      case VOLUME_BUDGET -> {
-        Object limitObj = map.get("limit");
-        Object unitObj = map.get("unit");
+    return new CursorLandmark((String) fromObj, (String) toObj);
+  }
 
-        if (limitObj == null || unitObj == null) {
-          throw new IllegalArgumentException(
-              "VOLUME_BUDGET strategy requires both 'limit' and 'unit' fields");
-        }
-        if (!(limitObj instanceof Number)) {
-          throw new IllegalArgumentException("VOLUME_BUDGET 'limit' must be a numeric value");
-        }
-        if (!(unitObj instanceof String)) {
-          throw new IllegalArgumentException("VOLUME_BUDGET 'unit' must be a string value");
-        }
+  /**
+   * Parses a VOLUME_BUDGET window from the map.
+   *
+   * @param map window spec map
+   * @return VolumeBudget window specification
+   */
+  private static VolumeBudget parseVolumeBudgetWindow(Map<String, Object> map) {
+    Object limitObj = map.get("limit");
+    Object unitObj = map.get("unit");
 
-        yield new VolumeBudget(((Number) limitObj).intValue(), (String) unitObj);
-      }
-      case SINGLE -> new Single();
-      case HYBRID -> throw new UnsupportedOperationException("HYBRID strategy not yet implemented");
-    };
+    if (limitObj == null || unitObj == null) {
+      throw new IllegalArgumentException(
+          "VOLUME_BUDGET strategy requires both 'limit' and 'unit' fields");
+    }
+    if (!(limitObj instanceof Number)) {
+      throw new IllegalArgumentException("VOLUME_BUDGET 'limit' must be a numeric value");
+    }
+    if (!(unitObj instanceof String)) {
+      throw new IllegalArgumentException("VOLUME_BUDGET 'unit' must be a string value");
+    }
+
+    return new VolumeBudget(((Number) limitObj).intValue(), (String) unitObj);
   }
 
   /**

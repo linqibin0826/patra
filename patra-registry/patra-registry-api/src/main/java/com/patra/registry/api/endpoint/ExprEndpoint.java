@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * Internal API contract for expression snapshot retrieval.
+ * Internal API contract for expression snapshot queries.
  *
  * <p>Exposes endpoints for querying expression configuration snapshots to internal microservices
  * via Feign client integration.
@@ -21,11 +21,11 @@ public interface ExprEndpoint {
   /**
    * Loads the aggregated expression snapshot for a provenance.
    *
-   * @param provenanceCode the provenance code identifying the source system
-   * @param operationType the operation type discriminator; {@code null} means all operations
-   * @param endpointName the endpoint name filter; {@code null} means all endpoints
-   * @param at the instant used for temporal slicing; {@code null} defaults to current time
-   * @return the expression snapshot response DTO
+   * @param provenanceCode provenance code identifying the source system
+   * @param operationType operation type discriminator; {@code null} means all operations
+   * @param endpointName endpoint name filter; {@code null} means all endpoints
+   * @param at instant used for temporal slicing; {@code null} defaults to current time
+   * @return aggregated expression snapshot
    */
   @GetMapping(BASE_PATH + "/snapshot")
   ExprSnapshotResp getSnapshot(

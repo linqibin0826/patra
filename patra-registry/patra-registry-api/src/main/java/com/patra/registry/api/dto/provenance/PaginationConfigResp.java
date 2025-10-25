@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.provenance;
 import java.time.Instant;
 
 /**
- * Response DTO describing pagination and cursor traversal configuration.
+ * Pagination and cursor traversal configuration.
  *
  * <p>Field descriptions:
  *

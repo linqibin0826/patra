@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.provenance;
 
 /**
- * Aggregated response DTO bundling all provenance configuration dimensions.
+ * Aggregated provenance configuration bundling all dimension configs.
  *
  * <p>Field descriptions:
  *

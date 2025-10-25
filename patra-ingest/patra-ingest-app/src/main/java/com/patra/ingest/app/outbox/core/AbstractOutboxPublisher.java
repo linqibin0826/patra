@@ -126,37 +126,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
    */
   @Transactional(rollbackFor = Exception.class)
   public OutboxPublishResult publish(List<E> events, OutboxPublishContext ctx) {
-    Instant startTime = Instant.now();
-    String aggregateType = getAggregateType().getCode();
-
-    try {
-      // Validate and filter events
-      List<E> validEvents = filterValidEvents(events, aggregateType);
-      if (validEvents.isEmpty()) {
-        return OutboxPublishResult.empty(calculateDuration(startTime));
-      }
-
-      // Build Outbox messages and collect failures
-      MessagesWithFailures result = buildOutboxMessages(validEvents, ctx, aggregateType);
-
-      // Batch save messages
-      saveBatchMessages(result.messages(), aggregateType);
-
-      // Record metrics and return result
-      Duration duration = calculateDuration(startTime);
-      metrics.recordPublish(aggregateType, "batch", true, duration);
-
-      log.info(
-          "Published {} Outbox messages for aggregateType={}, duration={}ms",
-          result.messages().size(),
-          aggregateType,
-          duration.toMillis());
-
-      return buildPublishResult(result, duration);
-
-    } catch (Exception e) {
-      return handlePublishFailure(e, aggregateType, startTime);
-    }
+    return executePublish(events, ctx, "batch", this::saveBatchMessages);
   }
 
   /**
@@ -179,42 +149,8 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
    */
   @Transactional(rollbackFor = Exception.class)
   public OutboxPublishResult publishRetry(List<E> events, OutboxPublishContext ctx) {
-    Instant startTime = Instant.now();
-    String aggregateType = getAggregateType().getCode();
-
-    try {
-      // Validate batch size constraints
-      validateRetryBatchSize(events.size());
-
-      // Validate and filter events
-      List<E> validEvents = filterValidEvents(events, aggregateType);
-      if (validEvents.isEmpty()) {
-        return OutboxPublishResult.empty(calculateDuration(startTime));
-      }
-
-      // Build messages and collect failures
-      MessagesWithFailures result = buildOutboxMessages(validEvents, ctx, aggregateType);
-
-      // UPSERT batch (idempotent insert/update)
-      if (!result.messages().isEmpty()) {
-        repository.upsertBatch(result.messages());
-      }
-
-      // Record metrics and return result
-      Duration duration = calculateDuration(startTime);
-      metrics.recordPublish(aggregateType, "retry", true, duration);
-
-      log.info(
-          "Retry-published {} Outbox messages for aggregateType={}, duration={}ms",
-          result.messages().size(),
-          aggregateType,
-          duration.toMillis());
-
-      return buildPublishResult(result, duration);
-
-    } catch (Exception e) {
-      return handleRetryFailure(e, aggregateType, startTime);
-    }
+    validateRetryBatchSize(events.size());
+    return executePublish(events, ctx, "retry", this::upsertMessages);
   }
 
   // ==================== Abstract Methods (Extension Points) ====================
@@ -328,6 +264,105 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   // ==================== Private Helper Methods ====================
+
+  /**
+   * Template method for publishing events.
+   *
+   * @param events events to publish
+   * @param ctx publishing context
+   * @param operationType operation type for logging (batch or retry)
+   * @param persistStrategy persistence strategy
+   * @return publish result
+   */
+  private OutboxPublishResult executePublish(
+      List<E> events,
+      OutboxPublishContext ctx,
+      String operationType,
+      MessagePersistStrategy persistStrategy) {
+    Instant startTime = Instant.now();
+    String aggregateType = getAggregateType().getCode();
+
+    try {
+      List<E> validEvents = filterValidEvents(events, aggregateType);
+      if (validEvents.isEmpty()) {
+        return OutboxPublishResult.empty(calculateDuration(startTime));
+      }
+
+      MessagesWithFailures result = buildOutboxMessages(validEvents, ctx, aggregateType);
+      persistStrategy.persist(result.messages(), aggregateType);
+
+      Duration duration = calculateDuration(startTime);
+      metrics.recordPublish(aggregateType, operationType, true, duration);
+      logPublishSuccess(aggregateType, operationType, result.messages().size(), duration);
+
+      return buildPublishResult(result, duration);
+
+    } catch (Exception e) {
+      return handlePublishError(e, aggregateType, operationType, startTime);
+    }
+  }
+
+  /**
+   * Logs successful publish operation.
+   *
+   * @param aggregateType aggregate type
+   * @param operationType operation type
+   * @param messageCount number of messages published
+   * @param duration operation duration
+   */
+  private void logPublishSuccess(
+      String aggregateType, String operationType, int messageCount, Duration duration) {
+    String action = "retry".equals(operationType) ? "Retry-published" : "Published";
+    log.info(
+        "{} {} Outbox messages for aggregateType={}, duration={}ms",
+        action,
+        messageCount,
+        aggregateType,
+        duration.toMillis());
+  }
+
+  /**
+   * Handles publish error and returns failure result.
+   *
+   * @param exception exception thrown
+   * @param aggregateType aggregate type
+   * @param operationType operation type
+   * @param startTime operation start time
+   * @return failure result
+   */
+  private OutboxPublishResult handlePublishError(
+      Exception exception, String aggregateType, String operationType, Instant startTime) {
+    Duration duration = calculateDuration(startTime);
+    metrics.recordPublish(aggregateType, operationType, false, duration);
+
+    String action = "retry".equals(operationType) ? "retry-publish" : "publish";
+    log.error(
+        "Failed to {} Outbox messages for aggregateType={}, error={}",
+        action,
+        aggregateType,
+        exception.getMessage(),
+        exception);
+
+    return OutboxPublishResult.failure(exception.getMessage(), duration);
+  }
+
+  /**
+   * Upserts messages (idempotent insert/update).
+   *
+   * @param messages messages to upsert
+   * @param aggregateType aggregate type for logging
+   */
+  private void upsertMessages(List<OutboxMessage> messages, String aggregateType) {
+    if (!messages.isEmpty()) {
+      repository.upsertBatch(messages);
+    }
+  }
+
+  /** Functional interface for message persistence strategies. */
+  @FunctionalInterface
+  private interface MessagePersistStrategy {
+    void persist(List<OutboxMessage> messages, String aggregateType);
+  }
 
   /** Creates an OutboxMessage from the event and context. */
   private OutboxMessage createOutboxMessage(E event, OutboxPublishContext ctx) {
@@ -473,28 +508,6 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Handles publish failure and returns failure result.
-   *
-   * @param exception Exception thrown
-   * @param aggregateType Aggregate type for logging
-   * @param startTime Operation start time
-   * @return Failure result
-   */
-  private OutboxPublishResult handlePublishFailure(
-      Exception exception, String aggregateType, Instant startTime) {
-    Duration duration = calculateDuration(startTime);
-    metrics.recordPublish(aggregateType, "batch", false, duration);
-
-    log.error(
-        "Failed to publish Outbox messages for aggregateType={}, error={}",
-        aggregateType,
-        exception.getMessage(),
-        exception);
-
-    return OutboxPublishResult.failure(exception.getMessage(), duration);
-  }
-
-  /**
    * Calculates duration from start time to now.
    *
    * @param startTime Start time
@@ -519,28 +532,6 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
                   + "Consider splitting the batch or increasing papertrace.outbox.publisher.max-batch-size.",
               batchSize, maxBatchSize));
     }
-  }
-
-  /**
-   * Handles retry-publish failure and returns failure result.
-   *
-   * @param exception Exception thrown
-   * @param aggregateType Aggregate type for logging
-   * @param startTime Operation start time
-   * @return Failure result
-   */
-  private OutboxPublishResult handleRetryFailure(
-      Exception exception, String aggregateType, Instant startTime) {
-    Duration duration = calculateDuration(startTime);
-    metrics.recordPublish(aggregateType, "retry", false, duration);
-
-    log.error(
-        "Failed to retry-publish Outbox messages for aggregateType={}, error={}",
-        aggregateType,
-        exception.getMessage(),
-        exception);
-
-    return OutboxPublishResult.failure(exception.getMessage(), duration);
   }
 
   /**

@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.expr;
 import java.time.Instant;
 
 /**
- * Response DTO describing API parameter mappings for expression evaluation.
+ * API parameter mappings for expression evaluation.
  *
  * <p>Field descriptions:
  *

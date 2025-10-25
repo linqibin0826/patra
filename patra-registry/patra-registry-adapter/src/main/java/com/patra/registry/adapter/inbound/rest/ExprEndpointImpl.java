@@ -3,7 +3,7 @@ package com.patra.registry.adapter.inbound.rest;
 import com.patra.registry.adapter.inbound.rest.converter.ExprApiConverter;
 import com.patra.registry.api.dto.expr.ExprSnapshotResp;
 import com.patra.registry.api.endpoint.ExprEndpoint;
-import com.patra.registry.app.service.ExprQueryAppService;
+import com.patra.registry.app.service.ExprQueryOrchestrator;
 import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Implementation of the expression internal API endpoint.
  *
  * <p>Exposes expression snapshot retrieval capabilities to other microservices via internal RPC
- * contract, delegating to application service and converting query DTOs to API response DTOs.
+ * contract, delegating to orchestrator and converting query DTOs to API response DTOs.
  *
  * @author linqibin
  * @since 0.1.0
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ExprEndpointImpl implements ExprEndpoint {
 
-  private final ExprQueryAppService exprQueryAppService;
+  private final ExprQueryOrchestrator orchestrator;
   private final ExprApiConverter converter;
 
   /**
@@ -39,21 +39,8 @@ public class ExprEndpointImpl implements ExprEndpoint {
   @Override
   public ExprSnapshotResp getSnapshot(
       String provenanceCode, String operationType, String endpointName, Instant at) {
-    log.debug(
-        "Retrieving expression snapshot for provenance [{}] with operationType [{}], endpoint [{}] at timestamp [{}]",
-        provenanceCode,
-        operationType,
-        endpointName,
-        at);
     ExprSnapshotQuery snapshot =
-        exprQueryAppService.loadSnapshot(provenanceCode, operationType, endpointName, at);
-    log.debug(
-        "Successfully loaded expression snapshot for provenance [{}] with {} fields, {} capabilities, {} render rules, {} API params",
-        provenanceCode,
-        snapshot.fields().size(),
-        snapshot.capabilities().size(),
-        snapshot.renderRules().size(),
-        snapshot.apiParamMappings().size());
+        orchestrator.loadSnapshot(provenanceCode, operationType, endpointName, at);
     return converter.toResp(snapshot);
   }
 }

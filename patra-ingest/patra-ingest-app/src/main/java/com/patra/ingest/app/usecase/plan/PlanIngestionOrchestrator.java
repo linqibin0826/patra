@@ -134,62 +134,120 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   @Override
   @Transactional
   public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
-    ProvenanceCode provenanceCode = request.provenanceCode();
-    OperationCode operationCode = request.operationCode();
+    logPlanIngestionStart(request);
 
-    Instant now = request.triggeredAt();
-    log.info(
-        "Starting plan ingestion for provenance [{}] operation [{}]: triggered at {} by scheduler "
-            + "[{}]",
-        provenanceCode,
-        operationCode,
-        now,
-        request.scheduler());
+    PlanningContext context = preparePlanningContext(request);
+    PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(context);
+    performPreValidation(context);
 
-    // Phase 1: Schedule instance and provenance config snapshot
-    ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
-    ProvenanceConfigSnapshot configSnapshot =
-        patraRegistryPort.fetchConfig(provenanceCode, operationCode);
-    PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
+    PlanAssemblyResult assembly = assembleAndValidatePlan(context, expressionDescriptor);
+    PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
 
-    // Phase 2: Cursor watermark (forward-only) and planning window resolution (TIME strategy)
-    Instant cursorWatermark = lookupCursorWatermark(provenanceCode, operationCode);
-    PlannerWindow window = resolvePlannerWindow(norm, configSnapshot, cursorWatermark, now);
-    logWindowResolution(provenanceCode, operationCode, cursorWatermark, window);
-
-    // Phase 3: Build plan-level expression descriptor (in-memory, not compiled)
-    PlanExpressionDescriptor expressionDescriptor =
-        planExpressionBuilder.build(norm, configSnapshot);
-    log.debug(
-        "Built plan expression for provenance [{}] operation [{}]: hash={}, snapshot size={} bytes",
-        provenanceCode,
-        operationCode,
-        expressionDescriptor.hash(),
-        expressionDescriptor.jsonSnapshot().length());
-
-    // Phase 4: Pre-validation (window sanity, backpressure, capacity)
-    long queuedTasks =
-        taskRepository.countQueuedTasks(provenanceCode.getCode(), opCode(operationCode));
-    validateBeforeAssemble(norm, configSnapshot, window, queuedTasks);
-    log.debug(
-        "Pre-validation passed for provenance [{}] operation [{}]: {} tasks currently queued",
-        provenanceCode,
-        operationCode,
-        queuedTasks);
-
-    // Phase 5: Assemble plan blueprints
-    PlanAssemblyRequest assemblyRequest =
-        new PlanAssemblyRequest(norm, window, configSnapshot, expressionDescriptor);
-    PlanAssemblyResult assembly = assemblePlan(assemblyRequest);
-
-    PlanAggregate draftPlan = assembly.plan();
-    PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
     if (existingPlan != null) {
-      return handleIdempotentPlanReuse(existingPlan, schedule, draftPlan.getPlanKey());
+      return handleIdempotentPlanReuse(
+          existingPlan, context.schedule(), assembly.plan().getPlanKey());
     }
 
-    // Phase 6: Persist plan, slices, and tasks; publish queued events
-    return persistAndPublishNewPlan(draftPlan, assembly, schedule, window);
+    return persistAndPublishNewPlan(
+        assembly.plan(), assembly, context.schedule(), context.window());
+  }
+
+  /**
+   * Logs the start of plan ingestion with key request details.
+   *
+   * @param request plan ingestion command
+   */
+  private void logPlanIngestionStart(PlanIngestionCommand request) {
+    log.info(
+        "Starting plan ingestion for provenance [{}] operation [{}]: triggered at {} by scheduler [{}]",
+        request.provenanceCode(),
+        request.operationCode(),
+        request.triggeredAt(),
+        request.scheduler());
+  }
+
+  /**
+   * Prepares planning context by loading configuration and resolving window.
+   *
+   * @param request plan ingestion command
+   * @return planning context with schedule, config, norm, and window
+   */
+  private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
+    ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
+    ProvenanceConfigSnapshot configSnapshot =
+        patraRegistryPort.fetchConfig(request.provenanceCode(), request.operationCode());
+    PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
+
+    Instant cursorWatermark =
+        lookupCursorWatermark(request.provenanceCode(), request.operationCode());
+    PlannerWindow window =
+        resolvePlannerWindow(norm, configSnapshot, cursorWatermark, request.triggeredAt());
+    logWindowResolution(request.provenanceCode(), request.operationCode(), cursorWatermark, window);
+
+    return new PlanningContext(
+        schedule, configSnapshot, norm, window, request.provenanceCode(), request.operationCode());
+  }
+
+  /**
+   * Builds plan expression descriptor and logs result.
+   *
+   * @param context planning context
+   * @return plan expression descriptor
+   */
+  private PlanExpressionDescriptor buildPlanExpression(PlanningContext context) {
+    PlanExpressionDescriptor descriptor =
+        planExpressionBuilder.build(context.norm(), context.configSnapshot());
+    log.debug(
+        "Built plan expression for provenance [{}] operation [{}]: hash={}, snapshot size={} bytes",
+        context.provenanceCode(),
+        context.operationCode(),
+        descriptor.hash(),
+        descriptor.jsonSnapshot().length());
+    return descriptor;
+  }
+
+  /**
+   * Performs pre-assembly validation and logs result.
+   *
+   * @param context planning context
+   * @throws PlanValidationException if validation fails
+   */
+  private void performPreValidation(PlanningContext context) {
+    long queuedTasks =
+        taskRepository.countQueuedTasks(
+            context.provenanceCode().getCode(), opCode(context.operationCode()));
+    validateBeforeAssemble(context.norm(), context.configSnapshot(), context.window(), queuedTasks);
+    log.debug(
+        "Pre-validation passed for provenance [{}] operation [{}]: {} tasks currently queued",
+        context.provenanceCode(),
+        context.operationCode(),
+        queuedTasks);
+  }
+
+  /**
+   * Assembles plan and validates result.
+   *
+   * @param context planning context
+   * @param expressionDescriptor plan expression descriptor
+   * @return assembly result
+   * @throws PlanAssemblyException if assembly fails
+   */
+  private PlanAssemblyResult assembleAndValidatePlan(
+      PlanningContext context, PlanExpressionDescriptor expressionDescriptor) {
+    PlanAssemblyRequest assemblyRequest =
+        new PlanAssemblyRequest(
+            context.norm(), context.window(), context.configSnapshot(), expressionDescriptor);
+    return assemblePlan(assemblyRequest);
+  }
+
+  /**
+   * Checks for existing plan by planKey.
+   *
+   * @param draftPlan draft plan aggregate
+   * @return existing plan if found, null otherwise
+   */
+  private PlanAggregate checkForExistingPlan(PlanAggregate draftPlan) {
+    return planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
   }
 
   /**
@@ -201,6 +259,24 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   private String opCode(OperationCode op) {
     return op == null ? null : op.getCode();
   }
+
+  /**
+   * Internal record holding planning context data.
+   *
+   * @param schedule schedule instance aggregate
+   * @param configSnapshot provenance configuration snapshot
+   * @param norm plan trigger norm
+   * @param window planner window
+   * @param provenanceCode provenance code enum
+   * @param operationCode operation code enum
+   */
+  private record PlanningContext(
+      ScheduleInstanceAggregate schedule,
+      ProvenanceConfigSnapshot configSnapshot,
+      PlanTriggerNorm norm,
+      PlannerWindow window,
+      ProvenanceCode provenanceCode,
+      OperationCode operationCode) {}
 
   /**
    * Queries the latest global time cursor watermark.
@@ -295,41 +371,80 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
    */
   private PlanIngestionResult handleIdempotentPlanReuse(
       PlanAggregate existingPlan, ScheduleInstanceAggregate schedule, String planKey) {
-    log.info(
-        "Detected duplicate plan ingestion for provenance [{}] operation [{}]: reusing existing "
-            + "plan [{}] with planKey={}",
-        existingPlan.getProvenanceCode(),
-        existingPlan.getOperationCode(),
-        existingPlan.getId(),
-        planKey);
+    logDuplicatePlanDetection(existingPlan, planKey);
 
     List<PlanSliceAggregate> existingSlices =
         planSliceRepository.findByPlanId(existingPlan.getId());
     List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
-
     List<TaskAggregate> retryTasks = prepareTasksForRetry(existingTasks);
 
     if (!retryTasks.isEmpty()) {
-      existingPlan.markPartial();
-      planRepository.save(existingPlan);
-      List<TaskQueuedEvent> retryEvents = collectQueuedEvents(retryTasks);
-      taskOutboxPublisher.publishRetry(retryEvents, existingPlan, schedule);
-      log.info(
-          "Re-queued {} failed tasks for existing plan [{}]",
-          retryTasks.size(),
-          existingPlan.getId());
+      processRetryTasks(existingPlan, schedule, retryTasks);
     } else {
       log.info(
           "No tasks require retry for existing plan [{}], returning existing state",
           existingPlan.getId());
     }
 
+    return buildPlanIngestionResult(schedule, existingPlan, existingSlices, existingTasks);
+  }
+
+  /**
+   * Logs duplicate plan detection.
+   *
+   * @param existingPlan existing plan aggregate
+   * @param planKey plan idempotency key
+   */
+  private void logDuplicatePlanDetection(PlanAggregate existingPlan, String planKey) {
+    log.info(
+        "Detected duplicate plan ingestion for provenance [{}] operation [{}]: reusing existing plan [{}] with planKey={}",
+        existingPlan.getProvenanceCode(),
+        existingPlan.getOperationCode(),
+        existingPlan.getId(),
+        planKey);
+  }
+
+  /**
+   * Processes retry tasks by marking plan partial and publishing retry events.
+   *
+   * @param existingPlan existing plan aggregate
+   * @param schedule schedule instance
+   * @param retryTasks tasks to retry
+   */
+  private void processRetryTasks(
+      PlanAggregate existingPlan,
+      ScheduleInstanceAggregate schedule,
+      List<TaskAggregate> retryTasks) {
+    existingPlan.markPartial();
+    planRepository.save(existingPlan);
+    List<TaskQueuedEvent> retryEvents = collectQueuedEvents(retryTasks);
+    taskOutboxPublisher.publishRetry(retryEvents, existingPlan, schedule);
+    log.info(
+        "Re-queued {} failed tasks for existing plan [{}]",
+        retryTasks.size(),
+        existingPlan.getId());
+  }
+
+  /**
+   * Builds plan ingestion result from existing plan data.
+   *
+   * @param schedule schedule instance
+   * @param plan plan aggregate
+   * @param slices plan slices
+   * @param tasks tasks
+   * @return plan ingestion result
+   */
+  private PlanIngestionResult buildPlanIngestionResult(
+      ScheduleInstanceAggregate schedule,
+      PlanAggregate plan,
+      List<PlanSliceAggregate> slices,
+      List<TaskAggregate> tasks) {
     return new PlanIngestionResult(
         schedule.getId(),
-        existingPlan.getId(),
-        existingSlices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
-        existingTasks.size(),
-        existingPlan.getStatus().name());
+        plan.getId(),
+        slices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
+        tasks.size(),
+        plan.getStatus().name());
   }
 
   /**

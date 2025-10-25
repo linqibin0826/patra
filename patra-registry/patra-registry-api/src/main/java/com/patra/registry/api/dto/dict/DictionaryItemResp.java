@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Response DTO exposed to subsystem clients for dictionary item lookups.
+ * Dictionary item metadata exposed to subsystem clients.
  *
  * <p>Field descriptions:
  *

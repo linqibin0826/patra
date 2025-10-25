@@ -105,6 +105,10 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
     return aggregate;
   }
 
-  // Placeholder: extend with additional snapshot recording when future requirements emerge.
+  /**
+   * Records additional snapshots for this schedule instance.
+   *
+   * <p>Placeholder for future snapshot recording requirements.
+   */
   public void recordSnapshots() {}
 }

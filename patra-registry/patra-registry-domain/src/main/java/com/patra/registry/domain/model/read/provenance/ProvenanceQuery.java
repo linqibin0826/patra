@@ -20,26 +20,13 @@ public record ProvenanceQuery(
     boolean active,
     String lifecycleStatusCode) {
   public ProvenanceQuery {
-    if (id == null || id <= 0) {
-      throw new DomainValidationException("Provenance id must be positive");
-    }
-    if (code == null || code.isBlank()) {
-      throw new DomainValidationException("Provenance code cannot be blank");
-    }
-    if (name == null || name.isBlank()) {
-      throw new DomainValidationException("Provenance name cannot be blank");
-    }
-    if (timezoneDefault == null || timezoneDefault.isBlank()) {
-      throw new DomainValidationException("Timezone default cannot be blank");
-    }
-    if (lifecycleStatusCode == null || lifecycleStatusCode.isBlank()) {
-      throw new DomainValidationException("Lifecycle status code cannot be blank");
-    }
-    code = code.trim();
-    name = name.trim();
-    baseUrlDefault = baseUrlDefault != null ? baseUrlDefault.trim() : null;
-    timezoneDefault = timezoneDefault.trim();
-    docsUrl = docsUrl != null ? docsUrl.trim() : null;
-    lifecycleStatusCode = lifecycleStatusCode.trim();
+    DomainValidationException.positive(id, "Provenance id");
+    code = DomainValidationException.notBlank(code, "Provenance code");
+    name = DomainValidationException.notBlank(name, "Provenance name");
+    timezoneDefault = DomainValidationException.notBlank(timezoneDefault, "Timezone default");
+    lifecycleStatusCode =
+        DomainValidationException.notBlank(lifecycleStatusCode, "Lifecycle status code");
+    baseUrlDefault = DomainValidationException.trimOrNull(baseUrlDefault);
+    docsUrl = DomainValidationException.trimOrNull(docsUrl);
   }
 }

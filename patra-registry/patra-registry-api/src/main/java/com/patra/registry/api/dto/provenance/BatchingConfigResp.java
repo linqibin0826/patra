@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.provenance;
 import java.time.Instant;
 
 /**
- * Response DTO describing batching configuration for provenance requests.
+ * Batching configuration for provenance API requests.
  *
  * <p>Field descriptions:
  *

@@ -45,73 +45,101 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
       ProvenanceCode provenanceCode, OperationCode operationCode) {
     String code = provenanceCode.getCode();
     String operationType = operationCode.name();
-    Instant queryTime = Instant.now();
+    logConfigRequest(code, operationType);
 
+    try {
+      ProvenanceConfigResp resp = callRegistry(provenanceCode, operationType);
+      return convertAndValidateResponse(resp, code);
+    } catch (RemoteCallException ex) {
+      return handleRemoteException(ex, code, operationType);
+    } catch (Exception ex) {
+      throw handleUnexpectedException(ex, code, operationType);
+    }
+  }
+
+  /** Logs the configuration request for debugging. */
+  private void logConfigRequest(String code, String operationType) {
     log.debug(
         "Requesting provenance config, code={}, operationType={}, at={}",
         code,
         operationType,
-        queryTime);
+        Instant.now());
+  }
 
-    try {
-      ProvenanceConfigResp resp =
-          provenanceClient.getConfiguration(provenanceCode, operationType, queryTime);
+  /** Calls the registry service to retrieve configuration. */
+  private ProvenanceConfigResp callRegistry(
+      ProvenanceCode provenanceCode, String operationType) {
+    return provenanceClient.getConfiguration(provenanceCode, operationType, Instant.now());
+  }
 
-      if (resp == null) {
-        log.warn("Registry returned empty config, code={}, operationType={}", code, operationType);
-        return createMinimalSnapshot(code);
-      }
-
-      ProvenanceConfigSnapshot snapshot = converter.convert(resp);
-
-      // Log hash info of conversion result for diagnosis (snapshot itself includes toString)
-      log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
-      return snapshot;
-
-    } catch (RemoteCallException ex) {
-      return handleRemoteException(ex, code, operationType);
-    } catch (Exception ex) {
-      String msg =
-          String.format(
-              "Unexpected error when fetching config, code=%s, operationType=%s",
-              code, operationType);
-      log.error("" + msg, ex);
-      throw new IngestConfigurationException(code, operationType, msg, ex);
+  /** Converts and validates the registry response. */
+  private ProvenanceConfigSnapshot convertAndValidateResponse(
+      ProvenanceConfigResp resp, String code) {
+    if (resp == null) {
+      log.warn("Registry returned empty config, code={}", code);
+      return createMinimalSnapshot(code);
     }
+
+    ProvenanceConfigSnapshot snapshot = converter.convert(resp);
+    log.debug("Provenance config loaded, code={}, snapshot={}", code, snapshot);
+    return snapshot;
+  }
+
+  /** Handles unexpected exceptions during configuration retrieval. */
+  private IngestConfigurationException handleUnexpectedException(
+      Exception ex, String code, String operationType) {
+    String msg =
+        String.format(
+            "Unexpected error when fetching config, code=%s, operationType=%s", code, operationType);
+    log.error(msg, ex);
+    return new IngestConfigurationException(code, operationType, msg, ex);
   }
 
   /** Handles remote ProblemDetail exceptions. */
   private ProvenanceConfigSnapshot handleRemoteException(
       RemoteCallException ex, String code, String operationType) {
     if (RemoteErrorHelper.isNotFound(ex)) {
-      String msg =
-          String.format(
-              "Provenance config not found, code=%s, operationType=%s", code, operationType);
-      log.warn(
-          "{} (remoteCode={}, status={}, traceId={})",
-          msg,
-          ex.getErrorCode(),
-          ex.getHttpStatus(),
-          ex.getTraceId());
-      throw new IngestConfigurationException(code, operationType, msg, ex);
+      throw createConfigNotFoundException(ex, code, operationType);
     }
-
     if (RemoteErrorHelper.isServerError(ex) || RemoteErrorHelper.isRetryable(ex)) {
-      log.warn(
-          "Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
-          code,
-          ex.getHttpStatus(),
-          ex.getTraceId());
-      return createMinimalSnapshot(code);
+      return handleRegistryUnavailable(ex, code);
     }
+    throw createClientErrorException(ex, code, operationType);
+  }
 
+  /** Creates exception for configuration not found errors. */
+  private IngestConfigurationException createConfigNotFoundException(
+      RemoteCallException ex, String code, String operationType) {
     String msg =
-        "Registry client error"
-            + String.format(
-                ", code=%s, status=%d, remoteCode=%s, traceId=%s, detail=%s",
-                code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId(), ex.getMessage());
-    log.error("" + msg);
-    throw new IngestConfigurationException(code, operationType, msg, ex);
+        String.format("Provenance config not found, code=%s, operationType=%s", code, operationType);
+    log.warn(
+        "{} (remoteCode={}, status={}, traceId={})",
+        msg,
+        ex.getErrorCode(),
+        ex.getHttpStatus(),
+        ex.getTraceId());
+    return new IngestConfigurationException(code, operationType, msg, ex);
+  }
+
+  /** Handles registry unavailability by returning minimal snapshot. */
+  private ProvenanceConfigSnapshot handleRegistryUnavailable(RemoteCallException ex, String code) {
+    log.warn(
+        "Registry unavailable, fallback to minimal snapshot, code={}, status={}, traceId={}",
+        code,
+        ex.getHttpStatus(),
+        ex.getTraceId());
+    return createMinimalSnapshot(code);
+  }
+
+  /** Creates exception for client errors. */
+  private IngestConfigurationException createClientErrorException(
+      RemoteCallException ex, String code, String operationType) {
+    String msg =
+        String.format(
+            "Registry client error, code=%s, status=%d, remoteCode=%s, traceId=%s, detail=%s",
+            code, ex.getHttpStatus(), ex.getErrorCode(), ex.getTraceId(), ex.getMessage());
+    log.error(msg);
+    return new IngestConfigurationException(code, operationType, msg, ex);
   }
 
   /** Creates a minimal usable configuration snapshot. */

@@ -15,29 +15,32 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * 计划切片（PlanSliceAggregate）仓储实现（MyBatis-Plus）。
+ * MyBatis-Plus implementation of PlanSliceRepository for plan slice aggregates.
  *
- * <p>职责：
+ * <p>Responsibilities:
  *
  * <ul>
- *   <li>切片聚合的插入 / 更新（通过是否存在 ID 判断）。
- *   <li>批量保存（顺序调用，保持输入顺序）。
- *   <li>按 planId 查询全部切片（常用于调度/回放）。
+ *   <li>Insert and update slice aggregates based on ID presence.
+ *   <li>Batch save with sequential calls maintaining input order.
+ *   <li>Query all slices by planId for scheduling and replay.
  * </ul>
  *
- * <p>设计与约束：
+ * <p>Design and constraints:
  *
  * <ul>
- *   <li>不在仓储层做复杂状态机校验；状态转换由应用服务控制。
- *   <li>乐观锁：如 DO 含 version，更新由 MP 自动处理；需根据未来并发场景可扩展条件更新。
- *   <li>幂等：由上层保证不重复创建同一业务语义切片（如 sliceSignatureHash）。
+ *   <li>No complex state machine validation in repository layer; state transitions controlled by
+ *       application services.
+ *   <li>Optimistic locking: if DO contains version field, updates handled automatically by
+ *       MyBatis-Plus; can extend conditional updates for future concurrency scenarios.
+ *   <li>Idempotency: caller ensures no duplicate creation of same business semantic slice (e.g.,
+ *       sliceSignatureHash).
  * </ul>
  *
- * <p>日志策略：
+ * <p>Logging strategy:
  *
  * <ul>
- *   <li>DEBUG：insert / update 打印 planId + hash（exprHash 代表表达式指纹）。
- *   <li>无 INFO：高频路径避免噪声；错误交由上层捕获统一处理。
+ *   <li>DEBUG: insert/update logs planId and hash (exprHash represents expression fingerprint).
+ *   <li>No INFO: avoid noise on high-frequency paths; errors handled by upper layers.
  * </ul>
  */
 @Repository
@@ -49,10 +52,10 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
   private final PlanSliceConverter converter;
 
   /**
-   * 保存单个切片（insert or update）。
+   * Saves a single slice by inserting or updating.
    *
-   * @param slice 切片聚合
-   * @return 持久化后的聚合（重新映射，确保包含生成字段）
+   * @param slice slice aggregate
+   * @return persisted aggregate re-mapped to include generated fields
    */
   @Override
   public PlanSliceAggregate save(PlanSliceAggregate slice) {
@@ -76,10 +79,10 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
   }
 
   /**
-   * 批量保存切片（内部逐条调用 {@link #save(PlanSliceAggregate)}）。
+   * Batch saves slices by sequentially calling {@link #save(PlanSliceAggregate)}.
    *
-   * @param slices 切片集合
-   * @return 持久化后结果（与输入顺序保持一致）
+   * @param slices collection of slices
+   * @return persisted results maintaining input order
    */
   @Override
   public List<PlanSliceAggregate> saveAll(List<PlanSliceAggregate> slices) {
@@ -91,10 +94,10 @@ public class PlanSliceRepositoryMpImpl implements PlanSliceRepository {
   }
 
   /**
-   * 按计划 ID 查询切片集合。
+   * Finds slices by plan ID.
    *
-   * @param planId 计划 ID
-   * @return 切片列表（可能为空）
+   * @param planId plan ID
+   * @return list of slices, may be empty
    */
   @Override
   public List<PlanSliceAggregate> findByPlanId(Long planId) {

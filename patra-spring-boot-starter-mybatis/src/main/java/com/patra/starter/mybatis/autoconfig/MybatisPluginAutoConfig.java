@@ -7,11 +7,9 @@ import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerIntercep
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.patra.starter.mybatis.handler.AuditMetaObjectHandler;
 import java.time.Clock;
-import java.time.Instant;
-import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -21,79 +19,77 @@ import org.springframework.lang.Nullable;
  * Auto-configuration for MyBatis-Plus plugins.
  *
  * <p>This class enables essential plugins for pagination, optimistic locking, and protection
- * against full table operations. It also provides a simple metadata handler for auditing purposes.
+ * against full table operations. It also provides a metadata handler for automatic audit field
+ * population.
  */
 @Slf4j
 @AutoConfiguration
 public class MybatisPluginAutoConfig {
 
   /**
-   * Configures the MyBatis-Plus interceptor chain.
+   * Configures the MyBatis-Plus interceptor chain with essential plugins.
    *
-   * @return The configured {@link MybatisPlusInterceptor}.
+   * @param additionalInterceptorsProvider provider for custom interceptors from application context
+   * @return configured interceptor with pagination, optimistic locking, and attack protection
    */
   @Bean
   public MybatisPlusInterceptor mybatisPlusInterceptor(
       ObjectProvider<InnerInterceptor> additionalInterceptorsProvider) {
-    MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-    // Add the pagination plugin for MySQL.
-    interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-    // Add the optimistic locker plugin to manage versioned data.
-    interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
-    // Add the block attack plugin to prevent full table updates and deletes.
-    interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
-
-    // Collect and register any additional InnerInterceptor beans provided by the application.
-    additionalInterceptorsProvider
-        .orderedStream()
-        .forEach(
-            inner -> {
-              // Avoid double-adding identical instances (defensive)
-              try {
-                interceptor.addInnerInterceptor(inner);
-                log.debug(
-                    "Registered additional MyBatis-Plus InnerInterceptor: {}",
-                    inner.getClass().getName());
-              } catch (Exception e) {
-                log.warn(
-                    "Failed to register additional InnerInterceptor {}: {}",
-                    inner.getClass().getName(),
-                    e.getMessage());
-              }
-            });
+    log.info("Initializing MyBatis-Plus interceptor with standard plugins");
+    MybatisPlusInterceptor interceptor = createStandardInterceptor();
+    registerAdditionalInterceptors(interceptor, additionalInterceptorsProvider);
     return interceptor;
   }
 
   /**
-   * Provides a {@link MetaObjectHandler} to automatically populate audit fields.
+   * Provides a metadata handler to automatically populate audit fields during insert and update.
    *
-   * @param clock An optional {@link Clock} for time-sensitive testing.
-   * @return The configured {@link MetaObjectHandler}.
+   * @param clock optional clock for time-sensitive testing, null uses system default
+   * @return configured metadata handler
    */
   @Bean
   public MetaObjectHandler metaObjectHandler(@Nullable Clock clock) {
-    log.info("Initializing MyBatis-Plus MetaObjectHandler.");
-    return new MetaObjectHandler() {
-      @Override
-      public void insertFill(MetaObject metaObject) {
-        // Populate createdAt and updatedAt fields on insertion.
-        Instant now = Objects.isNull(clock) ? Instant.now() : Instant.now(clock);
-        this.strictInsertFill(metaObject, "createdAt", () -> now, Instant.class);
-        this.strictInsertFill(metaObject, "updatedAt", () -> now, Instant.class);
+    log.info("Initializing MyBatis-Plus audit metadata handler");
+    return new AuditMetaObjectHandler(clock);
+  }
 
-        // TODO: Populate createdBy and updatedBy fields with user information from the current
-        // security context.
-      }
+  /**
+   * Creates a standard interceptor with pagination, optimistic locking, and attack protection.
+   *
+   * @return interceptor with standard plugins configured
+   */
+  private MybatisPlusInterceptor createStandardInterceptor() {
+    MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+    interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+    interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
+    interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
+    log.debug(
+        "Registered standard plugins: PaginationInterceptor, OptimisticLockerInterceptor, "
+            + "BlockAttackInterceptor");
+    return interceptor;
+  }
 
-      @Override
-      public void updateFill(MetaObject metaObject) {
-        // Populate the updatedAt field on update.
-        Instant now = Objects.isNull(clock) ? Instant.now() : Instant.now(clock);
-        this.strictUpdateFill(metaObject, "updatedAt", () -> now, Instant.class);
-
-        // TODO: Populate the updatedBy field with user information from the current security
-        // context.
-      }
-    };
+  /**
+   * Registers additional custom interceptors provided by the application.
+   *
+   * @param interceptor the interceptor to register into
+   * @param provider provider for additional interceptors
+   */
+  private void registerAdditionalInterceptors(
+      MybatisPlusInterceptor interceptor, ObjectProvider<InnerInterceptor> provider) {
+    provider
+        .orderedStream()
+        .forEach(
+            inner -> {
+              try {
+                interceptor.addInnerInterceptor(inner);
+                log.info("Registered additional InnerInterceptor: {}", inner.getClass().getName());
+              } catch (Exception e) {
+                log.warn(
+                    "Failed to register InnerInterceptor {}: {}",
+                    inner.getClass().getName(),
+                    e.getMessage());
+              }
+            });
   }
 }

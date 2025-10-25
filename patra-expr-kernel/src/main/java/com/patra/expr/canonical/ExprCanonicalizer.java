@@ -60,6 +60,12 @@ public final class ExprCanonicalizer {
     }
   }
 
+  /**
+   * Recursively canonicalizes a JSON node.
+   *
+   * @param node the node to canonicalize
+   * @return canonical JSON node
+   */
   private static JsonNode canonicalizeNode(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return NullNode.getInstance();
@@ -79,6 +85,12 @@ public final class ExprCanonicalizer {
     return node;
   }
 
+  /**
+   * Canonicalizes an object node by sorting keys and removing empty values.
+   *
+   * @param objectNode the object node to canonicalize
+   * @return canonical object node
+   */
   private static JsonNode canonicalizeObject(ObjectNode objectNode) {
     List<String> fieldNames = new ArrayList<>();
     objectNode.fieldNames().forEachRemaining(fieldNames::add);
@@ -94,7 +106,20 @@ public final class ExprCanonicalizer {
     return canonical;
   }
 
+  /**
+   * Canonicalizes an array node by deduplicating and sorting elements.
+   *
+   * @param arrayNode the array node to canonicalize
+   * @return canonical array node or NullNode if empty
+   */
   private static JsonNode canonicalizeArray(ArrayNode arrayNode) {
+    List<CanonicalElement> elements = buildCanonicalElements(arrayNode);
+    List<CanonicalElement> deduplicated = deduplicateElements(elements);
+    List<CanonicalElement> sorted = sortElements(deduplicated);
+    return buildCanonicalArrayNode(sorted);
+  }
+
+  private static List<CanonicalElement> buildCanonicalElements(ArrayNode arrayNode) {
     List<CanonicalElement> elements = new ArrayList<>();
     for (JsonNode element : arrayNode) {
       JsonNode normalized = canonicalizeNode(element);
@@ -105,25 +130,40 @@ public final class ExprCanonicalizer {
       String serialized = writeJson(normalized);
       elements.add(new CanonicalElement(normalized, typeTag, serialized));
     }
+    return elements;
+  }
 
+  private static List<CanonicalElement> deduplicateElements(List<CanonicalElement> elements) {
     Map<String, CanonicalElement> deduplicated = new LinkedHashMap<>();
     for (CanonicalElement element : elements) {
       String identity = element.typeTag + "|" + element.serialized;
       deduplicated.putIfAbsent(identity, element);
     }
+    return new ArrayList<>(deduplicated.values());
+  }
 
-    List<CanonicalElement> ordered = new ArrayList<>(deduplicated.values());
-    ordered.sort(
+  private static List<CanonicalElement> sortElements(List<CanonicalElement> elements) {
+    List<CanonicalElement> sorted = new ArrayList<>(elements);
+    sorted.sort(
         Comparator.comparing((CanonicalElement it) -> it.typeTag)
             .thenComparing(it -> it.serialized));
+    return sorted;
+  }
 
+  private static JsonNode buildCanonicalArrayNode(List<CanonicalElement> elements) {
     ArrayNode canonical = NODE_FACTORY.arrayNode();
-    for (CanonicalElement element : ordered) {
+    for (CanonicalElement element : elements) {
       canonical.add(element.value);
     }
     return canonical.isEmpty() ? NullNode.getInstance() : canonical;
   }
 
+  /**
+   * Canonicalizes text by trimming and collapsing whitespace.
+   *
+   * @param text the text to canonicalize
+   * @return canonical text node or NullNode if empty
+   */
   private static JsonNode canonicalizeText(String text) {
     if (text == null) {
       return NullNode.getInstance();
@@ -136,6 +176,12 @@ public final class ExprCanonicalizer {
     return NODE_FACTORY.textNode(collapsed);
   }
 
+  /**
+   * Canonicalizes numbers by stripping trailing zeros.
+   *
+   * @param node the number node to canonicalize
+   * @return canonical number node
+   */
   private static JsonNode canonicalizeNumber(JsonNode node) {
     if (!node.isNumber()) {
       return node;
@@ -147,6 +193,12 @@ public final class ExprCanonicalizer {
     return NODE_FACTORY.numberNode(decimal);
   }
 
+  /**
+   * Checks if a JSON node is considered empty.
+   *
+   * @param node the node to check
+   * @return true if node is null, missing, or empty
+   */
   private static boolean isEmpty(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return true;
@@ -163,6 +215,12 @@ public final class ExprCanonicalizer {
     return false;
   }
 
+  /**
+   * Returns a type tag for sorting JSON nodes.
+   *
+   * @param node the node to tag
+   * @return numeric type tag as string
+   */
   private static String typeTag(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       return "0";

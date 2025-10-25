@@ -13,11 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * 任务运行批次（TaskRunBatch）仓储实现。
+ * MyBatis-Plus implementation of TaskRunBatchRepository.
  *
- * <p>职责：批次统计与分页（页号 pageNo / pageSize）持久化，用于增量采集阶段分块处理。
+ * <p>Responsibilities: Persisting batch statistics and pagination information (pageNo/pageSize) for
+ * chunked processing during incremental collection.
  *
- * <p>说明：当前批量保存采取逐条写入；若未来批次数量显著增大，可引入批处理 SQL 或异步写。
+ * <p>Note: Current batch save uses sequential writes; if batch volume grows significantly, consider
+ * batch SQL or async writes.
  */
 @Repository
 @RequiredArgsConstructor
@@ -28,9 +30,9 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   private final TaskRunBatchConverter converter;
 
   /**
-   * 保存单个运行批次（insert or update）。
+   * Saves a single task run batch by inserting or updating.
    *
-   * @param batch 批次实体
+   * @param batch batch entity
    */
   @Override
   public void save(TaskRunBatch batch) {
@@ -58,9 +60,9 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   }
 
   /**
-   * 批量保存运行批次（insert or update）。
+   * Batch saves task run batches by inserting or updating.
    *
-   * @param batches 批次集合
+   * @param batches collection of batch entities
    */
   @Override
   public void saveAll(List<TaskRunBatch> batches) {
@@ -90,10 +92,10 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   }
 
   /**
-   * 查询指定运行尝试的全部批次。
+   * Finds all batches for a specific task run attempt.
    *
-   * @param runId 运行尝试 ID
-   * @return 批次列表（可能为空）
+   * @param runId task run attempt ID
+   * @return list of batches, may be empty
    */
   @Override
   public List<TaskRunBatch> findByRunId(Long runId) {

@@ -1,6 +1,7 @@
 package com.patra.registry.domain.model.vo.expr;
 
 import com.patra.registry.domain.exception.DomainValidationException;
+import com.patra.registry.domain.support.TemporalEntity;
 import java.time.Instant;
 
 /**
@@ -52,7 +53,8 @@ public record ExprRenderRule(
     /* JSON of standard keys/template variables when {@code emitTypeCode} is {@code PARAMS} (e.g., {"from":"from","to":"to"}) */
     String paramsJson,
     /* Template-level render function code (subset/extension of reg_transform); e.g., PUBMED_DATETYPE */
-    String functionCode) {
+    String functionCode)
+    implements TemporalEntity {
   public ExprRenderRule(
       Long id,
       Long provenanceId,
@@ -74,32 +76,17 @@ public record ExprRenderRule(
       boolean wrapGroup,
       String paramsJson,
       String functionCode) {
-    if (id == null || id <= 0)
-      throw new DomainValidationException("Render rule id must be positive");
-    if (provenanceId == null || provenanceId <= 0)
-      throw new DomainValidationException("Provenance id must be positive");
-    if (fieldKey == null || fieldKey.isBlank())
-      throw new DomainValidationException("Field key cannot be blank");
-    if (opCode == null || opCode.isBlank())
-      throw new DomainValidationException("Operation code cannot be blank");
-    if (emitTypeCode == null || emitTypeCode.isBlank())
-      throw new DomainValidationException("Emit type code cannot be blank");
-    if (matchTypeKey == null || matchTypeKey.isBlank())
-      throw new DomainValidationException("Match type key cannot be blank");
-    if (negatedKey == null || negatedKey.isBlank())
-      throw new DomainValidationException("Negated key cannot be blank");
-    if (valueTypeKey == null || valueTypeKey.isBlank())
-      throw new DomainValidationException("Value type key cannot be blank");
-    if (effectiveFrom == null) throw new DomainValidationException("Effective from cannot be null");
+    validateBasicFields(id, provenanceId, fieldKey, opCode, emitTypeCode, effectiveFrom);
+    validateNormalizedKeys(matchTypeKey, negatedKey, valueTypeKey);
 
     this.id = id;
     this.provenanceId = provenanceId;
-    this.operationType = operationType != null ? operationType.trim() : null;
+    this.operationType = DomainValidationException.trimOrNull(operationType);
     this.fieldKey = fieldKey.trim();
     this.opCode = opCode.trim();
-    this.matchTypeCode = matchTypeCode != null ? matchTypeCode.trim() : null;
+    this.matchTypeCode = DomainValidationException.trimOrNull(matchTypeCode);
     this.negated = negated;
-    this.valueTypeCode = valueTypeCode != null ? valueTypeCode.trim() : null;
+    this.valueTypeCode = DomainValidationException.trimOrNull(valueTypeCode);
     this.emitTypeCode = emitTypeCode.trim();
     this.matchTypeKey = matchTypeKey.trim();
     this.negatedKey = negatedKey.trim();
@@ -108,25 +95,48 @@ public record ExprRenderRule(
     this.effectiveTo = effectiveTo;
     this.template = template;
     this.itemTemplate = itemTemplate;
-    this.joiner = joiner != null ? joiner.trim() : null;
+    this.joiner = DomainValidationException.trimOrNull(joiner);
     this.wrapGroup = wrapGroup;
     this.paramsJson = paramsJson;
-    this.functionCode = functionCode != null ? functionCode.trim() : null;
+    this.functionCode = DomainValidationException.trimOrNull(functionCode);
   }
 
   /**
-   * Checks whether the render rule is effective at the given instant.
+   * Validates basic required fields for render rule.
    *
-   * @param instant the time point to check (must not be null)
-   * @return {@code true} if the rule is effective at the given instant
-   * @throws DomainValidationException if {@code instant} is null
+   * @param id rule identifier
+   * @param provenanceId provenance identifier
+   * @param fieldKey field key
+   * @param opCode operation code
+   * @param emitTypeCode emit type code
+   * @param effectiveFrom effective start timestamp
    */
-  public boolean isEffectiveAt(Instant instant) {
-    if (instant == null) {
-      throw new DomainValidationException("Instant cannot be null");
-    }
-    boolean afterStart = !instant.isBefore(effectiveFrom);
-    boolean beforeEnd = effectiveTo == null || instant.isBefore(effectiveTo);
-    return afterStart && beforeEnd;
+  private static void validateBasicFields(
+      Long id,
+      Long provenanceId,
+      String fieldKey,
+      String opCode,
+      String emitTypeCode,
+      Instant effectiveFrom) {
+    DomainValidationException.positive(id, "Render rule id");
+    DomainValidationException.positive(provenanceId, "Provenance id");
+    DomainValidationException.notBlank(fieldKey, "Field key");
+    DomainValidationException.notBlank(opCode, "Operation code");
+    DomainValidationException.notBlank(emitTypeCode, "Emit type code");
+    DomainValidationException.nonNull(effectiveFrom, "Effective from");
+  }
+
+  /**
+   * Validates normalized dimension keys.
+   *
+   * @param matchTypeKey normalized match type key
+   * @param negatedKey normalized negated key
+   * @param valueTypeKey normalized value type key
+   */
+  private static void validateNormalizedKeys(
+      String matchTypeKey, String negatedKey, String valueTypeKey) {
+    DomainValidationException.notBlank(matchTypeKey, "Match type key");
+    DomainValidationException.notBlank(negatedKey, "Negated key");
+    DomainValidationException.notBlank(valueTypeKey, "Value type key");
   }
 }

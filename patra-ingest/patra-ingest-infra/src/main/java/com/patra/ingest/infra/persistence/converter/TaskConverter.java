@@ -13,9 +13,10 @@ import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * 任务聚合 {@link TaskAggregate} ↔ 数据对象 {@link TaskDO} 的 MapStruct 转换器。
+ * MapStruct converter for {@link TaskAggregate} ↔ {@link TaskDO} transformations.
  *
- * <p>JSON 字段、状态枚举与值对象拆解统一在此转换器中完成，避免额外的 support 类。
+ * <p>Handles JSON fields, status enum conversions, and value object decomposition in a single
+ * converter to avoid extra support classes.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface TaskConverter {

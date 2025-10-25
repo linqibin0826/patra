@@ -55,38 +55,45 @@ public class IngestStreamConsumers {
   public Consumer<Message<String>> ingestTaskReadyConsumer() {
     return message -> {
       try {
-        // DEBUG: print all headers for diagnostics
-        if (log.isDebugEnabled()) {
-          log.debug("Received headers: {}", message.getHeaders());
-        }
+        logReceivedHeaders(message.getHeaders());
+        logMessageMetadata(message.getHeaders());
 
-        // Read RocketMQ-related headers
-        String topic = (String) message.getHeaders().getOrDefault(HEADER_TOPIC, "unknown");
-        String keys = (String) message.getHeaders().get(HEADER_KEYS);
-        String tags = (String) message.getHeaders().get(HEADER_TAGS);
-        String messageId = (String) message.getHeaders().get(HEADER_MESSAGE_ID);
-        String partitionKey = (String) message.getHeaders().get("partitionKey");
-
-        log.info(
-            "consume topic={} KEYS={} TAGS={} msgId={} partitionKey={}",
-            topic,
-            keys,
-            tags,
-            messageId,
-            partitionKey);
-
-        // Parse payload to TaskReadyCommand
         TaskReadyCommand command = parsePayload(message.getPayload(), message.getHeaders());
-
-        // Invoke application use case
         taskExecutionUseCase.execute(command);
 
       } catch (Exception e) {
-        log.error("failed to consume message, will retry", e);
-        // TODO Throw to trigger MQ retry
-        //        throw new RuntimeException("Message consumption failed", e);
+        log.error(
+            "Failed to consume task ready message from topic [{}]: {}",
+            message.getHeaders().getOrDefault(HEADER_TOPIC, "unknown"),
+            e.getMessage(),
+            e);
+        throw new RuntimeException("Message consumption failed", e);
       }
     };
+  }
+
+  /** Logs all received headers for diagnostics when DEBUG level is enabled. */
+  private void logReceivedHeaders(Map<String, Object> headers) {
+    if (log.isDebugEnabled()) {
+      log.debug("Received message with headers: {}", headers);
+    }
+  }
+
+  /** Logs key message metadata from RocketMQ headers for tracing and monitoring. */
+  private void logMessageMetadata(Map<String, Object> headers) {
+    String topic = (String) headers.getOrDefault(HEADER_TOPIC, "unknown");
+    String keys = (String) headers.get(HEADER_KEYS);
+    String tags = (String) headers.get(HEADER_TAGS);
+    String messageId = (String) headers.get(HEADER_MESSAGE_ID);
+    String partitionKey = (String) headers.get("partitionKey");
+
+    log.info(
+        "Consuming task ready event from topic [{}] with KEYS={} TAGS={} messageId={} partitionKey={}",
+        topic,
+        keys,
+        tags,
+        messageId,
+        partitionKey);
   }
 
   /**

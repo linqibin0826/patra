@@ -66,42 +66,80 @@ public class DataLayerErrorMappingContributor implements ErrorMappingContributor
   /**
    * Analyzes a {@link SQLException} to determine the most appropriate error code.
    *
-   * @param sqlEx The SQL exception.
-   * @return An optional containing the mapped error code.
+   * @param sqlEx the SQL exception to analyze
+   * @return an optional containing the mapped error code
    */
   private Optional<ErrorCodeLike> mapCommonSqlExceptions(SQLException sqlEx) {
-    int errorCode = sqlEx.getErrorCode();
-    String sqlState = sqlEx.getSQLState();
-
-    // Specific MySQL error codes are mapped to HTTP 409 Conflict.
-    switch (errorCode) {
-      case 1062: // ER_DUP_ENTRY: Duplicate entry for a unique key.
-        log.debug("Mapping MySQL duplicate entry error ({}) to a conflict.", errorCode, sqlEx);
-        return Optional.of(http.CONFLICT());
-      case 1451: // ER_ROW_IS_REFERENCED_2: Cannot delete or update a parent row (foreign key
-      // constraint).
-      case 1452: // ER_NO_REFERENCED_ROW_2: Cannot add or update a child row (foreign key constraint
-        // fails).
-        log.debug(
-            "Mapping MySQL foreign key constraint error ({}) to a conflict.", errorCode, sqlEx);
-        return Optional.of(http.CONFLICT());
+    Optional<ErrorCodeLike> mysqlError = mapMysqlSpecificErrors(sqlEx);
+    if (mysqlError.isPresent()) {
+      return mysqlError;
     }
 
-    // SQLState prefixes '08' (connection exception) and 'HY' (timeout) indicate service
-    // unavailability.
-    if (sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("HY"))) {
+    Optional<ErrorCodeLike> sqlStateError = mapSqlStateErrors(sqlEx);
+    if (sqlStateError.isPresent()) {
+      return sqlStateError;
+    }
+
+    return mapUnhandledSqlException(sqlEx);
+  }
+
+  /**
+   * Maps MySQL-specific error codes to appropriate error responses.
+   *
+   * @param sqlEx the SQL exception containing MySQL error code
+   * @return optional error code if MySQL error is recognized
+   */
+  private Optional<ErrorCodeLike> mapMysqlSpecificErrors(SQLException sqlEx) {
+    int errorCode = sqlEx.getErrorCode();
+
+    switch (errorCode) {
+      case 1062: // ER_DUP_ENTRY: Duplicate entry for a unique key
+        log.debug("Mapping MySQL duplicate entry error ({}) to conflict", errorCode, sqlEx);
+        return Optional.of(http.CONFLICT());
+      case 1451: // ER_ROW_IS_REFERENCED_2: Cannot delete/update parent row
+      case 1452: // ER_NO_REFERENCED_ROW_2: Cannot add/update child row
+        log.debug("Mapping MySQL foreign key constraint error ({}) to conflict", errorCode, sqlEx);
+        return Optional.of(http.CONFLICT());
+      default:
+        return Optional.empty();
+    }
+  }
+
+  /**
+   * Maps SQLState codes to appropriate error responses.
+   *
+   * @param sqlEx the SQL exception containing SQLState code
+   * @return optional error code if SQLState indicates connection or timeout issue
+   */
+  private Optional<ErrorCodeLike> mapSqlStateErrors(SQLException sqlEx) {
+    String sqlState = sqlEx.getSQLState();
+    if (sqlState == null) {
+      return Optional.empty();
+    }
+
+    // SQLState '08' = connection exception, 'HY' = timeout
+    if (sqlState.startsWith("08") || sqlState.startsWith("HY")) {
       log.warn(
-          "Mapping SQL connection/timeout error (SQLState: {}) to service unavailable.",
+          "Mapping SQL connection/timeout error (SQLState: {}) to service unavailable",
           sqlState,
           sqlEx);
       return Optional.of(http.UNAVAILABLE());
     }
 
-    // As a fallback, other SQL exceptions are treated as internal server errors.
+    return Optional.empty();
+  }
+
+  /**
+   * Maps unhandled SQL exceptions to internal server error.
+   *
+   * @param sqlEx the unhandled SQL exception
+   * @return error code for internal server error
+   */
+  private Optional<ErrorCodeLike> mapUnhandledSqlException(SQLException sqlEx) {
     log.error(
-        "Mapping unhandled SQL exception (SQLState: {}, ErrorCode: {}) to an internal server error.",
-        sqlState,
-        errorCode,
+        "Mapping unhandled SQL exception (SQLState: {}, ErrorCode: {}) to internal server error",
+        sqlEx.getSQLState(),
+        sqlEx.getErrorCode(),
         sqlEx);
     return Optional.of(http.INTERNAL_ERROR());
   }

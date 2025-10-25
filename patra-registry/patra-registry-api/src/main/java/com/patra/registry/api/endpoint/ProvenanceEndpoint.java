@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * Internal API contract for provenance configuration.
+ * Internal API contract for provenance metadata and configuration queries.
  *
  * <p>Exposes endpoints for querying provenance metadata and effective configuration to internal
  * microservices via Feign client integration.
@@ -25,7 +25,7 @@ public interface ProvenanceEndpoint {
   /**
    * Lists all available provenances.
    *
-   * @return list of provenance response DTOs
+   * @return list of provenance metadata
    */
   @GetMapping(BASE_PATH)
   List<ProvenanceResp> listProvenances();
@@ -33,8 +33,8 @@ public interface ProvenanceEndpoint {
   /**
    * Retrieves a single provenance by its code.
    *
-   * @param code the provenance code to look up
-   * @return provenance response DTO
+   * @param code provenance code to look up
+   * @return provenance metadata
    */
   @GetMapping(BASE_PATH + "/{code}")
   ProvenanceResp getProvenance(@PathVariable("code") ProvenanceCode code);
@@ -45,11 +45,11 @@ public interface ProvenanceEndpoint {
    * <p>Retrieves the effective configuration by resolving temporal slices and assembling all
    * dimension configs into a unified view.
    *
-   * @param code the provenance code to load configuration for
-   * @param operationType the operation type discriminator (e.g., HARVEST/UPDATE); {@code null}
-   *     means ALL
-   * @param at the instant to query effective configs; {@code null} defaults to current time
-   * @return provenance configuration response DTO
+   * @param code provenance code to load configuration for
+   * @param operationType operation type discriminator (e.g., HARVEST/UPDATE); {@code null} means
+   *     ALL
+   * @param at instant to query effective configs; {@code null} defaults to current time
+   * @return aggregated provenance configuration
    */
   @GetMapping(BASE_PATH + "/{code}/config")
   ProvenanceConfigResp getConfiguration(

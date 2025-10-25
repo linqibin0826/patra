@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.provenance;
 import java.time.Instant;
 
 /**
- * Response DTO describing retry and backoff configuration for provenance calls.
+ * Retry and backoff configuration for provenance API calls.
  *
  * <p>Field descriptions:
  *

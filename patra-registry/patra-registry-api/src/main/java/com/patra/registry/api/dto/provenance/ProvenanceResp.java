@@ -1,7 +1,7 @@
 package com.patra.registry.api.dto.provenance;
 
 /**
- * Response DTO exposing core provenance metadata to downstream services.
+ * Core provenance metadata exposed to downstream services.
  *
  * <p>Field descriptions:
  *

@@ -10,7 +10,9 @@ import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.provenance.*;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -250,14 +252,16 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
    * @return count of non-null configs
    */
   private int countNonNullConfigs(ProvenanceConfiguration configuration) {
-    int count = 0;
-    if (configuration.windowOffset() != null) count++;
-    if (configuration.pagination() != null) count++;
-    if (configuration.http() != null) count++;
-    if (configuration.batching() != null) count++;
-    if (configuration.retry() != null) count++;
-    if (configuration.rateLimit() != null) count++;
-    return count;
+    return (int)
+        Stream.of(
+                configuration.windowOffset(),
+                configuration.pagination(),
+                configuration.http(),
+                configuration.batching(),
+                configuration.retry(),
+                configuration.rateLimit())
+            .filter(Objects::nonNull)
+            .count();
   }
 
   /**

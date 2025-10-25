@@ -31,14 +31,17 @@ import org.springframework.context.annotation.Bean;
 public class JacksonAutoConfiguration {
 
   /**
-   * Registers the {@link ObjectMapperProvider} unless the application supplies its own bean. The
-   * provider synchronizes the Spring-managed mapper with {@code JsonMapperHolder} once the
-   * container is ready.
+   * Registers the {@link ObjectMapperProvider} unless the application supplies its own bean.
+   *
+   * <p>The provider synchronizes the Spring-managed mapper with {@code JsonMapperHolder} once the
+   * container is ready, enabling non-Spring code to access the configured ObjectMapper.
+   *
+   * @return object mapper provider instance
    */
   @ConditionalOnMissingBean(ObjectMapperProvider.class)
   @Bean
   public ObjectMapperProvider jacksonProvider() {
-    log.debug("loaded JacksonAutoConfiguration.jacksonProvider()");
+    log.debug("Loaded JacksonAutoConfiguration.jacksonProvider()");
     return new ObjectMapperProvider();
   }
 }

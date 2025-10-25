@@ -52,40 +52,48 @@ public class OutboxRelayJob {
    */
   @XxlJob("ingestOutboxRelayJob")
   public void execute() {
-    // Use injected Clock to produce deterministic execution time for testing
     Instant now = Instant.now(clock);
     try {
       OutboxRelayJobParam jobParam = parseParam(XxlJobHelper.getJobParam());
       OutboxRelayCommand command = buildInstruction(jobParam, now);
-
       RelayReport report = relayUseCase.relay(command);
-
-      String channelDesc = report.channel() != null ? report.channel().channel() : "ALL_CHANNELS";
-      XxlJobHelper.handleSuccess(
-          "Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d"
-              .formatted(
-                  channelDesc,
-                  report.fetched(),
-                  report.published(),
-                  report.retried(),
-                  report.failed(),
-                  report.leaseMissed()));
-
-      log.info(
-          "Outbox relay done, channel={} fetched={} published={} retried={} failed={} leaseMissed={}",
-          channelDesc,
-          report.fetched(),
-          report.published(),
-          report.retried(),
-          report.failed(),
-          report.leaseMissed());
+      handleRelaySuccess(report);
     } catch (OutboxRelayExecutionException ex) {
       throw ex;
     } catch (Exception ex) {
-      log.error("Outbox relay execution failed", ex);
-      XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
+      handleRelayFailure(ex);
       throw new OutboxRelayExecutionException("Outbox relay execution failed", ex);
     }
+  }
+
+  /** Handles successful relay execution with result reporting and logging. */
+  private void handleRelaySuccess(RelayReport report) {
+    String channelDesc = report.channel() != null ? report.channel().channel() : "ALL_CHANNELS";
+
+    log.info(
+        "Completed outbox relay for channel [{}]: {} messages fetched, {} published, {} retried, {} failed, {} lease missed",
+        channelDesc,
+        report.fetched(),
+        report.published(),
+        report.retried(),
+        report.failed(),
+        report.leaseMissed());
+
+    XxlJobHelper.handleSuccess(
+        String.format(
+            "Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d",
+            channelDesc,
+            report.fetched(),
+            report.published(),
+            report.retried(),
+            report.failed(),
+            report.leaseMissed()));
+  }
+
+  /** Handles relay failure with error logging and reporting. */
+  private void handleRelayFailure(Exception ex) {
+    log.error("Failed to execute outbox relay job: {}", ex.getMessage(), ex);
+    XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
   }
 
   /**

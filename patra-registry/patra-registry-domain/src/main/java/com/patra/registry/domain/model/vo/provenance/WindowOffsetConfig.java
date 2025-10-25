@@ -108,17 +108,17 @@ public record WindowOffsetConfig(
 
     this.id = id;
     this.provenanceId = provenanceId;
-    this.operationType = trimOrNull(operationType);
+    this.operationType = DomainValidationException.trimOrNull(operationType);
     this.effectiveFrom = effectiveFrom;
     this.effectiveTo = effectiveTo;
     this.windowModeCode = modeTrimmed;
     this.windowSizeValue = windowSizeValue;
     this.windowSizeUnitCode = sizeUnitTrimmed;
-    this.calendarAlignTo = trimOrNull(calendarAlignTo);
+    this.calendarAlignTo = DomainValidationException.trimOrNull(calendarAlignTo);
     this.lookbackValue = lookbackValue;
-    this.lookbackUnitCode = trimOrNull(lookbackUnitCode);
+    this.lookbackUnitCode = DomainValidationException.trimOrNull(lookbackUnitCode);
     this.overlapValue = overlapValue;
-    this.overlapUnitCode = trimOrNull(overlapUnitCode);
+    this.overlapUnitCode = DomainValidationException.trimOrNull(overlapUnitCode);
     this.watermarkLagSeconds = watermarkLagSeconds;
 
     String offsetFieldKeyNormalized = normalizeToNullIfEmpty(offsetFieldKey);
@@ -128,7 +128,7 @@ public record WindowOffsetConfig(
 
     this.offsetTypeCode = offsetTypeTrimmed;
     this.offsetFieldKey = offsetFieldKeyNormalized;
-    this.offsetDateFormat = trimOrNull(offsetDateFormat);
+    this.offsetDateFormat = DomainValidationException.trimOrNull(offsetDateFormat);
     this.windowDateFieldKey = windowDateFieldKeyNormalized;
     this.maxIdsPerWindow = maxIdsPerWindow;
     this.maxWindowSpanSeconds = maxWindowSpanSeconds;
@@ -162,16 +162,6 @@ public record WindowOffsetConfig(
       throw new DomainValidationException(
           "DATE/COMPOSITE offset requires at least one std_key (offset or window date)");
     }
-  }
-
-  /**
-   * Trims string and returns null if the input is null.
-   *
-   * @param value string to trim
-   * @return trimmed string or null
-   */
-  private static String trimOrNull(String value) {
-    return value != null ? value.trim() : null;
   }
 
   /**

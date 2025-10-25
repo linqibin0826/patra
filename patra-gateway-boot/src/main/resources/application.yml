@@ -1,16 +1,35 @@
+# ============================================================================
+# Papertrace API Gateway - Main Configuration
+# ============================================================================
+# This gateway serves as the unified entry point for all Papertrace services.
+# Routes are configured below with Nacos-based service discovery.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Server Configuration
+# ----------------------------------------------------------------------------
 server:
   port: 9528
 
+# ----------------------------------------------------------------------------
+# Spring Boot & Cloud Configuration
+# ----------------------------------------------------------------------------
 spring:
   application:
     name: patra-gateway
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Nacos Configuration Import
+  # Loads service-specific and shared configurations from Nacos
   config:
     import:
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
       - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+
+  # Cloud Configuration
   cloud:
+    # Nacos Service Discovery & Configuration
     nacos:
       server-addr: ${NACOS_ADDR:127.0.0.1:8848}
       username: ${NACOS_USERNAME:nacos}
@@ -18,14 +37,22 @@ spring:
       discovery:
         namespace: ${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}
         group: ${NACOS_DISCOVERY_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}
+
+    # Gateway Route Configuration
+    # Routes requests to downstream microservices using load balancing
     gateway:
       routes:
+        # Ingest Service Route
+        # Example: /patra-ingest/plans -> lb://patra-ingest/plans
         - id: patra-ingest
           uri: lb://patra-ingest
           predicates:
             - Path=/patra-ingest/**
           filters:
             - StripPrefix=1
+
+        # Registry Service Route
+        # Example: /patra-registry/provenance -> lb://patra-registry/provenance
         - id: patra-registry
           uri: lb://patra-registry
           predicates:
@@ -33,6 +60,9 @@ spring:
           filters:
             - StripPrefix=1
 
+# ----------------------------------------------------------------------------
+# Logging Configuration
+# ----------------------------------------------------------------------------
 logging:
   layer: adapter
   level:

@@ -1,6 +1,7 @@
 package com.patra.registry.domain.model.vo.expr;
 
 import com.patra.registry.domain.exception.DomainValidationException;
+import com.patra.registry.domain.support.TemporalEntity;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -73,7 +74,8 @@ public record ExprCapability(
     /* JSON array of allowed token kinds (e.g., ["owner","pmcid"]) */
     String tokenKindsJson,
     /* Optional regex constraint for token values */
-    String tokenValuePattern) {
+    String tokenValuePattern)
+    implements TemporalEntity {
   public ExprCapability(
       Long id,
       Long provenanceId,
@@ -105,17 +107,13 @@ public record ExprCapability(
       boolean existsSupported,
       String tokenKindsJson,
       String tokenValuePattern) {
-    DomainValidationException.positive(id, "Capability id");
-    DomainValidationException.positive(provenanceId, "Provenance id");
-    String fieldKeyTrimmed = DomainValidationException.notBlank(fieldKey, "Field key");
-    DomainValidationException.nonNull(effectiveFrom, "Effective from");
-    String rangeKindTrimmed = DomainValidationException.notBlank(rangeKindCode, "Range kind code");
+    validateRequiredFields(id, provenanceId, fieldKey, rangeKindCode, effectiveFrom);
 
-    this.id = id; // already validated
-    this.provenanceId = provenanceId; // already validated
-    this.operationType = operationType != null ? operationType.trim() : null;
-    this.fieldKey = fieldKeyTrimmed;
-    this.effectiveFrom = effectiveFrom; // already validated as non-null
+    this.id = id;
+    this.provenanceId = provenanceId;
+    this.operationType = DomainValidationException.trimOrNull(operationType);
+    this.fieldKey = fieldKey.trim();
+    this.effectiveFrom = effectiveFrom;
     this.effectiveTo = effectiveTo;
     this.opsJson = opsJson;
     this.negatableOpsJson = negatableOpsJson;
@@ -125,10 +123,10 @@ public record ExprCapability(
     this.termAllowBlank = termAllowBlank;
     this.termMinLength = termMinLength;
     this.termMaxLength = termMaxLength;
-    this.termPattern = termPattern != null ? termPattern.trim() : null;
+    this.termPattern = DomainValidationException.trimOrNull(termPattern);
     this.inMaxSize = inMaxSize;
     this.inCaseSensitiveAllowed = inCaseSensitiveAllowed;
-    this.rangeKindCode = rangeKindTrimmed;
+    this.rangeKindCode = rangeKindCode.trim();
     this.rangeAllowOpenStart = rangeAllowOpenStart;
     this.rangeAllowOpenEnd = rangeAllowOpenEnd;
     this.rangeAllowClosedAtInfinity = rangeAllowClosedAtInfinity;
@@ -140,20 +138,24 @@ public record ExprCapability(
     this.numberMax = numberMax;
     this.existsSupported = existsSupported;
     this.tokenKindsJson = tokenKindsJson;
-    this.tokenValuePattern = tokenValuePattern != null ? tokenValuePattern.trim() : null;
+    this.tokenValuePattern = DomainValidationException.trimOrNull(tokenValuePattern);
   }
 
   /**
-   * Checks whether the capability is effective at the given instant.
+   * Validates required fields for capability configuration.
    *
-   * @param instant the time point to check (must not be null)
-   * @return {@code true} if the capability is effective at the given instant
-   * @throws DomainValidationException if {@code instant} is null
+   * @param id capability identifier
+   * @param provenanceId provenance identifier
+   * @param fieldKey field key
+   * @param rangeKindCode range kind code
+   * @param effectiveFrom effective start timestamp
    */
-  public boolean isEffectiveAt(Instant instant) {
-    DomainValidationException.nonNull(instant, "Instant");
-    boolean afterStart = !instant.isBefore(effectiveFrom);
-    boolean beforeEnd = effectiveTo == null || instant.isBefore(effectiveTo);
-    return afterStart && beforeEnd;
+  private static void validateRequiredFields(
+      Long id, Long provenanceId, String fieldKey, String rangeKindCode, Instant effectiveFrom) {
+    DomainValidationException.positive(id, "Capability id");
+    DomainValidationException.positive(provenanceId, "Provenance id");
+    DomainValidationException.notBlank(fieldKey, "Field key");
+    DomainValidationException.notBlank(rangeKindCode, "Range kind code");
+    DomainValidationException.nonNull(effectiveFrom, "Effective from");
   }
 }

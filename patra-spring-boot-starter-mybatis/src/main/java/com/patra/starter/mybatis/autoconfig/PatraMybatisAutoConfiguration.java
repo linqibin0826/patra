@@ -59,10 +59,12 @@ public class PatraMybatisAutoConfiguration {
    * <p>Business modules can add or override scan paths using standard MyBatis-Plus configuration
    * properties.
    *
-   * @return A {@link MapperScannerConfigurer} instance.
+   * @return a configured mapper scanner instance
    */
   @Bean
   public MapperScannerConfigurer mapperScannerConfigurer() {
+    log.info(
+        "Configuring MyBatis mapper scanner for package: com.patra.**.infra.persistence.mapper");
     MapperScannerConfigurer configurer = new MapperScannerConfigurer();
     configurer.setBasePackage("com.patra.**.infra.persistence.mapper");
     return configurer;
@@ -71,14 +73,14 @@ public class PatraMybatisAutoConfiguration {
   /**
    * Creates a contributor for mapping data layer exceptions to standard HTTP error codes.
    *
-   * @param http A group of standard HTTP error definitions.
-   * @return A {@link DataLayerErrorMappingContributor} instance.
+   * @param http a group of standard HTTP error definitions
+   * @return a configured error mapping contributor
    */
   @Bean
   @ConditionalOnMissingBean
   public DataLayerErrorMappingContributor dataLayerErrorMappingContributor(
       HttpStdErrors.Group http) {
-    log.debug("Creating data layer error mapping contributor for MyBatis-Plus.");
+    log.info("Creating data layer error mapping contributor for MyBatis-Plus exceptions");
     return new DataLayerErrorMappingContributor(http);
   }
 
@@ -88,18 +90,17 @@ public class PatraMybatisAutoConfiguration {
    * <p>This is the recommended approach to ensure TypeHandlers are available when MyBatis parses
    * XML mappers and generates autoResultMaps.
    *
-   * @param objectMapper The Spring-managed {@link ObjectMapper} for consistent JSON processing.
-   * @return A {@link ConfigurationCustomizer} instance.
+   * @param objectMapper the Spring-managed object mapper for consistent JSON processing
+   * @return a configuration customizer that registers type handlers
    */
   @Bean
   public ConfigurationCustomizer configurationCustomizer(ObjectMapper objectMapper) {
+    log.info("Registering custom TypeHandlers for JSON field mapping");
     return configuration -> {
-      // Register the JsonNode TypeHandler globally.
       configuration
           .getTypeHandlerRegistry()
           .register(JsonNode.class, new JsonToJsonNodeTypeHandler(objectMapper));
-
-      log.info("Custom TypeHandlers registered: JsonNode -> JsonToJsonNodeTypeHandler");
+      log.debug("Registered JsonToJsonNodeTypeHandler for JsonNode fields");
     };
   }
 }

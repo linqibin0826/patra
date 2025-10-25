@@ -159,7 +159,19 @@ public class PlanAssemblerImpl implements PlanAssembler {
         buildSliceParams(sliceStrategy));
   }
 
-  /** 生成切片：调用策略 → SlicePlan 列表 → canonical 表达式快照 → PlanSlice 聚合。 */
+  /**
+   * Generates slices by invoking strategy and converting to aggregates.
+   *
+   * <p>Flow: invoke planner strategy → SlicePlan list → canonical expr snapshot → PlanSlice
+   * aggregates
+   *
+   * @param norm plan trigger norm
+   * @param window planner window
+   * @param planExpression plan expression descriptor
+   * @param configSnapshot provenance config snapshot
+   * @param sliceStrategy slice strategy
+   * @return slice generation result
+   */
   private SliceGenerationResult createSlices(
       PlanTriggerNorm norm,
       PlannerWindow window,
@@ -172,11 +184,43 @@ public class PlanAssemblerImpl implements PlanAssembler {
     }
 
     List<SlicePlan> drafts =
-        planner.slice(new SlicePlanningContext(norm, window, planExpression, configSnapshot));
+        generateSlicePlans(planner, norm, window, planExpression, configSnapshot);
     if (drafts == null || drafts.isEmpty()) {
       return new SliceGenerationResult(List.of(), List.of());
     }
 
+    List<PlanSliceAggregate> slices = convertToSliceAggregates(norm, drafts);
+    return new SliceGenerationResult(slices, drafts);
+  }
+
+  /**
+   * Generates slice plans using planner strategy.
+   *
+   * @param planner slice planner
+   * @param norm plan trigger norm
+   * @param window planner window
+   * @param planExpression plan expression descriptor
+   * @param configSnapshot provenance config snapshot
+   * @return list of slice plans
+   */
+  private List<SlicePlan> generateSlicePlans(
+      SlicePlanner planner,
+      PlanTriggerNorm norm,
+      PlannerWindow window,
+      PlanExpressionDescriptor planExpression,
+      ProvenanceConfigSnapshot configSnapshot) {
+    return planner.slice(new SlicePlanningContext(norm, window, planExpression, configSnapshot));
+  }
+
+  /**
+   * Converts slice plans to slice aggregates.
+   *
+   * @param norm plan trigger norm
+   * @param drafts slice plan drafts
+   * @return list of slice aggregates
+   */
+  private List<PlanSliceAggregate> convertToSliceAggregates(
+      PlanTriggerNorm norm, List<SlicePlan> drafts) {
     List<PlanSliceAggregate> slices = new ArrayList<>(drafts.size());
     for (SlicePlan draft : drafts) {
       ExprCanonicalSnapshot sliceSnapshot = ExprCanonicalizer.canonicalize(draft.sliceExpr());
@@ -190,7 +234,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
               sliceSnapshot.hash(),
               sliceSnapshot.canonicalJson()));
     }
-    return new SliceGenerationResult(slices, drafts);
+    return slices;
   }
 
   /**

@@ -6,8 +6,11 @@ import com.patra.common.error.trait.ErrorTrait;
 import com.patra.common.error.trait.HasErrorTraits;
 import com.patra.starter.core.error.config.ErrorProperties;
 import com.patra.starter.core.error.model.ErrorResolution;
+import com.patra.starter.core.error.model.SimpleErrorCode;
 import com.patra.starter.core.error.spi.ErrorMappingContributor;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,7 +33,32 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
   private static final String DEFAULT_CONTEXT = "UNKNOWN";
 
-  private final ErrorProperties errorProperties;
+  /** Maps error traits to HTTP status code suffixes. */
+  private static final Map<ErrorTrait, String> TRAIT_TO_CODE_MAP =
+      Map.ofEntries(
+          Map.entry(ErrorTrait.NOT_FOUND, "0404"),
+          Map.entry(ErrorTrait.CONFLICT, "0409"),
+          Map.entry(ErrorTrait.RULE_VIOLATION, "0422"),
+          Map.entry(ErrorTrait.QUOTA_EXCEEDED, "0429"),
+          Map.entry(ErrorTrait.UNAUTHORIZED, "0401"),
+          Map.entry(ErrorTrait.FORBIDDEN, "0403"),
+          Map.entry(ErrorTrait.TIMEOUT, "0504"),
+          Map.entry(ErrorTrait.DEP_UNAVAILABLE, "0503"));
+
+  /** Maps exception class name suffixes to HTTP status code suffixes. */
+  private static final Map<String, String> NAMING_SUFFIX_TO_CODE_MAP =
+      Map.ofEntries(
+          Map.entry("NotFound", "0404"),
+          Map.entry("Conflict", "0409"),
+          Map.entry("AlreadyExists", "0409"),
+          Map.entry("Invalid", "0422"),
+          Map.entry("Validation", "0422"),
+          Map.entry("QuotaExceeded", "0429"),
+          Map.entry("Unauthorized", "0401"),
+          Map.entry("Forbidden", "0403"),
+          Map.entry("Timeout", "0504"));
+
+  private final String contextPrefix;
   private final List<ErrorMappingContributor> mappingContributors;
   private final int maxCauseDepth;
   private final boolean traitMappingEnabled;
@@ -38,7 +66,8 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
   public DefaultErrorResolutionEngine(
       ErrorProperties errorProperties, List<ErrorMappingContributor> mappingContributors) {
-    this.errorProperties = errorProperties;
+    String prefix = errorProperties.getContextPrefix();
+    this.contextPrefix = (prefix == null || prefix.isBlank()) ? DEFAULT_CONTEXT : prefix;
     this.mappingContributors = mappingContributors;
     this.maxCauseDepth = errorProperties.getEngine().getMaxCauseDepth();
     this.traitMappingEnabled = errorProperties.getEngine().isEnableTraitMapping();
@@ -54,133 +83,103 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     return resolveWithCause(exception, 0);
   }
 
+  /** Resolves exception recursively up to max cause depth. */
   private ErrorResolution resolveWithCause(Throwable exception, int depth) {
     if (depth > maxCauseDepth) {
       log.warn("Exceeded max cause depth {} — returning server error", maxCauseDepth);
-      ErrorCodeLike code = createCode("0500");
-      return new ErrorResolution(code, code.httpStatus());
+      return createResolution("0500");
     }
 
+    return resolveAsApplicationException(exception)
+        .or(() -> resolveViaContributors(exception))
+        .or(() -> resolveViaTraits(exception))
+        .or(() -> resolveViaNamingHeuristic(exception))
+        .or(() -> resolveCause(exception, depth))
+        .orElseGet(() -> fallbackForException(exception));
+  }
+
+  /** Attempts to resolve as ApplicationException. */
+  private Optional<ErrorResolution> resolveAsApplicationException(Throwable exception) {
     if (exception instanceof ApplicationException appEx) {
       ErrorCodeLike errorCode = appEx.getErrorCode();
       log.debug("Resolved via ApplicationException -> {}", errorCode.code());
-      return new ErrorResolution(errorCode, errorCode.httpStatus());
+      return Optional.of(new ErrorResolution(errorCode, errorCode.httpStatus()));
     }
+    return Optional.empty();
+  }
 
+  /** Attempts to resolve via registered ErrorMappingContributors. */
+  private Optional<ErrorResolution> resolveViaContributors(Throwable exception) {
     for (ErrorMappingContributor contributor : mappingContributors) {
       try {
-        var mapped = contributor.mapException(exception);
+        Optional<ErrorCodeLike> mapped = contributor.mapException(exception);
         if (mapped.isPresent()) {
           ErrorCodeLike code = mapped.get();
           log.debug(
               "Resolved by ErrorMappingContributor({}) -> {}",
               contributor.getClass().getSimpleName(),
               code.code());
-          return new ErrorResolution(code, code.httpStatus());
+          return Optional.of(new ErrorResolution(code, code.httpStatus()));
         }
       } catch (Exception ex) {
         log.warn(
-            "ErrorMappingContributor({}) failed to process exception: {}",
+            "ErrorMappingContributor({}) failed: {}",
             contributor.getClass().getSimpleName(),
             ex.getMessage());
       }
     }
+    return Optional.empty();
+  }
 
-    if (traitMappingEnabled && exception instanceof HasErrorTraits hasErrorTraits) {
-      Set<ErrorTrait> traits = hasErrorTraits.getErrorTraits();
-      if (traits != null && !traits.isEmpty()) {
-        ErrorCodeLike code = mapTraitsToCode(traits);
-        log.debug("Resolved via traits -> {}", code.code());
-        return new ErrorResolution(code, code.httpStatus());
+  /** Attempts to resolve via error traits. */
+  private Optional<ErrorResolution> resolveViaTraits(Throwable exception) {
+    if (!traitMappingEnabled || !(exception instanceof HasErrorTraits hasTraits)) {
+      return Optional.empty();
+    }
+    Set<ErrorTrait> traits = hasTraits.getErrorTraits();
+    if (traits == null || traits.isEmpty()) {
+      return Optional.empty();
+    }
+    for (ErrorTrait trait : traits) {
+      String codeSuffix = TRAIT_TO_CODE_MAP.get(trait);
+      if (codeSuffix != null) {
+        log.debug("Resolved via trait {} -> {}-{}", trait, contextPrefix, codeSuffix);
+        return Optional.of(createResolution(codeSuffix));
       }
     }
+    return Optional.of(createResolution("0500"));
+  }
 
-    if (namingHeuristicEnabled) {
-      String className = exception.getClass().getSimpleName();
-      ErrorResolution resolution = resolveByNamingConvention(className);
-      if (resolution != null) {
-        log.debug(
-            "Resolved via naming heuristic {} -> {}", className, resolution.errorCode().code());
-        return resolution;
+  /** Attempts to resolve via class naming conventions. */
+  private Optional<ErrorResolution> resolveViaNamingHeuristic(Throwable exception) {
+    if (!namingHeuristicEnabled) {
+      return Optional.empty();
+    }
+    String className = exception.getClass().getSimpleName();
+    for (Map.Entry<String, String> entry : NAMING_SUFFIX_TO_CODE_MAP.entrySet()) {
+      if (className.endsWith(entry.getKey())) {
+        log.debug("Resolved via naming heuristic {} -> {}", className, entry.getValue());
+        return Optional.of(createResolution(entry.getValue()));
       }
     }
+    return Optional.empty();
+  }
 
+  /** Attempts to resolve by recursing into exception cause. */
+  private Optional<ErrorResolution> resolveCause(Throwable exception, int depth) {
     Throwable cause = exception.getCause();
     if (cause != null && cause != exception) {
-      return resolveWithCause(cause, depth + 1);
+      return Optional.of(resolveWithCause(cause, depth + 1));
     }
-
-    return fallbackForException(exception);
+    return Optional.empty();
   }
 
+  /** Returns appropriate fallback resolution for the exception. */
   private ErrorResolution fallbackForException(Throwable exception) {
-    if (isClientErrorLike(exception)) {
-      ErrorCodeLike code = createCode("0422");
-      return new ErrorResolution(code, code.httpStatus());
-    }
-    return fallbackServerError();
+    return isClientErrorLike(exception) ? createResolution("0422") : fallbackServerError();
   }
 
-  private ErrorCodeLike mapTraitsToCode(Set<ErrorTrait> traits) {
-    if (traits.contains(ErrorTrait.NOT_FOUND)) {
-      return createCode("0404");
-    }
-    if (traits.contains(ErrorTrait.CONFLICT)) {
-      return createCode("0409");
-    }
-    if (traits.contains(ErrorTrait.RULE_VIOLATION)) {
-      return createCode("0422");
-    }
-    if (traits.contains(ErrorTrait.QUOTA_EXCEEDED)) {
-      return createCode("0429");
-    }
-    if (traits.contains(ErrorTrait.UNAUTHORIZED)) {
-      return createCode("0401");
-    }
-    if (traits.contains(ErrorTrait.FORBIDDEN)) {
-      return createCode("0403");
-    }
-    if (traits.contains(ErrorTrait.TIMEOUT)) {
-      return createCode("0504");
-    }
-    if (traits.contains(ErrorTrait.DEP_UNAVAILABLE)) {
-      return createCode("0503");
-    }
-    return createCode("0500");
-  }
-
-  private ErrorResolution resolveByNamingConvention(String className) {
-    if (className.endsWith("NotFound")) {
-      ErrorCodeLike c = createCode("0404");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    if (className.endsWith("Conflict") || className.endsWith("AlreadyExists")) {
-      ErrorCodeLike c = createCode("0409");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    if (className.endsWith("Invalid") || className.endsWith("Validation")) {
-      ErrorCodeLike c = createCode("0422");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    if (className.endsWith("QuotaExceeded")) {
-      ErrorCodeLike c = createCode("0429");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    if (className.endsWith("Unauthorized")) {
-      ErrorCodeLike c = createCode("0401");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    if (className.endsWith("Forbidden")) {
-      ErrorCodeLike c = createCode("0403");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    if (className.endsWith("Timeout")) {
-      ErrorCodeLike c = createCode("0504");
-      return new ErrorResolution(c, c.httpStatus());
-    }
-    return null;
-  }
-
+  /** Checks if exception name suggests a client error. */
   private boolean isClientErrorLike(Throwable exception) {
     String className = exception.getClass().getSimpleName().toLowerCase();
     return className.contains("validation")
@@ -194,42 +193,19 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         || className.contains("malformed");
   }
 
+  /** Returns 500 Internal Server Error resolution. */
   private ErrorResolution fallbackServerError() {
-    ErrorCodeLike code = createCode("0500");
-    return new ErrorResolution(code, code.httpStatus());
+    return createResolution("0500");
   }
 
-  private ErrorCodeLike createCode(String suffix) {
-    String contextPrefix = errorProperties.getContextPrefix();
-    if (contextPrefix == null || contextPrefix.isBlank()) {
-      contextPrefix = DEFAULT_CONTEXT;
-    }
-    final String finalCode = contextPrefix + "-" + suffix;
-    int status;
-    try {
-      status = Integer.parseInt(suffix);
-      if (status < 100 || status > 599) {
-        status = 500;
-      }
-    } catch (NumberFormatException e) {
-      status = 500;
-    }
-    final int http = status;
-    return new ErrorCodeLike() {
-      @Override
-      public String code() {
-        return finalCode;
-      }
-
-      @Override
-      public int httpStatus() {
-        return http;
-      }
-
-      @Override
-      public String toString() {
-        return finalCode;
-      }
-    };
+  /**
+   * Creates error resolution from HTTP status suffix.
+   *
+   * @param suffix HTTP status code (e.g., "0404", "0500")
+   * @return error resolution with context prefix applied
+   */
+  private ErrorResolution createResolution(String suffix) {
+    ErrorCodeLike code = SimpleErrorCode.create(contextPrefix, suffix);
+    return new ErrorResolution(code, code.httpStatus());
   }
 }

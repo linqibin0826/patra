@@ -95,10 +95,10 @@ class ExprObservabilityTest {
 
     String infoLogs = appender.dump();
     assertThat(infoLogs)
-        .contains("Compiled expr for provenance=PUBMED")
+        .contains("Successfully compiled expression for provenance [PUBMED]")
         .contains("queryHash=")
         .doesNotContain("\"heart failure\"")
-        .doesNotContain("Compiled params detail");
+        .doesNotContain("Compiled parameter details");
 
     // DEBUG-level: expect detailed params printed
     compilerLogger.setLevel(Level.DEBUG);
@@ -112,8 +112,8 @@ class ExprObservabilityTest {
 
     String debugLogs = appender.dump();
     assertThat(debugLogs)
-        .contains("Compiled expr for provenance=PUBMED")
-        .contains("Compiled params detail:")
+        .contains("Successfully compiled expression for provenance [PUBMED]")
+        .contains("Compiled parameter details:")
         .contains("term=\"heart failure\"[TIAB]")
         .contains("mindate=2023-01-01")
         .contains("maxdate=2023-12-30"); // TO_EXCLUSIVE_MINUS_1D applied

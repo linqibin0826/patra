@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Spring Boot entry point for the Patra ingest service.
+ * Spring Boot entry point for the Patra ingest service
  *
  * <p>Feign clients are automatically discovered via {@code patra-spring-cloud-starter-feign} which
  * scans all packages matching {@code com.patra.*.api.rpc.client}.
@@ -16,7 +16,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class PatraIngestApplication {
 
   public static void main(String[] args) {
-    // Set default active profile to 'dev' if not already set via env or system property
+    // Default to 'dev' profile when no explicit profile is configured
     if (System.getProperty("spring.profiles.active") == null
         && System.getenv("SPRING_PROFILES_ACTIVE") == null) {
       System.setProperty("spring.profiles.active", "dev");

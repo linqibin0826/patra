@@ -20,6 +20,11 @@ final class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
     super(IMAGE);
   }
 
+  /**
+   * Returns the singleton MySQL container instance.
+   *
+   * @return the shared MySQL container
+   */
   static SharedMySQLContainer getInstance() {
     return INSTANCE;
   }

@@ -1,11 +1,21 @@
+# ========================================
+# Production Environment Configuration
+# ========================================
+# This configuration is active when spring.profiles.active=prod
+# All sensitive values are injected via environment variables
+
 spring:
   config:
     activate:
       on-profile: prod
+
+  # Production database (credentials from environment)
   datasource:
     url: ${REGISTRY_DB_URL}
     username: ${REGISTRY_DB_USERNAME}
     password: ${REGISTRY_DB_PASSWORD}
+
+  # Production Redis (URL from environment)
   data:
     redis:
       url: ${REGISTRY_REDIS_URL}

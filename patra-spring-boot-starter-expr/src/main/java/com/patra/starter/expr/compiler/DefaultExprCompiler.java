@@ -71,151 +71,265 @@ public class DefaultExprCompiler implements ExprCompiler {
     String endpointName = fallbackEndpoint(request.endpointName());
 
     try {
-      boolean strictMode = request.options().strict() || modeProperties.isStrict();
-      boolean repeatEnabled = modeProperties.getMulti().isRepeatEnabled();
-      int queryLengthLimit = resolveMaxQueryLength(request);
-      int warnParamCount = compilerProperties.getWarnParamCount();
-      int maxParamCount = compilerProperties.getMaxParamCount();
-      boolean bridgeEnabled = compilerProperties.getQueryParamBridge().isEnabled();
-
-      ProvenanceSnapshot snapshot =
-          snapshotLoader.load(
-              request.provenance(), request.operationType(), request.endpointName());
+      CompileContext ctx = extractCompileContext(request);
+      ProvenanceSnapshot snapshot = loadSnapshot(request, ctx);
       provenanceCode = snapshot.identity().code();
       endpointName = resolveEndpoint(snapshot, endpointName);
 
       Expr normalized = normalizer.normalize(request.expression(), request.options().strict());
 
-      IssueBuckets capabilityBuckets =
-          bucketCapabilityIssues(
-              capabilityChecker.check(normalized, snapshot, strictMode), strictMode);
-      List<Issue> warnings = new ArrayList<>(capabilityBuckets.warnings());
-      List<Issue> errors = new ArrayList<>(capabilityBuckets.errors());
-      ValidationReport report = new ValidationReport(warnings, errors);
+      CapabilityCheckResult capabilityCheck =
+          performCapabilityCheck(request, snapshot, normalized, endpointName, ctx);
+      if (capabilityCheck.failure() != null) {
+        return capabilityCheck.failure();
+      }
 
-      if (!errors.isEmpty()) {
-        log.warn(
-            "Capability validation failed for provenance={}, endpoint={}, errorCount={}",
-            provenanceCode,
-            endpointName,
-            errors.size());
-        recordCompileErrors(errors);
-        return new CompileResult(
+      ExprRenderer.RenderOutcome outcome =
+          renderer.render(normalized, snapshot, request.options().traceEnabled());
+
+      CompileResult queryLengthFailure =
+          validateQueryLength(outcome, normalized, snapshot, endpointName, provenanceCode, ctx);
+      if (queryLengthFailure != null) {
+        return queryLengthFailure;
+      }
+
+      return buildSuccessResult(
+          request,
+          outcome,
+          normalized,
+          snapshot,
+          endpointName,
+          provenanceCode,
+          ctx,
+          capabilityCheck.warnings());
+    } finally {
+      recordMetrics(provenanceCode, endpointName, startNanos);
+    }
+  }
+
+  private CompileContext extractCompileContext(CompileRequest request) {
+    boolean strictMode = request.options().strict() || modeProperties.isStrict();
+    boolean repeatEnabled = modeProperties.getMulti().isRepeatEnabled();
+    int queryLengthLimit = resolveMaxQueryLength(request);
+    int warnParamCount = compilerProperties.getWarnParamCount();
+    int maxParamCount = compilerProperties.getMaxParamCount();
+    boolean bridgeEnabled = compilerProperties.getQueryParamBridge().isEnabled();
+    return new CompileContext(
+        strictMode, repeatEnabled, queryLengthLimit, warnParamCount, maxParamCount, bridgeEnabled);
+  }
+
+  private ProvenanceSnapshot loadSnapshot(CompileRequest request, CompileContext ctx) {
+    return snapshotLoader.load(
+        request.provenance(), request.operationType(), request.endpointName());
+  }
+
+  private CapabilityCheckResult performCapabilityCheck(
+      CompileRequest request,
+      ProvenanceSnapshot snapshot,
+      Expr normalized,
+      String endpointName,
+      CompileContext ctx) {
+    IssueBuckets capabilityBuckets =
+        bucketCapabilityIssues(
+            capabilityChecker.check(normalized, snapshot, ctx.strictMode()), ctx.strictMode());
+    List<Issue> warnings = new ArrayList<>(capabilityBuckets.warnings());
+    List<Issue> errors = new ArrayList<>(capabilityBuckets.errors());
+
+    if (errors.isEmpty()) {
+      return new CapabilityCheckResult(warnings, null);
+    }
+
+    String provenanceCode = snapshot.identity().code();
+    log.warn(
+        "Capability validation failed for provenance [{}] at endpoint [{}] with {} errors",
+        provenanceCode,
+        endpointName,
+        errors.size());
+    recordCompileErrors(errors);
+
+    ValidationReport report = new ValidationReport(warnings, errors);
+    CompileResult failure =
+        new CompileResult(
             "",
             Map.of(),
             normalized,
             report,
             toRef(snapshot, endpointName),
             request.options().traceEnabled() ? new RenderTrace(List.of()) : null);
-      }
 
-      ExprRenderer.RenderOutcome outcome =
-          renderer.render(normalized, snapshot, request.options().traceEnabled());
+    return new CapabilityCheckResult(warnings, failure);
+  }
 
-      String renderedQuery = outcome.query() == null ? "" : outcome.query();
+  private CompileResult validateQueryLength(
+      ExprRenderer.RenderOutcome outcome,
+      Expr normalized,
+      ProvenanceSnapshot snapshot,
+      String endpointName,
+      String provenanceCode,
+      CompileContext ctx) {
+    String renderedQuery = outcome.query() == null ? "" : outcome.query();
+    if (ctx.queryLengthLimit() <= 0 || renderedQuery.length() <= ctx.queryLengthLimit()) {
+      return null;
+    }
 
-      if (queryLengthLimit > 0 && renderedQuery.length() > queryLengthLimit) {
-        errors.add(
-            Issue.error(
-                "E-QUERY-LEN-MAX",
-                "Rendered query exceeds length budget",
-                Map.of("max", queryLengthLimit, "actual", renderedQuery.length())));
-        ValidationReport finalReport = new ValidationReport(warnings, errors);
-        log.warn(
-            "Query length exceeded for provenance={}, endpoint={}, limit={}, actual={}",
-            provenanceCode,
-            endpointName,
-            queryLengthLimit,
-            renderedQuery.length());
-        recordCompileErrors(errors);
-        return new CompileResult(
-            "", Map.of(), normalized, finalReport, toRef(snapshot, endpointName), outcome.trace());
-      }
+    List<Issue> errors = new ArrayList<>();
+    errors.add(
+        Issue.error(
+            "E-QUERY-LEN-MAX",
+            "Rendered query exceeds maximum allowed length",
+            Map.of("max", ctx.queryLengthLimit(), "actual", renderedQuery.length())));
 
-      LinkedHashMap<String, String> providerParams = new LinkedHashMap<>();
-      mapStdKeys(
-          outcome.params(),
+    log.warn(
+        "Query length exceeded for provenance [{}] at endpoint [{}]: limit={}, actual={}",
+        provenanceCode,
+        endpointName,
+        ctx.queryLengthLimit(),
+        renderedQuery.length());
+    recordCompileErrors(errors);
+
+    ValidationReport report = new ValidationReport(List.of(), errors);
+    return new CompileResult(
+        "", Map.of(), normalized, report, toRef(snapshot, endpointName), outcome.trace());
+  }
+
+  private CompileResult buildSuccessResult(
+      CompileRequest request,
+      ExprRenderer.RenderOutcome outcome,
+      Expr normalized,
+      ProvenanceSnapshot snapshot,
+      String endpointName,
+      String provenanceCode,
+      CompileContext ctx,
+      List<Issue> capabilityWarnings) {
+    List<Issue> warnings = new ArrayList<>(capabilityWarnings);
+    List<Issue> errors = new ArrayList<>();
+
+    String renderedQuery = outcome.query() == null ? "" : outcome.query();
+    LinkedHashMap<String, String> providerParams =
+        buildProviderParams(
+            outcome, snapshot, endpointName, provenanceCode, renderedQuery, warnings, errors, ctx);
+
+    mergeRendererWarnings(outcome.warnings(), warnings, errors, ctx.strictMode());
+    applyParamCountLimits(
+        providerParams, ctx.warnParamCount(), ctx.maxParamCount(), warnings, errors);
+
+    ValidationReport finalReport = new ValidationReport(warnings, errors);
+
+    if (!errors.isEmpty()) {
+      return handleCompileErrors(
+          errors, normalized, snapshot, endpointName, provenanceCode, outcome, providerParams);
+    }
+
+    logSuccessfulCompile(provenanceCode, endpointName, renderedQuery, providerParams);
+
+    return new CompileResult(
+        renderedQuery,
+        providerParams,
+        normalized,
+        finalReport,
+        toRef(snapshot, endpointName),
+        outcome.trace());
+  }
+
+  private LinkedHashMap<String, String> buildProviderParams(
+      ExprRenderer.RenderOutcome outcome,
+      ProvenanceSnapshot snapshot,
+      String endpointName,
+      String provenanceCode,
+      String renderedQuery,
+      List<Issue> warnings,
+      List<Issue> errors,
+      CompileContext ctx) {
+    LinkedHashMap<String, String> providerParams = new LinkedHashMap<>();
+
+    mapStdKeys(
+        outcome.params(),
+        snapshot,
+        provenanceCode,
+        endpointName,
+        ctx.strictMode(),
+        ctx.repeatEnabled(),
+        warnings,
+        errors,
+        providerParams);
+
+    if (ctx.bridgeEnabled() && !renderedQuery.isBlank()) {
+      bridgeQuery(
+          renderedQuery,
           snapshot,
           provenanceCode,
           endpointName,
-          strictMode,
-          repeatEnabled,
+          ctx.strictMode(),
           warnings,
           errors,
           providerParams);
+    }
 
-      if (bridgeEnabled && !renderedQuery.isBlank()) {
-        bridgeQuery(
-            renderedQuery,
-            snapshot,
-            provenanceCode,
-            endpointName,
-            strictMode,
-            warnings,
-            errors,
-            providerParams);
-      }
+    return providerParams;
+  }
 
-      // Merge renderer warnings after mapping/bridging to achieve deterministic code ordering
-      // expected by golden tests (param-map issues first, then fn/transform issues).
-      mergeRendererWarnings(outcome.warnings(), warnings, errors, strictMode);
+  private CompileResult handleCompileErrors(
+      List<Issue> errors,
+      Expr normalized,
+      ProvenanceSnapshot snapshot,
+      String endpointName,
+      String provenanceCode,
+      ExprRenderer.RenderOutcome outcome,
+      Map<String, String> providerParams) {
+    log.warn(
+        "Compilation failed for provenance [{}] at endpoint [{}] with {} errors",
+        provenanceCode,
+        endpointName,
+        errors.size());
+    recordCompileErrors(errors);
 
-      applyParamCountLimits(providerParams, warnParamCount, maxParamCount, warnings, errors);
+    boolean hasRenderError =
+        errors.stream()
+            .anyMatch(
+                e ->
+                    e.code().equals("E-FN-NOTFOUND")
+                        || e.code().equals("E-TRANSFORM-NOTFOUND")
+                        || e.code().equals("E-TRANSFORM-EXEC"));
 
-      ValidationReport finalReport = new ValidationReport(warnings, errors);
+    Map<String, String> errorParams = hasRenderError ? Map.of() : providerParams;
+    ValidationReport report = new ValidationReport(List.of(), errors);
 
-      if (!errors.isEmpty()) {
-        log.warn(
-            "Compilation produced errors for provenance={}, endpoint={}, errorCount={}",
-            provenanceCode,
-            endpointName,
-            errors.size());
-        recordCompileErrors(errors);
-        // Return empty params for render/transform errors, but preserve params for mapping/bridge
-        // errors
-        boolean hasRenderError =
-            errors.stream()
-                .anyMatch(
-                    e ->
-                        e.code().equals("E-FN-NOTFOUND")
-                            || e.code().equals("E-TRANSFORM-NOTFOUND")
-                            || e.code().equals("E-TRANSFORM-EXEC"));
-        Map<String, String> errorParams = hasRenderError ? Map.of() : providerParams;
-        return new CompileResult(
-            "",
-            errorParams,
-            normalized,
-            finalReport,
-            toRef(snapshot, endpointName),
-            outcome.trace());
-      }
+    return new CompileResult(
+        "", errorParams, normalized, report, toRef(snapshot, endpointName), outcome.trace());
+  }
 
-      log.info(
-          "Compiled expr for provenance={}, endpoint={}, queryHash={}, queryLen={}, paramCount={}",
-          provenanceCode,
-          endpointName,
-          hashQuery(renderedQuery),
-          renderedQuery.length(),
-          providerParams.size());
+  private void logSuccessfulCompile(
+      String provenanceCode, String endpointName, String query, Map<String, String> params) {
+    log.info(
+        "Successfully compiled expression for provenance [{}] at endpoint [{}]: queryHash={}, "
+            + "queryLength={}, paramCount={}",
+        provenanceCode,
+        endpointName,
+        hashQuery(query),
+        query.length(),
+        params.size());
 
-      log.debug(
-          "Compiled params detail: {}",
-          providerParams.entrySet().stream().map(Object::toString).toList());
+    log.debug(
+        "Compiled parameter details: {}",
+        params.entrySet().stream().map(Object::toString).toList());
+  }
 
-      return new CompileResult(
-          renderedQuery,
-          providerParams,
-          normalized,
-          finalReport,
-          toRef(snapshot, endpointName),
-          outcome.trace());
-    } finally {
-      if (provenanceCode != null) {
-        long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
-        metrics.compileDuration(provenanceCode, endpointName, durationMillis);
-      }
+  private void recordMetrics(String provenanceCode, String endpointName, long startNanos) {
+    if (provenanceCode != null) {
+      long durationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos);
+      metrics.compileDuration(provenanceCode, endpointName, durationMillis);
     }
   }
+
+  private record CompileContext(
+      boolean strictMode,
+      boolean repeatEnabled,
+      int queryLengthLimit,
+      int warnParamCount,
+      int maxParamCount,
+      boolean bridgeEnabled) {}
+
+  private record CapabilityCheckResult(List<Issue> warnings, CompileResult failure) {}
 
   private void applyParamCountLimits(
       Map<String, String> providerParams,
@@ -250,32 +364,69 @@ public class DefaultExprCompiler implements ExprCompiler {
       Map<String, String> providerParams) {
     ProvenanceSnapshot.ApiParameter mapping = snapshot.apiParameterMap().get("query");
     if (mapping == null) {
-      warnings.add(
-          Issue.warn(
-              "W-PARAM-MAP-MISSING",
-              "Standard key lacks provider parameter mapping",
-              Map.of("stdKey", "query")));
-      log.warn(
-          "Query bridging skipped - missing mapping for stdKey=query, provenance={}",
-          snapshot.identity().code());
-      metrics.paramMapMiss(provenanceCode, endpointName);
+      handleMissingQueryMapping(snapshot, provenanceCode, endpointName, warnings);
       return;
     }
+
     String providerName = mapping.providerParamName();
     if (providerParams.containsKey(providerName)) {
-      // Duplicate population of the provider param indicates a configuration conflict between
-      // renderer-emitted std_keys and query bridging. Treat as an error to avoid ambiguous output.
-      errors.add(
-          Issue.error(
-              "E-QUERY-BRIDGE-DUP",
-              "Query bridging conflicted with an already populated provider parameter",
-              Map.of("param", providerName)));
-      log.warn(
-          "Query bridging conflict - provider param {} already populated (provenance={})",
-          providerName,
-          snapshot.identity().code());
+      handleQueryBridgeConflict(providerName, snapshot, errors);
       return;
     }
+
+    applyQueryBridge(
+        query,
+        mapping,
+        providerName,
+        snapshot,
+        provenanceCode,
+        endpointName,
+        strictMode,
+        warnings,
+        errors,
+        providerParams);
+  }
+
+  private void handleMissingQueryMapping(
+      ProvenanceSnapshot snapshot,
+      String provenanceCode,
+      String endpointName,
+      List<Issue> warnings) {
+    warnings.add(
+        Issue.warn(
+            "W-PARAM-MAP-MISSING",
+            "Standard key lacks provider parameter mapping",
+            Map.of("stdKey", "query")));
+    log.warn(
+        "Query bridging skipped for provenance [{}]: missing mapping for stdKey=query",
+        snapshot.identity().code());
+    metrics.paramMapMiss(provenanceCode, endpointName);
+  }
+
+  private void handleQueryBridgeConflict(
+      String providerName, ProvenanceSnapshot snapshot, List<Issue> errors) {
+    errors.add(
+        Issue.error(
+            "E-QUERY-BRIDGE-DUP",
+            "Query bridging conflicted with already populated provider parameter",
+            Map.of("param", providerName)));
+    log.warn(
+        "Query bridging conflict for provenance [{}]: provider param [{}] already populated",
+        snapshot.identity().code(),
+        providerName);
+  }
+
+  private void applyQueryBridge(
+      String query,
+      ProvenanceSnapshot.ApiParameter mapping,
+      String providerName,
+      ProvenanceSnapshot snapshot,
+      String provenanceCode,
+      String endpointName,
+      boolean strictMode,
+      List<Issue> warnings,
+      List<Issue> errors,
+      Map<String, String> providerParams) {
     String bridged =
         applyTransformIfNeeded(
             "query",
@@ -288,9 +439,9 @@ public class DefaultExprCompiler implements ExprCompiler {
             strictMode,
             warnings,
             errors);
-    // Set the provider param with the bridged query (no conflict detected above)
+
     providerParams.put(providerName, bridged);
-    log.debug("Bridged query into provider param {}", providerName);
+    log.debug("Successfully bridged query into provider parameter [{}]", providerName);
     metrics.paramMapHit(provenanceCode, endpointName);
   }
 
@@ -307,62 +458,104 @@ public class DefaultExprCompiler implements ExprCompiler {
     if (stdKeyParams == null || stdKeyParams.isEmpty()) {
       return;
     }
+
     for (Map.Entry<String, String> entry : stdKeyParams.entrySet()) {
-      String stdKey = entry.getKey();
-      String value = entry.getValue();
-      ProvenanceSnapshot.ApiParameter mapping = snapshot.apiParameterMap().get(stdKey);
-      if (mapping == null) {
-        warnings.add(
-            Issue.warn(
-                "W-PARAM-MAP-MISSING",
-                "Standard key lacks provider parameter mapping",
-                Map.of("stdKey", stdKey)));
-        log.warn(
-            "Skipping std_key={} - missing provider mapping (provenance={})",
+      processStdKeyEntry(
+          entry,
+          snapshot,
+          provenanceCode,
+          endpointName,
+          strictMode,
+          repeatEnabled,
+          warnings,
+          errors,
+          providerParams);
+    }
+  }
+
+  private void processStdKeyEntry(
+      Map.Entry<String, String> entry,
+      ProvenanceSnapshot snapshot,
+      String provenanceCode,
+      String endpointName,
+      boolean strictMode,
+      boolean repeatEnabled,
+      List<Issue> warnings,
+      List<Issue> errors,
+      Map<String, String> providerParams) {
+    String stdKey = entry.getKey();
+    String value = entry.getValue();
+
+    ProvenanceSnapshot.ApiParameter mapping = snapshot.apiParameterMap().get(stdKey);
+    if (mapping == null) {
+      handleMissingStdKeyMapping(stdKey, snapshot, provenanceCode, endpointName, warnings);
+      return;
+    }
+
+    String providerName = mapping.providerParamName();
+    String preparedValue = value == null ? "" : value;
+
+    checkMultiRepeatStrategy(stdKey, providerName, mapping, snapshot, repeatEnabled, warnings);
+
+    String finalValue =
+        applyTransformIfNeeded(
             stdKey,
-            snapshot.identity().code());
-        metrics.paramMapMiss(provenanceCode, endpointName);
-        continue;
-      }
+            providerName,
+            preparedValue,
+            mapping.transformCode(),
+            snapshot,
+            provenanceCode,
+            endpointName,
+            strictMode,
+            warnings,
+            errors);
 
-      String providerName = mapping.providerParamName();
-      String preparedValue = value == null ? "" : value;
+    providerParams.put(providerName, finalValue);
+    metrics.paramMapHit(provenanceCode, endpointName);
+  }
 
-      // MULTI repeat strategy is not yet implemented. Record warning and fall back to join encoding
-      // so callers receive deterministic output.
-      ProvenanceSnapshot.FieldDefinition fieldDefinition = snapshot.fieldDictionary().get(stdKey);
-      boolean multi =
-          fieldDefinition != null
-              && fieldDefinition.cardinality() == ProvenanceSnapshot.Cardinality.MULTI;
-      if (multi
-          && repeatEnabled
-          && (mapping.transformCode() == null || mapping.transformCode().isBlank())) {
-        Map<String, Object> context = Map.of("stdKey", stdKey, "param", providerName);
-        warnings.add(
-            Issue.warn(
-                "W-MULTI-REPEAT-NOTSUPPORTED",
-                "MULTI repeat strategy not available; falling back to join encoding",
-                context));
-        log.warn(
-            "MULTI repeat requested but not supported yet: stdKey={}, providerParam={}",
-            stdKey,
-            providerName);
-      }
+  private void handleMissingStdKeyMapping(
+      String stdKey,
+      ProvenanceSnapshot snapshot,
+      String provenanceCode,
+      String endpointName,
+      List<Issue> warnings) {
+    warnings.add(
+        Issue.warn(
+            "W-PARAM-MAP-MISSING",
+            "Standard key lacks provider parameter mapping",
+            Map.of("stdKey", stdKey)));
+    log.warn(
+        "Skipping std_key [{}] for provenance [{}]: missing provider mapping",
+        stdKey,
+        snapshot.identity().code());
+    metrics.paramMapMiss(provenanceCode, endpointName);
+  }
 
-      String finalValue =
-          applyTransformIfNeeded(
-              stdKey,
-              providerName,
-              preparedValue,
-              mapping.transformCode(),
-              snapshot,
-              provenanceCode,
-              endpointName,
-              strictMode,
-              warnings,
-              errors);
-      providerParams.put(providerName, finalValue);
-      metrics.paramMapHit(provenanceCode, endpointName);
+  private void checkMultiRepeatStrategy(
+      String stdKey,
+      String providerName,
+      ProvenanceSnapshot.ApiParameter mapping,
+      ProvenanceSnapshot snapshot,
+      boolean repeatEnabled,
+      List<Issue> warnings) {
+    ProvenanceSnapshot.FieldDefinition fieldDefinition = snapshot.fieldDictionary().get(stdKey);
+    boolean isMulti =
+        fieldDefinition != null
+            && fieldDefinition.cardinality() == ProvenanceSnapshot.Cardinality.MULTI;
+
+    boolean hasNoTransform = mapping.transformCode() == null || mapping.transformCode().isBlank();
+
+    if (isMulti && repeatEnabled && hasNoTransform) {
+      warnings.add(
+          Issue.warn(
+              "W-MULTI-REPEAT-NOTSUPPORTED",
+              "MULTI repeat strategy not available; falling back to join encoding",
+              Map.of("stdKey", stdKey, "param", providerName)));
+      log.warn(
+          "MULTI repeat requested but not yet supported: stdKey=[{}], providerParam=[{}]",
+          stdKey,
+          providerName);
     }
   }
 
@@ -409,31 +602,67 @@ public class DefaultExprCompiler implements ExprCompiler {
     if (transformCode == null || transformCode.isBlank()) {
       return value;
     }
+
     Optional<ValueTransform> transformOpt = transformRegistry.find(transformCode);
     if (transformOpt.isEmpty()) {
-      Map<String, Object> context =
-          Map.of("transformCode", transformCode, "stdKey", stdKey, "param", providerParamName);
-      if (strictMode) {
-        errors.add(Issue.error("E-TRANSFORM-NOTFOUND", "Transform not found", context));
-      } else {
-        warnings.add(Issue.warn("W-FN-OR-TRANSFORM-NOTFOUND", "Transform not found", context));
-      }
-      log.warn(
-          "Transform code not found: code={}, stdKey={}, providerParam={}",
-          transformCode,
-          stdKey,
-          providerParamName);
+      handleMissingTransform(
+          transformCode, stdKey, providerParamName, strictMode, warnings, errors);
       return value;
     }
-    ValueTransform transform = transformOpt.get();
+
+    return executeTransform(
+        transformOpt.get(),
+        stdKey,
+        providerParamName,
+        value,
+        transformCode,
+        snapshot,
+        provenanceCode,
+        endpointName);
+  }
+
+  private void handleMissingTransform(
+      String transformCode,
+      String stdKey,
+      String providerParamName,
+      boolean strictMode,
+      List<Issue> warnings,
+      List<Issue> errors) {
+    Map<String, Object> context =
+        Map.of("transformCode", transformCode, "stdKey", stdKey, "param", providerParamName);
+
+    if (strictMode) {
+      errors.add(Issue.error("E-TRANSFORM-NOTFOUND", "Transform not found", context));
+    } else {
+      warnings.add(Issue.warn("W-FN-OR-TRANSFORM-NOTFOUND", "Transform not found", context));
+    }
+
+    log.warn(
+        "Transform [{}] not found for stdKey=[{}], providerParam=[{}]",
+        transformCode,
+        stdKey,
+        providerParamName);
+  }
+
+  private String executeTransform(
+      ValueTransform transform,
+      String stdKey,
+      String providerParamName,
+      String value,
+      String transformCode,
+      ProvenanceSnapshot snapshot,
+      String provenanceCode,
+      String endpointName) {
     String result = transform.apply(stdKey, value, snapshot);
+
     log.debug(
-        "Applied transform: code={}, stdKey={}, providerParam={}, beforeLen={}, afterLen={}",
+        "Applied transform [{}] for stdKey=[{}], providerParam=[{}]: length {} -> {}",
         transformCode,
         stdKey,
         providerParamName,
         value == null ? 0 : value.length(),
         result == null ? 0 : result.length());
+
     metrics.transformApplied(provenanceCode, endpointName, transformCode);
     return result == null ? "" : result;
   }

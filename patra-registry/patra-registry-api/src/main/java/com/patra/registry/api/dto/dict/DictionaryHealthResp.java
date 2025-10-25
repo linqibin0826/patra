@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Response DTO describing dictionary health metrics for subsystem monitoring.
+ * Dictionary health metrics for subsystem monitoring.
  *
  * <p>Field descriptions:
  *
@@ -26,7 +26,7 @@ public record DictionaryHealthResp(
     List<String> typesWithoutDefault,
     List<String> typesWithMultipleDefaults) {
   /**
-   * Canonical constructor enforcing invariants and defensive copies.
+   * Canonical constructor enforcing invariants and creating defensive copies.
    *
    * @param totalTypes total dictionary types registered
    * @param totalItems total dictionary items across all types
@@ -53,9 +53,9 @@ public record DictionaryHealthResp(
   }
 
   /**
-   * Indicates whether dictionary configuration is healthy (no missing or duplicate defaults).
+   * Checks whether dictionary configuration is healthy.
    *
-   * @return {@code true} when no anomalies are detected
+   * @return {@code true} when no missing or duplicate defaults are detected
    */
   public boolean isHealthy() {
     return typesWithoutDefault.isEmpty() && typesWithMultipleDefaults.isEmpty();

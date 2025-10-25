@@ -3,7 +3,7 @@ package com.patra.registry.api.dto.expr;
 import java.util.List;
 
 /**
- * Aggregated snapshot DTO combining expression field metadata and mappings.
+ * Aggregated expression snapshot combining field metadata and mappings.
  *
  * <p>Field descriptions:
  *

@@ -15,25 +15,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * 任务运行尝试（TaskRun Attempt）仓储实现。
+ * MyBatis-Plus implementation of TaskRunRepository for task run attempts.
  *
- * <p>职责：
- *
- * <ul>
- *   <li>插入 / 更新 TaskRun（含统计 / 检查点字段 JSON）。
- *   <li>查询最新一次尝试（按 attempt_no 降序取 1）。
- *   <li>查询所有尝试（审计 / 排障）。
- *   <li>获取最新 attemptNo（用于生成下一次尝试编号）。
- * </ul>
- *
- * <p>设计：
+ * <p>Responsibilities:
  *
  * <ul>
- *   <li>ID 为空：insert；否则 update。
- *   <li>保存后再次 selectById，确保获取数据库回填字段（如乐观锁 version 若后续添加）。
+ *   <li>Insert and update TaskRun including statistics and checkpoint JSON fields.
+ *   <li>Query latest attempt by task ID (ordered by attempt_no DESC, limit 1).
+ *   <li>Query all attempts for audit and troubleshooting.
+ *   <li>Retrieve latest attemptNo for generating next attempt number.
  * </ul>
  *
- * <p>日志策略：DEBUG 输出 insert / update 关键字段；不打印查询日志。
+ * <p>Design:
+ *
+ * <ul>
+ *   <li>If ID is null: insert; otherwise: update.
+ *   <li>After save, selectById again to retrieve database-generated fields (e.g., optimistic lock
+ *       version if added later).
+ * </ul>
+ *
+ * <p>Logging strategy: DEBUG for insert/update with key fields; no query logging.
  */
 @Repository
 @RequiredArgsConstructor
@@ -44,10 +45,10 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   private final TaskRunConverter converter;
 
   /**
-   * 保存运行记录。
+   * Saves a task run record.
    *
-   * @param run 运行聚合
-   * @return 持久化后的最新聚合
+   * @param run task run entity
+   * @return persisted task run with database-generated fields
    */
   @Override
   public TaskRun save(TaskRun run) {
@@ -67,16 +68,16 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
             dto.getStatusCode());
       }
     }
-    // 返回数据库最新状态重新映射（包含生成的 ID）
+    // Return re-mapped latest database state including generated ID
     TaskRunDO persisted = mapper.selectById(dto.getId());
     return converter.toDomain(persisted);
   }
 
   /**
-   * 查询最新一次任务运行尝试。
+   * Finds the latest task run attempt by task ID.
    *
-   * @param taskId 任务 ID
-   * @return Optional（为空表示尚未运行）
+   * @param taskId task ID
+   * @return Optional containing latest run, empty if task has not been run yet
    */
   @Override
   public Optional<TaskRun> findLatest(Long taskId) {
@@ -90,10 +91,10 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   }
 
   /**
-   * 查询任务全部运行尝试（按 attemptNo 升序）。
+   * Finds all task run attempts ordered by attemptNo ascending.
    *
-   * @param taskId 任务 ID
-   * @return 列表（可能为空）
+   * @param taskId task ID
+   * @return list of all attempts, may be empty
    */
   @Override
   public List<TaskRun> findAll(Long taskId) {
@@ -108,10 +109,10 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
   }
 
   /**
-   * 获取任务的最新 attemptNo（用于生成下一次尝试编号）。
+   * Retrieves the latest attemptNo for a task to generate next attempt number.
    *
-   * @param taskId 任务 ID
-   * @return 最大的 attemptNo，若无运行记录则返回 0
+   * @param taskId task ID
+   * @return maximum attemptNo, or 0 if no run records exist
    */
   @Override
   public int getLatestAttemptNo(Long taskId) {
@@ -163,7 +164,8 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
         mapper.selectCount(
             new LambdaQueryWrapper<TaskRunDO>()
                 .eq(TaskRunDO::getTaskId, taskId)
-                .eq(TaskRunDO::getStatusCode, "SUCCEEDED")); // TODO 不要硬编码，改成枚举，让DO、domain公用枚举
+                .eq(TaskRunDO::getStatusCode, "SUCCEEDED"));
+    // TODO: Replace hardcoded status with enum shared between DO and domain
     return count != null && count > 0;
   }
 }

@@ -4,7 +4,7 @@ import com.patra.registry.api.endpoint.ExprEndpoint;
 import org.springframework.cloud.openfeign.FeignClient;
 
 /**
- * Feign client definition for invoking registry expression internal API.
+ * Feign client for registry expression internal API.
  *
  * <p>Extends {@link ExprEndpoint} to provide type-safe RPC integration via Spring Cloud OpenFeign.
  *
