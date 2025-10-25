@@ -258,7 +258,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `provenance_code`  VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code, aligns with reg_provenance.provenance_code (for tracing and aggregation)',
     `operation_code`   VARCHAR(32)     NULL COMMENT 'Redundant: Operation type (already in task), facilitates direct (source,op,status) statistics',
 
-    `status_code`      VARCHAR(32)     NOT NULL DEFAULT 'PLANNED' COMMENT 'DICT CODE(type=ing_task_run_status): PLANNED/RUNNING/SUCCEEDED/FAILED/CANCELLED',
+    `status_code`      VARCHAR(32)     NOT NULL DEFAULT 'PLANNED' COMMENT 'DICT CODE(type=ing_task_run_status): PLANNED/RUNNING/SUCCEEDED/FAILED/PARTIAL/CURSOR_PENDING',
     `checkpoint`       JSON            NULL COMMENT 'Run-level checkpoint (e.g. nextHint / resumeToken etc)',
     `stats`            JSON            NULL COMMENT 'Statistics: fetched/upserted/failed/pages etc',
     `error`            TEXT            NULL COMMENT 'Failure reason',
