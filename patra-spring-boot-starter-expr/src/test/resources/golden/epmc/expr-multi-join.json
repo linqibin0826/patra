@@ -1,8 +1,0 @@
-{
-  "type": "AND",
-  "children": [
-    {"type": "ATOM", "field": "text", "op": "TERM", "value": {"kind": "TERM", "text": "genomics", "match": "ANY", "case": "INSENSITIVE"}},
-    {"type": "ATOM", "field": "facet", "op": "TERM", "value": {"kind": "TERM", "text": "open_access", "match": "ANY", "case": "INSENSITIVE"}},
-    {"type": "ATOM", "field": "facet", "op": "TERM", "value": {"kind": "TERM", "text": "has_full_text", "match": "ANY", "case": "INSENSITIVE"}}
-  ]
-}

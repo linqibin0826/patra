@@ -1,6 +1,0 @@
-{
-  "query": "cancer AND FIRST_PDATE:[2024-01-01 TO 2024-06-01]",
-  "params": {"query": "cancer AND FIRST_PDATE:[2024-01-01 TO 2024-06-01]"},
-  "warnings": [],
-  "errors": []
-}
