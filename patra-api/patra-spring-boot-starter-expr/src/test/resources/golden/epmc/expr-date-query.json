@@ -1,7 +1,0 @@
-{
-  "type": "AND",
-  "children": [
-    {"type": "ATOM", "field": "text", "op": "TERM", "value": {"kind": "TERM", "text": "cancer", "match": "ANY", "case": "INSENSITIVE"}},
-    {"type": "ATOM", "field": "publication_date", "op": "RANGE", "value": {"kind": "RANGE", "rangeType": "DATE", "from": "2024-01-01", "to": "2024-06-01", "fromBoundary": "CLOSED", "toBoundary": "CLOSED"}}
-  ]
-}
