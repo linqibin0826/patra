@@ -4,6 +4,8 @@ import com.patra.ingest.app.usecase.execution.support.ExecutionSession;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.vo.*;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
+import com.patra.ingest.domain.port.TaskRunRepository;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +51,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
   private final BatchPlannerRegistry plannerRegistry;
   private final BatchExecutorRegistry executorRegistry;
   private final TaskRunBatchRepository batchRepository;
+  private final TaskRunRepository taskRunRepository;
 
   @Value("${task.execution.fail-fast:false}")
   private boolean failFast;
@@ -131,6 +134,27 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       // 2.3 Persist batch result
       TaskRunBatch batchEntity = TaskRunBatch.create(context, batch, result);
       batchRepository.save(batchEntity);
+
+      // 2.3.1 Update TaskRun heartbeat to reflect batch processing activity
+      try {
+        boolean updated = taskRunRepository.touchHeartbeat(runId, Instant.now());
+        if (log.isDebugEnabled()) {
+          log.debug(
+              "TaskRun heartbeat updated taskId={} runId={} batchNo={} updated={}",
+              taskId,
+              runId,
+              batch.batchNo(),
+              updated);
+        }
+      } catch (Exception e) {
+        log.warn(
+            "failed to update TaskRun heartbeat taskId={} runId={} batchNo={}",
+            taskId,
+            runId,
+            batch.batchNo(),
+            e);
+        // Do not fail batch execution due to heartbeat update failure
+      }
 
       // 2.4 Update statistics
       if (result.success()) {
