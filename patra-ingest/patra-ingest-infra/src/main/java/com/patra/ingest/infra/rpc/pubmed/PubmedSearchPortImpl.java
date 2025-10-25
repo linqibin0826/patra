@@ -61,7 +61,26 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
   private ESearchResponse executeESearch(
       ESearchRequest request, ProvenanceConfigSnapshot snapshot) {
     ProvenanceConfig config = toProvenanceConfig(snapshot);
-    return config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "calling PubMed ESearch API with term={}, useConfigOverride={}",
+          safeHash(request.term()),
+          config != null);
+    }
+    long startTime = System.currentTimeMillis();
+    ESearchResponse response =
+        config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
+    long duration = System.currentTimeMillis() - startTime;
+    if (log.isDebugEnabled()) {
+      int resultCount =
+          response != null && response.result() != null ? response.result().count() : 0;
+      log.debug(
+          "PubMed ESearch completed in {}ms, termHash={}, resultCount={}",
+          duration,
+          safeHash(request.term()),
+          resultCount);
+    }
+    return response;
   }
 
   /** Extracts plan metadata from ESearch response. */

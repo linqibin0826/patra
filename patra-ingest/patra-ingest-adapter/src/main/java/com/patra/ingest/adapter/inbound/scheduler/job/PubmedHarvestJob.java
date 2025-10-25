@@ -35,7 +35,13 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
    */
   @XxlJob("pubmedHarvest")
   public void run() {
+    String jobParam = XxlJobHelper.getJobParam();
+    log.debug(
+        "PubMed harvest job triggered with jobId [{}], param: {}",
+        XxlJobHelper.getJobId(),
+        jobParam);
+
     // Pass XXL param through to the common scheduling logic
-    executeScheduleJob(XxlJobHelper.getJobParam());
+    executeScheduleJob(jobParam);
   }
 }

@@ -87,6 +87,12 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
                 .eq(TaskRunDO::getTaskId, taskId)
                 .orderByDesc(TaskRunDO::getAttemptNo)
                 .last("limit 1"));
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "query latest TaskRun by taskId={}, found={}",
+          taskId,
+          one != null ? "attemptNo=" + one.getAttemptNo() : "none");
+    }
     return Optional.ofNullable(one).map(converter::toDomain);
   }
 
@@ -98,14 +104,15 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
    */
   @Override
   public List<TaskRun> findAll(Long taskId) {
-    return mapper
-        .selectList(
+    List<TaskRunDO> entities =
+        mapper.selectList(
             new LambdaQueryWrapper<TaskRunDO>()
                 .eq(TaskRunDO::getTaskId, taskId)
-                .orderByAsc(TaskRunDO::getAttemptNo))
-        .stream()
-        .map(converter::toDomain)
-        .collect(Collectors.toList());
+                .orderByAsc(TaskRunDO::getAttemptNo));
+    if (log.isDebugEnabled()) {
+      log.debug("query all TaskRun by taskId={}, found {} results", taskId, entities.size());
+    }
+    return entities.stream().map(converter::toDomain).collect(Collectors.toList());
   }
 
   /**
@@ -133,6 +140,8 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
     int updated = mapper.updateCheckpointAndHeartbeat(runId, checkpointJson, now);
     if (updated == 0) {
       log.warn("task run checkpoint update missed runId={}", runId);
+    } else if (log.isDebugEnabled()) {
+      log.debug("updated checkpoint and heartbeat for runId={}", runId);
     }
     return updated > 0;
   }
@@ -142,6 +151,8 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
     int updated = mapper.touchHeartbeat(runId, now);
     if (updated == 0) {
       log.warn("task run heartbeat touch missed runId={}", runId);
+    } else if (log.isDebugEnabled()) {
+      log.debug("touched heartbeat for runId={}", runId);
     }
     return updated > 0;
   }
@@ -166,6 +177,10 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
                 .eq(TaskRunDO::getTaskId, taskId)
                 .eq(TaskRunDO::getStatusCode, "SUCCEEDED"));
     // TODO: Replace hardcoded status with enum shared between DO and domain
-    return count != null && count > 0;
+    boolean hasSucceeded = count != null && count > 0;
+    if (log.isDebugEnabled()) {
+      log.debug("check succeeded run for taskId={}, hasSucceeded={}", taskId, hasSucceeded);
+    }
+    return hasSucceeded;
   }
 }

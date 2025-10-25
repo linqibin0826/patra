@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.policy.RelayErrorClassifier;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Component;
  * Extensibility: replace this implementation with composed strategies to support finer-grained
  * matching (for example by error code).
  */
+@Slf4j
 @Component
 public class RelayErrorClassifierImpl implements RelayErrorClassifier {
 
@@ -31,18 +33,41 @@ public class RelayErrorClassifierImpl implements RelayErrorClassifier {
   public RelayErrorKind classify(Throwable cause) {
     Throwable publish = findPublishException(cause);
     if (publish instanceof OutboxPublishException publishException) {
-      return publishException.getReason().isFatal()
-          ? RelayErrorKind.FATAL
-          : RelayErrorKind.TRANSIENT;
+      RelayErrorKind kind =
+          publishException.getReason().isFatal() ? RelayErrorKind.FATAL : RelayErrorKind.TRANSIENT;
+
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "Classifying OutboxPublishException as [{}]: reason [{}], isFatal [{}]",
+            kind,
+            publishException.getReason(),
+            publishException.getReason().isFatal());
+      }
+
+      return kind;
     }
+
     Throwable root = ExceptionUtil.getRootCause(cause);
+    RelayErrorKind kind;
+
     if (root instanceof OutboxRelayExecutionException
         || root instanceof IllegalArgumentException
         || root instanceof IllegalStateException
         || root instanceof JsonProcessingException) {
-      return RelayErrorKind.FATAL;
+      kind = RelayErrorKind.FATAL;
+    } else {
+      kind = RelayErrorKind.TRANSIENT;
     }
-    return RelayErrorKind.TRANSIENT;
+
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Classifying exception as [{}]: exceptionType [{}], rootCause [{}]",
+          kind,
+          cause.getClass().getSimpleName(),
+          root.getClass().getSimpleName());
+    }
+
+    return kind;
   }
 
   private Throwable findPublishException(Throwable cause) {

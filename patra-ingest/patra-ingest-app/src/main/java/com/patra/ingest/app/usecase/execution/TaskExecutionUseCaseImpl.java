@@ -61,6 +61,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
 
     try {
       // ========== Phase 0: Prepare ==========
+      log.debug("entering prepare phase taskId={} idemKey={}", taskId, idempotentKey);
       PrepareTaskExecutionUseCase.PrepareResult prepareResult;
       try {
         prepareResult = prepareUseCase.prepare(command);
@@ -87,6 +88,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
       }
 
       // ========== Phase 1: Execute ==========
+      log.debug("entering execute phase taskId={} runId={}", taskId, session.runId());
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
           executeUseCase.execute(session, context);
 
@@ -99,6 +101,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
           executeResult.failedBatches());
 
       // ========== Phase 2: Complete ==========
+      log.debug("entering complete phase taskId={} runId={}", taskId, session.runId());
       completeUseCase.complete(session, context, executeResult);
 
       log.info("task execution completed taskId={} runId={}", taskId, session.runId());

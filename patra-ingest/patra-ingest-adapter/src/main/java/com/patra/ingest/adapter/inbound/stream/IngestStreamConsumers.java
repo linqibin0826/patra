@@ -58,8 +58,16 @@ public class IngestStreamConsumers {
         logReceivedHeaders(message.getHeaders());
         logMessageMetadata(message.getHeaders());
 
+        log.debug("Parsing task ready message payload");
         TaskReadyCommand command = parsePayload(message.getPayload(), message.getHeaders());
+        log.debug(
+            "Converted task ready payload to command: taskId [{}], idempotentKey [{}]",
+            command.taskId(),
+            command.idempotentKey());
+
+        log.debug("Invoking task execution use case for taskId [{}]", command.taskId());
         taskExecutionUseCase.execute(command);
+        log.debug("Task execution completed successfully for taskId [{}]", command.taskId());
 
       } catch (Exception e) {
         log.error(

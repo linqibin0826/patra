@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -31,6 +32,7 @@ import org.springframework.util.StringUtils;
  * provenance-agnostic model.
  */
 @Component
+@Slf4j
 public class PubmedArticleConverter {
 
   /**
@@ -40,6 +42,9 @@ public class PubmedArticleConverter {
    * @return standardized literature representation
    */
   public StandardLiterature toStandardLiterature(PubmedArticle article) {
+    if (log.isDebugEnabled()) {
+      log.debug("converting PubMed article to StandardLiterature pmid={}", article.pmid());
+    }
     Article citation = article.article();
     return StandardLiterature.builder()
         .title(citation != null ? citation.title() : null)

@@ -50,8 +50,14 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
    */
   @Override
   public Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode) {
-    log.debug("Finding provenance by code: {}", provenanceCode.getCode());
-    return provenanceMapper.selectByCode(provenanceCode.getCode()).map(converter::toDomain);
+    String code = provenanceCode.getCode();
+    log.debug("Querying provenance by code [{}] from database", code);
+    Optional<Provenance> result = provenanceMapper.selectByCode(code).map(converter::toDomain);
+    log.debug(
+        "Provenance lookup for code [{}] returned: {}",
+        code,
+        result.isPresent() ? "found" : "not found");
+    return result;
   }
 
   /**
@@ -61,10 +67,13 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
    */
   @Override
   public List<Provenance> findAllProvenances() {
-    log.debug("Loading all active provenances");
+    log.debug("Querying all active provenances from database");
     List<Provenance> provenances =
         provenanceMapper.selectAllActive().stream().map(converter::toDomain).toList();
-    log.debug("Loaded {} active provenances", provenances.size());
+    log.debug(
+        "Converting {} ProvenanceDO entities to domain models, codes: {}",
+        provenances.size(),
+        provenances.stream().map(Provenance::code).toList());
     return provenances;
   }
 
@@ -235,6 +244,10 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
   private ProvenanceConfiguration assembleConfiguration(
       Provenance provenance, String operationType, Instant timestamp) {
     Long provenanceId = provenance.id();
+    log.debug(
+        "Assembling configuration aggregate for provenance [{}], operationType [{}]",
+        provenance.code(),
+        operationType);
     return new ProvenanceConfiguration(
         provenance,
         findActiveWindowOffset(provenanceId, operationType, timestamp).orElse(null),
@@ -287,11 +300,19 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     Instant timestamp = atOrNow(at);
     String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
     log.debug(
-        "Finding {} config for provenanceId [{}] with operationKey [{}]",
+        "Querying {} config from database: provenanceId [{}], operationKey [{}], timestamp [{}]",
         configName,
         provenanceId,
-        operationKey);
-    return selector.select(provenanceId, operationKey, timestamp).map(converter);
+        operationKey,
+        timestamp);
+    Optional<DOMAIN> result = selector.select(provenanceId, operationKey, timestamp).map(converter);
+    log.debug(
+        "{} config lookup for provenanceId [{}] with operationKey [{}] returned: {}",
+        configName,
+        provenanceId,
+        operationKey,
+        result.isPresent() ? "found" : "not found");
+    return result;
   }
 
   /**
@@ -302,14 +323,19 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
    */
   private Optional<Provenance> findProvenanceById(Long provenanceId) {
     if (provenanceId == null) {
-      log.debug("Provenance ID is null");
+      log.debug("Provenance ID is null, skipping database query");
       return Optional.empty();
     }
+    log.debug("Querying provenance by ID [{}] from database", provenanceId);
     RegProvenanceDO entity = provenanceMapper.selectById(provenanceId);
     if (entity == null) {
-      log.debug("Provenance entity not found for id [{}]", provenanceId);
+      log.debug("Provenance entity not found for ID [{}]", provenanceId);
       return Optional.empty();
     }
+    log.debug(
+        "Converting ProvenanceDO to domain model for ID [{}], code [{}]",
+        provenanceId,
+        entity.getProvenanceCode());
     return Optional.of(converter.toDomain(entity));
   }
 

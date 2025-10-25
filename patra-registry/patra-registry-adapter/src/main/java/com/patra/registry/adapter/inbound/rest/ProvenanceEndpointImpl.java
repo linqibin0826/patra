@@ -38,7 +38,13 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public List<ProvenanceResp> listProvenances() {
-    return converter.toResp(orchestrator.listProvenances());
+    log.debug("Received request to list all provenances");
+
+    List<ProvenanceResp> response = converter.toResp(orchestrator.listProvenances());
+
+    log.debug("Returning {} provenance entries", response.size());
+
+    return response;
   }
 
   /**
@@ -50,13 +56,21 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public ProvenanceResp getProvenance(ProvenanceCode code) {
-    return orchestrator
-        .findProvenance(code)
-        .map(converter::toResp)
-        .orElseThrow(
-            () ->
-                new ProvenanceNotFoundException(
-                    String.format("Provenance not found for code [%s]", code.getCode())));
+    log.debug("Received request to get provenance for code [{}]", code.getCode());
+
+    ProvenanceResp response =
+        orchestrator
+            .findProvenance(code)
+            .map(converter::toResp)
+            .orElseThrow(
+                () ->
+                    new ProvenanceNotFoundException(
+                        String.format("Provenance not found for code [%s]", code.getCode())));
+
+    log.debug(
+        "Successfully retrieved provenance [{}] with name [{}]", code.getCode(), response.name());
+
+    return response;
   }
 
   /**
@@ -71,14 +85,25 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   @Override
   public ProvenanceConfigResp getConfiguration(
       ProvenanceCode code, String operationType, Instant at) {
-    return orchestrator
-        .loadConfiguration(code, operationType, at)
-        .map(converter::toResp)
-        .orElseThrow(
-            () ->
-                new ProvenanceNotFoundException(
-                    String.format(
-                        "Provenance configuration not found for code [%s] and operationType [%s]",
-                        code.getCode(), operationType)));
+    log.debug(
+        "Received provenance configuration request for code [{}], operationType [{}], at [{}]",
+        code.getCode(),
+        operationType,
+        at);
+
+    ProvenanceConfigResp response =
+        orchestrator
+            .loadConfiguration(code, operationType, at)
+            .map(converter::toResp)
+            .orElseThrow(
+                () ->
+                    new ProvenanceNotFoundException(
+                        String.format(
+                            "Provenance configuration not found for code [%s] and operationType [%s]",
+                            code.getCode(), operationType)));
+
+    log.debug("Successfully loaded configuration for provenance [{}]", code.getCode());
+
+    return response;
   }
 }

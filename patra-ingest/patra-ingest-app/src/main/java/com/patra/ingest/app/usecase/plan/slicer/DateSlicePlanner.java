@@ -119,6 +119,16 @@ public class DateSlicePlanner implements SlicePlanner {
     // Convert Instant to LocalDate (UTC zone for consistent date extraction)
     LocalDate cursor = from.atZone(ZoneOffset.UTC).toLocalDate();
     LocalDate endDate = to.atZone(ZoneOffset.UTC).toLocalDate();
+
+    log.debug(
+        "Starting DATE slicing for provenance [{}] operation [{}]: window=[{}, {}), step={} days, timeField={}",
+        context.norm().provenanceCode(),
+        context.norm().operationCode(),
+        cursor,
+        endDate,
+        step.toDays(),
+        timeField);
+
     int index = 1;
     PlanExpressionDescriptor planExpr = context.planExpression();
 
@@ -165,6 +175,13 @@ public class DateSlicePlanner implements SlicePlanner {
       cursor = upper;
       index++;
     }
+
+    log.debug(
+        "Completed DATE slicing for provenance [{}] operation [{}]: generated {} slices",
+        context.norm().provenanceCode(),
+        context.norm().operationCode(),
+        result.size());
+
     return result;
   }
 

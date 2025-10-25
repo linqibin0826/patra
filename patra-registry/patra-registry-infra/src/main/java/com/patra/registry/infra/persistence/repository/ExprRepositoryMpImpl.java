@@ -6,7 +6,6 @@ import com.patra.registry.domain.model.vo.expr.*;
 import com.patra.registry.domain.port.ExprRepository;
 import com.patra.registry.domain.support.RegistryKeyStandardizer;
 import com.patra.registry.infra.persistence.converter.ExprEntityConverter;
-import com.patra.registry.infra.persistence.entity.provenance.RegProvenanceDO;
 import com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper;
 import com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper;
@@ -91,10 +90,14 @@ public class ExprRepositoryMpImpl implements ExprRepository {
    * @return list of active expression fields
    */
   private List<ExprField> loadFields() {
-    log.debug("Loading all active expression fields");
+    log.debug("Querying all active expression fields from field dictionary");
     List<ExprField> fields =
         fieldDictMapper.selectAllActive().stream().map(converter::toDomain).toList();
-    log.debug("Loaded {} expression fields", fields.size());
+    log.debug(
+        "Converting {} ExprFieldDictDO entities to domain models, field keys: {}",
+        fields.size(),
+        fields.stream().map(ExprField::fieldKey).limit(10).toList()
+            + (fields.size() > 10 ? "..." : ""));
     return fields;
   }
 
@@ -108,12 +111,19 @@ public class ExprRepositoryMpImpl implements ExprRepository {
    */
   private List<ExprCapability> loadCapabilities(
       Long provenanceId, String operationKey, Instant timestamp) {
-    log.debug("Loading capabilities: provenanceId={}, operationKey={}", provenanceId, operationKey);
+    log.debug(
+        "Querying capabilities from database: provenanceId [{}], operationKey [{}], timestamp [{}]",
+        provenanceId,
+        operationKey,
+        timestamp);
     List<ExprCapability> capabilities =
         capabilityMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
             .map(converter::toDomain)
             .toList();
-    log.debug("Loaded {} capabilities", capabilities.size());
+    log.debug(
+        "Converting {} ExprCapabilityDO entities to domain models, field keys: {}",
+        capabilities.size(),
+        capabilities.stream().map(ExprCapability::fieldKey).toList());
     return capabilities;
   }
 
@@ -127,12 +137,19 @@ public class ExprRepositoryMpImpl implements ExprRepository {
    */
   private List<ExprRenderRule> loadRenderRules(
       Long provenanceId, String operationKey, Instant timestamp) {
-    log.debug("Loading render rules: provenanceId={}, operationKey={}", provenanceId, operationKey);
+    log.debug(
+        "Querying render rules from database: provenanceId [{}], operationKey [{}], timestamp [{}]",
+        provenanceId,
+        operationKey,
+        timestamp);
     List<ExprRenderRule> renderRules =
         renderRuleMapper.selectActiveByTask(provenanceId, operationKey, timestamp).stream()
             .map(converter::toDomain)
             .toList();
-    log.debug("Loaded {} render rules", renderRules.size());
+    log.debug(
+        "Converting {} ExprRenderRuleDO entities to domain models for {} unique fields",
+        renderRules.size(),
+        renderRules.stream().map(ExprRenderRule::fieldKey).distinct().count());
     return renderRules;
   }
 
@@ -148,17 +165,21 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   private List<ApiParamMapping> loadApiParamMappings(
       Long provenanceId, String operationKey, String normalizedEndpoint, Instant timestamp) {
     log.debug(
-        "Loading API parameter mappings: provenanceId={}, operationKey={}, endpoint={}",
+        "Querying API parameter mappings from database: provenanceId [{}], operationKey [{}], endpoint [{}], timestamp [{}]",
         provenanceId,
         operationKey,
-        normalizedEndpoint);
+        normalizedEndpoint,
+        timestamp);
     List<ApiParamMapping> apiParams =
         apiParamMapMapper
             .selectActiveByTask(provenanceId, operationKey, normalizedEndpoint, timestamp)
             .stream()
             .map(converter::toDomain)
             .toList();
-    log.debug("Loaded {} API parameter mappings", apiParams.size());
+    log.debug(
+        "Converting {} ApiParamMapDO entities to domain models, standard keys: {}",
+        apiParams.size(),
+        apiParams.stream().map(ApiParamMapping::stdKey).toList());
     return apiParams;
   }
 
@@ -181,10 +202,14 @@ public class ExprRepositoryMpImpl implements ExprRepository {
    */
   private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
     String code = provenanceCode.getCode();
-    log.debug("Resolving provenance ID for code: {}", code);
+    log.debug("Querying provenance ID for code [{}] from database", code);
     return provenanceMapper
         .selectByCode(code)
-        .map(RegProvenanceDO::getId)
+        .map(
+            entity -> {
+              log.debug("Resolved provenance code [{}] to ID [{}]", code, entity.getId());
+              return entity.getId();
+            })
         .orElseThrow(
             () -> {
               log.warn("Provenance code not found: {}", code);

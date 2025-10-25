@@ -107,11 +107,23 @@ public class PlanAssemblerImpl implements PlanAssembler {
     ProvenanceConfigSnapshot configSnapshot = request.configSnapshot();
 
     SliceStrategy sliceStrategy = determineSliceStrategy(norm, configSnapshot);
+    log.debug(
+        "Determined slice strategy for provenance [{}] operation [{}]: {}",
+        norm.provenanceCode(),
+        norm.operationCode(),
+        sliceStrategy.getCode());
+
     JsonNormalizerResult configCanonical = normalizeConfigSnapshot(configSnapshot);
 
     PlanAggregate plan =
         createPlanAggregate(norm, window, planExpression, sliceStrategy, configCanonical);
     plan.startSlicing();
+    log.debug(
+        "Created plan aggregate for provenance [{}] operation [{}]: planKey={}, strategy={}",
+        norm.provenanceCode(),
+        norm.operationCode(),
+        plan.getPlanKey(),
+        sliceStrategy.getCode());
 
     SliceGenerationResult sliceResult =
         createSlices(norm, window, planExpression, configSnapshot, sliceStrategy);
@@ -119,8 +131,19 @@ public class PlanAssemblerImpl implements PlanAssembler {
     List<TaskAggregate> tasks =
         slices.isEmpty() ? List.of() : createTasks(norm, window, sliceResult);
 
+    log.debug(
+        "Generated {} slices and {} tasks for provenance [{}] operation [{}]",
+        slices.size(),
+        tasks.size(),
+        norm.provenanceCode(),
+        norm.operationCode());
+
     if (slices.isEmpty() || tasks.isEmpty()) {
       plan.markFailed();
+      log.debug(
+          "Plan assembly failed for provenance [{}] operation [{}]: no slices or tasks generated",
+          norm.provenanceCode(),
+          norm.operationCode());
       return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.FAILED);
     }
 
@@ -182,14 +205,37 @@ public class PlanAssemblerImpl implements PlanAssembler {
       SliceStrategy sliceStrategy) {
     SlicePlanner planner = slicePlannerRegistry.get(sliceStrategy);
     if (planner == null) {
+      log.debug(
+          "No slice planner found for strategy [{}], provenance [{}] operation [{}]",
+          sliceStrategy.getCode(),
+          norm.provenanceCode(),
+          norm.operationCode());
       return new SliceGenerationResult(List.of(), List.of());
     }
+
+    log.debug(
+        "Invoking slice planner [{}] for provenance [{}] operation [{}]",
+        sliceStrategy.getCode(),
+        norm.provenanceCode(),
+        norm.operationCode());
 
     List<SlicePlan> drafts =
         generateSlicePlans(planner, norm, window, planExpression, configSnapshot);
     if (drafts == null || drafts.isEmpty()) {
+      log.debug(
+          "Slice planner [{}] returned no slices for provenance [{}] operation [{}]",
+          sliceStrategy.getCode(),
+          norm.provenanceCode(),
+          norm.operationCode());
       return new SliceGenerationResult(List.of(), List.of());
     }
+
+    log.debug(
+        "Slice planner [{}] generated {} slice drafts for provenance [{}] operation [{}]",
+        sliceStrategy.getCode(),
+        drafts.size(),
+        norm.provenanceCode(),
+        norm.operationCode());
 
     List<PlanSliceAggregate> slices = convertToSliceAggregates(norm, drafts);
     return new SliceGenerationResult(slices, drafts);
@@ -250,11 +296,19 @@ public class PlanAssemblerImpl implements PlanAssembler {
     List<PlanSliceAggregate> slices = sliceResult.aggregates();
     List<SlicePlan> drafts = sliceResult.drafts();
     List<TaskAggregate> tasks = new ArrayList<>(slices.size());
+
+    Priority effectivePriority = norm.priority() == null ? Priority.NORMAL : norm.priority();
+    log.debug(
+        "Creating {} tasks from slices for provenance [{}] operation [{}], priority={}",
+        slices.size(),
+        norm.provenanceCode(),
+        norm.operationCode(),
+        effectivePriority);
+
     for (int i = 0; i < slices.size(); i++) {
       PlanSliceAggregate slice = slices.get(i);
       SlicePlan draft = drafts.get(i);
       String idemKey = computeSignature(norm, slice.getSliceSignatureHash());
-      Priority effectivePriority = norm.priority() == null ? Priority.NORMAL : norm.priority();
       int priorityVal = effectivePriority.queueValue();
       Instant scheduledAt = determineScheduledAt(draft, window);
 
@@ -271,6 +325,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
               priorityVal,
               scheduledAt));
     }
+
     return tasks;
   }
 

@@ -36,8 +36,12 @@ public class ProvenanceConfigOrchestrator {
    */
   public List<ProvenanceQuery> listProvenances() {
     log.info("Listing all available provenances");
+    log.debug("Querying provenance repository for all provenances");
+
     List<ProvenanceQuery> provenances =
         repository.findAllProvenances().stream().map(assembler::toQuery).toList();
+
+    log.debug("Assembling {} provenance domain objects to query DTOs", provenances.size());
     log.info("Successfully retrieved {} provenances", provenances.size());
     return provenances;
   }
@@ -50,10 +54,15 @@ public class ProvenanceConfigOrchestrator {
    */
   public Optional<ProvenanceQuery> findProvenance(ProvenanceCode provenanceCode) {
     log.info("Finding provenance by code [{}]", provenanceCode.getCode());
+    log.debug("Querying provenance repository for code [{}]", provenanceCode.getCode());
+
     Optional<ProvenanceQuery> result =
         repository.findProvenanceByCode(provenanceCode).map(assembler::toQuery);
 
     if (result.isPresent()) {
+      log.debug(
+          "Found provenance domain object for code [{}], assembling to query DTO",
+          provenanceCode.getCode());
       log.info("Successfully found provenance [{}]", provenanceCode.getCode());
     } else {
       log.warn("Provenance not found for code [{}]", provenanceCode.getCode());
@@ -82,14 +91,32 @@ public class ProvenanceConfigOrchestrator {
         operationType);
 
     Instant effectiveTime = at != null ? at : Instant.now();
+    log.debug(
+        "Using effective time [{}] for configuration lookup (at parameter was {})",
+        effectiveTime,
+        at != null ? "provided" : "defaulted to now");
+
+    log.debug("Querying provenance repository for code [{}]", provenanceCode.getCode());
     Optional<ProvenanceConfigQuery> result =
         repository
             .findProvenanceByCode(provenanceCode)
             .flatMap(
-                provenance ->
-                    repository
-                        .loadConfiguration(provenance.id(), operationType, effectiveTime)
-                        .map(assembler::toQuery));
+                provenance -> {
+                  log.debug(
+                      "Found provenance with ID [{}], loading configuration with operationType [{}] at [{}]",
+                      provenance.id(),
+                      operationType,
+                      effectiveTime);
+                  return repository
+                      .loadConfiguration(provenance.id(), operationType, effectiveTime)
+                      .map(
+                          config -> {
+                            log.debug(
+                                "Retrieved configuration domain object for provenance [{}], assembling to query DTO",
+                                provenanceCode.getCode());
+                            return assembler.toQuery(config);
+                          });
+                });
 
     if (result.isPresent()) {
       log.info(

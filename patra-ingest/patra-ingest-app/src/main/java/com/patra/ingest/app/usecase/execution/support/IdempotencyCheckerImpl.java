@@ -40,10 +40,13 @@ public class IdempotencyCheckerImpl implements IdempotencyChecker {
    */
   @Override
   public boolean isAlreadySucceeded(Long taskId, String idempotentKey) {
+    log.debug("checking if task already succeeded taskId={} idemKey={}", taskId, idempotentKey);
     boolean succeeded = taskRunRepository.hasSucceededRun(taskId);
     if (succeeded) {
       log.info(
           "task already succeeded, skip execution taskId={} idemKey={}", taskId, idempotentKey);
+    } else {
+      log.debug("task not yet succeeded taskId={} idemKey={}", taskId, idempotentKey);
     }
     return succeeded;
   }
