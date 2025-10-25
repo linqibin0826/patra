@@ -93,6 +93,11 @@ public class PubmedBatchExecutor implements BatchExecutor {
       ProvenanceConfig config = toProvenanceConfig(context.configSnapshot());
 
       // Step 1: retrieve PMIDs via ESearch
+      log.debug(
+          "executing PubMed ESearch for batch runId={} batchNo={} queryHash={}",
+          runId,
+          batchNo,
+          queryHash);
       List<String> pmids = executeSearch(batch, config);
       if (CollectionUtils.isEmpty(pmids)) {
         log.info(
@@ -107,6 +112,11 @@ public class PubmedBatchExecutor implements BatchExecutor {
       }
 
       // Step 2: fetch detailed articles via EFetch
+      log.debug(
+          "fetching {} articles from PubMed for batch runId={} batchNo={}",
+          pmids.size(),
+          runId,
+          batchNo);
       List<StandardLiterature> literature =
           fetchArticles(pmids, config).stream()
               .map(articleConverter::toStandardLiterature)
@@ -141,13 +151,17 @@ public class PubmedBatchExecutor implements BatchExecutor {
   private List<String> executeSearch(Batch batch, ProvenanceConfig config) {
     JsonNode params = batch.params();
     JsonNode mergedParams = mergeQueryIntoParams(batch.query(), params);
+    log.debug("building ESearch request with params batchNo={}", batch.batchNo());
     ESearchRequest request = ASSEMBLER.buildList(mergedParams);
     ESearchResponse response =
         config != null ? pubMedClient.esearch(request, config) : pubMedClient.esearch(request);
     if (response == null || response.result() == null) {
+      log.debug("ESearch returned empty result for batch batchNo={}", batch.batchNo());
       return List.of();
     }
-    return response.result().idList();
+    List<String> pmids = response.result().idList();
+    log.debug("ESearch returned {} PMIDs for batch batchNo={}", pmids.size(), batch.batchNo());
+    return pmids;
   }
 
   private JsonNode mergeQueryIntoParams(String query, JsonNode params) {
@@ -195,12 +209,15 @@ public class PubmedBatchExecutor implements BatchExecutor {
    */
   private List<PubmedArticle> fetchArticlesDirectly(List<String> pmids, ProvenanceConfig config) {
     String idParam = String.join(",", pmids);
+    log.debug("executing direct EFetch for {} PMIDs", pmids.size());
     EFetchRequest request = new EFetchRequest(PROVENANCE_DB, idParam);
     EFetchResponse response =
         config != null ? pubMedClient.efetch(request, config) : pubMedClient.efetch(request);
     if (response == null || response.articles() == null) {
+      log.debug("EFetch returned empty result for {} PMIDs", pmids.size());
       return List.of();
     }
+    log.debug("EFetch returned {} articles", response.articles().size());
     return response.articles();
   }
 
@@ -220,6 +237,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
    */
   private List<PubmedArticle> fetchArticlesViaEPost(List<String> pmids, ProvenanceConfig config) {
     // Step 1: Upload ID list to History Server
+    log.debug("executing EPost to upload {} PMIDs to History Server", pmids.size());
     String idParam = String.join(",", pmids);
     EPostRequest postReq = new EPostRequest(PROVENANCE_DB, idParam, null, null, null);
     EPostResponse postResp =
@@ -241,6 +259,7 @@ public class PubmedBatchExecutor implements BatchExecutor {
         postResp.count());
 
     // Step 2: Fetch articles using WebEnv (ID list is empty!)
+    log.debug("executing EFetch with WebEnv for {} PMIDs", pmids.size());
     EFetchRequest fetchReq =
         new EFetchRequest(
             PROVENANCE_DB,

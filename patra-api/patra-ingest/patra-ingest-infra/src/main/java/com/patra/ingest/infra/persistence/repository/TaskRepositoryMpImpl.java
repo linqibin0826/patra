@@ -105,7 +105,13 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     }
     List<TaskDO> entities = mapper.selectList(new QueryWrapper<TaskDO>().eq("plan_id", planId));
     if (entities == null || entities.isEmpty()) {
+      if (log.isDebugEnabled()) {
+        log.debug("query tasks by planId={}, found 0 results", planId);
+      }
       return List.of();
+    }
+    if (log.isDebugEnabled()) {
+      log.debug("query tasks by planId={}, found {} results", planId, entities.size());
     }
     List<TaskAggregate> aggregates = new ArrayList<>(entities.size());
     for (TaskDO entity : entities) {
@@ -146,7 +152,15 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     if (operationCode != null) {
       wrapper.eq("operation_code", operationCode);
     }
-    return mapper.selectCount(wrapper);
+    long count = mapper.selectCount(wrapper);
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "count queued tasks provenance={} operation={}, count={}",
+          provenanceCode,
+          operationCode,
+          count);
+    }
+    return count;
   }
 
   /**

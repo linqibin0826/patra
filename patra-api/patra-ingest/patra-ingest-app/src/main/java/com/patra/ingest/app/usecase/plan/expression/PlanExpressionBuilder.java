@@ -35,8 +35,21 @@ public class PlanExpressionBuilder {
    */
   public PlanExpressionDescriptor build(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
+    log.debug(
+        "Building plan expression for provenance [{}] operation [{}]",
+        norm.provenanceCode(),
+        norm.operationCode());
+
     Expr businessExpr = buildBusinessExpression(norm, configSnapshot);
     ExprCanonicalSnapshot snapshot = ExprCanonicalizer.canonicalize(businessExpr);
+
+    log.debug(
+        "Canonicalized plan expression for provenance [{}] operation [{}]: hash={}, json length={}",
+        norm.provenanceCode(),
+        norm.operationCode(),
+        snapshot.hash(),
+        snapshot.canonicalJson().length());
+
     return new PlanExpressionDescriptor(businessExpr, snapshot.canonicalJson(), snapshot.hash());
   }
 

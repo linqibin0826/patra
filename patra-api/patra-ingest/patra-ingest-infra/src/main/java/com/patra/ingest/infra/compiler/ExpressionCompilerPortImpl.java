@@ -57,6 +57,13 @@ public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
    */
   @Override
   public ExprCompilationResult compile(ExprCompilationRequest request) {
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "compiling expression provenance={} endpoint={} exprLength={}",
+          request.provenanceCode(),
+          request.endpointName(),
+          request.rawExpression() != null ? request.rawExpression().length() : 0);
+    }
     try {
       // 1. Parse JSON expression to Expr object using ExprJsonCodec
       Expr expression = ExprJsonCodec.fromJson(request.rawExpression());
@@ -75,7 +82,18 @@ public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
       CompileResult compileResult = exprCompiler.compile(compileRequest);
 
       // 5. Convert CompileResult to ExprCompilationResult
-      return convertToExprCompilationResult(compileResult);
+      ExprCompilationResult result = convertToExprCompilationResult(compileResult);
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "expression compilation completed provenance={} endpoint={}, isValid={}, query={}",
+            request.provenanceCode(),
+            request.endpointName(),
+            result.isValid(),
+            result.query() != null
+                ? result.query().substring(0, Math.min(100, result.query().length()))
+                : "null");
+      }
+      return result;
 
     } catch (Exception e) {
       log.error("expression compilation failed: {}", e.getMessage(), e);

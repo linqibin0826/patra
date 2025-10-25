@@ -3,6 +3,7 @@ package com.patra.registry.app.service;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.registry.app.converter.ExprQueryAssembler;
 import com.patra.registry.domain.model.read.expr.ExprSnapshotQuery;
+import com.patra.registry.domain.model.vo.expr.ExprSnapshot;
 import com.patra.registry.domain.port.ExprRepository;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -49,8 +50,24 @@ public class ExprQueryOrchestrator {
         operationType,
         endpointName);
 
-    ExprSnapshotQuery snapshot =
-        assembler.toQuery(exprRepository.loadSnapshot(code, operationType, endpointName, at));
+    Instant effectiveTime = at != null ? at : Instant.now();
+    log.debug(
+        "Querying expression repository for provenance [{}] at effective time [{}]",
+        code.getCode(),
+        effectiveTime);
+
+    ExprSnapshot domainSnapshot =
+        exprRepository.loadSnapshot(code, operationType, endpointName, at);
+    log.debug(
+        "Retrieved domain snapshot for provenance [{}]: {} fields, {} capabilities, {} render rules, {} API parameter mappings",
+        code.getCode(),
+        domainSnapshot.fields().size(),
+        domainSnapshot.capabilities().size(),
+        domainSnapshot.renderRules().size(),
+        domainSnapshot.apiParamMappings().size());
+
+    log.debug("Assembling expression snapshot query DTO from domain snapshot");
+    ExprSnapshotQuery snapshot = assembler.toQuery(domainSnapshot);
 
     log.info(
         "Successfully loaded expression snapshot for provenance [{}]: {} fields, {} capabilities, {} render rules, {} API parameter mappings",

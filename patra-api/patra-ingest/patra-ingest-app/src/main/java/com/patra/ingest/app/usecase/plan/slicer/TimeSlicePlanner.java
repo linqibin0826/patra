@@ -61,7 +61,7 @@ public class TimeSlicePlanner implements SlicePlanner {
         || context.window().from() == null
         || context.window().to() == null) {
       log.warn(
-          "Skip time slicing because planning window is missing: norm={}, window=.",
+          "Skip time slicing because planning window is missing: norm={}, window={}",
           context.norm(),
           context.window());
       return result;
@@ -81,7 +81,7 @@ public class TimeSlicePlanner implements SlicePlanner {
     Instant from = context.window().from();
     Instant to = context.window().to();
     if (!from.isBefore(to)) {
-      log.warn("Skip time slicing because window is not forward, from={} to=.", from, to);
+      log.warn("Skip time slicing because window is not forward, from={} to={}", from, to);
       return result;
     }
 
@@ -92,9 +92,18 @@ public class TimeSlicePlanner implements SlicePlanner {
         step = Duration.parse(context.norm().step().trim());
       } catch (Exception e) {
         log.warn(
-            "Invalid step format, fallback to default, stepString=.", context.norm().step(), e);
+            "Invalid step format, fallback to default, stepString={}", context.norm().step(), e);
       }
     }
+
+    log.debug(
+        "Starting TIME slicing for provenance [{}] operation [{}]: window=[{}, {}), step={}, timeField={}",
+        context.norm().provenanceCode(),
+        context.norm().operationCode(),
+        from,
+        to,
+        step,
+        timeField);
 
     Instant cursor = from;
     int index = 1;
@@ -128,7 +137,7 @@ public class TimeSlicePlanner implements SlicePlanner {
       result.add(new SlicePlan(index, signatureHash, specJson, combined));
 
       log.debug(
-          "Time slice prepared, sliceNo={}, from={}, to={}, hash=",
+          "Time slice prepared, sliceNo={}, from={}, to={}, hash={}",
           index,
           cursor,
           upper,
@@ -137,6 +146,13 @@ public class TimeSlicePlanner implements SlicePlanner {
       cursor = upper;
       index++;
     }
+
+    log.debug(
+        "Completed TIME slicing for provenance [{}] operation [{}]: generated {} slices",
+        context.norm().provenanceCode(),
+        context.norm().operationCode(),
+        result.size());
+
     return result;
   }
 

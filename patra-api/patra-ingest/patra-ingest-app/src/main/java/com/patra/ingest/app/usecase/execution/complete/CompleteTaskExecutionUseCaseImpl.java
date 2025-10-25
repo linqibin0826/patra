@@ -110,6 +110,10 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
 
       if (allSucceeded) {
         // 3.1 All succeeded: advance cursor
+        log.debug(
+            "all batches succeeded, attempting cursor advancement taskId={} runId={}",
+            taskId,
+            runId);
         boolean cursorAdvanced = false;
         try {
           cursorAdvanced = cursorAdvancer.advance(context, taskId, runId);
@@ -153,6 +157,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
       taskRunRepository.save(taskRun);
 
       if (executeResult.succeededBatches() > 0) {
+        log.debug("publishing literature ready event taskId={} runId={}", taskId, runId);
         publishLiteratureReadyEvent(taskId, runId, context);
       }
 
@@ -232,6 +237,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
     Long taskId = session.taskId();
     String leaseOwner = session.leaseOwner();
 
+    log.debug("cleaning up execution resources taskId={} owner={}", taskId, leaseOwner);
     try {
       // Stop heartbeat
       session.cleanup();

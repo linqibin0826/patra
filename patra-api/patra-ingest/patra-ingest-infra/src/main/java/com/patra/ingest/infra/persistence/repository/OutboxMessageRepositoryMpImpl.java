@@ -199,7 +199,18 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     }
     List<OutboxMessageDO> entities = mapper.fetchPending(channel, availableTime, limit);
     if (entities == null || entities.isEmpty()) {
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "fetch pending Outbox messages channel={} limit={}, found 0 results", channel, limit);
+      }
       return Collections.emptyList();
+    }
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "fetch pending Outbox messages channel={} limit={}, found {} results",
+          channel,
+          limit,
+          entities.size());
     }
     // Map to domain objects for upstream Relay processing
     return entities.stream().map(converter::toDomain).toList();

@@ -75,6 +75,11 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         context.provenanceCode());
 
     // 1) Plan batches.
+    log.debug(
+        "planning batches taskId={} runId={} provenanceCode={}",
+        taskId,
+        runId,
+        context.provenanceCode());
     BatchPlanner planner = plannerRegistry.get(context.provenanceCode());
     BatchPlan plan = planner.plan(context);
 
@@ -101,6 +106,12 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
     for (Batch batch : plan.batches()) {
       // 2.1 Check lease revocation
+      log.debug(
+          "processing batch [{}/{}] taskId={} runId={}",
+          batch.batchNo(),
+          plan.totalBatches(),
+          taskId,
+          runId);
       if (session.heartbeatHandle() != null && session.heartbeatHandle().isLeaseRevoked()) {
         log.warn(
             "lease revoked, abort batch execution taskId={} runId={} batchNo={}",

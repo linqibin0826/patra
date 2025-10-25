@@ -74,10 +74,19 @@ public class TaskOutboxPublisher
     Objects.requireNonNull(plan, "plan must not be null");
     Objects.requireNonNull(schedule, "schedule must not be null");
 
+    log.debug(
+        "Publishing {} task-ready events to outbox for plan [{}], provenance [{}] operation [{}]",
+        events.size(),
+        plan.getId(),
+        plan.getProvenanceCode(),
+        plan.getOperationCode());
+
     OutboxPublishContext ctx =
         OutboxPublishContext.builder().put("plan", plan).put("schedule", schedule).build();
 
     super.publish(events, ctx);
+
+    log.debug("Successfully published {} task-ready events to outbox", events.size());
   }
 
   /**
@@ -94,10 +103,19 @@ public class TaskOutboxPublisher
     Objects.requireNonNull(plan, "plan must not be null");
     Objects.requireNonNull(schedule, "schedule must not be null");
 
+    log.debug(
+        "Publishing {} retry task events to outbox for plan [{}], provenance [{}] operation [{}]",
+        events.size(),
+        plan.getId(),
+        plan.getProvenanceCode(),
+        plan.getOperationCode());
+
     OutboxPublishContext ctx =
         OutboxPublishContext.builder().put("plan", plan).put("schedule", schedule).build();
 
     super.publishRetry(events, ctx);
+
+    log.debug("Successfully published {} retry task events to outbox", events.size());
   }
 
   // ==================== Extension Point Implementations ====================

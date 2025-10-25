@@ -89,6 +89,17 @@ public class CursorRepositoryMpImpl implements CursorRepository {
                 .eq("cursor_key", cursorKey)
                 .eq("namespace_scope_code", namespaceScopeCode)
                 .eq("namespace_key", namespaceKey));
+    boolean foundResult = found != null;
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "query cursor by provenance={} operation={} key={} scope={} ns={}, found={}",
+          provenanceCode,
+          operationCode,
+          cursorKey,
+          namespaceScopeCode,
+          namespaceKey,
+          foundResult);
+    }
     return Optional.ofNullable(found).map(converter::toDomain);
   }
 
@@ -107,6 +118,14 @@ public class CursorRepositoryMpImpl implements CursorRepository {
         .orderByDesc("updated_at")
         .last("LIMIT 1");
     CursorDO one = mapper.selectOne(wrapper);
-    return Optional.ofNullable(one).map(CursorDO::getNormalizedInstant);
+    Instant watermark = one != null ? one.getNormalizedInstant() : null;
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "query latest global TIME watermark provenance={} operation={}, watermark={}",
+          provenanceCode,
+          operationCode,
+          watermark);
+    }
+    return Optional.ofNullable(watermark);
   }
 }

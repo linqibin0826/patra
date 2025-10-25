@@ -52,10 +52,24 @@ public class OutboxRelayJob {
    */
   @XxlJob("ingestOutboxRelayJob")
   public void execute() {
+    String rawParam = XxlJobHelper.getJobParam();
+    log.debug(
+        "Outbox relay job triggered with jobId [{}], param: {}", XxlJobHelper.getJobId(), rawParam);
+
     Instant now = Instant.now(clock);
     try {
-      OutboxRelayJobParam jobParam = parseParam(XxlJobHelper.getJobParam());
+      OutboxRelayJobParam jobParam = parseParam(rawParam);
+      log.debug(
+          "Parsed outbox relay parameters: channel [{}], batchSize [{}], leaseDuration [{}], maxAttempts [{}], initialBackoff [{}]",
+          jobParam.channel(),
+          jobParam.batchSize(),
+          jobParam.leaseDuration(),
+          jobParam.maxAttempts(),
+          jobParam.initialBackoff());
+
       OutboxRelayCommand command = buildInstruction(jobParam, now);
+      log.debug("Built relay command with leaseOwner [{}] at {}", command.leaseOwner(), now);
+
       RelayReport report = relayUseCase.relay(command);
       handleRelaySuccess(report);
     } catch (OutboxRelayExecutionException ex) {

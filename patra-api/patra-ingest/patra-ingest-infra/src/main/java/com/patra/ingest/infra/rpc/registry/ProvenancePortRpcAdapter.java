@@ -68,7 +68,18 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
 
   /** Calls the registry service to retrieve configuration. */
   private ProvenanceConfigResp callRegistry(ProvenanceCode provenanceCode, String operationType) {
-    return provenanceClient.getConfiguration(provenanceCode, operationType, Instant.now());
+    long startTime = System.currentTimeMillis();
+    ProvenanceConfigResp resp =
+        provenanceClient.getConfiguration(provenanceCode, operationType, Instant.now());
+    long duration = System.currentTimeMillis() - startTime;
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "RPC call to registry for provenance config completed in {}ms, code={}, operationType={}",
+          duration,
+          provenanceCode.getCode(),
+          operationType);
+    }
+    return resp;
   }
 
   /** Converts and validates the registry response. */

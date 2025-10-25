@@ -70,6 +70,8 @@ public class PubmedBatchPlanner implements BatchPlanner {
 
     ObjectNode baseParams = toObjectNode(compiledParams);
 
+    log.debug(
+        "calling PubMed ESearch to prepare plan metadata queryHash={}", safeHash(compiledQuery));
     PlanMetadata metadata =
         searchPort.preparePlanMetadata(compiledQuery, ctx.compiledParams(), ctx.configSnapshot());
     int total = metadata.totalCount();
@@ -80,6 +82,12 @@ public class PubmedBatchPlanner implements BatchPlanner {
 
     int pageSize = resolvePageSize(baseParams, ctx.configSnapshot());
     int maxPages = resolveMaxPages(ctx.configSnapshot());
+    log.debug(
+        "batch planning params pageSize={} maxPages={} total={} queryHash={}",
+        pageSize,
+        maxPages,
+        total,
+        safeHash(compiledQuery));
 
     int pagesNeeded = (int) Math.ceil(total / (double) pageSize);
     if (pagesNeeded > maxPages) {

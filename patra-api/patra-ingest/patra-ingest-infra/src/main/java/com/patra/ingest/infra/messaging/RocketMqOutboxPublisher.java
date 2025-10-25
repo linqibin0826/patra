@@ -50,7 +50,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     if (StringUtils.hasText(message.getMsgId())) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "Skip publishing message id={} channel={} because msgId already present",
+            "skip publishing message id={} channel={} because msgId already present",
             message.getId(),
             message.getChannel());
       }
@@ -62,6 +62,13 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
           Reason.CHANNEL_NOT_ALLOWED, "Channel not allowed by whitelist: " + channel);
     }
     Message<String> outboundMessage = buildMessage(message);
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "publishing Outbox message to RocketMQ channel={} dedupKey={} opType={}",
+          channel,
+          message.getDedupKey(),
+          message.getOpType());
+    }
     try {
       boolean sent = streamBridge.send(channel, outboundMessage);
       if (!sent) {
@@ -70,7 +77,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
       }
       if (log.isDebugEnabled()) {
         log.debug(
-            "Published message id={} channel={} dedupKey={} opType={} partitionKey={}",
+            "published message to RocketMQ id={} channel={} dedupKey={} opType={} partitionKey={}",
             message.getId(),
             channel,
             message.getDedupKey(),

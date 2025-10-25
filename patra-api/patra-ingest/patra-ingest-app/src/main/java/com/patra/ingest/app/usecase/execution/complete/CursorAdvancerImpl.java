@@ -83,6 +83,15 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     String namespaceScope = "GLOBAL";
     String namespaceKey = null;
 
+    log.debug(
+        "advancing cursor provenanceCode={} operationCode={} cursorKey={} newWatermark={} taskId={} runId={}",
+        provenanceCode,
+        operationCode,
+        cursorKey,
+        newWatermark,
+        taskId,
+        runId);
+
     try {
       // 4) Lookup current cursor
       Optional<Cursor> cursorOpt =

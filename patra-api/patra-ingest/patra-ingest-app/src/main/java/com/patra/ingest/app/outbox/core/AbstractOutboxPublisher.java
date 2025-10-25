@@ -354,6 +354,12 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
    */
   private void upsertMessages(List<OutboxMessage> messages, String aggregateType) {
     if (!messages.isEmpty()) {
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "Upserting {} outbox messages for aggregateType [{}] (retry operation)",
+            messages.size(),
+            aggregateType);
+      }
       repository.upsertBatch(messages);
     }
   }
@@ -486,6 +492,15 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   private void saveBatchMessages(List<OutboxMessage> messages, String aggregateType) {
     int batchSize = properties.getBatchSize();
     List<List<OutboxMessage>> batches = partition(messages, batchSize);
+
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Saving {} outbox messages in {} batches for aggregateType [{}], batchSize [{}]",
+          messages.size(),
+          batches.size(),
+          aggregateType,
+          batchSize);
+    }
 
     for (List<OutboxMessage> batch : batches) {
       repository.saveAll(batch);

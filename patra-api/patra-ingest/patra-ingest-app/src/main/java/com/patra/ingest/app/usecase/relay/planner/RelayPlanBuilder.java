@@ -10,6 +10,7 @@ import com.patra.ingest.domain.model.vo.RelayPlan;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>{@code channel == null} indicates that all channels should be processed.
  */
+@Slf4j
 @Component
 public class RelayPlanBuilder {
 
@@ -56,6 +58,18 @@ public class RelayPlanBuilder {
         StrUtil.isNotBlank(instruction.leaseOwner())
             ? instruction.leaseOwner()
             : buildLeaseOwner(triggeredAt);
+
+    if (log.isDebugEnabled()) {
+      String channelDesc = channelKey != null ? channelKey.channel() : "ALL_CHANNELS";
+      log.debug(
+          "Building relay plan for channel [{}] with batchSize [{}], maxAttempts [{}], leaseDuration [{}ms], initialBackoff [{}ms]",
+          channelDesc,
+          batchSize,
+          maxAttempts,
+          leaseDuration.toMillis(),
+          initialBackoff.toMillis());
+    }
+
     return new RelayPlan(
         channelKey,
         triggeredAt,

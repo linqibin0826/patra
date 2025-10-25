@@ -173,6 +173,11 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
    * @return planning context with schedule, config, norm, and window
    */
   private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
+    log.debug(
+        "Preparing planning context for provenance [{}] operation [{}]",
+        request.provenanceCode(),
+        request.operationCode());
+
     ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
     ProvenanceConfigSnapshot configSnapshot =
         patraRegistryPort.fetchConfig(request.provenanceCode(), request.operationCode());
@@ -180,6 +185,12 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
     Instant cursorWatermark =
         lookupCursorWatermark(request.provenanceCode(), request.operationCode());
+    log.debug(
+        "Retrieved cursor watermark for provenance [{}] operation [{}]: {}",
+        request.provenanceCode(),
+        request.operationCode(),
+        cursorWatermark);
+
     PlannerWindow window =
         resolvePlannerWindow(norm, configSnapshot, cursorWatermark, request.triggeredAt());
     logWindowResolution(request.provenanceCode(), request.operationCode(), cursorWatermark, window);
@@ -234,10 +245,25 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
    */
   private PlanAssemblyResult assembleAndValidatePlan(
       PlanningContext context, PlanExpressionDescriptor expressionDescriptor) {
+    log.debug(
+        "Starting plan assembly for provenance [{}] operation [{}]",
+        context.provenanceCode(),
+        context.operationCode());
+
     PlanAssemblyRequest assemblyRequest =
         new PlanAssemblyRequest(
             context.norm(), context.window(), context.configSnapshot(), expressionDescriptor);
-    return assemblePlan(assemblyRequest);
+    PlanAssemblyResult result = assemblePlan(assemblyRequest);
+
+    log.debug(
+        "Plan assembly completed for provenance [{}] operation [{}]: status={}, slices={}, tasks={}",
+        context.provenanceCode(),
+        context.operationCode(),
+        result.status(),
+        result.slices().size(),
+        result.tasks().size());
+
+    return result;
   }
 
   /**
@@ -481,12 +507,29 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       PlanAssemblyResult assembly,
       ScheduleInstanceAggregate schedule,
       PlannerWindow window) {
+    log.debug(
+        "Persisting plan for provenance [{}] operation [{}]: planKey={}",
+        draftPlan.getProvenanceCode(),
+        draftPlan.getOperationCode(),
+        draftPlan.getPlanKey());
+
     PlanAggregate persistedPlan = savePlanSafely(draftPlan);
     List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
     List<TaskAggregate> persistedTasks =
         persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 
+    log.debug(
+        "Persisted plan [{}] with {} slices and {} tasks",
+        persistedPlan.getId(),
+        persistedSlices.size(),
+        persistedTasks.size());
+
     List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
+    log.debug(
+        "Publishing {} task-ready events to outbox for plan [{}]",
+        queuedEvents.size(),
+        persistedPlan.getId());
+
     taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
 
     log.info(

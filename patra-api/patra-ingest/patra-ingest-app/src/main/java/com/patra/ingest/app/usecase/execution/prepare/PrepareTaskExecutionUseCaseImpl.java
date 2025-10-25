@@ -88,6 +88,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
     log.info("prepare task execution start taskId={} idemKey={}", taskId, idempotentKey);
 
     // 1) Idempotency check
+    log.debug("checking idempotency taskId={} idemKey={}", taskId, idempotentKey);
     if (idempotencyChecker.isAlreadySucceeded(taskId, idempotentKey)) {
       throw new TaskAlreadySucceededException(
           "Task already succeeded taskId=" + taskId + " idemKey=" + idempotentKey);
@@ -97,6 +98,11 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
     String leaseOwner = generateLeaseOwner();
 
     // 3) Try acquire lease
+    log.debug(
+        "attempting to acquire lease taskId={} owner={} duration={}s",
+        taskId,
+        leaseOwner,
+        leaseDurationSeconds);
     Duration leaseDuration = Duration.ofSeconds(leaseDurationSeconds);
     boolean acquired = leaseManagementService.tryAcquireLease(taskId, leaseOwner, leaseDuration);
     if (!acquired) {
@@ -128,6 +134,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       log.info("session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
 
       // 6) Load execution context (restore config, compile expressions)
+      log.debug("loading execution context taskId={} runId={}", taskId, runId);
       ExecutionContext context = contextLoader.loadContext(task, runId);
 
       // 7) Mark task/run as RUNNING

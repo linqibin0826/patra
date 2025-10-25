@@ -81,6 +81,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     Long taskId = task.getId();
 
     // 2) Read Slice
+    log.debug("loading execution context for task taskId={} sliceId={}", taskId, task.getSliceId());
     PlanSliceAggregate slice =
         sliceRepository
             .findById(task.getSliceId())
@@ -88,6 +89,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
                 () -> new IllegalArgumentException("Slice not found sliceId=" + task.getSliceId()));
 
     // 3) Read Plan
+    log.debug("loading plan for slice sliceId={} planId={}", slice.getId(), slice.getPlanId());
     PlanAggregate plan =
         planRepository
             .findById(slice.getPlanId())
@@ -103,6 +105,10 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     // The port implementation converts JSON expression snapshot to Expr object and invokes
     // ExprCompiler
     // Use slice's expression snapshot (after plan_slice), not plan's original snapshot
+    log.debug(
+        "compiling expression for task taskId={} provenanceCode={}",
+        taskId,
+        task.getProvenanceCode());
     String exprSnapshotJson = slice.getExprSnapshotJson();
     if (exprSnapshotJson == null || exprSnapshotJson.isBlank()) {
       log.warn(

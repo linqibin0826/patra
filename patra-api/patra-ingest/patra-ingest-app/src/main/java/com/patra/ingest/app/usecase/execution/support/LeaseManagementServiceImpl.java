@@ -61,7 +61,9 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
   public boolean renewLease(Long taskId, String owner, Duration leaseDuration) {
     Instant now = clock.instant();
     int ttlSeconds = (int) leaseDuration.toSeconds();
-    return taskRepository.renewLease(taskId, owner, now, ttlSeconds);
+    boolean renewed = taskRepository.renewLease(taskId, owner, now, ttlSeconds);
+    log.debug("lease renewal result taskId={} owner={} renewed={}", taskId, owner, renewed);
+    return renewed;
   }
 
   /** Releases a lease. */

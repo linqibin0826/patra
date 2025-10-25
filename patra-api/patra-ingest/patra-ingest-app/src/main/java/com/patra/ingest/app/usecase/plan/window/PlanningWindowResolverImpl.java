@@ -161,6 +161,15 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
             cfg == null ? null : cfg.lookbackUnitCode(),
             Duration.ZERO);
 
+    log.debug(
+        "Resolving HARVEST window: harvestWM={}, userFrom={}, userTo={}, nowSafe={}, windowSize={}, lookback={}",
+        harvestWM,
+        userFrom,
+        userTo,
+        nowSafe,
+        windowSize,
+        lookback);
+
     Instant toCandidate = minInstant(userTo, nowSafe);
     if (toCandidate == null) {
       toCandidate = nowSafe; // No user upper bound -> use nowSafe
@@ -170,22 +179,35 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     if (harvestWM != null) {
       Instant lowerByCursor = harvestWM.minus(lookback);
       fromCandidate = maxInstant(lowerByCursor, userFrom);
+      log.debug(
+          "Using harvestWM: lowerByCursor={}, fromCandidate={}", lowerByCursor, fromCandidate);
     } else if (userFrom != null) {
       fromCandidate = userFrom;
+      log.debug("No harvestWM, using userFrom: {}", fromCandidate);
     } else {
       fromCandidate = toCandidate.minus(windowSize); // Default: roll back one window
+      log.debug("No harvestWM or userFrom, rolling back from toCandidate: {}", fromCandidate);
     }
 
     if (isCalendarMode(cfg) && cfg != null) {
       ZoneId zone = resolveZone(timezone);
+      Instant beforeAlign = fromCandidate;
       fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
       toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
+      log.debug(
+          "Calendar alignment applied: from {} -> {}, to {} -> {}",
+          beforeAlign,
+          fromCandidate,
+          toCandidate,
+          toCandidate);
     }
 
     if (!toCandidate.isAfter(fromCandidate)) {
       log.debug("HARVEST window empty after alignment: {} >= {}", fromCandidate, toCandidate);
       return nullWindowIfEmpty(fromCandidate, toCandidate);
     }
+
+    log.debug("Resolved HARVEST window: [{}, {})", fromCandidate, toCandidate);
     return safeWindow(fromCandidate, toCandidate);
   }
 
@@ -207,6 +229,15 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
       String timezone) {
     Duration windowSize = resolveWindowSize(cfg, DEFAULT_WINDOW_SIZE);
 
+    log.debug(
+        "Resolving BACKFILL window: backfillWM={}, forwardWM={}, userFrom={}, userTo={}, nowSafe={}, windowSize={}",
+        backfillWM,
+        forwardWM,
+        userFrom,
+        userTo,
+        nowSafe,
+        windowSize);
+
     // forwardWM as an upperAnchor candidate (e.g., HARVEST watermark). This resolver gets a single
     // cursorWatermark according to the selected mode. To avoid expanding the interface for now,
     // assume the provided watermark corresponds to BACKFILL. If forwardWM is ever needed, it can be
@@ -219,12 +250,16 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     Instant fromCandidate;
     if (backfillWM != null) {
       fromCandidate = maxInstant(backfillWM, userFrom);
+      log.debug("Using backfillWM: fromCandidate={}", fromCandidate);
     } else if (userFrom != null) {
       fromCandidate = userFrom;
+      log.debug("No backfillWM, using userFrom: {}", fromCandidate);
     } else {
       fromCandidate = upperAnchor.minus(windowSize);
+      log.debug("No backfillWM or userFrom, rolling back from upperAnchor: {}", fromCandidate);
     }
     if (fromCandidate.isAfter(upperAnchor)) {
+      log.debug("fromCandidate {} exceeds upperAnchor {}, capping", fromCandidate, upperAnchor);
       fromCandidate = upperAnchor; // prevent crossing the upper bound
     }
 
@@ -232,11 +267,14 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
       ZoneId zone = resolveZone(timezone);
       fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
       upperAnchor = alignFloor(upperAnchor, cfg.calendarAlignTo(), zone);
+      log.debug("Calendar alignment applied: from={}, to={}", fromCandidate, upperAnchor);
     }
     if (!upperAnchor.isAfter(fromCandidate)) {
       log.debug("BACKFILL window empty: {} >= {}", fromCandidate, upperAnchor);
       return nullWindowIfEmpty(fromCandidate, upperAnchor);
     }
+
+    log.debug("Resolved BACKFILL window: [{}, {})", fromCandidate, upperAnchor);
     return safeWindow(fromCandidate, upperAnchor);
   }
 
@@ -262,6 +300,15 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
                 && (userFrom != null || userTo != null))
             || (userFrom != null || userTo != null);
 
+    log.debug(
+        "Resolving UPDATE window: updateWM={}, userFrom={}, userTo={}, nowSafe={}, windowSize={}, timeDriven={}",
+        updateWM,
+        userFrom,
+        userTo,
+        nowSafe,
+        windowSize,
+        timeDriven);
+
     Instant fromCandidate;
     Instant toCandidate;
     if (timeDriven) {
@@ -271,15 +318,19 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
       }
       if (updateWM != null && userFrom != null) {
         fromCandidate = maxInstant(updateWM, userFrom);
+        log.debug("Time-driven with updateWM and userFrom: fromCandidate={}", fromCandidate);
       } else if (updateWM != null) {
         fromCandidate = updateWM;
         if (userFrom != null && userFrom.isAfter(fromCandidate)) {
           fromCandidate = userFrom;
         }
+        log.debug("Time-driven with updateWM: fromCandidate={}", fromCandidate);
       } else if (userFrom != null) {
         fromCandidate = userFrom;
+        log.debug("Time-driven with userFrom only: fromCandidate={}", fromCandidate);
       } else {
         fromCandidate = nowSafe.minus(windowSize);
+        log.debug("Time-driven default: fromCandidate={}", fromCandidate);
       }
     } else { // ID-driven
       if (userFrom != null || userTo != null) {
@@ -288,9 +339,11 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
           toCandidate = nowSafe;
         }
         fromCandidate = userFrom != null ? userFrom : toCandidate.minus(windowSize);
+        log.debug("ID-driven with user bounds: fromCandidate={}", fromCandidate);
       } else {
         toCandidate = nowSafe;
         fromCandidate = nowSafe.minus(windowSize);
+        log.debug("ID-driven default: fromCandidate={}", fromCandidate);
       }
     }
 
@@ -298,11 +351,14 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
       ZoneId zone = resolveZone(timezone);
       fromCandidate = alignFloor(fromCandidate, cfg.calendarAlignTo(), zone);
       toCandidate = alignFloor(toCandidate, cfg.calendarAlignTo(), zone);
+      log.debug("Calendar alignment applied: from={}, to={}", fromCandidate, toCandidate);
     }
     if (!toCandidate.isAfter(fromCandidate)) {
       log.debug("UPDATE window empty: {} >= {}", fromCandidate, toCandidate);
       return nullWindowIfEmpty(fromCandidate, toCandidate);
     }
+
+    log.debug("Resolved UPDATE window: [{}, {})", fromCandidate, toCandidate);
     return safeWindow(fromCandidate, toCandidate);
   }
 

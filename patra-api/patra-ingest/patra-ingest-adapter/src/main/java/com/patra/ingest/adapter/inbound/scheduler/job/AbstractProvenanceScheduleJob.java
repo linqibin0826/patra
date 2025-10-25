@@ -75,7 +75,10 @@ public abstract class AbstractProvenanceScheduleJob {
    * @throws IngestScheduleParameterException when parameters are invalid
    */
   protected PlanIngestionCommand parseJobParam(String paramStr) {
+    log.debug("Parsing job parameters from XXL-Job: {}", paramStr);
+
     if (CharSequenceUtil.isBlank(paramStr)) {
+      log.debug("No parameters provided, using default configuration with step [{}]", DEFAULT_STEP);
       return buildPlanIngestionCommand(ProvenanceScheduleJobParam.empty(), Map.of());
     }
     try {
@@ -87,6 +90,15 @@ public abstract class AbstractProvenanceScheduleJob {
       if (jobParam == null) {
         jobParam = ProvenanceScheduleJobParam.empty();
       }
+      log.debug(
+          "Extracted job parameters: windowFrom [{}], windowTo [{}], priority [{}], step [{}], schedulerLogId [{}], triggeredAt [{}]",
+          jobParam.windowFrom(),
+          jobParam.windowTo(),
+          jobParam.priority(),
+          jobParam.step(),
+          jobParam.schedulerLogId(),
+          jobParam.triggeredAt());
+
       Map<String, Object> triggerParams =
           (rawParams == null || rawParams.isEmpty())
               ? Map.of()
@@ -103,19 +115,31 @@ public abstract class AbstractProvenanceScheduleJob {
     ProvenanceScheduleJobParam nonNullParam =
         param == null ? ProvenanceScheduleJobParam.empty() : param;
     Map<String, Object> nonNullTriggerParams = triggerParams == null ? Map.of() : triggerParams;
-    return new PlanIngestionCommand(
-        getProvenanceCode(),
-        getOperationCode(),
-        resolveStep(nonNullParam.step()),
-        TriggerType.SCHEDULE,
-        Scheduler.XXL,
-        String.valueOf(XxlJobHelper.getJobId()),
-        resolveSchedulerLogId(nonNullParam.schedulerLogId()),
-        parseInstant(nonNullParam.windowFrom(), "windowFrom"),
-        parseInstant(nonNullParam.windowTo(), "windowTo"),
-        resolvePriority(nonNullParam.priority()),
-        resolveTriggeredAt(nonNullParam.triggeredAt()),
-        nonNullTriggerParams);
+    PlanIngestionCommand command =
+        new PlanIngestionCommand(
+            getProvenanceCode(),
+            getOperationCode(),
+            resolveStep(nonNullParam.step()),
+            TriggerType.SCHEDULE,
+            Scheduler.XXL,
+            String.valueOf(XxlJobHelper.getJobId()),
+            resolveSchedulerLogId(nonNullParam.schedulerLogId()),
+            parseInstant(nonNullParam.windowFrom(), "windowFrom"),
+            parseInstant(nonNullParam.windowTo(), "windowTo"),
+            resolvePriority(nonNullParam.priority()),
+            resolveTriggeredAt(nonNullParam.triggeredAt()),
+            nonNullTriggerParams);
+
+    log.debug(
+        "Built PlanIngestionCommand: provenance [{}], operation [{}], step [{}], windowFrom [{}], windowTo [{}], priority [{}]",
+        command.provenanceCode(),
+        command.operationCode(),
+        command.step(),
+        command.windowFrom(),
+        command.windowTo(),
+        command.priority());
+
+    return command;
   }
 
   private String resolveStep(String step) {

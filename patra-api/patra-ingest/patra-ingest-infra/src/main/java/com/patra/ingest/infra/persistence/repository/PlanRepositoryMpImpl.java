@@ -77,6 +77,10 @@ public class PlanRepositoryMpImpl implements PlanRepository {
       return Optional.empty();
     }
     PlanDO entity = planMapper.findByPlanKey(planKey);
+    boolean found = entity != null;
+    if (log.isDebugEnabled()) {
+      log.debug("query plan by planKey={}, found={}", planKey, found);
+    }
     return Optional.ofNullable(entity).map(planConverter::toAggregate);
   }
 
@@ -99,6 +103,10 @@ public class PlanRepositoryMpImpl implements PlanRepository {
       return Optional.empty();
     }
     PlanDO entity = planMapper.selectById(planId);
+    boolean found = entity != null;
+    if (log.isDebugEnabled()) {
+      log.debug("query plan by id={}, found={}", planId, found);
+    }
     return Optional.ofNullable(entity).map(planConverter::toAggregate);
   }
 }

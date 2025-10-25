@@ -87,6 +87,16 @@ public class OutboxRelayExecutor {
       }
       return RelayBatchResult.empty(plan.channel());
     }
+
+    if (log.isDebugEnabled()) {
+      String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
+      log.debug(
+          "Processing relay batch for channel [{}] with {} messages, leaseOwner [{}]",
+          channelDesc,
+          messages.size(),
+          plan.leaseOwner());
+    }
+
     RelayContext context = new RelayContext(plan);
     for (OutboxMessage message : messages) {
       processMessage(message, context);
@@ -103,7 +113,19 @@ public class OutboxRelayExecutor {
   private List<OutboxMessage> fetchMessages(RelayPlan plan) {
     // Null channel means all channels are eligible
     String channel = plan.channel() != null ? plan.channel().channel() : null;
-    return relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
+    List<OutboxMessage> messages =
+        relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
+
+    if (log.isDebugEnabled()) {
+      String channelDesc = channel != null ? channel : "ALL_CHANNELS";
+      log.debug(
+          "Fetched {} pending outbox messages for channel [{}], batchSize limit: {}",
+          messages.size(),
+          channelDesc,
+          plan.batchSize());
+    }
+
+    return messages;
   }
 
   /**
@@ -366,6 +388,18 @@ public class OutboxRelayExecutor {
 
     /** Assemble the final batch result with statistics and domain events. */
     private RelayBatchResult toBatchResult(int totalMessages) {
+      if (log.isDebugEnabled()) {
+        String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
+        log.debug(
+            "Relay batch completed for channel [{}]: {} messages processed, {} published, {} retried, {} failed, {} leaseMissed",
+            channelDesc,
+            totalMessages,
+            published,
+            retried,
+            failed,
+            leaseMissed);
+      }
+
       return new RelayBatchResult(
           plan.channel(), totalMessages, published, retried, failed, leaseMissed, events);
     }
