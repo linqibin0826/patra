@@ -52,12 +52,6 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   @Override
   public ExprSnapshot loadSnapshot(
       ProvenanceCode provenanceCode, String operationType, String endpointName, Instant at) {
-    log.info(
-        "Loading expression snapshot: provenanceCode={}, operationType={}, endpoint={}",
-        provenanceCode.getCode(),
-        operationType,
-        endpointName);
-
     Instant timestamp = atOrNow(at);
     Long provenanceId = resolveProvenanceId(provenanceCode);
 
@@ -72,14 +66,6 @@ public class ExprRepositoryMpImpl implements ExprRepository {
     List<ExprRenderRule> renderRules = loadRenderRules(provenanceId, operationKey, timestamp);
     List<ApiParamMapping> apiParams =
         loadApiParamMappings(provenanceId, operationKey, normalizedEndpoint, timestamp);
-
-    log.info(
-        "Expression snapshot loaded: provenanceCode={}, fields={}, capabilities={}, renderRules={}, apiParams={}",
-        provenanceCode.getCode(),
-        fields.size(),
-        capabilities.size(),
-        renderRules.size(),
-        apiParams.size());
 
     return new ExprSnapshot(fields, capabilities, renderRules, apiParams);
   }

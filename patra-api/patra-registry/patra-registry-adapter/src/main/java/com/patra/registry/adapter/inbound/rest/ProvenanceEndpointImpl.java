@@ -42,8 +42,6 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
 
     List<ProvenanceResp> response = converter.toResp(orchestrator.listProvenances());
 
-    log.debug("Returning {} provenance entries", response.size());
-
     return response;
   }
 
@@ -66,9 +64,6 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
                 () ->
                     new ProvenanceNotFoundException(
                         String.format("Provenance not found for code [%s]", code.getCode())));
-
-    log.debug(
-        "Successfully retrieved provenance [{}] with name [{}]", code.getCode(), response.name());
 
     return response;
   }
@@ -101,8 +96,6 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
                         String.format(
                             "Provenance configuration not found for code [%s] and operationType [%s]",
                             code.getCode(), operationType)));
-
-    log.debug("Successfully loaded configuration for provenance [{}]", code.getCode());
 
     return response;
   }

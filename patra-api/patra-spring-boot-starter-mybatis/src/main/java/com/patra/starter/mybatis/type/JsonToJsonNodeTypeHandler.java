@@ -68,7 +68,8 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
       // configuration consistency.
       json = objectMapper.writeValueAsString(parameter);
     } catch (Exception e) {
-      throw new SQLException("Failed to serialize JsonNode", e);
+      throw new SQLException(
+          "Failed to serialize JsonNode to database column at parameter index " + i, e);
     }
 
     if (jdbcType != null) {

@@ -300,18 +300,20 @@ public class DefaultExprCompiler implements ExprCompiler {
 
   private void logSuccessfulCompile(
       String provenanceCode, String endpointName, String query, Map<String, String> params) {
-    log.info(
-        "Successfully compiled expression for provenance [{}] at endpoint [{}]: queryHash={}, "
-            + "queryLength={}, paramCount={}",
-        provenanceCode,
-        endpointName,
-        hashQuery(query),
-        query.length(),
-        params.size());
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Compiled expression for provenance [{}] at endpoint [{}]: queryHash={}, "
+              + "queryLength={}, paramCount={}",
+          provenanceCode,
+          endpointName,
+          hashQuery(query),
+          query.length(),
+          params.size());
 
-    log.debug(
-        "Compiled parameter details: {}",
-        params.entrySet().stream().map(Object::toString).toList());
+      log.debug(
+          "Compiled parameter details: {}",
+          params.entrySet().stream().map(Object::toString).toList());
+    }
   }
 
   private void recordMetrics(String provenanceCode, String endpointName, long startNanos) {

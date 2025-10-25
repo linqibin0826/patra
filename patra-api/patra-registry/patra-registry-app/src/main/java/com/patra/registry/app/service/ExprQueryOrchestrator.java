@@ -44,34 +44,16 @@ public class ExprQueryOrchestrator {
   public ExprSnapshotQuery loadSnapshot(
       String provenanceCode, String operationType, String endpointName, Instant at) {
     ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
-    log.info(
-        "Loading expression snapshot for provenance [{}] with operationType [{}] and endpoint [{}]",
-        code.getCode(),
-        operationType,
-        endpointName);
-
-    Instant effectiveTime = at != null ? at : Instant.now();
-    log.debug(
-        "Querying expression repository for provenance [{}] at effective time [{}]",
-        code.getCode(),
-        effectiveTime);
 
     ExprSnapshot domainSnapshot =
         exprRepository.loadSnapshot(code, operationType, endpointName, at);
-    log.debug(
-        "Retrieved domain snapshot for provenance [{}]: {} fields, {} capabilities, {} render rules, {} API parameter mappings",
-        code.getCode(),
-        domainSnapshot.fields().size(),
-        domainSnapshot.capabilities().size(),
-        domainSnapshot.renderRules().size(),
-        domainSnapshot.apiParamMappings().size());
-
-    log.debug("Assembling expression snapshot query DTO from domain snapshot");
     ExprSnapshotQuery snapshot = assembler.toQuery(domainSnapshot);
 
     log.info(
-        "Successfully loaded expression snapshot for provenance [{}]: {} fields, {} capabilities, {} render rules, {} API parameter mappings",
+        "Loaded expression snapshot for provenance [{}] operation [{}] endpoint [{}]: {} fields, {} capabilities, {} render rules, {} API params",
         code.getCode(),
+        operationType,
+        endpointName,
         snapshot.fields().size(),
         snapshot.capabilities().size(),
         snapshot.renderRules().size(),

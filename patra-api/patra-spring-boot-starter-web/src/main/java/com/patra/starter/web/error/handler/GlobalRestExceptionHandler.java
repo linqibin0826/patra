@@ -46,7 +46,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, request);
 
-    logExceptionHandled(response);
+    logExceptionHandled(response, ex);
 
     return ResponseEntity.status(response.httpStatus())
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -67,7 +67,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     List<ValidationError> errors = formatAndTruncateValidationErrors(ex);
     response.problemDetail().setProperty(ErrorKeys.ERRORS, errors);
 
-    logValidationExceptionHandled(response, errors);
+    logValidationExceptionHandled(response, errors, ex);
 
     return ResponseEntity.status(response.httpStatus())
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
@@ -112,35 +112,40 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /**
-   * Logs general exception handling with error code, status, and request path.
+   * Logs general exception handling with error code, status, request path, and full stack trace.
    *
    * @param response problem detail response containing error metadata
+   * @param ex the exception that was handled
    */
-  private void logExceptionHandled(ProblemDetailResponse response) {
+  private void logExceptionHandled(ProblemDetailResponse response, Exception ex) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
-    log.info(
-        "Exception handled: error code [{}], HTTP status {}, request path [{}]",
+    log.error(
+        "Exception handled: error code [{}], HTTP status {}, request path [{}], exception={}",
         response.errorResolution().errorCode().code(),
         response.httpStatus().value(),
-        path);
+        path,
+        ex.getClass().getSimpleName(),
+        ex);
   }
 
   /**
-   * Logs validation exception handling with validation error count and metadata.
+   * Logs validation exception handling with validation error count, metadata, and stack trace.
    *
    * @param response problem detail response
    * @param errors validation errors included in response
+   * @param ex the validation exception that was handled
    */
   private void logValidationExceptionHandled(
-      ProblemDetailResponse response, List<ValidationError> errors) {
+      ProblemDetailResponse response, List<ValidationError> errors, Exception ex) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
-    log.info(
+    log.error(
         "Validation exception handled: error code [{}], {} validation errors, "
             + "HTTP status {}, request path [{}]",
         response.errorResolution().errorCode().code(),
         errors.size(),
         response.httpStatus().value(),
-        path);
+        path,
+        ex);
   }
 
   /**

@@ -51,12 +51,11 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
   @Override
   public Optional<Provenance> findProvenanceByCode(ProvenanceCode provenanceCode) {
     String code = provenanceCode.getCode();
-    log.debug("Querying provenance by code [{}] from database", code);
     Optional<Provenance> result = provenanceMapper.selectByCode(code).map(converter::toDomain);
-    log.debug(
-        "Provenance lookup for code [{}] returned: {}",
-        code,
-        result.isPresent() ? "found" : "not found");
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Provenance lookup for code [{}]: {}", code, result.isPresent() ? "found" : "not found");
+    }
     return result;
   }
 
@@ -210,10 +209,12 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
   @Override
   public Optional<ProvenanceConfiguration> loadConfiguration(
       Long provenanceId, String operationType, Instant at) {
-    log.info(
-        "Loading provenance configuration for provenanceId [{}] with operationType [{}]",
-        provenanceId,
-        operationType);
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Loading provenance configuration for provenanceId [{}] with operationType [{}]",
+          provenanceId,
+          operationType);
+    }
 
     Optional<Provenance> provenanceOpt = findProvenanceById(provenanceId);
     if (provenanceOpt.isEmpty()) {
@@ -226,10 +227,12 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
     ProvenanceConfiguration configuration =
         assembleConfiguration(provenance, operationType, timestamp);
 
-    log.info(
-        "Successfully loaded configuration for provenance [{}] with {} configs applied",
-        provenance.code(),
-        countNonNullConfigs(configuration));
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Assembled configuration aggregate for provenance [{}] with {} configs applied",
+          provenance.code(),
+          countNonNullConfigs(configuration));
+    }
     return Optional.of(configuration);
   }
 
@@ -299,19 +302,17 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
       java.util.function.Function<DO, DOMAIN> converter) {
     Instant timestamp = atOrNow(at);
     String operationKey = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
-    log.debug(
-        "Querying {} config from database: provenanceId [{}], operationKey [{}], timestamp [{}]",
-        configName,
-        provenanceId,
-        operationKey,
-        timestamp);
+
     Optional<DOMAIN> result = selector.select(provenanceId, operationKey, timestamp).map(converter);
-    log.debug(
-        "{} config lookup for provenanceId [{}] with operationKey [{}] returned: {}",
-        configName,
-        provenanceId,
-        operationKey,
-        result.isPresent() ? "found" : "not found");
+
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "{} config for provenance [{}] operation [{}]: {}",
+          configName,
+          provenanceId,
+          operationKey,
+          result.isPresent() ? "found" : "not found");
+    }
     return result;
   }
 

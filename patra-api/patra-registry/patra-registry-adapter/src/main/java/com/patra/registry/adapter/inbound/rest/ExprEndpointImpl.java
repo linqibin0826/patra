@@ -49,12 +49,6 @@ public class ExprEndpointImpl implements ExprEndpoint {
     ExprSnapshotQuery snapshot =
         orchestrator.loadSnapshot(provenanceCode, operationType, endpointName, at);
 
-    log.debug(
-        "Loaded expression snapshot with {} capabilities, {} fields for provenance [{}]",
-        snapshot.capabilities().size(),
-        snapshot.fields().size(),
-        provenanceCode);
-
     return converter.toResp(snapshot);
   }
 }

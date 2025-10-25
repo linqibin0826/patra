@@ -186,25 +186,24 @@ public class ProblemDetailBuilder {
     if (forwarded != null && !forwarded.isEmpty()) {
       String path = parseForwardedPath(forwarded);
       if (path != null) {
-        log.debug("Extracted request path from Forwarded header: path={}", path);
         return path;
       }
     }
 
     String forwardedPath = request.getHeader("X-Forwarded-Path");
     if (forwardedPath != null && !forwardedPath.isEmpty()) {
-      log.debug("Extracted request path from X-Forwarded-Path header: path={}", forwardedPath);
       return forwardedPath;
     }
 
     String forwardedUri = request.getHeader("X-Forwarded-Uri");
     if (forwardedUri != null && !forwardedUri.isEmpty()) {
-      log.debug("Extracted request path from X-Forwarded-Uri header: path={}", forwardedUri);
       return forwardedUri;
     }
 
     String requestUri = request.getRequestURI();
-    log.debug("Using direct request URI as path: path={}", requestUri);
+    if (log.isDebugEnabled()) {
+      log.debug("Resolved request path: {}", requestUri);
+    }
     return requestUri;
   }
 

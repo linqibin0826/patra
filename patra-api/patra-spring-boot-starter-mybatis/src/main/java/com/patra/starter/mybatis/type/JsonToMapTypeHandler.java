@@ -55,7 +55,8 @@ public class JsonToMapTypeHandler extends BaseTypeHandler<Map<String, Object>> {
     try {
       json = writer.writeValueAsString(parameter);
     } catch (Exception e) {
-      throw new SQLException("Failed to serialize Map to JSON", e);
+      throw new SQLException(
+          "Failed to serialize Map to JSON for database column at parameter index " + i, e);
     }
     if (jdbcType != null) {
       ps.setObject(i, json, jdbcType.TYPE_CODE);
