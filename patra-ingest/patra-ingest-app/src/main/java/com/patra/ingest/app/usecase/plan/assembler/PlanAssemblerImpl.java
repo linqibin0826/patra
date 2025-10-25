@@ -3,6 +3,8 @@ package com.patra.ingest.app.usecase.plan.assembler;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.patra.common.enums.Priority;
 import com.patra.common.json.JsonNormalizer;
+import com.patra.common.json.JsonNormalizerConfig;
+import com.patra.common.json.JsonNormalizerResult;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.expr.canonical.ExprCanonicalizer;
@@ -81,8 +83,8 @@ public class PlanAssemblerImpl implements PlanAssembler {
    */
   private static final JsonNormalizer TASK_PARAM_NORMALIZER =
       JsonNormalizer.withConfig(
-          JsonNormalizer.Config.builder()
-              .coerceBoolean(JsonNormalizer.Config.CoerceBoolean.NONE)
+          JsonNormalizerConfig.builder()
+              .coerceBoolean(JsonNormalizerConfig.CoerceBoolean.NONE)
               .coerceTime(false)
               .build());
 
@@ -105,7 +107,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
     ProvenanceConfigSnapshot configSnapshot = request.configSnapshot();
 
     SliceStrategy sliceStrategy = determineSliceStrategy(norm, configSnapshot);
-    JsonNormalizer.Result configCanonical = normalizeConfigSnapshot(configSnapshot);
+    JsonNormalizerResult configCanonical = normalizeConfigSnapshot(configSnapshot);
 
     PlanAggregate plan =
         createPlanAggregate(norm, window, planExpression, sliceStrategy, configCanonical);
@@ -137,7 +139,7 @@ public class PlanAssemblerImpl implements PlanAssembler {
       PlannerWindow window,
       PlanExpressionDescriptor planExpression,
       SliceStrategy sliceStrategy,
-      JsonNormalizer.Result configSnapshot) {
+      JsonNormalizerResult configSnapshot) {
     String planKey = buildPlanKey(norm, window);
     String configSnapshotJson = configSnapshot == null ? null : configSnapshot.getCanonicalJson();
     String configSnapshotHash =
@@ -400,20 +402,20 @@ public class PlanAssemblerImpl implements PlanAssembler {
     // TODO does not need to keep the strategy field, there is a strategy field in the plan, and the
     // parameters only need to contain specific configurations,
     //  such as step, etc., values passed by the user or configured in the registry database.
-    JsonNormalizer.Result normalized =
+    JsonNormalizerResult normalized =
         DEFAULT_NORMALIZER.normalize(Map.of("strategy", sliceStrategy.getCode()));
     return normalized.getCanonicalJson();
   }
 
   /** Builds task params JSON: only sliceNo; use custom normalizer to avoid type ambiguity. */
   private String buildTaskParamsJson(int sliceSequence) {
-    JsonNormalizer.Result normalized =
+    JsonNormalizerResult normalized =
         TASK_PARAM_NORMALIZER.normalize(Map.of("sliceNo", sliceSequence));
     return normalized.getCanonicalJson();
   }
 
   /** Canonicalizes config snapshot; returns null when no config (allowed in UPDATE mode). */
-  private JsonNormalizer.Result normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
+  private JsonNormalizerResult normalizeConfigSnapshot(ProvenanceConfigSnapshot snapshot) {
     if (snapshot == null) {
       return null;
     }

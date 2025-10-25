@@ -38,7 +38,7 @@ class JsonNormalizerAdditionalTest {
         new PayloadHolder("sample", new byte[] {1, 2, 3}, Instant.parse("2024-05-01T12:30:15Z"));
     JsonNormalizer normalizer = JsonNormalizer.usingDefault();
 
-    JsonNormalizer.Result result = normalizer.normalize(JsonNodeFactory.instance.pojoNode(holder));
+    JsonNormalizerResult result = normalizer.normalize(JsonNodeFactory.instance.pojoNode(holder));
 
     assertThat(result.getCanonicalJson()).contains("\"payload\":\"AQID\"");
     assertThat(result.getCanonicalJson()).contains("\"createdAt\":1714566615");
@@ -49,7 +49,7 @@ class JsonNormalizerAdditionalTest {
   void normalize_binaryNode_shouldDropEmptyPayload() {
     JsonNormalizer normalizer = JsonNormalizer.usingDefault();
 
-    JsonNormalizer.Result result =
+    JsonNormalizerResult result =
         normalizer.normalize(JsonNodeFactory.instance.binaryNode(new byte[0]));
 
     assertThat(result.getCanonicalValue()).isNull();

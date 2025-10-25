@@ -1,6 +1,7 @@
 package com.patra.ingest.app.usecase.plan.slicer;
 
 import com.patra.common.json.JsonNormalizer;
+import com.patra.common.json.JsonNormalizerResult;
 import com.patra.common.util.HashUtils;
 import com.patra.expr.Expr;
 import com.patra.ingest.app.usecase.plan.slicer.model.SlicePlan;
@@ -62,7 +63,7 @@ public class SingleSlicePlanner implements SlicePlanner {
       }
     }
 
-    JsonNormalizer.Result specNormalized = JsonNormalizer.normalizeDefault(specMap);
+    JsonNormalizerResult specNormalized = JsonNormalizer.normalizeDefault(specMap);
     String specJson = specNormalized.getCanonicalJson();
     String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 

@@ -67,8 +67,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
   }
 
   /** Calls the registry service to retrieve configuration. */
-  private ProvenanceConfigResp callRegistry(
-      ProvenanceCode provenanceCode, String operationType) {
+  private ProvenanceConfigResp callRegistry(ProvenanceCode provenanceCode, String operationType) {
     return provenanceClient.getConfiguration(provenanceCode, operationType, Instant.now());
   }
 
@@ -90,7 +89,8 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
       Exception ex, String code, String operationType) {
     String msg =
         String.format(
-            "Unexpected error when fetching config, code=%s, operationType=%s", code, operationType);
+            "Unexpected error when fetching config, code=%s, operationType=%s",
+            code, operationType);
     log.error(msg, ex);
     return new IngestConfigurationException(code, operationType, msg, ex);
   }
@@ -111,7 +111,8 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
   private IngestConfigurationException createConfigNotFoundException(
       RemoteCallException ex, String code, String operationType) {
     String msg =
-        String.format("Provenance config not found, code=%s, operationType=%s", code, operationType);
+        String.format(
+            "Provenance config not found, code=%s, operationType=%s", code, operationType);
     log.warn(
         "{} (remoteCode={}, status={}, traceId={})",
         msg,

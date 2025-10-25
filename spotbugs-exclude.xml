@@ -263,7 +263,7 @@
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
   </Match>
 
-  <!-- JsonNormalizer.Result: Internal result class, exposing hash material is intentional -->
+  <!-- JsonNormalizerResult: Internal result class, exposing hash material is intentional -->
   <Match>
     <Class name="com.patra.common.json.JsonNormalizer$Result"/>
     <Method name="getHashMaterial"/>
