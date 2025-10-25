@@ -2,6 +2,7 @@
 name: test-writer
 description: Test writing specialist following test pyramid (70% unit, 20% integration, 10% E2E). Writes tests for Domain/App/Infra/Adapter layers with proper mocking and TestContainers setup.
 tools: Read, Write, Edit, Grep, Glob, Bash, Task, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
+color: green
 ---
 
 # Test Writer
