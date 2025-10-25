@@ -35,14 +35,10 @@ public class ProvenanceConfigOrchestrator {
    * @return list of provenance query DTOs
    */
   public List<ProvenanceQuery> listProvenances() {
-    log.info("Listing all available provenances");
-    log.debug("Querying provenance repository for all provenances");
-
     List<ProvenanceQuery> provenances =
         repository.findAllProvenances().stream().map(assembler::toQuery).toList();
 
-    log.debug("Assembling {} provenance domain objects to query DTOs", provenances.size());
-    log.info("Successfully retrieved {} provenances", provenances.size());
+    log.info("Retrieved {} provenance configurations", provenances.size());
     return provenances;
   }
 
@@ -53,19 +49,13 @@ public class ProvenanceConfigOrchestrator {
    * @return optional containing the provenance query DTO if found
    */
   public Optional<ProvenanceQuery> findProvenance(ProvenanceCode provenanceCode) {
-    log.info("Finding provenance by code [{}]", provenanceCode.getCode());
-    log.debug("Querying provenance repository for code [{}]", provenanceCode.getCode());
-
     Optional<ProvenanceQuery> result =
         repository.findProvenanceByCode(provenanceCode).map(assembler::toQuery);
 
     if (result.isPresent()) {
-      log.debug(
-          "Found provenance domain object for code [{}], assembling to query DTO",
-          provenanceCode.getCode());
-      log.info("Successfully found provenance [{}]", provenanceCode.getCode());
+      log.debug("Found provenance configuration for code [{}]", provenanceCode.getCode());
     } else {
-      log.warn("Provenance not found for code [{}]", provenanceCode.getCode());
+      log.warn("Provenance configuration not found for code [{}]", provenanceCode.getCode());
     }
 
     return result;
@@ -85,49 +75,29 @@ public class ProvenanceConfigOrchestrator {
    */
   public Optional<ProvenanceConfigQuery> loadConfiguration(
       ProvenanceCode provenanceCode, String operationType, Instant at) {
-    log.info(
-        "Loading configuration for provenance [{}] with operationType [{}]",
-        provenanceCode.getCode(),
-        operationType);
-
     Instant effectiveTime = at != null ? at : Instant.now();
-    log.debug(
-        "Using effective time [{}] for configuration lookup (at parameter was {})",
-        effectiveTime,
-        at != null ? "provided" : "defaulted to now");
 
-    log.debug("Querying provenance repository for code [{}]", provenanceCode.getCode());
     Optional<ProvenanceConfigQuery> result =
         repository
             .findProvenanceByCode(provenanceCode)
             .flatMap(
-                provenance -> {
-                  log.debug(
-                      "Found provenance with ID [{}], loading configuration with operationType [{}] at [{}]",
-                      provenance.id(),
-                      operationType,
-                      effectiveTime);
-                  return repository
-                      .loadConfiguration(provenance.id(), operationType, effectiveTime)
-                      .map(
-                          config -> {
-                            log.debug(
-                                "Retrieved configuration domain object for provenance [{}], assembling to query DTO",
-                                provenanceCode.getCode());
-                            return assembler.toQuery(config);
-                          });
-                });
+                provenance ->
+                    repository
+                        .loadConfiguration(provenance.id(), operationType, effectiveTime)
+                        .map(assembler::toQuery));
 
     if (result.isPresent()) {
       log.info(
-          "Successfully loaded configuration for provenance [{}] with operationType [{}]",
+          "Loaded configuration for provenance [{}] operation [{}] at [{}]",
           provenanceCode.getCode(),
-          operationType);
+          operationType,
+          effectiveTime);
     } else {
       log.warn(
-          "Configuration not found for provenance [{}] with operationType [{}]",
+          "Configuration not found for provenance [{}] operation [{}] at [{}]",
           provenanceCode.getCode(),
-          operationType);
+          operationType,
+          effectiveTime);
     }
 
     return result;
