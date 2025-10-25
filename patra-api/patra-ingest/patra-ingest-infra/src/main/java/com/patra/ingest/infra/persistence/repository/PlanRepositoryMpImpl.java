@@ -59,8 +59,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
       planMapper.insert(entity);
     } else {
       if (log.isDebugEnabled()) {
-        log.debug(
-            "plan update id={} planKey={}", entity.getId(), entity.getPlanKey());
+        log.debug("plan update id={} planKey={}", entity.getId(), entity.getPlanKey());
       }
       planMapper.updateById(entity);
     }

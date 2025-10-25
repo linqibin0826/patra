@@ -41,8 +41,10 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public List<ProvenanceResp> listProvenances() {
-    log.debug("list provenances");
-    return converter.toResp(appService.listProvenances());
+    log.debug("Listing all available provenances");
+    List<ProvenanceResp> provenances = converter.toResp(appService.listProvenances());
+    log.debug("Retrieved {} provenances", provenances.size());
+    return provenances;
   }
 
   /**
@@ -54,11 +56,14 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
    */
   @Override
   public ProvenanceResp getProvenance(ProvenanceCode code) {
-    log.debug("get provenance code={}", code);
+    log.debug("Retrieving provenance by code [{}]", code.getCode());
     Optional<ProvenanceQuery> result = appService.findProvenance(code);
     return result
         .map(converter::toResp)
-        .orElseThrow(() -> new ProvenanceNotFoundException("Provenance not found: code=" + code));
+        .orElseThrow(
+            () ->
+                new ProvenanceNotFoundException(
+                    String.format("Provenance not found for code [%s]", code.getCode())));
   }
 
   /**
@@ -74,8 +79,8 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   public ProvenanceConfigResp getConfiguration(
       ProvenanceCode code, String operationType, Instant at) {
     log.debug(
-        "get provenance config code={} operationType={} at={}",
-        code,
+        "Retrieving provenance configuration for code [{}] with operationType [{}] at timestamp [{}]",
+        code.getCode(),
         operationType,
         at);
     Optional<ProvenanceConfigQuery> result = appService.loadConfiguration(code, operationType, at);
@@ -84,9 +89,8 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
         .orElseThrow(
             () ->
                 new ProvenanceNotFoundException(
-                    "Provenance configuration not found: code="
-                        + code
-                        + ", operationType="
-                        + operationType));
+                    String.format(
+                        "Provenance configuration not found for code [%s] and operationType [%s]",
+                        code.getCode(), operationType)));
   }
 }

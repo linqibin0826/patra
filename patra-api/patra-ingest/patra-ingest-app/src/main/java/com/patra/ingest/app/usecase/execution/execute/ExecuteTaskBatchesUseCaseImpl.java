@@ -152,10 +152,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
         // fail-fast: abort immediately
         if (failFast) {
-          log.warn(
-              "fail-fast enabled, abort remaining batches taskId={} runId={}",
-              taskId,
-              runId);
+          log.warn("fail-fast enabled, abort remaining batches taskId={} runId={}", taskId, runId);
           break;
         }
       }

@@ -58,10 +58,7 @@ public class ProvenancePortRpcAdapter implements PatraRegistryPort {
           provenanceClient.getConfiguration(provenanceCode, operationType, queryTime);
 
       if (resp == null) {
-        log.warn(
-            "Registry returned empty config, code={}, operationType={}",
-            code,
-            operationType);
+        log.warn("Registry returned empty config, code={}, operationType={}", code, operationType);
         return createMinimalSnapshot(code);
       }
 

@@ -183,10 +183,7 @@ public class PlanningWindowResolverImpl implements PlanningWindowResolver {
     }
 
     if (!toCandidate.isAfter(fromCandidate)) {
-      log.debug(
-          "HARVEST window empty after alignment: {} >= {}",
-          fromCandidate,
-          toCandidate);
+      log.debug("HARVEST window empty after alignment: {} >= {}", fromCandidate, toCandidate);
       return nullWindowIfEmpty(fromCandidate, toCandidate);
     }
     return safeWindow(fromCandidate, toCandidate);

@@ -64,9 +64,14 @@ public class ProvenanceConfigAppService {
    */
   public Optional<ProvenanceConfigQuery> loadConfiguration(
       ProvenanceCode provenanceCode, String operationType, Instant at) {
+    log.debug(
+        "Loading configuration for provenance [{}] with operationType [{}]",
+        provenanceCode.getCode(),
+        operationType);
+
     Optional<Provenance> provenanceOpt = repository.findProvenanceByCode(provenanceCode);
     if (provenanceOpt.isEmpty()) {
-      log.error("Provenance not found: code={}", provenanceCode);
+      log.warn("Provenance not found for code [{}]", provenanceCode.getCode());
       return Optional.empty();
     }
 

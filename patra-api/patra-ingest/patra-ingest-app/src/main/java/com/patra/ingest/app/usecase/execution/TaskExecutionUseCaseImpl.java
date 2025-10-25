@@ -77,9 +77,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
       } catch (PrepareTaskExecutionUseCase.TaskAlreadySucceededException e) {
         // Idempotent skip: already succeeded
         log.warn(
-            "task already succeeded, skip execution taskId={} idemKey={}",
-            taskId,
-            idempotentKey);
+            "task already succeeded, skip execution taskId={} idemKey={}", taskId, idempotentKey);
         return;
 
       } catch (PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException e) {
@@ -103,12 +101,10 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
       // ========== Phase 2: Complete ==========
       completeUseCase.complete(session, context, executeResult);
 
-      log.info(
-          "task execution completed taskId={} runId={}", taskId, session.runId());
+      log.info("task execution completed taskId={} runId={}", taskId, session.runId());
 
     } catch (Exception e) {
-      log.error(
-          "task execution failed taskId={} idemKey={}", taskId, idempotentKey, e);
+      log.error("task execution failed taskId={} idemKey={}", taskId, idempotentKey, e);
 
       // On failure, try to cleanup resources (if session was created)
       if (session != null) {

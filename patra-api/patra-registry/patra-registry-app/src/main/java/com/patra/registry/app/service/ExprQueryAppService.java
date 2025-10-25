@@ -43,8 +43,8 @@ public class ExprQueryAppService {
       String provenanceCode, String operationType, String endpointName, Instant at) {
     ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
     log.debug(
-        "load expr snapshot provenanceCode={} operationType={} endpointName={}",
-        code,
+        "Loading expression snapshot for provenance [{}] with operationType [{}] and endpoint [{}]",
+        code.getCode(),
         operationType,
         endpointName);
     return assembler.toQuery(exprRepository.loadSnapshot(code, operationType, endpointName, at));

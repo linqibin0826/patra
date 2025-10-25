@@ -40,13 +40,20 @@ public class ExprEndpointImpl implements ExprEndpoint {
   public ExprSnapshotResp getSnapshot(
       String provenanceCode, String operationType, String endpointName, Instant at) {
     log.debug(
-        "get expr snapshot provenanceCode={} operationType={} endpointName={} at={}",
+        "Retrieving expression snapshot for provenance [{}] with operationType [{}], endpoint [{}] at timestamp [{}]",
         provenanceCode,
         operationType,
         endpointName,
         at);
     ExprSnapshotQuery snapshot =
         exprQueryAppService.loadSnapshot(provenanceCode, operationType, endpointName, at);
+    log.debug(
+        "Successfully loaded expression snapshot for provenance [{}] with {} fields, {} capabilities, {} render rules, {} API params",
+        provenanceCode,
+        snapshot.fields().size(),
+        snapshot.capabilities().size(),
+        snapshot.renderRules().size(),
+        snapshot.apiParamMappings().size());
     return converter.toResp(snapshot);
   }
 }

@@ -39,9 +39,7 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
    */
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {
-    log.debug(
-        "map exception start exception={} mapping=TRY",
-        exception.getClass().getSimpleName());
+    log.debug("map exception start exception={} mapping=TRY", exception.getClass().getSimpleName());
 
     // Domain validation exceptions
     if (exception instanceof DomainValidationException) {
@@ -67,9 +65,7 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
       return Optional.of(http.CONFLICT());
     }
 
-    log.debug(
-        "map exception miss exception={}",
-        exception.getClass().getSimpleName());
+    log.debug("map exception miss exception={}", exception.getClass().getSimpleName());
     return Optional.empty();
   }
 }

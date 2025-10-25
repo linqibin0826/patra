@@ -92,8 +92,7 @@ public class DateSlicePlanner implements SlicePlanner {
     Instant from = context.window().from();
     Instant to = context.window().to();
     if (!from.isBefore(to)) {
-      log.warn(
-          "Skip date slicing because window is not forward, from={} to={}", from, to);
+      log.warn("Skip date slicing because window is not forward, from={} to={}", from, to);
       return result;
     }
 
@@ -111,9 +110,7 @@ public class DateSlicePlanner implements SlicePlanner {
         }
       } catch (Exception e) {
         log.warn(
-            "Invalid step format, fallback to default, stepString={}",
-            context.norm().step(),
-            e);
+            "Invalid step format, fallback to default, stepString={}", context.norm().step(), e);
       }
     }
 

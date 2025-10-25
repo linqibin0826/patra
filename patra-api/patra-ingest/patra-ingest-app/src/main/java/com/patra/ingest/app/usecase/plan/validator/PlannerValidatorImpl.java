@@ -175,9 +175,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
       }
     }
 
-    log.debug(
-        "Incremental capability validation passed, source={}",
-        triggerNorm.provenanceCode());
+    log.debug("Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
   }
 
   /** Issue warnings when optional window configuration (size/span) is invalid. */
@@ -192,9 +190,7 @@ public class PlannerValidatorImpl implements PlannerValidator {
 
       // Warn when the maximum window span is invalid.
       if (windowOffset.maxWindowSpanSeconds() != null && windowOffset.maxWindowSpanSeconds() <= 0) {
-        log.warn(
-            "invalid max window span configuration: {}",
-            windowOffset.maxWindowSpanSeconds());
+        log.warn("invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
       }
     }
   }

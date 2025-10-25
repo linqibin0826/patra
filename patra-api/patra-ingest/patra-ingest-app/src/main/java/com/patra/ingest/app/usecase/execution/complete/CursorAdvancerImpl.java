@@ -62,8 +62,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
     WindowSpec windowSpec = context.windowSpec();
     if (windowSpec == null) {
-      log.debug(
-          "cursor advance skipped: no window spec taskId={} runId={}", taskId, runId);
+      log.debug("cursor advance skipped: no window spec taskId={} runId={}", taskId, runId);
       return true; // no window spec, skip advancement
     }
 
@@ -186,8 +185,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       case HYBRID -> {
         // Future: extract time component from HYBRID spec
         log.warn(
-            "HYBRID strategy watermark extraction not yet implemented "
-                + "taskId={} runId={}",
+            "HYBRID strategy watermark extraction not yet implemented " + "taskId={} runId={}",
             taskId,
             runId);
         yield null;

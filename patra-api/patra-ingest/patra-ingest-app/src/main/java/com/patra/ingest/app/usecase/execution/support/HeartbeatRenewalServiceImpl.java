@@ -89,8 +89,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                 if (renewed) {
                   consecutiveFailures.set(0); // reset failures
                   if (log.isDebugEnabled()) {
-                    log.debug(
-                        "heartbeat renewed taskId={} owner={}", taskId, leaseOwner);
+                    log.debug("heartbeat renewed taskId={} owner={}", taskId, leaseOwner);
                   }
                 } else {
                   int failures = consecutiveFailures.incrementAndGet();
@@ -105,20 +104,13 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                     boolean valid = leaseManagementService.validateLease(taskId, leaseOwner);
                     if (!valid) {
                       leaseRevoked.set(true);
-                      log.warn(
-                          "lease revoked detected taskId={} owner={}",
-                          taskId,
-                          leaseOwner);
+                      log.warn("lease revoked detected taskId={} owner={}", taskId, leaseOwner);
                       stopped.set(true); // stop heartbeat
                     }
                   }
                 }
               } catch (Exception e) {
-                log.error(
-                    "heartbeat renewal error taskId={} owner={}",
-                    taskId,
-                    leaseOwner,
-                    e);
+                log.error("heartbeat renewal error taskId={} owner={}", taskId, leaseOwner, e);
                 int failures = consecutiveFailures.incrementAndGet();
                 if (failures >= failureThreshold) {
                   leaseRevoked.set(true);
