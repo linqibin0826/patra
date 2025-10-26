@@ -25,6 +25,17 @@ patra:
       max-query-length: 0
       warn-param-count: 0
       max-param-count: 0
+  object-storage:
+    active-provider: minio
+    providers:
+      minio:
+        endpoint: http://localhost:9000
+        access-key: ${MINIO_ACCESS_KEY:minioadmin}
+        secret-key: ${MINIO_SECRET_KEY:minioadmin}
+        bucket: dev-ingest
+    retry:
+      max-attempts: 3
+      wait-duration: 1000
 
 logging:
   level:

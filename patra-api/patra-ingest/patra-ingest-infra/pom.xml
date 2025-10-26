@@ -60,6 +60,16 @@
         </dependency>
 
         <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-spring-boot-starter-object-storage</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-storage-api</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-stream-rocketmq</artifactId>
         </dependency>

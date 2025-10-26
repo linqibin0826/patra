@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.papertrace</groupId>
+        <artifactId>patra-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../patra-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>patra-storage</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>Papertrace Storage</name>
+    <description>Object storage metadata microservice modules</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-storage-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-storage-domain</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-storage-app</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-storage-infra</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-storage-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <modules>
+        <module>patra-storage-boot</module>
+        <module>patra-storage-api</module>
+        <module>patra-storage-domain</module>
+        <module>patra-storage-app</module>
+        <module>patra-storage-infra</module>
+        <module>patra-storage-adapter</module>
+    </modules>
+</project>

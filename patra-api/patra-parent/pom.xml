@@ -30,6 +30,7 @@
         <okio.version>3.6.0</okio.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <skywalking.version>9.5.0</skywalking.version>
+        <aws.sdk.version>2.25.36</aws.sdk.version>
         <feign.version>13.1</feign.version>
 
         <maven.compiler.release>${java.version}</maven.compiler.release>
@@ -121,6 +122,14 @@
                 <scope>import</scope>
             </dependency>
 
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
 
             <dependency>
                 <groupId>com.baomidou</groupId>
@@ -185,6 +194,11 @@
             <dependency>
                 <groupId>com.papertrace</groupId>
                 <artifactId>patra-spring-boot-starter-web</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-spring-boot-starter-object-storage</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -255,6 +269,12 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-storage-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
 
             <dependency>
                 <groupId>com.papertrace</groupId>
@@ -266,6 +286,18 @@
                 <groupId>com.papertrace</groupId>
                 <artifactId>patra-catalog-api</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.77</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.errorprone</groupId>
+                <artifactId>error_prone_annotations</artifactId>
+                <version>2.14.0</version>
             </dependency>
 
         </dependencies>
