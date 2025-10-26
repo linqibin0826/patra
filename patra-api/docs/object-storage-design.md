@@ -23,8 +23,7 @@
 12. [故障处理与降级](#12-故障处理与降级)
 13. [测试策略](#13-测试策略)
 14. [扩展性设计](#14-扩展性设计)
-15. [迁移方案](#15-迁移方案)
-16. [FAQ](#16-faq)
+15. [FAQ](#15-faq)
 
 ---
 
@@ -279,19 +278,213 @@ public class S3StorageProvider implements ObjectStorageProvider {
 2. **最终一致性**: 通过补偿机制最终保证一致性
 3. **降级友好**: patra-storage 不可用时仍可上传文件
 
-#### 补偿机制（可选）
+#### 补偿机制（必须实现）
+
+利用项目统一的 Outbox 表实现最终一致性。参考 `patra-ingest` 的 Outbox 实现。
+
+**关键设计要点**：
+1. 使用 `patra_ingest.ing_outbox_message` 表（已存在）
+2. 元数据记录失败时，保存到 Outbox 由定时任务重试
+3. 使用 `channel` + `dedupKey` 确保幂等性
+
+**实现示例**（参考 patra-ingest 的 OutboxMessage 实体）：
 
 ```java
+/**
+ * 记录元数据（业务协调逻辑）
+ */
 private void recordMetadata(UploadResult result, PublishContext context) {
+    UploadRecordRequest request = buildUploadRecordRequest(result, context);
+
     try {
         storageClient.recordUpload(request);
+        log.info("Metadata recorded successfully for storageKey={}", result.getStorageKey());
+
+    } catch (FeignException e) {
+        handleMetadataRecordFailure(e, request, context);
+
+    } catch (TimeoutException | ReadTimeoutException e) {
+        log.warn("Metadata recording timeout, saving to Outbox for retry");
+        saveToOutbox(request, context);
+
     } catch (Exception e) {
-        log.warn("Metadata recording failed, will retry later");
-        // 保存到本地 Outbox 表，定时任务重试
-        outboxRepository.save(createMetadataRecordEvent(result, context));
+        log.error("Unexpected error recording metadata, saving to Outbox", e);
+        saveToOutbox(request, context);
+    }
+}
+
+/**
+ * 处理元数据记录失败（区分不同错误类型）
+ */
+private void handleMetadataRecordFailure(
+    FeignException e,
+    UploadRecordRequest request,
+    PublishContext context) {
+
+    if (e.status() >= 500 || e.status() == 503) {
+        // 服务端错误或服务不可用，降级处理
+        log.warn("patra-storage service unavailable (HTTP {}), saving to Outbox for retry",
+            e.status());
+        saveToOutbox(request, context);
+
+    } else if (e.status() >= 400 && e.status() < 500) {
+        // 客户端错误，可能是数据问题，需要告警（不重试）
+        log.error("Invalid metadata record request (HTTP {}), requires investigation. Request: {}",
+            e.status(), request, e);
+
+    } else {
+        log.error("Unexpected Feign error recording metadata", e);
+        saveToOutbox(request, context);
+    }
+}
+
+/**
+ * 保存元数据记录事件到 Outbox 表，由定时任务重试
+ *
+ * 使用 patra-ingest 的 OutboxMessage 实体（参考 ing_outbox_message 表结构）
+ */
+private void saveToOutbox(UploadRecordRequest request, PublishContext context) {
+    try {
+        // 构建 Outbox 消息（基于实际的 OutboxMessage 实体）
+        OutboxMessage message = OutboxMessage.builder()
+            .aggregateType("TASK_RUN")  // 关联到 TaskRun
+            .aggregateId(context.runId())  // 使用 runId 作为聚合 ID
+            .channel("storage.metadata.internal")  // 内部重试 channel
+            .opType("METADATA_RECORD")
+            .partitionKey(context.provenanceCode())  // 按来源分区
+            .dedupKey(generateDedupKey(request))  // 幂等键
+            .payloadJson(JsonUtil.toJson(request))  // 序列化请求
+            .headersJson(buildHeaders(context))
+            .notBefore(null)  // 立即可重试
+            .statusCode("PENDING")
+            .retryCount(0)
+            .build();
+
+        outboxMessageRepository.saveOrUpdate(message);
+
+        log.info("Metadata record event saved to Outbox: runId={}, storageKey={}, dedupKey={}",
+            context.runId(), request.getStorageKey(), message.getDedupKey());
+
+    } catch (Exception e) {
+        // Outbox 保存失败，记录严重告警（需要人工介入）
+        log.error("CRITICAL: Failed to save to Outbox, metadata may be lost! " +
+            "storageKey={}, runId={}", request.getStorageKey(), context.runId(), e);
+    }
+}
+
+/**
+ * 生成幂等键：确保同一文件的元数据记录只保存一次
+ */
+private String generateDedupKey(UploadRecordRequest request) {
+    return DigestUtils.sha256Hex(request.getStorageKey() + ":" + request.getFileSize());
+}
+
+private String buildHeaders(PublishContext context) {
+    Map<String, Object> headers = Map.of(
+        "provenanceCode", context.provenanceCode(),
+        "batchNo", context.batchNo(),
+        "traceId", MDC.get("traceId")
+    );
+    return JsonUtil.toJson(headers);
+}
+```
+
+**Outbox 重试任务**（参考 patra-ingest 的 OutboxRelayOrchestrator）:
+
+```java
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class MetadataRecordRetryJob {
+
+    private final OutboxMessageRepository outboxMessageRepository;
+    private final StorageClient storageClient;
+
+    private static final String METADATA_CHANNEL = "storage.metadata.internal";
+    private static final int MAX_RETRIES = 5;
+
+    /**
+     * 每 5 分钟处理一次待重试的 Outbox 消息
+     */
+    @Scheduled(fixedDelay = 300000) // 5 minutes
+    public void retryPendingMetadataRecords() {
+        // 查询待重试的消息（实际实现需要查询条件，此处简化）
+        List<OutboxMessage> pendingMessages = outboxMessageRepository
+            .findPendingMessagesByChannel(METADATA_CHANNEL, 100);
+
+        if (pendingMessages.isEmpty()) {
+            return;
+        }
+
+        log.info("Processing {} pending metadata record messages from Outbox",
+            pendingMessages.size());
+
+        for (OutboxMessage message : pendingMessages) {
+            try {
+                // 解析 payload
+                UploadRecordRequest request = JsonUtil.fromJson(
+                    message.getPayloadJson(),
+                    UploadRecordRequest.class
+                );
+
+                // 重试调用 patra-storage
+                storageClient.recordUpload(request);
+
+                // 成功，标记为已完成
+                OutboxMessage completed = message.toBuilder()
+                    .statusCode("PUBLISHED")
+                    .build();
+                outboxMessageRepository.saveOrUpdate(completed);
+
+                log.info("Metadata record retry succeeded: messageId={}, storageKey={}",
+                    message.getId(), request.getStorageKey());
+
+            } catch (Exception e) {
+                // 重试失败，增加重试次数
+                int newRetryCount = message.getRetryCount() + 1;
+
+                if (newRetryCount >= MAX_RETRIES) {
+                    // 达到最大重试次数，标记为失败
+                    OutboxMessage failed = message.toBuilder()
+                        .statusCode("FAILED")
+                        .errorCode("MAX_RETRIES_EXCEEDED")
+                        .errorMsg(e.getMessage())
+                        .retryCount(newRetryCount)
+                        .build();
+                    outboxMessageRepository.saveOrUpdate(failed);
+
+                    log.error("Metadata record retry exhausted (max retries={}): messageId={}",
+                        MAX_RETRIES, message.getId(), e);
+
+                } else {
+                    // 更新重试次数，下次继续重试
+                    OutboxMessage retry = message.toBuilder()
+                        .retryCount(newRetryCount)
+                        .nextRetryAt(calculateNextRetryTime(newRetryCount))
+                        .build();
+                    outboxMessageRepository.saveOrUpdate(retry);
+
+                    log.warn("Metadata record retry failed (attempt {}/{}): messageId={}",
+                        newRetryCount, MAX_RETRIES, message.getId(), e);
+                }
+            }
+        }
+    }
+
+    /**
+     * 计算下次重试时间（指数退避）
+     */
+    private Instant calculateNextRetryTime(int retryCount) {
+        long delaySeconds = (long) Math.pow(2, retryCount) * 60; // 2^n 分钟
+        return Instant.now().plusSeconds(delaySeconds);
     }
 }
 ```
+
+**说明**：
+- 实际实现需添加 `findPendingMessagesByChannel()` 方法到 Repository
+- Outbox Relay 可以复用 patra-ingest 的现有基础设施
+- 使用 `channel` + `dedupKey` 确保同一元数据记录只处理一次
 
 ---
 
@@ -578,11 +771,17 @@ public class FileMetadata {
     private Instant expiresAt;
     private Instant deletedAt;
 
-    // 审计字段
+    // Audit fields (标准审计字段)
+    private String recordRemarks;       // JSON string (变更日志)
+    private Long version;               // 乐观锁版本号
+    private byte[] ipAddress;           // 请求者IP (binary, supports IPv4/IPv6)
     private Instant createdAt;
-    private String createdBy;
+    private Long createdBy;
+    private String createdByName;
     private Instant updatedAt;
-    private String updatedBy;
+    private Long updatedBy;
+    private String updatedByName;
+    private Boolean deleted;            // 软删除标记 (0=active, 1=deleted)
 
     /**
      * 工厂方法：创建新的文件元数据
@@ -602,7 +801,11 @@ public class FileMetadata {
         metadata.provider = provider;
         metadata.status = FileStatus.ACTIVE;
         metadata.uploadedAt = Instant.now();
+
+        // 初始化标准审计字段
+        metadata.version = 0L;
         metadata.createdAt = Instant.now();
+        metadata.deleted = false;
 
         return metadata;
     }
@@ -610,14 +813,16 @@ public class FileMetadata {
     /**
      * 标记为已删除（软删除）
      */
-    public void markAsDeleted(String operator) {
+    public void markAsDeleted(Long operatorId, String operatorName) {
         if (this.status == FileStatus.DELETED) {
             throw new IllegalStateException("File already deleted");
         }
 
         this.status = FileStatus.DELETED;
         this.deletedAt = Instant.now();
-        this.updatedBy = operator;
+        this.deleted = true;               // 标记软删除
+        this.updatedBy = operatorId;
+        this.updatedByName = operatorName;
         this.updatedAt = Instant.now();
     }
 
@@ -682,6 +887,10 @@ public record BusinessContext(
         if (serviceName == null || serviceName.isBlank()) {
             throw new IllegalArgumentException("Service name cannot be empty");
         }
+        // 防御性复制，确保不可变性
+        correlationData = correlationData == null
+            ? Map.of()
+            : Map.copyOf(correlationData);
     }
 }
 ```
@@ -736,8 +945,8 @@ public class RecordUploadOrchestrator {
 ┌─────────────────────────────────────┐
 │ storage_file_metadata               │
 ├─────────────────────────────────────┤
-│ PK: id (BIGINT)                     │
-│ UK: storage_key (VARCHAR 512)       │
+│ PK: id (BIGINT UNSIGNED)            │
+│     storage_key (VARCHAR 512)       │
 │     bucket_name (VARCHAR 128)       │
 │     object_key (VARCHAR 512)        │
 │     file_size (BIGINT)              │
@@ -753,16 +962,29 @@ public class RecordUploadOrchestrator {
 │     uploaded_at (DATETIME)          │
 │     expires_at (DATETIME)           │
 │     deleted_at (DATETIME)           │
-│     created_at (DATETIME)           │
-│     created_by (VARCHAR 64)         │
-│     updated_at (DATETIME)           │
-│     updated_by (VARCHAR 64)         │
+│                                     │
+│ -- Audit fields (标准审计字段)      │
+│     record_remarks (JSON)           │
+│     version (BIGINT UNSIGNED)       │
+│     ip_address (VARBINARY 16)       │
+│     created_at (TIMESTAMP(6))       │
+│     created_by (BIGINT UNSIGNED)    │
+│     created_by_name (VARCHAR 100)   │
+│     updated_at (TIMESTAMP(6))       │
+│     updated_by (BIGINT UNSIGNED)    │
+│     updated_by_name (VARCHAR 100)   │
+│     deleted (TINYINT(1))            │
 ├─────────────────────────────────────┤
+│ IDX: idx_storage_key_uploaded       │
 │ IDX: idx_service_business           │
 │ IDX: idx_uploaded_at                │
 │ IDX: idx_expires_at                 │
 │ IDX: idx_file_status                │
 └─────────────────────────────────────┘
+
+注意：storage_key 不使用 UNIQUE 约束，允许同一文件多次上传
+（用于重试失败的批次）。通过 idx_storage_key_uploaded 索引
+可以按时间查询同一文件的所有上传记录。
 ```
 
 ### 6.2 索引策略
@@ -770,15 +992,73 @@ public class RecordUploadOrchestrator {
 | 索引名 | 列 | 类型 | 用途 |
 |-------|-----|------|------|
 | PRIMARY | id | 主键 | 唯一标识 |
-| UNIQUE | storage_key | 唯一索引 | 防止重复记录 |
+| idx_storage_key_uploaded | (storage_key, uploaded_at) | 组合索引 | 查询同一文件的上传历史 |
 | idx_service_business | (service_name, business_type, business_id) | 组合索引 | 按业务上下文查询 |
 | idx_uploaded_at | uploaded_at | 普通索引 | 按时间范围查询 |
 | idx_expires_at | expires_at | 普通索引 | 查询过期文件 |
 | idx_file_status | file_status | 普通索引 | 按状态筛选 |
 
-### 6.3 分区策略（可选，未来扩展）
+### 6.3 Outbox 表（patra_ingest 数据库）
 
-当数据量超过 1000万 行时，可考虑按时间分区：
+元数据记录失败时，使用 `patra_ingest` 数据库中已存在的 `ing_outbox_message` 表实现最终一致性。
+
+**说明**：该表已在 `patra-ingest-infra/src/main/resources/db/migration/V0.1.0__init_ingest_schema.sql` 中定义，无需额外创建。
+
+```sql
+-- 已存在于 patra_ingest 数据库
+CREATE TABLE IF NOT EXISTS `ing_outbox_message`
+(
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · OutboxID',
+    `aggregate_type`   VARCHAR(32)     NOT NULL COMMENT 'Aggregate type: TASK_RUN/PLAN/...',
+    `aggregate_id`     BIGINT UNSIGNED NOT NULL COMMENT 'Aggregate root ID',
+    `channel`          VARCHAR(64)     NOT NULL COMMENT 'Logical channel (e.g. storage.metadata.internal)',
+    `op_type`          VARCHAR(32)     NOT NULL COMMENT 'Operation type: METADATA_RECORD/...',
+    `partition_key`    VARCHAR(128)    NOT NULL COMMENT 'Partitioning key (e.g. provenance code)',
+    `dedup_key`        VARCHAR(128)    NOT NULL COMMENT 'Idempotency key (channel, dedup_key) unique',
+    `payload_json`     JSON            NOT NULL COMMENT 'Payload (JSON): UploadRecordRequest',
+    `headers_json`     JSON            NULL COMMENT 'Extension headers (JSON)',
+    `not_before`       TIMESTAMP(6)    NULL COMMENT 'Earliest publishable time (UTC)',
+
+    `status_code`      VARCHAR(16)     NOT NULL DEFAULT 'PENDING',
+    `retry_count`      INT UNSIGNED    NOT NULL DEFAULT 0,
+    `next_retry_at`    TIMESTAMP(6)    NULL,
+    `error_code`       VARCHAR(64)     NULL,
+    `error_msg`        VARCHAR(512)    NULL,
+
+    `pub_lease_owner`  VARCHAR(128)    NULL,
+    `pub_leased_until` TIMESTAMP(6)    NULL,
+    `msg_id`           VARCHAR(128)    NULL,
+
+    -- Audit fields (标准审计字段)
+    `record_remarks`    JSON            NULL COMMENT 'JSON array, remarks/change log',
+    `version`           BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
+    `ip_address`        VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
+    `created_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
+    `created_by`        BIGINT UNSIGNED NULL COMMENT 'Creator ID',
+    `created_by_name`   VARCHAR(100)    NULL COMMENT 'Creator name',
+    `updated_at`        TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
+    `updated_by`        BIGINT UNSIGNED NULL COMMENT 'Updater ID',
+    `updated_by_name`   VARCHAR(100)    NULL COMMENT 'Updater name',
+    `deleted`           TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_outbox_channel_dedup` (`channel`, `dedup_key`),
+    -- 其他索引省略
+) ENGINE = InnoDB COMMENT ='Outbox: Generic outbound message table';
+```
+
+**使用场景**（元数据记录失败时）：
+- `aggregate_type = "TASK_RUN"`
+- `aggregate_id = context.runId()`  （Long 类型）
+- `channel = "storage.metadata.internal"`
+- `op_type = "METADATA_RECORD"`
+- `partition_key = context.provenanceCode()`
+- `dedup_key = SHA256(storageKey + fileSize)`
+- `payload_json = JSON.stringify(UploadRecordRequest)`
+
+### 6.4 分区策略（可选，未来扩展）
+
+当 `storage_file_metadata` 表数据量超过 1000万 行时，可考虑按时间分区：
 
 ```sql
 ALTER TABLE storage_file_metadata
@@ -864,8 +1144,18 @@ PARTITION BY RANGE (YEAR(uploaded_at)) (
   "fileStatus": "ACTIVE",
   "uploadedAt": "2025-01-26T10:30:00Z",
   "expiresAt": "2025-12-31T23:59:59Z",
+
+  // Audit fields (标准审计字段)
+  "recordRemarks": [{"time":"2025-01-26 10:30:00","by":"System","note":"Initial upload"}],
+  "version": 0,
+  "ipAddress": "192.168.1.100",
   "createdAt": "2025-01-26T10:30:00Z",
-  "createdBy": "system"
+  "createdBy": 1,
+  "createdByName": "system",
+  "updatedAt": "2025-01-26T10:30:00Z",
+  "updatedBy": 1,
+  "updatedByName": "system",
+  "deleted": false
 }
 ```
 
@@ -1493,22 +1783,24 @@ class FileMetadataTest {
         FileMetadata metadata = createActiveMetadata();
 
         // When
-        metadata.markAsDeleted("operator");
+        metadata.markAsDeleted(1001L, "John Doe");
 
         // Then
         assertThat(metadata.getStatus()).isEqualTo(FileStatus.DELETED);
         assertThat(metadata.getDeletedAt()).isNotNull();
-        assertThat(metadata.getUpdatedBy()).isEqualTo("operator");
+        assertThat(metadata.getDeleted()).isTrue();
+        assertThat(metadata.getUpdatedBy()).isEqualTo(1001L);
+        assertThat(metadata.getUpdatedByName()).isEqualTo("John Doe");
     }
 
     @Test
     void markAsDeleted_should_throw_if_already_deleted() {
         // Given
         FileMetadata metadata = createActiveMetadata();
-        metadata.markAsDeleted("operator");
+        metadata.markAsDeleted(1001L, "John Doe");
 
         // When/Then
-        assertThatThrownBy(() -> metadata.markAsDeleted("operator"))
+        assertThatThrownBy(() -> metadata.markAsDeleted(1001L, "John Doe"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("File already deleted");
     }
@@ -1761,127 +2053,9 @@ public class UploadRecordRequest {
 }
 ```
 
-### 14.3 支持多租户
-
-当需要支持多租户时：
-
-1. **数据隔离**: 在 correlation_data 中添加 tenantId
-2. **查询过滤**: Repository 自动添加 tenantId 过滤
-3. **权限控制**: 只能查询本租户的文件
-
-```java
-@Repository
-public class FileMetadataRepositoryImpl implements FileMetadataRepository {
-
-    @Override
-    public List<FileMetadata> findByBusiness(String service, String type, String id) {
-        String tenantId = TenantContext.getCurrentTenantId();
-
-        return baseMapper.selectList(
-            new LambdaQueryWrapper<FileMetadataDO>()
-                .eq(FileMetadataDO::getServiceName, service)
-                .eq(FileMetadataDO::getBusinessType, type)
-                .eq(FileMetadataDO::getBusinessId, id)
-                .apply("JSON_EXTRACT(correlation_data, '$.tenantId') = {0}", tenantId)
-        );
-    }
-}
-```
-
 ---
 
-## 15. 迁移方案
-
-### 15.1 迁移策略
-
-假设现有系统已有文件存储实现（如存储在本地文件系统），迁移到新系统的步骤：
-
-#### 15.1.1 Phase 1: 双写（1-2 周）
-
-```java
-public PublishResult publish(List<StandardLiterature> literature, PublishContext context) {
-    byte[] data = serialize(literature);
-
-    // 1. 写入旧系统（保留）
-    String oldPath = legacyFileStorage.save(data, context);
-
-    // 2. 写入新系统（对象存储）
-    UploadResult newResult = storageTemplate.upload(bucket, key, new ByteArrayInputStream(data), metadata);
-
-    // 3. 记录元数据
-    storageClient.recordUpload(...);
-
-    return PublishResult.builder()
-        .storageKey(newResult.getStorageKey())  // 返回新系统的 key
-        .publishedCount(literature.size())
-        .build();
-}
-```
-
-#### 15.1.2 Phase 2: 灰度验证（1 周）
-
-- 10% 流量：读取新系统
-- 90% 流量：读取旧系统
-- 对比数据一致性
-
-#### 15.1.3 Phase 3: 全量切换（1 天）
-
-- 100% 流量：读取新系统
-- 停止写入旧系统
-- 保留旧数据 3 个月后删除
-
-### 15.2 数据回填
-
-对于历史数据，编写迁移脚本：
-
-```java
-@Component
-@Slf4j
-public class DataMigrationJob {
-
-    @Autowired
-    private LegacyFileStorage legacyStorage;
-
-    @Autowired
-    private ObjectStorageTemplate storageTemplate;
-
-    @Autowired
-    private StorageClient storageClient;
-
-    @Scheduled(cron = "0 0 2 * * ?")  // 每天凌晨 2 点
-    public void migrateHistoricalData() {
-        List<LegacyFile> files = legacyStorage.findUnmigrated(1000);
-
-        for (LegacyFile file : files) {
-            try {
-                // 1. 上传到对象存储
-                byte[] data = legacyStorage.readBytes(file.getPath());
-                UploadResult result = storageTemplate.upload(
-                    bucket,
-                    generateKey(file),
-                    new ByteArrayInputStream(data),
-                    buildMetadata(file)
-                );
-
-                // 2. 记录元数据
-                storageClient.recordUpload(buildRequest(result, file));
-
-                // 3. 标记为已迁移
-                legacyStorage.markAsMigrated(file.getId());
-
-                log.info("Migrated file: {}", file.getId());
-
-            } catch (Exception e) {
-                log.error("Migration failed for file: {}", file.getId(), e);
-            }
-        }
-    }
-}
-```
-
----
-
-## 16. FAQ
+## 15. FAQ
 
 ### Q1: 为什么 Starter 不依赖 patra-storage-api？
 

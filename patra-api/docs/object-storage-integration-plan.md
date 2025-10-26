@@ -528,7 +528,7 @@ CREATE TABLE storage_file_metadata (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
 
     -- 存储标识
-    storage_key VARCHAR(512) NOT NULL UNIQUE COMMENT '完整存储键（bucket/key）',
+    storage_key VARCHAR(512) NOT NULL COMMENT '完整存储键（bucket/key），允许重复以支持重试',
     bucket_name VARCHAR(128) NOT NULL,
     object_key VARCHAR(512) NOT NULL,
 
@@ -557,13 +557,20 @@ CREATE TABLE storage_file_metadata (
     expires_at DATETIME COMMENT '过期时间',
     deleted_at DATETIME COMMENT '删除时间（软删除）',
 
-    -- 审计字段（统一标准）
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(64),
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    updated_by VARCHAR(64),
+    -- Audit fields (标准审计字段)
+    record_remarks JSON NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
+    version BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
+    ip_address VARBINARY(16) NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
+    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
+    created_by BIGINT UNSIGNED NULL COMMENT 'Creator ID',
+    created_by_name VARCHAR(100) NULL COMMENT 'Creator name',
+    updated_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
+    updated_by BIGINT UNSIGNED NULL COMMENT 'Updater ID',
+    updated_by_name VARCHAR(100) NULL COMMENT 'Updater name',
+    deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
 
     -- 索引
+    INDEX idx_storage_key_uploaded(storage_key, uploaded_at) COMMENT '查询同一文件的上传历史',
     INDEX idx_service_business(service_name, business_type, business_id),
     INDEX idx_uploaded_at(uploaded_at),
     INDEX idx_expires_at(expires_at),
@@ -593,6 +600,11 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
   @Value("${patra.ingest.storage.provider:MINIO}")
   private String providerType;
 
+  @Value("${patra.ingest.storage.max-file-size:524288000}")  // 默认 500MB
+  private long maxFileSize;
+
+  private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("application/json");
+
   @Override
   public PublishResult publish(List<StandardLiterature> literature, PublishContext context) {
     try {
@@ -601,6 +613,10 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
           .map(this::toDto)
           .collect(Collectors.toList());
       byte[] serialized = objectMapper.writeValueAsBytes(payload);
+
+      // 2. 输入验证
+      validateFileSize(serialized.length, context);
+      validateContentType("application/json");
 
       // 2. 生成存储键
       String objectKey = generateStorageKey(context);
@@ -639,40 +655,117 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
    * 记录元数据（业务协调逻辑）
    */
   private void recordMetadata(UploadResult uploadResult, PublishContext context) {
-    try {
-      UploadRecordRequest recordRequest = UploadRecordRequest.builder()
-          .storageKey(uploadResult.getStorageKey())
-          .bucketName(uploadResult.getBucketName())
-          .objectKey(uploadResult.getObjectKey())
-          .fileSize(uploadResult.getFileSize())
-          .contentType("application/json")
-          .md5Hash(uploadResult.getEtag())
-          // 业务上下文（领域特定）
-          .serviceName("patra-ingest")
-          .businessType("literature_batch")
-          .businessId(String.valueOf(context.runId()))
-          .correlationData(Map.of(
-              "runId", context.runId(),
-              "batchNo", context.batchNo(),
-              "provenanceCode", context.provenanceCode()
-          ))
-          .providerType(providerType)
-          .build();
+    UploadRecordRequest recordRequest = UploadRecordRequest.builder()
+        .storageKey(uploadResult.getStorageKey())
+        .bucketName(uploadResult.getBucketName())
+        .objectKey(uploadResult.getObjectKey())
+        .fileSize(uploadResult.getFileSize())
+        .contentType("application/json")
+        .md5Hash(uploadResult.getEtag())
+        // 业务上下文（领域特定）
+        .serviceName("patra-ingest")
+        .businessType("literature_batch")
+        .businessId(String.valueOf(context.runId()))
+        .correlationData(Map.of(
+            "runId", context.runId(),
+            "batchNo", context.batchNo(),
+            "provenanceCode", context.provenanceCode()
+        ))
+        .providerType(providerType)
+        .build();
 
+    try {
       UploadRecordResponse response = storageClient.recordUpload(recordRequest);
 
       log.info("Metadata recorded: metadataId={}, storageKey={}",
           response.getMetadataId(), uploadResult.getStorageKey());
 
-    } catch (Exception e) {
-      // 元数据记录失败不影响文件上传成功
-      // 可以选择：1. 记录到本地补偿表  2. 发送告警  3. 降级处理
-      log.warn("Failed to record metadata, file upload succeeded but metadata not recorded: {}",
-          e.getMessage());
+    } catch (FeignException e) {
+      handleMetadataRecordFailure(e, recordRequest, context);
 
-      // TODO: 实现补偿机制（可选）
-      // outboxRepository.save(createMetadataRecordEvent(uploadResult, context));
+    } catch (TimeoutException | ReadTimeoutException e) {
+      log.warn("Metadata recording timeout, saving to Outbox for retry");
+      saveToOutbox(recordRequest, context);
+
+    } catch (Exception e) {
+      log.error("Unexpected error recording metadata, saving to Outbox", e);
+      saveToOutbox(recordRequest, context);
     }
+  }
+
+  /**
+   * 处理元数据记录失败（区分不同错误类型）
+   */
+  private void handleMetadataRecordFailure(
+      FeignException e,
+      UploadRecordRequest request,
+      PublishContext context) {
+
+    if (e.status() >= 500 || e.status() == 503) {
+      // 服务端错误或服务不可用，降级处理
+      log.warn("patra-storage service unavailable (HTTP {}), saving to Outbox for retry",
+          e.status());
+      saveToOutbox(request, context);
+
+    } else if (e.status() >= 400 && e.status() < 500) {
+      // 客户端错误，可能是数据问题，需要告警（不重试）
+      log.error("Invalid metadata record request (HTTP {}), requires investigation. Request: {}",
+          e.status(), request, e);
+
+    } else {
+      log.error("Unexpected Feign error recording metadata", e);
+      saveToOutbox(request, context);
+    }
+  }
+
+  /**
+   * 保存元数据记录事件到 Outbox 表，由定时任务重试
+   *
+   * 使用 patra-ingest 的 OutboxMessage 实体（参考 ing_outbox_message 表）
+   */
+  private void saveToOutbox(UploadRecordRequest request, PublishContext context) {
+    try {
+      // 构建 Outbox 消息（基于实际的 OutboxMessage 实体）
+      OutboxMessage message = OutboxMessage.builder()
+          .aggregateType("TASK_RUN")  // 关联到 TaskRun
+          .aggregateId(context.runId())  // Long 类型
+          .channel("storage.metadata.internal")  // 内部重试 channel
+          .opType("METADATA_RECORD")
+          .partitionKey(context.provenanceCode())  // 按来源分区
+          .dedupKey(generateDedupKey(request))  // 幂等键
+          .payloadJson(JsonUtil.toJson(request))
+          .headersJson(buildHeaders(context))
+          .notBefore(null)  // 立即可重试
+          .statusCode("PENDING")
+          .retryCount(0)
+          .build();
+
+      outboxMessageRepository.saveOrUpdate(message);
+
+      log.info("Metadata record event saved to Outbox: runId={}, storageKey={}, dedupKey={}",
+          context.runId(), request.getStorageKey(), message.getDedupKey());
+
+    } catch (Exception e) {
+      // Outbox 保存失败，记录严重告警（需要人工介入）
+      log.error("CRITICAL: Failed to save to Outbox, metadata may be lost! " +
+          "storageKey={}, runId={}", request.getStorageKey(), context.runId(), e);
+    }
+  }
+
+  /**
+   * 生成幂等键：确保同一文件的元数据记录只保存一次
+   */
+  private String generateDedupKey(UploadRecordRequest request) {
+    return DigestUtils.sha256Hex(request.getStorageKey() + ":" + request.getFileSize());
+  }
+
+  private String buildHeaders(PublishContext context) {
+    Map<String, Object> headers = Map.of(
+        "provenanceCode", context.provenanceCode(),
+        "batchNo", context.batchNo(),
+        "traceId", MDC.get("traceId")
+    );
+    return JsonUtil.toJson(headers);
   }
 
   private String generateStorageKey(PublishContext context) {
@@ -680,6 +773,39 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
         context.provenanceCode().toLowerCase(),
         context.runId(),
         context.batchNo());
+  }
+
+  /**
+   * 验证文件大小
+   */
+  private void validateFileSize(long fileSize, PublishContext context) {
+    if (fileSize > maxFileSize) {
+      throw new FileTooLargeException(
+          String.format("File size %d bytes exceeds maximum allowed size %d bytes. " +
+              "RunId=%d, Batch=%d, Provenance=%s",
+              fileSize, maxFileSize, context.runId(), context.batchNo(),
+              context.provenanceCode()));
+    }
+
+    if (fileSize == 0) {
+      throw new IllegalArgumentException(
+          String.format("File size cannot be zero. RunId=%d, Batch=%d",
+              context.runId(), context.batchNo()));
+    }
+
+    log.debug("File size validation passed: {} bytes (max: {} bytes)",
+        fileSize, maxFileSize);
+  }
+
+  /**
+   * 验证 Content-Type
+   */
+  private void validateContentType(String contentType) {
+    if (!ALLOWED_CONTENT_TYPES.contains(contentType)) {
+      throw new UnsupportedContentTypeException(
+          String.format("Content-Type '%s' not allowed. Supported types: %s",
+              contentType, ALLOWED_CONTENT_TYPES));
+    }
   }
 
   // toDto() 方法保持不变...
