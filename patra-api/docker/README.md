@@ -5,9 +5,10 @@ Modular Docker Compose setup for Papertrace development environment, organized b
 ## Structure
 
 ```
-docker/compose/
+docker/
 ├── docker-compose.dev.yaml          # Main entry point (all services)
 ├── docker-compose.core.yaml         # Essential runtime services
+├── docker-compose.storage.yaml      # Object storage services (MinIO)
 ├── docker-compose.observability.yaml # APM and monitoring stack
 ├── docker-compose.jobs.yaml         # Job scheduling and message queue
 └── README.md                        # This file
@@ -31,6 +32,8 @@ All service data is stored in `~/.papertrace/docker/` directory in your home fol
 ├── nacos/
 │   ├── data/           # Nacos configuration data
 │   └── logs/           # Nacos logs
+├── minio/
+│   └── data/           # MinIO object storage data
 ├── es/
 │   └── data/           # Elasticsearch indices and data
 ├── xxl-job-admin/
@@ -60,6 +63,13 @@ Essential infrastructure required for application runtime:
 
 **When to use**: Always start these services first. The application cannot run without them.
 
+### Storage Services (`docker-compose.storage.yaml`)
+Object storage infrastructure for file uploads and document management:
+
+- **MinIO** (ports 19000, 19001): S3-compatible object storage with web console
+
+**When to use**: Required when using file upload features. Includes automatic bucket creation (`dev-ingest`) with private access policy.
+
 ### Observability Services (`docker-compose.observability.yaml`)
 Optional monitoring and APM stack for distributed tracing:
 
@@ -87,7 +97,7 @@ Before starting services for the first time, create the required directory struc
 
 ```bash
 # Create directory structure
-mkdir -p ~/.papertrace/docker/{mysql/{data,conf.d,init},redis/data,nacos/{data,logs},es/data,xxl-job-admin/logs,rocketmq/{namesrv/{logs,store},broker/{logs,store,conf}}}
+mkdir -p ~/.papertrace/docker/{mysql/{data,conf.d,init},redis/data,nacos/{data,logs},minio/data,es/data,xxl-job-admin/logs,rocketmq/{namesrv/{logs,store},broker/{logs,store,conf}}}
 
 # Create Redis configuration (minimal example)
 cat > ~/.papertrace/docker/redis/redis.conf << 'EOF'
@@ -133,16 +143,30 @@ docker compose -f docker-compose.core.yaml up -d
 
 ---
 
-### Standard Development (Core + Jobs)
+### File Upload Development (Core + Storage)
 
-Add job services for event-driven features:
+Add storage services for file upload features:
 
 ```bash
 docker compose -f docker-compose.core.yaml \
+               -f docker-compose.storage.yaml up -d
+```
+
+**Use case**: Working on file upload, document management, image processing features
+
+---
+
+### Standard Development (Core + Storage + Jobs)
+
+Add both storage and job services:
+
+```bash
+docker compose -f docker-compose.core.yaml \
+               -f docker-compose.storage.yaml \
                -f docker-compose.jobs.yaml up -d
 ```
 
-**Use case**: Working on batch import jobs, scheduled tasks, message consumers
+**Use case**: Working on batch import jobs, scheduled tasks, message consumers with file uploads
 
 ---
 
@@ -231,6 +255,10 @@ docker compose -f docker-compose.observability.yaml restart skywalking-oap
 - **Redis**: `localhost:16379`
 - **Nacos Console**: http://localhost:8848/nacos (patra/patra)
 
+### Storage Services
+- **MinIO API**: `localhost:19000` (minioadmin/minioadmin123)
+- **MinIO Console**: http://localhost:19001 (minioadmin/minioadmin123)
+
 ### Observability Services
 - **Elasticsearch**: http://localhost:9200
 - **SkyWalking UI**: http://localhost:8088
@@ -248,15 +276,20 @@ docker compose -f docker-compose.observability.yaml restart skywalking-oap
 - **Memory**: ~1GB
 - **Services**: 3
 
-### Standard (Core + Jobs)
+### Standard (Core + Storage)
+- **CPU**: 2 cores
+- **Memory**: ~1.5GB
+- **Services**: 4
+
+### Extended (Core + Storage + Jobs)
 - **CPU**: 4 cores
-- **Memory**: ~3GB
-- **Services**: 7
+- **Memory**: ~3.5GB
+- **Services**: 8
 
 ### Full (All Services)
 - **CPU**: 6+ cores
-- **Memory**: ~5GB
-- **Services**: 10
+- **Memory**: ~5.5GB
+- **Services**: 11
 
 ---
 
@@ -368,6 +401,7 @@ cd /path/to/Papertrace-api
 cp -r docker/mysql ~/.papertrace/docker/
 cp -r docker/redis ~/.papertrace/docker/
 cp -r docker/nacos ~/.papertrace/docker/
+cp -r docker/minio ~/.papertrace/docker/  # If you have existing MinIO data
 cp -r docker/es ~/.papertrace/docker/
 cp -r docker/xxl-job-admin ~/.papertrace/docker/
 cp -r docker/rocketmq ~/.papertrace/docker/
@@ -383,7 +417,7 @@ docker compose -f docker-compose.dev.yaml up -d
 **Note**: After successful migration, you can optionally remove the old data directories to free up space:
 ```bash
 # Optional: Remove old data after verifying new setup works
-rm -rf /path/to/Papertrace-api/docker/{mysql,redis,nacos,es,xxl-job-admin,rocketmq}
+rm -rf /path/to/Papertrace-api/docker/{mysql,redis,nacos,minio,es,xxl-job-admin,rocketmq}
 ```
 
 ### Backward Compatibility
@@ -417,18 +451,19 @@ docker compose -f docker-compose.dev.yaml up -d
 │ Core Services                       │  (No dependencies)
 │ - MySQL, Redis, Nacos               │
 └─────────────────────────────────────┘
-         ▲                    ▲
-         │                    │
-         │                    │
-┌────────┴─────────┐  ┌──────┴───────────────────┐
-│ Jobs Services    │  │ Observability Services   │
-│ - XXL-Job (MySQL)│  │ - Elasticsearch          │
-│ - RocketMQ       │  │ - SkyWalking (ES)        │
-└──────────────────┘  └──────────────────────────┘
+         ▲                    ▲             ▲
+         │                    │             │
+         │                    │             │
+┌────────┴─────────┐  ┌──────┴────────┐  ┌┴────────────────────┐
+│ Jobs Services    │  │ Observability │  │ Storage Services    │
+│ - XXL-Job (MySQL)│  │ - ES          │  │ - MinIO             │
+│ - RocketMQ       │  │ - SkyWalking  │  │ (No dependencies)   │
+└──────────────────┘  └───────────────┘  └─────────────────────┘
 ```
 
 - **Jobs stack** depends on MySQL for XXL-Job
 - **Observability stack** has internal dependency (SkyWalking → Elasticsearch)
+- **Storage stack** is self-contained (no external dependencies)
 - **RocketMQ** services are self-contained (no external dependencies)
 
 ---
@@ -438,20 +473,117 @@ docker compose -f docker-compose.dev.yaml up -d
 Configure via `.env` file or shell environment:
 
 ```bash
-# Example .env file
+# Example .env file in docker/ directory
 MYSQL_ROOT_PASSWORD=your_secure_password
+MINIO_ROOT_USER=your_minio_user
+MINIO_ROOT_PASSWORD=your_minio_password
 ```
 
 Current configurable variables:
 - `MYSQL_ROOT_PASSWORD` (default: 123456)
+- `MINIO_ROOT_USER` (default: minioadmin)
+- `MINIO_ROOT_PASSWORD` (default: minioadmin123)
+
+---
+
+## MinIO Usage Guide
+
+### Accessing MinIO Console
+
+After starting the storage stack, access the MinIO web console at http://localhost:19001:
+
+1. Login with credentials: `minioadmin` / `minioadmin123` (or your custom credentials from `.env`)
+2. The following bucket is automatically created:
+   - `dev-ingest` - Development environment storage for patra-ingest service
+
+### Connecting from Application
+
+Use these settings in your Spring Boot application configuration (Nacos):
+
+```yaml
+patra:
+  object-storage:
+    active-provider: minio
+    max-file-size: 104857600  # 100MB
+    providers:
+      minio:
+        endpoint: http://localhost:19000
+        access-key: minioadmin
+        secret-key: minioadmin123
+
+patra:
+  ingest:
+    storage:
+      bucket: dev-ingest  # Default bucket for patra-ingest
+```
+
+### Using MinIO Client (mc)
+
+The `minio-init` container includes the `mc` command-line tool. To use it:
+
+```bash
+# Access the minio container
+docker exec -it patra-minio sh
+
+# Inside the container, mc is already configured
+mc ls /data  # List all buckets
+mc ls /data/dev-ingest  # List files in a bucket
+```
+
+Or use `mc` from your host machine:
+
+```bash
+# Install mc (macOS)
+brew install minio/stable/mc
+
+# Configure connection
+mc alias set papertrace http://localhost:19000 minioadmin minioadmin123
+
+# List buckets
+mc ls papertrace
+
+# Upload a file
+mc cp /path/to/file.pdf papertrace/dev-ingest/
+
+# Download a file
+mc cp papertrace/dev-ingest/file.pdf ./
+```
+
+### Creating Additional Buckets
+
+To create additional buckets:
+
+```bash
+# Using mc command
+docker exec -it patra-minio sh -c \
+  "mc mb /data/my-new-bucket && mc anonymous set none /data/my-new-bucket"
+
+# Or via MinIO Console
+# Navigate to http://localhost:19001 → Buckets → Create Bucket
+```
+
+### Testing Upload from Command Line
+
+```bash
+# Test file upload
+curl -X PUT \
+  -H "Host: dev-ingest.localhost" \
+  --user minioadmin:minioadmin123 \
+  --upload-file /path/to/test.txt \
+  http://localhost:19000/dev-ingest/test.txt
+
+# Verify upload
+mc ls papertrace/dev-ingest/test.txt
+```
 
 ---
 
 ## Next Steps
 
 1. Start with core services: `docker compose -f docker-compose.core.yaml up -d`
-2. Add stacks as needed for your development task
-3. Verify health status before running application services
-4. Refer to service URLs section for accessing web consoles
+2. Add storage stack for file uploads: `docker compose -f docker-compose.storage.yaml up -d`
+3. Add other stacks as needed for your development task
+4. Verify health status before running application services
+5. Refer to service URLs section for accessing web consoles
 
 For questions or issues, refer to the main project documentation.

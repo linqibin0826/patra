@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
+import com.patra.common.objectstorage.ObjectKeyTemplate;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.StandardLiterature;
 import com.patra.ingest.domain.model.vo.StandardLiterature.StandardAuthor;
@@ -15,15 +16,16 @@ import com.patra.starter.objectstorage.ObjectStorageProperties;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
 import com.patra.starter.objectstorage.domain.UploadResult;
-import com.patra.storage.api.RecordUploadResponse;
-import com.patra.storage.api.StorageClient;
-import com.patra.storage.api.UploadRecordRequest;
+import com.patra.storage.api.client.StorageClient;
+import com.patra.storage.api.dto.RecordUploadResponse;
+import com.patra.storage.api.dto.UploadRecordRequest;
 import feign.FeignException;
 import feign.RetryableException;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -299,7 +301,13 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
   private String generateObjectKey(PublishContext context) {
     String provenance = safeProvenance(context.provenanceCode());
     long runId = context.runId() != null ? context.runId() : 0L;
-    return String.format("%s/%d/batch-%d.json", provenance, runId, context.batchNo());
+
+    // Build business ID: {provenanceCode}-{runId}-batch-{batchNo(3-digit)}
+    String businessId = String.format("%s-%d-batch-%03d", provenance, runId, context.batchNo());
+
+    // Generate standardized key: ingest/literature-batch/yyyy/MM/dd/{businessId}.json
+    return ObjectKeyTemplate.generateDailyKey(
+        "ingest", "literature-batch", businessId, LocalDate.now(), "json");
   }
 
   private String safeProvenance(String provenanceCode) {

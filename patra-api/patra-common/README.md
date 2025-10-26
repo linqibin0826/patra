@@ -235,7 +235,96 @@ String normalized = JsonNormalizer.normalize(json);
 
 ---
 
-### 5. Utilities
+### 5. Object Storage Key Generation
+
+**Location**: [`objectstorage/`](src/main/java/com/patra/common/objectstorage/)
+
+**Purpose**: Standardized object key generation for distributed microservices using MinIO/S3.
+
+#### Standard Key Format
+
+```
+{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}
+```
+
+**Examples**:
+```
+ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
+storage/metadata-snapshot/2025/10/25/snapshot-20251025-001.json.gz
+catalog/literature-index/2025/10/26/index-pmid-12345.xml
+```
+
+#### Core Components
+
+| Class | Purpose |
+|-------|---------|
+| **ObjectKeyContext** | Immutable context (record) containing all key parameters |
+| **ObjectKeyGenerator** | Strategy interface for custom key generation patterns |
+| **DatePartitionedKeyGenerator** | Daily partition implementation (yyyy/MM/dd) |
+| **ObjectKeyTemplate** | Static utility for convenient key generation |
+
+#### Quick Start
+
+**Simple Usage** (most common):
+```java
+import com.patra.common.objectstorage.ObjectKeyTemplate;
+import java.time.LocalDate;
+
+// Generate key with today's date
+String key = ObjectKeyTemplate.generateDailyKey(
+    "ingest",                    // service name
+    "literature-batch",          // business type (kebab-case)
+    "pubmed-123-batch-001",      // business ID
+    "json"                       // extension
+);
+// Result: ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
+```
+
+**Historical Data** (specific date):
+```java
+String historicalKey = ObjectKeyTemplate.generateDailyKey(
+    "ingest",
+    "literature-batch",
+    "pubmed-456-batch-002",
+    LocalDate.of(2025, 10, 20),  // partition date
+    "json.gz"                     // supports compound extensions
+);
+// Result: ingest/literature-batch/2025/10/20/pubmed-456-batch-002.json.gz
+```
+
+**Advanced Usage** (with custom segments):
+```java
+import com.patra.common.objectstorage.ObjectKeyContext;
+
+String customKey = ObjectKeyTemplate.builder()
+    .serviceName("catalog")
+    .businessType("index_snapshot")  // underscores → hyphens
+    .businessId("snapshot-20251026-001")
+    .partitionDate(LocalDate.now())
+    .extension("json.gz")
+    .customSegment("env", "prod")
+    .build();
+```
+
+#### Naming Conventions
+
+| Component | Convention | Example |
+|-----------|------------|---------|
+| **Service** | Lowercase, short name | `ingest`, `storage`, `catalog` |
+| **Business Type** | Lowercase, kebab-case | `literature-batch`, `metadata-snapshot` |
+| **Business ID** | Custom format, preserved | `pubmed-123-batch-001` |
+| **Extension** | Lowercase, supports compound | `json`, `json.gz`, `tar.gz` |
+
+#### Design Patterns
+
+- **Strategy Pattern**: `ObjectKeyGenerator` allows custom implementations
+- **Builder Pattern**: `ObjectKeyContext.Builder` for complex scenarios
+- **Singleton**: `DatePartitionedKeyGenerator.INSTANCE` for shared usage
+- **Immutability**: All contexts are immutable records
+
+---
+
+### 6. Utilities
 
 **Location**: [`util/`](src/main/java/com/patra/common/util/)
 
