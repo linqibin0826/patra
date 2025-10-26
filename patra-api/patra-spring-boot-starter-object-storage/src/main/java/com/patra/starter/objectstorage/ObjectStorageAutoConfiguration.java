@@ -29,6 +29,29 @@ public class ObjectStorageAutoConfiguration {
     return new ObjectStorageMetrics(meterRegistry.getIfAvailable());
   }
 
+  /**
+   * Creates a retry template configured to retry only transient failures.
+   *
+   * <p>Retryable exceptions (transient failures):
+   *
+   * <ul>
+   *   <li>{@link java.io.IOException} - Network errors, connection failures
+   *   <li>{@link java.net.SocketTimeoutException} - Read/write timeouts
+   *   <li>{@link java.net.ConnectException} - Connection refused
+   * </ul>
+   *
+   * <p>Non-retryable exceptions (permanent failures):
+   *
+   * <ul>
+   *   <li>{@link com.patra.starter.objectstorage.domain.InvalidUploadRequestException} - Invalid
+   *       arguments
+   *   <li>Authentication failures
+   *   <li>Authorization failures
+   * </ul>
+   *
+   * @param properties configuration properties containing retry settings
+   * @return configured retry template with exponential backoff
+   */
   @Bean
   @ConditionalOnMissingBean
   public RetryTemplate objectStorageRetryTemplate(ObjectStorageProperties properties) {
@@ -39,6 +62,10 @@ public class ObjectStorageAutoConfiguration {
     return RetryTemplate.builder()
         .maxAttempts(maxAttempts)
         .exponentialBackoff(baseDelay, 2.0, maxDelay)
+        .retryOn(java.io.IOException.class)
+        .retryOn(java.net.SocketTimeoutException.class)
+        .retryOn(java.net.ConnectException.class)
+        .traversingCauses()
         .build();
   }
 
@@ -62,11 +89,12 @@ public class ObjectStorageAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(ObjectStorageProvider.class)
   @ConditionalOnBean(MinioClient.class)
-  public ObjectStorageProvider minioObjectStorageProvider(MinioClient minioClient) {
-    return new MinioStorageProvider(minioClient);
+  public ObjectStorageProvider minioObjectStorageProvider(
+      MinioClient minioClient, ObjectStorageProperties properties) {
+    return new MinioStorageProvider(minioClient, properties.getMaxFileSize());
   }
 
-  @Bean
+  @Bean(destroyMethod = "close")
   @ConditionalOnMissingBean(S3Client.class)
   @ConditionalOnProperty(
       prefix = "patra.object-storage",
@@ -91,8 +119,9 @@ public class ObjectStorageAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(ObjectStorageProvider.class)
   @ConditionalOnBean(S3Client.class)
-  public ObjectStorageProvider s3ObjectStorageProvider(S3Client s3Client) {
-    return new S3StorageProvider(s3Client);
+  public ObjectStorageProvider s3ObjectStorageProvider(
+      S3Client s3Client, ObjectStorageProperties properties) {
+    return new S3StorageProvider(s3Client, properties.getMaxFileSize());
   }
 
   @Bean

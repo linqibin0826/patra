@@ -36,11 +36,29 @@ public class ObjectStorageMetrics {
     summary(providerType, bucket).record(Math.max(0, fileSize));
   }
 
-  public void recordUploadFailure(ProviderType providerType, String bucket) {
+  /**
+   * Record an upload failure with error type classification.
+   *
+   * @param providerType the storage provider type
+   * @param bucket the bucket name
+   * @param errorType the error classification (e.g., "validation", "network", "auth", "unknown")
+   */
+  public void recordUploadFailure(ProviderType providerType, String bucket, String errorType) {
     if (meterRegistry == null) {
       return;
     }
-    counter(providerType, bucket, "failure").increment();
+    Counter.builder(UPLOAD_TOTAL)
+        .tags(
+            "provider",
+            providerType.name().toLowerCase(),
+            "bucket",
+            bucket,
+            "status",
+            "failure",
+            "error_type",
+            errorType)
+        .register(meterRegistry)
+        .increment();
   }
 
   public void recordRetry(ProviderType providerType, String bucket, int retryCount) {
