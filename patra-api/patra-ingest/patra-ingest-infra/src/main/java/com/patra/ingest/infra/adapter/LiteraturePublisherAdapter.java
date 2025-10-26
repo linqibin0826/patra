@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
-import com.patra.common.objectstorage.ObjectKeyTemplate;
+import com.patra.common.objectstorage.StorageContext;
+import com.patra.common.objectstorage.StorageLocation;
+import com.patra.common.objectstorage.StorageLocationResolver;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.StandardLiterature;
 import com.patra.ingest.domain.model.vo.StandardLiterature.StandardAuthor;
@@ -25,7 +27,8 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
@@ -53,12 +56,15 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
   private static final String AGGREGATE_TYPE = "TASK_RUN";
   private static final String OP_TYPE = "METADATA_RECORD";
   private static final String SERVICE_NAME = "patra-ingest";
-  private static final String BUSINESS_TYPE = "literature_batch";
+  private static final String BUSINESS_TYPE = "literature-batch";
   private static final HexFormat HEX_FORMAT = HexFormat.of();
+  private static final DateTimeFormatter FILENAME_TIMESTAMP_FORMAT =
+      DateTimeFormatter.ofPattern("HHmmssSSS");
 
   private final ObjectMapper objectMapper;
   private final ObjectStorageTemplate objectStorageTemplate;
   private final ObjectStorageProperties storageProperties;
+  private final StorageLocationResolver storageLocationResolver;
   private final StorageClient storageClient;
   private final OutboxMessageRepository outboxMessageRepository;
 
@@ -71,12 +77,12 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
 
     byte[] serialized = serializePayload(payload, context);
     Checksums checksums = calculateChecksums(serialized);
-    String bucket = resolveBucket();
-    String objectKey = generateObjectKey(context);
+    StorageContext storageContext = buildStorageContext(context);
+    StorageLocation location = storageLocationResolver.resolve(storageContext);
 
     UploadResult uploadResult =
-        uploadPayload(bucket, objectKey, serialized, context, payload.size());
-    recordMetadata(uploadResult, context, serialized.length, checksums);
+        uploadPayload(location.bucket(), location.objectKey(), serialized, context, payload.size());
+    recordMetadata(uploadResult, location, context, serialized.length, checksums);
 
     return PublishResult.builder()
         .storageKey(uploadResult.getStorageKey())
@@ -98,6 +104,20 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
     } catch (JsonProcessingException ex) {
       throw new LiteraturePublishException("Failed to serialize literature payload", ex);
     }
+  }
+
+  private StorageContext buildStorageContext(PublishContext context) {
+    StorageContext.StorageContextBuilder builder =
+        StorageContext.builder()
+            .businessType(BUSINESS_TYPE)
+            .filename(generateFilename(context))
+            .businessId(buildBusinessId(context));
+    builder.correlationEntry("batchNo", context.batchNo());
+    builder.correlationEntry("provenanceCode", safeProvenance(context.provenanceCode()));
+    if (context.runId() != null) {
+      builder.correlationEntry("runId", context.runId());
+    }
+    return builder.build();
   }
 
   private UploadResult uploadPayload(
@@ -126,10 +146,22 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
     }
   }
 
+  private String generateFilename(PublishContext context) {
+    String provenance = safeProvenance(context.provenanceCode());
+    String runSegment = context.runId() == null ? "na" : Long.toUnsignedString(context.runId(), 36);
+    String timestamp = LocalDateTime.now().format(FILENAME_TIMESTAMP_FORMAT);
+    return String.format(
+        "%s-batch-%03d-%s-%s.json", provenance, context.batchNo(), runSegment, timestamp);
+  }
+
   private void recordMetadata(
-      UploadResult uploadResult, PublishContext context, long payloadSize, Checksums checksums) {
+      UploadResult uploadResult,
+      StorageLocation location,
+      PublishContext context,
+      long payloadSize,
+      Checksums checksums) {
     UploadRecordRequest request =
-        buildUploadRecordRequest(uploadResult, context, payloadSize, checksums);
+        buildUploadRecordRequest(uploadResult, location, context, payloadSize, checksums);
     try {
       RecordUploadResponse response = storageClient.recordUpload(request);
       log.info(
@@ -150,8 +182,12 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
   }
 
   private UploadRecordRequest buildUploadRecordRequest(
-      UploadResult result, PublishContext context, long payloadSize, Checksums checksums) {
-    Map<String, Object> correlation = buildCorrelationData(result, context);
+      UploadResult result,
+      StorageLocation location,
+      PublishContext context,
+      long payloadSize,
+      Checksums checksums) {
+    Map<String, Object> correlation = buildCorrelationData(location, result);
     String providerType = storageProperties.getActiveProvider();
     String normalizedProvider =
         StringUtils.hasText(providerType) ? providerType.toUpperCase(Locale.ROOT) : "MINIO";
@@ -164,7 +200,7 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
         checksums.sha256(),
         SERVICE_NAME,
         BUSINESS_TYPE,
-        buildBusinessId(context),
+        location.businessId(),
         correlation,
         normalizedProvider,
         null,
@@ -233,15 +269,8 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
     return headers;
   }
 
-  private Map<String, Object> buildCorrelationData(UploadResult result, PublishContext context) {
-    Map<String, Object> correlation = new LinkedHashMap<>();
-    if (context.runId() != null) {
-      correlation.put("runId", context.runId());
-    }
-    correlation.put("batchNo", context.batchNo());
-    if (StringUtils.hasText(context.provenanceCode())) {
-      correlation.put("provenanceCode", context.provenanceCode());
-    }
+  private Map<String, Object> buildCorrelationData(StorageLocation location, UploadResult result) {
+    Map<String, Object> correlation = new LinkedHashMap<>(location.correlationData());
     correlation.put("storageKey", result.getStorageKey());
     return correlation;
   }
@@ -287,27 +316,6 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
     } catch (NoSuchAlgorithmException ex) {
       throw new IllegalStateException("Missing SHA-256 algorithm", ex);
     }
-  }
-
-  private String resolveBucket() {
-    String active = storageProperties.getActiveProvider();
-    ObjectStorageProperties.ProviderConfig config = storageProperties.getProviders().get(active);
-    if (config == null || !StringUtils.hasText(config.getBucket())) {
-      throw new IllegalStateException("No bucket configured for provider " + active);
-    }
-    return config.getBucket();
-  }
-
-  private String generateObjectKey(PublishContext context) {
-    String provenance = safeProvenance(context.provenanceCode());
-    long runId = context.runId() != null ? context.runId() : 0L;
-
-    // Build business ID: {provenanceCode}-{runId}-batch-{batchNo(3-digit)}
-    String businessId = String.format("%s-%d-batch-%03d", provenance, runId, context.batchNo());
-
-    // Generate standardized key: ingest/literature-batch/yyyy/MM/dd/{businessId}.json
-    return ObjectKeyTemplate.generateDailyKey(
-        "ingest", "literature-batch", businessId, LocalDate.now(), "json");
   }
 
   private String safeProvenance(String provenanceCode) {
