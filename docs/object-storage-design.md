@@ -1,9 +1,10 @@
 # 对象存储系统详细设计文档
 
-**文档版本**: v1.0
+**文档版本**: v1.1
 **创建日期**: 2025-01-26
+**最后更新**: 2025-01-26
 **作者**: Jobs (Claude Code)
-**状态**: 待审核
+**状态**: 已审核
 
 ---
 
@@ -946,7 +947,7 @@ public class RecordUploadOrchestrator {
 │ storage_file_metadata               │
 ├─────────────────────────────────────┤
 │ PK: id (BIGINT UNSIGNED)            │
-│     storage_key (VARCHAR 512)       │
+│     storage_key (VARCHAR 768)       │
 │     bucket_name (VARCHAR 128)       │
 │     object_key (VARCHAR 512)        │
 │     file_size (BIGINT)              │
@@ -975,16 +976,14 @@ public class RecordUploadOrchestrator {
 │     updated_by_name (VARCHAR 100)   │
 │     deleted (TINYINT(1))            │
 ├─────────────────────────────────────┤
-│ IDX: idx_storage_key_uploaded       │
-│ IDX: idx_service_business           │
-│ IDX: idx_uploaded_at                │
-│ IDX: idx_expires_at                 │
-│ IDX: idx_file_status                │
+│ PK:  PRIMARY KEY (id)               │
+│ UQ:  uk_storage_key (storage_key)   │
+│ IDX: idx_uploaded_at (uploaded_at)  │
+│ IDX: idx_deleted (deleted)          │
 └─────────────────────────────────────┘
 
-注意：storage_key 不使用 UNIQUE 约束，允许同一文件多次上传
-（用于重试失败的批次）。通过 idx_storage_key_uploaded 索引
-可以按时间查询同一文件的所有上传记录。
+注意：storage_key 使用 UNIQUE 约束保证幂等性。元数据记录失败时
+通过 Outbox 重试机制保证最终一致性，避免产生重复记录。
 ```
 
 ### 6.2 索引策略
@@ -992,11 +991,13 @@ public class RecordUploadOrchestrator {
 | 索引名 | 列 | 类型 | 用途 |
 |-------|-----|------|------|
 | PRIMARY | id | 主键 | 唯一标识 |
-| idx_storage_key_uploaded | (storage_key, uploaded_at) | 组合索引 | 查询同一文件的上传历史 |
-| idx_service_business | (service_name, business_type, business_id) | 组合索引 | 按业务上下文查询 |
-| idx_uploaded_at | uploaded_at | 普通索引 | 按时间范围查询 |
-| idx_expires_at | expires_at | 普通索引 | 查询过期文件 |
-| idx_file_status | file_status | 普通索引 | 按状态筛选 |
+| uk_storage_key | storage_key | 唯一索引 | 保证幂等性，避免重复记录 |
+| idx_uploaded_at | uploaded_at | 普通索引 | 数据归档/清理任务按时间查询 |
+| idx_deleted | deleted | 普通索引 | 过滤软删除记录（WHERE deleted = 0）|
+
+**说明**：
+- patra-storage 是纯内部服务，不提供查询API，因此删除了查询相关的索引
+- 如未来需要复杂查询，建议通过CDC同步到Elasticsearch或建立只读视图
 
 ### 6.3 Outbox 表（patra_ingest 数据库）
 
@@ -1074,16 +1075,47 @@ PARTITION BY RANGE (YEAR(uploaded_at)) (
 
 ## 7. 接口设计
 
-### 7.1 patra-storage REST API
+### 7.1 patra-storage Feign Client（内部接口）
 
-#### 7.1.1 记录上传元数据
+patra-storage 是**纯内部服务**，仅通过 Feign 提供服务间调用接口，不对外暴露 REST API。
 
-**Endpoint**: `POST /api/storage/files/record`
+#### 7.1.1 接口定义
 
-**Request**:
+```java
+package com.patra.storage.api;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
+
+/**
+ * 对象存储元数据服务 - 内部 Feign 接口
+ *
+ * <p>仅用于服务间内部调用，不对外暴露 REST API
+ */
+@FeignClient(name = "patra-storage", path = "/internal/storage")
+public interface StorageClient {
+
+    /**
+     * 记录文件上传元数据
+     *
+     * <p>调用时机：文件上传到对象存储成功后
+     *
+     * @param request 上传记录请求
+     * @return 元数据ID和记录时间
+     * @throws FeignException 服务调用失败时抛出，调用方应实现降级逻辑（参考 ADR-005）
+     */
+    @PostMapping("/files/record")
+    RecordUploadResponse recordUpload(@RequestBody @Valid UploadRecordRequest request);
+}
+```
+
+#### 7.1.2 请求/响应示例
+
+**Request** (`UploadRecordRequest`):
 ```json
 {
-  "storageKey": "dev-ingest/12345/batch-1.json",
   "bucketName": "dev-ingest",
   "objectKey": "12345/batch-1.json",
   "fileSize": 1048576,
@@ -1117,73 +1149,35 @@ PARTITION BY RANGE (YEAR(uploaded_at)) (
   "title": "Invalid Request",
   "status": 400,
   "detail": "File size must be greater than 0",
-  "instance": "/api/storage/files/record"
+  "instance": "/internal/storage/files/record"
 }
 ```
 
-#### 7.1.2 查询文件元数据
+#### 7.1.3 错误处理
 
-**Endpoint**: `GET /api/storage/files/{id}`
+调用方应实现降级逻辑（参考 ADR-005 Outbox 补偿机制）：
 
-**Response** (200 OK):
-```json
-{
-  "id": 1001,
-  "storageKey": "dev-ingest/12345/batch-1.json",
-  "bucketName": "dev-ingest",
-  "objectKey": "12345/batch-1.json",
-  "fileSize": 1048576,
-  "fileSizeHumanReadable": "1.00 MB",
-  "contentType": "application/json",
-  "md5Hash": "abc123...",
-  "serviceName": "patra-ingest",
-  "businessType": "literature_batch",
-  "businessId": "12345",
-  "correlationData": {...},
-  "providerType": "MINIO",
-  "fileStatus": "ACTIVE",
-  "uploadedAt": "2025-01-26T10:30:00Z",
-  "expiresAt": "2025-12-31T23:59:59Z",
+| 错误类型 | HTTP状态码 | 处理策略 |
+|---------|-----------|---------|
+| 服务端错误 | 5xx, 503 | 保存到 Outbox 重试 |
+| 客户端错误 | 4xx | 记录错误日志并告警，不重试 |
+| 超时 | ReadTimeoutException | 保存到 Outbox 重试 |
+| 网络错误 | FeignException | 保存到 Outbox 重试 |
 
-  // Audit fields (标准审计字段)
-  "recordRemarks": [{"time":"2025-01-26 10:30:00","by":"System","note":"Initial upload"}],
-  "version": 0,
-  "ipAddress": "192.168.1.100",
-  "createdAt": "2025-01-26T10:30:00Z",
-  "createdBy": 1,
-  "createdByName": "system",
-  "updatedAt": "2025-01-26T10:30:00Z",
-  "updatedBy": 1,
-  "updatedByName": "system",
-  "deleted": false
-}
-```
+---
 
-#### 7.1.3 按业务上下文查询
+### 7.2 元数据查询方案
 
-**Endpoint**: `GET /api/storage/files/by-business?serviceName=patra-ingest&businessType=literature_batch&businessId=12345`
+patra-storage 不提供查询 API。如需查询元数据，推荐以下方案：
 
-**Response** (200 OK):
-```json
-{
-  "total": 5,
-  "files": [
-    {
-      "id": 1001,
-      "storageKey": "dev-ingest/12345/batch-1.json",
-      "fileSize": 1048576,
-      "uploadedAt": "2025-01-26T10:30:00Z"
-    },
-    // ...
-  ]
-}
-```
+#### 方案A：直接访问数据库（推荐，当前阶段）
+调用方（如 patra-ingest）直接查询 `patra_storage` 数据库的只读副本。
 
-#### 7.1.4 软删除文件
+#### 方案B：数据库只读视图（中期）
+创建只读视图暴露给其他服务，限制访问权限。
 
-**Endpoint**: `DELETE /api/storage/files/{id}`
-
-**Response** (204 No Content)
+#### 方案C：独立查询服务（长期，CQRS）
+通过 CDC（Change Data Capture）将元数据同步到 Elasticsearch，提供独立的查询服务。
 
 ---
 
@@ -1364,12 +1358,13 @@ groups:
     expr: |
       histogram_quantile(0.99,
         rate(patra_object_storage_upload_duration_bucket[5m])
-      ) > 30
+      ) > 11
     for: 5m
     labels:
       severity: warning
     annotations:
-      summary: "Object storage P99 upload latency > 30s"
+      summary: "Object storage P99 upload latency > 11s (NFR: 10s)"
+      description: "Current P99 latency exceeds NFR requirement (10s + 10% buffer)"
 
   - alert: MetadataRecordFailureRateHigh
     expr: |
@@ -1466,9 +1461,9 @@ patra-ingest
 }
 ```
 
-#### 10.1.2 API 鉴权
+#### 10.1.2 内部服务鉴权
 
-patra-storage REST API 通过 Spring Security + JWT 保护：
+patra-storage 作为纯内部服务，通过 Spring Security + JWT 保护内部接口：
 
 ```java
 @Configuration
@@ -1480,14 +1475,34 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
-                .requestMatchers("/api/storage/**").authenticated()
+                .requestMatchers("/internal/**").hasRole("SERVICE")  // 仅允许服务间调用
+                .anyRequest().denyAll()  // 拒绝其他所有请求
             )
-            .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(serviceJwtConverter()))
+            );
 
         return http.build();
     }
+
+    /**
+     * 从 JWT 中提取服务身份（如 patra-ingest）
+     */
+    private JwtAuthenticationConverter serviceJwtConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthorityPrefix("ROLE_");
+        authoritiesConverter.setAuthoritiesClaimName("roles");
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        return converter;
+    }
 }
 ```
+
+**说明**：
+- `/internal/**` 路径仅允许具有 `ROLE_SERVICE` 角色的服务调用
+- JWT token 由网关或认证中心颁发，包含服务身份信息
+- 所有外部请求（非 `/actuator/health` 和 `/internal`）被拒绝
 
 ### 10.2 数据加密
 
@@ -2108,13 +2123,15 @@ patra:
       wait-duration: 2000
 ```
 
-### Q6: 如何查询某个业务任务上传的所有文件？
+### Q6: 如何查询文件元数据？
 
-**A**: 调用 patra-storage API：
+**A**: patra-storage 不提供查询 API。推荐以下方案：
 
-```http
-GET /api/storage/files/by-business?serviceName=patra-ingest&businessType=literature_batch&businessId=12345
-```
+1. **直接查询数据库**（当前阶段）：调用方直接查询 `patra_storage` 数据库的只读副本
+2. **使用只读视图**（中期）：创建数据库只读视图，限制访问权限
+3. **独立查询服务**（长期）：通过CDC同步到Elasticsearch，实现CQRS架构
+
+详见 [7.2 元数据查询方案](#72-元数据查询方案)
 
 ### Q7: 元数据表会不会无限增长？
 
@@ -2174,6 +2191,7 @@ rate(patra_object_storage_upload_total[5m])
 
 | 版本 | 日期 | 作者 | 变更说明 |
 |-----|------|------|---------|
+| v1.1 | 2025-01-26 | Jobs | 设计优化：(1) storage_key 字段长度改为768 (2) 简化为纯内部服务，只保留 Feign 接口 (3) 索引优化，添加UNIQUE约束 (4) 告警阈值调整为11s |
 | v1.0 | 2025-01-26 | Jobs | 初始版本，完整设计方案 |
 
 ---

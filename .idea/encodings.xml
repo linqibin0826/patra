@@ -75,6 +75,8 @@
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-logging/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-mybatis/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-mybatis/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-object-storage/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-object-storage/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-observability/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-observability/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-spring-boot-starter-provenance/src/main/java" charset="UTF-8" />
@@ -87,6 +89,20 @@
     <file url="file://$PROJECT_DIR$/patra-spring-cloud-starter-feign/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-starter-query/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/patra-starter-query/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-adapter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-adapter/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-app/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-app/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-boot/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-infra/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/patra-storage-infra/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/patra-storage/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
   </component>
