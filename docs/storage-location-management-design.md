@@ -482,6 +482,7 @@ public class StorageLocationResolver {
 | `storage_key` | `dev-ingest/literature-batch/2025/10/26/batch-001.json` | 完整存储路径 |
 | `bucket_name` | `dev-ingest` | Bucket名称 |
 | `object_key` | `literature-batch/2025/10/26/batch-001.json` | 对象路径 |
+| `original_filename` | `batch-001.json` | 原始文件名（用户上传）或提取的文件名（系统生成） |
 | `business_id` | `1982409827952177154` | 业务标识（Snowflake ID / runId等） |
 | `business_type` | `literature-batch` | 业务类型 |
 | `correlation_data` | `{"provenance":"pubmed","runId":123,"batchNo":1}` | 业务上下文（JSON） |
@@ -945,6 +946,7 @@ CREATE TABLE IF NOT EXISTS `storage_file_metadata` (
     `storage_key`      VARCHAR(768)    NOT NULL COMMENT 'Full storage key: bucket/objectKey',
     `bucket_name`      VARCHAR(128)    NOT NULL COMMENT 'Bucket name',
     `object_key`       VARCHAR(512)    NOT NULL COMMENT 'Object key within bucket',
+    `original_filename` VARCHAR(255)   NULL COMMENT 'Original filename (user upload) or extracted filename (system generated)',
     `file_size`        BIGINT          NOT NULL COMMENT 'File size in bytes',
     `content_type`     VARCHAR(128)    NULL COMMENT 'MIME type',
     `md5_hash`         VARCHAR(64)     NOT NULL COMMENT 'MD5 checksum',
