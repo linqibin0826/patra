@@ -1,5 +1,6 @@
 package com.patra.starter.objectstorage;
 
+import com.patra.starter.objectstorage.domain.InvalidUploadRequestException;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
 import com.patra.starter.objectstorage.domain.UploadFailedException;
 import com.patra.starter.objectstorage.domain.UploadResult;
@@ -36,7 +37,8 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
                 result.getFileSize());
             return result;
           } catch (Exception ex) {
-            metrics.recordUploadFailure(provider.getProviderType(), bucket);
+            String errorType = classifyError(ex);
+            metrics.recordUploadFailure(provider.getProviderType(), bucket, errorType);
             if (ex instanceof UploadFailedException uploadFailedException) {
               throw uploadFailedException;
             }
@@ -47,5 +49,40 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
             }
           }
         });
+  }
+
+  /**
+   * Classify exception into error type for metrics tagging.
+   *
+   * @param ex the exception to classify
+   * @return error type string: "validation", "network", "auth", or "unknown"
+   */
+  private String classifyError(Exception ex) {
+    if (ex instanceof InvalidUploadRequestException) {
+      return "validation";
+    }
+
+    // Check exception message for common patterns
+    String message = ex.getMessage();
+    if (message != null) {
+      String lowerMessage = message.toLowerCase();
+      if (lowerMessage.contains("auth") || lowerMessage.contains("credential")) {
+        return "auth";
+      }
+      if (lowerMessage.contains("timeout")
+          || lowerMessage.contains("connection")
+          || lowerMessage.contains("network")) {
+        return "network";
+      }
+    }
+
+    // Check exception type
+    if (ex instanceof java.io.IOException
+        || ex instanceof java.net.SocketException
+        || ex instanceof java.net.SocketTimeoutException) {
+      return "network";
+    }
+
+    return "unknown";
   }
 }

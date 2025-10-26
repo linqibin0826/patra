@@ -19,6 +19,15 @@ public class ObjectStorageProperties {
   /** Retry settings applied to template operations. */
   private RetryConfig retry = new RetryConfig();
 
+  /**
+   * Maximum file size in bytes for uploads (default: 100MB).
+   *
+   * <p>This limit protects against out-of-memory errors from uploading excessively large files.
+   * Uploads exceeding this size will fail with {@link
+   * com.patra.starter.objectstorage.domain.InvalidUploadRequestException}.
+   */
+  private long maxFileSize = 104857600L; // 100MB
+
   public ProviderConfig getProviderConfig(String providerId) {
     if (providerId == null) {
       return null;
