@@ -3,7 +3,6 @@ package com.patra.starter.objectstorage;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
-import java.net.URI;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -12,11 +11,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.retry.support.RetryTemplate;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
 
 /** Auto-configuration entry point that exposes {@link ObjectStorageTemplate}. */
 @AutoConfiguration
@@ -92,36 +86,6 @@ public class ObjectStorageAutoConfiguration {
   public ObjectStorageProvider minioObjectStorageProvider(
       MinioClient minioClient, ObjectStorageProperties properties) {
     return new MinioStorageProvider(minioClient, properties.getMaxFileSize());
-  }
-
-  @Bean(destroyMethod = "close")
-  @ConditionalOnMissingBean(S3Client.class)
-  @ConditionalOnProperty(
-      prefix = "patra.object-storage",
-      name = "active-provider",
-      havingValue = "s3")
-  public S3Client s3Client(ObjectStorageProperties properties) {
-    var config = resolveConfig(properties, "s3");
-    S3ClientBuilder builder =
-        S3Client.builder()
-            .region(Region.of(require(config.getRegion(), "region")))
-            .credentialsProvider(
-                StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(
-                        require(config.getAccessKey(), "access-key"),
-                        require(config.getSecretKey(), "secret-key"))));
-    if (hasText(config.getEndpoint())) {
-      builder.endpointOverride(URI.create(config.getEndpoint()));
-    }
-    return builder.build();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean(ObjectStorageProvider.class)
-  @ConditionalOnBean(S3Client.class)
-  public ObjectStorageProvider s3ObjectStorageProvider(
-      S3Client s3Client, ObjectStorageProperties properties) {
-    return new S3StorageProvider(s3Client, properties.getMaxFileSize());
   }
 
   @Bean
