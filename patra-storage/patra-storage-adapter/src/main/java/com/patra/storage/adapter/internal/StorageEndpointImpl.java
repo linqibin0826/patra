@@ -1,7 +1,8 @@
 package com.patra.storage.adapter.internal;
 
-import com.patra.storage.api.RecordUploadResponse;
-import com.patra.storage.api.UploadRecordRequest;
+import com.patra.storage.api.dto.RecordUploadResponse;
+import com.patra.storage.api.dto.UploadRecordRequest;
+import com.patra.storage.api.endpoint.StorageEndpoint;
 import com.patra.storage.app.recordupload.RecordUploadCommand;
 import com.patra.storage.app.recordupload.RecordUploadOrchestrator;
 import com.patra.storage.app.recordupload.RecordUploadResult;
@@ -11,21 +12,18 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-/** REST controller exposing the internal storage metadata endpoint. */
+/** REST controller implementing the internal storage metadata endpoint. */
 @Slf4j
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/internal/storage")
-public class StorageEndpointImpl {
+public class StorageEndpointImpl implements StorageEndpoint {
 
   private final RecordUploadOrchestrator orchestrator;
 
@@ -33,17 +31,20 @@ public class StorageEndpointImpl {
    * Persists metadata describing a successfully uploaded object.
    *
    * @param request validated upload payload
-   * @param httpRequest servlet request (for IP capture)
    * @return 201 Created with metadata id
    */
-  @PostMapping("/files/record")
-  public ResponseEntity<RecordUploadResponse> recordUpload(
-      @RequestBody @Valid UploadRecordRequest request, HttpServletRequest httpRequest) {
+  @Override
+  public RecordUploadResponse recordUpload(@RequestBody @Valid UploadRecordRequest request) {
+    HttpServletRequest httpRequest = getCurrentRequest();
     RecordUploadCommand command = buildCommand(request, httpRequest);
     RecordUploadResult result = orchestrator.execute(command);
-    RecordUploadResponse response =
-        new RecordUploadResponse(result.metadataId(), result.recordedAt());
-    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    return new RecordUploadResponse(result.metadataId(), result.recordedAt());
+  }
+
+  private HttpServletRequest getCurrentRequest() {
+    ServletRequestAttributes attributes =
+        (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+    return attributes.getRequest();
   }
 
   private RecordUploadCommand buildCommand(

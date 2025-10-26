@@ -1,4 +1,4 @@
-package com.patra.storage.api;
+package com.patra.storage.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${STORAGE_DB_URL:jdbc:mysql://localhost:3306/patra_storage?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=UTC}
+    url: ${STORAGE_DB_URL:jdbc:mysql://localhost:13306/patra_storage?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
     username: ${STORAGE_DB_USERNAME:root}
-    password: ${STORAGE_DB_PASSWORD:root}
+    password: ${STORAGE_DB_PASSWORD:123456}
 
 logging:
   file:
