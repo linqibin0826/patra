@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `storage_file_metadata`
     `storage_key`      VARCHAR(768)    NOT NULL COMMENT 'Full storage key: bucket/objectKey',
     `bucket_name`      VARCHAR(128)    NOT NULL COMMENT 'Bucket name',
     `object_key`       VARCHAR(512)    NOT NULL COMMENT 'Object key within bucket',
+    `original_filename` VARCHAR(255)   NULL COMMENT 'Original filename (user upload) or extracted filename (system generated)',
     `file_size`        BIGINT          NOT NULL COMMENT 'File size in bytes',
     `content_type`     VARCHAR(128)    NULL COMMENT 'MIME type declared by uploader',
     `md5_hash`         VARCHAR(64)     NOT NULL COMMENT 'MD5 checksum',
