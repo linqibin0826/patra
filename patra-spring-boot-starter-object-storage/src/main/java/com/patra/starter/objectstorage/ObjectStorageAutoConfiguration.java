@@ -1,5 +1,6 @@
 package com.patra.starter.objectstorage;
 
+import com.patra.common.objectstorage.StorageLocationResolver;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
@@ -10,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.retry.support.RetryTemplate;
 
 /** Auto-configuration entry point that exposes {@link ObjectStorageTemplate}. */
@@ -94,6 +96,14 @@ public class ObjectStorageAutoConfiguration {
   public ObjectStorageTemplate objectStorageTemplate(
       ObjectStorageProvider provider, RetryTemplate retryTemplate, ObjectStorageMetrics metrics) {
     return new ObjectStorageTemplate(provider, retryTemplate, metrics);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  public StorageLocationResolver storageLocationResolver(Environment environment) {
+    String profile = environment.getProperty("spring.profiles.active", "dev");
+    String service = environment.getProperty("spring.application.name", "service");
+    return new StorageLocationResolver(profile, service);
   }
 
   private ObjectStorageProperties.ProviderConfig resolveConfig(
