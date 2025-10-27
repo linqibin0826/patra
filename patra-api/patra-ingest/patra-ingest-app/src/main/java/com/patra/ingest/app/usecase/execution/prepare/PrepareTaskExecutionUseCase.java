@@ -1,7 +1,7 @@
 package com.patra.ingest.app.usecase.execution.prepare;
 
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
-import com.patra.ingest.app.usecase.execution.support.ExecutionSession;
+import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
 /**
