@@ -41,17 +41,15 @@ public enum OutboxChannels {
   INGEST_TASK_READY(
       "INGEST_TASK_READY", "Ingest task ready - scheduler created task and queued for execution"),
 
-  /** Ingest plan created channel. */
-  INGEST_PLAN_CREATED("INGEST_PLAN_CREATED", "Ingest plan created - new ingestion plan persisted"),
-
-  /** Ingest plan updated channel. */
-  INGEST_PLAN_UPDATED(
-      "INGEST_PLAN_UPDATED", "Ingest plan updated - plan state or configuration changed"),
-
   /** Literature data ready channel. */
   LITERATURE_DATA_READY(
       "LITERATURE_DATA_READY",
-      "Literature data ready - ingestion batches committed to object storage");
+      "Literature data ready - ingestion batches committed to object storage"),
+
+  /** Storage metadata internal retry channel. */
+  STORAGE_METADATA_INTERNAL(
+      "storage.metadata.internal",
+      "Storage metadata internal - technical retry channel for failed metadata operations");
 
   private final String code;
   private final String description;

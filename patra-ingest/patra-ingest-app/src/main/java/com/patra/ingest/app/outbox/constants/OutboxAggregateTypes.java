@@ -32,6 +32,7 @@ import lombok.Getter;
  *     publisher:
  *       allowed-aggregate-types:
  *         - Task
+ *         - TaskRun
  * </pre>
  *
  * @author linqibin
@@ -47,6 +48,13 @@ public enum OutboxAggregateTypes {
    * <p>Used for task queue events (task creation, scheduling, execution).
    */
   TASK("Task", "Task aggregate - for task queue events"),
+
+  /**
+   * Task run aggregate type.
+   *
+   * <p>Used for task execution events (technical retries, metadata recording).
+   */
+  TASK_RUN("TaskRun", "Task run aggregate - for execution tracking and retry"),
   ;
 
   /**
