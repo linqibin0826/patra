@@ -1,7 +1,7 @@
 package com.patra.ingest.app.usecase.execution.complete;
 
-import com.patra.ingest.app.usecase.execution.execute.ExecuteTaskBatchesUseCase;
-import com.patra.ingest.app.usecase.execution.support.ExecutionSession;
+import com.patra.ingest.app.usecase.execution.batch.ExecuteTaskBatchesUseCase;
+import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 
 /**
