@@ -44,38 +44,19 @@ public enum OutboxBusinessTags {
   /** Task ready for execution. */
   TASK_READY("TASK_READY", "Task ready - scheduler created task and queued for execution"),
 
-  // ==================== Plan Domain ====================
-
-  /** Ingestion plan created. */
-  PLAN_CREATED("PLAN_CREATED", "Plan created - new ingestion plan persisted"),
-
-  /** Ingestion plan updated. */
-  PLAN_UPDATED("PLAN_UPDATED", "Plan updated - plan state or configuration changed"),
-
-  /** Ingestion plan completed. */
-  PLAN_COMPLETED("PLAN_COMPLETED", "Plan completed - plan finished execution"),
-
   // ==================== Literature Domain ====================
-
-  /** Literature data parsed. */
-  LITERATURE_PARSED(
-      "LITERATURE_PARSED", "Literature parsed - raw data parsed to structured format"),
-
-  /** Literature data cleansed. */
-  LITERATURE_CLEANSED("LITERATURE_CLEANSED", "Literature cleansed - data cleansed and enriched"),
-
-  /** Literature data stored. */
-  LITERATURE_STORED("LITERATURE_STORED", "Literature stored - data persisted to target storage"),
 
   /** Literature data ready for catalog ingestion. */
   LITERATURE_DATA_READY(
       "LITERATURE_DATA_READY",
       "Literature data ready - aggregated object storage payload available"),
 
-  // ==================== Generic Events ====================
+  // ==================== Technical Operations ====================
 
-  /** Generic event published. */
-  EVENT_PUBLISHED("EVENT_PUBLISHED", "Event published - generic business event");
+  /** Storage metadata retry for failed recording operations. */
+  STORAGE_METADATA_RETRY(
+      "STORAGE_METADATA_RETRY",
+      "Storage metadata retry - failed metadata recording request pending retry");
 
   private final String code;
   private final String description;

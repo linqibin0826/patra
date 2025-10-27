@@ -8,12 +8,11 @@ import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.objectstorage.StorageContext;
 import com.patra.common.objectstorage.StorageLocation;
 import com.patra.common.objectstorage.StorageLocationResolver;
-import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.StandardLiterature;
 import com.patra.ingest.domain.model.vo.StandardLiterature.StandardAuthor;
 import com.patra.ingest.domain.model.vo.StandardLiterature.StandardJournal;
 import com.patra.ingest.domain.port.LiteraturePublisherPort;
-import com.patra.ingest.domain.port.OutboxMessageRepository;
+import com.patra.ingest.domain.port.TechnicalRetryPort;
 import com.patra.starter.objectstorage.ObjectStorageProperties;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.domain.ObjectMetadata;
@@ -24,7 +23,6 @@ import com.patra.storage.api.dto.UploadRecordRequest;
 import feign.FeignException;
 import feign.RetryableException;
 import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -39,6 +37,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -52,21 +51,20 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
 
-  private static final String STORAGE_CHANNEL = "storage.metadata.internal";
-  private static final String AGGREGATE_TYPE = "TASK_RUN";
-  private static final String OP_TYPE = "METADATA_RECORD";
-  private static final String SERVICE_NAME = "patra-ingest";
   private static final String BUSINESS_TYPE = "literature-batch";
   private static final HexFormat HEX_FORMAT = HexFormat.of();
   private static final DateTimeFormatter FILENAME_TIMESTAMP_FORMAT =
       DateTimeFormatter.ofPattern("HHmmssSSS");
+
+  @Value("${spring.application.name}")
+  private String serviceName;
 
   private final ObjectMapper objectMapper;
   private final ObjectStorageTemplate objectStorageTemplate;
   private final ObjectStorageProperties storageProperties;
   private final StorageLocationResolver storageLocationResolver;
   private final StorageClient storageClient;
-  private final OutboxMessageRepository outboxMessageRepository;
+  private final TechnicalRetryPort technicalRetryPort;
 
   @Override
   public PublishResult publish(List<StandardLiterature> literature, PublishContext context) {
@@ -172,12 +170,12 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
       handleMetadataRecordFailure(e, request, context);
     } catch (Exception e) {
       if (e instanceof RetryableException) {
-        log.warn("Metadata recording timeout, persisting to Outbox for retry", e);
-        saveToOutbox(request, context);
+        log.warn("Metadata recording timeout, delegating to retry publisher", e);
+        delegateToRetryPublisher(request, context);
         return;
       }
-      log.error("Unexpected error recording metadata, persisting to Outbox", e);
-      saveToOutbox(request, context);
+      log.error("Unexpected error recording metadata, delegating to retry publisher", e);
+      delegateToRetryPublisher(request, context);
     }
   }
 
@@ -198,7 +196,7 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
         "application/json",
         checksums.md5(),
         checksums.sha256(),
-        SERVICE_NAME,
+        serviceName,
         BUSINESS_TYPE,
         location.businessId(),
         correlation,
@@ -210,9 +208,9 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
   private void handleMetadataRecordFailure(
       FeignException exception, UploadRecordRequest request, PublishContext context) {
     int status = exception.status();
-    if (status >= 500 || status == 503) {
-      log.warn("patra-storage unavailable (HTTP {}), storing metadata request in Outbox", status);
-      saveToOutbox(request, context);
+    if (status >= 500 || status == 503 || status == -1) {
+      log.warn("patra-storage unavailable (HTTP {}), delegating to retry publisher", status);
+      delegateToRetryPublisher(request, context);
       return;
     }
     if (status >= 400 && status < 500) {
@@ -224,49 +222,60 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
           exception);
       return;
     }
-    log.error("Unexpected Feign error recording metadata", exception);
-    saveToOutbox(request, context);
+    log.error("Unexpected Feign error, delegating to retry publisher", exception);
+    delegateToRetryPublisher(request, context);
   }
 
-  private void saveToOutbox(UploadRecordRequest request, PublishContext context) {
+  /**
+   * Delegates failed metadata recording to the technical retry publisher.
+   *
+   * <p>Instead of directly manipulating Outbox, this method uses {@link TechnicalRetryPort} to
+   * ensure consistent handling through the {@link
+   * com.patra.ingest.app.outbox.core.AbstractOutboxPublisher} framework.
+   *
+   * @param request the failed upload record request
+   * @param context publish context for traceability
+   */
+  private void delegateToRetryPublisher(UploadRecordRequest request, PublishContext context) {
     try {
       String payloadJson = objectMapper.writeValueAsString(request);
-      String headersJson = objectMapper.writeValueAsString(buildHeaders(context));
       Long aggregateId = context.runId() != null ? context.runId() : 0L;
-      OutboxMessage message =
-          OutboxMessage.builder()
-              .aggregateType(AGGREGATE_TYPE)
+
+      Map<String, Object> metadata =
+          Map.of(
+              "provenanceCode",
+              safeProvenance(context.provenanceCode()),
+              "batchNo",
+              context.batchNo(),
+              "storageKey",
+              request.storageKey(),
+              "fileSize",
+              request.fileSize(),
+              "traceId",
+              MDC.get("traceId") != null ? MDC.get("traceId") : "");
+
+      TechnicalRetryPort.RetryContext retryContext =
+          TechnicalRetryPort.RetryContext.builder()
+              .operationType("METADATA_RECORD")
               .aggregateId(aggregateId)
-              .channel(STORAGE_CHANNEL)
-              .opType(OP_TYPE)
-              .partitionKey(safeProvenance(context.provenanceCode()))
-              .dedupKey(generateDedupKey(request))
-              .payloadJson(payloadJson)
-              .headersJson(headersJson)
-              .statusCode("PENDING")
-              .retryCount(0)
+              .payload(payloadJson)
+              .metadata(metadata)
               .build();
-      outboxMessageRepository.saveOrUpdate(message);
+
+      technicalRetryPort.publishRetry(retryContext);
+
       log.info(
-          "Metadata record request saved to Outbox runId={} storageKey={} dedupKey={}",
+          "Metadata record request delegated to retry publisher runId={} storageKey={}",
           context.runId(),
-          request.storageKey(),
-          message.getDedupKey());
+          request.storageKey());
+
     } catch (Exception e) {
       log.error(
-          "CRITICAL: Failed to persist metadata record request to Outbox storageKey={} runId={}",
+          "CRITICAL: Failed to delegate to retry publisher storageKey={} runId={}",
           request.bucketName() + "/" + request.objectKey(),
           context.runId(),
           e);
     }
-  }
-
-  private Map<String, Object> buildHeaders(PublishContext context) {
-    Map<String, Object> headers = new LinkedHashMap<>();
-    headers.put("provenanceCode", context.provenanceCode());
-    headers.put("batchNo", context.batchNo());
-    headers.put("traceId", MDC.get("traceId"));
-    return headers;
   }
 
   private Map<String, Object> buildCorrelationData(StorageLocation location, UploadResult result) {
@@ -303,18 +312,6 @@ public class LiteraturePublisherAdapter implements LiteraturePublisherPort {
           HEX_FORMAT.formatHex(md5.digest()), HEX_FORMAT.formatHex(sha256.digest()));
     } catch (NoSuchAlgorithmException ex) {
       throw new IllegalStateException("Missing digest algorithm", ex);
-    }
-  }
-
-  private String generateDedupKey(UploadRecordRequest request) {
-    String storageKey = request.storageKey();
-    String input = storageKey + ':' + request.fileSize();
-    try {
-      MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-      sha256.update(input.getBytes(StandardCharsets.UTF_8));
-      return HEX_FORMAT.formatHex(sha256.digest());
-    } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException("Missing SHA-256 algorithm", ex);
     }
   }
 
