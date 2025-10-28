@@ -1,4 +1,4 @@
-package com.patra.common.objectstorage;
+package com.patra.common.storage;
 
 /**
  * Strategy interface for generating standardized object storage keys.

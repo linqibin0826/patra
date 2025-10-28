@@ -1,27 +1,33 @@
 package com.patra.starter.objectstorage;
 
-import com.patra.common.objectstorage.StorageContext;
-import com.patra.common.objectstorage.StorageLocation;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import com.patra.common.storage.DatePartitionedKeyGenerator;
+import com.patra.common.storage.ObjectKeyContext;
+import com.patra.common.storage.ObjectKeyGenerator;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
-/** Resolves storage bucket and object key using fixed formatting rules. */
+/** Resolves storage bucket and object key using configurable key generation strategy. */
 @Slf4j
 public class StorageLocationResolver {
 
-  private static final DateTimeFormatter YEAR_FORMATTER = DateTimeFormatter.ofPattern("yyyy");
-  private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("MM");
-  private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("dd");
-
   private final String environment;
   private final String serviceName;
+  private final ObjectKeyGenerator keyGenerator;
 
-  public StorageLocationResolver(String environment, String serviceName) {
+  /**
+   * Creates a resolver with the specified environment, service name, and key generator.
+   *
+   * @param environment environment name (e.g., "dev", "prod")
+   * @param serviceName service name
+   * @param keyGenerator strategy for generating object keys (defaults to
+   *     DatePartitionedKeyGenerator if null)
+   */
+  public StorageLocationResolver(
+      String environment, String serviceName, ObjectKeyGenerator keyGenerator) {
     this.environment = normalizeScope(environment, "dev");
     this.serviceName = normalizeScope(serviceName, "service");
+    this.keyGenerator = keyGenerator != null ? keyGenerator : DatePartitionedKeyGenerator.INSTANCE;
   }
 
   public StorageLocation resolve(StorageContext context) {
@@ -46,20 +52,25 @@ public class StorageLocationResolver {
   }
 
   private String generateObjectKey(StorageContext context) {
-    LocalDate date = context.getDate();
-    String year = YEAR_FORMATTER.format(date);
-    String month = MONTH_FORMATTER.format(date);
-    String day = DAY_FORMATTER.format(date);
-    String businessType = normalizeBusinessType(context.getBusinessType());
+    // Extract extension from filename
     String filename = context.getFilename().trim();
-    return businessType + '/' + year + '/' + month + '/' + day + '/' + filename;
-  }
+    String extension = "";
+    int lastDot = filename.lastIndexOf('.');
+    if (lastDot > 0 && lastDot < filename.length() - 1) {
+      extension = filename.substring(lastDot); // includes the dot
+    }
 
-  private String normalizeBusinessType(String businessType) {
-    String normalized = businessType.trim().toLowerCase(Locale.ROOT);
-    normalized = normalized.replace('_', '-');
-    normalized = normalized.replace(' ', '-');
-    return normalized;
+    // Build context for key generator
+    ObjectKeyContext keyContext =
+        ObjectKeyContext.builder()
+            .serviceName(serviceName)
+            .businessType(context.getBusinessType())
+            .businessId(context.getBusinessId())
+            .partitionDate(context.getDate())
+            .extension(extension)
+            .build();
+
+    return keyGenerator.generate(keyContext);
   }
 
   private String normalizeScope(String value, String fallback) {

@@ -21,7 +21,12 @@
         <!-- patra-common (required) -->
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-common-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.papertrace</groupId>
+            <artifactId>patra-common-model</artifactId>
         </dependency>
 
 

@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-common-core</artifactId>
         </dependency>
 
         <!-- Allow DTO validation annotations without pulling in full Spring dependencies. -->

@@ -1,66 +1,56 @@
-<project>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>com.papertrace</groupId>
-        <artifactId>patra-parent</artifactId>
+        <artifactId>patra-common</artifactId>
         <version>0.1.0-SNAPSHOT</version>
-        <relativePath>../patra-parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>patra-spring-boot-starter-core</artifactId>
-    <packaging>jar</packaging>
-    <name>Papertrace Spring Boot Starter - Core</name>
+    <artifactId>patra-common-core</artifactId>
+    <name>Papertrace Common Core</name>
+    <description>
+        Core utilities required by all Papertrace services:
+        - Domain layer base classes (AggregateRoot, DomainEvent)
+        - Error handling framework (DomainException, ErrorTrait)
+        - Shared enums (ProvenanceCode, Priority)
+        - JSON utilities (JsonMapperHolder, JsonNormalizer)
+        - Messaging utilities (ChannelKey)
+        - Common utilities (HashUtils)
+    </description>
 
     <dependencies>
-        <!-- Internal shared library: utilities/exceptions -->
+        <!-- Hutool for utilities -->
         <dependency>
-            <groupId>com.papertrace</groupId>
-            <artifactId>patra-common-core</artifactId>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-core</artifactId>
         </dependency>
 
-        <!-- Foundation for custom AutoConfiguration -->
+        <!-- Jackson for JSON processing -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- Official Boot JSON starter (jackson-databind + common modules) -->
+        <!-- SLF4J API for logging (provided by runtime) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-json</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- Jackson XML (optional): enables XmlMapper auto-config when present -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-xml</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Micrometer metrics -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-core</artifactId>
-        </dependency>
-
-        <!-- Resilience4j circuit breaker (optional: only needed if error-pipeline circuit breaker is enabled) -->
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-circuitbreaker</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Configuration metadata (IDE hints during development; not used at runtime) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- SkyWalking toolkits may be added by services directly when needed -->
-
-        <!-- Test dependencies (keep the suite lightweight; no spring-boot-starter-test) -->
+        <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -83,8 +73,15 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <!-- Version and base executions inherited from parent pluginManagement -->
                 <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <configuration>
+                            <includes>
+                                <include>com/patra/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>check</id>
                         <phase>verify</phase>

@@ -1,550 +1,268 @@
-# patra-common — Shared Domain Foundation
+# patra-common — Shared Foundation (Multi-Module)
 
-> **Pure Java library** providing base classes, utilities, and domain contracts shared across all Papertrace microservices.
-
----
-
-## 📌 Purpose
-
-`patra-common` serves as the **foundation layer** for domain-driven design across the platform, providing:
-
-1. **Domain Base Classes**: `AggregateRoot`, `DomainEvent`, `ReadOnlyAggregate`
-2. **Error Handling**: Exception hierarchy, error codes, problem detail traits
-3. **Shared Enums**: `ProvenanceCode`, `Priority`, `SortDirection`, etc.
-4. **JSON Utilities**: Jackson helpers, JSON normalization
-5. **Common Utilities**: Hashing, messaging contracts
-
-**Key Principle**: **ZERO framework dependencies** — Pure Java for maximum portability.
+> **Multi-module project** providing core utilities, storage abstractions, and shared models for Papertrace microservices.
 
 ---
 
 ## 📦 Module Structure
 
+`patra-common` is now a **multi-module aggregator** with three independent submodules:
+
 ```
-patra-common/
-└─ src/main/java/com/patra/common/
-   ├─ domain/                    # DDD base classes (⭐ core)
-   │  ├─ AggregateRoot.java           # Base for aggregate roots
-   │  ├─ ReadOnlyAggregate.java       # Base for read models (CQRS)
-   │  └─ DomainEvent.java             # Domain event interface
-   │  └─ README.md                    # 📖 Package documentation
-   │
-   ├─ error/                     # Exception hierarchy
-   │  ├─ DomainException.java         # Domain layer exceptions
-   │  ├─ ApplicationException.java    # App layer exceptions
-   │  ├─ problem/                     # Problem detail support
-   │  ├─ trait/                       # Error traits (categorization)
-   │  └─ codes/                       # Error code definitions
-   │
-   ├─ enums/                     # Shared enumerations
-   │  ├─ ProvenanceCode.java          # Data source codes
-   │  ├─ Priority.java                # Task priority levels
-   │  ├─ SortDirection.java           # ASC/DESC
-   │  └─ ...
-   │
-   ├─ json/                      # JSON utilities
-   │  ├─ JsonMapperHolder.java        # Jackson ObjectMapper singleton
-   │  ├─ JsonNormalizer.java          # JSON normalization utils
-   │  └─ JsonNodeMappings.java        # JsonNode helpers
-   │
-   ├─ messaging/                 # Messaging contracts
-   │  └─ ChannelKey.java              # Message channel identifiers
-   │
-   └─ util/                      # General utilities
-      └─ HashUtils.java                # Hash generation (SHA-256, etc.)
+patra-common/                    (聚合 POM - 无代码)
+├── patra-common-core/          (核心基础 - 所有服务必需)
+├── patra-common-storage/       (存储键生成 - 按需依赖)
+└── patra-common-model/         (共享数据模型 - 按需依赖)
 ```
 
 ---
 
-## 🔑 Key Components
+## 🎯 Design Philosophy
 
-### 1. Domain Base Classes
+### Before (Old Structure)
+❌ **Problem**: All microservices were forced to depend on ALL code in `patra-common`, including:
+- Object storage key generation (only used by patra-ingest)
+- StandardLiterature model (only used by 3 modules)
+- This violated "dependency on demand" principle
 
-**Location**: [`domain/`](src/main/java/com/patra/common/domain/)
-
-**Purpose**: Foundation for DDD aggregates and events.
-
-| Class | Purpose | Used By |
-|-------|---------|---------|
-| **AggregateRoot<ID>** | Base for aggregate roots (mutable state) | PlanAggregate, TaskAggregate, ... |
-| **ReadOnlyAggregate<ID>** | Base for read models (CQRS read side) | ProvenanceConfiguration |
-| **DomainEvent** | Interface for domain events | TaskQueuedEvent, PlanCompletedEvent, ... |
-
-**See**: [Domain Package README](src/main/java/com/patra/common/domain/README.md) for comprehensive guide.
-
-**Example Usage**:
-```java
-// Define aggregate
-public class PlanAggregate extends AggregateRoot<Long> {
-    private PlanStatus status;
-
-    public void startSlicing() {
-        this.status = PlanStatus.SLICING;
-        addDomainEvent(new PlanSlicingStartedEvent(getId(), Instant.now()));
-    }
-}
-
-// Define event
-public record PlanSlicingStartedEvent(Long planId, Instant occurredAt)
-    implements DomainEvent {
-
-    @Override
-    public String eventType() {
-        return "ingest.plan.slicing-started";
-    }
-}
-```
+### After (New Structure)
+✅ **Solution**: Modular design with clear boundaries:
+- **patra-common-core**: Truly shared core utilities (domain/error/enums/json/util)
+- **patra-common-storage**: Storage key generation (optional, DDD business rule)
+- **patra-common-model**: Shared data models (optional, inter-service contracts)
 
 ---
 
-### 2. Error Handling
+## 📌 Submodules
 
-**Location**: [`error/`](src/main/java/com/patra/common/error/)
+### 1. patra-common-core (Required by All Services)
 
-**Purpose**: Structured exception hierarchy with error codes and traits.
+**Artifact**: `com.papertrace:patra-common-core`
 
-#### Exception Hierarchy
+**Purpose**: Foundation classes used by ALL Papertrace services.
 
-```
-Throwable
-└─ RuntimeException
-   ├─ DomainException           # Domain layer (pure business logic)
-   │  └─ PlanValidationException, TaskNotFoundException, ...
-   │
-   └─ ApplicationException       # App layer (orchestration)
-      └─ PlanAssemblyException, ConfigurationException, ...
-```
+**Contents**:
+- **domain/**: DDD base classes (`AggregateRoot`, `DomainEvent`)
+- **error/**: Exception hierarchy, error codes, traits
+- **enums/**: Shared enums (`ProvenanceCode`, `Priority`)
+- **json/**: JSON utilities (`JsonMapperHolder`, `JsonNormalizer`)
+- **messaging/**: Message channel identifiers
+- **util/**: Common utilities (`HashUtils`)
 
-**Pattern**:
-```java
-// Domain exception
-public class TaskNotFoundException extends DomainException {
-    public TaskNotFoundException(String message) {
-        super(ErrorCodes.TASK_NOT_FOUND, message);
-    }
-}
+**Dependencies**: Hutool, Jackson, SLF4J (provided)
 
-// App exception
-public class PlanAssemblyException extends ApplicationException {
-    public PlanAssemblyException(String message, Throwable cause) {
-        super(ErrorCodes.PLAN_ASSEMBLY_FAILED, message, cause);
-    }
-}
+**Usage**:
+```xml
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-core</artifactId>
+</dependency>
 ```
 
-#### Error Codes
-
-**Location**: [`error/codes/`](src/main/java/com/patra/common/error/codes/)
-
-**Interface**: `ErrorCodeLike`
-
-```java
-public interface ErrorCodeLike {
-    String getCode();          // Machine-readable code
-    String getDefaultMessage(); // Human-readable message
-    int getHttpStatus();       // HTTP status code
-}
-```
-
-**Implementation**:
-```java
-public enum HttpStdErrors implements ErrorCodeLike {
-    NOT_FOUND("NOT_FOUND", "Resource not found", 404),
-    CONFLICT("CONFLICT", "Resource already exists", 409),
-    VALIDATION_FAILED("VALIDATION_FAILED", "Validation failed", 400);
-
-    // ...
-}
-```
-
-#### Error Traits
-
-**Location**: [`error/trait/`](src/main/java/com/patra/common/error/trait/)
-
-**Purpose**: Categorize errors for cross-cutting concerns (retry, alerting, etc.).
-
-**Example**:
-```java
-public interface ErrorTrait { }
-
-public interface Retryable extends ErrorTrait { }
-public interface NotRetryable extends ErrorTrait { }
-public interface ClientError extends ErrorTrait { }
-public interface ServerError extends ErrorTrait { }
-
-// Usage
-public class NetworkTimeoutException extends ApplicationException implements Retryable { }
-public class InvalidInputException extends ApplicationException implements ClientError, NotRetryable { }
-```
+**Who Uses**: All `*-domain`, `*-app`, `*-infra`, `*-adapter` modules
 
 ---
 
-### 3. Shared Enumerations
+### 2. patra-common-storage (Optional - On-Demand)
 
-**Location**: [`enums/`](src/main/java/com/patra/common/enums/)
+**Artifact**: `com.papertrace:patra-common-storage`
 
-**Purpose**: Type-safe constants shared across services.
+**Purpose**: Standardized object storage key generation strategies.
 
-| Enum | Purpose | Values |
-|------|---------|--------|
-| **ProvenanceCode** | Data source identifiers | PUBMED, EPMC, CROSSREF, ... |
-| **Priority** | Task priority levels | HIGH, NORMAL, LOW |
-| **SortDirection** | Sort order | ASC, DESC |
-| **IngestDateType** | Date type for ingestion | CREATED, UPDATED, PUBLISHED |
-| **RegistryConfigScope** | Config scope level | SOURCE, TASK |
+**Contents**:
+- **ObjectKeyContext**: Immutable context for key generation
+- **ObjectKeyGenerator**: Strategy interface
+- **DatePartitionedKeyGenerator**: Date-based partitioning (yyyy/MM/dd)
+- **ObjectKeyTemplate**: Factory methods for common patterns
 
-**Example**:
-```java
-public enum ProvenanceCode {
-    PUBMED("pubmed", "PubMed"),
-    EPMC("epmc", "Europe PMC"),
-    CROSSREF("crossref", "Crossref");
-
-    private final String code;
-    private final String displayName;
-
-    // Constructor, getters...
-}
-```
-
----
-
-### 4. JSON Utilities
-
-**Location**: [`json/`](src/main/java/com/patra/common/json/)
-
-**Purpose**: Jackson helpers for JSON serialization/deserialization.
-
-| Class | Purpose |
-|-------|---------|
-| **JsonMapperHolder** | Singleton ObjectMapper for global JSON operations |
-| **JsonNormalizer** | Normalize JSON strings (sorting keys, removing whitespace) |
-| **JsonNodeMappings** | Helpers for working with JsonNode |
-
-**Example**:
-```java
-// Serialize to JSON
-String json = JsonMapperHolder.INSTANCE.writeValueAsString(object);
-
-// Deserialize from JSON
-MyClass obj = JsonMapperHolder.INSTANCE.readValue(json, MyClass.class);
-
-// Normalize JSON (for hashing/comparison)
-String normalized = JsonNormalizer.normalize(json);
-```
-
----
-
-### 5. Object Storage Key Generation
-
-**Location**: [`objectstorage/`](src/main/java/com/patra/common/objectstorage/)
-
-**Purpose**: Standardized object key generation for distributed microservices using MinIO/S3.
-
-#### Standard Key Format
-
+**Key Format**:
 ```
 {service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}
 ```
 
-**Examples**:
-```
-ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
-storage/metadata-snapshot/2025/10/25/snapshot-20251025-001.json.gz
-catalog/literature-index/2025/10/26/index-pmid-12345.xml
-```
-
-#### Core Components
-
-| Class | Purpose |
-|-------|---------|
-| **ObjectKeyContext** | Immutable context (record) containing all key parameters |
-| **ObjectKeyGenerator** | Strategy interface for custom key generation patterns |
-| **DatePartitionedKeyGenerator** | Daily partition implementation (yyyy/MM/dd) |
-| **ObjectKeyTemplate** | Static utility for convenient key generation |
-
-#### Quick Start
-
-**Simple Usage** (most common):
+**Example**:
 ```java
-import com.patra.common.objectstorage.ObjectKeyTemplate;
-import java.time.LocalDate;
+import com.patra.common.storage.ObjectKeyTemplate;
 
-// Generate key with today's date
 String key = ObjectKeyTemplate.generateDailyKey(
-    "ingest",                    // service name
-    "literature-batch",          // business type (kebab-case)
-    "pubmed-123-batch-001",      // business ID
-    "json"                       // extension
+    "ingest", "literature-batch", "pubmed-123-batch-001", "json"
 );
-// Result: ingest/literature-batch/2025/10/26/pubmed-123-batch-001.json
+// Result: ingest/literature-batch/2025/10/28/pubmed-123-batch-001.json
 ```
 
-**Historical Data** (specific date):
-```java
-String historicalKey = ObjectKeyTemplate.generateDailyKey(
-    "ingest",
-    "literature-batch",
-    "pubmed-456-batch-002",
-    LocalDate.of(2025, 10, 20),  // partition date
-    "json.gz"                     // supports compound extensions
-);
-// Result: ingest/literature-batch/2025/10/20/pubmed-456-batch-002.json.gz
-```
-
-**Advanced Usage** (with custom segments):
-```java
-import com.patra.common.objectstorage.ObjectKeyContext;
-
-String customKey = ObjectKeyTemplate.builder()
-    .serviceName("catalog")
-    .businessType("index_snapshot")  // underscores → hyphens
-    .businessId("snapshot-20251026-001")
-    .partitionDate(LocalDate.now())
-    .extension("json.gz")
-    .customSegment("env", "prod")
-    .build();
-```
-
-#### Naming Conventions
-
-| Component | Convention | Example |
-|-----------|------------|---------|
-| **Service** | Lowercase, short name | `ingest`, `storage`, `catalog` |
-| **Business Type** | Lowercase, kebab-case | `literature-batch`, `metadata-snapshot` |
-| **Business ID** | Custom format, preserved | `pubmed-123-batch-001` |
-| **Extension** | Lowercase, supports compound | `json`, `json.gz`, `tar.gz` |
-
-#### Design Patterns
-
-- **Strategy Pattern**: `ObjectKeyGenerator` allows custom implementations
-- **Builder Pattern**: `ObjectKeyContext.Builder` for complex scenarios
-- **Singleton**: `DatePartitionedKeyGenerator.INSTANCE` for shared usage
-- **Immutability**: All contexts are immutable records
-
----
-
-### 6. Utilities
-
-**Location**: [`util/`](src/main/java/com/patra/common/util/)
-
-#### HashUtils
-
-**Purpose**: Generate hashes for idempotency keys, snapshots, etc.
-
-**Methods**:
-```java
-public class HashUtils {
-    // SHA-256 hash of string
-    public static String sha256(String input);
-
-    // SHA-256 hash of multiple strings (concatenated)
-    public static String sha256(String... inputs);
-
-    // MD5 hash (for non-security purposes)
-    public static String md5(String input);
-}
-```
+**Dependencies**: Hutool
 
 **Usage**:
-```java
-// Generate plan key
-String planKey = HashUtils.sha256(
-    provenanceCode,
-    operationCode,
-    windowSpec.toString(),
-    strategyCode
-);
+```xml
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-storage</artifactId>
+</dependency>
 ```
+
+**Who Uses**:
+- `patra-spring-boot-starter-object-storage` (StorageLocationResolver)
+- Any service needing standardized storage key generation
+
+**Design Note**: This is a **business rule** (naming convention), not infrastructure code. Keeping it separate from the `object-storage` starter allows domain layers to use standardized naming without depending on Spring framework.
 
 ---
 
-## 🔗 Dependencies
+### 3. patra-common-model (Optional - On-Demand)
 
-**This module has ZERO external dependencies** (except JDK and Jackson for JSON).
+**Artifact**: `com.papertrace:patra-common-model`
 
-**POM**:
+**Purpose**: Shared data models for inter-service communication.
+
+**Contents**:
+- **StandardLiterature**: Common literature data structure used across services
+
+**Dependencies**: Jackson (for JSON serialization)
+
+**Usage**:
 ```xml
-<dependencies>
-    <!-- ONLY Jackson for JSON -->
-    <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-    </dependency>
-
-    <!-- NO Spring, NO MyBatis, NO Lombok (domain classes) -->
-</dependencies>
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-model</artifactId>
+</dependency>
 ```
 
-**Why minimal dependencies?**
-- ✅ **Portability**: Can be used in any Java project
-- ✅ **Fast builds**: No transitive dependency hell
-- ✅ **Clear boundaries**: Domain logic isolated from frameworks
+**Who Uses**:
+- `patra-ingest-domain` (port interfaces)
+- `patra-ingest-app` (orchestrators)
+- `patra-spring-boot-starter-provenance` (data adapters)
 
 ---
 
-## 🔌 Usage in Other Modules
+## 🔧 Migration Guide
 
-### Domain Layers
+### For Service Modules
 
-**All `*-domain` modules depend on patra-common**:
-
+**Before** (old dependencies):
 ```xml
-<!-- patra-ingest-domain/pom.xml -->
 <dependency>
     <groupId>com.papertrace</groupId>
     <artifactId>patra-common</artifactId>
 </dependency>
 ```
 
-**Usage**:
-```java
-// Extend base classes
-public class TaskAggregate extends AggregateRoot<Long> { }
+**After** (choose what you need):
+```xml
+<!-- Required: Core utilities -->
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-core</artifactId>
+</dependency>
 
-// Use shared enums
-ProvenanceCode provenance = ProvenanceCode.PUBMED;
+<!-- Optional: If you need storage key generation -->
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-storage</artifactId>
+</dependency>
 
-// Throw domain exceptions
-throw new TaskNotFoundException("Task not found: " + taskId);
+<!-- Optional: If you need StandardLiterature model -->
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-model</artifactId>
+</dependency>
 ```
 
-### Application Layers
+### Import Statement Changes
 
-**App layers use error handling and utilities**:
-
+**Storage package renamed**:
 ```java
-// Map domain exceptions to app exceptions
-try {
-    task.markRunning();
-} catch (IllegalStateException e) {
-    throw new TaskExecutionException("Cannot start task", e);
-}
+// Before
+import com.patra.common.objectstorage.*;
 
-// Use hash utils
-String idempotentKey = HashUtils.sha256(planId, sliceId, batchId);
+// After
+import com.patra.common.storage.*;
 ```
 
----
-
-## 🛠️ Extending
-
-### Adding a New Shared Enum
-
-**Recipe**:
-
-1. Create enum in `enums/` package:
+**Note**: `StorageContext` and `StorageLocation` have been moved to:
 ```java
-package com.patra.common.enums;
-
-public enum TaskPriority {
-    URGENT(1),
-    HIGH(2),
-    NORMAL(3),
-    LOW(4);
-
-    private final int level;
-
-    TaskPriority(int level) {
-        this.level = level;
-    }
-
-    public int getLevel() {
-        return level;
-    }
-}
-```
-
-2. Use in domain models:
-```java
-public class TaskAggregate extends AggregateRoot<Long> {
-    private TaskPriority priority;
-
-    public void escalate() {
-        if (priority == TaskPriority.NORMAL) {
-            priority = TaskPriority.HIGH;
-        }
-    }
-}
-```
-
-### Adding a New Error Code
-
-**Recipe**:
-
-1. Create enum in `error/codes/`:
-```java
-package com.patra.common.error.codes;
-
-public enum IngestErrors implements ErrorCodeLike {
-    PLAN_NOT_FOUND("PLAN_NOT_FOUND", "Plan not found", 404),
-    TASK_CANCELLED("TASK_CANCELLED", "Task was cancelled", 409);
-
-    private final String code;
-    private final String message;
-    private final int httpStatus;
-
-    // Constructor, getters, implementation of ErrorCodeLike...
-}
-```
-
-2. Use in exceptions:
-```java
-public class PlanNotFoundException extends DomainException {
-    public PlanNotFoundException(String message) {
-        super(IngestErrors.PLAN_NOT_FOUND, message);
-    }
-}
+import com.patra.starter.objectstorage.StorageContext;
+import com.patra.starter.objectstorage.StorageLocation;
 ```
 
 ---
 
-## 🧪 Testing
+## 🏗️ Architecture Benefits
 
-### No Tests in patra-common (By Design)
+### 1. Dependency on Demand ✅
+- Services only depend on what they actually use
+- Reduces classpath pollution
+- Faster builds for services that don't need all features
 
-**Why?**
-- **Pure utilities**: Simple, self-evident code
-- **Tested via usage**: Domain tests in `*-domain` modules exercise base classes
-- **Minimal logic**: Enums, base classes have no complex business logic
+### 2. Clear Boundaries ✅
+- **Core**: Truly universal utilities
+- **Storage**: Domain-level naming rules (business logic)
+- **Model**: Inter-service contracts
 
-**Exception**: Add tests if complex logic is introduced (e.g., advanced hash algorithms).
+### 3. Hexagonal Architecture Compliance ✅
+- Domain layers can use `patra-common-storage` (business rules) without depending on infrastructure (`object-storage` starter)
+- Separation of concerns: naming strategy vs. storage implementation
+
+### 4. Independent Evolution ✅
+- Each submodule can evolve independently
+- Version management flexibility (future)
+
+---
+
+## 🔗 Dependencies
+
+```
+patra-common (POM aggregator)
+    ↓
+    ├─ patra-common-core (Hutool, Jackson, SLF4J)
+    │     ↑
+    │     └─ All microservice layers
+    │
+    ├─ patra-common-storage (Hutool)
+    │     ↑
+    │     └─ patra-spring-boot-starter-object-storage
+    │
+    └─ patra-common-model (Jackson)
+          ↑
+          ├─ patra-ingest-domain
+          └─ patra-spring-boot-starter-provenance
+```
 
 ---
 
 ## 📊 Module Statistics
 
-| Metric | Count |
-|--------|-------|
-| **Java Classes** | ~20 |
-| **Lines of Code** | ~800 |
-| **Dependencies** | 1 (Jackson) |
-| **Dependent Modules** | All (registry, ingest, gateway, ...) |
+| Module | Classes | LOC | Dependencies | Usage |
+|--------|---------|-----|--------------|-------|
+| **patra-common-core** | ~27 | ~2500 | Hutool, Jackson | All services (required) |
+| **patra-common-storage** | 4 | ~300 | Hutool | patra-ingest, object-storage starter |
+| **patra-common-model** | 1 | ~200 | Jackson | patra-ingest, patra-provenance |
 
 ---
 
-## 🚀 Best Practices
+## 🚀 Build Commands
 
-### DO ✅
+```bash
+# Build all submodules
+cd patra-common
+mvn clean install
 
-- **Keep pure**: NO Spring, MyBatis, or framework dependencies
-- **Keep small**: Only truly shared concepts (3+ modules using it)
-- **Document well**: Add Javadoc for public APIs
+# Build specific submodule
+cd patra-common-core
+mvn clean install
 
-### DON'T ❌
-
-- **Don't add service-specific logic**: Belongs in `*-domain` modules
-- **Don't add infrastructure code**: Belongs in `*-infra` or starters
-- **Don't add Spring annotations**: Violates framework independence
+# Verify dependencies
+mvn dependency:tree
+```
 
 ---
 
 ## 🔗 Related Documentation
 
-- [Domain Package README](src/main/java/com/patra/common/domain/README.md) — Deep dive into DDD base classes
-- [Architecture Guide](../docs/ARCHITECTURE.md) — Hexagonal Architecture principles
-- [Development Guide](../docs/DEV-GUIDE.md) — How to use base classes
+- [ARCHITECTURE.md](../docs/ARCHITECTURE.md) — Hexagonal Architecture principles
+- [DEV-GUIDE.md](../docs/DEV-GUIDE.md) — Development guidelines
+- [AGENTS-architecture.md](../.claude/AGENTS-architecture.md) — DDD patterns reference
 
 ---
 
-**Last Updated**: 2025-01-12
+**Last Updated**: 2025-10-28
+**Migration**: patra-common → multi-module structure (patra-common-core/storage/model)

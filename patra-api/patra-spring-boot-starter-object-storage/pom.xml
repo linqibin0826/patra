@@ -28,7 +28,7 @@
 
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-common-storage</artifactId>
         </dependency>
 
         <dependency>

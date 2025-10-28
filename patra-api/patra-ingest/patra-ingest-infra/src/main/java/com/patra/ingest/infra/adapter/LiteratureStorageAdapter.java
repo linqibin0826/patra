@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.model.StandardLiterature;
-import com.patra.common.objectstorage.StorageContext;
-import com.patra.common.objectstorage.StorageLocation;
+import com.patra.starter.objectstorage.StorageContext;
+import com.patra.starter.objectstorage.StorageLocation;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.infra.acl.LiteratureConverter;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
@@ -121,8 +121,8 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
   }
 
   private StorageLocation resolveStorageLocation(LiteratureStoragePort.StorageContext context) {
-    com.patra.common.objectstorage.StorageContext storageContext =
-        com.patra.common.objectstorage.StorageContext.builder()
+    com.patra.starter.objectstorage.StorageContext storageContext =
+        com.patra.starter.objectstorage.StorageContext.builder()
             .businessType(BUSINESS_TYPE)
             .filename(generateFilename(context))
             .businessId(buildBusinessId(context))
