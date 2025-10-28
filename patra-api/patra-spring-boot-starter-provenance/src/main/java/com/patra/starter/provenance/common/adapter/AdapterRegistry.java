@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
  * Registry responsible for discovering and querying {@link DataSourceAdapter} implementations.
  *
  * <p>The registry is populated via Spring's component scanning and provides fast lookup by
- * provenance code and operation.
+ * provenance code.
  */
 @Slf4j
 public class AdapterRegistry {
@@ -31,34 +31,31 @@ public class AdapterRegistry {
   }
 
   /**
-   * Tests whether an adapter exists for the requested provenance code and operation.
+   * Tests whether an adapter exists for the requested provenance code.
    *
    * @param provenanceCode provenance identifier such as {@code pubmed}
-   * @param operationCode operation code (e.g. HARVEST, UPDATE)
    * @return true when a matching adapter is available
    */
-  public boolean supports(String provenanceCode, String operationCode) {
-    return findAdapter(provenanceCode, operationCode).isPresent();
+  public boolean supports(String provenanceCode) {
+    return findAdapter(provenanceCode).isPresent();
   }
 
   /**
-   * Returns the adapter matching the requested provenance code and operation.
+   * Returns the adapter matching the requested provenance code.
    *
    * @param provenanceCode provenance identifier such as {@code pubmed}
-   * @param operationCode operation code (e.g. HARVEST, UPDATE)
    * @return matching adapter
-   * @throws IllegalArgumentException if no adapter matches the input
+   * @throws IllegalArgumentException if no adapter exists for the provenance
    */
-  public DataSourceAdapter getAdapter(String provenanceCode, String operationCode) {
-    return findAdapter(provenanceCode, operationCode)
+  public DataSourceAdapter getAdapter(String provenanceCode) {
+    return findAdapter(provenanceCode)
         .orElseThrow(
             () ->
                 new IllegalArgumentException(
-                    "No adapter found for provenance=%s operation=%s"
-                        .formatted(provenanceCode, operationCode)));
+                    "No adapter found for provenance=%s".formatted(provenanceCode)));
   }
 
-  private Optional<DataSourceAdapter> findAdapter(String provenanceCode, String operationCode) {
+  private Optional<DataSourceAdapter> findAdapter(String provenanceCode) {
     if (provenanceCode == null || provenanceCode.isBlank()) {
       return Optional.empty();
     }
@@ -67,7 +64,9 @@ public class AdapterRegistry {
     if (candidates == null || candidates.isEmpty()) {
       return Optional.empty();
     }
-    return candidates.stream().filter(adapter -> adapter.supports(operationCode)).findFirst();
+    // Return the first adapter for this provenance.
+    // Each provenance should have exactly one adapter implementation.
+    return candidates.stream().findFirst();
   }
 
   private void register(DataSourceAdapter adapter) {
