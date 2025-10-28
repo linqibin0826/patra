@@ -1,6 +1,5 @@
 package com.patra.starter.objectstorage;
 
-import com.patra.common.objectstorage.StorageLocationResolver;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;

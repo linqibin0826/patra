@@ -648,7 +648,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
             request.triggerType(),
             request.triggeredAt(),
             request.triggerParams(),
-            request.provenanceCode());
+            request.provenanceCode().getCode());
     try {
       return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
     } catch (RuntimeException ex) {

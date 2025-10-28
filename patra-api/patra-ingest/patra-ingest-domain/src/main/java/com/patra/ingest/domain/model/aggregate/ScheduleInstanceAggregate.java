@@ -1,7 +1,6 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import java.time.Instant;
@@ -36,7 +35,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
   private final Instant triggeredAt;
 
   /** Provenance/source code. */
-  private final ProvenanceCode provenanceCode;
+  private final String provenanceCode;
 
   /** Trigger parameters delivered by the scheduler. */
   private final Map<String, Object> triggerParams;
@@ -49,7 +48,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
       TriggerType triggerType,
       Instant triggeredAt,
       Map<String, Object> triggerParams,
-      ProvenanceCode provenanceCode) {
+      String provenanceCode) {
     super(id);
     this.scheduler = Objects.requireNonNull(scheduler, "schedulerCode must not be null");
     this.schedulerJobId = schedulerJobId;
@@ -69,7 +68,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
       TriggerType triggerType,
       Instant triggeredAt,
       Map<String, Object> triggerParams,
-      ProvenanceCode provenanceCode) {
+      String provenanceCode) {
     return new ScheduleInstanceAggregate(
         null,
         scheduler,
@@ -89,7 +88,7 @@ public class ScheduleInstanceAggregate extends AggregateRoot<Long> {
       TriggerType triggerType,
       Instant triggeredAt,
       Map<String, Object> triggerParams,
-      ProvenanceCode provenanceCode,
+      String provenanceCode,
       long version) {
     ScheduleInstanceAggregate aggregate =
         new ScheduleInstanceAggregate(
