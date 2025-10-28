@@ -19,7 +19,7 @@
         <!-- Common types (ProvenanceCode, etc.) -->
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-common-core</artifactId>
         </dependency>
 
         <dependency>

@@ -1,5 +1,6 @@
 package com.patra.starter.objectstorage;
 
+import com.patra.common.storage.ObjectKeyGenerator;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
@@ -99,10 +100,12 @@ public class ObjectStorageAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  public StorageLocationResolver storageLocationResolver(Environment environment) {
+  public StorageLocationResolver storageLocationResolver(
+      Environment environment, ObjectProvider<ObjectKeyGenerator> keyGeneratorProvider) {
     String profile = environment.getProperty("spring.profiles.active", "dev");
     String service = environment.getProperty("spring.application.name", "service");
-    return new StorageLocationResolver(profile, service);
+    ObjectKeyGenerator keyGenerator = keyGeneratorProvider.getIfAvailable();
+    return new StorageLocationResolver(profile, service, keyGenerator);
   }
 
   private ObjectStorageProperties.ProviderConfig resolveConfig(

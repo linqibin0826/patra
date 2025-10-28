@@ -1,4 +1,4 @@
-package com.patra.common.objectstorage;
+package com.patra.common.storage;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;

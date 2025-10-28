@@ -1,4 +1,4 @@
-package com.patra.common.objectstorage;
+package com.patra.starter.objectstorage;
 
 import java.time.LocalDate;
 import java.util.Collections;

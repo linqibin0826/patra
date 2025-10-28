@@ -156,15 +156,22 @@
             </dependency>
 
             <!-- Patra modules. -->
+            <!-- patra-common is now a multi-module aggregator -->
             <dependency>
                 <groupId>com.papertrace</groupId>
-                <artifactId>patra-common</artifactId>
+                <artifactId>patra-common-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
                 <groupId>com.papertrace</groupId>
-                <artifactId>patra-common-error</artifactId>
+                <artifactId>patra-common-storage</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.papertrace</groupId>
+                <artifactId>patra-common-model</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

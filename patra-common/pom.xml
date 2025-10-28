@@ -12,90 +12,21 @@
     </parent>
 
     <artifactId>patra-common</artifactId>
+    <packaging>pom</packaging>
     <name>Papertrace Common</name>
 
-    <dependencies>
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-        </dependency>
-        <!-- SLF4J API for logging utilities (provided scope) -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <modules>
+        <module>patra-common-core</module>
+        <module>patra-common-storage</module>
+        <module>patra-common-model</module>
+    </modules>
 
-    <!-- Test-only dependencies; keep the footprint light without spring-boot-starter-test. -->
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <!-- Version inherited from parent pluginManagement -->
-                <executions>
-                    <execution>
-                        <id>prepare-agent</id>
-                        <configuration>
-                            <includes>
-                                <include>com/patra/**</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                    <!-- report execution inherited from parent -->
-                    <execution>
-                        <id>check</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <rule>
-                                    <element>BUNDLE</element>
-                                    <limits>
-                                        <limit>
-                                            <counter>LINE</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.75</minimum>
-                                        </limit>
-                                    </limits>
-                                </rule>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+    <description>
+        Papertrace Common - Multi-module project providing shared utilities:
+        - patra-common-core: Core domain/error/json/util classes (required by all services)
+        - patra-common-storage: Object storage key generation strategies (optional)
+        - patra-common-model: Shared data models like StandardLiterature (optional)
+    </description>
 
 
 </project>

@@ -1,4 +1,4 @@
-package com.patra.common.objectstorage;
+package com.patra.starter.objectstorage;
 
 import java.util.Collections;
 import java.util.Map;

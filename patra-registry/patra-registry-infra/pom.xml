@@ -22,7 +22,7 @@
         <!-- Consume domain placeholders/normalizers and shared enums from patra-common. -->
         <dependency>
             <groupId>com.papertrace</groupId>
-            <artifactId>patra-common</artifactId>
+            <artifactId>patra-common-core</artifactId>
         </dependency>
 
         <dependency>
@@ -39,7 +39,7 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
         </dependency>
-
+π
         <!-- test dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>
