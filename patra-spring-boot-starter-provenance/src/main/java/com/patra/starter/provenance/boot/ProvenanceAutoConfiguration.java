@@ -110,6 +110,17 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
+   * Creates the PubMed article converter for transforming PubMed responses to StandardLiterature.
+   *
+   * @return PubMed article converter
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public PubmedArticleConverter pubmedArticleConverter() {
+    return new PubmedArticleConverter();
+  }
+
+  /**
    * Creates the PubMed client for direct HTTP access to E-utilities API.
    *
    * @param configProvider configuration provider for PubMed settings

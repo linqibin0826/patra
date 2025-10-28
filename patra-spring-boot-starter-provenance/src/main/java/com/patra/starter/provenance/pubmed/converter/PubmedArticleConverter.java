@@ -20,7 +20,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -30,7 +29,6 @@ import org.springframework.util.StringUtils;
  * <p>Centralizes all field extraction logic so downstream components operate on a stable Shared
  * Kernel model.
  */
-@Component
 @Slf4j
 public class PubmedArticleConverter {
 
