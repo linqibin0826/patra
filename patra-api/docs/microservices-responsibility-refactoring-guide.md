@@ -133,11 +133,18 @@
 #### **配置层级结构**
 ```yaml
 ProvenanceProperties (应用级):
-  default: SourceProperties      # 兜底配置，所有数据源共享
-  pubmed: SourceProperties       # PubMed 特定覆盖
-  epmc: SourceProperties         # EPMC 特定覆盖
-  crossref: SourceProperties     # Crossref 特定覆盖
+  defaults: SourceProperties              # 兜底配置，所有数据源共享
+  sources: Map<String, SourceProperties>  # ✅ 数据源特定配置（支持动态扩展）
+    - pubmed: SourceProperties
+    - epmc: SourceProperties
+    - crossref: SourceProperties
+    - ... 任意新数据源无需修改代码
 ```
+
+**设计理念**：
+- ✅ **开闭原则**：新增数据源只需添加配置，无需修改 `ProvenanceProperties` 类
+- ✅ **配置驱动**：通过 YAML 配置即可支持新数据源
+- ✅ **类型安全**：编译期保证配置结构正确
 
 #### **配置优先级**
 ```
@@ -152,7 +159,7 @@ patra:
     enabled: true
 
     # 兜底配置 - 所有数据源共享
-    default:
+    defaults:
       http:
         timeout-connect-millis: 10000
         timeout-read-millis: 30000
@@ -165,20 +172,37 @@ patra:
         max-concurrent-requests: 10
         per-credential-qps-limit: 5
 
-    # PubMed 特定配置（覆盖兜底配置）
-    pubmed:
-      base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-      pagination:
-        page-size-value: 200  # PubMed 支持更大的分页
-      batching:
-        detail-fetch-batch-size: 100
-        max-ids-per-request: 500
+    # ✅ 数据源特定配置（Map 结构，支持动态扩展）
+    sources:
+      # PubMed 特定配置（覆盖兜底配置）
+      pubmed:
+        base-url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+        pagination:
+          page-size-value: 200  # PubMed 支持更大的分页
+        batching:
+          detail-fetch-batch-size: 100
+          max-ids-per-request: 500
+          epost-threshold: 200  # ✅ 配置化的 EPost 阈值
 
-    # EPMC 特定配置
-    epmc:
-      base-url: "https://www.ebi.ac.uk/europepmc/webservices/rest"
-      rate-limit:
-        max-concurrent-requests: 5  # EPMC 限制更严格
+      # EPMC 特定配置
+      epmc:
+        base-url: "https://www.ebi.ac.uk/europepmc/webservices/rest"
+        rate-limit:
+          max-concurrent-requests: 5  # EPMC 限制更严格
+
+      # ✅ 新增数据源无需修改代码！
+      crossref:
+        base-url: "https://api.crossref.org/works"
+        rate-limit:
+          max-concurrent-requests: 3
+        pagination:
+          page-size-value: 50
+
+      # ✅ 未来添加任意新数据源
+      arxiv:
+        base-url: "https://export.arxiv.org/api"
+        pagination:
+          page-size-value: 100
 ```
 
 ### 3.2 适配器接口设计
@@ -252,7 +276,379 @@ public record BatchInfo(
 }
 ```
 
-### 3.3 目录结构设计
+### 3.3 共享模型管理
+
+#### **StandardLiterature 位置决策**
+
+**问题分析**：
+`StandardLiterature`、`StandardAuthor`、`StandardJournal` 等实体是整个项目的**通用文献表示模型**，需要被多个微服务使用：
+- `patra-ingest`：数据摄取后的标准化输出
+- `patra-catalog`：文献目录管理
+- `patra-spring-boot-starter-provenance`：数据源适配器的输出模型
+
+**错误方案**：
+```
+❌ 放在 patra-ingest-domain 中
+   → catalog 需要依赖 ingest：patra-catalog → patra-ingest-domain（微服务不应相互依赖）
+
+❌ 放在 patra-spring-boot-starter-provenance 中
+   → 违反依赖方向：domain 层不应依赖 starter
+```
+
+**正确方案：放入 patra-common**
+
+```bash
+patra-common/
+└── src/main/java/com/patra/common/
+    ├── domain/          # 现有的 DDD 基类
+    ├── enums/           # 现有的共享枚举
+    └── model/           # ✅ 新增：跨微服务共享的领域模型
+        ├── StandardLiterature.java
+        ├── StandardAuthor.java
+        └── StandardJournal.java
+```
+
+**理由**：
+1. **符合 patra-common 定位**：≥3 个模块共享的抽象和模型
+2. **保持依赖方向正确**：所有微服务的 domain 层都可以依赖 patra-common
+3. **符合 DDD 的 Shared Kernel 模式**：作为项目的通用语言（Ubiquitous Language）
+4. **保持纯净性**：patra-common 零框架依赖，只用 Lombok + Jackson
+
+#### **StandardLiterature 实现要求**
+
+```java
+// com.patra.common.model.StandardLiterature
+package com.patra.common.model;
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
+import lombok.Builder;
+import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 标准化文献模型 - 项目通用的文献表示
+ *
+ * <p>作为 Shared Kernel 的一部分，被所有微服务使用：
+ * <ul>
+ *   <li>patra-ingest：数据摄取后的标准化输出</li>
+ *   <li>patra-catalog：文献目录管理的核心实体</li>
+ *   <li>patra-spring-boot-starter-provenance：数据源适配器的输出模型</li>
+ * </ul>
+ *
+ * <p>设计原则：
+ * <ul>
+ *   <li>❌ 不包含业务逻辑方法（保持纯数据结构）</li>
+ *   <li>❌ 不使用 Spring/JPA 注解（保持框架无关）</li>
+ *   <li>✅ 使用 Lombok @Value + @Builder（不可变对象）</li>
+ *   <li>✅ 使用 Jackson 注解（序列化/反序列化）</li>
+ * </ul>
+ *
+ * @since 1.0
+ */
+@Value
+@Builder
+@Jacksonized
+public class StandardLiterature {
+
+    String title;
+    String abstractText;
+    List<StandardAuthor> authors;
+    StandardJournal journal;
+    Map<String, String> identifiers;  // pmid, doi, pmc 等
+    LocalDate publicationDate;
+    List<String> keywords;
+
+    /**
+     * 标准作者信息
+     */
+    @Value
+    @Builder
+    @Jacksonized
+    public static class StandardAuthor {
+        String lastName;
+        String foreName;
+        String affiliation;
+    }
+
+    /**
+     * 标准期刊信息
+     */
+    @Value
+    @Builder
+    @Jacksonized
+    public static class StandardJournal {
+        String title;
+        String issn;
+        String publisher;
+    }
+}
+```
+
+#### **迁移影响范围**
+
+| 模块 | 影响内容 | 处理方式 |
+|------|---------|---------|
+| `patra-common` | 新增 model 包 | 创建 `model/StandardLiterature.java` 等三个类 |
+| `patra-ingest-domain` | 删除原有 StandardLiterature | 改为导入 `com.patra.common.model.StandardLiterature` |
+| `patra-ingest-app` | 更新导入语句 | 批量替换包路径 |
+| `patra-ingest-infra` | 更新导入语句 | 批量替换包路径 |
+| `patra-spring-boot-starter-provenance` | 转换器输出类型调整 | PubmedArticleConverter 等改为输出 common 模型 |
+
+#### **迁移检查清单**
+
+```bash
+# 1. 在 patra-common 创建 model 包
+mkdir -p patra-common/src/main/java/com/patra/common/model
+
+# 2. 复制文件到 patra-common
+cp patra-ingest/patra-ingest-domain/.../StandardLiterature.java \
+   patra-common/src/main/java/com/patra/common/model/
+
+# 3. 更新包声明
+sed -i '' 's/package com.patra.ingest.domain.model.vo/package com.patra.common.model/' \
+    patra-common/src/main/java/com/patra/common/model/StandardLiterature.java
+
+# 4. 全局替换导入语句
+# 在 patra-ingest-app, patra-ingest-infra, patra-spring-boot-starter-provenance 中
+find . -name "*.java" -exec sed -i '' \
+    's/import com.patra.ingest.domain.model.vo.StandardLiterature/import com.patra.common.model.StandardLiterature/' {} \;
+
+# 5. 删除 patra-ingest-domain 中的原文件
+rm patra-ingest/patra-ingest-domain/.../StandardLiterature.java
+
+# 6. 编译验证
+mvn clean compile -pl patra-common,patra-ingest
+```
+
+---
+
+### 3.4 错误处理策略
+
+#### **当前问题**
+
+现有设计中所有错误都返回 `AdapterResult.failure(errorMessage)`，没有区分**可重试错误**和**不可重试错误**：
+
+```java
+// 问题：网络超时（应该重试）和数据格式错误（不应该重试）被同等对待
+catch (Exception ex) {
+    return AdapterResult.failure(ex.getMessage());  // ⚠️ 无法区分错误类型
+}
+```
+
+**影响**：
+- GenericBatchExecutor 无法实现智能重试策略
+- 可能导致无效重试浪费资源（如数据格式错误反复重试）
+- 或漏掉应该重试的临时故障（如短暂的网络抖动）
+
+#### **错误分类**
+
+| 错误类型 | 说明 | 示例 | 重试策略 |
+|---------|------|------|---------|
+| **RETRIABLE** | 临时性故障，重试可能成功 | 网络超时、503 服务不可用、429 限流 | ✅ 应该重试（指数退避） |
+| **NON_RETRIABLE** | 永久性错误，重试无意义 | 401 认证失败、400 参数错误、数据格式错误 | ❌ 不应重试，记录并告警 |
+| **PARTIAL_SUCCESS** | 部分数据成功，部分失败 | 批量转换中部分文章格式错误 | ⚠️ 记录失败项，继续处理成功项 |
+
+#### **增强后的 AdapterResult**
+
+```java
+// com.patra.starter.provenance.common.adapter.AdapterResult
+package com.patra.starter.provenance.common.adapter;
+
+import com.patra.common.model.StandardLiterature;
+import lombok.Builder;
+
+import java.util.List;
+
+/**
+ * 数据源适配器执行结果
+ *
+ * <p>增强了错误处理能力，区分可重试和不可重试错误
+ */
+@Builder
+public record AdapterResult(
+    boolean success,
+    List<StandardLiterature> literatures,
+    String nextCursorToken,
+    String errorMessage,
+    int fetchedCount,
+    ErrorType errorType  // ✅ 新增：错误类型
+) {
+
+    /**
+     * 错误类型枚举
+     */
+    public enum ErrorType {
+        /** 无错误 */
+        NONE,
+
+        /** 可重试错误：临时性故障，重试可能成功 */
+        RETRIABLE,
+
+        /** 不可重试错误：永久性错误，重试无意义 */
+        NON_RETRIABLE,
+
+        /** 部分成功：部分数据处理失败 */
+        PARTIAL_SUCCESS
+    }
+
+    /**
+     * 创建成功结果
+     */
+    public static AdapterResult success(List<StandardLiterature> literatures, String nextCursor) {
+        return new AdapterResult(true, literatures, nextCursor, null, literatures.size(), ErrorType.NONE);
+    }
+
+    /**
+     * 创建可重试失败结果
+     */
+    public static AdapterResult retriableFailure(String errorMessage) {
+        return new AdapterResult(false, List.of(), null, errorMessage, 0, ErrorType.RETRIABLE);
+    }
+
+    /**
+     * 创建不可重试失败结果
+     */
+    public static AdapterResult nonRetriableFailure(String errorMessage) {
+        return new AdapterResult(false, List.of(), null, errorMessage, 0, ErrorType.NON_RETRIABLE);
+    }
+
+    /**
+     * 创建部分成功结果
+     */
+    public static AdapterResult partialSuccess(List<StandardLiterature> literatures,
+                                               String nextCursor,
+                                               String warningMessage,
+                                               int totalAttempted) {
+        return new AdapterResult(true, literatures, nextCursor, warningMessage,
+                               totalAttempted, ErrorType.PARTIAL_SUCCESS);
+    }
+
+    /**
+     * 判断是否可以重试
+     */
+    public boolean isRetriable() {
+        return errorType == ErrorType.RETRIABLE;
+    }
+}
+```
+
+#### **适配器中的错误处理示例**
+
+```java
+// PubmedDataSourceAdapter.fetchData() 方法改进
+@Override
+public AdapterResult fetchData(AdapterRequest request) {
+    try {
+        // ... 正常处理逻辑
+
+    } catch (HttpTimeoutException ex) {
+        // ✅ 网络超时 → 可重试
+        log.warn("PubMed API timeout, retriable: {}", ex.getMessage());
+        return AdapterResult.retriableFailure("PubMed API timeout: " + ex.getMessage());
+
+    } catch (HttpStatusException ex) {
+        // ✅ 根据 HTTP 状态码判断
+        int statusCode = ex.getStatusCode();
+        if (statusCode == 503 || statusCode == 429) {
+            // 服务不可用或限流 → 可重试
+            log.warn("PubMed API unavailable ({}), retriable", statusCode);
+            return AdapterResult.retriableFailure(
+                String.format("PubMed API unavailable: HTTP %d", statusCode));
+        } else if (statusCode == 401 || statusCode == 403) {
+            // 认证/授权失败 → 不可重试
+            log.error("PubMed API authentication failed ({}), non-retriable", statusCode);
+            return AdapterResult.nonRetriableFailure(
+                String.format("PubMed API authentication failed: HTTP %d", statusCode));
+        } else if (statusCode >= 400 && statusCode < 500) {
+            // 其他客户端错误 → 不可重试
+            log.error("PubMed API client error ({}), non-retriable", statusCode);
+            return AdapterResult.nonRetriableFailure(
+                String.format("PubMed API client error: HTTP %d", statusCode));
+        } else {
+            // 服务端错误 → 可重试
+            log.warn("PubMed API server error ({}), retriable", statusCode);
+            return AdapterResult.retriableFailure(
+                String.format("PubMed API server error: HTTP %d", statusCode));
+        }
+
+    } catch (DataConversionException ex) {
+        // ✅ 数据格式错误 → 不可重试
+        log.error("Invalid PubMed data format, non-retriable: {}", ex.getMessage(), ex);
+        return AdapterResult.nonRetriableFailure("Invalid data format: " + ex.getMessage());
+
+    } catch (Exception ex) {
+        // ✅ 未知错误 → 默认不可重试（保守策略）
+        log.error("Unexpected error in PubMed adapter, non-retriable", ex);
+        return AdapterResult.nonRetriableFailure("Unexpected error: " + ex.getMessage());
+    }
+}
+```
+
+#### **GenericBatchExecutor 中的智能重试**
+
+```java
+// GenericBatchExecutor.execute() 方法改进
+public BatchResult execute(ExecutionContext context, Batch batch) {
+    int maxRetries = 3;
+    int retryCount = 0;
+
+    while (retryCount <= maxRetries) {
+        try {
+            // ... 执行适配器调用
+            AdapterResult result = adapter.fetchData(request);
+
+            if (!result.success()) {
+                // ✅ 根据错误类型决定是否重试
+                if (result.isRetriable() && retryCount < maxRetries) {
+                    retryCount++;
+                    long delayMillis = calculateBackoffDelay(retryCount);
+                    log.warn("Batch execution failed with retriable error, retry {}/{} after {}ms: {}",
+                            retryCount, maxRetries, delayMillis, result.errorMessage());
+                    Thread.sleep(delayMillis);
+                    continue;  // ✅ 重试
+                } else {
+                    // ❌ 不可重试或已达最大重试次数
+                    log.error("Batch execution failed (non-retriable or max retries reached): {}",
+                            result.errorMessage());
+                    return BatchResult.failure(batchNo, result.errorMessage());
+                }
+            }
+
+            // ✅ 成功处理
+            if (result.errorType() == ErrorType.PARTIAL_SUCCESS) {
+                log.warn("Batch execution partially successful: {}", result.errorMessage());
+            }
+
+            String storageKey = publishLiteratures(result.literatures(), context, batch);
+            return BatchResult.success(batchNo, result.fetchedCount(), result.nextCursorToken(), storageKey);
+
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            return BatchResult.failure(batchNo, "Batch execution interrupted");
+        }
+    }
+
+    // 不应到达这里
+    return BatchResult.failure(batchNo, "Unexpected retry loop exit");
+}
+
+/**
+ * 计算指数退避延迟
+ */
+private long calculateBackoffDelay(int retryCount) {
+    // 1秒、2秒、4秒
+    return 1000L * (1L << (retryCount - 1));
+}
+```
+
+---
+
+### 3.5 目录结构设计
 
 #### **patra-spring-boot-starter-provenance 增强后结构**
 ```
@@ -580,10 +976,14 @@ import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 增强的 Provenance 配置属性
  *
  * <p>支持兜底配置 + 数据源特定覆盖的配置模式
+ * <p>✅ 使用 Map 结构支持动态数据源，无需修改代码即可添加新数据源
  */
 @Data
 @ConfigurationProperties(prefix = "patra.provenance")
@@ -594,21 +994,21 @@ public class ProvenanceProperties {
     // 兜底配置 - 所有数据源共享
     private SourceProperties defaults = new SourceProperties();
 
-    // 数据源特定配置
-    private SourceProperties pubmed = new SourceProperties();
-    private SourceProperties epmc = new SourceProperties();
-    private SourceProperties crossref = new SourceProperties();
+    // ✅ 数据源特定配置（Map 结构，支持动态扩展）
+    private Map<String, SourceProperties> sources = new HashMap<>();
 
     /**
      * 获取指定数据源的合并配置
+     *
+     * @param provenanceCode 数据源代码（如 pubmed, epmc, crossref）
+     * @return 合并后的配置（数据源特定配置覆盖兜底配置）
      */
     public SourceProperties getConfigForSource(String provenanceCode) {
-        SourceProperties specific = switch (provenanceCode.toLowerCase()) {
-            case "pubmed" -> pubmed;
-            case "epmc" -> epmc;
-            case "crossref" -> crossref;
-            default -> new SourceProperties();
-        };
+        // ✅ 从 Map 中获取数据源特定配置，不存在则返回空配置
+        SourceProperties specific = sources.getOrDefault(
+            provenanceCode.toLowerCase(),
+            new SourceProperties()
+        );
 
         return mergeWithDefaults(specific, defaults);
     }
@@ -815,16 +1215,23 @@ public class GenericBatchExecutor {
 
 ### 5.1 新增文件
 
+#### **patra-common 新增**
+
+| 文件路径 | 说明 | 状态 |
+|---------|------|------|
+| `model/StandardLiterature.java` | ✅ 标准文献模型（Shared Kernel） | 迁移自 patra-ingest-domain |
+| `model/StandardAuthor.java` | ✅ 标准作者模型（内部类形式） | 迁移自 patra-ingest-domain |
+| `model/StandardJournal.java` | ✅ 标准期刊模型（内部类形式） | 迁移自 patra-ingest-domain |
+
 #### **patra-spring-boot-starter-provenance 新增**
 
 | 文件路径 | 说明 | 状态 |
 |---------|------|------|
 | `common/adapter/DataSourceAdapter.java` | 统一适配器接口 | 新增 |
 | `common/adapter/AdapterRequest.java` | 请求模型 | 新增 |
-| `common/adapter/AdapterResult.java` | 响应模型 | 新增 |
+| `common/adapter/AdapterResult.java` | ✅ 响应模型（含 ErrorType 枚举） | 新增 |
 | `common/adapter/BatchInfo.java` | 批次信息 | 新增 |
 | `common/adapter/AdapterRegistry.java` | 适配器注册表 | 新增 |
-| `common/model/StandardLiterature.java` | 标准模型 | 迁移自 ingest |
 | `common/converter/BaseArticleConverter.java` | 转换器基类 | 新增 |
 | `pubmed/PubmedDataSourceAdapter.java` | PubMed适配器 | 新增 |
 | `pubmed/converter/PubmedArticleConverter.java` | PubMed转换器 | 迁移自 ingest |
@@ -837,7 +1244,7 @@ public class GenericBatchExecutor {
 
 | 文件路径 | 说明 | 状态 |
 |---------|------|------|
-| `app/usecase/execution/GenericBatchExecutor.java` | 通用批处理执行器 | 新增 |
+| `app/usecase/execution/GenericBatchExecutor.java` | ✅ 通用批处理执行器（含智能重试） | 新增 |
 | `infra/config/ProvenanceConfigConverter.java` | 配置转换器 | 新增 |
 
 ### 5.2 删除文件
@@ -850,7 +1257,7 @@ public class GenericBatchExecutor {
 | `app/usecase/execution/batch/executor/PubmedBatchExecutor.java` | PubMed执行器 | 迁移到 starter 中 |
 | `app/usecase/execution/batch/executor/BatchExecutorRegistry.java` | 执行器注册表 | 被 AdapterRegistry 替代 |
 | `app/usecase/execution/batch/converter/PubmedArticleConverter.java` | PubMed转换器 | 迁移到 starter 中 |
-| `domain/model/vo/StandardLiterature.java` | 标准模型 | 迁移到 starter 中 |
+| `domain/model/vo/StandardLiterature.java` | ✅ 标准模型 | 迁移到 patra-common/model |
 
 ### 5.3 修改文件
 
@@ -866,7 +1273,13 @@ public class GenericBatchExecutor {
 | 文件路径 | 修改内容 | 影响范围 |
 |---------|---------|----------|
 | `boot/ProvenanceAutoConfiguration.java` | 添加适配器相关 Bean 配置 | Spring配置 |
-| `boot/ProvenanceProperties.java` | 增强配置合并逻辑 | 配置管理 |
+| `boot/ProvenanceProperties.java` | ✅ 改为 Map<String, SourceProperties> 结构 | 配置管理 |
+
+#### **patra-common 修改**
+
+| 文件路径 | 修改内容 | 影响范围 |
+|---------|---------|----------|
+| `pom.xml` | ✅ 添加 Jackson 依赖（用于 StandardLiterature 序列化） | 依赖管理 |
 
 ### 5.4 Maven 依赖调整
 
@@ -1455,6 +1868,458 @@ system_metrics:
 - [ ] 部署手册更新
 - [ ] 故障排查指南
 - [ ] 性能调优建议
+
+---
+
+## 10. 架构改进建议
+
+本章节包含在架构审核中识别出的其他改进建议。这些改进虽非必需，但可显著提升系统的健壮性和可维护性。
+
+### 10.1 硬编码阈值配置化
+
+#### **当前问题**
+
+`PubmedDataSourceAdapter` 中的 EPost 阈值硬编码：
+
+```java
+// ❌ 当前实现
+private static final int EPOST_THRESHOLD = 200;
+
+if (pmids.size() <= EPOST_THRESHOLD) {
+    // 直接 EFetch
+} else {
+    // EPost + EFetch
+}
+```
+
+**问题**：
+- 阈值固定为 200，无法根据环境或数据源特性调整
+- 不同的 PubMed API Key 可能有不同的限制
+- 调整阈值需要修改代码并重新部署
+
+#### **改进方案**
+
+**1. 在 SourceProperties 中添加 batching 配置**：
+
+```java
+// SourceProperties.java
+@Data
+public class SourceProperties {
+    // ... 现有字段
+
+    private BatchingConfig batching;
+
+    @Data
+    public static class BatchingConfig {
+        private Integer detailFetchBatchSize = 100;
+        private Integer maxIdsPerRequest = 500;
+        private Integer epostThreshold = 200;  // ✅ 可配置的 EPost 阈值
+    }
+}
+```
+
+**2. 在 application.yml 中配置**：
+
+```yaml
+patra:
+  provenance:
+    defaults:
+      batching:
+        epost-threshold: 200  # 兜底值
+
+    sources:
+      pubmed:
+        batching:
+          epost-threshold: 300  # PubMed 特定阈值（假设有高级 API Key）
+
+      epmc:
+        batching:
+          epost-threshold: 150  # EPMC 较低的阈值
+```
+
+**3. 在适配器中使用配置**：
+
+```java
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class PubmedDataSourceAdapter implements DataSourceAdapter {
+
+    private final PubMedClient pubMedClient;
+    private final PubmedArticleConverter converter;
+
+    @Override
+    public AdapterResult fetchData(AdapterRequest request) {
+        try {
+            // ... ESearch 逻辑
+
+            // ✅ 从配置中获取阈值
+            int epostThreshold = request.config().batching() != null
+                ? request.config().batching().epostThreshold()
+                : 200;  // 代码默认值
+
+            List<StandardLiterature> literatures;
+            if (pmids.size() <= epostThreshold) {
+                literatures = fetchDirectly(pmids, request.config());
+            } else {
+                literatures = fetchViaEPost(pmids, request.config());
+            }
+
+            // ...
+        } catch (Exception ex) {
+            // ...
+        }
+    }
+}
+```
+
+**优点**：
+- ✅ 运维可根据实际情况调整阈值
+- ✅ 不同数据源可有不同阈值
+- ✅ 无需重新部署即可调整
+- ✅ 保留代码默认值作为兜底
+
+---
+
+### 10.2 数据转换失败的可观测性
+
+#### **当前问题**
+
+转换失败后数据**静默丢失**：
+
+```java
+// ❌ 当前实现 (PubmedDataSourceAdapter.java)
+private List<StandardLiterature> convertArticles(EFetchResponse response) {
+    return response.articles().stream()
+            .map(article -> {
+                try {
+                    return converter.toStandardLiterature(article);
+                } catch (Exception ex) {
+                    log.warn("Failed to convert PubMed article: pmid={}", article.pmid(), ex);
+                    return null;  // ⚠️ 数据静默丢失
+                }
+            })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+}
+```
+
+**问题**：
+- 转换失败的文章直接被过滤掉，可能丢失重要数据
+- 只有 WARN 日志，无告警、无指标、无持久化记录
+- 无法追溯哪些文章转换失败、失败原因是什么
+- 影响数据质量监控和问题排查
+
+#### **改进方案**
+
+**1. 创建转换失败记录器**：
+
+```java
+// com.patra.starter.provenance.common.converter.ConversionFailureRecorder
+package com.patra.starter.provenance.common.converter;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+/**
+ * 数据转换失败记录器
+ *
+ * <p>记录转换失败的原始数据，用于后续人工排查和修复
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class ConversionFailureRecorder {
+
+    // 可以是数据库、消息队列或对象存储
+    private final ConversionFailureRepository failureRepository;
+    private final AlertService alertService;
+
+    /**
+     * 记录转换失败
+     *
+     * @param sourceId 数据源标识（如 PMID）
+     * @param provenanceCode 数据源代码
+     * @param rawData 原始数据（JSON 格式）
+     * @param errorMessage 错误信息
+     */
+    public void recordFailure(String sourceId,
+                             String provenanceCode,
+                             String rawData,
+                             String errorMessage) {
+        try {
+            ConversionFailureRecord record = ConversionFailureRecord.builder()
+                .sourceId(sourceId)
+                .provenanceCode(provenanceCode)
+                .rawData(rawData)
+                .errorMessage(errorMessage)
+                .failedAt(Instant.now())
+                .build();
+
+            failureRepository.save(record);
+
+            log.error("Recorded conversion failure: sourceId={}, provenance={}, error={}",
+                    sourceId, provenanceCode, errorMessage);
+
+            // ✅ 发送告警（如果失败率超过阈值）
+            if (shouldAlert(provenanceCode)) {
+                alertService.sendConversionFailureAlert(provenanceCode, record);
+            }
+
+        } catch (Exception ex) {
+            // 记录失败不应影响主流程
+            log.error("Failed to record conversion failure: sourceId={}", sourceId, ex);
+        }
+    }
+
+    private boolean shouldAlert(String provenanceCode) {
+        // 示例：如果过去 1 小时内失败次数超过 10 次，发送告警
+        long recentFailures = failureRepository.countRecentFailures(
+            provenanceCode, Duration.ofHours(1));
+        return recentFailures > 10;
+    }
+}
+```
+
+**2. 增强转换器指标收集**：
+
+```java
+// com.patra.starter.provenance.common.converter.ConversionMetrics
+package com.patra.starter.provenance.common.converter;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+/**
+ * 数据转换指标收集器
+ */
+@Component
+@RequiredArgsConstructor
+public class ConversionMetrics {
+
+    private final MeterRegistry meterRegistry;
+
+    /**
+     * 记录转换成功
+     */
+    public void recordSuccess(String provenanceCode) {
+        Counter.builder("provenance.conversion.success")
+            .tag("source", provenanceCode)
+            .register(meterRegistry)
+            .increment();
+    }
+
+    /**
+     * 记录转换失败
+     */
+    public void recordFailure(String provenanceCode, String errorType) {
+        Counter.builder("provenance.conversion.failure")
+            .tag("source", provenanceCode)
+            .tag("error_type", errorType)
+            .register(meterRegistry)
+            .increment();
+    }
+
+    /**
+     * 记录转换耗时
+     */
+    public void recordDuration(String provenanceCode, long durationMillis) {
+        meterRegistry.timer("provenance.conversion.duration",
+            "source", provenanceCode)
+            .record(Duration.ofMillis(durationMillis));
+    }
+}
+```
+
+**3. 改进 convertArticles 方法**：
+
+```java
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class PubmedDataSourceAdapter implements DataSourceAdapter {
+
+    private final PubMedClient pubMedClient;
+    private final PubmedArticleConverter converter;
+    private final ConversionFailureRecorder failureRecorder;  // ✅ 注入
+    private final ConversionMetrics metrics;  // ✅ 注入
+
+    private List<StandardLiterature> convertArticles(EFetchResponse response) {
+        List<StandardLiterature> results = new ArrayList<>();
+        int successCount = 0;
+        int failureCount = 0;
+
+        for (PubmedArticle article : response.articles()) {
+            long startTime = System.currentTimeMillis();
+
+            try {
+                StandardLiterature literature = converter.toStandardLiterature(article);
+                results.add(literature);
+                successCount++;
+
+                // ✅ 记录成功指标
+                metrics.recordSuccess("pubmed");
+                metrics.recordDuration("pubmed", System.currentTimeMillis() - startTime);
+
+            } catch (Exception ex) {
+                failureCount++;
+
+                log.error("Failed to convert PubMed article: pmid={}, error={}",
+                        article.pmid(), ex.getMessage(), ex);
+
+                // ✅ 记录失败（持久化 + 告警）
+                failureRecorder.recordFailure(
+                    article.pmid(),
+                    "pubmed",
+                    serializeToJson(article),  // 保存原始数据
+                    ex.getMessage()
+                );
+
+                // ✅ 记录失败指标
+                metrics.recordFailure("pubmed", ex.getClass().getSimpleName());
+            }
+        }
+
+        log.info("PubMed article conversion completed: success={}, failure={}, total={}",
+                successCount, failureCount, response.articles().size());
+
+        return results;
+    }
+
+    private String serializeToJson(PubmedArticle article) {
+        try {
+            return objectMapper.writeValueAsString(article);
+        } catch (Exception ex) {
+            return "{}";  // 序列化失败则返回空 JSON
+        }
+    }
+}
+```
+
+**4. 创建失败记录查询接口**（可选）：
+
+```java
+// ConversionFailureController.java
+@RestController
+@RequestMapping("/api/internal/conversion-failures")
+@RequiredArgsConstructor
+public class ConversionFailureController {
+
+    private final ConversionFailureRepository failureRepository;
+
+    /**
+     * 查询转换失败记录
+     */
+    @GetMapping
+    public Page<ConversionFailureRecord> listFailures(
+            @RequestParam(required = false) String provenanceCode,
+            @RequestParam(required = false) LocalDate startDate,
+            Pageable pageable) {
+        return failureRepository.findFailures(provenanceCode, startDate, pageable);
+    }
+
+    /**
+     * 重新处理失败记录
+     */
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<Void> retryConversion(@PathVariable Long id) {
+        // 触发重新转换逻辑
+        return ResponseEntity.ok().build();
+    }
+}
+```
+
+**优点**：
+- ✅ 转换失败不再静默丢失
+- ✅ 持久化原始数据，支持后续人工排查
+- ✅ 自动告警（失败率超过阈值）
+- ✅ 指标可视化（Grafana 监控）
+- ✅ 支持失败记录的重新处理
+
+---
+
+### 10.3 配置热更新支持（可选）
+
+如果需要在不重启服务的情况下更新配置，可以集成 Nacos 配置中心：
+
+```java
+// ProvenanceProperties.java
+@Data
+@ConfigurationProperties(prefix = "patra.provenance")
+@RefreshScope  // ✅ 支持配置热更新
+public class ProvenanceProperties {
+    // ... 现有字段
+}
+```
+
+```yaml
+# bootstrap.yml
+spring:
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER_ADDR}
+        namespace: ${NACOS_NAMESPACE}
+        group: provenance
+        file-extension: yaml
+        refresh-enabled: true  # ✅ 开启配置自动刷新
+```
+
+**优点**：
+- ✅ 运行时调整配置（如调整限流、超时等）
+- ✅ 无需重启服务
+- ✅ 配置变更可审计
+
+---
+
+### 10.4 适配器性能监控
+
+为每个适配器添加性能指标：
+
+```java
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class PubmedDataSourceAdapter implements DataSourceAdapter {
+
+    private final MeterRegistry meterRegistry;
+
+    @Override
+    public AdapterResult fetchData(AdapterRequest request) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+
+        try {
+            // ... 执行逻辑
+
+            sample.stop(Timer.builder("provenance.adapter.duration")
+                .tag("source", "pubmed")
+                .tag("operation", request.operationCode())
+                .tag("status", "success")
+                .register(meterRegistry));
+
+            return AdapterResult.success(literatures, nextCursor);
+
+        } catch (Exception ex) {
+            sample.stop(Timer.builder("provenance.adapter.duration")
+                .tag("source", "pubmed")
+                .tag("operation", request.operationCode())
+                .tag("status", "failure")
+                .register(meterRegistry));
+
+            throw ex;
+        }
+    }
+}
+```
+
+**Grafana 监控面板示例**：
+- 适配器调用次数（按数据源分组）
+- 适配器成功率（按数据源分组）
+- 适配器 P50/P99 延迟
+- 转换失败率趋势图
 
 ---
 
