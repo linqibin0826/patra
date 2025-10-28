@@ -71,11 +71,39 @@ public class ProvenanceMetrics {
 
   private void incrementCounter(
       String metricName, ProvenanceCode code, String apiName, String errorType) {
+    incrementCounter(metricName, code, apiName, errorType, 1.0d);
+  }
+
+  private void incrementCounter(
+      String metricName, ProvenanceCode code, String apiName, String errorType, double amount) {
     Counter.Builder builder =
         Counter.builder(metricName).tag("provenanceCode", code.getCode()).tag("apiName", apiName);
     if (errorType != null) {
       builder.tag("errorType", errorType);
     }
-    builder.register(meterRegistry).increment();
+    builder.register(meterRegistry).increment(amount);
+  }
+
+  private void incrementCounter(String metricName, ProvenanceCode code, double amount) {
+    Counter.builder(metricName)
+        .tag("provenanceCode", code.getCode())
+        .register(meterRegistry)
+        .increment(amount);
+  }
+
+  /**
+   * Records conversion metrics for standardized literature conversion.
+   *
+   * @param code provenance source
+   * @param successCount number of successfully converted records
+   * @param failureCount number of failed conversions
+   */
+  public void recordConversionMetrics(ProvenanceCode code, int successCount, int failureCount) {
+    if (successCount > 0) {
+      incrementCounter("provenance.conversion.success", code, successCount);
+    }
+    if (failureCount > 0) {
+      incrementCounter("provenance.conversion.failure", code, failureCount);
+    }
   }
 }

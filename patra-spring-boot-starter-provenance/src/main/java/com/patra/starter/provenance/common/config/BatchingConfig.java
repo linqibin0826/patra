@@ -7,7 +7,9 @@ package com.patra.starter.provenance.common.config;
  *
  * @param detailFetchBatchSize batch size used when expanding detail fetch requests
  * @param maxIdsPerRequest hard cap on identifiers included in a single API call
+ * @param epostThreshold threshold for switching to EPost strategy (nullable)
  * @author linqibin
  * @since 0.1.0
  */
-public record BatchingConfig(Integer detailFetchBatchSize, Integer maxIdsPerRequest) {}
+public record BatchingConfig(
+    Integer detailFetchBatchSize, Integer maxIdsPerRequest, Integer epostThreshold) {}

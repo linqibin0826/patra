@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.ingest.domain.model.vo.StandardLiterature;
+import com.patra.common.model.StandardLiterature;
 import java.util.List;
 import lombok.Builder;
 

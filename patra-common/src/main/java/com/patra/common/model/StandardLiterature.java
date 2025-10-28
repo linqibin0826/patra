@@ -1,20 +1,24 @@
-package com.patra.ingest.domain.model.vo;
+package com.patra.common.model;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import lombok.Builder;
 import lombok.Value;
+import lombok.extern.jackson.Jacksonized;
 
 /**
- * Domain-level standardized literature representation used within patra-ingest.
+ * Canonical literature representation shared across Papertrace microservices.
  *
- * <p>This value object normalizes literature records originating from heterogeneous sources
- * (PubMed, EPMC, Crossref, etc.) before they leave the ingest bounded context. The structure is
- * intentionally framework-free to keep the domain layer pure Java.
+ * <p>This immutable structure acts as the Shared Kernel model between ingestion, catalog, and
+ * provenance adapters. It deliberately contains no business behavior to keep the shared module
+ * framework-free and portable.
+ *
+ * @since 0.2.0
  */
 @Value
 @Builder
+@Jacksonized
 public class StandardLiterature {
 
   /** Human readable title of the literature item. */
@@ -41,7 +45,9 @@ public class StandardLiterature {
   /** Author snapshot aligned with catalog contract needs. */
   @Value
   @Builder
+  @Jacksonized
   public static class StandardAuthor {
+
     String lastName;
     String foreName;
     String affiliation;
@@ -50,7 +56,9 @@ public class StandardLiterature {
   /** Journal snapshot aligned with catalog contract needs. */
   @Value
   @Builder
+  @Jacksonized
   public static class StandardJournal {
+
     String title;
     String issn;
     String publisher;

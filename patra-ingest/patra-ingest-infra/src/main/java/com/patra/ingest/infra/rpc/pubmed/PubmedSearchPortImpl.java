@@ -225,7 +225,7 @@ public class PubmedSearchPortImpl implements PubmedSearchPort {
     if (source.detailFetchBatchSize() == null && source.maxIdsPerRequest() == null) {
       return null;
     }
-    return new BatchingConfig(source.detailFetchBatchSize(), source.maxIdsPerRequest());
+    return new BatchingConfig(source.detailFetchBatchSize(), source.maxIdsPerRequest(), null);
   }
 
   private RetryConfig toRetryConfig(ProvenanceConfigSnapshot.RetryConfig source) {
