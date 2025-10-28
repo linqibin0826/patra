@@ -1,8 +1,8 @@
-package com.patra.ingest.app.usecase.execution.batch.converter;
+package com.patra.starter.provenance.pubmed.converter;
 
-import com.patra.ingest.domain.model.vo.StandardLiterature;
-import com.patra.ingest.domain.model.vo.StandardLiterature.StandardAuthor;
-import com.patra.ingest.domain.model.vo.StandardLiterature.StandardJournal;
+import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.StandardLiterature.StandardAuthor;
+import com.patra.common.model.StandardLiterature.StandardJournal;
 import com.patra.starter.provenance.pubmed.model.response.Article;
 import com.patra.starter.provenance.pubmed.model.response.Author;
 import com.patra.starter.provenance.pubmed.model.response.Journal;
@@ -25,25 +25,27 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * Converter that maps {@link PubmedArticle} responses to domain-level {@link StandardLiterature}
- * value objects.
+ * Converter that maps {@link PubmedArticle} responses to {@link StandardLiterature}.
  *
- * <p>Centralizes all field extraction logic so downstream components operate on a stable,
- * provenance-agnostic model.
+ * <p>Centralizes all field extraction logic so downstream components operate on a stable Shared
+ * Kernel model.
  */
 @Component
 @Slf4j
 public class PubmedArticleConverter {
 
   /**
-   * Convert a PubMed article into the standardized ingest model.
+   * Convert a PubMed article into the standardized model.
    *
    * @param article PubMed article response
    * @return standardized literature representation
    */
   public StandardLiterature toStandardLiterature(PubmedArticle article) {
+    if (article == null) {
+      return null;
+    }
     if (log.isDebugEnabled()) {
-      log.debug("converting PubMed article to StandardLiterature pmid={}", article.pmid());
+      log.debug("Converting PubMed article to StandardLiterature pmid={}", article.pmid());
     }
     Article citation = article.article();
     return StandardLiterature.builder()
@@ -162,6 +164,10 @@ public class PubmedArticleConverter {
       int dayValue = resolveDay(day);
       return LocalDate.of(yearValue, monthValue, dayValue);
     } catch (Exception ex) {
+      log.debug(
+          "Failed to parse publication date for pmid={} due to {}",
+          article.pmid(),
+          ex.getMessage());
       return null;
     }
   }

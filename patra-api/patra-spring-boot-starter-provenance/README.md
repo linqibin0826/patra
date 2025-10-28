@@ -75,6 +75,9 @@ patra:
     epmc:
       base-url: "https://www.ebi.ac.uk/europepmc/webservices/rest"  # Default
       timeout-seconds: 30  # Default
+    defaults:
+      batching:
+        epost-threshold: 200  # Switch to EPost when PMID count exceeds this value
 ```
 
 **Disabling the starter:**

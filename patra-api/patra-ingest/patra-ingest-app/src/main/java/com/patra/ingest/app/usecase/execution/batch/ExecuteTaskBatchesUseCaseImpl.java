@@ -1,7 +1,6 @@
 package com.patra.ingest.app.usecase.execution.batch;
 
-import com.patra.ingest.app.usecase.execution.batch.executor.BatchExecutor;
-import com.patra.ingest.app.usecase.execution.batch.executor.BatchExecutorRegistry;
+import com.patra.ingest.app.usecase.execution.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.batch.planner.BatchPlanner;
 import com.patra.ingest.app.usecase.execution.batch.planner.BatchPlannerRegistry;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
@@ -28,7 +27,7 @@ import org.springframework.stereotype.Service;
  * <ul>
  *   <li>Batch planning via BatchPlannerRegistry to build batch list.
  *   <li>Enforce batch limits and throw when exceeded.
- *   <li>Batch execution via BatchExecutorRegistry.
+ *   <li>Batch execution delegated to GenericBatchExecutor backed by adapter registry.
  *   <li>Persist each batch result immediately via TaskRunBatchRepository.
  *   <li>Lease check before each batch; abort when revoked.
  *   <li>Error handling: record failures and continue (configurable fail-fast).
@@ -56,7 +55,7 @@ import org.springframework.stereotype.Service;
 public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
 
   private final BatchPlannerRegistry plannerRegistry;
-  private final BatchExecutorRegistry executorRegistry;
+  private final GenericBatchExecutor batchExecutor;
   private final TaskRunBatchRepository batchRepository;
   private final TaskRunRepository taskRunRepository;
 
@@ -107,7 +106,6 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         plan.totalBatches());
 
     // 2) Execute batches
-    BatchExecutor executor = executorRegistry.get(context.provenanceCode());
     int succeededCount = 0;
     int failedCount = 0;
 
@@ -138,7 +136,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
 
       BatchResult result;
       try {
-        result = executor.execute(context, batch);
+        result = batchExecutor.execute(context, batch);
       } catch (Exception e) {
         log.error(
             "batch execution failed taskId={} runId={} batchNo={}",

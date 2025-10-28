@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.patra.starter.provenance.common.adapter.AdapterRegistry;
+import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
@@ -11,9 +13,13 @@ import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
+import com.patra.starter.provenance.pubmed.PubmedDataSourceAdapter;
+import com.patra.starter.provenance.pubmed.converter.PubmedArticleConverter;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -68,6 +74,19 @@ public class ProvenanceAutoConfiguration {
   public ProvenanceMetrics provenanceMetrics(MeterRegistry meterRegistry) {
     log.info("Enabling Provenance metrics instrumentation with Micrometer");
     return new ProvenanceMetrics(meterRegistry);
+  }
+
+  /**
+   * Registers the adapter registry, allowing ingest to discover available data source adapters.
+   *
+   * @param adaptersProvider provider for adapter implementations
+   * @return adapter registry
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public AdapterRegistry adapterRegistry(ObjectProvider<List<DataSourceAdapter>> adaptersProvider) {
+    List<DataSourceAdapter> adapters = adaptersProvider.getIfAvailable(List::of);
+    return new AdapterRegistry(adapters);
   }
 
   /**
@@ -128,5 +147,25 @@ public class ProvenanceAutoConfiguration {
     log.info("Auto-configuring Europe PMC client for EPMC API access");
     return new EPMCClientImpl(
         new SimpleHttpClient(), configProvider, objectMapper, metrics.orElse(null));
+  }
+
+  /**
+   * Registers the PubMed data source adapter so ingest can consume PubMed via the unified adapter
+   * contract.
+   *
+   * @param pubMedClient PubMed client
+   * @param articleConverter article converter
+   * @param properties provenance properties for configuration merging
+   * @return PubMed data source adapter
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public PubmedDataSourceAdapter pubmedDataSourceAdapter(
+      PubMedClient pubMedClient,
+      PubmedArticleConverter articleConverter,
+      ProvenanceProperties properties,
+      Optional<ProvenanceMetrics> metrics) {
+    return new PubmedDataSourceAdapter(
+        pubMedClient, articleConverter, properties, metrics.orElse(null));
   }
 }
