@@ -4,7 +4,6 @@ import com.patra.common.model.StandardLiterature;
 import com.patra.ingest.domain.model.vo.Batch;
 import com.patra.ingest.domain.model.vo.BatchResult;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
-import com.patra.ingest.domain.port.LiteraturePublisherPort;
 import com.patra.starter.provenance.common.adapter.AdapterRegistry;
 import com.patra.starter.provenance.common.adapter.AdapterRequest;
 import com.patra.starter.provenance.common.adapter.AdapterResult;
@@ -28,7 +27,7 @@ import org.springframework.util.StringUtils;
  * <ul>
  *   <li>Resolving the correct adapter via {@link AdapterRegistry}.
  *   <li>Converting registry snapshots into runtime configuration.
- *   <li>Publishing standardized literature through {@link LiteraturePublisherPort}.
+ *   <li>Publishing standardized literature through {@link LiteraturePublisherOrchestrator}.
  *   <li>Translating adapter outcomes into domain {@link BatchResult} instances.
  * </ul>
  */
@@ -42,7 +41,7 @@ public class GenericBatchExecutor {
   private static final long MAX_BACKOFF_MILLIS = 30_000L;
 
   private final AdapterRegistry adapterRegistry;
-  private final LiteraturePublisherPort publisherPort;
+  private final LiteraturePublisherOrchestrator literaturePublisherOrchestrator;
   private final ProvenanceConfigConverter configConverter;
 
   /**
@@ -132,7 +131,7 @@ public class GenericBatchExecutor {
         }
       }
 
-      LiteraturePublisherPort.PublishResult publishResult =
+      LiteraturePublisherOrchestrator.PublishResult publishResult =
           publishLiterature(context, batchNo, adapterResult.literatures());
       logAdapterWarnings(adapterResult, provenanceCode, batchNo);
 
@@ -189,22 +188,22 @@ public class GenericBatchExecutor {
     }
   }
 
-  private LiteraturePublisherPort.PublishResult publishLiterature(
+  private LiteraturePublisherOrchestrator.PublishResult publishLiterature(
       ExecutionContext context, int batchNo, List<StandardLiterature> literatures) {
     List<StandardLiterature> payload = literatures == null ? List.of() : List.copyOf(literatures);
     if (payload.isEmpty()) {
-      return LiteraturePublisherPort.PublishResult.builder()
+      return LiteraturePublisherOrchestrator.PublishResult.builder()
           .publishedCount(0)
           .storageKey(null)
           .build();
     }
-    LiteraturePublisherPort.PublishContext publishContext =
-        LiteraturePublisherPort.PublishContext.builder()
+    LiteraturePublisherOrchestrator.PublishContext publishContext =
+        LiteraturePublisherOrchestrator.PublishContext.builder()
             .runId(context.runId())
             .batchNo(batchNo)
             .provenanceCode(context.provenanceCode())
             .build();
-    return publisherPort.publish(payload, publishContext);
+    return literaturePublisherOrchestrator.publish(payload, publishContext);
   }
 
   private BatchInfo toBatchInfo(Batch batch) {

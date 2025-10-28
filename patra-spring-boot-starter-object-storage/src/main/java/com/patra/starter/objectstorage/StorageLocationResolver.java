@@ -1,5 +1,7 @@
-package com.patra.common.objectstorage;
+package com.patra.starter.objectstorage;
 
+import com.patra.common.objectstorage.StorageContext;
+import com.patra.common.objectstorage.StorageLocation;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;

@@ -1,6 +1,5 @@
 package com.patra.ingest.infra.persistence.converter;
 
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.Scheduler;
@@ -20,10 +19,6 @@ public interface ScheduleInstanceConverter {
       target = "triggerTypeCode",
       source = "triggerType",
       qualifiedByName = "triggerTypeToCode")
-  @Mapping(
-      target = "provenanceCode",
-      source = "provenanceCode",
-      qualifiedByName = "provenanceToCode")
   @Mapping(
       target = "triggerParams",
       expression =
@@ -47,9 +42,7 @@ public interface ScheduleInstanceConverter {
         triggerTypeFromCode(entity.getTriggerTypeCode()),
         entity.getTriggeredAt(),
         JsonNodeMappings.jsonNodeToMap(entity.getTriggerParams()),
-        entity.getProvenanceCode() == null
-            ? null
-            : ProvenanceCode.parse(entity.getProvenanceCode()),
+        entity.getProvenanceCode(),
         version);
   }
 
@@ -69,10 +62,5 @@ public interface ScheduleInstanceConverter {
 
   static TriggerType triggerTypeFromCode(String code) {
     return code == null ? null : TriggerType.fromCode(code);
-  }
-
-  @Named("provenanceToCode")
-  static String provenanceToCode(ProvenanceCode code) {
-    return code == null ? null : code.getCode();
   }
 }
