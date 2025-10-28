@@ -25,12 +25,13 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 - **Ask before acting** when information is insufficient
 - Reuse `patra-*` starters, `patra-common`, Hutool
 - Output **small diffs**; document key decisions
-- Use MCP tools (sequential-thinking, context7) proactively
+- Use MCP tools (serena, sequential-thinking, context7) proactively 
 - Apply appropriate design patterns for the problem at hand
 
 **❌ Don't**
 - Add framework dependencies to `domain` layer (Pure Java only)
 - Hardcode secrets/configs (use Nacos/environment variables)
+- Read entire files (use serena's symbolic tools)
 - Skip clarification for complex tasks
 
 ---
