@@ -27,7 +27,6 @@ import java.net.SocketTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,15 +59,6 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
   @Override
   public String getProvenanceCode() {
     return PROVENANCE_CODE;
-  }
-
-  @Override
-  public boolean supports(String operationCode) {
-    if (!StringUtils.hasText(operationCode)) {
-      return false;
-    }
-    String normalized = operationCode.trim().toLowerCase(Locale.ROOT);
-    return "harvest".equals(normalized) || "update".equals(normalized);
   }
 
   @Override

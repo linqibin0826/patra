@@ -69,7 +69,7 @@ public class GenericBatchExecutor {
         context.runId());
 
     try {
-      DataSourceAdapter adapter = adapterRegistry.getAdapter(provenanceCode, operationCode);
+      DataSourceAdapter adapter = adapterRegistry.getAdapter(provenanceCode);
       ProvenanceConfig runtimeConfig =
           configConverter.convert(provenanceCode, context.configSnapshot());
       BatchInfo batchInfo = toBatchInfo(batch);

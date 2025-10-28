@@ -5,6 +5,9 @@ package com.patra.starter.provenance.common.adapter;
  *
  * <p>The ingest engine only depends on this interface, enabling new data sources to be introduced
  * by providing additional implementations without modifying existing ingestion logic.
+ *
+ * <p>Adapters are responsible solely for data retrieval and have no business logic awareness.
+ * Operation types (HARVEST, UPDATE, etc.) are orchestration-level concerns handled by upper layers.
  */
 public interface DataSourceAdapter {
 
@@ -14,14 +17,6 @@ public interface DataSourceAdapter {
    * @return unique provenance code
    */
   String getProvenanceCode();
-
-  /**
-   * Checks whether the adapter supports the specified operation.
-   *
-   * @param operationCode operation identifier such as HARVEST or UPDATE
-   * @return true when the adapter can execute the operation
-   */
-  boolean supports(String operationCode);
 
   /**
    * Executes the data retrieval and conversion workflow.
