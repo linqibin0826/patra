@@ -39,7 +39,7 @@
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
         </dependency>
-π
+
         <!-- test dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>
