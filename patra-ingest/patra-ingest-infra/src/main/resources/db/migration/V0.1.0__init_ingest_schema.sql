@@ -203,7 +203,6 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     `started_at`           TIMESTAMP(6)     NULL COMMENT 'Actual start time',
     `finished_at`          TIMESTAMP(6)     NULL COMMENT 'Finish time',
 
-    `scheduler_run_id`     VARCHAR(64)      NULL COMMENT 'External scheduler run ID (only used if triggered per-slice)',
     `correlation_id`       VARCHAR(64)      NULL COMMENT 'Trace/CID',
 
     -- Audit fields
@@ -267,7 +266,6 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `finished_at`      TIMESTAMP(6)    NULL,
     `last_heartbeat`   TIMESTAMP(6)    NULL,
 
-    `scheduler_run_id` VARCHAR(64)     NULL,
     `correlation_id`   VARCHAR(64)     NULL,
 
     -- Audit fields

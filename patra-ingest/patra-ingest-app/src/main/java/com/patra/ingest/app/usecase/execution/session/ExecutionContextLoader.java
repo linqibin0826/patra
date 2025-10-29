@@ -19,10 +19,9 @@ public interface ExecutionContextLoader {
    *
    * @param taskId task id
    * @param runId run id
-   * @param schedulerRunId scheduler run id (for lineage tracking)
    * @return execution context
    */
-  ExecutionContext loadContext(Long taskId, Long runId, String schedulerRunId);
+  ExecutionContext loadContext(Long taskId, Long runId);
 
   /**
    * Loads execution context (config restore + expression compile) — optimized to avoid reloading
@@ -30,8 +29,7 @@ public interface ExecutionContextLoader {
    *
    * @param task task aggregate (already loaded)
    * @param runId run id
-   * @param schedulerRunId scheduler run id (for lineage tracking)
    * @return execution context
    */
-  ExecutionContext loadContext(TaskAggregate task, Long runId, String schedulerRunId);
+  ExecutionContext loadContext(TaskAggregate task, Long runId);
 }

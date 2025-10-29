@@ -31,7 +31,6 @@ public interface TaskConverter {
   @Mapping(target = "leaseCount", source = "leaseInfo.leaseCount")
   @Mapping(target = "startedAt", source = "executionTimeline.startedAt")
   @Mapping(target = "finishedAt", source = "executionTimeline.finishedAt")
-  @Mapping(target = "schedulerRunId", source = "schedulerContext.schedulerRunId")
   @Mapping(target = "correlationId", source = "schedulerContext.correlationId")
   TaskDO toEntity(TaskAggregate aggregate);
 
@@ -51,8 +50,7 @@ public interface TaskConverter {
             entity.getLeaseOwner(), entity.getLeasedUntil(), entity.getLeaseCount());
     ExecutionTimeline timeline =
         new ExecutionTimeline(entity.getStartedAt(), entity.getFinishedAt());
-    TaskSchedulerContext schedulerContext =
-        new TaskSchedulerContext(entity.getSchedulerRunId(), entity.getCorrelationId());
+    TaskSchedulerContext schedulerContext = new TaskSchedulerContext(entity.getCorrelationId());
     return TaskAggregate.restore(
         entity.getId(),
         entity.getScheduleInstanceId(),

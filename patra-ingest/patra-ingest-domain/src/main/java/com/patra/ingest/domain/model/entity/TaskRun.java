@@ -127,10 +127,8 @@ public class TaskRun {
     this.lastHeartbeat = heartbeatAt;
   }
 
-  public void bindRunContext(String schedulerRunId, String correlationId) {
-    RunContext updated = this.runContext.withSchedulerRun(schedulerRunId);
-    updated = updated.withCorrelation(correlationId);
-    this.runContext = updated;
+  public void bindRunContext(String correlationId) {
+    this.runContext = this.runContext.withCorrelation(correlationId);
   }
 
   public void appendStats(RunStats delta) {

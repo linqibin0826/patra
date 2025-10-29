@@ -10,7 +10,7 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
  * @param runId run identifier
  * @param planId owning plan identifier
  * @param sliceId owning slice identifier
- * @param schedulerRunId scheduler run identifier (for lineage tracking)
+ * @param scheduleInstanceId schedule instance identifier (from TaskAggregate)
  * @param provenanceCode provenance code
  * @param operationCode operation code
  * @param configSnapshot configuration snapshot
@@ -27,7 +27,7 @@ public record ExecutionContext(
     Long runId,
     Long planId,
     Long sliceId,
-    String schedulerRunId,
+    Long scheduleInstanceId,
     String provenanceCode,
     String operationCode,
     ProvenanceConfigSnapshot configSnapshot,

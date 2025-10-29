@@ -12,6 +12,7 @@ import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.BatchStats;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.RunStats;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
@@ -19,7 +20,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -158,7 +158,41 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
         log.warn("task marked FAILED (no batches) taskId={} runId={}", taskId, runId);
       }
 
-      // 4) Persist Task and TaskRun
+      // 4) Aggregate batch stats to TaskRun
+      if (executeResult.succeededBatches() > 0 || executeResult.failedBatches() > 0) {
+        List<TaskRunBatch> batches = taskRunBatchRepository.findByRunId(runId);
+        int totalPages = batches.size();
+        long totalFetched =
+            batches.stream()
+                .map(TaskRunBatch::getStats)
+                .filter(Objects::nonNull)
+                .mapToLong(BatchStats::recordCount)
+                .sum();
+
+        long failedCount =
+            batches.stream().filter(batch -> batch.getStatus() == BatchStatus.FAILED).count();
+
+        RunStats totalStats =
+            new RunStats(
+                totalFetched, // fetched: total record count
+                totalFetched, // upserted: same as fetched (for now)
+                failedCount, // failed: failed batch count
+                (long) totalPages); // pages: total batch count
+
+        taskRun.appendStats(totalStats);
+
+        if (log.isDebugEnabled()) {
+          log.debug(
+              "Aggregated stats from {} batches: fetched={} failed={} taskId={} runId={}",
+              totalPages,
+              totalFetched,
+              failedCount,
+              taskId,
+              runId);
+        }
+      }
+
+      // 5) Persist Task and TaskRun
       taskRepository.save(task);
       taskRunRepository.save(taskRun);
 

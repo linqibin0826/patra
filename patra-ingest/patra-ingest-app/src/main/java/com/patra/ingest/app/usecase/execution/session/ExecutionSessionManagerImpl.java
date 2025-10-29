@@ -53,29 +53,22 @@ public class ExecutionSessionManagerImpl implements ExecutionSessionManager {
   @Value("${task.execution.lease.renewal-interval:20}")
   private int renewalIntervalSeconds;
 
-  /**
-   * Creates an execution session (TaskRun + heartbeat). TODO Two parameters are currently unused;
-   * consider removing if not needed.
-   */
+  /** Creates an execution session (TaskRun + heartbeat). */
   @Override
-  public ExecutionSession createSession(
-      Long taskId, String leaseOwner, String schedulerRunId, String correlationId) {
+  public ExecutionSession createSession(Long taskId, String leaseOwner, String correlationId) {
     // Query task and delegate to overloaded method
     TaskAggregate task =
         taskRepository
             .findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
 
-    return createSession(task, leaseOwner, schedulerRunId, correlationId);
+    return createSession(task, leaseOwner, correlationId);
   }
 
-  /**
-   * Creates an execution session (TaskRun + heartbeat), optimized to avoid reloading Task. TODO Two
-   * parameters are currently unused; consider removing if not needed.
-   */
+  /** Creates an execution session (TaskRun + heartbeat), optimized to avoid reloading Task. */
   @Override
   public ExecutionSession createSession(
-      TaskAggregate task, String leaseOwner, String schedulerRunId, String correlationId) {
+      TaskAggregate task, String leaseOwner, String correlationId) {
     Long taskId = task.getId();
 
     // 1) Get latest attemptNo and compute next

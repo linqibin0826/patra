@@ -103,10 +103,9 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
     try {
       // 4) Build lineage context from execution context and parameters
-      Long scheduleInstanceId = parseSchedulerRunIdAsLong(context.schedulerRunId());
       CursorLineage lineage =
           new CursorLineage(
-              scheduleInstanceId, // from ExecutionContext.schedulerRunId
+              context.scheduleInstanceId(), // from TaskAggregate via ExecutionContext
               context.planId(),
               context.sliceId(),
               context.taskId(),
@@ -294,26 +293,6 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       case CURSOR_LANDMARK -> "CURSOR";
       case VOLUME_BUDGET, SINGLE, HYBRID -> "GLOBAL";
     };
-  }
-
-  /**
-   * Parses schedulerRunId to Long for lineage tracking.
-   *
-   * <p>schedulerRunId may be null or non-numeric; return null if unparseable.
-   *
-   * @param schedulerRunId scheduler run id string
-   * @return parsed Long value, or null if unparseable
-   */
-  private Long parseSchedulerRunIdAsLong(String schedulerRunId) {
-    if (schedulerRunId == null || schedulerRunId.isBlank()) {
-      return null;
-    }
-    try {
-      return Long.parseLong(schedulerRunId);
-    } catch (NumberFormatException e) {
-      log.debug("schedulerRunId is not a valid Long: {}", schedulerRunId);
-      return null;
-    }
   }
 
   /**

@@ -321,13 +321,11 @@ public class TaskAggregate extends AggregateRoot<Long> {
    * Marks the task as running and records execution context.
    *
    * @param startedAt execution start time
-   * @param schedulerRunId scheduler run identifier
    * @param correlationId correlation identifier for tracing
    */
-  public void markRunning(Instant startedAt, String schedulerRunId, String correlationId) {
+  public void markRunning(Instant startedAt, String correlationId) {
     this.executionTimeline = executionTimeline.onStart(startedAt);
-    this.schedulerContext =
-        schedulerContext.withSchedulerRun(schedulerRunId).withCorrelation(correlationId);
+    this.schedulerContext = schedulerContext.withCorrelation(correlationId);
     this.status = TaskStatus.RUNNING;
   }
 
