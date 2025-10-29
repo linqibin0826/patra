@@ -2,6 +2,7 @@ package com.patra.ingest.domain.port;
 
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository port for task execution batches.
@@ -35,4 +36,14 @@ public interface TaskRunBatchRepository {
    * @return batches belonging to the run
    */
   List<TaskRunBatch> findByRunId(Long runId);
+
+  /**
+   * Finds the batch ID of the last succeeded batch for a given run.
+   *
+   * <p>Used for cursor lineage tracking to record which batch triggered cursor advancement.
+   *
+   * @param runId run identifier
+   * @return optional batch ID (latest SUCCEEDED batch by ID order)
+   */
+  Optional<Long> findLastSucceededBatchId(Long runId);
 }

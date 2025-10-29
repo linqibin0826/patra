@@ -1,6 +1,7 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
 import com.patra.ingest.domain.model.entity.Cursor;
+import com.patra.ingest.domain.model.vo.CursorLineage;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.domain.port.CursorRepository;
@@ -55,7 +56,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
   /** Advances the cursor watermark. */
   @Override
-  public boolean advance(ExecutionContext context, Long taskId, Long runId) {
+  public boolean advance(ExecutionContext context, Long taskId, Long runId, Long batchId) {
     // 1) Extract cursor parameters
     String provenanceCode = context.provenanceCode();
     String operationCode = context.operationCode();
@@ -93,14 +94,25 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         runId);
 
     try {
-      // 4) Lookup current cursor
+      // 4) Build lineage context from execution context and parameters
+      Long scheduleInstanceId = parseSchedulerRunIdAsLong(context.schedulerRunId());
+      CursorLineage lineage =
+          new CursorLineage(
+              scheduleInstanceId, // from ExecutionContext.schedulerRunId
+              context.planId(),
+              context.sliceId(),
+              context.taskId(),
+              context.runId(),
+              batchId); // from method parameter (last succeeded batch)
+
+      // 5) Lookup current cursor
       Optional<Cursor> cursorOpt =
           cursorRepository.find(
               provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey);
 
       Cursor cursor;
       if (cursorOpt.isPresent()) {
-        // 4.1 Cursor exists: update watermark
+        // 5.1 Cursor exists: update watermark and lineage
         cursor = cursorOpt.get();
         Instant oldWatermark = cursor.getCurrentWatermark();
 
@@ -112,19 +124,21 @@ public class CursorAdvancerImpl implements CursorAdvancer {
               oldWatermark);
         }
 
-        // Advance watermark (domain ensures monotonicity)
-        cursor.advanceTo(newWatermark);
+        // Advance watermark and lineage (domain ensures monotonicity)
+        cursor.advanceTo(newWatermark, lineage);
 
         log.info(
-            "cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={}",
+            "cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={} planId={} sliceId={}",
             provenanceCode,
             operationCode,
             oldWatermark,
             newWatermark,
             taskId,
-            runId);
+            runId,
+            context.planId(),
+            context.sliceId());
       } else {
-        // 4.2 Cursor missing: create
+        // 5.2 Cursor missing: create with lineage
         cursor =
             Cursor.create(
                 provenanceCode,
@@ -132,18 +146,21 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                 cursorKey,
                 namespaceScope,
                 namespaceKey,
-                newWatermark);
+                newWatermark,
+                lineage);
 
         log.info(
-            "cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={}",
+            "cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={} planId={} sliceId={}",
             provenanceCode,
             operationCode,
             newWatermark,
             taskId,
-            runId);
+            runId,
+            context.planId(),
+            context.sliceId());
       }
 
-      // 5) Save cursor (optimistic lock check)
+      // 6) Save cursor (optimistic lock check)
       cursorRepository.save(cursor);
       return true;
 
@@ -215,5 +232,25 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       case CURSOR_LANDMARK -> "CURSOR";
       case VOLUME_BUDGET, SINGLE, HYBRID -> "GLOBAL";
     };
+  }
+
+  /**
+   * Parses schedulerRunId to Long for lineage tracking.
+   *
+   * <p>schedulerRunId may be null or non-numeric; return null if unparseable.
+   *
+   * @param schedulerRunId scheduler run id string
+   * @return parsed Long value, or null if unparseable
+   */
+  private Long parseSchedulerRunIdAsLong(String schedulerRunId) {
+    if (schedulerRunId == null || schedulerRunId.isBlank()) {
+      return null;
+    }
+    try {
+      return Long.parseLong(schedulerRunId);
+    } catch (NumberFormatException e) {
+      log.debug("schedulerRunId is not a valid Long: {}", schedulerRunId);
+      return null;
+    }
   }
 }

@@ -35,7 +35,8 @@ public interface CursorAdvancer {
    * @param context execution context (window/provenance)
    * @param taskId task id (for TASK-granularity cursors)
    * @param runId run id (for audit)
+   * @param batchId last succeeded batch id (for lineage tracking)
    * @return true when advanced; false when optimistic conflict (retry later)
    */
-  boolean advance(ExecutionContext context, Long taskId, Long runId);
+  boolean advance(ExecutionContext context, Long taskId, Long runId, Long batchId);
 }

@@ -1,12 +1,14 @@
 package com.patra.ingest.infra.persistence.repository;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
+import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.infra.persistence.converter.TaskRunBatchConverter;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
 import com.patra.ingest.infra.persistence.mapper.TaskRunBatchMapper;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,10 +72,38 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   @Override
   public List<TaskRunBatch> findByRunId(Long runId) {
     List<TaskRunBatchDO> entities =
-        mapper.selectList(new QueryWrapper<TaskRunBatchDO>().eq("run_id", runId));
+        mapper.selectList(
+            new LambdaQueryWrapper<TaskRunBatchDO>().eq(TaskRunBatchDO::getRunId, runId));
     if (log.isDebugEnabled()) {
       log.debug("query TaskRunBatch by runId={}, found {} results", runId, entities.size());
     }
     return entities.stream().map(converter::toDomain).collect(Collectors.toList());
+  }
+
+  /**
+   * Finds the batch ID of the last succeeded batch for a given run.
+   *
+   * <p>Used for cursor lineage tracking to record which batch triggered cursor advancement.
+   *
+   * @param runId run identifier
+   * @return optional batch ID (latest SUCCEEDED batch by ID order)
+   */
+  @Override
+  public Optional<Long> findLastSucceededBatchId(Long runId) {
+    LambdaQueryWrapper<TaskRunBatchDO> wrapper =
+        new LambdaQueryWrapper<TaskRunBatchDO>()
+            .eq(TaskRunBatchDO::getRunId, runId)
+            .eq(TaskRunBatchDO::getStatusCode, BatchStatus.SUCCEEDED.getCode())
+            .orderByDesc(TaskRunBatchDO::getId)
+            .last("LIMIT 1");
+
+    TaskRunBatchDO batch = mapper.selectOne(wrapper);
+    Long batchId = batch != null ? batch.getId() : null;
+
+    if (log.isDebugEnabled()) {
+      log.debug("query last succeeded batch for runId={}, batchId={}", runId, batchId);
+    }
+
+    return Optional.ofNullable(batchId);
   }
 }
