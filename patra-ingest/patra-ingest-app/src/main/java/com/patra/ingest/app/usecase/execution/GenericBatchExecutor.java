@@ -78,8 +78,7 @@ public class GenericBatchExecutor {
           new BatchExecutionParams(batch.query(), batch.params());
 
       // Build batch metadata (batchNo + cursor)
-      BatchMetadata metadata =
-          new BatchMetadata(batch.batchNo(), batch.cursorToken(), batch.expectedCount());
+      BatchMetadata metadata = new BatchMetadata(batch.batchNo(), batch.cursorToken());
 
       AdapterRequest request =
           AdapterRequest.builder()

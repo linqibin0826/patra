@@ -119,7 +119,7 @@ public class PubmedBatchPlanner implements BatchPlanner {
         batchParams.put("query_key", metadata.queryKey());
       }
 
-      batches.add(new Batch(i + 1, compiledQuery, batchParams, null, null));
+      batches.add(new Batch(i + 1, compiledQuery, batchParams, null, i + 1, pageSize));
     }
 
     log.info(

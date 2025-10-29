@@ -8,16 +8,14 @@ package com.patra.starter.provenance.common.adapter;
  *
  * @param batchNo sequential batch number within the execution run (1-based)
  * @param cursorToken resume cursor supplied by the upstream data source (nullable)
- * @param expectedCount expected number of items in this batch if known (nullable)
  */
-public record BatchMetadata(int batchNo, String cursorToken, Integer expectedCount) {
+public record BatchMetadata(int batchNo, String cursorToken) {
 
   /**
    * Validates invariants when creating the record.
    *
    * @param batchNo sequential batch number (must be >= 1)
    * @param cursorToken resume cursor token
-   * @param expectedCount expected item count
    */
   public BatchMetadata {
     if (batchNo < 1) {
@@ -31,7 +29,7 @@ public record BatchMetadata(int batchNo, String cursorToken, Integer expectedCou
    * @return metadata for batch #1 with no cursor
    */
   public static BatchMetadata first() {
-    return new BatchMetadata(1, null, null);
+    return new BatchMetadata(1, null);
   }
 
   /**
@@ -41,6 +39,6 @@ public record BatchMetadata(int batchNo, String cursorToken, Integer expectedCou
    * @return new metadata instance with updated cursor
    */
   public BatchMetadata withCursorToken(String newCursorToken) {
-    return new BatchMetadata(batchNo, newCursorToken, expectedCount);
+    return new BatchMetadata(batchNo, newCursorToken);
   }
 }

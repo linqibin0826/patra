@@ -201,9 +201,9 @@ public class TaskRunBatch {
         context.provenanceCode(),
         context.operationCode(),
         batch.batchNo(),
-        null, // pageNo - optional
-        null, // pageSize - optional
-        beforeToken,
+        batch.pageNo(), // pageNo - from Batch VO (page-based pagination)
+        batch.pageSize(), // pageSize - from Batch VO
+        beforeToken, // beforeToken - cursorToken for token-based, null for page-based
         result.nextCursorToken(), // afterToken
         context.exprHash(),
         idempotentKey,
