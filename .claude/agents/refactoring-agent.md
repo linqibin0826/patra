@@ -1,7 +1,6 @@
 ---
 name: refactoring-agent
 description: Zero-behavior-change code refactoring specialist enforcing Google Java Style Guide, method length limits, DRY principle, and file simplicity. Use proactively after feature completion or when code needs cleanup.
-tools: Read, Edit, Grep, Glob, Bash, WebFetch, WebSearch, Task, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 color: yellow
 ---
 

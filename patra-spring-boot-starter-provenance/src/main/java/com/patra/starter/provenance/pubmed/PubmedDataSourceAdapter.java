@@ -8,7 +8,7 @@ import com.patra.common.model.StandardLiterature;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.adapter.AdapterRequest;
 import com.patra.starter.provenance.common.adapter.AdapterResult;
-import com.patra.starter.provenance.common.adapter.BatchInfo;
+import com.patra.starter.provenance.common.adapter.BatchExecutionParams;
 import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -64,11 +64,10 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
   @Override
   public AdapterResult fetchData(AdapterRequest request) {
     long start = System.currentTimeMillis();
-    BatchInfo batchInfo = request.batchInfo();
-    String batchLabel = batchInfo != null ? String.valueOf(batchInfo.batchNo()) : "N/A";
+    int batchNo = request.metadata().batchNo();
     String operation = request.operationCode();
 
-    log.info("PubMed adapter start: operation={} batchNo={}", operation, batchLabel);
+    log.info("PubMed adapter start: operation={} batchNo={}", operation, batchNo);
 
     try {
       ProvenanceConfig config = properties.mergeWithRuntime(PROVENANCE_CODE, request.config());
@@ -82,7 +81,7 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
         log.info(
             "PubMed adapter empty result: operation={} batchNo={} duration={}ms",
             operation,
-            batchLabel,
+            batchNo,
             System.currentTimeMillis() - start);
         return AdapterResult.success(List.of(), null);
       }
@@ -103,7 +102,7 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
       log.info(
           "PubMed adapter success: operation={} batchNo={} fetched={} attempted={} duration={}ms",
           operation,
-          batchLabel,
+          batchNo,
           result.fetchedCount(),
           outcome.attempted(),
           System.currentTimeMillis() - start);
@@ -113,36 +112,39 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
       log.warn(
           "PubMed adapter client error: operation={} batchNo={} status={} message={}",
           operation,
-          batchLabel,
+          batchNo,
           ex.getStatusCode(),
           ex.getMessage(),
           ex);
       return failure;
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
-      log.error("PubMed adapter interrupted: operation={} batchNo={}", operation, batchLabel, ex);
+      log.error("PubMed adapter interrupted: operation={} batchNo={}", operation, batchNo, ex);
       return AdapterResult.retriableFailure("PubMed adapter interrupted");
     } catch (Exception ex) {
       if (isTimeout(ex)) {
         log.warn(
             "PubMed adapter timeout detected: operation={} batchNo={} message={}",
             operation,
-            batchLabel,
+            batchNo,
             ex.getMessage());
         return AdapterResult.retriableFailure("PubMed request timeout: " + ex.getMessage());
       }
-      log.error(
-          "PubMed adapter unexpected error: operation={} batchNo={}", operation, batchLabel, ex);
+      log.error("PubMed adapter unexpected error: operation={} batchNo={}", operation, batchNo, ex);
       return AdapterResult.nonRetriableFailure("Unexpected PubMed error: " + ex.getMessage());
     }
   }
 
   private JsonNode buildSearchParams(AdapterRequest request) {
-    JsonNode params = request.compiledParams();
-    String query = request.compiledQuery();
+    // executionParams.params() contains complete batch execution parameters (incl. pagination)
+    BatchExecutionParams exec = request.executionParams();
+    JsonNode params = exec.params();
+    String query = exec.query();
+
     if (!StringUtils.hasText(query)) {
       return params;
     }
+
     ObjectNode node;
     if (params != null && params.isObject()) {
       node = ((ObjectNode) params).deepCopy();
