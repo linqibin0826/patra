@@ -1,10 +1,17 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
 import com.patra.ingest.domain.model.entity.Cursor;
+import com.patra.ingest.domain.model.entity.CursorEvent;
+import com.patra.ingest.domain.model.enums.CursorDirection;
+import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.CursorLineage;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 import com.patra.ingest.domain.model.vo.WindowSpec;
+import com.patra.ingest.domain.port.CursorEventRepository;
 import com.patra.ingest.domain.port.CursorRepository;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +60,7 @@ import org.springframework.stereotype.Service;
 public class CursorAdvancerImpl implements CursorAdvancer {
 
   private final CursorRepository cursorRepository;
+  private final CursorEventRepository cursorEventRepository;
 
   /** Advances the cursor watermark. */
   @Override
@@ -111,10 +119,15 @@ public class CursorAdvancerImpl implements CursorAdvancer {
               provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey);
 
       Cursor cursor;
+      Instant prevWatermark = null;
+      String prevValue = null;
+
       if (cursorOpt.isPresent()) {
         // 5.1 Cursor exists: update watermark and lineage
         cursor = cursorOpt.get();
         Instant oldWatermark = cursor.getCurrentWatermark();
+        prevWatermark = oldWatermark;
+        prevValue = oldWatermark != null ? oldWatermark.toString() : null;
 
         if (log.isDebugEnabled()) {
           log.debug(
@@ -138,7 +151,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
             context.planId(),
             context.sliceId());
       } else {
-        // 5.2 Cursor missing: create with lineage
+        // 5.2 Cursor missing: create with lineage (first advancement)
         cursor =
             Cursor.create(
                 provenanceCode,
@@ -148,6 +161,9 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                 namespaceKey,
                 newWatermark,
                 lineage);
+
+        prevWatermark = null;
+        prevValue = null;
 
         log.info(
             "cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={} planId={} sliceId={}",
@@ -162,6 +178,52 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
       // 6) Save cursor (optimistic lock check)
       cursorRepository.save(cursor);
+
+      // 7) Generate idempotent key for event deduplication
+      String idempotentKey =
+          generateIdempotentKey(
+              provenanceCode,
+              operationCode,
+              cursorKey,
+              namespaceScope,
+              namespaceKey != null ? namespaceKey : "",
+              prevValue,
+              newWatermark.toString(),
+              runId,
+              batchId);
+
+      // 8) Determine advancement direction
+      CursorDirection direction = determineDirection(operationCode);
+
+      // 9) Create and save cursor advancement event
+      CursorEvent event =
+          CursorEvent.create(
+              provenanceCode,
+              operationCode,
+              cursorKey,
+              namespaceScope,
+              namespaceKey,
+              CursorType.TIME,
+              prevValue,
+              newWatermark.toString(),
+              prevWatermark,
+              newWatermark,
+              direction,
+              idempotentKey,
+              lineage,
+              cursor.getExprHash());
+
+      cursorEventRepository.save(event);
+
+      if (log.isDebugEnabled()) {
+        log.debug(
+            "cursor event recorded idempotentKey={} direction={} taskId={} runId={}",
+            idempotentKey,
+            direction,
+            taskId,
+            runId);
+      }
+
       return true;
 
     } catch (OptimisticLockingFailureException e) {
@@ -252,5 +314,83 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       log.debug("schedulerRunId is not a valid Long: {}", schedulerRunId);
       return null;
     }
+  }
+
+  /**
+   * Generates idempotent key for cursor event deduplication.
+   *
+   * <p>Format: SHA256(provenance|operation|cursorKey|nsScope|nsKey|prev|new|runId|batchId)
+   *
+   * <p>This ensures that the same advancement (same context and watermark transition) generates the
+   * same idempotent key, preventing duplicate event records.
+   *
+   * @param provenanceCode provenance code
+   * @param operationCode operation code
+   * @param cursorKey cursor key
+   * @param namespaceScopeCode namespace scope code
+   * @param namespaceKey namespace key (empty string if null)
+   * @param prevValue previous watermark value (NULL string if null)
+   * @param newValue new watermark value
+   * @param runId run identifier
+   * @param batchId batch identifier
+   * @return SHA256 hash as idempotent key (64-character hex string)
+   */
+  private String generateIdempotentKey(
+      String provenanceCode,
+      String operationCode,
+      String cursorKey,
+      String namespaceScopeCode,
+      String namespaceKey,
+      String prevValue,
+      String newValue,
+      Long runId,
+      Long batchId) {
+
+    String composite =
+        String.format(
+            "%s|%s|%s|%s|%s|%s|%s|%s|%s",
+            provenanceCode,
+            operationCode,
+            cursorKey,
+            namespaceScopeCode,
+            namespaceKey != null ? namespaceKey : "",
+            prevValue != null ? prevValue : "NULL",
+            newValue,
+            runId,
+            batchId);
+
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hashBytes = digest.digest(composite.getBytes(StandardCharsets.UTF_8));
+
+      // Convert byte array to hex string
+      StringBuilder hexString = new StringBuilder(2 * hashBytes.length);
+      for (byte b : hashBytes) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) {
+          hexString.append('0');
+        }
+        hexString.append(hex);
+      }
+      return hexString.toString();
+    } catch (NoSuchAlgorithmException e) {
+      // Should never happen as SHA-256 is guaranteed to be available
+      throw new IllegalStateException("SHA-256 algorithm not available", e);
+    }
+  }
+
+  /**
+   * Determines cursor advancement direction based on operation code.
+   *
+   * <p>BACKFILL operations move cursor backward (historical data ingestion), while all other
+   * operations move cursor forward (incremental harvest).
+   *
+   * @param operationCode operation code (HARVEST/BACKFILL/UPDATE/METRICS)
+   * @return BACKFILL if operation is backfill, FORWARD otherwise
+   */
+  private CursorDirection determineDirection(String operationCode) {
+    return "BACKFILL".equalsIgnoreCase(operationCode)
+        ? CursorDirection.BACKFILL
+        : CursorDirection.FORWARD;
   }
 }
