@@ -125,13 +125,11 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
     ExecutionSession session = null;
     try {
       // 5) Initialize session (create TaskRun, start heartbeat)
-      String schedulerRunId = command.getSchedulerRunId();
       String correlationId = command.getCorrelationId();
       session =
           sessionManager.createSession(
               task, // Use pre-queried task
               leaseOwner,
-              schedulerRunId,
               correlationId);
 
       Long runId = session.runId();
@@ -139,7 +137,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
 
       // 6) Load execution context (restore config, compile expressions)
       log.debug("loading execution context taskId={} runId={}", taskId, runId);
-      ExecutionContext context = contextLoader.loadContext(task, runId, schedulerRunId);
+      ExecutionContext context = contextLoader.loadContext(task, runId);
 
       // 7) Mark task/run as RUNNING
       TaskRun taskRun =
@@ -147,10 +145,10 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
               .findById(runId)
               .orElseThrow(() -> new IllegalStateException("TaskRun not found runId=" + runId));
       Instant now = clock.instant();
-      taskRun.bindRunContext(schedulerRunId, correlationId);
+      taskRun.bindRunContext(correlationId);
       taskRun.start(now);
       taskRunRepository.save(taskRun);
-      task.markRunning(now, schedulerRunId, correlationId);
+      task.markRunning(now, correlationId);
       taskRepository.save(task);
 
       log.info("prepare task execution completed taskId={} runId={}", taskId, runId);

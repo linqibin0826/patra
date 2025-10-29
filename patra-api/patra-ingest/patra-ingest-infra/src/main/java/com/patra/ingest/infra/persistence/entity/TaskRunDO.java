@@ -72,11 +72,7 @@ public class TaskRunDO extends BaseDO {
   @TableField("last_heartbeat")
   private Instant lastHeartbeat;
 
-  /** Scheduler run id (for tracing external execution record). */
-  @TableField("scheduler_run_id")
-  private String schedulerRunId;
-
-  /** Trace / Correlation ID */
+  /** Trace / Correlation ID for distributed tracing */
   @TableField("correlation_id")
   private String correlationId;
 }

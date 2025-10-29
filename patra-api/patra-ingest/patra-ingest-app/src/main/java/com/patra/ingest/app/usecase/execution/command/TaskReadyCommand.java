@@ -37,11 +37,7 @@ public record TaskReadyCommand(long taskId, String idempotentKey, Map<String, Ob
   }
 
   public String getCorrelationId() {
-    return resolveHeaderAsString("correlationId"); // TODO Update producer to include this value
-  }
-
-  public String getSchedulerRunId() {
-    return resolveHeaderAsString("scheduler"); // TODO Remove if not used
+    return resolveHeaderAsString("correlationId");
   }
 
   private String resolveHeaderAsString(String key) {

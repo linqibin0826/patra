@@ -18,22 +18,18 @@ public interface ExecutionSessionManager {
    *
    * @param taskId task id
    * @param leaseOwner lease owner
-   * @param schedulerRunId scheduler run id
    * @param correlationId correlation id
    * @return execution session
    */
-  ExecutionSession createSession(
-      Long taskId, String leaseOwner, String schedulerRunId, String correlationId);
+  ExecutionSession createSession(Long taskId, String leaseOwner, String correlationId);
 
   /**
    * Creates an execution session (TaskRun + heartbeat) — optimized to avoid reloading Task.
    *
    * @param task task aggregate (already loaded)
    * @param leaseOwner lease owner
-   * @param schedulerRunId scheduler run id
    * @param correlationId correlation id
    * @return execution session
    */
-  ExecutionSession createSession(
-      TaskAggregate task, String leaseOwner, String schedulerRunId, String correlationId);
+  ExecutionSession createSession(TaskAggregate task, String leaseOwner, String correlationId);
 }

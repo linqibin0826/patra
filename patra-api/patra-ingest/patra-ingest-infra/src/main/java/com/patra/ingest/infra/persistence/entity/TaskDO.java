@@ -111,11 +111,7 @@ public class TaskDO extends BaseDO {
   @TableField("finished_at")
   private Instant finishedAt;
 
-  /** Scheduler run id (used when triggering per-slice). */
-  @TableField("scheduler_run_id")
-  private String schedulerRunId;
-
-  /** Trace / Correlation ID */
+  /** Trace / Correlation ID for distributed tracing */
   @TableField("correlation_id")
   private String correlationId;
 }

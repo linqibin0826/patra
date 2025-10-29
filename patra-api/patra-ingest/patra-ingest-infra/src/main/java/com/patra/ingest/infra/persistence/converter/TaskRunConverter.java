@@ -22,7 +22,6 @@ public interface TaskRunConverter {
   @Mapping(target = "statusCode", source = "status", qualifiedByName = "taskRunStatusToCode")
   @Mapping(target = "stats", source = "stats", qualifiedByName = "runStatsToJson")
   @Mapping(target = "checkpoint", source = "checkpoint", qualifiedByName = "checkpointToJson")
-  @Mapping(target = "schedulerRunId", source = "runContext.schedulerRunId")
   @Mapping(target = "correlationId", source = "runContext.correlationId")
   TaskRunDO toDO(TaskRun source);
 
@@ -37,7 +36,7 @@ public interface TaskRunConverter {
     TaskRunStatus status = taskRunStatusFromCode(entity.getStatusCode());
     RunStats stats = deriveStats(entity.getStats());
     TaskRunCheckpoint checkpoint = checkpointFromNode(entity.getCheckpoint());
-    RunContext context = new RunContext(entity.getSchedulerRunId(), entity.getCorrelationId());
+    RunContext context = new RunContext(entity.getCorrelationId());
     return TaskRun.restore(
         entity.getId(),
         entity.getTaskId(),
