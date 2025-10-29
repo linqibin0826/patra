@@ -230,6 +230,21 @@ public class PlanAggregate extends AggregateRoot<Long> {
     this.status = PlanStatus.COMPLETED;
   }
 
+  /**
+   * Updates the plan status to the specified value.
+   *
+   * <p>This method is used by event handlers to update the status based on aggregated slice states.
+   *
+   * @param newStatus the new status to set
+   * @throws IllegalArgumentException if newStatus is null
+   */
+  public void updateStatus(PlanStatus newStatus) {
+    if (newStatus == null) {
+      throw new IllegalArgumentException("newStatus must not be null");
+    }
+    this.status = newStatus;
+  }
+
   public Long getScheduleInstanceId() {
     return scheduleInstanceId;
   }

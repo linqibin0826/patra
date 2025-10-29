@@ -41,6 +41,14 @@ public interface TaskRepository {
   List<TaskAggregate> findByPlanId(Long planId);
 
   /**
+   * Retrieve all tasks belonging to a specific slice.
+   *
+   * @param sliceId the slice identifier
+   * @return list of task aggregates
+   */
+  List<TaskAggregate> findBySliceId(Long sliceId);
+
+  /**
    * Retrieve a task aggregate by identifier.
    *
    * @param taskId task identifier

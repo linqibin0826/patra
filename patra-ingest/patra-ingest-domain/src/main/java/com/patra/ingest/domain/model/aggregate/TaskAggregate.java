@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
+import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.ExecutionTimeline;
@@ -337,6 +338,11 @@ public class TaskAggregate extends AggregateRoot<Long> {
   public void markSucceeded(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.SUCCEEDED;
+
+    // Publish domain event to trigger Slice and Plan status aggregation
+    addDomainEvent(
+        TaskCompletedEvent.of(
+            this.getId(), this.sliceId, this.planId, TaskStatus.SUCCEEDED.getCode(), finishedAt));
   }
 
   /**
@@ -347,6 +353,17 @@ public class TaskAggregate extends AggregateRoot<Long> {
   public void markFailed(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.FAILED;
+
+    // Publish domain event to trigger Slice and Plan status aggregation
+    addDomainEvent(
+        TaskCompletedEvent.ofFailure(
+            this.getId(),
+            this.sliceId,
+            this.planId,
+            TaskStatus.FAILED.getCode(),
+            this.lastErrorCode,
+            this.lastErrorMsg,
+            finishedAt));
   }
 
   /**
@@ -357,6 +374,11 @@ public class TaskAggregate extends AggregateRoot<Long> {
   public void markPartial(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.PARTIAL;
+
+    // Publish domain event to trigger Slice and Plan status aggregation
+    addDomainEvent(
+        TaskCompletedEvent.of(
+            this.getId(), this.sliceId, this.planId, TaskStatus.PARTIAL.getCode(), finishedAt));
   }
 
   /**
@@ -367,6 +389,16 @@ public class TaskAggregate extends AggregateRoot<Long> {
   public void markCursorPending(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.CURSOR_PENDING;
+
+    // Publish domain event to trigger Slice and Plan status aggregation
+    // Note: CURSOR_PENDING is treated as "still executing" in Slice status calculation
+    addDomainEvent(
+        TaskCompletedEvent.of(
+            this.getId(),
+            this.sliceId,
+            this.planId,
+            TaskStatus.CURSOR_PENDING.getCode(),
+            finishedAt));
   }
 
   /**

@@ -10,7 +10,6 @@ import lombok.Getter;
 @Getter
 public enum SliceStatus {
   PENDING("PENDING", "Pending"),
-  DISPATCHED("DISPATCHED", "Dispatched"),
   EXECUTING("EXECUTING", "Executing"),
   SUCCEEDED("SUCCEEDED", "Succeeded"),
   FAILED("FAILED", "Failed"),
