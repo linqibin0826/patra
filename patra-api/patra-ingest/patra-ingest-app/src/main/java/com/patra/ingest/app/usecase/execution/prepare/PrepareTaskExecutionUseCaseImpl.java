@@ -6,9 +6,12 @@ import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import com.patra.ingest.app.usecase.execution.session.ExecutionContextLoader;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSessionManager;
+import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
+import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import java.lang.management.ManagementFactory;
@@ -64,6 +67,7 @@ import org.springframework.stereotype.Service;
 public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseCase {
 
   private final TaskRepository taskRepository;
+  private final PlanSliceRepository planSliceRepository;
   private final IdempotencyChecker idempotencyChecker;
   private final LeaseManagementService leaseManagementService;
   private final ExecutionSessionManager sessionManager;
@@ -121,6 +125,19 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
         taskRepository
             .findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
+
+    // Mark Slice as EXECUTING (if still PENDING)
+    PlanSliceAggregate slice =
+        planSliceRepository
+            .findById(task.getSliceId())
+            .orElseThrow(
+                () -> new IllegalStateException("Slice not found: sliceId=" + task.getSliceId()));
+
+    if (slice.getStatus() == SliceStatus.PENDING) {
+      slice.markExecuting();
+      planSliceRepository.save(slice);
+      log.info("Slice marked as EXECUTING sliceId={}", slice.getId());
+    }
 
     ExecutionSession session = null;
     try {

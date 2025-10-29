@@ -6,6 +6,7 @@ import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import com.patra.ingest.app.usecase.execution.publisher.LiteratureEventPublisher;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.event.LiteratureDataReadyEvent;
+import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -68,6 +70,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
   private final CursorAdvancer cursorAdvancer;
   private final LeaseManagementService leaseManagementService;
   private final LiteratureEventPublisher literatureEventPublisher;
+  private final ApplicationEventPublisher applicationEventPublisher;
   private final Clock clock;
 
   /** Completes execution (advance cursor + update status). */
@@ -195,6 +198,20 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
       // 5) Persist Task and TaskRun
       taskRepository.save(task);
       taskRunRepository.save(taskRun);
+
+      // Pull domain events and publish as Spring events
+      task.pullDomainEvents()
+          .forEach(
+              domainEvent -> {
+                if (domainEvent instanceof TaskCompletedEvent event) {
+                  applicationEventPublisher.publishEvent(event);
+                  log.debug(
+                      "Published TaskCompletedEvent for taskId={} sliceId={} planId={}",
+                      event.taskId(),
+                      event.sliceId(),
+                      event.planId());
+                }
+              });
 
       if (executeResult.succeededBatches() > 0) {
         log.debug("publishing literature ready event taskId={} runId={}", taskId, runId);

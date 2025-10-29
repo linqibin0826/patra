@@ -117,11 +117,6 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     this.planId = planId;
   }
 
-  /** Marks the slice as dispatched. */
-  public void markDispatched() {
-    this.status = SliceStatus.DISPATCHED;
-  }
-
   /** Marks the slice as executing. */
   public void markExecuting() {
     this.status = SliceStatus.EXECUTING;
@@ -140,6 +135,21 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
   /** Marks the slice as partially completed. */
   public void markPartial() {
     this.status = SliceStatus.PARTIAL;
+  }
+
+  /**
+   * Updates the slice status to the specified value.
+   *
+   * <p>This method is used by event handlers to update the status based on aggregated task states.
+   *
+   * @param newStatus the new status to set
+   * @throws IllegalArgumentException if newStatus is null
+   */
+  public void updateStatus(SliceStatus newStatus) {
+    if (newStatus == null) {
+      throw new IllegalArgumentException("newStatus must not be null");
+    }
+    this.status = newStatus;
   }
 
   public Long getPlanId() {

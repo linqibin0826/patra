@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.persistence.repository;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.port.TaskRepository;
@@ -118,6 +119,25 @@ public class TaskRepositoryMpImpl implements TaskRepository {
       aggregates.add(converter.toAggregate(entity));
     }
     return aggregates;
+  }
+
+  /**
+   * Finds tasks by slice ID.
+   *
+   * @param sliceId slice ID
+   * @return list of task aggregates, empty if none found
+   */
+  @Override
+  public List<TaskAggregate> findBySliceId(Long sliceId) {
+    if (sliceId == null) {
+      throw new IllegalArgumentException("sliceId must not be null");
+    }
+
+    LambdaQueryWrapper<TaskDO> query = new LambdaQueryWrapper<>();
+    query.eq(TaskDO::getSliceId, sliceId);
+
+    List<TaskDO> taskDOs = mapper.selectList(query);
+    return taskDOs.stream().map(converter::toAggregate).toList();
   }
 
   /**
