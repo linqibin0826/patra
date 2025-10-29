@@ -450,7 +450,8 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `operation_code`       VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_operation): HARVEST/BACKFILL/UPDATE/METRICS',
     `cursor_key`           VARCHAR(64)     NOT NULL,
     `namespace_scope_code` VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_namespace_scope): GLOBAL/EXPR/CUSTOM',
-    `namespace_key`        CHAR(64)        NOT NULL,
+    `namespace_key`        CHAR(64)        NOT NULL DEFAULT '0000000000000000000000000000000000000000000000000000000000000000'
+        COMMENT 'Namespace key: expr_hash or custom hash; global=all zeros',
 
     `cursor_type_code`     VARCHAR(32)     NOT NULL COMMENT 'DICT CODE(type=ing_cursor_type): TIME/ID/TOKEN',
     `prev_value`           VARCHAR(1024)   NULL,
@@ -461,6 +462,8 @@ CREATE TABLE IF NOT EXISTS `ing_cursor_event`
     `new_instant`          TIMESTAMP(6)    NULL,
     `prev_numeric`         DECIMAL(38, 0)  NULL,
     `new_numeric`          DECIMAL(38, 0)  NULL,
+    `window_from`          TIMESTAMP(6)    NULL COMMENT 'Covered window start (UTC, inclusive)',
+    `window_to`            TIMESTAMP(6)    NULL COMMENT 'Covered window end (UTC, exclusive)',
 
     `direction_code`       VARCHAR(16)     NULL COMMENT 'DICT CODE(type=ing_cursor_direction): FORWARD/BACKFILL',
 
