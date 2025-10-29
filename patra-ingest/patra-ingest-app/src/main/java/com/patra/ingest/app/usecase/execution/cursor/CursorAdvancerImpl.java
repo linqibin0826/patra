@@ -6,6 +6,7 @@ import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.CursorLineage;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.NamespaceKey;
 import com.patra.ingest.domain.model.vo.WindowSpec;
 import com.patra.ingest.domain.port.CursorEventRepository;
 import com.patra.ingest.domain.port.CursorRepository;
@@ -90,7 +91,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     // 3) Determine cursor key and namespace
     String cursorKey = determineCursorKey(windowSpec);
     String namespaceScope = "GLOBAL";
-    String namespaceKey = null;
+    String namespaceKey = NamespaceKey.global().key();
 
     log.debug(
         "advancing cursor provenanceCode={} operationCode={} cursorKey={} newWatermark={} taskId={} runId={}",
