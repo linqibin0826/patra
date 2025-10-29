@@ -8,7 +8,8 @@ import com.patra.starter.provenance.common.adapter.AdapterRegistry;
 import com.patra.starter.provenance.common.adapter.AdapterRequest;
 import com.patra.starter.provenance.common.adapter.AdapterResult;
 import com.patra.starter.provenance.common.adapter.AdapterResult.ErrorType;
-import com.patra.starter.provenance.common.adapter.BatchInfo;
+import com.patra.starter.provenance.common.adapter.BatchExecutionParams;
+import com.patra.starter.provenance.common.adapter.BatchMetadata;
 import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import java.util.List;
@@ -71,15 +72,21 @@ public class GenericBatchExecutor {
       DataSourceAdapter adapter = adapterRegistry.getAdapter(provenanceCode);
       ProvenanceConfig runtimeConfig =
           configConverter.convert(provenanceCode, context.configSnapshot());
-      BatchInfo batchInfo = toBatchInfo(batch);
+
+      // Build batch execution parameters (query + complete params including pagination)
+      BatchExecutionParams executionParams =
+          new BatchExecutionParams(batch.query(), batch.params());
+
+      // Build batch metadata (batchNo + cursor)
+      BatchMetadata metadata =
+          new BatchMetadata(batch.batchNo(), batch.cursorToken(), batch.expectedCount());
 
       AdapterRequest request =
           AdapterRequest.builder()
               .operationCode(operationCode)
               .config(runtimeConfig)
-              .compiledQuery(context.compiledQuery())
-              .compiledParams(context.compiledParams())
-              .batchInfo(batchInfo)
+              .executionParams(executionParams)
+              .metadata(metadata)
               .build();
 
       int maxAttempts = resolveMaxAttempts(runtimeConfig);
@@ -204,16 +211,6 @@ public class GenericBatchExecutor {
             .provenanceCode(context.provenanceCode())
             .build();
     return literaturePublisherOrchestrator.publish(payload, publishContext);
-  }
-
-  private BatchInfo toBatchInfo(Batch batch) {
-    return BatchInfo.builder()
-        .batchNo(batch.batchNo())
-        .query(batch.query())
-        .params(batch.params())
-        .cursorToken(batch.cursorToken())
-        .expectedCount(batch.expectedCount())
-        .build();
   }
 
   private int resolveMaxAttempts(ProvenanceConfig runtimeConfig) {
