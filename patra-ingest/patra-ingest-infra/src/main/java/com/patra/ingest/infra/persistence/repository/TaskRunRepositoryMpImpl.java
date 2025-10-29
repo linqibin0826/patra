@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.patra.ingest.domain.model.entity.TaskRun;
+import com.patra.ingest.domain.model.enums.TaskRunStatus;
 import com.patra.ingest.domain.port.TaskRunRepository;
 import com.patra.ingest.infra.persistence.converter.TaskRunConverter;
 import com.patra.ingest.infra.persistence.entity.TaskRunDO;
@@ -165,8 +166,7 @@ public class TaskRunRepositoryMpImpl implements TaskRunRepository {
         mapper.selectCount(
             new LambdaQueryWrapper<TaskRunDO>()
                 .eq(TaskRunDO::getTaskId, taskId)
-                .eq(TaskRunDO::getStatusCode, "SUCCEEDED"));
-    // TODO: Replace hardcoded status with enum shared between DO and domain
+                .eq(TaskRunDO::getStatusCode, TaskRunStatus.SUCCEEDED.getCode()));
     boolean hasSucceeded = count != null && count > 0;
     if (log.isDebugEnabled()) {
       log.debug("check succeeded run for taskId={}, hasSucceeded={}", taskId, hasSucceeded);

@@ -117,7 +117,9 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
             runId);
         boolean cursorAdvanced = false;
         try {
-          cursorAdvanced = cursorAdvancer.advance(context, taskId, runId);
+          // Query last succeeded batch ID for lineage tracking
+          Long lastBatchId = taskRunBatchRepository.findLastSucceededBatchId(runId).orElse(null);
+          cursorAdvanced = cursorAdvancer.advance(context, taskId, runId, lastBatchId);
         } catch (Exception e) {
           log.error("cursor advance failed taskId={} runId={}", taskId, runId, e);
         }

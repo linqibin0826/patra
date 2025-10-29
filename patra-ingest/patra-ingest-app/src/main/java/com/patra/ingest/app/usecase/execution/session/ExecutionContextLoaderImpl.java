@@ -62,14 +62,14 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
 
   /** Loads execution context (config restore + expression compile). */
   @Override
-  public ExecutionContext loadContext(Long taskId, Long runId) {
+  public ExecutionContext loadContext(Long taskId, Long runId, String schedulerRunId) {
     // Query task and delegate to overloaded method
     TaskAggregate task =
         taskRepository
             .findById(taskId)
             .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
 
-    return loadContext(task, runId);
+    return loadContext(task, runId, schedulerRunId);
   }
 
   /**
@@ -77,7 +77,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
    * Task.
    */
   @Override
-  public ExecutionContext loadContext(TaskAggregate task, Long runId) {
+  public ExecutionContext loadContext(TaskAggregate task, Long runId, String schedulerRunId) {
     Long taskId = task.getId();
 
     // 2) Read Slice
@@ -159,6 +159,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         runId,
         plan.getId(),
         slice.getId(),
+        schedulerRunId, // for lineage tracking
         task.getProvenanceCode(),
         task.getOperationCode(),
         configSnapshot,

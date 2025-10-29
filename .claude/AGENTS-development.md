@@ -149,6 +149,14 @@ for (Literature lit : literatureList) { }
 
 ---
 
+## MyBatis-Plus Usage
+
+- **Query API**: Use Lambda-based API (`LambdaQueryWrapper`, `LambdaUpdateWrapper`), avoid deprecated `QueryWrapper`
+- **Complex queries**: Queries with 3+ conditions should use XML mapper files for better readability and maintainability
+- **Logical delete**: XML queries must manually handle logical delete filtering (e.g., `WHERE deleted = 0`)
+
+---
+
 ## Development Workflow
 
 **⚠️ IMPORTANT**: Read target module's README.md FIRST before any code reading/modification!

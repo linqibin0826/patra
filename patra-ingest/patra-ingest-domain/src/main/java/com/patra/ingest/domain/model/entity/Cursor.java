@@ -108,9 +108,39 @@ public class Cursor {
       String namespaceScope,
       String namespaceKey,
       java.time.Instant watermark) {
+    return create(
+        provenanceCode,
+        operationCode,
+        cursorKey,
+        namespaceScope,
+        namespaceKey,
+        watermark,
+        CursorLineage.empty());
+  }
+
+  /**
+   * Factory method creating a time-based cursor with lineage context.
+   *
+   * @param provenanceCode provenance code
+   * @param operationCode operation code
+   * @param cursorKey cursor key identifier
+   * @param namespaceScope namespace scope (GLOBAL/TASK/PLAN)
+   * @param namespaceKey namespace key
+   * @param watermark initial watermark timestamp
+   * @param lineage lineage context capturing task/run/plan/slice identifiers
+   * @return new cursor instance
+   */
+  public static Cursor create(
+      String provenanceCode,
+      String operationCode,
+      String cursorKey,
+      String namespaceScope,
+      String namespaceKey,
+      java.time.Instant watermark,
+      CursorLineage lineage) {
     NamespaceScope scope = NamespaceScope.fromCode(namespaceScope);
     CursorType type = CursorType.TIME;
-    CursorValue value = CursorValue.empty();
+    CursorValue value = watermark == null ? CursorValue.empty() : CursorValue.time(watermark);
     CursorWatermark watermarkVO =
         new CursorWatermark(watermark == null ? null : watermark.toString(), watermark, null);
     return new Cursor(
@@ -123,12 +153,22 @@ public class Cursor {
         type,
         value,
         watermarkVO,
-        CursorLineage.empty(),
+        lineage == null ? CursorLineage.empty() : lineage,
         null);
   }
 
   /** Advance the cursor to the supplied time watermark. */
   public void advanceTo(java.time.Instant newWatermark) {
+    advanceTo(newWatermark, null);
+  }
+
+  /**
+   * Advance the cursor to the supplied time watermark with lineage update.
+   *
+   * @param newWatermark new watermark timestamp
+   * @param newLineage new lineage context (optional, keeps existing if null)
+   */
+  public void advanceTo(java.time.Instant newWatermark, CursorLineage newLineage) {
     if (newWatermark == null) {
       throw new IllegalArgumentException("New watermark must not be null");
     }
@@ -142,6 +182,9 @@ public class Cursor {
               + newWatermark);
     }
     this.watermark = new CursorWatermark(newWatermark.toString(), newWatermark, null);
+    if (newLineage != null) {
+      this.lineage = newLineage;
+    }
   }
 
   /** Return the current time-based watermark. */

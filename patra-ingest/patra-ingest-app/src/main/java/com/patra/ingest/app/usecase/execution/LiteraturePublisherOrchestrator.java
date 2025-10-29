@@ -138,7 +138,6 @@ public class LiteraturePublisherOrchestrator {
         .businessId(buildBusinessId(context))
         .correlation(correlation)
         .providerType(null) // Will be populated by adapter
-        .remarks(buildRecordRemarks(context))
         .build();
   }
 
@@ -158,13 +157,6 @@ public class LiteraturePublisherOrchestrator {
     String provenance = safeProvenance(context.provenanceCode());
     String runIdSegment = context.runId() != null ? String.valueOf(context.runId()) : "na";
     return provenance + "-" + context.batchNo() + "-" + runIdSegment;
-  }
-
-  private String buildRecordRemarks(PublishContext context) {
-    // Simple string format - adapter will handle JSON serialization if needed
-    return String.format(
-        "runId=%s, batchNo=%d, provenance=%s",
-        context.runId(), context.batchNo(), context.provenanceCode());
   }
 
   private void handleMetadataRecordFailure(

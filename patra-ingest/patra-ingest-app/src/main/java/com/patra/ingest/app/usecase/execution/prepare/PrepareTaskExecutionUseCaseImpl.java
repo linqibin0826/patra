@@ -139,7 +139,7 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
 
       // 6) Load execution context (restore config, compile expressions)
       log.debug("loading execution context taskId={} runId={}", taskId, runId);
-      ExecutionContext context = contextLoader.loadContext(task, runId);
+      ExecutionContext context = contextLoader.loadContext(task, runId, schedulerRunId);
 
       // 7) Mark task/run as RUNNING
       TaskRun taskRun =
