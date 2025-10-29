@@ -19,7 +19,7 @@ import lombok.extern.jackson.Jacksonized;
  * @param operationCode ingest operation (e.g., HARVEST, UPDATE)
  * @param config merged configuration applied for this execution
  * @param executionParams batch execution parameters (query + complete params)
- * @param metadata batch metadata (batchNo, cursor, expectedCount)
+ * @param metadata batch metadata (batchNo, cursor)
  */
 @Builder
 @Jacksonized
