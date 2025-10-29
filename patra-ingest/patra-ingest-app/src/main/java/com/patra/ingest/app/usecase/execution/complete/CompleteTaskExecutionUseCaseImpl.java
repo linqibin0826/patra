@@ -116,13 +116,16 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
             taskId,
             runId);
         boolean cursorAdvanced = false;
+        // Query last succeeded batch ID for lineage tracking
+        Long lastBatchId = taskRunBatchRepository.findLastSucceededBatchId(runId).orElse(null);
+
         try {
-          // Query last succeeded batch ID for lineage tracking
-          Long lastBatchId = taskRunBatchRepository.findLastSucceededBatchId(runId).orElse(null);
           cursorAdvanced = cursorAdvancer.advance(context, taskId, runId, lastBatchId);
-        } catch (Exception e) {
-          log.error("cursor advance failed taskId={} runId={}", taskId, runId, e);
+        } catch (org.springframework.dao.OptimisticLockingFailureException e) {
+          // Optimistic lock conflict - cursor version mismatch (retryable)
+          log.warn("cursor advancement conflict (will retry) taskId={} runId={}", taskId, runId, e);
         }
+        // Other exceptions (e.g., event save failure) propagate → transaction rollback
 
         if (cursorAdvanced) {
           // Cursor ok → SUCCEEDED
@@ -186,7 +189,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
         batches.stream()
             .filter(batch -> batch.getStatus() == BatchStatus.SUCCEEDED)
             .filter(batch -> StringUtils.hasText(batch.getStorageKey()))
-            .collect(Collectors.toList());
+            .toList();
 
     if (succeededBatches.isEmpty()) {
       return;
@@ -197,7 +200,7 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
             .map(TaskRunBatch::getStorageKey)
             .filter(StringUtils::hasText)
             .distinct()
-            .collect(Collectors.toList());
+            .toList();
 
     if (storageKeys.isEmpty()) {
       return;
