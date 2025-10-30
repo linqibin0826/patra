@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.relay.core;
+package com.patra.ingest.app.usecase.relay.planner;
 
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;

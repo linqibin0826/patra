@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.relay.core;
+package com.patra.ingest.app.usecase.relay.classifier;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;

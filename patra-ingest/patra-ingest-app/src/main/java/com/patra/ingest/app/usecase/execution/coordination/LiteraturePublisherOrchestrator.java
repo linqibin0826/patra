@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution;
+package com.patra.ingest.app.usecase.execution.coordination;
 
 import com.patra.common.model.StandardLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;

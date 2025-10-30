@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.relay.core;
+package com.patra.ingest.app.usecase.relay.executor;
 
 import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.event.OutboxLeaseMissedEvent;

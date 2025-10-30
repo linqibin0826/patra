@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution;
+package com.patra.ingest.app.usecase.execution.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.json.JsonMapperHolder;

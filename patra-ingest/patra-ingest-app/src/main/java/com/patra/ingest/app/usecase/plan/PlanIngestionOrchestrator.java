@@ -1,8 +1,5 @@
 package com.patra.ingest.app.usecase.plan;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.map.MapUtil;
-import cn.hutool.core.util.ObjectUtil;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssembler;
 import com.patra.ingest.app.usecase.plan.assembler.PlanAssemblyRequest;
@@ -11,50 +8,50 @@ import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionBuilder;
 import com.patra.ingest.app.usecase.plan.expression.PlanExpressionDescriptor;
-import com.patra.ingest.app.usecase.plan.publisher.TaskOutboxPublisher;
 import com.patra.ingest.app.usecase.plan.validator.PlannerValidator;
 import com.patra.ingest.app.usecase.plan.window.PlanningWindowResolver;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.exception.PlanAssemblyException;
 import com.patra.ingest.domain.exception.PlanPersistenceException;
 import com.patra.ingest.domain.exception.PlanValidationException;
-import com.patra.ingest.domain.model.aggregate.*;
+import com.patra.ingest.domain.model.aggregate.PlanAggregate;
+import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
+import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
+import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.OperationCode;
-import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.PlannerWindow;
-import com.patra.ingest.domain.port.*;
+import com.patra.ingest.domain.port.CursorRepository;
+import com.patra.ingest.domain.port.PatraRegistryPort;
+import com.patra.ingest.domain.port.PlanRepository;
+import com.patra.ingest.domain.port.TaskRepository;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Core application service for plan orchestration. Handles calls from the scheduling layer
- * (cron/manual triggers) and performs:
+ * Main orchestrator for plan ingestion flow.
+ *
+ * <p>Coordinates the following phases:
  *
  * <ul>
  *   <li>Persist schedule instance and load provenance config snapshot
- *   <li>Query cursor watermark and resolve execution window (time-window strategy)
+ *   <li>Query cursor watermark and resolve execution window
  *   <li>Build plan expression and run pre-validations
  *   <li>Assemble and persist plan/slices/tasks (with idempotency and compensation)
- *   <li>Collect task enqueued events and publish via the Outbox pattern
+ *   <li>Collect task enqueued events and publish via Outbox pattern
  * </ul>
  *
- * This orchestrator (Application Service) focuses on flow orchestration, exception mapping,
- * idempotency, and observability. Domain rules are enforced by domain objects and validators.
+ * <p>This orchestrator delegates persistence to {@link PlanPersistenceCoordinator}, idempotency
+ * handling to {@link PlanIdempotencyCoordinator}, and publishing to {@link
+ * PlanPublishingCoordinator}.
  *
- * <p>Logging: INFO for one-shot results and key branch hits; DEBUG for window/expression
- * diagnostics.
- *
- * <p>Thread-safety: no shared mutable state; relies on thread-safe Spring beans
- * (repositories/builders) and is safe for concurrent use.
+ * <p>Note: This orchestrator maintains the {@code @Transactional} boundary to ensure atomicity
+ * across persistence and event publishing (Outbox pattern).
  *
  * @author linqibin
  * @since 0.1.0
@@ -64,56 +61,24 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
-  /** Port for querying provenance configuration from the upstream registry service. */
   private final PatraRegistryPort patraRegistryPort;
-
-  /** Cursor repository: retrieves the latest global time watermark (window starting point). */
   private final CursorRepository cursorRepository;
-
-  /** Task repository: supports deduplication statistics and batch persistence. */
   private final TaskRepository taskRepository;
-
-  /**
-   * Planning window resolver: computes this run's window from trigger spec, config, and cursor
-   * watermark.
-   */
   private final PlanningWindowResolver planningWindowResolver;
-
-  /**
-   * Pre-orchestration validator: validates window sanity, queue pressure, and capacity constraints.
-   */
   private final PlannerValidator plannerValidator;
-
-  /** Plan assembler: assembles Plan / Slice / Task blueprints (without persistence). */
   private final PlanAssembler planAssembler;
-
-  /**
-   * Outbox publisher for tasks: converts queued events to Outbox messages and persists/publishes
-   * them.
-   */
-  private final TaskOutboxPublisher taskOutboxPublisher;
-
-  /**
-   * Plan expression builder: generates plan-level expression descriptors (uncompiled snapshot and
-   * hash only).
-   */
   private final PlanExpressionBuilder planExpressionBuilder;
-
-  /**
-   * Schedule instance repository: saves/updates trigger records to support idempotency tracking.
-   */
-  private final ScheduleInstanceRepository scheduleInstanceRepository;
-
-  /** Plan repository: persist or load plan aggregates; supports idempotency by planKey. */
   private final PlanRepository planRepository;
 
-  /** Plan-slice repository: batch-persist plan slice aggregates. */
-  private final PlanSliceRepository planSliceRepository;
+  // Coordinators for delegating specific responsibilities
+  private final PlanPersistenceCoordinator persistenceCoordinator;
+  private final PlanIdempotencyCoordinator idempotencyCoordinator;
+  private final PlanPublishingCoordinator publishingCoordinator;
 
   /**
    * Main plan orchestration flow (entry method).
    *
-   * <p>Consists of six phases:
+   * <p>Coordinates six phases:
    *
    * <ol>
    *   <li>Persist schedule instance and load provenance config snapshot
@@ -124,11 +89,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
    *   <li>Persist and publish task enqueued events
    * </ol>
    *
-   * Exception handling: convert runtime exceptions into semantic Plan*Exception types for uniform
-   * error-code mapping.
-   *
-   * @param request scheduling request (provenance, operation, window bounds, priority, trigger
-   *     info, etc.)
+   * @param request scheduling request
    * @return summary of plan execution
    */
   @Override
@@ -144,7 +105,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
 
     if (existingPlan != null) {
-      return handleIdempotentPlanReuse(
+      return idempotencyCoordinator.handleIdempotentPlanReuse(
           existingPlan, context.schedule(), assembly.plan().getPlanKey());
     }
 
@@ -178,7 +139,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         request.provenanceCode(),
         request.operationCode());
 
-    ScheduleInstanceAggregate schedule = persistScheduleInstanceSafely(request);
+    ScheduleInstanceAggregate schedule = persistenceCoordinator.persistScheduleInstance(request);
     ProvenanceConfigSnapshot configSnapshot =
         patraRegistryPort.fetchConfig(request.provenanceCode(), request.operationCode());
     PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
@@ -377,124 +338,6 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Handles idempotent plan reuse when an existing plan with the same planKey is found.
-   *
-   * <p>This method:
-   *
-   * <ol>
-   *   <li>Loads existing slices and tasks
-   *   <li>Identifies tasks eligible for retry (FAILED or CANCELLED status)
-   *   <li>Resets and re-queues retry tasks
-   *   <li>Publishes retry events via outbox
-   *   <li>Returns result based on existing plan
-   * </ol>
-   *
-   * @param existingPlan the existing plan aggregate
-   * @param schedule the current schedule instance
-   * @param planKey the idempotency key for logging
-   * @return ingestion result based on existing plan
-   * @throws PlanPersistenceException if retry persistence fails
-   */
-  private PlanIngestionResult handleIdempotentPlanReuse(
-      PlanAggregate existingPlan, ScheduleInstanceAggregate schedule, String planKey) {
-    logDuplicatePlanDetection(existingPlan, planKey);
-
-    List<PlanSliceAggregate> existingSlices =
-        planSliceRepository.findByPlanId(existingPlan.getId());
-    List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
-    List<TaskAggregate> retryTasks = prepareTasksForRetry(existingTasks);
-
-    if (!retryTasks.isEmpty()) {
-      processRetryTasks(existingPlan, schedule, retryTasks);
-    } else {
-      log.info(
-          "No tasks require retry for existing plan [{}], returning existing state",
-          existingPlan.getId());
-    }
-
-    return buildPlanIngestionResult(schedule, existingPlan, existingSlices, existingTasks);
-  }
-
-  /**
-   * Logs duplicate plan detection.
-   *
-   * @param existingPlan existing plan aggregate
-   * @param planKey plan idempotency key
-   */
-  private void logDuplicatePlanDetection(PlanAggregate existingPlan, String planKey) {
-    log.info(
-        "Detected duplicate plan ingestion for provenance [{}] operation [{}]: reusing existing plan [{}] with planKey={}",
-        existingPlan.getProvenanceCode(),
-        existingPlan.getOperationCode(),
-        existingPlan.getId(),
-        planKey);
-  }
-
-  /**
-   * Processes retry tasks by publishing retry events.
-   *
-   * <p>Note: After refactoring, Plan status is not changed during retry. Plan remains in its
-   * current state (typically READY) while failed tasks are re-queued.
-   *
-   * @param existingPlan existing plan aggregate
-   * @param schedule schedule instance
-   * @param retryTasks tasks to retry
-   */
-  private void processRetryTasks(
-      PlanAggregate existingPlan,
-      ScheduleInstanceAggregate schedule,
-      List<TaskAggregate> retryTasks) {
-    // Plan status unchanged - tasks are simply re-queued for execution
-    List<TaskQueuedEvent> retryEvents = collectQueuedEvents(retryTasks);
-    taskOutboxPublisher.publishRetry(retryEvents, existingPlan, schedule);
-    log.info(
-        "Re-queued {} failed tasks for existing plan [{}]",
-        retryTasks.size(),
-        existingPlan.getId());
-  }
-
-  /**
-   * Builds plan ingestion result from existing plan data.
-   *
-   * @param schedule schedule instance
-   * @param plan plan aggregate
-   * @param slices plan slices
-   * @param tasks tasks
-   * @return plan ingestion result
-   */
-  private PlanIngestionResult buildPlanIngestionResult(
-      ScheduleInstanceAggregate schedule,
-      PlanAggregate plan,
-      List<PlanSliceAggregate> slices,
-      List<TaskAggregate> tasks) {
-    return new PlanIngestionResult(
-        schedule.getId(),
-        plan.getId(),
-        slices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
-        tasks.size(),
-        plan.getStatus().name());
-  }
-
-  /**
-   * Prepares tasks for retry by resetting failed or cancelled tasks.
-   *
-   * @param tasks the list of tasks to check
-   * @return list of tasks that were prepared for retry
-   * @throws PlanPersistenceException if task persistence fails
-   */
-  private List<TaskAggregate> prepareTasksForRetry(List<TaskAggregate> tasks) {
-    List<TaskAggregate> retryTasks = new ArrayList<>();
-    for (TaskAggregate task : tasks) {
-      if (shouldRetry(task)) {
-        task.prepareForRetry();
-        saveTaskSafely(task);
-        retryTasks.add(task);
-      }
-    }
-    return retryTasks;
-  }
-
-  /**
    * Persists new plan with slices and tasks, then publishes queued events.
    *
    * @param draftPlan the draft plan aggregate to persist
@@ -502,7 +345,6 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
    * @param schedule the schedule instance
    * @param window the planning window (nullable)
    * @return ingestion result with persisted IDs
-   * @throws PlanPersistenceException if persistence fails
    */
   private PlanIngestionResult persistAndPublishNewPlan(
       PlanAggregate draftPlan,
@@ -515,10 +357,11 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         draftPlan.getOperationCode(),
         draftPlan.getPlanKey());
 
-    PlanAggregate persistedPlan = savePlanSafely(draftPlan);
-    List<PlanSliceAggregate> persistedSlices = persistSlices(persistedPlan, assembly.slices());
+    PlanAggregate persistedPlan = persistenceCoordinator.savePlan(draftPlan);
+    List<PlanSliceAggregate> persistedSlices =
+        persistenceCoordinator.persistSlices(persistedPlan, assembly.slices());
     List<TaskAggregate> persistedTasks =
-        persistTasks(persistedPlan, persistedSlices, assembly.tasks());
+        persistenceCoordinator.persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 
     log.debug(
         "Persisted plan [{}] with {} slices and {} tasks",
@@ -526,13 +369,8 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         persistedSlices.size(),
         persistedTasks.size());
 
-    List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
-    log.debug(
-        "Publishing {} task-ready events to outbox for plan [{}]",
-        queuedEvents.size(),
-        persistedPlan.getId());
-
-    taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
+    List<TaskQueuedEvent> queuedEvents = publishingCoordinator.collectQueuedEvents(persistedTasks);
+    publishingCoordinator.publishNewPlanEvents(queuedEvents, persistedPlan, schedule);
 
     log.info(
         "Successfully created plan [{}] for provenance [{}] operation [{}]: {} slices, {} tasks "
@@ -545,12 +383,8 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         window == null ? null : window.from(),
         window == null ? null : window.to());
 
-    return new PlanIngestionResult(
-        schedule.getId(),
-        persistedPlan.getId(),
-        persistedSlices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
-        persistedTasks.size(),
-        assembly.status().name());
+    return publishingCoordinator.buildIngestionResult(
+        schedule, persistedPlan, persistedSlices, persistedTasks.size(), assembly.status().name());
   }
 
   /**
@@ -604,64 +438,6 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Persists plan aggregate and wraps underlying exceptions.
-   *
-   * @param draftPlan draft plan aggregate
-   * @return persisted plan aggregate
-   * @throws PlanPersistenceException if persistence fails
-   */
-  private PlanAggregate savePlanSafely(PlanAggregate draftPlan) {
-    try {
-      return planRepository.save(draftPlan);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.PLAN, "Failed to persist plan aggregate", ex);
-    }
-  }
-
-  /**
-   * Persists task retry state.
-   *
-   * @param task task aggregate
-   * @throws PlanPersistenceException if persistence fails
-   */
-  private void saveTaskSafely(TaskAggregate task) {
-    try {
-      taskRepository.save(task);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.TASK_RETRY, "Failed to persist task retry state", ex);
-    }
-  }
-
-  /**
-   * Saves or updates schedule instance (idempotent).
-   *
-   * @param request schedule request
-   * @return persisted schedule instance
-   * @throws PlanPersistenceException if storage fails
-   */
-  private ScheduleInstanceAggregate persistScheduleInstanceSafely(PlanIngestionCommand request) {
-    ScheduleInstanceAggregate schedule =
-        ScheduleInstanceAggregate.start(
-            request.scheduler(),
-            request.schedulerJobId(),
-            request.schedulerLogId(),
-            request.triggerType(),
-            request.triggeredAt(),
-            request.triggerParams(),
-            request.provenanceCode().getCode());
-    try {
-      return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.SCHEDULE_INSTANCE,
-          "Failed to persist schedule instance",
-          ex);
-    }
-  }
-
-  /**
    * Builds trigger specification (PlanTriggerNorm).
    *
    * @param schedule schedule instance
@@ -683,98 +459,5 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         request.windowTo(),
         request.priority(),
         request.triggerParams());
-  }
-
-  /**
-   * Collects TaskQueuedEvent instances from task aggregates.
-   *
-   * <p>Explicitly triggers {@link TaskAggregate#raiseQueuedEvent()} to ensure events exist.
-   *
-   * @param tasks task collection
-   * @return list of queued events (empty list if no tasks)
-   */
-  private List<TaskQueuedEvent> collectQueuedEvents(List<TaskAggregate> tasks) {
-    if (CollUtil.isEmpty(tasks)) {
-      return List.of();
-    }
-    List<TaskQueuedEvent> events = new ArrayList<>(tasks.size());
-    for (TaskAggregate task : tasks) {
-      task.raiseQueuedEvent();
-      task.pullDomainEvents().stream()
-          .filter(TaskQueuedEvent.class::isInstance)
-          .map(TaskQueuedEvent.class::cast)
-          .forEach(events::add);
-    }
-    return events;
-  }
-
-  /**
-   * Determines if task is eligible for compensation retry.
-   *
-   * <p>Note: After refactoring, only FAILED status is checked. CANCELLED status was removed as
-   * cancellation is not supported in the current design.
-   *
-   * @param task task aggregate
-   * @return true if retry is needed (FAILED status only)
-   */
-  private boolean shouldRetry(TaskAggregate task) {
-    TaskStatus status = task.getStatus();
-    return status == TaskStatus.FAILED;
-  }
-
-  /**
-   * Batch persists plan slice aggregates.
-   *
-   * @param plan plan aggregate (already persisted)
-   * @param slices slice collection
-   * @return persisted slice collection
-   * @throws PlanPersistenceException if persistence fails
-   */
-  private List<PlanSliceAggregate> persistSlices(
-      PlanAggregate plan, List<PlanSliceAggregate> slices) {
-    if (CollUtil.isEmpty(slices)) {
-      return List.of();
-    }
-    slices.forEach(slice -> slice.bindPlan(plan.getId()));
-    try {
-      return planSliceRepository.saveAll(slices);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.PLAN_SLICE, "Failed to persist plan slices", ex);
-    }
-  }
-
-  /**
-   * Batch persists task aggregates and binds plan and slice IDs.
-   *
-   * @param plan plan aggregate
-   * @param persistedSlices persisted slices
-   * @param tasks task collection
-   * @return persisted task collection
-   * @throws PlanPersistenceException if persistence fails
-   */
-  private List<TaskAggregate> persistTasks(
-      PlanAggregate plan, List<PlanSliceAggregate> persistedSlices, List<TaskAggregate> tasks) {
-    if (CollUtil.isEmpty(tasks)) {
-      return List.of();
-    }
-    Map<Integer, PlanSliceAggregate> sliceBySeq = MapUtil.newHashMap(persistedSlices.size());
-    for (PlanSliceAggregate slice : persistedSlices) {
-      sliceBySeq.putIfAbsent(slice.getSliceNo(), slice);
-    }
-    for (TaskAggregate task : tasks) {
-      Long placeholderSequence = task.getSliceId();
-      PlanSliceAggregate slice =
-          ObjectUtil.isNull(placeholderSequence)
-              ? null
-              : sliceBySeq.get(placeholderSequence.intValue());
-      task.bindPlanAndSlice(plan.getId(), slice == null ? null : slice.getId());
-    }
-    try {
-      return taskRepository.saveAll(tasks);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.TASK, "Failed to persist tasks", ex);
-    }
   }
 }

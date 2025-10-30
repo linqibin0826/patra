@@ -1,9 +1,9 @@
-package com.patra.ingest.app.usecase.execution.batch;
+package com.patra.ingest.app.usecase.execution.strategy;
 
-import com.patra.ingest.app.usecase.execution.GenericBatchExecutor;
-import com.patra.ingest.app.usecase.execution.batch.planner.BatchPlanner;
-import com.patra.ingest.app.usecase.execution.batch.planner.BatchPlannerRegistry;
+import com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
+import com.patra.ingest.app.usecase.execution.strategy.planner.BatchPlanner;
+import com.patra.ingest.app.usecase.execution.strategy.planner.BatchPlannerRegistry;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.vo.Batch;
 import com.patra.ingest.domain.model.vo.BatchPlan;
