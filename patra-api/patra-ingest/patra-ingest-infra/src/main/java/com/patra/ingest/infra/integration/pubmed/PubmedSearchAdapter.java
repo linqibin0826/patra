@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.rpc.pubmed;
+package com.patra.ingest.infra.integration.pubmed;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -31,7 +31,7 @@ import org.springframework.util.StringUtils;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class PubmedSearchPortImpl implements PubmedSearchPort {
+public class PubmedSearchAdapter implements PubmedSearchPort {
 
   private final PubMedClient pubMedClient;
   private static final PubMedESearchRequestAssembler ASSEMBLER =

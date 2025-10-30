@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.acl;
+package com.patra.ingest.infra.integration.storage.acl;
 
 import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;

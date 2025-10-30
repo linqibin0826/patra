@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.adapter;
+package com.patra.ingest.infra.integration.storage;
 
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.starter.objectstorage.ObjectStorageProperties;

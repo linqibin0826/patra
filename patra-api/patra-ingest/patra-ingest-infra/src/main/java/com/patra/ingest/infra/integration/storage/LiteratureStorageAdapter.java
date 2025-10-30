@@ -1,11 +1,11 @@
-package com.patra.ingest.infra.adapter;
+package com.patra.ingest.infra.integration.storage;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.model.StandardLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
-import com.patra.ingest.infra.acl.LiteratureConverter;
+import com.patra.ingest.infra.integration.storage.acl.LiteratureConverter;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
 import com.patra.starter.objectstorage.StorageLocation;
 import com.patra.starter.objectstorage.StorageLocationResolver;
