@@ -10,18 +10,19 @@ import java.util.List;
  * <p>This is a stateless pure function that encapsulates business rules for Plan status
  * aggregation.
  *
- * <p>Aggregation Rules:
+ * <p>Aggregation Rules (after refactoring):
  *
  * <ul>
- *   <li>If any Slice is PENDING/EXECUTING → Plan remains at current status (not all done yet)
- *   <li>If all Slices are SUCCEEDED → Plan is COMPLETED
- *   <li>If all Slices are FAILED or CANCELLED → Plan is FAILED
- *   <li>If Slices are mixed (some succeeded, some failed/partial) → Plan is PARTIAL
+ *   <li>If any Slice is PENDING or ASSIGNED → Plan remains at current status (not all done yet)
+ *   <li>If all Slices are FINISHED → Plan is ARCHIVED (lifecycle closed)
  *   <li>If no Slices exist → Plan remains at current status (edge case)
  * </ul>
  *
- * <p>Note: This service only handles status transitions from READY onwards. The DRAFT → SLICING →
- * READY transitions are handled by the plan assembly process.
+ * <p><b>Note:</b> Plan status only reflects its own lifecycle. Execution results (partial/failed)
+ * should be queried by aggregating Task status from the database.
+ *
+ * <p>This service only handles status transitions from READY onwards. The DRAFT → SLICING → READY
+ * transitions are handled by the plan assembly process.
  */
 public final class PlanStatusCalculator {
 
@@ -53,34 +54,15 @@ public final class PlanStatusCalculator {
 
     // Check if any slice is still in progress
     boolean hasInProgress =
-        sliceStatuses.stream()
-            .anyMatch(s -> s == SliceStatus.PENDING || s == SliceStatus.EXECUTING);
+        sliceStatuses.stream().anyMatch(s -> s == SliceStatus.PENDING || s == SliceStatus.ASSIGNED);
     if (hasInProgress) {
       return currentPlanStatus; // Keep current status, not all slices are done
     }
 
-    // All slices are in terminal states, aggregate the result
-    long succeededCount = sliceStatuses.stream().filter(s -> s == SliceStatus.SUCCEEDED).count();
-    long failedCount =
-        sliceStatuses.stream()
-            .filter(s -> s == SliceStatus.FAILED || s == SliceStatus.CANCELLED)
-            .count();
-    long partialCount = sliceStatuses.stream().filter(s -> s == SliceStatus.PARTIAL).count();
-
-    // All slices succeeded
-    if (succeededCount == sliceStatuses.size()) {
-      return PlanStatus.COMPLETED;
-    }
-
-    // All slices failed or cancelled
-    if (failedCount == sliceStatuses.size()) {
-      return PlanStatus.FAILED;
-    }
-
-    // Mixed results (some succeeded, some failed/partial)
-    // Or any slice is PARTIAL
-    if (succeededCount > 0 || partialCount > 0) {
-      return PlanStatus.PARTIAL;
+    // All slices are FINISHED (terminal state)
+    boolean allFinished = sliceStatuses.stream().allMatch(s -> s == SliceStatus.FINISHED);
+    if (allFinished) {
+      return PlanStatus.ARCHIVED; // Lifecycle closed
     }
 
     // Fallback: keep current status
@@ -94,9 +76,6 @@ public final class PlanStatusCalculator {
    * @return true if terminal, false otherwise
    */
   public static boolean isTerminal(SliceStatus status) {
-    return status == SliceStatus.SUCCEEDED
-        || status == SliceStatus.FAILED
-        || status == SliceStatus.CANCELLED
-        || status == SliceStatus.PARTIAL;
+    return status == SliceStatus.FINISHED;
   }
 }

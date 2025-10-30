@@ -139,9 +139,11 @@ public class PlanAssemblerImpl implements PlanAssembler {
         norm.operationCode());
 
     if (slices.isEmpty() || tasks.isEmpty()) {
-      plan.markFailed();
-      log.debug(
-          "Plan assembly failed for provenance [{}] operation [{}]: no slices or tasks generated",
+      // Note: After refactoring, Plan remains in SLICING status when assembly fails.
+      // No explicit failure status exists; the Plan will not progress to READY.
+      log.warn(
+          "Plan assembly failed for provenance [{}] operation [{}]: no slices or tasks generated. "
+              + "Plan remains in SLICING status.",
           norm.provenanceCode(),
           norm.operationCode());
       return new PlanAssemblyResult(plan, slices, tasks, PlanAssemblyResult.AssemblyStatus.FAILED);

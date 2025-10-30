@@ -6,6 +6,7 @@ import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.WindowSpec;
 import java.time.Instant;
 import java.util.Objects;
+import lombok.Getter;
 
 /**
  * Aggregate root that represents the blueprint of a single ingestion plan together with its state
@@ -27,6 +28,7 @@ import java.util.Objects;
  * @author linqibin
  * @since 0.1.0
  */
+@Getter
 public class PlanAggregate extends AggregateRoot<Long> {
 
   /** Scheduler instance identifier associated with the external trigger. */
@@ -215,21 +217,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
     this.status = PlanStatus.READY;
   }
 
-  /** Marks the plan as partially successful (some slices are still retrying). */
-  public void markPartial() {
-    this.status = PlanStatus.PARTIAL;
-  }
-
-  /** Marks the plan as failed, indicating termination or need for compensation. */
-  public void markFailed() {
-    this.status = PlanStatus.FAILED;
-  }
-
-  /** Marks the plan as completed after all tasks finish successfully. */
-  public void markCompleted() {
-    this.status = PlanStatus.COMPLETED;
-  }
-
   /**
    * Updates the plan status to the specified value.
    *
@@ -245,23 +232,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
     this.status = newStatus;
   }
 
-  public Long getScheduleInstanceId() {
-    return scheduleInstanceId;
-  }
-
-  /**
-   * Obtain the idempotency key of this plan.
-   *
-   * @return planKey
-   */
-  public String getPlanKey() {
-    return planKey;
-  }
-
-  public String getProvenanceCode() {
-    return provenanceCode;
-  }
-
   /**
    * Obtain the operation code string, if one is present.
    *
@@ -274,31 +244,6 @@ public class PlanAggregate extends AggregateRoot<Long> {
   // ========== Native enum accessor for internal domain use ==========
   public OperationCode getOperation() {
     return operationCode;
-  }
-
-  public String getExprProtoHash() {
-    return exprProtoHash;
-  }
-
-  public String getExprProtoSnapshotJson() {
-    return exprProtoSnapshotJson;
-  }
-
-  public String getProvenanceConfigSnapshotJson() {
-    return provenanceConfigSnapshotJson;
-  }
-
-  public String getProvenanceConfigHash() {
-    return provenanceConfigHash;
-  }
-
-  /**
-   * Expose the raw window specification.
-   *
-   * @return window specification
-   */
-  public WindowSpec getWindowSpec() {
-    return windowSpec;
   }
 
   /**
@@ -325,18 +270,5 @@ public class PlanAggregate extends AggregateRoot<Long> {
       return timeSpec.to();
     }
     return null;
-  }
-
-  public String getSliceStrategyCode() {
-    return sliceStrategyCode;
-  }
-
-  public String getSliceParamsJson() {
-    return sliceParamsJson;
-  }
-
-  /** Return the current {@link PlanStatus} for this plan. */
-  public PlanStatus getStatus() {
-    return status;
   }
 }

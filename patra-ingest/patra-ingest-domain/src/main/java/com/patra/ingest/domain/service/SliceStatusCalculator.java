@@ -2,24 +2,24 @@ package com.patra.ingest.domain.service;
 
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.model.enums.TaskStatus;
-import java.util.List;
 
 /**
- * Domain Service for calculating Slice status based on its child Tasks.
+ * Domain Service for calculating Slice status based on its associated Task (enforces 1:1
+ * relationship).
  *
- * <p>This is a stateless pure function that encapsulates business rules for Slice status
- * aggregation.
+ * <p>This is a stateless pure function that directly maps Task status to Slice status.
  *
- * <p>Aggregation Rules:
+ * <p>After refactoring, Slice:Task is a 1:1 relationship, so no aggregation is needed. The mapping
+ * rules are:
  *
  * <ul>
- *   <li>If any Task is QUEUED/RUNNING → Slice is EXECUTING (tasks still in progress)
- *   <li>If any Task is CURSOR_PENDING → Slice is EXECUTING (waiting for cursor retry)
- *   <li>If all Tasks are SUCCEEDED → Slice is SUCCEEDED
- *   <li>If all Tasks are FAILED or CANCELLED → Slice is FAILED
- *   <li>If Tasks are mixed (some succeeded, some failed) → Slice is PARTIAL
- *   <li>If no Tasks exist → Slice remains PENDING (edge case, should not happen)
+ *   <li>TaskStatus.PENDING or QUEUED → SliceStatus.PENDING (awaiting Task generation/execution)
+ *   <li>TaskStatus.RUNNING → SliceStatus.ASSIGNED (Task in progress)
+ *   <li>TaskStatus.SUCCEEDED or FAILED → SliceStatus.FINISHED (Task reached terminal state)
  * </ul>
+ *
+ * <p><b>Note:</b> Slice no longer distinguishes success/failure. Query the Task directly for
+ * execution results.
  */
 public final class SliceStatusCalculator {
 
@@ -28,61 +28,22 @@ public final class SliceStatusCalculator {
   }
 
   /**
-   * Calculates the Slice status based on the statuses of all its child Tasks.
+   * Calculates the Slice status based on its associated Task status (1:1 mapping).
    *
-   * @param taskStatuses list of task statuses (must not be null, but can be empty)
-   * @return the aggregated Slice status
-   * @throws IllegalArgumentException if taskStatuses is null
+   * @param taskStatus the status of the single associated Task (must not be null)
+   * @return the corresponding Slice status
+   * @throws IllegalArgumentException if taskStatus is null
    */
-  public static SliceStatus calculate(List<TaskStatus> taskStatuses) {
-    if (taskStatuses == null) {
-      throw new IllegalArgumentException("Task statuses list cannot be null");
+  public static SliceStatus calculate(TaskStatus taskStatus) {
+    if (taskStatus == null) {
+      throw new IllegalArgumentException("Task status cannot be null");
     }
 
-    // Edge case: no tasks exist (should not happen in normal flow)
-    if (taskStatuses.isEmpty()) {
-      return SliceStatus.PENDING;
-    }
-
-    // Check if any task is still in progress
-    boolean hasRunning =
-        taskStatuses.stream().anyMatch(s -> s == TaskStatus.QUEUED || s == TaskStatus.RUNNING);
-    if (hasRunning) {
-      return SliceStatus.EXECUTING;
-    }
-
-    // Check if any task is waiting for cursor retry
-    boolean hasCursorPending = taskStatuses.stream().anyMatch(s -> s == TaskStatus.CURSOR_PENDING);
-    if (hasCursorPending) {
-      return SliceStatus.EXECUTING; // Treat CURSOR_PENDING as temporary failure, still executing
-    }
-
-    // Count terminal states
-    long succeededCount = taskStatuses.stream().filter(s -> s == TaskStatus.SUCCEEDED).count();
-    long failedCount =
-        taskStatuses.stream()
-            .filter(s -> s == TaskStatus.FAILED || s == TaskStatus.CANCELLED)
-            .count();
-    long partialCount = taskStatuses.stream().filter(s -> s == TaskStatus.PARTIAL).count();
-
-    // All tasks succeeded
-    if (succeededCount == taskStatuses.size()) {
-      return SliceStatus.SUCCEEDED;
-    }
-
-    // All tasks failed or cancelled
-    if (failedCount == taskStatuses.size()) {
-      return SliceStatus.FAILED;
-    }
-
-    // Mixed results (some succeeded, some failed/partial)
-    // Or any task is PARTIAL
-    if (succeededCount > 0 || partialCount > 0) {
-      return SliceStatus.PARTIAL;
-    }
-
-    // Fallback: if we get here, something unexpected happened
-    return SliceStatus.EXECUTING;
+    return switch (taskStatus) {
+      case PENDING, QUEUED -> SliceStatus.PENDING;
+      case RUNNING -> SliceStatus.ASSIGNED;
+      case SUCCEEDED, FAILED -> SliceStatus.FINISHED;
+    };
   }
 
   /**
@@ -92,9 +53,6 @@ public final class SliceStatusCalculator {
    * @return true if terminal, false otherwise
    */
   public static boolean isTerminal(TaskStatus status) {
-    return status == TaskStatus.SUCCEEDED
-        || status == TaskStatus.FAILED
-        || status == TaskStatus.CANCELLED
-        || status == TaskStatus.PARTIAL;
+    return status == TaskStatus.SUCCEEDED || status == TaskStatus.FAILED;
   }
 }

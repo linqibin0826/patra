@@ -37,23 +37,23 @@ import org.springframework.util.StringUtils;
  * <p>Design notes:
  *
  * <ul>
- *   <li>Status decision:
+ *   <li>Status decision (after refactoring):
  *       <ul>
- *         <li>all succeeded + cursor advanced → SUCCEEDED
- *         <li>all succeeded + cursor failed → CURSOR_PENDING
- *         <li>partial success (failed > 0 && succeeded > 0) → PARTIAL
- *         <li>all failed (succeeded == 0) → FAILED
+ *         <li>all succeeded + cursor advanced → Task: SUCCEEDED, TaskRun: SUCCEEDED
+ *         <li>all succeeded + cursor failed → Task: FAILED, TaskRun: PARTIAL (checkpoint for retry)
+ *         <li>partial success (failed > 0 && succeeded > 0) → Task: FAILED, TaskRun: PARTIAL
+ *         <li>all failed (succeeded == 0) → Task: FAILED, TaskRun: FAILED
  *       </ul>
  *   <li>Advance cursor only when all batches succeeded; record reason on failure.
- *   <li>On optimistic conflict, mark CURSOR_PENDING for async retry.
+ *   <li>On optimistic conflict or cursor failure, mark TaskRun as PARTIAL (retryable).
  *   <li>Cleanup: stop heartbeat and release lease regardless of outcome.
  * </ul>
  *
  * <p>Logging:
  *
  * <ul>
- *   <li>INFO: cursor advanced, task completed (final status).
- *   <li>WARN: cursor failed, partial/failed states.
+ *   <li>INFO: cursor advanced, task completed (SUCCEEDED status).
+ *   <li>WARN: cursor failed, partial success, or all failed states.
  * </ul>
  *
  * @author linqibin
@@ -136,17 +136,23 @@ public class CompleteTaskExecutionUseCaseImpl implements CompleteTaskExecutionUs
           taskRun.succeed(now);
           log.info("task succeeded taskId={} runId={}", taskId, runId);
         } else {
-          // Cursor failed → CURSOR_PENDING
-          task.markCursorPending(now);
-          taskRun.markCursorPending(now);
-          log.warn("task marked CURSOR_PENDING taskId={} runId={}", taskId, runId);
+          // Cursor failed → Task: FAILED, TaskRun: PARTIAL (retryable with checkpoint)
+          task.markFailed(now);
+          taskRun.markPartial("Cursor advancement failed", now);
+          log.warn(
+              "task marked FAILED (cursor failed), run marked PARTIAL taskId={} runId={}",
+              taskId,
+              runId);
         }
 
       } else if (partialSuccess) {
-        // 3.2 Partial → PARTIAL
-        task.markPartial(now);
+        // 3.2 Partial success → Task: FAILED, TaskRun: PARTIAL
+        task.markFailed(now);
         taskRun.markPartial("Some batches failed", now);
-        log.warn("task marked PARTIAL taskId={} runId={}", taskId, runId);
+        log.warn(
+            "task marked FAILED (partial success), run marked PARTIAL taskId={} runId={}",
+            taskId,
+            runId);
 
       } else if (allFailed) {
         // 3.3 All failed → FAILED

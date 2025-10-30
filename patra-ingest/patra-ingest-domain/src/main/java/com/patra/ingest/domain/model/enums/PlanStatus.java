@@ -6,7 +6,7 @@ import lombok.Getter;
 /**
  * Plan status (DICT: ing_plan_status).
  *
- * <p>Field mapping: {@code ing_plan.status_code → DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED}
+ * <p>Field mapping: {@code ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED}
  *
  * <p>State machine semantics:
  *
@@ -14,10 +14,11 @@ import lombok.Getter;
  *   <li>DRAFT → newly created, slicing not started
  *   <li>SLICING → slices/tasks are being generated
  *   <li>READY → slices and tasks created successfully
- *   <li>PARTIAL → partially generated, compensation may proceed
- *   <li>FAILED → assembly or critical persistence failed
- *   <li>COMPLETED → lifecycle closed, all tasks finished
+ *   <li>ARCHIVED → lifecycle closed, all tasks finished (previously COMPLETED)
  * </ul>
+ *
+ * <p><b>Note:</b> Plan status only reflects its own lifecycle. Execution results (partial/failed)
+ * should be queried by aggregating Task status.
  */
 @Getter
 public enum PlanStatus {
@@ -27,12 +28,8 @@ public enum PlanStatus {
   SLICING("SLICING", "Slicing"),
   /** Slices generated and tasks ready for scheduling. */
   READY("READY", "Ready"),
-  /** Partially successful; additional compensation may occur. */
-  PARTIAL("PARTIAL", "Partially completed"),
-  /** Failed and requires manual/system recovery. */
-  FAILED("FAILED", "Failed"),
-  /** Fully completed lifecycle. */
-  COMPLETED("COMPLETED", "Completed");
+  /** Archived; lifecycle closed, all tasks finished. */
+  ARCHIVED("ARCHIVED", "Archived");
 
   private final String code;
   private final String description;

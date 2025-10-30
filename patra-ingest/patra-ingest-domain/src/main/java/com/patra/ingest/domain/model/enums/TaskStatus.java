@@ -5,26 +5,33 @@ import lombok.Getter;
 /**
  * Task status (DICT: ing_task_status).
  *
- * <p>Field mapping: {@code ing_task.status_code → QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED}
+ * <p>Field mapping: {@code ing_task.status_code → PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED}
  *
- * <p>Example transitions: {@code QUEUED → RUNNING → SUCCEEDED | FAILED | CANCELLED}
+ * <p>State machine semantics:
+ *
+ * <ul>
+ *   <li>PENDING → initial state, awaiting scheduler pickup
+ *   <li>QUEUED → added to execution queue
+ *   <li>RUNNING → TaskRun in progress
+ *   <li>RUNNING ⇄ QUEUED → retry on failure (create new TaskRun)
+ *   <li>SUCCEEDED → final success state (at least one TaskRun succeeded)
+ *   <li>FAILED → final failure state (all TaskRuns failed, max retries reached)
+ * </ul>
+ *
+ * <p><b>Note:</b> PARTIAL status moved to TaskRun layer for resumable execution tracking.
  */
 @Getter
 public enum TaskStatus {
-  /** Queued and awaiting execution. */
+  /** Pending; initial state, awaiting scheduler pickup. */
+  PENDING("PENDING", "Pending"),
+  /** Queued; added to execution queue, awaiting TaskRun creation. */
   QUEUED("QUEUED", "Queued"),
-  /** Currently running (not idempotent to re-run). */
+  /** Running; TaskRun in progress. */
   RUNNING("RUNNING", "Running"),
-  /** Completed successfully. */
+  /** Succeeded; at least one TaskRun completed successfully. */
   SUCCEEDED("SUCCEEDED", "Succeeded"),
-  /** Failed execution (eligible for compensation or retry). */
-  FAILED("FAILED", "Failed"),
-  /** Partially failed batches. */
-  PARTIAL("PARTIAL", "Partially failed"),
-  /** Batches succeeded but cursor advancement pending retry. */
-  CURSOR_PENDING("CURSOR_PENDING", "Cursor pending"),
-  /** Cancelled by operator or unmet conditions. */
-  CANCELLED("CANCELLED", "Cancelled");
+  /** Failed; all TaskRuns failed, max retries reached. */
+  FAILED("FAILED", "Failed");
 
   private final String code;
   private final String description;

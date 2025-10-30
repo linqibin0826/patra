@@ -34,7 +34,7 @@ public class TaskRun {
         attemptNo,
         provenanceCode,
         operationCode,
-        TaskRunStatus.PLANNED,
+        TaskRunStatus.PENDING, // After refactoring: PLANNED → PENDING
         RunStats.empty(),
         TaskRunCheckpoint.empty(),
         null,
@@ -109,7 +109,7 @@ public class TaskRun {
   }
 
   public void start(Instant now) {
-    if (status == TaskRunStatus.PLANNED) {
+    if (status == TaskRunStatus.PENDING) {
       status = TaskRunStatus.RUNNING;
       startedAt = now;
     }
@@ -152,8 +152,6 @@ public class TaskRun {
     finishedAt = now;
   }
 
-  public void markCursorPending(Instant now) {
-    status = TaskRunStatus.CURSOR_PENDING;
-    finishedAt = now;
-  }
+  // Note: markCursorPending() method removed after refactoring
+  // CURSOR_PENDING status merged into PARTIAL with checkpoint support for resumable execution
 }

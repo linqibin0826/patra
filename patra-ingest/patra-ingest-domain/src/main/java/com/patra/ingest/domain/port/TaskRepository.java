@@ -41,12 +41,15 @@ public interface TaskRepository {
   List<TaskAggregate> findByPlanId(Long planId);
 
   /**
-   * Retrieve all tasks belonging to a specific slice.
+   * Retrieve the task associated with a specific slice (enforces 1:1 relationship).
+   *
+   * <p><b>Note:</b> After refactoring, Slice:Task is now a 1:1 relationship protected by database
+   * unique constraint {@code uk_task_slice}. This method returns at most one task.
    *
    * @param sliceId the slice identifier
-   * @return list of task aggregates
+   * @return the task aggregate if exists, or {@link Optional#empty()}
    */
-  List<TaskAggregate> findBySliceId(Long sliceId);
+  Optional<TaskAggregate> findBySliceId(Long sliceId);
 
   /**
    * Retrieve a task aggregate by identifier.
