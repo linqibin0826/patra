@@ -12,7 +12,7 @@ import java.time.Instant;
  *
  * <ul>
  *   <li>Metrics: measure success rates and partition distribution for each channel.
- *   <li>Audit: correlate {@code messageId} with {@code brokerMessageId} to trace broker flows.
+ *   <li>Audit: track successful message publications for monitoring and alerting.
  *   <li>Downstream: optional consumers can build second-stage fan-out or populate caches.
  * </ul>
  *
@@ -26,8 +26,6 @@ public record OutboxMessagePublishedEvent(
     String channel,
     /** Partition routing key, potentially hashed by the broker. */
     String partitionKey,
-    /** Broker-provided message identifier for cross-system tracking. */
-    String brokerMessageId,
     /** UTC timestamp when the event occurred. */
     Instant occurredAt)
     implements OutboxRelayDomainEvent {}

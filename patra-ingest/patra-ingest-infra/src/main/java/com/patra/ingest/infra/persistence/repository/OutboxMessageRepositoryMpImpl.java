@@ -248,23 +248,22 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
    * Marks message as successfully published.
    *
    * <p>Requires current version == expectedVersion; updates fields: state=PUBLISHED, published_at,
-   * broker_message_id, version=version+1.
+   * version=version+1.
    *
    * @param id Message ID
    * @param expectedVersion Expected version (includes post-lease version)
-   * @param messageId Broker-returned message ID (for idempotent confirmation)
    * @throws OutboxPersistenceException if version conflict or row not found
    */
   @Override
-  public void markPublished(Long id, Long expectedVersion, String messageId) {
-    int affectedRows = mapper.markPublished(id, expectedVersion, messageId);
+  public void markPublished(Long id, Long expectedVersion) {
+    int affectedRows = mapper.markPublished(id, expectedVersion);
     if (affectedRows != 1) {
       throw new OutboxPersistenceException(
           OutboxPersistenceException.Stage.MARK_PUBLISHED,
           "Failed to update Outbox state to PUBLISHED, id=" + id);
     }
     if (log.isDebugEnabled()) {
-      log.debug("Outbox published id={} brokerMsgId={}", id, messageId);
+      log.debug("Outbox published id={}", id);
     }
   }
 

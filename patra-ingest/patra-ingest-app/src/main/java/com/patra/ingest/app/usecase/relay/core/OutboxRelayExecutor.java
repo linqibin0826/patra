@@ -141,10 +141,9 @@ public class OutboxRelayExecutor {
     }
     long publishingVersion = nextVersionOf(message);
     try {
-      OutboxPublisherPort.PublishResult publishResult =
-          publisherPort.publish(message, context.plan());
-      relayStore.markPublished(message.getId(), publishingVersion, publishResult.messageId());
-      context.onPublished(message, publishResult);
+      publisherPort.publish(message, context.plan());
+      relayStore.markPublished(message.getId(), publishingVersion);
+      context.onPublished(message);
     } catch (Exception ex) {
       // Delegate exception classification to the failure decision module (retry vs fail)
       handleFailure(message, context, publishingVersion, ex);
@@ -313,15 +312,10 @@ public class OutboxRelayExecutor {
               plan.triggeredAt()));
     }
 
-    /** Publish succeeded: record the external message identifier and increment counters. */
-    private void onPublished(
-        OutboxMessage message, OutboxPublisherPort.PublishResult publishResult) {
+    /** Publish succeeded: increment counters and emit domain event. */
+    private void onPublished(OutboxMessage message) {
       if (log.isDebugEnabled()) {
-        log.debug(
-            "relay published messageId={} channel={} externalMsgId={}",
-            message.getId(),
-            message.getChannel(),
-            publishResult.messageId());
+        log.debug("relay published messageId={} channel={}", message.getId(), message.getChannel());
       }
       published++;
       events.add(
@@ -329,7 +323,6 @@ public class OutboxRelayExecutor {
               message.getId(),
               message.getChannel(),
               message.getPartitionKey(),
-              publishResult.messageId(),
               plan.triggeredAt()));
     }
 

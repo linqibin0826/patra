@@ -207,8 +207,4 @@ public class OutboxMessageDO extends BaseDO {
    */
   @TableField("pub_leased_until")
   private Instant pubLeasedUntil;
-
-  /** Message ID returned by the broker (for reconciliation/replay identification). */
-  @TableField("msg_id")
-  private String msgId;
 }

@@ -52,7 +52,6 @@
     <update id="markPublished">
         UPDATE patra_ingest.ing_outbox_message
         SET status_code = 'PUBLISHED',
-            msg_id = #{msgId},
             pub_lease_owner = NULL,
             pub_leased_until = NULL,
             error_code = NULL,
@@ -75,7 +74,6 @@
             next_retry_at = #{nextRetryAt},
             error_code = #{errorCode},
             error_msg = #{errorMsg},
-            msg_id = NULL,
             pub_lease_owner = NULL,
             pub_leased_until = NULL,
             updated_at = NOW(6),
@@ -95,7 +93,6 @@
             error_code = #{errorCode},
             error_msg = #{errorMsg},
             next_retry_at = NULL,
-            msg_id = NULL,
             pub_lease_owner = NULL,
             pub_leased_until = NULL,
             updated_at = NOW(6),
@@ -168,7 +165,6 @@
             error_msg = NULL,
             pub_lease_owner = NULL,
             pub_leased_until = NULL,
-            msg_id = NULL,
             updated_at = NOW(6),
             version = version + 1
     </insert>

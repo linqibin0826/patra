@@ -63,7 +63,9 @@ public interface CursorEventConverter {
         entity.getPrevNumeric(),
         entity.getNewNumeric(),
         lineage,
-        entity.getExprHash());
+        entity.getExprHash(),
+        entity.getWindowFrom(),
+        entity.getWindowTo());
   }
 
   @Named("cursorTypeToCode")

@@ -76,7 +76,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       return true; // no window spec, skip advancement
     }
 
-    // 2) Strategy-aware watermark extraction
+    // 2) Strategy-aware watermark and window boundary extraction
     Instant newWatermark = extractWatermark(windowSpec, taskId, runId);
     if (newWatermark == null) {
       log.debug(
@@ -86,6 +86,14 @@ public class CursorAdvancerImpl implements CursorAdvancer {
           taskId,
           runId);
       return true; // non-TIME strategies currently do not advance watermark
+    }
+
+    // Extract window boundaries (only for TIME/DATE strategies)
+    Instant windowFrom = null;
+    Instant windowTo = null;
+    if (windowSpec instanceof WindowSpec.Time timeSpec) {
+      windowFrom = timeSpec.from();
+      windowTo = timeSpec.to();
     }
 
     // 3) Determine cursor key and namespace
@@ -137,8 +145,36 @@ public class CursorAdvancerImpl implements CursorAdvancer {
               oldWatermark);
         }
 
-        // Advance watermark and lineage (domain ensures monotonicity)
-        cursor.advanceTo(newWatermark, lineage);
+        // Advance watermark with expression hash tracking (domain ensures monotonicity)
+        Cursor.AdvancementResult result =
+            cursor.advanceTo(newWatermark, lineage, context.exprHash());
+
+        // Handle expression hash change: reset cursor to initial position
+        if (result == Cursor.AdvancementResult.EXPRESSION_CHANGED) {
+          log.info(
+              "Expression changed for cursor [{}]: {} -> {}, resetting cursor to initial position",
+              cursorKey,
+              cursor.getExprHash(),
+              context.exprHash());
+
+          // Create a new cursor with the new expression hash
+          cursor =
+              Cursor.create(
+                  provenanceCode,
+                  operationCode,
+                  cursorKey,
+                  namespaceScope,
+                  namespaceKey,
+                  newWatermark,
+                  lineage);
+
+          // Advance the new cursor with the new expression hash
+          cursor.advanceTo(newWatermark, lineage, context.exprHash());
+
+          // Update tracking variables for event creation
+          prevWatermark = null;
+          prevValue = null;
+        }
 
         log.info(
             "cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={} planId={} sliceId={}",
@@ -211,7 +247,9 @@ public class CursorAdvancerImpl implements CursorAdvancer {
               direction,
               idempotentKey,
               lineage,
-              cursor.getExprHash());
+              context.exprHash(), // Use fresh expr_hash from context
+              windowFrom, // Window start (null for non-TIME strategies)
+              windowTo); // Window end (null for non-TIME strategies)
 
       cursorEventRepository.save(event);
 

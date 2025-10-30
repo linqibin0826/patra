@@ -537,7 +537,6 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
 
     `pub_lease_owner`  VARCHAR(128)    NULL COMMENT 'Publisher lease holder (instance ID or workerId), prevents concurrent publishing on same row',
     `pub_leased_until` TIMESTAMP(6)    NULL COMMENT 'Publisher lease expiration (UTC), expired can be taken over by other publishers',
-    `msg_id`           VARCHAR(128)    NULL COMMENT 'Broker-returned message ID (for reconciliation/replay identification)',
 
     -- Audit fields
     `record_remarks`   JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
