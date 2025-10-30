@@ -65,9 +65,6 @@ public final class OutboxMessage {
   /** Lease expiration time. */
   private final Instant leaseExpireAt;
 
-  /** Broker message identifier. */
-  private final String msgId;
-
   private OutboxMessage(Builder builder) {
     this.id = builder.id;
     this.version = builder.version;
@@ -89,7 +86,6 @@ public final class OutboxMessage {
     this.errorMsg = builder.errorMsg;
     this.leaseOwner = builder.leaseOwner;
     this.leaseExpireAt = builder.leaseExpireAt;
-    this.msgId = builder.msgId;
   }
 
   public Long getId() {
@@ -164,10 +160,6 @@ public final class OutboxMessage {
     return leaseExpireAt;
   }
 
-  public String getMsgId() {
-    return msgId;
-  }
-
   public static Builder builder() {
     return new Builder();
   }
@@ -191,8 +183,7 @@ public final class OutboxMessage {
         .errorCode(errorCode)
         .errorMsg(errorMsg)
         .leaseOwner(leaseOwner)
-        .leaseExpireAt(leaseExpireAt)
-        .msgId(msgId);
+        .leaseExpireAt(leaseExpireAt);
   }
 
   /**
@@ -235,7 +226,6 @@ public final class OutboxMessage {
     private String errorMsg;
     private String leaseOwner;
     private Instant leaseExpireAt;
-    private String msgId;
 
     private Builder() {}
 
@@ -326,11 +316,6 @@ public final class OutboxMessage {
 
     public Builder leaseExpireAt(Instant leaseExpireAt) {
       this.leaseExpireAt = leaseExpireAt;
-      return this;
-    }
-
-    public Builder msgId(String msgId) {
-      this.msgId = msgId;
       return this;
     }
 

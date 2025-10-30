@@ -46,16 +46,7 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
   }
 
   @Override
-  public PublishResult publish(OutboxMessage message, RelayPlan plan) {
-    if (StringUtils.hasText(message.getMsgId())) {
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "skip publishing message id={} channel={} because msgId already present",
-            message.getId(),
-            message.getChannel());
-      }
-      return new PublishResult(message.getMsgId());
-    }
+  public void publish(OutboxMessage message, RelayPlan plan) {
     String channel = message.getChannel();
     if (!properties.isChannelAllowed(channel)) {
       throw new OutboxPublishException(
@@ -84,7 +75,6 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
             message.getOpType(),
             outboundMessage.getHeaders().get("partitionKey"));
       }
-      return PublishResult.NONE;
     } catch (MessagingException ex) {
       throw new OutboxPublishException(
           Reason.SEND_FAILED, "Failed to publish message to channel " + channel, ex);

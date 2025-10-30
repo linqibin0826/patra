@@ -50,10 +50,7 @@ public interface OutboxMessageMapper extends BaseMapper<OutboxMessageDO> {
       @Param("leaseExpireAt") Instant leaseExpireAt);
 
   /** Marks as published and increments version. */
-  int markPublished(
-      @Param("id") Long id,
-      @Param("expectedVersion") Long expectedVersion,
-      @Param("msgId") String msgId);
+  int markPublished(@Param("id") Long id, @Param("expectedVersion") Long expectedVersion);
 
   /** Marks as deferred (retry) and increments version. */
   int markDeferred(

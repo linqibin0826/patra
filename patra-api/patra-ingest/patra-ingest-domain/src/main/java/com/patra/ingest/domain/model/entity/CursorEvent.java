@@ -78,6 +78,12 @@ public class CursorEvent {
   /** Hash of the expression used during advancement (tracks strategy changes). */
   private final String exprHash;
 
+  /** Covered window start (UTC, inclusive; null for non-TIME strategies). */
+  private final Instant windowFrom;
+
+  /** Covered window end (UTC, exclusive; null for non-TIME strategies). */
+  private final Instant windowTo;
+
   private CursorEvent(
       Long id,
       String provenanceCode,
@@ -96,7 +102,9 @@ public class CursorEvent {
       BigDecimal prevNumeric,
       BigDecimal newNumeric,
       CursorLineage lineage,
-      String exprHash) {
+      String exprHash,
+      Instant windowFrom,
+      Instant windowTo) {
     this.id = id;
     this.provenanceCode = provenanceCode;
     this.operationCode = operationCode;
@@ -115,6 +123,8 @@ public class CursorEvent {
     this.newNumeric = newNumeric;
     this.lineage = lineage == null ? CursorLineage.empty() : lineage;
     this.exprHash = exprHash;
+    this.windowFrom = windowFrom;
+    this.windowTo = windowTo;
   }
 
   /**
@@ -137,6 +147,8 @@ public class CursorEvent {
    * @param idempotentKey idempotency key (SHA256 hash of advancement context)
    * @param lineage lineage metadata (task/run/plan/slice/batch identifiers)
    * @param exprHash expression hash (nullable; for strategy change tracking)
+   * @param windowFrom covered window start (UTC, inclusive; null for non-TIME strategies)
+   * @param windowTo covered window end (UTC, exclusive; null for non-TIME strategies)
    * @return new {@link CursorEvent} instance ready for persistence
    */
   public static CursorEvent create(
@@ -153,7 +165,9 @@ public class CursorEvent {
       CursorDirection direction,
       String idempotentKey,
       CursorLineage lineage,
-      String exprHash) {
+      String exprHash,
+      Instant windowFrom,
+      Instant windowTo) {
     // Defensive programming: ensure namespaceKey is never null
     // Use 64 zeros as default for GLOBAL namespace
     String effectiveNamespaceKey = (namespaceKey != null) ? namespaceKey : "0".repeat(64);
@@ -176,7 +190,9 @@ public class CursorEvent {
         null, // prevNumeric - not used for TIME cursors
         null, // newNumeric - not used for TIME cursors
         lineage,
-        exprHash);
+        exprHash,
+        windowFrom,
+        windowTo);
   }
 
   /**
@@ -200,6 +216,8 @@ public class CursorEvent {
    * @param newNumeric new numeric value
    * @param lineage lineage metadata
    * @param exprHash expression hash
+   * @param windowFrom covered window start
+   * @param windowTo covered window end
    * @return {@link CursorEvent} instance
    */
   public static CursorEvent restore(
@@ -220,7 +238,9 @@ public class CursorEvent {
       BigDecimal prevNumeric,
       BigDecimal newNumeric,
       CursorLineage lineage,
-      String exprHash) {
+      String exprHash,
+      Instant windowFrom,
+      Instant windowTo) {
     return new CursorEvent(
         id,
         provenanceCode,
@@ -239,6 +259,8 @@ public class CursorEvent {
         prevNumeric,
         newNumeric,
         lineage,
-        exprHash);
+        exprHash,
+        windowFrom,
+        windowTo);
   }
 }

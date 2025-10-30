@@ -45,13 +45,12 @@ public interface OutboxRelayStore {
   boolean acquireLease(Long id, Long expectedVersion, String leaseOwner, Instant leaseExpireAt);
 
   /**
-   * Mark the message as published and store the downstream message identifier.
+   * Mark the message as published.
    *
    * @param id outbox identifier
    * @param expectedVersion optimistic-lock version
-   * @param messageId broker-provided message identifier (optional)
    */
-  void markPublished(Long id, Long expectedVersion, String messageId);
+  void markPublished(Long id, Long expectedVersion);
 
   /**
    * Requeue the message for retry after a recoverable failure.

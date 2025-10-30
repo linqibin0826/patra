@@ -5,12 +5,22 @@ import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.domain.model.vo.CursorLineage;
 import com.patra.ingest.domain.model.vo.CursorValue;
 import com.patra.ingest.domain.model.vo.CursorWatermark;
+import java.util.Objects;
 import lombok.Getter;
 
 /** Domain entity representing the current cursor state. */
 @SuppressWarnings("unused")
 @Getter
 public class Cursor {
+
+  /** Result of cursor advancement operation. */
+  public enum AdvancementResult {
+    /** Cursor advanced successfully. */
+    SUCCESS,
+    /** Expression hash changed, cursor needs reset. */
+    EXPRESSION_CHANGED
+  }
+
   private final Long id;
   private final String provenanceCode;
   private final String operationCode;
@@ -185,6 +195,61 @@ public class Cursor {
     if (newLineage != null) {
       this.lineage = newLineage;
     }
+  }
+
+  /**
+   * Advance the cursor to the supplied time watermark with expression hash tracking.
+   *
+   * <p>This method detects expression changes and returns a result indicating whether the cursor
+   * was advanced successfully or if the expression hash has changed (requiring a reset).
+   *
+   * @param newWatermark new watermark timestamp
+   * @param newLineage new lineage context (optional, keeps existing if null)
+   * @param newExprHash new expression hash (nullable)
+   * @return {@link AdvancementResult#SUCCESS} if advanced, {@link
+   *     AdvancementResult#EXPRESSION_CHANGED} if expression hash changed
+   */
+  public AdvancementResult advanceTo(
+      java.time.Instant newWatermark, CursorLineage newLineage, String newExprHash) {
+    if (newWatermark == null) {
+      throw new IllegalArgumentException("New watermark must not be null");
+    }
+
+    // Check for expression hash change (null-safe comparison)
+    if (!matchesExpression(newExprHash)) {
+      return AdvancementResult.EXPRESSION_CHANGED;
+    }
+
+    // Ensure the watermark never moves backwards
+    if (watermark.normalizedInstant() != null
+        && newWatermark.isBefore(watermark.normalizedInstant())) {
+      throw new IllegalArgumentException(
+          "Cursor watermark cannot move backwards current="
+              + watermark.normalizedInstant()
+              + " new="
+              + newWatermark);
+    }
+
+    // Update cursor state
+    this.watermark = new CursorWatermark(newWatermark.toString(), newWatermark, null);
+    if (newLineage != null) {
+      this.lineage = newLineage;
+    }
+    this.exprHash = newExprHash;
+
+    return AdvancementResult.SUCCESS;
+  }
+
+  /**
+   * Check if the cursor's expression hash matches the given expression hash.
+   *
+   * <p>Uses null-safe comparison to handle cases where either hash might be null.
+   *
+   * @param exprHash expression hash to compare against
+   * @return true if hashes match, false otherwise
+   */
+  public boolean matchesExpression(String exprHash) {
+    return Objects.equals(this.exprHash, exprHash);
   }
 
   /** Return the current time-based watermark. */
