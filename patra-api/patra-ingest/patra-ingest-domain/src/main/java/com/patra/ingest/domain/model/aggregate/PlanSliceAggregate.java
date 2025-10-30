@@ -3,6 +3,7 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import java.util.Objects;
+import lombok.Getter;
 
 /**
  * Aggregate root that models the signature and lifecycle of an ingestion plan slice.
@@ -10,6 +11,7 @@ import java.util.Objects;
  * @author linqibin
  * @since 0.1.0
  */
+@Getter
 public class PlanSliceAggregate extends AggregateRoot<Long> {
 
   /** Identifier of the plan this slice belongs to. */
@@ -117,24 +119,13 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
     this.planId = planId;
   }
 
-  /** Marks the slice as executing. */
-  public void markExecuting() {
-    this.status = SliceStatus.EXECUTING;
-  }
-
-  /** Marks the slice as succeeded. */
-  public void markSucceeded() {
-    this.status = SliceStatus.SUCCEEDED;
-  }
-
-  /** Marks the slice as failed. */
-  public void markFailed() {
-    this.status = SliceStatus.FAILED;
-  }
-
-  /** Marks the slice as partially completed. */
-  public void markPartial() {
-    this.status = SliceStatus.PARTIAL;
+  /**
+   * Marks the slice as assigned (corresponding Task has been created).
+   *
+   * <p><b>Note:</b> After refactoring, enforces 1:1 Slice-Task relationship.
+   */
+  public void markAssigned() {
+    this.status = SliceStatus.ASSIGNED;
   }
 
   /**
@@ -150,37 +141,5 @@ public class PlanSliceAggregate extends AggregateRoot<Long> {
       throw new IllegalArgumentException("newStatus must not be null");
     }
     this.status = newStatus;
-  }
-
-  public Long getPlanId() {
-    return planId;
-  }
-
-  public String getProvenanceCode() {
-    return provenanceCode;
-  }
-
-  public int getSliceNo() {
-    return sliceNo;
-  }
-
-  public String getSliceSignatureHash() {
-    return sliceSignatureHash;
-  }
-
-  public String getWindowSpecJson() {
-    return windowSpecJson;
-  }
-
-  public String getExprHash() {
-    return exprHash;
-  }
-
-  public String getExprSnapshotJson() {
-    return exprSnapshotJson;
-  }
-
-  public SliceStatus getStatus() {
-    return status;
   }
 }

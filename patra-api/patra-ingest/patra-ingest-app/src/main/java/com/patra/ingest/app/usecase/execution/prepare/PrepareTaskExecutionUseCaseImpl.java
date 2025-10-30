@@ -134,9 +134,9 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
                 () -> new IllegalStateException("Slice not found: sliceId=" + task.getSliceId()));
 
     if (slice.getStatus() == SliceStatus.PENDING) {
-      slice.markExecuting();
+      slice.markAssigned();
       planSliceRepository.save(slice);
-      log.info("Slice marked as EXECUTING sliceId={}", slice.getId());
+      log.info("Slice marked as ASSIGNED sliceId={}", slice.getId());
     }
 
     ExecutionSession session = null;

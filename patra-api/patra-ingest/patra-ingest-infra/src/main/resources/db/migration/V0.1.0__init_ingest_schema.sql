@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan`
     `window_from_ts`             TIMESTAMP(6)    NULL COMMENT 'Denormalized: TIME/DATE strategy window start (inclusive, UTC). Populated by application layer when slice_strategy_code=TIME or DATE for efficient time-range queries. NULL for non-time-based strategies.',
     `window_to_ts`               TIMESTAMP(6)    NULL COMMENT 'Denormalized: TIME/DATE strategy window end (exclusive, UTC). Populated by application layer when slice_strategy_code=TIME or DATE for efficient time-range queries. NULL for non-time-based strategies.',
 
-    `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status): DRAFT/SLICING/READY/PARTIAL/FAILED/COMPLETED',
+    `status_code`                VARCHAR(32)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DICT CODE(type=ing_plan_status): DRAFT/SLICING/READY/ARCHIVED',
 
     -- Audit fields
     `record_remarks`             JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
     `expr_hash`            CHAR(64)        NOT NULL COMMENT 'Localized expression hash: Fingerprint calculated from "normalized localized AST"; typically changes together with slice_signature_hash',
 
     `expr_snapshot`        JSON            NULL COMMENT 'Localized expression snapshot (AST, JSON): "Directly executable expression tree" after injecting this slice boundary conditions into plan prototype; slice carries replay semantics',
-    `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_slice_status): PENDING/DISPATCHED/EXECUTING/SUCCEEDED/FAILED/PARTIAL/CANCELLED',
+    `status_code`          VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_slice_status): PENDING/ASSIGNED/FINISHED',
 
     -- Audit fields
     `record_remarks`       JSON            NULL COMMENT 'JSON array, remarks/change log [{"time":"2025-08-18 15:00:00","by":"John Doe","note":"xxx"}]',
@@ -162,15 +162,16 @@ CREATE TABLE IF NOT EXISTS `ing_plan_slice`
 
 
 -- ======================================================================
--- 4) Task: Each slice generates one task; supports strong idempotency and scheduling/execution status
+-- 4) Task: Each slice generates ONE task (1:1 relationship); supports strong idempotency and scheduling/execution status
 -- ======================================================================
 /* ====================================================================
  * Table: ing_task —— Derived Task
- * Semantics: Each slice derives one schedulable task; binds source, operation, credentials and execution parameters.
+ * Semantics: Each slice derives EXACTLY ONE schedulable task (1:1 relationship enforced by uk_task_slice); binds source, operation, credentials and execution parameters.
  * Key Points:
  *  - Logically associated with schedule_instance/plan/slice (no FK);
- *  - Idempotent key idempotent_key is unique, ensures "same slice+operation+params+trigger context" creates only one task.
- * Indexes: uk_task_idem / idx_task_slice / idx_task_src_op / idx_task_sched_at / idx_task_queue.
+ *  - Idempotent key idempotent_key is unique, ensures "same slice+operation+params+trigger context" creates only one task;
+ *  - 1:1 Slice-Task relationship enforced by UNIQUE KEY uk_task_slice on slice_id.
+ * Indexes: uk_task_idem / uk_task_slice / idx_task_slice_status / idx_task_src_op / idx_task_sched_at / idx_task_queue.
  * ==================================================================== */
 CREATE TABLE IF NOT EXISTS `ing_task`
 (
@@ -198,7 +199,7 @@ CREATE TABLE IF NOT EXISTS `ing_task`
     `last_error_code`      VARCHAR(64)      NULL COMMENT 'Latest error code',
     `last_error_msg`       VARCHAR(512)     NULL COMMENT 'Latest error message',
 
-    `status_code`          VARCHAR(32)      NOT NULL DEFAULT 'QUEUED' COMMENT 'DICT CODE(type=ing_task_status): QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED',
+    `status_code`          VARCHAR(32)      NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_task_status): PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED',
     `scheduled_at`         TIMESTAMP(6)     NULL COMMENT 'Planned start time',
     `started_at`           TIMESTAMP(6)     NULL COMMENT 'Actual start time',
     `finished_at`          TIMESTAMP(6)     NULL COMMENT 'Finish time',
@@ -221,7 +222,8 @@ CREATE TABLE IF NOT EXISTS `ing_task`
 
     -- Idempotency and common retrieval indexes
     UNIQUE KEY `uk_task_idem` (`idempotent_key`),
-    KEY `idx_task_slice` (`slice_id`, `status_code`),
+    UNIQUE KEY `uk_task_slice` (`slice_id`),
+    KEY `idx_task_slice_status` (`slice_id`, `status_code`),
     KEY `idx_task_src_op` (`provenance_code`, `operation_code`, `status_code`),
     KEY `idx_task_sched_at` (`status_code`, `scheduled_at`),
 
@@ -237,7 +239,7 @@ CREATE TABLE IF NOT EXISTS `ing_task`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci
-    COMMENT ='Task: Each slice generates one task; supports strong idempotency and scheduling/execution status; no physical foreign keys';
+    COMMENT ='Task: Each slice generates EXACTLY ONE task (1:1 relationship enforced by uk_task_slice); supports strong idempotency and scheduling/execution status; no physical foreign keys';
 
 -- ======================================================================
 -- 5) Task Run (attempt): One specific attempt; failed retries/replays each add new record
@@ -257,7 +259,7 @@ CREATE TABLE IF NOT EXISTS `ing_task_run`
     `provenance_code`  VARCHAR(64)     NULL COMMENT 'Redundant: Provenance code, aligns with reg_provenance.provenance_code (for tracing and aggregation)',
     `operation_code`   VARCHAR(32)     NULL COMMENT 'Redundant: Operation type (already in task), facilitates direct (source,op,status) statistics',
 
-    `status_code`      VARCHAR(32)     NOT NULL DEFAULT 'PLANNED' COMMENT 'DICT CODE(type=ing_task_run_status): PLANNED/RUNNING/SUCCEEDED/FAILED/PARTIAL/CURSOR_PENDING',
+    `status_code`      VARCHAR(32)     NOT NULL DEFAULT 'PENDING' COMMENT 'DICT CODE(type=ing_task_run_status): PENDING/RUNNING/PARTIAL/SUCCEEDED/FAILED',
     `checkpoint`       JSON            NULL COMMENT 'Run-level checkpoint (e.g. nextHint / resumeToken etc)',
     `stats`            JSON            NULL COMMENT 'Statistics: fetched/upserted/failed/pages etc',
     `error`            TEXT            NULL COMMENT 'Failure reason',

@@ -60,7 +60,7 @@ public interface TaskRunConverter {
   }
 
   static TaskRunStatus taskRunStatusFromCode(String code) {
-    return code == null ? TaskRunStatus.PLANNED : TaskRunStatus.fromCode(code);
+    return code == null ? TaskRunStatus.PENDING : TaskRunStatus.fromCode(code);
   }
 
   @Named("runStatsToJson")

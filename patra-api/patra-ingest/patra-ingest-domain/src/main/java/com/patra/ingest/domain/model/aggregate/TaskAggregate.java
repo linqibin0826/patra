@@ -8,6 +8,7 @@ import com.patra.ingest.domain.model.vo.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.LeaseInfo;
 import com.patra.ingest.domain.model.vo.TaskSchedulerContext;
 import java.time.Instant;
+import lombok.Getter;
 
 /**
  * Aggregate root for ingestion tasks. Encapsulates scheduling metadata, execution progress, lease
@@ -18,6 +19,7 @@ import java.time.Instant;
  * @author linqibin
  * @since 0.1.0
  */
+@Getter
 public class TaskAggregate extends AggregateRoot<Long> {
 
   /** Scheduler instance identifier. */
@@ -366,50 +368,10 @@ public class TaskAggregate extends AggregateRoot<Long> {
             finishedAt));
   }
 
-  /**
-   * Marks the task as partially completed.
-   *
-   * @param finishedAt execution finish time
-   */
-  public void markPartial(Instant finishedAt) {
-    this.executionTimeline = executionTimeline.onFinish(finishedAt);
-    this.status = TaskStatus.PARTIAL;
-
-    // Publish domain event to trigger Slice and Plan status aggregation
-    addDomainEvent(
-        TaskCompletedEvent.of(
-            this.getId(), this.sliceId, this.planId, TaskStatus.PARTIAL.getCode(), finishedAt));
-  }
-
-  /**
-   * Marks the task as pending cursor advancement.
-   *
-   * @param finishedAt execution finish time
-   */
-  public void markCursorPending(Instant finishedAt) {
-    this.executionTimeline = executionTimeline.onFinish(finishedAt);
-    this.status = TaskStatus.CURSOR_PENDING;
-
-    // Publish domain event to trigger Slice and Plan status aggregation
-    // Note: CURSOR_PENDING is treated as "still executing" in Slice status calculation
-    addDomainEvent(
-        TaskCompletedEvent.of(
-            this.getId(),
-            this.sliceId,
-            this.planId,
-            TaskStatus.CURSOR_PENDING.getCode(),
-            finishedAt));
-  }
-
-  /**
-   * Marks the task as cancelled.
-   *
-   * @param finishedAt cancellation time
-   */
-  public void markCancelled(Instant finishedAt) {
-    this.executionTimeline = executionTimeline.onFinish(finishedAt);
-    this.status = TaskStatus.CANCELLED;
-  }
+  // Note: markPartial(), markCursorPending(), markCancelled() methods removed after refactoring
+  // - PARTIAL status moved to TaskRun layer for resumable execution tracking
+  // - CURSOR_PENDING status merged into TaskRun.PARTIAL with checkpoint support
+  // - CANCELLED status removed (cancellation not supported in current design)
 
   /**
    * Acquires a lease for this task.
@@ -446,77 +408,5 @@ public class TaskAggregate extends AggregateRoot<Long> {
     this.executionTimeline = ExecutionTimeline.empty();
     this.schedulerContext = TaskSchedulerContext.empty();
     markQueued();
-  }
-
-  public LeaseInfo getLeaseInfo() {
-    return leaseInfo;
-  }
-
-  public ExecutionTimeline getExecutionTimeline() {
-    return executionTimeline;
-  }
-
-  public TaskSchedulerContext getSchedulerContext() {
-    return schedulerContext;
-  }
-
-  public Long getScheduleInstanceId() {
-    return scheduleInstanceId;
-  }
-
-  public Long getPlanId() {
-    return planId;
-  }
-
-  public Long getSliceId() {
-    return sliceId;
-  }
-
-  public String getProvenanceCode() {
-    return provenanceCode;
-  }
-
-  public String getOperationCode() {
-    return operationCode;
-  }
-
-  public String getParamsJson() {
-    return paramsJson;
-  }
-
-  public String getIdempotentKey() {
-    return idempotentKey;
-  }
-
-  public String getExprHash() {
-    return exprHash;
-  }
-
-  public Integer getPriority() {
-    return priority;
-  }
-
-  public Instant getScheduledAt() {
-    return scheduledAt;
-  }
-
-  public TaskStatus getStatus() {
-    return status;
-  }
-
-  public Instant getLastHeartbeatAt() {
-    return lastHeartbeatAt;
-  }
-
-  public Integer getRetryCount() {
-    return retryCount;
-  }
-
-  public String getLastErrorCode() {
-    return lastErrorCode;
-  }
-
-  public String getLastErrorMsg() {
-    return lastErrorMsg;
   }
 }

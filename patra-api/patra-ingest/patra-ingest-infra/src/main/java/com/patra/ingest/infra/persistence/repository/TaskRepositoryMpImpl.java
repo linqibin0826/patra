@@ -122,13 +122,17 @@ public class TaskRepositoryMpImpl implements TaskRepository {
   }
 
   /**
-   * Finds tasks by slice ID.
+   * Finds the task associated with a specific slice (enforces 1:1 relationship).
+   *
+   * <p><b>Note:</b> After refactoring, Slice:Task is a 1:1 relationship protected by database
+   * unique constraint {@code uk_task_slice}. This method returns at most one task.
    *
    * @param sliceId slice ID
-   * @return list of task aggregates, empty if none found
+   * @return task aggregate if exists, or {@link Optional#empty()}
+   * @throws IllegalArgumentException if sliceId is null
    */
   @Override
-  public List<TaskAggregate> findBySliceId(Long sliceId) {
+  public Optional<TaskAggregate> findBySliceId(Long sliceId) {
     if (sliceId == null) {
       throw new IllegalArgumentException("sliceId must not be null");
     }
@@ -136,8 +140,8 @@ public class TaskRepositoryMpImpl implements TaskRepository {
     LambdaQueryWrapper<TaskDO> query = new LambdaQueryWrapper<>();
     query.eq(TaskDO::getSliceId, sliceId);
 
-    List<TaskDO> taskDOs = mapper.selectList(query);
-    return taskDOs.stream().map(converter::toAggregate).toList();
+    TaskDO taskDO = mapper.selectOne(query);
+    return taskDO == null ? Optional.empty() : Optional.of(converter.toAggregate(taskDO));
   }
 
   /**

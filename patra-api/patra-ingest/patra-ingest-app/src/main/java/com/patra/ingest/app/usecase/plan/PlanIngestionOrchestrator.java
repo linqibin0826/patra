@@ -431,7 +431,10 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Processes retry tasks by marking plan partial and publishing retry events.
+   * Processes retry tasks by publishing retry events.
+   *
+   * <p>Note: After refactoring, Plan status is not changed during retry. Plan remains in its
+   * current state (typically READY) while failed tasks are re-queued.
    *
    * @param existingPlan existing plan aggregate
    * @param schedule schedule instance
@@ -441,8 +444,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       PlanAggregate existingPlan,
       ScheduleInstanceAggregate schedule,
       List<TaskAggregate> retryTasks) {
-    existingPlan.markPartial();
-    planRepository.save(existingPlan);
+    // Plan status unchanged - tasks are simply re-queued for execution
     List<TaskQueuedEvent> retryEvents = collectQueuedEvents(retryTasks);
     taskOutboxPublisher.publishRetry(retryEvents, existingPlan, schedule);
     log.info(
@@ -709,12 +711,15 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   /**
    * Determines if task is eligible for compensation retry.
    *
+   * <p>Note: After refactoring, only FAILED status is checked. CANCELLED status was removed as
+   * cancellation is not supported in the current design.
+   *
    * @param task task aggregate
-   * @return true if retry is needed (FAILED or CANCELLED status)
+   * @return true if retry is needed (FAILED status only)
    */
   private boolean shouldRetry(TaskAggregate task) {
     TaskStatus status = task.getStatus();
-    return status == TaskStatus.FAILED || status == TaskStatus.CANCELLED;
+    return status == TaskStatus.FAILED;
   }
 
   /**

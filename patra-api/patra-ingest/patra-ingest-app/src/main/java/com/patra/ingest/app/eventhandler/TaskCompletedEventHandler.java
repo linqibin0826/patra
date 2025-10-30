@@ -9,7 +9,7 @@ import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.service.SliceStatusCalculator;
-import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -21,10 +21,10 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Handles TaskCompletedEvent to update Slice status.
+ * Handles TaskCompletedEvent to update Slice status (enforces 1:1 Slice-Task relationship).
  *
- * <p>When a Task completes (SUCCEEDED/FAILED/PARTIAL/CURSOR_PENDING), this handler aggregates the
- * statuses of all Tasks in the Slice and updates the Slice status accordingly.
+ * <p>After refactoring, Slice:Task is 1:1. When a Task completes (SUCCEEDED/FAILED), this handler
+ * directly maps the Task status to Slice status using {@link SliceStatusCalculator}.
  *
  * <p>If the Slice status changes, it publishes a SliceStatusChangedEvent to trigger Plan status
  * update.
@@ -54,12 +54,20 @@ public class TaskCompletedEventHandler {
           event.planId(),
           event.status());
 
-      // 1. Query all tasks in the slice
-      List<TaskAggregate> tasks = taskRepository.findBySliceId(event.sliceId());
-      List<TaskStatus> taskStatuses = tasks.stream().map(TaskAggregate::getStatus).toList();
+      // 1. Query the task associated with the slice (1:1 relationship)
+      Optional<TaskAggregate> taskOpt = taskRepository.findBySliceId(event.sliceId());
+      if (taskOpt.isEmpty()) {
+        log.warn(
+            "Task not found for sliceId={}, skip Slice status update (possible data inconsistency)",
+            event.sliceId());
+        return;
+      }
 
-      // 2. Aggregate slice status using Domain Service
-      SliceStatus newStatus = SliceStatusCalculator.calculate(taskStatuses);
+      TaskAggregate task = taskOpt.get();
+      TaskStatus taskStatus = task.getStatus();
+
+      // 2. Calculate slice status using Domain Service (direct 1:1 mapping)
+      SliceStatus newStatus = SliceStatusCalculator.calculate(taskStatus);
 
       // 3. Update slice status
       PlanSliceAggregate slice =

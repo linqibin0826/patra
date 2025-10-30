@@ -504,11 +504,11 @@ public void markSkipped(String reason) {
 #### Step 3: Update State Machine Logic
 
 ```java
-// Update retry logic to skip SKIPPED tasks
+// After refactoring: Only FAILED tasks are retried
+// Note: CANCELLED status removed (cancellation not supported in current design)
 private boolean shouldRetry(TaskAggregate task) {
     TaskStatus status = task.getStatus();
-    return status == TaskStatus.FAILED || status == TaskStatus.CANCELLED;
-    // SKIPPED tasks are NOT retried
+    return status == TaskStatus.FAILED;
 }
 ```
 

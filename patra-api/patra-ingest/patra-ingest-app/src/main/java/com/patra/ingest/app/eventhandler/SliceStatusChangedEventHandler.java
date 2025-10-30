@@ -21,8 +21,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 /**
  * Handles SliceStatusChangedEvent to update Plan status.
  *
- * <p>When a Slice status changes, this handler aggregates the statuses of all Slices in the Plan
- * and updates the Plan status accordingly.
+ * <p>When a Slice status changes (PENDING → ASSIGNED → FINISHED), this handler aggregates the
+ * statuses of all Slices in the Plan and updates the Plan status accordingly (READY → ARCHIVED).
+ *
+ * <p><b>Note:</b> After refactoring, Plan status only reflects lifecycle state. If all Slices are
+ * FINISHED, Plan becomes ARCHIVED regardless of individual Task success/failure.
  */
 @Component
 @RequiredArgsConstructor
