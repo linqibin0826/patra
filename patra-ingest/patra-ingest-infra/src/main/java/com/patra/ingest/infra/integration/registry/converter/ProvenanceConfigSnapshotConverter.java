@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.rpc.registry.converter;
+package com.patra.ingest.infra.integration.registry.converter;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.registry.api.dto.provenance.*;
