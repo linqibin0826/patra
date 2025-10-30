@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution.batch.planner;
+package com.patra.ingest.app.usecase.execution.strategy.planner;
 
 import com.patra.common.enums.ProvenanceCode;
 import java.util.List;

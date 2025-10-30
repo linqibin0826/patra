@@ -1,10 +1,10 @@
 package com.patra.ingest.app.usecase.execution.complete;
 
-import com.patra.ingest.app.usecase.execution.batch.ExecuteTaskBatchesUseCase;
 import com.patra.ingest.app.usecase.execution.cursor.CursorAdvancer;
 import com.patra.ingest.app.usecase.execution.lease.LeaseManagementService;
 import com.patra.ingest.app.usecase.execution.publisher.LiteratureEventPublisher;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
+import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
 import com.patra.ingest.domain.event.LiteratureDataReadyEvent;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;

@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution.batch.planner;
+package com.patra.ingest.app.usecase.execution.strategy.planner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

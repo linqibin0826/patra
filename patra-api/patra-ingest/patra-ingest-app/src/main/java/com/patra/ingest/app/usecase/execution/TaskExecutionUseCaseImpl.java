@@ -1,10 +1,10 @@
 package com.patra.ingest.app.usecase.execution;
 
-import com.patra.ingest.app.usecase.execution.batch.ExecuteTaskBatchesUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.app.usecase.execution.complete.CompleteTaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.prepare.PrepareTaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
+import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
 import com.patra.ingest.domain.model.vo.ExecutionContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

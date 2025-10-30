@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution.batch;
+package com.patra.ingest.app.usecase.execution.strategy;
 
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.model.vo.ExecutionContext;

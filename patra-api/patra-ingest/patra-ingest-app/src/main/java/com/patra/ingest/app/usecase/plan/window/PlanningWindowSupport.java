@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.plan.window.support;
+package com.patra.ingest.app.usecase.plan.window;
 
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
