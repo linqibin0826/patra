@@ -55,6 +55,80 @@ api      →  NO framework dependencies (external contracts)
 
 ---
 
+## Adapter Layer Organization
+
+### Module-Level Separation (Driving vs Driven)
+
+Papertrace uses **module-level boundaries** to separate driving from driven adapters:
+
+```
+patra-{service}-adapter/     ← Driving Adapters ONLY (receive external triggers)
+├── REST APIs, Scheduled Jobs, Message Consumers
+└── Direction: External World → System
+
+patra-{service}-infra/       ← Driven Adapters ONLY (access external resources)
+├── DB Repositories, External API Clients, MQ Publishers
+└── Direction: System → External Resources
+```
+
+**Key Principle**: The module boundary provides clear separation between driving and driven adapters. No need for `inbound/outbound/` packages within the adapter module.
+
+### Package Organization Standard
+
+**Organize by adapter technology type** directly under `adapter/`:
+
+```
+com.patra.{service}.adapter/
+├── rest/           REST APIs (Spring MVC, OpenAPI)
+│   ├── internal/   (optional: microservice-to-microservice APIs)
+│   └── public/     (optional: external-facing APIs)
+├── scheduler/      Scheduled jobs (XXL-Job)
+│   ├── config/
+│   ├── job/
+│   └── param/
+├── stream/         Message consumers (RocketMQ, Kafka)
+│   └── dto/
+├── graphql/        GraphQL APIs (future)
+└── grpc/           gRPC APIs (future)
+```
+
+### Why NOT `inbound/` or `driving/`?
+
+1. **Module name provides context**: `patra-{service}-adapter` already indicates this is the adapter layer
+2. **Module contract is explicit**: `-adapter` module contains ONLY driving adapters (by architectural design)
+3. **Semantic redundancy**: `adapter.inbound.rest` repeats the "inbound" concept unnecessarily
+4. **No future conflation**: ALL outbound integrations belong in `-infra` module, never in `-adapter`
+
+### Examples of Correct Adapter Placement
+
+**Driving Adapters** (belong in `-adapter` module):
+- REST API receives HTTP request → `adapter/rest/ProvenanceController.java`
+- XXL-Job triggers scheduled task → `adapter/scheduler/job/PubmedHarvestJob.java`
+- RocketMQ consumer receives message → `adapter/stream/IngestStreamConsumers.java`
+
+**Driven Adapters** (belong in `-infra` module):
+- Call external API (PubMed) → `infra/integration/pubmed/PubmedSearchAdapter.java`
+- Access database → `infra/repository/ProvenanceRepositoryImpl.java`
+- Publish MQ message → `infra/messaging/RocketMqOutboxPublisher.java`
+- Send webhook (future) → `infra/integration/webhook/WebhookSender.java`
+
+### Naming Conventions
+
+| Adapter Type | Naming Pattern | Example |
+|--------------|----------------|---------|
+| REST Controller | `*Controller` or `*EndpointImpl` | `ProvenanceController` |
+| Scheduled Job | `*Job` | `PubmedHarvestJob` |
+| Message Consumer | `*Consumers` | `IngestStreamConsumers` |
+| Job Parameter | `*Param` or `*DTO` | `ProvenanceScheduleJobParam` |
+
+### Documentation Requirements
+
+Each adapter module MUST have:
+1. **Module README.md**: Explicitly states "This module contains ONLY driving adapters"
+2. **Package-level JavaDoc**: Each adapter type package (scheduler, rest, stream) has `package-info.java`
+
+---
+
 ## Application Layer Organization Patterns
 
 The Application layer can be organized using two complementary patterns, each suited to different scenarios.

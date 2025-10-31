@@ -5,7 +5,7 @@ import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
-import com.patra.ingest.domain.model.vo.WindowSpec;
+import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
 import java.util.Map;
 import org.mapstruct.AfterMapping;

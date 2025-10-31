@@ -5,7 +5,7 @@ import com.patra.ingest.app.usecase.execution.complete.CompleteTaskExecutionUseC
 import com.patra.ingest.app.usecase.execution.prepare.PrepareTaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

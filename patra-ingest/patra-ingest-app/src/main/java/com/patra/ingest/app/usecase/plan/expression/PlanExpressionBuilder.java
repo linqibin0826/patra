@@ -7,7 +7,7 @@ import com.patra.expr.Exprs;
 import com.patra.expr.canonical.ExprCanonicalSnapshot;
 import com.patra.expr.canonical.ExprCanonicalizer;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;

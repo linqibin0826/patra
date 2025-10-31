@@ -1,8 +1,8 @@
 package com.patra.ingest.app.usecase.plan.window;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
-import com.patra.ingest.domain.model.vo.PlannerWindow;
+import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import java.time.Instant;
 
 /**

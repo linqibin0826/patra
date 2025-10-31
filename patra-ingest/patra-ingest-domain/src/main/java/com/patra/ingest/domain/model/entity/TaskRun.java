@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.entity;
 
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
-import com.patra.ingest.domain.model.vo.RunContext;
-import com.patra.ingest.domain.model.vo.RunStats;
-import com.patra.ingest.domain.model.vo.TaskRunCheckpoint;
-import com.patra.ingest.domain.model.vo.WindowSpec;
+import com.patra.ingest.domain.model.vo.execution.RunContext;
+import com.patra.ingest.domain.model.vo.execution.RunStats;
+import com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint;
+import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.time.Instant;
 import lombok.Getter;
 

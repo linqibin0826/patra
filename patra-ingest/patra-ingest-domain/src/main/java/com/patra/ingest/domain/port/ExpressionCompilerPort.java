@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.ingest.domain.model.vo.ExprCompilationRequest;
-import com.patra.ingest.domain.model.vo.ExprCompilationResult;
+import com.patra.ingest.domain.model.vo.expression.ExprCompilationRequest;
+import com.patra.ingest.domain.model.vo.expression.ExprCompilationResult;
 
 /**
  * Port that compiles ingestion expressions into executable queries and parameters.

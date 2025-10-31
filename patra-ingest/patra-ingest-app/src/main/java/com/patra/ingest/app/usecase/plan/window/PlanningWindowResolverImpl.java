@@ -11,8 +11,8 @@ import static com.patra.ingest.app.usecase.plan.window.PlanningWindowSupport.res
 
 import cn.hutool.core.util.StrUtil;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.vo.PlanTriggerNorm;
-import com.patra.ingest.domain.model.vo.PlannerWindow;
+import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
+import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;

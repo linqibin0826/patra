@@ -2,9 +2,9 @@ package com.patra.ingest.domain.model.entity;
 
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
-import com.patra.ingest.domain.model.vo.CursorLineage;
-import com.patra.ingest.domain.model.vo.CursorValue;
-import com.patra.ingest.domain.model.vo.CursorWatermark;
+import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
+import com.patra.ingest.domain.model.vo.cursor.CursorValue;
+import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
 import java.util.Objects;
 import lombok.Getter;
 

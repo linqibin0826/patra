@@ -1,8 +1,8 @@
 package com.patra.ingest.app.usecase.execution.strategy.planner;
 
 import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.vo.BatchPlan;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.batch.BatchPlan;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
  * Batch planner interface.

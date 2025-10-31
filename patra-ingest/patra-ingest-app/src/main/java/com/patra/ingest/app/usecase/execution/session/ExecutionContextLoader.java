@@ -1,7 +1,7 @@
 package com.patra.ingest.app.usecase.execution.session;
 
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
  * Execution context loader.

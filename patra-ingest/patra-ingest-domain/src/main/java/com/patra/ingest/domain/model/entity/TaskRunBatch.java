@@ -2,11 +2,11 @@ package com.patra.ingest.domain.model.entity;
 
 import com.patra.common.util.HashUtils;
 import com.patra.ingest.domain.model.enums.BatchStatus;
-import com.patra.ingest.domain.model.vo.Batch;
-import com.patra.ingest.domain.model.vo.BatchResult;
-import com.patra.ingest.domain.model.vo.BatchStats;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
-import com.patra.ingest.domain.model.vo.IdempotentKey;
+import com.patra.ingest.domain.model.vo.batch.Batch;
+import com.patra.ingest.domain.model.vo.batch.BatchResult;
+import com.patra.ingest.domain.model.vo.batch.BatchStats;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import java.time.Instant;
 import lombok.Getter;
 

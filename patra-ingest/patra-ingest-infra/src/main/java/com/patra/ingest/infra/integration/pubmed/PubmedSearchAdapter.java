@@ -6,7 +6,7 @@ import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.util.HashUtils;
 import com.patra.ingest.domain.exception.BatchPlanningException;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.vo.PlanMetadata;
+import com.patra.ingest.domain.model.vo.plan.PlanMetadata;
 import com.patra.ingest.domain.port.PubmedSearchPort;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
