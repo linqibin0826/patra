@@ -148,6 +148,39 @@ public class Cursor {
       String namespaceKey,
       java.time.Instant watermark,
       CursorLineage lineage) {
+    return create(
+        provenanceCode,
+        operationCode,
+        cursorKey,
+        namespaceScope,
+        namespaceKey,
+        watermark,
+        lineage,
+        null);
+  }
+
+  /**
+   * Factory method creating a time-based cursor with lineage context and expression hash.
+   *
+   * @param provenanceCode provenance code
+   * @param operationCode operation code
+   * @param cursorKey cursor key identifier
+   * @param namespaceScope namespace scope (GLOBAL/TASK/PLAN)
+   * @param namespaceKey namespace key
+   * @param watermark initial watermark timestamp
+   * @param lineage lineage context capturing task/run/plan/slice identifiers
+   * @param exprHash expression hash for tracking strategy changes
+   * @return new cursor instance
+   */
+  public static Cursor create(
+      String provenanceCode,
+      String operationCode,
+      String cursorKey,
+      String namespaceScope,
+      String namespaceKey,
+      java.time.Instant watermark,
+      CursorLineage lineage,
+      String exprHash) {
     NamespaceScope scope = NamespaceScope.fromCode(namespaceScope);
     CursorType type = CursorType.TIME;
     CursorValue value = watermark == null ? CursorValue.empty() : CursorValue.time(watermark);
@@ -164,7 +197,7 @@ public class Cursor {
         value,
         watermarkVO,
         lineage == null ? CursorLineage.empty() : lineage,
-        null);
+        exprHash);
   }
 
   /** Advance the cursor to the supplied time watermark. */
