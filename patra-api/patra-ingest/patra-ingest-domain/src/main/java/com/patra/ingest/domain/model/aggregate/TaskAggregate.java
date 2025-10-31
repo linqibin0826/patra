@@ -4,9 +4,9 @@ import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
-import com.patra.ingest.domain.model.vo.ExecutionTimeline;
-import com.patra.ingest.domain.model.vo.LeaseInfo;
-import com.patra.ingest.domain.model.vo.TaskSchedulerContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
+import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
+import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import java.time.Instant;
 import lombok.Getter;
 

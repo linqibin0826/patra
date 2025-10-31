@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.ingest.domain.model.vo.StorageUploadRequest;
-import com.patra.ingest.domain.model.vo.StorageUploadResult;
+import com.patra.ingest.domain.model.vo.storage.StorageUploadRequest;
+import com.patra.ingest.domain.model.vo.storage.StorageUploadResult;
 
 /**
  * Port for interacting with object storage (MinIO/S3).

@@ -2,7 +2,7 @@ package com.patra.ingest.domain.port;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.ingest.domain.model.vo.PlanMetadata;
+import com.patra.ingest.domain.model.vo.plan.PlanMetadata;
 
 /**
  * Domain port for PubMed search metadata.

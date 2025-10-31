@@ -1,7 +1,7 @@
 package com.patra.ingest.app.usecase.execution.strategy;
 
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
  * Use case for executing task batches (Execute phase).

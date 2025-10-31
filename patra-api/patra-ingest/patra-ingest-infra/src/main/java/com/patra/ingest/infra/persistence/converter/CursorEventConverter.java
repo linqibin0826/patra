@@ -3,7 +3,7 @@ package com.patra.ingest.infra.persistence.converter;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
-import com.patra.ingest.domain.model.vo.CursorLineage;
+import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.infra.persistence.entity.CursorEventDO;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
  * Cursor advancer interface.

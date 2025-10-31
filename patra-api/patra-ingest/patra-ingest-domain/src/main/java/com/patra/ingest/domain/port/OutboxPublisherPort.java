@@ -1,7 +1,7 @@
 package com.patra.ingest.domain.port;
 
 import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.domain.model.vo.RelayPlan;
+import com.patra.ingest.domain.model.vo.relay.RelayPlan;
 
 /**
  * Port that publishes outbox messages.

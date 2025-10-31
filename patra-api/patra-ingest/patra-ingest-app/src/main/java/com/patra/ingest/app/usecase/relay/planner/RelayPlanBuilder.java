@@ -6,7 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
 import com.patra.ingest.app.usecase.relay.config.OutboxRelayProperties;
-import com.patra.ingest.domain.model.vo.RelayPlan;
+import com.patra.ingest.domain.model.vo.relay.RelayPlan;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;

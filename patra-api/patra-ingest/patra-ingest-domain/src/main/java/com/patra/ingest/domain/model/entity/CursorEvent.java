@@ -2,7 +2,7 @@ package com.patra.ingest.domain.model.entity;
 
 import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
-import com.patra.ingest.domain.model.vo.CursorLineage;
+import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import java.math.BigDecimal;
 import java.time.Instant;
 import lombok.Getter;

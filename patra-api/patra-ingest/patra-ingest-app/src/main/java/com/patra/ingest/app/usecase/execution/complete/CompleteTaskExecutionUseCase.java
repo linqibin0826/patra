@@ -2,7 +2,7 @@ package com.patra.ingest.app.usecase.execution.complete;
 
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.ExecuteTaskBatchesUseCase;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
  * Complete phase use case.

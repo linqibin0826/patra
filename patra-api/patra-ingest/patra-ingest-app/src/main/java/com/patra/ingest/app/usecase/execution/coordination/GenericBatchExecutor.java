@@ -2,9 +2,9 @@ package com.patra.ingest.app.usecase.execution.coordination;
 
 import com.patra.common.model.StandardLiterature;
 import com.patra.ingest.app.usecase.execution.converter.ProvenanceConfigConverter;
-import com.patra.ingest.domain.model.vo.Batch;
-import com.patra.ingest.domain.model.vo.BatchResult;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.batch.Batch;
+import com.patra.ingest.domain.model.vo.batch.BatchResult;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.starter.provenance.common.adapter.AdapterRegistry;
 import com.patra.starter.provenance.common.adapter.AdapterRequest;
 import com.patra.starter.provenance.common.adapter.AdapterResult;

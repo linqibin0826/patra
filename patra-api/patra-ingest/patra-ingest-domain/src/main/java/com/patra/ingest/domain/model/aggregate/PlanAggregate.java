@@ -3,7 +3,7 @@ package com.patra.ingest.domain.model.aggregate;
 import com.patra.common.domain.AggregateRoot;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
-import com.patra.ingest.domain.model.vo.WindowSpec;
+import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;

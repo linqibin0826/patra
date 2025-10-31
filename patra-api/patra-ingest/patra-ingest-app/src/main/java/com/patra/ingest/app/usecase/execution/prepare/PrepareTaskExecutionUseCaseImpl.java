@@ -10,7 +10,7 @@ import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.entity.TaskRun;
 import com.patra.ingest.domain.model.enums.SliceStatus;
-import com.patra.ingest.domain.model.vo.ExecutionContext;
+import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.PlanSliceRepository;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;

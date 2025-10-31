@@ -1,0 +1,39 @@
+package com.patra.ingest.domain.model.vo.execution;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+
+/**
+ * Execution context capturing configuration snapshots and compiled expressions for a task run.
+ *
+ * @param taskId task identifier
+ * @param runId run identifier
+ * @param planId owning plan identifier
+ * @param sliceId owning slice identifier
+ * @param scheduleInstanceId schedule instance identifier (from TaskAggregate)
+ * @param provenanceCode provenance code
+ * @param operationCode operation code
+ * @param configSnapshot configuration snapshot
+ * @param exprHash expression hash
+ * @param compiledQuery compiled query
+ * @param compiledParams compiled query parameters
+ * @param normalizedExpression normalized expression string
+ * @param windowSpec window specification
+ * @author linqibin
+ * @since 0.1.0
+ */
+public record ExecutionContext(
+    Long taskId,
+    Long runId,
+    Long planId,
+    Long sliceId,
+    Long scheduleInstanceId,
+    String provenanceCode,
+    String operationCode,
+    ProvenanceConfigSnapshot configSnapshot,
+    String exprHash,
+    String compiledQuery,
+    JsonNode compiledParams,
+    String normalizedExpression,
+    WindowSpec windowSpec) {}

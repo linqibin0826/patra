@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.domain.exception.OutboxPublishException;
 import com.patra.ingest.domain.exception.OutboxPublishException.Reason;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
-import com.patra.ingest.domain.model.vo.RelayPlan;
+import com.patra.ingest.domain.model.vo.relay.RelayPlan;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
 import com.patra.ingest.infra.config.OutboxMqProperties;
 import java.util.Collections;

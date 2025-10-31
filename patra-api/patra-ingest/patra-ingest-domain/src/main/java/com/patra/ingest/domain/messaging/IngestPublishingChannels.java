@@ -1,8 +1,8 @@
 package com.patra.ingest.domain.messaging;
 
 import com.patra.common.messaging.ChannelKey;
-import com.patra.ingest.domain.model.vo.LiteratureReadyMessage;
-import com.patra.ingest.domain.model.vo.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.execution.TaskReadyMessage;
+import com.patra.ingest.domain.model.vo.relay.LiteratureReadyMessage;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
