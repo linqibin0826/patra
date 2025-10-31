@@ -166,10 +166,8 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                   namespaceScope,
                   namespaceKey,
                   newWatermark,
-                  lineage);
-
-          // Advance the new cursor with the new expression hash
-          cursor.advanceTo(newWatermark, lineage, context.exprHash());
+                  lineage,
+                  context.exprHash());
 
           // Update tracking variables for event creation
           prevWatermark = null;
@@ -187,7 +185,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
             context.planId(),
             context.sliceId());
       } else {
-        // 5.2 Cursor missing: create with lineage (first advancement)
+        // 5.2 Cursor missing: create with lineage and expression hash (first advancement)
         cursor =
             Cursor.create(
                 provenanceCode,
@@ -196,16 +194,18 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                 namespaceScope,
                 namespaceKey,
                 newWatermark,
-                lineage);
+                lineage,
+                context.exprHash());
 
         prevWatermark = null;
         prevValue = null;
 
         log.info(
-            "cursor created provenanceCode={} endpointName={} watermark={} taskId={} runId={} planId={} sliceId={}",
+            "cursor created provenanceCode={} endpointName={} watermark={} exprHash={} taskId={} runId={} planId={} sliceId={}",
             provenanceCode,
             operationCode,
             newWatermark,
+            context.exprHash(),
             taskId,
             runId,
             context.planId(),
