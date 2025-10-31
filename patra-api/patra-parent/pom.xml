@@ -9,23 +9,23 @@
     <name>Papertrace Parent</name>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <project.version>0.1.0-SNAPSHOT</project.version>
 
-        <spring-boot.version>3.2.4</spring-boot.version>
+        <spring-boot.version>3.5.7</spring-boot.version>
 
         <!-- Align versions with Spring Cloud Alibaba by importing the BOM; choose specific versions according to the compatibility matrix. -->
-        <spring-cloud.version>2023.0.1</spring-cloud.version>
-        <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
+        <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
         <mybatis-plus.version>3.5.12</mybatis-plus.version>
 
-        <lombok.version>1.18.38</lombok.version>
+        <lombok.version>1.18.40</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.mapstruct.version>0.2.0</lombok.mapstruct.version>
 
         <hutool.version>5.8.25</hutool.version>
         <xxl-job.version>3.2.0</xxl-job.version>
-        <rocketmq.version>5.1.4</rocketmq.version>
+        <rocketmq.version>5.3.1</rocketmq.version>
         <guava.version>31.1-jre</guava.version>
         <okio.version>3.6.0</okio.version>
         <resilience4j.version>2.2.0</resilience4j.version>
@@ -307,6 +307,13 @@
                 <version>2.14.0</version>
             </dependency>
 
+            <!-- Fastjson2 - Resolve version conflict between RocketMQ and Spring Cloud Alibaba -->
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>2.0.58</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -371,8 +378,8 @@
                             <configuration>
                                 <rules>
                                     <requireJavaVersion>
-                                        <version>[21,)</version>
-                                        <message>Java 21 or higher is required</message>
+                                        <version>[25,)</version>
+                                        <message>Java 25 or higher is required</message>
                                     </requireJavaVersion>
                                     <requireMavenVersion>
                                         <version>[3.8.1,)</version>
@@ -419,7 +426,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.14.1</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
                     <parameters>true</parameters>
