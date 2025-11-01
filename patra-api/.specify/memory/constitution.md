@@ -161,8 +161,8 @@ Code MUST follow these naming conventions:
 
 Core technologies are standardized across all services:
 
-- **Language**: Java 21 with modern features (`record`, pattern matching, sealed classes)
-- **Framework**: Spring Boot 3.2.4 + Spring Cloud 2023.0.1
+- **Language**: Java 25 with modern features (`record`, pattern matching, sealed classes)
+- **Framework**: Spring Boot 3.5.7 + Spring Cloud 2025.0.0
 - **Persistence**: MyBatis-Plus + MySQL 8.x
 - **Build**: Maven 3.9+
 - **Messaging**: RocketMQ (Kafka planned)

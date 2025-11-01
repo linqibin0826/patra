@@ -9,7 +9,7 @@
 Provides **consistent** dependency versions and build configuration:
 - Dependency management (Spring Boot, MyBatis-Plus, etc.)
 - Plugin management (compiler, surefire, jacoco, etc.)
-- Java version enforcement (Java 21)
+- Java version enforcement (Java 25)
 - Encoding standards (UTF-8)
 - Maven properties (versions, flags)
 

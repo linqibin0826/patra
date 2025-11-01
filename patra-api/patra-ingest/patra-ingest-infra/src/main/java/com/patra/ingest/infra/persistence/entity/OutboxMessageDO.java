@@ -155,6 +155,18 @@ public class OutboxMessageDO extends BaseDO {
   private Instant notBefore;
 
   /**
+   * Successful publish timestamp (UTC).
+   *
+   * <p>Set when status transitions to PUBLISHED; NULL for all other statuses.
+   *
+   * <p>Use cases: Track relay latency (published_at - created_at), audit trail.
+   *
+   * @since 2.0
+   */
+  @TableField("published_at")
+  private Instant publishedAt;
+
+  /**
    * Publish status code.
    *
    * <p>Values: <code>PENDING</code>/<code>PUBLISHING</code>/<code>PUBLISHED</code>/<code>FAILED

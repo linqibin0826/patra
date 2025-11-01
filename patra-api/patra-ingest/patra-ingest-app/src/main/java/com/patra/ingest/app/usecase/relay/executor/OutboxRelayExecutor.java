@@ -1,280 +1,190 @@
 package com.patra.ingest.app.usecase.relay.executor;
 
-import cn.hutool.core.util.StrUtil;
+import com.patra.ingest.app.usecase.relay.coordinator.RelayLeaseCoordinator;
+import com.patra.ingest.app.usecase.relay.coordinator.RelayLogCoordinator;
+import com.patra.ingest.app.usecase.relay.coordinator.RelayLogCoordinator.LogAccumulator;
+import com.patra.ingest.app.usecase.relay.coordinator.RelayPublishCoordinator;
+import com.patra.ingest.app.usecase.relay.coordinator.RelayPublishCoordinator.RelayResult;
 import com.patra.ingest.domain.event.OutboxLeaseMissedEvent;
 import com.patra.ingest.domain.event.OutboxMessageDeferredEvent;
 import com.patra.ingest.domain.event.OutboxMessageFailedEvent;
 import com.patra.ingest.domain.event.OutboxMessagePublishedEvent;
 import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
+import com.patra.ingest.domain.model.vo.relay.RelayBatchId;
 import com.patra.ingest.domain.model.vo.relay.RelayBatchResult;
 import com.patra.ingest.domain.model.vo.relay.RelayPlan;
-import com.patra.ingest.domain.policy.RelayErrorClassifier;
-import com.patra.ingest.domain.policy.RelayErrorClassifier.RelayErrorKind;
-import com.patra.ingest.domain.policy.RelayRetryPolicy;
-import com.patra.ingest.domain.port.OutboxPublisherPort;
 import com.patra.ingest.domain.port.OutboxRelayStore;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox Relay executor: completes message retrieval, lease validation, publishing, and state
- * updates within a single trigger cycle.
+ * Outbox relay executor - orchestrates relay batch execution via specialized coordinators.
  *
- * <p>Idempotency: relies on lease acquisition plus version increments; failures persist durable
- * error information to prevent reprocessing; deferred retries are controlled via {@code
- * nextRetryAt}.
+ * <h3>Responsibilities</h3>
  *
- * <p>Error classification: delegates to {@link RelayErrorClassifier} to distinguish FATAL and
- * TRANSIENT cases and route them to {@code markFailed} or {@code markDeferred}.
+ * <ul>
+ *   <li>Fetch pending messages from persistence store
+ *   <li>Delegate lease acquisition to {@link RelayLeaseCoordinator}
+ *   <li>Delegate publishing and state transitions to {@link RelayPublishCoordinator}
+ *   <li>Delegate relay logging to {@link RelayLogCoordinator}
+ *   <li>Accumulate batch statistics and domain events
+ * </ul>
  *
- * <p>Logging strategy: DEBUG for diagnostics (opt-in), WARN for retryable failures, and ERROR for
- * permanent failures.
+ * <h3>Architecture: Orchestrator + Coordinators Pattern</h3>
  *
- * @author linqibin
- * @since 0.1.0
+ * <p>This executor is a slim orchestrator (~250 lines) that delegates all concerns to specialized
+ * coordinators:
+ *
+ * <ul>
+ *   <li><strong>RelayLeaseCoordinator</strong>: Distributed lease acquisition with optimistic
+ *       locking
+ *   <li><strong>RelayPublishCoordinator</strong>: Message publishing, error classification, retry
+ *       scheduling
+ *   <li><strong>RelayLogCoordinator</strong>: Complete audit trail creation and batch persistence
+ * </ul>
+ *
+ * <h3>Execution Flow</h3>
+ *
+ * <pre>
+ * 1. Fetch pending messages (respecting channel filter and batch size)
+ * 2. Create relay batch ID and log accumulator
+ * 3. For each message:
+ *    a. Try acquire lease → record LEASE_MISSED if failed
+ *    b. Publish message → handle SUCCESS/DEFERRED/FAILED outcome
+ *    c. Record relay log for audit trail
+ * 4. Batch-persist all relay logs (single INSERT statement)
+ * 5. Return batch result with statistics and domain events
+ * </pre>
+ *
+ * <h3>Domain Events</h3>
+ *
+ * <p>Emits events for:
+ *
+ * <ul>
+ *   <li>{@link OutboxLeaseMissedEvent}: Lease acquisition failed
+ *   <li>{@link OutboxMessagePublishedEvent}: Message published successfully
+ *   <li>{@link OutboxMessageDeferredEvent}: Transient error, scheduled for retry
+ *   <li>{@link OutboxMessageFailedEvent}: Permanent failure after max retries
+ * </ul>
+ *
+ * @author Papertrace Team
+ * @since 2.0
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class OutboxRelayExecutor {
 
-  private static final int ERROR_MSG_LIMIT = 512;
-
   private final OutboxRelayStore relayStore;
-  private final OutboxPublisherPort publisherPort;
-  private final RelayRetryPolicy retryPolicy;
-  private final RelayErrorClassifier errorClassifier;
-
-  public OutboxRelayExecutor(
-      OutboxRelayStore relayStore,
-      OutboxPublisherPort publisherPort,
-      RelayRetryPolicy retryPolicy,
-      RelayErrorClassifier errorClassifier) {
-    this.relayStore = relayStore;
-    this.publisherPort = publisherPort;
-    this.retryPolicy = retryPolicy;
-    this.errorClassifier = errorClassifier;
-  }
+  private final RelayLeaseCoordinator leaseCoordinator;
+  private final RelayPublishCoordinator publishCoordinator;
+  private final RelayLogCoordinator logCoordinator;
 
   /**
-   * Execute a single batch publication.
+   * Executes a single relay batch according to the plan.
    *
-   * <ol>
-   *   <li>{@code fetchPending} fetches candidate messages according to the plan (single channel or
-   *       all channels).
-   *   <li>Attempt {@code acquireLease} per message (optimistic concurrency control).
-   *   <li>Publish -> {@code markPublished}; on exception classify and invoke {@code markFailed} or
-   *       {@code markDeferred}.
-   *   <li>Accumulate domain events and batch statistics.
-   * </ol>
+   * <p>Fetches pending messages, processes each through the relay pipeline (lease → publish → log),
+   * and returns batch-level statistics.
    *
-   * @param plan publication plan
-   * @return batch-level metrics
+   * @param plan relay plan specifying channel, batch size, retry policy, and lease parameters
+   * @return batch result with counts and domain events
    */
   public RelayBatchResult execute(RelayPlan plan) {
-    // Fetch pending messages according to the plan, subject to lease and batch limits
-    // When plan.channel() is null we fetch messages across every channel
-    List<OutboxMessage> messages = fetchMessages(plan);
+    // Fetch pending messages (null channel means all channels)
+    String channel = plan.channel() != null ? plan.channel().channel() : null;
+    List<OutboxMessage> messages =
+        relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
+
     if (messages.isEmpty()) {
       if (log.isDebugEnabled()) {
-        String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
+        String channelDesc = channel != null ? channel : "ALL_CHANNELS";
         log.debug(
-            "relay executor no-pending channel={} triggeredAt={}", channelDesc, plan.triggeredAt());
+            "No pending messages for channel [{}], triggeredAt={}",
+            channelDesc,
+            plan.triggeredAt());
       }
       return RelayBatchResult.empty(plan.channel());
     }
 
     if (log.isDebugEnabled()) {
-      String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
+      String channelDesc = channel != null ? channel : "ALL_CHANNELS";
       log.debug(
-          "Processing relay batch for channel [{}] with {} messages, leaseOwner [{}]",
+          "Processing relay batch for channel [{}]: {} messages, leaseOwner={}",
           channelDesc,
           messages.size(),
           plan.leaseOwner());
     }
 
+    // Create batch ID and log accumulator
+    RelayBatchId batchId = RelayBatchId.generate(plan.triggeredAt());
+    LogAccumulator logAcc = logCoordinator.createAccumulator(batchId);
+
+    // Process messages and accumulate statistics
     RelayContext context = new RelayContext(plan);
     for (OutboxMessage message : messages) {
-      processMessage(message, context);
+      processMessage(message, context, logAcc);
     }
+
+    // Persist all relay logs in batch (single INSERT with N rows)
+    logCoordinator.persistBatch(logAcc);
+
     return context.toBatchResult(messages.size());
   }
 
   /**
-   * Fetch pending messages from the persistence layer as instructed by the plan.
+   * Processes a single message through the relay pipeline: lease → publish → log.
    *
-   * @param plan relay plan with channel filter, availability window, and batch size
-   * @return pending messages; empty collection indicates nothing eligible
+   * @param message outbox message to relay
+   * @param context batch context for statistics and events
+   * @param logAcc log accumulator for audit trail
    */
-  private List<OutboxMessage> fetchMessages(RelayPlan plan) {
-    // Null channel means all channels are eligible
-    String channel = plan.channel() != null ? plan.channel().channel() : null;
-    List<OutboxMessage> messages =
-        relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
+  private void processMessage(OutboxMessage message, RelayContext context, LogAccumulator logAcc) {
+    Instant startTime = Instant.now();
 
-    if (log.isDebugEnabled()) {
-      String channelDesc = channel != null ? channel : "ALL_CHANNELS";
-      log.debug(
-          "Fetched {} pending outbox messages for channel [{}], batchSize limit: {}",
-          messages.size(),
-          channelDesc,
-          plan.batchSize());
-    }
-
-    return messages;
-  }
-
-  /**
-   * Execute the relay pipeline for a single message: lease acquisition, publish attempt, and state
-   * update according to the outcome.
-   *
-   * @param message Outbox message to process
-   * @param context batch context that accumulates statistics and domain events
-   */
-  private void processMessage(OutboxMessage message, RelayContext context) {
-    if (!tryAcquireLease(message, context)) {
-      return;
-    }
-    long publishingVersion = nextVersionOf(message);
-    try {
-      publisherPort.publish(message, context.plan());
-      relayStore.markPublished(message.getId(), publishingVersion);
-      context.onPublished(message);
-    } catch (Exception ex) {
-      // Delegate exception classification to the failure decision module (retry vs fail)
-      handleFailure(message, context, publishingVersion, ex);
-    }
-  }
-
-  /**
-   * Attempt to acquire a lease; record the miss and skip processing when another worker already
-   * owns it.
-   *
-   * @param message message whose lease is requested
-   * @param context batch context
-   * @return {@code true} when the lease is acquired successfully
-   */
-  private boolean tryAcquireLease(OutboxMessage message, RelayContext context) {
-    RelayPlan plan = context.plan();
-    boolean leased =
-        relayStore.acquireLease(
-            message.getId(), message.getVersion(), plan.leaseOwner(), plan.leaseExpireAt());
-    if (!leased) {
+    // Attempt lease acquisition
+    if (!leaseCoordinator.tryAcquire(message, context.plan())) {
       context.onLeaseMissed(message);
-    }
-    return leased;
-  }
-
-  /**
-   * Route failure handling based on the classified exception: permanent failures persist
-   * immediately, while transient ones are rescheduled according to the retry policy.
-   *
-   * @param message current message
-   * @param context batch context
-   * @param publishingVersion version written alongside the status update
-   * @param exception exception thrown during publish
-   */
-  private void handleFailure(
-      OutboxMessage message, RelayContext context, long publishingVersion, Exception exception) {
-    RelayPlan plan = context.plan();
-    FailureDecision decision = decideFailure(message, plan, exception);
-    if (decision.handling() == FailureHandling.FAIL) {
-      relayStore.markFailed(
-          message.getId(),
-          publishingVersion,
-          decision.nextRetry(),
-          decision.errorCode(),
-          decision.errorMessage());
-      context.onFailed(
-          message, decision.nextRetry(), decision.errorCode(), decision.errorMessage(), exception);
+      logAcc.recordLeaseMissed(message, context.plan().leaseOwner(), startTime);
       return;
     }
-    Duration delay = retryPolicy.computeDelay(decision.nextRetry());
-    Instant nextRetryAt = plan.triggeredAt().plus(delay);
-    relayStore.markDeferred(
-        message.getId(),
-        publishingVersion,
-        decision.nextRetry(),
-        nextRetryAt,
-        decision.errorCode(),
-        decision.errorMessage());
-    context.onDeferred(
-        message,
-        decision.nextRetry(),
-        nextRetryAt,
-        decision.errorCode(),
-        decision.errorMessage(),
-        exception);
+
+    // Publish message and handle result
+    RelayResult result = publishCoordinator.publish(message, context.plan());
+
+    if (result.isSuccess()) {
+      context.onPublished(message, result.attemptNumber());
+      logAcc.recordPublished(message, context.plan().leaseOwner(), startTime, Instant.now());
+    } else if (result.isDeferred()) {
+      context.onDeferred(message, result);
+      logAcc.recordDeferred(
+          message,
+          context.plan().leaseOwner(),
+          startTime,
+          result.nextRetryAt(),
+          result.errorCode(),
+          result.errorMessage(),
+          "TRANSIENT"); // Deferred always means transient error
+    } else {
+      context.onFailed(message, result);
+      logAcc.recordFailed(
+          message,
+          context.plan().leaseOwner(),
+          startTime,
+          result.errorCode(),
+          result.errorMessage(),
+          "FATAL"); // Failed can be FATAL or max retries (treat as FATAL)
+    }
   }
 
   /**
-   * Aggregate exception information, determine the handling strategy, and wrap the decision for the
-   * main flow.
-   */
-  private FailureDecision decideFailure(
-      OutboxMessage message, RelayPlan plan, Exception exception) {
-    RelayErrorKind kind = errorClassifier.classify(exception);
-    int nextRetry = nextRetryCount(message);
-    FailureHandling handling = determineFailureHandling(plan, kind, nextRetry);
-    String errorCode = errorCode(exception);
-    String errorMessage = errorMessage(exception);
-    return new FailureDecision(handling, nextRetry, errorCode, errorMessage);
-  }
-
-  /** Decide whether the failure should terminate processing or re-enter the retry flow. */
-  private FailureHandling determineFailureHandling(
-      RelayPlan plan, RelayErrorKind kind, int nextRetry) {
-    if (kind == RelayErrorKind.FATAL) {
-      return FailureHandling.FAIL;
-    }
-    if (nextRetry >= plan.maxAttempts()) {
-      return FailureHandling.FAIL;
-    }
-    return FailureHandling.RETRY;
-  }
-
-  /** Calculate the next persisted version (treat {@code null} as zero). */
-  private long nextVersionOf(OutboxMessage message) {
-    long currentVersion = message.getVersion() == null ? 0L : message.getVersion();
-    return currentVersion + 1;
-  }
-
-  /** Calculate the next retry count; later persisted as {@code retryCount}. */
-  private int nextRetryCount(OutboxMessage message) {
-    int currentRetry = message.getRetryCount() == null ? 0 : message.getRetryCount();
-    return currentRetry + 1;
-  }
-
-  /** Use the exception type name as the error code field. */
-  private String errorCode(Exception exception) {
-    return exception.getClass().getSimpleName();
-  }
-
-  /** Trim the exception message to keep stored fields within length limits. */
-  private String errorMessage(Exception exception) {
-    String message = exception.getMessage();
-    if (message == null) {
-      return null;
-    }
-    return StrUtil.maxLength(message, ERROR_MSG_LIMIT);
-  }
-
-  /** Snapshot of the failure decision, carrying the handling mode and key metadata. */
-  private record FailureDecision(
-      FailureHandling handling, int nextRetry, String errorCode, String errorMessage) {}
-
-  private enum FailureHandling {
-    RETRY,
-    FAIL
-  }
-
-  /**
-   * Batch context: encapsulates statistics, domain events, and log output to keep the loop
-   * readable.
+   * Batch context for accumulating statistics and domain events during relay execution.
+   *
+   * <p>Thread-safety: NOT thread-safe, used within single-threaded relay job execution.
    */
   private static final class RelayContext {
     private final RelayPlan plan;
@@ -288,21 +198,12 @@ public class OutboxRelayExecutor {
       this.plan = plan;
     }
 
-    /** Expose the current plan to outer layers. */
     private RelayPlan plan() {
       return plan;
     }
 
-    /** Lease acquisition failed: log and register the domain event. */
     private void onLeaseMissed(OutboxMessage message) {
       leaseMissed++;
-      if (log.isDebugEnabled()) {
-        log.debug(
-            "relay lease-missed messageId={} channel={} existingLeaseOwner={}",
-            message.getId(),
-            message.getChannel(),
-            message.getLeaseOwner());
-      }
       events.add(
           new OutboxLeaseMissedEvent(
               message.getId(),
@@ -312,11 +213,7 @@ public class OutboxRelayExecutor {
               plan.triggeredAt()));
     }
 
-    /** Publish succeeded: increment counters and emit domain event. */
-    private void onPublished(OutboxMessage message) {
-      if (log.isDebugEnabled()) {
-        log.debug("relay published messageId={} channel={}", message.getId(), message.getChannel());
-      }
+    private void onPublished(OutboxMessage message, int attemptNumber) {
       published++;
       events.add(
           new OutboxMessagePublishedEvent(
@@ -326,65 +223,36 @@ public class OutboxRelayExecutor {
               plan.triggeredAt()));
     }
 
-    /** Permanent failure: emit an error log and register the domain event. */
-    private void onFailed(
-        OutboxMessage message,
-        int nextRetry,
-        String errorCode,
-        String errorMessage,
-        Exception exception) {
-      failed++;
-      log.error(
-          "Relay publish failed permanently, messageId={} channel={} retryCount={} errorCode={}",
-          message.getId(),
-          message.getChannel(),
-          nextRetry,
-          errorCode,
-          exception);
-      events.add(
-          new OutboxMessageFailedEvent(
-              message.getId(),
-              message.getChannel(),
-              nextRetry,
-              errorCode,
-              errorMessage,
-              plan.triggeredAt()));
-    }
-
-    /** Deferred retry: log at WARN level and register the retry schedule. */
-    private void onDeferred(
-        OutboxMessage message,
-        int nextRetry,
-        Instant nextRetryAt,
-        String errorCode,
-        String errorMessage,
-        Exception exception) {
+    private void onDeferred(OutboxMessage message, RelayResult result) {
       retried++;
-      log.warn(
-          "Relay publish deferred, messageId={} channel={} retryCount={} nextRetryAt={} errorCode={}",
-          message.getId(),
-          message.getChannel(),
-          nextRetry,
-          nextRetryAt,
-          errorCode,
-          exception);
       events.add(
           new OutboxMessageDeferredEvent(
               message.getId(),
               message.getChannel(),
-              nextRetry,
-              nextRetryAt,
-              errorCode,
-              errorMessage,
+              result.attemptNumber(),
+              result.nextRetryAt(),
+              result.errorCode(),
+              result.errorMessage(),
               plan.triggeredAt()));
     }
 
-    /** Assemble the final batch result with statistics and domain events. */
+    private void onFailed(OutboxMessage message, RelayResult result) {
+      failed++;
+      events.add(
+          new OutboxMessageFailedEvent(
+              message.getId(),
+              message.getChannel(),
+              result.attemptNumber(),
+              result.errorCode(),
+              result.errorMessage(),
+              plan.triggeredAt()));
+    }
+
     private RelayBatchResult toBatchResult(int totalMessages) {
       if (log.isDebugEnabled()) {
         String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
         log.debug(
-            "Relay batch completed for channel [{}]: {} messages processed, {} published, {} retried, {} failed, {} leaseMissed",
+            "Relay batch completed for channel [{}]: {} messages processed ({} published, {} retried, {} failed, {} leaseMissed)",
             channelDesc,
             totalMessages,
             published,

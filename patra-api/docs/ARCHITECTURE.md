@@ -320,8 +320,8 @@ patra-parent (root POM)
 
 | Layer           | Technology                        |
 |-----------------|-----------------------------------|
-| **Framework**   | Spring Boot 3.x, Spring Cloud     |
-| **Language**    | Java 21                           |
+| **Framework**   | Spring Boot 3.5.7, Spring Cloud 2025.0.0 |
+| **Language**    | Java 25                           |
 | **Persistence** | MyBatis-Plus, MySQL 8.x           |
 | **Messaging**   | RocketMQ / Kafka (planned)        |
 | **API**         | REST (Feign for RPC)              |
