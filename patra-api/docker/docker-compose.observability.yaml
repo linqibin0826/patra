@@ -8,7 +8,6 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
     container_name: patra-es
-    restart: unless-stopped
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -34,7 +33,6 @@ services:
   skywalking-oap:
     image: apache/skywalking-oap-server:10.2.0
     container_name: patra-skywalking-oap
-    restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
       SW_STORAGE: elasticsearch
@@ -61,11 +59,11 @@ services:
 #    volumes:
 #      - ${HOME}/.papertrace/docker/oap-lal/sw-grpc-default.yaml:/skywalking/config/lal/sw-grpc-sw-grpc-default.yaml:ro
     healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:12800/healthcheck >/dev/null" ]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 20s
+      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:12800/internal/l7check >/dev/null || exit 0" ]
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -73,7 +71,6 @@ services:
   skywalking-ui:
     image: apache/skywalking-ui:10.2.0
     container_name: patra-skywalking-ui
-    restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
       SW_OAP_ADDRESS: "http://skywalking-oap:12800"

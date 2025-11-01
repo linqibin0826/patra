@@ -1,6 +1,0 @@
-{
-    "java.configuration.updateBuildConfiguration": "interactive",
-    "java.compile.nullAnalysis.mode": "automatic",
-    "kiroAgent.configureMCP": "Enabled",
-    "chatgpt.commentCodeLensEnabled": false
-}

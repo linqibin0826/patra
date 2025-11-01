@@ -153,6 +153,11 @@ public class OutboxRelayExecutor {
       return;
     }
 
+    // ✅ FIX: Sync version after successful lease acquisition
+    // acquireLease() increments version in DB (version+1), must sync to avoid optimistic lock
+    // failure
+    message = message.toBuilder().version(message.getVersion() + 1).build();
+
     // Publish message and handle result
     RelayResult result = publishCoordinator.publish(message, context.plan());
 
