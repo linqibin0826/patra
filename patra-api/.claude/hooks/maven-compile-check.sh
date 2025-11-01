@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# maven-compile-check.sh
+# Purpose: Quick Maven compilation check for Papertrace multi-module project
+# Triggers on: Stop event
+# Usage: Runs mvn compile with multi-threading to quickly detect compilation errors
+
+set -eo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "🔨 Running Maven compilation check..."
+
+# Navigate to project root (assumes we're in .claude/hooks)
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+cd "$PROJECT_ROOT" || exit 1
+
+# Check if pom.xml exists
+if [ ! -f "pom.xml" ]; then
+    echo -e "${RED}❌ Error: No pom.xml found in project root${NC}"
+    exit 1
+fi
+
+# Create temp file for compilation output
+TEMP_OUTPUT=$(mktemp)
+trap 'rm -f "$TEMP_OUTPUT"' EXIT
+
+# Run Maven compile with multi-threading
+# -T 1C: Use 1 thread per CPU core
+# -q: Quiet mode (only errors)
+# -DskipTests: Skip test compilation and execution
+echo "Running: mvn -T 1C compile -q -DskipTests"
+
+if mvn -T 1C compile -q -DskipTests 2>&1 | tee "$TEMP_OUTPUT"; then
+    echo -e "${GREEN}✅ Maven compilation successful${NC}"
+    exit 0
+else
+    echo -e "${RED}❌ Maven compilation failed${NC}"
+    echo ""
+    echo "=== Compilation Errors Summary ==="
+
+    # Extract and display compilation errors
+    grep -E "\[ERROR\]|error:|cannot find symbol|package .* does not exist" "$TEMP_OUTPUT" | head -20
+
+    echo ""
+    echo "=== Failed Modules ==="
+    grep -E "BUILD FAILURE|FAILURE \[" "$TEMP_OUTPUT" | sed 's/.*\[\(.*\)\].*/  - \1/' | sort -u
+
+    echo ""
+    echo -e "${YELLOW}💡 Tip: Run 'mvn compile' for detailed error information${NC}"
+    echo -e "${YELLOW}💡 Or use the auto-error-resolver agent to fix errors automatically${NC}"
+
+    # Create marker file for trigger-build-resolver-java.sh
+    mkdir -p "$PROJECT_ROOT/.claude/hooks"
+    touch "$PROJECT_ROOT/.claude/hooks/.last-compile-failed"
+
+    exit 1
+fi

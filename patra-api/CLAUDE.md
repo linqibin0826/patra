@@ -2,11 +2,6 @@
 
 Claude Code instructions for Papertrace – Medical Literature Data Platform.
 
-- **Architecture & Design Patterns**: @.claude/AGENTS-architecture.md
-- **Development Guidelines**: @.claude/AGENTS-development.md
-- **Testing Strategy**: @.claude/AGENTS-testing.md
-- **MCP Tools**: @.claude/AGENTS-mcp-tools.md
-
 ---
 
 ## Quick Reference
@@ -58,4 +53,4 @@ Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Im
 
 **Security**: No hardcoded secrets (use Nacos/env vars), validate all inputs, sanitize user content, log security events
 
-**Docs**: `docs/ARCHITECTURE.md`, `docs/DEV-GUIDE.md`, `patra-*/README.md`
+**Docs**: Module-specific `README.md` files in each `patra-*` module
