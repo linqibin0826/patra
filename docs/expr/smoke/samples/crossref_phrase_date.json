@@ -1,1 +1,0 @@
-{"and":[{"term":{"field":"text","value":"machine learning","match":"PHRASE"}},{"range":{"field":"publication_date","from":"2022-01-01","to":"2022-12-31"}}]}
