@@ -207,6 +207,122 @@ public final class OutboxMessage {
         .build();
   }
 
+  // ========== Outbox Pattern Enhancement V2.0 - Behavior Methods ==========
+
+  /**
+   * Computes the next attempt number for this message.
+   *
+   * <p>Handles null retryCount (first attempt case) gracefully.
+   *
+   * @return next attempt number (1-based, starts from 1)
+   */
+  public int computeNextAttempt() {
+    return (retryCount == null ? 0 : retryCount) + 1;
+  }
+
+  /**
+   * Checks if this message can be retried based on maximum attempts limit.
+   *
+   * <p>Compares next attempt number against maxAttempts threshold.
+   *
+   * @param maxAttempts maximum allowed relay attempts (from retry policy)
+   * @return true if next attempt <= maxAttempts, false otherwise
+   */
+  public boolean canRetry(int maxAttempts) {
+    return computeNextAttempt() <= maxAttempts;
+  }
+
+  /**
+   * Checks if this message currently holds an active (non-expired) lease.
+   *
+   * <p>A lease is active if:
+   *
+   * <ul>
+   *   <li>leaseOwner is not null
+   *   <li>leaseExpireAt is not null
+   *   <li>leaseExpireAt is after the given timestamp
+   * </ul>
+   *
+   * @param now current timestamp for lease expiry check
+   * @return true if lease is active, false otherwise
+   */
+  public boolean hasActiveLease(Instant now) {
+    return leaseOwner != null && leaseExpireAt != null && leaseExpireAt.isAfter(now);
+  }
+
+  /**
+   * Checks if this message is in PENDING state.
+   *
+   * @return true if status is PENDING
+   */
+  public boolean isPending() {
+    return "PENDING".equals(statusCode);
+  }
+
+  /**
+   * Checks if this message is in PUBLISHING state.
+   *
+   * @return true if status is PUBLISHING
+   */
+  public boolean isPublishing() {
+    return "PUBLISHING".equals(statusCode);
+  }
+
+  /**
+   * Checks if this message is in a terminal state (PUBLISHED or FAILED).
+   *
+   * <p>Terminal states indicate no further relay processing is needed.
+   *
+   * @return true if status is PUBLISHED or FAILED
+   */
+  public boolean isTerminal() {
+    return "PUBLISHED".equals(statusCode) || "FAILED".equals(statusCode);
+  }
+
+  /**
+   * Checks if this message is ready to be relayed at the given timestamp.
+   *
+   * <p>A message is ready if:
+   *
+   * <ul>
+   *   <li>Status is PENDING (awaiting relay)
+   *   <li>notBefore time has passed (if set)
+   *   <li>nextRetryAt time has passed (if set, for retries)
+   * </ul>
+   *
+   * @param now current timestamp for readiness check
+   * @return true if message is ready to relay
+   */
+  public boolean isReadyToRelay(Instant now) {
+    if (!isPending()) {
+      return false;
+    }
+    if (notBefore != null && notBefore.isAfter(now)) {
+      return false;
+    }
+    if (nextRetryAt != null && nextRetryAt.isAfter(now)) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Checks if the lease for this message has expired at the given timestamp.
+   *
+   * <p>Returns true if:
+   *
+   * <ul>
+   *   <li>Message has no lease (leaseExpireAt is null), OR
+   *   <li>Lease expiration time has passed
+   * </ul>
+   *
+   * @param now current timestamp for expiry check
+   * @return true if lease is expired or absent
+   */
+  public boolean isLeaseExpired(Instant now) {
+    return leaseExpireAt == null || leaseExpireAt.isBefore(now);
+  }
+
   public static final class Builder {
     private Long id;
     private Long version;

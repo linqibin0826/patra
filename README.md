@@ -2,7 +2,7 @@
 
 > **Status**: 🚧 Bootstrap Phase (v0.1.0-SNAPSHOT)
 > **Architecture**: Microservices + Hexagonal + DDD + Event-Driven
-> **Tech Stack**: Java 21, Spring Boot 3.x, MyBatis-Plus, MySQL 8.x
+> **Tech Stack**: Java 25, Spring Boot 3.5.7, MyBatis-Plus, MySQL 8.x
 
 ---
 
@@ -87,7 +87,7 @@ See [Architecture Documentation](./docs/ARCHITECTURE.md) for deep dive.
 
 ### Prerequisites
 
-- **Java 21+** (OpenJDK or Oracle JDK)
+- **Java 25+** (OpenJDK or Oracle JDK)
 - **Maven 3.9+**
 - **MySQL 8.0+**
 - **Docker & Docker Compose** (for local infrastructure)
@@ -252,7 +252,7 @@ mvn verify -pl patra-{service}-adapter
 
 ### Code Style
 
-- **Java 21 features**: Use `record`, pattern matching, sealed classes where appropriate
+- **Java 25 features**: Use `record`, pattern matching, sealed classes where appropriate
 - **Naming**: `*Aggregate`, `*Orchestrator`, `*RepositoryMpImpl`
 - **Logging**: Parameterized, English-only (`log.info("Processing {}", id)`)
 - **Immutability**: Prefer `record` and `final` fields

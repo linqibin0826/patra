@@ -528,6 +528,7 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
     `payload_json`     JSON            NOT NULL COMMENT 'Minimal necessary payload (JSON): taskId/sliceKey/planKey/provenance/operation/endpoint/priority/notBefore etc; large fields not enqueued',
     `headers_json`     JSON            NULL COMMENT 'Extension headers (JSON): correlationId etc',
     `not_before`       TIMESTAMP(6)    NULL COMMENT 'Earliest publishable time (UTC): NULL=publishable anytime; for scheduled/delayed publishing',
+    `published_at`     TIMESTAMP(6)    NULL COMMENT 'Successful publish timestamp (UTC), set when status transitions to PUBLISHED',
 
     `status_code`      VARCHAR(16)     NOT NULL DEFAULT 'PENDING' COMMENT 'Publishing status: PENDING/PUBLISHING/PUBLISHED/FAILED/DEAD',
     `retry_count`      INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT 'Publishing retry count (incremented on failure)',
@@ -560,8 +561,93 @@ CREATE TABLE IF NOT EXISTS `ing_outbox_message`
     KEY `idx_outbox_partition` (`channel`, `partition_key`, `status_code`),
     -- Publisher lease reclaim (for reclaiming expired leases when multiple Relays run in parallel)
     KEY `idx_outbox_lease` (`status_code`, `pub_leased_until`),
+    -- Optimized indexes for UNION ALL query pattern (V2.0 enhancement)
+    KEY `idx_pending_relay` (`channel`, `status_code`, `not_before`, `id`) COMMENT 'Optimized for PENDING message relay query (UNION ALL first subquery)',
+    KEY `idx_publishing_lease` (`channel`, `status_code`, `pub_leased_until`, `id`) COMMENT 'Optimized for PUBLISHING message with expired lease query (UNION ALL second subquery)',
     -- Archive/reconciliation convenience
     KEY `idx_outbox_created` (`created_at`),
     KEY `idx_outbox_deleted_upd` (`deleted`, `updated_at`)
 )
     ENGINE = InnoDB COMMENT ='Outbox: Generic outbound message table (unified management of task dispatch/integration events; same transaction as business write; scanned and delivered to MQ by Relay)';
+
+-- ======================================================================
+-- Table: ing_outbox_relay_log —— Outbox Relay Execution Logs
+-- Semantics: Immutable audit trail for every relay attempt; tracks publish success/failure, timing, errors, and retry scheduling.
+-- Design Points:
+--  - One record per relay attempt (multiple attempts for same message if retries occur);
+--  - Denormalizes channel, partition_key from ing_outbox_message for query efficiency;
+--  - Supports troubleshooting ("show all attempts for this message"), batch-level statistics, and monitoring/alerting.
+-- ======================================================================
+CREATE TABLE IF NOT EXISTS `ing_outbox_relay_log`
+(
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK · Relay log ID',
+
+    -- Core references
+    `message_id`       BIGINT UNSIGNED NOT NULL COMMENT 'Reference to ing_outbox_message.id (FK-like, application-enforced)',
+    `relay_batch_id`   VARCHAR(50)     NOT NULL COMMENT 'Relay batch identifier (format: yyyyMMddHHmmss-xxxxxxxx), groups logs from same job execution',
+
+    -- Relay context (denormalized for query efficiency)
+    `channel`          VARCHAR(64)     NOT NULL COMMENT 'Message channel (denormalized from ing_outbox_message for query efficiency)',
+    `partition_key`    VARCHAR(128)    NULL COMMENT 'Partition key (denormalized from ing_outbox_message for analysis)',
+    `lease_owner`      VARCHAR(128)    NULL COMMENT 'Lease owner identifier (host-jobId-threadId-uuid format)',
+    `attempt_number`   INT UNSIGNED    NOT NULL COMMENT 'Attempt number for this message (1-based, increments on retry)',
+
+    -- Relay result
+    `relay_status`     VARCHAR(16)     NOT NULL COMMENT 'Relay execution status: PUBLISHED (success) / DEFERRED (retry) / FAILED (permanent) / LEASE_MISSED (conflict)',
+
+    -- Error details (NULL for success)
+    `error_code`       VARCHAR(50)     NULL COMMENT 'Error code if relay failed (e.g., NETWORK_TIMEOUT, BROKER_UNAVAILABLE), NULL for success',
+    `error_message`    TEXT            NULL COMMENT 'Error details if relay failed (truncated to 512 chars), NULL for success',
+    `error_kind`       VARCHAR(16)     NULL COMMENT 'Error classification: FATAL (non-retryable) or TRANSIENT (retryable), NULL for success',
+
+    -- Timing fields
+    `started_at`       TIMESTAMP(6)    NOT NULL COMMENT 'Relay start timestamp (UTC)',
+    `completed_at`     TIMESTAMP(6)    NOT NULL COMMENT 'Relay completion timestamp (UTC)',
+    `duration_ms`      INT UNSIGNED    NOT NULL COMMENT 'Relay execution duration in milliseconds (completedAt - startedAt)',
+
+    -- Next retry scheduling (only for DEFERRED status)
+    `next_retry_at`    TIMESTAMP(6)    NULL COMMENT 'Next retry timestamp (UTC), only present for DEFERRED status',
+
+    -- Standard audit fields
+    `record_remarks`   JSON            NULL COMMENT 'JSON array, remarks/change log',
+    `version`          BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Optimistic lock version number',
+    `ip_address`       VARBINARY(16)   NULL COMMENT 'Requester IP (binary, supports IPv4/IPv6)',
+    `created_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time (UTC)',
+    `created_by`       BIGINT UNSIGNED NULL COMMENT 'Creator ID',
+    `created_by_name`  VARCHAR(100)    NULL COMMENT 'Creator name',
+    `updated_at`       TIMESTAMP(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Update time (UTC)',
+    `updated_by`       BIGINT UNSIGNED NULL COMMENT 'Updater ID',
+    `updated_by_name`  VARCHAR(100)    NULL COMMENT 'Updater name',
+    `deleted`          TINYINT(1)      NOT NULL DEFAULT 0 COMMENT 'Soft delete: 0=active, 1=deleted',
+
+    PRIMARY KEY (`id`),
+
+    -- Query by message ID (for troubleshooting: "show all attempts for this message")
+    INDEX `idx_message_id` (`message_id`, `started_at` DESC)
+        COMMENT 'Query logs by message (newest first)',
+
+    -- Query by batch ID (for batch-level statistics)
+    INDEX `idx_batch_id` (`relay_batch_id`)
+        COMMENT 'Query logs by relay batch',
+
+    -- Query by channel and time range (for monitoring dashboards)
+    INDEX `idx_channel_time` (`channel`, `started_at`)
+        COMMENT 'Query logs by channel and time range',
+
+    -- Query by status (for alerting: "show recent failures")
+    INDEX `idx_status` (`relay_status`, `started_at`)
+        COMMENT 'Query logs by status',
+
+    -- Archive/cleanup convenience
+    INDEX `idx_created_at` (`created_at`)
+        COMMENT 'Archive old logs by creation time',
+
+    INDEX `idx_deleted_upd` (`deleted`, `updated_at`)
+        COMMENT 'Soft delete support'
+
+    -- Note: Foreign key constraint intentionally omitted for performance
+    -- Referential integrity enforced at application layer
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci
+    COMMENT ='Outbox relay execution logs - immutable audit trail for every relay attempt';

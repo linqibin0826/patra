@@ -131,7 +131,7 @@ Papertrace – Medical literature data platform collecting 10+ sources (PubMed, 
 
 Architecture: Microservices + Hexagonal + DDD + Event-Driven
 
-Tech Stack: Java 21 | Spring Boot 3.2.4 + Cloud 2023.0.1 | Maven | MyBatis-Plus + MapStruct | Nacos
+Tech Stack: Java 25 | Spring Boot 3.5.7 + Cloud 2025.0.0 | Maven | MyBatis-Plus + MapStruct | Nacos
 
 Current Focus: Reliable data collection → parsing → storage
 
