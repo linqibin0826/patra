@@ -2,7 +2,7 @@
 
 # maven-compile-check.sh
 # Purpose: Quick Maven compilation check for Papertrace multi-module project
-# Triggers on: Stop event
+# Triggers on: Stop event (only if Java files were modified)
 # Usage: Runs mvn compile with multi-threading to quickly detect compilation errors
 
 set -eo pipefail
@@ -11,13 +11,24 @@ set -eo pipefail
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
-
-echo "🔨 Running Maven compilation check..."
 
 # Navigate to project root (assumes we're in .claude/hooks)
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$PROJECT_ROOT" || exit 1
+
+# Check if Java files were modified in this session
+MARKER_FILE="$PROJECT_ROOT/.claude/hooks/.java-files-modified"
+if [ ! -f "$MARKER_FILE" ]; then
+    echo -e "${BLUE}ℹ️  No Java file changes detected, skipping Maven compilation check${NC}"
+    exit 0
+fi
+
+# Remove the marker file (will be recreated if Java files are modified again)
+rm -f "$MARKER_FILE"
+
+echo "🔨 Running Maven compilation check..."
 
 # Check if pom.xml exists
 if [ ! -f "pom.xml" ]; then

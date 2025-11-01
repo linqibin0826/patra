@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 interface HookInput {
@@ -41,8 +41,16 @@ async function main() {
         const prompt = data.prompt.toLowerCase();
 
         // Load skill rules
-        const projectDir = process.env.CLAUDE_PROJECT_DIR || '$HOME/project';
+        const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.HOME + '/project';
         const rulesPath = join(projectDir, '.claude', 'skills', 'skill-rules.json');
+
+        // Check if skill-rules.json exists
+        if (!existsSync(rulesPath)) {
+            // Silently exit if no skill rules configured (non-blocking hook behavior)
+            process.exit(0);
+            return;
+        }
+
         const rules: SkillRules = JSON.parse(readFileSync(rulesPath, 'utf-8'));
 
         const matchedSkills: MatchedSkill[] = [];
@@ -121,12 +129,14 @@ async function main() {
 
         process.exit(0);
     } catch (err) {
+        // Non-blocking hook: log error but exit successfully per Claude Code best practices
         console.error('Error in skill-activation-prompt hook:', err);
-        process.exit(1);
+        process.exit(0);
     }
 }
 
 main().catch(err => {
+    // Non-blocking hook: log error but exit successfully
     console.error('Uncaught error:', err);
-    process.exit(1);
+    process.exit(0);
 });
