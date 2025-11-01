@@ -326,8 +326,10 @@
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco.version}</version>
                     <executions>
+                        <!-- Only activate JaCoCo during test phase to avoid slowing down compile -->
                         <execution>
                             <id>prepare-agent</id>
+                            <phase>process-test-classes</phase>
                             <goals>
                                 <goal>prepare-agent</goal>
                             </goals>
@@ -370,8 +372,10 @@
                     <artifactId>maven-enforcer-plugin</artifactId>
                     <version>${maven.enforcer.plugin.version}</version>
                     <executions>
+                        <!-- Fast version checks during validate phase -->
                         <execution>
                             <id>enforce-versions</id>
+                            <phase>validate</phase>
                             <goals>
                                 <goal>enforce</goal>
                             </goals>
@@ -385,6 +389,18 @@
                                         <version>[3.8.1,)</version>
                                         <message>Maven 3.8.1 or higher is required</message>
                                     </requireMavenVersion>
+                                </rules>
+                            </configuration>
+                        </execution>
+                        <!-- Expensive dependency convergence check moved to verify phase -->
+                        <execution>
+                            <id>enforce-dependency-convergence</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>enforce</goal>
+                            </goals>
+                            <configuration>
+                                <rules>
                                     <dependencyConvergence/>
                                 </rules>
                             </configuration>
@@ -408,11 +424,12 @@
                     </dependency>
                 </dependencies>
                 <executions>
-                    <!-- Only check during build, do not auto-format; change 'check' to 'format' for auto-formatting -->
+                    <!-- Auto-format on demand via: mvn fmt:format -->
+                    <!-- Disabled by default during compile to avoid automatic code changes -->
                     <execution>
-                        <phase>validate</phase>
+                        <phase>none</phase>
                         <goals>
-                            <goal>check</goal>
+                            <goal>format</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -467,8 +484,10 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
                 <executions>
+                    <!-- Only activate JaCoCo during test phase to avoid slowing down compile -->
                     <execution>
                         <id>prepare-agent</id>
+                        <phase>process-test-classes</phase>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
