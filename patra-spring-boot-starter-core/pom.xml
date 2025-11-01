@@ -58,7 +58,17 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- SkyWalking toolkits may be added by services directly when needed -->
+        <!-- SkyWalking APM Toolkit for distributed tracing (logback integration) -->
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-toolkit-logback-1.x</artifactId>
+        </dependency>
+
+        <!-- SkyWalking APM Toolkit for trace context API (used by custom converters) -->
+        <dependency>
+            <groupId>org.apache.skywalking</groupId>
+            <artifactId>apm-toolkit-trace</artifactId>
+        </dependency>
 
         <!-- Test dependencies (keep the suite lightweight; no spring-boot-starter-test) -->
         <dependency>

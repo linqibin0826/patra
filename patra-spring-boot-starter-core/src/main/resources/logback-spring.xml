@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Use Spring Boot's default console pattern -->
+    <!-- Include Spring Boot's logback extensions for %clr and %wEx support -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <!-- Property for application name (fallback to "application") -->
@@ -10,24 +10,26 @@
     <property name="LOG_PATH" value="logs"/>
     <property name="LOG_FILE" value="${LOG_PATH}/${appName}"/>
 
-    <!-- Custom file log pattern with distributed tracing -->
-    <property name="FILE_LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${appName},%X{traceId:-},%X{spanId:-}] [%t] %-40.40logger{39} : %m%n%wEx"/>
+    <!-- Register custom SkyWalking converters for separated trace info -->
+    <conversionRule conversionWord="traceId"
+                    converterClass="com.patra.starter.core.logging.TraceIdConverter"/>
+    <conversionRule conversionWord="segmentId"
+                    converterClass="com.patra.starter.core.logging.SegmentIdConverter"/>
+    <conversionRule conversionWord="spanId"
+                    converterClass="com.patra.starter.core.logging.SpanIdConverter"/>
 
-    <!-- Console Appender (DEBUG level, using Spring Boot's default pattern) -->
+    <!-- Console Appender with colors and separated trace/segment/span IDs -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
-            <charset>UTF-8</charset>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([${appName}]){blue} %clr([trace:%traceId,seg:%segmentId,span:%spanId]){magenta} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
         </encoder>
     </appender>
 
-    <!-- File Appender (INFO level, custom pattern with tracing) -->
+    <!-- File Appender with separated trace/segment/span IDs -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE}.log</file>
         <encoder>
-            <pattern>${FILE_LOG_PATTERN}</pattern>
-            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${appName}] [trace:%traceId,seg:%segmentId,span:%spanId] [%t] %-40.40logger{39} : %m%n</pattern>
         </encoder>
 
         <!-- Rolling Policy -->
