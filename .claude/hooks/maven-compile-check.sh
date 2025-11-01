@@ -41,12 +41,12 @@ TEMP_OUTPUT=$(mktemp)
 trap 'rm -f "$TEMP_OUTPUT"' EXIT
 
 # Run Maven compile with multi-threading
-# -T 1C: Use 1 thread per CPU core
+# -T 2C: Use 2 threads per CPU core (optimal based on performance testing)
 # -q: Quiet mode (only errors)
 # -DskipTests: Skip test compilation and execution
-echo "Running: mvn -T 1C compile -q -DskipTests"
+echo "Running: mvn -T 2C compile -q -DskipTests"
 
-if mvn -T 1C compile -q -DskipTests 2>&1 | tee "$TEMP_OUTPUT"; then
+if mvn -T 2C compile -q -DskipTests 2>&1 | tee "$TEMP_OUTPUT"; then
     echo -e "${GREEN}✅ Maven compilation successful${NC}"
     exit 0
 else
