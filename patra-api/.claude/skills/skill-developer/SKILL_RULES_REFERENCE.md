@@ -115,68 +115,64 @@ Complete example of a blocking guardrail skill with all features:
 
 ```json
 {
-  "database-verification": {
+  "mybatis-query-verification": {
     "type": "guardrail",
     "enforcement": "block",
     "priority": "critical",
 
     "promptTriggers": {
       "keywords": [
-        "prisma",
+        "mybatis",
+        "mapper",
         "database",
         "table",
         "column",
         "schema",
         "query",
-        "migration"
+        "sql"
       ],
       "intentPatterns": [
-        "(add|create|implement).*?(user|login|auth|tracking|feature)",
-        "(modify|update|change).*?(table|column|schema|field)",
-        "database.*?(change|update|modify|migration)"
+        "(add|create|implement).*?(mapper|entity|repository|query)",
+        "(modify|update|change).*?(table|column|schema|field|mapper)",
+        "database.*?(query|change|update|modify)"
       ]
     },
 
     "fileTriggers": {
       "pathPatterns": [
-        "**/schema.prisma",
-        "**/migrations/**/*.sql",
-        "database/src/**/*.ts",
-        "form/src/**/*.ts",
-        "email/src/**/*.ts",
-        "users/src/**/*.ts",
-        "projects/src/**/*.ts",
-        "utilities/src/**/*.ts"
+        "patra-*/patra-*-infra/src/main/java/**/*Mapper.java",
+        "patra-*/patra-*-infra/src/main/java/**/*Repository*.java",
+        "patra-*/patra-*-domain/src/main/java/**/*Entity.java",
+        "**/mapper/**/*.xml",
+        "**/resources/db/migration/**/*.sql"
       ],
       "pathExclusions": [
-        "**/*.test.ts",
-        "**/*.spec.ts"
+        "**/*Test.java",
+        "**/*IT.java"
       ],
       "contentPatterns": [
-        "import.*[Pp]risma",
-        "PrismaService",
-        "prisma\\.",
-        "\\.findMany\\(",
-        "\\.findUnique\\(",
-        "\\.findFirst\\(",
-        "\\.create\\(",
-        "\\.createMany\\(",
+        "import.*mybatis.*plus",
+        "BaseMapper<",
+        "@Mapper",
+        "@TableName",
+        "\\.selectOne\\(",
+        "\\.selectList\\(",
+        "\\.insert\\(",
         "\\.update\\(",
-        "\\.updateMany\\(",
-        "\\.upsert\\(",
         "\\.delete\\(",
-        "\\.deleteMany\\("
+        "LambdaQueryWrapper",
+        "QueryWrapper"
       ]
     },
 
-    "blockMessage": "⚠️ BLOCKED - Database Operation Detected\n\n📋 REQUIRED ACTION:\n1. Use Skill tool: 'database-verification'\n2. Verify ALL table and column names against schema\n3. Check database structure with DESCRIBE commands\n4. Then retry this edit\n\nReason: Prevent column name errors in Prisma queries\nFile: {file_path}\n\n💡 TIP: Add '// @skip-validation' comment to skip future checks",
+    "blockMessage": "⚠️ BLOCKED - Database Operation Detected\n\n📋 REQUIRED ACTION:\n1. Use MCP mysql tool to query database schema\n2. Verify ALL table and column names against actual database\n3. Use DESCRIBE table_name or SHOW COLUMNS to check structure\n4. Then retry this edit\n\nReason: Prevent column name errors in MyBatis queries\nFile: {file_path}\n\n💡 TIP: Add '// @skip-validation' comment to skip future checks",
 
     "skipConditions": {
       "sessionSkillUsed": true,
       "fileMarkers": [
         "@skip-validation"
       ],
-      "envOverride": "SKIP_DB_VERIFICATION"
+      "envOverride": "SKIP_MYBATIS_VERIFICATION"
     }
   }
 }
@@ -200,50 +196,48 @@ Complete example of a suggestion-based domain skill:
 
 ```json
 {
-  "project-catalog-developer": {
+  "java-backend-guidelines": {
     "type": "domain",
     "enforcement": "suggest",
     "priority": "high",
 
     "promptTriggers": {
       "keywords": [
-        "layout",
-        "layout system",
-        "grid",
-        "grid layout",
-        "toolbar",
-        "column",
-        "cell editor",
-        "cell renderer",
-        "submission",
-        "submissions",
-        "blog dashboard",
-        "datagrid",
-        "data grid",
-        "CustomToolbar",
-        "GridLayoutDialog",
-        "useGridLayout",
-        "auto-save",
-        "column order",
-        "column width",
-        "filter",
-        "sort"
+        "orchestrator",
+        "coordinator",
+        "hexagonal",
+        "hexagonal architecture",
+        "ddd",
+        "domain driven design",
+        "aggregate",
+        "aggregate root",
+        "domain event",
+        "event handler",
+        "spring boot",
+        "mybatis",
+        "transaction",
+        "adapter",
+        "application layer",
+        "domain layer",
+        "infrastructure"
       ],
       "intentPatterns": [
-        "(how does|how do|explain|what is|describe).*?(layout|grid|toolbar|column|submission|catalog)",
-        "(add|create|modify|change).*?(toolbar|column|cell|editor|renderer)",
-        "blog dashboard.*?"
+        "(how does|how do|explain|what is|describe).*?(orchestrator|coordinator|hexagonal|aggregate|domain.*?event)",
+        "(create|implement|build).*?(orchestrator|coordinator|aggregate|adapter)",
+        "(add|create|modify).*?(service|controller|repository|mapper)"
       ]
     },
 
     "fileTriggers": {
       "pathPatterns": [
-        "frontend/src/features/submissions/**/*.tsx",
-        "frontend/src/features/submissions/**/*.ts"
+        "patra-*/patra-*-app/src/main/java/**/*Orchestrator.java",
+        "patra-*/patra-*-app/src/main/java/**/*Coordinator.java",
+        "patra-*/patra-*-domain/src/main/java/**/*Aggregate.java",
+        "patra-*/patra-*-adapter/src/main/java/**/*Controller.java"
       ],
       "pathExclusions": [
-        "**/*.test.tsx",
-        "**/*.test.ts"
+        "**/*Test.java",
+        "**/*IT.java"
       ]
     }
   }

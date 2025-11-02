@@ -16,10 +16,67 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 ---
 
-## Available Agents (8)
+## 🔍 Agent Selection Decision Tree
 
-### comprehensive-error-diagnostic ⭐ NEW
-**Purpose:** Comprehensive error diagnostic and troubleshooting for Papertrace issues
+Not sure which agent to use? Follow this decision tree:
+
+### 📝 Refactoring Scenarios
+- **Need refactoring plan?** → `refactor-planner`
+  - Analyze code structure
+  - Identify code smells
+  - Output detailed refactoring plan document
+
+- **Execute refactoring?** → `code-refactor-master`
+  - Read refactoring plan or analyze independently
+  - Execute file moves, class splitting
+  - Update all dependencies and import paths
+
+### 🔎 Review Scenarios
+- **Review development plan?** → `plan-reviewer`
+  - **Pre-implementation review**: Before coding starts
+  - Identify potential issues and technical risks
+  - Provide alternative approach suggestions
+
+- **Review written code?** → `code-architecture-reviewer`
+  - **Post-implementation review**: After code completion
+  - Check architectural compliance (Hexagonal + DDD)
+  - Verify best practices and code quality
+
+### 🐛 Error Handling
+- **Compilation errors?** → `compile-error-resolver`
+  - Maven build failures
+  - Layer boundary violations (e.g., Spring annotations in Domain layer)
+  - Missing dependencies, import errors
+
+- **Runtime errors?** → `runtime-error-diagnostic`
+  - Analyze log files (`logs/patra-*.log`)
+  - Query SkyWalking traces
+  - Dynamically adjust log levels
+  - May invoke `compile-error-resolver` for compilation issues
+
+### 📚 Documentation & Research
+- **Create/update documentation?** → `documentation-architect`
+  - API documentation, developer guides
+  - Architecture docs, data flow diagrams
+
+- **Technical research?** → `web-research-specialist`
+  - Find error solutions
+  - Research best practices
+  - Compare technical approaches
+
+### ✅ Test Generation & Review
+- **Generate test code?** → `test-architect`
+  - Identify code patterns (Orchestrator, Event Handler, Repository, etc.)
+  - Generate unit tests, integration tests
+  - Review test coverage
+  - Follow testing pyramid principles
+
+---
+
+## Available Agents (9)
+
+### runtime-error-diagnostic ⭐ NEW
+**Purpose:** Runtime error diagnostic and troubleshooting for Papertrace issues
 
 **When to use:**
 - Debugging production errors
@@ -27,13 +84,13 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - Investigating SkyWalking traces
 - Performance troubleshooting
 - Dynamically adjusting log levels
-- Systematic error investigation
+- Systematic runtime error investigation
 
 **Features:**
 - Analyzes logs from `logs/patra-*.log` files
 - Extracts SkyWalking trace information
 - Dynamically enables DEBUG logging via Spring Boot Actuator
-- Integrates with auto-error-resolver for compilation errors
+- Integrates with compile-error-resolver for compilation errors
 - References papertrace-domain troubleshooting guide
 - Provides structured diagnostic reports
 
@@ -82,6 +139,29 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 ---
 
+### test-architect ⭐ NEW
+**Purpose:** Generate and review tests for Hexagonal Architecture + DDD patterns
+
+**When to use:**
+- After implementing new features (Orchestrators, Event Handlers, Repositories)
+- Reviewing test coverage
+- Generating unit tests for domain logic
+- Creating integration tests for database operations
+- Writing tests for REST endpoints or scheduled jobs
+- Following testing pyramid (70% unit, 25% integration, 5% E2E)
+
+**Features:**
+- Automatically identifies code patterns (Orchestrator, Event Handler, Repository, etc.)
+- Recommends correct test strategy (unit vs integration)
+- Generates complete test classes with proper mocking
+- Follows testing-guide.md best practices
+- Provides test coverage analysis
+- Uses AAA pattern (Arrange-Act-Assert) and AssertJ assertions
+
+**Integration:** ✅ Copy as-is
+
+---
+
 ### plan-reviewer
 **Purpose:** Review development plans before implementation
 
@@ -121,7 +201,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 
 ---
 
-### auto-error-resolver
+### compile-error-resolver
 **Purpose:** Automatically fix Java/Maven compilation errors in Spring Boot projects
 
 **When to use:**
@@ -129,7 +209,7 @@ Agents are autonomous Claude instances that handle specific complex tasks. Unlik
 - After refactoring that breaks compilation
 - Hexagonal Architecture layer violations
 - Missing imports or incorrect dependencies
-- Systematic error resolution needed
+- Systematic compilation error resolution needed
 
 **Integration:** ⚠️ Requires Maven and works with maven-compile-check.sh hook
 
@@ -160,7 +240,7 @@ That's it! Agents work immediately.
 
 ### Agents Requiring Customization
 
-**auto-error-resolver:**
+**compile-error-resolver:**
 - Requires Maven to be installed and in PATH
 - Works best with maven-compile-check.sh hook (see `.claude/hooks/`)
 - Expects Maven multi-module project structure
@@ -188,14 +268,15 @@ That's it! Agents work immediately.
 
 | Agent | Complexity | Customization | Requirements |
 |-------|-----------|---------------|--------------|
-| comprehensive-error-diagnostic | High | ⚠️ Actuator | Spring Boot Actuator |
+| runtime-error-diagnostic | High | ⚠️ Actuator | Spring Boot Actuator |
 | code-architecture-reviewer | Medium | ✅ None | No |
 | code-refactor-master | High | ✅ None | No |
 | documentation-architect | Medium | ✅ None | No |
+| test-architect | Medium | ✅ None | No |
 | plan-reviewer | Low | ✅ None | No |
 | refactor-planner | Medium | ✅ None | No |
 | web-research-specialist | Low | ✅ None | No |
-| auto-error-resolver | Medium | ⚠️ Maven + hooks | Maven in PATH |
+| compile-error-resolver | Medium | ⚠️ Maven + hooks | Maven in PATH |
 
 ---
 
@@ -210,7 +291,7 @@ That's it! Agents work immediately.
    grep "~/git/\|/root/" agent-name.md
    ```
 4. **Update paths if found** to `$CLAUDE_PROJECT_DIR` or `.`
-5. **For auto-error-resolver:** Ensure Maven is installed and recommend setting up hooks
+5. **For compile-error-resolver:** Ensure Maven is installed and recommend setting up hooks
 
 **That's it!** Agents are the easiest components to integrate.
 
@@ -277,3 +358,55 @@ sed -i 's|~/git/.*project|$CLAUDE_PROJECT_DIR|g' .claude/agents/[agent-name].md
 4. **Create your own** - Follow the pattern for your specific needs
 
 **Questions?** See [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)
+
+---
+
+## 💡 使用最佳实践
+
+### Agent 协作工作流示例
+
+**完整重构流程：**
+```bash
+1. refactor-planner           # 生成 refactor-plan.md
+2. plan-reviewer              # 审查计划可行性
+3. code-refactor-master       # 执行重构
+4. code-architecture-reviewer # 审查重构结果
+```
+
+**错误诊断 → 修复流程：**
+```bash
+1. runtime-error-diagnostic  # 诊断运行时错误
+   ↓（如发现编译问题）
+2. compile-error-resolver    # 修复编译错误
+   ↓
+3. runtime-error-diagnostic  # 重新验证
+```
+
+### 明确职责，避免混淆
+
+| 容易混淆的 Agent | 核心区别 | 选择标准 |
+|----------------|---------|---------|
+| `refactor-planner` vs `code-refactor-master` | **规划** vs **执行** | 需要计划文档？用 planner；直接重构？用 master |
+| `plan-reviewer` vs `code-architecture-reviewer` | **事前** vs **事后** | 代码还没写？用 plan-reviewer；代码写完了？用 code-architecture-reviewer |
+| `compile-error-resolver` vs `runtime-error-diagnostic` | **编译期** vs **运行期** | Maven 编译失败？用 compile-error-resolver；程序运行报错？用 runtime-error-diagnostic |
+
+### Agent 调用技巧
+
+**显式调用（推荐）：**
+```
+Use the code-architecture-reviewer agent to review my recent changes
+```
+
+**隐式触发：**
+```
+I just finished implementing ProvenanceOrchestrator, please review it
+（Claude 会自动选择 code-architecture-reviewer）
+```
+
+**链式调用：**
+```
+First use refactor-planner to analyze UserService,
+then use code-refactor-master to execute the refactoring
+```
+
+---

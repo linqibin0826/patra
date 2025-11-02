@@ -1,5 +1,5 @@
 ---
-name: auto-error-resolver
+name: compile-error-resolver
 description: Automatically fix Java/Maven compilation errors in Spring Boot projects following Hexagonal Architecture + DDD patterns
 tools: Read, Write, Edit, MultiEdit, Bash
 model: sonnet

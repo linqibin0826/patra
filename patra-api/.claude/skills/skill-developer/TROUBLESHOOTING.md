@@ -129,12 +129,12 @@ Expected: Your skill should appear in the output.
 **Example:**
 ```json
 "pathPatterns": [
-  "frontend/src/**/*.tsx"
+  "patra-*/patra-*-adapter/src/main/java/**/*.java"
 ]
 ```
-- Editing: `frontend/src/components/Dashboard.tsx` → ✅ Matches
-- Editing: `frontend/tests/Dashboard.test.tsx` → ✅ Matches (add exclusion!)
-- Editing: `backend/src/app.ts` → ❌ Doesn't match
+- Editing: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/IngestController.java` → ✅ Matches
+- Editing: `patra-ingest/patra-ingest-adapter/src/test/java/com/patra/ingest/adapter/IngestControllerTest.java` → ✅ Matches (add exclusion!)
+- Editing: `patra-common/src/main/java/com/patra/common/util/StringUtil.java` → ❌ Doesn't match
 
 **Fix:** Adjust glob patterns or add the missing path
 
@@ -147,12 +147,12 @@ Expected: Your skill should appear in the output.
 **Example:**
 ```json
 "pathExclusions": [
-  "**/*.test.ts",
-  "**/*.spec.ts"
+  "**/*Test.java",
+  "**/*IT.java"
 ]
 ```
-- Editing: `services/user.test.ts` → ❌ Excluded
-- Editing: `services/user.ts` → ✅ Not excluded
+- Editing: `services/UserServiceTest.java` → ❌ Excluded
+- Editing: `services/UserService.java` → ✅ Not excluded
 
 **Fix:** If test exclusion too broad, narrow it or remove
 
@@ -166,16 +166,17 @@ Expected: Your skill should appear in the output.
 **Example:**
 ```json
 "contentPatterns": [
-  "import.*[Pp]risma"
+  "import.*mybatis.*plus"
 ]
 ```
-- File has: `import { PrismaService } from './prisma'` → ✅ Matches
-- File has: `import { Database } from './db'` → ❌ Doesn't match
+- File has: `import com.baomidou.mybatisplus.core.mapper.BaseMapper;` → ✅ Matches
+- File has: `import org.springframework.data.jpa.repository.JpaRepository;` → ❌ Doesn't match
 
 **Debug:**
 ```bash
 # Check if pattern exists in file
-grep -i "prisma" path/to/file.ts
+grep -i "mybatis" path/to/file.java
+grep "@Mapper" path/to/file.java
 ```
 
 **Fix:** Adjust content patterns or add missing imports
@@ -207,7 +208,7 @@ rm .claude/hooks/state/skills-used-{session-id}.json
 
 **Check file for skip marker:**
 ```bash
-grep "@skip-validation" path/to/file.ts
+grep "@skip-validation" path/to/file.java
 ```
 
 If found, the file is permanently skipped.
@@ -308,8 +309,8 @@ Expected:
 **Solution:** Use narrower patterns
 ```json
 "pathPatterns": [
-  "form/src/services/**/*.ts",  // Only service files
-  "form/src/controllers/**/*.ts"
+  "patra-ingest/patra-ingest-app/src/main/java/**/*Orchestrator.java",  // Only orchestrators
+  "patra-ingest/patra-ingest-adapter/src/main/java/**/*Controller.java"
 ]
 ```
 
@@ -318,18 +319,19 @@ Expected:
 **Problem:**
 ```json
 "contentPatterns": [
-  "Prisma"  // Matches in comments, strings, etc.
+  "mapper"  // Too generic, matches everything
 ]
 ```
-- Triggers on: `// Don't use Prisma here`
-- Triggers on: `const note = "Prisma is cool"`
+- Triggers on: `// This is a mapper comment`
+- Triggers on: `String note = "mapper configuration"`
 
 **Solution:** Make patterns more specific
 ```json
 "contentPatterns": [
-  "import.*[Pp]risma",        // Only imports
-  "PrismaService\\.",         // Only actual usage
-  "prisma\\.(findMany|create)" // Specific methods
+  "import.*mybatis",          // Only MyBatis imports
+  "@Mapper",                  // Mapper annotation
+  "BaseMapper<",              // BaseMapper interface
+  "\\.selectOne\\(|\\.insert\\(" // Specific methods
 ]
 ```
 
@@ -406,32 +408,51 @@ Expected: `#!/bin/bash`
 
 **Fix:** Add correct shebang to first line
 
-### 4. npx/tsx Not Available
+### 4. Hook Dependencies Not Available
 
 **Check:**
 ```bash
+# For TypeScript hooks
 npx tsx --version
+
+# For Shell hooks
+bash --version
+
+# For Java hooks
+java -version
 ```
 
 Expected: Version number
 
-**Fix:** Install dependencies:
+**Fix:** Install required dependencies:
 ```bash
+# For TypeScript
 cd .claude/hooks
 npm install
+
+# For Shell - usually pre-installed
+
+# For Java - install JRE if needed
 ```
 
-### 5. TypeScript Compilation Error
+### 5. Script Syntax Error
 
 **Check:**
 ```bash
+# For TypeScript
 cd .claude/hooks
 npx tsc --noEmit skill-activation-prompt.ts
+
+# For Shell
+bash -n .claude/hooks/skill-activation-prompt.sh
+
+# For Java
+javac -version
 ```
 
 Expected: No output (no errors)
 
-**Fix:** Correct TypeScript syntax errors
+**Fix:** Correct syntax errors in the script
 
 ---
 
@@ -470,15 +491,15 @@ Expected: No output (no errors)
 **Problem:**
 ```json
 "pathPatterns": [
-  "**/*.ts"  // Checks ALL TypeScript files
+  "**/*.java"  // Checks ALL Java files
 ]
 ```
 
 **Solution:** Be more specific
 ```json
 "pathPatterns": [
-  "form/src/services/**/*.ts",  // Only specific directory
-  "form/src/controllers/**/*.ts"
+  "patra-*/patra-*-infra/src/main/java/**/*Mapper.java",  // Only mappers
+  "patra-*/patra-*-adapter/src/main/java/**/*Controller.java"  // Only controllers
 ]
 ```
 
@@ -493,17 +514,20 @@ Content pattern matching reads entire file - slow for large files.
 ### Measure Performance
 
 ```bash
-# UserPromptSubmit
+# UserPromptSubmit (shell script - fastest)
+time echo '{"prompt":"test"}' | .claude/hooks/skill-activation-prompt.sh
+
+# UserPromptSubmit (TypeScript - slower due to Node.js startup)
 time echo '{"prompt":"test"}' | npx tsx .claude/hooks/skill-activation-prompt.ts
 
 # PreToolUse
-time cat <<'EOF' | npx tsx .claude/hooks/skill-verification-guard.ts
-{"tool_name":"Edit","tool_input":{"file_path":"test.ts"}}
+time cat <<'EOF' | .claude/hooks/skill-verification-guard.sh
+{"tool_name":"Edit","tool_input":{"file_path":"MyController.java"}}
 EOF
 ```
 
 **Target metrics:**
-- UserPromptSubmit: < 100ms
+- UserPromptSubmit: < 100ms (shell), < 500ms (TypeScript with Node.js startup)
 - PreToolUse: < 200ms
 
 ---
