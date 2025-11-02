@@ -21,9 +21,7 @@ User submits prompt
     ↓
 .claude/settings.json registers hook
     ↓
-skill-activation-prompt.sh executes
-    ↓
-npx tsx skill-activation-prompt.ts
+Hook script executes (TypeScript/Shell/Java/Python)
     ↓
 Hook reads stdin (JSON with prompt)
     ↓
@@ -39,6 +37,12 @@ stdout becomes context for Claude (injected before prompt)
     ↓
 Claude sees: [skill suggestion] + user's prompt
 ```
+
+**Implementation Options**:
+- **TypeScript**: `npx tsx skill-activation-prompt.ts` (requires Node.js)
+- **Shell**: `./skill-activation-prompt.sh` (pure Bash, no dependencies)
+- **Java**: `java -jar skill-activation.jar` (requires JRE)
+- **Python**: `python3 skill-activation.py` (requires Python)
 
 ### Key Points
 
@@ -88,9 +92,7 @@ Claude calls Edit/Write tool
     ↓
 .claude/settings.json registers hook (matcher: Edit|Write)
     ↓
-skill-verification-guard.sh executes
-    ↓
-npx tsx skill-verification-guard.ts
+Hook script executes (TypeScript/Shell/Java/Python)
     ↓
 Hook reads stdin (JSON with tool_name, tool_input)
     ↓
@@ -139,7 +141,7 @@ IF ALLOWED:
   "hook_event_name": "PreToolUse",
   "tool_name": "Edit",
   "tool_input": {
-    "file_path": "/root/git/your-project/form/src/services/user.ts",
+    "file_path": "/root/git/your-project/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/mapper/ProvenanceMapper.java",
     "old_string": "...",
     "new_string": "..."
   }
@@ -152,13 +154,13 @@ IF ALLOWED:
 ⚠️ BLOCKED - Database Operation Detected
 
 📋 REQUIRED ACTION:
-1. Use Skill tool: 'database-verification'
-2. Verify ALL table and column names against schema
-3. Check database structure with DESCRIBE commands
+1. Use MCP mysql tool to query database schema
+2. Verify ALL table and column names against actual database
+3. Use DESCRIBE table_name or SHOW COLUMNS to check structure
 4. Then retry this edit
 
-Reason: Prevent column name errors in Prisma queries
-File: form/src/services/user.ts
+Reason: Prevent column name errors in MyBatis queries
+File: patra-ingest-infra/src/main/java/com/patra/ingest/infra/mapper/ProvenanceMapper.java
 
 💡 TIP: Add '// @skip-validation' comment to skip future checks
 ```
@@ -191,17 +193,17 @@ This is THE critical mechanism for enforcement:
 ### Example Conversation Flow
 
 ```
-User: "Add a new user service with Prisma"
+User: "Add a new provenance mapper with MyBatis"
 
-Claude: "I'll create the user service..."
-    [Attempts to Edit form/src/services/user.ts]
+Claude: "I'll create the provenance mapper..."
+    [Attempts to Edit ProvenanceMapper.java]
 
 PreToolUse Hook: [Exit code 2]
-    stderr: "⚠️ BLOCKED - Use database-verification"
+    stderr: "⚠️ BLOCKED - Use MCP mysql tool to verify schema"
 
 Claude sees error, responds:
     "I need to verify the database schema first."
-    [Uses Skill tool: database-verification]
+    [Uses MCP mysql tool to query schema]
     [Verifies column names]
     [Retries Edit - now allowed (session tracking)]
 ```

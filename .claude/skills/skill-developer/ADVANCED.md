@@ -157,7 +157,7 @@ Ideas and concepts for future improvements to the skill system.
 
 ## Skill Testing Framework
 
-**Current State:** Manual testing with npx tsx commands
+**Current State:** Manual testing with hook scripts
 
 **Future Enhancement:** Automated skill testing
 
@@ -167,26 +167,28 @@ Ideas and concepts for future improvements to the skill system.
 - CI/CD integration
 - Coverage reports
 
-**Example Test:**
-```typescript
-describe('database-verification', () => {
-  it('triggers on Prisma imports', () => {
-    const result = testSkill({
-      prompt: "add user tracking",
-      file: "services/user.ts",
-      content: "import { PrismaService } from './prisma'"
-    });
-
-    expect(result.triggered).toBe(true);
-    expect(result.skill).toBe('database-verification');
-  });
-});
+**Example Test Concept:**
 ```
+Test: mybatis-query-verification
+  ✓ triggers on MyBatis imports
+  ✓ triggers on @Mapper annotation
+  ✓ triggers on BaseMapper interface
+  ✓ blocks when mapper file edited
+  ✓ allows when session skill used
+  ✓ allows when @skip-validation present
+```
+
+**Implementation Options:**
+- Shell script test framework (e.g., bats)
+- JUnit tests for Java hook implementations
+- TypeScript tests for TS hook implementations
+- Generic JSON-based test cases
 
 **Benefits:**
 - Prevent regressions
 - Validate patterns before deployment
 - Confidence in changes
+- Cross-language support
 
 ---
 

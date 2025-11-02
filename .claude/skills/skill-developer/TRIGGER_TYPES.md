@@ -26,15 +26,15 @@ Topic-based activation where user explicitly mentions the subject.
 
 ```json
 "promptTriggers": {
-  "keywords": ["layout", "grid", "toolbar", "submission"]
+  "keywords": ["orchestrator", "mybatis", "hexagonal", "aggregate", "domain event"]
 }
 ```
 
 ### Example
 
-- User prompt: "how does the **layout** system work?"
-- Matches: "layout" keyword
-- Activates: `project-catalog-developer`
+- User prompt: "how does the **orchestrator** pattern work?"
+- Matches: "orchestrator" keyword
+- Activates: `java-backend-guidelines`
 
 ### Best Practices
 
@@ -71,12 +71,12 @@ Action-based activation where user describes what they want to do rather than th
 **Database Work:**
 - User prompt: "add user tracking feature"
 - Matches: `(add).*?(feature)`
-- Activates: `database-verification`, `logging-observability`
+- Activates: `mybatis-query-verification`, `java-backend-guidelines`
 
-**Component Creation:**
-- User prompt: "create a dashboard widget"
-- Matches: `(create).*?(component)` (if component in pattern)
-- Activates: `frontend-dev-guidelines`
+**Orchestrator Creation:**
+- User prompt: "create a data ingestion orchestrator"
+- Matches: `(create).*?(orchestrator)`
+- Activates: `java-backend-guidelines`, `papertrace-domain`
 
 ### Best Practices
 
@@ -91,19 +91,19 @@ Action-based activation where user describes what they want to do rather than th
 
 ```regex
 # Database Work
-(add|create|implement).*?(user|login|auth|feature)
+(add|create|implement).*?(mapper|entity|repository|table|query)
 
 # Explanations
 (how does|explain|what is|describe).*?
 
-# Frontend Work
-(create|add|make|build).*?(component|UI|page|modal|dialog)
+# Hexagonal Architecture
+(create|add|make|build).*?(orchestrator|coordinator|aggregate|adapter)
 
 # Error Handling
 (fix|handle|catch|debug).*?(error|exception|bug)
 
-# Workflow Operations
-(create|add|modify).*?(workflow|step|branch|condition)
+# Workflow/Domain Events
+(create|add|modify).*?(workflow|orchestrator|domain.*?event|event.*?handler)
 ```
 
 ---
@@ -123,12 +123,12 @@ Domain/area-specific activation based on file location in the project.
 ```json
 "fileTriggers": {
   "pathPatterns": [
-    "frontend/src/**/*.tsx",
-    "form/src/**/*.ts"
+    "patra-*/patra-*-adapter/src/main/java/**/*.java",
+    "patra-*/patra-*-app/src/main/java/**/*Orchestrator.java"
   ],
   "pathExclusions": [
-    "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*Test.java",
+    "**/*IT.java"
   ]
 }
 ```
@@ -138,50 +138,53 @@ Domain/area-specific activation based on file location in the project.
 - `**` = Any number of directories (including zero)
 - `*` = Any characters within a directory name
 - Examples:
-  - `frontend/src/**/*.tsx` = All .tsx files in frontend/src and subdirs
-  - `**/schema.prisma` = schema.prisma anywhere in project
-  - `form/src/**/*.ts` = All .ts files in form/src subdirs
+  - `patra-*/src/main/java/**/*.java` = All .java files in src/main/java and subdirs
+  - `**/application.yml` = application.yml anywhere in project
+  - `patra-ingest/**/*Orchestrator.java` = All Orchestrator files in patra-ingest
 
 ### Example
 
-- File being edited: `frontend/src/components/Dashboard.tsx`
-- Matches: `frontend/src/**/*.tsx`
-- Activates: `frontend-dev-guidelines`
+- File being edited: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/PlanIngestionOrchestrator.java`
+- Matches: `patra-*/patra-*-app/src/main/java/**/*Orchestrator.java`
+- Activates: `java-backend-guidelines`, `papertrace-domain`
 
 ### Best Practices
 
 - Be specific to avoid false positives
-- Use exclusions for test files: `**/*.test.ts`
-- Consider subdirectory structure
+- Use exclusions for test files: `**/*Test.java`, `**/*IT.java`
+- Consider Maven multi-module structure
 - Test patterns with actual file paths
-- Use narrower patterns when possible: `form/src/services/**` not `form/**`
+- Use narrower patterns when possible: `patra-ingest/patra-ingest-app/**` not `patra-ingest/**`
 
 ### Common Path Patterns
 
 ```glob
-# Frontend
-frontend/src/**/*.tsx        # All React components
-frontend/src/**/*.ts         # All TypeScript files
-frontend/src/components/**   # Only components directory
+# Adapter Layer (Controllers, Jobs)
+patra-*/patra-*-adapter/src/main/java/**/*.java          # All adapter files
+patra-*/patra-*-adapter/src/main/java/**/*Controller.java # REST controllers
+patra-*/patra-*-adapter/src/main/java/**/*Job.java       # Scheduled jobs
 
-# Backend Services
-form/src/**/*.ts            # Form service
-email/src/**/*.ts           # Email service
-users/src/**/*.ts           # Users service
+# Application Layer (Orchestrators)
+patra-*/patra-*-app/src/main/java/**/*.java              # All application files
+patra-*/patra-*-app/src/main/java/**/*Orchestrator.java  # Orchestrators
+patra-*/patra-*-app/src/main/java/**/*Coordinator.java   # Coordinators
 
-# Database
-**/schema.prisma            # Prisma schema (anywhere)
-**/migrations/**/*.sql      # Migration files
-database/src/**/*.ts        # Database scripts
+# Domain Layer
+patra-*/patra-*-domain/src/main/java/**/*.java           # All domain files
+patra-*/patra-*-domain/src/main/java/**/*Aggregate.java  # Aggregates
 
-# Workflows
-form/src/workflow/**/*.ts              # Workflow engine
-form/src/workflow-definitions/**/*.json # Workflow definitions
+# Infrastructure Layer
+patra-*/patra-*-infra/src/main/java/**/*Mapper.java      # MyBatis mappers
+patra-*/patra-*-infra/src/main/java/**/*Repository*.java # Repositories
+
+# Configuration
+**/application.yml                                       # Spring Boot config
+**/application-*.yml                                     # Environment configs
+**/mapper/**/*.xml                                       # MyBatis XML mappers
 
 # Test Exclusions
-**/*.test.ts                # TypeScript tests
-**/*.test.tsx               # React component tests
-**/*.spec.ts                # Spec files
+**/*Test.java                                            # Unit tests
+**/*IT.java                                              # Integration tests
 ```
 
 ---
@@ -201,30 +204,30 @@ Technology-specific activation based on what the code imports or uses (Prisma, c
 ```json
 "fileTriggers": {
   "contentPatterns": [
-    "import.*[Pp]risma",
-    "PrismaService",
-    "\\.findMany\\(",
-    "\\.create\\("
+    "import.*mybatis.*plus",
+    "BaseMapper<",
+    "@Mapper",
+    "@Service"
   ]
 }
 ```
 
 ### Examples
 
-**Prisma Detection:**
-- File contains: `import { PrismaService } from '@project/database'`
-- Matches: `import.*[Pp]risma`
-- Activates: `database-verification`
+**MyBatis Detection:**
+- File contains: `import com.baomidou.mybatisplus.core.mapper.BaseMapper;`
+- Matches: `import.*mybatis.*plus`
+- Activates: `mybatis-query-verification`
 
 **Controller Detection:**
 - File contains: `@RestController`
 - Matches: `@RestController`
-- Activates: `logging-observability`
+- Activates: `java-backend-guidelines`
 
 ### Best Practices
 
-- Match imports: `import.*[Pp]risma` (case-insensitive with [Pp])
-- Escape special regex chars: `\\.findMany\\(` not `.findMany(`
+- Match imports: `import.*mybatis` (case-insensitive)
+- Escape special regex chars: `\\.selectOne\\(` not `.selectOne(`
 - Patterns use case-insensitive flag
 - Test against real file content
 - Make patterns specific enough to avoid false matches
@@ -232,29 +235,34 @@ Technology-specific activation based on what the code imports or uses (Prisma, c
 ### Common Content Patterns
 
 ```regex
-# Prisma/Database
-import.*[Pp]risma                # Prisma imports
-PrismaService                    # PrismaService usage
-prisma\.                         # prisma.something
-\.findMany\(                     # Prisma query methods
-\.create\(
-\.update\(
-\.delete\(
+# MyBatis-Plus
+import.*mybatis.*plus            # MyBatis-Plus imports
+BaseMapper<                      # BaseMapper interface
+ServiceImpl<                     # ServiceImpl base class
+\.selectOne\(|\.selectList\(    # MyBatis-Plus query methods
+@Mapper                          # Mapper annotation
 
-# Controllers/Routes
-export class.*Controller         # Controller classes
-router\.                         # Express router
-app\.(get|post|put|delete|patch) # Express app routes
+# Spring Boot Controllers
+@RestController                  # REST controller
+@Controller                      # MVC controller
+@RequestMapping|@GetMapping      # Request mappings
+@PathVariable|@RequestBody       # Request parameters
+
+# Spring Boot Services
+@Service                         # Service component
+@Transactional                   # Transaction management
+@Async                           # Async execution
 
 # Error Handling
 try\s*\{                        # Try blocks
 catch\s*\(                      # Catch blocks
 throw new                        # Throw statements
+@ControllerAdvice                # Global exception handler
 
-# React/Components
-export.*React\.FC               # React functional components
-export default function.*       # Default function exports
-useState|useEffect              # React hooks
+# Hexagonal Architecture
+class.*Orchestrator              # Orchestrator classes
+class.*Coordinator               # Coordinator classes
+@TransactionalEventListener      # Event listeners
 ```
 
 ---
@@ -282,17 +290,23 @@ useState|useEffect              # React hooks
 
 **Test keyword/intent triggers:**
 ```bash
+# Using shell script
+echo '{"session_id":"test","prompt":"your test prompt"}' | \
+  .claude/hooks/skill-activation-prompt.sh
+
+# Or using TypeScript (if available)
 echo '{"session_id":"test","prompt":"your test prompt"}' | \
   npx tsx .claude/hooks/skill-activation-prompt.ts
 ```
 
 **Test file path/content triggers:**
 ```bash
-cat <<'EOF' | npx tsx .claude/hooks/skill-verification-guard.ts
+# Using shell script
+cat <<'EOF' | .claude/hooks/skill-verification-guard.sh
 {
   "session_id": "test",
   "tool_name": "Edit",
-  "tool_input": {"file_path": "/path/to/test/file.ts"}
+  "tool_input": {"file_path": "patra-ingest-app/src/main/java/com/patra/ingest/app/MyOrchestrator.java"}
 }
 EOF
 ```

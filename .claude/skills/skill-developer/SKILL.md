@@ -73,8 +73,8 @@ Defines:
 - Session-aware (don't repeat nag in same session)
 
 **Examples:**
-- `database-verification` - Verify table/column names before Prisma queries
-- `frontend-dev-guidelines` - Enforce React/TypeScript patterns
+- `mybatis-query-verification` - Verify table/column names before MyBatis queries
+- `java-backend-guidelines` - Enforce Spring Boot/Hexagonal Architecture patterns
 
 **When to Use:**
 - Mistakes that cause runtime errors
@@ -161,14 +161,20 @@ See [SKILL_RULES_REFERENCE.md](SKILL_RULES_REFERENCE.md) for complete schema.
 
 **Test UserPromptSubmit:**
 ```bash
+# Using shell script (if implemented)
+echo '{"session_id":"test","prompt":"your test prompt"}' | \
+  .claude/hooks/skill-activation-prompt.sh
+
+# Or TypeScript (if using npx tsx)
 echo '{"session_id":"test","prompt":"your test prompt"}' | \
   npx tsx .claude/hooks/skill-activation-prompt.ts
 ```
 
 **Test PreToolUse:**
 ```bash
-cat <<'EOF' | npx tsx .claude/hooks/skill-verification-guard.ts
-{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"test.ts"}}
+# Using shell script
+cat <<'EOF' | .claude/hooks/skill-verification-guard.sh
+{"session_id":"test","tool_name":"Edit","tool_input":{"file_path":"MyService.java"}}
 EOF
 ```
 
@@ -200,7 +206,7 @@ Based on testing:
 - Claude sees message and must use skill to proceed
 - **Use For**: Critical mistakes, data integrity, security issues
 
-**Example:** Database column name verification
+**Example:** MyBatis table/column name verification
 
 ### SUGGEST (Recommended)
 
@@ -209,7 +215,7 @@ Based on testing:
 - Not enforced, just advisory
 - **Use For**: Domain guidance, best practices, how-to guides
 
-**Example:** Frontend development guidelines
+**Example:** Java backend development guidelines
 
 ### WARN (Optional)
 
@@ -241,9 +247,9 @@ Based on testing:
 **Marker:** `// @skip-validation`
 
 **Usage:**
-```typescript
+```java
 // @skip-validation
-import { PrismaService } from './prisma';
+import com.patra.ingest.infra.mapper.ProvenanceMapper;
 // This file has been manually verified
 ```
 
@@ -390,12 +396,15 @@ See [TRIGGER_TYPES.md](TRIGGER_TYPES.md) for complete details.
 
 Test hooks manually:
 ```bash
-# UserPromptSubmit
+# UserPromptSubmit (shell script)
+echo '{"prompt":"test"}' | .claude/hooks/skill-activation-prompt.sh
+
+# Or using TypeScript
 echo '{"prompt":"test"}' | npx tsx .claude/hooks/skill-activation-prompt.ts
 
-# PreToolUse
-cat <<'EOF' | npx tsx .claude/hooks/skill-verification-guard.ts
-{"tool_name":"Edit","tool_input":{"file_path":"test.ts"}}
+# PreToolUse (shell script)
+cat <<'EOF' | .claude/hooks/skill-verification-guard.sh
+{"tool_name":"Edit","tool_input":{"file_path":"MyController.java"}}
 EOF
 ```
 
