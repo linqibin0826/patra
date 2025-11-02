@@ -1,6 +1,6 @@
 ---
 name: java-backend-guidelines
-description: Comprehensive Java backend development guide for Hexagonal Architecture + DDD with Spring Boot 3.5.7. Use when creating REST endpoints, orchestrators, domain entities, aggregates, repositories, or working with MyBatis-Plus, MapStruct, validation, Nacos configuration, Outbox pattern, event-driven architecture, or testing strategies. Covers four-layer architecture (Adapter → Application → Domain ← Infrastructure), dependency directions, transaction management, error handling, and performance optimization.
+description: Comprehensive Java backend development guide for Hexagonal Architecture + DDD with Spring Boot 3.5.7. Use when creating REST endpoints, orchestrators, coordinators, domain entities, aggregates, repositories, scheduled jobs (XXL-Job), event handlers (@TransactionalEventListener), or working with MyBatis-Plus, MapStruct, validation, Nacos configuration, Outbox pattern (relay, lease coordination, exponential backoff), event-driven architecture (domain events, event chains, AFTER_COMMIT, REQUIRES_NEW), or testing strategies. Covers four-layer architecture (Adapter → Application → Domain ← Infrastructure), dependency directions, transaction management (@Transactional), error handling (ProblemDetail, OptimisticLockingFailureException), idempotency, and performance optimization. Includes patra-ingest patterns: OutboxRelayOrchestrator, RelayCoordinator (lease/publish/log), TaskCompletedEvent, SliceStatusChangedEvent, PlanIngestionOrchestrator, AbstractProvenanceScheduleJob, Template Method pattern.
 ---
 
 # Java Backend Development Guidelines (Papertrace)
@@ -427,32 +427,29 @@ public class ProvenanceRepositoryImpl implements ProvenancePort {
 
 ## Resource Files
 
-Detailed guides for specific topics (each <500 lines):
+Detailed guides for specific topics:
 
 ### Architecture & Design
-- **[architecture-overview.md](resources/architecture-overview.md)** - Complete Hexagonal + DDD architecture
-- **[dependency-rules.md](resources/dependency-rules.md)** - Layer dependencies and validation
+- ✅ **[architecture-overview.md](resources/architecture-overview.md)** (704 lines) - Complete Hexagonal + DDD architecture
+- ✅ **[dependency-rules.md](resources/dependency-rules.md)** (577 lines) - Layer dependencies and validation
 
 ### Layer-Specific Patterns
-- **[adapter-layer-patterns.md](resources/adapter-layer-patterns.md)** - REST, Jobs, Consumers
-- **[orchestrator-coordinator-patterns.md](resources/orchestrator-coordinator-patterns.md)** - Application layer organization
-- **[domain-modeling-patterns.md](resources/domain-modeling-patterns.md)** - Aggregates, Entities, VOs, Events
-- **[mybatis-plus-patterns.md](resources/mybatis-plus-patterns.md)** - Database access and mapping
+- ✅ **[adapter-layer-patterns.md](resources/adapter-layer-patterns.md)** (490 lines) - REST, Jobs, Consumers (XXL-Job, Template Method)
+- ✅ **[orchestrator-coordinator-patterns.md](resources/orchestrator-coordinator-patterns.md)** (1,142 lines) - Application layer organization
+- ✅ **[domain-modeling-patterns.md](resources/domain-modeling-patterns.md)** (1,296 lines) - Aggregates, Entities, VOs, Events
+- ✅ **[mybatis-plus-patterns.md](resources/mybatis-plus-patterns.md)** (1,263 lines) - Database access and mapping
 
 ### Cross-Cutting Concerns
-- **[transaction-error-handling.md](resources/transaction-error-handling.md)** - @Transactional, ProblemDetail
-- **[validation-patterns.md](resources/validation-patterns.md)** - @Valid, custom validators
-- **[nacos-configuration.md](resources/nacos-configuration.md)** - Configuration management
-- **[observability-guide.md](resources/observability-guide.md)** - Logging, tracing, metrics
+- ✅ **[transaction-error-handling.md](resources/transaction-error-handling.md)** (682 lines) - @Transactional, ProblemDetail, OptimisticLocking
+- ✅ **[observability-guide.md](resources/observability-guide.md)** (791 lines) - SLF4J logging, MDC, Micrometer metrics, error handling, testing logging
 
 ### Advanced Topics
-- **[outbox-pattern.md](resources/outbox-pattern.md)** - Reliable event publishing
-- **[event-driven-architecture.md](resources/event-driven-architecture.md)** - Domain events, handlers
-- **[testing-guide.md](resources/testing-guide.md)** - Unit, Integration, ArchUnit
-- **[performance-optimization.md](resources/performance-optimization.md)** - N+1 queries, batch operations
+- ✅ **[outbox-pattern.md](resources/outbox-pattern.md)** (962 lines) - Reliable event publishing with patra-ingest outbox implementation
+- ✅ **[event-driven-architecture.md](resources/event-driven-architecture.md)** (507 lines) - Domain events, @TransactionalEventListener, event chains
+- ✅ **[testing-guide.md](resources/testing-guide.md)** (2,478 lines) - Complete testing guide: Unit, Integration, Event-driven, Outbox pattern, ArchUnit tests
 
 ### Complete Examples
-- **[complete-examples.md](resources/complete-examples.md)** - Full feature implementation from Papertrace
+- ✅ **[complete-examples.md](resources/complete-examples.md)** (1,167 lines) - Full Plan Ingestion feature from patra-ingest
 
 ---
 
@@ -577,7 +574,8 @@ public interface ProvenancePort {
 - Rule: @Transactional at orchestrator level only
 
 **Performance issues?**
-- Check: [performance-optimization.md](resources/performance-optimization.md)
+- Check: [mybatis-plus-patterns.md](resources/mybatis-plus-patterns.md) - Batch operations, pagination
+- Check: [testing-guide.md](resources/testing-guide.md#test-coverage-strategy) - Performance testing strategies
 - Watch for: N+1 queries, missing indexes, large batch sizes
 
 ---

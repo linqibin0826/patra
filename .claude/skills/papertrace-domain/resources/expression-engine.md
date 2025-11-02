@@ -1,851 +1,516 @@
-# Expression Engine Deep Dive
+# Expression Engine
 
 ## Overview
 
-The Expression Engine is Papertrace's abstraction layer that decouples the business query model from provider-specific API parameters. This enables:
+The Expression Engine provides an **abstraction layer** between business query concepts and provider-specific API parameters. Expressions are stored in `patra-registry` and consumed by `patra-ingest` via snapshot mechanism.
 
-- **Unified Query Interface**: Write queries once, execute across multiple providers
-- **Provider Flexibility**: Add new providers without changing query logic
-- **Capability Discovery**: Understand what each provider supports
-- **Testability**: Mock Expression rendering without hitting real APIs
+**Key Characteristics:**
+- **4-Table Architecture**: Field Dictionary → Capabilities → Render Rules → API Param Mappings
+- **Snapshot-Based**: Expressions are snapshotted at Plan creation time (`expr_proto_snapshot`)
+- **Localized at Slice**: Slice expressions inject window boundaries (`expr_snapshot`)
+- **Hash-Based Identity**: Change detection via SHA256 hashing
+- **Two Emission Modes**: QUERY (template rendering) vs PARAMS (structured JSON)
 
 ---
 
 ## Architecture
 
-### Three-Layer Model
+### Registry Schema (4 Tables)
 
 ```
-┌──────────────────────────────────────────────────┐
-│ Layer 1: Abstract Query (Business Model)        │
-│ {                                                │
-│   "field": "publicationDate",                    │
-│   "capability": "range",                         │
-│   "values": {                                    │
-│     "start": "2024-01-01",                       │
-│     "end": "2024-12-31"                          │
-│   }                                              │
-│ }                                                │
-└──────────────────────────────────────────────────┘
-                     │
-                     ▼ (Expression Engine)
-┌──────────────────────────────────────────────────┐
-│ Layer 2: Expression (Mapping Rules)             │
-│ {                                                │
-│   "provenance": "PUBMED",                        │
-│   "exprField": "publicationDate",                │
-│   "capability": "range",                         │
-│   "renderRule": "mindate={start}&maxdate={end}" │
-│ }                                                │
-└──────────────────────────────────────────────────┘
-                     │
-                     ▼ (Render)
-┌──────────────────────────────────────────────────┐
-│ Layer 3: Provider API Parameters                │
-│ "mindate=2024-01-01&maxdate=2024-12-31"         │
-└──────────────────────────────────────────────────┘
+reg_expr_field_dict              - Business field definitions (abstract layer)
+    ↓ 1:N
+reg_expr_capability              - Operations supported per field (TERM/IN/RANGE/EXISTS/TOKEN)
+    ↓ 1:N
+reg_prov_expr_render_rule        - Provenance-specific rendering rules (template + emission)
+    ↓ 1:N
+reg_prov_api_param_mapping       - Final API parameter mappings
 ```
 
 ---
 
-## Core Concepts
+### Table 1: reg_expr_field_dict
 
-### 1. ExprField (Abstract Field)
+**Purpose**: Define business-level queryable fields (abstract layer).
 
-**Definition**: A business-level field that represents a searchable attribute in Papertrace's unified data model.
+**Schema**:
+```sql
+CREATE TABLE reg_expr_field_dict (
+  id BIGINT PRIMARY KEY,
+  field_key VARCHAR(64) NOT NULL,           -- 'publication_date', 'title', 'author'
+  field_name VARCHAR(128),                  -- Display name
+  field_type_code VARCHAR(32),              -- DATA_TYPE: DATE/TEXT/NUMBER
+  description TEXT,
+  UNIQUE KEY uk_field_key(field_key)
+);
+```
 
-**Standard Fields**:
-
-| ExprField | Description | Example Values |
-|-----------|-------------|----------------|
-| `publicationDate` | When article was published | 2024-01-01, 2023-12-31 |
-| `author` | Author name | "Smith J", "Garcia M" |
-| `title` | Article title | "COVID-19 treatment" |
-| `journal` | Journal name | "Nature", "Science" |
-| `keyword` | Subject keyword | "cancer", "immunology" |
-| `pmid` | PubMed ID | "38123456" |
-| `doi` | Digital Object Identifier | "10.1038/s41586-024-..." |
-| `affiliation` | Author affiliation | "Harvard Medical School" |
-| `language` | Publication language | "eng", "spa" |
-
-**Custom Fields** (provider-specific):
-- `mesh`: MeSH terms (PubMed only)
-- `grantId`: Funding grant ID (EPMC)
-- `funder`: Funding organization (Crossref)
+**Example Rows**:
+| field_key | field_name | field_type_code |
+|-----------|------------|-----------------|
+| `publication_date` | Publication Date | DATE |
+| `title` | Article Title | TEXT |
+| `author` | Author Name | TEXT |
+| `journal` | Journal Name | TEXT |
 
 ---
 
-### 2. Capability (Query Operation)
+### Table 2: reg_expr_capability
 
-**Definition**: The type of query operation supported for a field.
+**Purpose**: Define which operations each field supports.
 
-**Standard Capabilities**:
+**Schema**:
+```sql
+CREATE TABLE reg_expr_capability (
+  id BIGINT PRIMARY KEY,
+  field_id BIGINT NOT NULL,                 -- FK to reg_expr_field_dict
+  operation_code VARCHAR(32) NOT NULL,      -- 'TERM', 'IN', 'RANGE', 'EXISTS', 'TOKEN'
+  value_mode_code VARCHAR(32),              -- 'ANY', 'PHRASE', 'EXACT'
+  description TEXT,
+  UNIQUE KEY uk_field_op_mode(field_id, operation_code, value_mode_code)
+);
+```
 
-| Capability | Description | Query Example | Use Case |
-|------------|-------------|---------------|----------|
-| `exact` | Exact match | `author=Smith` | Known author name |
-| `range` | Range query (inclusive) | `publicationDate=[2024-01-01,2024-12-31]` | Time windows |
-| `wildcard` | Pattern matching | `title=*COVID*` | Partial match |
-| `fuzzy` | Fuzzy match (Levenshtein) | `author~Smyth` | Spelling variations |
-| `prefix` | Prefix match | `journal=Nat*` | Starts with |
-| `in` | Set membership | `pmid in [123, 456, 789]` | Multiple IDs |
-| `exists` | Field presence | `doi exists` | Has DOI? |
+**Operation Codes**:
 
-**Capability Support Matrix**:
+| Operation | Description | Use Case |
+|-----------|-------------|----------|
+| **TERM** | Single term match | `publication_date:2024-01-01` |
+| **IN** | Multiple value match | `journal IN ('Nature', 'Science')` |
+| **RANGE** | Range query | `publication_date:[2024-01-01 TO 2024-12-31]` |
+| **EXISTS** | Field presence check | `EXISTS(doi)` |
+| **TOKEN** | Token-based search | Full-text tokenization |
 
-|  | PubMed | EPMC | Crossref |
-|--|--------|------|----------|
-| **publicationDate** | range | range | range |
-| **author** | exact, wildcard | exact, fuzzy | exact |
-| **title** | wildcard | wildcard, fuzzy | wildcard |
-| **journal** | exact | exact, prefix | exact |
-| **keyword** | exact | exact, fuzzy | (not supported) |
-| **pmid** | exact, in | exact | (not supported) |
-| **doi** | exact | exact | exact, prefix |
+**Value Modes** (for TERM):
+- **ANY**: Any word match
+- **PHRASE**: Exact phrase match
+- **EXACT**: Exact string match
 
 ---
 
-### 3. RenderRule (Template)
+### Table 3: reg_prov_expr_render_rule
 
-**Definition**: A provider-specific template that maps abstract fields and capabilities to API parameters.
+**Purpose**: Provenance-specific rendering templates.
 
-**Template Syntax**:
-
-```
-renderRule: "param1={placeholder1}&param2={placeholder2}"
-```
-
-**Placeholders**: Surrounded by `{}`, replaced at runtime with actual values.
-
-**Examples**:
-
-**PubMed publicationDate range**:
-```
-renderRule: "mindate={start}&maxdate={end}"
-
-Values: {start: "2024-01-01", end: "2024-12-31"}
-Rendered: "mindate=2024-01-01&maxdate=2024-12-31"
+**Schema**:
+```sql
+CREATE TABLE reg_prov_expr_render_rule (
+  id BIGINT PRIMARY KEY,
+  provenance_id BIGINT NOT NULL,
+  capability_id BIGINT NOT NULL,            -- FK to reg_expr_capability
+  template TEXT,                            -- Mustache template: '{{v}}[TIAB]', '"{{v}}"[TIAB]'
+  emission_mode_code VARCHAR(32),           -- 'QUERY' or 'PARAMS'
+  params JSON,                              -- For PARAMS mode: {"from":"{{from}}", "to":"{{to}}"}
+  priority INT,                             -- Rendering priority
+  UNIQUE KEY uk_prov_cap(provenance_id, capability_id)
+);
 ```
 
-**EPMC publicationDate range (Lucene syntax)**:
-```
-renderRule: "PUB_YEAR:[{startYear} TO {endYear}]"
+**Emission Modes**:
 
-Values: {startYear: "2024", endYear: "2024"}
-Rendered: "PUB_YEAR:[2024 TO 2024]"
-```
+| Mode | Description | Output Target |
+|------|-------------|---------------|
+| **QUERY** | Render to query string | Appended to URL query params |
+| **PARAMS** | Emit structured params | Merged into request body/params |
 
-**Crossref publicationDate range**:
-```
-renderRule: "from-pub-date={start}&until-pub-date={end}"
-
-Values: {start: "2024-01-01", end: "2024-12-31"}
-Rendered: "from-pub-date=2024-01-01&until-pub-date=2024-12-31"
-```
+**Template Syntax** (Mustache-style):
+- `{{v}}`: Single value placeholder
+- `{{from}}`, `{{to}}`: Range boundaries
+- `{{datetype}}`: Date type parameter (PubMed-specific)
 
 ---
 
-## Expression Domain Model
+### Table 4: reg_prov_api_param_mapping
 
-### Expression Entity
+**Purpose**: Map abstract fields to provider API parameter names.
 
+**Schema**:
+```sql
+CREATE TABLE reg_prov_api_param_mapping (
+  id BIGINT PRIMARY KEY,
+  provenance_id BIGINT NOT NULL,
+  field_id BIGINT NOT NULL,
+  api_param_key VARCHAR(128),               -- Provider API param name: 'tiab', 'pdat', 'auth'
+  UNIQUE KEY uk_prov_field(provenance_id, field_id)
+);
+```
+
+**Example** (PubMed):
+| field_key (abstract) | api_param_key (PubMed-specific) |
+|----------------------|---------------------------------|
+| `title` | `tiab` (Title/Abstract) |
+| `publication_date` | `pdat` (Publication Date) |
+| `author` | `auth` (Author) |
+
+---
+
+## Expression Snapshot Flow
+
+### 1. Registry: ExprSnapshot Creation
+
+**Repository Method**:
 ```java
-// patra-expr-kernel/src/main/java/com/patra/expr/domain/model/
-public class Expression {
-    private ExpressionId id;
-    private ProvenanceCode provenanceCode;
-    private String exprField;
-    private String capability;
-    private String renderRule;
-    private boolean isActive;
-    private int priority;  // For conflict resolution
-    private Instant effectiveFrom;
-    private Instant effectiveTo;
-
-    // Business logic
-    public String render(Map<String, Object> values) {
-        String result = renderRule;
-        for (Map.Entry<String, Object> entry : values.entrySet()) {
-            String placeholder = "{" + entry.getKey() + "}";
-            String value = entry.getValue().toString();
-            result = result.replace(placeholder, value);
-        }
-        return result;
-    }
-
-    public boolean supports(String field, String cap) {
-        return this.exprField.equals(field) &&
-               this.capability.equals(cap) &&
-               this.isActive;
-    }
-}
+ExprSnapshot loadSnapshot(
+    String provenanceCode,
+    String operationType,
+    String endpointName,
+    Instant at
+)
 ```
 
-### Expression Repository Port
-
+**Returns**:
 ```java
-public interface ExpressionPort {
-    List<Expression> findByProvenance(ProvenanceCode provenanceCode);
-
-    Optional<Expression> findByProvenanceAndFieldAndCapability(
-        ProvenanceCode provenanceCode,
-        String exprField,
-        String capability
-    );
-
-    void save(Expression expression);
-}
+record ExprSnapshot(
+    List<ExprField> fields,              // Field dictionary entries
+    List<ExprCapability> capabilities,   // Supported operations
+    List<ExprRenderRule> renderRules,    // Rendering templates
+    List<ApiParamMapping> apiParamMappings  // API param mappings
+)
 ```
 
 ---
 
-## Expression Rendering Process
+### 2. Registry API: REST Endpoint
 
-### Step-by-Step Example
+**Endpoint**:
+```
+GET /_internal/expr/snapshot?
+    provenanceCode=PUBMED&
+    operationType=HARVEST&
+    endpointName=null&
+    at=2024-11-02T12:00:00Z
+```
 
-**Input Query**:
+**Response** (ExprSnapshotResp DTO):
 ```json
 {
-  "provenance": "PUBMED",
-  "filters": [
-    {
-      "field": "publicationDate",
-      "capability": "range",
-      "values": {
-        "start": "2024-01-01",
-        "end": "2024-12-31"
-      }
-    },
-    {
-      "field": "author",
-      "capability": "exact",
-      "values": {
-        "name": "Smith J"
-      }
-    }
+  "fields": [
+    {"fieldKey": "publication_date", "fieldName": "Publication Date", "fieldTypeCode": "DATE"},
+    {"fieldKey": "title", "fieldName": "Title", "fieldTypeCode": "TEXT"}
+  ],
+  "capabilities": [
+    {"fieldKey": "publication_date", "operationCode": "RANGE", "valueModeCode": null},
+    {"fieldKey": "title", "operationCode": "TERM", "valueModeCode": "ANY"}
+  ],
+  "renderRules": [
+    {"fieldKey": "publication_date", "operationCode": "RANGE", "emissionModeCode": "PARAMS",
+     "params": {"from":"{{from}}", "to":"{{to}}", "datetype":"{{datetype}}"}},
+    {"fieldKey": "title", "operationCode": "TERM", "template": "{{v}}[TIAB]", "emissionModeCode": "QUERY"}
+  ],
+  "apiParamMappings": [
+    {"fieldKey": "publication_date", "apiParamKey": "pdat"},
+    {"fieldKey": "title", "apiParamKey": "tiab"}
   ]
 }
 ```
 
-**Step 1: Load Expressions**
-
-```java
-List<Expression> expressions = expressionRepository.findByProvenance(
-    ProvenanceCode.PUBMED
-);
-
-// Result:
-// Expression 1: publicationDate + range → "mindate={start}&maxdate={end}"
-// Expression 2: author + exact → "author={name}"
-```
-
-**Step 2: Match Filters to Expressions**
-
-```java
-for (Filter filter : query.filters()) {
-    Optional<Expression> expr = expressions.stream()
-        .filter(e -> e.supports(filter.field(), filter.capability()))
-        .findFirst();
-
-    if (expr.isEmpty()) {
-        throw new ExpressionNotFoundException(
-            "No expression for " + filter.field() + ":" + filter.capability()
-        );
-    }
-
-    renderedParams.add(expr.get().render(filter.values()));
-}
-```
-
-**Step 3: Render Each Expression**
-
-```java
-// Filter 1: publicationDate + range
-Expression dateExpr = expressions[0];
-String rendered1 = dateExpr.render(Map.of(
-    "start", "2024-01-01",
-    "end", "2024-12-31"
-));
-// Result: "mindate=2024-01-01&maxdate=2024-12-31"
-
-// Filter 2: author + exact
-Expression authorExpr = expressions[1];
-String rendered2 = authorExpr.render(Map.of(
-    "name", "Smith J"
-));
-// Result: "author=Smith J"
-```
-
-**Step 4: Combine Parameters**
-
-```java
-String finalUrl = baseUrl + "/esearch.fcgi?db=pubmed&" +
-    String.join("&", renderedParams);
-
-// Result:
-// https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?
-//   db=pubmed&mindate=2024-01-01&maxdate=2024-12-31&author=Smith J
-```
-
 ---
 
-## Advanced Features
+### 3. Ingest: Plan Expression (Prototype)
 
-### 1. Multi-Value Rendering
-
-**Use Case**: Searching for multiple PMIDs
-
-**Query**:
-```json
-{
-  "field": "pmid",
-  "capability": "in",
-  "values": {
-    "ids": ["38123456", "38234567", "38345678"]
-  }
-}
-```
-
-**Expression**:
+**Plan Creation** (PlanAssemblerImpl):
 ```java
-Expression pmidInExpr = new Expression(
+// Fetch expression snapshot from registry
+ExprSnapshotResp exprSnapshot = exprClient.getSnapshot(
+    provenanceCode, operationType, null, Instant.now()
+);
+
+// Serialize to JSON
+JsonNode exprProtoSnapshotJson = objectMapper.valueToTree(exprSnapshot);
+
+// Hash for change detection
+String exprProtoHash = hashCalculator.sha256(exprProtoSnapshotJson);
+
+// Store in Plan
+PlanAggregate plan = PlanAggregate.create(
     ...,
-    ProvenanceCode.PUBMED,
-    "pmid",
-    "in",
-    "id={ids|join(',')}", // Custom function: join with comma
+    exprProtoHash,           // SHA256 hash
+    exprProtoSnapshotJson,   // Full snapshot JSON
     ...
 );
 ```
 
-**Rendered**:
-```
-"id=38123456,38234567,38345678"
-```
-
-**Implementation**:
-```java
-public String render(Map<String, Object> values) {
-    String result = renderRule;
-
-    for (Map.Entry<String, Object> entry : values.entrySet()) {
-        String placeholder = "{" + entry.getKey() + "}";
-
-        // Check for custom functions
-        if (renderRule.contains(placeholder + "|join")) {
-            List<String> list = (List<String>) entry.getValue();
-            String separator = extractSeparator(renderRule, entry.getKey());
-            String joined = String.join(separator, list);
-            result = result.replaceAll("\\{" + entry.getKey() + "\\|join\\([^)]+\\)\\}", joined);
-        } else {
-            result = result.replace(placeholder, entry.getValue().toString());
-        }
-    }
-
-    return result;
-}
-```
+**Storage**:
+- **ing_plan.expr_proto_hash**: `SHA256(expr_proto_snapshot)` (for change detection)
+- **ing_plan.expr_proto_snapshot**: `JsonNode` (immutable prototype)
 
 ---
 
-### 2. Conditional Rendering
+### 4. Ingest: Slice Expression (Localized)
 
-**Use Case**: Different formats for different date precisions
-
-**Query 1** (day precision):
-```json
-{
-  "field": "publicationDate",
-  "capability": "range",
-  "values": {
-    "start": "2024-01-15",
-    "end": "2024-01-20",
-    "precision": "day"
-  }
-}
-```
-
-**Query 2** (year precision):
-```json
-{
-  "field": "publicationDate",
-  "capability": "range",
-  "values": {
-    "start": "2024",
-    "end": "2024",
-    "precision": "year"
-  }
-}
-```
-
-**Expression with Conditional**:
+**Slice Creation** (SlicePlanner):
 ```java
-// renderRule with conditional syntax
-"{{if precision=='day'}}mindate={start}&maxdate={end}{{else}}PUB_YEAR:{start}{{endif}}"
-```
+// Copy prototype from Plan
+JsonNode planExprProto = plan.getExprProtoSnapshotJson();
 
-**Rendered**:
-```
-Query 1: "mindate=2024-01-15&maxdate=2024-01-20"
-Query 2: "PUB_YEAR:2024"
-```
+// Localize: inject window boundaries into expression
+JsonNode localizedExpr = expressionLocalizer.localize(
+    planExprProto,
+    sliceWindow  // WindowSpec.Time(from, to)
+);
 
----
+// Hash localized expression
+String exprHash = hashCalculator.sha256(localizedExpr);
 
-### 3. URL Encoding
-
-**Problem**: Special characters in values need URL encoding.
-
-**Query**:
-```json
-{
-  "field": "title",
-  "capability": "wildcard",
-  "values": {
-    "pattern": "COVID-19 & Long COVID"
-  }
-}
-```
-
-**Naive Rendering**:
-```
-"title=COVID-19 & Long COVID"  ❌ (& breaks URL)
-```
-
-**Correct Rendering** (with URL encoding):
-```
-"title=COVID-19%20%26%20Long%20COVID"  ✅
-```
-
-**Implementation**:
-```java
-public String render(Map<String, Object> values) {
-    String result = renderRule;
-
-    for (Map.Entry<String, Object> entry : values.entrySet()) {
-        String placeholder = "{" + entry.getKey() + "}";
-        String value = URLEncoder.encode(
-            entry.getValue().toString(),
-            StandardCharsets.UTF_8
-        );
-        result = result.replace(placeholder, value);
-    }
-
-    return result;
-}
-```
-
----
-
-### 4. Priority-Based Expression Selection
-
-**Problem**: Multiple Expressions for same field + capability.
-
-**Scenario**: PubMed has two ways to query by date:
-1. `mindate/maxdate` (E-utilities)
-2. `datetype=pdat&mindate/maxdate` (more precise)
-
-**Expressions**:
-```java
-Expression basic = new Expression(
+// Create Slice with localized expression
+PlanSliceAggregate slice = PlanSliceAggregate.create(
     ...,
-    "publicationDate",
-    "range",
-    "mindate={start}&maxdate={end}",
-    priority=1  // Lower priority
-);
-
-Expression precise = new Expression(
-    ...,
-    "publicationDate",
-    "range",
-    "datetype=pdat&mindate={start}&maxdate={end}",
-    priority=10  // Higher priority (preferred)
+    exprHash,           // SHA256 of localized expression
+    localizedExpr,      // JSON with window boundaries
+    ...
 );
 ```
 
-**Selection Logic**:
-```java
-Optional<Expression> findBestExpression(
-    String field,
-    String capability,
-    List<Expression> candidates
-) {
-    return candidates.stream()
-        .filter(e -> e.supports(field, capability))
-        .max(Comparator.comparingInt(Expression::getPriority));
-}
-```
-
-**Result**: `precise` Expression selected (priority 10 > 1).
+**Storage**:
+- **ing_plan_slice.expr_hash**: `SHA256(expr_snapshot)` (localized hash)
+- **ing_plan_slice.expr_snapshot_json**: `TEXT` (localized expression with boundaries)
 
 ---
 
-## Real-World Provider Examples
+## Expression Rendering
 
-### PubMed (E-utilities)
+### Rendering Context
 
-**API Documentation**: https://www.ncbi.nlm.nih.gov/books/NBK25499/
-
-**Common Expressions**:
-
+**At Task Execution**:
 ```java
-// publicationDate range
-new Expression(
-    ProvenanceCode.PUBMED,
-    "publicationDate",
-    "range",
-    "mindate={start}&maxdate={end}"
-);
+// Load slice expression
+String exprSnapshotJson = slice.getExprSnapshotJson();
+ExprSnapshot expr = objectMapper.readValue(exprSnapshotJson, ExprSnapshot.class);
 
-// author exact
-new Expression(
-    ProvenanceCode.PUBMED,
-    "author",
-    "exact",
-    "author={name}"
-);
-
-// title wildcard (PubMed uses [Title] field tag)
-new Expression(
-    ProvenanceCode.PUBMED,
-    "title",
-    "wildcard",
-    "term={pattern}[Title]"
-);
-
-// pmid exact
-new Expression(
-    ProvenanceCode.PUBMED,
-    "pmid",
-    "exact",
-    "id={pmid}"
-);
-
-// MeSH term (PubMed-specific)
-new Expression(
-    ProvenanceCode.PUBMED,
-    "mesh",
-    "exact",
-    "term={meshTerm}[MeSH Terms]"
-);
+// Pass to rendering engine (patra-expr-kernel)
+QueryRenderResult result = exprRenderer.render(expr, userQuery);
 ```
 
-**Example Rendered URL**:
+### Two Emission Modes
+
+**1. QUERY Mode** (URL Query String):
 ```
-https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?
-  db=pubmed&
-  mindate=2024-01-01&
-  maxdate=2024-12-31&
-  author=Smith J&
-  retstart=0&
-  retmax=1000
+Template: "{{v}}[TIAB]"
+Input: {v: "cancer"}
+Output: "cancer[TIAB]"
+
+Final URL: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?term=cancer[TIAB]
+```
+
+**2. PARAMS Mode** (Structured Parameters):
+```
+Params: {"from":"{{from}}", "to":"{{to}}", "datetype":"{{datetype}}"}
+Input: {from: "2024-01-01", to: "2024-12-31", datetype: "edat"}
+Output: {"from": "2024-01-01", "to": "2024-12-31", "datetype": "edat"}
+
+Final Request Body: {"from": "2024-01-01", "to": "2024-12-31", "datetype": "edat"}
 ```
 
 ---
 
-### Europe PMC
+## Real-World Example: PubMed Publication Date Range
 
-**API Documentation**: https://europepmc.org/RestfulWebService
+### Registry Data
 
-**Common Expressions**:
-
-```java
-// publicationDate range (Lucene syntax)
-new Expression(
-    ProvenanceCode.EPMC,
-    "publicationDate",
-    "range",
-    "PUB_YEAR:[{startYear} TO {endYear}]"
-);
-
-// author exact
-new Expression(
-    ProvenanceCode.EPMC,
-    "author",
-    "exact",
-    "AUTH:{name}"
-);
-
-// title fuzzy (EPMC supports fuzzy~)
-new Expression(
-    ProvenanceCode.EPMC,
-    "title",
-    "fuzzy",
-    "TITLE:{pattern}~"
-);
-
-// grantId (EPMC-specific)
-new Expression(
-    ProvenanceCode.EPMC,
-    "grantId",
-    "exact",
-    "GRANT_ID:{grantId}"
-);
+**Field Dictionary**:
+```
+field_key: 'publication_date'
+field_name: 'Publication Date'
+field_type_code: 'DATE'
 ```
 
-**Example Rendered URL**:
+**Capability**:
 ```
-https://www.ebi.ac.uk/europepmc/webservices/rest/search?
-  query=PUB_YEAR:[2024 TO 2024] AND AUTH:Smith%20J&
-  pageSize=1000&
-  cursorMark=*
-```
-
----
-
-### Crossref
-
-**API Documentation**: https://api.crossref.org/
-
-**Common Expressions**:
-
-```java
-// publicationDate range
-new Expression(
-    ProvenanceCode.CROSSREF,
-    "publicationDate",
-    "range",
-    "filter=from-pub-date:{start},until-pub-date:{end}"
-);
-
-// author exact (structured query)
-new Expression(
-    ProvenanceCode.CROSSREF,
-    "author",
-    "exact",
-    "query.author={name}"
-);
-
-// doi exact
-new Expression(
-    ProvenanceCode.CROSSREF,
-    "doi",
-    "exact",
-    "filter=doi:{doi}"
-);
-
-// funder (Crossref-specific)
-new Expression(
-    ProvenanceCode.CROSSREF,
-    "funder",
-    "exact",
-    "filter=funder:{funderId}"
-);
+field_key: 'publication_date'
+operation_code: 'RANGE'
+value_mode_code: null
 ```
 
-**Example Rendered URL**:
+**Render Rule** (PubMed):
 ```
-https://api.crossref.org/works?
-  filter=from-pub-date:2024-01-01,until-pub-date:2024-12-31&
-  query.author=Smith J&
-  rows=1000&
-  offset=0
+provenance_code: 'PUBMED'
+capability_id: (publication_date, RANGE)
+emission_mode_code: 'PARAMS'
+params: {"from":"{{from}}", "to":"{{to}}", "datetype":"{{datetype}}"}
+```
+
+**API Param Mapping**:
+```
+field_key: 'publication_date'
+api_param_key: 'pdat'  (PubMed-specific)
+```
+
+### Expression Flow
+
+**Step 1: Plan Creation**
+```
+ExprSnapshot loaded from registry:
+  - Field: publication_date (DATE)
+  - Capability: RANGE
+  - RenderRule: PARAMS mode with {"from":"{{from}}", "to":"{{to}}"}
+  - ApiParamMapping: pdat
+
+Stored in ing_plan.expr_proto_snapshot (no boundaries yet)
+```
+
+**Step 2: Slice Creation**
+```
+Slice window: 2024-01-01 to 2024-01-31
+
+Localize expression:
+  - Inject from=2024-01-01, to=2024-01-31
+  - Store in ing_plan_slice.expr_snapshot_json
+```
+
+**Step 3: Task Execution**
+```
+Load expr_snapshot_json from Slice
+Render with params:
+  from: "2024-01-01"
+  to: "2024-01-31"
+  datetype: "edat"  (EntrezDate)
+
+Final API params:
+  pdat: {"from": "2024-01-01", "to": "2024-01-31", "datetype": "edat"}
 ```
 
 ---
 
-## Testing Strategies
+## Expression Hashing (Change Detection)
 
-### 1. Unit Testing Expression Rendering
+### Two-Level Hashing
 
-```java
-@Test
-void testRenderPublicationDateRange() {
-    Expression expr = new Expression(
-        ExpressionId.generate(),
-        ProvenanceCode.PUBMED,
-        "publicationDate",
-        "range",
-        "mindate={start}&maxdate={end}",
-        true,
-        1,
-        Instant.now(),
-        null
-    );
-
-    Map<String, Object> values = Map.of(
-        "start", "2024-01-01",
-        "end", "2024-12-31"
-    );
-
-    String rendered = expr.render(values);
-
-    assertThat(rendered).isEqualTo("mindate=2024-01-01&maxdate=2024-12-31");
-}
+**1. Plan Expression Hash** (`expr_proto_hash`):
+```
+Input: ExprSnapshot JSON (no boundaries)
+Algorithm: SHA256
+Purpose: Detect expression definition changes
 ```
 
-### 2. Integration Testing with Mock API
+**2. Slice Expression Hash** (`expr_hash`):
+```
+Input: Localized ExprSnapshot JSON (with boundaries)
+Algorithm: SHA256
+Purpose: Idempotency for slice expression
+```
 
-```java
-@Test
-void testEndToEndQueryRendering() {
-    // 1. Setup: Load Expressions from repository
-    List<Expression> expressions = expressionRepository.findByProvenance(
-        ProvenanceCode.PUBMED
-    );
-
-    // 2. Create abstract query
-    Query query = new Query(
-        ProvenanceCode.PUBMED,
-        List.of(
-            new Filter("publicationDate", "range", Map.of("start", "2024-01-01", "end", "2024-12-31")),
-            new Filter("author", "exact", Map.of("name", "Smith J"))
-        )
-    );
-
-    // 3. Render to API URL
-    String url = queryRenderer.render(query, expressions);
-
-    // 4. Assert
-    assertThat(url).contains("mindate=2024-01-01");
-    assertThat(url).contains("maxdate=2024-12-31");
-    assertThat(url).contains("author=Smith J");
-}
+**Use Case**:
+```
+If exprProtoHash changes → Expression definition updated in registry
+If exprHash changes → Slice window boundaries changed
 ```
 
 ---
 
-## Common Pitfalls and Solutions
+## Integration (Registry → Ingest)
 
-### Pitfall 1: Missing URL Encoding
+### API Contract
 
-**Problem**:
-```java
-// values = {name: "O'Brien"}
-renderRule = "author={name}"
-rendered = "author=O'Brien"  // ❌ Single quote breaks URL
+**Request**:
+```
+GET /_internal/expr/snapshot?provenanceCode={code}&operationType={op}&at={timestamp}
 ```
 
-**Solution**: Always URL-encode values.
-
----
-
-### Pitfall 2: Ambiguous Placeholder Names
-
-**Problem**:
+**Response**:
 ```java
-renderRule = "from-date={date}&to-date={date}"  // ❌ Ambiguous
-values = {date: "???"}  // Which date?
+record ExprSnapshotResp(
+    List<ExprFieldDto> fields,
+    List<ExprCapabilityDto> capabilities,
+    List<ExprRenderRuleDto> renderRules,
+    List<ApiParamMappingDto> apiParamMappings
+)
 ```
 
-**Solution**: Use distinct placeholder names.
+### Ingest Client
+
+**PatraRegistryPort** (domain interface):
 ```java
-renderRule = "from-date={startDate}&to-date={endDate}"  // ✅
-values = {startDate: "2024-01-01", endDate: "2024-12-31"}
-```
-
----
-
-### Pitfall 3: Missing Expression for Provider
-
-**Problem**: User queries with `fuzzy` capability, but provider doesn't support it.
-
-**Detection**:
-```java
-Optional<Expression> expr = findExpression("author", "fuzzy", ProvenanceCode.CROSSREF);
-if (expr.isEmpty()) {
-    throw new UnsupportedCapabilityException(
-        "Crossref does not support fuzzy search for author"
+public interface PatraRegistryPort {
+    ExprSnapshot fetchExprSnapshot(
+        String provenanceCode,
+        String operationType,
+        Instant at
     );
 }
 ```
 
-**User-Friendly Error**:
-```
-"Fuzzy search is not supported for author in Crossref.
-Supported capabilities: exact, wildcard.
-Try using exact match or wildcard search instead."
+**Implementation** (ExprClientAdapter):
+```java
+@Override
+public ExprSnapshot fetchExprSnapshot(String provenance, String operation, Instant at) {
+    ExprSnapshotResp resp = exprClient.getSnapshot(provenance, operation, null, at);
+    return exprSnapshotConverter.convert(resp);
+}
 ```
 
 ---
 
 ## Best Practices
 
-### 1. Version Expressions with effectiveFrom/effectiveTo
+### 1. Separate Concerns
 
-**Why**: APIs evolve. PubMed might change parameter names.
+**Good**:
+- Abstract fields in `reg_expr_field_dict` (business layer)
+- Provider-specific rules in `reg_prov_expr_render_rule` (adapter layer)
 
-**Example**:
-```java
-// Old Expression (expires 2024-12-31)
-Expression oldExpr = new Expression(
-    ...,
-    "publicationDate",
-    "range",
-    "mindate={start}&maxdate={end}",
-    effectiveTo=Instant.parse("2024-12-31T23:59:59Z")
-);
+**Bad**:
+- Hardcoding PubMed-specific field names in business logic
 
-// New Expression (effective 2025-01-01)
-Expression newExpr = new Expression(
-    ...,
-    "publicationDate",
-    "range",
-    "pub-date-start={start}&pub-date-end={end}",  // API changed
-    effectiveFrom=Instant.parse("2025-01-01T00:00:00Z")
-);
+### 2. Use PARAMS Mode for Structured Data
+
+**Good** (RANGE with PARAMS):
+```json
+{"from": "{{from}}", "to": "{{to}}", "datetype": "edat"}
 ```
 
-### 2. Test Expressions with Real APIs
-
-**Why**: Provider docs may be outdated or incomplete.
-
-**Strategy**:
-```java
-@Test
-void testPubMedDateRangeWithRealAPI() {
-    String url = renderExpression(...);
-    HttpResponse<String> response = httpClient.send(GET(url));
-    assertThat(response.statusCode()).isEqualTo(200);
-    // Verify response structure
-}
+**Bad** (RANGE with QUERY template):
+```
+"pdat:[{{from}} TO {{to}}]"  // Brittle, hard to validate
 ```
 
-### 3. Document Provider Quirks
+### 3. Version Expressions via Temporal Validity
 
-**Example**:
-```java
-/**
- * PubMed Quirk: mindate/maxdate require YYYY/MM/DD format, NOT ISO-8601.
- *
- * ✅ Correct: mindate=2024/01/01
- * ❌ Wrong: mindate=2024-01-01 (will return 0 results)
- */
-new Expression(
-    ...,
-    "publicationDate",
-    "range",
-    "mindate={start}&maxdate={end}",
-    ...
-);
+Although not shown in current schema, expressions can be versioned by adding `effective_from`/`effective_to` to render rules.
 
-// In rendering logic:
-String formattedDate = date.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-```
+---
+
+## Troubleshooting
+
+### Issue: "Expression not found"
+
+**Diagnosis**:
+1. Check if field exists: `SELECT * FROM reg_expr_field_dict WHERE field_key='publication_date'`
+2. Check capability: `SELECT * FROM reg_expr_capability WHERE field_id=...`
+3. Check render rule: `SELECT * FROM reg_prov_expr_render_rule WHERE provenance_id=... AND capability_id=...`
+
+**Fix**: Seed missing expression data.
+
+---
+
+### Issue: "Wrong API parameter generated"
+
+**Diagnosis**:
+1. Check template: Verify `template` or `params` JSON in render rule
+2. Check emission mode: QUERY vs PARAMS
+3. Check API param mapping: `api_param_key` in `reg_prov_api_param_mapping`
+
+**Fix**: Update render rule or param mapping.
 
 ---
 
 ## Summary
 
-**Expression Engine Benefits**:
-- ✅ **Abstraction**: Business logic independent of provider APIs
-- ✅ **Flexibility**: Easy to add new providers
-- ✅ **Testability**: Mock rendering without API calls
-- ✅ **Versioning**: Handle API changes gracefully
+**Key Architecture**:
+- ✅ 4-table registry structure (field dict → capability → render rule → api mapping)
+- ✅ ExprSnapshot as immutable snapshot
+- ✅ Two-level hashing (plan proto vs slice localized)
+- ✅ Two emission modes (QUERY template vs PARAMS structured)
 
-**Key Components**:
-- **ExprField**: Abstract business field (e.g., `publicationDate`)
-- **Capability**: Query operation type (e.g., `range`, `exact`)
-- **RenderRule**: Provider-specific template (e.g., `mindate={start}&maxdate={end}`)
+**Expression Lifecycle**:
+```
+1. Define in Registry (4 tables)
+2. Load as ExprSnapshot (via REST API)
+3. Store in Plan (expr_proto_snapshot)
+4. Localize in Slice (inject boundaries → expr_snapshot)
+5. Render at Task execution (patra-expr-kernel)
+```
 
-**Workflow**:
-1. User submits abstract query
-2. Engine loads Expressions for target Provenance
-3. Match each filter to Expression by field + capability
-4. Render templates with actual values
-5. Combine into final API URL
-
-**See Also**:
-- [business-concepts.md](business-concepts.md) for Expression definition
-- [provenance-config-system.md](provenance-config-system.md) for Expression versioning
+**No**:
+- ❌ Single `Expression` entity with `render()` method
+- ❌ Placeholder syntax `{placeholder}` (use `{{placeholder}}`)
+- ❌ Capability names like `exact`, `fuzzy` (use TERM, RANGE, IN, EXISTS, TOKEN)

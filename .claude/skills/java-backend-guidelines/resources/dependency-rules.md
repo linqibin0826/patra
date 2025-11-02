@@ -17,12 +17,12 @@ ArchUnit is a Java library that validates architectural rules at compile/test ti
 - ✅ `patra-common` (shared utilities)
 - ✅ `lombok.*` (compile-time code generation)
 - ✅ `cn.hutool.*` (Hutool utilities)
+- ✅ `com.fasterxml.jackson.*` (for JSON serialization in domain events/snapshots)
 
 **Forbidden Dependencies**:
 - ❌ `org.springframework.*`
 - ❌ `com.baomidou.mybatisplus.*`
 - ❌ `jakarta.persistence.*`
-- ❌ `com.fasterxml.jackson.*` (except in specific cases)
 
 ### ArchUnit Test
 
@@ -36,6 +36,7 @@ static final ArchRule domainLayerIsIndependent =
                 "java..",
                 "lombok..",
                 "cn.hutool..",
+                "com.fasterxml.jackson..",
                 "com.patra.common..",
                 "..domain.."
             )
@@ -46,24 +47,30 @@ static final ArchRule domainLayerIsIndependent =
 **Example Violation**:
 ```java
 // ❌ BAD: Spring annotation in domain
-package com.patra.registry.domain.model.aggregate;
+package com.patra.registry.domain.model.vo.provenance;
 
 import org.springframework.stereotype.Component;  // ← Violation!
 
 @Component  // ← Violation!
-public class ProvenanceConfiguration {
+public record Provenance(...) {
     // ...
 }
 ```
 
 **Fix**:
 ```java
-// ✅ GOOD: Pure Java
-package com.patra.registry.domain.model.aggregate;
+// ✅ GOOD: Pure Java record
+package com.patra.registry.domain.model.vo.provenance;
 
-public record ProvenanceConfiguration(
-    Provenance provenance,
-    WindowOffsetConfig windowOffset
+public record Provenance(
+    Long id,
+    String code,
+    String name,
+    String baseUrlDefault,
+    String timezoneDefault,
+    String docsUrl,
+    boolean active,
+    String lifecycleStatusCode
 ) {
     // Pure business logic, no framework dependencies
 }
@@ -143,6 +150,8 @@ static final ArchRule infraDependsOnDomain =
 static final ArchRule portsDefinedInDomain =
     classes()
         .that().haveSimpleNameEndingWith("Port")
+        .or().haveSimpleNameEndingWith("Repository")
+        .and().areInterfaces()
         .should().resideInAPackage("..domain.port..")
         .because("Port interfaces must be defined in domain layer");
 
@@ -152,7 +161,9 @@ static final ArchRule portsImplementedInInfra =
         .that().implement(DescribedPredicate.describe(
             "Port interface",
             clazz -> clazz.getSimpleName().endsWith("Port")
+                  || clazz.getSimpleName().endsWith("Repository")
         ))
+        .and().areNotInterfaces()
         .should().resideInAPackage("..infra..")
         .because("Port implementations must be in infrastructure layer");
 ```
@@ -160,18 +171,19 @@ static final ArchRule portsImplementedInInfra =
 **Example**:
 ```java
 // ✅ Port in domain
-package com.patra.registry.domain.port;
+package com.patra.ingest.domain.port;
 
-public interface ProvenanceConfigPort {
-    Optional<ProvenanceConfiguration> findById(ProvenanceId id);
+public interface PatraRegistryPort {
+    String fetchConfigSnapshot(String provenanceCode, String operationCode);
+    String fetchExprSnapshot(String provenanceCode, String operationCode, Instant at);
 }
 
 // ✅ Implementation in infra
-package com.patra.registry.infra.persistence.repository;
+package com.patra.ingest.infra.adapter.registry;
 
-@Repository
-public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigPort {
-    // Implementation using MyBatis-Plus
+@Component
+public class PatraRegistryAdapter implements PatraRegistryPort {
+    // Implementation using Feign client
 }
 ```
 
@@ -223,6 +235,12 @@ static final ArchRule orchestratorsAreNamedCorrectly =
         .because("Application services should be named *Orchestrator");
 ```
 
+**Real Examples**:
+- `PlanIngestionOrchestrator` (patra-ingest-app)
+- `ProvenanceConfigOrchestrator` (patra-registry-app)
+- `ExprQueryOrchestrator` (patra-registry-app)
+- `RecordUploadOrchestrator` (patra-storage-app)
+
 ---
 
 ### Rule 6: Repository Naming
@@ -236,8 +254,8 @@ static final ArchRule orchestratorsAreNamedCorrectly =
 static final ArchRule repositoriesAreNamedCorrectly =
     classes()
         .that().implement(DescribedPredicate.describe(
-            "Port interface",
-            clazz -> clazz.getSimpleName().endsWith("Port")
+            "Repository interface",
+            clazz -> clazz.getSimpleName().endsWith("Repository")
         ))
         .and().resideInAPackage("..infra..")
         .should().haveSimpleNameMatching(".*Repository(Impl|MpImpl)")
@@ -260,6 +278,13 @@ static final ArchRule dataObjectsAreNamedCorrectly =
         .should().haveSimpleNameEndingWith("DO")
         .because("MyBatis-Plus entities should end with DO");
 ```
+
+**Real Examples**:
+- `PlanDO` → `@TableName("ing_plan")`
+- `PlanSliceDO` → `@TableName("ing_plan_slice")`
+- `TaskDO` → `@TableName("ing_task")`
+- `OutboxMessageDO` → `@TableName("ing_outbox_message")`
+- `RegProvenanceDO` → `@TableName("reg_provenance")`
 
 ---
 
@@ -301,16 +326,16 @@ static final ArchRule noFieldInjection =
 ```java
 // ❌ BAD: Field injection
 @Service
-public class ProvenanceOrchestrator {
+public class PlanIngestionOrchestrator {
     @Autowired  // ← Violation!
-    private ProvenancePort provenancePort;
+    private PatraRegistryPort registryPort;
 }
 
 // ✅ GOOD: Constructor injection
 @Service
 @RequiredArgsConstructor  // Lombok generates constructor
-public class ProvenanceOrchestrator {
-    private final ProvenancePort provenancePort;  // ← Injected via constructor
+public class PlanIngestionOrchestrator {
+    private final PatraRegistryPort registryPort;  // ← Injected via constructor
 }
 ```
 
@@ -346,8 +371,6 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
@@ -368,6 +391,7 @@ class ArchitectureTest {
                     "java..",
                     "lombok..",
                     "cn.hutool..",
+                    "com.fasterxml.jackson..",
                     "com.patra.common..",
                     "..domain.."
                 )
@@ -426,6 +450,8 @@ class ArchitectureTest {
     static final ArchRule portsDefinedInDomain =
         classes()
             .that().haveSimpleNameEndingWith("Port")
+            .or().haveSimpleNameEndingWith("Repository")
+            .and().areInterfaces()
             .should().resideInAPackage("..domain.port..");
 
     @ArchTest
@@ -434,23 +460,39 @@ class ArchitectureTest {
             .that().implement(DescribedPredicate.describe(
                 "Port interface",
                 clazz -> clazz.getSimpleName().endsWith("Port")
+                      || clazz.getSimpleName().endsWith("Repository")
             ))
+            .and().areNotInterfaces()
             .should().resideInAPackage("..infra..");
 }
 ```
 
 ---
 
-## CI/CD Integration
+## Running ArchUnit Tests Locally
 
-### Maven Configuration
+### Maven Commands
 
-**pom.xml**:
+```bash
+# Run all tests including ArchUnit
+mvn test
+
+# Run only ArchUnit tests
+mvn test -Dtest=ArchitectureTest
+
+# Compile and test (if test fails with "Class not found")
+mvn clean compile test
+```
+
+### Maven Configuration (Optional)
+
+If you want to explicitly include ArchUnit tests in Maven Surefire:
+
 ```xml
 <plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-surefire-plugin</artifactId>
-    <version>3.0.0-M9</version>
+    <version>3.2.5</version>
     <configuration>
         <includes>
             <include>**/*Test.java</include>
@@ -460,118 +502,83 @@ class ArchitectureTest {
 </plugin>
 ```
 
-### CI Pipeline (GitHub Actions)
-
-```yaml
-name: Architecture Validation
-
-on: [push, pull_request]
-
-jobs:
-  architecture-test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v3
-        with:
-          java-version: '25'
-          distribution: 'zulu'
-
-      - name: Run ArchUnit Tests
-        run: mvn test -Dtest=ArchitectureTest
-
-      - name: Publish ArchUnit Report
-        if: always()
-        uses: scacap/action-surefire-report@v1
-        with:
-          report_paths: '**/target/surefire-reports/TEST-*.xml'
-```
-
 ---
 
 ## Best Practices
 
-### 1. Run ArchUnit Tests Locally
+### 1. Fix Violations Immediately
 
-```bash
-# Run all tests including ArchUnit
-mvn test
+**Don't ignore ArchUnit failures**. They indicate architectural drift that becomes harder to fix over time.
 
-# Run only ArchUnit tests
-mvn test -Dtest=ArchitectureTest
-```
+### 2. Run Tests Before Committing
 
-### 2. Fix Violations Immediately
-
-**Don't ignore ArchUnit failures**. They indicate architectural drift.
+Make it a habit to run `mvn test` before committing code changes to catch violations early.
 
 ### 3. Update Rules as Architecture Evolves
 
-If architecture decisions change, update ArchUnit rules to match.
+If architecture decisions change, update ArchUnit rules to match. Rules should reflect the current agreed-upon architecture.
 
 ### 4. Document Exceptions
 
-If you need to violate a rule, document why:
+If you need to make an exception to a rule, document why:
+
 ```java
 @ArchTest
 static final ArchRule domainLayerIsIndependent =
     classes()
         .that().resideInAPackage("..domain..")
-        .and().haveSimpleNameNotEndingWith("JsonSerializer")  // Exception documented
+        .and().haveSimpleNameNotEndingWith("JsonSerializer")  // ← Exception documented
         .should().onlyDependOnClassesThat(...)
-        .because("Domain layer must be framework-agnostic (except JSON serializers)");
+        .because("Domain layer must be framework-agnostic (except JSON serializers for events)");
 ```
 
----
+### 5. Handle Legacy Violations Gradually
 
-## Troubleshooting
+If you have too many existing violations, freeze the current state and prevent new ones:
 
-### Issue: Test Fails with "Class not found"
-
-**Solution**: Ensure all modules are compiled before running tests.
-```bash
-mvn clean compile test
-```
-
-### Issue: Too Many Violations
-
-**Solution**: Freeze current state, prevent new violations.
 ```java
 @ArchTest
 static final ArchRule domainLayerIsIndependent =
     classes()
         .that().resideInAPackage("..domain..")
         .should().onlyDependOnClassesThat(...)
-        .allowEmptyShould(true);  // ← Allows current violations
+        .allowEmptyShould(true);  // ← Temporarily allows current violations
 ```
 
-Then fix violations incrementally.
+Then fix violations incrementally in separate refactoring efforts.
 
 ---
 
 ## Summary
 
 **ArchUnit Benefits**:
-- ✅ Automated architecture validation
-- ✅ Prevents architectural drift
-- ✅ Documents architectural decisions in code
-- ✅ CI/CD integration
+- ✅ Automated architecture validation at test time
+- ✅ Prevents architectural drift before code is committed
+- ✅ Documents architectural decisions as executable code
+- ✅ Provides fast feedback on architecture violations
 
-**Key Rules**:
-1. Domain layer independence
-2. Dependency direction (Hexagonal)
-3. Port/Adapter pattern enforcement
-4. Naming conventions
-5. No cyclic dependencies
+**Key Rules Covered**:
+1. **Domain Layer Independence** - No framework dependencies in domain
+2. **Dependency Direction** - Hexagonal Architecture boundaries (Adapter → App → Domain ← Infra)
+3. **Port/Adapter Pattern** - Ports in domain, implementations in infra
+4. **Naming Conventions** - Orchestrators, Repositories, DOs properly named
+5. **Anti-Patterns** - No cyclic dependencies, no field injection, no layer violations
 
-**Integration**:
-- Run in Maven: `mvn test`
-- CI/CD pipeline validation
-- Fail builds on violations
+**Running Tests**:
+```bash
+# Run all tests
+mvn test
+
+# Run only ArchUnit tests
+mvn test -Dtest=ArchitectureTest
+```
+
+**Development Workflow**:
+1. Write code following architecture principles
+2. Run `mvn test` locally before committing
+3. Fix any ArchUnit violations immediately
+4. Update rules when architecture evolves
 
 **See Also**:
-- [architecture-overview.md](architecture-overview.md) for architecture principles
-- [testing-guide.md](testing-guide.md) for other testing strategies
+- [architecture-overview.md](architecture-overview.md) - Architecture principles and patterns
+- [testing-guide.md](testing-guide.md) - Other testing strategies (unit, integration, E2E)

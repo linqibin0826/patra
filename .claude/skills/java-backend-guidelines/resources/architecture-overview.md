@@ -4,6 +4,19 @@ Complete guide to Papertrace's architectural patterns combining Hexagonal Archit
 
 ---
 
+## Table of Contents
+
+1. [Core Architectural Principles](#core-architectural-principles)
+2. [Four-Layer Architecture](#four-layer-architecture)
+3. [Dependency Rules](#dependency-rules-must-follow)
+4. [Layer Responsibilities](#layer-responsibilities)
+5. [Adapter Layer Organization](#adapter-layer-organization)
+6. [Application Layer Patterns](#application-layer-organization-patterns)
+7. [Design Patterns Reference](#design-patterns-reference)
+8. [Testing Strategy](#testing-strategy)
+
+---
+
 ## Core Architectural Principles
 
 ### 1. Hexagonal Architecture (Ports & Adapters)
@@ -93,7 +106,11 @@ api      →  NO framework dependencies (external contracts)
 boot     →  ALL modules + Spring Boot starters
 ```
 
-### ⚠️ Forbidden Dependencies
+**⚠️ Violation of these rules is NOT acceptable!**
+
+---
+
+### Forbidden Dependencies
 
 ```java
 // ❌ NEVER: Domain depending on Infrastructure
@@ -103,36 +120,12 @@ import com.patra.ingest.infra.persistence.entity.BatchPlanDO;  // WRONG!
 // ❌ NEVER: Domain depending on Spring
 package com.patra.ingest.domain.model.entity;
 import org.springframework.stereotype.Service;  // WRONG!
-@Service
-public class BatchPlan { }
 
 // ❌ NEVER: Application depending on Infrastructure directly
 package com.patra.ingest.app.usecase.plan;
 import com.patra.ingest.infra.persistence.repository.ProvenanceRepositoryImpl;  // WRONG!
 // Instead, depend on domain port:
 import com.patra.ingest.domain.port.ProvenancePort;  // CORRECT!
-```
-
-### ✅ Allowed Dependencies
-
-```java
-// ✅ Infrastructure implements Domain port
-package com.patra.ingest.infra.persistence.repository;
-import com.patra.ingest.domain.port.ProvenancePort;  // Correct!
-import com.patra.ingest.domain.model.entity.Provenance;  // Correct!
-
-public class ProvenanceRepositoryImpl implements ProvenancePort { }
-
-// ✅ Domain uses Lombok
-package com.patra.ingest.domain.model.entity;
-import lombok.Data;  // Correct!
-@Data
-public class BatchPlan { }
-
-// ✅ Application depends on Domain
-package com.patra.ingest.app.usecase.plan;
-import com.patra.ingest.domain.model.entity.BatchPlan;  // Correct!
-import com.patra.ingest.domain.port.ProvenancePort;  // Correct!
 ```
 
 ---
@@ -149,8 +142,7 @@ import com.patra.ingest.domain.port.ProvenancePort;  // Correct!
 - REST Controllers (`@RestController`)
 - Scheduled Jobs (XXL-Job, `@XxlJob`)
 - Message Consumers (RocketMQ, `@RocketMQMessageListener`)
-- Request/Response DTOs
-- Validation (`@Valid`)
+- Request/Response DTOs, Validation (`@Valid`)
 
 **What Does NOT Go Here**:
 - ❌ Business logic (belongs in Domain)
@@ -186,58 +178,15 @@ public class ProvenanceController {
 **What Goes Here**:
 - Orchestrators (`*Orchestrator.java`)
 - Coordinators (`*Coordinator.java`)
-- Use case commands/DTOs
-- Domain event handlers
+- Use case commands/DTOs, Domain event handlers
 - Transaction boundaries (`@Transactional`)
 
 **What Does NOT Go Here**:
 - ❌ Business rules (belongs in Domain)
 - ❌ Database queries (use ports)
-- ❌ External API calls (use ports)
+- ❌ External API calls within transactions
 
-**Pattern 1: Orchestrator + Coordinators** (for complex flows with single transaction):
-
-```java
-@Service
-@RequiredArgsConstructor
-public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
-    private final PlanPersistenceCoordinator persistenceCoordinator;
-    private final PlanIdempotencyCoordinator idempotencyCoordinator;
-    private final PlanPublishingCoordinator publishingCoordinator;
-
-    @Override
-    @Transactional  // Single transaction boundary
-    public PlanIngestionResult ingest(PlanIngestionCommand command) {
-        // Phase 1: Prepare data
-        // Phase 2: Validate business rules (delegate to Domain)
-        // Phase 3: Assemble domain objects (delegate to Domain Factory)
-        // Phase 4: Check idempotency
-        // Phase 5: Persist (delegate to coordinator)
-        // Phase 6: Publish events (delegate to coordinator)
-    }
-}
-```
-
-**Pattern 2: Main Orchestrator + Sub-UseCases** (for multi-phase with independent transactions):
-
-```java
-@Service
-@RequiredArgsConstructor
-public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
-    private final PrepareTaskExecutionUseCase prepareUseCase;  // NO @Transactional
-    private final ExecuteTaskBatchesUseCase executeUseCase;    // NO @Transactional
-    private final CompleteTaskExecutionUseCase completeUseCase; // @Transactional
-
-    @Override
-    public void execute(TaskReadyCommand command) {
-        // Phase 0: Prepare (fast checks, may fail fast)
-        // Phase 1: Execute (external API calls, NO transaction)
-        // Phase 2: Complete (update state atomically, @Transactional)
-    }
-}
-```
-
-**Key Rule**: NEVER call external APIs within `@Transactional` methods (holds DB locks too long).
+**See**: [Application Layer Patterns](#application-layer-organization-patterns) section below for detailed patterns.
 
 ---
 
@@ -247,25 +196,16 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
 
 **Responsibility**: Pure business logic and rules.
 
-**What Goes Here**:
-- Aggregates and Entities
-- Value Objects (`record` for immutables)
-- Domain Events
-- Port interfaces (define what domain needs)
-- Factories (complex object creation)
-- Domain exceptions
-
-**What Does NOT Go Here**:
-- ❌ Spring annotations (`@Service`, `@Repository`, `@Autowired`)
-- ❌ Database entities (DOs belong in Infrastructure)
-- ❌ HTTP DTOs (belong in Adapter)
-- ❌ Transaction management
-
 **Allowed Dependencies**:
 - ✅ Lombok (`@Data`, `@Slf4j`, etc.)
 - ✅ Hutool utilities
 - ✅ patra-common base classes
 - ✅ Java standard library
+
+**What Does NOT Go Here**:
+- ❌ Spring annotations (`@Service`, `@Repository`, `@Autowired`)
+- ❌ Database entities (DOs belong in Infrastructure)
+- ❌ HTTP DTOs (belong in Adapter)
 
 **Aggregate Example**:
 ```java
@@ -273,51 +213,27 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
 @Data
 public class BatchPlan {
     private BatchPlanId id;
-    private ProvenanceId provenanceId;
     private PlanStatus status;
     private List<Slice> slices;
-    private Instant createdAt;
 
-    // Business logic method
     public void markAsCompleted() {
-        // Business rule validation
         if (this.status == PlanStatus.CANCELLED) {
             throw new BatchPlanException("Cannot complete cancelled plan");
         }
-        if (this.slices.stream().anyMatch(s -> !s.isCompleted())) {
-            throw new BatchPlanException("Cannot complete plan with incomplete slices");
-        }
-
         this.status = PlanStatus.COMPLETED;
-        
-        // Emit domain event for cross-aggregate reactions
         DomainEventPublisher.publish(new PlanCompletedEvent(this.id));
     }
 }
 ```
 
-**Value Object Example (using `record`)**:
+**Value Object Example**:
 ```java
 public record LiteratureId(String value) {
     public LiteratureId {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("LiteratureId cannot be null or empty");
+            throw new IllegalArgumentException("LiteratureId cannot be null");
         }
     }
-
-    public static LiteratureId of(String value) {
-        return new LiteratureId(value);
-    }
-}
-```
-
-**Port Interface Example**:
-```java
-public interface ProvenancePort {
-    Provenance findById(ProvenanceId id);
-    void save(Provenance provenance);
-    List<Provenance> findByStatus(ProvenanceStatus status);
-    boolean existsByName(String name);
 }
 ```
 
@@ -331,30 +247,21 @@ public interface ProvenancePort {
 
 **What Goes Here**:
 - Repository implementations (`*RepositoryImpl.java`)
-- MyBatis-Plus DOs (`*DO.java`)
-- MyBatis-Plus Mappers
+- MyBatis-Plus DOs (`*DO.java`), Mappers
 - MapStruct converters (`*Converter.java`)
-- External API clients
-- MQ publishers
-
-**What Does NOT Go Here**:
-- ❌ Business logic (belongs in Domain)
-- ❌ Use case orchestration (belongs in Application)
+- External API clients, MQ publishers
 
 **Repository Implementation Example**:
 ```java
 @Repository
 @RequiredArgsConstructor
 public class ProvenanceRepositoryImpl implements ProvenancePort {
-    private final ProvenanceMapper mapper;  // MyBatis-Plus
-    private final ProvenanceConverter converter;  // MapStruct
+    private final ProvenanceMapper mapper;
+    private final ProvenanceConverter converter;
 
     @Override
     public Provenance findById(ProvenanceId id) {
         ProvenanceDO dataObject = mapper.selectById(id.getValue());
-        if (dataObject == null) {
-            return null;
-        }
         return converter.toDomain(dataObject);  // DO → Domain
     }
 
@@ -363,7 +270,6 @@ public class ProvenanceRepositoryImpl implements ProvenancePort {
         ProvenanceDO dataObject = converter.toDO(provenance);  // Domain → DO
         if (dataObject.getId() == null) {
             mapper.insert(dataObject);
-            provenance.setId(ProvenanceId.of(dataObject.getId()));
         } else {
             mapper.updateById(dataObject);
         }
@@ -371,210 +277,278 @@ public class ProvenanceRepositoryImpl implements ProvenancePort {
 }
 ```
 
-**MyBatis-Plus DO Example**:
-```java
-@Data
-@TableName("t_provenance")
-public class ProvenanceDO {
-    @TableId(type = IdType.ASSIGN_ID)
-    private Long id;
+---
 
-    private String name;
-    private String description;
-    
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private JsonNode configJson;  // Store complex config as JSON
+## Adapter Layer Organization
 
-    private Integer status;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    
-    @TableLogic
-    private Boolean deleted;
-    
-    @Version
-    private Integer version;  // Optimistic locking
-}
+### Module-Level Separation (Driving vs Driven)
+
+Papertrace uses **module-level boundaries** to separate driving from driven adapters:
+
+```
+patra-{service}-adapter/     ← Driving Adapters ONLY (receive triggers)
+├── REST APIs, Scheduled Jobs, Message Consumers
+└── Direction: External World → System
+
+patra-{service}-infra/       ← Driven Adapters ONLY (access resources)
+├── DB Repositories, External API Clients, MQ Publishers
+└── Direction: System → External Resources
 ```
 
-**MapStruct Converter Example**:
-```java
-@Mapper(componentModel = "spring")
-public interface ProvenanceConverter {
-    @Mapping(target = "id", expression = "java(ProvenanceId.of(source.getId()))")
-    @Mapping(target = "status", expression = "java(ProvenanceStatus.fromCode(source.getStatus()))")
-    Provenance toDomain(ProvenanceDO source);
-
-    @Mapping(target = "id", expression = "java(source.getId() != null ? source.getId().getValue() : null)")
-    @Mapping(target = "status", expression = "java(source.getStatus().getCode())")
-    ProvenanceDO toDO(Provenance source);
-}
-```
+**Key Principle**: Module boundary provides clear separation. No need for `inbound/outbound/` packages within adapter module.
 
 ---
 
-## Module Isolation & API Module
+### Package Organization Standard
 
-### API Module (`patra-{service}-api`)
+**Organize by adapter technology type** directly under `adapter/`:
 
-**Purpose**: Define external contracts (DTOs, error codes) that other services can depend on.
+```
+com.patra.{service}.adapter/
+├── rest/           REST APIs (Spring MVC, OpenAPI)
+│   ├── internal/   (optional: microservice-to-microservice)
+│   └── public/     (optional: external-facing)
+├── scheduler/      Scheduled jobs (XXL-Job)
+│   ├── config/
+│   ├── job/
+│   └── param/
+├── stream/         Message consumers (RocketMQ, Kafka)
+│   └── dto/
+├── graphql/        GraphQL APIs (future)
+└── grpc/           gRPC APIs (future)
+```
 
-**Key Rule**: NO framework dependencies (pure POJOs).
+### Why NOT `inbound/` or `driving/`?
 
-**What Goes Here**:
-- Request/Response DTOs (for remote calls)
-- Error codes (enums)
-- Constants shared externally
+1. **Module name provides context**: `patra-{service}-adapter` already indicates adapter layer
+2. **Module contract is explicit**: `-adapter` contains ONLY driving adapters (by design)
+3. **Semantic redundancy**: `adapter.inbound.rest` repeats "inbound" unnecessarily
+4. **No future conflation**: ALL outbound integrations belong in `-infra` module
+
+### Naming Conventions
+
+| Adapter Type | Naming Pattern | Example |
+|--------------|----------------|---------|
+| REST Controller | `*Controller` or `*EndpointImpl` | `ProvenanceController` |
+| Scheduled Job | `*Job` | `PubmedHarvestJob` |
+| Message Consumer | `*Consumers` | `IngestStreamConsumers` |
+
+---
+
+## Application Layer Organization Patterns
+
+The Application layer uses two complementary patterns, each suited to different scenarios.
+
+### Pattern 1: Orchestrator + Coordinators
+
+**Structure:**
+```
+MainOrchestrator (@Transactional)
+  ├─ PersistenceCoordinator    (concern: data persistence)
+  ├─ IdempotencyCoordinator    (concern: duplicate detection)
+  └─ PublishingCoordinator     (concern: event publishing)
+```
+
+**Characteristics:**
+- **Separation by Concern**: Split by business concerns
+- **Unified Transaction**: Main Orchestrator holds `@Transactional`
+- **Lightweight Delegation**: Coordinators are helper classes (NO interfaces)
+- **Linear Flow**: Suitable for sequential flows
+
+**When to Use:**
+- ✅ Entire flow within single transaction
+- ✅ No external API calls (or minimal)
+- ✅ Concern separation more important than phase isolation
+- ✅ Components have no reuse requirements
 
 **Example**:
 ```java
-// api/dto/CreateProvenanceRequest.java
-public record CreateProvenanceRequest(
-    @NotBlank String name,
-    String description,
-    ProvenanceType type
-) { }
-
-// api/error/IngestErrorCode.java
-public enum IngestErrorCode {
-    PROVENANCE_NOT_FOUND("INGEST_001", "Provenance not found"),
-    PLAN_CREATION_FAILED("INGEST_002", "Plan creation failed");
-
-    private final String code;
-    private final String message;
-}
-```
-
----
-
-## Transaction Management
-
-### Rules
-
-1. **@Transactional at Orchestrator level ONLY**
-2. **NEVER call external APIs within transactions** (holds DB locks)
-3. **Keep transactions short** (minimize lock contention)
-
-### Pattern: Isolate External Calls from Transactions
-
-```java
-// ❌ BAD: External API call inside transaction
-@Transactional
-public void execute() {
-    prepare();           // DB query
-    callPubMedAPI();    // 10+ seconds, blocks transaction!
-    saveResults();      // DB update
-}
-
-// ✅ GOOD: External API call outside transaction
-public void execute() {
-    prepare();              // NO transaction
-    callPubMedAPI();       // NO transaction - external API
-    complete();            // @Transactional - only final DB updates
-}
-```
-
----
-
-## Event-Driven Architecture
-
-### Domain Events
-
-**Purpose**: Decouple aggregates, enable cross-aggregate reactions.
-
-**Pattern**:
-```java
-// Domain layer - emit event
-public class BatchPlan {
-    public void markAsCompleted() {
-        this.status = PlanStatus.COMPLETED;
-        DomainEventPublisher.publish(new PlanCompletedEvent(this.id));
-    }
-}
-
-// Application layer - handle event
-@Component
+@Service
 @RequiredArgsConstructor
-public class PlanCompletedEventHandler {
-    private final OutboxPublisher outboxPublisher;
+public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
+  private final PlanPersistenceCoordinator persistenceCoordinator;
+  private final PlanIdempotencyCoordinator idempotencyCoordinator;
 
-    @EventListener
-    @Transactional
-    public void handlePlanCompleted(PlanCompletedEvent event) {
-        // Persist to outbox for reliable publishing
-        outboxPublisher.publishPlanCompletedMessage(event);
-    }
+  @Override
+  @Transactional  // Single transaction for entire flow
+  public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
+    // Orchestrate: prepare → validate → assemble → persist → publish
+  }
 }
 ```
-
-### Outbox Pattern (Papertrace Core)
-
-**Purpose**: Reliable event publishing with transactional guarantees.
-
-**Flow**:
-1. Business transaction writes to domain table + outbox table (atomic)
-2. Separate relay job polls outbox table
-3. Publishes to MQ
-4. Marks as published in outbox
-
-**See**: [outbox-pattern.md](outbox-pattern.md) for complete implementation.
 
 ---
 
-## Validation & Error Handling
+### Pattern 2: Main Orchestrator + Sub-UseCases
 
-### Validation Layers
+**Structure:**
+```
+MainOrchestrator (NO @Transactional)
+  ├─ PrepareUseCase     (phase: preparation, isolated transaction)
+  ├─ ExecuteUseCase     (phase: execution, NO transaction)
+  └─ CompleteUseCase    (phase: completion, @Transactional)
+```
 
-1. **Adapter Layer**: `@Valid` for request format
-2. **Domain Layer**: Business rule validation
-3. **Application Layer**: Cross-aggregate validation
+**Characteristics:**
+- **Phase Isolation**: Split by execution phases
+- **Independent Reuse**: Each Sub-UseCase has interface
+- **Distributed Transactions**: Each phase may have own transaction boundary
+- **Error Isolation**: Each phase handles exceptions independently
+
+**When to Use:**
+- ✅ Multi-phase transactions (only some need transactions)
+- ✅ Contains external API calls (must NOT be in transactions)
+- ✅ Clear lifecycle and state transitions
+- ✅ Sub-UseCases may be reused by other flows
 
 **Example**:
 ```java
-// Adapter - format validation
-@PostMapping
-public ResponseEntity<ProvenanceResponse> create(
-    @Valid @RequestBody CreateProvenanceCommand command  // @NotBlank, @Size, etc.
-) { }
+@Service
+@RequiredArgsConstructor
+public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
+  private final PrepareTaskExecutionUseCase prepareUseCase;      // NO @Transactional
+  private final ExecuteTaskBatchesUseCase executeUseCase;        // NO @Transactional
+  private final CompleteTaskExecutionUseCase completeUseCase;    // @Transactional
 
-// Domain - business rule validation
-public class Provenance {
-    public void setName(String name) {
-        if (name.length() < 3) {
-            throw new ProvenanceException("Name must be at least 3 characters");
-        }
-        this.name = name;
-    }
+  @Override
+  public void execute(TaskReadyCommand command) {
+    // Phase 0: Prepare (may fail fast)
+    // Phase 1: Execute (external API calls)
+    // Phase 2: Complete (final updates atomically)
+  }
 }
 ```
 
-### Error Mapping
+---
 
-**Flow**: Domain Exception → App Exception → ProblemDetail (HTTP)
+### Golden Rules for Transaction Management
 
-```java
-// Domain exception
-public class ProvenanceException extends RuntimeException { }
+**⚠️ Critical Principles:**
 
-// Global exception handler (adapter layer)
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-    @ExceptionHandler(ProvenanceException.class)
-    public ProblemDetail handleProvenanceException(ProvenanceException ex) {
-        return ProblemDetail.forStatusAndDetail(
-            HttpStatus.BAD_REQUEST,
-            ex.getMessage()
-        );
-    }
-}
+1. **NEVER call external APIs within `@Transactional` methods**
+   - External APIs can take 10+ seconds, holding DB connections and locks
+   - Use Pattern 2 to isolate external calls from transactions
+
+2. **Minimize transaction scope**
+   - Only include operations that MUST be atomic
+   - Keep transactions short-lived
+
+3. **Example of WRONG approach:**
+   ```java
+   @Transactional  // ❌ BAD: Long transaction
+   public void execute() {
+     prepare();           // DB check
+     callPubMedAPI();    // 10+ seconds, blocks transaction!
+     saveResults();      // DB update
+   }
+   ```
+
+4. **Example of CORRECT approach:**
+   ```java
+   public void execute() {
+     prepare();              // NO transaction
+     callPubMedAPI();       // NO transaction
+     complete();            // @Transactional - only final updates
+   }
+   ```
+
+---
+
+### Pattern Comparison
+
+| Dimension | Orchestrator + Coordinators | Main + Sub-UseCases |
+|-----------|----------------------------|---------------------|
+| **Split Strategy** | By Concern | By Phase |
+| **Component Interface** | None | Yes |
+| **Transaction Boundary** | Unified | Distributed |
+| **Component Size** | Small (100-200 lines) | Large (200-300 lines) |
+| **Reusability** | Low | High |
+| **Use Case** | Single transaction | Multi-phase with external calls |
+
+### Decision Tree
+
 ```
+Does the flow contain external API calls?
+  ├─ YES → Use Pattern 2 (Main + Sub-UseCases)
+  │         Reason: Avoid long transactions
+  └─ NO  → Does the flow need multiple independent transactions?
+            ├─ YES → Use Pattern 2
+            │         Reason: Phase isolation
+            └─ NO  → Use Pattern 1 (Orchestrator + Coordinators)
+                      Reason: Simpler, unified transaction
+```
+
+---
+
+### Naming Conventions
+
+| Pattern | Naming | Responsibility | Interface | Transaction |
+|---------|--------|---------------|-----------|-------------|
+| **Sub-UseCase** | `*UseCase` / `*UseCaseImpl` | Complete business phase | ✅ Has | ✅ Independent |
+| **Coordinator** | `*Coordinator` | Assists Orchestrator | ❌ None | ❌ Inherits |
+| **Orchestrator** | `*Orchestrator` | Main flow orchestration | ✅ Has | ✅ Controls |
+
+---
+
+## Design Patterns Reference
+
+### DDD Patterns (Domain-Driven Design)
+- **Aggregate**: Consistency boundary with root entity, enforces invariants
+- **Entity**: Identity-based objects (ID-driven equality)
+- **Value Object**: Immutable, equality by value (use `record`)
+- **Domain Event**: Captures business facts, triggers reactions
+- **Repository**: Collection-like interface for aggregate persistence
+- **Factory**: Complex aggregate creation logic
+- **Domain Service**: Stateless operation spanning aggregates
+
+### GoF Patterns (Common in Papertrace)
+- **Strategy**: Multiple algorithm implementations (e.g., parsers per source)
+- **Factory**: Object creation (e.g., Provenance creation)
+- **Template Method**: Algorithm skeleton with hook points (e.g., AbstractProvenanceScheduleJob)
+- **Observer**: Event-driven reactions (domain events)
+- **Adapter**: Convert interfaces (ACL between contexts)
+
+### Enterprise Patterns (Fowler)
+- **Service Layer**: Application service orchestrators
+- **Repository**: Data access abstraction (port/adapter)
+- **Data Mapper**: DTO/DO ↔ Domain mapping (MapStruct)
+- **Unit of Work**: Transaction boundary management
+
+### Integration Patterns
+- **Outbox Pattern**: Reliable event publishing with DB transaction
+- **Idempotency Key**: Prevent duplicate processing
+- **Retry with Backoff**: Transient failure recovery (exponential backoff)
+- **Anti-Corruption Layer (ACL)**: Protect domain from external models
+
+### Data Patterns
+- **Optimistic Locking**: Version-based concurrency control (`@Version`)
+- **Eventual Consistency**: Async cross-aggregate updates via events
+- **Aggregate Persistence**: Save entire aggregate atomically
+
+---
+
+## Design Principles & Philosophy
+
+### Core Principles
+- **Self-contained use cases**: Each use case dir has command/dto/logic
+- **Naming conventions**: `*Orchestrator`, `*Command`, `*Port`, `*DO`
+- **Contract-first**: Define `*-api` contracts → Domain → App → Infra → Adapter
+- **Simplicity first**: Solve current problem, avoid over-engineering
+- **YAGNI**: You Aren't Gonna Need It - don't build for hypothetical futures
+- **Fail fast**: Validate early, make errors obvious
+
+### Pattern Selection Guidelines
+- **Start simple**: Use simplest pattern that solves the problem
+- **Refactor when needed**: Abstract after 3rd duplication (Rule of Three)
+- **Match context**: Choose patterns that fit team skills
+- **Consider trade-offs**: Every pattern has complexity cost vs. flexibility benefit
 
 ---
 
 ## Testing Strategy
 
 ### Domain Layer
-- **Pure Java unit tests**, NO mocks needed
+- Pure Java unit tests, NO mocks needed
 - Test business rules in isolation
 
 ```java
@@ -582,7 +556,6 @@ public class GlobalExceptionHandler {
 void should_throw_exception_when_completing_cancelled_plan() {
     BatchPlan plan = new BatchPlan();
     plan.setStatus(PlanStatus.CANCELLED);
-
     assertThrows(BatchPlanException.class, () -> plan.markAsCompleted());
 }
 ```
@@ -594,29 +567,20 @@ void should_throw_exception_when_completing_cancelled_plan() {
 ```java
 @ExtendWith(MockitoExtension.class)
 class PlanIngestionOrchestratorTest {
-    @Mock
-    private ProvenancePort provenancePort;
-
-    @InjectMocks
-    private PlanIngestionOrchestrator orchestrator;
+    @Mock private ProvenancePort provenancePort;
+    @InjectMocks private PlanIngestionOrchestrator orchestrator;
 
     @Test
     void should_create_plan_successfully() {
-        // Given
         when(provenancePort.findById(any())).thenReturn(provenance);
-
-        // When
         PlanIngestionResult result = orchestrator.ingest(command);
-
-        // Then
         assertThat(result.isSuccess()).isTrue();
     }
 }
 ```
 
 ### Infrastructure Layer
-- Integration tests in boot module
-- Use TestContainers for DB
+- Integration tests in boot module with TestContainers
 
 ```java
 @SpringBootTest
@@ -625,19 +589,12 @@ class ProvenanceRepositoryImplTest {
     @Container
     static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
 
-    @Autowired
-    private ProvenancePort provenancePort;
+    @Autowired private ProvenancePort provenancePort;
 
     @Test
     void should_save_and_find_provenance() {
-        // Given
-        Provenance provenance = new Provenance();
-
-        // When
         provenancePort.save(provenance);
         Provenance found = provenancePort.findById(provenance.getId());
-
-        // Then
         assertThat(found).isNotNull();
     }
 }
@@ -671,33 +628,16 @@ void domain_should_not_depend_on_spring() {
 | MyBatis-Plus entity? | `infra/persistence/entity/*DO.java` |
 | Port interface? | `domain/port/*Port.java` |
 
-### Dependency Check
-
-```bash
-# ✅ Allowed
-adapter → app, api
-app → domain
-infra → domain
-domain → patra-common, Lombok, Hutool
-
-# ❌ Forbidden
-domain → infra, app, adapter, Spring
-app → infra
-```
-
 ---
 
-## Next Steps
+## Related Files
 
-1. **Read layer-specific guides**:
-   - [adapter-layer-patterns.md](adapter-layer-patterns.md)
-   - [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md)
-   - [domain-modeling-patterns.md](domain-modeling-patterns.md)
-   - [mybatis-plus-patterns.md](mybatis-plus-patterns.md)
-
-2. **Run ArchUnit tests** to validate dependencies
-
-3. **Check complete examples** in [complete-examples.md](complete-examples.md)
+- [adapter-layer-patterns.md](adapter-layer-patterns.md) - XXL-Job, Template Method patterns
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Application layer deep dive
+- [domain-modeling-patterns.md](domain-modeling-patterns.md) - DDD tactical patterns
+- [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - Infrastructure layer persistence
+- [outbox-pattern.md](outbox-pattern.md) - Reliable event publishing
+- [event-driven-architecture.md](event-driven-architecture.md) - Domain events, handlers
 
 ---
 
