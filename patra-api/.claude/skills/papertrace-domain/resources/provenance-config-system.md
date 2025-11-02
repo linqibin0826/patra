@@ -2,724 +2,439 @@
 
 ## Overview
 
-The Provenance Configuration System is Papertrace's flexible, multi-level configuration mechanism that governs how data is harvested from each Provenance. It supports:
+The Provenance Configuration System is Papertrace's **multi-dimensional temporal configuration mechanism** stored in `patra-registry` and consumed by `patra-ingest`. It governs how data is harvested from each Provenance source.
 
-- **Scope Precedence**: Task > Source > Global configuration hierarchy
-- **Temporal Validity**: Time-based configuration versioning
-- **Operation-Specific**: Different configs for different operation types
-- **Type Safety**: Strongly-typed configuration objects
+**Key Characteristics:**
+- **Multi-Dimensional**: 7 independent configuration dimensions (Window, Pagination, HTTP, Batching, Retry, RateLimit, CircuitBreaker)
+- **Temporal Validity**: Time-based configuration versioning with `[effective_from, effective_to)` windows
+- **Operation-Specific**: Different configs for different operation types (HARVEST, UPDATE, BACKFILL, ALL)
+- **Snapshot Isolation**: Configs are snapshotted at Plan creation time to prevent runtime changes
 
 ---
 
 ## Configuration Architecture
 
-### Three-Level Hierarchy
+### Registry Schema Structure
+
+**7 Configuration Tables** (in `patra-registry` database):
 
 ```
-┌────────────────────────────────────────────────────┐
-│ TASK Level (Highest Priority)                     │
-│ Specific override for a single Task               │
-│ Example: Increase retry limit for problematic API │
-└────────────────────────────────────────────────────┘
-                     │
-                     ▼ (if not found)
-┌────────────────────────────────────────────────────┐
-│ SOURCE Level (Medium Priority)                    │
-│ Provenance-specific configuration                 │
-│ Example: PubMed has different rate limits         │
-└────────────────────────────────────────────────────┘
-                     │
-                     ▼ (if not found)
-┌────────────────────────────────────────────────────┐
-│ GLOBAL Level (Fallback)                           │
-│ Default configuration for all Provenances         │
-│ Example: Standard 3-retry policy                  │
-└────────────────────────────────────────────────────┘
+reg_prov_window_offset_cfg      - Window sizing and offset strategies
+reg_prov_pagination_cfg         - Pagination modes and parameters
+reg_prov_http_cfg               - HTTP client settings
+reg_prov_batching_cfg           - Batch processing parallelism
+reg_prov_retry_cfg              - Retry policies and backoff
+reg_prov_rate_limit_cfg         - Rate limiting thresholds
+reg_prov_circuit_breaker_cfg    - Circuit breaker settings
 ```
 
-### Scope Precedence Rule
+**Common Schema Pattern** (all tables share this structure):
 
-**Rule**: **TASK > SOURCE > GLOBAL** (most specific wins)
-
-**Example Scenario**:
+```sql
+CREATE TABLE reg_prov_<dimension>_cfg (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  provenance_id BIGINT NOT NULL,            -- FK to reg_provenance
+  operation_type VARCHAR(32) NOT NULL,      -- 'HARVEST'/'UPDATE'/'BACKFILL'/'ALL'
+  lifecycle_status_code VARCHAR(32),        -- 'ACTIVE', 'DEPRECATED', etc.
+  effective_from TIMESTAMP(3) NOT NULL,     -- Config activation time
+  effective_to TIMESTAMP(3),                -- Config expiration (NULL = forever)
+  deleted TINYINT(1) DEFAULT 0,
+  -- Dimension-specific fields...
+  UNIQUE KEY uk_dimension(provenance_id, operation_type, effective_from)
+);
 ```
-Global Config:
-  retryLimit: 3
-  backoffStrategy: EXPONENTIAL
 
-Source Config (PUBMED):
-  retryLimit: 5
+### Precedence Rule (Operation-Specific)
 
-Task Config (Task#ABC-123):
-  retryLimit: 1
+**CRITICAL**: There is **NO** global/task hierarchy. Precedence is **operation-specific**:
 
-→ Task ABC-123 uses: retryLimit=1, backoffStrategy=EXPONENTIAL
-  (1 from TASK, backoffStrategy from GLOBAL)
+```
+Specific operation_type  >  operation_type='ALL'
+```
+
+**Selection Algorithm** (per dimension):
+
+```sql
+SELECT * FROM reg_prov_<dimension>_cfg
+WHERE provenance_id = (SELECT id FROM reg_provenance WHERE provenance_code = ?)
+  AND operation_type IN (?, 'ALL')  -- Specific operation or 'ALL'
+  AND lifecycle_status_code = 'ACTIVE'
+  AND deleted = 0
+  AND effective_from <= ?
+  AND (effective_to IS NULL OR effective_to > ?)
+ORDER BY
+  CASE WHEN operation_type = ? THEN 1 ELSE 2 END,  -- Specific > 'ALL'
+  effective_from DESC,                              -- Newest wins
+  id DESC
+LIMIT 1;
+```
+
+**Example**:
+```
+Query: provenanceCode=PUBMED, operationType=HARVEST, at=2024-11-02T12:00:00Z
+
+Results:
+1. (provenance=PUBMED, operation=HARVEST, effective_from=2024-01-01) ✅ SELECTED
+2. (provenance=PUBMED, operation=ALL, effective_from=2024-01-01)     ⏭️  Skipped
+
+→ Uses config #1 (specific HARVEST overrides 'ALL')
 ```
 
 ---
 
-## Configuration Components
+## Configuration Dimensions
 
-### 1. WindowOffsetConfig
+### 1. Window/Offset Configuration
 
-**Purpose**: Controls how Plans are sliced into time windows.
+**Table**: `reg_prov_window_offset_cfg`
 
-```java
-public record WindowOffsetConfig(
-    Duration sliceDuration,     // Size of each Slice (e.g., 30 days)
-    Duration lookbackPeriod,    // Default lookback (e.g., 365 days)
-    Duration maxWindowSize,     // Maximum allowed window (e.g., 180 days)
-    Instant effectiveFrom,      // When this config becomes active
-    Instant effectiveTo         // When this config expires (null = forever)
-) {
-    public boolean isEffectiveAt(Instant instant) {
-        return !instant.isBefore(effectiveFrom) &&
-               (effectiveTo == null || instant.isBefore(effectiveTo));
-    }
-}
+**Purpose**: Controls time window sizing and offset calculation strategies.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `window_mode_code` | VARCHAR | Window mode: TIME/DATE/SINGLE | 'DATE' |
+| `window_size_value` | INT | Window size numeric value | 30 |
+| `window_size_unit_code` | VARCHAR | ChronoUnit: DAYS/HOURS/MONTHS | 'DAYS' |
+| `offset_type_code` | VARCHAR | Offset strategy: WATERMARK/FIXED/RELATIVE | 'WATERMARK' |
+| `offset_field_key` | VARCHAR | Field for offset extraction | 'publication_date' |
+| `offset_date_format` | VARCHAR | Date format pattern | 'yyyy-MM-dd' |
+| `watermark_lag_seconds` | BIGINT | Watermark lag (seconds) | 86400 (1 day) |
+
+**Window Modes**:
+- **TIME**: Absolute timestamp-based windows (uses Instant)
+- **DATE**: Date-only windows (uses LocalDate, ignores time)
+- **SINGLE**: No slicing, entire window in one piece
+
+**Offset Types**:
+- **WATERMARK**: Use last successful cursor value
+- **FIXED**: Fixed start date (e.g., "2020-01-01")
+- **RELATIVE**: Relative to current time (e.g., "now - 365 days")
+
+---
+
+### 2. Pagination Configuration
+
+**Table**: `reg_prov_pagination_cfg`
+
+**Purpose**: Defines pagination strategy and parameters.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `pagination_mode_code` | VARCHAR | Mode: PAGE_NUMBER/CURSOR/TOKEN/SCROLL | 'PAGE_NUMBER' |
+| `page_size` | INT | Records per page | 1000 |
+| `max_pages` | INT | Safety limit (max pages) | 100 |
+| `cursor_field_key` | VARCHAR | Cursor field for CURSOR mode | 'next_cursor' |
+| `token_field_key` | VARCHAR | Token field for TOKEN mode | 'continuation_token' |
+
+**Pagination Modes**:
+
+| Mode | API Pattern | Use Case |
+|------|-------------|----------|
+| **PAGE_NUMBER** | `page=1&size=100` | Traditional REST APIs |
+| **CURSOR** | `cursor=abc123&limit=100` | Modern APIs (opaque cursor) |
+| **TOKEN** | `token=xyz789&pageSize=100` | Continuation token pattern |
+| **SCROLL** | `scroll_id=...&scroll=5m` | Elasticsearch-style |
+
+**Example** (PubMed):
+- Mode: PAGE_NUMBER
+- page_size: 1000
+- API call: `retstart=0&retmax=1000`
+
+---
+
+### 3. HTTP Configuration
+
+**Table**: `reg_prov_http_cfg`
+
+**Purpose**: HTTP client settings.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `request_method_code` | VARCHAR | HTTP method: GET/POST | 'GET' |
+| `timeout_seconds` | INT | Request timeout | 30 |
+| `headers` | JSON | Default HTTP headers | `{"User-Agent":"Papertrace/1.0"}` |
+
+---
+
+### 4. Batching Configuration
+
+**Table**: `reg_prov_batching_cfg`
+
+**Purpose**: Batch processing parallelism.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `batch_size` | INT | Tasks per batch | 50 |
+| `max_concurrency` | INT | Parallel threads | 10 |
+| `batch_delay_millis` | BIGINT | Delay between batches (ms) | 5000 |
+
+---
+
+### 5. Retry Configuration
+
+**Table**: `reg_prov_retry_cfg`
+
+**Purpose**: Retry policies for failed requests.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `max_retries` | INT | Maximum retry attempts | 5 |
+| `backoff_strategy_code` | VARCHAR | FIXED/LINEAR/EXPONENTIAL | 'EXPONENTIAL' |
+| `initial_delay_millis` | BIGINT | Initial retry delay (ms) | 5000 |
+| `max_delay_millis` | BIGINT | Max retry delay (ms) | 60000 |
+| `retriable_http_codes` | JSON | Retry-eligible HTTP codes | `[429,503,504]` |
+
+---
+
+### 6. Rate Limit Configuration
+
+**Table**: `reg_prov_rate_limit_cfg`
+
+**Purpose**: API rate limiting thresholds.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `requests_per_second` | INT | Max requests/second | 10 |
+| `requests_per_minute` | INT | Max requests/minute | 600 |
+| `burst_size` | INT | Token bucket burst capacity | 20 |
+
+---
+
+### 7. Circuit Breaker Configuration
+
+**Table**: `reg_prov_circuit_breaker_cfg`
+
+**Purpose**: Circuit breaker fault tolerance.
+
+**Key Fields**:
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `failure_threshold` | INT | Failures before opening | 5 |
+| `success_threshold` | INT | Successes before closing | 3 |
+| `timeout_millis` | BIGINT | Half-open retry timeout | 60000 |
+
+---
+
+## Temporal Validity
+
+### Time Window Pattern
+
+Every configuration uses `[effective_from, effective_to)` for temporal validity:
+
+```
+[2024-01-01T00:00:00Z, 2024-06-30T23:59:59Z)  - Old config (expired)
+[2024-07-01T00:00:00Z, NULL)                   - New config (active forever)
 ```
 
-**Configuration Parameters:**
+**Benefits**:
+- Seamless config transitions (no downtime)
+- Historical config tracking
+- Reproducible plan creation (time-based)
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `sliceDuration` | Duration | How long each Slice should be | 30 days (monthly slicing) |
-| `lookbackPeriod` | Duration | Default time range to harvest if not specified | 365 days (1 year) |
-| `maxWindowSize` | Duration | Maximum allowed Plan window (safety limit) | 180 days (6 months) |
-| `effectiveFrom` | Instant | Config activation time | 2024-01-01T00:00:00Z |
-| `effectiveTo` | Instant | Config expiration time (nullable) | null (permanent) |
-
-**Use Cases:**
-
-**Monthly Slicing for PubMed:**
-```java
-WindowOffsetConfig pubmedWindow = new WindowOffsetConfig(
-    Duration.ofDays(30),     // Monthly slices
-    Duration.ofDays(365),    // 1-year lookback
-    Duration.ofDays(180),    // Max 6-month window
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null  // No expiration
-);
-```
-
-**Weekly Slicing for High-Volume Source:**
-```java
-WindowOffsetConfig epmcWindow = new WindowOffsetConfig(
-    Duration.ofDays(7),      // Weekly slices (more granular)
-    Duration.ofDays(180),    // 6-month lookback
-    Duration.ofDays(90),     // Max 3-month window
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
+**Query Pattern**:
+```sql
+WHERE effective_from <= ?
+  AND (effective_to IS NULL OR effective_to > ?)
 ```
 
 ---
 
-### 2. PaginationConfig
+## Configuration Snapshot
 
-**Purpose**: Defines how to paginate through API results.
+### Snapshot Creation (Plan Level)
+
+When a Plan is created, all 7 dimensions are **fetched and serialized** into `ing_plan.provenance_config_snapshot`:
+
+**Flow**:
+```
+1. PatraRegistryPort.fetchConfig(provenanceCode, operationCode)
+   ↓
+2. ProvenanceClient.getConfiguration(...) → ProvenanceConfigResp (REST API)
+   ↓
+3. ProvenanceConfigSnapshotConverter.convert(resp)
+   ↓
+4. Returns: ProvenanceConfigSnapshot (domain VO)
+   ↓
+5. Store: JSON.stringify(snapshot) → ing_plan.provenance_config_snapshot
+```
+
+**Snapshot Structure** (Java VO in patra-ingest-domain):
 
 ```java
-public record PaginationConfig(
-    int pageSize,                    // Records per page
-    PaginationStrategy strategy,     // OFFSET, CURSOR, PAGE_NUMBER
-    int maxPages,                    // Safety limit
-    Instant effectiveFrom,
-    Instant effectiveTo
-) {
-    public int maxRecords() {
-        return pageSize * maxPages;
-    }
-}
-```
-
-**Pagination Strategies:**
-
-```java
-public enum PaginationStrategy {
-    OFFSET,       // offset=0, offset=1000, offset=2000 (SQL-style)
-    CURSOR,       // cursor=abc123, cursor=def456 (opaque tokens)
-    PAGE_NUMBER   // page=1, page=2, page=3 (simple numbering)
-}
-```
-
-**Strategy Comparison:**
-
-| Strategy | API Example | Use When | Pros | Cons |
-|----------|-------------|----------|------|------|
-| **OFFSET** | `retstart=0&retmax=1000` | PubMed E-utilities | Simple, resumable | Slow for large offsets |
-| **CURSOR** | `cursor=abc123&limit=100` | Modern REST APIs | Fast, consistent | Cannot jump to page N |
-| **PAGE_NUMBER** | `page=5&size=100` | Traditional APIs | Human-readable | May have consistency issues |
-
-**Examples:**
-
-**PubMed (OFFSET):**
-```java
-PaginationConfig pubmedPagination = new PaginationConfig(
-    1000,                    // 1000 records per request
-    PaginationStrategy.OFFSET,
-    100,                     // Max 100 pages = 100k records
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
-
-// Generated API calls:
-// Page 1: retstart=0&retmax=1000
-// Page 2: retstart=1000&retmax=1000
-// Page 3: retstart=2000&retmax=1000
-```
-
-**EPMC (PAGE_NUMBER):**
-```java
-PaginationConfig epmcPagination = new PaginationConfig(
-    100,
-    PaginationStrategy.PAGE_NUMBER,
-    500,  // Max 500 pages = 50k records
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
-
-// Generated API calls:
-// Page 1: page=1&pageSize=100
-// Page 2: page=2&pageSize=100
-```
-
----
-
-### 3. HttpConfig
-
-**Purpose**: HTTP client configuration for API calls.
-
-```java
-public record HttpConfig(
-    int connectTimeout,           // Seconds
-    int readTimeout,              // Seconds
-    Map<String, String> headers,  // Default headers
-    String userAgent,
-    boolean followRedirects,
-    Instant effectiveFrom,
-    Instant effectiveTo
-) {
-    public Duration connectTimeoutDuration() {
-        return Duration.ofSeconds(connectTimeout);
-    }
-}
-```
-
-**Configuration Parameters:**
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `connectTimeout` | int | Connection timeout (seconds) | 10 |
-| `readTimeout` | int | Read timeout (seconds) | 30 |
-| `headers` | Map | Default HTTP headers | {"User-Agent": "Papertrace/1.0"} |
-| `userAgent` | String | User-Agent header value | "Papertrace/1.0 (contact@papertrace.io)" |
-| `followRedirects` | boolean | Follow HTTP redirects | true |
-
-**Example:**
-
-```java
-HttpConfig pubmedHttp = new HttpConfig(
-    10,   // 10s connect timeout
-    30,   // 30s read timeout
-    Map.of(
-        "User-Agent", "Papertrace/1.0 (contact@papertrace.io)",
-        "Accept", "application/json"
-    ),
-    "Papertrace/1.0",
-    true,  // Follow redirects
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
-```
-
----
-
-### 4. BatchingConfig
-
-**Purpose**: Control batch processing parallelism.
-
-```java
-public record BatchingConfig(
-    int batchSize,         // Number of Tasks to process concurrently
-    int maxConcurrency,    // Thread pool size
-    Duration batchDelay,   // Delay between batches
-    Instant effectiveFrom,
-    Instant effectiveTo
-) { }
-```
-
-**Configuration Parameters:**
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `batchSize` | int | Tasks per batch | 50 |
-| `maxConcurrency` | int | Parallel thread count | 10 |
-| `batchDelay` | Duration | Delay between batches | 5 seconds |
-
-**Example:**
-
-```java
-BatchingConfig pubmedBatching = new BatchingConfig(
-    50,                      // Process 50 Tasks per batch
-    10,                      // Use 10 threads
-    Duration.ofSeconds(5),   // 5s delay between batches
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
-```
-
-**Use Case:**
-```
-Plan has 500 Tasks
-
-Batch 1: Tasks 1-50   (parallel, 10 threads)
-Wait 5 seconds
-Batch 2: Tasks 51-100
-Wait 5 seconds
-...
-Batch 10: Tasks 451-500
-```
-
----
-
-### 5. RetryConfig
-
-**Purpose**: Retry strategy for failed Tasks.
-
-```java
-public record RetryConfig(
-    int maxRetries,
-    BackoffStrategy backoffStrategy,
-    Duration initialDelay,
-    Duration maxDelay,
-    List<Integer> retriableHttpCodes,  // e.g., [429, 503, 504]
-    Instant effectiveFrom,
-    Instant effectiveTo
-) {
-    public Duration calculateDelay(int retryCount) {
-        return switch (backoffStrategy) {
-            case FIXED -> initialDelay;
-            case LINEAR -> initialDelay.multipliedBy(retryCount + 1);
-            case EXPONENTIAL -> {
-                long delayMs = initialDelay.toMillis() * (long) Math.pow(2, retryCount);
-                yield Duration.ofMillis(Math.min(delayMs, maxDelay.toMillis()));
-            }
-        };
-    }
-}
-```
-
-**Backoff Strategies:**
-
-```java
-public enum BackoffStrategy {
-    FIXED,        // Always use initialDelay
-    LINEAR,       // Delay increases linearly (1x, 2x, 3x)
-    EXPONENTIAL   // Delay doubles each time (2^0, 2^1, 2^2)
-}
-```
-
-**Strategy Comparison:**
-
-| Retry | FIXED (5s) | LINEAR (5s) | EXPONENTIAL (5s, max 60s) |
-|-------|------------|-------------|--------------------------|
-| 1st   | 5s         | 5s          | 5s (2^0 * 5s) |
-| 2nd   | 5s         | 10s         | 10s (2^1 * 5s) |
-| 3rd   | 5s         | 15s         | 20s (2^2 * 5s) |
-| 4th   | 5s         | 20s         | 40s (2^3 * 5s) |
-| 5th   | 5s         | 25s         | 60s (capped at maxDelay) |
-
-**Example:**
-
-```java
-RetryConfig pubmedRetry = new RetryConfig(
-    5,                            // Max 5 retries
-    BackoffStrategy.EXPONENTIAL,
-    Duration.ofSeconds(5),        // Start with 5s
-    Duration.ofSeconds(60),       // Cap at 60s
-    List.of(429, 503, 504),      // Retry on rate limit and server errors
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
-```
-
-**Retriable HTTP Codes:**
-- `429 Too Many Requests`: Rate limiting
-- `503 Service Unavailable`: Temporary server issue
-- `504 Gateway Timeout`: Upstream timeout
-
----
-
-### 6. RateLimitConfig
-
-**Purpose**: Prevent exceeding API rate limits.
-
-```java
-public record RateLimitConfig(
-    int requestsPerSecond,
-    int requestsPerMinute,
-    int burstSize,          // Token bucket burst capacity
-    Instant effectiveFrom,
-    Instant effectiveTo
-) { }
-```
-
-**Configuration Parameters:**
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `requestsPerSecond` | int | Max requests per second | 10 |
-| `requestsPerMinute` | int | Max requests per minute | 300 |
-| `burstSize` | int | Burst capacity (token bucket) | 20 |
-
-**Token Bucket Algorithm:**
-
-```
-Bucket Capacity: burstSize (e.g., 20 tokens)
-Refill Rate: requestsPerSecond (e.g., 10 tokens/s)
-
-Request arrives:
-  if bucket has tokens:
-    consume 1 token
-    process request
-  else:
-    wait for token refill
-```
-
-**Example:**
-
-```java
-// PubMed: 10 req/s, burst up to 20
-RateLimitConfig pubmedRateLimit = new RateLimitConfig(
-    10,    // 10 requests/second
-    300,   // 300 requests/minute (backup limit)
-    20,    // Burst size: can send 20 immediately, then throttle
-    Instant.parse("2024-01-01T00:00:00Z"),
-    null
-);
-```
-
-**Burst Example:**
-```
-Time 0s:   Send 20 requests (burst) → bucket empty
-Time 0.1s: Wait (bucket refilling at 10/s)
-Time 1s:   Bucket has 10 tokens → send 10 requests
-Time 2s:   Bucket has 10 tokens → send 10 requests
-```
-
----
-
-## Temporal Validity (Configuration Versioning)
-
-### Problem
-
-APIs evolve:
-- PubMed increases rate limits: 3 req/s → 10 req/s
-- EPMC changes pagination: OFFSET → CURSOR
-- Need to switch configs at specific time
-
-### Solution: Effective Time Windows
-
-**Each config has**:
-- `effectiveFrom`: When config becomes active
-- `effectiveTo`: When config expires (null = forever)
-
-**Query Logic:**
-```java
-public Optional<WindowOffsetConfig> loadActiveConfig(
-    ProvenanceCode provenanceCode,
-    Instant at
-) {
-    return repository.findAllConfigs(provenanceCode).stream()
-        .filter(config -> config.isEffectiveAt(at))
-        .findFirst();
-}
-```
-
-### Example: PubMed Rate Limit Increase
-
-**Old Config (2023-01-01 to 2024-06-30):**
-```java
-RateLimitConfig oldConfig = new RateLimitConfig(
-    3,     // 3 req/s
-    180,
-    10,
-    Instant.parse("2023-01-01T00:00:00Z"),
-    Instant.parse("2024-06-30T23:59:59Z")  // Expires
-);
-```
-
-**New Config (2024-07-01 onwards):**
-```java
-RateLimitConfig newConfig = new RateLimitConfig(
-    10,    // 10 req/s (increased!)
-    600,
-    20,
-    Instant.parse("2024-07-01T00:00:00Z"),
-    null   // No expiration
-);
-```
-
-**Query Result:**
-```
-loadActiveConfig(PUBMED, Instant.parse("2024-06-15T12:00:00Z"))
-  → Returns oldConfig (3 req/s)
-
-loadActiveConfig(PUBMED, Instant.parse("2024-07-15T12:00:00Z"))
-  → Returns newConfig (10 req/s)
-```
-
----
-
-## Operation-Specific Configuration
-
-### Problem
-
-Different operations have different requirements:
-- **Harvest**: Initial data ingestion (high volume, aggressive rate limit)
-- **Update**: Incremental updates (low volume, conservative)
-- **Backfill**: Historical data (very high volume, slow rate)
-
-### Solution: operationType Field
-
-```java
-public record ProvenanceConfiguration(
-    Provenance provenance,
-    String operationType,  // "harvest", "update", "backfill"
+record ProvenanceConfigSnapshot(
     WindowOffsetConfig windowOffset,
-    ...
-) { }
+    PaginationConfig pagination,
+    HttpConfig http,
+    BatchingConfig batching,
+    RetryConfig retry,
+    RateLimitConfig rateLimit,
+    CircuitBreakerConfig circuitBreaker
+)
 ```
 
-**Configuration Repository Method:**
-```java
-public Optional<ProvenanceConfiguration> loadConfiguration(
-    ProvenanceCode provenanceCode,
-    String operationType,
-    Instant at
-) {
-    return configurations.stream()
-        .filter(config -> config.provenance().provenanceCode().equals(provenanceCode))
-        .filter(config -> config.operationType().equals(operationType))
-        .filter(config -> config.isEffectiveAt(at))
-        .findFirst();
-}
+**Storage**:
+- **Database**: `ing_plan.provenance_config_snapshot` (JsonNode column)
+- **Immutability**: Once snapshotted, never changes (even if registry config updates)
+
+---
+
+## Operation Types
+
+**Enum**: `OperationType` (in `patra-registry`)
+
+| Code | Description | Use Case |
+|------|-------------|----------|
+| **HARVEST** | Initial bulk ingestion | Large historical windows, aggressive rate limits |
+| **UPDATE** | Incremental updates | Small recent windows, conservative rate |
+| **BACKFILL** | Gap filling | Specific date ranges, medium rate |
+| **ALL** | Fallback default | Used when no operation-specific config exists |
+
+**Example**:
 ```
+PUBMED/HARVEST config:
+  - window_size: 30 days
+  - rate_limit: 10 req/s
 
-### Example: PubMed Harvest vs Update
-
-**Harvest Config (monthly slices, aggressive):**
-```java
-ProvenanceConfiguration harvestConfig = new ProvenanceConfiguration(
-    pubmed,
-    "harvest",
-    new WindowOffsetConfig(Duration.ofDays(30), ...),
-    new RateLimitConfig(10, 600, 20, ...)
-);
-```
-
-**Update Config (daily slices, conservative):**
-```java
-ProvenanceConfiguration updateConfig = new ProvenanceConfiguration(
-    pubmed,
-    "update",
-    new WindowOffsetConfig(Duration.ofDays(1), ...),  // Daily slices
-    new RateLimitConfig(5, 300, 10, ...)               // Slower rate
-);
-```
-
-**Usage:**
-```java
-// Creating a harvest Plan
-ProvenanceConfiguration config = repository.loadConfiguration(
-    ProvenanceCode.PUBMED,
-    "harvest",  // Operation type
-    Instant.now()
-);
-
-// Creating an update Plan
-ProvenanceConfiguration updateConf = repository.loadConfiguration(
-    ProvenanceCode.PUBMED,
-    "update",   // Different operation type
-    Instant.now()
-);
+PUBMED/UPDATE config:
+  - window_size: 1 day
+  - rate_limit: 5 req/s
 ```
 
 ---
 
-## Configuration Loading Algorithm
+## Integration (Registry → Ingest)
 
-### Pseudocode
+### API Endpoint
 
-```java
-public ProvenanceConfiguration loadConfiguration(
-    ProvenanceCode provenanceCode,
-    String operationType,
-    Optional<TaskId> taskId,
-    Instant at
-) {
-    // 1. Try TASK level (highest priority)
-    if (taskId.isPresent()) {
-        Optional<Config> taskConfig = loadTaskConfig(taskId.get(), at);
-        if (taskConfig.isPresent()) {
-            return taskConfig.get();
-        }
-    }
+**Registry exposes**:
+```
+GET /_internal/provenance/configuration?
+    provenanceCode=PUBMED&
+    operationType=HARVEST&
+    at=2024-11-02T12:00:00Z
+```
 
-    // 2. Try SOURCE level (medium priority)
-    Optional<Config> sourceConfig = loadSourceConfig(
-        provenanceCode,
-        operationType,
-        at
-    );
-    if (sourceConfig.isPresent()) {
-        return sourceConfig.get();
-    }
-
-    // 3. Fall back to GLOBAL level
-    return loadGlobalConfig(operationType, at)
-        .orElseThrow(() -> new ConfigurationException("No config found"));
+**Response** (ProvenanceConfigResp DTO):
+```json
+{
+  "provenance": {...},
+  "windowOffset": {...},
+  "pagination": {...},
+  "http": {...},
+  "batching": {...},
+  "retry": {...},
+  "rateLimit": {...},
+  "circuitBreaker": {...}
 }
 ```
 
-### Real-World Example
+### Ingest Consumption
 
-**Scenario: Load Config for Task ABC-123 (PUBMED, harvest, 2024-07-15)**
+**PlanAssemblerImpl** (patra-ingest-app):
+```java
+// Fetch config from registry
+ProvenanceConfigSnapshot configSnapshot =
+    patraRegistryPort.fetchConfig(provenanceCode, operationCode);
 
-**Step 1: Check TASK level**
-```
-Query: taskId = ABC-123, effectiveAt = 2024-07-15
-Result: No task-specific config found
-```
+// Snapshot to JSON
+JsonNode configJson = objectMapper.valueToTree(configSnapshot);
 
-**Step 2: Check SOURCE level**
-```
-Query: provenanceCode = PUBMED, operationType = harvest, effectiveAt = 2024-07-15
-Result: Found PubMed harvest config
-  - retryLimit: 5
-  - rateLimit: 10 req/s
-  - sliceDuration: 30 days
-```
-
-**Step 3: Return SOURCE level config**
-```
-Task ABC-123 uses:
-  - retryLimit: 5 (from SOURCE)
-  - rateLimit: 10 req/s (from SOURCE)
-  - sliceDuration: 30 days (from SOURCE)
+// Create Plan with snapshot
+PlanAggregate plan = PlanAggregate.create(
+    ...,
+    configJson,  // Stored in provenance_config_snapshot
+    ...
+);
 ```
 
 ---
 
 ## Best Practices
 
-### 1. Start with GLOBAL, Specialize to SOURCE
+### 1. Define Operation-Specific Configs
 
-```java
-// 1. Define sensible GLOBAL defaults
-GlobalConfig global = new GlobalConfig(
-    new RetryConfig(3, EXPONENTIAL, ...),  // 3 retries is reasonable
-    new RateLimitConfig(5, 300, 10, ...)   // Conservative rate limit
-);
-
-// 2. Override for specific Provenances
-SourceConfig pubmed = new SourceConfig(
-    ProvenanceCode.PUBMED,
-    new RateLimitConfig(10, 600, 20, ...)  // PubMed allows higher rate
-);
+**Good**:
+```
+PUBMED/HARVEST - Aggressive (30-day windows, 10 req/s)
+PUBMED/UPDATE  - Conservative (1-day windows, 5 req/s)
 ```
 
-### 2. Use TASK level sparingly
-
-**Good Use Cases:**
-- Debugging: Increase logging for one Task
-- Workaround: Retry limit=1 for a known-bad API
-
-**Bad Use Cases:**
-- ❌ Setting different retry limits for every Task
-- ❌ Using TASK configs as a substitute for SOURCE configs
-
-### 3. Plan for Config Changes
-
-**Use temporal validity:**
-```java
-// Old config expires on 2024-12-31
-WindowOffsetConfig oldConfig = new WindowOffsetConfig(
-    ...,
-    Instant.parse("2023-01-01T00:00:00Z"),
-    Instant.parse("2024-12-31T23:59:59Z")  // Expiration
-);
-
-// New config takes over on 2025-01-01
-WindowOffsetConfig newConfig = new WindowOffsetConfig(
-    ...,
-    Instant.parse("2025-01-01T00:00:00Z"),
-    null  // No expiration
-);
+**Bad**:
+```
+PUBMED/ALL - One-size-fits-all (suboptimal for all operations)
 ```
 
-**Effect**: Smooth transition, no downtime.
+### 2. Use 'ALL' as Fallback
+
+Create `operation_type='ALL'` config as a safety net when specific configs are missing.
+
+### 3. Plan Config Transitions
+
+**Smooth transition**:
+```
+Old config: [2024-01-01, 2024-12-31T23:59:59Z]
+New config: [2025-01-01, NULL)
+```
+
+**Overlap**: No gap between configs ensures no downtime.
 
 ---
 
 ## Troubleshooting
 
-### Issue: "Configuration not found"
-
-**Symptoms**: `ConfigurationException: No config found for PUBMED/harvest`
+### Issue: "No configuration found"
 
 **Diagnosis**:
-1. Check if SOURCE config exists: `SELECT * FROM provenance_config WHERE provenance_code = 'PUBMED' AND operation_type = 'harvest'`
-2. Check temporal validity: Is `effective_from <= now < effective_to`?
-3. Check GLOBAL fallback: Does a GLOBAL config exist?
+1. Check if config exists:
+   ```sql
+   SELECT * FROM reg_prov_window_offset_cfg
+   WHERE provenance_id = (SELECT id FROM reg_provenance WHERE provenance_code='PUBMED')
+     AND operation_type IN ('HARVEST', 'ALL');
+   ```
+2. Check temporal validity: `effective_from <= NOW() < effective_to`
+3. Check lifecycle_status: Should be 'ACTIVE'
 
-**Fix**: Create missing SOURCE or GLOBAL config.
+**Fix**: Create missing config or activate existing one.
 
 ---
 
 ### Issue: "Wrong config applied"
 
-**Symptoms**: Task uses unexpected rate limit
-
 **Diagnosis**:
-1. Print effective config: `log.info("Using config: {}", config)`
-2. Check scope precedence: TASK > SOURCE > GLOBAL
-3. Verify `operationType` matches
+1. Check operation precedence: Specific > 'ALL'
+2. Verify `operation_type` in request
+3. Check `effective_from` ordering (newest wins)
 
-**Fix**: Remove conflicting TASK config or update SOURCE config.
-
----
-
-### Issue: "Config change not applied"
-
-**Symptoms**: New config created but Tasks still use old config
-
-**Diagnosis**:
-1. Check `effectiveFrom`: Is it in the future?
-2. Check config cache: Is system caching old config?
-3. Verify temporal overlap: Do old and new configs overlap?
-
-**Fix**: Set correct `effectiveFrom`, clear cache, or expire old config.
+**Fix**: Update config or adjust `effective_from` dates.
 
 ---
 
 ## Summary
 
-**Key Concepts:**
+**Key Differences from Original Documentation**:
+- ❌ NO three-level hierarchy (TASK > SOURCE > GLOBAL)
+- ✅ Multi-dimensional configuration (7 independent tables)
+- ✅ Operation-specific precedence (specific operation > 'ALL')
+- ✅ Snapshot isolation (immutable at Plan creation)
+- ✅ Temporal validity for smooth transitions
 
-1. **Three-Level Hierarchy**: TASK > SOURCE > GLOBAL
-2. **Temporal Validity**: `effectiveFrom` / `effectiveTo` for versioning
-3. **Operation-Specific**: Different configs for harvest/update/backfill
-4. **Six Config Components**: Window, Pagination, Http, Batching, Retry, RateLimit
-
-**Design Goals:**
-
-- **Flexibility**: Override configs at multiple levels
-- **Safety**: Temporal validity prevents abrupt changes
-- **Scalability**: Different configs for different operations
-
-**See Also:**
-- [business-concepts.md](business-concepts.md) for Provenance definition
-- [plan-task-workflow.md](plan-task-workflow.md) for how configs are used
+**Configuration Lifecycle**:
+```
+1. Define in Registry DB (7 tables)
+2. Query via REST API (at Plan creation time)
+3. Snapshot in Plan (provenance_config_snapshot JSON)
+4. Use immutable snapshot during execution
+```

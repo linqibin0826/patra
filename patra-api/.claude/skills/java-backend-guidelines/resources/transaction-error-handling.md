@@ -27,24 +27,24 @@ Transaction management and error handling are critical cross-cutting concerns in
 @RequiredArgsConstructor
 public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
-    private final PlanPort planPort;
-    private final SlicePort slicePort;
-    private final OutboxPort outboxPort;
+    private final PlanRepository planRepository;
+    private final PlanSliceRepository sliceRepository;
+    private final OutboxMessageRepository outboxRepository;
 
     @Override
     @Transactional  // ← Transaction boundary
     public PlanCreationResult createPlan(CreatePlanCommand command) {
         // All database operations within this method are in one transaction
-        BatchPlan plan = assemblePlan(command);
-        planPort.save(plan);
+        PlanAggregate plan = assemblePlan(command);
+        planRepository.save(plan);
 
-        List<Slice> slices = generateSlices(plan);
-        slicePort.saveAll(slices);
+        List<PlanSliceAggregate> slices = generateSlices(plan);
+        sliceRepository.saveAll(slices);
 
         OutboxMessage message = createOutboxMessage(plan);
-        outboxPort.save(message);
+        outboxRepository.save(message);
 
-        return new PlanCreationResult(plan.id(), slices.size());
+        return new PlanCreationResult(plan.getId(), slices.size());
     }
 }
 ```
@@ -52,19 +52,19 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 ```java
 // ❌ BAD: Transaction at repository level
 @Repository
-public class PlanRepositoryImpl implements PlanPort {
+public class PlanRepositoryImpl implements PlanRepository {
 
     @Transactional  // ← NO! Too granular
-    public void save(BatchPlan plan) {
+    public PlanAggregate save(PlanAggregate plan) {
         // ...
     }
 }
 
 // ❌ BAD: Transaction in domain layer
-public class BatchPlan {
+public class PlanAggregate {
 
     @Transactional  // ← NO! Domain is pure Java
-    public void addSlice(Slice slice) {
+    public void addSlice(PlanSliceAggregate slice) {
         // ...
     }
 }
@@ -103,13 +103,19 @@ public class PlanIngestionOrchestrator {
 ```java
 @Service
 @RequiredArgsConstructor
-public class AuditLogCoordinator {
+public class OutboxRelayLogCoordinator {
+
+    private final OutboxRelayLogRepository relayLogRepository;
 
     // Use REQUIRES_NEW when audit must succeed even if parent transaction rolls back
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logOperation(String operation, Object details) {
-        AuditLog log = new AuditLog(operation, details, Instant.now());
-        auditLogPort.save(log);
+    public void logOperation(OutboxMessage message, RelayBatchId batchId, String leaseOwner) {
+        OutboxRelayLog log = OutboxRelayLog.builder()
+            .outboxMessageId(message.getId())
+            .relayBatchId(batchId.getValue())
+            .leaseOwner(leaseOwner)
+            .build();
+        relayLogRepository.save(log);
     }
 }
 ```
@@ -119,13 +125,15 @@ public class AuditLogCoordinator {
 ```java
 @Transactional
 public void createPlan(CreatePlanCommand command) {
-    auditLogCoordinator.logOperation("CREATE_PLAN", command);  // REQUIRES_NEW
+    // Log operation with REQUIRES_NEW propagation
+    OutboxMessage message = createOutboxMessage(command);
+    relayLogCoordinator.logOperation(message, batchId, leaseOwner);  // REQUIRES_NEW
 
     // Main operation
-    BatchPlan plan = assemblePlan(command);
-    planPort.save(plan);
+    PlanAggregate plan = assemblePlan(command);
+    planRepository.save(plan);
 
-    // If this throws, plan creation rolls back, but audit log is committed
+    // If this throws, plan creation rolls back, but relay log is committed
     if (someCondition) {
         throw new BusinessException("Plan creation failed");
     }
@@ -166,8 +174,8 @@ public void updatePlan(UpdatePlanCommand command) {
 ```java
 @Transactional
 public void createPlanWithValidation(CreatePlanCommand command) {
-    BatchPlan plan = assemblePlan(command);
-    planPort.save(plan);
+    PlanAggregate plan = assemblePlan(command);
+    planRepository.save(plan);
 
     // Manual rollback on business condition
     if (!plan.isValid()) {
@@ -197,13 +205,13 @@ public void createPlanWithValidation(CreatePlanCommand command) {
 // ❌ BAD: External API call inside transaction
 @Transactional
 public void harvestData(HarvestCommand command) {
-    BatchPlan plan = assemblePlan(command);
-    planPort.save(plan);  // Transaction starts
+    PlanAggregate plan = assemblePlan(command);
+    planRepository.save(plan);  // Transaction starts
 
     // External API call (slow, unreliable)
-    List<Literature> results = pubmedApiClient.search(query);  // ← NO!
+    SearchResult results = pubmedSearchPort.search(query);  // ← NO!
 
-    literaturePort.saveAll(results);  // Transaction still open
+    literatureStoragePort.saveAll(results);  // Transaction still open
 }
 ```
 
@@ -217,21 +225,25 @@ public void harvestData(HarvestCommand command) {
 @RequiredArgsConstructor
 public class HarvestOrchestrator {
 
+    private final PlanRepository planRepository;
+    private final PubmedSearchPort pubmedSearchPort;
+    private final LiteratureStoragePort literatureStoragePort;
+
     @Transactional
-    public BatchPlan createPlan(CreatePlanCommand command) {
-        BatchPlan plan = assemblePlan(command);
-        planPort.save(plan);
+    public PlanAggregate createPlan(CreatePlanCommand command) {
+        PlanAggregate plan = assemblePlan(command);
+        planRepository.save(plan);
         return plan;
     }
 
     // Separate method, NO @Transactional
-    public List<Literature> fetchFromExternalApi(BatchPlan plan) {
-        return pubmedApiClient.search(plan.query());  // Outside transaction
+    public SearchResult fetchFromExternalApi(PlanAggregate plan) {
+        return pubmedSearchPort.search(plan.getQuery());  // Outside transaction
     }
 
     @Transactional
-    public void saveLiterature(List<Literature> results) {
-        literaturePort.saveAll(results);  // New transaction
+    public void saveLiterature(SearchResult results) {
+        literatureStoragePort.save(results);  // New transaction
     }
 }
 ```

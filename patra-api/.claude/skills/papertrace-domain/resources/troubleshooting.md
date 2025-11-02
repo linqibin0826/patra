@@ -2,818 +2,485 @@
 
 ## Overview
 
-This guide helps diagnose and fix common issues in Papertrace. Each issue includes symptoms, root causes, diagnostic steps, and solutions.
+Diagnostic guide for common Papertrace issues, based on actual database schema and architecture.
 
 ---
 
-## Issue 1: Plan Stuck in RUNNING Status
+## Plan Issues
 
-### Symptoms
-- Plan created hours/days ago
-- Status still RUNNING
-- Some Tasks SUCCEEDED, others PENDING/FAILED
-- No new Task progress
+### Issue: Plan Stuck in SLICING
 
-### Root Causes
+**Symptoms**:
+- Plan status: `SLICING` for hours
+- No PlanSlice records created
+- No error logs
 
-**Cause 1**: Tasks exhausted but Plan completion check didn't run
-
-**Cause 2**: Event handler failed silently
-
-**Cause 3**: Scheduled executor stopped
-
-### Diagnostic Steps
-
-**Step 1: Check Task Distribution**
+**Diagnosis**:
 ```sql
-SELECT
-    status,
-    COUNT(*) as count
-FROM batch_task
-WHERE plan_id = <plan_id>
-GROUP BY status;
+SELECT id, plan_key, status_code, slice_strategy_code, created_at
+FROM ing_plan
+WHERE status_code = 'SLICING'
+  AND created_at < NOW() - INTERVAL 1 HOUR;
 ```
 
-**Expected**:
-```
-SUCCEEDED: 80
-PENDING: 0
-RUNNING: 0
-FAILED: 0
-EXHAUSTED: 20
-```
+**Root Causes**:
+1. SlicePlanner threw exception (check logs: `SlicePlanningException`)
+2. Transaction rollback during slice creation
+3. WindowSpec JSON invalid (check `window_spec_json` column)
 
-**Problem**: If EXHAUSTED > 0 and (PENDING + RUNNING) = 0, Plan should be FAILED.
-
-**Step 2: Check Event Handler Logs**
-```bash
-grep "PlanCreatedEvent" application.log | grep <plan_id>
-grep "TaskStatusChangedEvent" application.log | grep <plan_id>
-```
-
-**Expected**:
-```
-[2024-07-15 10:00:00] PlanCreatedEvent published for plan-123
-[2024-07-15 10:00:01] PlanCreatedEventHandler processing plan-123
-[2024-07-15 10:05:30] TaskStatusChangedEvent for plan-123 (task-456 → SUCCEEDED)
-```
-
-**Problem**: If no TaskStatusChangedEvent logs, event publishing broken.
-
-**Step 3**: Check Scheduled Executor
-```bash
-# Check if PlanCompletionChecker is running
-grep "PlanCompletionChecker" application.log --since="1 hour ago"
-```
-
-### Solutions
-
-**Solution 1: Manually Trigger Completion Check**
-```java
-@Autowired
-private PlanCompletionChecker completionChecker;
-
-completionChecker.checkPlanCompletion(PlanId.of("<plan_id>"));
-```
-
-**Solution 2: Fix Event Handler (if @Async failed)**
-```java
-// Check AsyncConfig
-@Configuration
-@EnableAsync
-public class AsyncConfig {
-    @Bean
-    public Executor taskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(100);
-        executor.setThreadNamePrefix("async-");
-        executor.setRejectedExecutionHandler(new CallerRunsPolicy());  // ← Add this!
-        executor.initialize();
-        return executor;
-    }
-}
-```
-
-**Solution 3: Restart Scheduled Tasks**
-```bash
-# Restart application
-kubectl rollout restart deployment/patra-ingest
-
-# Or trigger endpoint (if exists)
-curl -X POST http://localhost:8082/actuator/scheduledtasks/restart
-```
-
----
-
-## Issue 2: Tasks Fail with "Expression Not Found"
-
-### Symptoms
-- Tasks fail immediately with error: `ExpressionNotFoundException`
-- Error message: `"No expression for publicationDate:range"`
-
-### Root Cause
-
-Missing Expression in patra-registry for Provenance + field + capability combination.
-
-### Diagnostic Steps
-
-**Step 1: Check Expression Exists**
+**Solutions**:
 ```sql
-SELECT
-    provenance_code,
-    expr_field,
-    capability,
-    render_rule,
-    is_active
-FROM reg_expression
-WHERE provenance_code = 'PUBMED'
-  AND expr_field = 'publicationDate'
-  AND capability = 'range';
-```
+-- Check window spec
+SELECT id, window_spec_json
+FROM ing_plan
+WHERE id = <plan_id>;
 
-**Expected**: At least 1 row with `is_active = true`.
-
-**Problem**: 0 rows or `is_active = false`.
-
-**Step 2: Check Configuration Loading**
-```java
-List<Expression> expressions = expressionRepository.findByProvenance(
-    ProvenanceCode.PUBMED
-);
-System.out.println("Loaded expressions: " + expressions.size());
-expressions.forEach(expr ->
-    System.out.println(expr.exprField() + ":" + expr.capability())
-);
-```
-
-### Solutions
-
-**Solution 1: Create Missing Expression**
-```sql
-INSERT INTO reg_expression (
-    provenance_code,
-    expr_field,
-    capability,
-    render_rule,
-    is_active,
-    priority,
-    effective_from
-) VALUES (
-    'PUBMED',
-    'publicationDate',
-    'range',
-    'mindate={start}&maxdate={end}',
-    true,
-    1,
-    NOW()
-);
-```
-
-**Solution 2: Activate Inactive Expression**
-```sql
-UPDATE reg_expression
-SET is_active = true
-WHERE provenance_code = 'PUBMED'
-  AND expr_field = 'publicationDate'
-  AND capability = 'range';
-```
-
-**Solution 3: Check Expression Cache**
-```java
-// If using cache, clear it
-@Autowired
-private CacheManager cacheManager;
-
-cacheManager.getCache("expressions").clear();
-```
-
----
-
-## Issue 3: Plan Generates 0 Slices
-
-### Symptoms
-- Plan created successfully
-- `slice_count = 0`
-- No Tasks generated
-- No error message
-
-### Root Causes
-
-**Cause 1**: `startTime >= endTime`
-
-**Cause 2**: `sliceDuration` larger than Plan window
-
-**Cause 3**: Invalid `WindowOffsetConfig`
-
-### Diagnostic Steps
-
-**Step 1: Check Plan Time Window**
-```sql
-SELECT
-    id,
-    start_time,
-    end_time,
-    TIMESTAMPDIFF(HOUR, start_time, end_time) as window_hours
-FROM batch_plan
+-- Manually transition to ARCHIVED if unrecoverable
+UPDATE ing_plan
+SET status_code = 'ARCHIVED',
+    archived_at = NOW(),
+    archive_reason = 'Slicing failed - manual intervention'
 WHERE id = <plan_id>;
 ```
 
-**Problem**: `window_hours <= 0` or `NULL`.
+---
 
-**Step 2: Check WindowOffsetConfig**
+### Issue: Plan Missing Expression Prototype
+
+**Symptoms**:
+- Plan created but slices fail
+- Error: `expr_proto_snapshot_json is NULL`
+
+**Diagnosis**:
 ```sql
-SELECT
-    provenance_code,
-    window_offset_json
-FROM reg_provenance_config
-WHERE provenance_code = 'PUBMED'
-  AND operation_type = 'harvest'
-  AND effective_from <= NOW()
-  AND (effective_to IS NULL OR effective_to > NOW());
+SELECT id, expr_proto_hash, expr_proto_snapshot_json
+FROM ing_plan
+WHERE id = <plan_id>;
 ```
 
-**Expected**:
-```json
-{
-  "sliceDuration": "P30D",
-  "lookbackPeriod": "P365D",
-  "maxWindowSize": "P180D"
-}
-```
+**Root Cause**: Registry API returned null/empty ExprSnapshot
 
-**Problem**: `sliceDuration = "P365D"` (larger than Plan window).
-
-### Solutions
-
-**Solution 1: Fix Plan Time Window**
-```java
-// Re-create Plan with valid times
-CreatePlanCommand command = new CreatePlanCommand(
-    ProvenanceCode.PUBMED,
-    LocalDateTime.of(2024, 1, 1, 0, 0),   // startTime
-    LocalDateTime.of(2024, 12, 31, 23, 59), // endTime (AFTER startTime!)
-    "harvest",
-    "user123"
+**Solutions**:
+```sql
+-- Verify registry has expression for this operation
+-- Check patra-registry database
+SELECT *
+FROM reg_expr_field_dict f
+JOIN reg_expr_capability c ON f.id = c.field_id
+WHERE c.id IN (
+  SELECT capability_id
+  FROM reg_prov_expr_render_rule
+  WHERE provenance_id = <provenance_id>
 );
-```
-
-**Solution 2: Adjust WindowOffsetConfig**
-```sql
-UPDATE reg_provenance_config
-SET window_offset_json = JSON_SET(
-    window_offset_json,
-    '$.sliceDuration',
-    'P7D'  -- Change from 30 days to 7 days
-)
-WHERE provenance_code = 'PUBMED';
 ```
 
 ---
 
-## Issue 4: Tasks Retry Infinitely
+## PlanSlice Issues
 
-### Symptoms
-- Same Task retries 100+ times
-- `retry_count` keeps increasing
-- Task never reaches EXHAUSTED status
+### Issue: Slice Without Task
 
-### Root Cause
+**Symptoms**:
+- PlanSlice exists (status: `PENDING`)
+- No corresponding Task record
+- Violation of 1:1 constraint
 
-`maxRetries` not configured or set to very high value (e.g., 999).
+**Diagnosis**:
+```sql
+SELECT ps.id, ps.slice_no, ps.status_code, t.id as task_id
+FROM ing_plan_slice ps
+LEFT JOIN ing_task t ON t.slice_id = ps.id
+WHERE ps.plan_id = <plan_id>
+  AND t.id IS NULL;
+```
 
-### Diagnostic Steps
+**Root Cause**: Transaction failure after slice creation, before task creation
 
-**Step 1: Check Task Retry Count**
+**Solutions**:
+```sql
+-- Create missing task
+INSERT INTO ing_task (
+  slice_id, idempotent_key, status_code,
+  params_json, created_at
+)
+SELECT
+  ps.id,
+  CONCAT('retry-', ps.id),  -- Temporary key
+  'QUEUED',
+  '{}',
+  NOW()
+FROM ing_plan_slice ps
+WHERE ps.id = <slice_id>
+  AND NOT EXISTS (SELECT 1 FROM ing_task WHERE slice_id = ps.id);
+```
+
+---
+
+### Issue: Slice Signature Hash Collision
+
+**Symptoms**:
+- Different slices have same `slice_signature_hash`
+- UNIQUE constraint violation on slice creation
+
+**Diagnosis**:
+```sql
+SELECT slice_signature_hash, COUNT(*) as count
+FROM ing_plan_slice
+WHERE plan_id = <plan_id>
+GROUP BY slice_signature_hash
+HAVING count > 1;
+```
+
+**Root Cause**: WindowSpec canonicalization not deterministic
+
+**Solutions**: Report to development team (canonicalizer bug)
+
+---
+
+## Task Issues
+
+### Issue: Task Stuck in RUNNING
+
+**Symptoms**:
+- Task status: `RUNNING`
+- Lease expired (`leased_until < NOW()`)
+- No progress for hours
+
+**Diagnosis**:
 ```sql
 SELECT
-    id,
-    business_key,
-    retry_count,
-    status,
-    error_message
-FROM batch_task
-WHERE retry_count > 10
-ORDER BY retry_count DESC
+  id,
+  idempotent_key,
+  status_code,
+  lease_owner,
+  leased_until,
+  NOW() as current_time,
+  TIMESTAMPDIFF(MINUTE, leased_until, NOW()) as lease_expired_minutes
+FROM ing_task
+WHERE status_code = 'RUNNING'
+  AND leased_until < NOW();
+```
+
+**Root Cause**: Worker crashed/killed without releasing lease
+
+**Solutions**:
+```sql
+-- Release expired lease
+UPDATE ing_task
+SET status_code = 'QUEUED',
+    lease_owner = NULL,
+    leased_until = NULL
+WHERE id = <task_id>
+  AND leased_until < NOW();
+```
+
+---
+
+### Issue: Task Idempotency Key Collision
+
+**Symptoms**:
+- Cannot create task
+- Error: `Duplicate entry for key 'uk_task_idempotent_key'`
+
+**Diagnosis**:
+```sql
+SELECT id, slice_id, idempotent_key, status_code
+FROM ing_task
+WHERE idempotent_key = <key>;
+```
+
+**Root Cause**: Retry logic attempting to create duplicate task
+
+**Solutions**: Check existing task status; if SUCCEEDED/FAILED, ignore. If QUEUED/RUNNING, reuse.
+
+---
+
+## Lease Issues
+
+### Issue: Lease Never Released
+
+**Symptoms**:
+- Task completed (SUCCEEDED/FAILED) but lease still held
+- `lease_owner` not NULL
+- `leased_until` in future
+
+**Diagnosis**:
+```sql
+SELECT id, status_code, lease_owner, leased_until
+FROM ing_task
+WHERE status_code IN ('SUCCEEDED', 'FAILED')
+  AND lease_owner IS NOT NULL;
+```
+
+**Root Cause**: Lease release logic bug
+
+**Solutions**:
+```sql
+-- Manually release lease
+UPDATE ing_task
+SET lease_owner = NULL,
+    leased_until = NULL
+WHERE status_code IN ('SUCCEEDED', 'FAILED')
+  AND lease_owner IS NOT NULL;
+```
+
+---
+
+## Outbox Issues
+
+### Issue: Outbox Message Accumulation
+
+**Symptoms**:
+- `ing_outbox_message` table growing
+- Messages stuck in `PENDING` status
+- Events not published to MQ
+
+**Diagnosis**:
+```sql
+SELECT
+  status,
+  COUNT(*) as count,
+  MIN(created_at) as oldest_message
+FROM ing_outbox_message
+GROUP BY status;
+```
+
+**Root Cause**: Outbox relay not running or MQ connection failure
+
+**Solutions**:
+```bash
+# Check outbox relay logs
+grep "OutboxRelay" application.log | tail -20
+
+# Restart outbox relay (if using scheduled task)
+# Check Spring @Scheduled annotation on OutboxRelay
+```
+
+---
+
+### Issue: Outbox Message Failed Publishing
+
+**Symptoms**:
+- Messages status: `FAILED`
+- Error in `error_message` column
+
+**Diagnosis**:
+```sql
+SELECT id, event_type, status, error_message, retry_count
+FROM ing_outbox_message
+WHERE status = 'FAILED'
+ORDER BY created_at DESC
 LIMIT 10;
 ```
 
-**Step 2: Check RetryConfig**
+**Root Cause**: MQ reject (e.g., invalid payload, queue not found)
+
+**Solutions**:
 ```sql
-SELECT
-    provenance_code,
-    retry_json
-FROM reg_provenance_config
-WHERE provenance_code = 'PUBMED';
-```
-
-**Expected**:
-```json
-{
-  "maxRetries": 3,
-  "backoffStrategy": "EXPONENTIAL",
-  "initialDelay": "PT5S",
-  "maxDelay": "PT60S"
-}
-```
-
-**Problem**: `maxRetries = 999` or missing.
-
-### Solutions
-
-**Solution 1: Set Reasonable maxRetries**
-```sql
-UPDATE reg_provenance_config
-SET retry_json = JSON_SET(
-    retry_json,
-    '$.maxRetries',
-    3  -- Reasonable limit
-)
-WHERE provenance_code = 'PUBMED';
-```
-
-**Solution 2: Manually Exhaust Task**
-```sql
-UPDATE batch_task
-SET status = 'EXHAUSTED',
-    error_message = 'Manually exhausted due to infinite retries'
-WHERE id = <task_id>;
-```
-
-**Solution 3: Add Retry Limit Validation**
-```java
-public record RetryConfig(
-    int maxRetries,
-    ...
-) {
-    public RetryConfig {
-        if (maxRetries < 0 || maxRetries > 10) {
-            throw new IllegalArgumentException("maxRetries must be between 0 and 10");
-        }
-    }
-}
+-- Retry failed messages
+UPDATE ing_outbox_message
+SET status = 'PENDING',
+    retry_count = retry_count + 1
+WHERE status = 'FAILED'
+  AND retry_count < 3;
 ```
 
 ---
 
-## Issue 5: Configuration Not Applied
+## Configuration Issues
 
-### Symptoms
-- Created new SOURCE-level config
-- Tasks still use old GLOBAL config
-- No error message
+### Issue: Configuration Not Found
 
-### Root Causes
+**Symptoms**:
+- Task fails with `ConfigurationNotFoundException`
+- Error: `"No window_offset config for provenance X, operation Y"`
 
-**Cause 1**: Configuration cache not cleared
-
-**Cause 2**: `effectiveFrom` in future
-
-**Cause 3**: `operationType` mismatch
-
-**Cause 4**: Temporal overlap (multiple configs effective)
-
-### Diagnostic Steps
-
-**Step 1: Check Effective Time**
+**Diagnosis**:
 ```sql
-SELECT
-    id,
-    provenance_code,
-    operation_type,
-    effective_from,
-    effective_to,
-    NOW() as current_time,
-    CASE
-        WHEN effective_from > NOW() THEN 'Future'
-        WHEN effective_to IS NOT NULL AND effective_to < NOW() THEN 'Expired'
-        ELSE 'Active'
-    END as status
-FROM reg_provenance_config
-WHERE provenance_code = 'PUBMED';
+-- Check if config exists
+SELECT provenance_id, operation_type_code, window_mode_code
+FROM reg_prov_window_offset_cfg
+WHERE provenance_id = <provenance_id>
+  AND (operation_type_code = '<operation>' OR operation_type_code = 'ALL');
 ```
 
-**Problem**: New config has `status = 'Future'`.
+**Root Cause**: Missing config row in registry
 
-**Step 2: Check Scope Resolution**
-```java
-@Autowired
-private ConfigurationResolver configResolver;
-
-ProvenanceConfiguration resolved = configResolver.resolve(
-    ProvenanceCode.PUBMED,
-    "harvest",
-    Optional.empty()
+**Solutions**:
+```sql
+-- Create default config
+INSERT INTO reg_prov_window_offset_cfg (
+  provenance_id, operation_type_code, window_mode_code,
+  window_size_value, window_size_unit
+)
+VALUES (
+  <provenance_id>, 'ALL', 'SLIDING',
+  7, 'DAYS'
 );
-
-System.out.println("Resolved config: " + resolved);
-System.out.println("Retry limit: " + resolved.retry().maxRetries());
-```
-
-**Step 3**: Check for Overlapping Configs
-```sql
-SELECT
-    id,
-    operation_type,
-    effective_from,
-    effective_to
-FROM reg_provenance_config
-WHERE provenance_code = 'PUBMED'
-  AND effective_from <= NOW()
-  AND (effective_to IS NULL OR effective_to > NOW())
-ORDER BY effective_from DESC;
-```
-
-**Problem**: Multiple rows returned (ambiguous).
-
-### Solutions
-
-**Solution 1: Fix Effective Time**
-```sql
-UPDATE reg_provenance_config
-SET effective_from = NOW()  -- Make effective immediately
-WHERE id = <config_id>;
-```
-
-**Solution 2: Expire Old Config**
-```sql
-UPDATE reg_provenance_config
-SET effective_to = NOW()  -- Expire old config
-WHERE id = <old_config_id>;
-```
-
-**Solution 3: Clear Configuration Cache**
-```bash
-# Call cache clear endpoint
-curl -X POST http://localhost:8081/actuator/caches/configurations/clear
-
-# Or restart service
-kubectl rollout restart deployment/patra-registry
 ```
 
 ---
 
-## Issue 6: Slice Estimation Way Off
+### Issue: Wrong Config Precedence
 
-### Symptoms
-- Slice estimated 10,000 records
-- Actually fetched 500,000 records
-- Tasks timeout due to large responses
+**Symptoms**:
+- Specific operation config ignored
+- Uses 'ALL' config instead
 
-### Root Cause
-
-`RecordEstimator` uses outdated statistics or wrong formula.
-
-### Diagnostic Steps
-
-**Step 1: Compare Estimate vs Actual**
+**Diagnosis**:
 ```sql
-SELECT
-    s.id,
-    s.estimated_record_count,
-    SUM(t.records_fetched) as actual_count,
-    (SUM(t.records_fetched) - s.estimated_record_count) as difference
-FROM slice s
-JOIN batch_task t ON t.slice_id = s.id
-WHERE s.plan_id = <plan_id>
-  AND t.status = 'SUCCEEDED'
-GROUP BY s.id
-HAVING ABS(difference) > s.estimated_record_count * 0.5;  -- 50% error
+-- Check both specific and 'ALL' configs
+SELECT operation_type_code, window_mode_code, created_at
+FROM reg_prov_window_offset_cfg
+WHERE provenance_id = <provenance_id>
+  AND operation_type_code IN ('<specific_op>', 'ALL')
+ORDER BY operation_type_code DESC;  -- Specific should come first
 ```
 
-**Step 2: Check Estimator Logic**
-```java
-@Component
-public class RecordEstimator {
-    public int estimate(
-        ProvenanceCode provenanceCode,
-        LocalDateTime startTime,
-        LocalDateTime endTime
-    ) {
-        // Current logic (maybe flawed):
-        long days = ChronoUnit.DAYS.between(startTime, endTime);
-        return (int) (days * 1000);  // Naive: 1000 records/day
+**Root Cause**: Config resolution logic bug (should prefer specific over 'ALL')
 
-        // Better: Query actual statistics
-    }
-}
+**Solutions**: Verify ConfigResolver uses: `specific operation_type > 'ALL'` precedence
+
+---
+
+## Expression Issues
+
+### Issue: Expression Field Not Found
+
+**Symptoms**:
+- Task fails: `ExpressionFieldNotFoundException`
+- Error: `"Field 'publication_date' not found"`
+
+**Diagnosis**:
+```sql
+-- Check field dictionary
+SELECT id, field_key, field_name, field_type_code
+FROM reg_expr_field_dict
+WHERE field_key = 'publication_date';
 ```
 
-### Solutions
+**Root Cause**: Missing field definition in registry
 
-**Solution 1: Use Actual Statistics**
-```java
-@Component
-@RequiredArgsConstructor
-public class ImprovedRecordEstimator {
-    private final StatisticsRepository statsRepo;
-
-    public int estimate(
-        ProvenanceCode provenanceCode,
-        LocalDateTime startTime,
-        LocalDateTime endTime
-    ) {
-        // Query actual historical data
-        Optional<Statistics> stats = statsRepo.findByProvenanceAndTimeRange(
-            provenanceCode,
-            startTime.minusMonths(1),  // Same period last month
-            endTime.minusMonths(1)
-        );
-
-        if (stats.isPresent()) {
-            return stats.get().recordCount();
-        }
-
-        // Fallback to conservative estimate
-        long days = ChronoUnit.DAYS.between(startTime, endTime);
-        return (int) (days * 500);  // Conservative: 500/day
-    }
-}
-```
-
-**Solution 2: Add Safety Margin**
-```java
-int baseEstimate = estimator.estimate(...);
-int safeEstimate = (int) (baseEstimate * 1.5);  // 50% buffer
-```
-
-**Solution 3: Dynamic Task Splitting**
-```java
-// If Task fetches > 100k records, split into smaller Tasks
-if (recordsFetched > 100_000) {
-    splitTaskIntoSmaller(task);
-}
+**Solutions**:
+```sql
+-- Add missing field
+INSERT INTO reg_expr_field_dict (field_key, field_name, field_type_code)
+VALUES ('publication_date', 'Publication Date', 'DATE');
 ```
 
 ---
 
-## Issue 7: Rate Limit Errors
+### Issue: Expression Render Rule Not Found
 
-### Symptoms
-- Tasks fail with HTTP 429 (Too Many Requests)
-- Error message: `"API rate limit exceeded"`
-- Retries also fail immediately
+**Symptoms**:
+- Expression field exists but rendering fails
+- Error: `"No render rule for capability RANGE"`
 
-### Root Cause
-
-**Cause 1**: `RateLimitConfig` too aggressive
-
-**Cause 2**: Multiple instances sending requests
-
-**Cause 3**: Provider lowered rate limits
-
-### Diagnostic Steps
-
-**Step 1: Check Rate Limit Config**
+**Diagnosis**:
 ```sql
-SELECT
-    provenance_code,
-    rate_limit_json
-FROM reg_provenance_config
-WHERE provenance_code = 'PUBMED';
+-- Check render rule exists
+SELECT rr.id, rr.template, rr.emission_mode_code, rr.params
+FROM reg_expr_field_dict f
+JOIN reg_expr_capability c ON f.id = c.field_id
+JOIN reg_prov_expr_render_rule rr ON c.id = rr.capability_id
+WHERE f.field_key = 'publication_date'
+  AND c.operation_code = 'RANGE'
+  AND rr.provenance_id = <provenance_id>;
 ```
 
-**Expected**:
-```json
-{
-  "requestsPerSecond": 10,
-  "requestsPerMinute": 600,
-  "burstSize": 20
-}
-```
+**Root Cause**: Missing render rule for this provenance + capability
 
-**Problem**: `requestsPerSecond = 100` (too high).
-
-**Step 2: Check Actual Request Rate**
-```bash
-# Count requests in last minute
-grep "Calling PubMed API" application.log --since="1 minute ago" | wc -l
-```
-
-**Step 3: Check Provider Response**
-```bash
-# Look for rate limit headers in response
-grep "X-RateLimit-Remaining" application.log | tail -1
-```
-
-### Solutions
-
-**Solution 1: Lower Rate Limit**
+**Solutions**:
 ```sql
-UPDATE reg_provenance_config
-SET rate_limit_json = JSON_SET(
-    rate_limit_json,
-    '$.requestsPerSecond',
-    3  -- Conservative limit
+-- Add render rule
+INSERT INTO reg_prov_expr_render_rule (
+  provenance_id, capability_id, emission_mode_code, params
 )
-WHERE provenance_code = 'PUBMED';
-```
-
-**Solution 2: Implement Distributed Rate Limiting**
-```java
-@Component
-@RequiredArgsConstructor
-public class DistributedRateLimiter {
-    private final RedisTemplate<String, String> redis;
-
-    public boolean allowRequest(ProvenanceCode provenanceCode) {
-        String key = "rate-limit:" + provenanceCode.value();
-        Long current = redis.opsForValue().increment(key);
-
-        if (current == 1) {
-            redis.expire(key, 1, TimeUnit.SECONDS);
-        }
-
-        return current <= 10;  // 10 requests/second across all instances
-    }
-}
-```
-
-**Solution 3: Add Retry After Delay**
-```java
-if (response.statusCode() == 429) {
-    String retryAfter = response.headers().firstValue("Retry-After").orElse("60");
-    Duration delay = Duration.ofSeconds(Long.parseLong(retryAfter));
-    scheduleRetry(task, delay);
-}
+VALUES (
+  <provenance_id>,
+  <capability_id>,
+  'PARAMS',
+  '{"from":"{{from}}", "to":"{{to}}", "datetype":"edat"}'
+);
 ```
 
 ---
 
-## Issue 8: Expression Rendering Produces Invalid URL
-
-### Symptoms
-- Task fails with HTTP 400 (Bad Request)
-- Provider error: `"Invalid query parameter"`
-- Expression seems correct
-
-### Root Causes
-
-**Cause 1**: Missing URL encoding
-
-**Cause 2**: Special characters in values
-
-**Cause 3**: Template syntax error
-
-### Diagnostic Steps
-
-**Step 1: Log Rendered URL**
-```java
-String url = expressionRenderer.render(...);
-log.info("Rendered URL: {}", url);
-```
-
-**Example Output**:
-```
-Rendered URL: https://api.pubmed.gov?author=O'Brien&title=COVID-19
-                                              ^ Problem: Unencoded quote
-```
-
-**Step 2: Test URL Manually**
-```bash
-curl "https://api.pubmed.gov?author=O'Brien&title=COVID-19"
-# Response: 400 Bad Request
-```
-
-**Step 3: Check Expression Template**
-```sql
-SELECT render_rule
-FROM reg_expression
-WHERE provenance_code = 'PUBMED'
-  AND expr_field = 'author';
-```
-
-### Solutions
-
-**Solution 1: URL-Encode Values**
-```java
-public String render(Map<String, Object> values) {
-    String result = renderRule;
-
-    for (Map.Entry<String, Object> entry : values.entrySet()) {
-        String placeholder = "{" + entry.getKey() + "}";
-        String value = URLEncoder.encode(
-            entry.getValue().toString(),
-            StandardCharsets.UTF_8
-        );
-        result = result.replace(placeholder, value);
-    }
-
-    return result;
-}
-```
-
-**Solution 2: Escape Special Characters**
-```java
-// Before rendering
-String authorName = command.getAuthor()
-    .replace("'", "\\'")
-    .replace("\"", "\\\"");
-```
-
-**Solution 3: Validate Rendered Output**
-```java
-public String render(Map<String, Object> values) {
-    String result = // ... render logic
-
-    // Validate
-    try {
-        new URI(baseUrl + "?" + result);  // Will throw if invalid
-    } catch (URISyntaxException e) {
-        throw new ExpressionRenderingException("Invalid URL: " + result, e);
-    }
-
-    return result;
-}
-```
-
----
-
-## Diagnostic Commands Cheatsheet
+## Diagnostic Commands
 
 ### Database Queries
 
-**Check Plan Status Distribution**:
+**Check Plan Distribution**:
 ```sql
-SELECT status, COUNT(*) FROM batch_plan GROUP BY status;
+SELECT status_code, COUNT(*)
+FROM ing_plan
+GROUP BY status_code;
 ```
 
-**Find Stuck Plans**:
+**Find Expired Leases**:
 ```sql
-SELECT id, provenance_code, created_at
-FROM batch_plan
-WHERE status = 'RUNNING'
-  AND created_at < NOW() - INTERVAL 24 HOUR;
+SELECT id, idempotent_key, lease_owner, leased_until
+FROM ing_task
+WHERE status_code = 'RUNNING'
+  AND leased_until < NOW();
 ```
 
-**Check Task Failures**:
+**Check Outbox Backlog**:
 ```sql
-SELECT
-    provenance_code,
-    status,
-    COUNT(*) as count,
-    AVG(retry_count) as avg_retries
-FROM batch_task
-WHERE plan_id = <plan_id>
-GROUP BY provenance_code, status;
+SELECT status, COUNT(*), MIN(created_at) as oldest
+FROM ing_outbox_message
+GROUP BY status;
+```
+
+**Find Missing Slices**:
+```sql
+SELECT p.id, p.plan_key, COUNT(ps.id) as slice_count
+FROM ing_plan p
+LEFT JOIN ing_plan_slice ps ON p.id = ps.plan_id
+WHERE p.status_code = 'READY'
+GROUP BY p.id
+HAVING slice_count = 0;
 ```
 
 ### Logs
 
-**Filter by Plan ID**:
+**Filter by Plan Key**:
 ```bash
-grep "plan-123" application.log
+grep "plan_key=harvest-pubmed-20241102" application.log
 ```
 
-**Count Errors**:
-```bash
-grep "ERROR" application.log --since="1 hour ago" | wc -l
-```
-
-**Watch Live Logs**:
+**Watch Task Execution**:
 ```bash
 tail -f application.log | grep --color=always "Task.*SUCCEEDED\|Task.*FAILED"
 ```
 
-### API Endpoints (Actuator)
-
-**Check Health**:
+**Check Lease Acquisition**:
 ```bash
-curl http://localhost:8082/actuator/health
+grep "Lease acquired" application.log | tail -20
 ```
 
-**List Scheduled Tasks**:
-```bash
-curl http://localhost:8082/actuator/scheduledtasks
-```
+---
 
-**Clear Cache**:
-```bash
-curl -X POST http://localhost:8081/actuator/caches/expressions/clear
-```
+## Best Practices
+
+1. **Check Temporal Validity**: Always verify `created_at`, `leased_until` timestamps
+2. **Respect State Machines**: Never manually set invalid state transitions
+3. **Monitor Outbox**: Watch for `PENDING` message accumulation
+4. **Verify 1:1 Constraints**: Each Slice must have exactly ONE Task
+5. **Use Idempotency Keys**: Never create duplicate tasks with same `idempotent_key`
 
 ---
 
 ## Summary
 
 **Most Common Issues**:
-1. Plans stuck in RUNNING (event handlers)
-2. Missing Expressions (configuration)
-3. Rate limiting (too aggressive config)
-4. Configuration not applied (temporal validity)
+- Expired leases (task stuck RUNNING)
+- Missing config (7-table structure)
+- Outbox accumulation (relay not running)
+- Expression render rule missing (4-table structure)
 
-**Key Diagnostic Tools**:
-- SQL queries for data inspection
-- Log analysis for event tracking
-- Actuator endpoints for runtime state
-
-**Best Practices**:
-- Always check temporal validity (`effectiveFrom`/`effectiveTo`)
-- Monitor retry counts (prevent infinite loops)
-- Validate configurations before deployment
-- Use conservative estimates and rate limits
-
-**See Also**:
-- [plan-task-workflow.md](plan-task-workflow.md) for workflow details
-- [provenance-config-system.md](provenance-config-system.md) for configuration
+**Key Tables**:
+- `ing_plan`, `ing_plan_slice`, `ing_task` (ingest entities)
+- `ing_outbox_message` (event publishing)
+- `reg_prov_*_cfg` (7 config tables)
+- `reg_expr_*` (4 expression tables)
