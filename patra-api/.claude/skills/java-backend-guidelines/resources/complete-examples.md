@@ -4,83 +4,83 @@
 
 ## 目录
 
-- [Complete Feature Example: Plan Ingestion](#complete-feature-example-plan-ingestion)
-- [Architecture Layers Walkthrough](#architecture-layers-walkthrough)
-- [Refactoring Example: Bad to Good](#refactoring-example-bad-to-good)
-- [End-to-End Request Flow](#end-to-end-request-flow)
-- [Testing Strategy](#testing-strategy)
+- [完整功能示例: Plan 采集](#完整功能示例-plan-采集)
+- [架构分层详解](#架构分层详解)
+- [重构示例: 从错误到正确](#重构示例-从错误到正确)
+- [端到端请求流程](#端到端请求流程)
+- [测试策略](#测试策略)
 
 ---
 
-## Complete Feature Example: Plan Ingestion
+## 完整功能示例: Plan 采集
 
 ### 概览
 
-The Plan Ingestion feature demonstrates a complete Hexagonal Architecture + DDD implementation spanning all four layers: **Adapter → Application → Domain ← Infrastructure**.
+Plan 采集功能演示了一个完整的六边形架构 + DDD 实现,跨越所有四层: **Adapter → Application → Domain ← Infrastructure**。
 
-**Business Context**: When a scheduler triggers a data ingestion task, the system creates a Plan with multiple Slices and Tasks based on temporal windows and configuration snapshots. This ensures idempotent, reliable, and auditable data collection.
+**业务上下文**: 当调度器触发数据采集任务时,系统基于时间窗口和配置快照创建包含多个 Slice 和 Task 的 Plan。这确保了幂等、可靠和可审计的数据采集。
 
-**Key Components**:
-- **Orchestrator**: PlanIngestionOrchestrator coordinates the entire workflow
-- **Coordinators**: Separate concerns for persistence, idempotency, and publishing
-- **Domain Aggregates**: PlanAggregate encapsulates business rules and state
-- **Repository**: MyBatis-Plus implementation with MapStruct converters
+**核心组件**:
+- **Orchestrator**: PlanIngestionOrchestrator 协调整个工作流
+- **Coordinators**: 分离持久化、幂等性和发布的关注点
+- **Domain Aggregates**: PlanAggregate 封装业务规则和状态
+- **Repository**: 使用 MapStruct 转换器的 MyBatis-Plus 实现
 
 ---
 
-## Architecture Layers Walkthrough
+## 架构分层详解
 
-### 1. Domain Layer (Pure Java)
+### 1. Domain 层 (纯 Java)
 
-**目的**: Business logic and rules. NO framework dependencies.
+**目的**: 业务逻辑和规则。禁止框架依赖。
 
 #### Aggregate Root: PlanAggregate
 
-**File**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java`
+**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java`
 
 ```java
 /**
- * Aggregate root representing an ingestion plan blueprint with state transitions.
+ * 表示采集计划蓝图的聚合根,包含状态转换。
  *
- * Idempotency: planKey (source + operation + window + strategy hash) prevents duplicates
- * State machine: DRAFT → SLICING → READY/PARTIAL → COMPLETED/FAILED
+ * 幂等性: planKey (数据源 + 操作 + 窗口 + 策略哈希) 防止重复
+ * 状态机: DRAFT → SLICING → READY/PARTIAL → COMPLETED/FAILED
  *
- * Thread safety: single-threaded usage only, not shared across threads
+ * 线程安全: 仅单线程使用,不跨线程共享
  */
 @Getter
 public class PlanAggregate extends AggregateRoot<Long> {
 
-  /** Scheduler instance identifier */
+  /** 调度实例标识符 */
   private final Long scheduleInstanceId;
 
-  /** Business idempotency key for deduplication */
+  /** 业务幂等键,用于去重 */
   private final String planKey;
 
-  /** Provenance/source code (e.g., PUBMED) */
+  /** Provenance/数据源代码 (例如: PUBMED) */
   private final String provenanceCode;
 
-  /** Operation type (full, incremental, compensation) */
+  /** 操作类型 (全量、增量、补偿) */
   private final OperationCode operationCode;
 
-  /** Hash of plan expression prototype */
+  /** Plan 表达式原型的哈希值 */
   private final String exprProtoHash;
 
-  /** Snapshot of raw expression prototype (JSON) */
+  /** 表达式原型的快照 (JSON) */
   private final String exprProtoSnapshotJson;
 
-  /** Snapshot of provenance configuration */
+  /** Provenance 配置的快照 */
   private final String provenanceConfigSnapshotJson;
 
-  /** Window boundary specification */
+  /** 窗口边界规范 */
   private final WindowSpec windowSpec;
 
-  /** Slicing strategy code (TIME, DATE, SINGLE) */
+  /** 切片策略代码 (TIME, DATE, SINGLE) */
   private final String sliceStrategyCode;
 
-  /** Current state of the plan */
+  /** Plan 的当前状态 */
   private PlanStatus status;
 
-  // Private constructor ensures use of factory methods
+  // 私有构造函数确保使用工厂方法
   private PlanAggregate(
       Long id,
       Long scheduleInstanceId,
@@ -108,229 +108,228 @@ public class PlanAggregate extends AggregateRoot<Long> {
     this.status = status == null ? PlanStatus.DRAFT : status;
   }
 
-  // Factory method for creating new plans
+  // 用于创建新 plan 的工厂方法
   public static PlanAggregate create(/* parameters */) {
-    // Business rule validation happens here
+    // 业务规则验证在此处进行
     return new PlanAggregate(/* ... */);
   }
 
-  // Business logic methods
+  // 业务逻辑方法
   public void markAsCompleted() {
-    // Business rule: validate state transition
+    // 业务规则: 验证状态转换
     if (this.status == PlanStatus.CANCELLED) {
-      throw new IllegalStateException("Cannot complete cancelled plan");
+      throw new IllegalStateException("不能完成已取消的 plan");
     }
     this.status = PlanStatus.COMPLETED;
-    // Emit domain event for cross-aggregate reactions
+    // 发出领域事件用于跨聚合反应
   }
 }
 ```
 
-**Key Takeaways**:
-- ✅ Pure Java (extends AggregateRoot from patra-common)
-- ✅ Immutable fields with business meaning
-- ✅ Factory methods for creation
-- ✅ Business rules in domain methods
-- ❌ NO Spring annotations (@Service, @Autowired)
-- ❌ NO framework dependencies
+**核心要点**:
+- ✅ 纯 Java (继承自 patra-common 的 AggregateRoot)
+- ✅ 具有业务意义的不可变字段
+- ✅ 使用工厂方法创建
+- ✅ 业务规则在领域方法中
+- ❌ 禁止 Spring 注解 (@Service, @Autowired)
+- ❌ 禁止框架依赖
 
 ---
 
 #### Value Object: BatchPlan
 
-**File**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/batch/BatchPlan.java`
+**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/batch/BatchPlan.java`
 
 ```java
 /**
- * Value object representing a batch planning outcome.
+ * 表示批处理规划结果的值对象。
  *
- * Invariants:
- * - batches must not be null (but may be empty)
- * - totalBatches must be >= 0
+ * 不变量:
+ * - batches 不能为 null (但可以为空)
+ * - totalBatches 必须 >= 0
  */
 public record BatchPlan(
     List<Batch> batches,
     int totalBatches,
     boolean exceedsLimit) {
 
-  // Compact constructor for validation
+  // 紧凑构造函数用于验证
   public BatchPlan {
     if (batches == null) {
-      throw new IllegalArgumentException("batches must not be null");
+      throw new IllegalArgumentException("batches 不能为 null");
     }
     if (totalBatches < 0) {
-      throw new IllegalArgumentException("totalBatches must not be negative");
+      throw new IllegalArgumentException("totalBatches 不能为负数");
     }
   }
 
-  /** Create an empty batch plan */
+  /** 创建一个空的批处理计划 */
   public static BatchPlan empty() {
     return new BatchPlan(List.of(), 0, false);
   }
 
-  /** Create a plan containing a single batch */
+  /** 创建包含单个批次的计划 */
   public static BatchPlan single(Batch batch) {
     return new BatchPlan(List.of(batch), 1, false);
   }
 
-  /** Returns true when the plan contains at least one batch */
+  /** 当计划至少包含一个批次时返回 true */
   public boolean hasBatches() {
     return !batches.isEmpty();
   }
 }
 ```
 
-**Key Takeaways**:
-- ✅ Use `record` for immutable value objects
-- ✅ Compact constructor validates invariants
-- ✅ Factory methods for common cases
-- ✅ Equality by value (automatic with record)
-- ✅ Self-validating
+**核心要点**:
+- ✅ 使用 `record` 创建不可变值对象
+- ✅ 紧凑构造函数验证不变量
+- ✅ 常见场景使用工厂方法
+- ✅ 按值比较 (record 自动实现)
+- ✅ 自我验证
 
 ---
 
 #### Port Interface: PlanRepository
 
-**File**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/PlanRepository.java`
+**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/PlanRepository.java`
 
 ```java
 /**
- * Port interface for Plan persistence (defined in domain layer).
+ * Plan 持久化的端口接口 (定义在 domain 层)。
  *
- * Infrastructure layer implements this interface.
+ * Infrastructure 层实现此接口。
  */
 public interface PlanRepository {
 
   /**
-   * Saves a Plan: insert or update based on presence of ID
-   * @param plan aggregate
-   * @return persisted aggregate with ID populated
+   * 保存 Plan: 基于 ID 是否存在来决定插入或更新
+   * @param plan 聚合
+   * @return 已持久化的聚合,ID 已填充
    */
   PlanAggregate save(PlanAggregate plan);
 
   /**
-   * Finds a plan by business key (idempotent query)
-   * @param planKey business idempotency key
-   * @return plan if found
+   * 通过业务键查找 plan (幂等查询)
+   * @param planKey 业务幂等键
+   * @return 如果找到则返回 plan
    */
   Optional<PlanAggregate> findByPlanKey(String planKey);
 
   /**
-   * Checks whether a planKey exists
-   * @param planKey business key
-   * @return true if exists
+   * 检查 planKey 是否存在
+   * @param planKey 业务键
+   * @return 如果存在则返回 true
    */
   boolean existsByPlanKey(String planKey);
 }
 ```
 
-**Key Takeaways**:
-- ✅ Port defined in domain layer
-- ✅ Domain types in signatures (PlanAggregate)
-- ✅ Business-oriented method names
-- ❌ NO infrastructure types (DOs, DTOs)
+**核心要点**:
+- ✅ 端口定义在 domain 层
+- ✅ 签名中使用领域类型 (PlanAggregate)
+- ✅ 面向业务的方法名
+- ❌ 禁止基础设施类型 (DOs, DTOs)
 
 ---
 
-### 2. Application Layer (Orchestration)
+### 2. Application 层 (编排)
 
-**目的**: Coordinate use cases, manage transactions, delegate to domain and infrastructure.
+**目的**: 协调用例,管理事务,委托给 domain 和 infrastructure。
 
 #### Orchestrator: PlanIngestionOrchestrator
 
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java`
+**文件**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java`
 
 ```java
 /**
- * Main orchestrator for plan ingestion flow.
+ * Plan 采集流程的主编排器。
  *
- * Coordinates six phases:
- * 1. Persist schedule instance and load provenance config snapshot
- * 2. Query cursor watermark and resolve execution window
- * 3. Build plan expression and run pre-validations
- * 4. Assemble plan/slices/tasks (with idempotency)
- * 5. Check for existing plan (idempotent reuse)
- * 6. Persist and publish task enqueued events (Outbox pattern)
+ * 协调六个阶段:
+ * 1. 持久化调度实例并加载 provenance 配置快照
+ * 2. 查询游标水位并解析执行窗口
+ * 3. 构建 plan 表达式并运行预验证
+ * 4. 组装 plan/slices/tasks (带幂等性)
+ * 5. 检查现有 plan (幂等重用)
+ * 6. 持久化并发布任务入队事件 (Outbox 模式)
  *
- * This orchestrator maintains the @Transactional boundary to ensure atomicity
- * across persistence and event publishing (Outbox pattern).
+ * 此编排器维护 @Transactional 边界以确保持久化和事件发布的原子性 (Outbox 模式)。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 
-  // Domain ports
+  // Domain 端口
   private final PatraRegistryPort patraRegistryPort;
   private final CursorRepository cursorRepository;
   private final TaskRepository taskRepository;
   private final PlanRepository planRepository;
 
-  // Application services
+  // Application 服务
   private final PlanningWindowResolver planningWindowResolver;
   private final PlannerValidator plannerValidator;
   private final PlanAssembler planAssembler;
   private final PlanExpressionBuilder planExpressionBuilder;
 
-  // Coordinators for delegating specific responsibilities
+  // Coordinators 用于委托特定职责
   private final PlanPersistenceCoordinator persistenceCoordinator;
   private final PlanIdempotencyCoordinator idempotencyCoordinator;
   private final PlanPublishingCoordinator publishingCoordinator;
 
   /**
-   * Main plan orchestration flow (entry method)
+   * 主 plan 编排流程 (入口方法)
    */
   @Override
-  @Transactional  // Transaction boundary at orchestrator level
+  @Transactional  // 编排器级别的事务边界
   public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
     logPlanIngestionStart(request);
 
-    // Phase 1: Prepare planning context
+    // 阶段 1: 准备规划上下文
     PlanningContext context = preparePlanningContext(request);
 
-    // Phase 2: Build plan expression
+    // 阶段 2: 构建 plan 表达式
     PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(context);
 
-    // Phase 3: Pre-validation
+    // 阶段 3: 预验证
     performPreValidation(context);
 
-    // Phase 4: Assemble plan
+    // 阶段 4: 组装 plan
     PlanAssemblyResult assembly = assembleAndValidatePlan(context, expressionDescriptor);
 
-    // Phase 5: Check for existing plan (idempotency)
+    // 阶段 5: 检查现有 plan (幂等性)
     PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
     if (existingPlan != null) {
       return idempotencyCoordinator.handleIdempotentPlanReuse(
           existingPlan, context.schedule(), assembly.plan().getPlanKey());
     }
 
-    // Phase 6: Persist and publish
+    // 阶段 6: 持久化并发布
     return persistAndPublishNewPlan(
         assembly.plan(), assembly, context.schedule(), context.window());
   }
 
   /**
-   * Prepares planning context by loading configuration and resolving window
+   * 通过加载配置并解析窗口来准备规划上下文
    */
   private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
-    log.debug("Preparing planning context for provenance [{}] operation [{}]",
+    log.debug("为 provenance [{}] operation [{}] 准备规划上下文",
         request.provenanceCode(), request.operationCode());
 
-    // Delegate to persistence coordinator
+    // 委托给持久化 coordinator
     ScheduleInstanceAggregate schedule =
         persistenceCoordinator.persistScheduleInstance(request);
 
-    // Fetch configuration snapshot from registry
+    // 从 registry 获取配置快照
     ProvenanceConfigSnapshot configSnapshot =
         patraRegistryPort.fetchConfig(request.provenanceCode(), request.operationCode());
 
     PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
 
-    // Query cursor watermark
+    // 查询游标水位
     Instant cursorWatermark =
         lookupCursorWatermark(request.provenanceCode(), request.operationCode());
 
-    // Resolve planning window
+    // 解析规划窗口
     PlannerWindow window =
         resolvePlannerWindow(norm, configSnapshot, cursorWatermark, request.triggeredAt());
 
@@ -340,7 +339,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Persists new plan with slices and tasks, then publishes queued events
+   * 持久化新 plan 及其 slices 和 tasks,然后发布排队的事件
    */
   private PlanIngestionResult persistAndPublishNewPlan(
       PlanAggregate draftPlan,
@@ -348,26 +347,26 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       ScheduleInstanceAggregate schedule,
       PlannerWindow window) {
 
-    log.debug("Persisting plan for provenance [{}] operation [{}]: planKey={}",
+    log.debug("为 provenance [{}] operation [{}] 持久化 plan: planKey={}",
         draftPlan.getProvenanceCode(), draftPlan.getOperationCode(), draftPlan.getPlanKey());
 
-    // Delegate to persistence coordinator
+    // 委托给持久化 coordinator
     PlanAggregate persistedPlan = persistenceCoordinator.savePlan(draftPlan);
     List<PlanSliceAggregate> persistedSlices =
         persistenceCoordinator.persistSlices(persistedPlan, assembly.slices());
     List<TaskAggregate> persistedTasks =
         persistenceCoordinator.persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 
-    log.debug("Persisted plan [{}] with {} slices and {} tasks",
+    log.debug("已持久化 plan [{}],包含 {} 个 slices 和 {} 个 tasks",
         persistedPlan.getId(), persistedSlices.size(), persistedTasks.size());
 
-    // Delegate to publishing coordinator
+    // 委托给发布 coordinator
     List<TaskQueuedEvent> queuedEvents =
         publishingCoordinator.collectQueuedEvents(persistedTasks);
     publishingCoordinator.publishNewPlanEvents(queuedEvents, persistedPlan, schedule);
 
-    log.info("Successfully created plan [{}] for provenance [{}] operation [{}]: "
-        + "{} slices, {} tasks generated for window [{}, {})",
+    log.info("成功为 provenance [{}] operation [{}] 创建 plan [{}]: "
+        + "为窗口 [{}, {}] 生成了 {} 个 slices 和 {} 个 tasks",
         persistedPlan.getId(), persistedPlan.getProvenanceCode(),
         persistedPlan.getOperationCode(), persistedSlices.size(), persistedTasks.size(),
         window == null ? null : window.from(), window == null ? null : window.to());
@@ -377,7 +376,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         assembly.status().name());
   }
 
-  // Internal record holding planning context data
+  // 保存规划上下文数据的内部记录
   private record PlanningContext(
       ScheduleInstanceAggregate schedule,
       ProvenanceConfigSnapshot configSnapshot,
@@ -388,29 +387,28 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
 }
 ```
 
-**Key Takeaways**:
-- ✅ Orchestrate only, delegate business logic to Domain
-- ✅ @Transactional at orchestrator level (transaction boundary)
-- ✅ Coordinator pattern for separation of concerns
-- ✅ Clear phases with logging
-- ❌ NO business rules (belong in Domain)
-- ❌ NO direct database access (use ports)
+**核心要点**:
+- ✅ 仅负责编排,业务逻辑委托给 Domain
+- ✅ 在编排器级别使用 @Transactional (事务边界)
+- ✅ 使用 Coordinator 模式分离关注点
+- ✅ 清晰的阶段划分并记录日志
+- ❌ 禁止业务规则 (应在 Domain 中)
+- ❌ 禁止直接数据库访问 (使用 ports)
 
 ---
 
 #### Coordinator: PlanPersistenceCoordinator
 
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanPersistenceCoordinator.java`
+**文件**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanPersistenceCoordinator.java`
 
 ```java
 /**
- * Coordinator for plan persistence operations.
+ * Plan 持久化操作的 Coordinator。
  *
- * Responsible for safely persisting plan aggregates, slices, tasks, and schedule
- * instances with proper exception handling and logging.
+ * 负责安全地持久化 plan 聚合、slices、tasks 和 schedule 实例,
+ * 并进行适当的异常处理和日志记录。
  *
- * Note: This coordinator does NOT use @Transactional. It relies on the outer
- * transaction boundary from the main orchestrator.
+ * 注意: 此 coordinator 不使用 @Transactional。它依赖于主编排器的外部事务边界。
  */
 @Slf4j
 @Service
@@ -423,7 +421,7 @@ public class PlanPersistenceCoordinator {
   private final ScheduleInstanceRepository scheduleInstanceRepository;
 
   /**
-   * Saves or updates schedule instance (idempotent)
+   * 保存或更新 schedule 实例 (幂等)
    */
   public ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionCommand request) {
     ScheduleInstanceAggregate schedule = ScheduleInstanceAggregate.start(
@@ -440,13 +438,13 @@ public class PlanPersistenceCoordinator {
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
           PlanPersistenceException.Stage.SCHEDULE_INSTANCE,
-          "Failed to persist schedule instance",
+          "持久化 schedule 实例失败",
           ex);
     }
   }
 
   /**
-   * Persists plan aggregate and wraps underlying exceptions
+   * 持久化 plan 聚合并包装底层异常
    */
   public PlanAggregate savePlan(PlanAggregate draftPlan) {
     try {
@@ -454,13 +452,13 @@ public class PlanPersistenceCoordinator {
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
           PlanPersistenceException.Stage.PLAN,
-          "Failed to persist plan aggregate",
+          "持久化 plan 聚合失败",
           ex);
     }
   }
 
   /**
-   * Batch persists plan slice aggregates
+   * 批量持久化 plan slice 聚合
    */
   public List<PlanSliceAggregate> persistSlices(
       PlanAggregate plan,
@@ -469,7 +467,7 @@ public class PlanPersistenceCoordinator {
       return List.of();
     }
 
-    // Bind plan ID to each slice
+    // 将 plan ID 绑定到每个 slice
     slices.forEach(slice -> slice.bindPlan(plan.getId()));
 
     try {
@@ -477,13 +475,13 @@ public class PlanPersistenceCoordinator {
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
           PlanPersistenceException.Stage.PLAN_SLICE,
-          "Failed to persist plan slices",
+          "持久化 plan slices 失败",
           ex);
     }
   }
 
   /**
-   * Batch persists task aggregates and binds plan and slice IDs
+   * 批量持久化 task 聚合并绑定 plan 和 slice ID
    */
   public List<TaskAggregate> persistTasks(
       PlanAggregate plan,
@@ -493,14 +491,14 @@ public class PlanPersistenceCoordinator {
       return List.of();
     }
 
-    // Create slice lookup map
+    // 创建 slice 查找映射
     Map<Integer, PlanSliceAggregate> sliceBySeq =
         MapUtil.newHashMap(persistedSlices.size());
     for (PlanSliceAggregate slice : persistedSlices) {
       sliceBySeq.putIfAbsent(slice.getSliceNo(), slice);
     }
 
-    // Bind plan and slice IDs to each task
+    // 将 plan 和 slice ID 绑定到每个 task
     for (TaskAggregate task : tasks) {
       Long placeholderSequence = task.getSliceId();
       PlanSliceAggregate slice = ObjectUtil.isNull(placeholderSequence)
@@ -514,44 +512,44 @@ public class PlanPersistenceCoordinator {
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
           PlanPersistenceException.Stage.TASK,
-          "Failed to persist tasks",
+          "持久化 tasks 失败",
           ex);
     }
   }
 }
 ```
 
-**Key Takeaways**:
-- ✅ Coordinator separates persistence concerns
-- ✅ Wraps exceptions with domain-specific types
-- ✅ Batch operations for performance
-- ✅ NO @Transactional (relies on outer boundary)
-- ✅ Clear logging for debugging
+**核心要点**:
+- ✅ Coordinator 分离持久化关注点
+- ✅ 使用领域特定类型包装异常
+- ✅ 批量操作以提高性能
+- ✅ 禁止 @Transactional (依赖外部边界)
+- ✅ 清晰的日志用于调试
 
 ---
 
-### 3. Infrastructure Layer (Driven)
+### 3. Infrastructure 层 (被驱动)
 
-**目的**: Implement domain ports, provide data access.
+**目的**: 实现 domain 端口,提供数据访问。
 
-#### Repository Implementation: PlanRepositoryMpImpl
+#### Repository 实现: PlanRepositoryMpImpl
 
-**File**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/repository/PlanRepositoryMpImpl.java`
+**文件**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/repository/PlanRepositoryMpImpl.java`
 
 ```java
 /**
- * MyBatis-Plus implementation of PlanRepository (Infrastructure layer).
+ * PlanRepository 的 MyBatis-Plus 实现 (Infrastructure 层)。
  *
- * Responsibilities:
- * - Mapping between PlanAggregate and PlanDO (using MapStruct)
- * - Idempotent query by planKey / existence check
- * - Insert / update (optimistic locking via @Version)
+ * 职责:
+ * - 在 PlanAggregate 和 PlanDO 之间进行映射 (使用 MapStruct)
+ * - 通过 planKey 进行幂等查询 / 存在性检查
+ * - 插入 / 更新 (通过 @Version 实现乐观锁)
  *
- * Logging strategy:
- * - DEBUG: log key fields on insert/update (id, planKey)
- * - INFO: avoid noisy high-frequency CRUD logs
+ * 日志策略:
+ * - DEBUG: 在插入/更新时记录关键字段 (id, planKey)
+ * - INFO: 避免嘈杂的高频 CRUD 日志
  *
- * Thread-safety: stateless singleton via dependency injection
+ * 线程安全: 通过依赖注入实现的无状态单例
  */
 @Slf4j
 @Repository
@@ -561,39 +559,38 @@ public class PlanRepositoryMpImpl implements PlanRepository {
   /** Plan mapper (MyBatis-Plus) */
   private final PlanMapper planMapper;
 
-  /** Aggregate-to-DO converter (MapStruct) */
+  /** 聚合到 DO 的转换器 (MapStruct) */
   private final PlanConverter planConverter;
 
   /**
-   * Saves a Plan: insert or update based on presence of ID.
+   * 保存 Plan: 基于 ID 是否存在来决定插入或更新。
    *
-   * Converts aggregate to DO and back to ensure version/auto-increment
-   * fields are reflected.
+   * 将聚合转换为 DO 并转换回来,以确保反映 version/自增字段。
    */
   @Override
   public PlanAggregate save(PlanAggregate plan) {
     PlanDO entity = planConverter.toEntity(plan);
 
     if (entity.getId() == null) {
-      // Insert new plan
+      // 插入新 plan
       if (log.isDebugEnabled()) {
-        log.debug("plan insert planKey={}", entity.getPlanKey());
+        log.debug("插入 plan planKey={}", entity.getPlanKey());
       }
       planMapper.insert(entity);
     } else {
-      // Update existing plan
+      // 更新现有 plan
       if (log.isDebugEnabled()) {
-        log.debug("plan update id={} planKey={}", entity.getId(), entity.getPlanKey());
+        log.debug("更新 plan id={} planKey={}", entity.getId(), entity.getPlanKey());
       }
       planMapper.updateById(entity);
     }
 
-    // Convert back to aggregate (with generated ID/version)
+    // 转换回聚合 (包含生成的 ID/version)
     return planConverter.toAggregate(entity);
   }
 
   /**
-   * Finds a plan by planKey (idempotent query)
+   * 通过 planKey 查找 plan (幂等查询)
    */
   @Override
   public Optional<PlanAggregate> findByPlanKey(String planKey) {
@@ -605,7 +602,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
     boolean found = entity != null;
 
     if (log.isDebugEnabled()) {
-      log.debug("query plan by planKey={}, found={}", planKey, found);
+      log.debug("通过 planKey={} 查询 plan, found={}", planKey, found);
     }
 
     return Optional.ofNullable(entity)
@@ -613,7 +610,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
   }
 
   /**
-   * Checks whether a planKey exists
+   * 检查 planKey 是否存在
    */
   @Override
   public boolean existsByPlanKey(String planKey) {
@@ -625,40 +622,40 @@ public class PlanRepositoryMpImpl implements PlanRepository {
 }
 ```
 
-**Key Takeaways**:
-- ✅ Implements domain port interface
-- ✅ MapStruct for DO ↔ Domain conversion
-- ✅ MyBatis-Plus for simple operations
-- ✅ Detailed logging at DEBUG level
-- ❌ NEVER expose DOs outside infrastructure layer
+**核心要点**:
+- ✅ 实现 domain 端口接口
+- ✅ 使用 MapStruct 进行 DO ↔ Domain 转换
+- ✅ 使用 MyBatis-Plus 进行简单操作
+- ✅ 在 DEBUG 级别记录详细日志
+- ❌ 永远不要在 infrastructure 层之外暴露 DOs
 
 ---
 
 #### MyBatis-Plus Mapper: PlanMapper
 
-**File**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/mapper/PlanMapper.java`
+**文件**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/mapper/PlanMapper.java`
 
 ```java
 /**
- * MyBatis-Plus mapper for Plan entity.
+ * Plan 实体的 MyBatis-Plus mapper。
  *
- * Extends BaseMapper for CRUD operations.
- * Custom queries defined here or in XML mapper.
+ * 扩展 BaseMapper 以进行 CRUD 操作。
+ * 自定义查询在此处或 XML mapper 中定义。
  */
 @Mapper
 public interface PlanMapper extends BaseMapper<PlanDO> {
 
   /**
-   * Find plan by business key
-   * @param planKey idempotent key
-   * @return plan DO if found
+   * 通过业务键查找 plan
+   * @param planKey 幂等键
+   * @return 如果找到则返回 plan DO
    */
   PlanDO findByPlanKey(@Param("planKey") String planKey);
 
   /**
-   * Count plans by business key (for existence check)
-   * @param planKey idempotent key
-   * @return count (0 or 1)
+   * 按业务键计数 plans (用于存在性检查)
+   * @param planKey 幂等键
+   * @return 计数 (0 或 1)
    */
   int countByPlanKey(@Param("planKey") String planKey);
 }
@@ -668,18 +665,18 @@ public interface PlanMapper extends BaseMapper<PlanDO> {
 
 #### Data Object: PlanDO
 
-**File**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/PlanDO.java`
+**文件**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/PlanDO.java`
 
 ```java
 /**
- * MyBatis-Plus data object for t_batch_plan table.
+ * t_batch_plan 表的 MyBatis-Plus 数据对象。
  *
- * Annotations:
- * - @TableName: maps to table
- * - @TableId: auto-generated ID
- * - @TableField: custom type handlers or column mapping
- * - @TableLogic: soft delete
- * - @Version: optimistic locking
+ * 注解说明:
+ * - @TableName: 映射到表名
+ * - @TableId: 自动生成 ID
+ * - @TableField: 自定义类型处理器或列映射
+ * - @TableLogic: 逻辑删除
+ * - @Version: 乐观锁
  */
 @Data
 @TableName("t_batch_plan")
@@ -693,31 +690,31 @@ public class PlanDO {
   private String provenanceCode;
   private String operationCode;
 
-  /** Hash of plan expression prototype */
+  /** 计划表达式原型的哈希值 */
   private String exprProtoHash;
 
-  /** JSON snapshot of expression prototype */
+  /** 表达式原型的 JSON 快照 */
   @TableField(typeHandler = JacksonTypeHandler.class)
   private String exprProtoSnapshotJson;
 
-  /** JSON snapshot of provenance configuration */
+  /** Provenance 配置的 JSON 快照 */
   @TableField(typeHandler = JacksonTypeHandler.class)
   private String provenanceConfigSnapshotJson;
 
   private String provenanceConfigHash;
 
-  /** Window specification (JSON) */
+  /** 时间窗口规范 (JSON) */
   @TableField(typeHandler = JacksonTypeHandler.class)
   private String windowSpecJson;
 
-  /** Slicing strategy code */
+  /** 切片策略代码 */
   private String sliceStrategyCode;
 
-  /** Slicing parameters (JSON) */
+  /** 切片参数 (JSON) */
   @TableField(typeHandler = JacksonTypeHandler.class)
   private String sliceParamsJson;
 
-  /** Current plan status */
+  /** 当前计划状态 */
   private Integer status;
 
   @TableField(fill = FieldFill.INSERT)
@@ -726,47 +723,47 @@ public class PlanDO {
   @TableField(fill = FieldFill.INSERT_UPDATE)
   private LocalDateTime updatedAt;
 
-  /** Soft delete flag */
+  /** 逻辑删除标志 */
   @TableLogic
   private Boolean deleted;
 
-  /** Optimistic locking version */
+  /** 乐观锁版本号 */
   @Version
   private Integer version;
 }
 ```
 
-**Key Annotations**:
-- `@TableName`: Map to table name
-- `@TableId(type = IdType.ASSIGN_ID)`: Auto-generate ID (Snowflake)
-- `@TableField(typeHandler = JacksonTypeHandler.class)`: Store JSON
-- `@TableLogic`: Soft delete (deleted=true)
-- `@Version`: Optimistic locking
-- `@TableField(fill = FieldFill.INSERT)`: Auto-fill on insert
+**关键注解**:
+- `@TableName`: 映射到表名
+- `@TableId(type = IdType.ASSIGN_ID)`: 自动生成 ID (Snowflake)
+- `@TableField(typeHandler = JacksonTypeHandler.class)`: 存储 JSON
+- `@TableLogic`: 逻辑删除 (deleted=true)
+- `@Version`: 乐观锁
+- `@TableField(fill = FieldFill.INSERT)`: 插入时自动填充
 
 ---
 
 #### MapStruct Converter: PlanConverter
 
-**File**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/converter/PlanConverter.java`
+**文件**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/converter/PlanConverter.java`
 
 ```java
 /**
- * MapStruct converter between PlanAggregate and PlanDO.
+ * PlanAggregate 和 PlanDO 之间的 MapStruct 转换器。
  *
- * Handles:
- * - Value object ↔ primitive conversions
- * - Enum ↔ code conversions
- * - Complex object ↔ JSON conversions
+ * 处理:
+ * - 值对象 ↔ 基本类型转换
+ * - 枚举 ↔ 代码转换
+ * - 复杂对象 ↔ JSON 转换
  */
 @Mapper(componentModel = "spring")
 public interface PlanConverter {
 
   /**
-   * Converts DO to Domain aggregate
+   * 将 DO 转换为 Domain 聚合根
    *
-   * @param entity PlanDO from database
-   * @return PlanAggregate for domain layer
+   * @param entity 来自数据库的 PlanDO
+   * @return 用于领域层的 PlanAggregate
    */
   @Mapping(target = "id", source = "id")
   @Mapping(target = "scheduleInstanceId", source = "scheduleInstanceId")
@@ -781,10 +778,10 @@ public interface PlanConverter {
   PlanAggregate toAggregate(PlanDO entity);
 
   /**
-   * Converts Domain aggregate to DO
+   * 将 Domain 聚合根转换为 DO
    *
-   * @param aggregate PlanAggregate from domain
-   * @return PlanDO for persistence
+   * @param aggregate 来自领域的 PlanAggregate
+   * @return 用于持久化的 PlanDO
    */
   @Mapping(target = "id", source = "id")
   @Mapping(target = "scheduleInstanceId", source = "scheduleInstanceId")
@@ -796,13 +793,13 @@ public interface PlanConverter {
       expression = "java(serializeWindowSpec(aggregate.getWindowSpec()))")
   @Mapping(target = "status",
       expression = "java(aggregate.getStatus().getCode())")
-  @Mapping(target = "deleted", ignore = true)  // Managed by MyBatis-Plus
-  @Mapping(target = "version", ignore = true)  // Managed by @Version
-  @Mapping(target = "createdAt", ignore = true)  // Auto-fill
-  @Mapping(target = "updatedAt", ignore = true)  // Auto-fill
+  @Mapping(target = "deleted", ignore = true)  // 由 MyBatis-Plus 管理
+  @Mapping(target = "version", ignore = true)  // 由 @Version 管理
+  @Mapping(target = "createdAt", ignore = true)  // 自动填充
+  @Mapping(target = "updatedAt", ignore = true)  // 自动填充
   PlanDO toEntity(PlanAggregate aggregate);
 
-  // Helper methods for complex conversions
+  // 复杂转换的辅助方法
   default OperationCode mapOperationCode(String code) {
     return code == null ? null : OperationCode.fromCode(code);
   }
@@ -812,70 +809,70 @@ public interface PlanConverter {
   }
 
   default WindowSpec mapWindowSpec(String json) {
-    // JSON deserialization logic
+    // JSON 反序列化逻辑
     return WindowSpec.fromJson(json);
   }
 
   default String serializeWindowSpec(WindowSpec spec) {
-    // JSON serialization logic
+    // JSON 序列化逻辑
     return spec.toJson();
   }
 }
 ```
 
-**Key Takeaways**:
-- ✅ MapStruct for type-safe conversions
-- ✅ Expression mappings for complex conversions
-- ✅ Ignore auto-managed fields (version, timestamps)
-- ✅ Helper methods for enum/JSON conversions
+**关键要点**:
+- ✅ 使用 MapStruct 进行类型安全的转换
+- ✅ 使用表达式映射处理复杂转换
+- ✅ 忽略自动管理的字段 (version, timestamps)
+- ✅ 使用辅助方法处理枚举/JSON 转换
 
 ---
 
-## Refactoring Example: Bad to Good
+## 重构示例: 从错误到正确
 
-### BEFORE: Business Logic in Wrong Layer ❌
+### 重构前: 业务逻辑在错误的层 ❌
 
 ```java
-// ❌ BAD: Direct MyBatis-Plus usage in Application layer
+// ❌ 错误: 在 Application 层直接使用 MyBatis-Plus
 @Service
 @RequiredArgsConstructor
 public class PlanIngestionService {
 
-  private final PlanMapper planMapper;  // ❌ Wrong! Should use domain port
+  private final PlanMapper planMapper;  // ❌ 错误! 应该使用领域端口
 
   @Transactional
   public void createPlan(CreatePlanRequest request) {
-    // ❌ Business logic mixed with persistence
+    // ❌ 业务逻辑与持久化混合
     PlanDO planDO = new PlanDO();
     planDO.setProvenanceCode(request.getProvenanceCode());
     planDO.setOperationCode(request.getOperationCode());
 
-    // ❌ Business rules in service layer
+    // ❌ 业务规则在服务层
     if (request.getWindowFrom().isAfter(request.getWindowTo())) {
       throw new ValidationException("Invalid window");
     }
 
-    // ❌ Direct mapper usage
+    // ❌ 直接使用 mapper
     planMapper.insert(planDO);
 
-    // ... 100+ more lines of mixed logic
+    // ... 还有 100 多行混合逻辑
   }
 }
 ```
 
-### AFTER: Clean Separation ✅
+### 重构后: 清晰的分层 ✅
 
-**1. Domain Layer** (Business Rules):
+**1. Domain 层** (业务规则):
 ```java
-// ✅ GOOD: Business rules in domain aggregate
+// ✅ 正确: 业务规则在领域聚合根中
 @Getter
 public class PlanAggregate extends AggregateRoot<Long> {
 
   private final WindowSpec windowSpec;
 
-  // Factory method with validation
+  // 带验证的工厂方法
   public static PlanAggregate create(/* parameters */) {
-    // ✅ Business rule validation in domain
+    // ✅ 业务规则验证在领域层
     if (windowFrom.isAfter(windowTo)) {
       throw new IllegalArgumentException("Invalid window: from must be before to");
     }
@@ -884,22 +881,22 @@ public class PlanAggregate extends AggregateRoot<Long> {
 }
 ```
 
-**2. Application Layer** (Orchestration):
+**2. Application 层** (编排):
 ```java
-// ✅ GOOD: Clean orchestration, delegates to domain and ports
+// ✅ 正确: 清晰的编排,委托给领域和端口
 @Service
 @RequiredArgsConstructor
 public class PlanIngestionOrchestrator {
 
-  private final PlanRepository planRepository;  // ✅ Domain port
+  private final PlanRepository planRepository;  // ✅ 领域端口
   private final PlanPersistenceCoordinator persistenceCoordinator;
 
   @Transactional
   public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
-    // ✅ Delegate to domain for creation
+    // ✅ 委托给领域进行创建
     PlanAggregate plan = PlanAggregate.create(/* ... */);
 
-    // ✅ Delegate to coordinator for persistence
+    // ✅ 委托给协调器进行持久化
     PlanAggregate persisted = persistenceCoordinator.savePlan(plan);
 
     return PlanIngestionResult.from(persisted);
@@ -907,9 +904,9 @@ public class PlanIngestionOrchestrator {
 }
 ```
 
-**3. Infrastructure Layer** (Data Access):
+**3. Infrastructure 层** (数据访问):
 ```java
-// ✅ GOOD: Clean repository implementation
+// ✅ 正确: 清晰的仓储实现
 @Repository
 @RequiredArgsConstructor
 public class PlanRepositoryMpImpl implements PlanRepository {
@@ -919,62 +916,62 @@ public class PlanRepositoryMpImpl implements PlanRepository {
 
   @Override
   public PlanAggregate save(PlanAggregate plan) {
-    // ✅ Convert domain → DO
+    // ✅ 转换 domain → DO
     PlanDO entity = planConverter.toEntity(plan);
     planMapper.insert(entity);
 
-    // ✅ Convert back DO → domain
+    // ✅ 转换回 DO → domain
     return planConverter.toAggregate(entity);
   }
 }
 ```
 
-**Result**:
-- Domain: Pure business logic, easy to test
-- Application: Clear orchestration, no business rules
-- Infrastructure: Clean data access, no business logic
-- **Testable, maintainable, follows architecture!**
+**结果**:
+- Domain: 纯业务逻辑,易于测试
+- Application: 清晰的编排,无业务规则
+- Infrastructure: 清晰的数据访问,无业务逻辑
+- **可测试、可维护、遵循架构原则!**
 
 ---
 
-## End-to-End Request Flow
+## 端到端请求流程
 
-### Complete Request Flow Diagram
+### 完整请求流程图
 
 ```
-Scheduler Trigger (XXL-Job or Manual)
+调度器触发 (XXL-Job 或手动)
     ↓
 PlanIngestionOrchestrator.ingestPlan(command)
     ↓
-Phase 1: Prepare Planning Context
+阶段 1: 准备规划上下文
     ├─ PlanPersistenceCoordinator.persistScheduleInstance()
     │   └─ ScheduleInstanceRepositoryMpImpl.saveOrUpdateInstance()
     │       └─ MyBatis-Plus insert/update
-    ├─ PatraRegistryPort.fetchConfig() [External service call]
+    ├─ PatraRegistryPort.fetchConfig() [外部服务调用]
     ├─ CursorRepository.findLatestGlobalTimeWatermark()
     │   └─ MyBatis-Plus query
-    └─ PlanningWindowResolver.resolveWindow() [Domain service]
+    └─ PlanningWindowResolver.resolveWindow() [领域服务]
     ↓
-Phase 2: Build Plan Expression
-    └─ PlanExpressionBuilder.build() [Domain service]
+阶段 2: 构建计划表达式
+    └─ PlanExpressionBuilder.build() [领域服务]
     ↓
-Phase 3: Pre-validation
+阶段 3: 预验证
     ├─ TaskRepository.countQueuedTasks()
     │   └─ MyBatis-Plus count query
-    └─ PlannerValidator.validateBeforeAssemble() [Domain service]
+    └─ PlannerValidator.validateBeforeAssemble() [领域服务]
     ↓
-Phase 4: Assemble Plan
+阶段 4: 组装计划
     └─ PlanAssembler.assemble()
-        └─ Returns PlanAggregate + List<PlanSliceAggregate> + List<TaskAggregate>
+        └─ 返回 PlanAggregate + List<PlanSliceAggregate> + List<TaskAggregate>
     ↓
-Phase 5: Check Idempotency
+阶段 5: 检查幂等性
     └─ PlanRepository.findByPlanKey()
-        └─ MyBatis-Plus query by business key
+        └─ MyBatis-Plus 按业务键查询
         ↓
-        If exists → PlanIdempotencyCoordinator.handleIdempotentPlanReuse()
-        If not exists → Continue to Phase 6
+        如果存在 → PlanIdempotencyCoordinator.handleIdempotentPlanReuse()
+        如果不存在 → 继续阶段 6
     ↓
-Phase 6: Persist and Publish
+阶段 6: 持久化和发布
     ├─ PlanPersistenceCoordinator.savePlan()
     │   └─ PlanRepositoryMpImpl.save()
     │       └─ MyBatis-Plus insert
@@ -985,39 +982,39 @@ Phase 6: Persist and Publish
     │   └─ TaskRepositoryMpImpl.saveAll()
     │       └─ MyBatis-Plus batch insert
     ├─ PlanPublishingCoordinator.collectQueuedEvents()
-    │   └─ Create TaskQueuedEvent for each task
+    │   └─ 为每个任务创建 TaskQueuedEvent
     └─ PlanPublishingCoordinator.publishNewPlanEvents()
-        └─ OutboxPublisher.publish() [Outbox pattern, atomic with DB transaction]
+        └─ OutboxPublisher.publish() [Outbox 模式, 与 DB 事务原子性]
             └─ OutboxMessageRepositoryMpImpl.insert()
                 └─ MyBatis-Plus insert into t_outbox_message
     ↓
-@Transactional COMMIT (All persistence + outbox in single transaction)
+@Transactional COMMIT (所有持久化 + outbox 在单个事务中)
     ↓
-Outbox Relay Job (separate process)
-    └─ Publishes messages from t_outbox_message to RocketMQ
+Outbox 中继任务 (独立进程)
+    └─ 从 t_outbox_message 发布消息到 RocketMQ
     ↓
-Task Execution Workers
-    └─ Consume TaskQueuedEvent and execute data collection
+任务执行工作节点
+    └─ 消费 TaskQueuedEvent 并执行数据采集
 ```
 
-**Key Observations**:
-- ✅ **Single @Transactional boundary** at orchestrator level
-- ✅ **Outbox pattern** ensures reliable event publishing
-- ✅ **Idempotency** via business key (planKey)
-- ✅ **Separation of concerns** via coordinators
-- ✅ **NO external API calls inside transaction** (configuration fetch happens before)
+**关键观察**:
+- ✅ **单个 @Transactional 边界** 在编排器层级
+- ✅ **Outbox 模式** 确保可靠的事件发布
+- ✅ **幂等性** 通过业务键 (planKey)
+- ✅ **关注点分离** 通过协调器
+- ✅ **事务内无外部 API 调用** (配置获取在事务之前)
 
 ---
 
-## Testing Strategy
+## 测试策略
 
-### 1. Domain Layer Tests (Pure Java)
+### 1. Domain 层测试 (纯 Java)
 
-**File**: `patra-ingest-domain/src/test/java/com/patra/ingest/domain/model/aggregate/PlanAggregateTest.java`
+**文件**: `patra-ingest-domain/src/test/java/com/patra/ingest/domain/model/aggregate/PlanAggregateTest.java`
 
 ```java
 /**
- * Unit tests for PlanAggregate (NO mocks needed)
+ * PlanAggregate 的单元测试 (不需要 mock)
  */
 class PlanAggregateTest {
 
@@ -1048,7 +1045,7 @@ class PlanAggregateTest {
   void should_throw_exception_when_window_invalid() {
     // Given
     Instant windowFrom = Instant.parse("2024-01-02T00:00:00Z");
-    Instant windowTo = Instant.parse("2024-01-01T00:00:00Z");  // Before from!
+    Instant windowTo = Instant.parse("2024-01-01T00:00:00Z");  // 在 from 之前!
 
     // When & Then
     assertThrows(IllegalArgumentException.class, () -> {
@@ -1058,13 +1055,13 @@ class PlanAggregateTest {
 }
 ```
 
-### 2. Application Layer Tests (Mock Ports)
+### 2. Application 层测试 (Mock 端口)
 
-**File**: `patra-ingest-app/src/test/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestratorTest.java`
+**文件**: `patra-ingest-app/src/test/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestratorTest.java`
 
 ```java
 /**
- * Unit tests for PlanIngestionOrchestrator (mock domain ports)
+ * PlanIngestionOrchestrator 的单元测试 (mock 领域端口)
  */
 @ExtendWith(MockitoExtension.class)
 class PlanIngestionOrchestratorTest {
@@ -1103,13 +1100,13 @@ class PlanIngestionOrchestratorTest {
 }
 ```
 
-### 3. Infrastructure Layer Tests (Integration with TestContainers)
+### 3. Infrastructure 层测试 (使用 TestContainers 集成)
 
-**File**: `patra-ingest-boot/src/test/java/com/patra/ingest/infra/persistence/repository/PlanRepositoryMpImplIT.java`
+**文件**: `patra-ingest-boot/src/test/java/com/patra/ingest/infra/persistence/repository/PlanRepositoryMpImplIT.java`
 
 ```java
 /**
- * Integration tests for PlanRepositoryMpImpl (real database)
+ * PlanRepositoryMpImpl 的集成测试 (真实数据库)
  */
 @SpringBootTest
 @Testcontainers
@@ -1144,7 +1141,7 @@ class PlanRepositoryMpImplIT {
   void should_handle_duplicate_plan_key_idempotently() {
     // Given
     PlanAggregate plan1 = createTestPlan();
-    PlanAggregate plan2 = createTestPlan();  // Same planKey
+    PlanAggregate plan2 = createTestPlan();  // 相同的 planKey
 
     // When
     planRepository.save(plan1);
@@ -1152,16 +1149,16 @@ class PlanRepositoryMpImplIT {
 
     // Then
     assertThat(exists).isTrue();
-    // Trying to save plan2 would violate unique constraint on planKey
+    // 尝试保存 plan2 会违反 planKey 的唯一约束
   }
 }
 ```
 
 ---
 
-**相关文件：**
-- [SKILL.md](../SKILL.md) - Main guide
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Orchestrator patterns
-- [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain layer patterns
-- [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - Database access patterns
-- [adapter-layer-patterns.md](adapter-layer-patterns.md) - Adapter layer patterns
+**相关文件:**
+- [SKILL.md](../SKILL.md) - 主要指南
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Orchestrator 模式
+- [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain 层模式
+- [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - 数据库访问模式
+- [adapter-layer-patterns.md](adapter-layer-patterns.md) - Adapter 层模式
