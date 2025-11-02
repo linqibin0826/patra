@@ -1,8 +1,8 @@
-# Slicing Strategies
+# 切片策略
 
-## Overview
+## 概览
 
-Slicing is the process of dividing a Plan's time/ID window into smaller **PlanSlice** units for parallel processing. Each slice becomes exactly ONE task.
+切片是将 Plan 的时间/ID 窗口划分为更小的 **PlanSlice** 单元以进行并行处理的过程。每个切片恰好对应一个任务。
 
 **Core Problem**: Processing large windows (e.g., 1 year of data) in a single API call:
 - Exceeds API result limits (e.g., PubMed max 10,000 results)
@@ -10,13 +10,13 @@ Slicing is the process of dividing a Plan's time/ID window into smaller **PlanSl
 - Makes retry difficult
 - Prevents parallel processing
 
-**Solution**: Divide the window into smaller slices using **SlicePlanner** strategies, each becoming an independent **PlanSliceAggregate** → **TaskAggregate**.
+**解决方案**: Divide the window into smaller slices using **SlicePlanner** strategies, each becoming an independent **PlanSliceAggregate** → **TaskAggregate**.
 
 ---
 
 ## WindowSpec (Window Specification)
 
-### Purpose
+### 目的
 Define the boundaries of a plan or slice window using different strategies.
 
 ### Sealed Interface (5 Variants)
@@ -39,7 +39,7 @@ public sealed interface WindowSpec permits
 
 ### 1. WindowSpec.Time
 
-**Purpose**: Absolute timestamp-based windows.
+**目的**: Absolute timestamp-based windows.
 
 **Fields**:
 ```java
@@ -63,7 +63,7 @@ WindowSpec window = new WindowSpec.Time(
 
 ### 2. WindowSpec.IdRange
 
-**Purpose**: ID-based windows (numeric range).
+**目的**: ID-based windows (numeric range).
 
 **Fields**:
 ```java
@@ -87,7 +87,7 @@ WindowSpec window = new WindowSpec.IdRange(
 
 ### 3. WindowSpec.CursorLandmark
 
-**Purpose**: Cursor/landmark-based windows.
+**目的**: Cursor/landmark-based windows.
 
 **Fields**:
 ```java
@@ -111,7 +111,7 @@ WindowSpec window = new WindowSpec.CursorLandmark(
 
 ### 4. WindowSpec.VolumeBudget
 
-**Purpose**: Volume-limited windows.
+**目的**: Volume-limited windows.
 
 **Fields**:
 ```java
@@ -135,7 +135,7 @@ WindowSpec window = new WindowSpec.VolumeBudget(
 
 ### 5. WindowSpec.Single
 
-**Purpose**: No slicing (entire window in one slice).
+**目的**: No slicing (entire window in one slice).
 
 **Fields**:
 ```java
@@ -153,7 +153,7 @@ WindowSpec window = new WindowSpec.Single();
 
 ## SlicePlanner Architecture
 
-### Purpose
+### 目的
 Generate **SlicePlan** DTOs (app-layer) that are converted to **PlanSliceAggregates** (domain-layer).
 
 ### Interface
@@ -188,7 +188,7 @@ record SlicePlanningResult(
 
 ### SlicePlannerRegistry (Strategy Pattern)
 
-**Purpose**: Select appropriate SlicePlanner based on strategy code.
+**目的**: Select appropriate SlicePlanner based on strategy code.
 
 **Implementation**:
 ```java
@@ -220,7 +220,7 @@ if (operation == OperationType.UPDATE) {
 
 ### 1. TimeSlicePlanner (TIME)
 
-**Purpose**: Slice by time duration (hours, days, weeks).
+**目的**: Slice by time duration (hours, days, weeks).
 
 **Algorithm**:
 ```java
@@ -265,7 +265,7 @@ Generated slices:
 
 ### 2. DateSlicePlanner (DATE)
 
-**Purpose**: Slice by calendar date (ignores time component).
+**目的**: Slice by calendar date (ignores time component).
 
 **Algorithm**:
 ```java
@@ -307,7 +307,7 @@ Generated slices:
 
 ### 3. SingleSlicePlanner (SINGLE)
 
-**Purpose**: No slicing, entire window in one slice.
+**目的**: No slicing, entire window in one slice.
 
 **Algorithm**:
 ```java
@@ -376,7 +376,7 @@ PlanSliceAggregate convertToAggregate(SlicePlan draft, PlanAggregate plan) {
 
 ## Slice Signature Hash (Idempotency)
 
-### Purpose
+### 目的
 Unique identifier for a slice based on its window boundaries, ensuring idempotency.
 
 ### Algorithm
@@ -409,7 +409,7 @@ String hash = sha256(canonical);
 
 ## Expression Localization (Slice-Level)
 
-### Purpose
+### 目的
 Inject window boundaries into the expression prototype at slice creation.
 
 ### Process

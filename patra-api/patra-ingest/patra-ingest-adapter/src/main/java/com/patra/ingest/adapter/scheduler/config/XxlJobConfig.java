@@ -8,10 +8,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * XXL-Job executor configuration.
+ * XXL-Job 执行器配置。
  *
- * <p>Configures the XXL-Job executor for the Patra-Ingest service, including: - Executor
- * registration and heartbeat - Log path and access token - Task handler auto-scan
+ * <p>为 Patra-Ingest 服务配置 XXL-Job 执行器,包括: - 执行器注册和心跳 - 日志路径和访问令牌 - 任务处理器自动扫描
  *
  * @author linqibin
  * @since 0.1.0
@@ -25,44 +24,44 @@ import org.springframework.context.annotation.Configuration;
     matchIfMissing = true)
 public class XxlJobConfig {
 
-  /** Admin server addresses */
+  /** 管理端服务器地址 */
   @Value("${xxl.job.admin.addresses}")
   private String adminAddresses;
 
-  /** Executor bind IP */
+  /** 执行器绑定 IP */
   @Value("${xxl.job.executor.ip:}")
   private String ip;
 
-  /** Access token */
+  /** 访问令牌 */
   @Value("${xxl.job.accessToken:}")
   private String accessToken;
 
-  /** Executor log path */
+  /** 执行器日志路径 */
   @Value("${xxl.job.executor.logpath:logs/xxl-job}")
   private String logPath;
 
-  /** Log retention days */
+  /** 日志保留天数 */
   @Value("${xxl.job.executor.logretentiondays:30}")
   private int logRetentionDays;
 
-  /** Application server port */
+  /** 应用服务端口 */
   @Value("${server.port}")
   private int serverPort;
 
-  /** Application name */
+  /** 应用名称 */
   @Value("${spring.application.name}")
   private String appName;
 
-  /** Configures the XXL-Job executor bean. */
+  /** 配置 XXL-Job 执行器 Bean。 */
   @Bean
   public XxlJobSpringExecutor xxlJobExecutor() {
-    log.info("Initializing XXL-Job executor configuration...");
+    log.info("正在初始化 XXL-Job 执行器配置...");
 
     XxlJobSpringExecutor xxlJobSpringExecutor = new XxlJobSpringExecutor();
     xxlJobSpringExecutor.setAdminAddresses(adminAddresses);
     xxlJobSpringExecutor.setAppname(appName);
     xxlJobSpringExecutor.setIp(ip);
-    // Convention: executor port = server port + 1 to avoid conflicts with the main service
+    // 约定: 执行器端口 = 服务端口 + 1,避免与主服务冲突
     int executorPort = serverPort + 1;
     xxlJobSpringExecutor.setPort(executorPort);
     xxlJobSpringExecutor.setAccessToken(accessToken);
@@ -70,7 +69,7 @@ public class XxlJobConfig {
     xxlJobSpringExecutor.setLogRetentionDays(logRetentionDays);
 
     log.info(
-        "XXL-Job executor initialized, appName={}, adminAddresses={}, port={}",
+        "XXL-Job 执行器初始化完成, appName={}, adminAddresses={}, port={}",
         appName,
         adminAddresses,
         executorPort);

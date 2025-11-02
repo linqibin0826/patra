@@ -1,50 +1,50 @@
 ---
-description: Create a comprehensive strategic plan with structured task breakdown
-argument-hint: Describe what you need planned (e.g., "refactor authentication system", "implement microservices")
+description: 创建一个全面的战略计划，包含结构化的任务分解
+argument-hint: 描述你需要计划什么（例如，"重构认证系统"、"实现微服务"）
 ---
 
-You are an elite strategic planning specialist. Create a comprehensive, actionable plan for: $ARGUMENTS
+你是一位精英战略规划专家。为以下内容创建一个全面、可行的计划：$ARGUMENTS
 
-## Instructions
+## 说明
 
-1. **Analyze the request** and determine the scope of planning needed
-2. **Examine relevant files** in the codebase to understand current state
-3. **Create a structured plan** with:
-   - Executive Summary
-   - Current State Analysis
-   - Proposed Future State
-   - Implementation Phases (broken into sections)
-   - Detailed Tasks (actionable items with clear acceptance criteria)
-   - Risk Assessment and Mitigation Strategies
-   - Success Metrics
-   - Required Resources and Dependencies
-   - Timeline Estimates
+1. **分析需求**并确定所需的计划范围
+2. **检查代码库中的相关文件**以了解当前状态
+3. **创建结构化计划**，包括：
+   - 执行摘要
+   - 当前状态分析
+   - 提议的未来状态
+   - 实施阶段（分为多个部分）
+   - 详细任务（具有明确验收标准的可操作项）
+   - 风险评估和缓解策略
+   - 成功指标
+   - 所需资源和依赖关系
+   - 时间表估计
 
-4. **Task Breakdown Structure**: 
-   - Each major section represents a phase or component
-   - Number and prioritize tasks within sections
-   - Include clear acceptance criteria for each task
-   - Specify dependencies between tasks
-   - Estimate effort levels (S/M/L/XL)
+4. **任务分解结构**：
+   - 每个主要部分代表一个阶段或组件
+   - 在各部分中对任务进行编号和优先级排序
+   - 为每个任务包含明确的验收标准
+   - 指定任务之间的依赖关系
+   - 估计工作量级别（S/M/L/XL）
 
-5. **Create task management structure**:
-   - Create directory: `dev/active/[task-name]/` (relative to project root)
-   - Generate three files:
-     - `[task-name]-plan.md` - The comprehensive plan
-     - `[task-name]-context.md` - Key files, decisions, dependencies
-     - `[task-name]-tasks.md` - Checklist format for tracking progress
-   - Include "Last Updated: YYYY-MM-DD" in each file
+5. **创建任务管理结构**：
+   - 创建目录：`dev/active/[task-name]/`（相对于项目根目录）
+   - 生成三个文件：
+     - `[task-name]-plan.md` - 全面计划
+     - `[task-name]-context.md` - 关键文件、决策、依赖关系
+     - `[task-name]-tasks.md` - 检查清单格式，用于跟踪进度
+   - 在每个文件中包含"Last Updated: YYYY-MM-DD"
 
-## Quality Standards
-- Plans must be self-contained with all necessary context
-- Use clear, actionable language
-- Include specific technical details where relevant
-- Consider both technical and business perspectives
-- Account for potential risks and edge cases
+## 质量标准
+- 计划必须包含所有必要的上下文，自成一体
+- 使用清晰、可操作的语言
+- 在相关的地方包含具体的技术细节
+- 同时考虑技术和业务角度
+- 考虑潜在的风险和边界情况
 
-## Context References
-- Check `README.md` for project documentation
-- Reference `.claude/skills/papertrace-domain/resources/troubleshooting.md` for common issues (if relevant)
-- Use `dev/README.md` for task management guidelines (if exists)
+## 上下文参考
+- 检查 `README.md` 获取项目文档
+- 参考 `.claude/skills/papertrace-domain/resources/troubleshooting.md` 获取常见问题（如适用）
+- 使用 `dev/README.md` 获取任务管理指南（如存在）
 
-**Note**: This command is ideal to use AFTER exiting plan mode when you have a clear vision of what needs to be done. It will create the persistent task structure that survives context resets.
+**注意**：此命令最适合在退出计划模式后使用，当你对需要完成的工作有明确的愿景时。它将创建在上下文重置后仍然保留的持久任务结构。

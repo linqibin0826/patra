@@ -82,7 +82,7 @@ public final class IngestErrorCode {
 
 ### Task Worker APIs
 
-**Purpose**: Allow external task workers to:
+**目的**: Allow external task workers to:
 1. Poll for queued tasks
 2. Lease tasks for execution
 3. Report task status (running, succeeded, failed)
@@ -276,4 +276,4 @@ public class PubMedTaskWorker {
 ---
 
 **Last Updated**: 2025-01-12
-**Status**: Bootstrap Phase — Error Codes Only
+**状态**: Bootstrap Phase — Error Codes Only

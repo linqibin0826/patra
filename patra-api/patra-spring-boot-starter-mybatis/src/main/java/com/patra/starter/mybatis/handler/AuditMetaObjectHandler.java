@@ -9,11 +9,9 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.lang.Nullable;
 
 /**
- * Handles automatic population of audit fields for database entities.
+ * 处理数据库实体的审计字段自动填充。
  *
- * <p>This handler integrates with MyBatis-Plus to automatically fill timestamp and user-related
- * audit fields during insert and update operations. It supports time-sensitive testing by accepting
- * an optional {@link Clock} instance.
+ * <p>此处理程序与 MyBatis-Plus 集成，在插入和更新操作期间自动填充时间戳和用户相关的 审计字段。它通过接受可选的 {@link Clock} 实例来支持时间敏感型测试。
  */
 @Slf4j
 public class AuditMetaObjectHandler implements MetaObjectHandler {
@@ -21,21 +19,21 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
   private final Clock clock;
 
   /**
-   * Creates an audit metadata handler with an optional clock.
+   * 创建一个带有可选时钟的审计元数据处理程序。
    *
-   * @param clock optional clock for time-sensitive testing, null uses system default
+   * @param clock 可选的时钟用于时间敏感型测试，null 使用系统默认值
    */
   public AuditMetaObjectHandler(@Nullable Clock clock) {
     this.clock = clock;
-    log.debug("Initialized AuditMetaObjectHandler with clock: {}", clock);
+    log.debug("初始化 AuditMetaObjectHandler，时钟: {}", clock);
   }
 
   /**
-   * Fills audit fields during insert operations.
+   * 在插入操作期间填充审计字段。
    *
-   * <p>Populates both creation and update timestamps since this is the initial save.
+   * <p>由于这是初始保存，因此填充创建和更新时间戳。
    *
-   * @param metaObject the metadata object representing the entity being inserted
+   * @param metaObject 代表要插入的实体的元数据对象
    */
   @Override
   public void insertFill(MetaObject metaObject) {
@@ -45,11 +43,11 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
   }
 
   /**
-   * Fills audit fields during update operations.
+   * 在更新操作期间填充审计字段。
    *
-   * <p>Only populates update-related fields.
+   * <p>仅填充与更新相关的字段。
    *
-   * @param metaObject the metadata object representing the entity being updated
+   * @param metaObject 代表要更新的实体的元数据对象
    */
   @Override
   public void updateFill(MetaObject metaObject) {
@@ -58,33 +56,33 @@ public class AuditMetaObjectHandler implements MetaObjectHandler {
   }
 
   /**
-   * Obtains the current time from the configured clock or system default.
+   * 从配置的时钟或系统默认值获取当前时间。
    *
-   * @return the current instant
+   * @return 当前时刻
    */
   private Instant getCurrentTime() {
     return Objects.isNull(clock) ? Instant.now() : Instant.now(clock);
   }
 
   /**
-   * Populates creation-related audit fields.
+   * 填充创建相关的审计字段。
    *
-   * @param metaObject the entity metadata
-   * @param now the timestamp to use
+   * @param metaObject 实体元数据
+   * @param now 要使用的时间戳
    */
   private void fillCreationFields(MetaObject metaObject, Instant now) {
     this.strictInsertFill(metaObject, "createdAt", () -> now, Instant.class);
-    // TODO: Populate createdBy and createdByName from security context
+    // TODO: 从安全上下文填充 createdBy 和 createdByName
   }
 
   /**
-   * Populates update-related audit fields.
+   * 填充更新相关的审计字段。
    *
-   * @param metaObject the entity metadata
-   * @param now the timestamp to use
+   * @param metaObject 实体元数据
+   * @param now 要使用的时间戳
    */
   private void fillUpdateFields(MetaObject metaObject, Instant now) {
     this.strictUpdateFill(metaObject, "updatedAt", () -> now, Instant.class);
-    // TODO: Populate updatedBy and updatedByName from security context
+    // TODO: 从安全上下文填充 updatedBy 和 updatedByName
   }
 }

@@ -4,10 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * Represents an entity with temporal effectiveness constraints.
+ * 表示具有时态有效性约束的实体。
  *
- * <p>Entities implementing this interface have a validity period defined by {@code effectiveFrom}
- * and {@code effectiveTo} timestamps, supporting temporal queries and configuration slicing.
+ * <p>实现此接口的实体具有由 {@code effectiveFrom} 和 {@code effectiveTo} 时间戳定义的有效期, 支持时态查询和配置切片。
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,28 +14,27 @@ import java.time.Instant;
 public interface TemporalEntity {
 
   /**
-   * Returns the inclusive start timestamp when this entity becomes effective.
+   * 返回此实体生效的包含性起始时间戳。
    *
-   * @return effective start instant, never null
+   * @return 生效起始时刻,永不为 null
    */
   Instant effectiveFrom();
 
   /**
-   * Returns the exclusive end timestamp when this entity expires.
+   * 返回此实体失效的排他性结束时间戳。
    *
-   * @return effective end instant, null means open-ended (never expires)
+   * @return 生效结束时刻,null 表示开放式(永不失效)
    */
   Instant effectiveTo();
 
   /**
-   * Checks whether this entity is effective at the given instant.
+   * 检查此实体在给定时刻是否有效。
    *
-   * <p>An entity is effective when the instant falls within its validity period: {@code
-   * effectiveFrom <= instant < effectiveTo}.
+   * <p>当时刻落在有效期内时,实体有效: {@code effectiveFrom <= instant < effectiveTo}。
    *
-   * @param instant the time point to check, must not be null
-   * @return true if the entity is effective at the given instant
-   * @throws DomainValidationException if instant is null
+   * @param instant 要检查的时间点,不能为 null
+   * @return 如果实体在给定时刻有效则返回 true
+   * @throws DomainValidationException 如果 instant 为 null
    */
   default boolean isEffectiveAt(Instant instant) {
     DomainValidationException.nonNull(instant, "Instant");

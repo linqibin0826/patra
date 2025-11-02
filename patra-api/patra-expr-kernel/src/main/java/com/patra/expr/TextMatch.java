@@ -1,17 +1,29 @@
 package com.patra.expr;
 
 /**
- * Text matching semantics for TERM operations.
+ * TERM 操作的文本匹配语义。
  *
- * <p>Defines how text values should be matched against field content in search queries.
+ * <p>定义了文本值应如何与搜索查询中的字段内容匹配。
  */
 public enum TextMatch {
-  /** Matches text as a complete phrase preserving word order. */
+  /**
+   * 短语匹配。
+   *
+   * <p>将文本作为完整短语匹配，保留字序。
+   */
   PHRASE,
 
-  /** Matches text exactly as specified without tokenization. */
+  /**
+   * 精确匹配。
+   *
+   * <p>精确匹配文本，不进行分词。
+   */
   EXACT,
 
-  /** Matches if any of the tokens in the text are found in the field. */
+  /**
+   * 任意令牌匹配。
+   *
+   * <p>如果文本中的任何令牌在字段中找到，则匹配。
+   */
   ANY
 }

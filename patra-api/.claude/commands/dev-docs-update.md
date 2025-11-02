@@ -1,55 +1,55 @@
 ---
-description: Update dev documentation before context compaction
-argument-hint: Optional - specific context or tasks to focus on (leave empty for comprehensive update)
+description: 在上下文压缩之前更新开发文档
+argument-hint: 可选 - 特定的上下文或任务要关注（留空以进行全面更新）
 ---
 
-We're approaching context limits. Please update the development documentation to ensure seamless continuation after context reset.
+我们即将达到上下文限制。请更新开发文档，以确保在上下文重置后无缝续接。
 
-## Required Updates
+## 必需的更新
 
-### 1. Update Active Task Documentation
-For each task in `/dev/active/`:
-- Update `[task-name]-context.md` with:
-  - Current implementation state
-  - Key decisions made this session
-  - Files modified and why
-  - Any blockers or issues discovered
-  - Next immediate steps
-  - Last Updated timestamp
+### 1. 更新活跃任务文档
+对于 `/dev/active/` 中的每个任务：
+- 使用以下内容更新 `[task-name]-context.md`：
+  - 当前实现状态
+  - 本次会话中的关键决策
+  - 修改的文件及原因
+  - 发现的任何阻碍或问题
+  - 下一步的直接步骤
+  - 最后更新时间戳
 
-- Update `[task-name]-tasks.md` with:
-  - Mark completed tasks as ✅ 
-  - Add any new tasks discovered
-  - Update in-progress tasks with current status
-  - Reorder priorities if needed
+- 使用以下内容更新 `[task-name]-tasks.md`：
+  - 将已完成的任务标记为 ✅
+  - 添加发现的任何新任务
+  - 用当前状态更新进行中的任务
+  - 如需要，重新排列优先级
 
-### 2. Capture Session Context
-Include any relevant information about:
-- Complex problems solved
-- Architectural decisions made
-- Tricky bugs found and fixed
-- Integration points discovered
-- Testing approaches used
-- Performance optimizations made
+### 2. 捕获会话上下文
+包括有关以下内容的任何相关信息：
+- 解决的复杂问题
+- 做出的架构决策
+- 发现并修复的棘手 bug
+- 发现的集成点
+- 使用的测试方法
+- 进行的性能优化
 
-### 3. Update Project Documentation
-- Store any new patterns or solutions in project documentation
-- Update entity relationships discovered
-- Add observations about system behavior
+### 3. 更新项目文档
+- 在项目文档中存储任何新模式或解决方案
+- 更新发现的实体关系
+- 添加关于系统行为的观察
 
-### 4. Document Unfinished Work
-- What was being worked on when context limit approached
-- Exact state of any partially completed features
-- Commands that need to be run on restart
-- Any temporary workarounds that need permanent fixes
+### 4. 文档化未完成的工作
+- 当接近上下文限制时正在进行的工作
+- 任何部分完成的特性的确切状态
+- 重启时需要运行的命令
+- 任何需要永久修复的临时解决方案
 
-### 5. Create Handoff Notes
-If switching to a new conversation:
-- Exact file and line being edited
-- The goal of current changes
-- Any uncommitted changes that need attention
-- Test commands to verify work
+### 5. 创建交接说明
+如果切换到新的会话：
+- 正在编辑的确切文件和行号
+- 当前更改的目标
+- 任何需要关注的未提交更改
+- 用于验证工作的测试命令
 
-## Additional Context: $ARGUMENTS
+## 附加上下文：$ARGUMENTS
 
-**Priority**: Focus on capturing information that would be hard to rediscover or reconstruct from code alone.
+**优先级**：关注难以重新发现或从代码中重建的信息。

@@ -12,9 +12,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Outbox MQ publishing properties.
+ * 发件箱 MQ 发布属性配置。
  *
- * <p>Constrain publisher implementation wiring and perform fail-fast validation at startup.
+ * <p>约束发布器实现的装配,并在启动时执行快速失败验证。
  */
 @ConfigurationProperties(prefix = "papertrace.ingest.outbox")
 @Validated
@@ -32,11 +32,10 @@ public class OutboxMqProperties {
   public void validate() {
     if (!EXPECTED_PUBLISHER.equalsIgnoreCase(publisher)) {
       throw new IllegalStateException(
-          "papertrace.ingest.outbox.publisher must be 'rocketmq', but was '" + publisher + "'");
+          "papertrace.ingest.outbox.publisher 必须为 'rocketmq',但实际值为 '" + publisher + "'");
     }
     if (strictChannelWhitelist && isEmpty(allowedChannels)) {
-      throw new IllegalStateException(
-          "strict-channel-whitelist=true requires at least one allowed channel");
+      throw new IllegalStateException("strict-channel-whitelist=true 需要至少配置一个允许的通道");
     }
   }
 

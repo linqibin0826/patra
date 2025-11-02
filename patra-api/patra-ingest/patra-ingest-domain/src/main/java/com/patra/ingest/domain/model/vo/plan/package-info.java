@@ -1,15 +1,15 @@
 /**
- * Plan and scheduling value objects.
+ * 计划和调度值对象。
  *
- * <p>Contains value objects for ingestion plan specification and scheduling:
+ * <p>包含用于采集计划规范和调度的值对象:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlanMetadata} - Plan metadata
- *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm} - Plan trigger normalization
- *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlannerWindow} - Planner window specification
- *   <li>{@link com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext} - Task scheduler context
- *   <li>{@link com.patra.ingest.domain.model.vo.plan.WindowSpec} - Window specification (sealed
- *       interface with 5 strategies: TIME, ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE)
+ *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlanMetadata} - 计划元数据
+ *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm} - 计划触发器归一化
+ *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlannerWindow} - 计划器窗口规范
+ *   <li>{@link com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext} - 任务调度器上下文
+ *   <li>{@link com.patra.ingest.domain.model.vo.plan.WindowSpec} - 窗口规范(密封接口,包含 5 种策略: TIME,
+ *       ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE)
  * </ul>
  *
  * @author linqibin

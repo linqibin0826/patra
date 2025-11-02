@@ -3,144 +3,125 @@ package com.patra.ingest.api.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * Catalog of error codes for the ingest service.
+ * 采集服务的错误代码目录。
  *
- * <p>Error code format: {@code ING-NNNN} where ING is the service prefix.
+ * <p>错误代码格式: {@code ING-NNNN},其中 ING 是服务前缀。
  *
- * <p>Code ranges:
+ * <p>代码范围:
  *
  * <ul>
- *   <li>0xxx: HTTP-aligned errors (use {@code HttpStdErrors.of("ING").*} factory methods)
- *   <li>12xx: Registry configuration errors
- *   <li>13xx: Outbox persistence errors
- *   <li>14xx: Scheduler and job execution errors
- *   <li>15xx: Checkpoint serialization errors
- *   <li>16xx: Plan assembly errors
+ *   <li>0xxx: HTTP 标准错误(使用 {@code HttpStdErrors.of("ING").*} 工厂方法)
+ *   <li>12xx: 注册中心配置错误
+ *   <li>13xx: 发件箱持久化错误
+ *   <li>14xx: 调度器和作业执行错误
+ *   <li>15xx: 检查点序列化错误
+ *   <li>16xx: 计划组装错误
  * </ul>
  *
  * @see com.patra.common.error.codes.ErrorCodeLike
  */
 public enum IngestErrorCode implements ErrorCodeLike {
 
-  // ===== Registry Configuration Errors (12xx) =====
+  // ===== 注册中心配置错误 (12xx) =====
 
   /**
-   * Signals that provenance configuration is missing in registry.
+   * 表示注册中心中缺少来源配置。
    *
-   * <p>Occurs when requesting configuration for a provenance code that does not exist in the
-   * registry service. Verify the provenance code is correctly registered in patra-registry.
+   * <p>在请求注册中心服务中不存在的来源代码配置时发生。请验证来源代码是否已在 patra-registry 中正确注册。
    */
   ING_1201("ING-1201", 404),
 
   /**
-   * Signals that registry returned malformed or invalid configuration data.
+   * 表示注册中心返回了格式错误或无效的配置数据。
    *
-   * <p>Occurs when registry response fails validation or contains inconsistent data. Check registry
-   * data integrity and schema compliance.
+   * <p>在注册中心响应验证失败或包含不一致数据时发生。请检查注册中心数据完整性和模式合规性。
    */
   ING_1202("ING-1202", 422),
 
   /**
-   * Signals that registry service is unreachable or degraded.
+   * 表示注册中心服务不可达或降级。
    *
-   * <p>Occurs when registry service is down or experiencing issues. The system may fall back to
-   * cached or default configurations. Monitor registry service health.
+   * <p>在注册中心服务宕机或遇到问题时发生。系统可能会回退到缓存或默认配置。请监控注册中心服务健康状况。
    */
   ING_1203("ING-1203", 503),
 
-  // ===== Outbox Persistence Errors (13xx) =====
+  // ===== 发件箱持久化错误 (13xx) =====
 
   /**
-   * Signals failure to persist domain event to outbox table.
+   * 表示领域事件持久化到发件箱表失败。
    *
-   * <p>Occurs during transaction commit when outbox message insert fails. Indicates database
-   * connectivity or constraint violation issues. Check database logs and connection pool.
+   * <p>在事务提交时发件箱消息插入失败时发生。表明数据库连接或约束违反问题。请检查数据库日志和连接池。
    */
   ING_1301("ING-1301", 500),
 
   /**
-   * Signals failure to update outbox message status.
+   * 表示更新发件箱消息状态失败。
    *
-   * <p>Occurs when attempting to mark outbox message as published or failed. May indicate
-   * optimistic locking conflicts or database issues. Retry mechanism should handle transient
-   * failures.
+   * <p>在尝试将发件箱消息标记为已发布或失败时发生。可能表明乐观锁冲突或数据库问题。重试机制应处理瞬态故障。
    */
   ING_1302("ING-1302", 500),
 
   /**
-   * Signals failure to move outbox message to dead-letter queue.
+   * 表示将发件箱消息移动到死信队列失败。
    *
-   * <p>Occurs when maximum retry attempts exceeded but dead-letter persistence fails. Requires
-   * manual intervention to prevent message loss. Check database and dead-letter table schema.
+   * <p>在超过最大重试次数但死信持久化失败时发生。需要手动干预以防止消息丢失。请检查数据库和死信表模式。
    */
   ING_1303("ING-1303", 500),
 
-  // ===== Scheduler and Job Execution Errors (14xx) =====
+  // ===== 调度器和作业执行错误 (14xx) =====
 
   /**
-   * Signals that scheduled job parameters are invalid or malformed.
+   * 表示调度作业参数无效或格式错误。
    *
-   * <p>Occurs when job parameters fail JSON parsing or business validation. Verify job
-   * configuration and parameter schema. Common causes include missing required fields or invalid
-   * date formats.
+   * <p>在作业参数 JSON 解析或业务验证失败时发生。请验证作业配置和参数模式。常见原因包括缺少必需字段或无效的日期格式。
    */
   ING_1401("ING-1401", 422),
 
   /**
-   * Signals unexpected failure during scheduled job execution.
+   * 表示调度作业执行期间发生意外失败。
    *
-   * <p>Occurs when job encounters unhandled exceptions during execution. Check application logs for
-   * stack traces and root cause. May indicate external service failures or data corruption.
+   * <p>在作业执行期间遇到未处理异常时发生。请检查应用日志以查看堆栈跟踪和根本原因。可能表明外部服务故障或数据损坏。
    */
   ING_1402("ING-1402", 500),
 
   /**
-   * Signals that plan assembly pre-validation failed.
+   * 表示计划组装预验证失败。
    *
-   * <p>Occurs when input parameters for plan creation fail business rules validation before
-   * assembly begins. Common causes include invalid date ranges, negative batch sizes, or disabled
-   * provenance sources. Verify input parameters meet business constraints.
+   * <p>在计划创建的输入参数在组装开始前未通过业务规则验证时发生。常见原因包括无效的日期范围、负批次大小或禁用的来源。请验证输入参数符合业务约束。
    */
   ING_1403("ING-1403", 422),
 
-  // ===== Checkpoint Serialization Errors (15xx) =====
+  // ===== 检查点序列化错误 (15xx) =====
 
   /**
-   * Signals failure to deserialize checkpoint payload from storage.
+   * 表示从存储反序列化检查点负载失败。
    *
-   * <p>Occurs when loading checkpoint data that is corrupted, incompatible, or in wrong format. May
-   * indicate schema evolution issues or data corruption. Verify checkpoint format version
-   * compatibility.
+   * <p>在加载损坏、不兼容或格式错误的检查点数据时发生。可能表明模式演化问题或数据损坏。请验证检查点格式版本兼容性。
    */
   ING_1501("ING-1501", 422),
 
   /**
-   * Signals failure to serialize checkpoint payload for storage.
+   * 表示序列化检查点负载以存储失败。
    *
-   * <p>Occurs when checkpoint object cannot be converted to JSON or binary format. May indicate
-   * circular references, unsupported types, or encoding issues. Check checkpoint data structure.
+   * <p>在检查点对象无法转换为 JSON 或二进制格式时发生。可能表明循环引用、不支持的类型或编码问题。请检查检查点数据结构。
    */
   ING_1502("ING-1502", 422),
 
-  // ===== Plan Persistence Errors (15xx) =====
+  // ===== 计划持久化错误 (15xx) =====
 
   /**
-   * Signals failure to persist batch plan and associated tasks to database.
+   * 表示批次计划和关联任务持久化到数据库失败。
    *
-   * <p>Occurs during transactional save of plan entity and task entities. Common causes include
-   * constraint violations, deadlocks, or connection timeouts. Check database logs and transaction
-   * isolation settings.
+   * <p>在计划实体和任务实体的事务性保存期间发生。常见原因包括约束违反、死锁或连接超时。请检查数据库日志和事务隔离设置。
    */
   ING_1503("ING-1503", 500),
 
-  // ===== Plan Assembly Errors (16xx) =====
+  // ===== 计划组装错误 (16xx) =====
 
   /**
-   * Signals failure to assemble batch plan with required tasks and slices.
+   * 表示组装批次计划及所需任务和切片失败。
    *
-   * <p>Occurs when plan assembly logic fails to generate valid task slices. May indicate issues
-   * with date range calculations, batch size logic, or data availability. Verify assembly
-   * parameters and provenance configuration.
+   * <p>在计划组装逻辑无法生成有效任务切片时发生。可能表明日期范围计算、批次大小逻辑或数据可用性问题。请验证组装参数和来源配置。
    */
   ING_1601("ING-1601", 500);
 
@@ -153,9 +134,9 @@ public enum IngestErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the error code string.
+   * 返回错误代码字符串。
    *
-   * @return error code in format ING-NNNN
+   * @return 格式为 ING-NNNN 的错误代码
    */
   @Override
   public String code() {
@@ -163,9 +144,9 @@ public enum IngestErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the HTTP status code associated with this error.
+   * 返回与此错误关联的 HTTP 状态码。
    *
-   * @return HTTP status code (400-599)
+   * @return HTTP 状态码 (400-599)
    */
   @Override
   public int httpStatus() {
@@ -173,9 +154,9 @@ public enum IngestErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the error code string representation.
+   * 返回错误代码的字符串表示形式。
    *
-   * @return error code in format ING-NNNN
+   * @return 格式为 ING-NNNN 的错误代码
    */
   @Override
   public String toString() {

@@ -3,13 +3,17 @@ package com.patra.expr;
 import java.util.List;
 import java.util.Objects;
 
-/** Logical conjunction of {@link Expr} nodes. */
+/**
+ * 逻辑合取表达式。
+ *
+ * <p>表示多个表达式的与逻辑结合。
+ */
 public record And(List<Expr> children) implements Expr {
 
   public And {
     Objects.requireNonNull(children, "children");
     if (children.stream().anyMatch(Objects::isNull)) {
-      throw new IllegalArgumentException("AND expression cannot contain null children");
+      throw new IllegalArgumentException("AND 表达式不能包含空的子表达式");
     }
     children = List.copyOf(children);
   }

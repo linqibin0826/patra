@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/** Converts registry DTOs into the starter's immutable {@link ProvenanceSnapshot} model. */
+/** 将注册表 DTO 转换为启动器的不可变 {@link ProvenanceSnapshot} 模型。 */
 @SuppressWarnings("unused")
 public class SnapshotAssembler {
 

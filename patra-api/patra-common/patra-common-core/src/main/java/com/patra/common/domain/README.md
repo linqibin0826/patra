@@ -1,35 +1,35 @@
-# Domain Base Classes (patra-common)
+# 领域基础类 (patra-common)
 
-This package provides **framework-agnostic base classes** for implementing DDD aggregates and events across all Papertrace microservices.
+本包为 Papertrace 所有微服务的 DDD 聚合根和事件实现提供**框架无关的基础类**。
 
 ---
 
-## Package Contents
+## 包结构
 
 ```
 domain/
-├─ AggregateRoot.java        # Base class for aggregate roots
-├─ ReadOnlyAggregate.java    # Base for read-only aggregates (CQRS read side)
-└─ DomainEvent.java          # Interface for domain events
+├─ AggregateRoot.java        # 聚合根基类
+├─ ReadOnlyAggregate.java    # 只读聚合基类(CQRS 读端)
+└─ DomainEvent.java          # 领域事件接口
 ```
 
 ---
 
-## Core Classes
+## 核心类
 
 ### 1. AggregateRoot<ID>
 
-**Purpose**: Abstract base class for all aggregate roots in the domain layer.
+**目的**: 领域层所有聚合根的抽象基类。
 
-**Key Features**:
-- **Identity management**: Assigns and tracks aggregate ID
-- **Optimistic locking**: Version field for concurrency control
-- **Domain events**: Collects events raised during state changes
-- **Pure Java**: NO framework dependencies (Serializable only)
+**核心特性**:
+- **身份管理**: 分配和追踪聚合 ID
+- **乐观锁**: 用于并发控制的版本字段
+- **领域事件**: 收集状态变化期间引发的事件
+- **纯 Java**: 无框架依赖(仅 Serializable)
 
-**Source**: [`AggregateRoot.java`](AggregateRoot.java:1)
+**源码**: [`AggregateRoot.java`](AggregateRoot.java:1)
 
-#### Usage Example
+#### 使用示例
 
 ```java
 public class PlanAggregate extends AggregateRoot<Long> {
@@ -37,86 +37,86 @@ public class PlanAggregate extends AggregateRoot<Long> {
     private final String planKey;
     private PlanStatus status;
 
-    // Private constructor
+    // 私有构造器
     private PlanAggregate(Long id, String planKey, PlanStatus status) {
-        super(id);  // Set ID
+        super(id);  // 设置 ID
         this.planKey = planKey;
         this.status = status;
     }
 
-    // Factory for new aggregates
+    // 创建新聚合的工厂方法
     public static PlanAggregate create(String planKey) {
         return new PlanAggregate(null, planKey, PlanStatus.DRAFT);
     }
 
-    // Factory for restoring from persistence
+    // 从持久化恢复的工厂方法
     public static PlanAggregate restore(Long id, String planKey, PlanStatus status, long version) {
         PlanAggregate aggregate = new PlanAggregate(id, planKey, status);
-        aggregate.assignVersion(version);  // Set version for optimistic locking
+        aggregate.assignVersion(version);  // 设置乐观锁版本
         return aggregate;
     }
 
-    // Domain behavior
+    // 领域行为
     public void startSlicing() {
         if (this.status != PlanStatus.DRAFT) {
-            throw new IllegalStateException("Can only slice from DRAFT state");
+            throw new IllegalStateException("只能从 DRAFT 状态进行切片");
         }
         this.status = PlanStatus.SLICING;
 
-        // Raise domain event
+        // 引发领域事件
         addDomainEvent(new PlanSlicingStartedEvent(getId(), Instant.now()));
     }
 }
 ```
 
-#### Key Methods
+#### 核心方法
 
-| Method | Purpose | When to Call |
+| 方法 | 目的 | 何时调用 |
 |--------|---------|--------------|
-| `assignId(ID id)` | Assign ID after persistence | Repository after INSERT |
-| `assignVersion(long version)` | Set optimistic lock version | Repository after SELECT/UPDATE |
-| `isTransient()` | Check if not yet persisted | Before saving |
-| `addDomainEvent(DomainEvent event)` | Register domain event | In domain behaviors |
-| `pullDomainEvents()` | Drain events for publishing | App layer after persistence |
-| `peekDomainEvents()` | View events (debug/test) | Unit tests |
+| `assignId(ID id)` | 持久化后分配 ID | 仓储在 INSERT 后 |
+| `assignVersion(long version)` | 设置乐观锁版本 | 仓储在 SELECT/UPDATE 后 |
+| `isTransient()` | 检查是否尚未持久化 | 保存前 |
+| `addDomainEvent(DomainEvent event)` | 注册领域事件 | 在领域行为中 |
+| `pullDomainEvents()` | 提取事件用于发布 | 应用层在持久化后 |
+| `peekDomainEvents()` | 查看事件(调试/测试) | 单元测试 |
 
-#### Identity Management
+#### 身份管理
 
-**Before persistence**:
+**持久化前**:
 ```java
 PlanAggregate plan = PlanAggregate.create("plan-123");
-assertTrue(plan.isTransient());  // ID is null
+assertTrue(plan.isTransient());  // ID 为 null
 assertNull(plan.getId());
 ```
 
-**After persistence**:
+**持久化后**:
 ```java
 PlanAggregate saved = repository.save(plan);
-assertFalse(saved.isTransient());  // ID assigned
+assertFalse(saved.isTransient());  // ID 已分配
 assertNotNull(saved.getId());
 ```
 
-#### Optimistic Locking
+#### 乐观锁
 
-**Version field** prevents lost updates:
+**版本字段**防止更新丢失:
 
 ```java
-// Thread A reads plan (version=1)
+// 线程 A 读取计划(version=1)
 PlanAggregate planA = repository.findById(123L);
 
-// Thread B reads same plan (version=1)
+// 线程 B 读取同一计划(version=1)
 PlanAggregate planB = repository.findById(123L);
 
-// Thread A updates (version becomes 2)
+// 线程 A 更新(version 变为 2)
 planA.startSlicing();
-repository.save(planA);  // Success (version 1 → 2)
+repository.save(planA);  // 成功(version 1 → 2)
 
-// Thread B updates (stale version=1)
+// 线程 B 更新(陈旧的 version=1)
 planB.markReady();
-repository.save(planB);  // ❌ OptimisticLockException (expected version 2, found 1)
+repository.save(planB);  // ❌ OptimisticLockException(期望 version 2,实际为 1)
 ```
 
-**MyBatis-Plus** handles this via `@Version` annotation:
+**MyBatis-Plus** 通过 `@Version` 注解处理此问题:
 ```java
 @Data
 @TableName("ingest_plan")
@@ -124,92 +124,92 @@ public class IngestPlanDO {
     @TableId
     private Long id;
 
-    @Version  // Auto-incremented on UPDATE
+    @Version  // UPDATE 时自动递增
     private Long version;
 }
 ```
 
-#### Domain Events
+#### 领域事件
 
-**Lifecycle**:
-1. **Raise**: Aggregate calls `addDomainEvent()` during behavior
-2. **Collect**: App layer calls `pullDomainEvents()` after persistence
-3. **Publish**: App layer publishes to outbox/message bus
-4. **Clear**: `pullDomainEvents()` clears internal event list
+**生命周期**:
+1. **引发**: 聚合在行为期间调用 `addDomainEvent()`
+2. **收集**: 应用层在持久化后调用 `pullDomainEvents()`
+3. **发布**: 应用层发布到 outbox/消息总线
+4. **清空**: `pullDomainEvents()` 清空内部事件列表
 
-**Example Flow**:
+**示例流程**:
 ```java
-// 1. Aggregate raises event
+// 1. 聚合引发事件
 public void startSlicing() {
     this.status = PlanStatus.SLICING;
     addDomainEvent(new PlanSlicingStartedEvent(getId(), Instant.now()));
 }
 
-// 2. App layer collects and publishes
+// 2. 应用层收集并发布
 @Transactional
 public void executeUseCase() {
     PlanAggregate plan = repository.findById(123L);
     plan.startSlicing();
 
-    repository.save(plan);  // Persist state change
+    repository.save(plan);  // 持久化状态变化
 
-    List<DomainEvent> events = plan.pullDomainEvents();  // Drain events
-    eventPublisher.publish(events);  // Publish to outbox
+    List<DomainEvent> events = plan.pullDomainEvents();  // 提取事件
+    eventPublisher.publish(events);  // 发布到 outbox
 }
 ```
 
-**Why not publish directly from aggregate?**
-- Aggregates are **pure domain** (no infrastructure concerns)
-- Publishing requires transaction coordination (app layer responsibility)
-- Testability (mock publisher in app layer, not domain)
+**为什么不从聚合直接发布?**
+- 聚合是**纯领域**(无基础设施关注点)
+- 发布需要事务协调(应用层职责)
+- 可测试性(在应用层模拟发布器,而非领域层)
 
 ---
 
 ### 2. ReadOnlyAggregate<ID>
 
-**Purpose**: Base for read-only aggregates (CQRS read side).
+**目的**: 只读聚合基类(CQRS 读端)。
 
-**Differences from `AggregateRoot`**:
-- NO domain events (read-only)
-- NO state transitions (immutable after creation)
-- Used for query models optimized for reads
+**与 `AggregateRoot` 的区别**:
+- 无领域事件(只读)
+- 无状态转换(创建后不可变)
+- 用于针对读取优化的查询模型
 
-**Usage**:
+**用法**:
 ```java
 public class ProvenanceConfiguration extends ReadOnlyAggregate<Long> {
 
     private final Provenance provenance;
     private final HttpConfig httpConfig;
-    // ... other configs
+    // ... 其他配置
 
-    // No setters, no state changes
+    // 无 setters,无状态变化
     public boolean isComplete() {
         return provenance != null && provenance.isActive();
     }
 }
 ```
 
-**Source**: [`ReadOnlyAggregate.java`](ReadOnlyAggregate.java)
+**源码**: [`ReadOnlyAggregate.java`](ReadOnlyAggregate.java)
 
 ---
 
 ### 3. DomainEvent
 
-**Purpose**: Marker interface for domain events.
+**目的**: 领域事件的标记接口。
 
-**Contract**:
+**契约**:
 ```java
 public interface DomainEvent extends Serializable {
 
     /**
-     * Returns the event type identifier (e.g., "ingest.task.queued").
-     * Used for routing and deserialization.
+     * 返回事件类型标识符(例如 "ingest.task.queued")。
+     * 用于路由和反序列化。
      */
     String eventType();
 }
 ```
 
-**Implementation Pattern** (record):
+**实现模式**(record):
 ```java
 public record TaskQueuedEvent(
     Long taskId,
@@ -223,7 +223,7 @@ public record TaskQueuedEvent(
         return "ingest.task.queued";
     }
 
-    // Factory method
+    // 工厂方法
     public static TaskQueuedEvent of(Long taskId, Long planId, String provenanceCode, Instant queuedAt) {
         return new TaskQueuedEvent(taskId, planId, provenanceCode,
             queuedAt != null ? queuedAt : Instant.now());
@@ -231,31 +231,31 @@ public record TaskQueuedEvent(
 }
 ```
 
-**Source**: [`DomainEvent.java`](DomainEvent.java)
+**源码**: [`DomainEvent.java`](DomainEvent.java)
 
 ---
 
-## Design Patterns
+## 设计模式
 
-### 1. Factory Methods over Constructors
+### 1. 工厂方法优于构造器
 
-**Problem**: Aggregate construction requires validation, defaults, business rules.
+**问题**: 聚合构造需要验证、默认值、业务规则。
 
-**Solution**: Private constructor + static factory methods.
+**解决方案**: 私有构造器 + 静态工厂方法。
 
 ```java
 public class TaskAggregate extends AggregateRoot<Long> {
 
-    // Private constructor (force use of factories)
+    // 私有构造器(强制使用工厂)
     private TaskAggregate(...) { }
 
-    // Factory for new instances
+    // 创建新实例的工厂
     public static TaskAggregate create(...) {
-        // Validation + defaults
+        // 验证 + 默认值
         return new TaskAggregate(null, ...);
     }
 
-    // Factory for restoring from DB
+    // 从数据库恢复的工厂
     public static TaskAggregate restore(Long id, ..., long version) {
         TaskAggregate aggregate = new TaskAggregate(id, ...);
         aggregate.assignVersion(version);
@@ -264,57 +264,57 @@ public class TaskAggregate extends AggregateRoot<Long> {
 }
 ```
 
-**Benefits**:
-- Clear intent (`create` vs. `restore`)
-- Encapsulates validation
-- Prevents invalid construction
+**好处**:
+- 明确意图(`create` vs. `restore`)
+- 封装验证
+- 防止无效构造
 
-### 2. Tell, Don't Ask
+### 2. Tell, Don't Ask(告诉,别询问)
 
-**Problem**: Exposing internal state leads to business logic leaking into app layer.
+**问题**: 暴露内部状态导致业务逻辑泄漏到应用层。
 
-**Anti-pattern**:
+**反模式**:
 ```java
-// BAD: App layer checks state and mutates aggregate
+// 错误: 应用层检查状态并变更聚合
 if (plan.getStatus() == PlanStatus.DRAFT) {
-    plan.setStatus(PlanStatus.SLICING);  // ❌ Exposes internal state
+    plan.setStatus(PlanStatus.SLICING);  // ❌ 暴露内部状态
 }
 ```
 
-**Pattern**:
+**正确模式**:
 ```java
-// GOOD: Aggregate encapsulates state transition
-plan.startSlicing();  // ✅ Validates state machine internally
+// 正确: 聚合封装状态转换
+plan.startSlicing();  // ✅ 内部验证状态机
 ```
 
-**Rule**: Aggregates should **expose behavior**, not state.
+**规则**: 聚合应该**暴露行为**,而非状态。
 
-### 3. Event Sourcing Lite
+### 3. 轻量级事件溯源
 
-**Problem**: Need audit trail of state changes without full event sourcing.
+**问题**: 需要状态变化的审计跟踪,但不使用完整事件溯源。
 
-**Solution**: Raise domain events for important state transitions.
+**解决方案**: 为重要状态转换引发领域事件。
 
 ```java
 public void markRunning(Instant startedAt) {
     this.status = TaskStatus.RUNNING;
     this.executionTimeline = executionTimeline.onStart(startedAt);
 
-    // Event for observability/audit
+    // 用于可观测性/审计的事件
     addDomainEvent(new TaskStartedEvent(getId(), startedAt));
 }
 ```
 
-**Benefits**:
-- Audit trail (who did what when)
-- Integration with other services (async notifications)
-- Debugging (event log shows state transitions)
+**好处**:
+- 审计跟踪(谁在何时做了什么)
+- 与其他服务集成(异步通知)
+- 调试(事件日志显示状态转换)
 
 ---
 
-## Testing Guidelines
+## 测试指南
 
-### Unit Tests (Aggregate Behavior)
+### 单元测试(聚合行为)
 
 ```java
 @Test
@@ -328,14 +328,14 @@ void testAggregateStateTransition() {
     // Then
     assertEquals(PlanStatus.SLICING, plan.getStatus());
 
-    // Verify event
+    // 验证事件
     List<DomainEvent> events = plan.peekDomainEvents();
     assertEquals(1, events.size());
     assertTrue(events.get(0) instanceof PlanSlicingStartedEvent);
 }
 ```
 
-### Unit Tests (Event Pulling)
+### 单元测试(事件提取)
 
 ```java
 @Test
@@ -350,31 +350,31 @@ void testEventPulling() {
     // Then
     assertEquals(1, events.size());
 
-    // Second pull returns empty (events cleared)
+    // 第二次提取返回空(事件已清空)
     List<DomainEvent> events2 = task.pullDomainEvents();
     assertTrue(events2.isEmpty());
 }
 ```
 
-### Integration Tests (Optimistic Locking)
+### 集成测试(乐观锁)
 
 ```java
 @Test
 void testOptimisticLockingConflict() {
-    // Given: Persist initial aggregate
+    // Given: 持久化初始聚合
     PlanAggregate plan = PlanAggregate.create("plan-123");
     plan = repository.save(plan);
     Long planId = plan.getId();
 
-    // When: Two threads load same aggregate
+    // When: 两个线程加载同一聚合
     PlanAggregate planA = repository.findById(planId).get();
     PlanAggregate planB = repository.findById(planId).get();
 
-    // Thread A updates
+    // 线程 A 更新
     planA.startSlicing();
-    repository.save(planA);  // Success
+    repository.save(planA);  // 成功
 
-    // Thread B updates (stale version)
+    // 线程 B 更新(陈旧版本)
     planB.markReady();
 
     // Then: OptimisticLockException
@@ -386,35 +386,35 @@ void testOptimisticLockingConflict() {
 
 ---
 
-## Common Pitfalls
+## 常见陷阱
 
-### ❌ DON'T: Bypass aggregate encapsulation
+### ❌ 不要: 绕过聚合封装
 
 ```java
-// BAD: App layer directly sets aggregate fields
-plan.setStatus(PlanStatus.SLICING);  // ❌ Violates encapsulation
+// 错误: 应用层直接设置聚合字段
+plan.setStatus(PlanStatus.SLICING);  // ❌ 违反封装
 ```
 
-### ✅ DO: Use behavior methods
+### ✅ 正确: 使用行为方法
 
 ```java
-// GOOD: Aggregate validates state transition
-plan.startSlicing();  // ✅ Encapsulated behavior
+// 正确: 聚合验证状态转换
+plan.startSlicing();  // ✅ 封装的行为
 ```
 
-### ❌ DON'T: Share aggregates across threads
+### ❌ 不要: 跨线程共享聚合
 
 ```java
-// BAD: Aggregates are not thread-safe
+// 错误: 聚合不是线程安全的
 PlanAggregate plan = repository.findById(123L);
-executor.submit(() -> plan.startSlicing());  // ❌ Race condition
-executor.submit(() -> plan.markReady());     // ❌ Race condition
+executor.submit(() -> plan.startSlicing());  // ❌ 竞态条件
+executor.submit(() -> plan.markReady());     // ❌ 竞态条件
 ```
 
-### ✅ DO: One aggregate per thread/transaction
+### ✅ 正确: 每个线程/事务一个聚合
 
 ```java
-// GOOD: Each thread loads fresh copy
+// 正确: 每个线程加载新副本
 executor.submit(() -> {
     PlanAggregate plan = repository.findById(123L);
     plan.startSlicing();
@@ -422,49 +422,49 @@ executor.submit(() -> {
 });
 ```
 
-### ❌ DON'T: Publish events before persisting aggregate
+### ❌ 不要: 在持久化聚合前发布事件
 
 ```java
-// BAD: Event published but aggregate save fails
+// 错误: 事件已发布但聚合保存失败
 plan.startSlicing();
-eventPublisher.publish(plan.pullDomainEvents());  // ❌ Out of order
-repository.save(plan);  // May fail, but event already sent
+eventPublisher.publish(plan.pullDomainEvents());  // ❌ 顺序错误
+repository.save(plan);  // 可能失败,但事件已发送
 ```
 
-### ✅ DO: Persist then publish (in same transaction)
+### ✅ 正确: 先持久化再发布(在同一事务中)
 
 ```java
-// GOOD: Events published only if save succeeds
+// 正确: 仅在保存成功后发布事件
 plan.startSlicing();
-repository.save(plan);  // Commit state change
-eventPublisher.publish(plan.pullDomainEvents());  // Then publish
+repository.save(plan);  // 提交状态变化
+eventPublisher.publish(plan.pullDomainEvents());  // 然后发布
 ```
 
 ---
 
-## Framework Independence
+## 框架独立性
 
-**Key Principle**: Domain layer has **ZERO framework dependencies**.
+**核心原则**: 领域层**零框架依赖**。
 
-**Allowed**:
-- ✅ Java SE classes (`java.time.*`, `java.util.*`)
-- ✅ `Serializable` (for remoting/caching)
-- ✅ `patra-common` (shared domain utilities)
+**允许**:
+- ✅ Java SE 类(`java.time.*`、`java.util.*`)
+- ✅ `Serializable`(用于远程调用/缓存)
+- ✅ `patra-common`(共享领域工具)
 
-**Forbidden**:
-- ❌ Spring annotations (`@Component`, `@Transactional`, `@Autowired`)
-- ❌ MyBatis annotations (`@TableName`, `@TableId`)
-- ❌ Jackson annotations (`@JsonProperty`, `@JsonIgnore`)
-- ❌ Lombok (except `@Getter` on private fields, acceptable)
+**禁止**:
+- ❌ Spring 注解(`@Component`、`@Transactional`、`@Autowired`)
+- ❌ MyBatis 注解(`@TableName`、`@TableId`)
+- ❌ Jackson 注解(`@JsonProperty`、`@JsonIgnore`)
+- ❌ Lombok(除了私有字段上的 `@Getter`,可接受)
 
-**Why?**
-- **Testability**: Domain logic testable without Spring context
-- **Portability**: Easy to migrate frameworks (Spring → Quarkus)
-- **Focus**: Business logic isolated from infrastructure concerns
+**为什么?**
+- **可测试性**: 无需 Spring 上下文即可测试领域逻辑
+- **可移植性**: 易于迁移框架(Spring → Quarkus)
+- **专注**: 业务逻辑与基础设施关注点隔离
 
 ---
 
-**See Also**:
-- [Architecture Guide](../../../../../docs/ARCHITECTURE.md)
-- [Development Guide](../../../../../docs/DEV-GUIDE.md)
-- [patra-ingest Domain Model README](../../../../../../../patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/README.md)
+**另请参阅**:
+- [架构指南](../../../../../docs/ARCHITECTURE.md)
+- [开发指南](../../../../../docs/DEV-GUIDE.md)
+- [patra-ingest 领域模型 README](../../../../../../../patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/README.md)

@@ -1,66 +1,66 @@
-# Outbox Pattern
+# Outbox 模式
 
-**Purpose**: Reliable event publishing with transactional guarantees using the Transactional Outbox pattern.
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Domain Layer](#domain-layer)
-3. [Database Design](#database-design)
-4. [Application Layer](#application-layer)
-5. [Infrastructure Layer](#infrastructure-layer)
-6. [Adapter Layer](#adapter-layer)
-7. [Key Patterns](#key-patterns)
-8. [Best Practices](#best-practices)
+**目的**: 使用事务性 Outbox 模式实现具有事务保证的可靠事件发布。
 
 ---
 
-## Overview
+## 目录
 
-### What is the Outbox Pattern?
+1. [概览](#overview)
+2. [领域层](#domain-layer)
+3. [数据库设计](#database-design)
+4. [应用层](#application-layer)
+5. [基础设施层](#infrastructure-layer)
+6. [适配器层](#adapter-layer)
+7. [核心模式](#key-patterns)
+8. [最佳实践](#best-practices)
 
-The **Transactional Outbox Pattern** ensures reliable event publishing by writing events to a database table within the same transaction as business data. A separate relay process reads these events and publishes them to message brokers.
+---
 
-### Why Use Outbox Pattern?
+## 概览
 
-**❌ Without Outbox:**
-- Business data committed, but MQ publish fails → **data loss**
-- MQ publish succeeds, but business data rollback → **duplicate events**
-- No transactional guarantee between DB and MQ
+### 什么是 Outbox 模式？
 
-**✅ With Outbox:**
-- Business data + outbox message written in **single transaction**
-- Relay job publishes from outbox table
-- At-least-once delivery guarantee
-- **No dual-write problem**
+**事务性 Outbox 模式**通过在与业务数据相同的事务中将事件写入数据库表，确保可靠的事件发布。单独的中继进程读取这些事件并发布到消息代理。
 
-### Papertrace Implementation
+### 为什么使用 Outbox 模式？
+
+**❌ 不使用 Outbox：**
+- 业务数据已提交，但 MQ 发布失败 → **数据丢失**
+- MQ 发布成功，但业务数据回滚 → **重复事件**
+- DB 和 MQ 之间没有事务保证
+
+**✅ 使用 Outbox：**
+- 业务数据 + outbox 消息在**单个事务**中写入
+- 中继作业从 outbox 表发布消息
+- 至少一次投递保证
+- **没有双写问题**
+
+### Papertrace 实现
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Ingestion Flow                          │
+│                    Ingest Flow                              │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Business Transaction:                                  │
-│     - Save Task aggregate (ing_task)                       │
-│     - Save Outbox message (ing_outbox_message)             │
-│     └─> COMMIT (atomic)                                    │
+│  1. Business Transaction:                                   │
+│     - Save Task aggregate (ing_task)                        │
+│     - Save Outbox message (ing_outbox_message)              │
+│     └─> COMMIT (atomic)                                     │
 │                                                             │
-│  2. Relay Job (separate process):                          │
-│     - Poll ing_outbox_message (PENDING)                    │
-│     - Acquire lease (optimistic lock)                      │
-│     - Publish to RocketMQ                                  │
-│     - Mark as PUBLISHED                                    │
-│     - Save relay log (audit trail)                         │
+│  2. Relay Job (separate process):                           │
+│     - Poll ing_outbox_message (PENDING)                     │
+│     - Acquire lease (optimistic lock)                       │
+│     - Publish to RocketMQ                                   │
+│     - Mark as PUBLISHED                                     │
+│     - Save relay log (audit trail)                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Domain Layer
+## 领域层
 
-### OutboxMessage Entity
+### OutboxMessage 实体
 
 **File**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/entity/OutboxMessage.java`
 
@@ -71,9 +71,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Domain entity representing an outbox message for reliable event publishing.
+ * 表示一个用于可靠事件发布的 outbox 消息。
  *
- * <p>Uses Builder pattern for complex construction with many optional fields.
+ * <p>使用 Builder 模式进行复杂构造，包含多个可选字段。
  */
 public final class OutboxMessage {
 
@@ -210,7 +210,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository port for outbox messages.
+ * 仓储端口用于 outbox messages.
  *
  * <p>Persists pending messages, enforces idempotency, and enables bulk operations.
  */
@@ -240,7 +240,7 @@ public interface OutboxMessageRepository {
 }
 ```
 
-### Relay Store Port
+### 中继存储端口
 
 **File**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/OutboxRelayStore.java`
 
@@ -252,7 +252,7 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Persistence port used by the outbox relay to fetch publishable messages
+ * 持久化端口供 the outbox relay to fetch publishable messages
  * and drive state transitions.
  */
 public interface OutboxRelayStore {
@@ -291,9 +291,9 @@ public interface OutboxRelayStore {
 
 ---
 
-## Database Design
+## 数据库设计
 
-### Table Structure
+### 表结构
 
 **Table**: `ing_outbox_message`
 
@@ -334,16 +334,16 @@ CREATE TABLE ing_outbox_message (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
-### Indexes Explained
+### 索引说明
 
-| Index | Purpose |
+| 索引 | 用途 |
 |-------|---------|
 | `uk_outbox_channel_dedup` | **Idempotency**: Prevent duplicate messages for same (channel, dedupKey) |
 | `idx_outbox_status_time` | **Relay polling**: Fetch PENDING messages ordered by creation time |
 | `idx_outbox_partition` | **Ordered processing**: Group messages by channel and partition key |
 | `idx_outbox_lease` | **Lease management**: Find expired leases for takeover |
 
-### State Machine
+### 状态机
 
 ```
 ┌─────────┐
@@ -369,9 +369,9 @@ CREATE TABLE ing_outbox_message (
 
 ---
 
-## Application Layer
+## 应用层
 
-### Outbox Relay Orchestrator
+### Outbox 中继编排器
 
 **File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/OutboxRelayOrchestrator.java`
 
@@ -392,7 +392,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Application service for the Outbox Relay use case.
+ * 应用服务用于 the Outbox Relay use case.
  *
  * <p>Flow:
  * 1. Check feature toggle (disabled → return empty report)
@@ -455,7 +455,7 @@ public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
 }
 ```
 
-### Outbox Relay Executor
+### Outbox 中继执行器
 
 **File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/executor/OutboxRelayExecutor.java`
 
@@ -473,7 +473,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox relay executor - orchestrates relay batch execution via specialized coordinators.
+ * Outbox 中继执行器 - orchestrates relay batch execution via specialized coordinators.
  *
  * <h3>Architecture: Orchestrator + Coordinators Pattern</h3>
  *
@@ -567,9 +567,9 @@ public class OutboxRelayExecutor {
 
 ---
 
-## Infrastructure Layer
+## 基础设施层
 
-### Database Entity
+### 数据库实体
 
 **File**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/OutboxMessageDO.java`
 
@@ -644,7 +644,7 @@ public class OutboxMessageDO extends BaseDO {
 }
 ```
 
-### Repository Implementation
+### 仓储实现
 
 **File**: `patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/repository/OutboxMessageRepositoryMpImpl.java`
 
@@ -664,7 +664,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-Plus implementation for Outbox message persistence.
+ * MyBatis-Plus 实现 for Outbox message persistence.
  *
  * <h3>State Machine</h3>
  * PENDING → LEASED (implicit) → PUBLISHED / DEFERRED / FAILED
@@ -746,9 +746,9 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
 
 ---
 
-## Adapter Layer
+## 适配器层
 
-### Outbox Relay Job
+### Outbox 中继作业
 
 **File**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/OutboxRelayJob.java`
 
@@ -769,7 +769,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox Relay scheduled job. Periodically scans the Outbox table to fetch
+ * Outbox 中继定时作业. Periodically scans the Outbox table to fetch
  * deliverable messages and attempts to publish them.
  *
  * <p>Idempotency: lease owner identifier includes host + jobId + threadId + uuid
@@ -822,13 +822,13 @@ public class OutboxRelayJob {
 
 ---
 
-## Key Patterns
+## 核心模式
 
-### 1. Lease-Based Distributed Coordination
+### 1. 基于租约的分布式协调
 
-**Problem**: Multiple relay job instances polling same Outbox table → duplicate publishes
+**问题**: Multiple relay job instances polling same Outbox table → duplicate publishes
 
-**Solution**: Optimistic locking + lease fields
+**解决方案**: Optimistic locking + lease fields
 
 ```java
 // ✅ GOOD: Acquire lease before publishing
@@ -846,11 +846,11 @@ boolean acquireLease(Long id, Long expectedVersion, String leaseOwner, Instant l
 - ✅ Allows lease takeover if instance crashes (after expiration)
 - ✅ No distributed locks required
 
-### 2. Retry Strategy with Exponential Backoff
+### 2. 指数退避重试策略
 
-**Problem**: Transient errors should be retried, but not too aggressively
+**问题**: Transient errors should be retried, but not too aggressively
 
-**Solution**: Exponential backoff + max retries
+**解决方案**: Exponential backoff + max retries
 
 ```java
 // ✅ GOOD: Calculate next retry time with exponential backoff
@@ -870,11 +870,11 @@ if (retryCount < maxRetries) {
 }
 ```
 
-### 3. Batch Processing Optimization
+### 3. 批处理优化
 
-**Problem**: Processing messages one-by-one is slow
+**问题**: Processing messages one-by-one is slow
 
-**Solution**: Batch relay + batch audit logging
+**解决方案**: Batch relay + batch audit logging
 
 ```java
 // ✅ GOOD: Batch processing with single relay log INSERT
@@ -897,11 +897,11 @@ public RelayBatchResult execute(RelayPlan plan) {
 }
 ```
 
-### 4. Idempotency Guarantee
+### 4. 幂等性保证
 
-**Problem**: Same business event might trigger multiple Outbox writes
+**问题**: Same business event might trigger multiple Outbox writes
 
-**Solution**: Unique constraint on (channel, dedupKey)
+**解决方案**: Unique constraint on (channel, dedupKey)
 
 ```sql
 -- ✅ GOOD: Unique constraint prevents duplicates
@@ -924,11 +924,11 @@ outboxRepository.saveOrUpdate(message);
 
 ---
 
-## Best Practices
+## 最佳实践
 
-### ✅ DO
+### ✅ 应该做
 
-| Practice | Reason |
+| 实践 | 原因 |
 |----------|--------|
 | **Write outbox in same transaction** | Guarantee atomicity with business data |
 | **Use unique (channel, dedupKey)** | Prevent duplicate events |
@@ -938,9 +938,9 @@ outboxRepository.saveOrUpdate(message);
 | **Log relay statistics** | Enable monitoring and alerting |
 | **Create audit trail (relay logs)** | Trace message lifecycle |
 
-### ❌ DON'T
+### ❌ 不应该做
 
-| Anti-pattern | Problem |
+| 反模式 | 问题 |
 |--------------|---------|
 | **Skip optimistic locking** | Leads to duplicate publishes |
 | **Retry indefinitely** | Poison messages block queue |
@@ -951,7 +951,7 @@ outboxRepository.saveOrUpdate(message);
 
 ---
 
-**Related Files:**
+**相关文件：**
 - [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Application layer orchestration
 - [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain entity patterns
 - [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - Infrastructure layer persistence
@@ -959,4 +959,4 @@ outboxRepository.saveOrUpdate(message);
 
 ---
 
-**📝 Status**: ✅ **COMPLETE** - Comprehensive guide to Outbox Pattern implementation from patra-ingest with real examples.
+**📝 状态**: ✅ **已完成** - 全面指南： Outbox Pattern implementation from patra-ingest with real examples.

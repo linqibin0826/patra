@@ -29,20 +29,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Default implementation of {@link ExprRenderer} with full OR/NOT support, fn_code execution, and
- * std_key-only emission.
+ * {@link ExprRenderer} 的默认实现，支持完整的 OR/NOT 操作、函数代码执行和仅 std_key 发出。
  *
- * <p>Key features:
+ * <p>主要特性：
  *
  * <ul>
- *   <li>OR/NOT boolean operators with proper parentheses
- *   <li>fn_code execution for PARAMS rules
- *   <li>Emits std_keys only (no provider parameter naming)
- *   <li>SINGLE/MULTI std_key merge policies
- *   <li>Comprehensive logging and warnings
+ *   <li>带有适当括号的 OR/NOT 布尔运算符
+ *   <li>PARAMS 规则的函数代码执行
+ *   <li>仅发出 std_keys（不发出提供者参数名称）
+ *   <li>SINGLE/MULTI std_key 合并策略
+ *   <li>全面的日志和警告
  * </ul>
  *
- * <p>See: docs/expr/02-architecture.md §2.7, docs/expr/03-compiler-bridge-internals.md §3.2.1
+ * <p>参见：docs/expr/02-architecture.md §2.7、docs/expr/03-compiler-bridge-internals.md §3.2.1
  *
  * @since 1.0.0
  */
@@ -94,7 +93,7 @@ public class DefaultExprRenderer implements ExprRenderer {
     Map<String, String> stdKeyParams = stdKeyAccumulator.toMap();
 
     log.debug(
-        "Rendered expression: queryFragments={}, stdKeyCount={}, warningCount={}",
+        "已渲染表达式：queryFragments={}, stdKeyCount={}, warningCount={}",
         queryFragments.size(),
         stdKeyParams.size(),
         warnings.size());
@@ -224,10 +223,7 @@ public class DefaultExprRenderer implements ExprRenderer {
         joined = "(" + joined + ")";
       }
       fragments.add(joined);
-      log.debug(
-          "Rendered OR expression with {} children, wrapped={}",
-          orFragments.size(),
-          context != RenderContext.OR);
+      log.debug("已渲染 OR 表达式，有 {} 个子节点，已包装={}", orFragments.size(), context != RenderContext.OR);
     }
   }
 
@@ -263,7 +259,7 @@ public class DefaultExprRenderer implements ExprRenderer {
       } else {
         fragments.addAll(notFragments);
       }
-      log.debug("Rendered NOT expression with {} fragments", notFragments.size());
+      log.debug("已渲染 NOT 表达式，有 {} 个片段", notFragments.size());
     }
   }
 
@@ -276,17 +272,14 @@ public class DefaultExprRenderer implements ExprRenderer {
       trimmed = "(" + trimmed + ")";
     }
 
-    log.debug(
-        "Built NOT composite fragment: childType={}, result=NOT{}",
-        child.getClass().getSimpleName(),
-        trimmed);
+    log.debug("已构建 NOT 复合片段：childType={}, result=NOT{}", child.getClass().getSimpleName(), trimmed);
 
     return "NOT" + trimmed;
   }
 
   private void renderConstNode(Const constant, List<Issue> warnings) {
     if (constant == Const.FALSE) {
-      warnings.add(Issue.warn("W-CONST-FALSE", "Expression is unsatisfiable", Map.of()));
+      warnings.add(Issue.warn("W-CONST-FALSE", "表达式不可满足", Map.of()));
     }
   }
 
@@ -302,7 +295,7 @@ public class DefaultExprRenderer implements ExprRenderer {
 
     AtomContext ctx = AtomContext.create(atom);
 
-    // Pre-select rules for both emit types
+    // 为两种发出类型预选规则
     ProvenanceSnapshot.RenderRule queryRule =
         selectRule(
             snapshot,
@@ -321,7 +314,7 @@ public class DefaultExprRenderer implements ExprRenderer {
             ctx.matchTypeCode(),
             ctx.valueType());
 
-    // Render QUERY fragment if available
+    // 如果可用，渲染 QUERY 片段
     if (queryRule != null && queryRule.template() != null) {
       metrics.renderRuleHit(labels.provenance(), labels.endpoint());
       String fragment = buildQuery(queryRule, ctx);
@@ -336,7 +329,7 @@ public class DefaultExprRenderer implements ExprRenderer {
                   ruleId(queryRule)));
         }
         log.debug(
-            "Rendered QUERY: fieldKey={}, operator={}, negated={}, priority={}",
+            "已渲染 QUERY：fieldKey={}, operator={}, negated={}, priority={}",
             atom.fieldKey(),
             atom.operator().name(),
             negated,
@@ -344,10 +337,10 @@ public class DefaultExprRenderer implements ExprRenderer {
       }
     } else {
       metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
-      // Defer W-RENDER-RULE-MISSING emission until we know PARAMS is also missing
+      // 延迟 W-RENDER-RULE-MISSING 发出，直到我们知道 PARAMS 也缺失
     }
 
-    // Render PARAMS std_keys if available
+    // 渲染 PARAMS std_keys（如果可用）
     if (paramRule != null && !paramRule.params().isEmpty()) {
       metrics.renderRuleHit(labels.provenance(), labels.endpoint());
       applyParams(paramRule, ctx, snapshot, stdKeys, warnings, hits, atom);
@@ -355,12 +348,12 @@ public class DefaultExprRenderer implements ExprRenderer {
       metrics.renderRuleMiss(labels.provenance(), labels.endpoint());
     }
 
-    // If neither QUERY nor PARAMS rule matched, emit warning once
+    // 如果 QUERY 和 PARAMS 规则都不匹配，则发出一次警告
     if (queryRule == null && paramRule == null) {
       warnings.add(
           Issue.warn(
               "W-RENDER-RULE-MISSING",
-              "No render rule found",
+              "未找到渲染规则",
               Map.of(
                   "fieldKey",
                   atom.fieldKey(),
@@ -369,7 +362,7 @@ public class DefaultExprRenderer implements ExprRenderer {
                   "negated",
                   negated)));
       log.warn(
-          "Missing render rule: fieldKey={}, operator={}, negated={}",
+          "缺失渲染规则：fieldKey={}, operator={}, negated={}",
           atom.fieldKey(),
           atom.operator().name(),
           negated);
@@ -404,7 +397,7 @@ public class DefaultExprRenderer implements ExprRenderer {
       List<RenderTrace.Hit> hits,
       Atom atom) {
 
-    // Execute fn_code if present
+    // 执行函数代码（如果存在）
     Map<String, String> placeholders = new LinkedHashMap<>(ctx.basePlaceholders().delegate);
     if (rule.functionCode() != null && !rule.functionCode().isBlank()) {
       if (functionRegistry != null) {
@@ -412,34 +405,32 @@ public class DefaultExprRenderer implements ExprRenderer {
         if (functionOpt.isPresent()) {
           RenderFunction function = functionOpt.get();
           String result = function.apply(placeholders, snapshot);
-          // Function may modify placeholders or return a derived value
-          // Store result with a standard placeholder name if function returns non-null
+          // 函数可能修改占位符或返回派生值
+          // 如果函数返回非空值，则使用标准占位符名称存储结果
           if (result != null && !result.isBlank()) {
             placeholders.put("{{" + rule.functionCode().toLowerCase() + "}}", result);
-            log.debug("Executed fn_code={}, result={}", rule.functionCode(), result);
+            log.debug("已执行 fn_code={}，result={}", rule.functionCode(), result);
           }
         } else {
           warnings.add(
               Issue.warn(
-                  "W-FN-OR-TRANSFORM-NOTFOUND",
-                  "Function not found",
-                  Map.of("fnCode", rule.functionCode())));
-          log.warn("Function not found: fnCode={}", rule.functionCode());
+                  "W-FN-OR-TRANSFORM-NOTFOUND", "未找到函数", Map.of("fnCode", rule.functionCode())));
+          log.warn("函数未找到：fnCode={}", rule.functionCode());
         }
       } else {
-        log.warn("FunctionRegistry not available, cannot execute fnCode={}", rule.functionCode());
+        log.warn("FunctionRegistry 不可用，无法执行 fnCode={}", rule.functionCode());
       }
     }
 
     PlaceholderMap enrichedPlaceholders = new PlaceholderMap(placeholders);
 
-    // Emit std_keys (NOT provider parameter names)
+    // 发出 std_keys（不发出提供者参数名称）
     for (Map.Entry<String, String> entry : rule.params().entrySet()) {
       String stdKey = entry.getKey();
       String template = entry.getValue();
       String value = applyTemplate(template, enrichedPlaceholders);
 
-      // Emit std_key directly (no provider naming here!)
+      // 直接发出 std_key（此处无提供者命名！）
       boolean multi = isMulti(snapshot, atom.fieldKey(), stdKey);
       stdKeys.add(
           stdKey,
@@ -460,7 +451,7 @@ public class DefaultExprRenderer implements ExprRenderer {
       }
 
       log.debug(
-          "Emitted std_key: key={}, valueLength={}, priority={}",
+          "已发出 std_key: key={}, valueLength={}, priority={}",
           stdKey,
           value.length(),
           rule.priority());
@@ -474,7 +465,7 @@ public class DefaultExprRenderer implements ExprRenderer {
       boolean negated,
       String matchType,
       ProvenanceSnapshot.ValueType valueType) {
-    // Common predicate except match type, which we handle in two passes to prefer exact match
+    // 通用谓词，除了匹配类型，我们在两遍中处理以优先精确匹配
     Stream<ProvenanceSnapshot.RenderRule> base =
         snapshot.renderRules().stream()
             .filter(rule -> rule.emitType() == emit)
@@ -486,7 +477,7 @@ public class DefaultExprRenderer implements ExprRenderer {
     Comparator<ProvenanceSnapshot.RenderRule> byPriority =
         Comparator.comparingInt(ProvenanceSnapshot.RenderRule::priority);
 
-    // Pass 1: exact matchType if provided, or ANY when matchType is null
+    // 第一遍：精确匹配类型（如果提供），或当 matchType 为空时使用 ANY
     Optional<ProvenanceSnapshot.RenderRule> exact =
         base.filter(
                 rule -> {
@@ -497,7 +488,7 @@ public class DefaultExprRenderer implements ExprRenderer {
             .max(byPriority);
     if (exact.isPresent()) return exact.get();
 
-    // Pass 2: fallback for text ANY -> use PHRASE rule if available
+    // 第二遍：文本 ANY 的回退 -> 如果可用，使用 PHRASE 规则
     if (matchType != null && "ANY".equalsIgnoreCase(matchType)) {
       Optional<ProvenanceSnapshot.RenderRule> phrase =
           snapshot.renderRules().stream()
@@ -511,7 +502,7 @@ public class DefaultExprRenderer implements ExprRenderer {
       if (phrase.isPresent()) return phrase.get();
     }
 
-    // No suitable rule found
+    // 未找到合适的规则
     return null;
   }
 
@@ -524,20 +515,20 @@ public class DefaultExprRenderer implements ExprRenderer {
   }
 
   private boolean matchesMatchType(ProvenanceSnapshot.RenderRule rule, String matchType) {
-    // If the rule does not constrain match type, it's a match.
+    // 如果规则不约束匹配类型，则是匹配的
     if (rule.matchTypeCode() == null || rule.matchTypeCode().isBlank()) {
       return true;
     }
-    // If the expression omitted match type, treat as ANY and allow rules that declare ANY.
+    // 如果表达式省略了匹配类型，则将其视为 ANY 并允许声明 ANY 的规则
     if (matchType == null) {
       return "ANY".equalsIgnoreCase(rule.matchTypeCode());
     }
-    // Exact match first.
+    // 精确匹配优先
     if (rule.matchTypeCode().equalsIgnoreCase(matchType)) {
       return true;
     }
-    // Fallback: when input is ANY, allow PHRASE rule as a safe default (quoted text).
-    // This aligns with golden expectations where ONLY PHRASE rule exists.
+    // 回退：当输入是 ANY 时，允许 PHRASE 规则作为安全默认值（带引号的文本）
+    // 这符合黄金期望，其中只存在 PHRASE 规则
     return "ANY".equalsIgnoreCase(matchType) && "PHRASE".equalsIgnoreCase(rule.matchTypeCode());
   }
 
@@ -591,7 +582,7 @@ public class DefaultExprRenderer implements ExprRenderer {
     }
   }
 
-  /** Render context for tracking expression nesting to determine parentheses requirements. */
+  /** 用于跟踪表达式嵌套以确定括号要求的渲染上下文。 */
   private enum RenderContext {
     AND,
     OR,
@@ -599,12 +590,12 @@ public class DefaultExprRenderer implements ExprRenderer {
   }
 
   /**
-   * Accumulator for std_key emissions with SINGLE/MULTI merge policy.
+   * 用于 std_key 发出并具有 SINGLE/MULTI 合并策略的累加器。
    *
-   * <p>SINGLE: deterministic last-write-wins by (priority DESC, fieldKey ASC, opCode ASC, ruleId
-   * ASC) MULTI: accumulates all values with internal delimiter
+   * <p>SINGLE: 根据 (priority DESC, fieldKey ASC, opCode ASC, ruleId ASC) 确定性的最后写入获胜 MULTI:
+   * 使用内部分隔符累积所有值
    *
-   * <p>See: docs/expr/03-compiler-bridge-internals.md §3.8
+   * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.8
    */
   private static class StdKeyAccumulator {
     private final Map<String, StdKeyEntry> entries = new LinkedHashMap<>();
@@ -683,24 +674,21 @@ public class DefaultExprRenderer implements ExprRenderer {
           }
           values.add(candidate);
           values.sort(StdKeyAccumulator::compareForOrdering);
-          log.debug("MULTI std_key accumulation: stdKey={}, valueCount={}", stdKey, values.size());
+          log.debug("MULTI std_key 累积: stdKey={}, valueCount={}", stdKey, values.size());
           return;
         }
 
         if (winner == null || shouldReplace(candidate, winner)) {
           if (winner != null) {
             log.debug(
-                "SINGLE std_key collision: stdKey={}, replaced (new priority={} > old priority={})",
+                "SINGLE std_key 冲突: stdKey={}, 已替换 (new priority={} > old priority={})",
                 stdKey,
                 candidate.priority(),
                 winner.priority());
           }
           winner = candidate;
         } else {
-          log.debug(
-              "SINGLE std_key collision: stdKey={}, kept existing (priority={})",
-              stdKey,
-              winner.priority());
+          log.debug("SINGLE std_key 冲突: stdKey={}, 保留现有 (priority={})", stdKey, winner.priority());
         }
       }
 

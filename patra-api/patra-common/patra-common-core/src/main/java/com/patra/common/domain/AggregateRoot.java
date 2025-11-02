@@ -10,38 +10,37 @@ import java.util.Objects;
 import lombok.Getter;
 
 /**
- * Abstract base class for aggregate roots.
+ * 聚合根的抽象基类。
  *
- * <p>Constraints and conventions:
+ * <p>约束和约定:
  *
  * <ul>
- *   <li>Depends solely on the JDK; the domain layer stays framework-free.
- *   <li>State changes must occur through aggregate behaviors to preserve invariants.
- *   <li>Domain events remain attached to the aggregate and are pulled by the application layer for
- *       publication (e.g., outbox or message bus).
+ *   <li>仅依赖 JDK;领域层保持无框架依赖。
+ *   <li>状态变更必须通过聚合行为发生以保持不变量。
+ *   <li>领域事件附加到聚合上,由应用层拉取后发布(例如,通过 outbox 或消息总线)。
  * </ul>
  *
- * @param <ID> aggregate identifier type (value object or wrapped primitive)
+ * @param <ID> 聚合标识符类型(值对象或封装的原始类型)
  */
 public abstract class AggregateRoot<ID> implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
   /**
-   * Aggregate identifier assigned by the repository during initial persistence.
+   * 由仓储在首次持久化时分配的聚合标识符。
    *
-   * <p>Getter returns {@code null} while the aggregate has not been persisted.
+   * <p>在聚合尚未持久化时,Getter 返回 {@code null}。
    */
   @Getter private ID id;
 
   /**
-   * Optional optimistic-lock version maintained by the infrastructure layer.
+   * 由基础设施层维护的可选乐观锁版本。
    *
-   * <p>Exposed primarily for read-only checks within the domain.
+   * <p>主要用于领域内的只读检查。
    */
   @Getter private long version;
 
-  /** Pending domain events awaiting collection by the application layer. */
+  /** 待应用层收集的挂起领域事件。 */
   private final transient List<DomainEvent> domainEvents = new ArrayList<>();
 
   protected AggregateRoot() {}
@@ -50,37 +49,31 @@ public abstract class AggregateRoot<ID> implements Serializable {
     this.id = id;
   }
 
-  /**
-   * Assigns the identifier when rebuilding or persisting for the first time. Intended for
-   * repository use only.
-   */
+  /** 在重建或首次持久化时分配标识符。仅供仓储使用。 */
   public void assignId(ID id) {
-    this.id = Objects.requireNonNull(id, "aggregate id must not be null");
+    this.id = Objects.requireNonNull(id, "聚合 ID 不能为 null");
   }
 
-  /** Sets the optimistic-lock version. Infrastructure should call this when persisting updates. */
+  /** 设置乐观锁版本。基础设施层应在持久化更新时调用此方法。 */
   public void assignVersion(long version) {
     if (version < 0) {
-      throw new IllegalArgumentException("version must be >= 0");
+      throw new IllegalArgumentException("版本必须 >= 0");
     }
     this.version = version;
   }
 
-  /** Indicates whether the aggregate has not yet been persisted. */
+  /** 指示聚合是否尚未持久化。 */
   public boolean isTransient() {
     return this.id == null;
   }
 
-  /** Registers a domain event produced by aggregate behavior after state changes. */
+  /** 注册由聚合行为在状态变更后产生的领域事件。 */
   protected void addDomainEvent(DomainEvent event) {
     if (event == null) return;
     domainEvents.add(event);
   }
 
-  /**
-   * Drains and clears staged domain events. The application layer should call this inside the
-   * transaction boundary before publishing to the outbox.
-   */
+  /** 提取并清空暂存的领域事件。应用层应在事务边界内调用此方法,然后再发布到 outbox。 */
   public List<DomainEvent> pullDomainEvents() {
     if (domainEvents.isEmpty()) {
       return Collections.emptyList();
@@ -90,23 +83,19 @@ public abstract class AggregateRoot<ID> implements Serializable {
     return snapshot;
   }
 
-  /** Returns an immutable view of staged domain events (for debugging or tests). */
+  /** 返回暂存领域事件的不可变视图(用于调试或测试)。 */
   public List<DomainEvent> peekDomainEvents() {
     return Collections.unmodifiableList(domainEvents);
   }
 
-  /**
-   * Hook for domain invariant checks. Override to validate state after critical transitions and
-   * throw {@link IllegalStateException} when invariants are violated.
-   */
+  /** 领域不变量检查的钩子方法。覆盖此方法以在关键转换后验证状态, 并在不变量被违反时抛出 {@link IllegalStateException}。 */
   protected void assertInvariants() {
-    // Default no-op; subclasses should enforce invariants such as state-machine
-    // validity or value-object consistency.
+    // 默认为空操作;子类应强制执行不变量,如状态机有效性或值对象一致性。
   }
 
-  /* ========== Optional helper to assign default timestamps to events ========== */
+  /* ========== 为事件分配默认时间戳的可选辅助方法 ========== */
 
-  /** Supplies the current time when an event timestamp is missing. */
+  /** 当事件时间戳缺失时提供当前时间。 */
   protected static Instant nowIfNull(Instant t) {
     return (t == null) ? Instant.now() : t;
   }

@@ -6,13 +6,11 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 
-/**
- * {@link TraceProvider} backed by MDC that extracts trace identifiers from configured header names.
- */
+/** 基于 MDC 的 {@link TraceProvider}，从配置的头部名称中提取追踪标识符。 */
 @Slf4j
 public class HeaderBasedTraceProvider implements TraceProvider {
 
-  /** Trace configuration properties. */
+  /** 追踪配置属性。 */
   private final TracingProperties tracingProperties;
 
   public HeaderBasedTraceProvider(TracingProperties tracingProperties) {
@@ -24,14 +22,12 @@ public class HeaderBasedTraceProvider implements TraceProvider {
     for (String headerName : tracingProperties.getHeaderNames()) {
       String traceId = MDC.get(headerName);
       if (traceId != null && !traceId.trim().isEmpty()) {
-        log.debug("Found trace ID '{}' from MDC key '{}'", traceId, headerName);
+        log.debug("从 MDC 键 '{}' 找到追踪 ID '{}'", headerName, traceId);
         return Optional.of(traceId.trim());
       }
     }
 
-    log.debug(
-        "No trace ID found in MDC for any configured header names: {}",
-        tracingProperties.getHeaderNames());
+    log.debug("在 MDC 中未找到任何已配置头部名称的追踪 ID：{}", tracingProperties.getHeaderNames());
     return Optional.empty();
   }
 }

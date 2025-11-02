@@ -5,37 +5,37 @@ import java.util.List;
 import lombok.Data;
 
 /**
- * Generic pagination payload shared by REST endpoints.
+ * REST 接口共享的通用分页载荷。
  *
- * @param <T> element type contained in the page
+ * @param <T> 页面中包含的元素类型
  */
 @Data
 public class PageResult<T> {
 
-  /** Total number of matching records across all pages. */
+  /** 所有页面中匹配的记录总数。 */
   private long total;
 
-  /** Index of the current page (1-based to align with API contracts). */
+  /** 当前页面的索引（1-based，与 API 契约对齐）。 */
   private long current;
 
-  /** Requested page size. */
+  /** 请求的页面大小。 */
   private long size;
 
-  /** Total number of pages derived from {@code total} and {@code size}. */
+  /** 从 {@code total} 和 {@code size} 派生的页面总数。 */
   private long pages;
 
-  /** Records contained in the current page; empty when no data is available. */
+  /** 当前页面中包含的记录；无数据时为空。 */
   private List<T> records = Collections.emptyList();
 
   /**
-   * Build a {@link PageResult} instance with the supplied metadata and records.
+   * 用提供的元数据和记录构建 {@link PageResult} 实例。
    *
-   * @param total total number of records
-   * @param current current page index (1-based)
-   * @param size requested page size
-   * @param records page records (nullable)
-   * @param <T> element type
-   * @return populated {@link PageResult}
+   * @param total 记录总数
+   * @param current 当前页面索引（1-based）
+   * @param size 请求的页面大小
+   * @param records 页面记录（可为 null）
+   * @param <T> 元素类型
+   * @return 填充的 {@link PageResult}
    */
   public static <T> PageResult<T> of(long total, long current, long size, List<T> records) {
     PageResult<T> r = new PageResult<>();

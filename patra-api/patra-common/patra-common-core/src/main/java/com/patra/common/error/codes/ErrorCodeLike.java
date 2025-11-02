@@ -1,10 +1,9 @@
 package com.patra.common.error.codes;
 
 /**
- * Contract for structured business error codes leveraged by the unified error-handling system.
+ * 统一错误处理系统使用的结构化业务错误码契约。
  *
- * <p>Implementations must expose a globally unique identifier to power error resolution, mapping,
- * and client-side handling.
+ * <p>实现必须提供全局唯一标识符,以支持错误解析、映射和客户端处理。
  *
  * @author linqibin
  * @since 0.1.0
@@ -12,17 +11,16 @@ package com.patra.common.error.codes;
 public interface ErrorCodeLike {
 
   /**
-   * Returns the canonical error-code string.
+   * 返回规范的错误码字符串。
    *
-   * <p>Follow the shared naming pattern (for example, {@code REG-0404} or {@code ING-1201}) so that
-   * responses remain readable for humans and easy to parse programmatically.
+   * <p>遵循共享命名模式(例如,{@code REG-0404} 或 {@code ING-1201}), 使响应对人类可读且易于编程解析。
    */
   String code();
 
   /**
-   * Returns the HTTP status (100–599) associated with this code.
+   * 返回与此代码关联的 HTTP 状态码(100–599)。
    *
-   * <p>Used when rendering HTTP responses; other transports may ignore or override this mapping.
+   * <p>用于呈现 HTTP 响应;其他传输协议可能忽略或覆盖此映射。
    */
   int httpStatus();
 }

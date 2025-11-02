@@ -1,50 +1,50 @@
-# Hooks (Papertrace Edition)
+# Hooks（Papertrace 版本）
 
-Claude Code hooks that enable skill auto-activation, file tracking, and Maven compilation validation for Java/Spring Boot projects.
-
----
-
-## What Are Hooks?
-
-Hooks are scripts that run at specific points in Claude's workflow:
-- **UserPromptSubmit**: When user submits a prompt
-- **PreToolUse**: Before a tool executes
-- **PostToolUse**: After a tool completes
-- **Stop**: When user requests to stop
-
-**Key insight:** Hooks can modify prompts, block actions, and track state - enabling features Claude can't do alone.
+用于实现技能自动激活、文件跟踪和 Maven 编译验证的 Claude Code hooks，适用于 Java/Spring Boot 项目。
 
 ---
 
-## Essential Hooks (Start Here)
+## 什么是 Hooks？
+
+Hooks 是在 Claude 工作流程的特定点运行的脚本：
+- **UserPromptSubmit**: 当用户提交提示时
+- **PreToolUse**: 工具执行前
+- **PostToolUse**: 工具完成后
+- **Stop**: 当用户请求停止时
+
+**关键洞察**：Hooks 可以修改提示、阻止操作和跟踪状态 - 实现 Claude 单独无法做到的功能。
+
+---
+
+## 必要的 Hooks（从这里开始）
 
 ### skill-activation-prompt (UserPromptSubmit)
 
-**Purpose:** Automatically suggests relevant skills based on user prompts and file context
+**目的**：根据用户提示和文件上下文自动建议相关的技能
 
-**How it works:**
-1. Reads `skill-rules.json`
-2. Matches user prompt against trigger patterns
-3. Checks which files user is working with
-4. Injects skill suggestions into Claude's context
+**工作原理**：
+1. 读取 `skill-rules.json`
+2. 将用户提示与触发器模式匹配
+3. 检查用户正在使用哪些文件
+4. 将技能建议注入到 Claude 的上下文中
 
-**Why it's essential:** This is THE hook that makes skills auto-activate.
+**为什么这很重要**：这是使技能自动激活的关键 hook。
 
-**Integration:**
+**集成**：
 ```bash
-# Copy both files
+# 复制两个文件
 cp skill-activation-prompt.sh your-project/.claude/hooks/
 cp skill-activation-prompt.ts your-project/.claude/hooks/
 
-# Make executable
+# 设置为可执行
 chmod +x your-project/.claude/hooks/skill-activation-prompt.sh
 
-# Install dependencies
+# 安装依赖
 cd your-project/.claude/hooks
 npm install
 ```
 
-**Add to settings.json:**
+**添加到 settings.json**：
 ```json
 {
   "hooks": {
@@ -62,32 +62,32 @@ npm install
 }
 ```
 
-**Customization:** ✅ None needed - reads skill-rules.json automatically
+**自定义**：✅ 无需自定义 - 自动读取 skill-rules.json
 
 ---
 
 ### post-tool-use-tracker (PostToolUse)
 
-**Purpose:** Tracks file changes to maintain context across sessions
+**目的**：跟踪文件更改以在会话间维护上下文
 
-**How it works:**
-1. Monitors Edit/Write/MultiEdit tool calls
-2. Records which files were modified
-3. Creates cache for context management
-4. Auto-detects project structure (services, modules, packages, etc.)
+**工作原理**：
+1. 监控 Edit/Write/MultiEdit 工具调用
+2. 记录哪些文件被修改
+3. 为上下文管理创建缓存
+4. 自动检测项目结构（服务、模块、包等）
 
-**Why it's essential:** Helps Claude understand what parts of your codebase are active.
+**为什么这很重要**：帮助 Claude 理解代码库的哪些部分处于活跃状态。
 
-**Integration:**
+**集成**：
 ```bash
-# Copy file
+# 复制文件
 cp post-tool-use-tracker.sh your-project/.claude/hooks/
 
-# Make executable
+# 设置为可执行
 chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
 ```
 
-**Add to settings.json:**
+**添加到 settings.json**：
 ```json
 {
   "hooks": {
@@ -106,36 +106,36 @@ chmod +x your-project/.claude/hooks/post-tool-use-tracker.sh
 }
 ```
 
-**Customization:** ✅ None needed - auto-detects structure
+**自定义**：✅ 无需自定义 - 自动检测结构
 
 ---
 
-## Java-Specific Hooks (Recommended for Papertrace)
+## Java 特定的 Hooks（推荐用于 Papertrace）
 
 ### maven-compile-check (Stop)
 
-**Purpose:** Quick Maven compilation check when user stops Claude
+**目的**：当用户停止 Claude 时进行快速 Maven 编译检查
 
-**How it works:**
-1. Runs `mvn -T 1C compile -q -DskipTests`
-2. Detects compilation errors
-3. Displays error summary
-4. Creates marker file if compilation fails
+**工作原理**：
+1. 运行 `mvn -T 1C compile -q -DskipTests`
+2. 检测编译错误
+3. 显示错误摘要
+4. 如果编译失败，创建标记文件
 
-**Why it's useful:** Catch compilation errors early before committing code
+**为什么这很有用**：在提交代码之前及早发现编译错误
 
-**⚠️ Note:** This hook runs `mvn compile` which may take a few seconds for large projects.
+**⚠️ 注意**：此 hook 运行 `mvn compile`，对于大型项目可能需要几秒钟。
 
-**Integration:**
+**集成**：
 ```bash
-# Copy file
+# 复制文件
 cp maven-compile-check.sh your-project/.claude/hooks/
 
-# Make executable
+# 设置为可执行
 chmod +x your-project/.claude/hooks/maven-compile-check.sh
 ```
 
-**Add to settings.json:**
+**添加到 settings.json**：
 ```json
 {
   "hooks": {
@@ -153,37 +153,37 @@ chmod +x your-project/.claude/hooks/maven-compile-check.sh
 }
 ```
 
-**Requirements:**
-- Maven (`mvn`) must be in PATH
-- `pom.xml` must exist in project root
+**要求**：
+- Maven (`mvn`) 必须在 PATH 中
+- `pom.xml` 必须存在于项目根目录
 
-**Customization:** ✅ None needed - works with any Maven project
+**自定义**：✅ 无需自定义 - 适用于任何 Maven 项目
 
 ---
 
 ### trigger-build-resolver-java (Stop)
 
-**Purpose:** Suggests using auto-error-resolver agent when Maven compilation fails
+**目的**：当 Maven 编译失败时建议使用自动错误解析器代理
 
-**How it works:**
-1. Checks for `.last-compile-failed` marker file (created by maven-compile-check.sh)
-2. Displays friendly prompt suggesting auto-error-resolver agent
-3. Cleans up marker file
+**工作原理**：
+1. 检查 `.last-compile-failed` 标记文件（由 maven-compile-check.sh 创建）
+2. 显示友好的提示，建议使用自动错误解析器代理
+3. 清理标记文件
 
-**Why it's useful:** Automatically prompts user to fix compilation errors with AI assistance
+**为什么这很有用**：在 AI 协助下自动提示用户修复编译错误
 
-**Dependencies:** Requires `maven-compile-check.sh` to run first
+**依赖关系**：需要 `maven-compile-check.sh` 首先运行
 
-**Integration:**
+**集成**：
 ```bash
-# Copy file
+# 复制文件
 cp trigger-build-resolver-java.sh your-project/.claude/hooks/
 
-# Make executable
+# 设置为可执行
 chmod +x your-project/.claude/hooks/trigger-build-resolver-java.sh
 ```
 
-**Add to settings.json (after maven-compile-check):**
+**添加到 settings.json（在 maven-compile-check 之后）**：
 ```json
 {
   "hooks": {
@@ -205,13 +205,13 @@ chmod +x your-project/.claude/hooks/trigger-build-resolver-java.sh
 }
 ```
 
-**Customization:** ✅ None needed
+**自定义**：✅ 无需自定义
 
 ---
 
-## Complete Papertrace Configuration
+## 完整的 Papertrace 配置
 
-**Recommended settings.json for Papertrace projects:**
+**推荐的 Papertrace 项目 settings.json**：
 
 ```json
 {
@@ -257,81 +257,81 @@ chmod +x your-project/.claude/hooks/trigger-build-resolver-java.sh
 
 ---
 
-## Hook Execution Order
+## Hook 执行顺序
 
-### On User Prompt Submit:
-1. `skill-activation-prompt.sh` → Analyzes prompt and injects skill suggestions
+### 用户提交提示时：
+1. `skill-activation-prompt.sh` → 分析提示并注入技能建议
 
-### After File Edit:
-1. `post-tool-use-tracker.sh` → Records file changes
+### 文件编辑后：
+1. `post-tool-use-tracker.sh` → 记录文件更改
 
-### On Stop:
-1. `maven-compile-check.sh` → Runs Maven compilation
-2. `trigger-build-resolver-java.sh` → Suggests agent if compilation failed
+### 停止时：
+1. `maven-compile-check.sh` → 运行 Maven 编译
+2. `trigger-build-resolver-java.sh` → 如果编译失败，建议使用代理
 
 ---
 
-## Troubleshooting
+## 故障排查
 
-### Hook Not Executing
+### Hook 未执行
 
-**Check permissions:**
+**检查权限**：
 ```bash
 ls -la .claude/hooks/*.sh | grep rwx
 ```
 
-All `.sh` files should have `x` (executable) permission.
+所有 `.sh` 文件都应该有 `x`（可执行）权限。
 
-**Fix:**
+**修复**：
 ```bash
 chmod +x .claude/hooks/*.sh
 ```
 
 ---
 
-### skill-activation-prompt Not Working
+### skill-activation-prompt 无法工作
 
-**Check dependencies:**
+**检查依赖**：
 ```bash
 cd .claude/hooks
 npm install
 ```
 
-**Verify skill-rules.json exists:**
+**验证 skill-rules.json 存在**：
 ```bash
 ls -la .claude/skills/skill-rules.json
 ```
 
 ---
 
-### maven-compile-check Too Slow
+### maven-compile-check 过慢
 
-**Option 1: Disable multi-threading**
-Edit `maven-compile-check.sh` line 36:
+**选项 1：禁用多线程**
+编辑 `maven-compile-check.sh` 第 36 行：
 ```bash
-# Change from:
+# 从以下改为：
 mvn -T 1C compile -q -DskipTests
 
-# To:
+# 改为：
 mvn compile -q -DskipTests
 ```
 
-**Option 2: Skip this hook**
-Remove from `settings.json` Stop hooks section.
+**选项 2：跳过此 hook**
+从 `settings.json` 的 Stop hooks 部分移除。
 
 ---
 
-### Maven Not Found
+### Maven 未找到
 
-**Error:** `mvn: command not found`
+**错误**：`mvn: command not found`
 
-**Solution:** Ensure Maven is installed and in PATH:
+**解决方案**：确保 Maven 已安装并在 PATH 中：
 ```bash
 which mvn
 mvn --version
 ```
 
-Install Maven if needed:
+如果需要，安装 Maven：
 ```bash
 # macOS
 brew install maven
@@ -342,17 +342,17 @@ sudo apt-get install maven
 
 ---
 
-## For Claude Code
+## 对于 Claude Code
 
-**When setting up hooks for a user:**
+**为用户设置 hooks 时**：
 
-1. **Read [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)** first
-2. **Always start with the two essential hooks** (skill-activation-prompt + post-tool-use-tracker)
-3. **Java projects: Add Maven hooks** for compilation checking
-4. **Verify after setup:**
+1. **首先阅读 [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)**
+2. **始终从两个必要的 hooks 开始**（skill-activation-prompt + post-tool-use-tracker）
+3. **Java 项目：添加 Maven hooks** 用于编译检查
+4. **设置后验证**：
    ```bash
    ls -la .claude/hooks/*.sh | grep rwx
    cd .claude/hooks && npm install
    ```
 
-**Questions?** See [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)
+**有问题？** 查看 [CLAUDE_INTEGRATION_GUIDE.md](../../CLAUDE_INTEGRATION_GUIDE.md)

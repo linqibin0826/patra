@@ -113,9 +113,9 @@ public enum TaskStatus {
 
 ### 1. Aggregate Factory Methods
 
-**Problem**: Aggregates have complex construction logic (validation, defaults).
+**问题**: Aggregates have complex construction logic (validation, defaults).
 
-**Solution**: Private constructor + static factory methods.
+**解决方案**: Private constructor + static factory methods.
 
 ```java
 public class PlanAggregate extends AggregateRoot<Long> {
@@ -140,9 +140,9 @@ public class PlanAggregate extends AggregateRoot<Long> {
 
 ### 2. Sealed WindowSpec
 
-**Problem**: Window strategies are fixed and known (not extensible at runtime).
+**问题**: Window strategies are fixed and known (not extensible at runtime).
 
-**Solution**: Sealed interface with record implementations.
+**解决方案**: Sealed interface with record implementations.
 
 ```java
 public sealed interface WindowSpec {
@@ -167,9 +167,9 @@ if (windowSpec instanceof WindowSpec.Time timeSpec) {
 
 ### 3. Domain Events
 
-**Problem**: Aggregates need to communicate state changes without tight coupling.
+**问题**: Aggregates need to communicate state changes without tight coupling.
 
-**Solution**: Domain events raised via `addDomainEvent()`, pulled by app layer.
+**解决方案**: Domain events raised via `addDomainEvent()`, pulled by app layer.
 
 ```java
 public class TaskAggregate extends AggregateRoot<Long> {
@@ -190,9 +190,9 @@ eventPublisher.publish(events);
 
 ### 4. Snapshot Pattern
 
-**Problem**: Configuration from `patra-registry` may change during task execution.
+**问题**: Configuration from `patra-registry` may change during task execution.
 
-**Solution**: Capture config snapshot at plan creation time.
+**解决方案**: Capture config snapshot at plan creation time.
 
 ```java
 public class PlanAggregate {

@@ -1,105 +1,105 @@
-# Docker Compose Configuration
+# Docker Compose 配置
 
-Modular Docker Compose setup for Papertrace development environment, organized by service lifecycle and priority.
+Papertrace 开发环境的模块化 Docker Compose 设置,按服务生命周期和优先级组织。
 
-## Structure
+## 结构
 
 ```
 docker/
-├── docker-compose.dev.yaml          # Main entry point (all services)
-├── docker-compose.core.yaml         # Essential runtime services
-├── docker-compose.storage.yaml      # Object storage services (MinIO)
-├── docker-compose.observability.yaml # APM and monitoring stack
-├── docker-compose.jobs.yaml         # Job scheduling and message queue
-└── README.md                        # This file
+├── docker-compose.dev.yaml          # 主入口点 (所有服务)
+├── docker-compose.core.yaml         # 必需的运行时服务
+├── docker-compose.storage.yaml      # 对象存储服务 (MinIO)
+├── docker-compose.observability.yaml # APM 和监控栈
+├── docker-compose.jobs.yaml         # 任务调度和消息队列
+└── README.md                        # 本文件
 ```
 
 ---
 
-## Volume Storage Location
+## 卷存储位置
 
-All service data is stored in `~/.papertrace/docker/` directory in your home folder:
+所有服务数据存储在您主目录的 `~/.papertrace/docker/` 目录中:
 
 ```
 ~/.papertrace/docker/
 ├── mysql/
-│   ├── data/           # MySQL database files
-│   ├── conf.d/         # MySQL configuration files
-│   └── init/           # Database initialization scripts
+│   ├── data/           # MySQL 数据库文件
+│   ├── conf.d/         # MySQL 配置文件
+│   └── init/           # 数据库初始化脚本
 ├── redis/
-│   ├── data/           # Redis persistent data
-│   └── redis.conf      # Redis configuration
+│   ├── data/           # Redis 持久化数据
+│   └── redis.conf      # Redis 配置
 ├── nacos/
-│   ├── data/           # Nacos configuration data
-│   └── logs/           # Nacos logs
+│   ├── data/           # Nacos 配置数据
+│   └── logs/           # Nacos 日志
 ├── minio/
-│   └── data/           # MinIO object storage data
+│   └── data/           # MinIO 对象存储数据
 ├── es/
-│   └── data/           # Elasticsearch indices and data
+│   └── data/           # Elasticsearch 索引和数据
 ├── xxl-job-admin/
-│   └── logs/           # XXL-Job logs
+│   └── logs/           # XXL-Job 日志
 └── rocketmq/
     ├── namesrv/
-    │   ├── logs/       # NameServer logs
-    │   └── store/      # NameServer data
+    │   ├── logs/       # NameServer 日志
+    │   └── store/      # NameServer 数据
     └── broker/
-        ├── logs/       # Broker logs
-        ├── store/      # Message store
-        └── conf/       # Broker configuration
+        ├── logs/       # Broker 日志
+        ├── store/      # 消息存储
+        └── conf/       # Broker 配置
 ```
 
-**Note**: You need to create the required directories and configuration files before first startup. See the "First-Time Setup" section below.
+**注意**: 首次启动前需要创建所需的目录和配置文件。参见下面的"首次设置"部分。
 
 ---
 
-## Service Organization
+## 服务组织
 
-### Core Services (`docker-compose.core.yaml`)
-Essential infrastructure required for application runtime:
+### 核心服务 (`docker-compose.core.yaml`)
+应用运行时所需的基础设施:
 
-- **MySQL** (port 13306): Primary database
-- **Redis** (port 16379): Cache and session store
-- **Nacos** (ports 4000, 8848, 9848, 9849): Service discovery and configuration center
+- **MySQL** (端口 13306): 主数据库
+- **Redis** (端口 16379): 缓存和会话存储
+- **Nacos** (端口 4000, 8848, 9848, 9849): 服务发现和配置中心
 
-**When to use**: Always start these services first. The application cannot run without them.
+**何时使用**: 始终首先启动这些服务。应用程序没有它们无法运行。
 
-### Storage Services (`docker-compose.storage.yaml`)
-Object storage infrastructure for file uploads and document management:
+### 存储服务 (`docker-compose.storage.yaml`)
+文件上传和文档管理的对象存储基础设施:
 
-- **MinIO** (ports 19000, 19001): S3-compatible object storage with web console
+- **MinIO** (端口 19000, 19001): S3 兼容的对象存储,带 Web 控制台
 
-**When to use**: Required when using file upload features. Includes automatic bucket creation (`dev-ingest`) with private access policy.
+**何时使用**: 使用文件上传功能时需要。包含自动创建存储桶 (`dev-ingest`),具有私有访问策略。
 
-### Observability Services (`docker-compose.observability.yaml`)
-Optional monitoring and APM stack for distributed tracing:
+### 可观测性服务 (`docker-compose.observability.yaml`)
+用于分布式追踪的可选监控和 APM 栈:
 
-- **Elasticsearch** (port 9200): Storage backend for traces
-- **SkyWalking OAP** (ports 11800, 12800): APM server
-- **SkyWalking UI** (port 8088): Web dashboard
+- **Elasticsearch** (端口 9200): 追踪数据的存储后端
+- **SkyWalking OAP** (端口 11800, 12800): APM 服务器
+- **SkyWalking UI** (端口 8088): Web 仪表板
 
-**When to use**: Enable when debugging distributed traces, performance issues, or during integration testing. Can be disabled to save resources (~2GB RAM).
+**何时使用**: 在调试分布式追踪、性能问题或集成测试时启用。可以禁用以节省资源 (~2GB RAM)。
 
-### Job Services (`docker-compose.jobs.yaml`)
-Async workload services for batch processing and event-driven features:
+### 任务服务 (`docker-compose.jobs.yaml`)
+用于批处理和事件驱动功能的异步工作负载服务:
 
-- **XXL-Job Admin** (port 7070): Distributed job scheduling platform
-- **RocketMQ NameServer** (port 9876): Message queue registry
-- **RocketMQ Broker** (ports 10909-10912, 7071, 8081): Message broker with proxy
-- **RocketMQ Dashboard** (port 4002): Web console
+- **XXL-Job Admin** (端口 7070): 分布式任务调度平台
+- **RocketMQ NameServer** (端口 9876): 消息队列注册中心
+- **RocketMQ Broker** (端口 10909-10912, 7071, 8081): 带代理的消息代理
+- **RocketMQ Dashboard** (端口 4002): Web 控制台
 
-**When to use**: Start when working on scheduled tasks, batch jobs, or event-driven features. Not needed for synchronous API development.
+**何时使用**: 处理定时任务、批处理作业或事件驱动功能时启动。同步 API 开发不需要。
 
 ---
 
-## First-Time Setup
+## 首次设置
 
-Before starting services for the first time, create the required directory structure and configuration files:
+首次启动服务前,创建所需的目录结构和配置文件:
 
 ```bash
-# Create directory structure
+# 创建目录结构
 mkdir -p ~/.papertrace/docker/{mysql/{data,conf.d,init},redis/data,nacos/{data,logs},minio/data,es/data,xxl-job-admin/logs,rocketmq/{namesrv/{logs,store},broker/{logs,store,conf}}}
 
-# Create Redis configuration (minimal example)
+# 创建 Redis 配置 (最小示例)
 cat > ~/.papertrace/docker/redis/redis.conf << 'EOF'
 bind 0.0.0.0
 protected-mode no
@@ -109,7 +109,7 @@ appendfilename "appendonly.aof"
 dir /data
 EOF
 
-# Create RocketMQ broker configuration (minimal example)
+# 创建 RocketMQ broker 配置 (最小示例)
 cat > ~/.papertrace/docker/rocketmq/broker/conf/broker.conf << 'EOF'
 brokerClusterName = PapertraceCluster
 brokerName = broker-a
@@ -120,45 +120,45 @@ brokerRole = ASYNC_MASTER
 flushDiskType = ASYNC_FLUSH
 EOF
 
-# Set appropriate permissions (important for Elasticsearch)
+# 设置适当的权限 (对 Elasticsearch 很重要)
 chmod -R 777 ~/.papertrace/docker/es/data
 ```
 
-**Note**: You may need to copy existing configuration files from your old setup (`docker/mysql/conf.d/`, `docker/mysql/init/`, etc.) to the new location if you have custom configurations.
+**注意**: 如果有自定义配置,您可能需要将现有配置文件从旧设置 (`docker/mysql/conf.d/`, `docker/mysql/init/` 等) 复制到新位置。
 
 ---
 
-## Usage Patterns
+## 使用模式
 
-### Quick Start (Minimal Environment)
+### 快速开始 (最小环境)
 
-Start only core services for fastest startup and lowest resource usage:
+仅启动核心服务以实现最快启动和最低资源使用:
 
 ```bash
 cd docker/compose
 docker compose -f docker-compose.core.yaml up -d
 ```
 
-**Use case**: API development, frontend development, quick testing
+**用例**: API 开发、前端开发、快速测试
 
 ---
 
-### File Upload Development (Core + Storage)
+### 文件上传开发 (核心 + 存储)
 
-Add storage services for file upload features:
+添加存储服务以支持文件上传功能:
 
 ```bash
 docker compose -f docker-compose.core.yaml \
                -f docker-compose.storage.yaml up -d
 ```
 
-**Use case**: Working on file upload, document management, image processing features
+**用例**: 处理文件上传、文档管理、图像处理功能
 
 ---
 
-### Standard Development (Core + Storage + Jobs)
+### 标准开发 (核心 + 存储 + 任务)
 
-Add both storage and job services:
+同时添加存储和任务服务:
 
 ```bash
 docker compose -f docker-compose.core.yaml \
@@ -166,81 +166,81 @@ docker compose -f docker-compose.core.yaml \
                -f docker-compose.jobs.yaml up -d
 ```
 
-**Use case**: Working on batch import jobs, scheduled tasks, message consumers with file uploads
+**用例**: 处理批量导入作业、定时任务、消息消费者及文件上传
 
 ---
 
-### Full Observability (Core + Monitoring)
+### 完整可观测性 (核心 + 监控)
 
-Enable APM for distributed tracing:
+启用 APM 进行分布式追踪:
 
 ```bash
 docker compose -f docker-compose.core.yaml \
                -f docker-compose.observability.yaml up -d
 ```
 
-**Use case**: Debugging microservice interactions, performance analysis, latency tracing
+**用例**: 调试微服务交互、性能分析、延迟追踪
 
 ---
 
-### Complete Environment (All Services)
+### 完整环境 (所有服务)
 
-Start all services using the main file:
+使用主文件启动所有服务:
 
 ```bash
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
-**Use case**: Integration testing, full-stack development, production-like environment
+**用例**: 集成测试、全栈开发、类生产环境
 
 ---
 
-## Common Commands
+## 常用命令
 
-### Start Services
+### 启动服务
 ```bash
-# All services
+# 所有服务
 docker compose -f docker-compose.dev.yaml up -d
 
-# Specific stack
+# 特定栈
 docker compose -f docker-compose.core.yaml up -d
 
-# Multiple stacks
+# 多个栈
 docker compose -f docker-compose.core.yaml \
                -f docker-compose.jobs.yaml up -d
 ```
 
-### Check Status
+### 检查状态
 ```bash
 docker compose -f docker-compose.dev.yaml ps
 docker compose -f docker-compose.core.yaml ps
 ```
 
-### View Logs
+### 查看日志
 ```bash
-# All services
+# 所有服务
 docker compose -f docker-compose.dev.yaml logs -f
 
-# Specific service
+# 特定服务
 docker compose -f docker-compose.dev.yaml logs -f mysql
 
-# Specific stack
+# 特定栈
 docker compose -f docker-compose.core.yaml logs -f
 ```
 
-### Stop Services
+### 停止服务
 ```bash
-# All services
+# 所有服务
 docker compose -f docker-compose.dev.yaml down
 
-# Specific stack
+# 特定栈
 docker compose -f docker-compose.core.yaml down
 
-# With volume cleanup
+# 带卷清理
 docker compose -f docker-compose.dev.yaml down -v
 ```
 
-### Restart Single Service
+### 重启单个服务
 ```bash
 docker compose -f docker-compose.dev.yaml restart mysql
 docker compose -f docker-compose.observability.yaml restart skywalking-oap
@@ -248,257 +248,257 @@ docker compose -f docker-compose.observability.yaml restart skywalking-oap
 
 ---
 
-## Service Access URLs
+## 服务访问 URL
 
-### Core Services
+### 核心服务
 - **MySQL**: `localhost:13306` (root/123456)
 - **Redis**: `localhost:16379`
-- **Nacos Console**: http://localhost:8848/nacos (patra/patra)
+- **Nacos 控制台**: http://localhost:8848/nacos (patra/patra)
 
-### Storage Services
+### 存储服务
 - **MinIO API**: `localhost:19000` (minioadmin/minioadmin123)
-- **MinIO Console**: http://localhost:19001 (minioadmin/minioadmin123)
+- **MinIO 控制台**: http://localhost:19001 (minioadmin/minioadmin123)
 
-### Observability Services
+### 可观测性服务
 - **Elasticsearch**: http://localhost:9200
 - **SkyWalking UI**: http://localhost:8088
 
-### Job Services
+### 任务服务
 - **XXL-Job Admin**: http://localhost:7070/xxl-job-admin (admin/123456)
 - **RocketMQ Dashboard**: http://localhost:4002
 
 ---
 
-## Resource Requirements
+## 资源需求
 
-### Minimal (Core Only)
-- **CPU**: 2 cores
-- **Memory**: ~1GB
-- **Services**: 3
+### 最小环境 (仅核心)
+- **CPU**: 2 核
+- **内存**: ~1GB
+- **服务数**: 3
 
-### Standard (Core + Storage)
-- **CPU**: 2 cores
-- **Memory**: ~1.5GB
-- **Services**: 4
+### 标准环境 (核心 + 存储)
+- **CPU**: 2 核
+- **内存**: ~1.5GB
+- **服务数**: 4
 
-### Extended (Core + Storage + Jobs)
-- **CPU**: 4 cores
-- **Memory**: ~3.5GB
-- **Services**: 8
+### 扩展环境 (核心 + 存储 + 任务)
+- **CPU**: 4 核
+- **内存**: ~3.5GB
+- **服务数**: 8
 
-### Full (All Services)
-- **CPU**: 6+ cores
-- **Memory**: ~5.5GB
-- **Services**: 11
+### 完整环境 (所有服务)
+- **CPU**: 6+ 核
+- **内存**: ~5.5GB
+- **服务数**: 11
 
 ---
 
-## Health Checks
+## 健康检查
 
-All services include health checks. Wait for all services to be healthy:
+所有服务都包含健康检查。等待所有服务健康:
 
 ```bash
-# Check health status
+# 检查健康状态
 docker compose -f docker-compose.dev.yaml ps
 
-# Wait for services to be healthy (example for core services)
+# 等待服务健康 (核心服务示例)
 until docker compose -f docker-compose.core.yaml ps | grep -q '(healthy)'; do
-  echo "Waiting for services to be healthy..."
+  echo "等待服务健康..."
   sleep 5
 done
 ```
 
 ---
 
-## Troubleshooting
+## 故障排除
 
-### Service Won't Start
+### 服务无法启动
 
-1. Check logs:
+1. 检查日志:
    ```bash
    docker compose -f docker-compose.dev.yaml logs <service-name>
    ```
 
-2. Verify port availability:
+2. 验证端口可用性:
    ```bash
-   lsof -i :13306  # Example for MySQL
+   lsof -i :13306  # MySQL 示例
    ```
 
-3. Check service health:
+3. 检查服务健康:
    ```bash
    docker compose -f docker-compose.dev.yaml ps
    ```
 
-### Out of Memory
+### 内存不足
 
-Reduce resource usage by starting only needed services:
+通过仅启动所需服务来减少资源使用:
 ```bash
-# Disable observability stack
+# 禁用可观测性栈
 docker compose -f docker-compose.observability.yaml down
 
-# Or start only core services
+# 或仅启动核心服务
 docker compose -f docker-compose.core.yaml up -d
 ```
 
-### Permission Issues (macOS/Linux)
+### 权限问题 (macOS/Linux)
 
-Fix volume permissions:
+修复卷权限:
 ```bash
 sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/
-# Or for specific services:
+# 或针对特定服务:
 sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/mysql
 sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/es
 ```
 
-### Reset Everything
+### 重置所有
 
-Remove all data and restart:
+删除所有数据并重启:
 ```bash
-# Stop all services
+# 停止所有服务
 docker compose -f docker-compose.dev.yaml down -v
 
-# Remove all data (WARNING: This deletes all persistent data!)
+# 删除所有数据 (警告: 这会删除所有持久化数据!)
 rm -rf ~/.papertrace/docker/mysql/data
 rm -rf ~/.papertrace/docker/redis/data
 rm -rf ~/.papertrace/docker/es/data
 rm -rf ~/.papertrace/docker/nacos/data
 rm -rf ~/.papertrace/docker/rocketmq/*/store
 
-# Or remove everything at once
+# 或一次性删除所有
 rm -rf ~/.papertrace/docker
 
-# Recreate directory structure and configurations (see First-Time Setup section)
-# Then restart services
+# 重新创建目录结构和配置 (参见首次设置部分)
+# 然后重启服务
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
 ---
 
-## Migration from Monolithic Setup
+## 从单体设置迁移
 
-The original `docker-compose.dev.yaml` has been split into three modular files, and volume mounts now use `~/.papertrace/docker/` instead of relative paths.
+原始的 `docker-compose.dev.yaml` 已拆分为三个模块化文件,卷挂载现在使用 `~/.papertrace/docker/` 而不是相对路径。
 
-### What Changed
-- ✅ Service definitions remain identical
-- ✅ All ports and configurations preserved
-- ✅ Network configuration unchanged (`patra-net`)
-- ✅ Environment variables and health checks intact
-- ⚠️ **Volume paths updated**: From `../service/` to `~/.papertrace/docker/service/`
+### 变更内容
+- ✅ 服务定义保持不变
+- ✅ 所有端口和配置保持不变
+- ✅ 网络配置不变 (`patra-net`)
+- ✅ 环境变量和健康检查完整
+- ⚠️ **卷路径已更新**: 从 `../service/` 到 `~/.papertrace/docker/service/`
 
-### Migrating Existing Data
+### 迁移现有数据
 
-If you have existing data in the old location (`docker/mysql/`, `docker/redis/`, etc.), migrate it to the new location:
+如果您在旧位置 (`docker/mysql/`, `docker/redis/` 等) 有现有数据,将其迁移到新位置:
 
 ```bash
-# Stop all services first
+# 首先停止所有服务
 docker compose -f docker-compose.dev.yaml down
 
-# Create new directory structure
+# 创建新目录结构
 mkdir -p ~/.papertrace/docker
 
-# Copy existing data (adjust path to your project root)
+# 复制现有数据 (调整路径到您的项目根目录)
 cd /path/to/Papertrace-api
 cp -r docker/mysql ~/.papertrace/docker/
 cp -r docker/redis ~/.papertrace/docker/
 cp -r docker/nacos ~/.papertrace/docker/
-cp -r docker/minio ~/.papertrace/docker/  # If you have existing MinIO data
+cp -r docker/minio ~/.papertrace/docker/  # 如果有现有 MinIO 数据
 cp -r docker/es ~/.papertrace/docker/
 cp -r docker/xxl-job-admin ~/.papertrace/docker/
 cp -r docker/rocketmq ~/.papertrace/docker/
 
-# Verify migration
+# 验证迁移
 ls -la ~/.papertrace/docker/
 
-# Start services with new configuration
+# 使用新配置启动服务
 cd docker/compose
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
-**Note**: After successful migration, you can optionally remove the old data directories to free up space:
+**注意**: 成功迁移后,您可以选择删除旧的数据目录以释放空间:
 ```bash
-# Optional: Remove old data after verifying new setup works
+# 可选: 验证新设置工作正常后删除旧数据
 rm -rf /path/to/Papertrace-api/docker/{mysql,redis,nacos,minio,es,xxl-job-admin,rocketmq}
 ```
 
-### Backward Compatibility
-The main file still works as before:
+### 向后兼容性
+主文件仍像以前一样工作:
 ```bash
 docker compose -f docker-compose.dev.yaml up -d
 ```
 
-### Benefits
-- **Faster startup**: Start only needed services
-- **Resource efficiency**: Save RAM by disabling unused stacks
-- **Better organization**: Clear separation by lifecycle
-- **Flexible workflows**: Mix and match stacks as needed
+### 优势
+- **更快的启动**: 仅启动所需服务
+- **资源效率**: 通过禁用未使用的栈节省 RAM
+- **更好的组织**: 按生命周期明确分离
+- **灵活的工作流**: 根据需要混合搭配栈
 
 ---
 
-## Best Practices
+## 最佳实践
 
-1. **Start core services first**: Always begin with `docker-compose.core.yaml`
-2. **Use selective startup**: Only run services you're actively working on
-3. **Monitor resources**: Use `docker stats` to track memory usage
-4. **Clean up regularly**: Run `docker compose down -v` to remove unused volumes
-5. **Check health status**: Wait for health checks before starting application services
+1. **首先启动核心服务**: 始终从 `docker-compose.core.yaml` 开始
+2. **使用选择性启动**: 仅运行您正在处理的服务
+3. **监控资源**: 使用 `docker stats` 跟踪内存使用
+4. **定期清理**: 运行 `docker compose down -v` 删除未使用的卷
+5. **检查健康状态**: 在启动应用程序服务前等待健康检查
 
 ---
 
-## Dependencies Between Stacks
+## 栈之间的依赖关系
 
 ```
 ┌─────────────────────────────────────┐
-│ Core Services                       │  (No dependencies)
+│ 核心服务                             │  (无依赖)
 │ - MySQL, Redis, Nacos               │
 └─────────────────────────────────────┘
          ▲                    ▲             ▲
          │                    │             │
          │                    │             │
 ┌────────┴─────────┐  ┌──────┴────────┐  ┌┴────────────────────┐
-│ Jobs Services    │  │ Observability │  │ Storage Services    │
+│ 任务服务          │  │ 可观测性       │  │ 存储服务            │
 │ - XXL-Job (MySQL)│  │ - ES          │  │ - MinIO             │
-│ - RocketMQ       │  │ - SkyWalking  │  │ (No dependencies)   │
+│ - RocketMQ       │  │ - SkyWalking  │  │ (无依赖)            │
 └──────────────────┘  └───────────────┘  └─────────────────────┘
 ```
 
-- **Jobs stack** depends on MySQL for XXL-Job
-- **Observability stack** has internal dependency (SkyWalking → Elasticsearch)
-- **Storage stack** is self-contained (no external dependencies)
-- **RocketMQ** services are self-contained (no external dependencies)
+- **任务栈** 依赖 MySQL (用于 XXL-Job)
+- **可观测性栈** 有内部依赖 (SkyWalking → Elasticsearch)
+- **存储栈** 是自包含的 (无外部依赖)
+- **RocketMQ** 服务是自包含的 (无外部依赖)
 
 ---
 
-## Environment Variables
+## 环境变量
 
-Configure via `.env` file or shell environment:
+通过 `.env` 文件或 shell 环境配置:
 
 ```bash
-# Example .env file in docker/ directory
+# docker/ 目录中的 .env 文件示例
 MYSQL_ROOT_PASSWORD=your_secure_password
 MINIO_ROOT_USER=your_minio_user
 MINIO_ROOT_PASSWORD=your_minio_password
 ```
 
-Current configurable variables:
-- `MYSQL_ROOT_PASSWORD` (default: 123456)
-- `MINIO_ROOT_USER` (default: minioadmin)
-- `MINIO_ROOT_PASSWORD` (default: minioadmin123)
+当前可配置变量:
+- `MYSQL_ROOT_PASSWORD` (默认: 123456)
+- `MINIO_ROOT_USER` (默认: minioadmin)
+- `MINIO_ROOT_PASSWORD` (默认: minioadmin123)
 
 ---
 
-## MinIO Usage Guide
+## MinIO 使用指南
 
-### Accessing MinIO Console
+### 访问 MinIO 控制台
 
-After starting the storage stack, access the MinIO web console at http://localhost:19001:
+启动存储栈后,在 http://localhost:19001 访问 MinIO Web 控制台:
 
-1. Login with credentials: `minioadmin` / `minioadmin123` (or your custom credentials from `.env`)
-2. The following bucket is automatically created:
-   - `dev-ingest` - Development environment storage for patra-ingest service
+1. 使用凭证登录: `minioadmin` / `minioadmin123` (或来自 `.env` 的自定义凭证)
+2. 以下存储桶会自动创建:
+   - `dev-ingest` - patra-ingest 服务的开发环境存储
 
-### Connecting from Application
+### 从应用程序连接
 
-Use these settings in your Spring Boot application configuration (Nacos):
+在 Spring Boot 应用程序配置 (Nacos) 中使用这些设置:
 
 ```yaml
 patra:
@@ -514,76 +514,76 @@ patra:
 patra:
   ingest:
     storage:
-      bucket: dev-ingest  # Default bucket for patra-ingest
+      bucket: dev-ingest  # patra-ingest 的默认存储桶
 ```
 
-### Using MinIO Client (mc)
+### 使用 MinIO 客户端 (mc)
 
-The `minio-init` container includes the `mc` command-line tool. To use it:
+`minio-init` 容器包含 `mc` 命令行工具。使用它:
 
 ```bash
-# Access the minio container
+# 访问 minio 容器
 docker exec -it patra-minio sh
 
-# Inside the container, mc is already configured
-mc ls /data  # List all buckets
-mc ls /data/dev-ingest  # List files in a bucket
+# 在容器内,mc 已经配置好
+mc ls /data  # 列出所有存储桶
+mc ls /data/dev-ingest  # 列出存储桶中的文件
 ```
 
-Or use `mc` from your host machine:
+或从主机使用 `mc`:
 
 ```bash
-# Install mc (macOS)
+# 安装 mc (macOS)
 brew install minio/stable/mc
 
-# Configure connection
+# 配置连接
 mc alias set papertrace http://localhost:19000 minioadmin minioadmin123
 
-# List buckets
+# 列出存储桶
 mc ls papertrace
 
-# Upload a file
+# 上传文件
 mc cp /path/to/file.pdf papertrace/dev-ingest/
 
-# Download a file
+# 下载文件
 mc cp papertrace/dev-ingest/file.pdf ./
 ```
 
-### Creating Additional Buckets
+### 创建额外的存储桶
 
-To create additional buckets:
+要创建额外的存储桶:
 
 ```bash
-# Using mc command
+# 使用 mc 命令
 docker exec -it patra-minio sh -c \
   "mc mb /data/my-new-bucket && mc anonymous set none /data/my-new-bucket"
 
-# Or via MinIO Console
-# Navigate to http://localhost:19001 → Buckets → Create Bucket
+# 或通过 MinIO 控制台
+# 导航到 http://localhost:19001 → Buckets → Create Bucket
 ```
 
-### Testing Upload from Command Line
+### 从命令行测试上传
 
 ```bash
-# Test file upload
+# 测试文件上传
 curl -X PUT \
   -H "Host: dev-ingest.localhost" \
   --user minioadmin:minioadmin123 \
   --upload-file /path/to/test.txt \
   http://localhost:19000/dev-ingest/test.txt
 
-# Verify upload
+# 验证上传
 mc ls papertrace/dev-ingest/test.txt
 ```
 
 ---
 
-## Next Steps
+## 下一步
 
-1. Start with core services: `docker compose -f docker-compose.core.yaml up -d`
-2. Add storage stack for file uploads: `docker compose -f docker-compose.storage.yaml up -d`
-3. Add other stacks as needed for your development task
-4. Verify health status before running application services
-5. Refer to service URLs section for accessing web consoles
+1. 从核心服务开始: `docker compose -f docker-compose.core.yaml up -d`
+2. 添加存储栈以支持文件上传: `docker compose -f docker-compose.storage.yaml up -d`
+3. 根据开发任务需要添加其他栈
+4. 运行应用程序服务前验证健康状态
+5. 参考服务 URL 部分访问 Web 控制台
 
-For questions or issues, refer to the main project documentation.
+如有问题或疑问,请参阅主项目文档。

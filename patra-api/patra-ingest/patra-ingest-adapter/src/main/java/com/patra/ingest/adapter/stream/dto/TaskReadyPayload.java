@@ -4,16 +4,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
- * INGEST_TASK_READY message payload DTO (simplified).
+ * INGEST_TASK_READY 消息负载 DTO(简化版)。
  *
- * <p>Parses MQ message body (JSON format) for task ready events. Contains only essential fields -
- * all other business data should be queried from database.
+ * <p>解析 MQ 消息体(JSON 格式)用于任务就绪事件。仅包含必需字段 - 所有其他业务数据应从数据库查询。
  *
- * <p>Fields:
+ * <p>字段:
  *
  * <ul>
- *   <li>taskId: Task ID (required, for context loading and lease acquisition)
- *   <li>idempotentKey: Idempotent key (required, for deduplication)
+ *   <li>taskId: 任务 ID(必填,用于上下文加载和租约获取)
+ *   <li>idempotentKey: 幂等键(必填,用于去重)
  * </ul>
  *
  * @author linqibin
@@ -22,25 +21,25 @@ import lombok.Data;
 @Data
 public class TaskReadyPayload {
 
-  /** Task ID */
+  /** 任务 ID */
   @JsonProperty("taskId")
   private Long taskId;
 
-  /** Idempotent key */
+  /** 幂等键 */
   @JsonProperty("idempotentKey")
   private String idempotentKey;
 
   /**
-   * Validates required fields.
+   * 验证必填字段。
    *
-   * @throws IllegalArgumentException when required fields are null/blank
+   * @throws IllegalArgumentException 当必填字段为 null/空白时
    */
   public void validate() {
     if (taskId == null) {
-      throw new IllegalArgumentException("taskId must not be null");
+      throw new IllegalArgumentException("任务 ID 不能为空");
     }
     if (idempotentKey == null || idempotentKey.isBlank()) {
-      throw new IllegalArgumentException("idempotentKey must not be blank");
+      throw new IllegalArgumentException("幂等键不能为空");
     }
   }
 }

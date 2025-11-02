@@ -1,69 +1,69 @@
-# Event-Driven Architecture
+# 事件驱动架构
 
-**Purpose**: Domain events enable loose coupling and reactive workflows across aggregates and bounded contexts.
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Domain Events](#domain-events)
-3. [Event Handlers](#event-handlers)
-4. [Event Chains](#event-chains)
-5. [Integration with Outbox](#integration-with-outbox)
-6. [Best Practices](#best-practices)
+**目的**: 领域事件实现聚合根和限界上下文之间的松耦合和响应式工作流。
 
 ---
 
-## Overview
+## 目录
 
-### What is Event-Driven Architecture?
+1. [概述](#概述)
+2. [领域事件](#领域事件)
+3. [事件处理器](#事件处理器)
+4. [事件链](#事件链)
+5. [与 Outbox 模式的集成](#与-outbox-模式的集成)
+6. [最佳实践](#最佳实践)
 
-**Event-Driven Architecture (EDA)** uses domain events to communicate state changes between components. Events enable:
-- ✅ **Loose coupling**: Aggregates don't know their consumers
-- ✅ **Reactive workflows**: Automatic status propagation
-- ✅ **Audit trail**: Complete event history
-- ✅ **Eventually consistent updates**: Async processing
+---
 
-### Papertrace Event Flow
+## 概述
+
+### 什么是事件驱动架构?
+
+**事件驱动架构 (EDA)** 使用领域事件在组件之间传递状态变化。事件的优势:
+- ✅ **松耦合**: 聚合根不需要知道其消费者
+- ✅ **响应式工作流**: 自动传播状态
+- ✅ **审计追踪**: 完整的事件历史
+- ✅ **最终一致性更新**: 异步处理
+
+### Papertrace 事件流
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              Task Completion Event Chain                   │
+│              Task Completion Event Chain                    │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Task completes execution                               │
-│     → Emit TaskCompletedEvent                              │
+│  1. Task execution completes                                │
+│     → Publishes TaskCompletedEvent                          │
 │                                                             │
-│  2. TaskCompletedEventHandler                              │
-│     → Calculate Slice status (1:1 mapping)                 │
-│     → Update Slice aggregate                               │
-│     → Emit SliceStatusChangedEvent                         │
+│  2. TaskCompletedEventHandler                               │
+│     → Calculates Slice status (1:1 mapping)                 │
+│     → Updates Slice aggregate                               │
+│     → Publishes SliceStatusChangedEvent                     │
 │                                                             │
-│  3. SliceStatusChangedEventHandler                         │
-│     → Aggregate all Slice statuses for Plan                │
-│     → Update Plan aggregate                                │
-│     → Emit PlanStatusChangedEvent (optional)               │
+│  3. SliceStatusChangedEventHandler                          │
+│     → Aggregates all Slice statuses for Plan                │
+│     → Updates Plan aggregate                                │
+│     → Publishes PlanStatusChangedEvent (optional)           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Domain Events
+## 领域事件
 
-### Event Design Pattern
+### 事件设计模式
 
-Domain events in patra-ingest follow these conventions:
+patra-ingest 中的领域事件遵循以下约定:
 
-**✅ Event Best Practices:**
-- Use Java `record` for immutability
-- Past tense naming (e.g., `TaskCompletedEvent`, not `TaskCompleteEvent`)
-- Include all relevant context (IDs, status, timestamps)
-- Auto-populate `occurredAt` if not provided
-- Provide factory methods for common scenarios
+**✅ 事件最佳实践:**
+- 使用 Java `record` 实现不可变性
+- 使用过去时命名 (例如: `TaskCompletedEvent`, 而非 `TaskCompleteEvent`)
+- 包含所有相关上下文 (ID、状态、时间戳)
+- 自动填充 `occurredAt` (如果未提供)
+- 为常见场景提供工厂方法
 
-### Complete Event Example
+### 完整事件示例
 
-**File**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/event/TaskCompletedEvent.java`
+**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/event/TaskCompletedEvent.java`
 
 ```java
 package com.patra.ingest.domain.event;
@@ -72,9 +72,9 @@ import com.patra.common.domain.DomainEvent;
 import java.time.Instant;
 
 /**
- * Domain event emitted when a task completes execution.
+ * 任务执行完成时发布的领域事件。
  *
- * <p>Event Chain: TaskCompletedEvent → SliceStatusChangedEvent → PlanAggregate update
+ * <p>事件链: TaskCompletedEvent → SliceStatusChangedEvent → PlanAggregate 更新
  */
 public record TaskCompletedEvent(
     Long taskId,
@@ -87,19 +87,19 @@ public record TaskCompletedEvent(
     Instant occurredAt)
     implements DomainEvent {
 
-  // ✅ Auto-populate timestamp in compact constructor
+  // ✅ 在紧凑构造器中自动填充时间戳
   public TaskCompletedEvent {
     occurredAt = occurredAt == null ? Instant.now() : occurredAt;
   }
 
-  // ✅ Factory method for successful completion
+  // ✅ 成功完成的工厂方法
   public static TaskCompletedEvent of(
       Long taskId, Long sliceId, Long planId, String status, Instant finishedAt) {
     return new TaskCompletedEvent(
         taskId, sliceId, planId, status, null, null, finishedAt, Instant.now());
   }
 
-  // ✅ Factory method for failed completion
+  // ✅ 失败完成的工厂方法
   public static TaskCompletedEvent ofFailure(
       Long taskId, Long sliceId, Long planId, String status,
       String errorCode, String errorMessage, Instant finishedAt) {
@@ -109,23 +109,23 @@ public record TaskCompletedEvent(
 }
 ```
 
-### Event Examples from patra-ingest
+### patra-ingest 事件示例
 
-| Event | Trigger | Purpose |
+| 事件 | 触发时机 | 目的 |
 |-------|---------|---------|
-| **TaskQueuedEvent** | Task created and persisted | Metrics, audit trail |
-| **TaskCompletedEvent** | Task reaches terminal state | Trigger Slice status update |
-| **SliceStatusChangedEvent** | Slice status changes | Trigger Plan status aggregation |
-| **OutboxMessagePublishedEvent** | Message published to MQ | Audit, metrics |
-| **OutboxMessageDeferredEvent** | Message retry scheduled | Monitor retry rate |
+| **TaskQueuedEvent** | Task 创建并持久化 | 度量指标、审计追踪 |
+| **TaskCompletedEvent** | Task 到达终态 | 触发 Slice 状态更新 |
+| **SliceStatusChangedEvent** | Slice 状态变化 | 触发 Plan 状态聚合 |
+| **OutboxMessagePublishedEvent** | 消息发布到 MQ | 审计、度量指标 |
+| **OutboxMessageDeferredEvent** | 消息重试已调度 | 监控重试率 |
 
 ---
 
-## Event Handlers
+## 事件处理器
 
-### Event Handler Pattern
+### 事件处理器模式
 
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/eventhandler/TaskCompletedEventHandler.java`
+**文件**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/eventhandler/TaskCompletedEventHandler.java`
 
 ```java
 @Component
@@ -138,7 +138,7 @@ public class TaskCompletedEventHandler {
   private final ApplicationEventPublisher eventPublisher;
 
   /**
-   * Handles TaskCompletedEvent after the transaction commits.
+   * 在事务提交后处理 TaskCompletedEvent。
    *
    * ✅ @TransactionalEventListener(phase = AFTER_COMMIT)
    * ✅ @Transactional(propagation = REQUIRES_NEW)
@@ -147,53 +147,53 @@ public class TaskCompletedEventHandler {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void handle(TaskCompletedEvent event) {
     try {
-      log.debug("Handling TaskCompletedEvent taskId={} sliceId={}",
+      log.debug("处理 TaskCompletedEvent taskId={} sliceId={}",
           event.taskId(), event.sliceId());
 
-      // 1. Query associated Task (1:1 relationship with Slice)
+      // 1. 查询关联的 Task (与 Slice 1:1 关系)
       TaskAggregate task = taskRepository.findBySliceId(event.sliceId())
-          .orElseThrow(() -> new IllegalStateException("Task not found"));
+          .orElseThrow(() -> new IllegalStateException("Task 未找到"));
 
-      // 2. Calculate new Slice status using Domain Service
+      // 2. 使用领域服务计算新的 Slice 状态
       SliceStatus newStatus = SliceStatusCalculator.calculate(task.getStatus());
 
-      // 3. Update Slice aggregate
+      // 3. 更新 Slice 聚合根
       PlanSliceAggregate slice = sliceRepository.findById(event.sliceId())
-          .orElseThrow(() -> new IllegalStateException("Slice not found"));
+          .orElseThrow(() -> new IllegalStateException("Slice 未找到"));
 
       SliceStatus oldStatus = slice.getStatus();
 
-      // ✅ Idempotency check
+      // ✅ 幂等性检查
       if (oldStatus == newStatus) {
-        log.debug("Slice status unchanged, skip update");
+        log.debug("Slice 状态未变化,跳过更新");
         return;
       }
 
       slice.updateStatus(newStatus);
       sliceRepository.save(slice);
 
-      log.info("Slice status updated sliceId={} {} -> {}",
+      log.info("Slice 状态已更新 sliceId={} {} -> {}",
           event.sliceId(), oldStatus, newStatus);
 
-      // 4. Publish SliceStatusChangedEvent for next handler
+      // 4. 发布 SliceStatusChangedEvent 给下一个处理器
       SliceStatusChangedEvent sliceEvent = SliceStatusChangedEvent.of(
           event.sliceId(), event.planId(), oldStatus.getCode(), newStatus.getCode());
       eventPublisher.publishEvent(sliceEvent);
 
     } catch (OptimisticLockingFailureException e) {
-      // ✅ Optimistic lock conflict: another thread already updated
-      log.warn("Optimistic lock conflict, skip sliceId={}", event.sliceId());
+      // ✅ 乐观锁冲突: 其他线程已更新
+      log.warn("乐观锁冲突,跳过 sliceId={}", event.sliceId());
     } catch (Exception e) {
-      // ✅ Log error, rely on reconciliation task to fix
-      log.error("Failed to handle TaskCompletedEvent", e);
+      // ✅ 记录错误,依赖对账任务修复
+      log.error("处理 TaskCompletedEvent 失败", e);
     }
   }
 }
 ```
 
-### Key Handler Patterns
+### 核心处理器模式
 
-#### 1. Transactional Event Listener
+#### 1. 事务性事件监听器
 
 ```java
 // ✅ GOOD: AFTER_COMMIT ensures event published only if transaction succeeds

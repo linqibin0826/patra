@@ -4,13 +4,12 @@ import java.io.Serializable;
 import java.time.Instant;
 
 /**
- * Marker interface for domain events.
+ * 领域事件的标记接口。
  *
- * <p>Events should be immutable and may carry an occurrence timestamp and optional event
- * identifier.
+ * <p>事件应该是不可变的,并可能携带发生时间戳和可选的事件标识符。
  */
 public interface DomainEvent extends Serializable {
 
-  /** Timestamp representing when the event occurred (for ordering/auditing). */
+  /** 表示事件发生时间的时间戳(用于排序/审计)。 */
   Instant occurredAt();
 }

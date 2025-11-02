@@ -1,10 +1,10 @@
-# Domain Modeling Patterns
+# 领域建模模式
 
-**Purpose**: DDD tactical patterns for pure business logic modeling in the Domain layer.
+**目的**: 领域层中用于纯业务逻辑建模的 DDD 战术模式。
 
 ---
 
-## Table of Contents
+## 目录
 
 - [Domain Layer Overview](#domain-layer-overview)
 - [Aggregates](#aggregates)
@@ -20,11 +20,11 @@
 
 ---
 
-## Domain Layer Overview
+## 领域层 Overview
 
 The Domain layer is the **heart of your application** and contains the pure business logic. It must remain **framework-independent** and rely only on Pure Java + Lombok.
 
-### Domain Layer Responsibilities
+### 领域层 Responsibilities
 
 1. **Encapsulate business rules** in domain objects (Aggregates, Entities, Value Objects)
 2. **Define domain contracts** through ports (interfaces)
@@ -32,7 +32,7 @@ The Domain layer is the **heart of your application** and contains the pure busi
 4. **Enforce invariants** through validation in constructors and methods
 5. **Expose factory methods** for complex object creation
 
-### Domain Layer Structure
+### 领域层 Structure
 
 ```
 patra-ingest-domain/
@@ -1135,7 +1135,7 @@ public final class SliceStatusCalculator {
 
 ## Key Principles
 
-### Domain Layer Constraints
+### 领域层 Constraints
 
 | ✅ Allowed | ❌ Forbidden |
 |-----------|-------------|
@@ -1167,7 +1167,7 @@ Before committing domain code, verify:
 
 Domain models are **highly testable** because they have no framework dependencies.
 
-#### Testing Aggregates
+#### 测试 Aggregates
 
 ```java
 @Test
@@ -1211,7 +1211,7 @@ void should_transition_from_draft_to_slicing() {
 // ... (additional tests for state machine validation omitted for brevity)
 ```
 
-#### Testing Value Objects
+#### 测试 Value Objects
 
 ```java
 @Test
@@ -1231,7 +1231,7 @@ void should_create_and_validate_value_objects() {
 // ... (validation tests omitted for brevity)
 ```
 
-#### Testing Domain Services
+#### 测试 Domain Services
 
 ```java
 @Test
@@ -1248,7 +1248,7 @@ void should_calculate_slice_status_and_check_terminal_state() {
 }
 ```
 
-#### Testing Factories
+#### 测试 Factories
 
 ```java
 @Test
@@ -1283,7 +1283,7 @@ void should_create_relay_log_for_published_message() {
 
 ---
 
-**Related Files:**
+**相关文件：**
 - [architecture-overview.md](architecture-overview.md) - Hexagonal Architecture + DDD overview
 - [dependency-rules.md](dependency-rules.md) - Layer dependency rules and validation
 - [complete-examples.md](complete-examples.md) - End-to-end feature examples
@@ -1292,4 +1292,4 @@ void should_create_relay_log_for_published_message() {
 
 ---
 
-**📝 Status**: ✅ **COMPLETE** - Comprehensive guide to all DDD tactical patterns from patra-ingest domain layer with real examples.
+**📝 Status**: ✅ **已完成** - Comprehensive guide to all DDD tactical patterns from patra-ingest domain layer with real examples.

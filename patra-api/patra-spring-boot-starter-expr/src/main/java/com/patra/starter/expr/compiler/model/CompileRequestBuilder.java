@@ -5,9 +5,9 @@ import com.patra.expr.Expr;
 import java.util.Objects;
 
 /**
- * Fluent builder for {@link CompileRequest} with sensible defaults and convenience helpers.
+ * {@link CompileRequest} 的流式构建器，具有合理的默认值和便利的辅助方法。
  *
- * <p>Example usage:
+ * <p>使用示例：
  *
  * <pre>{@code
  * CompileRequest request = CompileRequestBuilder.of(expr, ProvenanceCode.PUBMED)
@@ -22,12 +22,12 @@ public class CompileRequestBuilder {
   private final Expr expression;
   private final ProvenanceCode provenance;
   private String operationType;
-  private String endpointName = EndpointNames.SEARCH; // default to search
+  private String endpointName = EndpointNames.SEARCH; // 默认为搜索
   private CompileOptions options = CompileOptions.defaults();
 
   private CompileRequestBuilder(Expr expression, ProvenanceCode provenance) {
-    this.expression = Objects.requireNonNull(expression, "expression cannot be null");
-    this.provenance = Objects.requireNonNull(provenance, "provenance cannot be null");
+    this.expression = Objects.requireNonNull(expression, "expression 不能为空");
+    this.provenance = Objects.requireNonNull(provenance, "provenance 不能为空");
   }
 
   /**

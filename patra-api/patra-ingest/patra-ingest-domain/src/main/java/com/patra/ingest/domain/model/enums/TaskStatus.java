@@ -3,34 +3,34 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * Task status (DICT: ing_task_status).
+ * 任务状态 (字典: ing_task_status)。
  *
- * <p>Field mapping: {@code ing_task.status_code → PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED}
+ * <p>字段映射: {@code ing_task.status_code → PENDING/QUEUED/RUNNING/SUCCEEDED/FAILED}
  *
- * <p>State machine semantics:
+ * <p>状态机语义:
  *
  * <ul>
- *   <li>PENDING → initial state, awaiting scheduler pickup
- *   <li>QUEUED → added to execution queue
- *   <li>RUNNING → TaskRun in progress
- *   <li>RUNNING ⇄ QUEUED → retry on failure (create new TaskRun)
- *   <li>SUCCEEDED → final success state (at least one TaskRun succeeded)
- *   <li>FAILED → final failure state (all TaskRuns failed, max retries reached)
+ *   <li>PENDING → 初始状态,等待调度器拾取
+ *   <li>QUEUED → 已加入执行队列
+ *   <li>RUNNING → 任务运行进行中
+ *   <li>RUNNING ⇄ QUEUED → 失败时重试(创建新的 TaskRun)
+ *   <li>SUCCEEDED → 最终成功状态(至少一个 TaskRun 成功)
+ *   <li>FAILED → 最终失败状态(所有 TaskRun 失败,达到最大重试次数)
  * </ul>
  *
- * <p><b>Note:</b> PARTIAL status moved to TaskRun layer for resumable execution tracking.
+ * <p><b>注意:</b> PARTIAL 状态已移至 TaskRun 层以进行可恢复执行追踪。
  */
 @Getter
 public enum TaskStatus {
-  /** Pending; initial state, awaiting scheduler pickup. */
+  /** 待处理;初始状态,等待调度器拾取。 */
   PENDING("PENDING", "Pending"),
-  /** Queued; added to execution queue, awaiting TaskRun creation. */
+  /** 已排队;已加入执行队列,等待创建 TaskRun。 */
   QUEUED("QUEUED", "Queued"),
-  /** Running; TaskRun in progress. */
+  /** 运行中;TaskRun 进行中。 */
   RUNNING("RUNNING", "Running"),
-  /** Succeeded; at least one TaskRun completed successfully. */
+  /** 成功;至少一个 TaskRun 成功完成。 */
   SUCCEEDED("SUCCEEDED", "Succeeded"),
-  /** Failed; all TaskRuns failed, max retries reached. */
+  /** 失败;所有 TaskRun 失败,达到最大重试次数。 */
   FAILED("FAILED", "Failed");
 
   private final String code;
@@ -43,12 +43,12 @@ public enum TaskStatus {
 
   public static TaskStatus fromCode(String value) {
     if (value == null) {
-      throw new IllegalArgumentException("Task status code cannot be null");
+      throw new IllegalArgumentException("任务状态代码不能为 null");
     }
     String n = value.trim().toUpperCase();
     for (TaskStatus e : values()) {
       if (e.code.equals(n)) return e;
     }
-    throw new IllegalArgumentException("Unknown task status code: " + value);
+    throw new IllegalArgumentException("未知的任务状态代码: " + value);
   }
 }

@@ -4,11 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.util.Locale;
 
 /**
- * Standardization utility for Registry dimension/condition keys.
+ * 注册中心维度/条件键的标准化工具。
  *
- * <p>Ensures dimensional keys meet constraints across layers (operation_type/field_key/code/etc.),
- * enabling stable hash/lookup, avoiding NULL ambiguity, and supporting schema versioning
- * compatibility.
+ * <p>确保维度键(operation_type/field_key/code等)满足跨层约束, 实现稳定的哈希/查找,避免 NULL 歧义,支持架构版本兼容性。
  *
  * @author linqibin
  * @since 0.1.0
@@ -18,16 +16,16 @@ public final class RegistryKeyStandardizer {
   private RegistryKeyStandardizer() {}
 
   // -----------------------------
-  // Descriptive API (preferred)
+  // 描述性 API(推荐使用)
   // -----------------------------
 
   /**
-   * Returns normalized operation key or {@code ALL} when input is null/blank.
+   * 返回归一化的操作键,当输入为 null/空白时返回 {@code ALL}。
    *
-   * <p>Preserves original case for backward compatibility with existing configuration.
+   * <p>保留原始大小写以向后兼容现有配置。
    *
-   * @param operationType raw operation type
-   * @return trimmed operation key or {@code ALL}
+   * @param operationType 原始操作类型
+   * @return 修剪后的操作键或 {@code ALL}
    */
   public static String toOperationKeyOrAll(String operationType) {
     if (operationType == null || operationType.isBlank()) {
@@ -37,40 +35,40 @@ public final class RegistryKeyStandardizer {
   }
 
   /**
-   * Returns trimmed uppercase code, throws when input is null.
+   * 返回修剪后的大写代码,输入为 null 时抛出异常。
    *
-   * <p>Use for dictionary/status codes that require case-insensitive comparison.
+   * <p>用于需要不区分大小写比较的字典/状态代码。
    *
-   * @param value raw code value
-   * @return uppercase code (trimmed)
-   * @throws DomainValidationException when value is null
+   * @param value 原始代码值
+   * @return 大写代码(已修剪)
+   * @throws DomainValidationException 当 value 为 null 时
    */
   public static String toUppercaseCode(String value) {
     if (value == null) {
-      throw new DomainValidationException("value cannot be null");
+      throw new DomainValidationException("值不能为 null");
     }
     return value.trim().toUpperCase(Locale.ROOT);
   }
 
   /**
-   * Returns trimmed field key, throws when input is null. Case is preserved.
+   * 返回修剪后的字段键,输入为 null 时抛出异常。保留大小写。
    *
-   * @param value raw field key
-   * @return trimmed field key
-   * @throws DomainValidationException when value is null
+   * @param value 原始字段键
+   * @return 修剪后的字段键
+   * @throws DomainValidationException 当 value 为 null 时
    */
   public static String toTrimmedFieldKey(String value) {
     if (value == null) {
-      throw new DomainValidationException("value cannot be null");
+      throw new DomainValidationException("值不能为 null");
     }
     return value.trim();
   }
 
   /**
-   * Returns normalized match type key or {@code ANY} when input is null/blank.
+   * 返回归一化的匹配类型键,当输入为 null/空白时返回 {@code ANY}。
    *
-   * @param matchTypeCode raw match type code
-   * @return uppercase match type key or {@code ANY}
+   * @param matchTypeCode 原始匹配类型代码
+   * @return 大写匹配类型键或 {@code ANY}
    */
   public static String toMatchTypeKeyOrAny(String matchTypeCode) {
     if (matchTypeCode == null || matchTypeCode.isBlank()) {
@@ -80,9 +78,9 @@ public final class RegistryKeyStandardizer {
   }
 
   /**
-   * Returns normalized negated key: {@code ANY} for null, {@code T} for true, {@code F} for false.
+   * 返回归一化的取反键: null 返回 {@code ANY},true 返回 {@code T},false 返回 {@code F}。
    *
-   * @param negated raw negated flag
+   * @param negated 原始取反标志
    * @return {@code ANY}/{@code T}/{@code F}
    */
   public static String toNegatedKeyOrAny(Boolean negated) {
@@ -95,10 +93,10 @@ public final class RegistryKeyStandardizer {
   }
 
   /**
-   * Returns normalized value type key or {@code ANY} when input is null/blank.
+   * 返回归一化的值类型键,当输入为 null/空白时返回 {@code ANY}。
    *
-   * @param valueTypeCode raw value type code
-   * @return uppercase value type key or {@code ANY}
+   * @param valueTypeCode 原始值类型代码
+   * @return 大写值类型键或 {@code ANY}
    */
   public static String toValueTypeKeyOrAny(String valueTypeCode) {
     if (valueTypeCode == null || valueTypeCode.isBlank()) {

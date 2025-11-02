@@ -1,86 +1,86 @@
-# patra-ingest — Data Ingestion Orchestration Service
+# patra-ingest — 数据摄入编排服务
 
-> **Data collection orchestrator** that breaks down ingestion jobs into executable tasks and manages their lifecycle.
-
----
-
-## 📌 Purpose
-
-`patra-ingest` is responsible for:
-
-1. **Plan Orchestration**: Create execution plans from scheduler triggers
-2. **Task Generation**: Break plans into atomic tasks (with idempotency)
-3. **Window Resolution**: Determine time/volume windows for data collection
-4. **Cursor Tracking**: Maintain watermarks for incremental collection
-5. **Outbox Relay**: Publish task events reliably via Outbox pattern
-6. **Execution Coordination**: Track task status, retries, and lease management
-
-**Key Principle**: Ensure **at-least-once delivery** with **idempotent task execution**.
+> **数据采集编排器**,将摄入任务分解为可执行的原子任务并管理其生命周期。
 
 ---
 
-## 🏗️ Module Structure
+## 📌 核心职责
+
+`patra-ingest` 负责:
+
+1. **计划编排**: 根据调度器触发器创建执行计划
+2. **任务生成**: 将计划分解为原子任务(带幂等性保证)
+3. **窗口解析**: 确定数据采集的时间/容量窗口
+4. **游标跟踪**: 维护增量采集的水位线
+5. **Outbox 中继**: 通过 Outbox 模式可靠地发布任务事件
+6. **执行协调**: 跟踪任务状态、重试和租约管理
+
+**核心原则**: 确保**至少一次交付**和**幂等任务执行**。
+
+---
+
+## 🏗️ 模块结构
 
 ```
 patra-ingest/
-├─ patra-ingest-api/                # External contracts
+├─ patra-ingest-api/                # 外部契约(API层)
 │  └─ src/main/java/.../api/
-│     └─ (future: task worker APIs)
+│     └─ (未来: 任务工作者 APIs)
 │
-├─ patra-ingest-domain/             # Pure Java domain model
+├─ patra-ingest-domain/             # 纯 Java 领域模型(Domain层)
 │  └─ src/main/java/.../domain/
 │     ├─ model/
-│     │  ├─ aggregate/              # Core aggregates
-│     │  │  ├─ PlanAggregate.java       # Plan blueprint + state machine
-│     │  │  ├─ TaskAggregate.java       # Task with lease + execution timeline
-│     │  │  ├─ PlanSliceAggregate.java  # Plan slice (intermediate grouping)
-│     │  │  └─ ScheduleInstanceAggregate.java  # Scheduler run tracking
-│     │  ├─ vo/                     # Value objects
-│     │  │  ├─ WindowSpec.java          # Window specification (TIME/CURSOR/...)
-│     │  │  ├─ Batch.java               # Batch definition
-│     │  │  ├─ CursorWatermark.java     # Watermark tracking
-│     │  │  └─ ExecutionContext.java    # Task execution context
-│     │  ├─ entity/                 # Domain entities
-│     │  │  └─ OutboxMessage.java       # Outbox message entity
-│     │  ├─ enums/                  # Domain enums
+│     │  ├─ aggregate/              # 核心聚合根
+│     │  │  ├─ PlanAggregate.java       # 计划蓝图 + 状态机
+│     │  │  ├─ TaskAggregate.java       # 任务(带租约 + 执行时间线)
+│     │  │  ├─ PlanSliceAggregate.java  # 计划切片(中间分组)
+│     │  │  └─ ScheduleInstanceAggregate.java  # 调度运行跟踪
+│     │  ├─ vo/                     # 值对象
+│     │  │  ├─ WindowSpec.java          # 窗口规范(TIME/CURSOR/...)
+│     │  │  ├─ Batch.java               # 批次定义
+│     │  │  ├─ CursorWatermark.java     # 水位线跟踪
+│     │  │  └─ ExecutionContext.java    # 任务执行上下文
+│     │  ├─ entity/                 # 领域实体
+│     │  │  └─ OutboxMessage.java       # Outbox 消息实体
+│     │  ├─ enums/                  # 领域枚举
 │     │  │  ├─ PlanStatus.java          # DRAFT/SLICING/READY/COMPLETED/FAILED
 │     │  │  ├─ TaskStatus.java          # QUEUED/RUNNING/SUCCEEDED/FAILED/...
 │     │  │  └─ OperationCode.java       # HARVEST/UPDATE/COMPENSATION
-│     │  └─ snapshot/               # Config snapshots
+│     │  └─ snapshot/               # 配置快照
 │     │     └─ ProvenanceConfigSnapshot.java
-│     ├─ port/                      # Repository ports
+│     ├─ port/                      # 仓储端口
 │     │  ├─ PlanRepository.java
 │     │  ├─ TaskRepository.java
 │     │  ├─ CursorRepository.java
 │     │  ├─ OutboxRepository.java
-│     │  └─ PatraRegistryPort.java      # External service port
-│     ├─ event/                     # Domain events
+│     │  └─ PatraRegistryPort.java      # 外部服务端口
+│     ├─ event/                     # 领域事件
 │     │  └─ TaskQueuedEvent.java
-│     ├─ policy/                    # Domain policies
-│     ├─ exception/                 # Domain exceptions
-│     └─ messaging/                 # Messaging contracts
+│     ├─ policy/                    # 领域策略
+│     ├─ exception/                 # 领域异常
+│     └─ messaging/                 # 消息契约
 │
-├─ patra-ingest-app/                # Application layer (orchestration)
+├─ patra-ingest-app/                # 应用层(Application层 - 编排)
 │  └─ src/main/java/.../app/
 │     └─ usecase/
-│        ├─ plan/                   # Plan ingestion use case
-│        │  ├─ PlanIngestionOrchestrator.java    # Main orchestrator
-│        │  ├─ PlanIngestionCommand.java         # Input command
-│        │  ├─ PlanIngestionResult.java          # Output result
-│        │  ├─ assembler/                        # Plan assembly logic
+│        ├─ plan/                   # 计划摄入用例
+│        │  ├─ PlanIngestionOrchestrator.java    # 主编排器
+│        │  ├─ PlanIngestionCommand.java         # 输入命令
+│        │  ├─ PlanIngestionResult.java          # 输出结果
+│        │  ├─ assembler/                        # 计划装配逻辑
 │        │  │  └─ PlanAssembler.java
-│        │  ├─ expression/                       # Expression building
+│        │  ├─ expression/                       # 表达式构建
 │        │  │  └─ PlanExpressionBuilder.java
-│        │  ├─ window/                           # Window resolution
+│        │  ├─ window/                           # 窗口解析
 │        │  │  └─ PlanningWindowResolver.java
-│        │  ├─ validator/                        # Pre-validation
+│        │  ├─ validator/                        # 预验证
 │        │  │  └─ PlannerValidator.java
-│        │  └─ publisher/                        # Event publishing
+│        │  └─ publisher/                        # 事件发布
 │        │     └─ TaskOutboxPublisher.java
-│        └─ relay/                  # Outbox relay use case
+│        └─ relay/                  # Outbox 中继用例
 │           └─ OutboxRelayOrchestrator.java
 │
-├─ patra-ingest-infra/              # Infrastructure layer
+├─ patra-ingest-infra/              # 基础设施层(Infrastructure层)
 │  └─ src/main/java/.../infra/
 │     ├─ persistence/
 │     │  ├─ entity/                 # MyBatis-Plus DOs
@@ -89,79 +89,79 @@ patra-ingest/
 │     │  │  ├─ IngestCursorDO.java
 │     │  │  └─ IngestOutboxMessageDO.java
 │     │  ├─ mapper/                 # MyBatis mappers
-│     │  ├─ converter/              # DO ↔ Domain converters
-│     │  └─ repository/             # Repository implementations
+│     │  ├─ converter/              # DO ↔ Domain 转换器
+│     │  └─ repository/             # 仓储实现
 │     │     ├─ PlanRepositoryMpImpl.java
 │     │     ├─ TaskRepositoryMpImpl.java
 │     │     ├─ CursorRepositoryMpImpl.java
 │     │     └─ OutboxRepositoryMpImpl.java
-│     └─ rpc/                       # External service adapters
-│        └─ PatraRegistryPortImpl.java  # Calls patra-registry via Feign
+│     └─ rpc/                       # 外部服务适配器
+│        └─ PatraRegistryPortImpl.java  # 通过 Feign 调用 patra-registry
 │
-├─ patra-ingest-adapter/            # Adapter layer
+├─ patra-ingest-adapter/            # 适配器层(Adapter层)
 │  └─ src/main/java/.../adapter/
 │     ├─ inbound/
-│     │  ├─ scheduler/              # Job schedulers
-│     │  │  └─ PlanScheduler.java       # Cron-triggered planning
-│     │  └─ mq/                     # MQ listeners (future)
-│     └─ config/                    # Error mapping, tracing
+│     │  ├─ scheduler/              # 定时任务调度器
+│     │  │  └─ PlanScheduler.java       # Cron 触发的规划
+│     │  └─ mq/                     # MQ 监听器(未来)
+│     └─ config/                    # 错误映射、链路追踪
 │
-└─ patra-ingest-boot/               # Executable module
+└─ patra-ingest-boot/               # 可执行模块
    └─ src/main/java/.../
       └─ PatraIngestApplication.java
 ```
 
 ---
 
-## 🔑 Key Domain Concepts
+## 🔑 核心领域概念
 
-### 1. Plan (Aggregate Root)
+### 1. Plan (计划聚合根)
 
-**Definition**: Blueprint for a data collection job, containing window specification, expression snapshot, and configuration snapshot.
+**定义**: 数据采集任务的蓝图,包含窗口规范、表达式快照和配置快照。
 
-**State Machine**:
+**状态机**:
 ```
-DRAFT → SLICING → READY → COMPLETED
-                      ↓
-                   PARTIAL → FAILED
+DRAFT(草稿) → SLICING(切片中) → READY(就绪) → COMPLETED(已完成)
+                                   ↓
+                               PARTIAL(部分完成) → FAILED(失败)
 ```
 
-**Key Attributes**:
-- `planKey` (String): Idempotency key = hash(provenance + operation + window + strategy)
-- `provenanceCode` (String): Source code (e.g., `"pubmed"`)
+**核心属性**:
+- `planKey` (String): 幂等键 = hash(provenance + operation + window + strategy)
+- `provenanceCode` (String): 来源代码(例如: `"pubmed"`)
 - `operationCode` (OperationCode): HARVEST/UPDATE/COMPENSATION
-- `windowSpec` (WindowSpec): Window boundary (TIME/DATE/CURSOR/VOLUME/SINGLE)
-- `sliceStrategyCode` (String): How to break plan into slices (e.g., `"TIME"`, `"DATE"`, `"SINGLE"`)
-- `exprProtoSnapshotJson` (String): Captured expression prototype
-- `provenanceConfigSnapshotJson` (String): Captured config snapshot
+- `windowSpec` (WindowSpec): 窗口边界(TIME/DATE/CURSOR/VOLUME/SINGLE)
+- `sliceStrategyCode` (String): 如何将计划分解为切片(例如: `"TIME"`, `"DATE"`, `"SINGLE"`)
+- `exprProtoSnapshotJson` (String): 捕获的表达式原型
+- `provenanceConfigSnapshotJson` (String): 捕获的配置快照
 
-**File**: [`PlanAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java:1)
+**文件**: [`PlanAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java:1)
 
-### 2. Task (Aggregate Root)
+### 2. Task (任务聚合根)
 
-**Definition**: Atomic work unit for data collection (e.g., fetch PubMed records 1-1000).
+**定义**: 数据采集的原子工作单元(例如:获取 PubMed 记录 1-1000)。
 
-**State Machine**:
+**状态机**:
 ```
-QUEUED → RUNNING → SUCCEEDED
-            ↓
-         FAILED → (retry) → QUEUED
-            ↓
-       CANCELLED
+QUEUED(排队) → RUNNING(运行中) → SUCCEEDED(成功)
+                  ↓
+              FAILED(失败) → (重试) → QUEUED(排队)
+                  ↓
+             CANCELLED(已取消)
 ```
 
-**Key Attributes**:
-- `idempotentKey` (String): Business idempotency key
-- `provenanceCode` (String): Source code
-- `operationCode` (String): Operation type
-- `paramsJson` (String): Task parameters (JSON)
-- `priority` (Integer): Execution priority
-- `scheduledAt` (Instant): When to execute
-- `leaseInfo` (LeaseInfo): Lease ownership (owner, leasedUntil)
-- `executionTimeline` (ExecutionTimeline): Start/finish timestamps
-- `retryCount` (Integer): Number of retries attempted
+**核心属性**:
+- `idempotentKey` (String): 业务幂等键
+- `provenanceCode` (String): 来源代码
+- `operationCode` (String): 操作类型
+- `paramsJson` (String): 任务参数(JSON)
+- `priority` (Integer): 执行优先级
+- `scheduledAt` (Instant): 执行时间
+- `leaseInfo` (LeaseInfo): 租约所有权(owner, leasedUntil)
+- `executionTimeline` (ExecutionTimeline): 开始/结束时间戳
+- `retryCount` (Integer): 已尝试的重试次数
 
-**File**: [`TaskAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/TaskAggregate.java:1)
+**文件**: [`TaskAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/TaskAggregate.java:1)
 
 ### 3. WindowSpec (Sealed Interface)
 

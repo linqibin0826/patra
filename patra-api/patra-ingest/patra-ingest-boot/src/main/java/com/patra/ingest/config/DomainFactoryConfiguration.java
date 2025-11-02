@@ -6,34 +6,33 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration for registering Domain layer factories as Spring beans.
+ * 用于在 Spring 容器中注册领域层工厂的配置类。
  *
- * <p>Responsibilities:
+ * <p>职责:
  *
  * <ul>
- *   <li>Register Domain factories (pure Java classes) in Spring container
- *   <li>Inject infrastructure dependencies (e.g., Clock from patra-starter-core) into Domain
- *       factories
- *   <li>Maintain Domain layer purity (factories remain pure Java, no @Component)
+ *   <li>在 Spring 容器中注册领域层工厂(纯 Java 类)
+ *   <li>向领域层工厂注入基础设施依赖(例如来自 patra-starter-core 的 Clock)
+ *   <li>保持领域层的纯净(工厂保持为纯 Java,无 @Component 注解)
  * </ul>
  *
- * <p>Design rationale:
+ * <p>设计理由:
  *
  * <ul>
- *   <li>Domain layer must remain pure Java (no framework dependencies)
- *   <li>Factory classes in Domain don't use @Component annotation
- *   <li>Boot layer bridges Domain (pure Java) with Spring framework
- *   <li>Dependency direction: Boot → Domain (correct), NOT Domain → Spring (wrong)
- *   <li>Infrastructure beans (Clock) provided by patra-spring-boot-starter-core
+ *   <li>领域层必须保持为纯 Java(无框架依赖)
+ *   <li>领域层中的工厂类不使用 @Component 注解
+ *   <li>启动层桥接领域层(纯 Java)与 Spring 框架
+ *   <li>依赖方向: 启动层 → 领域层(正确),非 领域层 → Spring(错误)
+ *   <li>基础设施 Bean(Clock)由 patra-spring-boot-starter-core 提供
  * </ul>
  *
- * <p>Benefits:
+ * <p>优势:
  *
  * <ul>
- *   <li>Domain layer can be tested without Spring context
- *   <li>Factories can be instantiated in unit tests with test-specific dependencies
- *   <li>Adheres to Hexagonal Architecture dependency rules
- *   <li>Centralized infrastructure beans eliminate duplication
+ *   <li>领域层可以不使用 Spring 上下文进行测试
+ *   <li>工厂可以在单元测试中用测试特定的依赖进行实例化
+ *   <li>遵守六边形架构依赖规则
+ *   <li>集中式基础设施 Bean 消除重复
  * </ul>
  *
  * @author Papertrace Team
@@ -43,20 +42,19 @@ import org.springframework.context.annotation.Configuration;
 public class DomainFactoryConfiguration {
 
   /**
-   * Registers OutboxRelayLogFactory as Spring bean.
+   * 将 OutboxRelayLogFactory 注册为 Spring Bean。
    *
-   * <p>Factory methods:
+   * <p>工厂方法:
    *
    * <ul>
-   *   <li>createForPublished - Success scenario
-   *   <li>createForDeferred - Transient error with retry
-   *   <li>createForFailed - Permanent failure
-   *   <li>createForLeaseMissed - Concurrent lease conflict
+   *   <li>createForPublished - 成功场景
+   *   <li>createForDeferred - 临时错误并重试
+   *   <li>createForFailed - 永久失败
+   *   <li>createForLeaseMissed - 并发租约冲突
    * </ul>
    *
-   * @param clock Clock instance for timestamp generation (auto-injected from
-   *     patra-spring-boot-starter-core)
-   * @return OutboxRelayLogFactory instance
+   * @param clock 用于时间戳生成的 Clock 实例(从 patra-spring-boot-starter-core 自动注入)
+   * @return OutboxRelayLogFactory 实例
    */
   @Bean
   public OutboxRelayLogFactory outboxRelayLogFactory(Clock clock) {

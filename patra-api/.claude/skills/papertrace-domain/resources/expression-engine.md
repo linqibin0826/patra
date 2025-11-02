@@ -1,15 +1,15 @@
-# Expression Engine
+# 表达式引擎
 
-## Overview
+## 概览
 
-The Expression Engine provides an **abstraction layer** between business query concepts and provider-specific API parameters. Expressions are stored in `patra-registry` and consumed by `patra-ingest` via snapshot mechanism.
+表达式引擎在业务查询概念和特定提供者 API 参数之间提供了一个**抽象层**。表达式存储在 `patra-registry` 中，并通过快照机制被 `patra-ingest` 消费。
 
-**Key Characteristics:**
-- **4-Table Architecture**: Field Dictionary → Capabilities → Render Rules → API Param Mappings
-- **Snapshot-Based**: Expressions are snapshotted at Plan creation time (`expr_proto_snapshot`)
-- **Localized at Slice**: Slice expressions inject window boundaries (`expr_snapshot`)
-- **Hash-Based Identity**: Change detection via SHA256 hashing
-- **Two Emission Modes**: QUERY (template rendering) vs PARAMS (structured JSON)
+**核心特性**：
+- **四表架构**：字段字典 → 能力 → 渲染规则 → API 参数映射
+- **基于快照**：表达式在 Plan 创建时进行快照（`expr_proto_snapshot`）
+- **在切片层本地化**：切片表达式注入时间窗口边界（`expr_snapshot`）
+- **基于哈希的标识**：通过 SHA256 哈希进行变更检测
+- **两种发射模式**：QUERY（模板渲染）vs PARAMS（结构化 JSON）
 
 ---
 
@@ -31,7 +31,7 @@ reg_prov_api_param_mapping       - Final API parameter mappings
 
 ### Table 1: reg_expr_field_dict
 
-**Purpose**: Define business-level queryable fields (abstract layer).
+**目的**: Define business-level queryable fields (abstract layer).
 
 **Schema**:
 ```sql
@@ -57,7 +57,7 @@ CREATE TABLE reg_expr_field_dict (
 
 ### Table 2: reg_expr_capability
 
-**Purpose**: Define which operations each field supports.
+**目的**: Define which operations each field supports.
 
 **Schema**:
 ```sql
@@ -90,7 +90,7 @@ CREATE TABLE reg_expr_capability (
 
 ### Table 3: reg_prov_expr_render_rule
 
-**Purpose**: Provenance-specific rendering templates.
+**目的**: Provenance-specific rendering templates.
 
 **Schema**:
 ```sql
@@ -122,7 +122,7 @@ CREATE TABLE reg_prov_expr_render_rule (
 
 ### Table 4: reg_prov_api_param_mapping
 
-**Purpose**: Map abstract fields to provider API parameter names.
+**目的**: Map abstract fields to provider API parameter names.
 
 **Schema**:
 ```sql

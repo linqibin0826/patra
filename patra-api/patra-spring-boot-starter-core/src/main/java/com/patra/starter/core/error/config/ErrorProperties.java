@@ -5,71 +5,71 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties for platform-wide error handling.
+ * 平台级错误处理的配置属性。
  *
- * <p>Controls error-code context, resolution behavior, observation, and circuit-breaker settings.
+ * <p>控制错误码上下文、错误解析行为、观测和断路器设置。
  */
 @Data
 @ConfigurationProperties(prefix = "patra.error")
 public class ErrorProperties {
 
-  /** Whether platform-level error resolution is enabled. */
+  /** 是否启用平台级错误解析。 */
   private boolean enabled = true;
 
-  /** Required error-code context prefix (e.g., REG, INGEST). */
+  /** 必需的错误码上下文前缀（例如，REG、INGEST）。 */
   private String contextPrefix;
 
-  /** Core resolution behavior. */
+  /** 核心解析行为。 */
   private EngineProperties engine = new EngineProperties();
 
-  /** Observation and metrics configuration. */
+  /** 观测和指标配置。 */
   private ObservationProperties observation = new ObservationProperties();
 
-  /** Circuit-breaker configuration. */
+  /** 断路器配置。 */
   private CircuitBreakerProperties circuitBreaker = new CircuitBreakerProperties();
 
   @Data
   public static class EngineProperties {
-    /** Maximum depth to traverse the cause chain to avoid deep recursion. */
+    /** 遍历原因链的最大深度，以避免深度递归。 */
     private int maxCauseDepth = 10;
 
-    /** Whether trait-based semantic mapping is enabled. */
+    /** 是否启用基于特征的语义映射。 */
     private boolean enableTraitMapping = true;
 
-    /** Whether class-name heuristics are enabled. */
+    /** 是否启用类名启发式。 */
     private boolean enableNamingHeuristic = true;
   }
 
   @Data
   public static class ObservationProperties {
-    /** Whether Micrometer observation and structured logging are enabled. */
+    /** 是否启用 Micrometer 观测和结构化日志。 */
     private boolean enabled = true;
 
-    /** Slow-resolution threshold in milliseconds. */
+    /** 慢解析阈值（毫秒）。 */
     private long slowThresholdMs = 200L;
 
-    /** Whether to log WARN entries for slow resolutions. */
+    /** 是否为慢解析记录 WARN 日志。 */
     private boolean logSlowResolution = true;
   }
 
   @Data
   public static class CircuitBreakerProperties {
-    /** Whether circuit-breaker protection is enabled. */
+    /** 是否启用断路器保护。 */
     private boolean enabled = true;
 
-    /** Failure rate threshold (percentage 0–100). */
+    /** 失败率阈值（百分比 0-100）。 */
     private float failureRateThreshold = 50.0f;
 
-    /** Minimum number of calls considered in the circuit window. */
+    /** 断路器窗口中考虑的最少调用次数。 */
     private int minimumNumberOfCalls = 20;
 
-    /** Sliding-window size. */
+    /** 滑动窗口大小。 */
     private int slidingWindowSize = 50;
 
-    /** Number of permitted calls while half-open. */
+    /** 断路器处于半开状态时允许的调用数。 */
     private int permittedCallsInHalfOpenState = 5;
 
-    /** Wait duration while the breaker is open. */
+    /** 断路器打开时的等待时长。 */
     private Duration waitDurationInOpenState = Duration.ofSeconds(30);
   }
 }

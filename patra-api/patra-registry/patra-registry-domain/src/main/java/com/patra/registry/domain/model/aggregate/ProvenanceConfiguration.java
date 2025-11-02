@@ -10,24 +10,22 @@ import com.patra.registry.domain.model.vo.provenance.RetryConfig;
 import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
 
 /**
- * Provenance configuration aggregate root providing a consolidated read-only view over provenance
- * and multiple configuration dimensions.
+ * 来源配置聚合根,提供来源和多个配置维度的整合只读视图。
  *
- * <p>Used on the CQRS read side to represent the effective configuration at a point in time,
- * including HTTP policy, retry, rate limit, and other operational settings.
+ * <p>用于 CQRS 读端,表示特定时间点的有效配置, 包括 HTTP 策略、重试、速率限制和其他运营设置。
  *
- * <p>Scope precedence: TASK-specific slices override SOURCE-level defaults.
+ * <p>作用域优先级:TASK 级切片覆盖 SOURCE 级默认值。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>provenance - core provenance entity containing source metadata; never null
- *   <li>windowOffset - window offset configuration for time-based segmentation; nullable
- *   <li>pagination - pagination strategy configuration; nullable
- *   <li>http - HTTP client configuration including timeouts and headers; nullable
- *   <li>batching - batching configuration for detail fetch operations; nullable
- *   <li>retry - retry policy configuration with backoff strategy; nullable
- *   <li>rateLimit - rate limiting configuration for API throttling; nullable
+ *   <li>provenance - 包含来源元数据的核心来源实体;永不为 null
+ *   <li>windowOffset - 基于时间分段的窗口偏移配置;可为 null
+ *   <li>pagination - 分页策略配置;可为 null
+ *   <li>http - HTTP 客户端配置,包括超时和头部;可为 null
+ *   <li>batching - 详情获取操作的批处理配置;可为 null
+ *   <li>retry - 重试策略配置,包含退避策略;可为 null
+ *   <li>rateLimit - API 节流的速率限制配置;可为 null
  * </ol>
  *
  * @author linqibin
@@ -42,75 +40,74 @@ public record ProvenanceConfiguration(
     RetryConfig retry,
     RateLimitConfig rateLimit) {
   /**
-   * Compact canonical constructor enforcing provenance non-null invariant.
+   * 紧凑的规范构造器,强制 provenance 非空不变性。
    *
-   * @throws DomainValidationException if provenance is null
+   * @throws DomainValidationException 如果 provenance 为 null
    */
   public ProvenanceConfiguration {
     DomainValidationException.nonNull(provenance, "Provenance");
   }
 
   /**
-   * Checks whether window offset configuration is present.
+   * 检查窗口偏移配置是否存在。
    *
-   * @return true if window offset is configured
+   * @return 如果配置了窗口偏移则返回 true
    */
   public boolean hasWindowOffset() {
     return windowOffset != null;
   }
 
   /**
-   * Checks whether pagination configuration is present.
+   * 检查分页配置是否存在。
    *
-   * @return true if pagination is configured
+   * @return 如果配置了分页则返回 true
    */
   public boolean hasPagination() {
     return pagination != null;
   }
 
   /**
-   * Checks whether HTTP configuration is present.
+   * 检查 HTTP 配置是否存在。
    *
-   * @return true if HTTP config is present
+   * @return 如果存在 HTTP 配置则返回 true
    */
   public boolean hasHttpConfig() {
     return http != null;
   }
 
   /**
-   * Checks whether batching configuration is present.
+   * 检查批处理配置是否存在。
    *
-   * @return true if batching is configured
+   * @return 如果配置了批处理则返回 true
    */
   public boolean hasBatching() {
     return batching != null;
   }
 
   /**
-   * Checks whether retry configuration is present.
+   * 检查重试配置是否存在。
    *
-   * @return true if retry policy is configured
+   * @return 如果配置了重试策略则返回 true
    */
   public boolean hasRetry() {
     return retry != null;
   }
 
   /**
-   * Checks whether rate limit configuration is present.
+   * 检查速率限制配置是否存在。
    *
-   * @return true if rate limit is configured
+   * @return 如果配置了速率限制则返回 true
    */
   public boolean hasRateLimit() {
     return rateLimit != null;
   }
 
   /**
-   * Checks whether the configuration is complete and active.
+   * 检查配置是否完整且激活。
    *
-   * <p>A configuration is considered complete if the provenance is non-null and active. Individual
-   * policy configurations (pagination, retry, etc.) are optional.
+   * <p>如果 provenance 非空且激活,则认为配置完整。单个策略配置(分页、重试等)是可选的。
    *
-   * @return true if provenance is present and active
+   * @return 如果 provenance 存在且激活则返回 true
    */
   public boolean isComplete() {
     return provenance != null && provenance.isActive();

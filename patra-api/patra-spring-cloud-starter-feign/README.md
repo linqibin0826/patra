@@ -1,85 +1,85 @@
 # patra-spring-cloud-starter-feign
 
-> Enhanced Feign client configuration with convention-based scanning, error handling, tracing, and retry policies.
+> 增强的 Feign 客户端配置,支持基于约定的扫描、错误处理、追踪和重试策略。
 
-## 📌 Purpose
+## 📌 目的
 
-Extends Spring Cloud OpenFeign with Papertrace conventions:
+使用 Papertrace 约定扩展 Spring Cloud OpenFeign:
 
-- **Convention-based Feign client scanning** (`com.patra.*.api.rpc.client`)
-- Custom error decoder (maps errors to domain exceptions)
-- Request interceptors (trace ID propagation, caller service ID)
-- Retry policies (exponential backoff)
-- Timeout configuration
-- Circuit breaker integration
+- **基于约定的 Feign 客户端扫描**(`com.patra.*.api.rpc.client`)
+- 自定义错误解码器(映射错误到领域异常)
+- 请求拦截器(追踪 ID 传播、调用方服务 ID)
+- 重试策略(指数退避)
+- 超时配置
+- 熔断器集成
 
-## 🏗️ Convention-Based Scanning
+## 🏗️ 基于约定的扫描
 
-### Automatic Feign Client Discovery
+### 自动 Feign 客户端发现
 
-This starter **automatically scans and registers** all `@FeignClient` annotated interfaces under the `com.patra` package.
+本 Starter **自动扫描并注册** `com.patra` 包下所有使用 `@FeignClient` 注解的接口。
 
-**Convention**: Place RPC clients in `{module}-api/src/main/java/com/patra/{module}/api/rpc/client/` packages.
+**约定**: 将 RPC 客户端放在 `{module}-api/src/main/java/com/patra/{module}/api/rpc/client/` 包中。
 
-**Examples of auto-discovered clients:**
+**自动发现的客户端示例**:
 
 - `com.patra.registry.api.rpc.client.ProvenanceClient`
 - `com.patra.registry.api.rpc.client.ExprClient`
-- `com.patra.ingest.api.rpc.client.TaskClient` (future)
-- `com.patra.data.api.rpc.client.LiteratureClient` (future)
+- `com.patra.ingest.api.rpc.client.TaskClient`(未来)
+- `com.patra.data.api.rpc.client.LiteratureClient`(未来)
 
-### No Manual Configuration Required
+### 无需手动配置
 
 ```java
-// ❌ OLD WAY: Manual configuration in every service
+// ❌ 旧方式: 在每个服务中手动配置
 @EnableFeignClients(basePackages = {"com.patra.registry.api.rpc.client"})
 @SpringBootApplication
 public class MyApplication {
 }
 
-// ✅ NEW WAY: Convention-based automatic discovery
+// ✅ 新方式: 基于约定的自动发现
 @SpringBootApplication
 public class MyApplication {
-    // Feign clients automatically discovered via starter
+    // Feign 客户端通过 Starter 自动发现
 }
 ```
 
-### Benefits
+### 优势
 
-- ✅ **Convention over Configuration**: Follow naming pattern → automatic registration
-- ✅ **DRY Principle**: No scattered `@EnableFeignClients` across services
-- ✅ **Consistency**: All services follow same discovery pattern
-- ✅ **Maintainability**: Add new Feign clients without updating configuration
+- ✅ **约定优于配置**: 遵循命名模式 → 自动注册
+- ✅ **DRY 原则**: 无需在各服务中分散 `@EnableFeignClients`
+- ✅ **一致性**: 所有服务遵循相同的发现模式
+- ✅ **可维护性**: 添加新的 Feign 客户端无需更新配置
 
-### All Feign Clients Discovered
+### 发现所有 Feign 客户端
 
-This starter discovers **all** `@FeignClient` interfaces under `com.patra`, including business RPC
-clients placed under `com.patra.{module}.api.rpc.client.*` (following the convention).
+本 Starter 发现 `com.patra` 下的**所有** `@FeignClient` 接口,包括放置在
+`com.patra.{module}.api.rpc.client.*` 下的业务 RPC 客户端(遵循约定)。
 
-**No need for individual starters to declare `@EnableFeignClients`** - this starter handles it centrally.
+**各个 Starter 无需声明 `@EnableFeignClients`** - 本 Starter 集中处理。
 
-## 🔧 Auto-Configurations
+## 🔧 自动配置
 
-### Error Decoder
+### 错误解码器
 
-- Maps HTTP 404 → `NotFoundException`
-- Maps HTTP 409 → `ConflictException`
-- Maps HTTP 5xx → `RemoteServiceException`
-- Extracts Problem Detail from responses
+- 映射 HTTP 404 → `NotFoundException`
+- 映射 HTTP 409 → `ConflictException`
+- 映射 HTTP 5xx → `RemoteServiceException`
+- 从响应中提取 Problem Detail
 
-### Request Interceptor
+### 请求拦截器
 
-- Injects `X-Trace-ID` header
-- Injects `X-Span-ID` header
-- Propagates correlation ID
+- 注入 `X-Trace-ID` 头
+- 注入 `X-Span-ID` 头
+- 传播关联 ID
 
-### Retry Configuration
+### 重试配置
 
-- Max attempts: 3
-- Backoff: 100ms, 300ms, 900ms (exponential)
-- Retryable: 502, 503, 504 status codes
+- 最大尝试次数: 3
+- 退避: 100ms, 300ms, 900ms(指数)
+- 可重试: 502, 503, 504 状态码
 
-## 🔗 Dependencies
+## 🔗 依赖
 
 ```xml
 
@@ -89,13 +89,13 @@ clients placed under `com.patra.{module}.api.rpc.client.*` (following the conven
 </dependency>
 ```
 
-Includes: Spring Cloud OpenFeign, Resilience4j Retry
+包含: Spring Cloud OpenFeign、Resilience4j Retry
 
-## 🚀 Usage
+## 🚀 用法
 
-### Define Feign Client (Convention-Based)
+### 定义 Feign 客户端(基于约定)
 
-**Step 1**: Create client interface in `{module}-api/src/main/java/com/patra/{module}/api/rpc/client/`
+**步骤 1**: 在 `{module}-api/src/main/java/com/patra/{module}/api/rpc/client/` 创建客户端接口
 
 ```java
 package com.patra.registry.api.rpc.client;
@@ -104,11 +104,11 @@ import org.springframework.cloud.openfeign.FeignClient;
 
 @FeignClient(name = "patra-registry", contextId = "provenanceClient")
 public interface ProvenanceClient extends ProvenanceEndpoint {
-    // Methods inherited from endpoint interface
+    // 方法从端点接口继承
 }
 ```
 
-**Step 2**: Use client in your service (automatically discovered and injected)
+**步骤 2**: 在服务中使用客户端(自动发现并注入)
 
 ```java
 
@@ -116,7 +116,7 @@ public interface ProvenanceClient extends ProvenanceEndpoint {
 @RequiredArgsConstructor
 public class PatraRegistryPortImpl implements PatraRegistryPort {
 
-    private final ProvenanceClient client;  // Auto-wired (no @EnableFeignClients needed!)
+    private final ProvenanceClient client;  // 自动注入(无需 @EnableFeignClients!)
 
     @Override
     public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode code) {
@@ -129,9 +129,9 @@ public class PatraRegistryPortImpl implements PatraRegistryPort {
 }
 ```
 
-**That's it!** No `@EnableFeignClients` annotation needed in your application class.
+**就这样!** 应用类中无需 `@EnableFeignClients` 注解。
 
-### Configuration
+### 配置
 
 ```yaml
 feign:
@@ -145,12 +145,12 @@ feign:
 
 ---
 
-## 🔗 Related Documentation
+## 🔗 相关文档
 
-- [Main README](../README.md)
-- [patra-spring-boot-starter-provenance](../patra-spring-boot-starter-provenance/README.md) - Provenance client starter
-- [Architecture Guide](../docs/ARCHITECTURE.md) - System design patterns
+- [主 README](../README.md)
+- [patra-spring-boot-starter-provenance](../patra-spring-boot-starter-provenance/README.md) - Provenance 客户端 Starter
+- [架构指南](../docs/ARCHITECTURE.md) - 系统设计模式
 
 ---
 
-**Last Updated**: 2025-10-14
+**最后更新**: 2025-10-14

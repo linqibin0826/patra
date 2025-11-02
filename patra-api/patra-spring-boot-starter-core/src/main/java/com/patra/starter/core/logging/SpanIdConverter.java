@@ -5,9 +5,9 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 
 /**
- * Custom Logback converter for extracting SkyWalking span ID.
+ * 用于提取 SkyWalking 跨度 ID 的自定义 Logback 转换器。
  *
- * <p>Usage in logback.xml:
+ * <p>在 logback.xml 中的使用：
  *
  * <pre>
  * &lt;conversionRule conversionWord="spanId"
@@ -28,8 +28,8 @@ public class SpanIdConverter extends ClassicConverter {
       if (traceId == null || traceId.isEmpty() || "N/A".equals(traceId)) {
         return EMPTY_SPAN_ID;
       }
-      // Extract span ID (after second dot)
-      // Format: traceId.segmentId.spanId
+      // 提取跨度 ID（第二个点之后）
+      // 格式：traceId.segmentId.spanId
       String[] parts = traceId.split("\\.");
       if (parts.length >= 3) {
         return parts[2];

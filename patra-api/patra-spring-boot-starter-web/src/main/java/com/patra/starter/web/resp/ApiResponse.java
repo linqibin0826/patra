@@ -5,10 +5,9 @@ import java.time.Instant;
 import lombok.Getter;
 
 /**
- * Standard API response envelope providing a consistent success/failure contract with an associated
- * timestamp and optional payload.
+ * 标准 API 响应信封，提供一致的成功/失败契约，包含关联的时间戳和可选的载荷。
  *
- * @param <T> type of the optional response body
+ * @param <T> 可选响应体的类型
  */
 @Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -31,16 +30,16 @@ public class ApiResponse<T> {
     this.data = data;
   }
 
-  /** Create a successful response with the supplied payload. */
+  /** 使用提供的数据创建成功响应。 */
   public static <T> ApiResponse<T> ok(T data) {
     return new ApiResponse<>(true, ResultCode.OK.getCode(), ResultCode.OK.getMessage(), data);
   }
 
   /**
-   * Create a business failure response using the provided result code.
+   * 使用提供的结果代码创建业务失败响应。
    *
-   * @param code logical result code
-   * @param message optional override for the default message
+   * @param code 逻辑结果代码
+   * @param message 默认消息的可选覆盖
    */
   public static <T> ApiResponse<T> failure(ResultCode code, String message) {
     return new ApiResponse<>(
@@ -48,11 +47,11 @@ public class ApiResponse<T> {
   }
 
   /**
-   * Create an error response referencing the raw HTTP status code.
+   * 创建引用原始 HTTP 状态代码的错误响应。
    *
-   * @param code HTTP status code
-   * @param message human-readable error description
-   * @return response marked as unsuccessful
+   * @param code HTTP 状态代码
+   * @param message 人类可读的错误描述
+   * @return 标记为失败的响应
    */
   public static <T> ApiResponse<T> error(int code, String message) {
     return new ApiResponse<>(false, code, message, null);

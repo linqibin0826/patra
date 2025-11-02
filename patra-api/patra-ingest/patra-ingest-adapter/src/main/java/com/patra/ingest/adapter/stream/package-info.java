@@ -1,34 +1,30 @@
 /**
- * RocketMQ message consumers that trigger task execution workflows.
+ * RocketMQ 消息消费者,触发任务执行工作流。
  *
- * <p>This package contains driving adapters that receive messages from RocketMQ topics and
- * translate them into application use case calls. All classes here are part of the Hexagonal
- * Architecture's adapter layer (External → System direction).
+ * <p>此包包含驱动适配器,接收来自 RocketMQ 主题的消息并将它们转换为应用用例调用。这里的所有类都是六边形架构适配器层的一部分(外部 → 系统方向)。
  *
- * <h2>Responsibilities</h2>
+ * <h2>职责</h2>
  *
  * <ul>
- *   <li>Consume messages from RocketMQ topics
- *   <li>Parse and validate message payloads
- *   <li>Extract tracing context (traceId, spanId) from message headers
- *   <li>Delegate to {@code TaskExecutionUseCase} or other orchestrators
- *   <li>Handle adapter-level error mapping and dead letter queue (DLQ) routing
+ *   <li>从 RocketMQ 主题消费消息
+ *   <li>解析和验证消息负载
+ *   <li>从消息头提取追踪上下文(traceId, spanId)
+ *   <li>委托给 {@code TaskExecutionUseCase} 或其他编排器
+ *   <li>处理适配器层错误映射和死信队列(DLQ)路由
  * </ul>
  *
- * <h2>Message Topics</h2>
+ * <h2>消息主题</h2>
  *
  * <ul>
- *   <li>{@code INGEST_TASK_READY} - Task ready for execution (consumed by {@code
- *       IngestStreamConsumers})
+ *   <li>{@code INGEST_TASK_READY} - 任务准备执行(由 {@code IngestStreamConsumers} 消费)
  * </ul>
  *
- * <h2>Configuration</h2>
+ * <h2>配置</h2>
  *
- * Message consumers are configured as Spring Cloud Stream {@code @Bean} methods that return {@code
- * Consumer<Message<String>>}. The framework handles subscription, message delivery, and error
- * handling.
+ * 消息消费者配置为 Spring Cloud Stream {@code @Bean} 方法,返回 {@code
+ * Consumer<Message<String>>}。框架处理订阅、消息投递和错误处理。
  *
- * <h2>Example</h2>
+ * <h2>示例</h2>
  *
  * <pre>{@code
  * @Configuration

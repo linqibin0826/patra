@@ -1,23 +1,19 @@
 package com.patra.common.storage;
 
 /**
- * Strategy interface for generating standardized object storage keys.
+ * 生成标准化对象存储键的策略接口。
  *
- * <p>Implementations define specific key generation patterns (e.g., date-partitioned, hierarchical,
- * custom) while ensuring consistent structure across all Papertrace microservices.
+ * <p>实现定义特定的键生成模式(例如,日期分区、层次化、自定义), 同时确保所有 Papertrace 微服务的结构一致性。
  *
- * <p><b>Design Pattern</b>: Strategy Pattern — allows different key generation strategies to be
- * swapped at runtime or configured per service/use case.
+ * <p><b>设计模式</b>:策略模式 — 允许在运行时交换不同的键生成策略或按服务/用例配置。
  *
- * <p><b>Thread Safety</b>: Implementations should be stateless and thread-safe to support singleton
- * usage across the application.
+ * <p><b>线程安全</b>:实现应该是无状态且线程安全的,以支持整个应用程序中的单例使用。
  *
- * <p><b>Standard Implementations</b>:
+ * <p><b>标准实现</b>:
  *
  * <ul>
- *   <li>{@link DatePartitionedKeyGenerator} — Daily partitioned keys ({@code
- *       service/type/yyyy/MM/dd/id.ext})
- *   <li>Future: {@code MonthPartitionedKeyGenerator}, {@code HierarchicalKeyGenerator}, etc.
+ *   <li>{@link DatePartitionedKeyGenerator} — 按日分区的键({@code service/type/yyyy/MM/dd/id.ext})
+ *   <li>未来:{@code MonthPartitionedKeyGenerator}、{@code HierarchicalKeyGenerator} 等。
  * </ul>
  *
  * @author linqibin
@@ -29,24 +25,22 @@ package com.patra.common.storage;
 public interface ObjectKeyGenerator {
 
   /**
-   * Generates an object storage key from the provided context.
+   * 从提供的上下文生成对象存储键。
    *
-   * <p>The returned key should be a relative path (without bucket name) that uniquely identifies
-   * the object within the storage bucket.
+   * <p>返回的键应该是相对路径(不包含存储桶名称),在存储桶内唯一标识对象。
    *
-   * <p><b>Normalization Requirements</b>:
+   * <p><b>规范化要求</b>:
    *
    * <ul>
-   *   <li>Service names should be lowercase
-   *   <li>Business types should follow kebab-case convention
-   *   <li>Date segments should use consistent formatting (yyyy/MM/dd)
-   *   <li>Path separators should use forward slashes ({@code /})
+   *   <li>服务名称应为小写
+   *   <li>业务类型应遵循 kebab-case 约定
+   *   <li>日期段应使用一致的格式(yyyy/MM/dd)
+   *   <li>路径分隔符应使用正斜杠({@code /})
    * </ul>
    *
-   * @param context immutable context containing all key generation parameters
-   * @return generated object key path (e.g., {@code
-   *     ingest/literature-batch/2025/10/26/pubmed-123.json})
-   * @throws IllegalArgumentException if context contains invalid data
+   * @param context 包含所有键生成参数的不可变上下文
+   * @return 生成的对象键路径(例如,{@code ingest/literature-batch/2025/10/26/pubmed-123.json})
+   * @throws IllegalArgumentException 如果上下文包含无效数据
    */
   String generate(ObjectKeyContext context);
 }

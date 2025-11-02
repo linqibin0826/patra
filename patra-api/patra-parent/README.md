@@ -1,23 +1,23 @@
-# patra-parent — Parent POM
+# patra-parent — 父 POM
 
-> **Maven parent POM** providing centralized dependency management and plugin configuration for all Papertrace modules.
-
----
-
-## 📌 Purpose
-
-Provides **consistent** dependency versions and build configuration:
-- Dependency management (Spring Boot, MyBatis-Plus, etc.)
-- Plugin management (compiler, surefire, jacoco, etc.)
-- Java version enforcement (Java 25)
-- Encoding standards (UTF-8)
-- Maven properties (versions, flags)
+> **Maven 父 POM**,为所有 Papertrace 模块提供集中的依赖管理和插件配置。
 
 ---
 
-## 🔧 Managed Dependencies
+## 📌 目的
 
-### Spring Ecosystem
+提供**一致的**依赖版本和构建配置:
+- 依赖管理(Spring Boot、MyBatis-Plus 等)
+- 插件管理(编译器、surefire、jacoco 等)
+- Java 版本强制(Java 25)
+- 编码标准(UTF-8)
+- Maven 属性(版本、标志)
+
+---
+
+## 🔧 管理的依赖
+
+### Spring 生态系统
 
 ```xml
 <dependencyManagement>
@@ -43,9 +43,9 @@ Provides **consistent** dependency versions and build configuration:
 </dependencyManagement>
 ```
 
-### Papertrace Modules
+### Papertrace 模块
 
-All internal modules inherit versions from parent:
+所有内部模块从父 POM 继承版本:
 
 ```xml
 <dependency>
@@ -55,21 +55,21 @@ All internal modules inherit versions from parent:
 </dependency>
 ```
 
-### Key Libraries
+### 核心库
 
-| Library | Version | Purpose |
+| 库 | 版本 | 用途 |
 |---------|---------|---------|
-| **MyBatis-Plus** | 3.5.5 | ORM framework |
-| **MapStruct** | 1.5.5 | Object mapping |
-| **Hutool** | 5.8.25 | Java utilities |
-| **Resilience4j** | 2.2.0 | Resilience patterns |
-| **SkyWalking** | 9.5.0 | Distributed tracing |
+| **MyBatis-Plus** | 3.5.5 | ORM 框架 |
+| **MapStruct** | 1.5.5 | 对象映射 |
+| **Hutool** | 5.8.25 | Java 工具库 |
+| **Resilience4j** | 2.2.0 | 弹性模式 |
+| **SkyWalking** | 9.5.0 | 分布式追踪 |
 
 ---
 
-## 🔨 Plugin Management
+## 🔨 插件管理
 
-### Maven Compiler Plugin
+### Maven 编译器插件
 
 ```xml
 <plugin>
@@ -85,7 +85,7 @@ All internal modules inherit versions from parent:
 </plugin>
 ```
 
-### Maven Surefire Plugin
+### Maven Surefire 插件
 
 ```xml
 <plugin>
@@ -98,7 +98,7 @@ All internal modules inherit versions from parent:
 </plugin>
 ```
 
-### JaCoCo (Code Coverage)
+### JaCoCo (代码覆盖率)
 
 ```xml
 <plugin>
@@ -112,7 +112,7 @@ All internal modules inherit versions from parent:
                     <limit>
                         <counter>LINE</counter>
                         <value>COVEREDRATIO</value>
-                        <minimum>0.75</minimum>  <!-- 75% coverage -->
+                        <minimum>0.75</minimum>  <!-- 75% 覆盖率 -->
                     </limit>
                 </limits>
             </rule>
@@ -123,9 +123,9 @@ All internal modules inherit versions from parent:
 
 ---
 
-## 🚀 Usage
+## 🚀 用法
 
-### In Child Modules
+### 在子模块中
 
 ```xml
 <parent>
@@ -138,7 +138,7 @@ All internal modules inherit versions from parent:
 <artifactId>patra-{module}</artifactId>
 
 <dependencies>
-    <!-- No need to specify versions (inherited from parent) -->
+    <!-- 无需指定版本(从父 POM 继承) -->
     <dependency>
         <groupId>com.papertrace</groupId>
         <artifactId>patra-common</artifactId>
@@ -153,28 +153,28 @@ All internal modules inherit versions from parent:
 
 ---
 
-## 📦 Build Commands
+## 📦 构建命令
 
-### Build All Modules
+### 构建所有模块
 
 ```bash
 mvn clean install
 ```
 
-### Skip Tests
+### 跳过测试
 
 ```bash
 mvn clean install -DskipTests
 ```
 
-### Run Tests with Coverage
+### 运行测试并生成覆盖率报告
 
 ```bash
 mvn clean verify
-# Coverage report: target/site/jacoco/index.html
+# 覆盖率报告: target/site/jacoco/index.html
 ```
 
-### Update All Versions
+### 更新所有版本
 
 ```bash
 mvn versions:set -DnewVersion=0.2.0-SNAPSHOT
@@ -183,10 +183,10 @@ mvn versions:commit
 
 ---
 
-## 🔗 Module Hierarchy
+## 🔗 模块层次结构
 
 ```
-patra-parent (this)
+patra-parent (本模块)
 ├─ patra-common
 ├─ patra-expr-kernel
 ├─ patra-spring-boot-starter-*
@@ -196,13 +196,13 @@ patra-parent (this)
 └─ patra-gateway-boot
 ```
 
-All modules declare `patra-parent` as parent.
+所有模块将 `patra-parent` 声明为父 POM。
 
 ---
 
-## 📊 Properties
+## 📊 属性
 
-### Java Version
+### Java 版本
 
 ```xml
 <properties>
@@ -212,7 +212,7 @@ All modules declare `patra-parent` as parent.
 </properties>
 ```
 
-### Encoding
+### 编码
 
 ```xml
 <properties>
@@ -223,11 +223,11 @@ All modules declare `patra-parent` as parent.
 
 ---
 
-## 🔗 Related Documentation
+## 🔗 相关文档
 
-- [Main README](../README.md)
-- [Architecture Guide](../docs/ARCHITECTURE.md)
+- [主 README](../README.md)
+- [架构指南](../docs/ARCHITECTURE.md)
 
 ---
 
-**Last Updated**: 2025-01-12
+**最后更新**: 2025-01-12

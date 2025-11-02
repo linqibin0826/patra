@@ -1,8 +1,8 @@
-# Provenance Configuration System
+# Provenance 配置系统
 
-## Overview
+## 概览
 
-The Provenance Configuration System is Papertrace's **multi-dimensional temporal configuration mechanism** stored in `patra-registry` and consumed by `patra-ingest`. It governs how data is harvested from each Provenance source.
+Provenance 配置系统是 Papertrace 的**多维时态配置机制**,存储在 `patra-registry` 中并由 `patra-ingest` 消费。它管理从每个 Provenance 源采集数据的方式。
 
 **Key Characteristics:**
 - **Multi-Dimensional**: 7 independent configuration dimensions (Window, Pagination, HTTP, Batching, Retry, RateLimit, CircuitBreaker)
@@ -88,7 +88,7 @@ Results:
 
 **Table**: `reg_prov_window_offset_cfg`
 
-**Purpose**: Controls time window sizing and offset calculation strategies.
+**目的**: Controls time window sizing and offset calculation strategies.
 
 **Key Fields**:
 
@@ -118,7 +118,7 @@ Results:
 
 **Table**: `reg_prov_pagination_cfg`
 
-**Purpose**: Defines pagination strategy and parameters.
+**目的**: Defines pagination strategy and parameters.
 
 **Key Fields**:
 
@@ -150,7 +150,7 @@ Results:
 
 **Table**: `reg_prov_http_cfg`
 
-**Purpose**: HTTP client settings.
+**目的**: HTTP client settings.
 
 **Key Fields**:
 
@@ -166,7 +166,7 @@ Results:
 
 **Table**: `reg_prov_batching_cfg`
 
-**Purpose**: Batch processing parallelism.
+**目的**: Batch processing parallelism.
 
 **Key Fields**:
 
@@ -182,7 +182,7 @@ Results:
 
 **Table**: `reg_prov_retry_cfg`
 
-**Purpose**: Retry policies for failed requests.
+**目的**: Retry policies for failed requests.
 
 **Key Fields**:
 
@@ -200,7 +200,7 @@ Results:
 
 **Table**: `reg_prov_rate_limit_cfg`
 
-**Purpose**: API rate limiting thresholds.
+**目的**: API rate limiting thresholds.
 
 **Key Fields**:
 
@@ -216,7 +216,7 @@ Results:
 
 **Table**: `reg_prov_circuit_breaker_cfg`
 
-**Purpose**: Circuit breaker fault tolerance.
+**目的**: Circuit breaker fault tolerance.
 
 **Key Fields**:
 

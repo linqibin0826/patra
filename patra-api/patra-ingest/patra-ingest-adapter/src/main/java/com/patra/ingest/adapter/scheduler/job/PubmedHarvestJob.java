@@ -8,40 +8,33 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * PubMed HARVEST scheduled job. Binds the PUBMED provenance with the HARVEST operation and
- * delegates parameter parsing and plan orchestration to the base class.
+ * PubMed HARVEST 定时任务。将 PUBMED 来源与 HARVEST 操作绑定,并将参数解析和计划编排委托给基类。
  *
- * <p>This class does not handle business details; it declares provenance/operation and exposes the
- * XXL execution entrypoint.
+ * <p>此类不处理业务细节;它声明来源/操作并暴露 XXL 执行入口点。
  */
 @Slf4j
 @Component
 public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
 
-  /** Fixed PUBMED provenance. */
+  /** 固定的 PUBMED 来源。 */
   @Override
   protected ProvenanceCode getProvenanceCode() {
     return ProvenanceCode.PUBMED;
   }
 
-  /** Fixed HARVEST operation. */
+  /** 固定的 HARVEST 操作。 */
   @Override
   protected OperationCode getOperationCode() {
     return OperationCode.HARVEST;
   }
 
-  /**
-   * XXL-Job entrypoint: fetch scheduler param and delegate to {@link #executeScheduleJob(String)}.
-   */
+  /** XXL-Job 入口点: 获取调度器参数并委托给 {@link #executeScheduleJob(String)}。 */
   @XxlJob("pubmedHarvest")
   public void run() {
     String jobParam = XxlJobHelper.getJobParam();
-    log.debug(
-        "PubMed harvest job triggered with jobId [{}], param: {}",
-        XxlJobHelper.getJobId(),
-        jobParam);
+    log.debug("PubMed harvest 任务已触发,jobId [{}],参数: {}", XxlJobHelper.getJobId(), jobParam);
 
-    // Pass XXL param through to the common scheduling logic
+    // 将 XXL 参数传递给通用调度逻辑
     executeScheduleJob(jobParam);
   }
 }

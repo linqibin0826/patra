@@ -1,155 +1,155 @@
-# Hexagonal Architecture + DDD Overview
+# 六边形架构 + DDD 概览
 
-Complete guide to Papertrace's architectural patterns combining Hexagonal Architecture (Ports & Adapters) with Domain-Driven Design.
-
----
-
-## Table of Contents
-
-1. [Core Architectural Principles](#core-architectural-principles)
-2. [Four-Layer Architecture](#four-layer-architecture)
-3. [Dependency Rules](#dependency-rules-must-follow)
-4. [Layer Responsibilities](#layer-responsibilities)
-5. [Adapter Layer Organization](#adapter-layer-organization)
-6. [Application Layer Patterns](#application-layer-organization-patterns)
-7. [Design Patterns Reference](#design-patterns-reference)
-8. [Testing Strategy](#testing-strategy)
+Papertrace 架构模式完整指南,结合六边形架构 (Ports & Adapters) 与领域驱动设计 (Domain-Driven Design)。
 
 ---
 
-## Core Architectural Principles
+## 目录
 
-### 1. Hexagonal Architecture (Ports & Adapters)
-
-**Goal**: Isolate business logic from external concerns (HTTP, databases, messaging).
-
-**Key Concepts**:
-- **Domain (Core)**: Pure business logic, no external dependencies
-- **Ports**: Interfaces defined by domain (e.g., `ProvenancePort`)
-- **Adapters**: Implementations that connect to external systems
-  - **Driving Adapters** (Inbound): Receive external triggers → `adapter` module
-  - **Driven Adapters** (Outbound): Access external resources → `infra` module
-
-**Benefits**:
-- Testable business logic (pure Java, no mocks needed for domain)
-- Swappable implementations (e.g., change DB without touching domain)
-- Clear separation of concerns
+1. [核心架构原则](#核心架构原则)
+2. [四层架构](#四层架构)
+3. [依赖规则](#依赖规则-必须遵守)
+4. [层职责](#层职责)
+5. [适配器层组织](#适配器层组织)
+6. [应用层模式](#应用层组织模式)
+7. [设计模式参考](#设计模式参考)
+8. [测试策略](#测试策略)
 
 ---
 
-### 2. Domain-Driven Design (DDD)
+## 核心架构原则
 
-**Goal**: Align code structure with business domain.
+### 1. 六边形架构 (Hexagonal Architecture - Ports & Adapters)
 
-**Key Tactical Patterns**:
-- **Aggregate**: Consistency boundary with root entity
-- **Entity**: Identity-based objects (e.g., `BatchPlan`)
-- **Value Object**: Immutable, equality by value (e.g., `LiteratureId` as `record`)
-- **Domain Event**: Captures business facts (e.g., `PlanCompletedEvent`)
-- **Repository**: Collection-like interface for persistence
-- **Factory**: Complex object creation
+**目标**: 将业务逻辑与外部关注点 (HTTP、数据库、消息传递) 隔离。
 
-**Benefits**:
-- Ubiquitous language (code matches business terms)
-- Business rules in domain layer
-- Evolutionary design
+**关键概念**:
+- **领域 (Domain - 核心)**: 纯业务逻辑,无外部依赖
+- **端口 (Ports)**: 由领域定义的接口 (例如 `ProvenancePort`)
+- **适配器 (Adapters)**: 连接外部系统的实现
+  - **驱动适配器 (Driving Adapters - 入站)**: 接收外部触发 → `adapter` 模块
+  - **被驱动适配器 (Driven Adapters - 出站)**: 访问外部资源 → `infra` 模块
+
+**优势**:
+- 可测试的业务逻辑 (纯 Java,领域无需 mock)
+- 可交换的实现 (例如更换数据库而无需触碰领域)
+- 清晰的关注点分离
 
 ---
 
-## Four-Layer Architecture
+### 2. 领域驱动设计 (Domain-Driven Design - DDD)
+
+**目标**: 使代码结构与业务领域对齐。
+
+**关键战术模式**:
+- **聚合 (Aggregate)**: 一致性边界,包含根实体
+- **实体 (Entity)**: 基于身份的对象 (例如 `BatchPlan`)
+- **值对象 (Value Object)**: 不可变,按值相等 (例如使用 `record` 的 `LiteratureId`)
+- **领域事件 (Domain Event)**: 捕获业务事实 (例如 `PlanCompletedEvent`)
+- **仓储 (Repository)**: 类集合接口用于持久化
+- **工厂 (Factory)**: 复杂对象创建
+
+**优势**:
+- 统一语言 (Ubiquitous Language - 代码匹配业务术语)
+- 业务规则在领域层
+- 演进式设计
+
+---
+
+## 四层架构
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. Adapter Layer (Driving - Outermost)                     │
+│ 1. Adapter Layer (Driving Side - Outermost)                │
 │    Purpose: Receive external triggers                       │
 │    Examples: REST Controllers, Jobs, Message Consumers      │
 │    Module: patra-{service}-adapter                          │
-│    Dependencies: app + api + web starters                   │
-│    ↓ calls ↓                                                 │
+│    Depends: app + api + web starters                        │
+│    ↓ calls ↓                                                │
 ├─────────────────────────────────────────────────────────────┤
 │ 2. Application Layer                                        │
 │    Purpose: Orchestrate use cases, manage transactions      │
 │    Examples: Orchestrators, Coordinators                    │
 │    Module: patra-{service}-app                              │
-│    Dependencies: domain + patra-common + core starter       │
-│    ↓ calls ↓                                                 │
+│    Depends: domain + patra-common + core starter            │
+│    ↓ calls ↓                                                │
 ├─────────────────────────────────────────────────────────────┤
-│ 3. Domain Layer (Core - Pure Java)                          │
+│ 3. Domain Layer (Core - Pure Java)                         │
 │    Purpose: Business logic and rules                        │
 │    Examples: Aggregates, Entities, VOs, Events, Ports       │
 │    Module: patra-{service}-domain                           │
-│    Dependencies: patra-common + Lombok + Hutool ONLY        │
-│    ↑ implemented by ↑                                        │
+│    Depends: ONLY patra-common + Lombok + Hutool             │
+│    ↑ implemented by ↑                                       │
 ├─────────────────────────────────────────────────────────────┤
-│ 4. Infrastructure Layer (Driven)                            │
+│ 4. Infrastructure Layer (Driven Side)                       │
 │    Purpose: Access external resources                       │
 │    Examples: DB Repositories, External APIs, MQ Publishers  │
 │    Module: patra-{service}-infra                            │
-│    Dependencies: domain + mybatis starter + core starter    │
+│    Depends: domain + mybatis starter + core starter         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Dependency Rules (MUST FOLLOW)
+## 依赖规则 (必须遵守)
 
-### The Golden Rule
+### 黄金法则
 
-**Dependencies MUST flow from outer layers to inner layers:**
+**依赖必须从外层流向内层:**
 
 ```
 adapter  →  app + api (+ web starters)
 app      →  domain + patra-common + core starter
 infra    →  domain + mybatis starter + core starter
-domain   →  patra-common + Lombok + Hutool (NO Spring!)
-api      →  NO framework dependencies (external contracts)
-boot     →  ALL modules + Spring Boot starters
+domain   →  patra-common + Lombok + Hutool (禁止 Spring!)
+api      →  无框架依赖 (外部契约)
+boot     →  所有模块 + Spring Boot starters
 ```
 
-**⚠️ Violation of these rules is NOT acceptable!**
+**⚠️ 违反这些规则是不可接受的!**
 
 ---
 
-### Forbidden Dependencies
+### 禁止的依赖
 
 ```java
-// ❌ NEVER: Domain depending on Infrastructure
+// ❌ 永远不要: 领域依赖基础设施
 package com.patra.ingest.domain.model.entity;
-import com.patra.ingest.infra.persistence.entity.BatchPlanDO;  // WRONG!
+import com.patra.ingest.infra.persistence.entity.BatchPlanDO;  // 错误!
 
-// ❌ NEVER: Domain depending on Spring
+// ❌ 永远不要: 领域依赖 Spring
 package com.patra.ingest.domain.model.entity;
-import org.springframework.stereotype.Service;  // WRONG!
+import org.springframework.stereotype.Service;  // 错误!
 
-// ❌ NEVER: Application depending on Infrastructure directly
+// ❌ 永远不要: 应用直接依赖基础设施
 package com.patra.ingest.app.usecase.plan;
-import com.patra.ingest.infra.persistence.repository.ProvenanceRepositoryImpl;  // WRONG!
-// Instead, depend on domain port:
-import com.patra.ingest.domain.port.ProvenancePort;  // CORRECT!
+import com.patra.ingest.infra.persistence.repository.ProvenanceRepositoryImpl;  // 错误!
+// 应该依赖领域端口:
+import com.patra.ingest.domain.port.ProvenancePort;  // 正确!
 ```
 
 ---
 
-## Layer Responsibilities
+## 层职责
 
-### 1. Adapter Layer (Driving)
+### 1. 适配器层 (驱动端 - Adapter Layer - Driving)
 
-**Module**: `patra-{service}-adapter`
+**模块**: `patra-{service}-adapter`
 
-**Responsibility**: Receive external triggers and delegate to Application layer.
+**职责**: 接收外部触发并委托给应用层。
 
-**What Goes Here**:
-- REST Controllers (`@RestController`)
-- Scheduled Jobs (XXL-Job, `@XxlJob`)
-- Message Consumers (RocketMQ, `@RocketMQMessageListener`)
-- Request/Response DTOs, Validation (`@Valid`)
+**应该包含的内容**:
+- REST 控制器 (`@RestController`)
+- 定时任务 (XXL-Job, `@XxlJob`)
+- 消息消费者 (RocketMQ, `@RocketMQMessageListener`)
+- 请求/响应 DTO、验证 (`@Valid`)
 
-**What Does NOT Go Here**:
-- ❌ Business logic (belongs in Domain)
-- ❌ Database access (belongs in Infrastructure)
-- ❌ Transaction management (belongs in Application)
+**不应该包含的内容**:
+- ❌ 业务逻辑 (属于领域)
+- ❌ 数据库访问 (属于基础设施)
+- ❌ 事务管理 (属于应用)
 
-**Example**:
+**示例**:
 ```java
 @RestController
 @RequestMapping("/api/v1/provenances")
@@ -169,45 +169,45 @@ public class ProvenanceController {
 
 ---
 
-### 2. Application Layer
+### 2. 应用层 (Application Layer)
 
-**Module**: `patra-{service}-app`
+**模块**: `patra-{service}-app`
 
-**Responsibility**: Orchestrate use cases, manage transactions, coordinate domain logic.
+**职责**: 编排用例,管理事务,协调领域逻辑。
 
-**What Goes Here**:
-- Orchestrators (`*Orchestrator.java`)
-- Coordinators (`*Coordinator.java`)
-- Use case commands/DTOs, Domain event handlers
-- Transaction boundaries (`@Transactional`)
+**应该包含的内容**:
+- 编排者 (`*Orchestrator.java`)
+- 协调者 (`*Coordinator.java`)
+- 用例命令/DTO、领域事件处理器
+- 事务边界 (`@Transactional`)
 
-**What Does NOT Go Here**:
-- ❌ Business rules (belongs in Domain)
-- ❌ Database queries (use ports)
-- ❌ External API calls within transactions
+**不应该包含的内容**:
+- ❌ 业务规则 (属于领域)
+- ❌ 数据库查询 (使用端口)
+- ❌ 事务内的外部 API 调用
 
-**See**: [Application Layer Patterns](#application-layer-organization-patterns) section below for detailed patterns.
+**参见**: 下方 [应用层组织模式](#应用层组织模式) 部分获取详细模式。
 
 ---
 
-### 3. Domain Layer (Core)
+### 3. 领域层 (核心 - Domain Layer - Core)
 
-**Module**: `patra-{service}-domain`
+**模块**: `patra-{service}-domain`
 
-**Responsibility**: Pure business logic and rules.
+**职责**: 纯业务逻辑和规则。
 
-**Allowed Dependencies**:
-- ✅ Lombok (`@Data`, `@Slf4j`, etc.)
-- ✅ Hutool utilities
-- ✅ patra-common base classes
-- ✅ Java standard library
+**允许的依赖**:
+- ✅ Lombok (`@Data`, `@Slf4j` 等)
+- ✅ Hutool 工具
+- ✅ patra-common 基础类
+- ✅ Java 标准库
 
-**What Does NOT Go Here**:
-- ❌ Spring annotations (`@Service`, `@Repository`, `@Autowired`)
-- ❌ Database entities (DOs belong in Infrastructure)
-- ❌ HTTP DTOs (belong in Adapter)
+**不应该包含的内容**:
+- ❌ Spring 注解 (`@Service`, `@Repository`, `@Autowired`)
+- ❌ 数据库实体 (DO 属于基础设施)
+- ❌ HTTP DTO (属于适配器)
 
-**Aggregate Example**:
+**聚合示例**:
 ```java
 @Slf4j
 @Data
@@ -226,7 +226,7 @@ public class BatchPlan {
 }
 ```
 
-**Value Object Example**:
+**值对象示例**:
 ```java
 public record LiteratureId(String value) {
     public LiteratureId {
@@ -239,19 +239,19 @@ public record LiteratureId(String value) {
 
 ---
 
-### 4. Infrastructure Layer (Driven)
+### 4. 基础设施层 (被驱动端 - Infrastructure Layer - Driven)
 
-**Module**: `patra-{service}-infra`
+**模块**: `patra-{service}-infra`
 
-**Responsibility**: Implement domain ports, access external resources.
+**职责**: 实现领域端口,访问外部资源。
 
-**What Goes Here**:
-- Repository implementations (`*RepositoryImpl.java`)
-- MyBatis-Plus DOs (`*DO.java`), Mappers
-- MapStruct converters (`*Converter.java`)
-- External API clients, MQ publishers
+**应该包含的内容**:
+- 仓储实现 (`*RepositoryImpl.java`)
+- MyBatis-Plus DO (`*DO.java`)、Mapper
+- MapStruct 转换器 (`*Converter.java`)
+- 外部 API 客户端、MQ 发布者
 
-**Repository Implementation Example**:
+**仓储实现示例**:
 ```java
 @Repository
 @RequiredArgsConstructor
@@ -279,89 +279,89 @@ public class ProvenanceRepositoryImpl implements ProvenancePort {
 
 ---
 
-## Adapter Layer Organization
+## 适配器层组织
 
-### Module-Level Separation (Driving vs Driven)
+### 模块级分离 (驱动 vs 被驱动)
 
-Papertrace uses **module-level boundaries** to separate driving from driven adapters:
+Papertrace 使用 **模块级边界** 分离驱动和被驱动适配器:
 
 ```
-patra-{service}-adapter/     ← Driving Adapters ONLY (receive triggers)
-├── REST APIs, Scheduled Jobs, Message Consumers
-└── Direction: External World → System
+patra-{service}-adapter/     ← 仅驱动适配器 (接收触发)
+├── REST API、定时任务、消息消费者
+└── 方向: 外部世界 → 系统
 
-patra-{service}-infra/       ← Driven Adapters ONLY (access resources)
-├── DB Repositories, External API Clients, MQ Publishers
-└── Direction: System → External Resources
+patra-{service}-infra/       ← 仅被驱动适配器 (访问资源)
+├── DB 仓储、外部 API 客户端、MQ 发布者
+└── 方向: 系统 → 外部资源
 ```
 
-**Key Principle**: Module boundary provides clear separation. No need for `inbound/outbound/` packages within adapter module.
+**关键原则**: 模块边界提供清晰的分离。无需在 adapter 模块内使用 `inbound/outbound/` 包。
 
 ---
 
-### Package Organization Standard
+### 包组织标准
 
-**Organize by adapter technology type** directly under `adapter/`:
+**直接在 `adapter/` 下按适配器技术类型组织**:
 
 ```
 com.patra.{service}.adapter/
-├── rest/           REST APIs (Spring MVC, OpenAPI)
-│   ├── internal/   (optional: microservice-to-microservice)
-│   └── public/     (optional: external-facing)
-├── scheduler/      Scheduled jobs (XXL-Job)
+├── rest/           REST API (Spring MVC, OpenAPI)
+│   ├── internal/   (可选: 微服务之间)
+│   └── public/     (可选: 面向外部)
+├── scheduler/      定时任务 (XXL-Job)
 │   ├── config/
 │   ├── job/
 │   └── param/
-├── stream/         Message consumers (RocketMQ, Kafka)
+├── stream/         消息消费者 (RocketMQ, Kafka)
 │   └── dto/
-├── graphql/        GraphQL APIs (future)
-└── grpc/           gRPC APIs (future)
+├── graphql/        GraphQL API (未来)
+└── grpc/           gRPC API (未来)
 ```
 
-### Why NOT `inbound/` or `driving/`?
+### 为什么不使用 `inbound/` 或 `driving/`?
 
-1. **Module name provides context**: `patra-{service}-adapter` already indicates adapter layer
-2. **Module contract is explicit**: `-adapter` contains ONLY driving adapters (by design)
-3. **Semantic redundancy**: `adapter.inbound.rest` repeats "inbound" unnecessarily
-4. **No future conflation**: ALL outbound integrations belong in `-infra` module
+1. **模块名提供上下文**: `patra-{service}-adapter` 已经表明是适配器层
+2. **模块契约是明确的**: `-adapter` 仅包含驱动适配器 (根据设计)
+3. **语义冗余**: `adapter.inbound.rest` 不必要地重复了 "inbound"
+4. **避免未来混淆**: 所有出站集成属于 `-infra` 模块
 
-### Naming Conventions
+### 命名约定
 
-| Adapter Type | Naming Pattern | Example |
+| 适配器类型 | 命名模式 | 示例 |
 |--------------|----------------|---------|
-| REST Controller | `*Controller` or `*EndpointImpl` | `ProvenanceController` |
-| Scheduled Job | `*Job` | `PubmedHarvestJob` |
-| Message Consumer | `*Consumers` | `IngestStreamConsumers` |
+| REST 控制器 | `*Controller` 或 `*EndpointImpl` | `ProvenanceController` |
+| 定时任务 | `*Job` | `PubmedHarvestJob` |
+| 消息消费者 | `*Consumers` | `IngestStreamConsumers` |
 
 ---
 
-## Application Layer Organization Patterns
+## 应用层组织模式
 
-The Application layer uses two complementary patterns, each suited to different scenarios.
+应用层使用两种互补模式,每种适用于不同场景。
 
-### Pattern 1: Orchestrator + Coordinators
+### 模式 1: 编排者 + 协调者 (Orchestrator + Coordinators)
 
-**Structure:**
+**结构:**
 ```
 MainOrchestrator (@Transactional)
-  ├─ PersistenceCoordinator    (concern: data persistence)
-  ├─ IdempotencyCoordinator    (concern: duplicate detection)
-  └─ PublishingCoordinator     (concern: event publishing)
+  ├─ PersistenceCoordinator    (关注点: 数据持久化)
+  ├─ IdempotencyCoordinator    (关注点: 重复检测)
+  └─ PublishingCoordinator     (关注点: 事件发布)
 ```
 
-**Characteristics:**
-- **Separation by Concern**: Split by business concerns
-- **Unified Transaction**: Main Orchestrator holds `@Transactional`
-- **Lightweight Delegation**: Coordinators are helper classes (NO interfaces)
-- **Linear Flow**: Suitable for sequential flows
+**特征:**
+- **按关注点分离 (Separation by Concern)**: 按业务关注点拆分
+- **统一事务 (Unified Transaction)**: 主编排者持有 `@Transactional`
+- **轻量委托 (Lightweight Delegation)**: 协调者是辅助类 (无接口)
+- **线性流程 (Linear Flow)**: 适合顺序流程
 
-**When to Use:**
-- ✅ Entire flow within single transaction
-- ✅ No external API calls (or minimal)
-- ✅ Concern separation more important than phase isolation
-- ✅ Components have no reuse requirements
+**何时使用:**
+- ✅ 整个流程在单个事务内
+- ✅ 无外部 API 调用 (或很少)
+- ✅ 关注点分离比阶段隔离更重要
+- ✅ 组件无复用需求
 
-**Example**:
+**示例**:
 ```java
 @Service
 @RequiredArgsConstructor
@@ -370,186 +370,186 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   private final PlanIdempotencyCoordinator idempotencyCoordinator;
 
   @Override
-  @Transactional  // Single transaction for entire flow
+  @Transactional  // 整个流程的单个事务
   public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
-    // Orchestrate: prepare → validate → assemble → persist → publish
+    // 编排: 准备 → 验证 → 组装 → 持久化 → 发布
   }
 }
 ```
 
 ---
 
-### Pattern 2: Main Orchestrator + Sub-UseCases
+### 模式 2: 主编排者 + 子用例 (Main Orchestrator + Sub-UseCases)
 
-**Structure:**
+**结构:**
 ```
-MainOrchestrator (NO @Transactional)
-  ├─ PrepareUseCase     (phase: preparation, isolated transaction)
-  ├─ ExecuteUseCase     (phase: execution, NO transaction)
-  └─ CompleteUseCase    (phase: completion, @Transactional)
+MainOrchestrator (无 @Transactional)
+  ├─ PrepareUseCase     (阶段: 准备,隔离事务)
+  ├─ ExecuteUseCase     (阶段: 执行,无事务)
+  └─ CompleteUseCase    (阶段: 完成,@Transactional)
 ```
 
-**Characteristics:**
-- **Phase Isolation**: Split by execution phases
-- **Independent Reuse**: Each Sub-UseCase has interface
-- **Distributed Transactions**: Each phase may have own transaction boundary
-- **Error Isolation**: Each phase handles exceptions independently
+**特征:**
+- **阶段隔离 (Phase Isolation)**: 按执行阶段拆分
+- **独立复用 (Independent Reuse)**: 每个子用例有接口
+- **分布式事务 (Distributed Transactions)**: 每个阶段可以有自己的事务边界
+- **错误隔离 (Error Isolation)**: 每个阶段独立处理异常
 
-**When to Use:**
-- ✅ Multi-phase transactions (only some need transactions)
-- ✅ Contains external API calls (must NOT be in transactions)
-- ✅ Clear lifecycle and state transitions
-- ✅ Sub-UseCases may be reused by other flows
+**何时使用:**
+- ✅ 多阶段事务 (仅部分需要事务)
+- ✅ 包含外部 API 调用 (不能在事务内)
+- ✅ 清晰的生命周期和状态转换
+- ✅ 子用例可能被其他流程复用
 
-**Example**:
+**示例**:
 ```java
 @Service
 @RequiredArgsConstructor
 public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
-  private final PrepareTaskExecutionUseCase prepareUseCase;      // NO @Transactional
-  private final ExecuteTaskBatchesUseCase executeUseCase;        // NO @Transactional
+  private final PrepareTaskExecutionUseCase prepareUseCase;      // 无 @Transactional
+  private final ExecuteTaskBatchesUseCase executeUseCase;        // 无 @Transactional
   private final CompleteTaskExecutionUseCase completeUseCase;    // @Transactional
 
   @Override
   public void execute(TaskReadyCommand command) {
-    // Phase 0: Prepare (may fail fast)
-    // Phase 1: Execute (external API calls)
-    // Phase 2: Complete (final updates atomically)
+    // 阶段 0: 准备 (可能快速失败)
+    // 阶段 1: 执行 (外部 API 调用)
+    // 阶段 2: 完成 (原子性的最终更新)
   }
 }
 ```
 
 ---
 
-### Golden Rules for Transaction Management
+### 事务管理黄金法则
 
-**⚠️ Critical Principles:**
+**⚠️ 关键原则:**
 
-1. **NEVER call external APIs within `@Transactional` methods**
-   - External APIs can take 10+ seconds, holding DB connections and locks
-   - Use Pattern 2 to isolate external calls from transactions
+1. **永远不要在 `@Transactional` 方法内调用外部 API**
+   - 外部 API 可能需要 10+ 秒,持有数据库连接和锁
+   - 使用模式 2 将外部调用与事务隔离
 
-2. **Minimize transaction scope**
-   - Only include operations that MUST be atomic
-   - Keep transactions short-lived
+2. **最小化事务范围**
+   - 仅包含必须原子执行的操作
+   - 保持事务短暂
 
-3. **Example of WRONG approach:**
+3. **错误方法示例:**
    ```java
-   @Transactional  // ❌ BAD: Long transaction
+   @Transactional  // ❌ 错误: 长事务
    public void execute() {
-     prepare();           // DB check
-     callPubMedAPI();    // 10+ seconds, blocks transaction!
-     saveResults();      // DB update
+     prepare();           // 数据库检查
+     callPubMedAPI();    // 10+ 秒,阻塞事务!
+     saveResults();      // 数据库更新
    }
    ```
 
-4. **Example of CORRECT approach:**
+4. **正确方法示例:**
    ```java
    public void execute() {
-     prepare();              // NO transaction
-     callPubMedAPI();       // NO transaction
-     complete();            // @Transactional - only final updates
+     prepare();              // 无事务
+     callPubMedAPI();       // 无事务
+     complete();            // @Transactional - 仅最终更新
    }
    ```
 
 ---
 
-### Pattern Comparison
+### 模式对比
 
-| Dimension | Orchestrator + Coordinators | Main + Sub-UseCases |
+| 维度 | 编排者 + 协调者 | 主编排者 + 子用例 |
 |-----------|----------------------------|---------------------|
-| **Split Strategy** | By Concern | By Phase |
-| **Component Interface** | None | Yes |
-| **Transaction Boundary** | Unified | Distributed |
-| **Component Size** | Small (100-200 lines) | Large (200-300 lines) |
-| **Reusability** | Low | High |
-| **Use Case** | Single transaction | Multi-phase with external calls |
+| **拆分策略** | 按关注点 | 按阶段 |
+| **组件接口** | 无 | 有 |
+| **事务边界** | 统一 | 分布式 |
+| **组件大小** | 小 (100-200 行) | 大 (200-300 行) |
+| **可复用性** | 低 | 高 |
+| **用例** | 单事务 | 多阶段含外部调用 |
 
-### Decision Tree
+### 决策树
 
 ```
-Does the flow contain external API calls?
-  ├─ YES → Use Pattern 2 (Main + Sub-UseCases)
-  │         Reason: Avoid long transactions
-  └─ NO  → Does the flow need multiple independent transactions?
-            ├─ YES → Use Pattern 2
-            │         Reason: Phase isolation
-            └─ NO  → Use Pattern 1 (Orchestrator + Coordinators)
-                      Reason: Simpler, unified transaction
+流程是否包含外部 API 调用?
+  ├─ 是 → 使用模式 2 (主编排者 + 子用例)
+  │         理由: 避免长事务
+  └─ 否  → 流程是否需要多个独立事务?
+            ├─ 是 → 使用模式 2
+            │         理由: 阶段隔离
+            └─ 否  → 使用模式 1 (编排者 + 协调者)
+                      理由: 更简单,统一事务
 ```
 
 ---
 
-### Naming Conventions
+### 命名约定
 
-| Pattern | Naming | Responsibility | Interface | Transaction |
+| 模式 | 命名 | 职责 | 接口 | 事务 |
 |---------|--------|---------------|-----------|-------------|
-| **Sub-UseCase** | `*UseCase` / `*UseCaseImpl` | Complete business phase | ✅ Has | ✅ Independent |
-| **Coordinator** | `*Coordinator` | Assists Orchestrator | ❌ None | ❌ Inherits |
-| **Orchestrator** | `*Orchestrator` | Main flow orchestration | ✅ Has | ✅ Controls |
+| **子用例 (Sub-UseCase)** | `*UseCase` / `*UseCaseImpl` | 完整业务阶段 | ✅ 有 | ✅ 独立 |
+| **协调者 (Coordinator)** | `*Coordinator` | 协助编排者 | ❌ 无 | ❌ 继承 |
+| **编排者 (Orchestrator)** | `*Orchestrator` | 主流程编排 | ✅ 有 | ✅ 控制 |
 
 ---
 
-## Design Patterns Reference
+## 设计模式参考
 
-### DDD Patterns (Domain-Driven Design)
-- **Aggregate**: Consistency boundary with root entity, enforces invariants
-- **Entity**: Identity-based objects (ID-driven equality)
-- **Value Object**: Immutable, equality by value (use `record`)
-- **Domain Event**: Captures business facts, triggers reactions
-- **Repository**: Collection-like interface for aggregate persistence
-- **Factory**: Complex aggregate creation logic
-- **Domain Service**: Stateless operation spanning aggregates
+### DDD 模式 (Domain-Driven Design)
+- **聚合 (Aggregate)**: 一致性边界,包含根实体,强制不变量
+- **实体 (Entity)**: 基于身份的对象 (ID 驱动的相等性)
+- **值对象 (Value Object)**: 不可变,按值相等 (使用 `record`)
+- **领域事件 (Domain Event)**: 捕获业务事实,触发反应
+- **仓储 (Repository)**: 聚合持久化的类集合接口
+- **工厂 (Factory)**: 复杂聚合创建逻辑
+- **领域服务 (Domain Service)**: 跨聚合的无状态操作
 
-### GoF Patterns (Common in Papertrace)
-- **Strategy**: Multiple algorithm implementations (e.g., parsers per source)
-- **Factory**: Object creation (e.g., Provenance creation)
-- **Template Method**: Algorithm skeleton with hook points (e.g., AbstractProvenanceScheduleJob)
-- **Observer**: Event-driven reactions (domain events)
-- **Adapter**: Convert interfaces (ACL between contexts)
+### GoF 模式 (Papertrace 中常见)
+- **策略 (Strategy)**: 多算法实现 (例如每个来源的解析器)
+- **工厂 (Factory)**: 对象创建 (例如 Provenance 创建)
+- **模板方法 (Template Method)**: 带钩子点的算法骨架 (例如 AbstractProvenanceScheduleJob)
+- **观察者 (Observer)**: 事件驱动反应 (领域事件)
+- **适配器 (Adapter)**: 转换接口 (上下文间的 ACL)
 
-### Enterprise Patterns (Fowler)
-- **Service Layer**: Application service orchestrators
-- **Repository**: Data access abstraction (port/adapter)
-- **Data Mapper**: DTO/DO ↔ Domain mapping (MapStruct)
-- **Unit of Work**: Transaction boundary management
+### 企业模式 (Enterprise Patterns - Fowler)
+- **服务层 (Service Layer)**: 应用服务编排者
+- **仓储 (Repository)**: 数据访问抽象 (端口/适配器)
+- **数据映射器 (Data Mapper)**: DTO/DO ↔ Domain 映射 (MapStruct)
+- **工作单元 (Unit of Work)**: 事务边界管理
 
-### Integration Patterns
-- **Outbox Pattern**: Reliable event publishing with DB transaction
-- **Idempotency Key**: Prevent duplicate processing
-- **Retry with Backoff**: Transient failure recovery (exponential backoff)
-- **Anti-Corruption Layer (ACL)**: Protect domain from external models
+### 集成模式 (Integration Patterns)
+- **Outbox 模式 (Outbox Pattern)**: 使用数据库事务的可靠事件发布
+- **幂等键 (Idempotency Key)**: 防止重复处理
+- **重试与退避 (Retry with Backoff)**: 瞬态故障恢复 (指数退避)
+- **防腐层 (Anti-Corruption Layer - ACL)**: 保护领域免受外部模型影响
 
-### Data Patterns
-- **Optimistic Locking**: Version-based concurrency control (`@Version`)
-- **Eventual Consistency**: Async cross-aggregate updates via events
-- **Aggregate Persistence**: Save entire aggregate atomically
-
----
-
-## Design Principles & Philosophy
-
-### Core Principles
-- **Self-contained use cases**: Each use case dir has command/dto/logic
-- **Naming conventions**: `*Orchestrator`, `*Command`, `*Port`, `*DO`
-- **Contract-first**: Define `*-api` contracts → Domain → App → Infra → Adapter
-- **Simplicity first**: Solve current problem, avoid over-engineering
-- **YAGNI**: You Aren't Gonna Need It - don't build for hypothetical futures
-- **Fail fast**: Validate early, make errors obvious
-
-### Pattern Selection Guidelines
-- **Start simple**: Use simplest pattern that solves the problem
-- **Refactor when needed**: Abstract after 3rd duplication (Rule of Three)
-- **Match context**: Choose patterns that fit team skills
-- **Consider trade-offs**: Every pattern has complexity cost vs. flexibility benefit
+### 数据模式 (Data Patterns)
+- **乐观锁 (Optimistic Locking)**: 基于版本的并发控制 (`@Version`)
+- **最终一致性 (Eventual Consistency)**: 通过事件的异步跨聚合更新
+- **聚合持久化 (Aggregate Persistence)**: 原子性保存整个聚合
 
 ---
 
-## Testing Strategy
+## 设计原则与哲学
 
-### Domain Layer
-- Pure Java unit tests, NO mocks needed
-- Test business rules in isolation
+### 核心原则
+- **自包含用例 (Self-contained use cases)**: 每个用例目录有 command/dto/logic
+- **命名约定 (Naming conventions)**: `*Orchestrator`, `*Command`, `*Port`, `*DO`
+- **契约优先 (Contract-first)**: 定义 `*-api` 契约 → Domain → App → Infra → Adapter
+- **简单优先 (Simplicity first)**: 解决当前问题,避免过度工程化
+- **YAGNI**: You Aren't Gonna Need It - 不要为假设的未来构建
+- **快速失败 (Fail fast)**: 早期验证,使错误明显
+
+### 模式选择指南
+- **从简单开始 (Start simple)**: 使用解决问题的最简单模式
+- **需要时重构 (Refactor when needed)**: 第三次重复后抽象 (Rule of Three - 三次法则)
+- **匹配上下文 (Match context)**: 选择适合团队技能的模式
+- **考虑权衡 (Consider trade-offs)**: 每个模式都有复杂性成本 vs 灵活性收益
+
+---
+
+## 测试策略
+
+### 领域层
+- 纯 Java 单元测试,无需 mock
+- 隔离测试业务规则
 
 ```java
 @Test
@@ -560,9 +560,9 @@ void should_throw_exception_when_completing_cancelled_plan() {
 }
 ```
 
-### Application Layer
-- Mock ports (domain interfaces)
-- Test orchestration logic
+### 应用层
+- Mock 端口 (领域接口)
+- 测试编排逻辑
 
 ```java
 @ExtendWith(MockitoExtension.class)
@@ -579,8 +579,8 @@ class PlanIngestionOrchestratorTest {
 }
 ```
 
-### Infrastructure Layer
-- Integration tests in boot module with TestContainers
+### 基础设施层
+- 在 boot 模块中使用 TestContainers 的集成测试
 
 ```java
 @SpringBootTest
@@ -600,7 +600,7 @@ class ProvenanceRepositoryImplTest {
 }
 ```
 
-### ArchUnit (Dependency Validation)
+### ArchUnit (依赖验证)
 ```java
 @Test
 void domain_should_not_depend_on_spring() {
@@ -613,32 +613,32 @@ void domain_should_not_depend_on_spring() {
 
 ---
 
-## Quick Reference
+## 快速参考
 
-### Where to Put New Code?
+### 新代码应该放在哪里?
 
-| Question | Answer |
+| 问题 | 答案 |
 |----------|--------|
-| Receives HTTP request? | `adapter/rest/*Controller.java` |
-| Scheduled job? | `adapter/scheduler/job/*Job.java` |
-| Message consumer? | `adapter/stream/*Consumers.java` |
-| Orchestrates use case? | `app/usecase/{feature}/*Orchestrator.java` |
-| Business logic? | `domain/model/entity/*.java` |
-| Database access? | `infra/persistence/repository/*RepositoryImpl.java` |
-| MyBatis-Plus entity? | `infra/persistence/entity/*DO.java` |
-| Port interface? | `domain/port/*Port.java` |
+| 接收 HTTP 请求? | `adapter/rest/*Controller.java` |
+| 定时任务? | `adapter/scheduler/job/*Job.java` |
+| 消息消费者? | `adapter/stream/*Consumers.java` |
+| 编排用例? | `app/usecase/{feature}/*Orchestrator.java` |
+| 业务逻辑? | `domain/model/entity/*.java` |
+| 数据库访问? | `infra/persistence/repository/*RepositoryImpl.java` |
+| MyBatis-Plus 实体? | `infra/persistence/entity/*DO.java` |
+| 端口接口? | `domain/port/*Port.java` |
 
 ---
 
-## Related Files
+## 相关文件
 
-- [adapter-layer-patterns.md](adapter-layer-patterns.md) - XXL-Job, Template Method patterns
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Application layer deep dive
-- [domain-modeling-patterns.md](domain-modeling-patterns.md) - DDD tactical patterns
-- [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - Infrastructure layer persistence
-- [outbox-pattern.md](outbox-pattern.md) - Reliable event publishing
-- [event-driven-architecture.md](event-driven-architecture.md) - Domain events, handlers
+- [adapter-layer-patterns.md](adapter-layer-patterns.md) - XXL-Job、Template Method 模式
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 应用层深入解析
+- [domain-modeling-patterns.md](domain-modeling-patterns.md) - DDD 战术模式
+- [mybatis-plus-patterns.md](mybatis-plus-patterns.md) - 基础设施层持久化
+- [outbox-pattern.md](outbox-pattern.md) - 可靠事件发布
+- [event-driven-architecture.md](event-driven-architecture.md) - 领域事件、处理器
 
 ---
 
-**This architecture is non-negotiable in Papertrace. Violations will be caught by ArchUnit tests and code reviews.**
+**此架构在 Papertrace 中不可协商。违规将被 ArchUnit 测试和代码审查捕获。**

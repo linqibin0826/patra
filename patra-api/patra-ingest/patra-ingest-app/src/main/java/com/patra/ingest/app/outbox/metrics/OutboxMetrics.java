@@ -11,17 +11,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Metrics facade for Outbox publishing operations.
+ * 发件箱发布操作的指标门面。
  *
- * <p>Provides Micrometer instrumentation for:
+ * <p>提供以下 Micrometer 指标:
  *
  * <ul>
- *   <li>papertrace.outbox.publish.total (Counter): Total publish attempts with status tags
- *   <li>papertrace.outbox.publish.duration (Timer): Publish operation duration
- *   <li>papertrace.outbox.publish.batch.size (DistributionSummary): Batch size distribution
+ *   <li>papertrace.outbox.publish.total (计数器): 发布尝试总数,带状态标签
+ *   <li>papertrace.outbox.publish.duration (计时器): 发布操作耗时
+ *   <li>papertrace.outbox.publish.batch.size (分布汇总): 批次大小分布
  * </ul>
  *
- * <p>All metrics include tags: aggregateType (controlled by allowedAggregateTypes), opType.
+ * <p>所有指标包含标签: aggregateType (受 allowedAggregateTypes 控制), opType。
  *
  * @author linqibin
  * @since 0.1.0
@@ -34,10 +34,10 @@ public class OutboxMetrics {
   private final OutboxPublisherProperties properties;
 
   /**
-   * Constructs OutboxMetrics with Micrometer registry and configuration.
+   * 使用 Micrometer 注册表和配置构造 OutboxMetrics。
    *
-   * @param meterRegistry Micrometer meter registry (injected by Spring)
-   * @param properties Outbox publisher configuration properties
+   * @param meterRegistry Micrometer 指标注册表 (由 Spring 注入)
+   * @param properties 发件箱发布器配置属性
    */
   public OutboxMetrics(MeterRegistry meterRegistry, OutboxPublisherProperties properties) {
     this.meterRegistry = meterRegistry;
@@ -45,19 +45,19 @@ public class OutboxMetrics {
   }
 
   /**
-   * Records a publish operation result (success or failure).
+   * 记录发布操作结果(成功或失败)。
    *
-   * <p>Metrics recorded:
+   * <p>记录的指标:
    *
    * <ul>
-   *   <li>papertrace.outbox.publish.total (Counter): Incremented on each publish attempt
-   *   <li>papertrace.outbox.publish.duration (Timer): Records operation duration
+   *   <li>papertrace.outbox.publish.total (计数器): 每次发布尝试时递增
+   *   <li>papertrace.outbox.publish.duration (计时器): 记录操作耗时
    * </ul>
    *
-   * @param aggregateType Aggregate type (e.g., "Task", "LiteratureData"), must be in allowed list
-   * @param opType Operation type (e.g., "batch", "retry", "CREATED")
-   * @param isSuccess true if operation succeeded, false otherwise
-   * @param duration Operation duration (must not be null)
+   * @param aggregateType 聚合类型 (例如 "Task", "LiteratureData"),必须在允许列表中
+   * @param opType 操作类型 (例如 "batch", "retry", "CREATED")
+   * @param isSuccess 操作是否成功,成功为 true,否则为 false
+   * @param duration 操作耗时 (不能为 null)
    */
   public void recordPublish(
       String aggregateType, String opType, boolean isSuccess, Duration duration) {
@@ -70,7 +70,7 @@ public class OutboxMetrics {
 
       String status = isSuccess ? "success" : "failure";
 
-      // Counter: papertrace.outbox.publish.total
+      // 计数器: papertrace.outbox.publish.total
       Counter.builder("papertrace.outbox.publish.total")
           .tag("aggregateType", aggregateType)
           .tag("opType", opType)
@@ -78,7 +78,7 @@ public class OutboxMetrics {
           .register(meterRegistry)
           .increment();
 
-      // Timer: papertrace.outbox.publish.duration
+      // 计时器: papertrace.outbox.publish.duration
       Timer.builder("papertrace.outbox.publish.duration")
           .tag("aggregateType", aggregateType)
           .tag("opType", opType)
@@ -86,21 +86,17 @@ public class OutboxMetrics {
           .record(duration);
 
     } catch (Exception e) {
-      log.warn(
-          "Failed to record Outbox metrics for aggregateType={}, opType={}: {}",
-          aggregateType,
-          opType,
-          e.getMessage());
+      log.warn("记录发件箱指标失败,aggregateType={}, opType={}: {}", aggregateType, opType, e.getMessage());
     }
   }
 
   /**
-   * Records batch size distribution.
+   * 记录批次大小分布。
    *
-   * <p>Useful for analyzing batch processing patterns and identifying optimization opportunities.
+   * <p>用于分析批处理模式和识别优化机会。
    *
-   * @param aggregateType Aggregate type (must be in allowed list)
-   * @param batchSize Size of the batch being recorded (should be positive)
+   * @param aggregateType 聚合类型 (必须在允许列表中)
+   * @param batchSize 记录的批次大小 (应为正数)
    */
   public void recordBatchSize(String aggregateType, int batchSize) {
     if (!properties.getMetrics().isEnabled()) {
@@ -116,26 +112,23 @@ public class OutboxMetrics {
           .record(batchSize);
 
     } catch (Exception e) {
-      log.warn(
-          "Failed to record batch size metric for aggregateType={}: {}",
-          aggregateType,
-          e.getMessage());
+      log.warn("记录批次大小指标失败,aggregateType={}: {}", aggregateType, e.getMessage());
     }
   }
 
   /**
-   * Validates aggregate type against allowed list to prevent metric cardinality explosion.
+   * 验证聚合类型是否在允许列表中,防止指标基数爆炸。
    *
-   * @param aggregateType Aggregate type to validate
-   * @throws IllegalArgumentException if aggregate type is not allowed
+   * @param aggregateType 待验证的聚合类型
+   * @throws IllegalArgumentException 如果聚合类型不在允许列表中
    */
   private void validateAggregateType(String aggregateType) {
     Set<String> allowed = properties.getAllowedAggregateTypes();
     if (!allowed.isEmpty() && !allowed.contains(aggregateType)) {
       throw new IllegalArgumentException(
           String.format(
-              "Unknown aggregateType '%s'. Allowed types: %s. "
-                  + "Update papertrace.outbox.publisher.allowed-aggregate-types in configuration.",
+              "未知的 aggregateType '%s'。允许的类型: %s。"
+                  + "请在配置中更新 papertrace.outbox.publisher.allowed-aggregate-types。",
               aggregateType, allowed));
     }
   }

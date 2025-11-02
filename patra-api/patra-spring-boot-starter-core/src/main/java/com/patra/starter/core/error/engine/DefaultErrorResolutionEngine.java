@@ -15,17 +15,16 @@ import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Default implementation of {@link ErrorResolutionEngine} that maps exceptions to unified error
- * codes and HTTP statuses.
+ * {@link ErrorResolutionEngine} 的默认实现，将异常映射到统一的错误码和 HTTP 状态。
  *
- * <p>Resolution order:
+ * <p>错误解析顺序：
  *
  * <ol>
  *   <li>{@link ApplicationException}
  *   <li>{@link ErrorMappingContributor}
  *   <li>{@link HasErrorTraits}
- *   <li>Naming heuristics
- *   <li>Fallback strategy
+ *   <li>类名启发式
+ *   <li>回退策略
  * </ol>
  */
 @Slf4j
@@ -33,7 +32,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
 
   private static final String DEFAULT_CONTEXT = "UNKNOWN";
 
-  /** Maps error traits to HTTP status code suffixes. */
+  /** 将错误特征映射到 HTTP 状态码后缀。 */
   private static final Map<ErrorTrait, String> TRAIT_TO_CODE_MAP =
       Map.ofEntries(
           Map.entry(ErrorTrait.NOT_FOUND, "0404"),
@@ -45,7 +44,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
           Map.entry(ErrorTrait.TIMEOUT, "0504"),
           Map.entry(ErrorTrait.DEP_UNAVAILABLE, "0503"));
 
-  /** Maps exception class name suffixes to HTTP status code suffixes. */
+  /** 将异常类名后缀映射到 HTTP 状态码后缀。 */
   private static final Map<String, String> NAMING_SUFFIX_TO_CODE_MAP =
       Map.ofEntries(
           Map.entry("NotFound", "0404"),
@@ -77,18 +76,16 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
   @Override
   public ErrorResolution resolve(Throwable exception) {
     if (exception == null) {
-      log.warn(
-          "Received null exception, returning fallback error code",
-          new IllegalStateException("Null exception trace"));
+      log.warn("接收到 null 异常，返回回退错误码", new IllegalStateException("Null 异常追踪"));
       return fallbackServerError();
     }
     return resolveWithCause(exception, 0);
   }
 
-  /** Resolves exception recursively up to max cause depth. */
+  /** 递归解析异常，直到达到最大原因链深度。 */
   private ErrorResolution resolveWithCause(Throwable exception, int depth) {
     if (depth > maxCauseDepth) {
-      log.warn("Exceeded max cause depth {} — returning server error", maxCauseDepth);
+      log.warn("超过最大原因链深度 {} — 返回服务器错误", maxCauseDepth);
       return createResolution("0500");
     }
 
@@ -100,17 +97,17 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         .orElseGet(() -> fallbackForException(exception));
   }
 
-  /** Attempts to resolve as ApplicationException. */
+  /** 尝试解析为 ApplicationException。 */
   private Optional<ErrorResolution> resolveAsApplicationException(Throwable exception) {
     if (exception instanceof ApplicationException appEx) {
       ErrorCodeLike errorCode = appEx.getErrorCode();
-      log.debug("Resolved via ApplicationException -> {}", errorCode.code());
+      log.debug("通过 ApplicationException 解析 -> {}", errorCode.code());
       return Optional.of(new ErrorResolution(errorCode, errorCode.httpStatus()));
     }
     return Optional.empty();
   }
 
-  /** Attempts to resolve via registered ErrorMappingContributors. */
+  /** 尝试通过已注册的 ErrorMappingContributor 解析。 */
   private Optional<ErrorResolution> resolveViaContributors(Throwable exception) {
     for (ErrorMappingContributor contributor : mappingContributors) {
       try {
@@ -118,14 +115,14 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         if (mapped.isPresent()) {
           ErrorCodeLike code = mapped.get();
           log.debug(
-              "Resolved by ErrorMappingContributor({}) -> {}",
+              "由 ErrorMappingContributor({}) 解析 -> {}",
               contributor.getClass().getSimpleName(),
               code.code());
           return Optional.of(new ErrorResolution(code, code.httpStatus()));
         }
       } catch (Exception ex) {
         log.warn(
-            "ErrorMappingContributor({}) failed: {}",
+            "ErrorMappingContributor({}) 失败：{}",
             contributor.getClass().getSimpleName(),
             ex.getMessage());
       }
@@ -133,7 +130,7 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     return Optional.empty();
   }
 
-  /** Attempts to resolve via error traits. */
+  /** 尝试通过错误特征解析。 */
   private Optional<ErrorResolution> resolveViaTraits(Throwable exception) {
     if (!traitMappingEnabled || !(exception instanceof HasErrorTraits hasTraits)) {
       return Optional.empty();
@@ -145,14 +142,14 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     for (ErrorTrait trait : traits) {
       String codeSuffix = TRAIT_TO_CODE_MAP.get(trait);
       if (codeSuffix != null) {
-        log.debug("Resolved via trait {} -> {}-{}", trait, contextPrefix, codeSuffix);
+        log.debug("通过特征 {} 解析 -> {}-{}", trait, contextPrefix, codeSuffix);
         return Optional.of(createResolution(codeSuffix));
       }
     }
     return Optional.of(createResolution("0500"));
   }
 
-  /** Attempts to resolve via class naming conventions. */
+  /** 尝试通过类命名约定解析。 */
   private Optional<ErrorResolution> resolveViaNamingHeuristic(Throwable exception) {
     if (!namingHeuristicEnabled) {
       return Optional.empty();
@@ -160,14 +157,14 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     String className = exception.getClass().getSimpleName();
     for (Map.Entry<String, String> entry : NAMING_SUFFIX_TO_CODE_MAP.entrySet()) {
       if (className.endsWith(entry.getKey())) {
-        log.debug("Resolved via naming heuristic {} -> {}", className, entry.getValue());
+        log.debug("通过命名启发式 {} 解析 -> {}", className, entry.getValue());
         return Optional.of(createResolution(entry.getValue()));
       }
     }
     return Optional.empty();
   }
 
-  /** Attempts to resolve by recursing into exception cause. */
+  /** 尝试通过递归进入异常原因解析。 */
   private Optional<ErrorResolution> resolveCause(Throwable exception, int depth) {
     Throwable cause = exception.getCause();
     if (cause != null && cause != exception) {
@@ -176,12 +173,12 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
     return Optional.empty();
   }
 
-  /** Returns appropriate fallback resolution for the exception. */
+  /** 为异常返回适当的回退解析。 */
   private ErrorResolution fallbackForException(Throwable exception) {
     return isClientErrorLike(exception) ? createResolution("0422") : fallbackServerError();
   }
 
-  /** Checks if exception name suggests a client error. */
+  /** 检查异常名称是否暗示客户端错误。 */
   private boolean isClientErrorLike(Throwable exception) {
     String className = exception.getClass().getSimpleName().toLowerCase();
     return className.contains("validation")
@@ -195,16 +192,16 @@ public class DefaultErrorResolutionEngine implements ErrorResolutionEngine {
         || className.contains("malformed");
   }
 
-  /** Returns 500 Internal Server Error resolution. */
+  /** 返回 500 内部服务器错误解析。 */
   private ErrorResolution fallbackServerError() {
     return createResolution("0500");
   }
 
   /**
-   * Creates error resolution from HTTP status suffix.
+   * 从 HTTP 状态码后缀创建错误解析。
    *
-   * @param suffix HTTP status code (e.g., "0404", "0500")
-   * @return error resolution with context prefix applied
+   * @param suffix HTTP 状态码（例如，"0404"、"0500"）
+   * @return 应用了上下文前缀的错误解析
    */
   private ErrorResolution createResolution(String suffix) {
     ErrorCodeLike code = SimpleErrorCode.create(contextPrefix, suffix);

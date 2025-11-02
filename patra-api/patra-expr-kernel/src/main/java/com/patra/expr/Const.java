@@ -1,8 +1,15 @@
 package com.patra.expr;
 
-/** Boolean constant expression. */
+/**
+ * 布尔常量表达式。
+ *
+ * <p>表示始终为真或始终为假的表达式。
+ */
 public enum Const implements Expr {
+  /** 真常量。 */
   TRUE,
+
+  /** 假常量。 */
   FALSE;
 
   @Override

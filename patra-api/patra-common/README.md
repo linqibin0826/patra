@@ -1,12 +1,12 @@
-# patra-common — Shared Foundation (Multi-Module)
+# patra-common — 共享基础(多模块)
 
-> **Multi-module project** providing core utilities, storage abstractions, and shared models for Papertrace microservices.
+> **多模块项目**,为 Papertrace 微服务提供核心工具、存储抽象和共享模型。
 
 ---
 
-## 📦 Module Structure
+## 📦 模块结构
 
-`patra-common` is now a **multi-module aggregator** with three independent submodules:
+`patra-common` 现在是一个**多模块聚合器**,包含三个独立的子模块:
 
 ```
 patra-common/                    (聚合 POM - 无代码)
@@ -17,41 +17,41 @@ patra-common/                    (聚合 POM - 无代码)
 
 ---
 
-## 🎯 Design Philosophy
+## 🎯 设计理念
 
-### Before (Old Structure)
-❌ **Problem**: All microservices were forced to depend on ALL code in `patra-common`, including:
-- Object storage key generation (only used by patra-ingest)
-- StandardLiterature model (only used by 3 modules)
-- This violated "dependency on demand" principle
+### 之前(旧结构)
+❌ **问题**: 所有微服务被迫依赖 `patra-common` 中的所有代码,包括:
+- 对象存储键生成(仅 patra-ingest 使用)
+- StandardLiterature 模型(仅 3 个模块使用)
+- 违反了"按需依赖"原则
 
-### After (New Structure)
-✅ **Solution**: Modular design with clear boundaries:
-- **patra-common-core**: Truly shared core utilities (domain/error/enums/json/util)
-- **patra-common-storage**: Storage key generation (optional, DDD business rule)
-- **patra-common-model**: Shared data models (optional, inter-service contracts)
+### 之后(新结构)
+✅ **解决方案**: 边界清晰的模块化设计:
+- **patra-common-core**: 真正共享的核心工具(domain/error/enums/json/util)
+- **patra-common-storage**: 存储键生成(可选,DDD 业务规则)
+- **patra-common-model**: 共享数据模型(可选,服务间契约)
 
 ---
 
-## 📌 Submodules
+## 📌 子模块
 
-### 1. patra-common-core (Required by All Services)
+### 1. patra-common-core (所有服务必需)
 
-**Artifact**: `com.papertrace:patra-common-core`
+**构件**: `com.papertrace:patra-common-core`
 
-**Purpose**: Foundation classes used by ALL Papertrace services.
+**目的**: 所有 Papertrace 服务使用的基础类。
 
-**Contents**:
-- **domain/**: DDD base classes (`AggregateRoot`, `DomainEvent`)
-- **error/**: Exception hierarchy, error codes, traits
-- **enums/**: Shared enums (`ProvenanceCode`, `Priority`)
-- **json/**: JSON utilities (`JsonMapperHolder`, `JsonNormalizer`)
-- **messaging/**: Message channel identifiers
-- **util/**: Common utilities (`HashUtils`)
+**内容**:
+- **domain/**: DDD 基础类(`AggregateRoot`、`DomainEvent`)
+- **error/**: 异常层次结构、错误码、特征
+- **enums/**: 共享枚举(`ProvenanceCode`、`Priority`)
+- **json/**: JSON 工具(`JsonMapperHolder`、`JsonNormalizer`)
+- **messaging/**: 消息通道标识符
+- **util/**: 通用工具(`HashUtils`)
 
-**Dependencies**: Hutool, Jackson, SLF4J (provided)
+**依赖**: Hutool、Jackson、SLF4J(provided)
 
-**Usage**:
+**用法**:
 ```xml
 <dependency>
     <groupId>com.papertrace</groupId>
@@ -59,40 +59,40 @@ patra-common/                    (聚合 POM - 无代码)
 </dependency>
 ```
 
-**Who Uses**: All `*-domain`, `*-app`, `*-infra`, `*-adapter` modules
+**使用者**: 所有 `*-domain`、`*-app`、`*-infra`、`*-adapter` 模块
 
 ---
 
-### 2. patra-common-storage (Optional - On-Demand)
+### 2. patra-common-storage (可选 - 按需使用)
 
-**Artifact**: `com.papertrace:patra-common-storage`
+**构件**: `com.papertrace:patra-common-storage`
 
-**Purpose**: Standardized object storage key generation strategies.
+**目的**: 标准化的对象存储键生成策略。
 
-**Contents**:
-- **ObjectKeyContext**: Immutable context for key generation
-- **ObjectKeyGenerator**: Strategy interface
-- **DatePartitionedKeyGenerator**: Date-based partitioning (yyyy/MM/dd)
-- **ObjectKeyTemplate**: Factory methods for common patterns
+**内容**:
+- **ObjectKeyContext**: 键生成的不可变上下文
+- **ObjectKeyGenerator**: 策略接口
+- **DatePartitionedKeyGenerator**: 基于日期的分区(yyyy/MM/dd)
+- **ObjectKeyTemplate**: 常见模式的工厂方法
 
-**Key Format**:
+**键格式**:
 ```
 {service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}
 ```
 
-**Example**:
+**示例**:
 ```java
 import com.patra.common.storage.ObjectKeyTemplate;
 
 String key = ObjectKeyTemplate.generateDailyKey(
     "ingest", "literature-batch", "pubmed-123-batch-001", "json"
 );
-// Result: ingest/literature-batch/2025/10/28/pubmed-123-batch-001.json
+// 结果: ingest/literature-batch/2025/10/28/pubmed-123-batch-001.json
 ```
 
-**Dependencies**: Hutool
+**依赖**: Hutool
 
-**Usage**:
+**用法**:
 ```xml
 <dependency>
     <groupId>com.papertrace</groupId>
@@ -100,26 +100,26 @@ String key = ObjectKeyTemplate.generateDailyKey(
 </dependency>
 ```
 
-**Who Uses**:
+**使用者**:
 - `patra-spring-boot-starter-object-storage` (StorageLocationResolver)
-- Any service needing standardized storage key generation
+- 任何需要标准化存储键生成的服务
 
-**Design Note**: This is a **business rule** (naming convention), not infrastructure code. Keeping it separate from the `object-storage` starter allows domain layers to use standardized naming without depending on Spring framework.
+**设计说明**: 这是一个**业务规则**(命名约定),而非基础设施代码。将其与 `object-storage` starter 分离,允许领域层使用标准化命名而无需依赖 Spring 框架。
 
 ---
 
-### 3. patra-common-model (Optional - On-Demand)
+### 3. patra-common-model (可选 - 按需使用)
 
-**Artifact**: `com.papertrace:patra-common-model`
+**构件**: `com.papertrace:patra-common-model`
 
-**Purpose**: Shared data models for inter-service communication.
+**目的**: 服务间通信的共享数据模型。
 
-**Contents**:
-- **StandardLiterature**: Common literature data structure used across services
+**内容**:
+- **StandardLiterature**: 跨服务使用的通用文献数据结构
 
-**Dependencies**: Jackson (for JSON serialization)
+**依赖**: Jackson(用于 JSON 序列化)
 
-**Usage**:
+**用法**:
 ```xml
 <dependency>
     <groupId>com.papertrace</groupId>
@@ -127,18 +127,18 @@ String key = ObjectKeyTemplate.generateDailyKey(
 </dependency>
 ```
 
-**Who Uses**:
-- `patra-ingest-domain` (port interfaces)
-- `patra-ingest-app` (orchestrators)
-- `patra-spring-boot-starter-provenance` (data adapters)
+**使用者**:
+- `patra-ingest-domain` (端口接口)
+- `patra-ingest-app` (编排器)
+- `patra-spring-boot-starter-provenance` (数据适配器)
 
 ---
 
-## 🔧 Migration Guide
+## 🔧 迁移指南
 
-### For Service Modules
+### 对于服务模块
 
-**Before** (old dependencies):
+**之前**(旧依赖):
 ```xml
 <dependency>
     <groupId>com.papertrace</groupId>
@@ -146,39 +146,39 @@ String key = ObjectKeyTemplate.generateDailyKey(
 </dependency>
 ```
 
-**After** (choose what you need):
+**之后**(选择您需要的):
 ```xml
-<!-- Required: Core utilities -->
+<!-- 必需: 核心工具 -->
 <dependency>
     <groupId>com.papertrace</groupId>
     <artifactId>patra-common-core</artifactId>
 </dependency>
 
-<!-- Optional: If you need storage key generation -->
+<!-- 可选: 如果需要存储键生成 -->
 <dependency>
     <groupId>com.papertrace</groupId>
     <artifactId>patra-common-storage</artifactId>
 </dependency>
 
-<!-- Optional: If you need StandardLiterature model -->
+<!-- 可选: 如果需要 StandardLiterature 模型 -->
 <dependency>
     <groupId>com.papertrace</groupId>
     <artifactId>patra-common-model</artifactId>
 </dependency>
 ```
 
-### Import Statement Changes
+### 导入语句变更
 
-**Storage package renamed**:
+**存储包重命名**:
 ```java
-// Before
+// 之前
 import com.patra.common.objectstorage.*;
 
-// After
+// 之后
 import com.patra.common.storage.*;
 ```
 
-**Note**: `StorageContext` and `StorageLocation` have been moved to:
+**注意**: `StorageContext` 和 `StorageLocation` 已移至:
 ```java
 import com.patra.starter.objectstorage.StorageContext;
 import com.patra.starter.objectstorage.StorageLocation;
@@ -186,36 +186,36 @@ import com.patra.starter.objectstorage.StorageLocation;
 
 ---
 
-## 🏗️ Architecture Benefits
+## 🏗️ 架构优势
 
-### 1. Dependency on Demand ✅
-- Services only depend on what they actually use
-- Reduces classpath pollution
-- Faster builds for services that don't need all features
+### 1. 按需依赖 ✅
+- 服务仅依赖实际使用的内容
+- 减少 classpath 污染
+- 不需要所有功能的服务构建更快
 
-### 2. Clear Boundaries ✅
-- **Core**: Truly universal utilities
-- **Storage**: Domain-level naming rules (business logic)
-- **Model**: Inter-service contracts
+### 2. 清晰边界 ✅
+- **Core**: 真正通用的工具
+- **Storage**: 领域级命名规则(业务逻辑)
+- **Model**: 服务间契约
 
-### 3. Hexagonal Architecture Compliance ✅
-- Domain layers can use `patra-common-storage` (business rules) without depending on infrastructure (`object-storage` starter)
-- Separation of concerns: naming strategy vs. storage implementation
+### 3. 符合六边形架构 ✅
+- 领域层可以使用 `patra-common-storage`(业务规则)而无需依赖基础设施(`object-storage` starter)
+- 关注点分离: 命名策略 vs. 存储实现
 
-### 4. Independent Evolution ✅
-- Each submodule can evolve independently
-- Version management flexibility (future)
+### 4. 独立演进 ✅
+- 每个子模块可以独立演进
+- 版本管理灵活性(未来)
 
 ---
 
-## 🔗 Dependencies
+## 🔗 依赖关系
 
 ```
-patra-common (POM aggregator)
+patra-common (POM 聚合器)
     ↓
     ├─ patra-common-core (Hutool, Jackson, SLF4J)
     │     ↑
-    │     └─ All microservice layers
+    │     └─ 所有微服务层
     │
     ├─ patra-common-storage (Hutool)
     │     ↑
@@ -229,40 +229,40 @@ patra-common (POM aggregator)
 
 ---
 
-## 📊 Module Statistics
+## 📊 模块统计
 
-| Module | Classes | LOC | Dependencies | Usage |
+| 模块 | 类数 | 代码行数 | 依赖 | 使用情况 |
 |--------|---------|-----|--------------|-------|
-| **patra-common-core** | ~27 | ~2500 | Hutool, Jackson | All services (required) |
+| **patra-common-core** | ~27 | ~2500 | Hutool, Jackson | 所有服务(必需) |
 | **patra-common-storage** | 4 | ~300 | Hutool | patra-ingest, object-storage starter |
 | **patra-common-model** | 1 | ~200 | Jackson | patra-ingest, patra-provenance |
 
 ---
 
-## 🚀 Build Commands
+## 🚀 构建命令
 
 ```bash
-# Build all submodules
+# 构建所有子模块
 cd patra-common
 mvn clean install
 
-# Build specific submodule
+# 构建特定子模块
 cd patra-common-core
 mvn clean install
 
-# Verify dependencies
+# 验证依赖
 mvn dependency:tree
 ```
 
 ---
 
-## 🔗 Related Documentation
+## 🔗 相关文档
 
-- [ARCHITECTURE.md](../docs/ARCHITECTURE.md) — Hexagonal Architecture principles
-- [DEV-GUIDE.md](../docs/DEV-GUIDE.md) — Development guidelines
-- [AGENTS-architecture.md](../.claude/AGENTS-architecture.md) — DDD patterns reference
+- [ARCHITECTURE.md](../docs/ARCHITECTURE.md) — 六边形架构原则
+- [DEV-GUIDE.md](../docs/DEV-GUIDE.md) — 开发指南
+- [AGENTS-architecture.md](../.claude/AGENTS-architecture.md) — DDD 模式参考
 
 ---
 
-**Last Updated**: 2025-10-28
-**Migration**: patra-common → multi-module structure (patra-common-core/storage/model)
+**最后更新**: 2025-10-28
+**迁移**: patra-common → 多模块结构(patra-common-core/storage/model)

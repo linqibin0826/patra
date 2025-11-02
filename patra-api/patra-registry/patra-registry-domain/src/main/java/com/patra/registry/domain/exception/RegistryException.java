@@ -3,11 +3,9 @@ package com.patra.registry.domain.exception;
 import com.patra.common.error.DomainException;
 
 /**
- * Base class for Registry domain exceptions.
+ * 注册中心领域异常基类。
  *
- * <p>Represents business rule violations inside the Registry domain and is intended to be handled
- * uniformly by the application layer. All Registry domain exceptions shall extend this class for
- * consistency.
+ * <p>表示注册中心领域内的业务规则违规,旨在由应用层统一处理。 所有注册中心领域异常都应扩展此类以保持一致性。
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,19 +13,19 @@ import com.patra.common.error.DomainException;
 public abstract class RegistryException extends DomainException {
 
   /**
-   * Creates an exception with a message.
+   * 使用消息创建异常。
    *
-   * @param message detail message
+   * @param message 详细消息
    */
   protected RegistryException(String message) {
     super(message);
   }
 
   /**
-   * Creates an exception with a message and root cause.
+   * 使用消息和根本原因创建异常。
    *
-   * @param message detail message
-   * @param cause root cause
+   * @param message 详细消息
+   * @param cause 根本原因
    */
   protected RegistryException(String message, Throwable cause) {
     super(message, cause);

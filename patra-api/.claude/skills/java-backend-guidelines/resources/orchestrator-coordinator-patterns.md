@@ -1,8 +1,8 @@
-# Orchestrator & Coordinator Patterns - Application Layer
+# 编排器与协调器模式 - 应用层
 
-Complete guide to organizing use case orchestration and coordination logic in the application layer.
+应用层中组织用例编排和协调逻辑的完整指南。
 
-## Table of Contents
+## 目录
 
 - [Application Layer Overview](#application-layer-overview)
 - [Orchestrator Pattern](#orchestrator-pattern)
@@ -15,9 +15,9 @@ Complete guide to organizing use case orchestration and coordination logic in th
 
 ---
 
-## Application Layer Overview
+## 应用层 Overview
 
-### Purpose of Application Layer
+### 目的 of Application Layer
 
 **Application layer coordinates use cases** - the 'how' of workflows:
 
@@ -206,7 +206,7 @@ A coordinator handles ONE specific concern within a use case:
 
 ### Coordinator Example 1: Persistence
 
-**Purpose**: Coordinate all persistence operations with error handling.
+**目的**: Coordinate all persistence operations with error handling.
 
 **File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanPersistenceCoordinator.java`
 
@@ -328,7 +328,7 @@ public class PlanPersistenceCoordinator {
 
 ### Coordinator Example 2: Idempotency
 
-**Purpose**: Handle duplicate detection and retry logic.
+**目的**: Handle duplicate detection and retry logic.
 
 **File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIdempotencyCoordinator.java`
 
@@ -437,7 +437,7 @@ public class PlanIdempotencyCoordinator {
 
 ### Coordinator Example 3: Publishing
 
-**Purpose**: Collect domain events and publish via Outbox pattern.
+**目的**: Collect domain events and publish via Outbox pattern.
 
 **File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanPublishingCoordinator.java`
 
@@ -550,7 +550,7 @@ public class PlanPublishingCoordinator {
 - ✅ Want separation of concerns within application layer
 - ✅ Multiple coordinators can be reused
 
-**Example**: PlanIngestionOrchestrator + 3 Coordinators
+**示例**: PlanIngestionOrchestrator + 3 Coordinators
 
 ```java
 @Service
@@ -645,7 +645,7 @@ public class PlanPublishingCoordinator {
 - ✅ Long-running operations
 - ✅ Sub-usecases can be reused independently
 
-**Example**: OutboxRelayOrchestrator + Executor
+**示例**: OutboxRelayOrchestrator + Executor
 
 **File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/OutboxRelayOrchestrator.java`
 
@@ -1134,7 +1134,7 @@ class PlanIngestionOrchestratorTest {
 
 ---
 
-**Related Files:**
+**相关文件：**
 - [SKILL.md](../SKILL.md) - Main guide
 - [complete-examples.md](complete-examples.md) - Complete feature examples
 - [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain layer patterns

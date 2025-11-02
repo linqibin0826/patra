@@ -1,60 +1,60 @@
 # patra-registry-infra
 
-Infrastructure layer for patra-registry implementing persistence using MyBatis-Plus.
+patra-registry 的基础设施层,使用 MyBatis-Plus 实现持久化。
 
-## Module Overview
+## 模块概览
 
-This module provides concrete implementations of domain ports defined in `patra-registry-domain`, handling database access and DO↔Domain mapping.
+本模块提供 `patra-registry-domain` 中定义的领域端口的具体实现,处理数据库访问和 DO↔Domain 映射。
 
-**Key Responsibilities:**
-- Implement repository interfaces (`*Port`) from domain layer
-- Manage database entities (DO classes) mapped to database tables
-- Convert between DO and domain objects using MapStruct
-- Execute complex queries using MyBatis-Plus and XML mappers
+**核心职责:**
+- 实现领域层的仓储接口(`*Port`)
+- 管理数据库实体(DO 类),映射到数据库表
+- 使用 MapStruct 在 DO 和领域对象之间转换
+- 使用 MyBatis-Plus 和 XML 映射器执行复杂查询
 
-## Architecture
+## 架构
 
-**Dependencies:**
-- ✅ `patra-registry-domain` (implements domain ports)
-- ✅ `patra-common` (shared utilities)
-- ✅ `patra-spring-boot-starter-core` (core Spring configuration)
-- ✅ `patra-spring-boot-starter-mybatis` (MyBatis-Plus configuration)
-- ✅ MapStruct (DO↔Domain conversion)
+**依赖:**
+- ✅ `patra-registry-domain`(实现领域端口)
+- ✅ `patra-common`(共享工具)
+- ✅ `patra-spring-boot-starter-core`(核心 Spring 配置)
+- ✅ `patra-spring-boot-starter-mybatis`(MyBatis-Plus 配置)
+- ✅ MapStruct(DO↔Domain 转换)
 
-**Critical Rules:**
-- ❌ Never expose DO objects outside this module
-- ✅ Always use MapStruct converters for DO↔Domain mapping
-- ✅ Use JsonNode for JSON columns, convert to String in domain
-- ✅ Keep SQL in XML mapper files, not in annotations
+**关键规则:**
+- ❌ 切勿在本模块外暴露 DO 对象
+- ✅ 始终使用 MapStruct 转换器进行 DO↔Domain 映射
+- ✅ 对 JSON 列使用 JsonNode,在领域中转换为 String
+- ✅ 将 SQL 保留在 XML 映射器文件中,而非注解
 
-## Package Structure
+## 包结构
 
 ```
 com.patra.registry.infra.persistence
-├── repository/              # Repository implementations (*RepositoryMpImpl)
-├── converter/               # MapStruct converters (DO↔Domain)
-├── entity/                  # Database objects (DO)
-│   ├── provenance/         # Provenance configuration tables
-│   ├── expr/               # Expression metadata tables
-│   └── dictionary/         # System dictionary tables
-└── mapper/                  # MyBatis mappers (interfaces + XML)
+├── repository/              # 仓储实现(*RepositoryMpImpl)
+├── converter/               # MapStruct 转换器(DO↔Domain)
+├── entity/                  # 数据库对象(DO)
+│   ├── provenance/         # 数据源配置表
+│   ├── expr/               # 表达式元数据表
+│   └── dictionary/         # 系统字典表
+└── mapper/                  # MyBatis 映射器(接口 + XML)
     ├── provenance/
     ├── expr/
     └── dictionary/
 ```
 
-## DO Entity Conventions
+## DO 实体约定
 
-All DO entities follow these patterns:
+所有 DO 实体遵循以下模式:
 
-**Naming:** `Reg*DO` for registry tables, maps to database table names
-**Base Class:** Extend `BaseDO` (provides id, created_at, updated_at, deleted)
-**Annotations:**
-- `@TableName("table_name")` - Database table mapping
-- `@TableField("column_name")` - Column mapping
-- `@Data` / `@SuperBuilder` - Lombok for getters/setters/builders
+**命名:** 注册表表用 `Reg*DO`,映射到数据库表名
+**基类:** 扩展 `BaseDO`(提供 id、created_at、updated_at、deleted)
+**注解:**
+- `@TableName("table_name")` - 数据库表映射
+- `@TableField("column_name")` - 列映射
+- `@Data` / `@SuperBuilder` - Lombok 用于 getters/setters/builders
 
-**Example:**
+**示例:**
 ```java
 @Data
 @SuperBuilder
@@ -65,24 +65,24 @@ All DO entities follow these patterns:
 public class RegProvenanceDO extends BaseDO {
     @TableField("provenance_code")
     private String provenanceCode;
-    
+
     @TableField("is_active")
     private Boolean isActive;
 }
 ```
 
-## Mapper Conventions
+## 映射器约定
 
-**Interface Naming:** `Reg*Mapper extends BaseMapper<DO>`
-**XML Location:** `src/main/resources/mapper/Reg*Mapper.xml`
-**Method Naming:** `select*`, `count*`, `insert*`, `update*`, `delete*`
+**接口命名:** `Reg*Mapper extends BaseMapper<DO>`
+**XML 位置:** `src/main/resources/mapper/Reg*Mapper.xml`
+**方法命名:** `select*`、`count*`、`insert*`、`update*`、`delete*`
 
-**Reusable SQL Fragments:**
-All provenance configuration mappers use shared SQL fragments:
-- `<sql id="activeConfigFilter">` - Temporal slicing and active status filter
-- `<sql id="operationPrecedenceOrder">` - Operation-specific precedence ordering
+**可重用 SQL 片段:**
+所有数据源配置映射器使用共享 SQL 片段:
+- `<sql id="activeConfigFilter">` - 时态切片和活动状态过滤
+- `<sql id="operationPrecedenceOrder">` - 操作特定优先级排序
 
-**Example:**
+**示例:**
 ```xml
 <select id="selectActiveMerged" resultType="...DO">
     SELECT * FROM table_name
@@ -92,42 +92,42 @@ All provenance configuration mappers use shared SQL fragments:
 </select>
 ```
 
-## MapStruct Converters
+## MapStruct 转换器
 
-**Naming:** `*EntityConverter` interface annotated with `@Mapper(componentModel = "spring")`
-**Purpose:** Convert DO↔Domain objects, never expose DO outside infra layer
+**命名:** `*EntityConverter` 接口,使用 `@Mapper(componentModel = "spring")` 注解
+**目的:** 转换 DO↔Domain 对象,切勿在 infra 层外暴露 DO
 
-**Key Patterns:**
-- Boolean fields: Map SQL `TINYINT(1)` to Java `Boolean` using expressions
-- JSON fields: Convert `JsonNode` to `String` using helper method
-- Field renames: Use `@Mapping` annotations
+**关键模式:**
+- 布尔字段: 使用表达式将 SQL `TINYINT(1)` 映射到 Java `Boolean`
+- JSON 字段: 使用辅助方法将 `JsonNode` 转换为 `String`
+- 字段重命名: 使用 `@Mapping` 注解
 
-**Example:**
+**示例:**
 ```java
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProvenanceEntityConverter {
     @Mapping(target = "code", source = "provenanceCode")
     @Mapping(target = "active", expression = "java(Boolean.TRUE.equals(entity.getIsActive()))")
     Provenance toDomain(RegProvenanceDO entity);
-    
+
     default String map(JsonNode node) {
         return node == null ? null : node.toString();
     }
 }
 ```
 
-## Repository Implementations
+## 仓储实现
 
-**Naming:** `*RepositoryMpImpl implements *Port`
-**Annotations:** `@Repository` + `@RequiredArgsConstructor` + `@Slf4j`
+**命名:** `*RepositoryMpImpl implements *Port`
+**注解:** `@Repository` + `@RequiredArgsConstructor` + `@Slf4j`
 
-**Key Responsibilities:**
-1. Inject required mappers and converters
-2. Delegate database operations to MyBatis mappers
-3. Convert DO to domain objects using converters
-4. Add appropriate logging for debugging
+**核心职责:**
+1. 注入所需的映射器和转换器
+2. 将数据库操作委托给 MyBatis 映射器
+3. 使用转换器将 DO 转换为领域对象
+4. 添加适当的日志以便调试
 
-**Example:**
+**示例:**
 ```java
 @Slf4j
 @Repository
@@ -135,7 +135,7 @@ public interface ProvenanceEntityConverter {
 public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigRepository {
     private final RegProvenanceMapper provenanceMapper;
     private final ProvenanceEntityConverter converter;
-    
+
     @Override
     public Optional<Provenance> findProvenanceByCode(ProvenanceCode code) {
         log.debug("Finding provenance by code: {}", code.getCode());
@@ -144,78 +144,78 @@ public class ProvenanceConfigRepositoryMpImpl implements ProvenanceConfigReposit
 }
 ```
 
-## Testing Strategy
+## 测试策略
 
-- **Unit Tests:** Test MapStruct converters (DO↔Domain mapping correctness)
-- **Integration Tests:** Located in `patra-registry-boot` module with full Spring context
-- **TestContainers:** Use for database integration tests
+- **单元测试:** 测试 MapStruct 转换器(DO↔Domain 映射正确性)
+- **集成测试:** 位于 `patra-registry-boot` 模块,具有完整 Spring 上下文
+- **TestContainers:** 用于数据库集成测试
 
-## Code Quality Standards
+## 代码质量标准
 
-This module follows strict refactoring standards:
+本模块遵循严格的重构标准:
 
-✅ **Google Java Style Guide compliance**
-✅ **All public methods have JavaDoc**
-✅ **All methods < 30 lines**
-✅ **No duplicate code (DRY principle)**
-✅ **SQL fragments reused across mappers**
-✅ **DO objects never leaked outside this module**
-✅ **MapStruct for all DO↔Domain conversions**
+✅ **符合 Google Java 代码风格指南**
+✅ **所有公共方法都有 JavaDoc**
+✅ **所有方法 < 30 行**
+✅ **无重复代码(DRY 原则)**
+✅ **跨映射器重用 SQL 片段**
+✅ **DO 对象切勿泄漏到本模块外**
+✅ **所有 DO↔Domain 转换使用 MapStruct**
 
-## Recent Refactoring (2025-10)
+## 近期重构(2025-10)
 
-**SQL Deduplication:**
-- Extracted common query patterns into reusable `<sql>` fragments
-- Applied across all provenance configuration mappers
-- Reduced duplication while maintaining readability
+**SQL 去重:**
+- 将常见查询模式提取到可重用的 `<sql>` 片段
+- 应用于所有数据源配置映射器
+- 在保持可读性的同时减少重复
 
-**Code Simplification:**
-- Refactored `countNonNullConfigs` to use Stream API
-- Improved readability and reduced line count
+**代码简化:**
+- 重构 `countNonNullConfigs` 以使用 Stream API
+- 提高可读性并减少行数
 
-**JavaDoc Enhancement:**
-- Added comprehensive JavaDoc to all mappers
-- Documented SQL fragment purposes and usage
+**JavaDoc 增强:**
+- 为所有映射器添加全面的 JavaDoc
+- 记录 SQL 片段的目的和用法
 
-## Database Schema
+## 数据库模式
 
-**Provenance Configuration Tables:**
-- `reg_provenance` - Root provenance records
-- `reg_prov_window_offset_cfg` - Window and offset configuration
-- `reg_prov_pagination_cfg` - Pagination strategies
-- `reg_prov_http_cfg` - HTTP policies and timeouts
-- `reg_prov_batching_cfg` - Batching rules
-- `reg_prov_retry_cfg` - Retry and circuit breaker config
-- `reg_prov_rate_limit_cfg` - Concurrency and rate limits
+**数据源配置表:**
+- `reg_provenance` - 根数据源记录
+- `reg_prov_window_offset_cfg` - 窗口和偏移配置
+- `reg_prov_pagination_cfg` - 分页策略
+- `reg_prov_http_cfg` - HTTP 策略和超时
+- `reg_prov_batching_cfg` - 批处理规则
+- `reg_prov_retry_cfg` - 重试和熔断器配置
+- `reg_prov_rate_limit_cfg` - 并发和速率限制
 
-**Expression Metadata Tables:**
-- `reg_expr_field_dict` - Canonical field definitions
-- `reg_prov_expr_capability` - Field capabilities per provenance
-- `reg_prov_expr_render_rule` - Expression rendering rules
-- `reg_prov_api_param_map` - API parameter mappings
+**表达式元数据表:**
+- `reg_expr_field_dict` - 规范字段定义
+- `reg_prov_expr_capability` - 每个数据源的字段能力
+- `reg_prov_expr_render_rule` - 表达式渲染规则
+- `reg_prov_api_param_map` - API 参数映射
 
-**Dictionary Tables:**
-- `sys_dict_type` - Dictionary type definitions
-- `sys_dict_item` - Dictionary items
-- `sys_dict_item_alias` - External system aliases
+**字典表:**
+- `sys_dict_type` - 字典类型定义
+- `sys_dict_item` - 字典项
+- `sys_dict_item_alias` - 外部系统别名
 
-## Build Commands
+## 构建命令
 
 ```bash
-# Compile this module only
+# 仅编译本模块
 mvn -q compile -pl :patra-registry-infra
 
-# Run unit tests (if any)
+# 运行单元测试(如有)
 mvn test -pl :patra-registry-infra
 
-# Full build with parent
+# 与父级完整构建
 mvn clean install -pl :patra-registry-infra
 ```
 
-## Dependencies
+## 依赖
 
-See `pom.xml` for complete dependency list. Key dependencies:
-- MyBatis-Plus (database access)
-- MapStruct (object mapping)
-- Jackson (JSON handling with JsonNode)
-- Lombok (boilerplate reduction)
+有关完整的依赖列表,请参见 `pom.xml`。关键依赖:
+- MyBatis-Plus(数据库访问)
+- MapStruct(对象映射)
+- Jackson(使用 JsonNode 处理 JSON)
+- Lombok(减少样板代码)

@@ -3,39 +3,37 @@ package com.patra.common.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * Application-layer exception that carries a structured business error code.
+ * 携带结构化业务错误码的应用层异常。
  *
- * <p>Used to wrap domain exceptions or represent application errors enriched with an {@link
- * ErrorCodeLike}. The embedded code guides the error-resolution algorithm when determining the HTTP
- * status and serialized response.
+ * <p>用于包装领域异常或表示使用 {@link ErrorCodeLike} 丰富的应用错误。 嵌入的错误码在确定 HTTP 状态和序列化响应时指导错误解析算法。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public class ApplicationException extends RuntimeException {
 
-  /** Business error code associated with this exception. */
+  /** 与此异常关联的业务错误码。 */
   private final ErrorCodeLike errorCode;
 
-  /** Creates an exception with the provided error code and message. */
+  /** 使用提供的错误码和消息创建异常。 */
   public ApplicationException(ErrorCodeLike errorCode, String message) {
     super(message);
     if (errorCode == null) {
-      throw new IllegalArgumentException("ErrorCode cannot be null");
+      throw new IllegalArgumentException("ErrorCode 不能为 null");
     }
     this.errorCode = errorCode;
   }
 
-  /** Creates an exception with the provided error code, message, and root cause. */
+  /** 使用提供的错误码、消息和根本原因创建异常。 */
   public ApplicationException(ErrorCodeLike errorCode, String message, Throwable cause) {
     super(message, cause);
     if (errorCode == null) {
-      throw new IllegalArgumentException("ErrorCode cannot be null");
+      throw new IllegalArgumentException("ErrorCode 不能为 null");
     }
     this.errorCode = errorCode;
   }
 
-  /** Returns the associated business error code. */
+  /** 返回关联的业务错误码。 */
   public ErrorCodeLike getErrorCode() {
     return errorCode;
   }

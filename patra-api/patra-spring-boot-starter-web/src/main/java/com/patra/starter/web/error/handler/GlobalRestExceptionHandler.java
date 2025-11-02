@@ -19,16 +19,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-/**
- * Global REST exception handler that renders RFC 7807 {@link ProblemDetail} documents using the
- * shared platform error resolution pipeline.
- */
+/** 全局 REST 异常处理器，使用共享平台错误解析管道呈现 RFC 7807 {@link ProblemDetail} 文档。 */
 @Slf4j
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
 
-  /** Maximum number of validation errors attached to the ProblemDetail payload. */
+  /** 附加到问题详情载荷的验证错误的最大数量。 */
   private static final int MAX_VALIDATION_ERRORS = 100;
 
   private final ProblemDetailAdapter problemDetailAdapter;
@@ -41,7 +38,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
     this.validationErrorsFormatter = validationErrorsFormatter;
   }
 
-  /** Fallback handler that converts any uncaught exception into a ProblemDetail document. */
+  /** 后备处理器，将任何未捕获的异常转换为问题详情文档。 */
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ProblemDetail> handleException(Exception ex, HttpServletRequest request) {
     ProblemDetailResponse response = problemDetailAdapter.adapt(ex, request);
@@ -53,7 +50,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
         .body(response.problemDetail());
   }
 
-  /** Handles validation failures and appends sanitized field errors to the response payload. */
+  /** 处理验证失败并将清理后的字段错误附加到响应载荷。 */
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
       @NonNull MethodArgumentNotValidException ex,
@@ -75,10 +72,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /**
-   * Extracts HttpServletRequest from Spring's WebRequest wrapper.
+   * 从 Spring 的 WebRequest 包装器中提取 HttpServletRequest。
    *
-   * @param request web request wrapper
-   * @return servlet request or null if not available
+   * @param request web 请求包装器
+   * @return servlet 请求或 null（如果不可用）
    */
   private HttpServletRequest extractServletRequest(
       org.springframework.web.context.request.WebRequest request) {
@@ -90,10 +87,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /**
-   * Formats validation errors with masking and truncates to maximum allowed count.
+   * 格式化验证错误并进行掩码，截断到允许的最大计数。
    *
-   * @param ex validation exception containing binding results
-   * @return formatted and truncated validation error list
+   * @param ex 包含绑定结果的验证异常
+   * @return 格式化和截断的验证错误列表
    */
   private List<ValidationError> formatAndTruncateValidationErrors(
       MethodArgumentNotValidException ex) {
@@ -101,10 +98,7 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
         validationErrorsFormatter.formatWithMasking(ex.getBindingResult());
 
     if (errors.size() > MAX_VALIDATION_ERRORS) {
-      log.warn(
-          "Validation errors exceeded maximum limit: total={}, truncated to {}",
-          errors.size(),
-          MAX_VALIDATION_ERRORS);
+      log.warn("验证错误超出最大限制：total={}，截断为 {}", errors.size(), MAX_VALIDATION_ERRORS);
       return errors.subList(0, MAX_VALIDATION_ERRORS);
     }
 
@@ -112,10 +106,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /**
-   * Logs general exception handling with error code, status, request path, and full stack trace.
+   * 记录通用异常处理，包括错误代码、状态、请求路径和完整堆栈跟踪。
    *
-   * @param response problem detail response containing error metadata
-   * @param ex the exception that was handled
+   * @param response 包含错误元数据的问题详情响应
+   * @param ex 被处理的异常
    */
   private void logExceptionHandled(ProblemDetailResponse response, Exception ex) {
     Object path = extractPathFromProblemDetail(response.problemDetail());
@@ -129,11 +123,11 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /**
-   * Logs validation exception handling with validation error count, metadata, and stack trace.
+   * 记录验证异常处理，包括验证错误计数、元数据和堆栈跟踪。
    *
-   * @param response problem detail response
-   * @param errors validation errors included in response
-   * @param ex the validation exception that was handled
+   * @param response 问题详情响应
+   * @param errors 响应中包含的验证错误
+   * @param ex 被处理的验证异常
    */
   private void logValidationExceptionHandled(
       ProblemDetailResponse response, List<ValidationError> errors, Exception ex) {
@@ -149,10 +143,10 @@ public class GlobalRestExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   /**
-   * Safely extracts path property from ProblemDetail.
+   * 安全地从问题详情中提取路径属性。
    *
-   * @param problemDetail problem detail instance
-   * @return path value or null if not present
+   * @param problemDetail 问题详情实例
+   * @return 路径值，不存在时返回 null
    */
   private Object extractPathFromProblemDetail(ProblemDetail problemDetail) {
     return problemDetail.getProperties() == null

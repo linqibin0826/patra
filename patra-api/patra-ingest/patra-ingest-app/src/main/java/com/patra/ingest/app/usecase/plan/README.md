@@ -64,7 +64,7 @@ plan/
 
 ### Phase 1: Schedule Instance + Config Snapshot
 
-**Purpose**: Initialize scheduler tracking and capture immutable config.
+**目的**: Initialize scheduler tracking and capture immutable config.
 
 **Code**:
 ```java
@@ -89,7 +89,7 @@ PlanTriggerNorm norm = buildTriggerNorm(schedule, request);
 
 ### Phase 2: Cursor Watermark + Window Resolution
 
-**Purpose**: Determine execution window based on cursor and trigger params.
+**目的**: Determine execution window based on cursor and trigger params.
 
 **Code**:
 ```java
@@ -124,7 +124,7 @@ Resolved:  [2025-01-05, 2025-01-10)  ← Start from cursor
 
 ### Phase 3: Expression Building
 
-**Purpose**: Build plan-level expression descriptor (uncompiled snapshot).
+**目的**: Build plan-level expression descriptor (uncompiled snapshot).
 
 **Code**:
 ```java
@@ -150,7 +150,7 @@ PlanExpressionDescriptor expressionDescriptor = planExpressionBuilder.build(
 
 ### Phase 4: Pre-Validation
 
-**Purpose**: Fail fast before expensive assembly.
+**目的**: Fail fast before expensive assembly.
 
 **Code**:
 ```java
@@ -177,7 +177,7 @@ plannerValidator.validateBeforeAssemble(
 
 ### Phase 5: Plan Assembly
 
-**Purpose**: Assemble in-memory plan/slices/tasks (not persisted yet).
+**目的**: Assemble in-memory plan/slices/tasks (not persisted yet).
 
 **Code**:
 ```java
@@ -213,7 +213,7 @@ if (existingPlan != null) {
 
 ### Phase 6: Persistence
 
-**Purpose**: Persist plan → slices → tasks in correct order.
+**目的**: Persist plan → slices → tasks in correct order.
 
 **Code**:
 ```java
@@ -241,7 +241,7 @@ List<TaskAggregate> persistedTasks = taskRepository.saveAll(tasks);
 
 ### Phase 7: Event Publishing
 
-**Purpose**: Publish task queued events via Outbox pattern.
+**目的**: Publish task queued events via Outbox pattern.
 
 **Code**:
 ```java
