@@ -279,8 +279,8 @@ class MyEventHandlerTest {
 
         // Assert 3: Idempotency record created in Outbox
         OutboxMessage outbox = outboxRepo.findByDedupKey(dedupKey).orElseThrow();
-        assertThat(outbox.getEventType()).isEqualTo("NextEvent");
-        assertThat(outbox.getStatus()).isEqualTo("PUBLISHED");
+        assertThat(outbox.getOpType()).isEqualTo("NextEvent");
+        assertThat(outbox.getStatusCode()).isEqualTo("PUBLISHED");
     }
 
     @Test
@@ -290,8 +290,8 @@ class MyEventHandlerTest {
         String dedupKey = "duplicate-event";
         outboxRepo.save(OutboxMessage.builder()
             .dedupKey(dedupKey)
-            .eventType("NextEvent")
-            .status("PUBLISHED")
+            .opType("NextEvent")
+            .statusCode("PUBLISHED")
             .build());
 
         MyEvent event = new MyEvent(/* ... */, dedupKey);
@@ -346,7 +346,7 @@ class MyRepositoryIntegrationTest {
     }
 
     @Autowired
-    private MyRepositoryImpl repository;
+    private MyRepositoryMpImpl repository;
 
     @Test
     @DisplayName("Should save and find entity")
@@ -388,11 +388,15 @@ package com.patra.{service}.infra.converter;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import static org.assertj.core.api.Assertions.*;
 
+@SpringBootTest
 class MyConverterTest {
 
-    private final MyConverter converter = MyConverter.INSTANCE;
+    @Autowired
+    private MyConverter converter;
 
     @Test
     @DisplayName("Should convert Domain → DO correctly")

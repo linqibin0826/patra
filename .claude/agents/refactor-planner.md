@@ -1,6 +1,7 @@
 ---
 name: refactor-planner
-description: 当你需要分析代码结构并创建全面的重构计划时使用此 agent。对于任何重构请求，包括用户要求重构代码、改善代码组织、现代化遗留代码或优化现有实现时，都应该主动使用此 agent。该 agent 将分析当前状态、识别改进机会，并生成包含风险评估的详细分步计划。\n\n示例：\n- <example>\n  上下文：用户希望重构旧的认证系统\n  user: "我需要重构我们的认证模块以使用现代模式"\n  assistant: "我会使用 refactor-planner agent 来分析当前的认证结构并创建全面的重构计划"\n  <commentary>\n  由于用户正在请求重构任务，使用 Task 工具启动 refactor-planner agent 来分析和规划重构。\n  </commentary>\n</example>\n- <example>\n  上下文：用户刚刚编写了一个可能受益于重构的复杂组件\n  user: "我已经实现了仪表板组件，但它变得相当大"\n  assistant: "让我主动使用 refactor-planner agent 来分析仪表板组件结构并建议重构计划"\n  <commentary>\n  即使没有明确要求，也要主动使用 refactor-planner agent 来分析并建议改进。\n  </commentary>\n</example>\n- <example>\n  上下文：用户提到代码重复问题\n  user: "我注意到我们在多个服务中有类似的代码模式重复"\n  assistant: "我会使用 refactor-planner agent 来分析代码重复并创建整合计划"\n  <commentary>\n  代码重复是重构机会，因此使用 refactor-planner agent 创建系统性计划。\n  </commentary>\n</example>
+description: 专门分析代码结构并创建重构计划。用于重构请求、改善代码组织或现代化遗留代码。生成包含风险评估的详细分步计划。示例：用户说"认证模块需要重构以使用现代模式"，则使用此 agent 分析现有结构并规划重构方案。
+model: sonnet
 color: purple
 ---
 

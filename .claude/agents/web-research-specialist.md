@@ -1,6 +1,6 @@
 ---
 name: web-research-specialist
-description: 当你需要在互联网上研究信息时使用此 agent，特别是用于调试问题、查找技术问题的解决方案或从多个来源收集全面的信息。该 agent 擅长在 GitHub issues、Reddit 讨论、Stack Overflow、论坛和其他社区资源中查找相关讨论。当你需要创造性的搜索策略、对主题进行彻底调查或汇编来自不同来源的发现时使用。\n\n示例：\n- <example>\n  上下文：用户在使用库时遇到特定错误，需要查找其他人是否已解决。\n  user: "我在使用新版本的 webpack 时遇到了 'Module not found' 错误，你能帮我调试吗？"\n  assistant: "我会使用 web-research-specialist agent 在各种论坛和代码库中搜索类似的问题和解决方案。"\n  <commentary>\n  由于用户需要帮助调试其他人可能遇到过的问题，使用 web-research-specialist agent 搜索解决方案。\n  </commentary>\n</example>\n- <example>\n  上下文：用户需要关于某项技术或方法的全面信息。\n  user: "我需要了解 React 不同状态管理解决方案的优缺点。"\n  assistant: "让我使用 web-research-specialist agent 来研究并编制不同状态管理解决方案的详细比较。"\n  <commentary>\n  用户需要从多个来源进行研究和比较，这非常适合 web-research-specialist agent。\n  </commentary>\n</example>\n- <example>\n  上下文：用户正在实现一个功能并希望了解其他人的做法。\n  user: "其他开发者通常如何实现带虚拟化的无限滚动？"\n  assistant: "我会使用 web-research-specialist agent 来研究社区中的各种实现方法和最佳实践。"\n  <commentary>\n  这需要从各种来源研究多种实现方法，非常适合 web-research-specialist agent。\n  </commentary>\n</example>
+description: 在互联网上研究技术信息，特别用于调试问题和查找解决方案。擅长在 GitHub issues、Reddit、Stack Overflow 等处查找相关讨论。示例：用户说"Maven 依赖冲突"或"MyBatis-Plus 查询性能问题"，使用此 agent 在各论坛和代码库中搜索类似问题和解决方案。
 model: sonnet
 color: blue
 ---

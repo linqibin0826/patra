@@ -63,8 +63,8 @@ import java.util.Optional;
 ### 3. 类型不匹配
 ```java
 // Error: incompatible types: ProvenanceCode cannot be converted to String
-// Fix: Use .value() method to extract String
-String code = provenanceCode.value();
+// Fix: Use .getCode() method to extract String
+String code = provenanceCode.getCode();
 ```
 
 ### 4. 找不到方法
@@ -80,7 +80,7 @@ public ProvenanceId id() {
 ```java
 // Error: package com.patra.domain.model does not exist
 // Fix: Correct the import path
-import com.patra.registry.domain.model.entity.Provenance;
+import com.patra.registry.domain.model.vo.provenance.Provenance;
 ```
 
 ### 6. 六边形架构违规
@@ -185,9 +185,9 @@ mvn -T 1C compile -DskipTests 2>&1 | tee /tmp/mvn-errors.log
 
 # 2. Analyze error output
 # Example error:
-[ERROR] /path/to/patra-registry-domain/src/main/java/com/patra/registry/domain/model/entity/Provenance.java:[15,8] cannot find symbol
+[ERROR] /path/to/patra-registry-domain/src/main/java/com/patra/registry/domain/model/vo/provenance/Provenance.java:[15,8] cannot find symbol
   symbol:   class ProvenanceCode
-  location: class com.patra.registry.domain.model.entity.Provenance
+  location: class com.patra.registry.domain.model.vo.provenance.Provenance
 
 # 3. Identify the issue
 # Missing import or incorrect package
