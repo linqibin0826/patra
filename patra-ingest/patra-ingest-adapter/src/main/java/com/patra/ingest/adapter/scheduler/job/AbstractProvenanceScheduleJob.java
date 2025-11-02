@@ -22,61 +22,55 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * Scheduling job base class that provides a unified template for "provenance + operation" jobs
- * (param parsing → orchestration → result/error reporting).
+ * 调度任务基类,为 "来源 + 操作" 任务提供统一模板(参数解析 → 编排 → 结果/错误报告)。
  *
- * <p>Common logic is centralized here. Subclasses only need to define {@link #getProvenanceCode()}
- * and {@link #getOperationCode()}.
+ * <p>通用逻辑集中在此处。子类只需定义 {@link #getProvenanceCode()} 和 {@link #getOperationCode()}。
  *
- * <p>Defaults and constraints: - If XXL-Job param is blank, fall back to default window and step
- * (currently step=PT6H; can be externalized later). - Parse windowFrom/windowTo as ISO-8601 Instant
- * strings; missing/illegal values are treated as null. - Illegal values of priority are ignored to
- * avoid job failure. - Results are reported via logs and XxlJobHelper; on failure, the original
- * exception chain is thrown to allow retry policies to decide.
+ * <p>默认值和约束: - 如果 XXL-Job 参数为空,则回退到默认窗口和步长(当前 step=P1D;以后可以外部化)。 - 将 windowFrom/windowTo 解析为
+ * ISO-8601 Instant 字符串;缺失/非法值被视为 null。 - 非法的优先级值会被忽略以避免任务失败。 - 结果通过日志和 XxlJobHelper
+ * 报告;失败时,抛出原始异常链以允许重试策略决定。
  */
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {
 
-  private static final String DEFAULT_STEP =
-      "P1D"; // Default to 1 day for DATE-based slicing (e.g., PubMed)
+  private static final String DEFAULT_STEP = "P1D"; // 默认为 1 天,用于基于日期的切片(例如 PubMed)
   private static final String DEFAULT_SCHEDULER_LOG_ID = "0";
 
-  /** Plan orchestration application service (application layer entry). */
+  /** 计划采集用例应用服务(应用层入口)。 */
   @Autowired private PlanIngestionUseCase planIngestionUseCase;
 
-  /** JSON object mapper. */
+  /** JSON 对象映射器。 */
   @Autowired private ObjectMapper objectMapper;
 
   /**
-   * Returns the provenance code for this job (fixed per subclass).
+   * 返回此任务的来源代码(每个子类固定)。
    *
-   * @return provenance code
+   * @return 来源代码
    */
   protected abstract ProvenanceCode getProvenanceCode();
 
   /**
-   * Returns the operation code for this job (fixed per subclass).
+   * 返回此任务的操作代码(每个子类固定)。
    *
-   * @return operation code
+   * @return 操作代码
    */
   protected abstract OperationCode getOperationCode();
 
   /**
-   * Parses XXL-Job JSON param into the application request object.
+   * 将 XXL-Job JSON 参数解析为应用请求对象。
    *
-   * <p>Supported fields: windowFrom, windowTo, priority, step, schedulerLogId, triggeredAt and any
-   * additional fields (passed through as triggerParams).
+   * <p>支持的字段: windowFrom, windowTo, priority, step, schedulerLogId, triggeredAt 以及任何额外字段(作为
+   * triggerParams 传递)。
    *
-   * <p>Failure policy: if structure is invalid or JSON parsing fails, throws {@link
-   * IngestScheduleParameterException} which is caught by the job entrypoint and marked as failed.
+   * <p>失败策略: 如果结构无效或 JSON 解析失败,抛出 {@link IngestScheduleParameterException},该异常会被任务入口点捕获并标记为失败。
    *
-   * @param paramStr raw XXL-Job param (JSON string; may be blank)
-   * @return PlanIngestionCommand request
-   * @throws IngestScheduleParameterException when parameters are invalid
+   * @param paramStr 原始 XXL-Job 参数(JSON 字符串;可能为空)
+   * @return PlanIngestionCommand 请求
+   * @throws IngestScheduleParameterException 当参数无效时
    */
   protected PlanIngestionCommand parseJobParam(String paramStr) {
     if (CharSequenceUtil.isBlank(paramStr)) {
-      log.debug("Using default job configuration with step [{}]", DEFAULT_STEP);
+      log.debug("使用默认任务配置,步长为 [{}]", DEFAULT_STEP);
       return buildPlanIngestionCommand(ProvenanceScheduleJobParam.empty(), Map.of());
     }
     try {
@@ -95,8 +89,7 @@ public abstract class AbstractProvenanceScheduleJob {
               : Collections.unmodifiableMap(new LinkedHashMap<>(rawParams));
       return buildPlanIngestionCommand(jobParam, triggerParams);
     } catch (Exception e) {
-      throw new IngestScheduleParameterException(
-          "Failed to parse JSON param: " + e.getMessage(), e);
+      throw new IngestScheduleParameterException("JSON 参数解析失败: " + e.getMessage(), e);
     }
   }
 
@@ -122,7 +115,7 @@ public abstract class AbstractProvenanceScheduleJob {
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "Parsed job command: provenance [{}] operation [{}] window [{}, {}) priority [{}]",
+          "已解析任务命令: 来源 [{}] 操作 [{}] 窗口 [{}, {}) 优先级 [{}]",
           command.provenanceCode(),
           command.operationCode(),
           command.windowFrom(),
@@ -151,7 +144,7 @@ public abstract class AbstractProvenanceScheduleJob {
     try {
       return Priority.valueOf(normalized);
     } catch (IllegalArgumentException ex) {
-      log.warn("Ignoring illegal priority value: {}", priority);
+      log.warn("忽略非法的优先级值: {}", priority);
       return null;
     }
   }
@@ -164,7 +157,7 @@ public abstract class AbstractProvenanceScheduleJob {
       return Instant.parse(CharSequenceUtil.trim(value));
     } catch (Exception ex) {
       throw new IngestScheduleParameterException(
-          String.format("Illegal time format for field %s: %s", fieldName, value), ex);
+          String.format("字段 %s 的时间格式非法: %s", fieldName, value), ex);
     }
   }
 
@@ -174,13 +167,11 @@ public abstract class AbstractProvenanceScheduleJob {
   }
 
   /**
-   * Executes the main scheduling flow: logging (start/end/error) + param parsing + orchestration
-   * call + result reporting.
+   * 执行主调度流程: 日志记录(开始/结束/错误) + 参数解析 + 编排调用 + 结果报告。
    *
-   * <p>Execution time is recorded for SLA monitoring; on failure, XxlJobHelper marks the job failed
-   * and the exception is rethrown.
+   * <p>执行时间会被记录用于 SLA 监控;失败时,XxlJobHelper 标记任务失败并重新抛出异常。
    *
-   * @param paramStr XXL-Job JSON param string (may be blank)
+   * @param paramStr XXL-Job JSON 参数字符串(可能为空)
    */
   protected void executeScheduleJob(String paramStr) {
     long startTime = System.currentTimeMillis();
@@ -196,42 +187,42 @@ public abstract class AbstractProvenanceScheduleJob {
     }
   }
 
-  /** Logs job start with provenance and operation context. */
+  /** 记录任务开始,包含来源和操作上下文。 */
   private void logJobStart(String rawParam) {
     log.info(
-        "Starting ingestion plan creation for provenance [{}] with operation [{}] using parameters: {}",
+        "开始为来源 [{}] 创建采集计划,操作为 [{}],使用参数: {}",
         getProvenanceCode().getCode(),
         getOperationCode(),
         rawParam);
   }
 
-  /** Handles successful job execution with result reporting and logging. */
+  /** 处理成功的任务执行,包含结果报告和日志记录。 */
   private void handleJobSuccess(PlanIngestionResult result, long startTime) {
     long duration = System.currentTimeMillis() - startTime;
     log.info(
-        "Completed ingestion plan [{}] for provenance [{}] with {} tasks scheduled in {}ms",
-        result.planId(),
+        "已完成来源 [{}] 的采集计划 [{}],调度了 {} 个任务,耗时 {}ms",
         getProvenanceCode().getCode(),
+        result.planId(),
         result.taskCount(),
         duration);
 
     XxlJobHelper.handleSuccess(
         String.format(
-            "Job succeeded in %dms, planId=%s, taskCount=%d",
+            "任务成功,耗时 %dms, planId=%s, taskCount=%d",
             duration, result.planId(), result.taskCount()));
   }
 
-  /** Handles job failure with error logging and reporting. */
+  /** 处理任务失败,包含错误日志和报告。 */
   private void handleJobFailure(Exception e, long startTime) {
     long duration = System.currentTimeMillis() - startTime;
     log.error(
-        "Failed to execute scheduled job for provenance [{}] with operation [{}] after {}ms: {}",
+        "来源 [{}] 的定时任务执行失败,操作为 [{}],耗时 {}ms: {}",
         getProvenanceCode().getCode(),
         getOperationCode(),
         duration,
         e.getMessage(),
         e);
 
-    XxlJobHelper.handleFail(String.format("Job failed: %s", e.getMessage()));
+    XxlJobHelper.handleFail(String.format("任务失败: %s", e.getMessage()));
   }
 }

@@ -1,8 +1,8 @@
-# Complete Examples - Full Working Code
+# 完整示例 - 可运行代码
 
-Real-world examples showing complete implementation patterns across all architectural layers from Papertrace patra-ingest module.
+展示 Papertrace patra-ingest 模块中跨所有架构层的完整实现模式的真实示例。
 
-## Table of Contents
+## 目录
 
 - [Complete Feature Example: Plan Ingestion](#complete-feature-example-plan-ingestion)
 - [Architecture Layers Walkthrough](#architecture-layers-walkthrough)
@@ -14,7 +14,7 @@ Real-world examples showing complete implementation patterns across all architec
 
 ## Complete Feature Example: Plan Ingestion
 
-### Overview
+### 概览
 
 The Plan Ingestion feature demonstrates a complete Hexagonal Architecture + DDD implementation spanning all four layers: **Adapter → Application → Domain ← Infrastructure**.
 
@@ -32,7 +32,7 @@ The Plan Ingestion feature demonstrates a complete Hexagonal Architecture + DDD 
 
 ### 1. Domain Layer (Pure Java)
 
-**Purpose**: Business logic and rules. NO framework dependencies.
+**目的**: Business logic and rules. NO framework dependencies.
 
 #### Aggregate Root: PlanAggregate
 
@@ -234,7 +234,7 @@ public interface PlanRepository {
 
 ### 2. Application Layer (Orchestration)
 
-**Purpose**: Coordinate use cases, manage transactions, delegate to domain and infrastructure.
+**目的**: Coordinate use cases, manage transactions, delegate to domain and infrastructure.
 
 #### Orchestrator: PlanIngestionOrchestrator
 
@@ -532,7 +532,7 @@ public class PlanPersistenceCoordinator {
 
 ### 3. Infrastructure Layer (Driven)
 
-**Purpose**: Implement domain ports, provide data access.
+**目的**: Implement domain ports, provide data access.
 
 #### Repository Implementation: PlanRepositoryMpImpl
 
@@ -1159,7 +1159,7 @@ class PlanRepositoryMpImplIT {
 
 ---
 
-**Related Files:**
+**相关文件：**
 - [SKILL.md](../SKILL.md) - Main guide
 - [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Orchestrator patterns
 - [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain layer patterns

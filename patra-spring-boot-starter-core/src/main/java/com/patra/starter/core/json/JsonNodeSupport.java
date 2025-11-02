@@ -6,22 +6,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
 import org.springframework.util.StringUtils;
 
-/**
- * Helper interface for MapStruct default methods to reuse the platform-configured {@link
- * ObjectMapper}.
- */
+/** 帮助 MapStruct 默认方法复用平台配置的 {@link ObjectMapper} 的接口。 */
 public interface JsonNodeSupport {
 
-  /** Returns the shared {@link ObjectMapper}. */
+  /** 返回共享的 {@link ObjectMapper}。 */
   private ObjectMapper jsonMapper() {
     return JsonMapperHolder.getObjectMapper();
   }
 
   /**
-   * Converts a JSON string to a {@link JsonNode}.
+   * 将 JSON 字符串转换为 {@link JsonNode}。
    *
-   * @param json source JSON string
-   * @return parsed node or {@code null} if blank
+   * @param json 源 JSON 字符串
+   * @return 解析后的节点，如果为空则返回 {@code null}
    */
   default JsonNode readJsonNode(String json) {
     if (!StringUtils.hasText(json)) {
@@ -30,15 +27,15 @@ public interface JsonNodeSupport {
     try {
       return jsonMapper().readTree(json);
     } catch (JsonProcessingException e) {
-      throw new IllegalArgumentException("Unable to parse JSON", e);
+      throw new IllegalArgumentException("无法解析 JSON", e);
     }
   }
 
   /**
-   * Converts a {@link JsonNode} to its JSON string representation.
+   * 将 {@link JsonNode} 转换为其 JSON 字符串表示形式。
    *
-   * @param node node to serialize
-   * @return JSON string or {@code null} if the node is {@code null}
+   * @param node 要序列化的节点
+   * @return JSON 字符串，如果节点为 {@code null} 则返回 {@code null}
    */
   default String writeJsonString(JsonNode node) {
     if (node == null || node.isNull()) {
@@ -47,7 +44,7 @@ public interface JsonNodeSupport {
     try {
       return jsonMapper().writeValueAsString(node);
     } catch (JsonProcessingException e) {
-      throw new IllegalArgumentException("Unable to serialize JsonNode", e);
+      throw new IllegalArgumentException("无法序列化 JsonNode", e);
     }
   }
 }

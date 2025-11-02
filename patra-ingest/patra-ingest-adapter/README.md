@@ -1,65 +1,65 @@
 # patra-ingest-adapter
 
-**Role**: Driving Adapters (Hexagonal Architecture - Adapter Layer)
+**角色**: 驱动适配器(六边形架构 - 适配器层)
 
-This module contains **ONLY driving adapters** that receive external triggers and translate them into use case invocations.
+本模块**仅包含驱动适配器**,用于接收外部触发并将其转换为用例调用。
 
-## Architectural Contract
+## 架构契约
 
-- **Direction**: External World → System
-- **Responsibility**: Receive external requests, validate input, delegate to application orchestrators
-- **Never**: Directly call external resources (databases, external APIs, MQ publishers) - those belong in `patra-ingest-infra`
+- **方向**: 外部世界 → 系统
+- **职责**: 接收外部请求、验证输入、委托给应用编排器
+- **禁止**: 直接调用外部资源(数据库、外部 API、MQ 发布者) - 这些属于 `patra-ingest-infra`
 
-## Module Separation
+## 模块分离
 
-In Papertrace's Hexagonal Architecture:
+在 Papertrace 的六边形架构中:
 
 ```
-patra-ingest-adapter/     ← Driving Adapters (inbound, receive external triggers)
-patra-ingest-infra/       ← Driven Adapters (outbound, access external resources)
+patra-ingest-adapter/     ← 驱动适配器(入站,接收外部触发)
+patra-ingest-infra/       ← 被驱动适配器(出站,访问外部资源)
 ```
 
-This module-level separation ensures clear boundaries between driving and driven adapters.
+这种模块级分离确保驱动适配器和被驱动适配器之间的清晰边界。
 
-## Package Organization
+## 包组织
 
 ```
 adapter/
-├── scheduler/        - XXL-Job scheduled tasks
-│   ├── config/       - XXL-Job executor configuration
-│   ├── job/          - Scheduled job implementations
-│   └── param/        - Job parameter DTOs
-└── stream/          - RocketMQ message consumers
+├── scheduler/        - XXL-Job 定时任务
+│   ├── config/       - XXL-Job 执行器配置
+│   ├── job/          - 定时任务实现
+│   └── param/        - 任务参数 DTO
+└── stream/          - RocketMQ 消息消费者
     ├── IngestStreamConsumers.java
-    └── dto/          - Message payload DTOs
+    └── dto/          - 消息负载 DTO
 ```
 
-## Naming Conventions
+## 命名约定
 
-- **Jobs**: `*Job` (e.g., `PubmedHarvestJob`)
-- **Consumers**: `*Consumers` (e.g., `IngestStreamConsumers`)
-- **Controllers**: `*Controller` (future REST APIs)
+- **任务**: `*Job`(例如 `PubmedHarvestJob`)
+- **消费者**: `*Consumers`(例如 `IngestStreamConsumers`)
+- **控制器**: `*Controller`(未来的 REST API)
 
-## Driven Adapters (Outbound)
+## 被驱动适配器(出站)
 
-ALL driven adapters belong in `patra-ingest-infra`, including:
-- Database access → `infra/repository/`
-- External API clients → `infra/integration/pubmed/`, `infra/integration/registry/`
-- MQ publishers → `infra/messaging/`
-- Future: Webhooks, event publishers, monitoring clients
+所有被驱动适配器都属于 `patra-ingest-infra`,包括:
+- 数据库访问 → `infra/repository/`
+- 外部 API 客户端 → `infra/integration/pubmed/`, `infra/integration/registry/`
+- MQ 发布者 → `infra/messaging/`
+- 未来: Webhook、事件发布者、监控客户端
 
-**Never add driven adapters to this module.**
+**切勿向本模块添加被驱动适配器。**
 
-## Related Documentation
+## 相关文档
 
-- Architecture: `/docs/ARCHITECTURE.md`
-- Development Guide: `/docs/DEV-GUIDE.md`
-- Agent Guidelines: `/.claude/AGENTS-architecture.md`
+- 架构: `/docs/ARCHITECTURE.md`
+- 开发指南: `/docs/DEV-GUIDE.md`
+- Agent 指南: `/.claude/AGENTS-architecture.md`
 
-## Author
+## 作者
 
 linqibin
 
-## Since
+## 起始版本
 
 0.1.0

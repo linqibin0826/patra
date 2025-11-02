@@ -1,8 +1,8 @@
-# Troubleshooting - Skill Activation Issues
+# 故障排除 - Skill 激活问题
 
-Complete debugging guide for skill activation problems.
+Skill 激活问题的完整调试指南。
 
-## Table of Contents
+## 目录
 
 - [Skill Not Triggering](#skill-not-triggering)
   - [UserPromptSubmit Not Suggesting](#userpromptsubmit-not-suggesting)

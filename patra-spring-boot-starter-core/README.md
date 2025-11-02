@@ -1,39 +1,39 @@
 # patra-spring-boot-starter-core
 
-> **Core Spring Boot starter** providing foundational auto-configuration for JSON serialization, error handling, observability, and resilience across all Papertrace microservices.
+> **核心 Spring Boot Starter**,为所有 Papertrace 微服务提供 JSON 序列化、错误处理、可观测性和弹性支持的基础自动配置。
 
 ---
 
-## 📌 Purpose
+## 📌 目的
 
-This starter provides **essential infrastructure** that ALL Papertrace services need:
+本 Starter 为所有 Papertrace 服务提供**必需的基础设施**:
 
-1. **Jackson Configuration**: Standardized JSON serialization (date formats, null handling, etc.)
-2. **Error Handling Framework**: Sophisticated error resolution pipeline with tracing and metrics
-3. **Observability**: Integration with Micrometer (metrics) and SkyWalking (tracing)
-4. **Resilience**: Circuit breaker integration via Resilience4j
-5. **Logging**: Pre-configured Logback with trace context propagation
+1. **Jackson 配置**: 标准化的 JSON 序列化(日期格式、null 处理等)
+2. **错误处理框架**: 包含追踪和指标的复杂错误解析管道
+3. **可观测性**: 与 Micrometer(指标)和 SkyWalking(追踪)集成
+4. **弹性支持**: 通过 Resilience4j 实现熔断器集成
+5. **日志记录**: 预配置的 Logback,支持追踪上下文传播
 
-**Key Principle**: Convention over configuration — services get sensible defaults out-of-the-box.
+**核心原则**: 约定优于配置——服务开箱即用地获得合理的默认值。
 
 ---
 
-## 🔧 Auto-Configurations
+## 🔧 自动配置
 
 ### 1. JacksonAutoConfiguration
 
-**Purpose**: Standardize JSON serialization across all services.
+**目的**: 在所有服务间标准化 JSON 序列化。
 
-**What it does**:
-- Configure `ObjectMapper` with Papertrace conventions:
-  - ISO-8601 date/time formatting
-  - Include non-null fields only
-  - Fail on unknown properties (strict mode)
-  - Register Java 8 time module
-- Provide `@JsonComponent` support
-- Enable `JsonNode` support for dynamic JSON fields
+**功能**:
+- 使用 Papertrace 约定配置 `ObjectMapper`:
+  - ISO-8601 日期/时间格式化
+  - 仅包含非空字段
+  - 遇到未知属性时失败(严格模式)
+  - 注册 Java 8 时间模块
+- 提供 `@JsonComponent` 支持
+- 启用 `JsonNode` 支持动态 JSON 字段
 
-**Configuration Properties**:
+**配置属性**:
 ```yaml
 spring:
   jackson:
@@ -48,52 +48,52 @@ spring:
 
 ### 2. XmlAutoConfiguration
 
-**Purpose**: Provide a project-level `XmlMapper` for modules that process XML (e.g., PubMed payloads).
+**目的**: 为处理 XML 的模块(如 PubMed 负载)提供项目级 `XmlMapper`。
 
-**What it does**:
-- Exposes a singleton `XmlMapper` built from Spring Boot's `Jackson2ObjectMapperBuilder`
-- Activates only when `jackson-dataformat-xml` is on the classpath
-- Shares the same global Jackson modules and settings as JSON
+**功能**:
+- 暴露由 Spring Boot 的 `Jackson2ObjectMapperBuilder` 构建的单例 `XmlMapper`
+- 仅在 classpath 中存在 `jackson-dataformat-xml` 时激活
+- 与 JSON 共享相同的全局 Jackson 模块和设置
 
-No extra configuration is required; simply inject `XmlMapper` where needed.
+无需额外配置;需要时直接注入 `XmlMapper` 即可。
 
 ---
 
 ### 3. CoreErrorAutoConfiguration
 
-**Purpose**: Unified error handling with extensible resolution pipeline.
+**目的**: 统一错误处理,支持可扩展的解析管道。
 
-**Architecture**:
+**架构**:
 ```
-Exception thrown
+异常抛出
     ↓
 ErrorResolutionEngine
     ↓
-ResolutionPipeline (chain of interceptors)
-    ├─ TracingInterceptor (propagate trace context)
-    ├─ MetricsInterceptor (record error metrics)
-    ├─ CircuitBreakerInterceptor (trigger circuit breaker)
-    └─ ... (custom interceptors)
+ResolutionPipeline (拦截器链)
+    ├─ TracingInterceptor (传播追踪上下文)
+    ├─ MetricsInterceptor (记录错误指标)
+    ├─ CircuitBreakerInterceptor (触发熔断器)
+    └─ ... (自定义拦截器)
     ↓
-ErrorMappingContributor (SPI: map exception → HTTP status)
+ErrorMappingContributor (SPI: 映射异常 → HTTP 状态码)
     ↓
-ProblemDetail (RFC 7807 format)
+ProblemDetail (RFC 7807 格式)
 ```
 
-**Key Components**:
+**核心组件**:
 
-| Component | Purpose |
+| 组件 | 目的 |
 |-----------|---------|
-| **ErrorResolutionEngine** | Orchestrates error resolution through pipeline |
-| **ResolutionPipeline** | Chain-of-responsibility for interceptors |
-| **ErrorMappingContributor** | SPI for custom exception → HTTP mappings |
-| **ProblemFieldContributor** | SPI for adding custom fields to problem details |
-| **TraceProvider** | SPI for trace context extraction |
+| **ErrorResolutionEngine** | 通过管道编排错误解析 |
+| **ResolutionPipeline** | 拦截器的责任链 |
+| **ErrorMappingContributor** | 自定义异常 → HTTP 映射的 SPI |
+| **ProblemFieldContributor** | 向 problem details 添加自定义字段的 SPI |
+| **TraceProvider** | 追踪上下文提取的 SPI |
 
-**SPI Extension Points**:
+**SPI 扩展点**:
 
 ```java
-// Custom error mapping
+// 自定义错误映射
 @Component
 public class MyErrorMappingContributor implements ErrorMappingContributor {
     @Override
@@ -104,11 +104,11 @@ public class MyErrorMappingContributor implements ErrorMappingContributor {
                 ex.getMessage()
             );
         }
-        return null;  // Let next contributor handle it
+        return null;  // 让下一个贡献者处理
     }
 }
 
-// Add custom fields to problem details
+// 向 problem details 添加自定义字段
 @Component
 public class MyProblemFieldContributor implements ProblemFieldContributor {
     @Override
@@ -121,43 +121,43 @@ public class MyProblemFieldContributor implements ProblemFieldContributor {
 
 ---
 
-## 📊 Observability
+## 📊 可观测性
 
-### Metrics (Micrometer)
+### 指标 (Micrometer)
 
-**Auto-configured metrics**:
-- Error counts by exception type
-- Error resolution duration
-- Circuit breaker state changes
+**自动配置的指标**:
+- 按异常类型统计的错误计数
+- 错误解析持续时间
+- 熔断器状态变化
 
-**Access**:
+**访问方式**:
 ```java
 @Autowired
 private MeterRegistry meterRegistry;
 
-// Record custom metric
+// 记录自定义指标
 meterRegistry.counter("plan.ingestion.success").increment();
 ```
 
-### Tracing (SkyWalking)
+### 追踪 (SkyWalking)
 
-**Features**:
-- Automatic trace context propagation in logs
-- Trace ID injection into error responses
-- Integration with SkyWalking agent
+**特性**:
+- 日志中自动传播追踪上下文
+- 将追踪 ID 注入错误响应
+- 与 SkyWalking agent 集成
 
-**Log Format** (with trace):
+**日志格式**(包含追踪信息):
 ```
 [2025-01-12 10:30:45] [TID:abc123] [INFO] [PlanIngestionOrchestrator] Plan ingestion success, planId=123
 ```
 
 ---
 
-## 🛡️ Resilience
+## 🛡️ 弹性支持
 
-### Circuit Breaker Integration
+### 熔断器集成
 
-**Resilience4j** auto-configured for error handling:
+为错误处理自动配置的 **Resilience4j**:
 
 ```java
 @CircuitBreaker(name = "registry-service", fallbackMethod = "registryFallback")
@@ -166,18 +166,18 @@ public ProvenanceConfig fetchConfig(ProvenanceCode code) {
 }
 
 public ProvenanceConfig registryFallback(ProvenanceCode code, Exception ex) {
-    // Fallback logic
+    // 降级逻辑
     return getCachedConfig(code);
 }
 ```
 
-**Circuit breaker events** are automatically logged and metrics are recorded.
+**熔断器事件**自动记录日志并收集指标。
 
 ---
 
-## 🔗 Dependencies
+## 🔗 依赖
 
-This starter is included by ALL microservice `-boot` modules:
+本 Starter 被所有微服务 `-boot` 模块包含:
 
 ```xml
 <dependency>
@@ -186,8 +186,8 @@ This starter is included by ALL microservice `-boot` modules:
 </dependency>
 ```
 
-**Transitive dependencies** (auto-included):
-- `patra-common` (domain base classes)
+**传递依赖**(自动包含):
+- `patra-common` (领域基础类)
 - Spring Boot Autoconfigure
 - Spring Boot Starter JSON (Jackson)
 - Micrometer Core
@@ -196,30 +196,30 @@ This starter is included by ALL microservice `-boot` modules:
 
 ---
 
-## 🚀 Usage
+## 🚀 用法
 
-### In Application Layer
+### 在应用层
 
-**Error handling**:
+**错误处理**:
 ```java
 @Service
 public class PlanIngestionOrchestrator {
 
     public PlanIngestionResult ingest(PlanIngestionCommand cmd) {
         try {
-            // Business logic
+            // 业务逻辑
             return result;
         } catch (DomainException ex) {
-            // Domain exceptions are automatically mapped to app exceptions
+            // 领域异常自动映射为应用层异常
             throw new PlanAssemblyException("Plan assembly failed", ex);
         }
     }
 }
 ```
 
-### In Adapter Layer
+### 在适配器层
 
-**Error mapping**:
+**错误映射**:
 ```java
 @RestControllerAdvice
 public class RegistryErrorMappingContributor implements ErrorMappingContributor {
@@ -237,33 +237,33 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
 }
 ```
 
-**Automatic features**:
-- Trace ID injected into error responses
-- Metrics recorded for all errors
-- Circuit breaker triggered on repeated failures
+**自动功能**:
+- 追踪 ID 注入到错误响应
+- 为所有错误记录指标
+- 在重复失败时触发熔断器
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ 配置
 
 ### application.yml
 
 ```yaml
-# Error handling
+# 错误处理
 patra:
   error:
-    include-trace: true              # Include trace ID in errors
-    include-stack-trace: false       # Hide stack traces in prod
-    max-resolution-time: 5000        # Max time for error resolution (ms)
+    include-trace: true              # 在错误中包含追踪 ID
+    include-stack-trace: false       # 在生产环境隐藏堆栈跟踪
+    max-resolution-time: 5000        # 错误解析最大时间(毫秒)
 
-# Tracing
+# 追踪
 patra:
   tracing:
     enabled: true
-    trace-header: X-Trace-ID         # HTTP header for trace ID
+    trace-header: X-Trace-ID         # 追踪 ID 的 HTTP 头
     span-header: X-Span-ID
 
-# Circuit breaker
+# 熔断器
 resilience4j:
   circuitbreaker:
     instances:
@@ -274,9 +274,9 @@ resilience4j:
 
 ---
 
-## 🧪 Testing
+## 🧪 测试
 
-### Unit Tests
+### 单元测试
 
 ```java
 @SpringBootTest
@@ -302,22 +302,22 @@ class ErrorResolutionEngineTest {
 
 ---
 
-## 📈 Performance
+## 📈 性能
 
-**Error Resolution Overhead**: < 1ms per error (measured with Micrometer)
+**错误解析开销**: 每次错误 < 1ms (使用 Micrometer 测量)
 
-**Circuit Breaker**: Fail-fast after threshold reached (prevents cascading failures)
+**熔断器**: 达到阈值后快速失败(防止级联故障)
 
-**Logging**: Async logging with SkyWalking (non-blocking)
-
----
-
-## 🔗 Related Documentation
-
-- [Main README](../README.md)
-- [Architecture Guide](../docs/ARCHITECTURE.md)
-- [patra-common README](../patra-common/README.md) — Error base classes
+**日志记录**: 与 SkyWalking 的异步日志(非阻塞)
 
 ---
 
-**Last Updated**: 2025-01-12
+## 🔗 相关文档
+
+- [主 README](../README.md)
+- [架构指南](../docs/ARCHITECTURE.md)
+- [patra-common README](../patra-common/README.md) — 错误基础类
+
+---
+
+**最后更新**: 2025-01-12

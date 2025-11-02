@@ -4,31 +4,30 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 
 /**
- * Plan status (DICT: ing_plan_status).
+ * 计划状态 (字典: ing_plan_status)。
  *
- * <p>Field mapping: {@code ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED}
+ * <p>字段映射: {@code ing_plan.status_code → DRAFT/SLICING/READY/ARCHIVED}
  *
- * <p>State machine semantics:
+ * <p>状态机语义:
  *
  * <ul>
- *   <li>DRAFT → newly created, slicing not started
- *   <li>SLICING → slices/tasks are being generated
- *   <li>READY → slices and tasks created successfully
- *   <li>ARCHIVED → lifecycle closed, all tasks finished (previously COMPLETED)
+ *   <li>DRAFT → 新创建,尚未开始切片
+ *   <li>SLICING → 正在生成切片/任务
+ *   <li>READY → 切片和任务创建成功
+ *   <li>ARCHIVED → 生命周期已关闭,所有任务已完成(以前称为 COMPLETED)
  * </ul>
  *
- * <p><b>Note:</b> Plan status only reflects its own lifecycle. Execution results (partial/failed)
- * should be queried by aggregating Task status.
+ * <p><b>注意:</b> 计划状态仅反映其自身的生命周期。执行结果(部分完成/失败)应通过聚合任务状态来查询。
  */
 @Getter
 public enum PlanStatus {
-  /** Draft; slicing has not started yet. */
+  /** 草稿;尚未开始切片。 */
   DRAFT("DRAFT", "Draft"),
-  /** Slicing in progress (non-repeatable transition). */
+  /** 切片进行中(不可重复转换)。 */
   SLICING("SLICING", "Slicing"),
-  /** Slices generated and tasks ready for scheduling. */
+  /** 切片已生成,任务已就绪可调度。 */
   READY("READY", "Ready"),
-  /** Archived; lifecycle closed, all tasks finished. */
+  /** 已归档;生命周期已关闭,所有任务已完成。 */
   ARCHIVED("ARCHIVED", "Archived");
 
   private final String code;
@@ -42,12 +41,12 @@ public enum PlanStatus {
   @JsonCreator
   public static PlanStatus fromCode(String value) {
     if (value == null) {
-      throw new IllegalArgumentException("Plan status code cannot be null");
+      throw new IllegalArgumentException("计划状态代码不能为 null");
     }
     String n = value.trim().toUpperCase();
     for (PlanStatus e : values()) {
       if (e.code.equals(n)) return e;
     }
-    throw new IllegalArgumentException("Unknown plan status code: " + value);
+    throw new IllegalArgumentException("未知的计划状态代码: " + value);
   }
 }

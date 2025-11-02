@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.http.ProblemDetail;
 
 /**
- * Configuration properties that govern Web-layer error responses (e.g. {@link ProblemDetail}).
+ * 控制 Web 层错误响应的配置属性（例如 {@link ProblemDetail}）。
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,12 +14,12 @@ import org.springframework.http.ProblemDetail;
 @ConfigurationProperties(prefix = "patra.web.problem")
 public class WebErrorProperties {
 
-  /** Whether Web-specific error handling is enabled. */
+  /** 是否启用 Web 特定的错误处理。 */
   private boolean enabled = true;
 
-  /** Base URL used to construct the {@code ProblemDetail#type} attribute. */
+  /** 用于构建 {@code ProblemDetail#type} 属性的基础 URL。 */
   private String typeBaseUrl = "https://errors.example.com/";
 
-  /** Whether stack traces should be included in the response (debug purposes only). */
+  /** 是否在响应中包含堆栈跟踪（仅用于调试目的）。 */
   private boolean includeStack = false;
 }

@@ -1,8 +1,8 @@
-# Transaction & Error Handling
+# 事务与错误处理
 
-## Overview
+## 概览
 
-Transaction management and error handling are critical cross-cutting concerns in Papertrace. This guide covers Spring's `@Transactional`, exception design, error mapping to HTTP responses, and distributed transaction patterns.
+事务管理和错误处理是 Papertrace 中的关键横切关注点。本指南涵盖 Spring 的 `@Transactional`、异常设计、错误到 HTTP 响应的映射以及分布式事务模式。
 
 **Core Principle**: Transactions at the orchestrator boundary, domain exceptions flow outward, never call external APIs inside transactions.
 
@@ -215,7 +215,7 @@ public void harvestData(HarvestCommand command) {
 }
 ```
 
-**Problem**: If PubMed API is slow (10 seconds), the database transaction is held open for 10+ seconds, blocking other operations.
+**问题**: If PubMed API is slow (10 seconds), the database transaction is held open for 10+ seconds, blocking other operations.
 
 ### Correct Pattern: External API Outside Transaction
 
@@ -281,7 +281,7 @@ Throwable
 
 **Location**: `patra-{service}-domain/src/main/java/.../exception/`
 
-**Purpose**: Business rule violations
+**目的**: Business rule violations
 
 ```java
 package com.patra.registry.domain.exception;
@@ -318,7 +318,7 @@ public class ProvenanceNotFoundException extends DomainException {
 
 **Location**: `patra-{service}-app/src/main/java/.../exception/`
 
-**Purpose**: Use case orchestration failures
+**目的**: Use case orchestration failures
 
 ```java
 package com.patra.ingest.app.exception;
@@ -344,7 +344,7 @@ public class ProvenanceConfigNotFoundException extends ApplicationException {
 
 **Location**: `patra-{service}-adapter/src/main/java/.../rest/GlobalExceptionHandler.java`
 
-**Purpose**: Map exceptions to RFC 7807 ProblemDetail responses
+**目的**: Map exceptions to RFC 7807 ProblemDetail responses
 
 ```java
 package com.patra.registry.adapter.rest;

@@ -1,13 +1,11 @@
 /**
- * Storage integration value objects.
+ * 存储集成值对象。
  *
- * <p>Contains value objects for object storage (S3/MinIO) and storage service integration:
+ * <p>包含用于对象存储(S3/MinIO)和存储服务集成的值对象:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.storage.StorageUploadRequest} - Storage upload
- *       request
- *   <li>{@link com.patra.ingest.domain.model.vo.storage.StorageUploadResult} - Storage upload
- *       result with storage key
+ *   <li>{@link com.patra.ingest.domain.model.vo.storage.StorageUploadRequest} - 存储上传请求
+ *   <li>{@link com.patra.ingest.domain.model.vo.storage.StorageUploadResult} - 带存储键的存储上传结果
  * </ul>
  *
  * @author linqibin

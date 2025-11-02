@@ -3,15 +3,15 @@ package com.patra.starter.web.error.adapter;
 import com.patra.starter.web.error.adapter.model.ProblemDetailResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
-/** Adapter that translates exceptions into consistent {@code ProblemDetail} responses. */
+/** 将异常转换为一致的 {@code ProblemDetail} 响应的适配器。 */
 public interface ProblemDetailAdapter {
 
   /**
-   * Convert the supplied exception into a {@link ProblemDetailResponse}.
+   * 将提供的异常转换为 {@link ProblemDetailResponse}。
    *
-   * @param exception exception being processed
-   * @param request HTTP request context; may be {@code null} in non-servlet flows
-   * @return resolved ProblemDetail metadata and HTTP status
+   * @param exception 正在处理的异常
+   * @param request HTTP 请求上下文；在非 servlet 流中可能为 {@code null}
+   * @return 已解析的 ProblemDetail 元数据和 HTTP 状态
    */
   ProblemDetailResponse adapt(Throwable exception, HttpServletRequest request);
 }

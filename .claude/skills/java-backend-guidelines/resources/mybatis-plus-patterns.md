@@ -1,10 +1,10 @@
-# MyBatis-Plus Patterns & Database Access
+# MyBatis-Plus 模式与数据库访问
 
-**Purpose**: Infrastructure layer patterns for database access using MyBatis-Plus in Hexagonal Architecture.
+**目的**: 六边形架构中使用 MyBatis-Plus 进行数据库访问的基础设施层模式。
 
 ---
 
-## Table of Contents
+## 目录
 
 - [Infrastructure Layer Overview](#infrastructure-layer-overview)
 - [Data Objects (DOs)](#data-objects-dos)
@@ -19,11 +19,11 @@
 
 ---
 
-## Infrastructure Layer Overview
+## 基础设施层 Overview
 
 The Infrastructure layer implements **domain ports** (repository interfaces) and handles all external concerns like databases, message queues, and third-party APIs.
 
-### Infrastructure Layer Responsibilities
+### 基础设施层 Responsibilities
 
 1. **Implement domain repository ports** using MyBatis-Plus
 2. **Convert between Domain models and Data Objects** (DOs) using MapStruct
@@ -31,7 +31,7 @@ The Infrastructure layer implements **domain ports** (repository interfaces) and
 4. **Handle JSON columns** using Jackson `JsonNode` with type handlers
 5. **Never expose DOs outside the infrastructure layer** - always convert to domain models
 
-### Infrastructure Layer Structure
+### 基础设施层 Structure
 
 ```
 patra-ingest-infra/
@@ -1078,7 +1078,7 @@ List<PlanDO> plans = planMapper.selectList(wrapper);
 
 ## Key Principles
 
-### Infrastructure Layer Rules
+### 基础设施层 Rules
 
 | ✅ DO | ❌ DON'T |
 |------|---------|
@@ -1179,7 +1179,7 @@ class PlanRepositoryMpImplTest {
 }
 ```
 
-### Testing MapStruct Converters
+### 测试 MapStruct Converters
 
 ```java
 @SpringBootTest
@@ -1252,7 +1252,7 @@ class PlanConverterTest {
 
 ---
 
-**Related Files:**
+**相关文件：**
 - [architecture-overview.md](architecture-overview.md) - Hexagonal Architecture overview
 - [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain layer patterns
 - [complete-examples.md](complete-examples.md) - End-to-end feature examples
@@ -1260,4 +1260,4 @@ class PlanConverterTest {
 
 ---
 
-**📝 Status**: ✅ **COMPLETE** - Comprehensive guide to MyBatis-Plus patterns and database access from patra-ingest infrastructure layer.
+**📝 Status**: ✅ **已完成** - Comprehensive guide to MyBatis-Plus patterns and database access from patra-ingest infrastructure layer.

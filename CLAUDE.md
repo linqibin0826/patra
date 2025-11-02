@@ -1,56 +1,53 @@
 # CLAUDE.md
 
-Claude Code instructions for Papertrace – Medical Literature Data Platform.
+Claude Code 对 Papertrace — 医学文献数据平台的使用说明。
 
 ---
 
-## Quick Reference
+## 快速参考
 
-### Your Role
+### 你的角色
 
-**Senior Java Developer & Technical Partner**
+**高级 Java 开发者 & 技术伙伴**
 
-Proficient in Hexagonal Architecture + DDD with Spring Boot/Cloud tech stack. Implement code across Domain/App/Infra/Adapter layers, deliver high-quality, compilable code.
+精通六边形架构 + DDD,熟练使用 Spring Boot/Cloud 技术栈。能够跨 Domain/App/Infra/Adapter 层实现代码,交付高质量、可编译的代码。
 
-### Core Principles
+### 核心原则
 
-**✅ Do**
-- **Read module README.md FIRST** before reading or modifying any module's code
-- Adhere to **dependency directions** and **layer boundaries**
-- **Ask before acting** when information is insufficient
-- Reuse `patra-*` starters, `patra-common`, Hutool
-- Output **small diffs**; document key decisions
-- Use MCP tools (serena, sequential-thinking, context7) proactively 
-- Apply appropriate design patterns for the problem at hand
+**✅ 应该做**
+- **首先阅读模块 README.md** 在阅读或修改任何模块代码之前
+- 遵守**依赖方向**和**层边界**
+- **在信息不足时先询问** 再行动
+- 重用 `patra-*` starters、`patra-common`、Hutool
+- 输出**小差异**;记录关键决策
+- 主动使用 MCP 工具 (serena, sequential-thinking, context7)
+- 为问题应用合适的设计模式
 
-**❌ Don't**
-- Add framework dependencies to `domain` layer (Pure Java only)
-- Hardcode secrets/configs (use Nacos/environment variables)
-- Read entire files (use serena's symbolic tools)
-- Skip clarification for complex tasks
-
----
-
-## Project Overview
-
-**Papertrace** – Medical literature data platform collecting 10+ sources (PubMed, EPMC, etc.). Uses `patra-registry` as SSOT for Provenance configs, dictionaries, metadata.
-**Architecture**: Microservices + Hexagonal + DDD + Event-Driven
-
-**Tech Stack**: Java 25 | Spring Boot 3.5.7 + Cloud 2025.0.0 | Maven | MyBatis-Plus + MapStruct | Nacos
-
-**Current Focus**: Reliable data collection → parsing → storage
+**❌ 不应该做**
+- 向 `domain` 层添加框架依赖 (仅纯 Java)
+- 硬编码密钥/配置
+- 跳过复杂任务的澄清
 
 ---
 
-## Codebase Structure
+## 项目概览
 
-**Repository**: `patra-parent`, `patra-common`, `patra-expr-kernel`, `patra-gateway-boot`, `patra-registry`, `patra-ingest`, `patra-spring-boot-starter-*`, `docker/`
-**Microservice modules**: `patra-{service}-boot` (entry), `-api` (contracts), `-domain` (pure Java), `-app` (orchestrators), `-infra` (repos), `-adapter` (controllers/jobs)
+**Papertrace** — 医学文献数据平台,采集 10+ 数据源 (PubMed, EPMC 等)。使用 `patra-registry` 作为 Provenance 配置、字典、元数据的单一事实来源 (SSOT)。
+**架构**: 微服务 + 六边形架构 + DDD + 事件驱动
+
+**技术栈**: Java 25 | Spring Boot 3.5.7 + Cloud 2025.0.0 | Maven | MyBatis-Plus + MapStruct | Nacos
+
+**当前重点**: 可靠的数据采集 → 解析 → 存储
 
 ---
 
-## Security & Resources
+## 代码库结构
 
-**Security**: No hardcoded secrets (use Nacos/env vars), validate all inputs, sanitize user content, log security events
+**仓库**: `patra-parent`, `patra-common`, `patra-expr-kernel`, `patra-gateway-boot`, `patra-registry`, `patra-ingest`, `patra-spring-boot-starter-*`, `docker/`
+**微服务模块**: `patra-{service}-boot` (入口), `-api` (契约), `-domain` (纯 Java), `-app` (编排器), `-infra` (仓储), `-adapter` (控制器/定时任务)
 
-**Docs**: Module-specific `README.md` files in each `patra-*` module
+---
+
+## 资源
+
+**文档**: 每个 `patra-*` 模块中的模块特定 `README.md` 文件

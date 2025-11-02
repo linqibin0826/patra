@@ -1,35 +1,35 @@
 # patra-spring-boot-starter-web
 
-> Web layer auto-configuration providing REST controllers, validation, problem detail error handling, and Feign client support.
+> Web 层自动配置,提供 REST 控制器、验证、Problem Detail 错误处理和 Feign 客户端支持。
 
-## 📌 Purpose
+## 📌 目的
 
-Provides **web-specific** auto-configuration for REST APIs:
-- Spring Web MVC configuration
-- Validation framework (`@Valid`)
-- Problem Detail error mapping (RFC 7807)
-- Feign client integration
-- CORS configuration
-- Request/response logging
+为 REST API 提供**Web 特定**的自动配置:
+- Spring Web MVC 配置
+- 验证框架(`@Valid`)
+- Problem Detail 错误映射(RFC 7807)
+- Feign 客户端集成
+- CORS 配置
+- 请求/响应日志记录
 
-## 🔧 Auto-Configurations
+## 🔧 自动配置
 
-### REST Controller Support
-- Automatic `@RestControllerAdvice` registration
-- Global exception handlers
-- Problem Detail responses for all errors
+### REST 控制器支持
+- 自动注册 `@RestControllerAdvice`
+- 全局异常处理器
+- 所有错误的 Problem Detail 响应
 
-### Validation
-- JSR-303 Bean Validation enabled
-- Custom validators auto-registered
-- Validation error mapping to Problem Detail
+### 验证
+- 启用 JSR-303 Bean 验证
+- 自动注册自定义验证器
+- 验证错误映射到 Problem Detail
 
-### Feign Clients
-- Error decoder for Feign errors
-- Request interceptors for trace propagation
-- Retry policies
+### Feign 客户端
+- Feign 错误的错误解码器
+- 用于追踪传播的请求拦截器
+- 重试策略
 
-## 🔗 Dependencies
+## 🔗 依赖
 
 ```xml
 <dependency>
@@ -38,11 +38,11 @@ Provides **web-specific** auto-configuration for REST APIs:
 </dependency>
 ```
 
-Includes: `patra-spring-boot-starter-core`, Spring Web, Spring Cloud OpenFeign
+包含: `patra-spring-boot-starter-core`、Spring Web、Spring Cloud OpenFeign
 
-## 🚀 Usage
+## 🚀 用法
 
-### Adapter Layer
+### 适配器层
 ```java
 @RestController
 @RequestMapping("/api/plans")
@@ -50,13 +50,13 @@ public class PlanController {
 
     @PostMapping
     public PlanResponse create(@Valid @RequestBody CreatePlanRequest request) {
-        // Auto-validated, errors mapped to Problem Detail
+        // 自动验证,错误映射到 Problem Detail
         return orchestrator.create(request.toCommand());
     }
 }
 ```
 
-### Error Handling
+### 错误处理
 ```java
 @Component
 public class IngestErrorMapping implements ErrorMappingContributor {
@@ -72,4 +72,4 @@ public class IngestErrorMapping implements ErrorMappingContributor {
 
 ---
 
-**Last Updated**: 2025-01-12
+**最后更新**: 2025-01-12

@@ -11,8 +11,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 
 /**
- * Default {@link ValidationErrorsFormatter} that masks sensitive values and caps the number of
- * validation errors returned to clients.
+ * 默认的 {@link ValidationErrorsFormatter}，用于掩盖敏感值并限制返回给客户端的验证错误数量。
  *
  * @author linqibin
  * @since 0.1.0
@@ -21,10 +20,10 @@ import org.springframework.validation.ObjectError;
 @Slf4j
 public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatter {
 
-  /** Maximum number of validation errors included in the response. */
+  /** 响应中包含的验证错误的最大数量。 */
   private static final int MAX_ERRORS = 100;
 
-  /** Field name patterns (case insensitive, substring match) that should be masked. */
+  /** 应被掩盖的字段名称模式（不区分大小写，子字符串匹配）。 */
   private static final Set<String> SENSITIVE_PATTERNS =
       Set.of(
           "password",
@@ -60,10 +59,10 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
   }
 
   /**
-   * Map Spring's {@link ObjectError} to a {@link ValidationError} and mask sensitive values.
+   * 将 Spring 的 {@link ObjectError} 映射到 {@link ValidationError} 并掩盖敏感值。
    *
-   * @param error binding error reported by Spring Validation
-   * @return sanitized validation error
+   * @param error Spring 验证报告的绑定错误
+   * @return 清理后的验证错误
    */
   private ValidationError mapToValidationError(ObjectError error) {
     if (error instanceof FieldError fieldError) {
@@ -73,17 +72,17 @@ public class DefaultValidationErrorsFormatter implements ValidationErrorsFormatt
 
       return new ValidationError(fieldName, rejectedValue, message);
     } else {
-      // Global errors (not field-specific)
+      // 全局错误（非字段特定）
       return new ValidationError(error.getObjectName(), null, error.getDefaultMessage());
     }
   }
 
   /**
-   * Mask sensitive field values based on the configured name patterns.
+   * 基于配置的名称模式掩盖敏感的字段值。
    *
-   * @param fieldName logical field name
-   * @param value rejected value supplied by the client
-   * @return masked value when considered sensitive; original value otherwise
+   * @param fieldName 逻辑字段名
+   * @param value 客户端提供的被拒绝值
+   * @return 当被认为是敏感时的掩盖值；否则为原始值
    */
   private Object maskSensitiveValue(String fieldName, Object value) {
     if (fieldName == null || value == null) {

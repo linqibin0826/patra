@@ -1,8 +1,8 @@
-# Trigger Types - Complete Guide
+# 触发器类型 - 完整指南
 
-Complete reference for configuring skill triggers in Claude Code's skill auto-activation system.
+Claude Code 的 skill 自动激活系统中配置 skill 触发器的完整参考。
 
-## Table of Contents
+## 目录
 
 - [Keyword Triggers (Explicit)](#keyword-triggers-explicit)
 - [Intent Pattern Triggers (Implicit)](#intent-pattern-triggers-implicit)
@@ -22,7 +22,7 @@ Case-insensitive substring matching in user's prompt.
 
 Topic-based activation where user explicitly mentions the subject.
 
-### Configuration
+### 配置
 
 ```json
 "promptTriggers": {
@@ -36,7 +36,7 @@ Topic-based activation where user explicitly mentions the subject.
 - Matches: "orchestrator" keyword
 - Activates: `java-backend-guidelines`
 
-### Best Practices
+### 最佳实践
 
 - Use specific, unambiguous terms
 - Include common variations ("layout", "layout system", "grid layout")
@@ -55,7 +55,7 @@ Regex pattern matching to detect user's intent even when they don't mention the 
 
 Action-based activation where user describes what they want to do rather than the specific topic.
 
-### Configuration
+### 配置
 
 ```json
 "promptTriggers": {
@@ -66,7 +66,7 @@ Action-based activation where user describes what they want to do rather than th
 }
 ```
 
-### Examples
+### 示例
 
 **Database Work:**
 - User prompt: "add user tracking feature"
@@ -78,7 +78,7 @@ Action-based activation where user describes what they want to do rather than th
 - Matches: `(create).*?(orchestrator)`
 - Activates: `java-backend-guidelines`, `papertrace-domain`
 
-### Best Practices
+### 最佳实践
 
 - Capture common action verbs: `(create|add|modify|build|implement)`
 - Include domain-specific nouns: `(feature|endpoint|component|workflow)`
@@ -118,7 +118,7 @@ Glob pattern matching against the file path being edited.
 
 Domain/area-specific activation based on file location in the project.
 
-### Configuration
+### 配置
 
 ```json
 "fileTriggers": {
@@ -148,7 +148,7 @@ Domain/area-specific activation based on file location in the project.
 - Matches: `patra-*/patra-*-app/src/main/java/**/*Orchestrator.java`
 - Activates: `java-backend-guidelines`, `papertrace-domain`
 
-### Best Practices
+### 最佳实践
 
 - Be specific to avoid false positives
 - Use exclusions for test files: `**/*Test.java`, `**/*IT.java`
@@ -199,7 +199,7 @@ Regex pattern matching against the file's actual content (what's inside the file
 
 Technology-specific activation based on what the code imports or uses (Prisma, controllers, specific libraries).
 
-### Configuration
+### 配置
 
 ```json
 "fileTriggers": {
@@ -212,7 +212,7 @@ Technology-specific activation based on what the code imports or uses (Prisma, c
 }
 ```
 
-### Examples
+### 示例
 
 **MyBatis Detection:**
 - File contains: `import com.baomidou.mybatisplus.core.mapper.BaseMapper;`
@@ -224,7 +224,7 @@ Technology-specific activation based on what the code imports or uses (Prisma, c
 - Matches: `@RestController`
 - Activates: `java-backend-guidelines`
 
-### Best Practices
+### 最佳实践
 
 - Match imports: `import.*mybatis` (case-insensitive)
 - Escape special regex chars: `\\.selectOne\\(` not `.selectOne(`
@@ -267,7 +267,7 @@ class.*Coordinator               # Coordinator classes
 
 ---
 
-## Best Practices Summary
+## 最佳实践 Summary
 
 ### DO:
 ✅ Use specific, unambiguous keywords
@@ -286,7 +286,7 @@ class.*Coordinator               # Coordinator classes
 ❌ Use greedy regex: `.*` instead of `.*?`
 ❌ Match too broadly in file paths
 
-### Testing Your Triggers
+### 测试 Your Triggers
 
 **Test keyword/intent triggers:**
 ```bash

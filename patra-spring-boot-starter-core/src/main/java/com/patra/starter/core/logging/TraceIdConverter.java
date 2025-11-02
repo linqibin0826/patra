@@ -5,9 +5,9 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import org.apache.skywalking.apm.toolkit.trace.TraceContext;
 
 /**
- * Custom Logback converter for extracting SkyWalking trace ID only.
+ * 用于仅提取 SkyWalking 追踪 ID 的自定义 Logback 转换器。
  *
- * <p>Usage in logback.xml:
+ * <p>在 logback.xml 中的使用：
  *
  * <pre>
  * &lt;conversionRule conversionWord="traceId"
@@ -28,7 +28,7 @@ public class TraceIdConverter extends ClassicConverter {
       if (traceId == null || traceId.isEmpty() || "N/A".equals(traceId)) {
         return EMPTY_TRACE_ID;
       }
-      // Extract only the traceId part (before first dot)
+      // 仅提取 traceId 部分（第一个点之前）
       int dotIndex = traceId.indexOf('.');
       if (dotIndex > 0) {
         return traceId.substring(0, dotIndex);

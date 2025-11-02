@@ -18,10 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Contributes ingest-specific exception to error-code mappings.
+ * 贡献采集服务特定的异常到错误码映射。
  *
- * <p>Registers the domain exceptions emitted by the ingest service so the platform error parsing
- * engine can convert them into consistent {@link IngestErrorCode} responses.
+ * <p>注册采集服务发出的领域异常,以便平台错误解析引擎可以将它们转换为一致的 {@link IngestErrorCode} 响应。
  */
 @Slf4j
 @Component
@@ -37,23 +36,19 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
             .or(() -> tryMapOutboxException(exception));
 
     if (errorCode.isEmpty()) {
-      log.debug(
-          "No error code mapping found for exception type: {}", exception.getClass().getName());
+      log.debug("未找到异常类型的错误码映射: {}", exception.getClass().getName());
     } else {
-      log.debug(
-          "Mapped exception {} to error code: {}",
-          exception.getClass().getSimpleName(),
-          errorCode.get().code());
+      log.debug("已将异常 {} 映射到错误码: {}", exception.getClass().getSimpleName(), errorCode.get().code());
     }
 
     return errorCode;
   }
 
   /**
-   * Maps configuration-related exceptions to error codes.
+   * 将配置相关异常映射到错误码。
    *
-   * @param exception the throwable to attempt mapping
-   * @return optional error code if exception type matches
+   * @param exception 尝试映射的可抛出对象
+   * @return 如果异常类型匹配则返回可选的错误码
    */
   private Optional<ErrorCodeLike> tryMapConfigurationException(Throwable exception) {
     if (exception instanceof IngestConfigurationException configurationException) {
@@ -63,10 +58,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Maps schedule parameter exceptions to error codes.
+   * 将调度参数异常映射到错误码。
    *
-   * @param exception the throwable to attempt mapping
-   * @return optional error code if exception type matches
+   * @param exception 尝试映射的可抛出对象
+   * @return 如果异常类型匹配则返回可选的错误码
    */
   private Optional<ErrorCodeLike> tryMapScheduleException(Throwable exception) {
     if (exception instanceof IngestScheduleParameterException) {
@@ -82,10 +77,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Maps checkpoint-related exceptions to error codes.
+   * 将检查点相关异常映射到错误码。
    *
-   * @param exception the throwable to attempt mapping
-   * @return optional error code if exception type matches
+   * @param exception 尝试映射的可抛出对象
+   * @return 如果异常类型匹配则返回可选的错误码
    */
   private Optional<ErrorCodeLike> tryMapCheckpointException(Throwable exception) {
     if (exception instanceof TaskCheckpointException checkpointException) {
@@ -100,10 +95,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Maps plan-related exceptions to error codes.
+   * 将计划相关异常映射到错误码。
    *
-   * @param exception the throwable to attempt mapping
-   * @return optional error code if exception type matches
+   * @param exception 尝试映射的可抛出对象
+   * @return 如果异常类型匹配则返回可选的错误码
    */
   private Optional<ErrorCodeLike> tryMapPlanException(Throwable exception) {
     if (exception instanceof PlanAssemblyException) {
@@ -116,10 +111,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Maps outbox-related exceptions to error codes.
+   * 将 outbox 相关异常映射到错误码。
    *
-   * @param exception the throwable to attempt mapping
-   * @return optional error code if exception type matches
+   * @param exception 尝试映射的可抛出对象
+   * @return 如果异常类型匹配则返回可选的错误码
    */
   private Optional<ErrorCodeLike> tryMapOutboxException(Throwable exception) {
     if (exception instanceof OutboxPersistenceException persistenceException) {
@@ -129,10 +124,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Resolves configuration error based on remote call exception details.
+   * 基于远程调用异常详细信息解析配置错误。
    *
-   * @param exception the configuration exception to analyze
-   * @return appropriate error code based on remote failure type
+   * @param exception 要分析的配置异常
+   * @return 基于远程失败类型的适当错误码
    */
   private ErrorCodeLike resolveConfigurationError(IngestConfigurationException exception) {
     Throwable cause = exception.getCause();
@@ -151,10 +146,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Resolves outbox persistence error based on operation stage.
+   * 基于操作阶段解析 outbox 持久化错误。
    *
-   * @param exception the outbox persistence exception with stage information
-   * @return appropriate error code based on the failed persistence stage
+   * @param exception 包含阶段信息的 outbox 持久化异常
+   * @return 基于失败的持久化阶段的适当错误码
    */
   private ErrorCodeLike resolveOutboxPersistence(OutboxPersistenceException exception) {
     return switch (exception.getStage()) {
@@ -165,10 +160,10 @@ public class IngestErrorMappingContributor implements ErrorMappingContributor {
   }
 
   /**
-   * Resolves plan persistence error based on operation stage.
+   * 基于操作阶段解析计划持久化错误。
    *
-   * @param exception the plan persistence exception with stage information
-   * @return appropriate error code based on the failed persistence stage
+   * @param exception 包含阶段信息的计划持久化异常
+   * @return 基于失败的持久化阶段的适当错误码
    */
   private ErrorCodeLike resolvePlanPersistence(PlanPersistenceException exception) {
     return switch (exception.getStage()) {

@@ -1,12 +1,11 @@
 package com.patra.registry.domain.support;
 
 /**
- * Registry dimension/condition key placeholder constants.
+ * 注册中心维度/条件键占位符常量。
  *
- * <p>Unified reserved words for SOURCE/TASK scopes used in snapshots or configuration merging,
- * avoiding duplicate definitions across layers.
+ * <p>用于快照或配置合并的 SOURCE/TASK 作用域统一保留字,避免跨层重复定义。
  *
- * <p>Reference: docs/patra-registry/expr/Registry-expr-schema-design.md
+ * <p>参考: docs/patra-registry/expr/Registry-expr-schema-design.md
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,15 +14,15 @@ public final class RegistryKeyPlaceholders {
 
   private RegistryKeyPlaceholders() {}
 
-  /** Represents "all tasks/sources", used as fallback key in scope merging. */
+  /** 表示"所有任务/来源",用作作用域合并中的回退键。 */
   public static final String ALL = "ALL";
 
-  /** Represents "any value", typically used for wildcard/agnostic dimension matching. */
+  /** 表示"任意值",通常用于通配符/不可知维度匹配。 */
   public static final String ANY = "ANY";
 
-  /** Normalized marker for negated rule (negated = true). */
+  /** 取反规则的归一化标记(negated = true)。 */
   public static final String NEGATED_TRUE = "T";
 
-  /** Normalized marker for non-negated rule (negated = false or explicit false). */
+  /** 非取反规则的归一化标记(negated = false 或显式 false)。 */
   public static final String NEGATED_FALSE = "F";
 }

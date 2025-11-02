@@ -1,20 +1,16 @@
 /**
- * Task execution value objects.
+ * 任务执行值对象。
  *
- * <p>Contains value objects related to task execution lifecycle:
+ * <p>包含与任务执行生命周期相关的值对象:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.ExecutionContext} - Execution context
- *       with configuration snapshots
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.ExecutionTimeline} - Execution timeline
- *       tracking
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.RunContext} - Task run context
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.RunStats} - Task run statistics
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.TaskParams} - Task parameters
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.TaskReadyMessage} - Task ready message
- *       for queue
- *   <li>{@link com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint} - Task run checkpoint
- *       for resumption
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.ExecutionContext} - 带配置快照的执行上下文
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.ExecutionTimeline} - 执行时间线追踪
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.RunContext} - 任务运行上下文
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.RunStats} - 任务运行统计信息
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.TaskParams} - 任务参数
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.TaskReadyMessage} - 用于队列的任务就绪消息
+ *   <li>{@link com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint} - 用于恢复的任务运行检查点
  * </ul>
  *
  * @author linqibin

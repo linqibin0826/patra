@@ -2,7 +2,7 @@
 
 Complete schema and configuration reference for `.claude/skills/skill-rules.json`.
 
-## Table of Contents
+## 目录
 
 - [File Location](#file-location)
 - [Complete TypeScript Schema](#complete-typescript-schema)

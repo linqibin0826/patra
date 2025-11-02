@@ -1,195 +1,195 @@
-# patra-registry — SSOT Registry Service
+# patra-registry — SSOT 注册中心服务
 
-> **Single Source of Truth** for provenance metadata, operational configurations, expressions, and dictionaries.
-
----
-
-## 📌 Purpose
-
-`patra-registry` serves as the **configuration hub** for the Papertrace platform, providing:
-
-1. **Provenance Management**: Catalog of external data sources (PubMed, EPMC, Crossref, etc.)
-2. **Operational Configurations**: HTTP policies, retry strategies, rate limits, pagination rules
-3. **Expression Metadata**: API parameter mappings, field definitions, render rules
-4. **Dictionary Management**: System dictionaries for codes and enums
-5. **Temporal Slicing**: Time-effective configurations (config snapshots valid at specific instants)
-
-All other services (especially `patra-ingest`) query this service via **Feign RPC** to retrieve configuration snapshots.
+> **唯一真实数据源(Single Source of Truth)**,管理数据源元数据、运营配置、表达式和字典。
 
 ---
 
-## 🏗️ Module Structure
+## 📌 目标定位
+
+`patra-registry` 作为 Papertrace 平台的**配置中枢**,提供以下能力:
+
+1. **数据源管理**: 外部数据源目录(PubMed、EPMC、Crossref 等)
+2. **运营配置**: HTTP 策略、重试策略、速率限制、分页规则
+3. **表达式元数据**: API 参数映射、字段定义、渲染规则
+4. **字典管理**: 系统字典用于代码和枚举
+5. **时态切片**: 时间有效配置(特定时刻有效的配置快照)
+
+所有其他服务(特别是 `patra-ingest`)通过 **Feign RPC** 查询此服务以获取配置快照。
+
+---
+
+## 🏗️ 模块结构
 
 ```
 patra-registry/
-├─ patra-registry-api/              # External contracts (Feign clients, DTOs)
+├─ patra-registry-api/              # 外部契约(Feign 客户端、DTO)
 │  └─ src/main/java/.../api/
-│     ├─ rpc/client/                # Feign client interfaces
-│     │  ├─ ProvenanceClient.java   # Provenance API client
-│     │  └─ ExprClient.java         # Expression API client
-│     ├─ rpc/dto/                   # Response DTOs
-│     │  ├─ provenance/             # Provenance-related DTOs
-│     │  └─ expr/                   # Expression-related DTOs
-│     └─ rpc/endpoint/              # Endpoint contracts
+│     ├─ rpc/client/                # Feign 客户端接口
+│     │  ├─ ProvenanceClient.java   # 数据源 API 客户端
+│     │  └─ ExprClient.java         # 表达式 API 客户端
+│     ├─ rpc/dto/                   # 响应 DTO
+│     │  ├─ provenance/             # 数据源相关 DTO
+│     │  └─ expr/                   # 表达式相关 DTO
+│     └─ rpc/endpoint/              # 端点契约
 │
-├─ patra-registry-domain/           # Pure Java domain model (NO frameworks)
+├─ patra-registry-domain/           # 纯 Java 领域模型(无框架)
 │  └─ src/main/java/.../domain/
 │     ├─ model/
-│     │  ├─ aggregate/              # ProvenanceConfiguration (aggregate root)
-│     │  ├─ vo/                     # Value objects (Provenance, *Config)
-│     │  │  ├─ provenance/          # Provenance VOs
-│     │  │  └─ expr/                # Expression VOs
-│     │  └─ read/                   # Read models (CQRS queries)
-│     │     ├─ provenance/          # Provenance queries
-│     │     └─ expr/                # Expression queries
-│     ├─ port/                      # Repository interfaces
+│     │  ├─ aggregate/              # ProvenanceConfiguration(聚合根)
+│     │  ├─ vo/                     # 值对象(Provenance、*Config)
+│     │  │  ├─ provenance/          # 数据源值对象
+│     │  │  └─ expr/                # 表达式值对象
+│     │  └─ read/                   # 读模型(CQRS 查询)
+│     │     ├─ provenance/          # 数据源查询
+│     │     └─ expr/                # 表达式查询
+│     ├─ port/                      # 仓储接口
 │     │  ├─ ProvenanceConfigRepository.java
 │     │  └─ ExprRepository.java
-│     ├─ exception/                 # Domain exceptions
-│     └─ support/                   # Domain support classes
+│     ├─ exception/                 # 领域异常
+│     └─ support/                   # 领域支持类
 │
-├─ patra-registry-app/              # Application layer (orchestration)
+├─ patra-registry-app/              # 应用层(编排)
 │  └─ src/main/java/.../app/
-│     ├─ service/                   # Application services
+│     ├─ service/                   # 应用服务
 │     │  ├─ ProvenanceConfigAppService.java
 │     │  └─ ExprQueryAppService.java
-│     └─ converter/                 # Query assemblers (Domain → DTO)
+│     └─ converter/                 # 查询装配器(Domain → DTO)
 │        ├─ ProvenanceQueryAssembler.java
 │        └─ ExprQueryAssembler.java
 │
-├─ patra-registry-infra/            # Infrastructure layer (persistence)
+├─ patra-registry-infra/            # 基础设施层(持久化)
 │  └─ src/main/java/.../infra/
 │     └─ persistence/
-│        ├─ entity/                 # MyBatis-Plus entities (DOs)
-│        │  ├─ provenance/          # RegProvenanceDO, RegProv*CfgDO
+│        ├─ entity/                 # MyBatis-Plus 实体(DO)
+│        │  ├─ provenance/          # RegProvenanceDO、RegProv*CfgDO
 │        │  ├─ expr/                # RegProvExpr*DO
 │        │  └─ dictionary/          # RegSysDict*DO
-│        ├─ mapper/                 # MyBatis mappers
-│        ├─ converter/              # DO ↔ Domain converters
-│        └─ repository/             # Repository implementations
+│        ├─ mapper/                 # MyBatis 映射器
+│        ├─ converter/              # DO ↔ Domain 转换器
+│        └─ repository/             # 仓储实现
 │           ├─ ProvenanceConfigRepositoryMpImpl.java
 │           └─ ExprRepositoryMpImpl.java
 │
-├─ patra-registry-adapter/          # Adapter layer (inbound/outbound)
+├─ patra-registry-adapter/          # 适配器层(入站/出站)
 │  └─ src/main/java/.../adapter/
-│     ├─ inbound/rest/feign/        # Feign endpoint implementations
-│     │  ├─ ProvenanceClientImpl.java  # Implements ProvenanceClient
-│     │  └─ ExprClientImpl.java        # Implements ExprClient
-│     └─ config/                    # Error mapping contributors
+│     ├─ inbound/rest/feign/        # Feign 端点实现
+│     │  ├─ ProvenanceClientImpl.java  # 实现 ProvenanceClient
+│     │  └─ ExprClientImpl.java        # 实现 ExprClient
+│     └─ config/                    # 错误映射贡献器
 │
-└─ patra-registry-boot/             # Executable module
+└─ patra-registry-boot/             # 可执行模块
    └─ src/main/java/.../
-      └─ PatraRegistryApplication.java  # Main class
+      └─ PatraRegistryApplication.java  # 主类
 ```
 
 ---
 
-## 🔑 Key Domain Concepts
+## 🔑 核心领域概念
 
-### 1. Provenance
+### 1. Provenance(数据源)
 
-**Definition**: An external data source (e.g., PubMed, EPMC, Crossref).
+**定义**: 外部数据源(例如 PubMed、EPMC、Crossref)。
 
-**Attributes**:
-- `code` (String): Unique stable identifier (e.g., `"pubmed"`, `"crossref"`)
-- `name` (String): Display name (e.g., `"PubMed"`)
-- `baseUrlDefault` (String): Default API base URL
-- `timezoneDefault` (String): Default timezone (IANA format, e.g., `"UTC"`)
-- `active` (boolean): Whether the source is active
-- `lifecycleStatusCode` (String): Dictionary code for lifecycle state
+**属性**:
+- `code` (String): 唯一稳定标识符(例如 `"pubmed"`、`"crossref"`)
+- `name` (String): 显示名称(例如 `"PubMed"`)
+- `baseUrlDefault` (String): 默认 API 基础 URL
+- `timezoneDefault` (String): 默认时区(IANA 格式,例如 `"UTC"`)
+- `active` (boolean): 数据源是否激活
+- `lifecycleStatusCode` (String): 生命周期状态的字典代码
 
-**File**: [`patra-registry-domain/src/main/java/.../model/vo/provenance/Provenance.java`](patra-registry-domain/src/main/java/com/patra/registry/domain/model/vo/provenance/Provenance.java)
+**文件**: [`patra-registry-domain/src/main/java/.../model/vo/provenance/Provenance.java`](patra-registry-domain/src/main/java/com/patra/registry/domain/model/vo/provenance/Provenance.java)
 
-### 2. ProvenanceConfiguration (Aggregate Root)
+### 2. ProvenanceConfiguration(聚合根)
 
-**Definition**: Read-only aggregate combining `Provenance` with all operational configs.
+**定义**: 只读聚合,将 `Provenance` 与所有运营配置组合。
 
-**Structure**:
+**结构**:
 ```java
 public record ProvenanceConfiguration(
-    Provenance provenance,              // Core metadata (NEVER null)
-    WindowOffsetConfig windowOffset,    // Time window segmentation (nullable)
-    PaginationConfig pagination,        // Pagination strategy (nullable)
-    HttpConfig http,                    // HTTP client settings (nullable)
-    BatchingConfig batching,            // Batching rules (nullable)
-    RetryConfig retry,                  // Retry policy (nullable)
-    RateLimitConfig rateLimit           // Rate limit config (nullable)
+    Provenance provenance,              // 核心元数据(绝不为 null)
+    WindowOffsetConfig windowOffset,    // 时间窗口分段(可为 null)
+    PaginationConfig pagination,        // 分页策略(可为 null)
+    HttpConfig http,                    // HTTP 客户端设置(可为 null)
+    BatchingConfig batching,            // 批处理规则(可为 null)
+    RetryConfig retry,                  // 重试策略(可为 null)
+    RateLimitConfig rateLimit           // 速率限制配置(可为 null)
 ) { }
 ```
 
-**Scope Precedence**: TASK-specific configs override SOURCE-level defaults.
+**作用域优先级**: TASK 级配置覆盖 SOURCE 级默认值。
 
-**File**: [`patra-registry-domain/src/main/java/.../model/aggregate/ProvenanceConfiguration.java`](patra-registry-domain/src/main/java/com/patra/registry/domain/model/aggregate/ProvenanceConfiguration.java)
+**文件**: [`patra-registry-domain/src/main/java/.../model/aggregate/ProvenanceConfiguration.java`](patra-registry-domain/src/main/java/com/patra/registry/domain/model/aggregate/ProvenanceConfiguration.java)
 
-### 3. Temporal Configuration
+### 3. 时态配置
 
-All configs (except `Provenance` itself) have **effective time ranges**:
+所有配置(除 `Provenance` 本身外)都有**有效时间范围**:
 
-- `effective_from` (Instant): Config becomes valid
-- `effective_until` (Instant): Config expires
+- `effective_from` (Instant): 配置生效时间
+- `effective_until` (Instant): 配置失效时间
 
-**Query Pattern**:
+**查询模式**:
 ```java
-// Find config effective at specific time
+// 查找特定时间有效的配置
 Optional<HttpConfig> findActiveHttpConfig(
     Long provenanceId,
     String operationType,
-    Instant at  // Query time
+    Instant at  // 查询时间
 );
 ```
 
-**Benefits**:
-- Safe config updates without impacting running tasks
-- A/B testing support
-- Audit trail
+**优点**:
+- 安全更新配置而不影响运行中的任务
+- 支持 A/B 测试
+- 审计轨迹
 
-### 4. Operational Configurations
+### 4. 运营配置
 
-| Config Type | Purpose | Key Fields |
-|-------------|---------|------------|
-| **WindowOffsetConfig** | Time window segmentation | `startOffsetDays`, `lookbackWindowDays` |
-| **PaginationConfig** | Pagination strategy | `pageSize`, `maxPages`, `cursorField` |
-| **HttpConfig** | HTTP client settings | `baseUrl`, `connectTimeout`, `readTimeout`, `headers` |
-| **BatchingConfig** | Batching rules for detail fetching | `batchSize`, `maxConcurrentBatches` |
-| **RetryConfig** | Retry policy | `maxRetries`, `backoffMillis`, `retryableStatusCodes` |
-| **RateLimitConfig** | Rate limiting | `requestsPerSecond`, `burstCapacity` |
+| 配置类型 | 用途 | 关键字段 |
+|---------|------|---------|
+| **WindowOffsetConfig** | 时间窗口分段 | `startOffsetDays`、`lookbackWindowDays` |
+| **PaginationConfig** | 分页策略 | `pageSize`、`maxPages`、`cursorField` |
+| **HttpConfig** | HTTP 客户端设置 | `baseUrl`、`connectTimeout`、`readTimeout`、`headers` |
+| **BatchingConfig** | 详情获取的批处理规则 | `batchSize`、`maxConcurrentBatches` |
+| **RetryConfig** | 重试策略 | `maxRetries`、`backoffMillis`、`retryableStatusCodes` |
+| **RateLimitConfig** | 速率限制 | `requestsPerSecond`、`burstCapacity` |
 
-### 5. Expression Metadata
+### 5. 表达式元数据
 
-**Definition**: Metadata for dynamic API parameter mapping (used by `patra-expr-kernel`).
+**定义**: 动态 API 参数映射的元数据(由 `patra-expr-kernel` 使用)。
 
-**Components**:
-- **ExprCapability**: Defines operation capabilities (e.g., `HARVEST`, `UPDATE`)
-- **ApiParamMapping**: Maps logical params to API query params
-- **ExprField**: Field definitions (data types, constraints)
-- **ExprRenderRule**: Rules for rendering expressions into API queries
+**组件**:
+- **ExprCapability**: 定义操作能力(例如 `HARVEST`、`UPDATE`)
+- **ApiParamMapping**: 将逻辑参数映射到 API 查询参数
+- **ExprField**: 字段定义(数据类型、约束)
+- **ExprRenderRule**: 将表达式渲染为 API 查询的规则
 
-**Example Use Case**: Map `dateFrom`/`dateTo` logical params to PubMed's `mindate`/`maxdate` query params.
+**用例示例**: 将 `dateFrom`/`dateTo` 逻辑参数映射到 PubMed 的 `mindate`/`maxdate` 查询参数。
 
 ---
 
-## 🔌 API Contracts
+## 🔌 API 契约
 
-### Internal RPC API (Feign)
+### 内部 RPC API(Feign)
 
 #### ProvenanceClient
 
-**Base Path**: `/internal/provenance`
+**基础路径**: `/internal/provenance`
 
-**Endpoints**:
+**端点**:
 ```java
 @FeignClient(name = "patra-registry", contextId = "provenanceClient")
 public interface ProvenanceClient {
 
-    // List all provenances
+    // 列出所有数据源
     @GetMapping("/list")
     List<ProvenanceResp> listProvenances();
 
-    // Get single provenance by code
+    // 根据代码获取单个数据源
     @GetMapping("/{code}")
     ProvenanceResp getProvenance(@PathVariable ProvenanceCode code);
 
-    // Load full configuration (with temporal slicing)
+    // 加载完整配置(带时态切片)
     @GetMapping("/{code}/config")
     ProvenanceConfigResp getConfiguration(
         @PathVariable ProvenanceCode code,
@@ -199,24 +199,24 @@ public interface ProvenanceClient {
 }
 ```
 
-**Response DTOs**:
-- `ProvenanceResp`: Basic provenance metadata
-- `ProvenanceConfigResp`: Full configuration aggregate (with all nested configs)
+**响应 DTO**:
+- `ProvenanceResp`: 基础数据源元数据
+- `ProvenanceConfigResp`: 完整配置聚合(包含所有嵌套配置)
 
 #### ExprClient
 
-**Base Path**: `/internal/expr`
+**基础路径**: `/internal/expr`
 
-**Endpoints**:
+**端点**:
 ```java
 @FeignClient(name = "patra-registry", contextId = "exprClient")
 public interface ExprClient {
 
-    // Get expression capabilities for provenance
+    // 获取数据源的表达式能力
     @GetMapping("/{provenanceCode}/capabilities")
     List<ExprCapabilityResp> getCapabilities(@PathVariable String provenanceCode);
 
-    // Get API param mappings
+    // 获取 API 参数映射
     @GetMapping("/{provenanceCode}/param-mappings")
     List<ApiParamMappingResp> getParamMappings(@PathVariable String provenanceCode);
 }
@@ -224,13 +224,13 @@ public interface ExprClient {
 
 ---
 
-## 🛠️ How to Extend
+## 🛠️ 如何扩展
 
-### Adding a New Configuration Type
+### 添加新的配置类型
 
-**Example**: Add `CacheConfig` for caching policies.
+**示例**: 添加 `CacheConfig` 用于缓存策略。
 
-#### Step 1: Define Domain VO
+#### 步骤 1: 定义领域值对象
 
 ```java
 // patra-registry-domain/model/vo/provenance/CacheConfig.java
@@ -247,7 +247,7 @@ public record CacheConfig(
 ) { }
 ```
 
-#### Step 2: Define Read Model
+#### 步骤 2: 定义读模型
 
 ```java
 // patra-registry-domain/model/read/provenance/CacheConfigQuery.java
@@ -259,7 +259,7 @@ public record CacheConfigQuery(
 ) { }
 ```
 
-#### Step 3: Add to Aggregate
+#### 步骤 3: 添加到聚合
 
 ```java
 // ProvenanceConfiguration.java
@@ -271,18 +271,18 @@ public record ProvenanceConfiguration(
     BatchingConfig batching,
     RetryConfig retry,
     RateLimitConfig rateLimit,
-    CacheConfig cache  // NEW
+    CacheConfig cache  // 新增
 ) { }
 ```
 
-#### Step 4: Add Repository Port Method
+#### 步骤 4: 添加仓储端口方法
 
 ```java
 // ProvenanceConfigRepository.java
 Optional<CacheConfig> findActiveCache(Long provenanceId, String operationType, Instant at);
 ```
 
-#### Step 5: Create DO and Mapper
+#### 步骤 5: 创建 DO 和 Mapper
 
 ```java
 // RegProvCacheCfgDO.java
@@ -294,47 +294,47 @@ public class RegProvCacheCfgDO { ... }
 public interface RegProvCacheCfgMapper extends BaseMapper<RegProvCacheCfgDO> { }
 ```
 
-#### Step 6: Implement Repository Method
+#### 步骤 6: 实现仓储方法
 
 ```java
 // ProvenanceConfigRepositoryMpImpl.java
 @Override
 public Optional<CacheConfig> findActiveCache(Long provenanceId, String operationType, Instant at) {
-    // Query with temporal filtering (effective_from <= at < effective_until)
+    // 使用时态过滤查询(effective_from <= at < effective_until)
     // ...
 }
 ```
 
-#### Step 7: Update DTO and Converter
+#### 步骤 7: 更新 DTO 和转换器
 
 ```java
-// ProvenanceConfigResp.java (in api module)
+// ProvenanceConfigResp.java (在 api 模块中)
 public record ProvenanceConfigResp(
     ProvenanceResp provenance,
     WindowOffsetResp windowOffset,
     // ...
-    CacheConfigResp cache  // NEW
+    CacheConfigResp cache  // 新增
 ) { }
 ```
 
 ---
 
-## 🔍 Example: Configuration Query Flow
+## 🔍 示例: 配置查询流程
 
-### Scenario
+### 场景
 
-`patra-ingest` needs to fetch PubMed configuration for a HARVEST operation at `2025-01-12T10:00:00Z`.
+`patra-ingest` 需要在 `2025-01-12T10:00:00Z` 获取 PubMed 的 HARVEST 操作配置。
 
-### Sequence
+### 序列
 
 ```
-1. patra-ingest calls:
+1. patra-ingest 调用:
    provenanceClient.getConfiguration(PUBMED, "HARVEST", Instant.parse("2025-01-12T10:00:00Z"))
 
    ↓
 
 2. ProvenanceClientImpl.getConfiguration()
-   - Calls ProvenanceConfigAppService.loadConfiguration()
+   - 调用 ProvenanceConfigAppService.loadConfiguration()
 
    ↓
 
@@ -345,109 +345,108 @@ public record ProvenanceConfigResp(
    ↓
 
 4. ProvenanceConfigRepositoryMpImpl.loadConfiguration()
-   - Query provenance (reg_provenance)
-   - Query windowOffset (reg_prov_window_offset_cfg WHERE effective_from <= at < effective_until)
-   - Query pagination (reg_prov_pagination_cfg ...)
-   - Query http (reg_prov_http_cfg ...)
-   - Query batching (reg_prov_batching_cfg ...)
-   - Query retry (reg_prov_retry_cfg ...)
-   - Query rateLimit (reg_prov_rate_limit_cfg ...)
-   - Assemble ProvenanceConfiguration aggregate
+   - 查询 provenance (reg_provenance)
+   - 查询 windowOffset (reg_prov_window_offset_cfg WHERE effective_from <= at < effective_until)
+   - 查询 pagination (reg_prov_pagination_cfg ...)
+   - 查询 http (reg_prov_http_cfg ...)
+   - 查询 batching (reg_prov_batching_cfg ...)
+   - 查询 retry (reg_prov_retry_cfg ...)
+   - 查询 rateLimit (reg_prov_rate_limit_cfg ...)
+   - 组装 ProvenanceConfiguration 聚合
 
    ↓
 
 5. ProvenanceQueryAssembler.toQuery()
-   - Convert domain aggregate → ProvenanceConfigQuery
+   - 将领域聚合 → ProvenanceConfigQuery
 
    ↓
 
 6. ProvenanceApiConverter.toResp()
-   - Convert query DTO → ProvenanceConfigResp (API contract)
+   - 将查询 DTO → ProvenanceConfigResp(API 契约)
 
    ↓
 
-7. Return to patra-ingest as ProvenanceConfigResp JSON
+7. 返回给 patra-ingest 作为 ProvenanceConfigResp JSON
 ```
 
 ---
 
-## 🗄️ Database Schema Overview
+## 🗄️ 数据库表概览
 
-### Tables
+### 表
 
-| Table | Purpose |
-|-------|---------|
-| `reg_provenance` | Core provenance catalog |
-| `reg_prov_window_offset_cfg` | Window offset configs (temporal) |
-| `reg_prov_pagination_cfg` | Pagination configs (temporal) |
-| `reg_prov_http_cfg` | HTTP client configs (temporal) |
-| `reg_prov_batching_cfg` | Batching configs (temporal) |
-| `reg_prov_retry_cfg` | Retry policies (temporal) |
-| `reg_prov_rate_limit_cfg` | Rate limit configs (temporal) |
-| `reg_prov_expr_capability` | Expression capabilities |
-| `reg_prov_api_param_map` | API parameter mappings |
-| `reg_expr_field_dict` | Expression field definitions |
-| `reg_prov_expr_render_rule` | Expression render rules |
-| `reg_sys_dict_type` | Dictionary types |
-| `reg_sys_dict_item` | Dictionary items |
-| `reg_sys_dict_item_alias` | Dictionary item aliases |
+| 表名 | 用途 |
+|------|------|
+| `reg_provenance` | 核心数据源目录 |
+| `reg_prov_window_offset_cfg` | 窗口偏移配置(时态) |
+| `reg_prov_pagination_cfg` | 分页配置(时态) |
+| `reg_prov_http_cfg` | HTTP 客户端配置(时态) |
+| `reg_prov_batching_cfg` | 批处理配置(时态) |
+| `reg_prov_retry_cfg` | 重试策略(时态) |
+| `reg_prov_rate_limit_cfg` | 速率限制配置(时态) |
+| `reg_prov_expr_capability` | 表达式能力 |
+| `reg_prov_api_param_map` | API 参数映射 |
+| `reg_expr_field_dict` | 表达式字段定义 |
+| `reg_prov_expr_render_rule` | 表达式渲染规则 |
+| `reg_sys_dict_type` | 字典类型 |
+| `reg_sys_dict_item` | 字典项 |
+| `reg_sys_dict_item_alias` | 字典项别名 |
 
-> `reg_prov_window_offset_cfg.offset_field_key` and `reg_prov_window_offset_cfg.window_date_field_key` store unified
-> semantic keys (`std_key` matching `reg_expr_field_dict.field_key`) rather than provider-specific parameter names.
+> `reg_prov_window_offset_cfg.offset_field_key` 和 `reg_prov_window_offset_cfg.window_date_field_key` 存储统一语义键(`std_key` 匹配 `reg_expr_field_dict.field_key`),而非提供商特定的参数名。
 
-**Key Relationships**:
-- All `reg_prov_*_cfg` tables have FK → `reg_provenance.id`
-- All temporal configs have `effective_from` and `effective_until` columns
-- Scope is determined by `operation_type` (NULL = SOURCE-level default)
+**关键关系**:
+- 所有 `reg_prov_*_cfg` 表都有 FK → `reg_provenance.id`
+- 所有时态配置都有 `effective_from` 和 `effective_until` 列
+- 作用域由 `operation_type` 确定(NULL = SOURCE 级默认值)
 
 ---
 
-## 🧪 Testing
+## 🧪 测试
 
-### Unit Tests (Domain)
+### 单元测试(领域)
 
 ```bash
 mvn test -pl patra-registry-domain
 ```
 
-**Focus**: Value object validation, aggregate invariants.
+**重点**: 值对象验证、聚合不变量。
 
-### Integration Tests (Repository)
+### 集成测试(仓储)
 
 ```bash
 mvn verify -pl patra-registry-infra
 ```
 
-**Focus**: Temporal queries, MyBatis mappers, DO ↔ Domain conversion.
+**重点**: 时态查询、MyBatis 映射器、DO ↔ Domain 转换。
 
-### API Tests (Adapter)
+### API 测试(适配器)
 
 ```bash
 mvn verify -pl patra-registry-adapter
 ```
 
-**Focus**: Feign endpoint contracts, error mapping.
+**重点**: Feign 端点契约、错误映射。
 
 ---
 
-## 📊 Observability
+## 📊 可观测性
 
-### Logs
+### 日志
 
-- **INFO**: High-level operations (e.g., "Loading provenance config for PUBMED")
-- **DEBUG**: Query details (e.g., "Found 3 active configs for provenanceId=1")
-- **ERROR**: Failures (e.g., "Provenance not found: code=INVALID")
+- **INFO**: 高级操作(例如 "Loading provenance config for PUBMED")
+- **DEBUG**: 查询详情(例如 "Found 3 active configs for provenanceId=1")
+- **ERROR**: 失败(例如 "Provenance not found: code=INVALID")
 
-### 🪵 Logging (Starter v1.0)
+### 🪵 日志(Starter v1.0)
 
-`patra-registry` uses Spring Boot default logging. Distributed tracing is handled by SkyWalking agent.
-- Dynamic log levels via Nacos (≤60s)
+`patra-registry` 使用 Spring Boot 默认日志。分布式追踪由 SkyWalking agent 处理。
+- 通过 Nacos 动态日志级别(≤60s)
 
-Minimal setup (already applied):
+最小设置(已应用):
 ```xml
 <dependency>
   <groupId>com.papertrace</groupId>
-  <!-- logging handled by service-specific config or defaults -->
+  <!-- 日志由服务特定配置或默认值处理 -->
 </dependency>
 ```
 
@@ -459,12 +458,12 @@ spring:
 papertrace.logging.trace.enabled: true
 ```
 
-Adapter example (sanitize + business MDC):
+适配器示例(清理 + 业务 MDC):
 ```java
 @RestController
 @Slf4j
 public class ProvenanceController {
-  // logging example removed; use standard logging APIs
+  // 日志示例已移除;使用标准日志 API
   @Autowired LogContextEnricher enricher;
 
   @GetMapping("/provenance/{code}")
@@ -472,7 +471,7 @@ public class ProvenanceController {
     enricher.enrich("operation", "GET_PROVENANCE");
     try {
       log.info("Load provenance: code={}", sanitizer.sanitize(code));
-      // delegate to app layer
+      // 委托给应用层
       return ResponseEntity.ok().build();
     } finally {
       enricher.clearEnriched();
@@ -481,7 +480,7 @@ public class ProvenanceController {
 }
 ```
 
-Dynamic levels (Nacos `logging-patra-registry.yml`):
+动态级别(Nacos `logging-patra-registry.yml`):
 ```yaml
 logging.level:
   root: INFO
@@ -489,83 +488,83 @@ logging.level:
   com.patra.registry.infra: DEBUG
 ```
 
-References: docs/logging/operations-guide.md, specs/001-logging-starter/quickstart.md
+参考: docs/logging/operations-guide.md、specs/001-logging-starter/quickstart.md
 
-### Metrics (Planned)
+### 指标(计划中)
 
-- `provenance.config.query.duration` (histogram)
-- `provenance.config.cache.hit_rate` (gauge)
-- `provenance.config.temporal.slices_active` (gauge)
+- `provenance.config.query.duration` (直方图)
+- `provenance.config.cache.hit_rate` (仪表)
+- `provenance.config.temporal.slices_active` (仪表)
 
 ---
 
-## 🚀 Running Locally
+## 🚀 本地运行
 
 ```bash
-# Start MySQL
+# 启动 MySQL
 docker-compose up -d mysql
 
-# Run migrations (if applicable)
+# 运行迁移(如适用)
 # ...
 
-# Start service
+# 启动服务
 cd patra-registry/patra-registry-boot
 mvn spring-boot:run
 ```
 
-**Default Port**: 8081
+**默认端口**: 8081
 
 ---
 
-## 📦 Expression Seeds Management
+## 📦 表达式种子管理
 
-All expression behavior (fields/capabilities/rules/param maps) is delivered via Flyway seed SQL. Follow the checklist below when adding/updating providers.
+所有表达式行为(字段/能力/规则/参数映射)都通过 Flyway 种子 SQL 交付。添加/更新提供商时遵循以下检查清单。
 
-Files (examples):
+文件(示例):
 - `patra-registry-infra/src/main/resources/db/migration/V1.1.1__seed_pubmed_expr_config.sql`
 - `patra-registry-infra/src/main/resources/db/migration/V1.1.2__seed_epmc_expr_config.sql`
 - `patra-registry-infra/src/main/resources/db/migration/V1.1.3__seed_crossref_expr_config.sql`
 
-Principles:
-- No schema change required; seeds are safe to rewrite in a clean dev DB.
-- Prefer provider‑agnostic std_keys in rules; map to provider params via `reg_prov_api_param_map`.
-- Use consistent `effective_from` timestamps; leave `effective_until` NULL.
+原则:
+- 无需架构更改;种子在干净的开发数据库中可安全重写。
+- 在规则中优先使用提供商无关的 std_keys;通过 `reg_prov_api_param_map` 映射到提供商参数。
+- 使用一致的 `effective_from` 时间戳;保留 `effective_until` 为 NULL。
 
-Minimum param maps to include:
-- PubMed: `query→term`, `from→mindate`, `to→maxdate (TO_EXCLUSIVE_MINUS_1D)`, `datetype→datetype`, `limit→retmax`, `offset→retstart`
-- EPMC: `query→query`, `limit→pageSize`
-- Crossref: `query→query`, `filter→filter`, `limit→rows`, `offset→offset`
+最少包含的参数映射:
+- PubMed: `query→term`、`from→mindate`、`to→maxdate (TO_EXCLUSIVE_MINUS_1D)`、`datetype→datetype`、`limit→retmax`、`offset→retstart`
+- EPMC: `query→query`、`limit→pageSize`
+- Crossref: `query→query`、`filter→filter`、`limit→rows`、`offset→offset`
 
-Verification (manual SQL):
+验证(手动 SQL):
 ```sql
--- Param map has query mapping for PubMed
+-- 参数映射包含 PubMed 的查询映射
 SELECT std_key, provider_param_name, transform_code
 FROM   reg_prov_api_param_map
 WHERE  provenance_id = (SELECT id FROM reg_provenance WHERE code='PUBMED')
   AND  std_key IN ('query','from','to','datetype');
 
--- Render rules for PubMed date PARAMS
+-- PubMed 日期 PARAMS 的渲染规则
 SELECT field_key, op_code, emit_type_code, params, fn_code
 FROM   reg_prov_expr_render_rule
 WHERE  provenance_id = (SELECT id FROM reg_provenance WHERE code='PUBMED')
   AND  field_key='entrez_date' AND op_code='RANGE';
 ```
 
-STRICT Mode Readiness:
-- Run compiler tests with `expr.strict=true` to ensure all fn_code/transform_code exist.
-- Keep MULTI repeat disabled (`expr.multi.repeat-enabled=false`) unless repeated serialization is verified end‑to‑end.
+严格模式准备:
+- 使用 `expr.strict=true` 运行编译器测试以确保所有 fn_code/transform_code 存在。
+- 保持 MULTI 重复禁用(`expr.multi.repeat-enabled=false`),除非端到端验证了重复序列化。
 
-More details: `docs/expr/07-migration-plan.md` and `docs/expr/12-provider-checklist.md`.
+更多详情: `docs/expr/07-migration-plan.md` 和 `docs/expr/12-provider-checklist.md`。
 
 ---
 
-## 🔗 Related Documentation
+## 🔗 相关文档
 
-- [Main README](../README.md)
-- [Architecture Guide](../docs/ARCHITECTURE.md)
-- [Development Guide](../docs/DEV-GUIDE.md)
+- [主 README](../README.md)
+- [架构指南](../docs/ARCHITECTURE.md)
+- [开发指南](../docs/DEV-GUIDE.md)
 - [patra-ingest README](../patra-ingest/README.md)
 
 ---
 
-**Last Updated**: 2025-01-12
+**最后更新**: 2025-01-12

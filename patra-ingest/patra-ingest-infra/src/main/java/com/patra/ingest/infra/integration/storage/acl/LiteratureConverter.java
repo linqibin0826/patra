@@ -15,29 +15,26 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * Anti-Corruption Layer (ACL) converter for transforming ingest domain models into catalog API
- * DTOs.
+ * 防腐层 (ACL) 转换器,用于将采集领域模型转换为目录 API DTO。
  *
- * <p>This MapStruct converter protects the ingest bounded context from external API contracts by
- * providing explicit, versioned mappings. Changes to catalog API structures are isolated to this
- * converter.
+ * <p>此 MapStruct 转换器通过提供显式的版本化映射,保护采集限界上下文免受外部 API 契约的影响。 对目录 API 结构的更改将隔离在此转换器中。
  *
- * <p>Conversion rules:
+ * <p>转换规则:
  *
  * <ul>
- *   <li>StandardLiterature → LiteratureDTO (catalog external API format)
- *   <li>StandardAuthor → AuthorDTO (with affiliation normalization)
- *   <li>StandardJournal → JournalDTO (journal metadata)
+ *   <li>StandardLiterature → LiteratureDTO (目录外部 API 格式)
+ *   <li>StandardAuthor → AuthorDTO (带关联归一化)
+ *   <li>StandardJournal → JournalDTO (期刊元数据)
  * </ul>
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface LiteratureConverter {
 
   /**
-   * Converts domain StandardLiterature to catalog LiteratureDTO.
+   * 将领域 StandardLiterature 转换为目录 LiteratureDTO。
    *
-   * @param source domain literature model
-   * @return catalog API DTO
+   * @param source 领域文献模型
+   * @return 目录 API DTO
    */
   @Mapping(target = "authors", source = "authors", qualifiedByName = "mapAuthors")
   @Mapping(target = "journal", source = "journal", qualifiedByName = "mapJournal")
@@ -46,18 +43,18 @@ public interface LiteratureConverter {
   LiteratureDTO toDto(StandardLiterature source);
 
   /**
-   * Converts a list of StandardLiterature to LiteratureDTO list.
+   * 将 StandardLiterature 列表转换为 LiteratureDTO 列表。
    *
-   * @param sources domain literature list
-   * @return catalog API DTO list
+   * @param sources 领域文献列表
+   * @return 目录 API DTO 列表
    */
   List<LiteratureDTO> toDto(List<StandardLiterature> sources);
 
   /**
-   * Maps domain authors to catalog AuthorDTO.
+   * 将领域作者映射为目录 AuthorDTO。
    *
-   * @param authors domain author list
-   * @return catalog author DTO list
+   * @param authors 领域作者列表
+   * @return 目录作者 DTO 列表
    */
   @Named("mapAuthors")
   default List<AuthorDTO> mapAuthors(List<StandardAuthor> authors) {
@@ -79,10 +76,10 @@ public interface LiteratureConverter {
   }
 
   /**
-   * Maps domain journal to catalog JournalDTO.
+   * 将领域期刊映射为目录 JournalDTO。
    *
-   * @param journal domain journal
-   * @return catalog journal DTO or null
+   * @param journal 领域期刊
+   * @return 目录期刊 DTO 或 null
    */
   @Named("mapJournal")
   default JournalDTO mapJournal(StandardJournal journal) {
@@ -99,10 +96,10 @@ public interface LiteratureConverter {
   }
 
   /**
-   * Resolves single affiliation string into list format.
+   * 将单个关联字符串解析为列表格式。
    *
-   * @param affiliation affiliation text
-   * @return affiliation list (empty if no text)
+   * @param affiliation 关联文本
+   * @return 关联列表 (如果无文本则为空)
    */
   default List<String> resolveAffiliations(String affiliation) {
     if (!StringUtils.hasText(affiliation)) {

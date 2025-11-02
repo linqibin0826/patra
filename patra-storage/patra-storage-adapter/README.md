@@ -1,66 +1,66 @@
 # patra-storage-adapter
 
-**Role**: Driving Adapters (Hexagonal Architecture - Adapter Layer)
+**角色**: 驱动适配器(六边形架构 - 适配器层)
 
-This module contains **ONLY driving adapters** that receive external triggers and translate them into use case invocations.
+本模块**仅包含驱动适配器**,用于接收外部触发并将其转换为用例调用。
 
-## Architectural Contract
+## 架构契约
 
-- **Direction**: External World → System
-- **Responsibility**: Receive external requests, validate input, delegate to application orchestrators
-- **Never**: Directly call external resources (databases, external APIs, object storage) - those belong in `patra-storage-infra`
+- **方向**: 外部世界 → 系统
+- **职责**: 接收外部请求、验证输入、委托给应用编排器
+- **禁止**: 直接调用外部资源(数据库、外部 API、对象存储) - 这些属于 `patra-storage-infra`
 
-## Module Separation
+## 模块分离
 
-In Papertrace's Hexagonal Architecture:
+在 Papertrace 的六边形架构中:
 
 ```
-patra-storage-adapter/     ← Driving Adapters (inbound, receive external triggers)
-patra-storage-infra/       ← Driven Adapters (outbound, access external resources)
+patra-storage-adapter/     ← 驱动适配器(入站,接收外部触发)
+patra-storage-infra/       ← 被驱动适配器(出站,访问外部资源)
 ```
 
-This module-level separation ensures clear boundaries between driving and driven adapters.
+这种模块级分离确保驱动适配器和被驱动适配器之间的清晰边界。
 
-## Package Organization
+## 包组织
 
 ```
 adapter/
-└── rest/                 - REST API endpoints
-    └── internal/         - Internal microservice-to-microservice APIs
+└── rest/                 - REST API 端点
+    └── internal/         - 微服务间内部 API
         └── StorageEndpointImpl.java
 ```
 
-### API Audience Organization
+### API 受众组织
 
-The `rest/` package can be organized by API audience:
-- **`internal/`**: Microservice-to-microservice communication (Feign clients)
-- **`public/`**: External-facing public APIs (future)
+`rest/` 包可按 API 受众组织:
+- **`internal/`**: 微服务间通信(Feign 客户端)
+- **`public/`**: 面向外部的公共 API(未来)
 
-This organization clarifies the intended consumers of each API.
+这种组织方式清楚地说明了每个 API 的预期消费者。
 
-## Naming Conventions
+## 命名约定
 
-- **Controllers**: `*EndpointImpl` (REST endpoint implementations)
+- **控制器**: `*EndpointImpl`(REST 端点实现)
 
-## Driven Adapters (Outbound)
+## 被驱动适配器(出站)
 
-ALL driven adapters belong in `patra-storage-infra`, including:
-- Database access → `infra/repository/`
-- Object storage (S3/MinIO) → `infra/storage/`
-- External service clients → `infra/integration/`
+所有被驱动适配器都属于 `patra-storage-infra`,包括:
+- 数据库访问 → `infra/repository/`
+- 对象存储(S3/MinIO) → `infra/storage/`
+- 外部服务客户端 → `infra/integration/`
 
-**Never add driven adapters to this module.**
+**切勿向本模块添加被驱动适配器。**
 
-## Related Documentation
+## 相关文档
 
-- Architecture: `/docs/ARCHITECTURE.md`
-- Development Guide: `/docs/DEV-GUIDE.md`
-- Agent Guidelines: `/.claude/AGENTS-architecture.md`
+- 架构: `/docs/ARCHITECTURE.md`
+- 开发指南: `/docs/DEV-GUIDE.md`
+- Agent 指南: `/.claude/AGENTS-architecture.md`
 
-## Author
+## 作者
 
 linqibin
 
-## Since
+## 起始版本
 
 0.1.0

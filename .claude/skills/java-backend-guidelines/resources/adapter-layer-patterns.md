@@ -1,53 +1,53 @@
-# Adapter Layer Patterns
+# 适配器层模式
 
-**Purpose**: Driving adapters receive external triggers (HTTP, Jobs, MQ) and delegate to Application layer orchestrators.
-
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [XXL-Job Pattern](#xxl-job-pattern)
-3. [Key Principles](#key-principles)
-4. [Anti-Patterns](#anti-patterns)
-5. [Best Practices](#best-practices)
+**目的**: 驱动适配器接收外部触发(HTTP、作业、MQ)并委托给应用层编排者。
 
 ---
 
-## Overview
+## 目录
 
-### Adapter Layer Responsibilities
-
-The **Adapter Layer** (Driving Adapters) handles external triggers and translates them to Application layer calls.
-
-**✅ Adapter Layer SHOULD:**
-- Receive external requests (HTTP, Job, MQ)
-- Parse/validate input parameters
-- Delegate to Use Case orchestrators
-- Map domain results to adapter-specific responses
-- Handle adapter-specific error reporting
-
-**❌ Adapter Layer SHOULD NOT:**
-- Contain business logic
-- Access domain repositories directly
-- Call infrastructure layer directly
-- Implement retry logic (delegate to orchestrators)
+1. [概览](#概览)
+2. [XXL-Job 模式](#xxl-job-模式)
+3. [核心原则](#核心原则)
+4. [反模式](#反模式)
+5. [最佳实践](#最佳实践)
 
 ---
 
-## XXL-Job Pattern
+## 概览
 
-### Overview
+### 适配器层职责
 
-Papertrace uses **XXL-Job** for distributed scheduled tasks. The adapter layer provides job entry points.
+**适配器层**(驱动适配器)处理外部触发并将其转换为应用层调用。
 
-### Pattern: Template Method (Abstract Base Job)
+**✅ 适配器层应该:**
+- 接收外部请求(HTTP、作业、MQ)
+- 解析/验证输入参数
+- 委托给用例编排者
+- 将领域结果映射到适配器特定响应
+- 处理适配器特定错误报告
 
-**Problem**: Multiple jobs share common logic (param parsing, error handling, metrics)
+**❌ 适配器层不应该:**
+- 包含业务逻辑
+- 直接访问领域仓储
+- 直接调用基础设施层
+- 实现重试逻辑(委托给编排者)
 
-**Solution**: Extract common logic into abstract base class
+---
 
-**File**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/AbstractProvenanceScheduleJob.java`
+## XXL-Job 模式
+
+### 概览
+
+Papertrace 使用 **XXL-Job** 进行分布式定时任务。适配器层提供作业入口点。
+
+### 模式: 模板方法(抽象基础作业)
+
+**问题**: 多个作业共享通用逻辑(参数解析、错误处理、指标)
+
+**解决方案**: 将通用逻辑提取到抽象基类
+
+**文件**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/AbstractProvenanceScheduleJob.java`
 
 ```java
 @Slf4j
@@ -56,29 +56,29 @@ public abstract class AbstractProvenanceScheduleJob {
   @Autowired private PlanIngestionUseCase planIngestionUseCase;
   @Autowired private ObjectMapper objectMapper;
 
-  // ✅ Template method: subclasses provide provenance/operation
+  // ✅ 模板方法: 子类提供来源/操作
   protected abstract ProvenanceCode getProvenanceCode();
   protected abstract OperationCode getOperationCode();
 
   /**
-   * Common job execution flow: parse params → call orchestrator → report result
+   * 通用作业执行流程: 解析参数 → 调用编排者 → 报告结果
    */
   protected void executeScheduleJob(String paramStr) {
     long startTime = System.currentTimeMillis();
 
     try {
-      // ✅ Parse XXL-Job JSON parameters
+      // ✅ 解析 XXL-Job JSON 参数
       PlanIngestionCommand command = parseJobParam(paramStr);
 
-      // ✅ Delegate to orchestrator
+      // ✅ 委托给编排者
       PlanIngestionResult result = planIngestionUseCase.ingestPlan(command);
 
-      // ✅ Report success to XXL-Job
+      // ✅ 向 XXL-Job 报告成功
       handleJobSuccess(result, startTime);
     } catch (Exception e) {
-      // ✅ Report failure to XXL-Job
+      // ✅ 向 XXL-Job 报告失败
       handleJobFailure(e, startTime);
-      throw e;  // Let XXL-Job handle retry
+      throw e;  // 让 XXL-Job 处理重试
     }
   }
 
@@ -97,7 +97,7 @@ public abstract class AbstractProvenanceScheduleJob {
         TriggerType.SCHEDULE,
         Scheduler.XXL,
         String.valueOf(XxlJobHelper.getJobId()),
-        // ... other fields
+        // ... 其他字段
     );
   }
 
@@ -105,108 +105,108 @@ public abstract class AbstractProvenanceScheduleJob {
     long elapsed = System.currentTimeMillis() - startTime;
 
     log.info(
-        "Job completed: provenance={} operation={} planId={} costMs={}",
+        "作业完成: provenance={} operation={} planId={} costMs={}",
         getProvenanceCode(), getOperationCode(), result.planId(), elapsed);
 
-    // ✅ Report to XXL-Job console
+    // ✅ 报告到 XXL-Job 控制台
     XxlJobHelper.handleSuccess(
-        String.format("Plan created: planId=%d, slices=%d", result.planId(), result.sliceCount()));
+        String.format("创建计划: planId=%d, slices=%d", result.planId(), result.sliceCount()));
   }
 
   private void handleJobFailure(Exception e, long startTime) {
     long elapsed = System.currentTimeMillis() - startTime;
 
     log.error(
-        "Job failed: provenance={} operation={} error={} costMs={}",
+        "作业失败: provenance={} operation={} error={} costMs={}",
         getProvenanceCode(), getOperationCode(), e.getMessage(), elapsed, e);
 
-    // ✅ Report to XXL-Job console
-    XxlJobHelper.handleFail("Job failed: " + e.getMessage());
+    // ✅ 报告到 XXL-Job 控制台
+    XxlJobHelper.handleFail("作业失败: " + e.getMessage());
   }
 }
 ```
 
-### Concrete Job Implementation
+### 具体作业实现
 
-**File**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/PubmedHarvestJob.java`
+**文件**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/PubmedHarvestJob.java`
 
 ```java
 @Slf4j
 @Component
 public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
 
-  // ✅ Declare fixed provenance
+  // ✅ 声明固定来源
   @Override
   protected ProvenanceCode getProvenanceCode() {
     return ProvenanceCode.PUBMED;
   }
 
-  // ✅ Declare fixed operation
+  // ✅ 声明固定操作
   @Override
   protected OperationCode getOperationCode() {
     return OperationCode.HARVEST;
   }
 
   /**
-   * XXL-Job entrypoint: fetch param and delegate to base class
+   * XXL-Job 入口点: 获取参数并委托给基类
    */
   @XxlJob("pubmedHarvest")
   public void run() {
     String jobParam = XxlJobHelper.getJobParam();
-    log.debug("PubMed harvest job triggered with param: {}", jobParam);
+    log.debug("PubMed 采集作业触发,参数: {}", jobParam);
 
-    // ✅ Delegate to template method
+    // ✅ 委托给模板方法
     executeScheduleJob(jobParam);
   }
 }
 ```
 
-**Benefits:**
-- ✅ Each concrete job is ~20 lines (minimal boilerplate)
-- ✅ Consistent error handling across all jobs
-- ✅ Easy to add new provenance/operation jobs
-- ✅ Testable (inject mock orchestrator in base class)
+**优势:**
+- ✅ 每个具体作业约20行(最少样板代码)
+- ✅ 所有作业间一致的错误处理
+- ✅ 易于添加新的来源/操作作业
+- ✅ 可测试(在基类中注入模拟编排者)
 
 ---
 
-## Key Principles
+## 核心原则
 
-### 1. Thin Adapter, Delegate to Orchestrator
+### 1. 薄适配器,委托给编排者
 
 ```java
-// ✅ GOOD: Adapter delegates immediately
+// ✅ 良好: 适配器立即委托
 @XxlJob("outboxRelay")
 public void execute() {
   OutboxRelayJobParam param = parseParam(XxlJobHelper.getJobParam());
 
   OutboxRelayCommand command = buildCommand(param, Instant.now());
 
-  // ✅ Delegate to orchestrator
+  // ✅ 委托给编排者
   RelayReport report = relayUseCase.relay(command);
 
-  // ✅ Report statistics
+  // ✅ 报告统计
   XxlJobHelper.handleSuccess(formatReport(report));
 }
 ```
 
 ```java
-// ❌ BAD: Business logic in adapter
+// ❌ 错误: 适配器中的业务逻辑
 @XxlJob("outboxRelay")
 public void execute() {
-  List<OutboxMessage> messages = outboxRepository.fetchPending(...);  // ❌ Direct repo access
+  List<OutboxMessage> messages = outboxRepository.fetchPending(...);  // ❌ 直接仓储访问
 
   for (OutboxMessage msg : messages) {
-    if (msg.getRetryCount() < 3) {  // ❌ Business rule in adapter
+    if (msg.getRetryCount() < 3) {  // ❌ 适配器中的业务规则
       publisher.publish(msg);
     }
   }
 }
 ```
 
-### 2. Parameter Parsing and Validation
+### 2. 参数解析和验证
 
 ```java
-// ✅ GOOD: Parse in adapter, validate in domain
+// ✅ 良好: 在适配器中解析,在领域中验证
 private OutboxRelayCommand buildCommand(OutboxRelayJobParam param, Instant now) {
   return new OutboxRelayCommand(
       resolveChannel(param.channel()),
@@ -215,7 +215,7 @@ private OutboxRelayCommand buildCommand(OutboxRelayJobParam param, Instant now) 
       parseDuration(param.leaseDuration()),
       param.maxAttempts(),
       parseDuration(param.initialBackoff()),
-      buildLeaseOwner()  // ✅ Adapter-specific (host+jobId+threadId)
+      buildLeaseOwner()  // ✅ 适配器特定(host+jobId+threadId)
   );
 }
 
@@ -226,61 +226,61 @@ private String buildLeaseOwner() {
 }
 ```
 
-### 3. Error Handling and Reporting
+### 3. 错误处理和报告
 
 ```java
-// ✅ GOOD: Report errors to scheduler
+// ✅ 良好: 向调度器报告错误
 try {
   RelayReport report = relayUseCase.relay(command);
   XxlJobHelper.handleSuccess(formatSuccessMessage(report));
 } catch (OutboxRelayExecutionException ex) {
-  log.error("Relay execution failed: {}", ex.getMessage(), ex);
-  XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
-  throw ex;  // ✅ Let XXL-Job retry policy decide
+  log.error("中继执行失败: {}", ex.getMessage(), ex);
+  XxlJobHelper.handleFail("中继失败: " + ex.getMessage());
+  throw ex;  // ✅ 让 XXL-Job 重试策略决定
 }
 ```
 
 ```java
-// ❌ BAD: Swallow exceptions
+// ❌ 错误: 吞掉异常
 try {
   relayUseCase.relay(command);
 } catch (Exception ex) {
-  log.error("Error: {}", ex.getMessage());
-  // ❌ No reporting to scheduler, job appears successful!
+  log.error("错误: {}", ex.getMessage());
+  // ❌ 不向调度器报告,作业看起来成功了!
 }
 ```
 
-### 4. Idempotent Job Execution
+### 4. 幂等作业执行
 
 ```java
-// ✅ GOOD: Generate unique lease owner per execution
+// ✅ 良好: 每次执行生成唯一租约拥有者
 private String buildLeaseOwner() {
-  // host-jobId-threadId-uuid ensures uniqueness
+  // host-jobId-threadId-uuid 确保唯一性
   String host = NetUtil.getLocalHostName();
   return host + '-' + XxlJobHelper.getJobId() + '-'
       + Thread.currentThread().threadId() + '-' + IdUtil.fastSimpleUUID();
 }
 ```
 
-**Why:**
-- Multiple job instances might run concurrently
-- Lease owner identifies which instance owns a message
-- UUID prevents collision if job restarts quickly
+**原因:**
+- 多个作业实例可能并发运行
+- 租约拥有者标识哪个实例拥有消息
+- UUID 防止作业快速重启时冲突
 
 ---
 
-## Anti-Patterns
+## 反模式
 
-### ❌ Business Logic in Adapter
+### ❌ 适配器中的业务逻辑
 
 ```java
-// ❌ BAD: Adapter contains business rules
+// ❌ 错误: 适配器包含业务规则
 @XxlJob("taskExecution")
 public void execute() {
   List<Task> tasks = taskRepository.findReady();
 
   for (Task task : tasks) {
-    // ❌ Business logic: retry calculation, status validation
+    // ❌ 业务逻辑: 重试计算、状态验证
     if (task.getRetryCount() < 3 && task.getStatus() == TaskStatus.PENDING) {
       taskExecutor.execute(task);
       task.setStatus(TaskStatus.RUNNING);
@@ -291,131 +291,131 @@ public void execute() {
 ```
 
 ```java
-// ✅ GOOD: Delegate to orchestrator
+// ✅ 良好: 委托给编排者
 @XxlJob("taskExecution")
 public void execute() {
   TaskExecutionCommand command = parseCommand(XxlJobHelper.getJobParam());
 
-  // ✅ Orchestrator handles all business logic
+  // ✅ 编排者处理所有业务逻辑
   TaskExecutionResult result = taskExecutionUseCase.execute(command);
 
   XxlJobHelper.handleSuccess(formatResult(result));
 }
 ```
 
-### ❌ Direct Repository Access
+### ❌ 直接仓储访问
 
 ```java
-// ❌ BAD: Adapter bypasses Application layer
+// ❌ 错误: 适配器绕过应用层
 @XxlJob("cleanupOldData")
 public void execute() {
   Instant cutoff = Instant.now().minus(Duration.ofDays(90));
 
-  // ❌ Direct access to Infrastructure layer
+  // ❌ 直接访问基础设施层
   outboxRepository.deleteOlderThan(cutoff);
   taskRepository.deleteOlderThan(cutoff);
 }
 ```
 
 ```java
-// ✅ GOOD: Use cleanup orchestrator
+// ✅ 良好: 使用清理编排者
 @XxlJob("cleanupOldData")
 public void execute() {
   CleanupCommand command = new CleanupCommand(
       Instant.now().minus(Duration.ofDays(90)));
 
-  // ✅ Orchestrator coordinates cleanup across aggregates
+  // ✅ 编排者协调跨聚合的清理
   CleanupResult result = cleanupUseCase.cleanup(command);
 
   XxlJobHelper.handleSuccess(
-      String.format("Cleaned %d outbox, %d tasks",
+      String.format("已清理 %d 个 outbox, %d 个任务",
           result.outboxDeleted(), result.tasksDeleted()));
 }
 ```
 
-### ❌ Missing Error Reporting
+### ❌ 缺少错误报告
 
 ```java
-// ❌ BAD: No error reporting to scheduler
+// ❌ 错误: 不向调度器报告错误
 @XxlJob("importData")
 public void execute() {
   try {
     importUseCase.importData(...);
   } catch (Exception ex) {
-    log.error("Import failed", ex);
-    // ❌ XXL-Job thinks job succeeded!
+    log.error("导入失败", ex);
+    // ❌ XXL-Job 认为作业成功了!
   }
 }
 ```
 
 ```java
-// ✅ GOOD: Report errors properly
+// ✅ 良好: 正确报告错误
 @XxlJob("importData")
 public void execute() {
   try {
     ImportResult result = importUseCase.importData(...);
-    XxlJobHelper.handleSuccess("Imported: " + result.count());
+    XxlJobHelper.handleSuccess("已导入: " + result.count());
   } catch (Exception ex) {
-    log.error("Import failed", ex);
-    XxlJobHelper.handleFail("Import failed: " + ex.getMessage());
-    throw ex;  // ✅ Let XXL-Job retry
+    log.error("导入失败", ex);
+    XxlJobHelper.handleFail("导入失败: " + ex.getMessage());
+    throw ex;  // ✅ 让 XXL-Job 重试
   }
 }
 ```
 
 ---
 
-## Best Practices
+## 最佳实践
 
-### ✅ DO
+### ✅ 应该
 
-| Practice | Reason |
+| 实践 | 原因 |
 |----------|--------|
-| **Delegate to orchestrators** | Keep adapters thin, business logic in Application layer |
-| **Parse parameters in adapter** | Adapter-specific format (JSON, env vars, etc.) |
-| **Report to scheduler** | Use `XxlJobHelper.handleSuccess/Fail()` for visibility |
-| **Use template pattern** | Extract common logic into abstract base class |
-| **Generate unique identifiers** | Lease owner, trace ID for distributed coordination |
-| **Log job lifecycle** | Start, success, failure with timing metrics |
+| **委托给编排者** | 保持适配器薄,业务逻辑在应用层 |
+| **在适配器中解析参数** | 适配器特定格式(JSON、环境变量等) |
+| **向调度器报告** | 使用 `XxlJobHelper.handleSuccess/Fail()` 提高可见性 |
+| **使用模板模式** | 将通用逻辑提取到抽象基类 |
+| **生成唯一标识符** | 租约拥有者、跟踪ID用于分布式协调 |
+| **记录作业生命周期** | 启动、成功、失败及时间指标 |
 
-### ❌ DON'T
+### ❌ 不应该
 
-| Anti-pattern | Problem |
+| 反模式 | 问题 |
 |--------------|---------|
-| **Business logic in adapter** | Violates layered architecture, hard to test |
-| **Direct repository access** | Bypasses transaction boundaries and business rules |
-| **Swallow exceptions** | Scheduler can't detect failures, no retry |
-| **Hardcode configuration** | Use Nacos/env vars for flexibility |
-| **Skip parameter validation** | Fail fast on invalid input |
+| **适配器中的业务逻辑** | 违反分层架构,难以测试 |
+| **直接仓储访问** | 绕过事务边界和业务规则 |
+| **吞掉异常** | 调度器无法检测失败,无重试 |
+| **硬编码配置** | 使用 Nacos/环境变量以提高灵活性 |
+| **跳过参数验证** | 在无效输入时快速失败 |
 
-### Configuration Best Practices
+### 配置最佳实践
 
 ```java
-// ✅ GOOD: Externalize configuration
+// ✅ 良好: 外部化配置
 @Component
 @RequiredArgsConstructor
 public class OutboxRelayJob {
 
-  private final OutboxRelayProperties properties;  // ✅ From Nacos
+  private final OutboxRelayProperties properties;  // ✅ 来自 Nacos
   private final OutboxRelayUseCase relayUseCase;
 
   @XxlJob("outboxRelay")
   public void execute() {
-    // ✅ Check feature toggle
+    // ✅ 检查功能开关
     if (!properties.isEnabled()) {
-      log.info("Outbox relay disabled, skip execution");
-      XxlJobHelper.handleSuccess("Relay disabled");
+      log.info("Outbox 中继已禁用,跳过执行");
+      XxlJobHelper.handleSuccess("中继已禁用");
       return;
     }
 
-    // ✅ Use configured values
+    // ✅ 使用配置值
     OutboxRelayCommand command = new OutboxRelayCommand(
-        /* channel */ null,  // All channels
+        /* channel */ null,  // 所有通道
         Instant.now(),
-        properties.getBatchSize(),        // ✅ From config
-        properties.getLeaseDuration(),    // ✅ From config
-        properties.getMaxAttempts(),      // ✅ From config
-        properties.getInitialBackoff(),   // ✅ From config
+        properties.getBatchSize(),        // ✅ 来自配置
+        properties.getLeaseDuration(),    // ✅ 来自配置
+        properties.getMaxAttempts(),      // ✅ 来自配置
+        properties.getInitialBackoff(),   // ✅ 来自配置
         buildLeaseOwner()
     );
 
@@ -425,10 +425,10 @@ public class OutboxRelayJob {
 }
 ```
 
-### Testing Jobs
+### 测试作业
 
 ```java
-// ✅ GOOD: Test base class with mock orchestrator
+// ✅ 良好: 使用模拟编排者测试基类
 @ExtendWith(MockitoExtension.class)
 class AbstractProvenanceScheduleJobTest {
 
@@ -464,13 +464,13 @@ class AbstractProvenanceScheduleJobTest {
   @Test
   void should_handle_orchestrator_exception() {
     // Given
-    when(mockUseCase.ingestPlan(any())).thenThrow(new RuntimeException("Test error"));
+    when(mockUseCase.ingestPlan(any())).thenThrow(new RuntimeException("测试错误"));
 
     // When/Then
     assertThrows(RuntimeException.class, () -> job.executeScheduleJob("{}"));
   }
 
-  // Test job for testing abstract base
+  // 用于测试抽象基类的测试作业
   private static class TestJob extends AbstractProvenanceScheduleJob {
     @Override protected ProvenanceCode getProvenanceCode() { return ProvenanceCode.PUBMED; }
     @Override protected OperationCode getOperationCode() { return OperationCode.HARVEST; }
@@ -480,11 +480,11 @@ class AbstractProvenanceScheduleJobTest {
 
 ---
 
-**Related Files:**
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Application layer orchestration
-- [architecture-overview.md](architecture-overview.md) - Hexagonal Architecture overview
-- [outbox-pattern.md](outbox-pattern.md) - OutboxRelayJob implementation details
+**相关文件:**
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 应用层编排
+- [architecture-overview.md](architecture-overview.md) - 六边形架构概览
+- [outbox-pattern.md](outbox-pattern.md) - OutboxRelayJob 实现细节
 
 ---
 
-**📝 Status**: ✅ **COMPLETE** - Comprehensive guide to Adapter Layer patterns from patra-ingest with XXL-Job examples.
+**📝 状态**: ✅ **完成** - 来自 patra-ingest 的适配器层模式综合指南,包含 XXL-Job 示例。

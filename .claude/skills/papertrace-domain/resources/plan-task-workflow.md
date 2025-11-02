@@ -1,14 +1,14 @@
-# Plan/Task Workflow and Lifecycle
+# Plan/Task 工作流与生命周期
 
-## Overview
+## 概览
 
-This document describes the complete lifecycle of **ScheduleInstance → Plan → PlanSlice → Task → TaskRun** in Papertrace, based on actual database schema and code implementation.
+本文档描述了 Papertrace 中 **ScheduleInstance → Plan → PlanSlice → Task → TaskRun** 的完整生命周期，基于实际的数据库模式和代码实现。
 
-**Key Architecture**:
-- **4-Layer Hierarchy**: ScheduleInstance → Plan → PlanSlice → Task (1:1:1)
-- **PlanSlice as Parallelism Unit**: Each slice becomes exactly one task
-- **Outbox Pattern**: Task dispatch via transactional outbox
-- **Lease-Based Execution**: Distributed task locking mechanism
+**核心架构**：
+- **四层层次结构**：ScheduleInstance → Plan → PlanSlice → Task（1:1:1）
+- **PlanSlice 作为并行单元**：每个切片恰好对应一个任务
+- **Outbox 模式**：通过事务性 outbox 进行任务分发
+- **基于租约的执行**：分布式任务锁定机制
 
 ---
 
@@ -38,7 +38,7 @@ UNIQUE KEY uk_task_slice(slice_id)  -- ONE task per slice
 
 ## ScheduleInstance Lifecycle
 
-### Purpose
+### 目的
 External trigger event that initiates plan creation (e.g., scheduler, manual trigger, webhook).
 
 ### Table Schema
@@ -64,7 +64,7 @@ TRIGGERED → COMPLETED (all plans succeeded)
 
 ## Plan Lifecycle
 
-### Purpose
+### 目的
 Orchestration blueprint containing expression prototype, config snapshot, window spec, and slicing strategy.
 
 ### Table Schema
@@ -113,7 +113,7 @@ planKey = String.format("%s:%s:%d-%d",
 
 ## PlanSlice Lifecycle (CRITICAL - Previously Missing)
 
-### Purpose
+### 目的
 Parallelism unit representing a time/ID slice of the plan window. Each slice becomes exactly ONE task.
 
 ### Table Schema
@@ -180,7 +180,7 @@ slice.setExprHash(exprHash);
 
 ## Task Lifecycle
 
-### Purpose
+### 目的
 Executable unit representing one plan slice. Managed via lease-based distributed execution.
 
 ### Table Schema
@@ -267,7 +267,7 @@ WHERE id = ? AND lease_owner = ?;
 
 ## TaskRun Lifecycle
 
-### Purpose
+### 目的
 Represents one execution attempt of a task (supports retries).
 
 ### Table Schema
@@ -306,7 +306,7 @@ PENDING → RUNNING → PARTIAL (paginating)
 
 ## TaskRunBatch Lifecycle
 
-### Purpose
+### 目的
 Represents one pagination batch within a task run.
 
 ### Table Schema
@@ -454,7 +454,7 @@ return new PlanAssemblyResult(plan, slices, tasks);
 
 ## Outbox Pattern (Task Dispatch)
 
-### Purpose
+### 目的
 Transactional event publishing for task dispatch to message queue.
 
 ### Table Schema

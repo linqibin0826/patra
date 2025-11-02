@@ -1,10 +1,10 @@
-# Testing Guide (Unit, Integration, ArchUnit)
+# 测试指南（单元测试、集成测试、ArchUnit）
 
-Complete testing reference for Hexagonal Architecture + DDD with Spring Boot. Teaches AI and developers how to identify code patterns and generate correct tests.
+六边形架构 + DDD 与 Spring Boot 的完整测试参考。教授 AI 和开发者如何识别代码模式并生成正确的测试。
 
 ---
 
-## Table of Contents
+## 目录
 
 1. [Overview & Testing Pyramid](#overview--testing-pyramid)
 2. [Testing Pattern Recognition](#testing-pattern-recognition) ⭐
@@ -32,13 +32,13 @@ Complete testing reference for Hexagonal Architecture + DDD with Spring Boot. Te
 
 ---
 
-## Overview & Testing Pyramid
+## 概览 & Testing Pyramid
 
 Papertrace follows the **Testing Pyramid** approach: many fast unit tests, fewer integration tests, and minimal end-to-end tests. Tests are organized by layer (Domain, Application, Infrastructure, Adapter) to match Hexagonal Architecture.
 
 **Core Principle**: Test each layer in isolation with appropriate test doubles (mocks, stubs, test containers).
 
-### Testing Pyramid
+### 测试 Pyramid
 
 ```
          /\
@@ -110,7 +110,7 @@ patra-{service}/
 
 ## Testing Pattern Recognition
 
-**Purpose**: Help AI identify code patterns and apply correct testing strategies.
+**目的**: Help AI identify code patterns and apply correct testing strategies.
 
 ### Code Pattern → Test Strategy Mapping
 
@@ -201,9 +201,9 @@ Code calls multiple Coordinators?
 
 ---
 
-## Domain Layer Testing
+## 领域层 Testing
 
-**Purpose**: Test **business logic** and **business rules** in isolation. No Spring, no database, no mocks needed.
+**目的**: Test **business logic** and **business rules** in isolation. No Spring, no database, no mocks needed.
 
 ### Characteristics
 
@@ -512,9 +512,9 @@ class SliceStatusCalculatorTest {
 
 ---
 
-## Application Layer Testing
+## 应用层 Testing
 
-**Purpose**: Test **orchestration logic** without database or external dependencies.
+**目的**: Test **orchestration logic** without database or external dependencies.
 
 ### Characteristics
 
@@ -641,7 +641,7 @@ class PlanIngestionOrchestratorTest {
 
 Test **concern-specific coordination** in isolation from orchestrators.
 
-#### Purpose
+#### 目的
 
 Coordinators handle single concerns (persistence, event publishing, validation). Test them independently with mocked dependencies.
 
@@ -747,7 +747,7 @@ class PlanPersistenceCoordinatorTest {
 
 Test **domain event handlers** with Spring context and event publishing verification.
 
-#### Purpose
+#### 目的
 
 Event handlers (@TransactionalEventListener) react to domain events. They require special testing considerations:
 - AFTER_COMMIT phase verification
@@ -944,9 +944,9 @@ class SliceStatusChangedEventHandlerTest {
 
 ---
 
-## Infrastructure Layer Testing
+## 基础设施层 Testing
 
-**Purpose**: Test **database interactions** and **repository implementations** with a real database.
+**目的**: Test **database interactions** and **repository implementations** with a real database.
 
 ### Characteristics
 
@@ -1123,7 +1123,7 @@ public abstract class BaseIntegrationTest {
 
 Test **MapStruct converters** for Domain ↔ DO (Data Object) mapping.
 
-#### Purpose
+#### 目的
 
 Converters translate between domain models and database entities. Test bidirectional mapping correctness, null handling, and complex mappings.
 
@@ -1238,9 +1238,9 @@ class ProvenanceConverterTest {
 
 ---
 
-## Adapter Layer Testing
+## 适配器层 Testing
 
-**Purpose**: Test **adapters** (REST controllers, scheduled jobs) without full application context.
+**目的**: Test **adapters** (REST controllers, scheduled jobs) without full application context.
 
 ### Characteristics
 
@@ -1354,7 +1354,7 @@ class ProvenanceControllerTest {
 
 Test **scheduled jobs** with mocked XxlJobHelper.
 
-#### Purpose
+#### 目的
 
 XXL-Job methods require special testing: mock XxlJobHelper for parameter parsing and job execution flow.
 
@@ -1467,7 +1467,7 @@ class PubmedHarvestJobTest {
 
 ## Integration Testing Patterns
 
-**Purpose**: Test **end-to-end workflows** with real database and event propagation.
+**目的**: Test **end-to-end workflows** with real database and event propagation.
 
 ### Characteristics
 
@@ -1482,7 +1482,7 @@ class PubmedHarvestJobTest {
 
 Test **end-to-end event propagation** through multiple aggregates.
 
-#### Purpose
+#### 目的
 
 Verify that domain events propagate correctly through the system (Task → Slice → Plan).
 
@@ -1642,7 +1642,7 @@ class TaskToSliceEventChainIntegrationTest {
 
 Test **transactional outbox** for reliable event publishing.
 
-#### Purpose
+#### 目的
 
 Verify that business data and outbox messages are saved atomically, and relay mechanism works correctly.
 
@@ -1868,7 +1868,7 @@ class ConcurrencyTest {
 
 ## Test Data Management
 
-**Purpose**: Manage test data creation and isolation efficiently.
+**目的**: Manage test data creation and isolation efficiently.
 
 ### Test Data Builder Pattern
 
@@ -2020,7 +2020,7 @@ class MyIntegrationTest {
 
 ## Test Coverage Strategy
 
-**Purpose**: Define coverage targets and measurement strategies.
+**目的**: Define coverage targets and measurement strategies.
 
 ### JaCoCo Configuration
 
@@ -2279,7 +2279,7 @@ void shouldPropagateStatusUpdates() {
 
 ## Testing Checklists & Quick Reference
 
-**Purpose**: Fast decision-making for AI when generating tests.
+**目的**: Fast decision-making for AI when generating tests.
 
 ### Checklist: Testing an Orchestrator
 

@@ -1,30 +1,30 @@
-# Dependency Rules & ArchUnit Validation
+# 依赖规则与 ArchUnit 验证
 
-## Overview
+## 概览
 
-ArchUnit is a Java library that validates architectural rules at compile/test time. Papertrace uses ArchUnit to enforce Hexagonal Architecture + DDD boundaries and prevent architectural drift.
+ArchUnit 是一个 Java 库,用于在编译/测试时验证架构规则。Papertrace 使用 ArchUnit 强制执行六边形架构 + DDD 边界,防止架构漂移。
 
 ---
 
-## Core Dependency Rules
+## 核心依赖规则
 
-### Rule 1: Domain Layer Independence
+### 规则 1: 领域层独立性
 
-**Rule**: Domain layer must NOT depend on any infrastructure or framework code.
+**规则**: 领域层不得依赖任何基础设施或框架代码。
 
-**Allowed Dependencies**:
-- ✅ `java.*` (core Java)
-- ✅ `patra-common` (shared utilities)
-- ✅ `lombok.*` (compile-time code generation)
-- ✅ `cn.hutool.*` (Hutool utilities)
-- ✅ `com.fasterxml.jackson.*` (for JSON serialization in domain events/snapshots)
+**允许的依赖**:
+- ✅ `java.*` (核心 Java)
+- ✅ `patra-common` (共享工具)
+- ✅ `lombok.*` (编译时代码生成)
+- ✅ `cn.hutool.*` (Hutool 工具)
+- ✅ `com.fasterxml.jackson.*` (用于领域事件/快照的 JSON 序列化)
 
-**Forbidden Dependencies**:
+**禁止的依赖**:
 - ❌ `org.springframework.*`
 - ❌ `com.baomidou.mybatisplus.*`
 - ❌ `jakarta.persistence.*`
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -41,25 +41,25 @@ static final ArchRule domainLayerIsIndependent =
                 "..domain.."
             )
         )
-        .because("Domain layer must be framework-agnostic");
+        .because("领域层必须框架无关");
 ```
 
-**Example Violation**:
+**违规示例**:
 ```java
-// ❌ BAD: Spring annotation in domain
+// ❌ 错误: 在领域中使用 Spring 注解
 package com.patra.registry.domain.model.vo.provenance;
 
-import org.springframework.stereotype.Component;  // ← Violation!
+import org.springframework.stereotype.Component;  // ← 违规!
 
-@Component  // ← Violation!
+@Component  // ← 违规!
 public record Provenance(...) {
     // ...
 }
 ```
 
-**Fix**:
+**修复**:
 ```java
-// ✅ GOOD: Pure Java record
+// ✅ 正确: 纯 Java record
 package com.patra.registry.domain.model.vo.provenance;
 
 public record Provenance(
@@ -72,24 +72,24 @@ public record Provenance(
     boolean active,
     String lifecycleStatusCode
 ) {
-    // Pure business logic, no framework dependencies
+    // 纯业务逻辑,无框架依赖
 }
 ```
 
 ---
 
-### Rule 2: Dependency Direction (Hexagonal Architecture)
+### 规则 2: 依赖方向 (六边形架构)
 
-**Rule**: Dependencies flow inward: Adapter → App → Domain ← Infra
+**规则**: 依赖向内流动: Adapter → App → Domain ← Infra
 
 ```
 adapter  →  app + api
 app      →  domain
 infra    →  domain
-domain   →  patra-common ONLY
+domain   →  仅 patra-common
 ```
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -105,7 +105,7 @@ static final ArchRule adapterDependsOnApp =
                 "java.."
             )
         )
-        .because("Adapter should only depend on App and Domain");
+        .because("适配器层应仅依赖应用层和领域层");
 
 @ArchTest
 static final ArchRule appDependsOnDomain =
@@ -119,7 +119,7 @@ static final ArchRule appDependsOnDomain =
                 "java.."
             )
         )
-        .because("App should only depend on Domain");
+        .because("应用层应仅依赖领域层");
 
 @ArchTest
 static final ArchRule infraDependsOnDomain =
@@ -134,16 +134,16 @@ static final ArchRule infraDependsOnDomain =
                 "java.."
             )
         )
-        .because("Infra should only depend on Domain");
+        .because("基础设施层应仅依赖领域层");
 ```
 
 ---
 
-### Rule 3: Port Interface Direction
+### 规则 3: 端口接口方向
 
-**Rule**: Domain defines ports (interfaces), Infrastructure implements them.
+**规则**: 领域定义端口(接口),基础设施实现它们。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -153,24 +153,24 @@ static final ArchRule portsDefinedInDomain =
         .or().haveSimpleNameEndingWith("Repository")
         .and().areInterfaces()
         .should().resideInAPackage("..domain.port..")
-        .because("Port interfaces must be defined in domain layer");
+        .because("端口接口必须在领域层定义");
 
 @ArchTest
 static final ArchRule portsImplementedInInfra =
     classes()
         .that().implement(DescribedPredicate.describe(
-            "Port interface",
+            "端口接口",
             clazz -> clazz.getSimpleName().endsWith("Port")
                   || clazz.getSimpleName().endsWith("Repository")
         ))
         .and().areNotInterfaces()
         .should().resideInAPackage("..infra..")
-        .because("Port implementations must be in infrastructure layer");
+        .because("端口实现必须在基础设施层");
 ```
 
-**Example**:
+**示例**:
 ```java
-// ✅ Port in domain
+// ✅ 领域中的端口
 package com.patra.ingest.domain.port;
 
 public interface PatraRegistryPort {
@@ -178,22 +178,22 @@ public interface PatraRegistryPort {
     String fetchExprSnapshot(String provenanceCode, String operationCode, Instant at);
 }
 
-// ✅ Implementation in infra
+// ✅ 基础设施中的实现
 package com.patra.ingest.infra.adapter.registry;
 
 @Component
 public class PatraRegistryAdapter implements PatraRegistryPort {
-    // Implementation using Feign client
+    // 使用 Feign 客户端的实现
 }
 ```
 
 ---
 
-### Rule 4: Layered Architecture Validation
+### 规则 4: 分层架构验证
 
-**Rule**: Enforce strict layer boundaries.
+**规则**: 强制执行严格的层边界。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
@@ -212,18 +212,18 @@ static final ArchRule layersAreRespected = layeredArchitecture()
     .whereLayer("Domain").mayOnlyBeAccessedByLayers("App", "Infra")
     .whereLayer("Infra").mayNotBeAccessedByAnyLayer()
 
-    .because("Layers must respect Hexagonal Architecture boundaries");
+    .because("层必须遵守六边形架构边界");
 ```
 
 ---
 
-## Naming Convention Rules
+## 命名约定规则
 
-### Rule 5: Orchestrator Naming
+### 规则 5: 编排者命名
 
-**Rule**: Application services must end with `Orchestrator`.
+**规则**: 应用服务必须以 `Orchestrator` 结尾。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -232,10 +232,10 @@ static final ArchRule orchestratorsAreNamedCorrectly =
         .that().resideInAPackage("..app..")
         .and().areAnnotatedWith(Service.class)
         .should().haveSimpleNameEndingWith("Orchestrator")
-        .because("Application services should be named *Orchestrator");
+        .because("应用服务应命名为 *Orchestrator");
 ```
 
-**Real Examples**:
+**实际示例**:
 - `PlanIngestionOrchestrator` (patra-ingest-app)
 - `ProvenanceConfigOrchestrator` (patra-registry-app)
 - `ExprQueryOrchestrator` (patra-registry-app)
@@ -243,43 +243,43 @@ static final ArchRule orchestratorsAreNamedCorrectly =
 
 ---
 
-### Rule 6: Repository Naming
+### 规则 6: 仓储命名
 
-**Rule**: Repository implementations must end with `RepositoryImpl` or `RepositoryMpImpl`.
+**规则**: 仓储实现必须以 `RepositoryImpl` 或 `RepositoryMpImpl` 结尾。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
 static final ArchRule repositoriesAreNamedCorrectly =
     classes()
         .that().implement(DescribedPredicate.describe(
-            "Repository interface",
+            "仓储接口",
             clazz -> clazz.getSimpleName().endsWith("Repository")
         ))
         .and().resideInAPackage("..infra..")
         .should().haveSimpleNameMatching(".*Repository(Impl|MpImpl)")
-        .because("Repository implementations should end with RepositoryImpl or RepositoryMpImpl");
+        .because("仓储实现应以 RepositoryImpl 或 RepositoryMpImpl 结尾");
 ```
 
 ---
 
-### Rule 7: DO (Data Object) Naming
+### 规则 7: DO (数据对象) 命名
 
-**Rule**: MyBatis-Plus entities must end with `DO`.
+**规则**: MyBatis-Plus 实体必须以 `DO` 结尾。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
 static final ArchRule dataObjectsAreNamedCorrectly =
     classes()
-        .that().areAnnotatedWith(TableName.class)  // MyBatis-Plus annotation
+        .that().areAnnotatedWith(TableName.class)  // MyBatis-Plus 注解
         .should().haveSimpleNameEndingWith("DO")
-        .because("MyBatis-Plus entities should end with DO");
+        .because("MyBatis-Plus 实体应以 DO 结尾");
 ```
 
-**Real Examples**:
+**实际示例**:
 - `PlanDO` → `@TableName("ing_plan")`
 - `PlanSliceDO` → `@TableName("ing_plan_slice")`
 - `TaskDO` → `@TableName("ing_task")`
@@ -288,13 +288,13 @@ static final ArchRule dataObjectsAreNamedCorrectly =
 
 ---
 
-## Anti-Patterns Detection
+## 反模式检测
 
-### Rule 8: No Cyclic Dependencies
+### 规则 8: 无循环依赖
 
-**Rule**: Prevent circular dependencies between packages.
+**规则**: 防止包之间的循环依赖。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -302,16 +302,16 @@ static final ArchRule noCyclesInPackages =
     slices()
         .matching("com.patra.(*)..")
         .should().beFreeOfCycles()
-        .because("Circular dependencies make code hard to understand and maintain");
+        .because("循环依赖使代码难以理解和维护");
 ```
 
 ---
 
-### Rule 9: No Field Injection
+### 规则 9: 禁止字段注入
 
-**Rule**: Use constructor injection, not field injection.
+**规则**: 使用构造器注入,而非字段注入。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -319,33 +319,33 @@ static final ArchRule noFieldInjection =
     noFields()
         .that().areDeclaredInClassesThat().resideInAPackage("com.patra..")
         .should().beAnnotatedWith(Autowired.class)
-        .because("Use constructor injection instead of field injection");
+        .because("使用构造器注入而非字段注入");
 ```
 
-**Example**:
+**示例**:
 ```java
-// ❌ BAD: Field injection
+// ❌ 错误: 字段注入
 @Service
 public class PlanIngestionOrchestrator {
-    @Autowired  // ← Violation!
+    @Autowired  // ← 违规!
     private PatraRegistryPort registryPort;
 }
 
-// ✅ GOOD: Constructor injection
+// ✅ 正确: 构造器注入
 @Service
-@RequiredArgsConstructor  // Lombok generates constructor
+@RequiredArgsConstructor  // Lombok 生成构造器
 public class PlanIngestionOrchestrator {
-    private final PatraRegistryPort registryPort;  // ← Injected via constructor
+    private final PatraRegistryPort registryPort;  // ← 通过构造器注入
 }
 ```
 
 ---
 
-### Rule 10: Repository Isolation
+### 规则 10: 仓储隔离
 
-**Rule**: Repositories should NOT be used directly in Adapter layer.
+**规则**: 仓储不应在适配器层直接使用。
 
-### ArchUnit Test
+### ArchUnit 测试
 
 ```java
 @ArchTest
@@ -353,14 +353,14 @@ static final ArchRule adapterDoesNotUseRepositories =
     noClasses()
         .that().resideInAPackage("..adapter..")
         .should().dependOnClassesThat().resideInAPackage("..infra..")
-        .because("Adapter should only use Application layer, not Infrastructure");
+        .because("适配器层应仅使用应用层,而非基础设施层");
 ```
 
 ---
 
-## Complete ArchUnit Test Class
+## 完整 ArchUnit 测试类
 
-**Location**: `patra-{service}-boot/src/test/java/architecture/ArchitectureTest.java`
+**位置**: `patra-{service}-boot/src/test/java/architecture/ArchitectureTest.java`
 
 ```java
 package com.patra.registry.architecture;
@@ -381,7 +381,7 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 @AnalyzeClasses(packages = "com.patra.registry")
 class ArchitectureTest {
 
-    // Domain Independence
+    // 领域独立性
     @ArchTest
     static final ArchRule domainLayerIsIndependent =
         classes()
@@ -397,7 +397,7 @@ class ArchitectureTest {
                 )
             );
 
-    // Layered Architecture
+    // 分层架构
     @ArchTest
     static final ArchRule layersAreRespected = layeredArchitecture()
         .consideringAllDependencies()
@@ -410,7 +410,7 @@ class ArchitectureTest {
         .whereLayer("Domain").mayOnlyBeAccessedByLayers("App", "Infra")
         .whereLayer("Infra").mayNotBeAccessedByAnyLayer();
 
-    // Naming Conventions
+    // 命名约定
     @ArchTest
     static final ArchRule orchestratorsAreNamedCorrectly =
         classes()
@@ -431,21 +431,21 @@ class ArchitectureTest {
             .that().areAnnotatedWith(TableName.class)
             .should().haveSimpleNameEndingWith("DO");
 
-    // No Cyclic Dependencies
+    // 无循环依赖
     @ArchTest
     static final ArchRule noCyclesInPackages =
         slices()
             .matching("com.patra.(*)..")
             .should().beFreeOfCycles();
 
-    // No Field Injection
+    // 禁止字段注入
     @ArchTest
     static final ArchRule noFieldInjection =
         noFields()
             .that().areDeclaredInClassesThat().resideInAPackage("com.patra..")
             .should().beAnnotatedWith(Autowired.class);
 
-    // Ports and Adapters
+    // 端口和适配器
     @ArchTest
     static final ArchRule portsDefinedInDomain =
         classes()
@@ -458,7 +458,7 @@ class ArchitectureTest {
     static final ArchRule portsImplementedInInfra =
         classes()
             .that().implement(DescribedPredicate.describe(
-                "Port interface",
+                "端口接口",
                 clazz -> clazz.getSimpleName().endsWith("Port")
                       || clazz.getSimpleName().endsWith("Repository")
             ))
@@ -469,24 +469,24 @@ class ArchitectureTest {
 
 ---
 
-## Running ArchUnit Tests Locally
+## 本地运行 ArchUnit 测试
 
-### Maven Commands
+### Maven 命令
 
 ```bash
-# Run all tests including ArchUnit
+# 运行所有测试,包括 ArchUnit
 mvn test
 
-# Run only ArchUnit tests
+# 仅运行 ArchUnit 测试
 mvn test -Dtest=ArchitectureTest
 
-# Compile and test (if test fails with "Class not found")
+# 编译并测试(如果测试失败并显示"找不到类")
 mvn clean compile test
 ```
 
-### Maven Configuration (Optional)
+### Maven 配置(可选)
 
-If you want to explicitly include ArchUnit tests in Maven Surefire:
+如果想在 Maven Surefire 中明确包含 ArchUnit 测试:
 
 ```xml
 <plugin>
@@ -504,81 +504,81 @@ If you want to explicitly include ArchUnit tests in Maven Surefire:
 
 ---
 
-## Best Practices
+## 最佳实践
 
-### 1. Fix Violations Immediately
+### 1. 立即修复违规
 
-**Don't ignore ArchUnit failures**. They indicate architectural drift that becomes harder to fix over time.
+**不要忽略 ArchUnit 失败**。它们表明架构漂移,随着时间推移会变得更难修复。
 
-### 2. Run Tests Before Committing
+### 2. 提交前运行测试
 
-Make it a habit to run `mvn test` before committing code changes to catch violations early.
+养成在提交代码变更前运行 `mvn test` 的习惯,以便及早发现违规。
 
-### 3. Update Rules as Architecture Evolves
+### 3. 随着架构演进更新规则
 
-If architecture decisions change, update ArchUnit rules to match. Rules should reflect the current agreed-upon architecture.
+如果架构决策发生变化,请更新 ArchUnit 规则以匹配。规则应反映当前商定的架构。
 
-### 4. Document Exceptions
+### 4. 记录例外情况
 
-If you need to make an exception to a rule, document why:
-
-```java
-@ArchTest
-static final ArchRule domainLayerIsIndependent =
-    classes()
-        .that().resideInAPackage("..domain..")
-        .and().haveSimpleNameNotEndingWith("JsonSerializer")  // ← Exception documented
-        .should().onlyDependOnClassesThat(...)
-        .because("Domain layer must be framework-agnostic (except JSON serializers for events)");
-```
-
-### 5. Handle Legacy Violations Gradually
-
-If you have too many existing violations, freeze the current state and prevent new ones:
+如果需要对规则进行例外处理,请记录原因:
 
 ```java
 @ArchTest
 static final ArchRule domainLayerIsIndependent =
     classes()
         .that().resideInAPackage("..domain..")
+        .and().haveSimpleNameNotEndingWith("JsonSerializer")  // ← 记录例外
         .should().onlyDependOnClassesThat(...)
-        .allowEmptyShould(true);  // ← Temporarily allows current violations
+        .because("领域层必须框架无关(事件的 JSON 序列化器除外)");
 ```
 
-Then fix violations incrementally in separate refactoring efforts.
+### 5. 逐步处理遗留违规
+
+如果现有违规太多,冻结当前状态并防止新违规:
+
+```java
+@ArchTest
+static final ArchRule domainLayerIsIndependent =
+    classes()
+        .that().resideInAPackage("..domain..")
+        .should().onlyDependOnClassesThat(...)
+        .allowEmptyShould(true);  // ← 暂时允许当前违规
+```
+
+然后在单独的重构工作中逐步修复违规。
 
 ---
 
-## Summary
+## 总结
 
-**ArchUnit Benefits**:
-- ✅ Automated architecture validation at test time
-- ✅ Prevents architectural drift before code is committed
-- ✅ Documents architectural decisions as executable code
-- ✅ Provides fast feedback on architecture violations
+**ArchUnit 的好处**:
+- ✅ 在测试时自动验证架构
+- ✅ 在提交前防止架构漂移
+- ✅ 将架构决策记录为可执行代码
+- ✅ 对架构违规提供快速反馈
 
-**Key Rules Covered**:
-1. **Domain Layer Independence** - No framework dependencies in domain
-2. **Dependency Direction** - Hexagonal Architecture boundaries (Adapter → App → Domain ← Infra)
-3. **Port/Adapter Pattern** - Ports in domain, implementations in infra
-4. **Naming Conventions** - Orchestrators, Repositories, DOs properly named
-5. **Anti-Patterns** - No cyclic dependencies, no field injection, no layer violations
+**涵盖的关键规则**:
+1. **领域层独立性** - 领域中无框架依赖
+2. **依赖方向** - 六边形架构边界 (Adapter → App → Domain ← Infra)
+3. **端口/适配器模式** - 端口在领域中,实现在基础设施中
+4. **命名约定** - Orchestrators、Repositories、DOs 正确命名
+5. **反模式** - 无循环依赖、无字段注入、无层违规
 
-**Running Tests**:
+**运行测试**:
 ```bash
-# Run all tests
+# 运行所有测试
 mvn test
 
-# Run only ArchUnit tests
+# 仅运行 ArchUnit 测试
 mvn test -Dtest=ArchitectureTest
 ```
 
-**Development Workflow**:
-1. Write code following architecture principles
-2. Run `mvn test` locally before committing
-3. Fix any ArchUnit violations immediately
-4. Update rules when architecture evolves
+**开发工作流**:
+1. 遵循架构原则编写代码
+2. 提交前本地运行 `mvn test`
+3. 立即修复任何 ArchUnit 违规
+4. 当架构演进时更新规则
 
-**See Also**:
-- [architecture-overview.md](architecture-overview.md) - Architecture principles and patterns
-- [testing-guide.md](testing-guide.md) - Other testing strategies (unit, integration, E2E)
+**另见**:
+- [architecture-overview.md](architecture-overview.md) - 架构原则和模式
+- [testing-guide.md](testing-guide.md) - 其他测试策略(单元测试、集成测试、E2E)

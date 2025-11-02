@@ -4,11 +4,11 @@ import java.util.List;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** Configuration properties for distributed tracing support. */
+/** 分布式追踪支持的配置属性。 */
 @Data
 @ConfigurationProperties(prefix = "patra.tracing")
 public class TracingProperties {
 
-  /** Header names (in priority order) used to resolve the trace identifier. */
+  /** 用于解析追踪标识符的头部名称（按优先级顺序）。 */
   private List<String> headerNames = List.of("traceId", "X-B3-TraceId", "traceparent");
 }

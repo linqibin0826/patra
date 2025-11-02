@@ -35,18 +35,18 @@ interface MatchedSkill {
 
 async function main() {
     try {
-        // Read input from stdin
+        // 从 stdin 读取输入
         const input = readFileSync(0, 'utf-8');
         const data: HookInput = JSON.parse(input);
         const prompt = data.prompt.toLowerCase();
 
-        // Load skill rules
+        // 加载技能规则
         const projectDir = process.env.CLAUDE_PROJECT_DIR || process.env.HOME + '/project';
         const rulesPath = join(projectDir, '.claude', 'skills', 'skill-rules.json');
 
-        // Check if skill-rules.json exists
+        // 检查 skill-rules.json 是否存在
         if (!existsSync(rulesPath)) {
-            // Silently exit if no skill rules configured (non-blocking hook behavior)
+            // 如果未配置技能规则，静默退出（非阻塞 hook 行为）
             process.exit(0);
             return;
         }
@@ -55,14 +55,14 @@ async function main() {
 
         const matchedSkills: MatchedSkill[] = [];
 
-        // Check each skill for matches
+        // 检查每个技能是否匹配
         for (const [skillName, config] of Object.entries(rules.skills)) {
             const triggers = config.promptTriggers;
             if (!triggers) {
                 continue;
             }
 
-            // Keyword matching
+            // 关键字匹配
             if (triggers.keywords) {
                 const keywordMatch = triggers.keywords.some(kw =>
                     prompt.includes(kw.toLowerCase())
@@ -73,7 +73,7 @@ async function main() {
                 }
             }
 
-            // Intent pattern matching
+            // 意图模式匹配
             if (triggers.intentPatterns) {
                 const intentMatch = triggers.intentPatterns.some(pattern => {
                     const regex = new RegExp(pattern, 'i');
@@ -85,43 +85,43 @@ async function main() {
             }
         }
 
-        // Generate output if matches found
+        // 如果找到匹配，生成输出
         if (matchedSkills.length > 0) {
             let output = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-            output += '🎯 SKILL ACTIVATION CHECK\n';
+            output += '🎯 技能激活检查\n';
             output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
 
-            // Group by priority
+            // 按优先级分组
             const critical = matchedSkills.filter(s => s.config.priority === 'critical');
             const high = matchedSkills.filter(s => s.config.priority === 'high');
             const medium = matchedSkills.filter(s => s.config.priority === 'medium');
             const low = matchedSkills.filter(s => s.config.priority === 'low');
 
             if (critical.length > 0) {
-                output += '⚠️ CRITICAL SKILLS (REQUIRED):\n';
+                output += '⚠️ 关键技能（必需）：\n';
                 critical.forEach(s => output += `  → ${s.name}\n`);
                 output += '\n';
             }
 
             if (high.length > 0) {
-                output += '📚 RECOMMENDED SKILLS:\n';
+                output += '📚 推荐技能：\n';
                 high.forEach(s => output += `  → ${s.name}\n`);
                 output += '\n';
             }
 
             if (medium.length > 0) {
-                output += '💡 SUGGESTED SKILLS:\n';
+                output += '💡 建议技能：\n';
                 medium.forEach(s => output += `  → ${s.name}\n`);
                 output += '\n';
             }
 
             if (low.length > 0) {
-                output += '📌 OPTIONAL SKILLS:\n';
+                output += '📌 可选技能：\n';
                 low.forEach(s => output += `  → ${s.name}\n`);
                 output += '\n';
             }
 
-            output += 'ACTION: Use Skill tool BEFORE responding\n';
+            output += '操作：在响应前使用 Skill 工具\n';
             output += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
 
             console.log(output);
@@ -129,14 +129,14 @@ async function main() {
 
         process.exit(0);
     } catch (err) {
-        // Non-blocking hook: log error but exit successfully per Claude Code best practices
-        console.error('Error in skill-activation-prompt hook:', err);
+        // 非阻塞 hook：记录错误但按照 Claude Code 最佳实践成功退出
+        console.error('skill-activation-prompt hook 中的错误：', err);
         process.exit(0);
     }
 }
 
 main().catch(err => {
-    // Non-blocking hook: log error but exit successfully
-    console.error('Uncaught error:', err);
+    // 非阻塞 hook：记录错误但成功退出
+    console.error('未捕获的错误：', err);
     process.exit(0);
 });

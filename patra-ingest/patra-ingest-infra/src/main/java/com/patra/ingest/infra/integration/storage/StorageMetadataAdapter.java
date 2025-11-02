@@ -14,21 +14,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Infrastructure adapter implementing metadata recording to patra-storage service.
+ * 基础设施适配器,实现元数据记录到 patra-storage 服务的功能。
  *
- * <p>This adapter provides a thin RPC integration layer to the patra-storage bounded context. It
- * delegates to the {@link StorageClient} Feign client for actual service communication.
+ * <p>此适配器为 patra-storage 限界上下文提供轻量级 RPC 集成层。它委托给 {@link StorageClient} Feign 客户端进行实际的服务通信。
  *
- * <p>Responsibilities:
+ * <p>职责:
  *
  * <ul>
- *   <li>Convert domain metadata requests to RPC DTOs
- *   <li>Invoke patra-storage service via Feign client
- *   <li>Translate service responses to domain results
- *   <li>Translate Feign exceptions to domain exceptions
+ *   <li>将领域元数据请求转换为 RPC DTO
+ *   <li>通过 Feign 客户端调用 patra-storage 服务
+ *   <li>将服务响应转换为领域结果
+ *   <li>将 Feign 异常转换为领域异常
  * </ul>
  *
- * <p>Error handling and retry logic are delegated to the application layer orchestrator.
+ * <p>错误处理和重试逻辑委托给应用层编排器。
  */
 @Component
 @RequiredArgsConstructor
@@ -54,14 +53,13 @@ public class StorageMetadataAdapter implements StorageMetadataPort {
           .build();
 
     } catch (FeignException e) {
-      // Translate Feign errors to domain exceptions for application layer handling
-      throw new StorageMetadataException(
-          "Failed to record metadata to patra-storage: " + e.getMessage(), e);
+      // 将 Feign 错误转换为领域异常供应用层处理
+      throw new StorageMetadataException("记录元数据到 patra-storage 失败: " + e.getMessage(), e);
     }
   }
 
   private UploadRecordRequest toRpcRequest(MetadataRequest request) {
-    // Populate infrastructure-specific fields
+    // 填充基础设施特定字段
     String actualServiceName =
         StringUtils.hasText(request.serviceName()) ? request.serviceName() : serviceName;
 
@@ -83,11 +81,11 @@ public class StorageMetadataAdapter implements StorageMetadataPort {
         request.businessId(),
         request.correlation(),
         actualProviderType,
-        null, // expiresAt - not used for literature storage
+        null, // expiresAt - 文献存储不使用
         request.remarks());
   }
 
-  /** Metadata recording exception indicating patra-storage service communication failure. */
+  /** 元数据记录异常,指示 patra-storage 服务通信失败。 */
   public static class StorageMetadataException extends RuntimeException {
     public StorageMetadataException(String message, Throwable cause) {
       super(message, cause);

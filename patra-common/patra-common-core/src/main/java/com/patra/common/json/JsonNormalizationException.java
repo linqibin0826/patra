@@ -1,27 +1,26 @@
 package com.patra.common.json;
 
 /**
- * Exception thrown when JSON normalization fails.
+ * JSON 规范化失败时抛出的异常。
  *
- * <p>Reasons for failure include parsing errors, illegal numeric values (NaN, Infinity), exceeding
- * depth or length limits, or encountering forbidden keys.
+ * <p>失败原因包括解析错误、非法数值(NaN、Infinity)、超出深度或长度限制,或遇到禁止的键。
  */
 public class JsonNormalizationException extends RuntimeException {
 
   /**
-   * Creates an exception with the specified message.
+   * 使用指定消息创建异常。
    *
-   * @param message error message describing the normalization failure
+   * @param message 描述规范化失败的错误消息
    */
   public JsonNormalizationException(String message) {
     super(message);
   }
 
   /**
-   * Creates an exception with the specified message and cause.
+   * 使用指定消息和原因创建异常。
    *
-   * @param message error message describing the normalization failure
-   * @param cause underlying cause of the failure
+   * @param message 描述规范化失败的错误消息
+   * @param cause 失败的根本原因
    */
   public JsonNormalizationException(String message, Throwable cause) {
     super(message, cause);

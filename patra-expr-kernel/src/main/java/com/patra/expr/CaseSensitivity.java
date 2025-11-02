@@ -1,31 +1,39 @@
 package com.patra.expr;
 
 /**
- * Represents whether a text-based comparison is case-sensitive.
+ * 表示文本比较是否区分大小写。
  *
- * <p>Used in TERM and IN operations to control case sensitivity behavior.
+ * <p>用于 TERM 和 IN 操作中控制大小写敏感度行为。
  */
 public enum CaseSensitivity {
-  /** Case-insensitive comparison where "Text" matches "text". */
+  /**
+   * 不区分大小写比较。
+   *
+   * <p>例如 "Text" 与 "text" 匹配。
+   */
   INSENSITIVE,
 
-  /** Case-sensitive comparison where "Text" does not match "text". */
+  /**
+   * 区分大小写比较。
+   *
+   * <p>例如 "Text" 与 "text" 不匹配。
+   */
   SENSITIVE;
 
   /**
-   * Converts a boolean flag to a CaseSensitivity value.
+   * 将布尔值转换为大小写敏感度。
    *
-   * @param caseSensitive true for SENSITIVE, false for INSENSITIVE
-   * @return corresponding CaseSensitivity value
+   * @param caseSensitive 为 true 返回 SENSITIVE，false 返回 INSENSITIVE
+   * @return 对应的大小写敏感度值
    */
   public static CaseSensitivity of(boolean caseSensitive) {
     return caseSensitive ? SENSITIVE : INSENSITIVE;
   }
 
   /**
-   * Checks if this instance represents case-sensitive matching.
+   * 检查此实例是否代表区分大小写的匹配。
    *
-   * @return true if SENSITIVE, false if INSENSITIVE
+   * @return 若为 SENSITIVE 返回 true，若为 INSENSITIVE 返回 false
    */
   public boolean isSensitive() {
     return this == SENSITIVE;

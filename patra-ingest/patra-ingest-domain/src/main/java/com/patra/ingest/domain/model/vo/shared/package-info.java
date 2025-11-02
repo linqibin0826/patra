@@ -1,17 +1,13 @@
 /**
- * Shared cross-domain value objects.
+ * 共享的跨领域值对象。
  *
- * <p>Contains value objects used across multiple domain concepts:
+ * <p>包含在多个领域概念中使用的值对象:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.shared.IdempotentKey} - Idempotency key for
- *       duplicate prevention
- *   <li>{@link com.patra.ingest.domain.model.vo.shared.LeaseInfo} - Lease information for
- *       distributed task coordination
- *   <li>{@link com.patra.ingest.domain.model.vo.shared.NamespaceKey} - Namespace key for
- *       multi-tenancy
- *   <li>{@link com.patra.ingest.domain.model.vo.shared.SliceSpec} - Slice specification for plan
- *       partitioning
+ *   <li>{@link com.patra.ingest.domain.model.vo.shared.IdempotentKey} - 用于防止重复的幂等键
+ *   <li>{@link com.patra.ingest.domain.model.vo.shared.LeaseInfo} - 用于分布式任务协调的租约信息
+ *   <li>{@link com.patra.ingest.domain.model.vo.shared.NamespaceKey} - 用于多租户的命名空间键
+ *   <li>{@link com.patra.ingest.domain.model.vo.shared.SliceSpec} - 用于计划分区的切片规范
  * </ul>
  *
  * @author linqibin

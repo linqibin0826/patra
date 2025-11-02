@@ -3,43 +3,42 @@ package com.patra.registry.domain.model.vo.provenance;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * Domain value object for {@code reg_provenance}.
+ * {@code reg_provenance} 的领域值对象。
  *
- * <p>Represents the root provenance entity referenced by all reg_prov_* configurations. This serves
- * as the catalog basic information for external data sources (e.g., PubMed, Crossref).
+ * <p>表示被所有 reg_prov_* 配置引用的根来源实体。这是外部数据源(如 PubMed、Crossref)的目录基本信息。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record Provenance(
-    /* Primary key; unique source identifier referenced by all downstream configurations */
+    /* 主键;所有下游配置引用的唯一来源标识符 */
     Long id,
-    /* Source code: globally unique, stable (e.g., pubmed/crossref); used for lookups and constraints */
+    /* 来源代码:全局唯一、稳定(如 pubmed/crossref);用于查找和约束 */
     String code,
-    /* Source display name (e.g., PubMed / Crossref) for human readability */
+    /* 来源显示名称(如 PubMed / Crossref),便于人工阅读 */
     String name,
-    /* Default base URL for this source; joined with endpoint paths to form complete API URLs; used when not overridden by HTTP policy */
+    /* 此来源的默认基础 URL;与端点路径结合形成完整的 API URL;在未被 HTTP 策略覆盖时使用 */
     String baseUrlDefault,
-    /* Default timezone (IANA TZ, e.g., UTC/Asia/Shanghai): default for window calc/display */
+    /* 默认时区(IANA TZ,如 UTC/Asia/Shanghai):用于窗口计算/显示的默认值 */
     String timezoneDefault,
-    /* Official docs/reference URL: helps troubleshooting and API verification */
+    /* 官方文档/参考 URL:帮助故障排查和 API 验证 */
     String docsUrl,
-    /* Whether this source is active: true=active, false=inactive; read side may filter by this flag */
+    /* 此来源是否激活:true=激活,false=未激活;读端可能按此标志过滤 */
     boolean active,
-    /* Lifecycle status code (DICT CODE: lifecycle_status); read side uses ACTIVE/valid only */
+    /* 生命周期状态代码(字典代码:lifecycle_status);读端仅使用 ACTIVE/有效状态 */
     String lifecycleStatusCode) {
   /**
-   * Canonical constructor with validation.
+   * 带验证的规范构造器。
    *
-   * @param id unique source identifier, must be positive
-   * @param code provenance code, must not be blank
-   * @param name provenance name, must not be blank
-   * @param baseUrlDefault default base URL, nullable
-   * @param timezoneDefault default timezone in IANA format, must not be blank
-   * @param docsUrl documentation URL, nullable
-   * @param active active flag
-   * @param lifecycleStatusCode lifecycle status code from dictionary, must not be blank
-   * @throws DomainValidationException if validation fails
+   * @param id 唯一来源标识符,必须为正数
+   * @param code 来源代码,不能为空白
+   * @param name 来源名称,不能为空白
+   * @param baseUrlDefault 默认基础 URL,可为 null
+   * @param timezoneDefault IANA 格式的默认时区,不能为空白
+   * @param docsUrl 文档 URL,可为 null
+   * @param active 激活标志
+   * @param lifecycleStatusCode 字典中的生命周期状态代码,不能为空白
+   * @throws DomainValidationException 验证失败时抛出
    */
   public Provenance(
       Long id,
@@ -68,9 +67,9 @@ public record Provenance(
   }
 
   /**
-   * Checks whether the provenance is active.
+   * 检查来源是否激活。
    *
-   * @return {@code true} if the source is active, {@code false} otherwise
+   * @return 如果来源激活则返回 {@code true},否则返回 {@code false}
    */
   public boolean isActive() {
     return active;

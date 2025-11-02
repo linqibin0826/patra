@@ -26,18 +26,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Infrastructure adapter implementing literature storage to object storage.
+ * 基础设施适配器,实现文献存储到对象存储的功能。
  *
- * <p>This adapter focuses solely on technical storage operations:
+ * <p>此适配器专注于技术性存储操作:
  *
  * <ul>
- *   <li>ACL mapping: StandardLiterature → LiteratureDTO (external API format)
- *   <li>Serialization: Convert payload to JSON bytes
- *   <li>Checksum calculation: MD5 and SHA-256 for integrity verification
- *   <li>Storage upload: Upload to S3/MinIO via {@link ObjectStorageTemplate}
+ *   <li>ACL 映射: StandardLiterature → LiteratureDTO (外部 API 格式)
+ *   <li>序列化: 将负载转换为 JSON 字节
+ *   <li>校验和计算: MD5 和 SHA-256 用于完整性验证
+ *   <li>存储上传: 通过 {@link ObjectStorageTemplate} 上传到 S3/MinIO
  * </ul>
  *
- * <p>Cross-service integration (metadata recording) is handled separately in the application layer.
+ * <p>跨服务集成(元数据记录)在应用层单独处理。
  */
 @Component
 @RequiredArgsConstructor
@@ -56,23 +56,23 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
 
   @Override
   public StorageResult store(List<StandardLiterature> literature, StorageContext context) {
-    // Step 1: ACL mapping (domain → external DTO)
+    // 步骤 1: ACL 映射 (领域 → 外部 DTO)
     List<LiteratureDTO> payload = literatureConverter.toDto(literature);
 
-    // Step 2: Serialize to JSON
+    // 步骤 2: 序列化为 JSON
     byte[] serialized = serializePayload(payload, context);
 
-    // Step 3: Calculate checksums
+    // 步骤 3: 计算校验和
     Checksums checksums = calculateChecksums(serialized);
 
-    // Step 4: Resolve storage location
+    // 步骤 4: 解析存储位置
     StorageLocation location = resolveStorageLocation(context);
 
-    // Step 5: Upload to object storage
+    // 步骤 5: 上传到对象存储
     UploadResult uploadResult = uploadPayload(location, serialized, payload.size(), context);
 
     log.info(
-        "Literature stored bucket={} key={} size={} bytes count={}",
+        "文献已存储 bucket={} key={} size={} bytes count={}",
         uploadResult.getBucketName(),
         uploadResult.getObjectKey(),
         uploadResult.getFileSize(),
@@ -94,7 +94,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
     try {
       byte[] serialized = objectMapper.writeValueAsBytes(payload);
       log.info(
-          "Literature payload prepared runId={} batchNo={} provenance={} size={} bytes entries={}",
+          "文献负载已准备 runId={} batchNo={} provenance={} size={} bytes entries={}",
           context.runId(),
           context.batchNo(),
           context.provenanceCode(),
@@ -102,7 +102,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
           payload.size());
       return serialized;
     } catch (JsonProcessingException ex) {
-      throw new LiteratureStorageException("Failed to serialize literature payload", ex);
+      throw new LiteratureStorageException("序列化文献负载失败", ex);
     }
   }
 
@@ -115,7 +115,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
       return new Checksums(
           HEX_FORMAT.formatHex(md5.digest()), HEX_FORMAT.formatHex(sha256.digest()));
     } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException("Missing digest algorithm", ex);
+      throw new IllegalStateException("缺少摘要算法", ex);
     }
   }
 
@@ -155,13 +155,13 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
           objectStorageTemplate.upload(
               location.bucket(), location.objectKey(), inputStream, metadata);
       log.info(
-          "Literature payload uploaded bucket={} key={} size={} bytes",
+          "文献负载已上传 bucket={} key={} size={} bytes",
           result.getBucketName(),
           result.getObjectKey(),
           result.getFileSize());
       return result;
     } catch (Exception ex) {
-      throw new LiteratureStorageException("Failed to upload literature payload", ex);
+      throw new LiteratureStorageException("上传文献负载失败", ex);
     }
   }
 
@@ -185,7 +185,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
         : "unknown";
   }
 
-  /** Storage exception indicating serialization or upload failure. */
+  /** 存储异常,指示序列化或上传失败。 */
   public static class LiteratureStorageException extends RuntimeException {
     public LiteratureStorageException(String message, Throwable cause) {
       super(message, cause);

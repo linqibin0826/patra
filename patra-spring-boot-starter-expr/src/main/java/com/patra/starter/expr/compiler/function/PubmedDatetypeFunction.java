@@ -6,13 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PubMed-specific function that returns the appropriate {@code datetype} value for date filtering.
- * Currently returns "pdat" (publication date) as the default.
+ * PubMed 特定函数，返回用于日期过滤的适当 {@code datetype} 值。 目前默认返回 "pdat"（发布日期）。
  *
- * <p>Future Enhancement: This function may be extended to select between "pdat" (publication date)
- * and "edat" (entry date) based on operation type, endpoint, or rule context from the snapshot.
+ * <p>未来增强：此函数可能会扩展以根据操作类型、端点或快照中的规则上下文在 "pdat"（发布日期） 和 "edat"（条目日期）之间进行选择。
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.3.2, docs/expr/04-provider-pubmed.md §4.3.2
+ * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.3.2, docs/expr/04-provider-pubmed.md §4.3.2
  *
  * @since 1.0.0
  */
@@ -29,27 +27,24 @@ public class PubmedDatetypeFunction implements RenderFunction {
 
   @Override
   public String apply(Map<String, String> placeholders, ProvenanceSnapshot snapshot) {
-    // Read fieldKey from placeholders to determine the correct datetype
+    // 从占位符中读取 fieldKey 以确定正确的 datetype
     String fieldKey = placeholders.get("{{field}}");
     String datetype;
 
-    // Map field semantics to PubMed datetype parameter
+    // 将字段语义映射到 PubMed datetype 参数
     if ("entrez_date".equals(fieldKey)) {
-      datetype = "edat"; // Entry Date - when the record was added to PubMed
+      datetype = "edat"; // 条目日期 - 记录添加到 PubMed 的时间
     } else if ("publication_date".equals(fieldKey)) {
-      datetype = "pdat"; // Publication Date - when the article was published
+      datetype = "pdat"; // 发布日期 - 文章发布的时间
     } else {
-      // Default to pdat for backward compatibility with unknown fields
+      // 默认为 pdat 以保持与未知字段的向后兼容性
       datetype = DEFAULT_DATETYPE;
-      log.warn(
-          "Unknown date field '{}' for PUBMED_DATETYPE, defaulting to '{}'",
-          fieldKey,
-          DEFAULT_DATETYPE);
+      log.warn("PUBMED_DATETYPE 的日期字段 '{}' 未知，默认为 '{}'", fieldKey, DEFAULT_DATETYPE);
     }
 
-    // Mutate placeholder map so templates like {{datetype}} resolve correctly
+    // 变异占位符映射，以便模板如 {{datetype}} 正确解析
     placeholders.put("{{datetype}}", datetype);
-    log.debug("PUBMED_DATETYPE for fieldKey='{}' returning: {}", fieldKey, datetype);
+    log.debug("PUBMED_DATETYPE for fieldKey='{}' 返回: {}", fieldKey, datetype);
     return datetype;
   }
 }

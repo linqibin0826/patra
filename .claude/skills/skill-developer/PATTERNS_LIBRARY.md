@@ -1,8 +1,8 @@
-# Common Patterns Library
+# 常用模式库
 
-Ready-to-use regex and glob patterns for skill triggers. Copy and customize for your skills.
+用于 skill 触发器的开箱即用的正则表达式和 glob 模式。复制并为你的 skills 自定义。
 
-**Target Tech Stack**: Java 25 | Spring Boot 3.5.7 | MyBatis-Plus | Maven | Hexagonal Architecture + DDD
+**目标技术栈**: Java 25 | Spring Boot 3.5.7 | MyBatis-Plus | Maven | 六边形架构 + DDD
 
 ---
 
@@ -45,7 +45,7 @@ Ready-to-use regex and glob patterns for skill triggers. Copy and customize for 
 (debug|troubleshoot|fix).*?(orchestrator|workflow)
 ```
 
-### Testing
+### 测试
 ```regex
 (write|create|add).*?(test|unit.*?test|integration.*?test)
 ```
@@ -82,7 +82,7 @@ patra-*/patra-*-infra/src/main/java/**/*Mapper.java      # MyBatis mappers
 patra-*/patra-*-infra/src/main/java/**/*Repository*.java # Repositories
 ```
 
-### Configuration and Resources
+### 配置 and Resources
 ```glob
 **/application.yml                                       # Spring Boot config
 **/application-*.yml                                     # Environment-specific config

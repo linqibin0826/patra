@@ -3,15 +3,15 @@ name: skill-developer
 description: Create and manage Claude Code skills following Anthropic best practices. Use when creating new skills, modifying skill-rules.json, understanding trigger patterns, working with hooks, debugging skill activation, or implementing progressive disclosure. Covers skill structure, YAML frontmatter, trigger types (keywords, intent patterns, file paths, content patterns), enforcement levels (block, suggest, warn), hook mechanisms (UserPromptSubmit, PreToolUse), session tracking, and the 500-line rule.
 ---
 
-# Skill Developer Guide
+# Skill 开发者指南
 
-## Purpose
+## 目的
 
 Comprehensive guide for creating and managing skills in Claude Code with auto-activation system, following Anthropic's official best practices including the 500-line rule and progressive disclosure pattern.
 
-## When to Use This Skill
+## 何时使用此 Skill
 
-Automatically activates when you mention:
+自动激活条件 you mention:
 - Creating or adding skills
 - Modifying skill triggers or rules
 - Understanding how skill activation works
@@ -32,20 +32,20 @@ Automatically activates when you mention:
 **1. UserPromptSubmit Hook** (Proactive Suggestions)
 - **File**: `.claude/hooks/skill-activation-prompt.ts`
 - **Trigger**: BEFORE Claude sees user's prompt
-- **Purpose**: Suggest relevant skills based on keywords + intent patterns
+- **目的**: Suggest relevant skills based on keywords + intent patterns
 - **Method**: Injects formatted reminder as context (stdout → Claude's input)
 - **Use Cases**: Topic-based skills, implicit work detection
 
 **2. Stop Hook - Error Handling Reminder** (Gentle Reminders)
 - **File**: `.claude/hooks/error-handling-reminder.ts`
 - **Trigger**: AFTER Claude finishes responding
-- **Purpose**: Gentle reminder to self-assess error handling in code written
+- **目的**: Gentle reminder to self-assess error handling in code written
 - **Method**: Analyzes edited files for risky patterns, displays reminder if needed
 - **Use Cases**: Error handling awareness without blocking friction
 
 **Philosophy Change (2025-10-27):** We moved away from blocking PreToolUse for Sentry/error handling. Instead, use gentle post-response reminders that don't block workflow but maintain code quality awareness.
 
-### Configuration File
+### 配置 File
 
 **Location**: `.claude/skills/skill-rules.json`
 
@@ -121,7 +121,7 @@ description: Brief description including keywords that trigger this skill. Menti
 
 # My New Skill
 
-## Purpose
+## 目的
 What this skill helps with
 
 ## When to Use
@@ -133,7 +133,7 @@ The actual guidance, documentation, patterns, examples
 
 **Best Practices:**
 - ✅ **Name**: Lowercase, hyphens, gerund form (verb + -ing) preferred
-- ✅ **Description**: Include ALL trigger keywords/phrases (max 1024 chars)
+- ✅ **描述**: Include ALL trigger keywords/phrases (max 1024 chars)
 - ✅ **Content**: Under 500 lines - use reference files for details
 - ✅ **Examples**: Real code examples
 - ✅ **Structure**: Clear headings, lists, code blocks
@@ -197,7 +197,7 @@ Based on testing:
 
 ---
 
-## Enforcement Levels
+## 强制级别
 
 ### BLOCK (Critical Guardrails)
 
@@ -296,7 +296,7 @@ When creating a new skill, verify:
 
 ---
 
-## Reference Files
+## 参考 Files
 
 For detailed information on specific topics, see:
 
@@ -361,7 +361,7 @@ Future enhancements and ideas:
 4. Refine patterns based on testing
 5. Keep SKILL.md under 500 lines
 
-### Trigger Types
+### 触发器类型
 
 - **Keywords**: Explicit topic mentions
 - **Intent**: Implicit action detection

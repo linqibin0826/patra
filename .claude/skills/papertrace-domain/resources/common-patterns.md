@@ -1,29 +1,29 @@
-# Common Patterns
+# 通用模式
 
-## Overview
+## 概述
 
-Common architectural and design patterns used in Papertrace, based on Hexagonal Architecture + DDD principles.
+Papertrace 中使用的常见架构和设计模式,基于六边形架构 + DDD 原则。
 
 ---
 
-## 1. Assembler Pattern (Complex Object Graph Creation)
+## 1. 组装器模式(复杂对象图创建)
 
-### Purpose
-Orchestrate creation of complex object graphs involving multiple aggregates and dependencies.
+### 目的
+编排涉及多个聚合和依赖的复杂对象图创建。
 
-### Implementation: PlanAssembler
+### 实现: PlanAssembler
 
-**Location**: `patra-ingest-app/.../plan/PlanAssemblerImpl.java`
+**位置**: `patra-ingest-app/.../plan/PlanAssemblerImpl.java`
 
-**Responsibilities**:
-1. Fetch config and expression from Registry
-2. Create PlanAggregate
-3. Invoke SlicePlanner to generate PlanSliceAggregates
-4. Create TaskAggregates (1:1 with slices)
-5. Persist all aggregates transactionally
-6. Emit domain events (TaskQueuedEvent)
+**职责**:
+1. 从 Registry 获取配置和表达式
+2. 创建 PlanAggregate
+3. 调用 SlicePlanner 生成 PlanSliceAggregates
+4. 创建 TaskAggregates(与切片 1:1)
+5. 事务性持久化所有聚合
+6. 发出领域事件(TaskQueuedEvent)
 
-**Key Methods**:
+**关键方法**:
 ```java
 PlanAssemblyResult assemble(PlanAssemblyContext context)
   ↓
@@ -32,27 +32,27 @@ PlanAssemblyResult assemble(PlanAssemblyContext context)
 3. PlanAggregate.create(...)
 4. slicePlanner.slice(context) → SlicePlanningResult
 5. createTasks(slices) → List<TaskAggregate>
-6. persist(plan, slices, tasks) (transactional)
+6. persist(plan, slices, tasks) (事务性)
 7. publishEvents(tasks)
 ```
 
-**Benefits**:
-- Single responsibility for complex orchestration
-- Transactional consistency across multiple aggregates
-- Centralized dependency management
+**优势**:
+- 复杂编排的单一职责
+- 跨多个聚合的事务一致性
+- 集中的依赖管理
 
 ---
 
-## 2. Registry Pattern (Strategy Selection)
+## 2. 注册表模式(策略选择)
 
-### Purpose
-Select appropriate strategy implementation based on input parameters.
+### 目的
+根据输入参数选择适当的策略实现。
 
-### Implementation: SlicePlannerRegistry
+### 实现: SlicePlannerRegistry
 
-**Location**: `patra-ingest-app/.../plan/SlicePlannerRegistry.java`
+**位置**: `patra-ingest-app/.../plan/SlicePlannerRegistry.java`
 
-**Structure**:
+**结构**:
 ```java
 @Component
 public class SlicePlannerRegistry {
@@ -76,37 +76,37 @@ public class SlicePlannerRegistry {
 }
 ```
 
-**Usage**:
+**使用方式**:
 ```java
 SliceStrategy strategy = determineStrategy(operation, provenance);
 SlicePlanner planner = slicePlannerRegistry.get(strategy);
 SlicePlanningResult result = planner.slice(context);
 ```
 
-**Benefits**:
-- Centralized strategy selection
-- Easy to add new strategies
-- Type-safe strategy resolution
+**优势**:
+- 集中的策略选择
+- 易于添加新策略
+- 类型安全的策略解析
 
 ---
 
-## 3. Snapshot Converter Pattern
+## 3. 快照转换器模式
 
-### Purpose
-Convert external API responses to immutable domain snapshots.
+### 目的
+将外部 API 响应转换为不可变的领域快照。
 
-### Implementation: ProvenanceConfigSnapshotConverter
+### 实现: ProvenanceConfigSnapshotConverter
 
-**Location**: `patra-ingest-infra/.../converter/ProvenanceConfigSnapshotConverter.java`
+**位置**: `patra-ingest-infra/.../converter/ProvenanceConfigSnapshotConverter.java`
 
-**Flow**:
+**流程**:
 ```
 ProvenanceConfigResp (API DTO)
   ↓ convert()
-ProvenanceConfigSnapshot (Domain VO)
+ProvenanceConfigSnapshot (领域 VO)
 ```
 
-**Conversion Logic**:
+**转换逻辑**:
 ```java
 @Component
 public class ProvenanceConfigSnapshotConverter {
@@ -124,67 +124,67 @@ public class ProvenanceConfigSnapshotConverter {
 }
 ```
 
-**Benefits**:
-- Isolation from external API changes
-- Domain-specific value objects
-- Centralized conversion logic
+**优势**:
+- 与外部 API 变更隔离
+- 领域特定的值对象
+- 集中的转换逻辑
 
 ---
 
-## 4. Canonicalizer Pattern (Deterministic Serialization)
+## 4. 规范化器模式(确定性序列化)
 
-### Purpose
-Generate deterministic, canonical representations for hashing and comparison.
+### 目的
+为哈希和比较生成确定性的规范表示。
 
-### Implementation: ExprCanonicalizer
+### 实现: ExprCanonicalizer
 
-**Location**: `patra-expr-kernel/.../ExprCanonicalizer.java`
+**位置**: `patra-expr-kernel/.../ExprCanonicalizer.java`
 
-**Purpose**:
-- Convert expression objects to canonical JSON
-- Ensure consistent field ordering
-- Remove whitespace/formatting variations
-- Generate stable hashes
+**目的**:
+- 将表达式对象转换为规范 JSON
+- 确保一致的字段顺序
+- 移除空格/格式变化
+- 生成稳定的哈希值
 
-**Usage**:
+**使用方式**:
 ```java
 ExprSnapshot expr = loadFromRegistry();
 String canonicalJson = exprCanonicalizer.canonicalize(expr);
 String hash = sha256(canonicalJson);
 ```
 
-**Benefits**:
-- Stable hashing for idempotency
-- Change detection accuracy
-- Cache key generation
+**优势**:
+- 幂等性的稳定哈希
+- 变更检测准确性
+- 缓存键生成
 
 ---
 
-## 5. Outbox Pattern (Transactional Messaging)
+## 5. Outbox 模式(事务性消息)
 
-### Purpose
-Ensure reliable event publishing via transactional outbox.
+### 目的
+通过事务性 outbox 确保可靠的事件发布。
 
-### Implementation
+### 实现
 
-**Outbox Table**: `ing_outbox_message`
+**Outbox 表**: `ing_outbox_message`
 
-**Flow**:
+**流程**:
 ```
-1. Business transaction:
+1. 业务事务:
    - TaskAggregate.create(...)
    - task.addDomainEvent(new TaskQueuedEvent(...))
    - taskRepository.save(task)
    - outboxRepository.save(extractOutboxMessage(task))
    [COMMIT]
 
-2. Outbox Relay (separate process):
+2. Outbox 中继(独立进程):
    - SELECT * FROM ing_outbox_message WHERE status='PENDING'
-   - Publish to MQ (RabbitMQ/Kafka)
+   - 发布到 MQ (RabbitMQ/Kafka)
    - UPDATE status='PUBLISHED'
 ```
 
-**Domain Event Emission**:
+**领域事件发射**:
 ```java
 public class TaskAggregate extends AggregateRoot<Long> {
     public static TaskAggregate create(...) {
@@ -195,7 +195,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
 }
 ```
 
-**Outbox Extraction**:
+**Outbox 提取**:
 ```java
 public class OutboxMessageExtractor {
     public List<OutboxMessage> extract(AggregateRoot<?> aggregate) {
@@ -206,21 +206,21 @@ public class OutboxMessageExtractor {
 }
 ```
 
-**Benefits**:
-- Guaranteed event delivery
-- Transactional consistency
-- At-least-once delivery semantics
+**优势**:
+- 保证事件交付
+- 事务一致性
+- 至少一次交付语义
 
 ---
 
-## 6. Port-Adapter Pattern (Hexagonal Architecture)
+## 6. 端口-适配器模式(六边形架构)
 
-### Purpose
-Decouple domain logic from external dependencies.
+### 目的
+将领域逻辑与外部依赖解耦。
 
-### Implementation: PatraRegistryPort
+### 实现: PatraRegistryPort
 
-**Domain Port** (`patra-ingest-domain`):
+**领域端口** (`patra-ingest-domain`):
 ```java
 public interface PatraRegistryPort {
     ProvenanceConfigSnapshot fetchConfig(
@@ -236,7 +236,7 @@ public interface PatraRegistryPort {
 }
 ```
 
-**Infrastructure Adapter** (`patra-ingest-infra`):
+**基础设施适配器** (`patra-ingest-infra`):
 ```java
 @Component
 public class PatraRegistryAdapter implements PatraRegistryPort {
@@ -259,10 +259,10 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
 }
 ```
 
-**Benefits**:
-- Domain independence
-- Testability (mock ports)
-- Technology flexibility
+**优势**:
+- 领域独立性
+- 可测试性(模拟端口)
+- 技术灵活性
 
 ---
 

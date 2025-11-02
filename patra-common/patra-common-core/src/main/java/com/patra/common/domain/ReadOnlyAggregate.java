@@ -6,51 +6,47 @@ import java.util.Objects;
 import lombok.Getter;
 
 /**
- * Abstract base class for read-only aggregates.
+ * 只读聚合的抽象基类。
  *
- * <p>Designed for the CQRS query side, it manages identifiers without bringing in write-side
- * concerns such as domain events or versioning.
+ * <p>专为 CQRS 查询端设计,管理标识符而不引入写端关注点,如领域事件或版本控制。
  *
- * <p>Constraints:
+ * <p>约束:
  *
  * <ul>
- *   <li>Depends solely on the JDK; the domain layer remains framework-free.
- *   <li>Focuses on data retrieval and validation of business rules.
- *   <li>Does not support state mutations or event publication.
- *   <li>Well suited for configuration, dictionary, and view-style aggregates.
+ *   <li>仅依赖 JDK;领域层保持无框架依赖。
+ *   <li>专注于数据检索和业务规则验证。
+ *   <li>不支持状态变更或事件发布。
+ *   <li>非常适合配置、字典和视图类型的聚合。
  * </ul>
  *
- * @param <ID> aggregate identifier type (value object or wrapped primitive)
+ * @param <ID> 聚合标识符类型(值对象或封装的原始类型)
  */
 public abstract class ReadOnlyAggregate<ID> implements Serializable {
 
   @Serial private static final long serialVersionUID = 1L;
 
-  /** Aggregate identifier. */
+  /** 聚合标识符。 */
   @Getter private final ID id;
 
   protected ReadOnlyAggregate(ID id) {
-    this.id = Objects.requireNonNull(id, "aggregate id must not be null");
+    this.id = Objects.requireNonNull(id, "聚合 ID 不能为 null");
   }
 
   protected ReadOnlyAggregate() {
     this.id = null;
   }
 
-  /** Indicates whether the aggregate is transient (identifier not assigned). */
+  /** 指示聚合是否为瞬态(标识符未分配)。 */
   public boolean isTransient() {
     return this.id == null;
   }
 
-  /**
-   * Hook for invariant checks. Override to validate state during construction or query-time
-   * operations and throw {@link IllegalStateException} when invariants do not hold.
-   */
+  /** 不变量检查的钩子方法。覆盖此方法以在构造或查询时操作期间验证状态, 并在不变量不成立时抛出 {@link IllegalStateException}。 */
   protected void assertInvariants() {
-    // Default no-op; subclasses should enforce data integrity and business rules.
+    // 默认为空操作;子类应强制执行数据完整性和业务规则。
   }
 
-  /** Equality based on the aggregate identifier. */
+  /** 基于聚合标识符的相等性。 */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -63,13 +59,13 @@ public abstract class ReadOnlyAggregate<ID> implements Serializable {
     return Objects.equals(id, that.id);
   }
 
-  /** Hash code derived from the aggregate identifier. */
+  /** 从聚合标识符派生的哈希码。 */
   @Override
   public int hashCode() {
     return Objects.hashCode(id);
   }
 
-  /** Human-readable representation including the identifier. */
+  /** 包含标识符的可读表示形式。 */
   @Override
   public String toString() {
     return getClass().getSimpleName() + "{" + "id=" + id + '}';

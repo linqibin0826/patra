@@ -1,14 +1,13 @@
 /**
- * Batch execution value objects.
+ * 批次执行值对象。
  *
- * <p>Contains value objects related to batch processing and execution:
+ * <p>包含与批次处理和执行相关的值对象:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.batch.Batch} - Batch definition with query and
- *       parameters
- *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchPlan} - Batch execution plan
- *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchResult} - Batch execution result
- *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchStats} - Batch statistics
+ *   <li>{@link com.patra.ingest.domain.model.vo.batch.Batch} - 带查询和参数的批次定义
+ *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchPlan} - 批次执行计划
+ *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchResult} - 批次执行结果
+ *   <li>{@link com.patra.ingest.domain.model.vo.batch.BatchStats} - 批次统计信息
  * </ul>
  *
  * @author linqibin

@@ -23,17 +23,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox Relay scheduled job. Periodically scans the Outbox table to fetch deliverable messages and
- * attempts to publish them.
+ * Outbox Relay 定时任务。定期扫描 Outbox 表以获取可投递的消息并尝试发布它们。
  *
- * <p>Workflow: parse params → build command (with lease/retry settings) → invoke use case → report
- * result.
+ * <p>工作流: 解析参数 → 构建命令(包含租约/重试设置) → 调用用例 → 报告结果。
  *
- * <p>Idempotency: the lease owner identifier includes host + jobId + threadId + uuid to distinguish
- * concurrent instances.
+ * <p>幂等性: 租约所有者标识符包含 host + jobId + threadId + uuid 以区分并发实例。
  *
- * <p>Failure mode: business failures are wrapped into {@link OutboxRelayExecutionException} and
- * rethrown; XXL marks the job failed.
+ * <p>失败模式: 业务失败会被包装到 {@link OutboxRelayExecutionException} 并重新抛出;XXL 标记任务失败。
  */
 @Slf4j
 @Component
@@ -46,21 +42,20 @@ public class OutboxRelayJob {
   private final Clock clock;
 
   /**
-   * XXL-Job entrypoint. Parses params, performs relay, and writes statistics to the scheduler log.
+   * XXL-Job 入口点。解析参数、执行转发并将统计信息写入调度器日志。
    *
-   * <p>Supports a specific channel or all channels when param is blank.
+   * <p>支持特定通道或在参数为空时支持所有通道。
    */
   @XxlJob("ingestOutboxRelayJob")
   public void execute() {
     String rawParam = XxlJobHelper.getJobParam();
-    log.debug(
-        "Outbox relay job triggered with jobId [{}], param: {}", XxlJobHelper.getJobId(), rawParam);
+    log.debug("Outbox relay 任务已触发,jobId [{}],参数: {}", XxlJobHelper.getJobId(), rawParam);
 
     Instant now = Instant.now(clock);
     try {
       OutboxRelayJobParam jobParam = parseParam(rawParam);
       log.debug(
-          "Parsed outbox relay parameters: channel [{}], batchSize [{}], leaseDuration [{}], maxAttempts [{}], initialBackoff [{}]",
+          "已解析 outbox relay 参数: 通道 [{}], 批量大小 [{}], 租约持续时间 [{}], 最大尝试次数 [{}], 初始退避 [{}]",
           jobParam.channel(),
           jobParam.batchSize(),
           jobParam.leaseDuration(),
@@ -68,7 +63,7 @@ public class OutboxRelayJob {
           jobParam.initialBackoff());
 
       OutboxRelayCommand command = buildInstruction(jobParam, now);
-      log.debug("Built relay command with leaseOwner [{}] at {}", command.leaseOwner(), now);
+      log.debug("已构建 relay 命令,租约所有者 [{}],时间 {}", command.leaseOwner(), now);
 
       RelayReport report = relayUseCase.relay(command);
       handleRelaySuccess(report);
@@ -76,16 +71,16 @@ public class OutboxRelayJob {
       throw ex;
     } catch (Exception ex) {
       handleRelayFailure(ex);
-      throw new OutboxRelayExecutionException("Outbox relay execution failed", ex);
+      throw new OutboxRelayExecutionException("Outbox relay 执行失败", ex);
     }
   }
 
-  /** Handles successful relay execution with result reporting and logging. */
+  /** 处理成功的 relay 执行,包含结果报告和日志记录。 */
   private void handleRelaySuccess(RelayReport report) {
     String channelDesc = report.channel() != null ? report.channel().channel() : "ALL_CHANNELS";
 
     log.info(
-        "Completed outbox relay for channel [{}]: {} messages fetched, {} published, {} retried, {} failed, {} lease missed",
+        "已完成通道 [{}] 的 outbox relay: 获取 {} 条消息,已发布 {},已重试 {},失败 {},错过租约 {}",
         channelDesc,
         report.fetched(),
         report.published(),
@@ -95,7 +90,7 @@ public class OutboxRelayJob {
 
     XxlJobHelper.handleSuccess(
         String.format(
-            "Relay finished channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d",
+            "Relay 完成 channel=%s fetched=%d published=%d retried=%d failed=%d leaseMissed=%d",
             channelDesc,
             report.fetched(),
             report.published(),
@@ -104,19 +99,18 @@ public class OutboxRelayJob {
             report.leaseMissed()));
   }
 
-  /** Handles relay failure with error logging and reporting. */
+  /** 处理 relay 失败,包含错误日志和报告。 */
   private void handleRelayFailure(Exception ex) {
-    log.error("Failed to execute outbox relay job: {}", ex.getMessage(), ex);
-    XxlJobHelper.handleFail("Relay failed: " + ex.getMessage());
+    log.error("outbox relay 任务执行失败: {}", ex.getMessage(), ex);
+    XxlJobHelper.handleFail("Relay 失败: " + ex.getMessage());
   }
 
   /**
-   * Builds the relay command: target channel, time base, batch size, lease configuration, and retry
-   * policy.
+   * 构建 relay 命令: 目标通道、时间基准、批量大小、租约配置和重试策略。
    *
-   * @param param job parameters (fields may be null)
-   * @param now current time (from injected Clock for testability)
-   * @return relay command
+   * @param param 任务参数(字段可能为 null)
+   * @param now 当前时间(从注入的 Clock 获取以支持可测试性)
+   * @return relay 命令
    */
   private OutboxRelayCommand buildInstruction(OutboxRelayJobParam param, Instant now) {
     return new OutboxRelayCommand(
@@ -129,10 +123,10 @@ public class OutboxRelayJob {
         buildLeaseOwner());
   }
 
-  /** Parses the channel; null/blank falls back to default configured channel. */
+  /** 解析通道;null/空白时回退到默认配置的通道。 */
   private ChannelKey resolveChannel(String channel) {
     if (CharSequenceUtil.isBlank(channel)) {
-      return null; // Let the builder fall back to its default value
+      return null; // 让构建器回退到其默认值
     }
     String trimmed = CharSequenceUtil.trim(channel);
     var byChannel = IngestPublishingChannels.fromChannel(trimmed);
@@ -142,17 +136,16 @@ public class OutboxRelayJob {
     try {
       return IngestPublishingChannels.valueOf(trimmed.toUpperCase());
     } catch (IllegalArgumentException ex) {
-      throw new IngestScheduleParameterException("Illegal channel value: " + channel, ex);
+      throw new IngestScheduleParameterException("非法的通道值: " + channel, ex);
     }
   }
 
   /**
-   * Parses a duration string: supports ISO-8601 (starting with PT) or a plain numeric seconds
-   * string.
+   * 解析持续时间字符串: 支持 ISO-8601 格式(以 PT 开头)或纯数字秒数字符串。
    *
-   * @param value duration string
-   * @return Duration or null when blank
-   * @throws IngestScheduleParameterException when format is illegal
+   * @param value 持续时间字符串
+   * @return Duration 或空白时为 null
+   * @throws IngestScheduleParameterException 当格式非法时
    */
   private Duration parseDuration(String value) {
     if (CharSequenceUtil.isBlank(value)) {
@@ -165,11 +158,11 @@ public class OutboxRelayJob {
       }
       return Duration.ofSeconds(Long.parseLong(trimmed));
     } catch (Exception ex) {
-      throw new IngestScheduleParameterException("Illegal duration value: " + value, ex);
+      throw new IngestScheduleParameterException("非法的持续时间值: " + value, ex);
     }
   }
 
-  /** Parses JSON param; throws schedule parameter exception on failure. */
+  /** 解析 JSON 参数;失败时抛出调度参数异常。 */
   private OutboxRelayJobParam parseParam(String param) {
     if (CharSequenceUtil.isBlank(param)) {
       return new OutboxRelayJobParam(null, null, null, null, null);
@@ -177,15 +170,11 @@ public class OutboxRelayJob {
     try {
       return objectMapper.readValue(param, OutboxRelayJobParam.class);
     } catch (Exception ex) {
-      throw new IngestScheduleParameterException(
-          "Failed to parse relay param: " + ex.getMessage(), ex);
+      throw new IngestScheduleParameterException("relay 参数解析失败: " + ex.getMessage(), ex);
     }
   }
 
-  /**
-   * Builds the lease owner id: host + jobId + threadId + uuid to avoid collisions and aid
-   * traceability.
-   */
+  /** 构建租约所有者 ID: host + jobId + threadId + uuid,以避免冲突并帮助追踪。 */
   private String buildLeaseOwner() {
     String host = CharSequenceUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");
     return host

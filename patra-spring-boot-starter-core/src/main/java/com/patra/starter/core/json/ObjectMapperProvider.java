@@ -7,76 +7,64 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.lang.NonNull;
 
 /**
- * Provides global access to an {@link ObjectMapper}, bridging Spring-managed configuration and
- * non-Spring code paths.
+ * 提供对 {@link ObjectMapper} 的全局访问，连接 Spring 管理的配置和非 Spring 代码路径。
  *
- * <p>Responsibilities and usage guidelines:
+ * <p>职责和使用指南：
  *
  * <ul>
- *   <li><b>Within a Spring context</b> the preferred approach remains constructor injection. This
- *       provider simply exposes the Spring-managed instance to static or non-Spring code by
- *       registering it with {@link JsonMapperHolder} once the application context is ready.
- *   <li><b>Outside Spring</b> the {@link JsonMapperHolder} lazily creates a default mapper. When
- *       the application later starts inside Spring, this provider replaces the default instance so
- *       both environments share the same configuration.
+ *   <li><b>在 Spring 上下文中</b>首选方法仍然是构造注入。本提供者通过在应用上下文就绪时将 Spring 管理的实例注册到 {@link JsonMapperHolder}，
+ *       将其暴露给静态或非 Spring 代码。
+ *   <li><b>在 Spring 外部</b>{@link JsonMapperHolder} 会延迟创建默认映射器。当应用稍后在 Spring 内启动时，
+ *       本提供者替换默认实例，使两个环境共享相同的配置。
  * </ul>
  *
- * <h3>Why not rely on this provider everywhere?</h3>
+ * <h3>为什么不在任何地方都依赖这个提供者？</h3>
  *
- * Dependency injection offers lifecycle management, configurability, and improved testability. This
- * class acts purely as a bridge for scenarios where DI is impossible (static utilities, shared
- * libraries, or very early initialization code).
+ * 依赖注入提供生命周期管理、可配置性和改进的可测试性。本类纯粹作为 DI 不可行的场景的桥梁 （静态工具、共享库或非常早期的初始化代码）。
  *
- * <h3>Lifecycle and thread safety</h3>
+ * <h3>生命周期和线程安全</h3>
  *
  * <ul>
- *   <li>{@link #setApplicationContext(ApplicationContext)} is invoked once during bean creation.
- *       The method caches the container-managed mapper and registers it with the global holder.
- *   <li>Registration is idempotent; a later registration simply replaces the previous mapper.
- *   <li>{@link #getObjectMapper()} falls back to {@link JsonMapperHolder} when the cached mapper is
- *       unavailable, ensuring consistent behavior regardless of initialization order.
+ *   <li>{@link #setApplicationContext(ApplicationContext)} 在 bean 创建期间被调用一次。
+ *       该方法缓存容器管理的映射器并将其注册到全局持有者。
+ *   <li>注册是幂等的；后续注册仅替换前一个映射器。
+ *   <li>{@link #getObjectMapper()} 在缓存的映射器不可用时回退到 {@link JsonMapperHolder}， 确保无论初始化顺序如何都保持一致的行为。
  * </ul>
  *
- * <h3>Usage tips</h3>
+ * <h3>使用提示</h3>
  *
  * <ul>
- *   <li>Favor constructor injection inside Spring components.
- *   <li>Use {@link JsonMapperHolder#getObjectMapper()} only when DI is not an option.
- *   <li>Avoid repeatedly registering different mappers at runtime to prevent configuration drift.
+ *   <li>在 Spring 组件内部优先使用构造注入。
+ *   <li>仅当 DI 不可行时才使用 {@link JsonMapperHolder#getObjectMapper()}。
+ *   <li>避免在运行时重复注册不同的映射器，防止配置漂移。
  * </ul>
  */
 public class ObjectMapperProvider implements ApplicationContextAware {
 
-  /**
-   * Cached {@link ObjectMapper} from the Spring container; a non-null value indicates that the
-   * context is fully initialized.
-   */
+  /** 来自 Spring 容器的缓存 {@link ObjectMapper}；非空值表示上下文已完全初始化。 */
   private static ObjectMapper objectMapper;
 
   /**
-   * Invoked when the Spring {@link ApplicationContext} becomes available. The managed mapper is
-   * cached locally and registered with {@link JsonMapperHolder} so non-Spring callers can reuse the
-   * same configuration.
+   * 在 Spring {@link ApplicationContext} 变为可用时被调用。管理的映射器被本地缓存并注册到 {@link JsonMapperHolder}， 以便非
+   * Spring 调用者可以复用相同的配置。
    */
   @Override
   public void setApplicationContext(@NonNull ApplicationContext applicationContext) {
-    // Spring Boot registers a shared ObjectMapper bean by default.
+    // Spring Boot 默认注册一个共享的 ObjectMapper bean。
     objectMapper = applicationContext.getBean(ObjectMapper.class);
-    // Bridge the container-managed mapper to the common-layer holder for consistent behavior.
+    // 将容器管理的映射器桥接到公共层持有者，以确保行为一致。
     JsonMapperHolder.register(objectMapper);
   }
 
   /**
-   * Returns the {@link ObjectMapper} to use.
+   * 返回要使用的 {@link ObjectMapper}。
    *
    * <ul>
-   *   <li>If the Spring context already exposed the mapper, the cached instance is returned.
-   *   <li>Otherwise the call falls back to {@link JsonMapperHolder}, which may lazily create a
-   *       default mapper.
+   *   <li>如果 Spring 上下文已经暴露了映射器，则返回缓存的实例。
+   *   <li>否则调用回退到 {@link JsonMapperHolder}，可能延迟创建默认映射器。
    * </ul>
    *
-   * Prefer constructor injection in application code; this method exists solely as a bridge for
-   * code that cannot rely on DI.
+   * 在应用代码中优先使用构造注入；该方法仅作为无法依赖 DI 的代码的桥梁存在。
    */
   public static ObjectMapper getObjectMapper() {
     if (objectMapper == null) {

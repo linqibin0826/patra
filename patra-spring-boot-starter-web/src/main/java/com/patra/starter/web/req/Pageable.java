@@ -1,16 +1,16 @@
 package com.patra.starter.web.req;
 
 /**
- * Pagination contract implemented by request DTOs that accept page settings.
+ * 由接受分页设置的请求 DTO 实现的分页契约。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public interface Pageable {
 
-  /** Page index (1-based). */
+  /** 页面索引（1-based）。 */
   Integer getPageNo();
 
-  /** Page size requested by the client. */
+  /** 客户端请求的页面大小。 */
   Integer getPageSize();
 }

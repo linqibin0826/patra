@@ -5,11 +5,9 @@ import com.patra.common.error.trait.HasErrorTraits;
 import java.util.Set;
 
 /**
- * Base exception class for Registry "not found" semantics.
+ * 注册中心"未找到"语义的异常基类。
  *
- * <p>Represents requested resources (namespaces, catalogs, types, etc.) that do not exist or are
- * inaccessible due to business rules. All "not found" exceptions should extend this class to ensure
- * consistent error trait classification and handling.
+ * <p>表示请求的资源(命名空间、目录、类型等)不存在, 或由于业务规则而不可访问。所有"未找到"异常都应扩展此类, 以确保一致的错误特征分类和处理。
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,28 +15,28 @@ import java.util.Set;
 public abstract class RegistryNotFound extends RegistryException implements HasErrorTraits {
 
   /**
-   * Creates an exception with a message.
+   * 使用消息创建异常。
    *
-   * @param message detail message
+   * @param message 详细消息
    */
   protected RegistryNotFound(String message) {
     super(message);
   }
 
   /**
-   * Creates an exception with a message and root cause.
+   * 使用消息和根本原因创建异常。
    *
-   * @param message detail message
-   * @param cause root cause
+   * @param message 详细消息
+   * @param cause 根本原因
    */
   protected RegistryNotFound(String message, Throwable cause) {
     super(message, cause);
   }
 
   /**
-   * Returns the error traits for this exception (always NOT_FOUND).
+   * 返回此异常的错误特征(始终为 NOT_FOUND)。
    *
-   * @return set containing NOT_FOUND trait
+   * @return 包含 NOT_FOUND 特征的集合
    */
   @Override
   public Set<ErrorTrait> getErrorTraits() {

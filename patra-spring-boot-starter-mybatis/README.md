@@ -1,33 +1,33 @@
 # patra-spring-boot-starter-mybatis
 
-> MyBatis-Plus auto-configuration with pagination, optimistic locking, and performance optimizations.
+> MyBatis-Plus 自动配置,支持分页、乐观锁和性能优化。
 
-## 📌 Purpose
+## 📌 目的
 
-Provides **MyBatis-Plus** configuration for repository layer:
-- Pagination plugin
-- Optimistic locking plugin (`@Version`)
-- Batch operations optimization
-- JSON type handlers for `JsonNode` fields
-- SQL logging (dev/test only)
+为仓储层提供 **MyBatis-Plus** 配置:
+- 分页插件
+- 乐观锁插件(`@Version`)
+- 批量操作优化
+- `JsonNode` 字段的 JSON 类型处理器
+- SQL 日志记录(仅开发/测试环境)
 
-## 🔧 Auto-Configurations
+## 🔧 自动配置
 
-### MyBatis-Plus Plugins
-- **PaginationInnerInterceptor**: Pagination support
-- **OptimisticLockerInnerInterceptor**: `@Version` for concurrency control
-- **BlockAttackInnerInterceptor**: Prevent full table updates/deletes
+### MyBatis-Plus 插件
+- **PaginationInnerInterceptor**: 分页支持
+- **OptimisticLockerInnerInterceptor**: 用于并发控制的 `@Version`
+- **BlockAttackInnerInterceptor**: 防止全表更新/删除
 
-### Type Handlers
-- **JsonNodeTypeHandler**: Map `JsonNode` ↔ VARCHAR/JSON columns
-- Custom type handlers auto-registered
+### 类型处理器
+- **JsonNodeTypeHandler**: 映射 `JsonNode` ↔ VARCHAR/JSON 列
+- 自动注册自定义类型处理器
 
-### Global Configuration
-- ID generation: `AUTO` (database auto-increment)
-- Logic delete support
-- Field strategy: `NOT_NULL`
+### 全局配置
+- ID 生成: `AUTO`(数据库自增)
+- 逻辑删除支持
+- 字段策略: `NOT_NULL`
 
-## 🔗 Dependencies
+## 🔗 依赖
 
 ```xml
 <dependency>
@@ -36,11 +36,11 @@ Provides **MyBatis-Plus** configuration for repository layer:
 </dependency>
 ```
 
-Includes: MyBatis-Plus, HikariCP, MapStruct
+包含: MyBatis-Plus、HikariCP、MapStruct
 
-## 🚀 Usage
+## 🚀 用法
 
-### Repository Implementation
+### 仓储实现
 ```java
 @Repository
 @RequiredArgsConstructor
@@ -57,7 +57,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
             mapper.insert(entity);
             aggregate.assignId(entity.getId());
         } else {
-            mapper.updateById(entity);  // Optimistic lock via @Version
+            mapper.updateById(entity);  // 通过 @Version 实现乐观锁
         }
 
         return aggregate;
@@ -65,7 +65,7 @@ public class PlanRepositoryMpImpl implements PlanRepository {
 }
 ```
 
-### Pagination
+### 分页
 ```java
 Page<IngestPlanDO> page = new Page<>(1, 20);
 IPage<IngestPlanDO> result = mapper.selectPage(page, queryWrapper);
@@ -73,4 +73,4 @@ IPage<IngestPlanDO> result = mapper.selectPage(page, queryWrapper);
 
 ---
 
-**Last Updated**: 2025-01-12
+**最后更新**: 2025-01-12

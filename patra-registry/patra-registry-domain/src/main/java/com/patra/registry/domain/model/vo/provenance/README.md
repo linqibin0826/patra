@@ -1,59 +1,59 @@
-# Provenance Configuration Value Objects
+# 数据源配置值对象
 
-This package contains **immutable value objects** representing provenance metadata and operational configurations.
+本包包含表示数据源元数据和运营配置的**不可变值对象**。
 
 ---
 
-## Package Contents
+## 包内容
 
-### Core Entity
+### 核心实体
 
-**Provenance.java** — Root provenance entity
-- Represents external data source catalog entry
-- Referenced by all `reg_prov_*` configuration tables
+**Provenance.java** — 根数据源实体
+- 表示外部数据源目录条目
+- 被所有 `reg_prov_*` 配置表引用
 
-### Operational Configurations (Temporal)
+### 运营配置(时态)
 
-All configs below support **time-effective slicing** (`effective_from`, `effective_until`):
+以下所有配置都支持**时间有效切片**(`effective_from`, `effective_until`):
 
-| Config | Purpose | Key Fields |
+| 配置 | 用途 | 关键字段 |
 |--------|---------|------------|
-| **WindowOffsetConfig** | Time window segmentation | `startOffsetDays`, `lookbackWindowDays` |
-| **PaginationConfig** | Pagination strategy | `pageSize`, `maxPages`, `cursorField` |
-| **HttpConfig** | HTTP client settings | `baseUrl`, `connectTimeout`, `readTimeout`, `headers` |
-| **BatchingConfig** | Batching rules | `batchSize`, `maxConcurrentBatches` |
-| **RetryConfig** | Retry policy | `maxRetries`, `backoffMillis`, `retryableStatusCodes` |
-| **RateLimitConfig** | Rate limiting | `requestsPerSecond`, `burstCapacity` |
+| **WindowOffsetConfig** | 时间窗口分段 | `startOffsetDays`, `lookbackWindowDays` |
+| **PaginationConfig** | 分页策略 | `pageSize`, `maxPages`, `cursorField` |
+| **HttpConfig** | HTTP 客户端设置 | `baseUrl`, `connectTimeout`, `readTimeout`, `headers` |
+| **BatchingConfig** | 批处理规则 | `batchSize`, `maxConcurrentBatches` |
+| **RetryConfig** | 重试策略 | `maxRetries`, `backoffMillis`, `retryableStatusCodes` |
+| **RateLimitConfig** | 速率限制 | `requestsPerSecond`, `burstCapacity` |
 
 ---
 
-## Temporal Configuration Pattern
+## 时态配置模式
 
-### Concept
+### 概念
 
-**Temporal Configuration** = Configs have time validity ranges, queries retrieve config effective at specific instant.
+**时态配置** = 配置具有时间有效范围,查询检索在特定时刻生效的配置。
 
-**Why?**
-- Safe config updates without impacting running tasks
-- Audit trail of config changes
-- Gradual rollout / A/B testing support
+**为什么?**
+- 安全更新配置而不影响正在运行的任务
+- 配置更改的审计轨迹
+- 支持渐进式发布 / A/B 测试
 
-### Schema Pattern
+### 模式架构
 
-All `reg_prov_*_cfg` tables include:
+所有 `reg_prov_*_cfg` 表包含:
 ```sql
 effective_from   DATETIME NOT NULL,
 effective_until  DATETIME NULL,
 INDEX idx_temporal (provenance_id, operation_type, effective_from, effective_until)
 ```
 
-### Query Pattern
+### 查询模式
 
 ```java
 Optional<HttpConfig> findActiveHttpConfig(
     Long provenanceId,
     String operationType,  // "HARVEST", "UPDATE", null (=ALL)
-    Instant at             // Query instant
+    Instant at             // 查询时刻
 );
 
 // SQL:
@@ -65,116 +65,116 @@ Optional<HttpConfig> findActiveHttpConfig(
 // LIMIT 1
 ```
 
-**Result**: Most recent config valid at instant `at`.
+**结果**: 在时刻 `at` 有效的最新配置。
 
 ---
 
-## Value Object Details
+## 值对象详情
 
 ### 1. Provenance
 
-**Purpose**: Core provenance catalog entry (external data source).
+**用途**: 核心数据源目录条目(外部数据源)。
 
-**Attributes**:
+**属性**:
 ```java
 public record Provenance(
     Long id,                     // PK
-    String code,                 // Unique stable code (e.g., "pubmed")
-    String name,                 // Display name (e.g., "PubMed")
-    String baseUrlDefault,       // Default API base URL
-    String timezoneDefault,      // Default timezone (IANA, e.g., "UTC")
-    String docsUrl,              // Official docs URL
-    boolean active,              // Is source active?
-    String lifecycleStatusCode   // Dict code (lifecycle_status)
+    String code,                 // 唯一稳定代码(例如 "pubmed")
+    String name,                 // 显示名称(例如 "PubMed")
+    String baseUrlDefault,       // 默认 API 基础 URL
+    String timezoneDefault,      // 默认时区(IANA,例如 "UTC")
+    String docsUrl,              // 官方文档 URL
+    boolean active,              // 数据源是否激活?
+    String lifecycleStatusCode   // 字典代码(lifecycle_status)
 ) { }
 ```
 
-**Validation**:
-- `code`, `name`, `timezoneDefault`, `lifecycleStatusCode`: NOT BLANK
-- `id`: POSITIVE
+**验证**:
+- `code`, `name`, `timezoneDefault`, `lifecycleStatusCode`: 非空
+- `id`: 正数
 
-**File**: [`Provenance.java`](Provenance.java:1)
+**文件**: [`Provenance.java`](Provenance.java:1)
 
 ---
 
 ### 2. WindowOffsetConfig
 
-**Purpose**: Defines time window segmentation for collection.
+**用途**: 定义采集的时间窗口分段。
 
-**Attributes**:
+**属性**:
 ```java
 public record WindowOffsetConfig(
     Long id,
     Long provenanceId,
-    String operationType,        // "HARVEST", "UPDATE", null (=SOURCE-level default)
-    Integer startOffsetDays,     // How many days back from today to start
-    Integer lookbackWindowDays,  // Size of collection window
+    String operationType,        // "HARVEST", "UPDATE", null (=SOURCE 级默认值)
+    Integer startOffsetDays,     // 从今天往回多少天开始
+    Integer lookbackWindowDays,  // 采集窗口大小
     Instant effectiveFrom,
     Instant effectiveUntil
 ) { }
 ```
 
-**Example**:
+**示例**:
 ```
-startOffsetDays = 7        → Start 7 days ago
-lookbackWindowDays = 3     → Collect 3 days of data
-Window = [today-7d, today-4d)
+startOffsetDays = 7        → 从 7 天前开始
+lookbackWindowDays = 3     → 采集 3 天的数据
+窗口 = [今天-7天, 今天-4天)
 ```
 
-**Scope Precedence**: TASK-level (operationType != null) overrides SOURCE-level (operationType = null).
+**作用域优先级**: TASK 级(operationType != null)覆盖 SOURCE 级(operationType = null)。
 
-**File**: [`WindowOffsetConfig.java`](WindowOffsetConfig.java)
+**文件**: [`WindowOffsetConfig.java`](WindowOffsetConfig.java)
 
 ---
 
 ### 3. PaginationConfig
 
-**Purpose**: Pagination strategy (offset-based, cursor-based, or page-based).
+**用途**: 分页策略(基于偏移、基于游标或基于页面)。
 
-**Attributes**:
+**属性**:
 ```java
 public record PaginationConfig(
     Long id,
     Long provenanceId,
     String operationType,
     String paginationType,       // "OFFSET", "CURSOR", "PAGE"
-    Integer pageSize,            // Records per page
-    Integer maxPages,            // Max pages to fetch (safety limit)
-    String cursorField,          // Cursor field name (for CURSOR type)
+    Integer pageSize,            // 每页记录数
+    Integer maxPages,            // 最大获取页数(安全限制)
+    String cursorField,          // 游标字段名(CURSOR 类型使用)
     Instant effectiveFrom,
     Instant effectiveUntil
 ) { }
 ```
 
-**Pagination Types**:
+**分页类型**:
 - **OFFSET**: `?offset=0&limit=100`, `?offset=100&limit=100`, ...
 - **CURSOR**: `?cursor=abc123`, `?cursor=xyz789`, ...
 - **PAGE**: `?page=1`, `?page=2`, ...
 
-**File**: [`PaginationConfig.java`](PaginationConfig.java)
+**文件**: [`PaginationConfig.java`](PaginationConfig.java)
 
 ---
 
 ### 4. HttpConfig
 
-**Purpose**: HTTP client settings (timeouts, headers, base URL override).
+**用途**: HTTP 客户端设置(超时、请求头、基础 URL 覆盖)。
 
-**Attributes**:
+**属性**:
 ```java
 public record HttpConfig(
     Long id,
     Long provenanceId,
     String operationType,
-    String baseUrl,              // Override provenance.baseUrlDefault
-    Integer connectTimeoutMs,    // Connection timeout
-    Integer readTimeoutMs,       // Read timeout
-    String headersJson,          // Custom headers (JSON map)
+    String baseUrl,              // 覆盖 provenance.baseUrlDefault
+    Integer connectTimeoutMs,    // 连接超时
+    Integer readTimeoutMs,       // 读取超时
+    String headersJson,          // 自定义请求头(JSON 映射)
     Instant effectiveFrom,
     Instant effectiveUntil
 ) { }
 ```
 
-**Headers Format** (JSON):
+**请求头格式**(JSON):
 ```json
 {
   "User-Agent": "Papertrace/1.0",
@@ -183,133 +183,133 @@ public record HttpConfig(
 }
 ```
 
-**File**: [`HttpConfig.java`](HttpConfig.java)
+**文件**: [`HttpConfig.java`](HttpConfig.java)
 
 ---
 
 ### 5. BatchingConfig
 
-**Purpose**: Batching rules for detail fetching (e.g., fetch 1000 IDs in batches of 100).
+**用途**: 详情获取的批处理规则(例如,将 1000 个 ID 分批为 100 个)。
 
-**Attributes**:
+**属性**:
 ```java
 public record BatchingConfig(
     Long id,
     Long provenanceId,
     String operationType,
-    Integer batchSize,           // Items per batch
-    Integer maxConcurrentBatches,  // Parallel batch execution limit
+    Integer batchSize,           // 每批项数
+    Integer maxConcurrentBatches,  // 并行批次执行限制
     Instant effectiveFrom,
     Instant effectiveUntil
 ) { }
 ```
 
-**Use Case**:
-- List API returns IDs: `[id1, id2, ..., id10000]`
-- Detail API fetches full records: batch into `[id1..id100]`, `[id101..id200]`, ...
-- Control concurrency to respect rate limits
+**用例**:
+- 列表 API 返回 ID: `[id1, id2, ..., id10000]`
+- 详情 API 获取完整记录: 分批为 `[id1..id100]`, `[id101..id200]`, ...
+- 控制并发以遵守速率限制
 
-**File**: [`BatchingConfig.java`](BatchingConfig.java)
+**文件**: [`BatchingConfig.java`](BatchingConfig.java)
 
 ---
 
 ### 6. RetryConfig
 
-**Purpose**: Retry policy (max retries, backoff, retryable errors).
+**用途**: 重试策略(最大重试次数、退避、可重试错误)。
 
-**Attributes**:
+**属性**:
 ```java
 public record RetryConfig(
     Long id,
     Long provenanceId,
     String operationType,
-    Integer maxRetries,          // Max retry attempts
-    Long backoffMillis,          // Fixed backoff delay (ms)
-    String retryableStatusCodes, // Comma-separated HTTP codes (e.g., "429,502,503")
+    Integer maxRetries,          // 最大重试次数
+    Long backoffMillis,          // 固定退避延迟(毫秒)
+    String retryableStatusCodes, // 逗号分隔的 HTTP 代码(例如 "429,502,503")
     Instant effectiveFrom,
     Instant effectiveUntil
 ) { }
 ```
 
-**Backoff Strategy**: Fixed delay (future: exponential backoff).
+**退避策略**: 固定延迟(未来: 指数退避)。
 
-**File**: [`RetryConfig.java`](RetryConfig.java)
+**文件**: [`RetryConfig.java`](RetryConfig.java)
 
 ---
 
 ### 7. RateLimitConfig
 
-**Purpose**: Rate limiting (requests per second, burst capacity).
+**用途**: 速率限制(每秒请求数、突发容量)。
 
-**Attributes**:
+**属性**:
 ```java
 public record RateLimitConfig(
     Long id,
     Long provenanceId,
     String operationType,
-    Double requestsPerSecond,    // Sustained rate
-    Integer burstCapacity,       // Max burst size
+    Double requestsPerSecond,    // 持续速率
+    Integer burstCapacity,       // 最大突发大小
     Instant effectiveFrom,
     Instant effectiveUntil
 ) { }
 ```
 
-**Algorithm**: Token bucket (future implementation).
+**算法**: 令牌桶(未来实现)。
 
-**File**: [`RateLimitConfig.java`](RateLimitConfig.java)
+**文件**: [`RateLimitConfig.java`](RateLimitConfig.java)
 
 ---
 
-## Scope Precedence
+## 作用域优先级
 
-### Concept
+### 概念
 
-Configs can exist at two levels:
-1. **SOURCE-level** (`operation_type = NULL`): Applies to all operations
-2. **TASK-level** (`operation_type = 'HARVEST'`): Applies only to specific operation
+配置可以存在于两个级别:
+1. **SOURCE 级**(`operation_type = NULL`): 适用于所有操作
+2. **TASK 级**(`operation_type = 'HARVEST'`): 仅适用于特定操作
 
-**Precedence**: TASK-level **overrides** SOURCE-level.
+**优先级**: TASK 级**覆盖** SOURCE 级。
 
-### Example
+### 示例
 
-**Scenario**: PubMed has two retry configs:
+**场景**: PubMed 有两个重试配置:
 
 | ID | provenance_id | operation_type | max_retries | effective_from |
 |----|---------------|----------------|-------------|----------------|
 | 1  | 1 (PubMed)    | NULL           | 3           | 2025-01-01     |
 | 2  | 1 (PubMed)    | HARVEST        | 5           | 2025-01-10     |
 
-**Query 1**: `findActiveRetry(provenanceId=1, operationType=UPDATE, at=2025-01-15)`
-- Result: Config #1 (SOURCE-level, max_retries=3)
+**查询 1**: `findActiveRetry(provenanceId=1, operationType=UPDATE, at=2025-01-15)`
+- 结果: 配置 #1 (SOURCE 级, max_retries=3)
 
-**Query 2**: `findActiveRetry(provenanceId=1, operationType=HARVEST, at=2025-01-15)`
-- Result: Config #2 (TASK-level, max_retries=5) — **overrides** SOURCE-level
+**查询 2**: `findActiveRetry(provenanceId=1, operationType=HARVEST, at=2025-01-15)`
+- 结果: 配置 #2 (TASK 级, max_retries=5) — **覆盖** SOURCE 级
 
 ---
 
-## Design Patterns
+## 设计模式
 
-### 1. Records for Immutability
+### 1. 使用 Record 实现不可变性
 
-**All VOs are `record` types** → immutable by default.
+**所有 VO 都是 `record` 类型** → 默认不可变。
 
 ```java
 public record HttpConfig(...) { }
 
-// No setters — construct new instance to "update"
+// 无 setter — 通过构造新实例来"更新"
 HttpConfig updated = new HttpConfig(
     config.id(),
     config.provenanceId(),
     config.operationType(),
-    "https://new-base-url.com",  // Changed
+    "https://new-base-url.com",  // 已更改
     config.connectTimeoutMs(),
     // ...
 );
 ```
 
-### 2. Canonical Constructor Validation
+### 2. 规范构造器验证
 
-**Validation in compact constructor**:
+**在紧凑构造器中验证**:
 ```java
 public record Provenance(String code, String name, ...) {
     public Provenance {
@@ -321,25 +321,25 @@ public record Provenance(String code, String name, ...) {
 }
 ```
 
-### 3. Nullable Optional Fields
+### 3. 可空的可选字段
 
-**Use `null` for optional fields** (not `Optional<T>` — records prefer null).
+**对可选字段使用 `null`**(不使用 `Optional<T>` — record 更偏好 null)。
 
 ```java
 public record WindowOffsetConfig(
     Long id,
     Long provenanceId,
-    String operationType,        // Nullable (null = SOURCE-level)
-    Integer startOffsetDays,     // Nullable (use provenance default)
+    String operationType,        // 可空(null = SOURCE 级)
+    Integer startOffsetDays,     // 可空(使用数据源默认值)
     // ...
 ) { }
 ```
 
 ---
 
-## Testing Guidelines
+## 测试指南
 
-### Unit Tests
+### 单元测试
 
 ```java
 @Test
@@ -354,24 +354,24 @@ void testProvenanceValidation() {
 }
 ```
 
-### Integration Tests (Repository)
+### 集成测试(仓储)
 
 ```java
 @Test
 void testTemporalQuery() {
-    // Given: Two configs for same provenance
+    // Given: 同一数据源的两个配置
     HttpConfig config1 = new HttpConfig(..., effectiveFrom=Jan1, effectiveUntil=Jan10);
     HttpConfig config2 = new HttpConfig(..., effectiveFrom=Jan10, effectiveUntil=null);
 
     repository.save(config1);
     repository.save(config2);
 
-    // When: Query at Jan5
+    // When: 在 Jan5 查询
     Optional<HttpConfig> result = repository.findActiveHttpConfig(
         provenanceId, operationType, Instant.parse("2025-01-05T00:00:00Z")
     );
 
-    // Then: Should return config1
+    // Then: 应返回 config1
     assertTrue(result.isPresent());
     assertEquals(config1.id(), result.get().id());
 }
@@ -379,43 +379,43 @@ void testTemporalQuery() {
 
 ---
 
-## Common Pitfalls
+## 常见陷阱
 
-### ❌ DON'T: Query without temporal filtering
+### ❌ 不要: 在没有时态过滤的情况下查询
 
 ```java
-// BAD: Returns all configs (ignores time validity)
+// 不好: 返回所有配置(忽略时间有效性)
 List<HttpConfig> findByProvenanceId(Long provenanceId);
 ```
 
-### ✅ DO: Always query with `at` parameter
+### ✅ 应该: 始终使用 `at` 参数查询
 
 ```java
-// GOOD: Returns config valid at specific instant
+// 好: 返回在特定时刻有效的配置
 Optional<HttpConfig> findActiveHttpConfig(Long provenanceId, String operationType, Instant at);
 ```
 
-### ❌ DON'T: Modify record fields (impossible, but don't try workarounds)
+### ❌ 不要: 修改 record 字段(不可能,但不要尝试变通方法)
 
 ```java
-// BAD: Records are immutable
-config.setBaseUrl("new-url");  // ❌ Compile error
+// 不好: Record 是不可变的
+config.setBaseUrl("new-url");  // ❌ 编译错误
 ```
 
-### ✅ DO: Create new instance
+### ✅ 应该: 创建新实例
 
 ```java
-// GOOD: Construct new record
+// 好: 构造新 record
 HttpConfig updated = new HttpConfig(
     config.id(),
     config.provenanceId(),
-    // ... copy fields, change only what's needed
+    // ... 复制字段,仅更改需要的
 );
 ```
 
 ---
 
-**See Also**:
+**另见**:
 - [patra-registry README](../../../../../README.md)
-- [Architecture Guide](../../../../../../../../docs/ARCHITECTURE.md)
-- [ProvenanceConfigRepository](../../port/ProvenanceConfigRepository.java) — Port interface for queries
+- [架构指南](../../../../../../../../docs/ARCHITECTURE.md)
+- [ProvenanceConfigRepository](../../port/ProvenanceConfigRepository.java) — 查询的端口接口

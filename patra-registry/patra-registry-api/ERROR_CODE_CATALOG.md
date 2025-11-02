@@ -1,43 +1,43 @@
-# Registry Service Error Code Catalog
+# 注册中心服务错误代码目录
 
-This document provides a comprehensive catalog of all Registry service error codes. The error codes follow the `REG-NNNN` format and are designed to provide consistent, machine-readable error identification across all Registry service operations.
+本文档提供注册中心服务所有错误代码的完整目录。错误代码遵循 `REG-NNNN` 格式,旨在为所有注册中心服务操作提供一致的、机器可读的错误识别。
 
-## Error Code Format
+## 错误代码格式
 
-All Registry error codes follow the structured format: **`REG-NNNN`**
+所有注册中心错误代码遵循结构化格式: **`REG-NNNN`**
 
-- **`REG`** - Registry service context prefix
-- **`NNNN`** - Four-digit numeric code
+- **`REG`** - 注册中心服务上下文前缀
+- **`NNNN`** - 四位数字代码
 
-## Error Code Categories
+## 错误代码分类
 
-### Business-Specific Codes (1xxx Series) (1xxx Series)
+### 业务特定代码(1xxx 系列)
 
-These codes represent business logic errors specific to Registry service operations and map directly to domain exceptions.
+这些代码代表注册中心服务操作特定的业务逻辑错误,直接映射到领域异常。
 
-#### Dictionary Operations (14xx Series)
+#### 字典操作(14xx 系列)
 
-| Code | Domain Exception | Description | Usage | Example Scenario |
+| 代码 | 领域异常 | 描述 | 用途 | 示例场景 |
 |------|------------------|-------------|-------|------------------|
-| `REG-1401` | `DictionaryNotFoundException` | Dictionary Type Not Found | The specified dictionary type could not be found | Accessing dictionary type "unknown-type" |
-| `REG-1402` | `DictionaryNotFoundException` | Dictionary Item Not Found | The specified dictionary item could not be found | Accessing item "missing-item" in dictionary type "sources" |
-| `REG-1403` | `DictionaryItemDisabled` | Dictionary Item Disabled | The specified dictionary item is disabled | Attempting to use disabled dictionary item |
-| `REG-1404` | `DictionaryTypeAlreadyExists` | Dictionary Type Already Exists | Attempted to create a dictionary type that already exists | Creating dictionary type "sources" when it already exists |
-| `REG-1405` | `DictionaryItemAlreadyExists` | Dictionary Item Already Exists | Attempted to create a dictionary item that already exists | Creating item "pubmed" in type "sources" when it already exists |
-| `REG-1406` | `DictionaryTypeDisabled` | Dictionary Type Disabled | The specified dictionary type is disabled | Attempting to use disabled dictionary type |
-| `REG-1407` | `DictionaryValidationException` | Dictionary Validation Error | The dictionary data failed validation | Submitting dictionary data with invalid format |
-| `REG-1408` | `DictionaryDefaultItemMissing` | Dictionary Default Item Missing | Required default item is missing from dictionary type | Dictionary type missing required default item |
-| `REG-1409` | `DictionaryRepositoryException` | Dictionary Repository Error | Database or repository layer error occurred | Database connection failure during dictionary operation |
+| `REG-1401` | `DictionaryNotFoundException` | 字典类型未找到 | 指定的字典类型无法找到 | 访问字典类型 "unknown-type" |
+| `REG-1402` | `DictionaryNotFoundException` | 字典项未找到 | 指定的字典项无法找到 | 访问字典类型 "sources" 中的项 "missing-item" |
+| `REG-1403` | `DictionaryItemDisabled` | 字典项已禁用 | 指定的字典项已被禁用 | 尝试使用已禁用的字典项 |
+| `REG-1404` | `DictionaryTypeAlreadyExists` | 字典类型已存在 | 尝试创建已存在的字典类型 | 当字典类型 "sources" 已存在时尝试创建它 |
+| `REG-1405` | `DictionaryItemAlreadyExists` | 字典项已存在 | 尝试创建已存在的字典项 | 当类型 "sources" 中的项 "pubmed" 已存在时尝试创建它 |
+| `REG-1406` | `DictionaryTypeDisabled` | 字典类型已禁用 | 指定的字典类型已被禁用 | 尝试使用已禁用的字典类型 |
+| `REG-1407` | `DictionaryValidationException` | 字典验证错误 | 字典数据验证失败 | 提交格式无效的字典数据 |
+| `REG-1408` | `DictionaryDefaultItemMissing` | 字典默认项缺失 | 字典类型缺少必需的默认项 | 字典类型缺少必需的默认项 |
+| `REG-1409` | `DictionaryRepositoryException` | 字典仓储错误 | 数据库或仓储层发生错误 | 字典操作期间数据库连接失败 |
 
-#### Registry General Operations (15xx Series)
+#### 注册中心通用操作(15xx 系列)
 
-| Code | Domain Exception | Description | Usage | Example Scenario |
+| 代码 | 领域异常 | 描述 | 用途 | 示例场景 |
 |------|------------------|-------------|-------|------------------|
-| `REG-1501` | `RegistryQuotaExceeded` | Registry Quota Exceeded | Operation would exceed system quotas or limits | Creating too many dictionary items beyond system limit |
+| `REG-1501` | `RegistryQuotaExceeded` | 注册中心配额超限 | 操作将超出系统配额或限制 | 创建的字典项数量超出系统限制 |
 
-## Error Response Format
+## 错误响应格式
 
-All Registry service errors follow the RFC 7807 ProblemDetail format:
+所有注册中心服务错误遵循 RFC 7807 ProblemDetail 格式:
 
 ```json
 {
@@ -52,45 +52,45 @@ All Registry service errors follow the RFC 7807 ProblemDetail format:
 }
 ```
 
-## Usage Guidelines
+## 使用指南
 
-### For API Consumers
+### 对于 API 消费者
 
-1. **Programmatic Handling**: Use the `code` field for programmatic error handling
-2. **Human-Readable Messages**: Use the `detail` field for user-facing error messages
-3. **Debugging**: Use the `traceId` field for debugging and support requests
-4. **Error Classification**: Use the code prefix and series to classify error types
+1. **编程处理**: 使用 `code` 字段进行编程错误处理
+2. **人类可读消息**: 使用 `detail` 字段作为面向用户的错误消息
+3. **调试**: 使用 `traceId` 字段进行调试和支持请求
+4. **错误分类**: 使用代码前缀和系列对错误类型进行分类
 
-### For Developers
+### 对于开发人员
 
-1. **Error Code Selection**: Choose the most specific error code available
-2. **Fallback Strategy**: Use HTTP-aligned codes via `HttpStdErrors` factory when no specific business code applies
-3. **Error Messages**: Provide clear, actionable error messages in the `detail` field
-4. **Consistency**: Maintain consistent error handling patterns across all endpoints
+1. **错误代码选择**: 选择最具体的可用错误代码
+2. **回退策略**: 当没有特定业务代码适用时,通过 `HttpStdErrors` 工厂使用 HTTP 对齐代码
+3. **错误消息**: 在 `detail` 字段中提供清晰、可操作的错误消息
+4. **一致性**: 在所有端点保持一致的错误处理模式
 
-## Append-Only Policy
+## 仅追加策略
 
-This error catalog follows an **append-only principle** to ensure API stability:
+此错误目录遵循**仅追加原则**以确保 API 稳定性:
 
-- Allowed: Adding new error codes
-- Allowed: Adding new documentation or examples
-- Forbidden: Removing existing error codes
-- Forbidden: Changing the meaning of existing error codes
-- Forbidden: Modifying existing error code strings
+- 允许: 添加新的错误代码
+- 允许: 添加新的文档或示例
+- 禁止: 移除现有错误代码
+- 禁止: 更改现有错误代码的含义
+- 禁止: 修改现有错误代码字符串
 
-## Integration Examples
+## 集成示例
 
-### Java Usage
+### Java 用法
 
 ```java
-// Domain exceptions already exist and map to error codes
-// Dictionary operations
-throw new DictionaryNotFoundException("sources"); // Maps to REG-1401
-throw new DictionaryNotFoundException("sources", "pubmed"); // Maps to REG-1402
-throw new DictionaryItemDisabled("sources", "disabled-item"); // Maps to REG-1403
-throw new DictionaryTypeAlreadyExists("sources"); // Maps to REG-1404
+// 领域异常已存在并映射到错误代码
+// 字典操作
+throw new DictionaryNotFoundException("sources"); // 映射到 REG-1401
+throw new DictionaryNotFoundException("sources", "pubmed"); // 映射到 REG-1402
+throw new DictionaryItemDisabled("sources", "disabled-item"); // 映射到 REG-1403
+throw new DictionaryTypeAlreadyExists("sources"); // 映射到 REG-1404
 
-// Error codes can be used in application layer for mapping
+// 错误代码可用于应用层映射
 public class RegistryErrorCodeMapper {
     public static RegistryErrorCode mapException(RegistryException exception) {
         return switch (exception) {
@@ -102,58 +102,58 @@ public class RegistryErrorCodeMapper {
                 RegistryErrorCode.REG_1403;
             case DictionaryTypeAlreadyExists dtae ->
                 RegistryErrorCode.REG_1404;
-            // ... other mappings
-            default -> RegistryErrorCode.REG_0500; // fallback
+            // ... 其他映射
+            default -> RegistryErrorCode.REG_0500; // 回退
         };
     }
 }
 ```
 
-### Client-Side Handling
+### 客户端处理
 
 ```javascript
-// JavaScript/TypeScript client handling
+// JavaScript/TypeScript 客户端处理
 switch (error.code) {
     case 'REG-1401':
-        // Dictionary type not found
-        showError('The specified dictionary type could not be found.');
+        // 字典类型未找到
+        showError('指定的字典类型无法找到。');
         break;
     case 'REG-1402':
-        // Dictionary item not found
-        showError('The specified dictionary item could not be found.');
+        // 字典项未找到
+        showError('指定的字典项无法找到。');
         break;
     case 'REG-1403':
-        // Dictionary item disabled
-        showError('This dictionary item is currently disabled and cannot be used.');
+        // 字典项已禁用
+        showError('此字典项当前已禁用,无法使用。');
         break;
     case 'REG-1404':
-        // Dictionary type already exists
-        showError('This dictionary type name is already taken. Please choose a different name.');
+        // 字典类型已存在
+        showError('此字典类型名称已被占用。请选择不同的名称。');
         break;
     case 'REG-1405':
-        // Dictionary item already exists
-        showError('This dictionary item already exists in the specified type.');
+        // 字典项已存在
+        showError('此字典项在指定类型中已存在。');
         break;
     default:
-        showError('An unexpected error occurred. Please try again.');
+        showError('发生意外错误。请重试。');
 }
 ```
 
-## Version History
+## 版本历史
 
-| Version | Date | Changes |
+| 版本 | 日期 | 变更 |
 |---------|------|---------|
-| 0.1.0 | 2025-09-19 | Initial error code catalog with HTTP-aligned and business-specific codes |
+| 0.1.0 | 2025-09-19 | 初始错误代码目录,包含 HTTP 对齐和业务特定代码 |
 
-## Support
+## 支持
 
-For questions about error codes or to request new error codes, please:
+关于错误代码的问题或请求新错误代码,请:
 
-1. Check this documentation first
-2. Review the source code in `RegistryErrorCode.java`
-3. Create an issue with the development team
-4. Include the `traceId` from error responses for debugging
+1. 首先检查本文档
+2. 查看 `RegistryErrorCode.java` 中的源代码
+3. 向开发团队创建工单
+4. 在调试时包含错误响应中的 `traceId`
 
 ---
 
-*This documentation is automatically generated from the `RegistryErrorCode` enum. For the most up-to-date information, refer to the source code.*
+*本文档从 `RegistryErrorCode` 枚举自动生成。有关最新信息,请参考源代码。*

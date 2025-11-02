@@ -1,8 +1,8 @@
-# Troubleshooting Guide
+# 故障排除指南
 
-## Overview
+## 概览
 
-Diagnostic guide for common Papertrace issues, based on actual database schema and architecture.
+基于实际数据库模式和架构的常见 Papertrace 问题诊断指南。
 
 ---
 

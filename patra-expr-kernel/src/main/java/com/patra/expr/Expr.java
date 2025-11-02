@@ -1,16 +1,12 @@
 package com.patra.expr;
 
 /**
- * Root interface for the expression abstract syntax tree used across the Papertrace platform.
+ * 用于 Papertrace 平台的表达式抽象语法树 (AST) 根接口。
  *
- * <p>The tree models boolean logic with immutable leaf atoms only; it deliberately avoids any
- * platform- or data-source-specific details. Rendering and escaping are delegated to translators
- * that run after normalization, degradation, and capability checks.
+ * <p>该树仅使用不可变的叶节点建模布尔逻辑,故意避免任何平台或数据源特定的细节。 渲染和转义被委托给在规范化、降级和能力检查后运行的转换器。
  *
- * <p>Thread safety: all implementations (records/enums) are immutable and can be freely shared
- * across threads. Resource usage: nodes never hold external resources nor participate in
- * transactional boundaries. Typical usage: construct expression trees via {@link Exprs} factory
- * methods before handing them to normalization and validation pipelines.
+ * <p>线程安全性: 所有实现(记录/枚举)都是不可变的,可以在线程间自由共享。 资源使用: 节点不持有外部资源,不参与事务边界。 典型用法: 通过 {@link Exprs}
+ * 工厂方法构建表达式树,然后将其交给规范化和验证管道。
  *
  * @author linqibin
  * @since 0.1.0
@@ -18,27 +14,27 @@ package com.patra.expr;
 public sealed interface Expr permits And, Or, Not, Const, Atom {
 
   /**
-   * Accepts the supplied visitor and delegates to the matching handler.
+   * 接受提供的访问者并委托到匹配的处理器。
    *
-   * @param visitor visitor to invoke
-   * @param <R> visitor return type
-   * @return visitor result
+   * @param visitor 要调用的访问者
+   * @param <R> 访问者返回类型
+   * @return 访问者结果
    */
   <R> R accept(ExprVisitor<R> visitor);
 
   /**
-   * Convenience shortcut for {@code this == Const.TRUE}.
+   * {@code this == Const.TRUE} 的便利快捷方式。
    *
-   * @return {@code true} when this node is the boolean constant TRUE
+   * @return 当该节点是布尔常量 TRUE 时返回 {@code true}
    */
   default boolean isConstTrue() {
     return this == Const.TRUE;
   }
 
   /**
-   * Convenience shortcut for {@code this == Const.FALSE}.
+   * {@code this == Const.FALSE} 的便利快捷方式。
    *
-   * @return {@code true} when this node is the boolean constant FALSE
+   * @return 当该节点是布尔常量 FALSE 时返回 {@code true}
    */
   default boolean isConstFalse() {
     return this == Const.FALSE;

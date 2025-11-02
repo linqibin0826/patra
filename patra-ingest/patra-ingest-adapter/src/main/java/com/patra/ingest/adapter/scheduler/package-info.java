@@ -1,37 +1,34 @@
 /**
- * XXL-Job scheduled tasks that trigger batch ingestion workflows.
+ * XXL-Job 定时任务,触发批量采集工作流。
  *
- * <p>This package contains driving adapters that receive external scheduling triggers and translate
- * them into application orchestrator calls. All classes here are part of the Hexagonal
- * Architecture's adapter layer (External → System direction).
+ * <p>此包包含驱动适配器,接收外部调度触发器并将它们转换为应用编排器调用。这里的所有类都是六边形架构适配器层的一部分(外部 → 系统方向)。
  *
- * <h2>Responsibilities</h2>
+ * <h2>职责</h2>
  *
  * <ul>
- *   <li>Parse XXL-Job parameters from JSON
- *   <li>Validate job parameters
- *   <li>Delegate to {@code PlanIngestionUseCase} or other orchestrators
- *   <li>Handle adapter-level error mapping
- *   <li>Report job execution results to XXL-Job admin
+ *   <li>从 JSON 解析 XXL-Job 参数
+ *   <li>验证任务参数
+ *   <li>委托给 {@code PlanIngestionUseCase} 或其他编排器
+ *   <li>处理适配器层错误映射
+ *   <li>向 XXL-Job 管理端报告任务执行结果
  * </ul>
  *
- * <h2>Design Pattern</h2>
+ * <h2>设计模式</h2>
  *
- * Uses Template Method pattern via {@link
- * com.patra.ingest.adapter.scheduler.job.AbstractProvenanceScheduleJob} to provide unified job
- * execution flow. Concrete job classes only need to:
+ * 通过 {@link com.patra.ingest.adapter.scheduler.job.AbstractProvenanceScheduleJob}
+ * 使用模板方法模式提供统一的任务执行流程。具体任务类只需:
  *
  * <ul>
- *   <li>Define provenance code (e.g., PUBMED, EMBASE)
- *   <li>Define operation code (e.g., HARVEST, PARSE)
- *   <li>Expose XXL-Job entry point with {@code @XxlJob} annotation
+ *   <li>定义来源代码(例如 PUBMED, EMBASE)
+ *   <li>定义操作代码(例如 HARVEST, PARSE)
+ *   <li>使用 {@code @XxlJob} 注解暴露 XXL-Job 入口点
  * </ul>
  *
- * <h2>Naming Convention</h2>
+ * <h2>命名约定</h2>
  *
- * All job classes must end with {@code Job} suffix (e.g., {@code PubmedHarvestJob}).
+ * 所有任务类必须以 {@code Job} 后缀结尾(例如 {@code PubmedHarvestJob})。
  *
- * <h2>Example</h2>
+ * <h2>示例</h2>
  *
  * <pre>{@code
  * @Component

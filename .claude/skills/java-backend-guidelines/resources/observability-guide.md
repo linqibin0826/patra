@@ -1,10 +1,10 @@
-# Observability Guide
+# 可观测性指南
 
-**Purpose**: SLF4J logging patterns, error handling, and observability practices from Papertrace.
+**目的**: Papertrace 中的 SLF4J 日志模式、错误处理和可观测性最佳实践。
 
 ---
 
-## Table of Contents
+## 目录
 
 1. [Overview](#overview)
 2. [Logging Patterns](#logging-patterns)
@@ -17,7 +17,7 @@
 
 ---
 
-## Overview
+## 概览
 
 ### Observability Stack
 
@@ -368,7 +368,7 @@ public abstract class AbstractProvenanceScheduleJob {
     └────────┴───────┘
 ```
 
-### Examples
+### 示例
 
 ```java
 // ✅ ERROR: Permanent failure
@@ -780,7 +780,7 @@ log.error("Publish failed", e);  // Which message? Which channel? Impossible to 
 
 ---
 
-**Related Files:**
+**相关文件：**
 - [transaction-error-handling.md](transaction-error-handling.md) - @Transactional and ProblemDetail
 - [event-driven-architecture.md](event-driven-architecture.md) - Event handler error patterns
 - [outbox-pattern.md](outbox-pattern.md) - Outbox relay logging examples
@@ -788,4 +788,4 @@ log.error("Publish failed", e);  // Which message? Which channel? Impossible to 
 
 ---
 
-**📝 Status**: ✅ **COMPLETE** - Comprehensive observability guide with real patterns from patra-ingest.
+**📝 Status**: ✅ **已完成** - Comprehensive observability guide with real patterns from patra-ingest.

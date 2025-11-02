@@ -8,31 +8,26 @@ import java.sql.*;
 import org.apache.ibatis.type.*;
 
 /**
- * A unified TypeHandler for converting between Jackson's {@link JsonNode} and SQL columns.
+ * 用于在 Jackson 的 {@link JsonNode} 和 SQL 列之间进行转换的统一类型处理器。
  *
- * <p><b>Design Principles:</b>
- *
- * <ul>
- *   <li><b>Dependency Injection:</b> It uses a Spring-managed {@link ObjectMapper} instance to
- *       ensure consistency with global Jackson configurations, rather than creating its own.
- *   <li><b>Writing to Database:</b> Serializes a {@code JsonNode} to a JSON string. If a {@link
- *       JdbcType} is specified, it respects the corresponding TYPE_CODE.
- *   <li><b>Reading from Database:</b> Flexibly deserializes a {@code JsonNode} from various JDBC
- *       representations, including String, CLOB, byte array, and PostgreSQL's PGobject (for
- *       json/jsonb types).
- *   <li><b>Null Handling:</b> Converts database NULL values to Java null. Empty or whitespace-only
- *       strings are also treated as null to prevent parsing errors.
- * </ul>
- *
- * <p><b>Database Compatibility:</b>
+ * <p><b>设计原则：</b>
  *
  * <ul>
- *   <li><b>MySQL:</b> Compatible with JSON, TEXT, and LONGTEXT column types.
- *   <li><b>PostgreSQL:</b> Compatible with JSON and JSONB column types; automatically handles the
- *       {@code org.postgresql.util.PGobject} returned by the driver.
+ *   <li><b>依赖注入：</b> 使用 Spring 管理的 {@link ObjectMapper} 实例，以确保与全局 Jackson 配置保持一致，而不是创建自己的实例。
+ *   <li><b>写入数据库：</b> 将 {@code JsonNode} 序列化为 JSON 字符串。如果指定了 {@link JdbcType}，则遵循相应的 TYPE_CODE。
+ *   <li><b>从数据库读取：</b> 灵活地从各种 JDBC 表示形式反序列化 {@code JsonNode}，包括 String、CLOB、字节数组和 PostgreSQL 的
+ *       PGobject（用于 json/jsonb 类型）。
+ *   <li><b>空值处理：</b> 将数据库 NULL 值转换为 Java null。空字符串或仅包含空白字符的字符串也会被视为 null，以防止解析错误。
  * </ul>
  *
- * <p><b>Registration Example:</b>
+ * <p><b>数据库兼容性：</b>
+ *
+ * <ul>
+ *   <li><b>MySQL：</b> 兼容 JSON、TEXT 和 LONGTEXT 列类型。
+ *   <li><b>PostgreSQL：</b> 兼容 JSON 和 JSONB 列类型；自动处理驱动程序返回的 {@code org.postgresql.util.PGobject}。
+ * </ul>
+ *
+ * <p><b>注册示例：</b>
  *
  * <pre>
  * configuration.getTypeHandlerRegistry()
@@ -57,30 +52,28 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
     this.objectMapper = objectMapper;
   }
 
-  // ---------------- Writing (Java -> JDBC) ----------------
+  // ---------------- 写入 (Java -> JDBC) ----------------
 
   @Override
   public void setNonNullParameter(
       PreparedStatement ps, int i, JsonNode parameter, JdbcType jdbcType) throws SQLException {
     final String json;
     try {
-      // Serialize the JsonNode to a JSON string. Using the injected ObjectMapper ensures
-      // configuration consistency.
+      // 将 JsonNode 序列化为 JSON 字符串。使用注入的 ObjectMapper 确保配置一致性。
       json = objectMapper.writeValueAsString(parameter);
     } catch (Exception e) {
-      throw new SQLException(
-          "Failed to serialize JsonNode to database column at parameter index " + i, e);
+      throw new SQLException("在参数索引 " + i + " 处将 JsonNode 序列化到数据库列失败", e);
     }
 
     if (jdbcType != null) {
       ps.setObject(i, json, jdbcType.TYPE_CODE);
     } else {
-      // Let the driver infer the type if not specified (works for both MySQL and PostgreSQL).
+      // 如果未指定类型，让驱动程序推断类型（适用于 MySQL 和 PostgreSQL）。
       ps.setObject(i, json);
     }
   }
 
-  // ---------------- Reading (JDBC -> Java) ----------------
+  // ---------------- 读取 (JDBC -> Java) ----------------
 
   @Override
   public JsonNode getNullableResult(ResultSet rs, String columnName) throws SQLException {
@@ -97,7 +90,7 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
     return parse(cs.getObject(columnIndex));
   }
 
-  // ---------------- Internal Parsing Logic ----------------
+  // ---------------- 内部解析逻辑 ----------------
 
   private JsonNode parse(Object raw) throws SQLException {
     if (raw == null) return null;
@@ -107,19 +100,19 @@ public class JsonToJsonNodeTypeHandler extends BaseTypeHandler<JsonNode> {
         return parseString(s);
       } else if (raw instanceof byte[] bytes) {
         return parseString(new String(bytes, StandardCharsets.UTF_8));
-      } else if (raw instanceof Clob clob) { // Includes NClob
+      } else if (raw instanceof Clob clob) { // 包括 NClob
         return parseString(readClob(clob));
-      } else if (raw instanceof Reader r) { // Fallback for rare cases
+      } else if (raw instanceof Reader r) { // 罕见情况的后备方案
         return parseString(readAll(r));
       } else if ("org.postgresql.util.PGobject".equals(raw.getClass().getName())) {
-        // Handle PostgreSQL's PGobject for json/jsonb types.
+        // 处理 PostgreSQL 的 PGobject（用于 json/jsonb 类型）。
         return parseString(raw.toString());
       }
 
-      // As a last resort, convert the object to a string and attempt to parse.
+      // 作为最后的手段，将对象转换为字符串并尝试解析。
       return parseString(String.valueOf(raw));
     } catch (Exception e) {
-      throw new SQLException("Failed to parse JSON value: " + raw, e);
+      throw new SQLException("解析 JSON 值失败: " + raw, e);
     }
   }
 

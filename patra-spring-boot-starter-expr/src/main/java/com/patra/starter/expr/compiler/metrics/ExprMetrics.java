@@ -6,12 +6,12 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Objects;
 
 /**
- * Micrometer-backed metrics recorder for the expression compiler bridge.
+ * 基于 Micrometer 的表达式编译器网桥的指标记录器。
  *
- * <p>All methods are no-ops when Micrometer is not on the classpath or no {@link MeterRegistry} is
- * available. Use {@link #noop()} in such cases to avoid null checks throughout the codebase.
+ * <p>当 Micrometer 不在 classpath 中或没有可用的 {@link MeterRegistry} 时，所有方法都是空操作。 在这种情况下，使用 {@link #noop()}
+ * 以避免在整个代码库中进行 null 检查。
  *
- * <p>Metric names (see docs/expr/02-architecture.md §2.6):
+ * <p>指标名称（见 docs/expr/02-architecture.md §2.6）：
  *
  * <ul>
  *   <li>{@code expr.render.rule_hits{provenance,endpoint}}
@@ -23,7 +23,7 @@ import java.util.Objects;
  *   <li>{@code expr.compile.duration_ms{provenance,endpoint}}
  * </ul>
  *
- * <p>Note: Not final to allow Spring AOP CGLIB proxying.
+ * <p>注意：非 final，以允许 Spring AOP CGLIB 代理。
  *
  * @since 1.0.0
  */
@@ -33,7 +33,7 @@ public class ExprMetrics {
 
   private final MeterRegistry meterRegistry;
 
-  /** Protected no-arg constructor for CGLIB proxying. */
+  /** CGLIB 代理的受保护的无参构造函数。 */
   protected ExprMetrics() {
     this(null);
   }
@@ -43,10 +43,10 @@ public class ExprMetrics {
   }
 
   /**
-   * Creates a Micrometer-backed metrics recorder.
+   * 创建一个基于 Micrometer 的指标记录器。
    *
-   * @param meterRegistry Micrometer registry (required, non-null)
-   * @return metrics recorder
+   * @param meterRegistry Micrometer 注册表（必需，非空）
+   * @return 指标记录器
    */
   public static ExprMetrics of(MeterRegistry meterRegistry) {
     Objects.requireNonNull(meterRegistry, "meterRegistry");
@@ -54,9 +54,9 @@ public class ExprMetrics {
   }
 
   /**
-   * Returns a no-op metrics recorder that skips all instrumentation calls.
+   * 返回一个跳过所有仪器调用的空操作指标记录器。
    *
-   * @return no-op recorder
+   * @return 空操作记录器
    */
   public static ExprMetrics noop() {
     return NO_OP;

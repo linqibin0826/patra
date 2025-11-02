@@ -1,8 +1,8 @@
-# Hook Mechanisms - Deep Dive
+# Hook 机制 - 深入剖析
 
-Technical deep dive into how the UserPromptSubmit and PreToolUse hooks work.
+UserPromptSubmit 和 PreToolUse hooks 工作原理的技术深入剖析。
 
-## Table of Contents
+## 目录
 
 - [UserPromptSubmit Hook Flow](#userpromptsubmit-hook-flow)
 - [PreToolUse Hook Flow](#pretooluse-hook-flow)
@@ -50,7 +50,7 @@ Claude sees: [skill suggestion] + user's prompt
 - **stdout**: → Claude's context (injected as system message)
 - **Timing**: Runs BEFORE Claude processes prompt
 - **Behavior**: Non-blocking, advisory only
-- **Purpose**: Make Claude aware of relevant skills
+- **目的**: Make Claude aware of relevant skills
 
 ### Input Format
 
@@ -128,7 +128,7 @@ IF ALLOWED:
 - **Timing**: Runs BEFORE tool execution
 - **Session tracking**: Prevents repeated blocks in same session
 - **Fail open**: On errors, allows operation (don't break workflow)
-- **Purpose**: Enforce critical guardrails
+- **目的**: Enforce critical guardrails
 
 ### Input Format
 
@@ -212,7 +212,7 @@ Claude sees error, responds:
 
 ## Session State Management
 
-### Purpose
+### 目的
 
 Prevent repeated nagging in the same session - once Claude uses a skill, don't block again.
 

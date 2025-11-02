@@ -1,27 +1,27 @@
-# patra-storage — Object Storage Metadata Service
+# patra-storage — 对象存储元数据服务
 
-> Dedicated microservice responsible for recording and managing metadata for files uploaded to external object storage providers.
+> 专用微服务,负责记录和管理上传到外部对象存储提供商的文件元数据。
 
-## 🎯 Responsibilities
-- Accept upload record requests from internal services (e.g., patra-ingest)
-- Persist file metadata, business context, and lifecycle attributes
-- Enforce idempotency via unique `storage_key`
-- Offer Feign APIs for other services, no public REST surface
+## 🎯 职责
+- 接受来自内部服务(例如 patra-ingest)的上传记录请求
+- 持久化文件元数据、业务上下文和生命周期属性
+- 通过唯一的 `storage_key` 强制幂等性
+- 为其他服务提供 Feign API,无公共 REST 接口
 
-## 🏗 Module Layout
+## 🏗 模块布局
 ```
 patra-storage/
-├─ patra-storage-api/        # Feign contracts + DTO
-├─ patra-storage-domain/     # Pure Java aggregates, VOs, ports
-├─ patra-storage-app/        # Use case orchestrators (@Transactional)
-├─ patra-storage-infra/      # MyBatis-Plus repositories, DO + mapper + Flyway
-├─ patra-storage-adapter/    # REST controllers implementing internal endpoint
-└─ patra-storage-boot/       # Executable Spring Boot application
+├─ patra-storage-api/        # Feign 契约 + DTO
+├─ patra-storage-domain/     # 纯 Java 聚合、VO、端口
+├─ patra-storage-app/        # 用例编排器(@Transactional)
+├─ patra-storage-infra/      # MyBatis-Plus 仓储、DO + 映射器 + Flyway
+├─ patra-storage-adapter/    # 实现内部端点的 REST 控制器
+└─ patra-storage-boot/       # 可执行 Spring Boot 应用程序
 ```
 
-Follow Hexagonal Architecture rules from `AGENTS.md`:
-- Adapter → App → Domain ← Infra dependency flow
-- Domain layer depends only on `patra-common` + Lombok/Hutool (no Spring)
-- Documentation + code style align with Google Java Style
+遵循 `AGENTS.md` 的六边形架构规则:
+- Adapter → App → Domain ← Infra 依赖流向
+- 领域层仅依赖 `patra-common` + Lombok/Hutool(无 Spring)
+- 文档和代码风格符合 Google Java Style
 
-Before editing any module, read this file to understand boundaries and naming conventions.
+在编辑任何模块之前,请阅读此文件以理解边界和命名约定。

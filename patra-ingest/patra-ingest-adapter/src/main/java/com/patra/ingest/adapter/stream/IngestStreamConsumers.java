@@ -14,25 +14,24 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 
 /**
- * RocketMQ consumer configuration: subscribes to the INGEST_TASK_READY topic and starts task
- * execution.
+ * RocketMQ 消费者配置: 订阅 INGEST_TASK_READY 主题并启动任务执行。
  *
- * <p>Responsibilities:
+ * <p>职责:
  *
  * <ul>
- *   <li>Parse MQ message payload and headers
- *   <li>Assemble {@link TaskReadyCommand} and invoke the application use case
- *   <li>Handle parsing failures (throwing triggers MQ retry)
+ *   <li>解析 MQ 消息负载和消息头
+ *   <li>组装 {@link TaskReadyCommand} 并调用应用用例
+ *   <li>处理解析失败(抛出异常触发 MQ 重试)
  * </ul>
  *
- * <p>Header keys used by Spring Cloud Stream RocketMQ Binder:
+ * <p>Spring Cloud Stream RocketMQ Binder 使用的消息头键:
  *
  * <ul>
- *   <li>ROCKET_KEYS: business key (RocketMQ KEYS)
- *   <li>ROCKET_TAGS: message tags (RocketMQ TAGS)
- *   <li>ROCKET_MQ_TOPIC: topic name
- *   <li>ROCKET_MQ_MESSAGE_ID: message id
- *   <li>partitionKey: partition key (custom header)
+ *   <li>ROCKET_KEYS: 业务键(RocketMQ KEYS)
+ *   <li>ROCKET_TAGS: 消息标签(RocketMQ TAGS)
+ *   <li>ROCKET_MQ_TOPIC: 主题名称
+ *   <li>ROCKET_MQ_MESSAGE_ID: 消息 ID
+ *   <li>partitionKey: 分区键(自定义消息头)
  * </ul>
  *
  * @author linqibin
@@ -63,23 +62,23 @@ public class IngestStreamConsumers {
 
       } catch (Exception e) {
         log.error(
-            "Failed to consume task ready message from topic [{}]: {}",
+            "从主题 [{}] 消费任务就绪消息失败: {}",
             message.getHeaders().getOrDefault(HEADER_TOPIC, "unknown"),
             e.getMessage(),
             e);
-        throw new RuntimeException("Message consumption failed", e);
+        throw new RuntimeException("消息消费失败", e);
       }
     };
   }
 
-  /** Logs all received headers for diagnostics when DEBUG level is enabled. */
+  /** 在启用 DEBUG 级别时记录所有接收到的消息头以进行诊断。 */
   private void logReceivedHeaders(Map<String, Object> headers) {
     if (log.isDebugEnabled()) {
-      log.debug("Received message with headers: {}", headers);
+      log.debug("收到消息,消息头: {}", headers);
     }
   }
 
-  /** Logs key message metadata from RocketMQ headers for tracing and monitoring. */
+  /** 从 RocketMQ 消息头记录关键消息元数据以进行追踪和监控。 */
   private void logMessageMetadata(Map<String, Object> headers) {
     String topic = (String) headers.getOrDefault(HEADER_TOPIC, "unknown");
     String keys = (String) headers.get(HEADER_KEYS);
@@ -88,7 +87,7 @@ public class IngestStreamConsumers {
     String partitionKey = (String) headers.get("partitionKey");
 
     log.info(
-        "Consuming task ready event from topic [{}] with KEYS={} TAGS={} messageId={} partitionKey={}",
+        "正在从主题 [{}] 消费任务就绪事件,KEYS={} TAGS={} messageId={} partitionKey={}",
         topic,
         keys,
         tags,
@@ -97,22 +96,22 @@ public class IngestStreamConsumers {
   }
 
   /**
-   * Parses payload to TaskReadyCommand (simplified).
+   * 将负载解析为 TaskReadyCommand(简化版)。
    *
-   * @param payload JSON string
-   * @param headers Message headers
+   * @param payload JSON 字符串
+   * @param headers 消息头
    * @return TaskReadyCommand
-   * @throws Exception when parsing fails
+   * @throws Exception 当解析失败时
    */
   private TaskReadyCommand parsePayload(String payload, Map<String, Object> headers)
       throws Exception {
-    // Parse payload to POJO
+    // 将负载解析为 POJO
     TaskReadyPayload dto = objectMapper.readValue(payload, TaskReadyPayload.class);
 
-    // Validate required fields
+    // 验证必填字段
     dto.validate();
 
-    // Merge headers (for tracing and auditing)
+    // 合并消息头(用于追踪和审计)
     Map<String, Object> allHeaders = new HashMap<>(headers);
 
     return new TaskReadyCommand(dto.getTaskId(), dto.getIdempotentKey(), allHeaders);

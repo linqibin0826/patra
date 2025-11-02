@@ -7,21 +7,20 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Leaf expression describing a field-level constraint.
+ * 描述字段级约束的叶子表达式。
  *
- * <p>Atoms represent the basic building blocks of queries, combining a field name with an operator
- * and a value. The operator determines which value type is allowed.
+ * <p>原子表示查询的基本构建块，将字段名、运算符和值组合在一起。运算符决定允许哪种值类型。
  *
- * @param fieldKey the field name to query
- * @param operator the operation to perform
- * @param value the value to match against
+ * @param fieldKey 要查询的字段名
+ * @param operator 要执行的运算
+ * @param value 要匹配的值
  */
 public record Atom(String fieldKey, Operator operator, Value value) implements Expr {
 
   public Atom {
     Objects.requireNonNull(fieldKey, "fieldKey");
     if (fieldKey.isBlank()) {
-      throw new IllegalArgumentException("fieldKey must not be blank");
+      throw new IllegalArgumentException("字段名不能为空");
     }
     Objects.requireNonNull(operator, "operator");
     Objects.requireNonNull(value, "value");
@@ -34,24 +33,24 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /**
-   * Supported field operators.
+   * 支持的字段运算符。
    *
-   * <p>Each operator is associated with a specific value type that it accepts.
+   * <p>每个运算符都关联一个特定的值类型。
    */
   public enum Operator {
-    /** Text-based term matching. */
+    /** 基于文本的词语匹配。 */
     TERM(TermValue.class),
 
-    /** Discrete value set matching. */
+    /** 离散值集合匹配。 */
     IN(InValues.class),
 
-    /** Range-based matching for dates, times, and numbers. */
+    /** 日期、时间和数字的范围匹配。 */
     RANGE(RangeValue.class),
 
-    /** Field existence check. */
+    /** 字段存在性检查。 */
     EXISTS(ExistsFlag.class),
 
-    /** Platform-specific token matching. */
+    /** 平台特定的令牌匹配。 */
     TOKEN(TokenValue.class);
 
     private final Class<? extends Value> supportedType;
@@ -64,25 +63,25 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
       if (!supportedType.isInstance(value)) {
         throw new IllegalArgumentException(
             String.format(
-                "Operator %s requires value type %s but received %s",
+                "运算符 %s 需要值类型 %s，但收到 %s",
                 this, supportedType.getSimpleName(), value.getClass().getSimpleName()));
       }
     }
   }
 
   /**
-   * Marker interface for all value variants.
+   * 所有值变体的标记接口。
    *
-   * <p>Sealed to ensure type safety and exhaustive pattern matching.
+   * <p>密封以确保类型安全和穷举模式匹配。
    */
   public sealed interface Value permits TermValue, InValues, RangeValue, ExistsFlag, TokenValue {}
 
   /**
-   * Text-based value for TERM operations.
+   * 用于 TERM 操作的基于文本的值。
    *
-   * @param text the text to match
-   * @param match the matching strategy
-   * @param caseSensitivity case sensitivity behavior
+   * @param text 要匹配的文本
+   * @param match 匹配策略
+   * @param caseSensitivity 大小写敏感度行为
    */
   public record TermValue(String text, TextMatch match, CaseSensitivity caseSensitivity)
       implements Value {
@@ -97,19 +96,19 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /**
-   * Collection of discrete string values used for IN operations.
+   * 用于 IN 操作的离散字符串值的集合。
    *
-   * @param values non-empty list of values to match against
-   * @param caseSensitivity case sensitivity behavior
+   * @param values 非空的要匹配的值列表
+   * @param caseSensitivity 大小写敏感度行为
    */
   public record InValues(List<String> values, CaseSensitivity caseSensitivity) implements Value {
     public InValues {
       Objects.requireNonNull(values, "values");
       if (values.isEmpty()) {
-        throw new IllegalArgumentException("IN values must contain at least one item");
+        throw new IllegalArgumentException("IN 值必须至少包含一个项目");
       }
       if (values.stream().anyMatch(Objects::isNull)) {
-        throw new IllegalArgumentException("IN values cannot contain null items");
+        throw new IllegalArgumentException("IN 值不能包含空项目");
       }
       values = List.copyOf(values);
       Objects.requireNonNull(caseSensitivity, "caseSensitivity");
@@ -121,34 +120,34 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /**
-   * Common contract for range-based values.
+   * 基于范围值的公共约定。
    *
-   * <p>Supports date, datetime, and number ranges with configurable boundary inclusion.
+   * <p>支持日期、日期时间和数字范围，具有可配置的边界包含。
    */
   public sealed interface RangeValue extends Value permits DateRange, DateTimeRange, NumberRange {
-    /** Returns the lower boundary inclusion type. */
+    /** 返回下边界包含类型。 */
     Boundary fromBoundary();
 
-    /** Returns the upper boundary inclusion type. */
+    /** 返回上边界包含类型。 */
     Boundary toBoundary();
 
-    /** Boundary inclusion type for range values. */
+    /** 范围值的边界包含类型。 */
     enum Boundary {
-      /** Excludes the boundary value from the range. */
+      /** 从范围中排除边界值。 */
       OPEN,
 
-      /** Includes the boundary value in the range. */
+      /** 在范围中包含边界值。 */
       CLOSED
     }
   }
 
   /**
-   * Date range value.
+   * 日期范围值。
    *
-   * @param from lower bound date
-   * @param to upper bound date
-   * @param fromBoundary lower boundary inclusion type
-   * @param toBoundary upper boundary inclusion type
+   * @param from 下边界日期
+   * @param to 上边界日期
+   * @param fromBoundary 下边界包含类型
+   * @param toBoundary 上边界包含类型
    */
   public record DateRange(LocalDate from, LocalDate to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
@@ -163,12 +162,12 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /**
-   * DateTime range value.
+   * 日期时间范围值。
    *
-   * @param from lower bound instant
-   * @param to upper bound instant
-   * @param fromBoundary lower boundary inclusion type
-   * @param toBoundary upper boundary inclusion type
+   * @param from 下边界时刻
+   * @param to 上边界时刻
+   * @param fromBoundary 下边界包含类型
+   * @param toBoundary 上边界包含类型
    */
   public record DateTimeRange(Instant from, Instant to, Boundary fromBoundary, Boundary toBoundary)
       implements RangeValue {
@@ -183,12 +182,12 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /**
-   * Number range value.
+   * 数字范围值。
    *
-   * @param from lower bound number
-   * @param to upper bound number
-   * @param fromBoundary lower boundary inclusion type
-   * @param toBoundary upper boundary inclusion type
+   * @param from 下边界数字
+   * @param to 上边界数字
+   * @param fromBoundary 下边界包含类型
+   * @param toBoundary 上边界包含类型
    */
   public record NumberRange(
       BigDecimal from, BigDecimal to, Boundary fromBoundary, Boundary toBoundary)
@@ -204,17 +203,17 @@ public record Atom(String fieldKey, Operator operator, Value value) implements E
   }
 
   /**
-   * EXISTS operation value indicating field presence or absence.
+   * EXISTS 操作值，表示字段的存在或不存在。
    *
-   * @param shouldExist true to check field exists, false to check field is absent
+   * @param shouldExist true 检查字段存在，false 检查字段不存在
    */
   public record ExistsFlag(boolean shouldExist) implements Value {}
 
   /**
-   * TOKEN operation value for platform-specific token semantics.
+   * TOKEN 操作值，用于平台特定的令牌语义。
    *
-   * @param tokenType the type of token (e.g., "MeSH", "GeneSymbol")
-   * @param tokenValue the token identifier value
+   * @param tokenType 令牌的类型（例如 "MeSH"、"GeneSymbol"）
+   * @param tokenValue 令牌标识符值
    */
   public record TokenValue(String tokenType, String tokenValue) implements Value {
     public TokenValue {
