@@ -1,6 +1,15 @@
 ---
 name: java-backend-guidelines
-description: Comprehensive Java backend development guide for Hexagonal Architecture + DDD with Spring Boot 3.5.7. Use when creating REST endpoints, orchestrators, coordinators, domain entities, aggregates, repositories, scheduled jobs (XXL-Job), event handlers (@TransactionalEventListener), or working with MyBatis-Plus, MapStruct, validation, Nacos configuration, Outbox pattern (relay, lease coordination, exponential backoff), event-driven architecture (domain events, event chains, AFTER_COMMIT, REQUIRES_NEW), or testing strategies. Covers four-layer architecture (Adapter → Application → Domain ← Infrastructure), dependency directions, transaction management (@Transactional), error handling (ProblemDetail, OptimisticLockingFailureException), idempotency, and performance optimization. Includes patra-ingest patterns: OutboxRelayOrchestrator, RelayCoordinator (lease/publish/log), TaskCompletedEvent, SliceStatusChangedEvent, PlanIngestionOrchestrator, AbstractProvenanceScheduleJob, Template Method pattern.
+description: >
+  基于六边形架构 + DDD 与 Spring Boot 3.5.7 的全面 Java 后端开发指南。
+  适用于创建 REST endpoints、orchestrators、coordinators、domain entities、aggregates、repositories、
+  scheduled jobs (XXL-Job)、event handlers (@TransactionalEventListener),
+  或使用 MyBatis-Plus、MapStruct、validation、Nacos 配置、Outbox pattern (relay、lease coordination、exponential backoff)、
+  事件驱动架构 (domain events、event chains、AFTER_COMMIT、REQUIRES_NEW) 或测试策略时使用。
+  涵盖四层架构 (Adapter → Application → Domain ← Infrastructure)、依赖方向、事务管理 (@Transactional)、
+  错误处理 (ProblemDetail、OptimisticLockingFailureException)、幂等性和性能优化。
+  包含 patra-ingest 模式: OutboxRelayOrchestrator、RelayCoordinator (lease/publish/log)、TaskCompletedEvent、
+  SliceStatusChangedEvent、PlanIngestionOrchestrator、AbstractProvenanceScheduleJob、Template Method pattern。
 ---
 
 # Java 后端开发指南 (Papertrace)

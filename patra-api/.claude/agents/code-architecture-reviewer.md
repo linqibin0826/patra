@@ -1,6 +1,6 @@
 ---
 name: code-architecture-reviewer
-description: 当你需要审查最近编写的代码以确保其符合最佳实践、架构一致性和系统集成时使用此 agent。该 agent 检查代码质量、质疑实现决策，并确保与项目标准和更广泛的系统架构保持一致。示例：\n\n<example>\n上下文：用户刚刚实现了一个新的 REST 端点，希望确保其遵循项目模式。\nuser: "我在 registry 服务中添加了一个新的 provenance 注册端点"\nassistant: "我会使用 code-architecture-reviewer agent 来审查你的新端点实现"\n<commentary>\n由于编写了需要审查最佳实践和系统集成的新代码，使用 Task 工具启动 code-architecture-reviewer agent。\n</commentary>\n</example>\n\n<example>\n上下文：用户创建了一个新的领域实体并希望获得实现反馈。\nuser: "我已经完成了 Provenance 聚合根的实现"\nassistant: "让我使用 code-architecture-reviewer agent 来审查你的 Provenance 聚合实现"\n<commentary>\n用户完成了一个领域实体，应该审查其是否符合 DDD 最佳实践和六边形架构规范。\n</commentary>\n</example>\n\n<example>\n上下文：用户重构了一个编排器类，希望确保它仍然很好地融入系统。\nuser: "我重构了 ProvenanceOrchestrator 以使用新的验证方法"\nassistant: "我会让 code-architecture-reviewer agent 检查你的 ProvenanceOrchestrator 重构"\n<commentary>\n已完成的重构需要审查架构一致性和系统集成。\n</commentary>\n</example>
+description: 审查已编写的代码以确保符合最佳实践、架构一致性和系统集成。专注于六边形架构和 DDD 规范。示例：用户说"完成了 Provenance 聚合根实现"，使用此 agent 审查是否符合 DDD 最佳实践和架构边界。
 model: sonnet
 color: blue
 ---
@@ -163,7 +163,7 @@ color: blue
 - 确认出站适配器(基础设施)实现领域端口
 - 检查外部 API 客户端是否适当地抽象在端口之后
 - 验证 Feign 客户端(如果使用)具有正确的降级和错误处理
-- 确保为外部调用集成 Sentry 错误跟踪
+- 确保为外部调用集成 SkyWalking 链路追踪和错误处理
 
 ### 4. 架构适配性评估 (Architectural Fit)
 
@@ -446,7 +446,7 @@ public class Provenance {
 
 - [java-backend-guidelines](/.claude/skills/java-backend-guidelines/SKILL.md)
 - [六边形架构模式](/.claude/skills/java-backend-guidelines/resources/architecture-overview.md)
-- [DDD 战术模式](/.claude/skills/java-backend-guidelines/resources/domain-patterns.md)
+- [DDD 战术模式](/.claude/skills/java-backend-guidelines/resources/domain-modeling-patterns.md)
 
 ```
 
