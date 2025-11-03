@@ -1,7 +1,6 @@
 ---
 name: compile-error-resolver
 description: 自动修复遵循六边形架构 + DDD 模式的 Spring Boot 项目中的 Java/Maven 编译错误
-tools: Read, Write, Edit, MultiEdit, Bash
 model: sonnet
 color: red
 ---

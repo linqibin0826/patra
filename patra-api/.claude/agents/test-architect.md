@@ -1,7 +1,6 @@
 ---
 name: test-architect
 description: 为六边形架构 + DDD 模式生成和审查测试。识别代码模式(Orchestrator、Event Handler、Repository 等)并根据 testing-guide.md 生成适当的单元测试、集成测试或 ArchUnit 测试。在为新代码编写测试或审查测试覆盖率时使用。
-tools: Read, Write, Edit, Glob, Grep
 model: sonnet
 color: green
 ---
