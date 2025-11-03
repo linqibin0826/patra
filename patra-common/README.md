@@ -1,268 +1,204 @@
-# patra-common — 共享基础(多模块)
+# patra-common — 共享基础设施聚合器
 
-> **多模块项目**,为 Papertrace 微服务提供核心工具、存储抽象和共享模型。
+> **多模块聚合项目**,为 Papertrace 微服务提供核心工具、存储抽象和共享模型。
 
 ---
 
-## 📦 模块结构
+## 概述
 
-`patra-common` 现在是一个**多模块聚合器**,包含三个独立的子模块:
+`patra-common` 是 Papertrace 平台的基础设施层聚合器,采用多模块结构,按职责清晰划分为三个独立的子模块:
+
+- **patra-common-core**: 核心基础设施(领域基类、异常处理、通用枚举、JSON 工具)
+- **patra-common-storage**: 对象存储键生成策略(业务级命名规则)
+- **patra-common-model**: 跨服务共享的标准化数据模型
+
+每个子模块独立发布,服务可按需引入所需依赖,避免不必要的 classpath 污染。
+
+---
+
+## 核心职责
+
+- **基础设施抽象**: 提供 DDD 领域层基类、异常层次结构、通用枚举
+- **JSON 标准化**: 统一的 JSON 序列化/反序列化配置和规范化工具
+- **存储命名规范**: 标准化的对象存储键生成策略(日期分区、层次化结构)
+- **数据模型共享**: 服务间通信的共享数据结构(Shared Kernel)
+
+---
+
+## 模块结构
 
 ```
-patra-common/                    (聚合 POM - 无代码)
-├── patra-common-core/          (核心基础 - 所有服务必需)
-├── patra-common-storage/       (存储键生成 - 按需依赖)
-└── patra-common-model/         (共享数据模型 - 按需依赖)
+patra-common/                         (聚合 POM - 无代码)
+├── patra-common-core/               (核心基础 - 所有服务必需)
+│   ├── domain/                      (领域层基类)
+│   ├── error/                       (异常处理框架)
+│   ├── enums/                       (共享枚举)
+│   ├── json/                        (JSON 工具)
+│   ├── messaging/                   (消息通道标识)
+│   └── util/                        (通用工具)
+├── patra-common-storage/            (存储键生成 - 按需依赖)
+│   └── storage/                     (对象存储键生成策略)
+└── patra-common-model/              (共享模型 - 按需依赖)
+    └── model/                       (StandardLiterature 等)
 ```
 
 ---
 
-## 🎯 设计理念
+## 子模块说明
 
-### 之前(旧结构)
-❌ **问题**: 所有微服务被迫依赖 `patra-common` 中的所有代码,包括:
-- 对象存储键生成(仅 patra-ingest 使用)
-- StandardLiterature 模型(仅 3 个模块使用)
-- 违反了"按需依赖"原则
+### 1. patra-common-core (必需)
 
-### 之后(新结构)
-✅ **解决方案**: 边界清晰的模块化设计:
-- **patra-common-core**: 真正共享的核心工具(domain/error/enums/json/util)
-- **patra-common-storage**: 存储键生成(可选,DDD 业务规则)
-- **patra-common-model**: 共享数据模型(可选,服务间契约)
+**Maven 坐标**: `com.papertrace:patra-common-core`
+
+**定位**: 所有 Papertrace 服务必须依赖的核心基础设施。
+
+**主要内容**:
+- **domain**: `AggregateRoot`、`DomainEvent`、`ReadOnlyAggregate`
+- **error**: `DomainException`、`ApplicationException`、`ErrorCodeLike`、`ErrorTrait`
+- **enums**: `ProvenanceCode`、`Priority`、`IngestDateType`、`RegistryConfigScope`
+- **json**: `JsonMapperHolder`、`JsonNormalizer`、`JsonNormalizerConfig`
+- **messaging**: `ChannelKey`
+- **util**: `HashUtils`
+
+**使用场景**: 所有 `*-domain`、`*-app`、`*-infra`、`*-adapter` 模块
+
+**详细文档**: [patra-common-core/README.md](patra-common-core/README.md)
 
 ---
 
-## 📌 子模块
+### 2. patra-common-storage (可选)
 
-### 1. patra-common-core (所有服务必需)
+**Maven 坐标**: `com.papertrace:patra-common-storage`
 
-**构件**: `com.papertrace:patra-common-core`
+**定位**: 标准化的对象存储键生成策略(业务规则,非基础设施代码)。
 
-**目的**: 所有 Papertrace 服务使用的基础类。
+**主要内容**:
+- `ObjectKeyContext`: 键生成的不可变上下文
+- `ObjectKeyGenerator`: 策略接口
+- `DatePartitionedKeyGenerator`: 日期分区实现(yyyy/MM/dd)
+- `ObjectKeyTemplate`: 常见模式的工厂方法
 
-**内容**:
-- **domain/**: DDD 基础类(`AggregateRoot`、`DomainEvent`)
-- **error/**: 异常层次结构、错误码、特征
-- **enums/**: 共享枚举(`ProvenanceCode`、`Priority`)
-- **json/**: JSON 工具(`JsonMapperHolder`、`JsonNormalizer`)
-- **messaging/**: 消息通道标识符
-- **util/**: 通用工具(`HashUtils`)
+**键格式**: `{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}`
 
-**依赖**: Hutool、Jackson、SLF4J(provided)
+**使用场景**: 任何需要标准化存储键生成的服务
 
-**用法**:
+**详细文档**: [patra-common-storage/README.md](patra-common-storage/README.md)
+
+---
+
+### 3. patra-common-model (可选)
+
+**Maven 坐标**: `com.papertrace:patra-common-model`
+
+**定位**: 跨服务共享的标准化数据模型(Shared Kernel)。
+
+**主要内容**:
+- `StandardLiterature`: 标准化文献数据结构
+- `StandardAuthor`: 作者快照
+- `StandardJournal`: 期刊快照
+
+**使用场景**: `patra-ingest`、`patra-spring-boot-starter-provenance`
+
+**详细文档**: [patra-common-model/README.md](patra-common-model/README.md)
+
+---
+
+## 依赖关系
+
+**上游依赖**:
+- `patra-common-core`: Hutool、Jackson、SLF4J
+- `patra-common-storage`: Hutool
+- `patra-common-model`: Jackson
+
+**下游消费者**:
+- **core**: 所有微服务的所有层
+- **storage**: 需要对象存储的服务
+- **model**: 需要标准化文献模型的服务
+
+---
+
+## 使用示例
+
+### 引入依赖
+
 ```xml
+<!-- 必需: 核心基础设施 -->
 <dependency>
     <groupId>com.papertrace</groupId>
     <artifactId>patra-common-core</artifactId>
 </dependency>
+
+<!-- 可选: 存储键生成策略 -->
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-storage</artifactId>
+</dependency>
+
+<!-- 可选: 共享数据模型 -->
+<dependency>
+    <groupId>com.papertrace</groupId>
+    <artifactId>patra-common-model</artifactId>
+</dependency>
 ```
 
-**使用者**: 所有 `*-domain`、`*-app`、`*-infra`、`*-adapter` 模块
+### 使用存储键生成器
 
----
-
-### 2. patra-common-storage (可选 - 按需使用)
-
-**构件**: `com.papertrace:patra-common-storage`
-
-**目的**: 标准化的对象存储键生成策略。
-
-**内容**:
-- **ObjectKeyContext**: 键生成的不可变上下文
-- **ObjectKeyGenerator**: 策略接口
-- **DatePartitionedKeyGenerator**: 基于日期的分区(yyyy/MM/dd)
-- **ObjectKeyTemplate**: 常见模式的工厂方法
-
-**键格式**:
-```
-{service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}
-```
-
-**示例**:
 ```java
 import com.patra.common.storage.ObjectKeyTemplate;
 
 String key = ObjectKeyTemplate.generateDailyKey(
     "ingest", "literature-batch", "pubmed-123-batch-001", "json"
 );
-// 结果: ingest/literature-batch/2025/10/28/pubmed-123-batch-001.json
+// 结果: ingest/literature-batch/2025/11/03/pubmed-123-batch-001.json
 ```
 
-**依赖**: Hutool
+### 使用 JSON 标准化工具
 
-**用法**:
-```xml
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-common-storage</artifactId>
-</dependency>
-```
-
-**使用者**:
-- `patra-spring-boot-starter-object-storage` (StorageLocationResolver)
-- 任何需要标准化存储键生成的服务
-
-**设计说明**: 这是一个**业务规则**(命名约定),而非基础设施代码。将其与 `object-storage` starter 分离,允许领域层使用标准化命名而无需依赖 Spring 框架。
-
----
-
-### 3. patra-common-model (可选 - 按需使用)
-
-**构件**: `com.papertrace:patra-common-model`
-
-**目的**: 服务间通信的共享数据模型。
-
-**内容**:
-- **StandardLiterature**: 跨服务使用的通用文献数据结构
-
-**依赖**: Jackson(用于 JSON 序列化)
-
-**用法**:
-```xml
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-common-model</artifactId>
-</dependency>
-```
-
-**使用者**:
-- `patra-ingest-domain` (端口接口)
-- `patra-ingest-app` (编排器)
-- `patra-spring-boot-starter-provenance` (数据适配器)
-
----
-
-## 🔧 迁移指南
-
-### 对于服务模块
-
-**之前**(旧依赖):
-```xml
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-common</artifactId>
-</dependency>
-```
-
-**之后**(选择您需要的):
-```xml
-<!-- 必需: 核心工具 -->
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-common-core</artifactId>
-</dependency>
-
-<!-- 可选: 如果需要存储键生成 -->
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-common-storage</artifactId>
-</dependency>
-
-<!-- 可选: 如果需要 StandardLiterature 模型 -->
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-common-model</artifactId>
-</dependency>
-```
-
-### 导入语句变更
-
-**存储包重命名**:
 ```java
-// 之前
-import com.patra.common.objectstorage.*;
+import com.patra.common.json.JsonNormalizer;
 
-// 之后
-import com.patra.common.storage.*;
-```
-
-**注意**: `StorageContext` 和 `StorageLocation` 已移至:
-```java
-import com.patra.starter.objectstorage.StorageContext;
-import com.patra.starter.objectstorage.StorageLocation;
+JsonNormalizerResult result = JsonNormalizer.normalizeDefault(payload);
+String canonicalJson = result.getCanonicalJson();
+byte[] hashMaterial = result.getHashMaterial();
 ```
 
 ---
 
-## 🏗️ 架构优势
+## 技术栈
 
-### 1. 按需依赖 ✅
-- 服务仅依赖实际使用的内容
-- 减少 classpath 污染
-- 不需要所有功能的服务构建更快
-
-### 2. 清晰边界 ✅
-- **Core**: 真正通用的工具
-- **Storage**: 领域级命名规则(业务逻辑)
-- **Model**: 服务间契约
-
-### 3. 符合六边形架构 ✅
-- 领域层可以使用 `patra-common-storage`(业务规则)而无需依赖基础设施(`object-storage` starter)
-- 关注点分离: 命名策略 vs. 存储实现
-
-### 4. 独立演进 ✅
-- 每个子模块可以独立演进
-- 版本管理灵活性(未来)
+| 模块 | 核心依赖 | 说明 |
+|------|---------|------|
+| **patra-common-core** | Hutool, Jackson, SLF4J | 核心基础设施 |
+| **patra-common-storage** | Hutool | 存储键生成策略 |
+| **patra-common-model** | Jackson | 共享数据模型 |
 
 ---
 
-## 🔗 依赖关系
+## 架构优势
 
-```
-patra-common (POM 聚合器)
-    ↓
-    ├─ patra-common-core (Hutool, Jackson, SLF4J)
-    │     ↑
-    │     └─ 所有微服务层
-    │
-    ├─ patra-common-storage (Hutool)
-    │     ↑
-    │     └─ patra-spring-boot-starter-object-storage
-    │
-    └─ patra-common-model (Jackson)
-          ↑
-          ├─ patra-ingest-domain
-          └─ patra-spring-boot-starter-provenance
-```
+### 1. 按需依赖
+服务仅依赖实际使用的模块,减少 classpath 污染和构建时间。
+
+### 2. 清晰边界
+- **Core**: 真正通用的基础设施
+- **Storage**: 业务级命名规则(DDD 业务逻辑)
+- **Model**: 服务间契约(Shared Kernel)
+
+### 3. 符合六边形架构
+领域层可使用 `storage` 模块(业务规则)而无需依赖基础设施(`object-storage` starter)。
+
+### 4. 独立演进
+每个子模块可独立版本管理和发布。
 
 ---
 
-## 📊 模块统计
+## 相关文档
 
-| 模块 | 类数 | 代码行数 | 依赖 | 使用情况 |
-|--------|---------|-----|--------------|-------|
-| **patra-common-core** | ~27 | ~2500 | Hutool, Jackson | 所有服务(必需) |
-| **patra-common-storage** | 4 | ~300 | Hutool | patra-ingest, object-storage starter |
-| **patra-common-model** | 1 | ~200 | Jackson | patra-ingest, patra-provenance |
+- [patra-common-core/README.md](patra-common-core/README.md) — 核心基础设施详细文档
+- [patra-common-storage/README.md](patra-common-storage/README.md) — 存储键生成策略详细文档
+- [patra-common-model/README.md](patra-common-model/README.md) — 共享数据模型详细文档
 
 ---
 
-## 🚀 构建命令
-
-```bash
-# 构建所有子模块
-cd patra-common
-mvn clean install
-
-# 构建特定子模块
-cd patra-common-core
-mvn clean install
-
-# 验证依赖
-mvn dependency:tree
-```
-
----
-
-## 🔗 相关文档
-
-- [ARCHITECTURE.md](../docs/ARCHITECTURE.md) — 六边形架构原则
-- [DEV-GUIDE.md](../docs/DEV-GUIDE.md) — 开发指南
-- [AGENTS-architecture.md](../.claude/AGENTS-architecture.md) — DDD 模式参考
-
----
-
-**最后更新**: 2025-10-28
-**迁移**: patra-common → 多模块结构(patra-common-core/storage/model)
+**版本**: 0.1.0-SNAPSHOT
+**最后更新**: 2025-11-03

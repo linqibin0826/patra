@@ -1,82 +1,113 @@
 # patra-spring-boot-starter-expr
 
-> 表达式引擎集成——自动配置表达式构建器、验证器和规则快照加载器。
+## 概述
 
-## 📌 目的
+表达式引擎集成 Starter,将 patra-expr-kernel 与 Spring Boot 生态无缝集成,提供表达式编译、验证、规范化和渲染能力。
 
-将 **patra-expr-kernel** 与 Spring Boot 集成:
-- 支持规则快照加载的表达式编译器
-- 表达式构建器 Bean
-- 自动配置的规范化器
-- 表达式验证支持
-- JSON 编解码器 Bean
+本 Starter 自动配置表达式编译器,支持从 patra-registry 加载规则快照,使用标准键方法实现跨数据源的表达式编译。
 
----
+## 核心功能
 
-## 🧭 标准键方法(配置内容 vs 发送内容)
+- **表达式编译器**: 将领域表达式编译为数据源特定的查询参数
+- **规则快照加载**: 从 patra-registry 动态加载数据源规则和映射
+- **标准键方法**: 使用与数据源无关的语义键(std_key),支持跨数据源表达式复用
+- **表达式工具**: 能力检查、规范化、渲染
+- **配置防护**: 支持查询长度限制、参数数量警告和错误
 
-编译器在渲染期间使用与提供商无关的语义键(std_key),并在最后将其桥接到提供商参数。
+## 自动配置内容
 
-- 渲染规则仅发出标准键,如 `query`、`from`、`to`、`datetype`、`filter`——从不使用提供商名称。
-- 提供商特定的参数映射(来自 `patra-registry`)将 std_key 转换为提供商参数(例如,PubMed `query→term`)。
-- MULTI 标准键(例如 `filter`)默认使用连接转换;如果提供商需要,可以通过配置启用重复参数。
+### 自动配置类
 
-为什么这很重要:
-- 种子(规则/映射)存储在 registry 中;演进提供商通常不需要代码变更。
-- 通过交换种子,一个表达式可以编译为多个提供商。
+**ExprCompilerAutoConfiguration** 自动配置:
 
-配置控制的关键行为:
+| Bean 名称 | 类型 | 描述 |
+|-----------|------|------|
+| `exprCompiler` | `ExprCompiler` | 主表达式编译器 |
+| `ruleSnapshotLoader` | `RuleSnapshotLoader` | 规则快照加载器(从 registry) |
+| `capabilityChecker` | `CapabilityChecker` | 表达式能力检查器 |
+| `exprNormalizer` | `ExprNormalizer` | 表达式规范化器 |
+| `exprRenderer` | `ExprRenderer` | 表达式渲染器 |
+| `exprMetrics` | `ExprMetrics` | 指标记录器(可选) |
 
-```yaml
-# 安全模式
-expr:
-  strict: true                 # 在缺少函数/转换、不支持的 NOT 时快速失败
-  multi:
-    repeat-enabled: false      # 默认关闭;首选 LIST_JOIN/FILTER_JOIN
+**ExprFunctionAutoConfiguration** 自动配置:
 
-# 编译器防护措施
-patra:
-  expr:
-    compiler:
-      query-param-bridge:
-        enabled: true          # 通过 std_key=query 桥接聚合的布尔查询
-      max-query-length: 5000   # 硬性限制(0 禁用)
-      warn-param-count: 50     # 软性警告(0 禁用)
-      max-param-count: 100     # 硬性错误(0 禁用)
+| Bean 名称 | 类型 | 描述 |
+|-----------|------|------|
+| `functionRegistry` | `FunctionRegistry` | 渲染函数注册表 |
+| `transformRegistry` | `TransformRegistry` | 值转换注册表 |
+
+### 启用条件
+
+- 配置属性 `patra.expr.compiler.enabled=true` (默认启用)
+- 配置属性 `patra.expr.compiler.registry-api.enabled=true` (默认启用)
+- 需要 `ProvenanceClient` 和 `ExprClient` Feign 客户端存在
+
+## 主要组件
+
+### ExprCompiler
+
+表达式编译器,将领域表达式编译为数据源特定的查询参数:
+
+```java
+CompileResult compile(CompileRequest request);
+CompileResult compile(Expr expression, ProvenanceCode provenance);
+CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType);
 ```
 
-参见文档: `docs/expr/01-overview.md`、`docs/expr/02-architecture.md`、`docs/expr/03-compiler-bridge-internals.md`。
+### 标准键方法
 
-## 🔧 自动配置
+编译器使用标准键(std_key)而非数据源特定参数名:
 
-### ExprCompiler (基于 Registry)
+- 规则仅发出标准键: `query`、`from`、`to`、`datetype`、`filter`
+- 数据源映射(来自 registry)将标准键转换为数据源参数,如 PubMed `query→term`
+- MULTI 标准键(如 `filter`)默认使用连接转换
 
-当 classpath 中存在 `patra-registry-api` 时,自动配置:
-- `SnapshotAssembler` - 将 registry DTO 转换为规则快照
-- `RuleSnapshotLoader` - 通过 Feign 客户端从 `patra-registry` 加载规则
-- `ExprCompiler` - 带规则验证的主表达式编译器
+**优势**:
 
-**要求:**
-- `ProvenanceClient` 和 `ExprClient` Feign 接口存在(通过 `patra-spring-cloud-starter-feign` 自动发现)
-- `patra.expr.compiler.registry-api.enabled=true` (默认)
-
-**配置:**
-```yaml
-patra:
-  expr:
-    compiler:
-      enabled: true  # 启用编译器
-      registry-api:
-        enabled: true  # 启用基于 registry 的规则加载
-```
+- 规则存储在 registry 中,演进数据源通常无需代码变更
+- 通过交换规则快照,一个表达式可编译为多个数据源
 
 ### 表达式工具
 
-- `CapabilityChecker` - 验证表达式能力
-- `ExprNormalizer` - 规范化表达式
-- `ExprRenderer` - 将表达式渲染为各种格式
+- `CapabilityChecker`: 验证表达式能力(如 NOT 支持)
+- `ExprNormalizer`: 规范化表达式结构
+- `ExprRenderer`: 将表达式渲染为各种格式
 
-## 🔗 依赖
+## 配置属性
+
+配置前缀: `patra.expr.compiler`
+
+### 编译器配置
+
+```yaml
+patra:
+  expr:
+    compiler:
+      enabled: true  # 启用编译器(默认 true)
+      registry-api:
+        enabled: true  # 启用基于 registry 的规则加载(默认 true)
+        operation-default: "SEARCH"  # 默认操作类型
+      query-param-bridge:
+        enabled: true  # 启用查询参数桥接(默认 true)
+      max-query-length: 5000  # 查询长度限制(0 = 禁用)
+      warn-param-count: 50    # 参数数量警告阈值(0 = 禁用)
+      max-param-count: 100    # 参数数量错误阈值(0 = 禁用)
+```
+
+### 表达式模式配置
+
+```yaml
+patra:
+  expr:
+    mode:
+      strict: true  # 严格模式: 缺少函数/转换时快速失败
+      multi:
+        repeat-enabled: false  # 禁用重复参数,首选 LIST_JOIN/FILTER_JOIN
+```
+
+## 使用方式
+
+### Maven 依赖
 
 ```xml
 <dependency>
@@ -85,50 +116,113 @@ patra:
 </dependency>
 ```
 
-包含: `patra-expr-kernel`、Jackson
+### 配置示例
 
-## 🚀 用法
+```yaml
+patra:
+  expr:
+    compiler:
+      enabled: true
+      max-query-length: 5000
+      warn-param-count: 50
+```
 
-### 使用 ExprCompiler
+### 代码示例
+
+#### 使用 ExprCompiler
 
 ```java
 @Component
 @RequiredArgsConstructor
 public class ExpressionCompilerPortImpl implements ExpressionCompilerPort {
 
-    private final ExprCompiler compiler;  // 自动注入
+    private final ExprCompiler compiler;
 
     @Override
-    public CompileResult compile(String exprJson, ProvenanceCode code) {
-        return compiler.compile(exprJson, code);
+    public CompileResult compile(Expr expression, ProvenanceCode provenance) {
+        // 编译为数据源特定参数
+        CompileResult result = compiler.compile(expression, provenance);
+
+        if (!result.isSuccess()) {
+            log.warn("表达式编译失败: {}", result.issues());
+            throw new CompilationException(result.issues());
+        }
+
+        return result;
     }
 }
 ```
 
-### 使用表达式工具
+#### 构建表达式
 
 ```java
 @Service
 @RequiredArgsConstructor
 public class PlanExpressionBuilder {
 
-    public PlanExpressionDescriptor build(PlanTriggerNorm norm, ProvenanceConfigSnapshot config) {
-        Expr expr = Exprs.and(List.of(
-            Exprs.rangeDate("date", norm.windowFrom(), norm.windowTo())
-        ));
+    public Expr buildDateRangeExpression(Instant from, Instant to) {
+        // 构建日期范围表达式
+        return Exprs.rangeDate("date", from, to);
+    }
 
-        ExprCanonicalSnapshot snapshot = ExprCanonicalizer.canonicalize(expr);
-        return new PlanExpressionDescriptor(snapshot.hash(), snapshot.canonicalJson());
+    public Expr buildComplexExpression(PlanTriggerNorm norm) {
+        // 构建复杂的布尔表达式
+        return Exprs.and(List.of(
+            Exprs.rangeDate("date", norm.windowFrom(), norm.windowTo()),
+            Exprs.term("keyword", norm.searchTerm())
+        ));
     }
 }
 ```
 
-## 🔗 相关文档
+## 扩展点
 
-- [主 README](../README.md)
-- [patra-spring-cloud-starter-feign](../patra-spring-cloud-starter-feign/README.md) - Feign 客户端自动配置
-- [patra-expr-kernel](../patra-expr-kernel/README.md) - 表达式引擎核心
+### 自定义函数
 
----
+实现 `RenderFunction` 接口并注册到 `FunctionRegistry`:
 
-**最后更新**: 2025-10-14
+```java
+@Component
+public class CustomFunction implements RenderFunction {
+
+    @Override
+    public String name() {
+        return "custom_func";
+    }
+
+    @Override
+    public JsonNode apply(JsonNode input, RenderContext context) {
+        // 自定义逻辑
+        return input;
+    }
+}
+```
+
+### 自定义值转换
+
+实现 `ValueTransform` 接口并注册到 `TransformRegistry`:
+
+```java
+@Component
+public class CustomTransform implements ValueTransform {
+
+    @Override
+    public String transformCode() {
+        return "CUSTOM_TRANSFORM";
+    }
+
+    @Override
+    public JsonNode transform(JsonNode value, TransformContext context) {
+        // 自定义转换逻辑
+        return value;
+    }
+}
+```
+
+## 技术栈
+
+- patra-expr-kernel
+- patra-registry-api
+- Spring Boot 3.5.7
+- Jackson
+- Micrometer (可选)
