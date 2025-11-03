@@ -1,131 +1,127 @@
-# patra-ingest-api — Ingest API Contracts
+# patra-ingest-api — 摄入服务 API 契约
 
-> **API module** defining the public contract for the ingest service — error codes and future task worker APIs.
-
----
-
-## 📌 Purpose
-
-`patra-ingest-api` provides the **external API contract** for interacting with the ingest service from other microservices. Currently in **bootstrap phase**, it contains:
-
-1. **Error Codes**: Standardized error handling for ingest operations
-2. **Future APIs** (Planned): Task worker APIs for external task execution
-
-**Why separate API module?**
-- **Decoupling**: Consumers depend only on contracts, not implementation
-- **Versioning**: API contracts evolve independently
-- **Type Safety**: Compile-time verification of RPC calls
+> **API 模块**,定义摄入服务的外部契约 — 错误码和未来的 Task Worker APIs。
 
 ---
 
-## 🗂️ Module Structure
+## 概述
+
+`patra-ingest-api` 提供 **patra-ingest 服务的外部 API 契约**,用于与其他微服务交互。当前处于**初始阶段**,包含:
+
+1. **错误码(Error Codes)**: 标准化的错误处理
+2. **未来 APIs(Planned)**: Task Worker APIs(用于外部任务执行)
+
+**为什么独立 API 模块?**
+- **解耦(Decoupling)**: 消费者仅依赖契约,不依赖实现
+- **版本控制(Versioning)**: API 契约独立演进
+- **类型安全(Type Safety)**: 编译时验证 RPC 调用
+
+---
+
+## 模块结构
 
 ```
 patra-ingest-api/
 └─ src/main/java/.../api/
-   └─ error/                         # Error Codes
-      └─ IngestErrorCode.java           # Standardized error codes
+   └─ error/                         # 错误码
+      └─ IngestErrorCode.java            # 标准化错误码
 ```
 
-**Current Status**: Bootstrap phase — only error codes defined.
+**当前状态**: 初始阶段 — 仅定义错误码
 
-**Planned Additions**:
-- `dto/` - Request/Response DTOs for task worker APIs
-- `endpoint/` - Task worker endpoint interfaces
-- `client/` - Feign clients for task workers
+**计划新增**:
+- `dto/` - Task Worker APIs 的请求/响应 DTOs
+- `endpoint/` - Task Worker 端点接口
+- `client/` - Feign 客户端(供 Task Workers 使用)
 
 ---
 
-## ⚠️ Error Codes
+## 错误码
 
 ### IngestErrorCode
 
-**Standardized error codes** following pattern: `ING-{segment}{number}`
+**标准化错误码**,遵循模式: `ING-{segment}{number}`
 
 ```java
 public final class IngestErrorCode {
 
-    // HTTP-aligned errors (0xxx segment)
+    // HTTP 对齐错误(0xxx 段)
     public static final ErrorCodeLike BAD_REQUEST = ...;           // ING-0400
     public static final ErrorCodeLike NOT_FOUND = ...;             // ING-0404
     public static final ErrorCodeLike UNPROCESSABLE = ...;         // ING-0422
     public static final ErrorCodeLike INTERNAL_ERROR = ...;        // ING-0500
 
-    // Business errors (1xxx+ segment)
+    // 业务错误(1xxx+ 段)
     public static final ErrorCodeLike PLAN_NOT_FOUND = ...;        // ING-1001
     public static final ErrorCodeLike PLAN_ALREADY_EXISTS = ...;   // ING-1002
     public static final ErrorCodeLike TASK_NOT_FOUND = ...;        // ING-1003
-    public static final ErrorCodeLike TASK_ALREADY_COMPLETED = ...; // ING-1004
     public static final ErrorCodeLike WINDOW_INVALID = ...;        // ING-1005
     public static final ErrorCodeLike CAPACITY_EXCEEDED = ...;     // ING-1006
-    public static final ErrorCodeLike IDEMPOTENCY_CONFLICT = ...;  // ING-1007
 }
 ```
 
-| Error Code | HTTP Status | Description |
-|------------|-------------|-------------|
-| `ING-0400` | 400 | Bad Request |
-| `ING-0404` | 404 | Plan/Task Not Found |
-| `ING-0422` | 422 | Unprocessable Entity (validation failed) |
-| `ING-0500` | 500 | Internal Server Error |
-| `ING-1001` | 404 | Plan not found |
-| `ING-1002` | 409 | Plan already exists (idempotency conflict) |
-| `ING-1003` | 404 | Task not found |
-| `ING-1004` | 409 | Task already completed |
-| `ING-1005` | 422 | Window invalid (empty, too large, etc.) |
-| `ING-1006` | 429 | Capacity exceeded (too many queued tasks) |
-| `ING-1007` | 409 | Idempotency conflict (duplicate idempotent key) |
+| 错误码 | HTTP 状态 | 说明 |
+|--------|-----------|------|
+| `ING-0400` | 400 | 错误请求 |
+| `ING-0404` | 404 | Plan/Task 未找到 |
+| `ING-0422` | 422 | 无法处理的实体(验证失败) |
+| `ING-0500` | 500 | 内部服务错误 |
+| `ING-1001` | 404 | Plan 未找到 |
+| `ING-1002` | 409 | Plan 已存在(幂等性冲突) |
+| `ING-1003` | 404 | Task 未找到 |
+| `ING-1005` | 422 | 窗口无效(空、过大等) |
+| `ING-1006` | 429 | 容量超限(排队任务过多) |
 
 ---
 
-## 🔮 Future APIs (Planned)
+## 未来 APIs (规划中)
 
 ### Task Worker APIs
 
-**目的**: Allow external task workers to:
-1. Poll for queued tasks
-2. Lease tasks for execution
-3. Report task status (running, succeeded, failed)
-4. Update task progress
+**目的**: 允许外部 Task Workers:
+1. 轮询排队任务
+2. 租用任务用于执行
+3. 报告任务状态(运行中、成功、失败)
+4. 更新任务进度
 
-**Planned Endpoints**:
+**规划端点**:
 
 ```java
-// Future: TaskWorkerEndpoint.java
+// 未来: TaskWorkerEndpoint.java
 public interface TaskWorkerEndpoint {
     String BASE_PATH = "/_internal/tasks";
 
-    // Poll for queued tasks
+    // 轮询排队任务
     @GetMapping(BASE_PATH + "/poll")
     List<TaskDTO> pollTasks(
         @RequestParam("provenanceCode") String provenanceCode,
         @RequestParam("limit") int limit
     );
 
-    // Lease task for execution
+    // 租用任务
     @PostMapping(BASE_PATH + "/{taskId}/lease")
     TaskLeaseResp leaseTask(
         @PathVariable("taskId") Long taskId,
         @RequestBody TaskLeaseReq request
     );
 
-    // Report task status
+    // 更新任务状态
     @PutMapping(BASE_PATH + "/{taskId}/status")
     void updateTaskStatus(
         @PathVariable("taskId") Long taskId,
         @RequestBody TaskStatusUpdateReq request
     );
 
-    // Heartbeat to keep lease alive
+    // 心跳续约
     @PostMapping(BASE_PATH + "/{taskId}/heartbeat")
     void heartbeat(@PathVariable("taskId") Long taskId);
 }
 ```
 
-**Planned DTOs**:
+**规划 DTOs**:
 
 ```java
-// Future: TaskDTO.java
+// 未来: TaskDTO.java
 public record TaskDTO(
     Long id,
     String idempotentKey,
@@ -136,144 +132,44 @@ public record TaskDTO(
     Instant scheduledAt
 ) {}
 
-// Future: TaskLeaseResp.java
+// 未来: TaskLeaseResp.java
 public record TaskLeaseResp(
     Long taskId,
     String leaseId,
     Instant leasedUntil
 ) {}
 
-// Future: TaskStatusUpdateReq.java
+// 未来: TaskStatusUpdateReq.java
 public record TaskStatusUpdateReq(
     String status,           // RUNNING, SUCCEEDED, FAILED
-    String resultJson,       // Result data
-    String errorMessage      // Error message if failed
+    String resultJson,       // 结果数据
+    String errorMessage      // 失败错误信息
 ) {}
 ```
 
-**Planned Feign Client**:
+---
 
-```java
-// Future: TaskWorkerClient.java
-@FeignClient(name = "patra-ingest", contextId = "taskWorkerClient")
-public interface TaskWorkerClient extends TaskWorkerEndpoint {
-}
-```
+## 依赖关系
+
+### 上游依赖
+- `patra-common-core`: 通用工具和枚举
+- `jakarta.validation-api`: 验证 API
+
+### 下游消费者
+- `patra-ingest-app`: 应用层(使用错误码)
+- `patra-ingest-adapter`: 适配器层(使用错误码)
+- **未来**: 外部 Task Worker 服务(使用 Feign 客户端)
 
 ---
 
-## 🚀 Usage Guide (Future)
+## 技术栈
 
-### Step 1: Add Dependency
-
-```xml
-<dependency>
-    <groupId>com.papertrace</groupId>
-    <artifactId>patra-ingest-api</artifactId>
-    <version>${project.version}</version>
-</dependency>
-```
-
-### Step 2: Enable Feign Clients
-
-```java
-@SpringBootApplication
-@EnableFeignClients(clients = TaskWorkerClient.class)
-public class TaskWorkerApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(TaskWorkerApplication.class, args);
-    }
-}
-```
-
-### Step 3: Poll and Execute Tasks
-
-```java
-@Component
-@RequiredArgsConstructor
-public class PubMedTaskWorker {
-
-    private final TaskWorkerClient taskWorkerClient;
-    private final PubMedClient pubMedClient;
-
-    @Scheduled(fixedDelay = 5000)
-    public void pollAndExecute() {
-        // Poll for queued tasks
-        List<TaskDTO> tasks = taskWorkerClient.pollTasks("pubmed", 10);
-
-        for (TaskDTO task : tasks) {
-            try {
-                // Lease task
-                TaskLeaseResp lease = taskWorkerClient.leaseTask(
-                    task.id(),
-                    new TaskLeaseReq("worker-01", 300)  // 5 min lease
-                );
-
-                // Execute task
-                executeTask(task);
-
-                // Report success
-                taskWorkerClient.updateTaskStatus(
-                    task.id(),
-                    new TaskStatusUpdateReq("SUCCEEDED", resultJson, null)
-                );
-            } catch (Exception ex) {
-                // Report failure
-                taskWorkerClient.updateTaskStatus(
-                    task.id(),
-                    new TaskStatusUpdateReq("FAILED", null, ex.getMessage())
-                );
-            }
-        }
-    }
-
-    private void executeTask(TaskDTO task) {
-        // Parse task params
-        TaskParams params = parseTaskParams(task.paramsJson());
-
-        // Call external API directly via provenance starter
-        ESearchRequest req = new PubMedESearchRequestAssembler().buildList(params.toJson());
-        ESearchResponse resp = pubMedClient.esearch(req);
-
-        // Process response
-        // ...
-    }
-}
-```
+- **Java**: 25
+- **Jakarta Validation API**: 3.x
+- **Lombok**: 编译时注解
 
 ---
 
-## 📊 Current Status
-
-### ✅ Completed
-
-- ✅ Error codes defined (IngestErrorCode)
-- ✅ API module structure
-
-### 🚧 In Progress
-
-- 🚧 Task worker API design
-- 🚧 Lease management pattern
-- 🚧 Heartbeat mechanism
-
-### 📋 Planned
-
-- 📋 Task worker endpoint interfaces
-- 📋 Task DTOs (TaskDTO, TaskLeaseResp, etc.)
-- 📋 Feign client (TaskWorkerClient)
-- 📋 Task status update APIs
-- 📋 Task query APIs (for monitoring)
-
----
-
-## 🔗 Related Documentation
-
-- [patra-ingest Service README](../README.md)
-- [Main README](../../README.md)
-- [Architecture Guide](../../docs/ARCHITECTURE.md)
-- [Plan Ingestion Flow](../patra-ingest-app/usecase/plan/README.md)
-
----
-
-**Last Updated**: 2025-01-12
-**状态**: Bootstrap Phase — Error Codes Only
+**最后更新**: 2025-01-16
+**Maven 坐标**: `com.papertrace:patra-ingest-api:0.1.0-SNAPSHOT`
+**状态**: 初始阶段 — 仅错误码

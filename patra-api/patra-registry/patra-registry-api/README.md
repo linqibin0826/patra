@@ -1,278 +1,138 @@
-# patra-registry-api — 注册中心 API 契约
+# patra-registry-api
 
-> **API 模块**,定义注册中心服务的公共契约 — 数据源和表达式元数据的 DTO、端点、Feign 客户端。
+## 概述
 
----
+`patra-registry-api` 是 patra-registry 服务的**外部契约模块**,定义了供其他微服务调用的 Feign 客户端接口、数据传输对象(DTO)和错误码。本模块遵循"契约优先"设计原则,确保 API 接口的稳定性和向后兼容性。
 
-## 📌 目标定位
+在六边形架构中,本模块作为独立的契约层,由 `patra-registry-adapter` 模块实现,被下游微服务(如 `patra-ingest`)作为 Feign 客户端依赖引入。
 
-`patra-registry-api` 提供从其他微服务查询注册中心服务的**外部 API 契约**。包含:
+## 核心职责
 
-1. **数据源 DTO**: 元数据和运营配置
-2. **表达式 DTO**: 表达式字段、渲染规则、API 参数映射
-3. **字典 DTO**: 字典项、类型、验证
-4. **端点接口**: Spring MVC 端点定义
-5. **Feign 客户端**: 开箱即用的 Feign RPC 集成客户端
-6. **错误代码**: 标准化错误处理
+- **接口契约定义**: 声明内部 RPC 端点接口(`ProvenanceEndpoint`、`ExprEndpoint`)
+- **DTO 定义**: 提供请求和响应数据传输对象,隔离内部领域模型与外部表示
+- **Feign 客户端**: 为消费者提供开箱即用的 Feign RPC 客户端(`ProvenanceClient`、`ExprClient`)
+- **错误码管理**: 定义统一的错误代码和异常响应结构
+- **验证注解**: 使用 Jakarta Validation 注解标注参数约束
 
-**为什么要独立 API 模块?**
-- **解耦**: 消费者仅依赖契约,而非实现
-- **版本控制**: API 契约独立演进
-- **类型安全**: RPC 调用的编译时验证
-
----
-
-## 🗂️ 模块结构
+## 模块结构
 
 ```
 patra-registry-api/
-└─ src/main/java/.../api/
-   ├─ rpc/
-   │  ├─ dto/
-   │  │  ├─ provenance/              # 数据源领域 DTO
-   │  │  │  ├─ ProvenanceResp.java       # 数据源元数据
-   │  │  │  ├─ ProvenanceConfigResp.java # 聚合配置(7 个维度)
-   │  │  │  ├─ HttpConfigResp.java       # HTTP 配置
-   │  │  │  ├─ RetryConfigResp.java      # 重试配置
-   │  │  │  ├─ RateLimitConfigResp.java  # 速率限制配置
-   │  │  │  ├─ PaginationConfigResp.java # 分页配置
-   │  │  │  ├─ BatchingConfigResp.java   # 批处理配置
-   │  │  │  └─ WindowOffsetResp.java     # 窗口偏移配置
-   │  │  │
-   │  │  ├─ expr/                    # 表达式领域 DTO
-   │  │  │  ├─ ExprSnapshotResp.java     # 表达式快照
-   │  │  │  ├─ ExprFieldResp.java        # 字段定义
-   │  │  │  ├─ ExprRenderRuleResp.java   # 渲染规则
-   │  │  │  ├─ ApiParamMappingResp.java  # API 参数映射
-   │  │  │  └─ ExprCapabilityResp.java   # 表达式能力
-   │  │  │
-   │  │  └─ dict/                    # 字典领域 DTO
-   │  │     ├─ DictionaryItemResp.java   # 字典项
-   │  │     ├─ DictionaryTypeResp.java   # 字典类型
-   │  │     ├─ DictionaryHealthResp.java # 健康状态
-   │  │     ├─ DictionaryValidationResp.java
-   │  │     └─ DictionaryReferenceReq.java
-   │  │
-   │  ├─ endpoint/                   # 端点接口
-   │  │  ├─ ProvenanceEndpoint.java      # 数据源 API
-   │  │  └─ ExprEndpoint.java            # 表达式 API
-   │  │
-   │  └─ client/                     # Feign 客户端
-   │     ├─ ProvenanceClient.java        # 数据源 RPC 客户端
-   │     └─ ExprClient.java              # 表达式 RPC 客户端
-   │
-   └─ error/                         # 错误代码
-      └─ RegistryErrorCode.java         # 标准化错误代码
+└── src/main/java/com/patra/registry/api/
+    ├── endpoint/                    # 端点接口契约
+    │   ├── ProvenanceEndpoint.java  # 数据源 API
+    │   └── ExprEndpoint.java        # 表达式 API
+    ├── client/                      # Feign 客户端
+    │   ├── ProvenanceClient.java    # 数据源 RPC 客户端
+    │   └── ExprClient.java          # 表达式 RPC 客户端
+    ├── dto/                         # 数据传输对象
+    │   ├── provenance/              # 数据源相关 DTO
+    │   │   ├── ProvenanceResp.java
+    │   │   ├── ProvenanceConfigResp.java
+    │   │   ├── HttpConfigResp.java
+    │   │   ├── RetryConfigResp.java
+    │   │   ├── RateLimitConfigResp.java
+    │   │   ├── PaginationConfigResp.java
+    │   │   ├── BatchingConfigResp.java
+    │   │   └── WindowOffsetResp.java
+    │   ├── expr/                    # 表达式相关 DTO
+    │   │   ├── ExprSnapshotResp.java
+    │   │   ├── ExprFieldResp.java
+    │   │   ├── ExprRenderRuleResp.java
+    │   │   ├── ApiParamMappingResp.java
+    │   │   └── ExprCapabilityResp.java
+    │   └── dict/                    # 字典相关 DTO
+    │       ├── DictionaryItemResp.java
+    │       ├── DictionaryTypeResp.java
+    │       └── DictionaryReferenceReq.java
+    └── error/                       # 错误代码
+        └── RegistryErrorCode.java
 ```
 
----
+## 主要组件
 
-## 🔌 API 契约
+### ProvenanceEndpoint
 
-### 1. 数据源 API
+数据源 API 端点契约,定义三个核心操作:
 
-#### ProvenanceEndpoint
+**端点**:
+- `GET /_internal/provenances` - 列出所有数据源
+- `GET /_internal/provenances/{code}` - 根据代码获取单个数据源
+- `GET /_internal/provenances/{code}/config` - 加载完整配置聚合(支持时态切片)
 
-```java
-public interface ProvenanceEndpoint {
-    String BASE_PATH = "/_internal/provenances";
+**时态切片参数**:
+- `operationType`: 按操作类型过滤(HARVEST/UPDATE 等),可选
+- `at`: 查询在指定时刻生效的配置,可选,默认为当前时间
 
-    @GetMapping(BASE_PATH)
-    List<ProvenanceResp> listProvenances();
+### ExprEndpoint
 
-    @GetMapping(BASE_PATH + "/{code}")
-    ProvenanceResp getProvenance(@PathVariable("code") ProvenanceCode code);
+表达式 API 端点契约,提供表达式元数据查询:
 
-    @GetMapping(BASE_PATH + "/{code}/config")
-    ProvenanceConfigResp getConfiguration(
-        @PathVariable("code") ProvenanceCode code,
-        @RequestParam(value = "operationType", required = false) String operationType,
-        @RequestParam(value = "at", required = false) Instant at
-    );
-}
-```
+**端点**:
+- `GET /_internal/expr/snapshot` - 获取表达式快照(字段定义、渲染规则、参数映射、能力)
 
-**3 个操作**:
+**参数**:
+- `provenanceCode`: 数据源代码
+- `operationType`: 操作类型,可选
+- `endpointName`: 端点名称,可选
+- `at`: 时态切片时间点,可选
 
-1. **GET /_internal/provenances** - 列出所有数据源
-2. **GET /_internal/provenances/{code}** - 根据代码获取单个数据源
-3. **GET /_internal/provenances/{code}/config?operationType=&at=** - 获取聚合配置(支持**时态切片**)
+### ProvenanceClient / ExprClient
 
----
-
-#### ProvenanceConfigResp (7 个配置维度)
-
-```java
-public record ProvenanceConfigResp(
-    ProvenanceResp provenance,           // Baseline metadata
-    WindowOffsetResp windowOffset,       // Window and offset config
-    PaginationConfigResp pagination,     // Pagination/cursor config
-    HttpConfigResp http,                 // HTTP baseline config
-    BatchingConfigResp batching,         // Batching and request shaping
-    RetryConfigResp retry,               // Retry and backoff config
-    RateLimitConfigResp rateLimit        // Rate limiting and concurrency
-) {}
-```
-
-**时态切片**:
-- `operationType`: 按操作类型过滤(HARVEST/UPDATE/COMPENSATION)
-- `at`: 查询在此时刻生效的配置
-
-**请求示例**:
-```
-GET /_internal/provenances/pubmed/config?operationType=HARVEST&at=2025-01-12T10:00:00Z
-```
-
-**响应示例**:
-```json
-{
-  "provenance": {
-    "code": "pubmed",
-    "name": "PubMed",
-    "baseUrl": "https://api.pubmed.gov",
-    "status": "ACTIVE"
-  },
-  "windowOffset": {
-    "maxWindowDays": 365,
-    "offsetSeconds": 0
-  },
-  "pagination": {
-    "type": "OFFSET",
-    "defaultPageSize": 1000,
-    "maxPageSize": 10000
-  },
-  "http": {
-    "timeoutSeconds": 30,
-    "connectTimeoutSeconds": 10,
-    "headers": {
-      "User-Agent": "Papertrace/1.0",
-      "Accept": "application/json"
-    }
-  },
-  "batching": {
-    "batchSizeLimit": 1000,
-    "batchTimeoutSeconds": 60
-  },
-  "retry": {
-    "maxAttempts": 3,
-    "backoffSeconds": 1,
-    "maxBackoffSeconds": 10,
-    "retryableCodes": [502, 503, 504]
-  },
-  "rateLimit": {
-    "requestsPerSecond": 10,
-    "burstSize": 20,
-    "concurrentRequests": 5
-  }
-}
-```
-
----
-
-### 2. 表达式 API
-
-#### ExprEndpoint
-
-```java
-public interface ExprEndpoint {
-    String BASE_PATH = "/_internal/expr";
-
-    @GetMapping(BASE_PATH + "/snapshot")
-    ExprSnapshotResp getSnapshot(
-        @RequestParam("provenanceCode") String provenanceCode,
-        @RequestParam(value = "operationType", required = false) String operationType,
-        @RequestParam(value = "endpointName", required = false) String endpointName,
-        @RequestParam(value = "at", required = false) Instant at
-    );
-}
-```
-
-**1 个操作**:
-
-**GET /_internal/expr/snapshot?provenanceCode=&operationType=&endpointName=&at=** - 获取表达式快照(支持时态切片)
-
-**请求示例**:
-```
-GET /_internal/expr/snapshot?provenanceCode=pubmed&operationType=HARVEST&endpointName=search&at=2025-01-12T10:00:00Z
-```
-
-**响应示例**:
-```json
-{
-  "provenanceCode": "pubmed",
-  "operationType": "HARVEST",
-  "endpointName": "search",
-  "fields": [
-    {
-      "fieldCode": "query",
-      "fieldType": "STRING",
-      "required": true,
-      "defaultValue": null,
-      "validation": {
-        "pattern": ".*",
-        "minLength": 1,
-        "maxLength": 500
-      }
-    },
-    {
-      "fieldCode": "pageSize",
-      "fieldType": "INTEGER",
-      "required": false,
-      "defaultValue": 1000
-    }
-  ],
-  "apiParamMappings": [
-    {
-      "apiParamName": "q",
-      "exprFieldCode": "query",
-      "transformRule": "URL_ENCODE"
-    },
-    {
-      "apiParamName": "pagesize",
-      "exprFieldCode": "pageSize",
-      "transformRule": "TO_STRING"
-    }
-  ],
-  "renderRules": [
-    {
-      "templateName": "query_url",
-      "template": "{baseUrl}/search?q={query}&pagesize={pageSize}",
-      "outputFormat": "URL"
-    }
-  ],
-  "capabilities": {
-    "supportsCursor": false,
-    "supportsOffset": true,
-    "supportsBatching": true
-  }
-}
-```
-
----
-
-### 3. Feign 客户端
-
-#### ProvenanceClient
+Feign 客户端接口,扩展对应的端点接口,通过 `@FeignClient` 注解声明服务名称和上下文 ID。本模块已提供开箱即用的客户端实现,下游服务可直接注入使用:
 
 ```java
 @FeignClient(name = "patra-registry", contextId = "provenanceClient")
-public interface ProvenanceClient extends ProvenanceEndpoint {
-}
+public interface ProvenanceClient extends ProvenanceEndpoint {}
+
+@FeignClient(name = "patra-registry", contextId = "exprClient")
+public interface ExprClient extends ExprEndpoint {}
 ```
 
-#### ExprClient
+**使用示例**:
+```java
+@Autowired
+private ProvenanceClient provenanceClient;
+
+ProvenanceConfigResp config = provenanceClient.getConfiguration(
+    ProvenanceCode.PUBMED,
+    "HARVEST",
+    Instant.now()
+);
+```
+
+### ProvenanceConfigResp
+
+配置聚合响应 DTO,包含 7 个配置维度:
 
 ```java
-@FeignClient(name = "patra-registry", contextId = "exprClient")
-public interface ExprClient extends ExprEndpoint {
-}
+public record ProvenanceConfigResp(
+    ProvenanceResp provenance,           // 基础元数据
+    WindowOffsetResp windowOffset,       // 时间窗口偏移配置
+    PaginationConfigResp pagination,     // 分页策略
+    HttpConfigResp http,                 // HTTP 客户端配置
+    BatchingConfigResp batching,         // 批处理配置
+    RetryConfigResp retry,               // 重试策略
+    RateLimitConfigResp rateLimit        // 速率限制配置
+) {}
 ```
 
----
+## 依赖关系
 
-## 🚀 使用指南
+**上游依赖**:
+- `patra-common-core`: 共享枚举和工具类
+- `jakarta.validation-api`: DTO 验证注解
+- `spring-web`: `@RequestMapping` 等注解(provided)
+- `spring-cloud-openfeign-core`: `@FeignClient` 注解(provided)
 
-### 步骤 1: 添加依赖
+**下游消费者**:
+- `patra-registry-adapter`: 实现端点接口
+- `patra-ingest`: 通过 Feign 客户端调用 registry 服务
+- 其他微服务: 引入本模块以访问 registry 服务
+
+## 使用示例
+
+### 添加依赖
 
 ```xml
 <dependency>
@@ -282,225 +142,96 @@ public interface ExprClient extends ExprEndpoint {
 </dependency>
 ```
 
-### 步骤 2: 启用 Feign 客户端
+### 启用 Feign 客户端
 
 ```java
 @SpringBootApplication
 @EnableFeignClients(clients = {ProvenanceClient.class, ExprClient.class})
-public class YourApplication {
+public class PatraIngestApplication {
     public static void main(String[] args) {
-        SpringApplication.run(YourApplication.class, args);
+        SpringApplication.run(PatraIngestApplication.class, args);
     }
 }
 ```
 
-### 步骤 3: 使用数据源客户端
+### 查询数据源配置
 
 ```java
 @Component
 @RequiredArgsConstructor
-public class PatraRegistryPortImpl implements PatraRegistryPort {
+public class ProvenanceConfigService {
 
     private final ProvenanceClient provenanceClient;
 
-    @Override
-    public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode code, OperationCode operation) {
-        // 使用时态切片查询
-        ProvenanceConfigResp resp = provenanceClient.getConfiguration(
-            code,
-            operation.getCode(),
-            Instant.now()  // 获取当前生效的配置
-        );
-
-        // 转换为领域快照
-        return convertToSnapshot(resp);
+    public ProvenanceConfigResp fetchConfig(ProvenanceCode code, String operationType, Instant at) {
+        // 使用时态切片查询特定时刻的有效配置
+        return provenanceClient.getConfiguration(code, operationType, at);
     }
 
-    @Override
-    public List<Provenance> listAllProvenances() {
-        List<ProvenanceResp> respList = provenanceClient.listProvenances();
-        return respList.stream()
-            .map(this::convertToDomain)
-            .toList();
+    public List<ProvenanceResp> listAll() {
+        return provenanceClient.listProvenances();
     }
 }
 ```
 
-### 步骤 4: 使用表达式客户端
+### 查询表达式快照
 
 ```java
 @Component
 @RequiredArgsConstructor
-public class PlanExpressionBuilder {
+public class ExprSnapshotService {
 
     private final ExprClient exprClient;
 
-    public PlanExpressionDescriptor build(PlanTriggerNorm norm, ProvenanceConfigSnapshot config) {
-        // 查询表达式快照
-        ExprSnapshotResp exprSnapshot = exprClient.getSnapshot(
-            norm.provenanceCode(),
-            norm.operationType(),
-            "search",
-            Instant.now()
-        );
-
-        // 从快照构建表达式
-        Expr expr = buildExprFromSnapshot(exprSnapshot, norm);
-
-        // 规范化
-        ExprCanonicalSnapshot canonical = ExprCanonicalizer.canonicalize(expr);
-
-        return new PlanExpressionDescriptor(
-            canonical.hash(),
-            canonical.canonicalJson()
-        );
+    public ExprSnapshotResp fetchSnapshot(String provenanceCode, String operationType, Instant at) {
+        return exprClient.getSnapshot(provenanceCode, operationType, null, at);
     }
 }
 ```
 
----
-
-## 📊 核心概念
+## 核心概念
 
 ### 时态配置切片
 
-**问题**: 配置在任务执行期间变更会破坏正在运行的任务。
+所有配置都具有时间有效性范围(`effectiveFrom` 和 `effectiveUntil`)。通过 `at` 参数查询特定时刻的有效配置,确保:
+- **配置不可变性**: 配置更改不会影响正在运行的任务
+- **审计追溯**: 明确知道使用了哪个版本的配置
+- **渐进式发布**: 支持基于时间的 A/B 测试
 
-**解决方案**: 在计划创建时捕获配置快照。
+### 配置作用域优先级
 
-```java
-// 在计划创建时(2025-01-10)
-ProvenanceConfigResp snapshot = provenanceClient.getConfiguration(
-    ProvenanceCode.PUBMED,
-    "HARVEST",
-    Instant.parse("2025-01-10T00:00:00Z")
-);
+配置按作用域分为三级(优先级从高到低):
+1. **TASK 级**: 任务特定配置
+2. **OPERATION 级**: 操作类型特定配置(HARVEST、UPDATE)
+3. **SOURCE 级**: 数据源默认配置
 
-// 捕获 2025-01-10 生效的配置
-// 即使配置在 2025-01-11 更改,计划仍使用 2025-01-10 的快照
-```
+查询时,高优先级配置覆盖低优先级配置。
 
-**优势**:
-- **不可变性**: 配置更改不会破坏计划
-- **审计轨迹**: 知道使用了哪个配置
-- **渐进式发布**: 使用时间切片进行 A/B 测试
+## 设计原则
 
-### 配置维度优先级
+### 1. 契约稳定性
 
-**作用域优先级**(从高到低):
-1. **TASK 级**: 最具体(操作 + 端点 + 任务特定)
-2. **OPERATION 级**: 操作特定(HARVEST vs UPDATE)
-3. **SOURCE 级**: 所有操作的默认值
+- API 接口变更必须遵循语义化版本控制
+- 避免破坏性变更,通过扩展而非修改来演进接口
+- DTO 字段添加必须保持向后兼容
 
-**示例**:
-- SOURCE 级: `rateLimit = 10`
-- HARVEST 级: `rateLimit = 5`
-- UPDATE 级: `rateLimit = 20`
+### 2. 纯契约模块
 
-```
-HARVEST 操作 → 使用 5 req/s
-UPDATE 操作 → 使用 20 req/s
-其他操作 → 使用 10 req/s(SOURCE 默认值)
-```
+- 仅包含接口定义、DTO 和注解,不包含业务逻辑
+- 依赖最小化,避免引入重量级框架
+- `spring-web` 和 `spring-cloud-openfeign-core` 使用 `provided` 作用域
 
----
+### 3. DTO 设计
 
-## ⚠️ 错误代码
+- 使用不可变对象(`record` 或 `@Value`)
+- 包含必要的验证注解(`@NotNull`、`@Valid` 等)
+- 字段命名清晰,避免缩写
 
-### RegistryErrorCode
+## 相关文档
 
-**标准化错误代码**,遵循模式: `REG-{segment}{number}`
-
-| 错误代码 | HTTP 状态 | 描述 |
-|------------|-------------|-------------|
-| `REG-0400` | 400 | 错误请求 |
-| `REG-0404` | 404 | 数据源/配置未找到 |
-| `REG-0422` | 422 | 无法处理的实体(验证失败) |
-| `REG-0500` | 500 | 内部服务器错误 |
-| `REG-1001` | 404 | 数据源未找到 |
-| `REG-1002` | 404 | 配置未找到 |
-| `REG-1003` | 422 | 配置验证失败 |
-| `REG-1004` | 409 | 配置冲突(重复) |
-
----
-
-## 📋 最佳实践
-
-### 1. 始终提供时态上下文
-
-```java
-// ✅ 好: 指定时态上下文
-ProvenanceConfigResp config = provenanceClient.getConfiguration(
-    code,
-    operationType,
-    Instant.now()  // 或 plan.getCreatedAt()
-);
-```
-
-```java
-// ❌ 不好: 依赖默认值(当前时间)
-ProvenanceConfigResp config = provenanceClient.getConfiguration(
-    code,
-    operationType,
-    null  // 默认为 "now",但不明确
-);
-```
-
-### 2. 缓存配置快照
-
-```java
-// ✅ 好: 在计划创建时捕获快照一次
-ProvenanceConfigSnapshot snapshot = fetchConfig(code, operation);
-plan.setConfigSnapshotJson(toJson(snapshot));
-
-// 之后,任务使用捕获的快照
-ProvenanceConfigSnapshot config = fromJson(plan.getConfigSnapshotJson());
-```
-
-```java
-// ❌ 不好: 为每个任务获取配置
-for (Task task : tasks) {
-    ProvenanceConfigResp config = provenanceClient.getConfiguration(...);  // 网络调用!
-}
-```
-
-### 3. 优雅地处理未找到的情况
-
-```java
-// ✅ 好: 处理 404
-try {
-    ProvenanceConfigResp config = provenanceClient.getConfiguration(...);
-} catch (FeignException.NotFound ex) {
-    log.warn("Configuration not found for {} at {}", code, at);
-    // 回退到默认值或优雅失败
-}
-```
-
-### 4. 使用操作类型进行过滤
-
-```java
-// ✅ 好: 按操作类型过滤
-ProvenanceConfigResp harvestConfig = provenanceClient.getConfiguration(
-    ProvenanceCode.PUBMED,
-    "HARVEST",  // 获取 HARVEST 特定配置
-    Instant.now()
-);
-
-ProvenanceConfigResp updateConfig = provenanceClient.getConfiguration(
-    ProvenanceCode.PUBMED,
-    "UPDATE",  // 获取 UPDATE 特定配置
-    Instant.now()
-);
-```
-
----
-
-## 🔗 相关文档
-
-- [patra-registry 服务 README](../README.md)
-- [主 README](../../README.md)
-- [架构指南](../../docs/ARCHITECTURE.md)
-- [时态配置模式](../../docs/ARCHITECTURE.md#43-temporal-configuration)
+- [patra-registry 顶层文档](../README.md)
+- [patra-registry-adapter 模块](../patra-registry-adapter/README.md) - API 接口的实现方
+- [patra-ingest 模块](../../patra-ingest/README.md) - API 接口的主要消费方
 
 ---
 

@@ -1,115 +1,74 @@
 # patra-ingest — 数据摄入编排服务
 
-> **数据采集编排器**,将摄入任务分解为可执行的原子任务并管理其生命周期。
+> **数据采集编排引擎**,负责计划编排、任务生成、窗口解析、游标跟踪和 Outbox 中继。
 
 ---
 
 ## 📌 核心职责
 
-`patra-ingest` 负责:
+`patra-ingest` 服务是 Papertrace 医学文献数据平台的**数据摄入编排核心**,负责:
 
-1. **计划编排**: 根据调度器触发器创建执行计划
-2. **任务生成**: 将计划分解为原子任务(带幂等性保证)
-3. **窗口解析**: 确定数据采集的时间/容量窗口
-4. **游标跟踪**: 维护增量采集的水位线
-5. **Outbox 中继**: 通过 Outbox 模式可靠地发布任务事件
-6. **执行协调**: 跟踪任务状态、重试和租约管理
+1. **计划编排(Plan Orchestration)**: 根据调度触发器创建执行计划,分解为原子任务
+2. **窗口解析(Window Resolution)**: 确定数据采集的时间/容量边界,支持增量采集
+3. **任务生成(Task Generation)**: 将计划切片为可并行执行的任务,保证幂等性
+4. **游标跟踪(Cursor Tracking)**: 维护增量采集的水位线(Watermark)
+5. **Outbox 中继(Outbox Relay)**: 通过 Outbox 模式可靠地将任务事件发布到 MQ
+6. **执行协调(Execution Coordination)**: 跟踪任务状态、租约管理、批次规划
 
-**核心原则**: 确保**至少一次交付**和**幂等任务执行**。
+**核心原则**: 确保**至少一次交付(At-least-once Delivery)**和**幂等任务执行(Idempotent Task Execution)**。
 
 ---
 
-## 🏗️ 模块结构
+## 🏗️ 架构概览
+
+### 六边形架构 + DDD
+
+本服务采用**六边形架构(Hexagonal Architecture)**和**领域驱动设计(DDD)**:
 
 ```
-patra-ingest/
-├─ patra-ingest-api/                # 外部契约(API层)
-│  └─ src/main/java/.../api/
-│     └─ (未来: 任务工作者 APIs)
-│
-├─ patra-ingest-domain/             # 纯 Java 领域模型(Domain层)
-│  └─ src/main/java/.../domain/
-│     ├─ model/
-│     │  ├─ aggregate/              # 核心聚合根
-│     │  │  ├─ PlanAggregate.java       # 计划蓝图 + 状态机
-│     │  │  ├─ TaskAggregate.java       # 任务(带租约 + 执行时间线)
-│     │  │  ├─ PlanSliceAggregate.java  # 计划切片(中间分组)
-│     │  │  └─ ScheduleInstanceAggregate.java  # 调度运行跟踪
-│     │  ├─ vo/                     # 值对象
-│     │  │  ├─ WindowSpec.java          # 窗口规范(TIME/CURSOR/...)
-│     │  │  ├─ Batch.java               # 批次定义
-│     │  │  ├─ CursorWatermark.java     # 水位线跟踪
-│     │  │  └─ ExecutionContext.java    # 任务执行上下文
-│     │  ├─ entity/                 # 领域实体
-│     │  │  └─ OutboxMessage.java       # Outbox 消息实体
-│     │  ├─ enums/                  # 领域枚举
-│     │  │  ├─ PlanStatus.java          # DRAFT/SLICING/READY/COMPLETED/FAILED
-│     │  │  ├─ TaskStatus.java          # QUEUED/RUNNING/SUCCEEDED/FAILED/...
-│     │  │  └─ OperationCode.java       # HARVEST/UPDATE/COMPENSATION
-│     │  └─ snapshot/               # 配置快照
-│     │     └─ ProvenanceConfigSnapshot.java
-│     ├─ port/                      # 仓储端口
-│     │  ├─ PlanRepository.java
-│     │  ├─ TaskRepository.java
-│     │  ├─ CursorRepository.java
-│     │  ├─ OutboxRepository.java
-│     │  └─ PatraRegistryPort.java      # 外部服务端口
-│     ├─ event/                     # 领域事件
-│     │  └─ TaskQueuedEvent.java
-│     ├─ policy/                    # 领域策略
-│     ├─ exception/                 # 领域异常
-│     └─ messaging/                 # 消息契约
-│
-├─ patra-ingest-app/                # 应用层(Application层 - 编排)
-│  └─ src/main/java/.../app/
-│     └─ usecase/
-│        ├─ plan/                   # 计划摄入用例
-│        │  ├─ PlanIngestionOrchestrator.java    # 主编排器
-│        │  ├─ PlanIngestionCommand.java         # 输入命令
-│        │  ├─ PlanIngestionResult.java          # 输出结果
-│        │  ├─ assembler/                        # 计划装配逻辑
-│        │  │  └─ PlanAssembler.java
-│        │  ├─ expression/                       # 表达式构建
-│        │  │  └─ PlanExpressionBuilder.java
-│        │  ├─ window/                           # 窗口解析
-│        │  │  └─ PlanningWindowResolver.java
-│        │  ├─ validator/                        # 预验证
-│        │  │  └─ PlannerValidator.java
-│        │  └─ publisher/                        # 事件发布
-│        │     └─ TaskOutboxPublisher.java
-│        └─ relay/                  # Outbox 中继用例
-│           └─ OutboxRelayOrchestrator.java
-│
-├─ patra-ingest-infra/              # 基础设施层(Infrastructure层)
-│  └─ src/main/java/.../infra/
-│     ├─ persistence/
-│     │  ├─ entity/                 # MyBatis-Plus DOs
-│     │  │  ├─ IngestPlanDO.java
-│     │  │  ├─ IngestTaskDO.java
-│     │  │  ├─ IngestCursorDO.java
-│     │  │  └─ IngestOutboxMessageDO.java
-│     │  ├─ mapper/                 # MyBatis mappers
-│     │  ├─ converter/              # DO ↔ Domain 转换器
-│     │  └─ repository/             # 仓储实现
-│     │     ├─ PlanRepositoryMpImpl.java
-│     │     ├─ TaskRepositoryMpImpl.java
-│     │     ├─ CursorRepositoryMpImpl.java
-│     │     └─ OutboxRepositoryMpImpl.java
-│     └─ rpc/                       # 外部服务适配器
-│        └─ PatraRegistryPortImpl.java  # 通过 Feign 调用 patra-registry
-│
-├─ patra-ingest-adapter/            # 适配器层(Adapter层)
-│  └─ src/main/java/.../adapter/
-│     ├─ inbound/
-│     │  ├─ scheduler/              # 定时任务调度器
-│     │  │  └─ PlanScheduler.java       # Cron 触发的规划
-│     │  └─ mq/                     # MQ 监听器(未来)
-│     └─ config/                    # 错误映射、链路追踪
-│
-└─ patra-ingest-boot/               # 可执行模块
-   └─ src/main/java/.../
-      └─ PatraIngestApplication.java
+┌─────────────────────────────────────────────────────────┐
+│  patra-ingest-boot (启动模块)                            │
+│  └─ PatraIngestApplication.java                        │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────────────────┐
+│  patra-ingest-adapter (适配器层 - 驱动适配器)            │
+│  ├─ scheduler/  - XXL-Job 定时任务(触发计划摄入)         │
+│  └─ stream/     - RocketMQ 消费者(任务执行)             │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────────────────┐
+│  patra-ingest-app (应用层 - 用例编排)                    │
+│  ├─ usecase/plan/        - PlanIngestionOrchestrator   │
+│  ├─ usecase/execution/   - TaskExecutionUseCase        │
+│  └─ usecase/relay/       - OutboxRelayOrchestrator     │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────────────────┐
+│  patra-ingest-domain (领域层 - 纯 Java)                 │
+│  ├─ model/aggregate/     - Plan, Task, PlanSlice       │
+│  ├─ model/vo/            - WindowSpec, ExecutionContext│
+│  └─ port/                - 仓储端口、外部服务端口        │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────────────────┐
+│  patra-ingest-infra (基础设施层 - 被驱动适配器)          │
+│  ├─ persistence/         - MyBatis-Plus 仓储实现        │
+│  ├─ integration/         - Feign 客户端(Registry/PubMed)│
+│  └─ messaging/           - RocketMQ 发布器              │
+└─────────────────────────────────────────────────────────┘
 ```
+
+### 模块说明
+
+| 模块 | 职责 | 核心类 |
+|------|------|--------|
+| **patra-ingest-boot** | Spring Boot 启动入口 | `PatraIngestApplication` |
+| **patra-ingest-adapter** | 驱动适配器(定时任务、MQ 消费者) | `PubmedHarvestJob`, `IngestStreamConsumers` |
+| **patra-ingest-app** | 应用层编排器(事务边界) | `PlanIngestionOrchestrator`, `TaskExecutionUseCase` |
+| **patra-ingest-domain** | 领域模型(纯 Java,无框架依赖) | `PlanAggregate`, `TaskAggregate`, `WindowSpec` |
+| **patra-ingest-infra** | 基础设施实现(数据库、RPC、MQ) | `PlanRepositoryMpImpl`, `PatraRegistryAdapter` |
+| **patra-ingest-api** | 外部 API 契约(错误码、Future APIs) | `IngestErrorCode` |
 
 ---
 
@@ -121,559 +80,225 @@ patra-ingest/
 
 **状态机**:
 ```
-DRAFT(草稿) → SLICING(切片中) → READY(就绪) → COMPLETED(已完成)
-                                   ↓
-                               PARTIAL(部分完成) → FAILED(失败)
+DRAFT → SLICING → READY → COMPLETED
+                     ↓
+                 PARTIAL → FAILED
 ```
 
 **核心属性**:
-- `planKey` (String): 幂等键 = hash(provenance + operation + window + strategy)
-- `provenanceCode` (String): 来源代码(例如: `"pubmed"`)
-- `operationCode` (OperationCode): HARVEST/UPDATE/COMPENSATION
-- `windowSpec` (WindowSpec): 窗口边界(TIME/DATE/CURSOR/VOLUME/SINGLE)
-- `sliceStrategyCode` (String): 如何将计划分解为切片(例如: `"TIME"`, `"DATE"`, `"SINGLE"`)
-- `exprProtoSnapshotJson` (String): 捕获的表达式原型
-- `provenanceConfigSnapshotJson` (String): 捕获的配置快照
+- `planKey`: 幂等键 = hash(provenance + operation + window + strategy)
+- `provenanceCode`: 来源代码(如 `"pubmed"`)
+- `windowSpec`: 窗口边界(TIME/DATE/CURSOR/VOLUME/SINGLE)
+- `exprProtoSnapshotJson`: 表达式原型快照(JSON)
 
-**文件**: [`PlanAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java:1)
+**文件**: [`patra-ingest-domain/.../PlanAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java)
 
 ### 2. Task (任务聚合根)
 
-**定义**: 数据采集的原子工作单元(例如:获取 PubMed 记录 1-1000)。
+**定义**: 数据采集的原子工作单元(如:获取 PubMed 记录 1-1000)。
 
 **状态机**:
 ```
-QUEUED(排队) → RUNNING(运行中) → SUCCEEDED(成功)
-                  ↓
-              FAILED(失败) → (重试) → QUEUED(排队)
-                  ↓
-             CANCELLED(已取消)
+QUEUED → RUNNING → SUCCEEDED
+           ↓
+        FAILED → (重试) → QUEUED
 ```
 
 **核心属性**:
-- `idempotentKey` (String): 业务幂等键
-- `provenanceCode` (String): 来源代码
-- `operationCode` (String): 操作类型
-- `paramsJson` (String): 任务参数(JSON)
-- `priority` (Integer): 执行优先级
-- `scheduledAt` (Instant): 执行时间
-- `leaseInfo` (LeaseInfo): 租约所有权(owner, leasedUntil)
-- `executionTimeline` (ExecutionTimeline): 开始/结束时间戳
-- `retryCount` (Integer): 已尝试的重试次数
+- `idempotentKey`: 业务幂等键
+- `paramsJson`: 任务参数(JSON)
+- `leaseInfo`: 租约信息(owner, leasedUntil)
+- `executionTimeline`: 执行时间线(startedAt, completedAt)
 
-**文件**: [`TaskAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/TaskAggregate.java:1)
+**文件**: [`patra-ingest-domain/.../TaskAggregate.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/TaskAggregate.java)
 
-### 3. WindowSpec (Sealed Interface)
+### 3. WindowSpec (窗口规范 - Sealed Interface)
 
-**Definition**: Specification for collection window boundaries.
+**定义**: 数据采集的窗口边界,支持多种窗口类型。
 
-**Strategies**:
 ```java
 public sealed interface WindowSpec {
-    record Time(Instant from, Instant to) implements WindowSpec {}
-    record IdRange(Long minId, Long maxId) implements WindowSpec {}
-    record CursorLandmark(String cursorValue) implements WindowSpec {}
-    record VolumeBudget(Integer maxRecords) implements WindowSpec {}
-    record Single() implements WindowSpec {}  // No windowing
+    record Time(Instant from, Instant to) implements WindowSpec {}      // 时间窗口
+    record IdRange(Long minId, Long maxId) implements WindowSpec {}     // ID 范围窗口
+    record CursorLandmark(String cursorValue) implements WindowSpec {}  // 游标窗口
+    record VolumeBudget(Integer maxRecords) implements WindowSpec {}    // 容量窗口
+    record Single() implements WindowSpec {}                             // 无窗口
 }
 ```
 
-**File**: [`WindowSpec.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/WindowSpec.java)
-
-### 4. Cursor Watermark
-
-**Definition**: Tracks progress of incremental collection (high-water mark).
-
-**Types**:
-- **Global Time Watermark**: Latest `collectedUntil` timestamp across all tasks
-- **Cursor Value Watermark**: Last pagination cursor (for cursor-based APIs)
-
-**File**: [`CursorWatermark.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/CursorWatermark.java)
-
-### 5. Outbox Pattern
-
-**Components**:
-1. **TaskQueuedEvent**: Domain event raised when task is created
-2. **OutboxMessage**: Persistent event record (JSON payload)
-3. **OutboxRelayOrchestrator**: Polls outbox table, publishes to MQ, marks as sent
-
-**Guarantees**:
-- **At-least-once delivery** (same transaction as task persistence)
-- **Ordering** (via sequence number)
-- **Idempotency** (consumer must deduplicate)
-
-**File**: [`OutboxMessage.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/entity/OutboxMessage.java)
+**文件**: [`patra-ingest-domain/.../WindowSpec.java`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/plan/WindowSpec.java)
 
 ---
 
-## 🔄 Plan Ingestion Flow
+## 🔄 Plan Ingestion Flow (核心流程)
 
-### High-Level Sequence
+### 高层序列
 
 ```
-1. Scheduler triggers (cron or manual)
+1. Scheduler 触发(Cron 或手动)
    ↓
 2. PlanIngestionOrchestrator.ingestPlan(command)
    ↓
-3. Phase 1: Persist schedule instance + load provenance config
+3. Phase 1: 持久化调度实例 + 加载 Provenance 配置快照
    ↓
-4. Phase 2: Query cursor watermark + resolve planning window
+4. Phase 2: 查询游标水位线 + 解析规划窗口
    ↓
-5. Phase 3: Build plan expression (uncompiled snapshot)
+5. Phase 3: 构建 Plan 表达式(未编译快照)
    ↓
-6. Phase 4: Pre-validation (window sanity, backpressure, capacity)
+6. Phase 4: 预验证(窗口合法性、背压检查、容量检查)
    ↓
-7. Phase 5: Assemble plan/slices/tasks (with idempotency check)
+7. Phase 5: 装配 Plan/Slice/Task(带幂等性检查)
    ↓
-8. Phase 6: Persist plan → slices → tasks (in transaction)
+8. Phase 6: 持久化 Plan → Slice → Task(事务内)
    ↓
-9. Phase 7: Collect TaskQueuedEvents → publish to Outbox
+9. Phase 7: 收集 TaskQueuedEvent → 发布到 Outbox
    ↓
-10. Outbox relay picks up messages → publishes to MQ
+10. Outbox 中继轮询 → 发布到 MQ
    ↓
-11. Task workers consume from MQ → execute → update task status
+11. Task 工作者消费 MQ → 执行 → 更新任务状态
 ```
 
-### Code Entry Point
+### 代码入口
 
-[`PlanIngestionOrchestrator.ingestPlan()`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java:133)
-
-### Key Phases Explained
-
-#### Phase 1: Load Configuration
-
-```java
-// Persist schedule instance (idempotent)
-ScheduleInstanceAggregate schedule = scheduleInstanceRepository.saveOrUpdateInstance(...);
-
-// Fetch provenance config snapshot from registry
-ProvenanceConfigSnapshot configSnapshot = patraRegistryPort.fetchConfig(
-    provenanceCode, operationCode
-);
-```
-
-**Purpose**: Capture config at plan creation time (immutable snapshot).
-
-#### Phase 2: Window Resolution
-
-```java
-// Query latest watermark
-Instant cursorWatermark = cursorRepository.findLatestGlobalTimeWatermark(...);
-
-// Resolve window based on trigger params + config + cursor
-PlannerWindow window = planningWindowResolver.resolveWindow(
-    triggerNorm, configSnapshot, cursorWatermark, Instant.now()
-);
-```
-
-**Example**:
-- Trigger says: `windowFrom=2025-01-01`, `windowTo=2025-01-10`
-- Cursor watermark: `2025-01-05`
-- Resolved window: `[2025-01-05, 2025-01-10)` (start from cursor)
-
-#### Phase 3: Expression Building
-
-```java
-// Build plan expression descriptor (hash + JSON snapshot)
-PlanExpressionDescriptor expressionDescriptor = planExpressionBuilder.build(
-    triggerNorm, configSnapshot
-);
-```
-
-**Purpose**: Capture expression prototype before compilation (stored in plan).
-
-#### Phase 4: Pre-Validation
-
-```java
-// Count queued tasks (backpressure check)
-long queuedTasks = taskRepository.countQueuedTasks(provenanceCode, operationCode);
-
-// Validate window, capacity, queue pressure
-plannerValidator.validateBeforeAssemble(
-    triggerNorm, configSnapshot, window, queuedTasks
-);
-```
-
-**Checks**:
-- Window not empty
-- Window not too large (max range)
-- Queue capacity not exceeded
-
-#### Phase 5: Plan Assembly
-
-```java
-// Assemble plan/slices/tasks (in-memory, not persisted yet)
-PlanAssemblyResult assembly = planAssembler.assemble(assemblyRequest);
-
-// Check idempotency: does planKey already exist?
-PlanAggregate existingPlan = planRepository.findByPlanKey(draftPlan.getPlanKey());
-if (existingPlan != null) {
-    // Reuse existing plan, retry failed tasks
-    ...
-}
-```
-
-**Idempotency**:
-- `planKey` = hash(provenance + operation + window + strategy)
-- If duplicate, skip creation and retry failed tasks
-
-#### Phase 6: Persistence
-
-```java
-// Persist plan
-PlanAggregate persistedPlan = planRepository.save(draftPlan);
-
-// Persist slices (bind to plan)
-List<PlanSliceAggregate> persistedSlices = planSliceRepository.saveAll(slices);
-
-// Persist tasks (bind to plan + slices)
-List<TaskAggregate> persistedTasks = taskRepository.saveAll(tasks);
-```
-
-**Transaction**: All 3 steps are in the same transaction.
-
-#### Phase 7: Event Publishing
-
-```java
-// Collect domain events from tasks
-List<TaskQueuedEvent> queuedEvents = collectQueuedEvents(persistedTasks);
-
-// Publish to Outbox (in same transaction)
-taskOutboxPublisher.publish(queuedEvents, persistedPlan, schedule);
-```
-
-**Outbox**: Converts events → `OutboxMessage` → persists to `ingest_outbox_message` table.
+- **Plan 摄入**: [`PlanIngestionOrchestrator.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java)
+- **Outbox 中继**: [`OutboxRelayOrchestrator.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/OutboxRelayOrchestrator.java)
+- **任务执行**: [`TaskExecutionUseCaseImpl.java`](patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/TaskExecutionUseCaseImpl.java)
 
 ---
 
-## 🔌 Cross-Module Integration
+## 🔌 表达式编译集成
 
-### Expression Compiler Integration (Adapter Binding)
+`patra-ingest` 在执行时编译表达式,并将编译后的参数直接绑定到 Provider 请求模型。
 
-`patra-ingest` compiles expressions at execution time and binds the compiled output (provider‑named params) directly into provider request models. No manual string concatenation.
-
-Flow:
-- `ExecutionContextLoader` restores snapshots (Task → Slice → Plan) and compiles the expression via `ExpressionCompilerPort`.
-- The compiled result provides:
-  - `compiledQuery` — aggregated boolean query string (bridged via `std_key=query`)
-  - `compiledParams` — provider‑named params map (e.g., PubMed `mindate/maxdate/datetype`, Crossref `query/filter`)
-- Provider adapters/assemblers read only from `compiledParams` (and `compiledQuery` when appropriate).
-
-Example (PubMed count planning):
+### 编译流程
 
 ```java
-// ExecutionContextLoaderImpl.loadContext(...) builds the context
+// 1. ExecutionContextLoader 加载任务上下文时编译表达式
+ExprCompilationResult compilationResult = expressionCompilerPort.compile(
+    new ExprCompilationRequest(plan.getExprProtoSnapshotJson(), configSnapshot)
+);
+
+// 2. 构建 ExecutionContext(包含编译后的参数)
 return new ExecutionContext(
-    taskId, runId, task.getProvenanceCode(), task.getOperationCode(),
+    taskId, runId,
+    task.getProvenanceCode(),
+    task.getOperationCode(),
     configSnapshot,
-    task.getExprHash(),
-    compilationResult.query(),        // compiledQuery (bridged via std_key=query)
-    compilationResult.params(),       // compiledParams (provider-named)
+    compilationResult.query(),       // compiledQuery(通过 std_key=query 桥接)
+    compilationResult.params(),      // compiledParams(provider-named)
     compilationResult.normalizedExpression(),
-    windowSpec);
+    windowSpec
+);
 
-// PubmedBatchPlanner uses compiled outputs
-PlanMetadata metadata =
-    searchPort.preparePlanMetadata(compiledQuery, compiledParams, configSnapshot);
-int total = metadata.totalCount();
-
-// Infra adapter builds request from provider-named params only
-ESearchRequest request = PubMedESearchRequestAssembler.buildList(compiledParams);
+// 3. Provider 适配器使用 compiledParams
+PlanMetadata metadata = searchPort.preparePlanMetadata(
+    compiledQuery,
+    compiledParams,  // 直接使用,不再手动拼接
+    configSnapshot
+);
 ```
 
-Rules of engagement:
-- Do not reconstruct `query`/`filter` in adapters — always use compiler output.
-- MULTI std_keys use join transforms by default. Repeated params require enabling `expr.multi.repeat-enabled=true` (not recommended by default).
-- Respect STRICT mode in prod (`expr.strict=true`) to catch incomplete seed configs early.
+### 关键规则
 
-### Calling patra-registry
-
-**Port Interface**: [`PatraRegistryPort`](patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/PatraRegistryPort.java)
-
-**Implementation**: [`PatraRegistryPortImpl`](patra-ingest-infra/src/main/java/com/patra/ingest/infra/rpc/PatraRegistryPortImpl.java)
-
-**Example**:
-```java
-@Component
-@RequiredArgsConstructor
-public class PatraRegistryPortImpl implements PatraRegistryPort {
-
-    private final ProvenanceClient provenanceClient;  // Feign client
-
-    @Override
-    public ProvenanceConfigSnapshot fetchConfig(ProvenanceCode code, OperationCode operation) {
-        ProvenanceConfigResp resp = provenanceClient.getConfiguration(
-            code,
-            operation.getCode(),
-            Instant.now()
-        );
-        return convertToSnapshot(resp);
-    }
-}
-```
-
-**Dependency**: `patra-registry-api` (Feign client interface).
+- ✅ **始终使用 compiledParams**,不再手动构建查询字符串
+- ✅ **MULTI std_keys 默认使用 JOIN 转换**,避免重复参数
+- ✅ **生产环境启用 STRICT 模式**(`expr.strict=true`),早期捕获配置错误
 
 ---
 
-## 🛠️ How to Extend
+## 🗄️ 数据库表概览
 
-### Adding a New Slicing Strategy
-
-**Example**: Add `ID_RANGE` slicing (split by ID ranges instead of time).
-
-#### Step 1: Define Slicer
-
-```java
-// app/usecase/plan/slicer/IdRangeSlicingStrategy.java
-@Component
-public class IdRangeSlicingStrategy implements SlicingStrategy {
-
-    @Override
-    public boolean supports(String strategyCode) {
-        return "ID_RANGE".equalsIgnoreCase(strategyCode);
-    }
-
-    @Override
-    public List<SliceSpec> slice(PlannerWindow window, SliceParamsJson params) {
-        // Parse window as WindowSpec.IdRange
-        // Split into ranges: [1, 1000], [1001, 2000], ...
-        // Return list of SliceSpec
-    }
-}
-```
-
-#### Step 2: Register in PlanAssembler
-
-```java
-// PlanAssembler.java
-private final List<SlicingStrategy> slicingStrategies;  // Auto-wired
-
-public PlanAssemblyResult assemble(PlanAssemblyRequest request) {
-    SlicingStrategy strategy = slicingStrategies.stream()
-        .filter(s -> s.supports(request.sliceStrategyCode()))
-        .findFirst()
-        .orElseThrow(() -> new PlanAssemblyException("Unsupported strategy: " + request.sliceStrategyCode()));
-
-    List<SliceSpec> slices = strategy.slice(request.window(), request.sliceParams());
-    // ...
-}
-```
-
-#### Step 3: Update WindowSpec
-
-```java
-// WindowSpec.java
-public sealed interface WindowSpec {
-    record Time(Instant from, Instant to) implements WindowSpec {}
-    record IdRange(Long minId, Long maxId) implements WindowSpec {}  // Use this
-    // ...
-}
-```
-
-### Adding a New Task Status
-
-**Example**: Add `SKIPPED` status for tasks that don't need execution.
-
-#### Step 1: Add to Enum
-
-```java
-// domain/model/enums/TaskStatus.java
-public enum TaskStatus {
-    QUEUED,
-    RUNNING,
-    SUCCEEDED,
-    FAILED,
-    PARTIAL,
-    CURSOR_PENDING,
-    CANCELLED,
-    SKIPPED  // NEW
-}
-```
-
-#### Step 2: Add Aggregate Method
-
-```java
-// TaskAggregate.java
-public void markSkipped(String reason) {
-    this.status = TaskStatus.SKIPPED;
-    this.lastErrorMsg = "Skipped: " + reason;
-}
-```
-
-#### Step 3: Update State Machine Logic
-
-```java
-// After refactoring: Only FAILED tasks are retried
-// Note: CANCELLED status removed (cancellation not supported in current design)
-private boolean shouldRetry(TaskAggregate task) {
-    TaskStatus status = task.getStatus();
-    return status == TaskStatus.FAILED;
-}
-```
+| 表名 | 说明 | 核心索引 |
+|------|------|----------|
+| `ingest_plan` | 计划蓝图 | `idx_plan_key` (幂等性) |
+| `ingest_task` | 原子任务 | `idx_task_idempotent_key`, `idx_task_status_scheduled` |
+| `ingest_plan_slice` | 计划切片 | `idx_slice_plan_id` |
+| `ingest_schedule_instance` | 调度实例 | `idx_schedule_key` |
+| `ingest_cursor` | 游标水位线 | `idx_cursor_namespace` |
+| `ingest_outbox_message` | Outbox 消息 | `idx_outbox_status_seq` (中继轮询) |
+| `ingest_outbox_relay_log` | 中继日志 | `idx_relay_batch_id` |
+| `ingest_task_run` | 任务运行记录 | `idx_run_task_id` |
 
 ---
 
-## 🗄️ Database Schema Overview
+## 🚀 快速开始
 
-### Tables
+### 1. 启动依赖服务
 
-| Table | Purpose |
-|-------|---------|
-| `ingest_schedule_instance` | Scheduler run tracking (idempotency) |
-| `ingest_plan` | Plan blueprints |
-| `ingest_plan_slice` | Plan slices (intermediate grouping) |
-| `ingest_task` | Atomic tasks |
-| `ingest_cursor` | Watermark tracking (global + slice-level) |
-| `ingest_outbox_message` | Outbox pattern event queue |
+```bash
+# 启动 MySQL + RocketMQ + MinIO
+docker-compose -f docker/docker-compose.yml up -d
+```
 
-**Key Relationships**:
-- `ingest_plan.schedule_instance_id` → `ingest_schedule_instance.id`
-- `ingest_plan_slice.plan_id` → `ingest_plan.id`
-- `ingest_task.plan_id` → `ingest_plan.id`
-- `ingest_task.slice_id` → `ingest_plan_slice.id`
+### 2. 运行服务
 
-**Indexes**:
-- `idx_plan_key` on `ingest_plan(plan_key)` (idempotency)
-- `idx_task_idempotent_key` on `ingest_task(idempotent_key)` (idempotency)
-- `idx_task_status_scheduled` on `ingest_task(status, scheduled_at)` (worker polling)
-- `idx_outbox_status_seq` on `ingest_outbox_message(status, seq)` (relay polling)
+```bash
+cd patra-ingest/patra-ingest-boot
+mvn spring-boot:run
+```
+
+**默认端口**: 8082
+
+### 3. 触发 Plan 摄入(通过 XXL-Job)
+
+在 XXL-Job 控制台配置定时任务:
+- **任务名称**: PubMed Harvest
+- **Cron**: `0 0 2 * * ?` (每天凌晨 2 点)
+- **任务参数**: `{"provenanceCode":"pubmed","operationCode":"HARVEST"}`
 
 ---
 
-## 🧪 Testing
+## 📊 可观测性
 
-### Unit Tests (Domain)
+### 日志
 
+- **INFO**: 主要里程碑(如 "Plan ingestion success, planId=123, taskCount=50")
+- **DEBUG**: 诊断详情(如 "Window resolved: [2025-01-01, 2025-01-10)")
+- **ERROR**: 失败原因(如 "Plan assembly failed: WINDOW_INVALID")
+
+### 指标(Micrometer)
+
+**Outbox 指标**:
+- `papertrace.outbox.publish.total` (Counter) - 发布总数
+- `papertrace.outbox.publish.duration` (Timer) - 发布耗时
+- `papertrace.outbox.publish.batch.size` (DistributionSummary) - 批次大小分布
+
+**访问方式**:
 ```bash
-mvn test -pl patra-ingest-domain
-```
-
-**Focus**: Aggregate state machines, window resolution logic.
-
-### Integration Tests (Orchestrator)
-
-```bash
-mvn verify -pl patra-ingest-app
-```
-
-**Focus**: End-to-end plan ingestion, idempotency checks.
-
-### Repository Tests (Infra)
-
-```bash
-mvn verify -pl patra-ingest-infra
-```
-
-**Focus**: MyBatis queries, cursor watermark updates.
-
----
-
-## 📊 Observability
-
-### Logs
-
-- **INFO**: Major milestones (e.g., "Plan ingestion success, planId=123, taskCount=50")
-- **DEBUG**: Diagnostic details (e.g., "Window resolved: [2025-01-01, 2025-01-10)")
-- **ERROR**: Failures (e.g., "Plan assembly failed: WINDOW_INVALID")
-
-### 🪵 Logging (Starter v1.0)
-
-`patra-ingest` uses Spring Boot default logging; tracing is provided by SkyWalking agent.
-
-Dependency (already included):
-```xml
-<dependency>
-  <groupId>com.papertrace</groupId>
-  <!-- logging handled by defaults -->
-</dependency>
-```
-
-Batch orchestration example (correlationId + MDC):
-```java
-@Slf4j
-@Service
-public class PlanIngestionOrchestrator {
-  @Autowired TraceContextHolder traceContextHolder;
-
-  public void ingestPlan(String planKey) {
-    var ctx = traceContextHolder.withCorrelationId(planKey);
-    traceContextHolder.populateMDC(ctx);
-    try {
-      log.info("Plan ingestion started: planKey={}", planKey);
-      // ...
-      log.info("Plan ingestion completed: planKey={}", planKey);
-    } finally {
-      traceContextHolder.clearMDC();
-    }
-  }
-}
-```
-
-Dynamic levels (Nacos `logging-patra-ingest.yml`):
-```yaml
-logging.level:
-  root: INFO
-  com.patra.ingest.app: DEBUG
-  com.patra.ingest.infra: DEBUG
-```
-
-More examples: docs/logging/layer-specific-examples.md, specs/001-logging-starter/quickstart.md
-
-### Metrics
-
-**Dependencies**: `spring-boot-starter-actuator` is included in `patra-ingest-boot` for Micrometer metrics support.
-
-**Outbox Metrics** (published by `OutboxMetrics`):
-- `papertrace.outbox.publish.total` (Counter) — Total publish attempts with `aggregateType`, `opType`, `status` tags
-- `papertrace.outbox.publish.duration` (Timer) — Publish operation duration
-- `papertrace.outbox.publish.batch.size` (DistributionSummary) — Batch size distribution
-
-**Planned Metrics**:
-- `plan.ingestion.duration` (histogram)
-- `task.queue.size` (gauge)
-- `cursor.watermark.lag` (gauge) — Time between now and watermark
-- `outbox.relay.lag` (gauge) — Number of pending outbox messages
-
-**Access metrics**:
-```bash
-# Health check
+# 健康检查
 curl http://localhost:8082/actuator/health
 
-# View all metrics
-curl http://localhost:8082/actuator/metrics
-
-# View specific outbox metrics
+# 查看指标
 curl http://localhost:8082/actuator/metrics/papertrace.outbox.publish.total
 ```
 
 ---
 
-## 🚀 Running Locally
+## 🔗 子模块文档
 
-```bash
-# Start MySQL + MQ
-docker-compose up -d
-
-# Run migrations
-# ...
-
-# Start service
-cd patra-ingest/patra-ingest-boot
-mvn spring-boot:run
-```
-
-**Default Port**: 8082
+- [patra-ingest-api](patra-ingest-api/README.md) - API 契约(错误码)
+- [patra-ingest-domain](patra-ingest-domain/README.md) - 领域模型(聚合根、值对象、端口接口)
+- [patra-ingest-app](patra-ingest-app/README.md) - 应用层编排器(用例编排、事务边界)
+- [patra-ingest-infra](patra-ingest-infra/README.md) - 基础设施层(仓储、RPC、MQ)
+- [patra-ingest-adapter](patra-ingest-adapter/README.md) - 适配器层(定时任务、MQ 消费者)
+- [patra-ingest-boot](patra-ingest-boot/README.md) - 启动模块
 
 ---
 
-## 🔗 Related Documentation
+## 🛠️ 技术栈
 
-- [Main README](../README.md)
-- [Architecture Guide](../docs/ARCHITECTURE.md)
-- [Development Guide](../docs/DEV-GUIDE.md)
-- [patra-registry README](../patra-registry/README.md)
+- **Java**: 25 (Record, Sealed Interface, Pattern Matching)
+- **Spring Boot**: 3.5.7
+- **Spring Cloud**: 2025.0.0
+- **MyBatis-Plus**: 3.5.x (ORM)
+- **MapStruct**: 1.5.x (对象转换)
+- **RocketMQ**: 消息队列
+- **MinIO**: 对象存储
+- **patra-expr-kernel**: 表达式编译内核
+- **XXL-Job**: 分布式任务调度
 
 ---
 
-**Last Updated**: 2025-01-14
+**最后更新**: 2025-01-16
+**Maven 坐标**: `com.papertrace:patra-ingest:0.1.0-SNAPSHOT`
+**作者**: linqibin
