@@ -5,24 +5,21 @@ import com.patra.ingest.domain.model.enums.SliceStatus;
 import java.util.List;
 
 /**
- * Domain Service for calculating Plan status based on its child Slices.
+ * 计划状态计算器领域服务。基于子切片状态计算计划状态。
  *
- * <p>This is a stateless pure function that encapsulates business rules for Plan status
- * aggregation.
+ * <p>这是一个无状态纯函数,封装了计划状态聚合的业务规则。
  *
- * <p>Aggregation Rules (after refactoring):
+ * <p>聚合规则（重构后）：
  *
  * <ul>
- *   <li>If any Slice is PENDING or ASSIGNED → Plan remains at current status (not all done yet)
- *   <li>If all Slices are FINISHED → Plan is ARCHIVED (lifecycle closed)
- *   <li>If no Slices exist → Plan remains at current status (edge case)
+ *   <li>如果任何切片处于 PENDING 或 ASSIGNED 状态 → 计划保持当前状态（尚未全部完成）
+ *   <li>如果所有切片都处于 FINISHED 状态 → 计划转为 ARCHIVED（生命周期关闭）
+ *   <li>如果不存在切片 → 计划保持当前状态（边界情况）
  * </ul>
  *
- * <p><b>Note:</b> Plan status only reflects its own lifecycle. Execution results (partial/failed)
- * should be queried by aggregating Task status from the database.
+ * <p><b>注意：</b>计划状态仅反映其自身生命周期。执行结果（部分成功/失败）应通过聚合数据库中的任务状态查询。
  *
- * <p>This service only handles status transitions from READY onwards. The DRAFT → SLICING → READY
- * transitions are handled by the plan assembly process.
+ * <p>此服务仅处理 READY 之后的状态转换。DRAFT → SLICING → READY 的转换由计划装配过程处理。
  */
 public final class PlanStatusCalculator {
 
@@ -31,15 +28,14 @@ public final class PlanStatusCalculator {
   }
 
   /**
-   * Calculates the Plan status based on the statuses of all its child Slices.
+   * 基于所有子切片的状态计算计划状态。
    *
-   * <p>Precondition: Plan must be in READY status or later. This method does not handle DRAFT →
-   * SLICING → READY transitions.
+   * <p>前提条件：计划必须处于 READY 状态或更晚状态。此方法不处理 DRAFT → SLICING → READY 的转换。
    *
-   * @param sliceStatuses list of slice statuses (must not be null, but can be empty)
-   * @param currentPlanStatus current status of the plan
-   * @return the aggregated Plan status
-   * @throws IllegalArgumentException if sliceStatuses is null
+   * @param sliceStatuses 切片状态列表（不能为 null,但可以为空）
+   * @param currentPlanStatus 计划当前状态
+   * @return 聚合后的计划状态
+   * @throws IllegalArgumentException 如果 sliceStatuses 为 null
    */
   public static PlanStatus calculate(
       List<SliceStatus> sliceStatuses, PlanStatus currentPlanStatus) {

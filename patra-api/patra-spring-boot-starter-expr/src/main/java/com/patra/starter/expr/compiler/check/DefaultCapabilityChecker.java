@@ -17,6 +17,27 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * {@link CapabilityChecker} 的默认实现，遍历表达式树并根据 Provenance 快照中的能力定义验证每个原子条件。
+ *
+ * <p>核心验证逻辑：
+ *
+ * <ul>
+ *   <li>字段是否在 Provenance 中注册
+ *   <li>操作符是否被字段支持
+ *   <li>否定是否被允许（整体和特定操作符）
+ *   <li>操作符特定的值约束（长度、模式、范围边界等）
+ * </ul>
+ *
+ * <p>严格模式影响：
+ *
+ * <ul>
+ *   <li>{@code strictMode=false}: 仅检查结构性约束
+ *   <li>{@code strictMode=true}: 额外检查语义约束（如 TOKEN 空白值）
+ * </ul>
+ *
+ * @since 1.0.0
+ */
 public class DefaultCapabilityChecker implements CapabilityChecker {
 
   @Override
@@ -28,6 +49,15 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     return issues;
   }
 
+  /**
+   * 递归访问表达式树节点。
+   *
+   * @param node 当前节点
+   * @param underNot 当前节点是否在 NOT 操作符下
+   * @param snapshot Provenance 快照
+   * @param strictMode 是否启用严格模式
+   * @param out 收集的问题列表
+   */
   private void visit(
       Expr node,
       boolean underNot,
@@ -43,10 +73,12 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
       return;
     }
     if (node instanceof Not notExpr) {
+      // 翻转 underNot 标志并继续遍历
       visit(notExpr.child(), !underNot, snapshot, strictMode, out);
       return;
     }
     if (node instanceof Const) {
+      // 常量节点无需验证
       return;
     }
     if (node instanceof Atom atom) {
@@ -54,6 +86,15 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
+  /**
+   * 验证原子条件的完整性和可行性。
+   *
+   * @param atom 原子条件
+   * @param underNot 是否在 NOT 操作符下
+   * @param snapshot Provenance 快照
+   * @param strictMode 是否启用严格模式
+   * @param out 收集的问题列表
+   */
   private void validateAtom(
       Atom atom,
       boolean underNot,
@@ -64,20 +105,13 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     ProvenanceSnapshot.FieldDefinition definition = snapshot.fieldDictionary().get(fieldKey);
     if (definition == null) {
       out.add(
-          Issue.error(
-              "E-FIELD-NOT-FOUND",
-              "Field not registered in provenance",
-              Map.of("fieldKey", fieldKey)));
+          Issue.error("E-FIELD-NOT-FOUND", "字段未在 Provenance 中注册", Map.of("fieldKey", fieldKey)));
       return;
     }
 
     ProvenanceSnapshot.Capability capability = snapshot.capabilityMatrix().get(fieldKey);
     if (capability == null) {
-      out.add(
-          Issue.error(
-              "E-CAPABILITY-MISSING",
-              "No capability definition for field",
-              Map.of("fieldKey", fieldKey)));
+      out.add(Issue.error("E-CAPABILITY-MISSING", "字段缺少能力定义", Map.of("fieldKey", fieldKey)));
       return;
     }
 
@@ -85,28 +119,22 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     if (!capability.ops().contains(op)) {
       out.add(
           Issue.error(
-              "E-OP-NOT-ALLOWED",
-              "Operator not supported for field",
-              Map.of("fieldKey", fieldKey, "operator", op)));
+              "E-OP-NOT-ALLOWED", "字段不支持该操作符", Map.of("fieldKey", fieldKey, "operator", op)));
       return;
     }
 
+    // 检查否定支持
     if (underNot) {
       if (!capability.supportsNot()) {
-        out.add(
-            Issue.error(
-                "E-NOT-UNSUPPORTED",
-                "Negation is not supported for this field",
-                Map.of("fieldKey", fieldKey)));
+        out.add(Issue.error("E-NOT-UNSUPPORTED", "该字段不支持否定", Map.of("fieldKey", fieldKey)));
       } else if (!capability.negatableOps().isEmpty() && !capability.negatableOps().contains(op)) {
         out.add(
             Issue.error(
-                "E-NOT-OP-UNSUPPORTED",
-                "Negation is not supported for this operator",
-                Map.of("fieldKey", fieldKey, "operator", op)));
+                "E-NOT-OP-UNSUPPORTED", "该操作符不支持否定", Map.of("fieldKey", fieldKey, "operator", op)));
       }
     }
 
+    // 根据操作符类型进行特定验证
     switch (atom.operator()) {
       case TERM -> validateTerm(atom, capability, out);
       case IN -> validateIn(atom, capability, out);
@@ -116,15 +144,24 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
   }
 
+  /**
+   * 验证 TERM 操作符的值约束。
+   *
+   * <p>检查项：
+   *
+   * <ul>
+   *   <li>空白值限制
+   *   <li>最小/最大长度
+   *   <li>正则表达式模式
+   *   <li>大小写敏感性
+   *   <li>匹配策略支持（PHRASE、WILDCARD 等）
+   * </ul>
+   */
   private void validateTerm(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     Atom.TermValue value = (Atom.TermValue) atom.value();
     String text = value.text();
     if ((text == null || text.isBlank()) && !capability.termAllowBlank()) {
-      out.add(
-          Issue.error(
-              "E-TERM-BLANK",
-              "TERM does not allow blank values",
-              Map.of("fieldKey", atom.fieldKey())));
+      out.add(Issue.error("E-TERM-BLANK", "TERM 不允许空白值", Map.of("fieldKey", atom.fieldKey())));
       return;
     }
 
@@ -134,7 +171,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         out.add(
             Issue.error(
                 "E-TERM-LEN-MIN",
-                "TERM shorter than minimum length",
+                "TERM 长度小于最小值",
                 Map.of(
                     "fieldKey",
                     atom.fieldKey(),
@@ -147,7 +184,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         out.add(
             Issue.error(
                 "E-TERM-LEN-MAX",
-                "TERM exceeds maximum length",
+                "TERM 长度超过最大值",
                 Map.of(
                     "fieldKey",
                     atom.fieldKey(),
@@ -161,7 +198,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
           out.add(
               Issue.error(
                   "E-TERM-PATTERN",
-                  "TERM violates pattern constraint",
+                  "TERM 不符合模式约束",
                   Map.of("fieldKey", atom.fieldKey(), "pattern", capability.termPattern())));
         }
       }
@@ -171,9 +208,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     if (cs.isSensitive() && !capability.termCaseSensitiveAllowed()) {
       out.add(
           Issue.error(
-              "E-TERM-CASE-SENSITIVE",
-              "Case sensitive TERM not supported",
-              Map.of("fieldKey", atom.fieldKey())));
+              "E-TERM-CASE-SENSITIVE", "不支持大小写敏感的 TERM", Map.of("fieldKey", atom.fieldKey())));
     }
 
     Set<String> matches = capability.termMatches();
@@ -183,25 +218,24 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         out.add(
             Issue.error(
                 "E-TERM-MATCH-UNSUPPORTED",
-                "Match strategy not supported",
+                "不支持该匹配策略",
                 Map.of("fieldKey", atom.fieldKey(), "match", match)));
       }
     }
   }
 
+  /** 验证 IN 操作符的值约束。 */
   private void validateIn(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     Atom.InValues values = (Atom.InValues) atom.value();
     if (values.values().isEmpty()) {
-      out.add(
-          Issue.error(
-              "E-IN-EMPTY", "IN requires at least one value", Map.of("fieldKey", atom.fieldKey())));
+      out.add(Issue.error("E-IN-EMPTY", "IN 至少需要一个值", Map.of("fieldKey", atom.fieldKey())));
       return;
     }
     if (capability.inMaxSize() > 0 && values.values().size() > capability.inMaxSize()) {
       out.add(
           Issue.error(
               "E-IN-SIZE",
-              "IN exceeds maximum item count",
+              "IN 值数量超过最大限制",
               Map.of(
                   "fieldKey",
                   atom.fieldKey(),
@@ -212,13 +246,11 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
     }
     if (values.caseSensitivity().isSensitive() && !capability.inCaseSensitiveAllowed()) {
       out.add(
-          Issue.error(
-              "E-IN-CASE-SENSITIVE",
-              "Case sensitive IN not supported",
-              Map.of("fieldKey", atom.fieldKey())));
+          Issue.error("E-IN-CASE-SENSITIVE", "不支持大小写敏感的 IN", Map.of("fieldKey", atom.fieldKey())));
     }
   }
 
+  /** 验证 RANGE 操作符的类型和边界约束。 */
   private void validateRange(Atom atom, ProvenanceSnapshot.Capability capability, List<Issue> out) {
     ProvenanceSnapshot.RangeKind kind = capability.rangeKind();
     Atom.RangeValue value = (Atom.RangeValue) atom.value();
@@ -236,10 +268,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         }
         if (dtr.from() == null && dtr.to() == null) {
           out.add(
-              Issue.error(
-                  "E-RANGE-OPEN",
-                  "Datetime range must specify at least one boundary",
-                  Map.of("fieldKey", atom.fieldKey())));
+              Issue.error("E-RANGE-OPEN", "日期时间范围必须至少指定一个边界", Map.of("fieldKey", atom.fieldKey())));
         }
       }
       case Atom.NumberRange nr -> {
@@ -248,15 +277,13 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         }
         if (nr.from() == null && nr.to() == null) {
           out.add(
-              Issue.error(
-                  "E-RANGE-OPEN",
-                  "Number range must specify at least one boundary",
-                  Map.of("fieldKey", atom.fieldKey())));
+              Issue.error("E-RANGE-OPEN", "数值范围必须至少指定一个边界", Map.of("fieldKey", atom.fieldKey())));
         }
       }
     }
   }
 
+  /** 验证日期范围的边界是否在能力定义的最小/最大值内。 */
   private void validateDateBounds(
       String fieldKey,
       LocalDate from,
@@ -265,59 +292,47 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
       LocalDate max,
       List<Issue> out) {
     if (from == null && to == null) {
-      out.add(
-          Issue.error(
-              "E-RANGE-OPEN",
-              "Date range must specify at least one boundary",
-              Map.of("fieldKey", fieldKey)));
+      out.add(Issue.error("E-RANGE-OPEN", "日期范围必须至少指定一个边界", Map.of("fieldKey", fieldKey)));
       return;
     }
     if (from != null && min != null && from.isBefore(min)) {
       out.add(
           Issue.error(
-              "E-DATE-MIN",
-              "Date lower bound before capability minimum",
-              Map.of("fieldKey", fieldKey, "from", from, "min", min)));
+              "E-DATE-MIN", "日期下界早于能力最小值", Map.of("fieldKey", fieldKey, "from", from, "min", min)));
     }
     if (to != null && max != null && to.isAfter(max)) {
       out.add(
           Issue.error(
-              "E-DATE-MAX",
-              "Date upper bound after capability maximum",
-              Map.of("fieldKey", fieldKey, "to", to, "max", max)));
+              "E-DATE-MAX", "日期上界晚于能力最大值", Map.of("fieldKey", fieldKey, "to", to, "max", max)));
     }
   }
 
+  /** 报告范围类型不匹配错误。 */
   private void complainRangeKind(
       Atom atom, ProvenanceSnapshot.RangeKind actual, String expected, List<Issue> out) {
     out.add(
         Issue.error(
             "E-RANGE-KIND",
-            "Range kind mismatch",
+            "范围类型不匹配",
             Map.of("fieldKey", atom.fieldKey(), "expected", expected, "actual", actual)));
   }
 
+  /** 验证 EXISTS 操作符是否被支持。 */
   private void validateExists(
       ProvenanceSnapshot.Capability capability, String fieldKey, List<Issue> out) {
     if (!capability.existsSupported()) {
-      out.add(
-          Issue.error(
-              "E-EXISTS-UNSUPPORTED",
-              "EXISTS operator is not supported",
-              Map.of("fieldKey", fieldKey)));
+      out.add(Issue.error("E-EXISTS-UNSUPPORTED", "不支持 EXISTS 操作符", Map.of("fieldKey", fieldKey)));
     }
   }
 
+  /** 验证 TOKEN 操作符的值约束。 */
   private void validateToken(
       Atom atom, ProvenanceSnapshot.Capability capability, boolean strictMode, List<Issue> out) {
     Atom.TokenValue token = (Atom.TokenValue) atom.value();
     if (token.tokenValue() == null || token.tokenValue().isBlank()) {
       if (strictMode) {
         out.add(
-            Issue.error(
-                "E-TOKEN-BLANK",
-                "Token value must not be blank in strict mode",
-                Map.of("fieldKey", atom.fieldKey())));
+            Issue.error("E-TOKEN-BLANK", "严格模式下 Token 值不能为空", Map.of("fieldKey", atom.fieldKey())));
       }
     }
 
@@ -328,7 +343,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         out.add(
             Issue.error(
                 "E-TOKEN-KIND",
-                "Token type not supported",
+                "不支持该 Token 类型",
                 Map.of("fieldKey", atom.fieldKey(), "tokenType", token.tokenType())));
       }
     }
@@ -339,7 +354,7 @@ public class DefaultCapabilityChecker implements CapabilityChecker {
         out.add(
             Issue.error(
                 "E-TOKEN-PATTERN",
-                "Token value violates pattern",
+                "Token 值不符合模式约束",
                 Map.of("fieldKey", atom.fieldKey(), "pattern", capability.tokenValuePattern())));
       }
     }

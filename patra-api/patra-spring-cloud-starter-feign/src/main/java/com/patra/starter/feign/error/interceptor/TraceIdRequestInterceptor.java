@@ -8,11 +8,22 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Feign interceptor that propagates the current trace identifier downstream.
+ * Feign 拦截器,向下游传播当前跟踪标识符
  *
- * <p>Uses the configurable header names from {@link TracingProperties} together with the {@link
- * TraceProvider} SPI so it can adapt to different tracing systems. The interceptor reads the
- * current trace ID from the execution context and writes it to the first configured header.
+ * <p>使用来自 {@link TracingProperties} 的可配置头名称以及 {@link TraceProvider} SPI,
+ * 使其能够适配不同的跟踪系统。拦截器从执行上下文读取当前 trace ID 并将其写入第一个配置的 header。
+ *
+ * <p><b>工作流程:</b>
+ *
+ * <ol>
+ *   <li>从 TraceProvider 获取当前跟踪标识符
+ *   <li>使用配置的 header 名称(或默认 'traceId')
+ *   <li>将跟踪标识符注入到出站请求 header
+ *   <li>失败时仅记录警告,不影响请求执行
+ * </ol>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class TraceIdRequestInterceptor implements RequestInterceptor {
@@ -26,7 +37,7 @@ public class TraceIdRequestInterceptor implements RequestInterceptor {
     this.tracingProperties = tracingProperties;
   }
 
-  /** Inject the trace identifier into the outbound request headers. */
+  /** 将跟踪标识符注入到出站请求 header */
   @Override
   public void apply(RequestTemplate template) {
     try {
@@ -49,7 +60,9 @@ public class TraceIdRequestInterceptor implements RequestInterceptor {
   }
 
   /**
-   * @return The header name used for trace propagation (first configured value or default).
+   * 获取用于跟踪传播的 header 名称
+   *
+   * @return 第一个配置的值或默认值
    */
   private String getTraceHeaderName() {
     if (tracingProperties.getHeaderNames() != null

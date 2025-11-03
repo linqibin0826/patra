@@ -8,16 +8,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Registry for BatchPlanner implementations.
+ * 批处理规划器注册中心
  *
- * <p>Responsibility: manage all BatchPlanner instances and route by provenanceCode.
+ * <p>职责: 管理所有 {@link BatchPlanner} 实例,根据 provenanceCode 路由。
  *
- * <p>Design notes:
+ * <h3>设计要点</h3>
  *
  * <ul>
- *   <li>Auto-registration via Spring constructor injection.
- *   <li>Thread-safe using ConcurrentHashMap.
- *   <li>Throws IllegalArgumentException when planner not found.
+ *   <li><b>自动注册</b>: 通过 Spring 构造器注入自动注册所有实现
+ *   <li><b>线程安全</b>: 使用 {@link ConcurrentHashMap} 保证并发安全
+ *   <li><b>异常处理</b>: 规划器未找到时抛出 {@link IllegalArgumentException}
  * </ul>
  *
  * @author linqibin
@@ -30,45 +30,39 @@ public class BatchPlannerRegistry {
   private final Map<String, BatchPlanner> planners = new ConcurrentHashMap<>();
 
   /**
-   * Constructor: auto-register all BatchPlanner instances.
+   * 构造器 - 自动注册所有批处理规划器实例
    *
-   * @param plannerList all BatchPlanner instances injected by Spring
+   * @param plannerList 所有由 Spring 注入的 BatchPlanner 实例
    */
   public BatchPlannerRegistry(List<BatchPlanner> plannerList) {
     for (BatchPlanner planner : plannerList) {
       ProvenanceCode provenanceCode = planner.getProvenanceCode();
       String code = provenanceCode.getCode();
       if (planners.containsKey(code)) {
-        log.warn("duplicate batch planner for provenanceCode={}", code);
+        log.warn("检测到重复的批处理规划器,provenanceCode={}", code);
       }
       planners.put(code, planner);
-      log.info(
-          "registered batch planner provenanceCode={} class={}",
-          code,
-          planner.getClass().getSimpleName());
+      log.info("已注册批处理规划器: provenanceCode={}, class={}", code, planner.getClass().getSimpleName());
     }
   }
 
   /**
-   * Gets the batch planner by provenance code.
+   * 根据 Provenance 代码获取批处理规划器
    *
-   * @param provenanceCode provenance code
-   * @return batch planner
-   * @throws IllegalArgumentException when planner is not found
+   * @param provenanceCode Provenance 代码
+   * @return 批处理规划器
+   * @throws IllegalArgumentException 规划器未找到时抛出
    */
   public BatchPlanner get(String provenanceCode) {
     BatchPlanner planner = planners.get(provenanceCode);
     if (planner == null) {
       throw new IllegalArgumentException(
-          "Batch planner not found for provenanceCode="
-              + provenanceCode
-              + "; available planners: "
-              + planners.keySet());
+          "未找到批处理规划器: provenanceCode=" + provenanceCode + "; 可用的规划器: " + planners.keySet());
     }
     return planner;
   }
 
-  /** Checks whether a planner exists for the given provenanceCode. */
+  /** 检查指定 provenanceCode 的规划器是否存在 */
   public boolean contains(String provenanceCode) {
     return planners.containsKey(provenanceCode);
   }

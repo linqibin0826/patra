@@ -6,38 +6,44 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Exception thrown when task checkpoint serialization or deserialization fails.
+ * 任务检查点异常。
  *
- * <p>Raised whenever checkpoint persistence or recovery fails due to JSON/binary conversion issues,
- * missing fields, or incompatible versions.
- *
- * <p>Handling guidance:
+ * <p>触发场景:当任务检查点的序列化或反序列化失败时抛出,具体包括:
  *
  * <ul>
- *   <li>{@code PARSE}: consider restarting from the beginning or halting the task for manual
- *       intervention depending on idempotency guarantees.
- *   <li>{@code SERIALIZE}: retry with a limit; persistent failures should alert operators so
- *       progress is not lost.
+ *   <li>JSON/二进制转换问题
+ *   <li>缺少必填字段
+ *   <li>版本不兼容(如检查点格式升级后旧数据无法解析)
  * </ul>
+ *
+ * <p>处理建议:
+ *
+ * <ul>
+ *   <li><b>{@code PARSE}</b>:根据幂等性保证,考虑从头开始重启任务或暂停任务等待人工介入。
+ *   <li><b>{@code SERIALIZE}</b>:限次重试;持续失败应告警运维人员以避免进度丢失。
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class TaskCheckpointException extends IngestException implements HasErrorTraits {
 
   public enum Type {
-    /** Failed to parse an existing checkpoint. */
+    /** 解析现有检查点失败。 */
     PARSE,
-    /** Failed to serialize a new checkpoint. */
+    /** 序列化新检查点失败。 */
     SERIALIZE
   }
 
-  /** Type of failure that occurred. */
+  /** 发生的失败类型。 */
   private final Type type;
 
   /**
-   * Create the exception.
+   * 构造任务检查点异常。
    *
-   * @param type failure type
-   * @param message descriptive message
-   * @param cause underlying exception
+   * @param type 失败类型
+   * @param message 描述性消息
+   * @param cause 底层异常
    */
   public TaskCheckpointException(Type type, String message, Throwable cause) {
     super(message, cause);
@@ -45,9 +51,9 @@ public class TaskCheckpointException extends IngestException implements HasError
   }
 
   /**
-   * Expose the failure type.
+   * 获取失败类型。
    *
-   * @return type enumeration
+   * @return 类型枚举
    */
   public Type getType() {
     return type;

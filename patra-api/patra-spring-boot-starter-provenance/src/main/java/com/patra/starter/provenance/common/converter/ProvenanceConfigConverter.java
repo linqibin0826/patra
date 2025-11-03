@@ -6,11 +6,19 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Converter between provenance-specific configuration and HTTP resilience configuration used by the
- * built-in simple HTTP client.
+ * Provenance 配置与 HTTP 弹性配置之间的转换器
  *
- * <p>This converter is used in direct HTTP access scenarios (non-gateway mode) to extract retry,
- * timeout, and rate limit settings from provenance configuration.
+ * <p>在直接 HTTP 访问场景(非网关模式)下使用,从 Provenance 配置中提取重试、超时和速率限制设置, 转换为内置简单 HTTP 客户端使用的 {@link
+ * HttpResilienceConfig}。
+ *
+ * <p><b>转换逻辑:</b>
+ *
+ * <ul>
+ *   <li>从 ProvenanceConfig.retry 提取重试次数和退避时间
+ *   <li>从 ProvenanceConfig.http 提取超时设置和默认头
+ *   <li>从 ProvenanceConfig.rateLimit 提取QPS限制
+ *   <li>对无效值应用安全默认值(如确保至少1秒超时)
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -22,10 +30,10 @@ public final class ProvenanceConfigConverter {
   }
 
   /**
-   * Converts ProvenanceConfig to lightweight HTTP resilience configuration.
+   * 将 ProvenanceConfig 转换为轻量级 HTTP 弹性配置
    *
-   * @param config provenance configuration
-   * @return resilience configuration for the simple HTTP client, never null
+   * @param config provenance 配置
+   * @return 简单 HTTP 客户端使用的弹性配置,永不为 null
    */
   public static HttpResilienceConfig toHttpResilienceConfig(ProvenanceConfig config) {
     if (config == null) {
@@ -41,10 +49,10 @@ public final class ProvenanceConfigConverter {
   }
 
   /**
-   * Extracts default headers from ProvenanceConfig.
+   * 从 ProvenanceConfig 提取默认请求头
    *
-   * @param config provenance configuration
-   * @return immutable map of default headers, empty if none configured, never null
+   * @param config provenance 配置
+   * @return 默认请求头的不可变映射,若未配置则为空,永不为 null
    */
   public static Map<String, String> extractHeaders(ProvenanceConfig config) {
     if (config == null || config.http() == null || config.http().defaultHeaders() == null) {

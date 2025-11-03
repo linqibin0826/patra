@@ -3,9 +3,9 @@ package com.patra.registry.domain.model.read.expr;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * Query view for unified expression fields.
+ * 统一表达式字段查询视图。
  *
- * <p>Read-optimized projection for querying expression field definitions from the dictionary.
+ * <p>用于从字典查询表达式字段定义的读优化投影。包含字段键、显示名称、数据类型、基数等元数据。
  *
  * @author linqibin
  * @since 0.1.0

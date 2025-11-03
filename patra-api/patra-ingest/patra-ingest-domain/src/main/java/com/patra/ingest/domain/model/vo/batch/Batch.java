@@ -3,31 +3,30 @@ package com.patra.ingest.domain.model.vo.batch;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Value object representing a single execution batch.
+ * 单次执行批次值对象。
  *
- * <p>Encapsulates the compiled query, parameters, and pagination metadata.
+ * <p>封装已编译的查询、参数和分页元数据。
  *
- * <p>Invariants:
+ * <p>不变式:
  *
  * <ul>
  *   <li>{@code batchNo} >= 1
- *   <li>{@code query} must not be blank
+ *   <li>{@code query} 不能为空
  * </ul>
  *
- * <p>Pagination modes:
+ * <p>分页模式:
  *
  * <ul>
- *   <li><b>Page-based</b>: uses {@code pageNo} and {@code pageSize} (e.g., PubMed retstart/retmax)
- *   <li><b>Token-based</b>: uses {@code cursorToken} and optional {@code pageSize} (e.g., EPMC
- *       cursorMark)
+ *   <li><b>基于页码</b>: 使用 {@code pageNo} 和 {@code pageSize} (例如 PubMed 的 retstart/retmax)
+ *   <li><b>基于游标</b>: 使用 {@code cursorToken} 和可选的 {@code pageSize} (例如 EPMC 的 cursorMark)
  * </ul>
  *
- * @param batchNo batch sequence number (1-based)
- * @param query compiled query string
- * @param params query parameters as JSON
- * @param cursorToken cursor token for token-based pagination (nullable)
- * @param pageNo page number for page-based pagination (1-based, nullable for token-based)
- * @param pageSize page size or expected fetch count (nullable)
+ * @param batchNo 批次序号 (从 1 开始)
+ * @param query 已编译的查询字符串
+ * @param params 查询参数(JSON 格式)
+ * @param cursorToken 用于游标分页的游标令牌 (可为空)
+ * @param pageNo 用于页码分页的页码 (从 1 开始, 游标分页时为空)
+ * @param pageSize 页大小或预期获取数量 (可为空)
  * @author linqibin
  * @since 0.1.0
  */
@@ -44,24 +43,24 @@ public record Batch(
     }
   }
 
-  /** Create the first batch without pagination metadata (legacy). */
+  /** 创建第一个批次,不包含分页元数据(遗留方法)。 */
   public static Batch first(String query, JsonNode params) {
     return new Batch(1, query, params, null, null, null);
   }
 
-  /** Create a page-based batch (e.g., PubMed with retstart/retmax). */
+  /** 创建基于页码的批次(例如 PubMed 的 retstart/retmax)。 */
   public static Batch withPage(
       int batchNo, String query, JsonNode params, int pageNo, int pageSize) {
     return new Batch(batchNo, query, params, null, pageNo, pageSize);
   }
 
-  /** Create a token-based batch (e.g., EPMC with cursorMark). */
+  /** 创建基于游标的批次(例如 EPMC 的 cursorMark)。 */
   public static Batch withToken(
       int batchNo, String query, JsonNode params, String cursorToken, Integer pageSize) {
     return new Batch(batchNo, query, params, cursorToken, null, pageSize);
   }
 
-  /** Indicates whether a cursor token is present. */
+  /** 指示是否存在游标令牌。 */
   public boolean hasCursor() {
     return cursorToken != null && !cursorToken.isBlank();
   }

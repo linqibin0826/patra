@@ -28,13 +28,17 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 
 /**
- * Provenance starter auto-configuration
+ * Provenance Starter 自动配置类
  *
- * <p>Auto-configures PubMed and Europe PMC clients. Outbound HTTP is performed directly by the
- * starter（无独立出站网关服务）。
+ * <p>自动配置 PubMed 和 Europe PMC 客户端。出站 HTTP 请求直接由 Starter 执行,无独立的出站网关服务。
  *
- * <p>Configuration properties: Use {@code patra.provenance.enabled=false} to disable this
- * auto-configuration if needed.
+ * <p>配置说明:
+ *
+ * <ul>
+ *   <li>使用 {@code patra.provenance.enabled=false} 可禁用此自动配置
+ *   <li>默认启用,自动注册 PubMed 和 EPMC 数据源适配器
+ *   <li>集成 Micrometer 进行指标监控(如果可用)
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -50,37 +54,37 @@ import org.springframework.context.annotation.Bean;
 public class ProvenanceAutoConfiguration {
 
   /**
-   * Creates the default configuration provider that reads application properties.
+   * 创建读取应用配置属性的默认配置提供者
    *
-   * @param properties bound provenance properties
-   * @return default configuration provider
+   * @param properties 绑定的 Provenance 配置属性
+   * @return 默认配置提供者实例
    */
   @Bean
   @ConditionalOnMissingBean
   public DefaultConfigProvider defaultConfigProvider(ProvenanceProperties properties) {
-    log.info("Initializing Provenance configuration provider with PubMed and EPMC defaults");
+    log.info("初始化 Provenance 配置提供者,包含 PubMed 和 EPMC 默认配置");
     return new DefaultConfigProvider(properties);
   }
 
   /**
-   * Creates the Micrometer-backed metrics recorder when a registry is present.
+   * 创建基于 Micrometer 的指标记录器(当 MeterRegistry 存在时)
    *
-   * @param meterRegistry Micrometer meter registry
-   * @return provenance metrics recorder
+   * @param meterRegistry Micrometer 指标注册表
+   * @return Provenance 指标记录器实例
    */
   @Bean
   @ConditionalOnMissingBean
   @ConditionalOnBean(MeterRegistry.class)
   public ProvenanceMetrics provenanceMetrics(MeterRegistry meterRegistry) {
-    log.info("Enabling Provenance metrics instrumentation with Micrometer");
+    log.info("启用基于 Micrometer 的 Provenance 指标监控");
     return new ProvenanceMetrics(meterRegistry);
   }
 
   /**
-   * Registers the adapter registry, allowing ingest to discover available data source adapters.
+   * 注册适配器注册表,允许 Ingest 引擎发现可用的数据源适配器
    *
-   * @param adaptersProvider provider for adapter implementations
-   * @return adapter registry
+   * @param adaptersProvider 适配器实现的提供者
+   * @return 适配器注册表实例
    */
   @Bean
   @ConditionalOnMissingBean
@@ -90,11 +94,11 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * Creates the XML mapper for parsing PubMed XML responses.
+   * 创建用于解析 PubMed XML 响应的 XML 映射器
    *
-   * <p>Configured to handle PubMed's XML format with lenient parsing options.
+   * <p>配置为使用宽松的解析选项处理 PubMed 的 XML 格式。
    *
-   * @return configured XML mapper
+   * @return 配置好的 XML 映射器
    */
   @Bean
   @ConditionalOnMissingBean
@@ -110,9 +114,9 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * Creates the PubMed article converter for transforming PubMed responses to StandardLiterature.
+   * 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 StandardLiterature
    *
-   * @return PubMed article converter
+   * @return PubMed 文章转换器实例
    */
   @Bean
   @ConditionalOnMissingBean
@@ -121,13 +125,13 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * Creates the PubMed client for direct HTTP access to E-utilities API.
+   * 创建用于直接 HTTP 访问 E-utilities API 的 PubMed 客户端
    *
-   * @param configProvider configuration provider for PubMed settings
-   * @param xmlMapper XML mapper for parsing PubMed XML responses
-   * @param objectMapper JSON mapper for parsing PubMed JSON responses
-   * @param metrics optional metrics recorder
-   * @return PubMed client implementation
+   * @param configProvider PubMed 设置的配置提供者
+   * @param xmlMapper 用于解析 PubMed XML 响应的 XML 映射器
+   * @param objectMapper 用于解析 PubMed JSON 响应的 JSON 映射器
+   * @param metrics 可选的指标记录器
+   * @return PubMed 客户端实现
    */
   @Bean
   @ConditionalOnMissingBean
@@ -136,18 +140,18 @@ public class ProvenanceAutoConfiguration {
       XmlMapper xmlMapper,
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
-    log.info("Auto-configuring PubMed client for E-utilities API access");
+    log.info("自动配置 PubMed 客户端,用于访问 E-utilities API");
     return new PubMedClientImpl(
         new SimpleHttpClient(), configProvider, objectMapper, xmlMapper, metrics.orElse(null));
   }
 
   /**
-   * Creates the Europe PMC client for direct HTTP access to EPMC API.
+   * 创建用于直接 HTTP 访问 EPMC API 的 Europe PMC 客户端
    *
-   * @param configProvider configuration provider for EPMC settings
-   * @param objectMapper JSON mapper for parsing EPMC responses
-   * @param metrics optional metrics recorder
-   * @return Europe PMC client implementation
+   * @param configProvider EPMC 设置的配置提供者
+   * @param objectMapper 用于解析 EPMC 响应的 JSON 映射器
+   * @param metrics 可选的指标记录器
+   * @return Europe PMC 客户端实现
    */
   @Bean
   @ConditionalOnMissingBean
@@ -155,19 +159,19 @@ public class ProvenanceAutoConfiguration {
       DefaultConfigProvider configProvider,
       ObjectMapper objectMapper,
       Optional<ProvenanceMetrics> metrics) {
-    log.info("Auto-configuring Europe PMC client for EPMC API access");
+    log.info("自动配置 Europe PMC 客户端,用于访问 EPMC API");
     return new EPMCClientImpl(
         new SimpleHttpClient(), configProvider, objectMapper, metrics.orElse(null));
   }
 
   /**
-   * Registers the PubMed data source adapter so ingest can consume PubMed via the unified adapter
-   * contract.
+   * 注册 PubMed 数据源适配器,使 Ingest 引擎可以通过统一的适配器契约消费 PubMed 数据
    *
-   * @param pubMedClient PubMed client
-   * @param articleConverter article converter
-   * @param properties provenance properties for configuration merging
-   * @return PubMed data source adapter
+   * @param pubMedClient PubMed 客户端
+   * @param articleConverter 文章转换器
+   * @param properties 用于配置合并的 Provenance 属性
+   * @param metrics 可选的指标记录器
+   * @return PubMed 数据源适配器实例
    */
   @Bean
   @ConditionalOnMissingBean

@@ -6,13 +6,21 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import org.springframework.util.StringUtils;
 
 /**
- * Structured view of the PubMed EPost API response (XML only).
+ * PubMed EPost API 响应的结构化视图 (仅支持 XML 格式)。
  *
- * <p>EPost uploads a list of UIDs to the Entrez History server and returns a WebEnv token and
- * query_key that can be used in subsequent API calls. This avoids URL length limitations when
- * dealing with large ID lists.
+ * <p>EPost 将 UID 列表上传到 Entrez 历史服务器,并返回 WebEnv 令牌和 query_key, 这些令牌可在后续 API 调用中使用。这避免了处理大型 ID 列表时的
+ * URL 长度限制。
  *
- * @author
+ * <p><b>典型响应字段:</b>
+ *
+ * <ul>
+ *   <li><b>WebEnv</b>: 历史服务器会话令牌 (有效期约24小时)
+ *   <li><b>QueryKey</b>: 标识上传的 UID 列表的查询键
+ *   <li><b>Count</b>: 成功上传的标识符数量
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JacksonXmlRootElement(localName = "ePostResult")
@@ -29,27 +37,27 @@ public final class EPostResponse {
 
   public EPostResponse() {}
 
-  /** History Server session token (valid for ~24 hours). */
+  /** 历史服务器会话令牌 (有效期约24小时)。 */
   public String webEnv() {
     return webEnv;
   }
 
-  /** Numeric key identifying the uploaded UID list within the WebEnv session. */
+  /** 标识 WebEnv 会话中上传的 UID 列表的数字键。 */
   public String queryKey() {
     return queryKey;
   }
 
-  /** Number of identifiers successfully uploaded (may be {@code null}). */
+  /** 成功上传的标识符数量 (可能为 {@code null})。 */
   public Integer count() {
     return count;
   }
 
-  /** Validate that the response contains usable WebEnv and QueryKey. */
+  /** 验证响应是否包含可用的 WebEnv 和 QueryKey。 */
   public boolean isValid() {
     return StringUtils.hasText(webEnv) && StringUtils.hasText(queryKey);
   }
 
-  /** Safe WebEnv snippet for logging without leaking full token. */
+  /** 用于日志记录的安全 WebEnv 片段,不泄露完整令牌。 */
   public String getTruncatedWebEnv() {
     if (!StringUtils.hasText(webEnv)) {
       return "null";

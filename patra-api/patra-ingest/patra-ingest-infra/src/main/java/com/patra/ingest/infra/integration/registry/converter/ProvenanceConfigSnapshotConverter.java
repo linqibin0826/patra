@@ -7,10 +7,9 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Converter from Registry API DTOs to Ingest domain configuration snapshots.
+ * 注册中心 API DTO 到采集领域配置快照的转换器。
  *
- * <p>Converts configuration responses from patra-registry to the snapshot objects required by the
- * Ingest domain. Follows MapStruct best practices for type-safe mapping.
+ * <p>将 patra-registry 的配置响应转换为采集领域所需的快照对象。遵循 MapStruct 最佳实践进行类型安全的映射。
  *
  * @author linqibin
  * @since 0.1.0
@@ -19,10 +18,10 @@ import org.mapstruct.ReportingPolicy;
 public interface ProvenanceConfigSnapshotConverter {
 
   /**
-   * Converts the full configuration response into a snapshot.
+   * 将完整的配置响应转换为快照。
    *
-   * @param resp configuration response
-   * @return snapshot
+   * @param resp 配置响应
+   * @return 快照
    */
   @Mapping(target = "provenance", source = "provenance")
   @Mapping(target = "windowOffset", source = "windowOffset")
@@ -33,7 +32,7 @@ public interface ProvenanceConfigSnapshotConverter {
   @Mapping(target = "rateLimit", source = "rateLimit")
   ProvenanceConfigSnapshot convert(ProvenanceConfigResp resp);
 
-  /** Maps provenance base info. */
+  /** 映射溯源基础信息。 */
   default ProvenanceConfigSnapshot.ProvenanceInfo mapProvenanceInfo(ProvenanceResp source) {
     if (source == null) {
       return null;
@@ -49,7 +48,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.lifecycleStatusCode());
   }
 
-  /** Map window offset configuration. */
+  /** 映射窗口偏移配置。 */
   default ProvenanceConfigSnapshot.WindowOffsetConfig mapWindowOffsetConfig(
       WindowOffsetResp source) {
     if (source == null) {
@@ -78,7 +77,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.maxWindowSpanSeconds());
   }
 
-  /** Map pagination configuration. */
+  /** 映射分页配置。 */
   default ProvenanceConfigSnapshot.PaginationConfig mapPaginationConfig(
       PaginationConfigResp source) {
     if (source == null) {
@@ -97,7 +96,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.sortingDirection());
   }
 
-  /** Map HTTP configuration. */
+  /** 映射 HTTP 配置。 */
   default ProvenanceConfigSnapshot.HttpConfig mapHttpConfig(HttpConfigResp source) {
     if (source == null) {
       return null;
@@ -120,7 +119,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.idempotencyTtlSeconds());
   }
 
-  /** Map batching configuration. */
+  /** 映射批处理配置。 */
   default ProvenanceConfigSnapshot.BatchingConfig mapBatchingConfig(BatchingConfigResp source) {
     if (source == null) {
       return null;
@@ -137,7 +136,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.maxIdsPerRequest());
   }
 
-  /** Map retry configuration. */
+  /** 映射重试配置。 */
   default ProvenanceConfigSnapshot.RetryConfig mapRetryConfig(RetryConfigResp source) {
     if (source == null) {
       return null;
@@ -161,7 +160,7 @@ public interface ProvenanceConfigSnapshotConverter {
         source.circuitCooldownMillis());
   }
 
-  /** Map rate limit configuration. */
+  /** 映射限流配置。 */
   default ProvenanceConfigSnapshot.RateLimitConfig mapRateLimitConfig(RateLimitConfigResp source) {
     if (source == null) {
       return null;
@@ -176,5 +175,5 @@ public interface ProvenanceConfigSnapshotConverter {
         source.perCredentialQpsLimit());
   }
 
-  // Credential dimension removed from API and snapshot; related mappings deleted.
+  // 凭证维度已从 API 和快照中移除;相关映射已删除。
 }

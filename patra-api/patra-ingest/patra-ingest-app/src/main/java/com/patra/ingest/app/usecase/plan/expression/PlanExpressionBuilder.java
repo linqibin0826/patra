@@ -14,10 +14,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Plan business expression builder, responsible for producing a canonical expression from the
- * trigger norm and the provenance configuration.
+ * Plan 业务表达式构建器 - 负责从触发规范和 Provenance 配置生成标准化的表达式
  *
- * <p>Used during plan assembly; can be extended to plug in external/custom rules.
+ * <p>在 Plan 组装阶段使用;可扩展以插入外部/自定义规则。
+ *
+ * <h3>职责</h3>
+ *
+ * <ul>
+ *   <li>根据 {@link PlanTriggerNorm} 和 {@link ProvenanceConfigSnapshot} 构建业务约束表达式
+ *   <li>调用 {@link ExprCanonicalizer} 生成标准化 JSON 和 Hash
+ *   <li>预留外部条件组合钩子(如管理员配置的规则)
+ * </ul>
+ *
+ * <h3>表达式构建策略</h3>
+ *
+ * <ul>
+ *   <li><b>内部约束</b>: 从 TriggerNorm 和 ConfigSnapshot 派生
+ *   <li><b>外部条件</b>: 预留扩展点 {@link #buildExternalConditionsExpr}
+ *   <li><b>组合逻辑</b>: 通过 {@code And} 合并所有约束
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -27,16 +42,16 @@ import org.springframework.stereotype.Component;
 public class PlanExpressionBuilder {
 
   /**
-   * Construct the plan-level expression descriptor (original expression, canonical JSON, and hash).
+   * 构建 Plan 级别的表达式描述符(原始表达式、标准化 JSON 和 Hash)
    *
-   * @param norm trigger norm
-   * @param configSnapshot provenance configuration snapshot
-   * @return plan expression descriptor
+   * @param norm 触发规范
+   * @param configSnapshot Provenance 配置快照
+   * @return Plan 表达式描述符
    */
   public PlanExpressionDescriptor build(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     log.debug(
-        "Building plan expression for provenance [{}] operation [{}]",
+        "正在为 Provenance [{}] Operation [{}] 构建 Plan 表达式",
         norm.provenanceCode(),
         norm.operationCode());
 
@@ -44,7 +59,7 @@ public class PlanExpressionBuilder {
     ExprCanonicalSnapshot snapshot = ExprCanonicalizer.canonicalize(businessExpr);
 
     log.debug(
-        "Canonicalized plan expression for provenance [{}] operation [{}]: hash={}, json length={}",
+        "已标准化 Plan 表达式,Provenance [{}] Operation [{}]: hash={}, json 长度={}",
         norm.provenanceCode(),
         norm.operationCode(),
         snapshot.hash(),
@@ -53,12 +68,12 @@ public class PlanExpressionBuilder {
     return new PlanExpressionDescriptor(businessExpr, snapshot.canonicalJson(), snapshot.hash());
   }
 
-  /** Build the business expression for the plan. */
+  /** 构建 Plan 的业务表达式 */
   private Expr buildBusinessExpression(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
-    log.debug("Building plan business expression, operation={}", norm.operationCode());
+    log.debug("正在构建 Plan 业务表达式,Operation={}", norm.operationCode());
 
-    // Start with internal constraints derived from the trigger norm and configuration
+    // 从触发规范和配置中派生内部约束
     List<Expr> constraints = buildBusinessConstraints(norm, configSnapshot);
     Expr external = buildExternalConditionsExpr(norm);
     if (external != null) {
@@ -78,12 +93,12 @@ public class PlanExpressionBuilder {
     return Exprs.and(constraints);
   }
 
-  /** Reserved hook for external condition composition (e.g., admin-configured rules). */
+  /** 预留的外部条件组合钩子(例如管理员配置的规则) */
   private Expr buildExternalConditionsExpr(PlanTriggerNorm norm) {
     return null;
   }
 
-  /** Build base constraints. */
+  /** 构建基础约束 */
   private List<Expr> buildBusinessConstraints(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     List<Expr> constraints = new ArrayList<>();
@@ -93,7 +108,7 @@ public class PlanExpressionBuilder {
     return constraints;
   }
 
-  /** Build constraints specific to UPDATE operations. */
+  /** 构建 UPDATE 操作特定的约束 */
   private List<Expr> buildUpdateBusinessConstraints(
       PlanTriggerNorm norm, ProvenanceConfigSnapshot configSnapshot) {
     return new ArrayList<>();

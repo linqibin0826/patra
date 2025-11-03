@@ -7,10 +7,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Default immutable implementation of {@link FunctionRegistry}. Initialized at construction time
- * with a list of functions, indexed by code for O(1) lookup. Thread-safe through immutability.
+ * {@link FunctionRegistry} 的默认不可变实现。在构造时使用函数列表初始化， 按代码索引以实现 O(1) 查找。通过不可变性保证线程安全。
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.7 (Thread Safety & Performance)
+ * <p>参考：docs/expr/03-compiler-bridge-internals.md §3.7（线程安全性与性能）
  *
  * @since 1.0.0
  */
@@ -19,15 +18,14 @@ public class DefaultFunctionRegistry implements FunctionRegistry {
   private final Map<String, RenderFunction> functions;
 
   /**
-   * Constructs a registry from a list of functions. Functions are indexed by their code for
-   * efficient lookup.
+   * 从函数列表构造注册表。函数按其代码索引以实现高效查找。
    *
-   * @param functionList list of render functions to register
-   * @throws IllegalArgumentException if duplicate function codes are detected
+   * @param functionList 要注册的渲染函数列表
+   * @throws IllegalArgumentException 如果检测到重复的函数代码
    */
   public DefaultFunctionRegistry(List<RenderFunction> functionList) {
     if (functionList == null) {
-      throw new IllegalArgumentException("Function list cannot be null");
+      throw new IllegalArgumentException("函数列表不能为空");
     }
 
     this.functions =
@@ -37,8 +35,7 @@ public class DefaultFunctionRegistry implements FunctionRegistry {
                     RenderFunction::code,
                     Function.identity(),
                     (f1, f2) -> {
-                      throw new IllegalArgumentException(
-                          "Duplicate function code detected: " + f1.code());
+                      throw new IllegalArgumentException("检测到重复的函数代码：" + f1.code());
                     }));
   }
 

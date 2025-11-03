@@ -1,6 +1,6 @@
 ---
 name: documentation-architect
-description: 为代码库创建、更新或增强文档。包括开发者文档、README、API 文档、数据流图、测试文档。从现有文档、源文件和配置中收集上下文，生成高质量文档。示例：用户说"完成了 JWT cookie 认证实现，需要文档"，使用此 agent 收集上下文并创建全面的认证系统文档。
+description: 为代码库创建、更新或增强文档。包括开发者文档、README、API 文档、数据流图、测试文档。从现有文档、源文件和配置中收集上下文，生成高质量文档。
 model: sonnet
 color: cyan
 ---

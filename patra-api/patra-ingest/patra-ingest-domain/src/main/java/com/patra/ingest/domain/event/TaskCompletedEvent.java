@@ -4,24 +4,22 @@ import com.patra.common.domain.DomainEvent;
 import java.time.Instant;
 
 /**
- * Domain event emitted when a task completes execution (either successfully or with failure).
+ * 任务完成领域事件。当任务执行完成时发布（无论成功或失败）。
  *
- * <p>Trigger: fired after a task transitions to a terminal state (SUCCEEDED, FAILED, PARTIAL).
+ * <p>触发时机：任务转换到终态（SUCCEEDED、FAILED、PARTIAL）后触发。
  *
- * <p>Usage:
+ * <p>用途：
  *
  * <ul>
- *   <li>Aggregation: triggers recomputation of parent Slice status based on all child Tasks.
- *   <li>Metrics: measure task completion rate, success rate, and failure rate by provenance and
- *       operation.
- *   <li>Audit: trace task lifecycle from creation to completion.
- *   <li>Monitoring: alert on high failure rates or stuck tasks.
+ *   <li>聚合：触发基于所有子任务重新计算父切片状态
+ *   <li>指标：按来源和操作度量任务完成率、成功率和失败率
+ *   <li>审计：追踪任务从创建到完成的生命周期
+ *   <li>监控：针对高失败率或卡住的任务发出告警
  * </ul>
  *
- * <p>Idempotency: {@code taskId} acts as the unique key. Handlers must check if the status has
- * already been processed.
+ * <p>幂等性：{@code taskId} 作为唯一键。处理器必须检查状态是否已被处理。
  *
- * <p>Event Chain: TaskCompletedEvent → SliceStatusChangedEvent → PlanAggregate status update.
+ * <p>事件链：TaskCompletedEvent → SliceStatusChangedEvent → PlanAggregate 状态更新。
  */
 public record TaskCompletedEvent(
     /* Primary identifier of the completed task. */

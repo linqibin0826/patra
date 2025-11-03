@@ -1,12 +1,12 @@
 package com.patra.starter.provenance.common.config;
 
 /**
- * Retry configuration.
+ * 重试策略配置记录
  *
- * <p>Field descriptions:
+ * <p>定义访问 Provenance 数据源时的重试行为,包括最大重试次数和初始退避延迟。 该配置会被委托给底层网关层进行实际的重试控制。
  *
- * @param maxRetryTimes maximum retry attempts delegated to the gateway
- * @param initialDelayMillis initial backoff delay in milliseconds
+ * @param maxRetryTimes 委托给网关的最大重试次数
+ * @param initialDelayMillis 初始退避延迟时间(毫秒)
  * @author linqibin
  * @since 0.1.0
  */

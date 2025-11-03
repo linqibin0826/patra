@@ -7,31 +7,27 @@ import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import java.util.Objects;
 
 /**
- * Slicing strategy execution context (Application-layer input model).
+ * 切片策略执行上下文(应用层·输入模型)
  *
- * <p>Constructed centrally during plan assembly to ensure that when entering {@code SlicePlanner}:
- *
- * <ul>
- *   <li>the trigger norm (mode/step/operation) is normalized;
- *   <li>the planning window is finalized (UTC half-open semantics [from, to));
- *   <li>the business expression is compiled (with JSON snapshot and hash for idempotency and
- *       debugging);
- *   <li>the provenance snapshot (if any) matches the expression logic.
- * </ul>
- *
- * <h4>Semantics</h4>
+ * <p>在 Plan 组装期间集中构建,以确保进入 {@code SlicePlanner} 时:
  *
  * <ul>
- *   <li><b>norm</b>: non-null; encapsulates trigger mode (e.g., HARVEST/BACKFILL/UPDATE), slicing
- *       step, and precedence.
- *   <li><b>window</b>: non-null; half-open interval; when window.to() is null it indicates an open
- *       upper bound.
- *   <li><b>planExpression</b>: non-null; its hash is used in slice signatures/idempotency later.
- *   <li><b>configSnapshot</b>: nullable; some tests or temporary scenarios may omit provenance
- *       config (strategy should handle nulls gracefully).
+ *   <li>触发规范(模式/步长/操作)已标准化;
+ *   <li>规划窗口已最终确定(UTC 半开区间语义 [from, to));
+ *   <li>业务表达式已编译(带有 JSON 快照和哈希用于幂等和调试);
+ *   <li>溯源快照(如果有)与表达式逻辑匹配。
  * </ul>
  *
- * <h4>Invariants</h4>
+ * <h4>语义说明</h4>
+ *
+ * <ul>
+ *   <li><b>norm</b>: 非空;封装触发模式(例如 HARVEST/BACKFILL/UPDATE)、切片步长和优先级。
+ *   <li><b>window</b>: 非空;半开区间;当 window.to() 为 null 时表示开放上界。
+ *   <li><b>planExpression</b>: 非空;其哈希用于后续切片签名/幂等性。
+ *   <li><b>configSnapshot</b>: 可为空;某些测试或临时场景可能省略溯源配置(策略应优雅处理 null)。
+ * </ul>
+ *
+ * <h4>不变式</h4>
  *
  * <ul>
  *   <li>{@code norm != null}
@@ -39,21 +35,18 @@ import java.util.Objects;
  *   <li>{@code planExpression != null}
  * </ul>
  *
- * <h4>Thread-safety</h4>
+ * <h4>线程安全</h4>
  *
- * <p>Record is immutable; does not expose mutable collections; safe across threads.
+ * <p>Record 不可变;不暴露可变集合;线程安全。
  *
- * <h4>Extension</h4>
+ * <h4>扩展性</h4>
  *
- * <p>If lease/ratelimiting information is needed in the future, add new fields while preserving
- * record compatibility (or migrate to a class).
+ * <p>如果将来需要租约/限流信息,可添加新字段并保持 record 兼容性(或迁移为类)。
  *
- * @param norm trigger norm including mode, step, etc. (required)
- * @param window planning window using UTC half-open semantics (required)
- * @param planExpression compiled expression descriptor with Expr, snapshot JSON, and hash
- *     (required)
- * @param configSnapshot provenance/source configuration snapshot; optional (strategy should
- *     fallback to defaults when null)
+ * @param norm 触发规范,包括模式、步长等(必需)
+ * @param window 规划窗口,使用 UTC 半开区间语义(必需)
+ * @param planExpression 已编译的表达式描述符,包含 Expr、快照 JSON 和哈希(必需)
+ * @param configSnapshot 溯源/数据源配置快照;可选(策略应在为 null 时回退到默认值)
  * @author linqibin
  * @since 0.1.0
  */
@@ -63,9 +56,9 @@ public record SlicePlanningContext(
     PlanExpressionDescriptor planExpression,
     ProvenanceConfigSnapshot configSnapshot) {
   public SlicePlanningContext {
-    Objects.requireNonNull(norm, "norm must not be null");
-    Objects.requireNonNull(window, "window must not be null");
-    Objects.requireNonNull(planExpression, "planExpression must not be null");
-    // configSnapshot may be null (some tests or invocations might not provide it)
+    Objects.requireNonNull(norm, "norm 不能为 null");
+    Objects.requireNonNull(window, "window 不能为 null");
+    Objects.requireNonNull(planExpression, "planExpression 不能为 null");
+    // configSnapshot 可以为 null(某些测试或调用可能不提供它)
   }
 }

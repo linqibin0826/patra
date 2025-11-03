@@ -20,13 +20,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Coordinator for plan persistence operations.
+ * 计划持久化协调器。
  *
- * <p>Responsible for safely persisting plan aggregates, slices, tasks, and schedule instances with
- * proper exception handling and logging.
+ * <p>职责：
  *
- * <p>Note: This coordinator does NOT use {@code @Transactional}. It relies on the outer transaction
- * boundary from the main orchestrator to ensure atomicity with event publishing.
+ * <ul>
+ *   <li>安全地持久化计划聚合根、切片、任务和调度实例
+ *   <li>提供适当的异常处理和日志记录
+ * </ul>
+ *
+ * <p>注意：该协调器不使用 {@code @Transactional}，依赖主编排器的外部事务边界来确保与事件发布的原子性。
  *
  * @author linqibin
  * @since 0.1.0
@@ -42,11 +45,11 @@ public class PlanPersistenceCoordinator {
   private final ScheduleInstanceRepository scheduleInstanceRepository;
 
   /**
-   * Saves or updates schedule instance (idempotent).
+   * 保存或更新调度实例（幂等）。
    *
-   * @param request schedule request
-   * @return persisted schedule instance
-   * @throws PlanPersistenceException if storage fails
+   * @param request 调度请求
+   * @return 已持久化的调度实例
+   * @throws PlanPersistenceException 存储失败时
    */
   public ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionCommand request) {
     ScheduleInstanceAggregate schedule =
@@ -62,35 +65,32 @@ public class PlanPersistenceCoordinator {
       return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.SCHEDULE_INSTANCE,
-          "Failed to persist schedule instance",
-          ex);
+          PlanPersistenceException.Stage.SCHEDULE_INSTANCE, "持久化调度实例失败", ex);
     }
   }
 
   /**
-   * Persists plan aggregate and wraps underlying exceptions.
+   * 持久化计划聚合根并包装底层异常。
    *
-   * @param draftPlan draft plan aggregate
-   * @return persisted plan aggregate
-   * @throws PlanPersistenceException if persistence fails
+   * @param draftPlan 草稿计划聚合根
+   * @return 已持久化的计划聚合根
+   * @throws PlanPersistenceException 持久化失败时
    */
   public PlanAggregate savePlan(PlanAggregate draftPlan) {
     try {
       return planRepository.save(draftPlan);
     } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.PLAN, "Failed to persist plan aggregate", ex);
+      throw new PlanPersistenceException(PlanPersistenceException.Stage.PLAN, "持久化计划聚合根失败", ex);
     }
   }
 
   /**
-   * Batch persists plan slice aggregates.
+   * 批量持久化计划切片聚合根。
    *
-   * @param plan plan aggregate (already persisted)
-   * @param slices slice collection
-   * @return persisted slice collection
-   * @throws PlanPersistenceException if persistence fails
+   * @param plan 计划聚合根（已持久化）
+   * @param slices 切片集合
+   * @return 已持久化的切片集合
+   * @throws PlanPersistenceException 持久化失败时
    */
   public List<PlanSliceAggregate> persistSlices(
       PlanAggregate plan, List<PlanSliceAggregate> slices) {
@@ -102,18 +102,18 @@ public class PlanPersistenceCoordinator {
       return planSliceRepository.saveAll(slices);
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.PLAN_SLICE, "Failed to persist plan slices", ex);
+          PlanPersistenceException.Stage.PLAN_SLICE, "持久化计划切片失败", ex);
     }
   }
 
   /**
-   * Batch persists task aggregates and binds plan and slice IDs.
+   * 批量持久化任务聚合根并绑定计划和切片 ID。
    *
-   * @param plan plan aggregate
-   * @param persistedSlices persisted slices
-   * @param tasks task collection
-   * @return persisted task collection
-   * @throws PlanPersistenceException if persistence fails
+   * @param plan 计划聚合根
+   * @param persistedSlices 已持久化的切片
+   * @param tasks 任务集合
+   * @return 已持久化的任务集合
+   * @throws PlanPersistenceException 持久化失败时
    */
   public List<TaskAggregate> persistTasks(
       PlanAggregate plan, List<PlanSliceAggregate> persistedSlices, List<TaskAggregate> tasks) {
@@ -135,23 +135,22 @@ public class PlanPersistenceCoordinator {
     try {
       return taskRepository.saveAll(tasks);
     } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.TASK, "Failed to persist tasks", ex);
+      throw new PlanPersistenceException(PlanPersistenceException.Stage.TASK, "持久化任务失败", ex);
     }
   }
 
   /**
-   * Persists task retry state.
+   * 持久化任务重试状态。
    *
-   * @param task task aggregate
-   * @throws PlanPersistenceException if persistence fails
+   * @param task 任务聚合根
+   * @throws PlanPersistenceException 持久化失败时
    */
   public void saveTask(TaskAggregate task) {
     try {
       taskRepository.save(task);
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.TASK_RETRY, "Failed to persist task retry state", ex);
+          PlanPersistenceException.Stage.TASK_RETRY, "持久化任务重试状态失败", ex);
     }
   }
 }

@@ -512,7 +512,7 @@ mvn clean compile test
 
 ### 2. 提交前运行测试
 
-养成在提交代码变更前运行 `mvn test` 的习惯,以便及早发现违规。
+养成在提交代码变更前运行 `./mvnw test` 的习惯,以便及早发现违规。
 
 ### 3. 随着架构演进更新规则
 
@@ -575,7 +575,7 @@ mvn test -Dtest=ArchitectureTest
 
 **开发工作流**:
 1. 遵循架构原则编写代码
-2. 提交前本地运行 `mvn test`
+2. 提交前本地运行 `./mvnw test`
 3. 立即修复任何 ArchUnit 违规
 4. 当架构演进时更新规则
 

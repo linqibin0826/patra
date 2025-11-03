@@ -1,15 +1,15 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Validation result for a dictionary reference.
+ * 字典引用的验证结果。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>typeCode - dictionary type identifier
- *   <li>itemCode - dictionary item identifier
- *   <li>valid - whether the reference is valid
- *   <li>errorMessage - validation error message when {@code valid} is false
+ *   <li>typeCode - 字典类型标识符
+ *   <li>itemCode - 字典项标识符
+ *   <li>valid - 引用是否有效
+ *   <li>errorMessage - 当 {@code valid} 为 false 时的验证错误消息
  * </ol>
  *
  * @author linqibin

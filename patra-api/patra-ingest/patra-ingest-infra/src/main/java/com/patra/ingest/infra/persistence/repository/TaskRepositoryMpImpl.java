@@ -16,40 +16,46 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-Plus implementation of TaskRepository.
+ * 任务（Task）仓储实现,基于 MyBatis-Plus。
  *
- * <p>Responsibilities:
- *
- * <ul>
- *   <li>Persisting and retrieving TaskAggregate entities.
- *   <li>Querying tasks by plan ID for slice replay and statistics.
- *   <li>Counting queued tasks for queue backpressure detection by provenance source.
- *   <li>Supporting lease operations including CAS acquisition, renewal, and marking as RUNNING.
- * </ul>
- *
- * <p>Logging strategy:
+ * <p>职责:
  *
  * <ul>
- *   <li>DEBUG: insert/update operations including id and planId.
- *   <li>INFO: lease acquisition and renewal key events.
- *   <li>No logging for high-frequency query operations to reduce I/O.
+ *   <li>持久化和检索任务聚合根实体
+ *   <li>按计划 ID 查询任务,支持切片重放和统计
+ *   <li>统计队列中的待处理任务,用于检测数据源队列积压
+ *   <li>支持租约操作,包括 CAS 获取、续约和标记为 RUNNING 状态
  * </ul>
+ *
+ * <p>日志策略:
+ *
+ * <ul>
+ *   <li>DEBUG: insert/update 操作,包括 id 和 planId
+ *   <li>INFO: 租约获取和续约等关键事件
+ *   <li>高频查询操作不记录日志,减少 I/O
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Repository
 @RequiredArgsConstructor
 @Slf4j
 public class TaskRepositoryMpImpl implements TaskRepository {
 
-  /** Task mapper. */
+  /** Task Mapper */
   private final TaskMapper mapper;
 
-  /** Task converter. */
+  /** Task 转换器 */
   private final TaskConverter converter;
 
   /**
-   * Saves a task by inserting or updating based on ID presence.
+   * 保存任务。
    *
-   * <p>Auto-generated ID and version fields are written back; operation type logged at DEBUG level.
+   * <p>根据 ID 是否存在决定插入或更新。自动生成的 ID 和 version 字段会被回写;操作类型在 DEBUG 级别记录。
+   *
+   * @param task 任务聚合根
+   * @return 持久化后的任务聚合根
    */
   @Override
   public TaskAggregate save(TaskAggregate task) {

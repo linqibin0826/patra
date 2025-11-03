@@ -1,21 +1,21 @@
 package com.patra.ingest.app.outbox.constants;
 
 /**
- * Outbox channel enum.
+ * Outbox Channel 枚举。
  *
- * <p>Defines messaging channels used in the Outbox framework for:
+ * <p>定义 Outbox 框架中使用的消息通道,用于:
  *
  * <ul>
- *   <li>Message routing and topic mapping
- *   <li>Deduplication key scoping (channel + dedupKey uniqueness)
- *   <li>Channel-based filtering and monitoring
+ *   <li>消息路由和主题映射
+ *   <li>去重键作用域(channel + dedupKey 唯一性)
+ *   <li>基于通道的过滤和监控
  * </ul>
  *
- * <h3>Naming Convention</h3>
+ * <h3>命名约定</h3>
  *
- * <p>Channels follow hierarchical underscore structure: {@code MODULE_SEMANTIC_STATE}
+ * <p>通道遵循层次化下划线结构: {@code MODULE_SEMANTIC_STATE}
  *
- * <h3>Usage Example</h3>
+ * <h3>使用示例</h3>
  *
  * <pre>{@code
  * @Override
@@ -24,12 +24,12 @@ package com.patra.ingest.app.outbox.constants;
  * }
  * }</pre>
  *
- * <h3>Design Considerations</h3>
+ * <h3>设计考虑</h3>
  *
  * <ul>
- *   <li>Channel names map to MQ topics/exchanges for routing
- *   <li>Channels provide deduplication scope (unique constraint: channel + dedupKey)
- *   <li>Channel-based metrics enable fine-grained monitoring
+ *   <li>通道名称映射到 MQ 主题/交换器以进行路由
+ *   <li>通道提供去重作用域(唯一约束: channel + dedupKey)
+ *   <li>基于通道的指标支持细粒度监控
  * </ul>
  *
  * @author linqibin
@@ -37,19 +37,14 @@ package com.patra.ingest.app.outbox.constants;
  */
 public enum OutboxChannels {
 
-  /** Ingest task ready channel. */
-  INGEST_TASK_READY(
-      "INGEST_TASK_READY", "Ingest task ready - scheduler created task and queued for execution"),
+  /** 采集任务就绪通道。 */
+  INGEST_TASK_READY("INGEST_TASK_READY", "采集任务就绪 - 调度器已创建任务并排队等待执行"),
 
-  /** Literature data ready channel. */
-  LITERATURE_DATA_READY(
-      "LITERATURE_DATA_READY",
-      "Literature data ready - ingestion batches committed to object storage"),
+  /** 文献数据就绪通道。 */
+  LITERATURE_DATA_READY("LITERATURE_DATA_READY", "文献数据就绪 - 采集批次已提交到对象存储"),
 
-  /** Storage metadata internal retry channel. */
-  STORAGE_METADATA_INTERNAL(
-      "storage.metadata.internal",
-      "Storage metadata internal - technical retry channel for failed metadata operations");
+  /** 存储元数据内部重试通道。 */
+  STORAGE_METADATA_INTERNAL("storage.metadata.internal", "存储元数据内部 - 失败元数据操作的技术重试通道");
 
   private final String code;
   private final String description;
@@ -60,31 +55,31 @@ public enum OutboxChannels {
   }
 
   /**
-   * Returns the channel code.
+   * 返回通道代码。
    *
-   * <p>This value is stored in {@code ing_outbox_message.channel} field.
+   * <p>此值存储在 {@code ing_outbox_message.channel} 字段中。
    *
-   * @return Channel code (e.g., "INGEST_TASK_READY")
+   * @return 通道代码(例如 "INGEST_TASK_READY")
    */
   public String getCode() {
     return code;
   }
 
   /**
-   * Returns the human-readable description.
+   * 返回人类可读的描述。
    *
-   * @return Description of this channel
+   * @return 此通道的描述
    */
   public String getDescription() {
     return description;
   }
 
   /**
-   * Finds enum by code.
+   * 根据代码查找枚举。
    *
-   * @param code Channel code
-   * @return Matching enum value
-   * @throws IllegalArgumentException if code is not found
+   * @param code 通道代码
+   * @return 匹配的枚举值
+   * @throws IllegalArgumentException 如果未找到代码
    */
   public static OutboxChannels fromCode(String code) {
     for (OutboxChannels channel : values()) {
@@ -92,6 +87,6 @@ public enum OutboxChannels {
         return channel;
       }
     }
-    throw new IllegalArgumentException("Unknown channel code: " + code);
+    throw new IllegalArgumentException("未知的通道代码: " + code);
   }
 }

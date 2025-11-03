@@ -6,63 +6,75 @@ import java.util.Map;
 import org.springframework.util.StringUtils;
 
 /**
- * PubMed EFetch API request parameters following the official E-utilities specification.
+ * PubMed EFetch API 请求参数,遵循 E-utilities 官方规范。
  *
- * <p>Field descriptions:
+ * <p>EFetch 用于根据 PubMed ID 列表检索文章详细信息。支持两种使用模式:
  *
- * @param db database identifier (always "pubmed" for this starter)
- * @param id comma separated list of article identifiers
- * @param retmode response format (xml or text)
- * @param rettype response type (abstract, medline, full, uilist)
- * @param retstart offset used when paging through history server results
- * @param retmax maximum records returned in a single call
- * @param webenv WebEnv token acquired from a previous ESearch
- * @param queryKey query key associated with the WebEnv session
- * @param apiKey API key that unlocks higher request quotas
- * @param tool tool identifier registered at NCBI
- * @param email maintainer email for operational contact
- *     <p>Use the XML defaults for retrieving detailed article structures and {@link
- *     #forUiList(String, String)} for lightweight identifier lists.
+ * <ul>
+ *   <li><b>直接ID模式</b>: 提供逗号分隔的 PMID 列表 (最多200个)
+ *   <li><b>历史服务器模式</b>: 使用 ESearch/EPost 返回的 WebEnv + query_key
+ * </ul>
+ *
+ * <p>字段说明:
+ *
+ * @param db 数据库标识符 (本 starter 固定为 "pubmed")
+ * @param id 逗号分隔的文章标识符列表 (直接ID模式必填,最多200个)
+ * @param retmode 响应格式 (xml 或 text,默认 xml)
+ * @param rettype 响应类型 (abstract/medline/full/uilist,默认 abstract)
+ * @param retstart 起始偏移量 (仅用于历史服务器分页)
+ * @param retmax 单次返回的最大记录数 (默认20,最大10000)
+ * @param webenv WebEnv 令牌 (从 ESearch/EPost 获取)
+ * @param queryKey 查询键 (与 WebEnv 配合使用)
+ * @param apiKey API 密钥 (可提升请求配额: 3次/秒 → 10次/秒)
+ * @param tool 工具标识符 (向 NCBI 注册的应用名称,如 "papertrace")
+ * @param email 维护者邮箱 (用于 NCBI 运营联系)
+ *     <p><b>使用建议:</b>
+ *     <ul>
+ *       <li>使用 XML 默认格式获取详细文章结构
+ *       <li>使用 {@link #forUiList(String, String)} 获取轻量级标识符列表
+ *       <li>超过200个ID时,应先使用 EPost 上传到历史服务器
+ *     </ul>
+ *
  * @author linqibin
  * @since 0.1.0
  */
 public record EFetchRequest(
-    // Required parameters
-    String db, // Database name (e.g., "pubmed")
-    String id, // Article ID list (comma-separated, max 200)
+    // 必填参数
+    String db, // 数据库名称 (例如: "pubmed")
+    String id, // 文章ID列表 (逗号分隔,最多200个)
 
-    // Optional parameters - Basic control
-    String retmode, // Return mode (xml/text, default xml)
-    String rettype, // Return type (abstract/medline/full/uilist, default abstract)
-    Integer retstart, // Start position (only for history queries)
-    Integer retmax, // Return count (default 20, max 10000)
+    // 可选参数 - 基本控制
+    String retmode, // 返回模式 (xml/text,默认 xml)
+    String rettype, // 返回类型 (abstract/medline/full/uilist,默认 abstract)
+    Integer retstart, // 起始位置 (仅用于历史查询)
+    Integer retmax, // 返回数量 (默认20,最大10000)
 
-    // Optional parameters - History and session
-    String webenv, // Web environment string (WebEnv)
-    String queryKey, // Query key
+    // 可选参数 - 历史服务器和会话
+    String webenv, // Web 环境字符串 (WebEnv)
+    String queryKey, // 查询键
 
-    // Optional parameters - Authentication and identification (IMPORTANT)
-    String apiKey, // API Key (increase rate limit: 3 req/sec → 10 req/sec)
-    String tool, // Tool name (identify application, e.g., "papertrace")
-    String email // Contact email (NCBI can contact developer)
+    // 可选参数 - 认证和标识 (重要)
+    String apiKey, // API 密钥 (提升速率限制: 3次/秒 → 10次/秒)
+    String tool, // 工具名称 (标识应用程序,例如: "papertrace")
+    String email // 联系邮箱 (NCBI 可联系开发者)
     ) implements ApiRequest {
 
   /**
-   * Create a request configured for abstract retrieval via XML.
+   * 创建用于通过 XML 检索摘要的请求。
    *
-   * @param db database identifier, typically "pubmed"
-   * @param id comma separated list of PubMed identifiers (max 200 per call)
+   * @param db 数据库标识符,通常为 "pubmed"
+   * @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
    */
   public EFetchRequest(String db, String id) {
     this(db, id, "xml", "abstract", null, null, null, null, null, null, null);
   }
 
   /**
-   * Create a request tuned for retrieving identifier lists in plain text.
+   * 创建用于以纯文本格式检索标识符列表的请求。
    *
-   * @param db database identifier, typically "pubmed"
-   * @param id comma separated list of PubMed identifiers (max 200 per call)
-   * @return request configured to return the uilist plain-text payload
+   * @param db 数据库标识符,通常为 "pubmed"
+   * @param id 逗号分隔的 PubMed 标识符列表 (每次最多200个)
+   * @return 配置为返回 uilist 纯文本负载的请求
    */
   public static EFetchRequest forUiList(String db, String id) {
     return new EFetchRequest(db, id, "text", "uilist", null, null, null, null, null, null, null);
@@ -99,9 +111,9 @@ public record EFetchRequest(
   }
 
   /**
-   * Compose the outbound query parameter map understood by the EFetch endpoint.
+   * 组装 EFetch 端点可识别的出站查询参数映射。
    *
-   * @return parameter map ready for gateway submission
+   * @return 准备好提交给网关的参数映射
    */
   @Override
   public Map<String, String> toQueryParams() {

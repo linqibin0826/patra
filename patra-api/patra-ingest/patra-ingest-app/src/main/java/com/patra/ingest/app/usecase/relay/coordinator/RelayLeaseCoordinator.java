@@ -8,30 +8,30 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Relay lease coordinator - manages distributed lease acquisition for outbox messages.
+ * 中继租约协调器 - 管理 Outbox 消息的分布式租约获取
  *
- * <h3>Responsibilities</h3>
+ * <h3>职责</h3>
  *
  * <ul>
- *   <li>Attempt lease acquisition for outbox messages using optimistic locking
- *   <li>Prevent concurrent relay processing across multiple instances
- *   <li>Track lease acquisition success/failure for monitoring
+ *   <li>使用乐观锁尝试为 Outbox 消息获取租约
+ *   <li>防止多个实例之间的并发中继处理
+ *   <li>跟踪租约获取成功/失败以进行监控
  * </ul>
  *
- * <h3>Concurrency Control</h3>
+ * <h3>并发控制</h3>
  *
- * <p>Uses database-level optimistic locking via version field:
+ * <p>使用数据库级乐观锁通过版本字段:
  *
  * <ul>
- *   <li>UPDATE succeeds (affectedRows=1) → Lease acquired successfully
- *   <li>UPDATE fails (affectedRows=0) → Another instance acquired the lease
+ *   <li>UPDATE 成功 (affectedRows=1) → 租约成功获取
+ *   <li>UPDATE 失败 (affectedRows=0) → 另一个实例获取了租约
  * </ul>
  *
- * <h3>Logging Strategy</h3>
+ * <h3>日志策略</h3>
  *
  * <ul>
- *   <li>DEBUG: Lease acquisition details (messageId, leaseOwner, result)
- *   <li>No INFO/WARN logging (high-frequency operation, avoid log noise)
+ *   <li>DEBUG: 租约获取详情 (messageId, leaseOwner, 结果)
+ *   <li>无 INFO/WARN 日志 (高频操作,避免日志噪音)
  * </ul>
  *
  * @author Papertrace Team
@@ -45,22 +45,22 @@ public class RelayLeaseCoordinator {
   private final OutboxRelayStore relayStore;
 
   /**
-   * Attempts to acquire lease for a single outbox message.
+   * 尝试为单条 Outbox 消息获取租约
    *
-   * <p>Lease acquisition ensures only one instance can relay this message within the lease window.
+   * <p>租约获取确保只有一个实例可以在租约窗口内中继此消息
    *
-   * <p>Implementation: Updates database row with:
+   * <p>实现: 使用以下内容更新数据库行:
    *
    * <ul>
    *   <li>status_code: 'PENDING' → 'PUBLISHING'
-   *   <li>pub_lease_owner: set to current instance identifier
-   *   <li>pub_leased_until: set to lease expiration time
-   *   <li>version: incremented via optimistic lock
+   *   <li>pub_lease_owner: 设置为当前实例标识符
+   *   <li>pub_leased_until: 设置为租约过期时间
+   *   <li>version: 通过乐观锁递增
    * </ul>
    *
-   * @param message outbox message to acquire lease for
-   * @param plan relay plan containing leaseOwner and leaseExpireAt
-   * @return true if lease acquired successfully, false if another instance owns the lease
+   * @param message 要获取租约的 Outbox 消息
+   * @param plan 包含 leaseOwner 和 leaseExpireAt 的中继计划
+   * @return 如果租约成功获取返回 true,如果另一个实例拥有租约返回 false
    */
   public boolean tryAcquire(OutboxMessage message, RelayPlan plan) {
     boolean acquired =
@@ -70,14 +70,14 @@ public class RelayLeaseCoordinator {
     if (log.isDebugEnabled()) {
       if (acquired) {
         log.debug(
-            "Lease acquired: messageId={}, channel={}, leaseOwner={}, leaseExpireAt={}",
+            "租约已获取: messageId={}, channel={}, leaseOwner={}, leaseExpireAt={}",
             message.getId(),
             message.getChannel(),
             plan.leaseOwner(),
             plan.leaseExpireAt());
       } else {
         log.debug(
-            "Lease missed: messageId={}, channel={}, existingLeaseOwner={}, requestedBy={}",
+            "租约丢失: messageId={}, channel={}, existingLeaseOwner={}, requestedBy={}",
             message.getId(),
             message.getChannel(),
             message.getLeaseOwner(),
@@ -89,20 +89,20 @@ public class RelayLeaseCoordinator {
   }
 
   /**
-   * Computes lease expiration timestamp based on plan's triggered time and lease duration.
+   * 根据计划的触发时间和租约持续时间计算租约过期时间戳
    *
-   * <p>Lease duration is typically configured to 30-60 seconds, sufficient for:
+   * <p>租约持续时间通常配置为 30-60 秒,足以满足:
    *
    * <ul>
-   *   <li>Publishing to downstream broker (usually < 100ms)
-   *   <li>State update in database (< 10ms)
-   *   <li>Retry buffer for transient network issues
+   *   <li>发布到下游代理 (通常 < 100ms)
+   *   <li>数据库中的状态更新 (< 10ms)
+   *   <li>暂时性网络问题的重试缓冲
    * </ul>
    *
-   * <p>Note: This is a stateless computation delegated from RelayPlan construction.
+   * <p>注意: 这是从 RelayPlan 构造委托的无状态计算
    *
-   * @param plan relay plan with triggeredAt and leaseDuration
-   * @return lease expiration instant
+   * @param plan 具有 triggeredAt 和 leaseDuration 的中继计划
+   * @return 租约过期时刻
    */
   public static java.time.Instant computeLeaseExpireAt(RelayPlan plan) {
     return plan.triggeredAt().plus(plan.leaseDuration());

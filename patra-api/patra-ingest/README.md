@@ -34,7 +34,7 @@
 ┌─────────────────▼───────────────────────────────────────┐
 │  patra-ingest-adapter (适配器层 - 驱动适配器)            │
 │  ├─ scheduler/  - XXL-Job 定时任务(触发计划摄入)         │
-│  └─ stream/     - RocketMQ 消费者(任务执行)             │
+│  └─ rocketmq/   - RocketMQ 消费者(任务执行)             │
 └─────────────────┬───────────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────────┐
@@ -64,7 +64,7 @@
 | 模块 | 职责 | 核心类 |
 |------|------|--------|
 | **patra-ingest-boot** | Spring Boot 启动入口 | `PatraIngestApplication` |
-| **patra-ingest-adapter** | 驱动适配器(定时任务、MQ 消费者) | `PubmedHarvestJob`, `IngestStreamConsumers` |
+| **patra-ingest-adapter** | 驱动适配器(定时任务、MQ 消费者) | `PubmedHarvestJob`, `TaskReadyMessageListener` |
 | **patra-ingest-app** | 应用层编排器(事务边界) | `PlanIngestionOrchestrator`, `TaskExecutionUseCase` |
 | **patra-ingest-domain** | 领域模型(纯 Java,无框架依赖) | `PlanAggregate`, `TaskAggregate`, `WindowSpec` |
 | **patra-ingest-infra** | 基础设施实现(数据库、RPC、MQ) | `PlanRepositoryMpImpl`, `PatraRegistryAdapter` |
@@ -234,7 +234,7 @@ docker-compose -f docker/docker-compose.yml up -d
 
 ```bash
 cd patra-ingest/patra-ingest-boot
-mvn spring-boot:run
+../../mvnw spring-boot:run
 ```
 
 **默认端口**: 8082

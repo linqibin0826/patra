@@ -26,6 +26,7 @@
         <hutool.version>5.8.25</hutool.version>
         <xxl-job.version>3.2.0</xxl-job.version>
         <rocketmq.version>5.3.1</rocketmq.version>
+        <rocketmq-spring-boot.version>2.3.1</rocketmq-spring-boot.version>
         <guava.version>31.1-jre</guava.version>
         <okio.version>3.6.0</okio.version>
         <resilience4j.version>2.2.0</resilience4j.version>
@@ -45,6 +46,8 @@
         <!-- Testing -->
         <junit.version>5.10.2</junit.version>
         <testcontainers.version>1.20.4</testcontainers.version>
+        <jmh.version>1.37</jmh.version>
+        <awaitility.version>4.2.2</awaitility.version>
     </properties>
 
     <dependencies>
@@ -147,6 +150,12 @@
                 <groupId>org.apache.rocketmq</groupId>
                 <artifactId>rocketmq-client</artifactId>
                 <version>${rocketmq.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-spring-boot-starter</artifactId>
+                <version>${rocketmq-spring-boot.version}</version>
             </dependency>
 
             <dependency>

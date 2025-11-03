@@ -10,15 +10,14 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Plan orchestration command (Adapter → Application).
+ * 计划编排命令（Adapter → Application）。
  *
- * <p>Built by a scheduler job or external caller; after parsing/defaulting in the Adapter, it is
- * passed to the application layer to:
+ * <p>由调度作业或外部调用方构建；经 Adapter 解析/默认值处理后，传递到应用层以：
  *
  * <ol>
- *   <li>Resolve the plan window (windowFrom/windowTo may be derived)
- *   <li>Build {@code PlanTriggerNorm} (mode, step, priority, etc.)
- *   <li>Drive plan assembly (expression, slicing strategy, task generation)
+ *   <li>解析计划窗口（windowFrom/windowTo 可能派生）
+ *   <li>构建 {@code PlanTriggerNorm}（模式、步长、优先级等）
+ *   <li>驱动计划组装（表达式、切片策略、任务生成）
  * </ol>
  *
  * <h4>Field semantics & constraints</h4>

@@ -27,35 +27,32 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Prepare phase implementation.
+ * 准备阶段实现。
  *
- * <p>Responsibility: idempotency check → lease acquisition → session initialization → context
- * loading.
+ * <p>职责:幂等性检查 → 租约获取 → 会话初始化 → 上下文加载。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>Idempotency: call IdempotencyChecker.isAlreadySucceeded(); throw to skip if already done.
- *   <li>Lease: call LeaseManagementService.tryAcquireLease(); throw when acquisition fails.
- *   <li>Session: call ExecutionSessionManager.createSession() to create TaskRun and start
- *       heartbeat.
- *   <li>Context: call ExecutionContextLoader.loadContext() to restore config and compile
- *       expressions.
+ *   <li>幂等性:调用 IdempotencyChecker.isAlreadySucceeded();如果已完成则抛出异常跳过
+ *   <li>租约:调用 LeaseManagementService.tryAcquireLease();获取失败时抛出异常
+ *   <li>会话:调用 ExecutionSessionManager.createSession() 创建 TaskRun 并启动心跳
+ *   <li>上下文:调用 ExecutionContextLoader.loadContext() 恢复配置并编译表达式
  * </ul>
  *
- * <p>Error handling:
+ * <p>错误处理:
  *
  * <ul>
- *   <li>TaskAlreadySucceededException for idempotent skip.
- *   <li>LeaseAcquisitionFailedException when lease acquisition fails.
- *   <li>Propagate IllegalStateException for context load failures.
+ *   <li>TaskAlreadySucceededException 用于幂等跳过
+ *   <li>LeaseAcquisitionFailedException 当租约获取失败时
+ *   <li>传播 IllegalStateException 用于上下文加载失败
  * </ul>
  *
- * <p>Logging:
+ * <p>日志记录:
  *
  * <ul>
- *   <li>INFO: key steps (idempotency, lease, session, context).
- *   <li>WARN: idempotent skip, lease failure.
+ *   <li>INFO: 关键步骤(幂等性、租约、会话、上下文)
+ *   <li>WARN: 幂等跳过、租约失败
  * </ul>
  *
  * @author linqibin
@@ -79,13 +76,13 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
   private int leaseDurationSeconds;
 
   /**
-   * Performs preparation (idempotency check, lease acquire, session create, context load).
+   * 执行准备(幂等性检查、租约获取、会话创建、上下文加载)。
    *
-   * <p>Optimizations:
+   * <p>优化:
    *
    * <ul>
-   *   <li>Load Task once to avoid duplicate reads for createSession/loadContext.
-   *   <li>Cleanup on exception to ensure heartbeat stops and lease is released.
+   *   <li>一次性加载 Task 以避免 createSession/loadContext 的重复读取
+   *   <li>异常时清理以确保心跳停止和租约释放
    * </ul>
    */
   @Override
@@ -93,74 +90,68 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
     long taskId = command.taskId();
     String idempotentKey = command.idempotentKey();
 
-    log.info("prepare task execution start taskId={} idemKey={}", taskId, idempotentKey);
+    log.info("开始准备任务执行 taskId={} idemKey={}", taskId, idempotentKey);
 
-    // 1) Idempotency check
-    log.debug("checking idempotency taskId={} idemKey={}", taskId, idempotentKey);
+    // 1) 幂等性检查
+    log.debug("检查幂等性 taskId={} idemKey={}", taskId, idempotentKey);
     if (idempotencyChecker.isAlreadySucceeded(taskId, idempotentKey)) {
       throw new TaskAlreadySucceededException(
-          "Task already succeeded taskId=" + taskId + " idemKey=" + idempotentKey);
+          "任务已成功 taskId=" + taskId + " idemKey=" + idempotentKey);
     }
 
-    // 2) Generate lease owner id
+    // 2) 生成租约持有者 ID
     String leaseOwner = generateLeaseOwner();
 
-    // 3) Try acquire lease
-    log.debug(
-        "attempting to acquire lease taskId={} owner={} duration={}s",
-        taskId,
-        leaseOwner,
-        leaseDurationSeconds);
+    // 3) 尝试获取租约
+    log.debug("尝试获取租约 taskId={} owner={} duration={}s", taskId, leaseOwner, leaseDurationSeconds);
     Duration leaseDuration = Duration.ofSeconds(leaseDurationSeconds);
     boolean acquired = leaseManagementService.tryAcquireLease(taskId, leaseOwner, leaseDuration);
     if (!acquired) {
-      throw new LeaseAcquisitionFailedException(
-          "Lease acquisition failed taskId=" + taskId + " owner=" + leaseOwner);
+      throw new LeaseAcquisitionFailedException("租约获取失败 taskId=" + taskId + " owner=" + leaseOwner);
     }
 
-    log.info("lease acquired taskId={} owner={}", taskId, leaseOwner);
+    log.info("租约已获取 taskId={} owner={}", taskId, leaseOwner);
 
-    // 4) Load Task (single read to avoid repetition)
+    // 4) 加载 Task(单次读取以避免重复)
     TaskAggregate task =
         taskRepository
             .findById(taskId)
-            .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
+            .orElseThrow(() -> new IllegalArgumentException("未找到任务 taskId=" + taskId));
 
-    // Mark Slice as EXECUTING (if still PENDING)
+    // 标记 Slice 为 EXECUTING(如果仍为 PENDING)
     PlanSliceAggregate slice =
         planSliceRepository
             .findById(task.getSliceId())
-            .orElseThrow(
-                () -> new IllegalStateException("Slice not found: sliceId=" + task.getSliceId()));
+            .orElseThrow(() -> new IllegalStateException("未找到切片: sliceId=" + task.getSliceId()));
 
     if (slice.getStatus() == SliceStatus.PENDING) {
       slice.markAssigned();
       planSliceRepository.save(slice);
-      log.info("Slice marked as ASSIGNED sliceId={}", slice.getId());
+      log.info("切片已标记为 ASSIGNED sliceId={}", slice.getId());
     }
 
     ExecutionSession session = null;
     try {
-      // 5) Initialize session (create TaskRun, start heartbeat)
+      // 5) 初始化会话(创建 TaskRun,启动心跳)
       String correlationId = command.getCorrelationId();
       session =
           sessionManager.createSession(
-              task, // Use pre-queried task
+              task, // 使用预查询的 task
               leaseOwner,
               correlationId);
 
       Long runId = session.runId();
-      log.info("session created taskId={} runId={} owner={}", taskId, runId, leaseOwner);
+      log.info("会话已创建 taskId={} runId={} owner={}", taskId, runId, leaseOwner);
 
-      // 6) Load execution context (restore config, compile expressions)
-      log.debug("loading execution context taskId={} runId={}", taskId, runId);
+      // 6) 加载执行上下文(恢复配置,编译表达式)
+      log.debug("加载执行上下文 taskId={} runId={}", taskId, runId);
       ExecutionContext context = contextLoader.loadContext(task, runId);
 
-      // 7) Mark task/run as RUNNING
+      // 7) 标记 task/run 为 RUNNING
       TaskRun taskRun =
           taskRunRepository
               .findById(runId)
-              .orElseThrow(() -> new IllegalStateException("TaskRun not found runId=" + runId));
+              .orElseThrow(() -> new IllegalStateException("未找到 TaskRun runId=" + runId));
       Instant now = clock.instant();
       taskRun.bindRunContext(correlationId);
       taskRun.start(now);
@@ -168,23 +159,21 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       task.markRunning(now, correlationId);
       taskRepository.save(task);
 
-      log.info("prepare task execution completed taskId={} runId={}", taskId, runId);
+      log.info("准备任务执行已完成 taskId={} runId={}", taskId, runId);
 
       return new PrepareResult(session, context);
 
     } catch (Exception e) {
-      // Resource cleanup on failure
+      // 失败时清理资源
       if (session != null) {
-        log.warn(
-            "prepare failed, cleaning up resources taskId={} runId={}", taskId, session.runId(), e);
+        log.warn("准备失败,清理资源 taskId={} runId={}", taskId, session.runId(), e);
         try {
-          // Stop heartbeat
+          // 停止心跳
           session.heartbeatHandle().stop();
-          // Release lease
+          // 释放租约
           leaseManagementService.releaseLease(taskId);
         } catch (Exception cleanupEx) {
-          log.error(
-              "resource cleanup failed taskId={} runId={}", taskId, session.runId(), cleanupEx);
+          log.error("资源清理失败 taskId={} runId={}", taskId, session.runId(), cleanupEx);
         }
       }
       throw e;
@@ -192,12 +181,11 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
   }
 
   /**
-   * Generate a lease owner identifier.
+   * 生成租约持有者标识符。
    *
-   * <p>Format: hostname:pid:execId
+   * <p>格式: hostname:pid:execId
    *
-   * <p>Combines machine id (hostname) + process id (PID) + execution id (UUID) for uniqueness and
-   * traceability.
+   * <p>结合机器 ID(hostname) + 进程 ID(PID) + 执行 ID(UUID) 以确保唯一性和可追溯性。
    */
   private String generateLeaseOwner() {
     try {
@@ -206,8 +194,8 @@ public class PrepareTaskExecutionUseCaseImpl implements PrepareTaskExecutionUseC
       String execId = UUID.randomUUID().toString().substring(0, 8);
       return String.format("%s:%s:%s", hostname, pid, execId);
     } catch (UnknownHostException e) {
-      // Fallback: use "unknown" as hostname if unable to resolve
-      log.warn("unable to resolve hostname, using fallback", e);
+      // 回退:如果无法解析则使用 "unknown" 作为主机名
+      log.warn("无法解析主机名,使用回退方案", e);
       String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
       String execId = UUID.randomUUID().toString().substring(0, 8);
       return String.format("unknown:%s:%s", pid, execId);

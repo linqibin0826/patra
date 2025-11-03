@@ -5,21 +5,22 @@ import com.patra.ingest.domain.model.vo.batch.BatchPlan;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
- * Batch planner interface.
+ * 批处理规划器接口
  *
- * <p>Responsibility: plan batches from the execution context; customizable per provenance.
+ * <p>职责: 从执行上下文中规划批处理;可根据 Provenance 定制策略。
  *
- * <p>Design notes:
+ * <h3>设计考量</h3>
  *
  * <ul>
- *   <li>Strategy: different provenanceCodes may use different planning strategies.
- *   <li>Batch limit: enforce max batch count; throw or mark exceedsLimit accordingly.
- *   <li>Cursor support: support cursor-based pagination (e.g., token-based).
- *   <li>Window-aware: adjust query range based on WindowSpec strategy
- *       (TIME/DATE/ID_RANGE/CURSOR_LANDMARK/etc.).
+ *   <li><b>策略模式</b>: 不同 provenanceCode 可使用不同的规划策略
+ *   <li><b>批次限制</b>: 强制执行最大批次数量;超限时抛异常或标记 exceedsLimit
+ *   <li><b>游标支持</b>: 支持基于游标的分页(如 token-based)
+ *   <li><b>窗口感知</b>: 根据 WindowSpec 策略调整查询范围 (TIME/DATE/ID_RANGE/CURSOR_LANDMARK 等)
  * </ul>
  *
- * <p>Implementations should be registered in BatchPlannerRegistry and routed by provenanceCode.
+ * <h3>注册机制</h3>
+ *
+ * <p>实现类应注册到 {@link BatchPlannerRegistry},通过 provenanceCode 路由。
  *
  * @author linqibin
  * @since 0.1.0
@@ -27,17 +28,17 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 public interface BatchPlanner {
 
   /**
-   * Returns the supported provenance code.
+   * 返回支持的 Provenance 代码
    *
-   * @return provenance code
+   * @return Provenance 代码
    */
   ProvenanceCode getProvenanceCode();
 
   /**
-   * Plans batches.
+   * 规划批处理
    *
-   * @param context execution context (query/params/window/configSnapshot)
-   * @return batch plan
+   * @param context 执行上下文(查询/参数/窗口/配置快照)
+   * @return 批处理计划
    */
   BatchPlan plan(ExecutionContext context);
 }

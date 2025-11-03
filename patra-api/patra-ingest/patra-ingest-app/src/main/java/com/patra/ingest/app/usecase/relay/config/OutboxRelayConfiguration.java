@@ -5,16 +5,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Bean registration for the Outbox Relay use case.
+ * Outbox 中继用例的 Bean 注册
  *
- * <p>Responsibilities: expose the retry policy backed by configuration.
+ * <p>职责: 暴露基于配置的重试策略
  *
- * <p>Note: Clock bean is provided by patra-spring-boot-starter-core and auto-injected where needed.
+ * <p>注意: Clock bean 由 patra-spring-boot-starter-core 提供,在需要时自动注入
  */
 @Configuration
 public class OutboxRelayConfiguration {
 
-  /** Build the retry policy: exponential backoff with an upper bound. */
+  /** 构建重试策略: 带上限的指数退避 */
   @Bean
   public RelayRetryPolicy relayRetryPolicy(OutboxRelayProperties properties) {
     return new RelayRetryPolicy(

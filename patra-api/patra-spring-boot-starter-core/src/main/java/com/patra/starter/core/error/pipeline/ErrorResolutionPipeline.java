@@ -8,8 +8,28 @@ import java.util.List;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
 /**
- * Executes the configured {@link ResolutionInterceptor} chain and delegates to the {@link
- * ErrorResolutionEngine} to obtain a normalized error representation.
+ * 错误解析管道,执行配置的 {@link ResolutionInterceptor} 链并委托给 {@link ErrorResolutionEngine} 获取标准化的错误表示。
+ *
+ * <p>执行流程:
+ *
+ * <pre>
+ * 异常输入
+ *   ↓
+ * 拦截器链 (按 @Order 排序)
+ *   ├─ TracingInterceptor
+ *   ├─ MetricsInterceptor
+ *   ├─ CircuitBreakerInterceptor (可选)
+ *   └─ ... (自定义拦截器)
+ *   ↓
+ * ErrorResolutionEngine (核心解析逻辑)
+ *   ↓
+ * ErrorResolution (标准化错误表示)
+ * </pre>
+ *
+ * <p>拦截器的执行顺序由 {@link org.springframework.core.annotation.Order} 注解决定, 数值越小优先级越高。
+ *
+ * @author Papertrace Team
+ * @since 2.0
  */
 public class ErrorResolutionPipeline {
 
@@ -29,16 +49,23 @@ public class ErrorResolutionPipeline {
   }
 
   /**
-   * Resolves the supplied exception through the interceptor pipeline.
+   * 通过拦截器管道解析提供的异常。
    *
-   * @param exception the exception to resolve
-   * @return the normalized error representation
+   * @param exception 要解析的异常
+   * @return 标准化的错误表示
    */
   public ErrorResolution resolve(Throwable exception) {
     ResolutionInvocation invocation = buildInvocationChain();
     return invocation.proceed(exception);
   }
 
+  /**
+   * 构建拦截器调用链。
+   *
+   * <p>使用责任链模式,从后向前构建嵌套的调用链,最内层是引擎解析调用。
+   *
+   * @return 构建好的调用链头部
+   */
   private ResolutionInvocation buildInvocationChain() {
     ResolutionInvocation tail = engine::resolve;
     for (int i = interceptors.size() - 1; i >= 0; i--) {
@@ -50,9 +77,9 @@ public class ErrorResolutionPipeline {
   }
 
   /**
-   * Returns the interceptor list in the order in which it will be applied.
+   * 返回按应用顺序排列的拦截器列表。
    *
-   * @return ordered and immutable interceptor list
+   * @return 已排序的不可变拦截器列表
    */
   public List<ResolutionInterceptor> getInterceptors() {
     return interceptors;

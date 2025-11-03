@@ -15,18 +15,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Relay log coordinator - manages relay execution audit trail.
+ * 中继日志协调器 - 管理中继执行审计跟踪
  *
- * <h3>Responsibilities</h3>
+ * <h3>职责</h3>
  *
  * <ul>
- *   <li>Create relay execution logs using OutboxRelayLogFactory
- *   <li>Accumulate logs in memory during batch execution
- *   <li>Batch-persist logs to database for performance efficiency
- *   <li>Support all relay outcomes: PUBLISHED, DEFERRED, FAILED, LEASE_MISSED
+ *   <li>使用 OutboxRelayLogFactory 创建中继执行日志
+ *   <li>在批次执行期间在内存中累积日志
+ *   <li>批量持久化日志到数据库以提高性能
+ *   <li>支持所有中继结果: PUBLISHED, DEFERRED, FAILED, LEASE_MISSED
  * </ul>
  *
- * <h3>Batch Processing Pattern</h3>
+ * <h3>批处理模式</h3>
  *
  * <pre>
  * LogAccumulator acc = coordinator.createAccumulator(batchId);
@@ -41,22 +41,22 @@ import org.springframework.stereotype.Component;
  *     acc.recordFailed(...);
  *   }
  * }
- * coordinator.persistBatch(acc); // Single INSERT with N rows
+ * coordinator.persistBatch(acc); // 单条 INSERT 语句处理 N 行
  * </pre>
  *
- * <h3>Performance Optimization</h3>
+ * <h3>性能优化</h3>
  *
  * <ul>
- *   <li>Batch insert: 100-500 logs persisted in single SQL statement
- *   <li>Reduces database round-trips from N to 1
- *   <li>Improves throughput for high-frequency relay jobs
+ *   <li>批量插入: 100-500 条日志在单个 SQL 语句中持久化
+ *   <li>将数据库往返次数从 N 减少到 1
+ *   <li>提高高频中继作业的吞吐量
  * </ul>
  *
- * <h3>Logging Strategy</h3>
+ * <h3>日志策略</h3>
  *
  * <ul>
- *   <li>DEBUG: Batch persist operation (size, affected rows, batch IDs)
- *   <li>No per-message logging (handled by other coordinators)
+ *   <li>DEBUG: 批量持久化操作 (大小、受影响的行数、批次 ID)
+ *   <li>无单条消息日志 (由其他协调器处理)
  * </ul>
  *
  * @author Papertrace Team
@@ -72,62 +72,61 @@ public class RelayLogCoordinator {
   private final OutboxRelayMetrics metrics;
 
   /**
-   * Creates a new log accumulator for a relay batch.
+   * 为中继批次创建新的日志累加器
    *
-   * <p>The accumulator collects logs in memory during batch execution and persists them all at once
-   * using {@link #persistBatch(LogAccumulator)}.
+   * <p>累加器在批次执行期间在内存中收集日志,并使用 {@link #persistBatch(LogAccumulator)} 一次性持久化所有日志
    *
-   * @param batchId Relay batch identifier for grouping logs
-   * @return Empty log accumulator ready to record relay outcomes
+   * @param batchId 用于分组日志的中继批次标识符
+   * @return 准备记录中继结果的空日志累加器
    */
   public LogAccumulator createAccumulator(RelayBatchId batchId) {
     return new LogAccumulator(batchId);
   }
 
   /**
-   * Batch-persists accumulated relay logs to database and records metrics.
+   * 批量持久化累积的中继日志到数据库并记录指标
    *
-   * <p>Uses single SQL INSERT with multiple rows for performance efficiency.
+   * <p>使用单个 SQL INSERT 语句处理多行以提高性能
    *
-   * <p>Example SQL generated:
+   * <p>生成的 SQL 示例:
    *
    * <pre>
    * INSERT INTO ing_outbox_relay_log (message_id, relay_batch_id, ...)
    * VALUES (1, 'batch-001', ...), (2, 'batch-001', ...), ...;
    * </pre>
    *
-   * <p>After persisting, records metrics for each relay outcome:
+   * <p>持久化后,为每个中继结果记录指标:
    *
    * <ul>
    *   <li>PUBLISHED: {@code outbox.relay.attempts{channel=X, status=PUBLISHED}}
-   *   <li>DEFERRED: {@code outbox.relay.attempts{channel=X, status=DEFERRED}} + error counter
-   *   <li>FAILED: {@code outbox.relay.attempts{channel=X, status=FAILED}} + error counter
+   *   <li>DEFERRED: {@code outbox.relay.attempts{channel=X, status=DEFERRED}} + 错误计数器
+   *   <li>FAILED: {@code outbox.relay.attempts{channel=X, status=FAILED}} + 错误计数器
    *   <li>LEASE_MISSED: {@code outbox.relay.attempts{channel=X, status=LEASE_MISSED}}
    * </ul>
    *
-   * @param accumulator Log accumulator containing collected relay logs
+   * @param accumulator 包含收集的中继日志的日志累加器
    */
   public void persistBatch(LogAccumulator accumulator) {
     if (accumulator.isEmpty()) {
-      log.debug("No relay logs to persist for batchId={}", accumulator.batchId.getValue());
+      log.debug("批次 ID={} 没有中继日志需要持久化", accumulator.batchId.getValue());
       return;
     }
 
     List<OutboxRelayLog> logs = accumulator.getLogs();
     logRepository.saveBatch(logs);
 
-    // Record metrics for each relay outcome
+    // 为每个中继结果记录指标
     for (OutboxRelayLog relayLog : logs) {
       recordMetrics(relayLog);
     }
   }
 
   /**
-   * Records metrics for a single relay log entry.
+   * 为单个中继日志条目记录指标
    *
-   * <p>Dispatches to appropriate metric recording method based on relay status.
+   * <p>根据中继状态分派到适当的指标记录方法
    *
-   * @param relayLog relay log to extract metrics from
+   * @param relayLog 要从中提取指标的中继日志
    */
   private void recordMetrics(OutboxRelayLog relayLog) {
     String channel = relayLog.getChannel();
@@ -138,15 +137,14 @@ public class RelayLogCoordinator {
       case DEFERRED -> metrics.recordDeferred(channel, relayLog.getErrorCode());
       case FAILED -> metrics.recordFailed(channel, relayLog.getErrorCode());
       case LEASE_MISSED -> metrics.recordLeaseMissed(channel);
-      default -> log.warn("Unknown relay status for metrics: {}", status);
+      default -> log.warn("未知的中继状态用于指标: {}", status);
     }
   }
 
   /**
-   * Log accumulator for collecting relay execution logs during batch processing.
+   * 用于在批处理期间收集中继执行日志的日志累加器
    *
-   * <p>Thread-safety: NOT thread-safe, should only be used within a single thread (typical relay
-   * job execution pattern).
+   * <p>线程安全性: 非线程安全,应仅在单个线程中使用 (典型的中继作业执行模式)
    */
   public class LogAccumulator {
 
@@ -159,13 +157,13 @@ public class RelayLogCoordinator {
     }
 
     /**
-     * Records a lease acquisition failure (concurrent competition).
+     * 记录租约获取失败 (并发竞争)
      *
-     * <p>Scenario: Another relay instance acquired the lease first.
+     * <p>场景: 另一个中继实例首先获取了租约
      *
-     * @param message Outbox message that failed to acquire lease
-     * @param leaseOwner Identifier of the instance that attempted lease acquisition
-     * @param startTime Relay attempt start timestamp
+     * @param message 未能获取租约的 Outbox 消息
+     * @param leaseOwner 尝试获取租约的实例标识符
+     * @param startTime 中继尝试开始时间戳
      */
     public void recordLeaseMissed(OutboxMessage message, String leaseOwner, Instant startTime) {
       OutboxRelayLog relayLog =
@@ -174,14 +172,14 @@ public class RelayLogCoordinator {
     }
 
     /**
-     * Records successful message publishing.
+     * 记录成功的消息发布
      *
-     * <p>Scenario: Message successfully sent to downstream broker.
+     * <p>场景: 消息成功发送到下游代理
      *
-     * @param message Outbox message that was published
-     * @param leaseOwner Identifier of the instance that published the message
-     * @param startTime Relay attempt start timestamp
-     * @param publishedAt Timestamp when message was confirmed published
+     * @param message 已发布的 Outbox 消息
+     * @param leaseOwner 发布消息的实例标识符
+     * @param startTime 中继尝试开始时间戳
+     * @param publishedAt 确认消息已发布的时间戳
      */
     public void recordPublished(
         OutboxMessage message, String leaseOwner, Instant startTime, Instant publishedAt) {
@@ -191,17 +189,17 @@ public class RelayLogCoordinator {
     }
 
     /**
-     * Records deferred retry (transient error).
+     * 记录延迟重试 (暂时性错误)
      *
-     * <p>Scenario: Publishing failed with retryable error, will retry after backoff.
+     * <p>场景: 发布失败并出现可重试错误,将在退避后重试
      *
-     * @param message Outbox message that encountered transient error
-     * @param leaseOwner Identifier of the instance that attempted publishing
-     * @param startTime Relay attempt start timestamp
-     * @param nextRetryAt Scheduled timestamp for next retry attempt
-     * @param errorCode Error classification code (e.g., NETWORK_TIMEOUT)
-     * @param errorMessage Detailed error message (will be truncated to 512 chars)
-     * @param errorKind Error kind: FATAL or TRANSIENT
+     * @param message 遇到暂时性错误的 Outbox 消息
+     * @param leaseOwner 尝试发布的实例标识符
+     * @param startTime 中继尝试开始时间戳
+     * @param nextRetryAt 下次重试尝试的计划时间戳
+     * @param errorCode 错误分类代码 (例如 NETWORK_TIMEOUT)
+     * @param errorMessage 详细的错误消息 (将被截断为 512 个字符)
+     * @param errorKind 错误类型: FATAL 或 TRANSIENT
      */
     public void recordDeferred(
         OutboxMessage message,
@@ -225,16 +223,16 @@ public class RelayLogCoordinator {
     }
 
     /**
-     * Records permanent failure (max retries exhausted or fatal error).
+     * 记录永久失败 (达到最大重试次数或致命错误)
      *
-     * <p>Scenario: Publishing failed permanently, no further retries.
+     * <p>场景: 发布永久失败,不再重试
      *
-     * @param message Outbox message that failed permanently
-     * @param leaseOwner Identifier of the instance that attempted publishing
-     * @param startTime Relay attempt start timestamp
-     * @param errorCode Error classification code
-     * @param errorMessage Detailed error message (will be truncated to 512 chars)
-     * @param errorKind Error kind: FATAL or TRANSIENT
+     * @param message 永久失败的 Outbox 消息
+     * @param leaseOwner 尝试发布的实例标识符
+     * @param startTime 中继尝试开始时间戳
+     * @param errorCode 错误分类代码
+     * @param errorMessage 详细的错误消息 (将被截断为 512 个字符)
+     * @param errorKind 错误类型: FATAL 或 TRANSIENT
      */
     public void recordFailed(
         OutboxMessage message,
@@ -250,27 +248,27 @@ public class RelayLogCoordinator {
     }
 
     /**
-     * Checks if accumulator has no logs.
+     * 检查累加器是否没有日志
      *
-     * @return true if no logs have been recorded
+     * @return 如果尚未记录日志则返回 true
      */
     public boolean isEmpty() {
       return logs.isEmpty();
     }
 
     /**
-     * Returns collected logs (for internal use by coordinator).
+     * 返回收集的日志 (供协调器内部使用)
      *
-     * @return Unmodifiable view of collected relay logs
+     * @return 收集的中继日志的不可修改视图
      */
     List<OutboxRelayLog> getLogs() {
       return List.copyOf(logs);
     }
 
     /**
-     * Returns the number of logs accumulated.
+     * 返回累积的日志数量
      *
-     * @return Count of relay logs
+     * @return 中继日志计数
      */
     public int size() {
       return logs.size();

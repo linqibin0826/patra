@@ -4,33 +4,44 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Normalized cursor watermark.
+ * 规范化游标水位线值对象,表示观察到的最大游标值。
  *
- * <p>A cursor may be represented as time, numeric, or raw string values; this record carries the
- * normalized forms.
+ * <p>游标可以表示为时间、数值或原始字符串值,此记录携带规范化的形式。
  *
- * <ul>
- *   <li>{@code observedMaxValue}: raw maximum cursor value observed
- *   <li>{@code normalizedInstant}: parsed instant when available
- *   <li>{@code normalizedNumeric}: parsed numeric representation when available
- * </ul>
+ * <p>不可变性:通过值语义比较相等性
  *
- * Fields may be {@code null} when that representation is not available.
+ * <p>使用场景:在增量采集中记录已处理的最大游标位置
+ *
+ * @param observedMaxValue 观察到的原始最大游标值
+ * @param normalizedInstant 当可用时的解析时间戳
+ * @param normalizedNumeric 当可用时的解析数值表示
  */
 public record CursorWatermark(
     String observedMaxValue, Instant normalizedInstant, BigDecimal normalizedNumeric) {
 
-  /** Watermark placeholder for initial runs (no observation yet). */
+  /**
+   * 为初始运行创建水位线占位符(尚无观察值)。
+   *
+   * @return 空水位线
+   */
   public static CursorWatermark empty() {
     return new CursorWatermark(null, null, null);
   }
 
-  /** Indicates whether a normalized instant watermark is present. */
+  /**
+   * 指示是否存在规范化的时间戳水位线。
+   *
+   * @return 如果存在时间戳水位线则返回true
+   */
   public boolean hasInstant() {
     return normalizedInstant != null;
   }
 
-  /** Indicates whether a normalized numeric watermark is present. */
+  /**
+   * 指示是否存在规范化的数值水位线。
+   *
+   * @return 如果存在数值水位线则返回true
+   */
   public boolean hasNumeric() {
     return normalizedNumeric != null;
   }

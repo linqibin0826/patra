@@ -13,10 +13,19 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 
 /**
- * Registry-specific error mapping contributor for fine-grained exception to error code mapping.
+ * Registry 异常映射贡献者,提供领域异常到错误码的精细化映射。
  *
- * <p>Provides explicit mappings for Registry domain exceptions and data layer exceptions. Migrated
- * from boot module to adapter to avoid boot directly depending on domain/api.
+ * <p>为 Registry 领域异常和数据层异常提供显式映射规则。从 boot 模块迁移到 adapter,避免 boot 直接依赖 domain/api。
+ *
+ * <p>映射规则:
+ *
+ * <ul>
+ *   <li>{@link DomainValidationException} → {@code BAD_REQUEST}
+ *   <li>{@link RegistryQuotaExceeded} → {@code CONFLICT}
+ *   <li>{@link DuplicateKeyException} → {@code CONFLICT}
+ *   <li>{@link DataIntegrityViolationException} → {@code UNPROCESSABLE}
+ *   <li>{@link OptimisticLockingFailureException} → {@code CONFLICT}
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,10 +41,10 @@ public class RegistryErrorMappingContributor implements ErrorMappingContributor 
   }
 
   /**
-   * Maps an exception to an error code.
+   * 将异常映射为错误码。
    *
-   * @param exception the exception to map
-   * @return optional containing the mapped error code if a mapping exists
+   * @param exception 待映射的异常
+   * @return 如果存在映射则返回错误码,否则返回空
    */
   @Override
   public Optional<ErrorCodeLike> mapException(Throwable exception) {

@@ -4,10 +4,19 @@ import com.patra.registry.api.endpoint.ProvenanceEndpoint;
 import org.springframework.cloud.openfeign.FeignClient;
 
 /**
- * Feign client for registry provenance internal API.
+ * Registry Provenance 内部 API 的 Feign 客户端。
  *
- * <p>Extends {@link ProvenanceEndpoint} to provide type-safe RPC integration via Spring Cloud
- * OpenFeign.
+ * <p>扩展 {@link ProvenanceEndpoint} 以通过 Spring Cloud OpenFeign 提供类型安全的 RPC 集成。
+ *
+ * <p>使用示例:
+ *
+ * <pre>{@code
+ * @Autowired
+ * private ProvenanceClient provenanceClient;
+ *
+ * ProvenanceConfigResp config = provenanceClient.getConfiguration(
+ *     ProvenanceCode.PUBMED, "HARVEST", Instant.now());
+ * }</pre>
  *
  * @author linqibin
  * @since 0.1.0

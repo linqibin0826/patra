@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * HTTP configuration query view.
+ * HTTP配置查询视图。
  *
- * <p>Read-optimized projection for querying HTTP client configuration.
+ * <p>用于查询HTTP客户端配置的读优化投影。包含超时设置、代理配置、重试策略等HTTP相关参数。
  *
  * @author linqibin
  * @since 0.1.0
@@ -29,16 +29,16 @@ public record HttpConfigQuery(
     Integer idempotencyTtlSeconds) {
   public HttpConfigQuery {
     if (id == null || id <= 0) {
-      throw new DomainValidationException("HTTP config id must be positive");
+      throw new DomainValidationException("HTTP配置ID必须为正数");
     }
     if (provenanceId == null || provenanceId <= 0) {
-      throw new DomainValidationException("Provenance id must be positive");
+      throw new DomainValidationException("来源ID必须为正数");
     }
     if (retryAfterPolicyCode == null || retryAfterPolicyCode.isBlank()) {
-      throw new DomainValidationException("Retry-after policy code cannot be blank");
+      throw new DomainValidationException("重试策略代码不能为空");
     }
     if (effectiveFrom == null) {
-      throw new DomainValidationException("Effective from cannot be null");
+      throw new DomainValidationException("生效时间不能为null");
     }
     operationType = operationType != null ? operationType.trim() : null;
     proxyUrlValue = proxyUrlValue != null ? proxyUrlValue.trim() : null;

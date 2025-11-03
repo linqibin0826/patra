@@ -14,11 +14,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Implementation of the provenance internal API endpoint.
+ * Provenance REST 控制器,提供数据源元数据和配置查询 HTTP API。
  *
- * <p>Exposes provenance metadata and configuration retrieval capabilities to other microservices
- * via internal RPC contract, delegating to orchestrator and converting query DTOs to API response
- * DTOs.
+ * <p>端点:
+ *
+ * <ul>
+ *   <li>GET /_internal/provenances - 列出所有数据源
+ *   <li>GET /_internal/provenances/{code} - 根据代码获取单个数据源
+ *   <li>GET /_internal/provenances/{code}/config - 加载完整配置聚合(支持时态切片)
+ * </ul>
+ *
+ * <p>职责:
+ *
+ * <ul>
+ *   <li>接收 HTTP 请求参数并验证
+ *   <li>调用 {@link ProvenanceConfigOrchestrator} 执行用例
+ *   <li>通过 {@link ProvenanceApiConverter} 转换为 API 响应 DTO
+ *   <li>处理异常并抛出 {@link ProvenanceNotFoundException}
+ * </ul>
+ *
+ * <p>权限: 内部服务间调用(/_internal 路径)
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,9 +47,9 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   private final ProvenanceApiConverter converter;
 
   /**
-   * Lists all available provenances and converts them to response DTOs.
+   * 列出所有可用数据源。
    *
-   * @return the list of provenance response DTOs
+   * @return 数据源响应 DTO 列表
    */
   @Override
   public List<ProvenanceResp> listProvenances() {
@@ -46,11 +61,11 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   }
 
   /**
-   * Retrieves a single provenance by code.
+   * 根据代码获取单个数据源。
    *
-   * @param code the provenance code to look up
-   * @return the provenance response DTO
-   * @throws ProvenanceNotFoundException when provenance is absent
+   * @param code 数据源代码
+   * @return 数据源响应 DTO
+   * @throws ProvenanceNotFoundException 当数据源不存在时
    */
   @Override
   public ProvenanceResp getProvenance(ProvenanceCode code) {
@@ -69,13 +84,20 @@ public class ProvenanceEndpointImpl implements ProvenanceEndpoint {
   }
 
   /**
-   * Loads aggregated configuration for a provenance and operation type.
+   * 加载数据源的聚合配置(支持时态切片)。
    *
-   * @param code the provenance code to load configuration for
-   * @param operationType the operation type discriminator; {@code null} means all operations
-   * @param at the instant used for temporal slicing; {@code null} defaults to current time
-   * @return the provenance configuration response DTO
-   * @throws ProvenanceNotFoundException when configuration is absent for the inputs
+   * <p>通过 operationType 和 at 参数进行配置过滤:
+   *
+   * <ul>
+   *   <li>operationType 为 null 表示所有操作类型
+   *   <li>at 为 null 表示当前时间
+   * </ul>
+   *
+   * @param code 数据源代码
+   * @param operationType 操作类型(HARVEST/UPDATE 等),为 {@code null} 时表示所有操作
+   * @param at 时态切片时间点,为 {@code null} 时默认为当前时间
+   * @return 数据源配置响应 DTO,包含 7 个配置维度
+   * @throws ProvenanceNotFoundException 当配置不存在时
    */
   @Override
   public ProvenanceConfigResp getConfiguration(

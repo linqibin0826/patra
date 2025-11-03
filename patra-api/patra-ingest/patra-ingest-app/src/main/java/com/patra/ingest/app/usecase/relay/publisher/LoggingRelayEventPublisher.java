@@ -6,10 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Logging-based event publisher: emits events at DEBUG level for development and diagnostics.
+ * 基于日志的事件发布器: 在 DEBUG 级别发出事件用于开发和诊断
  *
- * <p>Production deployments can increase the log level or replace this publisher with one that
- * forwards metrics.
+ * <p>生产环境部署可以提高日志级别或用转发指标的发布器替换此发布器
  */
 @Slf4j
 @Component
@@ -20,7 +19,7 @@ public class LoggingRelayEventPublisher implements RelayEventPublisher {
     if (events == null || events.isEmpty()) {
       return;
     }
-    // Emit event snapshots only at DEBUG level to avoid production noise
-    events.forEach(event -> log.debug("relay-event: {}", event));
+    // 仅在 DEBUG 级别发出事件快照,避免生产环境噪音
+    events.forEach(event -> log.debug("中继事件: {}", event));
   }
 }

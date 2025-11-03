@@ -5,21 +5,23 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 
 /**
- * Execution context capturing configuration snapshots and compiled expressions for a task run.
+ * 任务运行的执行上下文值对象。
  *
- * @param taskId task identifier
- * @param runId run identifier
- * @param planId owning plan identifier
- * @param sliceId owning slice identifier
- * @param scheduleInstanceId schedule instance identifier (from TaskAggregate)
- * @param provenanceCode provenance code
- * @param operationCode operation code
- * @param configSnapshot configuration snapshot
- * @param exprHash expression hash
- * @param compiledQuery compiled query
- * @param compiledParams compiled query parameters
- * @param normalizedExpression normalized expression string
- * @param windowSpec window specification
+ * <p>捕获配置快照和已编译表达式,确保任务执行的可重放性和一致性。
+ *
+ * @param taskId 任务标识符
+ * @param runId 运行标识符
+ * @param planId 所属计划标识符
+ * @param sliceId 所属切片标识符
+ * @param scheduleInstanceId 调度实例标识符(来自 TaskAggregate)
+ * @param provenanceCode 来源代码
+ * @param operationCode 操作代码
+ * @param configSnapshot 配置快照
+ * @param exprHash 表达式哈希
+ * @param compiledQuery 已编译的查询
+ * @param compiledParams 已编译的查询参数
+ * @param normalizedExpression 归一化表达式字符串
+ * @param windowSpec 窗口规范
  * @author linqibin
  * @since 0.1.0
  */

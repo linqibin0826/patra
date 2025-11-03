@@ -12,12 +12,21 @@ package com.patra.common.error;
  */
 public abstract class DomainException extends RuntimeException {
 
-  /** 使用提供的消息创建领域异常。 */
+  /**
+   * 使用提供的消息创建领域异常。
+   *
+   * @param message 异常消息
+   */
   protected DomainException(String message) {
     super(message);
   }
 
-  /** 使用提供的消息和根本原因创建领域异常。 */
+  /**
+   * 使用提供的消息和根本原因创建领域异常。
+   *
+   * @param message 异常消息
+   * @param cause 根本原因
+   */
   protected DomainException(String message, Throwable cause) {
     super(message, cause);
   }

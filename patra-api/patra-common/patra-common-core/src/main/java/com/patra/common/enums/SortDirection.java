@@ -1,15 +1,14 @@
 package com.patra.common.enums;
 
 /**
- * Sort order direction for query results.
+ * 查询结果的排序方向枚举。
  *
- * <p>Provides standard ascending and descending sort options used across query APIs and repository
- * methods.
+ * <p>提供跨查询 API 和仓储方法使用的标准升序和降序排序选项。
  */
 public enum SortDirection {
-  /** Ascending order (smallest to largest, A to Z). */
+  /** 升序排列(从小到大,A 到 Z)。 */
   ASC,
 
-  /** Descending order (largest to smallest, Z to A). */
+  /** 降序排列(从大到小,Z 到 A)。 */
   DESC
 }

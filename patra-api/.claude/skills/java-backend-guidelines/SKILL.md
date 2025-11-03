@@ -257,7 +257,7 @@ boot     →  所有模块 + Spring Boot starters
 | **协调者 (Coordinator)** | `Coordinator` | `PlanPersistenceCoordinator` | 关注点分离 |
 | **控制器 (Controller)** | `Controller` | `ProvenanceController` | REST 适配器 |
 | **定时任务 (Job)** | `Job` | `PubmedHarvestJob` | 定时任务 |
-| **消费者 (Consumer)** | `Consumers` | `IngestStreamConsumers` | 消息消费者 |
+| **消费者 (Message Listener)** | `MessageListener` | `TaskReadyMessageListener` | 消息消费者 |
 | **仓储实现 (Repository Impl)** | `RepositoryImpl` | `ProvenanceRepositoryImpl` | 端口实现 |
 | **DO (数据对象 - Data Object)** | `DO` | `ProvenanceDO` | MyBatis-Plus 实体 |
 | **转换器 (Converter)** | `Converter` | `ProvenanceConverter` | MapStruct mapper |

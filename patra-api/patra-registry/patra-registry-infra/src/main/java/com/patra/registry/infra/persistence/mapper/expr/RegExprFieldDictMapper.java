@@ -5,11 +5,11 @@ import com.patra.registry.infra.persistence.entity.expr.RegExprFieldDictDO;
 import java.util.List;
 
 /**
- * Read-only mapper for {@code reg_expr_field_dict}.
+ * 只读 Mapper,用于表 {@code reg_expr_field_dict}。
  *
- * <p>Supplies helper queries for loading canonical expression field metadata.
+ * <p>提供用于加载规范表达式字段元数据的辅助查询。
  *
- * <p>The SQL implementation is located in {@code resources/mapper/RegExprFieldDictMapper.xml}.
+ * <p>SQL 实现位于 {@code resources/mapper/RegExprFieldDictMapper.xml}。
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,9 +17,9 @@ import java.util.List;
 public interface RegExprFieldDictMapper extends BaseMapper<RegExprFieldDictDO> {
 
   /**
-   * Lists all non-deleted expression field definitions ordered by {@code field_key}.
+   * 列出按 {@code field_key} 排序的所有未删除表达式字段定义。
    *
-   * @return field definitions
+   * @return 字段定义列表
    */
   List<RegExprFieldDictDO> selectAllActive();
 }

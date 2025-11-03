@@ -7,9 +7,21 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import java.util.List;
 
 /**
- * Journal metadata derived from the PubMed citation.
+ * 从 PubMed 引文中衍生的期刊元数据。
  *
- * @author
+ * <p>包含期刊的标识信息 (ISSN)、标题、ISO 缩写以及期刊期号和发表日期信息。
+ *
+ * <p><b>主要字段:</b>
+ *
+ * <ul>
+ *   <li><b>issn</b>: 期刊 ISSN (国际标准连续出版物编号)
+ *   <li><b>title</b>: 完整期刊标题
+ *   <li><b>isoAbbreviation</b>: ISO 标准期刊缩写
+ *   <li><b>journalIssue</b>: 期号信息,包含发表日期
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class Journal {

@@ -1,35 +1,33 @@
 /**
- * REST API endpoints for provenance registry management.
+ * Provenance Registry REST API 端点实现。
  *
- * <p>This package contains driving adapters that receive HTTP requests and translate them into
- * application use case calls. All classes here are part of the Hexagonal Architecture's adapter
- * layer (External → System direction).
+ * <p>本包包含驱动适配器,接收 HTTP 请求并将其转换为应用层用例调用。所有类都是六边形架构适配器层的一部分(外部 → 系统方向)。
  *
- * <h2>Responsibilities</h2>
+ * <h2>职责</h2>
  *
  * <ul>
- *   <li>Implement OpenAPI endpoint contracts defined in {@code patra-registry-api}
- *   <li>Validate request DTOs using {@code @Valid} annotations
- *   <li>Delegate to application orchestrators
- *   <li>Convert domain results to API response DTOs
- *   <li>Map domain exceptions to HTTP ProblemDetail responses
+ *   <li>实现 {@code patra-registry-api} 中定义的 OpenAPI 端点契约
+ *   <li>使用 {@code @Valid} 注解验证请求 DTO
+ *   <li>委托给应用层编排器
+ *   <li>转换领域结果为 API 响应 DTO
+ *   <li>映射领域异常为 HTTP ProblemDetail 响应
  * </ul>
  *
- * <h2>API Endpoints</h2>
+ * <h2>API 端点</h2>
  *
  * <ul>
- *   <li>{@code ProvenanceEndpointImpl} - Provenance configuration CRUD operations
- *   <li>{@code ExprEndpointImpl} - Expression compilation and validation
+ *   <li>{@code ProvenanceEndpointImpl} - Provenance 配置 CRUD 操作
+ *   <li>{@code ExprEndpointImpl} - 表达式编译和验证
  * </ul>
  *
- * <h2>Naming Convention</h2>
+ * <h2>命名约定</h2>
  *
  * <ul>
- *   <li>Endpoint implementations: {@code *EndpointImpl}
- *   <li>API converters: {@code *ApiConverter}
+ *   <li>端点实现: {@code *EndpointImpl}
+ *   <li>API 转换器: {@code *ApiConverter}
  * </ul>
  *
- * <h2>Example</h2>
+ * <h2>示例</h2>
  *
  * <pre>{@code
  * @RestController

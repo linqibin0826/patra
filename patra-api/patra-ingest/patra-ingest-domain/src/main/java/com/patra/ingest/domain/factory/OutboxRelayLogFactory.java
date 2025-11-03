@@ -9,35 +9,35 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * Factory for creating OutboxRelayLog domain entities.
+ * OutboxRelayLog 领域实体工厂。
  *
- * <p>Responsibilities:
- *
- * <ul>
- *   <li>Encapsulate relay log construction logic in Domain layer
- *   <li>Use OutboxMessage's domain methods (computeNextAttempt, etc.)
- *   <li>Ensure consistent log creation across different relay outcomes
- * </ul>
- *
- * <p>Design principles:
+ * <p>职责:
  *
  * <ul>
- *   <li><strong>Pure Java</strong>: No Spring dependencies (NO @Component annotation)
- *   <li><strong>Instance factory</strong>: Injectable Clock for deterministic testing
- *   <li><strong>Single responsibility</strong>: Only constructs OutboxRelayLog instances
- *   <li><strong>Domain rules</strong>: Delegates to OutboxMessage for business logic
+ *   <li>在领域层封装 Relay 日志构造逻辑
+ *   <li>使用 OutboxMessage 的领域方法(如 computeNextAttempt)
+ *   <li>确保不同 Relay 结果的日志创建一致性
  * </ul>
  *
- * <p>Usage:
+ * <p>设计原则:
+ *
+ * <ul>
+ *   <li><strong>纯 Java</strong>: 无 Spring 依赖(不使用 @Component 注解)
+ *   <li><strong>实例工厂</strong>: 可注入 Clock 以支持确定性测试
+ *   <li><strong>单一职责</strong>: 仅构造 OutboxRelayLog 实例
+ *   <li><strong>领域规则</strong>: 委托给 OutboxMessage 执行业务逻辑
+ * </ul>
+ *
+ * <p>用法示例:
  *
  * <pre>{@code
- * // Boot layer registers as bean:
+ * // Boot 层注册为 Bean:
  * @Bean
  * public OutboxRelayLogFactory factory(Clock clock) {
  *   return new OutboxRelayLogFactory(clock);
  * }
  *
- * // Application layer uses injected factory:
+ * // Application 层使用注入的工厂:
  * OutboxRelayLog log = factory.createForPublished(message, batchId, ...);
  * }</pre>
  *
@@ -49,24 +49,24 @@ public class OutboxRelayLogFactory {
   private final Clock clock;
 
   /**
-   * Constructor for factory instance.
+   * 构造工厂实例。
    *
-   * @param clock Clock instance for timestamp generation (injectable for testing)
+   * @param clock 时钟实例,用于生成时间戳(可注入以支持测试)
    */
   public OutboxRelayLogFactory(Clock clock) {
     this.clock = clock;
   }
 
   /**
-   * Creates relay log for lease acquisition failure (concurrent competition).
+   * 为租约获取失败创建 Relay 日志(并发竞争场景)。
    *
-   * <p>Scenario: Another instance acquired the lease before this instance could.
+   * <p>场景:另一个实例先获得了租约。
    *
-   * @param message Outbox message that failed to acquire lease
-   * @param batchId Relay batch identifier
-   * @param leaseOwner Identifier of the instance that attempted lease acquisition
-   * @param startTime Relay attempt start timestamp
-   * @return OutboxRelayLog with LEASE_MISSED status
+   * @param message 未能获取租约的 Outbox 消息
+   * @param batchId Relay 批次标识符
+   * @param leaseOwner 尝试获取租约的实例标识符
+   * @param startTime Relay 尝试开始时间戳
+   * @return 状态为 LEASE_MISSED 的 OutboxRelayLog
    */
   public OutboxRelayLog createForLeaseMissed(
       OutboxMessage message, RelayBatchId batchId, String leaseOwner, Instant startTime) {
@@ -88,16 +88,16 @@ public class OutboxRelayLogFactory {
   }
 
   /**
-   * Creates relay log for successful message publishing.
+   * 为消息发布成功创建 Relay 日志。
    *
-   * <p>Scenario: Message successfully sent to downstream broker.
+   * <p>场景:消息成功发送到下游消息中间件。
    *
-   * @param message Outbox message that was published
-   * @param batchId Relay batch identifier
-   * @param leaseOwner Identifier of the instance that published the message
-   * @param startTime Relay attempt start timestamp
-   * @param publishedAt Timestamp when message was confirmed published
-   * @return OutboxRelayLog with PUBLISHED status
+   * @param message 已发布的 Outbox 消息
+   * @param batchId Relay 批次标识符
+   * @param leaseOwner 发布消息的实例标识符
+   * @param startTime Relay 尝试开始时间戳
+   * @param publishedAt 消息确认发布的时间戳
+   * @return 状态为 PUBLISHED 的 OutboxRelayLog
    */
   public OutboxRelayLog createForPublished(
       OutboxMessage message,
@@ -121,19 +121,19 @@ public class OutboxRelayLogFactory {
   }
 
   /**
-   * Creates relay log for deferred retry (transient error).
+   * 为延迟重试创建 Relay 日志(临时性错误)。
    *
-   * <p>Scenario: Publishing failed with retryable error, will retry after backoff.
+   * <p>场景:发布失败但错误可重试,将在退避后重试。
    *
-   * @param message Outbox message that encountered transient error
-   * @param batchId Relay batch identifier
-   * @param leaseOwner Identifier of the instance that attempted publishing
-   * @param startTime Relay attempt start timestamp
-   * @param nextRetryAt Scheduled timestamp for next retry attempt
-   * @param errorCode Error classification code (e.g., NETWORK_TIMEOUT)
-   * @param errorMessage Detailed error message (truncated to 512 chars)
-   * @param errorKind Error kind: FATAL or TRANSIENT
-   * @return OutboxRelayLog with DEFERRED status
+   * @param message 遇到临时性错误的 Outbox 消息
+   * @param batchId Relay 批次标识符
+   * @param leaseOwner 尝试发布的实例标识符
+   * @param startTime Relay 尝试开始时间戳
+   * @param nextRetryAt 下次重试的计划时间戳
+   * @param errorCode 错误分类代码(如 NETWORK_TIMEOUT)
+   * @param errorMessage 详细错误消息(截断至 512 字符)
+   * @param errorKind 错误类型: FATAL 或 TRANSIENT
+   * @return 状态为 DEFERRED 的 OutboxRelayLog
    */
   public OutboxRelayLog createForDeferred(
       OutboxMessage message,
@@ -166,18 +166,18 @@ public class OutboxRelayLogFactory {
   }
 
   /**
-   * Creates relay log for permanent failure (max retries exhausted or fatal error).
+   * 为永久失败创建 Relay 日志(达到最大重试次数或致命错误)。
    *
-   * <p>Scenario: Publishing failed permanently, no further retries.
+   * <p>场景:发布永久失败,不再重试。
    *
-   * @param message Outbox message that failed permanently
-   * @param batchId Relay batch identifier
-   * @param leaseOwner Identifier of the instance that attempted publishing
-   * @param startTime Relay attempt start timestamp
-   * @param errorCode Error classification code
-   * @param errorMessage Detailed error message (truncated to 512 chars)
-   * @param errorKind Error kind: FATAL or TRANSIENT
-   * @return OutboxRelayLog with FAILED status
+   * @param message 永久失败的 Outbox 消息
+   * @param batchId Relay 批次标识符
+   * @param leaseOwner 尝试发布的实例标识符
+   * @param startTime Relay 尝试开始时间戳
+   * @param errorCode 错误分类代码
+   * @param errorMessage 详细错误消息(截断至 512 字符)
+   * @param errorKind 错误类型: FATAL 或 TRANSIENT
+   * @return 状态为 FAILED 的 OutboxRelayLog
    */
   public OutboxRelayLog createForFailed(
       OutboxMessage message,
@@ -208,11 +208,11 @@ public class OutboxRelayLogFactory {
   }
 
   /**
-   * Truncates error message to maximum length.
+   * 将错误消息截断至最大长度。
    *
-   * @param str original string
-   * @param maxLength maximum allowed length
-   * @return truncated string (or null if input is null)
+   * @param str 原始字符串
+   * @param maxLength 允许的最大长度
+   * @return 截断后的字符串(如果输入为 null 则返回 null)
    */
   private String truncate(String str, int maxLength) {
     if (str == null) {

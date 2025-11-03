@@ -5,10 +5,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository port for plan slices.
+ * 计划切片(PlanSlice)聚合根仓储端口(六边形架构 - Domain → Infrastructure)。
  *
- * <p>Persists slices generated during planning so task assembly and replay can query precise
- * windows.
+ * <p><b>职责</b>: 持久化计划切片聚合根,确保:
+ *
+ * <ul>
+ *   <li>切片持久化 - 保存计划生成的时间窗口切片
+ *   <li>任务组装支持 - 为任务创建提供精确的窗口查询
+ *   <li>回放能力 - 支持历史切片的精确检索
+ * </ul>
+ *
+ * <p><b>端口语义</b>: 此接口是六边形架构中的 <b>仓储端口(Repository Port)</b>,定义在 Domain
+ * 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。
  *
  * @author linqibin
  * @since 0.1.0
@@ -16,34 +24,42 @@ import java.util.Optional;
 public interface PlanSliceRepository {
 
   /**
-   * Persist or update a single plan slice.
+   * 持久化或更新单个计划切片聚合根。
    *
-   * @param slice plan slice aggregate containing window and filter context
-   * @return persisted slice
+   * <p><b>业务含义</b>: 保存切片聚合根,包括时间窗口和过滤上下文。
+   *
+   * @param slice 计划切片聚合根,包含窗口和过滤上下文
+   * @return 已持久化的切片
    */
   PlanSliceAggregate save(PlanSliceAggregate slice);
 
   /**
-   * Persist multiple plan slices at once.
+   * 批量持久化多个计划切片。
    *
-   * @param slices slices to persist
-   * @return persisted slices
+   * <p><b>业务含义</b>: 一次性保存多个切片,用于计划切片后的批量保存。
+   *
+   * @param slices 待持久化的切片列表
+   * @return 已持久化的切片列表
    */
   List<PlanSliceAggregate> saveAll(List<PlanSliceAggregate> slices);
 
   /**
-   * Retrieve all slices for a plan.
+   * 查询指定计划的所有切片。
    *
-   * @param planId plan identifier
-   * @return list of slices
+   * <p><b>业务含义</b>: 获取计划的完整切片列表,用于任务组装或回放。
+   *
+   * @param planId 计划标识符
+   * @return 切片列表
    */
   List<PlanSliceAggregate> findByPlanId(Long planId);
 
   /**
-   * Retrieve a slice by identifier.
+   * 根据标识符查询切片。
    *
-   * @param sliceId slice identifier
-   * @return slice or {@link Optional#empty()}
+   * <p><b>业务含义</b>: 通过技术主键(ID)检索切片。
+   *
+   * @param sliceId 切片标识符
+   * @return 切片,或 {@link Optional#empty()}
    */
   Optional<PlanSliceAggregate> findById(Long sliceId);
 }

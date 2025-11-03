@@ -23,8 +23,22 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * Produces deterministic JSON snapshots and hashes for expressions so downstream services can
- * cache, deduplicate, or audit requests consistently.
+ * 为表达式生成确定性的 JSON 快照和哈希值,使下游服务能够一致地进行缓存、去重或审计。
+ *
+ * <p>规范化过程包括:
+ *
+ * <ul>
+ *   <li>对对象键进行排序
+ *   <li>对数组元素去重并排序
+ *   <li>修剪空白并折叠多余空格
+ *   <li>去除尾随零
+ *   <li>移除空值和空集合
+ * </ul>
+ *
+ * <p>输出的规范 JSON 可用于生成 SHA-256 哈希,确保逻辑相同的表达式产生相同的哈希值。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class ExprCanonicalizer {
   private static final ObjectMapper OBJECT_MAPPER;
@@ -41,11 +55,11 @@ public final class ExprCanonicalizer {
   private ExprCanonicalizer() {}
 
   /**
-   * Normalizes the supplied expression and returns a snapshot containing deterministic JSON text
-   * and its SHA-256 digest.
+   * 规范化给定的表达式,返回包含确定性 JSON 文本及其 SHA-256 摘要的快照。
    *
-   * @param expr expression to normalize
-   * @return canonical snapshot
+   * @param expr 待规范化的表达式
+   * @return 规范化快照
+   * @throws IllegalStateException 如果规范化过程失败
    */
   public static ExprCanonicalSnapshot canonicalize(Expr expr) {
     Objects.requireNonNull(expr, "expr must not be null");
@@ -61,10 +75,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Recursively canonicalizes a JSON node.
+   * 递归规范化 JSON 节点。
    *
-   * @param node the node to canonicalize
-   * @return canonical JSON node
+   * @param node 待规范化的节点
+   * @return 规范化后的 JSON 节点
    */
   private static JsonNode canonicalizeNode(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
@@ -86,10 +100,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Canonicalizes an object node by sorting keys and removing empty values.
+   * 通过排序键并移除空值来规范化对象节点。
    *
-   * @param objectNode the object node to canonicalize
-   * @return canonical object node
+   * @param objectNode 待规范化的对象节点
+   * @return 规范化后的对象节点
    */
   private static JsonNode canonicalizeObject(ObjectNode objectNode) {
     List<String> fieldNames = new ArrayList<>();
@@ -107,10 +121,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Canonicalizes an array node by deduplicating and sorting elements.
+   * 通过去重和排序元素来规范化数组节点。
    *
-   * @param arrayNode the array node to canonicalize
-   * @return canonical array node or NullNode if empty
+   * @param arrayNode 待规范化的数组节点
+   * @return 规范化后的数组节点,如果为空则返回 NullNode
    */
   private static JsonNode canonicalizeArray(ArrayNode arrayNode) {
     List<CanonicalElement> elements = buildCanonicalElements(arrayNode);
@@ -159,10 +173,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Canonicalizes text by trimming and collapsing whitespace.
+   * 通过修剪和折叠空白来规范化文本。
    *
-   * @param text the text to canonicalize
-   * @return canonical text node or NullNode if empty
+   * @param text 待规范化的文本
+   * @return 规范化后的文本节点,如果为空则返回 NullNode
    */
   private static JsonNode canonicalizeText(String text) {
     if (text == null) {
@@ -177,10 +191,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Canonicalizes numbers by stripping trailing zeros.
+   * 通过去除尾随零来规范化数字。
    *
-   * @param node the number node to canonicalize
-   * @return canonical number node
+   * @param node 待规范化的数字节点
+   * @return 规范化后的数字节点
    */
   private static JsonNode canonicalizeNumber(JsonNode node) {
     if (!node.isNumber()) {
@@ -194,10 +208,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Checks if a JSON node is considered empty.
+   * 检查 JSON 节点是否被视为空。
    *
-   * @param node the node to check
-   * @return true if node is null, missing, or empty
+   * @param node 待检查的节点
+   * @return 如果节点为 null、缺失或空,则返回 true
    */
   private static boolean isEmpty(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {
@@ -216,10 +230,10 @@ public final class ExprCanonicalizer {
   }
 
   /**
-   * Returns a type tag for sorting JSON nodes.
+   * 返回用于排序 JSON 节点的类型标签。
    *
-   * @param node the node to tag
-   * @return numeric type tag as string
+   * @param node 待标记的节点
+   * @return 数字类型标签的字符串表示
    */
   private static String typeTag(JsonNode node) {
     if (node == null || node.isNull() || node.isMissingNode()) {

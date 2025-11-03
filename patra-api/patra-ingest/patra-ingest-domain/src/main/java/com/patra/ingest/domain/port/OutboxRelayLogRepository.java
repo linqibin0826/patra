@@ -5,23 +5,26 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Repository port for OutboxRelayLog persistence and querying.
+ * Outbox 转发日志仓储端口(六边形架构 - Domain → Infrastructure)。
  *
- * <p>Responsibilities:
- *
- * <ul>
- *   <li>Persist relay execution logs (single or batch)
- *   <li>Query logs by message, batch, or time range
- *   <li>Support monitoring and troubleshooting queries
- * </ul>
- *
- * <p>Design principles:
+ * <p><b>职责</b>:
  *
  * <ul>
- *   <li>Port interface in Domain layer (no infrastructure dependencies)
- *   <li>Implementation in Infrastructure layer (MyBatis-Plus repository)
- *   <li>Domain-centric signatures (uses domain entities, not DOs)
+ *   <li>持久化转发执行日志(单条或批量)
+ *   <li>按消息、批次或时间范围查询日志
+ *   <li>支持监控和故障排查查询
  * </ul>
+ *
+ * <p><b>设计原则</b>:
+ *
+ * <ul>
+ *   <li>端口定义在 Domain 层(无基础设施依赖)
+ *   <li>实现在 Infrastructure 层(MyBatis-Plus 仓储)
+ *   <li>领域中心签名(使用领域实体,而非 DO)
+ * </ul>
+ *
+ * <p><b>端口语义</b>: 此接口是六边形架构中的 <b>仓储端口(Repository Port)</b>,定义在 Domain
+ * 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。
  *
  * @author Papertrace Team
  * @since 2.0
@@ -29,114 +32,114 @@ import java.util.List;
 public interface OutboxRelayLogRepository {
 
   /**
-   * Persists a single relay log.
+   * 持久化单条转发日志。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Single relay execution result
-   *   <li>Ad-hoc relay attempts outside batch jobs
+   *   <li>单次转发执行结果
+   *   <li>批量作业外的临时转发尝试
    * </ul>
    *
-   * @param log relay log to persist
+   * @param log 待持久化的转发日志
    */
   void save(OutboxRelayLog log);
 
   /**
-   * Persists multiple relay logs in a single batch operation.
+   * 批量持久化多条转发日志(单次批量操作)。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Batch relay job results (typical case: 100-500 logs)
-   *   <li>Performance optimization: single INSERT statement
+   *   <li>批量转发作业结果(典型场景:100-500 条日志)
+   *   <li>性能优化:单次 INSERT 语句
    * </ul>
    *
-   * <p>Implementation note: Must use batch INSERT (NOT N individual INSERTs).
+   * <p><b>实现要求</b>: 必须使用批量 INSERT(不能是 N 次单独 INSERT)。
    *
-   * @param logs list of relay logs to persist
+   * @param logs 待持久化的转发日志列表
    */
   void saveBatch(List<OutboxRelayLog> logs);
 
   /**
-   * Queries all relay logs for a specific outbox message (ordered by time descending).
+   * 查询指定 Outbox 消息的所有转发日志(按时间降序)。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Troubleshooting: "Why did this message fail?"
-   *   <li>Audit trail: "How many times was this message retried?"
+   *   <li>故障排查:"这条消息为什么失败?"
+   *   <li>审计跟踪:"这条消息重试了多少次?"
    * </ul>
    *
-   * @param messageId outbox message ID
-   * @return list of relay logs (newest first)
+   * @param messageId Outbox 消息 ID
+   * @return 转发日志列表(最新的在前)
    */
   List<OutboxRelayLog> findByOutboxMessageId(Long messageId);
 
   /**
-   * Queries all relay logs for a specific batch (ordered by time ascending).
+   * 查询指定批次的所有转发日志(按时间升序)。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Batch-level statistics: "How did batch X perform?"
-   *   <li>Performance analysis: "What was the success rate for this batch?"
+   *   <li>批次级统计:"批次 X 的执行情况如何?"
+   *   <li>性能分析:"这个批次的成功率是多少?"
    * </ul>
    *
-   * @param batchId relay batch identifier (format: yyyyMMddHHmmss-xxxxxxxx)
-   * @return list of relay logs (oldest first)
+   * @param batchId 转发批次标识符(格式: yyyyMMddHHmmss-xxxxxxxx)
+   * @return 转发日志列表(最旧的在前)
    */
   List<OutboxRelayLog> findByBatchId(String batchId);
 
   /**
-   * Counts relay logs matching channel, status, and time range.
+   * 统计匹配 channel、状态和时间范围的转发日志数量。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Monitoring dashboard: "Success rate for INGEST channel in last 1 hour"
-   *   <li>Alert queries: "How many failures in last 10 minutes?"
+   *   <li>监控面板:"INGEST 频道最近 1 小时的成功率"
+   *   <li>告警查询:"最近 10 分钟有多少失败?"
    * </ul>
    *
-   * @param channel channel name (e.g., INGEST), null = all channels
-   * @param status relay status (e.g., PUBLISHED), null = all statuses
-   * @param startTime time range start (inclusive)
-   * @param endTime time range end (exclusive)
-   * @return count of matching relay logs
+   * @param channel 频道名称(例如 INGEST),null = 所有频道
+   * @param status 转发状态(例如 PUBLISHED),null = 所有状态
+   * @param startTime 时间范围起始(包含)
+   * @param endTime 时间范围结束(不包含)
+   * @return 匹配的转发日志数量
    */
   long countByChannelAndStatus(String channel, String status, Instant startTime, Instant endTime);
 
   /**
-   * Queries recent failed relay logs (for alerting).
+   * 查询最近的失败转发日志(用于告警)。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Alert notification: "Show top 10 recent failures"
-   *   <li>On-call triage: "What's failing right now?"
+   *   <li>告警通知:"展示最近 10 条失败记录"
+   *   <li>值班分诊:"现在什么在失败?"
    * </ul>
    *
-   * @param channel channel name filter (null = all channels)
-   * @param limit maximum number of logs to return
-   * @return list of failed relay logs (newest first)
+   * @param channel 频道名称过滤条件(null = 所有频道)
+   * @param limit 返回的最大日志数量
+   * @return 失败的转发日志列表(最新的在前)
    */
   List<OutboxRelayLog> findRecentFailed(String channel, int limit);
 
   /**
-   * Queries relay logs for a channel within a time range (for analysis).
+   * 查询指定频道在时间范围内的转发日志(用于分析)。
    *
-   * <p>Use cases:
+   * <p><b>使用场景</b>:
    *
    * <ul>
-   *   <li>Performance analysis: "Show all relay attempts today"
-   *   <li>Historical review: "How did yesterday's relay perform?"
+   *   <li>性能分析:"展示今天所有转发尝试"
+   *   <li>历史回顾:"昨天的转发表现如何?"
    * </ul>
    *
-   * @param channel channel name filter (null = all channels)
-   * @param startTime time range start (inclusive)
-   * @param endTime time range end (exclusive)
-   * @param limit maximum number of logs to return
-   * @return list of relay logs (ordered by startedAt descending)
+   * @param channel 频道名称过滤条件(null = 所有频道)
+   * @param startTime 时间范围起始(包含)
+   * @param endTime 时间范围结束(不包含)
+   * @param limit 返回的最大日志数量
+   * @return 转发日志列表(按 startedAt 降序)
    */
   List<OutboxRelayLog> findByChannelAndTimeRange(
       String channel, Instant startTime, Instant endTime, int limit);

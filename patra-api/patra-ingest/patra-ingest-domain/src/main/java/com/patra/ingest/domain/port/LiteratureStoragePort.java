@@ -5,42 +5,43 @@ import java.util.List;
 import lombok.Builder;
 
 /**
- * Output port for storing literature payloads to object storage.
+ * 文献存储端口(六边形架构 - Domain → Infrastructure)。
  *
- * <p>This port abstracts the technical details of uploading serialized literature to S3/MinIO or
- * similar object storage systems. Infrastructure adapters implement file serialization, checksum
- * calculation, and physical upload.
- *
- * <p>Responsibilities:
+ * <p><b>职责</b>: 将文献负载存储到对象存储(S3/MinIO)。此端口抽象了上传序列化文献的技术细节,基础设施适配器负责:
  *
  * <ul>
- *   <li>Serialize literature to JSON format
- *   <li>Calculate file checksums (MD5, SHA-256)
- *   <li>Upload to object storage with metadata
- *   <li>Return storage location and file information
+ *   <li>将文献序列化为 JSON 格式
+ *   <li>计算文件校验和(MD5、SHA-256)
+ *   <li>上传到对象存储并附加元数据
+ *   <li>返回存储位置和文件信息
  * </ul>
+ *
+ * <p><b>端口语义</b>: 此接口是六边形架构中的 <b>输出端口(Output Port)</b>,定义在 Domain
+ * 层,由基础设施层(Infrastructure)实现,确保领域逻辑与存储技术解耦。
  */
 public interface LiteratureStoragePort {
 
   /**
-   * Stores a batch of standardized literature to object storage.
+   * 批量存储标准化文献到对象存储。
    *
-   * @param literature domain-normalized literature list
-   * @param context storage context with execution metadata
-   * @return storage result containing location and checksums
+   * <p><b>业务含义</b>: 将领域归一化的文献列表持久化到对象存储。
+   *
+   * @param literature 领域归一化的文献列表
+   * @param context 存储上下文,包含执行元数据
+   * @return 存储结果,包含位置和校验和
    */
   StorageResult store(List<StandardLiterature> literature, StorageContext context);
 
   /**
-   * Storage result containing file location and integrity information.
+   * 存储结果,包含文件位置和完整性信息。
    *
-   * @param storageKey complete storage identifier (bucket/key combined)
-   * @param bucketName object storage bucket name
-   * @param objectKey object key within bucket
-   * @param fileSize file size in bytes
-   * @param md5 MD5 checksum (hex format)
-   * @param sha256 SHA-256 checksum (hex format)
-   * @param literatureCount number of literature items stored
+   * @param storageKey 完整存储标识符(bucket/key 组合)
+   * @param bucketName 对象存储桶名称
+   * @param objectKey 桶内对象键
+   * @param fileSize 文件大小(字节)
+   * @param md5 MD5 校验和(十六进制格式)
+   * @param sha256 SHA-256 校验和(十六进制格式)
+   * @param literatureCount 存储的文献数量
    */
   @Builder
   record StorageResult(
@@ -53,11 +54,11 @@ public interface LiteratureStoragePort {
       int literatureCount) {}
 
   /**
-   * Storage context providing execution metadata for file organization.
+   * 存储上下文,提供文件组织的执行元数据。
    *
-   * @param runId task run identifier
-   * @param batchNo execution batch number
-   * @param provenanceCode normalized source identifier
+   * @param runId 任务 run 标识符
+   * @param batchNo 执行批次编号
+   * @param provenanceCode 归一化的数据源标识符
    */
   @Builder
   record StorageContext(Long runId, int batchNo, String provenanceCode) {}

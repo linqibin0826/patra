@@ -17,15 +17,25 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Converts {@link ProvenanceConfigSnapshot} records captured at planning time into runtime {@link
- * ProvenanceConfig} instances understood by starter adapters.
+ * Provenance配置转换器
  *
- * <p>The converter performs a defensive transformation:
+ * <p>在六边形架构+DDD中的角色:应用层转换器,负责将规划时捕获的{@link ProvenanceConfigSnapshot} 转换为starter适配器能够理解的运行时{@link
+ * ProvenanceConfig}实例。
+ *
+ * <p>主要职责:
  *
  * <ul>
- *   <li>Returns {@code null} when the snapshot lacks the minimum information (e.g., baseUrl).
- *   <li>Parses JSON headers into an immutable map while ignoring malformed entries.
- *   <li>Omits empty optional sections to let downstream defaults take effect.
+ *   <li>将数据库中的配置快照转换为可执行的配置对象
+ *   <li>执行防御性转换,确保配置的完整性和有效性
+ *   <li>处理可选配置,让下游使用默认值
+ * </ul>
+ *
+ * <p>转换策略:
+ *
+ * <ul>
+ *   <li>当快照缺少最小必需信息(如baseUrl)时返回{@code null}
+ *   <li>解析JSON格式的headers为不可变Map,忽略格式错误的条目
+ *   <li>省略空的可选配置段,让下游默认值生效
  * </ul>
  */
 @Component
@@ -33,25 +43,21 @@ import org.springframework.util.StringUtils;
 public class ProvenanceConfigConverter {
 
   /**
-   * Converts a provenance configuration snapshot into a starter configuration.
+   * 将Provenance配置快照转换为starter配置
    *
-   * @param provenanceCode provenance identifier (logging/debug only)
-   * @param snapshot registry snapshot captured with the execution context
-   * @return runtime configuration or {@code null} when the snapshot is incomplete/invalid
+   * @param provenanceCode Provenance标识符(仅用于日志/调试)
+   * @param snapshot 执行上下文中捕获的注册表快照
+   * @return 运行时配置,快照不完整/无效时返回{@code null}
    */
   public ProvenanceConfig convert(String provenanceCode, ProvenanceConfigSnapshot snapshot) {
     if (snapshot == null || snapshot.provenance() == null) {
-      log.debug(
-          "Skipping provenance config conversion because snapshot is missing. provenanceCode={}",
-          provenanceCode);
+      log.debug("跳过Provenance配置转换,快照缺失 provenanceCode={}", provenanceCode);
       return null;
     }
 
     String baseUrl = snapshot.provenance().baseUrlDefault();
     if (!StringUtils.hasText(baseUrl)) {
-      log.debug(
-          "Provenance snapshot missing baseUrl, fallback to starter defaults. provenanceCode={}",
-          provenanceCode);
+      log.debug("Provenance快照缺少baseUrl,回退到starter默认值 provenanceCode={}", provenanceCode);
       return null;
     }
 
@@ -65,10 +71,7 @@ public class ProvenanceConfigConverter {
           toRetryConfig(snapshot.retry()),
           toRateLimitConfig(snapshot.rateLimit()));
     } catch (IllegalArgumentException ex) {
-      log.warn(
-          "Invalid provenance snapshot detected. provenanceCode={} message={}",
-          provenanceCode,
-          ex.getMessage());
+      log.warn("检测到无效的Provenance快照 provenanceCode={} message={}", provenanceCode, ex.getMessage());
       return null;
     }
   }
@@ -175,7 +178,7 @@ public class ProvenanceConfigConverter {
               });
       return Map.copyOf(headers);
     } catch (Exception ex) {
-      log.warn("Failed to parse provenance default headers JSON. message={}", ex.getMessage());
+      log.warn("解析Provenance默认headers JSON失败 message={}", ex.getMessage());
       return Map.of();
     }
   }

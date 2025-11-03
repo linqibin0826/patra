@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * Retry configuration query view.
+ * 重试配置查询视图。
  *
- * <p>Read-optimized projection for querying retry policy configuration.
+ * <p>用于查询重试策略配置的读优化投影。包含最大重试次数、退避策略、延迟参数、熔断阈值等重试相关配置。
  *
  * @author linqibin
  * @since 0.1.0
@@ -30,16 +30,16 @@ public record RetryConfigQuery(
     Integer circuitCooldownMillis) {
   public RetryConfigQuery {
     if (id == null || id <= 0) {
-      throw new DomainValidationException("Retry config id must be positive");
+      throw new DomainValidationException("重试配置ID必须为正数");
     }
     if (provenanceId == null || provenanceId <= 0) {
-      throw new DomainValidationException("Provenance id must be positive");
+      throw new DomainValidationException("来源ID必须为正数");
     }
     if (backoffPolicyTypeCode == null || backoffPolicyTypeCode.isBlank()) {
-      throw new DomainValidationException("Backoff policy type code cannot be blank");
+      throw new DomainValidationException("退避策略类型代码不能为空");
     }
     if (effectiveFrom == null) {
-      throw new DomainValidationException("Effective from cannot be null");
+      throw new DomainValidationException("生效时间不能为null");
     }
     operationType = operationType != null ? operationType.trim() : null;
     backoffPolicyTypeCode = backoffPolicyTypeCode.trim();

@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Result of an Outbox publishing operation.
+ * Outbox 发布操作的结果。
  *
- * <p>Encapsulates success/failure counts, error details, and duration metrics.
+ * <p>封装成功/失败计数、错误详情和持续时间指标。
  *
  * @author linqibin
  * @since 0.1.0
@@ -29,67 +29,67 @@ public final class OutboxPublishResult {
   }
 
   /**
-   * Returns the number of successfully published messages.
+   * 返回成功发布的消息数量。
    *
-   * @return Success count
+   * @return 成功计数
    */
   public int getSuccessCount() {
     return successCount;
   }
 
   /**
-   * Returns the number of failed messages.
+   * 返回失败的消息数量。
    *
-   * @return Failure count
+   * @return 失败计数
    */
   public int getFailureCount() {
     return failureCount;
   }
 
   /**
-   * Returns the list of failure details.
+   * 返回失败详情列表。
    *
-   * @return Unmodifiable list of failures (never null, may be empty)
+   * @return 不可修改的失败列表(永远不为 null,可能为空)
    */
   public List<FailureDetail> getFailures() {
     return failures;
   }
 
   /**
-   * Returns the operation duration.
+   * 返回操作持续时间。
    *
-   * @return Duration (never null)
+   * @return 持续时间(永远不为 null)
    */
   public Duration getDuration() {
     return duration;
   }
 
   /**
-   * Checks if there were any failures.
+   * 检查是否有任何失败。
    *
-   * @return true if at least one message failed, false otherwise
+   * @return 如果至少有一条消息失败则返回 true,否则返回 false
    */
   public boolean hasFailures() {
     return failureCount > 0;
   }
 
   /**
-   * Creates a successful result.
+   * 创建成功结果。
    *
-   * @param count Number of successfully published messages
-   * @param duration Operation duration
-   * @return Success result
+   * @param count 成功发布的消息数量
+   * @param duration 操作持续时间
+   * @return 成功结果
    */
   public static OutboxPublishResult success(int count, Duration duration) {
     return new OutboxPublishResult(count, 0, Collections.emptyList(), duration);
   }
 
   /**
-   * Creates a failure result.
+   * 创建失败结果。
    *
-   * @param errorMessage General error message
-   * @param duration Operation duration
-   * @return Failure result
+   * @param errorMessage 通用错误消息
+   * @param duration 操作持续时间
+   * @return 失败结果
    */
   public static OutboxPublishResult failure(String errorMessage, Duration duration) {
     FailureDetail detail = new FailureDetail(null, null, errorMessage, "GENERAL_ERROR");
@@ -97,12 +97,12 @@ public final class OutboxPublishResult {
   }
 
   /**
-   * Creates a partial failure result (some succeeded, some failed).
+   * 创建部分失败结果(部分成功,部分失败)。
    *
-   * @param successCount Number of successful messages
-   * @param failures List of failure details
-   * @param duration Operation duration
-   * @return Partial failure result
+   * @param successCount 成功的消息数量
+   * @param failures 失败详情列表
+   * @param duration 操作持续时间
+   * @return 部分失败结果
    */
   public static OutboxPublishResult partial(
       int successCount, List<FailureDetail> failures, Duration duration) {
@@ -110,20 +110,20 @@ public final class OutboxPublishResult {
   }
 
   /**
-   * Creates an empty result (no messages to process).
+   * 创建空结果(没有消息需要处理)。
    *
-   * @param duration Operation duration
-   * @return Empty result
+   * @param duration 操作持续时间
+   * @return 空结果
    */
   public static OutboxPublishResult empty(Duration duration) {
     return new OutboxPublishResult(0, 0, Collections.emptyList(), duration);
   }
 
   /**
-   * Merges two results (useful for batch processing).
+   * 合并两个结果(用于批处理)。
    *
-   * @param other Other result to merge
-   * @return Merged result
+   * @param other 要合并的另一个结果
+   * @return 合并后的结果
    */
   public OutboxPublishResult merge(OutboxPublishResult other) {
     int totalSuccess = this.successCount + other.successCount;
@@ -138,12 +138,12 @@ public final class OutboxPublishResult {
   }
 
   /**
-   * Detailed failure information for a single message.
+   * 单条消息的详细失败信息。
    *
-   * @param aggregateId Aggregate ID (nullable)
-   * @param dedupKey Deduplication key (nullable)
-   * @param errorMessage Error message
-   * @param errorType Error type (e.g., "VALIDATION_ERROR", "DB_ERROR", "JSON_ERROR")
+   * @param aggregateId 聚合 ID(可为 null)
+   * @param dedupKey 去重键(可为 null)
+   * @param errorMessage 错误消息
+   * @param errorType 错误类型(例如 "VALIDATION_ERROR"、"DB_ERROR"、"JSON_ERROR")
    */
   public record FailureDetail(
       String aggregateId, String dedupKey, String errorMessage, String errorType) {}

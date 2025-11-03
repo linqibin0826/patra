@@ -6,33 +6,36 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 用于在 Spring 容器中注册领域层工厂的配置类。
+ * 领域层工厂 Spring 集成配置类。
+ *
+ * <p>在 Spring 容器中注册领域层工厂 Bean,桥接纯 Java 领域层与 Spring 框架基础设施,确保六边形架构的依赖方向正确性。
  *
  * <p>职责:
  *
  * <ul>
- *   <li>在 Spring 容器中注册领域层工厂(纯 Java 类)
- *   <li>向领域层工厂注入基础设施依赖(例如来自 patra-starter-core 的 Clock)
- *   <li>保持领域层的纯净(工厂保持为纯 Java,无 @Component 注解)
+ *   <li>将领域层工厂(纯 Java 类)注册为 Spring Bean
+ *   <li>向工厂注入基础设施依赖(如 Clock、IdGenerator 等)
+ *   <li>保持领域层纯净性(工厂类不使用 @Component 等 Spring 注解)
+ *   <li>实现启动层到领域层的单向依赖(启动层 → 领域层,非领域层 → 框架)
  * </ul>
  *
- * <p>设计理由:
+ * <p>架构设计理由:
  *
  * <ul>
- *   <li>领域层必须保持为纯 Java(无框架依赖)
- *   <li>领域层中的工厂类不使用 @Component 注解
- *   <li>启动层桥接领域层(纯 Java)与 Spring 框架
- *   <li>依赖方向: 启动层 → 领域层(正确),非 领域层 → Spring(错误)
- *   <li>基础设施 Bean(Clock)由 patra-spring-boot-starter-core 提供
+ *   <li>领域层必须保持为纯 Java - 无 Spring/框架依赖,可独立测试
+ *   <li>工厂类位于领域层,但不使用 @Component 注解
+ *   <li>启动层(Boot 模块)负责桥接领域层与 Spring 生态
+ *   <li>依赖方向严格遵守: Boot → Domain(正确),Domain ↛ Spring(禁止)
+ *   <li>基础设施 Bean(Clock)由 patra-spring-boot-starter-core 统一提供
  * </ul>
  *
  * <p>优势:
  *
  * <ul>
- *   <li>领域层可以不使用 Spring 上下文进行测试
- *   <li>工厂可以在单元测试中用测试特定的依赖进行实例化
- *   <li>遵守六边形架构依赖规则
- *   <li>集中式基础设施 Bean 消除重复
+ *   <li>领域层可脱离 Spring 容器进行单元测试
+ *   <li>工厂可在测试中使用 Mock 依赖轻松实例化
+ *   <li>严格遵守六边形架构和洋葱架构依赖规则
+ *   <li>集中式基础设施 Bean 配置,避免重复定义
  * </ul>
  *
  * @author Papertrace Team

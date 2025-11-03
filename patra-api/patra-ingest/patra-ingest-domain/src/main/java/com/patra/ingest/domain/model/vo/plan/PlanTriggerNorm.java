@@ -10,20 +10,34 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Domain record representing a normalized trigger command.
+ * 计划触发规范化值对象,表示规范化的触发命令。
  *
- * @param scheduleInstanceId scheduler instance identifier
- * @param provenanceCode provenance code
- * @param operationCode operation type
- * @param step slice planning step
- * @param triggerType trigger type
- * @param scheduler scheduler type
- * @param schedulerJobId scheduler job identifier
- * @param schedulerLogId scheduler log identifier
- * @param requestedWindowFrom requested window start
- * @param requestedWindowTo requested window end
- * @param priority priority level
- * @param triggerParams additional trigger parameters
+ * <p>不可变性:通过值语义比较相等性
+ *
+ * <p>业务约束:
+ *
+ * <ul>
+ *   <li>scheduleInstanceId必须非空
+ *   <li>provenanceCode必须非空
+ *   <li>operationCode必须非空
+ *   <li>triggerType必须非空
+ *   <li>scheduler必须非空
+ * </ul>
+ *
+ * <p>使用场景:封装来自不同调度器的触发命令,提供统一的领域模型
+ *
+ * @param scheduleInstanceId 调度实例标识符
+ * @param provenanceCode 来源代码
+ * @param operationCode 操作类型
+ * @param step 切片规划步骤
+ * @param triggerType 触发类型
+ * @param scheduler 调度器类型
+ * @param schedulerJobId 调度器作业标识符
+ * @param schedulerLogId 调度器日志标识符
+ * @param requestedWindowFrom 请求的窗口起始时间
+ * @param requestedWindowTo 请求的窗口结束时间
+ * @param priority 优先级
+ * @param triggerParams 附加触发参数
  */
 public record PlanTriggerNorm(
     Long scheduleInstanceId,
@@ -39,21 +53,36 @@ public record PlanTriggerNorm(
     Priority priority,
     Map<String, Object> triggerParams) {
   public PlanTriggerNorm {
-    Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId must not be null");
-    Objects.requireNonNull(provenanceCode, "provenanceCode must not be null");
-    Objects.requireNonNull(operationCode, "operationCode must not be null");
-    Objects.requireNonNull(triggerType, "triggerType must not be null");
-    Objects.requireNonNull(scheduler, "scheduler must not be null");
+    Objects.requireNonNull(scheduleInstanceId, "scheduleInstanceId不能为null");
+    Objects.requireNonNull(provenanceCode, "provenanceCode不能为null");
+    Objects.requireNonNull(operationCode, "operationCode不能为null");
+    Objects.requireNonNull(triggerType, "triggerType不能为null");
+    Objects.requireNonNull(scheduler, "scheduler不能为null");
   }
 
+  /**
+   * 检查是否为采集操作。
+   *
+   * @return 如果操作类型为HARVEST则返回true
+   */
   public boolean isHarvest() {
     return operationCode == OperationCode.HARVEST;
   }
 
+  /**
+   * 检查是否为回填操作。
+   *
+   * @return 如果操作类型为BACKFILL则返回true
+   */
   public boolean isBackfill() {
     return operationCode == OperationCode.BACKFILL;
   }
 
+  /**
+   * 检查是否为更新操作。
+   *
+   * @return 如果操作类型为UPDATE则返回true
+   */
   public boolean isUpdate() {
     return operationCode == OperationCode.UPDATE;
   }

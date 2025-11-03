@@ -1,13 +1,13 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Dictionary reference requiring validation.
+ * 需要验证的字典引用。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>typeCode - dictionary type identifier being referenced
- *   <li>itemCode - dictionary item identifier being referenced
+ *   <li>typeCode - 被引用的字典类型标识符
+ *   <li>itemCode - 被引用的字典项标识符
  * </ol>
  *
  * @author linqibin
@@ -15,17 +15,17 @@ package com.patra.registry.api.dto.dict;
  */
 public record DictionaryReferenceReq(String typeCode, String itemCode) {
   /**
-   * Canonical constructor performing null/blank validation and trimming.
+   * 规范构造器,执行非空/空白验证并修剪空格。
    *
-   * @param typeCode dictionary type identifier being referenced
-   * @param itemCode dictionary item identifier being referenced
+   * @param typeCode 被引用的字典类型标识符
+   * @param itemCode 被引用的字典项标识符
    */
   public DictionaryReferenceReq {
     if (typeCode == null || typeCode.trim().isEmpty()) {
-      throw new IllegalArgumentException("Dictionary type code cannot be null or empty");
+      throw new IllegalArgumentException("字典类型代码不能为null或空字符串");
     }
     if (itemCode == null || itemCode.trim().isEmpty()) {
-      throw new IllegalArgumentException("Dictionary item code cannot be null or empty");
+      throw new IllegalArgumentException("字典项代码不能为null或空字符串");
     }
     typeCode = typeCode.trim();
     itemCode = itemCode.trim();

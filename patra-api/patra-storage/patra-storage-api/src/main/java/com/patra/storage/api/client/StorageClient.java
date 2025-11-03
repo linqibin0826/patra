@@ -4,10 +4,9 @@ import com.patra.storage.api.endpoint.StorageEndpoint;
 import org.springframework.cloud.openfeign.FeignClient;
 
 /**
- * Feign client for storage metadata internal API.
+ * 存储元数据内部 API 的 Feign 客户端。
  *
- * <p>Extends {@link StorageEndpoint} to provide type-safe RPC integration via Spring Cloud
- * OpenFeign.
+ * <p>扩展 {@link StorageEndpoint} 以通过 Spring Cloud OpenFeign 提供类型安全的 RPC 集成。
  *
  * @author linqibin
  * @since 0.1.0

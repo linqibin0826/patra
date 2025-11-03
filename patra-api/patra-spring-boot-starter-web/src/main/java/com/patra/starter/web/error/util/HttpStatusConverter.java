@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
 /**
- * Utility for converting integer status codes to {@link HttpStatus} with fallback handling.
+ * 将整数状态码转换为 {@link HttpStatus} 的工具类,提供回退处理。
  *
  * @author linqibin
  * @since 0.1.0
@@ -13,22 +13,20 @@ import org.springframework.http.HttpStatus;
 public final class HttpStatusConverter {
 
   private HttpStatusConverter() {
-    throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    throw new UnsupportedOperationException("工具类不能被实例化");
   }
 
   /**
-   * Converts integer HTTP status code to {@link HttpStatus}, defaulting to 500 when invalid.
+   * 将整数 HTTP 状态码转换为 {@link HttpStatus},无效时默认为 500。
    *
-   * @param statusCode HTTP status code as integer
-   * @return corresponding {@link HttpStatus} or {@code INTERNAL_SERVER_ERROR} if invalid
+   * @param statusCode HTTP 状态码(整数)
+   * @return 对应的 {@link HttpStatus},如果无效则返回 {@code INTERNAL_SERVER_ERROR}
    */
   public static HttpStatus toHttpStatus(int statusCode) {
     try {
       return HttpStatus.valueOf(statusCode);
     } catch (IllegalArgumentException e) {
-      log.warn(
-          "Invalid HTTP status code [{}] encountered, defaulting to 500 Internal Server Error",
-          statusCode);
+      log.warn("遇到无效的 HTTP 状态码 [{}],默认为 500 Internal Server Error", statusCode);
       return HttpStatus.INTERNAL_SERVER_ERROR;
     }
   }

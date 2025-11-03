@@ -11,38 +11,37 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox relay metrics collector using Micrometer.
+ * 使用 Micrometer 的 Outbox 中继指标收集器
  *
- * <h3>Metrics Overview</h3>
+ * <h3>指标概览</h3>
  *
- * <p>This component exposes the following metrics for monitoring and alerting:
- *
- * <ul>
- *   <li><strong>outbox.relay.attempts</strong> (Counter): Total relay attempts by status and
- *       channel
- *   <li><strong>outbox.relay.duration</strong> (Timer): Relay execution duration distribution
- *   <li><strong>outbox.relay.batch.size</strong> (DistributionSummary): Batch size distribution
- *   <li><strong>outbox.relay.errors</strong> (Counter): Error count by error code and channel
- * </ul>
- *
- * <h3>Tag Dimensions</h3>
+ * <p>此组件公开以下用于监控和告警的指标:
  *
  * <ul>
- *   <li><code>channel</code>: Outbox channel (e.g., INGEST_TASK, REGISTRY_UPDATE)
- *   <li><code>status</code>: Relay result status (PUBLISHED, DEFERRED, FAILED, LEASE_MISSED)
- *   <li><code>error_code</code>: Error classification code (for failures only)
+ *   <li><strong>outbox.relay.attempts</strong> (Counter): 按状态和通道的中继尝试总数
+ *   <li><strong>outbox.relay.duration</strong> (Timer): 中继执行持续时间分布
+ *   <li><strong>outbox.relay.batch.size</strong> (DistributionSummary): 批大小分布
+ *   <li><strong>outbox.relay.errors</strong> (Counter): 按错误代码和通道的错误计数
  * </ul>
  *
- * <h3>Usage Example</h3>
+ * <h3>标签维度</h3>
+ *
+ * <ul>
+ *   <li><code>channel</code>: Outbox 通道 (例如 INGEST_TASK, REGISTRY_UPDATE)
+ *   <li><code>status</code>: 中继结果状态 (PUBLISHED, DEFERRED, FAILED, LEASE_MISSED)
+ *   <li><code>error_code</code>: 错误分类代码 (仅用于失败)
+ * </ul>
+ *
+ * <h3>使用示例</h3>
  *
  * <pre>{@code
- * // Record successful publish
+ * // 记录成功发布
  * metrics.recordPublished("INGEST_TASK");
  *
- * // Record deferred retry
+ * // 记录延迟重试
  * metrics.recordDeferred("INGEST_TASK", "NETWORK_TIMEOUT");
  *
- * // Record batch execution
+ * // 记录批次执行
  * metrics.recordBatchSize(150);
  * metrics.recordBatchDuration("INGEST_TASK", Duration.ofMillis(250));
  * }</pre>
@@ -63,34 +62,32 @@ public class OutboxRelayMetrics {
 
   public OutboxRelayMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
-    log.info(
-        "Initialized OutboxRelayMetrics with registry: {}",
-        meterRegistry.getClass().getSimpleName());
+    log.info("已初始化 OutboxRelayMetrics,注册表: {}", meterRegistry.getClass().getSimpleName());
   }
 
   /**
-   * Records a successful message publish.
+   * 记录成功的消息发布
    *
-   * <p>Increments counter: {@code outbox.relay.attempts{channel=X, status=PUBLISHED}}
+   * <p>递增计数器: {@code outbox.relay.attempts{channel=X, status=PUBLISHED}}
    *
-   * @param channel outbox channel name
+   * @param channel Outbox 通道名称
    */
   public void recordPublished(String channel) {
     counter("attempts", channel, RelayStatus.PUBLISHED.getCode()).increment();
   }
 
   /**
-   * Records a deferred retry (transient error).
+   * 记录延迟重试 (暂时性错误)
    *
-   * <p>Increments counters:
+   * <p>递增计数器:
    *
    * <ul>
    *   <li>{@code outbox.relay.attempts{channel=X, status=DEFERRED}}
    *   <li>{@code outbox.relay.errors{channel=X, error_code=Y}}
    * </ul>
    *
-   * @param channel outbox channel name
-   * @param errorCode error classification code
+   * @param channel Outbox 通道名称
+   * @param errorCode 错误分类代码
    */
   public void recordDeferred(String channel, String errorCode) {
     counter("attempts", channel, RelayStatus.DEFERRED.getCode()).increment();
@@ -98,17 +95,17 @@ public class OutboxRelayMetrics {
   }
 
   /**
-   * Records a permanent failure.
+   * 记录永久失败
    *
-   * <p>Increments counters:
+   * <p>递增计数器:
    *
    * <ul>
    *   <li>{@code outbox.relay.attempts{channel=X, status=FAILED}}
    *   <li>{@code outbox.relay.errors{channel=X, error_code=Y}}
    * </ul>
    *
-   * @param channel outbox channel name
-   * @param errorCode error classification code
+   * @param channel Outbox 通道名称
+   * @param errorCode 错误分类代码
    */
   public void recordFailed(String channel, String errorCode) {
     counter("attempts", channel, RelayStatus.FAILED.getCode()).increment();
@@ -116,124 +113,124 @@ public class OutboxRelayMetrics {
   }
 
   /**
-   * Records a lease acquisition miss (concurrent competition).
+   * 记录租约获取丢失 (并发竞争)
    *
-   * <p>Increments counter: {@code outbox.relay.attempts{channel=X, status=LEASE_MISSED}}
+   * <p>递增计数器: {@code outbox.relay.attempts{channel=X, status=LEASE_MISSED}}
    *
-   * @param channel outbox channel name
+   * @param channel Outbox 通道名称
    */
   public void recordLeaseMissed(String channel) {
     counter("attempts", channel, RelayStatus.LEASE_MISSED.getCode()).increment();
   }
 
   /**
-   * Records batch execution duration.
+   * 记录批次执行持续时间
    *
-   * <p>Records timer: {@code outbox.relay.duration{channel=X}}
+   * <p>记录计时器: {@code outbox.relay.duration{channel=X}}
    *
-   * <p>Useful for monitoring:
+   * <p>用于监控:
    *
    * <ul>
-   *   <li>P50, P95, P99 latency
-   *   <li>Performance degradation over time
-   *   <li>SLA compliance (e.g., 95% of batches complete within 500ms)
+   *   <li>P50, P95, P99 延迟
+   *   <li>随时间推移的性能下降
+   *   <li>SLA 合规性 (例如 95% 的批次在 500ms 内完成)
    * </ul>
    *
-   * @param channel outbox channel name
-   * @param duration batch execution duration
+   * @param channel Outbox 通道名称
+   * @param duration 批次执行持续时间
    */
   public void recordBatchDuration(String channel, Duration duration) {
     timer(channel).record(duration.toMillis(), TimeUnit.MILLISECONDS);
   }
 
   /**
-   * Records batch size (number of messages processed).
+   * 记录批大小 (处理的消息数量)
    *
-   * <p>Records distribution summary: {@code outbox.relay.batch.size}
+   * <p>记录分布摘要: {@code outbox.relay.batch.size}
    *
-   * <p>Useful for monitoring:
+   * <p>用于监控:
    *
    * <ul>
-   *   <li>Average batch size
-   *   <li>Throughput estimation (batch size × batch frequency)
-   *   <li>Resource utilization (larger batches = better efficiency)
+   *   <li>平均批大小
+   *   <li>吞吐量估算 (批大小 × 批频率)
+   *   <li>资源利用率 (更大的批次 = 更好的效率)
    * </ul>
    *
-   * @param batchSize number of messages in batch
+   * @param batchSize 批次中的消息数量
    */
   public void recordBatchSize(int batchSize) {
     batchSizeSummary().record(batchSize);
   }
 
   /**
-   * Gets or creates a counter for relay attempts.
+   * 获取或创建中继尝试的计数器
    *
-   * <p>Counter name: {@code outbox.relay.attempts}
+   * <p>计数器名称: {@code outbox.relay.attempts}
    *
-   * <p>Tags:
+   * <p>标签:
    *
    * <ul>
-   *   <li>channel: Outbox channel name
-   *   <li>status: Relay result status
+   *   <li>channel: Outbox 通道名称
+   *   <li>status: 中继结果状态
    * </ul>
    */
   private Counter counter(String metric, String channel, String status) {
     return Counter.builder(METRIC_PREFIX + "." + metric)
         .tag(TAG_CHANNEL, channel)
         .tag(TAG_STATUS, status)
-        .description("Outbox relay attempts by status and channel")
+        .description("按状态和通道的 Outbox 中继尝试")
         .register(meterRegistry);
   }
 
   /**
-   * Gets or creates a counter for relay errors.
+   * 获取或创建中继错误的计数器
    *
-   * <p>Counter name: {@code outbox.relay.errors}
+   * <p>计数器名称: {@code outbox.relay.errors}
    *
-   * <p>Tags:
+   * <p>标签:
    *
    * <ul>
-   *   <li>channel: Outbox channel name
-   *   <li>error_code: Error classification code
+   *   <li>channel: Outbox 通道名称
+   *   <li>error_code: 错误分类代码
    * </ul>
    */
   private Counter errorCounter(String channel, String errorCode) {
     return Counter.builder(METRIC_PREFIX + ".errors")
         .tag(TAG_CHANNEL, channel)
         .tag(TAG_ERROR_CODE, errorCode)
-        .description("Outbox relay errors by error code and channel")
+        .description("按错误代码和通道的 Outbox 中继错误")
         .register(meterRegistry);
   }
 
   /**
-   * Gets or creates a timer for batch execution duration.
+   * 获取或创建批次执行持续时间的计时器
    *
-   * <p>Timer name: {@code outbox.relay.duration}
+   * <p>计时器名称: {@code outbox.relay.duration}
    *
-   * <p>Tags:
+   * <p>标签:
    *
    * <ul>
-   *   <li>channel: Outbox channel name
+   *   <li>channel: Outbox 通道名称
    * </ul>
    */
   private Timer timer(String channel) {
     return Timer.builder(METRIC_PREFIX + ".duration")
         .tag(TAG_CHANNEL, channel)
-        .description("Outbox relay batch execution duration")
+        .description("Outbox 中继批次执行持续时间")
         .publishPercentiles(0.5, 0.95, 0.99) // P50, P95, P99
         .register(meterRegistry);
   }
 
   /**
-   * Gets or creates a distribution summary for batch size.
+   * 获取或创建批大小的分布摘要
    *
-   * <p>Summary name: {@code outbox.relay.batch.size}
+   * <p>摘要名称: {@code outbox.relay.batch.size}
    *
-   * <p>No tags (global metric across all channels).
+   * <p>无标签 (所有通道的全局指标)
    */
   private DistributionSummary batchSizeSummary() {
     return DistributionSummary.builder(METRIC_PREFIX + ".batch.size")
-        .description("Outbox relay batch size distribution")
+        .description("Outbox 中继批大小分布")
         .publishPercentiles(0.5, 0.95, 0.99) // P50, P95, P99
         .register(meterRegistry);
   }

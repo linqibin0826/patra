@@ -24,10 +24,13 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * Converter that maps {@link PubmedArticle} responses to {@link StandardLiterature}.
+ * PubMed文章转换器
  *
- * <p>Centralizes all field extraction logic so downstream components operate on a stable Shared
- * Kernel model.
+ * <p>将 {@link PubmedArticle} 响应映射为 {@link StandardLiterature} 标准文献模型。
+ * 集中所有字段提取逻辑，使下游组件能够操作稳定的共享内核模型。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class PubmedArticleConverter {

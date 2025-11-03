@@ -6,58 +6,69 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Exception that wraps persistence failures for plans and related entities.
+ * 计划持久化异常。
  *
- * <p>Represents write/update/query failures for scheduling instances, plans, slices, tasks, and
- * task attempts when orchestrating ingestion plans. Common causes include database outages, network
- * jitter, optimistic-lock conflicts, or sequence generation issues.
+ * <p>触发场景:在编排采集计划时,对调度实例、计划、切片、任务和任务尝试的写入/更新/查询失败。
+ *
+ * <p>常见原因:
  *
  * <ul>
- *   <li>Transient connection/timeout: retry a limited number of times.
- *   <li>Optimistic-lock conflicts: use {@link #getStage()} to determine which entity needs
- *       rebuilding or a fresh read.
- *   <li>Constraint violations: log and alert instead of retrying blindly.
+ *   <li>数据库宕机或连接池耗尽
+ *   <li>网络抖动导致超时
+ *   <li>乐观锁冲突(版本号不匹配)
+ *   <li>序列号生成问题
  * </ul>
+ *
+ * <p>处理策略:
+ *
+ * <ul>
+ *   <li><b>临时性连接/超时</b>:限次重试。
+ *   <li><b>乐观锁冲突</b>:使用 {@link #getStage()} 判断哪个实体需要重建或重新读取。
+ *   <li><b>约束违反</b>:记录日志并告警,不应盲目重试。
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class PlanPersistenceException extends IngestException implements HasErrorTraits {
 
   /**
-   * Stage classification for persistence operations.
+   * 持久化操作的阶段分类。
    *
-   * <p>Provides context to drive differentiated retry/compensation.
+   * <p>为差异化的重试/补偿策略提供上下文。
    */
   public enum Stage {
-    /** Failure while persisting scheduling instances. */
+    /** 持久化调度实例时失败。 */
     SCHEDULE_INSTANCE,
-    /** Failure while writing/updating the plan aggregate. */
+    /** 写入/更新计划聚合时失败。 */
     PLAN,
-    /** Failure while persisting plan slices. */
+    /** 持久化计划切片时失败。 */
     PLAN_SLICE,
-    /** Failure while writing/updating tasks. */
+    /** 写入/更新任务时失败。 */
     TASK,
-    /** Failure while recording task retries/attempts. */
+    /** 记录任务重试/尝试时失败。 */
     TASK_RETRY
   }
 
-  /** Stage where the failure occurred. */
+  /** 失败发生的阶段。 */
   private final Stage stage;
 
   /**
-   * Construct the exception with the stage and message.
+   * 构造计划持久化异常。
    *
-   * @param stage failing stage
-   * @param message descriptive message
+   * @param stage 失败阶段
+   * @param message 描述性消息
    */
   public PlanPersistenceException(Stage stage, String message) {
     this(stage, message, null);
   }
 
   /**
-   * Construct the exception with the stage, message, and underlying cause.
+   * 构造计划持久化异常并附带底层原因。
    *
-   * @param stage failing stage
-   * @param message descriptive message
-   * @param cause underlying cause
+   * @param stage 失败阶段
+   * @param message 描述性消息
+   * @param cause 底层原因
    */
   public PlanPersistenceException(Stage stage, String message, Throwable cause) {
     super(message, cause);
@@ -65,9 +76,9 @@ public class PlanPersistenceException extends IngestException implements HasErro
   }
 
   /**
-   * Expose the stage of the failure.
+   * 获取失败发生的阶段。
    *
-   * @return stage enumeration
+   * @return 阶段枚举
    */
   public Stage getStage() {
     return stage;

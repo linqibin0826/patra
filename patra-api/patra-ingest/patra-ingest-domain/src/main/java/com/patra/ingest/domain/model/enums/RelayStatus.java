@@ -1,18 +1,15 @@
 package com.patra.ingest.domain.model.enums;
 
 /**
- * Relay execution result enum representing the outcome of an outbox message relay attempt.
+ * 中继执行结果枚举,表示 Outbox 消息中继尝试的结果。
  *
- * <p>Status transitions and meanings:
+ * <p>状态转换及含义:
  *
  * <ul>
- *   <li><strong>PUBLISHED</strong>: Message successfully published to downstream broker (terminal
- *       state)
- *   <li><strong>DEFERRED</strong>: Relay failed with retryable error, will retry later (transient
- *       state)
- *   <li><strong>FAILED</strong>: Relay failed permanently (max retries exhausted or fatal error)
- *   <li><strong>LEASE_MISSED</strong>: Failed to acquire lease due to concurrent competition
- *       (transient state)
+ *   <li><strong>PUBLISHED</strong>: 消息成功发布到下游 broker(终态)
+ *   <li><strong>DEFERRED</strong>: 中继因可重试错误失败,稍后将重试(瞬态)
+ *   <li><strong>FAILED</strong>: 中继永久失败(达到最大重试次数或致命错误)
+ *   <li><strong>LEASE_MISSED</strong>: 由于并发竞争未能获取租约(瞬态)
  * </ul>
  *
  * @author Papertrace Team
@@ -20,16 +17,16 @@ package com.patra.ingest.domain.model.enums;
  */
 public enum RelayStatus {
 
-  /** Successfully published to downstream broker (terminal state). */
+  /** 已发布;成功发布到下游 broker(终态)。 */
   PUBLISHED("PUBLISHED", "发布成功", true, false),
 
-  /** Deferred for retry due to transient error (will retry with backoff). */
+  /** 延迟重试;因瞬态错误失败,将使用退避策略重试。 */
   DEFERRED("DEFERRED", "延迟重试", false, true),
 
-  /** Permanently failed after max retries or fatal error (terminal state). */
+  /** 永久失败;达到最大重试次数或致命错误(终态)。 */
   FAILED("FAILED", "永久失败", true, false),
 
-  /** Failed to acquire lease due to concurrent competition (optimistic lock failure). */
+  /** 租约竞争失败;由于并发竞争未能获取租约(乐观锁失败)。 */
   LEASE_MISSED("LEASE_MISSED", "租约竞争失败", false, true);
 
   private final String code;
@@ -45,61 +42,61 @@ public enum RelayStatus {
   }
 
   /**
-   * Gets the status code (matches database enum value).
+   * 获取状态代码(与数据库枚举值匹配)。
    *
-   * @return status code string
+   * @return 状态代码字符串
    */
   public String getCode() {
     return code;
   }
 
   /**
-   * Gets the human-readable description (Chinese).
+   * 获取人类可读的描述(中文)。
    *
-   * @return description string
+   * @return 描述字符串
    */
   public String getDescription() {
     return description;
   }
 
   /**
-   * Checks if this is a terminal state (no further processing needed).
+   * 检查是否为终态(无需进一步处理)。
    *
-   * <p>Terminal states: PUBLISHED, FAILED
+   * <p>终态: PUBLISHED, FAILED
    *
-   * @return true if this status represents a final state
+   * @return 如果此状态表示最终状态,则返回 true
    */
   public boolean isTerminal() {
     return terminal;
   }
 
   /**
-   * Checks if this status indicates a retryable failure.
+   * 检查此状态是否表示可重试的失败。
    *
-   * <p>Retryable states: DEFERRED, LEASE_MISSED
+   * <p>可重试状态: DEFERRED, LEASE_MISSED
    *
-   * @return true if this status allows retry
+   * @return 如果此状态允许重试,则返回 true
    */
   public boolean isRetryable() {
     return retryable;
   }
 
   /**
-   * Parses status code string to RelayStatus enum.
+   * 将状态代码字符串解析为 RelayStatus 枚举。
    *
-   * @param code status code string (e.g., "PUBLISHED")
-   * @return corresponding RelayStatus enum
-   * @throws IllegalArgumentException if code is invalid
+   * @param code 状态代码字符串(例如,"PUBLISHED")
+   * @return 对应的 RelayStatus 枚举
+   * @throws IllegalArgumentException 如果代码无效
    */
   public static RelayStatus fromCode(String code) {
     if (code == null || code.isBlank()) {
-      throw new IllegalArgumentException("RelayStatus code must not be null or blank");
+      throw new IllegalArgumentException("RelayStatus 代码不能为 null 或空白");
     }
     for (RelayStatus status : values()) {
       if (status.code.equals(code)) {
         return status;
       }
     }
-    throw new IllegalArgumentException("Invalid RelayStatus code: " + code);
+    throw new IllegalArgumentException("无效的 RelayStatus 代码: " + code);
   }
 }

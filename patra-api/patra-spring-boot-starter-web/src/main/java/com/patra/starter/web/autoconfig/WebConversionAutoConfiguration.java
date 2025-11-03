@@ -10,10 +10,10 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.StringUtils;
 
 /**
- * Auto-configuration for common Web converters.
+ * 通用 Web 转换器的自动配置类。
  *
- * <p>Registers a global {@code String -> ProvenanceCode} converter so that {@code @PathVariable}
- * and {@code @RequestParam} bindings resolve provenance identifiers consistently.
+ * <p>注册全局 {@code String -> ProvenanceCode} 转换器,使 {@code @PathVariable} 和 {@code @RequestParam}
+ * 绑定能够一致地解析 Provenance 标识符。
  *
  * @author linqibin
  * @since 0.1.0
@@ -24,16 +24,14 @@ import org.springframework.util.StringUtils;
 public class WebConversionAutoConfiguration {
 
   /**
-   * Registers a converter that resolves textual provenance identifiers to {@link ProvenanceCode}
-   * values, enabling Spring MVC to bind enum-friendly values for request parameters and path
-   * variables.
+   * 注册转换器,将文本形式的 Provenance 标识符解析为 {@link ProvenanceCode} 值, 使 Spring MVC 能够为请求参数和路径变量绑定枚举友好的值。
    *
-   * @return converter bean exposed to the Spring conversion service
+   * @return 暴露给 Spring 转换服务的转换器 Bean
    */
   @Bean
   @ConditionalOnMissingBean(name = "provenanceCodeConverter")
   public Converter<String, ProvenanceCode> provenanceCodeConverter() {
-    log.info("Registering String-to-ProvenanceCode converter for request parameter binding");
+    log.info("注册 String-to-ProvenanceCode 转换器,用于请求参数绑定");
     return new Converter<String, ProvenanceCode>() {
       @Override
       public ProvenanceCode convert(String source) {

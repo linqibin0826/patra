@@ -20,24 +20,33 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Task Outbox publisher (refactored to use framework).
+ * Task Outbox 发布器(重构为使用统一框架)
  *
- * <p>Publishes task queued events as Outbox messages for reliable MQ delivery.
+ * <p>将任务排队事件发布为 Outbox 消息,确保可靠的 MQ 投递。
  *
- * <h3>Idempotency Strategy</h3>
+ * <h3>幂等性策略</h3>
  *
  * <ul>
- *   <li><b>First publish</b>: Skips events without taskId (not persisted yet)
- *   <li><b>Retry publish</b>: Uses UPSERT to handle concurrent retry scenarios
+ *   <li><b>首次发布</b>: 跳过没有 taskId 的事件(尚未持久化)
+ *   <li><b>重试发布</b>: 使用 UPSERT 处理并发重试场景
  * </ul>
  *
- * <h3>Partition Strategy</h3>
+ * <h3>分区策略</h3>
  *
- * <p>partitionKey = provenance:operation (fallback to degraded concatenation)
+ * <p>partitionKey = provenance:operation (降级为拼接)
  *
- * <h3>Deferred Publishing</h3>
+ * <h3>延迟发布</h3>
  *
- * <p>notBefore = scheduledAt (or Instant.now() if null)
+ * <p>notBefore = scheduledAt (若为 null 则使用 Instant.now())
+ *
+ * <h3>适配器方法</h3>
+ *
+ * <p>提供向后兼容的适配器方法:
+ *
+ * <ul>
+ *   <li>{@link #publish(List, PlanAggregate, ScheduleInstanceAggregate)}: 首次发布
+ *   <li>{@link #publishRetry(List, PlanAggregate, ScheduleInstanceAggregate)}: 重试发布
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -58,16 +67,16 @@ public class TaskOutboxPublisher
     this.objectMapper = objectMapper;
   }
 
-  // ==================== Adapter Methods (Backward Compatibility) ====================
+  // ==================== 适配器方法(向后兼容) ====================
 
   /**
-   * First-time publish (adapter method for backward compatibility).
+   * 首次发布(适配器方法,向后兼容)
    *
-   * <p>Converts aggregates to context and delegates to framework.
+   * <p>将聚合转换为上下文并委托给框架。
    *
-   * @param events Task queued events
-   * @param plan Plan aggregate (must not be null)
-   * @param schedule Schedule instance aggregate (must not be null)
+   * @param events 任务排队事件
+   * @param plan Plan 聚合(不能为 null)
+   * @param schedule 调度实例聚合(不能为 null)
    */
   public void publish(
       List<TaskQueuedEvent> events, PlanAggregate plan, ScheduleInstanceAggregate schedule) {
@@ -75,7 +84,7 @@ public class TaskOutboxPublisher
     Objects.requireNonNull(schedule, "schedule must not be null");
 
     log.debug(
-        "Publishing {} task-ready events to outbox for plan [{}], provenance [{}] operation [{}]",
+        "正在发布 {} 个任务就绪事件到 Outbox,plan [{}], Provenance [{}] Operation [{}]",
         events.size(),
         plan.getId(),
         plan.getProvenanceCode(),
@@ -86,17 +95,17 @@ public class TaskOutboxPublisher
 
     super.publish(events, ctx);
 
-    log.debug("Successfully published {} task-ready events to outbox", events.size());
+    log.debug("已成功发布 {} 个任务就绪事件到 Outbox", events.size());
   }
 
   /**
-   * Retry publish (adapter method for backward compatibility).
+   * 重试发布(适配器方法,向后兼容)
    *
-   * <p>Converts aggregates to context and delegates to framework.
+   * <p>将聚合转换为上下文并委托给框架。
    *
-   * @param events Task queued events
-   * @param plan Plan aggregate (must not be null)
-   * @param schedule Schedule instance aggregate (must not be null)
+   * @param events 任务排队事件
+   * @param plan Plan 聚合(不能为 null)
+   * @param schedule 调度实例聚合(不能为 null)
    */
   public void publishRetry(
       List<TaskQueuedEvent> events, PlanAggregate plan, ScheduleInstanceAggregate schedule) {
@@ -104,7 +113,7 @@ public class TaskOutboxPublisher
     Objects.requireNonNull(schedule, "schedule must not be null");
 
     log.debug(
-        "Publishing {} retry task events to outbox for plan [{}], provenance [{}] operation [{}]",
+        "正在发布 {} 个重试任务事件到 Outbox,plan [{}], Provenance [{}] Operation [{}]",
         events.size(),
         plan.getId(),
         plan.getProvenanceCode(),
@@ -115,10 +124,10 @@ public class TaskOutboxPublisher
 
     super.publishRetry(events, ctx);
 
-    log.debug("Successfully published {} retry task events to outbox", events.size());
+    log.debug("已成功发布 {} 个重试任务事件到 Outbox", events.size());
   }
 
-  // ==================== Extension Point Implementations ====================
+  // ==================== 扩展点实现 ====================
 
   @Override
   protected OutboxAggregateTypes getAggregateType() {
@@ -132,8 +141,8 @@ public class TaskOutboxPublisher
 
   @Override
   protected TaskPayload buildPayload(TaskQueuedEvent event, OutboxPublishContext ctx) {
-    // Simplified payload: only taskId and idempotentKey
-    // Consumer will query database for all other data (provenance, operation, params, etc.)
+    // 简化载荷: 仅包含 taskId 和 idempotentKey
+    // 消费者将查询数据库获取所有其他数据(provenance, operation, params 等)
     return new TaskPayload(event.taskId(), event.idempotentKey());
   }
 
@@ -151,7 +160,7 @@ public class TaskOutboxPublisher
 
   @Override
   protected String buildPartitionKey(TaskQueuedEvent event, OutboxPublishContext ctx) {
-    // Ensure same provenance + operation maintains order downstream
+    // 确保相同 provenance + operation 在下游保持顺序
     String provenance = StrUtil.nullToEmpty(event.provenanceCode());
     String operation = StrUtil.nullToEmpty(event.operationCode());
 
@@ -169,7 +178,7 @@ public class TaskOutboxPublisher
 
   @Override
   protected String buildDedupKey(TaskQueuedEvent event, OutboxPublishContext ctx) {
-    // Use event's idempotent key for deduplication
+    // 使用事件的幂等键进行去重
     return event.idempotentKey();
   }
 
@@ -183,14 +192,14 @@ public class TaskOutboxPublisher
     return event.taskId();
   }
 
-  // ==================== Optional Hook Overrides ====================
+  // ==================== 可选钩子重写 ====================
 
   @Override
   protected boolean validateEvent(TaskQueuedEvent event) {
-    // Skip events without taskId (task not persisted successfully)
+    // 跳过没有 taskId 的事件(任务未成功持久化)
     if (event == null || event.taskId() == null) {
       if (event != null) {
-        log.warn("Skip task event without persistence, planId={}", event.planId());
+        log.warn("跳过未持久化的任务事件,planId={}", event.planId());
       }
       return false;
     }
@@ -199,7 +208,7 @@ public class TaskOutboxPublisher
 
   @Override
   protected Instant resolveNotBefore(TaskQueuedEvent event, OutboxPublishContext ctx) {
-    // Use scheduledAt if present, otherwise immediate
+    // 若存在 scheduledAt 则使用,否则立即发布
     return event.scheduledAt() != null ? event.scheduledAt() : Instant.now();
   }
 }

@@ -3,43 +3,57 @@ package com.patra.ingest.app.usecase.execution.command;
 import java.util.Map;
 
 /**
- * Task Ready Command (simplified).
+ * 任务就绪命令(简化版)
  *
- * <p>Assembled by adapter layer after consuming INGEST_TASK_READY MQ message. Contains only
- * essential fields required for task execution preparation. All other business data (provenance,
- * operation, params, etc.) should be queried from database.
+ * <p>在六边形架构+DDD中的角色:应用层命令对象,由适配器层在消费INGEST_TASK_READY MQ消息后组装。
  *
- * <p>Fields:
+ * <p>设计理念:仅包含任务执行准备所需的核心字段。其他业务数据(来源、操作、参数等)应从数据库查询。
+ *
+ * <p>字段说明:
  *
  * <ul>
- *   <li>taskId: Task ID (required, for lease acquisition and context loading)
- *   <li>idempotentKey: Idempotent key (required, for deduplication check)
- *   <li>headers: MQ message headers (for tracing: ROCKET_MQ_MESSAGE_ID, traceId, partitionKey,
- *       etc.)
+ *   <li>taskId: 任务ID(必需,用于租约获取和上下文加载)
+ *   <li>idempotentKey: 幂等键(必需,用于去重检查)
+ *   <li>headers: MQ消息头(用于链路追踪: ROCKET_MQ_MESSAGE_ID, traceId, partitionKey等)
  * </ul>
  *
- * @param taskId Task ID
- * @param idempotentKey Idempotent key
- * @param headers MQ message headers (for tracing and auditing)
+ * @param taskId 任务ID
+ * @param idempotentKey 幂等键
+ * @param headers MQ消息头(用于链路追踪和审计)
  * @author linqibin
  * @since 0.1.0
  */
 public record TaskReadyCommand(long taskId, String idempotentKey, Map<String, Object> headers) {
   public TaskReadyCommand {
     if (idempotentKey == null || idempotentKey.isBlank()) {
-      throw new IllegalArgumentException("idempotentKey must not be blank");
+      throw new IllegalArgumentException("幂等键不能为空");
     }
   }
 
-  /** Extracts tracing fields from headers (helper methods). */
+  /**
+   * 从消息头中提取追踪字段(辅助方法)
+   *
+   * @return RocketMQ消息ID
+   */
   public String getMessageId() {
     return resolveHeaderAsString("ROCKET_MQ_MESSAGE_ID");
   }
 
+  /**
+   * 获取关联ID
+   *
+   * @return 关联ID
+   */
   public String getCorrelationId() {
     return resolveHeaderAsString("correlationId");
   }
 
+  /**
+   * 从消息头中解析字符串值
+   *
+   * @param key 消息头键名
+   * @return 字符串值,不存在时返回null
+   */
   private String resolveHeaderAsString(String key) {
     if (headers == null) {
       return null;
@@ -48,7 +62,7 @@ public record TaskReadyCommand(long taskId, String idempotentKey, Map<String, Ob
     if (value == null) {
       return null;
     }
-    // RocketMQ headers may be UUID or other non-string types, unify to string
+    // RocketMQ消息头可能是UUID或其他非字符串类型,统一转换为字符串
     return value instanceof String ? (String) value : value.toString();
   }
 }

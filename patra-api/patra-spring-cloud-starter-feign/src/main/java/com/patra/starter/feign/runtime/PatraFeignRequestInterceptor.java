@@ -8,10 +8,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
 /**
- * Feign request interceptor that attaches shared headers to every outbound call.
+ * Feign 请求拦截器,向每个出站调用附加共享请求头
  *
- * <p>Currently forwards the caller service identity and can be extended with trace propagation
- * without relying on Servlet APIs, making it safe for non-web contexts.
+ * <p>当前转发调用者服务标识,未来可扩展跟踪传播功能,且无需依赖 Servlet API, 因此在非 Web 上下文中也是安全的。
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -24,7 +23,7 @@ public class PatraFeignRequestInterceptor implements RequestInterceptor {
   public void apply(RequestTemplate template) {
     if (!props.isEnabled()) return;
 
-    // Forward the caller service name so downstream services can tag inbound requests.
+    // 转发调用者服务名称,以便下游服务可以标记入站请求
     String serviceName = env.getProperty("spring.application.name", "UNKNOWN");
     if (StringUtils.hasText(serviceName)) {
       template.header(props.getServiceHeader(), serviceName);

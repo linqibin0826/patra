@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code sys_dict_item}.
+ * 数据库实体,映射到表 {@code sys_dict_item}.
  *
  * <p>Represents individual dictionary items that belong to a dictionary type.
  *
@@ -47,11 +47,11 @@ public class RegSysDictItemDO extends BaseDO {
   @TableField("item_name")
   private String itemName;
 
-  /** Optional short name or abbreviation for compact UI placements. */
+  /** 可选的 short name or abbreviation for compact UI placements. */
   @TableField("short_name")
   private String shortName;
 
-  /** Optional description documenting semantics and usage hints. */
+  /** 可选的 description documenting semantics and usage hints. */
   @TableField("description")
   private String description;
 
@@ -59,7 +59,7 @@ public class RegSysDictItemDO extends BaseDO {
   @TableField("display_order")
   private Integer displayOrder;
 
-  /** Flag indicating whether the item is the default choice for its type. */
+  /** 指示 whether the item is the default choice for its type. */
   @TableField("is_default")
   private Boolean isDefault;
 
@@ -67,11 +67,11 @@ public class RegSysDictItemDO extends BaseDO {
   @TableField("enabled")
   private Boolean enabled;
 
-  /** Optional label colour (either hex e.g. {@code #AABBCC} or semantic name). */
+  /** 可选的 label colour (either hex e.g. {@code #AABBCC} or semantic name). */
   @TableField("label_color")
   private String labelColor;
 
-  /** Optional icon reference used by UI surfaces. */
+  /** 可选的 icon reference used by UI surfaces. */
   @TableField("icon_name")
   private String iconName;
 

@@ -22,15 +22,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * Generic batch executor that delegates fetching to {@link DataSourceAdapter} implementations.
+ * 通用批次执行器
  *
- * <p>The executor is responsible for:
+ * <p>在六边形架构+DDD中的角色:应用层执行器,负责将批次获取工作委托给{@link DataSourceAdapter}实现。
+ *
+ * <p>主要职责:
  *
  * <ul>
- *   <li>Resolving the correct adapter via {@link AdapterRegistry}.
- *   <li>Converting registry snapshots into runtime configuration.
- *   <li>Publishing standardized literature through {@link LiteraturePublisherOrchestrator}.
- *   <li>Translating adapter outcomes into domain {@link BatchResult} instances.
+ *   <li>通过{@link AdapterRegistry}解析正确的适配器
+ *   <li>将注册表快照转换为运行时配置
+ *   <li>通过{@link LiteraturePublisherOrchestrator}发布标准化文献
+ *   <li>将适配器结果转换为领域层{@link BatchResult}实例
+ *   <li>处理重试逻辑和失败情况
  * </ul>
  */
 @Component
@@ -47,15 +50,25 @@ public class GenericBatchExecutor {
   private final ProvenanceConfigConverter configConverter;
 
   /**
-   * Executes a single batch.
+   * 执行单个批次
    *
-   * @param context execution context
-   * @param batch batch definition
-   * @return result of the batch execution
+   * <p>业务流程:
+   *
+   * <ol>
+   *   <li>解析适配器并转换配置
+   *   <li>构建请求并调用适配器获取数据
+   *   <li>处理重试逻辑(指数退避)
+   *   <li>发布标准化文献
+   *   <li>返回批次执行结果
+   * </ol>
+   *
+   * @param context 执行上下文
+   * @param batch 批次定义
+   * @return 批次执行结果
    */
   public BatchResult execute(ExecutionContext context, Batch batch) {
-    Objects.requireNonNull(context, "execution context must not be null");
-    Objects.requireNonNull(batch, "batch must not be null");
+    Objects.requireNonNull(context, "执行上下文不能为空");
+    Objects.requireNonNull(batch, "批次定义不能为空");
 
     long startAt = System.currentTimeMillis();
     int batchNo = batch.batchNo();
@@ -63,7 +76,7 @@ public class GenericBatchExecutor {
     String operationCode = context.operationCode();
 
     log.info(
-        "batch execution start provenanceCode={} operationCode={} batchNo={} runId={}",
+        "批次执行开始 provenanceCode={} operationCode={} batchNo={} runId={}",
         provenanceCode,
         operationCode,
         batchNo,
@@ -105,7 +118,7 @@ public class GenericBatchExecutor {
         if (!retriable || attempt >= maxAttempts) {
           if (retriable) {
             log.warn(
-                "adapter retry exhausted provenanceCode={} batchNo={} attemptsUsed={}/{}",
+                "适配器重试次数耗尽 provenanceCode={} batchNo={} attemptsUsed={}/{}",
                 provenanceCode,
                 batchNo,
                 attempt,
@@ -116,7 +129,7 @@ public class GenericBatchExecutor {
 
         long backoffMillis = calculateBackoffDelay(initialDelayMillis, attempt);
         log.warn(
-            "retriable adapter failure provenanceCode={} batchNo={} attempt={} of {} retryDelay={}ms message={}",
+            "适配器可重试失败 provenanceCode={} batchNo={} attempt={} of {} retryDelay={}ms message={}",
             provenanceCode,
             batchNo,
             attempt,
@@ -129,12 +142,12 @@ public class GenericBatchExecutor {
           Thread.currentThread().interrupt();
           long duration = System.currentTimeMillis() - startAt;
           log.error(
-              "batch execution interrupted during retry provenanceCode={} batchNo={} duration={}ms",
+              "批次执行在重试期间被中断 provenanceCode={} batchNo={} duration={}ms",
               provenanceCode,
               batchNo,
               duration,
               interrupted);
-          return BatchResult.failure(batchNo, "Adapter retry interrupted");
+          return BatchResult.failure(batchNo, "适配器重试被中断");
         }
       }
 
@@ -144,7 +157,7 @@ public class GenericBatchExecutor {
 
       long duration = System.currentTimeMillis() - startAt;
       log.info(
-          "batch execution success provenanceCode={} operationCode={} batchNo={} fetchedCount={} duration={}ms attempts={}",
+          "批次执行成功 provenanceCode={} operationCode={} batchNo={} fetchedCount={} duration={}ms attempts={}",
           provenanceCode,
           operationCode,
           batchNo,
@@ -159,7 +172,7 @@ public class GenericBatchExecutor {
     } catch (Exception ex) {
       long duration = System.currentTimeMillis() - startAt;
       log.error(
-          "batch execution unexpected failure provenanceCode={} batchNo={} duration={}ms",
+          "批次执行意外失败 provenanceCode={} batchNo={} duration={}ms",
           provenanceCode,
           batchNo,
           duration,
@@ -168,6 +181,15 @@ public class GenericBatchExecutor {
     }
   }
 
+  /**
+   * 处理批次执行失败
+   *
+   * @param context 执行上下文
+   * @param batch 批次定义
+   * @param result 适配器结果
+   * @param durationMillis 执行耗时(毫秒)
+   * @return 失败的批次结果
+   */
   private BatchResult handleFailure(
       ExecutionContext context, Batch batch, AdapterResult result, long durationMillis) {
     String provenanceCode = context.provenanceCode();
@@ -175,7 +197,7 @@ public class GenericBatchExecutor {
     ErrorType errorType = result.errorType();
     String reason = safeMessage(result.errorMessage());
     log.warn(
-        "batch execution failed provenanceCode={} batchNo={} errorType={} duration={}ms message={}",
+        "批次执行失败 provenanceCode={} batchNo={} errorType={} duration={}ms message={}",
         provenanceCode,
         batchNo,
         errorType,
@@ -184,11 +206,18 @@ public class GenericBatchExecutor {
     return BatchResult.failure(batchNo, buildFailureMessage(errorType, reason));
   }
 
+  /**
+   * 记录适配器警告信息
+   *
+   * @param adapterResult 适配器结果
+   * @param provenanceCode Provenance代码
+   * @param batchNo 批次编号
+   */
   private void logAdapterWarnings(AdapterResult adapterResult, String provenanceCode, int batchNo) {
     if (adapterResult.errorMessage() != null
         && adapterResult.errorType() == ErrorType.PARTIAL_SUCCESS) {
       log.warn(
-          "adapter reported partial success provenanceCode={} batchNo={} warning={}",
+          "适配器报告部分成功 provenanceCode={} batchNo={} warning={}",
           provenanceCode,
           batchNo,
           adapterResult.errorMessage());
@@ -261,7 +290,13 @@ public class GenericBatchExecutor {
     return "[%s] %s".formatted(type.name(), reason);
   }
 
+  /**
+   * 获取安全的错误消息
+   *
+   * @param message 原始消息
+   * @return 非空的错误消息
+   */
   private String safeMessage(String message) {
-    return StringUtils.hasText(message) ? message : "Unknown adapter failure";
+    return StringUtils.hasText(message) ? message : "未知适配器失败";
   }
 }

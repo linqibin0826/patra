@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code reg_prov_expr_render_rule}.
+ * 数据库实体,映射到表 {@code reg_prov_expr_render_rule}.
  *
  * <p>Defines how expression atoms are rendered into provider queries or parameters.
  *
@@ -27,11 +27,11 @@ import lombok.experimental.SuperBuilder;
 @TableName("reg_prov_expr_render_rule")
 public class RegProvExprRenderRuleDO extends BaseDO {
 
-  /** Foreign key referencing {@code reg_provenance.id}. */
+  /** 外键,引用 {@code reg_provenance.id}。 */
   @TableField("provenance_id")
   private Long provenanceId;
 
-  /** Operation type discriminator governing rule applicability. */
+  /** 操作类型鉴别器 governing rule applicability. */
   @TableField("operation_type")
   private String operationType;
 
@@ -39,7 +39,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("lifecycle_status_code")
   private String lifecycleStatusCode;
 
-  /** Canonical field key that the rule renders. */
+  /** 规范字段键 that the rule renders. */
   @TableField("field_key")
   private String fieldKey;
 
@@ -47,7 +47,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("op_code")
   private String opCode;
 
-  /** Optional match type refinement (e.g., PHRASE/EXACT). */
+  /** 可选的 match type refinement (e.g., PHRASE/EXACT). */
   @TableField("match_type_code")
   private String matchTypeCode;
 
@@ -55,7 +55,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("negated")
   private Boolean negated;
 
-  /** Optional value type discriminator (STRING/DATE/DATETIME/NUMBER). */
+  /** 可选的 value type discriminator (STRING/DATE/DATETIME/NUMBER). */
   @TableField("value_type_code")
   private String valueTypeCode;
 
@@ -75,11 +75,11 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("value_type_key")
   private String valueTypeKey;
 
-  /** Inclusive timestamp when the render rule becomes effective. */
+  /** 包含时间戳 when the render rule becomes effective. */
   @TableField("effective_from")
   private Instant effectiveFrom;
 
-  /** Exclusive timestamp when the render rule expires. */
+  /** 排除时间戳 when the render rule expires. */
   @TableField("effective_to")
   private Instant effectiveTo;
 
@@ -87,7 +87,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("template")
   private String template;
 
-  /** Optional template applied per item for IN operators. */
+  /** 可选的 template applied per item for IN operators. */
   @TableField("item_template")
   private String itemTemplate;
 
@@ -95,7 +95,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("joiner")
   private String joiner;
 
-  /** Flag indicating whether the rendered output should be wrapped in parentheses. */
+  /** 指示 whether the rendered output should be wrapped in parentheses. */
   @TableField("wrap_group")
   private Boolean wrapGroup;
 
@@ -103,7 +103,7 @@ public class RegProvExprRenderRuleDO extends BaseDO {
   @TableField("params")
   private JsonNode params;
 
-  /** Optional custom function applied during rendering. */
+  /** 可选的 custom function applied during rendering. */
   @TableField("fn_code")
   private String fnCode;
 }

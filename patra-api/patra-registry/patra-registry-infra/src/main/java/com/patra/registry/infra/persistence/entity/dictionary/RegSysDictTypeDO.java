@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code sys_dict_type}.
+ * 数据库实体,映射到表 {@code sys_dict_type}.
  *
  * <p>Exposes dictionary type metadata to the query side of the CQRS stack.
  *
@@ -45,11 +45,11 @@ public class RegSysDictTypeDO extends BaseDO {
   @TableField("type_name")
   private String typeName;
 
-  /** Optional free-form description that documents usage guidelines. */
+  /** 可选的 free-form description that documents usage guidelines. */
   @TableField("description")
   private String description;
 
-  /** Flag indicating whether business users are allowed to create custom items. */
+  /** 指示 whether business users are allowed to create custom items. */
   @TableField("allow_custom_items")
   private Boolean allowCustomItems;
 
@@ -60,7 +60,7 @@ public class RegSysDictTypeDO extends BaseDO {
   @TableField("is_system")
   private Boolean isSystem;
 
-  /** Optional JSON payload for additional metadata (e.g., colour, icon stereotypes). */
+  /** 可选的 JSON payload for additional metadata (e.g., colour, icon stereotypes). */
   @TableField("reserved_json")
   private JsonNode reservedJson;
 }

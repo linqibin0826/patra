@@ -4,22 +4,19 @@ import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 
 /**
- * Domain Service for calculating Slice status based on its associated Task (enforces 1:1
- * relationship).
+ * 切片状态计算器领域服务。基于关联任务状态计算切片状态（强制 1:1 关系）。
  *
- * <p>This is a stateless pure function that directly maps Task status to Slice status.
+ * <p>这是一个无状态纯函数,直接将任务状态映射到切片状态。
  *
- * <p>After refactoring, Slice:Task is a 1:1 relationship, so no aggregation is needed. The mapping
- * rules are:
+ * <p>重构后,切片:任务是 1:1 关系,因此无需聚合。映射规则为：
  *
  * <ul>
- *   <li>TaskStatus.PENDING or QUEUED → SliceStatus.PENDING (awaiting Task generation/execution)
- *   <li>TaskStatus.RUNNING → SliceStatus.ASSIGNED (Task in progress)
- *   <li>TaskStatus.SUCCEEDED or FAILED → SliceStatus.FINISHED (Task reached terminal state)
+ *   <li>TaskStatus.PENDING 或 QUEUED → SliceStatus.PENDING（等待任务生成/执行）
+ *   <li>TaskStatus.RUNNING → SliceStatus.ASSIGNED（任务执行中）
+ *   <li>TaskStatus.SUCCEEDED 或 FAILED → SliceStatus.FINISHED（任务达到终态）
  * </ul>
  *
- * <p><b>Note:</b> Slice no longer distinguishes success/failure. Query the Task directly for
- * execution results.
+ * <p><b>注意：</b>切片不再区分成功/失败。直接查询任务以获取执行结果。
  */
 public final class SliceStatusCalculator {
 
@@ -28,11 +25,11 @@ public final class SliceStatusCalculator {
   }
 
   /**
-   * Calculates the Slice status based on its associated Task status (1:1 mapping).
+   * 基于关联任务状态计算切片状态（1:1 映射）。
    *
-   * @param taskStatus the status of the single associated Task (must not be null)
-   * @return the corresponding Slice status
-   * @throws IllegalArgumentException if taskStatus is null
+   * @param taskStatus 唯一关联任务的状态（不能为 null）
+   * @return 对应的切片状态
+   * @throws IllegalArgumentException 如果 taskStatus 为 null
    */
   public static SliceStatus calculate(TaskStatus taskStatus) {
     if (taskStatus == null) {

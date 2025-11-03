@@ -13,13 +13,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Abstract base class for Data Objects (DOs) providing common fields for auditing, optimistic
- * locking, and soft deletion.
+ * 数据对象（DO）的抽象基类，提供审计、乐观锁和软删除的通用字段。
  *
- * <p>This class is intended to be extended by all persistent entities (DOs) to ensure consistent
- * handling of common concerns like tracking creation/update metadata, managing concurrent
- * modifications, and supporting logical deletion. It integrates with MyBatis-Plus's automatic field
- * population features.
+ * <p>此类旨在被所有持久化实体（DO）继承，以确保对常见关注点的一致处理， 如跟踪创建/更新元数据、管理并发修改以及支持逻辑删除。它与 MyBatis-Plus 的自动字段填充功能集成。
  */
 @Data
 @SuperBuilder

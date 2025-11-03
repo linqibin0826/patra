@@ -15,7 +15,15 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.ReportingPolicy;
 
-/** Plan aggregate {@link PlanAggregate} ↔ data object {@link PlanDO} converter. */
+/**
+ * 采集计划对象转换器,负责领域对象与数据库实体转换。
+ *
+ * <p>转换规则: 计划聚合 {@link PlanAggregate} ↔ 数据对象 {@link PlanDO} 双向转换,处理 JSON
+ * 快照字段、枚举类型代码映射、窗口规格序列化/反序列化。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface PlanConverter {
 

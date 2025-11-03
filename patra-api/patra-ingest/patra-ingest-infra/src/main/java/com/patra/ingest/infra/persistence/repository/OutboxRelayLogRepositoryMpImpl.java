@@ -12,45 +12,44 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-Plus implementation for Outbox relay log persistence.
+ * 发件箱中继日志持久化的 MyBatis-Plus 实现。
  *
- * <h3>Responsibilities</h3>
- *
- * <ul>
- *   <li>Persist relay execution logs (single or batch) to database
- *   <li>Query logs by message, batch, channel, status, or time range
- *   <li>Support troubleshooting, monitoring, and analytics use cases
- * </ul>
- *
- * <h3>Design Principles</h3>
+ * <h3>职责</h3>
  *
  * <ul>
- *   <li><strong>Append-only</strong>: Logs are never updated after creation (immutable audit trail)
- *   <li><strong>Batch-optimized</strong>: Batch insert uses single SQL statement for performance
- *   <li><strong>Query-optimized</strong>: Methods leverage database indexes for efficient retrieval
- *   <li><strong>No business logic</strong>: Pure data access layer, delegates to Domain for rules
+ *   <li>持久化中继执行日志(单条或批量)到数据库
+ *   <li>按消息、批次、通道、状态或时间范围查询日志
+ *   <li>支持故障排查、监控和分析用例
  * </ul>
  *
- * <h3>Performance Considerations</h3>
+ * <h3>设计原则</h3>
  *
  * <ul>
- *   <li>Batch insert: Use {@link #saveBatch(List)} for 100-500 logs (single INSERT statement)
- *   <li>Index coverage: All query methods use appropriate indexes (see Mapper JavaDoc)
- *   <li>Pagination: Query methods accept limit parameter to prevent large result sets
+ *   <li><strong>仅追加</strong>: 日志创建后永不更新(不可变审计轨迹)
+ *   <li><strong>批量优化</strong>: 批量插入使用单条 SQL 语句以提高性能
+ *   <li><strong>查询优化</strong>: 方法利用数据库索引实现高效检索
+ *   <li><strong>无业务逻辑</strong>: 纯数据访问层,委托给领域层处理规则
  * </ul>
  *
- * <h3>Logging Strategy</h3>
+ * <h3>性能考虑</h3>
  *
  * <ul>
- *   <li>DEBUG: Batch insert operation (size and affected rows)
- *   <li>DEBUG: Query operations (method name and result count)
- *   <li>No INFO logging for high-frequency operations (avoid log noise)
+ *   <li>批量插入: 使用 {@link #saveBatch(List)} 处理 100-500 条日志(单条 INSERT 语句)
+ *   <li>索引覆盖: 所有查询方法使用适当索引(参见 Mapper JavaDoc)
+ *   <li>分页: 查询方法接受 limit 参数以防止大结果集
  * </ul>
  *
- * <h3>Thread Safety</h3>
+ * <h3>日志策略</h3>
  *
- * <p>No shared mutable state (Mapper/Converter are stateless or thread-safe); instance can be
- * reused across threads.
+ * <ul>
+ *   <li>DEBUG: 批量插入操作(大小和受影响行数)
+ *   <li>DEBUG: 查询操作(方法名和结果计数)
+ *   <li>高频操作无 INFO 日志(避免日志噪音)
+ * </ul>
+ *
+ * <h3>线程安全</h3>
+ *
+ * <p>无共享可变状态(Mapper/Converter 无状态或线程安全); 实例可跨线程重用。
  *
  * @author Papertrace Team
  * @since 2.0
@@ -64,14 +63,13 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   private final OutboxRelayLogConverter converter;
 
   /**
-   * Persists a single relay log to database.
+   * 持久化单条中继日志到数据库。
    *
-   * <p>Use case: Single relay execution (rare, typically use batch insert instead).
+   * <p>使用场景: 单次中继执行(罕见,通常使用批量插入)。
    *
-   * <p>Performance note: For multiple logs, prefer {@link #saveBatch(List)} to reduce DB
-   * round-trips.
+   * <p>性能注意: 对于多条日志,优先使用 {@link #saveBatch(List)} 以减少数据库往返。
    *
-   * @param relayLog relay log to persist
+   * @param relayLog 要持久化的中继日志
    */
   @Override
   public void save(OutboxRelayLog relayLog) {
@@ -86,16 +84,15 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   }
 
   /**
-   * Batch persists multiple relay logs in a single SQL statement.
+   * 在单条 SQL 语句中批量持久化多条中继日志。
    *
-   * <p>Use case: Relay job completes 100-500 messages, insert all logs at once.
+   * <p>使用场景: 中继作业完成 100-500 条消息,一次性插入所有日志。
    *
-   * <p>Performance: Single INSERT statement with multiple rows (e.g., INSERT INTO ... VALUES
-   * (row1), (row2), ...).
+   * <p>性能: 单条 INSERT 语句包含多行(例如: INSERT INTO ... VALUES (row1), (row2), ...)。
    *
-   * <p>Recommended batch size: 100-500 logs (beyond 500 may hit SQL length limits).
+   * <p>推荐批次大小: 100-500 条日志(超过 500 可能触及 SQL 长度限制)。
    *
-   * @param logs list of relay logs to persist
+   * @param logs 要持久化的中继日志列表
    */
   @Override
   public void saveBatch(List<OutboxRelayLog> logs) {
@@ -114,14 +111,14 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   }
 
   /**
-   * Queries all relay logs for a specific outbox message (newest first).
+   * 查询特定发件箱消息的所有中继日志(最新的优先)。
    *
-   * <p>Use case: Troubleshooting - "show all relay attempts for message X".
+   * <p>使用场景: 故障排查 - "显示消息 X 的所有中继尝试"。
    *
-   * <p>Index used: <code>idx_message_id(message_id, started_at DESC)</code>.
+   * <p>使用的索引: <code>idx_message_id(message_id, started_at DESC)</code>。
    *
-   * @param messageId outbox message ID
-   * @return list of relay logs (newest first)
+   * @param messageId 发件箱消息 ID
+   * @return 中继日志列表(最新的优先)
    */
   @Override
   public List<OutboxRelayLog> findByOutboxMessageId(Long messageId) {
@@ -137,14 +134,14 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   }
 
   /**
-   * Queries all relay logs for a specific batch (oldest first).
+   * 查询特定批次的所有中继日志(最旧的优先)。
    *
-   * <p>Use case: Batch-level statistics - "how did batch X perform?".
+   * <p>使用场景: 批次级统计 - "批次 X 的表现如何?"。
    *
-   * <p>Index used: <code>idx_batch_id(relay_batch_id)</code>.
+   * <p>使用的索引: <code>idx_batch_id(relay_batch_id)</code>。
    *
-   * @param batchId relay batch identifier (format: yyyyMMddHHmmss-xxxxxxxx)
-   * @return list of relay logs (oldest first)
+   * @param batchId 中继批次标识符(格式: yyyyMMddHHmmss-xxxxxxxx)
+   * @return 中继日志列表(最旧的优先)
    */
   @Override
   public List<OutboxRelayLog> findByBatchId(String batchId) {
@@ -160,22 +157,22 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   }
 
   /**
-   * Counts relay logs matching channel, status, and time range.
+   * 统计匹配通道、状态和时间范围的中继日志数量。
    *
-   * <p>Use cases:
+   * <p>使用场景:
    *
    * <ul>
-   *   <li>Monitoring dashboard: "success rate for INGEST channel in last 1 hour"
-   *   <li>Alert queries: "how many FAILED relays in last 10 minutes?"
+   *   <li>监控仪表板: "最近 1 小时内 INGEST 通道的成功率"
+   *   <li>告警查询: "最近 10 分钟内有多少 FAILED 中继?"
    * </ul>
    *
-   * <p>Index used: <code>idx_channel_time</code> or <code>idx_status</code>.
+   * <p>使用的索引: <code>idx_channel_time</code> 或 <code>idx_status</code>。
    *
-   * @param channel channel name filter (null = all channels)
-   * @param status relay status filter (null = all statuses)
-   * @param startTime time range start (inclusive)
-   * @param endTime time range end (exclusive)
-   * @return count of matching relay logs
+   * @param channel 通道名称过滤器(null = 所有通道)
+   * @param status 中继状态过滤器(null = 所有状态)
+   * @param startTime 时间范围起始(包含)
+   * @param endTime 时间范围结束(不包含)
+   * @return 匹配的中继日志数量
    */
   @Override
   public long countByChannelAndStatus(
@@ -197,15 +194,15 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   }
 
   /**
-   * Queries recent failed relay logs (for alerting).
+   * 查询最近失败的中继日志(用于告警)。
    *
-   * <p>Use case: On-call triage - "show top 10 recent failures".
+   * <p>使用场景: 值班分诊 - "显示最近 10 次失败"。
    *
-   * <p>Index used: <code>idx_status(relay_status='FAILED', started_at DESC)</code>.
+   * <p>使用的索引: <code>idx_status(relay_status='FAILED', started_at DESC)</code>。
    *
-   * @param channel channel name filter (null = all channels)
-   * @param limit maximum number of logs to return
-   * @return list of failed relay logs (newest first)
+   * @param channel 通道名称过滤器(null = 所有通道)
+   * @param limit 返回的最大日志数
+   * @return 失败的中继日志列表(最新的优先)
    */
   @Override
   public List<OutboxRelayLog> findRecentFailed(String channel, int limit) {
@@ -221,17 +218,17 @@ public class OutboxRelayLogRepositoryMpImpl implements OutboxRelayLogRepository 
   }
 
   /**
-   * Queries relay logs for a channel within a time range.
+   * 查询时间范围内某通道的中继日志。
    *
-   * <p>Use case: Historical review - "show all relay attempts for INGEST channel today".
+   * <p>使用场景: 历史审查 - "显示今天 INGEST 通道的所有中继尝试"。
    *
-   * <p>Index used: <code>idx_channel_time(channel, started_at)</code>.
+   * <p>使用的索引: <code>idx_channel_time(channel, started_at)</code>。
    *
-   * @param channel channel name filter (null = all channels)
-   * @param startTime time range start (inclusive)
-   * @param endTime time range end (exclusive)
-   * @param limit maximum number of logs to return
-   * @return list of relay logs (newest first)
+   * @param channel 通道名称过滤器(null = 所有通道)
+   * @param startTime 时间范围起始(包含)
+   * @param endTime 时间范围结束(不包含)
+   * @param limit 返回的最大日志数
+   * @return 中继日志列表(最新的优先)
    */
   @Override
   public List<OutboxRelayLog> findByChannelAndTimeRange(

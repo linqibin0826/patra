@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_window_offset_cfg}. SQL implementation located in {@code
+ * 只读 Mapper,用于表 {@code reg_prov_window_offset_cfg}. SQL implementation located in {@code
  * resources/mapper/RegProvWindowOffsetCfgMapper.xml}.
  *
  * @author linqibin

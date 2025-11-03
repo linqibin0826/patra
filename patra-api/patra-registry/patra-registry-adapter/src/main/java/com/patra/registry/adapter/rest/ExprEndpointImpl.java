@@ -11,10 +11,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Implementation of the expression internal API endpoint.
+ * Expression REST 控制器,提供表达式快照查询 HTTP API。
  *
- * <p>Exposes expression snapshot retrieval capabilities to other microservices via internal RPC
- * contract, delegating to orchestrator and converting query DTOs to API response DTOs.
+ * <p>端点:
+ *
+ * <ul>
+ *   <li>GET /_internal/expr/snapshot - 获取完整表达式快照(字段定义、渲染规则、参数映射、能力)
+ * </ul>
+ *
+ * <p>职责:
+ *
+ * <ul>
+ *   <li>接收 HTTP 请求参数并验证
+ *   <li>调用 {@link ExprQueryOrchestrator} 执行用例
+ *   <li>通过 {@link ExprApiConverter} 转换为 API 响应 DTO
+ * </ul>
+ *
+ * <p>权限: 内部服务间调用(/_internal 路径)
  *
  * @author linqibin
  * @since 0.1.0
@@ -28,13 +41,22 @@ public class ExprEndpointImpl implements ExprEndpoint {
   private final ExprApiConverter converter;
 
   /**
-   * Loads an expression snapshot and converts it to API response DTO.
+   * 获取表达式快照(支持时态切片)。
    *
-   * @param provenanceCode the provenance code identifying the source system
-   * @param operationType the operation type discriminator; {@code null} means all operations
-   * @param endpointName the endpoint name filter; {@code null} means all endpoints
-   * @param at the instant used for temporal slicing; {@code null} defaults to current time
-   * @return the expression snapshot response DTO exposed by RPC contract
+   * <p>快照内容包括:
+   *
+   * <ul>
+   *   <li>字段定义({@code ExprFieldResp})
+   *   <li>渲染规则({@code ExprRenderRuleResp})
+   *   <li>参数映射({@code ApiParamMappingResp})
+   *   <li>能力配置({@code ExprCapabilityResp})
+   * </ul>
+   *
+   * @param provenanceCode 数据源代码
+   * @param operationType 操作类型,为 {@code null} 时表示所有操作
+   * @param endpointName 端点名称过滤器,为 {@code null} 时表示所有端点
+   * @param at 时态切片时间点,为 {@code null} 时默认为当前时间
+   * @return 表达式快照响应 DTO
    */
   @Override
   public ExprSnapshotResp getSnapshot(

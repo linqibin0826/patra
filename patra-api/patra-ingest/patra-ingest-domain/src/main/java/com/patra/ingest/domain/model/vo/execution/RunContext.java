@@ -1,22 +1,22 @@
 package com.patra.ingest.domain.model.vo.execution;
 
 /**
- * Context metadata captured for a single task run.
+ * 运行上下文值对象,表示单个任务运行的上下文元数据.
  *
- * <p>Similar to {@link TaskSchedulerContext} but scoped to an individual run.
+ * <p>类似于{@link TaskSchedulerContext}但作用域限于单个运行.
  *
  * <ul>
- *   <li>{@code correlationId}: cross-system correlation id for distributed tracing
+ *   <li>{@code correlationId}:用于分布式追踪的跨系统关联ID
  * </ul>
  */
 public record RunContext(String correlationId) {
 
-  /** Create an empty run context. */
+  /** 创建空运行上下文. */
   public static RunContext empty() {
     return new RunContext(null);
   }
 
-  /** Derive a new context with the provided {@code correlationId}. */
+  /** 派生具有指定{@code correlationId}的新上下文. */
   public RunContext withCorrelation(String corrId) {
     return new RunContext(corrId);
   }

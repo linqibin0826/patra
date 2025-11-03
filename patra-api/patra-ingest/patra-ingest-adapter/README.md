@@ -45,8 +45,8 @@ patra-ingest-adapter/
    │  └─ param/
    │     ├─ ProvenanceScheduleJobParam.java     # 采集任务参数 DTO
    │     └─ OutboxRelayJobParam.java            # 中继任务参数 DTO
-   └─ stream/                       # RocketMQ 消费者
-      ├─ IngestStreamConsumers.java        # 消息消费者
+   └─ rocketmq/                     # RocketMQ 消费者
+      ├─ TaskReadyMessageListener.java     # 消息消费者
       └─ dto/
          └─ TaskReadyPayload.java          # 任务就绪消息负载
 ```
@@ -137,37 +137,46 @@ public abstract class AbstractProvenanceScheduleJob extends IJobHandler {
 
 ### 2. RocketMQ 消息消费者
 
-#### IngestStreamConsumers (消息消费者)
+#### TaskReadyMessageListener (消息消费者)
 
 **职责**: 消费任务就绪消息,触发任务执行。
 
-**消费通道**:
-- **Input**: `task-ready-input` (绑定到 RocketMQ Topic: `papertrace-ingest-task-ready`)
+**消费配置**:
+- **Topic**: `${papertrace.ingest.mq.topics.task-ready}` (配置中为 `INGEST_TASK_READY`)
+- **ConsumerGroup**: `${papertrace.ingest.mq.consumer-groups.task-ready}`
 
 **核心方法**:
 ```java
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class IngestStreamConsumers {
+@RocketMQMessageListener(
+    topic = "${papertrace.ingest.mq.topics.task-ready}",
+    consumerGroup = "${papertrace.ingest.mq.consumer-groups.task-ready}",
+    selectorExpression = "*"
+)
+public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
 
     private final TaskExecutionUseCase taskExecutionUseCase;
+    private final ObjectMapper objectMapper;
 
-    @StreamListener(IngestPublishingChannels.TASK_READY)
-    public void handleTaskReady(Message<TaskReadyPayload> message) {
-        TaskReadyPayload payload = message.getPayload();
-        Long taskId = payload.getTaskId();
-
+    @Override
+    public void onMessage(MessageExt message) {
         try {
-            log.info("Received task ready message: taskId={}", taskId);
+            // 解析消息体
+            String payload = new String(message.getBody(), StandardCharsets.UTF_8);
+            TaskReadyPayload dto = objectMapper.readValue(payload, TaskReadyPayload.class);
+
+            Long taskId = dto.getTaskId();
+            log.info("Received task ready message: taskId={}, msgId={}", taskId, message.getMsgId());
 
             // 调用任务执行用例
             taskExecutionUseCase.executeTask(taskId);
 
             log.info("Task execution completed: taskId={}", taskId);
         } catch (Exception ex) {
-            log.error("Task execution failed: taskId={}", taskId, ex);
-            throw ex;  // 触发 MQ 重试
+            log.error("Task execution failed: msgId={}", message.getMsgId(), ex);
+            throw new RuntimeException("消息消费失败", ex);  // 触发 RocketMQ 重试
         }
     }
 }
@@ -184,7 +193,7 @@ public class IngestStreamConsumers {
 }
 ```
 
-**文件**: `stream/IngestStreamConsumers.java`
+**文件**: `rocketmq/TaskReadyMessageListener.java`
 
 ---
 
@@ -238,19 +247,19 @@ xxl:
 ### RocketMQ 消费者配置
 
 ```yaml
-spring:
-  cloud:
-    stream:
-      rocketmq:
-        binder:
-          name-server: localhost:9876
-      bindings:
-        task-ready-input:
-          destination: papertrace-ingest-task-ready
-          group: patra-ingest-consumer-group
-          consumer:
-            concurrency: 10
-            maxAttempts: 3
+rocketmq:
+  name-server: ${ROCKETMQ_NAMESRV:127.0.0.1:9876}
+  producer:
+    group: ingest-producer-group
+    send-message-timeout: 3000
+
+papertrace:
+  ingest:
+    mq:
+      topics:
+        task-ready: ${TOPIC_PREFIX:}INGEST_TASK_READY
+      consumer-groups:
+        task-ready: ${CONSUMER_GROUP_PREFIX:}ingest-task-ready-consumer-group
 ```
 
 ---
@@ -312,7 +321,7 @@ spring:
 - `patra-ingest-api`: API 契约
 - `patra-spring-boot-starter-web`: Web Starter
 - `xxl-job-core`: XXL-Job 核心库
-- `spring-cloud-starter-stream-rocketmq`: RocketMQ Stream Starter
+- `rocketmq-spring-boot-starter`: RocketMQ 官方 Spring Boot Starter
 
 ### 下游消费者
 - `patra-ingest-boot`: 启动模块(组装所有依赖)
@@ -324,7 +333,7 @@ spring:
 ## 命名约定
 
 - **定时任务**: `*Job` (如 `PubmedHarvestJob`)
-- **消费者**: `*Consumers` (如 `IngestStreamConsumers`)
+- **消费者**: `*MessageListener` (如 `TaskReadyMessageListener`)
 - **参数 DTO**: `*Param` (如 `ProvenanceScheduleJobParam`)
 - **消息负载**: `*Payload` (如 `TaskReadyPayload`)
 

@@ -10,19 +10,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 /**
- * Auto-configuration entry point for the Papertrace Feign starter.
+ * Papertrace Feign Starter 自动配置入口点
  *
- * <p>Registers cross-cutting components for Feign clients, including the {@link
- * PatraFeignRequestInterceptor} responsible for propagating shared headers such as the caller
- * service identifier.
+ * <p>为 Feign 客户端注册横切关注点组件,包括负责传播共享请求头(如调用者服务标识符)的 {@link PatraFeignRequestInterceptor}。
  *
- * <p><b>Convention-based Feign Client Scanning:</b> Automatically enables Feign client scanning for
- * all {@code @FeignClient} annotated interfaces under {@code com.patra} package. By convention,
- * standard RPC clients should be placed in {@code com.patra.{module}.api.rpc.client} packages.
+ * <p><b>基于约定的 Feign 客户端扫描:</b> 自动启用对 {@code com.patra} 包下所有标注了 {@code @FeignClient} 的接口的扫描。按照约定,标准的
+ * RPC 客户端应放置在 {@code com.patra.{module}.api.rpc.client} 包中。
  *
- * <p><b>Note:</b> Specialized infrastructure clients may define their own
- * {@code @EnableFeignClients} in their specific starters if they need custom scanning
- * configuration.
+ * <p><b>注意:</b> 如果需要自定义扫描配置,专用的基础设施客户端可以在其特定的 Starter 中 定义自己的 {@code @EnableFeignClients}。
  */
 @AutoConfiguration
 @EnableConfigurationProperties(PatraFeignProperties.class)

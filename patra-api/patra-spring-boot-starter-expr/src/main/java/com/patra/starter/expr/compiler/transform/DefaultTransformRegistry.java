@@ -7,10 +7,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Default immutable implementation of {@link TransformRegistry}. Initialized at construction time
- * with a list of transforms, indexed by code for O(1) lookup. Thread-safe through immutability.
+ * {@link TransformRegistry} 的默认不可变实现。在构造时使用变换列表初始化， 按代码索引以实现 O(1) 查找。通过不可变性保证线程安全。
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.7 (Thread Safety & Performance)
+ * <p>参考：docs/expr/03-compiler-bridge-internals.md §3.7（线程安全性与性能）
  *
  * @since 1.0.0
  */
@@ -19,15 +18,14 @@ public class DefaultTransformRegistry implements TransformRegistry {
   private final Map<String, ValueTransform> transforms;
 
   /**
-   * Constructs a registry from a list of transforms. Transforms are indexed by their code for
-   * efficient lookup.
+   * 从变换列表构造注册表。变换按其代码索引以实现高效查找。
    *
-   * @param transformList list of value transforms to register
-   * @throws IllegalArgumentException if duplicate transform codes are detected
+   * @param transformList 要注册的值变换列表
+   * @throws IllegalArgumentException 如果检测到重复的变换代码
    */
   public DefaultTransformRegistry(List<ValueTransform> transformList) {
     if (transformList == null) {
-      throw new IllegalArgumentException("Transform list cannot be null");
+      throw new IllegalArgumentException("变换列表不能为空");
     }
 
     this.transforms =
@@ -37,8 +35,7 @@ public class DefaultTransformRegistry implements TransformRegistry {
                     ValueTransform::code,
                     Function.identity(),
                     (t1, t2) -> {
-                      throw new IllegalArgumentException(
-                          "Duplicate transform code detected: " + t1.code());
+                      throw new IllegalArgumentException("检测到重复的变换代码：" + t1.code());
                     }));
   }
 

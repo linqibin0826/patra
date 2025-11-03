@@ -15,10 +15,20 @@ import com.patra.starter.provenance.epmc.model.response.SearchResponse;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Europe PMC client implementation calling provider APIs directly via HTTP.
+ * Europe PMC 客户端实现
  *
- * <p>Handles configuration prioritisation, optional Micrometer instrumentation and defensive
- * response parsing.
+ * <p>直接通过HTTP调用Europe PMC API。Europe PMC是欧洲的生物医学文献数据库， 提供PubMed数据以及欧洲特色的开放获取文献。
+ *
+ * <p>主要功能：
+ *
+ * <ul>
+ *   <li>配置优先级处理：优先使用方法级配置，回退到默认配置
+ *   <li>可选的Micrometer指标收集：记录API调用时长和成功率
+ *   <li>防御性响应解析：容忍格式变化和缺失字段
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class EPMCClientImpl implements EPMCClient {
@@ -51,7 +61,7 @@ public class EPMCClientImpl implements EPMCClient {
   @Override
   public SearchResponse search(SearchRequest request, ProvenanceConfig config) {
     if (metrics != null) {
-      // Wrap the call to capture duration and success/failure counters when Micrometer is present.
+      // 当Micrometer存在时，包装调用以捕获时长和成功/失败计数器
       return metrics.recordApiCall(PROVENANCE, "search", () -> executeSearch(request, config));
     }
     return executeSearch(request, config);
@@ -72,7 +82,7 @@ public class EPMCClientImpl implements EPMCClient {
       return SearchResponse.from(root);
     } catch (Exception ex) {
       throw new ProvenanceClientException(
-          PROVENANCE.getCode(), "search", null, null, body, "Failed to parse JSON response", ex);
+          PROVENANCE.getCode(), "search", null, null, body, "解析JSON响应失败", ex);
     }
   }
 }

@@ -6,64 +6,68 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Exception thrown when plan assembly fails.
+ * 计划组装异常。
  *
- * <p>Occurs after validation succeeds but the slicing/task generation stages cannot produce
- * executable batches. Unlike {@link PlanValidationException}, inputs are valid; the failure stems
- * from assembly algorithms or combination rules.
+ * <p>触发场景:在验证通过后,切片/任务生成阶段无法产生可执行的批次。
  *
- * <p>Handling strategy:
+ * <p>与 {@link PlanValidationException} 的区别:本异常表示输入参数有效,但组装算法或组合规则失败;而 {@link
+ * PlanValidationException} 表示输入参数本身无效。
+ *
+ * <p>处理策略:
  *
  * <ul>
- *   <li>{@link Reason#EMPTY_RESULT}: treat as an empty window, log at INFO, and stop creation.
- *   <li>{@link Reason#SLICE_GENERATION_FAILED} / {@link Reason#TASK_GENERATION_FAILED}: log at
- *       ERROR and inspect the strategy implementation or baseline data.
+ *   <li>{@link Reason#EMPTY_RESULT}: 视为空窗口,记录 INFO 级别日志并停止创建(正常情况)。
+ *   <li>{@link Reason#SLICE_GENERATION_FAILED} / {@link Reason#TASK_GENERATION_FAILED}: 记录 ERROR
+ *       级别日志,检查策略实现或基准数据。
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class PlanAssemblyException extends IngestException implements HasErrorTraits {
 
   /**
-   * Root cause for assembly failure.
+   * 组装失败的根因。
    *
-   * <p>Helps callers select log levels and alerting strategies.
+   * <p>帮助调用方选择日志级别和告警策略。
    */
   public enum Reason {
-    /** Algorithm succeeded but produced an empty result (no data in the window). */
+    /** 算法执行成功但产生空结果(窗口内无数据)。 */
     EMPTY_RESULT,
-    /** Failed while generating slices (errors in window partitioning or boundary calculations). */
+    /** 生成切片时失败(窗口分区或边界计算错误)。 */
     SLICE_GENERATION_FAILED,
-    /** Failed while generating tasks (slice-to-task mapping or parameter assembly issues). */
+    /** 生成任务时失败(切片到任务的映射或参数组装问题)。 */
     TASK_GENERATION_FAILED
   }
 
-  /** Reason provided for the failure; may be {@code null} when not distinguished. */
+  /** 失败原因;如果未区分则可能为 {@code null}。 */
   private final Reason reason;
 
   /**
-   * Create the exception with a message and no specific reason.
+   * 构造计划组装异常(不指定具体原因)。
    *
-   * @param message descriptive message
+   * @param message 描述性消息
    */
   public PlanAssemblyException(String message) {
     this(message, null, null);
   }
 
   /**
-   * Create the exception with a message and reason.
+   * 构造计划组装异常并指定原因。
    *
-   * @param message descriptive message
-   * @param reason failure reason
+   * @param message 描述性消息
+   * @param reason 失败原因
    */
   public PlanAssemblyException(String message, Reason reason) {
     this(message, reason, null);
   }
 
   /**
-   * Create the exception with a message, reason, and underlying cause.
+   * 构造计划组装异常并指定原因和底层原因。
    *
-   * @param message descriptive message
-   * @param reason failure reason
-   * @param cause underlying cause
+   * @param message 描述性消息
+   * @param reason 失败原因
+   * @param cause 底层原因
    */
   public PlanAssemblyException(String message, Reason reason, Throwable cause) {
     super(message, cause);
@@ -71,19 +75,19 @@ public class PlanAssemblyException extends IngestException implements HasErrorTr
   }
 
   /**
-   * Create the exception with a message and underlying cause without specifying the reason.
+   * 构造计划组装异常并附带底层原因(不指定 Reason)。
    *
-   * @param message descriptive message
-   * @param cause underlying cause
+   * @param message 描述性消息
+   * @param cause 底层原因
    */
   public PlanAssemblyException(String message, Throwable cause) {
     this(message, null, cause);
   }
 
   /**
-   * Expose the failure reason.
+   * 获取失败原因。
    *
-   * @return reason, possibly {@code null}
+   * @return 失败原因,可能为 {@code null}
    */
   public Reason getReason() {
     return reason;

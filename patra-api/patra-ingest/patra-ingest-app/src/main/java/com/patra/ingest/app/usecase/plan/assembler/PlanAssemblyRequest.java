@@ -7,18 +7,17 @@ import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import java.util.Objects;
 
 /**
- * Input for plan assembly (Application → Assembly).
+ * Plan 组装输入(应用层 → 组装器)
  *
- * <p>Packages results of window resolution, expression build, trigger normalization, and
- * configuration snapshot extraction for the assembler to produce:
+ * <p>打包窗口解析、表达式构建、触发器标准化和配置快照提取的结果,供组装器生成:
  *
  * <ol>
- *   <li>Plan aggregate root (with config/expression snapshot signatures)
- *   <li>PlanSlice aggregates (derived by slicing strategy)
- *   <li>Task aggregates (derived from slices)
+ *   <li>Plan 聚合根(带配置/表达式快照签名)
+ *   <li>PlanSlice 聚合(由切片策略派生)
+ *   <li>Task 聚合(由切片派生)
  * </ol>
  *
- * <h4>Invariants</h4>
+ * <h4>不变式</h4>
  *
  * <ul>
  *   <li>{@code triggerNorm != null}
@@ -27,19 +26,18 @@ import java.util.Objects;
  *   <li>{@code planExpression != null}
  * </ul>
  *
- * <h4>Thread safety</h4>
+ * <h4>线程安全</h4>
  *
- * <p>Record is immutable and safe for reuse.
+ * <p>Record 不可变,可安全重用。
  *
- * <h4>Extension</h4>
+ * <h4>扩展性</h4>
  *
- * <p>May include: lease info / rate-limit config / feature overrides; must remain backward
- * compatible.
+ * <p>可包含:租约信息 / 限流配置 / 特性覆盖;必须保持向后兼容。
  *
- * @param triggerNorm trigger normalization (mode, priority, user window, etc.)
- * @param window plan window (UTC half-open interval)
- * @param configSnapshot config snapshot (for canonical/hash)
- * @param planExpression plan expression descriptor (expr + json + hash)
+ * @param triggerNorm 触发器标准化(模式、优先级、用户窗口等)
+ * @param window Plan 窗口(UTC 半开区间)
+ * @param configSnapshot 配置快照(用于规范化/哈希)
+ * @param planExpression Plan 表达式描述符(expr + json + hash)
  */
 public record PlanAssemblyRequest(
     PlanTriggerNorm triggerNorm,
@@ -47,9 +45,9 @@ public record PlanAssemblyRequest(
     ProvenanceConfigSnapshot configSnapshot,
     PlanExpressionDescriptor planExpression) {
   public PlanAssemblyRequest {
-    Objects.requireNonNull(triggerNorm, "triggerNorm must not be null");
-    Objects.requireNonNull(window, "window must not be null");
-    Objects.requireNonNull(configSnapshot, "configSnapshot must not be null");
-    Objects.requireNonNull(planExpression, "planExpression must not be null");
+    Objects.requireNonNull(triggerNorm, "triggerNorm 不能为 null");
+    Objects.requireNonNull(window, "window 不能为 null");
+    Objects.requireNonNull(configSnapshot, "configSnapshot 不能为 null");
+    Objects.requireNonNull(planExpression, "planExpression 不能为 null");
   }
 }

@@ -6,7 +6,34 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.Map;
 
-/** Request body used by callers to persist upload metadata. */
+/**
+ * 上传记录请求。
+ *
+ * <p>调用方用于持久化上传元数据的请求体。包含文件的存储位置、大小、校验和、 业务上下文等所有必需信息,用于在存储服务中创建元数据记录。
+ *
+ * <p>验证约束:
+ *
+ * <ul>
+ *   <li>bucketName、objectKey、md5Hash、serviceName、businessType、businessId、providerType 不能为空
+ *   <li>fileSize 必须 >= 0
+ *   <li>contentType 最大128字符
+ *   <li>recordRemarks 最大512字符
+ * </ul>
+ *
+ * @param bucketName 存储桶名称
+ * @param objectKey 对象键
+ * @param fileSize 文件大小(字节)
+ * @param contentType MIME内容类型
+ * @param md5Hash MD5哈希值
+ * @param sha256Hash SHA-256哈希值(可选)
+ * @param serviceName 服务名称
+ * @param businessType 业务类型
+ * @param businessId 业务ID
+ * @param correlationData 关联数据
+ * @param providerType 存储提供商类型
+ * @param expiresAt 过期时间(可选)
+ * @param recordRemarks 记录备注(可选)
+ */
 public record UploadRecordRequest(
     @NotBlank String bucketName,
     @NotBlank String objectKey,

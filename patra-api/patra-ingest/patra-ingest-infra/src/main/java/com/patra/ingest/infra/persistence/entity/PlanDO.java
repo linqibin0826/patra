@@ -10,93 +10,89 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Plan blueprint DO</b> — table: <code>ing_plan</code>
+ * 采集计划数据库实体,映射到表 {@code ing_plan}。
  *
- * <p>Represents a single ingestion batch blueprint, capturing provenance configuration, expression
- * prototype, and slice strategy.
+ * <p>表结构: 表示单个采集批次蓝图,捕获数据源配置、表达式原型和切片策略。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>plan_key</code> is human-readable and idempotent (UK: uk_plan_key).
- *   <li><code>expr_proto_snapshot</code> and <code>provenance_config_snapshot</code> are stored as
- *       JSON snapshots for replay and comparison.
- *   <li><code>slice_strategy_code</code> + <code>slice_params</code> determine how child slices are
- *       derived.
- *   <li><code>window_spec</code> stores window boundaries as JSON; supports multiple strategies
- *       (TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE).
+ *   <li>{@code plan_key} 是可读的幂等键(唯一约束: uk_plan_key)
+ *   <li>{@code expr_proto_snapshot} 和 {@code provenance_config_snapshot} 以 JSON 快照形式存储,用于重放和比较
+ *   <li>{@code slice_strategy_code} + {@code slice_params} 决定如何派生子切片
+ *   <li>{@code window_spec} 以 JSON
+ *       存储窗口边界;支持多种策略(TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE)
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "ing_plan", autoResultMap = true)
 public class PlanDO extends BaseDO {
 
-  /** Related schedule instance ID. */
+  /** 关联的调度实例 ID */
   @TableField("schedule_instance_id")
   private Long scheduleInstanceId;
 
-  /** External idempotency key (human-readable). */
+  /** 外部幂等键(可读) */
   @TableField("plan_key")
   private String planKey;
 
-  /** Provenance code redundancy (for grouping by provenance). */
+  /** 数据源代码冗余(用于按数据源分组) */
   @TableField("provenance_code")
   private String provenanceCode;
 
-  /** Operation type code (DICT: ing_operation). */
+  /** 操作类型代码(字典: ing_operation) */
   @TableField("operation_code")
   private String operationCode;
 
-  /** Expression prototype hash (normalized AST fingerprint). */
+  /** 表达式原型哈希(规范化 AST 指纹) */
   @TableField("expr_proto_hash")
   private String exprProtoHash;
 
-  /** Expression prototype snapshot (JSON AST, without local conditions). */
+  /** 表达式原型快照(JSON AST,不含本地条件) */
   @TableField(value = "expr_proto_snapshot", typeHandler = JacksonTypeHandler.class)
   private JsonNode exprProtoSnapshot;
 
-  /** Provenance configuration snapshot (JSON, runtime-invariant parameters). */
+  /** 数据源配置快照(JSON,运行时不变参数) */
   @TableField(value = "provenance_config_snapshot", typeHandler = JacksonTypeHandler.class)
   private JsonNode provenanceConfigSnapshot;
 
-  /** Hash of provenance configuration snapshot (for change detection). */
+  /** 数据源配置快照哈希(用于变更检测) */
   @TableField("provenance_config_hash")
   private String provenanceConfigHash;
 
-  /** Slice strategy code (TIME/DATE/ID_RANGE/CURSOR, etc.). */
+  /** 切片策略代码(TIME/DATE/ID_RANGE/CURSOR 等) */
   @TableField("slice_strategy_code")
   private String sliceStrategyCode;
 
-  /** Slice parameters snapshot (JSON; strategy-specific details). */
+  /** 切片参数快照(JSON;策略特定细节) */
   @TableField(value = "slice_params", typeHandler = JacksonTypeHandler.class)
   private JsonNode sliceParams;
 
-  /** Window boundary spec (JSON; schema varies by slice_strategy_code). */
+  /** 窗口边界规格(JSON;模式因 slice_strategy_code 而异) */
   @TableField(value = "window_spec", typeHandler = JacksonTypeHandler.class)
   private JsonNode windowSpec;
 
   /**
-   * Denormalized window start timestamp for TIME strategy (application-maintained).
+   * TIME 策略的反规范化窗口起始时间戳(应用层维护)。
    *
-   * <p>This field is populated by the application layer when {@code slice_strategy_code = "TIME"}
-   * to enable efficient time-range queries. It should be set to {@code null} for non-TIME
-   * strategies.
+   * <p>当 {@code slice_strategy_code = "TIME"} 时由应用层填充,以支持高效的时间范围查询。非 TIME 策略应设为 {@code null}。
    */
   @TableField("window_from_ts")
   private Instant windowFromTs;
 
   /**
-   * Denormalized window end timestamp for TIME strategy (application-maintained).
+   * TIME 策略的反规范化窗口结束时间戳(应用层维护)。
    *
-   * <p>This field is populated by the application layer when {@code slice_strategy_code = "TIME"}
-   * to enable efficient time-range queries. It should be set to {@code null} for non-TIME
-   * strategies.
+   * <p>当 {@code slice_strategy_code = "TIME"} 时由应用层填充,以支持高效的时间范围查询。非 TIME 策略应设为 {@code null}。
    */
   @TableField("window_to_ts")
   private Instant windowToTs;
 
-  /** Status code (DICT: ing_plan_status). */
+  /** 状态代码(字典: ing_plan_status) */
   @TableField("status_code")
   private String statusCode;
 }

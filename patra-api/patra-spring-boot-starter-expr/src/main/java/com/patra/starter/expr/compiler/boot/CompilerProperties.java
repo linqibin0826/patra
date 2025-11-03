@@ -3,21 +3,46 @@ package com.patra.starter.expr.compiler.boot;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties for the expression compiler.
+ * 表达式编译器配置属性
  *
- * <p>Prefix: {@code patra.expr.compiler}
+ * <p>配置前缀: {@code patra.expr.compiler}
  *
- * <p>Key settings:
+ * <h3>核心配置</h3>
  *
  * <ul>
- *   <li>{@code queryParamBridge.enabled} - Enable query bridging via std_key=query (default: true)
- *   <li>{@code maxQueryLength} - Maximum query length in characters (default: 0 = disabled)
- *   <li>{@code warnParamCount} - Soft limit for parameter count warnings (default: 0 = disabled)
- *   <li>{@code maxParamCount} - Hard limit for parameter count errors (default: 0 = disabled)
+ *   <li>{@code enabled} - 是否启用表达式编译器(默认: true)
+ *   <li>{@code queryParamBridge.enabled} - 是否启用查询参数桥接,通过 std_key=query 映射(默认: true)
+ *   <li>{@code maxQueryLength} - 查询字符串最大长度(默认: 0 = 禁用)
+ *   <li>{@code warnParamCount} - 参数数量警告阈值(软限制,默认: 0 = 禁用)
+ *   <li>{@code maxParamCount} - 参数数量错误阈值(硬限制,默认: 0 = 禁用)
  * </ul>
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.6, §3.9
+ * <h3>Registry API 配置</h3>
  *
+ * <ul>
+ *   <li>{@code registryApi.enabled} - 是否从 patra-registry 加载规则(默认: true)
+ *   <li>{@code registryApi.operationDefault} - 默认操作类型(默认: "SEARCH")
+ * </ul>
+ *
+ * <h3>使用示例</h3>
+ *
+ * <pre>
+ * patra:
+ *   expr:
+ *     compiler:
+ *       enabled: true
+ *       maxQueryLength: 10000
+ *       warnParamCount: 50
+ *       maxParamCount: 100
+ *       queryParamBridge:
+ *         enabled: true
+ *       registryApi:
+ *         enabled: true
+ *         operationDefault: SEARCH
+ * </pre>
+ *
+ * @see CompilerProperties.RegistryApi
+ * @see CompilerProperties.QueryParamBridge
  * @since 1.0.0
  */
 @ConfigurationProperties(prefix = "patra.expr.compiler")
@@ -26,9 +51,9 @@ public class CompilerProperties {
   private boolean enabled = true;
   private final RegistryApi registryApi = new RegistryApi();
   private final QueryParamBridge queryParamBridge = new QueryParamBridge();
-  private int maxQueryLength = 0; // 0 = disabled
-  private int warnParamCount = 0; // 0 = disabled
-  private int maxParamCount = 0; // 0 = disabled
+  private int maxQueryLength = 0; // 0 = 禁用
+  private int warnParamCount = 0; // 0 = 禁用
+  private int maxParamCount = 0; // 0 = 禁用
 
   public boolean isEnabled() {
     return enabled;
@@ -47,9 +72,9 @@ public class CompilerProperties {
   }
 
   /**
-   * Maximum query length in characters. 0 means disabled (no limit).
+   * 查询字符串最大长度(字符数)。0 表示禁用(无限制)。
    *
-   * @return max query length
+   * @return 最大查询长度
    */
   public int getMaxQueryLength() {
     return maxQueryLength;
@@ -60,9 +85,9 @@ public class CompilerProperties {
   }
 
   /**
-   * Soft limit for parameter count that triggers W-PARAM-COUNT-LIMIT warning. 0 means disabled.
+   * 参数数量软限制,达到时触发 W-PARAM-COUNT-LIMIT 警告。0 表示禁用。
    *
-   * @return warn param count threshold
+   * @return 警告阈值
    */
   public int getWarnParamCount() {
     return warnParamCount;
@@ -73,9 +98,9 @@ public class CompilerProperties {
   }
 
   /**
-   * Hard limit for parameter count that triggers E-PARAM-COUNT-LIMIT error. 0 means disabled.
+   * 参数数量硬限制,超过时触发 E-PARAM-COUNT-LIMIT 错误。0 表示禁用。
    *
-   * @return max param count threshold
+   * @return 最大参数数量
    */
   public int getMaxParamCount() {
     return maxParamCount;
@@ -107,21 +132,26 @@ public class CompilerProperties {
   }
 
   /**
-   * Query parameter bridging configuration.
+   * 查询参数桥接配置
    *
-   * <p>Controls whether the aggregated boolean query is bridged into provider params via
-   * std_key=query mapping.
+   * <p>控制是否将聚合的布尔查询通过 std_key=query 映射桥接到数据源参数中。
    *
-   * <p>See: docs/expr/03-compiler-bridge-internals.md §3.2, §3.6
+   * <h3>工作原理</h3>
+   *
+   * <ul>
+   *   <li>启用时: 编译器将标准键 std_key=query 映射到具体数据源的查询参数名
+   *   <li>禁用时: 不进行查询桥接,查询表达式需要手动处理
+   * </ul>
+   *
+   * @see docs/expr/03-compiler-bridge-internals.md §3.2, §3.6
    */
   public static class QueryParamBridge {
     private boolean enabled = true;
 
     /**
-     * Enable/disable query bridging. When enabled, the compiler bridges std_key=query to the
-     * provider parameter name.
+     * 启用/禁用查询桥接。 启用时,编译器将 std_key=query 桥接到数据源的参数名。
      *
-     * @return true if query bridging is enabled
+     * @return 是否启用查询桥接
      */
     public boolean isEnabled() {
       return enabled;

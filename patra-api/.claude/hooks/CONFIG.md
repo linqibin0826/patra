@@ -104,16 +104,16 @@ esac
 
 ```bash
 # 默认：多线程编译
-mvn -T 1C compile -q -DskipTests
+./mvnw -T 1C compile -q -DskipTests
 
 # 单线程（更慢但更稳定）：
-mvn compile -q -DskipTests
+./mvnw compile -q -DskipTests
 
 # 使用特定模块：
-mvn -pl patra-registry,patra-ingest compile -q -DskipTests
+./mvnw -pl patra-registry,patra-ingest compile -q -DskipTests
 
 # 完整的清理编译：
-mvn clean compile -q -DskipTests
+./mvnw clean compile -q -DskipTests
 ```
 
 #### 调整错误显示限制
@@ -337,16 +337,16 @@ rm -f $CLAUDE_PROJECT_DIR/.claude/hooks/.last-compile-failed
 1. **禁用多线程**（`maven-compile-check.sh` 第 36 行）：
    ```bash
    # 从以下改为：
-   mvn -T 1C compile -q -DskipTests
+   ./mvnw -T 1C compile -q -DskipTests
 
    # 改为：
-   mvn compile -q -DskipTests
+   ./mvnw compile -q -DskipTests
    ```
 
 2. **仅编译特定模块**：
    ```bash
    # 在 maven-compile-check.sh 中，改变第 36 行：
-   mvn -pl patra-registry,patra-ingest compile -q -DskipTests
+   ./mvnw -pl patra-registry,patra-ingest compile -q -DskipTests
    ```
 
 3. **完全跳过此 hook** - 从 `settings.json` 中移除
@@ -379,7 +379,7 @@ fi
    sudo apt-get install maven
 
    # 验证安装
-   mvn --version
+   ./mvnw --version
    ```
 
 2. **设置 MAVEN_HOME 环境变量**：
@@ -418,9 +418,9 @@ echo "DEBUG: 运行 mvn compile..." >&2
 CHANGED_MODULES=$(git diff --name-only HEAD | grep -oP 'patra-\w+' | sort -u | tr '\n' ',' | sed 's/,$//')
 
 if [[ -n "$CHANGED_MODULES" ]]; then
-    mvn -pl "$CHANGED_MODULES" compile -q -DskipTests
+    ./mvnw -pl "$CHANGED_MODULES" compile -q -DskipTests
 else
-    mvn -T 1C compile -q -DskipTests
+    ./mvnw -T 1C compile -q -DskipTests
 fi
 ```
 
@@ -430,10 +430,10 @@ fi
 
 ```bash
 # 在 maven-compile-check.sh 中，第 36 行
-mvn -T 1C compile -q -DskipTests -P dev
+./mvnw -T 1C compile -q -DskipTests -P dev
 
 # 或多个配置文件：
-mvn -T 1C compile -q -DskipTests -P dev,local
+./mvnw -T 1C compile -q -DskipTests -P dev,local
 ```
 
 ### Docker/容器项目
@@ -478,13 +478,13 @@ if [[ -n "$CHANGED_FILES" ]]; then
     MODULES=$(echo "$CHANGED_FILES" | grep -oP 'patra-\w+' | sort -u | paste -sd,)
 
     if [[ -n "$MODULES" ]]; then
-        mvn -pl "$MODULES" -am compile -q -DskipTests
+        ./mvnw -pl "$MODULES" -am compile -q -DskipTests
         exit $?
     fi
 fi
 
 # 回退到完整编译
-mvn -T 1C compile -q -DskipTests
+./mvnw -T 1C compile -q -DskipTests
 ```
 
 **选项 2：使用 Maven Daemon**

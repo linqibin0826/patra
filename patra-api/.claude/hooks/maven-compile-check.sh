@@ -44,9 +44,9 @@ trap 'rm -f "$TEMP_OUTPUT"' EXIT
 # -T 2C：每个 CPU 核心使用 2 个线程（基于性能测试的最优值）
 # -q：静默模式（仅错误）
 # -DskipTests：跳过测试编译和执行
-echo "Running: mvn -T 2C compile -q -DskipTests"
+echo "Running: ./mvnw -T 2C clean compile -q -DskipTests"
 
-if mvn -T 2C compile -q -DskipTests 2>&1 | tee "$TEMP_OUTPUT"; then
+if ./mvnw -T 2C clean compile -q -DskipTests 2>&1 | tee "$TEMP_OUTPUT"; then
     echo -e "${GREEN}✅ Maven 编译成功${NC}"
     exit 0
 else
@@ -62,7 +62,7 @@ else
     grep -E "BUILD FAILURE|FAILURE \[" "$TEMP_OUTPUT" | sed 's/.*\[\(.*\)\].*/  - \1/' | sort -u
 
     echo ""
-    echo -e "${YELLOW}💡 提示：运行 'mvn compile' 获取详细的错误信息${NC}"
+    echo -e "${YELLOW}💡 提示：运行 './mvnw clean compile' 获取详细的错误信息${NC}"
     echo -e "${YELLOW}💡 或使用自动错误解析器代理自动修复错误${NC}"
 
     # 为 trigger-build-resolver-java.sh 创建标记文件

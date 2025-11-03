@@ -21,14 +21,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
 /**
- * Builder for RFC 7807 {@link org.springframework.http.ProblemDetail} responses.
+ * RFC 7807 {@link org.springframework.http.ProblemDetail} 响应的构建器。
  *
- * <p>Features include:
+ * <p>功能包括:
  *
  * <ul>
- *   <li>Masking of sensitive information before it leaves the service.
- *   <li>Proxy-aware path extraction (Forwarded / X-Forwarded-* headers).
- *   <li>Support for both core and Web-specific extension field contributors.
+ *   <li>在信息离开服务之前对敏感信息进行掩码。
+ *   <li>代理感知的路径提取(Forwarded / X-Forwarded-* 头)。
+ *   <li>支持核心和 Web 特定的扩展字段贡献器。
  * </ul>
  *
  * @author linqibin
@@ -46,6 +46,15 @@ public class ProblemDetailBuilder {
   private final List<ProblemFieldContributor> coreFieldContributors;
   private final List<WebProblemFieldContributor> webFieldContributors;
 
+  /**
+   * 构造函数,初始化 ProblemDetail 构建器。
+   *
+   * @param errorProperties 错误配置属性
+   * @param webProperties Web 错误配置属性
+   * @param traceProvider 跟踪 ID 提供者
+   * @param coreFieldContributors 核心字段贡献器列表
+   * @param webFieldContributors Web 字段贡献器列表
+   */
   public ProblemDetailBuilder(
       ErrorProperties errorProperties,
       WebErrorProperties webProperties,
@@ -60,17 +69,17 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Build a {@link ProblemDetail} instance from the resolved error metadata and HTTP context.
+   * 从已解析的错误元数据和 HTTP 上下文构建 {@link ProblemDetail} 实例。
    *
-   * @param resolution error resolution containing code and status
-   * @param exception exception being handled
-   * @param request HTTP request associated with the failure
-   * @return fully populated {@link ProblemDetail}
+   * @param resolution 包含错误码和状态的错误解析结果
+   * @param exception 正在处理的异常
+   * @param request 与失败关联的 HTTP 请求
+   * @return 完全填充的 {@link ProblemDetail}
    */
   public ProblemDetail build(
       ErrorResolution resolution, Throwable exception, HttpServletRequest request) {
     log.debug(
-        "Building ProblemDetail for error [{}] with HTTP status {}",
+        "为错误 [{}] 构建 ProblemDetail,HTTP 状态 {}",
         resolution.errorCode().code(),
         resolution.httpStatus());
 
@@ -83,7 +92,7 @@ public class ProblemDetailBuilder {
     contributeWebProblemFields(problemDetail, exception, request);
 
     log.debug(
-        "ProblemDetail built successfully: type={}, code={}",
+        "ProblemDetail 构建成功: type={}, code={}",
         problemDetail.getType(),
         resolution.errorCode().code());
 
@@ -91,12 +100,12 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Populates standard RFC 7807 fields and common extension properties.
+   * 填充标准 RFC 7807 字段和通用扩展属性。
    *
-   * @param problemDetail target problem detail instance
-   * @param resolution error resolution metadata
-   * @param exception source exception
-   * @param request HTTP request context
+   * @param problemDetail 目标问题详情实例
+   * @param resolution 错误解析元数据
+   * @param exception 源异常
+   * @param request HTTP 请求上下文
    */
   private void setupStandardFields(
       ProblemDetail problemDetail,
@@ -114,25 +123,25 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Adds trace ID to problem detail when available from the trace provider.
+   * 当跟踪提供者可用时,将跟踪 ID 添加到问题详情中。
    *
-   * @param problemDetail target problem detail instance
+   * @param problemDetail 目标问题详情实例
    */
   private void addTraceIdIfAvailable(ProblemDetail problemDetail) {
     traceProvider
         .getCurrentTraceId()
         .ifPresent(
             traceId -> {
-              log.debug("Adding distributed trace ID [{}] to ProblemDetail", traceId);
+              log.debug("将分布式跟踪 ID [{}] 添加到 ProblemDetail", traceId);
               problemDetail.setProperty(ErrorKeys.TRACE_ID, traceId);
             });
   }
 
   /**
-   * Invokes core field contributors to add platform-wide extension fields.
+   * 调用核心字段贡献器以添加平台范围的扩展字段。
    *
-   * @param problemDetail target problem detail instance
-   * @param exception source exception
+   * @param problemDetail 目标问题详情实例
+   * @param exception 源异常
    */
   private void contributeCoreProblemFields(ProblemDetail problemDetail, Throwable exception) {
     Map<String, Object> coreFields = new HashMap<>();
@@ -142,20 +151,18 @@ public class ProblemDetailBuilder {
             contributor.contribute(coreFields, exception);
           } catch (Exception e) {
             log.warn(
-                "Core field contributor [{}] failed with error: {}",
-                contributor.getClass().getSimpleName(),
-                e.getMessage());
+                "核心字段贡献器 [{}] 失败,错误: {}", contributor.getClass().getSimpleName(), e.getMessage());
           }
         });
     coreFields.forEach(problemDetail::setProperty);
   }
 
   /**
-   * Invokes web-specific field contributors to add HTTP context extension fields.
+   * 调用 Web 特定的字段贡献器以添加 HTTP 上下文扩展字段。
    *
-   * @param problemDetail target problem detail instance
-   * @param exception source exception
-   * @param request HTTP request context
+   * @param problemDetail 目标问题详情实例
+   * @param exception 源异常
+   * @param request HTTP 请求上下文
    */
   private void contributeWebProblemFields(
       ProblemDetail problemDetail, Throwable exception, HttpServletRequest request) {
@@ -166,20 +173,17 @@ public class ProblemDetailBuilder {
             contributor.contribute(webFields, exception, request);
           } catch (Exception e) {
             log.warn(
-                "Web field contributor [{}] failed with error: {}",
-                contributor.getClass().getSimpleName(),
-                e.getMessage());
+                "Web 字段贡献器 [{}] 失败,错误: {}", contributor.getClass().getSimpleName(), e.getMessage());
           }
         });
     webFields.forEach(problemDetail::setProperty);
   }
 
   /**
-   * Extracts request path in proxy-aware fashion using precedence: Forwarded header, X-Forwarded-*
-   * headers, then requestURI.
+   * 以代理感知方式提取请求路径,优先级为: Forwarded 头, X-Forwarded-* 头,然后是 requestURI。
    *
-   * @param request HTTP request context
-   * @return resolved path value
+   * @param request HTTP 请求上下文
+   * @return 解析的路径值
    */
   private String extractPath(HttpServletRequest request) {
     String forwarded = request.getHeader("Forwarded");
@@ -202,16 +206,16 @@ public class ProblemDetailBuilder {
 
     String requestUri = request.getRequestURI();
     if (log.isDebugEnabled()) {
-      log.debug("Resolved request path: {}", requestUri);
+      log.debug("解析的请求路径: {}", requestUri);
     }
     return requestUri;
   }
 
   /**
-   * Parses path attribute from RFC 7239 Forwarded header value.
+   * 从 RFC 7239 Forwarded 头值中解析路径属性。
    *
-   * @param forwarded header value
-   * @return extracted path or {@code null} when absent
+   * @param forwarded 头值
+   * @return 提取的路径,不存在时返回 {@code null}
    */
   private String parseForwardedPath(String forwarded) {
     String[] parts = forwarded.split(";");
@@ -225,10 +229,10 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Applies lightweight masking to sensitive key-value pairs in error messages.
+   * 对错误消息中的敏感键值对应用轻量级掩码。
    *
-   * @param message original detail message
-   * @return masked message when sensitive tokens are present
+   * @param message 原始详细消息
+   * @return 存在敏感令牌时的已掩码消息
    */
   private String maskSensitiveData(String message) {
     if (message == null) {
@@ -241,10 +245,10 @@ public class ProblemDetailBuilder {
   }
 
   /**
-   * Constructs ProblemDetail type URI from logical error code.
+   * 从逻辑错误码构建 ProblemDetail 类型 URI。
    *
-   * @param errorCode platform error code abstraction
-   * @return fully-qualified type URI
+   * @param errorCode 平台错误码抽象
+   * @return 完全限定的类型 URI
    */
   private URI buildTypeUri(ErrorCodeLike errorCode) {
     String baseUrl = webProperties.getTypeBaseUrl();

@@ -4,20 +4,18 @@ import com.patra.ingest.domain.event.OutboxRelayDomainEvent;
 import java.util.List;
 
 /**
- * Abstraction for publishing Outbox Relay domain events.
+ * 发布 Outbox 中继领域事件的抽象
  *
- * <p>Implementations may forward events to logs, monitoring systems, message queues, or local event
- * buses.
+ * <p>实现可以将事件转发到日志、监控系统、消息队列或本地事件总线
  *
- * <p>Contract: tolerate individual event failures and log them to avoid disrupting the main relay
- * flow.
+ * <p>契约: 容忍单个事件失败并记录日志,避免中断主中继流程
  */
 public interface RelayEventPublisher {
 
   /**
-   * Publish a batch of events (preserve original order when invoked in bulk).
+   * 批量发布事件 (批量调用时保留原始顺序)
    *
-   * @param events list of events, possibly empty or {@code null}
+   * @param events 事件列表,可能为空或 {@code null}
    */
   void publish(List<OutboxRelayDomainEvent> events);
 }

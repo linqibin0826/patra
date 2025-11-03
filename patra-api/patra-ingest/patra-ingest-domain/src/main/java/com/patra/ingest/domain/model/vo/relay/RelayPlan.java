@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Execution plan for the outbox relay.
+ * [待翻译] * Execution plan for the outbox relay.
  *
  * <p>A {@code null} channel indicates that all channels should be processed.
  */

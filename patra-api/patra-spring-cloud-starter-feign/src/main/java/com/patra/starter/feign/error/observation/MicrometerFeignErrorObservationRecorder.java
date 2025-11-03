@@ -7,7 +7,30 @@ import io.micrometer.core.instrument.Timer;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
-/** Micrometer-backed implementation of {@link FeignErrorObservationRecorder}. */
+/**
+ * 基于 Micrometer 的 Feign 错误观察记录器实现
+ *
+ * <p>使用 Micrometer 指标系统记录 Feign 错误解码过程中的各类可观测性数据。
+ *
+ * <h3>记录的指标</h3>
+ *
+ * <ul>
+ *   <li><b>papertrace.feign.error.parsing</b> - ProblemDetail 解析性能 (Timer)
+ *   <li><b>papertrace.feign.error.decoding</b> - 错误解码结果统计 (Counter)
+ *   <li><b>papertrace.feign.error.body.read</b> - 响应体读取性能 (Timer)
+ *   <li><b>papertrace.feign.error.traceid</b> - 跟踪标识符提取统计 (Counter)
+ * </ul>
+ *
+ * <h3>性能监控</h3>
+ *
+ * <ul>
+ *   <li>当解析耗时超过阈值时记录警告日志
+ *   <li>当响应体读取缓慢时记录警告日志
+ *   <li>容错模式使用情况可选记录
+ * </ul>
+ *
+ * @see FeignErrorObservationRecorder
+ */
 @Slf4j
 public class MicrometerFeignErrorObservationRecorder implements FeignErrorObservationRecorder {
 
@@ -33,7 +56,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
     if (observationProperties.isLogSlowParsing()
         && durationMs >= observationProperties.getSlowParsingThresholdMs()) {
       log.warn(
-          "Feign ProblemDetail parsing was slow: method={} status={} duration={}ms",
+          "Feign ProblemDetail 解析缓慢: method={} status={} duration={}ms",
           methodKey,
           status,
           durationMs);
@@ -41,7 +64,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
 
     if (!success) {
       log.debug(
-          "Feign ProblemDetail parsing failed: method={} status={} duration={}ms",
+          "Feign ProblemDetail 解析失败: method={} status={} duration={}ms",
           methodKey,
           status,
           durationMs);
@@ -60,8 +83,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
         .increment();
 
     if (tolerantMode && observationProperties.isLogTolerantUsage()) {
-      log.info(
-          "Feign error decoding invoked tolerant mode: method={} status={}", methodKey, status);
+      log.info("Feign 错误解码调用了容错模式: method={} status={}", methodKey, status);
     }
   }
 
@@ -77,7 +99,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
     if (observationProperties.isLogSlowBodyReading()
         && durationMs >= observationProperties.getSlowBodyReadingThresholdMs()) {
       log.warn(
-          "Feign response body read was slow: method={} size={} duration={}ms truncated={}",
+          "Feign 响应体读取缓慢: method={} size={} duration={}ms truncated={}",
           methodKey,
           bodySize,
           durationMs,
@@ -95,10 +117,9 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
         .increment();
 
     if (found) {
-      log.debug(
-          "Feign response headers contained TraceId: method={} header={}", methodKey, headerName);
+      log.debug("Feign 响应头包含 TraceId: method={} header={}", methodKey, headerName);
     } else {
-      log.debug("Feign response headers did not include TraceId: method={}", methodKey);
+      log.debug("Feign 响应头不包含 TraceId: method={}", methodKey);
     }
   }
 }

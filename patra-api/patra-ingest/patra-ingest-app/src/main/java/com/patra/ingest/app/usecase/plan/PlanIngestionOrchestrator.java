@@ -34,24 +34,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Main orchestrator for plan ingestion flow.
+ * 计划接入编排器。
  *
- * <p>Coordinates the following phases:
+ * <p>职责：
  *
  * <ul>
- *   <li>Persist schedule instance and load provenance config snapshot
- *   <li>Query cursor watermark and resolve execution window
- *   <li>Build plan expression and run pre-validations
- *   <li>Assemble and persist plan/slices/tasks (with idempotency and compensation)
- *   <li>Collect task enqueued events and publish via Outbox pattern
+ *   <li>持久化调度实例并加载数据源配置快照
+ *   <li>查询游标水位并解析执行窗口
+ *   <li>构建计划表达式并执行预验证
+ *   <li>组装并持久化 Plan/Slice/Task（包含幂等性和补偿逻辑）
+ *   <li>收集任务入队事件并通过 Outbox 模式发布
  * </ul>
  *
- * <p>This orchestrator delegates persistence to {@link PlanPersistenceCoordinator}, idempotency
- * handling to {@link PlanIdempotencyCoordinator}, and publishing to {@link
- * PlanPublishingCoordinator}.
+ * <p>该编排器将持久化操作委托给 {@link PlanPersistenceCoordinator}，幂等性处理委托给 {@link
+ * PlanIdempotencyCoordinator}，发布操作委托给 {@link PlanPublishingCoordinator}。
  *
- * <p>Note: This orchestrator maintains the {@code @Transactional} boundary to ensure atomicity
- * across persistence and event publishing (Outbox pattern).
+ * <p>注意：该编排器维护 {@code @Transactional} 事务边界，确保持久化和事件发布的原子性（Outbox 模式）。
  *
  * @author linqibin
  * @since 0.1.0
@@ -76,21 +74,21 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   private final PlanPublishingCoordinator publishingCoordinator;
 
   /**
-   * Main plan orchestration flow (entry method).
+   * 计划编排主流程（入口方法）。
    *
-   * <p>Coordinates six phases:
+   * <p>协调六个阶段：
    *
    * <ol>
-   *   <li>Persist schedule instance and load provenance config snapshot
-   *   <li>Query cursor watermark and resolve time window
-   *   <li>Build plan expression
-   *   <li>Pre-validation (window / backpressure / capacity)
-   *   <li>Assemble plan (with idempotent reuse and compensation retries)
-   *   <li>Persist and publish task enqueued events
+   *   <li>持久化调度实例并加载数据源配置快照
+   *   <li>查询游标水位并解析时间窗口
+   *   <li>构建计划表达式
+   *   <li>预验证（窗口/背压/容量）
+   *   <li>组装计划（含幂等复用和补偿重试）
+   *   <li>持久化并发布任务入队事件
    * </ol>
    *
-   * @param request scheduling request
-   * @return summary of plan execution
+   * @param request 调度请求
+   * @return 计划执行摘要
    */
   @Override
   @Transactional
@@ -114,13 +112,13 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Logs the start of plan ingestion with key request details.
+   * 记录计划接入开始日志及关键请求详情。
    *
-   * @param request plan ingestion command
+   * @param request 计划接入命令
    */
   private void logPlanIngestionStart(PlanIngestionCommand request) {
     log.info(
-        "Starting plan ingestion for provenance [{}] operation [{}]: triggered at {} by scheduler [{}]",
+        "开始计划接入 数据源 [{}] 操作 [{}]: 触发时间 {} 调度器 [{}]",
         request.provenanceCode(),
         request.operationCode(),
         request.triggeredAt(),
@@ -128,16 +126,13 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Prepares planning context by loading configuration and resolving window.
+   * 准备计划上下文：加载配置并解析窗口。
    *
-   * @param request plan ingestion command
-   * @return planning context with schedule, config, norm, and window
+   * @param request 计划接入命令
+   * @return 包含调度、配置、规范和窗口的计划上下文
    */
   private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
-    log.debug(
-        "Preparing planning context for provenance [{}] operation [{}]",
-        request.provenanceCode(),
-        request.operationCode());
+    log.debug("准备计划上下文 数据源 [{}] 操作 [{}]", request.provenanceCode(), request.operationCode());
 
     ScheduleInstanceAggregate schedule = persistenceCoordinator.persistScheduleInstance(request);
     ProvenanceConfigSnapshot configSnapshot =
@@ -147,7 +142,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     Instant cursorWatermark =
         lookupCursorWatermark(request.provenanceCode(), request.operationCode());
     log.debug(
-        "Retrieved cursor watermark for provenance [{}] operation [{}]: {}",
+        "检索游标水位 数据源 [{}] 操作 [{}]: {}",
         request.provenanceCode(),
         request.operationCode(),
         cursorWatermark);
@@ -161,16 +156,16 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Builds plan expression descriptor and logs result.
+   * 构建计划表达式描述符并记录结果。
    *
-   * @param context planning context
-   * @return plan expression descriptor
+   * @param context 计划上下文
+   * @return 计划表达式描述符
    */
   private PlanExpressionDescriptor buildPlanExpression(PlanningContext context) {
     PlanExpressionDescriptor descriptor =
         planExpressionBuilder.build(context.norm(), context.configSnapshot());
     log.debug(
-        "Built plan expression for provenance [{}] operation [{}]: hash={}, snapshot size={} bytes",
+        "构建计划表达式 数据源 [{}] 操作 [{}]: hash={}, 快照大小={} 字节",
         context.provenanceCode(),
         context.operationCode(),
         descriptor.hash(),
@@ -179,10 +174,10 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Performs pre-assembly validation and logs result.
+   * 执行组装前验证并记录结果。
    *
-   * @param context planning context
-   * @throws PlanValidationException if validation fails
+   * @param context 计划上下文
+   * @throws PlanValidationException 验证失败时
    */
   private void performPreValidation(PlanningContext context) {
     long queuedTasks =
@@ -190,26 +185,23 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
             context.provenanceCode().getCode(), opCode(context.operationCode()));
     validateBeforeAssemble(context.norm(), context.configSnapshot(), context.window(), queuedTasks);
     log.debug(
-        "Pre-validation passed for provenance [{}] operation [{}]: {} tasks currently queued",
+        "预验证通过 数据源 [{}] 操作 [{}]: 当前队列任务数 {}",
         context.provenanceCode(),
         context.operationCode(),
         queuedTasks);
   }
 
   /**
-   * Assembles plan and validates result.
+   * 组装计划并验证结果。
    *
-   * @param context planning context
-   * @param expressionDescriptor plan expression descriptor
-   * @return assembly result
-   * @throws PlanAssemblyException if assembly fails
+   * @param context 计划上下文
+   * @param expressionDescriptor 计划表达式描述符
+   * @return 组装结果
+   * @throws PlanAssemblyException 组装失败时
    */
   private PlanAssemblyResult assembleAndValidatePlan(
       PlanningContext context, PlanExpressionDescriptor expressionDescriptor) {
-    log.debug(
-        "Starting plan assembly for provenance [{}] operation [{}]",
-        context.provenanceCode(),
-        context.operationCode());
+    log.debug("开始组装计划 数据源 [{}] 操作 [{}]", context.provenanceCode(), context.operationCode());
 
     PlanAssemblyRequest assemblyRequest =
         new PlanAssemblyRequest(
@@ -217,7 +209,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     PlanAssemblyResult result = assemblePlan(assemblyRequest);
 
     log.debug(
-        "Plan assembly completed for provenance [{}] operation [{}]: status={}, slices={}, tasks={}",
+        "计划组装完成 数据源 [{}] 操作 [{}]: 状态={}, 切片数={}, 任务数={}",
         context.provenanceCode(),
         context.operationCode(),
         result.status(),
@@ -228,34 +220,34 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Checks for existing plan by planKey.
+   * 通过 planKey 检查现有计划。
    *
-   * @param draftPlan draft plan aggregate
-   * @return existing plan if found, null otherwise
+   * @param draftPlan 草稿计划聚合根
+   * @return 找到的现有计划，否则返回 null
    */
   private PlanAggregate checkForExistingPlan(PlanAggregate draftPlan) {
     return planRepository.findByPlanKey(draftPlan.getPlanKey()).orElse(null);
   }
 
   /**
-   * Returns the operation code string.
+   * 返回操作代码字符串。
    *
-   * @param op domain operation enum
-   * @return operation code; null when op is null
+   * @param op 领域操作枚举
+   * @return 操作代码；op 为 null 时返回 null
    */
   private String opCode(OperationCode op) {
     return op == null ? null : op.getCode();
   }
 
   /**
-   * Internal record holding planning context data.
+   * 内部记录，持有计划上下文数据。
    *
-   * @param schedule schedule instance aggregate
-   * @param configSnapshot provenance configuration snapshot
-   * @param norm plan trigger norm
-   * @param window planner window
-   * @param provenanceCode provenance code enum
-   * @param operationCode operation code enum
+   * @param schedule 调度实例聚合根
+   * @param configSnapshot 数据源配置快照
+   * @param norm 计划触发规范
+   * @param window 计划窗口
+   * @param provenanceCode 数据源代码枚举
+   * @param operationCode 操作代码枚举
    */
   private record PlanningContext(
       ScheduleInstanceAggregate schedule,
@@ -266,12 +258,12 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       OperationCode operationCode) {}
 
   /**
-   * Queries the latest global time cursor watermark.
+   * 查询最新的全局时间游标水位。
    *
-   * @param provenanceCode provenance code
-   * @param operationCode operation enum
-   * @return latest watermark (null indicates first run)
-   * @throws PlanPersistenceException when repository access fails
+   * @param provenanceCode 数据源代码
+   * @param operationCode 操作枚举
+   * @return 最新水位（null 表示首次运行）
+   * @throws PlanPersistenceException 仓储访问失败时
    */
   private Instant lookupCursorWatermark(
       ProvenanceCode provenanceCode, OperationCode operationCode) {
@@ -280,20 +272,19 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
           .findLatestGlobalTimeWatermark(provenanceCode.getCode(), opCode(operationCode))
           .orElse(null);
     } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.PLAN, "Failed to load cursor watermark", ex);
+      throw new PlanPersistenceException(PlanPersistenceException.Stage.PLAN, "加载游标水位失败", ex);
     }
   }
 
   /**
-   * Resolves the execution window for the plan.
+   * 解析计划的执行窗口。
    *
-   * @param norm trigger spec
-   * @param configSnapshot provenance configuration snapshot
-   * @param cursorWatermark cursor watermark (nullable)
-   * @param now current trigger time
-   * @return planning window (nullable when no plan should be generated)
-   * @throws PlanValidationException when parsing or validation fails
+   * @param norm 触发规范
+   * @param configSnapshot 数据源配置快照
+   * @param cursorWatermark 游标水位（可为 null）
+   * @param now 当前触发时间
+   * @return 计划窗口（不应生成计划时为 null）
+   * @throws PlanValidationException 解析或验证失败时
    */
   private PlannerWindow resolvePlannerWindow(
       PlanTriggerNorm norm,
@@ -306,19 +297,17 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       throw ex;
     } catch (RuntimeException ex) {
       throw new PlanValidationException(
-          "Failed to resolve planning window: " + ex.getMessage(),
-          PlanValidationException.Reason.WINDOW_INVALID,
-          ex);
+          "解析计划窗口失败: " + ex.getMessage(), PlanValidationException.Reason.WINDOW_INVALID, ex);
     }
   }
 
   /**
-   * Logs the window resolution details at DEBUG level.
+   * 在 DEBUG 级别记录窗口解析详情。
    *
-   * @param provenanceCode provenance code
-   * @param operationCode operation code
-   * @param cursorWatermark cursor watermark timestamp (nullable)
-   * @param window resolved planning window (nullable)
+   * @param provenanceCode 数据源代码
+   * @param operationCode 操作代码
+   * @param cursorWatermark 游标水位时间戳（可为 null）
+   * @param window 已解析的计划窗口（可为 null）
    */
   private void logWindowResolution(
       ProvenanceCode provenanceCode,
@@ -327,8 +316,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       PlannerWindow window) {
     if (log.isDebugEnabled()) {
       log.debug(
-          "Resolved planning window for provenance [{}] operation [{}]: cursorWatermark={}, "
-              + "window=[{}, {})",
+          "解析计划窗口 数据源 [{}] 操作 [{}]: 游标水位={}, 窗口=[{}, {})",
           provenanceCode,
           operationCode,
           cursorWatermark,
@@ -338,13 +326,13 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Persists new plan with slices and tasks, then publishes queued events.
+   * 持久化新计划（包含切片和任务），然后发布入队事件。
    *
-   * @param draftPlan the draft plan aggregate to persist
-   * @param assembly the assembly result containing slices and tasks
-   * @param schedule the schedule instance
-   * @param window the planning window (nullable)
-   * @return ingestion result with persisted IDs
+   * @param draftPlan 待持久化的草稿计划聚合根
+   * @param assembly 包含切片和任务的组装结果
+   * @param schedule 调度实例
+   * @param window 计划窗口（可为 null）
+   * @return 包含已持久化 ID 的接入结果
    */
   private PlanIngestionResult persistAndPublishNewPlan(
       PlanAggregate draftPlan,
@@ -352,7 +340,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       ScheduleInstanceAggregate schedule,
       PlannerWindow window) {
     log.debug(
-        "Persisting plan for provenance [{}] operation [{}]: planKey={}",
+        "持久化计划 数据源 [{}] 操作 [{}]: planKey={}",
         draftPlan.getProvenanceCode(),
         draftPlan.getOperationCode(),
         draftPlan.getPlanKey());
@@ -364,7 +352,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
         persistenceCoordinator.persistTasks(persistedPlan, persistedSlices, assembly.tasks());
 
     log.debug(
-        "Persisted plan [{}] with {} slices and {} tasks",
+        "已持久化计划 [{}]: {} 个切片, {} 个任务",
         persistedPlan.getId(),
         persistedSlices.size(),
         persistedTasks.size());
@@ -373,8 +361,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     publishingCoordinator.publishNewPlanEvents(queuedEvents, persistedPlan, schedule);
 
     log.info(
-        "Successfully created plan [{}] for provenance [{}] operation [{}]: {} slices, {} tasks "
-            + "generated for window [{}, {})",
+        "成功创建计划 [{}] 数据源 [{}] 操作 [{}]: {} 个切片, {} 个任务，窗口 [{}, {})",
         persistedPlan.getId(),
         persistedPlan.getProvenanceCode(),
         persistedPlan.getOperationCode(),
@@ -388,13 +375,13 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
   }
 
   /**
-   * Pre-orchestration validation entry point.
+   * 编排前验证入口点。
    *
-   * @param norm trigger specification
-   * @param configSnapshot configuration snapshot
-   * @param window planning window
-   * @param queuedTasks current count of queued tasks
-   * @throws PlanValidationException if validation fails
+   * @param norm 触发规范
+   * @param configSnapshot 配置快照
+   * @param window 计划窗口
+   * @param queuedTasks 当前队列任务数
+   * @throws PlanValidationException 验证失败时
    */
   private void validateBeforeAssemble(
       PlanTriggerNorm norm,
@@ -406,16 +393,16 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
     } catch (PlanValidationException ex) {
       throw ex;
     } catch (RuntimeException ex) {
-      throw new PlanValidationException("Plan validation failed: " + ex.getMessage(), ex);
+      throw new PlanValidationException("计划验证失败: " + ex.getMessage(), ex);
     }
   }
 
   /**
-   * Assembles plan blueprints and validates result completeness.
+   * 组装计划蓝图并验证结果完整性。
    *
-   * @param assemblyRequest assembly request
-   * @return assembly result
-   * @throws PlanAssemblyException if assembly fails or result is empty
+   * @param assemblyRequest 组装请求
+   * @return 组装结果
+   * @throws PlanAssemblyException 组装失败或结果为空时
    */
   private PlanAssemblyResult assemblePlan(PlanAssemblyRequest assemblyRequest) {
     PlanAssemblyResult assembly;
@@ -425,24 +412,21 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       throw ex;
     } catch (RuntimeException ex) {
       throw new PlanAssemblyException(
-          "Plan assembly execution failed",
-          PlanAssemblyException.Reason.SLICE_GENERATION_FAILED,
-          ex);
+          "计划组装执行失败", PlanAssemblyException.Reason.SLICE_GENERATION_FAILED, ex);
     }
 
     if (assembly == null || assembly.status() == PlanAssemblyResult.AssemblyStatus.FAILED) {
-      throw new PlanAssemblyException(
-          "Plan assembly produced no executable units", PlanAssemblyException.Reason.EMPTY_RESULT);
+      throw new PlanAssemblyException("计划组装未生成可执行单元", PlanAssemblyException.Reason.EMPTY_RESULT);
     }
     return assembly;
   }
 
   /**
-   * Builds trigger specification (PlanTriggerNorm).
+   * 构建触发规范 (PlanTriggerNorm)。
    *
-   * @param schedule schedule instance
-   * @param request schedule request
-   * @return trigger specification (value object)
+   * @param schedule 调度实例
+   * @param request 调度请求
+   * @return 触发规范（值对象）
    */
   private PlanTriggerNorm buildTriggerNorm(
       ScheduleInstanceAggregate schedule, PlanIngestionCommand request) {

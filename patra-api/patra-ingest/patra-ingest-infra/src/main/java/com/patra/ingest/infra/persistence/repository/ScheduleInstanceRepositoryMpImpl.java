@@ -11,17 +11,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * Repository implementation for ScheduleInstanceAggregate.
+ * 调度实例（ScheduleInstance）仓储实现,基于 MyBatis-Plus。
  *
- * <p>Responsibilities:
+ * <p>职责:
  *
  * <ul>
- *   <li>Insert or update based on whether an ID exists.
- *   <li>Do not validate scheduling semantics (e.g., trigger type legality); delegate to the domain.
- *   <li>Idempotency: the caller ensures no duplicate logical instances are created.
+ *   <li>根据 ID 是否存在决定插入或更新
+ *   <li>不验证调度语义(如触发类型合法性),委托给领域层
+ *   <li>幂等性: 调用方确保不会创建重复的逻辑实例
  * </ul>
  *
- * <p>Logging: DEBUG key fields on insert/update; no INFO logs here.
+ * <p>日志策略: DEBUG 级别记录 insert/update 的关键字段;不输出 INFO 日志。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @Repository
@@ -32,10 +35,10 @@ public class ScheduleInstanceRepositoryMpImpl implements ScheduleInstanceReposit
   private final ScheduleInstanceConverter converter;
 
   /**
-   * Save or update a schedule instance.
+   * 保存或更新调度实例。
    *
-   * @param instance schedule instance aggregate
-   * @return the persisted aggregate (for insert, return the converted new instance)
+   * @param instance 调度实例聚合根
+   * @return 持久化后的聚合根(插入时返回转换后的新实例)
    */
   @Override
   public ScheduleInstanceAggregate saveOrUpdateInstance(ScheduleInstanceAggregate instance) {

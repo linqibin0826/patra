@@ -8,24 +8,29 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * Relay batch ID value object for grouping relay logs from the same job execution.
+ * 中继批次 ID Value Object。
  *
- * <p>Format: {@code yyyyMMddHHmmss-xxxxxxxx} where:
+ * <p>用于将同一作业执行的所有中继日志分组,支持批次级别的统计和故障排查。
  *
- * <ul>
- *   <li>yyyyMMddHHmmss: UTC timestamp when relay batch triggered
- *   <li>xxxxxxxx: 8-character random hex UUID for uniqueness
- * </ul>
- *
- * <p>Example: {@code 20251031150000-a1b2c3d4}
- *
- * <p>Use cases:
+ * <p><b>格式:</b> {@code yyyyMMddHHmmss-xxxxxxxx}
  *
  * <ul>
- *   <li>Group all relay logs from a single job execution
- *   <li>Enable batch-level statistics and analysis
- *   <li>Facilitate troubleshooting by identifying related relay attempts
+ *   <li>yyyyMMddHHmmss: UTC 时间戳(中继批次触发时间)
+ *   <li>xxxxxxxx: 8 位随机十六进制 UUID(保证唯一性)
  * </ul>
+ *
+ * <p><b>示例:</b> {@code 20251031150000-a1b2c3d4}
+ *
+ * <p><b>业务用途:</b>
+ *
+ * <ul>
+ *   <li>将同一作业执行的所有中继日志分组
+ *   <li>支持批次级别的统计和分析
+ *   <li>通过识别相关中继尝试来简化故障排查
+ * </ul>
+ *
+ * <p><b>不变性:</b> 一旦创建,批次 ID 不可更改。使用 {@link #generate(Instant)} 生成新 ID, 使用 {@link #of(String)}
+ * 从字符串重建 ID(带格式验证)。
  *
  * @author Papertrace Team
  * @since 2.0
@@ -40,67 +45,66 @@ public final class RelayBatchId {
   private final String value;
 
   private RelayBatchId(String value) {
-    this.value = Objects.requireNonNull(value, "RelayBatchId value must not be null");
+    this.value = Objects.requireNonNull(value, "批次 ID 值不能为 null");
   }
 
   /**
-   * Generates a new batch ID based on the given trigger timestamp.
+   * 工厂方法: 根据触发时间戳生成新的批次 ID。
    *
-   * <p>The generated ID is guaranteed to be unique across concurrent calls due to the random UUID
-   * component.
+   * <p>生成的 ID 通过随机 UUID 组件保证并发调用下的唯一性。
    *
-   * @param triggeredAt relay batch trigger time (UTC)
-   * @return new RelayBatchId instance
-   * @throws NullPointerException if triggeredAt is null
+   * @param triggeredAt 中继批次触发时间(UTC)
+   * @return 新的 RelayBatchId 实例
+   * @throws NullPointerException 如果 triggeredAt 为 null
    */
   public static RelayBatchId generate(Instant triggeredAt) {
-    Objects.requireNonNull(triggeredAt, "triggeredAt must not be null");
+    Objects.requireNonNull(triggeredAt, "触发时间不能为 null");
     String timestamp = FORMATTER.format(triggeredAt);
     String uuid = IdUtil.fastSimpleUUID().substring(0, 8);
     return new RelayBatchId(timestamp + "-" + uuid);
   }
 
   /**
-   * Reconstructs RelayBatchId from a string value (with format validation).
+   * 工厂方法: 从字符串值重建 RelayBatchId(带格式验证)。
    *
-   * @param value batch ID string (format: yyyyMMddHHmmss-xxxxxxxx)
-   * @return RelayBatchId instance
-   * @throws IllegalArgumentException if format is invalid
+   * @param value 批次 ID 字符串(格式: yyyyMMddHHmmss-xxxxxxxx)
+   * @return RelayBatchId 实例
+   * @throws IllegalArgumentException 如果格式无效
    */
   public static RelayBatchId of(String value) {
     if (value == null || !VALID_PATTERN.matcher(value).matches()) {
       throw new IllegalArgumentException(
-          "Invalid RelayBatchId format: " + value + ", expected: yyyyMMddHHmmss-xxxxxxxx");
+          "无效的批次 ID 格式: " + value + ",期望格式: yyyyMMddHHmmss-xxxxxxxx");
     }
     return new RelayBatchId(value);
   }
 
   /**
-   * Gets the underlying string value of this batch ID.
+   * 获取批次 ID 的底层字符串值。
    *
-   * @return batch ID string
+   * @return 批次 ID 字符串
    */
   public String getValue() {
     return value;
   }
 
   /**
-   * Extracts the timestamp portion of this batch ID.
+   * 提取批次 ID 的时间戳部分。
    *
-   * <p>Example: {@code 20251031150000-a1b2c3d4} → {@code 20251031150000}
+   * <p>示例: {@code 20251031150000-a1b2c3d4} → {@code 20251031150000}
    *
-   * @return timestamp string (yyyyMMddHHmmss format)
+   * @return 时间戳字符串(yyyyMMddHHmmss 格式)
    */
   public String getTimestampPart() {
     return value.substring(0, 14);
   }
 
   /**
-   * Extracts the UUID portion of this batch ID.
+   * 提取批次 ID 的 UUID 部分。
    *
-   * <p>Example: {@code 20251031150000-a1b2c3d4} → {@code a1b2c3d4}
+   * <p>示例: {@code 20251031150000-a1b2c3d4} → {@code a1b2c3d4}
    *
-   * @return UUID string (8-character hex)
+   * @return UUID 字符串(8 位十六进制)
    */
   public String getUuidPart() {
     return value.substring(15);

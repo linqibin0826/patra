@@ -3,16 +3,15 @@ package com.patra.registry.api.error;
 import com.patra.common.error.codes.ErrorCodeLike;
 
 /**
- * Registry service error code catalog.
+ * Registry 服务错误码目录。
  *
- * <p>Error codes follow the {@code REG-NNNN} format (prefix + numeric code) and are added in an
- * append-only fashion to preserve API compatibility.
+ * <p>错误码遵循 {@code REG-NNNN} 格式(前缀 + 数字代码),以追加方式添加以保持 API 兼容性。
  *
- * <p>Series breakdown:
+ * <p>系列划分:
  *
  * <ul>
- *   <li>0xxx - align to generic HTTP errors (delegated to {@code HttpStdErrors})
- *   <li>1xxx - domain or business-specific errors maintained here
+ *   <li>0xxx - 通用 HTTP 错误(委托给 {@code HttpStdErrors})
+ *   <li>1xxx - 领域或业务特定错误
  * </ul>
  *
  * @author linqibin
@@ -20,54 +19,54 @@ import com.patra.common.error.codes.ErrorCodeLike;
  */
 public enum RegistryErrorCode implements ErrorCodeLike {
 
-  // Note: 0xxx series should be produced via HttpStdErrors.of("REG") factory methods.
+  // 注意: 0xxx 系列应通过 HttpStdErrors.of("REG") 工厂方法生成
 
   // ========================================
-  // Business-specific codes (1xxx series)
+  // 业务特定代码 (1xxx 系列)
   // ========================================
 
-  // Dictionary operations (14xx series)
+  // 字典操作 (14xx 系列)
 
-  /** Dictionary type not found (maps to {@code DictionaryNotFoundException} at type level). */
+  /** 字典类型未找到(映射到类型级别的 {@code DictionaryNotFoundException})。 */
   REG_1401("REG-1401", 404),
 
-  /** Dictionary item not found (maps to {@code DictionaryNotFoundException} at item level). */
+  /** 字典项未找到(映射到项级别的 {@code DictionaryNotFoundException})。 */
   REG_1402("REG-1402", 404),
 
-  /** Dictionary item disabled (maps to {@code DictionaryItemDisabled}). */
+  /** 字典项已禁用(映射到 {@code DictionaryItemDisabled})。 */
   REG_1403("REG-1403", 422),
 
-  /** Dictionary type already exists (maps to {@code DictionaryTypeAlreadyExists}). */
+  /** 字典类型已存在(映射到 {@code DictionaryTypeAlreadyExists})。 */
   REG_1404("REG-1404", 409),
 
-  /** Dictionary item already exists (maps to {@code DictionaryItemAlreadyExists}). */
+  /** 字典项已存在(映射到 {@code DictionaryItemAlreadyExists})。 */
   REG_1405("REG-1405", 409),
 
-  /** Dictionary type disabled (maps to {@code DictionaryTypeDisabled}). */
+  /** 字典类型已禁用(映射到 {@code DictionaryTypeDisabled})。 */
   REG_1406("REG-1406", 422),
 
-  /** Dictionary validation failed (maps to {@code DictionaryValidationException}). */
+  /** 字典验证失败(映射到 {@code DictionaryValidationException})。 */
   REG_1407("REG-1407", 422),
 
-  /** Default dictionary item missing (maps to {@code DictionaryDefaultItemMissing}). */
+  /** 默认字典项缺失(映射到 {@code DictionaryDefaultItemMissing})。 */
   REG_1408("REG-1408", 422),
 
-  /** Dictionary repository failure (maps to {@code DictionaryRepositoryException}). */
+  /** 字典仓储失败(映射到 {@code DictionaryRepositoryException})。 */
   REG_1409("REG-1409", 500),
 
-  // Registry general operations (15xx series)
+  // Registry 通用操作 (15xx 系列)
 
-  /** Registry quota exceeded (maps to {@code RegistryQuotaExceeded}). */
+  /** Registry 配额超限(映射到 {@code RegistryQuotaExceeded})。 */
   REG_1501("REG-1501", 429);
 
   private final String code;
   private final int httpStatus;
 
   /**
-   * Constructs an error code with HTTP status mapping.
+   * 构造带有 HTTP 状态映射的错误码。
    *
-   * @param code error code in {@code REG-NNNN} format
-   * @param httpStatus associated HTTP status code
+   * @param code {@code REG-NNNN} 格式的错误码
+   * @param httpStatus 关联的 HTTP 状态码
    */
   RegistryErrorCode(String code, int httpStatus) {
     this.code = code;
@@ -75,9 +74,9 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the error code string.
+   * 返回错误码字符串。
    *
-   * @return error code in {@code REG-NNNN} format
+   * @return {@code REG-NNNN} 格式的错误码
    */
   @Override
   public String code() {
@@ -85,9 +84,9 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the associated HTTP status code.
+   * 返回关联的 HTTP 状态码。
    *
-   * @return HTTP status code
+   * @return HTTP 状态码
    */
   @Override
   public int httpStatus() {
@@ -95,9 +94,9 @@ public enum RegistryErrorCode implements ErrorCodeLike {
   }
 
   /**
-   * Returns the error code string representation.
+   * 返回错误码的字符串表示。
    *
-   * @return error code string
+   * @return 错误码字符串
    */
   @Override
   public String toString() {

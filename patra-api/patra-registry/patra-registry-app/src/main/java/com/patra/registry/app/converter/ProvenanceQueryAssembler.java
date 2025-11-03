@@ -20,10 +20,17 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct assembler for converting provenance domain objects to query DTOs.
+ * 数据源领域对象到查询 DTO 转换器。
  *
- * <p>Transforms domain value objects and aggregates into read-side contract DTOs for consumption by
- * external clients (REST APIs, Feign clients, etc.).
+ * <p>职责：
+ *
+ * <ul>
+ *   <li>将领域值对象和聚合根转换为只读查询 DTO
+ *   <li>支持 REST API 和 Feign 客户端的数据契约
+ *   <li>隔离领域模型和外部表示层
+ * </ul>
+ *
+ * <p>设计模式：MapStruct 自动生成转换代码,避免手写样板映射。
  *
  * @author linqibin
  * @since 0.1.0
@@ -31,68 +38,68 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface ProvenanceQueryAssembler {
   /**
-   * Converts a provenance aggregate root to its query DTO.
+   * 转换数据源值对象为查询 DTO。
    *
-   * @param provenance the domain provenance aggregate
-   * @return the query DTO exposing provenance metadata
+   * @param provenance 领域层的数据源值对象
+   * @return 查询 DTO,包含数据源元数据
    */
   ProvenanceQuery toQuery(Provenance provenance);
 
   /**
-   * Converts a window offset configuration to its query DTO representation.
+   * 转换时间窗口偏移配置为查询 DTO。
    *
-   * @param config the domain window offset configuration
-   * @return the query DTO describing offset windows
+   * @param config 领域层的窗口偏移配置
+   * @return 查询 DTO,描述偏移窗口规则
    */
   WindowOffsetQuery toQuery(WindowOffsetConfig config);
 
   /**
-   * Converts pagination configuration to its query DTO form.
+   * 转换分页配置为查询 DTO。
    *
-   * @param config the domain pagination configuration
-   * @return the query DTO conveying pagination rules
+   * @param config 领域层的分页配置
+   * @return 查询 DTO,描述分页策略
    */
   PaginationConfigQuery toQuery(PaginationConfig config);
 
   /**
-   * Converts an HTTP configuration to its query DTO representation.
+   * 转换 HTTP 配置为查询 DTO。
    *
-   * @param config the domain HTTP configuration
-   * @return the query DTO carrying HTTP interaction settings
+   * @param config 领域层的 HTTP 配置
+   * @return 查询 DTO,包含 HTTP 交互设置
    */
   HttpConfigQuery toQuery(HttpConfig config);
 
   /**
-   * Converts batching configuration to its query DTO form.
+   * 转换批处理配置为查询 DTO。
    *
-   * @param config the domain batching configuration
-   * @return the query DTO outlining batching behavior
+   * @param config 领域层的批处理配置
+   * @return 查询 DTO,描述批处理行为
    */
   BatchingConfigQuery toQuery(BatchingConfig config);
 
   /**
-   * Converts retry configuration to its query DTO representation.
+   * 转换重试配置为查询 DTO。
    *
-   * @param config the domain retry configuration
-   * @return the query DTO carrying retry policy attributes
+   * @param config 领域层的重试配置
+   * @return 查询 DTO,包含重试策略属性
    */
   RetryConfigQuery toQuery(RetryConfig config);
 
   /**
-   * Converts rate limit configuration to its query DTO representation.
+   * 转换速率限制配置为查询 DTO。
    *
-   * @param config the domain rate limit configuration
-   * @return the query DTO describing throttling rules
+   * @param config 领域层的速率限制配置
+   * @return 查询 DTO,描述节流规则
    */
   RateLimitConfigQuery toQuery(RateLimitConfig config);
 
-  // Credential dimension removed
+  // 凭证维度已移除
 
   /**
-   * Converts the provenance configuration aggregate to its query DTO.
+   * 转换数据源配置聚合根为查询 DTO。
    *
-   * @param configuration the domain provenance configuration aggregate
-   * @return the query DTO consolidating all dimension configurations
+   * @param configuration 领域层的数据源配置聚合根
+   * @return 查询 DTO,整合所有维度配置
    */
   ProvenanceConfigQuery toQuery(ProvenanceConfiguration configuration);
 }

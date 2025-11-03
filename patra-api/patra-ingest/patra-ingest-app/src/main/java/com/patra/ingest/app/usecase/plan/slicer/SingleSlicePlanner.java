@@ -13,21 +13,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Single-slice strategy (Application Layer · Policy).
+ * 单切片策略(应用层·策略)
  *
- * <p>Use when the window does not need to be further partitioned or the business expression already
- * embeds sufficient filtering (e.g., full replay or driven by an external ID list). This strategy
- * produces exactly one slice with sliceNo = 1 and reuses the upstream plan expression. Guarantees:
+ * <p>当窗口不需要进一步分区或业务表达式已嵌入足够的过滤条件时使用(例如完整重放或由外部 ID 列表驱动)。 此策略恰好生成一个 sliceNo = 1 的切片,并重用上游 Plan
+ * 表达式。保证:
  *
  * <ul>
- *   <li>Idempotence: stable signature via canonical JSON spec + hash.
- *   <li>Minimal overhead: no loops; O(1) complexity.
- *   <li>Window semantics: if a window is provided upstream, the from/to will be recorded in the
- *       slice spec for auditing.
+ *   <li>幂等性:通过规范化 JSON 规格 + 哈希实现稳定签名。
+ *   <li>最小开销:无循环;O(1) 复杂度。
+ *   <li>窗口语义:如果上游提供了窗口,from/to 将被记录在切片规格中用于审计。
  * </ul>
  *
- * <p>Boundary: if the window is null, slicing still returns a single item; the caller decides
- * whether windowless execution is allowed.
+ * <p>边界情况:如果窗口为 null,切片仍返回单个项;调用方决定是否允许无窗口执行。
  *
  * @author linqibin
  * @since 0.1.0
@@ -43,11 +40,10 @@ public class SingleSlicePlanner implements SlicePlanner {
 
   @Override
   public List<SlicePlan> slice(SlicePlanningContext context) {
-    // UPDATE / ID-driven cases: do not add extra window constraints here; respect the plan's base
-    // expression
+    // UPDATE / ID 驱动的场景:不在此处添加额外的窗口约束;尊重 Plan 的基础表达式
     Expr baseExpr = context.planExpression().expr();
 
-    // Build window spec JSON including window information if present
+    // 构建窗口规格 JSON,如果存在窗口信息则包含
     Map<String, Object> specMap = new java.util.HashMap<>();
     specMap.put("strategy", code().getCode());
     if (context.window() != null) {
@@ -67,10 +63,7 @@ public class SingleSlicePlanner implements SlicePlanner {
     String specJson = specNormalized.getCanonicalJson();
     String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
-    log.debug(
-        "Single slice planned, provenance={}, hash={}",
-        context.norm().provenanceCode(),
-        signatureHash);
+    log.debug("单切片规划完成, 溯源={}, 哈希={}", context.norm().provenanceCode(), signatureHash);
 
     return List.of(new SlicePlan(1, signatureHash, specJson, baseExpr));
   }

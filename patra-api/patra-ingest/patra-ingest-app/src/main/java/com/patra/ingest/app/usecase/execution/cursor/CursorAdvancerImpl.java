@@ -21,35 +21,34 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 /**
- * Cursor advancer implementation.
+ * 游标推进器实现。
  *
- * <p>Responsibility: advance the cursor watermark based on batch results using optimistic locking
- * to avoid concurrent conflicts.
+ * <p>职责:根据批次结果推进游标水位线,使用乐观锁避免并发冲突。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>Query cursor by provenanceCode/operationCode/cursorKey/namespace.
- *   <li>Compute new watermark from WindowSpec strategy (TIME uses windowTo).
- *   <li>Update cursor via Cursor.advanceTo(); version checked on save.
- *   <li>Catch OptimisticLockingFailureException; return false to signal retry.
- *   <li>Create a new cursor on first advancement when none exists.
+ *   <li>通过 provenanceCode/operationCode/cursorKey/namespace 查询游标
+ *   <li>根据 WindowSpec 策略计算新水位线(TIME 策略使用 windowTo)
+ *   <li>通过 Cursor.advanceTo() 更新游标;保存时检查版本号
+ *   <li>捕获 OptimisticLockingFailureException;返回 false 表示需要重试
+ *   <li>首次推进时不存在游标则创建新游标
  * </ul>
  *
- * <p>Namespace strategy:
+ * <p>命名空间策略:
  *
  * <ul>
- *   <li>GLOBAL: global cursor shared across tasks
- *   <li>TASK: per-task cursor (isolated by taskId)
- *   <li>PLAN: per-plan cursor (isolated by planId)
+ *   <li>GLOBAL: 跨任务共享的全局游标
+ *   <li>TASK: 按任务隔离的游标(通过 taskId 隔离)
+ *   <li>PLAN: 按计划隔离的游标(通过 planId 隔离)
  * </ul>
  *
- * <p>Logging:
+ * <p>日志记录:
  *
  * <ul>
- *   <li>INFO: advancement success (from/to).
- *   <li>WARN: optimistic conflict (retry).
- *   <li>DEBUG: cursor lookup, creation.
+ *   <li>INFO: 推进成功(from/to)
+ *   <li>WARN: 乐观锁冲突(重试)
+ *   <li>DEBUG: 游标查找、创建
  * </ul>
  *
  * @author linqibin
@@ -63,32 +62,31 @@ public class CursorAdvancerImpl implements CursorAdvancer {
   private final CursorRepository cursorRepository;
   private final CursorEventRepository cursorEventRepository;
 
-  /** Advances the cursor watermark. */
+  /** 推进游标水位线。 */
   @Override
   public boolean advance(ExecutionContext context, Long taskId, Long runId, Long batchId) {
-    // 1) Extract cursor parameters
+    // 1) 提取游标参数
     String provenanceCode = context.provenanceCode();
     String operationCode = context.operationCode();
 
     WindowSpec windowSpec = context.windowSpec();
     if (windowSpec == null) {
-      log.debug("cursor advance skipped: no window spec taskId={} runId={}", taskId, runId);
-      return true; // no window spec, skip advancement
+      log.debug("跳过游标推进: 无窗口规范 taskId={} runId={}", taskId, runId);
+      return true; // 无窗口规范,跳过推进
     }
 
-    // 2) Strategy-aware watermark and window boundary extraction
+    // 2) 根据策略提取水位线和窗口边界
     Instant newWatermark = extractWatermark(windowSpec, taskId, runId);
     if (newWatermark == null) {
       log.debug(
-          "cursor advance skipped: non-TIME strategy or no watermark "
-              + "strategy={} taskId={} runId={}",
+          "跳过游标推进: 非 TIME 策略或无水位线 strategy={} taskId={} runId={}",
           windowSpec.strategy(),
           taskId,
           runId);
-      return true; // non-TIME strategies currently do not advance watermark
+      return true; // 非 TIME 策略当前不推进水位线
     }
 
-    // Extract window boundaries (only for TIME/DATE strategies)
+    // 提取窗口边界(仅用于 TIME/DATE 策略)
     Instant windowFrom = null;
     Instant windowTo = null;
     if (windowSpec instanceof WindowSpec.Time timeSpec) {
@@ -96,13 +94,13 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       windowTo = timeSpec.to();
     }
 
-    // 3) Determine cursor key and namespace
+    // 3) 确定游标键和命名空间
     String cursorKey = determineCursorKey(windowSpec);
     String namespaceScope = "GLOBAL";
     String namespaceKey = NamespaceKey.global().key();
 
     log.debug(
-        "advancing cursor provenanceCode={} operationCode={} cursorKey={} newWatermark={} taskId={} runId={}",
+        "推进游标 provenanceCode={} operationCode={} cursorKey={} newWatermark={} taskId={} runId={}",
         provenanceCode,
         operationCode,
         cursorKey,
@@ -111,17 +109,17 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         runId);
 
     try {
-      // 4) Build lineage context from execution context and parameters
+      // 4) 从执行上下文和参数构建血缘上下文
       CursorLineage lineage =
           new CursorLineage(
-              context.scheduleInstanceId(), // from TaskAggregate via ExecutionContext
+              context.scheduleInstanceId(), // 来自 TaskAggregate 通过 ExecutionContext
               context.planId(),
               context.sliceId(),
               context.taskId(),
               context.runId(),
-              batchId); // from method parameter (last succeeded batch)
+              batchId); // 来自方法参数(最后成功的批次)
 
-      // 5) Lookup current cursor
+      // 5) 查找当前游标
       Optional<Cursor> cursorOpt =
           cursorRepository.find(
               provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey);
@@ -131,7 +129,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       String prevValue = null;
 
       if (cursorOpt.isPresent()) {
-        // 5.1 Cursor exists: update watermark and lineage
+        // 5.1 游标存在:更新水位线和血缘
         cursor = cursorOpt.get();
         Instant oldWatermark = cursor.getCurrentWatermark();
         prevWatermark = oldWatermark;
@@ -139,25 +137,25 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         if (log.isDebugEnabled()) {
           log.debug(
-              "cursor found provenanceCode={} endpointName={} currentWatermark={}",
+              "找到游标 provenanceCode={} endpointName={} currentWatermark={}",
               provenanceCode,
               operationCode,
               oldWatermark);
         }
 
-        // Advance watermark with expression hash tracking (domain ensures monotonicity)
+        // 推进水位线并跟踪表达式哈希(领域层确保单调性)
         Cursor.AdvancementResult result =
             cursor.advanceTo(newWatermark, lineage, context.exprHash());
 
-        // Handle expression hash change: reset cursor to initial position
+        // 处理表达式哈希变化:重置游标到初始位置
         if (result == Cursor.AdvancementResult.EXPRESSION_CHANGED) {
           log.info(
-              "Expression changed for cursor [{}]: {} -> {}, resetting cursor to initial position",
+              "游标 [{}] 的表达式已变化: {} -> {}, 重置游标到初始位置",
               cursorKey,
               cursor.getExprHash(),
               context.exprHash());
 
-          // Create a new cursor with the new expression hash
+          // 使用新的表达式哈希创建新游标
           cursor =
               Cursor.create(
                   provenanceCode,
@@ -169,13 +167,13 @@ public class CursorAdvancerImpl implements CursorAdvancer {
                   lineage,
                   context.exprHash());
 
-          // Update tracking variables for event creation
+          // 更新跟踪变量用于事件创建
           prevWatermark = null;
           prevValue = null;
         }
 
         log.info(
-            "cursor advanced provenanceCode={} endpointName={} from={} to={} taskId={} runId={} planId={} sliceId={}",
+            "游标已推进 provenanceCode={} endpointName={} from={} to={} taskId={} runId={} planId={} sliceId={}",
             provenanceCode,
             operationCode,
             oldWatermark,
@@ -185,7 +183,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
             context.planId(),
             context.sliceId());
       } else {
-        // 5.2 Cursor missing: create with lineage and expression hash (first advancement)
+        // 5.2 游标缺失:使用血缘和表达式哈希创建(首次推进)
         cursor =
             Cursor.create(
                 provenanceCode,
@@ -201,7 +199,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         prevValue = null;
 
         log.info(
-            "cursor created provenanceCode={} endpointName={} watermark={} exprHash={} taskId={} runId={} planId={} sliceId={}",
+            "游标已创建 provenanceCode={} endpointName={} watermark={} exprHash={} taskId={} runId={} planId={} sliceId={}",
             provenanceCode,
             operationCode,
             newWatermark,
@@ -212,10 +210,10 @@ public class CursorAdvancerImpl implements CursorAdvancer {
             context.sliceId());
       }
 
-      // 6) Save cursor (optimistic lock check)
+      // 6) 保存游标(乐观锁检查)
       cursorRepository.save(cursor);
 
-      // 7) Generate idempotent key for event deduplication
+      // 7) 生成幂等键用于事件去重
       String idempotentKey =
           generateIdempotentKey(
               provenanceCode,
@@ -228,10 +226,10 @@ public class CursorAdvancerImpl implements CursorAdvancer {
               runId,
               batchId);
 
-      // 8) Determine advancement direction
+      // 8) 确定推进方向
       CursorDirection direction = determineDirection(operationCode);
 
-      // 9) Create and save cursor advancement event
+      // 9) 创建并保存游标推进事件
       CursorEvent event =
           CursorEvent.create(
               provenanceCode,
@@ -247,15 +245,15 @@ public class CursorAdvancerImpl implements CursorAdvancer {
               direction,
               idempotentKey,
               lineage,
-              context.exprHash(), // Use fresh expr_hash from context
-              windowFrom, // Window start (null for non-TIME strategies)
-              windowTo); // Window end (null for non-TIME strategies)
+              context.exprHash(), // 使用上下文中的新 expr_hash
+              windowFrom, // 窗口开始(非 TIME 策略为 null)
+              windowTo); // 窗口结束(非 TIME 策略为 null)
 
       cursorEventRepository.save(event);
 
       if (log.isDebugEnabled()) {
         log.debug(
-            "cursor event recorded idempotentKey={} direction={} taskId={} runId={}",
+            "游标事件已记录 idempotentKey={} direction={} taskId={} runId={}",
             idempotentKey,
             direction,
             taskId,
@@ -265,69 +263,66 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       return true;
 
     } catch (OptimisticLockingFailureException e) {
-      // Optimistic conflict (version mismatch)
+      // 乐观锁冲突(版本不匹配)
       log.warn(
-          "cursor advance conflict provenanceCode={} endpointName={} taskId={} runId={}",
+          "游标推进冲突 provenanceCode={} endpointName={} taskId={} runId={}",
           provenanceCode,
           operationCode,
           taskId,
           runId);
-      return false; // signal retry
+      return false; // 表示需要重试
 
     } catch (Exception e) {
       log.error(
-          "cursor advance failed provenanceCode={} endpointName={} taskId={} runId={}",
+          "游标推进失败 provenanceCode={} endpointName={} taskId={} runId={}",
           provenanceCode,
           operationCode,
           taskId,
           runId,
           e);
-      throw new IllegalStateException("Cursor advancement failed", e);
+      throw new IllegalStateException("游标推进失败", e);
     }
   }
 
   /**
-   * Extracts watermark from WindowSpec (strategy-aware).
+   * 从 WindowSpec 提取水位线(策略感知)。
    *
-   * <p>Currently only the TIME strategy supports timestamp-based watermark advancement.
+   * <p>当前仅 TIME 策略支持基于时间戳的水位线推进。
    *
-   * @param windowSpec window specification
-   * @param taskId task id (for logs)
-   * @param runId run id (for logs)
-   * @return watermark timestamp, or null when not supported by the strategy
+   * @param windowSpec 窗口规范
+   * @param taskId 任务 ID(用于日志)
+   * @param runId 运行 ID(用于日志)
+   * @return 水位线时间戳,如果策略不支持则返回 null
    */
   private Instant extractWatermark(WindowSpec windowSpec, Long taskId, Long runId) {
     return switch (windowSpec.strategy()) {
       case TIME, DATE -> {
-        // Both TIME and DATE strategies use time-based windows
+        // TIME 和 DATE 策略都使用基于时间的窗口
         WindowSpec.Time timeSpec = (WindowSpec.Time) windowSpec;
-        yield timeSpec.to(); // Use window end as watermark
+        yield timeSpec.to(); // 使用窗口结束时间作为水位线
       }
       case ID_RANGE, CURSOR_LANDMARK, VOLUME_BUDGET, SINGLE -> {
-        // These strategies currently do not use time-based watermark
-        // Future: ID_RANGE may use numeric-ID-based watermark
+        // 这些策略当前不使用基于时间的水位线
+        // 未来: ID_RANGE 可能使用基于数字 ID 的水位线
         yield null;
       }
       case HYBRID -> {
-        // Future: extract time component from HYBRID spec
-        log.warn(
-            "HYBRID strategy watermark extraction not yet implemented " + "taskId={} runId={}",
-            taskId,
-            runId);
+        // 未来: 从 HYBRID 规范提取时间组件
+        log.warn("HYBRID 策略水位线提取尚未实现 taskId={} runId={}", taskId, runId);
         yield null;
       }
     };
   }
 
   /**
-   * Determines the cursor key based on the window strategy.
+   * 根据窗口策略确定游标键。
    *
-   * @param windowSpec window specification
-   * @return cursor key identifier
+   * @param windowSpec 窗口规范
+   * @return 游标键标识符
    */
   private String determineCursorKey(WindowSpec windowSpec) {
     return switch (windowSpec.strategy()) {
-      case TIME, DATE -> "TIME"; // Both TIME and DATE use time-based cursor key
+      case TIME, DATE -> "TIME"; // TIME 和 DATE 都使用基于时间的游标键
       case ID_RANGE -> "ID";
       case CURSOR_LANDMARK -> "CURSOR";
       case VOLUME_BUDGET, SINGLE, HYBRID -> "GLOBAL";
@@ -335,23 +330,22 @@ public class CursorAdvancerImpl implements CursorAdvancer {
   }
 
   /**
-   * Generates idempotent key for cursor event deduplication.
+   * 生成幂等键用于游标事件去重。
    *
-   * <p>Format: SHA256(provenance|operation|cursorKey|nsScope|nsKey|prev|new|runId|batchId)
+   * <p>格式: SHA256(provenance|operation|cursorKey|nsScope|nsKey|prev|new|runId|batchId)
    *
-   * <p>This ensures that the same advancement (same context and watermark transition) generates the
-   * same idempotent key, preventing duplicate event records.
+   * <p>确保相同的推进(相同上下文和水位线转换)生成相同的幂等键,防止重复的事件记录。
    *
-   * @param provenanceCode provenance code
-   * @param operationCode operation code
-   * @param cursorKey cursor key
-   * @param namespaceScopeCode namespace scope code
-   * @param namespaceKey namespace key (empty string if null)
-   * @param prevValue previous watermark value (NULL string if null)
-   * @param newValue new watermark value
-   * @param runId run identifier
-   * @param batchId batch identifier
-   * @return SHA256 hash as idempotent key (64-character hex string)
+   * @param provenanceCode 来源代码
+   * @param operationCode 操作代码
+   * @param cursorKey 游标键
+   * @param namespaceScopeCode 命名空间范围代码
+   * @param namespaceKey 命名空间键(如果为 null 则为空字符串)
+   * @param prevValue 上一个水位线值(如果为 null 则为 NULL 字符串)
+   * @param newValue 新水位线值
+   * @param runId 运行标识符
+   * @param batchId 批次标识符
+   * @return SHA256 哈希作为幂等键(64 字符十六进制字符串)
    */
   private String generateIdempotentKey(
       String provenanceCode,
@@ -392,19 +386,18 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       }
       return hexString.toString();
     } catch (NoSuchAlgorithmException e) {
-      // Should never happen as SHA-256 is guaranteed to be available
-      throw new IllegalStateException("SHA-256 algorithm not available", e);
+      // SHA-256 算法是保证可用的,不应该发生此异常
+      throw new IllegalStateException("SHA-256 算法不可用", e);
     }
   }
 
   /**
-   * Determines cursor advancement direction based on operation code.
+   * 根据操作代码确定游标推进方向。
    *
-   * <p>BACKFILL operations move cursor backward (historical data ingestion), while all other
-   * operations move cursor forward (incremental harvest).
+   * <p>BACKFILL 操作将游标向后移动(历史数据采集),而所有其他操作将游标向前移动(增量采集)。
    *
-   * @param operationCode operation code (HARVEST/BACKFILL/UPDATE/METRICS)
-   * @return BACKFILL if operation is backfill, FORWARD otherwise
+   * @param operationCode 操作代码(HARVEST/BACKFILL/UPDATE/METRICS)
+   * @return 如果操作是 backfill 则返回 BACKFILL,否则返回 FORWARD
    */
   private CursorDirection determineDirection(String operationCode) {
     return "BACKFILL".equalsIgnoreCase(operationCode)

@@ -20,8 +20,17 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct converter turning provenance-related persistence entities into domain view models. Used
- * exclusively on the query side to assemble provenance configuration snapshots.
+ * 数据源实体转换器,负责将数据库实体转换为领域值对象。
+ *
+ * <p>转换规则:
+ *
+ * <ul>
+ *   <li>使用 MapStruct 自动映射字段
+ *   <li>处理布尔字段的 {@code TINYINT(1)} 到 {@code Boolean} 转换
+ *   <li>通过辅助方法处理 JSON 字段序列化
+ * </ul>
+ *
+ * <p>注意:仅在查询侧使用,用于组装数据源配置快照。
  *
  * @author linqibin
  * @since 0.1.0
@@ -53,8 +62,12 @@ public interface ProvenanceEntityConverter {
   RateLimitConfig toDomain(RegProvRateLimitCfgDO entity);
 
   /**
-   * MapStruct helper: serialize JsonNode to compact JSON string for domain VOs that keep JSON as
-   * String.
+   * MapStruct 辅助方法:将 JsonNode 序列化为紧凑 JSON 字符串。
+   *
+   * <p>用于领域 VO 将 JSON 保持为 String 类型的场景。
+   *
+   * @param node JSON 节点
+   * @return JSON 字符串或 null
    */
   default String map(JsonNode node) {
     return node == null ? null : node.toString();

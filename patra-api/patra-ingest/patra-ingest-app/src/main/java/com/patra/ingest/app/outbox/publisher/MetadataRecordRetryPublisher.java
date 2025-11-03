@@ -21,19 +21,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Publisher for technical retry operations (e.g., failed metadata recording, RPC timeouts).
+ * 技术重试操作的发布器(例如失败的元数据记录、RPC 超时)。
  *
- * <p>Implements {@link TechnicalRetryPort} to allow infrastructure adapters to delegate retry logic
- * without direct Outbox manipulation. Uses {@link AbstractOutboxPublisher} framework for consistent
- * metrics, logging, and batch handling.
+ * <p>实现 {@link TechnicalRetryPort} 以允许基础设施适配器委托重试逻辑,而无需直接操作 Outbox。 使用 {@link
+ * AbstractOutboxPublisher} 框架以实现一致的指标、日志记录和批处理。
  *
- * <h3>Design Notes</h3>
+ * <h3>设计说明</h3>
  *
  * <ul>
- *   <li><b>Framework Integration</b>: Extends AbstractOutboxPublisher for unified Outbox behavior
- *   <li><b>Port Implementation</b>: Implements TechnicalRetryPort to serve infrastructure layer
- *   <li><b>Channel Isolation</b>: Uses STORAGE_METADATA_INTERNAL channel for technical retries
- *   <li><b>Flexible Payload</b>: Accepts pre-serialized JSON payload to support any operation type
+ *   <li><b>框架集成</b>: 扩展 AbstractOutboxPublisher 以获得统一的 Outbox 行为
+ *   <li><b>端口实现</b>: 实现 TechnicalRetryPort 以服务基础设施层
+ *   <li><b>通道隔离</b>: 使用 STORAGE_METADATA_INTERNAL 通道进行技术重试
+ *   <li><b>灵活负载</b>: 接受预序列化的 JSON 负载以支持任何操作类型
  * </ul>
  *
  * @author linqibin
@@ -56,18 +55,17 @@ public class MetadataRecordRetryPublisher
   }
 
   /**
-   * Publishes a technical retry request to the Outbox.
+   * 将技术重试请求发布到 Outbox。
    *
-   * <p>This method is invoked by infrastructure adapters when a technical operation fails (e.g.,
-   * RPC timeout, external service unavailable).
+   * <p>当技术操作失败时(例如 RPC 超时、外部服务不可用),基础设施适配器会调用此方法。
    *
-   * @param context retry context containing operation details
+   * @param context 包含操作详情的重试上下文
    */
   @Override
   public void publishRetry(TechnicalRetryPort.RetryContext context) {
     if (!validateEvent(context)) {
       log.warn(
-          "Invalid retry context, skipping publish operationType={} aggregateId={}",
+          "无效的重试上下文,跳过发布,operationType={},aggregateId={}",
           context.operationType(),
           context.aggregateId());
       return;
@@ -128,10 +126,10 @@ public class MetadataRecordRetryPublisher
   }
 
   /**
-   * Computes SHA-256 hash for deduplication key.
+   * 计算用于去重键的 SHA-256 哈希。
    *
-   * @param input input string
-   * @return hex-encoded SHA-256 hash
+   * @param input 输入字符串
+   * @return 十六进制编码的 SHA-256 哈希
    */
   private String computeSha256(String input) {
     try {
@@ -139,21 +137,21 @@ public class MetadataRecordRetryPublisher
       sha256.update(input.getBytes());
       return HEX_FORMAT.formatHex(sha256.digest());
     } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException("Missing SHA-256 algorithm", ex);
+      throw new IllegalStateException("缺少 SHA-256 算法", ex);
     }
   }
 }
 
 /**
- * Retry payload containing the serialized operation request.
+ * 包含序列化操作请求的重试负载。
  *
- * @param rawPayload pre-serialized JSON payload (e.g., UploadRecordRequest JSON)
+ * @param rawPayload 预序列化的 JSON 负载(例如 UploadRecordRequest JSON)
  */
 record RetryPayload(String rawPayload) implements OutboxPayload {}
 
 /**
- * Retry headers containing metadata for tracing and correlation.
+ * 包含用于跟踪和关联的元数据的重试头部。
  *
- * @param metadata metadata map (traceId, provenanceCode, batchNo, etc.)
+ * @param metadata 元数据映射(traceId、provenanceCode、batchNo 等)
  */
 record RetryHeaders(Map<String, Object> metadata) implements OutboxHeaders {}

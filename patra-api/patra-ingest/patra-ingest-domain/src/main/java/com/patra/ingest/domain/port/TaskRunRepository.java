@@ -6,10 +6,19 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Repository port for task execution attempts.
+ * 任务执行尝试(TaskRun)仓储端口(六边形架构 - Domain → Infrastructure)。
  *
- * <p>Persists task run attempts and exposes history per task, allowing the application layer to
- * implement retry compensation, monitoring, and traceability.
+ * <p><b>职责</b>: 持久化任务执行尝试记录,并提供:
+ *
+ * <ul>
+ *   <li>执行历史 - 记录每次任务执行的完整状态、指标、心跳
+ *   <li>重试补偿 - 支持应用层实现重试逻辑
+ *   <li>监控追溯 - 提供任务执行的完整审计轨迹
+ *   <li>检查点管理 - 支持断点续传和状态恢复
+ * </ul>
+ *
+ * <p><b>端口语义</b>: 此接口是六边形架构中的 <b>仓储端口(Repository Port)</b>,定义在 Domain
+ * 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。
  *
  * @author linqibin
  * @since 0.1.0
@@ -17,79 +26,97 @@ import java.util.Optional;
 public interface TaskRunRepository {
 
   /**
-   * Persist or update a task run attempt.
+   * 持久化或更新任务执行尝试。
    *
-   * @param run task run entity containing status, metrics, and heartbeat info
-   * @return persisted entity, usually with a generated identifier
+   * <p><b>业务含义</b>: 保存任务执行尝试,包括状态、指标、心跳信息。
+   *
+   * @param run 任务执行实体,包含状态、指标、心跳信息
+   * @return 已持久化的实体(通常包含自动生成的标识符)
    */
   TaskRun save(TaskRun run);
 
   /**
-   * Locate the latest attempt for the given task.
+   * 查询指定任务的最新执行尝试。
    *
-   * @param taskId task identifier
-   * @return latest run ordered by attempt number descending, or {@link Optional#empty()}
+   * <p><b>业务含义</b>: 获取任务的最近一次执行记录。
+   *
+   * @param taskId 任务标识符
+   * @return 最新的执行尝试(按尝试编号降序),或 {@link Optional#empty()}
    */
   Optional<TaskRun> findLatest(Long taskId);
 
   /**
-   * Retrieve the complete run history for a task.
+   * 查询指定任务的完整执行历史。
    *
-   * @param taskId task identifier
-   * @return run attempts ordered per implementation (typically ascending attempt number)
+   * <p><b>业务含义</b>: 获取任务的所有执行尝试记录。
+   *
+   * @param taskId 任务标识符
+   * @return 执行尝试列表(按实现排序,通常为尝试编号升序)
    */
   List<TaskRun> findAll(Long taskId);
 
   /**
-   * Return the highest attempt number for the task (to derive the next attempt id).
+   * 获取任务的最大尝试编号(用于派生下一个尝试 ID)。
    *
-   * @param taskId task identifier
-   * @return highest attempt number, or {@code 0} when no runs exist
+   * <p><b>业务含义</b>: 计算下一次重试的尝试编号。
+   *
+   * @param taskId 任务标识符
+   * @return 最大尝试编号,或 {@code 0}(无执行记录时)
    */
   int getLatestAttemptNo(Long taskId);
 
   /**
-   * Retrieve a run attempt by identifier.
+   * 根据标识符查询执行尝试。
    *
-   * @param runId run identifier
-   * @return run attempt if present
+   * <p><b>业务含义</b>: 通过技术主键(ID)检索执行尝试。
+   *
+   * @param runId run 标识符
+   * @return 执行尝试,或 {@link Optional#empty()}
    */
   Optional<TaskRun> findById(Long runId);
 
   /**
-   * Overwrite the checkpoint and refresh the heartbeat.
+   * 覆盖检查点并刷新心跳。
    *
-   * @param runId run identifier
-   * @param checkpointJson checkpoint payload (null/empty clears it)
-   * @param now current timestamp
-   * @return whether the update succeeded
+   * <p><b>业务含义</b>: 更新执行尝试的检查点快照,同时刷新心跳时间。
+   *
+   * @param runId run 标识符
+   * @param checkpointJson 检查点负载(null/空表示清除)
+   * @param now 当前时间戳
+   * @return {@code true} 表示更新成功
    */
   boolean updateCheckpointAndHeartbeat(Long runId, String checkpointJson, Instant now);
 
   /**
-   * Refresh the heartbeat without mutating the checkpoint.
+   * 刷新心跳(不修改检查点)。
    *
-   * @param runId run identifier
-   * @param now current timestamp
-   * @return whether the update succeeded
+   * <p><b>业务含义</b>: 仅更新心跳时间,表示执行尝试仍在运行。
+   *
+   * @param runId run 标识符
+   * @param now 当前时间戳
+   * @return {@code true} 表示更新成功
    */
   boolean touchHeartbeat(Long runId, Instant now);
 
   /**
-   * Mark the run as failed and persist error context.
+   * 标记执行尝试为失败并持久化错误上下文。
    *
-   * @param runId run identifier
-   * @param errorMessage error description
-   * @param now current timestamp
-   * @return whether the update succeeded
+   * <p><b>业务含义</b>: 将执行尝试标记为 {@code FAILED},保存错误信息。
+   *
+   * @param runId run 标识符
+   * @param errorMessage 错误描述
+   * @param now 当前时间戳
+   * @return {@code true} 表示更新成功
    */
   boolean markFailed(Long runId, String errorMessage, Instant now);
 
   /**
-   * Check whether the task already has a successful run (idempotency helper).
+   * 检查任务是否已有成功执行记录(幂等辅助方法)。
    *
-   * @param taskId task identifier
-   * @return {@code true} if a {@code SUCCEEDED} run exists
+   * <p><b>业务含义</b>: 判断任务是否已成功执行过,用于幂等性检查。
+   *
+   * @param taskId 任务标识符
+   * @return {@code true} 表示存在 {@code SUCCEEDED} 执行记录
    */
   boolean hasSucceededRun(Long taskId);
 }

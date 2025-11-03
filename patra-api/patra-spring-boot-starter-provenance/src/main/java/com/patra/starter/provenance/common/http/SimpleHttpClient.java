@@ -14,11 +14,22 @@ import java.util.StringJoiner;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Tiny wrapper over Java 21 HttpClient with minimal retry/backoff support.
+ * Java 21 HttpClient 的轻量级封装,提供最小的重试/退避支持
  *
- * <p>This intentionally avoids adding new Spring dependencies to the starter. It is adequate for
- * the current usage scope (PubMed/EPMC text/JSON calls). For binary/streaming use cases, prefer
- * direct storage presign flows.
+ * <p>此实现有意避免向 starter 添加新的 Spring 依赖。它足以满足当前使用范围(PubMed/EPMC 文本/JSON 调用)。 对于二进制/流式用例,建议使用直接存储预签名流程。
+ *
+ * <p><b>特性:</b>
+ *
+ * <ul>
+ *   <li>支持 GET 和 POST(表单)请求
+ *   <li>可配置的超时、重试和退避
+ *   <li>尽力而为的速率限制(基于本地 sleep)
+ *   <li>对可重试 HTTP 状态(408, 429, 5xx)自动重试
+ *   <li>自动跟随重定向
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class SimpleHttpClient {

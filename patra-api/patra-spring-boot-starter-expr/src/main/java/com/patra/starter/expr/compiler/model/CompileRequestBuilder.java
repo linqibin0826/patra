@@ -31,23 +31,21 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Creates a new builder instance.
+   * 创建一个新的构建器实例。
    *
-   * @param expression expression to compile (non-null)
-   * @param provenance provenance code (non-null)
-   * @return builder instance
+   * @param expression 要编译的表达式 (非空)
+   * @param provenance Provenance 代码 (非空)
+   * @return 构建器实例
    */
   public static CompileRequestBuilder of(Expr expression, ProvenanceCode provenance) {
     return new CompileRequestBuilder(expression, provenance);
   }
 
   /**
-   * Sets the operation type dimension (e.g. {@link OperationTypes#HARVEST}, {@link
-   * OperationTypes#UPDATE}).
+   * 设置操作类型维度 (例如 {@link OperationTypes#HARVEST}, {@link OperationTypes#UPDATE})。
    *
-   * @param operationType upper-case operation type; {@code null} falls back to provenance-level
-   *     defaults
-   * @return this builder
+   * @param operationType 大写的操作类型;{@code null} 则回退到 Provenance 级别的默认值
+   * @return 本构建器
    */
   public CompileRequestBuilder forOperationType(String operationType) {
     this.operationType = operationType;
@@ -55,10 +53,10 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Sets the endpoint name used to select API templates (e.g. {@link EndpointNames#DETAIL}).
+   * 设置用于选择 API 模板的端点名称 (例如 {@link EndpointNames#DETAIL})。
    *
-   * @param endpointName endpoint name, automatically upper-cased
-   * @return this builder
+   * @param endpointName 端点名称,自动转为大写
+   * @return 本构建器
    */
   public CompileRequestBuilder forOperation(String endpointName) {
     this.endpointName = endpointName;
@@ -66,10 +64,10 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Applies custom compile options.
+   * 应用自定义编译选项。
    *
-   * @param options compile options; defaults are used when {@code null}
-   * @return this builder
+   * @param options 编译选项;{@code null} 时使用默认值
+   * @return 本构建器
    */
   public CompileRequestBuilder withOptions(CompileOptions options) {
     this.options = options != null ? options : CompileOptions.defaults();
@@ -77,10 +75,10 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Enables or disables strict validation mode.
+   * 启用或禁用严格验证模式。
    *
-   * @param strict {@code true} for strict mode
-   * @return this builder
+   * @param strict {@code true} 表示严格模式
+   * @return 本构建器
    */
   public CompileRequestBuilder withStrict(boolean strict) {
     this.options = this.options.withStrict(strict);
@@ -88,10 +86,10 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Sets a maximum rendered query length.
+   * 设置最大渲染查询长度。
    *
-   * @param maxQueryLength maximum length; {@code 0} means no limit
-   * @return this builder
+   * @param maxQueryLength 最大长度;{@code 0} 表示无限制
+   * @return 本构建器
    */
   public CompileRequestBuilder withMaxQueryLength(int maxQueryLength) {
     this.options = this.options.withMaxQueryLength(maxQueryLength);
@@ -99,10 +97,10 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Specifies the timezone for rendering.
+   * 指定渲染时使用的时区。
    *
-   * @param timezone timezone identifier (e.g. {@code "UTC"})
-   * @return this builder
+   * @param timezone 时区标识符 (例如 {@code "UTC"})
+   * @return 本构建器
    */
   public CompileRequestBuilder withTimezone(String timezone) {
     this.options = this.options.withTimezone(timezone);
@@ -110,10 +108,10 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Toggles render tracing.
+   * 切换渲染跟踪。
    *
-   * @param traceEnabled {@code true} to capture detailed trace information
-   * @return this builder
+   * @param traceEnabled {@code true} 表示捕获详细的跟踪信息
+   * @return 本构建器
    */
   public CompileRequestBuilder withTraceEnabled(boolean traceEnabled) {
     this.options = this.options.withTraceEnabled(traceEnabled);
@@ -121,9 +119,9 @@ public class CompileRequestBuilder {
   }
 
   /**
-   * Builds the immutable {@link CompileRequest}.
+   * 构建不可变的 {@link CompileRequest}。
    *
-   * @return compile request
+   * @return 编译请求
    */
   public CompileRequest build() {
     return new CompileRequest(expression, provenance, operationType, endpointName, options);

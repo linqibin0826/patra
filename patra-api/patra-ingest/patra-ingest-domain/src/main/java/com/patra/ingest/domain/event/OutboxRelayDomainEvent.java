@@ -3,22 +3,17 @@ package com.patra.ingest.domain.event;
 import com.patra.common.domain.DomainEvent;
 
 /**
- * Marker interface for outbox relay domain events.
+ * Outbox 中继领域事件标记接口。
  *
- * <p>Semantics: events produced during the outbox relay loop (fetch -> lease -> publish -> persist)
- * and intended for external consumers (monitoring, audit, asynchronous downstream) must implement
- * this interface. The common marker lets the event bus and listeners group or filter events
- * conveniently.
+ * <p>语义:在 Outbox 中继循环(获取 → 租约 → 发布 →
+ * 持久化)期间产生的事件,并且旨在供外部消费者(监控、审计、异步下游)使用,必须实现此接口。通用标记让事件总线和监听器可以方便地分组或过滤事件。
  *
- * <p>Design guidelines:
+ * <p>设计指南:
  *
  * <ul>
- *   <li>Event types should rely on immutable records or read-only fields so the payload remains
- *       stable.
- *   <li>Field names should mirror the outbox table and publishing context to reduce interpretation
- *       effort.
- *   <li>Every implementation must expose an {@code occurredAt} field; when missing, provide a
- *       default timestamp during construction.
+ *   <li>事件类型应依赖不可变记录或只读字段,以使负载保持稳定。
+ *   <li>字段名称应镜像 Outbox 表和发布上下文,以减少解释工作。
+ *   <li>每个实现必须公开 {@code occurredAt} 字段;当缺失时,在构造期间提供默认时间戳。
  * </ul>
  */
 public interface OutboxRelayDomainEvent extends DomainEvent {}

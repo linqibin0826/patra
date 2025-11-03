@@ -6,72 +6,79 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Exception thrown when pre-assembly validation fails for a plan.
+ * 计划验证异常。
  *
- * <p>Raised during the pre-flight validation chain executed before slicing or assembly (window
- * validity, boundary checks, queue backpressure, capability alignment, and so on). Once thrown, the
- * request does not meet business prerequisites and should not be retried. Adjust scheduler
- * parameters, time windows, or system configuration before resubmitting.
- *
- * <p>Handling guidelines:
+ * <p>触发场景:在切片或组装之前执行的预检验证链失败,具体包括:
  *
  * <ul>
- *   <li>Application layer: log at INFO/WARN depending on expectations, return a readable message
- *       upstream, and do not retry.
- *   <li>Monitoring: aggregate {@link Reason} to uncover scheduling or configuration gaps.
- *   <li>Diagnosis: correlate with window start/end, plan key, and backpressure metrics.
+ *   <li>窗口有效性检查失败(窗口缺失、边界无效、跨度过大/过小)
+ *   <li>队列背压检测到下游过载
+ *   <li>能力/数据源/端点组合不受平台支持
  * </ul>
+ *
+ * <p>一旦抛出,表示请求不满足业务前提条件,<b>不应重试</b>。应调整调度器参数、时间窗口或系统配置后重新提交。
+ *
+ * <p>处理指南:
+ *
+ * <ul>
+ *   <li><b>应用层</b>:根据预期记录 INFO/WARN 级别日志,向上游返回可读消息,<b>不重试</b>。
+ *   <li><b>监控</b>:聚合 {@link Reason} 以发现调度或配置缺陷。
+ *   <li><b>诊断</b>:关联窗口起止时间、计划键和背压指标进行分析。
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class PlanValidationException extends IngestException implements HasErrorTraits {
 
   /**
-   * Reason categories for validation failure.
+   * 验证失败的原因分类。
    *
-   * <p>All values represent caller-correctable issues; automatic retries are not appropriate.
+   * <p>所有值都表示调用方可纠正的问题;不适合自动重试。
    */
   public enum Reason {
-    /** Scheduler did not provide a window. */
+    /** 调度器未提供窗口。 */
     WINDOW_MISSING,
-    /** Invalid window boundaries (start >= end, misaligned, or out of range). */
+    /** 窗口边界无效(start >= end、未对齐或超出范围)。 */
     WINDOW_INVALID,
-    /** Window span exceeds the allowed maximum (needs splitting or reduction). */
+    /** 窗口跨度超过允许的最大值(需要拆分或缩小)。 */
     WINDOW_TOO_LARGE,
-    /** Window span is too small to generate efficient slices. */
+    /** 窗口跨度太小,无法生成高效的切片。 */
     WINDOW_TOO_SMALL,
-    /** Downstream queues are back-pressured; reject new plans for now. */
+    /** 下游队列背压;暂时拒绝新计划。 */
     QUEUE_BACKPRESSURE,
-    /** Capability/provenance/endpoint combination is unsupported by the platform. */
+    /** 能力/数据源/端点组合不受平台支持。 */
     CAPABILITY_MISMATCH
   }
 
-  /** Specific reason for the failure; {@code null} when not distinguished. */
+  /** 具体的失败原因;如果未区分则为 {@code null}。 */
   private final Reason reason;
 
   /**
-   * Create the exception with a message and no explicit reason.
+   * 构造计划验证异常(不指定明确原因)。
    *
-   * @param message human-readable failure description
+   * @param message 人类可读的失败描述
    */
   public PlanValidationException(String message) {
     this(message, null, null);
   }
 
   /**
-   * Create the exception with a message and reason.
+   * 构造计划验证异常并指定原因。
    *
-   * @param message failure description
-   * @param reason failure reason
+   * @param message 失败描述
+   * @param reason 失败原因
    */
   public PlanValidationException(String message, Reason reason) {
     this(message, reason, null);
   }
 
   /**
-   * Create the exception with a message, reason, and underlying cause.
+   * 构造计划验证异常并指定原因和底层原因。
    *
-   * @param message failure description
-   * @param reason failure reason
-   * @param cause underlying exception (optional)
+   * @param message 失败描述
+   * @param reason 失败原因
+   * @param cause 底层异常(可选)
    */
   public PlanValidationException(String message, Reason reason, Throwable cause) {
     super(message, cause);
@@ -79,19 +86,19 @@ public class PlanValidationException extends IngestException implements HasError
   }
 
   /**
-   * Create the exception with a message and underlying cause without specifying the reason.
+   * 构造计划验证异常并附带底层原因(不指定 Reason)。
    *
-   * @param message failure description
-   * @param cause underlying exception
+   * @param message 失败描述
+   * @param cause 底层异常
    */
   public PlanValidationException(String message, Throwable cause) {
     this(message, null, cause);
   }
 
   /**
-   * Expose the validation failure reason.
+   * 获取验证失败原因。
    *
-   * @return failure reason, possibly {@code null}
+   * @return 失败原因,可能为 {@code null}
    */
   public Reason getReason() {
     return reason;

@@ -5,41 +5,48 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * PubMed EPost API request parameters for uploading ID lists to the History Server.
+ * PubMed EPost API 请求参数,用于将 ID 列表上传到历史服务器。
  *
- * <p>EPost is used to upload a list of UIDs to the Entrez History server, which returns a WebEnv
- * and query_key that can be used in subsequent EFetch or other E-utility calls. This is the NCBI
- * recommended approach for handling large ID lists (>200 UIDs).
+ * <p>EPost 用于将 UID 列表上传到 Entrez 历史服务器,服务器返回 WebEnv 和 query_key, 这些令牌可在后续的 EFetch 或其他 E-utility
+ * 调用中使用。这是 NCBI 推荐的处理大型 ID 列表 (>200个) 的方法。
  *
- * <p>Field descriptions:
+ * <p><b>典型使用场景:</b>
  *
- * @param db database identifier (always "pubmed" for this starter)
- * @param id comma-separated list of PubMed identifiers (supports large batches)
- * @param apiKey API key granting elevated rate limits (optional)
- * @param tool client identifier registered with NCBI (optional)
- * @param email contact email for NCBI notifications (optional)
- *     <p><b>NCBI Best Practice:</b> Use EPost when fetching more than 200 records to avoid URL
- *     length limitations. The returned WebEnv/query_key can be reused in multiple EFetch calls.
- *     <p>Reference: <a href="https://www.ncbi.nlm.nih.gov/books/NBK25499/">E-utilities In-Depth</a>
+ * <ol>
+ *   <li>ESearch 返回 >200 个结果 → 使用 EPost 上传 ID 列表
+ *   <li>EPost 返回 WebEnv + query_key
+ *   <li>使用 WebEnv + query_key 分批调用 EFetch 获取详细数据
+ * </ol>
+ *
+ * <p>字段说明:
+ *
+ * @param db 数据库标识符 (本 starter 固定为 "pubmed")
+ * @param id 逗号分隔的 PubMed 标识符列表 (支持大批量,建议 <10000)
+ * @param apiKey API 密钥 (可提升速率限制: 3次/秒 → 10次/秒,可选)
+ * @param tool 客户端标识符 (向 NCBI 注册的工具名称,可选)
+ * @param email 联系邮箱 (用于 NCBI 通知,可选)
+ *     <p><b>NCBI 最佳实践:</b> 获取超过200条记录时使用 EPost,以避免 URL 长度限制。 返回的 WebEnv/query_key 可在多次 EFetch
+ *     调用中重复使用。
+ *     <p>参考文档: <a href="https://www.ncbi.nlm.nih.gov/books/NBK25499/">E-utilities 深度指南</a>
  * @author linqibin
  * @since 0.1.0
  */
 public record EPostRequest(
-    // Required parameters
-    String db, // Database name (e.g., "pubmed")
-    String id, // Comma-separated PMID list (no hard limit, but recommended < 10000)
+    // 必填参数
+    String db, // 数据库名称 (例如: "pubmed")
+    String id, // 逗号分隔的 PMID 列表 (无硬性限制,但建议 <10000)
 
-    // Optional parameters - Authentication and identification
-    String apiKey, // API Key (increase rate limit: 3 req/sec → 10 req/sec)
-    String tool, // Tool name (identify application, e.g., "papertrace")
-    String email // Contact email (NCBI can contact developer)
+    // 可选参数 - 认证和标识
+    String apiKey, // API 密钥 (提升速率限制: 3次/秒 → 10次/秒)
+    String tool, // 工具名称 (标识应用程序,例如: "papertrace")
+    String email // 联系邮箱 (NCBI 可联系开发者)
     ) implements ApiRequest {
 
   /**
-   * Create a minimal EPost request with only database and ID list.
+   * 创建仅包含数据库和 ID 列表的最小 EPost 请求。
    *
-   * @param db database identifier, typically "pubmed"
-   * @param id comma-separated list of PubMed identifiers
+   * @param db 数据库标识符,通常为 "pubmed"
+   * @param id 逗号分隔的 PubMed 标识符列表
    */
   public EPostRequest(String db, String id) {
     this(db, id, null, null, null);
@@ -56,9 +63,9 @@ public record EPostRequest(
   }
 
   /**
-   * Compose the outbound query parameter map understood by the EPost endpoint.
+   * 组装 EPost 端点可识别的出站查询参数映射。
    *
-   * @return parameter map ready for gateway submission
+   * @return 准备好提交给网关的参数映射
    */
   @Override
   public Map<String, String> toQueryParams() {
@@ -75,9 +82,9 @@ public record EPostRequest(
   }
 
   /**
-   * Get the count of identifiers in the ID list (for logging/debugging).
+   * 获取 ID 列表中的标识符数量 (用于日志记录/调试)。
    *
-   * @return number of comma-separated identifiers
+   * @return 逗号分隔的标识符数量
    */
   public int getIdCount() {
     if (id == null || id.isBlank()) {

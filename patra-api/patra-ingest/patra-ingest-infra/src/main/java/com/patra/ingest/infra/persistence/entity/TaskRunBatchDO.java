@@ -10,20 +10,20 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Task run batch DO</b> — table: <code>ing_task_run_batch</code>
+ * 任务执行批次数据库实体,映射到表 {@code ing_task_run_batch}。
  *
- * <p>Represents per-batch accounting (page/token steps) during a Task Run; the smallest unit for
- * resume/dedup.
+ * <p>表结构: 表示任务执行期间的批次核算(页面/令牌步骤);恢复/去重的最小单元。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>idempotent_key</code> unique (UK: uk_batch_idem) to avoid duplicate batches on
- *       retries.
- *   <li><code>before_token</code>/<code>after_token</code> capture pagination cursors for
- *       backtracking.
- *   <li><code>stats</code> stores batch-level metrics (fetched/upserted, etc.) in JSON.
+ *   <li>{@code idempotent_key} 唯一(唯一约束: uk_batch_idem),避免重试时重复批次
+ *   <li>{@code before_token}/{@code after_token} 捕获分页游标以支持回溯
+ *   <li>{@code stats} 以 JSON 存储批次级指标(fetched/upserted 等)
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -4,17 +4,35 @@ import com.patra.common.error.codes.ErrorCodeLike;
 import java.util.Optional;
 
 /**
- * SPI for supplying fine-grained error-code mappings.
+ * SPI 接口,用于提供细粒度的错误码映射。
  *
- * <p>Allows services to override the default resolution logic for specific exceptions.
+ * <p>允许服务覆盖特定异常的默认解析逻辑,实现自定义的异常到错误码映射。
+ *
+ * <p>使用示例:
+ *
+ * <pre>{@code
+ * @Component
+ * public class MyErrorMappingContributor implements ErrorMappingContributor {
+ *   @Override
+ *   public Optional<ErrorCodeLike> mapException(Throwable exception) {
+ *     if (exception instanceof MyCustomException) {
+ *       return Optional.of(new SimpleErrorCode("CUSTOM", "0422"));
+ *     }
+ *     return Optional.empty();  // 传递给下一个贡献者
+ *   }
+ * }
+ * }</pre>
+ *
+ * @author Papertrace Team
+ * @since 2.0
  */
 public interface ErrorMappingContributor {
 
   /**
-   * Provides an error code for the supplied exception if this contributor can handle it.
+   * 为提供的异常提供错误码(如果此贡献者可以处理)。
    *
-   * @param exception exception to map (never {@code null})
-   * @return optional error code; empty if the contributor does not apply
+   * @param exception 要映射的异常(永不为 {@code null})
+   * @return 可选的错误码;如果贡献者不适用则返回空
    */
   Optional<ErrorCodeLike> mapException(Throwable exception);
 }

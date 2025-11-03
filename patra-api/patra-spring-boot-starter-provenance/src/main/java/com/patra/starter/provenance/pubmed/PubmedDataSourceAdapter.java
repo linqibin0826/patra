@@ -35,10 +35,21 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * PubMed implementation of {@link DataSourceAdapter}.
+ * PubMed 数据源适配器
  *
- * <p>Encapsulates search, fetch, and conversion logic while respecting configuration precedence:
- * runtime snapshot &gt; source overrides &gt; shared defaults.
+ * <p>封装PubMed的搜索、获取和转换逻辑，遵循配置优先级：运行时快照 > 数据源覆盖 > 共享默认值。
+ *
+ * <p>核心流程：
+ *
+ * <ul>
+ *   <li>ESearch：执行搜索获取PMID列表（最多10000个）
+ *   <li>EPost（可选）：当ID数量超过阈值时，上传ID列表到服务器获取WebEnv
+ *   <li>EFetch：批量获取文章详细元数据
+ *   <li>转换：将PubMed XML响应转换为标准文献格式
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 @RequiredArgsConstructor

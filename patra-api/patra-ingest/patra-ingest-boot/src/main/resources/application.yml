@@ -10,7 +10,7 @@ spring:
     import:
       # Local configuration files (error handling and message queue)
       - "classpath:ingest-error-config.yaml"
-      - "classpath:ingest-mq-config.yaml"
+      - "classpath:ingest-rocketmq.yaml"
       # Service-specific configuration from Nacos
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
       # Shared platform configuration from Nacos

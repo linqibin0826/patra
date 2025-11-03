@@ -24,32 +24,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Date-only based slicing strategy (Application Layer · Policy).
+ * 仅日期的切片策略(应用层·策略)
  *
- * <p>Splits the upstream planning window [from, to) into several half-open date-only sub-windows
- * using a fixed step; each sub-window is paired with the business expression to form an independent
- * Slice.
+ * <p>使用固定步长将上游规划窗口 [from, to) 拆分为多个半开的仅日期子窗口; 每个子窗口与业务表达式配对形成独立的 Slice。
  *
- * <p>This strategy is designed for data sources that only support date-level queries without time
- * precision (e.g., PubMed which only accepts YYYY-MM-DD format).
+ * <p>此策略专为仅支持日期级查询而不支持时间精度的数据源设计(例如 PubMed 仅接受 YYYY-MM-DD 格式)。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>Step configuration: prefer the normalized step from the trigger context (ISO-8601
- *       Duration); fallback to the default 1 day when invalid.
- *   <li>Time field resolution: offsetFieldKey (DATE mode) > windowDateFieldKey.
- *   <li>Date conversion: Instant timestamps are converted to LocalDate using UTC zone for
- *       consistent date extraction.
- *   <li>Range semantics: Uses {@link Exprs#rangeDate} with half-open interval [from, to) to match
- *       PubMed query behavior.
- *   <li>Idempotence: build a canonical JSON and take sha256; repeated planning yields identical
- *       signatures.
- *   <li>Boundary: the last slice aligns to the window end if it is shorter than the step.
- *   <li>Complexity: O(n), n = ceil((to - from) / step).
+ *   <li>步长配置:优先使用触发上下文中的标准化步长(ISO-8601 Duration);无效时回退到默认 1 天。
+ *   <li>时间字段解析:offsetFieldKey(DATE 模式) > windowDateFieldKey。
+ *   <li>日期转换:Instant 时间戳使用 UTC 时区转换为 LocalDate 以确保一致的日期提取。
+ *   <li>范围语义:使用 {@link Exprs#rangeDate} 的半开区间 [from, to) 以匹配 PubMed 查询行为。
+ *   <li>幂等性:构建规范化 JSON 并取 sha256;重复规划产生相同签名。
+ *   <li>边界处理:如果最后一个切片短于步长,则对齐到窗口结束。
+ *   <li>复杂度:O(n),n = ceil((to - from) / step)。
  * </ul>
  *
- * <p>Return empty list when: window missing; from >= to; or the time field cannot be resolved.
+ * <p>返回空列表的情况:窗口缺失;from >= to;或时间字段无法解析。
  *
  * @author linqibin
  * @since 0.1.0
@@ -58,7 +51,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class DateSlicePlanner implements SlicePlanner {
 
-  /** Default slice step (1 day). */
+  /** 默认切片步长(1 天) */
   private static final Duration DEFAULT_STEP = Duration.ofDays(1);
 
   @Override
@@ -68,24 +61,20 @@ public class DateSlicePlanner implements SlicePlanner {
 
   @Override
   public List<SlicePlan> slice(SlicePlanningContext context) {
-    // Initialize the result to keep ordering stable even on early returns
+    // 初始化结果以保持排序稳定,即使提前返回
     List<SlicePlan> result = new ArrayList<>();
     if (context.window() == null
         || context.window().from() == null
         || context.window().to() == null) {
-      log.warn(
-          "Skip date slicing because planning window is missing: norm={}, window={}",
-          context.norm(),
-          context.window());
+      log.warn("跳过日期切片,因为规划窗口缺失: norm={}, window={}", context.norm(), context.window());
       return result;
     }
 
-    // Resolve time field: prefer offsetFieldKey (DATE mode), otherwise fallback to
-    // windowDateFieldKey
+    // 解析时间字段:优先 offsetFieldKey(DATE 模式),否则回退到 windowDateFieldKey
     String timeField = resolveTimeField(context.configSnapshot());
     if (timeField == null) {
       log.error(
-          "Cannot resolve time field from provenance snapshot, provenanceCode={}, operation={}",
+          "无法从溯源快照解析时间字段, provenanceCode={}, operation={}",
           context.norm().provenanceCode(),
           context.norm().operationCode());
       return result;
@@ -94,34 +83,31 @@ public class DateSlicePlanner implements SlicePlanner {
     Instant from = context.window().from();
     Instant to = context.window().to();
     if (!from.isBefore(to)) {
-      log.warn("Skip date slicing because window is not forward, from={} to={}", from, to);
+      log.warn("跳过日期切片,因为窗口不是前向的, from={} to={}", from, to);
       return result;
     }
 
-    // Use custom step from norm when present; otherwise fallback to the default
+    // 如果存在,使用 norm 中的自定义步长;否则回退到默认值
     Duration step = DEFAULT_STEP;
     if (StrUtil.isNotBlank(context.norm().step())) {
       try {
         step = Duration.parse(context.norm().step().trim());
-        // Validate: DATE strategy requires step >= 1 day to prevent infinite loop
+        // 验证:DATE 策略要求步长 >= 1 天以防止无限循环
         if (step.toDays() < 1) {
-          log.warn(
-              "Step too small for DATE strategy (< 1 day), fallback to default, stepString={}",
-              context.norm().step());
+          log.warn("DATE 策略的步长太小(< 1 天),回退到默认值, stepString={}", context.norm().step());
           step = DEFAULT_STEP;
         }
       } catch (Exception e) {
-        log.warn(
-            "Invalid step format, fallback to default, stepString={}", context.norm().step(), e);
+        log.warn("步长格式无效,回退到默认值, stepString={}", context.norm().step(), e);
       }
     }
 
-    // Convert Instant to LocalDate (UTC zone for consistent date extraction)
+    // 将 Instant 转换为 LocalDate(UTC 时区以确保一致的日期提取)
     LocalDate cursor = from.atZone(ZoneOffset.UTC).toLocalDate();
     LocalDate endDate = to.atZone(ZoneOffset.UTC).toLocalDate();
 
     log.debug(
-        "Starting DATE slicing for provenance [{}] operation [{}]: window=[{}, {}), step={} days, timeField={}",
+        "开始 DATE 切片,溯源 [{}] 操作 [{}]: window=[{}, {}), step={} 天, timeField={}",
         context.norm().provenanceCode(),
         context.norm().operationCode(),
         cursor,
@@ -133,23 +119,19 @@ public class DateSlicePlanner implements SlicePlanner {
     PlanExpressionDescriptor planExpr = context.planExpression();
 
     while (cursor.isBefore(endDate)) {
-      // Compute the current slice upper bound; ensure the last slice aligns to the window end
+      // 计算当前切片上界;确保最后一个切片对齐到窗口结束
       LocalDate upper = cursor.plusDays(step.toDays());
       if (upper.isAfter(endDate)) {
         upper = endDate;
       }
 
-      // Prevent infinite loop: ensure cursor can advance (upper must be after cursor)
+      // 防止无限循环:确保游标可以前进(upper 必须在 cursor 之后)
       if (!cursor.isBefore(upper)) {
-        log.warn(
-            "Stopping date slicing: cursor cannot advance, cursor={}, upper={}, endDate={}",
-            cursor,
-            upper,
-            endDate);
+        log.warn("停止日期切片:游标无法前进, cursor={}, upper={}, endDate={}", cursor, upper, endDate);
         break;
       }
 
-      // Build the slice spec and generate a stable signature
+      // 构建切片规格并生成稳定签名
       JsonNormalizerResult specNormalized =
           buildSpec(
               context,
@@ -158,26 +140,22 @@ public class DateSlicePlanner implements SlicePlanner {
       String specJson = specNormalized.getCanonicalJson();
       String signatureHash = HashUtils.sha256Hex(specNormalized.getHashMaterial());
 
-      // Combine the plan expression with the date-window constraint
-      // Use half-open interval [from, to) semantics: fromBoundary=CLOSED, toBoundary=OPEN
+      // 将 Plan 表达式与日期窗口约束组合
+      // 使用半开区间 [from, to) 语义:fromBoundary=CLOSED, toBoundary=OPEN
       Expr dateConstraint = buildDateWindowConstraint(timeField, cursor, upper);
       Expr combined = Exprs.and(List.of(planExpr.expr(), dateConstraint));
 
       result.add(new SlicePlan(index, signatureHash, specJson, combined));
 
       log.debug(
-          "Date slice prepared, sliceNo={}, from={}, to={}, hash={}",
-          index,
-          cursor,
-          upper,
-          signatureHash);
+          "日期切片准备完成, sliceNo={}, from={}, to={}, hash={}", index, cursor, upper, signatureHash);
 
       cursor = upper;
       index++;
     }
 
     log.debug(
-        "Completed DATE slicing for provenance [{}] operation [{}]: generated {} slices",
+        "DATE 切片完成,溯源 [{}] 操作 [{}]: 生成 {} 个切片",
         context.norm().provenanceCode(),
         context.norm().operationCode(),
         result.size());
@@ -186,26 +164,24 @@ public class DateSlicePlanner implements SlicePlanner {
   }
 
   /**
-   * Build the date-window constraint expression. Half-open interval semantics: from is inclusive,
-   * to is exclusive.
+   * 构建日期窗口约束表达式。半开区间语义:from 包含,to 排除。
    *
-   * @param field time field name
-   * @param from slice start date (inclusive)
-   * @param to slice end date (exclusive)
-   * @return range expression
+   * @param field 时间字段名
+   * @param from 切片开始日期(包含)
+   * @param to 切片结束日期(排除)
+   * @return 范围表达式
    */
   private Expr buildDateWindowConstraint(String field, LocalDate from, LocalDate to) {
-    // Use rangeDate with explicit boundaries: [from, to)
-    // includeFrom=true (CLOSED), includeTo=false (OPEN)
+    // 使用 rangeDate 的显式边界:[from, to)
+    // includeFrom=true(CLOSED), includeTo=false(OPEN)
     return Exprs.rangeDate(field, from, to, true, false);
   }
 
   /**
-   * Resolve the time field from the configuration snapshot. Priority: DATE mode offsetFieldKey >
-   * windowDateFieldKey.
+   * 从配置快照解析时间字段。优先级:DATE 模式 offsetFieldKey > windowDateFieldKey。
    *
-   * @param snapshot provenance/source configuration snapshot
-   * @return field name usable for range filtering; null when it cannot be resolved
+   * @param snapshot 溯源/数据源配置快照
+   * @return 可用于范围过滤的字段名;无法解析时返回 null
    */
   private String resolveTimeField(ProvenanceConfigSnapshot snapshot) {
     if (snapshot == null) {
@@ -226,21 +202,20 @@ public class DateSlicePlanner implements SlicePlanner {
   }
 
   /**
-   * Build the slice spec JSON and normalize it. Fields: strategy, window (from/to + boundary +
-   * timezone). On normalization failure, fallback to a minimal JSON to keep hashing available.
+   * 构建切片规格 JSON 并规范化。字段:strategy、window(from/to + boundary + timezone)。 规范化失败时,回退到最小 JSON 以保持哈希可用。
    *
-   * @param context slice context
-   * @param from window start (Instant for auditability)
-   * @param to window end (Instant for auditability)
-   * @return normalization result (canonical JSON + hash material)
+   * @param context 切片上下文
+   * @param from 窗口开始(Instant 用于审计)
+   * @param to 窗口结束(Instant 用于审计)
+   * @return 规范化结果(规范化 JSON + 哈希材料)
    */
   private JsonNormalizerResult buildSpec(SlicePlanningContext context, Instant from, Instant to) {
     ProvenanceConfigSnapshot configSnapshot = context.configSnapshot();
     ObjectNode root = JsonNodeFactory.instance.objectNode();
     root.put("strategy", code().getCode());
 
-    // Build the window node with timezone and boundary semantics for auditability
-    // Note: we store Instant for auditability, but the actual query uses date-only
+    // 构建窗口节点,包含时区和边界语义用于审计
+    // 注意:我们存储 Instant 用于审计,但实际查询仅使用日期
     ObjectNode window = root.putObject("window");
     window.put("from", from.toString());
     window.put("to", to.toString());
@@ -257,11 +232,7 @@ public class DateSlicePlanner implements SlicePlanner {
     try {
       return JsonNormalizer.normalizeDefault(root);
     } catch (JsonNormalizationException ex) {
-      log.error(
-          "Failed to normalize slice spec, fallback to minimal payload, from={}, to={}",
-          from,
-          to,
-          ex);
+      log.error("规范化切片规格失败,回退到最小载荷, from={}, to={}", from, to, ex);
       String fallback = "{\"strategy\":\"" + code().getCode() + "\"}";
       try {
         return JsonNormalizer.normalizeDefault(fallback);

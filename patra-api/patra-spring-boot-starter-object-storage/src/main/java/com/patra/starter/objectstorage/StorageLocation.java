@@ -4,8 +4,13 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Resolved storage location containing bucket/object key pair and the business metadata that must
- * be persisted alongside file records.
+ * 已解析的存储位置,包含存储桶/对象键对以及必须与文件记录一起持久化的业务元数据。
+ *
+ * @param bucket 存储桶名称
+ * @param objectKey 对象键
+ * @param businessId 业务标识符
+ * @param storageKey 存储键(bucket/objectKey)
+ * @param correlationData 关联数据(用于下游分析)
  */
 public record StorageLocation(
     String bucket,
@@ -25,13 +30,13 @@ public record StorageLocation(
 
   public StorageLocation {
     if (!hasText(bucket)) {
-      throw new IllegalArgumentException("bucket cannot be blank");
+      throw new IllegalArgumentException("bucket 不能为空");
     }
     if (!hasText(objectKey)) {
-      throw new IllegalArgumentException("objectKey cannot be blank");
+      throw new IllegalArgumentException("objectKey 不能为空");
     }
     if (!hasText(businessId)) {
-      throw new IllegalArgumentException("businessId cannot be blank");
+      throw new IllegalArgumentException("businessId 不能为空");
     }
     storageKey = hasText(storageKey) ? storageKey : bucket + "/" + objectKey;
     correlationData =

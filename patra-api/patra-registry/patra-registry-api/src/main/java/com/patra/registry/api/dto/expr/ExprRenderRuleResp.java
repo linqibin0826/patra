@@ -3,27 +3,27 @@ package com.patra.registry.api.dto.expr;
 import java.time.Instant;
 
 /**
- * Render rules for expression output templating.
+ * 表达式输出模板的渲染规则。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>provenanceId - internal provenance identifier owning the rule
- *   <li>operationType - operation discriminator the rule applies to
- *   <li>fieldKey - expression field key the render rule targets
- *   <li>opCode - logical operator used when evaluating the field
- *   <li>matchTypeCode - match type discriminator for render evaluation
- *   <li>negated - whether the rendered expression is negated
- *   <li>valueTypeCode - value type discriminator for substitution
- *   <li>emitTypeCode - emit strategy for templated output
- *   <li>template - top-level template fragment
- *   <li>itemTemplate - template fragment for list items
- *   <li>joiner - join token applied between rendered fragments
- *   <li>wrapGroup - whether to wrap rendered fragment with grouping tokens
- *   <li>paramsJson - serialized parameter metadata
- *   <li>functionCode - optional function identifier applied during rendering
- *   <li>effectiveFrom - timestamp from which the rule becomes effective
- *   <li>effectiveTo - timestamp until which the rule remains effective
+ *   <li>provenanceId - 拥有该规则的内部数据源标识符
+ *   <li>operationType - 规则应用的操作类型鉴别器
+ *   <li>fieldKey - 渲染规则目标的表达式字段键
+ *   <li>opCode - 求值字段时使用的逻辑运算符
+ *   <li>matchTypeCode - 用于渲染求值的匹配类型鉴别器
+ *   <li>negated - 渲染的表达式是否被否定
+ *   <li>valueTypeCode - 用于替换的值类型鉴别器
+ *   <li>emitTypeCode - 模板化输出的发出策略
+ *   <li>template - 顶级模板片段
+ *   <li>itemTemplate - 列表项的模板片段
+ *   <li>joiner - 在渲染片段之间应用的连接标记
+ *   <li>wrapGroup - 是否用分组标记包装渲染片段
+ *   <li>paramsJson - 序列化的参数元数据
+ *   <li>functionCode - 渲染期间应用的可选函数标识符
+ *   <li>effectiveFrom - 规则生效的时间戳
+ *   <li>effectiveTo - 规则保持有效的截止时间戳
  * </ol>
  *
  * @author linqibin

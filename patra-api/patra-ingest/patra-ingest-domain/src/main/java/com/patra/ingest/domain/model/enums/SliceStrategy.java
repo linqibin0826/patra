@@ -3,21 +3,20 @@ package com.patra.ingest.domain.model.enums;
 import java.util.Optional;
 
 /**
- * Slice strategy enumeration that defines all supported window types.
+ * 切片策略枚举,定义所有支持的窗口类型。
  *
- * <p>This enum is used for both plan-level window specifications and slice-level strategies.
+ * <p>此枚举用于计划级窗口规范和切片级策略。
  *
- * <p>Strategy types:
+ * <p>策略类型:
  *
  * <ul>
- *   <li>TIME: Time-based windowing with timestamp precision (e.g., 2024-01-01T00:00:00Z to
- *       2024-12-31T23:59:59Z)
- *   <li>DATE: Date-only windowing without time component (e.g., 2024-01-01 to 2024-12-31)
- *   <li>ID_RANGE: ID range windowing (e.g., ID 1000000 to 2000000)
- *   <li>CURSOR_LANDMARK: Cursor/token-based windowing (e.g., pagination tokens)
- *   <li>VOLUME_BUDGET: Volume-based windowing (e.g., fetch up to 100k records)
- *   <li>HYBRID: Combined strategy (e.g., time + ID + volume constraints)
- *   <li>SINGLE: Single slice (no partitioning, typically for UPDATE operations)
+ *   <li>TIME: 基于时间的窗口化,带时间戳精度(例如,2024-01-01T00:00:00Z 到 2024-12-31T23:59:59Z)
+ *   <li>DATE: 仅日期的窗口化,无时间部分(例如,2024-01-01 到 2024-12-31)
+ *   <li>ID_RANGE: ID 范围窗口化(例如,ID 1000000 到 2000000)
+ *   <li>CURSOR_LANDMARK: 基于游标/令牌的窗口化(例如,分页令牌)
+ *   <li>VOLUME_BUDGET: 基于数量的窗口化(例如,最多获取 100k 条记录)
+ *   <li>HYBRID: 组合策略(例如,时间 + ID + 数量约束)
+ *   <li>SINGLE: 单切片(无分区,通常用于 UPDATE 操作)
  * </ul>
  *
  * @author linqibin
@@ -25,25 +24,25 @@ import java.util.Optional;
  */
 public enum SliceStrategy {
 
-  /** Time-based windowing strategy (includes timestamp with time component). */
+  /** 时间型;基于时间的窗口化策略(包含带时间部分的时间戳)。 */
   TIME("TIME"),
 
-  /** Date-only windowing strategy (day-level granularity, no time component). */
+  /** 日期型;仅日期的窗口化策略(天级粒度,无时间部分)。 */
   DATE("DATE"),
 
-  /** ID range windowing strategy. */
+  /** ID 范围型;基于 ID 范围的窗口化策略。 */
   ID_RANGE("ID_RANGE"),
 
-  /** Cursor/token-based windowing strategy. */
+  /** 游标地标型;基于游标/令牌的窗口化策略。 */
   CURSOR_LANDMARK("CURSOR_LANDMARK"),
 
-  /** Volume budget windowing strategy. */
+  /** 数量预算型;基于数量预算的窗口化策略。 */
   VOLUME_BUDGET("VOLUME_BUDGET"),
 
-  /** Hybrid strategy combining multiple constraints. */
+  /** 混合型;组合多种约束的策略。 */
   HYBRID("HYBRID"),
 
-  /** Single slice strategy (no partitioning). */
+  /** 单切片型;单切片策略(无分区)。 */
   SINGLE("SINGLE");
 
   private final String code;
@@ -52,16 +51,16 @@ public enum SliceStrategy {
     this.code = code;
   }
 
-  /** Returns the strategy code for persistence and JSON serialization. */
+  /** 返回用于持久化和 JSON 序列化的策略代码。 */
   public String getCode() {
     return code;
   }
 
   /**
-   * Parses strategy enum from code string.
+   * 从代码字符串解析策略枚举。
    *
-   * @param code strategy code
-   * @return matching strategy enum wrapped in Optional
+   * @param code 策略代码
+   * @return 包装在 Optional 中的匹配策略枚举
    */
   public static Optional<SliceStrategy> fromCode(String code) {
     if (code == null || code.isBlank()) {

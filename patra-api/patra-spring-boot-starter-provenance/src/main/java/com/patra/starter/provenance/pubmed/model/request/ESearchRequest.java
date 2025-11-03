@@ -5,38 +5,38 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * PubMed ESearch API request parameters aligned with the official E-utilities documentation.
+ * PubMed ESearch API 请求参数
  *
- * <p>Field descriptions:
+ * <p>与官方E-utilities文档对齐的参数定义。ESearch用于搜索PubMed数据库并返回匹配的PMID列表。
  *
- * @param db target database identifier (e.g. "pubmed")
- * @param term Boolean query string sent to the ESearch API (optional when date filters are used)
- * @param retstart zero-based offset for pagination
- * @param retmax maximum records returned per invocation (max 10000)
- * @param retmode response format (json or xml)
- * @param rettype response type (uilist, count, etc.)
- * @param sort ordering strategy applied by PubMed
- * @param datetype publication date field evaluated for filtering
- * @param mindate lower bound date constraint
- * @param maxdate upper bound date constraint
- * @param field field-specific search restriction
- * @param reldate relative date filter expressed in days
- * @param usehistory toggle for PubMed history server usage
- * @param webenv history session WebEnv token
- * @param queryKey numeric key pointing to a stored query
- * @param apiKey API key granting elevated rate limits
- * @param tool client identifier registered with NCBI
- * @param email contact email for NCBI notifications
- *     <p>Prefer the convenience constructor when defaults are acceptable. Advanced callers may
- *     override optional parameters individually.
+ * <p>字段说明：
+ *
+ * @param db 目标数据库标识符（如"pubmed"）
+ * @param term 布尔查询字符串（当使用日期过滤器时可选）
+ * @param retstart 分页的从零开始的偏移量
+ * @param retmax 每次调用返回的最大记录数（最多10000）
+ * @param retmode 响应格式（json或xml）
+ * @param rettype 响应类型（uilist、count等）
+ * @param sort PubMed应用的排序策略
+ * @param datetype 用于过滤评估的出版日期字段
+ * @param mindate 日期约束下限
+ * @param maxdate 日期约束上限
+ * @param field 字段特定的搜索限制
+ * @param reldate 以天为单位表示的相对日期过滤器
+ * @param usehistory 是否使用PubMed历史服务器
+ * @param webenv 历史会话WebEnv令牌
+ * @param queryKey 指向存储查询的数字键
+ * @param apiKey 授予提升速率限制的API密钥
+ * @param tool 在NCBI注册的客户端标识符
+ * @param email NCBI通知的联系邮箱
  * @author linqibin
  * @since 0.1.0
  */
 public record ESearchRequest(
-    // Required parameters
-    String db, // Database name (e.g., "pubmed")
+    // 必需参数
+    String db, // 数据库名称（如"pubmed"）
 
-    // Search term (optional when date filters mindate/maxdate/datetype are provided)
+    // 搜索词（当提供日期过滤器mindate/maxdate/datetype时可选）
     String term,
 
     // Optional parameters - Basic control

@@ -3,27 +3,26 @@ package com.patra.ingest.domain.event;
 import java.time.Instant;
 
 /**
- * Domain event raised when an outbox message lease cannot be acquired.
+ * Outbox 租约竞争失败领域事件,当无法获取 Outbox 消息租约时触发。
  *
- * <p>Trigger: emitted after multiple relay instances contend for the same message lease and the
- * optimistic locking update fails. Useful for observing lease contention levels.
+ * <p>触发条件:多个中继实例竞争同一消息租约时,乐观锁更新失败后触发。用于观察租约竞争水平。
  *
- * <p>Usage:
+ * <p>用途:
  *
  * <ul>
- *   <li>Scaling decisions: repeated lease conflicts may indicate that concurrency is too high.
- *   <li>Hotspot analysis: aggregate by {@code channel + messageId} to surface hot messages.
+ *   <li>扩展决策:重复的租约冲突可能表明并发度过高
+ *   <li>热点分析:按 {@code channel + messageId} 聚合以发现热点消息
  * </ul>
  */
 public record OutboxLeaseMissedEvent(
-    /** Identifier of the message that triggered the lease conflict. */
+    /** 触发租约冲突的消息标识符。 */
     Long messageId,
-    /** Outbox channel associated with the message. */
+    /** 与消息关联的 Outbox 通道。 */
     String channel,
-    /** Lease owner requested by the current relay instance. */
+    /** 当前中继实例请求的租约所有者。 */
     String requestedLeaseOwner,
-    /** Lease owner already recorded in the database. */
+    /** 数据库中已记录的租约所有者。 */
     String currentLeaseOwner,
-    /** Timestamp when the event occurred. */
+    /** 事件发生的时间戳。 */
     Instant occurredAt)
     implements OutboxRelayDomainEvent {}

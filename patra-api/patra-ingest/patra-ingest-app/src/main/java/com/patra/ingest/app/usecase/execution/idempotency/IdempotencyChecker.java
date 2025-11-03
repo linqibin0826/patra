@@ -1,9 +1,9 @@
 package com.patra.ingest.app.usecase.execution.idempotency;
 
 /**
- * Idempotency checker.
+ * 幂等性检查器。
  *
- * <p>Checks whether a task has already succeeded (by idempotentKey + status).
+ * <p>检查任务是否已经成功(通过 idempotentKey + status)。
  *
  * @author linqibin
  * @since 0.1.0
@@ -11,11 +11,11 @@ package com.patra.ingest.app.usecase.execution.idempotency;
 public interface IdempotencyChecker {
 
   /**
-   * Checks whether the task has already been executed successfully.
+   * 检查任务是否已成功执行。
    *
-   * @param taskId task id
-   * @param idempotentKey idempotent key
-   * @return true if already succeeded, no need to execute again
+   * @param taskId 任务 ID
+   * @param idempotentKey 幂等键
+   * @return true 如果已成功,无需再次执行
    */
   boolean isAlreadySucceeded(Long taskId, String idempotentKey);
 }

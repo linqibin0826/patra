@@ -9,21 +9,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Default exception classification strategy: minimal yet practical rules for deciding between FATAL
- * and TRANSIENT.
+ * 默认异常分类策略: 用于决定 FATAL 和 TRANSIENT 的最小但实用的规则
  *
- * <p>Classification rules:
+ * <p>分类规则:
  *
  * <ul>
- *   <li>Configuration, illegal state, or parameter issues (IllegalArgument, IllegalState,
- *       OutboxRelayExecutionException) -> FATAL.
- *   <li>JSON serialization or deserialization failure -> FATAL (data typically unrecoverable).
- *   <li>All other cases -> TRANSIENT and delegated to retry policies (network hiccups, downstream
- *       outages, etc.).
+ *   <li>配置、非法状态或参数问题 (IllegalArgument, IllegalState, OutboxRelayExecutionException) → FATAL
+ *   <li>JSON 序列化或反序列化失败 → FATAL (数据通常无法恢复)
+ *   <li>所有其他情况 → TRANSIENT 并委托给重试策略 (网络故障、下游中断等)
  * </ul>
  *
- * Extensibility: replace this implementation with composed strategies to support finer-grained
- * matching (for example by error code).
+ * 可扩展性: 用组合策略替换此实现以支持更细粒度的匹配 (例如按错误代码)
  */
 @Slf4j
 @Component
@@ -38,7 +34,7 @@ public class RelayErrorClassifierImpl implements RelayErrorClassifier {
 
       if (log.isDebugEnabled()) {
         log.debug(
-            "Classifying OutboxPublishException as [{}]: reason [{}], isFatal [{}]",
+            "将 OutboxPublishException 分类为 [{}]: 原因 [{}], isFatal [{}]",
             kind,
             publishException.getReason(),
             publishException.getReason().isFatal());
@@ -61,7 +57,7 @@ public class RelayErrorClassifierImpl implements RelayErrorClassifier {
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "Classifying exception as [{}]: exceptionType [{}], rootCause [{}]",
+          "将异常分类为 [{}]: 异常类型 [{}], 根本原因 [{}]",
           kind,
           cause.getClass().getSimpleName(),
           root.getClass().getSimpleName());

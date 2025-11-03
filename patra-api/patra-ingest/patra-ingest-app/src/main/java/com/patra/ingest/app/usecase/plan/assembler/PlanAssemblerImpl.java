@@ -31,41 +31,39 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Plan assembler implementation.
+ * Plan 组装器实现类
  *
- * <p>Transforms {@link PlanAssemblyRequest} into {@link PlanAssemblyResult} aggregates:
+ * <p>将 {@link PlanAssemblyRequest} 转换为 {@link PlanAssemblyResult} 聚合根:
  *
  * <ol>
- *   <li>Decide slice strategy (UPDATE → SINGLE; otherwise TIME)
- *   <li>Canonicalize configuration (canonical JSON + hash material)
- *   <li>Create Plan aggregate (expr snapshot / config signature / window / strategy code)
- *   <li>Invoke slicing to produce SlicePlan drafts and convert to PlanSlice aggregates (canonical
- *       expr + hash)
- *   <li>Derive Task aggregates per slice (idempotent key, priority, scheduled time)
- *   <li>Mark Plan status as FAILED or READY based on presence of slices/tasks
+ *   <li>决定切片策略 (UPDATE → SINGLE; 其他 → TIME)
+ *   <li>规范化配置 (规范 JSON + 哈希材料)
+ *   <li>创建 Plan 聚合根 (表达式快照 / 配置签名 / 窗口 / 策略代码)
+ *   <li>调用切片生成 SlicePlan 草稿并转换为 PlanSlice 聚合根 (规范表达式 + 哈希)
+ *   <li>为每个切片派生 Task 聚合根 (幂等键、优先级、调度时间)
+ *   <li>根据切片/任务是否存在标记 Plan 状态为 FAILED 或 READY
  * </ol>
  *
- * <h4>Idempotency</h4>
+ * <h4>幂等性</h4>
  *
- * <p>PlanKey is generated in createPlanAggregate from (provenance, operation, endpoint?,
- * windowFrom-windowTo?). Task idempotent key uses (provenance | operation | sliceSignatureHash).
- * This class does not duplicate-check; upper layers enforce via persistence and unique indexes.
+ * <p>PlanKey 在 createPlanAggregate 中从 (provenance, operation, endpoint?, windowFrom-windowTo?) 生成。
+ * Task 幂等键使用 (provenance | operation | sliceSignatureHash)。 本类不进行重复检查,由上层通过持久化和唯一索引强制执行。
  *
- * <h4>Failure conditions</h4>
+ * <h4>失败条件</h4>
  *
  * <ul>
- *   <li>No slice strategy implementation (registry returns null) → FAILED (empty collections)
- *   <li>Slice strategy returns empty list → FAILED
- *   <li>Slices exist but derived tasks are empty (should not happen) → FAILED
+ *   <li>没有切片策略实现 (注册表返回 null) → FAILED (空集合)
+ *   <li>切片策略返回空列表 → FAILED
+ *   <li>切片存在但派生任务为空 (不应发生) → FAILED
  * </ul>
  *
- * <h4>Complexity</h4>
+ * <h4>复杂度</h4>
  *
- * <p>O(n), n = number of slices; canonicalization and hashing are linear.
+ * <p>O(n), n = 切片数量; 规范化和哈希计算是线性的。
  *
- * <h4>Thread safety</h4>
+ * <h4>线程安全</h4>
  *
- * <p>No shared mutable state; registry lookups are read-only and singleton-safe.
+ * <p>无共享可变状态; 注册表查找是只读的且单例安全。
  *
  * @author linqibin
  * @since 0.1.0
@@ -74,13 +72,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class PlanAssemblerImpl implements PlanAssembler {
 
-  /** Default JSON normalizer for stable serialization of config and strategy params. */
+  /** 默认 JSON 规范化器,用于配置和策略参数的稳定序列化 */
   private static final JsonNormalizer DEFAULT_NORMALIZER = JsonNormalizer.usingDefault();
 
-  /**
-   * Normalizer for task params: disable boolean/time coercion to avoid 0/1 becoming booleans or
-   * timestamps.
-   */
+  /** 任务参数规范化器: 禁用布尔值/时间强制转换,避免 0/1 被转换为布尔值或时间戳 */
   private static final JsonNormalizer TASK_PARAM_NORMALIZER =
       JsonNormalizer.withConfig(
           JsonNormalizerConfig.builder()

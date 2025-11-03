@@ -6,23 +6,23 @@ import lombok.Builder;
 import lombok.Value;
 
 /**
- * Outbox Relay execution log entity.
+ * 发件箱中继日志实体。记录每次发件箱消息的中继尝试。
  *
- * <p>Records every relay attempt for outbox messages, enabling:
+ * <p>业务价值：
  *
  * <ul>
- *   <li>Historical tracing: Query complete publishing history for a message
- *   <li>Performance analysis: Analyze duration and identify bottlenecks
- *   <li>Error analysis: Identify error patterns and retry effectiveness
- *   <li>Audit compliance: Immutable audit trail for data publishing
+ *   <li>历史追溯：查询消息的完整发布历史
+ *   <li>性能分析：分析执行时长并识别瓶颈
+ *   <li>错误分析：识别错误模式和重试有效性
+ *   <li>审计合规：不可变的数据发布审计轨迹
  * </ul>
  *
- * <p>Design principles:
+ * <p>设计原则：
  *
  * <ul>
- *   <li>Immutable: Logs are never modified after creation
- *   <li>Complete: Captures all information needed for troubleshooting
- *   <li>Efficient: Optimized for append-only writes and time-range queries
+ *   <li>不可变：日志创建后从不修改
+ *   <li>完整性：捕获故障排查所需的所有信息
+ *   <li>高效性：针对仅追加写入和时间范围查询优化
  * </ul>
  *
  * @author Papertrace Team

@@ -8,9 +8,18 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * XXL-Job 执行器配置。
+ * XXL-Job 执行器配置类。
  *
- * <p>为 Patra-Ingest 服务配置 XXL-Job 执行器,包括: - 执行器注册和心跳 - 日志路径和访问令牌 - 任务处理器自动扫描
+ * <p>为 Patra-Ingest 服务配置 XXL-Job 分布式任务调度执行器,包括:
+ *
+ * <ul>
+ *   <li>执行器注册到调度中心 - 自动发现和心跳保活
+ *   <li>日志路径和保留策略 - 本地日志存储和自动清理
+ *   <li>访问令牌验证 - 确保调度中心与执行器之间的安全通信
+ *   <li>任务处理器自动扫描 - 通过 @XxlJob 注解自动注册任务
+ * </ul>
+ *
+ * <p>执行器端口约定: 执行器端口 = 应用端口 + 1,避免与主服务端口冲突。
  *
  * @author linqibin
  * @since 0.1.0

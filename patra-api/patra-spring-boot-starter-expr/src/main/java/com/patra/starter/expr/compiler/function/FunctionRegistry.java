@@ -3,23 +3,21 @@ package com.patra.starter.expr.compiler.function;
 import java.util.Optional;
 
 /**
- * Registry for render-time functions referenced by {@code fn_code} in render rules. Provides lookup
- * of function implementations by code.
+ * 渲染时函数注册表，用于查找渲染规则中 {@code fn_code} 引用的函数实现。
  *
- * <p>Implementations must be thread-safe and immutable after initialization. Lookups are O(1) using
- * internal map structures.
+ * <p>实现必须是线程安全的，初始化后不可变。使用内部映射结构实现 O(1) 查找。
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.3
+ * <p>参考：docs/expr/03-compiler-bridge-internals.md §3.3
  *
  * @since 1.0.0
  */
 public interface FunctionRegistry {
 
   /**
-   * Finds a render function by its code identifier.
+   * 根据代码标识符查找渲染函数。
    *
-   * @param code function code (e.g., "PUBMED_DATETYPE")
-   * @return Optional containing the function if found, empty otherwise
+   * @param code 函数代码（例如 "PUBMED_DATETYPE"）
+   * @return 如果找到函数则返回包含函数的 Optional，否则返回空
    */
   Optional<RenderFunction> find(String code);
 }

@@ -4,44 +4,42 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.util.Objects;
 
 /**
- * Domain value object for unified expression field dictionary ({@code reg_expr_field_dict}).
+ * 统一表达式字段字典领域值对象,对应表 {@code reg_expr_field_dict}。
  *
- * <p>Describes canonical atom fields and core attributes used by expression modeling, capability
- * declaration, and render rule selection. Source-agnostic; only describes field data
- * type/cardinality/exposability.
+ * <p>描述用于表达式建模、能力声明和渲染规则选择的规范原子字段和核心属性。与来源无关; 仅描述字段数据类型/基数/可暴露性。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record ExprField(
-    /* Primary key; unique field identifier */
+    /* 主键;唯一字段标识符 */
     Long id,
-    /* Canonical field key that remains stable across environments (e.g., publish_date, ti, ab, tiab) */
+    /* 在环境间保持稳定的规范字段键(例如,publish_date, ti, ab, tiab) */
     String fieldKey,
-    /* Optional display name surfaced in consoles for human readability */
+    /* 可选的显示名称,在控制台中显示以提高可读性 */
     String displayName,
-    /* Rich description explaining field semantics, constraints, and exposure notes */
+    /* 详细描述,解释字段语义、约束和暴露说明 */
     String description,
-    /* Data type code (DICT CODE: reg_data_type) indicating value type (DATE/DATETIME/NUMBER/TEXT/KEYWORD/BOOLEAN/TOKEN) */
+    /* 数据类型代码(字典代码: reg_data_type)指示值类型 (DATE/DATETIME/NUMBER/TEXT/KEYWORD/BOOLEAN/TOKEN) */
     String dataTypeCode,
-    /* Cardinality code (DICT CODE: reg_cardinality) indicating whether field allows multiple values (SINGLE/MULTI) */
+    /* 基数代码(字典代码: reg_cardinality)指示字段是否允许多个值 (SINGLE/MULTI) */
     String cardinalityCode,
-    /* Whether the field is allowed to be exposed/used globally */
+    /* 字段是否允许被全局暴露/使用 */
     boolean exposable,
-    /* Redundant flag indicating whether field should be treated as date-like (typically consistent with DATE/DATETIME type) */
+    /* 冗余标志,指示字段是否应被视为日期类型(通常与 DATE/DATETIME 类型一致) */
     boolean dateField) {
   /**
-   * Canonical constructor with validation.
+   * 带验证的规范构造函数。
    *
-   * @param id unique field identifier, must be positive
-   * @param fieldKey canonical field key, must not be blank
-   * @param displayName display name, nullable
-   * @param description field description, nullable
-   * @param dataTypeCode data type code from dictionary, must not be blank
-   * @param cardinalityCode cardinality code from dictionary, must not be blank
-   * @param exposable whether field is exposable
-   * @param dateField whether field is date-like
-   * @throws DomainValidationException if validation fails
+   * @param id 唯一字段标识符,必须为正数
+   * @param fieldKey 规范字段键,不能为空白
+   * @param displayName 显示名称,可为 null
+   * @param description 字段描述,可为 null
+   * @param dataTypeCode 来自字典的数据类型代码,不能为空白
+   * @param cardinalityCode 来自字典的基数代码,不能为空白
+   * @param exposable 字段是否可暴露
+   * @param dateField 字段是否为日期类型
+   * @throws DomainValidationException 如果验证失败
    */
   public ExprField(
       Long id,
@@ -70,28 +68,28 @@ public record ExprField(
   }
 
   /**
-   * Checks whether the field is exposable to clients.
+   * 检查字段是否可暴露给客户端。
    *
-   * @return true if the field can be exposed to clients
+   * @return 如果字段可以暴露给客户端则返回 true
    */
   public boolean isExposable() {
     return exposable;
   }
 
   /**
-   * Checks whether the field should be treated as date-like for rendering/validation branches.
+   * 检查字段是否应被视为日期类型以用于渲染/验证分支。
    *
-   * @return true if the field is date-like
+   * @return 如果字段为日期类型则返回 true
    */
   public boolean isDateField() {
     return dateField;
   }
 
   /**
-   * Equality is based only on fieldKey (stable business key).
+   * 相等性仅基于 fieldKey(稳定的业务键)。
    *
-   * @param o the object to compare with
-   * @return true if the other object is an ExprField with the same fieldKey
+   * @param o 要比较的对象
+   * @return 如果另一个对象是具有相同 fieldKey 的 ExprField 则返回 true
    */
   @Override
   public boolean equals(Object o) {
@@ -105,9 +103,9 @@ public record ExprField(
   }
 
   /**
-   * Hash code based on fieldKey only.
+   * 仅基于 fieldKey 的哈希码。
    *
-   * @return hash code of fieldKey
+   * @return fieldKey 的哈希码
    */
   @Override
   public int hashCode() {

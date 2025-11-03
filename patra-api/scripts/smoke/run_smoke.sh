@@ -7,6 +7,6 @@ set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "$0")/../.." && pwd)
 
 echo "[smoke] Running Expr smoke tests (requires registry service and dev DB)..."
-RUN_SMOKE=1 mvn -q -f "$ROOT_DIR/pom.xml" -pl patra-ingest/patra-ingest-boot -Dtest=ExprSmokeTest test "$@"
+RUN_SMOKE=1 "$ROOT_DIR/mvnw" -q -f "$ROOT_DIR/pom.xml" -pl patra-ingest/patra-ingest-boot -Dtest=ExprSmokeTest test "$@"
 
 echo "[smoke] Done. Check logs for compiler DEBUG lines and INFO query hashes."

@@ -8,33 +8,34 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Catalog of message channels published by the ingest domain.
+ * 采集领域发布的消息通道目录。
  *
- * <p>Responsibilities:
- *
- * <ul>
- *   <li>Define all outbound channels via a strongly typed enumeration.
- *   <li>Provide lookup helpers such as {@link #fromChannel(String)}.
- *   <li>Associate each channel with its payload type for validation.
- * </ul>
- *
- * <p><b>Usage</b>:
+ * <p>职责:
  *
  * <ul>
- *   <li><b>Internal publishers</b>: call {@code IngestPublishingChannels.TASK_READY.channel()}.
- *   <li><b>External consumers</b>: reference the API contract {@code
- *       IngestPublishedChannels.TASK_READY}.
+ *   <li>通过强类型枚举定义所有出站通道
+ *   <li>提供查找辅助方法(如 {@link #fromChannel(String)})
+ *   <li>关联每个通道与其有效载荷类型以供验证
  * </ul>
+ *
+ * <p><b>使用方式</b>:
+ *
+ * <ul>
+ *   <li><b>内部发布者</b>:调用 {@code IngestPublishingChannels.TASK_READY.channel()}
+ *   <li><b>外部消费者</b>:引用 API 契约 {@code IngestPublishedChannels.TASK_READY}
+ * </ul>
+ *
+ * <p>通道命名规范: {@code DOMAIN_RESOURCE_EVENT} (如 {@code INGEST_TASK_READY})
  *
  * @author linqibin
  * @since 0.1.0
  */
 public enum IngestPublishingChannels implements ChannelKey {
 
-  /** Task scheduling ready event. */
+  /** 任务调度就绪事件。 */
   TASK_READY("INGEST", "TASK", "READY", TaskReadyMessage.class),
 
-  /** Literature data ready event targeting catalog ingestion. */
+  /** 文献数据就绪事件,目标为 Catalog 摄取。 */
   LITERATURE_DATA_READY("INGEST", "LITERATURE", "DATA_READY", LiteratureReadyMessage.class);
 
   private final String domain;
@@ -64,17 +65,20 @@ public enum IngestPublishingChannels implements ChannelKey {
     return event;
   }
 
-  /** Declared payload type for compile-time or runtime validation. */
+  /**
+   * 声明的有效载荷类型,用于编译时或运行时验证。
+   *
+   * @return 有效载荷类型
+   */
   public Class<?> payloadType() {
     return payloadType;
   }
 
   /**
-   * Parse the normalized channel string (for example {@code INGEST_TASK_READY}) into an enumeration
-   * value.
+   * 将规范化的通道字符串(如 {@code INGEST_TASK_READY})解析为枚举值。
    *
-   * @param channel channel string using uppercase snake case
-   * @return matching enum instance, or {@link Optional#empty()} if none matches
+   * @param channel 大写蛇形命名风格的通道字符串
+   * @return 匹配的枚举实例,如果无匹配则返回 {@link Optional#empty()}
    */
   public static Optional<IngestPublishingChannels> fromChannel(String channel) {
     if (channel == null || channel.isBlank()) return Optional.empty();

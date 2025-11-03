@@ -4,23 +4,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Aggregated expression snapshot for a provenance scope.
+ * 来源范围的聚合表达式快照。
  *
- * <p>This record captures a complete, immutable snapshot of all expression-related configuration
- * for a specific provenance at a given point in time. It is typically used by the expression
- * rendering engine to validate user input expressions, select appropriate render rules, and
- * transform standard keys into provider-specific parameter names.
+ * <p>此记录在给定时间点捕获特定来源的所有表达式相关配置的完整、不可变快照。 它通常由表达式渲染引擎用于验证用户输入表达式、选择适当的渲染规则, 以及将标准键转换为提供者特定的参数名称。
  *
- * <p>Field descriptions:
+ * <p>字段描述:
  *
  * <ol>
- *   <li>fields - canonical expression field definitions; never null, may be empty
- *   <li>capabilities - field capability declarations specifying allowed operations and constraints;
- *       never null
- *   <li>renderRules - render rules for transforming expression atoms into query fragments or
- *       parameters; never null
- *   <li>apiParamMappings - mappings from standard keys to provider-specific parameter names; never
- *       null
+ *   <li>fields - 规范表达式字段定义;永不为 null,可能为空
+ *   <li>capabilities - 字段能力声明,指定允许的操作和约束; 永不为 null
+ *   <li>renderRules - 用于将表达式原子转换为查询片段或参数的渲染规则; 永不为 null
+ *   <li>apiParamMappings - 从标准键到提供者特定参数名称的映射;永不为 null
  * </ol>
  *
  * @author linqibin
@@ -32,9 +26,9 @@ public record ExprSnapshot(
     List<ExprRenderRule> renderRules,
     List<ApiParamMapping> apiParamMappings) {
   /**
-   * Compact canonical constructor enforcing non-null invariants.
+   * 强制非空不变性的紧凑规范构造函数。
    *
-   * @throws NullPointerException if any parameter is {@code null}
+   * @throws NullPointerException 如果任何参数为 {@code null}
    */
   public ExprSnapshot {
     Objects.requireNonNull(fields, "fields");

@@ -11,29 +11,34 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Task execution use case implementation (top-level orchestrator).
+ * 任务执行用例实现(顶层编排器)
  *
- * <p>Responsibility: orchestrate Prepare → Execute → Complete sub-use-cases and handle top-level
- * exceptions and cleanup.
+ * <p>在六边形架构+DDD中的角色:应用层用例实现,负责编排任务执行的完整流程。
  *
- * <p>Design notes:
+ * <p>主要职责:
  *
  * <ul>
- *   <li>Three-phase orchestration per ADR-001.
- *   <li>Catch all exceptions and ensure cleanup (heartbeat/lease).
- *   <li>Idempotent skip: return immediately when TaskAlreadySucceededException is thrown by Prepare
- *       use case.
- *   <li>Lease acquisition failure: return immediately when LeaseAcquisitionFailedException is
- *       thrown by Prepare use case.
- *   <li>Failures in Execute/Complete do not prevent resource cleanup.
+ *   <li>编排准备 → 执行 → 完成三个阶段的子用例
+ *   <li>处理顶层异常并确保资源清理(心跳/租约)
+ *   <li>提供任务执行的容错和可观测性
  * </ul>
  *
- * <p>Logging:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>INFO: start, per-phase completion, end.
- *   <li>WARN: idempotent skip, lease acquisition failure.
- *   <li>ERROR: execution failure, cleanup failure.
+ *   <li>三阶段编排模式(按照ADR-001架构决策)
+ *   <li>捕获所有异常并确保清理资源(心跳/租约)
+ *   <li>幂等跳过:准备用例抛出TaskAlreadySucceededException时立即返回
+ *   <li>租约获取失败:准备用例抛出LeaseAcquisitionFailedException时立即返回
+ *   <li>执行/完成阶段的失败不会阻止资源清理
+ * </ul>
+ *
+ * <p>日志策略:
+ *
+ * <ul>
+ *   <li>INFO: 开始、各阶段完成、结束
+ *   <li>WARN: 幂等跳过、租约获取失败
+ *   <li>ERROR: 执行失败、清理失败
  * </ul>
  *
  * @author linqibin
@@ -48,20 +53,33 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
   private final ExecuteTaskBatchesUseCase executeUseCase;
   private final CompleteTaskExecutionUseCase completeUseCase;
 
-  /** Executes the task (prepare → execute → complete). */
+  /**
+   * 执行任务(准备 → 执行 → 完成)
+   *
+   * <p>业务流程:
+   *
+   * <ol>
+   *   <li>准备阶段:幂等检查、租约获取、加载执行上下文
+   *   <li>执行阶段:批量处理任务数据
+   *   <li>完成阶段:更新任务状态、推进游标、释放租约
+   * </ol>
+   *
+   * @param command 任务就绪命令
+   * @throws TaskExecutionException 任务执行失败时抛出
+   */
   @Override
   public void execute(TaskReadyCommand command) {
     long taskId = command.taskId();
     String idempotentKey = command.idempotentKey();
 
-    log.info("task execution start taskId={} idemKey={}", taskId, idempotentKey);
+    log.info("任务执行开始 taskId={} idemKey={}", taskId, idempotentKey);
 
     ExecutionSession session = null;
     ExecutionContext context = null;
 
     try {
-      // ========== Phase 0: Prepare ==========
-      log.debug("entering prepare phase taskId={} idemKey={}", taskId, idempotentKey);
+      // ========== 阶段0: 准备 ==========
+      log.debug("进入准备阶段 taskId={} idemKey={}", taskId, idempotentKey);
       PrepareTaskExecutionUseCase.PrepareResult prepareResult;
       try {
         prepareResult = prepareUseCase.prepare(command);
@@ -69,62 +87,65 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
         context = prepareResult.context();
 
         log.info(
-            "prepare phase completed taskId={} runId={} provenance={} operation={}",
+            "准备阶段完成 taskId={} runId={} provenance={} operation={}",
             taskId,
             session.runId(),
             context.provenanceCode(),
             context.operationCode());
 
       } catch (PrepareTaskExecutionUseCase.TaskAlreadySucceededException e) {
-        // Idempotent skip: already succeeded
-        log.warn(
-            "task already succeeded, skip execution taskId={} idemKey={}", taskId, idempotentKey);
+        // 幂等跳过:任务已成功
+        log.warn("任务已成功执行,跳过 taskId={} idemKey={}", taskId, idempotentKey);
         return;
 
       } catch (PrepareTaskExecutionUseCase.LeaseAcquisitionFailedException e) {
-        // Lease acquisition failed (owned by another worker)
-        log.warn("lease acquisition failed, skip execution taskId={}", taskId);
+        // 租约获取失败(被其他工作节点持有)
+        log.warn("租约获取失败,跳过执行 taskId={}", taskId);
         return;
       }
 
-      // ========== Phase 1: Execute ==========
-      log.debug("entering execute phase taskId={} runId={}", taskId, session.runId());
+      // ========== 阶段1: 执行 ==========
+      log.debug("进入执行阶段 taskId={} runId={}", taskId, session.runId());
       ExecuteTaskBatchesUseCase.ExecuteResult executeResult =
           executeUseCase.execute(session, context);
 
       log.info(
-          "execute phase completed taskId={} runId={} total={} succeeded={} failed={}",
+          "执行阶段完成 taskId={} runId={} total={} succeeded={} failed={}",
           taskId,
           session.runId(),
           executeResult.totalBatches(),
           executeResult.succeededBatches(),
           executeResult.failedBatches());
 
-      // ========== Phase 2: Complete ==========
-      log.debug("entering complete phase taskId={} runId={}", taskId, session.runId());
+      // ========== 阶段2: 完成 ==========
+      log.debug("进入完成阶段 taskId={} runId={}", taskId, session.runId());
       completeUseCase.complete(session, context, executeResult);
 
-      log.info("task execution completed taskId={} runId={}", taskId, session.runId());
+      log.info("任务执行完成 taskId={} runId={}", taskId, session.runId());
 
     } catch (Exception e) {
-      log.error("task execution failed taskId={} idemKey={}", taskId, idempotentKey, e);
+      log.error("任务执行失败 taskId={} idemKey={}", taskId, idempotentKey, e);
 
-      // On failure, try to cleanup resources (if session was created)
+      // 失败时尝试清理资源(如果会话已创建)
       if (session != null) {
         try {
           session.cleanup();
-          log.info("session cleanup on failure taskId={}", taskId);
+          log.info("失败时会话清理成功 taskId={}", taskId);
         } catch (Exception cleanupEx) {
-          log.error("session cleanup failed taskId={}", taskId, cleanupEx);
+          log.error("会话清理失败 taskId={}", taskId, cleanupEx);
         }
       }
 
-      // Re-throw; upstream (adapter/MQ consumer) decides whether to retry
-      throw new TaskExecutionException("Task execution failed taskId=" + taskId, e);
+      // 重新抛出;上游(适配器/MQ消费者)决定是否重试
+      throw new TaskExecutionException("任务执行失败 taskId=" + taskId, e);
     }
   }
 
-  /** Task execution exception (top-level). */
+  /**
+   * 任务执行异常(顶层)
+   *
+   * <p>封装任务执行过程中的所有异常,用于统一的错误处理和重试机制。
+   */
   public static class TaskExecutionException extends RuntimeException {
     public TaskExecutionException(String message, Throwable cause) {
       super(message, cause);

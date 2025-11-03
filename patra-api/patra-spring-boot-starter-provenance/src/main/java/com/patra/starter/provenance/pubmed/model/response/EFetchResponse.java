@@ -12,12 +12,20 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Parsed PubMed EFetch response with curated article view and optional UID list view.
+ * 解析后的 PubMed EFetch 响应,包含文章详情视图和可选的 UID 列表视图。
  *
- * <p>EFetch primarily returns XML for detailed article content. When {@code rettype=uilist} and
- * {@code retmode=text}, PubMed returns a newline-delimited UID list which is parsed here.
+ * <p>EFetch 主要返回 XML 格式的详细文章内容。当指定 {@code rettype=uilist} 和 {@code retmode=text} 时, PubMed 返回换行符分隔的
+ * UID 列表,本类可解析这两种格式。
  *
- * @author
+ * <p><b>支持的响应格式:</b>
+ *
+ * <ul>
+ *   <li><b>XML文章详情</b>: 包含完整的 PubmedArticle 对象列表
+ *   <li><b>纯文本UID列表</b>: 仅包含标识符列表,用于轻量级批量处理
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JacksonXmlRootElement(localName = "PubmedArticleSet")
@@ -39,29 +47,29 @@ public final class EFetchResponse {
     this.uids = uids;
   }
 
-  /** Immutable list of parsed article records. */
+  /** 不可变的已解析文章记录列表。 */
   public List<PubmedArticle> articles() {
     return articles != null ? articles : List.of();
   }
 
-  /** Immutable list of UIDs returned by {@code rettype=uilist}. */
+  /** {@code rettype=uilist} 返回的不可变 UID 列表。 */
   public List<String> uids() {
     return uids != null ? uids : List.of();
   }
 
-  /** True when the response carries neither articles nor UID list. */
+  /** 当响应既不包含文章也不包含 UID 列表时返回 true。 */
   public boolean isEmpty() {
     return articles().isEmpty() && uids().isEmpty();
   }
 
-  /** Parse XML payload into an {@link EFetchResponse}. */
+  /** 将 XML 负载解析为 {@link EFetchResponse}。 */
   public static EFetchResponse fromXml(XmlMapper xmlMapper, String xml) throws IOException {
     EFetchResponse response = xmlMapper.readValue(xml, EFetchResponse.class);
     response.normalise();
     return response;
   }
 
-  /** Parse plain-text UID list payload into an {@link EFetchResponse}. */
+  /** 将纯文本 UID 列表负载解析为 {@link EFetchResponse}。 */
   public static EFetchResponse fromUidListText(String text) {
     if (text == null || text.isBlank()) {
       return new EFetchResponse(List.of(), List.of());
@@ -80,7 +88,7 @@ public final class EFetchResponse {
     return new EFetchResponse(List.of(), List.copyOf(values));
   }
 
-  /** Create an empty response placeholder. */
+  /** 创建空响应占位符。 */
   public static EFetchResponse empty() {
     return new EFetchResponse(List.of(), List.of());
   }

@@ -26,7 +26,7 @@ if [[ "$FILE_PATH" == *.java ]]; then
 
         # 在特定文件上运行 fmt:format
         # 使用 -q 进行静默输出，仅显示错误
-        if cd "$PROJECT_ROOT" && mvn -q fmt:format -Dformat.files="$FILE_PATH" 2>/dev/null; then
+        if cd "$PROJECT_ROOT" && ./mvnw -q fmt:format -Dformat.files="$FILE_PATH" 2>/dev/null; then
             echo -e "${GREEN}✅ 格式化应用成功${NC}"
         else
             # 如果特定文件格式化失败，尝试格式化整个模块
@@ -38,7 +38,7 @@ if [[ "$FILE_PATH" == *.java ]]; then
 
             if [[ -f "$MODULE_DIR/pom.xml" ]]; then
                 echo -e "${BLUE}🔄 格式化模块：$(basename "$MODULE_DIR")${NC}"
-                cd "$MODULE_DIR" && mvn -q fmt:format 2>/dev/null || true
+                cd "$PROJECT_ROOT" && ./mvnw -q fmt:format -f "$MODULE_DIR/pom.xml" 2>/dev/null || true
             fi
         fi
     fi

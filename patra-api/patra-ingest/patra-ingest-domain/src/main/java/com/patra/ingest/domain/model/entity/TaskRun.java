@@ -8,7 +8,29 @@ import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import java.time.Instant;
 import lombok.Getter;
 
-/** Entity representing a single task run attempt. */
+/**
+ * 任务执行记录实体。表示单次任务执行尝试。
+ *
+ * <p>标识：由 taskId + attemptNo 唯一标识。
+ *
+ * <p>生命周期：
+ *
+ * <ul>
+ *   <li>创建时处于 {@code PENDING} 状态
+ *   <li>执行开始时转换为 {@code RUNNING} 状态
+ *   <li>执行完成后转换为 {@code SUCCEEDED/FAILED/PARTIAL} 状态
+ * </ul>
+ *
+ * <p>业务约束：
+ *
+ * <ul>
+ *   <li>支持检查点机制，用于可恢复执行
+ *   <li>部分成功状态 (PARTIAL) 携带检查点信息，支持断点续传
+ *   <li>统计信息 (RunStats) 记录抓取、解析、保存的记录数
+ * </ul>
+ *
+ * <p>注意：重构后 CURSOR_PENDING 状态已合并到 PARTIAL 并支持检查点。
+ */
 @SuppressWarnings("unused")
 @Getter
 public class TaskRun {

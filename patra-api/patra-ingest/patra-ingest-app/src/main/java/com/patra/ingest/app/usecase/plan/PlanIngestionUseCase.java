@@ -4,7 +4,7 @@ import com.patra.ingest.app.usecase.plan.command.PlanIngestionCommand;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 
 /**
- * Application use case for plan orchestration that defines the scheduling entry contract.
+ * 计划接入用例接口，定义调度入口契约。
  *
  * @author linqibin
  * @since 0.1.0
@@ -12,10 +12,10 @@ import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 public interface PlanIngestionUseCase {
 
   /**
-   * Orchestrates and persists plan/slices/tasks and triggers outbox publishing.
+   * 编排并持久化 Plan/Slice/Task，触发 Outbox 发布。
    *
-   * @param request scheduling request
-   * @return summary of orchestration result
+   * @param request 调度请求
+   * @return 编排结果摘要
    */
   PlanIngestionResult ingestPlan(PlanIngestionCommand request);
 }

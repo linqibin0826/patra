@@ -3,15 +3,14 @@ package com.patra.ingest.app.usecase.plan.assembler;
 import com.patra.ingest.app.usecase.plan.dto.PlanAssemblyResult;
 
 /**
- * Plan assembly service contract.
+ * 计划组装服务契约。
  *
- * <p>Accepts a fully prepared {@link PlanAssemblyRequest} (window resolved, expression compiled,
- * configuration snapshot collected) and returns a {@link PlanAssemblyResult} containing Plan +
- * PlanSlice[] + Task[] aggregates alongside a READY / FAILED status:
+ * <p>接受完全准备好的 {@link PlanAssemblyRequest}（窗口已解析、表达式已编译、配置快照已收集），返回包含 Plan + PlanSlice[] + Task[]
+ * 聚合根及 READY / FAILED 状态的 {@link PlanAssemblyResult}：
  *
  * <ul>
- *   <li>READY: at least one slice and one task were produced.
- *   <li>FAILED: slices or tasks are missing; the plan is marked failed.
+ *   <li>READY: 至少生成了一个切片和一个任务
+ *   <li>FAILED: 切片或任务缺失；计划标记为失败
  * </ul>
  *
  * <h4>Idempotency</h4>

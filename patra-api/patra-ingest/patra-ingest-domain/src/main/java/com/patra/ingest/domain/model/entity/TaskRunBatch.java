@@ -10,7 +10,28 @@ import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import java.time.Instant;
 import lombok.Getter;
 
-/** Entity representing a pagination/token batch within a task run. */
+/**
+ * 任务执行批次实体。表示任务执行中的单次分页/游标批次。
+ *
+ * <p>标识：由 runId + batchNo 唯一标识。
+ *
+ * <p>生命周期：
+ *
+ * <ul>
+ *   <li>创建时处于 {@code RUNNING} 状态
+ *   <li>执行完成后转换为 {@code SUCCEEDED/FAILED} 状态
+ * </ul>
+ *
+ * <p>业务约束：
+ *
+ * <ul>
+ *   <li>支持基于页码的分页 (pageNo + pageSize)
+ *   <li>支持基于游标令牌的分页 (beforeToken → afterToken)
+ *   <li>幂等键由 runId + (cursorToken or batchNo) 生成
+ *   <li>批次统计 (BatchStats) 记录本批次抓取的记录数
+ *   <li>可选存储键 (storageKey) 指向原始数据的对象存储位置
+ * </ul>
+ */
 @SuppressWarnings("unused")
 @Getter
 public class TaskRunBatch {

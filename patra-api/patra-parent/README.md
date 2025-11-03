@@ -107,7 +107,7 @@
 **执行阶段**:
 - **prepare-agent**: 在 `process-test-classes` 阶段准备 JaCoCo 代理
 - **report**: 在 `test` 阶段生成覆盖率报告(输出到 `target/site/jacoco/`)
-- **check**: 默认禁用,可通过 `mvn jacoco:check` 手动执行
+- **check**: 默认禁用,可通过 `./mvnw jacoco:check` 手动执行
 
 **覆盖率要求**: 70% 行覆盖率(可在子模块中覆盖)
 
@@ -128,7 +128,7 @@
 
 **配置**:
 - **代码风格**: Google Java Format(GOOGLE 风格)
-- **执行方式**: 手动触发 `mvn fmt:format`(默认不在编译时自动格式化)
+- **执行方式**: 手动触发 `./mvnw fmt:format`(默认不在编译时自动格式化)
 - **用途**: 统一代码风格,避免格式化引起的代码冲突
 
 ### 版本强制 (maven-enforcer-plugin)

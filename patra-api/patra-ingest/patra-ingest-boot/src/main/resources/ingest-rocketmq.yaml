@@ -1,0 +1,63 @@
+# RocketMQ 配置文件
+#
+# 使用 RocketMQ 官方 Spring Boot Starter 提供直接的 API 访问和高性能消息传递
+
+rocketmq:
+  # RocketMQ NameServer 地址
+  name-server: ${ROCKETMQ_NAMESRV:127.0.0.1:9876}
+
+  producer:
+    # 生产者组名称
+    group: ingest-producer-group
+    # 发送消息超时时间 (毫秒)
+    send-message-timeout: 3000
+    # 消息体压缩阈值 (字节) - 超过此大小自动压缩
+    compress-message-body-threshold: 4096
+    # 发送失败重试次数
+    retry-times-when-send-failed: 2
+    # 异步发送失败重试次数
+    retry-times-when-send-async-failed: 2
+    # 发送失败时是否尝试其他 Broker
+    retry-next-server: true
+
+  # 访问控制 (可选) - 如果 RocketMQ 启用了 ACL
+  access-key: ${ROCKETMQ_AK:}
+  secret-key: ${ROCKETMQ_SK:}
+
+# Papertrace Outbox 发布器配置
+papertrace:
+  ingest:
+    outbox:
+      # 严格通道白名单模式 (生产环境建议启用)
+      strict-channel-whitelist: ${OUTBOX_STRICT_CHANNEL_WHITELIST:false}
+      # 允许的消息通道白名单 (对应 Domain 层的 MessageChannels)
+      allowed-channels:
+        - TASK_READY
+        - LITERATURE_READY
+
+      # 发送消息超时时间（毫秒），默认 3000ms
+      send-timeout: 3000
+
+      # 同步发送失败重试次数，默认 2 次
+      retry-times-when-send-failed: 2
+
+      # 是否启用顺序消息（全局开关），默认 false
+      # 注意：即使启用，只有带 partitionKey 的消息才会使用顺序发送
+      enable-orderly: false
+
+      # 业务通道到 RocketMQ Topic 的映射（可选）
+      # 如果未配置，则使用 RocketMqChannelMapper 中的默认映射
+      channel-mapping:
+        TASK_READY: INGEST_TASK_READY
+        LITERATURE_READY: papertrace.catalog.literature.ready
+
+      # Topic 前缀（用于多环境隔离）
+      # 示例: "dev-" 会生成 "dev-INGEST_TASK_READY"
+      topic-prefix: ${TOPIC_PREFIX:}
+
+    # RocketMQ 消费者配置（用于 TaskReadyMessageListener）
+    mq:
+      topics:
+        task-ready: ${TOPIC_PREFIX:}INGEST_TASK_READY
+      consumer-groups:
+        task-ready: ${CONSUMER_GROUP_PREFIX:}ingest-task-ready-consumer-group

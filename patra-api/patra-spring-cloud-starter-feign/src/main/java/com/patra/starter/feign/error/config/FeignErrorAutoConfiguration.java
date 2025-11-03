@@ -18,10 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
-/**
- * Auto-configuration for Feign error handling: registers the error decoder, trace propagation
- * interceptor, and optional observation recorder.
- */
+/** Feign 错误处理自动配置:注册错误解码器、跟踪传播拦截器和可选的观察记录器 */
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(FeignErrorProperties.class)
@@ -39,12 +36,12 @@ public class FeignErrorAutoConfiguration {
   public FeignErrorObservationRecorder feignErrorObservationRecorder(
       FeignErrorProperties properties, ObjectProvider<MeterRegistry> meterRegistryProvider) {
     if (!properties.getObservation().isEnabled()) {
-      log.info("Feign error observation disabled; falling back to NO_OP recorder");
+      log.info("Feign 错误观察已禁用,回退到 NO_OP 记录器");
       return FeignErrorObservationRecorder.NO_OP;
     }
     MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
     if (meterRegistry == null) {
-      log.warn("Micrometer MeterRegistry not available, Feign error observation degrades to NO_OP");
+      log.warn("Micrometer MeterRegistry 不可用,Feign 错误观察降级为 NO_OP");
       return FeignErrorObservationRecorder.NO_OP;
     }
     return new MicrometerFeignErrorObservationRecorder(meterRegistry, properties);
@@ -56,9 +53,7 @@ public class FeignErrorAutoConfiguration {
       ObjectMapper objectMapper,
       FeignErrorProperties properties,
       FeignErrorObservationRecorder observationRecorder) {
-    log.info(
-        "Configuring ProblemDetailErrorDecoder (tolerant mode enabled: {})",
-        properties.isTolerant());
+    log.info("配置 ProblemDetailErrorDecoder (容错模式已启用: {})", properties.isTolerant());
     return new ProblemDetailErrorDecoder(objectMapper, properties, observationRecorder);
   }
 
@@ -66,9 +61,7 @@ public class FeignErrorAutoConfiguration {
   @ConditionalOnMissingBean(TraceIdRequestInterceptor.class)
   public TraceIdRequestInterceptor traceIdRequestInterceptor(
       TraceProvider traceProvider, TracingProperties tracingProperties) {
-    log.info(
-        "Configuring TraceIdRequestInterceptor with headers {}",
-        tracingProperties.getHeaderNames());
+    log.info("配置 TraceIdRequestInterceptor,使用请求头 {}", tracingProperties.getHeaderNames());
     return new TraceIdRequestInterceptor(traceProvider, tracingProperties);
   }
 }

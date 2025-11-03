@@ -10,18 +10,20 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Task run DO</b> — table: <code>ing_task_run</code>
+ * 任务执行记录数据库实体,映射到表 {@code ing_task_run}。
  *
- * <p>Represents a single attempt of a Task, including retry information and run snapshots.
+ * <p>表结构: 表示任务的单次执行尝试,包含重试信息和运行快照。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>attempt_no</code> unique per task (UK: uk_task_run_attempt) tracks attempt sequence.
- *   <li><code>checkpoint</code>/<code>stats</code> are JSON snapshots for resume points and
- *       metrics.
- *   <li>Time fields track start/finish and support heartbeat timeout checks.
+ *   <li>{@code attempt_no} 每任务唯一(唯一约束: uk_task_run_attempt),追踪尝试序列
+ *   <li>{@code checkpoint}/{@code stats} 是 JSON 快照,用于恢复点和指标
+ *   <li>时间字段追踪开始/结束,支持心跳超时检查
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

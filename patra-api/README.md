@@ -115,7 +115,7 @@ mysql -h127.0.0.1 -uroot -p < scripts/init-ingest.sql
 ### 3. 构建项目
 
 ```bash
-mvn clean install -DskipTests
+./mvnw clean install -DskipTests
 ```
 
 ### 4. 启动服务
@@ -123,15 +123,15 @@ mvn clean install -DskipTests
 ```bash
 # 终端 1: 启动 registry
 cd patra-registry/patra-registry-boot
-mvn spring-boot:run
+../../mvnw spring-boot:run
 
 # 终端 2: 启动 ingest
 cd patra-ingest/patra-ingest-boot
-mvn spring-boot:run
+../../mvnw spring-boot:run
 
 # 终端 3: 启动 gateway
 cd patra-gateway-boot
-mvn spring-boot:run
+../mvnw spring-boot:run
 ```
 
 ### 5. 验证服务
@@ -202,13 +202,13 @@ domain   →  仅 patra-common (无框架)
 
 ```bash
 # 单元测试 (领域层)
-mvn test -pl patra-{service}-domain
+./mvnw test -pl patra-{service}-domain
 
 # 集成测试 (仓储层)
-mvn verify -pl patra-{service}-infra
+./mvnw verify -pl patra-{service}-infra
 
 # API 测试 (适配器层)
-mvn verify -pl patra-{service}-adapter
+./mvnw verify -pl patra-{service}-adapter
 ```
 
 ---
@@ -247,7 +247,7 @@ mvn verify -pl patra-{service}-adapter
 
 1. **创建特性分支**: `git checkout -b feat/your-feature`
 2. **遵循 7 步流程** (参见 [DEV-GUIDE](./docs/DEV-GUIDE.md))
-3. **确保编译通过**: `mvn clean compile -DskipTests`
+3. **确保编译通过**: `./mvnw clean compile -DskipTests`
 4. **提交 PR** 保持最小差异
 
 ### 代码风格

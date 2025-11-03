@@ -8,55 +8,48 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Outbox relay log DO</b> — table: <code>ing_outbox_relay_log</code>
+ * 发件箱中继日志数据库实体,映射到表 {@code ing_outbox_relay_log}。
  *
- * <p>Semantics: Records every relay execution attempt for outbox messages, providing a complete
- * audit trail for troubleshooting, performance analysis, and compliance.
+ * <p>表结构: 记录发件箱消息的每次中继执行尝试,为故障排查、性能分析和合规性提供完整的审计跟踪。
  *
- * <p>Key characteristics:
- *
- * <ul>
- *   <li><strong>Immutable</strong>: Logs are never updated after creation (append-only audit trail)
- *   <li><strong>Complete</strong>: Captures all information needed for debugging (timing, errors,
- *       context)
- *   <li><strong>Indexed</strong>: Optimized for common query patterns (by message, by batch, by
- *       time range)
- * </ul>
- *
- * <p>Use cases:
+ * <p>关键特性:
  *
  * <ul>
- *   <li>Historical tracing: Query complete relay history for a specific message
- *   <li>Performance analysis: Analyze relay duration and identify bottlenecks
- *   <li>Error analysis: Identify error patterns and retry effectiveness
- *   <li>Batch statistics: Aggregate success rates and performance metrics per batch
- *   <li>Monitoring: Real-time alerts on failed relays or performance degradation
+ *   <li><strong>不可变</strong>: 日志创建后永不更新(仅追加审计跟踪)
+ *   <li><strong>完整</strong>: 捕获调试所需的所有信息(时间、错误、上下文)
+ *   <li><strong>索引优化</strong>: 针对常见查询模式优化(按消息、按批次、按时间范围)
  * </ul>
  *
- * <p>Relationship with {@link OutboxMessageDO}:
+ * <p>使用场景:
  *
  * <ul>
- *   <li>One outbox message can have multiple relay log entries (one per attempt)
- *   <li>Referential integrity enforced at <strong>application layer</strong> (no database FK for
- *       performance)
- *   <li>Denormalizes {@code channel} and {@code partitionKey} from outbox message for query
- *       efficiency
+ *   <li>历史跟踪: 查询特定消息的完整中继历史
+ *   <li>性能分析: 分析中继耗时并识别瓶颈
+ *   <li>错误分析: 识别错误模式和重试有效性
+ *   <li>批次统计: 按批次聚合成功率和性能指标
+ *   <li>监控: 对失败中继或性能下降的实时告警
  * </ul>
  *
- * <p>Relay status values:
+ * <p>与 {@link OutboxMessageDO} 的关系:
  *
  * <ul>
- *   <li><code>PUBLISHED</code>: Successfully published to downstream broker (terminal state)
- *   <li><code>DEFERRED</code>: Failed with retryable error, scheduled for retry (transient state)
- *   <li><code>FAILED</code>: Permanently failed after max retries or fatal error (terminal state)
- *   <li><code>LEASE_MISSED</code>: Failed to acquire lease due to concurrent competition
+ *   <li>一个发件箱消息可以有多个中继日志条目(每次尝试一个)
+ *   <li>引用完整性在<strong>应用层</strong>强制执行(为性能考虑,无数据库 FK)
+ *   <li>从发件箱消息反规范化 {@code channel} 和 {@code partitionKey} 以提高查询效率
  * </ul>
  *
- * <p>Audit/common fields (e.g., <code>created_at</code>, <code>version</code>, <code>deleted
- * </code>) are inherited from {@link BaseDO BaseDO}.
+ * <p>中继状态值:
  *
- * <p>Layering: an <em>infra/persistence DO</em> in a hexagonal architecture; contains no domain
- * behavior.
+ * <ul>
+ *   <li>{@code PUBLISHED}: 成功发布到下游代理(终态)
+ *   <li>{@code DEFERRED}: 可重试错误失败,已安排重试(瞬态)
+ *   <li>{@code FAILED}: 达到最大重试次数或致命错误后永久失败(终态)
+ *   <li>{@code LEASE_MISSED}: 由于并发竞争未能获取租约
+ * </ul>
+ *
+ * <p>审计/公共字段(如 {@code created_at}、{@code version}、{@code deleted})继承自 {@link BaseDO BaseDO}。
+ *
+ * <p>分层说明: 六边形架构中的<em>基础设施/持久化 DO</em>;不含领域行为。
  *
  * @author Papertrace Team
  * @since 2.0
@@ -67,177 +60,175 @@ import lombok.EqualsAndHashCode;
 public class OutboxRelayLogDO extends BaseDO {
 
   /**
-   * Reference to outbox message ID.
+   * 发件箱消息 ID 引用。
    *
-   * <p>Logical FK to {@link OutboxMessageDO#getId() ing_outbox_message.id}; integrity enforced at
-   * application layer.
+   * <p>逻辑外键到 {@link OutboxMessageDO#getId() ing_outbox_message.id};完整性在应用层强制执行。
    *
-   * <p>Constraint: NOT NULL; must reference an existing outbox message.
+   * <p>约束: NOT NULL;必须引用现有的发件箱消息。
    */
   @TableField("message_id")
   private Long messageId;
 
   /**
-   * Relay batch identifier (format: yyyyMMddHHmmss-xxxxxxxx).
+   * 中继批次标识符(格式: yyyyMMddHHmmss-xxxxxxxx)。
    *
-   * <p>Groups all relay logs from the same job execution (e.g., scheduled relay job run).
+   * <p>将来自同一作业执行的所有中继日志分组(如调度的中继作业运行)。
    *
-   * <p>Example: <code>20251031150000-a1b2c3d4</code>
+   * <p>示例: {@code 20251031150000-a1b2c3d4}
    *
-   * <p>Use cases:
+   * <p>使用场景:
    *
    * <ul>
-   *   <li>Batch-level statistics (success rate, average duration)
-   *   <li>Troubleshooting batch failures
-   *   <li>Performance analysis per batch
+   *   <li>批次级统计(成功率、平均耗时)
+   *   <li>批次失败故障排查
+   *   <li>每批次性能分析
    * </ul>
    */
   @TableField("relay_batch_id")
   private String relayBatchId;
 
   /**
-   * Message channel (denormalized from {@link OutboxMessageDO#getChannel()}).
+   * 消息通道(从 {@link OutboxMessageDO#getChannel()} 反规范化)。
    *
-   * <p>Denormalized for query efficiency (avoid JOIN with outbox_message table).
+   * <p>反规范化以提高查询效率(避免与 outbox_message 表 JOIN)。
    *
-   * <p>Example: <code>INGEST_TASK</code>, <code>REGISTRY_UPDATE</code>
+   * <p>示例: {@code INGEST_TASK}、{@code REGISTRY_UPDATE}
    */
   @TableField("channel")
   private String channel;
 
   /**
-   * Partition key (denormalized from {@link OutboxMessageDO#getPartitionKey()}).
+   * 分区键(从 {@link OutboxMessageDO#getPartitionKey()} 反规范化)。
    *
-   * <p>Used for analysis and troubleshooting partition-specific issues.
+   * <p>用于分析和排查分区特定问题。
    *
-   * <p>Example: <code>PUBMED:HARVEST</code>
+   * <p>示例: {@code PUBMED:HARVEST}
    */
   @TableField("partition_key")
   private String partitionKey;
 
   /**
-   * Lease owner identifier (host-jobId-threadId-uuid format).
+   * 租约拥有者标识符(格式: host-jobId-threadId-uuid)。
    *
-   * <p>Identifies which instance/thread attempted this relay (for distributed troubleshooting).
+   * <p>标识哪个实例/线程尝试了此中继(用于分布式故障排查)。
    *
-   * <p>Example: <code>ingest-server-1-job123-thread456-a1b2c3d4</code>
+   * <p>示例: {@code ingest-server-1-job123-thread456-a1b2c3d4}
    */
   @TableField("lease_owner")
   private String leaseOwner;
 
   /**
-   * Attempt number for this message (1-based).
+   * 此消息的尝试次数(从 1 开始)。
    *
-   * <p>First attempt = 1, increments on retry.
+   * <p>首次尝试 = 1,重试时递增。
    *
-   * <p>Use cases:
+   * <p>使用场景:
    *
    * <ul>
-   *   <li>Retry analysis (how many attempts before success?)
-   *   <li>Performance analysis (do later attempts take longer?)
-   *   <li>Alerting (trigger alert on attempt > threshold)
+   *   <li>重试分析(成功前尝试了多少次?)
+   *   <li>性能分析(后续尝试是否耗时更长?)
+   *   <li>告警(尝试次数 > 阈值时触发告警)
    * </ul>
    */
   @TableField("attempt_number")
   private Integer attemptNumber;
 
   /**
-   * Relay execution result status.
+   * 中继执行结果状态。
    *
-   * <p>Values:
+   * <p>值:
    *
    * <ul>
-   *   <li><code>PUBLISHED</code>: Success (terminal state)
-   *   <li><code>DEFERRED</code>: Transient error, will retry (transient state)
-   *   <li><code>FAILED</code>: Permanent failure (terminal state)
-   *   <li><code>LEASE_MISSED</code>: Concurrent lease conflict (transient state)
+   *   <li>{@code PUBLISHED}: 成功(终态)
+   *   <li>{@code DEFERRED}: 瞬态错误,将重试(瞬态)
+   *   <li>{@code FAILED}: 永久失败(终态)
+   *   <li>{@code LEASE_MISSED}: 并发租约冲突(瞬态)
    * </ul>
    *
-   * <p>Indexed for alert queries (e.g., "show all FAILED relays in last hour").
+   * <p>已建立索引,用于告警查询(如"显示最近一小时内所有 FAILED 中继")。
    */
   @TableField("relay_status")
   private String relayStatus;
 
   /**
-   * Error code if relay failed (NULL for success).
+   * 中继失败时的错误代码(成功时为 NULL)。
    *
-   * <p>Examples: <code>NETWORK_TIMEOUT</code>, <code>BROKER_UNAVAILABLE</code>, <code>
-   * SERIALIZATION_ERROR</code>
+   * <p>示例: {@code NETWORK_TIMEOUT}、{@code BROKER_UNAVAILABLE}、{@code SERIALIZATION_ERROR}
    *
-   * <p>Use cases:
+   * <p>使用场景:
    *
    * <ul>
-   *   <li>Error distribution analysis (which errors are most common?)
-   *   <li>Root cause analysis (group failures by error code)
-   *   <li>Alert routing (send different alerts for different error types)
+   *   <li>错误分布分析(哪些错误最常见?)
+   *   <li>根因分析(按错误代码分组失败)
+   *   <li>告警路由(针对不同错误类型发送不同告警)
    * </ul>
    */
   @TableField("error_code")
   private String errorCode;
 
   /**
-   * Error details if relay failed (NULL for success, truncated to 512 chars).
+   * 中继失败时的错误详情(成功时为 NULL,截断到 512 字符)。
    *
-   * <p>Contains detailed error message and stack trace excerpt.
+   * <p>包含详细错误消息和堆栈跟踪摘录。
    *
-   * <p>Note: Application layer truncates to 512 characters to prevent excessive storage.
+   * <p>注意: 应用层截断到 512 字符以防止过度存储。
    */
   @TableField("error_message")
   private String errorMessage;
 
   /**
-   * Error classification: FATAL or TRANSIENT (NULL for success).
+   * 错误分类: FATAL 或 TRANSIENT(成功时为 NULL)。
    *
-   * <p>Values:
+   * <p>值:
    *
    * <ul>
-   *   <li><code>FATAL</code>: Non-retryable error (e.g., invalid payload, authentication failure)
-   *   <li><code>TRANSIENT</code>: Retryable error (e.g., network timeout, broker unavailable)
+   *   <li>{@code FATAL}: 不可重试错误(如无效载荷、认证失败)
+   *   <li>{@code TRANSIENT}: 可重试错误(如网络超时、代理不可用)
    * </ul>
    *
-   * <p>Used for retry decision-making and alerting.
+   * <p>用于重试决策和告警。
    */
   @TableField("error_kind")
   private String errorKind;
 
   /**
-   * Relay start timestamp (UTC).
+   * 中继开始时间戳(UTC)。
    *
-   * <p>Marks when relay execution began (before lease acquisition).
+   * <p>标记中继执行开始时间(租约获取之前)。
    *
-   * <p>Indexed for time-range queries (e.g., "show all relays in last 24 hours").
+   * <p>已建立索引,用于时间范围查询(如"显示最近 24 小时内的所有中继")。
    */
   @TableField("started_at")
   private Instant startedAt;
 
   /**
-   * Relay completion timestamp (UTC).
+   * 中继完成时间戳(UTC)。
    *
-   * <p>Marks when relay execution finished (after publish or error handling).
+   * <p>标记中继执行完成时间(发布或错误处理之后)。
    */
   @TableField("completed_at")
   private Instant completedAt;
 
   /**
-   * Relay execution duration in milliseconds (completedAt - startedAt).
+   * 中继执行耗时(毫秒)(completedAt - startedAt)。
    *
-   * <p>Use cases:
+   * <p>使用场景:
    *
    * <ul>
-   *   <li>Performance analysis (P50, P95, P99 latency)
-   *   <li>Bottleneck identification (which messages take longest?)
-   *   <li>SLA monitoring (trigger alert if duration > threshold)
+   *   <li>性能分析(P50、P95、P99 延迟)
+   *   <li>瓶颈识别(哪些消息耗时最长?)
+   *   <li>SLA 监控(耗时 > 阈值时触发告警)
    * </ul>
    */
   @TableField("duration_ms")
   private Integer durationMs;
 
   /**
-   * Next retry timestamp (UTC), only present for DEFERRED status.
+   * 下次重试时间戳(UTC),仅在 DEFERRED 状态时存在。
    *
-   * <p>NULL for all other statuses (PUBLISHED, FAILED, LEASE_MISSED).
+   * <p>所有其他状态(PUBLISHED、FAILED、LEASE_MISSED)为 NULL。
    *
-   * <p>Computed using exponential backoff policy based on attempt number.
+   * <p>基于尝试次数使用指数退避策略计算。
    */
   @TableField("next_retry_at")
   private Instant nextRetryAt;

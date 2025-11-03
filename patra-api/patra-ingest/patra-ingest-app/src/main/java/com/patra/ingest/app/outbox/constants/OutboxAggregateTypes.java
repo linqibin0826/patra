@@ -3,17 +3,17 @@ package com.patra.ingest.app.outbox.constants;
 import lombok.Getter;
 
 /**
- * Outbox aggregate type enum.
+ * Outbox 聚合类型枚举。
  *
- * <p>Defines all valid aggregate types used in the Outbox framework for:
+ * <p>定义 Outbox 框架中使用的所有有效聚合类型,用于:
  *
  * <ul>
- *   <li>Micrometer metrics tag cardinality control
- *   <li>Database partitioning and indexing strategies
- *   <li>Message routing and filtering
+ *   <li>Micrometer 指标标签基数控制
+ *   <li>数据库分区和索引策略
+ *   <li>消息路由和过滤
  * </ul>
  *
- * <h3>Usage Example</h3>
+ * <h3>使用示例</h3>
  *
  * <pre>{@code
  * @Override
@@ -22,9 +22,9 @@ import lombok.Getter;
  * }
  * }</pre>
  *
- * <h3>Configuration Reference</h3>
+ * <h3>配置参考</h3>
  *
- * <p>These values must match the allowed aggregate types in Nacos configuration:
+ * <p>这些值必须与 Nacos 配置中允许的聚合类型匹配:
  *
  * <pre>
  * papertrace:
@@ -43,28 +43,28 @@ import lombok.Getter;
 public enum OutboxAggregateTypes {
 
   /**
-   * Task aggregate type.
+   * Task 聚合类型。
    *
-   * <p>Used for task queue events (task creation, scheduling, execution).
+   * <p>用于任务队列事件(任务创建、调度、执行)。
    */
-  TASK("Task", "Task aggregate - for task queue events"),
+  TASK("Task", "Task 聚合 - 用于任务队列事件"),
 
   /**
-   * Task run aggregate type.
+   * TaskRun 聚合类型。
    *
-   * <p>Used for task execution events (technical retries, metadata recording).
+   * <p>用于任务执行事件(技术重试、元数据记录)。
    */
-  TASK_RUN("TaskRun", "Task run aggregate - for execution tracking and retry"),
+  TASK_RUN("TaskRun", "TaskRun 聚合 - 用于执行跟踪和重试"),
   ;
 
   /**
-   * -- GETTER -- Returns the aggregate type code.
+   * -- GETTER -- 返回聚合类型代码。
    *
-   * <p>This value is stored in field.
+   * <p>此值存储在字段中。
    */
   private final String code;
 
-  /** -- GETTER -- Returns the human-readable description. */
+  /** -- GETTER -- 返回人类可读的描述。 */
   private final String description;
 
   OutboxAggregateTypes(String code, String description) {
@@ -73,11 +73,11 @@ public enum OutboxAggregateTypes {
   }
 
   /**
-   * Finds enum by code.
+   * 根据代码查找枚举。
    *
-   * @param code Aggregate type code
-   * @return Matching enum value
-   * @throws IllegalArgumentException if code is not found
+   * @param code 聚合类型代码
+   * @return 匹配的枚举值
+   * @throws IllegalArgumentException 如果未找到代码
    */
   public static OutboxAggregateTypes fromCode(String code) {
     for (OutboxAggregateTypes type : values()) {
@@ -85,6 +85,6 @@ public enum OutboxAggregateTypes {
         return type;
       }
     }
-    throw new IllegalArgumentException("Unknown aggregate type code: " + code);
+    throw new IllegalArgumentException("未知的聚合类型代码: " + code);
   }
 }

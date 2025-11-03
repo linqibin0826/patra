@@ -5,18 +5,21 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * Window specification value object. Sealed hierarchy ensures compile-time exhaustiveness.
+ * 窗口规范值对象密封接口,表示数据采集窗口的边界规范。
  *
- * <p>This represents the boundary specification for ingestion windows, supporting different
- * strategies for partitioning data collection:
+ * <p>密封继承层次确保编译时完备性检查。支持多种数据采集分区策略:
  *
  * <ul>
- *   <li>TIME: Time-based windows (from/to timestamps)
- *   <li>ID_RANGE: ID-based windows (from/to IDs)
- *   <li>CURSOR_LANDMARK: Cursor/pagination-based windows
- *   <li>VOLUME_BUDGET: Volume-limited windows
- *   <li>SINGLE: Single window (no partitioning)
+ *   <li>TIME - 基于时间的窗口(from/to 时间戳)
+ *   <li>ID_RANGE - 基于ID范围的窗口(from/to ID)
+ *   <li>CURSOR_LANDMARK - 基于游标/分页的窗口
+ *   <li>VOLUME_BUDGET - 基于容量预算的窗口
+ *   <li>SINGLE - 单一窗口(无分区)
  * </ul>
+ *
+ * <p>不可变性:所有实现都是不可变的Record
+ *
+ * <p>使用场景:在任务规划阶段指定数据采集的窗口边界
  *
  * @author linqibin
  * @since 0.1.0
@@ -28,13 +31,17 @@ public sealed interface WindowSpec
         WindowSpec.VolumeBudget,
         WindowSpec.Single {
 
-  /** Get the strategy type of this window specification. */
+  /**
+   * 获取窗口规范的策略类型。
+   *
+   * @return 切片策略枚举
+   */
   SliceStrategy strategy();
 
   /**
-   * Convert to JSON-serializable map for persistence layer.
+   * 转换为可JSON序列化的Map,用于持久化层存储。
    *
-   * <p>The map structure varies by strategy type (Format B - nested JSON):
+   * <p>Map结构根据策略类型变化(格式B - 嵌套JSON):
    *
    * <ul>
    *   <li>TIME:
@@ -45,25 +52,32 @@ public sealed interface WindowSpec
    *   <li>SINGLE: {"strategy":"SINGLE"}
    * </ul>
    *
-   * @return JSON-serializable map containing strategy code and strategy-specific fields
+   * @return 包含策略代码和策略特定字段的JSON可序列化Map
    */
   Map<String, Object> toMap();
 
-  // ============ Strategy Implementations ============
+  // ============ 策略实现 ============
 
   /**
-   * Time-based window specification.
+   * 基于时间的窗口规范值对象。
    *
-   * @param from start timestamp (inclusive)
-   * @param to end timestamp (exclusive)
+   * <p>业务约束:
+   *
+   * <ul>
+   *   <li>from和to必须非空
+   *   <li>from必须早于或等于to
+   * </ul>
+   *
+   * @param from 起始时间戳(闭区间)
+   * @param to 结束时间戳(开区间)
    */
   record Time(Instant from, Instant to) implements WindowSpec {
     public Time {
       if (from == null || to == null) {
-        throw new IllegalArgumentException("Time window requires both from and to");
+        throw new IllegalArgumentException("时间窗口要求from和to都非空");
       }
       if (from.isAfter(to)) {
-        throw new IllegalArgumentException("from must be before or equal to to");
+        throw new IllegalArgumentException("from必须早于或等于to");
       }
     }
 
@@ -93,18 +107,25 @@ public sealed interface WindowSpec
   }
 
   /**
-   * ID range-based window specification.
+   * 基于ID范围的窗口规范值对象。
    *
-   * @param from start ID (inclusive)
-   * @param to end ID (inclusive)
+   * <p>业务约束:
+   *
+   * <ul>
+   *   <li>from和to必须非空
+   *   <li>from必须小于或等于to
+   * </ul>
+   *
+   * @param from 起始ID(闭区间)
+   * @param to 结束ID(闭区间)
    */
   record IdRange(Long from, Long to) implements WindowSpec {
     public IdRange {
       if (from == null || to == null) {
-        throw new IllegalArgumentException("ID range requires both from and to");
+        throw new IllegalArgumentException("ID范围窗口要求from和to都非空");
       }
       if (from > to) {
-        throw new IllegalArgumentException("from must be less than or equal to to");
+        throw new IllegalArgumentException("from必须小于或等于to");
       }
     }
 
@@ -124,15 +145,21 @@ public sealed interface WindowSpec
   }
 
   /**
-   * Cursor/landmark-based window specification for pagination.
+   * 基于游标/地标的窗口规范值对象,用于分页场景。
    *
-   * @param from start cursor/token
-   * @param to end cursor/token
+   * <p>业务约束:
+   *
+   * <ul>
+   *   <li>from和to必须非空且非空白
+   * </ul>
+   *
+   * @param from 起始游标/令牌
+   * @param to 结束游标/令牌
    */
   record CursorLandmark(String from, String to) implements WindowSpec {
     public CursorLandmark {
       if (from == null || to == null || from.isBlank() || to.isBlank()) {
-        throw new IllegalArgumentException("Cursor landmarks require non-blank from and to");
+        throw new IllegalArgumentException("游标地标窗口要求from和to都非空且非空白");
       }
     }
 
@@ -152,18 +179,25 @@ public sealed interface WindowSpec
   }
 
   /**
-   * Volume budget-based window specification.
+   * 基于容量预算的窗口规范值对象。
    *
-   * @param limit maximum volume/count
-   * @param unit unit of measurement (e.g., "RECORDS", "BYTES", "MB")
+   * <p>业务约束:
+   *
+   * <ul>
+   *   <li>limit必须为正数
+   *   <li>unit必须非空且非空白
+   * </ul>
+   *
+   * @param limit 最大容量/数量
+   * @param unit 度量单位(例如:"RECORDS","BYTES","MB")
    */
   record VolumeBudget(Integer limit, String unit) implements WindowSpec {
     public VolumeBudget {
       if (limit == null || limit <= 0) {
-        throw new IllegalArgumentException("Volume limit must be positive");
+        throw new IllegalArgumentException("容量限制必须为正数");
       }
       if (unit == null || unit.isBlank()) {
-        throw new IllegalArgumentException("Volume unit is required");
+        throw new IllegalArgumentException("容量单位必须非空");
       }
     }
 
@@ -181,7 +215,11 @@ public sealed interface WindowSpec
     }
   }
 
-  /** Single window specification (no partitioning). */
+  /**
+   * 单一窗口规范值对象(无分区)。
+   *
+   * <p>使用场景:不需要窗口分区的简单采集场景
+   */
   record Single() implements WindowSpec {
     @Override
     public SliceStrategy strategy() {
@@ -194,37 +232,65 @@ public sealed interface WindowSpec
     }
   }
 
-  // ============ Factory Methods ============
+  // ============ 工厂方法 ============
 
-  /** Create a time-based window specification. */
+  /**
+   * 创建基于时间的窗口规范。
+   *
+   * @param from 起始时间戳
+   * @param to 结束时间戳
+   * @return 时间窗口规范
+   */
   static Time ofTime(Instant from, Instant to) {
     return new Time(from, to);
   }
 
-  /** Create an ID range-based window specification. */
+  /**
+   * 创建基于ID范围的窗口规范。
+   *
+   * @param from 起始ID
+   * @param to 结束ID
+   * @return ID范围窗口规范
+   */
   static IdRange ofIdRange(Long from, Long to) {
     return new IdRange(from, to);
   }
 
-  /** Create a cursor-based window specification. */
+  /**
+   * 创建基于游标的窗口规范。
+   *
+   * @param from 起始游标
+   * @param to 结束游标
+   * @return 游标窗口规范
+   */
   static CursorLandmark ofCursor(String from, String to) {
     return new CursorLandmark(from, to);
   }
 
-  /** Create a volume budget-based window specification. */
+  /**
+   * 创建基于容量预算的窗口规范。
+   *
+   * @param limit 最大容量
+   * @param unit 度量单位
+   * @return 容量预算窗口规范
+   */
   static VolumeBudget ofVolume(Integer limit, String unit) {
     return new VolumeBudget(limit, unit);
   }
 
-  /** Create a single window specification (no partitioning). */
+  /**
+   * 创建单一窗口规范(无分区)。
+   *
+   * @return 单一窗口规范
+   */
   static Single ofSingle() {
     return new Single();
   }
 
   /**
-   * Reconstruct WindowSpec from persistence map (for infrastructure layer).
+   * 从持久化Map重建WindowSpec(供基础设施层使用)。
    *
-   * <p>Expected map format (Format B - nested JSON):
+   * <p>期望的Map格式(格式B - 嵌套JSON):
    *
    * <ul>
    *   <li>TIME:
@@ -235,14 +301,13 @@ public sealed interface WindowSpec
    *   <li>SINGLE: {"strategy":"SINGLE"}
    * </ul>
    *
-   * @param map JSON-deserialized map containing at least a "strategy" key
-   * @return reconstructed WindowSpec instance
-   * @throws IllegalArgumentException if map is null, empty, has invalid structure, or contains
-   *     unknown strategy
+   * @param map JSON反序列化的Map,至少包含"strategy"键
+   * @return 重建的WindowSpec实例
+   * @throws IllegalArgumentException 如果map为null、空、结构无效或包含未知策略
    */
   static WindowSpec fromMap(Map<String, Object> map) {
     if (map == null || map.isEmpty()) {
-      throw new IllegalArgumentException("Window spec map cannot be null or empty");
+      throw new IllegalArgumentException("窗口规范map不能为null或空");
     }
 
     SliceStrategy strategy = extractAndValidateStrategy(map);
@@ -254,42 +319,38 @@ public sealed interface WindowSpec
       case CURSOR_LANDMARK -> parseCursorLandmarkWindow(map);
       case VOLUME_BUDGET -> parseVolumeBudgetWindow(map);
       case SINGLE -> new Single();
-      case HYBRID -> throw new UnsupportedOperationException("HYBRID strategy not yet implemented");
+      case HYBRID -> throw new UnsupportedOperationException("HYBRID策略尚未实现");
     };
   }
 
   /**
-   * Extracts and validates the strategy code from the map.
+   * 从map中提取并验证策略代码。
    *
-   * @param map window spec map
-   * @return validated SliceStrategy enum
-   * @throws IllegalArgumentException if strategy is missing, invalid type, or unknown code
+   * @param map 窗口规范map
+   * @return 已验证的切片策略枚举
+   * @throws IllegalArgumentException 如果策略缺失、类型无效或代码未知
    */
   private static SliceStrategy extractAndValidateStrategy(Map<String, Object> map) {
     Object strategyObj = map.get("strategy");
     if (strategyObj == null) {
-      throw new IllegalArgumentException("Window spec map must contain 'strategy' key");
+      throw new IllegalArgumentException("窗口规范map必须包含'strategy'键");
     }
     if (!(strategyObj instanceof String)) {
       throw new IllegalArgumentException(
-          "Window spec 'strategy' must be a string, got: "
-              + strategyObj.getClass().getSimpleName());
+          "窗口规范'strategy'必须是字符串, 实际类型: " + strategyObj.getClass().getSimpleName());
     }
 
     String strategyCode = (String) strategyObj;
     return SliceStrategy.fromCode(strategyCode)
-        .orElseThrow(
-            () ->
-                new IllegalArgumentException(
-                    "Unknown slice strategy code: '" + strategyCode + "'"));
+        .orElseThrow(() -> new IllegalArgumentException("未知的切片策略代码: '" + strategyCode + "'"));
   }
 
   /**
-   * Parses a TIME or DATE window from the map.
+   * 从map中解析TIME或DATE窗口。
    *
-   * @param map window spec map
-   * @param strategyName strategy name for error messages
-   * @return Time window specification
+   * @param map 窗口规范map
+   * @param strategyName 策略名称(用于错误消息)
+   * @return 时间窗口规范
    */
   private static Time parseTimeWindow(Map<String, Object> map, String strategyName) {
     Map<String, Object> windowMap = extractRequiredWindowMap(map, strategyName);
@@ -297,22 +358,20 @@ public sealed interface WindowSpec
     Object toObj = windowMap.get("to");
 
     if (fromObj == null || toObj == null) {
-      throw new IllegalArgumentException(
-          strategyName + " window requires both 'from' and 'to' fields");
+      throw new IllegalArgumentException(strategyName + " 窗口要求'from'和'to'字段都存在");
     }
     if (!(fromObj instanceof String) || !(toObj instanceof String)) {
-      throw new IllegalArgumentException(
-          strategyName + " window 'from' and 'to' must be ISO-8601 timestamp strings");
+      throw new IllegalArgumentException(strategyName + " 窗口'from'和'to'必须是ISO-8601时间戳字符串");
     }
 
     return new Time(Instant.parse((String) fromObj), Instant.parse((String) toObj));
   }
 
   /**
-   * Parses an ID_RANGE window from the map.
+   * 从map中解析ID_RANGE窗口。
    *
-   * @param map window spec map
-   * @return IdRange window specification
+   * @param map 窗口规范map
+   * @return ID范围窗口规范
    */
   private static IdRange parseIdRangeWindow(Map<String, Object> map) {
     Map<String, Object> windowMap = extractRequiredWindowMap(map, "ID_RANGE");
@@ -320,20 +379,20 @@ public sealed interface WindowSpec
     Object toObj = windowMap.get("to");
 
     if (fromObj == null || toObj == null) {
-      throw new IllegalArgumentException("ID_RANGE window requires both 'from' and 'to' fields");
+      throw new IllegalArgumentException("ID_RANGE 窗口要求'from'和'to'字段都存在");
     }
     if (!(fromObj instanceof Number) || !(toObj instanceof Number)) {
-      throw new IllegalArgumentException("ID_RANGE window 'from' and 'to' must be numeric values");
+      throw new IllegalArgumentException("ID_RANGE 窗口'from'和'to'必须是数值");
     }
 
     return new IdRange(((Number) fromObj).longValue(), ((Number) toObj).longValue());
   }
 
   /**
-   * Parses a CURSOR_LANDMARK window from the map.
+   * 从map中解析CURSOR_LANDMARK窗口。
    *
-   * @param map window spec map
-   * @return CursorLandmark window specification
+   * @param map 窗口规范map
+   * @return 游标地标窗口规范
    */
   private static CursorLandmark parseCursorLandmarkWindow(Map<String, Object> map) {
     Map<String, Object> windowMap = extractRequiredWindowMap(map, "CURSOR_LANDMARK");
@@ -341,61 +400,56 @@ public sealed interface WindowSpec
     Object toObj = windowMap.get("to");
 
     if (fromObj == null || toObj == null) {
-      throw new IllegalArgumentException(
-          "CURSOR_LANDMARK window requires both 'from' and 'to' fields");
+      throw new IllegalArgumentException("CURSOR_LANDMARK 窗口要求'from'和'to'字段都存在");
     }
     if (!(fromObj instanceof String) || !(toObj instanceof String)) {
-      throw new IllegalArgumentException(
-          "CURSOR_LANDMARK window 'from' and 'to' must be string values");
+      throw new IllegalArgumentException("CURSOR_LANDMARK 窗口'from'和'to'必须是字符串值");
     }
 
     return new CursorLandmark((String) fromObj, (String) toObj);
   }
 
   /**
-   * Parses a VOLUME_BUDGET window from the map.
+   * 从map中解析VOLUME_BUDGET窗口。
    *
-   * @param map window spec map
-   * @return VolumeBudget window specification
+   * @param map 窗口规范map
+   * @return 容量预算窗口规范
    */
   private static VolumeBudget parseVolumeBudgetWindow(Map<String, Object> map) {
     Object limitObj = map.get("limit");
     Object unitObj = map.get("unit");
 
     if (limitObj == null || unitObj == null) {
-      throw new IllegalArgumentException(
-          "VOLUME_BUDGET strategy requires both 'limit' and 'unit' fields");
+      throw new IllegalArgumentException("VOLUME_BUDGET 策略要求'limit'和'unit'字段都存在");
     }
     if (!(limitObj instanceof Number)) {
-      throw new IllegalArgumentException("VOLUME_BUDGET 'limit' must be a numeric value");
+      throw new IllegalArgumentException("VOLUME_BUDGET 'limit'必须是数值");
     }
     if (!(unitObj instanceof String)) {
-      throw new IllegalArgumentException("VOLUME_BUDGET 'unit' must be a string value");
+      throw new IllegalArgumentException("VOLUME_BUDGET 'unit'必须是字符串值");
     }
 
     return new VolumeBudget(((Number) limitObj).intValue(), (String) unitObj);
   }
 
   /**
-   * Extract and validate the 'window' map from the main map.
+   * 从主map中提取并验证'window'子map。
    *
-   * @param map main window spec map
-   * @param strategyName strategy name for error messages
-   * @return extracted window map
-   * @throws IllegalArgumentException if 'window' is missing or not a map
+   * @param map 主窗口规范map
+   * @param strategyName 策略名称(用于错误消息)
+   * @return 提取的window子map
+   * @throws IllegalArgumentException 如果'window'缺失或不是map
    */
   @SuppressWarnings("unchecked")
   private static Map<String, Object> extractRequiredWindowMap(
       Map<String, Object> map, String strategyName) {
     Object windowObj = map.get("window");
     if (windowObj == null) {
-      throw new IllegalArgumentException(strategyName + " strategy requires 'window' object");
+      throw new IllegalArgumentException(strategyName + " 策略要求'window'对象存在");
     }
     if (!(windowObj instanceof Map)) {
       throw new IllegalArgumentException(
-          strategyName
-              + " 'window' must be a JSON object, got: "
-              + windowObj.getClass().getSimpleName());
+          strategyName + " 'window'必须是JSON对象, 实际类型: " + windowObj.getClass().getSimpleName());
     }
     return (Map<String, Object>) windowObj;
   }

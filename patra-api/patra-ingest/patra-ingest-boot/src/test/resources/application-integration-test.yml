@@ -1,0 +1,50 @@
+# RocketMQ 集成测试配置
+# 用于 Testcontainers 端到端测试
+
+spring:
+  application:
+    name: patra-ingest-integration-test
+
+  # 数据源配置 (由 Testcontainers 动态注入)
+  datasource:
+    # URL 将在测试中通过 @DynamicPropertySource 设置
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  # MyBatis Plus 配置
+  sql:
+    init:
+      mode: never
+
+# RocketMQ 配置 (由 Testcontainers 动态注入)
+rocketmq:
+  # Name server 地址将在测试中通过 @DynamicPropertySource 设置
+  producer:
+    group: test-producer-group
+    send-message-timeout: 5000
+    compress-message-body-threshold: 4096
+    max-message-size: 4194304
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
+    retry-next-server: true
+    access-channel: LOCAL
+
+# Outbox 配置
+patra:
+  outbox:
+    mq:
+      channel-whitelist:
+        - TASK_READY
+        - LITERATURE_READY
+        - METADATA_RETRY
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.patra.ingest: DEBUG
+    org.apache.rocketmq: DEBUG
+    org.testcontainers: INFO
+    org.springframework.test: DEBUG

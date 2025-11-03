@@ -16,26 +16,28 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-Plus implementation of TaskRunRepository for task run attempts.
+ * 任务执行记录（TaskRun）仓储实现,基于 MyBatis-Plus。
  *
- * <p>Responsibilities:
- *
- * <ul>
- *   <li>Insert and update TaskRun including statistics and checkpoint JSON fields.
- *   <li>Query latest attempt by task ID (ordered by attempt_no DESC, limit 1).
- *   <li>Query all attempts for audit and troubleshooting.
- *   <li>Retrieve latest attemptNo for generating next attempt number.
- * </ul>
- *
- * <p>Design:
+ * <p>职责:
  *
  * <ul>
- *   <li>If ID is null: insert; otherwise: update.
- *   <li>After save, selectById again to retrieve database-generated fields (e.g., optimistic lock
- *       version if added later).
+ *   <li>插入和更新任务执行记录,包括统计数据和检查点 JSON 字段
+ *   <li>查询任务的最新执行尝试(按 attempt_no DESC 排序, limit 1)
+ *   <li>查询所有执行尝试,用于审计和故障排查
+ *   <li>获取最新 attemptNo 用于生成下一次尝试编号
  * </ul>
  *
- * <p>Logging strategy: DEBUG for insert/update with key fields; no query logging.
+ * <p>设计:
+ *
+ * <ul>
+ *   <li>ID 为 null 时插入,否则更新
+ *   <li>保存后再次 selectById 以获取数据库生成的字段(如后续添加的乐观锁 version)
+ * </ul>
+ *
+ * <p>日志策略: DEBUG 级别记录 insert/update 及关键字段;查询操作不记录日志。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Repository
 @RequiredArgsConstructor

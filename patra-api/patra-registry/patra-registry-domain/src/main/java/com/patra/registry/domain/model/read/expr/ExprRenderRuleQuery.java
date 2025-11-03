@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * Expression render rule query view.
+ * 表达式渲染规则查询视图。
  *
- * <p>Read-optimized projection for querying expression-to-query transformation rules.
+ * <p>用于查询表达式到查询语句转换规则的读优化投影。定义了如何将表达式树节点渲染为具体API查询参数。
  *
  * @author linqibin
  * @since 0.1.0
