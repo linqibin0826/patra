@@ -19,33 +19,32 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Abstract base class for Outbox message publishing.
+ * Outbox 消息发布的抽象基类。
  *
- * <p>Provides template methods for batch publishing and retry logic, with hook points for
- * subclasses to customize payload/headers/partition strategies.
+ * <p>提供批量发布和重试逻辑的模板方法,并为子类提供钩子点以自定义负载/头部/分区策略。
  *
- * <h3>Extension Points (Abstract Methods)</h3>
+ * <h3>扩展点(抽象方法)</h3>
  *
  * <ul>
- *   <li><b>Must Implement</b>:
+ *   <li><b>必须实现</b>:
  *       <ul>
- *         <li>{@link #getAggregateType()} - Returns {@link OutboxAggregateTypes} enum
- *         <li>{@link #getChannel()} - Returns {@link OutboxChannels} enum
- *         <li>{@link #buildPayload} - Constructs business payload JSON
- *         <li>{@link #buildHeaders} - Constructs message headers JSON
- *         <li>{@link #buildPartitionKey} - Defines partition strategy
- *         <li>{@link #buildDedupKey} - Defines idempotency key
- *         <li>{@link #getOperationType} - Returns {@link OutboxBusinessTags} enum
- *         <li>{@link #getAggregateId} - Extracts aggregate ID from event
+ *         <li>{@link #getAggregateType()} - 返回 {@link OutboxAggregateTypes} 枚举
+ *         <li>{@link #getChannel()} - 返回 {@link OutboxChannels} 枚举
+ *         <li>{@link #buildPayload} - 构造业务负载 JSON
+ *         <li>{@link #buildHeaders} - 构造消息头部 JSON
+ *         <li>{@link #buildPartitionKey} - 定义分区策略
+ *         <li>{@link #buildDedupKey} - 定义幂等键
+ *         <li>{@link #getOperationType} - 返回 {@link OutboxBusinessTags} 枚举
+ *         <li>{@link #getAggregateId} - 从事件中提取聚合 ID
  *       </ul>
- *   <li><b>Optional Override</b> (with default behavior):
+ *   <li><b>可选覆盖</b> (具有默认行为):
  *       <ul>
- *         <li>{@link #validateEvent} - Event validation (default: non-null check)
- *         <li>{@link #resolveNotBefore} - Deferred publishing logic (default: Instant.now())
+ *         <li>{@link #validateEvent} - 事件验证(默认: 非空检查)
+ *         <li>{@link #resolveNotBefore} - 延迟发布逻辑(默认: Instant.now())
  *       </ul>
  * </ul>
  *
- * <h3>Usage Example</h3>
+ * <h3>使用示例</h3>
  *
  * <pre>{@code
  * @Component
@@ -73,17 +72,17 @@ import org.springframework.transaction.annotation.Transactional;
  *             event.taskId(),
  *             event.planId(),
  *             event.provenanceCode(),
- *             // ... other fields
+ *             // ... 其他字段
  *         );
  *     }
  *
- *     // ... other extension point implementations
+ *     // ... 其他扩展点实现
  * }
  * }</pre>
  *
- * @param <E> Domain event type
- * @param <P> Outbox payload type (must implement OutboxPayload)
- * @param <H> Outbox headers type (must implement OutboxHeaders)
+ * @param <E> 领域事件类型
+ * @param <P> Outbox 负载类型(必须实现 OutboxPayload)
+ * @param <H> Outbox 头部类型(必须实现 OutboxHeaders)
  * @author linqibin
  * @since 0.1.0
  */
@@ -106,23 +105,23 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     this.objectMapper = objectMapper;
   }
 
-  // ==================== Template Methods (Public API) ====================
+  // ==================== 模板方法(公共 API) ====================
 
   /**
-   * Publishes events as Outbox messages (batch insert with transaction).
+   * 将事件发布为 Outbox 消息(带事务的批量插入)。
    *
-   * <p>Workflow:
+   * <p>工作流程:
    *
    * <ol>
-   *   <li>Validate and filter events
-   *   <li>Build OutboxMessage instances for each valid event
-   *   <li>Batch insert partitioned by batch-size configuration
-   *   <li>Record metrics and structured logs
+   *   <li>验证和过滤事件
+   *   <li>为每个有效事件构建 OutboxMessage 实例
+   *   <li>按 batch-size 配置分区批量插入
+   *   <li>记录指标和结构化日志
    * </ol>
    *
-   * @param events List of domain events to publish
-   * @param ctx Publishing context (aggregates, metadata, traceId, etc.)
-   * @return Publishing result with success/failure counts and duration
+   * @param events 要发布的领域事件列表
+   * @param ctx 发布上下文(聚合、元数据、traceId 等)
+   * @return 包含成功/失败计数和持续时间的发布结果
    */
   @Transactional(rollbackFor = Exception.class)
   public OutboxPublishResult publish(List<E> events, OutboxPublishContext ctx) {
@@ -130,22 +129,22 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Retry-publishes events using UPSERT strategy (idempotent batch operation).
+   * 使用 UPSERT 策略重试发布事件(幂等批量操作)。
    *
-   * <p>Workflow:
+   * <p>工作流程:
    *
    * <ol>
-   *   <li>Validate batch size (≤ maxBatchSize)
-   *   <li>Build OutboxMessage instances with refreshed payload/headers
-   *   <li>UPSERT batch: insert new or update existing (by channel + dedupKey)
-   *   <li>Record metrics and structured logs
+   *   <li>验证批次大小(≤ maxBatchSize)
+   *   <li>使用刷新的负载/头部构建 OutboxMessage 实例
+   *   <li>UPSERT 批次: 插入新记录或更新现有记录(按 channel + dedupKey)
+   *   <li>记录指标和结构化日志
    * </ol>
    *
-   * <p>This method is thread-safe and prevents race conditions in concurrent retry scenarios.
+   * <p>此方法是线程安全的,可防止并发重试场景中的竞态条件。
    *
-   * @param events List of domain events to retry
-   * @param ctx Publishing context
-   * @return Publishing result
+   * @param events 要重试的领域事件列表
+   * @param ctx 发布上下文
+   * @return 发布结果
    */
   @Transactional(rollbackFor = Exception.class)
   public OutboxPublishResult publishRetry(List<E> events, OutboxPublishContext ctx) {
@@ -153,126 +152,125 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     return executePublish(events, ctx, "retry", this::upsertMessages);
   }
 
-  // ==================== Abstract Methods (Extension Points) ====================
+  // ==================== 抽象方法(扩展点) ====================
 
   /**
-   * Returns the aggregate type enum.
+   * 返回聚合类型枚举。
    *
-   * <p>Used for metrics tagging and database partitioning.
+   * <p>用于指标标记和数据库分区。
    *
-   * @return Aggregate type from {@link OutboxAggregateTypes}
+   * @return 来自 {@link OutboxAggregateTypes} 的聚合类型
    */
   protected abstract OutboxAggregateTypes getAggregateType();
 
   /**
-   * Returns the messaging channel enum.
+   * 返回消息通道枚举。
    *
-   * <p>Used for routing and deduplication scoping (unique constraint: channel + dedupKey).
+   * <p>用于路由和去重作用域(唯一约束: channel + dedupKey)。
    *
-   * @return Channel from {@link OutboxChannels}
+   * @return 来自 {@link OutboxChannels} 的通道
    */
   protected abstract OutboxChannels getChannel();
 
   /**
-   * Builds the message payload from the event.
+   * 从事件构建消息负载。
    *
-   * <p>Payload contains business data required by downstream consumers.
+   * <p>负载包含下游消费者所需的业务数据。
    *
-   * @param event Domain event
-   * @param ctx Publishing context (aggregates, metadata)
-   * @return Strongly-typed payload object implementing OutboxPayload
+   * @param event 领域事件
+   * @param ctx 发布上下文(聚合、元数据)
+   * @return 实现 OutboxPayload 的强类型负载对象
    */
   protected abstract P buildPayload(E event, OutboxPublishContext ctx);
 
   /**
-   * Builds the message headers (metadata).
+   * 构建消息头部(元数据)。
    *
-   * <p>Headers typically include traceId, eventType, timestamp, etc.
+   * <p>头部通常包括 traceId、eventType、timestamp 等。
    *
-   * @param event Domain event
-   * @param ctx Publishing context
-   * @return Strongly-typed headers object implementing OutboxHeaders
+   * @param event 领域事件
+   * @param ctx 发布上下文
+   * @return 实现 OutboxHeaders 的强类型头部对象
    */
   protected abstract H buildHeaders(E event, OutboxPublishContext ctx);
 
   /**
-   * Builds the partition key for message ordering.
+   * 构建用于消息排序的分区键。
    *
-   * <p>Messages with the same partition key are guaranteed to be processed in order.
+   * <p>具有相同分区键的消息保证按顺序处理。
    *
-   * @param event Domain event
-   * @param ctx Publishing context
-   * @return Partition key string (e.g., taskId, literatureId)
+   * @param event 领域事件
+   * @param ctx 发布上下文
+   * @return 分区键字符串(例如 taskId、literatureId)
    */
   protected abstract String buildPartitionKey(E event, OutboxPublishContext ctx);
 
   /**
-   * Builds the deduplication key for idempotency.
+   * 构建用于幂等性的去重键。
    *
-   * <p>Format: typically {channel}:{aggregateId}:{opType}
+   * <p>格式: 通常为 {channel}:{aggregateId}:{opType}
    *
-   * @param event Domain event
-   * @param ctx Publishing context
-   * @return Dedup key string
+   * @param event 领域事件
+   * @param ctx 发布上下文
+   * @return 去重键字符串
    */
   protected abstract String buildDedupKey(E event, OutboxPublishContext ctx);
 
   /**
-   * Returns the business semantic tag for the event.
+   * 返回事件的业务语义标签。
    *
-   * <p>Represents "what happened" from a business perspective (e.g., TASK_READY, PLAN_CREATED), NOT
-   * generic CRUD operations.
+   * <p>从业务角度表示"发生了什么"(例如 TASK_READY、PLAN_CREATED),而不是通用的 CRUD 操作。
    *
-   * @param event Domain event
-   * @return Business tag from {@link OutboxBusinessTags}
+   * @param event 领域事件
+   * @return 来自 {@link OutboxBusinessTags} 的业务标签
    */
   protected abstract OutboxBusinessTags getOperationType(E event);
 
   /**
-   * Extracts aggregate ID from the event.
+   * 从事件中提取聚合 ID。
    *
-   * @param event Domain event
-   * @return Aggregate ID as Long
+   * @param event 领域事件
+   * @return Long 类型的聚合 ID
    */
   protected abstract Long getAggregateId(E event);
 
-  // ==================== Hook Methods (Optional Overrides) ====================
+  // ==================== 钩子方法(可选覆盖) ====================
 
   /**
-   * Validates whether the event should be published.
+   * 验证事件是否应该发布。
    *
-   * <p>Default implementation checks non-null. Subclasses can override for custom validation.
+   * <p>默认实现检查非空。子类可以覆盖以进行自定义验证。
    *
-   * @param event Domain event
-   * @return true if valid, false to skip
+   * @param event 领域事件
+   * @return 如果有效则返回 true,跳过则返回 false
    */
   protected boolean validateEvent(E event) {
     return event != null;
   }
 
   /**
-   * Resolves the earliest publishable time (for deferred publishing).
+   * 解析最早可发布时间(用于延迟发布)。
    *
-   * <p>Default implementation returns Instant.now(). Override to support scheduled publishing.
+   * <p>默认实现返回 Instant.now()。覆盖此方法以支持定时发布。
    *
-   * @param event Domain event
-   * @param ctx Publishing context
-   * @return Not-before timestamp
+   * @param event 领域事件
+   * @param ctx 发布上下文
+   * @return 最早发布时间戳
    */
   protected Instant resolveNotBefore(E event, OutboxPublishContext ctx) {
     return Instant.now();
   }
 
-  // ==================== Private Helper Methods ====================
+  // ==================== 私有辅助方法 ====================
 
   /**
-   * Template method for publishing events.
+   * 发布事件的模板方法。
    *
-   * @param events events to publish
-   * @param ctx publishing context
-   * @param operationType operation type for logging (batch or retry)
-   * @param persistStrategy persistence strategy
-   * @return publish result
+   * @param events 要发布的事件
+   * @param ctx 发布上下文
+   * @param operationType 操作类型,用于日志记录(batch 或 retry)
+   * @param persistStrategy 持久化策略
+   * @return 发布结果
    */
   private OutboxPublishResult executePublish(
       List<E> events,
@@ -303,18 +301,18 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Logs successful publish operation.
+   * 记录成功的发布操作日志。
    *
-   * @param aggregateType aggregate type
-   * @param operationType operation type
-   * @param messageCount number of messages published
-   * @param duration operation duration
+   * @param aggregateType 聚合类型
+   * @param operationType 操作类型
+   * @param messageCount 发布的消息数量
+   * @param duration 操作持续时间
    */
   private void logPublishSuccess(
       String aggregateType, String operationType, int messageCount, Duration duration) {
-    String action = "retry".equals(operationType) ? "Retry-published" : "Published";
+    String action = "retry".equals(operationType) ? "重试发布了" : "发布了";
     log.info(
-        "{} {} Outbox messages for aggregateType={}, duration={}ms",
+        "{} {} 条 Outbox 消息,aggregateType={},耗时={}ms",
         action,
         messageCount,
         aggregateType,
@@ -322,22 +320,22 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Handles publish error and returns failure result.
+   * 处理发布错误并返回失败结果。
    *
-   * @param exception exception thrown
-   * @param aggregateType aggregate type
-   * @param operationType operation type
-   * @param startTime operation start time
-   * @return failure result
+   * @param exception 抛出的异常
+   * @param aggregateType 聚合类型
+   * @param operationType 操作类型
+   * @param startTime 操作开始时间
+   * @return 失败结果
    */
   private OutboxPublishResult handlePublishError(
       Exception exception, String aggregateType, String operationType, Instant startTime) {
     Duration duration = calculateDuration(startTime);
     metrics.recordPublish(aggregateType, operationType, false, duration);
 
-    String action = "retry".equals(operationType) ? "retry-publish" : "publish";
+    String action = "retry".equals(operationType) ? "重试发布" : "发布";
     log.error(
-        "Failed to {} Outbox messages for aggregateType={}, error={}",
+        "{}Outbox 消息失败,aggregateType={},错误={}",
         action,
         aggregateType,
         exception.getMessage(),
@@ -347,30 +345,28 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Upserts messages (idempotent insert/update).
+   * UPSERT 消息(幂等的插入/更新)。
    *
-   * @param messages messages to upsert
-   * @param aggregateType aggregate type for logging
+   * @param messages 要 upsert 的消息
+   * @param aggregateType 聚合类型,用于日志记录
    */
   private void upsertMessages(List<OutboxMessage> messages, String aggregateType) {
     if (!messages.isEmpty()) {
       if (log.isDebugEnabled()) {
         log.debug(
-            "Upserting {} outbox messages for aggregateType [{}] (retry operation)",
-            messages.size(),
-            aggregateType);
+            "正在 upsert {} 条 outbox 消息,aggregateType [{}] (重试操作)", messages.size(), aggregateType);
       }
       repository.upsertBatch(messages);
     }
   }
 
-  /** Functional interface for message persistence strategies. */
+  /** 消息持久化策略的函数式接口。 */
   @FunctionalInterface
   private interface MessagePersistStrategy {
     void persist(List<OutboxMessage> messages, String aggregateType);
   }
 
-  /** Creates an OutboxMessage from the event and context. */
+  /** 从事件和上下文创建 OutboxMessage。 */
   private OutboxMessage createOutboxMessage(E event, OutboxPublishContext ctx) {
     try {
       P payload = buildPayload(event, ctx);
@@ -397,13 +393,13 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     } catch (Exception e) {
       String errorMsg =
           String.format(
-              "Failed to create OutboxMessage for event type %s, aggregateId=%s, dedupKey=%s",
+              "为事件类型 %s 创建 OutboxMessage 失败,aggregateId=%s,dedupKey=%s",
               event.getClass().getSimpleName(), getAggregateId(event), buildDedupKey(event, ctx));
       throw new IllegalStateException(errorMsg, e);
     }
   }
 
-  /** Partitions a list into sublists of specified size. */
+  /** 将列表分区为指定大小的子列表。 */
   private <T> List<List<T>> partition(List<T> list, int size) {
     List<List<T>> partitions = new ArrayList<>();
     for (int i = 0; i < list.size(); i += size) {
@@ -413,29 +409,29 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Filters valid events from the input list.
+   * 从输入列表中过滤有效事件。
    *
-   * @param events Events to filter
-   * @param aggregateType Aggregate type for logging
-   * @return List of valid events
+   * @param events 要过滤的事件
+   * @param aggregateType 聚合类型,用于日志记录
+   * @return 有效事件列表
    */
   private List<E> filterValidEvents(List<E> events, String aggregateType) {
     List<E> validEvents = events.stream().filter(this::validateEvent).collect(Collectors.toList());
 
     if (validEvents.isEmpty()) {
-      log.warn("No valid events to publish for aggregateType={}", aggregateType);
+      log.warn("没有有效事件可发布,aggregateType={}", aggregateType);
     }
 
     return validEvents;
   }
 
   /**
-   * Builds OutboxMessage instances from valid events and collects failures.
+   * 从有效事件构建 OutboxMessage 实例并收集失败信息。
    *
-   * @param validEvents Valid events to convert
-   * @param ctx Publishing context
-   * @param aggregateType Aggregate type for error logging
-   * @return Messages with failures
+   * @param validEvents 要转换的有效事件
+   * @param ctx 发布上下文
+   * @param aggregateType 聚合类型,用于错误日志记录
+   * @return 包含失败信息的消息
    */
   private MessagesWithFailures buildOutboxMessages(
       List<E> validEvents, OutboxPublishContext ctx, String aggregateType) {
@@ -455,13 +451,13 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Handles failure during OutboxMessage construction.
+   * 处理 OutboxMessage 构建期间的失败。
    *
-   * @param event Failed event
-   * @param exception Exception thrown
-   * @param ctx Publishing context
-   * @param aggregateType Aggregate type for metrics
-   * @param failures Failure collection
+   * @param event 失败的事件
+   * @param exception 抛出的异常
+   * @param ctx 发布上下文
+   * @param aggregateType 聚合类型,用于指标记录
+   * @param failures 失败集合
    */
   private void handleBuildFailure(
       E event,
@@ -469,11 +465,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
       OutboxPublishContext ctx,
       String aggregateType,
       List<OutboxPublishResult.FailureDetail> failures) {
-    log.error(
-        "Failed to build OutboxMessage for event={}, error={}",
-        event,
-        exception.getMessage(),
-        exception);
+    log.error("为事件构建 OutboxMessage 失败,event={},错误={}", event, exception.getMessage(), exception);
 
     String dedupKey = buildDedupKey(event, ctx);
     failures.add(
@@ -484,10 +476,10 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Saves messages in batches and records metrics.
+   * 批量保存消息并记录指标。
    *
-   * @param messages Messages to save
-   * @param aggregateType Aggregate type for metrics
+   * @param messages 要保存的消息
+   * @param aggregateType 聚合类型,用于指标记录
    */
   private void saveBatchMessages(List<OutboxMessage> messages, String aggregateType) {
     int batchSize = properties.getBatchSize();
@@ -495,7 +487,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
 
     if (log.isDebugEnabled()) {
       log.debug(
-          "Saving {} outbox messages in {} batches for aggregateType [{}], batchSize [{}]",
+          "正在保存 {} 条 outbox 消息,分为 {} 个批次,aggregateType [{}],batchSize [{}]",
           messages.size(),
           batches.size(),
           aggregateType,
@@ -509,11 +501,11 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Builds the final publish result based on messages and failures.
+   * 基于消息和失败信息构建最终发布结果。
    *
-   * @param result Messages with failures
-   * @param duration Operation duration
-   * @return Publish result
+   * @param result 包含失败信息的消息
+   * @param duration 操作持续时间
+   * @return 发布结果
    */
   private OutboxPublishResult buildPublishResult(MessagesWithFailures result, Duration duration) {
     if (!result.failures().isEmpty()) {
@@ -523,37 +515,36 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
   }
 
   /**
-   * Calculates duration from start time to now.
+   * 计算从开始时间到现在的持续时间。
    *
-   * @param startTime Start time
-   * @return Duration
+   * @param startTime 开始时间
+   * @return 持续时间
    */
   private Duration calculateDuration(Instant startTime) {
     return Duration.between(startTime, Instant.now());
   }
 
   /**
-   * Validates retry batch size against configuration limit.
+   * 根据配置限制验证重试批次大小。
    *
-   * @param batchSize Current batch size
-   * @throws IllegalArgumentException if batch size exceeds maximum
+   * @param batchSize 当前批次大小
+   * @throws IllegalArgumentException 如果批次大小超过最大值
    */
   private void validateRetryBatchSize(int batchSize) {
     int maxBatchSize = properties.getMaxBatchSize();
     if (batchSize > maxBatchSize) {
       throw new IllegalArgumentException(
           String.format(
-              "Retry batch size %d exceeds max %d. "
-                  + "Consider splitting the batch or increasing papertrace.outbox.publisher.max-batch-size.",
+              "重试批次大小 %d 超过最大值 %d。" + "请考虑拆分批次或增加 papertrace.outbox.publisher.max-batch-size 配置。",
               batchSize, maxBatchSize));
     }
   }
 
   /**
-   * Internal record for holding messages and failures.
+   * 用于保存消息和失败信息的内部记录。
    *
-   * @param messages List of successfully built messages
-   * @param failures List of failure details
+   * @param messages 成功构建的消息列表
+   * @param failures 失败详情列表
    */
   private record MessagesWithFailures(
       List<OutboxMessage> messages, List<OutboxPublishResult.FailureDetail> failures) {}

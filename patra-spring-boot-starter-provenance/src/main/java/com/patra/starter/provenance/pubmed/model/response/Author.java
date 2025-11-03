@@ -8,9 +8,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Author extracted from the PubMed citation.
+ * 从 PubMed 引文中提取的作者信息。
  *
- * @author
+ * <p>包含作者的姓名、缩写、机构隶属关系和可选的标识符 (如 ORCID)。
+ *
+ * <p><b>主要字段:</b>
+ *
+ * <ul>
+ *   <li><b>lastName</b>: 姓氏
+ *   <li><b>foreName</b>: 名字
+ *   <li><b>initials</b>: 姓名缩写
+ *   <li><b>affiliationInfo</b>: 机构隶属关系列表
+ *   <li><b>identifier</b>: 作者标识符 (如 ORCID)
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class Author {

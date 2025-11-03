@@ -1,31 +1,30 @@
 package com.patra.common.enums;
 
 /**
- * Task priority levels with associated queue values for scheduling.
+ * 任务优先级级别枚举,包含用于调度的关联队列值。
  *
- * <p>Lower queue values indicate higher priority. Used by task scheduling and queueing systems to
- * determine execution order.
+ * <p>队列值越小表示优先级越高。用于任务调度和队列系统确定执行顺序。
  */
 public enum Priority {
-  /** Highest priority with queue value 10. */
+  /** 最高优先级,队列值 10。 */
   HIGHEST(10),
 
-  /** Higher priority with queue value 20. */
+  /** 较高优先级,队列值 20。 */
   HIGHER(20),
 
-  /** High priority with queue value 30. */
+  /** 高优先级,队列值 30。 */
   HIGH(30),
 
-  /** Normal priority with queue value 50 (default). */
+  /** 正常优先级,队列值 50(默认)。 */
   NORMAL(50),
 
-  /** Low priority with queue value 70. */
+  /** 低优先级,队列值 70。 */
   LOW(70),
 
-  /** Lower priority with queue value 80. */
+  /** 较低优先级,队列值 80。 */
   LOWER(80),
 
-  /** Lowest priority with queue value 90. */
+  /** 最低优先级,队列值 90。 */
   LOWEST(90);
 
   private final int queueValue;
@@ -35,9 +34,9 @@ public enum Priority {
   }
 
   /**
-   * Returns the queue value for priority-based scheduling.
+   * 返回用于基于优先级调度的队列值。
    *
-   * @return queue value where lower numbers indicate higher priority
+   * @return 队列值,数字越小表示优先级越高
    */
   public int queueValue() {
     return queueValue;

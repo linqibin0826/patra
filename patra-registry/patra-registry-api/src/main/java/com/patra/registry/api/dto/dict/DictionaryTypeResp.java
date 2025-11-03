@@ -1,16 +1,16 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Dictionary type metadata exposed via internal HTTP API.
+ * 字典类型元数据,通过内部 HTTP API 暴露。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>typeCode - dictionary type identifier
- *   <li>typeName - human-readable type name
- *   <li>description - optional description for the type
- *   <li>enabledItemCount - number of enabled items under the type
- *   <li>hasDefault - whether the type currently has a default item
+ *   <li>typeCode - 字典类型标识符
+ *   <li>typeName - 人类可读的类型名称
+ *   <li>description - 类型的可选描述
+ *   <li>enabledItemCount - 该类型下启用的项数量
+ *   <li>hasDefault - 该类型当前是否有默认项
  * </ol>
  *
  * @author linqibin

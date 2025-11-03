@@ -18,32 +18,32 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Implementation of ExecuteTaskBatches use case.
+ * 执行任务批次用例的实现。
  *
- * <p>Responsibility: batch planning → batch execution → persist results → return stats.
+ * <p>核心职责: 批次规划 → 批次执行 → 持久化结果 → 返回统计信息。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>Batch planning via BatchPlannerRegistry to build batch list.
- *   <li>Enforce batch limits and throw when exceeded.
- *   <li>Batch execution delegated to GenericBatchExecutor backed by adapter registry.
- *   <li>Persist each batch result immediately via TaskRunBatchRepository.
- *   <li>Lease check before each batch; abort when revoked.
- *   <li>Error handling: record failures and continue (configurable fail-fast).
+ *   <li>通过 BatchPlannerRegistry 进行批次规划,构建批次列表
+ *   <li>强制执行批次限制,超出时抛出异常
+ *   <li>批次执行委托给 GenericBatchExecutor,由适配器注册表支持
+ *   <li>通过 TaskRunBatchRepository 立即持久化每个批次结果
+ *   <li>每个批次执行前检查租约;租约被撤销时中止执行
+ *   <li>错误处理:记录失败并继续(可配置快速失败)
  * </ul>
  *
- * <p>Config:
+ * <p>配置项:
  *
  * <ul>
- *   <li>task.execution.fail-fast: default false (continue).
+ *   <li>task.execution.fail-fast: 默认 false(继续执行)
  * </ul>
  *
- * <p>Logging:
+ * <p>日志策略:
  *
  * <ul>
- *   <li>INFO: plan created, batch start/finish, statistics.
- *   <li>WARN: limit exceeded, lease revoked, batch failures.
+ *   <li>INFO: 计划创建、批次开始/完成、统计信息
+ *   <li>WARN: 超出限制、租约撤销、批次失败
  * </ul>
  *
  * @author linqibin
@@ -63,11 +63,28 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
   private boolean failFast;
 
   /**
-   * Executes batches (plan + execute).
+   * 执行批次(规划 + 执行)。
    *
-   * @param session execution session
-   * @param context execution context
-   * @return result with batch statistics
+   * <p>执行流程:
+   *
+   * <ol>
+   *   <li>通过 BatchPlanner 规划批次列表
+   *   <li>验证批次数量不超过限制
+   *   <li>循环执行每个批次:
+   *       <ul>
+   *         <li>检查租约状态,撤销时中止
+   *         <li>执行批次并捕获异常
+   *         <li>持久化批次结果
+   *         <li>更新心跳时间戳
+   *         <li>更新统计计数器
+   *       </ul>
+   *   <li>返回执行统计结果
+   * </ol>
+   *
+   * @param session 执行会话
+   * @param context 执行上下文
+   * @return 包含批次统计信息的执行结果
+   * @throws BatchLimitExceededException 如果批次数量超过限制
    */
   @Override
   public ExecuteResult execute(ExecutionSession session, ExecutionContext context) {
@@ -75,60 +92,46 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     Long runId = session.runId();
 
     log.info(
-        "execute batches start taskId={} runId={} provenanceCode={}",
-        taskId,
-        runId,
-        context.provenanceCode());
+        "开始执行批次 taskId={} runId={} provenanceCode={}", taskId, runId, context.provenanceCode());
 
-    // 1) Plan batches.
+    // 步骤1: 规划批次
     log.debug(
-        "planning batches taskId={} runId={} provenanceCode={}",
-        taskId,
-        runId,
-        context.provenanceCode());
+        "规划批次中 taskId={} runId={} provenanceCode={}", taskId, runId, context.provenanceCode());
     BatchPlanner planner = plannerRegistry.get(context.provenanceCode());
     BatchPlan plan = planner.plan(context);
 
+    // 步骤2: 验证批次数量不超过限制
     if (plan.exceedsLimit()) {
       throw new BatchLimitExceededException(
-          "Batch count exceeds limit taskId=" + taskId + " totalBatches=" + plan.totalBatches());
+          "批次数量超过限制 taskId=" + taskId + " totalBatches=" + plan.totalBatches());
     }
 
+    // 步骤3: 如果没有批次,返回空结果
     if (!plan.hasBatches()) {
-      log.warn("no batches planned taskId={} runId={}", taskId, runId);
+      log.warn("未规划任何批次 taskId={} runId={}", taskId, runId);
       return new ExecuteResult(0, 0, 0);
     }
 
-    log.info(
-        "batch plan created taskId={} runId={} totalBatches={}",
-        taskId,
-        runId,
-        plan.totalBatches());
+    log.info("批次计划已创建 taskId={} runId={} totalBatches={}", taskId, runId, plan.totalBatches());
 
-    // 2) Execute batches
+    // 步骤4: 执行批次循环
     int succeededCount = 0;
     int failedCount = 0;
 
     for (Batch batch : plan.batches()) {
-      // 2.1 Check lease revocation
+      // 步骤4.1: 检查租约撤销状态
       log.debug(
-          "processing batch [{}/{}] taskId={} runId={}",
-          batch.batchNo(),
-          plan.totalBatches(),
-          taskId,
-          runId);
+          "处理批次 [{}/{}] taskId={} runId={}", batch.batchNo(), plan.totalBatches(), taskId, runId);
+
+      // 如果租约被撤销,立即中止后续批次执行
       if (session.heartbeatHandle() != null && session.heartbeatHandle().isLeaseRevoked()) {
-        log.warn(
-            "lease revoked, abort batch execution taskId={} runId={} batchNo={}",
-            taskId,
-            runId,
-            batch.batchNo());
-        break; // lease revoked, abort
+        log.warn("租约已撤销,中止批次执行 taskId={} runId={} batchNo={}", taskId, runId, batch.batchNo());
+        break;
       }
 
-      // 2.2 Execute single batch
+      // 步骤4.2: 执行单个批次
       log.info(
-          "execute batch start taskId={} runId={} batchNo={}/{}",
+          "开始执行批次 taskId={} runId={} batchNo={}/{}",
           taskId,
           runId,
           batch.batchNo(),
@@ -138,25 +141,21 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       try {
         result = batchExecutor.execute(context, batch);
       } catch (Exception e) {
-        log.error(
-            "batch execution failed taskId={} runId={} batchNo={}",
-            taskId,
-            runId,
-            batch.batchNo(),
-            e);
+        log.error("批次执行失败 taskId={} runId={} batchNo={}", taskId, runId, batch.batchNo(), e);
+        // 异常时创建失败结果
         result = BatchResult.failure(batch.batchNo(), e.getMessage());
       }
 
-      // 2.3 Persist batch result
+      // 步骤4.3: 持久化批次结果
       TaskRunBatch batchEntity = TaskRunBatch.create(context, batch, result);
       batchRepository.save(batchEntity);
 
-      // 2.3.1 Update TaskRun heartbeat to reflect batch processing activity
+      // 步骤4.3.1: 更新 TaskRun 心跳时间戳,反映批次处理活动
       try {
         boolean updated = taskRunRepository.touchHeartbeat(runId, Instant.now());
         if (log.isDebugEnabled()) {
           log.debug(
-              "TaskRun heartbeat updated taskId={} runId={} batchNo={} updated={}",
+              "TaskRun 心跳已更新 taskId={} runId={} batchNo={} updated={}",
               taskId,
               runId,
               batch.batchNo(),
@@ -164,19 +163,15 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         }
       } catch (Exception e) {
         log.warn(
-            "failed to update TaskRun heartbeat taskId={} runId={} batchNo={}",
-            taskId,
-            runId,
-            batch.batchNo(),
-            e);
-        // Do not fail batch execution due to heartbeat update failure
+            "更新 TaskRun 心跳失败 taskId={} runId={} batchNo={}", taskId, runId, batch.batchNo(), e);
+        // 心跳更新失败不影响批次执行
       }
 
-      // 2.4 Update statistics
+      // 步骤4.4: 更新统计计数器
       if (result.success()) {
         succeededCount++;
         log.info(
-            "batch succeeded taskId={} runId={} batchNo={} fetchedCount={}",
+            "批次执行成功 taskId={} runId={} batchNo={} fetchedCount={}",
             taskId,
             runId,
             batch.batchNo(),
@@ -184,22 +179,23 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
       } else {
         failedCount++;
         log.warn(
-            "batch failed taskId={} runId={} batchNo={} error={}",
+            "批次执行失败 taskId={} runId={} batchNo={} error={}",
             taskId,
             runId,
             batch.batchNo(),
             result.errorMessage());
 
-        // fail-fast: abort immediately
+        // 快速失败模式:立即中止剩余批次
         if (failFast) {
-          log.warn("fail-fast enabled, abort remaining batches taskId={} runId={}", taskId, runId);
+          log.warn("快速失败模式已启用,中止剩余批次 taskId={} runId={}", taskId, runId);
           break;
         }
       }
     }
 
+    // 步骤5: 记录执行统计并返回结果
     log.info(
-        "execute batches completed taskId={} runId={} total={} succeeded={} failed={}",
+        "批次执行完成 taskId={} runId={} total={} succeeded={} failed={}",
         taskId,
         runId,
         plan.totalBatches(),
@@ -209,7 +205,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     return new ExecuteResult(plan.totalBatches(), succeededCount, failedCount);
   }
 
-  /** Exception for batch limit exceeded. */
+  /** 批次数量超过限制异常。 */
   public static class BatchLimitExceededException extends RuntimeException {
     public BatchLimitExceededException(String message) {
       super(message);

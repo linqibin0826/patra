@@ -1,62 +1,57 @@
 package com.patra.ingest.app.outbox.constants;
 
 /**
- * Outbox business semantic tags enum (op_type field values).
+ * Outbox 业务语义标签枚举(op_type 字段值)。
  *
- * <p>Defines business event semantics stored in {@code ing_outbox_message.op_type} field.
+ * <p>定义存储在 {@code ing_outbox_message.op_type} 字段中的业务事件语义。
  *
- * <h3>Design Principles</h3>
+ * <h3>设计原则</h3>
  *
  * <ul>
- *   <li><b>Business-Oriented</b>: Tags describe specific business events, not generic CRUD
- *       operations
- *   <li><b>Domain-Specific</b>: Each tag has clear business meaning within its domain context
- *   <li><b>Event Semantics</b>: Tags represent "what happened" from a business perspective
+ *   <li><b>面向业务</b>: 标签描述特定的业务事件,而不是通用的 CRUD 操作
+ *   <li><b>领域特定</b>: 每个标签在其领域上下文中具有明确的业务含义
+ *   <li><b>事件语义</b>: 标签从业务角度表示"发生了什么"
  * </ul>
  *
- * <h3>SQL Field Reference</h3>
+ * <h3>SQL 字段参考</h3>
  *
  * <pre>
- * `op_type` VARCHAR(32) NOT NULL COMMENT 'Business semantic tag, e.g., TASK_READY / EVENT_PUBLISHED'
+ * `op_type` VARCHAR(32) NOT NULL COMMENT '业务语义标签,例如 TASK_READY / EVENT_PUBLISHED'
  * </pre>
  *
- * <h3>Usage Example</h3>
+ * <h3>使用示例</h3>
  *
  * <pre>{@code
- * // In TaskOutboxPublisher
+ * // 在 TaskOutboxPublisher 中
  * @Override
  * protected String getOperationType(TaskQueuedEvent event) {
  *     return OutboxBusinessTags.TASK_READY.getCode();
  * }
  * }</pre>
  *
- * <h3>Tag Naming Convention</h3>
+ * <h3>标签命名约定</h3>
  *
- * <p>Format: {@code <DOMAIN>_<EVENT_SEMANTIC>}
+ * <p>格式: {@code <DOMAIN>_<EVENT_SEMANTIC>}
  *
  * @author linqibin
  * @since 0.1.0
  */
 public enum OutboxBusinessTags {
 
-  // ==================== Task Domain ====================
+  // ==================== Task 领域 ====================
 
-  /** Task ready for execution. */
-  TASK_READY("TASK_READY", "Task ready - scheduler created task and queued for execution"),
+  /** 任务准备执行。 */
+  TASK_READY("TASK_READY", "任务就绪 - 调度器已创建任务并排队等待执行"),
 
-  // ==================== Literature Domain ====================
+  // ==================== Literature 领域 ====================
 
-  /** Literature data ready for catalog ingestion. */
-  LITERATURE_DATA_READY(
-      "LITERATURE_DATA_READY",
-      "Literature data ready - aggregated object storage payload available"),
+  /** 文献数据准备目录采集。 */
+  LITERATURE_DATA_READY("LITERATURE_DATA_READY", "文献数据就绪 - 聚合对象存储负载可用"),
 
-  // ==================== Technical Operations ====================
+  // ==================== 技术操作 ====================
 
-  /** Storage metadata retry for failed recording operations. */
-  STORAGE_METADATA_RETRY(
-      "STORAGE_METADATA_RETRY",
-      "Storage metadata retry - failed metadata recording request pending retry");
+  /** 存储元数据重试失败的记录操作。 */
+  STORAGE_METADATA_RETRY("STORAGE_METADATA_RETRY", "存储元数据重试 - 失败的元数据记录请求等待重试");
 
   private final String code;
   private final String description;
@@ -67,31 +62,31 @@ public enum OutboxBusinessTags {
   }
 
   /**
-   * Returns the business tag code.
+   * 返回业务标签代码。
    *
-   * <p>This value is stored in {@code ing_outbox_message.op_type} field.
+   * <p>此值存储在 {@code ing_outbox_message.op_type} 字段中。
    *
-   * @return Business tag code (e.g., "TASK_READY", "PLAN_CREATED")
+   * @return 业务标签代码(例如 "TASK_READY", "PLAN_CREATED")
    */
   public String getCode() {
     return code;
   }
 
   /**
-   * Returns the human-readable description.
+   * 返回人类可读的描述。
    *
-   * @return Description of this business tag
+   * @return 此业务标签的描述
    */
   public String getDescription() {
     return description;
   }
 
   /**
-   * Finds enum by code.
+   * 根据代码查找枚举。
    *
-   * @param code Business tag code
-   * @return Matching enum value
-   * @throws IllegalArgumentException if code is not found
+   * @param code 业务标签代码
+   * @return 匹配的枚举值
+   * @throws IllegalArgumentException 如果未找到代码
    */
   public static OutboxBusinessTags fromCode(String code) {
     for (OutboxBusinessTags tag : values()) {
@@ -99,6 +94,6 @@ public enum OutboxBusinessTags {
         return tag;
       }
     }
-    throw new IllegalArgumentException("Unknown business tag code: " + code);
+    throw new IllegalArgumentException("未知的业务标签代码: " + code);
   }
 }

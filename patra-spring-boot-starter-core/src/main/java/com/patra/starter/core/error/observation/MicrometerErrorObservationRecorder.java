@@ -7,17 +7,35 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.util.concurrent.TimeUnit;
 
-/** {@link ErrorObservationRecorder} backed by Micrometer metrics. */
+/**
+ * 基于 Micrometer 的错误观测记录器实现。
+ *
+ * <p>使用 Micrometer 指标库发布错误解析的时间序列指标,支持与 Prometheus、Grafana 等监控系统集成。
+ *
+ * <p>记录的指标:
+ *
+ * <ul>
+ *   <li>{@code papertrace.error.resolution.duration} - 解析耗时(Timer)
+ *   <li>{@code papertrace.error.resolution.count} - 解析次数(Counter)
+ *   <li>{@code papertrace.error.resolution.slow} - 慢解析次数(Counter)
+ *   <li>{@code papertrace.error.resolution.circuit_breaker} - 熔断降级次数(Counter)
+ * </ul>
+ *
+ * <p>所有指标包含标签: {@code context}(上下文前缀)、{@code exception}(异常类型)、{@code errorCode}(错误码)
+ *
+ * @author Papertrace Team
+ * @since 2.0
+ */
 public class MicrometerErrorObservationRecorder implements ErrorObservationRecorder {
 
   private final MeterRegistry meterRegistry;
   private final String contextPrefix;
 
   /**
-   * Creates a recorder that publishes metrics using the supplied {@link MeterRegistry}.
+   * 构造 Micrometer 观测记录器。
    *
-   * @param meterRegistry registry used to publish metrics
-   * @param errorProperties configuration providing the context prefix for metric tags
+   * @param meterRegistry Micrometer 指标注册表
+   * @param errorProperties 错误配置属性(提供上下文前缀用于指标标签)
    */
   public MicrometerErrorObservationRecorder(
       MeterRegistry meterRegistry, ErrorProperties errorProperties) {
@@ -26,11 +44,27 @@ public class MicrometerErrorObservationRecorder implements ErrorObservationRecor
     this.contextPrefix = (prefix == null || prefix.isBlank()) ? "UNKNOWN" : prefix;
   }
 
+  /**
+   * 记录错误解析的性能指标。
+   *
+   * <p>记录内容:
+   *
+   * <ul>
+   *   <li>解析耗时(Timer): papertrace.error.resolution.duration
+   *   <li>解析计数(Counter): papertrace.error.resolution.count
+   *   <li>慢解析计数(Counter): papertrace.error.resolution.slow(仅当 slow=true)
+   * </ul>
+   *
+   * @param exception 待解析的原始异常
+   * @param resolution 解析结果
+   * @param durationMs 解析耗时(毫秒)
+   * @param slow 是否为慢解析
+   */
   @Override
   @SuppressWarnings("resource")
   public void recordResolution(
       Throwable exception, ErrorResolution resolution, long durationMs, boolean slow) {
-    String exceptionName = exception == null ? "Null" : exception.getClass().getSimpleName();
+    String exceptionName = exception == null ? "空异常" : exception.getClass().getSimpleName();
     Timer.builder("papertrace.error.resolution.duration")
         .tag("context", contextPrefix)
         .tag("exception", exceptionName)
@@ -53,9 +87,16 @@ public class MicrometerErrorObservationRecorder implements ErrorObservationRecor
     }
   }
 
+  /**
+   * 记录熔断器降级指标。
+   *
+   * <p>当熔断器打开时,增加 {@code papertrace.error.resolution.circuit_breaker} 计数器。
+   *
+   * @param exception 触发降级的原始异常
+   */
   @Override
   public void recordCircuitBreakerFallback(Throwable exception) {
-    String exceptionName = exception == null ? "Null" : exception.getClass().getSimpleName();
+    String exceptionName = exception == null ? "空异常" : exception.getClass().getSimpleName();
     Counter.builder("papertrace.error.resolution.circuit_breaker")
         .tag("context", contextPrefix)
         .tag("exception", exceptionName)

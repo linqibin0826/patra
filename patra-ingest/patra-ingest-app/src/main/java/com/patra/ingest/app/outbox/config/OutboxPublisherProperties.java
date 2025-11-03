@@ -8,9 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Configuration properties for Outbox publisher framework.
+ * Outbox 发布器框架的配置属性。
  *
- * <p>Supports dynamic configuration via Nacos or application.yml:
+ * <p>支持通过 Nacos 或 application.yml 动态配置:
  *
  * <pre>
  * papertrace:
@@ -29,45 +29,43 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(
-    prefix = "papertrace.outbox.publisher") // Ensure this prefix matches your configuration source;
-// update docs if changed.
+@ConfigurationProperties(prefix = "papertrace.outbox.publisher") // 确保此前缀与配置源匹配;如变更需更新文档
 public class OutboxPublisherProperties {
 
   /**
-   * Default batch size for bulk insert operations (default: 500).
+   * 批量插入操作的默认批次大小(默认值: 500)。
    *
-   * <p>Used for partitioning large batches to avoid exceeding database limits.
+   * <p>用于分区大批次以避免超过数据库限制。
    */
   private int batchSize = 500;
 
   /**
-   * Maximum allowed batch size for IN clause queries (default: 500).
+   * IN 子句查询的最大允许批次大小(默认值: 500)。
    *
-   * <p>Prevents performance degradation from large IN queries.
+   * <p>防止大型 IN 查询导致的性能下降。
    */
   private int maxBatchSize = 500;
 
   /**
-   * Allowed aggregate types for Micrometer metrics tag cardinality control.
+   * Micrometer 指标标签基数控制允许的聚合类型。
    *
-   * <p>Prevents metric label cardinality explosion in Prometheus.
+   * <p>防止 Prometheus 中的指标标签基数爆炸。
    *
    * @see OutboxAggregateTypes
    */
   private Set<String> allowedAggregateTypes =
       new HashSet<>(Set.of(OutboxAggregateTypes.TASK.getCode()));
 
-  /** Metrics configuration. */
+  /** 指标配置。 */
   private Metrics metrics = new Metrics();
 
-  /** Nested configuration for metrics. */
+  /** 指标的嵌套配置。 */
   @Data
   public static class Metrics {
     /**
-     * Whether to enable Micrometer metrics recording (default: true).
+     * 是否启用 Micrometer 指标记录(默认值: true)。
      *
-     * <p>Set to false to disable all Outbox metrics recording for performance optimization.
+     * <p>设置为 false 可禁用所有 Outbox 指标记录以优化性能。
      */
     private boolean enabled = true;
   }

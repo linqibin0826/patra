@@ -10,22 +10,22 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Schedule instance DO</b> — table: <code>ing_schedule_instance</code>
+ * 调度实例数据库实体,映射到表 {@code ing_schedule_instance}。
  *
- * <p>Captures the root context for an external scheduling trigger and enables replay of runtime
- * parameters.
+ * <p>表结构: 捕获外部调度触发的根上下文,支持运行时参数重放。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>scheduler_code</code>/<code>scheduler_job_id</code>/<code>scheduler_log_id</code>
- *       track scheduler source and run logs.
- *   <li><code>trigger_params</code> stores normalized input snapshot (JSON) for cross-language
- *       replay; empty map is not persisted.
- *   <li><code>provenance_code</code> matches the registry; no physical FK, logical validation only.
+ *   <li>{@code scheduler_code}/{@code scheduler_job_id}/{@code scheduler_log_id} 追踪调度器来源和运行日志
+ *   <li>{@code trigger_params} 存储规范化的输入快照(JSON),用于跨语言重放;空映射不持久化
+ *   <li>{@code provenance_code} 匹配注册表;无物理外键,仅逻辑校验
  * </ul>
  *
- * <p>Audit fields come from {@link BaseDO BaseDO}.
+ * <p>审计字段来自 {@link BaseDO}。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -14,33 +14,32 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Heartbeat renewal service implementation.
+ * 心跳续约服务实现。
  *
- * <p>Responsibility: periodically renew the lease using ScheduledExecutorService. After reaching
- * the consecutive failure threshold, validate the lease to detect revocation.
+ * <p>职责:使用 ScheduledExecutorService 定期续约租约。达到连续失败阈值后,验证租约以检测撤销。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>Use a small ScheduledExecutorService for periodic renewal tasks.
- *   <li>Each renewal invokes LeaseManagementService.renewLease().
- *   <li>After N consecutive failures (default 3), call validateLease() to confirm revocation.
- *   <li>If revoked, set leaseRevoked flag so executors can abort.
- *   <li>Return a HeartbeatHandle to stop heartbeat and query lease status.
+ *   <li>使用小型 ScheduledExecutorService 执行定期续约任务
+ *   <li>每次续约调用 LeaseManagementService.renewLease()
+ *   <li>连续失败 N 次(默认3次)后,调用 validateLease() 确认撤销
+ *   <li>如果被撤销,设置 leaseRevoked 标志以便执行器中止
+ *   <li>返回 HeartbeatHandle 用于停止心跳和查询租约状态
  * </ul>
  *
- * <p>Config:
+ * <p>配置:
  *
  * <ul>
- *   <li>task.execution.heartbeat.failure-threshold: consecutive failure threshold (default 3)
+ *   <li>task.execution.heartbeat.failure-threshold: 连续失败阈值(默认 3)
  * </ul>
  *
- * <p>Logging:
+ * <p>日志记录:
  *
  * <ul>
- *   <li>DEBUG: each renewal
- *   <li>WARN: renewal failure, lease revoked
- *   <li>INFO: heartbeat start/stop
+ *   <li>DEBUG: 每次续约
+ *   <li>WARN: 续约失败、租约被撤销
+ *   <li>INFO: 心跳启动/停止
  * </ul>
  *
  * @author linqibin
@@ -53,21 +52,21 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
 
   private final LeaseManagementService leaseManagementService;
 
-  /** Consecutive failure threshold (default 3). */
+  /** 连续失败阈值(默认 3)。 */
   @Value("${task.execution.heartbeat.failure-threshold:3}")
   private int failureThreshold;
 
-  /** Global scheduler (small pool; sufficient for heartbeat tasks). */
+  /** 全局调度器(小池;足够用于心跳任务)。 */
   private final ScheduledExecutorService scheduler =
       Executors.newScheduledThreadPool(
-          2, // Use 2 threads to avoid single-thread starvation
+          2, // 使用 2 个线程避免单线程饥饿
           r -> {
             Thread t = new Thread(r, "heartbeat-renewal");
-            t.setDaemon(true); // Daemon thread; exits on JVM shutdown
+            t.setDaemon(true); // 守护线程;JVM 关闭时退出
             return t;
           });
 
-  /** Starts heartbeat-based lease renewal. */
+  /** 启动基于心跳的租约续约。 */
   @Override
   public ExecutionSession.HeartbeatHandle startHeartbeat(
       Long taskId, String leaseOwner, Duration leaseDuration, Duration renewalInterval) {
@@ -75,7 +74,7 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
     AtomicBoolean leaseRevoked = new AtomicBoolean(false);
     AtomicInteger consecutiveFailures = new AtomicInteger(0);
 
-    // Periodic renewal task
+    // 定期续约任务
     ScheduledFuture<?> future =
         scheduler.scheduleAtFixedRate(
             () -> {
@@ -88,30 +87,30 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                     leaseManagementService.renewLease(taskId, leaseOwner, leaseDuration);
 
                 if (renewed) {
-                  consecutiveFailures.set(0); // reset failures
+                  consecutiveFailures.set(0); // 重置失败计数
                   if (log.isDebugEnabled()) {
-                    log.debug("heartbeat renewed taskId={} owner={}", taskId, leaseOwner);
+                    log.debug("心跳已续约 taskId={} owner={}", taskId, leaseOwner);
                   }
                 } else {
                   int failures = consecutiveFailures.incrementAndGet();
                   log.warn(
-                      "heartbeat renewal failed taskId={} owner={} consecutiveFailures={}",
+                      "心跳续约失败 taskId={} owner={} consecutiveFailures={}",
                       taskId,
                       leaseOwner,
                       failures);
 
-                  // Upon reaching threshold, validate lease proactively
+                  // 达到阈值后,主动验证租约
                   if (failures >= failureThreshold) {
                     boolean valid = leaseManagementService.validateLease(taskId, leaseOwner);
                     if (!valid) {
                       leaseRevoked.set(true);
-                      log.warn("lease revoked detected taskId={} owner={}", taskId, leaseOwner);
-                      stopped.set(true); // stop heartbeat
+                      log.warn("检测到租约已被撤销 taskId={} owner={}", taskId, leaseOwner);
+                      stopped.set(true); // 停止心跳
                     }
                   }
                 }
               } catch (Exception e) {
-                log.error("heartbeat renewal error taskId={} owner={}", taskId, leaseOwner, e);
+                log.error("心跳续约错误 taskId={} owner={}", taskId, leaseOwner, e);
                 int failures = consecutiveFailures.incrementAndGet();
                 if (failures >= failureThreshold) {
                   leaseRevoked.set(true);
@@ -119,20 +118,17 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
                 }
               }
             },
-            renewalInterval.toMillis(), // initial delay
-            renewalInterval.toMillis(), // period
+            renewalInterval.toMillis(), // 初始延迟
+            renewalInterval.toMillis(), // 周期
             TimeUnit.MILLISECONDS);
 
     log.info(
-        "heartbeat started taskId={} owner={} interval={}ms",
-        taskId,
-        leaseOwner,
-        renewalInterval.toMillis());
+        "心跳已启动 taskId={} owner={} interval={}ms", taskId, leaseOwner, renewalInterval.toMillis());
 
     return new HeartbeatHandleImpl(taskId, leaseOwner, future, stopped, leaseRevoked);
   }
 
-  /** Heartbeat handle implementation. */
+  /** 心跳句柄实现。 */
   private static class HeartbeatHandleImpl implements ExecutionSession.HeartbeatHandle {
     private final Long taskId;
     private final String leaseOwner;
@@ -156,8 +152,8 @@ public class HeartbeatRenewalServiceImpl implements HeartbeatRenewalService {
     @Override
     public void stop() {
       if (stopped.compareAndSet(false, true)) {
-        future.cancel(false); // do not interrupt running task
-        log.info("heartbeat stopped taskId={} owner={}", taskId, leaseOwner);
+        future.cancel(false); // 不中断正在运行的任务
+        log.info("心跳已停止 taskId={} owner={}", taskId, leaseOwner);
       }
     }
 

@@ -1,18 +1,18 @@
 package com.patra.registry.api.dto.dict;
 
 /**
- * Dictionary item metadata exposed to subsystem clients.
+ * 字典项元数据,暴露给子系统客户端。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>typeCode - dictionary type identifier
- *   <li>itemCode - item code within the dictionary type
- *   <li>displayName - localized display name for the item
- *   <li>description - optional human-readable description
- *   <li>isDefault - whether the item is marked as default
- *   <li>sortOrder - ordering hint within the dictionary
- *   <li>enabled - whether the item is currently active
+ *   <li>typeCode - 字典类型标识符
+ *   <li>itemCode - 字典类型内的项代码
+ *   <li>displayName - 项的本地化显示名称
+ *   <li>description - 可选的人类可读描述
+ *   <li>isDefault - 该项是否标记为默认
+ *   <li>sortOrder - 字典内的排序提示
+ *   <li>enabled - 该项是否当前激活
  * </ol>
  *
  * @author linqibin

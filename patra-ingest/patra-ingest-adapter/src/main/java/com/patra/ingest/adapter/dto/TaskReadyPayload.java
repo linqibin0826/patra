@@ -1,22 +1,24 @@
-package com.patra.ingest.adapter.stream.dto;
+package com.patra.ingest.adapter.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 /**
- * INGEST_TASK_READY 消息负载 DTO(简化版)。
+ * 任务就绪消息负载对象。
  *
- * <p>解析 MQ 消息体(JSON 格式)用于任务就绪事件。仅包含必需字段 - 所有其他业务数据应从数据库查询。
+ * <p>解析 RocketMQ INGEST_TASK_READY 主题的消息体(JSON 格式)。采用简化设计,仅包含任务执行的最小必需字段,其他业务数据从数据库查询以减少消息体积和耦合。
  *
- * <p>字段:
+ * <p>字段说明:
  *
  * <ul>
- *   <li>taskId: 任务 ID(必填,用于上下文加载和租约获取)
- *   <li>idempotentKey: 幂等键(必填,用于去重)
+ *   <li>taskId: 任务 ID(必填) - 用于加载任务上下文和获取分布式租约
+ *   <li>idempotentKey: 幂等键(必填) - 用于消息去重和防止重复执行
  * </ul>
  *
+ * <p>设计理由: 消息负载最小化避免了序列化大对象的开销,减少网络传输成本,并降低消息生产者与消费者之间的耦合度。
+ *
  * @author linqibin
- * @since 0.1.0
+ * @since 0.2.0
  */
 @Data
 public class TaskReadyPayload {

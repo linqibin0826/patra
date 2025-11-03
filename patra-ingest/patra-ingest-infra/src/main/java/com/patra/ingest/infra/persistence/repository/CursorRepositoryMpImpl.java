@@ -13,21 +13,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-Plus implementation of CursorRepository.
+ * 游标（Cursor）仓储实现,基于 MyBatis-Plus。
  *
- * <p>Responsibilities:
+ * <p>职责:
  *
  * <ul>
- *   <li>Insert and update incremental cursors with normalized instant/numeric values.
- *   <li>Find cursors by composite key (provenance, operation, key, scope, namespace).
- *   <li>Query latest global time cursor watermark for specific provenance/operation (for monitoring
- *       and replay starting point).
+ *   <li>插入和更新增量游标,包含规范化的 instant/numeric 值
+ *   <li>按复合键(数据源、操作、键、作用域、命名空间)查找游标
+ *   <li>查询特定数据源/操作的最新全局时间游标水位(用于监控和重放起点)
  * </ul>
  *
- * <p>Design: After update, immediately selectById to retrieve database-derived fields such as
- * normalizedInstant.
+ * <p>设计: 更新后立即执行 selectById 获取数据库衍生字段(如 normalizedInstant)。
  *
- * <p>Logging strategy: DEBUG for insert/update with key identifiers; no query logging.
+ * <p>日志策略: DEBUG 级别记录 insert/update 及关键标识符;查询操作不记录日志。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Repository
 @RequiredArgsConstructor
@@ -38,10 +39,10 @@ public class CursorRepositoryMpImpl implements CursorRepository {
   private final CursorConverter converter;
 
   /**
-   * Saves a cursor.
+   * 保存游标。
    *
-   * @param cursor cursor entity
-   * @return persisted cursor with database-generated fields
+   * @param cursor 游标实体
+   * @return 持久化后的游标,包含数据库生成的字段
    */
   @Override
   public Cursor save(Cursor cursor) {
@@ -73,7 +74,16 @@ public class CursorRepositoryMpImpl implements CursorRepository {
     return converter.toDomain(persisted);
   }
 
-  /** Finds cursor by composite key. */
+  /**
+   * 按复合键查找游标。
+   *
+   * @param provenanceCode 数据源代码
+   * @param operationCode 操作代码
+   * @param cursorKey 游标键
+   * @param namespaceScopeCode 命名空间作用域代码
+   * @param namespaceKey 命名空间键
+   * @return 游标实体(可选)
+   */
   @Override
   public Optional<Cursor> find(
       String provenanceCode,
@@ -103,7 +113,13 @@ public class CursorRepositoryMpImpl implements CursorRepository {
     return Optional.ofNullable(found).map(converter::toDomain);
   }
 
-  /** Finds latest global TIME cursor watermark for provenance/operation (normalized timestamp). */
+  /**
+   * 查找数据源/操作的最新全局时间游标水位(规范化时间戳)。
+   *
+   * @param provenanceCode 数据源代码
+   * @param operationCode 操作代码(可为 null)
+   * @return 最新水位时间戳(可选)
+   */
   @Override
   public Optional<Instant> findLatestGlobalTimeWatermark(
       String provenanceCode, String operationCode) {

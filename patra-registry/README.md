@@ -143,7 +143,7 @@ papertrace:
 cd patra-registry-boot
 
 # 启动应用
-mvn spring-boot:run
+../../mvnw spring-boot:run
 ```
 
 **默认端口**: 8081

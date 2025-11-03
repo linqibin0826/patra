@@ -18,11 +18,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-based read-side repository for expression metadata.
+ * 表达式元数据仓储实现,基于 MyBatis-Plus。
  *
- * <p>Aggregates field dictionaries, capabilities, render rules, and API parameter mappings to build
- * domain snapshots. Operation-specific configuration is preferred and the logic falls back to
- * {@code ALL} when a dedicated slice is unavailable.
+ * <p>实现策略:
+ *
+ * <ul>
+ *   <li>聚合字段字典、能力、渲染规则和 API 参数映射以构建领域快照
+ *   <li>优先使用操作特定配置,当专用切片不可用时回退到 {@code ALL}
+ * </ul>
+ *
+ * <p>日志策略:
+ *
+ * <ul>
+ *   <li>DEBUG 级别记录所有查询操作和转换过程
+ *   <li>WARN 级别记录数据源代码未找到等异常情况
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -40,14 +50,15 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   private final ExprEntityConverter converter;
 
   /**
-   * Loads expression metadata snapshot for a specific provenance and operation. Aggregates field
-   * dictionaries, capabilities, render rules, and API parameter mappings.
+   * 加载指定数据源和操作的表达式元数据快照。
    *
-   * @param provenanceCode the provenance code
-   * @param operationType the operation type key
-   * @param endpointName the API endpoint name (nullable for endpoint-agnostic queries)
-   * @param at the query timestamp (null for current time)
-   * @return complete expression metadata snapshot
+   * <p>聚合字段字典、能力、渲染规则和 API 参数映射。
+   *
+   * @param provenanceCode 数据源代码
+   * @param operationType 操作类型键
+   * @param endpointName API 端点名称(对于端点无关查询可为 null)
+   * @param at 查询时间戳(null 表示当前时间)
+   * @return 完整的表达式元数据快照
    */
   @Override
   public ExprSnapshot loadSnapshot(
@@ -71,9 +82,9 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   }
 
   /**
-   * Loads all active expression fields from the field dictionary.
+   * 从字段字典加载所有激活的表达式字段。
    *
-   * @return list of active expression fields
+   * @return 激活的表达式字段列表
    */
   private List<ExprField> loadFields() {
     log.debug("Querying all active expression fields from field dictionary");
@@ -88,12 +99,12 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   }
 
   /**
-   * Loads expression capabilities for a specific provenance and operation.
+   * 加载指定数据源和操作的表达式能力。
    *
-   * @param provenanceId the provenance ID
-   * @param operationKey the normalized operation key
-   * @param timestamp the query timestamp
-   * @return list of expression capabilities
+   * @param provenanceId 数据源 ID
+   * @param operationKey 规范化的操作键
+   * @param timestamp 查询时间戳
+   * @return 表达式能力列表
    */
   private List<ExprCapability> loadCapabilities(
       Long provenanceId, String operationKey, Instant timestamp) {
@@ -114,12 +125,12 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   }
 
   /**
-   * Loads expression render rules for a specific provenance and operation.
+   * 加载指定数据源和操作的表达式渲染规则。
    *
-   * @param provenanceId the provenance ID
-   * @param operationKey the normalized operation key
-   * @param timestamp the query timestamp
-   * @return list of expression render rules
+   * @param provenanceId 数据源 ID
+   * @param operationKey 规范化的操作键
+   * @param timestamp 查询时间戳
+   * @return 表达式渲染规则列表
    */
   private List<ExprRenderRule> loadRenderRules(
       Long provenanceId, String operationKey, Instant timestamp) {
@@ -140,13 +151,13 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   }
 
   /**
-   * Loads API parameter mappings for a specific provenance, operation, and endpoint.
+   * 加载指定数据源、操作和端点的 API 参数映射。
    *
-   * @param provenanceId the provenance ID
-   * @param operationKey the normalized operation key
-   * @param normalizedEndpoint the normalized endpoint name (nullable for endpoint-agnostic queries)
-   * @param timestamp the query timestamp
-   * @return list of API parameter mappings
+   * @param provenanceId 数据源 ID
+   * @param operationKey 规范化的操作键
+   * @param normalizedEndpoint 规范化的端点名称(对于端点无关查询可为 null)
+   * @param timestamp 查询时间戳
+   * @return API 参数映射列表
    */
   private List<ApiParamMapping> loadApiParamMappings(
       Long provenanceId, String operationKey, String normalizedEndpoint, Instant timestamp) {
@@ -170,21 +181,21 @@ public class ExprRepositoryMpImpl implements ExprRepository {
   }
 
   /**
-   * Returns the provided instant or current time if null.
+   * 返回提供的时间戳,如果为 null 则返回当前时间。
    *
-   * @param at the instant to check
-   * @return the instant or current time
+   * @param at 要检查的时间戳
+   * @return 时间戳或当前时间
    */
   private Instant atOrNow(Instant at) {
     return at != null ? at : Instant.now();
   }
 
   /**
-   * Resolves provenance ID from business code.
+   * 从业务代码解析数据源 ID。
    *
-   * @param provenanceCode the provenance code
-   * @return provenance ID
-   * @throws ProvenanceNotFoundException if provenance code not found
+   * @param provenanceCode 数据源代码
+   * @return 数据源 ID
+   * @throws ProvenanceNotFoundException 如果数据源代码未找到
    */
   private Long resolveProvenanceId(ProvenanceCode provenanceCode) {
     String code = provenanceCode.getCode();

@@ -10,20 +10,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Lease management service implementation.
+ * 租约管理服务实现。
  *
- * <p>Responsibility: wrap repository operations related to task leases and provide a unified API.
+ * <p>职责:封装与任务租约相关的仓储操作并提供统一 API。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>tryAcquireLease: delegate to TaskRepository.tryAcquireLease() for CAS acquisition.
- *   <li>renewLease: delegate to TaskRepository.renewLease().
- *   <li>releaseLease: load aggregate, call releaseLease(), then save.
- *   <li>validateLease: load aggregate and check leaseInfo.owner.
+ *   <li>tryAcquireLease: 委托给 TaskRepository.tryAcquireLease() 进行 CAS 获取
+ *   <li>renewLease: 委托给 TaskRepository.renewLease()
+ *   <li>releaseLease: 加载聚合,调用 releaseLease(),然后保存
+ *   <li>validateLease: 加载聚合并检查 leaseInfo.owner
  * </ul>
  *
- * <p>Logging: INFO for key lease operations (acquire, release, validation failures).
+ * <p>日志记录:关键租约操作(获取、释放、验证失败)记录 INFO 级别日志。
  *
  * @author linqibin
  * @since 0.1.0
@@ -36,14 +36,14 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
   private final TaskRepository taskRepository;
   private final Clock clock;
 
-  /** Attempts to acquire a lease. */
+  /** 尝试获取租约。 */
   @Override
   public boolean tryAcquireLease(Long taskId, String owner, Duration leaseDuration) {
-    // Load task to obtain idempotent key (required by tryAcquireLease)
+    // 加载任务以获取幂等键(tryAcquireLease 需要)
     TaskAggregate task =
         taskRepository
             .findById(taskId)
-            .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
+            .orElseThrow(() -> new IllegalArgumentException("未找到任务 taskId=" + taskId));
 
     Instant now = clock.instant();
     int ttlSeconds = (int) leaseDuration.toSeconds();
@@ -51,42 +51,42 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
         taskRepository.tryAcquireLease(taskId, owner, now, ttlSeconds, task.getIdempotentKey());
 
     if (acquired) {
-      log.info("lease acquired taskId={} owner={}", taskId, owner);
+      log.info("租约已获取 taskId={} owner={}", taskId, owner);
     }
     return acquired;
   }
 
-  /** Renews a lease. */
+  /** 续约租约。 */
   @Override
   public boolean renewLease(Long taskId, String owner, Duration leaseDuration) {
     Instant now = clock.instant();
     int ttlSeconds = (int) leaseDuration.toSeconds();
     boolean renewed = taskRepository.renewLease(taskId, owner, now, ttlSeconds);
-    log.debug("lease renewal result taskId={} owner={} renewed={}", taskId, owner, renewed);
+    log.debug("租约续约结果 taskId={} owner={} renewed={}", taskId, owner, renewed);
     return renewed;
   }
 
-  /** Releases a lease. */
+  /** 释放租约。 */
   @Override
   public void releaseLease(Long taskId) {
     TaskAggregate task =
         taskRepository
             .findById(taskId)
-            .orElseThrow(() -> new IllegalArgumentException("Task not found taskId=" + taskId));
+            .orElseThrow(() -> new IllegalArgumentException("未找到任务 taskId=" + taskId));
 
-    // Call domain object's release method and then save
+    // 调用领域对象的释放方法然后保存
     task.releaseLease();
     taskRepository.save(task);
-    log.info("lease released taskId={}", taskId);
+    log.info("租约已释放 taskId={}", taskId);
   }
 
-  /** Validates a lease (owner still current node). */
+  /** 验证租约(持有者仍然是当前节点)。 */
   @Override
   public boolean validateLease(Long taskId, String owner) {
     TaskAggregate task = taskRepository.findById(taskId).orElse(null);
 
     if (task == null) {
-      log.warn("lease validation failed: task not found taskId={}", taskId);
+      log.warn("租约验证失败: 未找到任务 taskId={}", taskId);
       return false;
     }
 
@@ -94,7 +94,7 @@ public class LeaseManagementServiceImpl implements LeaseManagementService {
 
     if (!valid) {
       log.warn(
-          "lease validation failed taskId={} expectedOwner={} actualOwner={}",
+          "租约验证失败 taskId={} expectedOwner={} actualOwner={}",
           taskId,
           owner,
           task.getLeaseInfo().owner());

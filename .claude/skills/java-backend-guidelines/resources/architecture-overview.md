@@ -331,7 +331,7 @@ com.patra.{service}.adapter/
 |--------------|----------------|---------|
 | REST 控制器 | `*Controller` 或 `*EndpointImpl` | `ProvenanceController` |
 | 定时任务 | `*Job` | `PubmedHarvestJob` |
-| 消息消费者 | `*Consumers` | `IngestStreamConsumers` |
+| 消息消费者 | `*MessageListener` | `TaskReadyMessageListener` |
 
 ---
 

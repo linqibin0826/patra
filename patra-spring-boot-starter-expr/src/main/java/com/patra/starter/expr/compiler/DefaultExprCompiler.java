@@ -141,10 +141,7 @@ public class DefaultExprCompiler implements ExprCompiler {
 
     String provenanceCode = snapshot.identity().code();
     log.warn(
-        "Capability validation failed for provenance [{}] at endpoint [{}] with {} errors",
-        provenanceCode,
-        endpointName,
-        errors.size());
+        "Provenance [{}] 在端点 [{}] 的能力验证失败，包含 {} 个错误", provenanceCode, endpointName, errors.size());
     recordCompileErrors(errors);
 
     ValidationReport report = new ValidationReport(warnings, errors);

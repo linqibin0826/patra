@@ -5,16 +5,20 @@ import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.patra.starter.provenance.crossref.model.request.CrossrefWorksRequest;
 
 /**
- * Assemble {@link CrossrefWorksRequest} objects from provider-named parameters emitted by the
- * expression compiler.
+ * Crossref Works 请求组装器
+ *
+ * <p>从表达式编译器生成的数据源参数中组装 {@link CrossrefWorksRequest} 对象。 负责参数提取、类型转换和验证。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class CrossrefWorksRequestAssembler {
 
   /**
-   * Build a {@link CrossrefWorksRequest} using provider parameters (query, filter, rows, etc.).
+   * 从数据源参数构建 {@link CrossrefWorksRequest}
    *
-   * @param params provider parameter map as JSON
-   * @return assembled request
+   * @param params 数据源参数映射（JSON格式），包含query、filter、rows等
+   * @return 组装后的请求对象
    */
   public CrossrefWorksRequest build(JsonNode params) {
     String query = text(params, CrossrefParamKeys.QUERY);
@@ -60,8 +64,7 @@ public class CrossrefWorksRequestAssembler {
     if (value.isLong()) {
       long v = value.longValue();
       if (v > Integer.MAX_VALUE || v < Integer.MIN_VALUE) {
-        throw new IllegalArgumentException(
-            "Crossref parameter '" + key + "' exceeds integer range");
+        throw new IllegalArgumentException("Crossref 参数 '" + key + "' 超出整数范围");
       }
       return (int) v;
     }
@@ -73,8 +76,7 @@ public class CrossrefWorksRequestAssembler {
       try {
         return Integer.parseInt(text);
       } catch (NumberFormatException ex) {
-        throw new IllegalArgumentException(
-            "Crossref parameter '" + key + "' is not a valid integer: " + text, ex);
+        throw new IllegalArgumentException("Crossref 参数 '" + key + "' 不是有效的整数: " + text, ex);
       }
     }
     return null;

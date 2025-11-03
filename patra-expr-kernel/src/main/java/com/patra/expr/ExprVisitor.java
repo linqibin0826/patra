@@ -1,23 +1,60 @@
 package com.patra.expr;
 
 /**
- * Visitor contract decoupled from the expression model so that codecs, renderers, and other
- * translators can live outside the kernel while still traversing the tree safely. Implementations
- * are expected to be thread-safe; prefer stateless or read-only designs.
+ * 表达式访问者契约,与表达式模型解耦,使编解码器、渲染器和其他转换器可以在内核外部安全遍历表达式树。
  *
- * @param <R> visitor return type
+ * <p>实现类应该是线程安全的,优先使用无状态或只读设计。
+ *
+ * @param <R> 访问者返回类型
+ * @author linqibin
+ * @since 0.1.0
  */
 public interface ExprVisitor<R> {
+  /**
+   * 访问 AND 表达式节点。
+   *
+   * @param andExpr AND 表达式
+   * @return 访问结果
+   */
   R visitAnd(And andExpr);
 
+  /**
+   * 访问 OR 表达式节点。
+   *
+   * @param orExpr OR 表达式
+   * @return 访问结果
+   */
   R visitOr(Or orExpr);
 
+  /**
+   * 访问 NOT 表达式节点。
+   *
+   * @param notExpr NOT 表达式
+   * @return 访问结果
+   */
   R visitNot(Not notExpr);
 
+  /**
+   * 访问常量表达式节点。
+   *
+   * @param constantExpr 常量表达式
+   * @return 访问结果
+   */
   R visitConst(Const constantExpr);
 
+  /**
+   * 访问原子表达式节点。
+   *
+   * @param atomExpr 原子表达式
+   * @return 访问结果
+   */
   R visitAtom(Atom atomExpr);
 
+  /**
+   * 无返回值的访问者抽象类,简化无需返回值的访问者实现。
+   *
+   * <p>子类只需实现 {@link #visit(Expr)} 方法,处理所有类型的表达式节点。
+   */
   abstract class NoReturn implements ExprVisitor<java.lang.Void> {
     @Override
     public final java.lang.Void visitAnd(And andExpr) {
@@ -49,6 +86,11 @@ public interface ExprVisitor<R> {
       return null;
     }
 
+    /**
+     * 访问任意表达式节点的通用方法。
+     *
+     * @param expr 待访问的表达式
+     */
     protected abstract void visit(Expr expr);
   }
 }

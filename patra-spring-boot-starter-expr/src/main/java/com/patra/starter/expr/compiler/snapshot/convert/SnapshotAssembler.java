@@ -169,10 +169,11 @@ public class SnapshotAssembler {
       Map<String, String> map = objectMapper.readValue(paramsJson, Map.class);
       return Map.copyOf(map);
     } catch (IOException e) {
-      throw new IllegalStateException("Failed to parse render rule params", e);
+      throw new IllegalStateException("解析渲染规则参数失败", e);
     }
   }
 
+  /** 将 JSON 字符串转换为 Set。 */
   private Set<String> toSet(String json) {
     if (json == null || json.isBlank()) {
       return Set.of();
@@ -182,7 +183,7 @@ public class SnapshotAssembler {
       List<String> list = objectMapper.readValue(json, List.class);
       return new HashSet<>(list);
     } catch (IOException e) {
-      throw new IllegalStateException("Failed to parse JSON array: " + json, e);
+      throw new IllegalStateException("解析 JSON 数组失败: " + json, e);
     }
   }
 

@@ -15,7 +15,13 @@ public class ApplicationException extends RuntimeException {
   /** 与此异常关联的业务错误码。 */
   private final ErrorCodeLike errorCode;
 
-  /** 使用提供的错误码和消息创建异常。 */
+  /**
+   * 使用提供的错误码和消息创建异常。
+   *
+   * @param errorCode 业务错误码,不能为 null
+   * @param message 异常消息
+   * @throws IllegalArgumentException 如果错误码为 null
+   */
   public ApplicationException(ErrorCodeLike errorCode, String message) {
     super(message);
     if (errorCode == null) {
@@ -24,7 +30,14 @@ public class ApplicationException extends RuntimeException {
     this.errorCode = errorCode;
   }
 
-  /** 使用提供的错误码、消息和根本原因创建异常。 */
+  /**
+   * 使用提供的错误码、消息和根本原因创建异常。
+   *
+   * @param errorCode 业务错误码,不能为 null
+   * @param message 异常消息
+   * @param cause 根本原因
+   * @throws IllegalArgumentException 如果错误码为 null
+   */
   public ApplicationException(ErrorCodeLike errorCode, String message, Throwable cause) {
     super(message, cause);
     if (errorCode == null) {
@@ -33,7 +46,11 @@ public class ApplicationException extends RuntimeException {
     this.errorCode = errorCode;
   }
 
-  /** 返回关联的业务错误码。 */
+  /**
+   * 返回关联的业务错误码。
+   *
+   * @return 错误码
+   */
   public ErrorCodeLike getErrorCode() {
     return errorCode;
   }

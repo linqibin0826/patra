@@ -9,73 +9,80 @@ import java.time.Instant;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** Data Object representing the <code>storage_file_metadata</code> table. */
+/**
+ * 文件元数据数据对象。
+ *
+ * <p>表示 <code>storage_file_metadata</code> 表的数据对象(DO),用于MyBatis-Plus的ORM映射。 继承自 {@link
+ * BaseDO},包含标准的审计字段(id、version、创建人、更新人、软删除标志等)。
+ *
+ * <p>数据对象是持久化层的一部分,负责数据库表结构与Java对象之间的映射, 通过转换器({@code FileMetadataConverter})与领域聚合根进行转换。
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "storage_file_metadata", autoResultMap = true)
 public class FileMetadataDO extends BaseDO {
 
-  /** Canonical storage key in bucket/objectKey form. */
+  /** 规范存储键,格式为 bucket/objectKey */
   @TableField("storage_key")
   private String storageKey;
 
-  /** Bucket name hosting the object. */
+  /** 托管对象的存储桶名称 */
   @TableField("bucket_name")
   private String bucketName;
 
-  /** Object key within the bucket. */
+  /** 存储桶内的对象键 */
   @TableField("object_key")
   private String objectKey;
 
-  /** Physical file size in bytes. */
+  /** 物理文件大小(字节) */
   @TableField("file_size")
   private Long fileSize;
 
-  /** MIME type declared by the uploader. */
+  /** 上传方声明的MIME类型 */
   @TableField("content_type")
   private String contentType;
 
-  /** MD5 digest recorded at upload time. */
+  /** 上传时记录的MD5摘要 */
   @TableField("md5_hash")
   private String md5Hash;
 
-  /** Optional SHA-256 digest. */
+  /** 可选的SHA-256摘要 */
   @TableField("sha256_hash")
   private String sha256Hash;
 
-  /** Calling service name. */
+  /** 调用服务名称 */
   @TableField("service_name")
   private String serviceName;
 
-  /** Business context type (e.g., literature_batch). */
+  /** 业务上下文类型(例如 literature_batch) */
   @TableField("business_type")
   private String businessType;
 
-  /** Business identifier supplied by the caller. */
+  /** 调用方提供的业务标识符 */
   @TableField("business_id")
   private String businessId;
 
-  /** Correlation metadata captured as JSON. */
+  /** 捕获为JSON的关联元数据 */
   @TableField(value = "correlation_data", typeHandler = JacksonTypeHandler.class)
   private JsonNode correlationData;
 
-  /** Provider type enumeration value. */
+  /** 提供商类型枚举值 */
   @TableField("provider_type")
   private String providerType;
 
-  /** File lifecycle status. */
+  /** 文件生命周期状态 */
   @TableField("file_status")
   private String fileStatus;
 
-  /** Timestamp when the upload finished. */
+  /** 上传完成时的时间戳 */
   @TableField("uploaded_at")
   private Instant uploadedAt;
 
-  /** Optional expiry time. */
+  /** 可选的过期时间 */
   @TableField("expires_at")
   private Instant expiresAt;
 
-  /** Timestamp when the file was soft-deleted. */
+  /** 文件软删除时的时间戳 */
   @TableField("deleted_at")
   private Instant deletedAt;
 }

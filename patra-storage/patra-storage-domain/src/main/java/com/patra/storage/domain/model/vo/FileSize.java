@@ -2,24 +2,32 @@ package com.patra.storage.domain.model.vo;
 
 import java.util.Locale;
 
-/** Represents the physical byte size of a stored object. */
+/**
+ * 存储对象的物理字节大小。
+ *
+ * <p>封装文件大小信息,确保大小值的有效性(非负),并提供人类可读的格式化输出功能。
+ *
+ * @param bytes 对象占用的字节数(必须 >= 0)
+ */
 public record FileSize(long bytes) {
 
   /**
-   * Creates a new file size ensuring a non-negative quantity.
+   * 创建新的文件大小,确保数量非负。
    *
-   * @param bytes number of bytes occupied by the object (>= 0)
+   * @throws IllegalArgumentException 如果字节数为负
    */
   public FileSize {
     if (bytes < 0) {
-      throw new IllegalArgumentException("File size must be >= 0 bytes");
+      throw new IllegalArgumentException("文件大小必须 >= 0 字节");
     }
   }
 
   /**
-   * Converts the raw byte count into a human readable string with units.
+   * 将原始字节数转换为带单位的人类可读字符串。
    *
-   * @return human friendly size, e.g., {@code 1.23 MB}
+   * <p>根据文件大小自动选择合适的单位(B/KB/MB/GB),格式化为易读的文本表示。
+   *
+   * @return 人类友好的大小表示,例如 {@code 1.23 MB}
    */
   public String humanReadable() {
     if (bytes < 1024) {

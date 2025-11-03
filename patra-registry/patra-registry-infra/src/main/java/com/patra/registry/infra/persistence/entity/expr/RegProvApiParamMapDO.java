@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code reg_prov_api_param_map}.
+ * 数据库实体,映射到表 {@code reg_prov_api_param_map}.
  *
  * <p>Tracks provider-specific parameter names for standardized query keys.
  *
@@ -27,15 +27,15 @@ import lombok.experimental.SuperBuilder;
 @TableName("reg_prov_api_param_map")
 public class RegProvApiParamMapDO extends BaseDO {
 
-  /** Foreign key referencing {@code reg_provenance.id}. */
+  /** 外键,引用 {@code reg_provenance.id}。 */
   @TableField("provenance_id")
   private Long provenanceId;
 
-  /** Operation type discriminator associated with the mapping. */
+  /** 操作类型鉴别器 associated with the mapping. */
   @TableField("operation_type")
   private String operationType;
 
-  /** Lifecycle status code for the mapping record. */
+  /** 生命周期状态代码 for the mapping record. */
   @TableField("lifecycle_status_code")
   private String lifecycleStatusCode;
 
@@ -43,27 +43,27 @@ public class RegProvApiParamMapDO extends BaseDO {
   @TableField("endpoint_name")
   private String endpointName;
 
-  /** Standardized key resolved by expression rendering (e.g., {@code from}, {@code term}). */
+  /** 标准化键 resolved by expression rendering (e.g., {@code from}, {@code term}). */
   @TableField("std_key")
   private String stdKey;
 
-  /** Provider-specific parameter name aligned with the standard key. */
+  /** 特定于提供方的 parameter name aligned with the standard key. */
   @TableField("provider_param_name")
   private String providerParamName;
 
-  /** Optional transform applied to the value before sending to the provider. */
+  /** 可选的 transform applied to the value before sending to the provider. */
   @TableField("transform_code")
   private String transformCode;
 
-  /** Free-form JSON notes describing special handling. */
+  /** 自由格式 JSON notes describing special handling. */
   @TableField("notes")
   private JsonNode notes;
 
-  /** Inclusive timestamp indicating when the mapping becomes effective. */
+  /** 包含时间戳 indicating when the mapping becomes effective. */
   @TableField("effective_from")
   private Instant effectiveFrom;
 
-  /** Exclusive timestamp indicating when the mapping expires. */
+  /** 排除时间戳 indicating when the mapping expires. */
   @TableField("effective_to")
   private Instant effectiveTo;
 }

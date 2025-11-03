@@ -15,13 +15,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 /**
- * MyBatis-Plus implementation of TaskRunBatchRepository.
+ * 任务执行批次（TaskRunBatch）仓储实现,基于 MyBatis-Plus。
  *
- * <p>Responsibilities: Persisting batch statistics and pagination information (pageNo/pageSize) for
- * chunked processing during incremental collection.
+ * <p>职责: 持久化批次统计和分页信息(pageNo/pageSize),用于增量采集期间的分块处理。
  *
- * <p>Note: Current batch save uses sequential writes; if batch volume grows significantly, consider
- * batch SQL or async writes.
+ * <p>注意: 当前批量保存使用顺序写入;如果批次数量显著增长,考虑使用批量 SQL 或异步写入。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Repository
 @RequiredArgsConstructor
@@ -32,9 +33,9 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   private final TaskRunBatchConverter converter;
 
   /**
-   * Saves a single task run batch by inserting or updating.
+   * 保存单个任务执行批次。
    *
-   * @param batch batch entity
+   * @param batch 批次实体
    */
   @Override
   public void save(TaskRunBatch batch) {
@@ -47,9 +48,9 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   }
 
   /**
-   * Batch saves task run batches by inserting or updating.
+   * 批量保存任务执行批次。
    *
-   * @param batches collection of batch entities
+   * @param batches 批次实体集合
    */
   @Override
   public void saveAll(List<TaskRunBatch> batches) {
@@ -64,10 +65,10 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   }
 
   /**
-   * Finds all batches for a specific task run attempt.
+   * 查找特定任务执行尝试的所有批次。
    *
-   * @param runId task run attempt ID
-   * @return list of batches, may be empty
+   * @param runId 任务执行尝试 ID
+   * @return 批次列表,可能为空
    */
   @Override
   public List<TaskRunBatch> findByRunId(Long runId) {
@@ -81,12 +82,12 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   }
 
   /**
-   * Finds the batch ID of the last succeeded batch for a given run.
+   * 查找给定执行的最后一个成功批次的 ID。
    *
-   * <p>Used for cursor lineage tracking to record which batch triggered cursor advancement.
+   * <p>用于游标血缘跟踪,记录哪个批次触发了游标推进。
    *
-   * @param runId run identifier
-   * @return optional batch ID (latest SUCCEEDED batch by ID order)
+   * @param runId 执行标识符
+   * @return 批次 ID(可选,按 ID 排序的最新 SUCCEEDED 批次)
    */
   @Override
   public Optional<Long> findLastSucceededBatchId(Long runId) {

@@ -21,10 +21,23 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct converter for transforming provenance query DTOs to API response DTOs.
+ * Provenance 查询 DTO 到 API 响应 DTO 的转换器。
  *
- * <p>Maps read-side domain query objects to external API contract DTOs for consumption by Feign
- * clients from other microservices.
+ * <p>使用 MapStruct 自动生成转换代码,将读侧领域查询对象转换为外部 API 契约 DTO,供其他微服务的 Feign 客户端消费。
+ *
+ * <p>转换方法:
+ *
+ * <ul>
+ *   <li>{@link #toResp(ProvenanceQuery)} - 转换单个数据源查询对象
+ *   <li>{@link #toResp(List)} - 转换数据源查询对象列表
+ *   <li>{@link #toResp(ProvenanceConfigQuery)} - 转换配置聚合查询对象
+ *   <li>{@link #toResp(WindowOffsetQuery)} - 转换时间窗口偏移查询对象
+ *   <li>{@link #toResp(PaginationConfigQuery)} - 转换分页配置查询对象
+ *   <li>{@link #toResp(HttpConfigQuery)} - 转换 HTTP 配置查询对象
+ *   <li>{@link #toResp(BatchingConfigQuery)} - 转换批处理配置查询对象
+ *   <li>{@link #toResp(RetryConfigQuery)} - 转换重试配置查询对象
+ *   <li>{@link #toResp(RateLimitConfigQuery)} - 转换速率限制配置查询对象
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -33,76 +46,76 @@ import org.mapstruct.ReportingPolicy;
 public interface ProvenanceApiConverter {
 
   /**
-   * Converts a provenance query model to an API response DTO.
+   * 转换单个数据源查询对象为 API 响应 DTO。
    *
-   * @param query the provenance query model produced by application layer
-   * @return the provenance response DTO exposed by the RPC contract
+   * @param query 应用层产生的数据源查询对象
+   * @return RPC 契约暴露的数据源响应 DTO
    */
   ProvenanceResp toResp(ProvenanceQuery query);
 
   /**
-   * Converts provenance query models to API response DTOs.
+   * 转换数据源查询对象列表为 API 响应 DTO 列表。
    *
-   * @param queries the collection of provenance query models
-   * @return the list of response DTOs preserving iteration order
+   * @param queries 数据源查询对象集合
+   * @return 响应 DTO 列表,保持迭代顺序
    */
   List<ProvenanceResp> toResp(List<ProvenanceQuery> queries);
 
   /**
-   * Converts window offset query model to an API response DTO.
+   * 转换时间窗口偏移查询对象为 API 响应 DTO。
    *
-   * @param query the window offset query model
-   * @return the window offset response DTO
+   * @param query 时间窗口偏移查询对象
+   * @return 时间窗口偏移响应 DTO
    */
   WindowOffsetResp toResp(WindowOffsetQuery query);
 
   /**
-   * Converts pagination configuration query model to an API response DTO.
+   * 转换分页配置查询对象为 API 响应 DTO。
    *
-   * @param query the pagination configuration query model
-   * @return the pagination configuration response DTO
+   * @param query 分页配置查询对象
+   * @return 分页配置响应 DTO
    */
   PaginationConfigResp toResp(PaginationConfigQuery query);
 
   /**
-   * Converts HTTP configuration query model to an API response DTO.
+   * 转换 HTTP 配置查询对象为 API 响应 DTO。
    *
-   * @param query the HTTP configuration query model
-   * @return the HTTP configuration response DTO
+   * @param query HTTP 配置查询对象
+   * @return HTTP 配置响应 DTO
    */
   HttpConfigResp toResp(HttpConfigQuery query);
 
   /**
-   * Converts batching configuration query model to an API response DTO.
+   * 转换批处理配置查询对象为 API 响应 DTO。
    *
-   * @param query the batching configuration query model
-   * @return the batching configuration response DTO
+   * @param query 批处理配置查询对象
+   * @return 批处理配置响应 DTO
    */
   BatchingConfigResp toResp(BatchingConfigQuery query);
 
   /**
-   * Converts retry configuration query model to an API response DTO.
+   * 转换重试配置查询对象为 API 响应 DTO。
    *
-   * @param query the retry configuration query model
-   * @return the retry configuration response DTO
+   * @param query 重试配置查询对象
+   * @return 重试配置响应 DTO
    */
   RetryConfigResp toResp(RetryConfigQuery query);
 
   /**
-   * Converts rate limit configuration query model to an API response DTO.
+   * 转换速率限制配置查询对象为 API 响应 DTO。
    *
-   * @param query the rate limit configuration query model
-   * @return the rate limit configuration response DTO
+   * @param query 速率限制配置查询对象
+   * @return 速率限制配置响应 DTO
    */
   RateLimitConfigResp toResp(RateLimitConfigQuery query);
 
   // Credential dimension removed
 
   /**
-   * Converts aggregated provenance configuration query model to an API response DTO.
+   * 转换聚合数据源配置查询对象为 API 响应 DTO。
    *
-   * @param query the aggregated provenance configuration query model
-   * @return the configuration response DTO consolidating all dimensions
+   * @param query 聚合数据源配置查询对象
+   * @return 配置响应 DTO,整合所有配置维度
    */
   ProvenanceConfigResp toResp(ProvenanceConfigQuery query);
 }

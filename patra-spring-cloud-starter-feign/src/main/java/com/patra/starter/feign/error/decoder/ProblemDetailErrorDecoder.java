@@ -17,8 +17,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ProblemDetail;
 
 /**
- * Feign {@link ErrorDecoder} implementation that prefers {@link ProblemDetail} error payloads and
- * degrades gracefully when tolerant mode is enabled.
+ * Feign {@link ErrorDecoder} 实现,优先处理 {@link ProblemDetail} 错误载荷,并在启用宽容模式时优雅降级
+ *
+ * <p>此解码器实现了智能的错误处理策略:
+ *
+ * <ul>
+ *   <li>优先尝试解析 RFC 7807 ProblemDetail 格式的错误响应
+ *   <li>在宽容模式下,对非 ProblemDetail 响应进行包装而非抛出 FeignException
+ *   <li>自动提取并传播跟踪标识符(支持多种 trace header)
+ *   <li>记录解析性能指标和慢操作警告
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Slf4j
 public class ProblemDetailErrorDecoder implements ErrorDecoder {
@@ -78,12 +89,12 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
   }
 
   /**
-   * Attempts to decode a ProblemDetail response.
+   * 尝试解码 ProblemDetail 响应
    *
-   * @param methodKey Feign method key
-   * @param response Feign response object
-   * @return decoding result containing success status, body buffer, and exception if successful
-   * @throws IOException if response body reading fails
+   * @param methodKey Feign 方法键
+   * @param response Feign 响应对象
+   * @return 包含成功状态、响应体缓冲区和异常(如成功解析)的解码结果
+   * @throws IOException 响应体读取失败时抛出
    */
   private DecodingResult decodeProblemDetailResponse(String methodKey, Response response)
       throws IOException {
@@ -112,13 +123,13 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
   }
 
   /**
-   * Handles exceptions during error decoding, applying tolerant mode if enabled.
+   * 处理错误解码期间的异常,如启用则应用宽容模式
    *
-   * @param methodKey Feign method key
-   * @param response Feign response object
-   * @param state decoding state tracking success and buffers
-   * @param ex exception that occurred during decoding
-   * @return exception to throw (RemoteCallException or FeignException)
+   * @param methodKey Feign 方法键
+   * @param response Feign 响应对象
+   * @param state 跟踪成功状态和缓冲区的解码状态
+   * @param ex 解码期间发生的异常
+   * @return 要抛出的异常(RemoteCallException 或 FeignException)
    */
   private Exception handleDecodingException(
       String methodKey, Response response, DecodingState state, Exception ex) {
@@ -243,23 +254,23 @@ public class ProblemDetailErrorDecoder implements ErrorDecoder {
     return contentType != null && contentType.toLowerCase().contains("application/problem+json");
   }
 
-  /** Holds response body content and metadata. */
+  /** 持有响应体内容和元数据 */
   private record BodyBuffer(String content, int length, boolean truncated) {
     static BodyBuffer empty() {
       return new BodyBuffer(null, 0, false);
     }
   }
 
-  /** Result of ProblemDetail parsing operation. */
+  /** ProblemDetail 解析操作结果 */
   private record ParsingResult(ProblemDetail problemDetail, long durationMs, boolean success) {}
 
-  /** Trace identifier extraction result. */
+  /** 跟踪标识符提取结果 */
   private record TraceExtraction(String traceId, String headerName) {}
 
-  /** Result of ProblemDetail decoding operation. */
+  /** ProblemDetail 解码操作结果 */
   private record DecodingResult(BodyBuffer bodyBuffer, boolean success, Exception exception) {}
 
-  /** Mutable state holder for tracking decoding progress. */
+  /** 用于跟踪解码进度的可变状态持有者 */
   private static class DecodingState {
     boolean decodingSuccess = false;
     boolean tolerantModeUsed = false;

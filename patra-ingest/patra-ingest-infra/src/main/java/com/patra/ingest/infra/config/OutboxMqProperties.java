@@ -3,9 +3,13 @@ package com.patra.ingest.infra.config;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -27,6 +31,51 @@ public class OutboxMqProperties {
   private boolean strictChannelWhitelist;
 
   private Set<String> allowedChannels = new LinkedHashSet<>();
+
+  /** 发送消息超时时间（毫秒），默认 3000ms */
+  @Min(100)
+  @Max(60000)
+  private int sendTimeout = 3000;
+
+  /** 同步发送失败重试次数，默认 2 次 */
+  @Min(0)
+  @Max(10)
+  private int retryTimesWhenSendFailed = 2;
+
+  /** 是否启用顺序消息（全局开关），默认 false */
+  private boolean enableOrderly = false;
+
+  /**
+   * 业务通道到 RocketMQ Topic 的映射表。
+   *
+   * <p>示例配置:
+   *
+   * <pre>
+   * papertrace:
+   *   ingest:
+   *     outbox:
+   *       channel-mapping:
+   *         TASK_READY: INGEST_TASK_READY
+   *         LITERATURE_READY: papertrace.catalog.literature.ready
+   * </pre>
+   *
+   * <p>如果未配置，则使用 RocketMqChannelMapper 中的默认映射。
+   */
+  private Map<String, String> channelMapping = new LinkedHashMap<>();
+
+  /**
+   * Topic 前缀（用于多环境隔离）。
+   *
+   * <p>示例:
+   *
+   * <pre>
+   * papertrace:
+   *   ingest:
+   *     outbox:
+   *       topic-prefix: dev-   # 生成的 Topic: dev-INGEST_TASK_READY
+   * </pre>
+   */
+  private String topicPrefix = "";
 
   @PostConstruct
   public void validate() {
@@ -86,5 +135,46 @@ public class OutboxMqProperties {
     }
     String normalized = channel.trim().toUpperCase(Locale.ROOT);
     return allowedChannels.contains(normalized);
+  }
+
+  public int getSendTimeout() {
+    return sendTimeout;
+  }
+
+  public void setSendTimeout(int sendTimeout) {
+    this.sendTimeout = sendTimeout;
+  }
+
+  public int getRetryTimesWhenSendFailed() {
+    return retryTimesWhenSendFailed;
+  }
+
+  public void setRetryTimesWhenSendFailed(int retryTimesWhenSendFailed) {
+    this.retryTimesWhenSendFailed = retryTimesWhenSendFailed;
+  }
+
+  public boolean isEnableOrderly() {
+    return enableOrderly;
+  }
+
+  public void setEnableOrderly(boolean enableOrderly) {
+    this.enableOrderly = enableOrderly;
+  }
+
+  public Map<String, String> getChannelMapping() {
+    return Collections.unmodifiableMap(channelMapping);
+  }
+
+  public void setChannelMapping(Map<String, String> channelMapping) {
+    this.channelMapping =
+        channelMapping != null ? new LinkedHashMap<>(channelMapping) : new LinkedHashMap<>();
+  }
+
+  public String getTopicPrefix() {
+    return topicPrefix;
+  }
+
+  public void setTopicPrefix(String topicPrefix) {
+    this.topicPrefix = Objects.requireNonNullElse(topicPrefix, "").trim();
   }
 }

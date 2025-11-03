@@ -3,20 +3,20 @@ package com.patra.registry.api.dto.expr;
 import java.time.Instant;
 
 /**
- * API parameter mappings for expression evaluation.
+ * 表达式求值的 API 参数映射。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>provenanceId - internal provenance identifier backing the mapping
- *   <li>operationType - operation discriminator (e.g., HARVEST/UPDATE)
- *   <li>endpointName - endpoint discriminator the mapping applies to
- *   <li>stdKey - standardized parameter key used inside the engine
- *   <li>providerParamName - original provider parameter name
- *   <li>transformCode - optional transformation identifier applied to values
- *   <li>notesJson - structured notes payload for downstream diagnostics
- *   <li>effectiveFrom - timestamp from which the mapping becomes effective
- *   <li>effectiveTo - timestamp until which the mapping remains effective
+ *   <li>provenanceId - 支持该映射的内部数据源标识符
+ *   <li>operationType - 操作类型鉴别器(如 HARVEST/UPDATE)
+ *   <li>endpointName - 映射应用的端点鉴别器
+ *   <li>stdKey - 引擎内部使用的标准化参数键
+ *   <li>providerParamName - 原始提供者参数名称
+ *   <li>transformCode - 应用于值的可选转换标识符
+ *   <li>notesJson - 用于下游诊断的结构化注释负载
+ *   <li>effectiveFrom - 映射生效的时间戳
+ *   <li>effectiveTo - 映射保持有效的截止时间戳
  * </ol>
  *
  * @author linqibin

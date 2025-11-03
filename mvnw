@@ -147,7 +147,10 @@ MAVEN_HOME="${MAVEN_USER_HOME}/wrapper/dists/${distributionUrlNameMain-}/$(hash_
 
 exec_maven() {
   unset MVNW_VERBOSE MVNW_USERNAME MVNW_PASSWORD MVNW_REPOURL || :
-  exec "$MAVEN_HOME/bin/$MVN_CMD" "$@" || die "cannot exec $MAVEN_HOME/bin/$MVN_CMD"
+  # 过滤 Guice sun.misc.Unsafe 警告
+  # 使用 || true 确保 grep 总是成功，只依赖 Maven 的退出码
+  "$MAVEN_HOME/bin/$MVN_CMD" "$@" 2>&1 | grep -vE "(WARNING.*sun\.misc\.Unsafe|WARNING.*HiddenClassDefiner|WARNING.*terminally deprecated|will be removed in a future release)" || true
+  exit ${PIPESTATUS[0]}
 }
 
 if [ -d "$MAVEN_HOME" ]; then

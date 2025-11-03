@@ -14,51 +14,51 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Relay publish coordinator - manages message publishing and state transitions.
+ * 中继发布协调器 - 管理消息发布和状态转换
  *
- * <h3>Responsibilities</h3>
+ * <h3>职责</h3>
  *
  * <ul>
- *   <li>Publish outbox messages to downstream broker via OutboxPublisherPort
- *   <li>Classify publishing errors (FATAL vs TRANSIENT) using RelayErrorClassifier
- *   <li>Compute retry timing using RelayRetryPolicy with exponential backoff
- *   <li>Drive state transitions (PUBLISHING → PUBLISHED/FAILED)
+ *   <li>通过 OutboxPublisherPort 将 Outbox 消息发布到下游代理
+ *   <li>使用 RelayErrorClassifier 分类发布错误 (FATAL vs TRANSIENT)
+ *   <li>使用带指数退避的 RelayRetryPolicy 计算重试时机
+ *   <li>驱动状态转换 (PUBLISHING → PUBLISHED/FAILED)
  * </ul>
  *
- * <h3>Publishing Flow</h3>
+ * <h3>发布流程</h3>
  *
  * <ol>
- *   <li>Call {@code publisherPort.publish(message, plan)}
- *   <li>On success → {@link #handleSuccess(OutboxMessage)}
- *   <li>On exception → Classify error:
+ *   <li>调用 {@code publisherPort.publish(message, plan)}
+ *   <li>成功时 → {@link #handleSuccess(OutboxMessage)}
+ *   <li>异常时 → 分类错误:
  *       <ul>
- *         <li>TRANSIENT + can retry → {@link #handleRetry(OutboxMessage, RelayPlan, Exception)}
- *         <li>FATAL or max retries → {@link #handleFailed(OutboxMessage, RelayPlan, Exception)}
+ *         <li>TRANSIENT + 可重试 → {@link #handleRetry(OutboxMessage, RelayPlan, Exception)}
+ *         <li>FATAL 或达到最大重试 → {@link #handleFailed(OutboxMessage, RelayPlan, Exception)}
  *       </ul>
  * </ol>
  *
- * <h3>State Transitions</h3>
+ * <h3>状态转换</h3>
  *
  * <pre>
- * PUBLISHING → PUBLISHED  (success, lease released)
- * PUBLISHING → FAILED     (transient error, retry scheduled, lease released)
- * PUBLISHING → DEAD       (fatal error or max retries, lease released)
+ * PUBLISHING → PUBLISHED  (成功,释放租约)
+ * PUBLISHING → FAILED     (暂时性错误,已调度重试,释放租约)
+ * PUBLISHING → DEAD       (致命错误或达到最大重试,释放租约)
  * </pre>
  *
- * <h3>Retry Logic</h3>
+ * <h3>重试逻辑</h3>
  *
  * <ul>
- *   <li>Uses exponential backoff via RelayRetryPolicy
- *   <li>Respects maxAttempts from RelayPlan
- *   <li>Computes nextRetryAt = now + backoff(attemptNumber)
+ *   <li>通过 RelayRetryPolicy 使用指数退避
+ *   <li>遵守来自 RelayPlan 的 maxAttempts
+ *   <li>计算 nextRetryAt = now + backoff(attemptNumber)
  * </ul>
  *
- * <h3>Logging Strategy</h3>
+ * <h3>日志策略</h3>
  *
  * <ul>
- *   <li>DEBUG: Successful publish (messageId, channel, duration)
- *   <li>WARN: Transient error with retry (messageId, attemptNumber, nextRetryAt, errorCode)
- *   <li>ERROR: Fatal error or max retries (messageId, totalAttempts, errorCode, exception)
+ *   <li>DEBUG: 成功发布 (messageId, channel, duration)
+ *   <li>WARN: 暂时性错误并重试 (messageId, attemptNumber, nextRetryAt, errorCode)
+ *   <li>ERROR: 致命错误或达到最大重试 (messageId, totalAttempts, errorCode, exception)
  * </ul>
  *
  * @author Papertrace Team
@@ -75,35 +75,35 @@ public class RelayPublishCoordinator {
   private final RelayRetryPolicy retryPolicy;
 
   /**
-   * Publishes a single outbox message and handles the result.
+   * 发布单条 Outbox 消息并处理结果
    *
-   * <p>This method orchestrates the entire publish lifecycle:
+   * <p>此方法编排整个发布生命周期:
    *
    * <ol>
-   *   <li>Attempt to publish via {@code publisherPort}
-   *   <li>On success, mark as PUBLISHED and release lease
-   *   <li>On failure, classify error and either retry or fail permanently
+   *   <li>尝试通过 {@code publisherPort} 发布
+   *   <li>成功时,标记为 PUBLISHED 并释放租约
+   *   <li>失败时,分类错误并重试或永久失败
    * </ol>
    *
-   * @param message outbox message with lease already acquired
-   * @param plan relay plan containing retry policy parameters
-   * @return relay result indicating success/retry/failed outcome
+   * @param message 已获取租约的 Outbox 消息
+   * @param plan 包含重试策略参数的中继计划
+   * @return 指示成功/重试/失败结果的中继结果
    */
   public RelayResult publish(OutboxMessage message, RelayPlan plan) {
     Instant startTime = Instant.now();
     int attemptNumber = message.computeNextAttempt();
 
     try {
-      // Attempt to publish to downstream broker
+      // 尝试发布到下游代理
       publisherPort.publish(message, plan);
 
-      // Success: Mark as PUBLISHED and release lease
+      // 成功: 标记为 PUBLISHED 并释放租约
       handleSuccess(message);
 
       if (log.isDebugEnabled()) {
         long durationMs = Duration.between(startTime, Instant.now()).toMillis();
         log.debug(
-            "Published successfully: messageId={}, channel={}, attemptNumber={}, durationMs={}",
+            "发布成功: messageId={}, channel={}, attemptNumber={}, durationMs={}",
             message.getId(),
             message.getChannel(),
             attemptNumber,
@@ -113,21 +113,21 @@ public class RelayPublishCoordinator {
       return RelayResult.success(message.getId(), attemptNumber);
 
     } catch (Exception exception) {
-      // Classify error to determine retry eligibility
+      // 分类错误以确定重试资格
       RelayErrorKind errorKind = errorClassifier.classify(exception);
       boolean canRetry = message.canRetry(plan.maxAttempts());
       String errorCode = extractErrorCode(exception);
       String errorMessage = truncateMessage(exception.getMessage(), 500);
 
       if (errorKind == RelayErrorKind.TRANSIENT && canRetry) {
-        // Transient error with retry budget remaining
+        // 暂时性错误且剩余重试预算
         handleRetry(message, plan, exception);
 
         Duration backoff = retryPolicy.computeDelay(attemptNumber);
         Instant nextRetryAt = Instant.now().plus(backoff);
 
         log.warn(
-            "Publishing failed with transient error, will retry: messageId={}, channel={}, attemptNumber={}/{}, nextRetryAt={}, errorCode={}, errorMessage={}",
+            "发布失败,出现暂时性错误,将重试: messageId={}, channel={}, attemptNumber={}/{}, nextRetryAt={}, errorCode={}, errorMessage={}",
             message.getId(),
             message.getChannel(),
             attemptNumber,
@@ -140,16 +140,14 @@ public class RelayPublishCoordinator {
             message.getId(), attemptNumber, nextRetryAt, errorCode, errorMessage);
 
       } else {
-        // Fatal error or max retries exhausted
+        // 致命错误或达到最大重试次数
         handleFailed(message, plan, exception);
 
         String reason =
-            errorKind == RelayErrorKind.FATAL
-                ? "fatal error"
-                : "max retries exhausted (" + plan.maxAttempts() + ")";
+            errorKind == RelayErrorKind.FATAL ? "致命错误" : "达到最大重试次数 (" + plan.maxAttempts() + ")";
 
         log.error(
-            "Publishing failed permanently: messageId={}, channel={}, attemptNumber={}, reason={}, errorCode={}, errorMessage={}",
+            "发布永久失败: messageId={}, channel={}, attemptNumber={}, reason={}, errorCode={}, errorMessage={}",
             message.getId(),
             message.getChannel(),
             attemptNumber,
@@ -164,50 +162,50 @@ public class RelayPublishCoordinator {
   }
 
   /**
-   * Handles successful publishing by marking message as PUBLISHED.
+   * 通过将消息标记为 PUBLISHED 来处理成功发布
    *
-   * <p>State transition: PUBLISHING → PUBLISHED
+   * <p>状态转换: PUBLISHING → PUBLISHED
    *
-   * <p>Database changes:
+   * <p>数据库变更:
    *
    * <ul>
    *   <li>status_code = 'PUBLISHED'
    *   <li>published_at = NOW(6)
-   *   <li>pub_lease_owner = NULL (lease released)
-   *   <li>pub_leased_until = NULL (lease released)
-   *   <li>error_code = NULL (cleared)
-   *   <li>error_msg = NULL (cleared)
-   *   <li>next_retry_at = NULL (cleared)
+   *   <li>pub_lease_owner = NULL (租约已释放)
+   *   <li>pub_leased_until = NULL (租约已释放)
+   *   <li>error_code = NULL (已清除)
+   *   <li>error_msg = NULL (已清除)
+   *   <li>next_retry_at = NULL (已清除)
    *   <li>version = version + 1
    * </ul>
    *
-   * @param message outbox message that was published successfully
+   * @param message 成功发布的 Outbox 消息
    */
   private void handleSuccess(OutboxMessage message) {
     relayStore.markPublished(message.getId(), message.getVersion());
   }
 
   /**
-   * Handles transient publishing errors by scheduling retry.
+   * 通过调度重试来处理暂时性发布错误
    *
-   * <p>State transition: PUBLISHING → FAILED (with next_retry_at set)
+   * <p>状态转换: PUBLISHING → FAILED (但设置了 next_retry_at)
    *
-   * <p>Database changes:
+   * <p>数据库变更:
    *
    * <ul>
-   *   <li>status_code = 'FAILED' (but will retry based on next_retry_at)
-   *   <li>retry_count = incremented
-   *   <li>next_retry_at = computed using exponential backoff
-   *   <li>error_code = extracted from exception
-   *   <li>error_msg = truncated exception message
-   *   <li>pub_lease_owner = NULL (lease released)
-   *   <li>pub_leased_until = NULL (lease released)
+   *   <li>status_code = 'FAILED' (但将根据 next_retry_at 重试)
+   *   <li>retry_count = 递增
+   *   <li>next_retry_at = 使用指数退避计算
+   *   <li>error_code = 从异常中提取
+   *   <li>error_msg = 截断的异常消息
+   *   <li>pub_lease_owner = NULL (租约已释放)
+   *   <li>pub_leased_until = NULL (租约已释放)
    *   <li>version = version + 1
    * </ul>
    *
-   * @param message outbox message that failed with transient error
-   * @param plan relay plan containing retry policy parameters
-   * @param exception the exception that occurred during publishing
+   * @param message 失败并出现暂时性错误的 Outbox 消息
+   * @param plan 包含重试策略参数的中继计划
+   * @param exception 发布期间发生的异常
    */
   private void handleRetry(OutboxMessage message, RelayPlan plan, Exception exception) {
     int attemptNumber = message.computeNextAttempt();
@@ -217,33 +215,33 @@ public class RelayPublishCoordinator {
     relayStore.markDeferred(
         message.getId(),
         message.getVersion(),
-        attemptNumber, // Updated retry count
+        attemptNumber, // 已更新的重试计数
         nextRetryAt,
         extractErrorCode(exception),
         truncateMessage(exception.getMessage(), 500));
   }
 
   /**
-   * Handles fatal publishing errors or max retry exhaustion.
+   * 处理致命发布错误或达到最大重试
    *
-   * <p>State transition: PUBLISHING → DEAD
+   * <p>状态转换: PUBLISHING → DEAD
    *
-   * <p>Database changes:
+   * <p>数据库变更:
    *
    * <ul>
-   *   <li>status_code = 'DEAD' (terminal state, no more retries)
-   *   <li>retry_count = final attempt count
-   *   <li>error_code = extracted from exception
-   *   <li>error_msg = truncated exception message
-   *   <li>next_retry_at = NULL (no retry)
-   *   <li>pub_lease_owner = NULL (lease released)
-   *   <li>pub_leased_until = NULL (lease released)
+   *   <li>status_code = 'DEAD' (终止状态,不再重试)
+   *   <li>retry_count = 最终尝试计数
+   *   <li>error_code = 从异常中提取
+   *   <li>error_msg = 截断的异常消息
+   *   <li>next_retry_at = NULL (不重试)
+   *   <li>pub_lease_owner = NULL (租约已释放)
+   *   <li>pub_leased_until = NULL (租约已释放)
    *   <li>version = version + 1
    * </ul>
    *
-   * @param message outbox message that failed permanently
-   * @param plan relay plan (for context)
-   * @param exception the exception that occurred during publishing
+   * @param message 永久失败的 Outbox 消息
+   * @param plan 中继计划 (用于上下文)
+   * @param exception 发布期间发生的异常
    */
   private void handleFailed(OutboxMessage message, RelayPlan plan, Exception exception) {
     int attemptNumber = message.computeNextAttempt();
@@ -251,36 +249,36 @@ public class RelayPublishCoordinator {
     relayStore.markFailed(
         message.getId(),
         message.getVersion(),
-        attemptNumber, // Final retry count
+        attemptNumber, // 最终重试计数
         extractErrorCode(exception),
         truncateMessage(exception.getMessage(), 500));
   }
 
   /**
-   * Extracts a simple error code from exception class name.
+   * 从异常类名提取简单的错误代码
    *
-   * <p>Examples:
+   * <p>示例:
    *
    * <ul>
    *   <li>TimeoutException → TIMEOUT_EXCEPTION
    *   <li>BrokerUnavailableException → BROKER_UNAVAILABLE_EXCEPTION
    * </ul>
    *
-   * @param exception the exception to extract code from
-   * @return error code derived from exception class name
+   * @param exception 要从中提取代码的异常
+   * @return 从异常类名派生的错误代码
    */
   private String extractErrorCode(Exception exception) {
     return exception.getClass().getSimpleName().replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase();
   }
 
   /**
-   * Truncates error message to specified max length.
+   * 将错误消息截断到指定的最大长度
    *
-   * <p>Prevents excessive storage usage in database error_msg column.
+   * <p>防止数据库 error_msg 列中的过度存储使用
    *
-   * @param message error message to truncate
-   * @param maxLength maximum allowed length
-   * @return truncated message with "..." suffix if truncated
+   * @param message 要截断的错误消息
+   * @param maxLength 允许的最大长度
+   * @return 如果截断则带有 "..." 后缀的截断消息
    */
   private String truncateMessage(String message, int maxLength) {
     if (message == null) {
@@ -293,14 +291,14 @@ public class RelayPublishCoordinator {
   }
 
   /**
-   * Result of a relay publishing attempt.
+   * 中继发布尝试的结果
    *
-   * <p>Three possible outcomes:
+   * <p>三种可能的结果:
    *
    * <ul>
-   *   <li>SUCCESS: Message published and marked PUBLISHED
-   *   <li>DEFERRED: Transient error, scheduled for retry
-   *   <li>FAILED: Fatal error or max retries, marked DEAD
+   *   <li>SUCCESS: 消息已发布并标记为 PUBLISHED
+   *   <li>DEFERRED: 暂时性错误,已调度重试
+   *   <li>FAILED: 致命错误或达到最大重试,标记为 DEAD
    * </ul>
    */
   public record RelayResult(

@@ -7,8 +7,9 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_provenance}. Provides helper queries to load provenance metadata
- * by business code.
+ * 只读 Mapper,用于表 {@code reg_provenance}。
+ *
+ * <p>提供辅助查询以通过业务代码加载数据源元数据。
  *
  * @author linqibin
  * @since 0.1.0
@@ -16,17 +17,17 @@ import org.apache.ibatis.annotations.Param;
 public interface RegProvenanceMapper extends BaseMapper<RegProvenanceDO> {
 
   /**
-   * Fetches an active provenance row by its stable business code.
+   * 通过其稳定的业务代码获取激活的数据源行。
    *
-   * @param code provenance code (e.g., pubmed)
-   * @return optional provenance definition
+   * @param code 数据源代码(例如,pubmed)
+   * @return 可选的数据源定义
    */
   Optional<RegProvenanceDO> selectByCode(@Param("code") String code);
 
   /**
-   * Lists all active provenance definitions ordered by code.
+   * 列出按代码排序的所有激活数据源定义。
    *
-   * @return provenance list
+   * @return 数据源列表
    */
   List<RegProvenanceDO> selectAllActive();
 }

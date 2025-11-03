@@ -8,8 +8,8 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_expr_render_rule}. Supplies helpers to locate the active
- * render rule for expression atoms.
+ * 只读 Mapper,用于表 {@code reg_prov_expr_render_rule}. Supplies helpers to locate the active render
+ * rule for expression atoms.
  *
  * @author linqibin
  * @since 0.1.0

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code reg_prov_expr_capability}.
+ * 数据库实体,映射到表 {@code reg_prov_expr_capability}.
  *
  * <p>Describes expression capabilities and constraints for a provenance field.
  *
@@ -29,27 +29,27 @@ import lombok.experimental.SuperBuilder;
 @TableName("reg_prov_expr_capability")
 public class RegProvExprCapabilityDO extends BaseDO {
 
-  /** Foreign key referencing {@code reg_provenance.id}. */
+  /** 外键,引用 {@code reg_provenance.id}。 */
   @TableField("provenance_id")
   private Long provenanceId;
 
-  /** Operation type discriminator linked to this capability. */
+  /** 操作类型鉴别器 linked to this capability. */
   @TableField("operation_type")
   private String operationType;
 
-  /** Lifecycle status code for the capability record. */
+  /** 生命周期状态代码 for the capability record. */
   @TableField("lifecycle_status_code")
   private String lifecycleStatusCode;
 
-  /** Canonical field key to which this capability applies. */
+  /** 规范字段键 to which this capability applies. */
   @TableField("field_key")
   private String fieldKey;
 
-  /** Inclusive timestamp when the capability becomes effective. */
+  /** 包含时间戳 when the capability becomes effective. */
   @TableField("effective_from")
   private Instant effectiveFrom;
 
-  /** Exclusive timestamp indicating when the capability expires. */
+  /** 排除时间戳 indicating when the capability expires. */
   @TableField("effective_to")
   private Instant effectiveTo;
 
@@ -61,7 +61,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("negatable_ops")
   private JsonNode negatableOps;
 
-  /** Flag indicating whether the NOT operator is allowed globally. */
+  /** 指示 whether the NOT operator is allowed globally. */
   @TableField("supports_not")
   private Boolean supportsNot;
 
@@ -73,7 +73,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("term_case_sensitive_allowed")
   private Boolean termCaseSensitiveAllowed;
 
-  /** Flag indicating whether blank TERM values are permitted. */
+  /** 指示 whether blank TERM values are permitted. */
   @TableField("term_allow_blank")
   private Boolean termAllowBlank;
 
@@ -85,7 +85,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("term_max_len")
   private Integer termMaxLen;
 
-  /** Optional regular expression constraining TERM values. */
+  /** 可选的 regular expression constraining TERM values. */
   @TableField("term_pattern")
   private String termPattern;
 
@@ -93,7 +93,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("in_max_size")
   private Integer inMaxSize;
 
-  /** Flag indicating whether IN comparisons can be case sensitive. */
+  /** 指示 whether IN comparisons can be case sensitive. */
   @TableField("in_case_sensitive_allowed")
   private Boolean inCaseSensitiveAllowed;
 
@@ -101,15 +101,15 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("range_kind_code")
   private String rangeKindCode;
 
-  /** Flag indicating whether open-start ranges are allowed. */
+  /** 指示 whether open-start ranges are allowed. */
   @TableField("range_allow_open_start")
   private Boolean rangeAllowOpenStart;
 
-  /** Flag indicating whether open-end ranges are allowed. */
+  /** 指示 whether open-end ranges are allowed. */
   @TableField("range_allow_open_end")
   private Boolean rangeAllowOpenEnd;
 
-  /** Flag indicating whether ranges may be closed at positive or negative infinity. */
+  /** 指示 whether ranges may be closed at positive or negative infinity. */
   @TableField("range_allow_closed_at_infty")
   private Boolean rangeAllowClosedAtInfty;
 
@@ -137,7 +137,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("number_max")
   private BigDecimal numberMax;
 
-  /** Flag indicating whether the EXISTS operator is supported. */
+  /** 指示 whether the EXISTS operator is supported. */
   @TableField("exists_supported")
   private Boolean existsSupported;
 
@@ -145,7 +145,7 @@ public class RegProvExprCapabilityDO extends BaseDO {
   @TableField("token_kinds")
   private JsonNode tokenKinds;
 
-  /** Optional regex constraining token values. */
+  /** 可选的 regex constraining token values. */
   @TableField("token_value_pattern")
   private String tokenValuePattern;
 }

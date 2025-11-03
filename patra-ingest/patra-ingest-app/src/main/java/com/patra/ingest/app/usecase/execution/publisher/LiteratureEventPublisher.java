@@ -13,7 +13,13 @@ import com.patra.ingest.domain.port.OutboxMessageRepository;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
-/** Outbox publisher for literature ready events emitted after task execution completes. */
+/**
+ * 文献事件发布器
+ *
+ * <p>在六边形架构+DDD中的角色:应用层事件发布器,负责在任务执行完成后发布文献就绪事件。
+ *
+ * <p>主要职责:将领域事件持久化到Outbox表,由中继组件投递到MQ。
+ */
 @Component
 public class LiteratureEventPublisher
     extends AbstractOutboxPublisher<
@@ -28,9 +34,11 @@ public class LiteratureEventPublisher
   }
 
   /**
-   * Persist the given event into the outbox so the relay can deliver it to MQ.
+   * 发布文献就绪事件
    *
-   * @param event literature ready domain event
+   * <p>将事件持久化到outbox表,由relay组件投递到MQ。
+   *
+   * @param event 文献就绪领域事件
    */
   public void publish(LiteratureDataReadyEvent event) {
     if (!validateEvent(event)) {

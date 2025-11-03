@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_expr_capability}. Provides convenience queries to locate the
+ * 只读 Mapper,用于表 {@code reg_prov_expr_capability}. Provides convenience queries to locate the
  * effective capability slice for a field.
  *
  * @author linqibin

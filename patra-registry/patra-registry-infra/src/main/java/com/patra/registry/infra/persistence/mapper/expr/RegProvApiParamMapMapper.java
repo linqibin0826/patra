@@ -8,8 +8,8 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_api_param_map}. Resolves provider-specific parameter
- * mappings for standardized keys.
+ * 只读 Mapper,用于表 {@code reg_prov_api_param_map}. Resolves provider-specific parameter mappings for
+ * standardized keys.
  *
  * @author linqibin
  * @since 0.1.0

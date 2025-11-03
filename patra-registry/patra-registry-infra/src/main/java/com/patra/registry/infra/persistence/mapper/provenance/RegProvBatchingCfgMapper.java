@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_batching_cfg}. Backed by SQL statements in {@code
+ * 只读 Mapper,用于表 {@code reg_prov_batching_cfg}. Backed by SQL statements in {@code
  * resources/mapper/RegProvBatchingCfgMapper.xml}.
  *
  * @author linqibin

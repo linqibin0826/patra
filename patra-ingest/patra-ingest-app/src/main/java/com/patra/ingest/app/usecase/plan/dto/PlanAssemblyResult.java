@@ -7,16 +7,14 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Application-layer DTO describing the outcome of plan assembly. It combines the aggregates
- * produced during assembly (plan, slices, tasks) with an overall status.
+ * 应用层 DTO，描述计划组装结果。将组装期间生成的聚合根（Plan、Slice、Task）与总体状态组合。
  *
- * <p>This is not a domain aggregate itself; it is a composite view passed between {@code
- * PlanAssembler} and {@code PlanIngestionOrchestrator}.
+ * <p>这不是领域聚合根本身；而是在 {@code PlanAssembler} 和 {@code PlanIngestionOrchestrator} 之间传递的复合视图。
  *
- * @param plan assembled plan aggregate
- * @param slices assembled slice aggregates
- * @param tasks assembled task aggregates
- * @param status assembly status (READY/PARTIAL/FAILED)
+ * @param plan 已组装的计划聚合根
+ * @param slices 已组装的切片聚合根
+ * @param tasks 已组装的任务聚合根
+ * @param status 组装状态 (READY/PARTIAL/FAILED)
  */
 public record PlanAssemblyResult(
     PlanAggregate plan,

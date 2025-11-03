@@ -28,55 +28,49 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * JSON normalization utility that converts arbitrary inputs (POJOs, {@link JsonNode}s, strings,
- * etc.) into deterministic structures and canonical JSON text.
+ * JSON 规范化工具,将任意输入(POJO、{@link JsonNode}、字符串等)转换为确定性结构和规范 JSON 文本。
  *
- * <p>Key features:
- *
- * <ul>
- *   <li><b>Key ordering</b>: stable object-key sorting with optional ASCII/Unicode comparators.
- *   <li><b>Array handling</b>: deduplicates and orders arrays by type tag and serialized value
- *       while preserving the order of configured sequence fields.
- *   <li><b>Empty value policy</b>: removes empty objects/arrays/strings with whitelist support.
- *   <li><b>Type coercion</b>: normalizes booleans, numbers, and timestamps; strips trailing zeros
- *       from {@link BigDecimal} values.
- *   <li><b>String cleanup</b>: optional trim, whitespace collapse, and field/path-level
- *       lowercasing.
- *   <li><b>Time normalization</b>: parses multiple formats (including second/millisecond epochs)
- *       and emits UTC timestamps with millisecond precision ({@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}).
- *   <li><b>Safety guards</b>: enforces UTF-8 byte limits, maximum depth, and rejects non-finite
- *       numbers.
- *   <li><b>Deterministic output</b>: writes canonical JSON using an {@link ObjectWriter} configured
- *       with {@link com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN}.
- * </ul>
- *
- * <h3>Spring Integration</h3>
- *
- * <p>Does not depend on Spring. Uses {@link JsonMapperHolder} for {@link ObjectMapper} access. In
- * Spring apps, the starter registers the container mapper; outside Spring, a default mapper is
- * created. Prefer DI in business code; use static factories only when unavailable.
- *
- * <h3>Use Cases</h3>
+ * <p>主要特性:
  *
  * <ul>
- *   <li>Canonical JSON for signing, deduplication, cache keys
- *   <li>Normalize heterogeneous payloads from multiple sources
- *   <li>Persist canonical forms alongside hashes
+ *   <li><b>键排序</b>:使用可选的 ASCII/Unicode 比较器进行稳定的对象键排序。
+ *   <li><b>数组处理</b>:按类型标签和序列化值对数组去重和排序,同时保留已配置序列字段的顺序。
+ *   <li><b>空值策略</b>:删除空对象/数组/字符串,支持白名单。
+ *   <li><b>类型强制</b>:规范化布尔值、数字和时间戳;从 {@link BigDecimal} 值中去除尾随零。
+ *   <li><b>字符串清理</b>:可选的修剪、空格折叠以及字段/路径级别的小写转换。
+ *   <li><b>时间规范化</b>:解析多种格式(包括秒/毫秒纪元),并以毫秒精度发出 UTC 时间戳({@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'})。
+ *   <li><b>安全防护</b>:强制执行 UTF-8 字节限制、最大深度,并拒绝非有限数字。
+ *   <li><b>确定性输出</b>:使用配置了 {@link
+ *       com.fasterxml.jackson.core.JsonGenerator.Feature#WRITE_BIGDECIMAL_AS_PLAIN} 的 {@link
+ *       ObjectWriter} 编写规范 JSON。
  * </ul>
  *
- * <h3>Thread Safety</h3>
+ * <h3>Spring 集成</h3>
  *
- * <p>Immutable. {@link JsonMapperHolder} ensures safe {@link ObjectMapper} publication.
+ * <p>不依赖 Spring。使用 {@link JsonMapperHolder} 访问 {@link ObjectMapper}。在 Spring 应用中,启动器注册容器映射器;在
+ * Spring 之外,创建默认映射器。在业务代码中优先使用依赖注入;仅在不可用时使用静态工厂。
  *
- * <h3>Examples</h3>
+ * <h3>使用场景</h3>
+ *
+ * <ul>
+ *   <li>用于签名、去重、缓存键的规范 JSON
+ *   <li>规范化来自多个源的异构有效负载
+ *   <li>持久化规范形式及其哈希值
+ * </ul>
+ *
+ * <h3>线程安全</h3>
+ *
+ * <p>不可变。{@link JsonMapperHolder} 确保安全的 {@link ObjectMapper} 发布。
+ *
+ * <h3>示例</h3>
  *
  * <pre>{@code
- * // Quick normalization using the global ObjectMapper and default configuration
+ * // 使用全局 ObjectMapper 和默认配置快速规范化
  * JsonNormalizerResult r = JsonNormalizer.normalizeDefault(input);
  * String canonical = r.getCanonicalJson();
  * byte[] material = r.getHashMaterial();
  *
- * // Custom configuration
+ * // 自定义配置
  * JsonNormalizer normalizer = JsonNormalizer.withConfig(
  *     JsonNormalizerConfig.builder()
  *         .coerceNumber(true)
@@ -106,49 +100,40 @@ public final class JsonNormalizer {
   }
 
   /**
-   * Normalizes the given input using the global {@link ObjectMapper} supplied by {@link
-   * JsonMapperHolder} (bridged from Spring when available) and the default {@link
-   * JsonNormalizerConfig}.
+   * 使用由 {@link JsonMapperHolder} 提供的全局 {@link ObjectMapper}(从 Spring 桥接,如果可用)和默认的 {@link
+   * JsonNormalizerConfig} 规范化给定输入。
    */
   public static JsonNormalizerResult normalizeDefault(Object input) {
     return usingDefault().normalize(input);
   }
 
-  /**
-   * Creates a reusable normalizer backed by the global {@link ObjectMapper} and the default {@link
-   * JsonNormalizerConfig}. Ideal when multiple inputs share the same settings.
-   */
+  /** 创建由全局 {@link ObjectMapper} 和默认 {@link JsonNormalizerConfig} 支持的可重用规范化器。当多个输入共享相同设置时非常理想。 */
   public static JsonNormalizer usingDefault() {
     return new JsonNormalizer(
         JsonMapperHolder.getObjectMapper(), JsonNormalizerConfig.builder().build());
   }
 
   /**
-   * Creates a normalizer backed by the global {@link ObjectMapper} and the provided {@link
-   * JsonNormalizerConfig}. Use {@link #withMapper(ObjectMapper, JsonNormalizerConfig)} to supply a
-   * custom mapper.
+   * 创建由全局 {@link ObjectMapper} 和提供的 {@link JsonNormalizerConfig} 支持的规范化器。使用 {@link
+   * #withMapper(ObjectMapper, JsonNormalizerConfig)} 提供自定义映射器。
    */
   public static JsonNormalizer withConfig(JsonNormalizerConfig config) {
     return new JsonNormalizer(JsonMapperHolder.getObjectMapper(), config);
   }
 
   /**
-   * Builds a normalizer with the supplied {@link ObjectMapper} and configuration.
+   * 使用提供的 {@link ObjectMapper} 和配置构建规范化器。
    *
-   * <p>Prefer injecting the mapper into your service layer and composing this utility there rather
-   * than treating it as a service locator.
+   * <p>优先将映射器注入到服务层并在那里组合此工具,而不是将其视为服务定位器。
    */
   public static JsonNormalizer withMapper(ObjectMapper objectMapper, JsonNormalizerConfig config) {
     return new JsonNormalizer(objectMapper, config);
   }
 
   /**
-   * Executes normalization by converting the input to a {@link JsonNode}, recursively cleaning it
-   * according to the configured policies, rendering canonical JSON, and returning the structured
-   * {@link JsonNormalizerResult}.
+   * 通过将输入转换为 {@link JsonNode}、根据配置的策略递归清理它、渲染规范 JSON 并返回结构化的 {@link JsonNormalizerResult} 来执行规范化。
    *
-   * <p>Throws {@link JsonNormalizationException} for violations such as excessive depth, illegal
-   * numbers, or oversized strings.
+   * <p>对于过度深度、非法数字或超大字符串等违规情况,抛出 {@link JsonNormalizationException}。
    */
   public JsonNormalizerResult normalize(Object input) {
     JsonNode root = toJsonNode(input);

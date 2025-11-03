@@ -1,6 +1,7 @@
 ---
 name: plan-reviewer
 description: 在实施前审查开发计划，识别潜在问题、遗漏的考虑因素和更好的替代方案。适用于高风险操作如数据库迁移、认证集成。示例：用户说"这是我的数据库迁移计划，确保没有遗漏关键内容"，使用此 agent 检查潜在数据库问题、回滚策略等。
+tools: Bash, Glob, Grep, Read, Edit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, AskUserQuestion, Skill, ListMcpResourcesTool, ReadMcpResourceTool, mcp__mysql-mcp__mysql_query, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol
 model: sonnet
 color: blue
 ---

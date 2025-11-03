@@ -22,13 +22,37 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
- * 调度任务基类,为 "来源 + 操作" 任务提供统一模板(参数解析 → 编排 → 结果/错误报告)。
+ * 数据来源调度任务抽象基类。
  *
- * <p>通用逻辑集中在此处。子类只需定义 {@link #getProvenanceCode()} 和 {@link #getOperationCode()}。
+ * <p>为所有 "Provenance + OperationCode" 组合的调度任务提供统一的模板方法实现,执行流程为: 参数解析 → 用例编排 → 结果报告 / 错误处理。
  *
- * <p>默认值和约束: - 如果 XXL-Job 参数为空,则回退到默认窗口和步长(当前 step=P1D;以后可以外部化)。 - 将 windowFrom/windowTo 解析为
- * ISO-8601 Instant 字符串;缺失/非法值被视为 null。 - 非法的优先级值会被忽略以避免任务失败。 - 结果通过日志和 XxlJobHelper
- * 报告;失败时,抛出原始异常链以允许重试策略决定。
+ * <p>职责:
+ *
+ * <ul>
+ *   <li>从 XXL-Job JSON 参数解析调度配置(时间窗口、优先级、步长等)
+ *   <li>构建 PlanIngestionCommand 并委托给应用层用例
+ *   <li>处理参数验证和默认值回退逻辑
+ *   <li>统一记录任务执行日志和性能指标
+ *   <li>向 XXL-Job 调度中心报告任务执行结果
+ * </ul>
+ *
+ * <p>子类实现: 子类只需定义两个方法:
+ *
+ * <ul>
+ *   <li>{@link #getProvenanceCode()} - 指定数据来源(如 PUBMED、EMBASE)
+ *   <li>{@link #getOperationCode()} - 指定操作类型(如 HARVEST、PARSE)
+ * </ul>
+ *
+ * <p>默认值和约束:
+ *
+ * <ul>
+ *   <li>参数为空时回退到默认配置(step=P1D,即1天切片)
+ *   <li>windowFrom/windowTo 解析为 ISO-8601 Instant,非法值抛出异常
+ *   <li>非法优先级值被忽略(记录警告但不阻断任务执行)
+ *   <li>任务失败时抛出原始异常,由 XXL-Job 根据重试策略决定是否重试
+ * </ul>
+ *
+ * <p>设计模式: 模板方法模式 - 基类定义算法骨架,子类填充具体步骤。
  */
 @Slf4j
 public abstract class AbstractProvenanceScheduleJob {

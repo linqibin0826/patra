@@ -5,9 +5,11 @@ import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 
 /**
- * Prepare phase use case.
+ * 准备阶段用例
  *
- * <p>Responsibility: idempotency check, lease acquisition, session initialization, context loading.
+ * <p>在六边形架构+DDD中的角色:应用层用例,负责任务执行准备阶段的处理。
+ *
+ * <p>主要职责:幂等检查、租约获取、会话初始化、上下文加载
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,29 +17,37 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 public interface PrepareTaskExecutionUseCase {
 
   /**
-   * Performs preparation (idempotency check, lease acquisition, session creation, context loading).
+   * 执行准备(幂等检查、租约获取、会话创建、上下文加载)
    *
-   * @param command task-ready command
-   * @return preparation result (session + context)
+   * @param command 任务就绪命令
+   * @return 准备结果(会话 + 上下文)
    */
   PrepareResult prepare(TaskReadyCommand command);
 
   /**
-   * Preparation result.
+   * 准备结果
    *
-   * @param session execution session (with heartbeat handle)
-   * @param context execution context (config snapshot, compiled expression)
+   * @param session 执行会话(包含心跳句柄)
+   * @param context 执行上下文(配置快照、编译后的表达式)
    */
   record PrepareResult(ExecutionSession session, ExecutionContext context) {}
 
-  /** Raised when the task has already succeeded. */
+  /**
+   * 任务已成功异常
+   *
+   * <p>当任务已经成功执行时抛出,用于幂等跳过。
+   */
   class TaskAlreadySucceededException extends RuntimeException {
     public TaskAlreadySucceededException(String message) {
       super(message);
     }
   }
 
-  /** Raised when lease acquisition failed. */
+  /**
+   * 租约获取失败异常
+   *
+   * <p>当租约获取失败时抛出(被其他工作节点持有)。
+   */
   class LeaseAcquisitionFailedException extends RuntimeException {
     public LeaseAcquisitionFailedException(String message) {
       super(message);

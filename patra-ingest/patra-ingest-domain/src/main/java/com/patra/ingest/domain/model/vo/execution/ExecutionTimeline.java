@@ -3,10 +3,14 @@ package com.patra.ingest.domain.model.vo.execution;
 import java.time.Instant;
 
 /**
- * Execution timeline tracking start and end instants for a task.
+ * 任务执行时间线值对象。
  *
- * @param startedAt task execution start time
- * @param finishedAt task execution finish time
+ * <p>跟踪任务的开始和结束时间点。
+ *
+ * @param startedAt 任务执行开始时间
+ * @param finishedAt 任务执行结束时间
+ * @author linqibin
+ * @since 0.1.0
  */
 public record ExecutionTimeline(Instant startedAt, Instant finishedAt) {
 

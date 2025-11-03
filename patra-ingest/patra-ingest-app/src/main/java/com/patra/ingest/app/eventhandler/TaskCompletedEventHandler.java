@@ -21,13 +21,24 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Handles TaskCompletedEvent to update Slice status (enforces 1:1 Slice-Task relationship).
+ * Task 完成事件处理器 (强制 1:1 Slice-Task 关系)
  *
- * <p>After refactoring, Slice:Task is 1:1. When a Task completes (SUCCEEDED/FAILED), this handler
- * directly maps the Task status to Slice status using {@link SliceStatusCalculator}.
+ * <p>处理的领域事件: {@link TaskCompletedEvent} (Task 完成事件)
  *
- * <p>If the Slice status changes, it publishes a SliceStatusChangedEvent to trigger Plan status
- * update.
+ * <p>触发的后续操作:
+ *
+ * <ul>
+ *   <li>查询该 Slice 对应的 Task (1:1 关系)
+ *   <li>使用 {@link SliceStatusCalculator} 直接映射 Task 状态到 Slice 状态
+ *   <li>更新 Slice 状态
+ *   <li>如果 Slice 状态变化,发布 {@link SliceStatusChangedEvent} 触发 Plan 状态更新
+ * </ul>
+ *
+ * <p>重构说明: Slice:Task 为 1:1 关系。当 Task 完成 (SUCCEEDED/FAILED) 时,直接映射 Task 状态到 Slice 状态
+ *
+ * <p>事件流转: TaskCompletedEvent → SliceStatusChangedEvent → Plan 状态更新
+ *
+ * <p>并发处理: 使用乐观锁防止并发冲突,发生冲突时跳过本次更新
  */
 @Component
 @RequiredArgsConstructor
@@ -39,75 +50,71 @@ public class TaskCompletedEventHandler {
   private final ApplicationEventPublisher eventPublisher;
 
   /**
-   * Handles TaskCompletedEvent after the transaction commits.
+   * 处理 Task 完成事件 (事务提交后触发)
    *
-   * @param event the task completed event
+   * @param event Task 完成事件
    */
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void handle(TaskCompletedEvent event) {
     try {
       log.debug(
-          "Handling TaskCompletedEvent for taskId={} sliceId={} planId={} status={}",
+          "处理 TaskCompletedEvent: taskId={} sliceId={} planId={} status={}",
           event.taskId(),
           event.sliceId(),
           event.planId(),
           event.status());
 
-      // 1. Query the task associated with the slice (1:1 relationship)
+      // 1. 查询该 Slice 对应的 Task (1:1 关系)
       Optional<TaskAggregate> taskOpt = taskRepository.findBySliceId(event.sliceId());
       if (taskOpt.isEmpty()) {
-        log.warn(
-            "Task not found for sliceId={}, skip Slice status update (possible data inconsistency)",
-            event.sliceId());
+        log.warn("未找到 sliceId={} 对应的 Task,跳过 Slice 状态更新 (可能存在数据不一致)", event.sliceId());
         return;
       }
 
       TaskAggregate task = taskOpt.get();
       TaskStatus taskStatus = task.getStatus();
 
-      // 2. Calculate slice status using Domain Service (direct 1:1 mapping)
+      // 2. 使用领域服务计算 Slice 状态 (直接 1:1 映射)
       SliceStatus newStatus = SliceStatusCalculator.calculate(taskStatus);
 
-      // 3. Update slice status
+      // 3. 更新 Slice 状态
       PlanSliceAggregate slice =
           sliceRepository
               .findById(event.sliceId())
               .orElseThrow(
-                  () -> new IllegalStateException("Slice not found: sliceId=" + event.sliceId()));
+                  () -> new IllegalStateException("Slice 不存在: sliceId=" + event.sliceId()));
 
       SliceStatus oldStatus = slice.getStatus();
 
-      // 4. Check if status changed (idempotency)
+      // 4. 检查状态是否变化 (幂等性)
       if (oldStatus == newStatus) {
-        log.debug("Slice status unchanged, skip update sliceId={}", event.sliceId());
+        log.debug("Slice 状态未变化,跳过更新: sliceId={}", event.sliceId());
         return;
       }
 
-      // 5. Update and save
+      // 5. 更新并保存
       slice.updateStatus(newStatus);
       sliceRepository.save(slice);
 
-      log.info("Slice status updated sliceId={} {} -> {}", event.sliceId(), oldStatus, newStatus);
+      log.info("Slice 状态已更新: sliceId={} {} -> {}", event.sliceId(), oldStatus, newStatus);
 
-      // 6. Publish SliceStatusChangedEvent if status changed
+      // 6. 发布 SliceStatusChangedEvent (如果状态变化)
       SliceStatusChangedEvent sliceEvent =
           SliceStatusChangedEvent.of(
               event.sliceId(), event.planId(), oldStatus.getCode(), newStatus.getCode());
       eventPublisher.publishEvent(sliceEvent);
 
       log.debug(
-          "Published SliceStatusChangedEvent for sliceId={} planId={}",
-          event.sliceId(),
-          event.planId());
+          "已发布 SliceStatusChangedEvent: sliceId={} planId={}", event.sliceId(), event.planId());
 
     } catch (OptimisticLockingFailureException e) {
-      // Optimistic lock conflict: another thread already updated, skip this one
-      log.warn("Optimistic lock conflict on Slice update, skip sliceId={}", event.sliceId());
+      // 乐观锁冲突: 其他线程已更新,跳过本次更新
+      log.warn("Slice 更新发生乐观锁冲突,跳过: sliceId={}", event.sliceId());
     } catch (Exception e) {
-      // Other exceptions: log error, rely on reconciliation task to fix
+      // 其他异常: 记录错误,依赖对账任务修复
       log.error(
-          "Failed to handle TaskCompletedEvent for taskId={} sliceId={} planId={}",
+          "处理 TaskCompletedEvent 失败: taskId={} sliceId={} planId={}",
           event.taskId(),
           event.sliceId(),
           event.planId(),

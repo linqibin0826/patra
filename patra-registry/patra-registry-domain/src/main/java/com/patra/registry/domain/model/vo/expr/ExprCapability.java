@@ -7,73 +7,73 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * Domain value object for {@code reg_prov_expr_capability}.
+ * 表达式能力领域值对象,对应表 {@code reg_prov_expr_capability}。
  *
- * <p>Declares allowed expression operators and constraints per field/key and scope.
+ * <p>声明每个字段/键和范围允许的表达式操作符及约束。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record ExprCapability(
-    /* Primary key; unique capability configuration identifier */
+    /* 主键;唯一能力配置标识符 */
     Long id,
-    /* Foreign key referencing {@code reg_provenance.id} */
+    /* 外键,引用 {@code reg_provenance.id} */
     Long provenanceId,
-    /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+    /* 操作类型区分器 (HARVEST/UPDATE/BACKFILL);{@code null} 表示应用于所有类型 */
     String operationType,
-    /* Unified internal field key (logical FK to {@code reg_expr_field_dict.field_key}) */
+    /* 统一的内部字段键(逻辑外键到 {@code reg_expr_field_dict.field_key}) */
     String fieldKey,
-    /* Inclusive timestamp marking when this capability becomes effective */
+    /* 包含性时间戳,标记此能力何时生效 */
     Instant effectiveFrom,
-    /* Exclusive timestamp marking when this capability expires; {@code null} means open-ended */
+    /* 排他性时间戳,标记此能力何时到期;{@code null} 表示开放式 */
     Instant effectiveTo,
-    /* JSON array of allowed operation codes (e.g., ["TERM","IN","RANGE","EXISTS","TOKEN"]) */
+    /* 允许的操作代码 JSON 数组(例如,["TERM","IN","RANGE","EXISTS","TOKEN"]) */
     String opsJson,
-    /* JSON array of operations that allow NOT; {@code null} means same as {@code opsJson} */
+    /* 允许 NOT 的操作 JSON 数组;{@code null} 表示与 {@code opsJson} 相同 */
     String negatableOpsJson,
-    /* Whether NOT is globally allowed for this field */
+    /* 此字段是否全局允许 NOT */
     boolean supportsNot,
-    /* JSON array of allowed TERM match strategies (e.g., ["PHRASE","EXACT","ANY"]) */
+    /* 允许的 TERM 匹配策略 JSON 数组(例如,["PHRASE","EXACT","ANY"]) */
     String termMatchesJson,
-    /* Whether TERM operation supports case-sensitive matching */
+    /* TERM 操作是否支持区分大小写匹配 */
     boolean termCaseSensitiveAllowed,
-    /* Whether TERM allows blank/empty string values */
+    /* TERM 是否允许空白/空字符串值 */
     boolean termAllowBlank,
-    /* Minimum length for TERM values; {@code 0} means no limit */
+    /* TERM 值的最小长度;{@code 0} 表示无限制 */
     int termMinLength,
-    /* Maximum length for TERM values; {@code 0} means no limit */
+    /* TERM 值的最大长度;{@code 0} 表示无限制 */
     int termMaxLength,
-    /* Optional regex pattern to constrain TERM value charset/format */
+    /* 可选的正则表达式模式,用于约束 TERM 值的字符集/格式 */
     String termPattern,
-    /* Maximum number of elements for IN set; {@code 0} means no limit */
+    /* IN 集合的最大元素数;{@code 0} 表示无限制 */
     int inMaxSize,
-    /* Whether IN operation supports case-sensitive matching */
+    /* IN 操作是否支持区分大小写匹配 */
     boolean inCaseSensitiveAllowed,
-    /* Range kind code (DICT CODE: reg_range_kind) indicating RANGE value type (NONE/DATE/DATETIME/NUMBER) */
+    /* 范围类型代码(字典代码: reg_range_kind)指示 RANGE 值类型 (NONE/DATE/DATETIME/NUMBER) */
     String rangeKindCode,
-    /* Whether RANGE allows open start (-inf, x] */
+    /* RANGE 是否允许开始边界开放 (-inf, x] */
     boolean rangeAllowOpenStart,
-    /* Whether RANGE allows open end [x, +inf) */
+    /* RANGE 是否允许结束边界开放 [x, +inf) */
     boolean rangeAllowOpenEnd,
-    /* Whether RANGE allows closed interval at infinity (e.g., (-inf, x]) */
+    /* RANGE 是否允许在无穷处闭区间(例如,(-inf, x]) */
     boolean rangeAllowClosedAtInfinity,
-    /* Minimum DATE bound (UTC); applicable when {@code rangeKindCode} is {@code DATE} */
+    /* 最小 DATE 边界 (UTC);当 {@code rangeKindCode} 为 {@code DATE} 时适用 */
     LocalDate dateMin,
-    /* Maximum DATE bound (UTC); applicable when {@code rangeKindCode} is {@code DATE} */
+    /* 最大 DATE 边界 (UTC);当 {@code rangeKindCode} 为 {@code DATE} 时适用 */
     LocalDate dateMax,
-    /* Minimum DATETIME bound (UTC, microsecond precision); applicable when {@code rangeKindCode} is {@code DATETIME} */
+    /* 最小 DATETIME 边界 (UTC, 微秒精度);当 {@code rangeKindCode} 为 {@code DATETIME} 时适用 */
     Instant datetimeMin,
-    /* Maximum DATETIME bound (UTC, microsecond precision); applicable when {@code rangeKindCode} is {@code DATETIME} */
+    /* 最大 DATETIME 边界 (UTC, 微秒精度);当 {@code rangeKindCode} 为 {@code DATETIME} 时适用 */
     Instant datetimeMax,
-    /* Minimum NUMBER bound (high precision); applicable when {@code rangeKindCode} is {@code NUMBER} */
+    /* 最小 NUMBER 边界(高精度);当 {@code rangeKindCode} 为 {@code NUMBER} 时适用 */
     BigDecimal numberMin,
-    /* Maximum NUMBER bound (high precision); applicable when {@code rangeKindCode} is {@code NUMBER} */
+    /* 最大 NUMBER 边界(高精度);当 {@code rangeKindCode} 为 {@code NUMBER} 时适用 */
     BigDecimal numberMax,
-    /* Whether EXISTS operator is supported for this field */
+    /* 此字段是否支持 EXISTS 操作符 */
     boolean existsSupported,
-    /* JSON array of allowed token kinds (e.g., ["owner","pmcid"]) */
+    /* 允许的令牌类型 JSON 数组(例如,["owner","pmcid"]) */
     String tokenKindsJson,
-    /* Optional regex constraint for token values */
+    /* 可选的正则表达式约束,用于令牌值 */
     String tokenValuePattern)
     implements TemporalEntity {
   public ExprCapability(
@@ -142,13 +142,13 @@ public record ExprCapability(
   }
 
   /**
-   * Validates required fields for capability configuration.
+   * 验证能力配置的必需字段。
    *
-   * @param id capability identifier
-   * @param provenanceId provenance identifier
-   * @param fieldKey field key
-   * @param rangeKindCode range kind code
-   * @param effectiveFrom effective start timestamp
+   * @param id 能力标识符
+   * @param provenanceId 来源标识符
+   * @param fieldKey 字段键
+   * @param rangeKindCode 范围类型代码
+   * @param effectiveFrom 生效开始时间戳
    */
   private static void validateRequiredFields(
       Long id, Long provenanceId, String fieldKey, String rangeKindCode, Instant effectiveFrom) {

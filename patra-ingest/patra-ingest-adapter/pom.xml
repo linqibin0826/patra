@@ -33,9 +33,10 @@
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
 
+        <!-- RocketMQ 原生 Starter (替换 Spring Cloud Stream) -->
         <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-stream-rocketmq</artifactId>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
         </dependency>
 
         <!-- Outbound Feign/contracts moved to infra; adapter keeps only inbound dependencies -->

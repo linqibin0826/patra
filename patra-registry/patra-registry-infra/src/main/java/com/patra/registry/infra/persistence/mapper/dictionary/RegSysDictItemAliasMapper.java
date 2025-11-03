@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code sys_dict_item_alias}.
+ * 只读 Mapper,用于表 {@code sys_dict_item_alias}.
  *
  * <p>Provides query utilities for linking external alias codes to internal dictionary items.
  *

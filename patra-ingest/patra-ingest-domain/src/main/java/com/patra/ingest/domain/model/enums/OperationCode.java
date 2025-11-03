@@ -3,9 +3,9 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * Ingestion operation type (DICT: ing_operation).
+ * 采集操作类型 (字典: ing_operation)。
  *
- * <p><b>Persistence mapping</b>
+ * <p><b>持久化映射</b>
  *
  * <ul>
  *   <li>ing_plan.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
@@ -14,29 +14,27 @@ import lombok.Getter;
  *   <li>ing_cursor_event.operation_code → HARVEST/BACKFILL/UPDATE/METRICS
  * </ul>
  *
- * <p><b>Parsing/output contract</b>
+ * <p><b>解析/输出契约</b>
  *
  * <ul>
- *   <li>Always emit uppercase values via {@link #getCode()}.
- *   <li>Parse using {@link #fromCode(String)} which trims and uppercases; unknown values raise
- *       {@link IllegalArgumentException}.
+ *   <li>始终通过 {@link #getCode()} 输出大写值。
+ *   <li>使用 {@link #fromCode(String)} 解析,该方法会去空格并转大写;未知值抛出 {@link IllegalArgumentException}。
  * </ul>
  *
- * <p>Extension strategy: update upstream configuration and dictionary tables when adding new
- * operation types to remain backward compatible.
+ * <p><b>扩展策略:</b> 添加新操作类型时更新上游配置和字典表以保持向后兼容性。
  *
  * @author linqibin
  * @since 0.1.0
  */
 @Getter
 public enum OperationCode {
-  /** Initial full ingestion (first run or rebuilt windows). */
+  /** 全量采集;初次运行或重建窗口的全量数据采集。 */
   HARVEST("HARVEST", "Full ingestion"),
-  /** Historical backfill to close gaps or correct data. */
+  /** 历史回填;填补数据缺口或修正历史数据。 */
   BACKFILL("BACKFILL", "Backfill ingestion"),
-  /** Incremental updates driven by cursor progression. */
+  /** 增量更新;基于游标推进的增量数据更新。 */
   UPDATE("UPDATE", "Incremental update"),
-  /** Metrics/statistics-oriented operations (read-heavy). */
+  /** 指标采集;面向指标统计的操作(读取密集型)。 */
   METRICS("METRICS", "Metrics collection");
 
   private final String code;
@@ -48,15 +46,15 @@ public enum OperationCode {
   }
 
   /**
-   * Parse the provided code into the enumeration.
+   * 将提供的代码解析为枚举值。
    *
-   * @param value string code (e.g., {@code "harvest"} or {@code " UPDATE "})
-   * @return matching enum
-   * @throws IllegalArgumentException when the value is null or unknown
+   * @param value 字符串代码(例如,{@code "harvest"} 或 {@code " UPDATE "})
+   * @return 匹配的枚举值
+   * @throws IllegalArgumentException 当值为 null 或未知时
    */
   public static OperationCode fromCode(String value) {
     if (value == null) {
-      throw new IllegalArgumentException("Operation code cannot be null");
+      throw new IllegalArgumentException("操作代码不能为 null");
     }
     String normalized = value.trim().toUpperCase();
     for (OperationCode oc : values()) {
@@ -64,6 +62,6 @@ public enum OperationCode {
         return oc;
       }
     }
-    throw new IllegalArgumentException("Unknown operation code: " + value);
+    throw new IllegalArgumentException("未知的操作代码: " + value);
   }
 }

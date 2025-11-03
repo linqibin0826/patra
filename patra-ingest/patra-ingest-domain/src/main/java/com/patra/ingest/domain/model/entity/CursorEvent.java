@@ -8,18 +8,23 @@ import java.time.Instant;
 import lombok.Getter;
 
 /**
- * Append-only cursor advancement event.
+ * 游标前进事件实体（仅追加）。捕获游标在命名空间内的前进或回退动作。
  *
- * <p>Captures forward or backward movements for a cursor within a namespace to support:
+ * <p>业务价值：
  *
  * <ul>
- *   <li>Audit: trace the source and value changes for each window advancement.
- *   <li>Rebuild: replay events when restoring cursor state.
- *   <li>Monitoring: analyze advancement speed, rollback ratio, and lag.
+ *   <li>审计：追溯每次窗口前进的来源和值变更
+ *   <li>重建：重放事件以恢复游标状态
+ *   <li>监控：分析前进速度、回退比例和延迟
  * </ul>
  *
- * <p>Design principles: immutable; historical records are never mutated; fields cover
- * string/time/numeric representations to avoid precision loss.
+ * <p>设计原则：
+ *
+ * <ul>
+ *   <li>不可变：历史记录从不变更
+ *   <li>多表示：字段覆盖字符串/时间/数值表示以避免精度丢失
+ *   <li>完整性：包含血缘和表达式哈希用于追溯和变更检测
+ * </ul>
  */
 @SuppressWarnings("unused")
 @Getter

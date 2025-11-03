@@ -4,47 +4,51 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties that govern Feign error decoding behaviour, tolerant mode, and
- * observability.
+ * Feign 错误解码行为、宽容模式和可观测性的配置属性
+ *
+ * <p>通过 {@code patra.feign.problem} 前缀配置 Feign 错误处理行为。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @ConfigurationProperties(prefix = "patra.feign.problem")
 public class FeignErrorProperties {
 
-  /** Enable or disable the error decoder as a whole. */
+  /** 整体启用或禁用错误解码器 */
   private boolean enabled = true;
 
-  /** Enable tolerant mode (wrap non-ProblemDetail payloads in {@code RemoteCallException}). */
+  /** 启用宽容模式(将非 ProblemDetail 载荷包装在 {@code RemoteCallException} 中) */
   private boolean tolerant = true;
 
-  /** Maximum number of bytes to read from the downstream error response. */
+  /** 从下游错误响应读取的最大字节数 */
   private int maxErrorBodySize = 64 * 1024;
 
-  /** Include stack traces in tolerant-mode responses (debug use only). */
+  /** 在宽容模式响应中包含堆栈跟踪(仅用于调试) */
   private boolean includeStackTrace = false;
 
-  /** Observation/metrics configuration. */
+  /** 观察/度量配置 */
   private ObservationProperties observation = new ObservationProperties();
 
-  /** Nested configuration for observation thresholds and logging. */
+  /** 观察阈值和日志记录的嵌套配置 */
   @Data
   public static class ObservationProperties {
-    /** Enable the observation recorder. */
+    /** 启用观察记录器 */
     private boolean enabled = true;
 
-    /** Log and tag parsing operations slower than this threshold (milliseconds). */
+    /** 记录和标记慢于此阈值的解析操作(毫秒) */
     private long slowParsingThresholdMs = 150;
 
-    /** Emit a log line when parsing crosses the slow threshold. */
+    /** 当解析超过慢阈值时发出日志行 */
     private boolean logSlowParsing = true;
 
-    /** Log and tag response-body reads slower than this threshold (milliseconds). */
+    /** 记录和标记慢于此阈值的响应体读取(毫秒) */
     private long slowBodyReadingThresholdMs = 80;
 
-    /** Emit a log line when reading the body crosses the slow threshold. */
+    /** 当读取响应体超过慢阈值时发出日志行 */
     private boolean logSlowBodyReading = true;
 
-    /** Emit an informational log when tolerant mode is invoked. */
+    /** 当调用宽容模式时发出信息日志 */
     private boolean logTolerantUsage = true;
   }
 }

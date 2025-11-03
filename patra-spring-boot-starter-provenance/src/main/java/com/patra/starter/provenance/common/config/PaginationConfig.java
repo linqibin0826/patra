@@ -1,12 +1,12 @@
 package com.patra.starter.provenance.common.config;
 
 /**
- * Pagination configuration.
+ * 分页配置记录
  *
- * <p>Field descriptions:
+ * <p>定义访问 Provenance 数据源时的分页行为,包括默认页大小和单次执行的最大页数限制。 这些参数会被建议给上游 API,用于控制数据批量获取的粒度。
  *
- * @param pageSizeValue default page size suggested to upstream APIs
- * @param maxPagesPerExecution maximum number of pages processed in one run
+ * @param pageSizeValue 建议给上游 API 的默认页大小
+ * @param maxPagesPerExecution 单次执行中处理的最大页数
  * @author linqibin
  * @since 0.1.0
  */

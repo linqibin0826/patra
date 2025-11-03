@@ -15,30 +15,41 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
-/** AWS S3 implementation of {@link ObjectStorageProvider}. */
+/**
+ * AWS S3 对象存储提供者实现。
+ *
+ * <p>此实现负责:
+ *
+ * <ul>
+ *   <li>上传文件到 AWS S3 服务
+ *   <li><b>不会自动创建存储桶</b> - 存储桶必须预先存在
+ *   <li>严格的参数验证(存储桶名称、对象键、文件大小)
+ * </ul>
+ *
+ * @see MinioStorageProvider MinIO 实现(支持自动创建存储桶)
+ */
 @Slf4j
 public class S3StorageProvider implements ObjectStorageProvider {
 
   /**
-   * Bucket name validation pattern following S3 naming rules.
+   * 存储桶名称验证模式,遵循 S3 命名规则。
    *
-   * <p>Rules: 3-63 characters, lowercase letters/numbers/dots/hyphens, must start/end with
-   * letter/number.
+   * <p><b>规则:</b> 3-63 个字符,仅小写字母/数字/点/连字符,必须以字母或数字开头和结尾。
    */
   private static final Pattern BUCKET_NAME_PATTERN =
       Pattern.compile("^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$");
 
-  /** Maximum length for object keys (S3 limit). */
+  /** 对象键的最大长度(S3 限制)。 */
   private static final int MAX_KEY_LENGTH = 1024;
 
   private final S3Client s3Client;
   private final long maxFileSize;
 
   /**
-   * Constructs a new S3 storage provider.
+   * 构造一个新的 S3 存储提供者。
    *
-   * @param s3Client configured S3 client
-   * @param maxFileSize maximum allowed file size in bytes
+   * @param s3Client 配置好的 S3 客户端
+   * @param maxFileSize 允许的最大文件大小(字节)
    */
   public S3StorageProvider(S3Client s3Client, long maxFileSize) {
     this.s3Client = s3Client;
@@ -51,22 +62,19 @@ public class S3StorageProvider implements ObjectStorageProvider {
   }
 
   /**
-   * Upload an object to AWS S3 storage.
+   * 上传对象到 AWS S3 存储。
    *
-   * <p>Unlike MinIO, S3 does not automatically create buckets. The target bucket must exist before
-   * calling this method, otherwise an exception will be thrown.
+   * <p><b>重要区别:</b> 与 MinIO 不同,S3 不会自动创建存储桶。 在调用此方法之前,目标存储桶必须已存在,否则将抛出异常。
    *
-   * <p><b>Resource Management:</b> The AWS SDK consumes the {@code inputStream} and closes it
-   * internally. The caller should not attempt to reuse or close the stream after this method
-   * returns.
+   * <p><b>资源管理:</b> AWS SDK 会消费 {@code inputStream} 并在内部关闭它。 调用者不应在此方法返回后尝试重用或关闭流。
    *
-   * @param bucket bucket name (must already exist)
-   * @param key unique object key within the bucket
-   * @param inputStream content to upload (will be closed by AWS SDK)
-   * @param metadata file metadata including size and content type
-   * @return upload result with storage key and etag
-   * @throws InvalidUploadRequestException if arguments are invalid (not retryable)
-   * @throws UploadFailedException if upload fails due to network or server errors (retryable)
+   * @param bucket 存储桶名称(必须已存在)
+   * @param key 存储桶内的唯一对象键
+   * @param inputStream 要上传的内容流(将被 AWS SDK 关闭)
+   * @param metadata 文件元数据,包括大小和内容类型
+   * @return 上传结果,包含存储键和 ETag
+   * @throws InvalidUploadRequestException 如果参数无效(不可重试)
+   * @throws UploadFailedException 如果上传因网络或服务器错误失败(可重试)
    */
   @Override
   public UploadResult upload(
@@ -101,7 +109,7 @@ public class S3StorageProvider implements ObjectStorageProvider {
               .build();
 
       log.info(
-          "File uploaded successfully to S3: bucket={}, key={}, size={} bytes, etag={}",
+          "文件已成功上传到 S3: bucket={}, key={}, size={} 字节, etag={}",
           bucket,
           key,
           metadata.getContentLength(),
@@ -110,90 +118,74 @@ public class S3StorageProvider implements ObjectStorageProvider {
       return result;
 
     } catch (InvalidUploadRequestException ex) {
-      // Re-throw validation errors without wrapping (should not be retried)
+      // 不包装地重新抛出验证错误(不应重试)
       throw ex;
     } catch (Exception ex) {
       log.error(
-          "S3 upload failed: bucket={}, key={}, size={} bytes",
-          bucket,
-          key,
-          metadata.getContentLength(),
-          ex);
-      throw new UploadFailedException(
-          String.format("S3 upload failed for bucket=%s, key=%s", bucket, key), ex);
+          "S3 上传失败: bucket={}, key={}, size={} 字节", bucket, key, metadata.getContentLength(), ex);
+      throw new UploadFailedException(String.format("S3 上传失败: bucket=%s, key=%s", bucket, key), ex);
     }
   }
 
   /**
-   * Validates upload arguments for null/empty checks, format compliance, and size limits.
+   * 验证上传参数的 null/空检查、格式合规性和大小限制。
    *
-   * @param bucket bucket name
-   * @param key object key
-   * @param inputStream content stream
-   * @param metadata file metadata
-   * @throws InvalidUploadRequestException if any validation fails
+   * @param bucket 存储桶名称
+   * @param key 对象键
+   * @param inputStream 内容流
+   * @param metadata 文件元数据
+   * @throws InvalidUploadRequestException 如果任何验证失败
    */
   private void validateArguments(
       String bucket, String key, InputStream inputStream, ObjectMetadata metadata) {
-    // Null/empty checks
+    // Null/空检查
     if (bucket == null || bucket.isBlank()) {
-      throw new InvalidUploadRequestException("Bucket name must be provided and not empty");
+      throw new InvalidUploadRequestException("存储桶名称不能为空");
     }
     if (key == null || key.isBlank()) {
-      throw new InvalidUploadRequestException("Object key must be provided and not empty");
+      throw new InvalidUploadRequestException("对象键不能为空");
     }
     if (inputStream == null) {
-      throw new InvalidUploadRequestException("Input stream cannot be null");
+      throw new InvalidUploadRequestException("输入流不能为 null");
     }
     if (metadata == null) {
-      throw new InvalidUploadRequestException("Object metadata is required");
+      throw new InvalidUploadRequestException("对象元数据是必需的");
     }
     if (metadata.getContentLength() <= 0) {
       throw new InvalidUploadRequestException(
-          String.format(
-              "Content length must be greater than 0, got %d", metadata.getContentLength()));
+          String.format("内容长度必须大于 0,实际为 %d", metadata.getContentLength()));
     }
 
-    // Bucket format validation
+    // 存储桶格式验证
     if (bucket.length() < 3 || bucket.length() > 63) {
       throw new InvalidUploadRequestException(
-          String.format(
-              "Bucket name length must be between 3 and 63 characters, got %d", bucket.length()));
+          String.format("存储桶名称长度必须在 3 到 63 个字符之间,实际为 %d", bucket.length()));
     }
     if (!BUCKET_NAME_PATTERN.matcher(bucket).matches()) {
       throw new InvalidUploadRequestException(
-          String.format(
-              "Bucket name '%s' is invalid. Must contain only lowercase letters, numbers, dots,"
-                  + " and hyphens, and must start/end with a letter or number",
-              bucket));
+          String.format("存储桶名称 '%s' 无效。必须仅包含小写字母、数字、点和连字符,且必须以字母或数字开头和结尾", bucket));
     }
     if (bucket.contains("..")) {
-      throw new InvalidUploadRequestException(
-          String.format(
-              "Bucket name '%s' contains consecutive dots, which is not allowed", bucket));
+      throw new InvalidUploadRequestException(String.format("存储桶名称 '%s' 包含连续的点,这是不允许的", bucket));
     }
 
-    // Object key format validation
+    // 对象键格式验证
     if (key.length() > MAX_KEY_LENGTH) {
       throw new InvalidUploadRequestException(
-          String.format(
-              "Object key length exceeds maximum of %d characters, got %d",
-              MAX_KEY_LENGTH, key.length()));
+          String.format("对象键长度超过最大值 %d 个字符,实际为 %d", MAX_KEY_LENGTH, key.length()));
     }
     if (key.startsWith("/")) {
-      throw new InvalidUploadRequestException(
-          String.format("Object key '%s' cannot start with a forward slash", key));
+      throw new InvalidUploadRequestException(String.format("对象键 '%s' 不能以斜杠开头", key));
     }
     if (key.contains("//")) {
-      throw new InvalidUploadRequestException(
-          String.format("Object key '%s' contains consecutive slashes, which is not allowed", key));
+      throw new InvalidUploadRequestException(String.format("对象键 '%s' 包含连续的斜杠,这是不允许的", key));
     }
 
-    // File size validation
+    // 文件大小验证
     if (metadata.getContentLength() > maxFileSize) {
       throw new InvalidUploadRequestException(
           String.format(
-              "File size %d bytes exceeds maximum allowed size of %d bytes (%.2f MB)",
+              "文件大小 %d 字节超过了最大允许大小 %d 字节 (%.2f MB)",
               metadata.getContentLength(), maxFileSize, maxFileSize / 1024.0 / 1024.0));
     }
   }

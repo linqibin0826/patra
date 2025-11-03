@@ -10,6 +10,10 @@ import java.time.Instant;
  */
 public interface DomainEvent extends Serializable {
 
-  /** 表示事件发生时间的时间戳(用于排序/审计)。 */
+  /**
+   * 表示事件发生时间的时间戳(用于排序/审计)。
+   *
+   * @return 事件发生时间
+   */
   Instant occurredAt();
 }

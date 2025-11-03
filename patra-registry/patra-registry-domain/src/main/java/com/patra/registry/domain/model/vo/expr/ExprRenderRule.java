@@ -5,54 +5,53 @@ import com.patra.registry.domain.support.TemporalEntity;
 import java.time.Instant;
 
 /**
- * Domain value object for {@code reg_prov_expr_render_rule}.
+ * 表达式渲染规则领域值对象,对应表 {@code reg_prov_expr_render_rule}。
  *
- * <p>Defines how an expression atom (field/op/match/negation/value-type) is rendered into query
- * fragments or standard parameters.
+ * <p>定义如何将表达式原子(字段/操作/匹配/否定/值类型)渲染为查询片段或标准参数。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record ExprRenderRule(
-    /* Primary key; unique render rule identifier */
+    /* 主键;唯一渲染规则标识符 */
     Long id,
-    /* Foreign key referencing {@code reg_provenance.id} */
+    /* 外键,引用 {@code reg_provenance.id} */
     Long provenanceId,
-    /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); {@code null} applies to all */
+    /* 操作类型区分器 (HARVEST/UPDATE/BACKFILL);{@code null} 表示应用于所有类型 */
     String operationType,
-    /* Unified internal field key (logical FK to {@code reg_expr_field_dict.field_key}) */
+    /* 统一的内部字段键(逻辑外键到 {@code reg_expr_field_dict.field_key}) */
     String fieldKey,
-    /* Expression operator code (DICT CODE: reg_expr_op) such as TERM/IN/RANGE/EXISTS/TOKEN */
+    /* 表达式操作符代码(字典代码: reg_expr_op)例如 TERM/IN/RANGE/EXISTS/TOKEN */
     String opCode,
-    /* Match type code (DICT CODE: reg_match_type; TERM only) such as PHRASE/EXACT/ANY; {@code null} means agnostic */
+    /* 匹配类型代码(字典代码: reg_match_type;仅 TERM)例如 PHRASE/EXACT/ANY;{@code null} 表示不可知 */
     String matchTypeCode,
-    /* Negation flag: {@code true} for NOT, {@code false} for non-NOT; {@code null} means agnostic */
+    /* 否定标志:{@code true} 表示 NOT,{@code false} 表示非 NOT;{@code null} 表示不可知 */
     Boolean negated,
-    /* Value type code for RANGE etc. (STRING/DATE/DATETIME/NUMBER); {@code null} means agnostic */
+    /* RANGE 等的值类型代码 (STRING/DATE/DATETIME/NUMBER);{@code null} 表示不可知 */
     String valueTypeCode,
-    /* Emission type (DICT CODE: reg_emit_type): QUERY for query fragment, PARAMS for standard params */
+    /* 发射类型(字典代码: reg_emit_type):QUERY 表示查询片段,PARAMS 表示标准参数 */
     String emitTypeCode,
-    /* Normalization of {@code matchTypeCode}: {@code null} -> {@code ANY} */
+    /* {@code matchTypeCode} 的归一化:{@code null} -> {@code ANY} */
     String matchTypeKey,
-    /* Normalization of {@code negated}: {@code null} -> {@code ANY}, {@code true} -> {@code T}, {@code false} -> {@code F} */
+    /* {@code negated} 的归一化:{@code null} -> {@code ANY},{@code true} -> {@code T},{@code false} -> {@code F} */
     String negatedKey,
-    /* Normalization of {@code valueTypeCode}: {@code null} -> {@code ANY} */
+    /* {@code valueTypeCode} 的归一化:{@code null} -> {@code ANY} */
     String valueTypeKey,
-    /* Inclusive timestamp marking when this rule becomes effective */
+    /* 包含性时间戳,标记此规则何时生效 */
     Instant effectiveFrom,
-    /* Exclusive timestamp marking when this rule expires; {@code null} means open-ended */
+    /* 排他性时间戳,标记此规则何时到期;{@code null} 表示开放式 */
     Instant effectiveTo,
-    /* Template to render query fragment when {@code emitTypeCode} is {@code QUERY}; supports helpers (e.g., {{q v}}/{{lower ...}}) */
+    /* 当 {@code emitTypeCode} 为 {@code QUERY} 时渲染查询片段的模板;支持辅助函数(例如,{{q v}}/{{lower ...}}) */
     String template,
-    /* Template for each item when {@code emitTypeCode} is {@code QUERY} and {@code opCode} is {@code IN} */
+    /* 当 {@code emitTypeCode} 为 {@code QUERY} 且 {@code opCode} 为 {@code IN} 时每个项目的模板 */
     String itemTemplate,
-    /* Joiner for items when {@code emitTypeCode} is {@code QUERY} and {@code opCode} is {@code IN} (e.g., " OR " / " AND ") */
+    /* 当 {@code emitTypeCode} 为 {@code QUERY} 且 {@code opCode} 为 {@code IN} 时项目的连接符(例如," OR " / " AND ") */
     String joiner,
-    /* Whether to wrap entire group in parentheses when {@code emitTypeCode} is {@code QUERY} and {@code opCode} is {@code IN} */
+    /* 当 {@code emitTypeCode} 为 {@code QUERY} 且 {@code opCode} 为 {@code IN} 时是否用括号包裹整个组 */
     boolean wrapGroup,
-    /* JSON of standard keys/template variables when {@code emitTypeCode} is {@code PARAMS} (e.g., {"from":"from","to":"to"}) */
+    /* 当 {@code emitTypeCode} 为 {@code PARAMS} 时的标准键/模板变量 JSON(例如,{"from":"from","to":"to"}) */
     String paramsJson,
-    /* Template-level render function code (subset/extension of reg_transform); e.g., PUBMED_DATETYPE */
+    /* 模板级渲染函数代码(reg_transform 的子集/扩展);例如,PUBMED_DATETYPE */
     String functionCode)
     implements TemporalEntity {
   public ExprRenderRule(
@@ -102,14 +101,14 @@ public record ExprRenderRule(
   }
 
   /**
-   * Validates basic required fields for render rule.
+   * 验证渲染规则的基本必需字段。
    *
-   * @param id rule identifier
-   * @param provenanceId provenance identifier
-   * @param fieldKey field key
-   * @param opCode operation code
-   * @param emitTypeCode emit type code
-   * @param effectiveFrom effective start timestamp
+   * @param id 规则标识符
+   * @param provenanceId 来源标识符
+   * @param fieldKey 字段键
+   * @param opCode 操作代码
+   * @param emitTypeCode 发射类型代码
+   * @param effectiveFrom 生效开始时间戳
    */
   private static void validateBasicFields(
       Long id,
@@ -127,11 +126,11 @@ public record ExprRenderRule(
   }
 
   /**
-   * Validates normalized dimension keys.
+   * 验证归一化的维度键。
    *
-   * @param matchTypeKey normalized match type key
-   * @param negatedKey normalized negated key
-   * @param valueTypeKey normalized value type key
+   * @param matchTypeKey 归一化的匹配类型键
+   * @param negatedKey 归一化的否定键
+   * @param valueTypeKey 归一化的值类型键
    */
   private static void validateNormalizedKeys(
       String matchTypeKey, String negatedKey, String valueTypeKey) {

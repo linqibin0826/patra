@@ -3,29 +3,28 @@ package com.patra.ingest.domain.event;
 import java.time.Instant;
 
 /**
- * Domain event emitted when a message is declared dead and further retries stop.
+ * Outbox 消息永久失败领域事件,当消息被宣告为死信且停止进一步重试时触发。
  *
- * <p>Trigger: fired after the retry limit is reached or a strategy determines the failure is
- * unrecoverable (for example, permanently incompatible payload format).
+ * <p>触发条件:达到重试限制或策略确定失败不可恢复(例如,永久不兼容的负载格式)后触发。
  *
- * <p>Usage:
+ * <p>用途:
  *
  * <ul>
- *   <li>Alerting: aggregate by error code to locate hot failure patterns quickly.
- *   <li>Compensation: drive manual or offline replay tools to inspect dead messages.
+ *   <li>告警:按错误代码聚合以快速定位热点失败模式
+ *   <li>补偿:驱动手动或离线重放工具以检查死信消息
  * </ul>
  */
 public record OutboxMessageFailedEvent(
-    /** Identifier of the outbox message. */
+    /** Outbox 消息的标识符。 */
     Long messageId,
-    /** Logical channel of the message. */
+    /** 消息的逻辑通道。 */
     String channel,
-    /** Retry count that occurred before the final failure. */
+    /** 最终失败前发生的重试次数。 */
     int retryCount,
-    /** Error code associated with the terminal failure. */
+    /** 与终态失败关联的错误代码。 */
     String errorCode,
-    /** Summary message describing the terminal failure. */
+    /** 描述终态失败的摘要消息。 */
     String errorMessage,
-    /** Timestamp when this event occurred. */
+    /** 事件发生的时间戳。 */
     Instant occurredAt)
     implements OutboxRelayDomainEvent {}

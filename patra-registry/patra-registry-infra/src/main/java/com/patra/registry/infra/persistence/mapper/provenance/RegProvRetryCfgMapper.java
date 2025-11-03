@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_retry_cfg}. SQL statements are defined in {@code
+ * 只读 Mapper,用于表 {@code reg_prov_retry_cfg}. SQL statements are defined in {@code
  * resources/mapper/RegProvRetryCfgMapper.xml}.
  *
  * @author linqibin

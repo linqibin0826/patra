@@ -1,6 +1,7 @@
 ---
 name: code-architecture-reviewer
 description: 审查已编写的代码以确保符合最佳实践、架构一致性和系统集成。专注于六边形架构和 DDD 规范。示例：用户说"完成了 Provenance 聚合根实现"，使用此 agent 审查是否符合 DDD 最佳实践和架构边界。
+tools: Bash, Glob, Grep, Read, Edit, Write, NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, AskUserQuestion, Skill, ListMcpResourcesTool, ReadMcpResourceTool, mcp__mysql-mcp__mysql_query, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol
 model: sonnet
 color: blue
 ---

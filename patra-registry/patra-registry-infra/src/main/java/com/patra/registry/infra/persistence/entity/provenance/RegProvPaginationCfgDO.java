@@ -11,10 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code reg_prov_pagination_cfg}.
+ * 数据库实体,映射到表 {@code reg_prov_pagination_cfg}。
  *
- * <p>Stores pagination or cursor extraction parameters for a specific provenance and operation
- * type.
+ * <p>存储特定数据源和操作类型的分页或游标提取参数。
  *
  * @author linqibin
  * @since 0.1.0
@@ -27,43 +26,43 @@ import lombok.experimental.SuperBuilder;
 @TableName("reg_prov_pagination_cfg")
 public class RegProvPaginationCfgDO extends BaseDO {
 
-  /** Foreign key referencing {@code reg_provenance.id}. */
+  /** 外键,引用 {@code reg_provenance.id}。 */
   @TableField("provenance_id")
   private Long provenanceId;
 
-  /** Operation type discriminator controlling scope of the configuration. */
+  /** 控制配置作用域的操作类型鉴别器。 */
   @TableField("operation_type")
   private String operationType;
 
-  /** Inclusive timestamp marking when the pagination rule becomes effective. */
+  /** 标记分页规则生效时的包含时间戳。 */
   @TableField("effective_from")
   private Instant effectiveFrom;
 
-  /** Exclusive timestamp marking when the pagination rule expires. */
+  /** 标记分页规则过期时的排除时间戳。 */
   @TableField("effective_to")
   private Instant effectiveTo;
 
-  /** Code describing the pagination strategy (PAGE_NUMBER/CURSOR/TOKEN/SCROLL). */
+  /** 描述分页策略的代码(PAGE_NUMBER/CURSOR/TOKEN/SCROLL)。 */
   @TableField("pagination_mode_code")
   private String paginationModeCode;
 
-  /** Default page size to use when issuing requests. */
+  /** 发出请求时使用的默认页大小。 */
   @TableField("page_size_value")
   private Integer pageSizeValue;
 
-  /** Maximum number of pages to advance during a single execution. */
+  /** 单次执行期间推进的最大页数。 */
   @TableField("max_pages_per_execution")
   private Integer maxPagesPerExecution;
 
-  /** Name of the request parameter that controls server-side sorting. */
+  /** 控制服务器端排序的请求参数名称。 */
   @TableField("sort_field_param_name")
   private String sortFieldParamName;
 
-  /** Sorting direction flag ({@code 1} for ascending, {@code 0} for descending). */
+  /** 排序方向标志({@code 1} 表示升序,{@code 0} 表示降序)。 */
   @TableField("sorting_direction")
   private Integer sortingDirection;
 
-  /** Lifecycle status code, typically {@code ACTIVE} for valid records. */
+  /** 生命周期状态代码,有效记录通常为 {@code ACTIVE}。 */
   @TableField("lifecycle_status_code")
   private String lifecycleStatusCode;
 }

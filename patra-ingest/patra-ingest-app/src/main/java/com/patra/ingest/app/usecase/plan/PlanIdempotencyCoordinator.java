@@ -16,13 +16,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Coordinator for plan idempotency and retry logic.
+ * 计划幂等性协调器。
  *
- * <p>Responsible for handling duplicate plan detection, identifying tasks eligible for retry, and
- * coordinating retry operations.
+ * <p>职责：
  *
- * <p>Note: This coordinator does NOT use {@code @Transactional}. It relies on the outer transaction
- * boundary from the main orchestrator to ensure atomicity with persistence and publishing.
+ * <ul>
+ *   <li>处理重复计划检测
+ *   <li>识别符合重试条件的任务
+ *   <li>协调重试操作
+ * </ul>
+ *
+ * <p>注意：该协调器不使用 {@code @Transactional}，依赖主编排器的外部事务边界来确保与持久化和发布的原子性。
  *
  * @author linqibin
  * @since 0.1.0
@@ -38,22 +42,22 @@ public class PlanIdempotencyCoordinator {
   private final PlanPublishingCoordinator publishingCoordinator;
 
   /**
-   * Handles idempotent plan reuse when an existing plan with the same planKey is found.
+   * 当发现相同 planKey 的现有计划时处理幂等计划复用。
    *
-   * <p>This method:
+   * <p>该方法：
    *
    * <ol>
-   *   <li>Loads existing slices and tasks
-   *   <li>Identifies tasks eligible for retry (FAILED status)
-   *   <li>Resets and re-queues retry tasks
-   *   <li>Publishes retry events via outbox
-   *   <li>Returns result based on existing plan
+   *   <li>加载现有切片和任务
+   *   <li>识别符合重试条件的任务（FAILED 状态）
+   *   <li>重置并重新入队重试任务
+   *   <li>通过 Outbox 发布重试事件
+   *   <li>基于现有计划返回结果
    * </ol>
    *
-   * @param existingPlan the existing plan aggregate
-   * @param schedule the current schedule instance
-   * @param planKey the idempotency key for logging
-   * @return ingestion result based on existing plan
+   * @param existingPlan 现有计划聚合根
+   * @param schedule 当前调度实例
+   * @param planKey 幂等键（用于日志）
+   * @return 基于现有计划的接入结果
    */
   public PlanIngestionResult handleIdempotentPlanReuse(
       PlanAggregate existingPlan, ScheduleInstanceAggregate schedule, String planKey) {
@@ -67,9 +71,7 @@ public class PlanIdempotencyCoordinator {
     if (!retryTasks.isEmpty()) {
       processRetryTasks(existingPlan, schedule, retryTasks);
     } else {
-      log.info(
-          "No tasks require retry for existing plan [{}], returning existing state",
-          existingPlan.getId());
+      log.info("现有计划 [{}] 无需重试任务，返回现有状态", existingPlan.getId());
     }
 
     return publishingCoordinator.buildIngestionResult(
@@ -77,14 +79,14 @@ public class PlanIdempotencyCoordinator {
   }
 
   /**
-   * Logs duplicate plan detection.
+   * 记录重复计划检测日志。
    *
-   * @param existingPlan existing plan aggregate
-   * @param planKey plan idempotency key
+   * @param existingPlan 现有计划聚合根
+   * @param planKey 计划幂等键
    */
   private void logDuplicatePlanDetection(PlanAggregate existingPlan, String planKey) {
     log.info(
-        "Detected duplicate plan ingestion for provenance [{}] operation [{}]: reusing existing plan [{}] with planKey={}",
+        "检测到重复计划接入 数据源 [{}] 操作 [{}]: 复用现有计划 [{}]，planKey={}",
         existingPlan.getProvenanceCode(),
         existingPlan.getOperationCode(),
         existingPlan.getId(),
@@ -92,29 +94,28 @@ public class PlanIdempotencyCoordinator {
   }
 
   /**
-   * Processes retry tasks by publishing retry events.
+   * 通过发布重试事件处理重试任务。
    *
-   * <p>Note: After refactoring, Plan status is not changed during retry. Plan remains in its
-   * current state (typically READY) while failed tasks are re-queued.
+   * <p>注意：重构后，Plan 状态在重试期间不变。Plan 保持当前状态（通常为 READY），而失败任务被重新入队。
    *
-   * @param existingPlan existing plan aggregate
-   * @param schedule schedule instance
-   * @param retryTasks tasks to retry
+   * @param existingPlan 现有计划聚合根
+   * @param schedule 调度实例
+   * @param retryTasks 待重试任务
    */
   private void processRetryTasks(
       PlanAggregate existingPlan,
       ScheduleInstanceAggregate schedule,
       List<TaskAggregate> retryTasks) {
-    // Plan status unchanged - tasks are simply re-queued for execution
+    // 计划状态不变 - 任务仅被重新入队执行
     List<TaskQueuedEvent> retryEvents = publishingCoordinator.collectQueuedEvents(retryTasks);
     publishingCoordinator.publishRetryEvents(retryEvents, existingPlan, schedule);
   }
 
   /**
-   * Prepares tasks for retry by resetting failed tasks.
+   * 通过重置失败任务来准备重试任务。
    *
-   * @param tasks the list of tasks to check
-   * @return list of tasks that were prepared for retry
+   * @param tasks 待检查的任务列表
+   * @return 已准备重试的任务列表
    */
   private List<TaskAggregate> prepareTasksForRetry(List<TaskAggregate> tasks) {
     List<TaskAggregate> retryTasks = new ArrayList<>();
@@ -129,12 +130,12 @@ public class PlanIdempotencyCoordinator {
   }
 
   /**
-   * Determines if task is eligible for compensation retry.
+   * 判断任务是否符合补偿重试条件。
    *
-   * <p>Note: After refactoring, only FAILED status is checked.
+   * <p>注意：重构后仅检查 FAILED 状态。
    *
-   * @param task task aggregate
-   * @return true if retry is needed (FAILED status only)
+   * @param task 任务聚合根
+   * @return 如需重试则返回 true（仅 FAILED 状态）
    */
   private boolean shouldRetry(TaskAggregate task) {
     TaskStatus status = task.getStatus();

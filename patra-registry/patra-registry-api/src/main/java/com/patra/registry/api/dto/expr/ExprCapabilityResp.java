@@ -5,40 +5,40 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 /**
- * Capability metadata for expression fields.
+ * 表达式字段的能力元数据。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>provenanceId - internal provenance identifier owning the capability
- *   <li>operationType - operation discriminator associated with the capability
- *   <li>fieldKey - expression field key the capability belongs to
- *   <li>opsJson - serialized allowed operations for the field
- *   <li>negatableOpsJson - serialized operations supporting negation
- *   <li>supportsNot - whether logical NOT is supported for the field
- *   <li>termMatchesJson - serialized match operators for term-based searches
- *   <li>termCaseSensitiveAllowed - whether term operations may be case sensitive
- *   <li>termAllowBlank - whether blank terms are permitted
- *   <li>termMinLength - minimum allowed length for term input
- *   <li>termMaxLength - maximum allowed length for term input
- *   <li>termPattern - optional regex enforcing term formatting
- *   <li>inMaxSize - maximum size for IN clauses
- *   <li>inCaseSensitiveAllowed - whether IN values may be case sensitive
- *   <li>rangeKindCode - range evaluation strategy discriminator
- *   <li>rangeAllowOpenStart - whether open start ranges are allowed
- *   <li>rangeAllowOpenEnd - whether open end ranges are allowed
- *   <li>rangeAllowClosedAtInfinity - whether infinity bounds may be closed
- *   <li>dateMin - minimum supported date value
- *   <li>dateMax - maximum supported date value
- *   <li>datetimeMin - minimum supported timestamp value
- *   <li>datetimeMax - maximum supported timestamp value
- *   <li>numberMin - minimum numeric value
- *   <li>numberMax - maximum numeric value
- *   <li>existsSupported - whether EXISTS operator is supported
- *   <li>tokenKindsJson - serialized token kinds for tokenized queries
- *   <li>tokenValuePattern - optional regex for token values
- *   <li>effectiveFrom - timestamp from which the capability becomes effective
- *   <li>effectiveTo - timestamp until which the capability remains effective
+ *   <li>provenanceId - 拥有该能力的内部数据源标识符
+ *   <li>operationType - 与能力关联的操作类型鉴别器
+ *   <li>fieldKey - 能力所属的表达式字段键
+ *   <li>opsJson - 字段允许的操作序列化内容
+ *   <li>negatableOpsJson - 支持否定的操作序列化内容
+ *   <li>supportsNot - 字段是否支持逻辑 NOT
+ *   <li>termMatchesJson - 基于术语搜索的匹配运算符序列化内容
+ *   <li>termCaseSensitiveAllowed - 术语操作是否可以区分大小写
+ *   <li>termAllowBlank - 是否允许空白术语
+ *   <li>termMinLength - 术语输入的最小允许长度
+ *   <li>termMaxLength - 术语输入的最大允许长度
+ *   <li>termPattern - 强制术语格式的可选正则表达式
+ *   <li>inMaxSize - IN 子句的最大大小
+ *   <li>inCaseSensitiveAllowed - IN 值是否可以区分大小写
+ *   <li>rangeKindCode - 范围求值策略鉴别器
+ *   <li>rangeAllowOpenStart - 是否允许开放起始范围
+ *   <li>rangeAllowOpenEnd - 是否允许开放结束范围
+ *   <li>rangeAllowClosedAtInfinity - 无穷边界是否可以闭合
+ *   <li>dateMin - 支持的最小日期值
+ *   <li>dateMax - 支持的最大日期值
+ *   <li>datetimeMin - 支持的最小时间戳值
+ *   <li>datetimeMax - 支持的最大时间戳值
+ *   <li>numberMin - 最小数值
+ *   <li>numberMax - 最大数值
+ *   <li>existsSupported - 是否支持 EXISTS 运算符
+ *   <li>tokenKindsJson - 用于标记化查询的标记类型序列化内容
+ *   <li>tokenValuePattern - 标记值的可选正则表达式
+ *   <li>effectiveFrom - 能力生效的时间戳
+ *   <li>effectiveTo - 能力保持有效的截止时间戳
  * </ol>
  *
  * @author linqibin

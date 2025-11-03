@@ -4,9 +4,9 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * Window offset configuration query view.
+ * 时间窗口与偏移配置查询视图。
  *
- * <p>Read-optimized projection for querying time window and offset configuration.
+ * <p>用于查询时间窗口和偏移配置的读优化投影。定义了窗口模式、大小、回看期、重叠期、水位延迟、偏移类型等时间分片参数。
  *
  * @author linqibin
  * @since 0.1.0
@@ -34,22 +34,22 @@ public record WindowOffsetQuery(
     Integer maxWindowSpanSeconds) {
   public WindowOffsetQuery {
     if (id == null || id <= 0) {
-      throw new DomainValidationException("Window offset id must be positive");
+      throw new DomainValidationException("窗口偏移配置ID必须为正数");
     }
     if (provenanceId == null || provenanceId <= 0) {
-      throw new DomainValidationException("Provenance id must be positive");
+      throw new DomainValidationException("来源ID必须为正数");
     }
     if (windowModeCode == null || windowModeCode.isBlank()) {
-      throw new DomainValidationException("Window mode code cannot be blank");
+      throw new DomainValidationException("窗口模式代码不能为空");
     }
     if (windowSizeUnitCode == null || windowSizeUnitCode.isBlank()) {
-      throw new DomainValidationException("Window size unit code cannot be blank");
+      throw new DomainValidationException("窗口大小单位代码不能为空");
     }
     if (offsetTypeCode == null || offsetTypeCode.isBlank()) {
-      throw new DomainValidationException("Offset type code cannot be blank");
+      throw new DomainValidationException("偏移类型代码不能为空");
     }
     if (effectiveFrom == null) {
-      throw new DomainValidationException("Effective from cannot be null");
+      throw new DomainValidationException("生效时间不能为null");
     }
     operationType = operationType != null ? operationType.trim() : null;
     windowModeCode = windowModeCode.trim();

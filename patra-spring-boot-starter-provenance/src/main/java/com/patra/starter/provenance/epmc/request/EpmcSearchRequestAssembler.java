@@ -5,22 +5,25 @@ import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 
 /**
- * Assemble Europe PMC {@link SearchRequest} instances from provider-named parameters emitted by the
- * expression compiler.
+ * Europe PMC 搜索请求组装器
+ *
+ * <p>从表达式编译器生成的数据源参数中组装 {@link SearchRequest} 实例。 负责参数提取、类型转换和验证。
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class EpmcSearchRequestAssembler {
 
   /**
-   * Build a Europe PMC search request using the provider parameter map produced by the compiler.
+   * 从数据源参数构建Europe PMC搜索请求
    *
-   * @param params provider-named parameters (e.g., query/pageSize/cursorMark)
-   * @return assembled {@link SearchRequest}
+   * @param params 数据源命名的参数（如query、pageSize、cursorMark等）
+   * @return 组装后的 {@link SearchRequest}
    */
   public SearchRequest build(JsonNode params) {
     String query = text(params, EpmcParamKeys.QUERY);
     if (query == null || query.isBlank()) {
-      throw new IllegalArgumentException(
-          "EPMC params must include provider key 'query' after compiler mapping");
+      throw new IllegalArgumentException("EPMC 参数必须在编译器映射后包含数据源键 'query'");
     }
 
     String format = text(params, EpmcParamKeys.FORMAT);
@@ -65,7 +68,7 @@ public class EpmcSearchRequestAssembler {
     if (value.isLong()) {
       long v = value.longValue();
       if (v > Integer.MAX_VALUE || v < Integer.MIN_VALUE) {
-        throw new IllegalArgumentException("EPMC pageSize is out of int range: " + v);
+        throw new IllegalArgumentException("EPMC pageSize 超出整数范围: " + v);
       }
       return (int) v;
     }
@@ -77,8 +80,7 @@ public class EpmcSearchRequestAssembler {
       try {
         return Integer.parseInt(text);
       } catch (NumberFormatException ex) {
-        throw new IllegalArgumentException(
-            "EPMC parameter '" + key + "' is not a valid integer: " + text, ex);
+        throw new IllegalArgumentException("EPMC 参数 '" + key + "' 不是有效的整数: " + text, ex);
       }
     }
     return null;

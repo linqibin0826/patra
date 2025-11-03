@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code reg_prov_http_cfg}. Backed by XML queries located at {@code
+ * 只读 Mapper,用于表 {@code reg_prov_http_cfg}. Backed by XML queries located at {@code
  * resources/mapper/RegProvHttpCfgMapper.xml}.
  *
  * @author linqibin

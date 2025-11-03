@@ -12,10 +12,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code reg_prov_retry_cfg}.
+ * 数据库实体,映射到表 {@code reg_prov_retry_cfg}。
  *
- * <p>Contains retry and backoff rules that are applied when interacting with a provenance for the
- * specified operation type.
+ * <p>包含与指定操作类型的数据源交互时应用的重试和退避规则。
  *
  * @author linqibin
  * @since 0.1.0
@@ -28,67 +27,67 @@ import lombok.experimental.SuperBuilder;
 @TableName("reg_prov_retry_cfg")
 public class RegProvRetryCfgDO extends BaseDO {
 
-  /** Foreign key referencing {@code reg_provenance.id}. */
+  /** 外键,引用 {@code reg_provenance.id}。 */
   @TableField("provenance_id")
   private Long provenanceId;
 
-  /** Operation type discriminator for the retry configuration. */
+  /** 重试配置的操作类型鉴别器。 */
   @TableField("operation_type")
   private String operationType;
 
-  /** Inclusive timestamp when the retry policy becomes effective. */
+  /** 重试策略生效时的包含时间戳。 */
   @TableField("effective_from")
   private Instant effectiveFrom;
 
-  /** Exclusive timestamp when the retry policy expires (nullable). */
+  /** 重试策略过期时的排除时间戳(可为空)。 */
   @TableField("effective_to")
   private Instant effectiveTo;
 
-  /** Maximum number of retry attempts allowed. */
+  /** 允许的最大重试尝试次数。 */
   @TableField("max_retry_times")
   private Integer maxRetryTimes;
 
-  /** Backoff policy type (e.g., FIXED/EXPONENTIAL/EXP_JITTER). */
+  /** 退避策略类型(例如,FIXED/EXPONENTIAL/EXP_JITTER)。 */
   @TableField("backoff_policy_type_code")
   private String backoffPolicyTypeCode;
 
-  /** Initial delay in milliseconds before the first retry attempt. */
+  /** 第一次重试尝试前的初始延迟,单位毫秒。 */
   @TableField("initial_delay_millis")
   private Integer initialDelayMillis;
 
-  /** Upper bound in milliseconds for any retry delay. */
+  /** 任何重试延迟的上限,单位毫秒。 */
   @TableField("max_delay_millis")
   private Integer maxDelayMillis;
 
-  /** Multiplier applied between successive retries when exponential backoff is used. */
+  /** 使用指数退避时连续重试之间应用的乘数。 */
   @TableField("exp_multiplier_value")
   private Double expMultiplierValue;
 
-  /** Fraction specifying the jitter amplitude applied to backoff delays. */
+  /** 指定应用于退避延迟的抖动幅度的分数。 */
   @TableField("jitter_factor_ratio")
   private Double jitterFactorRatio;
 
-  /** JSON array describing HTTP status codes that should trigger a retry. */
+  /** 描述应触发重试的 HTTP 状态码的 JSON 数组。 */
   @TableField("retry_http_status_json")
   private JsonNode retryHttpStatusJson;
 
-  /** JSON array describing HTTP status codes that should skip retries. */
+  /** 描述应跳过重试的 HTTP 状态码的 JSON 数组。 */
   @TableField("giveup_http_status_json")
   private JsonNode giveupHttpStatusJson;
 
-  /** Flag indicating whether network-level errors are eligible for retries. */
+  /** 指示网络级错误是否符合重试条件的标志。 */
   @TableField("retry_on_network_error")
   private Boolean retryOnNetworkError;
 
-  /** Number of consecutive failures required to trip the circuit breaker. */
+  /** 触发熔断器所需的连续失败次数。 */
   @TableField("circuit_break_threshold")
   private Integer circuitBreakThreshold;
 
-  /** Cooldown interval in milliseconds after the circuit breaker trips. */
+  /** 熔断器触发后的冷却间隔,单位毫秒。 */
   @TableField("circuit_cooldown_millis")
   private Integer circuitCooldownMillis;
 
-  /** Lifecycle status code reflecting whether the policy is active. */
+  /** 生命周期状态代码,反映策略是否激活。 */
   @TableField("lifecycle_status_code")
   private String lifecycleStatusCode;
 }

@@ -1,10 +1,9 @@
 package com.patra.common.json;
 
 /**
- * Container for JSON normalization results.
+ * JSON 规范化结果容器。
  *
- * <p>Provides access to the canonical value (structured Java object), canonical JSON text (compact
- * string representation), and UTF-8 bytes suitable for hashing or signing.
+ * <p>提供对规范值(结构化 Java 对象)、规范 JSON 文本(紧凑字符串表示)以及适用于哈希或签名的 UTF-8 字节的访问。
  */
 public final class JsonNormalizerResult {
   private final Object canonicalValue;
@@ -18,27 +17,27 @@ public final class JsonNormalizerResult {
   }
 
   /**
-   * Returns the canonical value as a structured Java object.
+   * 返回作为结构化 Java 对象的规范值。
    *
-   * @return canonical value (Map, List, String, Number, Boolean, or null)
+   * @return 规范值(Map、List、String、Number、Boolean 或 null)
    */
   public Object getCanonicalValue() {
     return canonicalValue;
   }
 
   /**
-   * Returns the canonical JSON as a compact string.
+   * 返回作为紧凑字符串的规范 JSON。
    *
-   * @return canonical JSON string
+   * @return 规范 JSON 字符串
    */
   public String getCanonicalJson() {
     return canonicalJson;
   }
 
   /**
-   * Returns UTF-8 bytes of the canonical JSON for hashing or signing.
+   * 返回规范 JSON 的 UTF-8 字节,用于哈希或签名。
    *
-   * @return UTF-8 byte array
+   * @return UTF-8 字节数组
    */
   public byte[] getHashMaterial() {
     return hashMaterial;

@@ -1,28 +1,32 @@
 package com.patra.starter.provenance.common.adapter;
 
 /**
- * Unified contract implemented by provenance data source adapters.
+ * 数据源适配器统一契约接口
  *
- * <p>The ingest engine only depends on this interface, enabling new data sources to be introduced
- * by providing additional implementations without modifying existing ingestion logic.
+ * <p>Ingest 引擎仅依赖此接口,通过提供新的实现即可引入新的数据源,无需修改现有的采集逻辑。
  *
- * <p>Adapters are responsible solely for data retrieval and have no business logic awareness.
- * Operation types (HARVEST, UPDATE, etc.) are orchestration-level concerns handled by upper layers.
+ * <p>适配器职责说明:
+ *
+ * <ul>
+ *   <li>仅负责数据检索和格式转换,不包含业务逻辑
+ *   <li>操作类型(HARVEST、UPDATE 等)是编排层关注点,由上层处理
+ *   <li>通过 {@link AdapterRegistry} 进行注册和发现
+ * </ul>
  */
 public interface DataSourceAdapter {
 
   /**
-   * Returns the provenance code (e.g. {@code pubmed}) served by this adapter.
+   * 返回此适配器服务的数据源代码
    *
-   * @return unique provenance code
+   * @return 唯一的数据源代码(如 {@code pubmed}、{@code epmc})
    */
   String getProvenanceCode();
 
   /**
-   * Executes the data retrieval and conversion workflow.
+   * 执行数据检索和转换工作流
    *
-   * @param request immutable request payload originating from the ingest engine
-   * @return result describing the outcome, payload, and retry guidance
+   * @param request 来自 Ingest 引擎的不可变请求载荷
+   * @return 描述结果、载荷和重试指导的结果对象
    */
   AdapterResult fetchData(AdapterRequest request);
 }

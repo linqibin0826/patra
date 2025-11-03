@@ -1,21 +1,31 @@
 package com.patra.starter.provenance.common.adapter;
 
 /**
- * Batch metadata for logging, monitoring, and cursor management.
+ * 批次元数据,用于日志记录、监控和游标管理
  *
- * <p>This record serves as batch metadata only. For constructing API requests, use {@link
- * BatchExecutionParams} from {@link AdapterRequest}.
+ * <p>本记录仅作为批次元数据使用。要构建 API 请求,请使用 {@link AdapterRequest} 中的 {@link BatchExecutionParams}。
  *
- * @param batchNo sequential batch number within the execution run (1-based)
- * @param cursorToken resume cursor supplied by the upstream data source (nullable)
+ * <p><b>职责边界:</b>
+ *
+ * <ul>
+ *   <li>提供批次编号用于日志和监控
+ *   <li>管理上游API返回的游标令牌
+ *   <li>支持批次执行状态的追踪
+ *   <li><b>不</b>用于构建API请求参数
+ * </ul>
+ *
+ * @param batchNo 执行运行中的顺序批次号(从1开始)
+ * @param cursorToken 上游数据源提供的恢复游标(可为 null)
+ * @author linqibin
+ * @since 0.1.0
  */
 public record BatchMetadata(int batchNo, String cursorToken) {
 
   /**
-   * Validates invariants when creating the record.
+   * 创建记录时验证不变式
    *
-   * @param batchNo sequential batch number (must be >= 1)
-   * @param cursorToken resume cursor token
+   * @param batchNo 顺序批次号(必须 >= 1)
+   * @param cursorToken 恢复游标令牌
    */
   public BatchMetadata {
     if (batchNo < 1) {
@@ -24,19 +34,19 @@ public record BatchMetadata(int batchNo, String cursorToken) {
   }
 
   /**
-   * Creates metadata for the first batch without cursor.
+   * 创建第一批次的元数据(无游标)
    *
-   * @return metadata for batch #1 with no cursor
+   * @return 批次号为1且无游标的元数据
    */
   public static BatchMetadata first() {
     return new BatchMetadata(1, null);
   }
 
   /**
-   * Creates metadata with updated cursor token.
+   * 创建带更新游标令牌的元数据
    *
-   * @param newCursorToken new cursor token
-   * @return new metadata instance with updated cursor
+   * @param newCursorToken 新游标令牌
+   * @return 带更新游标的新元数据实例
    */
   public BatchMetadata withCursorToken(String newCursorToken) {
     return new BatchMetadata(batchNo, newCursorToken);

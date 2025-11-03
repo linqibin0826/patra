@@ -15,10 +15,17 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct assembler for converting expression domain objects to query DTOs.
+ * 表达式领域对象到查询 DTO 转换器。
  *
- * <p>Transforms domain value objects (fields, capabilities, render rules, mappings) into read-side
- * contract DTOs for consumption by external clients.
+ * <p>职责：
+ *
+ * <ul>
+ *   <li>将表达式领域对象(字段、能力、渲染规则、参数映射)转换为只读查询 DTO
+ *   <li>支持外部客户端的数据契约消费
+ *   <li>隔离表达式元数据的内部实现和外部表示
+ * </ul>
+ *
+ * <p>设计模式：MapStruct 自动生成转换代码,避免手写样板映射。
  *
  * @author linqibin
  * @since 0.1.0
@@ -26,74 +33,74 @@ import org.mapstruct.ReportingPolicy;
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface ExprQueryAssembler {
   /**
-   * Converts a single expression field value object to its read-model DTO.
+   * 转换单个表达式字段值对象为查询 DTO。
    *
-   * @param field the domain expression field to convert
-   * @return the corresponding query DTO
+   * @param field 领域层的表达式字段
+   * @return 对应的查询 DTO
    */
   ExprFieldQuery toQuery(ExprField field);
 
   /**
-   * Converts a collection of expression fields to read-model DTOs.
+   * 转换表达式字段集合为查询 DTO 列表。
    *
-   * @param fields the domain expression field collection
-   * @return the list of query DTOs preserving iteration order
+   * @param fields 领域层的表达式字段集合
+   * @return 查询 DTO 列表,保持迭代顺序
    */
   List<ExprFieldQuery> toFieldQueries(List<ExprField> fields);
 
   /**
-   * Converts an API parameter mapping to its query DTO representation.
+   * 转换 API 参数映射为查询 DTO。
    *
-   * @param mapping the domain API parameter mapping
-   * @return the query DTO mirroring the mapping properties
+   * @param mapping 领域层的 API 参数映射
+   * @return 查询 DTO,镜像映射属性
    */
   ApiParamMappingQuery toQuery(ApiParamMapping mapping);
 
   /**
-   * Converts an API parameter mapping collection to query DTOs.
+   * 转换 API 参数映射集合为查询 DTO 列表。
    *
-   * @param mappings the domain API parameter mapping collection
-   * @return the list of query DTOs aligned with the provided ordering
+   * @param mappings 领域层的 API 参数映射集合
+   * @return 查询 DTO 列表,保持提供的顺序
    */
   List<ApiParamMappingQuery> toMappingQueries(List<ApiParamMapping> mappings);
 
   /**
-   * Converts an expression capability to its read-model DTO.
+   * 转换表达式能力为查询 DTO。
    *
-   * @param capability the domain capability value object
-   * @return the query DTO describing the capability
+   * @param capability 领域层的能力值对象
+   * @return 查询 DTO,描述能力信息
    */
   ExprCapabilityQuery toQuery(ExprCapability capability);
 
   /**
-   * Converts expression capabilities to query DTOs.
+   * 转换表达式能力集合为查询 DTO 列表。
    *
-   * @param capabilities the domain capability collection
-   * @return the list of query DTOs mirroring the provided capabilities
+   * @param capabilities 领域层的能力集合
+   * @return 查询 DTO 列表,镜像提供的能力
    */
   List<ExprCapabilityQuery> toCapabilityQueries(List<ExprCapability> capabilities);
 
   /**
-   * Converts a render rule to its query DTO form.
+   * 转换渲染规则为查询 DTO。
    *
-   * @param rule the domain render rule value object
-   * @return the query DTO describing the render rule
+   * @param rule 领域层的渲染规则值对象
+   * @return 查询 DTO,描述渲染规则
    */
   ExprRenderRuleQuery toQuery(ExprRenderRule rule);
 
   /**
-   * Converts render rules to a list of query DTOs.
+   * 转换渲染规则集合为查询 DTO 列表。
    *
-   * @param rules the domain render rule collection
-   * @return the list of query DTOs matching the render rules
+   * @param rules 领域层的渲染规则集合
+   * @return 查询 DTO 列表,匹配渲染规则
    */
   List<ExprRenderRuleQuery> toRenderRuleQueries(List<ExprRenderRule> rules);
 
   /**
-   * Converts an expression snapshot aggregate to its read-model counterpart.
+   * 转换表达式快照聚合根为查询 DTO。
    *
-   * @param snapshot the domain expression snapshot aggregate
-   * @return the query DTO containing fields, capabilities, render rules, and mappings
+   * @param snapshot 领域层的表达式快照聚合根
+   * @return 查询 DTO,包含字段、能力、渲染规则和参数映射
    */
   default ExprSnapshotQuery toQuery(ExprSnapshot snapshot) {
     return new ExprSnapshotQuery(

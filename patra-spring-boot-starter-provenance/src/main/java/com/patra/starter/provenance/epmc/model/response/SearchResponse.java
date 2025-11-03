@@ -8,9 +8,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Structured representation of the Europe PMC search response payload.
+ * Europe PMC 搜索响应结构化表示
  *
- * <p>Exposes curated fields while providing access to the raw JSON for downstream processing.
+ * <p>暴露精选字段，同时提供原始JSON访问以支持下游处理。
+ *
+ * <p>设计特点：
+ *
+ * <ul>
+ *   <li>类型安全：将JSON响应映射为强类型Java对象
+ *   <li>防御性解析：容忍缺失字段和格式变化
+ *   <li>原始数据保留：保留完整JSON以支持高级用例
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -43,10 +51,10 @@ public final class SearchResponse {
   }
 
   /**
-   * Parse a Europe PMC response tree into the strongly typed representation.
+   * 将Europe PMC响应树解析为强类型表示
    *
-   * @param root response root node
-   * @return structured response view
+   * @param root 响应根节点
+   * @return 结构化响应视图
    */
   public static SearchResponse from(JsonNode root) {
     Objects.requireNonNull(root, "root cannot be null");
@@ -71,123 +79,60 @@ public final class SearchResponse {
   }
 
   /**
-   * Create an empty response placeholder for no-op scenarios.
+   * 为无操作场景创建空响应占位符
    *
-   * @return empty response instance
+   * @return 空响应实例
    */
   public static SearchResponse empty() {
     return new SearchResponse(null, 0, null, null, Request.empty(), Collections.emptyList(), null);
   }
 
-  /**
-   * Get the API version reported by Europe PMC.
-   *
-   * @return response version string
-   */
-  /**
-   * Get the API version reported by Europe PMC.
-   *
-   * @return response version string
-   */
+  /** 获取Europe PMC报告的API版本 */
   public String version() {
     return version;
   }
 
-  /**
-   * Get the total hit count for the query.
-   *
-   * @return hit count
-   */
-  /**
-   * Get the total hit count for the query.
-   *
-   * @return hit count
-   */
+  /** 获取查询的总命中数 */
   public long hitCount() {
     return hitCount;
   }
 
-  /**
-   * Get the cursor mark for continued paging.
-   *
-   * @return cursor mark token or {@code null}
-   */
-  /**
-   * Get the cursor mark for continued paging.
-   *
-   * @return cursor mark token or {@code null}
-   */
+  /** 获取用于继续分页的游标标记 */
   public String nextCursorMark() {
     return nextCursorMark;
   }
 
-  /**
-   * Get the URL that represents the next page link, if provided.
-   *
-   * @return next page URL or {@code null}
-   */
-  /**
-   * Get the URL that represents the next page link, if provided.
-   *
-   * @return next page URL or {@code null}
-   */
+  /** 获取下一页链接URL（如果提供） */
   public String nextPageUrl() {
     return nextPageUrl;
   }
 
-  /**
-   * Get the request echo block returned by Europe PMC.
-   *
-   * @return structured request metadata
-   */
-  /**
-   * Get the structured request echo returned by Europe PMC.
-   *
-   * @return request metadata
-   */
+  /** 获取Europe PMC返回的结构化请求回显 */
   public Request request() {
     return request;
   }
 
-  /**
-   * Get the list of search results.
-   *
-   * @return immutable list of results
-   */
-  /**
-   * Get the immutable list of search results.
-   *
-   * @return search results
-   */
+  /** 获取搜索结果的不可变列表 */
   public List<Result> results() {
     return results;
   }
 
-  /**
-   * Get the raw JSON payload for advanced consumers.
-   *
-   * @return raw response node or {@code null}
-   */
-  /**
-   * Get the raw JSON payload for advanced consumers.
-   *
-   * @return raw response node or {@code null}
-   */
+  /** 获取原始JSON载荷供高级消费者使用 */
   public JsonNode raw() {
     return raw;
   }
 
   /**
-   * Echo parameters returned by Europe PMC.
+   * Europe PMC返回的请求回显参数
    *
-   * <p>Field descriptions:
+   * <p>字段说明：
    *
-   * @param queryString resolved query string
-   * @param resultType result projection requested
-   * @param cursorMark cursor token for deep paging
-   * @param pageSize page size echoed by the API
-   * @param sort sorting applied to the results
-   * @param synonym whether synonym expansion was enabled
+   * @param queryString 解析后的查询字符串
+   * @param resultType 请求的结果投影
+   * @param cursorMark 深度分页的游标令牌
+   * @param pageSize API回显的页面大小
+   * @param sort 应用于结果的排序
+   * @param synonym 是否启用同义词扩展
    * @author linqibin
    * @since 0.1.0
    */
@@ -219,25 +164,25 @@ public final class SearchResponse {
   }
 
   /**
-   * Individual search result summary.
+   * 单个搜索结果摘要
    *
-   * <p>Field descriptions:
+   * <p>字段说明：
    *
-   * @param id Europe PMC identifier
-   * @param source source repository (e.g. MED)
-   * @param pmid PubMed identifier when available
-   * @param pmcid PubMed Central identifier when available
-   * @param doi digital object identifier
-   * @param title article title
-   * @param authorString concatenated author list
-   * @param journalTitle journal name
-   * @param pubYear publication year
-   * @param journalIssn ISSN code
-   * @param pageInfo page information string
-   * @param pubType publication type
-   * @param abstractText abstract snippet
-   * @param citedByCount citation count
-   * @param raw raw JSON node for the record
+   * @param id Europe PMC标识符
+   * @param source 来源仓库（如MED）
+   * @param pmid PubMed标识符（如果可用）
+   * @param pmcid PubMed Central标识符（如果可用）
+   * @param doi 数字对象标识符
+   * @param title 文章标题
+   * @param authorString 连接的作者列表
+   * @param journalTitle 期刊名称
+   * @param pubYear 发表年份
+   * @param journalIssn ISSN代码
+   * @param pageInfo 页面信息字符串
+   * @param pubType 出版物类型
+   * @param abstractText 摘要片段
+   * @param citedByCount 引用计数
+   * @param raw 记录的原始JSON节点
    * @author linqibin
    * @since 0.1.0
    */

@@ -3,23 +3,23 @@ package com.patra.ingest.domain.model.vo.expression;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Expression compilation result.
+ * 表达式编译结果值对象。
  *
- * <p>Aligned with CompileResult from patra-spring-boot-starter-expr but adapted for domain layer:
+ * <p>与 patra-spring-boot-starter-expr 的 CompileResult 对齐,但适配于领域层:
  *
  * <ul>
- *   <li>query - Compiled query string (e.g., PubMed term)
- *   <li>params - Compiled parameters as JSON (e.g., retmax, sort)
- *   <li>normalizedExpression - Normalized expression JSON
- *   <li>errors - Validation error messages (empty if valid)
- *   <li>warnings - Validation warning messages
+ *   <li>query - 已编译的查询字符串 (例如 PubMed term)
+ *   <li>params - 已编译的参数(JSON 格式,例如 retmax, sort)
+ *   <li>normalizedExpression - 归一化表达式 JSON
+ *   <li>errors - 验证错误消息 (有效时为空)
+ *   <li>warnings - 验证警告消息
  * </ul>
  *
- * @param query compiled query string
- * @param params compiled parameters as JSON
- * @param normalizedExpression normalized expression JSON
- * @param errors validation errors (empty if compilation succeeded)
- * @param warnings validation warnings
+ * @param query 已编译的查询字符串
+ * @param params 已编译的参数(JSON 格式)
+ * @param normalizedExpression 归一化表达式 JSON
+ * @param errors 验证错误 (编译成功时为空)
+ * @param warnings 验证警告
  * @author linqibin
  * @since 0.1.0
  */

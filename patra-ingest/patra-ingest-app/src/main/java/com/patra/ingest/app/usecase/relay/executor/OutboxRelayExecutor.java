@@ -23,53 +23,50 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox relay executor - orchestrates relay batch execution via specialized coordinators.
+ * Outbox 中继执行器 - 通过专门的协调器编排中继批次执行
  *
- * <h3>Responsibilities</h3>
- *
- * <ul>
- *   <li>Fetch pending messages from persistence store
- *   <li>Delegate lease acquisition to {@link RelayLeaseCoordinator}
- *   <li>Delegate publishing and state transitions to {@link RelayPublishCoordinator}
- *   <li>Delegate relay logging to {@link RelayLogCoordinator}
- *   <li>Accumulate batch statistics and domain events
- * </ul>
- *
- * <h3>Architecture: Orchestrator + Coordinators Pattern</h3>
- *
- * <p>This executor is a slim orchestrator (~250 lines) that delegates all concerns to specialized
- * coordinators:
+ * <h3>职责</h3>
  *
  * <ul>
- *   <li><strong>RelayLeaseCoordinator</strong>: Distributed lease acquisition with optimistic
- *       locking
- *   <li><strong>RelayPublishCoordinator</strong>: Message publishing, error classification, retry
- *       scheduling
- *   <li><strong>RelayLogCoordinator</strong>: Complete audit trail creation and batch persistence
+ *   <li>从持久化存储获取待处理消息
+ *   <li>将租约获取委托给 {@link RelayLeaseCoordinator}
+ *   <li>将发布和状态转换委托给 {@link RelayPublishCoordinator}
+ *   <li>将中继日志记录委托给 {@link RelayLogCoordinator}
+ *   <li>累积批次统计信息和领域事件
  * </ul>
  *
- * <h3>Execution Flow</h3>
+ * <h3>架构: 编排器 + 协调器模式</h3>
+ *
+ * <p>该执行器是一个精简的编排器 (~250 行),将所有关注点委托给专门的协调器:
+ *
+ * <ul>
+ *   <li><strong>RelayLeaseCoordinator</strong>: 使用乐观锁的分布式租约获取
+ *   <li><strong>RelayPublishCoordinator</strong>: 消息发布、错误分类、重试调度
+ *   <li><strong>RelayLogCoordinator</strong>: 完整审计跟踪创建和批量持久化
+ * </ul>
+ *
+ * <h3>执行流程</h3>
  *
  * <pre>
- * 1. Fetch pending messages (respecting channel filter and batch size)
- * 2. Create relay batch ID and log accumulator
- * 3. For each message:
- *    a. Try acquire lease → record LEASE_MISSED if failed
- *    b. Publish message → handle SUCCESS/DEFERRED/FAILED outcome
- *    c. Record relay log for audit trail
- * 4. Batch-persist all relay logs (single INSERT statement)
- * 5. Return batch result with statistics and domain events
+ * 1. 获取待处理消息 (遵守通道过滤和批大小)
+ * 2. 创建中继批次 ID 和日志累加器
+ * 3. 对于每条消息:
+ *    a. 尝试获取租约 → 失败时记录 LEASE_MISSED
+ *    b. 发布消息 → 处理 SUCCESS/DEFERRED/FAILED 结果
+ *    c. 记录中继日志用于审计跟踪
+ * 4. 批量持久化所有中继日志 (单条 INSERT 语句)
+ * 5. 返回包含统计信息和领域事件的批次结果
  * </pre>
  *
- * <h3>Domain Events</h3>
+ * <h3>领域事件</h3>
  *
- * <p>Emits events for:
+ * <p>发出以下事件:
  *
  * <ul>
- *   <li>{@link OutboxLeaseMissedEvent}: Lease acquisition failed
- *   <li>{@link OutboxMessagePublishedEvent}: Message published successfully
- *   <li>{@link OutboxMessageDeferredEvent}: Transient error, scheduled for retry
- *   <li>{@link OutboxMessageFailedEvent}: Permanent failure after max retries
+ *   <li>{@link OutboxLeaseMissedEvent}: 租约获取失败
+ *   <li>{@link OutboxMessagePublishedEvent}: 消息成功发布
+ *   <li>{@link OutboxMessageDeferredEvent}: 暂时性错误,已调度重试
+ *   <li>{@link OutboxMessageFailedEvent}: 达到最大重试次数后永久失败
  * </ul>
  *
  * @author Papertrace Team
@@ -86,16 +83,15 @@ public class OutboxRelayExecutor {
   private final RelayLogCoordinator logCoordinator;
 
   /**
-   * Executes a single relay batch according to the plan.
+   * 根据计划执行单批次中继
    *
-   * <p>Fetches pending messages, processes each through the relay pipeline (lease → publish → log),
-   * and returns batch-level statistics.
+   * <p>获取待处理消息,通过中继管道处理每条消息 (租约 → 发布 → 日志),并返回批次级别的统计信息
    *
-   * @param plan relay plan specifying channel, batch size, retry policy, and lease parameters
-   * @return batch result with counts and domain events
+   * @param plan 中继计划,指定通道、批大小、重试策略和租约参数
+   * @return 包含计数和领域事件的批次结果
    */
   public RelayBatchResult execute(RelayPlan plan) {
-    // Fetch pending messages (null channel means all channels)
+    // 获取待处理消息 (null 通道表示所有通道)
     String channel = plan.channel() != null ? plan.channel().channel() : null;
     List<OutboxMessage> messages =
         relayStore.fetchPending(channel, plan.triggeredAt(), plan.batchSize());
@@ -103,10 +99,7 @@ public class OutboxRelayExecutor {
     if (messages.isEmpty()) {
       if (log.isDebugEnabled()) {
         String channelDesc = channel != null ? channel : "ALL_CHANNELS";
-        log.debug(
-            "No pending messages for channel [{}], triggeredAt={}",
-            channelDesc,
-            plan.triggeredAt());
+        log.debug("通道 [{}] 没有待处理消息, 触发时间={}", channelDesc, plan.triggeredAt());
       }
       return RelayBatchResult.empty(plan.channel());
     }
@@ -114,51 +107,47 @@ public class OutboxRelayExecutor {
     if (log.isDebugEnabled()) {
       String channelDesc = channel != null ? channel : "ALL_CHANNELS";
       log.debug(
-          "Processing relay batch for channel [{}]: {} messages, leaseOwner={}",
-          channelDesc,
-          messages.size(),
-          plan.leaseOwner());
+          "处理通道 [{}] 的中继批次: {} 条消息, 租约持有者={}", channelDesc, messages.size(), plan.leaseOwner());
     }
 
-    // Create batch ID and log accumulator
+    // 创建批次 ID 和日志累加器
     RelayBatchId batchId = RelayBatchId.generate(plan.triggeredAt());
     LogAccumulator logAcc = logCoordinator.createAccumulator(batchId);
 
-    // Process messages and accumulate statistics
+    // 处理消息并累积统计信息
     RelayContext context = new RelayContext(plan);
     for (OutboxMessage message : messages) {
       processMessage(message, context, logAcc);
     }
 
-    // Persist all relay logs in batch (single INSERT with N rows)
+    // 批量持久化所有中继日志 (单条 INSERT,N 行数据)
     logCoordinator.persistBatch(logAcc);
 
     return context.toBatchResult(messages.size());
   }
 
   /**
-   * Processes a single message through the relay pipeline: lease → publish → log.
+   * 通过中继管道处理单条消息: 租约 → 发布 → 日志
    *
-   * @param message outbox message to relay
-   * @param context batch context for statistics and events
-   * @param logAcc log accumulator for audit trail
+   * @param message 要中继的 Outbox 消息
+   * @param context 用于统计信息和事件的批次上下文
+   * @param logAcc 用于审计跟踪的日志累加器
    */
   private void processMessage(OutboxMessage message, RelayContext context, LogAccumulator logAcc) {
     Instant startTime = Instant.now();
 
-    // Attempt lease acquisition
+    // 尝试获取租约
     if (!leaseCoordinator.tryAcquire(message, context.plan())) {
       context.onLeaseMissed(message);
       logAcc.recordLeaseMissed(message, context.plan().leaseOwner(), startTime);
       return;
     }
 
-    // ✅ FIX: Sync version after successful lease acquisition
-    // acquireLease() increments version in DB (version+1), must sync to avoid optimistic lock
-    // failure
+    // ✅ 修复: 成功获取租约后同步版本
+    // acquireLease() 在数据库中递增版本 (version+1),必须同步以避免乐观锁失败
     message = message.toBuilder().version(message.getVersion() + 1).build();
 
-    // Publish message and handle result
+    // 发布消息并处理结果
     RelayResult result = publishCoordinator.publish(message, context.plan());
 
     if (result.isSuccess()) {
@@ -173,7 +162,7 @@ public class OutboxRelayExecutor {
           result.nextRetryAt(),
           result.errorCode(),
           result.errorMessage(),
-          "TRANSIENT"); // Deferred always means transient error
+          "TRANSIENT"); // Deferred 总是表示暂时性错误
     } else {
       context.onFailed(message, result);
       logAcc.recordFailed(
@@ -182,14 +171,14 @@ public class OutboxRelayExecutor {
           startTime,
           result.errorCode(),
           result.errorMessage(),
-          "FATAL"); // Failed can be FATAL or max retries (treat as FATAL)
+          "FATAL"); // Failed 可能是 FATAL 或达到最大重试 (视为 FATAL)
     }
   }
 
   /**
-   * Batch context for accumulating statistics and domain events during relay execution.
+   * 用于在中继执行期间累积统计信息和领域事件的批次上下文
    *
-   * <p>Thread-safety: NOT thread-safe, used within single-threaded relay job execution.
+   * <p>线程安全性: 非线程安全,在单线程中继作业执行中使用
    */
   private static final class RelayContext {
     private final RelayPlan plan;
@@ -257,7 +246,7 @@ public class OutboxRelayExecutor {
       if (log.isDebugEnabled()) {
         String channelDesc = plan.channel() != null ? plan.channel().channel() : "ALL_CHANNELS";
         log.debug(
-            "Relay batch completed for channel [{}]: {} messages processed ({} published, {} retried, {} failed, {} leaseMissed)",
+            "通道 [{}] 的中继批次完成: 处理了 {} 条消息 ({} 已发布, {} 已重试, {} 失败, {} 租约丢失)",
             channelDesc,
             totalMessages,
             published,

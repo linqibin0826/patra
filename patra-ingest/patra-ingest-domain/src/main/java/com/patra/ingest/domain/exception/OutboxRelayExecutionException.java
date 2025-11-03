@@ -6,28 +6,37 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Exception raised during execution of the outbox relay pipeline.
+ * Outbox Relay 执行异常。
  *
- * <p>Represents non-persistence failures in the flow of fetching messages, acquiring leases,
- * publishing to the broker, or updating state (for example network interruptions, third-party SDK
- * errors, serialization issues). Compared with {@link OutboxPersistenceException}, this class
- * emphasizes external dependency or publishing failures rather than database updates.
- *
- * <p>Handling strategy:
+ * <p>触发场景:在 Outbox Relay 管道执行过程中发生非持久化类失败,具体包括:
  *
  * <ul>
- *   <li>Recoverable (e.g., transient network issues): mark for retry.
- *   <li>Non-recoverable (unsupported format, target rejection): route to dead letter according to
- *       policy.
+ *   <li>获取待发布消息失败
+ *   <li>获取租约(lease)失败
+ *   <li>发布到消息中间件失败(网络中断、SDK 错误)
+ *   <li>序列化/反序列化错误
  * </ul>
+ *
+ * <p>与 {@link OutboxPersistenceException} 的区别:本异常强调外部依赖或发布失败,而 {@link OutboxPersistenceException}
+ * 强调数据库更新失败。
+ *
+ * <p>处理策略:
+ *
+ * <ul>
+ *   <li><b>可恢复错误</b>(如临时性网络问题):标记为重试。
+ *   <li><b>不可恢复错误</b>(如不支持的格式、目标拒绝):根据策略路由到死信队列。
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public class OutboxRelayExecutionException extends IngestException implements HasErrorTraits {
 
   /**
-   * Construct the exception with a message and underlying cause.
+   * 构造 Outbox Relay 执行异常。
    *
-   * @param message descriptive message
-   * @param cause underlying exception
+   * @param message 描述性消息
+   * @param cause 底层异常
    */
   public OutboxRelayExecutionException(String message, Throwable cause) {
     super(message, cause);

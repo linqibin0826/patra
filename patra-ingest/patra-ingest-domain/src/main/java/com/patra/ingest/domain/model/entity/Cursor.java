@@ -8,16 +8,38 @@ import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
 import java.util.Objects;
 import lombok.Getter;
 
-/** Domain entity representing the current cursor state. */
+/**
+ * 游标实体。表示增量采集的当前游标状态。
+ *
+ * <p>标识：由 provenanceCode + operationCode + cursorKey + namespaceScope + namespaceKey 唯一标识。
+ *
+ * <p>生命周期：
+ *
+ * <ul>
+ *   <li>首次采集时创建游标，记录初始水位线
+ *   <li>每次采集完成后前进游标，更新水位线和血缘信息
+ *   <li>表达式哈希变更时需要重置游标
+ * </ul>
+ *
+ * <p>业务约束：
+ *
+ * <ul>
+ *   <li>游标水位线单调递增，不允许回退
+ *   <li>支持 GLOBAL/TASK/PLAN 三种命名空间范围
+ *   <li>游标值 (CursorValue) 支持时间、数值、字符串等多种类型
+ *   <li>水位线 (CursorWatermark) 记录归一化的时间戳或数值
+ *   <li>血缘 (CursorLineage) 捕获 task/run/plan/slice 标识用于追溯
+ * </ul>
+ */
 @SuppressWarnings("unused")
 @Getter
 public class Cursor {
 
-  /** Result of cursor advancement operation. */
+  /** 游标前进操作的结果。 */
   public enum AdvancementResult {
-    /** Cursor advanced successfully. */
+    /** 游标成功前进。 */
     SUCCESS,
-    /** Expression hash changed, cursor needs reset. */
+    /** 表达式哈希已变更，游标需要重置。 */
     EXPRESSION_CHANGED
   }
 

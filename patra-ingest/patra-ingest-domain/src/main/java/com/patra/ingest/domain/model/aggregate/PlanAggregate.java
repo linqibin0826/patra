@@ -9,21 +9,39 @@ import java.util.Objects;
 import lombok.Getter;
 
 /**
- * Aggregate root that represents the blueprint of a single ingestion plan together with its state
- * transitions.
+ * 采集计划聚合根。封装单个数据采集计划的蓝图及其状态机流转。
  *
- * <p>The aggregate captures the window specification, expression and configuration snapshots,
- * slicing strategy, and current status. Persistence responsibilities remain in the repository
- * layer.
+ * <p>一致性边界：
  *
- * <p>Idempotency: the {@code planKey} (source + operation + window + strategy hash) is managed by
- * repositories to prevent duplicate plans.
+ * <ul>
+ *   <li>计划的窗口规范、表达式快照、配置快照在整个生命周期中保持不可变
+ *   <li>状态转换必须遵循预定义的状态机规则
+ *   <li>计划键 (planKey) 保证同一业务场景的计划幂等性
+ * </ul>
  *
- * <p>State machine: {@code DRAFT → SLICING → READY/PARTIAL → COMPLETED/FAILED}. When a plan fails,
- * upper-layer compensation logic decides the follow-up action.
+ * <p>业务规则：
  *
- * <p>Thread safety: this aggregate is created and mutated within a single thread and must not be
- * shared across threads.
+ * <ul>
+ *   <li>计划创建时处于 {@code DRAFT} 状态，包含窗口边界、切片策略和配置快照
+ *   <li>切片生成开始时转换为 {@code SLICING} 状态
+ *   <li>所有切片生成完成后转换为 {@code READY} 状态，准备任务调度
+ *   <li>根据任务执行结果聚合，最终转换为 {@code COMPLETED/PARTIAL/FAILED} 状态
+ *   <li>计划键 = hash(provenance + operation + window + strategy) 确保幂等性
+ * </ul>
+ *
+ * <p>状态转换：
+ *
+ * <ul>
+ *   <li>{@code DRAFT} → {@code SLICING}: 开始切片生成
+ *   <li>{@code SLICING} → {@code READY}: 所有切片生成完成
+ *   <li>{@code READY} → {@code COMPLETED}: 所有任务执行成功
+ *   <li>{@code READY} → {@code PARTIAL}: 部分任务失败但计划可继续
+ *   <li>{@code READY} → {@code FAILED}: 计划执行失败，需补偿
+ * </ul>
+ *
+ * <p>领域事件：计划状态变更由 {@link com.patra.ingest.domain.event.TaskCompletedEvent} 触发的聚合逻辑驱动。
+ *
+ * <p>线程安全：此聚合根在单线程中创建和变更，不应跨线程共享。
  *
  * @author linqibin
  * @since 0.1.0
@@ -31,43 +49,40 @@ import lombok.Getter;
 @Getter
 public class PlanAggregate extends AggregateRoot<Long> {
 
-  /** Scheduler instance identifier associated with the external trigger. */
+  /** 关联的调度实例标识（外部触发源）。 */
   private final Long scheduleInstanceId;
 
-  /** Business idempotency key used for deduplication. */
+  /** 业务幂等键，用于计划去重（hash(provenance + operation + window + strategy)）。 */
   private final String planKey;
 
-  /** Provenance/source code (for example: PUBMED). */
+  /** 数据来源代码（如：pubmed、epmc）。 */
   private final String provenanceCode;
 
-  /** Operation type (full, incremental, compensation, and so on). */
+  /** 操作类型（全量采集、增量采集、补偿采集等）。 */
   private final OperationCode operationCode;
 
-  /** Hash of the plan expression prototype, used for change detection. */
+  /** 表达式原型哈希值，用于变更检测。 */
   private final String exprProtoHash;
 
-  /** Snapshot of the raw expression prototype (JSON form, prior to compilation). */
+  /** 表达式原型快照（JSON 格式，编译前的原始表达式）。 */
   private final String exprProtoSnapshotJson;
 
-  /** Snapshot of the provenance configuration captured for execution. */
+  /** 数据来源配置快照（执行时捕获的不可变配置）。 */
   private final String provenanceConfigSnapshotJson;
 
-  /** Hash of the provenance configuration snapshot for change detection. */
+  /** 数据来源配置哈希值，用于变更检测。 */
   private final String provenanceConfigHash;
 
-  /**
-   * Window boundary specification (supports TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE
-   * strategies).
-   */
+  /** 窗口边界规范（支持 TIME/DATE/ID_RANGE/CURSOR_LANDMARK/VOLUME_BUDGET/SINGLE 策略）。 */
   private final WindowSpec windowSpec;
 
-  /** Slicing strategy code (for example TIME, DATE, or SINGLE). */
+  /** 切片策略代码（如：TIME、DATE、SINGLE）。 */
   private final String sliceStrategyCode;
 
-  /** JSON payload containing slicing strategy parameters. */
+  /** 切片策略参数 JSON 载荷。 */
   private final String sliceParamsJson;
 
-  /** Current state of the plan. */
+  /** 计划当前状态。 */
   private PlanStatus status;
 
   private PlanAggregate(
@@ -101,20 +116,20 @@ public class PlanAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Create a brand-new plan blueprint aggregate in {@link PlanStatus#DRAFT DRAFT} status.
+   * 创建全新的计划蓝图聚合根，初始状态为 {@link PlanStatus#DRAFT DRAFT}。
    *
-   * @param scheduleInstanceId scheduler instance identifier
-   * @param planKey idempotency key
-   * @param provenanceCode provenance/source code
-   * @param operationCode operation code value (parsed into the enum)
-   * @param exprProtoHash expression prototype hash
-   * @param exprProtoSnapshotJson expression prototype snapshot JSON
-   * @param provenanceConfigSnapshotJson provenance configuration snapshot JSON
-   * @param provenanceConfigHash provenance configuration snapshot hash
-   * @param windowSpec window boundary specification
-   * @param sliceStrategyCode slicing strategy code
-   * @param sliceParamsJson slicing strategy parameter JSON
-   * @return a newly created plan aggregate
+   * @param scheduleInstanceId 调度实例标识
+   * @param planKey 幂等键
+   * @param provenanceCode 数据来源代码
+   * @param operationCode 操作代码（将解析为枚举）
+   * @param exprProtoHash 表达式原型哈希
+   * @param exprProtoSnapshotJson 表达式原型快照 JSON
+   * @param provenanceConfigSnapshotJson 数据来源配置快照 JSON
+   * @param provenanceConfigHash 数据来源配置哈希
+   * @param windowSpec 窗口边界规范
+   * @param sliceStrategyCode 切片策略代码
+   * @param sliceParamsJson 切片策略参数 JSON
+   * @return 新创建的计划聚合根
    */
   public static PlanAggregate create(
       Long scheduleInstanceId,
@@ -147,23 +162,23 @@ public class PlanAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Rebuild an existing plan aggregate from persisted state (used by repositories).
+   * 从持久化状态重建已存在的计划聚合根（由仓储层使用）。
    *
-   * @param id primary identifier
-   * @param scheduleInstanceId scheduler instance identifier
-   * @param planKey plan idempotency key
-   * @param provenanceCode provenance/source code
-   * @param operationCode operation code string
-   * @param exprProtoHash expression hash
-   * @param exprProtoSnapshotJson expression snapshot JSON
-   * @param provenanceConfigSnapshotJson configuration snapshot JSON
-   * @param provenanceConfigHash configuration snapshot hash
-   * @param windowSpec window boundary specification
-   * @param sliceStrategyCode slicing strategy code
-   * @param sliceParamsJson slicing strategy parameter JSON
-   * @param status current plan status
-   * @param version optimistic locking version
-   * @return plan aggregate reconstructed from persistence
+   * @param id 主键标识
+   * @param scheduleInstanceId 调度实例标识
+   * @param planKey 计划幂等键
+   * @param provenanceCode 数据来源代码
+   * @param operationCode 操作代码字符串
+   * @param exprProtoHash 表达式哈希
+   * @param exprProtoSnapshotJson 表达式快照 JSON
+   * @param provenanceConfigSnapshotJson 配置快照 JSON
+   * @param provenanceConfigHash 配置快照哈希
+   * @param windowSpec 窗口边界规范
+   * @param sliceStrategyCode 切片策略代码
+   * @param sliceParamsJson 切片策略参数 JSON
+   * @param status 当前计划状态
+   * @param version 乐观锁版本
+   * @return 从持久化重建的计划聚合根
    */
   public static PlanAggregate restore(
       Long id,
@@ -201,56 +216,55 @@ public class PlanAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Transitions the plan from DRAFT to SLICING status.
+   * 将计划从 DRAFT 状态转换为 SLICING 状态。
    *
-   * @throws IllegalStateException if plan is not in DRAFT status
+   * @throws IllegalStateException 如果计划不处于 DRAFT 状态
    */
   public void startSlicing() {
     if (this.status != PlanStatus.DRAFT) {
-      throw new IllegalStateException("Invalid plan status; slicing cannot start.");
+      throw new IllegalStateException("计划状态无效，无法开始切片生成");
     }
     this.status = PlanStatus.SLICING;
   }
 
-  /** Marks the plan as ready after all slices are generated. */
+  /** 在所有切片生成完成后，将计划标记为就绪状态。 */
   public void markReady() {
     this.status = PlanStatus.READY;
   }
 
   /**
-   * Updates the plan status to the specified value.
+   * 更新计划状态为指定值。
    *
-   * <p>This method is used by event handlers to update the status based on aggregated slice states.
+   * <p>此方法由事件处理器使用，根据聚合的切片状态更新计划状态。
    *
-   * @param newStatus the new status to set
-   * @throws IllegalArgumentException if newStatus is null
+   * @param newStatus 要设置的新状态
+   * @throws IllegalArgumentException 如果 newStatus 为 null
    */
   public void updateStatus(PlanStatus newStatus) {
     if (newStatus == null) {
-      throw new IllegalArgumentException("newStatus must not be null");
+      throw new IllegalArgumentException("newStatus 不能为 null");
     }
     this.status = newStatus;
   }
 
   /**
-   * Obtain the operation code string, if one is present.
+   * 获取操作代码字符串（如果存在）。
    *
-   * @return operation code or {@code null}
+   * @return 操作代码或 {@code null}
    */
   public String getOperationCode() {
     return operationCode == null ? null : operationCode.getCode();
   }
 
-  // ========== Native enum accessor for internal domain use ==========
+  // ========== 原生枚举访问器，用于内部领域使用 ==========
   public OperationCode getOperation() {
     return operationCode;
   }
 
   /**
-   * Convenience accessor that returns the window start when a TIME strategy is used. Returns {@code
-   * null} for strategies that do not have a time window.
+   * 便捷访问器，当使用 TIME 策略时返回窗口起始时间。 对于不包含时间窗口的策略返回 {@code null}。
    *
-   * @return window start time or {@code null}
+   * @return 窗口起始时间或 {@code null}
    */
   public Instant getWindowFrom() {
     if (windowSpec instanceof WindowSpec.Time timeSpec) {
@@ -260,10 +274,9 @@ public class PlanAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Convenience accessor that returns the window end when a TIME strategy is used. Returns {@code
-   * null} for strategies that do not expose a time window.
+   * 便捷访问器，当使用 TIME 策略时返回窗口结束时间。 对于不暴露时间窗口的策略返回 {@code null}。
    *
-   * @return window end time or {@code null}
+   * @return 窗口结束时间或 {@code null}
    */
   public Instant getWindowTo() {
     if (windowSpec instanceof WindowSpec.Time timeSpec) {

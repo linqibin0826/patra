@@ -8,65 +8,74 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Simplified view over a PubMed article parsed directly from XML.
+ * 从XML直接解析的PubMed文章简化视图。
  *
- * @author
+ * <p>该类封装了PubMed文章的核心信息,包括PMID、文章元数据、期刊信息和补充数据。 提供便捷的访问器方法用于获取关键字、文章标识符等常用信息。
+ *
+ * @author Patra
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class PubmedArticle {
 
   private static final PubmedData EMPTY_PUBMED_DATA = new PubmedData();
 
+  /** Medline引用信息,包含PMID和文章核心元数据 */
   @JacksonXmlProperty(localName = "MedlineCitation")
   private MedlineCitation medlineCitation;
 
+  /** PubMed补充数据,包含历史事件和文章标识符 */
   @JacksonXmlProperty(localName = "PubmedData")
   private PubmedData pubmedData;
 
   public PubmedArticle() {}
 
-  /** PubMed identifier (PMID). */
+  /** 返回PubMed标识符(PMID) */
   public String pmid() {
     return medlineCitation != null ? medlineCitation.pmid() : null;
   }
 
-  /** Core article metadata. */
+  /** 返回核心文章元数据 */
   public Article article() {
     return medlineCitation != null ? medlineCitation.article() : null;
   }
 
-  /** Journal information reported by Medline. */
+  /** 返回Medline报告的期刊信息 */
   public MedlineJournalInfo journalInfo() {
     return medlineCitation != null ? medlineCitation.journalInfo() : null;
   }
 
-  /** Supplemental PubMed data such as history events and article identifiers. */
+  /** 返回PubMed补充数据,如历史事件和文章标识符 */
   public PubmedData pubmedData() {
     return pubmedData != null ? pubmedData : EMPTY_PUBMED_DATA;
   }
 
-  /** Keyword list merged from all keyword blocks. */
+  /** 返回从所有关键字块合并的关键字列表 */
   public List<String> keywords() {
     return medlineCitation != null ? medlineCitation.keywords() : List.of();
   }
 
-  /** Convenience accessor for article identifiers (e.g., DOI, PMC). */
+  /** 返回文章标识符列表的便捷访问器(例如DOI、PMC) */
   public List<PubmedData.ArticleId> articleIds() {
     return pubmedData != null ? pubmedData.articleIds() : List.of();
   }
 
+  /** Medline引用信息的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class MedlineCitation {
 
+    /** PubMed标识符对象 */
     @JacksonXmlProperty(localName = "PMID")
     private Pmid pmid;
 
+    /** 文章核心元数据 */
     @JacksonXmlProperty(localName = "Article")
     private Article article;
 
+    /** Medline期刊信息 */
     @JacksonXmlProperty(localName = "MedlineJournalInfo")
     private MedlineJournalInfo journalInfo;
 
+    /** 关键字列表集合 */
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "KeywordList")
     private List<KeywordList> keywordLists;
@@ -97,9 +106,11 @@ public final class PubmedArticle {
     }
   }
 
+  /** 关键字列表的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class KeywordList {
 
+    /** 关键字集合 */
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "Keyword")
     private List<Keyword> keywords;
@@ -120,17 +131,21 @@ public final class PubmedArticle {
     }
   }
 
+  /** 单个关键字的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class Keyword {
 
+    /** 关键字文本内容 */
     @JacksonXmlText private String value;
 
     private Keyword() {}
   }
 
+  /** PMID标识符的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class Pmid {
 
+    /** PMID数值 */
     @JacksonXmlText private String value;
 
     private Pmid() {}

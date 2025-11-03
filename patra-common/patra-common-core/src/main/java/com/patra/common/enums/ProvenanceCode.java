@@ -5,11 +5,9 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
- * Enumeration of upstream data sources (provenances).
+ * 上游数据源(溯源/Provenance)枚举。
  *
- * <p>Provides canonical identifiers for common literature and metadata sources such as PubMed,
- * Crossref, and DataCite. Supports string parsing as well as Jackson serialization and
- * deserialization.
+ * <p>为常见的文献和元数据源(如 PubMed、Crossref 和 DataCite)提供规范标识符。 支持字符串解析以及 Jackson 序列化和反序列化。
  */
 @Getter
 public enum ProvenanceCode {
@@ -32,10 +30,10 @@ public enum ProvenanceCode {
   CORD19("CORD19", "CORD-19"),
   GIM("GIM", "WHO GIM");
 
-  /** Uppercase code used for persistence and interchange (for example, {@code PUBMED}). */
+  /** 用于持久化和交换的大写代码(例如 {@code PUBMED})。 */
   private final String code;
 
-  /** Human-readable description of the provenance. */
+  /** 数据源的人类可读描述。 */
   private final String description;
 
   ProvenanceCode(String code, String display) {
@@ -44,15 +42,15 @@ public enum ProvenanceCode {
   }
 
   /**
-   * Parses a string into a {@link ProvenanceCode} while normalizing case and common aliases.
+   * 将字符串解析为 {@link ProvenanceCode},同时规范化大小写和常见别名。
    *
-   * @param s source identifier
-   * @return matching provenance code
-   * @throws IllegalArgumentException if the identifier is null or unknown
+   * @param s 数据源标识符
+   * @return 匹配的数据源代码
+   * @throws IllegalArgumentException 如果标识符为 null 或未知
    */
   public static ProvenanceCode parse(String s) {
     if (s == null) {
-      throw new IllegalArgumentException("source is null");
+      throw new IllegalArgumentException("数据源标识符不能为 null");
     }
     String norm = s.trim().toLowerCase().replace('-', '_');
     return switch (norm) {
@@ -74,17 +72,26 @@ public enum ProvenanceCode {
       case "litcovid" -> LITCOVID;
       case "cord19", "cord-19" -> CORD19;
       case "gim", "who_gim" -> GIM;
-      default -> throw new IllegalArgumentException("Unknown source: " + s);
+      default -> throw new IllegalArgumentException("未知的数据源: " + s);
     };
   }
 
-  /** Jackson factory method used for JSON deserialization. */
+  /**
+   * 用于 JSON 反序列化的 Jackson 工厂方法。
+   *
+   * @param value JSON 中的值
+   * @return 匹配的数据源代码
+   */
   @JsonCreator
   public static ProvenanceCode fromJson(String value) {
     return parse(value);
   }
 
-  /** Serializes the code to JSON. */
+  /**
+   * 将代码序列化为 JSON。
+   *
+   * @return 数据源代码字符串
+   */
   @JsonValue
   public String toJson() {
     return this.code;

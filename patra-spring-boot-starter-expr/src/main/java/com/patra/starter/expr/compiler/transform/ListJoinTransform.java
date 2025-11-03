@@ -8,15 +8,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Transform that joins multiple values with a comma separator for MULTI std_keys. Used when MULTI
- * std_keys need to be collapsed into a single provider parameter value.
+ * 列表连接变换:将多个值用逗号分隔符连接,用于 MULTI std_keys。
  *
- * <p>The transform expects a special delimiter-separated value string (internal format from
- * renderer) and converts it to a comma-separated list suitable for provider consumption.
+ * <p>当 MULTI std_keys 需要合并为单个提供者参数值时使用。
  *
- * <p>Example: Internal format "value1||value2||value3" → Output "value1,value2,value3"
+ * <p>该变换期望接收一个特殊分隔符分隔的值字符串(来自渲染器的内部格式),并将其转换为适合提供者使用的逗号分隔列表。
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.8 (MULTI Join Strategy)
+ * <p>示例:
+ *
+ * <pre>
+ * 内部格式: "value1||value2||value3"
+ * 输出:     "value1,value2,value3"
+ * </pre>
+ *
+ * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.8 (MULTI Join Strategy)
  *
  * @since 1.0.0
  */
@@ -35,21 +40,17 @@ public class ListJoinTransform implements ValueTransform {
   @Override
   public String apply(String stdKey, String value, ProvenanceSnapshot snapshot) {
     if (value == null || value.isBlank()) {
-      log.debug("LIST_JOIN: stdKey={}, value is null or blank, returning as-is", stdKey);
+      log.debug("LIST_JOIN: stdKey={}, 值为 null 或空白,原样返回", stdKey);
       return value;
     }
 
-    // Split by internal delimiter and join with output separator
+    // 按内部分隔符分割,然后用输出分隔符连接
     String result =
         Arrays.stream(value.split(Pattern.quote(INTERNAL_DELIMITER)))
             .filter(s -> !s.isBlank())
             .collect(Collectors.joining(OUTPUT_SEPARATOR));
 
-    log.debug(
-        "LIST_JOIN: stdKey={}, input length={}, output length={}",
-        stdKey,
-        value.length(),
-        result.length());
+    log.debug("LIST_JOIN: stdKey={}, 输入长度={}, 输出长度={}", stdKey, value.length(), result.length());
     return result;
   }
 }

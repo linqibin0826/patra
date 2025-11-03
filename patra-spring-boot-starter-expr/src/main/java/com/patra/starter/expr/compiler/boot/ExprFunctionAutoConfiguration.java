@@ -18,16 +18,23 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 /**
- * Auto-configuration for expression function and transform registries.
+ * 表达式函数和变换注册表的自动配置。
  *
- * <p>Registers built-in functions and transforms: - Functions: PUBMED_DATETYPE - Transforms:
- * TO_EXCLUSIVE_MINUS_1D, LIST_JOIN, FILTER_JOIN
+ * <p>注册内置函数和变换：
  *
- * <p>Custom functions/transforms can be added by: 1. Defining beans of type {@link RenderFunction}
- * or {@link ValueTransform} 2. Providing a custom {@link FunctionRegistry} or {@link
- * TransformRegistry} bean
+ * <ul>
+ *   <li>函数：PUBMED_DATETYPE
+ *   <li>变换：TO_EXCLUSIVE_MINUS_1D, LIST_JOIN, FILTER_JOIN
+ * </ul>
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.3
+ * <p>自定义函数/变换的添加方式：
+ *
+ * <ol>
+ *   <li>定义 {@link RenderFunction} 或 {@link ValueTransform} 类型的 Bean
+ *   <li>提供自定义的 {@link FunctionRegistry} 或 {@link TransformRegistry} Bean
+ * </ol>
+ *
+ * <p>参考：docs/expr/03-compiler-bridge-internals.md §3.3
  *
  * @since 1.0.0
  */
@@ -37,9 +44,9 @@ public class ExprFunctionAutoConfiguration {
   private static final Logger log = LoggerFactory.getLogger(ExprFunctionAutoConfiguration.class);
 
   /**
-   * Registers the PubMed datetype function.
+   * 注册 PubMed 日期类型函数。
    *
-   * @return PUBMED_DATETYPE function instance
+   * @return PUBMED_DATETYPE 函数实例
    */
   @Bean
   @ConditionalOnMissingBean(name = "pubmedDatetypeFunction")
@@ -48,9 +55,9 @@ public class ExprFunctionAutoConfiguration {
   }
 
   /**
-   * Registers the exclusive-to-inclusive date transform.
+   * 注册排他转包含日期变换（将排他性日期转换为包含性日期）。
    *
-   * @return TO_EXCLUSIVE_MINUS_1D transform instance
+   * @return TO_EXCLUSIVE_MINUS_1D 变换实例
    */
   @Bean
   @ConditionalOnMissingBean(name = "toExclusiveMinus1DTransform")
@@ -59,9 +66,9 @@ public class ExprFunctionAutoConfiguration {
   }
 
   /**
-   * Registers the list join transform for MULTI std_keys.
+   * 注册列表拼接变换（用于 MULTI 基准键）。
    *
-   * @return LIST_JOIN transform instance
+   * @return LIST_JOIN 变换实例
    */
   @Bean
   @ConditionalOnMissingBean(name = "listJoinTransform")
@@ -70,9 +77,9 @@ public class ExprFunctionAutoConfiguration {
   }
 
   /**
-   * Registers the filter join transform for MULTI std_keys.
+   * 注册过滤拼接变换（用于 MULTI 基准键）。
    *
-   * @return FILTER_JOIN transform instance
+   * @return FILTER_JOIN 变换实例
    */
   @Bean
   @ConditionalOnMissingBean(name = "filterJoinTransform")
@@ -81,34 +88,34 @@ public class ExprFunctionAutoConfiguration {
   }
 
   /**
-   * Creates the function registry with all available RenderFunction beans.
+   * 创建函数注册表，包含所有可用的 RenderFunction Bean。
    *
-   * <p>Custom functions can be added by defining additional RenderFunction beans.
+   * <p>可通过定义额外的 RenderFunction Bean 来添加自定义函数。
    *
-   * @param functions list of all RenderFunction beans in the context
-   * @return immutable function registry
+   * @param functions 上下文中所有 RenderFunction Bean 的列表
+   * @return 不可变的函数注册表
    */
   @Bean
   @ConditionalOnMissingBean
   public FunctionRegistry functionRegistry(List<RenderFunction> functions) {
-    log.info("Initializing FunctionRegistry with {} functions", functions.size());
-    functions.forEach(fn -> log.debug("Registered function: {}", fn.code()));
+    log.info("初始化函数注册表，包含 {} 个函数", functions.size());
+    functions.forEach(fn -> log.debug("已注册函数：{}", fn.code()));
     return new DefaultFunctionRegistry(functions);
   }
 
   /**
-   * Creates the transform registry with all available ValueTransform beans.
+   * 创建变换注册表，包含所有可用的 ValueTransform Bean。
    *
-   * <p>Custom transforms can be added by defining additional ValueTransform beans.
+   * <p>可通过定义额外的 ValueTransform Bean 来添加自定义变换。
    *
-   * @param transforms list of all ValueTransform beans in the context
-   * @return immutable transform registry
+   * @param transforms 上下文中所有 ValueTransform Bean 的列表
+   * @return 不可变的变换注册表
    */
   @Bean
   @ConditionalOnMissingBean
   public TransformRegistry transformRegistry(List<ValueTransform> transforms) {
-    log.info("Initializing TransformRegistry with {} transforms", transforms.size());
-    transforms.forEach(t -> log.debug("Registered transform: {}", t.code()));
+    log.info("初始化变换注册表，包含 {} 个变换", transforms.size());
+    transforms.forEach(t -> log.debug("已注册变换：{}", t.code()));
     return new DefaultTransformRegistry(transforms);
   }
 }

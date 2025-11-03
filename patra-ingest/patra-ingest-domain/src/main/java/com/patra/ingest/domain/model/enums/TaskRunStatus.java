@@ -3,36 +3,33 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * Task run (attempt) status (DICT: ing_task_run_status).
+ * 任务运行(尝试)状态 (字典: ing_task_run_status)。
  *
- * <p>Field mapping: {@code ing_task_run.status_code → PENDING/RUNNING/SUCCEEDED/FAILED/PARTIAL}
+ * <p>字段映射: {@code ing_task_run.status_code → PENDING/RUNNING/SUCCEEDED/FAILED/PARTIAL}
  *
- * <p>Status transitions and semantics:
+ * <p>状态转换及语义:
  *
  * <ul>
- *   <li><b>PENDING</b> - Initial state when TaskRun is created; awaiting execution start
- *   <li><b>RUNNING</b> - Task execution started (via {@code start()} method)
- *   <li><b>SUCCEEDED</b> - Task completed successfully with all records processed (via {@code
- *       succeed()} method)
- *   <li><b>FAILED</b> - Task failed with errors, no records processed (via {@code fail()} method)
- *   <li><b>PARTIAL</b> - Task partially succeeded; some batches processed, checkpoint saved for
- *       resumption (via {@code markPartial()} method) - <b>enables resumable execution</b>
+ *   <li><b>PENDING</b> - TaskRun 创建时的初始状态;等待执行开始
+ *   <li><b>RUNNING</b> - 任务执行已开始(通过 {@code start()} 方法)
+ *   <li><b>SUCCEEDED</b> - 任务成功完成,所有记录已处理(通过 {@code succeed()} 方法)
+ *   <li><b>FAILED</b> - 任务失败并出现错误,未处理任何记录(通过 {@code fail()} 方法)
+ *   <li><b>PARTIAL</b> - 任务部分成功;部分批次已处理,检查点已保存以供恢复(通过 {@code markPartial()} 方法) - <b>启用可恢复执行</b>
  * </ul>
  *
- * <p><b>Note:</b> This is the ONLY layer that retains PARTIAL status for checkpoint-based resumable
- * execution.
+ * <p><b>注意:</b> 这是唯一保留 PARTIAL 状态以支持基于检查点的可恢复执行的层级。
  */
 @Getter
 public enum TaskRunStatus {
-  /** Pending; initial state, awaiting execution start. */
+  /** 待处理;初始状态,等待执行开始。 */
   PENDING("PENDING", "Pending"),
-  /** Running; task execution in progress. */
+  /** 运行中;任务执行进行中。 */
   RUNNING("RUNNING", "Running"),
-  /** Succeeded; all records processed successfully. */
+  /** 成功;所有记录已成功处理。 */
   SUCCEEDED("SUCCEEDED", "Succeeded"),
-  /** Failed; task failed with errors, no records processed. */
+  /** 失败;任务失败并出现错误,未处理任何记录。 */
   FAILED("FAILED", "Failed"),
-  /** Partial; some batches processed, checkpoint saved for resumption. */
+  /** 部分完成;部分批次已处理,检查点已保存以供恢复。 */
   PARTIAL("PARTIAL", "Partially completed");
 
   private final String code;
@@ -45,12 +42,12 @@ public enum TaskRunStatus {
 
   public static TaskRunStatus fromCode(String value) {
     if (value == null) {
-      throw new IllegalArgumentException("TaskRun status code cannot be null");
+      throw new IllegalArgumentException("TaskRun 状态代码不能为 null");
     }
     String n = value.trim().toUpperCase();
     for (TaskRunStatus e : values()) {
       if (e.code.equals(n)) return e;
     }
-    throw new IllegalArgumentException("Unknown TaskRun status code: " + value);
+    throw new IllegalArgumentException("未知的 TaskRun 状态代码: " + value);
   }
 }

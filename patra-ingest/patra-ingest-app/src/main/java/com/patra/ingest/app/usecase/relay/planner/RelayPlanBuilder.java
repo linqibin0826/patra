@@ -14,13 +14,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Builder for {@link RelayPlan}: merges the scheduling instruction with default configuration to
- * produce the immutable plan consumed by the domain layer.
+ * {@link RelayPlan} 构建器: 合并调度指令与默认配置,生成领域层使用的不可变计划
  *
- * <p>Rule precedence: instruction fields win; blank or invalid values fall back to {@link
- * OutboxRelayProperties} defaults.
+ * <p>规则优先级: 指令字段优先;空白或无效值回退到 {@link OutboxRelayProperties} 默认值
  *
- * <p>{@code channel == null} indicates that all channels should be processed.
+ * <p>{@code channel == null} 表示应处理所有通道
  */
 @Slf4j
 @Component
@@ -35,16 +33,15 @@ public class RelayPlanBuilder {
   }
 
   /**
-   * Build the relay plan.
+   * 构建中继计划
    *
-   * <p>If {@code instruction.channel()} is {@code null} and no default channel is configured, the
-   * plan keeps the channel {@code null} to signal broadcast processing.
+   * <p>如果 {@code instruction.channel()} 为 {@code null} 且未配置默认通道, 则计划保持通道为 {@code null} 以表示广播处理
    *
-   * @param instruction instruction payload (fields may be blank)
-   * @return immutable plan instance
+   * @param instruction 指令负载 (字段可能为空)
+   * @return 不可变的计划实例
    */
   public RelayPlan build(OutboxRelayCommand instruction) {
-    // Channel may be null to indicate all channels
+    // 通道可能为 null 表示所有通道
     ChannelKey channelKey = resolveChannelKey(instruction);
     Instant triggeredAt =
         instruction.triggeredAt() != null ? instruction.triggeredAt() : Instant.now(clock);
@@ -62,7 +59,7 @@ public class RelayPlanBuilder {
     if (log.isDebugEnabled()) {
       String channelDesc = channelKey != null ? channelKey.channel() : "ALL_CHANNELS";
       log.debug(
-          "Building relay plan for channel [{}] with batchSize [{}], maxAttempts [{}], leaseDuration [{}ms], initialBackoff [{}ms]",
+          "构建中继计划 通道 [{}] 批大小 [{}], 最大尝试次数 [{}], 租约持续时间 [{}ms], 初始退避 [{}ms]",
           channelDesc,
           batchSize,
           maxAttempts,
@@ -82,13 +79,13 @@ public class RelayPlanBuilder {
         leaseOwner);
   }
 
-  /** Resolve the {@link ChannelKey} from the instruction; {@code null} means all channels. */
+  /** 从指令解析 {@link ChannelKey}; {@code null} 表示所有通道 */
   private ChannelKey resolveChannelKey(OutboxRelayCommand instruction) {
-    // Return the channel from the instruction directly; may be null to process all channels
+    // 直接返回指令中的通道;可能为 null 以处理所有通道
     return instruction.channel();
   }
 
-  /** Use the fallback when the candidate is {@code null} or non-positive. */
+  /** 当候选值为 {@code null} 或非正数时使用回退值 */
   private int normalizePositive(Integer candidate, int fallback) {
     if (candidate == null || candidate <= 0) {
       return fallback;
@@ -96,7 +93,7 @@ public class RelayPlanBuilder {
     return candidate;
   }
 
-  /** Use the fallback when the candidate is {@code null}, negative, or zero. */
+  /** 当候选值为 {@code null}、负数或零时使用回退值 */
   private Duration normalizeDuration(Duration candidate, Duration fallback) {
     if (candidate == null || candidate.isNegative() || candidate.isZero()) {
       return fallback;
@@ -104,7 +101,7 @@ public class RelayPlanBuilder {
     return candidate;
   }
 
-  /** Compose the lease owner identifier as host + trigger epoch millis + random UUID. */
+  /** 组合租约持有者标识符: 主机 + 触发 epoch 毫秒 + 随机 UUID */
   private String buildLeaseOwner(Instant timestamp) {
     String host = StrUtil.blankToDefault(NetUtil.getLocalHostName(), "unknown");
     return host + '-' + timestamp.toEpochMilli() + '-' + IdUtil.fastSimpleUUID();

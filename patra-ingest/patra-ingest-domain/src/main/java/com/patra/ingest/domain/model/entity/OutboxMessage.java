@@ -4,7 +4,28 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Domain object representing an outbox message with core fields.
+ * 发件箱消息实体。封装 Outbox 模式的核心消息数据。
+ *
+ * <p>标识：由聚合类型 + 聚合ID + 去重键唯一标识。
+ *
+ * <p>生命周期：
+ *
+ * <ul>
+ *   <li>创建时处于 {@code PENDING} 状态，等待中继器发布
+ *   <li>中继器获取租约后转换为 {@code PUBLISHING} 状态
+ *   <li>发布成功后转换为 {@code PUBLISHED} 状态
+ *   <li>发布失败后根据重试策略转换为 {@code PENDING} 或 {@code FAILED} 状态
+ * </ul>
+ *
+ * <p>业务约束：
+ *
+ * <ul>
+ *   <li>支持租约机制，确保消息不被并发发布
+ *   <li>支持延迟发布（notBefore 字段）
+ *   <li>支持重试机制（retryCount + nextRetryAt）
+ *   <li>分区键用于保证消息的有序投递
+ *   <li>去重键用于消费端幂等性保证
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0

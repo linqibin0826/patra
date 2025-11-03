@@ -9,47 +9,55 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Supplemental PubMed data block parsed directly from XML.
+ * 从XML直接解析的PubMed补充数据块。
  *
- * @author
+ * <p>包含文章的发布状态、历史事件时间线和各类文章标识符(DOI、PMC等)。 提供便捷的方法用于访问和检查这些补充信息。
+ *
+ * @author Patra
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class PubmedData {
 
+  /** 文章发布状态(如epublish、ppublish等) */
   @JacksonXmlProperty(localName = "PublicationStatus")
   private String publicationStatus;
 
+  /** 文章发布历史时间线 */
   @JacksonXmlProperty(localName = "History")
   private History history;
 
+  /** 文章标识符列表 */
   @JacksonXmlProperty(localName = "ArticleIdList")
   private ArticleIdList articleIdList;
 
   public PubmedData() {}
 
-  /** Publication status reported by PubMed. */
+  /** 返回PubMed报告的发布状态 */
   public String publicationStatus() {
     return publicationStatus;
   }
 
-  /** Immutable list of history events describing publication timeline. */
+  /** 返回描述发布时间线的不可变历史事件列表 */
   public List<HistoryEvent> history() {
     return history != null ? history.events() : List.of();
   }
 
-  /** Immutable list of article identifiers (e.g., DOI, PMC). */
+  /** 返回文章标识符的不可变列表(例如DOI、PMC) */
   public List<ArticleId> articleIds() {
     return articleIdList != null ? articleIdList.articleIds() : List.of();
   }
 
+  /** 检查是否包含文章标识符 */
   @JsonIgnore
   public boolean hasArticleIds() {
     return !articleIds().isEmpty();
   }
 
+  /** 历史事件集合的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class History {
 
+    /** 发布日期事件列表 */
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "PubMedPubDate")
     private List<PubDate> events;
@@ -68,18 +76,23 @@ public final class PubmedData {
     }
   }
 
+  /** 发布日期的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class PubDate {
 
+    /** 发布状态(如received、accepted、epublish等) */
     @JacksonXmlProperty(isAttribute = true, localName = "PubStatus")
     private String status;
 
+    /** 年份 */
     @JacksonXmlProperty(localName = "Year")
     private String year;
 
+    /** 月份 */
     @JacksonXmlProperty(localName = "Month")
     private String month;
 
+    /** 日期 */
     @JacksonXmlProperty(localName = "Day")
     private String day;
 
@@ -90,9 +103,11 @@ public final class PubmedData {
     }
   }
 
+  /** 文章标识符列表的内部表示 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   private static final class ArticleIdList {
 
+    /** 文章标识符集合 */
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "ArticleId")
     private List<ArticleId> articleIds;
@@ -107,27 +122,41 @@ public final class PubmedData {
     }
   }
 
+  /**
+   * 文章标识符,表示各类唯一标识(DOI、PMC、PubMed等)。
+   *
+   * <p>每个标识符包含类型和对应的值。
+   */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class ArticleId {
 
+    /** 标识符值 */
     @JacksonXmlText private String value;
 
+    /** 标识符类型 */
     @JacksonXmlProperty(isAttribute = true, localName = "IdType")
     private String type;
 
     public ArticleId() {}
 
-    /** Identifier value (e.g., DOI, PMC). */
+    /** 返回标识符值(例如DOI、PMC值) */
     public String value() {
       return value;
     }
 
-    /** Identifier type reported by PubMed (e.g., doi, pmc, pubmed). */
+    /** 返回PubMed报告的标识符类型(例如doi、pmc、pubmed) */
     public String type() {
       return type;
     }
   }
 
-  /** History event describing a key publication milestone. */
+  /**
+   * 历史事件记录,描述关键的发布里程碑。
+   *
+   * @param status 发布状态(如received、accepted、epublish等)
+   * @param year 年份
+   * @param month 月份
+   * @param day 日期
+   */
   public record HistoryEvent(String status, String year, String month, String day) {}
 }

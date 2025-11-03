@@ -8,46 +8,43 @@ import lombok.Getter;
 import org.springframework.http.ProblemDetail;
 
 /**
- * Exception raised when a Feign client receives an error response from a downstream service.
+ * Feign 客户端从下游服务接收到错误响应时抛出的异常
  *
- * <p>Intended for adapter-layer code only; application and domain layers should translate it into
- * context-specific failures. The exception exposes downstream metadata such as business error code,
- * HTTP status, trace identifier, and the {@link ProblemDetail} extension map.
+ * <p>仅用于适配器层代码;应用层和领域层应将其转换为特定上下文的失败。 该异常暴露下游元数据,如业务错误代码、HTTP 状态、跟踪标识符和 {@link ProblemDetail} 扩展映射。
  *
- * <p>Constructed by {@link com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder} and
- * often inspected via {@link com.patra.starter.feign.error.util.RemoteErrorHelper}.
+ * <p>由 {@link com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder} 构造, 通常通过 {@link
+ * com.patra.starter.feign.error.util.RemoteErrorHelper} 检查。
  */
 @Getter
 public class RemoteCallException extends RuntimeException {
 
-  /** Business error code returned by the downstream service (may be {@code null}). */
+  /** 下游服务返回的业务错误代码(可能为 {@code null}) */
   private final String errorCode;
 
-  /** HTTP status code of the downstream response. */
+  /** 下游响应的 HTTP 状态码 */
   private final int httpStatus;
 
-  /** Feign method key that triggered the call. */
+  /** 触发调用的 Feign 方法键 */
   private final String methodKey;
 
-  /** Trace identifier extracted from downstream headers or payload (may be {@code null}). */
+  /** 从下游请求头或载荷中提取的跟踪标识符(可能为 {@code null}) */
   private final String traceId;
 
-  /** Additional ProblemDetail extension attributes returned by the downstream service. */
+  /** 下游服务返回的额外 ProblemDetail 扩展属性 */
   private final Map<String, Object> extensions;
 
   /**
-   * Build an exception from a downstream {@link ProblemDetail}, extracting the error code, trace
-   * identifier, and extension properties.
+   * 从下游 {@link ProblemDetail} 构建异常,提取错误代码、跟踪标识符和扩展属性
    *
-   * @param problemDetail ProblemDetail returned by the downstream service
-   * @param methodKey Feign method key associated with the call
+   * @param problemDetail 下游服务返回的 ProblemDetail
+   * @param methodKey 与调用关联的 Feign 方法键
    */
   public RemoteCallException(ProblemDetail problemDetail, String methodKey) {
     super(problemDetail.getDetail());
     this.httpStatus = problemDetail.getStatus();
     this.methodKey = methodKey;
 
-    // Extract error code and trace information from the extension map.
+    // 从扩展映射中提取错误代码和跟踪信息
     Map<String, Object> properties = problemDetail.getProperties();
     if (properties == null) {
       properties = Collections.emptyMap();
@@ -55,18 +52,17 @@ public class RemoteCallException extends RuntimeException {
     this.errorCode = (String) properties.get(ErrorKeys.CODE);
     this.traceId = (String) properties.get(ErrorKeys.TRACE_ID);
 
-    // Copy all extension fields for later inspection.
+    // 复制所有扩展字段以供后续检查
     this.extensions = new HashMap<>(properties);
   }
 
   /**
-   * Build an exception for non-ProblemDetail responses (strict mode fallback or tolerant-mode
-   * scenarios).
+   * 为非 ProblemDetail 响应构建异常(严格模式回退或容错模式场景)
    *
-   * @param httpStatus HTTP status returned by the downstream service
-   * @param message Reason phrase or synthesized error message
-   * @param methodKey Feign method key
-   * @param traceId Trace identifier extracted from response headers, if any
+   * @param httpStatus 下游服务返回的 HTTP 状态码
+   * @param message 原因短语或合成的错误消息
+   * @param methodKey Feign 方法键
+   * @param traceId 从响应头提取的跟踪标识符(如果有)
    */
   public RemoteCallException(int httpStatus, String message, String methodKey, String traceId) {
     super(message);
@@ -78,14 +74,14 @@ public class RemoteCallException extends RuntimeException {
   }
 
   /**
-   * Construct an exception with explicit values for all fields.
+   * 使用所有字段的显式值构造异常
    *
-   * @param errorCode Business error code (optional)
-   * @param httpStatus HTTP status code
-   * @param message Error message
-   * @param methodKey Feign method key
-   * @param traceId Trace identifier (optional)
-   * @param extensions ProblemDetail extensions (nullable)
+   * @param errorCode 业务错误代码(可选)
+   * @param httpStatus HTTP 状态码
+   * @param message 错误消息
+   * @param methodKey Feign 方法键
+   * @param traceId 跟踪标识符(可选)
+   * @param extensions ProblemDetail 扩展(可为 null)
    */
   public RemoteCallException(
       String errorCode,
@@ -103,36 +99,40 @@ public class RemoteCallException extends RuntimeException {
   }
 
   /**
-   * @return {@code true} if a non-empty business error code is present.
+   * 判断是否存在非空的业务错误代码
+   *
+   * @return 如果存在则返回 {@code true}
    */
   public boolean hasErrorCode() {
     return errorCode != null && !errorCode.trim().isEmpty();
   }
 
   /**
-   * @return {@code true} if a trace identifier is available.
+   * 判断跟踪标识符是否可用
+   *
+   * @return 如果可用则返回 {@code true}
    */
   public boolean hasTraceId() {
     return traceId != null && !traceId.trim().isEmpty();
   }
 
   /**
-   * Retrieve a ProblemDetail extension value.
+   * 检索 ProblemDetail 扩展值
    *
-   * @param key Extension key
-   * @return Extension value or {@code null} when not present
+   * @param key 扩展键
+   * @return 扩展值,如果不存在则返回 {@code null}
    */
   public Object getExtension(String key) {
     return extensions.get(key);
   }
 
   /**
-   * Retrieve a typed ProblemDetail extension value.
+   * 检索类型化的 ProblemDetail 扩展值
    *
-   * @param key Extension key
-   * @param type Desired value type
-   * @param <T> Type parameter
-   * @return Converted value, or {@code null} when absent or type mismatch
+   * @param key 扩展键
+   * @param type 所需的值类型
+   * @param <T> 类型参数
+   * @return 转换后的值,如果不存在或类型不匹配则返回 {@code null}
    */
   @SuppressWarnings("unchecked")
   public <T> T getExtension(String key, Class<T> type) {
@@ -144,7 +144,9 @@ public class RemoteCallException extends RuntimeException {
   }
 
   /**
-   * @return An immutable copy of the ProblemDetail extensions.
+   * 获取 ProblemDetail 扩展的不可变副本
+   *
+   * @return 不可变的扩展映射
    */
   public Map<String, Object> getAllExtensions() {
     return Collections.unmodifiableMap(extensions);

@@ -2,24 +2,48 @@ package com.patra.starter.core.error.observation;
 
 import com.patra.starter.core.error.model.ErrorResolution;
 
-/** 发布在错误解析期间捕获的指标或遥测数据的抽象。 */
+/**
+ * 错误观测记录器接口。
+ *
+ * <p>定义在错误解析期间捕获指标和遥测数据的抽象契约,支持性能监控和观测能力。
+ *
+ * <p>实现类:
+ *
+ * <ul>
+ *   <li>{@link MicrometerErrorObservationRecorder} - 基于 Micrometer 的实现
+ *   <li>{@link #NO_OP} - 禁用观测时的空实现
+ * </ul>
+ *
+ * @author Papertrace Team
+ * @since 2.0
+ */
 public interface ErrorObservationRecorder {
 
   /**
-   * 记录单次错误解析运行的结果和耗时。
+   * 记录单次错误解析的结果和耗时。
    *
-   * @param exception 正在解析的原始异常
-   * @param resolution 产生的规范化错误
-   * @param durationMs 解析错误花费的时间（毫秒）
-   * @param slow 执行是否超过配置的慢阈值
+   * @param exception 待解析的原始异常
+   * @param resolution 解析产生的规范化错误
+   * @param durationMs 解析耗时(毫秒)
+   * @param slow 是否为慢解析(超过配置阈值)
    */
   void recordResolution(
       Throwable exception, ErrorResolution resolution, long durationMs, boolean slow);
 
-  /** 记录断路器产生回退响应而不是执行管道的情况。 */
+  /**
+   * 记录熔断器降级事件。
+   *
+   * <p>当熔断器打开时,记录降级响应而非执行完整的解析管道。
+   *
+   * @param exception 触发降级的原始异常
+   */
   void recordCircuitBreakerFallback(Throwable exception);
 
-  /** 无操作实现，便于在禁用观测时进行依赖注入。 */
+  /**
+   * 无操作实现,便于在禁用观测时进行依赖注入。
+   *
+   * <p>所有方法均为空实现,不执行任何观测记录逻辑。
+   */
   ErrorObservationRecorder NO_OP =
       new ErrorObservationRecorder() {
         @Override

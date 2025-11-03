@@ -12,12 +12,12 @@ color: red
 1. **检查错误信息** 由 maven-compile-check hook 留下的:
    - 查找标记文件: `$CLAUDE_PROJECT_DIR/.claude/hooks/.last-compile-failed`
    - 如果存在，编译失败 - 继续错误解决
-   - 如果不存在，询问用户错误详情或自己运行 `mvn compile`
+   - 如果不存在，询问用户错误详情或自己运行 `./mvnw compile`
 
 2. **运行 Maven 编译** 获取当前错误:
    ```bash
    cd $CLAUDE_PROJECT_DIR
-   mvn -T 1C compile -DskipTests 2>&1 | tee /tmp/mvn-errors.log
+   ./mvnw -T 1C compile -DskipTests 2>&1 | tee /tmp/mvn-errors.log
    ```
 
 3. **系统性地分析错误**:
@@ -34,7 +34,7 @@ color: red
    - 在多个文件中修复类似问题时使用 MultiEdit
 
 5. **验证你的修复**:
-   - 做出更改后，再次运行 `mvn compile -DskipTests`
+   - 做出更改后，再次运行 `./mvnw compile -DskipTests`
    - 如果错误持续存在，继续系统性地修复
    - 当所有模块编译通过时报告成功
    - 如果存在则删除 `.last-compile-failed` 标记文件
@@ -162,12 +162,12 @@ public Optional<Provenance> findById(ProvenanceId id) {
 # Likely cause: patra-registry-domain module failed to compile
 # Fix: Navigate to that module and fix its errors first
 cd patra-registry-domain
-mvn compile
+./mvnw compile
 ```
 
 ## 重要指南:
 
-- **始终** 通过运行 `mvn compile -DskipTests` 验证修复
+- **始终** 通过运行 `./mvnw compile -DskipTests` 验证修复
 - **绝不** 添加 `@SuppressWarnings` 来隐藏错误
 - **绝不** 违反六边形架构边界
 - **优先** 修复根本原因而非临时解决方案
@@ -180,7 +180,7 @@ mvn compile
 ```bash
 # 1. Check for errors
 cd $CLAUDE_PROJECT_DIR
-mvn -T 1C compile -DskipTests 2>&1 | tee /tmp/mvn-errors.log
+./mvnw -T 1C compile -DskipTests 2>&1 | tee /tmp/mvn-errors.log
 
 # 2. Analyze error output
 # Example error:
@@ -199,7 +199,7 @@ Read: /path/to/patra-registry-domain/src/main/java/com/patra/registry/domain/mod
 Edit: Add import com.patra.registry.domain.model.vo.ProvenanceCode;
 
 # 5. Verify fix
-mvn compile -DskipTests
+./mvnw compile -DskipTests
 
 # 6. If more errors, repeat
 # Continue until all errors resolved
@@ -212,16 +212,16 @@ rm -f $CLAUDE_PROJECT_DIR/.claude/hooks/.last-compile-failed
 
 ```bash
 # Compile all modules
-mvn -T 1C compile -DskipTests
+./mvnw -T 1C compile -DskipTests
 
 # Compile specific module
-mvn -pl patra-registry-domain compile
+./mvnw -pl patra-registry-domain compile
 
 # Compile with dependencies
-mvn -pl patra-registry-domain -am compile
+./mvnw -pl patra-registry-domain -am compile
 
 # Check for test compilation issues (optional)
-mvn test-compile
+./mvnw test-compile
 ```
 
 ## 成功标准:
@@ -241,7 +241,7 @@ mvn test-compile
 2. **错误类别**: 解决了哪些类型的错误
 3. **修改的文件**: 修改过的文件列表
 4. **架构问题**: 注意到的任何违规(即使已修复)
-5. **验证**: 确认 `mvn compile` 成功
+5. **验证**: 确认 `./mvnw compile` 成功
 6. **后续步骤**: 如需要任何架构改进的建议
 
 **示例:**

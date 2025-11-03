@@ -6,20 +6,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Idempotency checker implementation.
+ * 幂等性检查器实现。
  *
- * <p>Responsibility: query TaskRun to check if a SUCCEEDED run already exists for the task to avoid
- * duplicate execution.
+ * <p>职责:查询 TaskRun 检查任务是否已有 SUCCEEDED 运行记录,避免重复执行。
  *
- * <p>Design notes:
+ * <p>设计要点:
  *
  * <ul>
- *   <li>Idempotent key is bound to Task at creation; run layer does not re-validate it.
- *   <li>Only need to check if any TaskRun for the taskId is in SUCCEEDED status.
- *   <li>Use TaskRunRepository.hasSucceededRun() for efficient existence check.
+ *   <li>幂等键在 Task 创建时绑定;运行层不重新验证它
+ *   <li>只需检查 taskId 的任何 TaskRun 是否处于 SUCCEEDED 状态
+ *   <li>使用 TaskRunRepository.hasSucceededRun() 进行高效的存在性检查
  * </ul>
  *
- * <p>Logging: INFO when skipping execution for auditability.
+ * <p>日志记录:跳过执行时记录 INFO 级别日志以便审计。
  *
  * @author linqibin
  * @since 0.1.0
@@ -32,21 +31,20 @@ public class IdempotencyCheckerImpl implements IdempotencyChecker {
   private final TaskRunRepository taskRunRepository;
 
   /**
-   * Checks whether the task has already succeeded.
+   * 检查任务是否已成功。
    *
-   * @param taskId task id
-   * @param idempotentKey idempotent key (for logging; query relies on taskId only)
-   * @return true if already succeeded
+   * @param taskId 任务 ID
+   * @param idempotentKey 幂等键(用于日志;查询仅依赖 taskId)
+   * @return true 如果已成功
    */
   @Override
   public boolean isAlreadySucceeded(Long taskId, String idempotentKey) {
-    log.debug("checking if task already succeeded taskId={} idemKey={}", taskId, idempotentKey);
+    log.debug("检查任务是否已成功 taskId={} idemKey={}", taskId, idempotentKey);
     boolean succeeded = taskRunRepository.hasSucceededRun(taskId);
     if (succeeded) {
-      log.info(
-          "task already succeeded, skip execution taskId={} idemKey={}", taskId, idempotentKey);
+      log.info("任务已成功,跳过执行 taskId={} idemKey={}", taskId, idempotentKey);
     } else {
-      log.debug("task not yet succeeded taskId={} idemKey={}", taskId, idempotentKey);
+      log.debug("任务尚未成功 taskId={} idemKey={}", taskId, idempotentKey);
     }
     return succeeded;
   }

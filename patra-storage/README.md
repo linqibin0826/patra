@@ -302,9 +302,9 @@ export NACOS_NAMESPACE=dev
 3. **编译并启动**:
 ```bash
 cd patra-storage
-mvn clean install -DskipTests
+../mvnw clean install -DskipTests
 cd patra-storage-boot
-mvn spring-boot:run
+../../mvnw spring-boot:run
 ```
 
 4. **验证启动**:

@@ -3,19 +3,16 @@ package com.patra.common.storage;
 import java.time.LocalDate;
 
 /**
- * Static utility class providing convenient factory methods for generating standardized object
- * storage keys.
+ * 提供便捷工厂方法的静态工具类,用于生成标准化对象存储键。
  *
- * <p>This class acts as a facade over the {@link ObjectKeyGenerator} strategy implementations,
- * offering simplified APIs for common use cases without requiring direct instantiation of
- * generators.
+ * <p>此类充当 {@link ObjectKeyGenerator} 策略实现的门面, 为常见用例提供简化的 API,无需直接实例化生成器。
  *
- * <p><b>Primary Use Cases</b>:
+ * <p><b>主要用例</b>:
  *
  * <ul>
- *   <li>Quick key generation with default (daily) partitioning
- *   <li>Current-date partitioning (when partition date = today)
- *   <li>Custom date partitioning for historical data ingestion
+ *   <li>使用默认(每日)分区快速生成键
+ *   <li>当前日期分区(分区日期=今天)
+ *   <li>用于历史数据采集的自定义日期分区
  * </ul>
  *
  * <p><b>Example Usage</b>:

@@ -7,26 +7,26 @@ import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Outbox relay log Mapper interface.
+ * 发件箱中继日志 Mapper 接口 — 对发件箱中继日志表的数据访问操作。
  *
- * <p>Provides queries for relay execution audit trail, troubleshooting, and monitoring.
+ * <p>提供中继执行审计跟踪、故障排查和监控的查询操作。
  *
- * <p>Design principles:
+ * <p>设计原则:
  *
  * <ul>
- *   <li><strong>Append-only</strong>: No update methods (logs are immutable after creation)
- *   <li><strong>Batch-optimized</strong>: Batch insert method for high-throughput relay jobs
- *   <li><strong>Query-optimized</strong>: Methods aligned with common troubleshooting patterns
+ *   <li><strong>仅追加</strong>: 无更新方法(日志创建后不可变)
+ *   <li><strong>批量优化</strong>: 批量插入方法用于高吞吐量中继作业
+ *   <li><strong>查询优化</strong>: 方法与常见故障排查模式对齐
  * </ul>
  *
- * <p>Index assumptions (for SQL optimization):
+ * <p>索引假设(用于 SQL 优化):
  *
  * <ul>
- *   <li><code>idx_message_id(message_id, started_at DESC)</code>: Query logs by message
- *   <li><code>idx_batch_id(relay_batch_id)</code>: Query logs by batch
- *   <li><code>idx_channel_time(channel, started_at)</code>: Query logs by channel and time range
- *   <li><code>idx_status(relay_status, started_at)</code>: Query logs by status (for alerts)
- *   <li><code>idx_created_at(created_at)</code>: Archive old logs by creation time
+ *   <li>{@code idx_message_id(message_id, started_at DESC)}: 按消息查询日志
+ *   <li>{@code idx_batch_id(relay_batch_id)}: 按批次查询日志
+ *   <li>{@code idx_channel_time(channel, started_at)}: 按通道和时间范围查询日志
+ *   <li>{@code idx_status(relay_status, started_at)}: 按状态查询日志(用于告警)
+ *   <li>{@code idx_created_at(created_at)}: 按创建时间归档旧日志
  * </ul>
  *
  * @author Papertrace Team
@@ -35,59 +35,59 @@ import org.apache.ibatis.annotations.Param;
 public interface OutboxRelayLogMapper extends BaseMapper<OutboxRelayLogDO> {
 
   /**
-   * Batch insert relay logs in a single SQL statement.
+   * 批量插入中继日志(单个 SQL 语句)。
    *
-   * <p>Performance note: Uses JDBC batch INSERT (single statement, multiple rows).
+   * <p>性能说明: 使用 JDBC 批量 INSERT(单语句,多行)。
    *
-   * <p>Use case: Relay job executes 100-500 messages, batch insert all logs at once.
+   * <p>使用场景: 中继作业执行 100-500 条消息,一次性批量插入所有日志。
    *
-   * @param logs list of relay logs to insert (recommend batch size ≤ 500)
-   * @return number of rows inserted
+   * @param logs 要插入的中继日志列表(建议批次大小 ≤ 500)
+   * @return 插入的行数
    */
   int insertBatch(@Param("logs") List<OutboxRelayLogDO> logs);
 
   /**
-   * Queries all relay logs for a specific outbox message (ordered by started_at descending).
+   * 查询特定发件箱消息的所有中继日志(按 started_at 降序排列)。
    *
-   * <p>Use case: Troubleshooting - "show all relay attempts for message X"
+   * <p>使用场景: 故障排查 - "显示消息 X 的所有中继尝试"
    *
-   * <p>Index used: <code>idx_message_id(message_id, started_at DESC)</code>
+   * <p>使用索引: {@code idx_message_id(message_id, started_at DESC)}
    *
-   * @param messageId outbox message ID
-   * @return list of relay logs (newest first)
+   * @param messageId 发件箱消息 ID
+   * @return 中继日志列表(最新的在前)
    */
   List<OutboxRelayLogDO> findByMessageId(@Param("messageId") Long messageId);
 
   /**
-   * Queries all relay logs for a specific batch (ordered by started_at ascending).
+   * 查询特定批次的所有中继日志(按 started_at 升序排列)。
    *
-   * <p>Use case: Batch-level statistics - "how did batch X perform?"
+   * <p>使用场景: 批次级统计 - "批次 X 的表现如何?"
    *
-   * <p>Index used: <code>idx_batch_id(relay_batch_id)</code>
+   * <p>使用索引: {@code idx_batch_id(relay_batch_id)}
    *
-   * @param batchId relay batch identifier (format: yyyyMMddHHmmss-xxxxxxxx)
-   * @return list of relay logs (oldest first)
+   * @param batchId 中继批次标识符(格式: yyyyMMddHHmmss-xxxxxxxx)
+   * @return 中继日志列表(最旧的在前)
    */
   List<OutboxRelayLogDO> findByBatchId(@Param("batchId") String batchId);
 
   /**
-   * Counts relay logs matching channel, status, and time range.
+   * 统计匹配 channel、status 和时间范围的中继日志数量。
    *
-   * <p>Use cases:
+   * <p>使用场景:
    *
    * <ul>
-   *   <li>Monitoring dashboard: "success rate for INGEST channel in last 1 hour"
-   *   <li>Alert queries: "how many FAILED relays in last 10 minutes?"
+   *   <li>监控仪表盘: "INGEST 通道在最近 1 小时内的成功率"
+   *   <li>告警查询: "最近 10 分钟内有多少 FAILED 中继?"
    * </ul>
    *
-   * <p>Index used: <code>idx_channel_time(channel, started_at)</code> or <code>
-   * idx_status(relay_status, started_at)</code>
+   * <p>使用索引: {@code idx_channel_time(channel, started_at)} 或 {@code idx_status(relay_status,
+   * started_at)}
    *
-   * @param channel channel name filter (NULL = all channels)
-   * @param status relay status filter (NULL = all statuses)
-   * @param startTime time range start (inclusive)
-   * @param endTime time range end (exclusive)
-   * @return count of matching relay logs
+   * @param channel 通道名称过滤器(NULL = 所有通道)
+   * @param status 中继状态过滤器(NULL = 所有状态)
+   * @param startTime 时间范围起始(含)
+   * @param endTime 时间范围结束(不含)
+   * @return 匹配的中继日志数量
    */
   long countByChannelAndStatus(
       @Param("channel") String channel,
@@ -96,31 +96,31 @@ public interface OutboxRelayLogMapper extends BaseMapper<OutboxRelayLogDO> {
       @Param("endTime") Instant endTime);
 
   /**
-   * Queries recent failed relay logs (for alerting).
+   * 查询最近失败的中继日志(用于告警)。
    *
-   * <p>Use case: On-call triage - "show top 10 recent failures"
+   * <p>使用场景: 值班分流 - "显示最近 10 个失败"
    *
-   * <p>Index used: <code>idx_status(relay_status='FAILED', started_at DESC)</code>
+   * <p>使用索引: {@code idx_status(relay_status='FAILED', started_at DESC)}
    *
-   * @param channel channel name filter (NULL = all channels)
-   * @param limit maximum number of logs to return
-   * @return list of failed relay logs (newest first)
+   * @param channel 通道名称过滤器(NULL = 所有通道)
+   * @param limit 返回的最大日志数
+   * @return 失败的中继日志列表(最新的在前)
    */
   List<OutboxRelayLogDO> findRecentFailed(
       @Param("channel") String channel, @Param("limit") int limit);
 
   /**
-   * Queries relay logs for a channel within a time range (for analysis).
+   * 查询通道在时间范围内的中继日志(用于分析)。
    *
-   * <p>Use case: Historical review - "show all relay attempts for INGEST channel today"
+   * <p>使用场景: 历史回顾 - "显示 INGEST 通道今天的所有中继尝试"
    *
-   * <p>Index used: <code>idx_channel_time(channel, started_at)</code>
+   * <p>使用索引: {@code idx_channel_time(channel, started_at)}
    *
-   * @param channel channel name filter (NULL = all channels)
-   * @param startTime time range start (inclusive)
-   * @param endTime time range end (exclusive)
-   * @param limit maximum number of logs to return
-   * @return list of relay logs (ordered by started_at descending)
+   * @param channel 通道名称过滤器(NULL = 所有通道)
+   * @param startTime 时间范围起始(含)
+   * @param endTime 时间范围结束(不含)
+   * @param limit 返回的最大日志数
+   * @return 中继日志列表(按 started_at 降序排列)
    */
   List<OutboxRelayLogDO> findByChannelAndTimeRange(
       @Param("channel") String channel,

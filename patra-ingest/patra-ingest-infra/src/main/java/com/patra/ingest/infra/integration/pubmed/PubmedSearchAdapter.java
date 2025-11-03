@@ -27,7 +27,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-/** Infra adapter for {@link PubmedSearchPort} using {@link PubMedClient}. */
+/**
+ * PubMed 搜索端口的基础设施适配器,使用 {@link PubMedClient}。
+ *
+ * <p>职责:
+ *
+ * <ul>
+ *   <li>调用 PubMed ESearch API 获取计划元数据(总数、WebEnv、QueryKey)
+ *   <li>将领域参数转换为 ESearchRequest
+ *   <li>将 ProvenanceConfigSnapshot 转换为 ProvenanceConfig 用于配置覆盖
+ *   <li>处理 API 错误并转换为领域异常
+ * </ul>
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -51,13 +62,13 @@ public class PubmedSearchAdapter implements PubmedSearchPort {
     }
   }
 
-  /** Builds ESearch request with required parameters. */
+  /** 构建包含必需参数的 ESearch 请求。 */
   private ESearchRequest buildESearchRequest(JsonNode params) {
     JsonNode enrichedParams = addUseHistory(params);
     return ASSEMBLER.buildList(enrichedParams);
   }
 
-  /** Executes ESearch request with optional config override. */
+  /** 执行 ESearch 请求,支持可选的配置覆盖。 */
   private ESearchResponse executeESearch(
       ESearchRequest request, ProvenanceConfigSnapshot snapshot) {
     ProvenanceConfig config = toProvenanceConfig(snapshot);
@@ -83,7 +94,7 @@ public class PubmedSearchAdapter implements PubmedSearchPort {
     return response;
   }
 
-  /** Extracts plan metadata from ESearch response. */
+  /** 从 ESearch 响应中提取计划元数据。 */
   private PlanMetadata extractPlanMetadata(ESearchResponse response, String term) {
     String termHash = safeHash(term);
 
@@ -97,7 +108,7 @@ public class PubmedSearchAdapter implements PubmedSearchPort {
     return buildPlanMetadata(result);
   }
 
-  /** Validates and logs metadata from ESearch result. */
+  /** 验证并记录 ESearch 结果的元数据。 */
   private void validateAndLogMetadata(ESearchResponse.Result result, String termHash) {
     int count = Math.max(result.count(), 0);
     boolean hasWebEnv = StringUtils.hasText(result.webEnv());
@@ -116,13 +127,13 @@ public class PubmedSearchAdapter implements PubmedSearchPort {
     }
   }
 
-  /** Builds PlanMetadata from ESearch result. */
+  /** 从 ESearch 结果构建 PlanMetadata。 */
   private PlanMetadata buildPlanMetadata(ESearchResponse.Result result) {
     int count = Math.max(result.count(), 0);
     return new PlanMetadata(count, result.webEnv(), result.queryKey());
   }
 
-  /** Handles provenance client errors. */
+  /** 处理溯源客户端错误。 */
   private BatchPlanningException handleProvenanceClientError(
       ProvenanceClientException ex, String query) {
     String msg = String.format("PubMed metadata lookup failed: %s", ex.getMessage());
@@ -130,7 +141,7 @@ public class PubmedSearchAdapter implements PubmedSearchPort {
     return new BatchPlanningException(msg, ex);
   }
 
-  /** Handles unexpected errors. */
+  /** 处理意外错误。 */
   private BatchPlanningException handleUnexpectedError(Exception ex, String query) {
     String msg = String.format("PubMed metadata lookup unexpected error: %s", ex.getMessage());
     log.error("{} termHash={}", msg, safeHash(query), ex);

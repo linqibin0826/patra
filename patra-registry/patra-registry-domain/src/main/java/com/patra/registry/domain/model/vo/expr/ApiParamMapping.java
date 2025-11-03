@@ -5,50 +5,49 @@ import com.patra.registry.domain.support.TemporalEntity;
 import java.time.Instant;
 
 /**
- * Domain value object for {@code reg_prov_api_param_map}.
+ * API 参数映射领域值对象,对应表 {@code reg_prov_api_param_map}。
  *
- * <p>Map unified standard keys to provider-specific parameter names at SOURCE/TASK scope. Only
- * responsible for key-name mapping; value-level transform is declared via transform_code only.
+ * <p>在 SOURCE/TASK 范围内将统一的标准键映射到提供者特定的参数名称。仅负责键名映射; 值级别的转换仅通过 transform_code 声明。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public record ApiParamMapping(
-    /* Primary key; unique mapping identifier */
+    /* 主键;唯一映射标识符 */
     Long id,
-    /* Foreign key referencing reg_provenance.id */
+    /* 外键,引用 reg_provenance.id */
     Long provenanceId,
-    /* Operation type discriminator (HARVEST/UPDATE/BACKFILL/SANDBOX); null applies to all */
+    /* 操作类型区分器 (HARVEST/UPDATE/BACKFILL/SANDBOX);null 表示应用于所有类型 */
     String operationType,
-    /* Endpoint name this mapping applies to; null means all endpoints */
+    /* 此映射应用的端点名称;null 表示所有端点 */
     String endpointName,
-    /* Standard key (unified internal semantic key) typically produced during rendering (e.g., from/to/ti/ab) */
+    /* 标准键(统一的内部语义键)通常在渲染期间产生(例如,from/to/ti/ab) */
     String stdKey,
-    /* Provider parameter name: concrete HTTP parameter (e.g., mindate/maxdate/term/retmax) */
+    /* 提供者参数名称:具体的 HTTP 参数(例如,mindate/maxdate/term/retmax) */
     String providerParamName,
-    /* Optional value-level transform code (DICT CODE: reg_transform) such as TO_EXCLUSIVE_MINUS_1D */
+    /* 可选的值级别转换代码(字典代码: reg_transform)例如 TO_EXCLUSIVE_MINUS_1D */
     String transformCode,
-    /* Additional notes as JSON object for platform differences/boundaries */
+    /* 作为 JSON 对象的附加说明,用于平台差异/边界 */
     String notesJson,
-    /* Inclusive timestamp marking when this mapping becomes effective */
+    /* 包含性时间戳,标记此映射何时生效 */
     Instant effectiveFrom,
-    /* Exclusive timestamp marking when this mapping expires; null means open-ended */
+    /* 排他性时间戳,标记此映射何时到期;null 表示开放式 */
     Instant effectiveTo)
     implements TemporalEntity {
   /**
-   * Canonical constructor with validation.
+   * 带验证的规范构造函数。
    *
-   * @param id unique mapping identifier, must be positive
-   * @param provenanceId provenance identifier, must be positive
-   * @param operationType operation type discriminator, nullable
-   * @param endpointName endpoint name this mapping applies to, nullable (null means all endpoints)
-   * @param stdKey standard key, must not be blank
-   * @param providerParamName provider parameter name, must not be blank
-   * @param transformCode transform code from dictionary, nullable
-   * @param notesJson additional notes as JSON, nullable
-   * @param effectiveFrom effective start timestamp, must not be null
-   * @param effectiveTo effective end timestamp, nullable (open-ended)
-   * @throws DomainValidationException if validation fails
+   * @param id 唯一映射标识符,必须为正数
+   * @param provenanceId 来源标识符,必须为正数
+   * @param operationType 操作类型区分器,可为 null
+   * @param endpointName 此映射应用的端点名称,可为 null(null 表示所有端点)
+   * @param stdKey 标准键,不能为空白
+   * @param providerParamName 提供者参数名称,不能为空白
+   * @param transformCode 来自字典的转换代码,可为 null
+   * @param notesJson 作为 JSON 的附加说明,可为 null
+   * @param effectiveFrom 生效开始时间戳,不能为 null
+   * @param effectiveTo 生效结束时间戳,可为 null(开放式)
+   * @throws DomainValidationException 如果验证失败
    */
   public ApiParamMapping(
       Long id,

@@ -3,31 +3,30 @@ package com.patra.ingest.domain.event;
 import java.time.Instant;
 
 /**
- * Domain event that records a scheduled retry for an outbox message.
+ * Outbox 消息延迟重试领域事件,记录 Outbox 消息的计划重试。
  *
- * <p>Trigger: emitted when publishing fails but is classified as retryable (threshold not exceeded
- * and the error is recoverable) so that the next retry plan is captured.
+ * <p>触发条件:发布失败但被归类为可重试(未超过阈值且错误可恢复)时触发,以便捕获下一次重试计划。
  *
- * <p>Usage:
+ * <p>用途:
  *
  * <ul>
- *   <li>Scheduling: observe retry backlog trends to tune backoff strategies.
- *   <li>Pipeline diagnostics: analyze error codes and retry counts to assess downstream stability.
+ *   <li>调度管理:观察重试积压趋势以调整退避策略
+ *   <li>管道诊断:分析错误代码和重试次数以评估下游稳定性
  * </ul>
  */
 public record OutboxMessageDeferredEvent(
-    /** Identifier of the message scheduled for replay. */
+    /** 计划重放的消息标识符。 */
     Long messageId,
-    /** Logical outbox channel. */
+    /** 逻辑 Outbox 通道。 */
     String channel,
-    /** Retry count that will be used for the next attempt (current failures + 1). */
+    /** 下一次尝试将使用的重试次数(当前失败次数 + 1)。 */
     int nextRetryCount,
-    /** Planned retry timestamp. */
+    /** 计划的重试时间戳。 */
     Instant nextRetryAt,
-    /** Error code produced by the last failure. */
+    /** 上次失败产生的错误代码。 */
     String errorCode,
-    /** Summary message for the failure. */
+    /** 失败的摘要消息。 */
     String errorMessage,
-    /** Timestamp when the event was emitted. */
+    /** 事件触发的时间戳。 */
     Instant occurredAt)
     implements OutboxRelayDomainEvent {}

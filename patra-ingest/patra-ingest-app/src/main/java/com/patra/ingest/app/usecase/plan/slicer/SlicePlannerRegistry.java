@@ -7,31 +7,28 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /**
- * Slice strategy registry (Application layer registry).
+ * 切片策略注册表(应用层·注册表)
  *
- * <p>Responsibility: collect and index {@link SlicePlanner} implementations by {@link
- * SliceStrategy}. Provides O(1) lookup during planning to avoid if-else/switch explosion.
+ * <p>职责:按 {@link SliceStrategy} 收集和索引 {@link SlicePlanner} 实现。在规划期间提供 O(1) 查找,避免 if-else/switch 爆炸。
  *
- * <p>Design & constraints:
+ * <p>设计与约束:
  *
  * <ul>
- *   <li>Batch-register via constructor with all Spring-injected {@link SlicePlanner} beans;
- *       read-only afterwards.
- *   <li>Ignore nulls; on conflicts, later registration overwrites earlier (supports gray
- *       replacement).
- *   <li>Uses {@link EnumMap} for constant-time access and low memory.
- *   <li>Thread-safe: no concurrent writes at runtime; reads only.
- *   <li>Extensible: add a strategy by adding a Spring bean implementation.
- *   <li>Failure mode: returns null when strategy not found (caller decides fallback/error).
+ *   <li>通过构造函数批量注册所有 Spring 注入的 {@link SlicePlanner} Bean;之后只读。
+ *   <li>忽略 null;冲突时后注册覆盖先注册(支持灰度替换)。
+ *   <li>使用 {@link EnumMap} 实现常数时间访问和低内存占用。
+ *   <li>线程安全:运行时无并发写入;仅读取。
+ *   <li>可扩展:通过添加 Spring Bean 实现来添加策略。
+ *   <li>失败模式:策略未找到时返回 null(调用方决定回退/错误)。
  * </ul>
  */
 @Component
 public class SlicePlannerRegistry {
 
-  /** Strategy → implementation mapping; read-only at runtime. */
+  /** 策略 → 实现映射;运行时只读 */
   private final Map<SliceStrategy, SlicePlanner> registry = new EnumMap<>(SliceStrategy.class);
 
-  /** Constructor that batch-registers all discovered {@link SlicePlanner} beans. */
+  /** 批量注册所有发现的 {@link SlicePlanner} Bean 的构造函数 */
   public SlicePlannerRegistry(List<SlicePlanner> planners) {
     if (planners == null) {
       return;
@@ -44,7 +41,7 @@ public class SlicePlannerRegistry {
     }
   }
 
-  /** Returns the planner for the given strategy or null when missing. */
+  /** 返回给定策略的规划器,缺失时返回 null */
   public SlicePlanner get(SliceStrategy strategy) {
     if (strategy == null) {
       return null;

@@ -9,10 +9,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Registry responsible for discovering and querying {@link DataSourceAdapter} implementations.
+ * 数据源适配器注册表
  *
- * <p>The registry is populated via Spring's component scanning and provides fast lookup by
- * provenance code.
+ * <p>负责发现和查询 {@link DataSourceAdapter} 实现。注册表通过 Spring 的组件扫描填充, 并提供按数据源代码的快速查找功能。
  */
 @Slf4j
 public class AdapterRegistry {
@@ -20,9 +19,9 @@ public class AdapterRegistry {
   private final Map<String, List<DataSourceAdapter>> adapters = new ConcurrentHashMap<>();
 
   /**
-   * Creates the registry and registers all discovered adapters.
+   * 创建注册表并注册所有已发现的适配器
    *
-   * @param discoveredAdapters adapters provided by Spring
+   * @param discoveredAdapters 由 Spring 提供的适配器列表
    */
   public AdapterRegistry(List<DataSourceAdapter> discoveredAdapters) {
     List<DataSourceAdapter> safeAdapters =
@@ -31,28 +30,28 @@ public class AdapterRegistry {
   }
 
   /**
-   * Tests whether an adapter exists for the requested provenance code.
+   * 测试是否存在请求的数据源代码对应的适配器
    *
-   * @param provenanceCode provenance identifier such as {@code pubmed}
-   * @return true when a matching adapter is available
+   * @param provenanceCode 数据源标识符(如 {@code pubmed})
+   * @return 如果有匹配的适配器可用则返回 true
    */
   public boolean supports(String provenanceCode) {
     return findAdapter(provenanceCode).isPresent();
   }
 
   /**
-   * Returns the adapter matching the requested provenance code.
+   * 返回与请求的数据源代码匹配的适配器
    *
-   * @param provenanceCode provenance identifier such as {@code pubmed}
-   * @return matching adapter
-   * @throws IllegalArgumentException if no adapter exists for the provenance
+   * @param provenanceCode 数据源标识符(如 {@code pubmed})
+   * @return 匹配的适配器实例
+   * @throws IllegalArgumentException 如果该数据源不存在对应的适配器
    */
   public DataSourceAdapter getAdapter(String provenanceCode) {
     return findAdapter(provenanceCode)
         .orElseThrow(
             () ->
                 new IllegalArgumentException(
-                    "No adapter found for provenance=%s".formatted(provenanceCode)));
+                    "未找到数据源对应的适配器: provenance=%s".formatted(provenanceCode)));
   }
 
   private Optional<DataSourceAdapter> findAdapter(String provenanceCode) {
@@ -64,8 +63,8 @@ public class AdapterRegistry {
     if (candidates == null || candidates.isEmpty()) {
       return Optional.empty();
     }
-    // Return the first adapter for this provenance.
-    // Each provenance should have exactly one adapter implementation.
+    // 返回该数据源的第一个适配器
+    // 每个数据源应该恰好有一个适配器实现
     return candidates.stream().findFirst();
   }
 
@@ -81,7 +80,7 @@ public class AdapterRegistry {
             return List.of(adapter);
           }
           if (list.stream().anyMatch(existing -> existing.getClass().equals(adapter.getClass()))) {
-            log.warn("Duplicate adapter registration ignored: {}", adapter.getClass().getName());
+            log.warn("忽略重复的适配器注册: {}", adapter.getClass().getName());
             return list;
           }
           return createExpandedList(list, adapter);

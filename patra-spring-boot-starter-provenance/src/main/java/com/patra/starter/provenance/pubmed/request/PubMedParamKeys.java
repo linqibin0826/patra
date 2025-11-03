@@ -1,10 +1,17 @@
 package com.patra.starter.provenance.pubmed.request;
 
-/** Centralized PubMed E-utilities parameter keys. */
+/**
+ * PubMed E-utilities 参数键常量
+ *
+ * <p>集中定义所有PubMed API参数名称，供请求组装器和参数映射使用。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 public final class PubMedParamKeys {
   private PubMedParamKeys() {}
 
-  // Pagination
+  // 分页参数
   public static final String RETSTART = "retstart";
   public static final String RETMAX = "retmax";
 

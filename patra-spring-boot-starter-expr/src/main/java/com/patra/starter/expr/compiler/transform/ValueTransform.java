@@ -3,41 +3,35 @@ package com.patra.starter.expr.compiler.transform;
 import com.patra.starter.expr.compiler.snapshot.ProvenanceSnapshot;
 
 /**
- * Parameter-level transform applied after std_key → provider parameter mapping. Transforms operate
- * on final mapped values (provider-specific semantics).
+ * 参数级转换,在 std_key → 提供商参数映射之后应用。转换操作最终映射的值(提供商特定语义)。
  *
- * <p>Execution occurs during the compiler phase, after all std_keys have been mapped to provider
- * parameter names. Transforms are identified by their code and applied via {@code transform_code}
- * in param map entries.
+ * <p>执行发生在编译器阶段,在所有 std_keys 已映射到提供商参数名称之后。转换通过其代码标识, 并通过参数映射条目中的 {@code transform_code} 应用。
  *
- * <p>Example: {@code TO_EXCLUSIVE_MINUS_1D} subtracts one day from a date value to convert
- * exclusive upper bounds to inclusive provider bounds.
+ * <p>示例:{@code TO_EXCLUSIVE_MINUS_1D} 从日期值中减去一天,将排他的上界转换为提供商的包含边界。
  *
- * <p>See: docs/expr/03-compiler-bridge-internals.md §3.3.1
+ * <p>参见: docs/expr/03-compiler-bridge-internals.md §3.3.1
  *
+ * @author linqibin
  * @since 1.0.0
  */
 public interface ValueTransform {
 
   /**
-   * Returns the unique transform code identifier. This code is referenced in param map {@code
-   * transform_code} fields.
+   * 返回唯一的转换代码标识符。此代码在参数映射的 {@code transform_code} 字段中引用。
    *
-   * @return transform code (e.g., "TO_EXCLUSIVE_MINUS_1D")
+   * @return 转换代码(例如 "TO_EXCLUSIVE_MINUS_1D")
    */
   String code();
 
   /**
-   * Applies the transform logic to a single mapped std_key value. Returns the transformed value
-   * suitable for the provider parameter.
+   * 对单个映射的 std_key 值应用转换逻辑。返回适合提供商参数的转换值。
    *
-   * <p>The snapshot provides access to provenance configuration if needed for context-aware
-   * transforms.
+   * <p>快照提供对溯源配置的访问,用于上下文感知的转换。
    *
-   * @param stdKey the std_key being transformed (e.g., "to", "query", "filter")
-   * @param value the mapped value before transformation (e.g., "2023-12-31", "cancer AND therapy")
-   * @param snapshot provenance snapshot for context-aware transform logic
-   * @return transformed value (e.g., "2023-12-30" after subtracting one day)
+   * @param stdKey 正在转换的 std_key(例如 "to"、"query"、"filter")
+   * @param value 转换前的映射值(例如 "2023-12-31"、"cancer AND therapy")
+   * @param snapshot 用于上下文感知转换逻辑的溯源快照
+   * @return 转换后的值(例如减去一天后的 "2023-12-30")
    */
   String apply(String stdKey, String value, ProvenanceSnapshot snapshot);
 }

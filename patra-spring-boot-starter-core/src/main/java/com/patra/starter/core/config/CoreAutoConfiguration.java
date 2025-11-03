@@ -6,22 +6,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 /**
- * Auto-configuration for core infrastructure beans.
+ * 核心基础设施 Bean 自动配置类。
  *
- * <p>Provides fundamental beans that are shared across the entire application:
+ * <p>配置内容:
  *
  * <ul>
- *   <li>{@link Clock} - Centralized time source for timestamp generation
+ *   <li>{@link Clock} - 统一的时间源,用于生成时间戳
  * </ul>
  *
- * <p>Design principles:
+ * <p>设计原则:
  *
  * <ul>
- *   <li><strong>Centralization</strong>: Single source of truth for infrastructure beans
- *   <li><strong>Overridability</strong>: Uses {@code @ConditionalOnMissingBean} to allow custom
- *       implementations
- *   <li><strong>Testability</strong>: Beans can be replaced in tests (e.g., Clock.fixed() for
- *       deterministic testing)
+ *   <li><strong>集中化</strong>: 基础设施 Bean 的单一真实来源
+ *   <li><strong>可覆盖性</strong>: 使用 {@code @ConditionalOnMissingBean} 允许自定义实现
+ *   <li><strong>可测试性</strong>: Bean 可在测试中替换(例如使用 Clock.fixed() 实现确定性测试)
  * </ul>
  *
  * @author Papertrace Team
@@ -31,20 +29,17 @@ import org.springframework.context.annotation.Bean;
 public class CoreAutoConfiguration {
 
   /**
-   * Provides a system UTC Clock bean for timestamp generation.
+   * 提供系统 UTC 时钟 Bean,用于生成时间戳。
    *
-   * <p>Benefits:
+   * <p>优势:
    *
    * <ul>
-   *   <li><strong>Consistency</strong>: All timestamps across the application use the same time
-   *       zone (UTC)
-   *   <li><strong>Testability</strong>: Can be mocked in tests with {@code Clock.fixed()} for
-   *       deterministic testing
-   *   <li><strong>Centralization</strong>: Single time source eliminates duplicate Clock bean
-   *       definitions
+   *   <li><strong>一致性</strong>: 整个应用程序的所有时间戳使用相同的时区 (UTC)
+   *   <li><strong>可测试性</strong>: 可在测试中使用 {@code Clock.fixed()} 进行 Mock,实现确定性测试
+   *   <li><strong>集中化</strong>: 单一时间源消除了重复的 Clock Bean 定义
    * </ul>
    *
-   * <p>Usage example:
+   * <p>使用示例:
    *
    * <pre>{@code
    * @Service
@@ -61,7 +56,7 @@ public class CoreAutoConfiguration {
    * }
    * }</pre>
    *
-   * @return Clock instance using system default zone (UTC)
+   * @return 使用系统默认时区 (UTC) 的 Clock 实例
    */
   @Bean
   @ConditionalOnMissingBean

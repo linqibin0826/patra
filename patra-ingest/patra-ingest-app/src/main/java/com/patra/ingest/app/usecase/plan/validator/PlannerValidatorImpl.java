@@ -10,22 +10,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Default implementation of {@link PlannerValidator}. Performs baseline checks including window
- * sanity, queue backpressure, and source capability validation.
+ * {@link PlannerValidator} 的默认实现 - 执行基线检查,包括窗口合理性、队列背压和数据源能力验证
  *
- * <p>Threshold policy:
+ * <h3>阈值策略</h3>
  *
  * <ul>
- *   <li>{@code DEFAULT_QUEUE_THRESHOLD = 50}: apply backpressure when the backlog exceeds this
- *       value.
- *   <li>{@code MAX_REASONABLE_WINDOW = 30 days}: prevent oversized windows that inflate task
- *       volume.
- *   <li>{@code MIN_REASONABLE_WINDOW = 1 minute}: avoid extremely small slices that waste
- *       resources.
+ *   <li><b>DEFAULT_QUEUE_THRESHOLD = 50</b>: 待处理任务超过此值时应用背压
+ *   <li><b>MAX_REASONABLE_WINDOW = 30 天</b>: 防止过大窗口导致任务量暴增
+ *   <li><b>MIN_REASONABLE_WINDOW = 1 分钟</b>: 避免极小切片浪费资源
  * </ul>
  *
- * UPDATE operations may omit a window; HARVEST operations must provide either an explicit window or
- * incremental capability configuration.
+ * <h3>窗口要求</h3>
+ *
+ * <ul>
+ *   <li><b>UPDATE 操作</b>: 可省略窗口
+ *   <li><b>HARVEST 操作</b>: 必须提供显式窗口或增量能力配置
+ * </ul>
  */
 @Slf4j
 @Component
@@ -42,29 +42,29 @@ public class PlannerValidatorImpl implements PlannerValidator {
       PlannerWindow window,
       long currentQueuedTasks) {
     log.debug(
-        "Validating plan assembly, provenance={}, operation={}, window={}, queuedTasks={}",
+        "正在验证 Plan 组装,provenance={}, operation={}, window={}, queuedTasks={}",
         triggerNorm.provenanceCode(),
         triggerNorm.operationCode(),
         window,
         currentQueuedTasks);
 
-    // Step 1: validate window sanity.
+    // 步骤 1: 验证窗口合理性
     validateWindow(triggerNorm, window);
 
-    // Step 2: enforce queue backpressure.
+    // 步骤 2: 强制执行队列背压
     validateQueueBackpressure(currentQueuedTasks);
 
-    // Step 3: ensure provenance capabilities align with the trigger.
+    // 步骤 3: 确保 Provenance 能力与触发器对齐
     validateSourceCapabilities(triggerNorm, snapshot, window);
 
-    log.debug("Plan assembly validation passed");
+    log.debug("Plan 组装验证通过");
   }
 
-  /** Validate the ingestion window: presence, ordering, and duration boundaries. */
+  /** 验证采集窗口: 存在性、时序、持续时间边界 */
   private void validateWindow(PlanTriggerNorm triggerNorm, PlannerWindow window) {
-    // UPDATE operations may proceed without a window.
+    // UPDATE 操作可无需窗口
     if (triggerNorm.isUpdate()) {
-      log.debug("Update operation detected, allowing null window");
+      log.debug("检测到 UPDATE 操作,允许 null 窗口");
       return;
     }
 
@@ -73,94 +73,87 @@ public class PlannerValidatorImpl implements PlannerValidator {
           "Plan window must not be null", PlanValidationException.Reason.WINDOW_MISSING);
     }
 
-    // Non-UPDATE operations require fully populated bounds.
+    // 非 UPDATE 操作需要完整的边界
     if (window.from() == null || window.to() == null) {
       throw new PlanValidationException(
-          String.format("Time window is required for %s operation", triggerNorm.operationCode()),
+          String.format("%s 操作需要时间窗口", triggerNorm.operationCode()),
           PlanValidationException.Reason.WINDOW_MISSING);
     }
 
-    // Enforce chronological ordering.
+    // 强制执行时序
     if (!window.from().isBefore(window.to())) {
       throw new PlanValidationException(
-          String.format("Invalid window: from=%s must be before to=%s", window.from(), window.to()),
+          String.format("无效窗口: from=%s 必须早于 to=%s", window.from(), window.to()),
           PlanValidationException.Reason.WINDOW_INVALID);
     }
 
-    // Ensure the window duration is within reasonable bounds.
+    // 确保窗口持续时间在合理范围内
     Duration windowDuration = Duration.between(window.from(), window.to());
     if (windowDuration.compareTo(MAX_REASONABLE_WINDOW) > 0) {
       throw new PlanValidationException(
           String.format(
-              "Window too large: %d days exceeds maximum %d days",
-              windowDuration.toDays(), MAX_REASONABLE_WINDOW.toDays()),
+              "窗口过大: %d 天超过最大值 %d 天", windowDuration.toDays(), MAX_REASONABLE_WINDOW.toDays()),
           PlanValidationException.Reason.WINDOW_TOO_LARGE);
     }
 
     if (windowDuration.compareTo(MIN_REASONABLE_WINDOW) < 0) {
       throw new PlanValidationException(
           String.format(
-              "Window too small: %d seconds below minimum %d seconds",
+              "窗口过小: %d 秒低于最小值 %d 秒",
               windowDuration.toSeconds(), MIN_REASONABLE_WINDOW.toSeconds()),
           PlanValidationException.Reason.WINDOW_TOO_SMALL);
     }
 
-    log.debug("Window validation passed, duration={}min", windowDuration.toMinutes());
+    log.debug("窗口验证通过,持续时间={}分钟", windowDuration.toMinutes());
   }
 
-  /** Enforce queue backpressure: halt planning when queued tasks exceed the threshold. */
+  /** 强制执行队列背压: 待处理任务超过阈值时停止规划 */
   private void validateQueueBackpressure(long currentQueuedTasks) {
     if (currentQueuedTasks > DEFAULT_QUEUE_THRESHOLD) {
       throw new PlanValidationException(
           String.format(
-              "Too many queued tasks (%d > %d), applying backpressure on plan trigger",
-              currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD),
+              "待处理任务过多 (%d > %d),对 Plan 触发应用背压", currentQueuedTasks, DEFAULT_QUEUE_THRESHOLD),
           PlanValidationException.Reason.QUEUE_BACKPRESSURE);
     }
-    log.debug("Queue backpressure check passed, queuedTasks={}", currentQueuedTasks);
+    log.debug("队列背压检查通过,queuedTasks={}", currentQueuedTasks);
   }
 
-  /** Validate source capabilities along with offset/window completeness. */
+  /** 验证数据源能力以及偏移量/窗口完整性 */
   private void validateSourceCapabilities(
       PlanTriggerNorm triggerNorm, ProvenanceConfigSnapshot snapshot, PlannerWindow window) {
 
     if (snapshot == null) {
-      log.warn("Provenance config snapshot is missing, skip capability validation");
+      log.warn("Provenance 配置快照缺失,跳过能力验证");
       return;
     }
 
-    // Validate incremental capability for HARVEST operations.
+    // 验证 HARVEST 操作的增量能力
     if (triggerNorm.isHarvest()) {
       validateIncrementalCapability(triggerNorm, snapshot, window);
     }
 
-    // Validate window-related configuration if a window is present.
+    // 若存在窗口,验证窗口相关配置
     if (!triggerNorm.isUpdate() && window != null && window.from() != null && window.to() != null) {
       validateWindowConfigCompleteness(snapshot);
     }
   }
 
-  /**
-   * Validate incremental collection capabilities. If the source advertises incremental mode
-   * (non-FULL), it must expose offset configuration; otherwise an explicit window is required.
-   */
+  /** 验证增量采集能力 - 若数据源声明增量模式(非 FULL),必须暴露偏移量配置;否则需要显式窗口 */
   private void validateIncrementalCapability(
       PlanTriggerNorm triggerNorm, ProvenanceConfigSnapshot snapshot, PlannerWindow window) {
 
     ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
 
-    // If no incremental capability is configured, require an explicit window.
+    // 若未配置增量能力,需要显式窗口
     if (windowOffset == null || StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
       if (triggerNorm.requestedWindowFrom() == null && window != null && window.from() != null) {
         throw new PlanValidationException(
-            String.format(
-                "Source %s does not support automatic incremental harvest; explicit window required",
-                triggerNorm.provenanceCode()),
+            String.format("数据源 %s 不支持自动增量采集;需要显式窗口", triggerNorm.provenanceCode()),
             PlanValidationException.Reason.CAPABILITY_MISMATCH);
       }
     }
 
-    // Verify offset-field configuration for date/composite offsets.
+    // 验证日期/复合偏移量的字段配置
     if (windowOffset != null
         && (StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "DATE")
             || StrUtil.equalsIgnoreCase(windowOffset.offsetTypeCode(), "COMPOSITE"))) {
@@ -169,28 +162,28 @@ public class PlannerValidatorImpl implements PlannerValidator {
           && StrUtil.isBlank(windowOffset.windowDateFieldKey())) {
         throw new PlanValidationException(
             String.format(
-                "Source %s configured for %s offset but missing date field configuration",
+                "数据源 %s 配置为 %s 偏移量但缺少日期字段配置",
                 triggerNorm.provenanceCode(), windowOffset.offsetTypeCode()),
             PlanValidationException.Reason.CAPABILITY_MISMATCH);
       }
     }
 
-    log.debug("Incremental capability validation passed, source={}", triggerNorm.provenanceCode());
+    log.debug("增量能力验证通过,数据源={}", triggerNorm.provenanceCode());
   }
 
-  /** Issue warnings when optional window configuration (size/span) is invalid. */
+  /** 当可选窗口配置(大小/跨度)无效时发出警告 */
   private void validateWindowConfigCompleteness(ProvenanceConfigSnapshot snapshot) {
     ProvenanceConfigSnapshot.WindowOffsetConfig windowOffset = snapshot.windowOffset();
 
     if (windowOffset != null && !StrUtil.equalsIgnoreCase(windowOffset.windowModeCode(), "FULL")) {
-      // Warn when window size is missing or invalid.
+      // 窗口大小缺失或无效时发出警告
       if (windowOffset.windowSizeValue() == null || windowOffset.windowSizeValue() <= 0) {
-        log.warn("window size not configured or invalid, fallback to defaults");
+        log.warn("窗口大小未配置或无效,将使用默认值");
       }
 
-      // Warn when the maximum window span is invalid.
+      // 最大窗口跨度无效时发出警告
       if (windowOffset.maxWindowSpanSeconds() != null && windowOffset.maxWindowSpanSeconds() <= 0) {
-        log.warn("invalid max window span configuration: {}", windowOffset.maxWindowSpanSeconds());
+        log.warn("最大窗口跨度配置无效: {}", windowOffset.maxWindowSpanSeconds());
       }
     }
   }

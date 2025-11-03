@@ -423,7 +423,7 @@ public abstract class AbstractOutboxPublisher {
 ### Task 执行流程
 
 ```
-1. IngestStreamConsumers(adapter) 消费任务消息
+1. TaskReadyMessageListener(adapter) 消费任务消息
    ↓
 2. TaskExecutionUseCase.executeTask(taskId)
    ↓
@@ -511,13 +511,19 @@ public class PlanSchedulerService {
 ```java
 @Component
 @RequiredArgsConstructor
-public class TaskMessageConsumer {
+@RocketMQMessageListener(
+    topic = "${papertrace.ingest.mq.topics.task-ready}",
+    consumerGroup = "${papertrace.ingest.mq.consumer-groups.task-ready}"
+)
+public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
 
     private final TaskExecutionUseCase taskExecutionUseCase;
 
-    @StreamListener(IngestPublishingChannels.TASK_READY)
-    public void handleTaskReadyMessage(TaskReadyMessage message) {
-        Long taskId = message.getTaskId();
+    @Override
+    public void onMessage(MessageExt message) {
+        // 解析消息体
+        TaskReadyPayload payload = parseMessage(message);
+        Long taskId = payload.getTaskId();
 
         try {
             taskExecutionUseCase.executeTask(taskId);

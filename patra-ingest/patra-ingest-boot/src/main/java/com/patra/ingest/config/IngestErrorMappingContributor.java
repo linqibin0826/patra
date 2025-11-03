@@ -18,9 +18,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 贡献采集服务特定的异常到错误码映射。
+ * 采集服务错误码映射贡献器。
  *
- * <p>注册采集服务发出的领域异常,以便平台错误解析引擎可以将它们转换为一致的 {@link IngestErrorCode} 响应。
+ * <p>实现 {@link ErrorMappingContributor} SPI,注册采集服务特定的领域异常到标准错误码的映射关系,使平台错误解析引擎能够将领域异常转换为一致的 API
+ * 错误响应。
+ *
+ * <p>职责:
+ *
+ * <ul>
+ *   <li>映射配置相关异常(IngestConfigurationException)到相应错误码
+ *   <li>映射调度参数异常(IngestScheduleParameterException、OutboxRelayExecutionException)
+ *   <li>映射检查点异常(TaskCheckpointException)根据类型区分解析/序列化错误
+ *   <li>映射计划相关异常(PlanAssemblyException、PlanPersistenceException)
+ *   <li>映射 Outbox 持久化异常(OutboxPersistenceException)根据阶段区分错误类型
+ *   <li>处理远程调用异常(RemoteCallException)根据 HTTP 状态码细分错误
+ * </ul>
+ *
+ * <p>错误码体系: 所有错误码定义在 {@link IngestErrorCode} 枚举中,遵循 ING_xxxx 命名约定(如 ING_1201、ING_1401)。
+ *
+ * <p>设计模式: SPI 贡献者模式 - 通过 Spring 组件扫描自动注册到平台错误处理框架。
  */
 @Slf4j
 @Component

@@ -36,17 +36,30 @@ public abstract class ReadOnlyAggregate<ID> implements Serializable {
     this.id = null;
   }
 
-  /** 指示聚合是否为瞬态(标识符未分配)。 */
+  /**
+   * 指示聚合是否为瞬态(标识符未分配)。
+   *
+   * @return 如果聚合 ID 为 null 则返回 true,否则返回 false
+   */
   public boolean isTransient() {
     return this.id == null;
   }
 
-  /** 不变量检查的钩子方法。覆盖此方法以在构造或查询时操作期间验证状态, 并在不变量不成立时抛出 {@link IllegalStateException}。 */
+  /**
+   * 不变量检查的钩子方法。
+   *
+   * <p>覆盖此方法以在构造或查询时操作期间验证状态,并在不变量不成立时抛出 {@link IllegalStateException}。
+   */
   protected void assertInvariants() {
     // 默认为空操作;子类应强制执行数据完整性和业务规则。
   }
 
-  /** 基于聚合标识符的相等性。 */
+  /**
+   * 基于聚合标识符的相等性。
+   *
+   * @param o 要比较的对象
+   * @return 如果两个聚合的 ID 相同则返回 true
+   */
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -59,13 +72,21 @@ public abstract class ReadOnlyAggregate<ID> implements Serializable {
     return Objects.equals(id, that.id);
   }
 
-  /** 从聚合标识符派生的哈希码。 */
+  /**
+   * 从聚合标识符派生的哈希码。
+   *
+   * @return 基于聚合 ID 的哈希码
+   */
   @Override
   public int hashCode() {
     return Objects.hashCode(id);
   }
 
-  /** 包含标识符的可读表示形式。 */
+  /**
+   * 包含标识符的可读表示形式。
+   *
+   * @return 格式为 "类名{id=标识符}" 的字符串
+   */
   @Override
   public String toString() {
     return getClass().getSimpleName() + "{" + "id=" + id + '}';

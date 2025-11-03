@@ -19,28 +19,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * Application orchestrator coordinating literature publishing workflow.
+ * 文献发布编排器
  *
- * <p>This orchestrator makes cross-service integration explicit by coordinating two distinct
- * operations:
+ * <p>在六边形架构+DDD中的角色:应用层编排器,负责协调文献发布工作流。
  *
- * <ul>
- *   <li>Storage upload via {@link LiteratureStoragePort} (technical infrastructure)
- *   <li>Metadata recording via {@link StorageMetadataPort} (business service integration with
- *       patra-storage)
- * </ul>
- *
- * <p>Responsibilities:
+ * <p>设计理念:通过在应用层显式编排两个不同的操作,使跨服务集成变得清晰:
  *
  * <ul>
- *   <li>Orchestrate storage and metadata recording sequence
- *   <li>Handle cross-service integration failures
- *   <li>Delegate failed metadata recording to retry mechanism
- *   <li>Provide unified publish result to application callers
+ *   <li>通过{@link LiteratureStoragePort}上传到对象存储(技术基础设施)
+ *   <li>通过{@link StorageMetadataPort}记录元数据(与patra-storage服务的业务集成)
  * </ul>
  *
- * <p>This design follows Hexagonal Architecture principles by making orchestration explicit at the
- * Application layer, rather than hiding it within infrastructure adapters.
+ * <p>主要职责:
+ *
+ * <ul>
+ *   <li>编排存储和元数据记录的顺序
+ *   <li>处理跨服务集成失败
+ *   <li>将失败的元数据记录委托给重试机制
+ *   <li>为应用层调用者提供统一的发布结果
+ * </ul>
+ *
+ * <p>这种设计遵循六边形架构原则,在应用层显式编排,而不是隐藏在基础设施适配器中。
  */
 @Service
 @RequiredArgsConstructor
@@ -54,29 +53,37 @@ public class LiteraturePublisherOrchestrator {
   private final TechnicalRetryPort technicalRetryPort;
 
   /**
-   * Publishes standardized literature by uploading to storage and recording metadata.
+   * 发布标准化文献
    *
-   * @param literature domain-normalized literature list
-   * @param context publishing context with execution metadata
-   * @return publish result with storage location
+   * <p>业务流程:
+   *
+   * <ol>
+   *   <li>上传文献到对象存储
+   *   <li>记录元数据到patra-storage服务
+   *   <li>处理元数据记录失败(委托给重试机制)
+   * </ol>
+   *
+   * @param literature 领域标准化的文献列表
+   * @param context 发布上下文(包含执行元数据)
+   * @return 发布结果(包含存储位置)
    */
   public PublishResult publish(List<StandardLiterature> literature, PublishContext context) {
     List<StandardLiterature> safeLiterature =
         literature == null ? Collections.emptyList() : literature;
 
-    // Step 1: Store to object storage
+    // 步骤1: 存储到对象存储
     LiteratureStoragePort.StorageContext storageContext = toStorageContext(context);
     LiteratureStoragePort.StorageResult storageResult =
         literatureStoragePort.store(safeLiterature, storageContext);
 
     log.info(
-        "Literature stored bucket={} key={} size={} bytes count={}",
+        "文献已存储 bucket={} key={} size={} bytes count={}",
         storageResult.bucketName(),
         storageResult.objectKey(),
         storageResult.fileSize(),
         storageResult.literatureCount());
 
-    // Step 2: Record metadata to patra-storage service (with error handling)
+    // 步骤2: 记录元数据到patra-storage服务(带错误处理)
     try {
       StorageMetadataPort.MetadataRequest metadataRequest =
           buildMetadataRequest(storageResult, context);
@@ -85,7 +92,7 @@ public class LiteraturePublisherOrchestrator {
           storageMetadataPort.recordUpload(metadataRequest);
 
       log.info(
-          "Metadata recorded successfully storageKey={} metadataId={}",
+          "元数据记录成功 storageKey={} metadataId={}",
           storageResult.storageKey(),
           metadataResult.metadataId());
 
@@ -93,16 +100,10 @@ public class LiteraturePublisherOrchestrator {
       handleMetadataRecordFailure(e, storageResult, context);
     } catch (Exception e) {
       if (e instanceof RetryableException) {
-        log.warn(
-            "Metadata recording timeout, delegating to retry storageKey={}",
-            storageResult.storageKey(),
-            e);
+        log.warn("元数据记录超时,委托给重试机制 storageKey={}", storageResult.storageKey(), e);
         delegateToRetry(storageResult, context, e);
       } else {
-        log.error(
-            "Unexpected error recording metadata, delegating to retry storageKey={}",
-            storageResult.storageKey(),
-            e);
+        log.error("记录元数据时发生意外错误,委托给重试机制 storageKey={}", storageResult.storageKey(), e);
         delegateToRetry(storageResult, context, e);
       }
     }
@@ -159,6 +160,13 @@ public class LiteraturePublisherOrchestrator {
     return provenance + "-" + context.batchNo() + "-" + runIdSegment;
   }
 
+  /**
+   * 处理元数据记录失败
+   *
+   * @param exception Feign异常
+   * @param storageResult 存储结果
+   * @param context 发布上下文
+   */
   private void handleMetadataRecordFailure(
       FeignException exception,
       LiteratureStoragePort.StorageResult storageResult,
@@ -166,15 +174,13 @@ public class LiteraturePublisherOrchestrator {
     int status = exception.status();
     if (status >= 500 || status == 503 || status == -1) {
       log.warn(
-          "patra-storage unavailable (HTTP {}), delegating to retry storageKey={}",
-          status,
-          storageResult.storageKey());
+          "patra-storage服务不可用 (HTTP {}),委托给重试机制 storageKey={}", status, storageResult.storageKey());
       delegateToRetry(storageResult, context, exception);
       return;
     }
     if (status >= 400 && status < 500) {
       log.error(
-          "Invalid metadata record request (HTTP {}), manual investigation required. StorageKey={} bucket={} key={}",
+          "无效的元数据记录请求 (HTTP {}),需要人工调查 StorageKey={} bucket={} key={}",
           status,
           storageResult.storageKey(),
           storageResult.bucketName(),
@@ -182,27 +188,23 @@ public class LiteraturePublisherOrchestrator {
           exception);
       return;
     }
-    log.error(
-        "Unexpected Feign error, delegating to retry storageKey={}",
-        storageResult.storageKey(),
-        exception);
+    log.error("意外的Feign错误,委托给重试机制 storageKey={}", storageResult.storageKey(), exception);
     delegateToRetry(storageResult, context, exception);
   }
 
   /**
-   * Delegates failed metadata recording to technical retry mechanism.
+   * 将失败的元数据记录委托给技术重试机制
    *
-   * <p>Uses {@link TechnicalRetryPort} to ensure consistent retry handling through the outbox
-   * publisher framework.
+   * <p>使用{@link TechnicalRetryPort}通过outbox发布者框架确保一致的重试处理。
    *
-   * @param storageResult storage result from successful upload
-   * @param context publish context for traceability
-   * @param error the exception that caused the failure
+   * @param storageResult 成功上传的存储结果
+   * @param context 发布上下文(用于可追溯性)
+   * @param error 导致失败的异常
    */
   private void delegateToRetry(
       LiteratureStoragePort.StorageResult storageResult, PublishContext context, Exception error) {
     try {
-      // Reconstruct metadata request for retry
+      // 重构元数据请求用于重试
       StorageMetadataPort.MetadataRequest metadataRequest =
           buildMetadataRequest(storageResult, context);
 
@@ -228,16 +230,11 @@ public class LiteraturePublisherOrchestrator {
       technicalRetryPort.publishRetry(retryContext);
 
       log.info(
-          "Metadata record request delegated to retry runId={} storageKey={}",
-          context.runId(),
-          storageResult.storageKey());
+          "元数据记录请求已委托给重试机制 runId={} storageKey={}", context.runId(), storageResult.storageKey());
 
     } catch (Exception e) {
       log.error(
-          "CRITICAL: Failed to delegate to retry storageKey={} runId={}",
-          storageResult.storageKey(),
-          context.runId(),
-          e);
+          "严重错误: 委托给重试机制失败 storageKey={} runId={}", storageResult.storageKey(), context.runId(), e);
     }
   }
 
@@ -248,20 +245,24 @@ public class LiteraturePublisherOrchestrator {
   }
 
   /**
-   * Publish result containing storage location information.
+   * 发布结果
    *
-   * @param storageKey complete storage identifier
-   * @param publishedCount number of literature items published
+   * <p>包含存储位置信息。
+   *
+   * @param storageKey 完整的存储标识符
+   * @param publishedCount 已发布的文献数量
    */
   @Builder
   public record PublishResult(String storageKey, int publishedCount) {}
 
   /**
-   * Publishing context with execution metadata.
+   * 发布上下文
    *
-   * @param runId task run identifier
-   * @param batchNo execution batch number
-   * @param provenanceCode normalized source identifier
+   * <p>包含执行元数据。
+   *
+   * @param runId 任务运行标识符
+   * @param batchNo 执行批次编号
+   * @param provenanceCode 标准化的数据源标识符
    */
   @Builder
   public record PublishContext(Long runId, int batchNo, String provenanceCode) {}

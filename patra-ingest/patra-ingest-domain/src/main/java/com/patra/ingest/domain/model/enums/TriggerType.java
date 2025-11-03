@@ -3,14 +3,25 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * Trigger type (DICT: ing_trigger_type).
+ * 触发类型 (字典: ing_trigger_type)。
  *
- * <p>Field mapping: {@code ing_schedule_instance.trigger_type_code → SCHEDULE/MANUAL/API}
+ * <p>字段映射: {@code ing_schedule_instance.trigger_type_code → SCHEDULE/MANUAL/API}
+ *
+ * <p>触发类型语义:
+ *
+ * <ul>
+ *   <li>SCHEDULE → 定时调度触发(由调度器自动触发)
+ *   <li>MANUAL → 手动触发(由用户手动触发)
+ *   <li>API → API 调用触发(通过 API 接口触发)
+ * </ul>
  */
 @Getter
 public enum TriggerType {
+  /** 定时调度;由调度器自动触发。 */
   SCHEDULE("SCHEDULE", "Scheduled trigger"),
+  /** 手动触发;由用户手动触发。 */
   MANUAL("MANUAL", "Manual trigger"),
+  /** API 触发;通过 API 接口调用触发。 */
   API("API", "API invocation");
 
   private final String code;
@@ -23,7 +34,7 @@ public enum TriggerType {
 
   public static TriggerType fromCode(String value) {
     if (value == null) {
-      throw new IllegalArgumentException("Trigger type code cannot be null");
+      throw new IllegalArgumentException("触发类型代码不能为 null");
     }
     String normalized = value.trim().toUpperCase();
     for (TriggerType type : values()) {
@@ -31,6 +42,6 @@ public enum TriggerType {
         return type;
       }
     }
-    throw new IllegalArgumentException("Unknown trigger type: " + value);
+    throw new IllegalArgumentException("未知的触发类型: " + value);
   }
 }

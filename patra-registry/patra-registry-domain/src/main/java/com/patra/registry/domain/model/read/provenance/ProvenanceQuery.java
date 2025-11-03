@@ -3,9 +3,9 @@ package com.patra.registry.domain.model.read.provenance;
 import com.patra.registry.domain.exception.DomainValidationException;
 
 /**
- * Provenance query view.
+ * 来源查询视图。
  *
- * <p>Read-optimized projection for querying provenance metadata.
+ * <p>用于查询来源元数据的读优化投影。包含来源的基本信息、代码、名称、基础URL、时区等核心属性。
  *
  * @author linqibin
  * @since 0.1.0

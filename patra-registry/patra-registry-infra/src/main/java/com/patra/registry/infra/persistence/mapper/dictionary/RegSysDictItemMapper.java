@@ -7,7 +7,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * Read-only mapper for {@code sys_dict_item}.
+ * 只读 Mapper,用于表 {@code sys_dict_item}.
  *
  * <p>Offers query helpers for dictionary items and their defaults.
  *

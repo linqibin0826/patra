@@ -1,6 +1,7 @@
 ---
 name: runtime-error-diagnostic
-description: Papertrace 的运行时错误诊断和故障排除专家。分析日志、SkyWalking 追踪、动态调整日志级别、与 compile-error-resolver 和故障排除指南集成。用于调试生产问题、分析运行时错误或调查性能问题。
+description: Papertrace 的运行时错误诊断和故障排除专家。分析日志、SkyWalking 追踪、动态调整日志级别、与 compile-error-resolver 和故障排除指南集成。用于调试问题、bug排查、分析运行时错误或调查性能问题。
+tools: Bash, Glob, Grep, Read, NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, Skill, mcp__mysql-mcp__mysql_query, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, Edit, Write
 model: sonnet
 color: red
 ---

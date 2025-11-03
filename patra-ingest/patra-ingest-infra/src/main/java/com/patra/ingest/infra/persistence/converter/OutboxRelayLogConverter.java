@@ -8,23 +8,23 @@ import org.mapstruct.Mapping;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * Outbox relay log converter: Domain entity ↔ Persistence DO.
+ * 发件箱中继日志对象转换器,负责领域对象与数据库实体转换。
  *
- * <p>Responsibilities:
+ * <p>职责:
  *
  * <ul>
- *   <li>Convert domain entity {@link OutboxRelayLog} to persistence DO {@link OutboxRelayLogDO}
- *   <li>Convert persistence DO back to domain entity
- *   <li>Support batch conversions for efficient repository operations
+ *   <li>将领域实体 {@link OutboxRelayLog} 转换为持久化 DO {@link OutboxRelayLogDO}
+ *   <li>将持久化 DO 转换回领域实体
+ *   <li>支持批量转换以提高仓储操作效率
  * </ul>
  *
- * <p>Design notes:
+ * <p>设计说明:
  *
  * <ul>
- *   <li>Uses MapStruct for type-safe, compile-time code generation
- *   <li>Registered as Spring bean (componentModel = "spring")
- *   <li>Field mappings mostly 1:1 (messageId ↔ messageId, relayBatchId ↔ relayBatchId)
- *   <li>No custom transformations needed (no JSON fields, no enum conversions)
+ *   <li>使用 MapStruct 实现类型安全的编译时代码生成
+ *   <li>注册为 Spring Bean(componentModel = "spring")
+ *   <li>字段映射大多为 1:1(messageId ↔ messageId、relayBatchId ↔ relayBatchId)
+ *   <li>无需自定义转换(无 JSON 字段、无枚举转换)
  * </ul>
  *
  * @author Papertrace Team
@@ -34,36 +34,36 @@ import org.mapstruct.ReportingPolicy;
 public interface OutboxRelayLogConverter {
 
   /**
-   * Converts domain entity to persistence DO (for insert operations).
+   * 将领域实体转换为持久化 DO(用于插入操作)。
    *
-   * <p>Field mappings:
+   * <p>字段映射:
    *
    * <ul>
    *   <li>outboxMessageId → messageId
-   *   <li>relayStatus (RelayStatus enum) → relayStatus (String via .getCode())
-   *   <li>All other fields map 1:1 by name
+   *   <li>relayStatus(RelayStatus 枚举) → relayStatus(String,通过 .getCode())
+   *   <li>所有其他字段按名称 1:1 映射
    * </ul>
    *
-   * @param log domain entity
-   * @return persistence DO
+   * @param log 领域实体
+   * @return 持久化 DO
    */
   @Mapping(target = "messageId", source = "outboxMessageId")
   @Mapping(target = "relayStatus", expression = "java(log.getRelayStatus().getCode())")
   OutboxRelayLogDO toEntity(OutboxRelayLog log);
 
   /**
-   * Converts persistence DO to domain entity (for query result mapping).
+   * 将持久化 DO 转换为领域实体(用于查询结果映射)。
    *
-   * <p>Field mappings:
+   * <p>字段映射:
    *
    * <ul>
    *   <li>messageId → outboxMessageId
-   *   <li>relayStatus (String) → relayStatus (RelayStatus enum via fromCode())
-   *   <li>All other fields map 1:1 by name
+   *   <li>relayStatus(String) → relayStatus(RelayStatus 枚举,通过 fromCode())
+   *   <li>所有其他字段按名称 1:1 映射
    * </ul>
    *
-   * @param entity persistence DO
-   * @return domain entity
+   * @param entity 持久化 DO
+   * @return 领域实体
    */
   @Mapping(target = "outboxMessageId", source = "messageId")
   @Mapping(
@@ -73,22 +73,22 @@ public interface OutboxRelayLogConverter {
   OutboxRelayLog toDomain(OutboxRelayLogDO entity);
 
   /**
-   * Batch converts domain entities to persistence DOs (for batch insert).
+   * 批量将领域实体转换为持久化 DO(用于批量插入)。
    *
-   * <p>Use case: Relay job completes 100-500 relays, convert all logs at once.
+   * <p>使用场景: 中继作业完成 100-500 个中继,一次性转换所有日志。
    *
-   * @param logs list of domain entities
-   * @return list of persistence DOs
+   * @param logs 领域实体列表
+   * @return 持久化 DO 列表
    */
   List<OutboxRelayLogDO> toEntities(List<OutboxRelayLog> logs);
 
   /**
-   * Batch converts persistence DOs to domain entities (for query results).
+   * 批量将持久化 DO 转换为领域实体(用于查询结果)。
    *
-   * <p>Use case: Query returns multiple relay logs, convert all to domain entities.
+   * <p>使用场景: 查询返回多个中继日志,全部转换为领域实体。
    *
-   * @param entities list of persistence DOs
-   * @return list of domain entities
+   * @param entities 持久化 DO 列表
+   * @return 领域实体列表
    */
   List<OutboxRelayLog> toDomains(List<OutboxRelayLogDO> entities);
 }

@@ -1,30 +1,31 @@
 package com.patra.common.error.problem;
 
 /**
- * Constants for standard ProblemDetail extension field keys used across the error handling system.
- * These keys ensure consistent field naming in RFC 7807 ProblemDetail responses.
+ * 错误处理系统中使用的标准 ProblemDetail 扩展字段键常量。
+ *
+ * <p>这些键确保 RFC 7807 ProblemDetail 响应中的字段命名一致性。
  *
  * @author linqibin
  * @since 0.1.0
  */
 public final class ErrorKeys {
 
-  /** Error code field key for business error codes */
+  /** 业务错误码字段键 */
   public static final String CODE = "code";
 
-  /** Trace ID field key for distributed tracing correlation */
+  /** 用于分布式跟踪关联的 Trace ID 字段键 */
   public static final String TRACE_ID = "traceId";
 
-  /** Request path field key for the original request path */
+  /** 原始请求路径字段键 */
   public static final String PATH = "path";
 
-  /** Timestamp field key for when the error occurred */
+  /** 错误发生时间戳字段键 */
   public static final String TIMESTAMP = "timestamp";
 
-  /** Validation errors field key for detailed validation error information */
+  /** 详细验证错误信息字段键 */
   public static final String ERRORS = "errors";
 
   private ErrorKeys() {
-    // Utility class - prevent instantiation
+    // 工具类 - 防止实例化
   }
 }

@@ -16,32 +16,34 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Jackson codec for the expression model.
+ * 表达式模型的 Jackson 编解码器。
  *
- * <p>Provides bidirectional JSON conversion without polluting model classes with Jackson
- * annotations. Design goals:
+ * <p>提供双向 JSON 转换,而不会污染模型类的 Jackson 注解。设计目标:
  *
  * <ul>
- *   <li>Expose a clear, stable structure suitable for cross-language consumers
- *   <li>Keep the kernel free from framework annotations
- *   <li>Remain forward compatible by ignoring unknown properties
+ *   <li>暴露清晰、稳定的结构,适合跨语言使用者
+ *   <li>保持内核不依赖框架注解
+ *   <li>通过忽略未知属性保持向前兼容
  * </ul>
  *
- * <p>Example payloads:
+ * <p>示例 JSON 格式:
  *
  * <pre>
  * {"type":"AND","children":[ ... ]}
  * {"type":"ATOM","field":"title","op":"TERM","value":{"kind":"TERM","text":"heart","match":"ANY","case":"INSENSITIVE"}}
  * {"type":"CONST","value":true}
  * </pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 public final class ExprJsonCodec {
   private ExprJsonCodec() {}
 
   /**
-   * Creates a module that registers the serializer and deserializer for {@link Expr}.
+   * 创建一个模块,注册 {@link Expr} 的序列化器和反序列化器。
    *
-   * @return module instance
+   * @return 模块实例
    */
   public static com.fasterxml.jackson.databind.Module module() {
     SimpleModule m = new SimpleModule("expr-json-module");
@@ -51,9 +53,9 @@ public final class ExprJsonCodec {
   }
 
   /**
-   * Builds an {@link ObjectMapper} pre-configured with the expression module.
+   * 构建预配置表达式模块的 {@link ObjectMapper}。
    *
-   * @return configured mapper
+   * @return 配置好的 mapper
    */
   public static ObjectMapper mapper() {
     ObjectMapper om = new ObjectMapper();
@@ -62,7 +64,7 @@ public final class ExprJsonCodec {
     return om;
   }
 
-  // ================= Serializer =================
+  // ================= 序列化器 =================
   static class ExprSerializer extends JsonSerializer<Expr> implements ExprVisitor<java.lang.Void> {
     private JsonGenerator gen;
 
@@ -249,7 +251,7 @@ public final class ExprJsonCodec {
     }
   }
 
-  // ================= Deserializer =================
+  // ================= 反序列化器 =================
   static class ExprDeserializer extends JsonDeserializer<Expr> {
     @Override
     public Expr deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
@@ -425,11 +427,11 @@ public final class ExprJsonCodec {
   }
 
   /**
-   * Serializes an expression tree to JSON.
+   * 将表达式树序列化为 JSON。
    *
-   * @param expr expression to serialize
-   * @return JSON string representation
-   * @throws RuntimeException if serialization fails
+   * @param expr 待序列化的表达式
+   * @return JSON 字符串表示
+   * @throws RuntimeException 如果序列化失败
    */
   public static String toJson(Expr expr) {
     try {
@@ -440,11 +442,11 @@ public final class ExprJsonCodec {
   }
 
   /**
-   * Deserializes JSON into an expression tree.
+   * 将 JSON 反序列化为表达式树。
    *
-   * @param json JSON string to parse
-   * @return expression tree
-   * @throws RuntimeException if deserialization fails
+   * @param json 待解析的 JSON 字符串
+   * @return 表达式树
+   * @throws RuntimeException 如果反序列化失败
    */
   public static Expr fromJson(String json) {
     Objects.requireNonNull(json, "json");

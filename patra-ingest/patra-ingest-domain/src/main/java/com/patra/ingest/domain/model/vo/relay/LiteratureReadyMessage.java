@@ -3,7 +3,7 @@ package com.patra.ingest.domain.model.vo.relay;
 import java.util.List;
 
 /**
- * Message payload for the {@code INGEST_LITERATURE_DATA_READY} channel.
+ * [待翻译] * Message payload for the {@code INGEST_LITERATURE_DATA_READY} channel.
  *
  * @param payload business payload
  * @param header message header metadata

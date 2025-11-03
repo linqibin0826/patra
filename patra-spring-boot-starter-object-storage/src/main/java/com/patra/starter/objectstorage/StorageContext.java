@@ -8,11 +8,16 @@ import lombok.Getter;
 import lombok.Singular;
 
 /**
- * Immutable context provided by callers when resolving storage locations.
+ * 解析存储位置时由调用方提供的不可变上下文。
  *
- * <p>Acts as the single source of truth for the resolver: all path-related inputs (business type
- * and filename), the business identifier written to the metadata store, optional correlation data
- * for downstream analytics, and the partition date.
+ * <p>作为解析器的单一事实来源,包含:
+ *
+ * <ul>
+ *   <li>路径相关输入(业务类型和文件名)
+ *   <li>写入元数据存储的业务标识符
+ *   <li>用于下游分析的可选关联数据
+ *   <li>分区日期
+ * </ul>
  */
 @Getter
 @Builder(toBuilder = true)
@@ -37,7 +42,11 @@ public final class StorageContext {
         : Collections.unmodifiableMap(correlationData);
   }
 
-  /** Validates mandatory fields and guards against path traversal input. */
+  /**
+   * 验证必填字段并防范路径遍历输入。
+   *
+   * @throws IllegalArgumentException 如果验证失败
+   */
   public void validate() {
     require("businessType", businessType);
     require("filename", filename);
@@ -48,7 +57,7 @@ public final class StorageContext {
 
   private static void require(String field, String value) {
     if (!hasText(value)) {
-      throw new IllegalArgumentException(field + " is required");
+      throw new IllegalArgumentException(field + " 是必需的");
     }
   }
 
@@ -57,7 +66,7 @@ public final class StorageContext {
       return;
     }
     if (value.contains("/") || value.contains("\\")) {
-      throw new IllegalArgumentException(field + " cannot contain path separators");
+      throw new IllegalArgumentException(field + " 不能包含路径分隔符");
     }
   }
 

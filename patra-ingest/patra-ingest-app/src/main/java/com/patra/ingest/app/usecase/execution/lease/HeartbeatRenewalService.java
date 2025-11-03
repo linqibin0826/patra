@@ -4,10 +4,9 @@ import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import java.time.Duration;
 
 /**
- * Heartbeat renewal service.
+ * 心跳续约服务。
  *
- * <p>Uses a ScheduledExecutorService to renew leases periodically; after consecutive failures,
- * validates lease.
+ * <p>使用 ScheduledExecutorService 定期续约租约;连续失败后验证租约。
  *
  * @author linqibin
  * @since 0.1.0
@@ -15,13 +14,13 @@ import java.time.Duration;
 public interface HeartbeatRenewalService {
 
   /**
-   * Starts heartbeat-based lease renewal.
+   * 启动基于心跳的租约续约。
    *
-   * @param taskId task id
-   * @param leaseOwner lease owner
-   * @param leaseDuration lease duration
-   * @param renewalInterval renewal interval
-   * @return heartbeat handle (to stop the heartbeat)
+   * @param taskId 任务 ID
+   * @param leaseOwner 租约持有者
+   * @param leaseDuration 租约时长
+   * @param renewalInterval 续约间隔
+   * @return 心跳句柄(用于停止心跳)
    */
   ExecutionSession.HeartbeatHandle startHeartbeat(
       Long taskId, String leaseOwner, Duration leaseDuration, Duration renewalInterval);

@@ -9,22 +9,21 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Generic cursor DO</b> — table: <code>ing_cursor</code>
+ * 游标数据库实体,映射到表 {@code ing_cursor}。
  *
- * <p>Maintains the current watermark for provenance + operation + namespace, supporting three
- * cursor types: time / numeric / token.
+ * <p>表结构: 维护数据源 + 操作 + 命名空间的当前水位,支持三种游标类型: time / numeric / token。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>namespace_scope_code</code> + <code>namespace_key</code> distinguish namespaces
- *       (GLOBAL / EXPR / CUSTOM).
- *   <li><code>normalized_instant</code>/<code>normalized_numeric</code> normalize values to enable
- *       ordering and range queries.
- *   <li>Redundant lineage fields (schedule/plan/slice/task/run/batch) allow quick backtracking.
- *   <li>Recommended unique key: (provenance_code, operation_code, cursor_key, namespace_scope_code,
- *       namespace_key).
+ *   <li>{@code namespace_scope_code} + {@code namespace_key} 区分命名空间(GLOBAL / EXPR / CUSTOM)
+ *   <li>{@code normalized_instant}/{@code normalized_numeric} 规范化值以支持排序和范围查询
+ *   <li>冗余血缘字段(schedule/plan/slice/task/run/batch) 支持快速回溯
+ *   <li>推荐唯一键: (provenance_code, operation_code, cursor_key, namespace_scope_code, namespace_key)
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

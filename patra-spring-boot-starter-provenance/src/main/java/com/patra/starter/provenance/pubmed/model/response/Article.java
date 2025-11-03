@@ -8,9 +8,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Simplified PubMed article metadata extracted from the Medline citation.
+ * 从 Medline 引文中提取的简化 PubMed 文章元数据。
  *
- * @author
+ * <p>包含文章的核心信息,包括标题、摘要、作者列表、期刊信息、发表类型等。 这是 PubMed 文章数据的主要数据传输对象。
+ *
+ * <p><b>主要字段:</b>
+ *
+ * <ul>
+ *   <li><b>journal</b>: 期刊元数据 (标题、ISSN、发表日期等)
+ *   <li><b>title</b>: 文章标题
+ *   <li><b>abstractContent</b>: 摘要内容 (可能包含多个分段)
+ *   <li><b>authors</b>: 作者列表
+ *   <li><b>languages</b>: 语言列表
+ *   <li><b>publicationTypes</b>: 发表类型标识符
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class Article {
@@ -38,17 +52,17 @@ public final class Article {
 
   public Article() {}
 
-  /** Journal metadata associated with the article. */
+  /** 与文章关联的期刊元数据。 */
   public Journal journal() {
     return journal;
   }
 
-  /** Article title. */
+  /** 文章标题。 */
   public String title() {
     return title;
   }
 
-  /** Primary language reported by PubMed. */
+  /** PubMed 报告的主要语言。 */
   public String language() {
     if (languages == null || languages.isEmpty()) {
       return null;
@@ -56,12 +70,12 @@ public final class Article {
     return languages.get(0);
   }
 
-  /** Abstract sections (label + text). */
+  /** 摘要分段 (标签 + 文本)。 */
   public List<AbstractSection> abstractSections() {
     return abstractContent != null ? abstractContent.sections() : List.of();
   }
 
-  /** List of parsed authors. */
+  /** 已解析的作者列表。 */
   public List<Author> authors() {
     if (authors == null || authors.isEmpty()) {
       return List.of();
@@ -69,7 +83,7 @@ public final class Article {
     return List.copyOf(authors);
   }
 
-  /** Publication type identifiers assigned by PubMed. */
+  /** PubMed 分配的发表类型标识符。 */
   public List<String> publicationTypes() {
     if (publicationTypes == null || publicationTypes.isEmpty()) {
       return List.of();
@@ -112,6 +126,6 @@ public final class Article {
     private AbstractText() {}
   }
 
-  /** Abstract section extracted from the citation with optional label. */
+  /** 从引文中提取的摘要分段,带可选标签。 */
   public record AbstractSection(String label, String text) {}
 }

@@ -14,35 +14,29 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 
 /**
- * Common auto-configuration for Patra MyBatis integration.
+ * Patra MyBatis 集成的通用自动配置类。
  *
- * <p><b>Responsibilities:</b>
+ * <p><b>职责说明:</b>
  *
  * <ul>
- *   <li>Defines a conventional mapper scanning path for the infrastructure layer (infra),
- *       defaulting to {@code com.patra.**.infra.persistence.mapper}.
- *   <li>Registers a type handler for Jackson's {@link JsonNode}, enabling automatic serialization
- *       and deserialization of JSON fields in Data Objects (DOs).
+ *   <li>为基础设施层(infra)定义约定的 mapper 扫描路径,默认为 {@code com.patra.**.infra.persistence.mapper}。
+ *   <li>为 Jackson 的 {@link JsonNode} 注册类型处理器,支持数据对象(DO)中 JSON 字段的自动序列化和反序列化。
  * </ul>
  *
- * <p><b>Extensibility:</b>
+ * <p><b>扩展性:</b>
  *
  * <ul>
- *   <li>The mapper scanning path can be extended by business modules using properties like {@code
- *       mybatis-plus.mapper-locations} or {@code mybatis-plus.type-aliases-package}.
- *   <li>Custom TypeHandlers can be registered via the {@code mybatis-plus.type-handlers-package}
- *       property.
- *   <li>The default handlers provided here can be overridden in business modules through MyBatis
- *       configuration.
+ *   <li>业务模块可以使用 {@code mybatis-plus.mapper-locations} 或 {@code mybatis-plus.type-aliases-package}
+ *       等属性扩展 mapper 扫描路径。
+ *   <li>可以通过 {@code mybatis-plus.type-handlers-package} 属性注册自定义 TypeHandler。
+ *   <li>业务模块可以通过 MyBatis 配置覆盖此处提供的默认处理器。
  * </ul>
  *
- * <p><b>Notes:</b>
+ * <p><b>注意事项:</b>
  *
  * <ul>
- *   <li>This configuration is activated only if MyBatis-Spring's {@link MapperScannerConfigurer} is
- *       on the classpath.
- *   <li>It does not handle transaction or data source configuration, which are delegated to the
- *       specific business module's infra/config layer.
+ *   <li>仅当 MyBatis-Spring 的 {@link MapperScannerConfigurer} 在 classpath 中时,此配置才会激活。
+ *   <li>不处理事务或数据源配置,这些配置委托给特定业务模块的 infra/config 层。
  * </ul>
  */
 @Slf4j
@@ -51,56 +45,52 @@ import org.springframework.context.annotation.Bean;
 public class PatraMybatisAutoConfiguration {
 
   /**
-   * Configures the mapper scanner to automatically detect and register mappers.
+   * 配置 mapper 扫描器以自动检测和注册 mapper。
    *
-   * <p>By default, it scans the {@code com.patra.**.infra.persistence.mapper} package, ensuring
-   * that mappers in each business module's infra layer are recognized.
+   * <p>默认扫描 {@code com.patra.**.infra.persistence.mapper} 包,确保识别每个业务模块 infra 层中的 mapper。
    *
-   * <p>Business modules can add or override scan paths using standard MyBatis-Plus configuration
-   * properties.
+   * <p>业务模块可以使用标准 MyBatis-Plus 配置属性添加或覆盖扫描路径。
    *
-   * @return a configured mapper scanner instance
+   * @return 配置好的 mapper 扫描器实例
    */
   @Bean
   public MapperScannerConfigurer mapperScannerConfigurer() {
-    log.info(
-        "Configuring MyBatis mapper scanner for package: com.patra.**.infra.persistence.mapper");
+    log.info("配置 MyBatis mapper 扫描器,扫描包: com.patra.**.infra.persistence.mapper");
     MapperScannerConfigurer configurer = new MapperScannerConfigurer();
     configurer.setBasePackage("com.patra.**.infra.persistence.mapper");
     return configurer;
   }
 
   /**
-   * Creates a contributor for mapping data layer exceptions to standard HTTP error codes.
+   * 创建数据层异常到标准 HTTP 错误码的映射贡献器。
    *
-   * @param http a group of standard HTTP error definitions
-   * @return a configured error mapping contributor
+   * @param http 标准 HTTP 错误定义组
+   * @return 配置好的错误映射贡献器
    */
   @Bean
   @ConditionalOnMissingBean
   public DataLayerErrorMappingContributor dataLayerErrorMappingContributor(
       HttpStdErrors.Group http) {
-    log.info("Creating data layer error mapping contributor for MyBatis-Plus exceptions");
+    log.info("创建数据层错误映射贡献器,用于 MyBatis-Plus 异常处理");
     return new DataLayerErrorMappingContributor(http);
   }
 
   /**
-   * Customizes the MyBatis configuration to register custom TypeHandlers during initialization.
+   * 自定义 MyBatis 配置,在初始化期间注册自定义 TypeHandler。
    *
-   * <p>This is the recommended approach to ensure TypeHandlers are available when MyBatis parses
-   * XML mappers and generates autoResultMaps.
+   * <p>这是推荐的方法,可确保 MyBatis 解析 XML mapper 和生成 autoResultMap 时 TypeHandler 可用。
    *
-   * @param objectMapper the Spring-managed object mapper for consistent JSON processing
-   * @return a configuration customizer that registers type handlers
+   * @param objectMapper Spring 管理的对象映射器,用于一致的 JSON 处理
+   * @return 注册类型处理器的配置自定义器
    */
   @Bean
   public ConfigurationCustomizer configurationCustomizer(ObjectMapper objectMapper) {
-    log.info("Registering custom TypeHandlers for JSON field mapping");
+    log.info("为 JSON 字段映射注册自定义 TypeHandler");
     return configuration -> {
       configuration
           .getTypeHandlerRegistry()
           .register(JsonNode.class, new JsonToJsonNodeTypeHandler(objectMapper));
-      log.debug("Registered JsonToJsonNodeTypeHandler for JsonNode fields");
+      log.debug("已为 JsonNode 字段注册 JsonToJsonNodeTypeHandler");
     };
   }
 }

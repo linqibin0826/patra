@@ -10,21 +10,20 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Ingestion task DO</b> — table: <code>ing_task</code>
+ * 采集任务数据库实体,映射到表 {@code ing_task}。
  *
- * <p>Represents an executable task derived from a plan slice, bound to provenance, operation,
- * idempotent key, and lease.
+ * <p>表结构: 表示从计划切片派生的可执行任务,绑定到数据源、操作、幂等键和租约。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>idempotent_key</code> is globally unique (UK: uk_task_idem) to prevent duplicate
- *       tasks.
- *   <li><code>params</code> stores normalized task params; persisted with {@link
- *       JacksonTypeHandler}.
- *   <li>Lease fields (<code>lease_owner</code>/<code>leased_until</code>/<code>lease_count</code>)
- *       support preempt/renew models.
+ *   <li>{@code idempotent_key} 全局唯一(唯一约束: uk_task_idem),防止重复任务
+ *   <li>{@code params} 存储规范化的任务参数;通过 {@link JacksonTypeHandler} 持久化
+ *   <li>租约字段({@code lease_owner}/{@code leased_until}/{@code lease_count}) 支持抢占/续约模型
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 /**
- * Persistence entity mapped to {@code sys_dict_item_alias}.
+ * 数据库实体,映射到表 {@code sys_dict_item_alias}.
  *
  * <p>Provides external aliases so that partner systems can reference internal dictionary items.
  *
@@ -44,11 +44,11 @@ public class RegSysDictItemAliasDO extends BaseDO {
   @TableField("external_code")
   private String externalCode;
 
-  /** Optional human-readable label coming from the upstream system. */
+  /** 可选的 human-readable label coming from the upstream system. */
   @TableField("external_label")
   private String externalLabel;
 
-  /** Optional notes describing the mapping context or any special behaviour. */
+  /** 可选的 notes describing the mapping context or any special behaviour. */
   @TableField("notes")
   private String notes;
 }

@@ -1,46 +1,42 @@
 /**
- * Internal REST API endpoints for microservice-to-microservice communication.
+ * 微服务间通信的内部 REST API 端点。
  *
- * <p>This package contains driving adapters that receive HTTP requests from other internal
- * microservices (via Feign clients) and translate them into application use case calls. All classes
- * here are part of the Hexagonal Architecture's adapter layer (External → System direction).
+ * <p>此包包含驱动适配器,用于接收来自其他内部微服务(通过 Feign 客户端)的 HTTP 请求并将其转换为应用程序用例调用。此处的所有类都是六边形架构适配器层的一部分(外部 → 系统方向)。
  *
- * <h2>API Audience</h2>
+ * <h2>API 受众</h2>
  *
- * These endpoints are designed for <strong>internal microservice communication</strong>:
+ * 这些端点设计用于<strong>内部微服务通信</strong>:
  *
  * <ul>
- *   <li>Consumed by Feign clients in other microservices (e.g., {@code
- *       patra-ingest-infra/integration/storage/})
- *   <li>NOT intended for external public access
- *   <li>May have relaxed security constraints compared to public APIs
- *   <li>Optimized for high-throughput internal operations
+ *   <li>由其他微服务中的 Feign 客户端使用(例如,{@code patra-ingest-infra/integration/storage/})
+ *   <li>不适用于外部公共访问
+ *   <li>与公共 API 相比可能具有宽松的安全约束
+ *   <li>针对高吞吐量内部操作进行了优化
  * </ul>
  *
- * <h2>Responsibilities</h2>
+ * <h2>职责</h2>
  *
  * <ul>
- *   <li>Implement OpenAPI endpoint contracts defined in {@code patra-storage-api}
- *   <li>Validate request DTOs using {@code @Valid} annotations
- *   <li>Delegate to {@code RecordUploadOrchestrator} and other orchestrators
- *   <li>Convert domain results to API response DTOs
- *   <li>Map domain exceptions to HTTP ProblemDetail responses
+ *   <li>实现 {@code patra-storage-api} 中定义的 OpenAPI 端点契约
+ *   <li>使用 {@code @Valid} 注解验证请求 DTO
+ *   <li>委托给 {@code RecordUploadOrchestrator} 和其他编排器
+ *   <li>将领域结果转换为 API 响应 DTO
+ *   <li>将领域异常映射到 HTTP ProblemDetail 响应
  * </ul>
  *
- * <h2>Security Considerations</h2>
+ * <h2>安全考虑</h2>
  *
  * <ul>
- *   <li>Internal APIs should be protected by network-level security (e.g., service mesh, VPC)
- *   <li>Authentication may use service-to-service tokens (e.g., JWT with service identity)
- *   <li>Consider rate limiting to protect against misconfigured consumers
+ *   <li>内部 API 应受网络级安全保护(例如,服务网格、VPC)
+ *   <li>身份验证可以使用服务到服务令牌(例如,带有服务身份的 JWT)
+ *   <li>考虑速率限制以防止配置错误的消费者
  * </ul>
  *
- * <h2>Future Extension</h2>
+ * <h2>未来扩展</h2>
  *
- * If public-facing APIs are needed, create a separate {@code adapter.rest.public} package with
- * appropriate security hardening.
+ * 如果需要面向公众的 API,请使用适当的安全加固创建单独的 {@code adapter.rest.public} 包。
  *
- * <h2>Example</h2>
+ * <h2>示例</h2>
  *
  * <pre>{@code
  * @RestController

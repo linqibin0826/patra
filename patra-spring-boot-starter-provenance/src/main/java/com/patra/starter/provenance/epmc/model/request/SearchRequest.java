@@ -5,19 +5,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Europe PMC search API request parameters.
+ * Europe PMC 搜索API请求参数
  *
- * <p>Field descriptions:
+ * <p>Europe PMC支持Lucene风格的查询语法，提供丰富的过滤和排序选项。
  *
- * @param query Lucene-style search query string
- * @param format response format (json or xml)
- * @param pageSize number of records requested per page
- * @param cursorMark cursor token for deep paging
- * @param sort sorting strategy string supported by EPMC
- * @param resultType result projection (lite, core, etc.)
- * @param synonym whether to expand the query with synonyms
- * @param fromSearchPost flag indicating POST based execution
- * @param searchType optional search context modifier
+ * <p>参数说明：
+ *
+ * @param query Lucene风格的搜索查询字符串（必需）
+ * @param format 响应格式（json或xml），默认json
+ * @param pageSize 每页返回的记录数
+ * @param cursorMark 游标令牌，用于深度分页
+ * @param sort EPMC支持的排序策略字符串
+ * @param resultType 结果投影类型（lite、core等）
+ * @param synonym 是否用同义词扩展查询
+ * @param fromSearchPost 标识是否基于POST执行
+ * @param searchType 可选的搜索上下文修饰符
  * @author linqibin
  * @since 0.1.0
  */
@@ -34,9 +36,9 @@ public record SearchRequest(
     implements ApiRequest {
 
   /**
-   * Create a request using JSON output and default paging.
+   * 使用JSON输出和默认分页创建请求
    *
-   * @param query Lucene-style search query
+   * @param query Lucene风格的搜索查询
    */
   public SearchRequest(String query) {
     this(query, "json", null, null, null, null, null, null, null);
@@ -44,7 +46,7 @@ public record SearchRequest(
 
   public SearchRequest {
     if (query == null || query.isBlank()) {
-      throw new IllegalArgumentException("query cannot be null or blank");
+      throw new IllegalArgumentException("query 参数不能为null或空白");
     }
     if (format == null || format.isBlank()) {
       format = "json";
@@ -52,9 +54,9 @@ public record SearchRequest(
   }
 
   /**
-   * Compose the outbound query parameter map understood by the Europe PMC endpoint.
+   * 组装Europe PMC端点理解的查询参数映射
    *
-   * @return parameter map ready for gateway submission
+   * @return 准备提交到网关的参数映射
    */
   @Override
   public Map<String, String> toQueryParams() {

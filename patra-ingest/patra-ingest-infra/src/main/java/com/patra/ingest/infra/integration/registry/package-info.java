@@ -1,18 +1,14 @@
 /**
- * patra-registry service integration adapters.
+ * patra-registry 服务集成适配器。
  *
- * <p>This package contains adapters for integrating with the patra-registry microservice, which
- * serves as the Single Source of Truth (SSOT) for provenance configurations, dictionaries, and
- * metadata.
+ * <p>此包包含与 patra-registry 微服务集成的适配器,该服务作为溯源配置、字典和元数据的单一事实来源(SSOT)。
  *
- * <p>Key components:
+ * <p>关键组件:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.infra.integration.registry.PatraRegistryAdapter} - Implements
- *       {@link com.patra.ingest.domain.port.PatraRegistryPort} for fetching provenance
- *       configurations
- *   <li>{@code converter/} - Anti-Corruption Layer (ACL) for translating registry DTOs to domain
- *       snapshots
+ *   <li>{@link com.patra.ingest.infra.integration.registry.PatraRegistryAdapter} - 实现 {@link
+ *       com.patra.ingest.domain.port.PatraRegistryPort} 用于获取溯源配置
+ *   <li>{@code converter/} - 防腐层(ACL),用于将注册中心 DTO 转换为领域快照
  * </ul>
  *
  * @since 0.1.0

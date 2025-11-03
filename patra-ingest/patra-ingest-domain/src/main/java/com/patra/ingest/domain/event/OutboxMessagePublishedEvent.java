@@ -3,29 +3,27 @@ package com.patra.ingest.domain.event;
 import java.time.Instant;
 
 /**
- * Domain event emitted when an outbox message is successfully published.
+ * Outbox 消息成功发布领域事件,当 Outbox 消息成功发布时触发。
  *
- * <p>Trigger: fired immediately after the outbox record is delivered to the message broker and
- * marked as {@code PUBLISHED}.
+ * <p>触发条件:在 Outbox 记录交付到消息代理并标记为 {@code PUBLISHED} 后立即触发。
  *
- * <p>Usage:
+ * <p>用途:
  *
  * <ul>
- *   <li>Metrics: measure success rates and partition distribution for each channel.
- *   <li>Audit: track successful message publications for monitoring and alerting.
- *   <li>Downstream: optional consumers can build second-stage fan-out or populate caches.
+ *   <li>指标:测量每个通道的成功率和分区分布
+ *   <li>审计:跟踪成功的消息发布以进行监控和告警
+ *   <li>下游:可选消费者可以构建第二阶段扇出或填充缓存
  * </ul>
  *
- * <p>Idempotency: each {@code messageId} should emit this event once; listeners that require
- * additional idempotency can reuse {@code messageId} as their key.
+ * <p>幂等性:每个 {@code messageId} 应只触发一次此事件;需要额外幂等性的监听器可以重用 {@code messageId} 作为其键。
  */
 public record OutboxMessagePublishedEvent(
-    /** Primary identifier of the outbox record. */
+    /** Outbox 记录的主标识符。 */
     Long messageId,
-    /** Logical channel (topic/stream) used during publishing. */
+    /** 发布期间使用的逻辑通道(主题/流)。 */
     String channel,
-    /** Partition routing key, potentially hashed by the broker. */
+    /** 分区路由键,可能由代理进行哈希。 */
     String partitionKey,
-    /** UTC timestamp when the event occurred. */
+    /** 事件发生的 UTC 时间戳。 */
     Instant occurredAt)
     implements OutboxRelayDomainEvent {}

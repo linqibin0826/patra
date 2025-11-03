@@ -11,11 +11,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Orchestrates expression configuration query operations.
+ * 表达式配置查询编排器。
  *
- * <p>Coordinates retrieval of expression snapshots from the domain layer and conversion to query
- * DTOs for external consumption. Handles field dictionaries, capabilities, render rules, and API
- * parameter mappings.
+ * <p>职责：
+ *
+ * <ul>
+ *   <li>编排表达式快照的查询用例
+ *   <li>协调领域仓储检索表达式元数据
+ *   <li>将领域对象转换为查询 DTO 供外部消费
+ * </ul>
+ *
+ * <p>典型用例：
+ *
+ * <ul>
+ *   <li>加载数据源的完整表达式快照(字段字典、能力、渲染规则、API 参数映射)
+ *   <li>支持按操作类型和端点名称过滤
+ *   <li>支持时态切片查询
+ * </ul>
+ *
+ * <p>设计模式：应用服务编排,不包含业务逻辑,仅负责用例协调和对象转换。
  *
  * @author linqibin
  * @since 0.1.0
@@ -29,17 +43,23 @@ public class ExprQueryOrchestrator {
   private final ExprQueryAssembler assembler;
 
   /**
-   * Loads the aggregated expression snapshot for a specific provenance.
+   * 加载数据源的完整表达式快照。
    *
-   * <p>Retrieves effective expression configuration by resolving temporal slices at the given
-   * instant, filtered by operation type and endpoint name.
+   * <p>用例说明：
    *
-   * @param provenanceCode the provenance code to load snapshot for
-   * @param operationType the operation type discriminator (e.g., HARVEST/UPDATE); {@code null}
-   *     means ALL
-   * @param endpointName the endpoint name (e.g., SEARCH/DETAIL); {@code null} means all endpoints
-   * @param at the instant to query effective configs; {@code null} defaults to current time
-   * @return the expression snapshot query DTO
+   * <ul>
+   *   <li>通过时态切片机制查询指定时间点的有效表达式配置
+   *   <li>支持按操作类型(如 HARVEST、UPDATE)和端点名称(如 SEARCH、DETAIL)过滤
+   *   <li>整合字段定义、能力、渲染规则和 API 参数映射为统一快照
+   * </ul>
+   *
+   * <p>事务边界：只读查询,无需事务管理。
+   *
+   * @param provenanceCode 数据源代码字符串(如 "PUBMED")
+   * @param operationType 操作类型(如 HARVEST/UPDATE);{@code null} 表示查询所有类型
+   * @param endpointName 端点名称(如 SEARCH/DETAIL);{@code null} 表示查询所有端点
+   * @param at 查询有效配置的时间点;{@code null} 默认使用当前时间
+   * @return 表达式快照查询 DTO
    */
   public ExprSnapshotQuery loadSnapshot(
       String provenanceCode, String operationType, String endpointName, Instant at) {
@@ -50,7 +70,7 @@ public class ExprQueryOrchestrator {
     ExprSnapshotQuery snapshot = assembler.toQuery(domainSnapshot);
 
     log.info(
-        "Loaded expression snapshot for provenance [{}] operation [{}] endpoint [{}]: {} fields, {} capabilities, {} render rules, {} API params",
+        "加载表达式快照成功 - 数据源: [{}], 操作类型: [{}], 端点: [{}] | 字段: {}, 能力: {}, 渲染规则: {}, API参数: {}",
         code.getCode(),
         operationType,
         endpointName,

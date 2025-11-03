@@ -6,22 +6,30 @@ import com.patra.starter.expr.compiler.model.CompileRequest;
 import com.patra.starter.expr.compiler.model.CompileRequestBuilder;
 import com.patra.starter.expr.compiler.model.CompileResult;
 
+/**
+ * 表达式编译器,将领域表达式编译为数据源特定的查询参数。
+ *
+ * <p>编译器使用标准键(std_key)而非数据源特定参数名,通过数据源映射将标准键转换为提供商参数。
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
 public interface ExprCompiler {
 
   /**
-   * Compiles an expression into provider-specific query text and parameter bindings.
+   * 将表达式编译为提供商特定的查询文本和参数绑定。
    *
-   * @param request compile request
-   * @return compilation outcome
+   * @param request 编译请求
+   * @return 编译结果
    */
   CompileResult compile(CompileRequest request);
 
   /**
-   * Convenience overload that uses default compile options and the SEARCH operation type.
+   * 便捷重载方法,使用默认编译选项和 SEARCH 操作类型。
    *
-   * @param expression expression to compile
-   * @param provenance provenance code identifying the data source
-   * @return compilation outcome
+   * @param expression 待编译的表达式
+   * @param provenance 标识数据源的溯源代码
+   * @return 编译结果
    */
   default CompileResult compile(Expr expression, ProvenanceCode provenance) {
     CompileRequest request = CompileRequestBuilder.of(expression, provenance).build();
@@ -29,13 +37,12 @@ public interface ExprCompiler {
   }
 
   /**
-   * Convenience overload that selects a custom operation type while keeping default options.
+   * 便捷重载方法,选择自定义操作类型,同时保持默认选项。
    *
-   * @param expression expression to compile
-   * @param provenance provenance code identifying the data source
-   * @param operationType operation slice (e.g. HARVEST/UPDATE; {@code null} defers to provenance
-   *     defaults)
-   * @return compilation outcome
+   * @param expression 待编译的表达式
+   * @param provenance 标识数据源的溯源代码
+   * @param operationType 操作切片(如 HARVEST/UPDATE;{@code null} 时使用溯源默认值)
+   * @return 编译结果
    */
   default CompileResult compile(Expr expression, ProvenanceCode provenance, String operationType) {
     CompileRequest request =
@@ -44,14 +51,13 @@ public interface ExprCompiler {
   }
 
   /**
-   * Convenience overload that specifies both operation type and endpoint name.
+   * 便捷重载方法,同时指定操作类型和端点名称。
    *
-   * @param expression expression to compile
-   * @param provenance provenance code identifying the data source
-   * @param operationType operation slice (e.g. HARVEST/UPDATE; {@code null} defers to provenance
-   *     defaults)
-   * @param endpointName endpoint identifier
-   * @return compilation outcome
+   * @param expression 待编译的表达式
+   * @param provenance 标识数据源的溯源代码
+   * @param operationType 操作切片(如 HARVEST/UPDATE;{@code null} 时使用溯源默认值)
+   * @param endpointName 端点标识符
+   * @return 编译结果
    */
   default CompileResult compile(
       Expr expression, ProvenanceCode provenance, String operationType, String endpointName) {

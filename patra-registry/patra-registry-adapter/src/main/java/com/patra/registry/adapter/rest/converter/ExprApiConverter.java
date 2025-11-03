@@ -15,10 +15,20 @@ import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 
 /**
- * MapStruct converter for transforming expression query DTOs to API response DTOs.
+ * Expression 查询 DTO 到 API 响应 DTO 的转换器。
  *
- * <p>Maps read-side domain query objects to external API contract DTOs for consumption by Feign
- * clients from other microservices.
+ * <p>使用 MapStruct 自动生成转换代码,将读侧领域查询对象转换为外部 API 契约 DTO,供其他微服务的 Feign 客户端消费。
+ *
+ * <p>转换方法:
+ *
+ * <ul>
+ *   <li>{@link #toResp(ExprFieldQuery)} - 转换单个字段查询对象
+ *   <li>{@link #toResp(List)} - 转换字段查询对象列表
+ *   <li>{@link #toResp(ApiParamMappingQuery)} - 转换 API 参数映射查询对象
+ *   <li>{@link #toResp(ExprCapabilityQuery)} - 转换能力查询对象
+ *   <li>{@link #toResp(ExprRenderRuleQuery)} - 转换渲染规则查询对象
+ *   <li>{@link #toResp(ExprSnapshotQuery)} - 转换聚合快照查询对象
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -27,50 +37,50 @@ import org.mapstruct.ReportingPolicy;
 public interface ExprApiConverter {
 
   /**
-   * Converts a single expression field query model to an API response DTO.
+   * 转换单个表达式字段查询对象为 API 响应 DTO。
    *
-   * @param query the field query model produced by application layer
-   * @return the response DTO exposed by the RPC contract
+   * @param query 应用层产生的字段查询对象
+   * @return RPC 契约暴露的响应 DTO
    */
   ExprFieldResp toResp(ExprFieldQuery query);
 
   /**
-   * Converts expression field query models to API response DTOs.
+   * 转换表达式字段查询对象列表为 API 响应 DTO 列表。
    *
-   * @param queries the collection of field query models
-   * @return the list of response DTOs preserving iteration order
+   * @param queries 字段查询对象集合
+   * @return 响应 DTO 列表,保持迭代顺序
    */
   List<ExprFieldResp> toResp(List<ExprFieldQuery> queries);
 
   /**
-   * Converts an API parameter mapping query model to its response DTO.
+   * 转换 API 参数映射查询对象为响应 DTO。
    *
-   * @param query the mapping query model produced by application layer
-   * @return the API response DTO reflecting the mapping configuration
+   * @param query 应用层产生的映射查询对象
+   * @return 反映映射配置的 API 响应 DTO
    */
   ApiParamMappingResp toResp(ApiParamMappingQuery query);
 
   /**
-   * Converts an expression capability query model to an API response DTO.
+   * 转换表达式能力查询对象为 API 响应 DTO。
    *
-   * @param query the capability query model
-   * @return the response DTO consumed by downstream clients
+   * @param query 能力查询对象
+   * @return 下游客户端消费的响应 DTO
    */
   ExprCapabilityResp toResp(ExprCapabilityQuery query);
 
   /**
-   * Converts an expression render rule query model to an API response DTO.
+   * 转换表达式渲染规则查询对象为 API 响应 DTO。
    *
-   * @param query the render rule query model
-   * @return the render rule response DTO
+   * @param query 渲染规则查询对象
+   * @return 渲染规则响应 DTO
    */
   ExprRenderRuleResp toResp(ExprRenderRuleQuery query);
 
   /**
-   * Converts an aggregated expression snapshot query model to an API response DTO.
+   * 转换聚合表达式快照查询对象为 API 响应 DTO。
    *
-   * @param query the aggregated snapshot query model
-   * @return the snapshot response DTO distributed to callers
+   * @param query 聚合快照查询对象
+   * @return 分发给调用者的快照响应 DTO
    */
   ExprSnapshotResp toResp(ExprSnapshotQuery query);
 }

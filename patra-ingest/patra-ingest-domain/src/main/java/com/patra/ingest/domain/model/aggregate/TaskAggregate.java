@@ -11,10 +11,42 @@ import java.time.Instant;
 import lombok.Getter;
 
 /**
- * Aggregate root for ingestion tasks. Encapsulates scheduling metadata, execution progress, lease
- * ownership, and retry bookkeeping required to orchestrate task lifecycles.
+ * 采集任务聚合根。封装数据采集任务的原子工作单元，包含调度元数据、执行进度、租约管理和重试簿记。
  *
- * <p>Supports idempotency key generation, execution state transitions, and compensation flows.
+ * <p>一致性边界：
+ *
+ * <ul>
+ *   <li>任务的参数快照、幂等键在整个生命周期中保持不可变
+ *   <li>租约信息确保分布式环境下的任务互斥执行
+ *   <li>执行时间线记录任务的完整生命周期
+ * </ul>
+ *
+ * <p>业务规则：
+ *
+ * <ul>
+ *   <li>任务创建时处于 {@code QUEUED} 状态，等待工作者拉取
+ *   <li>工作者获取租约后转换为 {@code RUNNING} 状态
+ *   <li>执行成功后转换为 {@code SUCCEEDED} 状态，发布 {@link TaskCompletedEvent}
+ *   <li>执行失败后转换为 {@code FAILED} 状态，可根据重试策略重新入队
+ *   <li>租约到期后任务可被其他工作者重新获取
+ *   <li>幂等键 = hash(provenance + operation + params) 确保任务去重
+ * </ul>
+ *
+ * <p>状态转换：
+ *
+ * <ul>
+ *   <li>{@code QUEUED} → {@code RUNNING}: 工作者获取租约并开始执行
+ *   <li>{@code RUNNING} → {@code SUCCEEDED}: 任务执行成功
+ *   <li>{@code RUNNING} → {@code FAILED}: 任务执行失败
+ *   <li>{@code FAILED} → {@code QUEUED}: 根据重试策略重新入队
+ * </ul>
+ *
+ * <p>领域事件：
+ *
+ * <ul>
+ *   <li>{@link TaskQueuedEvent}: 任务创建时发布，通知工作者拉取
+ *   <li>{@link TaskCompletedEvent}: 任务完成时发布，触发切片和计划状态聚合
+ * </ul>
  *
  * @author linqibin
  * @since 0.1.0
@@ -22,58 +54,58 @@ import lombok.Getter;
 @Getter
 public class TaskAggregate extends AggregateRoot<Long> {
 
-  /** Scheduler instance identifier. */
+  /** 调度实例标识。 */
   private Long scheduleInstanceId;
 
-  /** Owning plan identifier. */
+  /** 所属计划标识。 */
   private Long planId;
 
-  /** Owning slice identifier. */
+  /** 所属切片标识。 */
   private Long sliceId;
 
-  /** Provenance/source code. */
+  /** 数据来源代码（如：pubmed）。 */
   private final String provenanceCode;
 
-  /** Operation code. */
+  /** 操作代码（如：harvest、update）。 */
   private final String operationCode;
 
-  /** Task parameter payload in JSON. */
+  /** 任务参数载荷（JSON 格式）。 */
   private final String paramsJson;
 
-  /** Idempotency key. */
+  /** 幂等键，用于任务去重。 */
   private final String idempotentKey;
 
-  /** Expression hash. */
+  /** 表达式哈希值。 */
   private final String exprHash;
 
-  /** Scheduling priority. */
+  /** 调度优先级。 */
   private final Integer priority;
 
-  /** Scheduled execution time. */
+  /** 计划执行时间。 */
   private final Instant scheduledAt;
 
-  /** Timestamp of the last heartbeat. */
+  /** 最后心跳时间戳。 */
   private final Instant lastHeartbeatAt;
 
-  /** Retry count. */
+  /** 重试次数。 */
   private final Integer retryCount;
 
-  /** Most recent error code. */
+  /** 最近错误代码。 */
   private final String lastErrorCode;
 
-  /** Most recent error message. */
+  /** 最近错误消息。 */
   private final String lastErrorMsg;
 
-  /** Current task status. */
+  /** 任务当前状态。 */
   private TaskStatus status;
 
-  /** Lease ownership metadata. */
+  /** 租约所有权元数据（owner + leasedUntil）。 */
   private LeaseInfo leaseInfo;
 
-  /** Execution timeline markers. */
+  /** 执行时间线标记（startedAt + completedAt）。 */
   private ExecutionTimeline executionTimeline;
 
-  /** Scheduler context propagated with the task. */
+  /** 随任务传播的调度器上下文。 */
   private TaskSchedulerContext schedulerContext;
 
   private TaskAggregate(
@@ -120,19 +152,19 @@ public class TaskAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Create a new task aggregate in the queued state.
+   * 创建新的任务聚合根，初始状态为队列中 (QUEUED)。
    *
-   * @param scheduleInstanceId scheduler instance identifier
-   * @param planId owning plan identifier
-   * @param sliceId owning slice identifier placeholder
-   * @param provenanceCode provenance/source code
-   * @param operationCode operation code
-   * @param paramsJson task parameter payload in JSON
-   * @param idempotentKey idempotency key
-   * @param exprHash expression hash
-   * @param priority scheduling priority
-   * @param scheduledAt scheduled execution time
-   * @return new task aggregate ready for persistence
+   * @param scheduleInstanceId 调度实例标识
+   * @param planId 所属计划标识
+   * @param sliceId 所属切片标识占位符
+   * @param provenanceCode 数据来源代码
+   * @param operationCode 操作代码
+   * @param paramsJson 任务参数载荷（JSON 格式）
+   * @param idempotentKey 幂等键
+   * @param exprHash 表达式哈希
+   * @param priority 调度优先级
+   * @param scheduledAt 计划执行时间
+   * @return 新创建的任务聚合根，准备持久化
    */
   public static TaskAggregate create(
       Long scheduleInstanceId,
@@ -168,29 +200,29 @@ public class TaskAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Rebuilds an existing task aggregate from persisted state.
+   * 从持久化状态重建已存在的任务聚合根。
    *
-   * @param id task identifier
-   * @param scheduleInstanceId scheduler instance identifier
-   * @param planId owning plan identifier
-   * @param sliceId owning slice identifier
-   * @param provenanceCode provenance/source code
-   * @param operationCode operation code
-   * @param paramsJson task parameter payload in JSON
-   * @param idempotentKey idempotency key
-   * @param exprHash expression hash
-   * @param priority scheduling priority
-   * @param scheduledAt scheduled execution time
-   * @param lastHeartbeatAt timestamp of last heartbeat
-   * @param retryCount retry count
-   * @param lastErrorCode most recent error code
-   * @param lastErrorMsg most recent error message
-   * @param status current task status
-   * @param leaseInfo lease ownership metadata
-   * @param executionTimeline execution timeline markers
-   * @param schedulerContext scheduler context
-   * @param version optimistic locking version
-   * @return restored task aggregate
+   * @param id 任务标识
+   * @param scheduleInstanceId 调度实例标识
+   * @param planId 所属计划标识
+   * @param sliceId 所属切片标识
+   * @param provenanceCode 数据来源代码
+   * @param operationCode 操作代码
+   * @param paramsJson 任务参数载荷（JSON 格式）
+   * @param idempotentKey 幂等键
+   * @param exprHash 表达式哈希
+   * @param priority 调度优先级
+   * @param scheduledAt 计划执行时间
+   * @param lastHeartbeatAt 最后心跳时间戳
+   * @param retryCount 重试次数
+   * @param lastErrorCode 最近错误代码
+   * @param lastErrorMsg 最近错误消息
+   * @param status 当前任务状态
+   * @param leaseInfo 租约所有权元数据
+   * @param executionTimeline 执行时间线标记
+   * @param schedulerContext 调度器上下文
+   * @param version 乐观锁版本
+   * @return 从持久化重建的任务聚合根
    */
   public static TaskAggregate restore(
       Long id,
@@ -281,10 +313,10 @@ public class TaskAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Binds this task to a specific plan and slice after persistence.
+   * 在持久化后将任务绑定到特定计划和切片。
    *
-   * @param planId plan identifier
-   * @param sliceId slice identifier
+   * @param planId 计划标识
+   * @param sliceId 切片标识
    */
   public void bindPlanAndSlice(Long planId, Long sliceId) {
     this.planId = planId;
@@ -292,11 +324,11 @@ public class TaskAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Emits a domain event when the task is ready to be queued.
+   * 当任务准备入队时发布领域事件。
    *
-   * <p>Application layer should publish this event to the message queue.
+   * <p>应用层应将此事件发布到消息队列。
    *
-   * @return task queued event
+   * @return 任务入队事件
    */
   public TaskQueuedEvent raiseQueuedEvent() {
     TaskQueuedEvent event =
@@ -315,16 +347,16 @@ public class TaskAggregate extends AggregateRoot<Long> {
     return event;
   }
 
-  /** Marks the task as queued. */
+  /** 将任务标记为队列中状态。 */
   public void markQueued() {
     this.status = TaskStatus.QUEUED;
   }
 
   /**
-   * Marks the task as running and records execution context.
+   * 将任务标记为运行中并记录执行上下文。
    *
-   * @param startedAt execution start time
-   * @param correlationId correlation identifier for tracing
+   * @param startedAt 执行开始时间
+   * @param correlationId 跟踪关联标识
    */
   public void markRunning(Instant startedAt, String correlationId) {
     this.executionTimeline = executionTimeline.onStart(startedAt);
@@ -333,30 +365,30 @@ public class TaskAggregate extends AggregateRoot<Long> {
   }
 
   /**
-   * Marks the task as succeeded.
+   * 将任务标记为执行成功。
    *
-   * @param finishedAt execution finish time
+   * @param finishedAt 执行完成时间
    */
   public void markSucceeded(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.SUCCEEDED;
 
-    // Publish domain event to trigger Slice and Plan status aggregation
+    // 发布领域事件以触发切片和计划状态聚合
     addDomainEvent(
         TaskCompletedEvent.of(
             this.getId(), this.sliceId, this.planId, TaskStatus.SUCCEEDED.getCode(), finishedAt));
   }
 
   /**
-   * Marks the task as failed.
+   * 将任务标记为执行失败。
    *
-   * @param finishedAt execution finish time
+   * @param finishedAt 执行完成时间
    */
   public void markFailed(Instant finishedAt) {
     this.executionTimeline = executionTimeline.onFinish(finishedAt);
     this.status = TaskStatus.FAILED;
 
-    // Publish domain event to trigger Slice and Plan status aggregation
+    // 发布领域事件以触发切片和计划状态聚合
     addDomainEvent(
         TaskCompletedEvent.ofFailure(
             this.getId(),
@@ -368,40 +400,40 @@ public class TaskAggregate extends AggregateRoot<Long> {
             finishedAt));
   }
 
-  // Note: markPartial(), markCursorPending(), markCancelled() methods removed after refactoring
-  // - PARTIAL status moved to TaskRun layer for resumable execution tracking
-  // - CURSOR_PENDING status merged into TaskRun.PARTIAL with checkpoint support
-  // - CANCELLED status removed (cancellation not supported in current design)
+  // 注意：markPartial()、markCursorPending()、markCancelled() 方法已在重构后移除
+  // - PARTIAL 状态已移至 TaskRun 层用于可恢复执行跟踪
+  // - CURSOR_PENDING 状态已合并到 TaskRun.PARTIAL 并支持检查点
+  // - CANCELLED 状态已移除（当前设计不支持取消操作）
 
   /**
-   * Acquires a lease for this task.
+   * 为此任务获取租约。
    *
-   * @param owner lease owner identifier
-   * @param leasedUntil lease expiration time
+   * @param owner 租约所有者标识
+   * @param leasedUntil 租约过期时间
    */
   public void acquireLease(String owner, Instant leasedUntil) {
     this.leaseInfo = leaseInfo.acquire(owner, leasedUntil);
   }
 
   /**
-   * Renews the existing lease.
+   * 续约现有租约。
    *
-   * @param owner lease owner identifier
-   * @param leasedUntil new lease expiration time
+   * @param owner 租约所有者标识
+   * @param leasedUntil 新的租约过期时间
    */
   public void renewLease(String owner, Instant leasedUntil) {
     this.leaseInfo = leaseInfo.renew(owner, leasedUntil);
   }
 
-  /** Releases the current lease. */
+  /** 释放当前租约。 */
   public void releaseLease() {
     this.leaseInfo = leaseInfo.release();
   }
 
   /**
-   * Resets the task for retry by clearing runtime context.
+   * 通过清除运行时上下文来重置任务以便重试。
    *
-   * <p>Releases lease, clears execution timeline and scheduler context, then marks as queued.
+   * <p>释放租约、清除执行时间线和调度器上下文，然后标记为队列中状态。
    */
   public void prepareForRetry() {
     releaseLease();

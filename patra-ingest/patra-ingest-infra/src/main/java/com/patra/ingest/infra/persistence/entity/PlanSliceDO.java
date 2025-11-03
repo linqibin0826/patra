@@ -9,19 +9,19 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * <b>Plan slice DO</b> — table: <code>ing_plan_slice</code>
+ * 计划切片数据库实体,映射到表 {@code ing_plan_slice}。
  *
- * <p>Represents the smallest idempotent execution unit derived from a plan by strategy. One task
- * per slice.
+ * <p>表结构: 表示通过策略从计划派生的最小幂等执行单元。每个切片对应一个任务。
  *
- * <p>Notes:
+ * <p>关键字段说明:
  *
  * <ul>
- *   <li><code>slice_signature_hash</code> is a normalized hash of <code>window_spec</code> (UK:
- *       uk_slice_signature) to prevent duplicates.
- *   <li><code>window_spec</code> and <code>expr_snapshot</code> are JSON ASTs stored via {@link
- *       JacksonTypeHandler}.
+ *   <li>{@code slice_signature_hash} 是 {@code window_spec} 的规范化哈希(唯一约束: uk_slice_signature),防止重复
+ *   <li>{@code window_spec} 和 {@code expr_snapshot} 通过 {@link JacksonTypeHandler} 以 JSON AST 形式存储
  * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

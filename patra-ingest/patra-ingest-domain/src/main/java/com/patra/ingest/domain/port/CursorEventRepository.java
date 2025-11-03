@@ -3,10 +3,18 @@ package com.patra.ingest.domain.port;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 
 /**
- * Repository port for cursor advancement events.
+ * Cursor 推进事件仓储端口(六边形架构 - Domain → Infrastructure)。
  *
- * <p>Persists append-only records to capture cursor lineage, enabling audit trails, state replay,
- * and monitoring.
+ * <p><b>职责</b>: 持久化 Cursor 推进的只追加(append-only)事件记录,捕获 Cursor 演化血缘,用于:
+ *
+ * <ul>
+ *   <li>审计跟踪 - 记录每次 Cursor 推进的完整上下文
+ *   <li>状态回放 - 支持历史状态重建
+ *   <li>监控告警 - 分析 Cursor 推进模式
+ * </ul>
+ *
+ * <p><b>端口语义</b>: 此接口是六边形架构中的 <b>仓储端口(Repository Port)</b>,定义在 Domain
+ * 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。
  *
  * @author linqibin
  * @since 0.1.0
@@ -14,10 +22,12 @@ import com.patra.ingest.domain.model.entity.CursorEvent;
 public interface CursorEventRepository {
 
   /**
-   * Persist a cursor advancement event.
+   * 持久化单个 Cursor 推进事件。
    *
-   * @param event cursor event containing identifiers, window, lineage, and metadata
-   * @return saved event, typically with a generated identifier
+   * <p><b>业务含义</b>: 记录一次 Cursor 推进的快照,包括推进窗口、来源批次、触发时间等元数据。
+   *
+   * @param event Cursor 事件实体,包含标识符、时间窗口、血缘信息、元数据
+   * @return 已持久化的事件实体(通常包含自动生成的标识符)
    */
   CursorEvent save(CursorEvent event);
 }

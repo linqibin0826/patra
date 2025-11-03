@@ -23,13 +23,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox Relay 定时任务。定期扫描 Outbox 表以获取可投递的消息并尝试发布它们。
+ * Outbox 消息中继定时任务。
  *
- * <p>工作流: 解析参数 → 构建命令(包含租约/重试设置) → 调用用例 → 报告结果。
+ * <p>定期扫描 Outbox 表以获取待投递的消息并尝试发布到 RocketMQ。实现事务性发件箱模式(Transactional Outbox Pattern),确保消息最终一致性投递。
  *
- * <p>幂等性: 租约所有者标识符包含 host + jobId + threadId + uuid 以区分并发实例。
+ * <p>执行流程:
  *
- * <p>失败模式: 业务失败会被包装到 {@link OutboxRelayExecutionException} 并重新抛出;XXL 标记任务失败。
+ * <ul>
+ *   <li>1. 解析 XXL-Job 参数(通道、批量大小、租约时长、重试策略等)
+ *   <li>2. 构建租约所有者标识符(host + jobId + threadId + uuid)
+ *   <li>3. 构建 OutboxRelayCommand 并委托给应用层用例
+ *   <li>4. 用例执行: 获取租约 → 发布消息 → 更新状态 → 释放租约
+ *   <li>5. 报告执行结果(获取/发布/重试/失败统计)
+ * </ul>
+ *
+ * <p>幂等性保证: 租约所有者标识符包含 hostname + jobId + threadId + uuid,确保并发实例之间不会冲突,同一条消息同一时间只能被一个执行器处理。
+ *
+ * <p>失败处理: 业务层失败会被包装为 {@link OutboxRelayExecutionException} 并重新抛出,由 XXL-Job 根据重试策略决定是否重试任务。
+ *
+ * <p>设计模式: 事务性发件箱模式 + 租约机制 - 保证消息最终一致性投递和分布式环境下的并发安全。
  */
 @Slf4j
 @Component

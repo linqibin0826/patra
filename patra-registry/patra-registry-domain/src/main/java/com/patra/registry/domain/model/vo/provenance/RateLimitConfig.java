@@ -4,41 +4,60 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import java.time.Instant;
 
 /**
- * Domain value object for {@code reg_prov_rate_limit_cfg}.
+ * 速率限制配置值对象,定义QPS/令牌桶、突发容量、最大并发等流控策略。
  *
- * <p>Configure QPS/token-bucket, burst capacity, max concurrency, by key/endpoint/IP/task
- * granularity, smoothing/adaptive, etc. Combined with retry and HTTP; may respect server rate
- * headers (Retry-After, RateLimit-*) for smoothing.
+ * <p><strong>不可变性</strong>:此对象一旦创建不可修改,通过值语义比较相等性。
  *
- * @author linqibin
- * @since 0.1.0
+ * <p><strong>业务约束</strong>:
+ *
+ * <ul>
+ *   <li>配置ID和数据源ID必须为正整数
+ *   <li>生效时间(effectiveFrom)不可为空,失效时间(effectiveTo)为null表示永久有效
+ *   <li>操作类型(operationType)为null时表示适用于所有操作(HARVEST/UPDATE/BACKFILL)
+ *   <li>所有限流参数为可选项,null表示不限制
+ * </ul>
+ *
+ * <p><strong>业务语义</strong>:
+ *
+ * <ul>
+ *   <li>并发控制:maxConcurrentRequests限制全局并发请求数,防止过载
+ *   <li>凭证级QPS:perCredentialQpsLimit限制每个API密钥/凭证的每秒查询数
+ *   <li>粒度选择:支持按密钥/端点/IP/任务等多种粒度限流
+ *   <li>平滑与自适应:可配合服务端速率头(Retry-After, RateLimit-*)动态调整
+ *   <li>令牌桶模式:支持突发容量,允许短时间内超出平均速率
+ *   <li>与重试和HTTP配置协同:共同保护API稳定性和遵守服务商限制
+ * </ul>
+ *
+ * @param id 配置主键,唯一标识此速率限制配置,必须为正整数
+ * @param provenanceId 数据源ID外键,引用{@code reg_provenance.id},必须为正整数
+ * @param operationType 操作类型,取值为{@code HARVEST/UPDATE/BACKFILL},null表示适用于所有操作
+ * @param effectiveFrom 配置生效时间(包含),标记此配置开始生效的时刻,不可为null
+ * @param effectiveTo 配置失效时间(不包含),null表示永久有效
+ * @param maxConcurrentRequests 全局最大并发请求数,null表示无并发限制
+ * @param perCredentialQpsLimit 每个凭证/API密钥的QPS(每秒查询数)限制,null表示无凭证级限制
+ * @author Papertrace Team
+ * @since 2.0
  */
 public record RateLimitConfig(
-    /* Primary key; unique rate limit configuration identifier */
     Long id,
-    /* Foreign key referencing reg_provenance.id */
     Long provenanceId,
-    /* Operation type discriminator (HARVEST/UPDATE/BACKFILL); null applies to all */
     String operationType,
-    /* Inclusive timestamp marking when this rate limit configuration becomes effective */
     Instant effectiveFrom,
-    /* Exclusive timestamp marking when this rate limit configuration expires; null means open-ended */
     Instant effectiveTo,
-    /* Maximum concurrent requests allowed globally; null means no concurrency limit */
     Integer maxConcurrentRequests,
-    /* QPS (Queries Per Second) limit per credential/API key; null means no per-credential limit */
     Integer perCredentialQpsLimit) {
   /**
-   * Canonical constructor with validation.
+   * 规范构造器,强制执行速率限制配置的业务约束。
    *
-   * @param id unique configuration identifier, must be positive
-   * @param provenanceId provenance identifier, must be positive
-   * @param operationType operation type discriminator, nullable
-   * @param effectiveFrom effective start timestamp, must not be null
-   * @param effectiveTo effective end timestamp, nullable (open-ended)
-   * @param maxConcurrentRequests maximum concurrent requests, nullable
-   * @param perCredentialQpsLimit per-credential QPS limit, nullable
-   * @throws DomainValidationException if validation fails
+   * <p>验证规则:
+   *
+   * <ul>
+   *   <li>配置ID和数据源ID必须为正整数
+   *   <li>生效时间不可为空
+   *   <li>所有字符串字段自动trim去除首尾空白
+   * </ul>
+   *
+   * @throws DomainValidationException 如果验证失败
    */
   public RateLimitConfig(
       Long id,

@@ -4,16 +4,16 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Dictionary health metrics for subsystem monitoring.
+ * 字典健康度指标,用于子系统监控。
  *
- * <p>Field descriptions:
+ * <p>字段说明:
  *
  * <ol>
- *   <li>totalTypes - total dictionary types registered
- *   <li>totalItems - total dictionary items across all types
- *   <li>enabledItems - enabled dictionary items across all types
- *   <li>typesWithoutDefault - type codes lacking a default item
- *   <li>typesWithMultipleDefaults - type codes having multiple default items
+ *   <li>totalTypes - 注册的字典类型总数
+ *   <li>totalItems - 所有类型的字典项总数
+ *   <li>enabledItems - 所有类型的启用字典项总数
+ *   <li>typesWithoutDefault - 缺少默认项的类型代码列表
+ *   <li>typesWithMultipleDefaults - 有多个默认项的类型代码列表
  * </ol>
  *
  * @author linqibin
@@ -26,23 +26,23 @@ public record DictionaryHealthResp(
     List<String> typesWithoutDefault,
     List<String> typesWithMultipleDefaults) {
   /**
-   * Canonical constructor enforcing invariants and creating defensive copies.
+   * 规范构造器,强制不变性约束并创建防御性副本。
    *
-   * @param totalTypes total dictionary types registered
-   * @param totalItems total dictionary items across all types
-   * @param enabledItems enabled dictionary items across all types
-   * @param typesWithoutDefault type codes lacking a default item
-   * @param typesWithMultipleDefaults type codes with multiple defaults configured
+   * @param totalTypes 注册的字典类型总数
+   * @param totalItems 所有类型的字典项总数
+   * @param enabledItems 所有类型的启用字典项总数
+   * @param typesWithoutDefault 缺少默认项的类型代码列表
+   * @param typesWithMultipleDefaults 有多个默认项的类型代码列表
    */
   public DictionaryHealthResp {
     if (totalTypes < 0) {
-      throw new IllegalArgumentException("Total types count cannot be negative");
+      throw new IllegalArgumentException("字典类型总数不能为负数");
     }
     if (totalItems < 0) {
-      throw new IllegalArgumentException("Total items count cannot be negative");
+      throw new IllegalArgumentException("字典项总数不能为负数");
     }
     if (enabledItems < 0) {
-      throw new IllegalArgumentException("Enabled items count cannot be negative");
+      throw new IllegalArgumentException("启用项总数不能为负数");
     }
     typesWithoutDefault =
         typesWithoutDefault != null ? List.copyOf(typesWithoutDefault) : Collections.emptyList();
@@ -53,9 +53,9 @@ public record DictionaryHealthResp(
   }
 
   /**
-   * Checks whether dictionary configuration is healthy.
+   * 检查字典配置是否健康。
    *
-   * @return {@code true} when no missing or duplicate defaults are detected
+   * @return 当未检测到缺失或重复的默认项时返回 {@code true}
    */
   public boolean isHealthy() {
     return typesWithoutDefault.isEmpty() && typesWithMultipleDefaults.isEmpty();

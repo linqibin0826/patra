@@ -3,13 +3,22 @@ package com.patra.ingest.domain.model.enums;
 import lombok.Getter;
 
 /**
- * Cursor advancement direction (DICT: ing_cursor_direction).
+ * 游标推进方向 (字典: ing_cursor_direction)。
  *
- * <p>Field mapping: {@code ing_cursor_event.direction_code → FORWARD/BACKFILL}.
+ * <p>字段映射: {@code ing_cursor_event.direction_code → FORWARD/BACKFILL}。
+ *
+ * <p>方向语义:
+ *
+ * <ul>
+ *   <li>FORWARD → 向前推进,用于增量数据采集
+ *   <li>BACKFILL → 向后回填,用于历史数据补全
+ * </ul>
  */
 @Getter
 public enum CursorDirection {
+  /** 向前;增量推进方向。 */
   FORWARD("FORWARD", "Forward"),
+  /** 回填;历史数据回填方向。 */
   BACKFILL("BACKFILL", "Backfill");
 
   private final String code;
@@ -22,12 +31,12 @@ public enum CursorDirection {
 
   public static CursorDirection fromCode(String value) {
     if (value == null) {
-      throw new IllegalArgumentException("Cursor direction code cannot be null");
+      throw new IllegalArgumentException("游标方向代码不能为 null");
     }
     String n = value.trim().toUpperCase();
     for (CursorDirection e : values()) {
       if (e.code.equals(n)) return e;
     }
-    throw new IllegalArgumentException("Unknown cursor direction code: " + value);
+    throw new IllegalArgumentException("未知的游标方向代码: " + value);
   }
 }

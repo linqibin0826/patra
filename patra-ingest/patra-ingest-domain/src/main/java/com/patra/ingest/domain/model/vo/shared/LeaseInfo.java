@@ -3,14 +3,15 @@ package com.patra.ingest.domain.model.vo.shared;
 import java.time.Instant;
 
 /**
- * Value object describing the lease assigned to a task.
+ * 任务租约信息值对象。
  *
- * <p>Tracks the current holder and expiration for distributed execution, supporting
- * acquire/renew/release flows.
+ * <p>跟踪分布式执行中的当前持有者和过期时间,支持获取/续约/释放流程。
  *
- * @param owner lease holder (instance/node identifier)
- * @param leasedUntil lease expiration in UTC
- * @param leaseCount number of acquisitions/renewals (must be >= 0)
+ * @param owner 租约持有者 (实例/节点标识符)
+ * @param leasedUntil 租约过期时间 (UTC)
+ * @param leaseCount 获取/续约次数 (必须 >= 0)
+ * @author linqibin
+ * @since 0.1.0
  */
 public record LeaseInfo(String owner, Instant leasedUntil, int leaseCount) {
 

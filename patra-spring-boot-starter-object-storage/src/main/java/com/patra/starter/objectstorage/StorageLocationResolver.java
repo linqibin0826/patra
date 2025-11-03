@@ -7,7 +7,14 @@ import java.util.Locale;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
-/** Resolves storage bucket and object key using configurable key generation strategy. */
+/**
+ * 存储位置解析器,使用可配置的键生成策略解析存储桶和对象键。
+ *
+ * <p><b>路径生成规则:</b> {@code {environment}-{serviceName}/{generatedKey}} <br>
+ * 例如: {@code dev-patra-ingest/2024/01/15/abc123.pdf}
+ *
+ * <p><b>默认键生成器:</b> {@link DatePartitionedKeyGenerator},按日期分区生成键。
+ */
 @Slf4j
 public class StorageLocationResolver {
 
@@ -16,12 +23,11 @@ public class StorageLocationResolver {
   private final ObjectKeyGenerator keyGenerator;
 
   /**
-   * Creates a resolver with the specified environment, service name, and key generator.
+   * 创建解析器,使用指定的环境、服务名和键生成器。
    *
-   * @param environment environment name (e.g., "dev", "prod")
-   * @param serviceName service name
-   * @param keyGenerator strategy for generating object keys (defaults to
-   *     DatePartitionedKeyGenerator if null)
+   * @param environment 环境名称(例如 "dev"、"prod")
+   * @param serviceName 服务名称
+   * @param keyGenerator 对象键生成策略(如果为 null 则默认使用 DatePartitionedKeyGenerator)
    */
   public StorageLocationResolver(
       String environment, String serviceName, ObjectKeyGenerator keyGenerator) {
@@ -30,14 +36,20 @@ public class StorageLocationResolver {
     this.keyGenerator = keyGenerator != null ? keyGenerator : DatePartitionedKeyGenerator.INSTANCE;
   }
 
+  /**
+   * 解析存储位置,根据上下文生成存储桶和对象键。
+   *
+   * @param context 存储上下文,包含业务类型、文件名、业务ID等信息
+   * @return 解析后的存储位置
+   */
   public StorageLocation resolve(StorageContext context) {
-    Objects.requireNonNull(context, "context must not be null");
+    Objects.requireNonNull(context, "context 不能为 null");
     context.validate();
     String bucket = resolveBucket();
     String objectKey = generateObjectKey(context);
     if (log.isDebugEnabled()) {
       log.debug(
-          "Resolved storage location bucket={} key={} businessId={} businessType={}",
+          "已解析存储位置 bucket={} key={} businessId={} businessType={}",
           bucket,
           objectKey,
           context.getBusinessId(),

@@ -4,20 +4,19 @@ import com.patra.common.domain.DomainEvent;
 import java.time.Instant;
 
 /**
- * Domain event emitted when a task enters the execution queue.
+ * 任务入队领域事件。当任务进入执行队列时发布。
  *
- * <p>Trigger: fired after a task is successfully created and persisted in a schedulable state.
+ * <p>触发时机：任务成功创建并持久化到可调度状态后触发。
  *
- * <p>Usage:
+ * <p>用途：
  *
  * <ul>
- *   <li>Metrics: measure task creation rate by provenance and operation dimensions.
- *   <li>Audit: trace scheduling instances and slices through to concrete tasks.
- *   <li>Downstream: update real-time monitoring dashboards.
+ *   <li>指标：按来源和操作维度度量任务创建速率
+ *   <li>审计：追溯调度实例和切片到具体任务的关联
+ *   <li>下游：更新实时监控仪表板
  * </ul>
  *
- * <p>Idempotency: {@code taskId} acts as the unique key. Duplicate emissions indicate an upstream
- * issue.
+ * <p>幂等性：{@code taskId} 作为唯一键。重复发布表明上游存在问题。
  */
 public record TaskQueuedEvent(
     /* Primary identifier of the task. */

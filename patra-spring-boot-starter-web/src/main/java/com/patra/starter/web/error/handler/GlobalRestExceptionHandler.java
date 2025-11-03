@@ -19,7 +19,41 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-/** 全局 REST 异常处理器，使用共享平台错误解析管道呈现 RFC 7807 {@link ProblemDetail} 文档。 */
+/**
+ * 全局 REST 异常处理器,使用共享平台错误解析管道呈现 RFC 7807 {@link ProblemDetail} 文档。
+ *
+ * <p>此处理器负责:
+ *
+ * <ul>
+ *   <li>捕获所有未处理的异常({@code @ExceptionHandler(Exception.class)})
+ *   <li>使用 {@link ProblemDetailAdapter} 将异常转换为 {@link ProblemDetail}
+ *   <li>处理验证异常({@link MethodArgumentNotValidException}),附加验证错误列表
+ *   <li>掩码敏感字段(通过 {@link ValidationErrorsFormatter})
+ *   <li>返回符合 RFC 7807 标准的 JSON 响应(Content-Type: application/problem+json)
+ * </ul>
+ *
+ * <p><b>响应格式示例:</b>
+ *
+ * <pre>{@code
+ * {
+ *   "type": "about:blank",
+ *   "title": "Bad Request",
+ *   "status": 400,
+ *   "detail": "Validation failed for object='userRequest'",
+ *   "instance": "/api/users",
+ *   "errorCode": "ERR_VALIDATION_FAILED",
+ *   "path": "/api/users",
+ *   "errors": [
+ *     { "field": "email", "code": "Email", "message": "must be a valid email" }
+ *   ]
+ * }
+ * }</pre>
+ *
+ * <p><b>优先级:</b> {@link Ordered#HIGHEST_PRECEDENCE},确保在其他异常处理器之前执行。
+ *
+ * @see ProblemDetailAdapter
+ * @see ValidationErrorsFormatter
+ */
 @Slf4j
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
