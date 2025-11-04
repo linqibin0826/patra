@@ -32,11 +32,60 @@
 
 ---
 
-## 概览 & Testing Pyramid
+## 测试命名规范
 
-Papertrace follows the **Testing Pyramid** approach: many fast unit tests, fewer integration tests, and minimal end-to-end tests. Tests are organized by layer (Domain, Application, Infrastructure, Adapter) to match Hexagonal Architecture.
+### 测试类命名
+- **单元测试**: `{被测试类名}Test.java`
+  - 示例: `ProvenanceTest.java`, `PlanAggregateTest.java`
+- **集成测试**: `{功能描述}IntegrationTest.java` 或 `{功能描述}IT.java`
+  - 示例: `EventChainIntegrationTest.java`, `OutboxPatternIT.java`
 
-**Core Principle**: Test each layer in isolation with appropriate test doubles (mocks, stubs, test containers).
+### 测试方法命名规则
+
+**格式**: `should{预期行为}When{前置条件}` 或 `should{预期行为}`
+
+**规则**:
+- ✅ **有前置条件时**使用 When: `shouldThrowExceptionWhenCodeIsNull()`
+- ✅ **无特殊条件时**可省略 When: `shouldCreateProvenanceWithValidFields()`
+- ✅ **所有测试方法**都必须添加 `@DisplayName` 注解，提供**中文描述**
+
+**示例**:
+```java
+@Test
+@DisplayName("应该使用有效字段创建 Provenance")
+void shouldCreateProvenanceWithValidFields() { }
+
+@Test
+@DisplayName("当 code 为 null 时应该抛出异常")
+void shouldThrowExceptionWhenCodeIsNull() { }
+
+@Test
+@DisplayName("应该拒绝空的 code")
+void shouldRejectNullCode() { }
+```
+
+### 测试类级别描述
+
+给测试类也添加类级别 `@DisplayName`，用中文说明测试的主体：
+
+```java
+@DisplayName("Provenance 值对象测试")
+class ProvenanceTest { }
+
+@DisplayName("Plan 聚合根测试")
+class PlanAggregateTest { }
+
+@DisplayName("Plan 数据持久化协调器测试")
+class PlanPersistenceCoordinatorTest { }
+```
+
+---
+
+## 测试金字塔概览
+
+Papertrace 项目采用**测试金字塔**方法论：包括大量快速的单元测试、较少的集成测试和最少的端到端测试。测试按层组织（领域层、应用层、基础设施层、适配器层），与六边形架构相匹配。
+
+**核心原则**: 使用适当的测试替身（Mocks、Stubs、TestContainers）对每一层进行隔离测试。
 
 ### 测试 Pyramid
 
@@ -108,110 +157,110 @@ patra-{service}/
 
 ---
 
-## Testing Pattern Recognition
+## 测试模式识别
 
-**目的**: Help AI identify code patterns and apply correct testing strategies.
+**目的**: 帮助开发者识别代码模式并应用正确的测试策略。
 
-### Code Pattern → Test Strategy Mapping
+### 代码模式 → 测试策略映射
 
-When you see specific code patterns, immediately know which testing approach to use:
+当你看到特定的代码模式时，立即知道应该使用哪种测试方法：
 
-| Code Feature | Context | Test Strategy | Key Verification Points | Reference |
-|--------------|---------|---------------|-------------------------|-----------|
-| `@TransactionalEventListener(phase = AFTER_COMMIT)` | Event Handler | Integration test + Mock Publisher | Event publishing, idempotency check, optimistic lock handling | [§4.3](#event-handler-testing) |
-| `Orchestrator + multiple Coordinators` | Use case coordination | Layered mocking | Call order (InOrder), exception wrapping | [§4.1](#orchestrator-testing), [§4.2](#coordinator-testing) |
-| `OutboxMessage.builder()...save()` | Outbox Pattern | Integration test + TestContainers | Atomicity with business data, dedupKey uniqueness | [§7.2](#outbox-pattern-testing) |
-| `@XxlJob` annotation | Scheduled job | Mock XxlJobHelper | Parameter parsing, job execution flow | [§6.2](#xxl-job-testing) |
-| `@RestController` + `@Valid` | REST endpoint | @WebMvcTest + MockMvc | Validation failure responses, ProblemDetail | [§6.1](#rest-controller-testing) |
-| `MapStruct` converter | DO ↔ Domain mapping | Unit test | Bidirectional mapping, null handling | [§5.2](#converter-testing) |
-| `@Transactional` | Transaction boundary | Integration test | Rollback scenarios, REQUIRES_NEW propagation | [§7.3](#transaction-boundary-testing) |
-| Aggregate with `version` field | Optimistic locking | Integration test | Concurrent update conflicts | [§7.4](#concurrency--optimistic-locking-testing) |
+| 代码特性 | 使用场景 | 测试策略 | 关键验证点 | 参考 |
+|---------|---------|----------|-----------|------|
+| `@TransactionalEventListener(phase = AFTER_COMMIT)` | 事件处理器 | 集成测试 + Mock 发布者 | 事件发布、幂等性检查、乐观锁处理 | [§4.3](#event-handler-testing) |
+| `Orchestrator + 多个 Coordinator` | 用例编排 | 分层 Mock | 调用顺序 (InOrder)、异常包装 | [§4.1](#orchestrator-testing), [§4.2](#coordinator-testing) |
+| `OutboxMessage.builder()...save()` | Outbox 模式 | 集成测试 + TestContainers | 业务数据原子性、dedupKey 唯一性 | [§7.2](#outbox-pattern-testing) |
+| `@XxlJob` 注解 | 定时任务 | Mock XxlJobHelper | 参数解析、任务执行流程 | [§6.2](#xxl-job-testing) |
+| `@RestController` + `@Valid` | REST 端点 | @WebMvcTest + MockMvc | 验证失败响应、ProblemDetail | [§6.1](#rest-controller-testing) |
+| `MapStruct` 转换器 | DO ↔ 领域模型映射 | 单元测试 | 双向映射、空值处理 | [§5.2](#converter-testing) |
+| `@Transactional` | 事务边界 | 集成测试 | 回滚场景、REQUIRES_NEW 传播 | [§7.3](#transaction-boundary-testing) |
+| 聚合根带 `version` 字段 | 乐观锁 | 集成测试 | 并发更新冲突 | [§7.4](#concurrency--optimistic-locking-testing) |
 
-### Decision Tree: Choose Test Type
+### 决策树：选择测试类型
 
 ```
-Q1: Does code have Spring dependencies (@Service, @Transactional, @Component)?
-├─ NO → Pure unit test (Domain Layer)
-│   - No mocks needed
-│   - Fast execution (<100ms)
-│   - Test business rules only
+问题1: 代码是否有 Spring 依赖 (@Service, @Transactional, @Component)?
+├─ 否 → 纯单元测试（领域层）
+│   - 无需 Mock
+│   - 快速执行 (<100ms)
+│   - 仅测试业务规则
 │
-└─ YES → Q2: Does it need a database?
-    ├─ NO → Spring mock test (Application Layer)
-    │   - Mock all Ports
-    │   - Use @ExtendWith(MockitoExtension.class)
-    │   - Verify orchestration logic
+└─ 是 → 问题2: 是否需要数据库？
+    ├─ 否 → Spring Mock 测试（应用层）
+    │   - Mock 所有 Port
+    │   - 使用 @ExtendWith(MockitoExtension.class)
+    │   - 验证编排逻辑
     │
-    └─ YES → Integration test (Integration Layer)
-        - Use @SpringBootTest
-        - Use TestContainers for real database
-        - Test full workflow
+    └─ 是 → 集成测试（集成层）
+        - 使用 @SpringBootTest
+        - 使用 TestContainers 获取真实数据库
+        - 测试完整工作流
 
-Q3: Does code publish or handle Domain Events?
-├─ NO → Standard testing as above
+问题3: 代码是否发布或处理领域事件?
+├─ 否 → 按上述标准测试
 │
-└─ YES → Event-driven testing required
-    - Verify event publishing (Mock ApplicationEventPublisher)
-    - Test idempotency (dedupKey check against Outbox)
-    - Test optimistic lock conflict handling
-    - Test AFTER_COMMIT behavior
+└─ 是 → 需要事件驱动测试
+    - 验证事件发布 (Mock ApplicationEventPublisher)
+    - 测试幂等性 (Outbox 中的 dedupKey 检查)
+    - 测试乐观锁冲突处理
+    - 测试 AFTER_COMMIT 行为
 
-Q4: Does code use Outbox Pattern?
-├─ NO → Standard testing
+问题4: 代码是否使用 Outbox 模式?
+├─ 否 → 标准测试
 │
-└─ YES → Outbox testing required
-    - Verify business data + outbox message atomicity
-    - Test dedupKey uniqueness constraint
-    - Test relay mechanism (lease, publish, retry)
+└─ 是 → 需要 Outbox 测试
+    - 验证业务数据 + Outbox 消息原子性
+    - 测试 dedupKey 唯一性约束
+    - 测试中继机制 (租约、发布、重试)
 ```
 
-### Decision Tree: Test Scope
+### 决策树：测试范围
 
-Identify these key features in code to determine what to test:
+根据代码中的这些关键特性来确定要测试的内容：
 
 ```
-Code has @Transactional?
-├─ YES → Must test transaction rollback scenarios
-└─ NO  → Skip transaction tests
+代码是否有 @Transactional?
+├─ 是 → 必须测试事务回滚场景
+└─ 否 → 跳过事务测试
 
-Code has @TransactionalEventListener?
-├─ YES → Must test:
-│        - AFTER_COMMIT vs BEFORE_COMMIT behavior
-│        - Event publishing verification
-│        - Idempotency (dedupKey check)
-│        - OptimisticLockingFailureException handling
-└─ NO  → Skip event tests
+代码是否有 @TransactionalEventListener?
+├─ 是 → 必须测试：
+│       - AFTER_COMMIT vs BEFORE_COMMIT 行为
+│       - 事件发布验证
+│       - 幂等性（dedupKey 检查）
+│       - OptimisticLockingFailureException 处理
+└─ 否 → 跳过事件测试
 
-Code creates OutboxMessage?
-├─ YES → Must test atomicity with business table
-└─ NO  → Skip outbox tests
+代码是否创建 OutboxMessage?
+├─ 是 → 必须测试与业务表的原子性
+└─ 否 → 跳过 Outbox 测试
 
-Code has optimistic lock field (version)?
-├─ YES → Must test concurrent update conflicts
-└─ NO  → Skip concurrency tests
+代码是否有乐观锁字段 (version)?
+├─ 是 → 必须测试并发更新冲突
+└─ 否 → 跳过并发测试
 
-Code has @Valid parameter validation?
-├─ YES → Must test validation failure responses
-└─ NO  → Skip validation tests
+代码是否有 @Valid 参数验证?
+├─ 是 → 必须测试验证失败的响应
+└─ 否 → 跳过验证测试
 
-Code calls multiple Coordinators?
-├─ YES → Must verify call order with InOrder
-└─ NO  → Skip order verification
+代码是否调用多个 Coordinator?
+├─ 是 → 必须用 InOrder 验证调用顺序
+└─ 否 → 跳过顺序验证
 ```
 
 ---
 
-## 领域层 Testing
+## 领域层测试
 
-**目的**: Test **business logic** and **business rules** in isolation. No Spring, no database, no mocks needed.
+**目的**: 隔离测试**业务逻辑**和**业务规则**。无需 Spring、数据库或 Mock。
 
-### Characteristics
+### 特性
 
-- ✅ Pure Java tests
-- ✅ Fast execution (<100ms per test)
-- ✅ No external dependencies
-- ✅ Test domain invariants and business rules
-- ✅ No mocks required (pure functions)
+- ✅ 纯 Java 测试
+- ✅ 快速执行 (<100ms 每个测试)
+- ✅ 无外部依赖
+- ✅ 测试领域不变量和业务规则
+- ✅ 无需 Mock（纯函数）
 
 ### Example 1: Testing a Value Object (Record)
 
@@ -222,12 +271,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import static org.assertj.core.api.Assertions.*;
 
+@DisplayName("Provenance 值对象测试")
 class ProvenanceTest {
 
     @Test
-    @DisplayName("Should create provenance with valid fields")
+    @DisplayName("应该使用有效字段创建 Provenance")
     void shouldCreateProvenanceWithValidFields() {
-        // Arrange & Act
+        // 准备 & 执行
         Provenance provenance = new Provenance(
             1L,
             "PUBMED",
@@ -239,7 +289,7 @@ class ProvenanceTest {
             "ACTIVE"
         );
 
-        // Assert
+        // 断言
         assertThat(provenance.id()).isEqualTo(1L);
         assertThat(provenance.code()).isEqualTo("PUBMED");
         assertThat(provenance.name()).isEqualTo("PubMed");
@@ -249,9 +299,9 @@ class ProvenanceTest {
     }
 
     @Test
-    @DisplayName("Should reject null code")
+    @DisplayName("当 code 为 null 时应该抛出异常")
     void shouldRejectNullCode() {
-        // Act & Assert
+        // 执行 & 断言
         assertThatThrownBy(() -> new Provenance(
             1L, null, "Name", "https://url.com", "UTC", "https://docs.com", true, "ACTIVE"
         ))
@@ -260,21 +310,21 @@ class ProvenanceTest {
     }
 
     @Test
-    @DisplayName("Should trim whitespace from optional fields")
+    @DisplayName("应该修剪可选字段的空白字符")
     void shouldTrimWhitespaceFromOptionalFields() {
-        // Arrange & Act
+        // 准备 & 执行
         Provenance provenance = new Provenance(
             1L,
             "PUBMED",
             "PubMed",
-            "  https://pubmed.ncbi.nlm.nih.gov  ",  // with spaces
+            "  https://pubmed.ncbi.nlm.nih.gov  ",  // 带有空格
             "UTC",
-            "  https://docs.com  ",  // with spaces
+            "  https://docs.com  ",  // 带有空格
             true,
             "ACTIVE"
         );
 
-        // Assert: whitespace trimmed
+        // 断言: whitespace trimmed
         assertThat(provenance.baseUrlDefault()).isEqualTo("https://pubmed.ncbi.nlm.nih.gov");
         assertThat(provenance.docsUrl()).isEqualTo("https://docs.com");
     }
@@ -291,50 +341,51 @@ import org.junit.jupiter.api.DisplayName;
 import java.time.Instant;
 import static org.assertj.core.api.Assertions.*;
 
+@DisplayName("WindowSpec 密封接口测试")
 class WindowSpecTest {
 
     @Test
-    @DisplayName("Should create TIME window with valid timestamps")
+    @DisplayName("应该使用有效时间戳创建 TIME 窗口")
     void shouldCreateTimeWindow() {
-        // Arrange
+        // 准备
         Instant from = Instant.parse("2024-01-01T00:00:00Z");
         Instant to = Instant.parse("2024-01-31T23:59:59Z");
 
-        // Act
+        // 执行
         WindowSpec.Time window = WindowSpec.ofTime(from, to);
 
-        // Assert
+        // 断言
         assertThat(window.from()).isEqualTo(from);
         assertThat(window.to()).isEqualTo(to);
         assertThat(window.strategy().getCode()).isEqualTo("TIME");
     }
 
     @Test
-    @DisplayName("Should reject TIME window where from is after to")
+    @DisplayName("当 from 在 to 之后时应该拒绝 TIME 窗口")
     void shouldRejectInvalidTimeWindow() {
-        // Arrange
+        // 准备
         Instant from = Instant.parse("2024-12-31T00:00:00Z");
         Instant to = Instant.parse("2024-01-01T00:00:00Z");
 
-        // Act & Assert
+        // 执行 & 断言
         assertThatThrownBy(() -> WindowSpec.ofTime(from, to))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("from must be before or equal to to");
     }
 
     @Test
-    @DisplayName("Should convert TIME window to map")
+    @DisplayName("应该将 TIME 窗口转换为 Map")
     void shouldConvertTimeWindowToMap() {
-        // Arrange
+        // 准备
         WindowSpec.Time window = WindowSpec.ofTime(
             Instant.parse("2024-01-01T00:00:00Z"),
             Instant.parse("2024-01-31T23:59:59Z")
         );
 
-        // Act
+        // 执行
         var map = window.toMap();
 
-        // Assert
+        // 断言
         assertThat(map).containsKey("strategy");
         assertThat(map).containsKey("window");
         assertThat(map.get("strategy")).isEqualTo("TIME");
@@ -354,63 +405,64 @@ import org.junit.jupiter.api.DisplayName;
 import java.time.Instant;
 import static org.assertj.core.api.Assertions.*;
 
+@DisplayName("Plan 聚合根测试")
 class PlanAggregateTest {
 
     @Test
-    @DisplayName("Should create plan aggregate with DRAFT status")
+    @DisplayName("应该使用 DRAFT 状态创建 Plan 聚合根")
     void shouldCreatePlanWithDraftStatus() {
-        // Arrange
+        // 准备
         WindowSpec windowSpec = WindowSpec.ofTime(
             Instant.parse("2024-01-01T00:00:00Z"),
             Instant.parse("2024-01-31T23:59:59Z")
         );
 
-        // Act
+        // 执行
         PlanAggregate plan = PlanAggregate.create(
-            100L,                              // scheduleInstanceId
-            "PUBMED:HARVEST:1704067200000",    // planKey
-            "PUBMED",                          // provenanceCode
-            "HARVEST",                         // operationCode
-            "expr-hash-123",                   // exprProtoHash
-            "{\"fields\":[]}",                 // exprProtoSnapshotJson
-            "{\"windowOffset\":{}}",           // provenanceConfigSnapshotJson
-            "config-hash-456",                 // provenanceConfigHash
-            windowSpec,                        // windowSpec
-            "TIME",                            // sliceStrategyCode
-            "{}"                               // sliceParamsJson
+            100L,                              // 调度实例 ID
+            "PUBMED:HARVEST:1704067200000",    // 计划键
+            "PUBMED",                          // 数据源代码
+            "HARVEST",                         // 操作代码
+            "expr-hash-123",                   // 表达式原型哈希
+            "{\"fields\":[]}",                 // 表达式原型快照 JSON
+            "{\"windowOffset\":{}}",           // 数据源配置快照 JSON
+            "config-hash-456",                 // 数据源配置哈希
+            windowSpec,                        // 窗口规范
+            "TIME",                            // 切片策略代码
+            "{}"                               // 切片参数 JSON
         );
 
-        // Assert
+        // 断言
         assertThat(plan.getStatus()).isEqualTo(PlanStatus.DRAFT);
         assertThat(plan.getProvenanceCode()).isEqualTo("PUBMED");
         assertThat(plan.getPlanKey()).isEqualTo("PUBMED:HARVEST:1704067200000");
     }
 
     @Test
-    @DisplayName("Should transition from DRAFT to SLICING")
+    @DisplayName("应该从 DRAFT 转换到 SLICING")
     void shouldTransitionFromDraftToSlicing() {
-        // Arrange
+        // 准备
         PlanAggregate plan = createTestPlan();
         assertThat(plan.getStatus()).isEqualTo(PlanStatus.DRAFT);
 
-        // Act
+        // 执行
         plan.startSlicing();
 
-        // Assert
+        // 断言
         assertThat(plan.getStatus()).isEqualTo(PlanStatus.SLICING);
     }
 
     @Test
-    @DisplayName("Should mark plan as READY")
+    @DisplayName("应该将 Plan 标记为 READY")
     void shouldMarkPlanAsReady() {
-        // Arrange
+        // 准备
         PlanAggregate plan = createTestPlan();
         plan.startSlicing();
 
-        // Act
+        // 执行
         plan.markReady();
 
-        // Assert
+        // 断言
         assertThat(plan.getStatus()).isEqualTo(PlanStatus.READY);
     }
 
@@ -444,65 +496,66 @@ import org.junit.jupiter.api.DisplayName;
 import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 
+@DisplayName("Slice 状态计算器测试")
 class SliceStatusCalculatorTest {
 
     private final SliceStatusCalculator calculator = new SliceStatusCalculator();
 
     @Test
-    @DisplayName("Should calculate COMPLETED when all tasks completed")
+    @DisplayName("当所有任务完成时应该计算为 COMPLETED")
     void shouldCalculateCompletedWhenAllTasksCompleted() {
-        // Arrange: All tasks are COMPLETED
+        // 准备: All tasks are COMPLETED
         List<TaskStatus> taskStatuses = List.of(
             TaskStatus.COMPLETED,
             TaskStatus.COMPLETED,
             TaskStatus.COMPLETED
         );
 
-        // Act
+        // 执行
         SliceStatus result = calculator.calculate(taskStatuses);
 
-        // Assert
+        // 断言
         assertThat(result).isEqualTo(SliceStatus.COMPLETED);
     }
 
     @Test
-    @DisplayName("Should calculate FAILED when any task failed")
+    @DisplayName("当任何任务失败时应该计算为 FAILED")
     void shouldCalculateFailedWhenAnyTaskFailed() {
-        // Arrange: One task FAILED
+        // 准备: One task FAILED
         List<TaskStatus> taskStatuses = List.of(
             TaskStatus.COMPLETED,
             TaskStatus.FAILED,
             TaskStatus.IN_PROGRESS
         );
 
-        // Act
+        // 执行
         SliceStatus result = calculator.calculate(taskStatuses);
 
-        // Assert
+        // 断言
         assertThat(result).isEqualTo(SliceStatus.FAILED);
     }
 
     @Test
-    @DisplayName("Should calculate IN_PROGRESS when some tasks running")
+    @DisplayName("当某些任务运行时应该计算为 IN_PROGRESS")
     void shouldCalculateInProgressWhenSomeTasksRunning() {
-        // Arrange
+        // 准备
         List<TaskStatus> taskStatuses = List.of(
             TaskStatus.COMPLETED,
             TaskStatus.IN_PROGRESS,
             TaskStatus.PENDING
         );
 
-        // Act
+        // 执行
         SliceStatus result = calculator.calculate(taskStatuses);
 
-        // Assert
+        // 断言
         assertThat(result).isEqualTo(SliceStatus.IN_PROGRESS);
     }
 
     @Test
-    @DisplayName("Should handle empty task list")
+    @DisplayName("应该处理空的任务列表")
     void shouldHandleEmptyTaskList() {
-        // Act & Assert
+        // 执行 & 断言
         assertThatThrownBy(() -> calculator.calculate(List.of()))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("Task list cannot be empty");
@@ -512,18 +565,18 @@ class SliceStatusCalculatorTest {
 
 ---
 
-## 应用层 Testing
+## 应用层测试
 
-**目的**: Test **orchestration logic** without database or external dependencies.
+**目的**: 无需数据库或外部依赖地测试**编排逻辑**。
 
-### Characteristics
+### 特性
 
-- ✅ Mock domain ports (interfaces)
-- ✅ Test coordination flow
-- ✅ Verify port interactions
-- ❌ No database (use mocks)
+- ✅ Mock 领域 Port（接口）
+- ✅ 测试协调流程
+- ✅ 验证 Port 交互
+- ❌ 无数据库（使用 Mock）
 
-### Dependencies
+### 依赖项
 
 ```xml
 <dependency>
@@ -540,11 +593,11 @@ class SliceStatusCalculatorTest {
 
 ---
 
-### Orchestrator Testing
+### Orchestrator 测试
 
-Test **use case coordination** by mocking all coordinators and ports.
+通过 Mock 所有协调器和 Port 来测试**用例编排**。
 
-#### Example: Testing Orchestrator
+#### 示例：测试 Orchestrator
 
 ```java
 package com.patra.ingest.app.orchestrator.plan;
@@ -564,6 +617,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Plan 摄入 Orchestrator 测试")
 class PlanIngestionOrchestratorTest {
 
     @Mock
@@ -579,21 +633,21 @@ class PlanIngestionOrchestratorTest {
     private PlanIngestionOrchestrator orchestrator;
 
     @Test
-    @DisplayName("Should orchestrate plan ingestion successfully")
+    @DisplayName("应该成功编排 Plan 摄入")
     void shouldOrchestrateSuccessfully() {
-        // Arrange
+        // 准备
         String provenanceCode = "PUBMED";
         String operationCode = "HARVEST";
         Instant from = Instant.parse("2024-01-01T00:00:00Z");
         Instant to = Instant.parse("2024-01-31T23:59:59Z");
 
-        // Mock registry responses
+        // Mock 仓储响应
         when(registryPort.fetchConfigSnapshot(provenanceCode, operationCode))
             .thenReturn("{\"windowOffset\":{\"mode\":\"SLIDING\"}}");
         when(registryPort.fetchExprSnapshot(provenanceCode, operationCode, from))
             .thenReturn("{\"fields\":[{\"key\":\"publication_date\"}]}");
 
-        // Act
+        // 执行
         PlanIngestionContext context = new PlanIngestionContext(
             provenanceCode,
             operationCode,
@@ -602,26 +656,26 @@ class PlanIngestionOrchestratorTest {
         );
         orchestrator.ingestPlan(context);
 
-        // Assert: Verify coordinator call order
+        // 断言: Verify coordinator call order
         InOrder inOrder = inOrder(persistenceCoordinator, eventCoordinator);
         inOrder.verify(persistenceCoordinator).persistPlan(any(PlanAggregate.class));
         inOrder.verify(eventCoordinator).publishPlanCreatedEvent(any(PlanAggregate.class));
     }
 
     @Test
-    @DisplayName("Should rollback when persistence fails")
+    @DisplayName("当持久化失败时应该回滚")
     void shouldRollbackOnPersistenceFailure() {
-        // Arrange
+        // 准备
         when(registryPort.fetchConfigSnapshot(anyString(), anyString()))
             .thenReturn("{}");
         when(registryPort.fetchExprSnapshot(anyString(), anyString(), any()))
             .thenReturn("{}");
 
-        // Simulate persistence failure
+        // 模拟 persistence failure
         doThrow(new RuntimeException("DB error"))
             .when(persistenceCoordinator).persistPlan(any());
 
-        // Act & Assert
+        // 执行 & 断言
         PlanIngestionContext context = new PlanIngestionContext(
             "PUBMED", "HARVEST", Instant.now(), Instant.now()
         );
@@ -629,7 +683,7 @@ class PlanIngestionOrchestratorTest {
         assertThatThrownBy(() -> orchestrator.ingestPlan(context))
             .isInstanceOf(RuntimeException.class);
 
-        // Verify event coordinator never called (transaction rollback)
+        // 验证 event coordinator never called (transaction rollback)
         verify(eventCoordinator, never()).publishPlanCreatedEvent(any());
     }
 }
@@ -637,13 +691,13 @@ class PlanIngestionOrchestratorTest {
 
 ---
 
-### Coordinator Testing
+### Coordinator 测试
 
-Test **concern-specific coordination** in isolation from orchestrators.
+在与编排器隔离的情况下测试**关注点特定的协调**。
 
 #### 目的
 
-Coordinators handle single concerns (persistence, event publishing, validation). Test them independently with mocked dependencies.
+Coordinator 处理单一关注点（持久化、事件发布、验证）。使用 Mock 依赖独立测试它们。
 
 #### Example: Testing Persistence Coordinator
 
@@ -668,6 +722,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Plan 数据持久化协调器测试")
 class PlanPersistenceCoordinatorTest {
 
     @Mock
@@ -680,9 +735,9 @@ class PlanPersistenceCoordinatorTest {
     private PlanPersistenceCoordinator coordinator;
 
     @Test
-    @DisplayName("Should persist plan with all slices atomically")
+    @DisplayName("应该以原子方式持久化 Plan 和所有 Slice")
     void shouldPersistPlanWithSlices() {
-        // Arrange: Prepare Plan + Slices
+        // 准备: Prepare Plan + Slices
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan()
             .withId(1L)
             .build();
@@ -694,24 +749,24 @@ class PlanPersistenceCoordinatorTest {
 
         when(planRepo.save(any())).thenReturn(plan);
 
-        // Act
+        // 执行
         coordinator.persistPlanWithSlices(plan, slices);
 
-        // Assert: Verify call order (plan first, then slices)
+        // 断言: Verify call order (plan first, then slices)
         InOrder inOrder = inOrder(planRepo, sliceRepo);
         inOrder.verify(planRepo).save(plan);
         inOrder.verify(sliceRepo).batchSave(slices);
     }
 
     @Test
-    @DisplayName("Should wrap infrastructure exceptions")
+    @DisplayName("应该包装基础设施异常")
     void shouldWrapInfrastructureExceptions() {
-        // Arrange
+        // 准备
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan().build();
         when(planRepo.save(any()))
             .thenThrow(new DataAccessException("DB connection lost") {});
 
-        // Act & Assert: Verify exception wrapping
+        // 执行 & 断言: Verify exception wrapping
         assertThatThrownBy(() -> coordinator.persistPlanWithSlices(plan, List.of()))
             .isInstanceOf(PlanPersistenceException.class)
             .hasMessageContaining("Failed to persist plan")
@@ -719,16 +774,16 @@ class PlanPersistenceCoordinatorTest {
     }
 
     @Test
-    @DisplayName("Should skip slice persistence when list is empty")
+    @DisplayName("当列表为空时应该跳过 Slice 持久化")
     void shouldSkipSlicePersistenceWhenEmpty() {
-        // Arrange
+        // 准备
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan().build();
         when(planRepo.save(any())).thenReturn(plan);
 
-        // Act
+        // 执行
         coordinator.persistPlanWithSlices(plan, List.of());
 
-        // Assert: sliceRepo never called
+        // 断言: sliceRepo never called
         verify(planRepo).save(plan);
         verifyNoInteractions(sliceRepo);
     }
@@ -743,17 +798,17 @@ class PlanPersistenceCoordinatorTest {
 
 ---
 
-### Event Handler Testing
+### 事件处理器测试
 
-Test **domain event handlers** with Spring context and event publishing verification.
+使用 Spring 上下文和事件发布验证测试**领域事件处理器**。
 
 #### 目的
 
-Event handlers (@TransactionalEventListener) react to domain events. They require special testing considerations:
-- AFTER_COMMIT phase verification
-- Idempotency checks
-- Optimistic lock conflict handling
-- Event chain propagation
+事件处理器（@TransactionalEventListener）对领域事件做出反应。它们需要特殊的测试考虑：
+- AFTER_COMMIT 阶段验证
+- 幂等性检查
+- 乐观锁冲突处理
+- 事件链传播
 
 #### Example 1: Testing Event Publishing and Idempotency
 
@@ -780,6 +835,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @Transactional
+@DisplayName("任务完成事件处理器测试")
 class TaskCompletedEventHandlerTest {
 
     @Autowired
@@ -795,14 +851,14 @@ class TaskCompletedEventHandlerTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("Should update slice status and publish event AFTER_COMMIT")
+    @DisplayName("应该更新 Slice 状态并在事务提交后发布事件")
     void shouldUpdateSliceAndPublishEvent() {
-        // Arrange: Prepare completed task event
+        // 准备: Prepare completed task event
         Long taskId = 1L;
         Long sliceId = 100L;
         String dedupKey = "task-completed-1";
 
-        // Prepare existing Slice
+        // 准备现有的 Slice
         SliceAggregate slice = SliceTestBuilder.aSlice()
             .withId(sliceId)
             .withStatus(SliceStatus.IN_PROGRESS)
@@ -813,29 +869,29 @@ class TaskCompletedEventHandlerTest {
             taskId, sliceId, TaskStatus.COMPLETED, dedupKey, Instant.now()
         );
 
-        // Act: Handle event
+        // 执行: Handle event
         eventHandler.onTaskCompleted(event);
 
-        // Assert 1: Verify Slice status updated
+        // 断言 1: Verify Slice status updated
         SliceAggregate updated = sliceRepo.findById(sliceId).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(SliceStatus.COMPLETED);
 
-        // Assert 2: Verify event published (AFTER_COMMIT phase)
+        // 断言 2: Verify event published (AFTER_COMMIT phase)
         verify(eventPublisher).publishEvent(argThat(e ->
             e instanceof SliceStatusChangedEvent &&
             ((SliceStatusChangedEvent) e).sliceId().equals(sliceId)
         ));
 
-        // Assert 3: Verify idempotency record (Outbox table)
+        // 断言 3: Verify idempotency record (Outbox table)
         OutboxMessage outbox = outboxRepo.findByDedupKey(dedupKey).orElseThrow();
         assertThat(outbox.getEventType()).isEqualTo("SliceStatusChangedEvent");
         assertThat(outbox.getStatus()).isEqualTo("PUBLISHED");
     }
 
     @Test
-    @DisplayName("Should NOT process duplicate event (idempotency)")
+    @DisplayName("应该不处理重复事件（幂等性保证）")
     void shouldNotProcessDuplicateEvent() {
-        // Arrange: Prepare duplicate event (dedupKey already exists)
+        // 准备: Prepare duplicate event (dedupKey already exists)
         String dedupKey = "task-completed-duplicate";
         outboxRepo.save(OutboxMessage.builder()
             .dedupKey(dedupKey)
@@ -847,18 +903,18 @@ class TaskCompletedEventHandlerTest {
             1L, 100L, TaskStatus.COMPLETED, dedupKey, Instant.now()
         );
 
-        // Act
+        // 执行
         eventHandler.onTaskCompleted(event);
 
-        // Assert: Verify business logic NOT executed (idempotency protection)
+        // 断言: Verify business logic NOT executed (idempotency protection)
         verify(eventPublisher, never()).publishEvent(any());
         verifyNoMoreInteractions(sliceRepo);
     }
 
     @Test
-    @DisplayName("Should handle OptimisticLockingFailureException gracefully")
+    @DisplayName("应该妥善处理乐观锁冲突异常")
     void shouldHandleOptimisticLockConflict() {
-        // Arrange: Simulate concurrent update causing optimistic lock conflict
+        // 准备: Simulate concurrent update causing optimistic lock conflict
         Long sliceId = 100L;
         String dedupKey = "task-completed-conflict";
 
@@ -872,15 +928,15 @@ class TaskCompletedEventHandlerTest {
             1L, sliceId, TaskStatus.COMPLETED, dedupKey, Instant.now()
         );
 
-        // Simulate version conflict (another transaction updated the slice)
+        // 模拟 version conflict (another transaction updated the slice)
         doThrow(new OptimisticLockingFailureException("Version conflict"))
             .when(sliceRepo).save(any());
 
-        // Act & Assert: Verify exception handling
+        // 执行 & 断言: Verify exception handling
         assertThatThrownBy(() -> eventHandler.onTaskCompleted(event))
             .isInstanceOf(OptimisticLockingFailureException.class);
 
-        // Verify no subsequent event published (transaction rolled back)
+        // 验证 no subsequent event published (transaction rolled back)
         verify(eventPublisher, never()).publishEvent(any());
     }
 }
@@ -905,7 +961,7 @@ class SliceStatusChangedEventHandlerTest {
     @Test
     @DisplayName("Should propagate slice status to plan aggregate")
     void shouldPropagateSliceStatusToPlan() {
-        // Arrange: Prepare Plan with multiple Slices
+        // 准备: Prepare Plan with multiple Slices
         Long planId = 1L;
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan()
             .withId(planId)
@@ -913,19 +969,19 @@ class SliceStatusChangedEventHandlerTest {
             .build();
         planRepo.save(plan);
 
-        // All slices completed
+        // 所有 Slice 已完成
         SliceStatusChangedEvent event = new SliceStatusChangedEvent(
             100L, planId, SliceStatus.COMPLETED, "dedupKey-100", Instant.now()
         );
 
-        // Act
+        // 执行
         eventHandler.onSliceStatusChanged(event);
 
-        // Assert: Plan status updated to COMPLETED (if all slices completed)
+        // 断言: Plan status updated to COMPLETED (if all slices completed)
         PlanAggregate updated = planRepo.findById(planId).orElseThrow();
         assertThat(updated.getStatus()).isEqualTo(PlanStatus.COMPLETED);
 
-        // Verify PlanStatusChangedEvent published
+        // 验证 PlanStatusChangedEvent published
         verify(eventPublisher).publishEvent(argThat(e ->
             e instanceof PlanStatusChangedEvent &&
             ((PlanStatusChangedEvent) e).planId().equals(planId)
@@ -934,28 +990,28 @@ class SliceStatusChangedEventHandlerTest {
 }
 ```
 
-**Key Testing Points for Event Handlers**:
-- Use `@SpringBootTest` (needs Spring context for event publishing)
-- Mock `ApplicationEventPublisher` to verify event publishing
-- Test idempotency: duplicate events should be ignored
-- Test optimistic lock conflicts
-- Test event chain propagation (Task → Slice → Plan)
-- Verify AFTER_COMMIT behavior (events published after transaction commits)
+**Event Handler 测试的关键点**:
+- 使用 `@SpringBootTest`（需要 Spring 上下文来发布事件）
+- Mock `ApplicationEventPublisher` 验证事件发布
+- 测试幂等性：重复事件应被忽略
+- 测试乐观锁冲突
+- 测试事件链传播（Task → Slice → Plan）
+- 验证 AFTER_COMMIT 行为（事务提交后发布事件）
 
 ---
 
 ## 基础设施层 Testing
 
-**目的**: Test **database interactions** and **repository implementations** with a real database.
+**目的**: 使用真实数据库测试**数据库交互**和**Repository 实现**。
 
-### Characteristics
+### 特性
 
-- ✅ Real database (MySQL in Docker)
-- ✅ Test SQL queries and mappings
-- ✅ Verify MyBatis-Plus and MapStruct
-- ⚠️ Slower than unit tests (seconds)
+- ✅ 真实数据库（Docker 中的 MySQL）
+- ✅ 测试 SQL 查询和映射
+- ✅ 验证 MyBatis-Plus 和 MapStruct
+- ⚠️ 比单元测试慢（数秒）
 
-### Dependencies
+### 依赖项
 
 ```xml
 <dependency>
@@ -983,11 +1039,19 @@ class SliceStatusChangedEventHandlerTest {
 </dependency>
 ```
 
+### TestContainers 配置最佳实践
+
+**推荐配置**：
+- MySQL 版本：使用项目生产环境的实际版本（当前项目为 8.0.36）
+- 根用户凭证：root / 123456（与生产环境一致）
+- 容器重用：`.withReuse(true)` 加速测试运行
+- 驱动程序：`com.mysql.cj.jdbc.Driver`（MySQL 8.0+ 推荐）
+
 ---
 
-### Repository Testing
+### Repository 测试
 
-Test repository implementations with TestContainers (real MySQL database).
+使用 TestContainers（真实 MySQL 数据库）测试 Repository 实现。
 
 #### Example: Repository Integration Test
 
@@ -1009,27 +1073,31 @@ import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
 @Testcontainers
+@DisplayName("Provenance 数据持久化仓储集成测试")
 class ProvenanceRepositoryIntegrationTest {
 
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0.36")
         .withDatabaseName("patra_test")
-        .withUsername("test")
-        .withPassword("test");
+        .withUsername("root")
+        .withPassword("123456")
+        .withReuse(true);  // 跨测试重用容器以加快运行速度
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
     }
 
     @Autowired
     private ProvenanceRepositoryImpl repository;
 
     @Test
+    @DisplayName("应该保存并查找 Provenance")
     void shouldSaveAndFindProvenance() {
-        // Arrange
+        // 准备
         Provenance provenance = new Provenance(
             null,  // id will be auto-generated
             "PUBMED",
@@ -1041,11 +1109,11 @@ class ProvenanceRepositoryIntegrationTest {
             "ACTIVE"
         );
 
-        // Act
+        // 执行
         Provenance saved = repository.save(provenance);
         Optional<Provenance> found = repository.findByCode("PUBMED");
 
-        // Assert
+        // 断言
         assertThat(saved.id()).isNotNull();
         assertThat(found).isPresent();
         assertThat(found.get().code()).isEqualTo("PUBMED");
@@ -1054,16 +1122,17 @@ class ProvenanceRepositoryIntegrationTest {
     }
 
     @Test
+    @DisplayName("应该查找所有活跃的 Provenance")
     void shouldFindAllActiveProvenances() {
-        // Arrange
+        // 准备
         repository.save(createProvenance("PUBMED", true));
         repository.save(createProvenance("EPMC", true));
         repository.save(createProvenance("CROSSREF", false));
 
-        // Act
+        // 执行
         var activeProvenances = repository.findAllActive();
 
-        // Assert
+        // 断言
         assertThat(activeProvenances).hasSize(2);
         assertThat(activeProvenances)
             .extracting(Provenance::code)
@@ -1085,7 +1154,7 @@ class ProvenanceRepositoryIntegrationTest {
 }
 ```
 
-#### Base Test Class for TestContainers
+#### TestContainers 基础测试类
 
 ```java
 package com.patra.registry.integration;
@@ -1102,30 +1171,33 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 public abstract class BaseIntegrationTest {
 
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0.36")
         .withDatabaseName("patra_test")
-        .withUsername("test")
-        .withPassword("test")
-        .withReuse(true);  // Reuse container across tests
+        .withUsername("root")
+        .withPassword("123456")
+        .withReuse(true);  // 跨测试重用容器以提高性能
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
+        // 动态注入数据库连接配置
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     }
 }
 ```
 
 ---
 
-### Converter Testing
+### 转换器测试
 
-Test **MapStruct converters** for Domain ↔ DO (Data Object) mapping.
+测试**MapStruct 转换器**用于 Domain ↔ DO（数据对象）的映射。
 
 #### 目的
 
-Converters translate between domain models and database entities. Test bidirectional mapping correctness, null handling, and complex mappings.
+转换器在领域模型和数据库实体之间进行转换。测试双向映射的正确性、空字段处理和复杂映射。
 
 #### Example: Testing MapStruct Converter
 
@@ -1138,23 +1210,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import static org.assertj.core.api.Assertions.*;
 
+@DisplayName("Provenance MapStruct 转换器测试")
 class ProvenanceConverterTest {
 
     private final ProvenanceConverter converter = ProvenanceConverter.INSTANCE;
 
     @Test
-    @DisplayName("Should convert Domain → DO correctly")
+    @DisplayName("应该正确将领域模型转换为数据对象")
     void shouldConvertDomainToDO() {
-        // Arrange
+        // 准备
         Provenance domain = new Provenance(
             1L, "PUBMED", "PubMed", "https://pubmed.gov",
             "UTC", "https://docs.com", true, "ACTIVE"
         );
 
-        // Act
+        // 执行
         ProvenanceDO dataObject = converter.toDataObject(domain);
 
-        // Assert: Verify all field mappings
+        // 断言: Verify all field mappings
         assertThat(dataObject.getId()).isEqualTo(1L);
         assertThat(dataObject.getCode()).isEqualTo("PUBMED");
         assertThat(dataObject.getName()).isEqualTo("PubMed");
@@ -1163,26 +1236,26 @@ class ProvenanceConverterTest {
     }
 
     @Test
-    @DisplayName("Should handle null fields gracefully")
+    @DisplayName("应该妥善处理空字段")
     void shouldHandleNullFields() {
-        // Arrange: Optional fields are null
+        // 准备: Optional fields are null
         Provenance domain = new Provenance(
             1L, "PUBMED", "PubMed", "https://pubmed.gov",
-            null, null, true, "ACTIVE"  // timezone, docUrl are null
+            null, null, true, "ACTIVE"  // timezone、docUrl 为 null
         );
 
-        // Act
+        // 执行
         ProvenanceDO dataObject = converter.toDataObject(domain);
 
-        // Assert: null fields correctly converted
+        // 断言: null fields correctly converted
         assertThat(dataObject.getTimezone()).isNull();
         assertThat(dataObject.getDocUrl()).isNull();
     }
 
     @Test
-    @DisplayName("Should convert DO → Domain (round-trip)")
+    @DisplayName("应该将数据对象转换回领域模型（双向转换）")
     void shouldConvertDOToDomain() {
-        // Arrange
+        // 准备
         ProvenanceDO dataObject = new ProvenanceDO();
         dataObject.setId(1L);
         dataObject.setCode("PUBMED");
@@ -1190,10 +1263,10 @@ class ProvenanceConverterTest {
         dataObject.setBaseUrl("https://pubmed.gov");
         dataObject.setActive(true);
 
-        // Act
+        // 执行
         Provenance domain = converter.toDomain(dataObject);
 
-        // Assert: Bidirectional mapping consistency
+        // 断言: Bidirectional mapping consistency
         assertThat(domain.id()).isEqualTo(1L);
         assertThat(domain.code()).isEqualTo("PUBMED");
         assertThat(domain.name()).isEqualTo("PubMed");
@@ -1201,18 +1274,18 @@ class ProvenanceConverterTest {
     }
 
     @Test
-    @DisplayName("Should convert list of DOs to Domains")
+    @DisplayName("应该将数据对象列表转换为领域模型列表")
     void shouldConvertListOfDOs() {
-        // Arrange
+        // 准备
         List<ProvenanceDO> dataObjects = List.of(
             createDO("PUBMED", "PubMed"),
             createDO("EPMC", "Europe PMC")
         );
 
-        // Act
+        // 执行
         List<Provenance> domains = converter.toDomainList(dataObjects);
 
-        // Assert
+        // 断言
         assertThat(domains).hasSize(2);
         assertThat(domains)
             .extracting(Provenance::code)
@@ -1229,31 +1302,31 @@ class ProvenanceConverterTest {
 }
 ```
 
-**Key Testing Points for Converters**:
-- Test bidirectional mapping (Domain → DO → Domain)
-- Test null handling (optional fields)
-- Test list conversions
-- Test complex nested objects
-- Verify field name mappings (especially when names differ)
+**转换器测试的关键点**:
+- 测试双向映射（Domain → DO → Domain）
+- 测试空字段处理（可选字段）
+- 测试列表转换
+- 测试复杂嵌套对象
+- 验证字段名称映射（尤其是名称不同的情况）
 
 ---
 
 ## 适配器层 Testing
 
-**目的**: Test **adapters** (REST controllers, scheduled jobs) without full application context.
+**目的**: 在不使用完整应用上下文的情况下测试**适配器**（REST 控制器、定时任务）。
 
-### Characteristics
+### 特性
 
-- ✅ Test HTTP endpoints or job execution
-- ✅ Validate request/response
-- ✅ Mock application layer
-- ❌ No database
+- ✅ 测试 HTTP 端点或任务执行
+- ✅ 验证请求/响应
+- ✅ Mock 应用层
+- ❌ 无数据库
 
 ---
 
-### REST Controller Testing
+### REST 控制器测试
 
-Test REST endpoints with MockMvc (without starting full app).
+使用 MockMvc 测试 REST 端点（无需启动完整应用）。
 
 #### Example: Controller Test
 
@@ -1275,6 +1348,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProvenanceController.class)
+@DisplayName("Provenance REST 控制器测试")
 class ProvenanceControllerTest {
 
     @Autowired
@@ -1284,9 +1358,9 @@ class ProvenanceControllerTest {
     private ProvenanceService provenanceService;
 
     @Test
-    @DisplayName("Should get provenance by code")
+    @DisplayName("应该通过代码获取 Provenance")
     void shouldGetProvenanceByCode() throws Exception {
-        // Arrange
+        // 准备
         Provenance provenance = new Provenance(
             1L, "PUBMED", "PubMed",
             "https://pubmed.ncbi.nlm.nih.gov",
@@ -1294,7 +1368,7 @@ class ProvenanceControllerTest {
         );
         when(provenanceService.findByCode("PUBMED")).thenReturn(provenance);
 
-        // Act & Assert
+        // 执行 & 断言
         mockMvc.perform(get("/api/v1/provenances/PUBMED"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value("PUBMED"))
@@ -1305,13 +1379,13 @@ class ProvenanceControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 404 when provenance not found")
+    @DisplayName("当 Provenance 不存在时应该返回 404")
     void shouldReturnNotFoundWhenProvenanceDoesNotExist() throws Exception {
-        // Arrange
+        // 准备
         when(provenanceService.findByCode("UNKNOWN"))
             .thenThrow(new ProvenanceNotFoundException("UNKNOWN"));
 
-        // Act & Assert
+        // 执行 & 断言
         mockMvc.perform(get("/api/v1/provenances/UNKNOWN"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.status").value(404))
@@ -1319,9 +1393,9 @@ class ProvenanceControllerTest {
     }
 
     @Test
-    @DisplayName("Should validate request body with @Valid")
+    @DisplayName("应该使用 @Valid 验证请求体")
     void shouldValidateRequestBody() throws Exception {
-        // Arrange: Invalid JSON (code is null)
+        // 准备: Invalid JSON (code is null)
         String invalidJson = """
             {
                 "name": "Test Provenance",
@@ -1329,7 +1403,7 @@ class ProvenanceControllerTest {
             }
             """;
 
-        // Act & Assert
+        // 执行 & 断言
         mockMvc.perform(post("/api/v1/provenances")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
@@ -1341,22 +1415,22 @@ class ProvenanceControllerTest {
 }
 ```
 
-**Key Testing Points for REST Controllers**:
-- Use `@WebMvcTest` for controller slice testing
-- Mock application layer services
-- Test validation with `@Valid`
-- Verify ProblemDetail error responses
-- Test different HTTP status codes (200, 404, 400, 500)
+**REST 控制器测试的关键点**:
+- 使用 `@WebMvcTest` 进行控制器切片测试
+- Mock 应用层服务
+- 使用 `@Valid` 测试验证
+- 验证 ProblemDetail 错误响应
+- 测试不同 HTTP 状态码（200, 404, 400, 500）
 
 ---
 
-### XXL-Job Testing
+### XXL-Job 测试
 
-Test **scheduled jobs** with mocked XxlJobHelper.
+使用 Mock 的 XxlJobHelper 测试**定时任务**。
 
 #### 目的
 
-XXL-Job methods require special testing: mock XxlJobHelper for parameter parsing and job execution flow.
+XXL-Job 方法需要特殊的测试：Mock XxlJobHelper 来处理参数解析和任务执行流程。
 
 #### Example: Testing XXL-Job
 
@@ -1379,6 +1453,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("PubMed 数据采集定时任务测试")
 class PubmedHarvestJobTest {
 
     @Mock
@@ -1388,64 +1463,64 @@ class PubmedHarvestJobTest {
     private PubmedHarvestJob job;
 
     @Test
-    @DisplayName("Should execute job with correct parameters")
+    @DisplayName("应该使用正确的参数执行任务")
     void shouldExecuteJobWithParameters() throws Exception {
-        // Arrange: Mock XxlJobHelper
+        // 准备: Mock XxlJobHelper
         try (MockedStatic<XxlJobHelper> helper = mockStatic(XxlJobHelper.class)) {
             helper.when(XxlJobHelper::getJobParam).thenReturn("provenanceCode=PUBMED");
 
-            // Act
+            // 执行
             ReturnT<String> result = job.harvestPubmedData("provenanceCode=PUBMED");
 
-            // Assert
+            // 断言
             assertThat(result.getCode()).isEqualTo(ReturnT.SUCCESS_CODE);
             assertThat(result.getMsg()).contains("Success");
 
-            // Verify orchestrator called with correct parameter
+            // 验证 orchestrator called with correct parameter
             verify(orchestrator).ingestFromProvenance("PUBMED");
 
-            // Verify job log
+            // 验证 job log
             helper.verify(() -> XxlJobHelper.log("Starting PUBMED harvest..."));
         }
     }
 
     @Test
-    @DisplayName("Should handle job execution failure")
+    @DisplayName("应该处理任务执行失败")
     void shouldHandleJobFailure() throws Exception {
-        // Arrange: Simulate job failure
+        // 准备: Simulate job failure
         try (MockedStatic<XxlJobHelper> helper = mockStatic(XxlJobHelper.class)) {
             helper.when(XxlJobHelper::getJobParam).thenReturn("provenanceCode=PUBMED");
 
             doThrow(new RuntimeException("Ingestion failed"))
                 .when(orchestrator).ingestFromProvenance(any());
 
-            // Act
+            // 执行
             ReturnT<String> result = job.harvestPubmedData("provenanceCode=PUBMED");
 
-            // Assert: Verify failure response
+            // 断言: Verify failure response
             assertThat(result.getCode()).isEqualTo(ReturnT.FAIL_CODE);
             assertThat(result.getMsg()).contains("Ingestion failed");
 
-            // Verify error logged
+            // 验证 error logged
             helper.verify(() -> XxlJobHelper.log(contains("Job failed")));
         }
     }
 
     @Test
-    @DisplayName("Should parse complex job parameters")
+    @DisplayName("应该解析复杂的任务参数")
     void shouldParseComplexParameters() throws Exception {
-        // Arrange
+        // 准备
         try (MockedStatic<XxlJobHelper> helper = mockStatic(XxlJobHelper.class)) {
             String params = "provenanceCode=PUBMED&dateFrom=2024-01-01&dateTo=2024-01-31";
             helper.when(XxlJobHelper::getJobParam).thenReturn(params);
 
-            // Act
+            // 执行
             ReturnT<String> result = job.harvestPubmedDataWithDateRange(params);
 
-            // Assert
+            // 断言
             assertThat(result.getCode()).isEqualTo(ReturnT.SUCCESS_CODE);
 
-            // Verify orchestrator called with parsed parameters
+            // 验证 orchestrator called with parsed parameters
             verify(orchestrator).ingestFromProvenanceWithDateRange(
                 eq("PUBMED"),
                 eq("2024-01-01"),
@@ -1456,35 +1531,35 @@ class PubmedHarvestJobTest {
 }
 ```
 
-**Key Testing Points for XXL-Job**:
-- Mock `XxlJobHelper` with `MockedStatic`
-- Test parameter parsing (`getJobParam()`)
-- Test job execution flow
-- Test failure scenarios and error handling
-- Verify job logging (`XxlJobHelper.log()`)
+**XXL-Job 测试的关键点**:
+- 使用 `MockedStatic` Mock `XxlJobHelper`
+- 测试参数解析（`getJobParam()`）
+- 测试任务执行流程
+- 测试失败场景和错误处理
+- 验证任务日志（`XxlJobHelper.log()`）
 
 ---
 
-## Integration Testing Patterns
+## 集成测试模式
 
-**目的**: Test **end-to-end workflows** with real database and event propagation.
+**目的**: 使用真实数据库和事件传播测试**端到端工作流**。
 
-### Characteristics
+### 特性
 
-- ✅ Real database (TestContainers)
-- ✅ Real event publishing
-- ✅ Test complete workflows
-- ⚠️ Slowest tests (multiple seconds)
+- ✅ 真实数据库（TestContainers）
+- ✅ 真实事件发布
+- ✅ 测试完整工作流
+- ⚠️ 最慢的测试（数秒）
 
 ---
 
-### Event Chain Testing
+### 事件链测试
 
-Test **end-to-end event propagation** through multiple aggregates.
+通过多个聚合根测试**端到端事件传播**。
 
 #### 目的
 
-Verify that domain events propagate correctly through the system (Task → Slice → Plan).
+验证领域事件在系统中正确传播（Task → Slice → Plan）。
 
 #### Example: Testing Event Chain
 
@@ -1519,19 +1594,23 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest
 @Testcontainers
 @Transactional
+@DisplayName("任务到 Slice 事件链集成测试")
 class TaskToSliceEventChainIntegrationTest {
 
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0.36")
         .withDatabaseName("patra_test")
-        .withUsername("test")
-        .withPassword("test");
+        .withUsername("root")
+        .withPassword("123456")
+        .withReuse(true);  // 容器重用
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
+        // 为测试动态配置数据库连接
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
     }
 
     @Autowired
@@ -1550,9 +1629,9 @@ class TaskToSliceEventChainIntegrationTest {
     private OutboxMessageRepository outboxRepo;
 
     @Test
-    @DisplayName("Should propagate Task → Slice → Plan status updates")
+    @DisplayName("应该传播 Task → Slice → Plan 状态更新")
     void shouldPropagateStatusUpdates() {
-        // Arrange: Prepare Plan → Slice → Task hierarchy
+        // 准备: Prepare Plan → Slice → Task hierarchy
         PlanAggregate plan = planRepo.save(PlanTestBuilder.aDefaultPlan()
             .withStatus(PlanStatus.IN_PROGRESS)
             .build());
@@ -1567,7 +1646,7 @@ class TaskToSliceEventChainIntegrationTest {
             .withStatus(TaskStatus.IN_PROGRESS)
             .build());
 
-        // Act: Publish TaskCompletedEvent (simulate task completion)
+        // 执行: Publish TaskCompletedEvent (simulate task completion)
         eventPublisher.publishEvent(new TaskCompletedEvent(
             task.getId(),
             slice.getId(),
@@ -1576,18 +1655,18 @@ class TaskToSliceEventChainIntegrationTest {
             Instant.now()
         ));
 
-        // Wait for event chain to complete (AFTER_COMMIT)
+        // 等待事件链完成 (AFTER_COMMIT)
         flushAndClear();
 
-        // Assert 1: Slice status updated
+        // 断言 1: Slice status updated
         SliceAggregate updatedSlice = sliceRepo.findById(slice.getId()).orElseThrow();
         assertThat(updatedSlice.getStatus()).isEqualTo(SliceStatus.COMPLETED);
 
-        // Assert 2: Plan status updated (assuming all slices completed)
+        // 断言 2: Plan status updated (assuming all slices completed)
         PlanAggregate updatedPlan = planRepo.findById(plan.getId()).orElseThrow();
         assertThat(updatedPlan.getStatus()).isEqualTo(PlanStatus.COMPLETED);
 
-        // Assert 3: Verify Outbox event records
+        // 断言 3: Verify Outbox event records
         List<OutboxMessage> outboxMessages = outboxRepo.findAll();
         assertThat(outboxMessages)
             .extracting(OutboxMessage::getEventType)
@@ -1595,9 +1674,9 @@ class TaskToSliceEventChainIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should handle concurrent task completions")
+    @DisplayName("应该处理并发的任务完成事件")
     void shouldHandleConcurrentCompletions() {
-        // Arrange: Prepare multiple tasks for one slice
+        // 准备: Prepare multiple tasks for one slice
         PlanAggregate plan = planRepo.save(PlanTestBuilder.aDefaultPlan().build());
         SliceAggregate slice = sliceRepo.save(SliceTestBuilder.aSlice()
             .withPlanId(plan.getId()).build());
@@ -1609,7 +1688,7 @@ class TaskToSliceEventChainIntegrationTest {
                 .build()))
             .toList();
 
-        // Act: Publish multiple task completion events concurrently
+        // 执行: Publish multiple task completion events concurrently
         tasks.parallelStream().forEach(task ->
             eventPublisher.publishEvent(new TaskCompletedEvent(
                 task.getId(), slice.getId(), TaskStatus.COMPLETED,
@@ -1617,34 +1696,34 @@ class TaskToSliceEventChainIntegrationTest {
             ))
         );
 
-        // Assert: Verify idempotency (no duplicate event processing)
+        // 断言：验证幂等性（无重复事件处理）
         long outboxCount = outboxRepo.count();
-        assertThat(outboxCount).isLessThanOrEqualTo(tasks.size() + 1); // Task events + 1 Slice event
+        assertThat(outboxCount).isLessThanOrEqualTo(tasks.size() + 1); // Task 事件 + 1 个 Slice 事件
     }
 
     private void flushAndClear() {
-        // Helper method to flush and clear entity manager (for testing)
-        // Implementation depends on your setup
+        // 辅助方法：刷新和清除实体管理器（用于测试）
+        // 实现取决于你的设置
     }
 }
 ```
 
-**Key Testing Points for Event Chains**:
-- Test end-to-end propagation (Task → Slice → Plan)
-- Verify all levels of aggregate updates
-- Test concurrent event handling
-- Verify idempotency across the chain
-- Check Outbox message creation at each level
+**事件链测试的关键点**:
+- 测试端到端传播（Task → Slice → Plan）
+- 验证所有级别的聚合根更新
+- 测试并发事件处理
+- 验证链中的幂等性
+- 检查每个级别的 Outbox 消息创建
 
 ---
 
-### Outbox Pattern Testing
+### Outbox 模式测试
 
-Test **transactional outbox** for reliable event publishing.
+测试**事务性 Outbox** 用于可靠的事件发布。
 
 #### 目的
 
-Verify that business data and outbox messages are saved atomically, and relay mechanism works correctly.
+验证业务数据和 Outbox 消息原子性保存，并且中继机制正确工作。
 
 #### Example: Testing Outbox Atomicity
 
@@ -1670,13 +1749,17 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest
 @Testcontainers
 @Transactional
+@DisplayName("Outbox 模式集成测试")
 class OutboxPatternIntegrationTest {
 
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0.36")
         .withDatabaseName("patra_test")
-        .withUsername("test")
-        .withPassword("test");
+        .withUsername("root")
+        .withPassword("123456")
+        .withReuse(true);  // 容器重用以提高测试速度
+
+    // 注意：@DynamicPropertySource 在此省略，会在基类中配置
 
     @Autowired
     private PlanRepositoryPort planRepo;
@@ -1688,19 +1771,19 @@ class OutboxPatternIntegrationTest {
     private PlanPersistenceCoordinator coordinator;
 
     @Test
-    @DisplayName("Should persist business data and outbox message atomically")
+    @DisplayName("应该以原子方式持久化业务数据和 Outbox 消息")
     void shouldPersistAtomically() {
-        // Arrange
+        // 准备
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan().build();
 
-        // Act: Persist Plan + create Outbox message
+        // 执行: Persist Plan + create Outbox message
         coordinator.persistPlanWithOutbox(plan);
 
-        // Assert 1: Plan saved
+        // 断言 1: Plan saved
         PlanAggregate saved = planRepo.findById(plan.getId()).orElseThrow();
         assertThat(saved).isNotNull();
 
-        // Assert 2: Outbox message created (same transaction)
+        // 断言 2: Outbox message created (same transaction)
         OutboxMessage outbox = outboxRepo.findByDedupKey("plan-created-" + plan.getId()).orElseThrow();
         assertThat(outbox.getEventType()).isEqualTo("PlanCreatedEvent");
         assertThat(outbox.getStatus()).isEqualTo("PENDING");
@@ -1708,26 +1791,26 @@ class OutboxPatternIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should rollback outbox message when business operation fails")
+    @DisplayName("当业务操作失败时应该回滚 Outbox 消息")
     void shouldRollbackOutboxOnFailure() {
-        // Arrange: Mock business logic failure
+        // 准备: Mock business logic failure
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan()
-            .withInvalidData()  // Trigger validation failure
+            .withInvalidData()  // 触发 validation failure
             .build();
 
-        // Act & Assert
+        // 执行 & 断言
         assertThatThrownBy(() -> coordinator.persistPlanWithOutbox(plan))
             .isInstanceOf(ValidationException.class);
 
-        // Verify: Both Plan and Outbox message NOT saved (transaction rollback)
+        // 验证: Both Plan and Outbox message NOT saved (transaction rollback)
         assertThat(planRepo.findById(plan.getId())).isEmpty();
         assertThat(outboxRepo.findByDedupKey("plan-created-" + plan.getId())).isEmpty();
     }
 
     @Test
-    @DisplayName("Should prevent duplicate outbox messages (dedupKey uniqueness)")
+    @DisplayName("应该防止重复的 Outbox 消息（dedupKey 唯一性）")
     void shouldPreventDuplicateOutbox() {
-        // Arrange: Save one Outbox message
+        // 准备: Save one Outbox message
         String dedupKey = "plan-created-123";
         outboxRepo.save(OutboxMessage.builder()
             .dedupKey(dedupKey)
@@ -1735,7 +1818,7 @@ class OutboxPatternIntegrationTest {
             .status("PUBLISHED")
             .build());
 
-        // Act: Attempt to create duplicate message
+        // 执行: Attempt to create duplicate message
         PlanAggregate plan = PlanTestBuilder.aDefaultPlan().withId(123L).build();
 
         assertThatThrownBy(() -> coordinator.persistPlanWithOutbox(plan))
@@ -1744,9 +1827,9 @@ class OutboxPatternIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should relay pending outbox messages")
+    @DisplayName("应该中继待发的 Outbox 消息")
     void shouldRelayPendingMessages() {
-        // Arrange: Create PENDING outbox message
+        // 准备: Create PENDING outbox message
         OutboxMessage pending = outboxRepo.save(OutboxMessage.builder()
             .dedupKey("plan-created-999")
             .eventType("PlanCreatedEvent")
@@ -1754,11 +1837,11 @@ class OutboxPatternIntegrationTest {
             .payload("{\"planId\":999}")
             .build());
 
-        // Act: Execute Relay (simulate scheduled job)
+        // 执行: Execute Relay (simulate scheduled job)
         OutboxRelayOrchestrator relayOrchestrator = ...; // inject
         relayOrchestrator.relayPendingMessages();
 
-        // Assert: Message status updated to PUBLISHED
+        // 断言: Message status updated to PUBLISHED
         OutboxMessage relayed = outboxRepo.findById(pending.getId()).orElseThrow();
         assertThat(relayed.getStatus()).isEqualTo("PUBLISHED");
         assertThat(relayed.getPublishedAt()).isNotNull();
@@ -1766,18 +1849,18 @@ class OutboxPatternIntegrationTest {
 }
 ```
 
-**Key Testing Points for Outbox Pattern**:
-- Test atomicity: business data + outbox message in same transaction
-- Test rollback: both should rollback together on failure
-- Test dedupKey uniqueness constraint
-- Test relay mechanism (PENDING → PUBLISHED)
-- Test idempotency at outbox level
+**Outbox 模式测试的关键点**:
+- 测试原子性：业务数据 + Outbox 消息在同一事务中
+- 测试回滚：失败时两者应一起回滚
+- 测试 dedupKey 唯一性约束
+- 测试中继机制（PENDING → PUBLISHED）
+- 测试 Outbox 级别的幂等性
 
 ---
 
-### Transaction Boundary Testing
+### 事务边界测试
 
-Test **transaction propagation** and **rollback scenarios**.
+测试**事务传播**和**回滚场景**。
 
 #### Example: Testing Transaction Rollback
 
@@ -1793,37 +1876,37 @@ class TransactionBoundaryTest {
     private PlanRepositoryPort planRepo;
 
     @Test
-    @DisplayName("Should rollback entire transaction on failure")
+    @DisplayName("应该在失败时回滚整个事务")
     void shouldRollbackOnFailure() {
-        // Arrange
+        // 准备
         PlanIngestionContext context = new PlanIngestionContext(...);
 
-        // Mock to throw exception during persistence
+        // Mock 以在持久化期间抛出异常
         doThrow(new RuntimeException("DB error"))
             .when(planRepo).save(any());
 
-        // Act & Assert
+        // 执行 & 断言
         assertThatThrownBy(() -> orchestrator.ingestPlan(context))
             .isInstanceOf(RuntimeException.class);
 
-        // Verify: No data persisted (transaction rolled back)
+        // 验证: No data persisted (transaction rolled back)
         assertThat(planRepo.findAll()).isEmpty();
     }
 
     @Test
-    @DisplayName("Should support REQUIRES_NEW propagation")
+    @DisplayName("应该支持 REQUIRES_NEW 传播")
     void shouldSupportRequiresNewPropagation() {
-        // Test that REQUIRES_NEW creates independent transaction
-        // Implementation depends on your orchestrator design
+        // 测试 REQUIRES_NEW 是否创建独立事务
+        // 实现取决于你的编排器设计
     }
 }
 ```
 
 ---
 
-### Concurrency & Optimistic Locking Testing
+### 并发和乐观锁测试
 
-Test **concurrent updates** and **optimistic lock conflict resolution**.
+测试**并发更新**和**乐观锁冲突解决**。
 
 #### Example: Testing Optimistic Lock Conflicts
 
@@ -1835,44 +1918,44 @@ class ConcurrencyTest {
     private PlanRepositoryPort planRepo;
 
     @Test
-    @DisplayName("Should detect concurrent update conflicts")
+    @DisplayName("应该检测并发更新冲突")
     void shouldDetectConcurrentConflicts() {
-        // Arrange: Save plan with version 1
+        // 准备：保存版本为 1 的 Plan
         PlanAggregate plan = planRepo.save(PlanTestBuilder.aDefaultPlan()
             .withVersion(1L)
             .build());
 
-        // Simulate concurrent update (version mismatch)
+        // 模拟并发更新（版本不匹配）
         PlanAggregate staleVersion = planRepo.findById(plan.getId()).orElseThrow();
-        plan.updateStatus(PlanStatus.COMPLETED);  // Update original
-        planRepo.save(plan);  // Save original (version 2)
+        plan.updateStatus(PlanStatus.COMPLETED);  // 更新原始版本
+        planRepo.save(plan);  // 保存原始版本（版本 2）
 
-        // Act: Try to update stale version (still version 1)
+        // 执行：尝试更新过期版本（仍为版本 1）
         staleVersion.updateStatus(PlanStatus.FAILED);
 
-        // Assert: OptimisticLockingFailureException thrown
+        // 断言：抛出 OptimisticLockingFailureException
         assertThatThrownBy(() -> planRepo.save(staleVersion))
             .isInstanceOf(OptimisticLockingFailureException.class);
     }
 
     @Test
-    @DisplayName("Should retry on optimistic lock conflict")
+    @DisplayName("应该在乐观锁冲突时重试")
     void shouldRetryOnOptimisticLockConflict() {
-        // Test retry logic for optimistic lock conflicts
-        // Implementation depends on your retry mechanism
+        // 测试乐观锁冲突的重试逻辑
+        // 实现取决于你的重试机制
     }
 }
 ```
 
 ---
 
-## Test Data Management
+## 测试数据管理
 
-**目的**: Manage test data creation and isolation efficiently.
+**目的**: 高效管理测试数据的创建和隔离。
 
-### Test Data Builder Pattern
+### 测试数据构造器模式
 
-Use **fluent builders** to create test data with readable, maintainable code.
+使用**流畅构造器**以可读的、可维护的代码创建测试数据。
 
 #### Example: Test Data Builder
 
@@ -1917,7 +2000,7 @@ public class PlanTestBuilder {
 
     public PlanAggregate build() {
         return PlanAggregate.create(
-            100L,            // scheduleInstanceId
+            100L,            // 调度实例 ID
             planKey,
             provenanceCode,
             operationCode,
@@ -1933,20 +2016,20 @@ public class PlanTestBuilder {
 }
 ```
 
-#### Usage Example
+#### 使用示例
 
 ```java
-// Simple plan
+// 简单 Plan
 PlanAggregate plan = aDefaultPlan().build();
 
-// Customized plan
+// 自定义 Plan
 PlanAggregate pubmedPlan = aDefaultPlan()
     .withProvenanceCode("PUBMED")
     .withStatus(PlanStatus.READY)
     .withVersion(5L)
     .build();
 
-// Plan with time window
+// 具有时间窗口的 Plan
 PlanAggregate timePlan = aDefaultPlan()
     .withWindowSpec(WindowSpec.ofTime(
         Instant.parse("2024-01-01T00:00:00Z"),
@@ -1955,11 +2038,11 @@ PlanAggregate timePlan = aDefaultPlan()
     .build();
 ```
 
-### Fixture Management
+### 测试夹具管理
 
-Organize test fixtures in dedicated classes or methods.
+在专用类或方法中组织测试夹具。
 
-#### Example: Fixture Class
+#### 示例：夹具类
 
 ```java
 public class TestFixtures {
@@ -1994,39 +2077,39 @@ public class TestFixtures {
 }
 ```
 
-### Test Data Isolation
+### 测试数据隔离
 
-Use `@Transactional` on test classes to auto-rollback after each test.
+在测试类上使用 `@Transactional` 以在每个测试后自动回滚。
 
 ```java
 @SpringBootTest
-@Transactional  // Auto-rollback after each test
+@Transactional  // 每个测试后自动回滚
 class MyIntegrationTest {
 
     @Test
     void testA() {
-        // Create test data
-        // Automatically rolled back after test
+        // 创建测试数据
+        // 测试后自动回滚
     }
 
     @Test
     void testB() {
-        // Fresh database state (previous test rolled back)
+        // 全新数据库状态（前一个测试已回滚）
     }
 }
 ```
 
 ---
 
-## Test Coverage Strategy
+## 测试覆盖率策略
 
-**目的**: Define coverage targets and measurement strategies.
+**目的**: 定义覆盖率目标和测量策略。
 
-### JaCoCo Configuration
+### JaCoCo 配置
 
-Configure JaCoCo for automated coverage reporting.
+配置 JaCoCo 以进行自动覆盖率报告。
 
-#### Maven Configuration
+#### Maven 配置
 
 ```xml
 <plugin>
@@ -2071,56 +2154,56 @@ Configure JaCoCo for automated coverage reporting.
 </plugin>
 ```
 
-### Layer-specific Coverage Targets
+### 层级特定的覆盖率目标
 
-| Layer | Target Coverage | Rationale |
+| 层级 | 目标覆盖率 | 理由 |
 |-------|----------------|-----------|
-| **Domain** | 90%+ | Core business logic - critical to test thoroughly |
-| **Application** | 80%+ | Orchestration logic - important workflows |
-| **Infrastructure** | 70%+ | Repository & converter - some boilerplate |
-| **Adapter** | 75%+ | Controllers & jobs - validation & error handling |
+| **Domain（领域层）** | 90%+ | 核心业务逻辑 - 需要彻底测试 |
+| **Application（应用层）** | 80%+ | 编排逻辑 - 重要的工作流 |
+| **Infrastructure（基础设施层）** | 70%+ | Repository & 转换器 - 存在一些样板代码 |
+| **Adapter（适配器层）** | 75%+ | 控制器和任务 - 验证和错误处理 |
 
-### Critical Path Identification
+### 关键路径识别
 
-Focus on high-value test coverage:
+专注于高价值的测试覆盖率：
 
-1. **Business-critical paths**:
-   - Payment processing
-   - User authentication
-   - Data ingestion workflows
+1. **业务关键路径**:
+   - 支付处理
+   - 用户认证
+   - 数据采集工作流
 
-2. **Complex domain logic**:
-   - Status calculation algorithms
-   - Aggregation rules
-   - Validation logic
+2. **复杂的领域逻辑**:
+   - 状态计算算法
+   - 聚合规则
+   - 验证逻辑
 
-3. **Error-prone areas**:
-   - Concurrent updates
-   - Event propagation
-   - External API integration
+3. **容易出错的地方**:
+   - 并发更新
+   - 事件传播
+   - 外部 API 集成
 
-### AI Testing Coverage Checklist
+### AI 测试覆盖率检查清单
 
-When generating tests, ensure coverage of:
+生成测试时，确保覆盖以下内容：
 
 ```
-□ Happy path (expected flow)
-□ Edge cases (boundary values, empty lists, null)
-□ Error scenarios (exceptions, validation failures)
-□ Business rule violations
-□ Concurrent scenarios (if applicable)
-□ Idempotency (if applicable)
-□ Transaction rollback (if @Transactional)
-□ Event publishing (if event-driven)
+□ 成功路径（预期流程）
+□ 边界情况（边界值、空列表、null）
+□ 错误场景（异常、验证失败）
+□ 业务规则违反
+□ 并发场景（如适用）
+□ 幂等性（如适用）
+□ 事务回滚（如果使用 @Transactional）
+□ 事件发布（如果是事件驱动）
 ```
 
 ---
 
-## ArchUnit Tests
+## ArchUnit 测试
 
-See [dependency-rules.md](dependency-rules.md) for complete ArchUnit patterns.
+详见 [dependency-rules.md](dependency-rules.md) 了解完整的 ArchUnit 模式。
 
-**Quick Example**:
+**快速示例**:
 
 ```java
 @AnalyzeClasses(packages = "com.patra.registry")
@@ -2160,60 +2243,64 @@ class ArchitectureTest {
 
 ## Testing Best Practices
 
-### 1. Test Naming Conventions
+### 1. 测试命名约定
 
 ```java
-// ✅ Good: Describes behavior
+// ✅ 好：描述行为
 @Test
+@DisplayName("当提供有效上下文时应该创建 Plan")
 void shouldCreatePlanWhenValidContextProvided() { }
 
 @Test
+@DisplayName("当 Provenance 未找到时应该抛出异常")
 void shouldThrowExceptionWhenProvenanceNotFound() { }
 
-// ❌ Bad: Generic names
+// ❌ 不好：通用名称
 @Test
+@DisplayName("测试创建 Plan")
 void testCreatePlan() { }
 
 @Test
 void test1() { }
 ```
 
-### 2. AAA Pattern (Arrange-Act-Assert)
+### 2. AAA 模式（准备-执行-断言）
 
 ```java
 @Test
+@DisplayName("应该计算窗口持续时间")
 void shouldCalculateWindowDuration() {
-    // Arrange (Given) - Setup test data
+    // 准备 (Given) - 设置测试数据
     Instant start = Instant.parse("2024-01-01T00:00:00Z");
     Instant end = Instant.parse("2024-01-31T23:59:59Z");
     WindowSpec.Time window = WindowSpec.ofTime(start, end);
 
-    // Act (When) - Execute behavior
+    // 执行 (When) - 执行行为
     long durationSeconds = window.to().getEpochSecond() - window.from().getEpochSecond();
 
-    // Assert (Then) - Verify results
+    // 断言 (Then) - 验证结果
     assertThat(durationSeconds).isGreaterThan(0);
 }
 ```
 
-### 3. Use AssertJ for Fluent Assertions
+### 3. 使用 AssertJ 进行流畅的断言
 
 ```java
-// ✅ Good (AssertJ - fluent and readable)
+// ✅ 好（AssertJ - 流畅且可读）
 assertThat(plan.getStatus()).isEqualTo(PlanStatus.DRAFT);
 assertThat(plan.getId()).isNotNull();
 assertThat(plan.getProvenanceCode()).isEqualTo("PUBMED");
 
-// ❌ Avoid (JUnit assertions - less readable)
+// ❌ 避免（JUnit 断言 - 可读性较差）
 assertNotNull(plan.getId());
 assertTrue(plan.getStatus() == PlanStatus.DRAFT);
 assertEquals("PUBMED", plan.getProvenanceCode());
 ```
 
-### 4. Avoid Test Interdependence
+### 4. 避免测试相互依赖
 
 ```java
-// ❌ Bad: Tests depend on execution order
+// ❌ 不好：测试依赖执行顺序
 @Test
 void test1_createProvenance() {
     provenance = provenanceService.create("PUBMED");
@@ -2221,27 +2308,29 @@ void test1_createProvenance() {
 
 @Test
 void test2_updateProvenance() {
-    provenanceService.update(provenance, "Updated");  // Depends on test1
+    provenanceService.update(provenance, "Updated");  // 依赖 test1
 }
 
-// ✅ Good: Each test is independent
+// ✅ 好：每个测试都是独立的
 @Test
+@DisplayName("应该创建 Provenance")
 void shouldCreateProvenance() {
     Provenance provenance = provenanceService.create("PUBMED");
     assertThat(provenance).isNotNull();
 }
 
 @Test
+@DisplayName("应该更新 Provenance")
 void shouldUpdateProvenance() {
-    Provenance provenance = createTestProvenance();  // Create fresh
+    Provenance provenance = createTestProvenance();  // 创建全新实例
     provenanceService.update(provenance, "Updated");
 }
 ```
 
-### 5. Test One Behavior Per Test
+### 5. 每个测试只测试一个行为
 
 ```java
-// ❌ Bad: Testing multiple behaviors
+// ❌ 不好：测试多个行为
 @Test
 void testProvenance() {
     Provenance p = create("PUBMED");
@@ -2254,48 +2343,51 @@ void testProvenance() {
     assertThat(findByCode("PUBMED")).isEmpty();
 }
 
-// ✅ Good: One behavior per test
+// ✅ 好：每个测试只测试一个行为
 @Test
+@DisplayName("应该创建 Provenance")
 void shouldCreateProvenance() { ... }
 
 @Test
+@DisplayName("应该更新 Provenance")
 void shouldUpdateProvenance() { ... }
 
 @Test
+@DisplayName("应该删除 Provenance")
 void shouldDeleteProvenance() { ... }
 ```
 
-### 6. Use DisplayName for Clarity
+### 6. 使用 DisplayName 提高清晰度
 
 ```java
 @Test
-@DisplayName("Should propagate Task → Slice → Plan status updates")
+@DisplayName("应该传播 Task → Slice → Plan 状态更新")
 void shouldPropagateStatusUpdates() {
-    // Test implementation
+    // 测试实现
 }
 ```
 
 ---
 
-## Testing Checklists & Quick Reference
+## 测试检查清单和快速参考
 
-**目的**: Fast decision-making for AI when generating tests.
+**目的**: 在生成测试时为 AI 提供快速的决策支持。
 
-### Checklist: Testing an Orchestrator
+### 检查清单：测试 Orchestrator
 
-When you see an **Orchestrator** class:
+当你看到 **Orchestrator** 类时：
 
 ```
-□ Mock all Coordinator dependencies
-□ Mock all Port dependencies
-□ Verify Coordinator call order using InOrder
-□ Test transaction rollback scenario (@Transactional)
-□ Test exception propagation chain
-□ Test idempotency (if applicable)
-□ Aim for 80%+ coverage
+□ Mock 所有 Coordinator 依赖
+□ Mock 所有 Port 依赖
+□ 使用 InOrder 验证 Coordinator 调用顺序
+□ 测试事务回滚场景（@Transactional）
+□ 测试异常传播链
+□ 测试幂等性（如适用）
+□ 目标 80%+ 覆盖率
 ```
 
-**Example pattern**:
+**示例模式**:
 ```java
 @ExtendWith(MockitoExtension.class)
 class OrchestratorTest {
@@ -2315,22 +2407,22 @@ class OrchestratorTest {
 
 ---
 
-### Checklist: Testing an Event Handler
+### 检查清单：测试事件处理器
 
-When you see **@TransactionalEventListener**:
+当你看到 **@TransactionalEventListener** 时：
 
 ```
-□ Use @SpringBootTest (needs Spring context)
-□ Use @Transactional for auto-rollback
+□ 使用 @SpringBootTest（需要 Spring 上下文）
+□ 使用 @Transactional 进行自动回滚
 □ Mock ApplicationEventPublisher
-□ Verify AFTER_COMMIT phase event publishing
-□ Test idempotency check (dedupKey query against Outbox)
-□ Test OptimisticLockingFailureException handling
-□ Verify event chain propagation (integration test)
-□ Test concurrent event scenarios (optional)
+□ 验证 AFTER_COMMIT 阶段事件发布
+□ 测试幂等性检查（针对 Outbox 的 dedupKey 查询）
+□ 测试 OptimisticLockingFailureException 处理
+□ 验证事件链传播（集成测试）
+□ 测试并发事件场景（可选）
 ```
 
-**Example pattern**:
+**示例模式**:
 ```java
 @SpringBootTest
 @Transactional
@@ -2356,21 +2448,21 @@ class EventHandlerTest {
 
 ---
 
-### Checklist: Testing a Repository
+### 检查清单：测试 Repository
 
-When you see a **Repository implementation**:
+当你看到 **Repository 实现** 时：
 
 ```
-□ Use TestContainers (real database)
-□ Extend BaseIntegrationTest (or configure MySQL container)
-□ Test basic CRUD operations
-□ Test complex queries (Wrapper, pagination)
-□ Test unique constraint violations
-□ Test optimistic lock version conflicts
-□ Clean test data (@Transactional auto-rollback)
+□ 使用 TestContainers（真实数据库）
+□ 继承 BaseIntegrationTest（或配置 MySQL 容器）
+□ 测试基本 CRUD 操作
+□ 测试复杂查询（Wrapper、分页）
+□ 测试唯一性约束违反
+□ 测试乐观锁版本冲突
+□ 清理测试数据（@Transactional 自动回滚）
 ```
 
-**Example pattern**:
+**示例模式**:
 ```java
 @SpringBootTest
 @Testcontainers
@@ -2388,91 +2480,91 @@ class RepositoryIntegrationTest extends BaseIntegrationTest {
 
 ---
 
-### Checklist: Testing a Coordinator
+### 检查清单：测试 Coordinator
 
-When you see a **Coordinator** class:
-
-```
-□ Use @ExtendWith(MockitoExtension.class)
-□ Mock all dependencies (ports, other coordinators)
-□ Verify concern-specific logic
-□ Test exception wrapping (infrastructure → domain)
-□ Test edge cases (empty lists, null handling)
-```
-
----
-
-### Checklist: Testing a Converter
-
-When you see **MapStruct** converter:
+当你看到 **Coordinator** 类时：
 
 ```
-□ Test Domain → DO conversion
-□ Test DO → Domain conversion (round-trip)
-□ Test null field handling
-□ Test list conversions
-□ Test complex nested objects
-□ Verify field name mappings
+□ 使用 @ExtendWith(MockitoExtension.class)
+□ Mock 所有依赖（ports、其他 coordinators）
+□ 验证关注点特定的逻辑
+□ 测试异常包装（基础设施 → 领域）
+□ 测试边界情况（空列表、null 处理）
 ```
 
 ---
 
-### Checklist: Testing an XXL-Job
+### 检查清单：测试转换器
 
-When you see **@XxlJob**:
+当你看到 **MapStruct** 转换器时：
 
 ```
-□ Use @ExtendWith(MockitoExtension.class)
-□ Mock XxlJobHelper with MockedStatic
-□ Test parameter parsing (getJobParam)
-□ Test job execution flow
-□ Test failure scenarios and error handling
-□ Verify job logging (XxlJobHelper.log)
+□ 测试 Domain → DO 转换
+□ 测试 DO → Domain 转换（往返）
+□ 测试空字段处理
+□ 测试列表转换
+□ 测试复杂嵌套对象
+□ 验证字段名称映射
 ```
 
 ---
 
-### Pattern Matching Quick Reference
+### 检查清单：测试 XXL-Job
 
-| See This Code Feature | Immediately Know | Verify These Points | Example Section |
+当你看到 **@XxlJob** 时：
+
+```
+□ 使用 @ExtendWith(MockitoExtension.class)
+□ 使用 MockedStatic Mock XxlJobHelper
+□ 测试参数解析（getJobParam）
+□ 测试任务执行流程
+□ 测试失败场景和错误处理
+□ 验证任务日志（XxlJobHelper.log）
+```
+
+---
+
+### 模式匹配快速参考
+
+| 看到这个代码特征 | 立即知道 | 验证这些要点 | 示例部分 |
 |-----------------------|------------------|---------------------|-----------------|
-| `@TransactionalEventListener(phase = AFTER_COMMIT)` | Integration test + Mock Publisher | Event publishing, idempotency, optimistic lock | [§4.3](#event-handler-testing) |
-| `Orchestrator + multiple Coordinators` | Layered mocking | Call order (InOrder), exception wrapping | [§4.1](#orchestrator-testing) |
-| `OutboxMessage.builder()...save()` | Integration test | Atomicity with business data, dedupKey | [§7.2](#outbox-pattern-testing) |
-| `@XxlJob` | Mock XxlJobHelper | Parameter parsing, job flow | [§6.2](#xxl-job-testing) |
-| `@RestController` + `@Valid` | @WebMvcTest + MockMvc | Validation failure, ProblemDetail | [§6.1](#rest-controller-testing) |
-| `MapStruct` converter | Unit test | Bidirectional mapping, null handling | [§5.2](#converter-testing) |
-| `@Transactional` | Integration test | Rollback scenarios, REQUIRES_NEW | [§7.3](#transaction-boundary-testing) |
-| Aggregate with `version` field | Integration test | Concurrent update conflicts | [§7.4](#concurrency--optimistic-locking-testing) |
+| `@TransactionalEventListener(phase = AFTER_COMMIT)` | 集成测试 + Mock Publisher | 事件发布、幂等性、乐观锁 | [§4.3](#event-handler-testing) |
+| `Orchestrator + 多个 Coordinators` | 分层 Mock | 调用顺序（InOrder）、异常包装 | [§4.1](#orchestrator-testing) |
+| `OutboxMessage.builder()...save()` | 集成测试 | 与业务数据的原子性、dedupKey | [§7.2](#outbox-pattern-testing) |
+| `@XxlJob` | Mock XxlJobHelper | 参数解析、任务流程 | [§6.2](#xxl-job-testing) |
+| `@RestController` + `@Valid` | @WebMvcTest + MockMvc | 验证失败、ProblemDetail | [§6.1](#rest-controller-testing) |
+| `MapStruct` 转换器 | 单元测试 | 双向映射、空字段处理 | [§5.2](#converter-testing) |
+| `@Transactional` | 集成测试 | 回滚场景、REQUIRES_NEW | [§7.3](#transaction-boundary-testing) |
+| 具有 `version` 字段的聚合根 | 集成测试 | 并发更新冲突 | [§7.4](#concurrency--optimistic-locking-testing) |
 
 ---
 
-## Summary
+## 总结
 
-**Testing Strategy**:
-- **Domain**: Pure unit tests, no mocks
-- **Application**: Mock ports, test orchestration
-- **Infrastructure**: TestContainers, real database
-- **Adapter**: MockMvc or job mocking, mock application layer
-- **Integration**: End-to-end workflows with real database and events
-- **Architecture**: ArchUnit for dependency validation
+**测试策略**:
+- **Domain（领域层）**: 纯单元测试，无 Mock
+- **Application（应用层）**: Mock port，测试编排
+- **Infrastructure（基础设施层）**: TestContainers、真实数据库
+- **Adapter（适配器层）**: MockMvc 或任务 Mock、Mock 应用层
+- **Integration（集成测试）**: 使用真实数据库和事件的端到端工作流
+- **Architecture（架构）**: ArchUnit 用于依赖验证
 
-**Key Tools**:
-- **JUnit 5**: Test framework
-- **Mockito**: Mocking framework
-- **AssertJ**: Fluent assertions
-- **TestContainers**: Real database for integration tests
-- **ArchUnit**: Architecture validation
-- **JaCoCo**: Code coverage
+**关键工具**:
+- **JUnit 5**: 测试框架
+- **Mockito**: Mock 框架
+- **AssertJ**: 流畅的断言
+- **TestContainers**: 集成测试的真实数据库
+- **ArchUnit**: 架构验证
+- **JaCoCo**: 代码覆盖率
 
-**Testing Pyramid Targets**:
-- 70% Unit Tests (Domain + Application)
-- 25% Integration Tests (Infrastructure + Integration patterns)
-- 5% E2E Tests (Critical workflows)
+**测试金字塔目标**:
+- 70% 单元测试（Domain + Application）
+- 25% 集成测试（Infrastructure + 集成模式）
+- 5% E2E 测试（关键工作流）
 
-**See Also**:
-- [dependency-rules.md](dependency-rules.md) - ArchUnit patterns
-- [architecture-overview.md](architecture-overview.md) - Layer responsibilities
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Application layer patterns
-- [event-driven-architecture.md](event-driven-architecture.md) - Event handling patterns
-- [outbox-pattern.md](outbox-pattern.md) - Outbox implementation details
+**另见**:
+- [dependency-rules.md](dependency-rules.md) - ArchUnit 模式
+- [architecture-overview.md](architecture-overview.md) - 层级职责
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 应用层模式
+- [event-driven-architecture.md](event-driven-architecture.md) - 事件处理模式
+- [outbox-pattern.md](outbox-pattern.md) - Outbox 实现细节
