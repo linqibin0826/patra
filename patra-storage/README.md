@@ -2,7 +2,7 @@
 
 ## 概述
 
-**patra-storage** 是 Papertrace 平台的对象存储元数据管理微服务,专门负责记录和管理上传到外部对象存储提供商(MinIO/S3)的文件元数据。
+**patra-storage** 是 Patra 平台的对象存储元数据管理微服务,专门负责记录和管理上传到外部对象存储提供商(MinIO/S3)的文件元数据。
 
 作为平台的基础设施服务,patra-storage 提供了文件上传记录的持久化存储,维护文件与业务上下文的关联关系,并通过唯一的 `storage_key` (bucket/objectKey) 确保幂等性。该服务仅对内部微服务提供 Feign API,不暴露公共 REST 接口。
 
@@ -201,7 +201,7 @@ public interface StorageClient extends StorageEndpoint {}
 **1. 添加依赖** (在 `pom.xml` 中):
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-storage-api</artifactId>
 </dependency>
 ```
@@ -237,7 +237,7 @@ spring:
     name: patra-storage
 
   datasource:
-    url: jdbc:mysql://localhost:3306/papertrace_storage?useUnicode=true&characterEncoding=utf8mb4
+    url: jdbc:mysql://localhost:3306/patra_storage?useUnicode=true&characterEncoding=utf8mb4
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:password}
 
@@ -288,7 +288,7 @@ mybatis-plus:
 
 1. **初始化数据库**:
 ```bash
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS papertrace_storage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS patra_storage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
 2. **配置环境变量** (可选):
@@ -354,4 +354,4 @@ curl http://localhost:8848/nacos/v1/ns/instance/list?serviceName=patra-storage
 
 ## 许可证
 
-版权所有 © 2024 Papertrace 团队
+版权所有 © 2024 Patra 团队

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <relativePath>../patra-parent/pom.xml</relativePath>
         <version>0.1.0-SNAPSHOT</version>
@@ -13,7 +13,7 @@
 
     <artifactId>patra-common</artifactId>
     <packaging>pom</packaging>
-    <name>Papertrace Common</name>
+    <name>Patra Common</name>
 
     <modules>
         <module>patra-common-core</module>
@@ -22,7 +22,7 @@
     </modules>
 
     <description>
-        Papertrace Common - Multi-module project providing shared utilities:
+        Patra Common - Multi-module project providing shared utilities:
         - patra-common-core: Core domain/error/json/util classes (required by all services)
         - patra-common-storage: Object storage key generation strategies (optional)
         - patra-common-model: Shared data models like StandardLiterature (optional)

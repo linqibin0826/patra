@@ -9,7 +9,7 @@ spring:
   config:
     import:
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
-      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
   cloud:
     nacos:
       server-addr: ${NACOS_ADDR:127.0.0.1:8848}

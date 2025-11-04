@@ -15,10 +15,10 @@ import lombok.extern.slf4j.Slf4j;
  * <h3>记录的指标</h3>
  *
  * <ul>
- *   <li><b>papertrace.feign.error.parsing</b> - ProblemDetail 解析性能 (Timer)
- *   <li><b>papertrace.feign.error.decoding</b> - 错误解码结果统计 (Counter)
- *   <li><b>papertrace.feign.error.body.read</b> - 响应体读取性能 (Timer)
- *   <li><b>papertrace.feign.error.traceid</b> - 跟踪标识符提取统计 (Counter)
+ *   <li><b>patra.feign.error.parsing</b> - ProblemDetail 解析性能 (Timer)
+ *   <li><b>patra.feign.error.decoding</b> - 错误解码结果统计 (Counter)
+ *   <li><b>patra.feign.error.body.read</b> - 响应体读取性能 (Timer)
+ *   <li><b>patra.feign.error.traceid</b> - 跟踪标识符提取统计 (Counter)
  * </ul>
  *
  * <h3>性能监控</h3>
@@ -46,7 +46,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
   @Override
   public void recordProblemDetailParsing(
       String methodKey, int status, long durationMs, boolean success) {
-    Timer.builder("papertrace.feign.error.parsing")
+    Timer.builder("patra.feign.error.parsing")
         .tag("method", methodKey)
         .tag("status", String.valueOf(status))
         .tag("success", Boolean.toString(success))
@@ -74,7 +74,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
   @Override
   public void recordDecodingOutcome(
       String methodKey, int status, boolean success, boolean tolerantMode) {
-    Counter.builder("papertrace.feign.error.decoding")
+    Counter.builder("patra.feign.error.decoding")
         .tag("method", methodKey)
         .tag("status", String.valueOf(status))
         .tag("success", Boolean.toString(success))
@@ -90,7 +90,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
   @Override
   public void recordResponseBodyRead(
       String methodKey, int bodySize, long durationMs, boolean truncated) {
-    Timer.builder("papertrace.feign.error.body.read")
+    Timer.builder("patra.feign.error.body.read")
         .tag("method", methodKey)
         .tag("truncated", Boolean.toString(truncated))
         .register(meterRegistry)
@@ -109,7 +109,7 @@ public class MicrometerFeignErrorObservationRecorder implements FeignErrorObserv
 
   @Override
   public void recordTraceIdExtraction(String methodKey, boolean found, String headerName) {
-    Counter.builder("papertrace.feign.error.traceid")
+    Counter.builder("patra.feign.error.traceid")
         .tag("method", methodKey)
         .tag("found", Boolean.toString(found))
         .tag("header", headerName == null ? "none" : headerName)

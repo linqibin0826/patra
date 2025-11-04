@@ -2,7 +2,7 @@
 
 ## 概览
 
-ArchUnit 是一个 Java 库,用于在编译/测试时验证架构规则。Papertrace 使用 ArchUnit 强制执行六边形架构 + DDD 边界,防止架构漂移。
+ArchUnit 是一个 Java 库,用于在编译/测试时验证架构规则。Patra 使用 ArchUnit 强制执行六边形架构 + DDD 边界,防止架构漂移。
 
 ---
 

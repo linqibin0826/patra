@@ -6,7 +6,7 @@
 
 ## 概述
 
-`patra-common-model` 是 Papertrace 平台的共享数据模型模块,采用 DDD 的 **Shared Kernel** 模式,定义跨服务共享的核心数据结构。本模块提供的模型作为服务间的契约,确保数据交换的一致性和兼容性。
+`patra-common-model` 是 Patra 平台的共享数据模型模块,采用 DDD 的 **Shared Kernel** 模式,定义跨服务共享的核心数据结构。本模块提供的模型作为服务间的契约,确保数据交换的一致性和兼容性。
 
 **设计原则**:
 - **无行为**: 模型仅包含数据结构,不包含业务逻辑
@@ -91,7 +91,7 @@ patra-common-model/
 
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-common-model</artifactId>
 </dependency>
 ```
@@ -325,6 +325,6 @@ public class StandardLiterature {
 
 ---
 
-**Maven 坐标**: `com.papertrace:patra-common-model`
+**Maven 坐标**: `com.patra:patra-common-model`
 **版本**: 0.1.0-SNAPSHOT
 **最后更新**: 2025-11-03

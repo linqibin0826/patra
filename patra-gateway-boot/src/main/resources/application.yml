@@ -1,7 +1,7 @@
 # ============================================================================
-# Papertrace API Gateway - Main Configuration
+# Patra API Gateway - Main Configuration
 # ============================================================================
-# This gateway serves as the unified entry point for all Papertrace services.
+# This gateway serves as the unified entry point for all Patra services.
 # Routes are configured below with Nacos-based service discovery.
 # ============================================================================
 
@@ -25,7 +25,7 @@ spring:
   config:
     import:
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
-      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
 
   # Cloud Configuration
   cloud:

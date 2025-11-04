@@ -151,7 +151,7 @@ public record RecordUploadResponse(
 **1. 添加 Maven 依赖**:
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-storage-api</artifactId>
     <version>${project.version}</version>
 </dependency>
@@ -255,7 +255,7 @@ feign:
 | Jakarta Validation | 3.1.0+ | Bean Validation 规范 |
 | Spring Web | 6.2.5+ | Spring Web 注解支持 |
 | Spring Cloud OpenFeign | 4.2.5+ | Feign 客户端框架 |
-| patra-common-core | 0.1.0-SNAPSHOT | Papertrace 通用基础库 |
+| patra-common-core | 0.1.0-SNAPSHOT | Patra 通用基础库 |
 
 ## 相关文档
 

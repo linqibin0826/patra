@@ -2,7 +2,7 @@
 
 ## 概览
 
-Provenance 配置系统是 Papertrace 的**多维时态配置机制**,存储在 `patra-registry` 中并由 `patra-ingest` 消费。它管理从每个 Provenance 源采集数据的方式。
+Provenance 配置系统是 Patra 的**多维时态配置机制**,存储在 `patra-registry` 中并由 `patra-ingest` 消费。它管理从每个 Provenance 源采集数据的方式。
 
 **Key Characteristics:**
 - **Multi-Dimensional**: 7 independent configuration dimensions (Window, Pagination, HTTP, Batching, Retry, RateLimit, CircuitBreaker)
@@ -158,7 +158,7 @@ Results:
 |-------|------|-------------|---------|
 | `request_method_code` | VARCHAR | HTTP method: GET/POST | 'GET' |
 | `timeout_seconds` | INT | Request timeout | 30 |
-| `headers` | JSON | Default HTTP headers | `{"User-Agent":"Papertrace/1.0"}` |
+| `headers` | JSON | Default HTTP headers | `{"User-Agent":"Patra/1.0"}` |
 
 ---
 

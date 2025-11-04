@@ -47,7 +47,7 @@
 
 ## 项目概览
 
-**Papertrace** — 医学文献数据平台,采集 10+ 数据源 (PubMed, EPMC 等)。使用 `patra-registry` 作为 Provenance 配置、字典、元数据的单一事实来源 (SSOT)。
+**Patra** — 医学文献数据平台,采集 10+ 数据源 (PubMed, EPMC 等)。使用 `patra-registry` 作为 Provenance 配置、字典、元数据的单一事实来源 (SSOT)。
 **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
 
 **技术栈**: Java 25 | Spring Boot 3.5.7 + Cloud 2025.0.0 | Maven | MyBatis-Plus + MapStruct | Nacos

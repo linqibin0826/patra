@@ -5,24 +5,24 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-ingest</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-ingest-domain</artifactId>
-    <name>Papertrace Ingest Domain</name>
+    <name>Patra Ingest Domain</name>
     <description>Ingestion domain module - core business logic and domain model</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-common-core</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-common-model</artifactId>
         </dependency>
 

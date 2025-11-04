@@ -2,7 +2,7 @@
 
 ## 概览
 
-本文档描述了 Papertrace 中 **ScheduleInstance → Plan → PlanSlice → Task → TaskRun** 的完整生命周期，基于实际的数据库模式和代码实现。
+本文档描述了 Patra 中 **ScheduleInstance → Plan → PlanSlice → Task → TaskRun** 的完整生命周期，基于实际的数据库模式和代码实现。
 
 **核心架构**：
 - **四层层次结构**：ScheduleInstance → Plan → PlanSlice → Task（1:1:1）

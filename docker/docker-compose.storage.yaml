@@ -20,7 +20,7 @@ services:
       TZ: Asia/Shanghai
     command: server /data --console-address ":9001"
     volumes:
-      - ${HOME}/.papertrace/docker/minio/data:/data
+      - ${HOME}/.patra/docker/minio/data:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s
@@ -40,17 +40,17 @@ services:
       sleep 3;
 
       echo 'Configuring MinIO client...';
-      mc alias set papertrace http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
+      mc alias set patra http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
 
       echo 'Creating default bucket for development environment...';
-      mc mb --ignore-existing papertrace/dev-ingest;
+      mc mb --ignore-existing patra/dev-ingest;
 
       echo 'Setting bucket policy to private (authenticated access only)...';
-      mc anonymous set none papertrace/dev-ingest;
+      mc anonymous set none patra/dev-ingest;
 
       echo 'MinIO initialization completed successfully!';
       echo 'Available buckets:';
-      mc ls papertrace;
+      mc ls patra;
 
       echo '';
       echo '==================================================';

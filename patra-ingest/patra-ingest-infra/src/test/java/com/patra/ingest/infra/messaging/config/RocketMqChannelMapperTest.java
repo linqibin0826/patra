@@ -60,13 +60,13 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("LITERATURE_READY 应映射到 papertrace.catalog.literature.ready")
+    @DisplayName("LITERATURE_READY 应映射到 patra.catalog.literature.ready")
     void shouldMapLiteratureReadyChannelToTopic() {
       // When
       String topic = channelMapper.toTopic(MessageChannels.LITERATURE_READY);
 
       // Then
-      assertThat(topic).isEqualTo("papertrace.catalog.literature.ready");
+      assertThat(topic).isEqualTo("patra.catalog.literature.ready");
     }
 
     @Test
@@ -185,7 +185,7 @@ class RocketMqChannelMapperTest {
 
       // Then
       assertThat(customTopic).isEqualTo("CUSTOM_TASK_TOPIC"); // 自定义映射
-      assertThat(defaultTopic).isEqualTo("papertrace.catalog.literature.ready"); // 默认映射
+      assertThat(defaultTopic).isEqualTo("patra.catalog.literature.ready"); // 默认映射
     }
 
     @Test
@@ -220,10 +220,10 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("papertrace.catalog.literature.ready 应反向映射到 LITERATURE_READY")
+    @DisplayName("patra.catalog.literature.ready 应反向映射到 LITERATURE_READY")
     void shouldReverseMapLiteratureReadyTopicToChannel() {
       // When
-      String channel = channelMapper.toChannel("papertrace.catalog.literature.ready");
+      String channel = channelMapper.toChannel("patra.catalog.literature.ready");
 
       // Then
       assertThat(channel).isEqualTo(MessageChannels.LITERATURE_READY);
@@ -468,10 +468,10 @@ class RocketMqChannelMapperTest {
       // When
       String topic = channelMapper.toTopic(crossServiceChannel);
 
-      // Then: 应遵循 papertrace.{service}.{entity}.{action} 约定
+      // Then: 应遵循 patra.{service}.{entity}.{action} 约定
       assertThat(topic)
-          .isEqualTo("papertrace.catalog.literature.ready")
-          .startsWith("papertrace.")
+          .isEqualTo("patra.catalog.literature.ready")
+          .startsWith("patra.")
           .matches("[a-z.]+"); // 全小写 + 点号
     }
 

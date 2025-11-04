@@ -1,6 +1,6 @@
 # 六边形架构 + DDD 概览
 
-Papertrace 架构模式完整指南,结合六边形架构 (Ports & Adapters) 与领域驱动设计 (Domain-Driven Design)。
+Patra 架构模式完整指南,结合六边形架构 (Ports & Adapters) 与领域驱动设计 (Domain-Driven Design)。
 
 ---
 
@@ -283,7 +283,7 @@ public class ProvenanceRepositoryImpl implements ProvenancePort {
 
 ### 模块级分离 (驱动 vs 被驱动)
 
-Papertrace 使用 **模块级边界** 分离驱动和被驱动适配器:
+Patra 使用 **模块级边界** 分离驱动和被驱动适配器:
 
 ```
 patra-{service}-adapter/     ← 仅驱动适配器 (接收触发)
@@ -501,7 +501,7 @@ public class TaskExecutionUseCaseImpl implements TaskExecutionUseCase {
 - **工厂 (Factory)**: 复杂聚合创建逻辑
 - **领域服务 (Domain Service)**: 跨聚合的无状态操作
 
-### GoF 模式 (Papertrace 中常见)
+### GoF 模式 (Patra 中常见)
 - **策略 (Strategy)**: 多算法实现 (例如每个来源的解析器)
 - **工厂 (Factory)**: 对象创建 (例如 Provenance 创建)
 - **模板方法 (Template Method)**: 带钩子点的算法骨架 (例如 AbstractProvenanceScheduleJob)
@@ -641,4 +641,4 @@ void domain_should_not_depend_on_spring() {
 
 ---
 
-**此架构在 Papertrace 中不可协商。违规将被 ArchUnit 测试和代码审查捕获。**
+**此架构在 Patra 中不可协商。违规将被 ArchUnit 测试和代码审查捕获。**

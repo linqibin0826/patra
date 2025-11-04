@@ -64,7 +64,7 @@ Skills 是 Claude 在需要时加载的模块化知识库。它们提供:
 - 设置验证和错误处理
 - 性能优化和 N+1 查询预防
 
-**自定义:** ✅ 已为 Papertrace 配置(patra-* 模块)
+**自定义:** ✅ 已为 Patra 配置(patra-* 模块)
 
 **路径模式:**
 ```json
@@ -108,8 +108,8 @@ Skills 是 Claude 在需要时加载的模块化知识库。它们提供:
 
 ---
 
-### papertrace-domain
-**目的:** Papertrace 业务领域知识和工作流模式
+### patra-domain
+**目的:** Patra 业务领域知识和工作流模式
 
 **文件:** 7 个资源文件(主文件 465 行 + 资源文件)
 
@@ -132,7 +132,7 @@ Skills 是 Claude 在需要时加载的模块化知识库。它们提供:
 - 理解数据源集成
 - 排查 Plan/Task 失败
 
-**自定义:** ✅ 已为 Papertrace 配置(patra-registry, patra-ingest, patra-expr-kernel)
+**自定义:** ✅ 已为 Patra 配置(patra-registry, patra-ingest, patra-expr-kernel)
 
 **路径模式:**
 ```json
@@ -145,7 +145,7 @@ Skills 是 Claude 在需要时加载的模块化知识库。它们提供:
 }
 ```
 
-**[查看 Skill →](papertrace-domain/)**
+**[查看 Skill →](patra-domain/)**
 
 ---
 

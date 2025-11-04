@@ -23,7 +23,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - ${HOME}/.papertrace/docker/es/data:/usr/share/elasticsearch/data
+      - ${HOME}/.patra/docker/es/data:/usr/share/elasticsearch/data
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1" ]
       interval: 20s
@@ -57,7 +57,7 @@ services:
       - "11800:11800"   # gRPC (含 OTLP)
       - "12800:12800"   # HTTP / GraphQL
 #    volumes:
-#      - ${HOME}/.papertrace/docker/oap-lal/sw-grpc-default.yaml:/skywalking/config/lal/sw-grpc-sw-grpc-default.yaml:ro
+#      - ${HOME}/.patra/docker/oap-lal/sw-grpc-default.yaml:/skywalking/config/lal/sw-grpc-sw-grpc-default.yaml:ro
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:12800/internal/l7check >/dev/null || exit 0" ]
       interval: 30s

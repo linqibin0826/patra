@@ -34,7 +34,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
  *   <li>保持条件激活(不需要 XML 的服务不会产生硬依赖)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

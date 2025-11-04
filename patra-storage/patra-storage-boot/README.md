@@ -81,13 +81,13 @@ public class PatraStorageApplication {
 <dependencies>
     <!-- 适配器层(REST 端点) -->
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-storage-adapter</artifactId>
     </dependency>
 
     <!-- 基础设施层(数据库访问) -->
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-storage-infra</artifactId>
     </dependency>
 </dependencies>
@@ -105,7 +105,7 @@ public class PatraStorageApplication {
 <dependencies>
     <!-- Web 支持(REST API) -->
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-spring-boot-starter-web</artifactId>
     </dependency>
 
@@ -142,7 +142,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/papertrace_storage?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/patra_storage?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=UTC
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:password}
     hikari:
@@ -208,11 +208,11 @@ spring:
     nacos:
       discovery:
         enabled: true
-        server-addr: ${NACOS_SERVER:nacos.papertrace.com:8848}
+        server-addr: ${NACOS_SERVER:nacos.patra.com:8848}
         namespace: prod
       config:
         enabled: true
-        server-addr: ${NACOS_SERVER:nacos.papertrace.com:8848}
+        server-addr: ${NACOS_SERVER:nacos.patra.com:8848}
         namespace: prod
         file-extension: yaml
         refresh-enabled: true
@@ -361,7 +361,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 **构建镜像**:
 ```bash
-docker build -t papertrace/patra-storage:0.1.0 .
+docker build -t patra/patra-storage:0.1.0 .
 ```
 
 **运行容器**:
@@ -372,8 +372,8 @@ docker run -d \
   -e SPRING_PROFILES_ACTIVE=prod \
   -e DB_USERNAME=root \
   -e DB_PASSWORD=secret \
-  -e NACOS_SERVER=nacos.papertrace.com:8848 \
-  papertrace/patra-storage:0.1.0
+  -e NACOS_SERVER=nacos.patra.com:8848 \
+  patra/patra-storage:0.1.0
 ```
 
 ## 监控与运维
@@ -480,7 +480,7 @@ spring:
 - **解决**:
   - 检查数据库连接配置(`url`、`username`、`password`)
   - 确保 MySQL 服务已启动
-  - 检查数据库是否存在(`papertrace_storage`)
+  - 检查数据库是否存在(`patra_storage`)
 
 **Q: 服务无法注册到 Nacos**
 - **原因**: Nacos 服务器未启动或配置错误

@@ -2,7 +2,7 @@
 
 ## 概述
 
-`patra-parent` 是 **Papertrace 项目的 Maven 父 POM**,为所有子模块提供集中的依赖版本管理、插件配置和构建规范。它确保整个代码库使用一致的技术栈版本、编译设置和代码质量标准。
+`patra-parent` 是 **Patra 项目的 Maven 父 POM**,为所有子模块提供集中的依赖版本管理、插件配置和构建规范。它确保整个代码库使用一致的技术栈版本、编译设置和代码质量标准。
 
 **核心价值**: 单一依赖版本来源(Single Source of Truth),简化子模块配置,避免版本冲突,统一构建行为。
 
@@ -60,7 +60,7 @@
 | **AWS SDK** | 2.25.36 | AWS 云服务 SDK |
 | **OpenFeign** | 13.1 | HTTP 客户端 |
 
-### Papertrace 内部模块
+### Patra 内部模块
 
 所有内部模块版本统一为 `${project.version}` (当前 `0.1.0-SNAPSHOT`):
 
@@ -147,7 +147,7 @@
 ```xml
 <project>
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../patra-parent/pom.xml</relativePath>
@@ -158,7 +158,7 @@
     <dependencies>
         <!-- 无需指定版本,从父 POM 继承 -->
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-common-core</artifactId>
         </dependency>
 

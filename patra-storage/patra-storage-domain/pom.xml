@@ -5,19 +5,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-storage</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-storage-domain</artifactId>
-    <name>Papertrace Storage Domain</name>
+    <name>Patra Storage Domain</name>
     <description>Storage domain module - aggregates, value objects, and repository ports</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-common-core</artifactId>
         </dependency>
 

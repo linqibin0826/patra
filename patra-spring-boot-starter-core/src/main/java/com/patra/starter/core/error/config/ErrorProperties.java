@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <p>控制错误码上下文、错误解析行为、观测和断路器设置。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Data

@@ -27,7 +27,7 @@ import com.patra.starter.core.error.model.ErrorResolution;
  * }
  * }</pre>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  * @see ResolutionInvocation
  * @see ErrorResolutionPipeline

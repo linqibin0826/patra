@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # maven-compile-check.sh
-# 目的：对 Papertrace 多模块项目进行快速 Maven 编译检查
+# 目的：对 Patra 多模块项目进行快速 Maven 编译检查
 # 触发器：Stop 事件（仅当 Java 文件被修改时）
 # 用法：使用多线程运行 mvn compile 以快速检测编译错误
 

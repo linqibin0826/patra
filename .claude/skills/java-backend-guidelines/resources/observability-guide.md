@@ -1,6 +1,6 @@
 # 可观测性指南
 
-**目的**: Papertrace 中的 SLF4J 日志模式、错误处理和可观测性最佳实践。
+**目的**: Patra 中的 SLF4J 日志模式、错误处理和可观测性最佳实践。
 
 ---
 
@@ -23,7 +23,7 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│  Papertrace Observability Stack         │
+│  Patra Observability Stack         │
 ├─────────────────────────────────────────┤
 │  Logging:                               │
 │    - SLF4J 2.0.x (Facade)               │

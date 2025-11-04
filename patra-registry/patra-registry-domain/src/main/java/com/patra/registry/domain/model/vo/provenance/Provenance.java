@@ -26,7 +26,7 @@ import com.patra.registry.domain.exception.DomainValidationException;
  * @param docsUrl 官方文档或参考URL,用于故障排查和API验证,可为null
  * @param active 激活标志,{@code true}表示激活可用,{@code false}表示停用
  * @param lifecycleStatusCode 生命周期状态代码(字典值,如{@code ACTIVE}),用于精细化状态管理
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record Provenance(

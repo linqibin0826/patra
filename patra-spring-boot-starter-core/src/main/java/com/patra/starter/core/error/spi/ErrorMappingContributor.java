@@ -23,7 +23,7 @@ import java.util.Optional;
  * }
  * }</pre>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public interface ErrorMappingContributor {

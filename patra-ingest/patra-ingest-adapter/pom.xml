@@ -5,27 +5,27 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-ingest</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-ingest-adapter</artifactId>
-    <name>Papertrace Ingest Adapter</name>
+    <name>Patra Ingest Adapter</name>
     <description>Ingestion adapter module - Web controllers, message queues, scheduled jobs</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-ingest-app</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-ingest-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>

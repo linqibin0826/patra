@@ -6,7 +6,7 @@
 
 ## 📌 核心职责
 
-`patra-ingest` 服务是 Papertrace 医学文献数据平台的**数据摄入编排核心**,负责:
+`patra-ingest` 服务是 Patra 医学文献数据平台的**数据摄入编排核心**,负责:
 
 1. **计划编排(Plan Orchestration)**: 根据调度触发器创建执行计划,分解为原子任务
 2. **窗口解析(Window Resolution)**: 确定数据采集的时间/容量边界,支持增量采集
@@ -259,9 +259,9 @@ cd patra-ingest/patra-ingest-boot
 ### 指标(Micrometer)
 
 **Outbox 指标**:
-- `papertrace.outbox.publish.total` (Counter) - 发布总数
-- `papertrace.outbox.publish.duration` (Timer) - 发布耗时
-- `papertrace.outbox.publish.batch.size` (DistributionSummary) - 批次大小分布
+- `patra.outbox.publish.total` (Counter) - 发布总数
+- `patra.outbox.publish.duration` (Timer) - 发布耗时
+- `patra.outbox.publish.batch.size` (DistributionSummary) - 批次大小分布
 
 **访问方式**:
 ```bash
@@ -269,7 +269,7 @@ cd patra-ingest/patra-ingest-boot
 curl http://localhost:8082/actuator/health
 
 # 查看指标
-curl http://localhost:8082/actuator/metrics/papertrace.outbox.publish.total
+curl http://localhost:8082/actuator/metrics/patra.outbox.publish.total
 ```
 
 ---
@@ -300,5 +300,5 @@ curl http://localhost:8082/actuator/metrics/papertrace.outbox.publish.total
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest:0.1.0-SNAPSHOT`
 **作者**: linqibin

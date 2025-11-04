@@ -136,7 +136,7 @@ public record ProvenanceConfigResp(
 
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-registry-api</artifactId>
     <version>${project.version}</version>
 </dependency>

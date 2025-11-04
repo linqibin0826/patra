@@ -1,12 +1,12 @@
 # patra-common-core — 核心基础设施
 
-> **所有 Papertrace 服务必需的核心基础设施模块**,提供 DDD 领域层基类、异常处理框架、共享枚举、JSON 工具和通用工具类。
+> **所有 Patra 服务必需的核心基础设施模块**,提供 DDD 领域层基类、异常处理框架、共享枚举、JSON 工具和通用工具类。
 
 ---
 
 ## 概述
 
-`patra-common-core` 是 Papertrace 平台的核心基础设施模块,为所有微服务提供必需的基础抽象和工具类。本模块严格遵循"无框架依赖"原则,领域层代码仅依赖 JDK 和精选的工具库(Hutool、Jackson),确保领域逻辑的纯粹性和可移植性。
+`patra-common-core` 是 Patra 平台的核心基础设施模块,为所有微服务提供必需的基础抽象和工具类。本模块严格遵循"无框架依赖"原则,领域层代码仅依赖 JDK 和精选的工具库(Hutool、Jackson),确保领域逻辑的纯粹性和可移植性。
 
 本模块是 **patra-common** 聚合器的核心子模块,所有微服务的所有层(`*-domain`、`*-app`、`*-infra`、`*-adapter`)都必须依赖此模块。
 
@@ -291,7 +291,7 @@ String md5 = HashUtils.md5(data);
 
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-common-core</artifactId>
 </dependency>
 ```
@@ -402,6 +402,6 @@ String contentHash = HashUtils.sha256(result.getHashMaterial());
 
 ---
 
-**Maven 坐标**: `com.papertrace:patra-common-core`
+**Maven 坐标**: `com.patra:patra-common-core`
 **版本**: 0.1.0-SNAPSHOT
 **最后更新**: 2025-11-03

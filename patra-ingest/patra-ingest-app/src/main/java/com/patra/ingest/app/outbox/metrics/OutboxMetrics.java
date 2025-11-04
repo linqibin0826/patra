@@ -16,9 +16,9 @@ import org.springframework.stereotype.Component;
  * <p>提供以下 Micrometer 指标:
  *
  * <ul>
- *   <li>papertrace.outbox.publish.total (计数器): 发布尝试总数,带状态标签
- *   <li>papertrace.outbox.publish.duration (计时器): 发布操作耗时
- *   <li>papertrace.outbox.publish.batch.size (分布汇总): 批次大小分布
+ *   <li>patra.outbox.publish.total (计数器): 发布尝试总数,带状态标签
+ *   <li>patra.outbox.publish.duration (计时器): 发布操作耗时
+ *   <li>patra.outbox.publish.batch.size (分布汇总): 批次大小分布
  * </ul>
  *
  * <p>所有指标包含标签: aggregateType (受 allowedAggregateTypes 控制), opType。
@@ -50,8 +50,8 @@ public class OutboxMetrics {
    * <p>记录的指标:
    *
    * <ul>
-   *   <li>papertrace.outbox.publish.total (计数器): 每次发布尝试时递增
-   *   <li>papertrace.outbox.publish.duration (计时器): 记录操作耗时
+   *   <li>patra.outbox.publish.total (计数器): 每次发布尝试时递增
+   *   <li>patra.outbox.publish.duration (计时器): 记录操作耗时
    * </ul>
    *
    * @param aggregateType 聚合类型 (例如 "Task", "LiteratureData"),必须在允许列表中
@@ -70,16 +70,16 @@ public class OutboxMetrics {
 
       String status = isSuccess ? "success" : "failure";
 
-      // 计数器: papertrace.outbox.publish.total
-      Counter.builder("papertrace.outbox.publish.total")
+      // 计数器: patra.outbox.publish.total
+      Counter.builder("patra.outbox.publish.total")
           .tag("aggregateType", aggregateType)
           .tag("opType", opType)
           .tag("status", status)
           .register(meterRegistry)
           .increment();
 
-      // 计时器: papertrace.outbox.publish.duration
-      Timer.builder("papertrace.outbox.publish.duration")
+      // 计时器: patra.outbox.publish.duration
+      Timer.builder("patra.outbox.publish.duration")
           .tag("aggregateType", aggregateType)
           .tag("opType", opType)
           .register(meterRegistry)
@@ -106,7 +106,7 @@ public class OutboxMetrics {
     try {
       validateAggregateType(aggregateType);
 
-      DistributionSummary.builder("papertrace.outbox.publish.batch.size")
+      DistributionSummary.builder("patra.outbox.publish.batch.size")
           .tag("aggregateType", aggregateType)
           .register(meterRegistry)
           .record(batchSize);
@@ -128,7 +128,7 @@ public class OutboxMetrics {
       throw new IllegalArgumentException(
           String.format(
               "未知的 aggregateType '%s'。允许的类型: %s。"
-                  + "请在配置中更新 papertrace.outbox.publisher.allowed-aggregate-types。",
+                  + "请在配置中更新 patra.outbox.publisher.allowed-aggregate-types。",
               aggregateType, allowed));
     }
   }

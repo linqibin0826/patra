@@ -12,7 +12,7 @@ package com.patra.ingest.domain.model.enums;
  *   <li><strong>LEASE_MISSED</strong>: 由于并发竞争未能获取租约(瞬态)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public enum RelayStatus {

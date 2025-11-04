@@ -2,7 +2,7 @@
 
 ## 概述
 
-**patra-catalog** 是 Papertrace 医学文献数据平台的文献目录服务,负责文献数据的存储、管理和查询。作为核心业务服务,它接收来自 patra-ingest 的采集数据,并为其他服务提供文献信息查询能力。
+**patra-catalog** 是 Patra 医学文献数据平台的文献目录服务,负责文献数据的存储、管理和查询。作为核心业务服务,它接收来自 patra-ingest 的采集数据,并为其他服务提供文献信息查询能力。
 
 **当前状态**: 🚧 **规划中** - 目前仅实现了 API 契约层(patra-catalog-api),核心业务逻辑和数据持久化层尚在开发中。
 
@@ -121,7 +121,7 @@ patra-catalog 将采用**六边形架构 + DDD** 模式,包含以下层次:
 | 组件 | 版本/说明 |
 |------|----------|
 | **Spring Boot** | 3.5.7 |
-| **patra-common-core** | Papertrace 公共核心库 |
+| **patra-common-core** | Patra 公共核心库 |
 | **Jakarta Validation** | DTO 数据校验 |
 | **Lombok** | Builder 模式支持 |
 | **MyBatis-Plus** | 数据持久化(规划中) |

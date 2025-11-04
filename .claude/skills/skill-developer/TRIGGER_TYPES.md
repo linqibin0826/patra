@@ -76,7 +76,7 @@ Action-based activation where user describes what they want to do rather than th
 **Orchestrator Creation:**
 - User prompt: "create a data ingestion orchestrator"
 - Matches: `(create).*?(orchestrator)`
-- Activates: `java-backend-guidelines`, `papertrace-domain`
+- Activates: `java-backend-guidelines`, `patra-domain`
 
 ### 最佳实践
 
@@ -146,7 +146,7 @@ Domain/area-specific activation based on file location in the project.
 
 - File being edited: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/PlanIngestionOrchestrator.java`
 - Matches: `patra-*/patra-*-app/src/main/java/**/*Orchestrator.java`
-- Activates: `java-backend-guidelines`, `papertrace-domain`
+- Activates: `java-backend-guidelines`, `patra-domain`
 
 ### 最佳实践
 

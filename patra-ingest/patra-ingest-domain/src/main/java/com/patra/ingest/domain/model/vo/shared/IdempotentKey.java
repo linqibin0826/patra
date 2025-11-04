@@ -18,7 +18,7 @@ package com.patra.ingest.domain.model.vo.shared;
  * <p><b>不变性约束:</b> 长度必须为 64(创建时验证)。
  *
  * @param value 64 位 SHA-256 十六进制字符串
- * @author Papertrace Team
+ * @author Patra Team
  * @since 0.1.0
  */
 public record IdempotentKey(String value) {

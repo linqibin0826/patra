@@ -2,16 +2,16 @@
 
 ## 概述
 
-**patra-gateway-boot** 是 Papertrace 医学文献数据平台的 API 网关服务,基于 Spring Cloud Gateway 构建。作为系统的统一入口,负责接收所有外部请求并将其路由到相应的后端微服务。
+**patra-gateway-boot** 是 Patra 医学文献数据平台的 API 网关服务,基于 Spring Cloud Gateway 构建。作为系统的统一入口,负责接收所有外部请求并将其路由到相应的后端微服务。
 
-本网关提供服务发现、负载均衡、请求转发等核心功能,确保客户端可以通过单一入口访问整个 Papertrace 微服务生态系统。
+本网关提供服务发现、负载均衡、请求转发等核心功能,确保客户端可以通过单一入口访问整个 Patra 微服务生态系统。
 
 ## 核心职责
 
 - **请求路由**: 根据请求路径将流量分发到正确的微服务(patra-registry、patra-ingest 等)
 - **服务发现**: 通过 Nacos 自动发现和注册后端服务实例
 - **负载均衡**: 使用 Spring Cloud LoadBalancer 在多个服务实例间分配请求
-- **统一入口**: 为所有 Papertrace API 提供单一访问点,简化客户端配置
+- **统一入口**: 为所有 Patra API 提供单一访问点,简化客户端配置
 - **请求日志**: 集成分布式追踪,记录请求和响应以便问题诊断
 
 ## 模块结构
@@ -131,7 +131,7 @@ logging:
 | **Spring Cloud LoadBalancer** | 用于客户端负载均衡 |
 | **Nacos Discovery** | 服务发现和注册 |
 | **Nacos Config** | 动态配置管理 |
-| **patra-spring-boot-starter-core** | Papertrace 核心 starter |
+| **patra-spring-boot-starter-core** | Patra 核心 starter |
 
 ---
 

@@ -6,6 +6,6 @@ spring:
 
 logging:
   file:
-    path: ${PAPERTRACE_LOG_DIR:./logs}/patra-storage
+    path: ${PATRA_LOG_DIR:./logs}/patra-storage
   level:
     com.patra.storage: INFO

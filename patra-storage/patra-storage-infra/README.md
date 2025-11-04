@@ -355,8 +355,8 @@ db/migration/
 ### 上游依赖
 
 - **patra-storage-domain**: 领域层(聚合根、值对象、端口接口)
-- **patra-spring-boot-starter-mybatis**: Papertrace MyBatis 集成 Starter
-- **patra-spring-boot-starter-core**: Papertrace 核心 Starter
+- **patra-spring-boot-starter-mybatis**: Patra MyBatis 集成 Starter
+- **patra-spring-boot-starter-core**: Patra 核心 Starter
 - **MapStruct**: 对象映射框架
 - **MyBatis-Plus**: ORM 框架
 - **MySQL Connector**: MySQL 驱动

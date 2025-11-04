@@ -27,7 +27,7 @@ import org.mapstruct.ReportingPolicy;
  *   <li>无需自定义转换(无 JSON 字段、无枚举转换)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)

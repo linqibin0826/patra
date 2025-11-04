@@ -59,7 +59,7 @@ import org.springframework.stereotype.Component;
  *   <li>无单条消息日志 (由其他协调器处理)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

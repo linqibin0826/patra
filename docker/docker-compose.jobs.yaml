@@ -19,7 +19,7 @@ services:
         --spring.datasource.password=xxl_job_123456
         --xxl.job.accessToken=
     volumes:
-      - ${HOME}/.papertrace/docker/xxl-job-admin/logs:/data/applogs
+      - ${HOME}/.patra/docker/xxl-job-admin/logs:/data/applogs
     ports:
       - "7070:8080"         # http://localhost:7070/xxl-job-admin
     healthcheck:
@@ -39,8 +39,8 @@ services:
     ports:
       - "9876:9876"           # NameServer
     volumes:
-      - ${HOME}/.papertrace/docker/rocketmq/namesrv/logs:/home/rocketmq/logs
-      - ${HOME}/.papertrace/docker/rocketmq/namesrv/store:/home/rocketmq/store
+      - ${HOME}/.patra/docker/rocketmq/namesrv/logs:/home/rocketmq/logs
+      - ${HOME}/.patra/docker/rocketmq/namesrv/store:/home/rocketmq/store
     healthcheck:
       test: [ "CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9876'" ]
       interval: 10s
@@ -66,9 +66,9 @@ services:
       - "7071:8080"           # proxy (HTTP)
       - "8081:8081"           # proxy (gRPC/HTTP2)
     volumes:
-      - ${HOME}/.papertrace/docker/rocketmq/broker/logs:/home/rocketmq/logs
-      - ${HOME}/.papertrace/docker/rocketmq/broker/store:/home/rocketmq/store
-      - ${HOME}/.papertrace/docker/rocketmq/broker/conf/broker.conf:/home/rocketmq/rocketmq-5.3.1/conf/broker.conf:ro
+      - ${HOME}/.patra/docker/rocketmq/broker/logs:/home/rocketmq/logs
+      - ${HOME}/.patra/docker/rocketmq/broker/store:/home/rocketmq/store
+      - ${HOME}/.patra/docker/rocketmq/broker/conf/broker.conf:/home/rocketmq/rocketmq-5.3.1/conf/broker.conf:ro
     depends_on:
       rocketmq-namesrv:
         condition: service_started

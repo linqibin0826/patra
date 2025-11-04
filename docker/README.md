@@ -1,6 +1,6 @@
 # Docker Compose 配置
 
-Papertrace 开发环境的模块化 Docker Compose 设置,按服务生命周期和优先级组织。
+Patra 开发环境的模块化 Docker Compose 设置,按服务生命周期和优先级组织。
 
 ## 结构
 
@@ -18,10 +18,10 @@ docker/
 
 ## 卷存储位置
 
-所有服务数据存储在您主目录的 `~/.papertrace/docker/` 目录中:
+所有服务数据存储在您主目录的 `~/.patra/docker/` 目录中:
 
 ```
-~/.papertrace/docker/
+~/.patra/docker/
 ├── mysql/
 │   ├── data/           # MySQL 数据库文件
 │   ├── conf.d/         # MySQL 配置文件
@@ -97,10 +97,10 @@ docker/
 
 ```bash
 # 创建目录结构
-mkdir -p ~/.papertrace/docker/{mysql/{data,conf.d,init},redis/data,nacos/{data,logs},minio/data,es/data,xxl-job-admin/logs,rocketmq/{namesrv/{logs,store},broker/{logs,store,conf}}}
+mkdir -p ~/.patra/docker/{mysql/{data,conf.d,init},redis/data,nacos/{data,logs},minio/data,es/data,xxl-job-admin/logs,rocketmq/{namesrv/{logs,store},broker/{logs,store,conf}}}
 
 # 创建 Redis 配置 (最小示例)
-cat > ~/.papertrace/docker/redis/redis.conf << 'EOF'
+cat > ~/.patra/docker/redis/redis.conf << 'EOF'
 bind 0.0.0.0
 protected-mode no
 port 6379
@@ -110,8 +110,8 @@ dir /data
 EOF
 
 # 创建 RocketMQ broker 配置 (最小示例)
-cat > ~/.papertrace/docker/rocketmq/broker/conf/broker.conf << 'EOF'
-brokerClusterName = PapertraceCluster
+cat > ~/.patra/docker/rocketmq/broker/conf/broker.conf << 'EOF'
+brokerClusterName = PatraCluster
 brokerName = broker-a
 brokerId = 0
 deleteWhen = 04
@@ -121,7 +121,7 @@ flushDiskType = ASYNC_FLUSH
 EOF
 
 # 设置适当的权限 (对 Elasticsearch 很重要)
-chmod -R 777 ~/.papertrace/docker/es/data
+chmod -R 777 ~/.patra/docker/es/data
 ```
 
 **注意**: 如果有自定义配置,您可能需要将现有配置文件从旧设置 (`docker/mysql/conf.d/`, `docker/mysql/init/` 等) 复制到新位置。
@@ -344,10 +344,10 @@ docker compose -f docker-compose.core.yaml up -d
 
 修复卷权限:
 ```bash
-sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/
+sudo chown -R $(id -u):$(id -g) ~/.patra/docker/
 # 或针对特定服务:
-sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/mysql
-sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/es
+sudo chown -R $(id -u):$(id -g) ~/.patra/docker/mysql
+sudo chown -R $(id -u):$(id -g) ~/.patra/docker/es
 ```
 
 ### 重置所有
@@ -358,14 +358,14 @@ sudo chown -R $(id -u):$(id -g) ~/.papertrace/docker/es
 docker compose -f docker-compose.dev.yaml down -v
 
 # 删除所有数据 (警告: 这会删除所有持久化数据!)
-rm -rf ~/.papertrace/docker/mysql/data
-rm -rf ~/.papertrace/docker/redis/data
-rm -rf ~/.papertrace/docker/es/data
-rm -rf ~/.papertrace/docker/nacos/data
-rm -rf ~/.papertrace/docker/rocketmq/*/store
+rm -rf ~/.patra/docker/mysql/data
+rm -rf ~/.patra/docker/redis/data
+rm -rf ~/.patra/docker/es/data
+rm -rf ~/.patra/docker/nacos/data
+rm -rf ~/.patra/docker/rocketmq/*/store
 
 # 或一次性删除所有
-rm -rf ~/.papertrace/docker
+rm -rf ~/.patra/docker
 
 # 重新创建目录结构和配置 (参见首次设置部分)
 # 然后重启服务
@@ -376,14 +376,14 @@ docker compose -f docker-compose.dev.yaml up -d
 
 ## 从单体设置迁移
 
-原始的 `docker-compose.dev.yaml` 已拆分为三个模块化文件,卷挂载现在使用 `~/.papertrace/docker/` 而不是相对路径。
+原始的 `docker-compose.dev.yaml` 已拆分为三个模块化文件,卷挂载现在使用 `~/.patra/docker/` 而不是相对路径。
 
 ### 变更内容
 - ✅ 服务定义保持不变
 - ✅ 所有端口和配置保持不变
 - ✅ 网络配置不变 (`patra-net`)
 - ✅ 环境变量和健康检查完整
-- ⚠️ **卷路径已更新**: 从 `../service/` 到 `~/.papertrace/docker/service/`
+- ⚠️ **卷路径已更新**: 从 `../service/` 到 `~/.patra/docker/service/`
 
 ### 迁移现有数据
 
@@ -394,20 +394,20 @@ docker compose -f docker-compose.dev.yaml up -d
 docker compose -f docker-compose.dev.yaml down
 
 # 创建新目录结构
-mkdir -p ~/.papertrace/docker
+mkdir -p ~/.patra/docker
 
 # 复制现有数据 (调整路径到您的项目根目录)
-cd /path/to/Papertrace-api
-cp -r docker/mysql ~/.papertrace/docker/
-cp -r docker/redis ~/.papertrace/docker/
-cp -r docker/nacos ~/.papertrace/docker/
-cp -r docker/minio ~/.papertrace/docker/  # 如果有现有 MinIO 数据
-cp -r docker/es ~/.papertrace/docker/
-cp -r docker/xxl-job-admin ~/.papertrace/docker/
-cp -r docker/rocketmq ~/.papertrace/docker/
+cd /path/to/Patra-api
+cp -r docker/mysql ~/.patra/docker/
+cp -r docker/redis ~/.patra/docker/
+cp -r docker/nacos ~/.patra/docker/
+cp -r docker/minio ~/.patra/docker/  # 如果有现有 MinIO 数据
+cp -r docker/es ~/.patra/docker/
+cp -r docker/xxl-job-admin ~/.patra/docker/
+cp -r docker/rocketmq ~/.patra/docker/
 
 # 验证迁移
-ls -la ~/.papertrace/docker/
+ls -la ~/.patra/docker/
 
 # 使用新配置启动服务
 cd docker/compose
@@ -417,7 +417,7 @@ docker compose -f docker-compose.dev.yaml up -d
 **注意**: 成功迁移后,您可以选择删除旧的数据目录以释放空间:
 ```bash
 # 可选: 验证新设置工作正常后删除旧数据
-rm -rf /path/to/Papertrace-api/docker/{mysql,redis,nacos,minio,es,xxl-job-admin,rocketmq}
+rm -rf /path/to/Patra-api/docker/{mysql,redis,nacos,minio,es,xxl-job-admin,rocketmq}
 ```
 
 ### 向后兼容性
@@ -537,16 +537,16 @@ mc ls /data/dev-ingest  # 列出存储桶中的文件
 brew install minio/stable/mc
 
 # 配置连接
-mc alias set papertrace http://localhost:19000 minioadmin minioadmin123
+mc alias set patra http://localhost:19000 minioadmin minioadmin123
 
 # 列出存储桶
-mc ls papertrace
+mc ls patra
 
 # 上传文件
-mc cp /path/to/file.pdf papertrace/dev-ingest/
+mc cp /path/to/file.pdf patra/dev-ingest/
 
 # 下载文件
-mc cp papertrace/dev-ingest/file.pdf ./
+mc cp patra/dev-ingest/file.pdf ./
 ```
 
 ### 创建额外的存储桶
@@ -573,7 +573,7 @@ curl -X PUT \
   http://localhost:19000/dev-ingest/test.txt
 
 # 验证上传
-mc ls papertrace/dev-ingest/test.txt
+mc ls patra/dev-ingest/test.txt
 ```
 
 ---

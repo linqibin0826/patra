@@ -26,7 +26,7 @@ import org.springframework.util.StringUtils;
  * @param webenv WebEnv 令牌 (从 ESearch/EPost 获取)
  * @param queryKey 查询键 (与 WebEnv 配合使用)
  * @param apiKey API 密钥 (可提升请求配额: 3次/秒 → 10次/秒)
- * @param tool 工具标识符 (向 NCBI 注册的应用名称,如 "papertrace")
+ * @param tool 工具标识符 (向 NCBI 注册的应用名称,如 "patra")
  * @param email 维护者邮箱 (用于 NCBI 运营联系)
  *     <p><b>使用建议:</b>
  *     <ul>
@@ -55,7 +55,7 @@ public record EFetchRequest(
 
     // 可选参数 - 认证和标识 (重要)
     String apiKey, // API 密钥 (提升速率限制: 3次/秒 → 10次/秒)
-    String tool, // 工具名称 (标识应用程序,例如: "papertrace")
+    String tool, // 工具名称 (标识应用程序,例如: "patra")
     String email // 联系邮箱 (NCBI 可联系开发者)
     ) implements ApiRequest {
 

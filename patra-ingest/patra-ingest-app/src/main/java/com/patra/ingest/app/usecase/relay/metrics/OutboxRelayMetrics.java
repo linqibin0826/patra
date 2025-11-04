@@ -46,7 +46,7 @@ import org.springframework.stereotype.Component;
  * metrics.recordBatchDuration("INGEST_TASK", Duration.ofMillis(250));
  * }</pre>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

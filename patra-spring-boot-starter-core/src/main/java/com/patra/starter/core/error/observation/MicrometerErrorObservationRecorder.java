@@ -15,15 +15,15 @@ import java.util.concurrent.TimeUnit;
  * <p>记录的指标:
  *
  * <ul>
- *   <li>{@code papertrace.error.resolution.duration} - 解析耗时(Timer)
- *   <li>{@code papertrace.error.resolution.count} - 解析次数(Counter)
- *   <li>{@code papertrace.error.resolution.slow} - 慢解析次数(Counter)
- *   <li>{@code papertrace.error.resolution.circuit_breaker} - 熔断降级次数(Counter)
+ *   <li>{@code patra.error.resolution.duration} - 解析耗时(Timer)
+ *   <li>{@code patra.error.resolution.count} - 解析次数(Counter)
+ *   <li>{@code patra.error.resolution.slow} - 慢解析次数(Counter)
+ *   <li>{@code patra.error.resolution.circuit_breaker} - 熔断降级次数(Counter)
  * </ul>
  *
  * <p>所有指标包含标签: {@code context}(上下文前缀)、{@code exception}(异常类型)、{@code errorCode}(错误码)
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public class MicrometerErrorObservationRecorder implements ErrorObservationRecorder {
@@ -50,9 +50,9 @@ public class MicrometerErrorObservationRecorder implements ErrorObservationRecor
    * <p>记录内容:
    *
    * <ul>
-   *   <li>解析耗时(Timer): papertrace.error.resolution.duration
-   *   <li>解析计数(Counter): papertrace.error.resolution.count
-   *   <li>慢解析计数(Counter): papertrace.error.resolution.slow(仅当 slow=true)
+   *   <li>解析耗时(Timer): patra.error.resolution.duration
+   *   <li>解析计数(Counter): patra.error.resolution.count
+   *   <li>慢解析计数(Counter): patra.error.resolution.slow(仅当 slow=true)
    * </ul>
    *
    * @param exception 待解析的原始异常
@@ -65,21 +65,21 @@ public class MicrometerErrorObservationRecorder implements ErrorObservationRecor
   public void recordResolution(
       Throwable exception, ErrorResolution resolution, long durationMs, boolean slow) {
     String exceptionName = exception == null ? "空异常" : exception.getClass().getSimpleName();
-    Timer.builder("papertrace.error.resolution.duration")
+    Timer.builder("patra.error.resolution.duration")
         .tag("context", contextPrefix)
         .tag("exception", exceptionName)
         .tag("errorCode", resolution.errorCode().code())
         .register(meterRegistry)
         .record(durationMs, TimeUnit.MILLISECONDS);
 
-    Counter.builder("papertrace.error.resolution.count")
+    Counter.builder("patra.error.resolution.count")
         .tag("context", contextPrefix)
         .tag("errorCode", resolution.errorCode().code())
         .register(meterRegistry)
         .increment();
 
     if (slow) {
-      Counter.builder("papertrace.error.resolution.slow")
+      Counter.builder("patra.error.resolution.slow")
           .tag("context", contextPrefix)
           .tag("exception", exceptionName)
           .register(meterRegistry)
@@ -90,14 +90,14 @@ public class MicrometerErrorObservationRecorder implements ErrorObservationRecor
   /**
    * 记录熔断器降级指标。
    *
-   * <p>当熔断器打开时,增加 {@code papertrace.error.resolution.circuit_breaker} 计数器。
+   * <p>当熔断器打开时,增加 {@code patra.error.resolution.circuit_breaker} 计数器。
    *
    * @param exception 触发降级的原始异常
    */
   @Override
   public void recordCircuitBreakerFallback(Throwable exception) {
     String exceptionName = exception == null ? "空异常" : exception.getClass().getSimpleName();
-    Counter.builder("papertrace.error.resolution.circuit_breaker")
+    Counter.builder("patra.error.resolution.circuit_breaker")
         .tag("context", contextPrefix)
         .tag("exception", exceptionName)
         .register(meterRegistry)

@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <p>用于从 HTTP Header 中提取追踪 ID,支持多种分布式追踪系统的 Header 格式。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Data

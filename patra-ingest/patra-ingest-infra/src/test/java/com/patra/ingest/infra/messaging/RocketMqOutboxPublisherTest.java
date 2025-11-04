@@ -192,7 +192,7 @@ class RocketMqOutboxPublisherTest {
     void shouldSendOrderedMessageWithPartitionKey() throws JsonProcessingException {
       // Given
       String channel = "LITERATURE_READY";
-      String topic = "papertrace.catalog.literature.ready";
+      String topic = "patra.catalog.literature.ready";
       String partitionKey = "pmid-12345";
       String dedupKey = "lit-12345";
 
@@ -498,12 +498,11 @@ class RocketMqOutboxPublisherTest {
               .build();
 
       when(properties.isChannelAllowed("LITERATURE_READY")).thenReturn(true);
-      when(channelMapper.toTopic("LITERATURE_READY"))
-          .thenReturn("papertrace.catalog.literature.ready");
+      when(channelMapper.toTopic("LITERATURE_READY")).thenReturn("patra.catalog.literature.ready");
       when(objectMapper.readValue(anyString(), any(TypeReference.class))).thenReturn(Map.of());
 
       SendResult sendResult =
-          createSuccessSendResult("papertrace.catalog.literature.ready", "msg-007", 1);
+          createSuccessSendResult("patra.catalog.literature.ready", "msg-007", 1);
       when(rocketMQTemplate.syncSendOrderly(
               anyString(), any(Message.class), anyString(), eq(3000L)))
           .thenReturn(sendResult);

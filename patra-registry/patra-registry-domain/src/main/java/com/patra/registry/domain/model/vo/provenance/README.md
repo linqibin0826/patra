@@ -177,7 +177,7 @@ public record HttpConfig(
 **请求头格式**(JSON):
 ```json
 {
-  "User-Agent": "Papertrace/1.0",
+  "User-Agent": "Patra/1.0",
   "Accept": "application/json",
   "X-API-Key": "${env.PUBMED_API_KEY}"
 }

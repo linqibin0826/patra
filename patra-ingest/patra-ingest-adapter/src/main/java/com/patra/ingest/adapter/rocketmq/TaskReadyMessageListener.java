@@ -58,8 +58,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @RocketMQMessageListener(
-    topic = "${papertrace.ingest.mq.topics.task-ready}", // 从配置读取 Topic 名称
-    consumerGroup = "${papertrace.ingest.mq.consumer-groups.task-ready}", // 从配置读取消费者组
+    topic = "${patra.ingest.mq.topics.task-ready}", // 从配置读取 Topic 名称
+    consumerGroup = "${patra.ingest.mq.consumer-groups.task-ready}", // 从配置读取消费者组
     selectorExpression = "*" // 订阅所有 TAGS
     )
 public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {

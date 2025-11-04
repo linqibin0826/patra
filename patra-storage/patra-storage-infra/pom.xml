@@ -5,29 +5,29 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-storage</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-storage-infra</artifactId>
-    <name>Papertrace Storage Infrastructure</name>
+    <name>Patra Storage Infrastructure</name>
     <description>Storage infrastructure module - persistence and integrations</description>
 
     <dependencies>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-storage-domain</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-mybatis</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 

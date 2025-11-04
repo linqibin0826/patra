@@ -1,6 +1,6 @@
 # 完整示例 - 可运行代码
 
-展示 Papertrace patra-ingest 模块中跨所有架构层的完整实现模式的真实示例。
+展示 Patra patra-ingest 模块中跨所有架构层的完整实现模式的真实示例。
 
 ## 目录
 
@@ -1114,7 +1114,7 @@ class PlanRepositoryMpImplIT {
 
   @Container
   static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
-      .withDatabaseName("papertrace_test")
+      .withDatabaseName("patra_test")
       .withUsername("test")
       .withPassword("test");
 

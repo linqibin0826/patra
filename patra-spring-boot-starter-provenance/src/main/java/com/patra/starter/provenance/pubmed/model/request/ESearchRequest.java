@@ -60,7 +60,7 @@ public record ESearchRequest(
 
     // Optional parameters - Authentication and identification (IMPORTANT)
     String apiKey, // API Key (increase rate limit: 3 req/sec → 10 req/sec)
-    String tool, // Tool name (identify application, e.g., "papertrace")
+    String tool, // Tool name (identify application, e.g., "patra")
     String email // Contact email (NCBI can contact developer)
     ) implements ApiRequest {
 

@@ -1,5 +1,5 @@
 # ========================================
-# Papertrace Registry Service Configuration
+# Patra Registry Service Configuration
 # ========================================
 # Single Source of Truth for provenance metadata, operational configurations,
 # expressions, and dictionaries. Other services query this via Feign RPC.
@@ -29,7 +29,7 @@ spring:
       # Service-specific Nacos config (environment-aware)
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
       # Shared platform config from Nacos (environment-aware)
-      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
 
   # ========================================
   # Nacos Configuration & Service Discovery

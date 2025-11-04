@@ -113,7 +113,7 @@ patra:
 
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-spring-boot-starter-provenance</artifactId>
 </dependency>
 ```

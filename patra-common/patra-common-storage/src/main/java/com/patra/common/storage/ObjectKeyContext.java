@@ -9,7 +9,7 @@ import java.util.Objects;
 /**
  * 包含生成对象存储键所需的所有信息的不可变上下文。
  *
- * <p>此记录封装了所有 Papertrace 微服务中用于对象键生成的标准段, 确保一致的命名约定和结构。
+ * <p>此记录封装了所有 Patra 微服务中用于对象键生成的标准段, 确保一致的命名约定和结构。
  *
  * <p><b>标准对象键模式</b>: {@code {service}/{business-type}/{yyyy}/{MM}/{dd}/{business-id}.{extension}}
  *

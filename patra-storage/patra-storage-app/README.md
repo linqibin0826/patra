@@ -147,7 +147,7 @@ public record RecordUploadResult(
 
 - **patra-storage-domain**: 领域层(聚合根、值对象、仓储端口)
 - **patra-common-core**: 通用工具类
-- **patra-spring-boot-starter-core**: Papertrace Spring Boot 核心 Starter
+- **patra-spring-boot-starter-core**: Patra Spring Boot 核心 Starter
 - **spring-tx**: Spring 事务管理
 - **spring-boot-starter-aop**: Spring AOP(用于 @Transactional)
 

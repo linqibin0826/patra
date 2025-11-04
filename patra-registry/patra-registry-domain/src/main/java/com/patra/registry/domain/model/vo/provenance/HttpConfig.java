@@ -45,7 +45,7 @@ import java.time.Instant;
  * @param retryAfterCapMillis Retry-After最大等待上限(毫秒),仅在RESPECT/CLAMP策略下生效,可为null
  * @param idempotencyHeaderName 幂等性请求头名称(如{@code Idempotency-Key}),用于避免重复提交,可为null
  * @param idempotencyTtlSeconds 幂等性键TTL(秒),仅在支持幂等性时生效,可为null
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record HttpConfig(

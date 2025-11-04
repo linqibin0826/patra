@@ -274,7 +274,7 @@ public interface FileMetadataRepository {
 
 ### 上游依赖
 
-- **patra-common-core**: Papertrace 通用基础库(仅限工具类,无框架依赖)
+- **patra-common-core**: Patra 通用基础库(仅限工具类,无框架依赖)
 - **Lombok**: 代码生成工具(编译时依赖)
 - **Hutool**: 纯 Java 工具库
 - **JUnit/AssertJ**: 测试依赖
@@ -403,7 +403,7 @@ if (metadata.isExpired()) {
 | 组件 | 版本 | 说明 |
 |------|------|------|
 | Java | 25 | 语言版本,使用 record 类型 |
-| patra-common-core | 0.1.0-SNAPSHOT | Papertrace 通用基础库 |
+| patra-common-core | 0.1.0-SNAPSHOT | Patra 通用基础库 |
 | Lombok | 1.18.38+ | 代码生成(Getter/ToString) |
 | Hutool | 5.8.36+ | 纯 Java 工具库 |
 | JUnit 5 | 5.11.5+ | 单元测试框架 |

@@ -1,5 +1,5 @@
 # ============================================================================
-# Papertrace API Gateway - Production Environment Configuration
+# Patra API Gateway - Production Environment Configuration
 # ============================================================================
 # Production-specific settings override main configuration as needed.
 # Most production configurations are managed via Nacos for security.

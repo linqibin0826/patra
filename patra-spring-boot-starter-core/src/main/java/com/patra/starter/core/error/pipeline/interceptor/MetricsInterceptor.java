@@ -17,7 +17,7 @@ import org.springframework.core.annotation.Order;
  *
  * <p>执行优先级: {@link Ordered#LOWEST_PRECEDENCE} - 10,确保在其他拦截器之后执行以获取完整耗时。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

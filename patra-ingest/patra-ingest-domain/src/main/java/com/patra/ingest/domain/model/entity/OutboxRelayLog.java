@@ -25,7 +25,7 @@ import lombok.Value;
  *   <li>高效性：针对仅追加写入和时间范围查询优化
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Value

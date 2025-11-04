@@ -503,4 +503,4 @@ TaskQueuedEvent event = new TaskQueuedEvent(task.getId(), task.getIdempotentKey(
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest-domain:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest-domain:0.1.0-SNAPSHOT`

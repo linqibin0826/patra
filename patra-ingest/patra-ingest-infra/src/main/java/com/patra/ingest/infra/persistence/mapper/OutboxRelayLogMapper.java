@@ -29,7 +29,7 @@ import org.apache.ibatis.annotations.Param;
  *   <li>{@code idx_created_at(created_at)}: 按创建时间归档旧日志
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public interface OutboxRelayLogMapper extends BaseMapper<OutboxRelayLogDO> {

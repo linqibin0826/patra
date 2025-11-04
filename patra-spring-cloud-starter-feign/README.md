@@ -4,7 +4,7 @@
 
 增强的 Feign 客户端配置 Starter,提供基于约定的客户端扫描、错误处理、追踪传播和观测能力。
 
-本 Starter 使用 Papertrace 约定扩展 Spring Cloud OpenFeign,自动发现并注册 RPC 客户端,提供统一的错误解码、请求拦截和可观测性支持。
+本 Starter 使用 Patra 约定扩展 Spring Cloud OpenFeign,自动发现并注册 RPC 客户端,提供统一的错误解码、请求拦截和可观测性支持。
 
 ## 核心功能
 
@@ -126,7 +126,7 @@ feign:
 
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-spring-cloud-starter-feign</artifactId>
 </dependency>
 ```

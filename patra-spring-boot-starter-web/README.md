@@ -119,7 +119,7 @@ patra:
 ### Maven 依赖
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-spring-boot-starter-web</artifactId>
 </dependency>
 ```
@@ -137,7 +137,7 @@ patra:
   web:
     problem:
       enabled: true
-      type-base-url: https://api.papertrace.com/errors/
+      type-base-url: https://api.patra.com/errors/
       include-stack: false
 
   error:
@@ -194,7 +194,7 @@ public record CreatePlanRequest(
 **错误响应示例**(RFC 7807 ProblemDetail):
 ```json
 {
-  "type": "https://api.papertrace.com/errors/plan-not-found",
+  "type": "https://api.patra.com/errors/plan-not-found",
   "title": "Not Found",
   "status": 404,
   "detail": "Plan not found: 123",
@@ -207,7 +207,7 @@ public record CreatePlanRequest(
 **验证错误响应示例**:
 ```json
 {
-  "type": "https://api.papertrace.com/errors/validation-failed",
+  "type": "https://api.patra.com/errors/validation-failed",
   "title": "Bad Request",
   "status": 400,
   "detail": "Validation failed",
@@ -236,4 +236,4 @@ public record CreatePlanRequest(
 ---
 
 **最后更新**: 2025-01-12
-**维护者**: Papertrace Team
+**维护者**: Patra Team

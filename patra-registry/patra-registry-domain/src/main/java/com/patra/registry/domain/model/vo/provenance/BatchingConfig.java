@@ -36,7 +36,7 @@ import java.time.Instant;
  * @param idsParamName ID列表参数名称,用于批量详情请求,null时由端点或应用决定
  * @param idsJoinDelimiter ID列表连接分隔符,如逗号或加号,用于拼接ID数组
  * @param maxIdsPerRequest 单次HTTP请求最大ID数量,作为硬上限防止请求过大
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record BatchingConfig(

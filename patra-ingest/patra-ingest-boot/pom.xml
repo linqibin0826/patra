@@ -5,19 +5,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-ingest</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>patra-ingest-boot</artifactId>
-    <name>Papertrace Ingest Boot</name>
+    <name>Patra Ingest Boot</name>
     <description>Ingestion launcher module - Spring Boot entry point</description>
 
     <dependencies>
         <!-- Web starter includes core + logging + web + validation -->
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-web</artifactId>
         </dependency>
 
@@ -42,21 +42,21 @@
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-ingest-adapter</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-ingest-infra</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-object-storage</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-storage-api</artifactId>
         </dependency>
 

@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Bean;
  *
  * <p>应用程序代码应<b>优先使用依赖注入</b>来获取 {@code ObjectMapper}。此自动配置仅为无法使用 依赖注入的场景提供桥接,不应被用作服务定位器。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

@@ -1,8 +1,8 @@
-# Papertrace 核心业务概念
+# Patra 核心业务概念
 
 ## 概述
 
-本文档描述基于实际数据库架构和 Java 实现的 Papertrace 核心领域实体。所有实体来自 `patra-ingest-domain` 和 `patra-registry-domain`。
+本文档描述基于实际数据库架构和 Java 实现的 Patra 核心领域实体。所有实体来自 `patra-ingest-domain` 和 `patra-registry-domain`。
 
 **Entity Hierarchy**:
 ```

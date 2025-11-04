@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 /**
- * Papertrace Feign Starter 自动配置入口点
+ * Patra Feign Starter 自动配置入口点
  *
  * <p>为 Feign 客户端注册横切关注点组件,包括负责传播共享请求头(如调用者服务标识符)的 {@link PatraFeignRequestInterceptor}。
  *

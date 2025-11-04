@@ -6,7 +6,7 @@
 
 ## 概述
 
-`patra-common-storage` 是 Papertrace 平台的对象存储键生成策略模块,提供标准化的对象存储键命名规则。本模块定义了跨所有微服务的统一键格式,确保对象存储(S3/MinIO/OSS)中的数据组织一致、可预测、易管理。
+`patra-common-storage` 是 Patra 平台的对象存储键生成策略模块,提供标准化的对象存储键命名规则。本模块定义了跨所有微服务的统一键格式,确保对象存储(S3/MinIO/OSS)中的数据组织一致、可预测、易管理。
 
 **重要说明**: 本模块是**业务规则**(命名约定),而非基础设施代码。它与 `patra-spring-boot-starter-object-storage` 分离,允许领域层使用标准化命名而无需依赖 Spring 框架,完全符合六边形架构的关注点分离原则。
 
@@ -199,7 +199,7 @@ String key = ObjectKeyTemplate.builder()
 
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-common-storage</artifactId>
 </dependency>
 ```
@@ -354,6 +354,6 @@ String key = ObjectKeyTemplate.generate(context, new MonthPartitionedKeyGenerato
 
 ---
 
-**Maven 坐标**: `com.papertrace:patra-common-storage`
+**Maven 坐标**: `com.patra:patra-common-storage`
 **版本**: 0.1.0-SNAPSHOT
 **最后更新**: 2025-11-03
