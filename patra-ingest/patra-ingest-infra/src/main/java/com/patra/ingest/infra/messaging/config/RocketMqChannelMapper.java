@@ -26,7 +26,7 @@ import org.springframework.util.StringUtils;
  *
  * <ul>
  *   <li>{@code TASK_READY} → {@code INGEST_TASK_READY}
- *   <li>{@code LITERATURE_READY} → {@code patra.catalog.literature.ready}
+ *   <li>{@code LITERATURE_READY} → {@code INGEST_LITERATURE_READY}
  *   <li>支持通过 {@code patra.ingest.outbox.channel-mapping} 覆盖
  *   <li>支持通过 {@code patra.ingest.outbox.topic-prefix} 添加环境前缀
  * </ul>
@@ -40,12 +40,12 @@ public class RocketMqChannelMapper {
   /**
    * 默认业务通道到 RocketMQ Topic 的映射表。
    *
-   * <p>注意: LITERATURE_READY 映射到跨服务的 Topic,遵循 patra.{service}.{entity}.{action} 命名约定。
+   * <p>注意: LITERATURE_READY 映射到跨服务的 Topic,遵循 INGEST_{ENTITY}_READY 命名约定,符合 RocketMQ 规范(仅大写字母+下划线)。
    */
   private static final Map<String, String> DEFAULT_CHANNEL_TO_TOPIC =
       Map.of(
           MessageChannels.TASK_READY, "INGEST_TASK_READY",
-          MessageChannels.LITERATURE_READY, "patra.catalog.literature.ready");
+          MessageChannels.LITERATURE_READY, "INGEST_LITERATURE_READY");
 
   private final Map<String, String> channelToTopic;
   private final String topicPrefix;
