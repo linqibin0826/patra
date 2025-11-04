@@ -49,7 +49,7 @@ patra:
       # 如果未配置，则使用 RocketMqChannelMapper 中的默认映射
       channel-mapping:
         TASK_READY: INGEST_TASK_READY
-        LITERATURE_READY: patra.catalog.literature.ready
+        LITERATURE_READY: INGEST_LITERATURE_READY
 
       # Topic 前缀（用于多环境隔离）
       # 示例: "dev-" 会生成 "dev-INGEST_TASK_READY"

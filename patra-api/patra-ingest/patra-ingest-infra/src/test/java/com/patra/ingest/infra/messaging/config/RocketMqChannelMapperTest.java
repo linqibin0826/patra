@@ -60,13 +60,13 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("LITERATURE_READY 应映射到 patra.catalog.literature.ready")
+    @DisplayName("LITERATURE_READY 应映射到 INGEST_LITERATURE_READY")
     void shouldMapLiteratureReadyChannelToTopic() {
       // When
       String topic = channelMapper.toTopic(MessageChannels.LITERATURE_READY);
 
       // Then
-      assertThat(topic).isEqualTo("patra.catalog.literature.ready");
+      assertThat(topic).isEqualTo("INGEST_LITERATURE_READY");
     }
 
     @Test
@@ -185,7 +185,7 @@ class RocketMqChannelMapperTest {
 
       // Then
       assertThat(customTopic).isEqualTo("CUSTOM_TASK_TOPIC"); // 自定义映射
-      assertThat(defaultTopic).isEqualTo("patra.catalog.literature.ready"); // 默认映射
+      assertThat(defaultTopic).isEqualTo("INGEST_LITERATURE_READY"); // 默认映射
     }
 
     @Test
@@ -220,10 +220,10 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("patra.catalog.literature.ready 应反向映射到 LITERATURE_READY")
+    @DisplayName("INGEST_LITERATURE_READY 应反向映射到 LITERATURE_READY")
     void shouldReverseMapLiteratureReadyTopicToChannel() {
       // When
-      String channel = channelMapper.toChannel("patra.catalog.literature.ready");
+      String channel = channelMapper.toChannel("INGEST_LITERATURE_READY");
 
       // Then
       assertThat(channel).isEqualTo(MessageChannels.LITERATURE_READY);
@@ -460,19 +460,19 @@ class RocketMqChannelMapperTest {
     }
 
     @Test
-    @DisplayName("跨服务通道应映射到 dot-separated 格式 Topic")
-    void shouldMapCrossServiceChannelToDotSeparatedTopic() {
+    @DisplayName("跨服务通道应映射到 INGEST_{ENTITY}_READY 格式 Topic")
+    void shouldMapCrossServiceChannelToUnderscoreSeparatedTopic() {
       // Given: 跨服务通道 LITERATURE_READY
       String crossServiceChannel = MessageChannels.LITERATURE_READY;
 
       // When
       String topic = channelMapper.toTopic(crossServiceChannel);
 
-      // Then: 应遵循 patra.{service}.{entity}.{action} 约定
+      // Then: 应遵循 INGEST_{ENTITY}_READY 约定,符合 RocketMQ 规范(仅大写字母+下划线)
       assertThat(topic)
-          .isEqualTo("patra.catalog.literature.ready")
-          .startsWith("patra.")
-          .matches("[a-z.]+"); // 全小写 + 点号
+          .isEqualTo("INGEST_LITERATURE_READY")
+          .startsWith("INGEST_")
+          .matches("[A-Z_]+"); // 全大写 + 下划线
     }
 
     @Test
