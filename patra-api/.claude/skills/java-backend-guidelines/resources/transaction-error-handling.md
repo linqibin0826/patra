@@ -2,7 +2,7 @@
 
 ## 概览
 
-事务管理和错误处理是 Papertrace 中的关键横切关注点。本指南涵盖 Spring 的 `@Transactional`、异常设计、错误到 HTTP 响应的映射以及分布式事务模式。
+事务管理和错误处理是 Patra 中的关键横切关注点。本指南涵盖 Spring 的 `@Transactional`、异常设计、错误到 HTTP 响应的映射以及分布式事务模式。
 
 **Core Principle**: Transactions at the orchestrator boundary, domain exceptions flow outward, never call external APIs inside transactions.
 

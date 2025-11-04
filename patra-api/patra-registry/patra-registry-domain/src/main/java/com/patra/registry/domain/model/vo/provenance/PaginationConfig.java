@@ -38,7 +38,7 @@ import java.time.Instant;
  * @param maxPagesPerExecution 单次执行最大页数,用于限制深度分页,可为null
  * @param sortFieldParamName 排序字段参数名称,可为null
  * @param sortingDirection 排序方向,0表示降序(DESC),1表示升序(ASC),可为null
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record PaginationConfig(

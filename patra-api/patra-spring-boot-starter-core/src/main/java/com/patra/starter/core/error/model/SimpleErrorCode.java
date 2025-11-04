@@ -14,7 +14,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
  *   <li>INGEST-0500 (采集服务,内部服务器错误)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public final class SimpleErrorCode implements ErrorCodeLike {

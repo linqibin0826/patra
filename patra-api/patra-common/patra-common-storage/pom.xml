@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-common</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>patra-common-storage</artifactId>
-    <name>Papertrace Common Storage</name>
+    <name>Patra Common Storage</name>
     <description>
         Object storage key generation strategies:
         - ObjectKeyContext: Immutable context for key generation

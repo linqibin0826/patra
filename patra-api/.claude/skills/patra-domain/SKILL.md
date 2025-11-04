@@ -1,18 +1,18 @@
 ---
-skill: papertrace-domain
-description: Papertrace 业务领域知识 - Provenance、Plan、Task、表达式引擎与工作流模式
+skill: patra-domain
+description: Patra 业务领域知识 - Provenance、Plan、Task、表达式引擎与工作流模式
 type: domain
 enforcement: suggest
 priority: high
 ---
 
-# Papertrace 领域知识
+# Patra 领域知识
 
 ## 目的
 
-本技能提供关于 Papertrace 业务领域概念、工作流模式和架构决策的全面知识。在处理 Papertrace 特定的业务逻辑、数据模型和集成模式时使用本技能。
+本技能提供关于 Patra 业务领域概念、工作流模式和架构决策的全面知识。在处理 Patra 特定的业务逻辑、数据模型和集成模式时使用本技能。
 
-**核心原则**: Papertrace 是一个医学文献数据平台,使用可配置的基于 Provenance 的工作流,从多个来源(PubMed、EPMC、Crossref)采集、处理和索引科学出版物。
+**核心原则**: Patra 是一个医学文献数据平台,使用可配置的基于 Provenance 的工作流,从多个来源(PubMed、EPMC、Crossref)采集、处理和索引科学出版物。
 
 ---
 
@@ -47,7 +47,7 @@ priority: high
 
 ## 快速开始
 
-### 理解 Papertrace 架构
+### 理解 Patra 架构
 
 **三服务架构:**
 
@@ -175,7 +175,7 @@ PENDING → RUNNING → SUCCEEDED
 
 ### 4. **表达式引擎**
 
-**定义**: 动态参数映射系统,将 Papertrace 的抽象查询模型转换为提供者特定的 API 参数。
+**定义**: 动态参数映射系统,将 Patra 的抽象查询模型转换为提供者特定的 API 参数。
 
 **核心组件:**
 
@@ -377,7 +377,7 @@ businessKey = hash(
 
 ---
 
-## Papertrace 代码库示例
+## Patra 代码库示例
 
 ### 示例 1: ProvenanceConfiguration 聚合
 
@@ -449,9 +449,9 @@ public class PlanSlicingOrchestrator {
 本技能与 `java-backend-guidelines` 互补:
 
 - **java-backend-guidelines**: 如何构建代码(六边形 + DDD)
-- **papertrace-domain**: 业务概念的含义
+- **patra-domain**: 业务概念的含义
 
-**在 Papertrace 中实现新功能时一起使用两者。**
+**在 Patra 中实现新功能时一起使用两者。**
 
 ---
 

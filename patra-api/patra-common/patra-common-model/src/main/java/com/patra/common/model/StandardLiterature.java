@@ -8,7 +8,7 @@ import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 
 /**
- * Papertrace 微服务间共享的规范化文献表示。
+ * Patra 微服务间共享的规范化文献表示。
  *
  * <p>此不可变结构作为采集、目录和溯源适配器之间的共享内核模型。 特意不包含任何业务行为,以保持共享模块无框架依赖且可移植。
  *

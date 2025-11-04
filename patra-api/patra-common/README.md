@@ -1,12 +1,12 @@
 # patra-common — 共享基础设施聚合器
 
-> **多模块聚合项目**,为 Papertrace 微服务提供核心工具、存储抽象和共享模型。
+> **多模块聚合项目**,为 Patra 微服务提供核心工具、存储抽象和共享模型。
 
 ---
 
 ## 概述
 
-`patra-common` 是 Papertrace 平台的基础设施层聚合器,采用多模块结构,按职责清晰划分为三个独立的子模块:
+`patra-common` 是 Patra 平台的基础设施层聚合器,采用多模块结构,按职责清晰划分为三个独立的子模块:
 
 - **patra-common-core**: 核心基础设施(领域基类、异常处理、通用枚举、JSON 工具)
 - **patra-common-storage**: 对象存储键生成策略(业务级命名规则)
@@ -48,9 +48,9 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 1. patra-common-core (必需)
 
-**Maven 坐标**: `com.papertrace:patra-common-core`
+**Maven 坐标**: `com.patra:patra-common-core`
 
-**定位**: 所有 Papertrace 服务必须依赖的核心基础设施。
+**定位**: 所有 Patra 服务必须依赖的核心基础设施。
 
 **主要内容**:
 - **domain**: `AggregateRoot`、`DomainEvent`、`ReadOnlyAggregate`
@@ -68,7 +68,7 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 2. patra-common-storage (可选)
 
-**Maven 坐标**: `com.papertrace:patra-common-storage`
+**Maven 坐标**: `com.patra:patra-common-storage`
 
 **定位**: 标准化的对象存储键生成策略(业务规则,非基础设施代码)。
 
@@ -88,7 +88,7 @@ patra-common/                         (聚合 POM - 无代码)
 
 ### 3. patra-common-model (可选)
 
-**Maven 坐标**: `com.papertrace:patra-common-model`
+**Maven 坐标**: `com.patra:patra-common-model`
 
 **定位**: 跨服务共享的标准化数据模型(Shared Kernel)。
 
@@ -124,19 +124,19 @@ patra-common/                         (聚合 POM - 无代码)
 ```xml
 <!-- 必需: 核心基础设施 -->
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-common-core</artifactId>
 </dependency>
 
 <!-- 可选: 存储键生成策略 -->
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-common-storage</artifactId>
 </dependency>
 
 <!-- 可选: 共享数据模型 -->
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-common-model</artifactId>
 </dependency>
 ```

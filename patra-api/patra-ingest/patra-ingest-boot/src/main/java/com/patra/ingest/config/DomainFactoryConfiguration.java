@@ -38,7 +38,7 @@ import org.springframework.context.annotation.Configuration;
  *   <li>集中式基础设施 Bean 配置,避免重复定义
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Configuration

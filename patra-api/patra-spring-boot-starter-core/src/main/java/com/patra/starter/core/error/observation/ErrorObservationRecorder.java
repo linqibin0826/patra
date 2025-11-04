@@ -14,7 +14,7 @@ import com.patra.starter.core.error.model.ErrorResolution;
  *   <li>{@link #NO_OP} - 禁用观测时的空实现
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public interface ErrorObservationRecorder {

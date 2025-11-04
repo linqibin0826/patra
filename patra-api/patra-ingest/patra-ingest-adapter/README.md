@@ -142,8 +142,8 @@ public abstract class AbstractProvenanceScheduleJob extends IJobHandler {
 **职责**: 消费任务就绪消息,触发任务执行。
 
 **消费配置**:
-- **Topic**: `${papertrace.ingest.mq.topics.task-ready}` (配置中为 `INGEST_TASK_READY`)
-- **ConsumerGroup**: `${papertrace.ingest.mq.consumer-groups.task-ready}`
+- **Topic**: `${patra.ingest.mq.topics.task-ready}` (配置中为 `INGEST_TASK_READY`)
+- **ConsumerGroup**: `${patra.ingest.mq.consumer-groups.task-ready}`
 
 **核心方法**:
 ```java
@@ -151,8 +151,8 @@ public abstract class AbstractProvenanceScheduleJob extends IJobHandler {
 @Slf4j
 @RequiredArgsConstructor
 @RocketMQMessageListener(
-    topic = "${papertrace.ingest.mq.topics.task-ready}",
-    consumerGroup = "${papertrace.ingest.mq.consumer-groups.task-ready}",
+    topic = "${patra.ingest.mq.topics.task-ready}",
+    consumerGroup = "${patra.ingest.mq.consumer-groups.task-ready}",
     selectorExpression = "*"
 )
 public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
@@ -253,7 +253,7 @@ rocketmq:
     group: ingest-producer-group
     send-message-timeout: 3000
 
-papertrace:
+patra:
   ingest:
     mq:
       topics:
@@ -350,5 +350,5 @@ papertrace:
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest-adapter:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest-adapter:0.1.0-SNAPSHOT`
 **作者**: linqibin

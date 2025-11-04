@@ -203,7 +203,7 @@ public class GlobalExceptionHandler {
 
 - **patra-storage-app**: 应用层(用例编排器)
 - **patra-storage-api**: API 契约层(端点接口、DTO)
-- **patra-spring-boot-starter-web**: Papertrace Web Starter
+- **patra-spring-boot-starter-web**: Patra Web Starter
 - **spring-tx**: Spring 事务管理
 
 ### 下游消费者

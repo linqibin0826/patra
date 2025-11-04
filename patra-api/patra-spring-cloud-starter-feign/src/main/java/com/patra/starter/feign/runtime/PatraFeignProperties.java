@@ -5,7 +5,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Papertrace Feign Starter 配置属性
+ * Patra Feign Starter 配置属性
  *
  * <p>控制 Starter 开关、错误响应体读取限制、请求头传播以及由 {@link
  * com.patra.starter.feign.runtime.PatraFeignRequestInterceptor} 应用的密钥脱敏规则。

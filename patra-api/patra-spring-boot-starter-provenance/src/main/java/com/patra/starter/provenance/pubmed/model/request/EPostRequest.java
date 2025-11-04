@@ -38,7 +38,7 @@ public record EPostRequest(
 
     // 可选参数 - 认证和标识
     String apiKey, // API 密钥 (提升速率限制: 3次/秒 → 10次/秒)
-    String tool, // 工具名称 (标识应用程序,例如: "papertrace")
+    String tool, // 工具名称 (标识应用程序,例如: "patra")
     String email // 联系邮箱 (NCBI 可联系开发者)
     ) implements ApiRequest {
 

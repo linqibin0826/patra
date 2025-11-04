@@ -41,7 +41,7 @@ import java.time.Instant;
  * OutboxRelayLog log = factory.createForPublished(message, batchId, ...);
  * }</pre>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public class OutboxRelayLogFactory {

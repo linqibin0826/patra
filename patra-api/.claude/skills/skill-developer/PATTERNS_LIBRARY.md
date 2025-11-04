@@ -97,7 +97,7 @@ patra-*/patra-*-infra/src/main/java/**/*Repository*.java # Repositories
 **/src/test/java/**/*TestCase.java                      # Test cases
 ```
 
-### Specific Services (Papertrace Project)
+### Specific Services (Patra Project)
 ```glob
 patra-ingest/**/*.java                                  # Ingest service
 patra-registry/**/*.java                                # Registry service (SSOT)
@@ -154,8 +154,8 @@ LambdaQueryWrapper|QueryWrapper                         # Query wrappers
 ```regex
 class.*Orchestrator                                     # Orchestrator classes
 class.*Coordinator                                      # Coordinator classes
-OutboxRelayOrchestrator|PlanIngestionOrchestrator       # Papertrace orchestrators
-RelayCoordinator                                        # Papertrace coordinators
+OutboxRelayOrchestrator|PlanIngestionOrchestrator       # Patra orchestrators
+RelayCoordinator                                        # Patra coordinators
 ```
 
 ### Domain-Driven Design Patterns
@@ -167,7 +167,7 @@ class.*Event                                            # Domain events
 @TransactionalEventListener                             # Event listeners
 ```
 
-### Papertrace-Specific Patterns
+### Patra-Specific Patterns
 ```regex
 ProvenanceOrchestrator|OutboxRelayOrchestrator          # Specific orchestrators
 AbstractProvenanceScheduleJob                           # Base scheduled job

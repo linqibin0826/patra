@@ -35,7 +35,7 @@ import java.time.Instant;
  * @param effectiveTo 配置失效时间(不包含),null表示永久有效
  * @param maxConcurrentRequests 全局最大并发请求数,null表示无并发限制
  * @param perCredentialQpsLimit 每个凭证/API密钥的QPS(每秒查询数)限制,null表示无凭证级限制
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record RateLimitConfig(

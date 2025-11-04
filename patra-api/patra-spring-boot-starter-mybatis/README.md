@@ -96,7 +96,7 @@ mybatis-plus:
 ### Maven 依赖
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-spring-boot-starter-mybatis</artifactId>
 </dependency>
 ```
@@ -114,7 +114,7 @@ mybatis-plus:
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/papertrace?useUnicode=true&characterEncoding=utf8
+    url: jdbc:mysql://localhost:3306/patra?useUnicode=true&characterEncoding=utf8
     username: root
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -243,4 +243,4 @@ CREATE TABLE ingest_plan (
 ---
 
 **最后更新**: 2025-01-12
-**维护者**: Papertrace Team
+**维护者**: Patra Team

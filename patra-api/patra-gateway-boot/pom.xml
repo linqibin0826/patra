@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <relativePath>../patra-parent/pom.xml</relativePath>
         <version>0.1.0-SNAPSHOT</version>
@@ -13,11 +13,11 @@
 
     <artifactId>patra-gateway-boot</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>Papertrace API Gateway Boot</name>
+    <name>Patra API Gateway Boot</name>
 
     <dependencies>
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-spring-boot-starter-core</artifactId>
         </dependency>
 

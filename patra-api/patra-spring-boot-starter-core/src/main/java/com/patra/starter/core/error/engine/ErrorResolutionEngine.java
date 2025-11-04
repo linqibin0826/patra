@@ -13,7 +13,7 @@ import com.patra.starter.core.error.model.ErrorResolution;
  *   <li>类名启发式: 根据异常类名生成错误码(如 IllegalArgumentException → ILLEGAL_ARGUMENT)
  * </ol>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  * @see com.patra.starter.core.error.engine.DefaultErrorResolutionEngine
  */

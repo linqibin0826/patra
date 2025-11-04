@@ -7,7 +7,7 @@ import com.patra.starter.core.error.model.ErrorResolution;
  *
  * <p>这是一个函数式接口,拦截器通过调用 {@link #proceed(Throwable)} 方法传递异常到管道下游。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  * @see ResolutionInterceptor
  */

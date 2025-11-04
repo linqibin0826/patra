@@ -29,7 +29,7 @@ import java.util.Optional;
  *
  * <p><strong>注意</strong>:所有方法使用领域语言表达业务意图,隐藏底层持久化技术细节(SQL/NoSQL)。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public interface ProvenanceConfigRepository {

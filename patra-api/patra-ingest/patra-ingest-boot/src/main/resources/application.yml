@@ -14,7 +14,7 @@ spring:
       # Service-specific configuration from Nacos
       - "optional:nacos:${spring.application.name}-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
       # Shared platform configuration from Nacos
-      - "optional:nacos:papertrace-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
+      - "optional:nacos:patra-${spring.profiles.active:dev}.yaml?group=${NACOS_CONFIG_GROUP:${NACOS_GROUP:DEFAULT_GROUP}}&namespace=${NACOS_NAMESPACE_ID:${NACOS_NAMESPACE:public}}"
   cloud:
     nacos:
       server-addr: ${NACOS_ADDR:127.0.0.1:8848}
@@ -51,10 +51,10 @@ xxl:
     executor:
       ip: ${XXL_JOB_EXECUTOR_IP:host.docker.internal}
       # Log directory defaults to ./logs/patra-ingest/xxl-job in development
-      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PAPERTRACE_LOG_DIR:./logs}/patra-ingest/xxl-job}
+      logpath: ${XXL_JOB_EXECUTOR_LOG_PATH:${PATRA_LOG_DIR:./logs}/patra-ingest/xxl-job}
       logretentiondays: ${XXL_JOB_LOG_RETENTION_DAYS:30}
 
-papertrace:
+patra:
   ingest:
     exec:
       # Lease time-to-live in seconds for execution lock

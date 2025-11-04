@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../patra-parent/pom.xml</relativePath>
@@ -14,35 +14,35 @@
     <artifactId>patra-ingest</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Papertrace Ingest</name>
+    <name>Patra Ingest</name>
     <description>Ingestion module aggregate: api/domain/infra/app/adapter</description>
 
     <dependencyManagement>
         <dependencies>
             <!-- Centralise ingest submodule versions so internal dependencies can omit explicit version tags -->
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-ingest-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-ingest-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-ingest-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-ingest-infra</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-ingest-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>

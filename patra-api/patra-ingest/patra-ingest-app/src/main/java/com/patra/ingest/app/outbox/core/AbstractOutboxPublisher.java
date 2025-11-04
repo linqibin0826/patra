@@ -535,7 +535,7 @@ public abstract class AbstractOutboxPublisher<E, P extends OutboxPayload, H exte
     if (batchSize > maxBatchSize) {
       throw new IllegalArgumentException(
           String.format(
-              "重试批次大小 %d 超过最大值 %d。" + "请考虑拆分批次或增加 papertrace.outbox.publisher.max-batch-size 配置。",
+              "重试批次大小 %d 超过最大值 %d。" + "请考虑拆分批次或增加 patra.outbox.publisher.max-batch-size 配置。",
               batchSize, maxBatchSize));
     }
   }

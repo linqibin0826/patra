@@ -106,7 +106,7 @@ patra:
 ### Maven 依赖
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-spring-boot-starter-object-storage</artifactId>
 </dependency>
 ```
@@ -280,4 +280,4 @@ rate(object_storage_retry_total[5m])
 ---
 
 **最后更新**: 2025-01-12
-**维护者**: Papertrace Team
+**维护者**: Patra Team

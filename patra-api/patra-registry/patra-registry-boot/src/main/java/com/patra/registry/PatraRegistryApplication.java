@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 /**
  * Patra Registry 服务启动类。
  *
- * <p>Registry 是 Papertrace 平台的核心配置服务,作为 Provenance、表达式、字典和元数据的单一事实来源(SSOT)。
+ * <p>Registry 是 Patra 平台的核心配置服务,作为 Provenance、表达式、字典和元数据的单一事实来源(SSOT)。
  *
  * <p>主要功能:
  *

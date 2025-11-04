@@ -61,7 +61,7 @@ import org.springframework.stereotype.Component;
  *   <li>ERROR: 致命错误或达到最大重试 (messageId, totalAttempts, errorCode, exception)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

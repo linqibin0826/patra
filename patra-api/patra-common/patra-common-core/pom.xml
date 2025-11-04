@@ -5,15 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-common</artifactId>
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>patra-common-core</artifactId>
-    <name>Papertrace Common Core</name>
+    <name>Patra Common Core</name>
     <description>
-        Core utilities required by all Papertrace services:
+        Core utilities required by all Patra services:
         - Domain layer base classes (AggregateRoot, DomainEvent)
         - Error handling framework (DomainException, ErrorTrait)
         - Shared enums (ProvenanceCode, Priority)

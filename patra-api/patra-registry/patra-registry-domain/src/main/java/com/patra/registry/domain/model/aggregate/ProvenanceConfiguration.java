@@ -37,7 +37,7 @@ import com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig;
  *   <li>{@code rateLimit} - 速率限制配置,用于API节流保护,可选
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record ProvenanceConfiguration(

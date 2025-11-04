@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Bean;
  * <p>设计说明: 此配置与 {@link CoreErrorAutoConfiguration} 分离,避免 Resilience4j 不存在时 出现
  * ClassNotFoundException(可选依赖)。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

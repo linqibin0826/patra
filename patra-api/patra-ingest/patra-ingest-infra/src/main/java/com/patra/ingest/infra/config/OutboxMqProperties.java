@@ -20,7 +20,7 @@ import org.springframework.validation.annotation.Validated;
  *
  * <p>约束发布器实现的装配,并在启动时执行快速失败验证。
  */
-@ConfigurationProperties(prefix = "papertrace.ingest.outbox")
+@ConfigurationProperties(prefix = "patra.ingest.outbox")
 @Validated
 public class OutboxMqProperties {
 
@@ -51,12 +51,12 @@ public class OutboxMqProperties {
    * <p>示例配置:
    *
    * <pre>
-   * papertrace:
+   * patra:
    *   ingest:
    *     outbox:
    *       channel-mapping:
    *         TASK_READY: INGEST_TASK_READY
-   *         LITERATURE_READY: papertrace.catalog.literature.ready
+   *         LITERATURE_READY: patra.catalog.literature.ready
    * </pre>
    *
    * <p>如果未配置，则使用 RocketMqChannelMapper 中的默认映射。
@@ -69,7 +69,7 @@ public class OutboxMqProperties {
    * <p>示例:
    *
    * <pre>
-   * papertrace:
+   * patra:
    *   ingest:
    *     outbox:
    *       topic-prefix: dev-   # 生成的 Topic: dev-INGEST_TASK_READY
@@ -81,7 +81,7 @@ public class OutboxMqProperties {
   public void validate() {
     if (!EXPECTED_PUBLISHER.equalsIgnoreCase(publisher)) {
       throw new IllegalStateException(
-          "papertrace.ingest.outbox.publisher 必须为 'rocketmq',但实际值为 '" + publisher + "'");
+          "patra.ingest.outbox.publisher 必须为 'rocketmq',但实际值为 '" + publisher + "'");
     }
     if (strictChannelWhitelist && isEmpty(allowedChannels)) {
       throw new IllegalStateException("strict-channel-whitelist=true 需要至少配置一个允许的通道");

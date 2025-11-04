@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../patra-parent/pom.xml</relativePath>
@@ -14,33 +14,33 @@
     <artifactId>patra-storage</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Papertrace Storage</name>
+    <name>Patra Storage</name>
     <description>Object storage metadata microservice modules</description>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-storage-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-storage-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-storage-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-storage-infra</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-storage-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>

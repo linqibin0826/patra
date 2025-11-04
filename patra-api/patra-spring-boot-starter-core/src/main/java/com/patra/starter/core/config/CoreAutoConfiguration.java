@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Bean;
  *   <li><strong>可测试性</strong>: Bean 可在测试中替换(例如使用 Clock.fixed() 实现确定性测试)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @AutoConfiguration

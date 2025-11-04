@@ -5,20 +5,20 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-catalog</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>patra-catalog-api</artifactId>
-    <name>Papertrace Catalog API</name>
+    <name>Patra Catalog API</name>
     <description>Catalog API module - public DTOs and contracts for literature data transfer</description>
 
     <dependencies>
         <!-- Common base -->
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-common-core</artifactId>
         </dependency>
 

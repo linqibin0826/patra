@@ -48,7 +48,7 @@ import java.time.Instant;
  * @param windowDateFieldKey 统一日期字段键(std_key),用于DATE/COMPOSITE模式的时间切片,可为null
  * @param maxIdsPerWindow 单窗口最大ID数量,超出后分割窗口,可为null
  * @param maxWindowSpanSeconds 单窗口最大时间跨度(秒),过长窗口将被分割,可为null
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record WindowOffsetConfig(

@@ -1,6 +1,6 @@
 # Claude Code Hooks
 
-Papertrace 项目的自定义 hooks,用于自动激活技能和执行项目检查。
+Patra 项目的自定义 hooks,用于自动激活技能和执行项目检查。
 
 ## 🎯 技能激活 Hook
 

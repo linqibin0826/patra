@@ -34,7 +34,7 @@ import org.springframework.stereotype.Component;
  *   <li>无 INFO/WARN 日志 (高频操作,避免日志噪音)
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

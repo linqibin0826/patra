@@ -30,7 +30,7 @@ import java.util.List;
  * @param failed 失败的消息数
  * @param leaseMissed 租约丢失的消息数
  * @param events 领域事件列表(不可变)
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record RelayBatchResult(

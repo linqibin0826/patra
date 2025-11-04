@@ -27,7 +27,7 @@ import lombok.Getter;
  * <p>这些值必须与 Nacos 配置中允许的聚合类型匹配:
  *
  * <pre>
- * papertrace:
+ * patra:
  *   outbox:
  *     publisher:
  *       allowed-aggregate-types:

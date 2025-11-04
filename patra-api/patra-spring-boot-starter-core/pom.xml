@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../patra-parent/pom.xml</relativePath>
@@ -10,12 +10,12 @@
 
     <artifactId>patra-spring-boot-starter-core</artifactId>
     <packaging>jar</packaging>
-    <name>Papertrace Spring Boot Starter - Core</name>
+    <name>Patra Spring Boot Starter - Core</name>
 
     <dependencies>
         <!-- Internal shared library: utilities/exceptions -->
         <dependency>
-            <groupId>com.papertrace</groupId>
+            <groupId>com.patra</groupId>
             <artifactId>patra-common-core</artifactId>
         </dependency>
 

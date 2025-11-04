@@ -20,9 +20,9 @@ services:
       --explicit_defaults_for_timestamp=ON
       --max_connections=300
     volumes:
-      - ${HOME}/.papertrace/docker/mysql/data:/var/lib/mysql
-      - ${HOME}/.papertrace/docker/mysql/conf.d:/etc/mysql/conf.d
-      - ${HOME}/.papertrace/docker/mysql/init:/docker-entrypoint-initdb.d
+      - ${HOME}/.patra/docker/mysql/data:/var/lib/mysql
+      - ${HOME}/.patra/docker/mysql/conf.d:/etc/mysql/conf.d
+      - ${HOME}/.patra/docker/mysql/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD-SHELL", "mysqladmin ping -uroot -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1 --silent" ]
       interval: 10s
@@ -36,8 +36,8 @@ services:
     ports: [ "16379:6379" ]
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     volumes:
-      - ${HOME}/.papertrace/docker/redis/data:/data
-      - ${HOME}/.papertrace/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ${HOME}/.patra/docker/redis/data:/data
+      - ${HOME}/.patra/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -61,8 +61,8 @@ services:
       - "9848:9848"
       - "9849:9849"
     volumes:
-      - ${HOME}/.papertrace/docker/nacos/logs:/home/nacos/logs
-      - ${HOME}/.papertrace/docker/nacos/data:/home/nacos/data
+      - ${HOME}/.patra/docker/nacos/logs:/home/nacos/logs
+      - ${HOME}/.patra/docker/nacos/data:/home/nacos/data
     healthcheck:
       test: [ "CMD", "curl", "-fs", "http://localhost:8848/nacos/" ]
       interval: 10s

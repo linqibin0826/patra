@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Skill activation triggers for Papertrace Java backend (Claude Code)",
+  "description": "Skill activation triggers for Patra Java backend (Claude Code)",
   "skills": {
     "skill-developer": {
       "type": "domain",
@@ -243,11 +243,11 @@
         ]
       }
     },
-    "papertrace-domain": {
+    "patra-domain": {
       "type": "domain",
       "enforcement": "suggest",
       "priority": "high",
-      "description": "Papertrace business domain knowledge: Provenance, Plan, Task, Expression engine, and workflow patterns",
+      "description": "Patra business domain knowledge: Provenance, Plan, Task, Expression engine, and workflow patterns",
       "promptTriggers": {
         "keywords": [
           "provenance",

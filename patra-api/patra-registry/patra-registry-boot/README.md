@@ -65,7 +65,7 @@ spring:
 server:
   port: 8081
 
-papertrace:
+patra:
   logging:
     trace:
       enabled: true
@@ -203,7 +203,7 @@ SELECT * FROM flyway_schema_history ORDER BY installed_rank;
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/papertrace_registry
+    url: jdbc:mysql://localhost:3306/patra_registry
     username: root
     password: ${MYSQL_PASSWORD}
 

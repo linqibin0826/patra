@@ -2,7 +2,7 @@
 
 ## 概述
 
-核心基础设施 Starter,为所有 Papertrace 微服务提供统一的 JSON/XML 序列化、错误处理框架、可观测性和弹性支持的自动配置。遵循"约定优于配置"原则,开箱即用提供合理的默认值。
+核心基础设施 Starter,为所有 Patra 微服务提供统一的 JSON/XML 序列化、错误处理框架、可观测性和弹性支持的自动配置。遵循"约定优于配置"原则,开箱即用提供合理的默认值。
 
 本 Starter 是所有业务模块的基石,提供统一的基础设施能力,确保跨服务的一致性和可观测性。
 
@@ -184,7 +184,7 @@ patra:
 ### Maven 依赖
 ```xml
 <dependency>
-    <groupId>com.papertrace</groupId>
+    <groupId>com.patra</groupId>
     <artifactId>patra-spring-boot-starter-core</artifactId>
 </dependency>
 ```
@@ -262,4 +262,4 @@ public class GlobalExceptionHandler {
 ---
 
 **最后更新**: 2025-01-12
-**维护者**: Papertrace Team
+**维护者**: Patra Team

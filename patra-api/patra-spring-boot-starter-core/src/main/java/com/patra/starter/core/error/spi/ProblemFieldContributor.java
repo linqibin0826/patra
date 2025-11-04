@@ -20,7 +20,7 @@ import java.util.Map;
  * }
  * }</pre>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public interface ProblemFieldContributor {

@@ -512,8 +512,8 @@ public class PlanSchedulerService {
 @Component
 @RequiredArgsConstructor
 @RocketMQMessageListener(
-    topic = "${papertrace.ingest.mq.topics.task-ready}",
-    consumerGroup = "${papertrace.ingest.mq.consumer-groups.task-ready}"
+    topic = "${patra.ingest.mq.topics.task-ready}",
+    consumerGroup = "${patra.ingest.mq.consumer-groups.task-ready}"
 )
 public class TaskReadyMessageListener implements RocketMQListener<MessageExt> {
 
@@ -572,4 +572,4 @@ public class OutboxRelayService {
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest-app:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest-app:0.1.0-SNAPSHOT`

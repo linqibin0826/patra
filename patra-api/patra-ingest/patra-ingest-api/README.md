@@ -171,5 +171,5 @@ public record TaskStatusUpdateReq(
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest-api:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest-api:0.1.0-SNAPSHOT`
 **状态**: 初始阶段 — 仅错误码

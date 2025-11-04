@@ -22,7 +22,7 @@ patra:
   web:
     problem:
       enabled: true
-      type-base-url: "https://errors.papertrace.com"
+      type-base-url: "https://errors.patra.com"
       include-stack: false
 
   feign:

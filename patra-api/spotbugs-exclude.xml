@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  SpotBugs exclusion filter for Papertrace project.
+  SpotBugs exclusion filter for Patra project.
 
   This file excludes false positives and known safe patterns from SpotBugs analysis.
   Customize as needed based on your project's specific requirements.

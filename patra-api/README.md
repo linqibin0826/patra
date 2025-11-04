@@ -1,4 +1,4 @@
-# Papertrace — 医学文献数据平台
+# Patra — 医学文献数据平台
 
 > **状态**: 🚧 引导阶段 (v0.1.0-SNAPSHOT)
 > **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
@@ -6,9 +6,9 @@
 
 ---
 
-## 📖 什么是 Papertrace?
+## 📖 什么是 Patra?
 
-Papertrace 是一个**医学文献数据平台**,旨在:
+Patra 是一个**医学文献数据平台**,旨在:
 
 1. **采集** 来自 10+ 外部数据源的文献 (PubMed, EPMC, Crossref 等)
 2. **解析和标准化** 原始数据为统一的模式
@@ -147,7 +147,7 @@ curl http://localhost:8082/actuator/health   # Ingest
 
 - Spring profiles: `dev` (默认) 用于本地 Docker Compose 环境,`prod` 预留给未来的云部署。基础配置将 `SPRING_PROFILES_ACTIVE` 默认设置为 `dev`;在部署时导出 `SPRING_PROFILES_ACTIVE=prod` (或其他 profile)。
 - 每个 `*-boot` 模块现在使用 `application.yml` + `application-{profile}.yml`。将共享设置 (端口、starters、Jackson) 放在基础文件中,在 profile 文件中覆盖环境特定配置 (数据源、redis、日志)。
-- 配置中心 (Nacos) DataIds 遵循 `<service-name>-<profile>.yaml` 格式,加上可选的共享配置 `papertrace-<profile>.yaml`。Namespace/group 来自 `NACOS_NAMESPACE_ID`/`NACOS_CONFIG_GROUP` (回退保留旧的 `NACOS_NAMESPACE`/`NACOS_GROUP` 值)。
+- 配置中心 (Nacos) DataIds 遵循 `<service-name>-<profile>.yaml` 格式,加上可选的共享配置 `patra-<profile>.yaml`。Namespace/group 来自 `NACOS_NAMESPACE_ID`/`NACOS_CONFIG_GROUP` (回退保留旧的 `NACOS_NAMESPACE`/`NACOS_GROUP` 值)。
 - 敏感值 (DB/Redis 凭证、API 密钥) 存放在环境变量中,在 `application-prod.yml` 中使用 (例如: `REGISTRY_DB_URL`, `INGEST_DB_URL`)。仅提交本地引导的默认开发配置。
 
 ---
@@ -261,9 +261,9 @@ domain   →  仅 patra-common (无框架)
 
 ## 📞 支持
 
-- **Issues**: https://github.com/yourorg/papertrace/issues
-- **讨论**: https://github.com/yourorg/papertrace/discussions
-- **邮箱**: dev@papertrace.io
+- **Issues**: https://github.com/yourorg/patra/issues
+- **讨论**: https://github.com/yourorg/patra/discussions
+- **邮箱**: dev@patra.io
 
 ---
 
@@ -281,6 +281,6 @@ domain   →  仅 patra-common (无框架)
 
 ---
 
-**由 Papertrace 团队用 ❤️ 构建**
+**由 Patra 团队用 ❤️ 构建**
 
 最后更新: 2025-01-12

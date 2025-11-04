@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-parent</artifactId>
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../patra-parent/pom.xml</relativePath>
@@ -14,29 +14,29 @@
     <artifactId>patra-registry</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Papertrace Registry</name>
+    <name>Patra Registry</name>
     <description>Registry aggregator POM composing the api, domain, infra, app, and adapter modules.</description>
 
     <dependencyManagement>
         <dependencies>
             <!-- Keep registry submodule versions aligned so inter-module dependencies can omit explicit versions. -->
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-registry-domain</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-registry-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-registry-infra</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.papertrace</groupId>
+                <groupId>com.patra</groupId>
                 <artifactId>patra-registry-adapter</artifactId>
                 <version>${project.version}</version>
             </dependency>

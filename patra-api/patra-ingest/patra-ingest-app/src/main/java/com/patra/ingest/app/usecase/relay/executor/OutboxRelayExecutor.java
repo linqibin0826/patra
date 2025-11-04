@@ -69,7 +69,7 @@ import org.springframework.stereotype.Component;
  *   <li>{@link OutboxMessageFailedEvent}: 达到最大重试次数后永久失败
  * </ul>
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

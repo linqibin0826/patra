@@ -98,14 +98,14 @@ spring:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         namespace: ${NACOS_NAMESPACE:dev}
-        group: ${NACOS_GROUP:PAPERTRACE}
+        group: ${NACOS_GROUP:PATRA}
       config:
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
         namespace: ${NACOS_NAMESPACE:dev}
         file-extension: yml
         shared-configs:
           - data-id: common-config.yml
-            group: PAPERTRACE
+            group: PATRA
             refresh: true
 
 management:
@@ -123,7 +123,7 @@ management:
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/papertrace_ingest?useSSL=false
+    url: jdbc:mysql://localhost:3306/patra_ingest?useSSL=false
     username: root
     password: root
 
@@ -158,7 +158,7 @@ logging:
 <dependencies>
     <!-- Web Starter -->
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-spring-boot-starter-web</artifactId>
     </dependency>
 
@@ -184,21 +184,21 @@ logging:
 
     <!-- 子模块依赖 -->
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-ingest-adapter</artifactId>
     </dependency>
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-ingest-infra</artifactId>
     </dependency>
 
     <!-- 对象存储 -->
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-spring-boot-starter-object-storage</artifactId>
     </dependency>
     <dependency>
-        <groupId>com.papertrace</groupId>
+        <groupId>com.patra</groupId>
         <artifactId>patra-storage-api</artifactId>
     </dependency>
 
@@ -259,7 +259,7 @@ ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
 
 **构建镜像**:
 ```bash
-docker build -t papertrace/patra-ingest:0.1.0 .
+docker build -t patra/patra-ingest:0.1.0 .
 ```
 
 **运行容器**:
@@ -268,8 +268,8 @@ docker run -d \
   --name patra-ingest \
   -p 8082:8082 \
   -e NACOS_SERVER_ADDR=nacos:8848 \
-  -e DB_URL=jdbc:mysql://mysql:3306/papertrace_ingest \
-  papertrace/patra-ingest:0.1.0
+  -e DB_URL=jdbc:mysql://mysql:3306/patra_ingest \
+  patra/patra-ingest:0.1.0
 ```
 
 ---
@@ -383,7 +383,7 @@ curl http://localhost:8082/actuator/prometheus
 | `SPRING_PROFILES_ACTIVE` | 激活的配置文件 | `dev` |
 | `NACOS_SERVER_ADDR` | Nacos 服务地址 | `localhost:8848` |
 | `NACOS_NAMESPACE` | Nacos 命名空间 | `dev` |
-| `NACOS_GROUP` | Nacos 配置组 | `PAPERTRACE` |
+| `NACOS_GROUP` | Nacos 配置组 | `PATRA` |
 | `DB_URL` | 数据库连接 URL | 无 |
 | `DB_USERNAME` | 数据库用户名 | 无 |
 | `DB_PASSWORD` | 数据库密码 | 无 |
@@ -391,5 +391,5 @@ curl http://localhost:8082/actuator/prometheus
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest-boot:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest-boot:0.1.0-SNAPSHOT`
 **作者**: linqibin

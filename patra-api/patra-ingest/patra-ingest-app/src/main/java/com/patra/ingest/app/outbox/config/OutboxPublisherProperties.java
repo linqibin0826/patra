@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * <p>支持通过 Nacos 或 application.yml 动态配置:
  *
  * <pre>
- * papertrace:
+ * patra:
  *   outbox:
  *     publisher:
  *       batch-size: 500
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "papertrace.outbox.publisher") // 确保此前缀与配置源匹配;如变更需更新文档
+@ConfigurationProperties(prefix = "patra.outbox.publisher") // 确保此前缀与配置源匹配;如变更需更新文档
 public class OutboxPublisherProperties {
 
   /**

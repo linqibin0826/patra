@@ -1,4 +1,4 @@
-# Hooks 配置指南（Papertrace 版本）
+# Hooks 配置指南（Patra 版本）
 
 本指南说明如何为 Java/Spring Boot 项目配置和自定义 hooks 系统。
 

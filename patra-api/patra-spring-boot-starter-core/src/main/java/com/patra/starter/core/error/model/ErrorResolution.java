@@ -9,7 +9,7 @@ import com.patra.common.error.codes.ErrorCodeLike;
  *
  * @param errorCode 解析后的业务错误码(永不为 {@code null})
  * @param httpStatus 解析后的 HTTP 状态码(范围: 100–599)
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 public record ErrorResolution(ErrorCodeLike errorCode, int httpStatus) {

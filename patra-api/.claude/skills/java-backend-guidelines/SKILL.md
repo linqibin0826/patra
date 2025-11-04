@@ -12,11 +12,11 @@ description: >
   SliceStatusChangedEvent、PlanIngestionOrchestrator、AbstractProvenanceScheduleJob、Template Method pattern。
 ---
 
-# Java 后端开发指南 (Papertrace)
+# Java 后端开发指南 (Patra)
 
 ## 目的
 
-在 Papertrace 后端微服务(**patra-ingest**、**patra-registry**、**patra-gateway**)中建立一致性和最佳实践,使用 **六边形架构 + DDD(领域驱动设计)** 结合 Spring Boot 3.5.7、Java 25 和 MyBatis-Plus。
+在 Patra 后端微服务(**patra-ingest**、**patra-registry**、**patra-gateway**)中建立一致性和最佳实践,使用 **六边形架构 + DDD(领域驱动设计)** 结合 Spring Boot 3.5.7、Java 25 和 MyBatis-Plus。
 
 **核心原则**: 领域驱动设计,清晰的层次边界、纯粹的领域逻辑和依赖倒置。
 
@@ -600,7 +600,7 @@ public interface ProvenancePort {
 - 每个声明一个变量
 - 静态导入仅用于常量
 
-**参见:** Papertrace 的 AGENTS-development.md 获取完整编码标准。
+**参见:** Patra 的 AGENTS-development.md 获取完整编码标准。
 
 ---
 

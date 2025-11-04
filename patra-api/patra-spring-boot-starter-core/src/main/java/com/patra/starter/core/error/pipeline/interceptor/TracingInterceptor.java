@@ -15,7 +15,7 @@ import org.springframework.core.annotation.Order;
  *
  * <p>执行优先级: {@link Ordered#HIGHEST_PRECEDENCE},确保追踪信息最先被记录。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

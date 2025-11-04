@@ -45,7 +45,7 @@ import org.springframework.context.annotation.Configuration;
  *
  * <p>设计原则: 提供可被应用程序覆盖的默认引擎、拦截器和观测 Bean。
  *
- * @author Papertrace Team
+ * @author Patra Team
  * @since 2.0
  */
 @Slf4j

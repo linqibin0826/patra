@@ -5,7 +5,7 @@ import java.util.Arrays;
 /**
  * 平台支持的对象存储提供商枚举。
  *
- * <p>定义了Papertrace平台可以集成的各种对象存储服务提供商类型,包括开源和商业云存储解决方案。
+ * <p>定义了Patra平台可以集成的各种对象存储服务提供商类型,包括开源和商业云存储解决方案。
  */
 public enum StorageProvider {
   /** MinIO 对象存储 */

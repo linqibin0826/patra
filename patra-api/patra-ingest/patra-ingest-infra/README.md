@@ -474,7 +474,7 @@ patra:
       endpoint: http://localhost:9000
       access-key: minioadmin
       secret-key: minioadmin
-      bucket: papertrace-literature
+      bucket: patra-literature
 ```
 
 ---
@@ -562,4 +562,4 @@ public class OutboxPublisher {
 ---
 
 **最后更新**: 2025-01-16
-**Maven 坐标**: `com.papertrace:patra-ingest-infra:0.1.0-SNAPSHOT`
+**Maven 坐标**: `com.patra:patra-ingest-infra:0.1.0-SNAPSHOT`
