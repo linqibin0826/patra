@@ -14,13 +14,15 @@ color: green
 
 ## 你的流程
 
+加载 java-backend-guidelines 这个 java-backend-guidelines, 特别是 testing-guide.md, 以确保你遵循最新的测试最佳实践。
+
 ### 1. 识别代码模式
 
 当给定要测试的类或代码片段时:
 
 ```bash
 # 阅读目标文件
-Read the file to identify its pattern
+读取文件以识别其模式
 
 # 检查这些关键指标:
 □ 层级: domain / app / infra / adapter?
@@ -84,15 +86,15 @@ Q4: 代码是否使用 Outbox 模式?
 **测试结构 (AAA 模式):**
 ```java
 @Test
-@DisplayName("Should [behavior] when [condition]")
+@DisplayName("应该在[条件]时[执行行为]")
 void should[Behavior]When[Condition]() {
-    // Arrange (Given) - 设置测试数据
+    // 准备 (Given) - 设置测试数据
     // ... prepare test objects
 
-    // Act (When) - 执行行为
+    // 执行 (When) - 执行行为
     // ... call method under test
 
-    // Assert (Then) - 验证结果
+    // 断言 (Then) - 验证结果
     // ... assertions
 }
 ```
@@ -116,7 +118,7 @@ void should[Behavior]When[Condition]() {
 
 ## 测试生成模板
 
-### 模板 1: Domain Layer - Value Object/Record
+### 模板 1: 领域层 - 值对象/记录
 
 ```java
 package com.patra.{service}.domain.model.vo;
@@ -128,43 +130,43 @@ import static org.assertj.core.api.Assertions.*;
 class MyValueObjectTest {
 
     @Test
-    @DisplayName("Should create value object with valid fields")
+    @DisplayName("应该用有效字段创建值对象")
     void shouldCreateWithValidFields() {
-        // Arrange & Act
+        // 准备 & Act
         MyValueObject vo = new MyValueObject(
             "field1",
             "field2",
             true
         );
 
-        // Assert
+        // 断言
         assertThat(vo.field1()).isEqualTo("field1");
         assertThat(vo.field2()).isEqualTo("field2");
         assertThat(vo.active()).isTrue();
     }
 
     @Test
-    @DisplayName("Should reject null required fields")
+    @DisplayName("应该拒绝空的必填字段")
     void shouldRejectNullRequiredFields() {
-        // Act & Assert
+        // 执行 & Assert
         assertThatThrownBy(() -> new MyValueObject(null, "field2", true))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("field1 cannot be null");
     }
 
     @Test
-    @DisplayName("Should handle optional fields")
+    @DisplayName("应该处理可选字段")
     void shouldHandleOptionalFields() {
-        // Arrange & Act
+        // 准备 & Act
         MyValueObject vo = new MyValueObject("field1", null, true);
 
-        // Assert
+        // 断言
         assertThat(vo.field2()).isNull();
     }
 }
 ```
 
-### 模板 2: Application Layer - Orchestrator
+### 模板 2: 应用层 - 编排器
 
 ```java
 package com.patra.{service}.app.orchestrator;
@@ -196,38 +198,38 @@ class MyOrchestratorTest {
     private MyOrchestrator orchestrator;
 
     @Test
-    @DisplayName("Should orchestrate successfully with correct call order")
+    @DisplayName("应该成功编排并保证正确的调用顺序")
     void shouldOrchestrateSuccessfully() {
-        // Arrange
+        // 准备
         when(myPort.fetchData()).thenReturn(someData);
 
-        // Act
+        // 执行
         orchestrator.execute(context);
 
-        // Assert: Verify coordinator call order
+        // 断言: 验证协调器调用顺序
         InOrder inOrder = inOrder(coordinatorA, coordinatorB);
         inOrder.verify(coordinatorA).doA(any());
         inOrder.verify(coordinatorB).doB(any());
     }
 
     @Test
-    @DisplayName("Should rollback when coordinator fails")
+    @DisplayName("应该在协调器失败时回滚")
     void shouldRollbackOnCoordinatorFailure() {
-        // Arrange
+        // 准备
         doThrow(new RuntimeException("Coordinator error"))
             .when(coordinatorA).doA(any());
 
-        // Act & Assert
+        // 执行 & Assert
         assertThatThrownBy(() -> orchestrator.execute(context))
             .isInstanceOf(RuntimeException.class);
 
-        // Verify subsequent coordinator not called (transaction rollback)
+        // 验证 subsequent coordinator not called (transaction rollback)
         verify(coordinatorB, never()).doB(any());
     }
 }
 ```
 
-### 模板 3: Application Layer - Event Handler
+### 模板 3: 应用层 - 事件处理器
 
 ```java
 package com.patra.{service}.app.eventhandler;
@@ -260,33 +262,33 @@ class MyEventHandlerTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Test
-    @DisplayName("Should handle event and publish next event AFTER_COMMIT")
+    @DisplayName("应该处理事件并在事务提交后发布下一个事件")
     void shouldHandleEventAndPublishNext() {
-        // Arrange
+        // 准备
         String dedupKey = "event-dedup-123";
         MyEvent event = new MyEvent(/* ... */, dedupKey);
 
-        // Act
+        // 执行
         eventHandler.onEvent(event);
 
-        // Assert 1: Business logic executed
+        // 断言 1: Business logic executed
         // ... verify state changes
 
-        // Assert 2: Next event published
+        // 断言 2: Next event published
         verify(eventPublisher).publishEvent(argThat(e ->
             e instanceof NextEvent
         ));
 
-        // Assert 3: Idempotency record created in Outbox
+        // 断言 3: Idempotency record created in Outbox
         OutboxMessage outbox = outboxRepo.findByDedupKey(dedupKey).orElseThrow();
         assertThat(outbox.getOpType()).isEqualTo("NextEvent");
         assertThat(outbox.getStatusCode()).isEqualTo("PUBLISHED");
     }
 
     @Test
-    @DisplayName("Should NOT process duplicate event (idempotency)")
+    @DisplayName("应该不处理重复事件（幂等性）")
     void shouldNotProcessDuplicateEvent() {
-        // Arrange: Pre-existing outbox entry
+        // 准备: Pre-existing outbox entry
         String dedupKey = "duplicate-event";
         outboxRepo.save(OutboxMessage.builder()
             .dedupKey(dedupKey)
@@ -296,23 +298,23 @@ class MyEventHandlerTest {
 
         MyEvent event = new MyEvent(/* ... */, dedupKey);
 
-        // Act
+        // 执行
         eventHandler.onEvent(event);
 
-        // Assert: No business logic executed, no event published
+        // 断言: No business logic executed, no event published
         verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("Should handle OptimisticLockingFailureException")
+    @DisplayName("应该处理乐观锁失败异常")
     void shouldHandleOptimisticLockConflict() {
-        // Test optimistic lock conflict handling
+        // 测试乐观锁冲突处理
         // ...
     }
 }
 ```
 
-### 模板 4: Infrastructure Layer - Repository
+### 模板 4: 基础设施层 - 存储库
 
 ```java
 package com.patra.{service}.infra.persistence.repository;
@@ -333,46 +335,49 @@ import static org.assertj.core.api.Assertions.*;
 class MyRepositoryIntegrationTest {
 
     @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0.36")
         .withDatabaseName("patra_test")
-        .withUsername("test")
-        .withPassword("test");
+        .withUsername("root")
+        .withPassword("123456")
+        .withReuse(true);  // 容器重用以提高测试速度
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
+        // 为测试动态注入数据库连接配置
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
         registry.add("spring.datasource.username", mysql::getUsername);
         registry.add("spring.datasource.password", mysql::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
     }
 
     @Autowired
     private MyRepositoryMpImpl repository;
 
     @Test
-    @DisplayName("Should save and find entity")
+    @DisplayName("应该保存并查找实体")
     void shouldSaveAndFind() {
-        // Arrange
+        // 准备
         MyEntity entity = createTestEntity();
 
-        // Act
+        // 执行
         MyEntity saved = repository.save(entity);
         Optional<MyEntity> found = repository.findById(saved.getId());
 
-        // Assert
+        // 断言
         assertThat(saved.getId()).isNotNull();
         assertThat(found).isPresent();
         assertThat(found.get().getSomeField()).isEqualTo("expectedValue");
     }
 
     @Test
-    @DisplayName("Should find entities with complex query")
+    @DisplayName("应该用复杂查询查找实体")
     void shouldFindWithComplexQuery() {
-        // Test complex LambdaQueryWrapper or custom SQL
+        // 测试复杂的 LambdaQueryWrapper 或自定义 SQL
         // ...
     }
 
     private MyEntity createTestEntity() {
-        // Test data builder
+        // 测试数据构建器
         return MyEntity.builder()
             .field1("value1")
             .field2("value2")
@@ -381,7 +386,7 @@ class MyRepositoryIntegrationTest {
 }
 ```
 
-### 模板 5: Infrastructure Layer - Converter
+### 模板 5: 基础设施层 - 转换器
 
 ```java
 package com.patra.{service}.infra.converter;
@@ -399,50 +404,50 @@ class MyConverterTest {
     private MyConverter converter;
 
     @Test
-    @DisplayName("Should convert Domain → DO correctly")
+    @DisplayName("应该正确转换Domain → DO")
     void shouldConvertDomainToDO() {
-        // Arrange
+        // 准备
         MyDomain domain = new MyDomain(/* ... */);
 
-        // Act
+        // 执行
         MyDO dataObject = converter.toDataObject(domain);
 
-        // Assert: Verify all field mappings
+        // 断言: 验证所有字段映射
         assertThat(dataObject.getId()).isEqualTo(domain.id());
         assertThat(dataObject.getField1()).isEqualTo(domain.field1());
     }
 
     @Test
-    @DisplayName("Should convert DO → Domain (round-trip)")
+    @DisplayName("应该转换DO → Domain（往返映射）")
     void shouldConvertDOToDomain() {
-        // Arrange
+        // 准备
         MyDO dataObject = createTestDO();
 
-        // Act
+        // 执行
         MyDomain domain = converter.toDomain(dataObject);
 
-        // Assert: Bidirectional mapping consistency
+        // 断言: 双向映射一致性
         assertThat(domain.id()).isEqualTo(dataObject.getId());
         assertThat(domain.field1()).isEqualTo(dataObject.getField1());
     }
 
     @Test
-    @DisplayName("Should handle null fields gracefully")
+    @DisplayName("应该优雅地处理空字段")
     void shouldHandleNullFields() {
-        // Test null handling for optional fields
+        // 测试可选字段的空值处理
         // ...
     }
 
     @Test
-    @DisplayName("Should convert list of DOs to Domains")
+    @DisplayName("应该转换DO列表为Domain列表")
     void shouldConvertList() {
-        // Test list conversions
+        // 测试列表转换
         // ...
     }
 }
 ```
 
-### 模板 6: Adapter Layer - REST Controller
+### 模板 6: 适配器层 - REST控制器
 
 ```java
 package com.patra.{service}.adapter.rest;
@@ -469,12 +474,12 @@ class MyControllerTest {
     private MyService myService;
 
     @Test
-    @DisplayName("Should get resource by ID")
+    @DisplayName("应该通过ID获取资源")
     void shouldGetResourceById() throws Exception {
-        // Arrange
+        // 准备
         when(myService.findById(1L)).thenReturn(someResource);
 
-        // Act & Assert
+        // 执行 & Assert
         mockMvc.perform(get("/api/v1/resources/1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(1))
@@ -484,13 +489,13 @@ class MyControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 404 when resource not found")
+    @DisplayName("应该返回404当资源未找到时")
     void shouldReturn404WhenNotFound() throws Exception {
-        // Arrange
+        // 准备
         when(myService.findById(999L))
             .thenThrow(new ResourceNotFoundException("Resource not found"));
 
-        // Act & Assert
+        // 执行 & Assert
         mockMvc.perform(get("/api/v1/resources/999"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.status").value(404))
@@ -498,16 +503,16 @@ class MyControllerTest {
     }
 
     @Test
-    @DisplayName("Should validate request body with @Valid")
+    @DisplayName("应该用@Valid验证请求体")
     void shouldValidateRequestBody() throws Exception {
-        // Arrange: Invalid JSON (missing required field)
+        // 准备: Invalid JSON (missing required field)
         String invalidJson = """
             {
                 "field2": "value2"
             }
             """;
 
-        // Act & Assert
+        // 执行 & Assert
         mockMvc.perform(post("/api/v1/resources")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invalidJson))
@@ -519,7 +524,7 @@ class MyControllerTest {
 }
 ```
 
-### 模板 7: Adapter Layer - XXL-Job
+### 模板 7: 适配器层 - XXL-Job
 
 ```java
 package com.patra.{service}.adapter.job;
@@ -547,45 +552,45 @@ class MyJobTest {
     private MyJob job;
 
     @Test
-    @DisplayName("Should execute job with correct parameters")
+    @DisplayName("应该用正确的参数执行任务")
     void shouldExecuteJobWithParameters() throws Exception {
-        // Arrange: Mock XxlJobHelper
+        // 准备: Mock XxlJobHelper
         try (MockedStatic<XxlJobHelper> helper = mockStatic(XxlJobHelper.class)) {
             helper.when(XxlJobHelper::getJobParam).thenReturn("param1=value1");
 
-            // Act
+            // 执行
             ReturnT<String> result = job.executeJob("param1=value1");
 
-            // Assert
+            // 断言
             assertThat(result.getCode()).isEqualTo(ReturnT.SUCCESS_CODE);
             assertThat(result.getMsg()).contains("Success");
 
-            // Verify orchestrator called with correct parameter
+            // 验证 orchestrator called with correct parameter
             verify(orchestrator).execute("value1");
 
-            // Verify job log
+            // 验证 job log
             helper.verify(() -> XxlJobHelper.log("Starting job execution..."));
         }
     }
 
     @Test
-    @DisplayName("Should handle job execution failure")
+    @DisplayName("应该处理任务执行失败")
     void shouldHandleJobFailure() throws Exception {
-        // Arrange: Simulate job failure
+        // 准备: Simulate job failure
         try (MockedStatic<XxlJobHelper> helper = mockStatic(XxlJobHelper.class)) {
             helper.when(XxlJobHelper::getJobParam).thenReturn("param1=value1");
 
             doThrow(new RuntimeException("Execution failed"))
                 .when(orchestrator).execute(any());
 
-            // Act
+            // 执行
             ReturnT<String> result = job.executeJob("param1=value1");
 
-            // Assert: Verify failure response
+            // 断言: 验证失败响应
             assertThat(result.getCode()).isEqualTo(ReturnT.FAIL_CODE);
             assertThat(result.getMsg()).contains("Execution failed");
 
-            // Verify error logged
+            // 验证 error logged
             helper.verify(() -> XxlJobHelper.log(contains("Job failed")));
         }
     }
@@ -745,7 +750,7 @@ assertEquals(3, list.size());
 ```java
 // ✅ 好: 描述行为
 @Test
-@DisplayName("Should create plan when valid context provided")
+@DisplayName("应该在提供有效上下文时创建计划")
 void shouldCreatePlanWhenValidContextProvided() { }
 
 // ❌ 差: 通用名称
@@ -831,7 +836,7 @@ void testProvenanceCRUD() {
    ```
    识别的模式: Orchestrator with 3 coordinators
    测试类型: Mock-based unit test
-   关键重点: Verify call order, test rollback
+   关键重点: 验证调用顺序，测试回滚
    ```
 
 2. **生成的测试代码**: 包含所有必要导入的完整测试类

@@ -41,7 +41,7 @@
         <!-- Code quality and analysis plugins -->
         <archunit.version>1.3.0</archunit.version>
         <spotbugs.plugin.version>4.8.6.4</spotbugs.plugin.version>
-        <jacoco.version>0.8.12</jacoco.version>
+        <jacoco.version>0.8.14</jacoco.version>
 
         <!-- Testing -->
         <junit.version>5.10.2</junit.version>
