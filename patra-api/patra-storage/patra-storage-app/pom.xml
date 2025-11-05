@@ -21,6 +21,15 @@
             <artifactId>patra-storage-domain</artifactId>
         </dependency>
 
+        <!-- 测试依赖：引入领域层的测试工具类 -->
+        <dependency>
+            <groupId>com.patra</groupId>
+            <artifactId>patra-storage-domain</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.patra</groupId>
             <artifactId>patra-common-core</artifactId>
