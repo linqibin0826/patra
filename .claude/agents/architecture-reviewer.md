@@ -1,7 +1,7 @@
 ---
 name: architecture-reviewer
 description: 架构方案评审专家。基于六边形架构+DDD原则审查技术方案、设计决策和实施计划。识别架构违规、依赖问题、领域边界划分错误。用于方案评审、架构决策、技术选型评估、数据库设计审查。
-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch
+tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config
 model: opus
 color: purple
 ---

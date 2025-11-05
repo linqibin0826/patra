@@ -115,6 +115,8 @@ import org.testcontainers.junit.jupiter.Container;
  * @see TestMessageCollector
  */
 @DisplayName("Outbox 模式端到端测试")
+@org.springframework.test.context.ActiveProfiles("e2e-test")
+@org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与集成测试共享
 class OutboxPatternE2ETest extends BaseIntegrationTest {
 
   // ========== Testcontainers Configuration ==========
@@ -134,17 +136,21 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
   @Container
   private static final GenericContainer<?> rocketmqBroker =
       new GenericContainer<>("apache/rocketmq:5.3.1")
-          .withExposedPorts(10909, 10911)
-          .withCommand("sh mqbroker -n namesrv:9876 --enable-proxy")
+          .withExposedPorts(10909, 10911, 8081)
+          .withEnv("NAMESRV_ADDR", "namesrv:9876")
+          .withEnv("JAVA_OPT_EXT", "-Xms512m -Xmx512m")
+          .withCommand(
+              "sh", "mqbroker",
+              "-n", "namesrv:9876",
+              "-c", "/home/rocketmq/rocketmq-5.3.1/conf/broker.conf")
           .withNetwork(network)
           .dependsOn(rocketmqNamesrv)
-          .waitingFor(Wait.forLogMessage(".*The broker boot success.*", 1))
+          .waitingFor(Wait.forLogMessage(".*The broker.*success.*", 1))
           .withReuse(true);
 
   @DynamicPropertySource
   static void configureRocketMqProperties(DynamicPropertyRegistry registry) {
-    String namesrvAddr =
-        rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
+    String namesrvAddr = rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
     registry.add("rocketmq.name-server", () -> namesrvAddr);
     registry.add("patra.outbox.mq.send-timeout-millis", () -> 3000);
     registry.add("patra.outbox.mq.topic-prefix", () -> "patra_test_");
@@ -172,8 +178,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
   void setUp() throws Exception {
     messageCollector = new TestMessageCollector();
 
-    String namesrvAddr =
-        rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
+    String namesrvAddr = rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
     testConsumer = new DefaultMQPushConsumer("e2e_test_consumer_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
     testConsumer.subscribe("patra_test_*", "*");
@@ -228,7 +233,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       assertThat(savedMsg.getRetryCount()).isEqualTo(0);
 
       // 步骤 2-5: Outbox 扫描器执行中继 (发现 → 获取租约 → 发送 → 标记已发送)
-      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null);
+      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
       RelayReport report = relayOrchestrator.relay(command);
 
       // 验证: Relay 报告显示成功发布
@@ -245,7 +250,8 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       // 步骤 6: Consumer 接收消息
       await()
           .atMost(10, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("e2e-workflow-001")).isTrue());
+          .untilAsserted(
+              () -> assertThat(messageCollector.hasMessage("e2e-workflow-001")).isTrue());
 
       // 验证: 消息内容正确
       MessageExt receivedMsg = messageCollector.getMessage("e2e-workflow-001");
@@ -270,7 +276,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       }
 
       // 执行: Relay 批量发布
-      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null);
+      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
       RelayReport report = relayOrchestrator.relay(command);
 
       // 验证: 所有消息都已发布
@@ -280,7 +286,8 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       // 验证: 所有消息都被 Consumer 接收
       await()
           .atMost(10, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(5));
+          .untilAsserted(
+              () -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(5));
     }
   }
 
@@ -294,13 +301,11 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
     void shouldPreventDuplicatePublishing() {
       // 准备: 创建并发布一条消息
       OutboxMessage msg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("e2e-idempotent-001")
-              .build();
+          OutboxMessageTestBuilder.aValidPendingMessage().dedupKey("e2e-idempotent-001").build();
       outboxRepository.saveOrUpdate(msg);
 
       // 第一次 Relay
-      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null);
+      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
       relayOrchestrator.relay(command);
 
       // 验证: 消息已标记为 PUBLISHED
@@ -319,12 +324,13 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       // 验证: Consumer 只收到一条消息 (无重复)
       await()
           .atMost(10, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("e2e-idempotent-001")).isTrue());
+          .untilAsserted(
+              () -> assertThat(messageCollector.hasMessage("e2e-idempotent-001")).isTrue());
 
       // 等待额外 2 秒,确保没有重复消息
       await().pollDelay(2, SECONDS).until(() -> true);
       assertThat(messageCollector.getMessagesByTags("CREATE"))
-          .filteredOn(msg -> "e2e-idempotent-001".equals(msg.getKeys()))
+          .filteredOn(m -> "e2e-idempotent-001".equals(m.getKeys()))
           .hasSize(1); // 确认只有 1 条消息
     }
 
@@ -413,9 +419,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
     void shouldRetryAfterFailure() {
       // 准备: 创建一条消息
       OutboxMessage msg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("e2e-retry-001")
-              .build();
+          OutboxMessageTestBuilder.aValidPendingMessage().dedupKey("e2e-retry-001").build();
       outboxRepository.saveOrUpdate(msg);
 
       var savedMsg =
@@ -425,12 +429,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
 
       // 模拟: 第一次发送失败,标记为 DEFERRED
       relayStore.markDeferred(
-          savedMsg.getId(),
-          savedMsg.getVersion(),
-          1,
-          Instant.now(),
-          "SEND_FAILED",
-          "模拟发送失败");
+          savedMsg.getId(), savedMsg.getVersion(), 1, Instant.now(), "SEND_FAILED", "模拟发送失败");
 
       // 验证: 消息状态为 PENDING,重试次数为 1
       var deferredMsg =
@@ -442,7 +441,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       assertThat(deferredMsg.getErrorCode()).isEqualTo("SEND_FAILED");
 
       // 执行: 第二次 Relay (重试)
-      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null);
+      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
       RelayReport report = relayOrchestrator.relay(command);
 
       // 验证: 消息被重新发送
@@ -461,9 +460,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
     void shouldMarkFailedAfterMaxRetries() {
       // 准备: 创建一条消息
       OutboxMessage msg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("e2e-max-retry-001")
-              .build();
+          OutboxMessageTestBuilder.aValidPendingMessage().dedupKey("e2e-max-retry-001").build();
       outboxRepository.saveOrUpdate(msg);
 
       var savedMsg =
@@ -496,9 +493,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
     void shouldAcquireLeaseSuccessfully() {
       // 准备: 创建一条 PENDING 消息
       OutboxMessage msg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("e2e-lease-001")
-              .build();
+          OutboxMessageTestBuilder.aValidPendingMessage().dedupKey("e2e-lease-001").build();
       outboxRepository.saveOrUpdate(msg);
 
       var savedMsg =
@@ -510,7 +505,8 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       String leaseOwner = "relay-instance-1";
       Instant leaseExpireAt = Instant.now().plusSeconds(300);
       boolean leaseAcquired =
-          relayStore.acquireLease(savedMsg.getId(), savedMsg.getVersion(), leaseOwner, leaseExpireAt);
+          relayStore.acquireLease(
+              savedMsg.getId(), savedMsg.getVersion(), leaseOwner, leaseExpireAt);
 
       // 验证: 租约获取成功
       assertThat(leaseAcquired).isTrue();
@@ -588,7 +584,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
       // 执行: 仅处理 TASK_READY 通道
       // 注意: 需要构建带 channel 过滤的 RelayCommand
       // 由于 OutboxRelayCommand 构造函数参数可能不同,这里展示逻辑
-      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null);
+      OutboxRelayCommand command = new OutboxRelayCommand(null, null, null, null, null, null, null);
       RelayReport report = relayOrchestrator.relay(command);
 
       // 验证: 两条消息都被处理 (如果不指定 channel,处理所有)

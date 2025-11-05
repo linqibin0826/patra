@@ -21,17 +21,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * RocketMQ Outbox 发布器集成测试。
  *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境,测试消息发送、接收和元数据映射的完整流程。
+ * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link BaseIntegrationTest} 提供）,测试消息发送、接收和元数据映射的完整流程。
  *
  * <h3>测试范围</h3>
  *
@@ -49,7 +44,7 @@ import org.testcontainers.junit.jupiter.Container;
  * <p>遵循 testing-guide.md §7 集成测试模式:
  *
  * <ul>
- *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers
+ *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers (由基类提供)
  *   <li><strong>异步断言</strong>: 使用 Awaitility 等待消息接收
  *   <li><strong>消息收集</strong>: 使用 {@link TestMessageCollector} 收集接收的消息
  *   <li><strong>清理隔离</strong>: 每个测试后清理 Consumer 和 Collector
@@ -66,7 +61,7 @@ import org.testcontainers.junit.jupiter.Container;
  * <h3>性能优化</h3>
  *
  * <ul>
- *   <li>容器重用: {@code withReuse(true)} 加速后续测试
+ *   <li>容器重用: 由 {@link BaseIntegrationTest} 配置,所有集成测试共享容器
  *   <li>共享网络: NameServer 和 Broker 共享 Docker 网络
  *   <li>并行测试: 测试方法可并发执行 (不同 Consumer Group)
  * </ul>
@@ -78,90 +73,21 @@ import org.testcontainers.junit.jupiter.Container;
  * @see TestMessageCollector
  */
 @DisplayName("RocketMQ Outbox 发布器集成测试")
+@org.springframework.test.context.ActiveProfiles("integration-test")
+@org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与 E2E 测试共享
 class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
 
-  // ========== Testcontainers Configuration ==========
-
-  /**
-   * Docker 网络 (NameServer 和 Broker 共享)。
-   *
-   * <p>RocketMQ Broker 需要通过内部网络访问 NameServer。
-   */
-  private static final Network network = Network.newNetwork();
-
-  /**
-   * RocketMQ NameServer 容器。
-   *
-   * <p><strong>配置说明</strong>:
-   *
-   * <ul>
-   *   <li>镜像: apache/rocketmq:5.3.1 (稳定版本)
-   *   <li>端口: 9876 (NameServer 默认端口)
-   *   <li>网络别名: namesrv (Broker 通过此别名连接)
-   *   <li>等待策略: 日志出现 "The Name Server boot success"
-   * </ul>
-   */
-  @Container
-  private static final GenericContainer<?> rocketmqNamesrv =
-      new GenericContainer<>("apache/rocketmq:5.3.1")
-          .withExposedPorts(9876)
-          .withCommand("sh mqnamesrv")
-          .withNetwork(network)
-          .withNetworkAliases("namesrv")
-          .waitingFor(Wait.forLogMessage(".*The Name Server boot success.*", 1))
-          .withReuse(true);
-
-  /**
-   * RocketMQ Broker 容器。
-   *
-   * <p><strong>配置说明</strong>:
-   *
-   * <ul>
-   *   <li>镜像: apache/rocketmq:5.3.1
-   *   <li>端口: 10909 (VIP), 10911 (主服务)
-   *   <li>依赖: NameServer 容器必须先启动
-   *   <li>配置: autoCreateTopicEnable=true (自动创建 Topic,简化测试)
-   *   <li>等待策略: 日志出现 "The broker boot success"
-   * </ul>
-   *
-   * <p><strong>重要</strong>: brokerIP1 必须设置为宿主机可访问的地址。
-   */
-  @Container
-  private static final GenericContainer<?> rocketmqBroker =
-      new GenericContainer<>("apache/rocketmq:5.3.1")
-          .withExposedPorts(10909, 10911)
-          .withCommand(
-              "sh mqbroker -n namesrv:9876 "
-                  + "-c /opt/rocketmq/conf/broker.conf "
-                  + "--enable-proxy") // 启用 Proxy 模式 (RocketMQ 5.x 新特性)
-          .withNetwork(network)
-          .dependsOn(rocketmqNamesrv)
-          .waitingFor(Wait.forLogMessage(".*The broker boot success.*", 1))
-          .withReuse(true);
-
-  /**
-   * 动态配置 RocketMQ 连接属性。
-   *
-   * <p>注入 Testcontainers 动态生成的 NameServer 地址到 Spring 配置。
-   *
-   * @param registry Spring 动态属性注册器
-   */
-  @DynamicPropertySource
-  static void configureRocketMqProperties(DynamicPropertyRegistry registry) {
-    // NameServer 地址 (宿主机访问)
-    String namesrvAddr =
-        rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
-    registry.add("rocketmq.name-server", () -> namesrvAddr);
-
-    // Outbox MQ 配置
-    registry.add("patra.outbox.mq.send-timeout-millis", () -> 3000);
-    registry.add("patra.outbox.mq.topic-prefix", () -> "patra_test_");
-    registry.add("patra.outbox.mq.strict-channel-whitelist", () -> false); // 测试环境允许所有通道
-  }
-
   // ========== Test Dependencies ==========
+  // 注: RocketMQ 容器配置已迁移到 BaseIntegrationTest,所有集成测试共享
 
   @Autowired private RocketMqOutboxPublisher publisher;
+
+  /** Mock 对象存储模板（此测试不需要真实的对象存储） */
+  @MockBean private com.patra.starter.objectstorage.ObjectStorageTemplate objectStorageTemplate;
+
+  /** Mock 真实的业务 Message Listener（避免干扰测试） */
+  @MockBean
+  private com.patra.ingest.adapter.rocketmq.TaskReadyMessageListener taskReadyMessageListener;
 
   private TestMessageCollector messageCollector;
   private DefaultMQPushConsumer testConsumer;
@@ -180,13 +106,15 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
     messageCollector = new TestMessageCollector();
 
     // 创建测试 Consumer
-    String namesrvAddr =
-        rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
+    String namesrvAddr = rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
+
     testConsumer = new DefaultMQPushConsumer("test_consumer_group_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
 
-    // 订阅所有测试 Topic (通配符)
-    testConsumer.subscribe("patra_test_*", "*");
+    // 订阅测试 Topic（RocketMQ 不支持 Topic 名称通配符，需要显式订阅每个 Topic）
+    // 注意：由于 topic-prefix 使用环境变量占位符且默认为空，实际 Topic 名称没有前缀
+    testConsumer.subscribe("INGEST_TASK_READY", "*");
+    testConsumer.subscribe("INGEST_LITERATURE_READY", "*");
 
     // 注册消息监听器 (收集到 TestMessageCollector)
     testConsumer.registerMessageListener(
@@ -198,6 +126,9 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
 
     // 启动 Consumer
     testConsumer.start();
+
+    // 等待 Consumer 完全启动并发现 Topic（消费者需要时间来拉取路由信息）
+    Thread.sleep(2000);
   }
 
   /**
@@ -345,7 +276,8 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
       // 断言: 等待所有消息接收
       await()
           .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(3));
+          .untilAsserted(
+              () -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(3));
 
       // 验证顺序 (注意: RocketMQ 顺序消息在同一 MessageQueue 中有序)
       assertThat(messageCollector.hasMessage("order-msg-1")).isTrue();
@@ -378,7 +310,8 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
       // 断言
       await()
           .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("channel-test-001")).isTrue());
+          .untilAsserted(
+              () -> assertThat(messageCollector.hasMessage("channel-test-001")).isTrue());
 
       MessageExt receivedMsg = messageCollector.getMessage("channel-test-001");
       // 验证 Topic 名称 (patra_test_task_ready 或类似)
@@ -390,9 +323,7 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
     void shouldMapLiteratureReadyChannel() {
       // 准备
       OutboxMessage msg =
-          OutboxMessageTestBuilder.aLiteratureReadyMessage()
-              .dedupKey("channel-test-002")
-              .build();
+          OutboxMessageTestBuilder.aLiteratureReadyMessage().dedupKey("channel-test-002").build();
 
       // 执行
       publisher.publish(msg, null);
@@ -400,7 +331,8 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
       // 断言
       await()
           .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("channel-test-002")).isTrue());
+          .untilAsserted(
+              () -> assertThat(messageCollector.hasMessage("channel-test-002")).isTrue());
 
       MessageExt receivedMsg = messageCollector.getMessage("channel-test-002");
       assertThat(receivedMsg.getTopic()).containsIgnoringCase("literature");
@@ -477,16 +409,17 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
       int messageCount = 10;
       for (int i = 0; i < messageCount; i++) {
         OutboxMessage msg =
-            OutboxMessageTestBuilder.aValidPendingMessage()
-                .dedupKey("concurrent-msg-" + i)
-                .build();
+            OutboxMessageTestBuilder.aValidPendingMessage().dedupKey("concurrent-msg-" + i).build();
         publisher.publish(msg, null);
       }
 
       // 断言: 所有消息都应被接收
       await()
           .atMost(10, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(messageCount));
+          .untilAsserted(
+              () ->
+                  assertThat(messageCollector.getMessageCount())
+                      .isGreaterThanOrEqualTo(messageCount));
 
       // 验证没有消息丢失
       for (int i = 0; i < messageCount; i++) {

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -56,6 +57,11 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(
+    name = "patra.ingest.listener.task-ready.enabled",
+    havingValue = "true",
+    matchIfMissing = true // 默认启用（生产环境）
+)
 @RequiredArgsConstructor
 @RocketMQMessageListener(
     topic = "${patra.ingest.mq.topics.task-ready}", // 从配置读取 Topic 名称

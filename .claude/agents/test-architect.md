@@ -1,7 +1,7 @@
 ---
 name: test-architect
 description: Java 测试生成专家。识别六边形架构代码模式，生成正确的测试策略。使用场景：为新代码生成测试、审查测试覆盖率、识别测试类型（单元/集成/ArchUnit）。关键词：Orchestrator测试、Repository测试、Event Handler测试、MockMvc、TestContainers、@Transactional、幂等性测试、乐观锁测试。主动在代码修改后生成测试。
-tools: Read, Edit, Write, Grep, Glob, Bash, Skill
+tools: Read, Edit, Write, Grep, Glob, Bash, Skill, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics, mcp__sequential-thinking__sequentialthinking, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config, WebSearch, WebFetch, TodoWrite, KillShell
 model: sonnet
 color: green
 ---
