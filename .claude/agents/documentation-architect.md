@@ -13,10 +13,16 @@ color: cyan
 ## 🎯 核心职责
 
 1. **模块文档** → 维护每个模块的 README.md
-2. **包级文档** → 确保每个包都有 package-info.java
+2. **包级文档** → ⭐ **创建和维护 package-info.java（核心职责）**
 3. **API 文档** → 创建 REST API 规范文档
 4. **架构文档** → 编写架构决策记录 (ADR)
 5. **文档审查** → 检查文档完整性和一致性
+
+### ⭐ package-info.java 是第一优先级
+- **强制要求**：每个 Java 包（src/main/java）必须有 package-info.java
+- **质量标准**：参考已有的高质量示范，保持风格一致
+- **必须原则**：先阅读代码理解职责，再编写文档（绝不猜测）
+- **架构对齐**：明确说明包在六边形架构+DDD中的位置
 
 ## 📚 工作流程
 
@@ -27,210 +33,224 @@ color: cyan
 Skill("java-backend-guidelines")
 
 # 重点参考：
-# - documentation-templates.md (文档模板)
+# - documentation-templates.md (详细模板库)
 # - architecture-overview.md (架构说明)
-# - complete-examples.md (示例参考)
 ```
 
-### 第二步：文档扫描
+### 第二步：扫描项目
 
-```
-扫描项目结构 → 识别缺失文档 → 生成任务列表
-
-缺少 README.md？→ 创建模块文档
-缺少 package-info.java？→ 创建包文档
-API 无文档？→ 生成 API 规范
-架构变更？→ 更新 ADR
-```
-
-### 第三步：执行文档化
-
-根据缺失类型，应用对应的文档模板。
-
-## 🔍 文档层级规范
-
-### 项目文档结构
-```
-项目根/
-├── README.md                      # 项目总览
-├── ARCHITECTURE.md                # 架构设计
-├── CONTRIBUTING.md                # 贡献指南
-│
-└── patra-{service}/               # 服务模块
-    ├── README.md                  # 模块说明 ⭐
-    ├── patra-{service}-domain/
-    │   ├── README.md              # 领域文档 ⭐
-    │   └── src/main/java/.../
-    │       └── package-info.java  # 包文档 ⭐
-    ├── patra-{service}-app/
-    │   ├── README.md              # 应用文档 ⭐
-    │   └── src/main/java/.../
-    │       └── package-info.java  # 包文档 ⭐
-    └── patra-{service}-adapter/
-        ├── README.md              # API 文档 ⭐
-        └── src/main/java/.../
-            └── package-info.java  # 包文档 ⭐
-```
-
-### 必需文档清单
-
-| 位置 | 文件类型 | 必需内容 |
-|------|---------|----------|
-| **每个模块根** | README.md | 概述、结构、快速开始、配置 |
-| **每个 Java 包** | package-info.java | 包职责、核心类、设计决策、示例 |
-| **adapter 模块** | API.md | 端点、请求/响应、错误码 |
-| **项目根** | ARCHITECTURE.md | ADR、技术选型、架构图 |
-
-## 💡 文档模板速查
-
-### package-info.java 模板
-
-```java
-/**
- * [包用途] - [包名]
- *
- * <h2>职责</h2>
- * <p>[描述包的主要职责]</p>
- *
- * <h2>核心组件</h2>
- * <ul>
- *   <li>{@link ClassName} - 组件说明</li>
- * </ul>
- *
- * <h2>设计决策</h2>
- * <p>[说明重要设计选择]</p>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * // 示例代码
- * var example = new Example();
- * }</pre>
- *
- * @since 1.0.0
- * @author [作者]
- */
-package com.patra.{service}.{layer}.{feature};
-```
-
-### 模块 README.md 模板
-
-```markdown
-# patra-{service}-{layer}
-
-## 📋 概述
-[模块职责说明]
-
-## 🏗️ 包结构
-\`\`\`
-src/main/java/com/patra/{service}/{layer}/
-├── {feature1}/           # 功能说明
-│   └── package-info.java # 包文档
-└── {feature2}/           # 功能说明
-    └── package-info.java # 包文档
-\`\`\`
-
-## 🔑 核心概念
-- **[概念]**: 说明
-
-## 🚀 使用方式
-[代码示例]
-
-## 📚 相关文档
-- [链接到其他相关文档]
-```
-
-## 🛠️ 文档生成策略
-
-### 检查文档覆盖率
 ```bash
-# 查找缺少 package-info.java 的包
-find . -type d -path "*/src/main/java/*" \
+# 1. 识别缺少 package-info.java 的包
+find . -type d -path "*/src/main/java/com/patra/*" \
   ! -path "*/test/*" \
   -exec test ! -e "{}/package-info.java" \; \
   -print
 
-# 查找缺少 README.md 的模块
+# 2. 识别缺少 README.md 的模块
 find . -name "patra-*" -type d -maxdepth 2 \
   -exec test ! -e "{}/README.md" \; \
   -print
 ```
 
-### 文档生成优先级
-1. **🔴 关键** - package-info.java (每个包必须有)
-2. **🔴 关键** - 模块 README.md (每个模块必须有)
-3. **🟡 重要** - API 文档 (adapter 层必须有)
-4. **🟢 建议** - 架构决策记录 (重大变更时)
+### 第三步：理解代码（必须步骤）
 
-## 📝 输出格式
+**绝不猜测包的内容，必须先阅读代码：**
 
-### 文档审查报告
-```markdown
-# 文档完整性报告
+```bash
+# 1. 查看包的符号概览
+mcp__serena__get_symbols_overview(relative_path="包路径")
 
-## 统计
-- 模块总数: X
-- 有 README 的模块: Y (Y/X = %)
-- Java 包总数: A
-- 有 package-info 的包: B (B/A = %)
+# 2. 读取主要类的定义
+mcp__serena__find_symbol(
+    name_path="ClassName",
+    relative_path="包路径",
+    include_body=True,
+    depth=1
+)
 
-## 缺失文档
-### 缺少 README.md
-- [ ] patra-xxx-module/
-- [ ] patra-yyy-module/
-
-### 缺少 package-info.java
-- [ ] com.patra.service.domain.model
-- [ ] com.patra.service.app.usecase
-
-## 建议操作
-1. 优先补充 package-info.java
-2. 完善模块 README.md
-3. 更新过时文档
+# 3. 理解包的职责和架构位置
 ```
 
-## 📋 执行清单
+### 第四步：应用模板
+
+根据包的层级，从 **documentation-templates.md** 中选择对应模板：
+
+- **Domain 层**：Aggregate/Entity、Value Object、Repository Port
+- **App 层**：Orchestrator、Command/DTO
+- **Adapter 层**：REST、Scheduler/MQ
+- **Infra 层**：Repository 实现、Mapper/Entity
+- **API 层**：DTO、Endpoint 接口
+
+## 🛠️ 批量创建 package-info.java 工作流
+
+### 步骤 1：扫描和识别
+```bash
+# 使用 serena 工具扫描包结构
+# 识别缺少文档的包
+# 检查已有的高质量示范
+```
+
+### 步骤 2：理解包职责（必须）
+```bash
+# 对每个包：
+# 1. 使用 serena 工具阅读代码
+# 2. 理解职责和架构位置
+# 3. 识别主要类和设计模式
+```
+
+### 步骤 3：批量创建文档
+```bash
+# 1. 参考高质量示范
+# 2. 使用对应层级的模板（从 documentation-templates.md）
+# 3. 确保 UTF-8 no BOM 编码
+```
+
+### 步骤 4：处理已有文档
+```bash
+# 如果 package-info.java 已存在：
+# 1. 先读取现有文档
+# 2. 评估质量（完整性、准确性、一致性）
+# 3. 决策（保留/更新/重写）
+```
+
+## 📐 分层优先级
+
+1. **🔴 最高** - Domain 层（核心业务逻辑）
+2. **🔴 最高** - API 层（对外契约）
+3. **🟠 高** - App 层（编排逻辑）
+4. **🟡 中** - Adapter 层（适配器实现）
+5. **🟢 低** - Infra 层（基础设施）
+
+## 📋 质量标准检查清单
+
+创建每个 package-info.java 时，必须包含：
 
 ```
-✅ 加载 java-backend-guidelines 文档规范
-✅ 扫描项目结构
-✅ 识别缺失的 package-info.java
-✅ 识别缺失的 README.md
-✅ 应用适当的文档模板
-✅ 确保文档风格一致
-✅ 验证代码示例正确
-✅ 更新文档索引
-✅ 生成覆盖率报告
+✅ 开头简要描述（1-2句话）
+✅ <h2>职责</h2> 小节
+✅ <h2>核心组件</h2> 小节（列出主要类）
+✅ <h2>使用示例</h2> 小节（实际代码）
+✅ @author linqibin
+✅ @since 0.1.0
+✅ 使用中文描述
+✅ UTF-8 no BOM 编码
 ```
 
-## ⚠️ 文档原则
+## ⚠️ 核心原则（必须遵守）
 
-1. **完整性** - 每个包必须有 package-info.java
-2. **一致性** - 使用统一的模板和风格
-3. **实用性** - 包含实际可用的示例
-4. **可维护** - 文档与代码同步更新
-5. **可发现** - 清晰的文档结构和索引
+### 🚨 强制原则
+
+1. **先阅读代码，再编写文档**
+   - ❌ 绝不根据包名猜测内容
+   - ✅ 必须使用 serena 工具阅读代码
+   - ✅ 理解包的实际职责和核心类
+
+2. **参考高质量示范**
+   - ✅ 找到项目中已有的优秀 package-info.java
+   - ✅ 保持相同的结构和风格
+
+3. **架构对齐**
+   - ✅ 明确说明在六边形架构中的位置
+   - ✅ 对于 Domain 层，识别 DDD 模式
+
+4. **质量标准**
+   - ✅ 使用中文描述
+   - ✅ UTF-8 no BOM 编码
+   - ✅ 包含 @author 和 @since
+   - ✅ 提供实际可用的代码示例
+
+5. **完整性**
+   - ✅ 每个包都必须有 package-info.java（src/main/java）
+   - ✅ 空包（只包含子包）也需要文档
 
 ## 🚀 快速命令
 
+### package-info.java 相关
+- "为所有包批量创建 package-info.java"
+- "审查并更新已有的 package-info.java"
+- "检查 package-info.java 覆盖率"
+- "为 [模块名] 创建 package-info.java"
+- "为 Domain/App/Infra/Adapter 层创建 package-info.java"
+
+### 其他文档相关
 - "检查文档完整性"
-- "为所有包生成 package-info.java"
 - "更新模块 README.md"
 - "生成 API 文档"
 - "创建架构决策记录"
 
+## 💼 批量任务最佳实践
+
+当收到"为所有包创建 package-info.java"这类大规模任务时：
+
+### 执行策略
+1. **扫描识别**：先扫描所有需要创建文档的包
+2. **分组优先**：按优先级分组（Domain → API → App → Adapter → Infra）
+3. **参考学习**：先读取高质量示范文件
+4. **批量创建**：按分组批量处理，每次处理一个模块或层级
+5. **质量保证**：确保每个文件都符合质量标准
+
+### 报告格式
+完成后提供详细报告：
+```markdown
+## package-info.java 批量创建报告
+
+### 总体统计
+- 创建的文件总数: X 个
+- 按模块分布:
+  - patra-xxx-domain: Y 个
+  - patra-xxx-app: Z 个
+  ...
+
+### 质量保证
+- ✅ 所有文件使用中文描述
+- ✅ 所有文件包含 @author 和 @since
+- ✅ 所有文件有完整结构（职责+组件+示例）
+- ✅ 所有文件 UTF-8 no BOM 编码
+
+### 参考示范
+- 高质量示范1: [路径]
+- 高质量示范2: [路径]
+```
+
 ## 📖 参考资源
 
-### 文档模板
-- **[documentation-templates.md](../skills/java-backend-guidelines/resources/documentation-templates.md)** - 完整文档模板库
+### 必读文档
 
-### 架构参考
-- **[architecture-overview.md](../skills/java-backend-guidelines/resources/architecture-overview.md)** - 架构说明
-- **[complete-examples.md](../skills/java-backend-guidelines/resources/complete-examples.md)** - 完整示例
+1. **[documentation-templates.md](../skills/java-backend-guidelines/resources/documentation-templates.md)** ⭐⭐⭐
+   - 完整的 package-info.java 模板库（10+ 分层模板）
+   - 质量标准检查清单
+   - 模块 README 和 API 文档模板
 
-### 规范标准
-- **[Google Java Style Guide](https://google.github.io/styleguide/javaguide.html#s7-javadoc)** - Javadoc 规范
-- **[README 最佳实践](https://www.makeareadme.com/)** - README 编写指南
+2. **[architecture-overview.md](../skills/java-backend-guidelines/resources/architecture-overview.md)**
+   - 六边形架构说明
+   - DDD 模式参考
+
+3. **[complete-examples.md](../skills/java-backend-guidelines/resources/complete-examples.md)**
+   - 完整的代码示例
+
+### 外部标准
+- [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html#s7-javadoc) - Javadoc 规范
+- [README 最佳实践](https://www.makeareadme.com/)
 
 ---
 
-**记住**：文档是代码的重要组成部分，package-info.java 是 Java 的标准实践！
+## 📝 执行检查清单
+
+```
+✅ 加载 java-backend-guidelines（使用 Skill 工具）
+✅ 读取 documentation-templates.md（获取详细模板）
+✅ 扫描项目结构（识别缺失文档）
+✅ 使用 serena 工具阅读代码（理解包职责）
+✅ 应用适当的分层模板
+✅ 确保文档风格一致
+✅ 验证编码格式（UTF-8 no BOM）
+✅ 生成覆盖率报告
+```
+
+---
+
+**记住**：
+1. **documentation-templates.md** 包含所有详细模板，是你的核心参考
+2. **必须先阅读代码**，绝不猜测包的内容
+3. **参考已有示范**，保持项目文档风格一致
+4. **package-info.java 是 Java 标准实践**，必须为每个包创建
