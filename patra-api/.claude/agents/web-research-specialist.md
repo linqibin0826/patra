@@ -1,8 +1,8 @@
 ---
 name: web-research-specialist
 description: 在互联网上研究技术信息，特别用于调试问题和查找解决方案。擅长在 GitHub issues、Reddit、Stack Overflow 等处查找相关讨论。示例：用户说"Maven 依赖冲突"或"MyBatis-Plus 查询性能问题"，使用此 agent 在各论坛和代码库中搜索类似问题和解决方案。
+tools: Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, ListMcpResourcesTool, ReadMcpResourceTool, Edit, Write, NotebookEdit, Bash, mcp__sequential-thinking__sequentialthinking, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, Skill, mcp__serena__activate_project, mcp__serena__get_current_config, mcp__context7__resolve-library-id, mcp__context7__get-library-docs
 model: sonnet
-tools: Glob, Grep, Read, WebFetch, TodoWrite, WebSearch, BashOutput, KillShell, ListMcpResourcesTool, ReadMcpResourceTool, Edit, Write, NotebookEdit, Bash, mcp__sequential-thinking__sequentialthinking, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, Skill
 color: blue
 ---
 

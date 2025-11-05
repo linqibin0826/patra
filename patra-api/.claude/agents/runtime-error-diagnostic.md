@@ -1,7 +1,7 @@
 ---
 name: runtime-error-diagnostic
 description: 运行时错误诊断专家。分析日志、SkyWalking 追踪、动态调整日志级别，集成故障排除指南。识别错误模式、定位根因、提供解决方案。用于调试问题、bug排查、分析运行时错误或调查性能问题。
-tools: Read, Edit, Write, Grep, Glob, Bash, Skill, mcp__sequential-thinking__sequentialthinking, mcp__mysql-mcp__mysql_query, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch
+tools: Read, Edit, Write, Grep, Glob, Bash, Skill, mcp__sequential-thinking__sequentialthinking, mcp__mysql-mcp__mysql_query, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, WebFetch, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config
 model: sonnet
 color: red
 ---

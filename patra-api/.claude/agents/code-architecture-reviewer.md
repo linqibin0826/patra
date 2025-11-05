@@ -1,7 +1,7 @@
 ---
 name: code-architecture-reviewer
 description: 代码架构审查专家。基于六边形架构+DDD原则审查已编写的代码，确保架构一致性和最佳实践。识别架构违规、依赖问题、反模式。用于代码审查、架构合规检查、质量评估。
-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthinking, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols
+tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthinking, mcp__ide__getDiagnostics, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config
 model: sonnet
 color: blue
 ---

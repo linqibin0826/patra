@@ -1,7 +1,7 @@
 ---
 name: documentation-architect
 description: 文档架构师。创建和维护项目文档，包括模块 README、package-info.java、API 文档、架构决策记录。确保每个模块有 README.md，每个包有 package-info.java。
-tools: Read, Write, Grep, Glob, Skill
+tools: Read, Write, Grep, Glob, Skill, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config
 model: sonnet
 color: cyan
 ---

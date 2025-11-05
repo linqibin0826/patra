@@ -1,8 +1,13 @@
-# 测试环境配置 - 禁用 Nacos 和外部依赖
+# 测试环境配置 - 完全隔离测试环境
 
 spring:
   application:
     name: patra-ingest
+  # 覆盖 config.import，禁用 Nacos 导入
+  config:
+    import:
+      - "classpath:ingest-error-config.yaml"
+      - "classpath:ingest-rocketmq.yaml"
   cloud:
     nacos:
       discovery:
@@ -15,6 +20,15 @@ spring:
     username: ${spring.datasource.username}
     password: ${spring.datasource.password}
     driver-class-name: ${spring.datasource.driver-class-name}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+  # 启用 Flyway 自动初始化测试数据库
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: false
 
 # RocketMQ 配置（由 Testcontainers 动态配置）
 rocketmq:
@@ -23,20 +37,67 @@ rocketmq:
     group: patra_ingest_producer_test
     send-message-timeout: 3000
 
-# Patra Outbox 配置
+# XXL-Job 配置（测试环境禁用）
+xxl:
+  job:
+    enabled: false
+
+# Feign 配置
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+# Patra Ingest 配置
 patra:
-  outbox:
-    mq:
-      send-timeout-millis: 3000
-      topic-prefix: patra_test_
-      strict-channel-whitelist: false
-      channel-topic-mapping:
-        TASK_READY: INGEST_TASK_READY
-        LITERATURE_READY: INGEST_LITERATURE_READY
-    relay:
+  ingest:
+    exec:
+      lease-ttl-seconds: 60
+      heartbeat-interval-seconds: 20
+    outbox-relay:
       enabled: true
       batch-size: 10
-      lease-duration-seconds: 300
+      lease-duration: PT30S
+    # Outbox MQ 配置
+    outbox:
+      send-timeout: 3000
+      topic-prefix: patra_test_
+      strict-channel-whitelist: false
+      channel-mapping:
+        TASK_READY: INGEST_TASK_READY
+        LITERATURE_READY: INGEST_LITERATURE_READY
+  # 对象存储配置（测试环境使用虚拟配置）
+  object-storage:
+    active-provider: minio
+    providers:
+      minio:
+        endpoint: http://localhost:9000
+        access-key: minioadmin
+        secret-key: minioadmin
+        bucket: patra-test
+
+# Task 配置
+task:
+  execution:
+    lease:
+      duration: 60
+      renewal-interval: 20
+    heartbeat:
+      failure-threshold: 3
+    fail-fast: false
+
+# Management & Monitoring (禁用测试环境不需要的)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  metrics:
+    export:
+      prometheus:
+        enabled: false
 
 # 日志配置
 logging:
@@ -44,3 +105,5 @@ logging:
     com.patra: INFO
     org.testcontainers: INFO
     org.apache.rocketmq: WARN
+    org.springframework.cloud: WARN
+    com.alibaba.nacos: WARN

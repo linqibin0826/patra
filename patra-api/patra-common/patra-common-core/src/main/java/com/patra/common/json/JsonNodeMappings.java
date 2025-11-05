@@ -8,8 +8,12 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Helper utilities for converting between JSON structures and {@link JsonNode} while reusing the
- * platform-configured {@link ObjectMapper}.
+ * JSON 结构与 {@link JsonNode} 互转的辅助工具类，复用平台配置的 {@link ObjectMapper}。
+ *
+ * <p>提供 JSON 字符串、JsonNode、Map 之间的双向转换，确保使用统一的 ObjectMapper 配置。
+ *
+ * @author Patra Team
+ * @since 0.1.0
  */
 public final class JsonNodeMappings {
 
@@ -19,10 +23,11 @@ public final class JsonNodeMappings {
   private JsonNodeMappings() {}
 
   /**
-   * Converts a JSON string into a {@link JsonNode}.
+   * 将 JSON 字符串转换为 {@link JsonNode}。
    *
-   * @param json source JSON string
-   * @return parsed node, or {@code null} if the input is blank
+   * @param json 源 JSON 字符串
+   * @return 解析后的节点，如果输入为空白则返回 {@code null}
+   * @throws IllegalArgumentException 如果 JSON 格式无效
    */
   public static JsonNode jsonStringToNode(String json) {
     if (json == null || json.isBlank()) {
@@ -36,10 +41,11 @@ public final class JsonNodeMappings {
   }
 
   /**
-   * Converts a {@link JsonNode} back to its string representation.
+   * 将 {@link JsonNode} 转换回其字符串表示形式。
    *
-   * @param node JSON node to serialize
-   * @return JSON string, or {@code null} if the node itself is {@code null}
+   * @param node 要序列化的 JSON 节点
+   * @return JSON 字符串，如果节点本身为 {@code null} 则返回 {@code null}
+   * @throws IllegalArgumentException 如果序列化失败
    */
   public static String jsonNodeToString(JsonNode node) {
     if (node == null) {
@@ -54,10 +60,10 @@ public final class JsonNodeMappings {
   }
 
   /**
-   * Converts a {@link Map} into a {@link JsonNode}.
+   * 将 {@link Map} 转换为 {@link JsonNode}。
    *
-   * @param map source map
-   * @return corresponding node, or {@code null} for {@code null}/empty input
+   * @param map 源 Map 对象
+   * @return 对应的 JSON 节点，如果输入为 {@code null} 或空则返回 {@code null}
    */
   public static JsonNode mapToJsonNode(Map<String, ?> map) {
     if (map == null || map.isEmpty()) {
@@ -67,10 +73,10 @@ public final class JsonNodeMappings {
   }
 
   /**
-   * Converts a {@link JsonNode} into a {@link Map} view.
+   * 将 {@link JsonNode} 转换为 {@link Map} 视图。
    *
-   * @param node JSON node to convert
-   * @return map representation, or an empty map if the node is {@code null} or JSON {@code null}
+   * @param node 要转换的 JSON 节点
+   * @return Map 表示形式，如果节点为 {@code null} 或 JSON {@code null} 则返回空 Map
    */
   public static Map<String, Object> jsonNodeToMap(JsonNode node) {
     if (node == null || node.isNull()) {

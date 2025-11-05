@@ -81,6 +81,10 @@ patra:
         task-ready: ${TOPIC_PREFIX:patra_test_}INGEST_TASK_READY
       consumer-groups:
         task-ready: ${CONSUMER_GROUP_PREFIX:}ingest-task-ready-consumer-group
+    # 监听器开关配置（集成测试中禁用业务监听器）
+    listener:
+      task-ready:
+        enabled: false  # 禁用 TaskReadyMessageListener
   # 对象存储配置（测试环境使用虚拟配置）
   object-storage:
     active-provider: minio

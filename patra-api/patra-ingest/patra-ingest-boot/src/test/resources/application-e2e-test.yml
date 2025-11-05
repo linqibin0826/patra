@@ -80,6 +80,10 @@ patra:
         task-ready: patra_test_INGEST_TASK_READY
       consumer-groups:
         task-ready: ingest-task-ready-consumer-group-e2e
+    # 监听器开关配置（E2E 测试中启用业务监听器）
+    listener:
+      task-ready:
+        enabled: true  # 启用 TaskReadyMessageListener，测试完整业务流程
   # 对象存储配置（测试环境使用虚拟配置）
   object-storage:
     active-provider: minio
