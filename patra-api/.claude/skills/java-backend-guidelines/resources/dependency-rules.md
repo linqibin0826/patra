@@ -1,30 +1,51 @@
 # 依赖规则与 ArchUnit 验证
 
-## 概览
-
-ArchUnit 是一个 Java 库,用于在编译/测试时验证架构规则。Patra 使用 ArchUnit 强制执行六边形架构 + DDD 边界,防止架构漂移。
+> **2 分钟快速启动** → 运行 ArchUnit 测试,立即验证架构规则
 
 ---
 
-## 核心依赖规则
+## 🚀 快速启动
 
-### 规则 1: 领域层独立性
+### 运行 ArchUnit 测试 (3 步)
+
+```bash
+# 步骤 1: 运行所有测试
+mvn test
+
+# 步骤 2: 仅运行 ArchUnit 测试
+mvn test -Dtest=ArchitectureTest
+
+# 步骤 3: 如果失败,查看详细输出
+mvn clean compile test -Dtest=ArchitectureTest
+```
+
+✅ **完成!** ArchUnit 自动验证所有架构规则。
+
+---
+
+## 📊 依赖规则速查表
+
+| 层 | 可以依赖 | 禁止依赖 |
+|-----|----------|----------|
+| **Adapter** | ✅ App, Api, Domain, Spring | ❌ Infra (基础设施层) |
+| **App** | ✅ Domain, patra-common, Spring | ❌ Adapter, Infra |
+| **Domain** | ✅ patra-common, Lombok, Hutool | ❌ Spring, MyBatis, 任何框架 |
+| **Infra** | ✅ Domain, MyBatis, Spring | ❌ Adapter, App |
+
+---
+
+## 🎯 核心依赖规则
+
+### 规则 1: 领域层独立性 ⭐
 
 **规则**: 领域层不得依赖任何基础设施或框架代码。
 
-**允许的依赖**:
-- ✅ `java.*` (核心 Java)
-- ✅ `patra-common` (共享工具)
-- ✅ `lombok.*` (编译时代码生成)
-- ✅ `cn.hutool.*` (Hutool 工具)
-- ✅ `com.fasterxml.jackson.*` (用于领域事件/快照的 JSON 序列化)
+**✅ 允许**: `java.*`, `patra-common`, `lombok.*`, `cn.hutool.*`, `com.fasterxml.jackson.*`
 
-**禁止的依赖**:
-- ❌ `org.springframework.*`
-- ❌ `com.baomidou.mybatisplus.*`
-- ❌ `jakarta.persistence.*`
+**❌ 禁止**: `org.springframework.*`, `com.baomidou.mybatisplus.*`, `jakarta.persistence.*`
 
-### ArchUnit 测试
+<details>
+<summary><b>查看 ArchUnit 测试代码</b></summary>
 
 ```java
 @ArchTest
@@ -43,8 +64,12 @@ static final ArchRule domainLayerIsIndependent =
         )
         .because("领域层必须框架无关");
 ```
+</details>
 
-**违规示例**:
+<details>
+<summary><b>查看违规示例与修复</b></summary>
+
+**❌ 违规示例**:
 ```java
 // ❌ 错误: 在领域中使用 Spring 注解
 package com.patra.registry.domain.model.vo.provenance;
@@ -75,10 +100,11 @@ public record Provenance(
     // 纯业务逻辑,无框架依赖
 }
 ```
+</details>
 
 ---
 
-### 规则 2: 依赖方向 (六边形架构)
+### 规则 2: 依赖方向 (六边形架构) ⭐
 
 **规则**: 依赖向内流动: Adapter → App → Domain ← Infra
 
@@ -89,7 +115,8 @@ infra    →  domain
 domain   →  仅 patra-common
 ```
 
-### ArchUnit 测试
+<details>
+<summary><b>查看 ArchUnit 测试代码</b></summary>
 
 ```java
 @ArchTest
@@ -136,10 +163,11 @@ static final ArchRule infraDependsOnDomain =
         )
         .because("基础设施层应仅依赖领域层");
 ```
+</details>
 
 ---
 
-### 规则 3: 端口接口方向
+### 规则 3: 端口接口方向 ⭐
 
 **规则**: 领域定义端口(接口),基础设施实现它们。
 

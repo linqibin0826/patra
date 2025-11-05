@@ -95,7 +95,6 @@ Defines:
 
 **Examples:**
 - `java-backend-guidelines` - Java/Spring Boot/Hexagonal Architecture patterns
-- `patra-domain` - Business domain knowledge for Patra
 - `logging-observability` - Logging, tracing, and monitoring patterns
 
 **When to Use:**

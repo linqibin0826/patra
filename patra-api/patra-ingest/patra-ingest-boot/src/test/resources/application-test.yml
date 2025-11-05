@@ -1,0 +1,46 @@
+# 测试环境配置 - 禁用 Nacos 和外部依赖
+
+spring:
+  application:
+    name: patra-ingest
+  cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用服务注册
+      config:
+        enabled: false  # 禁用配置中心
+  datasource:
+    # 由 Testcontainers 动态配置
+    url: ${spring.datasource.url}
+    username: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    driver-class-name: ${spring.datasource.driver-class-name}
+
+# RocketMQ 配置（由 Testcontainers 动态配置）
+rocketmq:
+  name-server: ${rocketmq.name-server}
+  producer:
+    group: patra_ingest_producer_test
+    send-message-timeout: 3000
+
+# Patra Outbox 配置
+patra:
+  outbox:
+    mq:
+      send-timeout-millis: 3000
+      topic-prefix: patra_test_
+      strict-channel-whitelist: false
+      channel-topic-mapping:
+        TASK_READY: INGEST_TASK_READY
+        LITERATURE_READY: INGEST_LITERATURE_READY
+    relay:
+      enabled: true
+      batch-size: 10
+      lease-duration-seconds: 300
+
+# 日志配置
+logging:
+  level:
+    com.patra: INFO
+    org.testcontainers: INFO
+    org.apache.rocketmq: WARN

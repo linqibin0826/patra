@@ -108,47 +108,6 @@ Skills 是 Claude 在需要时加载的模块化知识库。它们提供:
 
 ---
 
-### patra-domain
-**目的:** Patra 业务领域知识和工作流模式
-
-**文件:** 7 个资源文件(主文件 465 行 + 资源文件)
-
-**涵盖内容:**
-- 核心领域概念: Provenance、Plan、Task、Expression 引擎
-- Provenance 配置系统(HTTP、分页、重试、速率限制)
-- Plan/Task 生命周期和工作流模式
-- 时间切片策略和窗口管理
-- Expression 引擎: 将抽象查询映射到提供者特定 API
-- 作用域优先级层次结构(TASK > SOURCE > GLOBAL)
-- 使用业务键的幂等性模式
-- 常见集成模式(PubMed、EPMC、Crossref)
-- 常见问题故障排除指南
-
-**使用场景:**
-- 处理 Provenance 配置
-- 实现 Plan 创建和切片逻辑
-- 构建 Task 执行工作流
-- 调试表达式渲染问题
-- 理解数据源集成
-- 排查 Plan/Task 失败
-
-**自定义:** ✅ 已为 Patra 配置(patra-registry, patra-ingest, patra-expr-kernel)
-
-**路径模式:**
-```json
-{
-  "pathPatterns": [
-    "patra-registry/**/*.java",
-    "patra-ingest/**/*.java",
-    "patra-expr-kernel/**/*.java"
-  ]
-}
-```
-
-**[查看 Skill →](patra-domain/)**
-
----
-
 ## 如何向项目添加 Skill
 
 ### 快速集成
