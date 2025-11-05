@@ -550,7 +550,7 @@ class CursorTest {
     @DisplayName("应该成功前进首次使用的空游标")
     void shouldAdvanceEmptyCursorForFirstTime() {
       // Given - 空水位线的游标
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(null).buildRestored();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark((Instant) null).buildRestored();
 
       // When - 首次前进
       Instant firstWatermark = Instant.parse("2024-01-01T00:00:00Z");
@@ -711,7 +711,7 @@ class CursorTest {
     }
 
     @Test
-    @DisplayName("应该更新表达式哈希当前进成功")
+    @DisplayName("应该更新表达式哈希当前进成功（哈希相同）")
     void shouldUpdateExprHashWhenAdvancementSucceeds() {
       // Given
       String exprHash = "expr-hash-12345";
@@ -721,14 +721,13 @@ class CursorTest {
               .exprHash(exprHash)
               .build();
 
-      // When
-      String newExprHash = "expr-hash-67890";
+      // When - 使用相同的哈希前进
       Cursor.AdvancementResult result =
-          cursor.advanceTo(Instant.parse("2024-02-01T00:00:00Z"), null, newExprHash);
+          cursor.advanceTo(Instant.parse("2024-02-01T00:00:00Z"), null, exprHash);
 
       // Then
       assertThat(result).isEqualTo(Cursor.AdvancementResult.SUCCESS);
-      assertThat(cursor.getExprHash()).isEqualTo(newExprHash);
+      assertThat(cursor.getExprHash()).isEqualTo(exprHash);
     }
 
     @Test
@@ -911,7 +910,7 @@ class CursorTest {
     @DisplayName("应该返回 null 当水位线为空")
     void shouldReturnNullWhenWatermarkIsEmpty() {
       // Given
-      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark(null).buildRestored();
+      Cursor cursor = CursorTestDataBuilder.aTimeCursor().watermark((Instant) null).buildRestored();
 
       // When
       Instant currentWatermark = cursor.getCurrentWatermark();

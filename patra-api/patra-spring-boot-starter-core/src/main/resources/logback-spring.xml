@@ -20,16 +20,18 @@
 
     <!-- Console Appender with colors and separated trace/segment/span IDs -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([${appName}]){blue} %clr([trace:%traceId,seg:%segmentId,span:%spanId]){magenta} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
+            <charset>UTF-8</charset>
         </encoder>
     </appender>
 
     <!-- File Appender with separated trace/segment/span IDs -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_FILE}.log</file>
-        <encoder>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p [${appName}] [trace:%traceId,seg:%segmentId,span:%spanId] [%t] %-40.40logger{39} : %m%n</pattern>
+            <charset>UTF-8</charset>
         </encoder>
 
         <!-- Rolling Policy -->

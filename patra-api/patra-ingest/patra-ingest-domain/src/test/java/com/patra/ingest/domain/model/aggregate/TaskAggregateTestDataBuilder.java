@@ -276,59 +276,45 @@ public class TaskAggregateTestDataBuilder {
   /**
    * 构建 TaskAggregate 实例。
    *
-   * <p>如果 id 为 null，则创建新任务（使用 {@code create}）；否则从持久化恢复（使用 {@code restore}）。
+   * <p>总是使用 {@code restore} 方法构建，以便能够完全控制所有字段的状态。
    *
    * @return TaskAggregate 实例
    */
   public TaskAggregate build() {
-    if (id == null) {
-      // 创建新任务
-      return TaskAggregate.create(
-          scheduleInstanceId,
-          planId,
-          sliceId,
-          provenanceCode,
-          operationCode,
-          paramsJson,
-          idempotentKey,
-          exprHash,
-          priority,
-          scheduledAt);
-    } else {
-      // 从持久化恢复
-      LeaseInfo leaseInfo = LeaseInfo.snapshotOf(leaseOwner, leasedUntil, leaseCount);
+    // 构建值对象
+    LeaseInfo leaseInfo = LeaseInfo.snapshotOf(leaseOwner, leasedUntil, leaseCount);
 
-      ExecutionTimeline executionTimeline =
-          (startedAt == null && finishedAt == null)
-              ? ExecutionTimeline.empty()
-              : new ExecutionTimeline(startedAt, finishedAt);
+    ExecutionTimeline executionTimeline =
+        (startedAt == null && finishedAt == null)
+            ? ExecutionTimeline.empty()
+            : new ExecutionTimeline(startedAt, finishedAt);
 
-      TaskSchedulerContext schedulerContext =
-          correlationId == null
-              ? TaskSchedulerContext.empty()
-              : new TaskSchedulerContext(correlationId);
+    TaskSchedulerContext schedulerContext =
+        correlationId == null
+            ? TaskSchedulerContext.empty()
+            : new TaskSchedulerContext(correlationId);
 
-      return TaskAggregate.restore(
-          id,
-          scheduleInstanceId,
-          planId,
-          sliceId,
-          provenanceCode,
-          operationCode,
-          paramsJson,
-          idempotentKey,
-          exprHash,
-          priority,
-          scheduledAt,
-          lastHeartbeatAt,
-          retryCount,
-          lastErrorCode,
-          lastErrorMsg,
-          status,
-          leaseInfo,
-          executionTimeline,
-          schedulerContext,
-          version);
-    }
+    // 统一使用 restore 方法，可以完全控制所有状态
+    return TaskAggregate.restore(
+        id, // 可以为 null，表示未持久化
+        scheduleInstanceId,
+        planId,
+        sliceId,
+        provenanceCode,
+        operationCode,
+        paramsJson,
+        idempotentKey,
+        exprHash,
+        priority,
+        scheduledAt,
+        lastHeartbeatAt,
+        retryCount,
+        lastErrorCode,
+        lastErrorMsg,
+        status,
+        leaseInfo,
+        executionTimeline,
+        schedulerContext,
+        version);
   }
 }

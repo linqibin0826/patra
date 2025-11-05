@@ -31,29 +31,29 @@
  * <h2>配置示例</h2>
  *
  * <p><b>默认行为(零配置):</b>
- * <pre>{@code
+ * <pre>
  * // 自动扫描所有模块的 Mapper 接口
  * // com.patra.registry.infra.persistence.mapper.ProvenanceMapper ✓
  * // com.patra.ingest.infra.persistence.mapper.LiteratureMapper ✓
- * }</pre>
+ * </pre>
  *
  * <p><b>扩展 Mapper 扫描路径:</b>
  * <pre>
  * mybatis-plus:
- *   mapper-locations: classpath*:/mapper/**/*.xml
+ *   mapper-locations: classpath*:/mapper/&#42;&#42;/&#42;.xml
  *   type-aliases-package: com.example.custom.entity
  * </pre>
  *
  * <p><b>注册自定义 TypeHandler:</b>
- * <pre>{@code
- * @Bean
+ * <pre>
+ * &#64;Bean
  * public ConfigurationCustomizer customTypeHandlerCustomizer() {
- *     return configuration -> {
+ *     return configuration -&gt; {
  *         configuration.getTypeHandlerRegistry()
  *             .register(LocalDate.class, new LocalDateTypeHandler());
  *     };
  * }
- * }</pre>
+ * </pre>
  *
  * <h2>相关模块</h2>
  *
