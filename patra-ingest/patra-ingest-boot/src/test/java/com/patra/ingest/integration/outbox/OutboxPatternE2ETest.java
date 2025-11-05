@@ -119,50 +119,9 @@ import org.testcontainers.junit.jupiter.Container;
 @org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与集成测试共享
 class OutboxPatternE2ETest extends BaseIntegrationTest {
 
-  // ========== Testcontainers Configuration ==========
-
-  private static final Network network = Network.newNetwork();
-
-  @Container
-  private static final GenericContainer<?> rocketmqNamesrv =
-      new GenericContainer<>("apache/rocketmq:5.3.1")
-          .withExposedPorts(9876)
-          .withCommand("sh mqnamesrv")
-          .withNetwork(network)
-          .withNetworkAliases("namesrv")
-          .waitingFor(Wait.forLogMessage(".*The Name Server boot success.*", 1))
-          .withReuse(true);
-
-  @Container
-  private static final GenericContainer<?> rocketmqBroker =
-      new GenericContainer<>("apache/rocketmq:5.3.1")
-          .withExposedPorts(10909, 10911, 8081)
-          .withEnv("NAMESRV_ADDR", "namesrv:9876")
-          .withEnv("JAVA_OPT_EXT", "-Xms512m -Xmx512m")
-          .withCommand(
-              "sh", "mqbroker",
-              "-n", "namesrv:9876",
-              "-c", "/home/rocketmq/rocketmq-5.3.1/conf/broker.conf")
-          .withNetwork(network)
-          .dependsOn(rocketmqNamesrv)
-          .waitingFor(Wait.forLogMessage(".*The broker.*success.*", 1))
-          .withReuse(true);
-
-  @DynamicPropertySource
-  static void configureRocketMqProperties(DynamicPropertyRegistry registry) {
-    String namesrvAddr = rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
-    registry.add("rocketmq.name-server", () -> namesrvAddr);
-    registry.add("patra.outbox.mq.send-timeout-millis", () -> 3000);
-    registry.add("patra.outbox.mq.topic-prefix", () -> "patra_test_");
-    registry.add("patra.outbox.mq.strict-channel-whitelist", () -> false);
-
-    // 启用 Outbox Relay 功能
-    registry.add("patra.outbox.relay.enabled", () -> true);
-    registry.add("patra.outbox.relay.batch-size", () -> 10);
-    registry.add("patra.outbox.relay.lease-duration-seconds", () -> 300);
-  }
-
   // ========== Test Dependencies ==========
+  // 注意：此测试类复用父类 BaseIntegrationTest 的容器配置
+  // RocketMQ 容器由父类管理，避免重复定义和端口冲突
 
   @Autowired private OutboxMessageRepository outboxRepository;
   @Autowired private OutboxRelayStore relayStore;
@@ -178,7 +137,7 @@ class OutboxPatternE2ETest extends BaseIntegrationTest {
   void setUp() throws Exception {
     messageCollector = new TestMessageCollector();
 
-    String namesrvAddr = rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
+    String namesrvAddr = rocketmqSupport.getNameserverAddress();
     testConsumer = new DefaultMQPushConsumer("e2e_test_consumer_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
     testConsumer.subscribe("patra_test_*", "*");

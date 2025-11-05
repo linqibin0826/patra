@@ -106,7 +106,7 @@ class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
     messageCollector = new TestMessageCollector();
 
     // 创建测试 Consumer
-    String namesrvAddr = rocketmqNamesrv.getHost() + ":" + rocketmqNamesrv.getMappedPort(9876);
+    String namesrvAddr = rocketmqSupport.getNameserverAddress();
 
     testConsumer = new DefaultMQPushConsumer("test_consumer_group_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
