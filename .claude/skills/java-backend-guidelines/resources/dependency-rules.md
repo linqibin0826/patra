@@ -10,13 +10,13 @@
 
 ```bash
 # 步骤 1: 运行所有测试
-mvn test
+./mvnw test
 
 # 步骤 2: 仅运行 ArchUnit 测试
-mvn test -Dtest=ArchitectureTest
+./mvnw test -Dtest=ArchitectureTest
 
 # 步骤 3: 如果失败,查看详细输出
-mvn clean compile test -Dtest=ArchitectureTest
+./mvnw clean compile test -Dtest=ArchitectureTest
 ```
 
 ✅ **完成!** ArchUnit 自动验证所有架构规则。
@@ -503,13 +503,13 @@ class ArchitectureTest {
 
 ```bash
 # 运行所有测试,包括 ArchUnit
-mvn test
+./mvnw test
 
 # 仅运行 ArchUnit 测试
-mvn test -Dtest=ArchitectureTest
+./mvnw test -Dtest=ArchitectureTest
 
 # 编译并测试(如果测试失败并显示"找不到类")
-mvn clean compile test
+./mvnw clean compile test
 ```
 
 ### Maven 配置(可选)
@@ -595,10 +595,10 @@ static final ArchRule domainLayerIsIndependent =
 **运行测试**:
 ```bash
 # 运行所有测试
-mvn test
+./mvnw test
 
 # 仅运行 ArchUnit 测试
-mvn test -Dtest=ArchitectureTest
+./mvnw test -Dtest=ArchitectureTest
 ```
 
 **开发工作流**:

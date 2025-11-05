@@ -766,8 +766,8 @@ class TaskAggregateTest {
       assertThat(event.scheduledAt()).isEqualTo(Instant.parse("2025-01-01T10:00:00Z"));
 
       // 验证事件被添加到聚合根
-      assertThat(task.getDomainEvents()).hasSize(1);
-      assertThat(task.getDomainEvents().get(0)).isInstanceOf(TaskQueuedEvent.class);
+      assertThat(task.peekDomainEvents()).hasSize(1);
+      assertThat(task.peekDomainEvents().get(0)).isInstanceOf(TaskQueuedEvent.class);
     }
 
     @Test
@@ -787,15 +787,15 @@ class TaskAggregateTest {
       task.markSucceeded(finishedAt);
 
       // Then: 应该发布完成事件
-      assertThat(task.getDomainEvents()).hasSize(1);
-      TaskCompletedEvent event = (TaskCompletedEvent) task.getDomainEvents().get(0);
+      assertThat(task.peekDomainEvents()).hasSize(1);
+      TaskCompletedEvent event = (TaskCompletedEvent) task.peekDomainEvents().get(0);
       assertThat(event.taskId()).isEqualTo(1001L);
       assertThat(event.sliceId()).isEqualTo(3001L);
       assertThat(event.planId()).isEqualTo(2001L);
-      assertThat(event.statusCode()).isEqualTo(TaskStatus.SUCCEEDED.getCode());
-      assertThat(event.completedAt()).isEqualTo(finishedAt);
+      assertThat(event.status()).isEqualTo(TaskStatus.SUCCEEDED.getCode());
+      assertThat(event.finishedAt()).isEqualTo(finishedAt);
       assertThat(event.errorCode()).isNull();
-      assertThat(event.errorMsg()).isNull();
+      assertThat(event.errorMessage()).isNull();
     }
 
     @Test
@@ -817,15 +817,15 @@ class TaskAggregateTest {
       task.markFailed(finishedAt);
 
       // Then: 应该发布包含错误信息的完成事件
-      assertThat(task.getDomainEvents()).hasSize(1);
-      TaskCompletedEvent event = (TaskCompletedEvent) task.getDomainEvents().get(0);
+      assertThat(task.peekDomainEvents()).hasSize(1);
+      TaskCompletedEvent event = (TaskCompletedEvent) task.peekDomainEvents().get(0);
       assertThat(event.taskId()).isEqualTo(1001L);
       assertThat(event.sliceId()).isEqualTo(3001L);
       assertThat(event.planId()).isEqualTo(2001L);
-      assertThat(event.statusCode()).isEqualTo(TaskStatus.FAILED.getCode());
-      assertThat(event.completedAt()).isEqualTo(finishedAt);
+      assertThat(event.status()).isEqualTo(TaskStatus.FAILED.getCode());
+      assertThat(event.finishedAt()).isEqualTo(finishedAt);
       assertThat(event.errorCode()).isEqualTo("ERR_TIMEOUT");
-      assertThat(event.errorMsg()).isEqualTo("Connection timeout after 30s");
+      assertThat(event.errorMessage()).isEqualTo("Connection timeout after 30s");
     }
   }
 
