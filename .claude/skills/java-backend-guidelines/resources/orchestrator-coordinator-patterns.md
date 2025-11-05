@@ -1,1142 +1,517 @@
-# 编排器与协调器模式 - 应用层
+# 编排器与协调器模式指南
 
-应用层中组织用例编排和协调逻辑的完整指南。
+> **目的**: 在应用层使用编排器和协调器组织用例的执行流程
 
-## 目录
+## 🚀 快速开始
 
-- [Application Layer Overview](#application-layer-overview)
-- [Orchestrator Pattern](#orchestrator-pattern)
-- [Coordinator Pattern](#coordinator-pattern)
-- [Pattern 1: Orchestrator + Coordinators](#pattern-1-orchestrator--coordinators)
-- [Pattern 2: Main Orchestrator + Sub-UseCases](#pattern-2-main-orchestrator--sub-usecases)
-- [Transaction Management](#transaction-management)
-- [Design Principles](#design-principles)
-- [Testing Orchestrators](#testing-orchestrators)
-
----
-
-## 应用层 Overview
-
-### 目的 of Application Layer
-
-**Application layer coordinates use cases** - the 'how' of workflows:
-
-```
-Controller asks: "Create a plan for this provenance"
-Orchestrator coordinates: "Fetch config → Validate → Assemble → Persist → Publish"
-Coordinators execute: "Here's how to persist", "Here's how to publish"
-Domain provides: Business rules and validations
-```
-
-**Application layer is responsible for:**
-- ✅ Use case orchestration (workflow coordination)
-- ✅ Transaction boundaries (@Transactional)
-- ✅ Orchestrating multiple coordinators
-- ✅ Delegating to domain for business logic
-- ✅ Delegating to infrastructure via ports
-
-**Application layer should NOT:**
-- ❌ Contain business rules (belongs in Domain)
-- ❌ Direct database access (use domain ports)
-- ❌ Complex calculations (belongs in Domain)
-- ❌ Know about HTTP/REST (belongs in Adapter)
-
----
-
-## Orchestrator Pattern
-
-### What is an Orchestrator?
-
-**Orchestrator = Use Case Coordinator**
-
-An orchestrator implements a complete use case by coordinating:
-- Domain services and aggregates
-- Multiple coordinators (separation of concerns)
-- Infrastructure services via ports
-- Transaction boundaries
-
-### Orchestrator Template
-
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestrator.java`
+### 需要实现新的用例？
 
 ```java
-/**
- * Main orchestrator for plan ingestion flow.
- *
- * Coordinates six phases:
- * 1. Prepare planning context (config + window)
- * 2. Build plan expression
- * 3. Pre-validation
- * 4. Assemble plan/slices/tasks
- * 5. Check idempotency
- * 6. Persist and publish events
- */
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
-
-  // Domain ports (defined in domain layer)
-  private final PatraRegistryPort patraRegistryPort;
-  private final CursorRepository cursorRepository;
-  private final TaskRepository taskRepository;
-  private final PlanRepository planRepository;
-
-  // Application services
-  private final PlanningWindowResolver planningWindowResolver;
-  private final PlannerValidator plannerValidator;
-  private final PlanAssembler planAssembler;
-  private final PlanExpressionBuilder planExpressionBuilder;
-
-  // Coordinators for delegating specific responsibilities
-  private final PlanPersistenceCoordinator persistenceCoordinator;
-  private final PlanIdempotencyCoordinator idempotencyCoordinator;
-  private final PlanPublishingCoordinator publishingCoordinator;
-
-  @Override
-  @Transactional  // ✅ Transaction boundary at orchestrator level
-  public PlanIngestionResult ingestPlan(PlanIngestionCommand request) {
-    logPlanIngestionStart(request);
-
-    // Phase 1: Prepare context
-    PlanningContext context = preparePlanningContext(request);
-
-    // Phase 2: Build expression
-    PlanExpressionDescriptor expressionDescriptor = buildPlanExpression(context);
-
-    // Phase 3: Pre-validation
-    performPreValidation(context);
-
-    // Phase 4: Assemble plan
-    PlanAssemblyResult assembly = assembleAndValidatePlan(context, expressionDescriptor);
-
-    // Phase 5: Check idempotency
-    PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
-    if (existingPlan != null) {
-      return idempotencyCoordinator.handleIdempotentPlanReuse(
-          existingPlan, context.schedule(), assembly.plan().getPlanKey());
-    }
-
-    // Phase 6: Persist and publish
-    return persistAndPublishNewPlan(
-        assembly.plan(), assembly, context.schedule(), context.window());
-  }
-
-  private PlanningContext preparePlanningContext(PlanIngestionCommand request) {
-    // Delegate to coordinator for schedule persistence
-    ScheduleInstanceAggregate schedule =
-        persistenceCoordinator.persistScheduleInstance(request);
-
-    // Fetch configuration from registry (NO transaction - external call)
-    ProvenanceConfigSnapshot configSnapshot =
-        patraRegistryPort.fetchConfig(request.provenanceCode(), request.operationCode());
-
-    // Query cursor watermark via port
-    Instant cursorWatermark =
-        lookupCursorWatermark(request.provenanceCode(), request.operationCode());
-
-    // Delegate to domain service for window resolution
-    PlannerWindow window =
-        resolvePlannerWindow(norm, configSnapshot, cursorWatermark, request.triggeredAt());
-
-    return new PlanningContext(schedule, configSnapshot, norm, window, /* ... */);
-  }
-
-  private PlanIngestionResult persistAndPublishNewPlan(
-      PlanAggregate draftPlan,
-      PlanAssemblyResult assembly,
-      ScheduleInstanceAggregate schedule,
-      PlannerWindow window) {
-
-    // Delegate to persistence coordinator
-    PlanAggregate persistedPlan = persistenceCoordinator.savePlan(draftPlan);
-    List<PlanSliceAggregate> persistedSlices =
-        persistenceCoordinator.persistSlices(persistedPlan, assembly.slices());
-    List<TaskAggregate> persistedTasks =
-        persistenceCoordinator.persistTasks(persistedPlan, persistedSlices, assembly.tasks());
-
-    // Delegate to publishing coordinator
-    List<TaskQueuedEvent> queuedEvents =
-        publishingCoordinator.collectQueuedEvents(persistedTasks);
-    publishingCoordinator.publishNewPlanEvents(queuedEvents, persistedPlan, schedule);
-
-    return publishingCoordinator.buildIngestionResult(
-        schedule, persistedPlan, persistedSlices, persistedTasks.size(), assembly.status().name());
-  }
-}
-```
-
-**Key Takeaways**:
-- ✅ Orchestrate only, NO business rules
-- ✅ @Transactional at orchestrator level (single boundary)
-- ✅ Delegate to coordinators for separation of concerns
-- ✅ Clear phases with descriptive method names
-- ✅ Use domain ports (NOT direct infrastructure)
-- ❌ NO business logic (delegate to domain)
-- ❌ NO external API calls inside @Transactional
-
----
-
-## Coordinator Pattern
-
-### What is a Coordinator?
-
-**Coordinator = Responsibility Separator**
-
-A coordinator handles ONE specific concern within a use case:
-- Persistence operations
-- Idempotency handling
-- Event publishing
-- Validation coordination
-
-### When to Use Coordinators?
-
-✅ **Use coordinators when:**
-- Complex orchestrator with multiple concerns
-- Need to separate persistence/publishing/validation logic
-- Want to reuse coordination logic across orchestrators
-- Need clear transaction boundary visibility
-
-❌ **Skip coordinators when:**
-- Simple orchestrator with one responsibility
-- Orchestrator already small (<100 lines)
-- No reuse needed
-
----
-
-### Coordinator Example 1: Persistence
-
-**目的**: Coordinate all persistence operations with error handling.
-
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanPersistenceCoordinator.java`
-
-```java
-/**
- * Coordinator for plan persistence operations.
- *
- * Responsibilities:
- * - Safely persisting plan aggregates, slices, tasks
- * - Proper exception handling and wrapping
- * - Batch operations coordination
- *
- * Note: Does NOT use @Transactional - relies on outer boundary
- */
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class PlanPersistenceCoordinator {
-
-  private final PlanRepository planRepository;
-  private final PlanSliceRepository planSliceRepository;
-  private final TaskRepository taskRepository;
-  private final ScheduleInstanceRepository scheduleInstanceRepository;
-
-  /**
-   * Saves or updates schedule instance (idempotent)
-   */
-  public ScheduleInstanceAggregate persistScheduleInstance(PlanIngestionCommand request) {
-    ScheduleInstanceAggregate schedule = ScheduleInstanceAggregate.start(
-        request.scheduler(),
-        request.schedulerJobId(),
-        request.schedulerLogId(),
-        request.triggerType(),
-        request.triggeredAt(),
-        request.triggerParams(),
-        request.provenanceCode().getCode());
-
-    try {
-      return scheduleInstanceRepository.saveOrUpdateInstance(schedule);
-    } catch (RuntimeException ex) {
-      // ✅ Wrap with domain-specific exception
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.SCHEDULE_INSTANCE,
-          "Failed to persist schedule instance",
-          ex);
-    }
-  }
-
-  /**
-   * Batch persists plan slice aggregates
-   */
-  public List<PlanSliceAggregate> persistSlices(
-      PlanAggregate plan,
-      List<PlanSliceAggregate> slices) {
-    if (CollUtil.isEmpty(slices)) {
-      return List.of();
-    }
-
-    // ✅ Bind plan ID to each slice
-    slices.forEach(slice -> slice.bindPlan(plan.getId()));
-
-    try {
-      return planSliceRepository.saveAll(slices);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.PLAN_SLICE,
-          "Failed to persist plan slices",
-          ex);
-    }
-  }
-
-  /**
-   * Batch persists task aggregates and binds plan/slice IDs
-   */
-  public List<TaskAggregate> persistTasks(
-      PlanAggregate plan,
-      List<PlanSliceAggregate> persistedSlices,
-      List<TaskAggregate> tasks) {
-    if (CollUtil.isEmpty(tasks)) {
-      return List.of();
-    }
-
-    // ✅ Create slice lookup map for efficient binding
-    Map<Integer, PlanSliceAggregate> sliceBySeq = MapUtil.newHashMap(persistedSlices.size());
-    for (PlanSliceAggregate slice : persistedSlices) {
-      sliceBySeq.putIfAbsent(slice.getSliceNo(), slice);
-    }
-
-    // ✅ Bind plan and slice IDs to each task
-    for (TaskAggregate task : tasks) {
-      Long placeholderSequence = task.getSliceId();
-      PlanSliceAggregate slice = ObjectUtil.isNull(placeholderSequence)
-          ? null
-          : sliceBySeq.get(placeholderSequence.intValue());
-      task.bindPlanAndSlice(plan.getId(), slice == null ? null : slice.getId());
-    }
-
-    try {
-      return taskRepository.saveAll(tasks);
-    } catch (RuntimeException ex) {
-      throw new PlanPersistenceException(
-          PlanPersistenceException.Stage.TASK,
-          "Failed to persist tasks",
-          ex);
-    }
-  }
-}
-```
-
-**Key Takeaways**:
-- ✅ Separates persistence concerns from orchestration
-- ✅ Wraps infrastructure exceptions with domain exceptions
-- ✅ Batch operations for performance
-- ✅ NO @Transactional (relies on orchestrator boundary)
-- ✅ Clear logging for debugging
-- ✅ Handles data binding (plan/slice IDs)
-
----
-
-### Coordinator Example 2: Idempotency
-
-**目的**: Handle duplicate detection and retry logic.
-
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanIdempotencyCoordinator.java`
-
-```java
-/**
- * Coordinator for plan idempotency and retry logic.
- *
- * Responsibilities:
- * - Handling duplicate plan detection
- * - Identifying tasks eligible for retry
- * - Coordinating retry operations
- *
- * Note: Does NOT use @Transactional - relies on outer boundary
- */
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class PlanIdempotencyCoordinator {
-
-  private final PlanSliceRepository planSliceRepository;
-  private final TaskRepository taskRepository;
-  private final PlanPersistenceCoordinator persistenceCoordinator;
-  private final PlanPublishingCoordinator publishingCoordinator;
-
-  /**
-   * Handles idempotent plan reuse when existing plan found.
-   *
-   * Steps:
-   * 1. Load existing slices and tasks
-   * 2. Identify tasks eligible for retry (FAILED status)
-   * 3. Reset and re-queue retry tasks
-   * 4. Publish retry events via outbox
-   * 5. Return result based on existing plan
-   */
-  public PlanIngestionResult handleIdempotentPlanReuse(
-      PlanAggregate existingPlan,
-      ScheduleInstanceAggregate schedule,
-      String planKey) {
-
-    logDuplicatePlanDetection(existingPlan, planKey);
-
-    // ✅ Load existing data
-    List<PlanSliceAggregate> existingSlices =
-        planSliceRepository.findByPlanId(existingPlan.getId());
-    List<TaskAggregate> existingTasks =
-        taskRepository.findByPlanId(existingPlan.getId());
-
-    // ✅ Identify and prepare retry tasks
-    List<TaskAggregate> retryTasks = prepareTasksForRetry(existingTasks);
-
-    if (!retryTasks.isEmpty()) {
-      processRetryTasks(existingPlan, schedule, retryTasks);
-    } else {
-      log.info(
-          "No tasks require retry for existing plan [{}], returning existing state",
-          existingPlan.getId());
-    }
-
-    return publishingCoordinator.buildIngestionResult(
-        schedule, existingPlan, existingSlices, existingTasks);
-  }
-
-  /**
-   * Prepares tasks for retry by resetting failed tasks
-   */
-  private List<TaskAggregate> prepareTasksForRetry(List<TaskAggregate> tasks) {
-    List<TaskAggregate> retryTasks = new ArrayList<>();
-    for (TaskAggregate task : tasks) {
-      if (shouldRetry(task)) {
-        // ✅ Delegate to domain aggregate for retry preparation
-        task.prepareForRetry();
-        persistenceCoordinator.saveTask(task);
-        retryTasks.add(task);
-      }
-    }
-    return retryTasks;
-  }
-
-  /**
-   * Determines if task is eligible for retry
-   */
-  private boolean shouldRetry(TaskAggregate task) {
-    TaskStatus status = task.getStatus();
-    return status == TaskStatus.FAILED;
-  }
-
-  private void processRetryTasks(
-      PlanAggregate existingPlan,
-      ScheduleInstanceAggregate schedule,
-      List<TaskAggregate> retryTasks) {
-    // ✅ Delegate to publishing coordinator
-    List<TaskQueuedEvent> retryEvents =
-        publishingCoordinator.collectQueuedEvents(retryTasks);
-    publishingCoordinator.publishRetryEvents(retryEvents, existingPlan, schedule);
-  }
-}
-```
-
-**Key Takeaways**:
-- ✅ Encapsulates idempotency logic
-- ✅ Delegates to domain aggregate for business logic (prepareForRetry)
-- ✅ Coordinates with other coordinators (persistence, publishing)
-- ✅ Clear separation of concerns
-
----
-
-### Coordinator Example 3: Publishing
-
-**目的**: Collect domain events and publish via Outbox pattern.
-
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/plan/PlanPublishingCoordinator.java`
-
-```java
-/**
- * Coordinator for plan publishing operations.
- *
- * Responsibilities:
- * - Collecting domain events from aggregates
- * - Publishing events via Outbox pattern
- * - Building ingestion results
- *
- * Note: Does NOT use @Transactional - relies on outer boundary
- */
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class PlanPublishingCoordinator {
-
-  private final TaskOutboxPublisher taskOutboxPublisher;
-
-  /**
-   * Publishes task queued events for new plans
-   */
-  public void publishNewPlanEvents(
-      List<TaskQueuedEvent> queuedEvents,
-      PlanAggregate plan,
-      ScheduleInstanceAggregate schedule) {
-
-    log.debug(
-        "Publishing {} task-ready events to outbox for plan [{}]",
-        queuedEvents.size(),
-        plan.getId());
-
-    // ✅ Delegate to outbox publisher (transactional with persistence)
-    taskOutboxPublisher.publish(queuedEvents, plan, schedule);
-  }
-
-  /**
-   * Publishes retry events for existing plans
-   */
-  public void publishRetryEvents(
-      List<TaskQueuedEvent> retryEvents,
-      PlanAggregate plan,
-      ScheduleInstanceAggregate schedule) {
-
-    taskOutboxPublisher.publishRetry(retryEvents, plan, schedule);
-    log.info("Re-queued {} failed tasks for existing plan [{}]",
-        retryEvents.size(), plan.getId());
-  }
-
-  /**
-   * Collects TaskQueuedEvent instances from task aggregates.
-   *
-   * Explicitly triggers raiseQueuedEvent() to ensure events exist.
-   */
-  public List<TaskQueuedEvent> collectQueuedEvents(List<TaskAggregate> tasks) {
-    if (CollUtil.isEmpty(tasks)) {
-      return List.of();
-    }
-
-    List<TaskQueuedEvent> events = new ArrayList<>(tasks.size());
-    for (TaskAggregate task : tasks) {
-      // ✅ Trigger domain event creation
-      task.raiseQueuedEvent();
-
-      // ✅ Pull and collect events from aggregate
-      task.pullDomainEvents().stream()
-          .filter(TaskQueuedEvent.class::isInstance)
-          .map(TaskQueuedEvent.class::cast)
-          .forEach(events::add);
-    }
-    return events;
-  }
-
-  /**
-   * Builds plan ingestion result from plan data
-   */
-  public PlanIngestionResult buildIngestionResult(
-      ScheduleInstanceAggregate schedule,
-      PlanAggregate plan,
-      List<PlanSliceAggregate> slices,
-      List<TaskAggregate> tasks) {
-
-    return new PlanIngestionResult(
-        schedule.getId(),
-        plan.getId(),
-        slices.stream().map(PlanSliceAggregate::getId).collect(Collectors.toList()),
-        tasks.size(),
-        plan.getStatus().name());
-  }
-}
-```
-
-**Key Takeaways**:
-- ✅ Encapsulates event publishing logic
-- ✅ Collects events from domain aggregates
-- ✅ Ensures Outbox pattern atomicity (transactional with DB)
-- ✅ Builds result DTOs for orchestrator
-
----
-
-## Pattern 1: Orchestrator + Coordinators
-
-### When to Use
-
-**Use this pattern when:**
-- ✅ Single transaction boundary needed
-- ✅ Complex internal flow with multiple concerns
-- ✅ Want separation of concerns within application layer
-- ✅ Multiple coordinators can be reused
-
-**示例**: PlanIngestionOrchestrator + 3 Coordinators
-
-```java
+// 1. 创建编排器 (Orchestrator)
 @Service
 @RequiredArgsConstructor
 public class PlanIngestionOrchestrator {
 
-  private final PlanPersistenceCoordinator persistenceCoordinator;
-  private final PlanIdempotencyCoordinator idempotencyCoordinator;
-  private final PlanPublishingCoordinator publishingCoordinator;
+    // 依赖注入
+    private final PlanRepository planRepository;  // 领域端口
+    private final PlanPersistenceCoordinator persistenceCoordinator;  // 协调器
+    private final PlanPublishingCoordinator publishingCoordinator;
 
-  @Transactional  // ✅ Single transaction boundary
-  public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
-    // Phase 1: Prepare and validate
-    PlanningContext context = preparePlanningContext(command);
-    performPreValidation(context);
+    @Transactional  // ✅ 事务边界在编排器层
+    public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
+        // 阶段 1: 准备上下文
+        PlanningContext context = preparePlanningContext(command);
 
-    // Phase 2: Assemble plan
-    PlanAssemblyResult assembly = assembleAndValidatePlan(context, expression);
+        // 阶段 2: 组装计划
+        PlanAssemblyResult assembly = assembleAndValidatePlan(context);
 
-    // Phase 3: Check idempotency
-    PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
-    if (existingPlan != null) {
-      // ✅ Delegate to idempotency coordinator
-      return idempotencyCoordinator.handleIdempotentPlanReuse(
-          existingPlan, context.schedule(), assembly.plan().getPlanKey());
+        // 阶段 3: 检查幂等性
+        PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
+        if (existingPlan != null) {
+            return handleIdempotentReuse(existingPlan);
+        }
+
+        // 阶段 4: 持久化 (委派给协调器)
+        PlanAggregate savedPlan = persistenceCoordinator.savePlan(assembly.plan());
+        List<PlanSliceAggregate> savedSlices =
+            persistenceCoordinator.persistSlices(savedPlan, assembly.slices());
+
+        // 阶段 5: 发布事件 (委派给协调器)
+        publishingCoordinator.publishNewPlanEvents(savedPlan, savedSlices);
+
+        return buildResult(savedPlan, savedSlices);
     }
 
-    // Phase 4: Persist (delegate to persistence coordinator)
-    PlanAggregate persistedPlan = persistenceCoordinator.savePlan(assembly.plan());
-    List<PlanSliceAggregate> persistedSlices =
-        persistenceCoordinator.persistSlices(persistedPlan, assembly.slices());
-    List<TaskAggregate> persistedTasks =
-        persistenceCoordinator.persistTasks(persistedPlan, persistedSlices, assembly.tasks());
-
-    // Phase 5: Publish events (delegate to publishing coordinator)
-    List<TaskQueuedEvent> queuedEvents =
-        publishingCoordinator.collectQueuedEvents(persistedTasks);
-    publishingCoordinator.publishNewPlanEvents(queuedEvents, persistedPlan, schedule);
-
-    return publishingCoordinator.buildIngestionResult(
-        schedule, persistedPlan, persistedSlices, persistedTasks.size(), assembly.status().name());
-  }
+    // 私有辅助方法
+    private PlanningContext preparePlanningContext(PlanIngestionCommand command) {
+        // 准备逻辑...
+    }
 }
-```
 
-**Coordinators** (NO @Transactional):
-```java
+// 2. 创建协调器 (Coordinator)
 @Service
 @RequiredArgsConstructor
 public class PlanPersistenceCoordinator {
-  // ❌ NO @Transactional - relies on outer boundary
-  public PlanAggregate savePlan(PlanAggregate plan) { /* ... */ }
-  public List<PlanSliceAggregate> persistSlices(/* ... */) { /* ... */ }
-  public List<TaskAggregate> persistTasks(/* ... */) { /* ... */ }
-}
 
-@Service
-@RequiredArgsConstructor
-public class PlanIdempotencyCoordinator {
-  // ❌ NO @Transactional - relies on outer boundary
-  public PlanIngestionResult handleIdempotentPlanReuse(/* ... */) { /* ... */ }
-}
+    private final PlanRepository planRepository;
+    private final PlanSliceRepository sliceRepository;
 
-@Service
-@RequiredArgsConstructor
-public class PlanPublishingCoordinator {
-  // ❌ NO @Transactional - relies on outer boundary
-  public void publishNewPlanEvents(/* ... */) { /* ... */ }
-  public List<TaskQueuedEvent> collectQueuedEvents(/* ... */) { /* ... */ }
+    // ❌ 不使用 @Transactional - 依赖外层事务边界
+    public PlanAggregate savePlan(PlanAggregate plan) {
+        try {
+            return planRepository.save(plan);
+        } catch (Exception ex) {
+            throw new PlanPersistenceException("持久化失败", ex);
+        }
+    }
+
+    public List<PlanSliceAggregate> persistSlices(
+        PlanAggregate plan,
+        List<PlanSliceAggregate> slices
+    ) {
+        // 绑定 planId
+        slices.forEach(slice -> slice.bindPlan(plan.getId()));
+
+        try {
+            return sliceRepository.saveAll(slices);
+        } catch (Exception ex) {
+            throw new PlanPersistenceException("切片持久化失败", ex);
+        }
+    }
 }
 ```
-
-**Benefits**:
-- ✅ Clear separation of concerns
-- ✅ Coordinators are reusable
-- ✅ Single transaction ensures atomicity
-- ✅ Easy to test (mock coordinators)
-
-**Trade-offs**:
-- ⚠️ More classes to maintain
-- ⚠️ Need to understand coordinator responsibilities
 
 ---
 
-## Pattern 2: Main Orchestrator + Sub-UseCases
+## 📊 决策矩阵
 
-### When to Use
+### 何时使用编排器和协调器？
 
-**Use this pattern when:**
-- ✅ Multiple independent transactions needed
-- ✅ External API calls between phases
-- ✅ Long-running operations
-- ✅ Sub-usecases can be reused independently
+| 场景 | 推荐模式 | 原因 |
+|------|---------|------|
+| 简单用例 (<100 行) | 单个编排器 | 无需额外复杂度 |
+| 复杂用例 (多关注点) | 编排器 + 协调器 | 职责分离 |
+| 需要复用逻辑 | 协调器 | 跨编排器复用 |
+| 多个独立事务 | 主编排器 + 子用例 | 事务边界清晰 |
+| 长时间运行 | 主编排器 + 子用例 | 避免长事务 |
 
-**示例**: OutboxRelayOrchestrator + Executor
+### 模式选择决策树
 
-**File**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/OutboxRelayOrchestrator.java`
+```
+用例复杂度如何？
+  ├─ 简单 (<100 行) → 单个编排器
+  └─ 复杂 → 有多个关注点吗？
+             ├─ 是 → 需要跨用例复用吗？
+             │       ├─ 是 → 编排器 + 协调器
+             │       └─ 否 → 单个编排器即可
+             └─ 否 → 需要多个事务吗？
+                     ├─ 是 → 主编排器 + 子用例
+                     └─ 否 → 编排器 + 协调器
+```
+
+---
+
+## 🎯 核心概念
+
+### 编排器 (Orchestrator)
+
+**定义**: 实现完整用例的应用层服务，协调工作流的执行。
+
+**职责**:
+- 协调用例的执行流程
+- 定义事务边界 (@Transactional)
+- 委派具体任务给协调器/领域服务
+- 通过领域端口访问基础设施
+
+**不应该做**:
+- ❌ 包含业务规则（属于领域层）
+- ❌ 直接访问数据库（使用端口）
+- ❌ 复杂计算（属于领域层）
+- ❌ 了解 HTTP/REST（属于适配器层）
+
+### 协调器 (Coordinator)
+
+**定义**: 处理用例中特定关注点的应用层组件。
+
+**职责**:
+- 封装特定职责（持久化、发布、验证等）
+- 跨编排器复用逻辑
+- 错误处理和异常转换
+- 批量操作协调
+
+**不应该做**:
+- ❌ 定义事务边界（依赖外层）
+- ❌ 包含业务规则（属于领域层）
+
+---
+
+## 🏗️ 常见模式
+
+### 模式 1: 编排器 + 协调器
+
+**适用场景**:
+- 单一事务边界
+- 复杂内部流程
+- 多个可复用的关注点
+
+<details>
+<summary>查看完整实现</summary>
 
 ```java
-/**
- * Orchestrator for Outbox Relay use case.
- *
- * Flow:
- * 1. Check feature toggle
- * 2. Build relay plan (NO transaction)
- * 3. Execute relay (WITH transaction - updates message state)
- * 4. Publish events (WITH transaction)
- * 5. Assemble report
- *
- * Transaction semantics: @Transactional covers executor + event publishing
- */
-@Slf4j
+// 编排器
 @Service
 @RequiredArgsConstructor
-public class OutboxRelayOrchestrator implements OutboxRelayUseCase {
+public class PlanIngestionOrchestrator {
 
-  private final OutboxRelayProperties properties;
-  private final RelayPlanBuilder planBuilder;
-  private final OutboxRelayExecutor relayExecutor;
-  private final RelayEventPublisher eventPublisher;
+    private final PlanPersistenceCoordinator persistenceCoordinator;
+    private final PlanIdempotencyCoordinator idempotencyCoordinator;
+    private final PlanPublishingCoordinator publishingCoordinator;
 
-  @Override
-  @Transactional  // ✅ Transaction boundary at orchestrator level
-  public RelayReport relay(OutboxRelayCommand instruction) {
-    // Phase 1: Feature toggle check (NO transaction needed)
-    if (!properties.isEnabled()) {
-      log.info("Outbox relay disabled, skip channel={}", instruction.channel());
-      return RelayReport.empty(instruction.channel());
+    @Transactional  // ✅ 单一事务边界
+    public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
+        // 准备和验证
+        PlanningContext context = preparePlanningContext(command);
+        performPreValidation(context);
+
+        // 组装计划
+        PlanAssemblyResult assembly = assembleAndValidatePlan(context);
+
+        // 检查幂等性
+        PlanAggregate existingPlan = checkForExistingPlan(assembly.plan());
+        if (existingPlan != null) {
+            // 委派给幂等性协调器
+            return idempotencyCoordinator.handleIdempotentPlanReuse(existingPlan);
+        }
+
+        // 持久化 (委派给持久化协调器)
+        PlanAggregate savedPlan = persistenceCoordinator.savePlan(assembly.plan());
+        List<PlanSliceAggregate> savedSlices =
+            persistenceCoordinator.persistSlices(savedPlan, assembly.slices());
+        List<TaskAggregate> savedTasks =
+            persistenceCoordinator.persistTasks(savedPlan, savedSlices, assembly.tasks());
+
+        // 发布事件 (委派给发布协调器)
+        List<TaskQueuedEvent> events = publishingCoordinator.collectQueuedEvents(savedTasks);
+        publishingCoordinator.publishNewPlanEvents(events, savedPlan);
+
+        return publishingCoordinator.buildIngestionResult(savedPlan, savedSlices, savedTasks);
+    }
+}
+
+// 协调器 - 持久化
+@Service
+@RequiredArgsConstructor
+public class PlanPersistenceCoordinator {
+    // ❌ 不使用 @Transactional
+
+    public PlanAggregate savePlan(PlanAggregate plan) {
+        try {
+            return planRepository.save(plan);
+        } catch (Exception ex) {
+            throw new PlanPersistenceException("持久化失败", ex);
+        }
     }
 
-    long start = System.currentTimeMillis();
+    public List<PlanSliceAggregate> persistSlices(
+        PlanAggregate plan,
+        List<PlanSliceAggregate> slices
+    ) {
+        slices.forEach(slice -> slice.bindPlan(plan.getId()));
+        try {
+            return sliceRepository.saveAll(slices);
+        } catch (Exception ex) {
+            throw new PlanPersistenceException("切片持久化失败", ex);
+        }
+    }
+}
 
-    // Phase 2: Build plan (NO transaction needed)
-    RelayPlan plan = planBuilder.build(instruction);
-    log.debug("relay plan built channel={} batchSize={} leaseOwner={}",
-        plan.channel(), plan.batchSize(), plan.leaseOwner());
+// 协调器 - 幂等性
+@Service
+@RequiredArgsConstructor
+public class PlanIdempotencyCoordinator {
+    // ❌ 不使用 @Transactional
 
-    // Phase 3: Execute relay (WITHIN transaction - updates message status)
-    RelayBatchResult result = relayExecutor.execute(plan);
+    public PlanIngestionResult handleIdempotentPlanReuse(PlanAggregate existingPlan) {
+        // 加载现有数据
+        List<TaskAggregate> existingTasks = taskRepository.findByPlanId(existingPlan.getId());
 
-    // Phase 4: Publish events (WITHIN same transaction)
-    eventPublisher.publish(result.events());
+        // 识别需要重试的任务
+        List<TaskAggregate> retryTasks = prepareTasksForRetry(existingTasks);
 
-    long elapsed = System.currentTimeMillis() - start;
-    log.info("relay completed channel={} fetched={} published={} costMs={}",
-        result.channel(), result.fetched(), result.published(), elapsed);
+        if (!retryTasks.isEmpty()) {
+            processRetryTasks(existingPlan, retryTasks);
+        }
 
-    return new RelayReport(
-        result.channel(),
-        result.fetched(),
-        result.published(),
-        result.retried(),
-        result.failed(),
-        result.leaseMissed());
-  }
+        return buildResult(existingPlan, existingTasks);
+    }
+}
+
+// 协调器 - 发布
+@Service
+@RequiredArgsConstructor
+public class PlanPublishingCoordinator {
+    // ❌ 不使用 @Transactional
+
+    public void publishNewPlanEvents(
+        List<TaskQueuedEvent> events,
+        PlanAggregate plan
+    ) {
+        // 委派给 Outbox 发布器 (与持久化同一事务)
+        taskOutboxPublisher.publish(events, plan);
+    }
+
+    public List<TaskQueuedEvent> collectQueuedEvents(List<TaskAggregate> tasks) {
+        List<TaskQueuedEvent> events = new ArrayList<>();
+        for (TaskAggregate task : tasks) {
+            task.raiseQueuedEvent();
+            task.pullDomainEvents().stream()
+                .filter(TaskQueuedEvent.class::isInstance)
+                .map(TaskQueuedEvent.class::cast)
+                .forEach(events::add);
+        }
+        return events;
+    }
 }
 ```
 
-**Sub-UseCase: RelayExecutor** (NO @Transactional):
+</details>
+
+### 模式 2: 主编排器 + 子用例
+
+**适用场景**:
+- 需要多个独立事务
+- 阶段间有外部 API 调用
+- 长时间运行的操作
+
+<details>
+<summary>查看完整实现</summary>
+
 ```java
-/**
- * Executor for relay operations.
- *
- * Delegates to coordinators for:
- * - Lease acquisition
- * - Message publishing
- * - Log recording
- *
- * Note: NO @Transactional - relies on orchestrator boundary
- */
+// 主编排器
+@Service
+@RequiredArgsConstructor
+public class OutboxRelayOrchestrator {
+
+    private final RelayPlanBuilder planBuilder;
+    private final OutboxRelayExecutor relayExecutor;  // 子用例
+    private final RelayEventPublisher eventPublisher;
+
+    @Transactional  // ✅ 覆盖执行器 + 事件发布
+    public RelayReport relay(OutboxRelayCommand command) {
+        // 阶段 1: 构建计划 (无事务)
+        RelayPlan plan = planBuilder.build(command);
+
+        // 阶段 2: 执行中继 (在事务内 - 更新消息状态)
+        RelayBatchResult result = relayExecutor.execute(plan);
+
+        // 阶段 3: 发布事件 (同一事务)
+        eventPublisher.publish(result.events());
+
+        return buildReport(result);
+    }
+}
+
+// 子用例 - 执行器
 @Service
 @RequiredArgsConstructor
 public class OutboxRelayExecutor {
+    // ❌ 不使用 @Transactional - 依赖外层边界
 
-  private final RelayLeaseCoordinator leaseCoordinator;
-  private final RelayPublishCoordinator publishCoordinator;
-  private final RelayLogCoordinator logCoordinator;
+    public RelayBatchResult execute(RelayPlan plan) {
+        // 尝试获取租约
+        boolean leaseAcquired = leaseCoordinator.tryAcquireLease(plan);
+        if (!leaseAcquired) {
+            return RelayBatchResult.leaseMissed(plan.channel());
+        }
 
-  // ❌ NO @Transactional
-  public RelayBatchResult execute(RelayPlan plan) {
-    // Try acquire lease
-    boolean leaseAcquired = leaseCoordinator.tryAcquireLease(plan);
-    if (!leaseAcquired) {
-      return RelayBatchResult.leaseMissed(plan.channel());
+        // 获取消息
+        List<OutboxMessage> messages = fetchMessages(plan);
+
+        // 发布到 RocketMQ
+        RelayBatchResult result = publishCoordinator.publishBatch(messages, plan);
+
+        // 记录中继日志
+        logCoordinator.recordRelayLog(result);
+
+        return result;
+    }
+}
+```
+
+</details>
+
+---
+
+## 📋 速查表
+
+### 职责分配
+
+| 层次 | 职责 | 示例 |
+|------|------|------|
+| **编排器** | 用例协调、事务边界 | `PlanIngestionOrchestrator` |
+| **协调器** | 特定关注点处理 | `PlanPersistenceCoordinator` |
+| **领域服务** | 跨聚合业务逻辑 | `SliceStatusCalculator` |
+| **聚合根** | 实体业务规则 | `PlanAggregate.startSlicing()` |
+| **端口** | 基础设施契约 | `PlanRepository` |
+
+### 事务管理规则
+
+| ✅ 应该 | ❌ 不应该 |
+|---------|-----------|
+| @Transactional 在编排器层 | @Transactional 在协调器层 |
+| 保持事务短 | 在事务内调用外部 API |
+| 只在事务内执行 DB 操作 | 在事务内执行复杂计算 |
+| 使用 REQUIRES_NEW 处理独立事务 | 嵌套多层事务 |
+
+### 命名约定
+
+| 类型 | 命名模式 | 示例 |
+|------|---------|------|
+| 编排器 | XxxOrchestrator | `PlanIngestionOrchestrator` |
+| 协调器 | XxxCoordinator | `PlanPersistenceCoordinator` |
+| 用例接口 | XxxUseCase | `PlanIngestionUseCase` |
+| 命令 | XxxCommand | `PlanIngestionCommand` |
+| 结果 | XxxResult | `PlanIngestionResult` |
+
+---
+
+## ⚠️ 常见问题与解决
+
+### 问题 1: 事务过长导致死锁
+
+**症状**: 高并发下频繁死锁，事务持有锁时间过长
+
+**解决方案**:
+```java
+// ❌ 错误: 事务内包含外部 API 调用
+@Transactional
+public void execute() {
+    prepare();           // DB 查询 - 持有锁
+    callExternalAPI();   // 10+ 秒 - 事务被阻塞！
+    saveResults();       // DB 更新
+}
+
+// ✅ 正确: 外部 API 在事务外
+public void execute() {
+    // 阶段 1: 外部调用 (无事务)
+    Config config = callExternalAPI();
+
+    // 阶段 2: 持久化 (有事务 - 短！)
+    persistResults(config);
+}
+
+@Transactional
+private void persistResults(Config config) {
+    // 只有 DB 操作 - 快速！
+    repository.save(config);
+}
+```
+
+### 问题 2: 协调器嵌套事务
+
+**症状**: `UnexpectedRollbackException` 或事务行为不符合预期
+
+**解决方案**:
+```java
+// ❌ 错误: 协调器定义事务
+@Service
+public class PlanPersistenceCoordinator {
+    @Transactional  // ❌ 创建嵌套事务
+    public PlanAggregate savePlan(PlanAggregate plan) {
+        return planRepository.save(plan);
+    }
+}
+
+// ✅ 正确: 协调器不定义事务
+@Service
+public class PlanPersistenceCoordinator {
+    // ❌ 无 @Transactional - 依赖外层边界
+    public PlanAggregate savePlan(PlanAggregate plan) {
+        return planRepository.save(plan);
+    }
+}
+```
+
+### 问题 3: 编排器包含业务逻辑
+
+**症状**: 编排器变得臃肿，难以测试
+
+**解决方案**:
+```java
+// ❌ 错误: 业务规则在编排器
+@Transactional
+public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
+    // ❌ 业务规则在编排器
+    if (command.windowFrom().isAfter(command.windowTo())) {
+        throw new ValidationException("无效窗口");
     }
 
-    // Fetch messages
-    List<OutboxMessage> messages = fetchMessages(plan);
-
-    // Publish to RocketMQ
-    RelayBatchResult result = publishCoordinator.publishBatch(messages, plan);
-
-    // Log relay result
-    logCoordinator.recordRelayLog(result);
-
-    return result;
-  }
-}
-```
-
-**Benefits**:
-- ✅ Clear phase separation
-- ✅ Executor is reusable
-- ✅ Transaction only covers DB operations
-- ✅ Feature toggle check outside transaction
-
-**Trade-offs**:
-- ⚠️ More complex flow
-- ⚠️ Need to understand transaction boundaries
-
----
-
-## Transaction Management
-
-### Rule 1: @Transactional at Orchestrator Level ONLY
-
-```java
-// ✅ GOOD: Transaction at orchestrator
-@Service
-public class PlanIngestionOrchestrator {
-  @Transactional  // ✅ Single boundary
-  public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
-    // All coordinators participate in this transaction
-    persistenceCoordinator.savePlan(plan);
-    publishingCoordinator.publishEvents(events);
-  }
+    PlanAggregate plan = new PlanAggregate(...);
+    planRepository.save(plan);
 }
 
-// ✅ GOOD: Coordinator without @Transactional
-@Service
-public class PlanPersistenceCoordinator {
-  // ❌ NO @Transactional - relies on outer boundary
-  public PlanAggregate savePlan(PlanAggregate plan) {
-    return planRepository.save(plan);
-  }
-}
-```
-
-```java
-// ❌ BAD: @Transactional on coordinator
-@Service
-public class PlanPersistenceCoordinator {
-  @Transactional  // ❌ Wrong! Creates nested transaction
-  public PlanAggregate savePlan(PlanAggregate plan) {
-    return planRepository.save(plan);
-  }
-}
-```
-
-**Why?**
-- ✅ Single transaction boundary is clear
-- ✅ Avoids nested transaction complexity
-- ✅ Easier to reason about atomicity
-- ✅ Coordinator reuse doesn't create unexpected transactions
-
----
-
-### Rule 2: NEVER Call External APIs Inside @Transactional
-
-```java
-// ❌ BAD: External API inside transaction
-@Transactional
-public void execute() {
-  prepare();           // DB query - holds transaction!
-  callPubMedAPI();    // 10+ seconds - transaction blocked!
-  saveResults();      // DB update
-}
-```
-
-```java
-// ✅ GOOD: External API outside transaction
-public void execute() {
-  // Phase 1: Prepare (NO transaction)
-  ConfigSnapshot config = fetchConfigFromRegistry();  // External API
-
-  // Phase 2: Execute (WITH transaction)
-  executePlan(config);
-}
-
-@Transactional
-private void executePlan(ConfigSnapshot config) {
-  // Only DB operations inside transaction
-  PlanAggregate plan = PlanAggregate.create(config);
-  planRepository.save(plan);
-  publishEvents(plan);
-}
-```
-
-**Why?**
-- ✅ Keeps transactions short
-- ✅ Avoids holding DB connections
-- ✅ Better performance
-- ✅ Reduced deadlock risk
-
----
-
-### Rule 3: Keep Transactions Short
-
-```java
-// ❌ BAD: Long transaction with complex logic
-@Transactional
-public void process() {
-  loadData();           // DB query
-  complexCalculation(); // 5 seconds CPU
-  externalValidation(); // 3 seconds HTTP
-  saveResults();        // DB update
-}
-```
-
-```java
-// ✅ GOOD: Short transaction, only DB operations
-public void process() {
-  // Phase 1: Prepare (NO transaction)
-  Data data = loadData();
-  Result calculated = complexCalculation(data);
-  ValidationResult validated = externalValidation(calculated);
-
-  // Phase 2: Persist (WITH transaction - short!)
-  saveResults(validated);
-}
-
-@Transactional
-private void saveResults(ValidationResult validated) {
-  // Only DB writes - fast!
-  repository.save(validated);
-  outboxPublisher.publish(event);
-}
-```
-
-**Why?**
-- ✅ Minimizes transaction duration
-- ✅ Reduces lock contention
-- ✅ Better throughput
-- ✅ Easier to handle errors
-
----
-
-## Design Principles
-
-### 1. Single Responsibility
-
-**Each orchestrator should coordinate ONE use case**:
-
-```java
-// ✅ GOOD: One use case
-class PlanIngestionOrchestrator {
-  PlanIngestionResult ingestPlan(PlanIngestionCommand command) { /* ... */ }
-}
-
-// ✅ GOOD: Another use case
-class OutboxRelayOrchestrator {
-  RelayReport relay(OutboxRelayCommand command) { /* ... */ }
-}
-```
-
-```java
-// ❌ BAD: Multiple use cases in one orchestrator
-class PlanOrchestrator {
-  PlanIngestionResult ingestPlan(/* ... */) { /* ... */ }
-  PlanUpdateResult updatePlan(/* ... */) { /* ... */ }
-  PlanDeletionResult deletePlan(/* ... */) { /* ... */ }
-}
-```
-
----
-
-### 2. Clear Method Names
-
-**Method names should describe WHAT they do**:
-
-```java
-// ✅ GOOD: Clear intent
-private PlanningContext preparePlanningContext(PlanIngestionCommand request)
-private void performPreValidation(PlanningContext context)
-private PlanAssemblyResult assembleAndValidatePlan(/* ... */)
-private PlanIngestionResult persistAndPublishNewPlan(/* ... */)
-
-// ❌ BAD: Vague or misleading
-private PlanningContext prepare(/* ... */)
-private void validate(/* ... */)
-private PlanAssemblyResult assemble(/* ... */)
-private PlanIngestionResult persist(/* ... */)
-```
-
----
-
-### 3. Delegate Business Logic to Domain
-
-```java
-// ❌ BAD: Business logic in orchestrator
+// ✅ 正确: 业务规则在领域层
 @Transactional
 public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
-  // ❌ Business rule in orchestrator
-  if (command.windowFrom().isAfter(command.windowTo())) {
-    throw new ValidationException("Invalid window");
-  }
+    // 委派给领域聚合根工厂方法
+    PlanAggregate plan = PlanAggregate.create(
+        command.windowFrom(),
+        command.windowTo()  // ✅ 验证在领域层
+    );
 
-  PlanAggregate plan = new PlanAggregate(/* ... */);
-  planRepository.save(plan);
+    planRepository.save(plan);
 }
-```
 
-```java
-// ✅ GOOD: Business logic in domain
-@Transactional
-public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
-  // ✅ Delegate to domain aggregate factory
-  PlanAggregate plan = PlanAggregate.create(
-      command.scheduleInstanceId(),
-      command.planKey(),
-      command.provenanceCode(),
-      command.operationCode(),
-      command.windowFrom(),
-      command.windowTo());
-
-  // Domain aggregate validates business rules internally
-  planRepository.save(plan);
-}
-```
-
-```java
-// ✅ Domain aggregate with validation
+// 领域聚合根
 public class PlanAggregate {
-  public static PlanAggregate create(/* parameters */) {
-    // ✅ Business rule validation in domain
-    if (windowFrom.isAfter(windowTo)) {
-      throw new IllegalArgumentException("Invalid window: from must be before to");
+    public static PlanAggregate create(Instant from, Instant to) {
+        // ✅ 业务规则验证在领域层
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("无效窗口: from 必须早于 to");
+        }
+        return new PlanAggregate(from, to);
     }
-    return new PlanAggregate(/* ... */);
-  }
 }
 ```
 
 ---
 
-### 4. Use Ports, NOT Direct Infrastructure
+## ✅ 最佳实践清单
 
-```java
-// ❌ BAD: Direct infrastructure dependency
-@Service
-public class PlanIngestionOrchestrator {
-  private final PlanMapper planMapper;  // ❌ Infrastructure type!
+### 编排器设计
+- [ ] 单一职责 - 一个编排器协调一个用例
+- [ ] @Transactional 只在编排器层
+- [ ] 使用领域端口，不直接访问基础设施
+- [ ] 清晰的方法命名 (描述做什么)
+- [ ] 委派业务逻辑给领域层
 
-  @Transactional
-  public void ingestPlan(/* ... */) {
-    PlanDO planDO = new PlanDO();  // ❌ Infrastructure type!
-    planMapper.insert(planDO);
-  }
-}
-```
+### 协调器设计
+- [ ] 不使用 @Transactional (依赖外层)
+- [ ] 封装单一关注点 (持久化、发布、验证)
+- [ ] 包装基础设施异常为领域异常
+- [ ] 可跨编排器复用
 
-```java
-// ✅ GOOD: Use domain port
-@Service
-public class PlanIngestionOrchestrator {
-  private final PlanRepository planRepository;  // ✅ Domain port!
+### 事务管理
+- [ ] 保持事务短 (只包含 DB 操作)
+- [ ] 外部 API 调用在事务外
+- [ ] 避免嵌套事务
+- [ ] 复杂计算在事务外
 
-  @Transactional
-  public void ingestPlan(/* ... */) {
-    PlanAggregate plan = PlanAggregate.create(/* ... */);  // ✅ Domain type!
-    planRepository.save(plan);  // ✅ Port method!
-  }
-}
-```
+### 代码质量
+- [ ] 编排器 <200 行
+- [ ] 协调器 <100 行
+- [ ] 清晰的阶段划分
+- [ ] 单元测试覆盖
 
 ---
 
-## Testing Orchestrators
+## 📚 相关文档
 
-### Unit Tests: Mock Coordinators and Ports
+### 核心概念
+- [architecture-overview.md](architecture-overview.md) - 六边形架构概览
+- [domain-modeling-patterns.md](domain-modeling-patterns.md) - 领域建模模式
+- [event-driven-architecture.md](event-driven-architecture.md) - 事件驱动架构
 
-**File**: `patra-ingest-app/src/test/java/com/patra/ingest/app/usecase/plan/PlanIngestionOrchestratorTest.java`
-
-```java
-/**
- * Unit tests for PlanIngestionOrchestrator.
- *
- * Mock all coordinators and ports to isolate orchestration logic.
- */
-@ExtendWith(MockitoExtension.class)
-class PlanIngestionOrchestratorTest {
-
-  @Mock private PlanRepository planRepository;
-  @Mock private CursorRepository cursorRepository;
-  @Mock private TaskRepository taskRepository;
-  @Mock private PatraRegistryPort patraRegistryPort;
-
-  @Mock private PlanningWindowResolver planningWindowResolver;
-  @Mock private PlannerValidator plannerValidator;
-  @Mock private PlanAssembler planAssembler;
-  @Mock private PlanExpressionBuilder planExpressionBuilder;
-
-  @Mock private PlanPersistenceCoordinator persistenceCoordinator;
-  @Mock private PlanIdempotencyCoordinator idempotencyCoordinator;
-  @Mock private PlanPublishingCoordinator publishingCoordinator;
-
-  @InjectMocks
-  private PlanIngestionOrchestrator orchestrator;
-
-  @Test
-  void should_create_plan_successfully_when_no_existing_plan() {
-    // Given
-    PlanIngestionCommand command = createTestCommand();
-
-    when(patraRegistryPort.fetchConfig(any(), any()))
-        .thenReturn(createTestConfig());
-    when(cursorRepository.findLatestGlobalTimeWatermark(any(), any()))
-        .thenReturn(Optional.of(Instant.now()));
-    when(planningWindowResolver.resolveWindow(any(), any(), any(), any()))
-        .thenReturn(createTestWindow());
-    when(planAssembler.assemble(any()))
-        .thenReturn(createTestAssembly());
-    when(planRepository.findByPlanKey(any()))
-        .thenReturn(Optional.empty());  // No existing plan
-    when(persistenceCoordinator.savePlan(any()))
-        .thenReturn(createTestPlan());
-    when(persistenceCoordinator.persistSlices(any(), any()))
-        .thenReturn(List.of(createTestSlice()));
-    when(persistenceCoordinator.persistTasks(any(), any(), any()))
-        .thenReturn(List.of(createTestTask()));
-    when(publishingCoordinator.collectQueuedEvents(any()))
-        .thenReturn(List.of(createTestEvent()));
-
-    // When
-    PlanIngestionResult result = orchestrator.ingestPlan(command);
-
-    // Then
-    assertThat(result).isNotNull();
-    assertThat(result.planId()).isNotNull();
-
-    // Verify coordinator interactions
-    verify(persistenceCoordinator).savePlan(any());
-    verify(persistenceCoordinator).persistSlices(any(), any());
-    verify(persistenceCoordinator).persistTasks(any(), any(), any());
-    verify(publishingCoordinator).publishNewPlanEvents(any(), any(), any());
-    verifyNoInteractions(idempotencyCoordinator);
-  }
-
-  @Test
-  void should_reuse_existing_plan_when_planKey_exists() {
-    // Given
-    PlanIngestionCommand command = createTestCommand();
-    PlanAggregate existingPlan = createTestPlan();
-
-    when(patraRegistryPort.fetchConfig(any(), any()))
-        .thenReturn(createTestConfig());
-    when(cursorRepository.findLatestGlobalTimeWatermark(any(), any()))
-        .thenReturn(Optional.of(Instant.now()));
-    when(planningWindowResolver.resolveWindow(any(), any(), any(), any()))
-        .thenReturn(createTestWindow());
-    when(planAssembler.assemble(any()))
-        .thenReturn(createTestAssembly());
-    when(planRepository.findByPlanKey(any()))
-        .thenReturn(Optional.of(existingPlan));  // Existing plan found!
-    when(idempotencyCoordinator.handleIdempotentPlanReuse(any(), any(), any()))
-        .thenReturn(createTestResult());
-
-    // When
-    PlanIngestionResult result = orchestrator.ingestPlan(command);
-
-    // Then
-    assertThat(result).isNotNull();
-
-    // Verify idempotency coordinator called
-    verify(idempotencyCoordinator).handleIdempotentPlanReuse(
-        eq(existingPlan), any(), any());
-
-    // Verify persistence coordinators NOT called
-    verifyNoInteractions(persistenceCoordinator);
-    verify(publishingCoordinator, never()).publishNewPlanEvents(any(), any(), any());
-  }
-}
-```
-
-**Key Takeaways**:
-- ✅ Mock all dependencies (coordinators + ports)
-- ✅ Test orchestration logic only
-- ✅ Verify coordinator interactions
-- ✅ Test different paths (new plan vs existing plan)
-- ✅ Fast tests (no DB, no Spring context)
-
----
-
-**相关文件：**
-- [SKILL.md](../SKILL.md) - Main guide
-- [complete-examples.md](complete-examples.md) - Complete feature examples
-- [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain layer patterns
-- [transaction-error-handling.md](transaction-error-handling.md) - Transaction management
-- [testing-guide.md](testing-guide.md) - Testing strategies
+### 测试指南
+- [testing-guide.md](testing-guide.md) - 完整测试策略
+- [test-templates-application.md](test-templates-application.md) - 应用层测试模板

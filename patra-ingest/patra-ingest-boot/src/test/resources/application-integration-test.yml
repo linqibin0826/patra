@@ -1,0 +1,122 @@
+# 集成测试环境配置 - 测试基础设施组件（Publisher、RocketMQ、数据库）
+#
+# 此配置用于 Integration Test，专注于测试：
+# - RocketMQ 消息发送和接收
+# - 数据库操作
+# - 消息序列化和元数据映射
+#
+# 特点：禁用业务监听器（TaskReadyMessageListener），使用测试专用 Consumer
+
+spring:
+  application:
+    name: patra-ingest
+  # 覆盖 config.import，禁用 Nacos 导入
+  config:
+    import:
+      - "classpath:ingest-error-config.yaml"
+      - "classpath:ingest-rocketmq.yaml"
+  cloud:
+    nacos:
+      discovery:
+        enabled: false  # 禁用服务注册
+      config:
+        enabled: false  # 禁用配置中心
+  datasource:
+    # 由 Testcontainers 动态配置
+    url: ${spring.datasource.url}
+    username: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    driver-class-name: ${spring.datasource.driver-class-name}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+  # 启用 Flyway 自动初始化测试数据库
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: false
+
+# RocketMQ 配置（由 Testcontainers 动态配置）
+rocketmq:
+  name-server: ${rocketmq.name-server}
+  producer:
+    group: patra_ingest_producer_integration_test
+    send-message-timeout: 3000
+
+# XXL-Job 配置（测试环境禁用）
+xxl:
+  job:
+    enabled: false
+
+# Feign 配置
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000
+
+# Patra Ingest 配置
+patra:
+  ingest:
+    exec:
+      lease-ttl-seconds: 60
+      heartbeat-interval-seconds: 20
+    outbox-relay:
+      enabled: true
+      batch-size: 10
+      lease-duration: PT30S
+    # Outbox MQ 配置
+    outbox:
+      send-timeout: 3000
+      topic-prefix: patra_test_
+      strict-channel-whitelist: false
+      channel-mapping:
+        TASK_READY: INGEST_TASK_READY
+        LITERATURE_READY: INGEST_LITERATURE_READY
+    # MQ 消费者配置（集成测试中不使用业务监听器）
+    mq:
+      topics:
+        task-ready: ${TOPIC_PREFIX:patra_test_}INGEST_TASK_READY
+      consumer-groups:
+        task-ready: ${CONSUMER_GROUP_PREFIX:}ingest-task-ready-consumer-group
+  # 对象存储配置（测试环境使用虚拟配置）
+  object-storage:
+    active-provider: minio
+    providers:
+      minio:
+        endpoint: http://localhost:9000
+        access-key: minioadmin
+        secret-key: minioadmin
+        bucket: patra-test
+
+# Task 配置
+task:
+  execution:
+    lease:
+      duration: 60
+      renewal-interval: 20
+    heartbeat:
+      failure-threshold: 3
+    fail-fast: false
+
+# Management & Monitoring (禁用测试环境不需要的)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  metrics:
+    export:
+      prometheus:
+        enabled: false
+
+# 日志配置
+logging:
+  level:
+    com.patra: INFO
+    org.testcontainers: INFO
+    org.apache.rocketmq: WARN
+    org.springframework.cloud: WARN
+    com.alibaba.nacos: WARN

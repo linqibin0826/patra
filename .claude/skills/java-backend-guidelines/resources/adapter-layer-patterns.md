@@ -1,24 +1,114 @@
 # 适配器层模式
 
-**目的**: 驱动适配器接收外部触发(HTTP、作业、MQ)并委托给应用层编排者。
+> **3 分钟快速启动** → 立即创建 XXL-Job 定时任务或 REST 控制器
 
 ---
 
-## 目录
+## 🚀 快速启动
 
-1. [概览](#概览)
-2. [XXL-Job 模式](#xxl-job-模式)
-3. [核心原则](#核心原则)
-4. [反模式](#反模式)
-5. [最佳实践](#最佳实践)
+### 模式 1: 创建 XXL-Job 定时任务 (3 步)
+
+```java
+// 步骤 1: 继承抽象基类
+@Slf4j
+@Component
+public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
+
+  // 步骤 2: 声明数据源和操作
+  @Override
+  protected ProvenanceCode getProvenanceCode() { return ProvenanceCode.PUBMED; }
+
+  @Override
+  protected OperationCode getOperationCode() { return OperationCode.HARVEST; }
+
+  // 步骤 3: 定义 XXL-Job 入口点
+  @XxlJob("pubmedHarvest")
+  public void run() {
+    executeScheduleJob(XxlJobHelper.getJobParam());
+  }
+}
+```
+
+✅ **完成!** 约 20 行代码实现一个完整的定时任务。
+
+### 模式 2: 创建 REST 控制器 (3 步)
+
+```java
+// 步骤 1: 定义控制器
+@RestController
+@RequestMapping("/api/v1/provenances")
+@RequiredArgsConstructor
+public class ProvenanceController {
+    private final ProvenanceManagementUseCase useCase;
+
+    // 步骤 2: 定义端点并验证
+    @PostMapping
+    public ResponseEntity<ProvenanceResponse> create(
+        @Valid @RequestBody CreateProvenanceCommand command
+    ) {
+        // 步骤 3: 委托给编排者
+        ProvenanceResult result = useCase.create(command);
+        return ResponseEntity.ok(ProvenanceResponse.from(result));
+    }
+}
+```
+
+✅ **完成!** 立即可用的 REST API。
 
 ---
 
-## 概览
+## 📊 决策矩阵
 
-### 适配器层职责
+**我应该创建什么类型的适配器?**
 
-**适配器层**(驱动适配器)处理外部触发并将其转换为应用层调用。
+| 触发源 | 适配器类型 | 包路径 | 命名模式 | 继承/注解 |
+|--------|----------|--------|----------|----------|
+| 调度任务 | XXL-Job | `adapter/scheduler/job/` | `*Job.java` | 继承 `AbstractProvenanceScheduleJob` |
+| HTTP 请求 | REST API | `adapter/rest/` | `*Controller.java` | `@RestController` |
+| 消息队列 | MQ 消费者 | `adapter/stream/` | `*MessageListener.java` | `@RocketMQMessageListener` |
+
+---
+
+## 🎯 核心原则
+
+### 原则 1: 薄适配器,委托给编排者
+
+<details>
+<summary><b>✅ 良好示例</b> (点击展开)</summary>
+
+```java
+@XxlJob("outboxRelay")
+public void execute() {
+  OutboxRelayJobParam param = parseParam(XxlJobHelper.getJobParam());
+  OutboxRelayCommand command = buildCommand(param, Instant.now());
+
+  // ✅ 委托给编排者
+  RelayReport report = relayUseCase.relay(command);
+
+  // ✅ 报告统计
+  XxlJobHelper.handleSuccess(formatReport(report));
+}
+```
+</details>
+
+<details>
+<summary><b>❌ 错误示例</b> (点击展开)</summary>
+
+```java
+@XxlJob("outboxRelay")
+public void execute() {
+  List<OutboxMessage> messages = outboxRepository.fetchPending(...);  // ❌ 直接仓储访问
+
+  for (OutboxMessage msg : messages) {
+    if (msg.getRetryCount() < 3) {  // ❌ 适配器中的业务规则
+      publisher.publish(msg);
+    }
+  }
+}
+```
+</details>
+
+### 原则 2: 适配器职责清单
 
 **✅ 适配器层应该:**
 - 接收外部请求(HTTP、作业、MQ)
@@ -35,19 +125,16 @@
 
 ---
 
-## XXL-Job 模式
+## 🏗️ XXL-Job 模式详解
 
-### 概览
-
-Patra 使用 **XXL-Job** 进行分布式定时任务。适配器层提供作业入口点。
-
-### 模式: 模板方法(抽象基础作业)
+### 模板方法模式 (Template Method Pattern)
 
 **问题**: 多个作业共享通用逻辑(参数解析、错误处理、指标)
 
 **解决方案**: 将通用逻辑提取到抽象基类
 
-**文件**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/AbstractProvenanceScheduleJob.java`
+<details>
+<summary><b>查看完整抽象基类实现</b> (AbstractProvenanceScheduleJob.java)</summary>
 
 ```java
 @Slf4j
@@ -125,8 +212,12 @@ public abstract class AbstractProvenanceScheduleJob {
   }
 }
 ```
+</details>
 
 ### 具体作业实现
+
+<details>
+<summary><b>查看具体 Job 示例</b> (PubmedHarvestJob.java)</summary>
 
 **文件**: `patra-ingest/patra-ingest-adapter/src/main/java/com/patra/ingest/adapter/scheduler/job/PubmedHarvestJob.java`
 
@@ -160,6 +251,7 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
   }
 }
 ```
+</details>
 
 **优势:**
 - ✅ 每个具体作业约20行(最少样板代码)
@@ -169,41 +261,12 @@ public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
 
 ---
 
-## 核心原则
+## 📋 实施指南
 
-### 1. 薄适配器,委托给编排者
+### 参数解析和验证
 
-```java
-// ✅ 良好: 适配器立即委托
-@XxlJob("outboxRelay")
-public void execute() {
-  OutboxRelayJobParam param = parseParam(XxlJobHelper.getJobParam());
-
-  OutboxRelayCommand command = buildCommand(param, Instant.now());
-
-  // ✅ 委托给编排者
-  RelayReport report = relayUseCase.relay(command);
-
-  // ✅ 报告统计
-  XxlJobHelper.handleSuccess(formatReport(report));
-}
-```
-
-```java
-// ❌ 错误: 适配器中的业务逻辑
-@XxlJob("outboxRelay")
-public void execute() {
-  List<OutboxMessage> messages = outboxRepository.fetchPending(...);  // ❌ 直接仓储访问
-
-  for (OutboxMessage msg : messages) {
-    if (msg.getRetryCount() < 3) {  // ❌ 适配器中的业务规则
-      publisher.publish(msg);
-    }
-  }
-}
-```
-
-### 2. 参数解析和验证
+<details>
+<summary><b>查看参数处理最佳实践</b></summary>
 
 ```java
 // ✅ 良好: 在适配器中解析,在领域中验证
@@ -225,8 +288,12 @@ private String buildLeaseOwner() {
       + Thread.currentThread().threadId() + '-' + IdUtil.fastSimpleUUID();
 }
 ```
+</details>
 
-### 3. 错误处理和报告
+### 错误处理和报告
+
+<details>
+<summary><b>查看错误处理最佳实践</b></summary>
 
 ```java
 // ✅ 良好: 向调度器报告错误
@@ -249,8 +316,12 @@ try {
   // ❌ 不向调度器报告,作业看起来成功了!
 }
 ```
+</details>
 
-### 4. 幂等作业执行
+### 幂等作业执行
+
+<details>
+<summary><b>查看幂等性最佳实践</b></summary>
 
 ```java
 // ✅ 良好: 每次执行生成唯一租约拥有者
@@ -266,12 +337,16 @@ private String buildLeaseOwner() {
 - 多个作业实例可能并发运行
 - 租约拥有者标识哪个实例拥有消息
 - UUID 防止作业快速重启时冲突
+</details>
 
 ---
 
-## 反模式
+## ⚠️ 常见反模式
 
-### ❌ 适配器中的业务逻辑
+### ❌ 反模式 1: 适配器中的业务逻辑
+
+<details>
+<summary><b>查看问题与解决方案</b></summary>
 
 ```java
 // ❌ 错误: 适配器包含业务规则
@@ -302,8 +377,12 @@ public void execute() {
   XxlJobHelper.handleSuccess(formatResult(result));
 }
 ```
+</details>
 
-### ❌ 直接仓储访问
+### ❌ 反模式 2: 直接仓储访问
+
+<details>
+<summary><b>查看问题与解决方案</b></summary>
 
 ```java
 // ❌ 错误: 适配器绕过应用层
@@ -332,8 +411,12 @@ public void execute() {
           result.outboxDeleted(), result.tasksDeleted()));
 }
 ```
+</details>
 
-### ❌ 缺少错误报告
+### ❌ 反模式 3: 缺少错误报告
+
+<details>
+<summary><b>查看问题与解决方案</b></summary>
 
 ```java
 // ❌ 错误: 不向调度器报告错误
@@ -362,10 +445,11 @@ public void execute() {
   }
 }
 ```
+</details>
 
 ---
 
-## 最佳实践
+## ✅ 最佳实践速查表
 
 ### ✅ 应该
 
@@ -389,6 +473,9 @@ public void execute() {
 | **跳过参数验证** | 在无效输入时快速失败 |
 
 ### 配置最佳实践
+
+<details>
+<summary><b>查看配置外部化示例</b></summary>
 
 ```java
 // ✅ 良好: 外部化配置
@@ -424,8 +511,12 @@ public class OutboxRelayJob {
   }
 }
 ```
+</details>
 
 ### 测试作业
+
+<details>
+<summary><b>查看测试最佳实践</b></summary>
 
 ```java
 // ✅ 良好: 使用模拟编排者测试基类
@@ -477,14 +568,12 @@ class AbstractProvenanceScheduleJobTest {
   }
 }
 ```
+</details>
 
 ---
 
-**相关文件:**
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 应用层编排
-- [architecture-overview.md](architecture-overview.md) - 六边形架构概览
+## 📚 相关文档
+
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 应用层编排模式
+- [architecture-overview.md](architecture-overview.md) - 六边形架构完整概览
 - [outbox-pattern.md](outbox-pattern.md) - OutboxRelayJob 实现细节
-
----
-
-**📝 状态**: ✅ **完成** - 来自 patra-ingest 的适配器层模式综合指南,包含 XXL-Job 示例。

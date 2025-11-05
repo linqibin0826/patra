@@ -1,42 +1,119 @@
 # 完整示例 - 可运行代码
 
-展示 Patra patra-ingest 模块中跨所有架构层的完整实现模式的真实示例。
-
-## 目录
-
-- [完整功能示例: Plan 采集](#完整功能示例-plan-采集)
-- [架构分层详解](#架构分层详解)
-- [重构示例: 从错误到正确](#重构示例-从错误到正确)
-- [端到端请求流程](#端到端请求流程)
-- [测试策略](#测试策略)
+> **10 分钟学习** → 通过真实的 Plan 采集功能理解六边形架构 + DDD 实践
 
 ---
 
-## 完整功能示例: Plan 采集
+## 🚀 快速导航
 
-### 概览
-
-Plan 采集功能演示了一个完整的六边形架构 + DDD 实现,跨越所有四层: **Adapter → Application → Domain ← Infrastructure**。
-
-**业务上下文**: 当调度器触发数据采集任务时,系统基于时间窗口和配置快照创建包含多个 Slice 和 Task 的 Plan。这确保了幂等、可靠和可审计的数据采集。
-
-**核心组件**:
-- **Orchestrator**: PlanIngestionOrchestrator 协调整个工作流
-- **Coordinators**: 分离持久化、幂等性和发布的关注点
-- **Domain Aggregates**: PlanAggregate 封装业务规则和状态
-- **Repository**: 使用 MapStruct 转换器的 MyBatis-Plus 实现
+**学习路径**:
+1. [快速启动](#快速启动) - 3 分钟理解核心流程
+2. [分层详解](#架构分层详解) - 深入每一层的实现
+3. [重构示例](#重构示例-从错误到正确) - 从错误学习正确做法
+4. [端到端流程](#端到端请求流程) - 完整的请求追踪
+5. [测试策略](#测试策略) - 如何测试每一层
 
 ---
 
-## 架构分层详解
+## 🚀 快速启动
 
-### 1. Domain 层 (纯 Java)
+### Plan 采集功能概览
+
+**业务场景**: 调度器触发数据采集任务,系统基于时间窗口和配置快照创建包含多个 Slice 和 Task 的 Plan。
+
+**核心流程** (3 步):
+
+```java
+步骤 1 (Domain): 建模 Plan 聚合 → 封装业务规则
+步骤 2 (Application): 编排流程 → 协调 6 个阶段
+步骤 3 (Adapter + Infra): 触发 + 持久化 → XXL-Job + MyBatis-Plus
+```
+
+<details>
+<summary><b>查看 3 步核心代码</b></summary>
+
+```java
+// 步骤 1: Domain 层 - Plan 聚合根
+@Getter
+public class PlanAggregate extends AggregateRoot<Long> {
+    private final String planKey;  // 业务幂等键
+    private PlanStatus status;
+
+    public void markAsCompleted() {
+        if (this.status == PlanStatus.CANCELLED) {
+            throw new IllegalStateException("不能完成已取消的 plan");
+        }
+        this.status = PlanStatus.COMPLETED;
+        DomainEventPublisher.publish(new PlanCompletedEvent(this.id));
+    }
+}
+
+// 步骤 2: Application 层 - 编排者
+@Service
+@RequiredArgsConstructor
+public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
+    @Override
+    @Transactional
+    public PlanIngestionResult ingestPlan(PlanIngestionCommand command) {
+        // 阶段 1: 准备 → 阶段 2: 组装 → 阶段 3: 幂等检查
+        // → 阶段 4: 持久化 → 阶段 5: 发布事件
+    }
+}
+
+// 步骤 3a: Adapter 层 - XXL-Job 触发
+@Component
+public class PubmedHarvestJob extends AbstractProvenanceScheduleJob {
+    @XxlJob("pubmedHarvest")
+    public void run() {
+        executeScheduleJob(XxlJobHelper.getJobParam());
+    }
+}
+
+// 步骤 3b: Infrastructure 层 - 仓储实现
+@Repository
+@RequiredArgsConstructor
+public class PlanRepositoryMpImpl implements PlanRepository {
+    @Override
+    public PlanAggregate save(PlanAggregate plan) {
+        PlanDO entity = planConverter.toEntity(plan);
+        planMapper.insert(entity);
+        return planConverter.toAggregate(entity);
+    }
+}
+```
+</details>
+
+**关键设计决策**:
+- ✅ **幂等性**: planKey (数据源 + 操作 + 窗口 + 策略哈希) 防止重复
+- ✅ **事务边界**: 单个 @Transactional 在编排器层级
+- ✅ **Outbox 模式**: 持久化和事件发布的原子性
+- ✅ **协调者模式**: 按关注点分离 (持久化、幂等性、发布)
+
+---
+
+## 📊 架构分层概览
+
+| 层 | 职责 | 关键类 | 依赖方向 |
+|-----|------|--------|----------|
+| **Adapter** | 接收触发 | `PubmedHarvestJob` | → App |
+| **Application** | 编排流程 | `PlanIngestionOrchestrator` + Coordinators | → Domain |
+| **Domain** | 业务规则 | `PlanAggregate` + `PlanStatus` + `PlanRepository` (接口) | ← Infra |
+| **Infrastructure** | 数据访问 | `PlanRepositoryMpImpl` + `PlanDO` + `PlanConverter` | → Domain |
+
+---
+
+## 🏗️ 架构分层详解
+
+Plan 采集功能演示了一个完整的六边形架构 + DDD 实现,跨越所有四层。
+
+### 1. Domain 层 (纯 Java - 业务核心)
 
 **目的**: 业务逻辑和规则。禁止框架依赖。
 
 #### Aggregate Root: PlanAggregate
 
-**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/aggregate/PlanAggregate.java`
+<details>
+<summary><b>查看完整实现</b> (PlanAggregate.java)</summary>
 
 ```java
 /**

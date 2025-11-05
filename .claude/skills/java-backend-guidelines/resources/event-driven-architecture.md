@@ -1,69 +1,249 @@
-# 事件驱动架构
+# 事件驱动架构指南
 
-**目的**: 领域事件实现聚合根和限界上下文之间的松耦合和响应式工作流。
+> **目的**: 使用领域事件实现聚合根之间的松耦合通信和状态传播
 
----
+## 🚀 快速开始
 
-## 目录
+### 需要创建新事件？
 
-1. [概述](#概述)
-2. [领域事件](#领域事件)
-3. [事件处理器](#事件处理器)
-4. [事件链](#事件链)
-5. [与 Outbox 模式的集成](#与-outbox-模式的集成)
-6. [最佳实践](#最佳实践)
+```java
+// 1. 在 domain 层创建事件 (使用 record)
+public record TaskCompletedEvent(
+    Long taskId,
+    Long sliceId,
+    String status,
+    Instant occurredAt
+) implements DomainEvent {
+    // 自动填充时间戳
+    public TaskCompletedEvent {
+        occurredAt = occurredAt == null ? Instant.now() : occurredAt;
+    }
+}
 
----
+// 2. 在 app 层创建处理器
+@Component
+@RequiredArgsConstructor
+public class TaskCompletedEventHandler {
+    @TransactionalEventListener(phase = AFTER_COMMIT)
+    @Transactional(propagation = REQUIRES_NEW)
+    public void handle(TaskCompletedEvent event) {
+        // 处理逻辑
+    }
+}
 
-## 概述
-
-### 什么是事件驱动架构?
-
-**事件驱动架构 (EDA)** 使用领域事件在组件之间传递状态变化。事件的优势:
-- ✅ **松耦合**: 聚合根不需要知道其消费者
-- ✅ **响应式工作流**: 自动传播状态
-- ✅ **审计追踪**: 完整的事件历史
-- ✅ **最终一致性更新**: 异步处理
-
-### Patra 事件流
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              Task Completion Event Chain                    │
-├─────────────────────────────────────────────────────────────┤
-│  1. Task execution completes                                │
-│     → Publishes TaskCompletedEvent                          │
-│                                                             │
-│  2. TaskCompletedEventHandler                               │
-│     → Calculates Slice status (1:1 mapping)                 │
-│     → Updates Slice aggregate                               │
-│     → Publishes SliceStatusChangedEvent                     │
-│                                                             │
-│  3. SliceStatusChangedEventHandler                          │
-│     → Aggregates all Slice statuses for Plan                │
-│     → Updates Plan aggregate                                │
-│     → Publishes PlanStatusChangedEvent (optional)           │
-└─────────────────────────────────────────────────────────────┘
+// 3. 发布事件
+eventPublisher.publishEvent(new TaskCompletedEvent(...));
 ```
 
+### 需要处理外部系统事件？
+
+参见 [Outbox 模式集成](#outbox-pattern-integration)
+
 ---
 
-## 领域事件
+## 📊 决策矩阵
 
-### 事件设计模式
+### 何时使用事件？
 
-patra-ingest 中的领域事件遵循以下约定:
+| 场景 | 使用事件? | 原因 |
+|-----|----------|------|
+| 聚合根状态变化需要通知其他聚合 | ✅ 是 | 松耦合 |
+| 需要审计追踪 | ✅ 是 | 事件历史 |
+| 跨服务通信 | ✅ 是 (Outbox) | 可靠传递 |
+| 简单的同步调用 | ❌ 否 | 直接调用更简单 |
+| 需要立即响应 | ❌ 否 | 事件是异步的 |
 
-**✅ 事件最佳实践:**
-- 使用 Java `record` 实现不可变性
-- 使用过去时命名 (例如: `TaskCompletedEvent`, 而非 `TaskCompleteEvent`)
-- 包含所有相关上下文 (ID、状态、时间戳)
-- 自动填充 `occurredAt` (如果未提供)
-- 为常见场景提供工厂方法
+### 事件类型选择
 
-### 完整事件示例
+```
+需要跨服务通信？
+  ├─ 是 → 使用 Outbox Pattern + MQ
+  └─ 否 → 需要事务一致性？
+          ├─ 是 → @TransactionalEventListener(AFTER_COMMIT)
+          └─ 否 → @EventListener
+```
 
-**文件**: `patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/event/TaskCompletedEvent.java`
+---
+
+## 🎯 常见场景与模板
+
+### 场景 1: 聚合状态变化触发下游更新
+
+**案例**: Task 完成 → 更新 Slice → 更新 Plan
+
+<details>
+<summary>查看完整实现</summary>
+
+```java
+// 1. 定义事件
+public record TaskCompletedEvent(
+    Long taskId,
+    Long sliceId,
+    Long planId,
+    String status,
+    Instant occurredAt
+) implements DomainEvent {
+    public TaskCompletedEvent {
+        occurredAt = occurredAt == null ? Instant.now() : occurredAt;
+    }
+
+    // 工厂方法
+    public static TaskCompletedEvent of(Long taskId, Long sliceId, Long planId, String status) {
+        return new TaskCompletedEvent(taskId, sliceId, planId, status, null);
+    }
+}
+
+// 2. 事件处理器
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class TaskCompletedEventHandler {
+
+    private final PlanSliceRepository sliceRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @TransactionalEventListener(phase = AFTER_COMMIT)
+    @Transactional(propagation = REQUIRES_NEW)
+    public void handle(TaskCompletedEvent event) {
+        try {
+            // 查询并更新 Slice
+            PlanSliceAggregate slice = sliceRepository.findById(event.sliceId())
+                .orElseThrow(() -> new IllegalStateException("Slice not found"));
+
+            SliceStatus oldStatus = slice.getStatus();
+            SliceStatus newStatus = calculateNewStatus(event.status());
+
+            // 幂等性检查
+            if (oldStatus == newStatus) {
+                return;
+            }
+
+            slice.updateStatus(newStatus);
+            sliceRepository.save(slice);
+
+            // 触发下一个事件
+            eventPublisher.publishEvent(
+                SliceStatusChangedEvent.of(event.sliceId(), event.planId(),
+                    oldStatus.getCode(), newStatus.getCode())
+            );
+
+        } catch (OptimisticLockingFailureException e) {
+            log.warn("并发更新冲突 sliceId={}", event.sliceId());
+        } catch (Exception e) {
+            log.error("处理失败 taskId={}", event.taskId(), e);
+        }
+    }
+}
+```
+
+</details>
+
+### 场景 2: 跨服务事件通知
+
+**案例**: 通知下游服务任务完成
+
+<details>
+<summary>查看 Outbox 模式实现</summary>
+
+```java
+@Transactional
+public void completeTask(Long taskId) {
+    // 1. 更新聚合
+    TaskAggregate task = taskRepository.findById(taskId)
+        .orElseThrow();
+    task.markCompleted();
+    taskRepository.save(task);
+
+    // 2. 写入 Outbox (同一事务)
+    OutboxMessage message = OutboxMessage.builder()
+        .channel("TASK_COMPLETED")
+        .dedupKey("TASK_" + taskId)
+        .aggregateType("Task")
+        .aggregateId(taskId)
+        .payloadJson(toJson(TaskCompletedPayload.from(task)))
+        .build();
+    outboxRepository.saveOrUpdate(message);
+}
+```
+
+</details>
+
+### 场景 3: 批处理事件聚合
+
+**案例**: 批量更新后发布汇总事件
+
+<details>
+<summary>查看批处理实现</summary>
+
+```java
+@Component
+public class BatchEventAggregator {
+
+    private final Map<Long, List<TaskCompletedEvent>> buffer = new ConcurrentHashMap<>();
+
+    @EventListener
+    public void collect(TaskCompletedEvent event) {
+        buffer.computeIfAbsent(event.planId(), k -> new ArrayList<>())
+            .add(event);
+    }
+
+    @Scheduled(fixedDelay = 5000) // 每5秒聚合一次
+    @Transactional
+    public void flush() {
+        buffer.forEach((planId, events) -> {
+            if (!events.isEmpty()) {
+                // 发布批量事件
+                eventPublisher.publishEvent(
+                    new BatchTasksCompletedEvent(planId, events)
+                );
+            }
+        });
+        buffer.clear();
+    }
+}
+```
+
+</details>
+
+---
+
+## 📋 速查表
+
+### 事件命名规范
+
+| ✅ 正确 (过去时) | ❌ 错误 (现在时) |
+|-----------------|------------------|
+| TaskCompletedEvent | TaskCompleteEvent |
+| SliceStatusChangedEvent | SliceStatusChangeEvent |
+| PlanCreatedEvent | PlanCreateEvent |
+| OutboxMessagePublishedEvent | OutboxMessagePublishEvent |
+
+### 注解组合
+
+| 场景 | 注解组合 |
+|------|---------|
+| 事务提交后处理 | `@TransactionalEventListener(phase = AFTER_COMMIT)`<br>`@Transactional(propagation = REQUIRES_NEW)` |
+| 立即处理 | `@EventListener` |
+| 异步处理 | `@EventListener`<br>`@Async` |
+| 条件处理 | `@EventListener(condition = "#event.status == 'COMPLETED'")` |
+
+### 错误处理策略
+
+| 错误类型 | 处理方式 |
+|---------|---------|
+| OptimisticLockingFailureException | 记录警告，跳过（其他线程已处理） |
+| IllegalStateException | 记录错误，依赖对账修复 |
+| 网络异常 | 重试或写入死信队列 |
+| 未知异常 | 记录错误，不抛出（让其他处理器继续） |
+
+---
+
+## 🔧 完整示例
+
+### 完整的领域事件定义
+
+<details>
+<summary>查看 TaskCompletedEvent 完整实现</summary>
 
 ```java
 package com.patra.ingest.domain.event;
@@ -109,7 +289,9 @@ public record TaskCompletedEvent(
 }
 ```
 
-### patra-ingest 事件示例
+</details>
+
+### 项目中的事件清单
 
 | 事件 | 触发时机 | 目的 |
 |-------|---------|---------|
@@ -121,387 +303,137 @@ public record TaskCompletedEvent(
 
 ---
 
-## 事件处理器
+## ⚠️ 常见问题与解决
 
-### 事件处理器模式
+### 问题 1: 事件重复处理
 
-**文件**: `patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/eventhandler/TaskCompletedEventHandler.java`
+**症状**: 同一事件被多次处理导致数据不一致
 
+**解决方案**:
 ```java
-@Component
-@RequiredArgsConstructor
-@Slf4j
-public class TaskCompletedEventHandler {
-
-  private final TaskRepository taskRepository;
-  private final PlanSliceRepository sliceRepository;
-  private final ApplicationEventPublisher eventPublisher;
-
-  /**
-   * 在事务提交后处理 TaskCompletedEvent。
-   *
-   * ✅ @TransactionalEventListener(phase = AFTER_COMMIT)
-   * ✅ @Transactional(propagation = REQUIRES_NEW)
-   */
-  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
-  public void handle(TaskCompletedEvent event) {
-    try {
-      log.debug("处理 TaskCompletedEvent taskId={} sliceId={}",
-          event.taskId(), event.sliceId());
-
-      // 1. 查询关联的 Task (与 Slice 1:1 关系)
-      TaskAggregate task = taskRepository.findBySliceId(event.sliceId())
-          .orElseThrow(() -> new IllegalStateException("Task 未找到"));
-
-      // 2. 使用领域服务计算新的 Slice 状态
-      SliceStatus newStatus = SliceStatusCalculator.calculate(task.getStatus());
-
-      // 3. 更新 Slice 聚合根
-      PlanSliceAggregate slice = sliceRepository.findById(event.sliceId())
-          .orElseThrow(() -> new IllegalStateException("Slice 未找到"));
-
-      SliceStatus oldStatus = slice.getStatus();
-
-      // ✅ 幂等性检查
-      if (oldStatus == newStatus) {
-        log.debug("Slice 状态未变化,跳过更新");
-        return;
-      }
-
-      slice.updateStatus(newStatus);
-      sliceRepository.save(slice);
-
-      log.info("Slice 状态已更新 sliceId={} {} -> {}",
-          event.sliceId(), oldStatus, newStatus);
-
-      // 4. 发布 SliceStatusChangedEvent 给下一个处理器
-      SliceStatusChangedEvent sliceEvent = SliceStatusChangedEvent.of(
-          event.sliceId(), event.planId(), oldStatus.getCode(), newStatus.getCode());
-      eventPublisher.publishEvent(sliceEvent);
-
-    } catch (OptimisticLockingFailureException e) {
-      // ✅ 乐观锁冲突: 其他线程已更新
-      log.warn("乐观锁冲突,跳过 sliceId={}", event.sliceId());
-    } catch (Exception e) {
-      // ✅ 记录错误,依赖对账任务修复
-      log.error("处理 TaskCompletedEvent 失败", e);
-    }
-  }
-}
-```
-
-### 核心处理器模式
-
-#### 1. 事务性事件监听器
-
-```java
-// ✅ GOOD: AFTER_COMMIT ensures event published only if transaction succeeds
-@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-@Transactional(propagation = Propagation.REQUIRES_NEW)
-public void handle(TaskCompletedEvent event) {
-  // Handler logic
-}
-```
-
-```java
-// ❌ BAD: BEFORE_COMMIT publishes even if transaction rolls back
-@EventListener
-public void handle(TaskCompletedEvent event) {
-  // Event visible even if transaction fails
-}
-```
-
-**Why AFTER_COMMIT:**
-- Event only visible if source transaction commits
-- Prevents ghost events from rollback scenarios
-- New transaction isolates handler failures
-
-#### 2. Idempotency Checks
-
-```java
-// ✅ GOOD: Check if work already done
-SliceStatus oldStatus = slice.getStatus();
+// ✅ 幂等性检查
 if (oldStatus == newStatus) {
-  log.debug("Status unchanged, skip update");
-  return;  // ✅ Idempotent
+    log.debug("状态未变化，跳过更新");
+    return;  // 幂等处理
 }
-```
 
-#### 3. Optimistic Lock Handling
-
-```java
-// ✅ GOOD: Handle concurrent updates gracefully
+// ✅ 使用乐观锁
 try {
-  slice.updateStatus(newStatus);
-  sliceRepository.save(slice);
+    slice.updateStatus(newStatus);
+    sliceRepository.save(slice);
 } catch (OptimisticLockingFailureException e) {
-  // ✅ Another thread already updated, skip
-  log.warn("Optimistic lock conflict, skip");
+    log.warn("并发更新，跳过");
 }
 ```
 
-#### 4. Error Handling Strategy
+### 问题 2: 事件循环
 
+**症状**: A → B → A 导致无限循环
+
+**解决方案**:
 ```java
-// ✅ GOOD: Log errors, don't crash
-try {
-  // Handler logic
-} catch (Exception e) {
-  log.error("Handler failed, rely on reconciliation", e);
-  // ✅ Don't throw: let other handlers continue
-}
-```
+// ❌ 错误: 循环事件链
+handleTaskCompleted() → publishEvent(TaskQueuedEvent)
+handleTaskQueued() → publishEvent(TaskCompletedEvent)
 
----
-
-## Event Chains
-
-### Status Propagation Chain
-
-patra-ingest uses **event chains** to propagate status changes:
-
-```
-Task completes
-    ↓
-TaskCompletedEvent (taskId=1, status=SUCCEEDED)
-    ↓
-TaskCompletedEventHandler
-    ↓ (calculates Slice status)
-    ↓
-SliceStatusChangedEvent (sliceId=1, PENDING → FINISHED)
-    ↓
-SliceStatusChangedEventHandler
-    ↓ (aggregates all Slices for Plan)
-    ↓
-PlanAggregate.updateStatus(COMPLETED)
-```
-
-### Event Chain Benefits
-
-| Benefit | Description |
-|---------|-------------|
-| **Loose coupling** | Task doesn't know about Slice or Plan |
-| **Single responsibility** | Each handler has one job |
-| **Eventually consistent** | Updates propagate asynchronously |
-| **Testable** | Mock event publisher to test in isolation |
-
-### Event Chain Example
-
-**Scenario**: PubMed harvest completes
-
-```
-1. Task execution completes
-   → TaskAggregate.markSucceeded()
-   → eventPublisher.publishEvent(TaskCompletedEvent.of(taskId, sliceId, planId, "SUCCEEDED", now))
-
-2. TaskCompletedEventHandler
-   → Calculate SliceStatus: SUCCEEDED → FINISHED
-   → Update PlanSliceAggregate.status = FINISHED
-   → eventPublisher.publishEvent(SliceStatusChangedEvent.of(sliceId, planId, "PENDING", "FINISHED"))
-
-3. SliceStatusChangedEventHandler
-   → Query all Slices for Plan
-   → Aggregate: if all FINISHED → Plan.COMPLETED
-   → Update PlanAggregate.status = COMPLETED
-```
-
----
-
-## Integration with Outbox
-
-### Events to External Systems
-
-For **cross-service communication**, use the **Outbox Pattern** (see [outbox-pattern.md](outbox-pattern.md)).
-
-```java
-// ✅ GOOD: Write to Outbox table in same transaction
-@Transactional
-public void ingestPlan(PlanIngestionCommand command) {
-  // 1. Create domain aggregate
-  PlanAggregate plan = PlanAggregate.create(...);
-  planRepository.save(plan);
-
-  // 2. Write to Outbox (same transaction)
-  OutboxMessage message = OutboxMessage.builder()
-      .channel("INGEST_PLAN")
-      .dedupKey("PLAN_" + plan.getId())
-      .aggregateType("PLAN")
-      .aggregateId(plan.getId())
-      .payloadJson(toJson(plan))
-      .build();
-  outboxRepository.saveOrUpdate(message);
-
-  // ✅ Both saved atomically
-}
-```
-
-### Internal vs External Events
-
-| Type | Mechanism | Use Case |
-|------|-----------|----------|
-| **Internal Events** | Spring `ApplicationEventPublisher` | Aggregate status propagation within service |
-| **External Events** | Outbox Pattern + MQ | Cross-service integration, downstream notifications |
-
-**Internal Event Example:**
-```java
-// ✅ Within patra-ingest service
-eventPublisher.publishEvent(TaskCompletedEvent.of(...));
-```
-
-**External Event Example:**
-```java
-// ✅ To downstream services (patra-workflow, analytics)
-OutboxMessage msg = OutboxMessage.builder()
-    .channel("TASK_COMPLETED")
-    .dedupKey("TASK_" + taskId)
-    .payloadJson(toJson(taskCompletedData))
-    .build();
-outboxRepository.saveOrUpdate(msg);
-```
-
----
-
-## Best Practices
-
-### ✅ DO
-
-| Practice | Reason |
-|----------|--------|
-| **Use `record` for events** | Immutability, concise syntax |
-| **Past tense naming** | Events describe what happened |
-| **Include all context** | Handlers shouldn't query for more data |
-| **Auto-populate timestamps** | Consistent event timing |
-| **Use AFTER_COMMIT listeners** | Prevent ghost events |
-| **REQUIRES_NEW transactions** | Isolate handler failures |
-| **Idempotency checks** | Handle duplicate events |
-| **Handle OptimisticLockingFailureException** | Gracefully handle concurrent updates |
-| **Log, don't throw** | Let other handlers continue |
-
-### ❌ DON'T
-
-| Anti-pattern | Problem |
-|--------------|---------|
-| **Mutable event classes** | Events can be modified after publish |
-| **Present tense names** | `TaskCompleteEvent` sounds like a command |
-| **Query in handlers** | Breaks loose coupling, adds latency |
-| **Synchronous handlers** | Blocks source transaction |
-| **Throwing exceptions** | Stops event processing chain |
-| **Skipping idempotency** | Duplicate processing on retries |
-| **Circular event chains** | A → B → A causes infinite loop |
-
-### Event Naming Convention
-
-```java
-// ✅ GOOD: Past tense, describes state change
-TaskCompletedEvent
-SliceStatusChangedEvent
-OutboxMessagePublishedEvent
-PlanCreatedEvent
-
-// ❌ BAD: Present tense, sounds like command
-TaskCompleteEvent
-SliceStatusChangeEvent
-OutboxMessagePublishEvent
-PlanCreateEvent
-```
-
-### Handler Error Strategy
-
-```java
-// ✅ GOOD: Defensive error handling
-@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-@Transactional(propagation = Propagation.REQUIRES_NEW)
-public void handle(TaskCompletedEvent event) {
-  try {
-    // Handler logic
-  } catch (OptimisticLockingFailureException e) {
-    // ✅ Expected: concurrent update, skip
-    log.warn("Optimistic lock conflict, skip taskId={}", event.taskId());
-  } catch (Exception e) {
-    // ✅ Unexpected: log error, rely on reconciliation
-    log.error("Handler failed for taskId={}", event.taskId(), e);
-    // DON'T throw: let other handlers continue
-  }
-}
-```
-
-### Testing Events
-
-```java
-// ✅ GOOD: Test event publishing
-@Test
-void should_publish_task_completed_event() {
-  // Given
-  TaskAggregate task = createTask();
-  ArgumentCaptor<TaskCompletedEvent> eventCaptor =
-      ArgumentCaptor.forClass(TaskCompletedEvent.class);
-
-  // When
-  task.markSucceeded(Instant.now());
-  orchestrator.completeTask(task);
-
-  // Then
-  verify(eventPublisher).publishEvent(eventCaptor.capture());
-  TaskCompletedEvent event = eventCaptor.getValue();
-  assertThat(event.taskId()).isEqualTo(task.getId());
-  assertThat(event.status()).isEqualTo("SUCCEEDED");
-}
-```
-
-```java
-// ✅ GOOD: Test handler logic
-@Test
-void should_update_slice_status_on_task_completed() {
-  // Given
-  TaskCompletedEvent event = TaskCompletedEvent.of(
-      taskId, sliceId, planId, "SUCCEEDED", Instant.now());
-  when(taskRepository.findBySliceId(sliceId))
-      .thenReturn(Optional.of(successfulTask));
-  when(sliceRepository.findById(sliceId))
-      .thenReturn(Optional.of(pendingSlice));
-
-  // When
-  handler.handle(event);
-
-  // Then
-  verify(sliceRepository).save(argThat(slice ->
-      slice.getStatus() == SliceStatus.FINISHED));
-  verify(eventPublisher).publishEvent(any(SliceStatusChangedEvent.class));
-}
-```
-
-### Avoiding Circular Events
-
-```java
-// ❌ BAD: Circular event chain
-@TransactionalEventListener
-public void handleTaskCompleted(TaskCompletedEvent event) {
-  // ...
-  eventPublisher.publishEvent(new TaskQueuedEvent(...));  // ❌ Creates new task!
-}
-
-@TransactionalEventListener
-public void handleTaskQueued(TaskQueuedEvent event) {
-  // ...
-  eventPublisher.publishEvent(new TaskCompletedEvent(...));  // ❌ Marks completed!
-}
-// Result: Infinite loop!
-```
-
-```java
-// ✅ GOOD: Linear event chain
+// ✅ 正确: 线性事件链
 TaskCompletedEvent → SliceStatusChangedEvent → PlanStatusChangedEvent
-// Each event flows in one direction
+```
+
+### 问题 3: 事务幻读
+
+**症状**: 事务回滚但事件已发布
+
+**解决方案**:
+```java
+// ✅ 使用 AFTER_COMMIT
+@TransactionalEventListener(phase = AFTER_COMMIT)
+@Transactional(propagation = REQUIRES_NEW)
 ```
 
 ---
 
-**Related Files:**
-- [outbox-pattern.md](outbox-pattern.md) - External event publishing via Outbox
-- [domain-modeling-patterns.md](domain-modeling-patterns.md) - Domain event examples
-- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - Event publishing from orchestrators
+## 🔗 Outbox 模式集成 {#outbox-pattern-integration}
+
+### 内部 vs 外部事件
+
+| 类型 | 机制 | 使用场景 |
+|-----|-----|---------|
+| **内部事件** | Spring ApplicationEventPublisher | 服务内聚合状态传播 |
+| **外部事件** | Outbox Pattern + MQ | 跨服务集成、下游通知 |
+
+### 跨服务事件实现
+
+```java
+@Transactional
+public void completeTask(Long taskId) {
+    // 1. 更新聚合
+    TaskAggregate task = taskRepository.findById(taskId).orElseThrow();
+    task.markCompleted();
+    taskRepository.save(task);
+
+    // 2. 写入 Outbox (同一事务)
+    OutboxMessage message = OutboxMessage.builder()
+        .channel("TASK_COMPLETED")
+        .dedupKey("TASK_" + taskId)
+        .aggregateType("Task")
+        .aggregateId(taskId)
+        .payloadJson(toJson(task))
+        .build();
+    outboxRepository.saveOrUpdate(message);
+    // ✅ 原子性保证
+}
+```
 
 ---
 
-**📝 Status**: ✅ **COMPLETE** - Comprehensive guide to Event-Driven Architecture from patra-ingest with Spring Events integration.
+## ✅ 最佳实践清单
+
+### 设计原则
+- [ ] 使用 record 定义不可变事件
+- [ ] 使用过去时命名（TaskCompletedEvent 而非 TaskCompleteEvent）
+- [ ] 包含完整上下文（避免处理器查询）
+- [ ] 自动填充 occurredAt 时间戳
+
+### 处理器实现
+- [ ] AFTER_COMMIT + REQUIRES_NEW 组合
+- [ ] 幂等性检查（状态对比）
+- [ ] 处理 OptimisticLockingFailureException
+- [ ] 记录错误但不抛出异常
+
+### 测试要点
+- [ ] 测试事件发布
+- [ ] 测试处理器逻辑
+- [ ] 测试幂等性
+- [ ] 测试并发场景
+
+---
+
+## 📚 深入学习
+
+<details>
+<summary>高级主题</summary>
+
+### 事件溯源 (Event Sourcing)
+- 使用事件作为唯一真相源
+- 通过重放事件重建状态
+- 适用于审计要求高的场景
+
+### CQRS + 事件驱动
+- 命令端发布事件
+- 查询端订阅并更新读模型
+- 实现读写分离
+
+### Saga 模式
+- 长事务的分布式协调
+- 补偿事务处理失败
+- 基于事件的编排
+
+</details>
+
+---
+
+**相关文档**:
+- [outbox-pattern.md](outbox-pattern.md) - 外部事件发布
+- [domain-modeling-patterns.md](domain-modeling-patterns.md) - 领域事件示例
+- [orchestrator-coordinator-patterns.md](orchestrator-coordinator-patterns.md) - 编排器事件发布
