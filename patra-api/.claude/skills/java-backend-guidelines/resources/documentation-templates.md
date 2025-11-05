@@ -40,7 +40,8 @@ Java 项目文档标准模板，确保文档一致性和完整性。
 [简要描述模块的职责和在系统中的角色]
 
 ## 🏗️ 模块结构
-\`\`\`
+
+```plain
 patra-{service}/
 ├── -api/         # 外部契约
 ├── -domain/      # 领域模型
@@ -48,7 +49,7 @@ patra-{service}/
 ├── -infra/       # 基础设施
 ├── -adapter/     # 适配器
 └── -boot/        # 启动器
-\`\`\`
+```
 
 ## 🔑 核心概念
 - **[概念1]**: [说明]
@@ -56,10 +57,10 @@ patra-{service}/
 
 ## 🚀 快速开始
 ### 本地运行
-\`\`\`bash
-mvn clean install
-mvn spring-boot:run
-\`\`\`
+```bash
+./mvnw clean install
+./mvnw spring-boot:run
+```
 
 ### 配置说明
 | 配置项 | 默认值 | 说明 |
@@ -80,10 +81,10 @@ mvn spring-boot:run
 - 被依赖: [其他模块]
 
 ## 🧪 测试
-\`\`\`bash
-mvn test                    # 单元测试
-mvn verify                  # 集成测试
-\`\`\`
+```bash
+./mvnw test                 # 单元测试
+./mvnw verify               # 集成测试
+```
 
 ## 📚 相关文档
 - [架构设计](../ARCHITECTURE.md)
@@ -98,132 +99,475 @@ mvn verify                  # 集成测试
 
 ### 2. package-info.java 模板
 
-#### 领域层包文档
-```java
-/**
- * 领域模型包 - [包名]
- *
- * <h2>职责</h2>
- * <p>[描述该包的主要职责和边界]</p>
- *
- * <h2>核心概念</h2>
- * <ul>
- *   <li>{@link Aggregate} - 聚合根，维护业务不变量</li>
- *   <li>{@link Entity} - 实体，具有唯一标识</li>
- *   <li>{@link ValueObject} - 值对象，不可变</li>
- * </ul>
- *
- * <h2>设计决策</h2>
- * <p>[说明重要的设计决策和原因]</p>
- *
- * <h2>使用示例</h2>
- * <pre>{@code
- * // 创建聚合
- * var aggregate = Aggregate.create(command);
- * aggregate.execute(action);
- * }</pre>
- *
- * <h2>注意事项</h2>
- * <ul>
- *   <li>该包为纯 Java，不依赖框架</li>
- *   <li>所有业务规则在此实现</li>
- *   <li>通过事件进行跨聚合通信</li>
- * </ul>
- *
- * @since 1.0.0
- * @author [作者]
- */
-package com.patra.{service}.domain.model;
+> ⭐ **创建原则**：必须先阅读代码理解包的职责，参考已有示范，使用中文描述，UTF-8 no BOM 编码
+
+#### 📋 质量标准检查清单
+```
+✅ 开头简要描述（1-2句话）
+✅ <h2>职责</h2> 小节
+✅ <h2>核心组件</h2> 小节（列出主要类）
+✅ <h2>使用示例</h2> 小节（实际代码）
+✅ @author linqibin
+✅ @since 0.1.0
+✅ 使用中文描述
+✅ UTF-8 no BOM 编码
 ```
 
-#### 应用层包文档
+---
+
+#### Domain 层 - Aggregate/Entity 包
+
 ```java
 /**
- * 应用层用例包 - [用例名称]
+ * [聚合根/实体] 包。
  *
- * <h2>用例说明</h2>
- * <p>[描述该用例的业务目标和流程]</p>
+ * <p>本包定义 [业务概念] 的领域模型，遵循 DDD 设计原则。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>封装业务规则和不变性约束
+ *   <li>管理聚合内的一致性边界
+ *   <li>发布领域事件
+ * </ul>
  *
  * <h2>核心组件</h2>
  * <ul>
- *   <li>{@link Orchestrator} - 编排器，协调用例执行</li>
- *   <li>{@link Coordinator} - 协调器，处理特定关注点</li>
- *   <li>{@link Command} - 命令，用例输入</li>
+ *   <li>{@link AggregateRoot} - 聚合根，管理一致性边界
+ *   <li>{@link Entity} - 实体，有唯一标识
  * </ul>
  *
- * <h2>事务边界</h2>
- * <p>所有编排器方法使用 @Transactional 管理事务</p>
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>不变性约束</strong>: 通过构造函数和方法确保对象始终有效
+ *   <li><strong>富领域模型</strong>: 业务逻辑封装在领域对象中
+ *   <li><strong>聚合边界</strong>: 仅通过聚合根访问内部实体
+ * </ul>
  *
- * <h2>执行流程</h2>
- * <ol>
- *   <li>接收命令</li>
- *   <li>验证输入</li>
- *   <li>执行业务逻辑</li>
- *   <li>持久化结果</li>
- *   <li>发布事件</li>
- * </ol>
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * // 创建聚合根
+ * var aggregate = AggregateRoot.create(params);
  *
- * @since 1.0.0
- * @see com.patra.{service}.domain
+ * // 业务操作
+ * aggregate.businessMethod();
+ *
+ * // 持久化（通过仓储）
+ * repository.save(aggregate);
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
-package com.patra.{service}.app.usecase.{feature};
+package com.patra.{service}.domain.model.aggregate;
 ```
 
-#### 适配器层包文档
+#### Domain 层 - Value Object 包
+
 ```java
 /**
- * REST API 适配器包
+ * [值对象] 包。
+ *
+ * <p>本包定义 [业务概念] 的值对象，遵循不可变性原则。
  *
  * <h2>职责</h2>
- * <p>处理 HTTP 请求，转换为应用层命令</p>
- *
- * <h2>端点列表</h2>
  * <ul>
- *   <li>POST /api/v1/resource - 创建资源</li>
- *   <li>GET /api/v1/resource/{id} - 获取资源</li>
- *   <li>PUT /api/v1/resource/{id} - 更新资源</li>
- *   <li>DELETE /api/v1/resource/{id} - 删除资源</li>
+ *   <li>封装无标识的业务概念
+ *   <li>提供类型安全的领域值
+ *   <li>实现基于值的相等性比较
  * </ul>
  *
- * <h2>错误处理</h2>
- * <p>使用 ProblemDetail (RFC 7807) 返回错误</p>
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link ValueObject1} - [说明]
+ *   <li>{@link ValueObject2} - [说明]
+ * </ul>
  *
- * <h2>验证</h2>
- * <p>使用 @Valid 进行请求验证</p>
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>不可变性</strong>: 所有字段为 final，无 setter
+ *   <li><strong>值相等</strong>: 重写 equals() 和 hashCode()
+ *   <li><strong>自验证</strong>: 构造时验证有效性
+ * </ul>
  *
- * @since 1.0.0
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * var vo = new ValueObject(value);
+ * // 修改通过创建新对象
+ * var newVo = vo.withNewValue(newValue);
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.domain.model.vo;
+```
+
+#### Domain 层 - Repository Port 包
+
+```java
+/**
+ * 仓储端口接口包。
+ *
+ * <p>本包定义领域层的数据访问契约（Port），由基础设施层实现。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>定义聚合根的持久化接口
+ *   <li>提供领域语言的查询方法
+ *   <li>隔离领域层与数据访问细节
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link AggregateRepository} - 聚合根仓储接口
+ * </ul>
+ *
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>领域语言</strong>: 方法名使用业务术语
+ *   <li><strong>仅聚合根</strong>: 不为实体单独提供仓储
+ *   <li><strong>纯接口</strong>: 不包含实现细节
+ * </ul>
+ *
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * public interface ProvenanceRepository {
+ *     void save(Provenance aggregate);
+ *     Optional<Provenance> findById(ProvenanceId id);
+ * }
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.domain.port;
+```
+
+---
+
+#### App 层 - Orchestrator 包
+
+```java
+/**
+ * [UseCase名称] 编排器包。
+ *
+ * <p>本包实现 [UseCase] 的应用层编排逻辑，协调领域对象、仓储和基础设施服务完成业务用例。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>接收来自 Adapter 层的 Command/Query
+ *   <li>协调 Domain 层的聚合根和领域服务
+ *   <li>通过 Port 接口调用基础设施服务
+ *   <li>管理事务边界
+ *   <li>发布领域事件（通过 Outbox）
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxOrchestrator} - 主编排器
+ *   <li>{@link XxxCoordinator} - 协调器（子流程）
+ *   <li>{@link XxxUseCase} - 用例接口
+ * </ul>
+ *
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>薄应用层</strong>: 不包含业务逻辑，仅协调
+ *   <li><strong>事务一致性</strong>: 使用 @Transactional 管理事务边界
+ *   <li><strong>依赖方向</strong>: App → Domain, App → Port, App ← Adapter
+ * </ul>
+ *
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * @Service
+ * @RequiredArgsConstructor
+ * public class XxxOrchestrator {
+ *     private final XxxRepository repository;
+ *
+ *     @Transactional
+ *     public XxxId execute(XxxCommand command) {
+ *         // 1. 调用领域逻辑
+ *         var aggregate = Xxx.create(command);
+ *
+ *         // 2. 持久化
+ *         repository.save(aggregate);
+ *
+ *         // 3. 发布事件
+ *         outbox.publish(aggregate.getDomainEvents());
+ *
+ *         return aggregate.getId();
+ *     }
+ * }
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.app.usecase.xxx;
+```
+
+#### App 层 - Command/DTO 包
+
+```java
+/**
+ * [UseCase] 命令/DTO 包。
+ *
+ * <p>本包定义应用层的输入命令和输出 DTO。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>封装用例的输入参数（Command）
+ *   <li>封装用例的输出结果（DTO）
+ *   <li>提供与领域模型不同的视图
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxCommand} - 输入命令
+ *   <li>{@link XxxResult} - 输出结果
+ * </ul>
+ *
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>不可变性</strong>: Command 和 DTO 应为不可变对象
+ *   <li><strong>验证</strong>: Command 可包含基本验证逻辑
+ *   <li><strong>转换</strong>: 通过 Converter 与领域模型互转
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.app.usecase.xxx.command;
+```
+
+---
+
+#### Adapter 层 - REST 包
+
+```java
+/**
+ * REST API 适配器包。
+ *
+ * <p>本包实现驱动适配器，接收 HTTP 请求并转换为应用层用例调用。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>实现 API 契约（patra-xxx-api）
+ *   <li>验证请求 DTO（@Valid）
+ *   <li>委托给应用层编排器
+ *   <li>转换领域结果为 API 响应
+ *   <li>映射领域异常为 HTTP 响应
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxEndpointImpl} - REST 端点实现
+ *   <li>{@link XxxApiConverter} - DTO 转换器
+ * </ul>
+ *
+ * <h2>命名约定</h2>
+ * <ul>
+ *   <li>端点实现: {@code *EndpointImpl}
+ *   <li>API 转换器: {@code *ApiConverter}
+ * </ul>
+ *
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * @RestController
+ * @RequiredArgsConstructor
+ * public class XxxEndpointImpl implements XxxEndpoint {
+ *     private final XxxOrchestrator orchestrator;
+ *
+ *     @Override
+ *     public XxxResponse createXxx(@Valid @RequestBody CreateXxxRequest request) {
+ *         var command = converter.toCommand(request);
+ *         var result = orchestrator.execute(command);
+ *         return converter.toResponse(result);
+ *     }
+ * }
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
  */
 package com.patra.{service}.adapter.rest;
 ```
 
-#### 基础设施层包文档
+#### Adapter 层 - Scheduler/MQ 包
+
 ```java
 /**
- * 持久化基础设施包
+ * [Scheduler/MQ] 适配器包。
+ *
+ * <p>本包实现驱动适配器，处理定时任务或消息队列事件。
  *
  * <h2>职责</h2>
- * <p>实现领域端口，提供数据持久化</p>
- *
- * <h2>技术选型</h2>
  * <ul>
- *   <li>MyBatis-Plus - ORM 框架</li>
- *   <li>MapStruct - DO ↔ Domain 转换</li>
- *   <li>MySQL - 数据库</li>
+ *   <li>处理定时触发的任务
+ *   <li>消费消息队列事件
+ *   <li>转换外部事件为应用层命令
+ *   <li>处理异步任务
  * </ul>
  *
- * <h2>设计模式</h2>
- * <p>Repository 模式，隔离领域与数据访问</p>
- *
- * <h2>注意事项</h2>
+ * <h2>核心组件</h2>
  * <ul>
- *   <li>DO 对象不能离开基础设施层</li>
- *   <li>所有查询通过 Repository 接口</li>
- *   <li>复杂查询使用 XML Mapper</li>
+ *   <li>{@link XxxScheduler} - 定时任务
+ *   <li>{@link XxxListener} - 消息监听器
  * </ul>
  *
- * @since 1.0.0
+ * @author linqibin
+ * @since 0.1.0
  */
-package com.patra.{service}.infra.persistence;
+package com.patra.{service}.adapter.scheduler;
+```
+
+---
+
+#### Infra 层 - Repository 实现包
+
+```java
+/**
+ * 仓储实现包。
+ *
+ * <p>本包实现 Domain 层定义的 Repository Port 接口，提供数据持久化能力。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>实现仓储接口（Port）
+ *   <li>领域对象与持久化对象互转
+ *   <li>封装数据访问技术细节（MyBatis）
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxRepositoryImpl} - 仓储实现
+ *   <li>{@link XxxConverter} - 对象转换器
+ *   <li>{@link XxxMapper} - MyBatis Mapper
+ *   <li>{@link XxxDO} - 数据库对象
+ * </ul>
+ *
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>隔离</strong>: DO 对象不能离开基础设施层
+ *   <li><strong>转换</strong>: 使用 MapStruct 进行 DO ↔ Domain 转换
+ *   <li><strong>封装</strong>: 隐藏 MyBatis 实现细节
+ * </ul>
+ *
+ * <h2>使用示例</h2>
+ * <pre>{@code
+ * @Repository
+ * @RequiredArgsConstructor
+ * public class XxxRepositoryImpl implements XxxRepository {
+ *     private final XxxMapper mapper;
+ *     private final XxxConverter converter;
+ *
+ *     @Override
+ *     public void save(Xxx aggregate) {
+ *         var entity = converter.toEntity(aggregate);
+ *         mapper.insert(entity);
+ *     }
+ * }
+ * }</pre>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.infra.persistence.repository;
+```
+
+#### Infra 层 - Mapper/Entity 包
+
+```java
+/**
+ * MyBatis Mapper 和数据库实体包。
+ *
+ * <p>本包定义 MyBatis Mapper 接口和数据库实体（DO）。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>定义数据库表映射（DO）
+ *   <li>定义 SQL 操作接口（Mapper）
+ *   <li>支持复杂查询（XML Mapper）
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxDO} - 数据库对象
+ *   <li>{@link XxxMapper} - MyBatis Mapper
+ * </ul>
+ *
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>表对应</strong>: 一个 DO 对应一个表
+ *   <li><strong>审计字段</strong>: 继承 BaseDO 获得审计能力
+ *   <li><strong>复杂查询</strong>: 使用 XML Mapper
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.infra.persistence.mapper;
+```
+
+---
+
+#### API 层 - DTO 包
+
+```java
+/**
+ * [功能模块] REST API DTO 包。
+ *
+ * <p>本包定义对外暴露的 REST API 数据传输对象（DTO）。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>定义请求 DTO（Request）
+ *   <li>定义响应 DTO（Response）
+ *   <li>定义验证规则（@Valid 注解）
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxRequest} - 请求 DTO
+ *   <li>{@link XxxResponse} - 响应 DTO
+ * </ul>
+ *
+ * <h2>设计原则</h2>
+ * <ul>
+ *   <li><strong>不可变性</strong>: DTO 应为不可变对象
+ *   <li><strong>验证</strong>: 使用 Bean Validation 注解
+ *   <li><strong>版本化</strong>: 通过 URL 版本管理 API 演进
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.api.dto.xxx;
+```
+
+#### API 层 - Endpoint 接口包
+
+```java
+/**
+ * REST API 端点接口包。
+ *
+ * <p>本包定义 OpenAPI 端点接口契约，由 Adapter 层实现。
+ *
+ * <h2>职责</h2>
+ * <ul>
+ *   <li>定义 REST API 契约
+ *   <li>使用 OpenAPI 注解描述 API
+ *   <li>定义请求/响应格式
+ * </ul>
+ *
+ * <h2>核心组件</h2>
+ * <ul>
+ *   <li>{@link XxxEndpoint} - API 端点接口
+ * </ul>
+ *
+ * @author linqibin
+ * @since 0.1.0
+ */
+package com.patra.{service}.api.endpoint;
 ```
 
 ### 3. API 文档模板
@@ -246,26 +590,26 @@ package com.patra.{service}.infra.persistence;
 - `Authorization: Bearer {token}`
 
 **请求体**:
-\`\`\`json
+```json
 {
   "name": "资源名称",
   "type": "资源类型",
   "config": {}
 }
-\`\`\`
+```
 
 **响应**:
 - **200 OK**
-\`\`\`json
+```json
 {
   "id": "12345",
   "name": "资源名称",
   "createdAt": "2024-11-05T10:00:00Z"
 }
-\`\`\`
+```
 
 - **400 Bad Request**
-\`\`\`json
+```json
 {
   "type": "about:blank",
   "title": "Bad Request",
@@ -273,7 +617,7 @@ package com.patra.{service}.infra.persistence;
   "detail": "名称不能为空",
   "instance": "/api/v1/resources"
 }
-\`\`\`
+```
 
 ### 2. 获取资源
 **端点**: `GET /api/v1/resources/{id}`
@@ -292,15 +636,15 @@ package com.patra.{service}.infra.persistence;
 ## 示例代码
 
 ### cURL
-\`\`\`bash
+```bash
 curl -X POST https://api.patra.com/api/v1/resources \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {token}" \
   -d '{"name":"测试资源"}'
-\`\`\`
+```
 
 ### Java
-\`\`\`java
+```java
 var client = HttpClient.newHttpClient();
 var request = HttpRequest.newBuilder()
     .uri(URI.create("https://api.patra.com/api/v1/resources"))
@@ -309,7 +653,7 @@ var request = HttpRequest.newBuilder()
     .POST(BodyPublishers.ofString("{\"name\":\"测试资源\"}"))
     .build();
 var response = client.send(request, BodyHandlers.ofString());
-\`\`\`
+```
 ```
 
 ### 4. 架构文档模板
@@ -384,35 +728,6 @@ var response = client.send(request, BodyHandlers.ofString());
 □ 配置说明
 □ 测试指南
 □ 相关文档链接
-```
-
-## 🔧 生成工具
-
-### 自动生成 package-info.java
-```bash
-# 查找缺失 package-info.java 的包
-find . -type d -name "java" -exec find {} -type d \
-  ! -exec test -e "{}/package-info.java" \; -print \;
-
-# 为包生成基础 package-info.java
-echo '/**
- * [包说明]
- *
- * @since 1.0.0
- */
-package com.patra.service.package;' > package-info.java
-```
-
-### 检查文档完整性
-```bash
-# 检查所有模块是否有 README.md
-find . -name "patra-*" -type d -maxdepth 1 \
-  ! -exec test -e "{}/README.md" \; -print
-
-# 统计 package-info.java 覆盖率
-total=$(find . -type d -path "*/src/main/java/*" | wc -l)
-covered=$(find . -name "package-info.java" | wc -l)
-echo "Package documentation coverage: $covered/$total"
 ```
 
 ## 📚 参考标准
