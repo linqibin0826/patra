@@ -22,16 +22,16 @@ public final class RegistryKeyStandardizer {
   /**
    * 返回归一化的操作键,当输入为 null/空白时返回 {@code ALL}。
    *
-   * <p>保留原始大小写以向后兼容现有配置。
+   * <p>统一转换为大写以确保标准化和一致性。
    *
    * @param operationType 原始操作类型
-   * @return 修剪后的操作键或 {@code ALL}
+   * @return 修剪并转为大写的操作键或 {@code ALL}
    */
   public static String toOperationKeyOrAll(String operationType) {
     if (operationType == null || operationType.isBlank()) {
       return RegistryKeyPlaceholders.ALL;
     }
-    return operationType.trim();
+    return operationType.trim().toUpperCase(Locale.ROOT);
   }
 
   /**
