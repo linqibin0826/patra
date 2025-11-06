@@ -403,6 +403,7 @@ class ProvenanceConfigRepositoryMpImplTest {
       RegProvenanceDO provenanceDO = createProvenanceDO(TEST_PROVENANCE_ID, "PUBMED", "PubMed");
       when(provenanceMapper.selectById(TEST_PROVENANCE_ID)).thenReturn(provenanceDO);
       Provenance provenance = org.mockito.Mockito.mock(Provenance.class);
+      when(provenance.id()).thenReturn(TEST_PROVENANCE_ID);
       when(converter.toDomain(provenanceDO)).thenReturn(provenance);
 
       // Mock 各种配置查询
@@ -512,6 +513,7 @@ class ProvenanceConfigRepositoryMpImplTest {
       RegProvenanceDO provenanceDO = createProvenanceDO(TEST_PROVENANCE_ID, "PUBMED", "PubMed");
       when(provenanceMapper.selectById(TEST_PROVENANCE_ID)).thenReturn(provenanceDO);
       Provenance provenance = org.mockito.Mockito.mock(Provenance.class);
+      when(provenance.id()).thenReturn(TEST_PROVENANCE_ID);
       when(converter.toDomain(provenanceDO)).thenReturn(provenance);
 
       RegProvWindowOffsetCfgDO windowOffsetDO = createWindowOffsetCfgDO();
@@ -559,6 +561,7 @@ class ProvenanceConfigRepositoryMpImplTest {
       RegProvenanceDO provenanceDO = createProvenanceDO(TEST_PROVENANCE_ID, "PUBMED", "PubMed");
       when(provenanceMapper.selectById(TEST_PROVENANCE_ID)).thenReturn(provenanceDO);
       Provenance provenance = org.mockito.Mockito.mock(Provenance.class);
+      when(provenance.id()).thenReturn(TEST_PROVENANCE_ID);
       when(converter.toDomain(provenanceDO)).thenReturn(provenance);
 
       when(windowOffsetCfgMapper.selectActiveMerged(
