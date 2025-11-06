@@ -1,5 +1,5 @@
 #!/bin/bash
-# 纯 Shell 实现的技能激活提示 hook
+# 最终版技能激活提示 hook
 # 依赖: jq (JSON 处理器)
 
 set -e
@@ -10,16 +10,19 @@ trap 'exit 0' ERR
 # 从 stdin 读取 JSON 输入
 INPUT=$(cat)
 
-# 提取 prompt 字段并转为小写
-PROMPT=$(echo "$INPUT" | jq -r '.prompt // ""' | tr '[:upper:]' '[:lower:]')
+# 提取 prompt 字段
+PROMPT_ORIGINAL=$(echo "$INPUT" | jq -r '.prompt // ""')
 
 # 如果 prompt 为空,静默退出
-if [ -z "$PROMPT" ]; then
+if [ -z "$PROMPT_ORIGINAL" ]; then
     exit 0
 fi
 
+# 转换为小写（用于英文匹配）
+PROMPT_LOWER=$(echo "$PROMPT_ORIGINAL" | awk '{print tolower($0)}')
+
 # 加载技能规则
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$HOME/project}"
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-/Users/linqibin/Desktop/Patra-api}"
 RULES_FILE="$PROJECT_DIR/.claude/skills/skill-rules.json"
 
 # 如果规则文件不存在,静默退出
@@ -36,6 +39,18 @@ SKILL_NAMES=$(jq -r '.skills | keys[]' "$RULES_FILE")
 
 # 检查每个技能
 while IFS= read -r SKILL_NAME; do
+    # 检查是否废弃
+    DEPRECATED=$(jq -r ".skills[\"$SKILL_NAME\"].deprecated // false" "$RULES_FILE")
+    if [ "$DEPRECATED" = "true" ]; then
+        continue
+    fi
+
+    # 检查 enforcement 级别
+    ENFORCEMENT=$(jq -r ".skills[\"$SKILL_NAME\"].enforcement // \"suggest\"" "$RULES_FILE")
+    if [ "$ENFORCEMENT" = "block" ]; then
+        continue
+    fi
+
     # 提取关键字列表
     KEYWORDS=$(jq -r ".skills[\"$SKILL_NAME\"].promptTriggers.keywords[]? // empty" "$RULES_FILE" 2>/dev/null || true)
 
@@ -43,8 +58,17 @@ while IFS= read -r SKILL_NAME; do
     MATCHED=false
     while IFS= read -r KEYWORD; do
         [ -z "$KEYWORD" ] && continue
-        KEYWORD_LOWER=$(echo "$KEYWORD" | tr '[:upper:]' '[:lower:]')
-        if echo "$PROMPT" | grep -qF "$KEYWORD_LOWER"; then
+
+        # 统一使用小写匹配（对中英文都有效）
+        KEYWORD_LOWER=$(echo "$KEYWORD" | awk '{print tolower($0)}')
+
+        # 同时检查原始文本和小写文本
+        if echo "$PROMPT_LOWER" | grep -qF "$KEYWORD_LOWER"; then
+            MATCHED=true
+            break
+        fi
+        # 也检查原始文本（对中文重要）
+        if echo "$PROMPT_ORIGINAL" | grep -qF "$KEYWORD"; then
             MATCHED=true
             break
         fi
@@ -56,7 +80,7 @@ while IFS= read -r SKILL_NAME; do
         while IFS= read -r PATTERN; do
             [ -z "$PATTERN" ] && continue
             # 使用 grep -E 进行正则匹配(不区分大小写)
-            if echo "$PROMPT" | grep -qiE "$PATTERN"; then
+            if echo "$PROMPT_ORIGINAL" | grep -qiE "$PATTERN" 2>/dev/null; then
                 MATCHED=true
                 break
             fi
@@ -82,7 +106,7 @@ echo "🎯 技能激活检查"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# 按优先级分组输出(兼容 bash 3.x)
+# 按优先级分组输出
 CRITICAL_SKILLS=""
 HIGH_SKILLS=""
 MEDIUM_SKILLS=""
@@ -94,16 +118,16 @@ for i in "${!MATCHED_SKILLS[@]}"; do
 
     case "$PRIORITY" in
         critical)
-            CRITICAL_SKILLS="$CRITICAL_SKILLS$SKILL|"
+            CRITICAL_SKILLS="${CRITICAL_SKILLS}${SKILL}|"
             ;;
         high)
-            HIGH_SKILLS="$HIGH_SKILLS$SKILL|"
+            HIGH_SKILLS="${HIGH_SKILLS}${SKILL}|"
             ;;
         medium)
-            MEDIUM_SKILLS="$MEDIUM_SKILLS$SKILL|"
+            MEDIUM_SKILLS="${MEDIUM_SKILLS}${SKILL}|"
             ;;
         low)
-            LOW_SKILLS="$LOW_SKILLS$SKILL|"
+            LOW_SKILLS="${LOW_SKILLS}${SKILL}|"
             ;;
     esac
 done

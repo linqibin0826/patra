@@ -29,12 +29,13 @@ color: cyan
 ### 第一步：加载文档规范
 
 ```bash
-# 使用 Skill 工具加载 java-backend-guidelines
-Skill("java-backend-guidelines")
+# 使用 Skill 工具加载 java-documentation-architect
+Skill("java-documentation-architect")
 
-# 重点参考：
+# 技能包含的核心资源：
 # - documentation-templates.md (详细模板库)
-# - architecture-overview.md (架构说明)
+# - README-templates.md (README 模板)
+# - package-info-templates.md (package-info 模板)
 ```
 
 ### 第二步：扫描项目

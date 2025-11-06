@@ -21,10 +21,10 @@ color: green
 ### 第一步：加载测试指南
 
 ```bash
-# 使用 Skill 工具加载 java-backend-guidelines
-Skill("java-backend-guidelines")
+# 使用 Skill 工具加载 java-test-architect
+Skill("java-test-architect")
 
-# 重点查看：
+# 技能包含的核心资源：
 # - testing-guide.md (快速决策)
 # - test-templates-domain.md (领域层)
 # - test-templates-application.md (应用层)
