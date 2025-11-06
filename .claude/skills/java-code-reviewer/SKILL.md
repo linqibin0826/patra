@@ -359,11 +359,3 @@ public class OrderService {
     <property name="applyToClasses" value="true"/>
 </module>
 ```
-## 详细资源
-
-需要深入了解时，查看以下资源文件：
-
-- [architecture-review-checklist.md](resources/architecture-review-checklist.md) - 架构评审清单
-- [code-quality-standards.md](resources/code-quality-standards.md) - 代码质量标准
-- [refactoring-guide.md](resources/refactoring-guide.md) - 重构指南
-- [security-checklist.md](resources/security-checklist.md) - 安全检查清单

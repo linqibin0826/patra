@@ -381,5 +381,3 @@ groups:
 
 - [error-diagnosis-guide.md](resources/error-diagnosis-guide.md) - 错误诊断指南
 - [observability-guide.md](resources/observability-guide.md) - 可观测性配置
-- [performance-tuning.md](resources/performance-tuning.md) - 性能调优指南
-- [emergency-response.md](resources/emergency-response.md) - 应急响应手册

@@ -340,3 +340,5 @@ com.patra.{service}
 - [orchestrator-coordinator-patterns.md](resources/orchestrator-coordinator-patterns.md) - 编排模式
 - [mybatis-plus-patterns.md](resources/mybatis-plus-patterns.md) - 数据访问模式
 - [transaction-error-handling.md](resources/transaction-error-handling.md) - 事务与错误处理
+- [event-driven-architecture.md](resources/event-driven-architecture.md) - 事件驱动架构
+- [outbox-pattern.md](resources/outbox-pattern.md) - 发件箱模式

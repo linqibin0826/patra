@@ -141,3 +141,5 @@ public class OrderRepositoryImpl implements OrderPort {
 - [domain-modeling-patterns.md](resources/domain-modeling-patterns.md) - 领域建模
 - [architecture-review-checklist.md](resources/architecture-review-checklist.md) - 架构评审清单
 - [complete-examples.md](resources/complete-examples.md) - 完整示例
+- [event-driven-architecture.md](resources/event-driven-architecture.md) - 事件驱动架构
+- [outbox-pattern.md](resources/outbox-pattern.md) - 发件箱模式
