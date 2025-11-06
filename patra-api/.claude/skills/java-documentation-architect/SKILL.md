@@ -457,6 +457,3 @@ java -jar plantuml.jar docs/design/*.puml
 需要深入了解时，查看以下资源文件：
 
 - [documentation-templates.md](resources/documentation-templates.md) - 文档模板库
-- [javadoc-guidelines.md](resources/javadoc-guidelines.md) - JavaDoc 编写指南
-- [diagram-patterns.md](resources/diagram-patterns.md) - 架构图绘制模式
-- [adr-process.md](resources/adr-process.md) - ADR 流程指南
