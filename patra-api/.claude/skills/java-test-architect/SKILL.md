@@ -405,9 +405,18 @@ var order = anOrder()
 # 运行所有测试
 mvn test
 
+# 运行特定类型的测试
+mvn test -Dtest="*Test"           # 单元测试
+mvn test -Dtest="*IT"             # 集成测试
+mvn test -Dtest="*E2ETest"        # E2E 测试
+
 # 运行特定层的测试
 mvn test -Dtest="*Domain*Test"
-mvn test -Dtest="*Integration*Test"
+mvn test -Dtest="*Application*Test"
+
+# 运行 boot 模块的集成和 E2E 测试
+cd patra-{service}-boot
+mvn test -Dtest="*IT,*E2ETest"
 
 # 生成测试覆盖率报告
 mvn jacoco:prepare-agent test jacoco:report
@@ -415,8 +424,8 @@ mvn jacoco:prepare-agent test jacoco:report
 # 运行 ArchUnit 测试
 mvn test -Dtest="*ArchitectureTest"
 
-# 并行执行测试
-mvn test -T 4 # 使用 4 个线程
+# 并行执行测试（排除慢测试）
+mvn test -Dtest="*Test" -T 4      # 只跑单元测试，使用 4 个线程
 ```
 
 ## 详细资源

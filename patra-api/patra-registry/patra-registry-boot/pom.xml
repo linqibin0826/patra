@@ -13,6 +13,16 @@
     <artifactId>patra-registry-boot</artifactId>
     <name>Patra Registry Boot</name>
 
+    <properties>
+        <!--
+            架构测试控制开关
+            - 默认值为 false,表示架构测试必须执行
+            - CI/CD 中应保持默认值,确保架构测试始终运行
+            - 仅在特殊情况下使用 -Darchitecture.test.skip=true 跳过
+        -->
+        <architecture.test.skip>false</architecture.test.skip>
+    </properties>
+
     <dependencies>
         <!-- Web starter includes core + logging + web + validation -->
         <dependency>
@@ -93,6 +103,48 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Maven Surefire Plugin - 架构测试强制执行配置
+                确保架构测试在 CI/CD 中始终运行,防止架构侵蚀
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <!--
+                        独立执行架构测试
+                        - 在 verify 阶段单独运行,便于 CI/CD 分别查看测试结果
+                        - 即使使用 -DskipTests 也会执行(通过 skip 属性控制)
+                        - 失败时立即中断构建
+                    -->
+                    <execution>
+                        <id>architecture-tests</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <!-- 只运行架构测试 -->
+                            <includes>
+                                <include>**/ArchitectureTest.java</include>
+                            </includes>
+                            <!-- 架构测试失败时立即失败构建 -->
+                            <testFailureIgnore>false</testFailureIgnore>
+                            <!-- 单独的测试报告目录 -->
+                            <reportsDirectory>${project.build.directory}/surefire-reports/architecture</reportsDirectory>
+                            <!--
+                                关键配置:即使使用 -DskipTests,架构测试仍然运行
+                                - skipTests 设为 false 覆盖全局 -DskipTests
+                                - skip 属性允许通过 -Darchitecture.test.skip=true 显式跳过
+                                - 两者都为 false 时才会运行测试
+                            -->
+                            <skipTests>false</skipTests>
+                            <skip>${architecture.test.skip}</skip>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

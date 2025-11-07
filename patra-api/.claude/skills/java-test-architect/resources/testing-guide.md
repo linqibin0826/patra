@@ -36,6 +36,30 @@ Q: 代码在哪一层？
    /________\
 ```
 
+### 测试类型详解
+
+| 测试类型 | 命名后缀 | 测试位置 | 测试内容 | 示例 |
+|---------|---------|---------|---------|------|
+| **单元测试** | `Test` | 任何模块 | Mock 依赖,测试单个类 | `OrderServiceTest` |
+| **集成测试** | `IT` | `patra-{service}-boot` | 真实依赖,测试多组件协作 | `OrderRepositoryIT` |
+| **E2E 测试** | `E2ETest` | `patra-{service}-boot` | 完整业务流程,端到端验证 | `OrderFlowE2ETest` |
+
+### 集成测试 vs E2E 测试
+
+**集成测试 (IT)**:
+- 🎯 **范围**: 测试单个或少数组件与外部依赖的集成
+- 🔧 **工具**: TestContainers (数据库、消息队列)
+- 📍 **位置**: `patra-{service}-boot/src/test/java`
+- 📝 **示例**: Repository + 数据库, Publisher + RocketMQ
+- ⏱️ **执行时间**: 3-10 秒
+
+**E2E 测试 (E2ETest)**:
+- 🎯 **范围**: 测试完整业务流程,从 API 入口到数据持久化
+- 🔧 **工具**: @SpringBootTest + TestContainers + MockMvc
+- 📍 **位置**: `patra-{service}-boot/src/test/java`
+- 📝 **示例**: HTTP 请求 → Orchestrator → Repository → Event → 数据库
+- ⏱️ **执行时间**: 10-30 秒
+
 ### 覆盖率目标
 
 | 层级 | 目标 | 原因 |
@@ -44,15 +68,25 @@ Q: 代码在哪一层？
 | Application | 80%+ | 编排逻辑 |
 | Infrastructure | 70%+ | 数据访问 |
 | Adapter | 75%+ | 输入验证 |
+| **Integration** | 60%+ | 关键集成点 |
+| **E2E** | 30%+ | 核心业务流程 |
 
 ## 📋 快速检查清单
 
 ### 测试命名
 
 ```java
-// 类名
-{被测类}Test.java              // 单元测试
-{功能}IntegrationTest.java     // 集成测试
+// 类名（按测试类型）
+{被测类}Test.java              // 单元测试（可在任何模块）
+{功能}IT.java                   // 集成测试（必须在 patra-{service}-boot 模块）
+{功能}E2ETest.java              // E2E 测试（必须在 patra-{service}-boot 模块）
+
+// 测试位置规则
+// ✅ domain/app/adapter/infra 层：{被测类}Test.java
+// ✅ boot 模块集成测试：{功能}IT.java
+// ✅ boot 模块 E2E 测试：{功能}E2ETest.java
+// ❌ 错误：在 infra 层使用 IntegrationTest 后缀
+// ❌ 错误：在 domain 层使用 IT 后缀
 
 // 方法名
 should{行为}When{条件}()        // 有条件时
@@ -154,15 +188,17 @@ class OrchestratorTest {
 ### Integration 测试 (需要数据库)
 
 ```java
+// 必须在 patra-{service}-boot/src/test/java 下
 @SpringBootTest
 @Testcontainers
-class RepositoryIT {
-    @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8");
+class RepositoryIT extends BaseIntegrationTest {
+    @Autowired
+    private PlanRepositoryPort planRepo;
 
     @Test
+    @DisplayName("应该保存并查询 Plan")
     void shouldPersistEntity() {
-        var entity = repository.save(createEntity());
+        var entity = planRepo.save(createEntity());
         assertThat(entity.getId()).isNotNull();
     }
 }
@@ -221,6 +257,53 @@ assertThat(list)
 | 测试实现细节 | 测试行为和契约 |
 | 忽略边界情况 | 测试 null、空集合、异常 |
 | 硬编码测试数据 | 使用测试数据构造器 |
+
+---
+
+## 🚨 重要提醒：测试位置规则
+
+### ✅ 正确示例
+
+```
+patra-registry/
+├── patra-registry-domain/src/test/java/
+│   └── ProvenanceTest.java              ✅ 单元测试
+├── patra-registry-app/src/test/java/
+│   └── OrchestratorTest.java            ✅ 单元测试
+├── patra-registry-infra/src/test/java/
+│   └── ConverterTest.java               ✅ 单元测试
+├── patra-registry-adapter/src/test/java/
+│   └── ControllerTest.java              ✅ 单元测试（@WebMvcTest）
+└── patra-registry-boot/src/test/java/
+    ├── ProvenanceRepositoryIT.java      ✅ 集成测试
+    ├── RocketMqPublisherIT.java         ✅ 集成测试
+    ├── ProvenanceFlowE2ETest.java       ✅ E2E 测试
+    └── ArchitectureTest.java            ✅ 架构测试
+```
+
+### ❌ 错误示例
+
+```
+❌ patra-registry-infra/src/test/java/
+   └── RepositoryIntegrationTest.java   # 错误！集成测试必须在 boot 模块
+
+❌ patra-registry-domain/src/test/java/
+   └── ProvenanceIT.java                # 错误！Domain 层只有单元测试
+
+❌ patra-registry-app/src/test/java/
+   └── OrchestratorE2ETest.java         # 错误！E2E 必须在 boot 模块
+```
+
+### 命名规范速查表
+
+| 你想写... | 后缀 | 位置 | 注解 |
+|----------|-----|------|------|
+| 单元测试（纯 Java） | `Test` | 任何模块 | 无或 `@ExtendWith(MockitoExtension.class)` |
+| 单元测试（Mock） | `Test` | 任何模块 | `@ExtendWith(MockitoExtension.class)` |
+| 切片测试（Controller） | `Test` | adapter 模块 | `@WebMvcTest` |
+| 集成测试（数据库/MQ） | `IT` | **boot 模块** | `@SpringBootTest + @Testcontainers` |
+| E2E 测试（完整流程） | `E2ETest` | **boot 模块** | `@SpringBootTest + @Testcontainers` |
+| 架构测试 | `ArchitectureTest` | boot 模块 | `@AnalyzeClasses` |
 
 ---
 
