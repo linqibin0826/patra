@@ -86,29 +86,28 @@ class CrossrefWorksRequestAssemblerTest {
   void build_shouldBuildRequestWithNullFields_whenParamsIsEmpty() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
+    params.put("query", "test"); // 至少需要提供 query 或 filter
 
     // Act
     CrossrefWorksRequest result = assembler.build(params);
 
     // Assert
     assertThat(result).isNotNull();
-    assertThat(result.query()).isNull();
+    assertThat(result.query()).isEqualTo("test");
     assertThat(result.filter()).isNull();
     assertThat(result.rows()).isNull();
     assertThat(result.offset()).isNull();
   }
 
   @Test
-  @DisplayName("build - null JsonNode返回全null请求")
+  @DisplayName("build - null JsonNode抛出异常")
   void build_shouldBuildRequestWithNullFields_whenParamsIsNull() {
-    // Act
-    CrossrefWorksRequest result = assembler.build(null);
-
-    // Assert
-    assertThat(result).isNotNull();
-    assertThat(result.query()).isNull();
-    assertThat(result.filter()).isNull();
-    assertThat(result.rows()).isNull();
+    // Act & Assert - null params 应该提供默认 query 以满足校验
+    // 由于 null 无法处理,assembler 应该抛出异常或提供默认值
+    // 这里我们测试如果 assembler 内部处理 null 的情况
+    assertThatThrownBy(() -> assembler.build(null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Crossref 请求必须提供 'query' 或 'filter' 中的至少一个");
   }
 
   @Test
@@ -116,6 +115,7 @@ class CrossrefWorksRequestAssemblerTest {
   void build_shouldParseIntegerParams_correctly() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
+    params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", 25);
     params.put("offset", 100);
 
@@ -132,6 +132,7 @@ class CrossrefWorksRequestAssemblerTest {
   void build_shouldParseStringInteger_correctly() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
+    params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", "50");
     params.put("offset", "200");
 
@@ -148,6 +149,7 @@ class CrossrefWorksRequestAssemblerTest {
   void build_shouldConvertLongToInteger() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
+    params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", 100L);
 
     // Act
@@ -184,19 +186,17 @@ class CrossrefWorksRequestAssemblerTest {
   }
 
   @Test
-  @DisplayName("build - 空白字符串被视为null")
+  @DisplayName("build - 空白字符串被视为null并抛出异常")
   void build_shouldTreatBlankStringAsNull() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
     params.put("query", "   ");
     params.put("filter", "");
 
-    // Act
-    CrossrefWorksRequest result = assembler.build(params);
-
-    // Assert
-    assertThat(result.query()).isNull();
-    assertThat(result.filter()).isNull();
+    // Act & Assert - 空白字符串被视为 null,因此不满足至少提供一个的要求
+    assertThatThrownBy(() -> assembler.build(params))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Crossref 请求必须提供 'query' 或 'filter' 中的至少一个");
   }
 
   @Test
@@ -234,35 +234,33 @@ class CrossrefWorksRequestAssemblerTest {
   }
 
   @Test
-  @DisplayName("build - 零值整数正确处理")
+  @DisplayName("build - 零值整数应抛出异常")
   void build_shouldHandleZeroIntegerValues() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
+    params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", 0);
     params.put("offset", 0);
 
-    // Act
-    CrossrefWorksRequest result = assembler.build(params);
-
-    // Assert
-    assertThat(result.rows()).isEqualTo(0);
-    assertThat(result.offset()).isEqualTo(0);
+    // Act & Assert - rows=0 不满足 "必须为正数" 的要求
+    assertThatThrownBy(() -> assembler.build(params))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("'rows' 参数必须为正数");
   }
 
   @Test
-  @DisplayName("build - 负数整数正确处理")
+  @DisplayName("build - 负数整数应抛出异常")
   void build_shouldHandleNegativeIntegerValues() {
     // Arrange
     ObjectNode params = objectMapper.createObjectNode();
+    params.put("query", "test"); // 至少需要提供 query 或 filter
     params.put("rows", -10);
     params.put("offset", -5);
 
-    // Act
-    CrossrefWorksRequest result = assembler.build(params);
-
-    // Assert - 应该能够解析，具体验证由业务逻辑处理
-    assertThat(result.rows()).isEqualTo(-10);
-    assertThat(result.offset()).isEqualTo(-5);
+    // Act & Assert - 负数不满足参数校验要求
+    assertThatThrownBy(() -> assembler.build(params))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("参数必须");
   }
 
   @Test

@@ -157,7 +157,8 @@ class SimpleHttpClientTest {
             () ->
                 httpClient.get(
                     null, "/path", Map.of(), Map.of(), defaultResilienceConfig))
-        .isInstanceOf(NullPointerException.class);
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("URI with undefined scheme");
   }
 
   @Test
