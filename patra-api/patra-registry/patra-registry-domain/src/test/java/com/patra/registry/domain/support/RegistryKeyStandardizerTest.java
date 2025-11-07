@@ -6,6 +6,10 @@ import com.patra.registry.domain.exception.DomainValidationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * RegistryKeyStandardizer 工具类单元测试。
@@ -101,16 +105,16 @@ class RegistryKeyStandardizerTest {
     }
 
     @Test
-    @DisplayName("应该返回 trim 后的字符串（小写）")
-    void shouldReturnTrimmedStringForLowercase() {
+    @DisplayName("应该返回 trim 后并转大写的字符串（输入为小写）")
+    void shouldReturnTrimmedAndUppercaseStringForLowercase() {
       // Given: 输入包含前后空白的小写字符串
       String operationType = "  harvest  ";
 
       // When: 调用 toOperationKeyOrAll
       String result = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
 
-      // Then: 返回 trim 后的小写字符串（保留原始大小写）
-      assertThat(result).isEqualTo("harvest");
+      // Then: 返回 trim 后并转大写的字符串
+      assertThat(result).isEqualTo("HARVEST");
     }
 
     @Test
@@ -127,16 +131,16 @@ class RegistryKeyStandardizerTest {
     }
 
     @Test
-    @DisplayName("应该保留原始大小写（混合大小写）")
-    void shouldPreserveOriginalCase() {
+    @DisplayName("应该将混合大小写转为大写")
+    void shouldConvertMixedCaseToUppercase() {
       // Given: 输入为混合大小写
       String operationType = "  HaRvEsT  ";
 
       // When: 调用 toOperationKeyOrAll
       String result = RegistryKeyStandardizer.toOperationKeyOrAll(operationType);
 
-      // Then: 保留原始大小写
-      assertThat(result).isEqualTo("HaRvEsT");
+      // Then: 转为大写
+      assertThat(result).isEqualTo("HARVEST");
     }
 
     @Test
@@ -1085,6 +1089,383 @@ class RegistryKeyStandardizerTest {
 
       // Then: trim 所有前后空格
       assertThat(result).isEqualTo("HARVEST");
+    }
+  }
+
+  // ========== 参数化测试 - 更全面的场景覆盖 ==========
+
+  @Nested
+  @DisplayName("参数化测试 - 全面场景覆盖")
+  class ParameterizedTests {
+
+    // toOperationKeyOrAll 参数化测试
+    @ParameterizedTest
+    @CsvSource({
+      "'harvest', 'HARVEST'",
+      "'HARVEST', 'HARVEST'",
+      "'HaRvEsT', 'HARVEST'",
+      "'update', 'UPDATE'",
+      "'DELETE', 'DELETE'",
+      "'  search  ', 'SEARCH'",
+      "'\t\tsync\n\n', 'SYNC'",
+      "'export import', 'EXPORT IMPORT'",
+      "'a', 'A'",
+      "'1', '1'",
+      "'harvest-v2', 'HARVEST-V2'",
+      "'harvest_update', 'HARVEST_UPDATE'",
+      "'harvest.sync', 'HARVEST.SYNC'"
+    })
+    @DisplayName("toOperationKeyOrAll 应该正确处理各种输入并转大写")
+    void toOperationKeyOrAll_shouldHandleVariousInputs(String input, String expected) {
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll(input)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", "\t", "\n", "\r\n", "   \t\n  "})
+    @DisplayName("toOperationKeyOrAll 应该对 null/空白字符串返回 ALL")
+    void toOperationKeyOrAll_shouldReturnAllForNullOrBlank(String input) {
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll(input))
+          .isEqualTo(RegistryKeyPlaceholders.ALL);
+    }
+
+    // toUppercaseCode 参数化测试
+    @ParameterizedTest
+    @CsvSource({
+      "'active', 'ACTIVE'",
+      "'ACTIVE', 'ACTIVE'",
+      "'AcTiVe', 'ACTIVE'",
+      "'pending', 'PENDING'",
+      "'  completed  ', 'COMPLETED'",
+      "'\t\nfailed\r\n', 'FAILED'",
+      "'status-code', 'STATUS-CODE'",
+      "'status_code', 'STATUS_CODE'",
+      "'status.code', 'STATUS.CODE'",
+      "'123', '123'",
+      "'code123', 'CODE123'",
+      "'a', 'A'",
+      "'café', 'CAFÉ'",
+      "'naïve', 'NAÏVE'"
+    })
+    @DisplayName("toUppercaseCode 应该正确转换各种输入为大写")
+    void toUppercaseCode_shouldConvertToUppercase(String input, String expected) {
+      assertThat(RegistryKeyStandardizer.toUppercaseCode(input)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "  ", "\t\n", "   \t\r\n  "})
+    @DisplayName("toUppercaseCode 应该处理空白字符串（返回空字符串）")
+    void toUppercaseCode_shouldHandleBlankStrings(String input) {
+      assertThat(RegistryKeyStandardizer.toUppercaseCode(input)).isEmpty();
+    }
+
+    // toTrimmedFieldKey 参数化测试
+    @ParameterizedTest
+    @CsvSource({
+      "'fieldName', 'fieldName'",
+      "'FIELDNAME', 'FIELDNAME'",
+      "'field_name', 'field_name'",
+      "'field-name', 'field-name'",
+      "'field.name', 'field.name'",
+      "'  fieldName  ', 'fieldName'",
+      "'\t\nfieldName\r\n', 'fieldName'",
+      "'field Name', 'field Name'",
+      "'a', 'a'",
+      "'123', '123'",
+      "'field123', 'field123'",
+      "'字段名', '字段名'",
+      "'  字段名  ', '字段名'"
+    })
+    @DisplayName("toTrimmedFieldKey 应该正确 trim 并保留大小写")
+    void toTrimmedFieldKey_shouldTrimAndPreserveCase(String input, String expected) {
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey(input)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "  ", "\t\n", "   \t\r\n  "})
+    @DisplayName("toTrimmedFieldKey 应该处理空白字符串（返回空字符串）")
+    void toTrimmedFieldKey_shouldHandleBlankStrings(String input) {
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey(input)).isEmpty();
+    }
+
+    // toMatchTypeKeyOrAny 参数化测试
+    @ParameterizedTest
+    @CsvSource({
+      "'exact', 'EXACT'",
+      "'EXACT', 'EXACT'",
+      "'regex', 'REGEX'",
+      "'contains', 'CONTAINS'",
+      "'  prefix  ', 'PREFIX'",
+      "'SUFFIX', 'SUFFIX'",
+      "'\t\npattern\r\n', 'PATTERN'",
+      "'a', 'A'",
+      "'match type', 'MATCH TYPE'"
+    })
+    @DisplayName("toMatchTypeKeyOrAny 应该正确转换为大写")
+    void toMatchTypeKeyOrAny_shouldConvertToUppercase(String input, String expected) {
+      assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny(input)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", "\t", "\n", "   \t\r\n  "})
+    @DisplayName("toMatchTypeKeyOrAny 应该对 null/空白字符串返回 ANY")
+    void toMatchTypeKeyOrAny_shouldReturnAnyForNullOrBlank(String input) {
+      assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny(input))
+          .isEqualTo(RegistryKeyPlaceholders.ANY);
+    }
+
+    // toValueTypeKeyOrAny 参数化测试
+    @ParameterizedTest
+    @CsvSource({
+      "'string', 'STRING'",
+      "'STRING', 'STRING'",
+      "'number', 'NUMBER'",
+      "'boolean', 'BOOLEAN'",
+      "'  array  ', 'ARRAY'",
+      "'OBJECT', 'OBJECT'",
+      "'\t\ndate\r\n', 'DATE'",
+      "'a', 'A'",
+      "'value type', 'VALUE TYPE'"
+    })
+    @DisplayName("toValueTypeKeyOrAny 应该正确转换为大写")
+    void toValueTypeKeyOrAny_shouldConvertToUppercase(String input, String expected) {
+      assertThat(RegistryKeyStandardizer.toValueTypeKeyOrAny(input)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"  ", "\t", "\n", "   \t\r\n  "})
+    @DisplayName("toValueTypeKeyOrAny 应该对 null/空白字符串返回 ANY")
+    void toValueTypeKeyOrAny_shouldReturnAnyForNullOrBlank(String input) {
+      assertThat(RegistryKeyStandardizer.toValueTypeKeyOrAny(input))
+          .isEqualTo(RegistryKeyPlaceholders.ANY);
+    }
+  }
+
+  // ========== 特殊字符和国际化测试 ==========
+
+  @Nested
+  @DisplayName("特殊字符和国际化场景")
+  class SpecialCharactersAndI18nTests {
+
+    @Test
+    @DisplayName("应该正确处理 Unicode 字符（中文）")
+    void shouldHandleChineseCharacters() {
+      // toUppercaseCode
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("  状态  ")).isEqualTo("状态");
+
+      // toTrimmedFieldKey
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("  字段名  ")).isEqualTo("字段名");
+
+      // toMatchTypeKeyOrAny
+      assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny("  匹配  ")).isEqualTo("匹配");
+
+      // toValueTypeKeyOrAny
+      assertThat(RegistryKeyStandardizer.toValueTypeKeyOrAny("  类型  ")).isEqualTo("类型");
+    }
+
+    @Test
+    @DisplayName("应该正确处理带音标的拉丁字符")
+    void shouldHandleAccentedLatinCharacters() {
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("café")).isEqualTo("CAFÉ");
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("naïve")).isEqualTo("NAÏVE");
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("résumé")).isEqualTo("RÉSUMÉ");
+      assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny("ñoño")).isEqualTo("ÑOÑO");
+    }
+
+    @Test
+    @DisplayName("应该正确处理特殊符号")
+    void shouldHandleSpecialSymbols() {
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest-v2"))
+          .isEqualTo("HARVEST-V2");
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest_update"))
+          .isEqualTo("HARVEST_UPDATE");
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("harvest.sync"))
+          .isEqualTo("HARVEST.SYNC");
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("status@123")).isEqualTo("STATUS@123");
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("field#name"))
+          .isEqualTo("field#name");
+    }
+
+    @Test
+    @DisplayName("应该正确处理数字和字母混合")
+    void shouldHandleAlphanumeric() {
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("code123")).isEqualTo("CODE123");
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("v2.0.1")).isEqualTo("V2.0.1");
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("field1")).isEqualTo("field1");
+      assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny("regex2")).isEqualTo("REGEX2");
+    }
+
+    @Test
+    @DisplayName("应该正确处理 Emoji 字符")
+    void shouldHandleEmojiCharacters() {
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey("  field🔥name  "))
+          .isEqualTo("field🔥name");
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll("  harvest✅  "))
+          .isEqualTo("HARVEST✅");
+    }
+
+    @Test
+    @DisplayName("应该使用 Locale.ROOT 避免土耳其语 locale 问题")
+    void shouldUseLocaleRootToAvoidTurkishLocaleProblem() {
+      // 在土耳其语 locale 中，小写 'i' 转大写为 'İ'（带点的大写I）
+      // 使用 Locale.ROOT 应该转换为标准的 'I'
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("info")).isEqualTo("INFO");
+      assertThat(RegistryKeyStandardizer.toUppercaseCode("index")).isEqualTo("INDEX");
+      assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny("filter")).isEqualTo("FILTER");
+    }
+  }
+
+  // ========== 性能和压力测试 ==========
+
+  @Nested
+  @DisplayName("性能和压力测试")
+  class PerformanceTests {
+
+    @Test
+    @DisplayName("应该高效处理极长字符串（10000 字符）")
+    void shouldHandleVeryLongStringsEfficiently() {
+      // Given: 10000 字符的字符串
+      String longString = "a".repeat(10000);
+
+      // When: 调用各个方法
+      long startTime = System.nanoTime();
+      String result1 = RegistryKeyStandardizer.toOperationKeyOrAll(longString);
+      String result2 = RegistryKeyStandardizer.toUppercaseCode(longString);
+      String result3 = RegistryKeyStandardizer.toTrimmedFieldKey(longString);
+      String result4 = RegistryKeyStandardizer.toMatchTypeKeyOrAny(longString);
+      String result5 = RegistryKeyStandardizer.toValueTypeKeyOrAny(longString);
+      long endTime = System.nanoTime();
+
+      // Then: 应该快速完成（< 10ms）
+      long durationMs = (endTime - startTime) / 1_000_000;
+      assertThat(durationMs).isLessThan(10);
+
+      // 验证结果正确
+      assertThat(result1).hasSize(10000).isEqualTo("A".repeat(10000));
+      assertThat(result2).hasSize(10000);
+      assertThat(result3).hasSize(10000).isEqualTo(longString);
+      assertThat(result4).hasSize(10000);
+      assertThat(result5).hasSize(10000);
+    }
+
+    @Test
+    @DisplayName("应该高效处理带空白的极长字符串")
+    void shouldHandleVeryLongStringsWithWhitespaceEfficiently() {
+      // Given: 前后有大量空白的长字符串
+      String longString = " ".repeat(1000) + "test" + " ".repeat(1000);
+
+      // When & Then: 应该快速完成
+      assertThat(RegistryKeyStandardizer.toOperationKeyOrAll(longString)).isEqualTo("TEST");
+      assertThat(RegistryKeyStandardizer.toUppercaseCode(longString)).isEqualTo("TEST");
+      assertThat(RegistryKeyStandardizer.toTrimmedFieldKey(longString)).isEqualTo("test");
+    }
+  }
+
+  // ========== 交叉场景和组合测试 ==========
+
+  @Nested
+  @DisplayName("交叉场景和组合测试")
+  class CrossScenarioTests {
+
+    @Test
+    @DisplayName("所有转大写的方法应该产生一致的结果")
+    void uppercaseMethodsShouldProduceConsistentResults() {
+      // Given: 相同的输入
+      String input = "  test  ";
+
+      // When: 调用所有转大写的方法
+      String result1 = RegistryKeyStandardizer.toOperationKeyOrAll(input);
+      String result2 = RegistryKeyStandardizer.toUppercaseCode(input);
+      String result3 = RegistryKeyStandardizer.toMatchTypeKeyOrAny(input);
+      String result4 = RegistryKeyStandardizer.toValueTypeKeyOrAny(input);
+
+      // Then: 所有结果应该相同
+      assertThat(result1).isEqualTo("TEST");
+      assertThat(result2).isEqualTo("TEST");
+      assertThat(result3).isEqualTo("TEST");
+      assertThat(result4).isEqualTo("TEST");
+    }
+
+    @Test
+    @DisplayName("幂等性：连续调用应该产生相同结果")
+    void methodsShouldBeIdempotent() {
+      // Given: 各种输入
+      String op = "  harvest  ";
+      String code = "  active  ";
+      String field = "  fieldName  ";
+      String match = "  exact  ";
+      String valueType = "  string  ";
+
+      // When: 连续调用多次
+      String opResult1 = RegistryKeyStandardizer.toOperationKeyOrAll(op);
+      String opResult2 = RegistryKeyStandardizer.toOperationKeyOrAll(opResult1);
+      String opResult3 = RegistryKeyStandardizer.toOperationKeyOrAll(opResult2);
+
+      String codeResult1 = RegistryKeyStandardizer.toUppercaseCode(code);
+      String codeResult2 = RegistryKeyStandardizer.toUppercaseCode(codeResult1);
+
+      String fieldResult1 = RegistryKeyStandardizer.toTrimmedFieldKey(field);
+      String fieldResult2 = RegistryKeyStandardizer.toTrimmedFieldKey(fieldResult1);
+
+      // Then: 幂等性（结果应该相同）
+      assertThat(opResult1).isEqualTo(opResult2).isEqualTo(opResult3);
+      assertThat(codeResult1).isEqualTo(codeResult2);
+      assertThat(fieldResult1).isEqualTo(fieldResult2);
+    }
+
+    @Test
+    @DisplayName("不同占位符常量应该是唯一的")
+    void placeholderConstantsShouldBeUnique() {
+      // Given & When: 获取所有占位符常量
+      String all = RegistryKeyPlaceholders.ALL;
+      String any = RegistryKeyPlaceholders.ANY;
+      String negatedTrue = RegistryKeyPlaceholders.NEGATED_TRUE;
+      String negatedFalse = RegistryKeyPlaceholders.NEGATED_FALSE;
+
+      // Then: 应该互不相同
+      assertThat(all).isNotEqualTo(any);
+      assertThat(negatedTrue).isNotEqualTo(negatedFalse);
+      assertThat(negatedTrue).isNotEqualTo(any);
+      assertThat(negatedFalse).isNotEqualTo(any);
+
+      // 验证具体值
+      assertThat(all).isEqualTo("ALL");
+      assertThat(any).isEqualTo("ANY");
+      assertThat(negatedTrue).isEqualTo("T");
+      assertThat(negatedFalse).isEqualTo("F");
+    }
+
+    @Test
+    @DisplayName("空白字符串处理的一致性")
+    void blankStringHandlingShouldBeConsistent() {
+      // Given: 各种空白字符串
+      String[] blankStrings = {"", "  ", "\t", "\n", "\r\n", "   \t\n  "};
+
+      for (String blank : blankStrings) {
+        // When & Then: 需要返回占位符的方法应该一致
+        assertThat(RegistryKeyStandardizer.toOperationKeyOrAll(blank))
+            .as("toOperationKeyOrAll with '%s'", blank)
+            .isEqualTo("ALL");
+
+        assertThat(RegistryKeyStandardizer.toMatchTypeKeyOrAny(blank))
+            .as("toMatchTypeKeyOrAny with '%s'", blank)
+            .isEqualTo("ANY");
+
+        assertThat(RegistryKeyStandardizer.toValueTypeKeyOrAny(blank))
+            .as("toValueTypeKeyOrAny with '%s'", blank)
+            .isEqualTo("ANY");
+
+        // 不接受空白的方法应该返回空字符串
+        assertThat(RegistryKeyStandardizer.toUppercaseCode(blank))
+            .as("toUppercaseCode with '%s'", blank)
+            .isEmpty();
+
+        assertThat(RegistryKeyStandardizer.toTrimmedFieldKey(blank))
+            .as("toTrimmedFieldKey with '%s'", blank)
+            .isEmpty();
+      }
     }
   }
 }

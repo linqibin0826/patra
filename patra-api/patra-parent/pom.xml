@@ -495,6 +495,12 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
+                <configuration>
+                    <!-- 排除第三方库中过大的类,避免 MethodTooLargeException -->
+                    <excludes>
+                        <exclude>net/sf/jsqlparser/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <!-- Only activate JaCoCo during test phase to avoid slowing down compile -->
                     <execution>
