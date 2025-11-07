@@ -65,6 +65,13 @@
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-spring-boot-starter</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <!-- 排除 commons-logging，使用 Spring 的 jcl 桥接 -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

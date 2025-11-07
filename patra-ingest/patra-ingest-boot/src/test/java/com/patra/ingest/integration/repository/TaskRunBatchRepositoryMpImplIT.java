@@ -8,7 +8,7 @@ import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import com.patra.ingest.infra.persistence.repository.TaskRunBatchRepositoryMpImpl;
-import com.patra.ingest.integration.BaseIT;
+import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +16,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -25,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>测试策略：
  *
  * <ul>
- *   <li>使用 TestContainers 提供真实的 MySQL 数据库环境
+ *   <li>使用 TestContainers 提供真实的 MySQL 数据库环境（由 {@link MySQLContainerInitializer} 提供）
  *   <li>使用 @Transactional 确保测试隔离和自动回滚
  *   <li>覆盖单个保存、批量保存、查询等关键场景
  * </ul>
@@ -40,13 +42,30 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li>边界情况：空列表、null 参数、不存在的 ID
  * </ul>
  *
+ * <h3>性能优化</h3>
+ *
+ * <ul>
+ *   <li>容器单例：由 {@link MySQLContainerInitializer} 配置,所有集成测试共享容器
+ *   <li>按需启动：仅启动 MySQL 容器,不启动未使用的 RocketMQ,节省 ~30-40s
+ *   <li>事务回滚：使用 @Transactional 自动回滚，无需手动清理数据
+ * </ul>
+ *
  * @author linqibin
  * @since 0.2.0
+ * @see MySQLContainerInitializer
  */
+@SpringBootTest(
+    properties = {
+      "spring.cloud.nacos.config.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
+      "spring.cloud.nacos.config.import-check.enabled=false",
+      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
+    })
+@ContextConfiguration(initializers = MySQLContainerInitializer.class)
 @ActiveProfiles("integration-test")
 @DisplayName("TaskRunBatchRepository 集成测试")
 @Transactional  // 每个测试方法在事务中执行，测试结束后自动回滚
-class TaskRunBatchRepositoryMpImplIT extends BaseIT {
+class TaskRunBatchRepositoryMpImplIT {
 
   @Autowired private TaskRunBatchRepositoryMpImpl repository;
 
