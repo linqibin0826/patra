@@ -70,7 +70,7 @@ patra:
     # Outbox MQ 配置
     outbox:
       send-timeout: 3000
-      topic-prefix: patra_test_
+      topic-prefix: ""  # 测试环境不使用前缀（RocketMQ 自动创建 Topic）
       strict-channel-whitelist: false
       channel-mapping:
         TASK_READY: INGEST_TASK_READY
@@ -78,7 +78,7 @@ patra:
     # MQ 消费者配置（集成测试中不使用业务监听器）
     mq:
       topics:
-        task-ready: ${TOPIC_PREFIX:patra_test_}INGEST_TASK_READY
+        task-ready: ${TOPIC_PREFIX:}INGEST_TASK_READY
       consumer-groups:
         task-ready: ${CONSUMER_GROUP_PREFIX:}ingest-task-ready-consumer-group
     # 监听器开关配置（集成测试中禁用业务监听器）

@@ -129,6 +129,10 @@ class RocketMqOutboxPublisherIT {
     testConsumer = new DefaultMQPushConsumer("test_consumer_group_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
 
+    // 默认值是 CONSUME_FROM_LAST_OFFSET，会跳过订阅前的消息
+    testConsumer.setConsumeFromWhere(
+        org.apache.rocketmq.common.consumer.ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
+
     // 订阅测试 Topic（RocketMQ 不支持 Topic 名称通配符，需要显式订阅每个 Topic）
     // 注意：由于 topic-prefix 使用环境变量占位符且默认为空，实际 Topic 名称没有前缀
     testConsumer.subscribe("INGEST_TASK_READY", "*");

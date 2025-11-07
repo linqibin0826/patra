@@ -147,7 +147,9 @@ class OutboxPatternE2ETest {
     String namesrvAddr = RocketMQContainerInitializer.getRocketMQSupport().getNameserverAddress();
     testConsumer = new DefaultMQPushConsumer("e2e_test_consumer_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
-    testConsumer.subscribe("patra_test_*", "*");
+    // RocketMQ 不支持通配符订阅，需要显式订阅每个 Topic
+    testConsumer.subscribe("INGEST_TASK_READY", "*");
+    testConsumer.subscribe("INGEST_LITERATURE_READY", "*");
 
     testConsumer.registerMessageListener(
         (MessageListenerConcurrently)
