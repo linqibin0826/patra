@@ -1,0 +1,703 @@
+package com.patra.starter.provenance.pubmed.converter;
+
+import static org.assertj.core.api.Assertions.*;
+
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.patra.common.model.StandardLiterature;
+import com.patra.starter.provenance.pubmed.model.response.PubmedArticle;
+import java.time.LocalDate;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * PubmedArticleConverter 单元测试
+ *
+ * @author linqibin
+ */
+@DisplayName("PubmedArticleConverter 测试")
+class PubmedArticleConverterTest {
+
+  private PubmedArticleConverter converter;
+  private XmlMapper xmlMapper;
+
+  @BeforeEach
+  void setUp() {
+    converter = new PubmedArticleConverter();
+    xmlMapper = new XmlMapper();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - null文章返回null")
+  void toStandardLiterature_shouldReturnNull_whenArticleIsNull() {
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(null);
+
+    // Assert
+    assertThat(result).isNull();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 完整文章转换成功")
+  void toStandardLiterature_shouldConvertCompleteArticle() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>12345678</PMID>
+            <Article>
+              <Journal>
+                <ISSN IssnType="Electronic">1234-5678</ISSN>
+                <Title>Medical Journal</Title>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2023</Year>
+                    <Month>DECEMBER</Month>
+                    <Day>15</Day>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Test Article Title</ArticleTitle>
+              <Abstract>
+                <AbstractText Label="BACKGROUND">Background text</AbstractText>
+                <AbstractText Label="METHODS">Methods text</AbstractText>
+              </Abstract>
+              <AuthorList>
+                <Author>
+                  <LastName>Smith</LastName>
+                  <ForeName>John</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>University A</Affiliation>
+                  </AffiliationInfo>
+                </Author>
+                <Author>
+                  <LastName>Doe</LastName>
+                  <ForeName>Jane</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>University B</Affiliation>
+                  </AffiliationInfo>
+                </Author>
+              </AuthorList>
+            </Article>
+            <KeywordList>
+              <Keyword>cancer</Keyword>
+              <Keyword>treatment</Keyword>
+            </KeywordList>
+          </MedlineCitation>
+          <PubmedData>
+            <ArticleIdList>
+              <ArticleId IdType="doi">10.1234/test.2023.001</ArticleId>
+              <ArticleId IdType="pmc">PMC1234567</ArticleId>
+            </ArticleIdList>
+          </PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result).isNotNull();
+    assertThat(result.getTitle()).isEqualTo("Test Article Title");
+    assertThat(result.getAbstractText())
+        .isEqualTo("BACKGROUND: Background text\nMETHODS: Methods text");
+    assertThat(result.getAuthors()).hasSize(2);
+    assertThat(result.getAuthors().get(0).getLastName()).isEqualTo("Smith");
+    assertThat(result.getAuthors().get(0).getForeName()).isEqualTo("John");
+    assertThat(result.getAuthors().get(0).getAffiliation()).isEqualTo("University A");
+    assertThat(result.getAuthors().get(1).getLastName()).isEqualTo("Doe");
+    assertThat(result.getJournal()).isNotNull();
+    assertThat(result.getJournal().getTitle()).isEqualTo("Medical Journal");
+    assertThat(result.getJournal().getIssn()).isEqualTo("1234-5678");
+    assertThat(result.getIdentifiers()).containsEntry("pmid", "12345678");
+    assertThat(result.getIdentifiers()).containsEntry("doi", "10.1234/test.2023.001");
+    assertThat(result.getIdentifiers()).containsEntry("pmc", "PMC1234567");
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 12, 15));
+    assertThat(result.getKeywords()).containsExactly("cancer", "treatment");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 仅包含标题的最小文章")
+  void toStandardLiterature_shouldConvertMinimalArticle_withOnlyTitle() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999999</PMID>
+            <Article>
+              <ArticleTitle>Minimal Article</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData>
+          </PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result).isNotNull();
+    assertThat(result.getTitle()).isEqualTo("Minimal Article");
+    assertThat(result.getAbstractText()).isNull();
+    assertThat(result.getAuthors()).isEmpty();
+    assertThat(result.getJournal()).isNull();
+    assertThat(result.getIdentifiers()).containsEntry("pmid", "99999999");
+    assertThat(result.getPublicationDate()).isNull();
+    assertThat(result.getKeywords()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 无标签的摘要正确提取")
+  void toStandardLiterature_shouldExtractAbstract_withoutLabels() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>11111111</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+              <Abstract>
+                <AbstractText>Simple abstract without labels.</AbstractText>
+              </Abstract>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getAbstractText()).isEqualTo("Simple abstract without labels.");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 空摘要返回null")
+  void toStandardLiterature_shouldReturnNullAbstract_whenAbstractIsEmpty() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>22222222</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+              <Abstract>
+              </Abstract>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getAbstractText()).isNull();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 作者无机构信息")
+  void toStandardLiterature_shouldConvertAuthors_withoutAffiliation() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>33333333</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+              <AuthorList>
+                <Author>
+                  <LastName>Brown</LastName>
+                  <ForeName>Alice</ForeName>
+                </Author>
+              </AuthorList>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getAuthors()).hasSize(1);
+    assertThat(result.getAuthors().get(0).getLastName()).isEqualTo("Brown");
+    assertThat(result.getAuthors().get(0).getForeName()).isEqualTo("Alice");
+    assertThat(result.getAuthors().get(0).getAffiliation()).isNull();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 期刊信息从MedlineJournalInfo提取")
+  void toStandardLiterature_shouldExtractJournal_fromMedlineJournalInfo() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>44444444</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+            <MedlineJournalInfo>
+              <MedlineTA>Med J</MedlineTA>
+              <ISSNLinking>9876-5432</ISSNLinking>
+            </MedlineJournalInfo>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getJournal()).isNotNull();
+    assertThat(result.getJournal().getTitle()).isEqualTo("Med J");
+    assertThat(result.getJournal().getIssn()).isEqualTo("9876-5432");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 期刊信息优先从Journal提取")
+  void toStandardLiterature_shouldPreferJournal_overMedlineJournalInfo() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>55555555</PMID>
+            <Article>
+              <Journal>
+                <ISSN IssnType="Print">1111-2222</ISSN>
+                <Title>Primary Journal</Title>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2023</Year>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+            <MedlineJournalInfo>
+              <MedlineTA>Secondary Journal</MedlineTA>
+              <ISSNLinking>3333-4444</ISSNLinking>
+            </MedlineJournalInfo>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getJournal()).isNotNull();
+    assertThat(result.getJournal().getTitle()).isEqualTo("Primary Journal");
+    assertThat(result.getJournal().getIssn()).isEqualTo("1111-2222");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 标识符包含PMID、DOI、PMC")
+  void toStandardLiterature_shouldBuildIdentifiers_withPmidDoiPmc() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>66666666</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData>
+            <ArticleIdList>
+              <ArticleId IdType="doi">10.9999/example</ArticleId>
+              <ArticleId IdType="pmcid">PMC9999999</ArticleId>
+              <ArticleId IdType="pubmed">66666666</ArticleId>
+            </ArticleIdList>
+          </PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getIdentifiers()).hasSize(3);
+    assertThat(result.getIdentifiers()).containsEntry("pmid", "66666666");
+    assertThat(result.getIdentifiers()).containsEntry("doi", "10.9999/example");
+    assertThat(result.getIdentifiers()).containsEntry("pmc", "PMC9999999");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - PMC类型同时支持pmc和pmcid")
+  void toStandardLiterature_shouldSupportBothPmcAndPmcid() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>77777777</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData>
+            <ArticleIdList>
+              <ArticleId IdType="pmc">PMC7777777</ArticleId>
+            </ArticleIdList>
+          </PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getIdentifiers()).containsEntry("pmc", "PMC7777777");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 发表日期仅年份")
+  void toStandardLiterature_shouldParsePublicationDate_withYearOnly() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>88888888</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2022</Year>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2022, 1, 1));
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 发表日期包含年月（完整月份名称）")
+  void toStandardLiterature_shouldParsePublicationDate_withYearAndMonth() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999990</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2021</Year>
+                    <Month>JUNE</Month>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2021, 6, 1));
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 发表日期月份为数字")
+  void toStandardLiterature_shouldParsePublicationDate_withNumericMonth() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999991</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2020</Year>
+                    <Month>3</Month>
+                    <Day>25</Day>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2020, 3, 25));
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 发表日期无效时返回null")
+  void toStandardLiterature_shouldReturnNullPublicationDate_whenDateIsInvalid() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999992</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>invalid</Year>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isNull();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 月份超出范围时限制为1-12")
+  void toStandardLiterature_shouldClampMonth_whenOutOfRange() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999993</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2023</Year>
+                    <Month>15</Month>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 12, 1));
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 日期超出范围时限制为1-28")
+  void toStandardLiterature_shouldClampDay_whenOutOfRange() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999994</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2023</Year>
+                    <Month>1</Month>
+                    <Day>35</Day>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 1, 28));
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 关键词过滤空白值")
+  void toStandardLiterature_shouldFilterBlankKeywords() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999995</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+            <KeywordList>
+              <Keyword>valid keyword</Keyword>
+              <Keyword>   </Keyword>
+              <Keyword>another valid</Keyword>
+            </KeywordList>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getKeywords()).containsExactly("valid keyword", "another valid");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 空关键词列表返回空集合")
+  void toStandardLiterature_shouldReturnEmptyKeywords_whenKeywordListIsEmpty() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999996</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+            <KeywordList>
+            </KeywordList>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getKeywords()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 作者有多个机构时仅取第一个")
+  void toStandardLiterature_shouldUseFirstAffiliation_whenMultipleAffiliationsExist()
+      throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999997</PMID>
+            <Article>
+              <ArticleTitle>Title</ArticleTitle>
+              <AuthorList>
+                <Author>
+                  <LastName>Johnson</LastName>
+                  <ForeName>Mark</ForeName>
+                  <AffiliationInfo>
+                    <Affiliation>First Affiliation</Affiliation>
+                  </AffiliationInfo>
+                  <AffiliationInfo>
+                    <Affiliation>Second Affiliation</Affiliation>
+                  </AffiliationInfo>
+                </Author>
+              </AuthorList>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getAuthors()).hasSize(1);
+    assertThat(result.getAuthors().get(0).getAffiliation()).isEqualTo("First Affiliation");
+  }
+
+  @Test
+  @DisplayName("toStandardLiterature - 无效月份名称时默认为1月")
+  void toStandardLiterature_shouldDefaultToJanuary_whenMonthNameIsInvalid() throws Exception {
+    // Arrange
+    String xml =
+        """
+        <PubmedArticle>
+          <MedlineCitation>
+            <PMID>99999998</PMID>
+            <Article>
+              <Journal>
+                <JournalIssue>
+                  <PubDate>
+                    <Year>2023</Year>
+                    <Month>InvalidMonth</Month>
+                  </PubDate>
+                </JournalIssue>
+              </Journal>
+              <ArticleTitle>Title</ArticleTitle>
+            </Article>
+          </MedlineCitation>
+          <PubmedData></PubmedData>
+        </PubmedArticle>
+        """;
+    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+
+    // Act
+    StandardLiterature result = converter.toStandardLiterature(article);
+
+    // Assert
+    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 1, 1));
+  }
+}

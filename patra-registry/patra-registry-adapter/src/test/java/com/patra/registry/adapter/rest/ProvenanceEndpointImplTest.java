@@ -270,6 +270,238 @@ class ProvenanceEndpointImplTest {
     }
   }
 
+  @Nested
+  @DisplayName("异常场景测试")
+  class ExceptionHandlingTests {
+
+    @Nested
+    @DisplayName("ProvenanceNotFoundException 场景")
+    class NotFoundExceptionTests {
+
+      @Test
+      @DisplayName("getProvenance - 当数据源代码不存在时抛出异常并包含代码")
+      void getProvenance_shouldThrowNotFoundExceptionWithCode() {
+        // Given: 数据源不存在
+        ProvenanceCode code = ProvenanceCode.EPMC;
+        when(orchestrator.findProvenance(code)).thenReturn(Optional.empty());
+
+        // When & Then: 验证异常消息包含代码
+        assertThatThrownBy(() -> endpoint.getProvenance(code))
+            .isInstanceOf(ProvenanceNotFoundException.class)
+            .hasMessage("Provenance not found for code [EPMC]");
+
+        verify(orchestrator).findProvenance(code);
+      }
+
+      @Test
+      @DisplayName("getConfiguration - 当配置不存在时抛出异常并包含代码和操作类型")
+      void getConfiguration_shouldThrowNotFoundExceptionWithCodeAndOperationType() {
+        // Given: 配置不存在
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        String operationType = "UPDATE";
+        when(orchestrator.loadConfiguration(code, operationType, null)).thenReturn(Optional.empty());
+
+        // When & Then: 验证异常消息包含代码和操作类型
+        assertThatThrownBy(() -> endpoint.getConfiguration(code, operationType, null))
+            .isInstanceOf(ProvenanceNotFoundException.class)
+            .hasMessage("Provenance configuration not found for code [PUBMED] and operationType [UPDATE]");
+
+        verify(orchestrator).loadConfiguration(code, operationType, null);
+      }
+
+      @Test
+      @DisplayName("getConfiguration - 当配置不存在且 operationType 为 null 时抛出异常")
+      void getConfiguration_shouldThrowNotFoundExceptionWithNullOperationType() {
+        // Given: 配置不存在，operationType 为 null
+        ProvenanceCode code = ProvenanceCode.EPMC;
+        when(orchestrator.loadConfiguration(code, null, null)).thenReturn(Optional.empty());
+
+        // When & Then: 验证异常消息包含 null
+        assertThatThrownBy(() -> endpoint.getConfiguration(code, null, null))
+            .isInstanceOf(ProvenanceNotFoundException.class)
+            .hasMessage("Provenance configuration not found for code [EPMC] and operationType [null]");
+
+        verify(orchestrator).loadConfiguration(code, null, null);
+      }
+    }
+
+    @Nested
+    @DisplayName("RuntimeException 传播场景")
+    class RuntimeExceptionPropagationTests {
+
+      @Test
+      @DisplayName("listProvenances - 当 Orchestrator 抛出 NullPointerException 时应传播")
+      void listProvenances_shouldPropagateNullPointerException() {
+        // Given: Orchestrator 抛出 NullPointerException
+        when(orchestrator.listProvenances()).thenThrow(new NullPointerException("Internal NPE"));
+
+        // When & Then: 验证异常传播
+        assertThatThrownBy(() -> endpoint.listProvenances())
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("Internal NPE");
+
+        verify(orchestrator).listProvenances();
+      }
+
+      @Test
+      @DisplayName("getProvenance - 当 Orchestrator 抛出 IllegalStateException 时应传播")
+      void getProvenance_shouldPropagateIllegalStateException() {
+        // Given: Orchestrator 抛出 IllegalStateException
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        when(orchestrator.findProvenance(code))
+            .thenThrow(new IllegalStateException("Invalid state"));
+
+        // When & Then: 验证异常传播
+        assertThatThrownBy(() -> endpoint.getProvenance(code))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("Invalid state");
+
+        verify(orchestrator).findProvenance(code);
+      }
+
+      @Test
+      @DisplayName("getConfiguration - 当 Orchestrator 抛出 IllegalArgumentException 时应传播")
+      void getConfiguration_shouldPropagateIllegalArgumentException() {
+        // Given: Orchestrator 抛出 IllegalArgumentException
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        when(orchestrator.loadConfiguration(any(), any(), any()))
+            .thenThrow(new IllegalArgumentException("Invalid argument"));
+
+        // When & Then: 验证异常传播
+        assertThatThrownBy(() -> endpoint.getConfiguration(code, null, null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Invalid argument");
+
+        verify(orchestrator).loadConfiguration(code, null, null);
+      }
+    }
+
+    @Nested
+    @DisplayName("Converter 异常场景")
+    class ConverterExceptionTests {
+
+      @Test
+      @DisplayName("listProvenances - 当 Converter 抛出异常时应传播")
+      void listProvenances_shouldPropagateConverterException() {
+        // Given: Orchestrator 返回正常，但 Converter 抛出异常
+        List<ProvenanceQuery> queryResults = List.of(createMockProvenanceQuery("PUBMED"));
+        when(orchestrator.listProvenances()).thenReturn(queryResults);
+        when(converter.toResp(queryResults))
+            .thenThrow(new RuntimeException("Converter error"));
+
+        // When & Then: 验证异常传播
+        assertThatThrownBy(() -> endpoint.listProvenances())
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Converter error");
+
+        verify(orchestrator).listProvenances();
+        verify(converter).toResp(queryResults);
+      }
+
+      @Test
+      @DisplayName("getProvenance - 当 Converter 抛出异常时应传播")
+      void getProvenance_shouldPropagateConverterException() {
+        // Given: Orchestrator 返回正常，但 Converter 抛出异常
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        ProvenanceQuery queryResult = createMockProvenanceQuery("PUBMED");
+        when(orchestrator.findProvenance(code)).thenReturn(Optional.of(queryResult));
+        when(converter.toResp(queryResult))
+            .thenThrow(new RuntimeException("Converter error"));
+
+        // When & Then: 验证异常传播
+        assertThatThrownBy(() -> endpoint.getProvenance(code))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Converter error");
+
+        verify(orchestrator).findProvenance(code);
+        verify(converter).toResp(queryResult);
+      }
+
+      @Test
+      @DisplayName("getConfiguration - 当 Converter 抛出异常时应传播")
+      void getConfiguration_shouldPropagateConverterException() {
+        // Given: Orchestrator 返回正常，但 Converter 抛出异常
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        ProvenanceConfigQuery queryResult = createMockConfigQuery();
+        when(orchestrator.loadConfiguration(code, null, null)).thenReturn(Optional.of(queryResult));
+        when(converter.toResp(queryResult))
+            .thenThrow(new RuntimeException("Converter error"));
+
+        // When & Then: 验证异常传播
+        assertThatThrownBy(() -> endpoint.getConfiguration(code, null, null))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessage("Converter error");
+
+        verify(orchestrator).loadConfiguration(code, null, null);
+        verify(converter).toResp(queryResult);
+      }
+    }
+
+    @Nested
+    @DisplayName("边界条件测试")
+    class EdgeCaseTests {
+
+      @Test
+      @DisplayName("getProvenance - 验证参数正确传递")
+      void getProvenance_shouldPassParameterCorrectly() {
+        // Given: 准备多个不同的 ProvenanceCode
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        ProvenanceQuery queryResult = createMockProvenanceQuery(code.getCode());
+        when(orchestrator.findProvenance(code)).thenReturn(Optional.of(queryResult));
+        when(converter.toResp(queryResult)).thenReturn(createMockProvenanceResp(code.getCode()));
+
+        // When: 调用方法
+        ProvenanceResp result = endpoint.getProvenance(code);
+
+        // Then: 验证正确的参数被传递
+        assertThat(result).isNotNull();
+        verify(orchestrator).findProvenance(eq(code));
+        verify(converter).toResp(eq(queryResult));
+      }
+
+      @Test
+      @DisplayName("getConfiguration - 验证所有参数组合正确传递")
+      void getConfiguration_shouldPassAllParameterCombinations() {
+        // Given: 准备完整的参数
+        ProvenanceCode code = ProvenanceCode.EPMC;
+        String operationType = "HARVEST";
+        Instant at = Instant.parse("2024-01-01T00:00:00Z");
+
+        ProvenanceConfigQuery queryResult = createMockConfigQuery();
+        when(orchestrator.loadConfiguration(code, operationType, at)).thenReturn(Optional.of(queryResult));
+        when(converter.toResp(queryResult)).thenReturn(createMockConfigResp());
+
+        // When: 调用方法
+        ProvenanceConfigResp result = endpoint.getConfiguration(code, operationType, at);
+
+        // Then: 验证所有参数正确传递
+        assertThat(result).isNotNull();
+        verify(orchestrator).loadConfiguration(eq(code), eq(operationType), eq(at));
+        verify(converter).toResp(eq(queryResult));
+      }
+
+      @Test
+      @DisplayName("getConfiguration - 验证部分参数为 null 时正确传递")
+      void getConfiguration_shouldPassPartialNullParameters() {
+        // Given: operationType 有值，at 为 null
+        ProvenanceCode code = ProvenanceCode.PUBMED;
+        String operationType = "UPDATE";
+
+        ProvenanceConfigQuery queryResult = createMockConfigQuery();
+        when(orchestrator.loadConfiguration(code, operationType, null)).thenReturn(Optional.of(queryResult));
+        when(converter.toResp(queryResult)).thenReturn(createMockConfigResp());
+
+        // When: 调用方法
+        ProvenanceConfigResp result = endpoint.getConfiguration(code, operationType, null);
+
+        // Then: 验证参数正确传递
+        assertThat(result).isNotNull();
+        verify(orchestrator).loadConfiguration(eq(code), eq(operationType), isNull());
+        verify(converter).toResp(eq(queryResult));
+      }
+    }
+  }
+
   // ========== 测试数据构建助手 ==========
 
   private ProvenanceQuery createMockProvenanceQuery(String code) {

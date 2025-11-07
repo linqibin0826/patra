@@ -197,6 +197,238 @@ class ExprEndpointImplTest {
     }
   }
 
+  @Nested
+  @DisplayName("getSnapshot() 异常场景测试")
+  class GetSnapshotExceptionTests {
+
+    @Test
+    @DisplayName("当 provenanceCode 无效时应该抛出 IllegalArgumentException")
+    void shouldThrowIllegalArgumentExceptionWhenProvenanceCodeInvalid() {
+      // Given: 无效的 provenanceCode
+      String invalidProvenanceCode = "INVALID_CODE";
+
+      // When & Then: 验证 IllegalArgumentException 被传播
+      // ProvenanceCode.parse() 会在 Orchestrator 内部抛出此异常
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(new IllegalArgumentException("未知的数据源: " + invalidProvenanceCode));
+
+      assertThatThrownBy(() -> endpoint.getSnapshot(invalidProvenanceCode, null, null, null))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("未知的数据源");
+    }
+
+    @Test
+    @DisplayName("当 provenanceCode 为 null 时应该抛出 IllegalArgumentException")
+    void shouldThrowIllegalArgumentExceptionWhenProvenanceCodeNull() {
+      // Given: null provenanceCode
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(new IllegalArgumentException("数据源标识符不能为 null"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(null, null, null, null))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("数据源标识符不能为 null");
+    }
+
+    @Test
+    @DisplayName("当领域验证失败时应该抛出 DomainValidationException")
+    void shouldThrowDomainValidationExceptionWhenValidationFails() {
+      // Given: Orchestrator 抛出领域验证异常
+      String provenanceCode = "PUBMED";
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(
+              new com.patra.registry.domain.exception.DomainValidationException(
+                  "operationType 不能为空白"));
+
+      // When & Then: 验证 DomainValidationException 被传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, "", null, null))
+          .isInstanceOf(com.patra.registry.domain.exception.DomainValidationException.class)
+          .hasMessageContaining("operationType 不能为空白");
+    }
+
+    @Test
+    @DisplayName("当参数超出范围时应该抛出 DomainValidationException")
+    void shouldThrowDomainValidationExceptionWhenParameterOutOfRange() {
+      // Given: 参数验证失败（例如时间点在未来）
+      String provenanceCode = "EPMC";
+      Instant futureTime = Instant.parse("2099-01-01T00:00:00Z");
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(
+              new com.patra.registry.domain.exception.DomainValidationException(
+                  "at 必须在过去或现在"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, futureTime))
+          .isInstanceOf(com.patra.registry.domain.exception.DomainValidationException.class)
+          .hasMessageContaining("at 必须在过去或现在");
+    }
+
+    @Test
+    @DisplayName("当数据源配置未找到时应该抛出 RegistryNotFound")
+    void shouldThrowRegistryNotFoundWhenProvenanceConfigNotFound() {
+      // Given: 数据源配置不存在
+      String provenanceCode = "ARXIV";
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(
+              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+                  "数据源配置未找到: " + provenanceCode));
+
+      // When & Then: 验证 RegistryNotFound 异常被传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
+          .isInstanceOf(
+              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+          .hasMessageContaining("数据源配置未找到");
+    }
+
+    @Test
+    @DisplayName("当指定操作类型的配置未找到时应该抛出 RegistryNotFound")
+    void shouldThrowRegistryNotFoundWhenOperationTypeConfigNotFound() {
+      // Given: 特定操作类型的配置不存在
+      String provenanceCode = "PUBMED";
+      String operationType = "UNKNOWN_OPERATION";
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(
+              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+                  "未找到操作类型 " + operationType + " 的配置"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(
+              () -> endpoint.getSnapshot(provenanceCode, operationType, null, null))
+          .isInstanceOf(
+              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+          .hasMessageContaining("未找到操作类型");
+    }
+
+    @Test
+    @DisplayName("当指定端点的配置未找到时应该抛出 RegistryNotFound")
+    void shouldThrowRegistryNotFoundWhenEndpointConfigNotFound() {
+      // Given: 特定端点的配置不存在
+      String provenanceCode = "EPMC";
+      String operationType = "HARVEST";
+      String endpointName = "unknown_endpoint";
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(
+              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+                  "未找到端点 " + endpointName + " 的配置"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(
+              () -> endpoint.getSnapshot(provenanceCode, operationType, endpointName, null))
+          .isInstanceOf(
+              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+          .hasMessageContaining("未找到端点");
+    }
+
+    @Test
+    @DisplayName("当指定时间点的历史配置未找到时应该抛出 RegistryNotFound")
+    void shouldThrowRegistryNotFoundWhenHistoricalConfigNotFound() {
+      // Given: 指定时间点没有有效配置
+      String provenanceCode = "PUBMED";
+      Instant historicalTime = Instant.parse("2000-01-01T00:00:00Z");
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(
+              new com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException(
+                  "在时间点 " + historicalTime + " 未找到有效配置"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(
+              () -> endpoint.getSnapshot(provenanceCode, null, null, historicalTime))
+          .isInstanceOf(
+              com.patra.registry.domain.exception.provenance.ProvenanceNotFoundException.class)
+          .hasMessageContaining("未找到有效配置");
+    }
+
+    @Test
+    @DisplayName("当并发查询超出配额时应该抛出 RegistryQuotaExceeded")
+    void shouldThrowRegistryQuotaExceededWhenConcurrentQueriesExceedLimit() {
+      // Given: 并发查询数超出配额
+      String provenanceCode = "PUBMED";
+
+      // 创建一个具体的 RegistryQuotaExceeded 子类实例
+      class ConcurrentQueryQuotaExceeded
+          extends com.patra.registry.domain.exception.RegistryQuotaExceeded {
+        public ConcurrentQueryQuotaExceeded(String message) {
+          super(message);
+        }
+      }
+
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(new ConcurrentQueryQuotaExceeded("并发查询数超出配额限制"));
+
+      // When & Then: 验证 RegistryQuotaExceeded 异常被传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
+          .isInstanceOf(com.patra.registry.domain.exception.RegistryQuotaExceeded.class)
+          .hasMessageContaining("并发查询数超出配额限制");
+    }
+
+    @Test
+    @DisplayName("当查询结果大小超出配额时应该抛出 RegistryQuotaExceeded")
+    void shouldThrowRegistryQuotaExceededWhenResultSizeExceedsLimit() {
+      // Given: 查询结果大小超出限制
+      String provenanceCode = "EPMC";
+
+      class ResultSizeQuotaExceeded
+          extends com.patra.registry.domain.exception.RegistryQuotaExceeded {
+        public ResultSizeQuotaExceeded(String message) {
+          super(message);
+        }
+      }
+
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(new ResultSizeQuotaExceeded("查询结果大小超出限制: 最大 10MB"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
+          .isInstanceOf(com.patra.registry.domain.exception.RegistryQuotaExceeded.class)
+          .hasMessageContaining("查询结果大小超出限制");
+    }
+
+    @Test
+    @DisplayName("当版本冲突时应该抛出 RegistryConflict")
+    void shouldThrowRegistryConflictWhenVersionConflict() {
+      // Given: 版本冲突（例如乐观锁失败）
+      String provenanceCode = "PUBMED";
+
+      class VersionConflictException
+          extends com.patra.registry.domain.exception.RegistryConflict {
+        public VersionConflictException(String message) {
+          super(message);
+        }
+      }
+
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(new VersionConflictException("配置版本冲突,请重试"));
+
+      // When & Then: 验证 RegistryConflict 异常被传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
+          .isInstanceOf(com.patra.registry.domain.exception.RegistryConflict.class)
+          .hasMessageContaining("配置版本冲突");
+    }
+
+    @Test
+    @DisplayName("当时态切片状态冲突时应该抛出 RegistryConflict")
+    void shouldThrowRegistryConflictWhenTemporalSliceConflict() {
+      // Given: 时态切片状态不一致
+      String provenanceCode = "CROSSREF";
+      Instant at = Instant.parse("2024-06-01T00:00:00Z");
+
+      class TemporalSliceConflictException
+          extends com.patra.registry.domain.exception.RegistryConflict {
+        public TemporalSliceConflictException(String message) {
+          super(message);
+        }
+      }
+
+      when(orchestrator.loadSnapshot(any(), any(), any(), any()))
+          .thenThrow(new TemporalSliceConflictException("时态切片状态冲突"));
+
+      // When & Then: 验证异常传播
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, at))
+          .isInstanceOf(com.patra.registry.domain.exception.RegistryConflict.class)
+          .hasMessageContaining("时态切片状态冲突");
+    }
+  }
+
   // ========== 测试数据构建助手 ==========
 
   private ExprSnapshotQuery createMockQuery() {
