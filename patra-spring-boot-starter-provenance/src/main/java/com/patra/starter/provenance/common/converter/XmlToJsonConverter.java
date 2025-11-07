@@ -42,6 +42,7 @@ public class XmlToJsonConverter {
 
     this.jsonMapper = new ObjectMapper();
     jsonMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    jsonMapper.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
   }
 
   /**
