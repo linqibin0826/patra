@@ -286,6 +286,99 @@ class ProvenanceEndpointIntegrationTest {
 }
 ```
 
+### 架构测试
+
+位于本模块的 `src/test/java/com/patra/registry/architecture/ArchitectureTest.java`,使用 ArchUnit 框架验证六边形架构规则。
+
+**测试覆盖**:
+- ✅ 六边形架构依赖方向 (Boot → Adapter → App → Domain ← Infra)
+- ✅ Domain 层纯净性 (无框架依赖)
+- ✅ Boot 层职责边界 (不包含业务逻辑)
+- ✅ 循环依赖检查
+- ✅ 命名规范 (DTO、Mapper、Repository、Orchestrator、Coordinator)
+- ✅ 注解使用规范 (@Service、@Repository、@Component)
+- ✅ DDD 模型约束 (值对象不可变性、聚合根位置)
+- ✅ 端口接口隔离 (Port 接口不依赖实现类)
+- ✅ API 契约隔离 (API 模块不依赖其他模块)
+
+**运行方式**:
+```bash
+# 运行所有测试(包括架构测试)
+mvn verify
+
+# 只运行架构测试
+mvn verify -DskipTests
+
+# 跳过架构测试(不推荐)
+mvn verify -Darchitecture.test.skip=true
+```
+
+**CI/CD 集成**:
+
+架构测试已配置为强制执行的构建检查项:
+- ✅ 在 `verify` 阶段自动运行
+- ✅ 即使使用 `-DskipTests` 也会执行
+- ✅ 测试失败会立即中断构建
+- ✅ 独立的测试报告目录: `target/surefire-reports/architecture/`
+
+**配置说明**:
+
+本模块的 `pom.xml` 中已配置 Maven Surefire 插件强制执行架构测试:
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <executions>
+        <execution>
+            <id>architecture-tests</id>
+            <phase>verify</phase>
+            <goals>
+                <goal>test</goal>
+            </goals>
+            <configuration>
+                <includes>
+                    <include>**/ArchitectureTest.java</include>
+                </includes>
+                <testFailureIgnore>false</testFailureIgnore>
+                <skipTests>false</skipTests>  <!-- 覆盖全局 -DskipTests -->
+                <skip>${architecture.test.skip}</skip>  <!-- 允许显式跳过 -->
+                <reportsDirectory>${project.build.directory}/surefire-reports/architecture</reportsDirectory>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+**ArchUnit 配置**:
+
+全局配置位于 `src/test/resources/archunit.properties`:
+```properties
+# 允许规则在没有匹配类时通过(适用于多模块项目)
+archRule.failOnEmptyShould=false
+
+# 类缓存模式: default(每次测试) | forever(缓存到进程结束)
+classCache=default
+classCache.useMd5=true
+```
+
+**架构测试失败处理**:
+
+当架构测试失败时:
+1. **查看报告**: 检查 `target/surefire-reports/architecture/` 目录中的测试报告
+2. **理解违规**: 阅读失败消息,理解违反了哪条架构规则
+3. **修复代码**: 调整代码以符合架构规范
+4. **重新运行**: 执行 `mvn verify` 验证修复
+
+**常见架构违规示例**:
+
+| 违规类型 | 违规示例 | 正确做法 |
+|---------|---------|---------|
+| Domain 层依赖框架 | `@Entity` 在 Domain 实体上 | 使用纯 Java 类,在 Infra 层创建 DO |
+| Boot 层包含业务逻辑 | `@Service` 类在 boot 包下 | 移动到 app 或 domain 包 |
+| 循环依赖 | A → B → C → A | 重构依赖关系,引入中介 |
+| 命名不规范 | `UserConverter` 实现 Repository | 重命名为 `UserRepository` |
+| 端口泄漏 | Port 接口依赖实现类 | 移除具体类依赖,只依赖接口 |
+
 ## 相关文档
 
 - [patra-registry 顶层文档](../README.md)
