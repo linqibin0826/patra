@@ -24,13 +24,17 @@ import java.util.Optional;
 public interface TaskRunBatchRepository {
 
   /**
-   * 持久化单个任务执行批次。
+   * 持久化单个任务执行批次并返回持久化后的实体。
    *
    * <p><b>业务含义</b>: 保存单个批次实体,包括批次状态和指标。
    *
+   * <p><b>返回值说明</b>: 返回持久化后的批次实体副本,包含数据库生成的 ID。
+   * 如果批次 ID 为 null,则执行 INSERT 并回填 ID;否则执行 UPDATE。
+   *
    * @param batch 批次实体
+   * @return 持久化后的批次实体（包含数据库生成的 ID）
    */
-  void save(TaskRunBatch batch);
+  TaskRunBatch save(TaskRunBatch batch);
 
   /**
    * 批量持久化多个任务执行批次。

@@ -191,7 +191,7 @@ class OrchestratorTest {
 // 必须在 patra-{service}-boot/src/test/java 下
 @SpringBootTest
 @Testcontainers
-class RepositoryIT extends BaseIntegrationTest {
+class RepositoryIT extends BaseIT {
     @Autowired
     private PlanRepositoryPort planRepo;
 

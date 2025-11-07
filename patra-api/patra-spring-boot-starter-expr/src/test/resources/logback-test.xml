@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- Include Spring Boot's logback extensions for %clr support -->
-    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <!-- Property for application name -->
     <property name="appName" value="patra-spring-boot-starter-expr"/>
@@ -10,7 +8,7 @@
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
             <!-- %nopex: 不输出异常堆栈跟踪,只显示异常消息,避免测试输出被大量堆栈淹没 -->
-            <pattern>%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr([${appName}]){blue} %clr([%t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%nopex%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %5p [${appName}] [%t] %-40.40logger{39} : %m%nopex%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
@@ -20,8 +18,8 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 
-    <!-- Application Logger: ERROR level (only for com.patra.* classes) -->
-    <logger name="com.patra" level="ERROR" additivity="false">
+    <!-- Application Logger: INFO level (only for com.patra.* classes) -->
+    <logger name="com.patra" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 

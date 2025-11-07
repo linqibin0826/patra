@@ -31,7 +31,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  *
  * <pre>{@code
  * @DisplayName("Plan 仓储集成测试")
- * class PlanRepositoryIntegrationTest extends BaseIntegrationTest {
+ * class PlanRepositoryIT extends BaseIT {
  *
  *     @Autowired
  *     private PlanRepositoryPort planRepo;
@@ -78,9 +78,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     })
 @Testcontainers
 // 注意：@ActiveProfiles 由子类指定，integration-test 或 e2e-test
-public abstract class BaseIntegrationTest {
+public abstract class BaseIT {
 
-  private static final Logger log = LoggerFactory.getLogger(BaseIntegrationTest.class);
+  private static final Logger log = LoggerFactory.getLogger(BaseIT.class);
 
   // ========== Docker Network ==========
 
