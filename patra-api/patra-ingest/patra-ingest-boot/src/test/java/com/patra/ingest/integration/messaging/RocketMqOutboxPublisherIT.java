@@ -7,7 +7,8 @@ import static org.awaitility.Awaitility.await;
 import com.patra.ingest.domain.messaging.MessageChannels;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import com.patra.ingest.integration.BaseIT;
+import com.patra.ingest.integration.config.MySQLContainerInitializer;
+import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import com.patra.ingest.testutil.TestMessageCollector;
 import java.nio.charset.StandardCharsets;
@@ -21,12 +22,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ContextConfiguration;
 
 /**
  * RocketMQ Outbox 发布器集成测试。
  *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link BaseIT} 提供）,测试消息发送、接收和元数据映射的完整流程。
+ * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）,测试消息发送、接收和元数据映射的完整流程。
  *
  * <h3>测试范围</h3>
  *
@@ -44,7 +47,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
  * <p>遵循 testing-guide.md §7 集成测试模式:
  *
  * <ul>
- *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers (由基类提供)
+ *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
  *   <li><strong>异步断言</strong>: 使用 Awaitility 等待消息接收
  *   <li><strong>消息收集</strong>: 使用 {@link TestMessageCollector} 收集接收的消息
  *   <li><strong>清理隔离</strong>: 每个测试后清理 Consumer 和 Collector
@@ -55,30 +58,45 @@ import org.springframework.boot.test.mock.mockito.MockBean;
  * <ul>
  *   <li>Docker Desktop 运行中
  *   <li>至少 4GB 可用内存
- *   <li>首次启动需要 ~30 秒 (拉取镜像 + 启动容器)
+ *   <li>首次启动需要 ~30-40 秒 (拉取镜像 + 启动容器)
  * </ul>
  *
  * <h3>性能优化</h3>
  *
  * <ul>
- *   <li>容器重用: 由 {@link BaseIT} 配置,所有集成测试共享容器
+ *   <li>容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer} 配置,所有集成测试共享容器
  *   <li>共享网络: NameServer 和 Broker 共享 Docker 网络
  *   <li>并行测试: 测试方法可并发执行 (不同 Consumer Group)
  * </ul>
  *
+ * <h3>容器依赖说明</h3>
+ *
+ * <p>虽然本测试主要测试 RocketMQ 消息发送,但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）,
+ * 因此也需要启动 MySQL 容器。这样可以确保完整的应用上下文正常启动。
+ *
  * @author linqibin
  * @since 0.2.0
- * @see BaseIT
+ * @see RocketMQContainerInitializer
+ * @see MySQLContainerInitializer
  * @see OutboxMessageTestBuilder
  * @see TestMessageCollector
  */
+@SpringBootTest(
+    properties = {
+      "spring.cloud.nacos.config.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
+      "spring.cloud.nacos.config.import-check.enabled=false",
+      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
+    })
+@ContextConfiguration(
+    initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
 @DisplayName("RocketMQ Outbox 发布器集成测试")
 @org.springframework.test.context.ActiveProfiles("integration-test")
 @org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与 E2E 测试共享
-class RocketMqOutboxPublisherIT extends BaseIT {
+class RocketMqOutboxPublisherIT {
 
   // ========== Test Dependencies ==========
-  // 注: RocketMQ 容器配置已迁移到 BaseIT,所有集成测试共享
+  // 注: RocketMQ 容器配置由 RocketMQContainerInitializer 提供,所有集成测试共享
 
   @Autowired private RocketMqOutboxPublisher publisher;
 
@@ -106,7 +124,7 @@ class RocketMqOutboxPublisherIT extends BaseIT {
     messageCollector = new TestMessageCollector();
 
     // 创建测试 Consumer
-    String namesrvAddr = rocketmqSupport.getNameserverAddress();
+    String namesrvAddr = RocketMQContainerInitializer.getRocketMQSupport().getNameserverAddress();
 
     testConsumer = new DefaultMQPushConsumer("test_consumer_group_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);

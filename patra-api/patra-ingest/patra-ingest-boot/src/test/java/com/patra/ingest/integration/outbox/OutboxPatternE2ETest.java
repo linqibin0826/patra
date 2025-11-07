@@ -12,7 +12,8 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import com.patra.ingest.domain.port.OutboxRelayStore;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import com.patra.ingest.integration.BaseIT;
+import com.patra.ingest.integration.config.MySQLContainerInitializer;
+import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import com.patra.ingest.testutil.TestMessageCollector;
 import java.nio.charset.StandardCharsets;
@@ -27,13 +28,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
 
 /**
  * Outbox 模式端到端测试。
@@ -110,18 +107,28 @@ import org.testcontainers.junit.jupiter.Container;
  *
  * @author linqibin
  * @since 0.2.0
- * @see BaseIT
+ * @see MySQLContainerInitializer
+ * @see RocketMQContainerInitializer
  * @see OutboxMessageTestBuilder
  * @see TestMessageCollector
  */
+@SpringBootTest(
+    properties = {
+      "spring.cloud.nacos.config.enabled=false",
+      "spring.cloud.nacos.discovery.enabled=false",
+      "spring.cloud.nacos.config.import-check.enabled=false",
+      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
+    })
+@ContextConfiguration(
+    initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
 @DisplayName("Outbox 模式端到端测试")
 @org.springframework.test.context.ActiveProfiles("e2e-test")
 @org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与集成测试共享
-class OutboxPatternE2ETest extends BaseIT {
+class OutboxPatternE2ETest {
 
   // ========== Test Dependencies ==========
-  // 注意：此测试类复用父类 BaseIT 的容器配置
-  // RocketMQ 容器由父类管理，避免重复定义和端口冲突
+  // 注意：此测试类同时使用 MySQL 和 RocketMQ 容器（由 MySQLContainerInitializer 和 RocketMQContainerInitializer 提供）
+  // 所有容器在所有测试间共享，提升测试性能
 
   @Autowired private OutboxMessageRepository outboxRepository;
   @Autowired private OutboxRelayStore relayStore;
@@ -137,7 +144,7 @@ class OutboxPatternE2ETest extends BaseIT {
   void setUp() throws Exception {
     messageCollector = new TestMessageCollector();
 
-    String namesrvAddr = rocketmqSupport.getNameserverAddress();
+    String namesrvAddr = RocketMQContainerInitializer.getRocketMQSupport().getNameserverAddress();
     testConsumer = new DefaultMQPushConsumer("e2e_test_consumer_" + System.currentTimeMillis());
     testConsumer.setNamesrvAddr(namesrvAddr);
     testConsumer.subscribe("patra_test_*", "*");
