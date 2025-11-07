@@ -12,7 +12,7 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import com.patra.ingest.domain.port.OutboxRelayStore;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import com.patra.ingest.integration.BaseIntegrationTest;
+import com.patra.ingest.integration.BaseIT;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import com.patra.ingest.testutil.TestMessageCollector;
 import java.nio.charset.StandardCharsets;
@@ -110,17 +110,17 @@ import org.testcontainers.junit.jupiter.Container;
  *
  * @author linqibin
  * @since 0.2.0
- * @see BaseIntegrationTest
+ * @see BaseIT
  * @see OutboxMessageTestBuilder
  * @see TestMessageCollector
  */
 @DisplayName("Outbox 模式端到端测试")
 @org.springframework.test.context.ActiveProfiles("e2e-test")
 @org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与集成测试共享
-class OutboxPatternE2ETest extends BaseIntegrationTest {
+class OutboxPatternE2ETest extends BaseIT {
 
   // ========== Test Dependencies ==========
-  // 注意：此测试类复用父类 BaseIntegrationTest 的容器配置
+  // 注意：此测试类复用父类 BaseIT 的容器配置
   // RocketMQ 容器由父类管理，避免重复定义和端口冲突
 
   @Autowired private OutboxMessageRepository outboxRepository;

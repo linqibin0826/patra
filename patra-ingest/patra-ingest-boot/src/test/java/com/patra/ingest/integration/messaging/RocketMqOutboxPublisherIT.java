@@ -7,7 +7,7 @@ import static org.awaitility.Awaitility.await;
 import com.patra.ingest.domain.messaging.MessageChannels;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
-import com.patra.ingest.integration.BaseIntegrationTest;
+import com.patra.ingest.integration.BaseIT;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import com.patra.ingest.testutil.TestMessageCollector;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +26,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 /**
  * RocketMQ Outbox 发布器集成测试。
  *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link BaseIntegrationTest} 提供）,测试消息发送、接收和元数据映射的完整流程。
+ * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link BaseIT} 提供）,测试消息发送、接收和元数据映射的完整流程。
  *
  * <h3>测试范围</h3>
  *
@@ -61,24 +61,24 @@ import org.springframework.boot.test.mock.mockito.MockBean;
  * <h3>性能优化</h3>
  *
  * <ul>
- *   <li>容器重用: 由 {@link BaseIntegrationTest} 配置,所有集成测试共享容器
+ *   <li>容器重用: 由 {@link BaseIT} 配置,所有集成测试共享容器
  *   <li>共享网络: NameServer 和 Broker 共享 Docker 网络
  *   <li>并行测试: 测试方法可并发执行 (不同 Consumer Group)
  * </ul>
  *
  * @author linqibin
  * @since 0.2.0
- * @see BaseIntegrationTest
+ * @see BaseIT
  * @see OutboxMessageTestBuilder
  * @see TestMessageCollector
  */
 @DisplayName("RocketMQ Outbox 发布器集成测试")
 @org.springframework.test.context.ActiveProfiles("integration-test")
 @org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与 E2E 测试共享
-class RocketMqOutboxPublisherIntegrationTest extends BaseIntegrationTest {
+class RocketMqOutboxPublisherIT extends BaseIT {
 
   // ========== Test Dependencies ==========
-  // 注: RocketMQ 容器配置已迁移到 BaseIntegrationTest,所有集成测试共享
+  // 注: RocketMQ 容器配置已迁移到 BaseIT,所有集成测试共享
 
   @Autowired private RocketMqOutboxPublisher publisher;
 

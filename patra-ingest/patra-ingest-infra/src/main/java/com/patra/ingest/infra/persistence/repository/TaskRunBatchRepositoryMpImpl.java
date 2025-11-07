@@ -33,18 +33,20 @@ public class TaskRunBatchRepositoryMpImpl implements TaskRunBatchRepository {
   private final TaskRunBatchConverter converter;
 
   /**
-   * 保存单个任务执行批次。
+   * 保存单个任务执行批次并返回持久化后的实体。
    *
    * @param batch 批次实体
+   * @return 持久化后的批次实体（包含数据库生成的 ID）
    */
   @Override
-  public void save(TaskRunBatch batch) {
+  public TaskRunBatch save(TaskRunBatch batch) {
     TaskRunBatchDO dto = converter.toDO(batch);
     if (dto.getId() == null) {
-      mapper.insert(dto);
+      mapper.insert(dto);  // MyBatis-Plus 自动回填 dto.id
     } else {
       mapper.updateById(dto);
     }
+    return converter.toDomain(dto);  // 返回带 ID 的领域实体
   }
 
   /**

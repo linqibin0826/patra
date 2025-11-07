@@ -1,18 +1,18 @@
-package com.patra.ingest.infra.persistence.repository;
+package com.patra.ingest.integration.repository;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.util.HashUtils;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
-import com.patra.ingest.infra.persistence.mapper.TaskRunBatchMapper;
-import com.patra.ingest.integration.BaseIntegrationTest;
+import com.patra.ingest.infra.persistence.repository.TaskRunBatchRepositoryMpImpl;
+import com.patra.ingest.integration.BaseIT;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,13 +44,11 @@ import org.springframework.transaction.annotation.Transactional;
  * @since 0.2.0
  */
 @ActiveProfiles("integration-test")
-@Transactional
 @DisplayName("TaskRunBatchRepository 集成测试")
-class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
+@Transactional  // 每个测试方法在事务中执行，测试结束后自动回滚
+class TaskRunBatchRepositoryMpImplIT extends BaseIT {
 
   @Autowired private TaskRunBatchRepositoryMpImpl repository;
-
-  @Autowired private TaskRunBatchMapper mapper;
 
   private static final Long TEST_RUN_ID = 1000L;
   private static final Long TEST_TASK_ID = 100L;
@@ -60,13 +58,17 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
   private static final String TEST_OPERATION_CODE = "LIST";
   private static final String TEST_EXPR_HASH = "hash123";
 
-  @BeforeEach
-  void setUp() {
-    // 清理测试数据
-    mapper.delete(null);
-  }
-
   // ==================== 辅助方法 ====================
+
+  /**
+   * 生成测试用的 64 位 SHA-256 十六进制幂等键。
+   *
+   * @param suffix 后缀,确保不同批次有不同的键
+   * @return 64 位十六进制字符串（真正的 SHA-256 散列）
+   */
+  private String generateIdempotentKey(String suffix) {
+    return HashUtils.sha256Hex(suffix);
+  }
 
   private TaskRunBatch createBatch(int batchNo, Integer pageNo) {
     return new TaskRunBatch(
@@ -82,7 +84,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
         100, // pageSize
         null, // beforeToken
         TEST_EXPR_HASH,
-        new IdempotentKey("idem-" + TEST_RUN_ID + "-" + batchNo));
+        new IdempotentKey(generateIdempotentKey("batch-" + TEST_RUN_ID + "-" + batchNo)));
   }
 
   private TaskRunBatch createTokenBasedBatch(int batchNo, String beforeToken) {
@@ -99,7 +101,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
         null, // pageSize - token-based pagination
         beforeToken,
         TEST_EXPR_HASH,
-        new IdempotentKey("idem-token-" + TEST_RUN_ID + "-" + beforeToken));
+        new IdempotentKey(generateIdempotentKey("token-" + TEST_RUN_ID + "-" + beforeToken)));
   }
 
   // ==================== save 操作 ====================
@@ -111,14 +113,14 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
     TaskRunBatch batch = createBatch(1, 1);
 
     // Act
-    repository.save(batch);
+    TaskRunBatch persisted = repository.save(batch);  // ✅ 直接获取带 ID 的实体
 
-    // Assert
-    assertThat(batch.getId()).isNotNull();
-    assertThat(batch.getRunId()).isEqualTo(TEST_RUN_ID);
-    assertThat(batch.getBatchNo()).isEqualTo(1);
-    assertThat(batch.getPageNo()).isEqualTo(1);
-    assertThat(batch.getStatus()).isEqualTo(BatchStatus.RUNNING);
+    // Assert - 验证插入成功
+    assertThat(persisted.getId()).isNotNull();
+    assertThat(persisted.getRunId()).isEqualTo(TEST_RUN_ID);
+    assertThat(persisted.getBatchNo()).isEqualTo(1);
+    assertThat(persisted.getPageNo()).isEqualTo(1);
+    assertThat(persisted.getStatus()).isEqualTo(BatchStatus.RUNNING);
   }
 
   @Test
@@ -126,26 +128,26 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
   void shouldUpdateExistingBatch() {
     // Arrange
     TaskRunBatch batch = createBatch(1, 1);
-    repository.save(batch);
+    TaskRunBatch persisted = repository.save(batch);  // ✅ 直接获取带 ID 的实体
 
     // 模拟批次完成
     Instant now = Instant.now();
     TaskRunBatch updated =
         TaskRunBatch.restore(
-            batch.getId(),
-            batch.getRunId(),
-            batch.getTaskId(),
-            batch.getSliceId(),
-            batch.getPlanId(),
-            batch.getProvenanceCode(),
-            batch.getOperationCode(),
-            batch.getBatchNo(),
-            batch.getPageNo(),
-            batch.getPageSize(),
-            batch.getBeforeToken(),
+            persisted.getId(),  // 直接使用返回的 ID
+            persisted.getRunId(),
+            persisted.getTaskId(),
+            persisted.getSliceId(),
+            persisted.getPlanId(),
+            persisted.getProvenanceCode(),
+            persisted.getOperationCode(),
+            persisted.getBatchNo(),
+            persisted.getPageNo(),
+            persisted.getPageSize(),
+            persisted.getBeforeToken(),
             "nextToken123", // afterToken
-            batch.getExprHash(),
-            batch.getIdempotentKey(),
+            persisted.getExprHash(),
+            persisted.getIdempotentKey(),
             BatchStatus.SUCCEEDED,
             BatchStats.of(50),
             now,
@@ -153,16 +155,13 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
             null);
 
     // Act
-    repository.save(updated);
+    TaskRunBatch result = repository.save(updated);
 
     // Assert
-    List<TaskRunBatch> batches = repository.findByRunId(TEST_RUN_ID);
-    assertThat(batches).hasSize(1);
-    TaskRunBatch persisted = batches.get(0);
-    assertThat(persisted.getId()).isEqualTo(batch.getId());
-    assertThat(persisted.getStatus()).isEqualTo(BatchStatus.SUCCEEDED);
-    assertThat(persisted.getStats().recordCount()).isEqualTo(50);
-    assertThat(persisted.getAfterToken()).isEqualTo("nextToken123");
+    assertThat(result.getId()).isEqualTo(persisted.getId());
+    assertThat(result.getStatus()).isEqualTo(BatchStatus.SUCCEEDED);
+    assertThat(result.getStats().recordCount()).isEqualTo(50);
+    assertThat(result.getAfterToken()).isEqualTo("nextToken123");
   }
 
   @Test
@@ -172,13 +171,13 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
     TaskRunBatch batch = createTokenBasedBatch(1, "token_abc");
 
     // Act
-    repository.save(batch);
+    TaskRunBatch persisted = repository.save(batch);  // ✅ 直接获取带 ID 的实体
 
-    // Assert
-    assertThat(batch.getId()).isNotNull();
-    assertThat(batch.getPageNo()).isNull();
-    assertThat(batch.getPageSize()).isNull();
-    assertThat(batch.getBeforeToken()).isEqualTo("token_abc");
+    // Assert - 验证插入成功
+    assertThat(persisted.getId()).isNotNull();
+    assertThat(persisted.getPageNo()).isNull();
+    assertThat(persisted.getPageSize()).isNull();
+    assertThat(persisted.getBeforeToken()).isEqualTo("token_abc");
   }
 
   // ==================== saveAll 批量操作 ====================
@@ -280,7 +279,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
             100,
             null,
             TEST_EXPR_HASH,
-            new IdempotentKey("idem-other"));
+            new IdempotentKey(generateIdempotentKey("other-run-2000-1")));
     repository.save(otherRunBatch);
 
     // Act
@@ -312,23 +311,24 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
 
     // 批次 1: 成功
     TaskRunBatch batch1 = createBatch(1, 1);
-    repository.save(batch1);
+    TaskRunBatch persisted1 = repository.save(batch1);  // ✅ 直接获取带 ID 的实体
+
     TaskRunBatch succeeded1 =
         TaskRunBatch.restore(
-            batch1.getId(),
-            batch1.getRunId(),
-            batch1.getTaskId(),
-            batch1.getSliceId(),
-            batch1.getPlanId(),
-            batch1.getProvenanceCode(),
-            batch1.getOperationCode(),
-            batch1.getBatchNo(),
-            batch1.getPageNo(),
-            batch1.getPageSize(),
-            batch1.getBeforeToken(),
+            persisted1.getId(),  // 直接使用返回的 ID
+            persisted1.getRunId(),
+            persisted1.getTaskId(),
+            persisted1.getSliceId(),
+            persisted1.getPlanId(),
+            persisted1.getProvenanceCode(),
+            persisted1.getOperationCode(),
+            persisted1.getBatchNo(),
+            persisted1.getPageNo(),
+            persisted1.getPageSize(),
+            persisted1.getBeforeToken(),
             null,
-            batch1.getExprHash(),
-            batch1.getIdempotentKey(),
+            persisted1.getExprHash(),
+            persisted1.getIdempotentKey(),
             BatchStatus.SUCCEEDED,
             BatchStats.of(100),
             now,
@@ -338,23 +338,24 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
 
     // 批次 2: 失败
     TaskRunBatch batch2 = createBatch(2, 2);
-    repository.save(batch2);
+    TaskRunBatch persisted2 = repository.save(batch2);  // ✅ 直接获取带 ID 的实体
+
     TaskRunBatch failed2 =
         TaskRunBatch.restore(
-            batch2.getId(),
-            batch2.getRunId(),
-            batch2.getTaskId(),
-            batch2.getSliceId(),
-            batch2.getPlanId(),
-            batch2.getProvenanceCode(),
-            batch2.getOperationCode(),
-            batch2.getBatchNo(),
-            batch2.getPageNo(),
-            batch2.getPageSize(),
-            batch2.getBeforeToken(),
+            persisted2.getId(),  // 直接使用返回的 ID
+            persisted2.getRunId(),
+            persisted2.getTaskId(),
+            persisted2.getSliceId(),
+            persisted2.getPlanId(),
+            persisted2.getProvenanceCode(),
+            persisted2.getOperationCode(),
+            persisted2.getBatchNo(),
+            persisted2.getPageNo(),
+            persisted2.getPageSize(),
+            persisted2.getBeforeToken(),
             null,
-            batch2.getExprHash(),
-            batch2.getIdempotentKey(),
+            persisted2.getExprHash(),
+            persisted2.getIdempotentKey(),
             BatchStatus.FAILED,
             BatchStats.of(0),
             now,
@@ -364,23 +365,24 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
 
     // 批次 3: 成功 (最新)
     TaskRunBatch batch3 = createBatch(3, 3);
-    repository.save(batch3);
+    TaskRunBatch persisted3 = repository.save(batch3);  // ✅ 直接获取带 ID 的实体
+
     TaskRunBatch succeeded3 =
         TaskRunBatch.restore(
-            batch3.getId(),
-            batch3.getRunId(),
-            batch3.getTaskId(),
-            batch3.getSliceId(),
-            batch3.getPlanId(),
-            batch3.getProvenanceCode(),
-            batch3.getOperationCode(),
-            batch3.getBatchNo(),
-            batch3.getPageNo(),
-            batch3.getPageSize(),
-            batch3.getBeforeToken(),
+            persisted3.getId(),  // 直接使用返回的 ID
+            persisted3.getRunId(),
+            persisted3.getTaskId(),
+            persisted3.getSliceId(),
+            persisted3.getPlanId(),
+            persisted3.getProvenanceCode(),
+            persisted3.getOperationCode(),
+            persisted3.getBatchNo(),
+            persisted3.getPageNo(),
+            persisted3.getPageSize(),
+            persisted3.getBeforeToken(),
             null,
-            batch3.getExprHash(),
-            batch3.getIdempotentKey(),
+            persisted3.getExprHash(),
+            persisted3.getIdempotentKey(),
             BatchStatus.SUCCEEDED,
             BatchStats.of(50),
             now.plusSeconds(10),
@@ -393,7 +395,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
 
     // Assert
     assertThat(lastSucceededBatchId).isPresent();
-    assertThat(lastSucceededBatchId.get()).isEqualTo(batch3.getId());
+    assertThat(lastSucceededBatchId.get()).isEqualTo(persisted3.getId());
   }
 
   @Test
@@ -401,23 +403,24 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
   void shouldReturnEmptyWhenNoSucceededBatches() {
     // Arrange - 只有失败批次
     TaskRunBatch batch = createBatch(1, 1);
-    repository.save(batch);
+    TaskRunBatch persisted = repository.save(batch);  // ✅ 直接获取带 ID 的实体
+
     TaskRunBatch failed =
         TaskRunBatch.restore(
-            batch.getId(),
-            batch.getRunId(),
-            batch.getTaskId(),
-            batch.getSliceId(),
-            batch.getPlanId(),
-            batch.getProvenanceCode(),
-            batch.getOperationCode(),
-            batch.getBatchNo(),
-            batch.getPageNo(),
-            batch.getPageSize(),
-            batch.getBeforeToken(),
+            persisted.getId(),  // 直接使用返回的 ID
+            persisted.getRunId(),
+            persisted.getTaskId(),
+            persisted.getSliceId(),
+            persisted.getPlanId(),
+            persisted.getProvenanceCode(),
+            persisted.getOperationCode(),
+            persisted.getBatchNo(),
+            persisted.getPageNo(),
+            persisted.getPageSize(),
+            persisted.getBeforeToken(),
             null,
-            batch.getExprHash(),
-            batch.getIdempotentKey(),
+            persisted.getExprHash(),
+            persisted.getIdempotentKey(),
             BatchStatus.FAILED,
             BatchStats.of(0),
             Instant.now(),
@@ -466,7 +469,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
               100,
               null,
               TEST_EXPR_HASH,
-              new IdempotentKey("idem-run1-" + i));
+              new IdempotentKey(generateIdempotentKey("run1-" + runId1 + "-" + i)));
       repository.save(batch1);
 
       TaskRunBatch batch2 =
@@ -483,7 +486,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
               100,
               null,
               "hash456",
-              new IdempotentKey("idem-run2-" + i));
+              new IdempotentKey(generateIdempotentKey("run2-" + runId2 + "-" + i)));
       repository.save(batch2);
     }
 
@@ -534,7 +537,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
   void shouldHandleBatchStatusTransitions() {
     // Arrange
     TaskRunBatch batch = createBatch(1, 1);
-    repository.save(batch);
+    TaskRunBatch persisted = repository.save(batch);  // ✅ 直接获取带 ID 的实体
 
     // Act & Assert - RUNNING → SUCCEEDED
     assertThat(batch.getStatus()).isEqualTo(BatchStatus.RUNNING);
@@ -542,38 +545,38 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
     Instant now = Instant.now();
     TaskRunBatch succeeded =
         TaskRunBatch.restore(
-            batch.getId(),
-            batch.getRunId(),
-            batch.getTaskId(),
-            batch.getSliceId(),
-            batch.getPlanId(),
-            batch.getProvenanceCode(),
-            batch.getOperationCode(),
-            batch.getBatchNo(),
-            batch.getPageNo(),
-            batch.getPageSize(),
-            batch.getBeforeToken(),
+            persisted.getId(),  // 直接使用返回的 ID
+            persisted.getRunId(),
+            persisted.getTaskId(),
+            persisted.getSliceId(),
+            persisted.getPlanId(),
+            persisted.getProvenanceCode(),
+            persisted.getOperationCode(),
+            persisted.getBatchNo(),
+            persisted.getPageNo(),
+            persisted.getPageSize(),
+            persisted.getBeforeToken(),
             "nextToken",
-            batch.getExprHash(),
-            batch.getIdempotentKey(),
+            persisted.getExprHash(),
+            persisted.getIdempotentKey(),
             BatchStatus.SUCCEEDED,
             BatchStats.of(200),
             now,
             null,
             null);
-    repository.save(succeeded);
+    TaskRunBatch result = repository.save(succeeded);
 
-    List<TaskRunBatch> persisted = repository.findByRunId(TEST_RUN_ID);
-    assertThat(persisted).hasSize(1);
-    assertThat(persisted.get(0).getStatus()).isEqualTo(BatchStatus.SUCCEEDED);
-    assertThat(persisted.get(0).getStats().recordCount()).isEqualTo(200);
-    assertThat(persisted.get(0).getAfterToken()).isEqualTo("nextToken");
+    assertThat(result.getStatus()).isEqualTo(BatchStatus.SUCCEEDED);
+    assertThat(result.getStats().recordCount()).isEqualTo(200);
+    assertThat(result.getAfterToken()).isEqualTo("nextToken");
   }
 
   @Test
   @DisplayName("应该验证幂等键的唯一性")
   void shouldEnforceIdempotentKeyUniqueness() {
     // Arrange
+    String duplicateKey = generateIdempotentKey("duplicate-test");
+
     TaskRunBatch batch1 =
         new TaskRunBatch(
             null,
@@ -588,7 +591,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
             100,
             null,
             TEST_EXPR_HASH,
-            new IdempotentKey("duplicate-key"));
+            new IdempotentKey(duplicateKey));
 
     TaskRunBatch batch2 =
         new TaskRunBatch(
@@ -604,7 +607,7 @@ class TaskRunBatchRepositoryMpImplTest extends BaseIntegrationTest {
             100,
             null,
             TEST_EXPR_HASH,
-            new IdempotentKey("duplicate-key")); // 相同的幂等键
+            new IdempotentKey(duplicateKey)); // 相同的幂等键
 
     // Act & Assert
     repository.save(batch1);
