@@ -42,6 +42,9 @@ jobs:
           echo "📂 patra-ingest 模块："
           ls -la patra-ingest/patra-ingest-boot
 
+      - name: 🔨 构建项目（安装依赖）
+        run: mvn clean install -DskipTests -B -V
+
       - name: 🧪 运行单元测试（跳过容器测试）
         run: |
           cd patra-ingest/patra-ingest-boot
@@ -79,6 +82,9 @@ jobs:
         run: |
           docker --version
           docker info
+
+      - name: 🔨 构建项目（安装依赖）
+        run: mvn clean install -DskipTests -B -V
 
       - name: 🔧 配置 Testcontainers
         run: |
