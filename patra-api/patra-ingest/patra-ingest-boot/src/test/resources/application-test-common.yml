@@ -1,4 +1,7 @@
-# 测试环境配置 - 完全隔离测试环境
+# 测试环境公共配置 - 集成测试和 E2E 测试共享
+#
+# 此配置文件包含所有测试环境的公共配置项，减少重复配置。
+# 差异化配置在各自的 profile 文件中（application-integration-test.yml, application-e2e-test.yml）
 
 spring:
   application:
@@ -34,7 +37,7 @@ spring:
 rocketmq:
   name-server: ${rocketmq.name-server}
   producer:
-    group: patra_ingest_producer_test
+    # producer.group 在各自的 profile 中覆盖
     send-message-timeout: 3000
 
 # XXL-Job 配置（测试环境禁用）
@@ -63,11 +66,17 @@ patra:
     # Outbox MQ 配置
     outbox:
       send-timeout: 3000
-      topic-prefix: patra_test_
+      topic-prefix: ""  # 测试环境不使用前缀（RocketMQ 自动创建 Topic）
       strict-channel-whitelist: false
       channel-mapping:
         TASK_READY: INGEST_TASK_READY
         LITERATURE_READY: INGEST_LITERATURE_READY
+    # MQ 消费者配置（Topic 名称）
+    mq:
+      topics:
+        task-ready: ${TOPIC_PREFIX:}INGEST_TASK_READY
+      # consumer-groups 在各自的 profile 中配置
+    # listener 开关在各自的 profile 中配置
   # 对象存储配置（测试环境使用虚拟配置）
   object-storage:
     active-provider: minio

@@ -1,6 +1,5 @@
 package com.patra.ingest.integration;
 
-import org.awaitility.Awaitility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.ComposeContainer;
@@ -8,14 +7,21 @@ import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.io.File;
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 /**
- * RocketMQ TestContainers 支持类
- * <p>
- * 使用 Docker Compose + ComposeContainer 管理 RocketMQ 容器，解决网络配置问题。
+ * RocketMQ TestContainers 容器管理类。
+ *
+ * <p>使用 Docker Compose + ComposeContainer 管理 RocketMQ 容器，解决网络配置问题。
+ *
+ * <h3>职责范围</h3>
+ *
+ * <ul>
+ *   <li><strong>容器生命周期管理</strong>: 启动、停止 RocketMQ 容器（NameServer + Broker）
+ *   <li><strong>网络配置</strong>: 确保宿主机可访问容器内的 RocketMQ 服务
+ * </ul>
  *
  * <h3>核心技术突破</h3>
+ *
  * <ul>
  *   <li><strong>brokerIP1=127.0.0.1</strong>: Broker advertise 宿主机可访问的地址
  *   <li><strong>1:1 端口映射</strong>: 10911:10911，确保客户端连接端口匹配
@@ -24,16 +30,27 @@ import java.util.concurrent.TimeUnit;
  * </ul>
  *
  * <h3>为什么不使用 GenericContainer?</h3>
+ *
  * <p>GenericContainer 的动态端口映射和容器内部 IP 检测机制，在 RocketMQ 场景下会导致：
+ *
  * <ul>
  *   <li>Broker 自动检测到容器内部 IP (如 172.17.0.x)
  *   <li>客户端从 NameServer 获取到错误的 Broker 地址
  *   <li>宿主机无法连接到 Broker
  * </ul>
  *
+ * <h3>设计原则</h3>
+ *
+ * <ul>
+ *   <li><strong>单一职责</strong>: 只管理容器生命周期，不管理 Topic（Topic 管理由 {@link
+ *       com.patra.ingest.integration.config.RocketMQTopicAdmin} 负责）
+ *   <li><strong>关注点分离</strong>: 容器管理与业务配置分离
+ * </ul>
+ *
  * @author linqibin
  * @since 0.2.0
  * @see ComposeContainer
+ * @see com.patra.ingest.integration.config.RocketMQTopicAdmin
  */
 public class RocketMQContainerSupport {
 
@@ -48,7 +65,10 @@ public class RocketMQContainerSupport {
      * 构造函数，初始化 Docker Compose 容器
      */
     public RocketMQContainerSupport() {
-        File composeFile = new File("docker-compose-rocketmq.yml");
+        // 从 classpath 加载 docker-compose 文件
+        File composeFile = new File(
+            getClass().getClassLoader().getResource("docker-compose-rocketmq.yml").getFile()
+        );
 
         if (!composeFile.exists()) {
             throw new IllegalStateException(
@@ -113,122 +133,6 @@ public class RocketMQContainerSupport {
         return "localhost:" + NAMESRV_PORT;
     }
 
-    /**
-     * 创建 Topic（使用 Awaitility 等待成功）
-     * <p>
-     * 基于 Apache Camel 的方案，确保 Topic 创建成功并等待路由信息同步
-     *
-     * @param topic Topic 名称
-     */
-    public void createTopic(String topic) {
-        log.info("创建 Topic: {}", topic);
-
-        // 获取 broker 容器（Docker Compose 的服务名称格式可能是 <service>-1 或 <service>_1）
-        var brokerContainerOpt = composeContainer.getContainerByServiceName("broker-1");
-        if (!brokerContainerOpt.isPresent()) {
-            brokerContainerOpt = composeContainer.getContainerByServiceName("broker_1");
-        }
-
-        if (!brokerContainerOpt.isPresent()) {
-            throw new IllegalStateException("找不到 Broker 容器");
-        }
-
-        var brokerContainer = brokerContainerOpt.get();
-
-        Awaitility.await()
-                .atMost(30, TimeUnit.SECONDS)
-                .pollDelay(1, TimeUnit.SECONDS)
-                .pollInterval(2, TimeUnit.SECONDS)
-                .until(() -> {
-                    try {
-                        var result = brokerContainer.execInContainer(
-                                "sh", "mqadmin", "updateTopic",
-                                "-n", "nameserver:9876",  // 容器内部使用别名
-                                "-t", topic,
-                                "-c", "DefaultCluster"
-                        );
-
-                        String output = result.getStdout();
-                        boolean success = result.getExitCode() == 0 && output.contains("success");
-
-                        if (success) {
-                            log.info("Topic 创建成功: {}", topic);
-                            // 等待路由信息同步
-                            return verifyTopicRoute(topic, brokerContainer);
-                        } else {
-                            log.warn("Topic 创建失败，重试中... 输出: {}", output);
-                            return false;
-                        }
-                    } catch (Exception e) {
-                        log.warn("执行 mqadmin 命令失败: {}", e.getMessage());
-                        return false;
-                    }
-                });
-
-        log.info("Topic {} 已创建并且路由信息已同步", topic);
-    }
-
-    /**
-     * 验证 Topic 路由信息
-     *
-     * @param topic Topic 名称
-     * @param brokerContainer Broker 容器
-     * @return 路由信息是否可用
-     */
-    private boolean verifyTopicRoute(String topic, org.testcontainers.containers.ContainerState brokerContainer) {
-        try {
-            var result = brokerContainer.execInContainer(
-                    "sh", "mqadmin", "topicRoute",
-                    "-n", "nameserver:9876",
-                    "-t", topic
-            );
-
-            String output = result.getStdout();
-            boolean routeAvailable = output != null && output.contains("brokerName");
-
-            if (routeAvailable) {
-                log.info("Topic {} 路由信息已可用", topic);
-            } else {
-                log.warn("Topic {} 路由信息尚未同步，输出: {}", topic, output);
-            }
-
-            return routeAvailable;
-        } catch (Exception e) {
-            log.warn("验证路由信息失败: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * 删除 Topic
-     *
-     * @param topic Topic 名称
-     */
-    public void deleteTopic(String topic) {
-        log.info("删除 Topic: {}", topic);
-
-        var brokerContainerOpt = composeContainer.getContainerByServiceName("broker-1");
-        if (!brokerContainerOpt.isPresent()) {
-            brokerContainerOpt = composeContainer.getContainerByServiceName("broker_1");
-        }
-
-        if (!brokerContainerOpt.isPresent()) {
-            log.warn("找不到 Broker 容器，无法删除 Topic");
-            return;
-        }
-
-        try {
-            brokerContainerOpt.get().execInContainer(
-                    "sh", "mqadmin", "deleteTopic",
-                    "-n", "nameserver:9876",
-                    "-t", topic,
-                    "-c", "DefaultCluster"
-            );
-            log.info("Topic {} 已删除", topic);
-        } catch (Exception e) {
-            log.warn("删除 Topic 失败: {}", e.getMessage());
-        }
-    }
 
     /**
      * 获取 ComposeContainer 实例

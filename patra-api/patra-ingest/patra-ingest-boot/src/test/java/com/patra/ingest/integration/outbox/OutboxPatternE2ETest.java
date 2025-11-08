@@ -15,7 +15,7 @@ import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
-import com.patra.ingest.testutil.TestMessageCollector;
+import com.patra.ingest.testutil.RocketMQMessageCollector;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
@@ -110,7 +110,6 @@ import org.springframework.transaction.annotation.Transactional;
  * @see MySQLContainerInitializer
  * @see RocketMQContainerInitializer
  * @see OutboxMessageTestBuilder
- * @see TestMessageCollector
  */
 @SpringBootTest(
     properties = {
@@ -135,14 +134,14 @@ class OutboxPatternE2ETest {
   @Autowired private OutboxRelayOrchestrator relayOrchestrator;
   @Autowired private RocketMqOutboxPublisher publisher;
 
-  private TestMessageCollector messageCollector;
+  private RocketMQMessageCollector messageCollector;
   private DefaultMQPushConsumer testConsumer;
 
   // ========== Setup & Teardown ==========
 
   @BeforeEach
   void setUp() throws Exception {
-    messageCollector = new TestMessageCollector();
+    messageCollector = new RocketMQMessageCollector();
 
     String namesrvAddr = RocketMQContainerInitializer.getRocketMQSupport().getNameserverAddress();
     testConsumer = new DefaultMQPushConsumer("e2e_test_consumer_" + System.currentTimeMillis());
