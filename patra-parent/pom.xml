@@ -668,21 +668,8 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- 跳过资源处理 -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-resources-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>default-resources</id>
-                                <phase>none</phase>
-                            </execution>
-                            <execution>
-                                <id>default-testResources</id>
-                                <phase>none</phase>
-                            </execution>
-                        </executions>
-                    </plugin>
+                    <!-- 保留资源处理，因为测试需要资源文件（如 docker-compose.yml） -->
+                    <!-- 资源处理很快（只是文件复制），跳过收益不大 -->
                 </plugins>
             </build>
         </profile>
