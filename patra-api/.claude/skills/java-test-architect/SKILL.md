@@ -408,7 +408,7 @@ mvn test
 # 运行特定类型的测试
 mvn test -Dtest="*Test"           # 单元测试
 mvn test -Dtest="*IT"             # 集成测试
-mvn test -Dtest="*E2ETest"        # E2E 测试
+mvn test -Dtest="*E2E"        # E2E 测试
 
 # 运行特定层的测试
 mvn test -Dtest="*Domain*Test"
@@ -416,7 +416,7 @@ mvn test -Dtest="*Application*Test"
 
 # 运行 boot 模块的集成和 E2E 测试
 cd patra-{service}-boot
-mvn test -Dtest="*IT,*E2ETest"
+mvn test -Dtest="*IT,*E2E"
 
 # 生成测试覆盖率报告
 mvn jacoco:prepare-agent test jacoco:report

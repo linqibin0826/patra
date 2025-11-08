@@ -42,7 +42,7 @@ Q: 代码在哪一层？
 |---------|---------|---------|---------|------|
 | **单元测试** | `Test` | 任何模块 | Mock 依赖,测试单个类 | `OrderServiceTest` |
 | **集成测试** | `IT` | `patra-{service}-boot` | 真实依赖,测试多组件协作 | `OrderRepositoryIT` |
-| **E2E 测试** | `E2ETest` | `patra-{service}-boot` | 完整业务流程,端到端验证 | `OrderFlowE2ETest` |
+| **E2E 测试** | `E2E` | `patra-{service}-boot` | 完整业务流程,端到端验证 | `OrderFlowE2E` |
 
 ### 集成测试 vs E2E 测试
 
@@ -53,7 +53,7 @@ Q: 代码在哪一层？
 - 📝 **示例**: Repository + 数据库, Publisher + RocketMQ
 - ⏱️ **执行时间**: 3-10 秒
 
-**E2E 测试 (E2ETest)**:
+**E2E 测试 (E2E)**:
 - 🎯 **范围**: 测试完整业务流程,从 API 入口到数据持久化
 - 🔧 **工具**: @SpringBootTest + TestContainers + MockMvc
 - 📍 **位置**: `patra-{service}-boot/src/test/java`
@@ -79,12 +79,12 @@ Q: 代码在哪一层？
 // 类名（按测试类型）
 {被测类}Test.java              // 单元测试（可在任何模块）
 {功能}IT.java                   // 集成测试（必须在 patra-{service}-boot 模块）
-{功能}E2ETest.java              // E2E 测试（必须在 patra-{service}-boot 模块）
+{功能}E2E.java              // E2E 测试（必须在 patra-{service}-boot 模块）
 
 // 测试位置规则
 // ✅ domain/app/adapter/infra 层：{被测类}Test.java
 // ✅ boot 模块集成测试：{功能}IT.java
-// ✅ boot 模块 E2E 测试：{功能}E2ETest.java
+// ✅ boot 模块 E2E 测试：{功能}E2E.java
 // ❌ 错误：在 infra 层使用 IntegrationTest 后缀
 // ❌ 错误：在 domain 层使用 IT 后缀
 
@@ -277,7 +277,7 @@ patra-registry/
 └── patra-registry-boot/src/test/java/
     ├── ProvenanceRepositoryIT.java      ✅ 集成测试
     ├── RocketMqPublisherIT.java         ✅ 集成测试
-    ├── ProvenanceFlowE2ETest.java       ✅ E2E 测试
+    ├── ProvenanceFlowE2E.java       ✅ E2E 测试
     └── ArchitectureTest.java            ✅ 架构测试
 ```
 
@@ -291,7 +291,7 @@ patra-registry/
    └── ProvenanceIT.java                # 错误！Domain 层只有单元测试
 
 ❌ patra-registry-app/src/test/java/
-   └── OrchestratorE2ETest.java         # 错误！E2E 必须在 boot 模块
+   └── OrchestratorE2E.java         # 错误！E2E 必须在 boot 模块
 ```
 
 ### 命名规范速查表
@@ -302,7 +302,7 @@ patra-registry/
 | 单元测试（Mock） | `Test` | 任何模块 | `@ExtendWith(MockitoExtension.class)` |
 | 切片测试（Controller） | `Test` | adapter 模块 | `@WebMvcTest` |
 | 集成测试（数据库/MQ） | `IT` | **boot 模块** | `@SpringBootTest + @Testcontainers` |
-| E2E 测试（完整流程） | `E2ETest` | **boot 模块** | `@SpringBootTest + @Testcontainers` |
+| E2E 测试（完整流程） | `E2E` | **boot 模块** | `@SpringBootTest + @Testcontainers` |
 | 架构测试 | `ArchitectureTest` | boot 模块 | `@AnalyzeClasses` |
 
 ---
