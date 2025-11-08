@@ -146,42 +146,7 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- Maven Surefire 插件：支持通过 tag 过滤测试 -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <!-- 排除指定的测试 tag（由 Profile 控制） -->
-                    <excludedGroups>${test.excluded.groups}</excludedGroups>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
-
-    <!-- Maven Profiles: 控制测试执行范围 -->
-    <profiles>
-        <!-- 快速测试模式：跳过慢速测试（RocketMQ 集成测试、E2E 测试） -->
-        <profile>
-            <id>fast-tests</id>
-            <properties>
-                <!-- 排除 @SlowTest 标记的测试 -->
-                <test.excluded.groups>slow</test.excluded.groups>
-            </properties>
-        </profile>
-
-        <!-- 完整测试模式：运行所有测试（包括慢速测试） -->
-        <profile>
-            <id>all-tests</id>
-            <activation>
-                <!-- 默认激活：mvn test 时运行所有测试 -->
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <!-- 不排除任何测试 -->
-                <test.excluded.groups></test.excluded.groups>
-            </properties>
-        </profile>
-    </profiles>
 
 </project>
