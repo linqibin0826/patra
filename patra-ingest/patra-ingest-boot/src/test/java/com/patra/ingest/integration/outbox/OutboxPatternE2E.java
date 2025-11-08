@@ -124,7 +124,7 @@ import org.springframework.transaction.annotation.Transactional;
 @org.springframework.test.context.ActiveProfiles("e2e-test")
 // 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能
 // 测试隔离通过动态生成的 Consumer Group (e2e_test_consumer_<timestamp>) 保证
-class OutboxPatternE2ETest {
+class OutboxPatternE2E {
 
   // ========== Test Dependencies ==========
   // 注意：此测试类同时使用 MySQL 和 RocketMQ 容器（由 MySQLContainerInitializer 和 RocketMQContainerInitializer 提供）
@@ -175,7 +175,7 @@ class OutboxPatternE2ETest {
 
   @Nested
   @DisplayName("完整工作流测试")
-  class CompleteWorkflowTests {
+  class CompleteWorkflowTest {
 
     @Test
     @Transactional
@@ -261,7 +261,7 @@ class OutboxPatternE2ETest {
 
   @Nested
   @DisplayName("幂等性测试")
-  class IdempotencyTests {
+  class IdempotencyTest {
 
     @Test
     @Transactional
@@ -342,7 +342,7 @@ class OutboxPatternE2ETest {
 
   @Nested
   @DisplayName("事务原子性测试")
-  class TransactionAtomicityTests {
+  class TransactionAtomicityTest {
 
     @Test
     @DisplayName("应该在业务操作失败时回滚 Outbox 消息")
@@ -385,7 +385,7 @@ class OutboxPatternE2ETest {
 
   @Nested
   @DisplayName("失败重试测试")
-  class RetryTests {
+  class RetryTest {
 
     @Test
     @Transactional
@@ -506,7 +506,7 @@ class OutboxPatternE2ETest {
 
   @Nested
   @DisplayName("租约机制测试")
-  class LeaseTests {
+  class LeaseTest {
 
     @Test
     @Transactional
@@ -582,7 +582,7 @@ class OutboxPatternE2ETest {
 
   @Nested
   @DisplayName("通道过滤测试")
-  class ChannelFilterTests {
+  class ChannelFilterTest {
 
     @Test
     @Transactional

@@ -570,7 +570,7 @@
 
     <!-- Maven Profiles for controlling test execution -->
     <profiles>
-        <!-- unit-only profile: 只运行单元测试（排除 IT 和 E2ETest） -->
+        <!-- unit-only profile: 只运行单元测试（排除 IT 和 E2E） -->
         <profile>
             <id>unit-only</id>
             <build>
@@ -579,9 +579,15 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
+                            <!-- 只包含以 Test 结尾的测试类 -->
+                            <includes>
+                                <include>**/*Test</include>
+                            </includes>
+                            <!-- 排除集成测试和 E2E 测试（包括内部类） -->
                             <excludes>
-                                <exclude>**/*IT.java</exclude>
-                                <exclude>**/*E2ETest.java</exclude>
+                                <exclude>**/*IT</exclude>
+                                <exclude>**/*E2E</exclude>
+                                <exclude>**/*E2E$*</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -589,7 +595,7 @@
             </build>
         </profile>
 
-        <!-- integration-only profile: 只运行集成测试（*IT.java） -->
+        <!-- integration-only profile: 只运行集成测试（*IT） -->
         <profile>
             <id>integration-only</id>
             <build>
@@ -599,15 +605,17 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>**/*IT.java</include>
+                                <include>**/*IT</include>
                             </includes>
+                            <!-- 清空 excludes，确保只运行 IT 测试 -->
+                            <excludes/>
                         </configuration>
                     </plugin>
                 </plugins>
             </build>
         </profile>
 
-        <!-- e2e-only profile: 只运行 E2E 测试（*E2ETest.java） -->
+        <!-- e2e-only profile: 只运行 E2E 测试（*E2E） -->
         <profile>
             <id>e2e-only</id>
             <build>
@@ -617,8 +625,10 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
-                                <include>**/*E2ETest.java</include>
+                                <include>**/*E2E</include>
                             </includes>
+                            <!-- 清空 excludes，确保只运行 E2E 测试 -->
+                            <excludes/>
                         </configuration>
                     </plugin>
                 </plugins>
