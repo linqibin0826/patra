@@ -16,8 +16,7 @@ import com.patra.ingest.infra.persistence.entity.TaskRunDO;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mapstruct.factory.Mappers;
 
 /**
  * TaskRunConverter 单元测试。
@@ -34,12 +33,11 @@ import org.springframework.boot.test.context.SpringBootTest;
  *   <li>测试空值和边界情况
  * </ul>
  *
- * <p>注意：TaskRunConverter 使用 MapStruct，需要 Spring 容器来实例化。
+ * <p>注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
  */
-@SpringBootTest(classes = {TaskRunConverterImpl.class})
 class TaskRunConverterTest {
 
-  @Autowired private TaskRunConverter converter;
+  private final TaskRunConverter converter = Mappers.getMapper(TaskRunConverter.class);
 
   @Test
   @DisplayName("应当正确将TaskRun转换为TaskRunDO")
