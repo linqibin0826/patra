@@ -579,9 +579,10 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
-                            <!-- 只包含以 Test 结尾的测试类 -->
+                            <!-- 只包含以 Test 或 Tests 结尾的测试类 -->
                             <includes>
                                 <include>**/*Test</include>
+                                <include>**/*Tests</include>
                             </includes>
                             <!-- 排除集成测试和 E2E 测试（包括内部类） -->
                             <excludes>
