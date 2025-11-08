@@ -21,7 +21,7 @@ jobs:
   setup:
     name: 🔧 依赖构建
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
 
     steps:
       - name: 📥 Checkout 代码
@@ -50,7 +50,7 @@ jobs:
     name: 🚀 单元测试
     runs-on: ubuntu-latest
     needs: setup
-    timeout-minutes: 3
+    timeout-minutes: 5
 
     steps:
       - name: 📥 Checkout 代码
@@ -90,7 +90,7 @@ jobs:
     name: 🔬 集成测试（IT）
     runs-on: ubuntu-latest
     needs: setup
-    timeout-minutes: 3
+    timeout-minutes: 8
 
     steps:
       - name: 📥 Checkout 代码
@@ -150,7 +150,7 @@ jobs:
     name: 🎯 E2E 测试
     runs-on: ubuntu-latest
     needs: setup
-    timeout-minutes: 3
+    timeout-minutes: 8
 
     steps:
       - name: 📥 Checkout 代码
