@@ -46,8 +46,7 @@ jobs:
         run: mvn clean install -DskipTests -B -V
 
       - name: 🧪 运行整个项目的单元测试（跳过容器测试）
-        run: mvn test -Pfast-tests -B -V \
-          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+        run: mvn test -Pfast-tests -B -V
 
       - name: 📊 上传测试报告
         if: always()
@@ -92,8 +91,7 @@ jobs:
           echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
 
       - name: 🧪 运行整个项目的完整测试（包含容器测试）
-        run: mvn test -Pall-tests -B -V \
-          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+        run: mvn test -Pall-tests -B -V
         env:
           # 确保 Docker 可访问
           DOCKER_HOST: unix:///var/run/docker.sock
