@@ -317,7 +317,7 @@ class GenericBatchExecutorTest {
     @DisplayName("应该使用配置的重试参数")
     void shouldUseConfiguredRetryParams() {
       // Given: 自定义重试配置
-      ProvenanceConfig customConfig = createCustomRetryConfig(5, 500);
+      ProvenanceConfig customConfig = createCustomRetryConfig(5, 5); // 使用 5ms 延迟以加快测试
       when(configConverter.convert(eq("pubmed"), any())).thenReturn(customConfig);
 
       AdapterResult failureResult = AdapterResult.retriableFailure("错误");
@@ -530,7 +530,7 @@ class GenericBatchExecutorTest {
         null, // pagination
         null, // windowOffset
         null, // batching
-        new com.patra.starter.provenance.common.config.RetryConfig(3, 1000),
+        new com.patra.starter.provenance.common.config.RetryConfig(3, 10), // 使用 10ms 延迟以加快测试
         null // rateLimit
         );
   }
