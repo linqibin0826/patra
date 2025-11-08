@@ -17,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.SendStatus;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.apache.rocketmq.spring.support.RocketMQHeaders;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -89,21 +92,23 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
     // 2. 业务通道映射到技术 Topic
     String topic = channelMapper.toTopic(channel);
 
-    // 3. 构建 RocketMQ 消息
-    org.apache.rocketmq.common.message.Message rocketMsg = buildRocketMqMessage(message, topic);
+    // 3. 构建 destination (topic:tags 格式)
+    String destination = buildDestination(topic, message.getOpType());
 
-    // 4. 记录发送日志
+    // 4. 构建 Spring 消息
+    Message<String> springMsg = buildSpringMessage(message);
+
+    // 5. 记录发送日志
     if (log.isDebugEnabled()) {
       log.debug(
-          "正在发布 Outbox 消息到 RocketMQ, topic={} channel={} dedupKey={} tags={} partitionKey={}",
-          topic,
+          "正在发布 Outbox 消息到 RocketMQ, destination={} channel={} dedupKey={} partitionKey={}",
+          destination,
           channel,
           message.getDedupKey(),
-          message.getOpType(),
           message.getPartitionKey());
     }
 
-    // 5. 发送消息 (根据是否有 partitionKey 选择普通或顺序发送)
+    // 6. 发送消息 (根据是否有 partitionKey 选择普通或顺序发送)
     try {
       SendResult result;
       long timeout = properties.getSendTimeout();
@@ -112,15 +117,15 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
         // 顺序消息发送: partitionKey 作为 hashKey,用于队列选择
         result =
             rocketMQTemplate.syncSendOrderly(
-                topic,
-                rocketMsg,
+                destination,
+                springMsg,
                 message.getPartitionKey(), // hashKey 用于选择队列
                 timeout // 使用配置的超时时间
                 );
         log.debug("使用顺序发送模式, hashKey={} timeout={}ms", message.getPartitionKey(), timeout);
       } else {
         // 普通消息发送
-        result = rocketMQTemplate.syncSend(topic, rocketMsg, timeout);
+        result = rocketMQTemplate.syncSend(destination, springMsg, timeout);
         log.debug("使用普通发送模式, timeout={}ms", timeout);
       }
 
@@ -169,51 +174,64 @@ public class RocketMqOutboxPublisher implements OutboxPublisherPort {
   }
 
   /**
-   * 构建 RocketMQ 原生消息对象。
+   * 构建 RocketMQ destination 字符串。
+   *
+   * <p>格式: "topic:tags"
+   *
+   * @param topic Topic 名称
+   * @param tags Tags (opType)
+   * @return destination 字符串
+   */
+  private String buildDestination(String topic, String tags) {
+    if (StringUtils.hasText(tags)) {
+      return topic + ":" + tags;
+    }
+    return topic;
+  }
+
+  /**
+   * 构建 Spring 消息对象（用于 RocketMQTemplate）。
    *
    * <p><strong>消息结构</strong>:
    *
    * <ul>
-   *   <li>Topic: 由 RocketMqChannelMapper 映射得到
-   *   <li>Tags: 对应 OutboxMessage.opType (用于消费端过滤)
-   *   <li>Keys: 对应 OutboxMessage.dedupKey (用于消息追踪和去重)
-   *   <li>Body: JSON 字符串
-   *   <li>UserProperties: 自定义头信息 + partitionKey
+   *   <li>Payload: JSON 字符串
+   *   <li>Header - KEYS: 对应 OutboxMessage.dedupKey (用于消息追踪和去重)
+   *   <li>Headers: 自定义头信息 + partitionKey + channel
    * </ul>
    *
+   * <p><strong>注意</strong>: TAGS 不通过 header 传递，而是通过 destination 参数 ("topic:tags" 格式)
+   *
    * @param message 发件箱消息
-   * @param topic RocketMQ Topic 名称
-   * @return RocketMQ 消息对象
+   * @return Spring 消息对象
    */
-  private org.apache.rocketmq.common.message.Message buildRocketMqMessage(
-      OutboxMessage message, String topic) {
+  private Message<String> buildSpringMessage(OutboxMessage message) {
 
-    // 1. 准备消息体
-    String payload = message.getPayloadJson() != null ? message.getPayloadJson() : "";
-    byte[] body = payload.getBytes(StandardCharsets.UTF_8);
-
-    // 2. 创建 RocketMQ 消息
-    // 构造函数参数: topic, tags, keys, body
-    org.apache.rocketmq.common.message.Message rocketMsg =
-        new org.apache.rocketmq.common.message.Message(
-            topic,
-            message.getOpType(), // tags - 用于过滤
-            message.getDedupKey(), // keys - 用于追踪和去重
-            body);
-
-    // 3. 设置自定义属性 (UserProperties)
-    Map<String, Object> headers = parseHeaders(message.getHeadersJson());
-    headers.forEach((k, v) -> rocketMsg.putUserProperty(k, String.valueOf(v)));
-
-    // 4. 保存 partitionKey 到 UserProperties (供消费端使用)
-    if (StringUtils.hasText(message.getPartitionKey())) {
-      rocketMsg.putUserProperty("partitionKey", message.getPartitionKey());
+    // 1. 准备消息体（RocketMQTemplate 不支持空 payload，使用占位符）
+    String payload = message.getPayloadJson();
+    if (payload == null || payload.isEmpty()) {
+      payload = "{}"; // 空 JSON 对象作为占位符
     }
 
-    // 5. 添加业务通道信息 (便于消费端日志和监控)
-    rocketMsg.putUserProperty("channel", message.getChannel());
+    // 2. 创建 Spring Message Builder
+    MessageBuilder<String> builder = MessageBuilder.withPayload(payload);
 
-    return rocketMsg;
+    // 3. 设置 RocketMQ KEYS (用于消息追踪和去重)
+    builder.setHeader(RocketMQHeaders.KEYS, message.getDedupKey());
+
+    // 4. 设置自定义属性 (headers)
+    Map<String, Object> headers = parseHeaders(message.getHeadersJson());
+    headers.forEach(builder::setHeader);
+
+    // 5. 保存 partitionKey 到 headers (供消费端使用)
+    if (StringUtils.hasText(message.getPartitionKey())) {
+      builder.setHeader("partitionKey", message.getPartitionKey());
+    }
+
+    // 6. 添加业务通道信息 (便于消费端日志和监控)
+    builder.setHeader("channel", message.getChannel());
+
+    return builder.build();
   }
 
   /**
