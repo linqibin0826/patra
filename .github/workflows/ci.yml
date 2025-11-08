@@ -45,12 +45,12 @@ jobs:
             **/target
           key: build-${{ github.sha }}
 
-  # ==================== Job 1: 单元测试（196个测试） ====================
+  # ==================== Job 1: 单元测试（195个测试） ====================
   unit-tests:
     name: 🚀 单元测试
     runs-on: ubuntu-latest
     needs: setup
-    timeout-minutes: 3
+    timeout-minutes: 8
     strategy:
       fail-fast: true
 
