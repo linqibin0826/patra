@@ -256,7 +256,8 @@ class RocketMqOutboxPublisherIT {
           .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-dedup-003")).isTrue());
 
       MessageExt msg = messageCollector.getMessage("test-dedup-003");
-      assertThat(new String(msg.getBody(), StandardCharsets.UTF_8)).isEmpty();
+      // RocketMQTemplate 不支持空 payload，系统会自动使用 {} 作为占位符
+      assertThat(new String(msg.getBody(), StandardCharsets.UTF_8)).isEqualTo("{}");
     }
   }
 

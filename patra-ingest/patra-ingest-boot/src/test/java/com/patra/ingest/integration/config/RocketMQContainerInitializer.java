@@ -44,7 +44,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  *
  * <ul>
  *   <li><strong>镜像版本</strong>: apache/rocketmq:5.3.1
- *   <li><strong>组件</strong>: NameServer + Broker (使用共享 Docker Network)
+ *   <li><strong>组件</strong>: NameServer + Broker (使用 Docker Compose 编排)
  *   <li><strong>自动创建 Topic</strong>: 启用 (仅测试环境)
  *   <li><strong>预创建 Topics</strong>: INGEST_TASK_READY, INGEST_LITERATURE_READY
  * </ul>
@@ -58,12 +58,22 @@ import org.springframework.context.ConfigurableApplicationContext;
  *
  * <h3>设计说明</h3>
  *
- * <p>基于 Apache Camel 的成功实现，关键配置:
+ * <p>采用 Docker Compose + ComposeContainer 方案，解决网络配置问题。
  *
+ * <h4>核心技术突破</h4>
  * <ul>
- *   <li>不配置 brokerIP1 - 让 RocketMQ 自动检测
- *   <li>使用容器网络别名 (nameserver, broker)
- *   <li>使用 Awaitility 等待 Topic 路由信息同步
+ *   <li><strong>brokerIP1=127.0.0.1</strong>: Broker advertise 宿主机可访问的地址，解决容器内部 IP 无法访问的问题
+ *   <li><strong>1:1 端口映射</strong>: 10911:10911，确保客户端连接端口与 Broker advertise 端口匹配
+ *   <li><strong>Here-Document 格式</strong>: 使用 <<EOF 格式化配置文件，确保 RocketMQ 正确解析多行配置
+ *   <li><strong>Docker Compose</strong>: 声明式配置，易于维护和调试
+ * </ul>
+ *
+ * <h4>为什么不使用 GenericContainer?</h4>
+ * <p>GenericContainer 的动态端口映射和容器内部 IP 检测机制，在 RocketMQ 场景下会导致：
+ * <ul>
+ *   <li>Broker 自动检测到容器内部 IP (如 172.17.0.x)，宿主机无法访问
+ *   <li>客户端从 NameServer 获取到错误的 Broker 地址
+ *   <li>动态端口映射导致端口不匹配
  * </ul>
  *
  * @author linqibin

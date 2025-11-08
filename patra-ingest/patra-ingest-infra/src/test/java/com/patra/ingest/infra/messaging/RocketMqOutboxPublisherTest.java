@@ -24,9 +24,9 @@ import java.time.Instant;
 import java.util.Map;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.SendStatus;
-import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.springframework.messaging.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,6 +36,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 /**
  * RocketMqOutboxPublisher 单元测试。
@@ -57,6 +59,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 0.2.0
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("RocketMqOutboxPublisher 单元测试")
 class RocketMqOutboxPublisherTest {
 
@@ -125,30 +128,33 @@ class RocketMqOutboxPublisherTest {
       Map<String, Object> headers = Map.of("source", "scheduler");
       when(objectMapper.readValue(eq(headersJson), any(TypeReference.class))).thenReturn(headers);
 
-      // Mock 发送成功
+      // Mock 发送成功 (注意: destination 格式为 "topic:tags")
       SendResult sendResult = createSuccessSendResult(topic, "msg-001", 0);
-      when(rocketMQTemplate.syncSend(eq(topic), any(Message.class), eq(3000L)))
+      when(rocketMQTemplate.syncSend(anyString(), any(Message.class), eq(3000L)))
           .thenReturn(sendResult);
 
       // When: 发送消息
       publisher.publish(message, plan);
 
       // Then: 验证使用 syncSend (普通发送)
-      verify(rocketMQTemplate).syncSend(eq(topic), messageCaptor.capture(), eq(3000L));
+      verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
       verify(rocketMQTemplate, never())
           .syncSendOrderly(anyString(), any(Message.class), anyString(), eq(3000L));
 
-      // 验证消息元数据映射
-      Message rocketMsg = messageCaptor.getValue();
-      assertThat(rocketMsg.getTopic()).isEqualTo(topic);
-      assertThat(rocketMsg.getTags()).isEqualTo(opType); // opType → TAGS
-      assertThat(rocketMsg.getKeys()).isEqualTo(dedupKey); // dedupKey → KEYS
-      assertThat(new String(rocketMsg.getBody())).isEqualTo(payloadJson);
+      // 验证 destination 格式 "topic:tags"
+      assertThat(topicCaptor.getValue()).isEqualTo(topic + ":" + opType);
 
-      // 验证 UserProperties
-      assertThat(rocketMsg.getUserProperty("channel")).isEqualTo(channel);
-      assertThat(rocketMsg.getUserProperty("source")).isEqualTo("scheduler");
-      assertThat(rocketMsg.getUserProperty("partitionKey")).isNull(); // 无 partitionKey
+      // 验证 Spring Message 的内容
+      Message<?> springMsg = messageCaptor.getValue();
+
+      // 验证 payload (应该是 String 类型的 JSON)
+      assertThat(springMsg.getPayload()).isEqualTo(payloadJson);
+
+      // 验证 headers
+      assertThat(springMsg.getHeaders().get("KEYS")).isEqualTo(dedupKey); // dedupKey → KEYS
+      assertThat(springMsg.getHeaders().get("channel")).isEqualTo(channel);
+      assertThat(springMsg.getHeaders().get("source")).isEqualTo("scheduler");
+      assertThat(springMsg.getHeaders().get("partitionKey")).isNull(); // 无 partitionKey
     }
 
     @Test
@@ -176,10 +182,10 @@ class RocketMqOutboxPublisherTest {
       publisher.publish(message, createTestRelayPlan());
 
       // Then
-      verify(rocketMQTemplate).syncSend(anyString(), messageCaptor.capture(), eq(3000L));
+      verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
 
-      Message rocketMsg = messageCaptor.getValue();
-      assertThat(new String(rocketMsg.getBody())).isEmpty();
+      Message<?> springMsg = messageCaptor.getValue();
+      assertThat(springMsg.getPayload()).isEqualTo("{}"); // 空 payload 使用 "{}" 占位符
     }
   }
 
@@ -214,7 +220,7 @@ class RocketMqOutboxPublisherTest {
 
       SendResult sendResult = createSuccessSendResult(topic, "msg-003", 2);
       when(rocketMQTemplate.syncSendOrderly(
-              eq(topic), any(Message.class), eq(partitionKey), eq(3000L)))
+              anyString(), any(Message.class), eq(partitionKey), eq(3000L)))
           .thenReturn(sendResult);
 
       // When
@@ -226,14 +232,14 @@ class RocketMqOutboxPublisherTest {
               topicCaptor.capture(), messageCaptor.capture(), hashKeyCaptor.capture(), eq(3000L));
       verify(rocketMQTemplate, never()).syncSend(anyString(), any(Message.class), eq(3000L));
 
-      assertThat(topicCaptor.getValue()).isEqualTo(topic);
+      assertThat(topicCaptor.getValue()).isEqualTo(topic + ":" + "LITERATURE_READY");
       assertThat(hashKeyCaptor.getValue()).isEqualTo(partitionKey); // partitionKey 作为 hashKey
 
-      // 验证消息元数据
-      Message rocketMsg = messageCaptor.getValue();
-      assertThat(rocketMsg.getKeys()).isEqualTo(dedupKey); // dedupKey → KEYS (不是 partitionKey!)
-      assertThat(rocketMsg.getUserProperty("partitionKey"))
-          .isEqualTo(partitionKey); // partitionKey → UserProperty
+      // 验证 Spring Message 的消息元数据
+      Message<?> springMsg = messageCaptor.getValue();
+      assertThat(springMsg.getHeaders().get("KEYS")).isEqualTo(dedupKey); // dedupKey → KEYS (不是 partitionKey!)
+      assertThat(springMsg.getHeaders().get("partitionKey"))
+          .isEqualTo(partitionKey); // partitionKey → header
     }
 
     @Test
@@ -261,7 +267,7 @@ class RocketMqOutboxPublisherTest {
       publisher.publish(message, createTestRelayPlan());
 
       // Then: 应使用普通发送
-      verify(rocketMQTemplate).syncSend(anyString(), any(Message.class), eq(3000L));
+      verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
       verify(rocketMQTemplate, never())
           .syncSendOrderly(anyString(), any(Message.class), anyString(), eq(3000L));
     }
@@ -392,15 +398,14 @@ class RocketMqOutboxPublisherTest {
       publisher.publish(message, createTestRelayPlan());
 
       // Then: 成功发送,headers 为空
-      verify(rocketMQTemplate).syncSend(anyString(), messageCaptor.capture(), eq(3000L));
+      verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
 
-      Message rocketMsg = messageCaptor.getValue();
+      Message<?> springMsg = messageCaptor.getValue();
       // 验证 channel 属性存在
-      assertThat(rocketMsg.getUserProperty("channel")).isEqualTo("TASK_READY");
-      // 验证没有其他自定义 headers (排除 RocketMQ 内部属性 KEYS/TAGS/WAIT)
-      assertThat(rocketMsg.getUserProperty("source")).isNull();
-      assertThat(rocketMsg.getUserProperty("userId")).isNull();
-      // 注意: getProperties() 包含 RocketMQ 内部属性(KEYS/TAGS/WAIT),不能简单检查大小
+      assertThat(springMsg.getHeaders().get("channel")).isEqualTo("TASK_READY");
+      // 验证没有其他自定义 headers
+      assertThat(springMsg.getHeaders().get("source")).isNull();
+      assertThat(springMsg.getHeaders().get("userId")).isNull();
     }
 
     @Test
@@ -465,13 +470,13 @@ class RocketMqOutboxPublisherTest {
       publisher.publish(message, createTestRelayPlan());
 
       // Then
-      verify(rocketMQTemplate).syncSend(anyString(), messageCaptor.capture(), eq(3000L));
+      verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
 
-      Message rocketMsg = messageCaptor.getValue();
-      assertThat(rocketMsg.getUserProperty("traceId")).isEqualTo("trace-001");
-      assertThat(rocketMsg.getUserProperty("spanId")).isEqualTo("span-001");
-      assertThat(rocketMsg.getUserProperty("priority")).isEqualTo("HIGH");
-      assertThat(rocketMsg.getUserProperty("channel")).isEqualTo("TASK_READY");
+      Message<?> springMsg = messageCaptor.getValue();
+      assertThat(springMsg.getHeaders().get("traceId")).isEqualTo("trace-001");
+      assertThat(springMsg.getHeaders().get("spanId")).isEqualTo("span-001");
+      assertThat(springMsg.getHeaders().get("priority")).isEqualTo("HIGH");
+      assertThat(springMsg.getHeaders().get("channel")).isEqualTo("TASK_READY");
     }
   }
 
@@ -512,14 +517,14 @@ class RocketMqOutboxPublisherTest {
       // Then
       verify(rocketMQTemplate)
           .syncSendOrderly(
-              anyString(), messageCaptor.capture(), hashKeyCaptor.capture(), eq(3000L));
+              topicCaptor.capture(), messageCaptor.capture(), hashKeyCaptor.capture(), eq(3000L));
 
-      Message rocketMsg = messageCaptor.getValue();
+      Message<?> springMsg = messageCaptor.getValue();
 
-      // 关键验证: dedupKey → KEYS, partitionKey → hashKey + UserProperty
-      assertThat(rocketMsg.getKeys()).isEqualTo(dedupKey); // KEYS 用于去重和追踪
+      // 关键验证: dedupKey → KEYS, partitionKey → hashKey + header
+      assertThat(springMsg.getHeaders().get("KEYS")).isEqualTo(dedupKey); // KEYS 用于去重和追踪
       assertThat(hashKeyCaptor.getValue()).isEqualTo(partitionKey); // hashKey 用于队列选择
-      assertThat(rocketMsg.getUserProperty("partitionKey")).isEqualTo(partitionKey); // 供消费端使用
+      assertThat(springMsg.getHeaders().get("partitionKey")).isEqualTo(partitionKey); // 供消费端使用
     }
 
     @Test
@@ -547,10 +552,10 @@ class RocketMqOutboxPublisherTest {
       publisher.publish(message, createTestRelayPlan());
 
       // Then
-      verify(rocketMQTemplate).syncSend(anyString(), messageCaptor.capture(), eq(3000L));
+      verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
 
-      Message rocketMsg = messageCaptor.getValue();
-      assertThat(rocketMsg.getTags()).isEqualTo(opType); // opType → TAGS (用于消费端过滤)
+      // 验证 destination 包含 tags (格式: "topic:tags")
+      assertThat(topicCaptor.getValue()).isEqualTo("INGEST_TASK_READY:" + opType); // opType → destination 中的 tags
     }
   }
 
