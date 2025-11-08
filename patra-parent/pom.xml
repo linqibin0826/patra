@@ -488,8 +488,6 @@
                     <!-- 强制使用 UTF-8 编码输出测试报告和控制台日志 -->
                     <encoding>UTF-8</encoding>
                     <reportNameSuffix>utf8</reportNameSuffix>
-                    <!-- 支持通过 profile 控制跳过慢速测试 -->
-                    <excludedGroups>${test.excluded.groups}</excludedGroups>
                 </configuration>
             </plugin>
 
@@ -572,25 +570,67 @@
 
     <!-- Maven Profiles for controlling test execution -->
     <profiles>
-        <!-- fast-tests profile: 跳过慢速测试（容器测试等），用于快速反馈 -->
+        <!-- unit-only profile: 只运行单元测试（排除 IT 和 E2ETest） -->
         <profile>
-            <id>fast-tests</id>
-            <properties>
-                <!-- 排除标记为 @Tag("slow") 或 @SlowTest 的测试 -->
-                <test.excluded.groups>slow</test.excluded.groups>
-            </properties>
+            <id>unit-only</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*IT.java</exclude>
+                                <exclude>**/*E2ETest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
 
-        <!-- all-tests profile: 运行所有测试（包括慢速测试），默认激活 -->
+        <!-- integration-only profile: 只运行集成测试（*IT.java） -->
+        <profile>
+            <id>integration-only</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/*IT.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- e2e-only profile: 只运行 E2E 测试（*E2ETest.java） -->
+        <profile>
+            <id>e2e-only</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <includes>
+                                <include>**/*E2ETest.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- all-tests profile: 运行所有测试（默认） -->
         <profile>
             <id>all-tests</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
-            <properties>
-                <!-- 不排除任何测试 -->
-                <test.excluded.groups></test.excluded.groups>
-            </properties>
         </profile>
     </profiles>
 
