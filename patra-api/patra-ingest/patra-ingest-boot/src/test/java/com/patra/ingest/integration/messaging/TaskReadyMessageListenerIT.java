@@ -9,7 +9,6 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
-import com.patra.ingest.integration.annotation.SlowTest;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import java.util.HashMap;
@@ -78,7 +77,6 @@ import org.springframework.test.context.ContextConfiguration;
  * @see TaskExecutionUseCase
  */
 @Slf4j
-@SlowTest // 标记为慢速测试，可通过 -Pfast-tests 跳过
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",

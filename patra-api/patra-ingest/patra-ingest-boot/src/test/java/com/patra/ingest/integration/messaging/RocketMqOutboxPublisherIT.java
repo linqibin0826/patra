@@ -9,7 +9,6 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
-import com.patra.ingest.integration.annotation.SlowTest;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -86,7 +85,6 @@ import org.springframework.test.context.ContextConfiguration;
  * @see OutboxMessageTestBuilder
  * @see MessageCollector
  */
-@SlowTest // 标记为慢速测试，可通过 -Pfast-tests 跳过
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",
