@@ -743,4 +743,4 @@ public void archiveFailedMessages() {
 - **领域模型**: `patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/entity/OutboxMessage.java`
 - **数据库设计**: `patra-ingest-infra/src/main/resources/db/migration/V0.1.0__init_ingest_schema.sql` (行 512-653)
 - **中继执行器**: `patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/relay/executor/OutboxRelayExecutor.java`
-- **集成测试**: `patra-ingest-boot/src/test/java/com/patra/ingest/integration/outbox/OutboxPatternE2ETest.java`
+- **集成测试**: `patra-ingest-boot/src/test/java/com/patra/ingest/integration/outbox/OutboxPatternE2E.java`
