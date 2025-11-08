@@ -13,8 +13,7 @@ import com.patra.ingest.infra.persistence.entity.TaskDO;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mapstruct.factory.Mappers;
 
 /**
  * TaskConverter 单元测试。
@@ -31,12 +30,11 @@ import org.springframework.boot.test.context.SpringBootTest;
  *   <li>测试值对象的分解和组装
  * </ul>
  *
- * <p>注意：TaskConverter 使用 MapStruct，需要 Spring 容器来实例化。
+ * <p>注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
  */
-@SpringBootTest(classes = {TaskConverterImpl.class})
 class TaskConverterTest {
 
-  @Autowired private TaskConverter converter;
+  private final TaskConverter converter = Mappers.getMapper(TaskConverter.class);
 
   @Test
   @DisplayName("应当正确将TaskAggregate转换为TaskDO")

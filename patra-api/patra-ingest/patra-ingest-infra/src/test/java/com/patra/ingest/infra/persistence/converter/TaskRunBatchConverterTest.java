@@ -13,8 +13,7 @@ import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mapstruct.factory.Mappers;
 
 /**
  * TaskRunBatchConverter 单元测试。
@@ -31,12 +30,11 @@ import org.springframework.boot.test.context.SpringBootTest;
  *   <li>测试空值和边界情况
  * </ul>
  *
- * <p>注意：TaskRunBatchConverter 使用 MapStruct，需要 Spring 容器来实例化。
+ * <p>注意：MapStruct 转换器通过 Mappers.getMapper() 直接实例化，无需 Spring 容器。
  */
-@SpringBootTest(classes = {TaskRunBatchConverterImpl.class})
 class TaskRunBatchConverterTest {
 
-  @Autowired private TaskRunBatchConverter converter;
+  private final TaskRunBatchConverter converter = Mappers.getMapper(TaskRunBatchConverter.class);
 
   @Test
   @DisplayName("应当正确将TaskRunBatch转换为TaskRunBatchDO")
