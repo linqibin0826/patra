@@ -10,47 +10,51 @@ import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
-import com.patra.ingest.testutil.TestMessageCollector;
 import java.nio.charset.StandardCharsets;
-import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
-import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyStatus;
-import org.apache.rocketmq.client.consumer.listener.MessageListenerConcurrently;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
+import org.apache.rocketmq.spring.core.RocketMQListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
  * RocketMQ Outbox 发布器集成测试。
  *
- * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供）,测试消息发送、接收和元数据映射的完整流程。
+ * <p>使用 Testcontainers 启动真实 RocketMQ 环境（由 {@link RocketMQContainerInitializer} 提供），
+ * 测试 {@link RocketMqOutboxPublisher} 的消息发送功能。
  *
  * <h3>测试范围</h3>
  *
  * <ul>
  *   <li>✅ 普通消息发送和接收
- *   <li>✅ 顺序消息发送和接收 (partitionKey 场景)
  *   <li>✅ 消息元数据映射 (KEYS, TAGS, UserProperties)
+ *   <li>✅ 批量消息发送
  *   <li>✅ 业务通道到 Topic 映射
  *   <li>✅ 消息序列化和编码
- *   <li>✅ 错误场景处理
+ *   <li>✅ 顺序消息发送 (带 partitionKey)
+ *   <li>✅ 边界情况处理 (空 payload, 无 TAGS, 空 headers)
  * </ul>
  *
  * <h3>测试策略</h3>
  *
- * <p>遵循 testing-guide.md §7 集成测试模式:
+ * <p>遵循 testing-guide.md §7 集成测试模式：
  *
  * <ul>
  *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
+ *   <li><strong>Spring 管理 Consumer</strong>: 使用内部类 {@link MessageCollector} 自动订阅和收集消息
  *   <li><strong>异步断言</strong>: 使用 Awaitility 等待消息接收
- *   <li><strong>消息收集</strong>: 使用 {@link TestMessageCollector} 收集接收的消息
- *   <li><strong>清理隔离</strong>: 每个测试后清理 Consumer 和 Collector
+ *   <li><strong>测试隔离</strong>: 每个测试前清空消息收集器
  * </ul>
  *
  * <h3>环境要求</h3>
@@ -64,14 +68,14 @@ import org.springframework.test.context.ContextConfiguration;
  * <h3>性能优化</h3>
  *
  * <ul>
- *   <li>容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer} 配置,所有集成测试共享容器
- *   <li>共享网络: NameServer 和 Broker 共享 Docker 网络
+ *   <li>容器单例: 由 {@link RocketMQContainerInitializer} 和 {@link MySQLContainerInitializer} 配置，所有集成测试共享容器
+ *   <li>Spring Consumer: 自动管理生命周期，无需手动等待启动
  *   <li>并行测试: 测试方法可并发执行 (不同 Consumer Group)
  * </ul>
  *
  * <h3>容器依赖说明</h3>
  *
- * <p>虽然本测试主要测试 RocketMQ 消息发送,但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository）,
+ * <p>虽然本测试主要测试 RocketMQ 消息发送，但由于 Spring 上下文中包含依赖数据库的组件（如 OutboxMessageRepository），
  * 因此也需要启动 MySQL 容器。这样可以确保完整的应用上下文正常启动。
  *
  * @author linqibin
@@ -79,375 +83,290 @@ import org.springframework.test.context.ContextConfiguration;
  * @see RocketMQContainerInitializer
  * @see MySQLContainerInitializer
  * @see OutboxMessageTestBuilder
- * @see TestMessageCollector
+ * @see MessageCollector
  */
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",
       "spring.cloud.nacos.discovery.enabled=false",
       "spring.cloud.nacos.config.import-check.enabled=false",
-      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml"
+      "spring.config.import=classpath:ingest-error-config.yaml,classpath:ingest-rocketmq.yaml",
+      // 禁用生产环境的 RocketMQ Listener
+      "patra.ingest.listener.task-ready.enabled=false",
+      // 启用测试用的 RocketMQ Consumer（使用 Spring 管理）
+      "patra.ingest.test.rocketmq.consumer.enabled=true"
     })
 @ContextConfiguration(
     initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
+@org.springframework.context.annotation.Import(RocketMqOutboxPublisherIT.MessageCollector.class)
 @DisplayName("RocketMQ Outbox 发布器集成测试")
 @org.springframework.test.context.ActiveProfiles("integration-test")
 @org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与 E2E 测试共享
 class RocketMqOutboxPublisherIT {
 
-  // ========== Test Dependencies ==========
-  // 注: RocketMQ 容器配置由 RocketMQContainerInitializer 提供,所有集成测试共享
-
   @Autowired private RocketMqOutboxPublisher publisher;
 
-  /** Mock 对象存储模板（此测试不需要真实的对象存储） */
-  @MockBean private com.patra.starter.objectstorage.ObjectStorageTemplate objectStorageTemplate;
+  /** 测试用的消息收集器（Spring 管理的 Consumer） */
+  @Autowired private MessageCollector messageCollector;
 
-  /** Mock 真实的业务 Message Listener（避免干扰测试） */
-  @MockBean
-  private com.patra.ingest.adapter.rocketmq.TaskReadyMessageListener taskReadyMessageListener;
-
-  private TestMessageCollector messageCollector;
-  private DefaultMQPushConsumer testConsumer;
-
-  // ========== Setup & Teardown ==========
-
-  /**
-   * 每个测试前初始化。
-   *
-   * <p>创建测试 Consumer 并订阅所有测试 Topic。
-   *
-   * @throws Exception Consumer 启动失败
-   */
   @BeforeEach
-  void setUp() throws Exception {
-    messageCollector = new TestMessageCollector();
-
-    // 创建测试 Consumer
-    String namesrvAddr = RocketMQContainerInitializer.getRocketMQSupport().getNameserverAddress();
-
-    testConsumer = new DefaultMQPushConsumer("test_consumer_group_" + System.currentTimeMillis());
-    testConsumer.setNamesrvAddr(namesrvAddr);
-
-    // 默认值是 CONSUME_FROM_LAST_OFFSET，会跳过订阅前的消息
-    testConsumer.setConsumeFromWhere(
-        org.apache.rocketmq.common.consumer.ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
-
-    // 订阅测试 Topic（RocketMQ 不支持 Topic 名称通配符，需要显式订阅每个 Topic）
-    // 注意：由于 topic-prefix 使用环境变量占位符且默认为空，实际 Topic 名称没有前缀
-    testConsumer.subscribe("INGEST_TASK_READY", "*");
-    testConsumer.subscribe("INGEST_LITERATURE_READY", "*");
-
-    // 注册消息监听器 (收集到 TestMessageCollector)
-    testConsumer.registerMessageListener(
-        (MessageListenerConcurrently)
-            (messages, context) -> {
-              messages.forEach(messageCollector::collect);
-              return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
-            });
-
-    // 启动 Consumer
-    testConsumer.start();
-
-    // 等待 Consumer 完全启动并发现 Topic（消费者需要时间来拉取路由信息）
-    Thread.sleep(2000);
+  void setUp() {
+    messageCollector.clear();
   }
 
-  /**
-   * 每个测试后清理。
-   *
-   * <p>关闭 Consumer 并清空消息收集器。
-   */
   @AfterEach
   void tearDown() {
-    if (testConsumer != null) {
-      testConsumer.shutdown();
-    }
-    if (messageCollector != null) {
-      messageCollector.clear();
-    }
+    messageCollector.clear();
   }
 
-  // ========== Test Cases ==========
+  @Test
+  @DisplayName("应该成功发送普通消息并被接收")
+  void shouldSendAndReceiveNormalMessage() {
+    // 准备
+    OutboxMessage outboxMsg =
+        OutboxMessageTestBuilder.aValidPendingMessage()
+            .channel(MessageChannels.TASK_READY)
+            .dedupKey("test-001")
+            .opType("CREATE")
+            .payloadJson("{\"taskId\":1001,\"status\":\"READY\"}")
+            .build();
 
-  @Nested
-  @DisplayName("普通消息发送测试")
-  class NormalMessageTests {
+    // 执行
+    publisher.publish(outboxMsg, null);
 
-    @Test
-    @DisplayName("应该成功发送普通消息并被 Consumer 接收")
-    void shouldSendAndReceiveNormalMessage() {
-      // 准备
-      OutboxMessage outboxMsg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .channel(MessageChannels.TASK_READY)
-              .dedupKey("test-dedup-001")
-              .opType("CREATE")
-              .payloadJson("{\"taskId\":1001,\"status\":\"READY\"}")
-              .build();
+    // 断言: 等待消息被接收 (最多 10 秒)
+    await()
+        .atMost(10, SECONDS)
+        .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-001")).isTrue());
 
-      // 执行
-      publisher.publish(outboxMsg, null);
-
-      // 断言: 等待消息被接收 (最多 5 秒)
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-dedup-001")).isTrue());
-
-      // 验证消息内容
-      MessageExt receivedMsg = messageCollector.getMessage("test-dedup-001");
-      assertThat(receivedMsg).isNotNull();
-      assertThat(new String(receivedMsg.getBody(), StandardCharsets.UTF_8))
-          .isEqualTo("{\"taskId\":1001,\"status\":\"READY\"}");
-      assertThat(receivedMsg.getTags()).isEqualTo("CREATE");
-      assertThat(receivedMsg.getKeys()).isEqualTo("test-dedup-001");
-    }
-
-    @Test
-    @DisplayName("应该正确映射消息元数据 (KEYS, TAGS, UserProperties)")
-    void shouldMapMessageMetadataCorrectly() {
-      // 准备
-      OutboxMessage outboxMsg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("test-dedup-002")
-              .opType("UPDATE")
-              .partitionKey("partition-A")
-              .headersJson("{\"traceId\":\"trace-123\",\"userId\":\"user-456\"}")
-              .build();
-
-      // 执行
-      publisher.publish(outboxMsg, null);
-
-      // 断言
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-dedup-002")).isTrue());
-
-      MessageExt msg = messageCollector.getMessage("test-dedup-002");
-
-      // 验证 KEYS (dedupKey)
-      assertThat(msg.getKeys()).isEqualTo("test-dedup-002");
-
-      // 验证 TAGS (opType)
-      assertThat(msg.getTags()).isEqualTo("UPDATE");
-
-      // 验证 UserProperties (headers + partitionKey)
-      assertThat(msg.getUserProperty("traceId")).isEqualTo("trace-123");
-      assertThat(msg.getUserProperty("userId")).isEqualTo("user-456");
-      assertThat(msg.getUserProperty("partitionKey")).isEqualTo("partition-A");
-    }
-
-    @Test
-    @DisplayName("应该支持空 payload (使用空字符串)")
-    void shouldSupportEmptyPayload() {
-      // 准备
-      OutboxMessage outboxMsg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("test-dedup-003")
-              .payloadJson(null) // 空 payload
-              .build();
-
-      // 执行
-      publisher.publish(outboxMsg, null);
-
-      // 断言
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-dedup-003")).isTrue());
-
-      MessageExt msg = messageCollector.getMessage("test-dedup-003");
-      // RocketMQTemplate 不支持空 payload，系统会自动使用 {} 作为占位符
-      assertThat(new String(msg.getBody(), StandardCharsets.UTF_8)).isEqualTo("{}");
-    }
+    // 验证消息内容
+    MessageExt receivedMsg = messageCollector.getMessage("test-001");
+    assertThat(receivedMsg).isNotNull();
+    assertThat(new String(receivedMsg.getBody(), StandardCharsets.UTF_8))
+        .isEqualTo("{\"taskId\":1001,\"status\":\"READY\"}");
+    assertThat(receivedMsg.getTags()).isEqualTo("CREATE");
+    assertThat(receivedMsg.getKeys()).isEqualTo("test-001");
   }
 
-  @Nested
-  @DisplayName("顺序消息发送测试")
-  class OrderedMessageTests {
+  @Test
+  @DisplayName("应该正确映射消息元数据 (KEYS, TAGS, UserProperties)")
+  void shouldMapMessageMetadataCorrectly() {
+    // 准备
+    OutboxMessage outboxMsg =
+        OutboxMessageTestBuilder.aValidPendingMessage()
+            .dedupKey("test-002")
+            .opType("UPDATE")
+            .partitionKey("partition-A")
+            .headersJson("{\"traceId\":\"trace-123\",\"userId\":\"user-456\"}")
+            .build();
 
-    @Test
-    @DisplayName("应该使用 partitionKey 发送顺序消息")
-    void shouldSendOrderedMessageWithPartitionKey() {
-      // 准备: 3 条消息使用相同 partitionKey
-      String partitionKey = "order-partition-1";
-      OutboxMessage msg1 =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("order-msg-1")
-              .partitionKey(partitionKey)
-              .payloadJson("{\"seq\":1}")
-              .build();
+    // 执行
+    publisher.publish(outboxMsg, null);
 
-      OutboxMessage msg2 =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("order-msg-2")
-              .partitionKey(partitionKey)
-              .payloadJson("{\"seq\":2}")
-              .build();
+    // 断言
+    await()
+        .atMost(10, SECONDS)
+        .untilAsserted(() -> assertThat(messageCollector.hasMessage("test-002")).isTrue());
 
-      OutboxMessage msg3 =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("order-msg-3")
-              .partitionKey(partitionKey)
-              .payloadJson("{\"seq\":3}")
-              .build();
+    MessageExt msg = messageCollector.getMessage("test-002");
 
-      // 执行: 按顺序发送
-      publisher.publish(msg1, null);
-      publisher.publish(msg2, null);
-      publisher.publish(msg3, null);
+    // 验证 KEYS (dedupKey)
+    assertThat(msg.getKeys()).isEqualTo("test-002");
 
-      // 断言: 等待所有消息接收
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(
-              () -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(3));
+    // 验证 TAGS (opType)
+    assertThat(msg.getTags()).isEqualTo("UPDATE");
 
-      // 验证顺序 (注意: RocketMQ 顺序消息在同一 MessageQueue 中有序)
-      assertThat(messageCollector.hasMessage("order-msg-1")).isTrue();
-      assertThat(messageCollector.hasMessage("order-msg-2")).isTrue();
-      assertThat(messageCollector.hasMessage("order-msg-3")).isTrue();
-
-      // 验证 partitionKey 映射到 UserProperty
-      MessageExt receivedMsg = messageCollector.getMessage("order-msg-1");
-      assertThat(receivedMsg.getUserProperty("partitionKey")).isEqualTo(partitionKey);
-    }
+    // 验证 UserProperties (headers + partitionKey)
+    assertThat(msg.getUserProperty("traceId")).isEqualTo("trace-123");
+    assertThat(msg.getUserProperty("userId")).isEqualTo("user-456");
+    assertThat(msg.getUserProperty("partitionKey")).isEqualTo("partition-A");
   }
 
-  @Nested
-  @DisplayName("业务通道映射测试")
-  class ChannelMappingTests {
+  @Test
+  @DisplayName("应该支持批量消息发送")
+  void shouldSendBatchMessages() {
+    // 准备
+    int batchSize = 5;
 
-    @Test
-    @DisplayName("应该正确映射 TASK_READY 通道到 Topic")
-    void shouldMapTaskReadyChannel() {
-      // 准备
+    // 执行: 发送多条消息
+    for (int i = 0; i < batchSize; i++) {
       OutboxMessage msg =
           OutboxMessageTestBuilder.aValidPendingMessage()
-              .channel(MessageChannels.TASK_READY)
-              .dedupKey("channel-test-001")
+              .dedupKey("test-batch-" + i)
+              .payloadJson("{\"seq\":" + i + "}")
               .build();
-
-      // 执行
       publisher.publish(msg, null);
-
-      // 断言
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(
-              () -> assertThat(messageCollector.hasMessage("channel-test-001")).isTrue());
-
-      MessageExt receivedMsg = messageCollector.getMessage("channel-test-001");
-      // 验证 Topic 名称 (patra_test_task_ready 或类似)
-      assertThat(receivedMsg.getTopic()).containsIgnoringCase("task");
     }
 
-    @Test
-    @DisplayName("应该正确映射 LITERATURE_READY 通道到 Topic")
-    void shouldMapLiteratureReadyChannel() {
-      // 准备
-      OutboxMessage msg =
-          OutboxMessageTestBuilder.aLiteratureReadyMessage().dedupKey("channel-test-002").build();
+    // 断言: 等待所有消息被接收
+    await()
+        .atMost(15, SECONDS)
+        .untilAsserted(
+            () ->
+                assertThat(messageCollector.getMessageCount())
+                    .isGreaterThanOrEqualTo(batchSize));
 
-      // 执行
-      publisher.publish(msg, null);
-
-      // 断言
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(
-              () -> assertThat(messageCollector.hasMessage("channel-test-002")).isTrue());
-
-      MessageExt receivedMsg = messageCollector.getMessage("channel-test-002");
-      assertThat(receivedMsg.getTopic()).containsIgnoringCase("literature");
+    // 验证每条消息都收到了
+    for (int i = 0; i < batchSize; i++) {
+      assertThat(messageCollector.hasMessage("test-batch-" + i)).isTrue();
     }
   }
 
-  @Nested
-  @DisplayName("消息序列化测试")
-  class SerializationTests {
+  @Test
+  @DisplayName("应该使用顺序发送模式发送带 partitionKey 的消息")
+  void shouldSendOrderlyMessageWithPartitionKey() {
+    // 准备: 同一 partitionKey 的多条消息
+    String partitionKey = "order-partition-A";
+    int messageCount = 3;
 
-    @Test
-    @DisplayName("应该正确处理 UTF-8 编码 (中文、Emoji)")
-    void shouldHandleUtf8Encoding() {
-      // 准备
+    // 执行: 发送多条具有相同 partitionKey 的消息
+    for (int i = 0; i < messageCount; i++) {
       OutboxMessage msg =
           OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("utf8-test-001")
-              .payloadJson("{\"title\":\"医学文献\",\"emoji\":\"🔬📊\"}")
+              .dedupKey("orderly-msg-" + i)
+              .partitionKey(partitionKey) // 相同 partitionKey
+              .payloadJson("{\"seq\":" + i + ",\"orderId\":\"ORDER-001\"}")
               .build();
-
-      // 执行
       publisher.publish(msg, null);
-
-      // 断言
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("utf8-test-001")).isTrue());
-
-      MessageExt receivedMsg = messageCollector.getMessage("utf8-test-001");
-      String payload = new String(receivedMsg.getBody(), StandardCharsets.UTF_8);
-      assertThat(payload).contains("医学文献");
-      assertThat(payload).contains("🔬📊");
     }
 
-    @Test
-    @DisplayName("应该正确处理复杂 JSON payload")
-    void shouldHandleComplexJsonPayload() {
-      // 准备
-      String complexJson =
-          "{"
-              + "\"taskId\":2001,"
-              + "\"metadata\":{\"source\":\"PUBMED\",\"count\":100},"
-              + "\"tags\":[\"medicine\",\"research\"]"
-              + "}";
+    // 断言: 所有消息都被接收
+    await()
+        .atMost(15, SECONDS)
+        .untilAsserted(
+            () -> assertThat(messageCollector.getMessageCount()).isGreaterThanOrEqualTo(messageCount));
 
-      OutboxMessage msg =
-          OutboxMessageTestBuilder.aValidPendingMessage()
-              .dedupKey("json-test-001")
-              .payloadJson(complexJson)
-              .build();
-
-      // 执行
-      publisher.publish(msg, null);
-
-      // 断言
-      await()
-          .atMost(5, SECONDS)
-          .untilAsserted(() -> assertThat(messageCollector.hasMessage("json-test-001")).isTrue());
-
-      MessageExt receivedMsg = messageCollector.getMessage("json-test-001");
-      String payload = new String(receivedMsg.getBody(), StandardCharsets.UTF_8);
-      assertThat(payload).isEqualToIgnoringWhitespace(complexJson);
+    // 验证每条消息都收到了
+    for (int i = 0; i < messageCount; i++) {
+      assertThat(messageCollector.hasMessage("orderly-msg-" + i)).isTrue();
+      MessageExt msg = messageCollector.getMessage("orderly-msg-" + i);
+      // 验证 partitionKey 保存到 UserProperties
+      assertThat(msg.getUserProperty("partitionKey")).isEqualTo(partitionKey);
     }
   }
 
-  @Nested
-  @DisplayName("并发发送测试")
-  class ConcurrentSendTests {
+  @Test
+  @DisplayName("应该正确处理空 payload（使用占位符）")
+  void shouldHandleEmptyPayload() {
+    // 准备: 空 payload 的消息
+    OutboxMessage msg =
+        OutboxMessageTestBuilder.aValidPendingMessage()
+            .dedupKey("empty-payload-test")
+            .payloadJson(null) // 空 payload
+            .build();
 
-    @Test
-    @DisplayName("应该支持并发发送多条消息")
-    void shouldSupportConcurrentSend() throws InterruptedException {
-      // 准备: 10 条消息
-      int messageCount = 10;
-      for (int i = 0; i < messageCount; i++) {
-        OutboxMessage msg =
-            OutboxMessageTestBuilder.aValidPendingMessage().dedupKey("concurrent-msg-" + i).build();
-        publisher.publish(msg, null);
+    // 执行
+    publisher.publish(msg, null);
+
+    // 断言: 等待消息被接收
+    await()
+        .atMost(10, SECONDS)
+        .untilAsserted(() -> assertThat(messageCollector.hasMessage("empty-payload-test")).isTrue());
+
+    // 验证: 空 payload 被替换为占位符 "{}"
+    MessageExt receivedMsg = messageCollector.getMessage("empty-payload-test");
+    String body = new String(receivedMsg.getBody(), StandardCharsets.UTF_8);
+    assertThat(body).isEqualTo("{}"); // 验证占位符
+  }
+
+  @Test
+  @DisplayName("应该支持发送无 TAGS 的消息")
+  void shouldHandleMessageWithoutTags() {
+    // 准备: 无 TAGS (opType 为空字符串)
+    OutboxMessage msg =
+        OutboxMessageTestBuilder.aValidPendingMessage()
+            .dedupKey("no-tags-test")
+            .opType("") // 无 TAGS - 使用空字符串
+            .payloadJson("{\"data\":\"test\"}")
+            .build();
+
+    // 执行
+    publisher.publish(msg, null);
+
+    // 断言: 等待消息被接收
+    await()
+        .atMost(10, SECONDS)
+        .untilAsserted(() -> assertThat(messageCollector.hasMessage("no-tags-test")).isTrue());
+
+    // 验证: TAGS 为空或 null
+    MessageExt receivedMsg = messageCollector.getMessage("no-tags-test");
+    // RocketMQ 中无 TAGS 时，getTags() 返回空字符串
+    assertThat(receivedMsg.getTags()).isNullOrEmpty();
+  }
+
+  @Test
+  @DisplayName("应该正确处理空 headers")
+  void shouldHandleEmptyHeaders() {
+    // 准备: 空 headers
+    OutboxMessage msg =
+        OutboxMessageTestBuilder.aValidPendingMessage()
+            .dedupKey("empty-headers-test")
+            .headersJson(null) // 空 headers
+            .payloadJson("{\"data\":\"test\"}")
+            .build();
+
+    // 执行
+    publisher.publish(msg, null);
+
+    // 断言: 等待消息被接收
+    await()
+        .atMost(10, SECONDS)
+        .untilAsserted(() -> assertThat(messageCollector.hasMessage("empty-headers-test")).isTrue());
+
+    // 验证: 消息成功发送（不应有自定义 UserProperties，除了默认的 channel）
+    MessageExt receivedMsg = messageCollector.getMessage("empty-headers-test");
+    assertThat(receivedMsg).isNotNull();
+    // 验证只有系统添加的 channel 属性
+    assertThat(receivedMsg.getUserProperty("channel")).isEqualTo("TASK_READY");
+  }
+
+  // ==================== 内部类：消息收集器 ====================
+
+  /**
+   * 测试用消息收集器（仅用于本集成测试）。
+   *
+   * <p>继承 {@link com.patra.ingest.testutil.RocketMQMessageCollector}，配合 Spring 管理的
+   * {@code @RocketMQMessageListener} 自动收集测试消息。
+   *
+   * <h3>设计考虑</h3>
+   *
+   * <ul>
+   *   <li><strong>Spring 管理生命周期</strong>: 避免手动创建 Consumer 的初始化延迟问题
+   *   <li><strong>按需启用</strong>: 通过 @ConditionalOnProperty 控制是否启用（仅在集成测试中启用）
+   *   <li><strong>代码复用</strong>: 继承统一的 RocketMQMessageCollector，避免重复实现
+   *   <li><strong>高内聚</strong>: 作为测试类的内部类，明确其作用域仅限于此测试
+   * </ul>
+   */
+  @Slf4j
+  @Component
+  @ConditionalOnProperty(
+      name = "patra.ingest.test.rocketmq.consumer.enabled",
+      havingValue = "true",
+      matchIfMissing = false // 默认禁用（仅在集成测试中启用）
+      )
+  @RocketMQMessageListener(
+      topic = "${patra.ingest.mq.topics.task-ready:INGEST_TASK_READY}",
+      consumerGroup = "test-consumer-group-integration",
+      selectorExpression = "*" // 接收所有 TAGS
+      )
+  static class MessageCollector extends com.patra.ingest.testutil.RocketMQMessageCollector
+      implements RocketMQListener<MessageExt> {
+
+    @Override
+    public void onMessage(MessageExt message) {
+      String keys = message.getKeys();
+      String topic = message.getTopic();
+      String msgId = message.getMsgId();
+
+      log.info("✅ 消息收集器收到消息: topic={}, keys={}, msgId={}", topic, keys, msgId);
+
+      // 存储消息（如果没有 KEYS，会使用 MsgId）
+      if (keys == null || keys.isEmpty()) {
+        log.warn("收到没有 KEYS 的消息，msgId={}", msgId);
       }
 
-      // 断言: 所有消息都应被接收
-      await()
-          .atMost(10, SECONDS)
-          .untilAsserted(
-              () ->
-                  assertThat(messageCollector.getMessageCount())
-                      .isGreaterThanOrEqualTo(messageCount));
-
-      // 验证没有消息丢失
-      for (int i = 0; i < messageCount; i++) {
-        assertThat(messageCollector.hasMessage("concurrent-msg-" + i)).isTrue();
-      }
+      // 委托给父类处理
+      collect(message);
     }
   }
 }

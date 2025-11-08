@@ -5,12 +5,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * 测试消息收集器。
+ * RocketMQ 测试消息收集器（统一版本）。
  *
- * <p>用于集成测试中收集 RocketMQ Consumer 接收到的消息,支持多线程并发收集和断言验证。
+ * <p>用于集成测试和 E2E 测试中收集 RocketMQ Consumer 接收到的消息,支持多线程并发收集和断言验证。
  *
  * <h3>功能特性</h3>
  *
@@ -19,44 +22,80 @@ import org.apache.rocketmq.common.message.MessageExt;
  *   <li><strong>按键索引</strong>: 通过消息 KEYS 快速查找
  *   <li><strong>全量保存</strong>: 保留所有消息用于后续验证
  *   <li><strong>灵活查询</strong>: 支持按 key、topic、tags 查询
+ *   <li><strong>可选计数器</strong>: 支持 CountDownLatch 精确控制等待
  * </ul>
  *
- * <h3>使用示例</h3>
+ * <h3>使用场景</h3>
+ *
+ * <ul>
+ *   <li><strong>集成测试</strong>: 配合 Spring 管理的 @RocketMQMessageListener 使用
+ *   <li><strong>E2E 测试</strong>: 配合手动创建的 DefaultMQPushConsumer 使用
+ * </ul>
+ *
+ * <h3>使用示例 1: 集成测试（Spring Consumer）</h3>
  *
  * <pre>{@code
- * @SpringBootTest
- * class RocketMqIntegrationTest {
+ * @Component
+ * @RocketMQMessageListener(topic = "TEST_TOPIC", consumerGroup = "test-group")
+ * class TestConsumer implements RocketMQListener<MessageExt> {
+ *     @Autowired
+ *     private RocketMQMessageCollector collector;
  *
- *     private TestMessageCollector collector = new TestMessageCollector();
- *
- *     @Test
- *     @DisplayName("应该成功发送并接收消息")
- *     void shouldSendAndReceiveMessage() {
- *         // 1. 发送消息
- *         publisher.publish(outboxMessage);
- *
- *         // 2. 等待接收 (使用 Awaitility)
- *         await().atMost(5, SECONDS)
- *             .until(() -> collector.hasMessage("dedup-key-123"));
- *
- *         // 3. 验证消息内容
- *         MessageExt msg = collector.getMessage("dedup-key-123");
- *         assertThat(msg).isNotNull();
- *         assertThat(msg.getTags()).isEqualTo("CREATE");
+ *     @Override
+ *     public void onMessage(MessageExt message) {
+ *         collector.collect(message);
  *     }
+ * }
+ *
+ * @Test
+ * void shouldReceiveMessage() {
+ *     publisher.publish(message);
+ *     await().atMost(5, SECONDS)
+ *         .until(() -> collector.hasMessage("dedup-key"));
+ *     assertThat(collector.getMessage("dedup-key").getTags()).isEqualTo("CREATE");
+ * }
+ * }</pre>
+ *
+ * <h3>使用示例 2: E2E 测试（手动 Consumer）</h3>
+ *
+ * <pre>{@code
+ * private RocketMQMessageCollector collector = new RocketMQMessageCollector();
+ * private DefaultMQPushConsumer consumer;
+ *
+ * @BeforeEach
+ * void setUp() throws Exception {
+ *     consumer = new DefaultMQPushConsumer("test-group");
+ *     consumer.setNamesrvAddr(namesrvAddr);
+ *     consumer.subscribe("TEST_TOPIC", "*");
+ *     consumer.registerMessageListener((MessageListenerConcurrently) (messages, context) -> {
+ *         messages.forEach(collector::collect);
+ *         return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
+ *     });
+ *     consumer.start();
+ * }
+ *
+ * @AfterEach
+ * void tearDown() {
+ *     if (consumer != null) consumer.shutdown();
+ *     collector.clear();
  * }
  * }</pre>
  *
  * @author linqibin
  * @since 0.2.0
  */
-public class TestMessageCollector {
+public class RocketMQMessageCollector {
+
+  private static final Logger log = LoggerFactory.getLogger(RocketMQMessageCollector.class);
 
   /** 按 KEYS 索引的消息映射。用于快速查找。 */
   private final Map<String, MessageExt> messagesByKey = new ConcurrentHashMap<>();
 
   /** 所有接收到的消息列表。保持接收顺序。 */
   private final List<MessageExt> allMessages = new CopyOnWriteArrayList<>();
+
+  /** 用于等待消息到达的 CountDownLatch（可选）。 */
+  private volatile CountDownLatch latch;
 
   /**
    * 收集一条消息。
@@ -74,6 +113,23 @@ public class TestMessageCollector {
     // 按 KEYS 索引 (优先使用 KEYS,fallback 到 MsgId)
     String key = message.getKeys() != null ? message.getKeys() : message.getMsgId();
     messagesByKey.put(key, message);
+
+    // 日志记录（可选，用于调试）
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "✅ 消息收集器收到消息: topic={}, keys={}, msgId={}",
+          message.getTopic(),
+          message.getKeys(),
+          message.getMsgId());
+    }
+
+    // 计数器减 1
+    if (latch != null) {
+      latch.countDown();
+      if (log.isDebugEnabled()) {
+        log.debug("CountDownLatch count: {}", latch.getCount());
+      }
+    }
   }
 
   /**
@@ -101,7 +157,7 @@ public class TestMessageCollector {
   /**
    * 获取所有收集到的消息。
    *
-   * @return 消息列表 (不可变视图)
+   * @return 消息列表（不可变视图）
    */
   public List<MessageExt> getAllMessages() {
     return new ArrayList<>(allMessages);
@@ -144,6 +200,10 @@ public class TestMessageCollector {
   public void clear() {
     messagesByKey.clear();
     allMessages.clear();
+    latch = null;
+    if (log.isDebugEnabled()) {
+      log.debug("已清空消息收集器中的所有消息");
+    }
   }
 
   /**
@@ -153,5 +213,16 @@ public class TestMessageCollector {
    */
   public boolean isEmpty() {
     return allMessages.isEmpty();
+  }
+
+  /**
+   * 设置 CountDownLatch 用于等待消息。
+   *
+   * <p>可选功能：如果需要精确控制等待消息数量，可以使用此方法。
+   *
+   * @param latch CountDownLatch 实例
+   */
+  public void setLatch(CountDownLatch latch) {
+    this.latch = latch;
   }
 }

@@ -90,9 +90,16 @@ public class RocketMQContainerInitializer
   /**
    * RocketMQ 容器支持类单例实例。
    *
-   * <p>包含 NameServer 和 Broker 容器的管理。
+   * <p>负责容器生命周期管理（启动、停止）。
    */
   private static final RocketMQContainerSupport rocketmqSupport;
+
+  /**
+   * RocketMQ Topic 管理工具单例实例。
+   *
+   * <p>负责 Topic 的创建、删除和验证。
+   */
+  private static final RocketMQTopicAdmin topicAdmin;
 
   // 静态初始化块：在类加载时启动容器并创建 Topics
   static {
@@ -100,17 +107,21 @@ public class RocketMQContainerInitializer
     log.info("初始化 RocketMQ TestContainers");
     log.info("========================================");
 
+    // 启动容器
     rocketmqSupport = new RocketMQContainerSupport();
     rocketmqSupport.start();
 
     log.info("RocketMQ 容器已启动");
     log.info("  - NameServer 地址: {}", rocketmqSupport.getNameserverAddress());
 
+    // 初始化 Topic 管理工具
+    topicAdmin = new RocketMQTopicAdmin(rocketmqSupport.getComposeContainer());
+
     // 创建测试所需的 Topics
     String[] topics = {"INGEST_TASK_READY", "INGEST_LITERATURE_READY"};
     for (String topic : topics) {
       log.info("创建测试 Topic: {}", topic);
-      rocketmqSupport.createTopic(topic);
+      topicAdmin.createTopic(topic);
     }
 
     log.info("========================================");
@@ -149,5 +160,14 @@ public class RocketMQContainerInitializer
    */
   public static RocketMQContainerSupport getRocketMQSupport() {
     return rocketmqSupport;
+  }
+
+  /**
+   * 获取 RocketMQ Topic 管理工具实例（供测试代码访问）。
+   *
+   * @return RocketMQ Topic 管理工具实例
+   */
+  public static RocketMQTopicAdmin getTopicAdmin() {
+    return topicAdmin;
   }
 }

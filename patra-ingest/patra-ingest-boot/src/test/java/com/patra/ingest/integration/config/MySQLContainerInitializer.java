@@ -15,7 +15,7 @@ import org.testcontainers.containers.MySQLContainer;
  * <h3>功能特性</h3>
  *
  * <ul>
- *   <li><strong>单例容器</strong>: 所有测试共享同一个 MySQL 容器实例，大幅提升测试速度
+ *   <li><strong>JVM 内单例</strong>: 同一 JVM 进程内所有测试共享同一个 MySQL 容器实例，大幅提升测试速度
  *   <li><strong>自动启动</strong>: 在类加载时启动容器（静态块）
  *   <li><strong>动态配置</strong>: 自动注入 JDBC 连接配置到 Spring 测试上下文
  * </ul>
@@ -45,14 +45,14 @@ import org.testcontainers.containers.MySQLContainer;
  *   <li><strong>镜像版本</strong>: mysql:8.0.36 (与生产环境一致)
  *   <li><strong>数据库名</strong>: patra_ingest
  *   <li><strong>用户名/密码</strong>: root / 123456
- *   <li><strong>容器重用</strong>: 禁用（避免测试污染）
+ *   <li><strong>容器复用</strong>: JVM 内复用，JVM 间不复用（避免配置缓存污染）
  * </ul>
  *
  * <h3>性能表现</h3>
  *
  * <ul>
- *   <li>首次启动: ~20-30 秒
- *   <li>后续测试: 复用容器，无需重启
+ *   <li>首次启动: ~20-30 秒（类加载时执行一次）
+ *   <li>后续测试: JVM 内复用容器，无需重启（性能提升 ~20-30 秒/测试类）
  * </ul>
  *
  * @author linqibin
@@ -68,13 +68,20 @@ public class MySQLContainerInitializer
   /**
    * MySQL 容器单例实例。
    *
-   * <p>配置说明:
+   * <p>容器复用策略:
+   *
+   * <ul>
+   *   <li><strong>JVM 内复用</strong>: 通过静态单例模式，同一 JVM 进程内所有测试共享此容器实例
+   *   <li><strong>JVM 间不复用</strong>: {@code withReuse(false)} 表示不跨 JVM 进程复用容器
+   *   <li><strong>原因</strong>: 避免测试配置缓存污染（不同测试运行可能有不同的配置需求）
+   * </ul>
+   *
+   * <p>容器配置:
    *
    * <ul>
    *   <li><strong>版本</strong>: mysql:8.0.36 (与生产环境一致)
    *   <li><strong>数据库名</strong>: patra_ingest
    *   <li><strong>用户名/密码</strong>: root / 123456
-   *   <li><strong>容器重用</strong>: 禁用 (withReuse(false))，避免测试间配置缓存问题
    * </ul>
    */
   private static final MySQLContainer<?> mysql =
@@ -82,7 +89,7 @@ public class MySQLContainerInitializer
           .withDatabaseName("patra_ingest") // 使用与生产环境一致的数据库名
           .withUsername("root")
           .withPassword("123456")
-          .withReuse(false); // 禁用容器重用以避免配置缓存问题
+          .withReuse(false); // 不跨 JVM 进程复用，避免配置缓存污染
 
   // 静态初始化块：在类加载时启动容器
   static {
