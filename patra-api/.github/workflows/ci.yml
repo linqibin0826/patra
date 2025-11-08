@@ -39,17 +39,15 @@ jobs:
           echo "📂 项目根目录："
           ls -la
           echo ""
-          echo "📂 patra-ingest 模块："
-          ls -la patra-ingest/patra-ingest-boot
+          echo "📦 Maven 多模块项目"
+          mvn -N help:evaluate -Dexpression=project.modules -q -DforceStdout 2>/dev/null || echo "检测模块中..."
 
-      - name: 🔨 构建项目（安装依赖）
+      - name: 🔨 构建整个项目（安装依赖）
         run: mvn clean install -DskipTests -B -V
 
-      - name: 🧪 运行单元测试（跳过容器测试）
-        run: |
-          cd patra-ingest/patra-ingest-boot
-          mvn test -Pfast-tests -B -V \
-            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      - name: 🧪 运行整个项目的单元测试（跳过容器测试）
+        run: mvn test -Pfast-tests -B -V \
+          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
       - name: 📊 上传测试报告
         if: always()
@@ -83,7 +81,7 @@ jobs:
           docker --version
           docker info
 
-      - name: 🔨 构建项目（安装依赖）
+      - name: 🔨 构建整个项目（安装依赖）
         run: mvn clean install -DskipTests -B -V
 
       - name: 🔧 配置 Testcontainers
@@ -93,11 +91,9 @@ jobs:
           echo "testcontainers.reuse.enable=false" > ~/.testcontainers.properties
           echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
 
-      - name: 🧪 运行完整测试（包含容器测试）
-        run: |
-          cd patra-ingest/patra-ingest-boot
-          mvn test -Pall-tests -B -V \
-            -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      - name: 🧪 运行整个项目的完整测试（包含容器测试）
+        run: mvn test -Pall-tests -B -V \
+          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
         env:
           # 确保 Docker 可访问
           DOCKER_HOST: unix:///var/run/docker.sock
