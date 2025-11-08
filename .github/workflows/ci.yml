@@ -75,10 +75,10 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: 🐳 启动 Docker（用于 Testcontainers）
+      - name: 🐳 验证 Docker 环境（用于 Testcontainers）
         run: |
           docker --version
-          docker-compose --version
+          docker info
 
       - name: 🔧 配置 Testcontainers
         run: |
