@@ -72,7 +72,7 @@ jobs:
           key: build-${{ github.sha }}
           fail-on-cache-miss: true
 
-      - name: 🧪 并行运行单元测试（排除 IT 和 E2ETest）
+      - name: 🧪 并行运行单元测试（排除 IT 和 E2E）
         run: mvn test -Punit-only -T 1C -B -V
 
       - name: 📊 上传测试报告
@@ -183,7 +183,7 @@ jobs:
           echo "testcontainers.reuse.enable=false" > ~/.testcontainers.properties
           echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
 
-      - name: 🧪 运行 E2E 测试（*E2ETest.java）
+      - name: 🧪 运行 E2E 测试（*E2E.java）
         run: mvn test -Pe2e-only -B -V
         env:
           DOCKER_HOST: unix:///var/run/docker.sock
