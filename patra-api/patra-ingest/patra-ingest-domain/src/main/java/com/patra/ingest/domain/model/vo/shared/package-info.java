@@ -10,6 +10,14 @@
  *   <li>{@link com.patra.ingest.domain.model.vo.shared.SliceSpec} - 用于计划分区的切片规范
  * </ul>
  *
+ * <p>测试 CI 优化效果：
+ * <ul>
+ *   <li>验证变更检测是否正确识别 patra-ingest 模块</li>
+ *   <li>验证增量构建是否只构建变更模块及其依赖</li>
+ *   <li>验证缓存是否命中（pom.xml 未修改）</li>
+ *   <li>验证 Setup job 耗时是否 < 2-3 分钟</li>
+ * </ul>
+ *
  * @author linqibin
  * @since 0.1.0
  */
