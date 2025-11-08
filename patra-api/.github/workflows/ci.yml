@@ -6,10 +6,23 @@ on:
       - main
       - develop
       - 'feature/**'
+    paths-ignore:  # 🚀 阶段1优化：忽略非代码文件，减少触发次数
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
+      - '.github/workflows/pr-checks.yml'  # PR检查工作流变更不触发CI
   pull_request:
     branches:
       - main
       - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.editorconfig'
+      - 'LICENSE'
   workflow_dispatch: # 支持手动触发
 
 env:
@@ -17,38 +30,153 @@ env:
   MAVEN_OPTS: -Xmx2g -Xms512m
 
 jobs:
-  # ==================== Job 0: 依赖预构建（共享给其他 jobs） ====================
+  # ==================== Job 0: 依赖预构建 + 变更检测（共享给其他 jobs） ====================
   setup:
-    name: 🔧 依赖构建
+    name: 🔧 依赖构建 & 变更检测
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      # 🚀 阶段2优化：输出变更的模块，供后续job使用
+      changed_modules: ${{ steps.changes.outputs.changed_modules }}
+      has_code_changes: ${{ steps.changes.outputs.has_code_changes }}
+      modules_to_build: ${{ steps.changes.outputs.modules_to_build }}
 
     steps:
       - name: 📥 Checkout 代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 🚀 获取完整历史，用于变更检测
+
+      - name: 🔍 检测变更的模块
+        id: changes
+        run: |
+          # 检测自上次提交以来变更的文件
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
+          echo "变更文件:"
+          echo "$CHANGED_FILES"
+
+          # 分析变更的模块
+          CHANGED_MODULES=""
+          BUILD_MODULES=""
+
+          # 检测各个模块的变更
+          declare -A MODULE_MAP
+          MODULE_MAP["patra-parent"]="patra-parent"
+          MODULE_MAP["patra-common"]="patra-common"
+          MODULE_MAP["patra-expr-kernel"]="patra-expr-kernel"
+          MODULE_MAP["patra-gateway-boot"]="patra-gateway-boot"
+          MODULE_MAP["patra-registry"]="patra-registry"
+          MODULE_MAP["patra-ingest"]="patra-ingest"
+          MODULE_MAP["patra-storage"]="patra-storage"
+          MODULE_MAP["patra-catalog"]="patra-catalog"
+          MODULE_MAP["patra-spring-boot-starter-core"]="patra-spring-boot-starter-core"
+          MODULE_MAP["patra-spring-boot-starter-web"]="patra-spring-boot-starter-web"
+          MODULE_MAP["patra-spring-boot-starter-mybatis"]="patra-spring-boot-starter-mybatis"
+          MODULE_MAP["patra-spring-boot-starter-expr"]="patra-spring-boot-starter-expr"
+          MODULE_MAP["patra-spring-boot-starter-provenance"]="patra-spring-boot-starter-provenance"
+          MODULE_MAP["patra-spring-boot-starter-object-storage"]="patra-spring-boot-starter-object-storage"
+          MODULE_MAP["patra-spring-cloud-starter-feign"]="patra-spring-cloud-starter-feign"
+
+          for module in "${!MODULE_MAP[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "^${module}/"; then
+              if [ -z "$CHANGED_MODULES" ]; then
+                CHANGED_MODULES="${MODULE_MAP[$module]}"
+                BUILD_MODULES="${MODULE_MAP[$module]}"
+              else
+                CHANGED_MODULES="$CHANGED_MODULES,${MODULE_MAP[$module]}"
+                BUILD_MODULES="$BUILD_MODULES,${MODULE_MAP[$module]}"
+              fi
+            fi
+          done
+
+          # 如果修改了根pom.xml，需要构建所有模块
+          if echo "$CHANGED_FILES" | grep -q "^pom.xml$"; then
+            CHANGED_MODULES="all"
+            BUILD_MODULES=""
+          fi
+
+          # 输出结果
+          if [ -z "$CHANGED_MODULES" ]; then
+            echo "has_code_changes=false" >> $GITHUB_OUTPUT
+            echo "changed_modules=none" >> $GITHUB_OUTPUT
+            echo "modules_to_build=" >> $GITHUB_OUTPUT
+            echo "✅ 无代码变更，跳过构建"
+          elif [ "$CHANGED_MODULES" == "all" ]; then
+            echo "has_code_changes=true" >> $GITHUB_OUTPUT
+            echo "changed_modules=all" >> $GITHUB_OUTPUT
+            echo "modules_to_build=" >> $GITHUB_OUTPUT
+            echo "📦 根pom.xml变更，需要构建所有模块"
+          else
+            echo "has_code_changes=true" >> $GITHUB_OUTPUT
+            echo "changed_modules=$CHANGED_MODULES" >> $GITHUB_OUTPUT
+            echo "modules_to_build=$BUILD_MODULES" >> $GITHUB_OUTPUT
+            echo "📦 变更模块: $CHANGED_MODULES"
+          fi
 
       - name: ☕ 设置 Java 25
+        if: steps.changes.outputs.has_code_changes == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: 🔨 并行构建整个项目（仅编译，生成 jar）
-        run: mvn clean install -DskipTests -T 1C -B -V
+      - name: 📦 恢复构建缓存
+        if: steps.changes.outputs.has_code_changes == 'true'
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.m2/repository
+            **/target
+          # 🚀 阶段1优化：基于pom.xml hash的缓存键，提高命中率
+          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
+            build-${{ runner.os }}-
 
-      - name: 📦 缓存构建产物（供其他 jobs 使用）
+      - name: 🔨 增量构建变更模块
+        if: steps.changes.outputs.has_code_changes == 'true' && steps.changes.outputs.modules_to_build != ''
+        run: |
+          # 🚀 阶段2优化：只构建变更的模块及其依赖
+          MODULES="${{ steps.changes.outputs.modules_to_build }}"
+          echo "增量构建模块: $MODULES"
+          # -pl: 指定模块列表, -am: also-make，构建依赖的模块
+          mvn install -pl "$MODULES" -am -DskipTests -T 1C -B -V
+
+      - name: 🔨 完整构建（pom.xml变更或首次构建）
+        if: steps.changes.outputs.has_code_changes == 'true' && steps.changes.outputs.modules_to_build == ''
+        run: |
+          # 🚀 阶段1优化：去掉clean，复用缓存的target目录
+          if [ "${{ steps.cache-restore.outputs.cache-hit }}" == "true" ]; then
+            echo "缓存命中，执行增量构建"
+            mvn install -DskipTests -T 1C -B -V
+          else
+            echo "缓存未命中，执行完整构建"
+            mvn clean install -DskipTests -T 1C -B -V
+          fi
+
+      - name: 📦 保存构建产物（供其他 jobs 使用）
+        if: steps.changes.outputs.has_code_changes == 'true'
         uses: actions/cache/save@v4
         with:
           path: |
             ~/.m2/repository
             **/target
-          key: build-${{ github.sha }}
+          # 🚀 阶段1优化：改进的缓存键
+          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
 
   # ==================== Job 1: 单元测试（195个测试） ====================
   unit-tests:
     name: 🚀 单元测试
-    runs-on: ubuntu-latest
+    # 🚀 阶段2优化：只在有代码变更时运行测试
+    if: needs.setup.outputs.has_code_changes == 'true'
+    runs-on: ubuntu-latest  # 🚀 阶段3优化：可选升级为 ubuntu-latest-4-cores（付费）
     needs: setup
     timeout-minutes: 8
     strategy:
@@ -71,11 +199,18 @@ jobs:
           path: |
             ~/.m2/repository
             **/target
-          key: build-${{ github.sha }}
+          # 🚀 阶段1优化：使用新的缓存键
+          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
+            build-${{ runner.os }}-
           fail-on-cache-miss: true
 
       - name: 🧪 并行运行单元测试（排除 IT 和 E2E）
-        run: mvn test -Punit-only,ci-skip-compile -B -V
+        run: |
+          # 🚀 阶段3优化：单元测试已在pom.xml中配置 forkCount=1C（每CPU核心一个JVM）
+          # 这使得测试可以并行执行，充分利用GitHub Actions的2核CPU
+          mvn test -Punit-only,ci-skip-compile -B -V
 
       - name: 📊 上传测试报告
         if: always()
@@ -90,6 +225,8 @@ jobs:
   # ==================== Job 2: 集成测试（3个测试，使用容器） ====================
   integration-tests:
     name: 🔬 集成测试（IT）
+    # 🚀 阶段2优化：只在有代码变更时运行测试
+    if: needs.setup.outputs.has_code_changes == 'true'
     runs-on: ubuntu-latest
     needs: setup
     timeout-minutes: 8
@@ -113,7 +250,11 @@ jobs:
           path: |
             ~/.m2/repository
             **/target
-          key: build-${{ github.sha }}
+          # 🚀 阶段1优化：使用新的缓存键
+          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
+            build-${{ runner.os }}-
           fail-on-cache-miss: true
 
       - name: 🐳 验证 Docker 环境（用于 Testcontainers）
@@ -152,6 +293,8 @@ jobs:
   # ==================== Job 3: E2E 测试（1个测试，使用容器） ====================
   e2e-tests:
     name: 🎯 E2E 测试
+    # 🚀 阶段2优化：只在有代码变更时运行测试
+    if: needs.setup.outputs.has_code_changes == 'true'
     runs-on: ubuntu-latest
     needs: setup
     timeout-minutes: 8
@@ -175,7 +318,11 @@ jobs:
           path: |
             ~/.m2/repository
             **/target
-          key: build-${{ github.sha }}
+          # 🚀 阶段1优化：使用新的缓存键
+          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
+            build-${{ runner.os }}-
           fail-on-cache-miss: true
 
       - name: 🐳 验证 Docker 环境（用于 Testcontainers）
@@ -214,6 +361,8 @@ jobs:
   # ==================== Job 4: 代码质量检查 ====================
   code-quality:
     name: 📐 代码质量检查
+    # 🚀 阶段2优化：只在有代码变更时运行检查
+    if: needs.setup.outputs.has_code_changes == 'true'
     runs-on: ubuntu-latest
     needs: setup
     timeout-minutes: 2
@@ -235,7 +384,11 @@ jobs:
           path: |
             ~/.m2/repository
             **/target
-          key: build-${{ github.sha }}
+          # 🚀 阶段1优化：使用新的缓存键
+          key: build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}-
+            build-${{ runner.os }}-
           fail-on-cache-miss: true
 
       - name: 🔍 编译检查
@@ -255,30 +408,41 @@ jobs:
     name: 📋 测试汇总
     runs-on: ubuntu-latest
     if: always()
-    needs: [unit-tests, integration-tests, e2e-tests, code-quality]
+    needs: [setup, unit-tests, integration-tests, e2e-tests, code-quality]
 
     steps:
       - name: 📊 检查测试结果
         run: |
+          echo "🔍 变更检测: ${{ needs.setup.outputs.changed_modules }}"
+          echo "📦 代码变更: ${{ needs.setup.outputs.has_code_changes }}"
           echo "🚀 单元测试: ${{ needs.unit-tests.result }}"
           echo "🔬 集成测试: ${{ needs.integration-tests.result }}"
           echo "🎯 E2E 测试: ${{ needs.e2e-tests.result }}"
           echo "📐 代码质量: ${{ needs.code-quality.result }}"
 
+      - name: ⏭️ 无代码变更，跳过测试
+        if: needs.setup.outputs.has_code_changes != 'true'
+        run: |
+          echo "✅ 无代码变更，所有测试已跳过"
+          echo "🚀 可以安全合并到主分支"
+
       - name: ✅ 验证所有测试通过
         if: |
-          needs.unit-tests.result != 'success' ||
-          needs.integration-tests.result != 'success' ||
-          needs.e2e-tests.result != 'success'
+          needs.setup.outputs.has_code_changes == 'true' &&
+          (needs.unit-tests.result != 'success' ||
+           needs.integration-tests.result != 'success' ||
+           needs.e2e-tests.result != 'success')
         run: |
           echo "❌ 测试失败！"
           exit 1
 
       - name: 🎉 所有测试通过
         if: |
+          needs.setup.outputs.has_code_changes == 'true' &&
           needs.unit-tests.result == 'success' &&
           needs.integration-tests.result == 'success' &&
           needs.e2e-tests.result == 'success'
         run: |
           echo "✅ 所有测试通过！"
+          echo "📦 变更模块: ${{ needs.setup.outputs.changed_modules }}"
           echo "🚀 可以安全合并到主分支"
