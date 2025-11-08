@@ -483,6 +483,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <!-- 并行执行配置 - 提升CI性能 -->
+                    <forkCount>1C</forkCount>  <!-- 每CPU核心fork 1个JVM进程 -->
+                    <reuseForks>true</reuseForks>  <!-- 复用JVM进程，减少启动开销 -->
+
                     <!-- @{argLine} is populated by JaCoCo, must be preserved -->
                     <argLine>@{argLine} -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED</argLine>
                     <!-- 强制使用 UTF-8 编码输出测试报告和控制台日志 -->
