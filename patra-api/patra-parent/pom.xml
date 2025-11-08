@@ -614,6 +614,9 @@
                             </includes>
                             <!-- 清空 excludes，确保只运行 IT 测试 -->
                             <excludes/>
+                            <!-- 集成测试使用单进程执行，避免 TestContainers 端口冲突 -->
+                            <forkCount>1</forkCount>
+                            <reuseForks>true</reuseForks>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -634,6 +637,9 @@
                             </includes>
                             <!-- 清空 excludes，确保只运行 E2E 测试 -->
                             <excludes/>
+                            <!-- E2E 测试使用单进程执行，避免 TestContainers 端口冲突 -->
+                            <forkCount>1</forkCount>
+                            <reuseForks>true</reuseForks>
                         </configuration>
                     </plugin>
                 </plugins>
