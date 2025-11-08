@@ -50,7 +50,9 @@ jobs:
     name: 🚀 单元测试
     runs-on: ubuntu-latest
     needs: setup
-    timeout-minutes: 5
+    timeout-minutes: 3
+    strategy:
+      fail-fast: true
 
     steps:
       - name: 📥 Checkout 代码
@@ -91,6 +93,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     timeout-minutes: 8
+    strategy:
+      fail-fast: true
 
     steps:
       - name: 📥 Checkout 代码
@@ -124,7 +128,7 @@ jobs:
           echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
 
       - name: 🧪 运行集成测试（*IT.java）
-        run: mvn test -Pintegration-only -B -V
+        run: mvn test -Pintegration-only -T 1C -B -V
         env:
           DOCKER_HOST: unix:///var/run/docker.sock
 
@@ -151,6 +155,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: setup
     timeout-minutes: 8
+    strategy:
+      fail-fast: true
 
     steps:
       - name: 📥 Checkout 代码
@@ -184,7 +190,7 @@ jobs:
           echo "ryuk.container.privileged=true" >> ~/.testcontainers.properties
 
       - name: 🧪 运行 E2E 测试（*E2E.java）
-        run: mvn test -Pe2e-only -B -V
+        run: mvn test -Pe2e-only -T 1C -B -V
         env:
           DOCKER_HOST: unix:///var/run/docker.sock
 
