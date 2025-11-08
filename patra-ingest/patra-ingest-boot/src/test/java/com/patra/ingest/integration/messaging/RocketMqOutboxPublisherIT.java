@@ -9,6 +9,7 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
+import com.patra.ingest.integration.annotation.SlowTest;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -85,6 +86,7 @@ import org.springframework.test.context.ContextConfiguration;
  * @see OutboxMessageTestBuilder
  * @see MessageCollector
  */
+@SlowTest // 标记为慢速测试，可通过 -Pfast-tests 跳过
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",
@@ -101,7 +103,8 @@ import org.springframework.test.context.ContextConfiguration;
 @org.springframework.context.annotation.Import(RocketMqOutboxPublisherIT.MessageCollector.class)
 @DisplayName("RocketMQ Outbox 发布器集成测试")
 @org.springframework.test.context.ActiveProfiles("integration-test")
-@org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与 E2E 测试共享
+// 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能
+// 测试隔离通过不同的 Consumer Group (test-consumer-group-integration) 保证
 class RocketMqOutboxPublisherIT {
 
   @Autowired private RocketMqOutboxPublisher publisher;

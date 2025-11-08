@@ -12,6 +12,7 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
 import com.patra.ingest.domain.port.OutboxRelayStore;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
+import com.patra.ingest.integration.annotation.SlowTest;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
@@ -111,6 +112,7 @@ import org.springframework.transaction.annotation.Transactional;
  * @see RocketMQContainerInitializer
  * @see OutboxMessageTestBuilder
  */
+@SlowTest // 标记为慢速测试，可通过 -Pfast-tests 跳过
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",
@@ -122,7 +124,8 @@ import org.springframework.transaction.annotation.Transactional;
     initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
 @DisplayName("Outbox 模式端到端测试")
 @org.springframework.test.context.ActiveProfiles("e2e-test")
-@org.springframework.test.annotation.DirtiesContext // 使用独立的 ApplicationContext，避免与集成测试共享
+// 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能
+// 测试隔离通过动态生成的 Consumer Group (e2e_test_consumer_<timestamp>) 保证
 class OutboxPatternE2ETest {
 
   // ========== Test Dependencies ==========

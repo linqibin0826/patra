@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.ingest.app.usecase.execution.TaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
+import com.patra.ingest.integration.annotation.SlowTest;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import java.util.HashMap;
@@ -77,6 +78,7 @@ import org.springframework.test.context.ContextConfiguration;
  * @see TaskExecutionUseCase
  */
 @Slf4j
+@SlowTest // 标记为慢速测试，可通过 -Pfast-tests 跳过
 @SpringBootTest(
     properties = {
       "spring.cloud.nacos.config.enabled=false",
@@ -92,7 +94,8 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration(
     initializers = {MySQLContainerInitializer.class, RocketMQContainerInitializer.class})
 @org.springframework.test.context.ActiveProfiles("integration-test")
-@org.springframework.test.annotation.DirtiesContext // 独立的 ApplicationContext，避免测试间干扰
+// 移除 @DirtiesContext: 共享 ApplicationContext 以提升测试性能
+// 测试隔离通过不同的 Consumer Group (test-task-ready-consumer-group) 保证
 @DisplayName("任务就绪消息监听器集成测试")
 class TaskReadyMessageListenerIT {
 
