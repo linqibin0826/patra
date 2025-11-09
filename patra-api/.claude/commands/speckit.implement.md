@@ -1,5 +1,6 @@
 ---
 description: 通过处理和执行 tasks.md 中定义的所有任务来执行实现计划
+important: 对于已完成的任务，确保在任务文件中将任务标记为 [X]。
 ---
 
 ## 用户输入
@@ -55,7 +56,46 @@ $ARGUMENTS
    - **如果存在**：读取 research.md 以获取技术决策和约束
    - **如果存在**：读取 quickstart.md 以获取集成场景
 
-4. **项目设置验证**：
+4. **初始化实施变更日志**（🆕 仅在需要时）：
+
+   **检查 implementation-log.md**：
+   - 路径：`FEATURE_DIR/implementation-log.md`
+   - **仅在首次发现变更时创建**，不需要在实施开始时就创建
+   - 如果文件不存在且发现变更，使用以下模板创建：
+
+   ```markdown
+   # Implementation Log - {特性名称}
+
+   > 📋 本文档**仅记录**实施过程中与原始规划的偏差和技术决策变更
+   >
+   > ⚠️ **重要**：正常按计划实施的任务不需要记录在此文档中
+
+   ## 📊 元数据
+
+   | 项目 | 值 |
+   |------|-----|
+   | 特性 ID | {从目录名提取} |
+   | 基线文档 | spec.md, plan.md, tasks.md |
+   | 创建时间 | {首次记录变更的时间} |
+   | 变更总数 | {当前变更数量} |
+
+   ## 📝 变更记录
+
+   > 按时间倒序记录（最新的在最上面）
+   > **只记录变更，不记录正常实施**
+
+   ---
+
+   {变更记录将在这里追加}
+
+   ---
+   ```
+
+   **如果文件已存在**：
+   - 读取现有内容
+   - 继续追加新的变更记录
+
+5. **项目设置验证**：
    - **必需**：基于实际项目设置创建/验证忽略文件：
 
    **检测与创建逻辑**：
@@ -79,11 +119,81 @@ $ARGUMENTS
    - **Java**：`target/`、`*.class`、`*.jar`、`.gradle/`、`build/`
    - **通用**：`.DS_Store`、`Thumbs.db`、`*.tmp`、`*.swp`、`.vscode/`、`.idea/`
 
-5. 解析 tasks.md 结构并提取：
+6. 解析 tasks.md 结构并提取：
    - **任务阶段**：设置、测试、核心、集成、润色
    - **任务依赖**：顺序执行 vs 并行执行规则
    - **任务详情**：ID、描述、文件路径、并行标记 [P]、层标签 [Domain] [App] [Infra] [Adapter]
    - **执行流程**：顺序和依赖要求
+
+7. 遵循任务计划执行实现：
+   - **阶段性执行**：在进入下一阶段前完成每个阶段
+   - **遵守依赖**：按顺序运行顺序任务，并行任务 [P] 可以一起运行
+   - **强制 TDD（项目规范）**：所有实现任务必须先编写测试，遵循测试驱动开发方法（参考 java-test-architect）
+   - **基于文件的协调**：影响相同文件的任务必须顺序运行
+   - **验证检查点**：在继续之前验证每个阶段的完成
+
+8. 实现执行规则：
+   - **设置优先**：初始化项目结构、依赖、配置
+   - **测试驱动开发（TDD 默认启用）**：所有 Domain/Application/Infrastructure/Adapter 层代码都应先编写测试（测试是强制的，不是可选的）
+   - **核心开发**：实现模型、服务、CLI 命令、端点
+   - **集成工作**：数据库连接、中间件、日志记录、外部服务
+   - **润色和验证**：单元测试、性能优化、文档
+
+9. **🔍 阶段性代码审查**：
+
+   在每个阶段完成后，使用 Task tool 调用 `code-reviewer` subagent 进行代码审查
+   **注意**：code-reviewer subagent 会自动激活 java-code-reviewer skill 并执行架构合规性、代码质量、性能等全面审查
+
+10. **📝 Polish 阶段：文档生成**：
+
+   **当执行 Polish 阶段的文档任务时，使用 Task tool 调用 `documentation-architect` subagent 生成文档**：
+
+   - **生成 package-info.java** → 调用 documentation-architect 生成各层的包文档
+   - **更新模块 README.md** → 调用 documentation-architect 增量更新模块文档
+   - **生成/更新 API 文档** → 调用 documentation-architect 生成 API 契约文档
+   - **为核心类添加 JavaDoc** → 调用 documentation-architect 为聚合根、Port 接口等核心类添加文档
+
+   **注意**：documentation-architect subagent 会自动激活 java-documentation-architect skill 并执行文档生成任务
+
+11. **进度跟踪、变更记录和错误处理**：
+
+   ### A. 任务进度追踪
+   - 在每个完成的任务后报告进度
+   - **重要**：对于已完成的任务，确保在 tasks.md 中将任务标记为 [X]
+   - **正常按计划实施的任务不需要记录到 implementation-log.md**
+
+   ### B. 🚨 变更检测与记录（强制流程）
+
+   **触发条件**（满足任一条件即需记录变更）：
+   1. **技术方案偏差**：实际实施与 plan.md 中的技术选型不一致
+   2. **任务调整**：需要修改 tasks.md 中的任务描述、依赖或新增/删除任务
+   3. **数据模型变更**：实体、字段、关系与 data-model.md 不符
+   4. **API 契约变更**：端点、请求/响应格式与 contracts/ 不符
+   5. **架构决策变更**：违反或调整 spec.md 中的设计原则
+   6. **依赖或配置变更**：新增/修改 pom.xml、application.yml 等关键配置
+
+   **变更记录流程**（4 步强制执行）：
+   - 步骤 1：检测变更 → 对比实施与原始文档，发现偏差立即暂停
+   - 步骤 2：记录变更到 implementation-log.md → 使用标准模板记录详细信息
+   - 步骤 3：同步更新受影响的原始文档 → 逐一更新并添加引用标记
+   - 步骤 4：继续实施 → 基于变更后的方案继续执行
+
+   **变更记录模板和示例**：参考 `.specify/templates/implementation-log-template.md`
+
+   ### C. 错误处理
+   - 如果任何非并行任务失败则停止执行
+   - 对于并行任务 [P]，继续成功的任务，报告失败的任务
+   - 提供带上下文的清晰错误消息以进行调试
+   - 如果实现无法继续则建议下一步
+   - **记录错误到 implementation-log.md**（使用任务失败记录模板）
+
+12. 完成验证：
+   - 验证所有必需任务已完成
+   - 检查实现的特性是否符合原始规格说明
+   - 验证测试通过且覆盖率满足要求（参考 CHK-TEST-* 验证项）
+   - 确认实现遵循技术计划
+   - **运行最终代码审查**：调用 java-code-reviewer 生成完整审查报告
+   - 报告最终状态及已完成工作的摘要
 
 ## 🎯 Skills 集成指令（实施阶段）
 
@@ -135,335 +245,63 @@ $ARGUMENTS
 - ⚠️ **IT 测试（*IT.java）必须在 patra-{service}-boot 模块**
 - ⚠️ **E2E 测试（*E2E.java）必须在 patra-{service}-boot 模块**
 
-6. 遵循任务计划执行实现：
-   - **阶段性执行**：在进入下一阶段前完成每个阶段
-   - **遵守依赖**：按顺序运行顺序任务，并行任务 [P] 可以一起运行
-   - **强制 TDD（项目规范）**：所有实现任务必须先编写测试，遵循测试驱动开发方法（参考 java-test-architect）
-   - **基于文件的协调**：影响相同文件的任务必须顺序运行
-   - **验证检查点**：在继续之前验证每个阶段的完成
-
-7. 实现执行规则：
-   - **设置优先**：初始化项目结构、依赖、配置
-   - **测试驱动开发（TDD 默认启用）**：所有 Domain/Application/Infrastructure/Adapter 层代码都应先编写测试（测试是强制的，不是可选的）
-   - **核心开发**：实现模型、服务、CLI 命令、端点
-   - **集成工作**：数据库连接、中间件、日志记录、外部服务
-   - **润色和验证**：单元测试、性能优化、文档
-
-8. **🔍 阶段性代码审查**（新增）：
-
-   **在每个阶段完成后，调用 java-code-reviewer 进行审查**：
-
-   - **Domain 层完成后**：
-     ```
-     调用 java-code-reviewer 审查：
-     - CHK-ARCH-001: Domain 层是否纯 Java？
-     - CHK-CODE-003: 是否避免了贫血模型？
-     - 参考：[架构合规性检查](../../.claude/skills/java-code-reviewer/SKILL.md#架构合规性检查)
-     ```
-
-   - **Application 层完成后**：
-     ```
-     调用 java-code-reviewer 审查：
-     - CHK-ARCH-003: 事务边界是否在 Orchestrator？
-     - CHK-CODE-002: 方法复杂度是否合理？
-     - 参考：[业务逻辑检查](../../.claude/skills/java-code-reviewer/SKILL.md#业务逻辑检查)
-     ```
-
-   - **Infrastructure 层完成后**：
-     ```
-     调用 java-code-reviewer 审查：
-     - CHK-ARCH-004: DO 是否被正确封装？
-     - CHK-CODE-005: 是否避免了 N+1 查询？
-     - 参考：[性能相关审查](../../.claude/skills/java-code-reviewer/SKILL.md#性能相关审查)
-     ```
-
-   - **Adapter 层完成后**：
-     ```
-     调用 java-code-reviewer 审查：
-     - CHK-ARCH-002: 依赖方向是否正确？
-     - 错误处理是否适当？
-     - 参考：[层次依赖检查](../../.claude/skills/java-code-reviewer/SKILL.md#层次依赖检查)
-     ```
-
-9. **📝 Polish 阶段：文档生成**（增强）：
-
-   **当执行 Polish 阶段的文档任务时，详细执行逻辑如下**：
-
-   ### A. 生成 package-info.java
-
-   **识别标志**：任务描述包含 "生成 package-info.java for"
-
-   **执行步骤**：
-   ```
-   1. 从任务描述提取：
-      - 包路径（如：com.patra.ingest.domain）
-      - 文件位置（如：patra-ingest-domain/src/main/java/.../package-info.java）
-
-   2. 调用 java-documentation-architect skill
-
-   3. 收集上下文信息：
-      - spec.md 的"领域模型"章节（提取该包对应层的描述）
-      - 扫描该包内的所有类（使用 Glob 工具：**/{package-path}/*.java）
-      - plan.md 的 Constitution Check（提取设计原则）
-
-   4. 生成 package-info.java 内容：
-      模板：java-documentation-architect/SKILL.md 的 package-info.java 模板
-
-      填充内容：
-      - 包描述：
-        * Domain 层：从 spec.md 的"领域模型"提取
-        * App 层："应用层用例编排包"
-        * Infra 层："基础设施层技术实现包"
-        * Adapter 层："适配器层外部交互包"
-
-      - 主要组件列表：
-        * 从扫描结果提取类名
-        * 添加 @link 引用
-        * 按类型分组（聚合根、实体、值对象）
-        * 添加特性标记（CHK-DOC-005，Patra 增量更新规范）：`<!-- 特性 ###-feature-name -->` 和 `<!-- /特性 ###-feature-name -->`，特性编号与特性目录一致
-
-      - 设计原则：
-        * Domain 层：聚合根负责维护业务不变量、值对象不可变
-        * App 层：事务边界、用例编排
-        * Infra 层：MyBatis-Plus、MapStruct、依赖倒置
-        * Adapter 层：REST API、事件监听
-
-      - 使用示例：
-        * AI 生成典型用法代码
-        * 使用 @code 标记
-
-      - @since：从 spec.md 的创建日期提取版本号
-
-   5. 检查文件是否已存在：
-      - 如果不存在 → 写入完整内容
-      - 如果存在 → 增量更新（在主要组件列表中追加新类）
-
-   6. 写入文件
-   ```
-
-   **参考**：[java-documentation-architect/SKILL.md#package-info.java模板](../../.claude/skills/java-documentation-architect/SKILL.md#package-infojava-模板)
-
-   ---
-
-   ### B. 更新模块 README.md
-
-   **识别标志**：任务描述包含 "更新模块 README.md"
-
-   **执行步骤**：
-   ```
-   1. 从任务描述提取：
-      - 模块路径（如：patra-ingest/README.md）
-
-   2. 检查 README.md 是否存在：
-      a. 如果不存在 → 使用 /speckit.plan 生成的骨架
-      b. 如果存在 → 读取现有内容
-
-   3. 收集更新内容：
-      - 核心类列表：
-        * 从 tasks.md 的所有 Domain/App/Infra/Adapter 任务提取
-        * 格式：类名（从文件路径提取）
-      - 职责描述：
-        * 从 spec.md 的"领域模型"匹配类名
-        * 如果找不到，根据类名和层次推断
-      - 层次：从任务的 [Layer] 标签提取
-
-   4. 增量更新逻辑（重要！）：
-      a. 定位"🎯 核心类说明"章节
-      b. 在该章节末尾添加：
-         ```markdown
-         ### 特性 ###-feature-name
-         | 类名 | 职责 | 层次 |
-         |-----|------|------|
-         | Article | 文章聚合根 | Domain |
-         | ArticleOrchestrator | 文章业务编排 | Application |
-         ...
-         ```
-      c. 定位"📝 变更日志"章节
-      d. 在该章节顶部添加：
-         ```markdown
-         ### v1.x.0 (日期)
-         - 新增：[从 spec.md 的概览提取]
-         - 核心类：Article、ArticleOrchestrator...
-         ```
-      e. 版本号递增规则：
-         - 读取现有最高版本号
-         - 小版本号 +1（v1.0.0 → v1.1.0）
-
-   5. 保持原有内容不变（只追加，不覆盖）
-
-   6. 写入文件
-   ```
-
-   **参考**：[java-documentation-architect/SKILL.md#模块README模板](../../.claude/skills/java-documentation-architect/SKILL.md#模块-readme-模板)
-
-   ---
-
-   ### C. 生成/更新 API 文档
-
-   **识别标志**：任务描述包含 "生成/更新 API 文档"
-
-   **执行步骤**：
-   ```
-   1. 从任务描述提取：
-      - 目标文件（如：specs/###-feature/contracts/API.md）
-
-   2. 检测 API 端点来源：
-      a. 如果 /speckit.plan 已生成 API.md 骨架 → 补充详细内容
-      b. 如果没有骨架 → 从头生成
-
-   3. 提取 API 信息：
-      - 从 tasks.md 扫描 Controller 任务：
-        * 查找包含 "[Adapter]" 和 "Controller.java" 的任务
-        * 提取 Controller 类名（如：ArticleController）
-
-      - 推断端点路径：
-        * ArticleController → /api/v1/articles
-        * 规则：类名去掉 Controller 后缀，转为小写复数
-
-      - 推断 HTTP 方法：
-        * 从 spec.md 的"用户场景"匹配动作：
-          - 创建 → POST
-          - 查询 → GET
-          - 更新 → PUT
-          - 删除 → DELETE
-
-   4. 生成 API 文档条目：
-      模板：java-documentation-architect/SKILL.md 的 API 文档模板
-
-      每个端点：
-      - 端点路径
-      - HTTP 方法
-      - 请求示例（从 spec.md 的用户场景 Given/When 提取）
-      - 响应示例（从 spec.md 的用户场景 Then 提取）
-      - 错误码（从 spec.md 的"成功标准"推断）
-
-   5. 写入/更新文件
-   ```
-
-   **参考**：[java-documentation-architect/SKILL.md#API文档模板](../../.claude/skills/java-documentation-architect/SKILL.md#api-文档模板)
-
-   ---
-
-   ### D. 为核心类添加 JavaDoc
-
-   **识别标志**：任务描述包含 "为聚合根添加 JavaDoc" 或 "为 Port 接口添加 JavaDoc"
-
-   **执行步骤**：
-   ```
-   1. 从任务描述提取：
-      - 目标类类型（聚合根 / Port 接口）
-      - 文件路径
-
-   2. 识别目标类：
-      - 聚合根：从 spec.md 的"领域模型" → "聚合根"章节提取
-      - Port 接口：从 tasks.md 扫描包含 "Repository.java" 的任务
-
-   3. 对于聚合根，生成类级 JavaDoc：
-      /**
-       * [类名] 聚合根，负责 [职责]。
-       *
-       * <p>[从 spec.md 提取详细描述]</p>
-       *
-       * <p>状态转换：</p>
-       * <pre>
-       * [如果有状态枚举，生成状态机图]
-       * PENDING -> CONFIRMED -> COMPLETED
-       *         \-> CANCELLED
-       * </pre>
-       *
-       * <p>线程安全性：此类不是线程安全的，需要外部同步。</p>
-       *
-       * @author [团队名称]
-       * @since [从 spec.md 的创建日期推断版本号]
-       * @see [关联的实体、值对象]
-       */
-
-   4. 对于每个公共方法，生成方法级 JavaDoc：
-      /**
-       * [方法描述]。
-       *
-       * <p>此方法会：</p>
-       * <ul>
-       *   <li>[业务逻辑步骤1]</li>
-       *   <li>[业务逻辑步骤2]</li>
-       * </ul>
-       *
-       * @param [参数名] [参数说明]，不能为 null
-       * @return [返回值说明]
-       * @throws [异常类] 如果 [触发条件]
-       *
-       * @example
-       * <pre>{@code
-       * [使用示例代码]
-       * }</pre>
-       */
-
-   5. 对于 Port 接口，生成接口级 JavaDoc：
-      /**
-       * [接口名] 仓储接口。
-       *
-       * <p>负责 [职责描述]。</p>
-       *
-       * <p>实现位置：@see [RepositoryImpl 的包路径]</p>
-       *
-       * @since [版本号]
-       */
-
-   6. 将 JavaDoc 添加到现有代码中（使用 Edit 工具）
-   ```
-
-   **参考**：[java-documentation-architect/SKILL.md#JavaDoc最佳实践](../../.claude/skills/java-documentation-architect/SKILL.md#javadoc-最佳实践)
-
-   ---
-
-   ### E. 文档任务执行总结
-
-   **执行完所有文档任务后，输出报告**：
-   ```
-   ✅ 文档生成完成
-
-   package-info.java：
-   - ✅ com.patra.ingest.domain
-   - ✅ com.patra.ingest.app
-   - ✅ com.patra.ingest.infra
-   - ✅ com.patra.ingest.adapter
-
-   模块 README.md：
-   - ✅ patra-ingest/README.md（增量更新，添加特性 001-pubmed-datasource）
-
-   API 文档：
-   - ✅ specs/001-pubmed-datasource/contracts/API.md（3 个端点）
-
-   JavaDoc：
-   - ✅ Article.java（聚合根）
-   - ✅ ArticleRepository.java（Port 接口）
-
-   建议后续操作：
-   - 运行 /speckit.document check 验证文档完整性
-   ```
-
-10. 进度跟踪和错误处理：
-   - 在每个完成的任务后报告进度
-   - 如果任何非并行任务失败则停止执行
-   - 对于并行任务 [P]，继续成功的任务，报告失败的任务
-   - 提供带上下文的清晰错误消息以进行调试
-   - 如果实现无法继续则建议下一步
-   - **重要**：对于已完成的任务，确保在任务文件中将任务标记为 [X]。
-
-11. 完成验证：
-   - 验证所有必需任务已完成
-   - 检查实现的特性是否符合原始规格说明
-   - 验证测试通过且覆盖率满足要求（参考 CHK-TEST-* 验证项）
-   - 确认实现遵循技术计划
-   - **运行最终代码审查**：调用 java-code-reviewer 生成完整审查报告
-   - 报告最终状态及已完成工作的摘要
-
 ## 关键规则
 
-- 使用绝对路径
-- **测试模块位置**：IT 和 E2E 测试必须在 boot 模块（CHK-TEST-006）
-- **参考 Skills 获取代码模板**：不要凭空编写，先查看 Skills 中的示例
-- **阶段性审查**：每个层完成后调用 java-code-reviewer
-- **最后生成文档**：所有代码完成后调用 java-documentation-architect
+### 🚨 强制性规则（不可违反）
 
-注意：此命令假设 tasks.md 中存在完整的任务分解。如果任务不完整或缺失，建议首先运行 `/speckit.tasks` 以重新生成任务列表。
+1. **使用绝对路径**：所有文件操作必须使用绝对路径，避免相对路径错误
+
+2. **测试模块位置**：IT 和 E2E 测试必须在 boot 模块（CHK-TEST-006）
+   - `*IT.java` → `patra-{service}-boot/src/test/java/`
+   - `*E2E.java` → `patra-{service}-boot/src/test/java/`
+
+3. **强制记录实施变更**（🆕 最重要）：
+   - ✅ **必须**在 `specs/{特性}/implementation-log.md` **仅记录**与原始计划的偏差
+   - ✅ **必须**在首次发现变更时创建 implementation-log.md（如不存在）
+   - ✅ **必须**在发现变更时立即暂停，先记录再继续
+   - ✅ **必须**同步更新受影响的原始文档（tasks.md、plan.md 等）
+   - ✅ **必须**在变更文档中添加引用标记：`<!-- 实施变更：见 implementation-log.md#变更-XXX -->`
+   - ❌ **禁止**不记录变更就继续实施
+   - ❌ **禁止**在实施完成后才补记录（必须实时记录）
+   - ❌ **禁止**记录正常按计划实施的任务（只记录变更和偏差）
+
+4. **implementation-log.md 是实施过程的 SSOT**：
+   - 所有技术决策变更必须有据可查
+   - 所有任务调整必须记录原因和影响
+   - 所有错误和阻塞必须记录解决方案
+
+### 📋 推荐规则
+
+5. **参考 Skills 获取代码模板**：不要凭空编写，先查看 Skills 中的示例
+   - Domain 层 → java-hexagonal-architecture
+   - Application/Infrastructure/Adapter 层 → java-spring-development
+   - 测试 → java-test-architect
+
+6. **阶段性审查**：每个层完成后调用 java-code-reviewer
+   - Domain 层完成 → 审查 CHK-ARCH-001, CHK-CODE-003
+   - Application 层完成 → 审查 CHK-ARCH-003, CHK-CODE-002
+   - Infrastructure 层完成 → 审查 CHK-ARCH-004, CHK-CODE-005
+   - Adapter 层完成 → 审查 CHK-ARCH-002, 错误处理
+
+7. **最后生成文档**：所有代码完成后调用 java-documentation-architect
+   - package-info.java
+   - 模块 README.md
+   - API 文档
+   - JavaDoc
+
+### 📊 变更记录检查清单
+
+**仅在存在变更或偏差时**验证以下内容：
+
+- [ ] implementation-log.md 已创建（如有变更发生）
+- [ ] 所有变更都已记录（技术方案、任务、数据模型、API、配置）
+- [ ] 每个变更都包含：时间、类型、任务 ID、原因、影响范围、决策依据
+- [ ] 受影响的原始文档已同步更新
+- [ ] 变更引用标记已添加到原始文档：`<!-- 实施变更：见 implementation-log.md#变更-XXX -->`
+- [ ] 如有错误或阻塞，已记录详细的错误信息和解决方案
+
+**如果所有任务都按计划实施，无需创建 implementation-log.md**
+
+---
+
+**注意**：此命令假设 tasks.md 中存在完整的任务分解。如果任务不完整或缺失，建议首先运行 `/speckit.tasks` 以重新生成任务列表。
