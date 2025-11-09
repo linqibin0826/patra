@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- Property for application name -->
-    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="patra-ingest"/>
+    <property name="appName" value="patra-ingest-test"/>
 
     <!-- Console Appender: 测试专用配置,使用 %nopex 抑制堆栈跟踪 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
