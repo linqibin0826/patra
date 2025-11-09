@@ -176,12 +176,141 @@ description: "特性实施的任务列表模板"
 
 **目的**: 影响多个用户故事的改进
 
-- [ ] TXXX [P] 在 docs/ 中更新文档
-- [ ] TXXX 代码清理和重构
-- [ ] TXXX 跨所有故事的性能优化
-- [ ] TXXX [P] 额外的单元测试（如果请求）in tests/unit/
-- [ ] TXXX 安全加固
-- [ ] TXXX 运行 quickstart.md 验证
+<!-- AI 执行指令：
+当执行 /speckit.tasks 命令时，自动生成文档任务：
+
+1. **扫描前面阶段的所有任务**
+2. **提取所有新创建的包路径**（从任务描述中的文件路径提取）
+3. **为每个新包添加 package-info.java 任务**
+4. **添加模块 README.md 更新任务**（如果有新类）
+5. **添加 API 文档任务**（如果有 Controller 任务）
+6. **添加 JavaDoc 补充任务**（针对聚合根、实体、Port 接口）
+
+示例：
+- 如果 T012 创建 patra-ingest-domain/.../Article.java
+  → 添加任务为 patra-ingest-domain/src/main/java/com/patra/ingest/domain/ 生成 package-info.java
+- 如果有 T019 创建 Controller
+  → 添加任务生成 API 文档
+-->
+
+### 文档任务（参考 java-documentation-architect）
+
+#### package-info.java 生成
+
+> **说明**: 为每个新包自动生成 package-info.java，包含包描述、主要组件、设计原则和使用示例
+
+- [ ] T996 [P] 生成 package-info.java for com.patra.[service].domain in patra-[service]-domain/src/main/java/com/patra/[service]/domain/package-info.java
+  - **数据来源**: spec.md 的"领域模型"章节
+  - **模板**: java-documentation-architect/SKILL.md 的 package-info.java 模板
+  - **包含内容**:
+    - 包描述（从 spec.md 提取领域描述）
+    - 主要组件列表（聚合根、实体、值对象）
+    - 设计原则（DDD 原则、不可变性）
+    - 使用示例（创建聚合根、添加实体的代码示例）
+  - **特殊标记**: 添加 `<!-- 特性 ###-feature-name -->` 用于增量更新
+
+- [ ] T997 [P] 生成 package-info.java for com.patra.[service].app in patra-[service]-app/src/main/java/com/patra/[service]/app/package-info.java
+  - **描述**: 应用层用例编排包
+  - **主要组件**: Orchestrator、Coordinator、Assembler
+  - **设计原则**: 事务边界、用例编排
+
+- [ ] T998 [P] 生成 package-info.java for com.patra.[service].infra in patra-[service]-infra/src/main/java/com/patra/[service]/infra/package-info.java
+  - **描述**: 基础设施层技术实现包
+  - **主要组件**: RepositoryImpl、Converter、Mapper、Config
+  - **设计原则**: MyBatis-Plus、MapStruct、依赖倒置
+
+- [ ] T999 [P] 生成 package-info.java for com.patra.[service].adapter in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/package-info.java
+  - **描述**: 适配器层外部交互包
+  - **主要组件**: Controller、Listener、Job
+  - **设计原则**: REST API、事件监听、定时任务
+
+#### 模块文档更新
+
+> **说明**: 增量更新模块 README.md，添加本特性的核心类说明
+
+- [ ] T1000 更新模块 README.md in patra-[service]/README.md
+  - **执行逻辑**:
+    1. 检查 README.md 是否存在
+    2. 如果不存在 → 使用 /speckit.plan 生成的骨架作为基础
+    3. 如果存在 → 增量更新（不覆盖原有内容）
+  - **增量更新内容**:
+    - 在"🎯 核心类说明"章节添加:
+      ```markdown
+      ### 特性 ###-feature-name
+      | 类名 | 职责 | 层次 |
+      |-----|------|------|
+      | Article | 文章聚合根 | Domain |
+      | ArticleOrchestrator | 文章业务编排 | Application |
+      | ArticleRepositoryImpl | 文章持久化实现 | Infrastructure |
+      | ArticleController | 文章 REST API | Adapter |
+      ```
+    - 在"📝 变更日志"章节添加:
+      ```markdown
+      ### v1.x.0 (日期)
+      - 新增：[从 spec.md 的概览提取特性描述]
+      - 核心类：Article、ArticleOrchestrator、ArticleRepositoryImpl
+      ```
+  - **数据来源**:
+    - 核心类列表：从 tasks.md 的 Domain/App/Infra/Adapter 任务提取
+    - 职责描述：从 spec.md 的"领域模型"提取
+    - 版本号：递增（v1.0.0 → v1.1.0）
+  - **特殊标记**: 使用 `### 特性 ###-feature-name` 标记便于追溯
+
+#### API 文档生成（如果有 Controller）
+
+> **说明**: 从 Controller 代码或 contracts/ 生成 API 文档
+
+- [ ] T1001 生成/更新 API 文档 in specs/###-feature/contracts/API.md
+  - **检测条件**: 如果任务列表中有 Controller 任务（包含 `[Adapter]` 和 `Controller.java`）
+  - **执行逻辑**:
+    1. 扫描 Adapter 层的 Controller 任务
+    2. 从任务描述推断 API 端点（或从 spec.md 的"用户场景"推断）
+    3. 生成 API 文档条目
+  - **生成内容**:
+    - 端点路径（从 Controller 类名推断：ArticleController → /api/v1/articles）
+    - HTTP 方法（从用户场景的动作推断：创建 → POST，查询 → GET）
+    - 请求示例（从 spec.md 的用户场景 Given/When 提取）
+    - 响应示例（从 spec.md 的用户场景 Then 提取）
+    - 错误码（从 spec.md 的"成功标准"推断）
+  - **模板**: java-documentation-architect/SKILL.md 的 API 文档模板
+  - **特殊处理**: 如果 /speckit.plan 已生成骨架，则补充详细内容
+
+#### JavaDoc 补充（核心类）
+
+> **说明**: 为聚合根、实体、Port 接口添加详细的 JavaDoc 注释
+
+- [ ] T1002 [P] 为聚合根添加 JavaDoc in patra-[service]-domain/.../[AggregateRoot].java
+  - **目标类**: 所有聚合根（从 spec.md 的"领域模型"识别）
+  - **JavaDoc 内容**:
+    - **类级 JavaDoc**:
+      - 描述（从 spec.md 的"领域模型"提取）
+      - 状态转换图（如果有状态枚举，生成状态机图）
+      - 线程安全性说明
+      - @author、@since（从 spec.md 的创建日期）
+      - @see 引用（关联的实体、值对象）
+    - **方法级 JavaDoc**:
+      - 方法描述（业务逻辑说明）
+      - @param（参数说明，包括非空约束）
+      - @return（返回值说明）
+      - @throws（异常说明，从业务规则推断）
+      - @example（使用示例代码）
+  - **模板**: java-documentation-architect/SKILL.md 的 JavaDoc 最佳实践
+
+- [ ] T1003 [P] 为 Port 接口添加 JavaDoc in patra-[service]-domain/.../repository/[Repository].java
+  - **目标类**: 所有 Port 接口（Repository、Gateway）
+  - **JavaDoc 内容**:
+    - 接口职责（数据访问、外部服务调用）
+    - 方法说明（查询、保存、删除）
+    - 实现位置提示（@see 指向 RepositoryImpl）
+
+### 其他润色任务
+
+- [ ] T1004 代码清理和重构
+- [ ] T1005 跨所有故事的性能优化
+- [ ] T1006 [P] 额外的单元测试（如果请求）in tests/unit/
+- [ ] T1007 安全加固
+- [ ] T1008 运行 quickstart.md 验证
+- [ ] T1009 运行 ArchUnit 测试验证架构合规性 in patra-[service]-boot/src/test/java/.../ArchitectureTest.java
 
 ---
 

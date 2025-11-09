@@ -187,6 +187,118 @@
 
 ---
 
+## Phase 1: 设计与文档骨架生成
+
+> **说明**: 本阶段由 `/speckit.plan` 命令执行，在架构设计的同时生成文档骨架
+
+### 1. 架构设计
+
+**参考**: `java-hexagonal-architecture` skill
+
+**决策流程**：
+1. **确定微服务归属**: 本功能属于 `patra-[SERVICE_NAME]` 微服务
+   - 理由: [说明为什么选择这个服务]
+
+2. **确定触发来源** → 选择适配器类型:
+   - REST API → Controller
+   - 定时任务 → XXL-Job
+   - 消息队列 → MessageListener
+
+3. **设计聚合边界**:
+   - 识别聚合根（从 spec.md 的"领域模型"提取）
+   - 定义聚合内实体和值对象
+   - 确定聚合间的通信方式（领域事件 vs 直接调用）
+
+4. **定义 Port 接口**:
+   - Repository 接口（数据访问）
+   - Gateway 接口（外部服务调用）
+   - EventPublisher 接口（事件发布）
+
+### 2. 文档骨架生成
+
+<!-- AI 执行指令：
+当执行 /speckit.plan 命令时，在完成架构设计后自动执行以下文档生成操作：
+
+1. **检测是否为新模块**：
+   - 读取上文的"微服务选择"决策
+   - 检查 patra-[SERVICE_NAME]/pom.xml 是否存在
+   - 如果不存在 → 标记为"新模块"
+
+2. **生成模块 README.md 骨架**（如果是新模块）：
+
+   📍 位置: patra-[SERVICE_NAME]/README.md
+
+   内容映射：
+   - 📋 概述 ← spec.md 的"概览"章节（前 2-3 段）
+   - 🏗️ 架构位置 ← 本 plan.md 的"微服务选择"说明
+   - 🔧 主要功能 ← spec.md 的"功能需求"（FR-*）转为功能列表
+   - 📦 依赖关系 ← 本 plan.md 的"Project Structure"中的模块依赖
+   - 🎯 核心类说明 ← 标记为 [待 /speckit.implement 阶段补充]
+   - 🔌 接口定义 ← spec.md 的"领域事件"章节
+   - 📊 数据模型 ← 引用链接: "见 specs/###-feature/data-model.md"
+   - 🧪 测试覆盖 ← 标记为 [待测试运行后更新]
+   - 📝 变更日志 ← 添加首个版本: "v1.0.0 - 初始版本"
+
+   模板参考: java-documentation-architect/SKILL.md 的"模块 README 模板"
+
+   特殊处理（如果是现有模块）：
+   - 不生成新的 README.md（将在 /speckit.implement 阶段增量更新）
+
+3. **生成 API 文档骨架**（如果有 REST API）：
+
+   📍 位置: specs/###-feature/contracts/API.md
+
+   检测条件：
+   - "Phase 1: 设计"中确定了需要 Controller
+   - 或 spec.md 的"用户场景"中涉及 HTTP 请求
+
+   内容生成：
+   - 从 spec.md 的"用户场景"推断 API 端点
+   - 每个用户故事 → 一个 API 端点
+   - 格式:
+     ```markdown
+     ### [端点名称]
+     **请求**: [从用户场景的 When 推断]
+     **响应**: [从用户场景的 Then 推断]
+     **错误码**: [从 spec.md 的"成功标准"推断]
+     ```
+
+   模板参考: java-documentation-architect/SKILL.md 的"API 文档模板"
+
+4. **生成 data-model.md**（如果有数据模型）：
+
+   📍 位置: specs/###-feature/data-model.md
+
+   内容来源：
+   - spec.md 的"领域模型"章节
+   - 聚合根、实体、值对象的属性设计
+   - 数据库表设计（DO 层）
+
+5. **输出报告**：
+
+   在 plan.md 生成完成后，输出文档生成报告：
+
+   ```
+   ✅ Phase 1 文档骨架生成完成
+
+   生成的文档：
+   - [✅/❌] patra-[SERVICE_NAME]/README.md（新模块骨架）
+   - [✅/❌] specs/###-feature/contracts/API.md（API 文档骨架）
+   - [✅/❌] specs/###-feature/data-model.md（数据模型）
+
+   待补充章节（将在 /speckit.implement 阶段自动填充）：
+   - 🎯 核心类说明
+   - 🧪 测试覆盖率
+   ```
+-->
+
+**文档生成输出**：
+- [ ] 模块 README.md 骨架（如果是新模块）
+- [ ] API 文档骨架（如果有 REST API）
+- [ ] 数据模型文档
+
+---
+
 ## Project Structure
 
 ### Documentation (this feature)
