@@ -79,6 +79,7 @@ $ARGUMENTS
    - spec.md：特性需求和范围
    - plan.md（如果存在）：技术细节、依赖
    - tasks.md（如果存在）：实现任务
+   - `.specify/memory/constitution.md`：架构规范和 CHK-* 验证项（用于架构合规性、DDD、SSOT、测试策略检查清单）
 
    **上下文加载策略**：
    - 仅加载与活动焦点区域相关的必要部分（避免完整文件转储）
@@ -113,6 +114,7 @@ $ARGUMENTS
    - **非功能需求**（性能、安全、可访问性等 - 是否已指定？）
    - **依赖和假设**（是否已记录并验证？）
    - **歧义和冲突**（需要澄清什么？）
+   - **架构合规性需求质量**（是否明确定义了架构约束？参考 `.specify/memory/constitution.md` 的 CHK-* 验证项）
 
    **如何编写检查清单项目 - "英文的单元测试"**：
 
@@ -261,6 +263,49 @@ $ARGUMENTS
 - "是否记录了威胁模型并与需求一致？[可追溯性]"
 - "安全需求是否与合规义务一致？[一致性]"
 - "是否定义了安全失败/违规响应需求？[Gap, 异常流程]"
+
+**架构合规性需求质量（Patra 项目）：** `architecture-compliance.md`
+
+样本项目（测试需求质量，参考 constitution.md 的 CHK-* 验证项）：
+
+- "是否明确指定了六边形架构的层次边界？[完整性, Spec §Architecture]"
+- "是否清晰定义了 Domain 层的依赖约束（仅 Lombok/Hutool/patra-common）？[清晰度, CHK-ARCH-001]"
+- "是否一致定义了依赖方向（Adapter → App → Domain ← Infra）？[一致性, CHK-ARCH-002]"
+- "是否为事务边界指定了明确的需求（@Transactional 仅在应用层）？[Gap, CHK-ARCH-003]"
+- "是否定义了 DO（数据对象）的封装需求（DO 不离开 Infrastructure 层）？[覆盖范围, CHK-ARCH-004]"
+- "架构约束需求是否可以通过 ArchUnit 测试验证？[可衡量性]"
+
+**DDD 设计需求质量（Patra 项目）：** `domain-model.md`
+
+样本项目（测试领域模型需求质量）：
+
+- "是否明确识别了所有聚合根及其边界？[完整性, Spec §Domain Model, CHK-DDD-001]"
+- "是否清晰定义了实体间的关系？[清晰度, CHK-DDD-002]"
+- "是否指定了领域事件及其发布时机（使用过去时命名）？[覆盖范围, CHK-DDD-003]"
+- "是否一致定义了值对象的不可变性需求（使用 record 或 final 类）？[一致性]"
+- "是否为聚合根定义了业务不变量？[Gap]"
+- "是否记录了 Port 接口的抽象策略（在 Domain 层定义，Infrastructure 层实现）？[CHK-DDD-004]"
+
+**SSOT 原则需求质量（Patra 项目）：** `ssot-compliance.md`
+
+样本项目（测试单一事实来源需求）：
+
+- "是否明确要求从 patra-registry 获取 Provenance 配置？[完整性, CHK-SSOT-001]"
+- "是否禁止硬编码数据源配置？[清晰度, Spec §Configuration]"
+- "是否定义了数据字典的单一来源需求（从 patra-registry 动态加载）？[Gap, CHK-SSOT-002]"
+- "是否指定了元数据和映射规则的版本化需求？[覆盖范围, CHK-SSOT-003]"
+- "patra-registry 的配置更新需求是否支持运行时热更新？[边界情况]"
+
+**测试策略需求质量（Patra 项目）：** `test-strategy.md`
+
+样本项目（测试测试策略需求，参考 java-test-architect）：
+
+- "是否明确要求 TDD 方法（测试先于代码）？[完整性, Spec §Testing]"
+- "是否为所有层指定了测试覆盖率需求（Domain ≥80%, App ≥70%）？[清晰度, CHK-TEST-001/002]"
+- "是否定义了 IT/E2E 测试的模块位置需求（必须在 patra-{service}-boot 模块）？[一致性, CHK-TEST-006]"
+- "是否指定了 TestContainers 用于集成测试的需求？[覆盖范围, CHK-TEST-003]"
+- "是否要求 ArchUnit 架构测试以验证依赖方向？[Gap, CHK-TEST-005]"
+- "是否为 Domain 层单元测试定义了无 Spring 依赖的需求？[清晰度, CHK-TEST-001]"
 
 ## 反例：不应该做什么
 
