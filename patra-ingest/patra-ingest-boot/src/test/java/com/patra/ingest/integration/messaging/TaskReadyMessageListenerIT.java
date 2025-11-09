@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.ContextConfiguration;
@@ -48,7 +48,7 @@ import org.springframework.test.context.ContextConfiguration;
  *
  * <ul>
  *   <li><strong>真实依赖</strong>: 使用 RocketMQ Testcontainers (由 RocketMQContainerInitializer 提供)
- *   <li><strong>Mock 业务用例</strong>: 使用 @MockBean Mock {@link TaskExecutionUseCase}，避免执行真实业务逻辑
+ *   <li><strong>Mock 业务用例</strong>: 使用 @MockitoBean Mock {@link TaskExecutionUseCase}，避免执行真实业务逻辑
  *   <li><strong>异步断言</strong>: 使用 Awaitility 等待消息消费完成
  *   <li><strong>参数捕获</strong>: 使用 Mockito ArgumentCaptor 验证传递给用例的 Command 对象
  * </ul>
@@ -100,7 +100,7 @@ class TaskReadyMessageListenerIT {
   @Autowired private RocketMQTemplate rocketMQTemplate;
 
   /** Mock 业务用例，避免执行真实业务逻辑 */
-  @MockBean private TaskExecutionUseCase taskExecutionUseCase;
+  @MockitoBean private TaskExecutionUseCase taskExecutionUseCase;
 
   @Autowired private ObjectMapper objectMapper;
 
