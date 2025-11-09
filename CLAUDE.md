@@ -184,13 +184,11 @@
 
 | 任务类型 | 推荐 Subagent | 理由 |
 |---------|--------------|------|
-| 🔍 代码库探索/理解结构 | `Explore` (medium/thorough) | 系统性扫描和模式识别 |
 | 📝 编写/生成测试用例 | `test-architect` | 专业测试专家 |
 | 🐛 诊断运行时错误/日志 | `runtime-error-diagnostic` | 专业故障排查 |
 | 📚 编写/更新文档 | `documentation-architect` | 结构化文档 |
 | 🔬 代码质量审查 | `code-architecture-reviewer` | 独立视角 |
 | 🌐 调研技术方案 | `web-research-specialist` | 专业调研 |
-| 📋 制定实施计划 | `Plan` (medium/thorough) | 系统性规划 |
 
 ### 你应该亲自处理的任务
 

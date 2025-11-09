@@ -1,81 +1,81 @@
 ---
-description: Execute the implementation planning workflow using the plan template to generate design artifacts.
+description: 使用规划模板执行实现规划工作流，生成设计工件。
 ---
 
-## User Input
+## 用户输入
 
 ```text
 $ARGUMENTS
 ```
 
-You **MUST** consider the user input before proceeding (if not empty).
+你**必须**在继续之前考虑用户输入（如果不为空）。
 
-## Outline
+## 概述
 
-1. **Setup**: Run `.specify/scripts/bash/setup-plan.sh --json` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, SPECS_DIR, BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. **设置**：从仓库根目录运行 `.specify/scripts/bash/setup-plan.sh --json` 并解析 JSON 以获取 FEATURE_SPEC、IMPL_PLAN、SPECS_DIR、BRANCH。对于包含单引号的参数，如 "I'm Groot"，使用转义语法：例如 'I'\''m Groot'（或者如果可能使用双引号："I'm Groot"）。
 
-2. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Load IMPL_PLAN template (already copied).
+2. **加载上下文**：读取 FEATURE_SPEC 和 `.specify/memory/constitution.md`。加载 IMPL_PLAN 模板（已复制）。
 
-3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
-   - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
-   - Fill Constitution Check section from constitution
-   - Evaluate gates (ERROR if violations unjustified)
-   - Phase 0: Generate research.md (resolve all NEEDS CLARIFICATION)
-   - Phase 1: Generate data-model.md, contracts/, quickstart.md
-   - Phase 1: Update agent context by running the agent script
-   - Re-evaluate Constitution Check post-design
+3. **执行规划工作流**：遵循 IMPL_PLAN 模板中的结构：
+   - 填写技术上下文（将未知项标记为 "需要澄清"）
+   - 从宪章填写宪章检查部分
+   - 评估关卡（如果违规未经证明则报错）
+   - 阶段 0：生成 research.md（解决所有需要澄清的问题）
+   - 阶段 1：生成 data-model.md、contracts/、quickstart.md
+   - 阶段 1：通过运行 agent 脚本更新 agent 上下文
+   - 设计后重新评估宪章检查
 
-4. **Stop and report**: Command ends after Phase 2 planning. Report branch, IMPL_PLAN path, and generated artifacts.
+4. **停止并报告**：命令在阶段 2 规划后结束。报告分支、IMPL_PLAN 路径和生成的工件。
 
-## Phases
+## 阶段
 
-### Phase 0: Outline & Research
+### 阶段 0：大纲与研究
 
-1. **Extract unknowns from Technical Context** above:
-   - For each NEEDS CLARIFICATION → research task
-   - For each dependency → best practices task
-   - For each integration → patterns task
+1. **从上述技术上下文中提取未知项**：
+   - 每个需要澄清 → 研究任务
+   - 每个依赖项 → 最佳实践任务
+   - 每个集成 → 模式任务
 
-2. **Generate and dispatch research agents**:
+2. **生成并派遣研究代理**：
 
    ```text
-   For each unknown in Technical Context:
-     Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
+   对于技术上下文中的每个未知项：
+     任务："为 {特性上下文} 研究 {未知项}"
+   对于每个技术选择：
+     任务："在 {领域} 中查找 {技术} 的最佳实践"
    ```
 
-3. **Consolidate findings** in `research.md` using format:
-   - Decision: [what was chosen]
-   - Rationale: [why chosen]
-   - Alternatives considered: [what else evaluated]
+3. **在 `research.md` 中整合发现**，使用格式：
+   - 决策：[选择了什么]
+   - 理由：[为什么选择]
+   - 考虑的替代方案：[还评估了什么]
 
-**Output**: research.md with all NEEDS CLARIFICATION resolved
+**输出**：research.md，其中所有需要澄清的问题已解决
 
-### Phase 1: Design & Contracts
+### 阶段 1：设计与契约
 
-**Prerequisites:** `research.md` complete
+**前置条件**：`research.md` 完成
 
-1. **Extract entities from feature spec** → `data-model.md`:
-   - Entity name, fields, relationships
-   - Validation rules from requirements
-   - State transitions if applicable
+1. **从特性规格中提取实体** → `data-model.md`：
+   - 实体名称、字段、关系
+   - 来自需求的验证规则
+   - 状态转换（如适用）
 
-2. **Generate API contracts** from functional requirements:
-   - For each user action → endpoint
-   - Use standard REST/GraphQL patterns
-   - Output OpenAPI/GraphQL schema to `/contracts/`
+2. **从功能需求生成 API 契约**：
+   - 对于每个用户操作 → 端点
+   - 使用标准 REST/GraphQL 模式
+   - 输出 OpenAPI/GraphQL schema 到 `/contracts/`
 
-3. **Agent context update**:
-   - Run `.specify/scripts/bash/update-agent-context.sh claude`
-   - These scripts detect which AI agent is in use
-   - Update the appropriate agent-specific context file
-   - Add only new technology from current plan
-   - Preserve manual additions between markers
+3. **项目文档更新**（可选）：
+   - 如有新增技术栈或架构决策，手动更新 `CLAUDE.md` 相关章节
+   - 建议更新位置：
+     * "技术栈" 章节 - 添加新技术
+     * "代码库结构" 章节 - 记录结构变化
+   - 保持文档与代码同步
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**输出**：data-model.md、/contracts/*、quickstart.md
 
-## Key rules
+## 关键规则
 
-- Use absolute paths
-- ERROR on gate failures or unresolved clarifications
+- 使用绝对路径
+- 对于关卡失败或未解决的澄清问题报错

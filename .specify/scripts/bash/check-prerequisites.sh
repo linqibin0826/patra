@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 
-# Consolidated prerequisite checking script
+# 统一的前置条件检查脚本
 #
-# This script provides unified prerequisite checking for Spec-Driven Development workflow.
-# It replaces the functionality previously spread across multiple scripts.
+# 该脚本为规范驱动开发工作流提供统一的前置条件检查。
+# 它替代了之前分散在多个脚本中的功能。
 #
-# Usage: ./check-prerequisites.sh [OPTIONS]
+# 用法：./check-prerequisites.sh [选项]
 #
-# OPTIONS:
-#   --json              Output in JSON format
-#   --require-tasks     Require tasks.md to exist (for implementation phase)
-#   --include-tasks     Include tasks.md in AVAILABLE_DOCS list
-#   --paths-only        Only output path variables (no validation)
-#   --help, -h          Show help message
+# 选项：
+#   --json              以 JSON 格式输出
+#   --require-tasks     要求 tasks.md 存在（用于实施阶段）
+#   --include-tasks     将 tasks.md 包含在 AVAILABLE_DOCS 列表中
+#   --paths-only        仅输出路径变量（无验证）
+#   --help, -h          显示帮助信息
 #
-# OUTPUTS:
-#   JSON mode: {"FEATURE_DIR":"...", "AVAILABLE_DOCS":["..."]}
-#   Text mode: FEATURE_DIR:... \n AVAILABLE_DOCS: \n ✓/✗ file.md
-#   Paths only: REPO_ROOT: ... \n BRANCH: ... \n FEATURE_DIR: ... etc.
+# 输出：
+#   JSON 模式：{"FEATURE_DIR":"...", "AVAILABLE_DOCS":["..."]}
+#   文本模式：FEATURE_DIR:... \n AVAILABLE_DOCS: \n ✓/✗ file.md
+#   仅路径：REPO_ROOT: ... \n BRANCH: ... \n FEATURE_DIR: ... 等
 
 set -e
 
-# Parse command line arguments
+# 解析命令行参数
 JSON_MODE=false
 REQUIRE_TASKS=false
 INCLUDE_TASKS=false
@@ -43,49 +43,49 @@ for arg in "$@"; do
             ;;
         --help|-h)
             cat << 'EOF'
-Usage: check-prerequisites.sh [OPTIONS]
+用法：check-prerequisites.sh [选项]
 
-Consolidated prerequisite checking for Spec-Driven Development workflow.
+规范驱动开发工作流的统一前置条件检查。
 
-OPTIONS:
-  --json              Output in JSON format
-  --require-tasks     Require tasks.md to exist (for implementation phase)
-  --include-tasks     Include tasks.md in AVAILABLE_DOCS list
-  --paths-only        Only output path variables (no prerequisite validation)
-  --help, -h          Show this help message
+选项：
+  --json              以 JSON 格式输出
+  --require-tasks     要求 tasks.md 存在（用于实施阶段）
+  --include-tasks     将 tasks.md 包含在 AVAILABLE_DOCS 列表中
+  --paths-only        仅输出路径变量（无前置条件验证）
+  --help, -h          显示此帮助信息
 
-EXAMPLES:
-  # Check task prerequisites (plan.md required)
+示例：
+  # 检查任务前置条件（需要 plan.md）
   ./check-prerequisites.sh --json
-  
-  # Check implementation prerequisites (plan.md + tasks.md required)
+
+  # 检查实施前置条件（需要 plan.md + tasks.md）
   ./check-prerequisites.sh --json --require-tasks --include-tasks
-  
-  # Get feature paths only (no validation)
+
+  # 仅获取特性路径（无验证）
   ./check-prerequisites.sh --paths-only
-  
+
 EOF
             exit 0
             ;;
         *)
-            echo "ERROR: Unknown option '$arg'. Use --help for usage information." >&2
+            echo "错误：未知选项 '$arg'。使用 --help 获取用法信息。" >&2
             exit 1
             ;;
     esac
 done
 
-# Source common functions
+# 导入公共函数
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Get feature paths and validate branch
+# 获取特性路径并验证分支
 eval $(get_feature_paths)
 check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
-# If paths-only mode, output paths and exit (support JSON + paths-only combined)
+# 如果仅路径模式，输出路径并退出（支持 JSON + 仅路径组合）
 if $PATHS_ONLY; then
     if $JSON_MODE; then
-        # Minimal JSON paths payload (no validation performed)
+        # 最小化的 JSON 路径负载（不执行任何验证）
         printf '{"REPO_ROOT":"%s","BRANCH":"%s","FEATURE_DIR":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s"}\n' \
             "$REPO_ROOT" "$CURRENT_BRANCH" "$FEATURE_DIR" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS"
     else
@@ -99,67 +99,67 @@ if $PATHS_ONLY; then
     exit 0
 fi
 
-# Validate required directories and files
+# 验证必需的目录和文件
 if [[ ! -d "$FEATURE_DIR" ]]; then
-    echo "ERROR: Feature directory not found: $FEATURE_DIR" >&2
-    echo "Run /speckit.specify first to create the feature structure." >&2
+    echo "错误：找不到特性目录：$FEATURE_DIR" >&2
+    echo "请先运行 /speckit.specify 以创建特性结构。" >&2
     exit 1
 fi
 
 if [[ ! -f "$IMPL_PLAN" ]]; then
-    echo "ERROR: plan.md not found in $FEATURE_DIR" >&2
-    echo "Run /speckit.plan first to create the implementation plan." >&2
+    echo "错误：$FEATURE_DIR 中找不到 plan.md" >&2
+    echo "请先运行 /speckit.plan 以创建实施计划。" >&2
     exit 1
 fi
 
-# Check for tasks.md if required
+# 如果需要，检查 tasks.md
 if $REQUIRE_TASKS && [[ ! -f "$TASKS" ]]; then
-    echo "ERROR: tasks.md not found in $FEATURE_DIR" >&2
-    echo "Run /speckit.tasks first to create the task list." >&2
+    echo "错误：$FEATURE_DIR 中找不到 tasks.md" >&2
+    echo "请先运行 /speckit.tasks 以创建任务列表。" >&2
     exit 1
 fi
 
-# Build list of available documents
+# 构建可用文档列表
 docs=()
 
-# Always check these optional docs
+# 始终检查这些可选文档
 [[ -f "$RESEARCH" ]] && docs+=("research.md")
 [[ -f "$DATA_MODEL" ]] && docs+=("data-model.md")
 
-# Check contracts directory (only if it exists and has files)
+# 检查合约目录（仅在存在且包含文件时）
 if [[ -d "$CONTRACTS_DIR" ]] && [[ -n "$(ls -A "$CONTRACTS_DIR" 2>/dev/null)" ]]; then
     docs+=("contracts/")
 fi
 
 [[ -f "$QUICKSTART" ]] && docs+=("quickstart.md")
 
-# Include tasks.md if requested and it exists
+# 如果请求且存在，则包含 tasks.md
 if $INCLUDE_TASKS && [[ -f "$TASKS" ]]; then
     docs+=("tasks.md")
 fi
 
-# Output results
+# 输出结果
 if $JSON_MODE; then
-    # Build JSON array of documents
+    # 构建文档的 JSON 数组
     if [[ ${#docs[@]} -eq 0 ]]; then
         json_docs="[]"
     else
         json_docs=$(printf '"%s",' "${docs[@]}")
         json_docs="[${json_docs%,}]"
     fi
-    
+
     printf '{"FEATURE_DIR":"%s","AVAILABLE_DOCS":%s}\n' "$FEATURE_DIR" "$json_docs"
 else
-    # Text output
+    # 文本输出
     echo "FEATURE_DIR:$FEATURE_DIR"
     echo "AVAILABLE_DOCS:"
-    
-    # Show status of each potential document
+
+    # 显示每个潜在文档的状态
     check_file "$RESEARCH" "research.md"
     check_file "$DATA_MODEL" "data-model.md"
     check_dir "$CONTRACTS_DIR" "contracts/"
     check_file "$QUICKSTART" "quickstart.md"
-    
+
     if $INCLUDE_TASKS; then
         check_file "$TASKS" "tasks.md"
     fi
