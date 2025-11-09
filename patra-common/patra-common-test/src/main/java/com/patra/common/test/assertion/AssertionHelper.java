@@ -2,6 +2,7 @@ package com.patra.common.test.assertion;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Iterator;
 
 /**
  * 通用断言辅助工具类
@@ -11,7 +12,7 @@ import java.time.LocalDateTime;
  * <h3>设计模式</h3>
  * <ul>
  *   <li>静态辅助方法模式: 所有方法都是静态的</li>
- *   <li>委托模式: 内部委托给 AssertJ 执行实际断言</li>
+ *   <li>委托模式: 提供业务语义化的断言方法</li>
  * </ul>
  *
  * <h3>使用示例</h3>
@@ -46,7 +47,19 @@ public final class AssertionHelper {
      * @throws AssertionError 如果字符串为空或长度不符合
      */
     public static void assertStringNotBlankAndLength(String actual, int minLength, int maxLength) {
-        throw new UnsupportedOperationException("待实现");
+        if (actual == null) {
+            throw new AssertionError("字符串不能为null");
+        }
+        if (actual.isBlank()) {
+            throw new AssertionError("字符串不能为空白");
+        }
+        int length = actual.length();
+        if (length < minLength || length > maxLength) {
+            throw new AssertionError(String.format(
+                "字符串长度应该在 [%d, %d] 范围内，实际长度: %d",
+                minLength, maxLength, length
+            ));
+        }
     }
 
     /**
@@ -58,7 +71,21 @@ public final class AssertionHelper {
      * @throws AssertionError 如果日期时间不在范围内
      */
     public static void assertDateTimeBetween(LocalDateTime actual, LocalDateTime start, LocalDateTime end) {
-        throw new UnsupportedOperationException("待实现");
+        if (actual == null) {
+            throw new AssertionError("日期时间不能为null");
+        }
+        if (start == null) {
+            throw new AssertionError("开始时间不能为null");
+        }
+        if (end == null) {
+            throw new AssertionError("结束时间不能为null");
+        }
+        if (actual.isBefore(start) || actual.isAfter(end)) {
+            throw new AssertionError(String.format(
+                "日期时间应该在 [%s, %s] 范围内，实际: %s",
+                start, end, actual
+            ));
+        }
     }
 
     /**
@@ -70,7 +97,21 @@ public final class AssertionHelper {
      * @throws AssertionError 如果日期不在范围内
      */
     public static void assertDateBetween(LocalDate actual, LocalDate start, LocalDate end) {
-        throw new UnsupportedOperationException("待实现");
+        if (actual == null) {
+            throw new AssertionError("日期不能为null");
+        }
+        if (start == null) {
+            throw new AssertionError("开始日期不能为null");
+        }
+        if (end == null) {
+            throw new AssertionError("结束日期不能为null");
+        }
+        if (actual.isBefore(start) || actual.isAfter(end)) {
+            throw new AssertionError(String.format(
+                "日期应该在 [%s, %s] 范围内，实际: %s",
+                start, end, actual
+            ));
+        }
     }
 
     /**
@@ -82,7 +123,29 @@ public final class AssertionHelper {
      * @throws AssertionError 如果集合不包含该元素
      */
     public static <T> void assertCollectionContains(Iterable<T> collection, T element) {
-        throw new UnsupportedOperationException("待实现");
+        if (collection == null) {
+            throw new AssertionError("集合不能为null");
+        }
+
+        boolean found = false;
+        Iterator<T> iterator = collection.iterator();
+        while (iterator.hasNext()) {
+            T item = iterator.next();
+            if (element == null && item == null) {
+                found = true;
+                break;
+            }
+            if (element != null && element.equals(item)) {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            throw new AssertionError(String.format(
+                "集合应该包含元素: %s", element
+            ));
+        }
     }
 
     /**
@@ -94,6 +157,25 @@ public final class AssertionHelper {
      * @throws AssertionError 如果数值不在范围内
      */
     public static void assertNumberBetween(Number actual, Number min, Number max) {
-        throw new UnsupportedOperationException("待实现");
+        if (actual == null) {
+            throw new AssertionError("数值不能为null");
+        }
+        if (min == null) {
+            throw new AssertionError("最小值不能为null");
+        }
+        if (max == null) {
+            throw new AssertionError("最大值不能为null");
+        }
+
+        double actualValue = actual.doubleValue();
+        double minValue = min.doubleValue();
+        double maxValue = max.doubleValue();
+
+        if (actualValue < minValue || actualValue > maxValue) {
+            throw new AssertionError(String.format(
+                "数值应该在 [%s, %s] 范围内，实际: %s",
+                min, max, actual
+            ));
+        }
     }
 }

@@ -47,12 +47,34 @@ public final class MockDataFactory {
     /**
      * 生成随机字符串
      *
-     * @param prefix 前缀
-     * @param length 长度(不包含前缀)
-     * @return 随机字符串
+     * <p>使用字符集 [a-z, A-Z, 0-9] 生成指定长度的随机字符串，支持自定义前缀。</p>
+     *
+     * <h3>使用示例</h3>
+     * <pre>{@code
+     * String taskId = MockDataFactory.randomString("TASK_", 8);  // TASK_a1B2c3D4
+     * String code = MockDataFactory.randomString("", 6);          // x7Y8z9
+     * }</pre>
+     *
+     * @param prefix 前缀（可以为空字符串）
+     * @param length 随机部分的长度（不包含前缀）
+     * @return 带前缀的随机字符串
      */
     public static String randomString(String prefix, int length) {
-        throw new UnsupportedOperationException("待实现");
+        if (length <= 0) {
+            return prefix;
+        }
+
+        // 字符集: a-z, A-Z, 0-9
+        String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        StringBuilder sb = new StringBuilder(prefix);
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        for (int i = 0; i < length; i++) {
+            int index = random.nextInt(chars.length());
+            sb.append(chars.charAt(index));
+        }
+
+        return sb.toString();
     }
 
     /**
@@ -133,18 +155,40 @@ public final class MockDataFactory {
     /**
      * 生成随机邮箱地址
      *
-     * @return 随机邮箱
+     * <p>生成符合标准格式的随机邮箱地址，格式为: {username}@{domain}.com</p>
+     * <p>用户名为随机字符串（8位），域名从 [example, test, mock] 中随机选择。</p>
+     *
+     * <h3>使用示例</h3>
+     * <pre>{@code
+     * String email = MockDataFactory.randomEmail();  // a1b2c3d4@example.com
+     * }</pre>
+     *
+     * @return 随机邮箱地址
      */
     public static String randomEmail() {
-        throw new UnsupportedOperationException("待实现");
+        String[] domains = {"example", "test", "mock"};
+        String username = randomString("", 8);
+        String domain = domains[ThreadLocalRandom.current().nextInt(domains.length)];
+        return username + "@" + domain + ".com";
     }
 
     /**
      * 生成随机 URL
      *
+     * <p>生成符合 HTTP/HTTPS 标准格式的随机 URL，格式为: https://{domain}.com/{path}</p>
+     * <p>域名从 [example, test, mock] 中随机选择，路径为随机字符串（8位）。</p>
+     *
+     * <h3>使用示例</h3>
+     * <pre>{@code
+     * String url = MockDataFactory.randomUrl();  // https://example.com/a1b2c3d4
+     * }</pre>
+     *
      * @return 随机 URL
      */
     public static String randomUrl() {
-        throw new UnsupportedOperationException("待实现");
+        String[] domains = {"example", "test", "mock"};
+        String domain = domains[ThreadLocalRandom.current().nextInt(domains.length)];
+        String path = randomString("", 8);
+        return "https://" + domain + ".com/" + path;
     }
 }

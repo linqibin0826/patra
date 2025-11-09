@@ -163,6 +163,9 @@ TaskStatus status = MockDataFactory.randomEnum(TaskStatus.class);
 
 ### 1.3 DomainAssertions - 领域断言工具
 
+<!-- 实施变更：见 implementation-log.md#变更-001 -->
+> ⚠️ **注意**：实际实现使用纯Java断言而非AssertJ（见implementation-log.md#变更-001），下方示例代码仅作参考
+
 **包路径**: `com.patra.common.test.assertion`
 
 **核心接口**:
