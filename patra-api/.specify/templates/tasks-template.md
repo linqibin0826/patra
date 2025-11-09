@@ -1,30 +1,30 @@
 ---
 
-description: "Task list template for feature implementation"
+description: "特性实施的任务列表模板"
 ---
 
-# Tasks: [FEATURE NAME]
+# 任务: [特性名称]
 
-**Input**: Design documents from `/specs/[###-feature-name]/`
-**Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
+**输入**: 来自 `/specs/[###-feature-name]/` 的设计文档
+**前置条件**: plan.md（必需）、spec.md（用户故事所需）、research.md、data-model.md、contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**测试**: 以下示例包含测试任务。测试是可选的 - 仅在特性规格说明中明确请求时才包含它们。
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+**组织**: 任务按用户故事分组，以实现每个故事的独立实施和测试。
 
-## Format: `[ID] [P?] [Layer?] [Story] Description`
+## 格式: `[ID] [P?] [Layer?] [Story] 描述`
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Layer]**: Hexagonal Architecture layer label (optional but recommended)
-  - `[Domain]`: Domain layer (纯 Java 领域模型)
-  - `[App]`: Application layer (Orchestrator/Coordinator)
-  - `[Infra]`: Infrastructure layer (Repository 实现/MyBatis Mapper)
-  - `[Adapter]`: Adapter layer (Controller/Listener/Job)
-  - `[API]`: API/Contract layer (DTO/Facade)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
-- Include exact file paths in descriptions (use Patra module paths: `patra-{service}-{layer}/src/...`)
+- **[P]**: 可并行运行（不同文件，无依赖）
+- **[Layer]**: 六边形架构层标签（可选但推荐）
+  - `[Domain]`: Domain 层（纯 Java 领域模型）
+  - `[App]`: Application 层（Orchestrator/Coordinator）
+  - `[Infra]`: Infrastructure 层（Repository 实现/MyBatis Mapper）
+  - `[Adapter]`: Adapter 层（Controller/Listener/Job）
+  - `[API]`: API/Contract 层（DTO/Facade）
+- **[Story]**: 此任务属于哪个用户故事（例如，US1、US2、US3）
+- 描述中包含确切的文件路径（使用 Patra 模块路径：`patra-{service}-{layer}/src/...`）
 
-## Path Conventions
+## 路径约定
 
 **Patra 项目使用六边形架构的多模块结构**：
 
@@ -34,72 +34,72 @@ description: "Task list template for feature implementation"
 - **Adapter 层**: `patra-{service}-adapter/src/main/java/com/patra/{service}/adapter/`
 - **API 层**: `patra-{service}-api/src/main/java/com/patra/{service}/api/`
 - **测试**:
-  - 单元测试: `src/test/java/` (与源码同结构)
-  - IT 测试: `patra-{service}-infra/src/test/java/` (`*IT.java`)
-  - E2E 测试: `patra-{service}-boot/src/test/java/` (`*E2ETest.java`)
+  - 单元测试: `src/test/java/`（与源码同结构）
+  - IT 测试: `patra-{service}-infra/src/test/java/`（`*IT.java`）
+  - E2E 测试: `patra-{service}-boot/src/test/java/`（`*E2ETest.java`）
 
-<!-- 
+<!--
   ============================================================================
-  IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
-  
-  The /speckit.tasks command MUST replace these with actual tasks based on:
-  - User stories from spec.md (with their priorities P1, P2, P3...)
-  - Feature requirements from plan.md
-  - Entities from data-model.md
-  - Endpoints from contracts/
-  
-  Tasks MUST be organized by user story so each story can be:
-  - Implemented independently
-  - Tested independently
-  - Delivered as an MVP increment
-  
-  DO NOT keep these sample tasks in the generated tasks.md file.
+  重要提示：以下任务是仅用于说明的示例任务。
+
+  /speckit.tasks 命令必须根据以下内容替换这些任务：
+  - 来自 spec.md 的用户故事（及其优先级 P1、P2、P3...）
+  - 来自 plan.md 的特性需求
+  - 来自 data-model.md 的实体
+  - 来自 contracts/ 的端点
+
+  任务必须按用户故事组织，以便每个故事可以：
+  - 独立实施
+  - 独立测试
+  - 作为 MVP 增量交付
+
+  不要在生成的 tasks.md 文件中保留这些示例任务。
   ============================================================================
 -->
 
-## Phase 1: Setup (Shared Infrastructure)
+## 阶段 1：设置（共享基础设施）
 
-**Purpose**: Project initialization and basic structure
+**目的**: 项目初始化和基本结构
 
-- [ ] T001 Create project structure per implementation plan
-- [ ] T002 Initialize [language] project with [framework] dependencies
-- [ ] T003 [P] Configure linting and formatting tools
-
----
-
-## Phase 2: Foundational (Blocking Prerequisites)
-
-**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
-
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
-
-Examples of foundational tasks (adjust based on your project):
-
-- [ ] T004 Setup database schema and migrations framework
-- [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] Setup API routing and middleware structure
-- [ ] T007 Create base models/entities that all stories depend on
-- [ ] T008 Configure error handling and logging infrastructure
-- [ ] T009 Setup environment configuration management
-
-**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
+- [ ] T001 按实现计划创建项目结构
+- [ ] T002 使用 [framework] 依赖初始化 [language] 项目
+- [ ] T003 [P] 配置代码检查和格式化工具
 
 ---
 
-## Phase 3: User Story 1 - [Title] (Priority: P1) 🎯 MVP
+## 阶段 2：基础（阻塞前置条件）
 
-**Goal**: [Brief description of what this story delivers]
+**目的**: 在任何用户故事可以实施之前必须完成的核心基础设施
 
-**Independent Test**: [How to verify this story works on its own]
+**⚠️ 关键**: 在此阶段完成之前，不能开始任何用户故事工作
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+基础任务示例（根据你的项目调整）：
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+- [ ] T004 设置数据库架构和迁移框架
+- [ ] T005 [P] 实现认证/授权框架
+- [ ] T006 [P] 设置 API 路由和中间件结构
+- [ ] T007 创建所有故事依赖的基础模型/实体
+- [ ] T008 配置错误处理和日志基础设施
+- [ ] T009 设置环境配置管理
 
-- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+**检查点**: 基础就绪 - 现在可以开始并行实施用户故事
 
-### Implementation for User Story 1
+---
+
+## 阶段 3：用户故事 1 - [标题]（优先级: P1）🎯 MVP
+
+**目标**: [此故事交付内容的简要描述]
+
+**独立测试**: [如何独立验证此故事有效]
+
+### 用户故事 1 的测试（可选 - 仅在请求测试时）⚠️
+
+> **注意：首先编写这些测试，确保在实施之前它们失败**
+
+- [ ] T010 [P] [US1] 在 tests/contract/test_[name].py 中为 [endpoint] 编写契约测试
+- [ ] T011 [P] [US1] 在 tests/integration/test_[name].py 中为 [user journey] 编写集成测试
+
+### 用户故事 1 的实施
 
 **按六边形架构顺序执行: Domain → App → Infra → Adapter**
 
@@ -107,171 +107,171 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T013 [P] [Domain] [US1] 定义 [ValueObject] 值对象 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[ValueObject].java
 - [ ] T014 [P] [Domain] [US1] 定义 [DomainEvent] 领域事件 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/event/[DomainEvent].java
 - [ ] T015 [Domain] [US1] 定义 [Repository] 仓储接口 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/repository/[Repository].java
-- [ ] T016 [App] [US1] 实现 [Coordinator] 协调器 in patra-[service]-app/src/main/java/com/patra/[service]/app/coordinator/[Coordinator].java (depends on T012-T015)
+- [ ] T016 [App] [US1] 实现 [Coordinator] 协调器 in patra-[service]-app/src/main/java/com/patra/[service]/app/coordinator/[Coordinator].java（依赖 T012-T015）
 - [ ] T017 [P] [Infra] [US1] 实现 [RepositoryImpl] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryImpl].java
 - [ ] T018 [P] [Infra] [US1] 创建 MyBatis Mapper in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/mapper/[EntityMapper].java
-- [ ] T019 [Adapter] [US1] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java (depends on T016)
+- [ ] T019 [Adapter] [US1] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java（依赖 T016）
 
-**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
+**检查点**: 此时，用户故事 1 应该完全可用且可以独立测试
 
 ---
 
-## Phase 4: User Story 2 - [Title] (Priority: P2)
+## 阶段 4：用户故事 2 - [标题]（优先级: P2）
 
-**Goal**: [Brief description of what this story delivers]
+**目标**: [此故事交付内容的简要描述]
 
-**Independent Test**: [How to verify this story works on its own]
+**独立测试**: [如何独立验证此故事有效]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### 用户故事 2 的测试（可选 - 仅在请求测试时）⚠️
 
-- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T018 [P] [US2] 在 tests/contract/test_[name].py 中为 [endpoint] 编写契约测试
+- [ ] T019 [P] [US2] 在 tests/integration/test_[name].py 中为 [user journey] 编写集成测试
 
-### Implementation for User Story 2
+### 用户故事 2 的实施
 
 **按六边形架构顺序执行: Domain → App → Infra → Adapter**
 
 - [ ] T020 [P] [Domain] [US2] 定义 [AggregateRoot] 聚合根 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[AggregateRoot].java
 - [ ] T021 [P] [Domain] [US2] 定义 [ValueObject] 值对象 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[ValueObject].java
-- [ ] T022 [App] [US2] 实现 [Orchestrator] 编排器 in patra-[service]-app/src/main/java/com/patra/[service]/app/orchestrator/[Orchestrator].java (depends on T020-T021)
+- [ ] T022 [App] [US2] 实现 [Orchestrator] 编排器 in patra-[service]-app/src/main/java/com/patra/[service]/app/orchestrator/[Orchestrator].java（依赖 T020-T021）
 - [ ] T023 [P] [Infra] [US2] 实现 [RepositoryImpl] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryImpl].java
-- [ ] T024 [Adapter] [US2] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java (depends on T022)
-- [ ] T025 [US2] 如需要，与 User Story 1 组件集成（跨聚合调用需通过 Application 层）
+- [ ] T024 [Adapter] [US2] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java（依赖 T022）
+- [ ] T025 [US2] 如需要，与用户故事 1 组件集成（跨聚合调用需通过 Application 层）
 
-**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
+**检查点**: 此时，用户故事 1 和 2 都应该独立工作
 
 ---
 
-## Phase 5: User Story 3 - [Title] (Priority: P3)
+## 阶段 5：用户故事 3 - [标题]（优先级: P3）
 
-**Goal**: [Brief description of what this story delivers]
+**目标**: [此故事交付内容的简要描述]
 
-**Independent Test**: [How to verify this story works on its own]
+**独立测试**: [如何独立验证此故事有效]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### 用户故事 3 的测试（可选 - 仅在请求测试时）⚠️
 
-- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
-- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+- [ ] T024 [P] [US3] 在 tests/contract/test_[name].py 中为 [endpoint] 编写契约测试
+- [ ] T025 [P] [US3] 在 tests/integration/test_[name].py 中为 [user journey] 编写集成测试
 
-### Implementation for User Story 3
+### 用户故事 3 的实施
 
 **按六边形架构顺序执行: Domain → App → Infra → Adapter**
 
 - [ ] T026 [P] [Domain] [US3] 定义 [AggregateRoot] 聚合根 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[AggregateRoot].java
 - [ ] T027 [P] [Domain] [US3] 定义 [ValueObject] 值对象 in patra-[service]-domain/src/main/java/com/patra/[service]/domain/model/[ValueObject].java
-- [ ] T028 [App] [US3] 实现 [Coordinator] 协调器 in patra-[service]-app/src/main/java/com/patra/[service]/app/coordinator/[Coordinator].java (depends on T026-T027)
+- [ ] T028 [App] [US3] 实现 [Coordinator] 协调器 in patra-[service]-app/src/main/java/com/patra/[service]/app/coordinator/[Coordinator].java（依赖 T026-T027）
 - [ ] T029 [P] [Infra] [US3] 实现 [RepositoryImpl] 仓储实现 in patra-[service]-infra/src/main/java/com/patra/[service]/infra/repository/[RepositoryImpl].java
-- [ ] T030 [Adapter] [US3] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java (depends on T028)
+- [ ] T030 [Adapter] [US3] 实现 REST API Controller in patra-[service]-adapter/src/main/java/com/patra/[service]/adapter/controller/[Controller].java（依赖 T028）
 
-**Checkpoint**: All user stories should now be independently functional
-
----
-
-[Add more user story phases as needed, following the same pattern]
+**检查点**: 所有用户故事现在都应该独立可用
 
 ---
 
-## Phase N: Polish & Cross-Cutting Concerns
-
-**Purpose**: Improvements that affect multiple user stories
-
-- [ ] TXXX [P] Documentation updates in docs/
-- [ ] TXXX Code cleanup and refactoring
-- [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
-- [ ] TXXX Security hardening
-- [ ] TXXX Run quickstart.md validation
+[根据需要添加更多用户故事阶段，遵循相同模式]
 
 ---
 
-## Dependencies & Execution Order
+## 阶段 N：润色和跨领域关注点
 
-### Phase Dependencies
+**目的**: 影响多个用户故事的改进
 
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Stories (Phase 3+)**: All depend on Foundational phase completion
-  - User stories can then proceed in parallel (if staffed)
-  - Or sequentially in priority order (P1 → P2 → P3)
-- **Polish (Final Phase)**: Depends on all desired user stories being complete
-
-### User Story Dependencies
-
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
-- **User Story 2 (P2)**: Can start after Foundational (Phase 2) - May integrate with US1 but should be independently testable
-- **User Story 3 (P3)**: Can start after Foundational (Phase 2) - May integrate with US1/US2 but should be independently testable
-
-### Within Each User Story
-
-- Tests (if included) MUST be written and FAIL before implementation
-- Models before services
-- Services before endpoints
-- Core implementation before integration
-- Story complete before moving to next priority
-
-### Parallel Opportunities
-
-- All Setup tasks marked [P] can run in parallel
-- All Foundational tasks marked [P] can run in parallel (within Phase 2)
-- Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
-- All tests for a user story marked [P] can run in parallel
-- Models within a story marked [P] can run in parallel
-- Different user stories can be worked on in parallel by different team members
+- [ ] TXXX [P] 在 docs/ 中更新文档
+- [ ] TXXX 代码清理和重构
+- [ ] TXXX 跨所有故事的性能优化
+- [ ] TXXX [P] 额外的单元测试（如果请求）in tests/unit/
+- [ ] TXXX 安全加固
+- [ ] TXXX 运行 quickstart.md 验证
 
 ---
 
-## Parallel Example: User Story 1
+## 依赖和执行顺序
+
+### 阶段依赖
+
+- **设置（阶段 1）**: 无依赖 - 可以立即开始
+- **基础（阶段 2）**: 依赖于设置完成 - 阻塞所有用户故事
+- **用户故事（阶段 3+）**: 都依赖于基础阶段完成
+  - 如果有人员配置，用户故事可以并行进行
+  - 或按优先级顺序依次进行（P1 → P2 → P3）
+- **润色（最后阶段）**: 依赖于所有期望的用户故事完成
+
+### 用户故事依赖
+
+- **用户故事 1（P1）**: 可以在基础（阶段 2）之后开始 - 不依赖其他故事
+- **用户故事 2（P2）**: 可以在基础（阶段 2）之后开始 - 可能与 US1 集成但应该可以独立测试
+- **用户故事 3（P3）**: 可以在基础（阶段 2）之后开始 - 可能与 US1/US2 集成但应该可以独立测试
+
+### 在每个用户故事内
+
+- 测试（如果包含）必须在实施之前编写并失败
+- 模型在服务之前
+- 服务在端点之前
+- 核心实施在集成之前
+- 故事完成后再转到下一个优先级
+
+### 并行机会
+
+- 所有标记 [P] 的设置任务可以并行运行
+- 所有标记 [P] 的基础任务可以并行运行（在阶段 2 内）
+- 一旦基础阶段完成，所有用户故事可以并行开始（如果团队容量允许）
+- 用户故事的所有标记 [P] 的测试可以并行运行
+- 故事内标记 [P] 的模型可以并行运行
+- 不同的用户故事可以由不同的团队成员并行工作
+
+---
+
+## 并行示例：用户故事 1
 
 ```bash
-# 同时启动 User Story 1 的所有 Domain 层任务（纯 Java，无依赖）:
+# 同时启动用户故事 1 的所有 Domain 层任务（纯 Java，无依赖）:
 Task: "定义 Article 聚合根 in patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/Article.java"
 Task: "定义 ArticleId 值对象 in patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/ArticleId.java"
 Task: "定义 ArticleCreated 领域事件 in patra-ingest-domain/src/main/java/com/patra/ingest/domain/event/ArticleCreated.java"
 
-# 同时启动 User Story 1 的所有 Infra 层任务（不同文件，可并行）:
+# 同时启动用户故事 1 的所有 Infra 层任务（不同文件，可并行）:
 Task: "实现 ArticleRepositoryImpl in patra-ingest-infra/src/main/java/com/patra/ingest/infra/repository/ArticleRepositoryImpl.java"
 Task: "创建 ArticleMapper in patra-ingest-infra/src/main/java/com/patra/ingest/infra/repository/mapper/ArticleMapper.java"
 ```
 
 ---
 
-## Implementation Strategy
+## 实施策略
 
-### MVP First (User Story 1 Only)
+### MVP 优先（仅用户故事 1）
 
-1. Complete Phase 1: Setup
-2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test User Story 1 independently
-5. Deploy/demo if ready
+1. 完成阶段 1：设置
+2. 完成阶段 2：基础（关键 - 阻塞所有故事）
+3. 完成阶段 3：用户故事 1
+4. **停止并验证**: 独立测试用户故事 1
+5. 如果准备好则部署/演示
 
-### Incremental Delivery
+### 增量交付
 
-1. Complete Setup + Foundational → Foundation ready
-2. Add User Story 1 → Test independently → Deploy/Demo (MVP!)
-3. Add User Story 2 → Test independently → Deploy/Demo
-4. Add User Story 3 → Test independently → Deploy/Demo
-5. Each story adds value without breaking previous stories
+1. 完成设置 + 基础 → 基础就绪
+2. 添加用户故事 1 → 独立测试 → 部署/演示（MVP！）
+3. 添加用户故事 2 → 独立测试 → 部署/演示
+4. 添加用户故事 3 → 独立测试 → 部署/演示
+5. 每个故事都增加价值而不破坏以前的故事
 
-### Parallel Team Strategy
+### 并行团队策略
 
-With multiple developers:
+对于多个开发者：
 
-1. Team completes Setup + Foundational together
-2. Once Foundational is done:
-   - Developer A: User Story 1
-   - Developer B: User Story 2
-   - Developer C: User Story 3
-3. Stories complete and integrate independently
+1. 团队一起完成设置 + 基础
+2. 一旦基础完成：
+   - 开发者 A：用户故事 1
+   - 开发者 B：用户故事 2
+   - 开发者 C：用户故事 3
+3. 故事独立完成和集成
 
 ---
 
-## Notes
+## 注意事项
 
-- [P] tasks = different files, no dependencies
-- [Story] label maps task to specific user story for traceability
-- Each user story should be independently completable and testable
-- Verify tests fail before implementing
-- Commit after each task or logical group
-- Stop at any checkpoint to validate story independently
-- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
+- [P] 任务 = 不同文件，无依赖
+- [Story] 标签将任务映射到特定用户故事以实现可追溯性
+- 每个用户故事应该可以独立完成和测试
+- 在实施之前验证测试失败
+- 在每个任务或逻辑组之后提交
+- 在任何检查点停止以独立验证故事
+- 避免：模糊任务、同一文件冲突、破坏独立性的跨故事依赖
