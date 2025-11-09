@@ -45,8 +45,11 @@
         <jacoco.version>0.8.14</jacoco.version>
 
         <!-- Testing -->
-        <junit.version>5.10.2</junit.version>
+        <junit.version>5.11.4</junit.version>
+        <mockito.version>5.15.2</mockito.version>
+        <assertj.version>3.27.3</assertj.version>
         <testcontainers.version>1.20.4</testcontainers.version>
+        <wiremock.version>3.10.0</wiremock.version>
         <jmh.version>1.37</jmh.version>
         <awaitility.version>4.2.2</awaitility.version>
     </properties>
@@ -277,6 +280,50 @@
                 <groupId>com.tngtech.archunit</groupId>
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Mockito - Mock 框架 -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- AssertJ - 流式断言库 -->
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${assertj.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- WireMock - HTTP Mock Server -->
+            <dependency>
+                <groupId>org.wiremock</groupId>
+                <artifactId>wiremock-standalone</artifactId>
+                <version>${wiremock.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Patra 测试基础设施模块 -->
+            <dependency>
+                <groupId>com.patra</groupId>
+                <artifactId>patra-common-test</artifactId>
+                <version>${project.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.patra</groupId>
+                <artifactId>patra-spring-boot-starter-test</artifactId>
+                <version>${project.version}</version>
                 <scope>test</scope>
             </dependency>
 
