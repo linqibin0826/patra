@@ -161,28 +161,146 @@
 
 ## 📝 文档验证
 
-### 模块文档
+### 包文档完整性
 
-- [ ] **CHK-DOC-001**: 模块根目录有完整的 `README.md`
-  - [ ] 包含模块职责说明
-  - [ ] 包含主要功能列表
-  - [ ] 包含快速开始指南
-  - [ ] 包含依赖关系说明
+- [ ] **CHK-DOC-001**: 每个包必须有 `package-info.java`
+  - **检查方法**: 扫描所有 `src/main/java` 下的包，验证是否存在 `package-info.java`
+  - **必需包**:
+    - [ ] `domain/model/` 包有文档
+    - [ ] `domain/event/` 包有文档（如存在）
+    - [ ] `domain/service/` 包有文档（如存在）
+    - [ ] `domain/repository/` 包有文档
+    - [ ] `app/orchestrator/` 包有文档（如存在）
+    - [ ] `app/coordinator/` 包有文档（如存在）
+    - [ ] `app/assembler/` 包有文档（如存在）
+    - [ ] `infra/repository/` 包有文档
+    - [ ] `adapter/controller/` 包有文档（如存在）
+    - [ ] `adapter/listener/` 包有文档（如存在）
+    - [ ] `adapter/job/` 包有文档（如存在）
+  - **内容要求**:
+    - [ ] 包含包职责描述
+    - [ ] 列出主要组件（使用 `@link` 引用）
+    - [ ] 说明设计原则（DDD、不可变性等）
+    - [ ] 包含特性标记（增量更新场景）
 
-### 包文档
+### 模块文档完整性
 
-- [ ] **CHK-DOC-002**: 重要的包有 `package-info.java`
-  - [ ] `domain/model/` 包有文档
-  - [ ] `domain/event/` 包有文档（如存在）
-  - [ ] `app/orchestrator/` 包有文档（如存在）
+- [ ] **CHK-DOC-002**: 每个模块必须有 `README.md`
+  - **检查方法**: 验证 `patra-{service}/README.md` 是否存在
+  - **必需模块**:
+    - [ ] `patra-{service}/README.md` 存在
+    - [ ] `patra-{service}-boot/README.md` 存在（如有特殊说明）
+  - **内容要求**:
+    - [ ] 包含模块职责说明（概述章节）
+    - [ ] 包含主要功能列表（🔧 主要功能章节）
+    - [ ] 包含核心类说明（🎯 核心类说明章节）
+    - [ ] 包含快速开始指南（如适用）
+    - [ ] 包含依赖关系说明（如适用）
+    - [ ] 增量特性有特性标记：`### 特性 ###-feature-name`
 
-### 语言规范
+### API 文档完整性
 
-- [ ] **CHK-DOC-003**: 所有文档和注释使用中文
-  - [ ] README.md 使用中文
-  - [ ] JavaDoc 注释使用中文
-  - [ ] package-info.java 使用中文
-  - [ ] 代码标识符使用英文
+- [ ] **CHK-DOC-003**: Controller 必须有 API 文档
+  - **检查方法**: 对于每个 `*Controller.java`，验证是否存在对应的 API 文档
+  - **文档位置**:
+    - [ ] `.specify/features/{feature-number}-{feature-name}/contracts/api-spec.yaml` 存在
+    - [ ] 或 `patra-{service}/contracts/api-spec.yaml` 存在（模块级）
+  - **内容要求**:
+    - [ ] 包含所有 `@RequestMapping` 端点
+    - [ ] 包含请求/响应 Schema 定义
+    - [ ] 包含错误码说明
+    - [ ] 包含请求示例
+    - [ ] 使用 OpenAPI 3.0+ 规范
+
+### JavaDoc 完整性
+
+- [ ] **CHK-DOC-004**: 聚合根必须有 JavaDoc
+  - **检查方法**: 对于每个聚合根类，验证是否有完整的 JavaDoc
+  - **聚合根列表**: [列出所有聚合根]
+  - **内容要求**:
+    - [ ] 类级别 JavaDoc 存在（`/** ... */`）
+    - [ ] 包含业务描述（从 `spec.md` 提取）
+    - [ ] 包含业务不变量说明（`<h2>业务不变量</h2>`）
+    - [ ] 包含状态转换说明（`<h2>状态转换</h2>`，如适用）
+    - [ ] 包含 `@author` 标记
+    - [ ] 包含 `@since` 标记
+    - [ ] 公共方法有 `@param`、`@return`、`@throws` 注释
+
+### 文档增量更新标记
+
+- [ ] **CHK-DOC-005**: 文档必须有特性标记（增量更新场景）
+  - **检查方法**: 验证增量更新的文档是否包含特性标记
+  - **适用文档**:
+    - [ ] `package-info.java` 包含 `<!-- 特性 ###-feature-name -->`
+    - [ ] `README.md` 包含 `### 特性 ###-feature-name`
+  - **标记格式**:
+    - 开始标记: `<!-- 特性 ###-feature-name -->`
+    - 结束标记: `<!-- /特性 ###-feature-name -->`
+    - 特性编号与特性目录一致
+  - **版本追踪**:
+    - [ ] 文档包含 `<!-- 文档版本: v1.x.x -->` 标记
+    - [ ] 文档包含 `<!-- 最后更新: YYYY-MM-DD -->` 标记
+    - [ ] 文档包含 `<!-- 关联特性: #001, #003 -->` 标记
+
+### 文档版本一致性
+
+- [ ] **CHK-DOC-006**: 文档版本必须与代码一致
+  - **检查方法**: 比对文档更新时间与代码最后提交时间
+  - **验证方式**:
+    - [ ] 读取文档中的 `<!-- 最后更新: YYYY-MM-DD -->` 时间戳
+    - [ ] 读取代码最后提交时间: `git log -1 --format=%cd --date=short`
+    - [ ] 验证文档时间 >= 代码时间（允许同一天）
+  - **过期处理**:
+    - 如果文档过期，运行 `/speckit.document sync [feature-number]`
+
+### API 文档与代码一致性
+
+- [ ] **CHK-DOC-007**: API 文档必须与 Controller 签名一致
+  - **检查方法**: 比对 `api-spec.yaml` 与 Controller 实际签名
+  - **验证项**:
+    - [ ] 端点路径一致（`paths` vs `@RequestMapping`）
+    - [ ] HTTP 方法一致（`get/post/put/delete` vs `@GetMapping` 等）
+    - [ ] 请求参数一致（`parameters` vs `@RequestParam`）
+    - [ ] 请求体一致（`requestBody` vs `@RequestBody`）
+    - [ ] 响应结构一致（`responses` vs 返回类型）
+  - **工具支持**:
+    - 使用 `/speckit.document sync` 自动检测差异
+    - 使用 `mcp__serena__find_symbol` 扫描 Controller 方法
+
+### 外部链接可访问性
+
+- [ ] **CHK-DOC-008**: 外部链接必须可访问
+  - **检查方法**: 扫描文档中的所有外部链接并验证可访问性
+  - **适用文档**:
+    - [ ] README.md 中的外部链接
+    - [ ] package-info.java 中的 `@see` 链接
+    - [ ] API 文档中的 `externalDocs` 链接
+  - **验证方式**:
+    - 提取所有 `http://` 和 `https://` 链接
+    - 使用 `WebFetch` 工具验证链接返回 2xx 状态码
+    - 失败链接记录到检查报告
+  - **例外情况**:
+    - 内网链接（如 `http://internal-docs.patra.com`）可跳过
+
+### 编码规范
+
+- [ ] **CHK-DOC-009**: 中文文档必须使用 UTF-8 no BOM 编码
+  - **检查方法**: 验证所有中文文档的编码格式
+  - **适用文档**:
+    - [ ] README.md
+    - [ ] package-info.java
+    - [ ] JavaDoc 注释
+    - [ ] API 文档（`.yaml`、`.md`）
+  - **验证方式**:
+    - 使用 `file -I [filename]` 检查编码
+    - 验证输出为 `charset=utf-8` 且无 BOM
+    - 或使用 `hexdump -C [filename] | head -1` 验证前 3 字节不是 `EF BB BF`
+  - **语言规范**:
+    - [ ] README.md 使用中文
+    - [ ] JavaDoc 注释使用中文
+    - [ ] package-info.java 使用中文
+    - [ ] 代码标识符使用英文（变量名、函数名、类名）
+    - [ ] Git 提交信息使用中文
 
 ---
 

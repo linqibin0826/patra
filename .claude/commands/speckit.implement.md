@@ -184,38 +184,262 @@ $ARGUMENTS
      - 参考：[层次依赖检查](../../.claude/skills/java-code-reviewer/SKILL.md#层次依赖检查)
      ```
 
-9. **📝 最后阶段：文档生成**（新增）：
+9. **📝 Polish 阶段：文档生成**（增强）：
 
-   **在所有代码实施完成后，调用 java-documentation-architect 生成文档**：
+   **当执行 Polish 阶段的文档任务时，详细执行逻辑如下**：
 
-   - **模块 README.md**：
-     ```
-     为每个新模块生成 README.md
-     参考：[模块 README 模板](../../.claude/skills/java-documentation-architect/SKILL.md#模块-readme-模板)
-     包含：
-     - 概述
-     - 架构位置
-     - 主要功能
-     - 核心类说明
-     - 快速开始
-     ```
+   ### A. 生成 package-info.java
 
-   - **package-info.java**：
-     ```
-     为每个包生成 package-info.java
-     参考：[package-info.java 模板](../../.claude/skills/java-documentation-architect/SKILL.md#package-infojava-模板)
-     包含：
-     - 包职责描述
-     - 主要组件列表
-     - 设计原则
-     - 使用示例
-     ```
+   **识别标志**：任务描述包含 "生成 package-info.java for"
 
-   - **JavaDoc**：
-     ```
-     为公共 API 添加 JavaDoc
-     参考：[JavaDoc 最佳实践](../../.claude/skills/java-documentation-architect/SKILL.md#javadoc-最佳实践)
-     ```
+   **执行步骤**：
+   ```
+   1. 从任务描述提取：
+      - 包路径（如：com.patra.ingest.domain）
+      - 文件位置（如：patra-ingest-domain/src/main/java/.../package-info.java）
+
+   2. 调用 java-documentation-architect skill
+
+   3. 收集上下文信息：
+      - spec.md 的"领域模型"章节（提取该包对应层的描述）
+      - 扫描该包内的所有类（使用 Glob 工具：**/{package-path}/*.java）
+      - plan.md 的 Constitution Check（提取设计原则）
+
+   4. 生成 package-info.java 内容：
+      模板：java-documentation-architect/SKILL.md 的 package-info.java 模板
+
+      填充内容：
+      - 包描述：
+        * Domain 层：从 spec.md 的"领域模型"提取
+        * App 层："应用层用例编排包"
+        * Infra 层："基础设施层技术实现包"
+        * Adapter 层："适配器层外部交互包"
+
+      - 主要组件列表：
+        * 从扫描结果提取类名
+        * 添加 @link 引用
+        * 按类型分组（聚合根、实体、值对象）
+        * 添加特性标记：<!-- 特性 ###-feature-name -->
+
+      - 设计原则：
+        * Domain 层：聚合根负责维护业务不变量、值对象不可变
+        * App 层：事务边界、用例编排
+        * Infra 层：MyBatis-Plus、MapStruct、依赖倒置
+        * Adapter 层：REST API、事件监听
+
+      - 使用示例：
+        * AI 生成典型用法代码
+        * 使用 @code 标记
+
+      - @since：从 spec.md 的创建日期提取版本号
+
+   5. 检查文件是否已存在：
+      - 如果不存在 → 写入完整内容
+      - 如果存在 → 增量更新（在主要组件列表中追加新类）
+
+   6. 写入文件
+   ```
+
+   **参考**：[java-documentation-architect/SKILL.md#package-info.java模板](../../.claude/skills/java-documentation-architect/SKILL.md#package-infojava-模板)
+
+   ---
+
+   ### B. 更新模块 README.md
+
+   **识别标志**：任务描述包含 "更新模块 README.md"
+
+   **执行步骤**：
+   ```
+   1. 从任务描述提取：
+      - 模块路径（如：patra-ingest/README.md）
+
+   2. 检查 README.md 是否存在：
+      a. 如果不存在 → 使用 /speckit.plan 生成的骨架
+      b. 如果存在 → 读取现有内容
+
+   3. 收集更新内容：
+      - 核心类列表：
+        * 从 tasks.md 的所有 Domain/App/Infra/Adapter 任务提取
+        * 格式：类名（从文件路径提取）
+      - 职责描述：
+        * 从 spec.md 的"领域模型"匹配类名
+        * 如果找不到，根据类名和层次推断
+      - 层次：从任务的 [Layer] 标签提取
+
+   4. 增量更新逻辑（重要！）：
+      a. 定位"🎯 核心类说明"章节
+      b. 在该章节末尾添加：
+         ```markdown
+         ### 特性 ###-feature-name
+         | 类名 | 职责 | 层次 |
+         |-----|------|------|
+         | Article | 文章聚合根 | Domain |
+         | ArticleOrchestrator | 文章业务编排 | Application |
+         ...
+         ```
+      c. 定位"📝 变更日志"章节
+      d. 在该章节顶部添加：
+         ```markdown
+         ### v1.x.0 (日期)
+         - 新增：[从 spec.md 的概览提取]
+         - 核心类：Article、ArticleOrchestrator...
+         ```
+      e. 版本号递增规则：
+         - 读取现有最高版本号
+         - 小版本号 +1（v1.0.0 → v1.1.0）
+
+   5. 保持原有内容不变（只追加，不覆盖）
+
+   6. 写入文件
+   ```
+
+   **参考**：[java-documentation-architect/SKILL.md#模块README模板](../../.claude/skills/java-documentation-architect/SKILL.md#模块-readme-模板)
+
+   ---
+
+   ### C. 生成/更新 API 文档
+
+   **识别标志**：任务描述包含 "生成/更新 API 文档"
+
+   **执行步骤**：
+   ```
+   1. 从任务描述提取：
+      - 目标文件（如：specs/###-feature/contracts/API.md）
+
+   2. 检测 API 端点来源：
+      a. 如果 /speckit.plan 已生成 API.md 骨架 → 补充详细内容
+      b. 如果没有骨架 → 从头生成
+
+   3. 提取 API 信息：
+      - 从 tasks.md 扫描 Controller 任务：
+        * 查找包含 "[Adapter]" 和 "Controller.java" 的任务
+        * 提取 Controller 类名（如：ArticleController）
+
+      - 推断端点路径：
+        * ArticleController → /api/v1/articles
+        * 规则：类名去掉 Controller 后缀，转为小写复数
+
+      - 推断 HTTP 方法：
+        * 从 spec.md 的"用户场景"匹配动作：
+          - 创建 → POST
+          - 查询 → GET
+          - 更新 → PUT
+          - 删除 → DELETE
+
+   4. 生成 API 文档条目：
+      模板：java-documentation-architect/SKILL.md 的 API 文档模板
+
+      每个端点：
+      - 端点路径
+      - HTTP 方法
+      - 请求示例（从 spec.md 的用户场景 Given/When 提取）
+      - 响应示例（从 spec.md 的用户场景 Then 提取）
+      - 错误码（从 spec.md 的"成功标准"推断）
+
+   5. 写入/更新文件
+   ```
+
+   **参考**：[java-documentation-architect/SKILL.md#API文档模板](../../.claude/skills/java-documentation-architect/SKILL.md#api-文档模板)
+
+   ---
+
+   ### D. 为核心类添加 JavaDoc
+
+   **识别标志**：任务描述包含 "为聚合根添加 JavaDoc" 或 "为 Port 接口添加 JavaDoc"
+
+   **执行步骤**：
+   ```
+   1. 从任务描述提取：
+      - 目标类类型（聚合根 / Port 接口）
+      - 文件路径
+
+   2. 识别目标类：
+      - 聚合根：从 spec.md 的"领域模型" → "聚合根"章节提取
+      - Port 接口：从 tasks.md 扫描包含 "Repository.java" 的任务
+
+   3. 对于聚合根，生成类级 JavaDoc：
+      /**
+       * [类名] 聚合根，负责 [职责]。
+       *
+       * <p>[从 spec.md 提取详细描述]</p>
+       *
+       * <p>状态转换：</p>
+       * <pre>
+       * [如果有状态枚举，生成状态机图]
+       * PENDING -> CONFIRMED -> COMPLETED
+       *         \-> CANCELLED
+       * </pre>
+       *
+       * <p>线程安全性：此类不是线程安全的，需要外部同步。</p>
+       *
+       * @author [团队名称]
+       * @since [从 spec.md 的创建日期推断版本号]
+       * @see [关联的实体、值对象]
+       */
+
+   4. 对于每个公共方法，生成方法级 JavaDoc：
+      /**
+       * [方法描述]。
+       *
+       * <p>此方法会：</p>
+       * <ul>
+       *   <li>[业务逻辑步骤1]</li>
+       *   <li>[业务逻辑步骤2]</li>
+       * </ul>
+       *
+       * @param [参数名] [参数说明]，不能为 null
+       * @return [返回值说明]
+       * @throws [异常类] 如果 [触发条件]
+       *
+       * @example
+       * <pre>{@code
+       * [使用示例代码]
+       * }</pre>
+       */
+
+   5. 对于 Port 接口，生成接口级 JavaDoc：
+      /**
+       * [接口名] 仓储接口。
+       *
+       * <p>负责 [职责描述]。</p>
+       *
+       * <p>实现位置：@see [RepositoryImpl 的包路径]</p>
+       *
+       * @since [版本号]
+       */
+
+   6. 将 JavaDoc 添加到现有代码中（使用 Edit 工具）
+   ```
+
+   **参考**：[java-documentation-architect/SKILL.md#JavaDoc最佳实践](../../.claude/skills/java-documentation-architect/SKILL.md#javadoc-最佳实践)
+
+   ---
+
+   ### E. 文档任务执行总结
+
+   **执行完所有文档任务后，输出报告**：
+   ```
+   ✅ 文档生成完成
+
+   package-info.java：
+   - ✅ com.patra.ingest.domain
+   - ✅ com.patra.ingest.app
+   - ✅ com.patra.ingest.infra
+   - ✅ com.patra.ingest.adapter
+
+   模块 README.md：
+   - ✅ patra-ingest/README.md（增量更新，添加特性 001-pubmed-datasource）
+
+   API 文档：
+   - ✅ specs/001-pubmed-datasource/contracts/API.md（3 个端点）
+
+   JavaDoc：
+   - ✅ Article.java（聚合根）
+   - ✅ ArticleRepository.java（Port 接口）
+
+   建议后续操作：
+   - 运行 /speckit.document check 验证文档完整性
+   ```
 
 10. 进度跟踪和错误处理：
    - 在每个完成的任务后报告进度
