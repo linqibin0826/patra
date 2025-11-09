@@ -11,6 +11,9 @@ allowed-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthin
 ### 架构合规性检查
 
 #### 层次依赖检查
+
+**【CHK-ARCH-001】Domain 层纯净性检查**
+
 ```java
 // ❌ 错误：Domain 层依赖 Spring
 package com.patra.domain;
@@ -22,7 +25,8 @@ import lombok.Data; // 允许
 import cn.hutool.core.util.StrUtil; // 允许
 ```
 
-#### 依赖方向检查
+**【CHK-ARCH-002】依赖方向检查**
+
 - [ ] Adapter → Application （✅ 允许）
 - [ ] Application → Domain （✅ 允许）
 - [ ] Infrastructure → Domain （✅ 允许）
@@ -30,7 +34,8 @@ import cn.hutool.core.util.StrUtil; // 允许
 - [ ] Domain → Application （❌ 禁止）
 - [ ] Application → Adapter （❌ 禁止）
 
-#### DO 封装检查
+**【CHK-ARCH-004】DO 封装检查**
+
 ```java
 // ❌ 错误：暴露 DO 给外部
 public interface OrderPort {
@@ -45,7 +50,8 @@ public interface OrderPort {
 
 ### 代码质量检查
 
-#### 命名规范
+**【CHK-CODE-001】命名规范**
+
 | 类型 | 规范 | 示例 | 常见错误 |
 |------|------|------|---------|
 | Controller | XxxController | OrderController | OrderCtrl ❌ |
@@ -74,7 +80,8 @@ public void processOrder(Order order) {
 
 ### 业务逻辑检查
 
-#### 事务边界
+**【CHK-ARCH-003】事务边界检查**
+
 ```java
 // ❌ 错误：Controller 层管理事务
 @RestController

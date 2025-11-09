@@ -22,13 +22,13 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__sequential-thinking__se
 
 ### 六边形架构测试策略
 
-| 层次 | 测试类型 | 测试重点 | 使用框架 |
-|------|---------|----------|---------|
-| Domain | 单元测试 | 业务逻辑、不变量 | JUnit, AssertJ |
-| Application | 单元测试 | 编排逻辑、事务 | JUnit, Mockito |
-| Infrastructure | 集成测试 | 数据访问、外部系统 | TestContainers, H2 |
-| Adapter | 集成测试 | API 契约、序列化 | MockMvc, RestAssured |
-| Architecture | 架构测试 | 依赖规则、命名约定 | ArchUnit |
+| 层次 | 测试类型 | 测试重点 | 使用框架 | 验证项 |
+|------|---------|----------|---------|--------|
+| Domain | 单元测试 | 业务逻辑、不变量 | JUnit, AssertJ | **CHK-TEST-001** |
+| Application | 单元测试 | 编排逻辑、事务 | JUnit, Mockito | **CHK-TEST-002** |
+| Infrastructure | 集成测试 | 数据访问、外部系统 | TestContainers, H2 | **CHK-TEST-003** |
+| Adapter | 集成测试 | API 契约、序列化 | MockMvc, RestAssured | **CHK-TEST-004** |
+| Architecture | 架构测试 | 依赖规则、命名约定 | ArchUnit | **CHK-TEST-005** |
 
 ## 单元测试模板
 
@@ -399,6 +399,34 @@ var order = anOrder()
     .build();
 ```
 
+## 测试模块位置规范
+
+**【CHK-TEST-006】重要规则：测试模块位置**
+
+| 测试类型 | 文件名模式 | 必须所在模块 | 原因 |
+|---------|-----------|------------|------|
+| 单元测试 | `*Test.java` | 对应层的模块 | 测试独立单元，无需容器 |
+| 集成测试 | `*IT.java` | `patra-{service}-boot` | 需要完整的 Spring 上下文 |
+| E2E 测试 | `*E2E.java` | `patra-{service}-boot` | 需要完整的应用启动 |
+| 架构测试 | `*ArchitectureTest.java` | `patra-{service}-boot` | 需要扫描所有模块 |
+
+**示例**：
+```
+patra-ingest/
+├── patra-ingest-domain/
+│   └── src/test/java/.../ArticleTest.java       ✅ 单元测试
+├── patra-ingest-app/
+│   └── src/test/java/.../ArticleOrchestratorTest.java  ✅ 单元测试
+├── patra-ingest-infra/
+│   └── src/test/java/.../ArticleRepositoryTest.java    ✅ 单元测试（无 Spring）
+└── patra-ingest-boot/
+    └── src/test/java/
+        ├── .../ArticleRepositoryIT.java         ✅ 集成测试（TestContainers）
+        ├── .../ArticleControllerIT.java         ✅ 集成测试（MockMvc）
+        ├── .../ArticleE2E.java                  ✅ E2E 测试
+        └── .../ArchitectureTest.java            ✅ 架构测试（ArchUnit）
+```
+
 ## 测试执行命令
 
 ```bash
@@ -414,7 +442,7 @@ mvn test -Dtest="*E2E"        # E2E 测试
 mvn test -Dtest="*Domain*Test"
 mvn test -Dtest="*Application*Test"
 
-# 运行 boot 模块的集成和 E2E 测试
+# 运行 boot 模块的集成和 E2E 测试（CHK-TEST-006）
 cd patra-{service}-boot
 mvn test -Dtest="*IT,*E2E"
 

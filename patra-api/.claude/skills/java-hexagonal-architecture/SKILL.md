@@ -43,10 +43,10 @@ allowed-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthin
 
 ## 架构铁律
 
-1. **Domain 层必须是纯 Java** - 仅允许 Lombok、Hutool、patra-common
-2. **依赖方向必须向内** - Adapter → App → Domain ← Infra
-3. **事务边界在 Orchestrator** - @Transactional 仅在应用层
-4. **永不暴露 DO** - DO 实体不能离开基础设施层
+1. **【CHK-ARCH-001】Domain 层必须是纯 Java** - 仅允许 Lombok、Hutool、patra-common
+2. **【CHK-ARCH-002】依赖方向必须向内** - Adapter → App → Domain ← Infra
+3. **【CHK-ARCH-003】事务边界在 Orchestrator** - @Transactional 仅在应用层
+4. **【CHK-ARCH-004】永不暴露 DO** - DO 实体不能离开基础设施层
 
 ## 模块结构规范
 
@@ -63,22 +63,22 @@ patra-{service}/
 ## 架构评审检查点
 
 ### 领域建模检查
-- [ ] 聚合边界是否合理？
-- [ ] 实体间关系是否正确？
-- [ ] 领域事件是否完整？
-- [ ] Port 接口是否抽象得当？
+- [ ] **【CHK-DDD-001】** 聚合边界是否合理？
+- [ ] **【CHK-DDD-002】** 实体间关系是否正确？
+- [ ] **【CHK-DDD-003】** 领域事件是否完整？
+- [ ] **【CHK-DDD-004】** Port 接口是否抽象得当？
 
 ### 依赖方向检查
-- [ ] Domain 层是否纯净（无框架依赖）？
-- [ ] 各层依赖方向是否正确？
-- [ ] 是否存在循环依赖？
-- [ ] DO 是否被正确封装？
+- [ ] **【CHK-ARCH-001】** Domain 层是否纯净（无框架依赖）？
+- [ ] **【CHK-ARCH-002】** 各层依赖方向是否正确？
+- [ ] **【CHK-ARCH-005】** 是否存在循环依赖？
+- [ ] **【CHK-ARCH-004】** DO 是否被正确封装？
 
 ### 技术选型检查
-- [ ] 技术栈是否与现有系统兼容？
-- [ ] 是否有更好的替代方案？
-- [ ] 性能影响是否可接受？
-- [ ] 维护成本是否合理？
+- [ ] **【CHK-TECH-001】** 技术栈是否与现有系统兼容？
+- [ ] **【CHK-TECH-002】** 是否有更好的替代方案？
+- [ ] **【CHK-TECH-003】** 性能影响是否可接受？
+- [ ] **【CHK-TECH-004】** 维护成本是否合理？
 
 ## 常见架构模式
 

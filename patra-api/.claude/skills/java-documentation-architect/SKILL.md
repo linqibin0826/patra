@@ -443,14 +443,14 @@ java -jar plantuml.jar docs/design/*.puml
 
 ## 文档维护检查清单
 
-- [ ] 每个模块都有 README.md
-- [ ] 每个包都有 package-info.java
-- [ ] 公共 API 都有 JavaDoc
-- [ ] 重要决策都有 ADR 记录
-- [ ] API 文档与实际接口同步
-- [ ] 架构图与代码结构一致
-- [ ] 变更日志及时更新
-- [ ] 示例代码可以运行
+- [ ] **【CHK-DOC-001】** 每个模块都有 README.md
+- [ ] **【CHK-DOC-002】** 每个包都有 package-info.java
+- [ ] **【CHK-DOC-003】** 公共 API 都有 JavaDoc
+- [ ] **【CHK-DOC-004】** 重要决策都有 ADR 记录
+- [ ] **【CHK-DOC-005】** API 文档与实际接口同步
+- [ ] **【CHK-DOC-006】** 架构图与代码结构一致
+- [ ] **【CHK-DOC-007】** 变更日志及时更新
+- [ ] **【CHK-DOC-008】** 示例代码可以运行
 
 ## 详细资源
 
