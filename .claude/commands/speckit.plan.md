@@ -66,12 +66,12 @@ $ARGUMENTS
    - 使用标准 REST/GraphQL 模式
    - 输出 OpenAPI/GraphQL schema 到 `/contracts/`
 
-3. **项目文档更新**（可选）：
-   - 如有新增技术栈或架构决策，手动更新 `CLAUDE.md` 相关章节
-   - 建议更新位置：
-     * "技术栈" 章节 - 添加新技术
-     * "代码库结构" 章节 - 记录结构变化
-   - 保持文档与代码同步
+3. **Agent 上下文更新**：
+    - 运行 `.specify/scripts/bash/update-agent-context.sh claude`
+    - 这些脚本会检测正在使用的 AI agent
+    - 更新相应的 agent 特定上下文文件
+    - 仅添加当前计划中的新技术
+    - 保留标记之间的手动添加内容
 
 **输出**：data-model.md、/contracts/*、quickstart.md
 

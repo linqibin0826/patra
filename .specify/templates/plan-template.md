@@ -125,6 +125,68 @@
 
 **如果 FAIL**: 必须在 Complexity Tracking 章节说明违规理由和替代方案。
 
+---
+
+## Skills 参考指南
+
+**说明**: 以下 Skills 提供详细的实施规范和代码模板，在 Phase 1 设计和 Phase 2 实施时参考。
+
+### 架构设计阶段（Phase 1）
+
+**参考 Skill**: `java-hexagonal-architecture`
+
+**关键决策点**：
+- [ ] **触发来源** → 确定适配器类型（Controller / Job / MessageListener）
+  - 参考: [java-hexagonal-architecture/SKILL.md#架构决策流程](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构决策流程)
+- [ ] **聚合设计** → 确定聚合根和聚合边界
+  - 参考: [java-hexagonal-architecture/SKILL.md#聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
+- [ ] **Port 接口定义** → 设计 Repository 和其他端口接口
+  - 参考: [java-hexagonal-architecture/SKILL.md#Port-Adapter模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
+
+### 代码实施阶段（Phase 2 - 由 /speckit.implement 调用）
+
+**参考 Skill**: `java-spring-development`
+
+**代码模板位置**：
+- Controller 开发 → [java-spring-development/SKILL.md#Controller开发模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- Orchestrator 编排 → [java-spring-development/SKILL.md#Orchestrator编排模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- MyBatis-Plus 数据访问 → [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- MapStruct 对象转换 → [java-spring-development/SKILL.md#MapStruct对象转换](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+
+### 测试生成阶段（Phase 2 - 由 /speckit.implement 调用）
+
+**参考 Skill**: `java-test-architect`
+
+**测试模板位置**：
+- Domain 层单元测试 → [java-test-architect/SKILL.md#Domain层单元测试](../../.claude/skills/java-test-architect/SKILL.md#单元测试模板)
+- Application 层单元测试 → [java-test-architect/SKILL.md#Application层单元测试](../../.claude/skills/java-test-architect/SKILL.md#单元测试模板)
+- Repository 集成测试 → [java-test-architect/SKILL.md#Repository集成测试](../../.claude/skills/java-test-architect/SKILL.md#集成测试模板)
+- Controller 集成测试 → [java-test-architect/SKILL.md#Controller集成测试](../../.claude/skills/java-test-architect/SKILL.md#集成测试模板)
+
+**⚠️ 重要规则：CHK-TEST-006**
+- IT 集成测试（`*IT.java`）**必须在** `patra-{service}-boot` 模块
+- E2E 测试（`*E2E.java`）**必须在** `patra-{service}-boot` 模块
+- 详见: [java-test-architect/SKILL.md#测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范)
+
+### 代码审查阶段（Phase 2 完成后）
+
+**参考 Skill**: `java-code-reviewer`
+
+**审查检查点**：
+- 架构合规性 → [java-code-reviewer/SKILL.md#架构合规性检查](../../.claude/skills/java-code-reviewer/SKILL.md#代码审查检查清单)
+- 代码质量 → [java-code-reviewer/SKILL.md#代码质量检查](../../.claude/skills/java-code-reviewer/SKILL.md#代码审查检查清单)
+- 常见反模式 → [java-code-reviewer/SKILL.md#常见反模式识别](../../.claude/skills/java-code-reviewer/SKILL.md#常见反模式识别)
+
+### 文档生成阶段（Phase 2 最后）
+
+**参考 Skill**: `java-documentation-architect`
+
+**文档模板位置**：
+- 模块 README.md → [java-documentation-architect/SKILL.md#模块README模板](../../.claude/skills/java-documentation-architect/SKILL.md#模块-readme-模板)
+- package-info.java → [java-documentation-architect/SKILL.md#package-info.java模板](../../.claude/skills/java-documentation-architect/SKILL.md#package-infojava-模板)
+
+---
+
 ## Project Structure
 
 ### Documentation (this feature)

@@ -1,344 +1,229 @@
 # Patra 项目架构宪章
 
-**版本**: 1.0.0
+**版本**: 2.0.0
 **批准日期**: 2025-01-09
-**最后修订**: 2025-01-09
+**最后修订**: 2025-11-09
+**变更说明**: 改为索引表模式，详细规范维护在 `.claude/skills/` 中
 
 ---
 
-## 核心原则
+## 💡 核心理念
 
-### I. 六边形架构（Hexagonal Architecture）
+本宪章作为 Patra 项目架构原则的**索引和门禁**，详细规范和实施指南维护在各个 **Skills** 中。
 
-**定义**: 所有微服务必须严格遵循六边形架构（端口-适配器模式），将业务逻辑与技术细节隔离。
-
-**强制规则**:
-
-1. **模块结构** (MUST):
-   - 每个微服务必须包含 6 个子模块：
-     - `{service}-boot`: Spring Boot 启动模块
-     - `{service}-api`: 契约层（DTO、接口定义）
-     - `{service}-domain`: 领域层（**纯 Java，无框架依赖**）
-     - `{service}-app`: 应用层（Orchestrator、Coordinator）
-     - `{service}-infra`: 基础设施层（Repository 实现）
-     - `{service}-adapter`: 适配器层（Controller、Listener、Job）
-
-2. **依赖方向** (MUST):
-   ```
-   Adapter → Application → Domain ← Infrastructure
-                             ↑
-                            API
-   ```
-   - ✅ Adapter 可以依赖 Application 和 API
-   - ✅ Application 可以依赖 Domain 和 API
-   - ✅ Infrastructure 可以依赖 Domain
-   - ❌ **Domain 绝不依赖任何其他模块**
-   - ❌ **Domain 绝不依赖任何框架**（Spring、MyBatis 等）
-
-3. **Domain 层纯净性** (MUST):
-   - ✅ 允许的依赖：
-     - JDK 标准库
-     - `patra-common-util`（工具类）
-     - Lombok
-     - Validation API (javax.validation / jakarta.validation)
-   - ❌ **禁止的依赖**：
-     - Spring Framework（@Component、@Service、@Autowired 等）
-     - MyBatis-Plus
-     - Jackson
-     - 任何持久化框架
-   - ✅ 使用接口定义 Repository，实现在 Infrastructure 层
-
-**好的实践**:
-```java
-// ✅ GOOD: Domain 层的聚合根（纯 Java）
-package com.patra.ingest.domain.model;
-
-public class Article {
-    private ArticleId id;
-    private String title;
-
-    public void updateMetadata(Metadata metadata) {
-        // 纯业务逻辑，无框架依赖
-        this.metadata = metadata;
-        this.addEvent(new ArticleUpdated(this.id));
-    }
-}
-```
-
-**坏的实践**:
-```java
-// ❌ BAD: Domain 层依赖 Spring（违反）
-package com.patra.ingest.domain.model;
-
-import org.springframework.stereotype.Component; // ❌ 禁止
-
-@Component  // ❌ 禁止
-public class Article {
-    @Autowired  // ❌ 禁止
-    private ArticleRepository repository;
-}
-```
+**设计哲学**：
+- ✅ **Skills 是 SSOT**：详细规范、代码示例、最佳实践在 Skills 中维护
+- ✅ **Constitution 是索引**：验证项（CHK-*）汇总，引用 Skills
+- ✅ **单一真相来源**：避免重复，确保一致性
 
 ---
 
-### II. DDD 战术设计（Domain-Driven Design Tactical Patterns）
+## 📋 Architecture Check 验证项总览
 
-**定义**: 使用 DDD 战术模式组织领域模型。
+所有新功能在进入实施阶段前必须通过以下验证。
 
-**关键概念**:
+### I. 六边形架构验证
 
-1. **聚合根（Aggregate Root）**:
-   - 每个聚合有唯一的聚合根
-   - 外部只能通过聚合根访问聚合内的实体
-   - 聚合根负责维护聚合内的一致性
-   - 聚合根必须有唯一标识（ID）
+**原则定义**：详见 → [java-hexagonal-architecture/SKILL.md](../../.claude/skills/java-hexagonal-architecture/SKILL.md)
 
-2. **实体（Entity）**:
-   - 有唯一标识（ID）
-   - 通过 ID 判断相等性
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-ARCH-001** | Domain 层是否纯 Java？（仅允许 Lombok、Hutool、patra-common） | [架构铁律 #1](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构铁律) |
+| **CHK-ARCH-002** | 依赖方向是否正确？（Adapter → App → Domain ← Infra） | [架构铁律 #2](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构铁律) |
+| **CHK-ARCH-003** | 事务边界是否在 Orchestrator？（@Transactional 仅在应用层） | [架构铁律 #3](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构铁律) |
+| **CHK-ARCH-004** | DO 是否被正确封装？（DO 不离开 Infrastructure 层） | [架构铁律 #4](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构铁律) |
+| **CHK-ARCH-005** | 是否存在循环依赖？ | [架构评审检查点](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构评审检查点) |
 
-3. **值对象（Value Object）**:
-   - 无标识，通过属性判断相等性
-   - 不可变（immutable）
-   - 使用 record 实现（推荐）
-
-4. **领域事件（Domain Event）**:
-   - 记录已经发生的业务事实
-   - 过去时命名（如 `ArticleCreated`，而非 `CreateArticle`）
-   - 不可变
-
-**包结构规范**:
-```
-{service}-domain/src/main/java/com/patra/{service}/domain/
-├── model/                  # 聚合根、实体、值对象
-│   ├── Article.java       # 聚合根
-│   ├── ArticleId.java     # 值对象（ID）
-│   └── Metadata.java      # 值对象
-├── event/                  # 领域事件
-│   ├── ArticleCreated.java
-│   └── ArticleUpdated.java
-├── service/                # 领域服务（跨聚合的业务逻辑）
-│   └── ArticleValidator.java
-└── repository/             # 仓储接口（实现在 infra 层）
-    └── ArticleRepository.java
-```
-
-**好的实践**:
-```java
-// ✅ GOOD: 值对象（不可变）
-public record ArticleId(String value) {
-    public ArticleId {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("ArticleId 不能为空");
-        }
-    }
-}
-
-// ✅ GOOD: 领域事件
-public record ArticleCreated(
-    ArticleId articleId,
-    Instant occurredAt
-) {}
-```
+**代码审查参考** → [java-code-reviewer/SKILL.md](../../.claude/skills/java-code-reviewer/SKILL.md)
 
 ---
 
-### III. 单一事实来源（Single Source of Truth - SSOT）
+### II. DDD 战术设计验证
+
+**原则定义**：详见 → [java-hexagonal-architecture/SKILL.md](../../.claude/skills/java-hexagonal-architecture/SKILL.md)
+
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-DDD-001** | 聚合边界是否合理？ | [领域建模检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#领域建模检查) |
+| **CHK-DDD-002** | 实体间关系是否正确？ | [领域建模检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#领域建模检查) |
+| **CHK-DDD-003** | 领域事件是否完整？ | [领域建模检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#领域建模检查) |
+| **CHK-DDD-004** | Port 接口是否抽象得当？ | [领域建模检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#领域建模检查) |
+
+**实施指南参考**：
+- 聚合设计模式 → [java-hexagonal-architecture/SKILL.md#聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
+- Port-Adapter 模式 → [java-hexagonal-architecture/SKILL.md#Port-Adapter模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
+
+---
+
+### III. 单一事实来源（SSOT）验证
 
 **定义**: `patra-registry` 是 Provenance 配置、数据字典、元数据的唯一权威来源。
 
-**强制规则**:
+| CHK 编号 | 验证项 | 说明 |
+|---------|--------|------|
+| **CHK-SSOT-001** | Provenance 配置是否从 `patra-registry` 获取？ | 禁止硬编码数据源配置 |
+| **CHK-SSOT-002** | 数据字典是否从 `patra-registry` 获取？ | 禁止重复定义枚举值、分类体系 |
+| **CHK-SSOT-003** | 元数据和映射规则是否从 `patra-registry` 获取？ | 支持版本化管理 |
 
-1. **配置管理** (MUST):
-   - ✅ 所有 Provenance（数据源）配置必须从 `patra-registry` 获取
-   - ❌ 禁止在其他服务中硬编码 Provenance 配置
-   - ✅ 使用 `patra-registry-api` 模块访问配置
-
-2. **数据字典** (MUST):
-   - ✅ 枚举值、分类体系必须从 `patra-registry` 获取
-   - ❌ 禁止在业务服务中重复定义数据字典
-   - ✅ 运行时动态加载，支持热更新
-
-3. **元数据** (MUST):
-   - ✅ 字段映射、解析规则必须从 `patra-registry` 获取
-   - ✅ 支持版本化管理
+**实施方式**：使用 `patra-registry-api` 模块访问配置
 
 ---
 
-### IV. 测试策略（Testing Strategy）
+### IV. 测试策略验证
 
-**定义**: 分层测试策略，确保不同层次的质量。
+**原则定义**：详见 → [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
 
-**强制规则**:
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-TEST-001** | Domain 层单元测试覆盖率 ≥ 80%？（无 Spring） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
+| **CHK-TEST-002** | Application 层单元测试覆盖率 ≥ 70%？（Mockito） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
+| **CHK-TEST-003** | Infrastructure 层是否有 IT 集成测试？（TestContainers） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
+| **CHK-TEST-004** | Adapter 层是否有集成测试？（MockMvc） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
+| **CHK-TEST-005** | 是否有架构测试？（ArchUnit） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
+| **CHK-TEST-006** | IT 和 E2E 测试是否在 boot 模块？⚠️ | [测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范) |
 
-1. **Domain 层** (MUST):
-   - ✅ 单元测试覆盖率目标 ≥ 80%
-   - ✅ 使用 JUnit 5 + AssertJ
-   - ❌ 不使用 Spring Test（Domain 层无 Spring 依赖）
+**测试模板参考** → [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
 
-2. **Application 层** (MUST):
-   - ✅ 单元测试覆盖率目标 ≥ 70%
-   - ✅ 使用 Mockito 模拟 Repository
-   - ✅ 测试用例编排逻辑和事务边界
+---
 
-3. **Infrastructure 层** (MUST):
-   - ✅ IT 集成测试（使用 TestContainers）
-   - ✅ 使用 `@MockitoBean` 替代 `@MockBean`
-   - ✅ 测试 MyBatis-Plus Mapper 的 SQL 正确性
-   - ✅ 测试 MapStruct Converter 的映射完整性
+### V. 技术选型验证
 
-4. **Adapter 层** (MUST):
-   - ✅ E2E 测试（使用 MockMvc + TestContainers）
-   - ✅ 测试 REST API 契约
-   - ✅ 测试异常处理和错误响应
+**原则定义**：详见 → [java-hexagonal-architecture/SKILL.md](../../.claude/skills/java-hexagonal-architecture/SKILL.md#技术选型检查)
 
-**测试文件命名**:
-- 单元测试: `XxxTest.java`
-- IT 集成测试: `XxxIT.java`
-- E2E 测试: `XxxE2ETest.java`
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-TECH-001** | 技术栈是否与现有系统兼容？ | [技术选型检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#技术选型检查) |
+| **CHK-TECH-002** | 是否有更好的替代方案？ | [技术选型检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#技术选型检查) |
+| **CHK-TECH-003** | 性能影响是否可接受？ | [技术选型检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#技术选型检查) |
+| **CHK-TECH-004** | 维护成本是否合理？ | [技术选型检查](../../.claude/skills/java-hexagonal-architecture/SKILL.md#技术选型检查) |
 
-**好的实践**:
-```java
-// ✅ GOOD: Domain 层单元测试（无 Spring）
-class ArticleTest {
-    @Test
-    void should_emit_event_when_update_metadata() {
-        // Given
-        Article article = new Article(new ArticleId("123"), "Title");
+---
 
-        // When
-        article.updateMetadata(new Metadata("New metadata"));
+### VI. 代码质量验证
 
-        // Then
-        assertThat(article.getEvents())
-            .hasSize(1)
-            .first()
-            .isInstanceOf(ArticleUpdated.class);
-    }
-}
+**原则定义**：详见 → [java-code-reviewer/SKILL.md](../../.claude/skills/java-code-reviewer/SKILL.md)
 
-// ✅ GOOD: Infrastructure 层 IT 测试
-@SpringBootTest
-@Testcontainers
-class ArticleRepositoryIT {
-    @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8");
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-CODE-001** | 命名是否符合规范？ | [命名规范](../../.claude/skills/java-code-reviewer/SKILL.md#命名规范) |
+| **CHK-CODE-002** | 方法复杂度是否合理？（圈复杂度、行数） | [方法复杂度](../../.claude/skills/java-code-reviewer/SKILL.md#方法复杂度) |
+| **CHK-CODE-003** | 是否避免了贫血模型？ | [常见反模式](../../.claude/skills/java-code-reviewer/SKILL.md#贫血模型) |
+| **CHK-CODE-004** | 是否避免了循环依赖？ | [常见反模式](../../.claude/skills/java-code-reviewer/SKILL.md#循环依赖) |
+| **CHK-CODE-005** | 是否避免了 N+1 查询？ | [性能相关审查](../../.claude/skills/java-code-reviewer/SKILL.md#n1-查询问题) |
 
-    @Autowired
-    private ArticleRepository repository;
+**代码审查参考** → [java-code-reviewer/SKILL.md](../../.claude/skills/java-code-reviewer/SKILL.md)
 
-    @Test
-    void should_save_and_find_article() {
-        // ...
-    }
-}
+---
+
+### VII. 文档标准验证
+
+**原则定义**：详见 → [java-documentation-architect/SKILL.md](../../.claude/skills/java-documentation-architect/SKILL.md)
+
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-DOC-001** | 每个模块是否有 README.md？ | [文档维护检查清单](../../.claude/skills/java-documentation-architect/SKILL.md#文档维护检查清单) |
+| **CHK-DOC-002** | 每个包是否有 package-info.java？ | [文档维护检查清单](../../.claude/skills/java-documentation-architect/SKILL.md#文档维护检查清单) |
+| **CHK-DOC-003** | 公共 API 是否有 JavaDoc？ | [文档维护检查清单](../../.claude/skills/java-documentation-architect/SKILL.md#文档维护检查清单) |
+| **CHK-DOC-004** | 重要决策是否有 ADR 记录？ | [ADR 模板](../../.claude/skills/java-documentation-architect/SKILL.md#架构决策记录adr模板) |
+
+**文档模板参考** → [java-documentation-architect/SKILL.md](../../.claude/skills/java-documentation-architect/SKILL.md)
+
+---
+
+## 🎯 Constitution Check 使用指南
+
+### 在 Spec-Kit 工作流中使用
+
+#### 1. `/speckit.plan` 阶段（Phase 0: Constitution Check）
+
+```markdown
+## Phase 0: Constitution Check
+
+**验证方法**：对照本 Constitution 验证项列表，逐项检查
+
+**示例**：
+- [ ] **CHK-ARCH-001**: Domain 层是否纯 Java？
+  - 检查 `patra-{service}-domain/pom.xml`，确保无 Spring、MyBatis 依赖
+  - 参考：[java-hexagonal-architecture/SKILL.md#架构铁律](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构铁律)
+
+- [ ] **CHK-TEST-006**: IT 和 E2E 测试是否在 boot 模块？
+  - 检查 spec.md 中的测试任务位置
+  - 参考：[java-test-architect/SKILL.md#测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范)
+
+**结果**：PASS / FAIL
+- PASS → 进入 Phase 1
+- FAIL → 在 plan.md 的 "Complexity Tracking" 章节说明理由
+```
+
+#### 2. `/speckit.analyze` 阶段（一致性分析）
+
+```markdown
+## Constitution 对齐检查
+
+**方法**：检查 plan.md 和 tasks.md 是否违反 MUST 原则
+
+**示例**：
+- ❌ **CRITICAL**: plan.md 第 45 行违反 CHK-ARCH-001（Domain 层引入 Spring）
+- ⚠️ **WARNING**: tasks.md 的 T050 任务将 IT 测试放在 infra 模块（违反 CHK-TEST-006）
+```
+
+#### 3. `/speckit.implement` 阶段（实施中审查）
+
+```markdown
+## 实施中验证
+
+**方法**：
+1. 代码生成时参考 Skills 中的代码模板
+2. 阶段完成后调用 `java-code-reviewer` 审查
+3. 最后阶段调用 `java-documentation-architect` 生成文档
+
+**Skills 调用示例**：
+- Domain 层代码 → 参考 [java-hexagonal-architecture/SKILL.md#聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
+- Repository 实现 → 参考 [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#mybatis-plus-数据访问)
+- 测试代码 → 参考 [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
 ```
 
 ---
 
-### V. 文档标准（Documentation Standards）
+## 📚 Skills 索引
 
-**定义**: 高质量的中文文档是项目可维护性的基础。
+### 架构与设计
+- [java-hexagonal-architecture/SKILL.md](../../.claude/skills/java-hexagonal-architecture/SKILL.md) - 六边形架构和 DDD 专家
 
-**强制规则**:
+### 开发实施
+- [java-spring-development/SKILL.md](../../.claude/skills/java-spring-development/SKILL.md) - Spring Boot 微服务开发
 
-1. **语言规范** (MUST):
-   - ✅ 所有文档、注释使用中文（UTF-8 无 BOM）
-   - ✅ 代码标识符（类名、方法名、变量名）使用英文
-   - ✅ Git 提交信息使用中文
+### 质量保障
+- [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md) - 测试生成专家
+- [java-code-reviewer/SKILL.md](../../.claude/skills/java-code-reviewer/SKILL.md) - 代码审查专家
+- [java-documentation-architect/SKILL.md](../../.claude/skills/java-documentation-architect/SKILL.md) - 文档架构师
 
-2. **模块文档** (MUST):
-   - ✅ 每个 `patra-{service}` 根目录必须有 `README.md`
-   - ✅ README 必须包含：
-     - 模块职责说明
-     - 主要功能列表
-     - 快速开始指南
-     - 依赖关系说明
-
-3. **包文档** (SHOULD):
-   - ✅ 重要的 Java 包应该有 `package-info.java`
-   - ✅ 说明包的职责和主要类
-
-4. **API 文档** (MUST):
-   - ✅ 使用 Swagger/OpenAPI 3.0 注解
-   - ✅ 所有公开 API 必须有中文描述
-
-**好的实践**:
-```java
-// ✅ GOOD: package-info.java
-/**
- * 文章聚合根和相关领域模型。
- *
- * <p>本包包含：
- * <ul>
- *   <li>{@link Article} - 文章聚合根</li>
- *   <li>{@link ArticleId} - 文章唯一标识（值对象）</li>
- *   <li>{@link Metadata} - 文章元数据（值对象）</li>
- * </ul>
- */
-package com.patra.ingest.domain.model;
-```
+### 运维支持
+- [java-runtime-diagnostic/SKILL.md](../../.claude/skills/java-runtime-diagnostic/SKILL.md) - 运行时错误诊断
 
 ---
 
-## Constitution Check 验证项
+## 🔧 治理规则
 
-所有新功能在进入实施阶段前必须通过以下验证：
+### 宪章修订流程
 
-### 架构验证
-
-- [ ] **CHK-ARCH-001**: 模块结构符合 6 层规范（boot/api/domain/app/infra/adapter）
-- [ ] **CHK-ARCH-002**: Domain 层 `pom.xml` 无任何框架依赖（仅 JDK + patra-common-util + Lombok + Validation API）
-- [ ] **CHK-ARCH-003**: 依赖方向符合 `Adapter → App → Domain ← Infra`
-
-### DDD 验证
-
-- [ ] **CHK-DDD-001**: 识别出明确的聚合根（Aggregate Root）
-- [ ] **CHK-DDD-002**: 聚合边界清晰（不跨聚合直接访问实体）
-- [ ] **CHK-DDD-003**: 值对象设计为不可变（immutable）
-- [ ] **CHK-DDD-004**: 领域事件使用过去时命名
-
-### SSOT 验证
-
-- [ ] **CHK-SSOT-001**: Provenance 配置从 `patra-registry` 获取（无硬编码）
-- [ ] **CHK-SSOT-002**: 数据字典从 `patra-registry` 获取
-- [ ] **CHK-SSOT-003**: 元数据和映射规则从 `patra-registry` 获取
-
-### 测试验证
-
-- [ ] **CHK-TEST-001**: Domain 层单元测试覆盖率 ≥ 80%
-- [ ] **CHK-TEST-002**: Application 层单元测试覆盖率 ≥ 70%
-- [ ] **CHK-TEST-003**: Infrastructure 层有 IT 集成测试
-- [ ] **CHK-TEST-004**: Adapter 层有 E2E 测试
-
-### 文档验证
-
-- [ ] **CHK-DOC-001**: 模块根目录有 `README.md`
-- [ ] **CHK-DOC-002**: 所有文档和注释使用中文
-- [ ] **CHK-DOC-003**: API 有 Swagger 文档
-
----
-
-## 治理规则
-
-### 宪章修订
-
-- 宪章修订需要技术负责人批准
-- 修订需要更新版本号（MAJOR.MINOR.PATCH）
-- 重大修订需要记录变更原因
+1. **Skills 优先修改**：规范变更首先在 Skills 中更新
+2. **Constitution 同步**：更新本索引表中的 CHK-* 验证项
+3. **版本管理**：修订需要更新版本号（MAJOR.MINOR.PATCH）
+4. **变更记录**：在文件头部记录变更说明
 
 ### 违规处理
 
-1. **Constitution Check 失败**:
-   - ❌ 阻止进入实施阶段
-   - ✅ 必须在 `plan.md` 的 Complexity Tracking 章节说明理由
-
-2. **架构测试失败**:
-   - ❌ 阻止合并到主分支
-   - ✅ 必须修复架构违规
+| 违规类型 | 严重程度 | 处理方式 |
+|---------|---------|---------|
+| **Constitution Check 失败** | CRITICAL | 阻止进入实施阶段，必须在 plan.md 的 Complexity Tracking 说明理由 |
+| **CHK-ARCH-*** 违规 | CRITICAL | 阻止合并到主分支 |
+| **CHK-TEST-006** 违规 | HIGH | 必须修复测试位置 |
+| **CHK-CODE-*** 违规 | MEDIUM | 代码审查阶段修复 |
+| **CHK-DOC-*** 违规 | LOW | 补充文档 |
 
 ---
 
-**版本**: 1.0.0
+**版本**: 2.0.0
 **批准日期**: 2025-01-09
-**最后修订**: 2025-01-09
+**最后修订**: 2025-11-09

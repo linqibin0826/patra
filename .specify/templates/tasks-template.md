@@ -33,10 +33,11 @@ description: "特性实施的任务列表模板"
 - **Infrastructure 层**: `patra-{service}-infra/src/main/java/com/patra/{service}/infra/`
 - **Adapter 层**: `patra-{service}-adapter/src/main/java/com/patra/{service}/adapter/`
 - **API 层**: `patra-{service}-api/src/main/java/com/patra/{service}/api/`
-- **测试**:
-  - 单元测试: `src/test/java/`（与源码同结构）
-  - IT 测试: `patra-{service}-infra/src/test/java/`（`*IT.java`）
-  - E2E 测试: `patra-{service}-boot/src/test/java/`（`*E2ETest.java`）
+- **测试**（⚠️ 参考 CHK-TEST-006 规范）:
+  - 单元测试（`*Test.java`）: `src/test/java/`（与源码同结构，在对应层的模块中）
+  - **IT 集成测试**（`*IT.java`）: **必须在 `patra-{service}-boot/src/test/java/`** ✅
+  - **E2E 测试**（`*E2E.java`）: **必须在 `patra-{service}-boot/src/test/java/`** ✅
+  - 详见: [java-test-architect/SKILL.md#测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范)
 
 <!--
   ============================================================================
