@@ -62,7 +62,9 @@ $ARGUMENTS
 
 **从宪章：**
 
-- 加载 `.specify/memory/constitution.md` 以进行原则验证
+- 加载 `.specify/memory/constitution.md` 中的 CHK-* 验证项索引表
+- 重点验证项：CHK-ARCH-001 到 005（架构）、CHK-DDD-001 到 004（DDD）、CHK-SSOT-001 到 003（单一事实来源）、CHK-TEST-001 到 006（测试）
+- 注意：详细规范在 `.claude/skills/` 中，constitution 仅作为索引
 
 ### 3. 构建语义模型
 
@@ -71,7 +73,7 @@ $ARGUMENTS
 - **需求清单**：每个功能 + 非功能需求都有稳定的键（基于祈使短语派生段；例如，"用户可以上传文件" → `user-can-upload-file`）
 - **用户故事/操作清单**：带验收标准的离散用户操作
 - **任务覆盖映射**：将每个任务映射到一个或多个需求或故事（通过关键字/显式引用模式如 ID 或关键短语推断）
-- **宪章规则集**：提取原则名称和必须/应该规范性陈述
+- **CHK-* 验证项清单**：构建验证项映射表，每个 CHK-* 对应 plan.md/tasks.md 中的检查点（例如 CHK-ARCH-001 → 检查 Domain 层 pom.xml 依赖，CHK-TEST-006 → 检查 IT/E2E 测试位置）
 
 ### 4. 检测通道（高效令牌分析）
 
@@ -93,10 +95,16 @@ $ARGUMENTS
 - 缺少验收标准对齐的用户故事
 - 引用规格说明/计划中未定义的文件或组件的任务
 
-#### D. 宪章对齐
+#### D. CHK-* 验证项对齐（Patra 架构规范）
 
-- 与必须原则冲突的任何需求或计划元素
-- 来自宪章的缺失强制部分或质量关卡
+关键检查项（参考 `.specify/memory/constitution.md` 和 `.claude/skills/`）：
+
+- **CHK-ARCH-001**：plan.md 的技术栈是否在 Domain 层引入框架依赖？（仅允许 Lombok、Hutool、patra-common）
+- **CHK-ARCH-002**：plan.md 的依赖方向是否正确？（Adapter → App → Domain ← Infra）
+- **CHK-TEST-006**：tasks.md 中的 IT/E2E 测试任务是否在 `patra-{service}-boot` 模块？（参考 java-test-architect）
+- **CHK-SSOT-001**：plan.md/tasks.md 是否从 `patra-registry` 获取 Provenance 配置？（禁止硬编码）
+- **CHK-DDD-001 到 004**：plan.md 的领域模型设计是否合理？（聚合边界、实体关系、领域事件）
+- 缺失的强制验证项或质量关卡
 
 #### E. 覆盖缺口
 
@@ -113,12 +121,23 @@ $ARGUMENTS
 
 ### 5. 严重性分配
 
-使用此启发式来优先处理发现：
+使用此启发式来优先处理发现（基于 Patra 架构规范）：
 
-- **关键**：违反宪章必须、缺少核心规格说明工件或阻止基线功能的零覆盖需求
-- **高**：重复或冲突的需求、模糊的安全/性能属性、不可测试的验收标准
-- **中**：术语漂移、缺失的非功能任务覆盖、不足的边界情况
-- **低**：风格/措辞改进、不影响执行顺序的轻微冗余
+- **关键 (CRITICAL)**：
+  - 违反 CHK-ARCH-* 验证项（Domain 层纯度、依赖方向）
+  - 违反 CHK-TEST-006（IT/E2E 测试位置错误）
+  - 违反 CHK-SSOT-001（硬编码 Provenance 配置）
+  - 缺少核心规格说明工件或阻止基线功能的零覆盖需求
+- **高 (HIGH)**：
+  - 违反 CHK-DDD-* 验证项（聚合边界、领域事件设计）
+  - 违反 CHK-TEST-001 到 005（测试覆盖率不足）
+  - 重复或冲突的需求、模糊的安全/性能属性、不可测试的验收标准
+- **中 (MEDIUM)**：
+  - 违反 CHK-CODE-* 验证项（命名、复杂度、反模式）
+  - 术语漂移、缺失的非功能任务覆盖、不足的边界情况
+- **低 (LOW)**：
+  - 违反 CHK-DOC-* 验证项（文档缺失）
+  - 风格/措辞改进、不影响执行顺序的轻微冗余
 
 ### 6. 生成紧凑分析报告
 
@@ -129,15 +148,23 @@ $ARGUMENTS
 | ID | 类别 | 严重性 | 位置 | 摘要 | 建议 |
 |----|------|--------|------|------|------|
 | A1 | 重复 | 高 | spec.md:L120-134 | 两个类似的需求... | 合并措辞；保留更清晰的版本 |
+| D1 | CHK-ARCH-001 | CRITICAL | plan.md:L45 | Domain 层引入 Spring 依赖 | 移除 Spring 依赖，仅保留 Lombok、Hutool |
+| D2 | CHK-TEST-006 | CRITICAL | tasks.md:T050 | IT 测试放在 infra 模块 | 移动到 patra-{service}-boot 模块 |
+| D3 | CHK-SSOT-001 | CRITICAL | plan.md:L78 | 硬编码 Provenance 配置 | 从 patra-registry 动态获取 |
 
-（每个发现添加一行；生成以类别首字母为前缀的稳定 ID。）
+（每个发现添加一行；生成以类别首字母为前缀的稳定 ID：A=歧义、B=重复、C=不足、D=CHK-*、E=覆盖缺口、F=不一致）
 
 **覆盖摘要表：**
 
 | 需求键 | 有任务？ | 任务 ID | 备注 |
 |--------|---------|---------|------|
 
-**宪章对齐问题：**（如有）
+**CHK-* 验证项问题：**（如有）
+
+示例格式：
+- ❌ **CHK-ARCH-001**: plan.md:L45 - Domain 层 pom.xml 包含 `spring-boot-starter`（仅允许 Lombok、Hutool、patra-common）
+- ❌ **CHK-TEST-006**: tasks.md:T050 - IT 测试任务 `ArticleRepositoryIT.java` 位于 `patra-ingest-infra` 模块（必须在 `patra-ingest-boot` 模块）
+- ⚠️ **CHK-SSOT-001**: plan.md:L78 - Provenance 配置使用硬编码 URL（应从 `patra-registry-api` 获取）
 
 **未映射任务：**（如有）
 
