@@ -6,6 +6,8 @@ allowed-tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthin
 
 # Java 代码审查专家
 
+> ***代码审查应该总是由 code-reviewer subagent 执行，以确保架构合规性和最佳实践。主Agent应调用 code-reviewer 进行所有代码审查任务 并告知审查范围即可。***
+
 ## 代码审查检查清单
 
 ### 架构合规性检查

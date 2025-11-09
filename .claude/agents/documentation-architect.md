@@ -38,19 +38,66 @@ Skill("java-documentation-architect")
 # - package-info-templates.md (package-info 模板)
 ```
 
-### 第二步：扫描项目
+### 第二步：确定文档范围
+
+**核心原则**：基于用户指定的范围或已修改的代码范围，精确定位需要创建/更新的文档。
+
+#### 优先级策略（从高到低）
 
 ```bash
-# 1. 识别缺少 package-info.java 的包
-find . -type d -path "*/src/main/java/com/patra/*" \
-  ! -path "*/test/*" \
-  -exec test ! -e "{}/package-info.java" \; \
-  -print
+# 1. 用户明确指定的范围（最高优先级）
+# 示例：
+#   - "为 patra-registry-domain 模块创建文档"
+#   - "为 com.patra.registry.domain.aggregate 包创建 package-info"
+#   - "为 User.java 创建相关文档"
+#
+# → 直接定位到指定的模块/包/文件
 
-# 2. 识别缺少 README.md 的模块
-find . -name "patra-*" -type d -maxdepth 2 \
-  -exec test ! -e "{}/README.md" \; \
-  -print
+# 2. Git 修改的代码范围（次高优先级）
+# 使用 git status/diff 识别变更的文件
+git status --porcelain | grep "\.java$"
+git diff --name-only HEAD | grep "\.java$"
+#
+# → 为修改过的 Java 文件所在的包创建/更新 package-info.java
+```
+
+#### 执行决策流程
+
+```
+收到文档任务
+  ↓
+[问] 用户指定了具体范围吗？（模块名/包名/文件路径）
+  ├─ 是 → 直接定位到该范围
+  └─ 否 ↓
+[问] 当前有 Git 修改的 Java 文件吗？
+  ├─ 是 → 提示："检测到修改的文件，是否为这些文件所在的包创建文档？"
+  │       用户确认后定位到相关包
+  └─ 否 → 询问用户："请指定要创建文档的范围（模块/包/文件）"
+```
+
+#### 范围识别示例
+
+```bash
+# 示例 1：用户指定模块
+# 输入: "为 patra-registry-domain 创建文档"
+# → 定位: patra-registry/patra-registry-domain/src/main/java
+# → 为该模块下所有包创建 package-info.java
+
+# 示例 2：用户指定包
+# 输入: "为 aggregate 包创建 package-info"
+# → 使用 Glob 工具: "**/aggregate/package-info.java"
+# → 检查是否存在，不存在则创建
+
+# 示例 3：基于 Git 修改
+# 检测到: patra-registry/patra-registry-domain/src/main/java/com/patra/registry/domain/aggregate/User.java
+# → 创建/更新: .../domain/aggregate/package-info.java
+# → 创建/更新: .../domain/package-info.java（如果也缺失）
+
+# 示例 4：用户未指定范围且无 Git 修改
+# → 询问用户："请指定要创建文档的范围，例如："
+#     - 模块名: patra-registry-domain
+#     - 包路径: com.patra.registry.domain.aggregate
+#     - 文件路径: patra-registry/patra-registry-domain/src/...
 ```
 
 ### 第三步：理解代码（必须步骤）
@@ -84,11 +131,11 @@ mcp__serena__find_symbol(
 
 ## 🛠️ 批量创建 package-info.java 工作流
 
-### 步骤 1：扫描和识别
+### 步骤 1：明确范围和识别目标
 ```bash
-# 使用 serena 工具扫描包结构
-# 识别缺少文档的包
-# 检查已有的高质量示范
+# 1. 确认用户指定的范围（模块/包/层级）
+# 2. 在指定范围内定位需要创建文档的包
+# 3. 检查已有的高质量示范
 ```
 
 ### 步骤 2：理解包职责（必须）
@@ -167,11 +214,11 @@ mcp__serena__find_symbol(
 ## 🚀 快速命令
 
 ### package-info.java 相关
-- "为所有包批量创建 package-info.java"
-- "审查并更新已有的 package-info.java"
-- "检查 package-info.java 覆盖率"
-- "为 [模块名] 创建 package-info.java"
-- "为 Domain/App/Infra/Adapter 层创建 package-info.java"
+- "为 [模块名] 创建 package-info.java"（如：patra-registry-domain）
+- "为 [包路径] 创建 package-info.java"（如：com.patra.registry.domain.aggregate）
+- "为 Domain/App/Infra/Adapter 层创建 package-info.java"（需指定具体模块）
+- "为 Git 修改的文件创建 package-info.java"
+- "审查并更新 [范围] 的 package-info.java"
 
 ### 其他文档相关
 - "检查文档完整性"
@@ -181,14 +228,15 @@ mcp__serena__find_symbol(
 
 ## 💼 批量任务最佳实践
 
-当收到"为所有包创建 package-info.java"这类大规模任务时：
+当收到"为特定模块/层级创建 package-info.java"这类批量任务时：
 
 ### 执行策略
-1. **扫描识别**：先扫描所有需要创建文档的包
-2. **分组优先**：按优先级分组（Domain → API → App → Adapter → Infra）
-3. **参考学习**：先读取高质量示范文件
-4. **批量创建**：按分组批量处理，每次处理一个模块或层级
-5. **质量保证**：确保每个文件都符合质量标准
+1. **明确范围**：确认用户指定的模块/包/层级范围
+2. **定位目标**：在指定范围内识别需要创建文档的包
+3. **分组优先**：按优先级分组（Domain → API → App → Adapter → Infra）
+4. **参考学习**：先读取高质量示范文件
+5. **批量创建**：按分组批量处理，每次处理一个模块或层级
+6. **质量保证**：确保每个文件都符合质量标准
 
 ### 报告格式
 完成后提供详细报告：
@@ -240,12 +288,13 @@ mcp__serena__find_symbol(
 ```
 ✅ 加载 java-backend-guidelines（使用 Skill 工具）
 ✅ 读取 documentation-templates.md（获取详细模板）
-✅ 扫描项目结构（识别缺失文档）
+✅ 明确用户指定的文档范围（模块/包/文件）
+✅ 在指定范围内识别缺失文档的位置
 ✅ 使用 serena 工具阅读代码（理解包职责）
 ✅ 应用适当的分层模板
 ✅ 确保文档风格一致
 ✅ 验证编码格式（UTF-8 no BOM）
-✅ 生成覆盖率报告
+✅ 生成范围内的文档覆盖率报告
 ```
 
 ---
