@@ -61,7 +61,12 @@ tasks.md 应该可立即执行 - 每个任务必须足够具体，以便 LLM 可
 
 **关键**：任务**必须**按用户故事组织，以实现独立的实现和测试。
 
-**测试是可选的**：仅在特性规格说明中明确请求或用户请求 TDD 方法时才生成测试任务。
+**测试默认启用（TDD）**：默认生成测试任务，遵循测试驱动开发（TDD）方法。
+- 参考 java-test-architect Skill 确定测试类型和位置
+- 单元测试（*Test.java）：与被测试类在同一模块，测试 Domain 和 Application 层逻辑
+- 集成测试（*IT.java）：**必须在 patra-{service}-boot 模块**，测试跨层集成和数据库交互
+- E2E 测试（*E2E.java）：**必须在 patra-{service}-boot 模块**，测试完整用户场景
+- 测试优先：在实施代码之前编写测试（先失败，后通过）
 
 ### 检查清单格式（必需）
 
@@ -84,16 +89,17 @@ tasks.md 应该可立即执行 - 每个任务必须足够具体，以便 LLM 可
    - 润色阶段：无故事标签
 5. **描述**：带确切文件路径的清晰操作
 
-**示例**：
+**示例（Patra 六边形架构）**：
 
 - ✅ 正确：`- [ ] T001 按实现计划创建项目结构`
-- ✅ 正确：`- [ ] T005 [P] 在 src/middleware/auth.py 中实现认证中间件`
-- ✅ 正确：`- [ ] T012 [P] [US1] 在 src/models/user.py 中创建 User 模型`
-- ✅ 正确：`- [ ] T014 [US1] 在 src/services/user_service.py 中实现 UserService`
-- ❌ 错误：`- [ ] 创建 User 模型`（缺少 ID 和故事标签）
-- ❌ 错误：`T001 [US1] 创建模型`（缺少复选框）
-- ❌ 错误：`- [ ] [US1] 创建 User 模型`（缺少任务 ID）
-- ❌ 错误：`- [ ] T001 [US1] 创建模型`（缺少文件路径）
+- ✅ 正确：`- [ ] T005 [P] [Domain] [US1] 在 patra-ingest-domain/.../Article.java 中创建 Article 聚合根`
+- ✅ 正确：`- [ ] T012 [P] [App] [US1] 在 patra-ingest-app/.../IngestOrchestrator.java 中实现编排器`
+- ✅ 正确：`- [ ] T014 [Infra] [US1] 在 patra-ingest-infra/.../ArticleRepositoryImpl.java 中实现仓储`
+- ✅ 正确：`- [ ] T018 [Adapter] [US1] 在 patra-ingest-adapter/.../IngestController.java 中实现 REST 端点`
+- ❌ 错误：`- [ ] 创建 Article 聚合根`（缺少 ID、层标签和故事标签）
+- ❌ 错误：`T001 [US1] 创建聚合根`（缺少复选框）
+- ❌ 错误：`- [ ] [US1] 创建 Article 聚合根`（缺少任务 ID）
+- ❌ 错误：`- [ ] T001 [US1] 创建聚合根`（缺少层标签和文件路径）
 
 ### 任务组织
 
@@ -125,6 +131,12 @@ tasks.md 应该可立即执行 - 每个任务必须足够具体，以便 LLM 可
 - **阶段 1**：设置（项目初始化）
 - **阶段 2**：基础（阻塞前置条件 - 必须在用户故事之前完成）
 - **阶段 3+**：按优先级顺序的用户故事（P1、P2、P3...）
-  - 在每个故事内：测试（如果请求）→ 模型 → 服务 → 端点 → 集成
+  - 在每个故事内（遵循六边形架构依赖方向，参考 java-hexagonal-architecture）：
+    1. **测试任务**（TDD）：先写测试（单元测试、契约测试）
+    2. **Domain 层**：聚合根、值对象、领域事件、Port 接口（纯 Java，无框架依赖）
+    3. **Application 层**：Orchestrator、Coordinator（业务流程编排）
+    4. **Infrastructure 层**：Repository 实现、MyBatis Mapper、外部服务适配器
+    5. **Adapter 层**：Controller、MessageListener、XXL-Job
+    6. **集成测试**：IT 测试、E2E 测试（在 patra-{service}-boot 模块）
   - 每个阶段应该是一个完整的、可独立测试的增量
 - **最后阶段**：润色与跨领域关注点
