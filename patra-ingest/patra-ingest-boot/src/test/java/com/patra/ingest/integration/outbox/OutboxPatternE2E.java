@@ -10,7 +10,7 @@ import com.patra.ingest.app.usecase.relay.dto.RelayReport;
 import com.patra.ingest.domain.messaging.MessageChannels;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import com.patra.ingest.infra.messaging.RocketMqOutboxPublisher;
 import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
@@ -131,7 +131,7 @@ class OutboxPatternE2E {
   // 所有容器在所有测试间共享，提升测试性能
 
   @Autowired private OutboxMessageRepository outboxRepository;
-  @Autowired private OutboxRelayStore relayStore;
+  @Autowired private OutboxRelayRepository relayStore;
   @Autowired private OutboxRelayOrchestrator relayOrchestrator;
   @Autowired private RocketMqOutboxPublisher publisher;
 

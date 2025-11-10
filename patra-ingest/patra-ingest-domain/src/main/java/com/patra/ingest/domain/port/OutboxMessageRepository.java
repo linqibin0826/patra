@@ -12,7 +12,7 @@ import java.util.Optional;
  * <ul>
  *   <li>幂等性保证 - 通过 channel + dedupKey 唯一约束防止重复消息
  *   <li>批量操作 - 支持批量保存、更新、upsert 提升性能
- *   <li>生命周期管理 - 与 {@link OutboxRelayStore} 协同管理消息状态转换
+ *   <li>生命周期管理 - 与 {@link OutboxRelayRepository} 协同管理消息状态转换
  * </ul>
  *
  * <p><b>端口语义</b>: 此接口是六边形架构中的 <b>仓储端口(Repository Port)</b>,定义在 Domain

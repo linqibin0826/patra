@@ -12,7 +12,7 @@ import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import com.patra.ingest.domain.policy.RelayErrorClassifier.RelayErrorKind;
 import com.patra.ingest.domain.policy.RelayRetryPolicy;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("RelayPublishCoordinator 单元测试")
 class RelayPublishCoordinatorTest {
 
-  @Mock private OutboxRelayStore relayStore;
+  @Mock private OutboxRelayRepository relayStore;
 
   @Mock private OutboxPublisherPort publisherPort;
 

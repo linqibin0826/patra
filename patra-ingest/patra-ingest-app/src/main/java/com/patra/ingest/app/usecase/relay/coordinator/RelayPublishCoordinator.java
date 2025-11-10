@@ -6,7 +6,7 @@ import com.patra.ingest.domain.policy.RelayErrorClassifier;
 import com.patra.ingest.domain.policy.RelayErrorClassifier.RelayErrorKind;
 import com.patra.ingest.domain.policy.RelayRetryPolicy;
 import com.patra.ingest.domain.port.OutboxPublisherPort;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -69,7 +69,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RelayPublishCoordinator {
 
-  private final OutboxRelayStore relayStore;
+  private final OutboxRelayRepository relayStore;
   private final OutboxPublisherPort publisherPort;
   private final RelayErrorClassifier errorClassifier;
   private final RelayRetryPolicy retryPolicy;

@@ -3,7 +3,7 @@ package com.patra.ingest.infra.persistence.repository;
 import com.patra.ingest.domain.exception.OutboxPersistenceException;
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.port.OutboxMessageRepository;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import com.patra.ingest.infra.persistence.converter.OutboxMessageConverter;
 import com.patra.ingest.infra.persistence.entity.OutboxMessageDO;
 import com.patra.ingest.infra.persistence.mapper.OutboxMessageMapper;
@@ -75,7 +75,7 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, OutboxRelayStore {
+public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, OutboxRelayRepository {
 
   private final OutboxMessageMapper mapper;
   private final OutboxMessageConverter converter;
@@ -156,7 +156,7 @@ public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, O
     return Optional.ofNullable(entity).map(converter::toDomain);
   }
 
-  // ==================== OutboxRelayStore 实现 ====================
+  // ==================== OutboxRelayRepository 实现 ====================
 
   /**
    * 获取准备发布的待处理消息。

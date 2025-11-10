@@ -274,6 +274,147 @@ curl http://localhost:8082/actuator/metrics/patra.outbox.publish.total
 
 ---
 
+## 🏗️ 架构测试 (ArchUnit)
+
+本模块使用 **ArchUnit** 自动化验证六边形架构 + DDD 的核心约束。
+
+### 测试套件
+
+| 测试类别 | 规则数 | 说明 |
+|---------|-------|------|
+| **层依赖方向** | 5 | 验证 Adapter → App → Domain ← Infra 依赖方向 |
+| **Domain 纯净性** | 3 | 验证 Domain 层零 Spring 依赖、允许 Jackson |
+| **命名约定** | 5 | 验证 Port/DO/Aggregate/Orchestrator 命名和位置 |
+| **封装规则** | 3 | 验证 DO 不泄露、Port 可见性、Event 位置 |
+| **事务边界** | 2 | 验证 @Transactional 仅在 App 层 |
+| **测试规范** | 6 | 验证测试命名规范、测试独立性、分层测试策略 |
+| **总计** | **24** | **六大类架构约束** |
+
+### 运行测试
+
+```bash
+# 单独运行架构测试
+cd patra-ingest/patra-ingest-boot
+../../mvnw test -Dtest=IngestArchitectureTest
+
+# 查看测试报告
+cat target/surefire-reports/com.patra.ingest.architecture.IngestArchitectureTest.txt
+```
+
+### 冻结模式工作流
+
+ArchUnit 使用冻结模式逐步修复架构违规：
+
+1. **首次运行**：记录当前违规到 `stored.rules` 文件
+2. **日常开发**：禁止新增违规，允许减少违规
+3. **持续改进**：每个 Sprint 修复部分违规
+
+```bash
+# 查看冻结的违规基线
+ls patra-ingest-boot/src/test/resources/archunit/
+```
+
+### CI/CD 集成
+
+Git pre-commit hook 自动运行架构测试：
+
+```bash
+# 手动触发（提交前）
+./scripts/git/mvn_archunit_changed_modules.sh
+```
+
+### 架构规则详情
+
+#### 规则 1: Domain 层零 Spring 依赖
+```java
+// ❌ 错误
+package com.patra.ingest.domain.service;
+@Service  // ❌ 不允许 Spring 注解
+public class PlanService { }
+
+// ✅ 正确
+package com.patra.ingest.domain.service;
+public class PlanService { }  // ✅ 纯 Java
+```
+
+#### 规则 2: App 层不直接依赖 Infra
+```java
+// ❌ 错误
+import com.patra.ingest.infra.persistence.entity.PlanDO;  // ❌
+public class Orchestrator {
+    void process(PlanDO plan) { }
+}
+
+// ✅ 正确
+import com.patra.ingest.domain.model.aggregate.PlanAggregate;  // ✅
+public class Orchestrator {
+    void process(PlanAggregate plan) { }
+}
+```
+
+#### 规则 3: DO 类不泄露 Infra 层
+```java
+// ❌ 错误
+package com.patra.ingest.app;
+import com.patra.ingest.infra.persistence.entity.PlanDO;  // ❌ DO 泄露
+
+// ✅ 正确
+// DO 仅在 infra.persistence 内部使用，通过 Converter 转换为 Domain 实体
+```
+
+#### 规则 4: 测试规范（第六类规则）
+
+**规则 17: 测试类命名规范**
+```java
+// ❌ 错误
+public class PlanAggregateTests { }        // 应为 PlanAggregateTest
+public class PlanRepositoryIntegration { } // 应为 PlanRepositoryIT
+
+// ✅ 正确
+public class PlanAggregateTest { }         // 单元测试
+public class PlanRepositoryIT { }          // 集成测试
+public class OutboxPatternE2E { }          // 端到端测试
+```
+
+**规则 18: Domain 层测试禁止 Spring 依赖**
+```java
+// ❌ 错误
+@SpringBootTest
+class PlanAggregateTest {
+    @Autowired
+    private PlanAggregate plan;  // ❌ Domain 层测试不应使用 Spring 容器
+}
+
+// ✅ 正确
+class PlanAggregateTest {
+    @Test
+    void should_change_status_when_starting() {
+        PlanAggregate plan = new PlanAggregate(...);  // ✅ 纯单元测试
+        plan.start();
+        assertThat(plan.getStatus()).isEqualTo(PlanStatus.RUNNING);
+    }
+}
+```
+
+**规则 19-22: 其他测试规范**
+- 测试方法必须有 `@Test` 注解（防止遗漏导致不执行）
+- Repository 集成测试必须在 `infra` 模块
+- 测试类不能依赖其他测试类（保持测试独立性）
+- E2E 测试必须在 `boot` 模块（需要完整应用上下文）
+
+### 常见问题
+
+**Q: 测试失败提示"检测到新增架构违规"？**
+A: 查看测试输出，修复违规代码，确保符合架构约束。
+
+**Q: 如何临时跳过某些规则？**
+A: 在测试类中注释掉对应的 `@Test` 方法。
+
+**Q: 大规模重构后违规激增怎么办？**
+A: 临时设置 `freeze.refreeze=true` 更新基线，但重构完成后立即改回 `false`。
+
+---
+
 ## 🔗 子模块文档
 
 - [patra-ingest-api](patra-ingest-api/README.md) - API 契约(错误码)
