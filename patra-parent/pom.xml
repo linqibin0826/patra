@@ -313,20 +313,6 @@
                 <scope>test</scope>
             </dependency>
 
-            <!-- Patra 测试基础设施模块 -->
-            <dependency>
-                <groupId>com.patra</groupId>
-                <artifactId>patra-common-test</artifactId>
-                <version>${project.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.patra</groupId>
-                <artifactId>patra-spring-boot-starter-test</artifactId>
-                <version>${project.version}</version>
-                <scope>test</scope>
-            </dependency>
-
             <dependency>
                 <groupId>com.patra</groupId>
                 <artifactId>patra-registry-api</artifactId>

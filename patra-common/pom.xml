@@ -19,7 +19,6 @@
         <module>patra-common-core</module>
         <module>patra-common-storage</module>
         <module>patra-common-model</module>
-        <module>patra-common-test</module>
     </modules>
 
     <description>
