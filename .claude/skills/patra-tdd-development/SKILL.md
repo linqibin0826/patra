@@ -1,6 +1,19 @@
 ---
 name: patra-tdd-development
-description: Patra 项目 TDD（测试驱动开发）专家。基于六边形架构+DDD实践TDD。核心：先写测试，再写实现，Red-Green-Refactor循环。当需要开发新功能、添加业务逻辑、重构代码时使用。关键词：TDD、测试先行、Red-Green-Refactor、小步迭代、六边形架构、领域建模。
+description: |
+  TDD（测试驱动开发）专家，用于开发新功能、重构代码时的测试先行指导。
+
+  **自动激活场景**：
+  - 编写测试用例（JUnit、Mockito、AssertJ）
+  - 实施 TDD 工作流（Red-Green-Refactor）
+  - 重构现有代码（在测试保护下）
+  - 六边形架构各层的测试策略
+
+  **触发关键词**：TDD、测试驱动、Red-Green-Refactor、单元测试、集成测试、
+  JUnit、Mockito、AssertJ、TestContainers、MockMvc、测试先行、重构、
+  Domain 测试、Application 测试、Infrastructure 测试、Adapter 测试。
+
+  **核心原则**：先写测试，再写实现，小步迭代，持续重构。
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__sequential-thinking__sequentialthinking, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics, WebSearch, WebFetch, TodoWrite, KillShell
 ---
 
