@@ -200,16 +200,40 @@ domain   →  仅 patra-common (无框架)
 
 ## 🧪 测试
 
+### 分层测试策略
+
+Patra 项目遵循**测试金字塔**，各层使用不同的测试策略：
+
 ```bash
-# 单元测试 (领域层)
+# 1. Domain 层：纯单元测试（JUnit 5 + AssertJ，无框架依赖）
 ./mvnw test -pl patra-{service}-domain
 
-# 集成测试 (仓储层)
-./mvnw verify -pl patra-{service}-infra
+# 2. Application 层：Mock 单元测试（Mock 所有 Port 接口）
+./mvnw test -pl patra-{service}-app
 
-# API 测试 (适配器层)
-./mvnw verify -pl patra-{service}-adapter
+# 3. Infrastructure 层：单元测试 + 集成测试
+./mvnw test -pl patra-{service}-infra           # 单元测试（Converter、Feign Client Mock）
+./mvnw verify -pl patra-{service}-infra         # 集成测试（@MybatisTest + TestContainers）
+
+# 4. Adapter 层：单元测试 + 切片测试
+./mvnw test -pl patra-{service}-adapter         # 单元测试（Listener、Job）+ @WebMvcTest（Controller）
+
+# 5. Boot 层：E2E 端到端测试（@SpringBootTest + TestContainers + Awaitility）
+./mvnw verify -pl patra-{service}-boot
+
+# 运行所有测试
+./mvnw clean verify
 ```
+
+### 测试覆盖率要求
+
+- **Domain 层**：≥ 80%（业务规则、状态转换）
+- **Application 层**：≥ 70%（编排逻辑、事务边界）
+- **Infrastructure 层**：有单元测试和集成测试
+- **Adapter 层**：有单元测试和切片测试
+- **Boot 层**：有 E2E 端到端测试
+
+详见：`.specify/templates/test-coverage-checklist.md`
 
 ---
 
