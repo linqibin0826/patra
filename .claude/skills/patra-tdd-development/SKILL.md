@@ -330,17 +330,20 @@ public ArticleResult createArticle(CreateArticleCommand command) {
 }
 ```
 
-### Infrastructure 层 TDD（数据访问）
+### Infrastructure 层 TDD（Port 接口实现）
 
-**特点**：集成测试，使用 TestContainers
+**特点**：单元测试 + 集成测试（根据实现类型选择）
+**测试位置**：`patra-{service}-infra/src/test/java/`
 
-#### 示例：开发 ArticleRepositoryImpl
+#### 类型 1：Repository - 使用 @MybatisTest + TestContainers
+
+**示例：开发 ArticleRepositoryImpl**
 
 ```java
 // 🔴 Red: 先写测试（集成测试）
-@DataJpaTest
+@MybatisTest
 @Testcontainers
-@Import({ArticleRepositoryImpl.class, MapperConfig.class})
+@Import({ArticleRepositoryImpl.class, ArticleConverter.class})
 class ArticleRepositoryImplIT {
 
     @Container
@@ -349,6 +352,8 @@ class ArticleRepositoryImplIT {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", mysql::getJdbcUrl);
+        registry.add("spring.datasource.username", mysql::getUsername);
+        registry.add("spring.datasource.password", mysql::getPassword);
     }
 
     @Autowired
@@ -393,22 +398,172 @@ public class ArticleRepositoryImpl implements ArticlePort {
 }
 ```
 
+#### 类型 2：Feign Client - 单元测试 + WireMock
+
+```java
+// 🔴 Red: 先写单元测试
+class ArticleServiceClientTest {
+
+    @Mock
+    private ArticleApi articleApi;
+
+    @InjectMocks
+    private ArticleServiceClient client;
+
+    @Test
+    @DisplayName("应该调用正确的API端点")
+    void should_call_correct_api_endpoint() {
+        // given
+        when(articleApi.getArticle(1L)).thenReturn(new ArticleDTO());
+
+        // when
+        client.fetchArticle(1L);
+
+        // then
+        verify(articleApi).getArticle(1L);
+    }
+}
+
+// 🔴 Red: 再写集成测试（使用 WireMock）
+@SpringBootTest
+@AutoConfigureWireMock(port = 0)
+class ArticleServiceClientIT {
+
+    @Autowired
+    private ArticleServiceClient client;
+
+    @Test
+    @DisplayName("应该正确处理HTTP响应")
+    void should_handle_http_response() {
+        // given
+        stubFor(get(urlEqualTo("/api/articles/1"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"id\":1,\"title\":\"测试\"}")));
+
+        // when
+        Article article = client.fetchArticle(1L);
+
+        // then
+        assertThat(article.getId()).isEqualTo(1L);
+        assertThat(article.getTitle()).isEqualTo("测试");
+    }
+}
+```
+
+#### 类型 3：MQ Publisher - 单元测试 + TestContainers
+
+```java
+// 🔴 Red: 先写单元测试
+class ArticleEventPublisherTest {
+
+    @Mock
+    private RocketMQTemplate rocketMQTemplate;
+
+    @InjectMocks
+    private ArticleEventPublisher publisher;
+
+    @Test
+    @DisplayName("应该发布文章创建事件")
+    void should_publish_article_created_event() {
+        // given
+        var event = new ArticleCreatedEvent(1L, "测试");
+
+        // when
+        publisher.publish(event);
+
+        // then
+        verify(rocketMQTemplate).syncSend(
+            eq("article-topic:created"),
+            any(Message.class)
+        );
+    }
+}
+
+// 🔴 Red: 再写集成测试（使用 TestContainers）
+@SpringBootTest
+@Testcontainers
+class ArticleEventPublisherIT {
+
+    @Container
+    static RocketMQContainer rocketmq = new RocketMQContainer("...");
+
+    @Autowired
+    private ArticleEventPublisher publisher;
+
+    @Test
+    @DisplayName("应该成功发送消息到RocketMQ")
+    void should_send_message_to_rocketmq() {
+        // given
+        var event = new ArticleCreatedEvent(1L, "测试");
+
+        // when
+        publisher.publish(event);
+
+        // then
+        // 验证消息已发送（使用RocketMQ的消费者API验证）
+        await().atMost(5, SECONDS).untilAsserted(() ->
+            assertThat(consumedMessages).hasSize(1)
+        );
+    }
+}
+```
+
+#### 类型 4：Converter - 纯单元测试
+
+```java
+// 🔴 Red: 先写测试
+class ArticleConverterTest {
+
+    private final ArticleConverter converter = Mappers.getMapper(ArticleConverter.class);
+
+    @Test
+    @DisplayName("应该正确转换Domain到Entity")
+    void should_convert_domain_to_entity() {
+        // given
+        Article article = Article.create("测试标题", "测试内容");
+
+        // when
+        ArticleEntity entity = converter.toEntity(article);
+
+        // then
+        assertThat(entity.getTitle()).isEqualTo("测试标题");
+        assertThat(entity.getContent()).isEqualTo("测试内容");
+    }
+
+    @Test
+    @DisplayName("应该正确处理null值")
+    void should_handle_null_values() {
+        // when
+        ArticleEntity entity = converter.toEntity(null);
+
+        // then
+        assertThat(entity).isNull();
+    }
+}
+```
+
 ### Adapter 层 TDD（API 接口）
 
-**特点**：使用 MockMvc，测试 HTTP 契约
+**特点**：使用 @WebMvcTest 切片测试，验证 HTTP 请求/响应、参数校验、异常处理
+**测试位置**：`patra-{service}-adapter/src/test/java/`
+**Mock 策略**：Mock 业务层依赖（UseCase/Orchestrator）
 
-#### 示例：开发 ArticleController
+#### 类型 1：Controller - @WebMvcTest 切片测试
+
+**示例：开发 ArticleController**
 
 ```java
 // 🔴 Red: 先写测试
 @WebMvcTest(ArticleController.class)
-class ArticleControllerIT {
+class ArticleControllerTest {  // 注意：命名为 *Test.java，位于 adapter 模块
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
-    private ArticleOrchestrator orchestrator;
+    private ArticleOrchestrator orchestrator;  // Mock 业务层
 
     @Test
     @DisplayName("创建文章应该返回201和文章ID")
@@ -447,7 +602,114 @@ class ArticleControllerIT {
         mockMvc.perform(post("/api/v1/articles")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(request))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("标题不能为空"));
+    }
+
+    @Test
+    @DisplayName("业务异常应该转换为HTTP错误")
+    void should_convert_business_exception_to_http_error() throws Exception {
+        // given
+        var request = """
+            {
+                "title": "测试标题",
+                "content": "测试内容"
+            }
+            """;
+        when(orchestrator.createArticle(any()))
+            .thenThrow(new ArticleException("文章已存在"));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/articles")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("文章已存在"));
+    }
+}
+
+#### 类型 2：Listener - 单元测试
+
+```java
+// 🔴 Red: 先写测试
+@ExtendWith(MockitoExtension.class)
+class ArticleEventListenerTest {
+
+    @Mock
+    private ArticleOrchestrator orchestrator;
+
+    @InjectMocks
+    private ArticleEventListener listener;
+
+    @Test
+    @DisplayName("应该正确处理文章创建事件")
+    void should_handle_article_created_event() {
+        // given
+        String message = "{\"id\":1,\"title\":\"测试\"}";
+
+        // when
+        listener.onArticleCreated(message);
+
+        // then
+        ArgumentCaptor<ProcessCommand> captor = ArgumentCaptor.forClass(ProcessCommand.class);
+        verify(orchestrator).processArticle(captor.capture());
+        assertThat(captor.getValue().getArticleId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("消息格式错误时应该记录错误")
+    void should_log_error_when_invalid_message_format() {
+        // given
+        String invalidMessage = "invalid json";
+
+        // when & then
+        assertThatThrownBy(() -> listener.onArticleCreated(invalidMessage))
+            .isInstanceOf(MessageDeserializationException.class);
+
+        verify(orchestrator, never()).processArticle(any());
+    }
+}
+```
+
+#### 类型 3：Job - 单元测试
+
+```java
+// 🔴 Red: 先写测试
+@ExtendWith(MockitoExtension.class)
+class ArticleSyncJobTest {
+
+    @Mock
+    private ArticleOrchestrator orchestrator;
+
+    @InjectMocks
+    private ArticleSyncJob job;
+
+    @Test
+    @DisplayName("应该同步所有待处理文章")
+    void should_sync_all_pending_articles() {
+        // given
+        when(orchestrator.getPendingArticles()).thenReturn(List.of(1L, 2L, 3L));
+
+        // when
+        job.execute();
+
+        // then
+        verify(orchestrator, times(3)).syncArticle(anyLong());
+    }
+
+    @Test
+    @DisplayName("同步失败时应该继续处理其他文章")
+    void should_continue_when_sync_fails() {
+        // given
+        when(orchestrator.getPendingArticles()).thenReturn(List.of(1L, 2L, 3L));
+        doThrow(new RuntimeException("Sync failed")).when(orchestrator).syncArticle(1L);
+
+        // when
+        job.execute();
+
+        // then
+        verify(orchestrator).syncArticle(2L);
+        verify(orchestrator).syncArticle(3L);
     }
 }
 
@@ -475,6 +737,147 @@ record CreateArticleRequest(
     @NotBlank(message = "内容不能为空") String content
 ) {}
 ```
+
+### Boot 层 E2E 测试（端到端验证）
+
+**特点**：@SpringBootTest 完整业务流程测试，验证 HTTP → 业务 → DB → MQ → ES 完整链路
+**测试位置**：`patra-{service}-boot/src/test/java/`
+**测试策略**：使用 TestContainers 启动所有依赖，Awaitility 进行异步断言
+
+#### 示例：文章创建完整流程 E2E 测试
+
+```java
+// 🔴 Red: 先写 E2E 测试
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Testcontainers
+@ContextConfiguration(initializers = {
+    MySQLContainerInitializer.class,
+    RocketMQContainerInitializer.class
+})
+class ArticleCreationE2ETest {
+
+    @Container
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
+
+    @Container
+    static RocketMQContainer rocketmq = new RocketMQContainer("apache/rocketmq:5.1.0");
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @Autowired
+    private ArticleMapper articleMapper;
+
+    @Autowired
+    private RocketMQTemplate rocketMQTemplate;
+
+    private final List<String> consumedMessages = new CopyOnWriteArrayList<>();
+
+    @BeforeEach
+    void setupMessageConsumer() {
+        // 订阅消息用于验证
+        rocketMQTemplate.getConsumer().subscribe("article-topic", "*",
+            (msgs) -> {
+                msgs.forEach(msg -> consumedMessages.add(new String(msg.getBody())));
+                return ConsumeOrderlyStatus.SUCCESS;
+            });
+    }
+
+    @Test
+    @DisplayName("创建文章应该保存到数据库并发布MQ消息")
+    void should_save_to_db_and_publish_message_when_create_article() {
+        // given
+        var request = new CreateArticleRequest("测试标题", "测试内容");
+
+        // when - 发送 HTTP 请求
+        ResponseEntity<ArticleResponse> response = restTemplate.postForEntity(
+            "/api/v1/articles",
+            request,
+            ArticleResponse.class
+        );
+
+        // then - 验证 HTTP 响应
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().id()).isNotNull();
+        Long articleId = response.getBody().id();
+
+        // then - 验证数据库状态
+        ArticleEntity savedEntity = articleMapper.selectById(articleId);
+        assertThat(savedEntity).isNotNull();
+        assertThat(savedEntity.getTitle()).isEqualTo("测试标题");
+        assertThat(savedEntity.getStatus()).isEqualTo("DRAFT");
+
+        // then - 验证消息发布（异步断言）
+        await().atMost(10, SECONDS).untilAsserted(() -> {
+            assertThat(consumedMessages).hasSize(1);
+            String message = consumedMessages.get(0);
+            assertThat(message).contains("\"id\":" + articleId);
+            assertThat(message).contains("\"eventType\":\"ARTICLE_CREATED\"");
+        });
+    }
+
+    @Test
+    @DisplayName("创建失败时应该回滚事务且不发布消息")
+    void should_rollback_and_not_publish_when_creation_fails() {
+        // given - 插入冲突数据
+        ArticleEntity conflict = new ArticleEntity();
+        conflict.setTitle("冲突标题");
+        conflict.setUniqueKey("test-key");
+        articleMapper.insert(conflict);
+
+        consumedMessages.clear();
+
+        // when - 尝试创建相同 unique key 的文章
+        var request = new CreateArticleRequest("冲突标题", "测试内容");
+        ResponseEntity<ErrorResponse> response = restTemplate.postForEntity(
+            "/api/v1/articles",
+            request,
+            ErrorResponse.class
+        );
+
+        // then - 验证错误响应
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        // then - 验证数据库没有新记录
+        List<ArticleEntity> articles = articleMapper.selectList(
+            new LambdaQueryWrapper<ArticleEntity>()
+                .eq(ArticleEntity::getTitle, "冲突标题")
+        );
+        assertThat(articles).hasSize(1); // 只有原来的记录
+
+        // then - 验证没有发布消息
+        await().during(3, SECONDS).atMost(5, SECONDS).untilAsserted(() ->
+            assertThat(consumedMessages).isEmpty()
+        );
+    }
+}
+
+// 容器初始化器
+public class MySQLContainerInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
+        .withDatabaseName("patra_test")
+        .withUsername("test")
+        .withPassword("test");
+
+    @Override
+    public void initialize(ConfigurableApplicationContext context) {
+        mysql.start();
+        TestPropertyValues.of(
+            "spring.datasource.url=" + mysql.getJdbcUrl(),
+            "spring.datasource.username=" + mysql.getUsername(),
+            "spring.datasource.password=" + mysql.getPassword()
+        ).applyTo(context.getEnvironment());
+    }
+}
+```
+
+**E2E 测试关键点**：
+
+1. **完整链路验证**：HTTP → 业务 → 数据库 → 消息队列
+2. **真实依赖**：使用 TestContainers 启动真实的 MySQL、RocketMQ
+3. **异步断言**：使用 Awaitility 等待异步操作完成
+4. **事务验证**：验证成功提交和失败回滚
+5. **数据一致性**：验证数据库状态和消息发布的一致性
 
 ---
 
