@@ -21,7 +21,7 @@ import java.util.List;
  * @author linqibin
  * @since 0.1.0
  */
-public interface OutboxRelayStore {
+public interface OutboxRelayRepository {
 
   /**
    * 获取待处理的 Outbox 消息。

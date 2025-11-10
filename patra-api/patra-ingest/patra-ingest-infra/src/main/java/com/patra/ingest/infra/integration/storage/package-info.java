@@ -11,7 +11,7 @@
  * <p>关键组件:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.infra.integration.storage.LiteratureStorageAdapter} - 实现 {@link
+ *   <li>{@link com.patra.ingest.infra.integration.storage.LiteratureStoragePort} - 实现 {@link
  *       com.patra.ingest.domain.port.LiteratureStoragePort} 将文献存储到对象存储 (S3/MinIO)
  *   <li>{@link com.patra.ingest.infra.integration.storage.StorageMetadataAdapter} - 实现 {@link
  *       com.patra.ingest.domain.port.StorageMetadataPort} 通过 patra-storage 服务记录元数据

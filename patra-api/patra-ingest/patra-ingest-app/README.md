@@ -8,7 +8,7 @@
 - **用例编排**: PlanIngestionOrchestrator、OutboxRelayOrchestrator、TaskExecutionUseCase
 - **事务边界管理**: 通过 `@Transactional` 确保业务操作的原子性
 - **领域事件处理**: TaskCompletedEventHandler、SliceStatusChangedEventHandler
-- **Outbox 发布**: TaskOutboxPublisher、MetadataRecordRetryPublisher
+- **Outbox 发布**: TaskOutboxPublisher、LiteratureEventPublisher
 - **表达式编译集成**: 调用 patra-expr-kernel 编译表达式
 
 **架构约束**: 应用层依赖 Domain 层,但不直接依赖 Infra 层(通过端口接口解耦)。
@@ -122,8 +122,6 @@ patra-ingest-app/
    │  │  ├─ AbstractOutboxPublisher.java        # Outbox 发布器抽象基类
    │  │  ├─ OutboxPublishContext.java           # 发布上下文
    │  │  └─ OutboxPublishResult.java            # 发布结果
-   │  ├─ publisher/
-   │  │  └─ MetadataRecordRetryPublisher.java   # 元数据重试发布器
    │  ├─ constants/
    │  │  ├─ OutboxAggregateTypes.java           # 聚合类型常量
    │  │  ├─ OutboxChannels.java                 # 通道常量

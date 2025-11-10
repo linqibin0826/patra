@@ -7,7 +7,7 @@ import static org.mockito.Mockito.*;
 
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.relay.RelayPlan;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +41,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("RelayLeaseCoordinator 单元测试")
 class RelayLeaseCoordinatorTest {
 
-  @Mock private OutboxRelayStore relayStore;
+  @Mock private OutboxRelayRepository relayStore;
 
   @InjectMocks private RelayLeaseCoordinator coordinator;
 

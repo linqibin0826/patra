@@ -21,7 +21,7 @@
  *   <li>{@link com.patra.ingest.domain.port.CursorEventRepository} - 游标事件仓储</li>
  *   <li>{@link com.patra.ingest.domain.port.OutboxMessageRepository} - Outbox 消息仓储</li>
  *   <li>{@link com.patra.ingest.domain.port.OutboxRelayLogRepository} - Outbox 中继日志仓储</li>
- *   <li>{@link com.patra.ingest.domain.port.OutboxRelayStore} - Outbox 中继存储(复合操作)</li>
+ *   <li>{@link com.patra.ingest.domain.port.OutboxRelayRepository} - Outbox 中继存储(复合操作)</li>
  * </ul>
  *
  * <h3>2. 外部服务端口(External Service Ports) - 被驱动端口</h3>
@@ -52,7 +52,7 @@
  *         <li>查询和更新文献元数据</li>
  *       </ul>
  *   </li>
- *   <li>{@link com.patra.ingest.domain.port.StorageAdapter} - 通用存储适配器端口
+ *   <li>{@link com.patra.ingest.domain.port.StoragePort} - 通用存储适配器端口
  *       <ul>
  *         <li>文件上传和下载</li>
  *         <li>支持多种存储后端(OSS, S3等)</li>
@@ -128,8 +128,8 @@
  * <ul>
  *   <li><b>Repository</b>: 仓储端口,用于聚合根持久化(如 {@code PlanRepository})</li>
  *   <li><b>Port</b>: 外部服务端口,用于调用外部系统(如 {@code PubmedSearchPort})</li>
- *   <li><b>Adapter</b>: 通用适配器端口(如 {@code StorageAdapter})</li>
- *   <li><b>Store</b>: 复合存储端口,组合多个仓储操作(如 {@code OutboxRelayStore})</li>
+ *   <li><b>Adapter</b>: 通用适配器端口(如 {@code StoragePort})</li>
+ *   <li><b>Store</b>: 复合存储端口,组合多个仓储操作(如 {@code OutboxRelayRepository})</li>
  * </ul>
  *
  * <h2>端口方法设计规范</h2>

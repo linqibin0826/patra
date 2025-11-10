@@ -2,7 +2,7 @@ package com.patra.ingest.app.usecase.relay.coordinator;
 
 import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.relay.RelayPlan;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RelayLeaseCoordinator {
 
-  private final OutboxRelayStore relayStore;
+  private final OutboxRelayRepository relayStore;
 
   /**
    * 尝试为单条 Outbox 消息获取租约

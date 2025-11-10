@@ -19,7 +19,7 @@ import com.patra.ingest.domain.model.vo.storage.StorageUploadResult;
  * @author linqibin
  * @since 0.1.0
  */
-public interface StorageAdapter {
+public interface StoragePort {
 
   /**
    * 上传数据到对象存储。

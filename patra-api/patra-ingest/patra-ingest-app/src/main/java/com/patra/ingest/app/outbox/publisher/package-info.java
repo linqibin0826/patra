@@ -13,11 +13,22 @@
  *
  * <h2>核心组件</h2>
  * <ul>
- *   <li>{@code MetadataRecordRetryPublisher} - 元数据重试事件发布器
+ *   <li>{@code TaskOutboxPublisher} - 任务事件发布器
  *       <ul>
- *         <li>处理 {@code MetadataRecordRetryEvent}
- *         <li>发布到 {@code METADATA_RECORD_RETRY} 通道
- *         <li>用于重试失败的元数据记录采集
+ *         <li>处理 {@code TaskQueuedEvent}
+ *         <li>发布到 {@code INGEST_TASK_READY} 通道
+ *         <li>用于触发任务执行流程
+ *       </ul>
+ *   <li>{@code LiteratureEventPublisher} - 文献事件发布器
+ *       <ul>
+ *         <li>处理 {@code LiteratureDataReadyEvent}
+ *         <li>发布到 {@code LITERATURE_DATA_READY} 通道
+ *         <li>用于通知文献数据已就绪
+ *       </ul>
+ *   <li>{@code RelayEventPublisher} - 中继事件发布器
+ *       <ul>
+ *         <li>处理 Outbox 中继事件
+ *         <li>用于发布消息到 RocketMQ
  *       </ul>
  * </ul>
  *
@@ -36,10 +47,16 @@
  *     <td>TaskReadyMessageListener</td>
  *   </tr>
  *   <tr>
- *     <td>MetadataRecordRetryPublisher</td>
- *     <td>MetadataRecordRetryEvent</td>
- *     <td>METADATA_RECORD_RETRY</td>
- *     <td>MetadataRetryListener</td>
+ *     <td>LiteratureEventPublisher</td>
+ *     <td>LiteratureDataReadyEvent</td>
+ *     <td>LITERATURE_DATA_READY</td>
+ *     <td>LiteratureReadyMessageListener</td>
+ *   </tr>
+ *   <tr>
+ *     <td>RelayEventPublisher</td>
+ *     <td>OutboxMessage</td>
+ *     <td>动态（根据消息通道）</td>
+ *     <td>各消费者</td>
  *   </tr>
  * </table>
  *
@@ -48,40 +65,41 @@
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
- * public class MetadataRecordRetryPublisher
- *     extends AbstractOutboxPublisher<MetadataRecordRetryEvent, RetryPayload, RetryHeaders> {
+ * public class LiteratureEventPublisher
+ *     extends AbstractOutboxPublisher<LiteratureDataReadyEvent, LiteratureReadyPayload, LiteratureReadyHeaders> {
  *
  *     private final ObjectMapper objectMapper;
  *
  *     @Override
  *     protected OutboxAggregateTypes getAggregateType() {
- *         return OutboxAggregateTypes.METADATA_RECORD;
+ *         return OutboxAggregateTypes.TASK;
  *     }
  *
  *     @Override
  *     protected OutboxChannels getChannel() {
- *         return OutboxChannels.METADATA_RECORD_RETRY;
+ *         return OutboxChannels.LITERATURE_DATA_READY;
  *     }
  *
  *     @Override
- *     protected RetryPayload buildPayload(MetadataRecordRetryEvent event) {
- *         return RetryPayload.builder()
- *             .recordId(event.getRecordId())
- *             .failureReason(event.getFailureReason())
- *             .retryCount(event.getRetryCount())
+ *     protected LiteratureReadyPayload buildPayload(LiteratureDataReadyEvent event) {
+ *         return LiteratureReadyPayload.builder()
+ *             .taskId(event.getTaskId())
+ *             .runId(event.getRunId())
+ *             .storageKeys(event.getStorageKeys())
+ *             .totalCount(event.getTotalLiteratureCount())
  *             .build();
  *     }
  *
  *     @Override
- *     protected String buildPartitionKey(MetadataRecordRetryEvent event) {
- *         // 按 recordId 分区，确保同一记录的重试消息顺序消费
- *         return String.valueOf(event.getRecordId());
+ *     protected String buildPartitionKey(LiteratureDataReadyEvent event) {
+ *         // 按 provenanceCode 分区，确保同一数据源的消息顺序消费
+ *         return event.getProvenanceCode();
  *     }
  *
  *     @Override
- *     protected String buildDedupKey(MetadataRecordRetryEvent event) {
- *         // recordId + retryCount 保证幂等性
- *         return event.getRecordId() + ":" + event.getRetryCount();
+ *     protected String buildDedupKey(LiteratureDataReadyEvent event) {
+ *         // taskId + runId 保证幂等性
+ *         return String.format("task:%d:run:%d:literature", event.getTaskId(), event.getRunId());
  *     }
  * }
  * }</pre>
@@ -91,16 +109,22 @@
  * @Service
  * @RequiredArgsConstructor
  * @Transactional
- * public class MetadataFailureHandler {
- *     private final MetadataRecordRetryPublisher retryPublisher;
+ * public class LiteraturePublisherOrchestrator {
+ *     private final LiteratureEventPublisher literaturePublisher;
  *
- *     public void handleFailure(Long recordId, String reason) {
- *         // 1. 标记记录为失败状态
- *         markRecordAsFailed(recordId, reason);
+ *     public void publishLiteratureData(Long taskId, Long runId, List<String> storageKeys) {
+ *         // 1. 构建领域事件
+ *         var event = new LiteratureDataReadyEvent(
+ *             taskId,
+ *             runId,
+ *             "pubmed",
+ *             storageKeys,
+ *             storageKeys.size(),
+ *             Instant.now()
+ *         );
  *
- *         // 2. 发布重试事件到 Outbox
- *         var event = new MetadataRecordRetryEvent(recordId, reason, 1);
- *         retryPublisher.publish(List.of(event));
+ *         // 2. 发布到 Outbox（同一事务内）
+ *         literaturePublisher.publish(event);
  *
  *         // 3. 事务提交后，Outbox 中继会自动发布到 MQ
  *     }

@@ -63,10 +63,10 @@
  *         <li>处理 {@code TaskQueuedEvent}
  *         <li>发布到 {@code INGEST_TASK_READY} 通道
  *       </ul>
- *   <li>{@code MetadataRecordRetryPublisher} - 元数据重试发布器
+ *   <li>{@code LiteratureEventPublisher} - 文献事件发布器
  *       <ul>
- *         <li>处理 {@code MetadataRecordRetryEvent}
- *         <li>发布到 {@code METADATA_RECORD_RETRY} 通道
+ *         <li>处理 {@code LiteratureDataReadyEvent}
+ *         <li>发布到 {@code LITERATURE_DATA_READY} 通道
  *       </ul>
  * </ul>
  *

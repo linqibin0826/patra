@@ -14,7 +14,7 @@ import com.patra.ingest.domain.model.entity.OutboxMessage;
 import com.patra.ingest.domain.model.vo.relay.RelayBatchId;
 import com.patra.ingest.domain.model.vo.relay.RelayBatchResult;
 import com.patra.ingest.domain.model.vo.relay.RelayPlan;
-import com.patra.ingest.domain.port.OutboxRelayStore;
+import com.patra.ingest.domain.port.OutboxRelayRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,7 +77,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class OutboxRelayExecutor {
 
-  private final OutboxRelayStore relayStore;
+  private final OutboxRelayRepository relayStore;
   private final RelayLeaseCoordinator leaseCoordinator;
   private final RelayPublishCoordinator publishCoordinator;
   private final RelayLogCoordinator logCoordinator;
