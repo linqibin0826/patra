@@ -1,6 +1,21 @@
 ---
 name: java-spring-development
-description: Spring Boot微服务开发，创建Controller、Orchestrator、Coordinator、Repository实现、MyBatis-Plus映射、MapStruct转换器。当你编写REST API、数据访问层、事务管理、XXL-Job定时任务、配置管理时使用。关键词：Spring Boot、@Transactional、MyBatis-Plus、MapStruct、REST控制器、Nacos配置。
+description: |
+  Spring Boot 微服务开发专家，提供技术实现模式和最佳实践。
+
+  **自动激活场景**：
+  - 创建 REST Controller（@RestController、@RequestMapping）
+  - 实现 Orchestrator/Coordinator（@Service、@Transactional）
+  - 开发 Repository（MyBatis-Plus、@Mapper）
+  - 配置 MapStruct 转换器
+  - 创建 XXL-Job 定时任务（@XxlJob）
+  - 配置 Nacos 动态配置（@RefreshScope）
+
+  **触发关键词**：Spring Boot、Controller、Orchestrator、Coordinator、
+  Repository、MyBatis-Plus、MapStruct、XXL-Job、Nacos、@Transactional、
+  @Service、@RestController、@Mapper、REST API、定时任务、事务管理。
+
+  **技术栈**：Spring Boot 3.5.7、MyBatis-Plus 3.5.x、MapStruct 1.5.x、XXL-Job 2.4.x。
 allowed-tools: Read, Edit, Write, Grep, Glob, Bash, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, mcp__ide__getDiagnostics
 ---
 

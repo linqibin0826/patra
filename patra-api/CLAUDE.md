@@ -40,8 +40,8 @@
 ### 核心原则
 
 **✅ 应该做**
-- 🚨 **[强制]** 首先阅读模块 README.md
-- 🚨 **[强制]** 信息不足时先询问（不要猜测）
+- 🚨 **[强制]** 首先阅读模块 README.md 与 包的 package-info.java
+- 🚨 **[强制]** 信息不足时先询问 或 自行查验（不要猜测）
 - 🚨 **[强制]** 三次失败必须转换策略（不允许第 4 次尝试）
 - [推荐] 遵守依赖方向和层边界
 - [推荐] 重用 patra-* starters、patra-common、Hutool
@@ -182,13 +182,14 @@
 
 ### 何时必须委派给 Subagents
 
-| 任务类型 | 推荐 Subagent | 理由 |
-|---------|--------------|------|
-| 🚀 后端功能开发 | `patra-backend-developer` | TDD 驱动的完整实现（测试+代码） |
-| 🐛 诊断运行时错误/日志 | `runtime-error-diagnostic` | 专业故障排查 |
-| 📚 编写/更新文档 | `documentation-architect` | 结构化文档 |
-| 🔬 代码质量审查 | `code-architecture-reviewer` | 独立视角 |
-| 🌐 调研技术方案 | `web-research-specialist` | 专业调研 |
+| 任务类型 | 推荐 Subagent | 自动触发条件 |
+|---------|--------------|------------|
+| 🚀 **后端功能开发** | `patra-backend-developer` | 创建/实现 REST API、领域逻辑、Repository、定时任务（≥20 行） |
+| 🏗️ **架构设计/评审** | `java-hexagonal-architecture` | 设计领域模型、评审架构方案、技术选型决策 |
+| 🐛 **运行时错误诊断** | `runtime-error-diagnostic` | 分析日志、SkyWalking 追踪、性能问题排查 |
+| 📚 **文档编写/更新** | `documentation-architect` | 创建 README、package-info、API 文档、ADR |
+| 🔬 **代码质量审查** | `code-reviewer` | 完成功能后的代码审查、架构合规检查 |
+| 🌐 **技术方案调研** | `web-research-specialist` | 搜索解决方案、调研最佳实践、GitHub Issues |
 
 ### 你应该亲自处理的任务
 
@@ -263,7 +264,7 @@
 ```
 并行启动：
 ├─ context7 (Spring Boot/MyBatis) - 查官方文档
-└─ web-research-specialist - 搜索 GitHub Issues, Stack Overflow
+└─ web-research-specialist - 搜索 GitHub Issues, Stack Overflow, Google 等
 ```
 
 **运行时错误/异常**
@@ -336,22 +337,17 @@
 ## 项目概览
 
 **Patra** — 医学文献数据平台，采集 10+ 数据源 (PubMed, EPMC 等)。使用 `patra-registry` 作为 Provenance 配置、字典、元数据的单一事实来源 (SSOT)。
-
 **架构**: 微服务 + 六边形架构 + DDD + 事件驱动
-
 **技术栈**: Java 25 | Spring Boot 3.5.7 + Cloud 2025.0.0 | Maven | MyBatis-Plus + MapStruct | Nacos
-
-**当前重点**: 可靠的数据采集 → 解析 → 存储
 
 ## 代码库结构
 
 **仓库**: `patra-parent`, `patra-common`, `patra-expr-kernel`, `patra-gateway-boot`, `patra-registry`, `patra-ingest`, `patra-spring-boot-starter-*`, `docker/`
-
 **微服务模块**: `patra-{service}-boot` (入口), `-api` (契约), `-domain` (纯 Java), `-app` (编排器), `-infra` (仓储), `-adapter` (控制器/定时任务)
 
 ## 资源
 
-**文档**: 每个 `patra-*` 模块中的模块特定 `README.md` 文件
+**文档**: 每个 `patra-*` 模块中的模块特定 `README.md` 文件, 重点包中存在 `package-info.java`
 
 ---
 
