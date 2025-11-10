@@ -20,13 +20,23 @@
   - 当前覆盖率: [%]
   - 未覆盖的关键代码: [列出]
 
-- [ ] **CHK-COV-003**: Infrastructure 层有 IT 集成测试
-  - IT 测试数量: [数量]
+- [ ] **CHK-COV-003**: Infrastructure 层有单元测试和集成测试
+  - 单元测试数量: [数量]
+  - 集成测试数量: [数量]
   - 覆盖的 Repository: [列出]
+  - 覆盖的 Feign Client: [列出]
+  - 覆盖的 MQ Publisher: [列出]
 
-- [ ] **CHK-COV-004**: Adapter 层有 E2E 测试
+- [ ] **CHK-COV-004**: Adapter 层有单元测试和切片测试
+  - 单元测试数量: [数量]
+  - 切片测试数量: [数量]
+  - 覆盖的 Controller: [列出]
+  - 覆盖的 Listener: [列出]
+  - 覆盖的 Job: [列出]
+
+- [ ] **CHK-COV-005**: Boot 层有 E2E 端到端测试
   - E2E 测试数量: [数量]
-  - 覆盖的 API: [列出]
+  - 覆盖的业务流程: [列出]
 
 ---
 
@@ -105,44 +115,69 @@
 
 ## 🔧 Infrastructure 层测试
 
-### Repository IT 测试
+### Repository 集成测试
 
-- [ ] **CHK-INFRA-001**: 所有 Repository 实现有 IT 测试
+- [ ] **CHK-INFRA-001**: 所有 Repository 实现有集成测试
   - Repository 列表: [列出所有 Repository]
-  - [ ] 使用 `@SpringBootTest`
-  - [ ] 使用 TestContainers 启动真实数据库
+  - [ ] 使用 `@MybatisTest` 切片测试
+  - [ ] 使用 TestContainers 启动真实数据库（MySQL）
   - [ ] 测试文件命名: `*RepositoryIT.java`
+  - [ ] 测试位置: `patra-{service}-infra/src/test/java/`
 
-- [ ] **CHK-INFRA-002**: IT 测试覆盖 CRUD 操作
+- [ ] **CHK-INFRA-002**: Repository 测试覆盖 CRUD 操作
   - [ ] 测试 save() 方法
   - [ ] 测试 findById() 方法
   - [ ] 测试 findAll() / findByXxx() 方法
   - [ ] 测试 update() 方法
   - [ ] 测试 delete() 方法
 
-- [ ] **CHK-INFRA-003**: IT 测试验证 SQL 正确性
+- [ ] **CHK-INFRA-003**: Repository 测试验证 SQL 正确性
   - [ ] 验证查询结果
   - [ ] 验证数据库状态
   - [ ] 验证关联关系
 
-### Mapper 测试
+### Feign Client 测试
 
-- [ ] **CHK-INFRA-004**: MyBatis Mapper 有 IT 测试
-  - [ ] 测试自定义 SQL
-  - [ ] 验证返回结果
-  - [ ] 验证参数绑定
+- [ ] **CHK-INFRA-004**: Feign Client 有单元测试和集成测试
+  - Feign Client 列表: [列出所有 Feign Client]
+  - [ ] **单元测试**: Mock HTTP 响应，验证请求构建
+  - [ ] **集成测试**: 使用 WireMock 模拟外部服务
+  - [ ] 测试文件命名: `*ClientTest.java` (单元), `*ClientIT.java` (集成)
+  - [ ] 测试位置: `patra-{service}-infra/src/test/java/`
 
-### Converter 测试
+### MQ Publisher 测试
 
-- [ ] **CHK-INFRA-005**: MapStruct Converter 有单元测试
+- [ ] **CHK-INFRA-005**: MQ Publisher 有单元测试和集成测试
+  - Publisher 列表: [列出所有 Publisher]
+  - [ ] **单元测试**: Mock MQ Template，验证消息构建
+  - [ ] **集成测试**: 使用 TestContainers 启动真实 RocketMQ
+  - [ ] 测试文件命名: `*PublisherTest.java` (单元), `*PublisherIT.java` (集成)
+  - [ ] 测试位置: `patra-{service}-infra/src/test/java/`
+
+### Elasticsearch Client 测试
+
+- [ ] **CHK-INFRA-006**: ES Client 有集成测试（如使用 ES）
+  - ES Client 列表: [列出所有 ES Client]
+  - [ ] 使用 `@DataElasticsearchTest` 切片测试
+  - [ ] 使用 TestContainers 启动真实 Elasticsearch
+  - [ ] 测试文件命名: `*ClientIT.java`
+  - [ ] 测试位置: `patra-{service}-infra/src/test/java/`
+
+### Converter 单元测试
+
+- [ ] **CHK-INFRA-007**: MapStruct Converter 有单元测试
+  - Converter 列表: [列出所有 Converter]
   - [ ] 测试映射完整性
   - [ ] 测试 null 值处理
   - [ ] 测试复杂映射规则
+  - [ ] 测试位置: `patra-{service}-infra/src/test/java/`
 
 ### TestContainers 配置
 
-- [ ] **CHK-INFRA-006**: TestContainers 配置正确
+- [ ] **CHK-INFRA-008**: TestContainers 配置正确
   - [ ] 使用正确的数据库版本（如 MySQL 8）
+  - [ ] 使用正确的 RocketMQ 版本
+  - [ ] 使用正确的 Elasticsearch 版本
   - [ ] 容器启动成功
   - [ ] 容器在测试结束后关闭
 
@@ -150,43 +185,94 @@
 
 ## 🔌 Adapter 层测试
 
-### Controller E2E 测试
+### Controller 切片测试
 
-- [ ] **CHK-ADAPTER-001**: 所有 Controller 有 E2E 测试
+- [ ] **CHK-ADAPTER-001**: 所有 Controller 有单元测试和切片测试
   - Controller 列表: [列出所有 Controller]
-  - [ ] 使用 MockMvc 测试 REST API
-  - [ ] 测试文件命名: `*ControllerE2ETest.java` 或 `*ControllerIT.java`
-  - [ ] 位置: `patra-{service}-boot/src/test/java/`
+  - [ ] **单元测试**: 使用 `@WebMvcTest` 切片测试
+  - [ ] Mock 业务层依赖（UseCase/Orchestrator）
+  - [ ] 测试文件命名: `*ControllerTest.java`
+  - [ ] 测试位置: `patra-{service}-adapter/src/test/java/`
 
-- [ ] **CHK-ADAPTER-002**: E2E 测试覆盖所有 API
+- [ ] **CHK-ADAPTER-002**: Controller 测试覆盖所有 HTTP 方法
   - [ ] 测试 GET 请求
   - [ ] 测试 POST 请求
   - [ ] 测试 PUT 请求
   - [ ] 测试 DELETE 请求
 
-- [ ] **CHK-ADAPTER-003**: E2E 测试验证 HTTP 响应
+- [ ] **CHK-ADAPTER-003**: Controller 测试验证 HTTP 请求/响应
   - [ ] 验证状态码（200/201/400/404/500）
   - [ ] 验证响应体结构
   - [ ] 验证错误消息
+  - [ ] 验证 Content-Type 头
 
-- [ ] **CHK-ADAPTER-004**: E2E 测试验证业务逻辑
-  - [ ] 验证数据库状态
-  - [ ] 验证领域事件发布（如需要）
-  - [ ] 端到端验证完整流程
+- [ ] **CHK-ADAPTER-004**: Controller 测试验证参数校验
+  - [ ] 测试 @Valid 参数校验
+  - [ ] 测试路径参数验证
+  - [ ] 测试查询参数验证
+  - [ ] 测试请求体验证
 
-### Listener 测试
+- [ ] **CHK-ADAPTER-005**: Controller 测试验证异常处理
+  - [ ] 测试业务异常转换为 HTTP 错误
+  - [ ] 测试全局异常处理器
+  - [ ] 验证错误响应格式
 
-- [ ] **CHK-ADAPTER-005**: 事件监听器有集成测试
-  - [ ] 测试消息消费
-  - [ ] 验证业务逻辑执行
+### Listener 单元测试
+
+- [ ] **CHK-ADAPTER-006**: 事件监听器有单元测试
+  - Listener 列表: [列出所有 Listener]
+  - [ ] Mock 业务层依赖
+  - [ ] 测试消息反序列化
+  - [ ] 测试消息处理逻辑
   - [ ] 测试异常处理
+  - [ ] 测试位置: `patra-{service}-adapter/src/test/java/`
 
-### Job 测试
+### Job 单元测试
 
-- [ ] **CHK-ADAPTER-006**: 定时任务有集成测试
+- [ ] **CHK-ADAPTER-007**: 定时任务有单元测试
+  - Job 列表: [列出所有 Job]
+  - [ ] Mock 业务层依赖
   - [ ] 测试任务执行逻辑
   - [ ] 验证任务结果
   - [ ] 测试异常处理
+  - [ ] 测试位置: `patra-{service}-adapter/src/test/java/`
+
+---
+
+## 🚀 Boot 层测试
+
+### E2E 端到端测试
+
+- [ ] **CHK-BOOT-001**: 所有关键业务流程有 E2E 测试
+  - 业务流程列表: [列出所有关键流程]
+  - [ ] 使用 `@SpringBootTest` 完整上下文测试
+  - [ ] 测试文件命名: `*E2ETest.java` 或 `*IT.java`
+  - [ ] 测试位置: `patra-{service}-boot/src/test/java/`
+
+- [ ] **CHK-BOOT-002**: E2E 测试验证完整业务流程
+  - [ ] 验证 HTTP → 业务逻辑 → 数据库 → MQ → ES 完整链路
+  - [ ] 使用 TestContainers 启动所有依赖（MySQL + RocketMQ + ES）
+  - [ ] 使用 Awaitility 进行异步断言
+
+- [ ] **CHK-BOOT-003**: E2E 测试验证数据一致性
+  - [ ] 验证数据库状态
+  - [ ] 验证消息发布
+  - [ ] 验证事件传播
+  - [ ] 验证最终一致性
+
+- [ ] **CHK-BOOT-004**: E2E 测试覆盖异常场景
+  - [ ] 测试系统故障恢复
+  - [ ] 测试事务回滚
+  - [ ] 测试幂等性保证
+
+### 架构规则测试
+
+- [ ] **CHK-BOOT-005**: 使用 ArchUnit 验证架构规则
+  - [ ] 测试文件: `ArchitectureTest.java`
+  - [ ] 验证六边形架构依赖方向
+  - [ ] 验证 Domain 层纯净性
+  - [ ] 验证命名规范
+  - [ ] 验证包结构规范
 
 ---
 
@@ -252,12 +338,40 @@
   - [ ] 使用 `@Container` 注解
   - [ ] 容器配置正确
 
-### MockMvc
+### Spring Test 切片注解
 
-- [ ] **CHK-TOOL-005**: 正确使用 MockMvc
-  - [ ] 使用 `@AutoConfigureMockMvc`
-  - [ ] 构建清晰的请求
-  - [ ] 验证响应状态和内容
+- [ ] **CHK-TOOL-005**: 正确使用 @WebMvcTest
+  - [ ] 用于 Controller 层切片测试
+  - [ ] Mock 业务层依赖（@MockBean）
+  - [ ] 自动配置 MockMvc
+  - [ ] 只加载 Web 层组件
+
+- [ ] **CHK-TOOL-006**: 正确使用 @MybatisTest
+  - [ ] 用于 Repository 层集成测试
+  - [ ] 结合 TestContainers 使用
+  - [ ] 只加载 MyBatis 相关组件
+  - [ ] 验证 SQL 和数据库操作
+
+- [ ] **CHK-TOOL-007**: 正确使用 @DataElasticsearchTest（如使用 ES）
+  - [ ] 用于 ES Client 层集成测试
+  - [ ] 结合 TestContainers 使用
+  - [ ] 只加载 Elasticsearch 相关组件
+
+### WireMock（HTTP Mock）
+
+- [ ] **CHK-TOOL-008**: 正确使用 WireMock（如有 Feign Client）
+  - [ ] 用于 Feign Client 集成测试
+  - [ ] 模拟外部 HTTP 服务
+  - [ ] 验证 HTTP 请求构建
+  - [ ] 验证响应处理
+
+### Awaitility（异步断言）
+
+- [ ] **CHK-TOOL-009**: 正确使用 Awaitility（如有异步场景）
+  - [ ] 用于 E2E 测试中的异步断言
+  - [ ] 等待消息消费完成
+  - [ ] 等待事件传播完成
+  - [ ] 设置合理的超时时间
 
 ---
 
@@ -343,17 +457,28 @@
 
 **Domain 层测试**:
 - 单元测试数量: [数量]
-- 覆盖率: [%]
+- 覆盖率: [%] (目标 ≥ 80%)
+- 测试位置: `patra-{service}-domain/src/test/java/`
 
 **Application 层测试**:
 - 单元测试数量: [数量]
-- 覆盖率: [%]
+- 覆盖率: [%] (目标 ≥ 70%)
+- 测试位置: `patra-{service}-app/src/test/java/`
 
 **Infrastructure 层测试**:
-- IT 测试数量: [数量]
+- 单元测试数量: [数量]
+- 集成测试数量: [数量]
+- 测试位置: `patra-{service}-infra/src/test/java/`
 
 **Adapter 层测试**:
+- 单元测试数量: [数量]
+- 切片测试数量: [数量]
+- 测试位置: `patra-{service}-adapter/src/test/java/`
+
+**Boot 层测试**:
 - E2E 测试数量: [数量]
+- 架构测试数量: [数量]
+- 测试位置: `patra-{service}-boot/src/test/java/`
 
 **整体状态**: [PASS / FAIL / PARTIAL]
 

@@ -313,6 +313,28 @@
                 <scope>test</scope>
             </dependency>
 
+            <!-- Awaitility - 异步测试工具 -->
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>${awaitility.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- JMH - 性能基准测试框架 -->
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${jmh.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-generator-annprocess</artifactId>
+                <version>${jmh.version}</version>
+                <scope>test</scope>
+            </dependency>
+
             <dependency>
                 <groupId>com.patra</groupId>
                 <artifactId>patra-registry-api</artifactId>

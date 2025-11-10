@@ -33,10 +33,22 @@ description: "特性实施的任务列表模板"
 - **Infrastructure 层**: `patra-{service}-infra/src/main/java/com/patra/{service}/infra/`
 - **Adapter 层**: `patra-{service}-adapter/src/main/java/com/patra/{service}/adapter/`
 - **API 层**: `patra-{service}-api/src/main/java/com/patra/{service}/api/`
-- **测试**（⚠️ 参考测试位置规范）:
-  - 单元测试（`*Test.java`）: `src/test/java/`（与源码同结构，在对应层的模块中）
-  - **IT 集成测试**（`*IT.java`）: **必须在 `patra-{service}-boot/src/test/java/`** ✅
-  - **E2E 测试**（`*E2E.java`）: **必须在 `patra-{service}-boot/src/test/java/`** ✅
+- **测试**（⚠️ 严格遵循测试位置规范）:
+  - **Domain 层单元测试** (`*Test.java`): `patra-{service}-domain/src/test/java/`
+    - JUnit 5 + Mockito + AssertJ，无框架依赖
+  - **Application 层单元测试** (`*Test.java`): `patra-{service}-app/src/test/java/`
+    - Mock 所有 Port 接口，JUnit 5 + Mockito + AssertJ
+  - **Infrastructure 层测试** (`*Test.java` / `*IT.java`): `patra-{service}-infra/src/test/java/`
+    - Repository: @MybatisTest + TestContainers (MySQL)
+    - Feign Client: 单元测试 + WireMock
+    - MQ Publisher: 单元测试 + TestContainers (RocketMQ)
+    - Converter: 单元测试
+  - **Adapter 层测试** (`*Test.java`): `patra-{service}-adapter/src/test/java/`
+    - Controller: @WebMvcTest 切片测试，Mock 业务层依赖
+    - Listener: 单元测试，Mock 业务层依赖
+    - Job: 单元测试，Mock 业务层依赖
+  - **Boot 层 E2E 测试** (`*E2ETest.java` / `*IT.java`): `patra-{service}-boot/src/test/java/`
+    - @SpringBootTest 完整业务流程测试，TestContainers + Awaitility
   - 详见: [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md)
 
 <!--

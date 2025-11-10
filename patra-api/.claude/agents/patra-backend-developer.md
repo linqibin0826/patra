@@ -110,13 +110,17 @@ Skill("java-spring-development")  # Spring Boot 技术实现模式
 
 **TDD 策略：纯单元测试，无 Mock，快速反馈**
 
+**测试位置**: `patra-{service}-domain/src/test/java/`
+**测试命名**: `*Test.java`
+**测试框架**: JUnit 5 + Mockito + AssertJ（无框架依赖）
+
 **我关注：**
 - ✅ 业务规则验证
 - ✅ 不变量保护
 - ✅ 状态转换正确性
 - ❌ 绝不添加 Spring 注解
 
-**详细示例** → 参考 `patra-tdd-development` Skill
+**详细示例** → 参考 `patra-tdd-development` Skill: Domain 层 TDD
 
 ---
 
@@ -124,19 +128,33 @@ Skill("java-spring-development")  # Spring Boot 技术实现模式
 
 **TDD 策略：使用 Mock，测试编排流程和事务边界**
 
+**测试位置**: `patra-{service}-app/src/test/java/`
+**测试命名**: `*Test.java`
+**测试框架**: JUnit 5 + Mockito + AssertJ
+
 **我关注：**
 - ✅ 调用顺序正确（InOrder 验证）
 - ✅ 事务边界清晰（@Transactional 在 Application 层）
 - ✅ 异常处理完整
 - ✅ 只编排，不实现业务逻辑
+- ✅ Mock 所有 Port 接口（Repository、EventPublisher 等）
 
-**详细示例** → 参考 `patra-tdd-development` 和 `java-spring-development` Skills
+**详细示例** → 参考 `patra-tdd-development` Skill: Application 层 TDD
 
 ---
 
-### Infrastructure 层（数据访问）
+### Infrastructure 层（数据访问和外部集成）
 
-**TDD 策略：集成测试，TestContainers，真实数据库**
+**TDD 策略：单元测试 + 集成测试（根据实现类型选择）**
+
+**测试位置**: `patra-{service}-infra/src/test/java/`
+**测试命名**:
+- 单元测试: `*Test.java`
+- 集成测试: `*IT.java`
+
+#### Infrastructure 层实现类型 1：Repository（数据持久化）
+
+**测试框架**: @MybatisTest + TestContainers (MySQL 8)
 
 **我关注：**
 - ✅ 数据持久化正确
@@ -144,21 +162,94 @@ Skill("java-spring-development")  # Spring Boot 技术实现模式
 - ✅ 乐观锁机制生效
 - ✅ 事务行为符合预期
 
-**详细示例** → 参考 `java-spring-development` Skill 的 MyBatis-Plus 模式
+#### Infrastructure 层实现类型 2：Feign Client（远程服务调用）
+
+**测试框架**: 单元测试 + WireMock
+
+**我关注：**
+- ✅ 请求参数映射正确
+- ✅ 响应解析正确
+- ✅ 错误处理和重试机制
+
+#### Infrastructure 层实现类型 3：MQ Publisher（消息发布）
+
+**测试框架**: 单元测试 + TestContainers (RocketMQ)
+
+**我关注：**
+- ✅ 消息格式正确
+- ✅ Topic/Tag 配置正确
+- ✅ 发送失败处理
+
+#### Infrastructure 层实现类型 4：Converter（对象转换）
+
+**测试框架**: 单元测试（JUnit + AssertJ）
+
+**我关注：**
+- ✅ 字段映射完整
+- ✅ null 值处理
+- ✅ 复杂类型转换正确
+
+**详细示例** → 参考 `patra-tdd-development` Skill: Infrastructure 层 TDD
 
 ---
 
-### Adapter 层（API 接口）
+### Adapter 层（外部接口）
 
-**TDD 策略：MockMvc，测试 HTTP 契约**
+**TDD 策略：单元测试 + 切片测试（根据实现类型选择）**
+
+**测试位置**: `patra-{service}-adapter/src/test/java/`
+**测试命名**: `*Test.java`
+
+#### Adapter 层实现类型 1：Controller（REST API）
+
+**测试框架**: @WebMvcTest + MockMvc
 
 **我关注：**
 - ✅ HTTP 状态码正确
 - ✅ 请求响应格式符合契约
-- ✅ 参数验证生效
+- ✅ 参数验证生效（@Valid）
 - ✅ 异常转换为合适的错误响应
+- ✅ Mock 业务层依赖（Orchestrator）
 
-**详细示例** → 参考 `java-spring-development` Skill 的 Adapter 层模式
+#### Adapter 层实现类型 2：Listener（消息监听器）
+
+**测试框架**: 单元测试（JUnit + Mockito + AssertJ）
+
+**我关注：**
+- ✅ 消息反序列化正确
+- ✅ 业务逻辑调用正确
+- ✅ 异常处理和重试机制
+- ✅ Mock 业务层依赖
+
+#### Adapter 层实现类型 3：Job（定时任务）
+
+**测试框架**: 单元测试（JUnit + Mockito + AssertJ）
+
+**我关注：**
+- ✅ 任务执行逻辑正确
+- ✅ 分布式锁机制
+- ✅ 异常处理和告警
+- ✅ Mock 业务层依赖
+
+**详细示例** → 参考 `patra-tdd-development` Skill: Adapter 层 TDD
+
+---
+
+### Boot 层（端到端测试）
+
+**TDD 策略：E2E 测试，验证完整业务流程**
+
+**测试位置**: `patra-{service}-boot/src/test/java/`
+**测试命名**: `*E2ETest.java` 或 `*IT.java`
+**测试框架**: @SpringBootTest + TestContainers + Awaitility
+
+**我关注：**
+- ✅ 完整业务流程（HTTP → Business → DB → MQ → ES）
+- ✅ 真实中间件集成（MySQL、RocketMQ、Elasticsearch）
+- ✅ 异步流程验证
+- ✅ 端到端数据一致性
+
+**详细示例** → 参考 `patra-tdd-development` Skill: Boot 层 E2E 测试
 
 ---
 
@@ -183,17 +274,31 @@ Skill("java-spring-development")  # Spring Boot 技术实现模式
 
 **我的 Mock 策略：**
 - Domain 层：不 Mock（纯业务逻辑）
-- Application 层：Mock Ports（Repository、EventPublisher 等接口）
-- Infrastructure 层：不 Mock（真实集成测试）
-- Adapter 层：Mock Orchestrator（应用服务）
+- Application 层：Mock 所有 Ports（Repository、EventPublisher 等接口）
+- Infrastructure 层：根据类型选择
+  - Repository：使用 @MybatisTest + TestContainers（真实数据库）
+  - Feign Client：单元测试 Mock + WireMock 集成测试
+  - MQ Publisher：单元测试 Mock + TestContainers 集成测试
+  - Converter：纯单元测试，不 Mock
+- Adapter 层：Mock 业务层依赖（Orchestrator）
+- Boot 层：不 Mock（真实 E2E 测试）
 
 ### 5. 快速反馈
 
 **测试金字塔：**
-1. Domain 单元测试（毫秒级）- 70%
-2. Application 单元测试（毫秒级）- 20%
-3. Infrastructure 集成测试（秒级）- 5%
-4. Adapter 切片测试（秒级）- 5%
+1. Domain 单元测试（毫秒级）- 40%
+2. Application 单元测试（毫秒级）- 25%
+3. Infrastructure 测试（秒级）- 15%
+   - 单元测试（Converter、Feign Client Mock）- 10%
+   - 集成测试（Repository IT、MQ IT）- 5%
+4. Adapter 测试（秒级）- 15%
+   - 单元测试（Listener、Job）- 10%
+   - 切片测试（@WebMvcTest）- 5%
+5. Boot 层 E2E 测试（秒级）- 5%
+
+**测试位置规范：**
+- 测试必须在对应层的模块中，不允许集中在 boot 模块
+- 详细规范参考 `patra-tdd-development` Skill
 
 ---
 

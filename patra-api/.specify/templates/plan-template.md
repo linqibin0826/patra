@@ -98,15 +98,26 @@
 
 - [ ] **CHK-TEST-001**: Domain 层单元测试覆盖率 ≥ 80%
   - **状态**: [计划在 Phase 2 实施]
+  - **测试位置**: `patra-{service}-domain/src/test/java/`
 
 - [ ] **CHK-TEST-002**: Application 层单元测试覆盖率 ≥ 70%
   - **状态**: [计划在 Phase 2 实施]
+  - **测试位置**: `patra-{service}-app/src/test/java/`
 
-- [ ] **CHK-TEST-003**: Infrastructure 层有 IT 集成测试
+- [ ] **CHK-TEST-003**: Infrastructure 层有单元测试和集成测试
   - **状态**: [计划在 Phase 2 实施]
+  - **测试位置**: `patra-{service}-infra/src/test/java/`
+  - **集成测试类型**: Repository (@MybatisTest), Feign Client (WireMock), MQ Publisher (TestContainers)
 
-- [ ] **CHK-TEST-004**: Adapter 层有 E2E 测试
+- [ ] **CHK-TEST-004**: Adapter 层有单元测试和切片测试
   - **状态**: [计划在 Phase 2 实施]
+  - **测试位置**: `patra-{service}-adapter/src/test/java/`
+  - **切片测试类型**: Controller (@WebMvcTest), Listener (单元测试), Job (单元测试)
+
+- [ ] **CHK-TEST-005**: Boot 层有 E2E 端到端测试
+  - **状态**: [计划在 Phase 2 实施]
+  - **测试位置**: `patra-{service}-boot/src/test/java/`
+  - **测试类型**: 完整业务流程 E2E 测试 (@SpringBootTest + TestContainers)
 
 ### 文档验证
 
@@ -153,27 +164,46 @@
 - 🔵 **Refactor**：重构代码和测试，保持测试通过
 
 **六边形架构各层的 TDD 实践**：
-- **Domain 层**：无框架依赖，纯业务逻辑测试
+- **Domain 层**：纯单元测试，验证业务规则和状态转换
   - 参考: [patra-tdd-development/SKILL.md#Domain层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
-- **Application 层**：Mock Port 接口，测试编排逻辑
+  - 测试框架：JUnit 5 + Mockito + AssertJ
+  - 测试位置：`patra-{service}-domain/src/test/java/`
+  - 无框架依赖，纯 Java 测试
+
+- **Application 层**：Mock 单元测试，验证用例编排逻辑和调用顺序
   - 参考: [patra-tdd-development/SKILL.md#Application层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
   - 技术实现: [java-spring-development/SKILL.md#Orchestrator编排模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
-- **Infrastructure 层**：使用 TestContainers，测试数据访问
+  - 测试框架：JUnit 5 + Mockito + AssertJ
+  - 测试位置：`patra-{service}-app/src/test/java/`
+  - Mock 所有 Port 接口
+
+- **Infrastructure 层**：单元测试 + 集成测试（根据实现类型选择）
   - 参考: [patra-tdd-development/SKILL.md#Infrastructure层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
   - 技术实现: [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
-- **Adapter 层**：使用 MockMvc，测试 HTTP 接口
+  - 测试位置：`patra-{service}-infra/src/test/java/`
+  - **Repository**：@MybatisTest + TestContainers（MySQL）
+  - **Feign Client**：单元测试 + WireMock
+  - **MQ Publisher**：单元测试 + TestContainers（RocketMQ）
+  - **ES Client**：@DataElasticsearchTest + TestContainers（ES）
+
+- **Adapter 层**：单元测试 + Web 切片测试
   - 参考: [patra-tdd-development/SKILL.md#Adapter层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
   - 技术实现: [java-spring-development/SKILL.md#Controller开发模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+  - 测试位置：`patra-{service}-adapter/src/test/java/`
+  - **Controller**：@WebMvcTest 切片测试，验证 HTTP 请求/响应、参数校验、异常处理
+  - **Listener**：单元测试，Mock 业务层依赖
+  - **Job**：单元测试，Mock 业务层依赖
+
+- **Boot 层**：@SpringBootTest 端到端测试
+  - 参考: [patra-tdd-development/SKILL.md#Boot层E2E测试](../../.claude/skills/patra-tdd-development/SKILL.md)
+  - 测试位置：`patra-{service}-boot/src/test/java/`
+  - 验证完整业务流程（HTTP → 业务 → DB → MQ → ES）
+  - 使用 TestContainers + Awaitility
 
 **技术组件参考**：
 - MapStruct 对象转换 → [java-spring-development/SKILL.md#MapStruct对象转换](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
 - 事务管理 → [java-spring-development/SKILL.md#事务管理最佳实践](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
 - 错误处理 → [java-spring-development/SKILL.md#错误处理模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
-
-**⚠️ 重要规则：测试位置规范**
-- IT 集成测试（`*IT.java`）**必须在** `patra-{service}-boot` 模块
-- E2E 测试（`*E2E.java`）**必须在** `patra-{service}-boot` 模块
-- 单元测试（`*Test.java`）与被测试类在同一模块
 
 ### 代码审查阶段（Phase 2 完成后）
 

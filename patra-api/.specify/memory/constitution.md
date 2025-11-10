@@ -1,9 +1,9 @@
 # Patra 项目架构宪章
 
-**版本**: 2.0.0
+**版本**: 2.1.0
 **批准日期**: 2025-01-09
-**最后修订**: 2025-11-09
-**变更说明**: 改为索引表模式，详细规范维护在 `.claude/skills/` 中
+**最后修订**: 2025-11-10
+**变更说明**: 添加测试策略验证（Section VII: CHK-TEST-001~005）
 
 ---
 
@@ -113,6 +113,24 @@
 
 ---
 
+### VII. 测试策略验证
+
+**原则定义**：详见 → [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md)
+
+| CHK 编号 | 验证项 | Skills 位置 |
+|---------|--------|------------|
+| **CHK-TEST-001** | Domain 层单元测试覆盖率 ≥ 80% | [测试覆盖率检查清单](../templates/test-coverage-checklist.md#chk-cov-001) |
+| **CHK-TEST-002** | Application 层单元测试覆盖率 ≥ 70% | [测试覆盖率检查清单](../templates/test-coverage-checklist.md#chk-cov-002) |
+| **CHK-TEST-003** | Infrastructure 层有单元测试和集成测试 | [测试覆盖率检查清单](../templates/test-coverage-checklist.md#chk-cov-003) |
+| **CHK-TEST-004** | Adapter 层有单元测试和切片测试 | [测试覆盖率检查清单](../templates/test-coverage-checklist.md#chk-cov-004) |
+| **CHK-TEST-005** | Boot 层有 E2E 端到端测试 | [测试覆盖率检查清单](../templates/test-coverage-checklist.md#chk-cov-005) |
+
+**详细规范参考**：
+- [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md) - TDD 开发实践指南
+- [test-coverage-checklist.md](../templates/test-coverage-checklist.md) - 测试覆盖率检查清单
+
+---
+
 ## 🎯 Constitution Check 使用指南
 
 ### 在 Spec-Kit 工作流中使用
@@ -201,6 +219,7 @@
 
 ---
 
-**版本**: 2.0.0
+**版本**: 2.1.0
 **批准日期**: 2025-01-09
-**最后修订**: 2025-11-09
+**最后修订**: 2025-11-10
+**最新变更**: 添加测试策略验证（Section VII: CHK-TEST-001~005）
