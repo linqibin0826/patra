@@ -146,9 +146,9 @@
 
 > **注意: 首先编写这些测试,确保在实施之前它们失败**
 
-- [ ] T052 [P] [Meta] [US2] 为 TestContainersAutoConfiguration 编写集成测试 in patra-spring-boot-starter-test/src/test/java/com/patra/spring/boot/starter/test/autoconfigure/TestContainersAutoConfigurationTest.java
-- [ ] T053 [P] [Meta] [US2] 为 BaseIntegrationTest 编写元测试 in patra-spring-boot-starter-test/src/test/java/com/patra/spring/boot/starter/test/base/BaseIntegrationTestTest.java
-- [ ] T054 [P] [Meta] [US2] 为 BaseE2ETest 编写元测试 in patra-spring-boot-starter-test/src/test/java/com/patra/spring/boot/starter/test/base/BaseE2ETestTest.java
+- [X] T052 [P] [Meta] [US2] 为 TestContainersAutoConfiguration 编写集成测试 in patra-spring-boot-starter-test/src/test/java/com/patra/spring/boot/starter/test/autoconfigure/TestContainersAutoConfigurationTest.java
+- [X] T053 [P] [Meta] [US2] 为 BaseIntegrationTest 编写元测试 in patra-spring-boot-starter-test/src/test/java/com/patra/spring/boot/starter/test/base/BaseIntegrationTestTest.java
+- [X] T054 [P] [Meta] [US2] 为 BaseE2ETest 编写元测试 in patra-spring-boot-starter-test/src/test/java/com/patra/spring/boot/starter/test/base/BaseE2ETestTest.java
 
 ### 用户故事 2 的实施
 
@@ -156,43 +156,43 @@
 
 #### 实现 TestContainers 容器
 
-- [ ] T055 [P] [Starter] [US2] 实现 MySQLTestContainer.start() 方法(MySQL 8.0.36 + tmpfs + Reusable)
-- [ ] T056 [P] [Starter] [US2] 实现 MySQLTestContainer.getConnectionUrl() 方法
-- [ ] T057 [P] [Starter] [US2] 实现 MySQLTestContainer.isHealthy() 方法
-- [ ] T058 [P] [Starter] [US2] 实现 RedisTestContainer.start() 方法(Redis 7-alpine + Reusable)
-- [ ] T059 [P] [Starter] [US2] 实现 RedisTestContainer.getConnectionString() 方法
-- [ ] T060 [P] [Starter] [US2] 实现 NacosTestContainer.start() 方法(Nacos 2.3.0 standalone + Reusable)
-- [ ] T061 [P] [Starter] [US2] 实现 NacosTestContainer.getServerAddr() 方法
-- [ ] T062 [Starter] [US2] 实现 NacosTestContainer 健康检查(Wait.forHttp)
+- [X] T055 [P] [Starter] [US2] 实现 MySQLTestContainer.start() 方法(MySQL 8.0.36 + tmpfs + Reusable)
+- [X] T056 [P] [Starter] [US2] 实现 MySQLTestContainer.getConnectionUrl() 方法
+- [X] T057 [P] [Starter] [US2] 实现 MySQLTestContainer.isHealthy() 方法
+- [X] T058 [P] [Starter] [US2] 实现 RedisTestContainer.start() 方法(Redis 7-alpine + Reusable)
+- [X] T059 [P] [Starter] [US2] 实现 RedisTestContainer.getConnectionString() 方法
+- [X] T060 [P] [Starter] [US2] 实现 NacosTestContainer.start() 方法(Nacos 2.3.0 standalone + Reusable)
+- [X] T061 [P] [Starter] [US2] 实现 NacosTestContainer.getServerAddr() 方法
+- [X] T062 [Starter] [US2] 实现 NacosTestContainer 健康检查(Wait.forHttp)
 
 #### 实现 TestcontainersConfiguration
 
-- [ ] T063 [Starter] [US2] 实现 TestcontainersConfiguration.mysqlContainer() Bean(依赖 T055-T057)
-- [ ] T064 [Starter] [US2] 实现 TestcontainersConfiguration.redisContainer() Bean(依赖 T058-T059)
-- [ ] T065 [Starter] [US2] 实现 TestcontainersConfiguration.nacosContainer() Bean(依赖 T060-T062)
-- [ ] T066 [Starter] [US2] 为 Nacos 容器添加 @DynamicPropertySource 配置方法
+- [X] T063 [Starter] [US2] 实现 TestcontainersConfiguration.mysqlContainer() Bean(依赖 T055-T057)
+- [X] T064 [Starter] [US2] 实现 TestcontainersConfiguration.redisContainer() Bean(依赖 T058-T059)
+- [X] T065 [Starter] [US2] 实现 TestcontainersConfiguration.nacosContainer() Bean(依赖 T060-T062)
+- [X] T066 [Starter] [US2] 为 Nacos 容器添加 @DynamicPropertySource 配置方法
 
 #### 实现自动配置
 
-- [ ] T067 [P] [Starter] [US2] 实现 TestContainersAutoConfiguration 条件化配置(@ConditionalOnClass, @ConditionalOnMissingBean)
-- [ ] T068 [P] [Starter] [US2] 实现 MockMvcAutoConfiguration 自动配置
-- [ ] T069 [P] [Starter] [US2] 实现 WireMockAutoConfiguration 自动配置
-- [ ] T070 [Starter] [US2] 在 AutoConfiguration.imports 中注册所有自动配置类(依赖 T067-T069)
+- [X] T067 [P] [Starter] [US2] 实现 TestContainersAutoConfiguration 条件化配置(@ConditionalOnClass, @ConditionalOnMissingBean)
+- [X] T068 [P] [Starter] [US2] 实现 MockMvcAutoConfiguration 自动配置
+- [X] T069 [P] [Starter] [US2] 实现 WireMockAutoConfiguration 自动配置
+- [X] T070 [Starter] [US2] 在 AutoConfiguration.imports 中注册所有自动配置类(依赖 T067-T069)
 
 #### 实现测试基类
 
-- [ ] T071 [Starter] [US2] 实现 BaseIntegrationTest.cleanRedis() 方法(依赖 T063-T065)
-- [ ] T072 [Starter] [US2] 实现 BaseIntegrationTest.executeSqlScript() 方法
-- [ ] T073 [Starter] [US2] 实现 BaseIntegrationTest.contextLoads() 测试方法
-- [ ] T074 [Starter] [US2] 实现 BaseE2ETest.performGet() 方法
-- [ ] T075 [Starter] [US2] 实现 BaseE2ETest.performPost() 方法
-- [ ] T076 [Starter] [US2] 实现 BaseE2ETest.performPut() 方法
-- [ ] T077 [Starter] [US2] 实现 BaseE2ETest.performDelete() 方法
-- [ ] T078 [Starter] [US2] 实现 BaseE2ETest.extractJsonValue() 方法
+- [X] T071 [Starter] [US2] 实现 BaseIntegrationTest.cleanRedis() 方法(依赖 T063-T065)
+- [X] T072 [Starter] [US2] 实现 BaseIntegrationTest.executeSqlScript() 方法
+- [X] T073 [Starter] [US2] 实现 BaseIntegrationTest.contextLoads() 测试方法
+- [X] T074 [Starter] [US2] 实现 BaseE2ETest.performGet() 方法
+- [X] T075 [Starter] [US2] 实现 BaseE2ETest.performPost() 方法
+- [X] T076 [Starter] [US2] 实现 BaseE2ETest.performPut() 方法
+- [X] T077 [Starter] [US2] 实现 BaseE2ETest.performDelete() 方法
+- [X] T078 [Starter] [US2] 实现 BaseE2ETest.extractJsonValue() 方法
 
 #### 验证测试通过
 
-- [ ] T079 [US2] 运行所有元测试,确保 patra-spring-boot-starter-test 的集成测试通过,TestContainers 启动成功
+- [X] T079 [US2] 运行所有元测试,确保 patra-spring-boot-starter-test 的集成测试通过,TestContainers 启动成功
 
 **检查点**: 此时,patra-spring-boot-starter-test 模块完全可用,开发者可以在 boot 模块中编写集成测试和 E2E 测试
 

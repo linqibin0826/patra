@@ -29,8 +29,7 @@
 | SubAgent | 加载的 Skill | 核心职责 |
 |----------|-------------|---------|
 | **java-hexagonal-architecture** | java-hexagonal-architecture | 架构设计、领域建模、方案评审、DDD 专家 |
-| **java-spring-development** | java-spring-development | Spring Boot 开发、REST API、事务管理 |
-| **test-architect** | java-test-architect | 测试生成、测试策略、覆盖率分析 |
+| **patra-backend-developer** | patra-tdd-development, java-spring-development | TDD 驱动的后端全栈开发、Spring Boot、REST API、事务管理、测试先行 |
 | **runtime-error-diagnostic** | java-runtime-diagnostic | 运行时错误诊断、日志分析、性能调优 |
 | **code-reviewer** | java-code-reviewer | 代码审查、质量评估、安全检查、性能分析 |
 | **documentation-architect** | java-documentation-architect | 文档创建、README 维护、JavaDoc 编写 |
@@ -140,12 +139,12 @@ Hook：提示激活 java-runtime-diagnostic
 SubAgent：加载技能，分析日志和堆栈
 ```
 
-### 场景 3：代码实现
+### 场景 3：TDD 后端开发
 ```
 用户：创建一个用户注册的 REST API
-Hook：提示激活 java-spring-development
-用户：使用 java-spring-development
-SubAgent：加载技能，生成 Controller、Orchestrator 等
+Hook：提示激活 patra-backend-developer
+用户：使用 patra-backend-developer
+SubAgent：加载技能（TDD+Spring），先写测试再生成 Controller、Orchestrator 等
 ```
 
 ## 📈 未来优化方向

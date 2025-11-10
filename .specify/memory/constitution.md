@@ -69,24 +69,7 @@
 
 ---
 
-### IV. 测试策略验证
-
-**原则定义**：详见 → [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
-
-| CHK 编号 | 验证项 | Skills 位置 |
-|---------|--------|------------|
-| **CHK-TEST-001** | Domain 层单元测试覆盖率 ≥ 80%？（无 Spring） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
-| **CHK-TEST-002** | Application 层单元测试覆盖率 ≥ 70%？（Mockito） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
-| **CHK-TEST-003** | Infrastructure 层是否有 IT 集成测试？（TestContainers） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
-| **CHK-TEST-004** | Adapter 层是否有集成测试？（MockMvc） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
-| **CHK-TEST-005** | 是否有架构测试？（ArchUnit） | [测试策略](../../.claude/skills/java-test-architect/SKILL.md#六边形架构测试策略) |
-| **CHK-TEST-006** | IT 和 E2E 测试是否在 boot 模块？⚠️ | [测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范) |
-
-**测试模板参考** → [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
-
----
-
-### V. 技术选型验证
+### IV. 技术选型验证
 
 **原则定义**：详见 → [java-hexagonal-architecture/SKILL.md](../../.claude/skills/java-hexagonal-architecture/SKILL.md#技术选型检查)
 
@@ -99,7 +82,7 @@
 
 ---
 
-### VI. 代码质量验证
+### V. 代码质量验证
 
 **原则定义**：详见 → [java-code-reviewer/SKILL.md](../../.claude/skills/java-code-reviewer/SKILL.md)
 
@@ -115,7 +98,7 @@
 
 ---
 
-### VII. 文档标准验证
+### VI. 文档标准验证
 
 **原则定义**：详见 → [java-documentation-architect/SKILL.md](../../.claude/skills/java-documentation-architect/SKILL.md)
 
@@ -146,10 +129,6 @@
   - 检查 `patra-{service}-domain/pom.xml`，确保无 Spring、MyBatis 依赖
   - 参考：[java-hexagonal-architecture/SKILL.md#架构铁律](../../.claude/skills/java-hexagonal-architecture/SKILL.md#架构铁律)
 
-- [ ] **CHK-TEST-006**: IT 和 E2E 测试是否在 boot 模块？
-  - 检查 spec.md 中的测试任务位置
-  - 参考：[java-test-architect/SKILL.md#测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范)
-
 **结果**：PASS / FAIL
 - PASS → 进入 Phase 1
 - FAIL → 在 plan.md 的 "Complexity Tracking" 章节说明理由
@@ -164,7 +143,6 @@
 
 **示例**：
 - ❌ **CRITICAL**: plan.md 第 45 行违反 CHK-ARCH-001（Domain 层引入 Spring）
-- ⚠️ **WARNING**: tasks.md 的 T050 任务将 IT 测试放在 infra 模块（违反 CHK-TEST-006）
 ```
 
 #### 3. `/speckit.implement` 阶段（实施中审查）
@@ -180,7 +158,7 @@
 **Skills 调用示例**：
 - Domain 层代码 → 参考 [java-hexagonal-architecture/SKILL.md#聚合设计模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
 - Repository 实现 → 参考 [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#mybatis-plus-数据访问)
-- 测试代码 → 参考 [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
+- TDD 开发 → 遵循 [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md) 的 Red-Green-Refactor 循环
 ```
 
 ---
@@ -194,7 +172,7 @@
 - [java-spring-development/SKILL.md](../../.claude/skills/java-spring-development/SKILL.md) - Spring Boot 微服务开发
 
 ### 质量保障
-- [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md) - 测试生成专家
+- [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md) - TDD 开发工作流
 - [java-code-reviewer/SKILL.md](../../.claude/skills/java-code-reviewer/SKILL.md) - 代码审查专家
 - [java-documentation-architect/SKILL.md](../../.claude/skills/java-documentation-architect/SKILL.md) - 文档架构师
 
@@ -218,7 +196,6 @@
 |---------|---------|---------|
 | **Constitution Check 失败** | CRITICAL | 阻止进入实施阶段，必须在 plan.md 的 Complexity Tracking 说明理由 |
 | **CHK-ARCH-*** 违规 | CRITICAL | 阻止合并到主分支 |
-| **CHK-TEST-006** 违规 | HIGH | 必须修复测试位置 |
 | **CHK-CODE-*** 违规 | MEDIUM | 代码审查阶段修复 |
 | **CHK-DOC-*** 违规 | LOW | 补充文档 |
 

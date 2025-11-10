@@ -69,7 +69,7 @@
 
 ### 3. 效率第一：能并行必并行
 - 调研阶段：Explore + Plan + web-research-specialist
-- 实施阶段：核心逻辑(你) + test-architect + documentation-architect
+- 实施阶段：patra-backend-developer（TDD 完整开发） + documentation-architect
 
 ### 4. 异常处理：2 次规则
 - Subagent 连续失败 2 次 → 停止委派，报告用户
@@ -167,7 +167,7 @@
 [ ] 7. 质量检查
     ├─ [ ] 代码可编译？
     ├─ [ ] 符合架构规范？
-    ├─ [ ] 有测试吗？（无 → 委派 test-architect）
+    ├─ [ ] 测试是否通过？（TDD 要求测试先行，应该已有测试）
     └─ [ ] 有文档吗？（无 → 委派 documentation-architect）
 
 [ ] 8. 用户沟通
@@ -184,7 +184,7 @@
 
 | 任务类型 | 推荐 Subagent | 理由 |
 |---------|--------------|------|
-| 📝 编写/生成测试用例 | `test-architect` | 专业测试专家 |
+| 🚀 后端功能开发 | `patra-backend-developer` | TDD 驱动的完整实现（测试+代码） |
 | 🐛 诊断运行时错误/日志 | `runtime-error-diagnostic` | 专业故障排查 |
 | 📚 编写/更新文档 | `documentation-architect` | 结构化文档 |
 | 🔬 代码质量审查 | `code-architecture-reviewer` | 独立视角 |
@@ -211,17 +211,20 @@
 
 - ≥20 行 → 委派相关 Subagent
 - 跨多个文件 → 自己处理或委派 Explore 先理解结构
-- 测试代码 → 委派 test-architect
+- **业务功能开发**（测试+代码一体）→ 委派 patra-backend-developer
 - 文档更新 → 委派 documentation-architect
 
 ### 并行执行策略
 
 ```
-❌ 错误：串行执行（自己探索 → 自己实现 → 自己测试）
+❌ 错误：先实现再测试（你写代码 → 别人补测试）
 
-✅ 正确：并行委派
+✅ 正确：TDD 驱动开发
 [阶段 1] 同时启动：Explore + Plan + web-research-specialist
-[阶段 2] 汇总后分配：你(核心逻辑) + test-architect + documentation-architect
+[阶段 2] 汇总后分配：
+    ├─ 业务功能开发 → patra-backend-developer（TDD：先测试后代码）
+    ├─ 架构决策 → 你（或委派 java-hexagonal-architecture）
+    └─ 文档更新 → documentation-architect
 ```
 
 ---

@@ -101,7 +101,6 @@ $ARGUMENTS
 
 - **CHK-ARCH-001**：plan.md 的技术栈是否在 Domain 层引入框架依赖？（仅允许 Lombok、Hutool、patra-common）
 - **CHK-ARCH-002**：plan.md 的依赖方向是否正确？（Adapter → App → Domain ← Infra）
-- **CHK-TEST-006**：tasks.md 中的 IT/E2E 测试任务是否在 `patra-{service}-boot` 模块？（参考 java-test-architect）
 - **CHK-SSOT-001**：plan.md/tasks.md 是否从 `patra-registry` 获取 Provenance 配置？（禁止硬编码）
 - **CHK-DDD-001 到 004**：plan.md 的领域模型设计是否合理？（聚合边界、实体关系、领域事件）
 - 缺失的强制验证项或质量关卡

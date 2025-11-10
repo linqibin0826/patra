@@ -29,7 +29,7 @@
 
 #### 📌 变更描述
 
-test-architect生成的 DomainAssertionsTest 和 AssertionHelperTest 元测试设计有缺陷，只验证"方法未实现"（期望抛出UnsupportedOperationException），而不是测试实际的断言功能
+patra-tdd-specialist 生成的 DomainAssertionsTest 和 AssertionHelperTest 元测试设计有缺陷，只验证"方法未实现"（期望抛出UnsupportedOperationException），而不是测试实际的断言功能
 
 #### 🎯 原计划
 
@@ -43,7 +43,7 @@ contracts/test-api.md 中定义的测试策略：
 
 #### ⚡ 实际实施
 
-test-architect创建的DomainAssertionsTest.java和AssertionHelperTest.java都有相同问题：
+patra-tdd-specialist 创建的DomainAssertionsTest.java和AssertionHelperTest.java都有相同问题：
 ```java
 // DomainAssertionsTest.java 示例
 @Test
@@ -71,7 +71,7 @@ void shouldAssertAggregateStatusCorrect() {
 
 #### 💡 变更原因
 
-- 测试生成工具理解偏差：test-architect将TDD的"红灯阶段"理解为"测试验证方法未实现"
+- 测试生成工具理解偏差：patra-tdd-specialist 将TDD的"红灯阶段"理解为"测试验证方法未实现"
 - 正确的TDD应该是：测试验证功能需求，初始时因方法未实现而失败，实现后测试通过
 
 #### 🔍 影响范围
@@ -91,7 +91,6 @@ void shouldAssertAggregateStatusCorrect() {
 - [ ] 重构 AssertionHelperTest.java：将24个失败测试改为验证实际断言功能
 - [ ] 更新 tasks.md：T024和T025描述改为"编写功能测试"而非"元测试"
 - [ ] 添加引用标记到 tasks.md：`<!-- 实施变更：见 implementation-log.md#变更-002 -->`
-- [ ] 更新test-architect agent指导：明确TDD红灯阶段的正确理解
 
 #### 🔗 相关链接
 
