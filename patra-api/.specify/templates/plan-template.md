@@ -143,30 +143,37 @@
 - [ ] **Port 接口定义** → 设计 Repository 和其他端口接口
   - 参考: [java-hexagonal-architecture/SKILL.md#Port-Adapter模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
 
-### 代码实施阶段（Phase 2 - 由 /speckit.implement 调用）
+### TDD 驱动的后端开发阶段（Phase 2 - 由 /speckit.implement 调用）
 
-**参考 Skill**: `java-spring-development`
+**执行 Agent**: `patra-backend-developer`（加载 `patra-tdd-development` + `java-spring-development` Skills）
 
-**代码模板位置**：
-- Controller 开发 → [java-spring-development/SKILL.md#Controller开发模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
-- Orchestrator 编排 → [java-spring-development/SKILL.md#Orchestrator编排模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
-- MyBatis-Plus 数据访问 → [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+**核心原则**：测试驱动设计，遵循 Red-Green-Refactor 循环
+- 🔴 **Red**：先写失败的测试（定义期望行为）
+- 🟢 **Green**：编写最少代码通过测试
+- 🔵 **Refactor**：重构代码和测试，保持测试通过
+
+**六边形架构各层的 TDD 实践**：
+- **Domain 层**：无框架依赖，纯业务逻辑测试
+  - 参考: [patra-tdd-development/SKILL.md#Domain层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
+- **Application 层**：Mock Port 接口，测试编排逻辑
+  - 参考: [patra-tdd-development/SKILL.md#Application层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
+  - 技术实现: [java-spring-development/SKILL.md#Orchestrator编排模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- **Infrastructure 层**：使用 TestContainers，测试数据访问
+  - 参考: [patra-tdd-development/SKILL.md#Infrastructure层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
+  - 技术实现: [java-spring-development/SKILL.md#MyBatis-Plus数据访问](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- **Adapter 层**：使用 MockMvc，测试 HTTP 接口
+  - 参考: [patra-tdd-development/SKILL.md#Adapter层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
+  - 技术实现: [java-spring-development/SKILL.md#Controller开发模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+
+**技术组件参考**：
 - MapStruct 对象转换 → [java-spring-development/SKILL.md#MapStruct对象转换](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- 事务管理 → [java-spring-development/SKILL.md#事务管理最佳实践](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
+- 错误处理 → [java-spring-development/SKILL.md#错误处理模式](../../.claude/skills/java-spring-development/SKILL.md#快速开发指南)
 
-### 测试生成阶段（Phase 2 - 由 /speckit.implement 调用）
-
-**参考 Skill**: `java-test-architect`
-
-**测试模板位置**：
-- Domain 层单元测试 → [java-test-architect/SKILL.md#Domain层单元测试](../../.claude/skills/java-test-architect/SKILL.md#单元测试模板)
-- Application 层单元测试 → [java-test-architect/SKILL.md#Application层单元测试](../../.claude/skills/java-test-architect/SKILL.md#单元测试模板)
-- Repository 集成测试 → [java-test-architect/SKILL.md#Repository集成测试](../../.claude/skills/java-test-architect/SKILL.md#集成测试模板)
-- Controller 集成测试 → [java-test-architect/SKILL.md#Controller集成测试](../../.claude/skills/java-test-architect/SKILL.md#集成测试模板)
-
-**⚠️ 重要规则：CHK-TEST-006**
+**⚠️ 重要规则：测试位置规范**
 - IT 集成测试（`*IT.java`）**必须在** `patra-{service}-boot` 模块
 - E2E 测试（`*E2E.java`）**必须在** `patra-{service}-boot` 模块
-- 详见: [java-test-architect/SKILL.md#测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范)
+- 单元测试（`*Test.java`）与被测试类在同一模块
 
 ### 代码审查阶段（Phase 2 完成后）
 

@@ -319,7 +319,7 @@ MyBatis-Plus 最佳实践 → mcp__context7 获取示例
 ### 与其他 Agents 协作
 **评审后续工作**
 ```
-识别测试缺失 → 委派 test-architect
+识别测试缺失 → 委派 patra-backend-developer（TDD 开发）
 文档需要更新 → 委派 documentation-architect
 代码需要重构 → 提供重构建议
 ```

@@ -193,23 +193,30 @@
 
 ### Phase 1: 设计阶段
 
-**参考 Skill**: `java-test-architect`
+**参考 Skill**: `patra-tdd-development`
 
 **关键参考点**：
 - [ ] **测试工具库设计** → TestDataBuilder 设计模式
-  - 参考: [java-test-architect/SKILL.md](../../.claude/skills/java-test-architect/SKILL.md)
+  - 参考: [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md)
 - [ ] **测试基类设计** → BaseIntegrationTest、BaseE2ETest 最佳实践
-  - 参考: [java-test-architect/SKILL.md#测试基类设计](../../.claude/skills/java-test-architect/SKILL.md)
+  - 遵循 TDD 工作流和六边形架构原则
 
-### Phase 2: 代码实施阶段（由 /speckit.implement 调用）
+### Phase 2: TDD 驱动的实施阶段（由 /speckit.implement 调用）
 
-**参考 Skill**: `java-spring-development`
+**执行 Agent**: `patra-backend-developer`（加载 `patra-tdd-development` + `java-spring-development` Skills）
+
+**核心原则**：测试驱动设计，遵循 Red-Green-Refactor 循环
+- 🔴 **Red**：先写失败的测试（定义期望行为）
+- 🟢 **Green**：编写最少代码通过测试
+- 🔵 **Refactor**：重构代码和测试，保持测试通过
 
 **关键参考点**：
-- Spring Boot Starter 自动配置 → @Configuration + @ConditionalOnClass
-  - 参考: [java-spring-development/SKILL.md](../../.claude/skills/java-spring-development/SKILL.md)
-- TestContainers 配置 → @Bean 定义 + Singleton 容器
-  - 需要调研 TestContainers 最佳实践
+- **测试工具类 TDD 实践**:
+  - 参考: [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md)
+  - 元测试：为 TestDataBuilder、MockDataFactory 编写测试
+- **Spring Boot 技术实现**:
+  - Spring Boot Starter 自动配置 → [java-spring-development/SKILL.md](../../.claude/skills/java-spring-development/SKILL.md)
+  - TestContainers 配置 → @Bean 定义 + Singleton 容器
 
 ### 元测试生成阶段（Phase 2）
 
@@ -580,8 +587,8 @@ JUnit 5 + Mockito + AssertJ
 
 **后续行动**:
 1. 等待用户执行 `/speckit.implement` 命令
-2. 实施阶段将生成实际代码和测试
-3. 实施完成后调用 `code-reviewer` 和 `test-architect` 进行质量审查
+2. 实施阶段将由 `patra-backend-developer` agent 执行（TDD 驱动）
+3. 实施完成后调用 `code-reviewer` 进行质量审查
 
 ---
 

@@ -8,7 +8,7 @@ description: "特性实施的任务列表模板"
 **输入**: 来自 `/specs/[###-feature-name]/` 的设计文档
 **前置条件**: plan.md（必需）、spec.md（用户故事所需）、research.md、data-model.md、contracts/
 
-**测试**: 以下示例包含测试任务。测试是可选的 - 仅在特性规格说明中明确请求时才包含它们。
+**测试**: 以下示例包含测试任务。测试是强制的（TDD） - 所有特性都必须先编写测试，遵循 Red-Green-Refactor 循环。
 
 **组织**: 任务按用户故事分组，以实现每个故事的独立实施和测试。
 
@@ -33,11 +33,11 @@ description: "特性实施的任务列表模板"
 - **Infrastructure 层**: `patra-{service}-infra/src/main/java/com/patra/{service}/infra/`
 - **Adapter 层**: `patra-{service}-adapter/src/main/java/com/patra/{service}/adapter/`
 - **API 层**: `patra-{service}-api/src/main/java/com/patra/{service}/api/`
-- **测试**（⚠️ 参考 CHK-TEST-006 规范）:
+- **测试**（⚠️ 参考测试位置规范）:
   - 单元测试（`*Test.java`）: `src/test/java/`（与源码同结构，在对应层的模块中）
   - **IT 集成测试**（`*IT.java`）: **必须在 `patra-{service}-boot/src/test/java/`** ✅
   - **E2E 测试**（`*E2E.java`）: **必须在 `patra-{service}-boot/src/test/java/`** ✅
-  - 详见: [java-test-architect/SKILL.md#测试模块位置规范](../../.claude/skills/java-test-architect/SKILL.md#测试模块位置规范)
+  - 详见: [patra-tdd-development/SKILL.md](../../.claude/skills/patra-tdd-development/SKILL.md)
 
 <!--
   ============================================================================
@@ -93,9 +93,9 @@ description: "特性实施的任务列表模板"
 
 **独立测试**: [如何独立验证此故事有效]
 
-### 用户故事 1 的测试（可选 - 仅在请求测试时）⚠️
+### 用户故事 1 的测试（TDD 强制）🔴
 
-> **注意：首先编写这些测试，确保在实施之前它们失败**
+> **注意：首先编写这些测试，确保在实施之前它们失败（Red）**
 
 - [ ] T010 [P] [US1] 在 tests/contract/test_[name].py 中为 [endpoint] 编写契约测试
 - [ ] T011 [P] [US1] 在 tests/integration/test_[name].py 中为 [user journey] 编写集成测试
@@ -123,7 +123,7 @@ description: "特性实施的任务列表模板"
 
 **独立测试**: [如何独立验证此故事有效]
 
-### 用户故事 2 的测试（可选 - 仅在请求测试时）⚠️
+### 用户故事 2 的测试（TDD 强制）🔴
 
 - [ ] T018 [P] [US2] 在 tests/contract/test_[name].py 中为 [endpoint] 编写契约测试
 - [ ] T019 [P] [US2] 在 tests/integration/test_[name].py 中为 [user journey] 编写集成测试
@@ -149,7 +149,7 @@ description: "特性实施的任务列表模板"
 
 **独立测试**: [如何独立验证此故事有效]
 
-### 用户故事 3 的测试（可选 - 仅在请求测试时）⚠️
+### 用户故事 3 的测试（TDD 强制）🔴
 
 - [ ] T024 [P] [US3] 在 tests/contract/test_[name].py 中为 [endpoint] 编写契约测试
 - [ ] T025 [P] [US3] 在 tests/integration/test_[name].py 中为 [user journey] 编写集成测试
@@ -193,7 +193,7 @@ description: "特性实施的任务列表模板"
   → 添加任务生成 API 文档
 -->
 
-### 文档任务（参考 java-documentation-architect）
+### 文档任务（参考 java-documentation-architect Skill）
 
 #### package-info.java 生成
 
@@ -307,7 +307,7 @@ description: "特性实施的任务列表模板"
 
 - [ ] T1004 代码清理和重构
 - [ ] T1005 跨所有故事的性能优化
-- [ ] T1006 [P] 额外的单元测试（如果请求）in tests/unit/
+- [ ] T1006 [P] 补充单元测试覆盖边界情况 in tests/unit/
 - [ ] T1007 安全加固
 - [ ] T1008 运行 quickstart.md 验证
 - [ ] T1009 运行 ArchUnit 测试验证架构合规性 in patra-[service]-boot/src/test/java/.../ArchitectureTest.java
@@ -333,7 +333,7 @@ description: "特性实施的任务列表模板"
 
 ### 在每个用户故事内
 
-- 测试（如果包含）必须在实施之前编写并失败
+- 测试必须在实施之前编写并失败（TDD Red）
 - 模型在服务之前
 - 服务在端点之前
 - 核心实施在集成之前

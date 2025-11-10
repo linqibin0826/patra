@@ -58,13 +58,20 @@
         ]
       }
     },
-    "java-spring-development": {
+    "patra-backend-developer": {
       "type": "domain",
       "enforcement": "suggest",
       "priority": "high",
-      "description": "Spring Boot microservices development with MyBatis-Plus and MapStruct",
+      "description": "Patra backend full-stack developer with TDD+Hexagonal Architecture+DDD. Implements all layers (Domain/Application/Infrastructure/Adapter) following test-first development.",
       "promptTriggers": {
         "keywords": [
+          "TDD",
+          "test-driven development",
+          "test-first",
+          "red-green-refactor",
+          "测试驱动开发",
+          "测试先行",
+          "红绿重构",
           "Spring Boot",
           "Spring Cloud",
           "controller",
@@ -89,23 +96,41 @@
           "仓储实现",
           "事务管理",
           "定时任务",
-          "配置管理"
+          "配置管理",
+          "implement feature",
+          "implement business logic",
+          "create service",
+          "实现功能",
+          "实现业务逻辑",
+          "创建服务",
+          "开发功能",
+          "业务开发"
         ],
         "intentPatterns": [
-          "(create|implement|add).*?(controller|endpoint|API|orchestrator|coordinator|repository)",
+          "(TDD|test-driven|test-first).*?(develop|implement|create)",
+          "(implement|create|add).*?(feature|business logic|service|function)",
+          "(implement|create|add).*?(controller|endpoint|API|orchestrator|coordinator|repository)",
           "(configure|setup).*?(Spring|MyBatis|transaction|Nacos)",
           "(implement|add).*?(scheduled job|XXL-Job|task)",
+          "(测试驱动|测试先行).*?(开发|实现)",
+          "(实现|创建|添加).*(功能|业务逻辑|服务)",
           "(创建|实现|添加).*(controller|控制器|接口|编排器|协调器|仓储)",
           "(配置|设置).*(Spring|MyBatis|事务|Nacos)",
-          "(实现|添加).*(定时任务|XXL-Job)"
+          "(实现|添加).*(定时任务|XXL-Job)",
+          "先.*?测试.*?再.*?(代码|实现)"
         ]
       },
       "fileTriggers": {
         "pathPatterns": [
-          "**/patra-*-adapter/src/**/*.java",
+          "**/patra-*-domain/src/**/*.java",
           "**/patra-*-app/src/**/*.java",
+          "**/patra-*-adapter/src/**/*.java",
           "**/patra-*-infra/src/**/*.java",
-          "**/patra-*-boot/src/**/*.java"
+          "**/patra-*-boot/src/**/*.java",
+          "**/src/test/**/*.java",
+          "**/*Test.java",
+          "**/*IT.java",
+          "**/*E2E.java"
         ],
         "contentPatterns": [
           "@RestController",
@@ -116,54 +141,9 @@
           "@Mapper",
           "class.*Orchestrator",
           "class.*Coordinator",
-          "implements.*Port"
-        ]
-      }
-    },
-    "java-test-architect": {
-      "type": "domain",
-      "enforcement": "suggest",
-      "priority": "high",
-      "description": "Test generation expert for unit tests, integration tests, and ArchUnit tests",
-      "promptTriggers": {
-        "keywords": [
-          "test",
-          "testing",
-          "unit test",
-          "integration test",
-          "ArchUnit",
-          "TestContainers",
-          "MockMvc",
-          "Mockito",
-          "JUnit",
-          "test coverage",
-          "TDD",
-          "test pyramid",
-          "idempotency test",
-          "optimistic lock test",
-          "测试",
-          "单元测试",
-          "集成测试",
-          "测试覆盖率",
-          "测试金字塔",
-          "幂等性测试",
-          "乐观锁测试"
-        ],
-        "intentPatterns": [
-          "(write|create|generate|add).*?test",
-          "(test|testing).*?(domain|orchestrator|coordinator|repository|controller)",
-          "(improve|increase).*?coverage",
-          "(写|创建|生成|添加).*测试",
-          "测试.*(领域|编排器|协调器|仓储|控制器)",
-          "(提高|增加).*覆盖率"
-        ]
-      },
-      "fileTriggers": {
-        "pathPatterns": [
-          "**/src/test/**/*.java",
-          "**/*Test.java",
-          "**/*IT.java",
-          "**/*Tests.java"
+          "implements.*Port",
+          "@Test",
+          "@DisplayName"
         ]
       }
     },

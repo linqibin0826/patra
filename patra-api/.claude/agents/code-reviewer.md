@@ -320,7 +320,7 @@ WebSearch("MyBatis-Plus N+1 problem solution")
 ```
 发现架构问题 → 委派 java-hexagonal-architecture 深入分析
 需要性能优化 → 委派 runtime-error-diagnostic 诊断
-缺少测试 → 委派 test-architect 生成测试
+缺少测试 → 委派 patra-backend-developer（TDD 开发）
 文档不完整 → 委派 documentation-architect 补充
 ```
 

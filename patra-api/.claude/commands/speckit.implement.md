@@ -128,7 +128,7 @@ $ARGUMENTS
 7. 遵循任务计划执行实现：
    - **阶段性执行**：在进入下一阶段前完成每个阶段
    - **遵守依赖**：按顺序运行顺序任务，并行任务 [P] 可以一起运行
-   - **强制 TDD（项目规范）**：所有实现任务必须先编写测试，遵循测试驱动开发方法（参考 java-test-architect）
+   - **强制 TDD（项目规范）**：所有实现任务必须先编写测试，遵循测试驱动开发方法（参考 patra-tdd-development）
    - **基于文件的协调**：影响相同文件的任务必须顺序运行
    - **验证检查点**：在继续之前验证每个阶段的完成
 
@@ -192,7 +192,7 @@ $ARGUMENTS
    - 检查实现的特性是否符合原始规格说明
    - 验证测试通过且覆盖率满足要求（参考 CHK-TEST-* 验证项）
    - 确认实现遵循技术计划
-   - **运行最终代码审查**：调用 java-code-reviewer 生成完整审查报告
+   - **运行最终代码审查**：调用 code-reviewer agent 生成完整审查报告
    - 报告最终状态及已完成工作的摘要
 
 ## 🎯 Skills 集成指令（实施阶段）
@@ -206,44 +206,38 @@ $ARGUMENTS
 - **Port 接口定义**：参考 [Port-Adapter 模式](../../.claude/skills/java-hexagonal-architecture/SKILL.md#常见架构模式)
 - **领域事件**：参考 [event-driven-architecture.md](../../.claude/skills/java-hexagonal-architecture/resources/event-driven-architecture.md)
 
-#### 2. Application 层任务 → java-spring-development
+#### 2. Application 层任务 → patra-backend-developer
 - **Orchestrator/Coordinator**：参考 [Orchestrator 编排模式](../../.claude/skills/java-spring-development/SKILL.md#orchestrator-编排模式)
 - **事务管理**：参考 [事务管理最佳实践](../../.claude/skills/java-spring-development/SKILL.md#事务管理最佳实践)
 
-#### 3. Infrastructure 层任务 → java-spring-development
+#### 3. Infrastructure 层任务 → patra-backend-developer
 - **Repository 实现**：参考 [MyBatis-Plus 数据访问](../../.claude/skills/java-spring-development/SKILL.md#mybatis-plus-数据访问)
 - **DO 和 Converter**：参考 [MapStruct 对象转换](../../.claude/skills/java-spring-development/SKILL.md#mapstruct-对象转换)
 
-#### 4. Adapter 层任务 → java-spring-development
+#### 4. Adapter 层任务 → patra-backend-developer
 - **Controller**：参考 [Controller 开发模式](../../.claude/skills/java-spring-development/SKILL.md#controller-开发模式)
 - **XXL-Job**：参考 [XXL-Job 定时任务](../../.claude/skills/java-spring-development/SKILL.md#xxl-job-定时任务)
 - **错误处理**：参考 [错误处理模式](../../.claude/skills/java-spring-development/SKILL.md#错误处理模式)
 
-#### 5. 测试任务 → java-test-architect
+#### 5. 所有层开发 → patra-backend-developer（TDD 驱动）
 
-**重要**：根据测试类型和层次，使用对应的测试模板
+**重要**：遵循 TDD 工作流（Red-Green-Refactor），测试先行驱动设计
 
-- **Domain 层单元测试**：参考 [Domain 层单元测试](../../.claude/skills/java-test-architect/SKILL.md#domain-层单元测试)
-  - 无 Spring 依赖
-  - 使用 JUnit + AssertJ
+- **TDD 工作流**：参考 [patra-tdd-development Skill](../../.claude/skills/patra-tdd-development/SKILL.md)
+  - Red：先写失败的测试
+  - Green：编写最少代码通过测试
+  - Refactor：重构代码和测试
 
-- **Application 层单元测试**：参考 [Application 层单元测试](../../.claude/skills/java-test-architect/SKILL.md#application-层单元测试)
-  - 使用 @ExtendWith(MockitoExtension.class)
-  - Mock Port 接口
+- **六边形架构各层的 TDD 实践**：
+  - Domain 层：无框架依赖，纯业务逻辑测试
+  - Application 层：Mock Port 接口，测试编排逻辑
+  - Infrastructure 层：使用 TestContainers，测试数据访问
+  - Adapter 层：使用 MockMvc，测试 HTTP 接口
 
-- **Infrastructure 层集成测试**：参考 [Repository 集成测试](../../.claude/skills/java-test-architect/SKILL.md#repository-集成测试testcontainers)
-  - 使用 TestContainers
-  - 必须在 `patra-{service}-boot` 模块
-
-- **Adapter 层集成测试**：参考 [Controller 集成测试](../../.claude/skills/java-test-architect/SKILL.md#controller-集成测试mockmvc)
-  - 使用 MockMvc
-  - 必须在 `patra-{service}-boot` 模块
-
-- **架构测试**：参考 [架构测试（ArchUnit）](../../.claude/skills/java-test-architect/SKILL.md#架构测试archunit)
-
-**关键规范（来自 Constitution CHK-TEST-006）**：
+**关键规范（测试位置）**：
 - ⚠️ **IT 测试（*IT.java）必须在 patra-{service}-boot 模块**
 - ⚠️ **E2E 测试（*E2E.java）必须在 patra-{service}-boot 模块**
+- ⚠️ **单元测试（*Test.java）与被测试类在同一模块**
 
 ## 关键规则
 
@@ -273,17 +267,17 @@ $ARGUMENTS
 ### 📋 推荐规则
 
 5. **参考 Skills 获取代码模板**：不要凭空编写，先查看 Skills 中的示例
-   - Domain 层 → java-hexagonal-architecture
-   - Application/Infrastructure/Adapter 层 → java-spring-development
-   - 测试 → java-test-architect
+   - 架构模式 → java-hexagonal-architecture
+   - Spring Boot 技术模式 → java-spring-development
+   - TDD 工作流 → patra-tdd-development
 
-6. **阶段性审查**：每个层完成后调用 java-code-reviewer
+6. **阶段性审查**：每个层完成后调用 code-reviewer agent
    - Domain 层完成 → 审查 CHK-ARCH-001, CHK-CODE-003
    - Application 层完成 → 审查 CHK-ARCH-003, CHK-CODE-002
    - Infrastructure 层完成 → 审查 CHK-ARCH-004, CHK-CODE-005
    - Adapter 层完成 → 审查 CHK-ARCH-002, 错误处理
 
-7. **最后生成文档**：所有代码完成后调用 java-documentation-architect
+7. **最后生成文档**：所有代码完成后调用 documentation-architect agent
    - package-info.java
    - 模块 README.md
    - API 文档

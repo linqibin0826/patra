@@ -298,14 +298,14 @@ $ARGUMENTS
 
 **测试策略需求质量（Patra 项目）：** `test-strategy.md`
 
-样本项目（测试测试策略需求，参考 java-test-architect）：
+样本项目（测试测试策略需求，参考 patra-tdd-development）：
 
 - "是否明确要求 TDD 方法（测试先于代码）？[完整性, Spec §Testing]"
-- "是否为所有层指定了测试覆盖率需求（Domain ≥80%, App ≥70%）？[清晰度, CHK-TEST-001/002]"
-- "是否定义了 IT/E2E 测试的模块位置需求（必须在 patra-{service}-boot 模块）？[一致性, CHK-TEST-006]"
-- "是否指定了 TestContainers 用于集成测试的需求？[覆盖范围, CHK-TEST-003]"
-- "是否要求 ArchUnit 架构测试以验证依赖方向？[Gap, CHK-TEST-005]"
-- "是否为 Domain 层单元测试定义了无 Spring 依赖的需求？[清晰度, CHK-TEST-001]"
+- "是否定义了 Red-Green-Refactor 循环的执行要求？[清晰度, TDD 工作流]"
+- "是否定义了 IT/E2E 测试的模块位置需求（必须在 patra-{service}-boot 模块）？[一致性, 测试位置规范]"
+- "是否指定了 TestContainers 用于集成测试的需求？[覆盖范围, TDD 最佳实践]"
+- "是否要求 ArchUnit 架构测试以验证依赖方向？[Gap, 架构合规性]"
+- "是否为 Domain 层单元测试定义了无框架依赖的需求？[清晰度, 六边形架构原则]"
 
 ## 反例：不应该做什么
 
