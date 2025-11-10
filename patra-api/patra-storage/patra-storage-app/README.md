@@ -322,10 +322,15 @@ public ComplexResult executeComplexUseCase(ComplexCommand command) {
 
 ### 测试策略
 
-1. **集成测试**: 测试用例编排器的完整流程
-2. **Mock 仓储**: 使用 Mockito Mock 仓储接口
-3. **事务测试**: 使用 `@Transactional` 和 `@Rollback` 测试事务行为
-4. **异常测试**: 测试各种异常场景和事务回滚
+Application 层使用**Mock 单元测试**，覆盖率要求 ≥ 70%。
+
+**测试原则**:
+1. **Mock Port 接口**: Mock 所有 Repository、EventPublisher 等接口
+2. **验证编排逻辑**: 使用 `InOrder` 验证调用顺序
+3. **事务边界测试**: 测试事务提交和回滚
+4. **异常场景**: 测试各种异常情况的处理
+
+**详细指南** → 参见 [patra-tdd-development § Application层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
 
 **测试示例**:
 ```java

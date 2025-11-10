@@ -421,10 +421,15 @@ if (metadata.isExpired()) {
 
 ### 测试策略
 
+Domain 层使用**纯单元测试**（无框架依赖），覆盖率要求 ≥ 80%。
+
+**测试原则**:
 1. **单元测试**: 测试聚合根的业务行为和值对象的验证逻辑
 2. **无需 Mock**: 领域层无外部依赖,测试无需 Mock 框架
 3. **边界测试**: 重点测试验证逻辑和边界条件
 4. **行为测试**: 测试业务行为(如 `markAsDeleted()`)而非 getter/setter
+
+**详细指南** → 参见 [patra-tdd-development § Domain层TDD](../../.claude/skills/patra-tdd-development/SKILL.md)
 
 ## 相关文档
 

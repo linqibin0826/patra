@@ -253,19 +253,28 @@ docker run -d \
 
 ## 测试策略
 
-### 单元测试
+Patra Registry 遵循**六边形架构的分层测试策略**。
 
-位于各子模块中,测试单个类或方法。
+**详细测试规范** → 参见 [测试覆盖率检查清单](../../.specify/templates/test-coverage-checklist.md)
 
-### 集成测试
+**TDD 实践指南** → 参见 [patra-tdd-development Skill](../../.claude/skills/patra-tdd-development/SKILL.md)
 
-位于本模块的 `src/test/java`,使用 Testcontainers 启动 MySQL 容器。
+### 快速参考
 
-**示例**:
+| 测试类型 | 位置 | 框架 | 覆盖率 |
+|---------|------|------|--------|
+| **Domain 单元测试** | patra-registry-domain/src/test/ | JUnit 5 + AssertJ | ≥ 80% |
+| **Application 单元测试** | patra-registry-app/src/test/ | JUnit 5 + Mockito | ≥ 70% |
+| **Infrastructure 测试** | patra-registry-infra/src/test/ | @MybatisTest + TestContainers | 有 |
+| **Adapter 测试** | patra-registry-adapter/src/test/ | @WebMvcTest + Mockito | 有 |
+| **Boot E2E 测试** | patra-registry-boot/src/test/ | @SpringBootTest + TestContainers | 有 |
+
+### E2E 测试示例
+
 ```java
 @SpringBootTest
 @Testcontainers
-class ProvenanceEndpointIntegrationTest {
+class ProvenanceEndpointE2ETest {
 
   @Container
   static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
