@@ -1,3 +1,0 @@
-com.patra.spring.boot.starter.test.autoconfigure.TestContainersAutoConfiguration
-com.patra.spring.boot.starter.test.autoconfigure.MockMvcAutoConfiguration
-com.patra.spring.boot.starter.test.autoconfigure.WireMockAutoConfiguration

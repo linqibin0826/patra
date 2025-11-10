@@ -8,6 +8,7 @@ import json
 import sys
 import os
 import re
+import subprocess
 
 def parse_context_from_transcript(transcript_path):
     """Parse context usage from transcript file."""
@@ -190,6 +191,40 @@ def get_session_metrics(cost_data):
     
     return f" \033[90m|\033[0m {' '.join(metrics)}" if metrics else ""
 
+def get_git_branch(workspace_data):
+    """Get current git branch name."""
+    try:
+        project_dir = workspace_data.get('project_dir', '')
+        if not project_dir:
+            project_dir = os.getcwd()
+
+        # Try to get git branch
+        result = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+            timeout=1
+        )
+
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            # Color based on branch name
+            if branch in ['main', 'master']:
+                branch_color = "\033[36m"  # Cyan for main/master
+            elif branch.startswith('feature/') or branch.startswith('feat/'):
+                branch_color = "\033[35m"  # Magenta for feature branches
+            elif branch.startswith('hotfix/') or branch.startswith('fix/'):
+                branch_color = "\033[31m"  # Red for hotfix branches
+            else:
+                branch_color = "\033[33m"  # Yellow for other branches
+
+            return f"{branch_color} {branch}\033[0m"
+        else:
+            return ""
+    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+        return ""
+
 def main():
     try:
         # Read JSON input from Claude Code
@@ -208,7 +243,8 @@ def main():
         context_display = get_context_display(context_info)
         directory = get_directory_display(workspace)
         session_metrics = get_session_metrics(cost_data)
-        
+        git_branch = get_git_branch(workspace)
+
         # Model display with context-aware coloring
         if context_info:
             percent = context_info.get('percent', 0)
@@ -218,13 +254,14 @@ def main():
                 model_color = "\033[33m"  # Yellow
             else:
                 model_color = "\033[32m"  # Green
-            
+
             model_display = f"{model_color}[{model_name}]\033[0m"
         else:
             model_display = f"\033[94m[{model_name}]\033[0m"
-        
-        # Combine all components
-        status_line = f"{model_display} \033[93m📁 {directory}\033[0m 🧠 {context_display}{session_metrics}"
+
+        # Combine all components with git branch
+        branch_display = f" 🌿{git_branch}" if git_branch else ""
+        status_line = f"{model_display} \033[93m📁 {directory}\033[0m{branch_display} 🧠 {context_display}{session_metrics}"
         
         print(status_line)
         

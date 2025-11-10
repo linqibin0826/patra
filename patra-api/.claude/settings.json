@@ -33,6 +33,10 @@
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/trigger-build-resolver-java.sh"
           },
           {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/send-stop-notification.sh"
+          },
+          {
             "type": "prompt",
             "prompt": "Evaluate if Claude should stop: $ARGUMENTS. Check if all tasks are complete."
           }
