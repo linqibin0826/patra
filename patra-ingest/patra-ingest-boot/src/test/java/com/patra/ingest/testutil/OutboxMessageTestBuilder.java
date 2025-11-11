@@ -44,7 +44,7 @@ public final class OutboxMessageTestBuilder {
   private Long version;
   private String aggregateType = "TASK";
   private Long aggregateId = 1001L;
-  private String channel = MessageChannels.TASK_READY;
+  private String channel = MessageChannels.INGEST_TASK_READY;
   private String opType = "CREATE";
   private String partitionKey = "partition-1";
   private String dedupKey = "dedup-" + UUID.randomUUID();
@@ -142,7 +142,7 @@ public final class OutboxMessageTestBuilder {
    */
   public static OutboxMessageTestBuilder aLiteratureReadyMessage() {
     return new OutboxMessageTestBuilder()
-        .channel(MessageChannels.LITERATURE_READY)
+        .channel(MessageChannels.INGEST_LITERATURE_READY)
         .aggregateType("LITERATURE")
         .opType("INGEST")
         .payloadJson("{\"literatureId\":9001,\"source\":\"PUBMED\"}");

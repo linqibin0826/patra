@@ -286,7 +286,7 @@ class MessageOperationsTest {
     void taskReadyShouldBeConsistentAcrossClasses() {
       // Then
       assertThat(MessageOperations.TASK_READY)
-          .isEqualTo(MessageChannels.TASK_READY);
+          .isEqualTo(MessageChannels.INGEST_TASK_READY);
     }
 
     @Test
@@ -294,7 +294,7 @@ class MessageOperationsTest {
     void literatureReadyShouldBeConsistentAcrossClasses() {
       // Then
       assertThat(MessageOperations.LITERATURE_READY)
-          .isEqualTo(MessageChannels.LITERATURE_READY);
+          .isEqualTo(MessageChannels.INGEST_LITERATURE_READY);
     }
   }
 }

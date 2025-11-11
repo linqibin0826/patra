@@ -53,7 +53,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("TASK_READY 应映射到 INGEST_TASK_READY")
     void shouldMapTaskReadyChannelToTopic() {
       // When
-      String topic = channelMapper.toTopic(MessageChannels.TASK_READY);
+      String topic = channelMapper.toTopic(MessageChannels.INGEST_TASK_READY);
 
       // Then
       assertThat(topic).isEqualTo("INGEST_TASK_READY");
@@ -63,7 +63,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("LITERATURE_READY 应映射到 INGEST_LITERATURE_READY")
     void shouldMapLiteratureReadyChannelToTopic() {
       // When
-      String topic = channelMapper.toTopic(MessageChannels.LITERATURE_READY);
+      String topic = channelMapper.toTopic(MessageChannels.INGEST_LITERATURE_READY);
 
       // Then
       assertThat(topic).isEqualTo("INGEST_LITERATURE_READY");
@@ -114,7 +114,7 @@ class RocketMqChannelMapperTest {
       RocketMqChannelMapper mapperWithPrefix = new RocketMqChannelMapper(properties);
 
       // When
-      String topic = mapperWithPrefix.toTopic(MessageChannels.TASK_READY);
+      String topic = mapperWithPrefix.toTopic(MessageChannels.INGEST_TASK_READY);
 
       // Then: 应生成 "dev-INGEST_TASK_READY"
       assertThat(topic).isEqualTo("dev-INGEST_TASK_READY");
@@ -128,7 +128,7 @@ class RocketMqChannelMapperTest {
       RocketMqChannelMapper mapperWithEmptyPrefix = new RocketMqChannelMapper(properties);
 
       // When
-      String topic = mapperWithEmptyPrefix.toTopic(MessageChannels.TASK_READY);
+      String topic = mapperWithEmptyPrefix.toTopic(MessageChannels.INGEST_TASK_READY);
 
       // Then: 应生成 "INGEST_TASK_READY"
       assertThat(topic).isEqualTo("INGEST_TASK_READY");
@@ -144,7 +144,7 @@ class RocketMqChannelMapperTest {
         // When
         when(properties.getTopicPrefix()).thenReturn(prefix);
         RocketMqChannelMapper mapper = new RocketMqChannelMapper(properties);
-        String topic = mapper.toTopic(MessageChannels.TASK_READY);
+        String topic = mapper.toTopic(MessageChannels.INGEST_TASK_READY);
 
         // Then
         assertThat(topic).isEqualTo(prefix + "INGEST_TASK_READY");
@@ -161,11 +161,11 @@ class RocketMqChannelMapperTest {
     void shouldOverrideDefaultMappingWithCustomMapping() {
       // Given: 自定义映射覆盖 TASK_READY
       when(properties.getChannelMapping())
-          .thenReturn(Map.of(MessageChannels.TASK_READY, "CUSTOM_TASK_TOPIC"));
+          .thenReturn(Map.of(MessageChannels.INGEST_TASK_READY, "CUSTOM_TASK_TOPIC"));
       RocketMqChannelMapper customMapper = new RocketMqChannelMapper(properties);
 
       // When
-      String topic = customMapper.toTopic(MessageChannels.TASK_READY);
+      String topic = customMapper.toTopic(MessageChannels.INGEST_TASK_READY);
 
       // Then: 应使用自定义映射
       assertThat(topic).isEqualTo("CUSTOM_TASK_TOPIC");
@@ -176,12 +176,12 @@ class RocketMqChannelMapperTest {
     void shouldMergeCustomAndDefaultMappings() {
       // Given: 只覆盖 TASK_READY，保留 LITERATURE_READY 的默认映射
       when(properties.getChannelMapping())
-          .thenReturn(Map.of(MessageChannels.TASK_READY, "CUSTOM_TASK_TOPIC"));
+          .thenReturn(Map.of(MessageChannels.INGEST_TASK_READY, "CUSTOM_TASK_TOPIC"));
       RocketMqChannelMapper customMapper = new RocketMqChannelMapper(properties);
 
       // When
-      String customTopic = customMapper.toTopic(MessageChannels.TASK_READY);
-      String defaultTopic = customMapper.toTopic(MessageChannels.LITERATURE_READY);
+      String customTopic = customMapper.toTopic(MessageChannels.INGEST_TASK_READY);
+      String defaultTopic = customMapper.toTopic(MessageChannels.INGEST_LITERATURE_READY);
 
       // Then
       assertThat(customTopic).isEqualTo("CUSTOM_TASK_TOPIC"); // 自定义映射
@@ -193,12 +193,12 @@ class RocketMqChannelMapperTest {
     void shouldCombineCustomMappingWithPrefix() {
       // Given: 自定义映射 + 前缀
       when(properties.getChannelMapping())
-          .thenReturn(Map.of(MessageChannels.TASK_READY, "CUSTOM_TOPIC"));
+          .thenReturn(Map.of(MessageChannels.INGEST_TASK_READY, "CUSTOM_TOPIC"));
       when(properties.getTopicPrefix()).thenReturn("dev-");
       RocketMqChannelMapper mapper = new RocketMqChannelMapper(properties);
 
       // When
-      String topic = mapper.toTopic(MessageChannels.TASK_READY);
+      String topic = mapper.toTopic(MessageChannels.INGEST_TASK_READY);
 
       // Then: 应应用自定义映射和前缀
       assertThat(topic).isEqualTo("dev-CUSTOM_TOPIC");
@@ -216,7 +216,7 @@ class RocketMqChannelMapperTest {
       String channel = channelMapper.toChannel("INGEST_TASK_READY");
 
       // Then
-      assertThat(channel).isEqualTo(MessageChannels.TASK_READY);
+      assertThat(channel).isEqualTo(MessageChannels.INGEST_TASK_READY);
     }
 
     @Test
@@ -226,7 +226,7 @@ class RocketMqChannelMapperTest {
       String channel = channelMapper.toChannel("INGEST_LITERATURE_READY");
 
       // Then
-      assertThat(channel).isEqualTo(MessageChannels.LITERATURE_READY);
+      assertThat(channel).isEqualTo(MessageChannels.INGEST_LITERATURE_READY);
     }
 
     @Test
@@ -240,7 +240,7 @@ class RocketMqChannelMapperTest {
       String channel = mapperWithPrefix.toChannel("dev-INGEST_TASK_READY");
 
       // Then: 应去除前缀后映射
-      assertThat(channel).isEqualTo(MessageChannels.TASK_READY);
+      assertThat(channel).isEqualTo(MessageChannels.INGEST_TASK_READY);
     }
 
     @Test
@@ -285,7 +285,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("TASK_READY 应有映射")
     void shouldHaveMappingForTaskReady() {
       // When
-      boolean hasMapping = channelMapper.hasMapping(MessageChannels.TASK_READY);
+      boolean hasMapping = channelMapper.hasMapping(MessageChannels.INGEST_TASK_READY);
 
       // Then
       assertThat(hasMapping).isTrue();
@@ -295,7 +295,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("LITERATURE_READY 应有映射")
     void shouldHaveMappingForLiteratureReady() {
       // When
-      boolean hasMapping = channelMapper.hasMapping(MessageChannels.LITERATURE_READY);
+      boolean hasMapping = channelMapper.hasMapping(MessageChannels.INGEST_LITERATURE_READY);
 
       // Then
       assertThat(hasMapping).isTrue();
@@ -343,7 +343,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("TASK_READY 通道应与 INGEST_TASK_READY Topic 双向映射一致")
     void shouldHaveConsistentBidirectionalMappingForTaskReady() {
       // Given
-      String channel = MessageChannels.TASK_READY;
+      String channel = MessageChannels.INGEST_TASK_READY;
 
       // When: 通道 → Topic → 通道
       String topic = channelMapper.toTopic(channel);
@@ -357,7 +357,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("LITERATURE_READY 通道应与 Topic 双向映射一致")
     void shouldHaveConsistentBidirectionalMappingForLiteratureReady() {
       // Given
-      String channel = MessageChannels.LITERATURE_READY;
+      String channel = MessageChannels.INGEST_LITERATURE_READY;
 
       // When: 通道 → Topic → 通道
       String topic = channelMapper.toTopic(channel);
@@ -373,7 +373,7 @@ class RocketMqChannelMapperTest {
       // Given: 配置前缀
       when(properties.getTopicPrefix()).thenReturn("dev-");
       RocketMqChannelMapper mapperWithPrefix = new RocketMqChannelMapper(properties);
-      String channel = MessageChannels.TASK_READY;
+      String channel = MessageChannels.INGEST_TASK_READY;
 
       // When: 通道 → Topic → 通道
       String topic = mapperWithPrefix.toTopic(channel);
@@ -388,7 +388,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置的通道应有双向映射")
     void shouldHaveBidirectionalMappingForAllConfiguredChannels() {
       // Given: 所有已知通道
-      String[] channels = {MessageChannels.TASK_READY, MessageChannels.LITERATURE_READY};
+      String[] channels = {MessageChannels.INGEST_TASK_READY, MessageChannels.INGEST_LITERATURE_READY};
 
       // When & Then: 验证每个通道的双向映射
       for (String channel : channels) {
@@ -450,7 +450,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("服务内通道应映射到 UPPER_CASE 格式 Topic")
     void shouldMapInternalChannelToUpperCaseTopic() {
       // Given: 服务内通道 TASK_READY
-      String internalChannel = MessageChannels.TASK_READY;
+      String internalChannel = MessageChannels.INGEST_TASK_READY;
 
       // When
       String topic = channelMapper.toTopic(internalChannel);
@@ -463,7 +463,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("跨服务通道应映射到 INGEST_{ENTITY}_READY 格式 Topic")
     void shouldMapCrossServiceChannelToUnderscoreSeparatedTopic() {
       // Given: 跨服务通道 LITERATURE_READY
-      String crossServiceChannel = MessageChannels.LITERATURE_READY;
+      String crossServiceChannel = MessageChannels.INGEST_LITERATURE_READY;
 
       // When
       String topic = channelMapper.toTopic(crossServiceChannel);
@@ -479,7 +479,7 @@ class RocketMqChannelMapperTest {
     @DisplayName("所有已配置通道的数量应为 2")
     void shouldHaveExactlyTwoConfiguredChannels() {
       // Given: MessageChannels 中定义的所有通道
-      String[] expectedChannels = {MessageChannels.TASK_READY, MessageChannels.LITERATURE_READY};
+      String[] expectedChannels = {MessageChannels.INGEST_TASK_READY, MessageChannels.INGEST_LITERATURE_READY};
 
       // When & Then: 验证每个通道都有映射
       for (String channel : expectedChannels) {

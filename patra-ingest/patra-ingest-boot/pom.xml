@@ -60,11 +60,10 @@
             <artifactId>patra-storage-api</artifactId>
         </dependency>
 
-        <!-- RocketMQ (needed for compile, already in infra but needed for tests) -->
+        <!-- RocketMQ (运行时依赖，用于消息监听器) -->
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-spring-boot-starter</artifactId>
-            <scope>test</scope>
             <exclusions>
                 <!-- 排除 commons-logging，使用 Spring 的 jcl 桥接 -->
                 <exclusion>
