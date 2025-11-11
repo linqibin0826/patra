@@ -1,7 +1,7 @@
 # 数据源适配器架构设计方案
 
 **文档版本**: 1.0.0
-**创建日期**: 2024-11-11
+**创建日期**: 2025-11-11
 **作者**: Patra 架构团队
 **状态**: 实施中
 
@@ -33,7 +33,7 @@ GenericBatchExecutor (Application Layer)
 │  │   - 执行批次数据获取                                     │  │
 │  │   - 通过 AdapterRegistry 获取适配器                      │  │
 │  │   - 处理重试和错误                                       │  │
-│  │   - 发布标准化数据                                       │  │
+│  │   - 发布规范化数据                                       │  │
 │  └─────────────────────────────────────────────────────────┘  │
 └───────────────────────────┬────────────────────────────────────┘
                            ↓
@@ -70,7 +70,7 @@ GenericBatchExecutor (Application Layer)
 
 ---
 
-## 2. 标准数据模型设计
+## 2. 规范数据模型设计
 
 ### 2.1 顶层接口
 
@@ -81,7 +81,7 @@ package com.patra.common.model;
 import java.time.Instant;
 
 /**
- * 所有标准数据模型的顶层接口
+ * 所有规范数据模型的顶层接口
  */
 public interface CanonicalData {
 
@@ -139,7 +139,7 @@ public enum DataType {
 package com.patra.common.model;
 
 /**
- * 标准文献数据模型
+ * 规范文献数据模型
  */
 @Data
 @Builder
@@ -163,7 +163,7 @@ public class CanonicalLiterature implements CanonicalData {
 }
 
 /**
- * 标准作者数据模型
+ * 规范作者数据模型
  */
 @Data
 @Builder
@@ -186,7 +186,7 @@ public class CanonicalAuthor implements CanonicalData {
 }
 
 /**
- * 标准期刊数据模型
+ * 规范期刊数据模型
  */
 @Data
 @Builder
@@ -210,7 +210,7 @@ public class CanonicalJournal implements CanonicalData {
 }
 
 /**
- * 标准引用数据模型
+ * 规范引用数据模型
  */
 @Data
 @Builder
@@ -235,7 +235,7 @@ public class CanonicalCitation implements CanonicalData {
 }
 
 /**
- * 标准全文数据模型
+ * 规范全文数据模型
  */
 @Data
 @Builder
@@ -274,7 +274,7 @@ import com.patra.common.model.CanonicalData;
  *
  * <p>由 GenericBatchExecutor 调用，执行数据获取和转换</p>
  *
- * @param <T> 返回的标准数据类型
+ * @param <T> 返回的规范数据类型
  */
 public interface DataSourceAdapter<T extends CanonicalData> {
 
@@ -289,7 +289,7 @@ public interface DataSourceAdapter<T extends CanonicalData> {
      * 执行数据检索和转换
      *
      * @param request 包含查询条件、配置和元数据的请求对象
-     * @return 包含标准化数据的结果
+     * @return 包含规范化数据的结果
      */
     AdapterResult<T> fetchData(AdapterRequest request);
 
@@ -493,7 +493,7 @@ import java.util.List;
  * 数据转换策略接口
  *
  * @param <S> 源数据类型（外部模型）
- * @param <T> 目标数据类型（标准模型）
+ * @param <T> 目标数据类型（规范模型）
  */
 public interface DataTransformStrategy<S, T extends CanonicalData> {
 
@@ -501,7 +501,7 @@ public interface DataTransformStrategy<S, T extends CanonicalData> {
      * 执行单个数据转换
      *
      * @param source 源数据对象
-     * @return 转换后的标准数据对象
+     * @return 转换后的规范数据对象
      */
     T transform(S source);
 
@@ -832,7 +832,7 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
             // 伪代码：调用 PubMed 作者 API
             List<PubMedAuthor> authors = pubMedClient.searchAuthors(/*...*/);
 
-            // 转换为标准作者模型
+            // 转换为规范作者模型
             DataTransformStrategy<PubMedAuthor, CanonicalAuthor> strategy =
                 strategyRegistry.getStrategy(PubMedAuthor.class, CanonicalAuthor.class);
 
@@ -854,7 +854,7 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
             // 伪代码：调用 PubMed 引用 API
             List<PubMedCitation> citations = pubMedClient.fetchCitations(/*...*/);
 
-            // 转换为标准引用模型
+            // 转换为规范引用模型
             DataTransformStrategy<PubMedCitation, CanonicalCitation> strategy =
                 strategyRegistry.getStrategy(PubMedCitation.class, CanonicalCitation.class);
 
