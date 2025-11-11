@@ -44,8 +44,8 @@ public class RocketMqChannelMapper {
    */
   private static final Map<String, String> DEFAULT_CHANNEL_TO_TOPIC =
       Map.of(
-          MessageChannels.TASK_READY, "INGEST_TASK_READY",
-          MessageChannels.LITERATURE_READY, "INGEST_LITERATURE_READY");
+          MessageChannels.INGEST_TASK_READY, "INGEST_TASK_READY",
+          MessageChannels.INGEST_LITERATURE_READY, "INGEST_LITERATURE_READY");
 
   private final Map<String, String> channelToTopic;
   private final String topicPrefix;

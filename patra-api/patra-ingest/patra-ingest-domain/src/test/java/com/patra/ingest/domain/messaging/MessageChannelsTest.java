@@ -18,7 +18,7 @@ class MessageChannelsTest {
     @DisplayName("TASK_READY 常量应该有正确的值")
     void taskReadyShouldHaveCorrectValue() {
       // When
-      String value = MessageChannels.TASK_READY;
+      String value = MessageChannels.INGEST_TASK_READY;
 
       // Then
       assertThat(value).isEqualTo("TASK_READY");
@@ -28,7 +28,7 @@ class MessageChannelsTest {
     @DisplayName("LITERATURE_READY 常量应该有正确的值")
     void literatureReadyShouldHaveCorrectValue() {
       // When
-      String value = MessageChannels.LITERATURE_READY;
+      String value = MessageChannels.INGEST_LITERATURE_READY;
 
       // Then
       assertThat(value).isEqualTo("LITERATURE_READY");
@@ -43,7 +43,7 @@ class MessageChannelsTest {
     @DisplayName("TASK_READY 应该是非空字符串")
     void taskReadyShouldNotBeEmpty() {
       // Then
-      assertThat(MessageChannels.TASK_READY)
+      assertThat(MessageChannels.INGEST_TASK_READY)
           .isNotNull()
           .isNotEmpty()
           .isNotBlank();
@@ -53,7 +53,7 @@ class MessageChannelsTest {
     @DisplayName("LITERATURE_READY 应该是非空字符串")
     void literatureReadyShouldNotBeEmpty() {
       // Then
-      assertThat(MessageChannels.LITERATURE_READY)
+      assertThat(MessageChannels.INGEST_LITERATURE_READY)
           .isNotNull()
           .isNotEmpty()
           .isNotBlank();
@@ -63,8 +63,8 @@ class MessageChannelsTest {
     @DisplayName("两个常量应该不相同")
     void constantsShouldBeDifferent() {
       // Then
-      assertThat(MessageChannels.TASK_READY)
-          .isNotEqualTo(MessageChannels.LITERATURE_READY);
+      assertThat(MessageChannels.INGEST_TASK_READY)
+          .isNotEqualTo(MessageChannels.INGEST_LITERATURE_READY);
     }
   }
 
@@ -76,7 +76,7 @@ class MessageChannelsTest {
     @DisplayName("TASK_READY 应该使用大写蛇形命名")
     void taskReadyShouldUseUpperSnakeCase() {
       // When
-      String value = MessageChannels.TASK_READY;
+      String value = MessageChannels.INGEST_TASK_READY;
 
       // Then
       assertThat(value).matches("^[A-Z_]+$");
@@ -86,7 +86,7 @@ class MessageChannelsTest {
     @DisplayName("LITERATURE_READY 应该使用大写蛇形命名")
     void literatureReadyShouldUseUpperSnakeCase() {
       // When
-      String value = MessageChannels.LITERATURE_READY;
+      String value = MessageChannels.INGEST_LITERATURE_READY;
 
       // Then
       assertThat(value).matches("^[A-Z_]+$");
@@ -96,11 +96,11 @@ class MessageChannelsTest {
     @DisplayName("常量名称应该表达业务意图")
     void constantsShouldExpressBusinessIntent() {
       // Then
-      assertThat(MessageChannels.TASK_READY)
+      assertThat(MessageChannels.INGEST_TASK_READY)
           .contains("TASK")
           .contains("READY");
 
-      assertThat(MessageChannels.LITERATURE_READY)
+      assertThat(MessageChannels.INGEST_LITERATURE_READY)
           .contains("LITERATURE")
           .contains("READY");
     }
@@ -133,7 +133,7 @@ class MessageChannelsTest {
     @DisplayName("TASK_READY 应该表示任务就绪事件")
     void taskReadyShouldRepresentTaskReadyEvent() {
       // Given
-      String channelName = MessageChannels.TASK_READY;
+      String channelName = MessageChannels.INGEST_TASK_READY;
 
       // Then
       assertThat(channelName)
@@ -145,7 +145,7 @@ class MessageChannelsTest {
     @DisplayName("LITERATURE_READY 应该表示文献数据就绪事件")
     void literatureReadyShouldRepresentLiteratureReadyEvent() {
       // Given
-      String channelName = MessageChannels.LITERATURE_READY;
+      String channelName = MessageChannels.INGEST_LITERATURE_READY;
 
       // Then
       assertThat(channelName)
@@ -162,8 +162,8 @@ class MessageChannelsTest {
     @DisplayName("多次访问 TASK_READY 应该返回相同引用")
     void taskReadyShouldReturnSameReference() {
       // When
-      String ref1 = MessageChannels.TASK_READY;
-      String ref2 = MessageChannels.TASK_READY;
+      String ref1 = MessageChannels.INGEST_TASK_READY;
+      String ref2 = MessageChannels.INGEST_TASK_READY;
 
       // Then
       assertThat(ref1).isSameAs(ref2);
@@ -173,8 +173,8 @@ class MessageChannelsTest {
     @DisplayName("多次访问 LITERATURE_READY 应该返回相同引用")
     void literatureReadyShouldReturnSameReference() {
       // When
-      String ref1 = MessageChannels.LITERATURE_READY;
-      String ref2 = MessageChannels.LITERATURE_READY;
+      String ref1 = MessageChannels.INGEST_LITERATURE_READY;
+      String ref2 = MessageChannels.INGEST_LITERATURE_READY;
 
       // Then
       assertThat(ref1).isSameAs(ref2);

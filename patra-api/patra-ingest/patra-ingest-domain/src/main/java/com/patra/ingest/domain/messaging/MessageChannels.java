@@ -27,12 +27,12 @@ public final class MessageChannels {
    *
    * <p>当采集任务被创建并准备执行时,通过此通道发送任务就绪消息。
    */
-  public static final String TASK_READY = "TASK_READY";
+  public static final String INGEST_TASK_READY = "INGEST_TASK_READY";
 
   /**
    * 文献数据就绪通道。
    *
    * <p>当任务执行完成,文献数据准备好写入 Catalog 时,通过此通道发送数据就绪消息。
    */
-  public static final String LITERATURE_READY = "LITERATURE_READY";
+  public static final String INGEST_LITERATURE_READY = "INGEST_LITERATURE_READY";
 }

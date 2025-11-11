@@ -11,9 +11,7 @@ import com.patra.ingest.integration.config.MySQLContainerInitializer;
 import com.patra.ingest.integration.config.RocketMQContainerInitializer;
 import com.patra.ingest.testutil.OutboxMessageTestBuilder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
@@ -126,7 +124,7 @@ class RocketMqOutboxPublisherIT {
     // 准备
     OutboxMessage outboxMsg =
         OutboxMessageTestBuilder.aValidPendingMessage()
-            .channel(MessageChannels.TASK_READY)
+            .channel(MessageChannels.INGEST_TASK_READY)
             .dedupKey("test-001")
             .opType("CREATE")
             .payloadJson("{\"taskId\":1001,\"status\":\"READY\"}")
