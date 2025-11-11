@@ -13,15 +13,15 @@
 
 > **重要说明**：本特性是一个**架构改造项目**，目标是提升系统的可扩展性和架构合理性，而不是直接交付给研究人员的用户功能。用户故事从开发团队、数据团队和运维团队的视角出发，验收标准是架构组件的实现和集成。
 
-### 用户故事 1 - 定义标准数据模型接口体系 (优先级: P1)
+### 用户故事 1 - 定义规范数据模型接口体系 (优先级: P1)
 
 **用户**: 架构师/后端开发团队
 
 **当前问题**: 现有架构中fetchData接口只返回单一类型数据（文献），无法支持作者、期刊、引用、全文等多种数据类型。每种数据类型都有不同的结构，缺乏统一的抽象。
 
-**目标**: 设计并实现CanonicalData接口体系，作为所有数据类型的顶层抽象，定义统一的标准数据模型（CanonicalLiterature、CanonicalAuthor、CanonicalJournal、CanonicalCitation、CanonicalFullText）。
+**目标**: 设计并实现CanonicalData接口体系，作为所有数据类型的顶层抽象，定义统一的规范数据模型（CanonicalLiterature、CanonicalAuthor、CanonicalJournal、CanonicalCitation、CanonicalFullText）。
 
-**为什么是这个优先级**: 这是整个架构改造的基础，标准数据模型是适配器和转换策略的核心依赖。如果不先定义清晰的数据模型，后续的泛型化设计无法进行。
+**为什么是这个优先级**: 这是整个架构改造的基础，规范数据模型是适配器和转换策略的核心依赖。如果不先定义清晰的数据模型，后续的泛型化设计无法进行。
 
 **独立测试**: 可以通过编写单元测试验证CanonicalData接口及其实现类的结构完整性、不变性约束和验证规则，无需依赖外部API或数据库。
 
@@ -29,7 +29,7 @@
 
 1. **假设** 定义了CanonicalData顶层接口, **当** 创建CanonicalLiterature实现类, **那么** 包含必填字段（id、title、provenance、createdAt）和可选字段（abstractText、authors、journal、keywords）
 2. **假设** 创建一个CanonicalLiterature对象但标题为空, **当** 调用validate()方法, **那么** 返回ValidationResult失败，错误消息为"标题不能为空"
-3. **假设** 定义了5种数据类型的标准模型, **当** 查看类图, **那么** 所有模型都继承CanonicalData接口，每个模型都有明确的聚合边界和不变性约束
+3. **假设** 定义了5种数据类型的规范模型, **当** 查看类图, **那么** 所有模型都继承CanonicalData接口，每个模型都有明确的聚合边界和不变性约束
 4. **假设** CanonicalLiterature包含作者列表, **当** 作者信息缺失, **那么** 作者列表为空集合（不是null），文献对象仍然有效
 
 ---
@@ -38,7 +38,7 @@
 
 **用户**: 架构师/后端开发团队
 
-**当前问题**: 现有DataSourceAdapter接口的fetchData方法返回固定类型，无法根据请求动态返回不同类型的标准数据。AdapterRegistry只能按数据源查找适配器，无法按数据源+数据类型组合查找。
+**当前问题**: 现有DataSourceAdapter接口的fetchData方法返回固定类型，无法根据请求动态返回不同类型的规范数据。AdapterRegistry只能按数据源查找适配器，无法按数据源+数据类型组合查找。
 
 **目标**: 将DataSourceAdapter改造为泛型接口`DataSourceAdapter<T extends CanonicalData>`，增强AdapterRequest包含requestedDataType字段，扩展AdapterRegistry支持按数据源代码和数据类型查找适配器。
 
@@ -65,7 +65,7 @@
 
 **为什么是这个优先级**: 这是降低新数据源接入成本的关键设计，转换策略可插拔后，数据团队只需编写针对特定数据源的转换逻辑，无需修改适配器核心代码。这直接影响"2-3天接入新数据源"的目标能否实现。
 
-**独立测试**: 可以通过准备PubMed原始数据（PubMedArticle对象）和期望的标准数据（CanonicalLiterature对象），验证PubMedToLiteratureStrategy能够正确转换，且TransformResult包含成功和失败的详细信息。
+**独立测试**: 可以通过准备PubMed原始数据（PubMedArticle对象）和期望的规范数据（CanonicalLiterature对象），验证PubMedToLiteratureStrategy能够正确转换，且TransformResult包含成功和失败的详细信息。
 
 **验收场景**:
 
@@ -82,7 +82,7 @@
 
 **当前问题**: 现有PubMed适配器只能获取文献基本信息，无法获取作者详情、引用关系等其他类型数据。即使PubMed API支持这些数据，现有架构也无法扩展支持。
 
-**目标**: 重构PubMed适配器，根据AdapterRequest中的requestedDataType返回对应类型的标准数据。实现至少3种数据类型的支持（LITERATURE、AUTHOR、CITATION），每种类型对应一个转换策略。
+**目标**: 重构PubMed适配器，根据AdapterRequest中的requestedDataType返回对应类型的规范数据。实现至少3种数据类型的支持（LITERATURE、AUTHOR、CITATION），每种类型对应一个转换策略。
 
 **为什么是这个优先级**: 这是验证新架构可行性的关键实践，PubMed适配器是第一个多类型适配器，为后续接入EPMC、ArXiv等数据源提供参考实现。如果PubMed适配器无法验证架构设计，后续所有数据源接入都会受阻。
 
@@ -112,8 +112,8 @@
 **验收场景**:
 
 1. **假设** 批量转换100条数据，90条成功10条失败, **当** 调用batchTransform(), **那么** TransformResult包含successItems(90个)和errors(10个TransformError)，getSuccessRate()返回0.9
-2. **假设** TransformResult的successRate ≥ 0.7, **当** GenericBatchExecutor处理结果, **那么** 发布成功数据到下游，同时记录警告日志"部分数据转换失败: 10/100"
-3. **假设** TransformResult的successRate < 0.7, **当** GenericBatchExecutor处理结果, **那么** 整批任务标记为失败，返回BatchResult包含所有错误详情
+2. **假设** patra-registry配置全局成功率阈值为0.7，TransformResult的successRate=0.9 ≥ 0.7, **当** GenericBatchExecutor处理结果, **那么** 发布成功数据到下游，同时记录警告日志"部分数据转换失败: 10/100"
+3. **假设** patra-registry配置PubMed数据源成功率阈值为0.9（覆盖全局默认），TransformResult的successRate=0.85 < 0.9, **当** GenericBatchExecutor处理PubMed数据结果, **那么** 整批任务标记为失败，返回BatchResult包含所有错误详情
 4. **假设** TransformError记录了原始数据快照, **当** 查看错误详情, **那么** 可以看到失败数据的索引、原始内容和错误原因，方便定位问题
 
 ---
@@ -144,6 +144,9 @@
 - **当数据源API突然变更响应格式时会发生什么?**
   系统的防腐层(Client)隔离外部API变化,如果响应格式变更,只需更新Client层的解析逻辑,不影响核心业务逻辑。
 
+- **当外部API响应格式验证失败时如何处理?**
+  系统抛出FormatValidationException,标记为NON_RETRIABLE错误,记录原始响应内容(截断至10KB)到ERROR日志,立即停止处理该数据,不进行重试。运维团队收到告警后通知开发团队分析根因(API变更或数据损坏)。
+
 - **当多个数据源返回同一篇文献的不同版本数据时如何处理?**
   系统根据数据来源(Provenance)标识数据,每个数据源的数据独立存储,由上层业务逻辑决定如何合并或选择优先级。
 
@@ -162,7 +165,7 @@
 
 - **FR-001**: 系统必须支持从多个医学文献数据源(PubMed、EPMC、ArXiv)获取数据,每个数据源独立配置和管理
 - **FR-002**: 系统必须支持获取多种类型的数据:文献、作者、期刊、引用、全文,每种类型有统一的数据结构
-- **FR-003**: 系统必须将不同数据源的外部数据格式转换为平台统一的标准格式(CanonicalData体系)
+- **FR-003**: 系统必须将不同数据源的外部数据格式转换为平台统一的规范格式(CanonicalData体系)
 - **FR-004**: 系统必须在批量处理时支持部分成功机制:成功的数据正常返回,失败的数据记录错误原因,不影响已成功数据
 - **FR-005**: 系统必须区分可重试错误(网络超时、API限流)和不可重试错误(数据格式错误、权限不足),对可重试错误自动重试
 - **FR-006**: 系统必须支持按关键词、时间范围、数据类型进行数据检索,支持分页和游标翻页机制
@@ -174,18 +177,18 @@
 ### 非功能需求
 
 **架构约束**:
-- **六边形架构层次**: 此功能涉及Domain、Application、Infrastructure三层:Domain层定义标准数据模型接口,Application层调用适配器获取数据,Infrastructure层实现具体数据源的适配器和转换策略
+- **六边形架构层次**: 此功能涉及Domain、Application、Infrastructure三层:Domain层定义规范数据模型接口,Application层调用适配器获取数据,Infrastructure层实现具体数据源的适配器和转换策略
 - **依赖方向**: 严格遵守依赖规则(Infrastructure → Application → Domain),Domain层不依赖任何外部框架,所有外部依赖隔离在Infrastructure层
 - **SSOT遵守**: 所有数据源配置(API地址、密钥、超时时间、限流配置)必须从patra-registry获取,不允许硬编码在代码中
 
 **性能要求**:
-- **NFR-001**: 单次数据查询响应时间P95 ≤ 3秒(从发起请求到返回标准化数据)
+- **NFR-001**: 单次数据查询响应时间P95 ≤ 3秒(从发起请求到返回规范化数据)
 - **NFR-002**: 系统支持每秒100+次并发请求,无性能降级
-- **NFR-003**: 单批次数据处理能力 ≥ 100条数据,批量转换时间 ≤ 5秒
+- **NFR-003**: 单批次数据处理能力 ≥ 100条数据,批量转换时间 ≤ 5秒,使用线程池并行转换（固定大小线程池,并发度从patra-registry配置,全局默认10,支持按数据源覆盖）
 
 **可靠性要求**:
 - **NFR-004**: 可重试错误的自动重试成功率 ≥ 90%(在3次重试内)
-- **NFR-005**: 批量处理时的部分成功率:如果70%以上数据有效,系统应返回成功结果和警告信息,而不是整体失败
+- **NFR-005**: 批量处理时的部分成功机制：成功率阈值从patra-registry配置获取（全局默认70%），支持按数据源覆盖（如PubMed=90%、ArXiv=60%），当实际成功率≥阈值时返回成功结果和警告信息，否则整批失败
 
 **可扩展性要求**:
 - **NFR-006**: 新数据源接入不需要修改核心接口和调度逻辑
@@ -195,19 +198,29 @@
 - **NFR-008**: 所有适配器和转换策略可通过Mock进行独立单元测试
 - **NFR-009**: 测试覆盖率 ≥ 80%(单元测试 + 集成测试)
 
+**可观察性要求**:
+- **NFR-010**: 适配器必须上报基础性能指标：请求成功率、响应时间P95/P99（按数据源和数据类型分组）
+- **NFR-011**: 转换策略必须上报转换成功率、转换失败率（按数据源和数据类型分组）
+- **NFR-012**: GenericBatchExecutor必须上报每种数据类型的处理量（成功数、失败数、部分成功数）
+- **NFR-013**: 错误重试机制必须上报重试次数、重试成功率（按错误类型分组）
+- **NFR-014**: 所有监控指标通过Micrometer上报，集成到现有监控模块
+- **NFR-015**: 日志记录策略：ERROR级别记录失败事件（转换失败、API调用失败、不可重试错误），WARN级别记录部分成功场景和可重试错误，INFO级别记录每次转换的详细过程（包括成功的转换，记录数据源、数据类型、转换耗时）
+- **NFR-016**: 失败日志必须包含失败数据快照（脱敏后，最多1KB）和完整堆栈信息，便于根因分析
+- **NFR-017**: 日志输出支持结构化格式（JSON），便于日志聚合和检索
+
 ### 领域模型 🏛️
 
 **聚合根 (Aggregate Root)**:
 
-- **标准数据(CanonicalData)**: 代表从外部数据源获取并转换后的标准化数据实体,是所有数据类型的顶层抽象
+- **规范数据(CanonicalData)**: 代表从外部数据源获取并转换后的规范化数据实体,是所有数据类型的顶层抽象
   - **聚合边界**: 包含数据唯一标识、数据类型、来源标识、创建时间、验证规则
   - **不变性约束**:
-    - 每条标准数据必须有唯一标识(id)和来源标识(provenance)
+    - 每条规范数据必须有唯一标识(id)和来源标识(provenance)
     - 数据类型(dataType)必须与实际数据结构一致
     - 创建时间(createdAt)不可修改
   - **唯一标识**: 使用数据源的原始ID(如PMID、DOI、ArXiv ID)作为唯一标识
 
-- **标准文献(CanonicalLiterature)**: 代表一篇学术论文或文献,是平台最核心的数据实体
+- **规范文献(CanonicalLiterature)**: 代表一篇学术论文或文献,是平台最核心的数据实体
   - **聚合边界**: 包含文献基本信息(标题、摘要、关键词)、作者列表、期刊信息、出版日期、标识符映射
   - **不变性约束**:
     - 标题(title)不能为空
@@ -215,28 +228,28 @@
     - 作者列表可以为空(部分数据源可能不提供作者信息)
   - **唯一标识**: 使用来源数据的ID(如"pubmed:12345678"、"arxiv:2301.12345")
 
-- **标准作者(CanonicalAuthor)**: 代表一位学术作者,包含身份标识和机构隶属
+- **规范作者(CanonicalAuthor)**: 代表一位学术作者,包含身份标识和机构隶属
   - **聚合边界**: 包含姓名(firstName、lastName、fullName)、ORCID、Email、机构列表
   - **不变性约束**:
     - 姓氏(lastName)或全名(fullName)至少有一个不为空
     - ORCID如果存在,必须符合格式规范(16位数字,分4组)
   - **唯一标识**: 使用ORCID(如果有),否则使用"数据源:作者名"的组合
 
-- **标准期刊(CanonicalJournal)**: 代表一个学术期刊,包含期刊元信息和影响力指标
+- **规范期刊(CanonicalJournal)**: 代表一个学术期刊,包含期刊元信息和影响力指标
   - **聚合边界**: 包含期刊名称、缩写、ISSN/eISSN、出版商、影响因子、国家
   - **不变性约束**:
     - 期刊标题(title)不能为空
     - ISSN和eISSN至少有一个不为空
   - **唯一标识**: 使用ISSN或eISSN
 
-- **标准引用(CanonicalCitation)**: 代表两篇文献之间的引用关系
+- **规范引用(CanonicalCitation)**: 代表两篇文献之间的引用关系
   - **聚合边界**: 包含引用文献ID(citingId)、被引文献ID(citedId)、引用上下文、引用类型
   - **不变性约束**:
     - citingId和citedId不能为空且不能相同
     - 引用类型(type)必须是预定义值之一(DIRECT、INDIRECT、SELF)
   - **唯一标识**: 使用"citingId + citedId"的组合
 
-- **标准全文(CanonicalFullText)**: 代表文献的全文内容或下载链接
+- **规范全文(CanonicalFullText)**: 代表文献的全文内容或下载链接
   - **聚合边界**: 包含关联文献ID、格式(PDF/HTML/XML)、内容或下载URL、文件大小
   - **不变性约束**:
     - 关联文献ID(literatureId)不能为空
@@ -257,7 +270,7 @@
 - **数据已获取(DataFetched)**: 适配器成功从外部数据源获取原始数据时发布
   - **携带数据**: 数据源代码、数据类型、获取数量、游标令牌、时间戳
 
-- **数据已转换(DataTransformed)**: 原始数据成功转换为标准数据格式时发布
+- **数据已转换(DataTransformed)**: 原始数据成功转换为规范数据格式时发布
   - **携带数据**: 数据源代码、数据类型、转换成功数量、转换失败数量、时间戳
 
 - **数据转换失败(DataTransformFailed)**: 数据转换过程中发生不可恢复错误时发布
@@ -279,7 +292,7 @@
   - **关键能力**: 声明数据源名称、支持的数据类型
   - **注意**: 这是六边形架构的"端口",不是技术实现
 
-- **DataTransformStrategy**: 定义数据转换策略的端口接口,负责将外部数据模型转换为标准模型
+- **DataTransformStrategy**: 定义数据转换策略的端口接口,负责将外部数据模型转换为规范模型
   - **职责**: 定义转换规则,支持批量转换和部分成功
   - **注意**: 转换策略可插拔,新数据源只需实现对应的转换策略
 
@@ -288,6 +301,8 @@
 - [x] Provenance配置(数据源配置,如PubMed API地址、API密钥、超时时间、重试配置)
 - [x] 数据字典(枚举值,如数据类型DataType、错误类型ErrorType、引用类型CitationType)
 - [x] 元数据(如必填字段定义、数据验证规则、标识符格式规范)
+- [x] 批量处理配置(全局成功率阈值默认70%,支持按数据源覆盖如PubMed=90%、ArXiv=60%)
+- [x] 并发控制配置(线程池并发度全局默认10,支持按数据源覆盖以适应不同API限流策略)
 
 ## 成功标准
 
@@ -296,7 +311,7 @@
 - **SC-001**: CanonicalData接口体系定义完整，包含5种数据类型（LITERATURE、AUTHOR、JOURNAL、CITATION、FULLTEXT），每种类型都有明确的聚合边界和不变性约束，通过单元测试验证
 - **SC-002**: DataSourceAdapter接口支持泛型化设计（DataSourceAdapter<T extends CanonicalData>），AdapterRegistry能够根据数据源代码和数据类型查找适配器，通过集成测试验证
 - **SC-003**: DataTransformStrategy接口支持可插拔转换策略，StrategyRegistry能够管理和查找策略，至少实现3个转换策略（PubMedToLiteratureStrategy、PubMedToAuthorStrategy、PubMedToCitationStrategy），通过单元测试验证每个策略的正确性
-- **SC-004**: PubMed适配器重构完成，支持3种数据类型（LITERATURE、AUTHOR、CITATION），能够根据AdapterRequest的requestedDataType返回对应类型的标准数据，通过集成测试验证
+- **SC-004**: PubMed适配器重构完成，支持3种数据类型（LITERATURE、AUTHOR、CITATION），能够根据AdapterRequest的requestedDataType返回对应类型的规范数据，通过集成测试验证
 - **SC-005**: AdapterResult和TransformResult支持部分成功机制，TransformResult包含成功列表和错误列表，GenericBatchExecutor能够根据成功率阈值（≥70%）处理部分成功结果，通过单元测试验证
 - **SC-006**: AdapterResult支持错误类型标识（RETRIABLE、NON_RETRIABLE），GenericBatchExecutor实现自动重试逻辑（指数退避，最多3次），通过单元测试验证不同错误类型的处理逻辑
 - **SC-007**: 所有核心组件（CanonicalData、DataSourceAdapter、DataTransformStrategy、AdapterRegistry、StrategyRegistry）的单元测试覆盖率 ≥ 80%
@@ -312,7 +327,7 @@
 
 - **PERF-001**: AdapterRegistry根据数据源代码和数据类型查找适配器的时间复杂度为O(1)（使用HashMap存储）
 - **PERF-002**: StrategyRegistry根据源类型和目标类型查找转换策略的时间复杂度为O(1)
-- **PERF-003**: 批量转换100条数据的时间 ≤ 5秒（平均每条50ms），通过性能测试验证
+- **PERF-003**: 批量转换100条数据的时间 ≤ 5秒（使用线程池并行转换，并发度从patra-registry配置），通过性能测试验证不同并发度下的吞吐量（如并发度10时，100条数据转换时间约0.5秒）
 
 ### 可维护性指标
 
@@ -324,18 +339,28 @@
 
 - **假设1**: 现有系统已经存在GenericBatchExecutor批量调度逻辑，本次改造只需修改其调用适配器的方式，无需重写整个调度器
 - **假设2**: 现有系统已经有PubMed数据源的基础实现（PubMedClient防腐层），本次改造重点是适配器和转换策略的重构，无需重写Client层
-- **假设3**: 不同数据源返回的同类数据（如文献）具有相似的核心字段（标题、作者、摘要、出版日期），可以映射到统一的标准模型，字段映射规则可以通过Strategy模式实现
+- **假设3**: 不同数据源返回的同类数据（如文献）具有相似的核心字段（标题、作者、摘要、出版日期），可以映射到统一的规范模型，字段映射规则可以通过Strategy模式实现
 - **假设4**: 数据验证规则（如必填字段、格式规范）可以定义在CanonicalData的validate()方法中，无需引入复杂的验证框架
 - **假设5**: 数据团队具备基本的Java编程能力和Spring Boot开发经验，能够根据开发文档和示例代码编写适配器和转换策略
 - **假设6**: 批量处理的数据量通常在100-1000条之间，单次转换时间在几十毫秒级别，批量转换时间可以控制在5秒以内
-- **假设7**: 本次架构改造不涉及数据持久化逻辑的变更，标准数据模型生成后交给现有的存储模块处理
+- **假设7**: 本次架构改造不涉及数据持久化逻辑的变更，规范数据模型生成后交给现有的存储模块处理
+
+## 澄清
+
+### 会话 2025-11-11
+
+- 问：适配器和转换策略运行时需要上报哪些监控指标？ → 答：详细指标（基础指标 + 转换成功率、每种数据类型的处理量、重试次数）
+- 问：转换失败、API调用失败等异常场景应该记录什么级别的日志，以及包含哪些信息？ → 答：详细日志（ERROR + WARN + INFO，记录每次转换的详细过程包括成功的转换）
+- 问：外部数据源API返回的响应格式验证失败时（如JSON解析失败、缺少必填字段）应该如何处理？ → 答：抛出异常，标记为NON_RETRIABLE错误，记录原始响应（截断至10KB），不重试
+- 问：批量处理的成功率阈值（70%）应该如何管理？ → 答：从patra-registry配置，全局默认70%，支持按数据源覆盖（如PubMed=90%，ArXiv=60%），运维团队可动态调整无需重启
+- 问：批量转换多条数据时（如100条）应该采用什么并发策略？ → 答：线程池并行转换，使用固定大小线程池（可配置并发度），从patra-registry配置并发度（全局默认10，按数据源覆盖）
 
 ## 范围界限
 
 ### 包含在此功能中
 - ✅ 从多个数据源(PubMed、EPMC、ArXiv)获取数据的能力
 - ✅ 支持多种数据类型(文献、作者、期刊、引用、全文)的统一数据模型
-- ✅ 外部数据格式到平台标准格式的转换逻辑
+- ✅ 外部数据格式到平台规范格式的转换逻辑
 - ✅ 批量处理和部分成功机制
 - ✅ 错误分类(可重试/不可重试)和自动重试
 - ✅ 数据源能力声明和注册管理
@@ -367,7 +392,7 @@
 
 ### 内部模块依赖
 - **patra-ingest-app**: 提供GenericBatchExecutor批量调度能力
-- **patra-common**: 提供CanonicalData标准数据模型定义
+- **patra-common**: 提供CanonicalData规范数据模型定义
 - **patra-starter-provenance**: 提供适配器和转换策略的基础设施
 
 ## 风险与缓解措施
@@ -384,7 +409,7 @@
 ## 实施阶段
 
 ### 第一阶段：核心接口和模型定义（第1周）
-**目标**: 完成架构改造的基础设施，定义所有核心接口和标准数据模型
+**目标**: 完成架构改造的基础设施，定义所有核心接口和规范数据模型
 
 **交付物**:
 - CanonicalData接口及5种数据类型实现（CanonicalLiterature、CanonicalAuthor、CanonicalJournal、CanonicalCitation、CanonicalFullText）
@@ -411,7 +436,7 @@
 **验收标准**:
 - PubMed适配器集成测试通过（覆盖3种数据类型）
 - AdapterRegistry和StrategyRegistry单元测试覆盖率 ≥ 80%
-- 能够根据AdapterRequest的requestedDataType返回正确类型的标准数据
+- 能够根据AdapterRequest的requestedDataType返回正确类型的规范数据
 
 ### 第三阶段：批量处理和错误处理优化（第3周）
 **目标**: 实现批量处理的部分成功机制和错误分类自动重试
