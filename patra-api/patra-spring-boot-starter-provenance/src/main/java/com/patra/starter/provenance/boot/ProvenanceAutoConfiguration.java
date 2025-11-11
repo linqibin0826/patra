@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.adapter.AdapterRegistry;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.adapter.DataSourcePort;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
@@ -81,15 +81,15 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * 注册适配器注册表,允许 Ingest 引擎发现可用的数据源适配器
+   * 注册端口注册表,允许 Ingest 引擎发现可用的数据源端口实现
    *
-   * @param adaptersProvider 适配器实现的提供者
-   * @return 适配器注册表实例
+   * @param adaptersProvider 端口实现的提供者
+   * @return 端口注册表实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public AdapterRegistry adapterRegistry(ObjectProvider<List<DataSourceAdapter>> adaptersProvider) {
-    List<DataSourceAdapter> adapters = adaptersProvider.getIfAvailable(List::of);
+  public AdapterRegistry adapterRegistry(ObjectProvider<List<DataSourcePort>> adaptersProvider) {
+    List<DataSourcePort> adapters = adaptersProvider.getIfAvailable(List::of);
     return new AdapterRegistry(adapters);
   }
 

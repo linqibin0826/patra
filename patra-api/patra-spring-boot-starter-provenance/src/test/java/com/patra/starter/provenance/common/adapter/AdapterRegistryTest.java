@@ -36,11 +36,11 @@ class AdapterRegistryTest {
   }
 
   @Test
-  @DisplayName("register - 成功注册适配器")
+  @DisplayName("register - 成功注册端口实现")
   void register_shouldRegisterAdapter_successfully() {
     // Arrange
     TestAdapter adapter = new TestAdapter("pubmed");
-    List<DataSourceAdapter> adapters = List.of(adapter);
+    List<DataSourcePort> adapters = List.of(adapter);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
@@ -120,14 +120,14 @@ class AdapterRegistryTest {
   }
 
   @Test
-  @DisplayName("getAdapter - 成功获取已注册的适配器")
+  @DisplayName("getAdapter - 成功获取已注册的端口实现")
   void getAdapter_shouldReturnAdapter_forRegisteredCode() {
     // Arrange
     TestAdapter adapter = new TestAdapter("pubmed");
     AdapterRegistry registry = new AdapterRegistry(List.of(adapter));
 
     // Act
-    DataSourceAdapter result = registry.getAdapter("pubmed");
+    DataSourcePort result = registry.getAdapter("pubmed");
 
     // Assert
     assertThat(result).isNotNull();
@@ -135,7 +135,7 @@ class AdapterRegistryTest {
   }
 
   @Test
-  @DisplayName("getAdapter - 未找到适配器时抛出异常")
+  @DisplayName("getAdapter - 未找到端口实现时抛出异常")
   void getAdapter_shouldThrowException_forUnregisteredCode() {
     // Arrange
     TestAdapter adapter = new TestAdapter("pubmed");
@@ -144,7 +144,7 @@ class AdapterRegistryTest {
     // Act & Assert
     assertThatThrownBy(() -> registry.getAdapter("crossref"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("未找到数据源对应的适配器")
+        .hasMessageContaining("未找到数据源对应的端口实现")
         .hasMessageContaining("crossref");
   }
 
@@ -158,7 +158,7 @@ class AdapterRegistryTest {
     // Act & Assert
     assertThatThrownBy(() -> registry.getAdapter(null))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("未找到数据源对应的适配器");
+        .hasMessageContaining("未找到数据源对应的端口实现");
   }
 
   @Test
@@ -171,44 +171,44 @@ class AdapterRegistryTest {
     // Act & Assert
     assertThatThrownBy(() -> registry.getAdapter(""))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("未找到数据源对应的适配器");
+        .hasMessageContaining("未找到数据源对应的端口实现");
   }
 
   @Test
-  @DisplayName("register - 重复注册相同类的适配器应被忽略")
+  @DisplayName("register - 重复注册相同类的端口实现应被忽略")
   void register_shouldIgnoreDuplicateAdapter_ofSameClass() {
     // Arrange
     TestAdapter adapter1 = new TestAdapter("pubmed");
     TestAdapter adapter2 = new TestAdapter("pubmed");
-    List<DataSourceAdapter> adapters = List.of(adapter1, adapter2);
+    List<DataSourcePort> adapters = List.of(adapter1, adapter2);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
 
-    // Assert - 应该只注册一个适配器
+    // Assert - 应该只注册一个端口实现
     assertThat(registry.supports("pubmed")).isTrue();
     assertThat(registry.getAdapter("pubmed")).isNotNull();
   }
 
   @Test
-  @DisplayName("register - 允许不同类的适配器注册相同数据源代码")
+  @DisplayName("register - 允许不同类的端口实现注册相同数据源代码")
   void register_shouldAllowDifferentClasses_forSameCode() {
     // Arrange
     TestAdapter adapter1 = new TestAdapter("pubmed");
     AnotherTestAdapter adapter2 = new AnotherTestAdapter("pubmed");
-    List<DataSourceAdapter> adapters = List.of(adapter1, adapter2);
+    List<DataSourcePort> adapters = List.of(adapter1, adapter2);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
 
-    // Assert - 应该返回第一个注册的适配器
+    // Assert - 应该返回第一个注册的端口实现
     assertThat(registry.supports("pubmed")).isTrue();
-    DataSourceAdapter result = registry.getAdapter("pubmed");
+    DataSourcePort result = registry.getAdapter("pubmed");
     assertThat(result).isInstanceOf(TestAdapter.class);
   }
 
   @Test
-  @DisplayName("register - 注册过程中null适配器被过滤")
+  @DisplayName("register - 注册过程中null端口实现被过滤")
   void register_shouldFilterNullAdaptersDuringRegistration() {
     // Arrange
     // 注意：List.copyOf 不接受包含 null 的列表
@@ -222,13 +222,13 @@ class AdapterRegistryTest {
   }
 
   @Test
-  @DisplayName("register - 注册多个不同数据源的适配器")
+  @DisplayName("register - 注册多个不同数据源的端口实现")
   void register_shouldRegisterMultipleAdapters() {
     // Arrange
     TestAdapter pubmedAdapter = new TestAdapter("pubmed");
     TestAdapter epmcAdapter = new TestAdapter("epmc");
     TestAdapter crossrefAdapter = new TestAdapter("crossref");
-    List<DataSourceAdapter> adapters = List.of(pubmedAdapter, epmcAdapter, crossrefAdapter);
+    List<DataSourcePort> adapters = List.of(pubmedAdapter, epmcAdapter, crossrefAdapter);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
@@ -242,8 +242,8 @@ class AdapterRegistryTest {
     assertThat(registry.getAdapter("crossref")).isEqualTo(crossrefAdapter);
   }
 
-  // 测试用适配器实现
-  private static class TestAdapter implements DataSourceAdapter {
+  // 测试用端口实现
+  private static class TestAdapter implements DataSourcePort {
     private final String code;
 
     TestAdapter(String code) {
@@ -261,8 +261,8 @@ class AdapterRegistryTest {
     }
   }
 
-  // 另一个测试用适配器实现（不同类）
-  private static class AnotherTestAdapter implements DataSourceAdapter {
+  // 另一个测试用端口实现（不同类）
+  private static class AnotherTestAdapter implements DataSourcePort {
     private final String code;
 
     AnotherTestAdapter(String code) {

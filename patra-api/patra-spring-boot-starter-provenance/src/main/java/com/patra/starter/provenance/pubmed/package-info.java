@@ -1,7 +1,7 @@
 /**
  * PubMed 数据源集成包。
  *
- * <p>提供 PubMed E-utilities API 客户端和数据源适配器实现，支持文献搜索、详情获取和批量检索。
+ * <p>提供 PubMed E-utilities API 客户端和数据源端口实现，支持文献搜索、详情获取和批量检索。
  *
  * <h2>职责</h2>
  *
@@ -9,7 +9,7 @@
  *   <li>调用 PubMed E-utilities API（ESearch、EFetch、EPost）
  *   <li>解析 PubMed XML/JSON 响应
  *   <li>转换为 StandardLiterature 标准模型
- *   <li>提供 {@link com.patra.starter.provenance.common.adapter.DataSourceAdapter} 适配器实现
+ *   <li>提供 {@link com.patra.starter.provenance.common.adapter.DataSourcePort} 端口实现
  * </ul>
  *
  * <h2>核心组件</h2>
@@ -17,7 +17,7 @@
  * <ul>
  *   <li>{@link PubMedClient} - PubMed 客户端接口
  *   <li>{@link PubMedClientImpl} - PubMed 客户端实现
- *   <li>{@link PubmedDataSourceAdapter} - PubMed 数据源适配器
+ *   <li>{@link PubmedDataSourceAdapter} - PubMed 数据源端口实现
  * </ul>
  *
  * <h2>支持的 E-utilities</h2>

@@ -11,7 +11,7 @@ import com.patra.starter.provenance.common.adapter.AdapterResult;
 import com.patra.starter.provenance.common.adapter.AdapterResult.ErrorType;
 import com.patra.starter.provenance.common.adapter.BatchExecutionParams;
 import com.patra.starter.provenance.common.adapter.BatchMetadata;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.adapter.DataSourcePort;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import java.util.List;
 import java.util.Objects;
@@ -24,15 +24,15 @@ import org.springframework.util.StringUtils;
 /**
  * 通用批次执行器
  *
- * <p>在六边形架构+DDD中的角色:应用层执行器,负责将批次获取工作委托给{@link DataSourceAdapter}实现。
+ * <p>在六边形架构+DDD中的角色:应用层执行器,负责将批次获取工作委托给{@link DataSourcePort}实现。
  *
  * <p>主要职责:
  *
  * <ul>
- *   <li>通过{@link AdapterRegistry}解析正确的适配器
+ *   <li>通过{@link AdapterRegistry}解析正确的端口实现
  *   <li>将注册表快照转换为运行时配置
  *   <li>通过{@link LiteraturePublisherOrchestrator}发布标准化文献
- *   <li>将适配器结果转换为领域层{@link BatchResult}实例
+ *   <li>将端口执行结果转换为领域层{@link BatchResult}实例
  *   <li>处理重试逻辑和失败情况
  * </ul>
  */
@@ -83,7 +83,7 @@ public class GenericBatchExecutor {
         context.runId());
 
     try {
-      DataSourceAdapter adapter = adapterRegistry.getAdapter(provenanceCode);
+      DataSourcePort adapter = adapterRegistry.getAdapter(provenanceCode);
       ProvenanceConfig runtimeConfig =
           configConverter.convert(provenanceCode, context.configSnapshot());
 

@@ -9,7 +9,7 @@ import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.adapter.AdapterRequest;
 import com.patra.starter.provenance.common.adapter.AdapterResult;
 import com.patra.starter.provenance.common.adapter.BatchExecutionParams;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.adapter.DataSourcePort;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -35,7 +35,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * PubMed 数据源适配器
+ * PubMed 数据源端口实现
  *
  * <p>封装PubMed的搜索、获取和转换逻辑，遵循配置优先级：运行时快照 > 数据源覆盖 > 共享默认值。
  *
@@ -53,7 +53,7 @@ import org.springframework.util.StringUtils;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class PubmedDataSourceAdapter implements DataSourceAdapter {
+public class PubmedDataSourceAdapter implements DataSourcePort {
 
   private static final String PROVENANCE_CODE = "pubmed";
   private static final int DEFAULT_EPOST_THRESHOLD = 200;
