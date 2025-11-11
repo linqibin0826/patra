@@ -20,7 +20,7 @@ GenericBatchExecutor (Application Layer)
          ↓
     DataTransformStrategy<S, T>
          ↓
-    StandardData
+    CanonicalData
 ```
 
 ### 1.2 架构图
@@ -75,7 +75,7 @@ GenericBatchExecutor (Application Layer)
 ### 2.1 顶层接口
 
 ```java
-// patra-common/src/main/java/com/patra/common/model/StandardData.java
+// patra-common/src/main/java/com/patra/common/model/CanonicalData.java
 package com.patra.common.model;
 
 import java.time.Instant;
@@ -83,7 +83,7 @@ import java.time.Instant;
 /**
  * 所有标准数据模型的顶层接口
  */
-public interface StandardData {
+public interface CanonicalData {
 
     /**
      * 获取数据的唯一标识符
@@ -135,7 +135,7 @@ public enum DataType {
 ### 2.2 具体数据模型
 
 ```java
-// patra-common/src/main/java/com/patra/common/model/StandardLiterature.java
+// patra-common/src/main/java/com/patra/common/model/CanonicalLiterature.java
 package com.patra.common.model;
 
 /**
@@ -143,13 +143,13 @@ package com.patra.common.model;
  */
 @Data
 @Builder
-public class StandardLiterature implements StandardData {
+public class CanonicalLiterature implements CanonicalData {
 
     private String id;
     private String title;
     private String abstractText;
-    private List<StandardAuthor> authors;
-    private StandardJournal journal;
+    private List<CanonicalAuthor> authors;
+    private CanonicalJournal journal;
     private LocalDate publicationDate;
     private List<String> keywords;
     private Map<String, String> identifiers; // doi, pmid, arxivId等
@@ -167,7 +167,7 @@ public class StandardLiterature implements StandardData {
  */
 @Data
 @Builder
-public class StandardAuthor implements StandardData {
+public class CanonicalAuthor implements CanonicalData {
 
     private String id;
     private String firstName;
@@ -190,7 +190,7 @@ public class StandardAuthor implements StandardData {
  */
 @Data
 @Builder
-public class StandardJournal implements StandardData {
+public class CanonicalJournal implements CanonicalData {
 
     private String id;
     private String issn;
@@ -214,7 +214,7 @@ public class StandardJournal implements StandardData {
  */
 @Data
 @Builder
-public class StandardCitation implements StandardData {
+public class CanonicalCitation implements CanonicalData {
 
     private String id;
     private String citingId;      // 引用文献ID
@@ -239,7 +239,7 @@ public class StandardCitation implements StandardData {
  */
 @Data
 @Builder
-public class StandardFullText implements StandardData {
+public class CanonicalFullText implements CanonicalData {
 
     private String id;
     private String literatureId;
@@ -267,7 +267,7 @@ public class StandardFullText implements StandardData {
 // patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/DataSourceAdapter.java
 package com.patra.starter.provenance.common.adapter;
 
-import com.patra.common.model.StandardData;
+import com.patra.common.model.CanonicalData;
 
 /**
  * 数据源适配器泛型接口
@@ -276,7 +276,7 @@ import com.patra.common.model.StandardData;
  *
  * @param <T> 返回的标准数据类型
  */
-public interface DataSourceAdapter<T extends StandardData> {
+public interface DataSourceAdapter<T extends CanonicalData> {
 
     /**
      * 返回数据源代码
@@ -315,7 +315,7 @@ public interface DataSourceAdapter<T extends StandardData> {
 // patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/AdapterResult.java
 package com.patra.starter.provenance.common.adapter;
 
-import com.patra.common.model.StandardData;
+import com.patra.common.model.CanonicalData;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -325,7 +325,7 @@ import java.util.Objects;
  *
  * @param <T> 数据载荷类型
  */
-public record AdapterResult<T extends StandardData>(
+public record AdapterResult<T extends CanonicalData>(
     boolean success,
     List<T> data,
     String nextCursorToken,
@@ -345,7 +345,7 @@ public record AdapterResult<T extends StandardData>(
     /**
      * 创建成功结果
      */
-    public static <T extends StandardData> AdapterResult<T> success(
+    public static <T extends CanonicalData> AdapterResult<T> success(
             List<T> data,
             String nextCursorToken) {
         return new AdapterResult<>(
@@ -362,7 +362,7 @@ public record AdapterResult<T extends StandardData>(
     /**
      * 创建可重试的失败结果
      */
-    public static <T extends StandardData> AdapterResult<T> retriableFailure(
+    public static <T extends CanonicalData> AdapterResult<T> retriableFailure(
             String errorMessage) {
         return new AdapterResult<>(
             false,
@@ -378,7 +378,7 @@ public record AdapterResult<T extends StandardData>(
     /**
      * 创建不可重试的失败结果
      */
-    public static <T extends StandardData> AdapterResult<T> nonRetriableFailure(
+    public static <T extends CanonicalData> AdapterResult<T> nonRetriableFailure(
             String errorMessage) {
         return new AdapterResult<>(
             false,
@@ -394,7 +394,7 @@ public record AdapterResult<T extends StandardData>(
     /**
      * 创建部分成功结果
      */
-    public static <T extends StandardData> AdapterResult<T> partialSuccess(
+    public static <T extends CanonicalData> AdapterResult<T> partialSuccess(
             List<T> data,
             String nextCursorToken,
             String warningMessage,
@@ -470,38 +470,8 @@ import java.util.Set;
 @Builder
 public class AdapterCapability {
 
-    private String dataSourceName;
+    private String dataSource;
     private Set<DataType> supportedDataTypes;
-    private QueryCapability queryCapability;
-    private RateLimitConfig rateLimitConfig;
-    private boolean supportsBatch;
-    private boolean supportsStreaming;
-
-    /**
-     * 查询能力
-     */
-    @Data
-    @Builder
-    public static class QueryCapability {
-        private boolean supportsPagination;
-        private boolean supportsCursor;
-        private boolean supportsFiltering;
-        private boolean supportsSorting;
-        private boolean supportsFullTextSearch;
-        private int maxPageSize;
-        private int maxResultWindow;
-    }
-
-    /**
-     * 限流配置
-     */
-    @Data
-    @Builder
-    public static class RateLimitConfig {
-        private int requestsPerSecond;
-        private int dailyQuota;
-        private boolean requiresAuth;
-    }
 }
 ```
 
@@ -515,7 +485,7 @@ public class AdapterCapability {
 // patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/strategy/DataTransformStrategy.java
 package com.patra.starter.provenance.common.strategy;
 
-import com.patra.common.model.StandardData;
+import com.patra.common.model.CanonicalData;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -525,7 +495,7 @@ import java.util.List;
  * @param <S> 源数据类型（外部模型）
  * @param <T> 目标数据类型（标准模型）
  */
-public interface DataTransformStrategy<S, T extends StandardData> {
+public interface DataTransformStrategy<S, T extends CanonicalData> {
 
     /**
      * 执行单个数据转换
@@ -574,7 +544,7 @@ public interface DataTransformStrategy<S, T extends StandardData> {
  * 转换结果
  */
 @Data
-public class TransformResult<T extends StandardData> {
+public class TransformResult<T extends CanonicalData> {
     private final List<T> successItems;
     private final List<TransformError> errors;
 
@@ -634,7 +604,7 @@ public class StrategyRegistry {
         }
     }
 
-    public <S, T extends StandardData> void register(DataTransformStrategy<S, T> strategy) {
+    public <S, T extends CanonicalData> void register(DataTransformStrategy<S, T> strategy) {
         StrategyKey key = new StrategyKey(
             strategy.getSourceType(),
             strategy.getTargetType()
@@ -643,7 +613,7 @@ public class StrategyRegistry {
     }
 
     @SuppressWarnings("unchecked")
-    public <S, T extends StandardData> DataTransformStrategy<S, T> getStrategy(
+    public <S, T extends CanonicalData> DataTransformStrategy<S, T> getStrategy(
             Class<S> sourceType,
             Class<T> targetType) {
 
@@ -678,7 +648,7 @@ public class StrategyRegistry {
 package com.patra.starter.provenance.common.adapter;
 
 import com.patra.common.model.DataType;
-import com.patra.common.model.StandardData;
+import com.patra.common.model.CanonicalData;
 import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import java.util.Map;
@@ -735,7 +705,7 @@ public class AdapterRegistry {
      * 根据数据源和数据类型获取适配器
      */
     @SuppressWarnings("unchecked")
-    public <T extends StandardData> DataSourceAdapter<T> getAdapter(
+    public <T extends CanonicalData> DataSourceAdapter<T> getAdapter(
             String provenanceCode,
             Class<T> dataTypeClass) {
 
@@ -784,7 +754,7 @@ package com.patra.starter.provenance.pubmed;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class PubMedAdapter implements DataSourceAdapter<StandardData> {
+public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
 
     private final PubMedClient pubMedClient;
     private final StrategyRegistry strategyRegistry;
@@ -795,7 +765,7 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
     }
 
     @Override
-    public AdapterResult<StandardData> fetchData(AdapterRequest request) {
+    public AdapterResult<CanonicalData> fetchData(AdapterRequest request) {
         // 确定请求的数据类型
         DataType requestedType = request.requestedDataType();
         if (requestedType == null) {
@@ -815,7 +785,7 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
     /**
      * 获取文献数据
      */
-    private AdapterResult<StandardData> fetchLiteratures(AdapterRequest request) {
+    private AdapterResult<CanonicalData> fetchLiteratures(AdapterRequest request) {
         try {
             // 1. 构建 PubMed 查询
             PubMedSearchQuery query = buildSearchQuery(request);
@@ -824,14 +794,14 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
             PubMedSearchResponse response = pubMedClient.search(query);
 
             // 3. 获取转换策略
-            DataTransformStrategy<PubMedArticle, StandardLiterature> strategy =
+            DataTransformStrategy<PubMedArticle, CanonicalLiterature> strategy =
                 strategyRegistry.getStrategy(
                     PubMedArticle.class,
-                    StandardLiterature.class
+                    CanonicalLiterature.class
                 );
 
             // 4. 批量转换
-            TransformResult<StandardLiterature> transformResult =
+            TransformResult<CanonicalLiterature> transformResult =
                 strategy.batchTransform(response.getArticles());
 
             // 5. 处理转换错误
@@ -842,7 +812,7 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
             }
 
             // 6. 构建返回结果
-            List<StandardData> data = new ArrayList<>(transformResult.getSuccessItems());
+            List<CanonicalData> data = new ArrayList<>(transformResult.getSuccessItems());
             return AdapterResult.success(data, response.getNextCursor());
 
         } catch (PubMedApiException e) {
@@ -857,18 +827,18 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
     /**
      * 获取作者数据
      */
-    private AdapterResult<StandardData> fetchAuthors(AdapterRequest request) {
+    private AdapterResult<CanonicalData> fetchAuthors(AdapterRequest request) {
         try {
             // 伪代码：调用 PubMed 作者 API
             List<PubMedAuthor> authors = pubMedClient.searchAuthors(/*...*/);
 
             // 转换为标准作者模型
-            DataTransformStrategy<PubMedAuthor, StandardAuthor> strategy =
-                strategyRegistry.getStrategy(PubMedAuthor.class, StandardAuthor.class);
+            DataTransformStrategy<PubMedAuthor, CanonicalAuthor> strategy =
+                strategyRegistry.getStrategy(PubMedAuthor.class, CanonicalAuthor.class);
 
-            TransformResult<StandardAuthor> result = strategy.batchTransform(authors);
+            TransformResult<CanonicalAuthor> result = strategy.batchTransform(authors);
 
-            List<StandardData> data = new ArrayList<>(result.getSuccessItems());
+            List<CanonicalData> data = new ArrayList<>(result.getSuccessItems());
             return AdapterResult.success(data, null);
 
         } catch (Exception e) {
@@ -879,18 +849,18 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
     /**
      * 获取引用数据
      */
-    private AdapterResult<StandardData> fetchCitations(AdapterRequest request) {
+    private AdapterResult<CanonicalData> fetchCitations(AdapterRequest request) {
         try {
             // 伪代码：调用 PubMed 引用 API
             List<PubMedCitation> citations = pubMedClient.fetchCitations(/*...*/);
 
             // 转换为标准引用模型
-            DataTransformStrategy<PubMedCitation, StandardCitation> strategy =
-                strategyRegistry.getStrategy(PubMedCitation.class, StandardCitation.class);
+            DataTransformStrategy<PubMedCitation, CanonicalCitation> strategy =
+                strategyRegistry.getStrategy(PubMedCitation.class, CanonicalCitation.class);
 
-            TransformResult<StandardCitation> result = strategy.batchTransform(citations);
+            TransformResult<CanonicalCitation> result = strategy.batchTransform(citations);
 
-            List<StandardData> data = new ArrayList<>(result.getSuccessItems());
+            List<CanonicalData> data = new ArrayList<>(result.getSuccessItems());
             return AdapterResult.success(data, null);
 
         } catch (Exception e) {
@@ -901,34 +871,18 @@ public class PubMedAdapter implements DataSourceAdapter<StandardData> {
     @Override
     public AdapterCapability getCapabilities() {
         return AdapterCapability.builder()
-            .dataSourceName("PubMed")
+            .dataSource("PubMed")
             .supportedDataTypes(Set.of(
                 DataType.LITERATURE,
                 DataType.AUTHOR,
                 DataType.CITATION
             ))
-            .queryCapability(AdapterCapability.QueryCapability.builder()
-                .supportsPagination(true)
-                .supportsCursor(true)
-                .supportsFiltering(true)
-                .supportsSorting(true)
-                .supportsFullTextSearch(true)
-                .maxPageSize(200)
-                .maxResultWindow(10000)
-                .build())
-            .rateLimitConfig(AdapterCapability.RateLimitConfig.builder()
-                .requestsPerSecond(10)
-                .dailyQuota(100000)
-                .requiresAuth(true)
-                .build())
-            .supportsBatch(true)
-            .supportsStreaming(false)
             .build();
     }
 
     @Override
-    public Class<StandardData> getDataTypeClass() {
-        return StandardData.class;
+    public Class<CanonicalData> getDataTypeClass() {
+        return CanonicalData.class;
     }
 
     /**
@@ -958,11 +912,11 @@ package com.patra.starter.provenance.pubmed.strategy;
 @Component
 @Slf4j
 public class PubMedToLiteratureStrategy
-        implements DataTransformStrategy<PubMedArticle, StandardLiterature> {
+        implements DataTransformStrategy<PubMedArticle, CanonicalLiterature> {
 
     @Override
-    public StandardLiterature transform(PubMedArticle source) {
-        return StandardLiterature.builder()
+    public CanonicalLiterature transform(PubMedArticle source) {
+        return CanonicalLiterature.builder()
             .id(source.getPmid())
             .title(extractTitle(source))
             .abstractText(extractAbstract(source))
@@ -989,13 +943,13 @@ public class PubMedToLiteratureStrategy
         return article.getAbstract().getText();
     }
 
-    private List<StandardAuthor> transformAuthors(List<PubMedAuthor> pubMedAuthors) {
+    private List<CanonicalAuthor> transformAuthors(List<PubMedAuthor> pubMedAuthors) {
         if (pubMedAuthors == null) {
             return List.of();
         }
 
         return pubMedAuthors.stream()
-            .map(author -> StandardAuthor.builder()
+            .map(author -> CanonicalAuthor.builder()
                 .firstName(author.getForeName())
                 .lastName(author.getLastName())
                 .fullName(author.getFullName())
@@ -1004,12 +958,12 @@ public class PubMedToLiteratureStrategy
             .collect(Collectors.toList());
     }
 
-    private StandardJournal transformJournal(PubMedJournal pubMedJournal) {
+    private CanonicalJournal transformJournal(PubMedJournal pubMedJournal) {
         if (pubMedJournal == null) {
             return null;
         }
 
-        return StandardJournal.builder()
+        return CanonicalJournal.builder()
             .title(pubMedJournal.getTitle())
             .abbreviation(pubMedJournal.getIsoAbbreviation())
             .issn(pubMedJournal.getIssn())
@@ -1044,8 +998,8 @@ public class PubMedToLiteratureStrategy
     }
 
     @Override
-    public Class<StandardLiterature> getTargetType() {
-        return StandardLiterature.class;
+    public Class<CanonicalLiterature> getTargetType() {
+        return CanonicalLiterature.class;
     }
 }
 ```
@@ -1282,13 +1236,13 @@ class PubMedAdapterTest {
         // Given
         AdapterRequest request = createTestRequest();
         PubMedSearchResponse mockResponse = createMockResponse();
-        DataTransformStrategy<PubMedArticle, StandardLiterature> mockStrategy = createMockStrategy();
+        DataTransformStrategy<PubMedArticle, CanonicalLiterature> mockStrategy = createMockStrategy();
 
         when(pubMedClient.search(any())).thenReturn(mockResponse);
         when(strategyRegistry.getStrategy(any(), any())).thenReturn(mockStrategy);
 
         // When
-        AdapterResult<StandardData> result = adapter.fetchData(request);
+        AdapterResult<CanonicalData> result = adapter.fetchData(request);
 
         // Then
         assertThat(result.success()).isTrue();
@@ -1303,7 +1257,7 @@ class PubMedAdapterTest {
         when(pubMedClient.search(any())).thenThrow(new PubMedApiException("API Error"));
 
         // When
-        AdapterResult<StandardData> result = adapter.fetchData(request);
+        AdapterResult<CanonicalData> result = adapter.fetchData(request);
 
         // Then
         assertThat(result.success()).isFalse();
@@ -1349,7 +1303,7 @@ class PubMedAdapterIntegrationTest {
             .build();
 
         // When
-        AdapterResult<StandardData> result = adapter.fetchData(request);
+        AdapterResult<CanonicalData> result = adapter.fetchData(request);
 
         // Then
         assertThat(result.success()).isTrue();
@@ -1469,7 +1423,7 @@ public class AdapterMetrics {
 ### 11.2 扩展点
 
 1. **新数据源接入**：实现 `DataSourceAdapter<T>` 接口
-2. **新数据类型**：定义 `StandardData` 实现类
+2. **新数据类型**：定义 `CanonicalData` 实现类
 3. **转换策略**：实现 `DataTransformStrategy<S, T>` 接口
 4. **能力扩展**：通过 `AdapterCapability` 声明新能力
 
