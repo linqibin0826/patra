@@ -1,6 +1,6 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import java.util.List;
 import lombok.Builder;
 
@@ -30,7 +30,7 @@ public interface LiteratureStoragePort {
    * @param context 存储上下文,包含执行元数据
    * @return 存储结果,包含位置和校验和
    */
-  StorageResult store(List<StandardLiterature> literature, StorageContext context);
+  StorageResult store(List<CanonicalLiterature> literature, StorageContext context);
 
   /**
    * 存储结果,包含文件位置和完整性信息。

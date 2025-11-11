@@ -39,7 +39,7 @@ patra-common/                         (聚合 POM - 无代码)
 ├── patra-common-storage/            (存储键生成 - 按需依赖)
 │   └── storage/                     (对象存储键生成策略)
 └── patra-common-model/              (共享模型 - 按需依赖)
-    └── model/                       (StandardLiterature 等)
+    └── model/                       (CanonicalLiterature 等)
 ```
 
 ---
@@ -93,9 +93,9 @@ patra-common/                         (聚合 POM - 无代码)
 **定位**: 跨服务共享的标准化数据模型(Shared Kernel)。
 
 **主要内容**:
-- `StandardLiterature`: 标准化文献数据结构
-- `StandardAuthor`: 作者快照
-- `StandardJournal`: 期刊快照
+- `CanonicalLiterature`: 标准化文献数据结构
+- `AuthorInfo`: 作者快照
+- `JournalInfo`: 期刊快照
 
 **使用场景**: `patra-ingest`、`patra-spring-boot-starter-provenance`
 

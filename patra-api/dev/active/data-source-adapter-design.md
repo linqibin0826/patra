@@ -55,7 +55,7 @@ GenericBatchExecutor (Application Layer)
 │  ┌─────────────────────────────────────────────────────────┐  │
 │  │ DataTransformStrategy<S, T> 实现                        │  │
 │  │   - PubMedToLiteratureStrategy                          │  │
-│  │   - EPMCToAuthorStrategy                                │  │
+│  │   - EPMCToJournalStrategy                               │  │
 │  │   - ArXivToFullTextStrategy                             │  │
 │  └─────────────────────────────────────────────────────────┘  │
 │                                                                 │
@@ -119,7 +119,6 @@ public interface CanonicalData {
 public enum DataType {
     LITERATURE("literature", "文献"),
     JOURNAL("journal", "期刊"),
-    AUTHOR("author", "作者"),
     CITATION("citation", "引用"),
     FULLTEXT("fulltext", "原文"),
     AFFILIATION("affiliation", "机构"),
@@ -148,7 +147,7 @@ public class CanonicalLiterature implements CanonicalData {
     private String id;
     private String title;
     private String abstractText;
-    private List<CanonicalAuthor> authors;
+    private List<AuthorInfo> authors;  // 内嵌的作者基本信息（非独立数据类型）
     private CanonicalJournal journal;
     private LocalDate publicationDate;
     private List<String> keywords;
@@ -163,26 +162,17 @@ public class CanonicalLiterature implements CanonicalData {
 }
 
 /**
- * 规范作者数据模型
+ * 作者基本信息（内嵌在文献中，非独立数据类型）
  */
 @Data
 @Builder
-public class CanonicalAuthor implements CanonicalData {
-
-    private String id;
+public class AuthorInfo {
     private String firstName;
     private String lastName;
     private String fullName;
     private String orcid;
     private String email;
     private List<String> affiliations;
-    private String provenance;
-    private Instant createdAt;
-
-    @Override
-    public DataType getDataType() {
-        return DataType.AUTHOR;
-    }
 }
 
 /**
@@ -777,7 +767,6 @@ public class PubMedAdapter implements DataSourcePort<CanonicalData> {
         // 根据类型分发到不同的处理方法
         return switch (requestedType) {
             case LITERATURE -> fetchLiteratures(request);
-            case AUTHOR -> fetchAuthors(request);
             case CITATION -> fetchCitations(request);
             default -> AdapterResult.nonRetriableFailure(
                 "不支持的数据类型: " + requestedType);
@@ -827,28 +816,6 @@ public class PubMedAdapter implements DataSourcePort<CanonicalData> {
     }
 
     /**
-     * 获取作者数据
-     */
-    private AdapterResult<CanonicalData> fetchAuthors(AdapterRequest request) {
-        try {
-            // 伪代码：调用 PubMed 作者 API
-            List<PubMedAuthor> authors = pubMedClient.searchAuthors(/*...*/);
-
-            // 转换为规范作者模型
-            DataTransformStrategy<PubMedAuthor, CanonicalAuthor> strategy =
-                strategyRegistry.getStrategy(PubMedAuthor.class, CanonicalAuthor.class);
-
-            TransformResult<CanonicalAuthor> result = strategy.batchTransform(authors);
-
-            List<CanonicalData> data = new ArrayList<>(result.getSuccessItems());
-            return AdapterResult.success(data, null);
-
-        } catch (Exception e) {
-            return AdapterResult.retriableFailure(e.getMessage());
-        }
-    }
-
-    /**
      * 获取引用数据
      */
     private AdapterResult<CanonicalData> fetchCitations(AdapterRequest request) {
@@ -876,7 +843,6 @@ public class PubMedAdapter implements DataSourcePort<CanonicalData> {
             .dataSource("PubMed")
             .supportedDataTypes(Set.of(
                 DataType.LITERATURE,
-                DataType.AUTHOR,
                 DataType.CITATION
             ))
             .build();
@@ -945,13 +911,13 @@ public class PubMedToLiteratureStrategy
         return article.getAbstract().getText();
     }
 
-    private List<CanonicalAuthor> transformAuthors(List<PubMedAuthor> pubMedAuthors) {
+    private List<AuthorInfo> transformAuthors(List<PubMedAuthor> pubMedAuthors) {
         if (pubMedAuthors == null) {
             return List.of();
         }
 
         return pubMedAuthors.stream()
-            .map(author -> CanonicalAuthor.builder()
+            .map(author -> AuthorInfo.builder()
                 .firstName(author.getForeName())
                 .lastName(author.getLastName())
                 .fullName(author.getFullName())

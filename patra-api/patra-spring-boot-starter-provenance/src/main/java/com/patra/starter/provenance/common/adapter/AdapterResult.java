@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.common.adapter;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +30,7 @@ import java.util.Objects;
  */
 public record AdapterResult(
     boolean success,
-    List<StandardLiterature> literatures,
+    List<CanonicalLiterature> literatures,
     String nextCursorToken,
     String errorMessage,
     int fetchedCount,
@@ -50,7 +50,7 @@ public record AdapterResult(
    * @return 不可变的成功结果
    */
   public static AdapterResult success(
-      List<StandardLiterature> literatures, String nextCursorToken) {
+      List<CanonicalLiterature> literatures, String nextCursorToken) {
     return new AdapterResult(
         true,
         literatures,
@@ -90,7 +90,7 @@ public record AdapterResult(
    * @return 部分成功结果
    */
   public static AdapterResult partialSuccess(
-      List<StandardLiterature> literatures,
+      List<CanonicalLiterature> literatures,
       String nextCursorToken,
       String warningMessage,
       int totalAttempted) {

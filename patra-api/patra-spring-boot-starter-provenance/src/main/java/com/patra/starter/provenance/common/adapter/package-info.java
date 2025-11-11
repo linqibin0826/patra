@@ -46,7 +46,7 @@
  *     @Override
  *     public AdapterResult fetchData(AdapterRequest request) {
  *         // 1. 调用外部 API
- *         // 2. 转换为 StandardLiterature
+ *         // 2. 转换为 CanonicalLiterature
  *         // 3. 包装为 AdapterResult 返回
  *         return AdapterResult.success(literatures);
  *     }

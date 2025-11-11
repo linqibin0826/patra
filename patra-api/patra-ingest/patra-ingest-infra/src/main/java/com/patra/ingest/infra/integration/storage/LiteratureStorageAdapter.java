@@ -3,7 +3,7 @@ package com.patra.ingest.infra.integration.storage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.api.dto.LiteratureDTO;
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.infra.integration.storage.acl.LiteratureConverter;
 import com.patra.starter.objectstorage.ObjectStorageTemplate;
@@ -31,7 +31,7 @@ import org.springframework.util.StringUtils;
  * <p>此适配器专注于技术性存储操作:
  *
  * <ul>
- *   <li>ACL 映射: StandardLiterature → LiteratureDTO (外部 API 格式)
+ *   <li>ACL 映射: CanonicalLiterature → LiteratureDTO (外部 API 格式)
  *   <li>序列化: 将负载转换为 JSON 字节
  *   <li>校验和计算: MD5 和 SHA-256 用于完整性验证
  *   <li>存储上传: 通过 {@link ObjectStorageTemplate} 上传到 S3/MinIO
@@ -55,7 +55,7 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
   private final LiteratureConverter literatureConverter;
 
   @Override
-  public StorageResult store(List<StandardLiterature> literature, StorageContext context) {
+  public StorageResult store(List<CanonicalLiterature> literature, StorageContext context) {
     // 步骤 1: ACL 映射 (领域 → 外部 DTO)
     List<LiteratureDTO> payload = literatureConverter.toDto(literature);
 

@@ -30,17 +30,17 @@
 ```
 patra-common-model/
 └── model/
-    └── StandardLiterature           (标准化文献模型)
-        ├── StandardLiterature       (主模型)
-        ├── StandardAuthor           (作者快照)
-        └── StandardJournal          (期刊快照)
+    └── CanonicalLiterature           (标准化文献模型)
+        ├── CanonicalLiterature       (主模型)
+        ├── AuthorInfo           (作者快照)
+        └── JournalInfo          (期刊快照)
 ```
 
 ---
 
 ## 主要组件
 
-### StandardLiterature — 标准化文献模型
+### CanonicalLiterature — 标准化文献模型
 
 跨服务共享的规范化文献数据结构,作为采集、存储、检索服务之间的数据交换契约。
 
@@ -49,21 +49,21 @@ patra-common-model/
 **核心字段**:
 - `title`: 文献标题(String)
 - `abstractText`: 摘要或总结文本(String)
-- `authors`: 作者列表(`List<StandardAuthor>`,保持呈现顺序)
-- `journal`: 期刊元数据(`StandardJournal`,可选)
+- `authors`: 作者列表(`List<AuthorInfo>`,保持呈现顺序)
+- `journal`: 期刊元数据(`JournalInfo`,可选)
 - `identifiers`: 标识符映射(如 PMID、DOI、PMC,`Map<String, String>`)
 - `publicationDate`: 发布日期(`LocalDate`,日精度,可选)
 - `keywords`: 领域级关键词(`List<String>`)
 
 **嵌套模型**:
 
-#### StandardAuthor
+#### AuthorInfo
 作者快照,与 Catalog 契约需求对齐:
 - `lastName`: 姓氏
 - `foreName`: 名字
 - `affiliation`: 所属机构
 
-#### StandardJournal
+#### JournalInfo
 期刊快照,与 Catalog 契约需求对齐:
 - `title`: 期刊名称
 - `issn`: 国际标准期刊号
@@ -99,29 +99,29 @@ patra-common-model/
 ### 创建标准化文献
 
 ```java
-import com.patra.common.model.StandardLiterature;
-import com.patra.common.model.StandardLiterature.StandardAuthor;
-import com.patra.common.model.StandardLiterature.StandardJournal;
+import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalLiterature.AuthorInfo;
+import com.patra.common.model.CanonicalLiterature.JournalInfo;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-StandardLiterature literature = StandardLiterature.builder()
+CanonicalLiterature literature = CanonicalLiterature.builder()
     .title("Deep Learning in Medical Image Analysis")
     .abstractText("This study presents a comprehensive review...")
     .authors(List.of(
-        StandardAuthor.builder()
+        AuthorInfo.builder()
             .lastName("Smith")
             .foreName("John")
             .affiliation("Stanford University")
             .build(),
-        StandardAuthor.builder()
+        AuthorInfo.builder()
             .lastName("Doe")
             .foreName("Jane")
             .affiliation("MIT")
             .build()
     ))
-    .journal(StandardJournal.builder()
+    .journal(JournalInfo.builder()
         .title("Nature Medicine")
         .issn("1546-170X")
         .publisher("Nature Publishing Group")
@@ -147,7 +147,7 @@ ObjectMapper mapper = new ObjectMapper();
 String json = mapper.writeValueAsString(literature);
 
 // 反序列化为对象
-StandardLiterature deserialized = mapper.readValue(json, StandardLiterature.class);
+CanonicalLiterature deserialized = mapper.readValue(json, CanonicalLiterature.class);
 ```
 
 ### 在领域层使用(端口接口)
@@ -155,7 +155,7 @@ StandardLiterature deserialized = mapper.readValue(json, StandardLiterature.clas
 ```java
 package com.patra.ingest.domain.port;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import java.util.Optional;
 
 /**
@@ -165,7 +165,7 @@ public interface ProvenanceAdapter {
     /**
      * 根据外部 ID 获取标准化文献数据
      */
-    Optional<StandardLiterature> fetchLiterature(String externalId);
+    Optional<CanonicalLiterature> fetchLiterature(String externalId);
 }
 ```
 
@@ -174,13 +174,13 @@ public interface ProvenanceAdapter {
 ```java
 package com.patra.ingest.app.service;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.ProvenanceAdapter;
 
 public class LiteratureIngestionService {
     private final ProvenanceAdapter provenanceAdapter;
 
-    public StandardLiterature ingestFromPubMed(String pmid) {
+    public CanonicalLiterature ingestFromPubMed(String pmid) {
         return provenanceAdapter.fetchLiterature(pmid)
             .orElseThrow(() -> new LiteratureNotFoundException(pmid));
     }
@@ -192,23 +192,23 @@ public class LiteratureIngestionService {
 ```java
 package com.patra.starter.provenance.pubmed;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.ProvenanceAdapter;
 
 public class PubMedAdapter implements ProvenanceAdapter {
     @Override
-    public Optional<StandardLiterature> fetchLiterature(String pmid) {
+    public Optional<CanonicalLiterature> fetchLiterature(String pmid) {
         // 1. 调用 PubMed API
         PubMedArticle article = pubMedClient.fetchArticle(pmid);
 
-        // 2. 转换为 StandardLiterature
-        StandardLiterature standardized = convertToStandard(article);
+        // 2. 转换为 CanonicalLiterature
+        CanonicalLiterature standardized = convertToStandard(article);
 
         return Optional.of(standardized);
     }
 
-    private StandardLiterature convertToStandard(PubMedArticle article) {
-        return StandardLiterature.builder()
+    private CanonicalLiterature convertToStandard(PubMedArticle article) {
+        return CanonicalLiterature.builder()
             .title(article.getTitle())
             .abstractText(article.getAbstractText())
             .authors(convertAuthors(article.getAuthors()))
@@ -266,7 +266,7 @@ public class PubMedAdapter implements ProvenanceAdapter {
 
 ### 扩展建议
 - **添加新字段**: 使用可选类型,提供默认值
-- **修改现有字段**: 创建新版本模型(`StandardLiteratureV2`)
+- **修改现有字段**: 创建新版本模型(`CanonicalLiteratureV2`)
 - **删除字段**: 必须确保无消费者依赖
 
 ### 示例: 添加新字段
@@ -275,7 +275,7 @@ public class PubMedAdapter implements ProvenanceAdapter {
 @Value
 @Builder
 @Jacksonized
-public class StandardLiterature {
+public class CanonicalLiterature {
     String title;
     String abstractText;
     // ... 现有字段

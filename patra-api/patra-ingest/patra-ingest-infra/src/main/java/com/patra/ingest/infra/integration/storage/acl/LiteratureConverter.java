@@ -3,9 +3,9 @@ package com.patra.ingest.infra.integration.storage.acl;
 import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
-import com.patra.common.model.StandardLiterature;
-import com.patra.common.model.StandardLiterature.StandardAuthor;
-import com.patra.common.model.StandardLiterature.StandardJournal;
+import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalLiterature.AuthorInfo;
+import com.patra.common.model.CanonicalLiterature.JournalInfo;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -22,16 +22,16 @@ import org.springframework.util.StringUtils;
  * <p>转换规则:
  *
  * <ul>
- *   <li>StandardLiterature → LiteratureDTO (目录外部 API 格式)
- *   <li>StandardAuthor → AuthorDTO (带关联归一化)
- *   <li>StandardJournal → JournalDTO (期刊元数据)
+ *   <li>CanonicalLiterature → LiteratureDTO (目录外部 API 格式)
+ *   <li>AuthorInfo → AuthorDTO (带关联归一化)
+ *   <li>JournalInfo → JournalDTO (期刊元数据)
  * </ul>
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface LiteratureConverter {
 
   /**
-   * 将领域 StandardLiterature 转换为目录 LiteratureDTO。
+   * 将领域 CanonicalLiterature 转换为目录 LiteratureDTO。
    *
    * @param source 领域文献模型
    * @return 目录 API DTO
@@ -40,15 +40,15 @@ public interface LiteratureConverter {
   @Mapping(target = "journal", source = "journal", qualifiedByName = "mapJournal")
   @Mapping(target = "language", ignore = true)
   @Mapping(target = "publicationTypes", expression = "java(java.util.List.of())")
-  LiteratureDTO toDto(StandardLiterature source);
+  LiteratureDTO toDto(CanonicalLiterature source);
 
   /**
-   * 将 StandardLiterature 列表转换为 LiteratureDTO 列表。
+   * 将 CanonicalLiterature 列表转换为 LiteratureDTO 列表。
    *
    * @param sources 领域文献列表
    * @return 目录 API DTO 列表
    */
-  List<LiteratureDTO> toDto(List<StandardLiterature> sources);
+  List<LiteratureDTO> toDto(List<CanonicalLiterature> sources);
 
   /**
    * 将领域作者映射为目录 AuthorDTO。
@@ -57,7 +57,7 @@ public interface LiteratureConverter {
    * @return 目录作者 DTO 列表
    */
   @Named("mapAuthors")
-  default List<AuthorDTO> mapAuthors(List<StandardAuthor> authors) {
+  default List<AuthorDTO> mapAuthors(List<AuthorInfo> authors) {
     if (CollectionUtils.isEmpty(authors)) {
       return List.of();
     }
@@ -82,7 +82,7 @@ public interface LiteratureConverter {
    * @return 目录期刊 DTO 或 null
    */
   @Named("mapJournal")
-  default JournalDTO mapJournal(StandardJournal journal) {
+  default JournalDTO mapJournal(JournalInfo journal) {
     if (journal == null) {
       return null;
     }
