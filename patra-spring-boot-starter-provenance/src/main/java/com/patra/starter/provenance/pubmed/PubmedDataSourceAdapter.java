@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.adapter.AdapterRequest;
 import com.patra.starter.provenance.common.adapter.AdapterResult;
@@ -257,7 +257,7 @@ public class PubmedDataSourceAdapter implements DataSourcePort {
     if (CollectionUtils.isEmpty(articles)) {
       return new FetchOutcome(List.of(), 0, List.of());
     }
-    List<StandardLiterature> literatures = new ArrayList<>();
+    List<CanonicalLiterature> literatures = new ArrayList<>();
     List<String> failures = new ArrayList<>();
     int attempted = 0;
     for (PubmedArticle article : articles) {
@@ -266,7 +266,7 @@ public class PubmedDataSourceAdapter implements DataSourcePort {
       }
       attempted++;
       try {
-        StandardLiterature converted = converter.toStandardLiterature(article);
+        CanonicalLiterature converted = converter.toCanonicalLiterature(article);
         if (converted != null) {
           literatures.add(converted);
         }
@@ -341,7 +341,7 @@ public class PubmedDataSourceAdapter implements DataSourcePort {
   }
 
   private record FetchOutcome(
-      List<StandardLiterature> literatures, int attempted, List<String> failedPmids) {}
+      List<CanonicalLiterature> literatures, int attempted, List<String> failedPmids) {}
 
   private void recordConversionMetrics(int successCount, int failureCount) {
     if (metrics == null) {

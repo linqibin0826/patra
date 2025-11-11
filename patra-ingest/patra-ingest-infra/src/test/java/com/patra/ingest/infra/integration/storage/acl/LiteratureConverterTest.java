@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.*;
 import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
-import com.patra.common.model.StandardLiterature;
-import com.patra.common.model.StandardLiterature.StandardAuthor;
-import com.patra.common.model.StandardLiterature.StandardJournal;
+import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalLiterature.AuthorInfo;
+import com.patra.common.model.CanonicalLiterature.JournalInfo;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
  * <p>测试策略：
  *
  * <ul>
- *   <li>测试 StandardLiterature → LiteratureDTO 转换
+ *   <li>测试 CanonicalLiterature → LiteratureDTO 转换
  *   <li>测试作者列表映射 (mapAuthors)
  *   <li>测试期刊映射 (mapJournal)
  *   <li>测试关联解析 (resolveAffiliations)
@@ -46,30 +46,30 @@ class LiteratureConverterTest {
     @Test
     @DisplayName("应该正确转换包含所有字段的完整文献")
     void shouldConvertCompleteLiterature() {
-      // Given: 创建完整的 StandardLiterature
-      StandardAuthor author1 =
-          StandardAuthor.builder()
+      // Given: 创建完整的 CanonicalLiterature
+      AuthorInfo author1 =
+          AuthorInfo.builder()
               .lastName("Smith")
               .foreName("John")
               .affiliation("Harvard Medical School")
               .build();
 
-      StandardAuthor author2 =
-          StandardAuthor.builder()
+      AuthorInfo author2 =
+          AuthorInfo.builder()
               .lastName("Johnson")
               .foreName("Mary")
               .affiliation("Stanford University")
               .build();
 
-      StandardJournal journal =
-          StandardJournal.builder()
+      JournalInfo journal =
+          JournalInfo.builder()
               .title("Nature Medicine")
               .issn("1078-8956")
               .publisher("Nature Publishing Group")
               .build();
 
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Novel Approaches to Cancer Treatment")
               .abstractText("This study explores innovative methods for treating various types of cancer.")
               .authors(List.of(author1, author2))
@@ -125,8 +125,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确转换只包含必填字段的最小文献")
     void shouldConvertMinimalLiterature() {
       // Given: 创建只有标题的文献
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Minimal Literature Entry")
               .abstractText(null)
               .authors(null)
@@ -156,8 +156,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确转换包含空作者列表的文献")
     void shouldConvertLiteratureWithEmptyAuthors() {
       // Given
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Paper Without Authors")
               .authors(List.of())
               .build();
@@ -181,19 +181,19 @@ class LiteratureConverterTest {
     @DisplayName("应该正确转换文献列表")
     void shouldConvertLiteratureList() {
       // Given: 创建多个文献
-      StandardLiterature lit1 =
-          StandardLiterature.builder()
+      CanonicalLiterature lit1 =
+          CanonicalLiterature.builder()
               .title("First Paper")
               .publicationDate(LocalDate.of(2025, 1, 1))
               .build();
 
-      StandardLiterature lit2 =
-          StandardLiterature.builder()
+      CanonicalLiterature lit2 =
+          CanonicalLiterature.builder()
               .title("Second Paper")
               .publicationDate(LocalDate.of(2025, 1, 2))
               .build();
 
-      List<StandardLiterature> literatures = List.of(lit1, lit2);
+      List<CanonicalLiterature> literatures = List.of(lit1, lit2);
 
       // When: 批量转换
       List<LiteratureDTO> dtos = converter.toDto(literatures);
@@ -208,7 +208,7 @@ class LiteratureConverterTest {
     @DisplayName("应该正确转换空文献列表")
     void shouldConvertEmptyLiteratureList() {
       // Given
-      List<StandardLiterature> literatures = List.of();
+      List<CanonicalLiterature> literatures = List.of();
 
       // When
       List<LiteratureDTO> dtos = converter.toDto(literatures);
@@ -228,21 +228,21 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射多个作者")
     void shouldMapMultipleAuthors() {
       // Given
-      StandardAuthor author1 =
-          StandardAuthor.builder()
+      AuthorInfo author1 =
+          AuthorInfo.builder()
               .lastName("Doe")
               .foreName("Jane")
               .affiliation("MIT")
               .build();
 
-      StandardAuthor author2 =
-          StandardAuthor.builder()
+      AuthorInfo author2 =
+          AuthorInfo.builder()
               .lastName("Lee")
               .foreName("David")
               .affiliation("Caltech")
               .build();
 
-      List<StandardAuthor> authors = List.of(author1, author2);
+      List<AuthorInfo> authors = List.of(author1, author2);
 
       // When
       List<AuthorDTO> authorDTOs = converter.mapAuthors(authors);
@@ -268,14 +268,14 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射没有关联的作者")
     void shouldMapAuthorWithoutAffiliation() {
       // Given: 作者没有关联
-      StandardAuthor author =
-          StandardAuthor.builder()
+      AuthorInfo author =
+          AuthorInfo.builder()
               .lastName("Wang")
               .foreName("Li")
               .affiliation(null)
               .build();
 
-      List<StandardAuthor> authors = List.of(author);
+      List<AuthorInfo> authors = List.of(author);
 
       // When
       List<AuthorDTO> authorDTOs = converter.mapAuthors(authors);
@@ -291,14 +291,14 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射空白关联的作者")
     void shouldMapAuthorWithBlankAffiliation() {
       // Given: 作者关联为空字符串
-      StandardAuthor author =
-          StandardAuthor.builder()
+      AuthorInfo author =
+          AuthorInfo.builder()
               .lastName("Chen")
               .foreName("Wei")
               .affiliation("   ")
               .build();
 
-      List<StandardAuthor> authors = List.of(author);
+      List<AuthorInfo> authors = List.of(author);
 
       // When
       List<AuthorDTO> authorDTOs = converter.mapAuthors(authors);
@@ -339,8 +339,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射完整期刊信息")
     void shouldMapCompleteJournal() {
       // Given
-      StandardJournal journal =
-          StandardJournal.builder()
+      JournalInfo journal =
+          JournalInfo.builder()
               .title("Science")
               .issn("0036-8075")
               .publisher("American Association for the Advancement of Science")
@@ -363,8 +363,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射只有标题的期刊")
     void shouldMapJournalWithTitleOnly() {
       // Given
-      StandardJournal journal =
-          StandardJournal.builder()
+      JournalInfo journal =
+          JournalInfo.builder()
               .title("Cell")
               .issn(null)
               .publisher(null)
@@ -451,8 +451,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确处理包含特殊字符的文献")
     void shouldHandleLiteratureWithSpecialCharacters() {
       // Given
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Study on α-β proteins & γ-rays: a \"novel\" approach")
               .abstractText("Testing special chars: <tag>, {brace}, [bracket], @symbol")
               .identifiers(Map.of("doi", "10.1000/xyz<>123"))
@@ -473,15 +473,15 @@ class LiteratureConverterTest {
     @DisplayName("应该正确处理包含 Unicode 字符的作者姓名")
     void shouldHandleAuthorsWithUnicodeCharacters() {
       // Given
-      StandardAuthor author =
-          StandardAuthor.builder()
+      AuthorInfo author =
+          AuthorInfo.builder()
               .lastName("李")
               .foreName("明")
               .affiliation("北京大学")
               .build();
 
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Research Paper")
               .authors(List.of(author))
               .build();
@@ -500,8 +500,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确处理包含多个标识符的文献")
     void shouldHandleLiteratureWithMultipleIdentifiers() {
       // Given
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Multi-Identifier Paper")
               .identifiers(
                   Map.of(
@@ -527,8 +527,8 @@ class LiteratureConverterTest {
     @DisplayName("应该正确处理包含多个关键词的文献")
     void shouldHandleLiteratureWithMultipleKeywords() {
       // Given
-      StandardLiterature literature =
-          StandardLiterature.builder()
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder()
               .title("Keyword-Rich Paper")
               .keywords(
                   List.of(

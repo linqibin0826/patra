@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
@@ -67,8 +67,8 @@ public class LiteraturePublisherOrchestrator {
    * @param context 发布上下文(包含执行元数据)
    * @return 发布结果(包含存储位置)
    */
-  public PublishResult publish(List<StandardLiterature> literature, PublishContext context) {
-    List<StandardLiterature> safeLiterature =
+  public PublishResult publish(List<CanonicalLiterature> literature, PublishContext context) {
+    List<CanonicalLiterature> safeLiterature =
         literature == null ? Collections.emptyList() : literature;
 
     // 步骤1: 存储到对象存储

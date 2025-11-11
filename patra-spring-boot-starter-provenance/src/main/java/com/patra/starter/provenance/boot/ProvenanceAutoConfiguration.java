@@ -114,7 +114,7 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 StandardLiterature
+   * 创建 PubMed 文章转换器,用于将 PubMed 响应转换为 CanonicalLiterature
    *
    * @return PubMed 文章转换器实例
    */

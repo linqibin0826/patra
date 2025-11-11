@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.app.usecase.execution.converter.ProvenanceConfigConverter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -122,7 +122,7 @@ class GenericBatchExecutorTest {
     @DisplayName("应该成功执行批次并返回成功结果")
     void shouldExecuteBatchSuccessfully() {
       // Given: Mock 适配器返回成功结果
-      List<StandardLiterature> literatures = createTestLiteratures(5);
+      List<CanonicalLiterature> literatures = createTestLiteratures(5);
       AdapterResult adapterResult = AdapterResult.success(literatures, "nextCursor123");
 
       when(mockAdapter.fetchData(any(AdapterRequest.class))).thenReturn(adapterResult);
@@ -396,7 +396,7 @@ class GenericBatchExecutorTest {
     @DisplayName("适配器返回部分成功应该记录警告并返回成功结果")
     void shouldHandlePartialSuccessWithWarning() {
       // Given: 适配器返回部分成功
-      List<StandardLiterature> literatures = createTestLiteratures(8);
+      List<CanonicalLiterature> literatures = createTestLiteratures(8);
       AdapterResult adapterResult =
           AdapterResult.partialSuccess(
               literatures,
@@ -547,11 +547,11 @@ class GenericBatchExecutorTest {
         );
   }
 
-  private List<StandardLiterature> createTestLiteratures(int count) {
+  private List<CanonicalLiterature> createTestLiteratures(int count) {
     return java.util.stream.IntStream.range(0, count)
         .mapToObj(
             i ->
-                StandardLiterature.builder()
+                CanonicalLiterature.builder()
                     .title("Test Literature " + i)
                     .identifiers(Map.of("sourceId", "PMID-" + (1000 + i)))
                     .build())

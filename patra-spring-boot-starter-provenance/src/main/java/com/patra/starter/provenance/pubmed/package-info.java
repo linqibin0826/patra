@@ -8,7 +8,7 @@
  * <ul>
  *   <li>调用 PubMed E-utilities API（ESearch、EFetch、EPost）
  *   <li>解析 PubMed XML/JSON 响应
- *   <li>转换为 StandardLiterature 标准模型
+ *   <li>转换为 CanonicalLiterature 标准模型
  *   <li>提供 {@link com.patra.starter.provenance.common.adapter.DataSourcePort} 端口实现
  * </ul>
  *

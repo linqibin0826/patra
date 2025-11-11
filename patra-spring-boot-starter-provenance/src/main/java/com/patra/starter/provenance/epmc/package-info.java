@@ -8,7 +8,7 @@
  * <ul>
  *   <li>调用 Europe PMC RESTful API
  *   <li>解析 Europe PMC JSON 响应
- *   <li>转换为 StandardLiterature 标准模型
+ *   <li>转换为 CanonicalLiterature 标准模型
  *   <li>提供 {@link com.patra.starter.provenance.common.adapter.DataSourcePort} 端口实现
  * </ul>
  *

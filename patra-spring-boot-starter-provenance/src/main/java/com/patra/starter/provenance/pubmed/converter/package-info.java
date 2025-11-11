@@ -1,14 +1,14 @@
 /**
  * PubMed 转换器包。
  *
- * <p>负责将 PubMed 响应对象转换为 StandardLiterature 标准模型。
+ * <p>负责将 PubMed 响应对象转换为 CanonicalLiterature 标准模型。
  *
  * <h2>职责</h2>
  *
  * <ul>
  *   <li>解析 PubMed XML/JSON 响应
  *   <li>提取文献元数据（标题、作者、期刊、摘要等）
- *   <li>转换为 {@code StandardLiterature} 标准模型
+ *   <li>转换为 {@code CanonicalLiterature} 标准模型
  *   <li>处理不完整或缺失的字段
  * </ul>
  *
@@ -22,7 +22,7 @@
  *
  * <pre>
  * PubmedArticle (PubMed 模型)
- * ├── PMID → StandardLiterature.pmid
+ * ├── PMID → CanonicalLiterature.pmid
  * ├── Article
  * │   ├── ArticleTitle → title
  * │   ├── Abstract → abstract
@@ -43,7 +43,7 @@
  * <pre>{@code
  * PubmedArticleConverter converter = new PubmedArticleConverter();
  * PubmedArticle article = ...; // 从 EFetch 响应获取
- * StandardLiterature literature = converter.convert(article);
+ * CanonicalLiterature literature = converter.convert(article);
  * }</pre>
  *
  * @since 0.1.0

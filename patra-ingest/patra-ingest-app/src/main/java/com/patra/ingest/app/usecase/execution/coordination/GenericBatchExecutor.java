@@ -1,6 +1,6 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.app.usecase.execution.converter.ProvenanceConfigConverter;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
@@ -225,8 +225,8 @@ public class GenericBatchExecutor {
   }
 
   private LiteraturePublisherOrchestrator.PublishResult publishLiterature(
-      ExecutionContext context, int batchNo, List<StandardLiterature> literatures) {
-    List<StandardLiterature> payload = literatures == null ? List.of() : List.copyOf(literatures);
+      ExecutionContext context, int batchNo, List<CanonicalLiterature> literatures) {
+    List<CanonicalLiterature> payload = literatures == null ? List.of() : List.copyOf(literatures);
     if (payload.isEmpty()) {
       return LiteraturePublisherOrchestrator.PublishResult.builder()
           .publishedCount(0)

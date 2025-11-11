@@ -9,7 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.patra.common.model.StandardLiterature;
+import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
@@ -66,7 +66,7 @@ class LiteraturePublisherOrchestratorTest {
   private static final String SHA256 = "def456";
 
   private LiteraturePublisherOrchestrator.PublishContext publishContext;
-  private List<StandardLiterature> literatures;
+  private List<CanonicalLiterature> literatures;
   private LiteratureStoragePort.StorageResult storageResult;
 
   @BeforeEach
@@ -124,7 +124,7 @@ class LiteraturePublisherOrchestratorTest {
     @DisplayName("空文献列表，不调用存储")
     void shouldHandleEmptyLiteratureList() {
       // Arrange
-      List<StandardLiterature> emptyList = Collections.emptyList();
+      List<CanonicalLiterature> emptyList = Collections.emptyList();
 
       LiteratureStoragePort.StorageResult emptyResult =
           LiteratureStoragePort.StorageResult.builder()
@@ -172,7 +172,7 @@ class LiteraturePublisherOrchestratorTest {
       assertThat(result).isNotNull();
       assertThat(result.publishedCount()).isEqualTo(0);
 
-      ArgumentCaptor<List<StandardLiterature>> captor = ArgumentCaptor.forClass(List.class);
+      ArgumentCaptor<List<CanonicalLiterature>> captor = ArgumentCaptor.forClass(List.class);
       verify(literatureStoragePort).store(captor.capture(), any());
       assertThat(captor.getValue()).isEmpty();
     }
@@ -519,11 +519,11 @@ class LiteraturePublisherOrchestratorTest {
 
   // ========== 辅助方法 ==========
 
-  private List<StandardLiterature> createLiteratureList(int count) {
-    List<StandardLiterature> list = new ArrayList<>();
+  private List<CanonicalLiterature> createLiteratureList(int count) {
+    List<CanonicalLiterature> list = new ArrayList<>();
     for (int i = 0; i < count; i++) {
-      StandardLiterature literature =
-          StandardLiterature.builder().title("Literature " + i).build();
+      CanonicalLiterature literature =
+          CanonicalLiterature.builder().title("Literature " + i).build();
       list.add(literature);
     }
     return list;

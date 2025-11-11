@@ -17,7 +17,7 @@ import lombok.extern.jackson.Jacksonized;
 @Value
 @Builder
 @Jacksonized
-public class StandardLiterature {
+public class CanonicalLiterature {
 
   /** 文献项目的人类可读标题。 */
   String title;
@@ -26,10 +26,10 @@ public class StandardLiterature {
   String abstractText;
 
   /** 按展示顺序排列的作者列表。 */
-  List<StandardAuthor> authors;
+  List<AuthorInfo> authors;
 
   /** 期刊元数据(如果可用)。 */
-  StandardJournal journal;
+  JournalInfo journal;
 
   /** 标识符映射,如 PMID、DOI、PMC。 */
   Map<String, String> identifiers;
@@ -40,11 +40,11 @@ public class StandardLiterature {
   /** 领域级关键词。 */
   List<String> keywords;
 
-  /** 与目录契约需求对齐的作者快照。 */
+  /** 作者基本信息（内嵌在文献中，非独立数据类型）。 */
   @Value
   @Builder
   @Jacksonized
-  public static class StandardAuthor {
+  public static class AuthorInfo {
 
     /** 姓氏 */
     String lastName;
@@ -56,11 +56,11 @@ public class StandardLiterature {
     String affiliation;
   }
 
-  /** 与目录契约需求对齐的期刊快照。 */
+  /** 期刊基本信息（内嵌在文献中）。 */
   @Value
   @Builder
   @Jacksonized
-  public static class StandardJournal {
+  public static class JournalInfo {
 
     /** 期刊标题 */
     String title;

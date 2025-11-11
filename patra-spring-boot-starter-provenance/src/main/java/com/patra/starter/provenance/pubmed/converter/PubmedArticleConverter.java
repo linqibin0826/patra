@@ -1,8 +1,8 @@
 package com.patra.starter.provenance.pubmed.converter;
 
-import com.patra.common.model.StandardLiterature;
-import com.patra.common.model.StandardLiterature.StandardAuthor;
-import com.patra.common.model.StandardLiterature.StandardJournal;
+import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.CanonicalLiterature.AuthorInfo;
+import com.patra.common.model.CanonicalLiterature.JournalInfo;
 import com.patra.starter.provenance.pubmed.model.response.Article;
 import com.patra.starter.provenance.pubmed.model.response.Author;
 import com.patra.starter.provenance.pubmed.model.response.Journal;
@@ -26,7 +26,7 @@ import org.springframework.util.StringUtils;
 /**
  * PubMed文章转换器
  *
- * <p>将 {@link PubmedArticle} 响应映射为 {@link StandardLiterature} 标准文献模型。
+ * <p>将 {@link PubmedArticle} 响应映射为 {@link CanonicalLiterature} 标准文献模型。
  * 集中所有字段提取逻辑，使下游组件能够操作稳定的共享内核模型。
  *
  * @author linqibin
@@ -41,15 +41,15 @@ public class PubmedArticleConverter {
    * @param article PubMed article response
    * @return standardized literature representation
    */
-  public StandardLiterature toStandardLiterature(PubmedArticle article) {
+  public CanonicalLiterature toCanonicalLiterature(PubmedArticle article) {
     if (article == null) {
       return null;
     }
     if (log.isDebugEnabled()) {
-      log.debug("Converting PubMed article to StandardLiterature pmid={}", article.pmid());
+      log.debug("Converting PubMed article to CanonicalLiterature pmid={}", article.pmid());
     }
     Article citation = article.article();
-    return StandardLiterature.builder()
+    return CanonicalLiterature.builder()
         .title(citation != null ? citation.title() : null)
         .abstractText(extractAbstract(citation))
         .authors(convertAuthors(citation))
@@ -80,24 +80,24 @@ public class PubmedArticleConverter {
         .collect(Collectors.joining("\n"));
   }
 
-  private List<StandardAuthor> convertAuthors(Article article) {
+  private List<AuthorInfo> convertAuthors(Article article) {
     if (article == null || CollectionUtils.isEmpty(article.authors())) {
       return List.of();
     }
     return article.authors().stream().map(this::mapAuthor).collect(Collectors.toUnmodifiableList());
   }
 
-  private StandardAuthor mapAuthor(Author author) {
+  private AuthorInfo mapAuthor(Author author) {
     String affiliation =
         !CollectionUtils.isEmpty(author.affiliations()) ? author.affiliations().get(0) : null;
-    return StandardAuthor.builder()
+    return AuthorInfo.builder()
         .lastName(author.lastName())
         .foreName(author.foreName())
         .affiliation(affiliation)
         .build();
   }
 
-  private StandardJournal convertJournal(PubmedArticle article) {
+  private JournalInfo convertJournal(PubmedArticle article) {
     Article citation = article.article();
     Journal journal = citation != null ? citation.journal() : null;
     MedlineJournalInfo medline = article.journalInfo();
@@ -115,7 +115,7 @@ public class PubmedArticleConverter {
             ? journal.title()
             : (medline != null ? medline.medlineTa() : null);
 
-    return StandardJournal.builder().title(title).issn(issn).publisher(null).build();
+    return JournalInfo.builder().title(title).issn(issn).publisher(null).build();
   }
 
   private Map<String, String> buildIdentifiers(PubmedArticle article) {
