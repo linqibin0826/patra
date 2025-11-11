@@ -87,11 +87,11 @@ public class GenericBatchExecutor {
       ProvenanceConfig runtimeConfig =
           configConverter.convert(provenanceCode, context.configSnapshot());
 
-      // Build batch execution parameters (query + complete params including pagination)
+      // 构建批次执行参数(查询条件 + 完整参数,包含分页信息)
       BatchExecutionParams executionParams =
           new BatchExecutionParams(batch.query(), batch.params());
 
-      // Build batch metadata (batchNo + cursor)
+      // 构建批次元数据(批次编号 + 游标令牌)
       BatchMetadata metadata = new BatchMetadata(batch.batchNo(), batch.cursorToken());
 
       AdapterRequest request =
