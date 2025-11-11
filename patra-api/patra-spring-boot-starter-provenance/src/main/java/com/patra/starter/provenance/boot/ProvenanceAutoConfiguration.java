@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.starter.provenance.common.adapter.AdapterRegistry;
-import com.patra.starter.provenance.common.adapter.DataSourcePort;
+import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
@@ -88,8 +88,8 @@ public class ProvenanceAutoConfiguration {
    */
   @Bean
   @ConditionalOnMissingBean
-  public AdapterRegistry adapterRegistry(ObjectProvider<List<DataSourcePort>> adaptersProvider) {
-    List<DataSourcePort> adapters = adaptersProvider.getIfAvailable(List::of);
+  public AdapterRegistry adapterRegistry(ObjectProvider<List<DataSourceAdapter>> adaptersProvider) {
+    List<DataSourceAdapter> adapters = adaptersProvider.getIfAvailable(List::of);
     return new AdapterRegistry(adapters);
   }
 

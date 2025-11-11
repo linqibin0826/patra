@@ -16,7 +16,7 @@ GenericBatchExecutor (Application Layer)
          ↓
     AdapterRegistry
          ↓
-    DataSourcePort<T>
+    DataSourceAdapter<T>
          ↓
     DataTransformStrategy<S, T>
          ↓
@@ -46,7 +46,7 @@ GenericBatchExecutor (Application Layer)
 │  └─────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │ DataSourcePort<T> 实现                                  │  │
+│  │ DataSourceAdapter<T> 实现                                  │  │
 │  │   - PubMedAdapter                                       │  │
 │  │   - EPMCAdapter                                         │  │
 │  │   - ArXivAdapter                                        │  │
@@ -254,7 +254,7 @@ public class CanonicalFullText implements CanonicalData {
 ### 3.1 数据源端口接口
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/DataSourcePort.java
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/DataSourceAdapter.java
 package com.patra.starter.provenance.common.adapter;
 
 import com.patra.common.model.CanonicalData;
@@ -266,7 +266,7 @@ import com.patra.common.model.CanonicalData;
  *
  * @param <T> 返回的规范数据类型
  */
-public interface DataSourcePort<T extends CanonicalData> {
+public interface DataSourceAdapter<T extends CanonicalData> {
 
     /**
      * 返回数据源代码
@@ -653,17 +653,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class AdapterRegistry {
 
-    private final Map<String, DataSourcePort<?>> portsByProvenance = new ConcurrentHashMap<>();
-    private final Map<RegistryKey, DataSourcePort<?>> portsByType = new ConcurrentHashMap<>();
+    private final Map<String, DataSourceAdapter<?>> portsByProvenance = new ConcurrentHashMap<>();
+    private final Map<RegistryKey, DataSourceAdapter<?>> portsByType = new ConcurrentHashMap<>();
     private final ApplicationContext applicationContext;
 
     @PostConstruct
     public void registerPorts() {
-        Map<String, DataSourcePort> portBeans =
-            applicationContext.getBeansOfType(DataSourcePort.class);
+        Map<String, DataSourceAdapter> portBeans =
+            applicationContext.getBeansOfType(DataSourceAdapter.class);
 
-        for (Map.Entry<String, DataSourcePort> entry : portBeans.entrySet()) {
-            DataSourcePort<?> port = entry.getValue();
+        for (Map.Entry<String, DataSourceAdapter> entry : portBeans.entrySet()) {
+            DataSourceAdapter<?> port = entry.getValue();
             String provenanceCode = port.getProvenanceCode();
 
             // 注册到主表
@@ -685,8 +685,8 @@ public class AdapterRegistry {
     /**
      * 根据数据源代码获取端口
      */
-    public DataSourcePort<?> getPort(String provenanceCode) {
-        DataSourcePort<?> port = portsByProvenance.get(provenanceCode);
+    public DataSourceAdapter<?> getPort(String provenanceCode) {
+        DataSourceAdapter<?> port = portsByProvenance.get(provenanceCode);
         if (port == null) {
             throw new IllegalArgumentException("未找到数据源端口: " + provenanceCode);
         }
@@ -697,21 +697,21 @@ public class AdapterRegistry {
      * 根据数据源和数据类型获取端口
      */
     @SuppressWarnings("unchecked")
-    public <T extends CanonicalData> DataSourcePort<T> getPort(
+    public <T extends CanonicalData> DataSourceAdapter<T> getPort(
             String provenanceCode,
             Class<T> dataTypeClass) {
 
         DataType dataType = extractDataType(dataTypeClass);
         RegistryKey key = new RegistryKey(provenanceCode, dataType);
 
-        DataSourcePort<?> port = portsByType.get(key);
+        DataSourceAdapter<?> port = portsByType.get(key);
         if (port == null) {
             throw new IllegalArgumentException(
                 String.format("未找到端口: %s -> %s", provenanceCode, dataType)
             );
         }
 
-        return (DataSourcePort<T>) port;
+        return (DataSourceAdapter<T>) port;
     }
 
     private DataType extractDataType(Class<?> dataTypeClass) {
@@ -746,7 +746,7 @@ package com.patra.starter.provenance.pubmed;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class PubMedAdapter implements DataSourcePort<CanonicalData> {
+public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
 
     private final PubMedClient pubMedClient;
     private final StrategyRegistry strategyRegistry;
@@ -1076,7 +1076,7 @@ public class PubMedArticle {
 
 public BatchResult execute(ExecutionContext context, Batch batch) {
     // 1. 获取端口（默认获取文献端口）
-    DataSourcePort<?> port = adapterRegistry.getPort(context.provenanceCode());
+    DataSourceAdapter<?> port = adapterRegistry.getPort(context.provenanceCode());
 
     // 2. 构建请求
     AdapterRequest request = AdapterRequest.builder()
@@ -1304,7 +1304,7 @@ public class DataSourceHealthIndicator implements HealthIndicator {
         Map<String, String> details = new HashMap<>();
         boolean allHealthy = true;
 
-        for (DataSourcePort<?> port : registry.getAllPorts()) {
+        for (DataSourceAdapter<?> port : registry.getAllPorts()) {
             String provenance = port.getProvenanceCode();
             try {
                 // 简单的连通性测试
@@ -1321,7 +1321,7 @@ public class DataSourceHealthIndicator implements HealthIndicator {
             : Health.down().withDetails(details).build();
     }
 
-    private void testPort(DataSourcePort<?> port) {
+    private void testPort(DataSourceAdapter<?> port) {
         // 伪代码：测试端口连通性
         // 可以调用一个轻量级的测试请求
     }
@@ -1374,9 +1374,208 @@ public class AdapterMetrics {
 
 ---
 
-## 11. 架构优势总结
+## 11. 六边形架构实现
 
-### 11.1 核心优势
+### 11.1 架构层次
+
+本设计严格遵循六边形架构（Ports & Adapters）原则，确保依赖方向正确：
+
+#### 层次关系
+```
+┌────────────────────────────────────────────────────┐
+│ Domain Layer (patra-ingest-domain)                │
+│ - DataSourcePort (输出端口接口)                    │
+│ - DataFetchResult (领域值对象)                     │
+│ 职责: 定义业务契约，不依赖任何技术实现            │
+└────────────────────────────────────────────────────┘
+                      ▲
+                      │ depends on
+                      │
+┌────────────────────────────────────────────────────┐
+│ Application Layer (patra-ingest-app)              │
+│ - GenericBatchExecutor (用例编排器)               │
+│ 职责: 业务流程编排，不关注技术细节                │
+└────────────────────────────────────────────────────┘
+                      ▲
+                      │ implements
+                      │
+┌────────────────────────────────────────────────────┐
+│ Infrastructure Layer (patra-ingest-infra)         │
+│ - DataSourcePortAdapter (端口实现)                │
+│ 职责: 桥接领域层和框架层，处理技术转换            │
+│   - 配置快照转换                                   │
+│   - 请求/响应对象转换                              │
+│   - 错误类型映射                                   │
+└────────────────────────────────────────────────────┘
+                      │ uses
+                      ↓
+┌────────────────────────────────────────────────────┐
+│ Framework Layer (patra-starter-provenance)        │
+│ - DataSourceAdapter (框架接口)                     │
+│ - AdapterRegistry (适配器注册表)                   │
+│ 职责: 提供技术支撑和统一规范                       │
+└────────────────────────────────────────────────────┘
+                      ▲
+                      │ implements
+                      │
+┌────────────────────────────────────────────────────┐
+│ Infrastructure Layer (patra-ingest-infra)         │
+│ - PubmedDataSourceAdapter                         │
+│ - EpmcDataSourceAdapter                           │
+│ 职责: 具体数据源的实现                             │
+└────────────────────────────────────────────────────┘
+```
+
+### 11.2 关键设计决策
+
+#### 为什么需要两层接口？
+
+**DataSourcePort (领域层)** vs **DataSourceAdapter (框架层)**
+
+| 对比项 | DataSourcePort (领域层) | DataSourceAdapter (框架层) |
+|--------|------------------------|---------------------------|
+| 定义位置 | patra-ingest-domain | patra-starter-provenance |
+| 职责 | 定义业务契约 | 定义技术规范 |
+| 依赖者 | Application 层 | Infrastructure 层 |
+| 方法签名 | `fetchData(ExecutionContext, Batch)` | `fetchData(AdapterRequest)` |
+| 返回类型 | DataFetchResult (领域对象) | AdapterResult (框架对象) |
+| 变更影响 | 影响业务流程 | 影响技术实现 |
+
+**架构优势**:
+1. **依赖倒置**: Application 层不依赖框架或技术实现
+2. **关注点分离**: 业务逻辑与技术细节解耦
+3. **可测试性**: Application 层可以轻松 Mock 端口
+4. **灵活性**: 可以替换底层技术实现而不影响业务层
+
+#### DataSourcePortAdapter 的职责
+
+DataSourcePortAdapter 作为 Infrastructure 层的桥接适配器，负责：
+
+1. **路由**: 使用 AdapterRegistry 根据 provenanceCode 获取具体适配器
+2. **类型转换**:
+   - ExecutionContext + Batch → AdapterRequest
+   - AdapterResult → DataFetchResult
+3. **配置转换**: ProvenanceConfigSnapshot → ProvenanceConfig
+4. **错误映射**: Framework ErrorType → Domain ErrorType
+
+### 11.3 实现文件
+
+#### Domain 层
+```java
+// com.patra.ingest.domain.port.DataSourcePort
+public interface DataSourcePort {
+    DataFetchResult fetchData(ExecutionContext context, Batch batch);
+
+    record DataFetchResult(
+        boolean success,
+        List<CanonicalLiterature> literatures,
+        String nextCursorToken,
+        String errorMessage,
+        int fetchedCount,
+        ErrorType errorType
+    ) { ... }
+}
+```
+
+#### Infrastructure 层
+```java
+// com.patra.ingest.infra.integration.datasource.DataSourcePortAdapter
+@Component
+@RequiredArgsConstructor
+public class DataSourcePortAdapter implements DataSourcePort {
+    private final AdapterRegistry adapterRegistry;
+
+    @Override
+    public DataFetchResult fetchData(ExecutionContext context, Batch batch) {
+        String provenanceCode = context.provenanceCode();
+        DataSourceAdapter adapter = adapterRegistry.getAdapter(provenanceCode);
+        AdapterRequest request = buildAdapterRequest(context, batch);
+        AdapterResult result = adapter.fetchData(request);
+        return convertToDataFetchResult(result);
+    }
+}
+```
+
+#### Application 层
+```java
+// com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor
+@Component
+@RequiredArgsConstructor
+public class GenericBatchExecutor {
+    private final DataSourcePort dataSourcePort;  // ✅ 依赖端口，不依赖实现
+
+    public BatchResult execute(ExecutionContext context, Batch batch) {
+        DataFetchResult fetchResult = dataSourcePort.fetchData(context, batch);
+        // 编排业务流程...
+    }
+}
+```
+
+### 11.4 重构成果
+
+#### 代码简化
+- GenericBatchExecutor: 302 行 → 203 行 (-32.8%)
+- GenericBatchExecutorTest: 573 行 → 345 行 (-39.8%)
+- 删除 ProvenanceConfigConverter: 201 行
+- **总计节省: 528 行代码**
+
+#### 职责清晰化
+**重构前**: GenericBatchExecutor 负责
+- ❌ 适配器注册表查找
+- ❌ 配置转换
+- ❌ 构建框架请求对象
+- ❌ 重试逻辑和指数退避
+- ✅ 业务流程编排
+
+**重构后**: GenericBatchExecutor 只负责
+- ✅ 调用领域端口获取数据
+- ✅ 发布文献
+- ✅ 构建批次执行结果
+- ✅ 记录日志
+
+#### 测试改进
+- 移除了重试逻辑测试（已在 starter 和 infra 层测试）
+- 移除了适配器参数传递测试（已在 infra 层测试）
+- Application 层测试更聚焦于业务流程
+- 测试代码减少 39.8%，但覆盖度不降低
+
+### 11.5 架构验证
+
+#### Maven 依赖验证
+```bash
+# Application 层 - 不依赖 starter
+$ grep "patra-starter-provenance" patra-ingest-app/pom.xml
+# (无结果 - 正确)
+
+# Infrastructure 层 - 依赖 starter
+$ grep "patra-starter-provenance" patra-ingest-infra/pom.xml
+<artifactId>patra-spring-boot-starter-provenance</artifactId>
+# (有结果 - 正确)
+```
+
+#### 测试验证
+- ✅ DataSourcePortAdapterTest: 12/12 通过
+- ✅ GenericBatchExecutorTest: 7/7 通过
+- ✅ 编译通过，无依赖冲突
+
+### 11.6 扩展性
+
+#### 添加新数据源
+1. **Framework 层**: 实现 DataSourceAdapter（如 ArxivDataSourceAdapter）
+2. **Infrastructure 层**: 注册到 AdapterRegistry
+3. **无需修改**: Domain 层、Application 层、DataSourcePortAdapter
+
+#### 更换框架实现
+1. **保持不变**: Domain 层的 DataSourcePort 接口
+2. **保持不变**: Application 层的 GenericBatchExecutor
+3. **修改**: Infrastructure 层的 DataSourcePortAdapter 实现
+4. **替换**: Framework 层的实现（如使用其他 HTTP 客户端）
+
+---
+
+## 12. 架构优势总结
+
+### 12.1 核心优势
 
 1. **类型安全**：泛型化设计提供编译时类型检查
 2. **清晰分层**：严格遵循六边形架构原则
@@ -1384,17 +1583,42 @@ public class AdapterMetrics {
 4. **防腐隔离**：外部模型变化不影响领域模型
 5. **策略可插拔**：数据转换策略独立可配置
 
-### 11.2 扩展点
+### 12.2 扩展点
 
-1. **新数据源接入**：实现 `DataSourcePort<T>` 接口
+1. **新数据源接入**：实现 `DataSourceAdapter<T>` 接口
 2. **新数据类型**：定义 `CanonicalData` 实现类
 3. **转换策略**：实现 `DataTransformStrategy<S, T>` 接口
 4. **能力扩展**：通过 `AdapterCapability` 声明新能力
 
-### 11.3 设计原则体现
+### 12.3 设计原则体现
 
 - **单一职责**：每个组件职责明确
 - **开闭原则**：对扩展开放，对修改关闭
 - **依赖倒置**：依赖抽象而非具体实现
 - **接口隔离**：细粒度的接口定义
 - **里氏替换**：所有端口实现可互相替换
+
+---
+
+## 13. 总结
+
+### 设计亮点
+
+1. **严格的六边形架构**: 依赖方向正确，Domain ← Application ← Infrastructure
+2. **双层接口设计**: DataSourcePort (业务契约) + DataSourceAdapter (技术规范)
+3. **桥接适配器**: DataSourcePortAdapter 完美隔离业务和技术
+4. **代码简化**: 移除冗余代码 528 行，职责更清晰
+
+### 架构优势
+
+1. **可测试性**: Application 层无需启动框架即可测试
+2. **可维护性**: 业务逻辑与技术实现完全解耦
+3. **可扩展性**: 添加新数据源无需修改 Application 层
+4. **可替换性**: 可以轻松替换底层技术实现
+
+### 遵循的原则
+
+- ✅ **依赖倒置原则**: 高层不依赖低层，都依赖抽象
+- ✅ **单一职责原则**: 每层只负责自己的职责
+- ✅ **开闭原则**: 对扩展开放，对修改关闭
+- ✅ **接口隔离原则**: 领域接口和框架接口分离

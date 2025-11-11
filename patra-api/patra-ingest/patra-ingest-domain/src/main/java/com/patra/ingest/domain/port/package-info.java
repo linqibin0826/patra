@@ -29,6 +29,13 @@
  * <p>用于调用外部系统,由基础设施层的 HTTP 客户端或 SDK 实现:
  *
  * <ul>
+ *   <li>{@link com.patra.ingest.domain.port.DataSourcePort} - 数据源端口
+ *       <ul>
+ *         <li>从外部数据源获取标准化文献数据</li>
+ *         <li>支持多种数据源(PubMed, EPMC 等)</li>
+ *         <li>处理分页、游标和错误重试</li>
+ *       </ul>
+ *   </li>
  *   <li>{@link com.patra.ingest.domain.port.PatraRegistryPort} - Patra Registry 配置服务端口
  *       <ul>
  *         <li>获取 Provenance 配置快照</li>
