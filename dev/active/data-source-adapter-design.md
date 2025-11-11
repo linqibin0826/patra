@@ -32,7 +32,7 @@ GenericBatchExecutor (Application Layer)
 │  │ GenericBatchExecutor                                    │  │
 │  │   - 执行批次数据获取                                     │  │
 │  │   - 通过 AdapterRegistry 获取适配器                      │  │
-│  │   - 处理重试和错误                                       │  │
+│  │   - 处理错误和部分成功                                   │  │
 │  │   - 发布规范化数据                                       │  │
 │  └─────────────────────────────────────────────────────────┘  │
 └───────────────────────────┬────────────────────────────────────┘
@@ -360,7 +360,8 @@ public record AdapterResult<T extends CanonicalData>(
     }
 
     /**
-     * 创建可重试的失败结果
+     * 创建标识为可重试错误的失败结果
+     * (注: 是否实际重试由上层调度器决定)
      */
     public static <T extends CanonicalData> AdapterResult<T> retriableFailure(
             String errorMessage) {
@@ -376,7 +377,8 @@ public record AdapterResult<T extends CanonicalData>(
     }
 
     /**
-     * 创建不可重试的失败结果
+     * 创建标识为不可重试错误的失败结果
+     * (注: 表示错误是永久性的，重试无法解决)
      */
     public static <T extends CanonicalData> AdapterResult<T> nonRetriableFailure(
             String errorMessage) {
@@ -1151,10 +1153,6 @@ patra:
         base-url: https://eutils.ncbi.nlm.nih.gov/entrez/eutils
         api-key: ${PUBMED_API_KEY}
         timeout: 30s
-        retry:
-          max-attempts: 3
-          initial-delay: 1s
-          multiplier: 2
         rate-limit:
           requests-per-second: 10
           daily-quota: 100000
