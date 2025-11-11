@@ -1,4 +1,4 @@
-# 数据源适配器架构需求文档
+# 数据源端口架构需求文档
 
 **文档版本**: 1.0.0
 **创建日期**: 2024-11-11
@@ -147,11 +147,11 @@ Patra 是一个医学文献数据平台，旨在从多个数据源（PubMed、EP
 ## 7. 里程碑计划
 
 - **M1（第1周）**：完成基础架构设计和核心接口定义
-- **M2（第2周）**：实现 PubMed 适配器和数据转换
+- **M2（第2周）**：实现 PubMed 端口实现和数据转换
 - **M3（第3周）**：接入新数据源并完成测试
 
 ## 8. 相关文档
 
-- [数据源适配器设计方案](./data-source-adapter-design.md)
+- [数据源端口设计方案](./data-source-adapter-design.md)
 - [六边形架构指南](../architecture/hexagonal-architecture.md)
 - [DDD 实践规范](../architecture/ddd-practices.md)

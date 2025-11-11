@@ -2,13 +2,13 @@
  * Provenance Starter 启动配置包。
  *
  * <p>本包提供 Spring Boot 自动配置支持，用于快速集成 Provenance 数据源客户端。自动注册
- * PubMed 和 Europe PMC 适配器，并支持通过属性文件进行声明式配置。
+ * PubMed 和 Europe PMC 端口实现，并支持通过属性文件进行声明式配置。
  *
  * <h2>职责</h2>
  *
  * <ul>
  *   <li>自动配置 PubMed 和 EPMC 客户端
- *   <li>注册 {@link com.patra.starter.provenance.common.adapter.DataSourceAdapter} 到 {@link
+ *   <li>注册 {@link com.patra.starter.provenance.common.adapter.DataSourcePort} 到 {@link
  *       com.patra.starter.provenance.common.adapter.AdapterRegistry}
  *   <li>加载并验证 {@code patra.provenance.*} 配置属性
  *   <li>按需集成 Micrometer 指标监控
@@ -50,7 +50,7 @@
  * <h2>扩展点</h2>
  *
  * <ul>
- *   <li>实现 {@link com.patra.starter.provenance.common.adapter.DataSourceAdapter} 添加新数据源
+ *   <li>实现 {@link com.patra.starter.provenance.common.adapter.DataSourcePort} 添加新数据源
  *   <li>自定义 {@link com.patra.starter.provenance.common.metrics.ProvenanceMetrics} 替换指标记录器
  *   <li>使用 {@code patra.provenance.enabled=false} 禁用自动配置
  * </ul>

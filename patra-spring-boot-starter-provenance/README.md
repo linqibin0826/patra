@@ -13,7 +13,7 @@
 - **请求组装器**: 标准化参数构建,避免硬编码
 - **配置合并**: 支持全局默认值和数据源级覆盖
 - **指标集成**: 可选的 Micrometer 指标采集
-- **适配器注册**: 统一的数据源适配器发现机制
+- **端口注册**: 统一的数据源端口发现机制
 
 ## 自动配置内容
 
@@ -28,8 +28,8 @@
 | `provenanceXmlMapper` | `XmlMapper` | PubMed XML 响应映射器 |
 | `pubmedArticleConverter` | `PubmedArticleConverter` | PubMed 文章转换器 |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
-| `adapterRegistry` | `AdapterRegistry` | 数据源适配器注册表 |
-| `pubmedDataSourceAdapter` | `PubmedDataSourceAdapter` | PubMed 数据源适配器 |
+| `adapterRegistry` | `AdapterRegistry` | 数据源端口注册表 |
+| `pubmedDataSourceAdapter` | `PubmedDataSourceAdapter` | PubMed 数据源端口实现 |
 | `provenanceMetrics` | `ProvenanceMetrics` | 指标记录器(需要 MeterRegistry) |
 
 ### 启用条件
@@ -62,9 +62,9 @@
 
 ### AdapterRegistry
 
-统一的数据源适配器注册表,支持:
-- 自动发现所有 `DataSourceAdapter` 实现
-- 按数据源代码查找适配器
+统一的数据源端口注册表,支持:
+- 自动发现所有 `DataSourcePort` 实现
+- 按数据源代码查找端口
 - 为 Ingest 服务提供统一的数据源访问接口
 
 ## 配置属性

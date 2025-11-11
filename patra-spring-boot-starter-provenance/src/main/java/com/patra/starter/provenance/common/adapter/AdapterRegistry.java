@@ -9,66 +9,66 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 数据源适配器注册表
+ * 数据源端口注册表
  *
- * <p>负责发现和查询 {@link DataSourceAdapter} 实现。注册表通过 Spring 的组件扫描填充, 并提供按数据源代码的快速查找功能。
+ * <p>负责发现和查询 {@link DataSourcePort} 实现。注册表通过 Spring 的组件扫描填充, 并提供按数据源代码的快速查找功能。
  */
 @Slf4j
 public class AdapterRegistry {
 
-  private final Map<String, List<DataSourceAdapter>> adapters = new ConcurrentHashMap<>();
+  private final Map<String, List<DataSourcePort>> adapters = new ConcurrentHashMap<>();
 
   /**
-   * 创建注册表并注册所有已发现的适配器
+   * 创建注册表并注册所有已发现的端口实现
    *
-   * @param discoveredAdapters 由 Spring 提供的适配器列表
+   * @param discoveredAdapters 由 Spring 提供的端口实现列表
    */
-  public AdapterRegistry(List<DataSourceAdapter> discoveredAdapters) {
-    List<DataSourceAdapter> safeAdapters =
+  public AdapterRegistry(List<DataSourcePort> discoveredAdapters) {
+    List<DataSourcePort> safeAdapters =
         discoveredAdapters == null ? List.of() : List.copyOf(discoveredAdapters);
     safeAdapters.forEach(this::register);
   }
 
   /**
-   * 测试是否存在请求的数据源代码对应的适配器
+   * 测试是否存在请求的数据源代码对应的端口实现
    *
    * @param provenanceCode 数据源标识符(如 {@code pubmed})
-   * @return 如果有匹配的适配器可用则返回 true
+   * @return 如果有匹配的端口实现可用则返回 true
    */
   public boolean supports(String provenanceCode) {
     return findAdapter(provenanceCode).isPresent();
   }
 
   /**
-   * 返回与请求的数据源代码匹配的适配器
+   * 返回与请求的数据源代码匹配的端口实现
    *
    * @param provenanceCode 数据源标识符(如 {@code pubmed})
-   * @return 匹配的适配器实例
-   * @throws IllegalArgumentException 如果该数据源不存在对应的适配器
+   * @return 匹配的端口实现实例
+   * @throws IllegalArgumentException 如果该数据源不存在对应的端口实现
    */
-  public DataSourceAdapter getAdapter(String provenanceCode) {
+  public DataSourcePort getAdapter(String provenanceCode) {
     return findAdapter(provenanceCode)
         .orElseThrow(
             () ->
                 new IllegalArgumentException(
-                    "未找到数据源对应的适配器: provenance=%s".formatted(provenanceCode)));
+                    "未找到数据源对应的端口实现: provenance=%s".formatted(provenanceCode)));
   }
 
-  private Optional<DataSourceAdapter> findAdapter(String provenanceCode) {
+  private Optional<DataSourcePort> findAdapter(String provenanceCode) {
     if (provenanceCode == null || provenanceCode.isBlank()) {
       return Optional.empty();
     }
     String normalizedCode = normalize(provenanceCode);
-    List<DataSourceAdapter> candidates = adapters.get(normalizedCode);
+    List<DataSourcePort> candidates = adapters.get(normalizedCode);
     if (candidates == null || candidates.isEmpty()) {
       return Optional.empty();
     }
-    // 返回该数据源的第一个适配器
-    // 每个数据源应该恰好有一个适配器实现
+    // 返回该数据源的第一个端口实现
+    // 每个数据源应该恰好有一个端口实现
     return candidates.stream().findFirst();
   }
 
-  private void register(DataSourceAdapter adapter) {
+  private void register(DataSourcePort adapter) {
     if (adapter == null) {
       return;
     }
@@ -80,16 +80,16 @@ public class AdapterRegistry {
             return List.of(adapter);
           }
           if (list.stream().anyMatch(existing -> existing.getClass().equals(adapter.getClass()))) {
-            log.warn("忽略重复的适配器注册: {}", adapter.getClass().getName());
+            log.warn("忽略重复的端口实现注册: {}", adapter.getClass().getName());
             return list;
           }
           return createExpandedList(list, adapter);
         });
   }
 
-  private List<DataSourceAdapter> createExpandedList(
-      List<DataSourceAdapter> existing, DataSourceAdapter adapter) {
-    List<DataSourceAdapter> combined = new ArrayList<>(existing.size() + 1);
+  private List<DataSourcePort> createExpandedList(
+      List<DataSourcePort> existing, DataSourcePort adapter) {
+    List<DataSourcePort> combined = new ArrayList<>(existing.size() + 1);
     combined.addAll(existing);
     combined.add(adapter);
     return List.copyOf(combined);

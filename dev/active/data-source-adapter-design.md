@@ -16,7 +16,7 @@ GenericBatchExecutor (Application Layer)
          ↓
     AdapterRegistry
          ↓
-    DataSourceAdapter<T>
+    DataSourcePort<T>
          ↓
     DataTransformStrategy<S, T>
          ↓
@@ -46,7 +46,7 @@ GenericBatchExecutor (Application Layer)
 │  └─────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │ DataSourceAdapter<T> 实现                               │  │
+│  │ DataSourcePort<T> 实现                                  │  │
 │  │   - PubMedAdapter                                       │  │
 │  │   - EPMCAdapter                                         │  │
 │  │   - ArXivAdapter                                        │  │
@@ -261,22 +261,22 @@ public class CanonicalFullText implements CanonicalData {
 
 ## 3. 核心接口设计
 
-### 3.1 数据源适配器接口
+### 3.1 数据源端口接口
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/DataSourceAdapter.java
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/DataSourcePort.java
 package com.patra.starter.provenance.common.adapter;
 
 import com.patra.common.model.CanonicalData;
 
 /**
- * 数据源适配器泛型接口
+ * 数据源端口泛型接口
  *
  * <p>由 GenericBatchExecutor 调用，执行数据获取和转换</p>
  *
  * @param <T> 返回的规范数据类型
  */
-public interface DataSourceAdapter<T extends CanonicalData> {
+public interface DataSourcePort<T extends CanonicalData> {
 
     /**
      * 返回数据源代码
@@ -294,7 +294,7 @@ public interface DataSourceAdapter<T extends CanonicalData> {
     AdapterResult<T> fetchData(AdapterRequest request);
 
     /**
-     * 获取适配器支持的能力
+     * 获取端口支持的能力
      *
      * @return 能力描述对象
      */
@@ -321,7 +321,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 泛型化的适配器执行结果
+ * 泛型化的端口执行结果
  *
  * @param <T> 数据载荷类型
  */
@@ -431,7 +431,7 @@ public record AdapterResult<T extends CanonicalData>(
 package com.patra.starter.provenance.common.adapter;
 
 /**
- * 适配器请求对象
+ * 端口请求对象
  */
 public record AdapterRequest(
     String operationCode,
@@ -451,7 +451,7 @@ public record AdapterRequest(
         if (metadata == null) {
             throw new IllegalArgumentException("metadata 不能为空");
         }
-        // requestedDataType 可以为 null，适配器会使用默认类型
+        // requestedDataType 可以为 null，端口实现会使用默认类型
     }
 }
 ```
@@ -643,7 +643,7 @@ public class StrategyRegistry {
 
 ---
 
-## 5. 适配器注册中心
+## 5. 端口注册中心
 
 ```java
 // patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/AdapterRegistry.java
@@ -657,71 +657,71 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 适配器注册中心
+ * 数据源端口注册中心
  */
 @Component
 @Slf4j
 public class AdapterRegistry {
 
-    private final Map<String, DataSourceAdapter<?>> adaptersByProvenance = new ConcurrentHashMap<>();
-    private final Map<RegistryKey, DataSourceAdapter<?>> adaptersByType = new ConcurrentHashMap<>();
+    private final Map<String, DataSourcePort<?>> portsByProvenance = new ConcurrentHashMap<>();
+    private final Map<RegistryKey, DataSourcePort<?>> portsByType = new ConcurrentHashMap<>();
     private final ApplicationContext applicationContext;
 
     @PostConstruct
-    public void registerAdapters() {
-        Map<String, DataSourceAdapter> adapterBeans =
-            applicationContext.getBeansOfType(DataSourceAdapter.class);
+    public void registerPorts() {
+        Map<String, DataSourcePort> portBeans =
+            applicationContext.getBeansOfType(DataSourcePort.class);
 
-        for (Map.Entry<String, DataSourceAdapter> entry : adapterBeans.entrySet()) {
-            DataSourceAdapter<?> adapter = entry.getValue();
-            String provenanceCode = adapter.getProvenanceCode();
+        for (Map.Entry<String, DataSourcePort> entry : portBeans.entrySet()) {
+            DataSourcePort<?> port = entry.getValue();
+            String provenanceCode = port.getProvenanceCode();
 
             // 注册到主表
-            adaptersByProvenance.put(provenanceCode, adapter);
+            portsByProvenance.put(provenanceCode, port);
 
             // 注册到类型表
-            AdapterCapability capability = adapter.getCapabilities();
+            AdapterCapability capability = port.getCapabilities();
             if (capability != null && capability.getSupportedDataTypes() != null) {
                 for (DataType dataType : capability.getSupportedDataTypes()) {
                     RegistryKey key = new RegistryKey(provenanceCode, dataType);
-                    adaptersByType.put(key, adapter);
+                    portsByType.put(key, port);
                 }
             }
 
-            log.info("注册数据源适配器: {} ({})", entry.getKey(), provenanceCode);
+            log.info("注册数据源端口: {} ({})", entry.getKey(), provenanceCode);
         }
     }
 
     /**
-     * 根据数据源代码获取适配器
+     * 根据数据源代码获取端口
      */
-    public DataSourceAdapter<?> getAdapter(String provenanceCode) {
-        DataSourceAdapter<?> adapter = adaptersByProvenance.get(provenanceCode);
-        if (adapter == null) {
-            throw new IllegalArgumentException("未找到数据源适配器: " + provenanceCode);
+    public DataSourcePort<?> getPort(String provenanceCode) {
+        DataSourcePort<?> port = portsByProvenance.get(provenanceCode);
+        if (port == null) {
+            throw new IllegalArgumentException("未找到数据源端口: " + provenanceCode);
         }
-        return adapter;
+        return port;
     }
 
     /**
-     * 根据数据源和数据类型获取适配器
+     * 根据数据源和数据类型获取端口
      */
     @SuppressWarnings("unchecked")
-    public <T extends CanonicalData> DataSourceAdapter<T> getAdapter(
+    public <T extends CanonicalData> DataSourcePort<T> getPort(
             String provenanceCode,
             Class<T> dataTypeClass) {
 
         DataType dataType = extractDataType(dataTypeClass);
         RegistryKey key = new RegistryKey(provenanceCode, dataType);
 
-        DataSourceAdapter<?> adapter = adaptersByType.get(key);
-        if (adapter == null) {
+        DataSourcePort<?> port = portsByType.get(key);
+        if (port == null) {
             throw new IllegalArgumentException(
-                String.format("未找到适配器: %s -> %s", provenanceCode, dataType)
+                String.format("未找到端口: %s -> %s", provenanceCode, dataType)
             );
         }
 
-        return (DataSourceAdapter<T>) adapter;
+        return (DataSourcePort<T>) port;
     }
 
     private DataType extractDataType(Class<?> dataTypeClass) {
@@ -756,7 +756,7 @@ package com.patra.starter.provenance.pubmed;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
+public class PubMedAdapter implements DataSourcePort<CanonicalData> {
 
     private final PubMedClient pubMedClient;
     private final StrategyRegistry strategyRegistry;
@@ -1109,8 +1109,8 @@ public class PubMedArticle {
 // patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/coordination/GenericBatchExecutor.java
 
 public BatchResult execute(ExecutionContext context, Batch batch) {
-    // 1. 获取适配器（默认获取文献适配器）
-    DataSourceAdapter<?> adapter = adapterRegistry.getAdapter(context.provenanceCode());
+    // 1. 获取端口（默认获取文献端口）
+    DataSourcePort<?> port = adapterRegistry.getPort(context.provenanceCode());
 
     // 2. 构建请求
     AdapterRequest request = AdapterRequest.builder()
@@ -1121,8 +1121,8 @@ public BatchResult execute(ExecutionContext context, Batch batch) {
         .requestedDataType(DataType.LITERATURE)  // 明确指定数据类型
         .build();
 
-    // 3. 调用适配器获取数据
-    AdapterResult<?> adapterResult = adapter.fetchData(request);
+    // 3. 调用端口获取数据
+    AdapterResult<?> adapterResult = port.fetchData(request);
 
     // 4. 处理结果
     if (adapterResult.success()) {
@@ -1338,11 +1338,11 @@ public class DataSourceHealthIndicator implements HealthIndicator {
         Map<String, String> details = new HashMap<>();
         boolean allHealthy = true;
 
-        for (DataSourceAdapter<?> adapter : registry.getAllAdapters()) {
-            String provenance = adapter.getProvenanceCode();
+        for (DataSourcePort<?> port : registry.getAllPorts()) {
+            String provenance = port.getProvenanceCode();
             try {
                 // 简单的连通性测试
-                testAdapter(adapter);
+                testPort(port);
                 details.put(provenance, "UP");
             } catch (Exception e) {
                 details.put(provenance, "DOWN: " + e.getMessage());
@@ -1355,8 +1355,8 @@ public class DataSourceHealthIndicator implements HealthIndicator {
             : Health.down().withDetails(details).build();
     }
 
-    private void testAdapter(DataSourceAdapter<?> adapter) {
-        // 伪代码：测试适配器连通性
+    private void testPort(DataSourcePort<?> port) {
+        // 伪代码：测试端口连通性
         // 可以调用一个轻量级的测试请求
     }
 }
@@ -1420,7 +1420,7 @@ public class AdapterMetrics {
 
 ### 11.2 扩展点
 
-1. **新数据源接入**：实现 `DataSourceAdapter<T>` 接口
+1. **新数据源接入**：实现 `DataSourcePort<T>` 接口
 2. **新数据类型**：定义 `CanonicalData` 实现类
 3. **转换策略**：实现 `DataTransformStrategy<S, T>` 接口
 4. **能力扩展**：通过 `AdapterCapability` 声明新能力
@@ -1431,4 +1431,4 @@ public class AdapterMetrics {
 - **开闭原则**：对扩展开放，对修改关闭
 - **依赖倒置**：依赖抽象而非具体实现
 - **接口隔离**：细粒度的接口定义
-- **里氏替换**：所有适配器可互相替换
+- **里氏替换**：所有端口实现可互相替换

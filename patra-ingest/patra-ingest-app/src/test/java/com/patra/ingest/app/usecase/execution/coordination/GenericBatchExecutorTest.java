@@ -60,7 +60,7 @@ class GenericBatchExecutorTest {
   @Mock private LiteraturePublisherOrchestrator literaturePublisherOrchestrator;
   @Mock private ProvenanceConfigConverter configConverter;
 
-  @Mock private DataSourceAdapter mockAdapter;
+  @Mock private DataSourcePort mockAdapter;
 
   @Captor private ArgumentCaptor<AdapterRequest> requestCaptor;
 
