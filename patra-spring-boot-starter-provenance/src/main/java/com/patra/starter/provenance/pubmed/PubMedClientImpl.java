@@ -17,6 +17,8 @@ import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import java.io.IOException;
+import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -121,8 +123,8 @@ public class PubMedClientImpl implements PubMedClient {
     String baseUrl = finalConfig.baseUrl();
     String path = "/efetch.fcgi";
 
-    java.util.Map<String, String> queryParams = request.toQueryParams();
-    java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
+    Map<String, String> queryParams = request.toQueryParams();
+    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
     HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
     String body = httpClient.get(baseUrl, path, queryParams, headers, rc);
