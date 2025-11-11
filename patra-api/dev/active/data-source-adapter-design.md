@@ -1,7 +1,8 @@
 # 数据源适配器架构设计方案
 
-**文档版本**: 1.0.0
+**文档版本**: 2.0.0
 **创建日期**: 2025-11-11
+**更新日期**: 2025-11-11
 **作者**: Patra 架构团队
 **状态**: 实施中
 
@@ -14,9 +15,9 @@
 ```
 GenericBatchExecutor (Application Layer)
          ↓
-    AdapterRegistry
+    ProviderRegistry
          ↓
-    DataSourceAdapter<T>
+    DataSourceProvider<T>
          ↓
     DataTransformStrategy<S, T>
          ↓
@@ -31,7 +32,7 @@ GenericBatchExecutor (Application Layer)
 │  ┌─────────────────────────────────────────────────────────┐  │
 │  │ GenericBatchExecutor                                    │  │
 │  │   - 执行批次数据获取                                     │  │
-│  │   - 通过 AdapterRegistry 获取适配器                      │  │
+│  │   - 通过 ProviderRegistry 获取提供者                     │  │
 │  │   - 处理错误和部分成功                                   │  │
 │  │   - 发布规范化数据                                       │  │
 │  └─────────────────────────────────────────────────────────┘  │
@@ -40,16 +41,16 @@ GenericBatchExecutor (Application Layer)
 ┌────────────────────────────────────────────────────────────────┐
 │                    Infrastructure Layer                         │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │ AdapterRegistry                                         │  │
-│  │   - 管理所有数据源适配器                                 │  │
-│  │   - 按数据源和数据类型查找适配器                          │  │
+│  │ ProviderRegistry                                        │  │
+│  │   - 管理所有数据源提供者                                 │  │
+│  │   - 按数据源和数据类型查找提供者                          │  │
 │  └─────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐  │
-│  │ DataSourceAdapter<T> 实现                                  │  │
-│  │   - PubMedAdapter                                       │  │
-│  │   - EPMCAdapter                                         │  │
-│  │   - ArXivAdapter                                        │  │
+│  │ DataSourceProvider<T> 实现                              │  │
+│  │   - PubMedProvider                                      │  │
+│  │   - EPMCProvider                                        │  │
+│  │   - ArXivProvider                                       │  │
 │  └─────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐  │
@@ -251,22 +252,22 @@ public class CanonicalFullText implements CanonicalData {
 
 ## 3. 核心接口设计
 
-### 3.1 数据源端口接口
+### 3.1 数据源提供者接口（Framework 层）
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/DataSourceAdapter.java
-package com.patra.starter.provenance.common.adapter;
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/provider/DataSourceProvider.java
+package com.patra.starter.provenance.common.provider;
 
 import com.patra.common.model.CanonicalData;
 
 /**
- * 数据源端口泛型接口
+ * 数据源提供者泛型接口（Framework 层）
  *
- * <p>由 GenericBatchExecutor 调用，执行数据获取和转换</p>
+ * <p>由 Infrastructure 层桥接到 Domain 层端口</p>
  *
  * @param <T> 返回的规范数据类型
  */
-public interface DataSourceAdapter<T extends CanonicalData> {
+public interface DataSourceProvider<T extends CanonicalData> {
 
     /**
      * 返回数据源代码
@@ -281,14 +282,14 @@ public interface DataSourceAdapter<T extends CanonicalData> {
      * @param request 包含查询条件、配置和元数据的请求对象
      * @return 包含规范化数据的结果
      */
-    AdapterResult<T> fetchData(AdapterRequest request);
+    ProviderResult<T> fetchData(ProviderRequest request);
 
     /**
-     * 获取端口支持的能力
+     * 获取提供者支持的能力
      *
      * @return 能力描述对象
      */
-    AdapterCapability getCapabilities();
+    ProviderCapability getCapabilities();
 
     /**
      * 获取支持的数据类型类
@@ -299,11 +300,11 @@ public interface DataSourceAdapter<T extends CanonicalData> {
 }
 ```
 
-### 3.2 增强的 AdapterResult
+### 3.2 增强的 ProviderResult
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/AdapterResult.java
-package com.patra.starter.provenance.common.adapter;
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/provider/ProviderResult.java
+package com.patra.starter.provenance.common.provider;
 
 import com.patra.common.model.CanonicalData;
 import java.util.List;
@@ -311,11 +312,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 泛型化的端口执行结果
+ * 泛型化的提供者执行结果
  *
  * @param <T> 数据载荷类型
  */
-public record AdapterResult<T extends CanonicalData>(
+public record ProviderResult<T extends CanonicalData>(
     boolean success,
     List<T> data,
     String nextCursorToken,
@@ -325,7 +326,7 @@ public record AdapterResult<T extends CanonicalData>(
     Map<String, Object> metadata
 ) {
 
-    public AdapterResult {
+    public ProviderResult {
         data = data == null ? List.of() : List.copyOf(data);
         fetchedCount = Math.max(fetchedCount, data.size());
         errorType = Objects.requireNonNullElse(errorType, ErrorType.NONE);
@@ -335,10 +336,10 @@ public record AdapterResult<T extends CanonicalData>(
     /**
      * 创建成功结果
      */
-    public static <T extends CanonicalData> AdapterResult<T> success(
+    public static <T extends CanonicalData> ProviderResult<T> success(
             List<T> data,
             String nextCursorToken) {
-        return new AdapterResult<>(
+        return new ProviderResult<>(
             true,
             data,
             nextCursorToken,
@@ -353,9 +354,9 @@ public record AdapterResult<T extends CanonicalData>(
      * 创建标识为可重试错误的失败结果
      * (注: 是否实际重试由上层调度器决定)
      */
-    public static <T extends CanonicalData> AdapterResult<T> retriableFailure(
+    public static <T extends CanonicalData> ProviderResult<T> retriableFailure(
             String errorMessage) {
-        return new AdapterResult<>(
+        return new ProviderResult<>(
             false,
             List.of(),
             null,
@@ -370,9 +371,9 @@ public record AdapterResult<T extends CanonicalData>(
      * 创建标识为不可重试错误的失败结果
      * (注: 表示错误是永久性的，重试无法解决)
      */
-    public static <T extends CanonicalData> AdapterResult<T> nonRetriableFailure(
+    public static <T extends CanonicalData> ProviderResult<T> nonRetriableFailure(
             String errorMessage) {
-        return new AdapterResult<>(
+        return new ProviderResult<>(
             false,
             List.of(),
             null,
@@ -386,12 +387,12 @@ public record AdapterResult<T extends CanonicalData>(
     /**
      * 创建部分成功结果
      */
-    public static <T extends CanonicalData> AdapterResult<T> partialSuccess(
+    public static <T extends CanonicalData> ProviderResult<T> partialSuccess(
             List<T> data,
             String nextCursorToken,
             String warningMessage,
             int totalAttempted) {
-        return new AdapterResult<>(
+        return new ProviderResult<>(
             true,
             data,
             nextCursorToken,
@@ -414,16 +415,16 @@ public record AdapterResult<T extends CanonicalData>(
 }
 ```
 
-### 3.3 增强的 AdapterRequest
+### 3.3 增强的 ProviderRequest
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/AdapterRequest.java
-package com.patra.starter.provenance.common.adapter;
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/provider/ProviderRequest.java
+package com.patra.starter.provenance.common.provider;
 
 /**
- * 端口请求对象
+ * 提供者请求对象
  */
-public record AdapterRequest(
+public record ProviderRequest(
     String operationCode,
     ProvenanceConfig config,
     BatchExecutionParams executionParams,
@@ -431,7 +432,7 @@ public record AdapterRequest(
     DataType requestedDataType
 ) {
 
-    public AdapterRequest {
+    public ProviderRequest {
         if (operationCode == null || operationCode.isBlank()) {
             throw new IllegalArgumentException("operationCode 不能为空");
         }
@@ -441,7 +442,7 @@ public record AdapterRequest(
         if (metadata == null) {
             throw new IllegalArgumentException("metadata 不能为空");
         }
-        // requestedDataType 可以为 null，端口实现会使用默认类型
+        // requestedDataType 可以为 null，提供者实现会使用默认类型
     }
 }
 ```
@@ -449,8 +450,8 @@ public record AdapterRequest(
 ### 3.4 能力声明
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/AdapterCapability.java
-package com.patra.starter.provenance.common.adapter;
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/provider/ProviderCapability.java
+package com.patra.starter.provenance.common.provider;
 
 import com.patra.common.model.DataType;
 import java.util.Set;
@@ -460,7 +461,7 @@ import java.util.Set;
  */
 @Data
 @Builder
-public class AdapterCapability {
+public class ProviderCapability {
 
     private String dataSource;
     private Set<DataType> supportedDataTypes;
@@ -633,11 +634,11 @@ public class StrategyRegistry {
 
 ---
 
-## 5. 端口注册中心
+## 5. 提供者注册中心
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/adapter/AdapterRegistry.java
-package com.patra.starter.provenance.common.adapter;
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/common/provider/ProviderRegistry.java
+package com.patra.starter.provenance.common.provider;
 
 import com.patra.common.model.DataType;
 import com.patra.common.model.CanonicalData;
@@ -647,71 +648,71 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 数据源端口注册中心
+ * 数据源提供者注册中心（Framework 层）
  */
 @Component
 @Slf4j
-public class AdapterRegistry {
+public class ProviderRegistry {
 
-    private final Map<String, DataSourceAdapter<?>> portsByProvenance = new ConcurrentHashMap<>();
-    private final Map<RegistryKey, DataSourceAdapter<?>> portsByType = new ConcurrentHashMap<>();
+    private final Map<String, DataSourceProvider<?>> providersByProvenance = new ConcurrentHashMap<>();
+    private final Map<RegistryKey, DataSourceProvider<?>> providersByType = new ConcurrentHashMap<>();
     private final ApplicationContext applicationContext;
 
     @PostConstruct
-    public void registerPorts() {
-        Map<String, DataSourceAdapter> portBeans =
-            applicationContext.getBeansOfType(DataSourceAdapter.class);
+    public void registerProviders() {
+        Map<String, DataSourceProvider> providerBeans =
+            applicationContext.getBeansOfType(DataSourceProvider.class);
 
-        for (Map.Entry<String, DataSourceAdapter> entry : portBeans.entrySet()) {
-            DataSourceAdapter<?> port = entry.getValue();
-            String provenanceCode = port.getProvenanceCode();
+        for (Map.Entry<String, DataSourceProvider> entry : providerBeans.entrySet()) {
+            DataSourceProvider<?> provider = entry.getValue();
+            String provenanceCode = provider.getProvenanceCode();
 
             // 注册到主表
-            portsByProvenance.put(provenanceCode, port);
+            providersByProvenance.put(provenanceCode, provider);
 
             // 注册到类型表
-            AdapterCapability capability = port.getCapabilities();
+            ProviderCapability capability = provider.getCapabilities();
             if (capability != null && capability.getSupportedDataTypes() != null) {
                 for (DataType dataType : capability.getSupportedDataTypes()) {
                     RegistryKey key = new RegistryKey(provenanceCode, dataType);
-                    portsByType.put(key, port);
+                    providersByType.put(key, provider);
                 }
             }
 
-            log.info("注册数据源端口: {} ({})", entry.getKey(), provenanceCode);
+            log.info("注册数据源提供者: {} ({})", entry.getKey(), provenanceCode);
         }
     }
 
     /**
-     * 根据数据源代码获取端口
+     * 根据数据源代码获取提供者
      */
-    public DataSourceAdapter<?> getPort(String provenanceCode) {
-        DataSourceAdapter<?> port = portsByProvenance.get(provenanceCode);
-        if (port == null) {
-            throw new IllegalArgumentException("未找到数据源端口: " + provenanceCode);
+    public DataSourceProvider<?> getProvider(String provenanceCode) {
+        DataSourceProvider<?> provider = providersByProvenance.get(provenanceCode);
+        if (provider == null) {
+            throw new IllegalArgumentException("未找到数据源提供者: " + provenanceCode);
         }
-        return port;
+        return provider;
     }
 
     /**
-     * 根据数据源和数据类型获取端口
+     * 根据数据源和数据类型获取提供者
      */
     @SuppressWarnings("unchecked")
-    public <T extends CanonicalData> DataSourceAdapter<T> getPort(
+    public <T extends CanonicalData> DataSourceProvider<T> getProvider(
             String provenanceCode,
             Class<T> dataTypeClass) {
 
         DataType dataType = extractDataType(dataTypeClass);
         RegistryKey key = new RegistryKey(provenanceCode, dataType);
 
-        DataSourceAdapter<?> port = portsByType.get(key);
-        if (port == null) {
+        DataSourceProvider<?> provider = providersByType.get(key);
+        if (provider == null) {
             throw new IllegalArgumentException(
-                String.format("未找到端口: %s -> %s", provenanceCode, dataType)
+                String.format("未找到提供者: %s -> %s", provenanceCode, dataType)
             );
         }
 
-        return (DataSourceAdapter<T>) port;
+        return (DataSourceProvider<T>) provider;
     }
 
     private DataType extractDataType(Class<?> dataTypeClass) {
@@ -730,23 +731,23 @@ public class AdapterRegistry {
 
 ---
 
-## 6. 具体适配器实现（伪代码）
+## 6. 具体提供者实现（伪代码）
 
-### 6.1 PubMed 多类型适配器
+### 6.1 PubMed 多类型提供者
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/pubmed/PubMedAdapter.java
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/pubmed/PubMedProvider.java
 package com.patra.starter.provenance.pubmed;
 
 /**
- * PubMed 数据源适配器
+ * PubMed 数据源提供者（Framework 层实现）
  *
  * <p>支持文献、作者、引用多种数据类型</p>
  */
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
+public class PubMedProvider implements DataSourceProvider<CanonicalData> {
 
     private final PubMedClient pubMedClient;
     private final StrategyRegistry strategyRegistry;
@@ -757,7 +758,7 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
     }
 
     @Override
-    public AdapterResult<CanonicalData> fetchData(AdapterRequest request) {
+    public ProviderResult<CanonicalData> fetchData(ProviderRequest request) {
         // 确定请求的数据类型
         DataType requestedType = request.requestedDataType();
         if (requestedType == null) {
@@ -768,7 +769,7 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
         return switch (requestedType) {
             case LITERATURE -> fetchLiteratures(request);
             case CITATION -> fetchCitations(request);
-            default -> AdapterResult.nonRetriableFailure(
+            default -> ProviderResult.nonRetriableFailure(
                 "不支持的数据类型: " + requestedType);
         };
     }
@@ -776,7 +777,7 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
     /**
      * 获取文献数据
      */
-    private AdapterResult<CanonicalData> fetchLiteratures(AdapterRequest request) {
+    private ProviderResult<CanonicalData> fetchLiteratures(ProviderRequest request) {
         try {
             // 1. 构建 PubMed 查询
             PubMedSearchQuery query = buildSearchQuery(request);
@@ -804,21 +805,21 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
 
             // 6. 构建返回结果
             List<CanonicalData> data = new ArrayList<>(transformResult.getSuccessItems());
-            return AdapterResult.success(data, response.getNextCursor());
+            return ProviderResult.success(data, response.getNextCursor());
 
         } catch (PubMedApiException e) {
             log.error("PubMed API 调用失败", e);
-            return AdapterResult.retriableFailure(e.getMessage());
+            return ProviderResult.retriableFailure(e.getMessage());
         } catch (Exception e) {
             log.error("文献获取失败", e);
-            return AdapterResult.nonRetriableFailure(e.getMessage());
+            return ProviderResult.nonRetriableFailure(e.getMessage());
         }
     }
 
     /**
      * 获取引用数据
      */
-    private AdapterResult<CanonicalData> fetchCitations(AdapterRequest request) {
+    private ProviderResult<CanonicalData> fetchCitations(ProviderRequest request) {
         try {
             // 伪代码：调用 PubMed 引用 API
             List<PubMedCitation> citations = pubMedClient.fetchCitations(/*...*/);
@@ -830,16 +831,16 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
             TransformResult<CanonicalCitation> result = strategy.batchTransform(citations);
 
             List<CanonicalData> data = new ArrayList<>(result.getSuccessItems());
-            return AdapterResult.success(data, null);
+            return ProviderResult.success(data, null);
 
         } catch (Exception e) {
-            return AdapterResult.retriableFailure(e.getMessage());
+            return ProviderResult.retriableFailure(e.getMessage());
         }
     }
 
     @Override
-    public AdapterCapability getCapabilities() {
-        return AdapterCapability.builder()
+    public ProviderCapability getCapabilities() {
+        return ProviderCapability.builder()
             .dataSource("PubMed")
             .supportedDataTypes(Set.of(
                 DataType.LITERATURE,
@@ -856,7 +857,7 @@ public class PubMedAdapter implements DataSourceAdapter<CanonicalData> {
     /**
      * 构建 PubMed 查询对象
      */
-    private PubMedSearchQuery buildSearchQuery(AdapterRequest request) {
+    private PubMedSearchQuery buildSearchQuery(ProviderRequest request) {
         // 伪代码：从 request 提取参数构建查询
         BatchExecutionParams params = request.executionParams();
         return PubMedSearchQuery.builder()
@@ -1075,11 +1076,11 @@ public class PubMedArticle {
 // patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/coordination/GenericBatchExecutor.java
 
 public BatchResult execute(ExecutionContext context, Batch batch) {
-    // 1. 获取端口（默认获取文献端口）
-    DataSourceAdapter<?> port = adapterRegistry.getPort(context.provenanceCode());
+    // 1. 获取提供者（默认获取文献提供者）
+    DataSourceProvider<?> provider = providerRegistry.getProvider(context.provenanceCode());
 
     // 2. 构建请求
-    AdapterRequest request = AdapterRequest.builder()
+    ProviderRequest request = ProviderRequest.builder()
         .operationCode(context.operationCode())
         .config(runtimeConfig)
         .executionParams(executionParams)
@@ -1087,13 +1088,13 @@ public BatchResult execute(ExecutionContext context, Batch batch) {
         .requestedDataType(DataType.LITERATURE)  // 明确指定数据类型
         .build();
 
-    // 3. 调用端口获取数据
-    AdapterResult<?> adapterResult = port.fetchData(request);
+    // 3. 调用提供者获取数据
+    ProviderResult<?> providerResult = provider.fetchData(request);
 
     // 4. 处理结果
-    if (adapterResult.success()) {
+    if (providerResult.success()) {
         // 发布数据
-        publishData(context, batch, adapterResult.data());
+        publishData(context, batch, providerResult.data());
         return BatchResult.success(/*...*/);
     } else {
         // 处理失败
@@ -1168,8 +1169,8 @@ public class DataSourceConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "patra.provenance.datasources.pubmed", name = "enabled", havingValue = "true")
-    public PubMedAdapter pubMedAdapter(PubMedClient client, StrategyRegistry registry) {
-        return new PubMedAdapter(client, registry);
+    public PubMedProvider pubMedProvider(PubMedClient client, StrategyRegistry registry) {
+        return new PubMedProvider(client, registry);
     }
 }
 ```
@@ -1181,10 +1182,10 @@ public class DataSourceConfiguration {
 ### 9.1 单元测试
 
 ```java
-// patra-starter-provenance/src/test/java/com/patra/starter/provenance/pubmed/PubMedAdapterTest.java
+// patra-starter-provenance/src/test/java/com/patra/starter/provenance/pubmed/PubMedProviderTest.java
 
 @ExtendWith(MockitoExtension.class)
-class PubMedAdapterTest {
+class PubMedProviderTest {
 
     @Mock
     private PubMedClient pubMedClient;
@@ -1193,12 +1194,12 @@ class PubMedAdapterTest {
     private StrategyRegistry strategyRegistry;
 
     @InjectMocks
-    private PubMedAdapter adapter;
+    private PubMedProvider provider;
 
     @Test
     void shouldFetchLiteratures() {
         // Given
-        AdapterRequest request = createTestRequest();
+        ProviderRequest request = createTestRequest();
         PubMedSearchResponse mockResponse = createMockResponse();
         DataTransformStrategy<PubMedArticle, CanonicalLiterature> mockStrategy = createMockStrategy();
 
@@ -1206,7 +1207,7 @@ class PubMedAdapterTest {
         when(strategyRegistry.getStrategy(any(), any())).thenReturn(mockStrategy);
 
         // When
-        AdapterResult<CanonicalData> result = adapter.fetchData(request);
+        ProviderResult<CanonicalData> result = provider.fetchData(request);
 
         // Then
         assertThat(result.success()).isTrue();
@@ -1217,11 +1218,11 @@ class PubMedAdapterTest {
     @Test
     void shouldHandleApiFailure() {
         // Given
-        AdapterRequest request = createTestRequest();
+        ProviderRequest request = createTestRequest();
         when(pubMedClient.search(any())).thenThrow(new PubMedApiException("API Error"));
 
         // When
-        AdapterResult<CanonicalData> result = adapter.fetchData(request);
+        ProviderResult<CanonicalData> result = provider.fetchData(request);
 
         // Then
         assertThat(result.success()).isFalse();
@@ -1233,22 +1234,22 @@ class PubMedAdapterTest {
 ### 9.2 集成测试
 
 ```java
-// patra-starter-provenance/src/test/java/com/patra/starter/provenance/pubmed/PubMedAdapterIntegrationTest.java
+// patra-starter-provenance/src/test/java/com/patra/starter/provenance/pubmed/PubMedProviderIntegrationTest.java
 
 @SpringBootTest
 @ActiveProfiles("test")
-class PubMedAdapterIntegrationTest {
+class PubMedProviderIntegrationTest {
 
     @Autowired
-    private PubMedAdapter adapter;
+    private PubMedProvider provider;
 
     @Autowired
-    private AdapterRegistry registry;
+    private ProviderRegistry registry;
 
     @Test
-    void shouldRegisterAdapter() {
+    void shouldRegisterProvider() {
         // When
-        DataSourceAdapter<?> registered = registry.getAdapter("pubmed");
+        DataSourceProvider<?> registered = registry.getProvider("pubmed");
 
         // Then
         assertThat(registered).isNotNull();
@@ -1258,7 +1259,7 @@ class PubMedAdapterIntegrationTest {
     @Test
     void shouldFetchRealData() {
         // Given
-        AdapterRequest request = AdapterRequest.builder()
+        ProviderRequest request = ProviderRequest.builder()
             .operationCode("HARVEST")
             .config(createTestConfig())
             .executionParams(createTestParams())
@@ -1267,7 +1268,7 @@ class PubMedAdapterIntegrationTest {
             .build();
 
         // When
-        AdapterResult<CanonicalData> result = adapter.fetchData(request);
+        ProviderResult<CanonicalData> result = provider.fetchData(request);
 
         // Then
         assertThat(result.success()).isTrue();
@@ -1297,18 +1298,18 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DataSourceHealthIndicator implements HealthIndicator {
 
-    private final AdapterRegistry registry;
+    private final ProviderRegistry registry;
 
     @Override
     public Health health() {
         Map<String, String> details = new HashMap<>();
         boolean allHealthy = true;
 
-        for (DataSourceAdapter<?> port : registry.getAllPorts()) {
-            String provenance = port.getProvenanceCode();
+        for (DataSourceProvider<?> provider : registry.getAllProviders()) {
+            String provenance = provider.getProvenanceCode();
             try {
                 // 简单的连通性测试
-                testPort(port);
+                testProvider(provider);
                 details.put(provenance, "UP");
             } catch (Exception e) {
                 details.put(provenance, "DOWN: " + e.getMessage());
@@ -1321,8 +1322,8 @@ public class DataSourceHealthIndicator implements HealthIndicator {
             : Health.down().withDetails(details).build();
     }
 
-    private void testPort(DataSourceAdapter<?> port) {
-        // 伪代码：测试端口连通性
+    private void testProvider(DataSourceProvider<?> provider) {
+        // 伪代码：测试提供者连通性
         // 可以调用一个轻量级的测试请求
     }
 }
@@ -1331,7 +1332,7 @@ public class DataSourceHealthIndicator implements HealthIndicator {
 ### 10.2 性能指标
 
 ```java
-// patra-starter-provenance/src/main/java/com/patra/starter/provenance/metrics/AdapterMetrics.java
+// patra-starter-provenance/src/main/java/com/patra/starter/provenance/metrics/ProviderMetrics.java
 package com.patra.starter.provenance.metrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -1339,16 +1340,16 @@ import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
 /**
- * 适配器性能指标
+ * 提供者性能指标
  */
 @Component
 @RequiredArgsConstructor
-public class AdapterMetrics {
+public class ProviderMetrics {
 
     private final MeterRegistry meterRegistry;
 
     public void recordFetchTime(String provenance, String dataType, long durationMs) {
-        Timer.builder("adapter.fetch.time")
+        Timer.builder("provider.fetch.time")
             .tag("provenance", provenance)
             .tag("dataType", dataType)
             .register(meterRegistry)
@@ -1356,7 +1357,7 @@ public class AdapterMetrics {
     }
 
     public void recordFetchCount(String provenance, String dataType, boolean success) {
-        meterRegistry.counter("adapter.fetch.count",
+        meterRegistry.counter("provider.fetch.count",
             "provenance", provenance,
             "dataType", dataType,
             "status", success ? "success" : "failure"
@@ -1364,7 +1365,7 @@ public class AdapterMetrics {
     }
 
     public void recordTransformError(String provenance, String dataType) {
-        meterRegistry.counter("adapter.transform.error",
+        meterRegistry.counter("provider.transform.error",
             "provenance", provenance,
             "dataType", dataType
         ).increment();
@@ -1401,7 +1402,7 @@ public class AdapterMetrics {
                       │
 ┌────────────────────────────────────────────────────┐
 │ Infrastructure Layer (patra-ingest-infra)         │
-│ - DataSourcePortAdapter (端口实现)                │
+│ - DataSourceAdapter (端口适配器)                  │
 │ 职责: 桥接领域层和框架层，处理技术转换            │
 │   - 配置快照转换                                   │
 │   - 请求/响应对象转换                              │
@@ -1411,8 +1412,8 @@ public class AdapterMetrics {
                       ↓
 ┌────────────────────────────────────────────────────┐
 │ Framework Layer (patra-starter-provenance)        │
-│ - DataSourceAdapter (框架接口)                     │
-│ - AdapterRegistry (适配器注册表)                   │
+│ - DataSourceProvider (框架接口)                   │
+│ - ProviderRegistry (提供者注册表)                  │
 │ 职责: 提供技术支撑和统一规范                       │
 └────────────────────────────────────────────────────┘
                       ▲
@@ -1420,41 +1421,56 @@ public class AdapterMetrics {
                       │
 ┌────────────────────────────────────────────────────┐
 │ Infrastructure Layer (patra-ingest-infra)         │
-│ - PubmedDataSourceAdapter                         │
-│ - EpmcDataSourceAdapter                           │
+│ - PubmedDataSourceProvider                        │
+│ - EpmcDataSourceProvider                          │
 │ 职责: 具体数据源的实现                             │
 └────────────────────────────────────────────────────┘
 ```
 
 ### 11.2 关键设计决策
 
-#### 为什么需要两层接口？
+#### 命名语义说明
 
-**DataSourcePort (领域层)** vs **DataSourceAdapter (框架层)**
+本架构采用三层接口设计，每层都有清晰的命名语义：
 
-| 对比项 | DataSourcePort (领域层) | DataSourceAdapter (框架层) |
-|--------|------------------------|---------------------------|
-| 定义位置 | patra-ingest-domain | patra-starter-provenance |
-| 职责 | 定义业务契约 | 定义技术规范 |
-| 依赖者 | Application 层 | Infrastructure 层 |
-| 方法签名 | `fetchData(ExecutionContext, Batch)` | `fetchData(AdapterRequest)` |
-| 返回类型 | DataFetchResult (领域对象) | AdapterResult (框架对象) |
-| 变更影响 | 影响业务流程 | 影响技术实现 |
+| 层级 | 接口名称 | 命名语义 | 职责 |
+|------|---------|---------|------|
+| **Domain 层** | `DataSourcePort` | 业务端口 | 定义业务契约，表示"获取数据的能力" |
+| **Infrastructure 层** | `DataSourceAdapter` | 适配器 | 适配 Domain Port 到 Framework Provider |
+| **Framework 层** | `DataSourceProvider` | 技术提供者 | 提供技术实现，表示"数据获取的技术规范" |
+
+**核心理念**：
+- **Port**（Domain 层）：业务语言，定义"需要什么能力"
+- **Adapter**（Infrastructure 层）：桥接层，处理"业务契约 → 技术规范"的转换
+- **Provider**（Framework 层）：技术语言，定义"如何提供能力"
+
+#### 为什么需要三层接口？
+
+**DataSourcePort (领域层)** vs **DataSourceAdapter (基础设施层)** vs **DataSourceProvider (框架层)**
+
+| 对比项 | DataSourcePort (领域层) | DataSourceAdapter (基础设施层) | DataSourceProvider (框架层) |
+|--------|------------------------|-------------------------------|---------------------------|
+| 定义位置 | patra-ingest-domain | patra-ingest-infra | patra-starter-provenance |
+| 职责 | 定义业务契约 | 桥接业务和技术 | 定义技术规范 |
+| 依赖者 | Application 层 | — | DataSourceAdapter |
+| 方法签名 | `fetchData(ExecutionContext, Batch)` | 同 Port | `fetchData(ProviderRequest)` |
+| 返回类型 | DataFetchResult (领域对象) | 同 Port | ProviderResult (框架对象) |
+| 变更影响 | 影响业务流程 | 影响转换逻辑 | 影响技术实现 |
 
 **架构优势**:
 1. **依赖倒置**: Application 层不依赖框架或技术实现
-2. **关注点分离**: 业务逻辑与技术细节解耦
+2. **关注点分离**: 业务逻辑、转换逻辑、技术细节完全解耦
 3. **可测试性**: Application 层可以轻松 Mock 端口
 4. **灵活性**: 可以替换底层技术实现而不影响业务层
 
-#### DataSourcePortAdapter 的职责
+#### DataSourceAdapter 的职责（Infrastructure 层）
 
-DataSourcePortAdapter 作为 Infrastructure 层的桥接适配器，负责：
+DataSourceAdapter 作为 Infrastructure 层的桥接适配器，负责：
 
-1. **路由**: 使用 AdapterRegistry 根据 provenanceCode 获取具体适配器
+1. **路由**: 使用 ProviderRegistry 根据 provenanceCode 获取具体提供者
 2. **类型转换**:
-   - ExecutionContext + Batch → AdapterRequest
-   - AdapterResult → DataFetchResult
+   - ExecutionContext + Batch → ProviderRequest
+   - ProviderResult → DataFetchResult
 3. **配置转换**: ProvenanceConfigSnapshot → ProvenanceConfig
 4. **错误映射**: Framework ErrorType → Domain ErrorType
 
@@ -1479,18 +1495,18 @@ public interface DataSourcePort {
 
 #### Infrastructure 层
 ```java
-// com.patra.ingest.infra.integration.datasource.DataSourcePortAdapter
+// com.patra.ingest.infra.integration.datasource.DataSourceAdapter
 @Component
 @RequiredArgsConstructor
-public class DataSourcePortAdapter implements DataSourcePort {
-    private final AdapterRegistry adapterRegistry;
+public class DataSourceAdapter implements DataSourcePort {
+    private final ProviderRegistry providerRegistry;
 
     @Override
     public DataFetchResult fetchData(ExecutionContext context, Batch batch) {
         String provenanceCode = context.provenanceCode();
-        DataSourceAdapter adapter = adapterRegistry.getAdapter(provenanceCode);
-        AdapterRequest request = buildAdapterRequest(context, batch);
-        AdapterResult result = adapter.fetchData(request);
+        DataSourceProvider provider = providerRegistry.getProvider(provenanceCode);
+        ProviderRequest request = buildProviderRequest(context, batch);
+        ProviderResult result = provider.fetchData(request);
         return convertToDataFetchResult(result);
     }
 }
@@ -1521,7 +1537,7 @@ public class GenericBatchExecutor {
 
 #### 职责清晰化
 **重构前**: GenericBatchExecutor 负责
-- ❌ 适配器注册表查找
+- ❌ 提供者注册表查找
 - ❌ 配置转换
 - ❌ 构建框架请求对象
 - ❌ 重试逻辑和指数退避
@@ -1535,7 +1551,7 @@ public class GenericBatchExecutor {
 
 #### 测试改进
 - 移除了重试逻辑测试（已在 starter 和 infra 层测试）
-- 移除了适配器参数传递测试（已在 infra 层测试）
+- 移除了提供者参数传递测试（已在 infra 层测试）
 - Application 层测试更聚焦于业务流程
 - 测试代码减少 39.8%，但覆盖度不降低
 
@@ -1554,21 +1570,21 @@ $ grep "patra-starter-provenance" patra-ingest-infra/pom.xml
 ```
 
 #### 测试验证
-- ✅ DataSourcePortAdapterTest: 12/12 通过
+- ✅ DataSourceAdapterTest: 12/12 通过
 - ✅ GenericBatchExecutorTest: 7/7 通过
 - ✅ 编译通过，无依赖冲突
 
 ### 11.6 扩展性
 
 #### 添加新数据源
-1. **Framework 层**: 实现 DataSourceAdapter（如 ArxivDataSourceAdapter）
-2. **Infrastructure 层**: 注册到 AdapterRegistry
-3. **无需修改**: Domain 层、Application 层、DataSourcePortAdapter
+1. **Framework 层**: 实现 DataSourceProvider（如 ArxivDataSourceProvider）
+2. **Infrastructure 层**: 注册到 ProviderRegistry
+3. **无需修改**: Domain 层、Application 层、DataSourceAdapter
 
 #### 更换框架实现
 1. **保持不变**: Domain 层的 DataSourcePort 接口
 2. **保持不变**: Application 层的 GenericBatchExecutor
-3. **修改**: Infrastructure 层的 DataSourcePortAdapter 实现
+3. **修改**: Infrastructure 层的 DataSourceAdapter 实现
 4. **替换**: Framework 层的实现（如使用其他 HTTP 客户端）
 
 ---
@@ -1585,10 +1601,10 @@ $ grep "patra-starter-provenance" patra-ingest-infra/pom.xml
 
 ### 12.2 扩展点
 
-1. **新数据源接入**：实现 `DataSourceAdapter<T>` 接口
+1. **新数据源接入**：实现 `DataSourceProvider<T>` 接口
 2. **新数据类型**：定义 `CanonicalData` 实现类
 3. **转换策略**：实现 `DataTransformStrategy<S, T>` 接口
-4. **能力扩展**：通过 `AdapterCapability` 声明新能力
+4. **能力扩展**：通过 `ProviderCapability` 声明新能力
 
 ### 12.3 设计原则体现
 
@@ -1596,7 +1612,7 @@ $ grep "patra-starter-provenance" patra-ingest-infra/pom.xml
 - **开闭原则**：对扩展开放，对修改关闭
 - **依赖倒置**：依赖抽象而非具体实现
 - **接口隔离**：细粒度的接口定义
-- **里氏替换**：所有端口实现可互相替换
+- **里氏替换**：所有提供者实现可互相替换
 
 ---
 
@@ -1605,9 +1621,10 @@ $ grep "patra-starter-provenance" patra-ingest-infra/pom.xml
 ### 设计亮点
 
 1. **严格的六边形架构**: 依赖方向正确，Domain ← Application ← Infrastructure
-2. **双层接口设计**: DataSourcePort (业务契约) + DataSourceAdapter (技术规范)
-3. **桥接适配器**: DataSourcePortAdapter 完美隔离业务和技术
+2. **三层接口设计**: DataSourcePort (业务契约) + DataSourceAdapter (桥接层) + DataSourceProvider (技术规范)
+3. **桥接适配器**: DataSourceAdapter 完美隔离业务和技术
 4. **代码简化**: 移除冗余代码 528 行，职责更清晰
+5. **清晰的命名语义**: Port/Adapter/Provider 各司其职
 
 ### 架构优势
 

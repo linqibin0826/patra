@@ -1,11 +1,11 @@
-package com.patra.starter.provenance.common.adapter;
+package com.patra.starter.provenance.common.provider;
 
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import lombok.Builder;
 import lombok.extern.jackson.Jacksonized;
 
 /**
- * 传递给 {@link DataSourceAdapter} 实现的不可变请求对象
+ * 传递给 {@link DataSourceProvider} 实现的不可变请求对象
  *
  * <p><strong>设计理念:</strong>
  *
@@ -22,7 +22,7 @@ import lombok.extern.jackson.Jacksonized;
  */
 @Builder
 @Jacksonized
-public record AdapterRequest(
+public record ProviderRequest(
     String operationCode,
     ProvenanceConfig config,
     BatchExecutionParams executionParams,
@@ -36,7 +36,7 @@ public record AdapterRequest(
    * @param executionParams 批次执行参数
    * @param metadata 批次元数据
    */
-  public AdapterRequest {
+  public ProviderRequest {
     if (operationCode == null || operationCode.isBlank()) {
       throw new IllegalArgumentException("必须提供 operationCode");
     }

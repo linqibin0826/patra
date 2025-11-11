@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.patra.starter.provenance.common.adapter.AdapterRegistry;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
+import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import com.patra.starter.provenance.common.config.DefaultConfigProvider;
 import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
@@ -13,7 +13,7 @@ import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
-import com.patra.starter.provenance.pubmed.PubmedDataSourceAdapter;
+import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider;
 import com.patra.starter.provenance.pubmed.converter.PubmedArticleConverter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
@@ -36,7 +36,7 @@ import org.springframework.context.annotation.Bean;
  *
  * <ul>
  *   <li>使用 {@code patra.provenance.enabled=false} 可禁用此自动配置
- *   <li>默认启用,自动注册 PubMed 和 EPMC 数据源适配器
+ *   <li>默认启用,自动注册 PubMed 和 EPMC 数据源提供者
  *   <li>集成 Micrometer 进行指标监控(如果可用)
  * </ul>
  *
@@ -81,16 +81,16 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * 注册端口注册表,允许 Ingest 引擎发现可用的数据源端口实现
+   * 注册提供者注册表,允许 Ingest 引擎发现可用的数据源提供者实现
    *
-   * @param adaptersProvider 端口实现的提供者
-   * @return 端口注册表实例
+   * @param providersProvider 提供者实现的提供者
+   * @return 提供者注册表实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public AdapterRegistry adapterRegistry(ObjectProvider<List<DataSourceAdapter>> adaptersProvider) {
-    List<DataSourceAdapter> adapters = adaptersProvider.getIfAvailable(List::of);
-    return new AdapterRegistry(adapters);
+  public ProviderRegistry providerRegistry(ObjectProvider<List<DataSourceProvider>> providersProvider) {
+    List<DataSourceProvider> providers = providersProvider.getIfAvailable(List::of);
+    return new ProviderRegistry(providers);
   }
 
   /**
@@ -165,22 +165,22 @@ public class ProvenanceAutoConfiguration {
   }
 
   /**
-   * 注册 PubMed 数据源适配器,使 Ingest 引擎可以通过统一的适配器契约消费 PubMed 数据
+   * 注册 PubMed 数据源提供者,使 Ingest 引擎可以通过统一的提供者契约消费 PubMed 数据
    *
    * @param pubMedClient PubMed 客户端
    * @param articleConverter 文章转换器
    * @param properties 用于配置合并的 Provenance 属性
    * @param metrics 可选的指标记录器
-   * @return PubMed 数据源适配器实例
+   * @return PubMed 数据源提供者实例
    */
   @Bean
   @ConditionalOnMissingBean
-  public PubmedDataSourceAdapter pubmedDataSourceAdapter(
+  public PubmedDataSourceProvider pubmedDataSourceProvider(
       PubMedClient pubMedClient,
       PubmedArticleConverter articleConverter,
       ProvenanceProperties properties,
       Optional<ProvenanceMetrics> metrics) {
-    return new PubmedDataSourceAdapter(
+    return new PubmedDataSourceProvider(
         pubMedClient, articleConverter, properties, metrics.orElse(null));
   }
 }
