@@ -40,7 +40,7 @@ class AdapterRegistryTest {
   void register_shouldRegisterAdapter_successfully() {
     // Arrange
     TestAdapter adapter = new TestAdapter("pubmed");
-    List<DataSourcePort> adapters = List.of(adapter);
+    List<DataSourceAdapter> adapters = List.of(adapter);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
@@ -127,7 +127,7 @@ class AdapterRegistryTest {
     AdapterRegistry registry = new AdapterRegistry(List.of(adapter));
 
     // Act
-    DataSourcePort result = registry.getAdapter("pubmed");
+    DataSourceAdapter result = registry.getAdapter("pubmed");
 
     // Assert
     assertThat(result).isNotNull();
@@ -180,7 +180,7 @@ class AdapterRegistryTest {
     // Arrange
     TestAdapter adapter1 = new TestAdapter("pubmed");
     TestAdapter adapter2 = new TestAdapter("pubmed");
-    List<DataSourcePort> adapters = List.of(adapter1, adapter2);
+    List<DataSourceAdapter> adapters = List.of(adapter1, adapter2);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
@@ -196,14 +196,14 @@ class AdapterRegistryTest {
     // Arrange
     TestAdapter adapter1 = new TestAdapter("pubmed");
     AnotherTestAdapter adapter2 = new AnotherTestAdapter("pubmed");
-    List<DataSourcePort> adapters = List.of(adapter1, adapter2);
+    List<DataSourceAdapter> adapters = List.of(adapter1, adapter2);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
 
     // Assert - 应该返回第一个注册的端口实现
     assertThat(registry.supports("pubmed")).isTrue();
-    DataSourcePort result = registry.getAdapter("pubmed");
+    DataSourceAdapter result = registry.getAdapter("pubmed");
     assertThat(result).isInstanceOf(TestAdapter.class);
   }
 
@@ -228,7 +228,7 @@ class AdapterRegistryTest {
     TestAdapter pubmedAdapter = new TestAdapter("pubmed");
     TestAdapter epmcAdapter = new TestAdapter("epmc");
     TestAdapter crossrefAdapter = new TestAdapter("crossref");
-    List<DataSourcePort> adapters = List.of(pubmedAdapter, epmcAdapter, crossrefAdapter);
+    List<DataSourceAdapter> adapters = List.of(pubmedAdapter, epmcAdapter, crossrefAdapter);
 
     // Act
     AdapterRegistry registry = new AdapterRegistry(adapters);
@@ -243,7 +243,7 @@ class AdapterRegistryTest {
   }
 
   // 测试用端口实现
-  private static class TestAdapter implements DataSourcePort {
+  private static class TestAdapter implements DataSourceAdapter {
     private final String code;
 
     TestAdapter(String code) {
@@ -262,7 +262,7 @@ class AdapterRegistryTest {
   }
 
   // 另一个测试用端口实现（不同类）
-  private static class AnotherTestAdapter implements DataSourcePort {
+  private static class AnotherTestAdapter implements DataSourceAdapter {
     private final String code;
 
     AnotherTestAdapter(String code) {
