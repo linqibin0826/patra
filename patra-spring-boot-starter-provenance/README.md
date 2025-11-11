@@ -13,7 +13,7 @@
 - **请求组装器**: 标准化参数构建,避免硬编码
 - **配置合并**: 支持全局默认值和数据源级覆盖
 - **指标集成**: 可选的 Micrometer 指标采集
-- **端口注册**: 统一的数据源端口发现机制
+- **提供者注册**: 统一的数据源提供者发现机制
 
 ## 自动配置内容
 
@@ -28,8 +28,8 @@
 | `provenanceXmlMapper` | `XmlMapper` | PubMed XML 响应映射器 |
 | `pubmedArticleConverter` | `PubmedArticleConverter` | PubMed 文章转换器 |
 | `defaultConfigProvider` | `DefaultConfigProvider` | 配置提供器 |
-| `adapterRegistry` | `AdapterRegistry` | 数据源端口注册表 |
-| `pubmedDataSourceAdapter` | `PubmedDataSourceAdapter` | PubMed 数据源端口实现 |
+| `providerRegistry` | `ProviderRegistry` | 数据源提供者注册表 |
+| `pubmedDataSourceProvider` | `PubmedDataSourceProvider` | PubMed 数据源提供者实现 |
 | `provenanceMetrics` | `ProvenanceMetrics` | 指标记录器(需要 MeterRegistry) |
 
 ### 启用条件
@@ -60,11 +60,11 @@
 
 参数常量统一维护在 `PubMedParamKeys` 和 `EpmcParamKeys` 类中。
 
-### AdapterRegistry
+### ProviderRegistry
 
-统一的数据源端口注册表,支持:
-- 自动发现所有 `DataSourcePort` 实现
-- 按数据源代码查找端口
+统一的数据源提供者注册表,支持:
+- 自动发现所有 `DataSourceProvider` 实现
+- 按数据源代码查找提供者
 - 为 Ingest 服务提供统一的数据源访问接口
 
 ## 配置属性
@@ -174,6 +174,61 @@ try {
 }
 ```
 
+## 架构集成
+
+### 六边形架构中的位置
+
+本 Starter 位于**框架层（Framework Layer）**，为基础设施层提供技术支撑：
+
+```
+Domain Layer (patra-ingest-domain)
+  - DataSourcePort (业务端口接口)
+    ↑ implements
+Infrastructure Layer (patra-ingest-infra)
+  - DataSourceAdapter (桥接适配器)
+    ↓ uses
+Framework Layer (patra-starter-provenance) ← 本 Starter
+  - DataSourceProvider (技术提供者接口)
+  - ProviderRegistry (提供者注册表)
+    ↑ implements
+Infrastructure Layer (patra-ingest-infra)
+  - PubmedDataSourceProvider (具体实现)
+  - EpmcDataSourceProvider (具体实现)
+```
+
+### 命名语义说明
+
+- **DataSourceProvider**（本 Starter）：框架层的技术提供者接口，定义"如何提供数据获取能力"
+- **DataSourceAdapter**（Infrastructure 层）：桥接适配器，连接领域端口和框架提供者
+- **DataSourcePort**（Domain 层）：业务端口接口，定义"需要什么数据获取能力"
+
+### 使用场景
+
+Infrastructure 层的 `DataSourceAdapter` 使用本 Starter：
+
+```java
+@Component
+@RequiredArgsConstructor
+public class DataSourceAdapter implements DataSourcePort {
+    private final ProviderRegistry providerRegistry; // 来自本 Starter
+
+    @Override
+    public DataFetchResult fetchData(ExecutionContext context, Batch batch) {
+        // 1. 从注册表获取提供者
+        DataSourceProvider provider = providerRegistry.getProvider(context.provenanceCode());
+
+        // 2. 构建提供者请求
+        ProviderRequest request = buildProviderRequest(context, batch);
+
+        // 3. 调用提供者
+        ProviderResult result = provider.fetchData(request);
+
+        // 4. 转换为领域结果
+        return convertToDataFetchResult(result);
+    }
+}
+```
+
 ## 扩展点
 
 ### 自定义配置提供器
@@ -209,6 +264,40 @@ public class CustomProvenanceConfig {
     }
 }
 ```
+
+### 实现自定义数据源提供者
+
+```java
+@Component
+public class CustomDataSourceProvider implements DataSourceProvider<CanonicalLiterature> {
+
+    @Override
+    public String getProvenanceCode() {
+        return "custom-source";
+    }
+
+    @Override
+    public ProviderResult<CanonicalLiterature> fetchData(ProviderRequest request) {
+        // 实现数据获取逻辑
+        return ProviderResult.success(data, nextCursor);
+    }
+
+    @Override
+    public ProviderCapability getCapabilities() {
+        return ProviderCapability.builder()
+            .dataSource("Custom Source")
+            .supportedDataTypes(Set.of(DataType.LITERATURE))
+            .build();
+    }
+
+    @Override
+    public Class<CanonicalLiterature> getDataTypeClass() {
+        return CanonicalLiterature.class;
+    }
+}
+```
+
+提供者会自动注册到 `ProviderRegistry`。
 
 ## 技术栈
 

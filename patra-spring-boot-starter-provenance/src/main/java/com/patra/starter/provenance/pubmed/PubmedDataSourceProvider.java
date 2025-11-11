@@ -6,10 +6,10 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
-import com.patra.starter.provenance.common.adapter.AdapterRequest;
-import com.patra.starter.provenance.common.adapter.AdapterResult;
-import com.patra.starter.provenance.common.adapter.BatchExecutionParams;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.provider.ProviderRequest;
+import com.patra.starter.provenance.common.provider.ProviderResult;
+import com.patra.starter.provenance.common.provider.BatchExecutionParams;
+import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -35,7 +35,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * PubMed 数据源适配器实现
+ * PubMed 数据源提供者实现
  *
  * <p>封装PubMed的搜索、获取和转换逻辑，遵循配置优先级：运行时快照 > 数据源覆盖 > 共享默认值。
  *
@@ -53,7 +53,7 @@ import org.springframework.util.StringUtils;
  */
 @Slf4j
 @RequiredArgsConstructor
-public class PubmedDataSourceAdapter implements DataSourceAdapter {
+public class PubmedDataSourceProvider implements DataSourceProvider {
 
   private static final String PROVENANCE_CODE = "pubmed";
   private static final int DEFAULT_EPOST_THRESHOLD = 200;
@@ -73,12 +73,12 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
   }
 
   @Override
-  public AdapterResult fetchData(AdapterRequest request) {
+  public ProviderResult fetchData(ProviderRequest request) {
     long start = System.currentTimeMillis();
     int batchNo = request.metadata().batchNo();
     String operation = request.operationCode();
 
-    log.info("PubMed adapter start: operation={} batchNo={}", operation, batchNo);
+    log.info("PubMed provider start: operation={} batchNo={}", operation, batchNo);
 
     try {
       ProvenanceConfig config = properties.mergeWithRuntime(PROVENANCE_CODE, request.config());
@@ -90,28 +90,28 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
 
       if (pmids.isEmpty()) {
         log.info(
-            "PubMed adapter empty result: operation={} batchNo={} duration={}ms",
+            "PubMed provider empty result: operation={} batchNo={} duration={}ms",
             operation,
             batchNo,
             System.currentTimeMillis() - start);
-        return AdapterResult.success(List.of(), null);
+        return ProviderResult.success(List.of(), null);
       }
 
       List<PubmedArticle> articles = fetchArticles(pmids, config);
       FetchOutcome outcome = convertArticles(articles);
       String nextCursor = extractCursorToken(searchResponse);
 
-      AdapterResult result =
+      ProviderResult result =
           outcome.failedPmids().isEmpty()
-              ? AdapterResult.success(outcome.literatures(), nextCursor)
-              : AdapterResult.partialSuccess(
+              ? ProviderResult.success(outcome.literatures(), nextCursor)
+              : ProviderResult.partialSuccess(
                   outcome.literatures(),
                   nextCursor,
                   buildConversionWarning(outcome.failedPmids()),
                   outcome.attempted());
 
       log.info(
-          "PubMed adapter success: operation={} batchNo={} fetched={} attempted={} duration={}ms",
+          "PubMed provider success: operation={} batchNo={} fetched={} attempted={} duration={}ms",
           operation,
           batchNo,
           result.fetchedCount(),
@@ -119,9 +119,9 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
           System.currentTimeMillis() - start);
       return result;
     } catch (ProvenanceClientException ex) {
-      AdapterResult failure = classifyClientException(ex);
+      ProviderResult failure = classifyClientException(ex);
       log.warn(
-          "PubMed adapter client error: operation={} batchNo={} status={} message={}",
+          "PubMed provider client error: operation={} batchNo={} status={} message={}",
           operation,
           batchNo,
           ex.getStatusCode(),
@@ -130,23 +130,23 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
       return failure;
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
-      log.error("PubMed adapter interrupted: operation={} batchNo={}", operation, batchNo, ex);
-      return AdapterResult.retriableFailure("PubMed adapter interrupted");
+      log.error("PubMed provider interrupted: operation={} batchNo={}", operation, batchNo, ex);
+      return ProviderResult.retriableFailure("PubMed provider interrupted");
     } catch (Exception ex) {
       if (isTimeout(ex)) {
         log.warn(
-            "PubMed adapter timeout detected: operation={} batchNo={} message={}",
+            "PubMed provider timeout detected: operation={} batchNo={} message={}",
             operation,
             batchNo,
             ex.getMessage());
-        return AdapterResult.retriableFailure("PubMed request timeout: " + ex.getMessage());
+        return ProviderResult.retriableFailure("PubMed request timeout: " + ex.getMessage());
       }
-      log.error("PubMed adapter unexpected error: operation={} batchNo={}", operation, batchNo, ex);
-      return AdapterResult.nonRetriableFailure("Unexpected PubMed error: " + ex.getMessage());
+      log.error("PubMed provider unexpected error: operation={} batchNo={}", operation, batchNo, ex);
+      return ProviderResult.nonRetriableFailure("Unexpected PubMed error: " + ex.getMessage());
     }
   }
 
-  private JsonNode buildSearchParams(AdapterRequest request) {
+  private JsonNode buildSearchParams(ProviderRequest request) {
     // executionParams.params() contains complete batch execution parameters (incl. pagination)
     BatchExecutionParams exec = request.executionParams();
     JsonNode params = exec.params();
@@ -292,24 +292,24 @@ public class PubmedDataSourceAdapter implements DataSourceAdapter {
     return new FetchOutcome(List.copyOf(literatures), attempted, List.copyOf(failures));
   }
 
-  private AdapterResult classifyClientException(ProvenanceClientException ex) {
+  private ProviderResult classifyClientException(ProvenanceClientException ex) {
     Integer status = ex.getStatusCode();
     if (status == null) {
-      return AdapterResult.retriableFailure("PubMed client error: " + ex.getMessage());
+      return ProviderResult.retriableFailure("PubMed client error: " + ex.getMessage());
     }
     if (status == 429 || status == 503 || status == 502 || status >= 500) {
-      return AdapterResult.retriableFailure(
+      return ProviderResult.retriableFailure(
           "PubMed service unavailable (status=%d)".formatted(status));
     }
     if (status == 401 || status == 403) {
-      return AdapterResult.nonRetriableFailure(
+      return ProviderResult.nonRetriableFailure(
           "PubMed authentication failure (status=%d)".formatted(status));
     }
     if (status >= 400 && status < 500) {
-      return AdapterResult.nonRetriableFailure(
+      return ProviderResult.nonRetriableFailure(
           "PubMed request rejected (status=%d)".formatted(status));
     }
-    return AdapterResult.retriableFailure(
+    return ProviderResult.retriableFailure(
         "PubMed unexpected response (status=%d)".formatted(status));
   }
 

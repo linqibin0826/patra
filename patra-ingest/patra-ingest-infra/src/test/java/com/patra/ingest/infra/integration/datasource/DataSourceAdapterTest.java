@@ -15,10 +15,10 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
-import com.patra.starter.provenance.common.adapter.AdapterRegistry;
-import com.patra.starter.provenance.common.adapter.AdapterRequest;
-import com.patra.starter.provenance.common.adapter.AdapterResult;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
+import com.patra.starter.provenance.common.provider.ProviderRequest;
+import com.patra.starter.provenance.common.provider.ProviderResult;
+import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,12 +30,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * {@link DataSourcePortAdapter} 单元测试
+ * {@link DataSourceAdapter} 单元测试
  *
  * <p>测试策略:
  *
  * <ul>
- *   <li>Mock {@link AdapterRegistry} 和 {@link DataSourceAdapter}
+ *   <li>Mock {@link ProviderRegistry} 和 {@link DataSourceProvider}
  *   <li>验证参数转换逻辑正确
  *   <li>验证结果转换逻辑正确
  *   <li>验证错误处理逻辑
@@ -45,20 +45,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 0.1.0
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("DataSourcePortAdapter 单元测试")
-class DataSourcePortAdapterTest {
+@DisplayName("DataSourceAdapter 单元测试")
+class DataSourceAdapterTest {
 
-  @Mock private AdapterRegistry adapterRegistry;
+  @Mock private ProviderRegistry providerRegistry;
 
-  @Mock private DataSourceAdapter dataSourceAdapter;
+  @Mock private DataSourceProvider dataSourceProvider;
 
-  private DataSourcePortAdapter adapter;
+  private DataSourceAdapter adapter;
 
   private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
-    adapter = new DataSourcePortAdapter(adapterRegistry);
+    adapter = new DataSourceAdapter(providerRegistry);
     objectMapper = new ObjectMapper();
   }
 
@@ -73,11 +73,11 @@ class DataSourcePortAdapterTest {
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "covid-19", buildParams(), 1, 100);
 
-      // Mock 适配器返回成功结果
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
+      // Mock 提供者返回成功结果
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
       List<CanonicalLiterature> literatures = List.of(buildCanonicalLiterature("Test Literature"));
-      AdapterResult adapterResult = AdapterResult.success(literatures, "cursor-token-1");
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class))).thenReturn(adapterResult);
+      ProviderResult providerResult = ProviderResult.success(literatures, "cursor-token-1");
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class))).thenReturn(providerResult);
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -92,8 +92,8 @@ class DataSourcePortAdapterTest {
       assertThat(result.errorType()).isEqualTo(DataFetchResult.ErrorType.NONE);
 
       // Verify: 验证调用了正确的方法
-      verify(adapterRegistry).getAdapter("pubmed");
-      verify(dataSourceAdapter).fetchData(any(AdapterRequest.class));
+      verify(providerRegistry).getProvider("pubmed");
+      verify(dataSourceProvider).fetchData(any(ProviderRequest.class));
     }
 
     @Test
@@ -103,19 +103,19 @@ class DataSourcePortAdapterTest {
       ExecutionContext context = buildExecutionContext("pubmed", "UPDATE");
       Batch batch = Batch.withToken(2, "covid-19", buildParams(), "cursor-token-1", 50);
 
-      // Mock 适配器
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class)))
-          .thenReturn(AdapterResult.success(List.of(), null));
+      // Mock 提供者
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class)))
+          .thenReturn(ProviderResult.success(List.of(), null));
 
       // When: 调用 fetchData
       adapter.fetchData(context, batch);
 
-      // Then: 捕获并验证 AdapterRequest
-      ArgumentCaptor<AdapterRequest> requestCaptor = ArgumentCaptor.forClass(AdapterRequest.class);
-      verify(dataSourceAdapter).fetchData(requestCaptor.capture());
+      // Then: 捕获并验证 ProviderRequest
+      ArgumentCaptor<ProviderRequest> requestCaptor = ArgumentCaptor.forClass(ProviderRequest.class);
+      verify(dataSourceProvider).fetchData(requestCaptor.capture());
 
-      AdapterRequest capturedRequest = requestCaptor.getValue();
+      ProviderRequest capturedRequest = requestCaptor.getValue();
       assertThat(capturedRequest.operationCode()).isEqualTo("UPDATE");
       assertThat(capturedRequest.executionParams()).isNotNull();
       assertThat(capturedRequest.executionParams().query()).isEqualTo("covid-19");
@@ -127,13 +127,13 @@ class DataSourcePortAdapterTest {
     @Test
     @DisplayName("成功获取数据 - 空数据列表")
     void shouldHandleEmptyLiteratureList() {
-      // Given: Mock 适配器返回空列表
+      // Given: Mock 提供者返回空列表
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      AdapterResult adapterResult = AdapterResult.success(List.of(), null);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class))).thenReturn(adapterResult);
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      ProviderResult providerResult = ProviderResult.success(List.of(), null);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class))).thenReturn(providerResult);
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -148,19 +148,19 @@ class DataSourcePortAdapterTest {
     @Test
     @DisplayName("成功获取数据 - 部分成功场景")
     void shouldHandlePartialSuccess() {
-      // Given: Mock 适配器返回部分成功
+      // Given: Mock 提供者返回部分成功
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
       List<CanonicalLiterature> literatures = List.of(buildCanonicalLiterature("Test Literature"));
-      AdapterResult adapterResult =
-          AdapterResult.partialSuccess(
+      ProviderResult providerResult =
+          ProviderResult.partialSuccess(
               literatures,
               "cursor-token-1",
               "部分记录转换失败",
               10);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class))).thenReturn(adapterResult);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class))).thenReturn(providerResult);
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -181,13 +181,13 @@ class DataSourcePortAdapterTest {
     @Test
     @DisplayName("适配器返回可重试失败")
     void shouldHandleRetriableFailure() {
-      // Given: Mock 适配器返回可重试失败
+      // Given: Mock 提供者返回可重试失败
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      AdapterResult adapterResult = AdapterResult.retriableFailure("网络超时");
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class))).thenReturn(adapterResult);
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      ProviderResult providerResult = ProviderResult.retriableFailure("网络超时");
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class))).thenReturn(providerResult);
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -203,13 +203,13 @@ class DataSourcePortAdapterTest {
     @Test
     @DisplayName("适配器返回不可重试失败")
     void shouldHandleNonRetriableFailure() {
-      // Given: Mock 适配器返回不可重试失败
+      // Given: Mock 提供者返回不可重试失败
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      AdapterResult adapterResult = AdapterResult.nonRetriableFailure("认证失败");
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class))).thenReturn(adapterResult);
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      ProviderResult providerResult = ProviderResult.nonRetriableFailure("认证失败");
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class))).thenReturn(providerResult);
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -222,13 +222,13 @@ class DataSourcePortAdapterTest {
     }
 
     @Test
-    @DisplayName("未找到适配器")
+    @DisplayName("未找到提供者")
     void shouldHandleAdapterNotFound() {
       // Given: Mock 注册表返回 null
       ExecutionContext context = buildExecutionContext("unknown", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("unknown")).thenReturn(null);
+      when(providerRegistry.getProvider("unknown")).thenReturn(null);
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -236,19 +236,19 @@ class DataSourcePortAdapterTest {
       // Then: 验证结果
       assertThat(result.success()).isFalse();
       assertThat(result.errorType()).isEqualTo(DataFetchResult.ErrorType.NON_RETRIABLE);
-      assertThat(result.errorMessage()).contains("未找到适配器");
+      assertThat(result.errorMessage()).contains("未找到提供者");
       assertThat(result.errorMessage()).contains("unknown");
     }
 
     @Test
-    @DisplayName("适配器抛出异常")
+    @DisplayName("提供者抛出异常")
     void shouldHandleAdapterException() {
-      // Given: Mock 适配器抛出异常
+      // Given: Mock 提供者抛出异常
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class)))
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class)))
           .thenThrow(new RuntimeException("模拟异常"));
 
       // When: 调用 fetchData
@@ -257,7 +257,7 @@ class DataSourcePortAdapterTest {
       // Then: 验证结果
       assertThat(result.success()).isFalse();
       assertThat(result.errorType()).isEqualTo(DataFetchResult.ErrorType.RETRIABLE);
-      assertThat(result.errorMessage()).contains("数据源适配器调用异常");
+      assertThat(result.errorMessage()).contains("数据源提供者调用异常");
       assertThat(result.errorMessage()).contains("模拟异常");
     }
 
@@ -268,7 +268,7 @@ class DataSourcePortAdapterTest {
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenThrow(new RuntimeException("注册表异常"));
+      when(providerRegistry.getProvider("pubmed")).thenThrow(new RuntimeException("注册表异常"));
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -276,7 +276,7 @@ class DataSourcePortAdapterTest {
       // Then: 验证结果
       assertThat(result.success()).isFalse();
       assertThat(result.errorType()).isEqualTo(DataFetchResult.ErrorType.NON_RETRIABLE);
-      assertThat(result.errorMessage()).contains("未找到适配器");
+      assertThat(result.errorMessage()).contains("未找到提供者");
     }
   }
 
@@ -291,9 +291,9 @@ class DataSourcePortAdapterTest {
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class)))
-          .thenReturn(AdapterResult.success(List.of(), null));
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class)))
+          .thenReturn(ProviderResult.success(List.of(), null));
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -324,9 +324,9 @@ class DataSourcePortAdapterTest {
               null);
       Batch batch = Batch.withPage(1, "query", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class)))
-          .thenReturn(AdapterResult.success(List.of(), null));
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class)))
+          .thenReturn(ProviderResult.success(List.of(), null));
 
       // When: 调用 fetchData
       DataFetchResult result = adapter.fetchData(context, batch);
@@ -334,9 +334,9 @@ class DataSourcePortAdapterTest {
       // Then: 验证结果 (应该成功,使用默认配置)
       assertThat(result.success()).isTrue();
 
-      // Verify: 验证传递给适配器的 config 为 null (使用默认配置)
-      ArgumentCaptor<AdapterRequest> requestCaptor = ArgumentCaptor.forClass(AdapterRequest.class);
-      verify(dataSourceAdapter).fetchData(requestCaptor.capture());
+      // Verify: 验证传递给提供者的 config 为 null (使用默认配置)
+      ArgumentCaptor<ProviderRequest> requestCaptor = ArgumentCaptor.forClass(ProviderRequest.class);
+      verify(dataSourceProvider).fetchData(requestCaptor.capture());
       assertThat(requestCaptor.getValue().config()).isNull();
     }
 
@@ -347,16 +347,16 @@ class DataSourcePortAdapterTest {
       ExecutionContext context = buildExecutionContext("pubmed", "HARVEST");
       Batch batch = Batch.withPage(1, "", buildParams(), 1, 100);
 
-      when(adapterRegistry.getAdapter("pubmed")).thenReturn(dataSourceAdapter);
-      when(dataSourceAdapter.fetchData(any(AdapterRequest.class)))
-          .thenReturn(AdapterResult.success(List.of(), null));
+      when(providerRegistry.getProvider("pubmed")).thenReturn(dataSourceProvider);
+      when(dataSourceProvider.fetchData(any(ProviderRequest.class)))
+          .thenReturn(ProviderResult.success(List.of(), null));
 
       // When: 调用 fetchData
       adapter.fetchData(context, batch);
 
       // Then: 验证使用了 ExecutionContext.compiledQuery
-      ArgumentCaptor<AdapterRequest> requestCaptor = ArgumentCaptor.forClass(AdapterRequest.class);
-      verify(dataSourceAdapter).fetchData(requestCaptor.capture());
+      ArgumentCaptor<ProviderRequest> requestCaptor = ArgumentCaptor.forClass(ProviderRequest.class);
+      verify(dataSourceProvider).fetchData(requestCaptor.capture());
       assertThat(requestCaptor.getValue().executionParams().query())
           .isEqualTo("compiled-query-from-context");
     }

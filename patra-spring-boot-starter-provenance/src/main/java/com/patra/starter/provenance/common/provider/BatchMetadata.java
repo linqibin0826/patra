@@ -1,9 +1,9 @@
-package com.patra.starter.provenance.common.adapter;
+package com.patra.starter.provenance.common.provider;
 
 /**
  * 批次元数据,用于日志记录、监控和游标管理
  *
- * <p>本记录仅作为批次元数据使用。要构建 API 请求,请使用 {@link AdapterRequest} 中的 {@link BatchExecutionParams}。
+ * <p>本记录仅作为批次元数据使用。要构建 API 请求,请使用 {@link ProviderRequest} 中的 {@link BatchExecutionParams}。
  *
  * <p><b>职责边界:</b>
  *

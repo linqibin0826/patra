@@ -8,12 +8,12 @@ import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.DataSourcePort;
-import com.patra.starter.provenance.common.adapter.AdapterRegistry;
-import com.patra.starter.provenance.common.adapter.AdapterRequest;
-import com.patra.starter.provenance.common.adapter.AdapterResult;
-import com.patra.starter.provenance.common.adapter.BatchExecutionParams;
-import com.patra.starter.provenance.common.adapter.BatchMetadata;
-import com.patra.starter.provenance.common.adapter.DataSourceAdapter;
+import com.patra.starter.provenance.common.provider.ProviderRegistry;
+import com.patra.starter.provenance.common.provider.ProviderRequest;
+import com.patra.starter.provenance.common.provider.ProviderResult;
+import com.patra.starter.provenance.common.provider.BatchExecutionParams;
+import com.patra.starter.provenance.common.provider.BatchMetadata;
+import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.HttpConfig;
 import com.patra.starter.provenance.common.config.PaginationConfig;
@@ -30,25 +30,25 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * 数据源端口适配器 - Infrastructure 层桥接实现
+ * 数据源适配器 - Infrastructure 层桥接实现
  *
  * <p><b>职责</b>: 实现 Domain 层的 {@link DataSourcePort} 接口,桥接到 Framework 层的 {@link
- * DataSourceAdapter} 实现。
+ * DataSourceProvider} 实现。
  *
  * <h2>核心转换流程</h2>
  *
  * <ol>
  *   <li>从 {@link ExecutionContext} 提取 provenanceCode
- *   <li>通过 {@link AdapterRegistry} 解析框架层适配器
+ *   <li>通过 {@link ProviderRegistry} 解析框架层提供者
  *   <li>将 {@link ProvenanceConfigSnapshot} 转换为 {@link ProvenanceConfig}
- *   <li>构建 {@link AdapterRequest}:
+ *   <li>构建 {@link ProviderRequest}:
  *       <ul>
- *         <li>ExecutionContext.operationCode → AdapterRequest.operationCode
+ *         <li>ExecutionContext.operationCode → ProviderRequest.operationCode
  *         <li>ExecutionContext + Batch → BatchExecutionParams (query + params)
  *         <li>Batch → BatchMetadata (batchNo + cursorToken)
  *       </ul>
- *   <li>调用框架层适配器 {@link DataSourceAdapter#fetchData(AdapterRequest)}
- *   <li>将 {@link AdapterResult} 转换为 {@link DataFetchResult}
+ *   <li>调用框架层提供者 {@link DataSourceProvider#fetchData(ProviderRequest)}
+ *   <li>将 {@link ProviderResult} 转换为 {@link DataFetchResult}
  * </ol>
  *
  * <h2>错误处理策略</h2>
@@ -56,21 +56,21 @@ import org.springframework.util.StringUtils;
  * <ul>
  *   <li><b>框架层异常</b>: 捕获并转换为 {@code DataFetchResult.retriableFailure}
  *   <li><b>配置转换失败</b>: 记录警告,使用默认配置继续执行
- *   <li><b>适配器未找到</b>: 转换为 {@code DataFetchResult.nonRetriableFailure}
+ *   <li><b>提供者未找到</b>: 转换为 {@code DataFetchResult.nonRetriableFailure}
  * </ul>
  *
  * @see DataSourcePort 领域层端口接口
- * @see DataSourceAdapter 框架层适配器接口
- * @see AdapterRegistry 框架层适配器注册表
+ * @see DataSourceProvider 框架层提供者接口
+ * @see ProviderRegistry 框架层提供者注册表
  * @author linqibin
  * @since 0.1.0
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class DataSourcePortAdapter implements DataSourcePort {
+public class DataSourceAdapter implements DataSourcePort {
 
-  private final AdapterRegistry adapterRegistry;
+  private final ProviderRegistry providerRegistry;
 
   @Override
   public DataFetchResult fetchData(ExecutionContext context, Batch batch) {
@@ -79,10 +79,10 @@ public class DataSourcePortAdapter implements DataSourcePort {
     int batchNo = batch.batchNo();
 
     try {
-      // 1. 解析框架层适配器
-      DataSourceAdapter adapter = resolveAdapter(provenanceCode);
-      if (adapter == null) {
-        String errorMsg = String.format("未找到适配器: provenanceCode=%s", provenanceCode);
+      // 1. 解析框架层提供者
+      DataSourceProvider provider = resolveProvider(provenanceCode);
+      if (provider == null) {
+        String errorMsg = String.format("未找到提供者: provenanceCode=%s", provenanceCode);
         log.error(errorMsg);
         return DataFetchResult.nonRetriableFailure(errorMsg);
       }
@@ -96,9 +96,9 @@ public class DataSourcePortAdapter implements DataSourcePort {
       // 4. 构建批次元数据 (批次号 + 游标令牌)
       BatchMetadata metadata = buildMetadata(batch);
 
-      // 5. 构建适配器请求
-      AdapterRequest request =
-          AdapterRequest.builder()
+      // 5. 构建提供者请求
+      ProviderRequest request =
+          ProviderRequest.builder()
               .operationCode(operationCode)
               .config(runtimeConfig)
               .executionParams(executionParams)
@@ -107,35 +107,35 @@ public class DataSourcePortAdapter implements DataSourcePort {
 
       if (log.isDebugEnabled()) {
         log.debug(
-            "调用数据源适配器 provenanceCode={} operationCode={} batchNo={} hasCursor={}",
+            "调用数据源提供者 provenanceCode={} operationCode={} batchNo={} hasCursor={}",
             provenanceCode,
             operationCode,
             batchNo,
             batch.hasCursor());
       }
 
-      // 6. 调用框架层适配器
+      // 6. 调用框架层提供者
       long startTime = System.currentTimeMillis();
-      AdapterResult adapterResult = adapter.fetchData(request);
+      ProviderResult providerResult = provider.fetchData(request);
       long duration = System.currentTimeMillis() - startTime;
 
       if (log.isDebugEnabled()) {
         log.debug(
-            "数据源适配器返回 provenanceCode={} batchNo={} success={} fetchedCount={} duration={}ms",
+            "数据源提供者返回 provenanceCode={} batchNo={} success={} fetchedCount={} duration={}ms",
             provenanceCode,
             batchNo,
-            adapterResult.success(),
-            adapterResult.fetchedCount(),
+            providerResult.success(),
+            providerResult.fetchedCount(),
             duration);
       }
 
       // 7. 转换结果
-      return convertResult(adapterResult);
+      return convertResult(providerResult);
 
     } catch (Exception ex) {
       String errorMsg =
           String.format(
-              "数据源适配器调用异常 provenanceCode=%s batchNo=%d error=%s",
+              "数据源提供者调用异常 provenanceCode=%s batchNo=%d error=%s",
               provenanceCode, batchNo, ex.getMessage());
       log.error(errorMsg, ex);
       return DataFetchResult.retriableFailure(errorMsg);
@@ -143,16 +143,16 @@ public class DataSourcePortAdapter implements DataSourcePort {
   }
 
   /**
-   * 解析框架层适配器
+   * 解析框架层提供者
    *
    * @param provenanceCode Provenance 代码
-   * @return 框架层适配器实例,未找到时返回 null
+   * @return 框架层提供者实例,未找到时返回 null
    */
-  private DataSourceAdapter resolveAdapter(String provenanceCode) {
+  private DataSourceProvider resolveProvider(String provenanceCode) {
     try {
-      return adapterRegistry.getAdapter(provenanceCode);
+      return providerRegistry.getProvider(provenanceCode);
     } catch (Exception ex) {
-      log.error("解析适配器失败 provenanceCode={}", provenanceCode, ex);
+      log.error("解析提供者失败 provenanceCode={}", provenanceCode, ex);
       return null;
     }
   }
@@ -418,7 +418,7 @@ public class DataSourcePortAdapter implements DataSourcePort {
   }
 
   /**
-   * 转换适配器结果为领域层结果
+   * 转换提供者结果为领域层结果
    *
    * <p>直接映射字段:
    *
@@ -431,20 +431,20 @@ public class DataSourcePortAdapter implements DataSourcePort {
    *   <li>errorType → errorType (枚举名称相同)
    * </ul>
    *
-   * @param adapterResult 框架层结果
+   * @param providerResult 框架层结果
    * @return 领域层结果
    */
-  private DataFetchResult convertResult(AdapterResult adapterResult) {
-    List<CanonicalLiterature> literatures = adapterResult.literatures();
-    String nextCursorToken = adapterResult.nextCursorToken();
-    String errorMessage = adapterResult.errorMessage();
-    int fetchedCount = adapterResult.fetchedCount();
+  private DataFetchResult convertResult(ProviderResult providerResult) {
+    List<CanonicalLiterature> literatures = providerResult.literatures();
+    String nextCursorToken = providerResult.nextCursorToken();
+    String errorMessage = providerResult.errorMessage();
+    int fetchedCount = providerResult.fetchedCount();
 
     // 转换错误类型 (枚举名称相同,直接映射)
-    DataFetchResult.ErrorType errorType = convertErrorType(adapterResult.errorType());
+    DataFetchResult.ErrorType errorType = convertErrorType(providerResult.errorType());
 
     return DataFetchResult.builder()
-        .success(adapterResult.success())
+        .success(providerResult.success())
         .literatures(literatures)
         .nextCursorToken(nextCursorToken)
         .errorMessage(errorMessage)
@@ -460,7 +460,7 @@ public class DataSourcePortAdapter implements DataSourcePort {
    * @return 领域层错误类型
    */
   private DataFetchResult.ErrorType convertErrorType(
-      AdapterResult.ErrorType frameworkErrorType) {
+      ProviderResult.ErrorType frameworkErrorType) {
     if (frameworkErrorType == null) {
       return DataFetchResult.ErrorType.NONE;
     }

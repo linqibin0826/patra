@@ -1,11 +1,11 @@
-package com.patra.starter.provenance.common.adapter;
+package com.patra.starter.provenance.common.provider;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * 批次执行的完整参数
  *
- * <p>包含适配器构建上游 API 请求所需的全部信息:
+ * <p>包含提供者构建上游 API 请求所需的全部信息:
  *
  * <ul>
  *   <li>任务编译产生的基础参数(如 datetype, sort)
@@ -16,8 +16,8 @@ import com.fasterxml.jackson.databind.JsonNode;
  * <p><b>使用场景:</b>
  *
  * <ul>
- *   <li>适配器从此对象获取所有必需的请求参数
- *   <li>与 {@link AdapterRequest} 一起传递,确保参数完整性
+ *   <li>提供者从此对象获取所有必需的请求参数
+ *   <li>与 {@link ProviderRequest} 一起传递,确保参数完整性
  *   <li>支持有状态的API调用(如PubMed的会话状态管理)
  * </ul>
  *

@@ -1,7 +1,8 @@
 # 数据源端口架构需求文档
 
-**文档版本**: 1.0.0
+**文档版本**: 2.0.0
 **创建日期**: 2024-11-11
+**更新日期**: 2025-11-11
 **作者**: Patra 架构团队
 **状态**: 实施中
 
@@ -107,7 +108,7 @@ Patra 是一个医学文献数据平台，旨在从多个数据源（PubMed、EP
 ### 4.1 架构要求
 
 1. **清晰的端口定义**：Application 层通过端口接口调用数据源
-2. **灵活的适配器实现**：每个数据源作为独立的适配器实现
+2. **灵活的适配器实现**：每个数据源作为独立的提供者实现
 3. **统一的数据模型**：定义平台标准数据模型体系
 4. **防腐层设计**：隔离外部 API 变化对内部的影响
 
@@ -140,7 +141,7 @@ Patra 是一个医学文献数据平台，旨在从多个数据源（PubMed、EP
 |-----|------|------|----------|
 | 设计过于复杂 | 高 | 中 | 提供模板和示例代码 |
 | 性能不达标 | 高 | 低 | 引入缓存和并发优化 |
-| 新数据源接入困难 | 中 | 低 | 提供适配器开发指南 |
+| 新数据源接入困难 | 中 | 低 | 提供提供者开发指南 |
 | 团队学习成本高 | 中 | 中 | 组织培训和代码评审 |
 
 ## 7. 实施成果
@@ -161,6 +162,17 @@ patra-ingest-app (依赖 domain，不依赖 starter)
 patra-ingest-infra (依赖 domain + starter)
 ```
 
+**三层接口设计**:
+```
+Domain Layer: DataSourcePort (业务契约)
+    ↑ implements
+Infrastructure Layer: DataSourceAdapter (桥接适配器)
+    ↓ uses
+Framework Layer: DataSourceProvider (技术规范)
+    ↑ implements
+Infrastructure Layer: PubmedDataSourceProvider, EpmcDataSourceProvider (具体实现)
+```
+
 ### 7.2 代码质量改进
 
 **代码行数变化**:
@@ -170,14 +182,14 @@ patra-ingest-infra (依赖 domain + starter)
 - **总计节省: 528 行代码**
 
 **职责简化**:
-- Application 层不再负责适配器查找、配置转换、重试逻辑
+- Application 层不再负责提供者查找、配置转换、重试逻辑
 - 技术细节全部封装在 Infrastructure 层
 - 业务流程编排更清晰简洁
 
 ### 7.3 测试覆盖
 
 **新增测试**:
-- DataSourcePortAdapterTest: 12 个测试用例，覆盖正常/错误/边界场景
+- DataSourceAdapterTest: 12 个测试用例，覆盖正常/错误/边界场景
 
 **简化测试**:
 - GenericBatchExecutorTest: 从 20+ 个测试简化到 7 个核心测试
@@ -210,11 +222,11 @@ patra-ingest-infra (依赖 domain + starter)
 ## 8. 里程碑计划
 
 - **M1（第1周）**：完成基础架构设计和核心接口定义
-- **M2（第2周）**：实现 PubMed 端口实现和数据转换
+- **M2（第2周）**：实现 PubMed 提供者和数据转换
 - **M3（第3周）**：接入新数据源并完成测试
 
 ## 9. 相关文档
 
-- [数据源端口设计方案](./data-source-adapter-design.md)
+- [数据源提供者设计方案](./data-source-adapter-design.md)
 - [六边形架构指南](../architecture/hexagonal-architecture.md)
 - [DDD 实践规范](../architecture/ddd-practices.md)
