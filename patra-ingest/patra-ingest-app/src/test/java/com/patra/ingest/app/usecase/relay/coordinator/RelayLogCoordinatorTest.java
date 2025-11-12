@@ -43,7 +43,7 @@ import org.mockito.quality.Strictness;
  * </ul>
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

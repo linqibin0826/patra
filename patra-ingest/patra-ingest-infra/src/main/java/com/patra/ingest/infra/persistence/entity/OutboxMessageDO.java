@@ -144,7 +144,7 @@ public class OutboxMessageDO extends BaseDO {
    *
    * <p>用例: 跟踪中继延迟(published_at - created_at)、审计跟踪。
    *
-   * @since 2.0
+   * @since 0.1.0
    */
   @TableField("published_at")
   private Instant publishedAt;

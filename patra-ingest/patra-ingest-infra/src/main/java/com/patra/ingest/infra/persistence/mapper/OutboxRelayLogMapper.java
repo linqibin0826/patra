@@ -30,7 +30,7 @@ import org.apache.ibatis.annotations.Param;
  * </ul>
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 public interface OutboxRelayLogMapper extends BaseMapper<OutboxRelayLogDO> {
 

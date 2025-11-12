@@ -28,7 +28,7 @@ import org.mapstruct.ReportingPolicy;
  * </ul>
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface OutboxRelayLogConverter {

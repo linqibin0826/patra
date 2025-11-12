@@ -52,7 +52,7 @@ import lombok.EqualsAndHashCode;
  * <p>分层说明: 六边形架构中的<em>基础设施/持久化 DO</em>;不含领域行为。
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

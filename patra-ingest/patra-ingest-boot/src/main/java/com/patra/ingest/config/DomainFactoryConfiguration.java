@@ -39,7 +39,7 @@ import org.springframework.context.annotation.Configuration;
  * </ul>
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 @Configuration
 public class DomainFactoryConfiguration {
