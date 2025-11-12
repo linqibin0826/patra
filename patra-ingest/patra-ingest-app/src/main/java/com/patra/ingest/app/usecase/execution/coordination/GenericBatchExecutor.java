@@ -74,7 +74,7 @@ public class GenericBatchExecutor {
 
     try {
       // 调用数据源端口获取数据（默认获取LITERATURE类型）
-      // TODO: 未来从ExecutionContext或Batch中获取dataType
+      // TODO: 未来从ExecutionContext或Batch中获取dataType(短期内不做，保持简单. To AGENTS)
       DataType dataType = DataType.LITERATURE;
       TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
       DataFetchResult<CanonicalLiterature> fetchResult =

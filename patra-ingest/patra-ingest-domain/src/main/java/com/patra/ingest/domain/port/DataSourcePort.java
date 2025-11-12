@@ -91,7 +91,7 @@ public interface DataSourcePort {
    * </ul>
    *
    * <p><strong>错误处理</strong>: 实现应捕获所有异常，将其转换为 {@link DataFetchResult} 返回，
-   * 并正确设置 {@link ErrorType} 以指导上层的重试策略。
+   * 并正确设置 {@link DataFetchResult.ErrorType} 以指导上层的重试策略。
    *
    * <p><strong>使用示例</strong>：
    * <pre>{@code
