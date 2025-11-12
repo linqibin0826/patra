@@ -31,7 +31,7 @@ import java.util.List;
  * @param leaseMissed 租约丢失的消息数
  * @param events 领域事件列表(不可变)
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 public record RelayBatchResult(
     ChannelKey channel,

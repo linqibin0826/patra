@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
  * 从字符串重建 ID(带格式验证)。
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 public final class RelayBatchId {
 

@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
  * </ul>
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 @DisplayName("PlannerWindow 值对象单元测试")
 class PlannerWindowTest {

@@ -27,7 +27,7 @@ import java.util.List;
  * 层,由基础设施层(Infrastructure)实现,确保领域逻辑与持久化技术解耦。
  *
  * @author Patra Team
- * @since 2.0
+ * @since 0.1.0
  */
 public interface OutboxRelayLogRepository {
 
