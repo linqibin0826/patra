@@ -1,6 +1,5 @@
-package com.patra.ingest.domain.model;
+package com.patra.common.type;
 
-import com.patra.common.model.CanonicalLiterature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -25,7 +24,7 @@ import static org.assertj.core.api.Assertions.*;
  *   <li>边界条件测试</li>
  * </ul>
  *
- * @since 2.0.0
+ * @since 0.1.0
  */
 @DisplayName("TypeReference 单元测试")
 class TypeReferenceTest {
@@ -64,22 +63,22 @@ class TypeReferenceTest {
         @DisplayName("应该正确捕获简单泛型类型")
         void should_capture_simple_generic_type() {
             // given
-            TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+            TypeReference<String> typeRef = new TypeReference<>() {};
 
             // when
             Class<?> rawType = typeRef.getRawType();
             Type type = typeRef.getType();
 
             // then
-            assertThat(rawType).isEqualTo(CanonicalLiterature.class);
-            assertThat(type).isEqualTo(CanonicalLiterature.class);
+            assertThat(rawType).isEqualTo(String.class);
+            assertThat(type).isEqualTo(String.class);
         }
 
         @Test
         @DisplayName("应该正确捕获参数化泛型类型 - List<T>")
         void should_capture_parameterized_generic_type_list() {
             // given
-            TypeReference<List<CanonicalLiterature>> typeRef = new TypeReference<>() {};
+            TypeReference<List<String>> typeRef = new TypeReference<>() {};
 
             // when
             Class<?> rawType = typeRef.getRawType();
@@ -92,14 +91,14 @@ class TypeReferenceTest {
             ParameterizedType paramType = (ParameterizedType) type;
             assertThat(paramType.getRawType()).isEqualTo(List.class);
             assertThat(paramType.getActualTypeArguments()).hasSize(1);
-            assertThat(paramType.getActualTypeArguments()[0]).isEqualTo(CanonicalLiterature.class);
+            assertThat(paramType.getActualTypeArguments()[0]).isEqualTo(String.class);
         }
 
         @Test
         @DisplayName("应该正确捕获嵌套泛型类型 - Map<K, V>")
         void should_capture_nested_generic_type_map() {
             // given
-            TypeReference<Map<String, List<CanonicalLiterature>>> typeRef = new TypeReference<>() {};
+            TypeReference<Map<String, List<Integer>>> typeRef = new TypeReference<>() {};
 
             // when
             Class<?> rawType = typeRef.getRawType();
@@ -116,11 +115,11 @@ class TypeReferenceTest {
             // 验证第一个类型参数：String
             assertThat(actualTypeArgs[0]).isEqualTo(String.class);
 
-            // 验证第二个类型参数：List<CanonicalLiterature>
+            // 验证第二个类型参数：List<Integer>
             assertThat(actualTypeArgs[1]).isInstanceOf(ParameterizedType.class);
             ParameterizedType listType = (ParameterizedType) actualTypeArgs[1];
             assertThat(listType.getRawType()).isEqualTo(List.class);
-            assertThat(listType.getActualTypeArguments()[0]).isEqualTo(CanonicalLiterature.class);
+            assertThat(listType.getActualTypeArguments()[0]).isEqualTo(Integer.class);
         }
 
         @Test
@@ -147,20 +146,20 @@ class TypeReferenceTest {
         @DisplayName("getRawType() 应该提取原始类型（简单类型）")
         void should_extract_raw_type_for_simple_type() {
             // given
-            TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+            TypeReference<String> typeRef = new TypeReference<>() {};
 
             // when
             Class<?> rawType = typeRef.getRawType();
 
             // then
-            assertThat(rawType).isEqualTo(CanonicalLiterature.class);
+            assertThat(rawType).isEqualTo(String.class);
         }
 
         @Test
         @DisplayName("getRawType() 应该提取原始类型（参数化类型）")
         void should_extract_raw_type_for_parameterized_type() {
             // given
-            TypeReference<List<CanonicalLiterature>> typeRef = new TypeReference<>() {};
+            TypeReference<List<String>> typeRef = new TypeReference<>() {};
 
             // when
             Class<?> rawType = typeRef.getRawType();
@@ -173,7 +172,7 @@ class TypeReferenceTest {
         @DisplayName("getType() 应该返回完整类型信息（包含泛型参数）")
         void should_return_full_type_info() {
             // given
-            TypeReference<List<CanonicalLiterature>> typeRef = new TypeReference<>() {};
+            TypeReference<List<String>> typeRef = new TypeReference<>() {};
 
             // when
             Type type = typeRef.getType();
@@ -181,7 +180,7 @@ class TypeReferenceTest {
             // then
             assertThat(type).isInstanceOf(ParameterizedType.class);
             assertThat(type.getTypeName()).contains("java.util.List");
-            assertThat(type.getTypeName()).contains("CanonicalLiterature");
+            assertThat(type.getTypeName()).contains("String");
         }
     }
 
@@ -195,10 +194,10 @@ class TypeReferenceTest {
         @DisplayName("isAssignableFrom() - 应该支持相同类型")
         void should_check_assignable_for_same_type() {
             // given
-            TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+            TypeReference<String> typeRef = new TypeReference<>() {};
 
             // when & then
-            assertThat(typeRef.isAssignableFrom(CanonicalLiterature.class)).isTrue();
+            assertThat(typeRef.isAssignableFrom(String.class)).isTrue();
         }
 
         @Test
@@ -215,10 +214,10 @@ class TypeReferenceTest {
         @DisplayName("isAssignableFrom() - 应该拒绝不兼容类型")
         void should_reject_incompatible_type() {
             // given
-            TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+            TypeReference<String> typeRef = new TypeReference<>() {};
 
             // when & then
-            assertThat(typeRef.isAssignableFrom(String.class)).isFalse();
+            assertThat(typeRef.isAssignableFrom(Integer.class)).isFalse();
             assertThat(typeRef.isAssignableFrom(TestEntity.class)).isFalse();
         }
 
@@ -226,7 +225,7 @@ class TypeReferenceTest {
         @DisplayName("isAssignableFrom() - 应该抛出异常当类为 null")
         void should_throw_exception_when_class_is_null() {
             // given
-            TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+            TypeReference<String> typeRef = new TypeReference<>() {};
 
             // when & then
             assertThatThrownBy(() -> typeRef.isAssignableFrom(null))
@@ -245,8 +244,8 @@ class TypeReferenceTest {
         @DisplayName("相同类型的 TypeReference 应该相等")
         void should_be_equal_for_same_type() {
             // given
-            TypeReference<CanonicalLiterature> ref1 = new TypeReference<>() {};
-            TypeReference<CanonicalLiterature> ref2 = new TypeReference<>() {};
+            TypeReference<String> ref1 = new TypeReference<>() {};
+            TypeReference<String> ref2 = new TypeReference<>() {};
 
             // when & then
             assertThat(ref1).isEqualTo(ref2);
@@ -257,7 +256,7 @@ class TypeReferenceTest {
         @DisplayName("不同类型的 TypeReference 不应该相等")
         void should_not_be_equal_for_different_type() {
             // given
-            TypeReference<CanonicalLiterature> ref1 = new TypeReference<>() {};
+            TypeReference<String> ref1 = new TypeReference<>() {};
             TypeReference<TestEntity> ref2 = new TypeReference<>() {};
 
             // when & then
@@ -268,8 +267,8 @@ class TypeReferenceTest {
         @DisplayName("相同参数化类型应该相等")
         void should_be_equal_for_same_parameterized_type() {
             // given
-            TypeReference<List<CanonicalLiterature>> ref1 = new TypeReference<>() {};
-            TypeReference<List<CanonicalLiterature>> ref2 = new TypeReference<>() {};
+            TypeReference<List<String>> ref1 = new TypeReference<>() {};
+            TypeReference<List<String>> ref2 = new TypeReference<>() {};
 
             // when & then
             assertThat(ref1).isEqualTo(ref2);
@@ -280,7 +279,7 @@ class TypeReferenceTest {
         @DisplayName("不同参数化类型不应该相等")
         void should_not_be_equal_for_different_parameterized_type() {
             // given
-            TypeReference<List<CanonicalLiterature>> ref1 = new TypeReference<>() {};
+            TypeReference<List<String>> ref1 = new TypeReference<>() {};
             TypeReference<List<TestEntity>> ref2 = new TypeReference<>() {};
 
             // when & then
@@ -291,7 +290,7 @@ class TypeReferenceTest {
         @DisplayName("equals 应该满足自反性")
         void equals_should_satisfy_reflexive() {
             // given
-            TypeReference<CanonicalLiterature> ref = new TypeReference<>() {};
+            TypeReference<String> ref = new TypeReference<>() {};
 
             // when & then
             assertThat(ref).isEqualTo(ref);
@@ -301,7 +300,7 @@ class TypeReferenceTest {
         @DisplayName("equals 应该处理 null")
         void equals_should_handle_null() {
             // given
-            TypeReference<CanonicalLiterature> ref = new TypeReference<>() {};
+            TypeReference<String> ref = new TypeReference<>() {};
 
             // when & then
             assertThat(ref).isNotEqualTo(null);
@@ -311,7 +310,7 @@ class TypeReferenceTest {
         @DisplayName("equals 应该处理不同类型的对象")
         void equals_should_handle_different_class() {
             // given
-            TypeReference<CanonicalLiterature> ref = new TypeReference<>() {};
+            TypeReference<String> ref = new TypeReference<>() {};
             String other = "not a TypeReference";
 
             // when & then
@@ -354,21 +353,21 @@ class TypeReferenceTest {
         @DisplayName("toString() 应该返回清晰的描述")
         void should_return_clear_description_in_toString() {
             // given
-            TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+            TypeReference<String> typeRef = new TypeReference<>() {};
 
             // when
             String toString = typeRef.toString();
 
             // then
             assertThat(toString).contains("TypeReference");
-            assertThat(toString).contains("CanonicalLiterature");
+            assertThat(toString).contains("String");
         }
 
         @Test
         @DisplayName("toString() 应该包含完整泛型信息")
         void should_include_full_generic_info_in_toString() {
             // given
-            TypeReference<List<CanonicalLiterature>> typeRef = new TypeReference<>() {};
+            TypeReference<List<String>> typeRef = new TypeReference<>() {};
 
             // when
             String toString = typeRef.toString();

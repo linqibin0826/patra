@@ -1,7 +1,7 @@
 package com.patra.starter.provenance.common.processor;
 
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.BatchMetadata;
@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.*;
  * <p>测试策略：使用Mock实现进行接口契约测试，验证接口设计的正确性。
  *
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 @DisplayName("DataProcessor 策略接口测试")
 class DataProcessorTest {
@@ -669,8 +669,8 @@ class DataProcessorTest {
                 .build();
 
             // When & Then: 验证属性
-            assertThat(context.attributes()).containsEntry("key1", "value1");
-            assertThat(context.attributes()).containsEntry("key2", 123);
+            assertThat(context.getAttributes()).containsEntry("key1", "value1");
+            assertThat(context.getAttributes()).containsEntry("key2", 123);
         }
     }
 }

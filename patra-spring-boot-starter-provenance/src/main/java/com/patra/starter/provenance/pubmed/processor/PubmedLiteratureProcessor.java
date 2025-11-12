@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
 import com.patra.starter.provenance.boot.ProvenanceProperties;
 import com.patra.starter.provenance.common.config.BatchingConfig;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -13,7 +13,6 @@ import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.common.processor.ProcessResult;
-import com.patra.starter.provenance.common.processor.ProcessResult.ProcessStatus;
 import com.patra.starter.provenance.common.processor.ProviderContext;
 import com.patra.starter.provenance.common.processor.ValidationResult;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
@@ -63,7 +62,7 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  *
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 @Slf4j
 @Component
@@ -166,13 +165,13 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     @Override
     public ValidationResult validate(CanonicalLiterature data) {
         if (data == null) {
-            return ValidationResult.invalid("文献数据不能为null");
+            return ValidationResult.failure("文献数据不能为null");
         }
 
         List<String> errors = new ArrayList<>();
 
         // 验证必填字段
-        if (!StringUtils.hasText(data.getPmid())) {
+        if (data.getIdentifiers() == null || !StringUtils.hasText(data.getIdentifiers().get("pmid"))) {
             errors.add("PMID不能为空");
         }
         if (!StringUtils.hasText(data.getTitle())) {
@@ -180,10 +179,10 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         }
 
         if (!errors.isEmpty()) {
-            return ValidationResult.invalid(String.join("; ", errors));
+            return ValidationResult.failure(errors);
         }
 
-        return ValidationResult.valid();
+        return ValidationResult.success();
     }
 
     @Override

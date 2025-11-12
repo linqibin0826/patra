@@ -8,6 +8,8 @@ import com.patra.common.model.CanonicalLiterature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.model.DataType;
+import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
@@ -108,9 +110,14 @@ class GenericBatchExecutorTest {
     void shouldExecuteBatchSuccessfully() {
       // Given: Mock 数据源端口返回成功结果
       List<CanonicalLiterature> literatures = createTestLiteratures(5);
-      DataFetchResult fetchResult = DataFetchResult.success(literatures, "nextCursor123");
+      DataFetchResult<CanonicalLiterature> fetchResult =
+          DataFetchResult.success(literatures, DataType.LITERATURE, "nextCursor123");
 
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenReturn(fetchResult);
 
       // Mock 文献发布
@@ -133,7 +140,11 @@ class GenericBatchExecutorTest {
       assertThat(result.errorMessage()).isNull();
 
       // 验证调用链
-      verify(dataSourcePort).fetchData(eq(context), eq(batch));
+      verify(dataSourcePort).fetchData(
+          eq(context),
+          eq(DataType.LITERATURE),
+          any(TypeReference.class),
+          eq(batch));
       verify(literaturePublisherOrchestrator).publish(eq(literatures), any());
     }
 
@@ -141,8 +152,13 @@ class GenericBatchExecutorTest {
     @DisplayName("应该正确处理空文献列表")
     void shouldHandleEmptyLiteratureList() {
       // Given: 数据源端口返回空文献列表
-      DataFetchResult fetchResult = DataFetchResult.success(List.of(), null);
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      DataFetchResult<CanonicalLiterature> fetchResult =
+          DataFetchResult.success(List.of(), DataType.LITERATURE, null);
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenReturn(fetchResult);
 
       // When: 执行批次
@@ -161,8 +177,13 @@ class GenericBatchExecutorTest {
     @DisplayName("应该正确处理 null 文献列表")
     void shouldHandleNullLiteratureList() {
       // Given: 数据源端口返回 null 文献列表
-      DataFetchResult fetchResult = DataFetchResult.success(null, null);
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      DataFetchResult<CanonicalLiterature> fetchResult =
+          DataFetchResult.success(null, DataType.LITERATURE, null);
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenReturn(fetchResult);
 
       // When: 执行批次
@@ -187,9 +208,14 @@ class GenericBatchExecutorTest {
     @DisplayName("可重试错误应该返回失败结果")
     void shouldHandleRetriableError() {
       // Given: 数据源端口返回可重试错误（重试已在 infra 层处理）
-      DataFetchResult failureResult = DataFetchResult.retriableFailure("网络超时");
+      DataFetchResult<CanonicalLiterature> failureResult =
+          DataFetchResult.failure(DataType.LITERATURE, "网络超时", ErrorType.RETRIABLE);
 
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenReturn(failureResult);
 
       // When: 执行批次
@@ -208,9 +234,14 @@ class GenericBatchExecutorTest {
     @DisplayName("非重试错误应该返回失败结果")
     void shouldHandleNonRetriableError() {
       // Given: 非重试错误
-      DataFetchResult failureResult = DataFetchResult.nonRetriableFailure("API 密钥无效");
+      DataFetchResult<CanonicalLiterature> failureResult =
+          DataFetchResult.failure(DataType.LITERATURE, "API 密钥无效", ErrorType.NON_RETRIABLE);
 
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenReturn(failureResult);
 
       // When: 执行批次
@@ -235,7 +266,11 @@ class GenericBatchExecutorTest {
     @DisplayName("数据源端口抛出异常应该返回失败结果")
     void shouldHandleDataSourcePortException() {
       // Given: 数据源端口抛出运行时异常
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenThrow(new RuntimeException("数据源内部错误"));
 
       // When: 执行批次
@@ -259,11 +294,15 @@ class GenericBatchExecutorTest {
     void shouldHandlePartialSuccessWithWarning() {
       // Given: 数据源端口返回部分成功
       List<CanonicalLiterature> literatures = createTestLiteratures(8);
-      DataFetchResult fetchResult =
+      DataFetchResult<CanonicalLiterature> fetchResult =
           DataFetchResult.partialSuccess(
-              literatures, "nextCursor", "10 条记录中有 2 条解析失败", 10);
+              literatures, DataType.LITERATURE, "nextCursor", "10 条记录中有 2 条解析失败");
 
-      when(dataSourcePort.fetchData(any(ExecutionContext.class), any(Batch.class)))
+      when(dataSourcePort.fetchData(
+          any(ExecutionContext.class),
+          any(DataType.class),
+          any(TypeReference.class),
+          any(Batch.class)))
           .thenReturn(fetchResult);
       mockPublish(8, "s3://bucket/key");
 

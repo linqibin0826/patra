@@ -21,7 +21,7 @@ class MessageChannelsTest {
       String value = MessageChannels.INGEST_TASK_READY;
 
       // Then
-      assertThat(value).isEqualTo("TASK_READY");
+      assertThat(value).isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -31,7 +31,7 @@ class MessageChannelsTest {
       String value = MessageChannels.INGEST_LITERATURE_READY;
 
       // Then
-      assertThat(value).isEqualTo("LITERATURE_READY");
+      assertThat(value).isEqualTo("INGEST_LITERATURE_READY");
     }
   }
 
@@ -138,7 +138,7 @@ class MessageChannelsTest {
       // Then
       assertThat(channelName)
           .as("任务就绪通道应该明确表达任务已准备好执行的语义")
-          .isEqualTo("TASK_READY");
+          .isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -150,7 +150,7 @@ class MessageChannelsTest {
       // Then
       assertThat(channelName)
           .as("文献就绪通道应该明确表达文献数据已准备好的语义")
-          .isEqualTo("LITERATURE_READY");
+          .isEqualTo("INGEST_LITERATURE_READY");
     }
   }
 

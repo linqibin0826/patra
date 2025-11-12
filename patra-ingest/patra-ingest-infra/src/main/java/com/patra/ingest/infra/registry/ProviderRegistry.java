@@ -1,6 +1,6 @@
 package com.patra.ingest.infra.registry;
 
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -64,7 +64,7 @@ import java.util.stream.Collectors;
  * }</pre>
  *
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 @Component
 @Slf4j

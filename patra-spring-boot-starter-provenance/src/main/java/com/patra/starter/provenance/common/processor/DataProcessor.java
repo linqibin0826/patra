@@ -1,11 +1,12 @@
 package com.patra.starter.provenance.common.processor;
 
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
+import com.patra.starter.provenance.common.provider.ProviderRequest;
 
 /**
  * 数据处理器策略接口
  *
- * <p>DataProcessor是v2.0多数据类型架构的核心策略接口，每个数据类型（LITERATURE、JOURNAL、DRUG等）
+ * <p>DataProcessor是多数据类型架构的核心策略接口，每个数据类型（LITERATURE、JOURNAL、DRUG等）
  * 都有对应的Processor实现类。
  *
  * <p><strong>架构角色</strong>：
@@ -57,7 +58,7 @@ import com.patra.ingest.domain.model.DataType;
  *
  * @param <T> 处理的数据类型（如CanonicalLiterature、Journal、Drug）
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 public interface DataProcessor<T> {
 

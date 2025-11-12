@@ -23,11 +23,11 @@ public final class MessageOperations {
   }
 
   /** 任务就绪操作 - 表示任务已创建并等待执行。 */
-  public static final String TASK_READY = "TASK_READY";
+  public static final String TASK_READY = "INGEST_TASK_READY";
 
   /** 任务完成操作 - 表示任务已成功执行完毕。 */
   public static final String TASK_COMPLETED = "TASK_COMPLETED";
 
   /** 文献就绪操作 - 表示文献数据已准备就绪。 */
-  public static final String LITERATURE_READY = "LITERATURE_READY";
+  public static final String LITERATURE_READY = "INGEST_LITERATURE_READY";
 }

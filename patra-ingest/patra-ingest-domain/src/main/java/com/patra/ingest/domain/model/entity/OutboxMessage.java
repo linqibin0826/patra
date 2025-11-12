@@ -228,7 +228,7 @@ public final class OutboxMessage {
         .build();
   }
 
-  // ========== Outbox Pattern Enhancement V2.0 - Behavior Methods ==========
+  // ========== Outbox Pattern Enhancement - Behavior Methods ==========
 
   /**
    * Computes the next attempt number for this message.

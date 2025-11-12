@@ -255,7 +255,15 @@ class ProviderRegistryTest {
     }
 
     @Override
-    public ProviderResult fetchData(ProviderRequest request) {
+    public java.util.Set<com.patra.common.model.DataType> getSupportedDataTypes() {
+      return java.util.Set.of(com.patra.common.model.DataType.LITERATURE);
+    }
+
+    @Override
+    public <T> ProviderResult<T> fetchData(
+        ProviderRequest request,
+        com.patra.common.model.DataType dataType,
+        Class<T> targetClass) {
       return null; // 测试中不需要实现
     }
   }
@@ -274,7 +282,15 @@ class ProviderRegistryTest {
     }
 
     @Override
-    public ProviderResult fetchData(ProviderRequest request) {
+    public java.util.Set<com.patra.common.model.DataType> getSupportedDataTypes() {
+      return java.util.Set.of(com.patra.common.model.DataType.LITERATURE);
+    }
+
+    @Override
+    public <T> ProviderResult<T> fetchData(
+        ProviderRequest request,
+        com.patra.common.model.DataType dataType,
+        Class<T> targetClass) {
       return null; // 测试中不需要实现
     }
   }

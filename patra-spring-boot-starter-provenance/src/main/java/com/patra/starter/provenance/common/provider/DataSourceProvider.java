@@ -1,11 +1,31 @@
 package com.patra.starter.provenance.common.provider;
 
+import com.patra.common.model.DataType;
+import com.patra.starter.provenance.common.processor.DataProcessor;
+
+import java.util.Optional;
+import java.util.Set;
+
 /**
  * 数据源提供者统一契约接口
  *
- * <p>本接口作为 Provenance Starter 提供的提供者框架，定义了数据源提供者的统一规范。
+ * <p>DataSourceProvider是Framework层的核心抽象，每个外部数据源（PubMed、DOAJ、Crossref等）
+ * 都有对应的Provider实现类。
  *
- * <p>Ingest 引擎通过此接口与各数据源交互，实现新数据源只需提供新的提供者实现，无需修改现有采集逻辑。
+ * <p><strong>核心特性</strong>：
+ * <ul>
+ *   <li>支持一对多：一个Provider可以支持多个DataType</li>
+ *   <li>泛型化：fetchData方法支持泛型返回类型</li>
+ *   <li>委托模式：Provider可以委托给DataProcessor处理</li>
+ *   <li>能力查询：getSupportedDataTypes()和supports()方法</li>
+ * </ul>
+ *
+ * <p><strong>架构角色</strong>：
+ * <ul>
+ *   <li>位于Framework层（patra-spring-boot-starter-provenance）</li>
+ *   <li>被DataSourceAdapter（Infrastructure层）调用</li>
+ *   <li>委托给DataProcessor（Framework层）处理</li>
+ * </ul>
  *
  * <p>提供者职责说明：
  *
@@ -15,23 +35,122 @@ package com.patra.starter.provenance.common.provider;
  *   <li>通过 {@link ProviderRegistry} 进行注册和发现
  * </ul>
  *
+ * <p><strong>使用示例</strong>：
+ * <pre>{@code
+ * // 实现Provider（支持多种数据类型）
+ * @Component
+ * public class PubmedDataSourceProvider implements DataSourceProvider {
+ *     private static final Set<DataType> SUPPORTED_TYPES = Set.of(
+ *         DataType.LITERATURE,
+ *         DataType.CITATION,
+ *         DataType.AUTHOR
+ *     );
+ *
+ *     @Override
+ *     public String getProvenanceCode() {
+ *         return "pubmed";
+ *     }
+ *
+ *     @Override
+ *     public Set<DataType> getSupportedDataTypes() {
+ *         return SUPPORTED_TYPES;
+ *     }
+ *
+ *     @Override
+ *     public <T> ProviderResult<T> fetchData(
+ *             ProviderRequest request,
+ *             DataType dataType,
+ *             Class<T> targetClass) {
+ *         // 委托给对应的Processor
+ *         DataProcessor<T> processor = getProcessor(dataType);
+ *         ProcessResult<T> result = processor.process(request, buildContext());
+ *         return convertToProviderResult(result);
+ *     }
+ * }
+ * }</pre>
+ *
  * <p><b>注意</b>：此接口位于 starter 包中，属于框架层抽象。
  * 如果需要在领域层定义端口（Port），请在对应的 domain 模块中定义。
+ *
+ * @author Patra Architecture Team
+ * @since 0.1.0
  */
 public interface DataSourceProvider {
 
   /**
-   * 返回此提供者服务的数据源代码
+   * 返回此提供者服务的数据源代码（唯一标识）
    *
-   * @return 唯一的数据源代码（如 {@code pubmed}、{@code epmc}）
+   * <p>数据源代码用于标识外部数据源，例如：
+   * <ul>
+   *   <li>"pubmed" - PubMed数据库</li>
+   *   <li>"doaj" - Directory of Open Access Journals</li>
+   *   <li>"crossref" - Crossref引用数据库</li>
+   *   <li>"drugbank" - DrugBank药品数据库</li>
+   * </ul>
+   *
+   * @return 唯一的数据源代码（小写，不含空格）
    */
   String getProvenanceCode();
 
   /**
-   * 执行数据检索和转换工作流
+   * 获取此Provider支持的所有数据类型
    *
-   * @param request 来自 Ingest 引擎的不可变请求载荷
-   * @return 描述结果、载荷和重试指导的结果对象
+   * <p>核心特性：一个Provider可以支持多个DataType。例如：
+   * <ul>
+   *   <li>PubMed支持：LITERATURE、CITATION、AUTHOR</li>
+   *   <li>DOAJ支持：JOURNAL</li>
+   *   <li>DrugBank支持：DRUG、DRUG_INTERACTION</li>
+   * </ul>
+   *
+   * @return 支持的数据类型集合（不可变）
    */
-  ProviderResult fetchData(ProviderRequest request);
+  Set<DataType> getSupportedDataTypes();
+
+  /**
+   * 判断是否支持指定的数据类型
+   *
+   * <p>默认实现：检查getSupportedDataTypes()是否包含指定类型
+   *
+   * @param dataType 数据类型
+   * @return 如果支持则返回true
+   */
+  default boolean supports(DataType dataType) {
+    return getSupportedDataTypes().contains(dataType);
+  }
+
+  /**
+   * 从数据源获取指定类型的数据
+   *
+   * <p><strong>实现策略</strong>：
+   * <ol>
+   *   <li>验证数据类型是否支持</li>
+   *   <li>委托给对应的DataProcessor处理</li>
+   *   <li>转换ProcessResult为ProviderResult</li>
+   *   <li>处理错误和异常</li>
+   * </ol>
+   *
+   * @param <T> 数据类型
+   * @param request 请求参数
+   * @param dataType 数据类型标识
+   * @param targetClass 目标类型（用于类型安全）
+   * @return Provider结果
+   */
+  <T> ProviderResult<T> fetchData(
+      ProviderRequest request,
+      DataType dataType,
+      Class<T> targetClass
+  );
+
+  /**
+   * 获取指定数据类型的Processor（可选方法）
+   *
+   * <p>此方法为可选实现，用于暴露内部的DataProcessor。
+   * 大多数情况下，Provider内部使用Processor，不需要暴露给外部。
+   *
+   * @param dataType 数据类型
+   * @return Processor实例（如果存在）
+   */
+  default Optional<DataProcessor<?>> getProcessor(DataType dataType) {
+    return Optional.empty();
+  }
 }

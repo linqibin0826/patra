@@ -1,6 +1,8 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
 import com.patra.common.model.CanonicalLiterature;
+import com.patra.common.model.DataType;
+import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
@@ -71,15 +73,19 @@ public class GenericBatchExecutor {
         context.runId());
 
     try {
-      // 调用数据源端口获取数据
-      DataFetchResult fetchResult = dataSourcePort.fetchData(context, batch);
+      // 调用数据源端口获取数据（默认获取LITERATURE类型）
+      // TODO: 未来从ExecutionContext或Batch中获取dataType
+      DataType dataType = DataType.LITERATURE;
+      TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+      DataFetchResult<CanonicalLiterature> fetchResult =
+          dataSourcePort.fetchData(context, dataType, typeRef, batch);
 
       if (!fetchResult.success()) {
         return handleFailure(context, batch, fetchResult, System.currentTimeMillis() - startAt);
       }
 
       LiteraturePublisherOrchestrator.PublishResult publishResult =
-          publishLiterature(context, batchNo, fetchResult.literatures());
+          publishLiterature(context, batchNo, fetchResult.data());
       logDataFetchWarnings(fetchResult, provenanceCode, batchNo);
 
       long duration = System.currentTimeMillis() - startAt;
