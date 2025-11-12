@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.integration.datasource;
 
+import cn.hutool.core.map.MapUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -166,7 +166,7 @@ public class DataSourceAdapter implements DataSourcePort {
      *
      * <p>确保DataType.getDataClass()与TypeReference.getRawType()一致。
      *
-     * <p><strong>特殊处理</strong>：支持List<T>泛型类型
+     * <p><strong>特殊处理</strong>：支持List<T>泛型类型（防御性处理）
      *
      * @param <T> 数据类型
      * @param dataType 数据类型标识
@@ -177,13 +177,18 @@ public class DataSourceAdapter implements DataSourcePort {
         Class<?> expectedClass = dataType.getDataClass();
         Class<?> actualClass = typeRef.getRawType();
 
-        // 处理List<T>类型
+        // 防御性处理：如果错误地传入了TypeReference<List<T>>，提取内部类型
+        // 正确用法应该是TypeReference<T>，而非TypeReference<List<T>>
         if (java.util.List.class.isAssignableFrom(actualClass)) {
             Type type = typeRef.getType();
-            if (type instanceof ParameterizedType) {
-                Type[] args = ((ParameterizedType) type).getActualTypeArguments();
-                if (args.length > 0 && args[0] instanceof Class) {
-                    actualClass = (Class<?>) args[0];
+            if (type instanceof ParameterizedType paramType) {
+                Type[] args = paramType.getActualTypeArguments();
+                if (args.length > 0 && args[0] instanceof Class<?> innerClass) {
+                    log.warn("检测到TypeReference<List<{}>>，应该使用TypeReference<{}>。" +
+                            "DataSourcePort.fetchData返回的DataFetchResult<T>中data字段已经是List<T>类型。",
+                        innerClass.getSimpleName(),
+                        dataType.getDataClass().getSimpleName());
+                    actualClass = innerClass;
                 }
             }
         }
@@ -194,6 +199,9 @@ public class DataSourceAdapter implements DataSourcePort {
                     expectedClass.getSimpleName(), actualClass.getSimpleName())
             );
         }
+
+        log.debug("类型验证通过: dataType={}, typeRef={}",
+            dataType, actualClass.getSimpleName());
     }
 
     /**
@@ -216,7 +224,13 @@ public class DataSourceAdapter implements DataSourcePort {
 
         return ProviderRequest.builder()
             .operationCode(context.operationCode())
-            .config(null)  // ProvenanceConfig会从DataSourceProvider内部的ProvenanceProperties获取
+            // config 设置为 null 的设计理由：
+            // 1. ProvenanceConfig 由 DataSourceProvider 内部从 ProvenanceProperties 获取
+            // 2. ExecutionContext.configSnapshot 是 Domain 层的 ProvenanceConfigSnapshot 类型，
+            //    主要用于执行审计和任务回放，而非运行时配置传递
+            // 3. 避免跨层类型转换（Domain → Starter），保持架构分层清晰
+            // 4. 当前设计已验证可行：Provider 内部通过 properties.mergeWithRuntime() 获取完整配置
+            .config(null)
             .executionParams(executionParams)
             .metadata(metadata)
             .build();
@@ -232,7 +246,8 @@ public class DataSourceAdapter implements DataSourcePort {
      * @return 参数JsonNode
      */
     private JsonNode buildParametersAsJson(ExecutionContext context, Batch batch) {
-        Map<String, Object> params = new HashMap<>();
+        // 使用MapUtil构建Map
+        Map<String, Object> params = MapUtil.<String, Object>newHashMap();
 
         // 从Context添加参数
         params.put("provenanceCode", context.provenanceCode());
@@ -243,6 +258,7 @@ public class DataSourceAdapter implements DataSourcePort {
         params.put("batchNo", batch.batchNo());
         params.put("pageSize", batch.pageSize());
 
+        // 条件添加cursorToken
         if (batch.cursorToken() != null) {
             params.put("cursorToken", batch.cursorToken());
         }

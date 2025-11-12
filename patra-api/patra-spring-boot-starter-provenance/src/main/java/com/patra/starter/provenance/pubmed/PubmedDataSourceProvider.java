@@ -49,7 +49,6 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <T> ProviderResult<T> fetchData(
       ProviderRequest request,
       DataType dataType,
@@ -60,36 +59,50 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
 
     log.info("PubMed provider start: operation={} batchNo={} dataType={}", operation, batchNo, dataType);
 
-    // 验证数据类型支持
-    if (!supports(dataType)) {
-      return (ProviderResult<T>) ProviderResult.nonRetriableFailure(
-          dataType,
-          "PubMed不支持数据类型: " + dataType + ", 仅支持: " + SUPPORTED_TYPES);
+    // 1. 验证类型一致性
+    if (!dataType.getDataClass().isAssignableFrom(targetClass)) {
+      String errorMsg = String.format(
+          "类型不匹配: DataType期望%s, 但提供了%s",
+          dataType.getDataClass().getSimpleName(),
+          targetClass.getSimpleName()
+      );
+      log.error(errorMsg);
+      return ProviderResult.nonRetriableFailure(dataType, errorMsg);
     }
 
-    try {
-      // 委托给 Processor 处理
-      ProviderContext context = ProviderContext.builder().build();
-      ProcessResult<CanonicalLiterature> processResult = literatureProcessor.process(request, context);
+    // 2. 根据dataType分派到对应的Processor
+    if (dataType == DataType.LITERATURE) {
+      try {
+        ProviderContext context = ProviderContext.builder().build();
+        ProcessResult<CanonicalLiterature> processResult = literatureProcessor.process(request, context);
+        ProviderResult<CanonicalLiterature> result = convertToProviderResult(processResult, dataType);
 
-      // 转换 ProcessResult 为 ProviderResult
-      ProviderResult<CanonicalLiterature> result = convertToProviderResult(processResult, dataType);
+        long duration = System.currentTimeMillis() - start;
+        log.info(
+            "PubMed provider completed: operation={} batchNo={} fetched={} duration={}ms",
+            operation,
+            batchNo,
+            result.fetchedCount(),
+            duration);
 
-      long duration = System.currentTimeMillis() - start;
-      log.info(
-          "PubMed provider completed: operation={} batchNo={} fetched={} duration={}ms",
-          operation,
-          batchNo,
-          result.fetchedCount(),
-          duration);
-      return (ProviderResult<T>) result;
-    } catch (Exception ex) {
-      long duration = System.currentTimeMillis() - start;
-      log.error("PubMed provider error: operation={} batchNo={} duration={}ms", operation, batchNo, duration, ex);
-      return (ProviderResult<T>) ProviderResult.nonRetriableFailure(
-          dataType,
-          "PubMed provider error: " + ex.getMessage());
+        @SuppressWarnings("unchecked")
+        ProviderResult<T> typedResult = (ProviderResult<T>) result;
+        return typedResult;
+      } catch (Exception ex) {
+        long duration = System.currentTimeMillis() - start;
+        log.error("PubMed provider error: operation={} batchNo={} duration={}ms", operation, batchNo, duration, ex);
+        return ProviderResult.nonRetriableFailure(
+            dataType,
+            "PubMed provider error: " + ex.getMessage());
+      }
     }
+
+    // 未来添加其他类型处理...
+    // if (dataType == DataType.AUTHOR) { ... }
+
+    String errorMsg = String.format("PubMed不支持数据类型: %s", dataType);
+    log.error(errorMsg);
+    return ProviderResult.nonRetriableFailure(dataType, errorMsg);
   }
 
   /**

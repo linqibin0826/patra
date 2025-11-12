@@ -1,5 +1,6 @@
 package com.patra.starter.provenance.common.provider;
 
+import cn.hutool.core.util.StrUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -58,7 +59,7 @@ public class ProviderRegistry {
     if (provenanceCode == null || provenanceCode.isBlank()) {
       return Optional.empty();
     }
-    String normalizedCode = normalize(provenanceCode);
+    String normalizedCode = normalizeProvenanceCode(provenanceCode);
     List<DataSourceProvider> candidates = providers.get(normalizedCode);
     if (candidates == null || candidates.isEmpty()) {
       return Optional.empty();
@@ -72,7 +73,7 @@ public class ProviderRegistry {
     if (provider == null) {
       return;
     }
-    String normalizedCode = normalize(provider.getProvenanceCode());
+    String normalizedCode = normalizeProvenanceCode(provider.getProvenanceCode());
     providers.compute(
         normalizedCode,
         (code, list) -> {
@@ -95,7 +96,15 @@ public class ProviderRegistry {
     return List.copyOf(combined);
   }
 
-  private String normalize(String provenanceCode) {
-    return provenanceCode == null ? "" : provenanceCode.trim().toLowerCase(Locale.ROOT);
+  /**
+   * 规范化数据源代码
+   *
+   * <p>将数据源代码转换为小写并去除空格，用于统一查找。
+   *
+   * @param provenanceCode 原始数据源代码
+   * @return 规范化后的代码
+   */
+  private String normalizeProvenanceCode(String provenanceCode) {
+    return StrUtil.emptyToDefault(StrUtil.trim(provenanceCode), "").toLowerCase(Locale.ROOT);
   }
 }

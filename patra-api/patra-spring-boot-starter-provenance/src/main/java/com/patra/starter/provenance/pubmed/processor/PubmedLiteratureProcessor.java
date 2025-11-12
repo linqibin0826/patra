@@ -27,12 +27,12 @@ import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import com.patra.starter.provenance.pubmed.model.response.PubmedArticle;
 import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -97,68 +97,30 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         log.info("PubMed Literature Processor start: operation={} batchNo={}", operation, batchNo);
 
         try {
-            // 1. 获取配置
-            ProvenanceConfig config = properties.mergeWithRuntime(PROVENANCE_CODE, request.config());
+            // 1. 准备处理上下文
+            ProcessingContext ctx = prepareProcessingContext(request, operation, batchNo);
 
-            // 2. 构建搜索参数
-            JsonNode searchParams = buildSearchParams(request);
-            ESearchRequest searchRequest = ESEARCH_ASSEMBLER.buildList(searchParams);
-
-            // 3. 执行搜索
-            ESearchResponse searchResponse = pubMedClient.esearch(searchRequest, config);
-            List<String> pmids = extractPmids(searchResponse);
-
-            if (pmids.isEmpty()) {
-                log.info(
-                        "PubMed Literature Processor empty result: operation={} batchNo={} duration={}ms",
-                        operation,
-                        batchNo,
-                        System.currentTimeMillis() - start);
-                return ProcessResult.success(List.of(), extractCursorToken(searchResponse));
+            // 2. 执行搜索并获取PMID列表
+            SearchResult searchResult = executeSearch(ctx);
+            if (searchResult.isEmpty()) {
+                return createEmptyResult(operation, batchNo, start, searchResult.cursor());
             }
 
-            // 4. 获取文章数据
-            List<PubmedArticle> articles = fetchArticles(pmids, config);
+            // 3. 获取文章数据
+            List<PubmedArticle> articles = fetchArticles(searchResult.pmids(), ctx.config());
 
-            // 5. 转换为标准格式
+            // 4. 转换为规范格式
             ConversionOutcome outcome = convertArticles(articles);
-            String nextCursor = extractCursorToken(searchResponse);
 
-            // 6. 构建结果
-            ProcessResult<CanonicalLiterature> result =
-                    outcome.failedPmids().isEmpty()
-                            ? ProcessResult.success(outcome.literatures(), nextCursor)
-                            : ProcessResult.partialSuccess(
-                                    outcome.literatures(),
-                                    nextCursor,
-                                    buildConversionWarning(outcome.failedPmids()));
-
-            log.info(
-                    "PubMed Literature Processor success: operation={} batchNo={} fetched={} attempted={} duration={}ms",
-                    operation,
-                    batchNo,
-                    result.data().size(),
-                    outcome.attempted(),
-                    System.currentTimeMillis() - start);
-
-            return result;
+            // 5. 构建并返回结果
+            return buildProcessResult(outcome, searchResult.cursor(), operation, batchNo, start);
 
         } catch (ProvenanceClientException ex) {
-            log.warn(
-                    "PubMed Literature Processor client error: operation={} batchNo={} status={} message={}",
-                    operation,
-                    batchNo,
-                    ex.getStatusCode(),
-                    ex.getMessage(),
-                    ex);
-            return ProcessResult.failure(classifyErrorMessage(ex));
+            return handleClientException(ex, operation, batchNo);
         } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            log.error("PubMed Literature Processor interrupted: operation={} batchNo={}", operation, batchNo, ex);
-            return ProcessResult.failure("PubMed processor interrupted");
+            return handleInterruptedException(ex, operation, batchNo);
         } catch (Exception ex) {
-            log.error("PubMed Literature Processor unexpected error: operation={} batchNo={}", operation, batchNo, ex);
-            return ProcessResult.failure("Unexpected PubMed error: " + ex.getMessage());
+            return handleUnexpectedException(ex, operation, batchNo);
         }
     }
 
@@ -171,10 +133,10 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         List<String> errors = new ArrayList<>();
 
         // 验证必填字段
-        if (data.getIdentifiers() == null || !StringUtils.hasText(data.getIdentifiers().get("pmid"))) {
+        if (data.getIdentifiers() == null || StrUtil.isBlank(data.getIdentifiers().get("pmid"))) {
             errors.add("PMID不能为空");
         }
-        if (!StringUtils.hasText(data.getTitle())) {
+        if (StrUtil.isBlank(data.getTitle())) {
             errors.add("标题不能为空");
         }
 
@@ -203,6 +165,135 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
     // ========== 私有辅助方法 ==========
 
     /**
+     * 准备处理上下文
+     */
+    private ProcessingContext prepareProcessingContext(
+            ProviderRequest request,
+            String operation,
+            int batchNo) {
+        ProvenanceConfig config = properties.mergeWithRuntime(PROVENANCE_CODE, request.config());
+        JsonNode searchParams = buildSearchParams(request);
+        ESearchRequest searchRequest = ESEARCH_ASSEMBLER.buildList(searchParams);
+
+        return new ProcessingContext(config, searchRequest, operation, batchNo);
+    }
+
+    /**
+     * 处理上下文记录
+     */
+    private record ProcessingContext(
+        ProvenanceConfig config,
+        ESearchRequest searchRequest,
+        String operation,
+        int batchNo
+    ) {}
+
+    /**
+     * 执行搜索并提取PMID列表
+     */
+    private SearchResult executeSearch(ProcessingContext ctx) {
+        ESearchResponse response = pubMedClient.esearch(ctx.searchRequest(), ctx.config());
+        List<String> pmids = extractPmids(response);
+        String cursor = extractCursorToken(response);
+
+        if (pmids.isEmpty()) {
+            log.info("PubMed ESearch 未找到结果");
+        } else {
+            log.debug("PubMed ESearch 找到 {} 个 PMID", pmids.size());
+        }
+
+        return new SearchResult(pmids, cursor);
+    }
+
+    /**
+     * 搜索结果记录
+     */
+    private record SearchResult(List<String> pmids, String cursor) {
+        boolean isEmpty() {
+            return pmids == null || pmids.isEmpty();
+        }
+    }
+
+    /**
+     * 创建空结果（未找到数据时）
+     */
+    private ProcessResult<CanonicalLiterature> createEmptyResult(
+            String operation,
+            int batchNo,
+            long startTime,
+            String cursor) {
+        log.info(
+            "PubMed Literature Processor empty result: operation={} batchNo={} duration={}ms",
+            operation, batchNo, System.currentTimeMillis() - startTime);
+        return ProcessResult.success(List.of(), cursor);
+    }
+
+    /**
+     * 构建处理结果
+     */
+    private ProcessResult<CanonicalLiterature> buildProcessResult(
+            ConversionOutcome outcome,
+            String nextCursor,
+            String operation,
+            int batchNo,
+            long startTime) {
+
+        ProcessResult<CanonicalLiterature> result = outcome.failedPmids().isEmpty()
+            ? ProcessResult.success(outcome.literatures(), nextCursor)
+            : ProcessResult.partialSuccess(
+                outcome.literatures(),
+                nextCursor,
+                buildConversionWarning(outcome.failedPmids()));
+
+        log.info(
+            "PubMed Literature Processor success: operation={} batchNo={} fetched={} attempted={} duration={}ms",
+            operation, batchNo, result.data().size(), outcome.attempted(),
+            System.currentTimeMillis() - startTime);
+
+        return result;
+    }
+
+    /**
+     * 处理客户端异常（HTTP错误、超时等）
+     */
+    private ProcessResult<CanonicalLiterature> handleClientException(
+            ProvenanceClientException ex,
+            String operation,
+            int batchNo) {
+        log.warn(
+            "PubMed Literature Processor client error: operation={} batchNo={} status={} message={}",
+            operation, batchNo, ex.getStatusCode(), ex.getMessage(), ex);
+        return ProcessResult.failure(formatErrorMessage(ex));
+    }
+
+    /**
+     * 处理中断异常（任务取消或超时）
+     */
+    private ProcessResult<CanonicalLiterature> handleInterruptedException(
+            InterruptedException ex,
+            String operation,
+            int batchNo) {
+        Thread.currentThread().interrupt();
+        log.error(
+            "PubMed Literature Processor interrupted: operation={} batchNo={}",
+            operation, batchNo, ex);
+        return ProcessResult.failure("PubMed processor interrupted");
+    }
+
+    /**
+     * 处理未预期的异常（代码Bug或系统错误）
+     */
+    private ProcessResult<CanonicalLiterature> handleUnexpectedException(
+            Exception ex,
+            String operation,
+            int batchNo) {
+        log.error(
+            "PubMed Literature Processor unexpected error: operation={} batchNo={}",
+            operation, batchNo, ex);
+        return ProcessResult.failure("Unexpected PubMed error: " + ex.getMessage());
+    }
+
+    /**
      * 构建搜索参数
      */
     private JsonNode buildSearchParams(ProviderRequest request) {
@@ -210,7 +301,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         JsonNode params = exec.params();
         String query = exec.query();
 
-        if (!StringUtils.hasText(query)) {
+        if (StrUtil.isBlank(query)) {
             return params;
         }
 
@@ -229,10 +320,10 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      */
     private List<String> extractPmids(ESearchResponse response) {
         if (response == null || response.result() == null) {
-            return List.of();
+            return CollUtil.newArrayList();
         }
         List<String> idList = response.result().idList();
-        return CollectionUtils.isEmpty(idList) ? List.of() : idList;
+        return CollUtil.isEmpty(idList) ? CollUtil.newArrayList() : idList;
     }
 
     /**
@@ -277,11 +368,11 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      * 直接通过EFetch获取文章
      */
     private List<PubmedArticle> fetchArticlesDirectly(List<String> pmids, ProvenanceConfig config) {
-        String idParam = String.join(",", pmids);
+        String idParam = StrUtil.join(",", pmids);
         log.debug("PubMed direct EFetch start: count={}", pmids.size());
         EFetchRequest request = new EFetchRequest(PROVENANCE_CODE, idParam);
         EFetchResponse response = pubMedClient.efetch(request, config);
-        List<PubmedArticle> articles = response != null ? response.articles() : List.of();
+        List<PubmedArticle> articles = response != null ? response.articles() : CollUtil.newArrayList();
         log.debug("PubMed direct EFetch completed: returned={}", articles.size());
         return articles;
     }
@@ -294,7 +385,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         log.info("PubMed EPost strategy triggered: count={}", pmids.size());
 
         // 1. EPost: 上传ID列表
-        String idParam = String.join(",", pmids);
+        String idParam = StrUtil.join(",", pmids);
         EPostRequest postRequest = new EPostRequest(PROVENANCE_CODE, idParam, null, null, null);
         EPostResponse postResponse = pubMedClient.epost(postRequest, config);
 
@@ -329,7 +420,7 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         // Gentle delay per NCBI recommendation
         TimeUnit.MILLISECONDS.sleep(600L);
 
-        List<PubmedArticle> articles = response != null ? response.articles() : List.of();
+        List<PubmedArticle> articles = response != null ? response.articles() : CollUtil.newArrayList();
         log.debug("PubMed EPost EFetch completed: returned={}", articles.size());
         return articles;
     }
@@ -338,8 +429,8 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
      * 转换文章列表为标准格式
      */
     private ConversionOutcome convertArticles(List<PubmedArticle> articles) {
-        if (CollectionUtils.isEmpty(articles)) {
-            return new ConversionOutcome(List.of(), 0, List.of());
+        if (CollUtil.isEmpty(articles)) {
+            return new ConversionOutcome(CollUtil.newArrayList(), 0, CollUtil.newArrayList());
         }
 
         List<CanonicalLiterature> literatures = new ArrayList<>();
@@ -387,22 +478,24 @@ public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterat
         if (failedPmids.isEmpty()) {
             return null;
         }
-        List<String> sample =
-                failedPmids.subList(0, Math.min(failedPmids.size(), WARNING_ID_SAMPLE_LIMIT));
-        if (failedPmids.size() <= WARNING_ID_SAMPLE_LIMIT) {
-            return "Conversion failed for pmid(s): " + String.join(",", sample);
+        int sampleSize = Math.min(failedPmids.size(), WARNING_ID_SAMPLE_LIMIT);
+        List<String> sample = CollUtil.sub(failedPmids, 0, sampleSize);
+        String message = StrUtil.format("Conversion failed for pmid(s): {}", StrUtil.join(",", sample));
+        if (failedPmids.size() > WARNING_ID_SAMPLE_LIMIT) {
+            message += StrUtil.format(" +{} more", failedPmids.size() - sampleSize);
         }
-        return "Conversion failed for pmid(s): "
-                + String.join(",", sample)
-                + " +"
-                + (failedPmids.size() - sample.size())
-                + " more";
+        return message;
     }
 
     /**
-     * 分类客户端异常消息
+     * 格式化客户端异常消息
+     *
+     * <p>根据HTTP状态码将异常转换为用户友好的错误消息。
+     *
+     * @param ex 客户端异常
+     * @return 格式化的错误消息
      */
-    private String classifyErrorMessage(ProvenanceClientException ex) {
+    private String formatErrorMessage(ProvenanceClientException ex) {
         Integer status = ex.getStatusCode();
         if (status == null) {
             return "PubMed client error: " + ex.getMessage();
