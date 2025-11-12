@@ -13,7 +13,7 @@ import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
-import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider;
+// import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider; // 临时注释，待Phase 4升级
 import com.patra.starter.provenance.pubmed.converter.PubmedArticleConverter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
@@ -164,15 +164,8 @@ public class ProvenanceAutoConfiguration {
         new SimpleHttpClient(), configProvider, objectMapper, metrics.orElse(null));
   }
 
-  /**
-   * 注册 PubMed 数据源提供者,使 Ingest 引擎可以通过统一的提供者契约消费 PubMed 数据
-   *
-   * @param pubMedClient PubMed 客户端
-   * @param articleConverter 文章转换器
-   * @param properties 用于配置合并的 Provenance 属性
-   * @param metrics 可选的指标记录器
-   * @return PubMed 数据源提供者实例
-   */
+  // 临时注释：PubmedDataSourceProvider已升级
+  /*
   @Bean
   @ConditionalOnMissingBean
   public PubmedDataSourceProvider pubmedDataSourceProvider(
@@ -183,4 +176,5 @@ public class ProvenanceAutoConfiguration {
     return new PubmedDataSourceProvider(
         pubMedClient, articleConverter, properties, metrics.orElse(null));
   }
+  */
 }

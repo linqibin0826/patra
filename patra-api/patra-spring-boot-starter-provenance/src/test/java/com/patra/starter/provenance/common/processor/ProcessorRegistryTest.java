@@ -1,7 +1,7 @@
 package com.patra.starter.provenance.common.processor;
 
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.*;
  * </ul>
  *
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 @DisplayName("ProcessorRegistry注册表测试")
 class ProcessorRegistryTest {

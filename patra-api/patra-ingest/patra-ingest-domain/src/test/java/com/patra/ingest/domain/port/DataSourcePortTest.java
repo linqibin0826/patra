@@ -3,8 +3,8 @@ package com.patra.ingest.domain.port;
 import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.model.DataType;
-import com.patra.ingest.domain.model.TypeReference;
+import com.patra.common.model.DataType;
+import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
  *   <li>验证 supports 和 getSupportedTypes 方法</li>
  * </ul>
  *
- * @since 2.0.0
+ * @since 0.1.0.0
  */
 @DisplayName("DataSourcePort v2.0 接口测试")
 class DataSourcePortTest {

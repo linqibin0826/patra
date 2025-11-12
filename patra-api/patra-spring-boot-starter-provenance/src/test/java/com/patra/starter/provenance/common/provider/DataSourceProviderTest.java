@@ -1,7 +1,7 @@
 package com.patra.starter.provenance.common.provider;
 
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.processor.DataProcessor;
 import com.patra.starter.provenance.common.processor.ProcessResult;
 import com.patra.starter.provenance.common.processor.ProviderContext;
@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -30,7 +31,7 @@ import static org.assertj.core.api.Assertions.*;
  * </ol>
  *
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 @DisplayName("DataSourceProvider接口测试")
 class DataSourceProviderTest {
@@ -431,22 +432,24 @@ class DataSourceProviderTest {
     private static ProviderRequest createMockRequest() {
         return ProviderRequest.builder()
             .operationCode("HARVEST")
-            .executionParams(BatchExecutionParams.builder()
-                .query("test")
-                .build())
-            .metadata(BatchMetadata.builder()
-                .batchNumber(1)
-                .build())
+            .executionParams(new BatchExecutionParams("test", null))
+            .metadata(BatchMetadata.first())
             .build();
     }
 
     /**
      * 创建Mock文献
      */
-    private static CanonicalLiterature createMockLiterature(String pmid) {
+    private static CanonicalLiterature createMockLiterature(String identifier) {
+        // CanonicalLiterature使用Builder模式
         return CanonicalLiterature.builder()
-            .pmid(pmid)
             .title("Test Literature")
+            .abstractText("Test Abstract")
+            .authors(List.of())
+            .journal(null)
+            .identifiers(Map.of("PMID", identifier))
+            .publicationDate(null)
+            .keywords(List.of())
             .build();
     }
 }

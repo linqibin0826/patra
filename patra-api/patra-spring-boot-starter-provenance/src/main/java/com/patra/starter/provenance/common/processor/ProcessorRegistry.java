@@ -1,6 +1,6 @@
 package com.patra.starter.provenance.common.processor;
 
-import com.patra.ingest.domain.model.DataType;
+import com.patra.common.model.DataType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -58,7 +58,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * </pre>
  *
  * @author Patra Architecture Team
- * @since v2.0
+ * @since 0.1.0
  */
 @Component
 @Slf4j

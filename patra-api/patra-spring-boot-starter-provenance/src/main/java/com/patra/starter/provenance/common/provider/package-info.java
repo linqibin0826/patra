@@ -44,11 +44,23 @@
  *     }
  *
  *     @Override
- *     public ProviderResult fetchData(ProviderRequest request) {
- *         // 1. 调用外部 API
- *         // 2. 转换为 CanonicalLiterature
- *         // 3. 包装为 ProviderResult 返回
- *         return ProviderResult.success(literatures);
+ *     public Set<DataType> getSupportedDataTypes() {
+ *         return Set.of(DataType.LITERATURE, DataType.CITATION);
+ *     }
+ *
+ *     @Override
+ *     public <T> ProviderResult<T> fetchData(
+ *             ProviderRequest request,
+ *             DataType dataType,
+ *             Class<T> targetClass) {
+ *         // 1. 检查数据类型支持
+ *         if (!supports(dataType)) {
+ *             return ProviderResult.failure(dataType, "不支持的数据类型", ErrorType.NON_RETRIABLE);
+ *         }
+ *         // 2. 调用外部 API
+ *         // 3. 转换为目标类型
+ *         // 4. 包装为泛型 ProviderResult 返回
+ *         return ProviderResult.success(data, dataType, nextCursor);
  *     }
  * }
  * }</pre>
@@ -61,13 +73,17 @@
  * public class IngestOrchestrator {
  *     private final ProviderRegistry registry;
  *
- *     public void ingest(String provenanceCode) {
+ *     public <T> void ingest(String provenanceCode, DataType dataType, Class<T> targetClass) {
  *         DataSourceProvider provider = registry.getProvider(provenanceCode);
  *         ProviderRequest request = ProviderRequest.builder()
  *             .provenanceCode(provenanceCode)
  *             .build();
- *         ProviderResult result = provider.fetchData(request);
- *         // 处理结果...
+ *         ProviderResult<T> result = provider.fetchData(request, dataType, targetClass);
+ *         // 类型安全地处理结果...
+ *         if (result.success()) {
+ *             List<T> data = result.data();
+ *             // 处理泛型数据
+ *         }
  *     }
  * }
  * }</pre>

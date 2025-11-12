@@ -21,7 +21,7 @@ class MessageOperationsTest {
       String value = MessageOperations.TASK_READY;
 
       // Then
-      assertThat(value).isEqualTo("TASK_READY");
+      assertThat(value).isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -41,7 +41,7 @@ class MessageOperationsTest {
       String value = MessageOperations.LITERATURE_READY;
 
       // Then
-      assertThat(value).isEqualTo("LITERATURE_READY");
+      assertThat(value).isEqualTo("INGEST_LITERATURE_READY");
     }
   }
 
@@ -176,7 +176,7 @@ class MessageOperationsTest {
       // Then
       assertThat(operation)
           .as("任务就绪操作应该明确表达任务已创建并等待执行的语义")
-          .isEqualTo("TASK_READY");
+          .isEqualTo("INGEST_TASK_READY");
     }
 
     @Test
@@ -200,7 +200,7 @@ class MessageOperationsTest {
       // Then
       assertThat(operation)
           .as("文献就绪操作应该明确表达文献数据已准备就绪的语义")
-          .isEqualTo("LITERATURE_READY");
+          .isEqualTo("INGEST_LITERATURE_READY");
     }
   }
 
@@ -247,18 +247,18 @@ class MessageOperationsTest {
   class OperationTypeClassification {
 
     @Test
-    @DisplayName("任务相关操作应该包含 TASK 前缀")
-    void taskOperationsShouldContainTaskPrefix() {
+    @DisplayName("任务相关操作应该包含 INGEST 前缀和 TASK 标识")
+    void taskOperationsShouldContainIngestPrefixAndTaskIdentifier() {
       // Then
-      assertThat(MessageOperations.TASK_READY).startsWith("TASK");
+      assertThat(MessageOperations.TASK_READY).startsWith("INGEST").contains("TASK");
       assertThat(MessageOperations.TASK_COMPLETED).startsWith("TASK");
     }
 
     @Test
-    @DisplayName("文献相关操作应该包含 LITERATURE 前缀")
-    void literatureOperationsShouldContainLiteraturePrefix() {
+    @DisplayName("文献相关操作应该包含 INGEST 前缀和 LITERATURE 标识")
+    void literatureOperationsShouldContainIngestPrefixAndLiteratureIdentifier() {
       // Then
-      assertThat(MessageOperations.LITERATURE_READY).startsWith("LITERATURE");
+      assertThat(MessageOperations.LITERATURE_READY).startsWith("INGEST").contains("LITERATURE");
     }
 
     @Test

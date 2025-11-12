@@ -10,11 +10,6 @@
  *   <li>{@link com.patra.ingest.domain.model.snapshot} - 配置快照（ProvenanceConfigSnapshot）</li>
  * </ul>
  *
- * <h2>核心类型</h2>
- * <ul>
- *   <li>{@link com.patra.ingest.domain.model.DataType} - 数据类型枚举，定义系统支持的所有数据类型</li>
- * </ul>
- *
  * <h2>设计原则</h2>
  * <ul>
  *   <li><strong>纯Java</strong>：本包不依赖任何框架（Spring、MyBatis、JPA）</li>

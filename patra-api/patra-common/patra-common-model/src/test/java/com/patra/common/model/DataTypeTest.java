@@ -1,4 +1,4 @@
-package com.patra.ingest.domain.model;
+package com.patra.common.model;
 
 import com.patra.common.model.CanonicalLiterature;
 import org.junit.jupiter.api.DisplayName;
