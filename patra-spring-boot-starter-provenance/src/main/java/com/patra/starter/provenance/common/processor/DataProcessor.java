@@ -19,7 +19,7 @@ import com.patra.starter.provenance.common.provider.ProviderRequest;
  * <p><strong>职责</strong>：
  * <ul>
  *   <li>处理特定数据类型的数据获取流程（ESearch/EFetch等）</li>
- *   <li>转换原始数据为领域模型（如PubmedArticle → CanonicalLiterature）</li>
+ *   <li>转换原始数据为领域模型（如PubmedLiterature → CanonicalLiterature）</li>
  *   <li>验证数据完整性和正确性</li>
  * </ul>
  *
@@ -125,7 +125,7 @@ public interface DataProcessor<T> {
     /**
      * 转换原始数据为目标类型
      *
-     * <p>将外部API返回的原始数据（如PubmedArticle、DoajJournal）
+     * <p>将外部API返回的原始数据（如PubmedLiterature、DoajJournal）
      * 转换为领域模型（如CanonicalLiterature、Journal）。
      *
      * @param rawData 原始数据

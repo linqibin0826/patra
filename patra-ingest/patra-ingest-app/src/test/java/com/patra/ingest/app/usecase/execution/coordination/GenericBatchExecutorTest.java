@@ -368,7 +368,12 @@ class GenericBatchExecutorTest {
             i ->
                 CanonicalLiterature.builder()
                     .title("Test Literature " + i)
-                    .identifiers(Map.of("sourceId", "PMID-" + (1000 + i)))
+                    .identifiers(
+                        List.of(
+                            CanonicalLiterature.Identifier.builder()
+                                .type("pmid")
+                                .value("PMID-" + (1000 + i))
+                                .build()))
                     .build())
         .toList();
   }

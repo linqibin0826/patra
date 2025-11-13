@@ -15,13 +15,13 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link PubmedArticleConverter} - PubMed 文章转换器
+ *   <li>{@link PubmedLiteratureConverter} - PubMed 文章转换器
  * </ul>
  *
  * <h2>转换逻辑</h2>
  *
  * <pre>
- * PubmedArticle (PubMed 模型)
+ * PubmedLiterature (PubMed 模型)
  * ├── PMID → CanonicalLiterature.pmid
  * ├── Article
  * │   ├── ArticleTitle → title
@@ -41,8 +41,8 @@
  * <h2>使用示例</h2>
  *
  * <pre>{@code
- * PubmedArticleConverter converter = new PubmedArticleConverter();
- * PubmedArticle article = ...; // 从 EFetch 响应获取
+ * PubmedLiteratureConverter converter = new PubmedLiteratureConverter();
+ * PubmedLiterature article = ...; // 从 EFetch 响应获取
  * CanonicalLiterature literature = converter.convert(article);
  * }</pre>
  *

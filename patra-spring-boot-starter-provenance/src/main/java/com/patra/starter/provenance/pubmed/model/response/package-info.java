@@ -14,18 +14,24 @@
  * <h2>核心模型</h2>
  *
  * <ul>
- *   <li>{@link PubmedArticle} - 文章完整模型
- *   <li>{@link Article} - 文章基本信息
- *   <li>{@link Journal} - 期刊信息
- *   <li>{@link Author} - 作者信息
- *   <li>{@link MedlineJournalInfo} - Medline 期刊信息
- *   <li>{@link PubmedData} - PubMed 元数据
+ *   <li>{@link PubmedLiterature} - 文章完整模型（聚合根）
+ *       <ul>
+ *         <li>{@link PubmedLiterature.Article} - 文章基本信息
+ *         <li>{@link PubmedLiterature.Journal} - 期刊信息
+ *         <li>{@link PubmedLiterature.Author} - 作者信息
+ *         <li>{@link PubmedLiterature.MedlineJournalInfo} - Medline 期刊信息
+ *         <li>{@link PubmedLiterature.PubmedData} - PubMed 元数据
+ *       </ul>
+ *   </li>
  * </ul>
+ *
+ * <p>注意：Article、Journal、Author、MedlineJournalInfo、PubmedData
+ * 现在都是 PubmedLiterature 的内部类，作为聚合根的值对象存在。
  *
  * <h2>XML 映射示例</h2>
  *
  * <pre>{@code
- * <PubmedArticle>
+ * <PubmedLiterature>
  *   <MedlineCitation>
  *     <PMID>12345678</PMID>
  *     <Article>
@@ -44,7 +50,7 @@
  *       <ArticleId IdType="doi">10.1234/example</ArticleId>
  *     </ArticleIdList>
  *   </PubmedData>
- * </PubmedArticle>
+ * </PubmedLiterature>
  * }</pre>
  *
  * @since 0.1.0

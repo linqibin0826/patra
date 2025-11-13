@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -179,7 +180,7 @@ public class DataSourceAdapter implements DataSourcePort {
 
         // 防御性处理：如果错误地传入了TypeReference<List<T>>，提取内部类型
         // 正确用法应该是TypeReference<T>，而非TypeReference<List<T>>
-        if (java.util.List.class.isAssignableFrom(actualClass)) {
+        if (List.class.isAssignableFrom(actualClass)) {
             Type type = typeRef.getType();
             if (type instanceof ParameterizedType paramType) {
                 Type[] args = paramType.getActualTypeArguments();

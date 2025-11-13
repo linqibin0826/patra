@@ -444,11 +444,18 @@ class DataSourceProviderTest {
         // CanonicalLiterature使用Builder模式
         return CanonicalLiterature.builder()
             .title("Test Literature")
-            .abstractText("Test Abstract")
+            .abstractContent(CanonicalLiterature.Abstract.builder()
+                .text("Test Abstract")
+                .build())
             .authors(List.of())
             .journal(null)
-            .identifiers(Map.of("PMID", identifier))
-            .publicationDate(null)
+            .identifiers(List.of(
+                CanonicalLiterature.Identifier.builder()
+                    .type("PMID")
+                    .value(identifier)
+                    .build()
+            ))
+            .dates(null)
             .keywords(List.of())
             .build();
     }

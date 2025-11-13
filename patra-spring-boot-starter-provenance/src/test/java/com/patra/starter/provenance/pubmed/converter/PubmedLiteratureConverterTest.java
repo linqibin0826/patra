@@ -4,26 +4,26 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.starter.provenance.pubmed.model.response.PubmedArticle;
+import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * PubmedArticleConverter 单元测试
+ * PubmedLiteratureConverter 单元测试
  *
  * @author linqibin
  */
-@DisplayName("PubmedArticleConverter 测试")
-class PubmedArticleConverterTest {
+@DisplayName("PubmedLiteratureConverter 测试")
+class PubmedLiteratureConverterTest {
 
-  private PubmedArticleConverter converter;
+  private PubmedLiteratureConverter converter;
   private XmlMapper xmlMapper;
 
   @BeforeEach
   void setUp() {
-    converter = new PubmedArticleConverter();
+    converter = new PubmedLiteratureConverter();
     xmlMapper = new XmlMapper();
   }
 
@@ -43,7 +43,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>12345678</PMID>
             <Article>
@@ -91,9 +91,9 @@ class PubmedArticleConverterTest {
               <ArticleId IdType="pmc">PMC1234567</ArticleId>
             </ArticleIdList>
           </PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
@@ -101,21 +101,31 @@ class PubmedArticleConverterTest {
     // Assert
     assertThat(result).isNotNull();
     assertThat(result.getTitle()).isEqualTo("Test Article Title");
-    assertThat(result.getAbstractText())
+    assertThat(result.getAbstractContent()).isNotNull();
+    assertThat(result.getAbstractContent().getText())
         .isEqualTo("BACKGROUND: Background text\nMETHODS: Methods text");
+    assertThat(result.getAbstractContent().getSections()).hasSize(2);
     assertThat(result.getAuthors()).hasSize(2);
     assertThat(result.getAuthors().get(0).getLastName()).isEqualTo("Smith");
     assertThat(result.getAuthors().get(0).getForeName()).isEqualTo("John");
-    assertThat(result.getAuthors().get(0).getAffiliation()).isEqualTo("University A");
+    assertThat(result.getAuthors().get(0).getAffiliations()).hasSize(1);
+    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName()).isEqualTo("University A");
     assertThat(result.getAuthors().get(1).getLastName()).isEqualTo("Doe");
     assertThat(result.getJournal()).isNotNull();
     assertThat(result.getJournal().getTitle()).isEqualTo("Medical Journal");
     assertThat(result.getJournal().getIssn()).isEqualTo("1234-5678");
-    assertThat(result.getIdentifiers()).containsEntry("pmid", "12345678");
-    assertThat(result.getIdentifiers()).containsEntry("doi", "10.1234/test.2023.001");
-    assertThat(result.getIdentifiers()).containsEntry("pmc", "PMC1234567");
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 12, 15));
-    assertThat(result.getKeywords()).containsExactly("cancer", "treatment");
+    assertThat(result.getIdentifiers()).hasSize(3);
+    assertThat(result.getIdentifiers()).extracting("type", "value")
+        .contains(
+            tuple("pmid", "12345678"),
+            tuple("doi", "10.1234/test.2023.001"),
+            tuple("pmc", "PMC1234567"));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 12, 15));
+    assertThat(result.getKeywords()).hasSize(1);
+    assertThat(result.getKeywords().get(0).getKeywords())
+        .extracting("term")
+        .containsExactly("cancer", "treatment");
   }
 
   @Test
@@ -124,7 +134,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999999</PMID>
             <Article>
@@ -133,9 +143,9 @@ class PubmedArticleConverterTest {
           </MedlineCitation>
           <PubmedData>
           </PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
@@ -143,12 +153,14 @@ class PubmedArticleConverterTest {
     // Assert
     assertThat(result).isNotNull();
     assertThat(result.getTitle()).isEqualTo("Minimal Article");
-    assertThat(result.getAbstractText()).isNull();
+    assertThat(result.getAbstractContent()).isNull();
     assertThat(result.getAuthors()).isEmpty();
     assertThat(result.getJournal()).isNull();
-    assertThat(result.getIdentifiers()).containsEntry("pmid", "99999999");
-    assertThat(result.getPublicationDate()).isNull();
-    assertThat(result.getKeywords()).isEmpty();
+    assertThat(result.getIdentifiers()).hasSize(1);
+    assertThat(result.getIdentifiers().get(0).getType()).isEqualTo("pmid");
+    assertThat(result.getIdentifiers().get(0).getValue()).isEqualTo("99999999");
+    assertThat(result.getDates()).isNull();
+    assertThat(result.getKeywords()).isNull();
   }
 
   @Test
@@ -157,7 +169,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>11111111</PMID>
             <Article>
@@ -168,15 +180,16 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getAbstractText()).isEqualTo("Simple abstract without labels.");
+    assertThat(result.getAbstractContent()).isNotNull();
+    assertThat(result.getAbstractContent().getText()).isEqualTo("Simple abstract without labels.");
   }
 
   @Test
@@ -185,7 +198,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>22222222</PMID>
             <Article>
@@ -195,15 +208,15 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getAbstractText()).isNull();
+    assertThat(result.getAbstractContent()).isNull();
   }
 
   @Test
@@ -212,7 +225,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>33333333</PMID>
             <Article>
@@ -226,9 +239,9 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
@@ -237,7 +250,7 @@ class PubmedArticleConverterTest {
     assertThat(result.getAuthors()).hasSize(1);
     assertThat(result.getAuthors().get(0).getLastName()).isEqualTo("Brown");
     assertThat(result.getAuthors().get(0).getForeName()).isEqualTo("Alice");
-    assertThat(result.getAuthors().get(0).getAffiliation()).isNull();
+    assertThat(result.getAuthors().get(0).getAffiliations()).isNull();
   }
 
   @Test
@@ -246,7 +259,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>44444444</PMID>
             <Article>
@@ -258,9 +271,9 @@ class PubmedArticleConverterTest {
             </MedlineJournalInfo>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
@@ -277,7 +290,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>55555555</PMID>
             <Article>
@@ -298,9 +311,9 @@ class PubmedArticleConverterTest {
             </MedlineJournalInfo>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
@@ -317,7 +330,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>66666666</PMID>
             <Article>
@@ -331,18 +344,20 @@ class PubmedArticleConverterTest {
               <ArticleId IdType="pubmed">66666666</ArticleId>
             </ArticleIdList>
           </PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
     assertThat(result.getIdentifiers()).hasSize(3);
-    assertThat(result.getIdentifiers()).containsEntry("pmid", "66666666");
-    assertThat(result.getIdentifiers()).containsEntry("doi", "10.9999/example");
-    assertThat(result.getIdentifiers()).containsEntry("pmc", "PMC9999999");
+    assertThat(result.getIdentifiers()).extracting("type", "value")
+        .contains(
+            tuple("pmid", "66666666"),
+            tuple("doi", "10.9999/example"),
+            tuple("pmc", "PMC9999999"));
   }
 
   @Test
@@ -351,7 +366,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>77777777</PMID>
             <Article>
@@ -363,15 +378,16 @@ class PubmedArticleConverterTest {
               <ArticleId IdType="pmc">PMC7777777</ArticleId>
             </ArticleIdList>
           </PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getIdentifiers()).containsEntry("pmc", "PMC7777777");
+    assertThat(result.getIdentifiers()).extracting("type", "value")
+        .contains(tuple("pmc", "PMC7777777"));
   }
 
   @Test
@@ -380,7 +396,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>88888888</PMID>
             <Article>
@@ -395,15 +411,16 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2022, 1, 1));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2022, 1, 1));
   }
 
   @Test
@@ -412,7 +429,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999990</PMID>
             <Article>
@@ -428,15 +445,16 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2021, 6, 1));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2021, 6, 1));
   }
 
   @Test
@@ -445,7 +463,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999991</PMID>
             <Article>
@@ -462,15 +480,16 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2020, 3, 25));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2020, 3, 25));
   }
 
   @Test
@@ -479,7 +498,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999992</PMID>
             <Article>
@@ -494,15 +513,15 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isNull();
+    assertThat(result.getDates()).isNull();
   }
 
   @Test
@@ -511,7 +530,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999993</PMID>
             <Article>
@@ -527,15 +546,16 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 12, 1));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 12, 1));
   }
 
   @Test
@@ -544,7 +564,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999994</PMID>
             <Article>
@@ -561,15 +581,16 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 1, 28));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 1, 28));
   }
 
   @Test
@@ -578,7 +599,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999995</PMID>
             <Article>
@@ -591,15 +612,18 @@ class PubmedArticleConverterTest {
             </KeywordList>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getKeywords()).containsExactly("valid keyword", "another valid");
+    assertThat(result.getKeywords()).hasSize(1);
+    assertThat(result.getKeywords().get(0).getKeywords())
+        .extracting("term")
+        .containsExactly("valid keyword", "another valid");
   }
 
   @Test
@@ -608,7 +632,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999996</PMID>
             <Article>
@@ -618,15 +642,15 @@ class PubmedArticleConverterTest {
             </KeywordList>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getKeywords()).isEmpty();
+    assertThat(result.getKeywords()).isNull();
   }
 
   @Test
@@ -636,7 +660,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999997</PMID>
             <Article>
@@ -656,16 +680,18 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
     assertThat(result.getAuthors()).hasSize(1);
-    assertThat(result.getAuthors().get(0).getAffiliation()).isEqualTo("First Affiliation");
+    assertThat(result.getAuthors().get(0).getAffiliations()).hasSize(2);
+    assertThat(result.getAuthors().get(0).getAffiliations().get(0).getName()).isEqualTo("First Affiliation");
+    assertThat(result.getAuthors().get(0).getAffiliations().get(1).getName()).isEqualTo("Second Affiliation");
   }
 
   @Test
@@ -674,7 +700,7 @@ class PubmedArticleConverterTest {
     // Arrange
     String xml =
         """
-        <PubmedArticle>
+        <PubmedLiterature>
           <MedlineCitation>
             <PMID>99999998</PMID>
             <Article>
@@ -690,14 +716,15 @@ class PubmedArticleConverterTest {
             </Article>
           </MedlineCitation>
           <PubmedData></PubmedData>
-        </PubmedArticle>
+        </PubmedLiterature>
         """;
-    PubmedArticle article = xmlMapper.readValue(xml, PubmedArticle.class);
+    PubmedLiterature article = xmlMapper.readValue(xml, PubmedLiterature.class);
 
     // Act
     CanonicalLiterature result = converter.toCanonicalLiterature(article);
 
     // Assert
-    assertThat(result.getPublicationDate()).isEqualTo(LocalDate.of(2023, 1, 1));
+    assertThat(result.getDates()).isNotNull();
+    assertThat(result.getDates().getPublished()).isEqualTo(LocalDate.of(2023, 1, 1));
   }
 }

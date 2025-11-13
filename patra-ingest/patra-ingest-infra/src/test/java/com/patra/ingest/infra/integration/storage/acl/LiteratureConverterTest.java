@@ -6,8 +6,6 @@ import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.common.model.CanonicalLiterature.AuthorInfo;
-import com.patra.common.model.CanonicalLiterature.JournalInfo;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,36 +45,58 @@ class LiteratureConverterTest {
     @DisplayName("应该正确转换包含所有字段的完整文献")
     void shouldConvertCompleteLiterature() {
       // Given: 创建完整的 CanonicalLiterature
-      AuthorInfo author1 =
-          AuthorInfo.builder()
+      CanonicalLiterature.Author author1 =
+          CanonicalLiterature.Author.builder()
               .lastName("Smith")
               .foreName("John")
-              .affiliation("Harvard Medical School")
+              .initials("JD")
+              .affiliations(List.of(
+                  CanonicalLiterature.Affiliation.builder()
+                      .name("Harvard Medical School")
+                      .build()))
               .build();
 
-      AuthorInfo author2 =
-          AuthorInfo.builder()
+      CanonicalLiterature.Author author2 =
+          CanonicalLiterature.Author.builder()
               .lastName("Johnson")
               .foreName("Mary")
-              .affiliation("Stanford University")
+              .affiliations(List.of(
+                  CanonicalLiterature.Affiliation.builder()
+                      .name("Stanford University")
+                      .build()))
               .build();
 
-      JournalInfo journal =
-          JournalInfo.builder()
+      CanonicalLiterature.Journal journal =
+          CanonicalLiterature.Journal.builder()
               .title("Nature Medicine")
               .issn("1078-8956")
+              .issnType("electronic")
               .publisher("Nature Publishing Group")
+              .country("US")
               .build();
 
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Novel Approaches to Cancer Treatment")
-              .abstractText("This study explores innovative methods for treating various types of cancer.")
+              .abstractContent(CanonicalLiterature.Abstract.builder()
+                  .text("This study explores innovative methods for treating various types of cancer.")
+                  .build())
               .authors(List.of(author1, author2))
               .journal(journal)
-              .identifiers(Map.of("pmid", "12345678", "doi", "10.1038/nm.12345"))
-              .publicationDate(LocalDate.of(2025, 1, 15))
-              .keywords(List.of("cancer", "treatment", "immunotherapy"))
+              .identifiers(List.of(
+                  CanonicalLiterature.Identifier.builder().type("pmid").value("12345678").build(),
+                  CanonicalLiterature.Identifier.builder().type("doi").value("10.1038/nm.12345").build()))
+              .dates(CanonicalLiterature.PublicationDates.builder()
+                  .published(LocalDate.of(2025, 1, 15))
+                  .build())
+              .keywords(List.of(
+                  CanonicalLiterature.KeywordSet.builder()
+                      .source("author")
+                      .keywords(List.of(
+                          CanonicalLiterature.Keyword.builder().term("cancer").build(),
+                          CanonicalLiterature.Keyword.builder().term("treatment").build(),
+                          CanonicalLiterature.Keyword.builder().term("immunotherapy").build()))
+                      .build()))
               .build();
 
       // When: 转换为 DTO
@@ -99,7 +119,7 @@ class LiteratureConverterTest {
       assertThat(firstAuthor.lastName()).isEqualTo("Smith");
       assertThat(firstAuthor.foreName()).isEqualTo("John");
       assertThat(firstAuthor.affiliations()).containsExactly("Harvard Medical School");
-      assertThat(firstAuthor.initials()).isNull();
+      assertThat(firstAuthor.initials()).isEqualTo("JD");
       assertThat(firstAuthor.identifier()).isNull();
       assertThat(firstAuthor.identifierSource()).isNull();
 
@@ -113,10 +133,10 @@ class LiteratureConverterTest {
       assertThat(dto.journal().title()).isEqualTo("Nature Medicine");
       assertThat(dto.journal().issn()).isEqualTo("1078-8956");
       assertThat(dto.journal().publisher()).isEqualTo("Nature Publishing Group");
-      assertThat(dto.journal().issnType()).isNull();
-      assertThat(dto.journal().country()).isNull();
+      assertThat(dto.journal().issnType()).isEqualTo("electronic");
+      assertThat(dto.journal().country()).isEqualTo("US");
 
-      // 验证强制为空的字段
+      // 验证语言和发表类型
       assertThat(dto.language()).isNull();
       assertThat(dto.publicationTypes()).isEmpty();
     }
@@ -128,11 +148,11 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Minimal Literature Entry")
-              .abstractText(null)
+              .abstractContent(null)
               .authors(null)
               .journal(null)
               .identifiers(null)
-              .publicationDate(null)
+              .dates(null)
               .keywords(null)
               .build();
 
@@ -184,13 +204,17 @@ class LiteratureConverterTest {
       CanonicalLiterature lit1 =
           CanonicalLiterature.builder()
               .title("First Paper")
-              .publicationDate(LocalDate.of(2025, 1, 1))
+              .dates(CanonicalLiterature.PublicationDates.builder()
+                  .published(LocalDate.of(2025, 1, 1))
+                  .build())
               .build();
 
       CanonicalLiterature lit2 =
           CanonicalLiterature.builder()
               .title("Second Paper")
-              .publicationDate(LocalDate.of(2025, 1, 2))
+              .dates(CanonicalLiterature.PublicationDates.builder()
+                  .published(LocalDate.of(2025, 1, 2))
+                  .build())
               .build();
 
       List<CanonicalLiterature> literatures = List.of(lit1, lit2);
@@ -228,21 +252,27 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射多个作者")
     void shouldMapMultipleAuthors() {
       // Given
-      AuthorInfo author1 =
-          AuthorInfo.builder()
+      CanonicalLiterature.Author author1 =
+          CanonicalLiterature.Author.builder()
               .lastName("Doe")
               .foreName("Jane")
-              .affiliation("MIT")
+              .affiliations(List.of(
+                  CanonicalLiterature.Affiliation.builder()
+                      .name("MIT")
+                      .build()))
               .build();
 
-      AuthorInfo author2 =
-          AuthorInfo.builder()
+      CanonicalLiterature.Author author2 =
+          CanonicalLiterature.Author.builder()
               .lastName("Lee")
               .foreName("David")
-              .affiliation("Caltech")
+              .affiliations(List.of(
+                  CanonicalLiterature.Affiliation.builder()
+                      .name("Caltech")
+                      .build()))
               .build();
 
-      List<AuthorInfo> authors = List.of(author1, author2);
+      List<CanonicalLiterature.Author> authors = List.of(author1, author2);
 
       // When
       List<AuthorDTO> authorDTOs = converter.mapAuthors(authors);
@@ -268,14 +298,14 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射没有关联的作者")
     void shouldMapAuthorWithoutAffiliation() {
       // Given: 作者没有关联
-      AuthorInfo author =
-          AuthorInfo.builder()
+      CanonicalLiterature.Author author =
+          CanonicalLiterature.Author.builder()
               .lastName("Wang")
               .foreName("Li")
-              .affiliation(null)
+              .affiliations(null)
               .build();
 
-      List<AuthorInfo> authors = List.of(author);
+      List<CanonicalLiterature.Author> authors = List.of(author);
 
       // When
       List<AuthorDTO> authorDTOs = converter.mapAuthors(authors);
@@ -290,15 +320,18 @@ class LiteratureConverterTest {
     @Test
     @DisplayName("应该正确映射空白关联的作者")
     void shouldMapAuthorWithBlankAffiliation() {
-      // Given: 作者关联为空字符串
-      AuthorInfo author =
-          AuthorInfo.builder()
+      // Given: 作者关联为空白机构名称
+      CanonicalLiterature.Author author =
+          CanonicalLiterature.Author.builder()
               .lastName("Chen")
               .foreName("Wei")
-              .affiliation("   ")
+              .affiliations(List.of(
+                  CanonicalLiterature.Affiliation.builder()
+                      .name("   ")
+                      .build()))
               .build();
 
-      List<AuthorInfo> authors = List.of(author);
+      List<CanonicalLiterature.Author> authors = List.of(author);
 
       // When
       List<AuthorDTO> authorDTOs = converter.mapAuthors(authors);
@@ -339,11 +372,13 @@ class LiteratureConverterTest {
     @DisplayName("应该正确映射完整期刊信息")
     void shouldMapCompleteJournal() {
       // Given
-      JournalInfo journal =
-          JournalInfo.builder()
+      CanonicalLiterature.Journal journal =
+          CanonicalLiterature.Journal.builder()
               .title("Science")
               .issn("0036-8075")
+              .issnType("print")
               .publisher("American Association for the Advancement of Science")
+              .country("USA")
               .build();
 
       // When
@@ -355,16 +390,16 @@ class LiteratureConverterTest {
       assertThat(journalDTO.issn()).isEqualTo("0036-8075");
       assertThat(journalDTO.publisher())
           .isEqualTo("American Association for the Advancement of Science");
-      assertThat(journalDTO.issnType()).isNull();
-      assertThat(journalDTO.country()).isNull();
+      assertThat(journalDTO.issnType()).isEqualTo("print");
+      assertThat(journalDTO.country()).isEqualTo("USA");
     }
 
     @Test
     @DisplayName("应该正确映射只有标题的期刊")
     void shouldMapJournalWithTitleOnly() {
       // Given
-      JournalInfo journal =
-          JournalInfo.builder()
+      CanonicalLiterature.Journal journal =
+          CanonicalLiterature.Journal.builder()
               .title("Cell")
               .issn(null)
               .publisher(null)
@@ -398,46 +433,55 @@ class LiteratureConverterTest {
   class ResolveAffiliationsTests {
 
     @Test
-    @DisplayName("应该将非空关联字符串转换为单元素列表")
-    void shouldConvertNonEmptyAffiliationToList() {
+    @DisplayName("应该将机构列表转换为名称列表")
+    void shouldConvertAffiliationsToNameList() {
       // Given
-      String affiliation = "University of California, Berkeley";
+      List<CanonicalLiterature.Affiliation> affiliations = List.of(
+          CanonicalLiterature.Affiliation.builder()
+              .name("University of California, Berkeley")
+              .build());
 
       // When
-      List<String> affiliations = converter.resolveAffiliations(affiliation);
+      List<String> names = converter.resolveAffiliations(affiliations);
 
       // Then
-      assertThat(affiliations).containsExactly("University of California, Berkeley");
+      assertThat(names).containsExactly("University of California, Berkeley");
     }
 
     @Test
-    @DisplayName("当关联为 null 时应该返回空列表")
-    void shouldReturnEmptyListWhenAffiliationIsNull() {
+    @DisplayName("当机构列表为 null 时应该返回空列表")
+    void shouldReturnEmptyListWhenAffiliationsIsNull() {
       // When
-      List<String> affiliations = converter.resolveAffiliations(null);
+      List<String> names = converter.resolveAffiliations(null);
 
       // Then
-      assertThat(affiliations).isEmpty();
+      assertThat(names).isEmpty();
     }
 
     @Test
-    @DisplayName("当关联为空字符串时应该返回空列表")
-    void shouldReturnEmptyListWhenAffiliationIsEmpty() {
+    @DisplayName("当机构列表为空时应该返回空列表")
+    void shouldReturnEmptyListWhenAffiliationsIsEmpty() {
       // When
-      List<String> affiliations = converter.resolveAffiliations("");
+      List<String> names = converter.resolveAffiliations(List.of());
 
       // Then
-      assertThat(affiliations).isEmpty();
+      assertThat(names).isEmpty();
     }
 
     @Test
-    @DisplayName("当关联为空白字符串时应该返回空列表")
-    void shouldReturnEmptyListWhenAffiliationIsBlank() {
+    @DisplayName("应该过滤空白机构名称")
+    void shouldFilterBlankAffiliationNames() {
+      // Given
+      List<CanonicalLiterature.Affiliation> affiliations = List.of(
+          CanonicalLiterature.Affiliation.builder().name("Valid Name").build(),
+          CanonicalLiterature.Affiliation.builder().name("   ").build(),
+          CanonicalLiterature.Affiliation.builder().name("").build());
+
       // When
-      List<String> affiliations = converter.resolveAffiliations("   ");
+      List<String> names = converter.resolveAffiliations(affiliations);
 
       // Then
-      assertThat(affiliations).isEmpty();
+      assertThat(names).containsExactly("Valid Name");
     }
   }
 
@@ -454,8 +498,14 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Study on α-β proteins & γ-rays: a \"novel\" approach")
-              .abstractText("Testing special chars: <tag>, {brace}, [bracket], @symbol")
-              .identifiers(Map.of("doi", "10.1000/xyz<>123"))
+              .abstractContent(CanonicalLiterature.Abstract.builder()
+                  .text("Testing special chars: <tag>, {brace}, [bracket], @symbol")
+                  .build())
+              .identifiers(List.of(
+                  CanonicalLiterature.Identifier.builder()
+                      .type("doi")
+                      .value("10.1000/xyz<>123")
+                      .build()))
               .build();
 
       // When
@@ -473,11 +523,14 @@ class LiteratureConverterTest {
     @DisplayName("应该正确处理包含 Unicode 字符的作者姓名")
     void shouldHandleAuthorsWithUnicodeCharacters() {
       // Given
-      AuthorInfo author =
-          AuthorInfo.builder()
+      CanonicalLiterature.Author author =
+          CanonicalLiterature.Author.builder()
               .lastName("李")
               .foreName("明")
-              .affiliation("北京大学")
+              .affiliations(List.of(
+                  CanonicalLiterature.Affiliation.builder()
+                      .name("北京大学")
+                      .build()))
               .build();
 
       CanonicalLiterature literature =
@@ -503,12 +556,11 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Multi-Identifier Paper")
-              .identifiers(
-                  Map.of(
-                      "pmid", "12345678",
-                      "doi", "10.1038/nature12345",
-                      "pmc", "PMC9876543",
-                      "arxiv", "2101.12345"))
+              .identifiers(List.of(
+                  CanonicalLiterature.Identifier.builder().type("pmid").value("12345678").build(),
+                  CanonicalLiterature.Identifier.builder().type("doi").value("10.1038/nature12345").build(),
+                  CanonicalLiterature.Identifier.builder().type("pmc").value("PMC9876543").build(),
+                  CanonicalLiterature.Identifier.builder().type("arxiv").value("2101.12345").build()))
               .build();
 
       // When
@@ -530,13 +582,16 @@ class LiteratureConverterTest {
       CanonicalLiterature literature =
           CanonicalLiterature.builder()
               .title("Keyword-Rich Paper")
-              .keywords(
-                  List.of(
-                      "machine learning",
-                      "deep learning",
-                      "neural networks",
-                      "artificial intelligence",
-                      "computer vision"))
+              .keywords(List.of(
+                  CanonicalLiterature.KeywordSet.builder()
+                      .source("author")
+                      .keywords(List.of(
+                          CanonicalLiterature.Keyword.builder().term("machine learning").build(),
+                          CanonicalLiterature.Keyword.builder().term("deep learning").build(),
+                          CanonicalLiterature.Keyword.builder().term("neural networks").build(),
+                          CanonicalLiterature.Keyword.builder().term("artificial intelligence").build(),
+                          CanonicalLiterature.Keyword.builder().term("computer vision").build()))
+                      .build()))
               .build();
 
       // When
