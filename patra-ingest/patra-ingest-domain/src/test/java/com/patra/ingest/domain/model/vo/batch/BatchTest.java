@@ -59,7 +59,7 @@ class BatchTest {
     @DisplayName("应该成功创建批次 - 所有字段有效")
     void shouldCreateBatchWithAllValidFields() {
       // When: 创建批次
-      Batch batch = new Batch(1, testQuery, testParams, "cursor-token-123", 1, 100);
+      Batch batch = new Batch(1, testQuery, testParams, "cursor-token-123", 1, 100, null);
 
       // Then: 应该成功创建
       assertThat(batch.batchNo()).isEqualTo(1);
@@ -74,7 +74,7 @@ class BatchTest {
     @DisplayName("应该成功创建批次 - 基于页码的分页 (cursorToken 为 null)")
     void shouldCreateBatchWithPageBasedPagination() {
       // When: 创建基于页码的批次
-      Batch batch = new Batch(2, testQuery, testParams, null, 5, 50);
+      Batch batch = new Batch(2, testQuery, testParams, null, 5, 50, null);
 
       // Then: 应该成功创建
       assertThat(batch.batchNo()).isEqualTo(2);
@@ -87,7 +87,7 @@ class BatchTest {
     @DisplayName("应该成功创建批次 - 基于游标的分页 (pageNo 为 null)")
     void shouldCreateBatchWithCursorBasedPagination() {
       // When: 创建基于游标的批次
-      Batch batch = new Batch(3, testQuery, testParams, "cursor-abc", null, 200);
+      Batch batch = new Batch(3, testQuery, testParams, "cursor-abc", null, 200, null);
 
       // Then: 应该成功创建
       assertThat(batch.batchNo()).isEqualTo(3);
@@ -100,7 +100,7 @@ class BatchTest {
     @DisplayName("应该成功创建批次 - 可选字段全部为 null")
     void shouldCreateBatchWithNullOptionalFields() {
       // When: 创建批次,可选字段为 null
-      Batch batch = new Batch(1, testQuery, testParams, null, null, null);
+      Batch batch = new Batch(1, testQuery, testParams, null, null, null, null);
 
       // Then: 应该成功创建
       assertThat(batch.batchNo()).isEqualTo(1);
@@ -115,7 +115,7 @@ class BatchTest {
     @DisplayName("应该拒绝 batchNo 为 0")
     void shouldRejectBatchNoZero() {
       // When & Then: batchNo = 0 应抛出 IllegalArgumentException
-      assertThatThrownBy(() -> new Batch(0, testQuery, testParams, null, null, null))
+      assertThatThrownBy(() -> new Batch(0, testQuery, testParams, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("batchNo must be >= 1");
     }
@@ -124,11 +124,11 @@ class BatchTest {
     @DisplayName("应该拒绝 batchNo 为负数")
     void shouldRejectNegativeBatchNo() {
       // When & Then: batchNo < 0 应抛出 IllegalArgumentException
-      assertThatThrownBy(() -> new Batch(-1, testQuery, testParams, null, null, null))
+      assertThatThrownBy(() -> new Batch(-1, testQuery, testParams, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("batchNo must be >= 1");
 
-      assertThatThrownBy(() -> new Batch(-999, testQuery, testParams, null, null, null))
+      assertThatThrownBy(() -> new Batch(-999, testQuery, testParams, null, null, null, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("batchNo must be >= 1");
     }
@@ -137,9 +137,9 @@ class BatchTest {
     @DisplayName("应该接受 batchNo >= 1")
     void shouldAcceptValidBatchNo() {
       // When: 创建批次,batchNo >= 1
-      Batch batch1 = new Batch(1, testQuery, testParams, null, null, null);
-      Batch batch2 = new Batch(100, testQuery, testParams, null, null, null);
-      Batch batch1000 = new Batch(1000, testQuery, testParams, null, null, null);
+      Batch batch1 = new Batch(1, testQuery, testParams, null, null, null, null);
+      Batch batch2 = new Batch(100, testQuery, testParams, null, null, null, null);
+      Batch batch1000 = new Batch(1000, testQuery, testParams, null, null, null, null);
 
       // Then: 应该成功创建
       assertThat(batch1.batchNo()).isEqualTo(1);
@@ -282,6 +282,78 @@ class BatchTest {
   }
 
   @Nested
+  @DisplayName("工厂方法: withPageAndSession()")
+  class WithPageAndSessionFactoryMethodTests {
+
+    @Test
+    @DisplayName("应该创建带会话令牌的批次")
+    void shouldCreateBatchWithSessionTokens() {
+      // When: 调用 withPageAndSession() 工厂方法
+      Batch batch = Batch.withPageAndSession(
+          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
+      );
+
+      // Then: 应该创建带会话令牌的批次
+      assertThat(batch.batchNo()).isEqualTo(1);
+      assertThat(batch.query()).isEqualTo(testQuery);
+      assertThat(batch.params()).isEqualTo(testParams);
+      assertThat(batch.pageNo()).isEqualTo(0);
+      assertThat(batch.pageSize()).isEqualTo(100);
+      assertThat(batch.sessionTokens()).isNotNull();
+      assertThat(batch.sessionTokens()).containsEntry("webEnv", "MCID_123456");
+      assertThat(batch.sessionTokens()).containsEntry("queryKey", "1");
+    }
+
+    @Test
+    @DisplayName("应该设置 cursorToken 为 null")
+    void shouldSetCursorTokenToNull() {
+      // When: 调用 withPageAndSession() 工厂方法
+      Batch batch = Batch.withPageAndSession(
+          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
+      );
+
+      // Then: cursorToken 应为 null
+      assertThat(batch.cursorToken()).isNull();
+    }
+
+    @Test
+    @DisplayName("应该遵守 batchNo 验证规则")
+    void shouldEnforceBatchNoValidation() {
+      // When & Then: batchNo < 1 应抛出异常
+      assertThatThrownBy(() ->
+          Batch.withPageAndSession(0, testQuery, testParams, 0, 100, "MCID_123456", "1")
+      )
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("batchNo must be >= 1");
+    }
+
+    @Test
+    @DisplayName("业务场景 - PubMed History Server 分页")
+    void shouldSupportPubMedHistoryServerPagination() {
+      // Given: PubMed History Server 参数
+      int batchNo = 2;
+      int retstart = 100;
+      int retmax = 100;
+      String webEnv = "MCID_674c8b5a5e8a9b1234567890";
+      String queryKey = "1";
+
+      // When: 创建批次
+      Batch batch = Batch.withPageAndSession(
+          batchNo, testQuery, testParams, retstart, retmax, webEnv, queryKey
+      );
+
+      // Then: 应该正确设置
+      assertThat(batch.batchNo()).isEqualTo(2);
+      assertThat(batch.pageNo()).isEqualTo(100);
+      assertThat(batch.pageSize()).isEqualTo(100);
+      assertThat(batch.cursorToken()).isNull();
+      assertThat(batch.hasSessionTokens()).isTrue();
+      assertThat(batch.sessionTokens().get("webEnv")).isEqualTo(webEnv);
+      assertThat(batch.sessionTokens().get("queryKey")).isEqualTo(queryKey);
+    }
+  }
+
+  @Nested
   @DisplayName("工厂方法: withToken()")
   class WithTokenFactoryMethodTests {
 
@@ -406,7 +478,7 @@ class BatchTest {
     @DisplayName("应该返回 false - cursorToken 为空字符串")
     void shouldReturnFalseWhenCursorTokenIsEmpty() {
       // Given: cursorToken 为空字符串的批次
-      Batch batch = new Batch(1, testQuery, testParams, "", null, null);
+      Batch batch = new Batch(1, testQuery, testParams, "", null, null, null);
 
       // When: 调用 hasCursor()
       boolean result = batch.hasCursor();
@@ -419,8 +491,8 @@ class BatchTest {
     @DisplayName("应该返回 false - cursorToken 为空白字符串")
     void shouldReturnFalseWhenCursorTokenIsBlank() {
       // Given: cursorToken 为空白字符串的批次
-      Batch blankBatch1 = new Batch(1, testQuery, testParams, "   ", null, null);
-      Batch blankBatch2 = new Batch(2, testQuery, testParams, "\t\n", null, null);
+      Batch blankBatch1 = new Batch(1, testQuery, testParams, "   ", null, null, null);
+      Batch blankBatch2 = new Batch(2, testQuery, testParams, "\t\n", null, null, null);
 
       // When: 调用 hasCursor()
       boolean result1 = blankBatch1.hasCursor();
@@ -435,7 +507,7 @@ class BatchTest {
     @DisplayName("应该返回 true - cursorToken 包含前后空白但有内容")
     void shouldReturnTrueWhenCursorTokenHasContent() {
       // Given: cursorToken 包含前后空白但有实际内容的批次
-      Batch batch = new Batch(1, testQuery, testParams, "  cursor-with-spaces  ", null, null);
+      Batch batch = new Batch(1, testQuery, testParams, "  cursor-with-spaces  ", null, null, null);
 
       // When: 调用 hasCursor()
       boolean result = batch.hasCursor();
@@ -454,6 +526,55 @@ class BatchTest {
       // When & Then: hasCursor() 应该区分分页模式
       assertThat(pageBasedBatch.hasCursor()).isFalse(); // 页码分页
       assertThat(cursorBasedBatch.hasCursor()).isTrue(); // 游标分页
+    }
+  }
+
+  @Nested
+  @DisplayName("业务方法: hasSessionTokens()")
+  class HasSessionTokensMethodTests {
+
+    @Test
+    @DisplayName("应该返回 true - sessionTokens 非空")
+    void shouldReturnTrueWhenSessionTokensNotEmpty() {
+      // Given: 包含会话令牌的批次
+      Batch batch = Batch.withPageAndSession(
+          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
+      );
+
+      // When: 调用 hasSessionTokens()
+      boolean result = batch.hasSessionTokens();
+
+      // Then: 应返回 true
+      assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("应该返回 false - sessionTokens 为空")
+    void shouldReturnFalseWhenSessionTokensEmpty() {
+      // Given: 不包含会话令牌的批次
+      Batch batch = Batch.withPage(1, testQuery, testParams, 0, 100);
+
+      // When: 调用 hasSessionTokens()
+      boolean result = batch.hasSessionTokens();
+
+      // Then: 应返回 false
+      assertThat(result).isFalse();
+    }
+
+    @Test
+    @DisplayName("业务场景 - 判断是否使用 History Server")
+    void shouldDetermineHistoryServerMode() {
+      // Given: 三种批次类型
+      Batch pageBasedBatch = Batch.withPage(1, testQuery, testParams, 0, 100);
+      Batch cursorBasedBatch = Batch.withToken(2, testQuery, testParams, "cursor-xyz", 100);
+      Batch sessionBasedBatch = Batch.withPageAndSession(
+          3, testQuery, testParams, 0, 100, "MCID_123456", "1"
+      );
+
+      // When & Then: hasSessionTokens() 应该区分是否有会话令牌
+      assertThat(pageBasedBatch.hasSessionTokens()).isFalse();
+      assertThat(cursorBasedBatch.hasSessionTokens()).isFalse();
+      assertThat(sessionBasedBatch.hasSessionTokens()).isTrue();
     }
   }
 
@@ -535,6 +656,34 @@ class BatchTest {
       // Given: pageSize 不同的 Batch
       Batch batch1 = Batch.withPage(1, testQuery, testParams, 1, 100);
       Batch batch2 = Batch.withPage(1, testQuery, testParams, 1, 200);
+
+      // When & Then: 应该不相等
+      assertThat(batch1).isNotEqualTo(batch2);
+    }
+
+    @Test
+    @DisplayName("equals() - 不同 sessionTokens 应不相等")
+    void shouldNotBeEqualForDifferentSessionTokens() {
+      // Given: sessionTokens 不同的 Batch
+      Batch batch1 = Batch.withPageAndSession(
+          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
+      );
+      Batch batch2 = Batch.withPageAndSession(
+          1, testQuery, testParams, 0, 100, "MCID_789012", "2"
+      );
+
+      // When & Then: 应该不相等
+      assertThat(batch1).isNotEqualTo(batch2);
+    }
+
+    @Test
+    @DisplayName("equals() - 有无 sessionTokens 应不相等")
+    void shouldNotBeEqualForDifferentSessionTokensPresence() {
+      // Given: 一个有 sessionTokens，一个没有
+      Batch batch1 = Batch.withPage(1, testQuery, testParams, 0, 100);
+      Batch batch2 = Batch.withPageAndSession(
+          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
+      );
 
       // When & Then: 应该不相等
       assertThat(batch1).isNotEqualTo(batch2);
@@ -635,7 +784,7 @@ class BatchTest {
     @DisplayName("toString() 应包含所有字段信息")
     void shouldIncludeAllFieldsInToString() {
       // Given: 一个包含所有字段的 Batch
-      Batch batch = new Batch(5, testQuery, testParams, "cursor-xyz", 10, 100);
+      Batch batch = new Batch(5, testQuery, testParams, "cursor-xyz", 10, 100, null);
 
       // When: 调用 toString()
       String result = batch.toString();

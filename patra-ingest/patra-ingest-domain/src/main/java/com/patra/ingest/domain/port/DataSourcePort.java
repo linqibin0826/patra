@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.port;
 
 import com.patra.common.model.DataType;
+import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
@@ -12,7 +13,7 @@ import lombok.Builder;
 /**
  * 数据源端口(六边形架构 - Domain → Infrastructure)
  *
- * <p><strong>职责</strong>: 定义从外部数据源获取指定类型数据的领域契约。此端口抽象了数据源访问的技术细节，基础设施适配器负责：
+ * <p><strong>职责</strong>: 定义从外部数据源获取指定类型数据的领域契约。此端口抽象了数据源访问的技术细节,基础设施适配器负责:
  *
  * <ul>
  *   <li>与外部数据源 API 交互(PubMed, EPMC, DOAJ, DrugBank 等)
@@ -66,6 +67,30 @@ import lombok.Builder;
  * @since 0.1.0
  */
 public interface DataSourcePort {
+
+  /**
+   * 准备采集计划元数据
+   *
+   * <p><strong>业务含义</strong>: 调用外部数据源 API 获取计划所需的元数据,包括总记录数和可选的会话令牌(如 PubMed 的 WebEnv)。
+   *
+   * <p><strong>执行流程</strong>:
+   * <ol>
+   *   <li>从执行上下文中提取查询条件和配置信息</li>
+   *   <li>调用数据源 API 获取计划元数据</li>
+   *   <li>返回数据源特定的 PlanMetadata 子类实例</li>
+   * </ol>
+   *
+   * <p><strong>使用场景</strong>:
+   * <ul>
+   *   <li>在批次规划阶段调用,获取总记录数以生成批次</li>
+   *   <li>获取会话令牌(如 WebEnv)以在执行阶段重用</li>
+   * </ul>
+   *
+   * @param context 执行上下文,包含查询条件和配置信息
+   * @param dataType 数据类型标识(如 LITERATURE、JOURNAL)
+   * @return 计划元数据(使用继承体系支持不同数据源)
+   */
+  PlanMetadata preparePlan(ExecutionContext context, DataType dataType);
 
   /**
    * 从数据源获取指定类型的数据

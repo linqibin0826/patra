@@ -9,7 +9,8 @@
 - **值对象(Value Objects)**: WindowSpec、CursorWatermark、ExecutionContext 等
 - **领域事件(Domain Events)**: TaskQueuedEvent、TaskCompletedEvent 等
 - **仓储端口(Repository Ports)**: 供外层实现的接口契约
-- **外部服务端口(Service Ports)**: PatraRegistryPort、ExpressionCompilerPort 等
+- **外部服务端口(Service Ports)**: PatraRegistryPort、ExpressionCompilerPort、DataSourcePort 等
+- **策略接口(Strategy Interfaces)**: BatchGenerationStrategy 等
 
 **架构约束**: 通过 `maven-enforcer-plugin` 强制执行领域层纯净性,禁止依赖 Spring、MyBatis、JPA 等框架。
 
@@ -21,6 +22,7 @@
 - **聚合根管理**: 维护聚合根的一致性边界和不变量
 - **领域事件发布**: 定义业务事件以驱动跨聚合的最终一致性
 - **端口定义**: 为基础设施层提供需要实现的接口契约
+- **策略契约**: 定义批次生成等业务策略的接口规范
 
 ---
 
@@ -87,7 +89,7 @@ patra-ingest-domain/
    │  ├─ TaskCompletedEvent.java          # 任务完成事件
    │  ├─ SliceStatusChangedEvent.java     # 切片状态变更事件
    │  └─ OutboxMessage*Event.java         # Outbox 相关事件
-   ├─ port/                           # 仓储端口(由 infra 实现)
+   ├─ port/                           # 端口接口(由 infra 实现)
    │  ├─ PlanRepository.java              # 计划仓储
    │  ├─ TaskRepository.java              # 任务仓储
    │  ├─ PlanSliceRepository.java         # 切片仓储
@@ -95,7 +97,9 @@ patra-ingest-domain/
    │  ├─ OutboxMessageRepository.java     # Outbox 仓储
    │  ├─ PatraRegistryPort.java           # Registry 外部端口
    │  ├─ ExpressionCompilerPort.java      # 表达式编译器端口
-   │  └─ PubmedSearchPort.java            # PubMed 搜索端口
+   │  └─ DataSourcePort.java              # 数据源端口(统一数据源访问)
+   ├─ strategy/                       # 策略接口
+   │  └─ BatchGenerationStrategy.java     # 批次生成策略接口
    ├─ service/                        # 领域服务
    │  ├─ PlanStatusCalculator.java        # 计划状态计算器
    │  └─ SliceStatusCalculator.java       # 切片状态计算器
@@ -274,7 +278,7 @@ public sealed interface WindowSpec {
 
 **文件**: `event/TaskCompletedEvent.java`
 
-### 仓储端口
+### 端口接口
 
 #### PlanRepository (计划仓储接口)
 
@@ -342,17 +346,113 @@ public interface ExpressionCompilerPort {
 
 **文件**: `port/ExpressionCompilerPort.java`
 
+#### DataSourcePort (数据源端口)
+
+**职责**: 定义从外部数据源获取数据的统一契约,支持多数据源和多数据类型。
+
+**设计理念**:
+- **统一接口**: 取代特定数据源端口(如已废弃的 PubmedSearchPort),提供统一的数据源访问契约
+- **泛型化**: 支持任意数据类型(文献、期刊、药品等)
+- **策略模式**: 通过 DataType 标识和 TypeReference 实现类型安全的数据获取
+- **双阶段设计**: 计划准备(`preparePlan`)和数据获取(`fetchData`)分离
+
+**核心方法**:
+```java
+public interface DataSourcePort {
+    // 准备计划元数据（获取总数、会话令牌等）
+    PlanMetadata preparePlan(ExecutionContext context, DataType dataType);
+
+    // 获取指定类型的数据
+    <T> DataFetchResult<T> fetchData(
+        ExecutionContext context,
+        DataType dataType,
+        TypeReference<T> typeRef,
+        Batch batch
+    );
+
+    // 查询数据源能力
+    boolean supports(String provenanceCode, DataType dataType);
+    Set<DataType> getSupportedTypes(String provenanceCode);
+}
+```
+
+**使用示例**:
+```java
+// 准备计划
+PlanMetadata planMetadata = dataSourcePort.preparePlan(context, DataType.LITERATURE);
+
+// 获取文献数据
+TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};
+DataFetchResult<CanonicalLiterature> result =
+    dataSourcePort.fetchData(context, DataType.LITERATURE, typeRef, batch);
+```
+
+**架构对齐**:
+- 在六边形架构中位于 **Domain 层**，定义业务契约
+- 由 **Infrastructure 层**的 `DataSourceAdapter` 实现
+- 通过 `DataSourceAdapter` 调用框架层的 `DataSourceProvider`（来自 patra-starter-provenance）
+
+**文件**: `port/DataSourcePort.java`
+
+**⚠️ 已废弃**: `PubmedSearchPort` 已被 `DataSourcePort` 取代,后者提供更通用和可扩展的设计。
+
+### 策略接口
+
+#### BatchGenerationStrategy (批次生成策略接口)
+
+**职责**: 定义如何根据计划元数据生成批次列表。
+
+**设计原则**:
+- **策略模式**: 每个数据源对应一个策略实现
+- **开闭原则**: 新增数据源无需修改 UnifiedBatchPlanner
+- **类型安全**: 通过 `getSupportedType()` 自动注册策略
+
+**核心方法**:
+```java
+public interface BatchGenerationStrategy {
+    // 获取策略支持的计划元数据类型
+    Class<? extends PlanMetadata> getSupportedType();
+
+    // 根据计划元数据生成批次列表
+    List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx);
+}
+```
+
+**使用场景**:
+- 在 `UnifiedBatchPlanner` 中根据 `PlanMetadata` 类型自动选择对应策略
+- 通过 Spring 自动注入所有策略实现
+- 使用 Map 进行策略路由（类似 DataSourceAdapter）
+
+**扩展指南**:
+```java
+// 新增数据源批次生成策略
+@Component
+public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
+    @Override
+    public Class<? extends PlanMetadata> getSupportedType() {
+        return EpmcPlanMetadata.class;  // 声明支持的类型
+    }
+
+    @Override
+    public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
+        // 实现 EPMC 特定的批次生成逻辑
+    }
+}
+```
+
+**文件**: `strategy/BatchGenerationStrategy.java`
+
 ---
 
 ## 依赖关系
 
 ### 上游依赖
 - `patra-common-core`: 通用工具类和枚举(ProvenanceCode, OperationCode)
-- `patra-common-model`: 通用领域模型基类
+- `patra-common-model`: 通用领域模型基类(PlanMetadata, DataType 等)
 
 ### 下游消费者
-- `patra-ingest-app`: 应用层(用例编排器)
-- `patra-ingest-infra`: 基础设施层(仓储实现)
+- `patra-ingest-app`: 应用层(用例编排器、策略实现)
+- `patra-ingest-infra`: 基础设施层(仓储实现、数据源适配器)
 
 **依赖方向**: Domain ← App ← Infra/Adapter (符合六边形架构)
 
@@ -388,6 +488,13 @@ public interface ExpressionCompilerPort {
 通过 OutboxMessage 实体保证事件发布的可靠性:
 - 事件与业务数据在同一事务中持久化
 - 通过轮询发布到 MQ
+
+### 6. 策略模式 (Strategy Pattern)
+
+通过策略接口支持多种实现:
+- BatchGenerationStrategy: 批次生成策略
+- 策略通过 `getSupportedType()` 自动注册
+- 完全符合开闭原则（OCP）
 
 ---
 
@@ -489,6 +596,40 @@ taskRepository.save(task);
 TaskQueuedEvent event = new TaskQueuedEvent(task.getId(), task.getIdempotentKey());
 
 // 发布到 Outbox(由 app 层处理)
+```
+
+### 示例 4: 使用批次生成策略
+
+```java
+// 定义 PubMed 批次生成策略
+@Component
+public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
+
+    @Override
+    public Class<? extends PlanMetadata> getSupportedType() {
+        return PubmedPlanMetadata.class;
+    }
+
+    @Override
+    public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
+        PubmedPlanMetadata pubmedPlan = (PubmedPlanMetadata) plan;
+        int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
+        int totalCount = pubmedPlan.totalCount();
+        int pageCount = (int) Math.ceil((double) totalCount / batchSize);
+
+        List<Batch> batches = new ArrayList<>();
+        for (int i = 0; i < pageCount; i++) {
+            batches.add(Batch.withPage(
+                i + 1,
+                ctx.compiledQuery(),
+                ctx.compiledParams(),
+                i * batchSize,
+                batchSize
+            ));
+        }
+        return batches;
+    }
+}
 ```
 
 ---

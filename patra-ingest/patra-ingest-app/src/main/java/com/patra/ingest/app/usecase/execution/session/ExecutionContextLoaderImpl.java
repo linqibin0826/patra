@@ -2,6 +2,7 @@ package com.patra.ingest.app.usecase.execution.session;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
@@ -167,6 +168,10 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         task.getProvenanceCode(),
         task.getOperationCode());
 
+    // TODO: 后续需要从 Provenance 配置中获取实际的 DataType
+    // 目前所有 Provenance 都默认使用 LITERATURE 类型，待注册中心添加 dataType 字段后再修改
+    DataType dataType = DataType.LITERATURE;
+
     return new ExecutionContext(
         taskId,
         runId,
@@ -175,12 +180,14 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         task.getScheduleInstanceId(), // 来自 TaskAggregate
         task.getProvenanceCode(),
         task.getOperationCode(),
+        dataType,
         configSnapshot,
         task.getExprHash(),
         compilationResult.query(),
         compilationResult.params(),
         compilationResult.normalizedExpression(),
-        windowSpec);
+        windowSpec,
+        null);
   }
 
   /**

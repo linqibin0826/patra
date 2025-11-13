@@ -86,12 +86,14 @@ class GenericBatchExecutorTest {
             null, // scheduleInstanceId
             "pubmed", // provenanceCode
             "harvest", // operationCode
+            DataType.LITERATURE, // dataType
             configSnapshot, // configSnapshot
             null, // exprHash
             null, // compiledQuery
             null, // compiledParams
             null, // normalizedExpression
-            null // windowSpec
+            null, // windowSpec
+            null // planMetadata
             );
 
     ObjectNode params = objectMapper.createObjectNode();

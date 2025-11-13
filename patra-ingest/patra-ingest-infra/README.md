@@ -80,8 +80,10 @@ patra-ingest-infra/
    │  │  ├─ PatraRegistryAdapter.java      # Registry 适配器
    │  │  └─ converter/
    │  │     └─ ProvenanceConfigSnapshotConverter.java # 配置快照转换器
-   │  ├─ pubmed/                       # PubMed 集成
-   │  │  └─ PubmedSearchAdapter.java       # PubMed 搜索适配器
+   │  ├─ datasource/                   # 数据源集成
+   │  │  └─ DataSourceAdapter.java         # 数据源适配器(统一数据源访问)
+   │  ├─ pubmed/                       # PubMed 集成(已废弃)
+   │  │  └─ PubmedSearchAdapter.java       # PubMed 搜索适配器(⚠️ 已废弃,使用 DataSourceAdapter)
    │  └─ storage/                      # 对象存储集成
    │     ├─ LiteratureStorageAdapter.java   # 文献存储适配器
    │     ├─ StorageMetadataAdapter.java     # 存储元数据适配器
@@ -214,41 +216,63 @@ public class PatraRegistryAdapter implements PatraRegistryPort {
 
 **文件**: `integration/registry/PatraRegistryAdapter.java`
 
-#### PubmedSearchAdapter (PubMed 搜索适配器)
+#### DataSourceAdapter (数据源适配器)
 
-**职责**: 实现 `PubmedSearchPort` 端口接口,通过 Feign 调用 PubMed E-utilities API。
+**职责**: 实现 `DataSourcePort` 端口接口,提供统一的数据源访问能力。通过 Framework 层的 `DataSourceProvider` 调用外部数据源 API。
+
+**核心特性**:
+- **统一端口**: 同时支持计划准备(`preparePlan`)和数据获取(`fetchData`)
+- **参数转换**: 将 Ingest 特定的 `ExecutionContext` 转换为通用参数(`query`, `params`, `config`)
+- **多数据源支持**: 通过 `ProviderRegistry` 自动选择对应的 `DataSourceProvider`
 
 **核心方法**:
 ```java
 @Component
 @RequiredArgsConstructor
-public class PubmedSearchAdapter implements PubmedSearchPort {
+public class DataSourceAdapter implements DataSourcePort {
 
-    private final PubmedESearchClient eSearchClient;
+    private final ProviderRegistry providerRegistry;
 
     @Override
-    public PlanMetadata preparePlanMetadata(
-        String compiledQuery,
-        Map<String, Object> compiledParams,
-        ProvenanceConfigSnapshot configSnapshot
-    ) {
-        // 使用 compiledParams 构建请求
-        ESearchRequest request = PubMedESearchRequestAssembler.buildList(compiledParams);
-
-        // 调用 PubMed API
-        ESearchResponse response = eSearchClient.esearch(request);
-
-        // 返回元数据
-        return new PlanMetadata(
-            response.getCount(),
-            response.getRetMax(),
-            response.getIdList()
+    public PlanMetadata preparePlan(ExecutionContext context, DataType dataType) {
+        // 1. 获取对应的 Provider
+        DataSourceProvider provider = providerRegistry.getProvider(
+            context.provenanceCode(),
+            dataType
         );
+
+        // 2. 提取通用参数
+        String query = context.compiledQuery();
+        JsonNode params = context.compiledParams();
+        ProvenanceConfig config = null; // Provider 从 ProvenanceProperties 获取
+
+        // 3. 调用 Provider 准备计划
+        return provider.preparePlan(query, params, config);
+    }
+
+    @Override
+    public DataFetchResult fetchData(ExecutionContext context, DataType dataType) {
+        // 类似的参数转换和调用逻辑
+        // ...
     }
 }
 ```
 
-**文件**: `integration/pubmed/PubmedSearchAdapter.java`
+**参数转换逻辑**:
+- `ExecutionContext` (Ingest 层) → `(query, params, config)` (Framework 层)
+- 提取编译后的查询字符串: `context.compiledQuery()`
+- 提取编译后的参数: `context.compiledParams()`
+- 配置由 Framework 层的 Provider 从 `ProvenanceProperties` 获取
+
+**文件**: `integration/datasource/DataSourceAdapter.java`
+
+#### ⚠️ PubmedSearchAdapter (已废弃)
+
+**状态**: **已废弃**,由 `DataSourceAdapter` 替代。
+
+**迁移说明**: `PubmedSearchPort` 已被统一为 `DataSourcePort`,提供更通用和可扩展的设计。所有数据源(PubMed、EPMC、DOAJ 等)现在通过 `DataSourceAdapter` 和 `DataSourceProvider` 体系统一访问。
+
+**文件**: ~~`integration/pubmed/PubmedSearchAdapter.java`~~ (已删除)
 
 ### 数据转换器
 

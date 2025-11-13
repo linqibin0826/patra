@@ -4,12 +4,72 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.patra.common.model.plan.PlanMetadata;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("PlanMetadata 值对象测试")
 class PlanMetadataTest {
+
+  /**
+   * 用于测试的具体 PlanMetadata 实现
+   */
+  private static class ConcretePlanMetadata extends PlanMetadata {
+    private final String webEnv;
+    private final String queryKey;
+
+    ConcretePlanMetadata(int totalCount, String webEnv, String queryKey) {
+      super("test-datasource", totalCount);
+      // 验证 webEnv 和 queryKey 的一致性
+      boolean webEnvPresent = webEnv != null && !webEnv.isBlank();
+      boolean queryKeyPresent = queryKey != null && !queryKey.isBlank();
+      if (webEnvPresent != queryKeyPresent) {
+        throw new IllegalArgumentException("webEnv和queryKey必须同时存在或同时为空");
+      }
+      this.webEnv = webEnvPresent ? webEnv : null;
+      this.queryKey = queryKeyPresent ? queryKey : null;
+    }
+
+    public String webEnv() {
+      return webEnv;
+    }
+
+    public String queryKey() {
+      return queryKey;
+    }
+
+    public boolean hasWebEnv() {
+      return webEnv != null && queryKey != null;
+    }
+
+    @Override
+    public boolean hasSessionToken() {
+      return hasWebEnv();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof ConcretePlanMetadata other)) {
+        return false;
+      }
+      return this.totalCount() == other.totalCount()
+          && java.util.Objects.equals(this.webEnv, other.webEnv)
+          && java.util.Objects.equals(this.queryKey, other.queryKey);
+    }
+
+    @Override
+    public int hashCode() {
+      return java.util.Objects.hash(totalCount(), webEnv, queryKey);
+    }
+
+    @Override
+    public String toString() {
+      return String.format(
+          "TestPlanMetadata[totalCount=%d, webEnv=%s, queryKey=%s]",
+          totalCount(), webEnv, queryKey);
+    }
+  }
 
   @Nested
   @DisplayName("构造器验证")
@@ -24,7 +84,7 @@ class PlanMetadataTest {
       String queryKey = "1";
 
       // When
-      PlanMetadata metadata = new PlanMetadata(totalCount, webEnv, queryKey);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(totalCount, webEnv, queryKey);
 
       // Then
       assertThat(metadata.totalCount()).isEqualTo(totalCount);
@@ -39,7 +99,7 @@ class PlanMetadataTest {
       int totalCount = 50;
 
       // When & Then
-      assertThatCode(() -> new PlanMetadata(totalCount, null, null))
+      assertThatCode(() -> new ConcretePlanMetadata(totalCount, null, null))
           .doesNotThrowAnyException();
     }
 
@@ -47,7 +107,7 @@ class PlanMetadataTest {
     @DisplayName("应该成功创建 totalCount 为 0 的元数据")
     void shouldCreateMetadataWithZeroCount() {
       // When & Then
-      assertThatCode(() -> new PlanMetadata(0, null, null))
+      assertThatCode(() -> new ConcretePlanMetadata(0, null, null))
           .doesNotThrowAnyException();
     }
 
@@ -55,9 +115,9 @@ class PlanMetadataTest {
     @DisplayName("应该拒绝负数的 totalCount")
     void shouldRejectNegativeTotalCount() {
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(-1, null, null))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(-1, null, null))
           .isInstanceOf(IllegalArgumentException.class)
-          .hasMessage("totalCount必须 >= 0");
+          .hasMessage("totalCount 必须 >= 0");
     }
 
     @Test
@@ -67,7 +127,7 @@ class PlanMetadataTest {
       String webEnv = "NCID_1_12345678_130.14.22.33_9001_1234567890";
 
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(100, webEnv, null))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(100, webEnv, null))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("webEnv和queryKey必须同时存在或同时为空");
     }
@@ -79,7 +139,7 @@ class PlanMetadataTest {
       String queryKey = "1";
 
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(100, null, queryKey))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(100, null, queryKey))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("webEnv和queryKey必须同时存在或同时为空");
     }
@@ -88,7 +148,7 @@ class PlanMetadataTest {
     @DisplayName("应该拒绝空白的 webEnv")
     void shouldRejectBlankWebEnv() {
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(100, "  ", "1"))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(100, "  ", "1"))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("webEnv和queryKey必须同时存在或同时为空");
     }
@@ -100,7 +160,7 @@ class PlanMetadataTest {
       String webEnv = "NCID_1_12345678_130.14.22.33_9001_1234567890";
 
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(100, webEnv, "  "))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(100, webEnv, "  "))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("webEnv和queryKey必须同时存在或同时为空");
     }
@@ -109,7 +169,7 @@ class PlanMetadataTest {
     @DisplayName("应该拒绝空字符串的 webEnv")
     void shouldRejectEmptyWebEnv() {
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(100, "", "1"))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(100, "", "1"))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("webEnv和queryKey必须同时存在或同时为空");
     }
@@ -121,7 +181,7 @@ class PlanMetadataTest {
       String webEnv = "NCID_1_12345678_130.14.22.33_9001_1234567890";
 
       // When & Then
-      assertThatThrownBy(() -> new PlanMetadata(100, webEnv, ""))
+      assertThatThrownBy(() -> new ConcretePlanMetadata(100, webEnv, ""))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("webEnv和queryKey必须同时存在或同时为空");
     }
@@ -132,10 +192,10 @@ class PlanMetadataTest {
   class FactoryMethods {
 
     @Test
-    @DisplayName("empty() 应该返回 totalCount 为 0 且无 WebEnv 的元数据")
-    void emptyShouldReturnZeroCountMetadata() {
+    @DisplayName("应该创建 totalCount 为 0 的空元数据")
+    void shouldCreateEmptyMetadata() {
       // When
-      PlanMetadata metadata = PlanMetadata.empty();
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(0, null, null);
 
       // Then
       assertThat(metadata.totalCount()).isZero();
@@ -144,10 +204,10 @@ class PlanMetadataTest {
     }
 
     @Test
-    @DisplayName("empty() 应该返回没有 WebEnv 句柄的元数据")
-    void emptyShouldReturnMetadataWithoutWebEnv() {
+    @DisplayName("应该创建没有 WebEnv 句柄的元数据")
+    void shouldCreateMetadataWithoutWebEnv() {
       // When
-      PlanMetadata metadata = PlanMetadata.empty();
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(0, null, null);
 
       // Then
       assertThat(metadata.hasWebEnv()).isFalse();
@@ -162,7 +222,7 @@ class PlanMetadataTest {
     @DisplayName("当 webEnv 和 queryKey 都存在时应该返回 true")
     void shouldReturnTrueWhenBothPresent() {
       // Given
-      PlanMetadata metadata = new PlanMetadata(
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(
           100,
           "NCID_1_12345678_130.14.22.33_9001_1234567890",
           "1"
@@ -179,7 +239,7 @@ class PlanMetadataTest {
     @DisplayName("当 webEnv 和 queryKey 都为 null 时应该返回 false")
     void shouldReturnFalseWhenBothNull() {
       // Given
-      PlanMetadata metadata = new PlanMetadata(100, null, null);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(100, null, null);
 
       // When
       boolean result = metadata.hasWebEnv();
@@ -197,12 +257,12 @@ class PlanMetadataTest {
     @DisplayName("相同值的实例应该相等")
     void shouldBeEqualForSameValues() {
       // Given
-      PlanMetadata metadata1 = new PlanMetadata(
+      ConcretePlanMetadata metadata1 = new ConcretePlanMetadata(
           100,
           "NCID_1_12345678_130.14.22.33_9001_1234567890",
           "1"
       );
-      PlanMetadata metadata2 = new PlanMetadata(
+      ConcretePlanMetadata metadata2 = new ConcretePlanMetadata(
           100,
           "NCID_1_12345678_130.14.22.33_9001_1234567890",
           "1"
@@ -217,8 +277,8 @@ class PlanMetadataTest {
     @DisplayName("不同 totalCount 的实例应该不相等")
     void shouldNotBeEqualForDifferentTotalCount() {
       // Given
-      PlanMetadata metadata1 = new PlanMetadata(100, null, null);
-      PlanMetadata metadata2 = new PlanMetadata(200, null, null);
+      ConcretePlanMetadata metadata1 = new ConcretePlanMetadata(100, null, null);
+      ConcretePlanMetadata metadata2 = new ConcretePlanMetadata(200, null, null);
 
       // Then
       assertThat(metadata1).isNotEqualTo(metadata2);
@@ -228,12 +288,12 @@ class PlanMetadataTest {
     @DisplayName("不同 webEnv 的实例应该不相等")
     void shouldNotBeEqualForDifferentWebEnv() {
       // Given
-      PlanMetadata metadata1 = new PlanMetadata(
+      ConcretePlanMetadata metadata1 = new ConcretePlanMetadata(
           100,
           "NCID_1_12345678_130.14.22.33_9001_1234567890",
           "1"
       );
-      PlanMetadata metadata2 = new PlanMetadata(
+      ConcretePlanMetadata metadata2 = new ConcretePlanMetadata(
           100,
           "NCID_1_98765432_130.14.22.33_9001_9876543210",
           "1"
@@ -248,8 +308,8 @@ class PlanMetadataTest {
     void shouldNotBeEqualForDifferentQueryKey() {
       // Given
       String webEnv = "NCID_1_12345678_130.14.22.33_9001_1234567890";
-      PlanMetadata metadata1 = new PlanMetadata(100, webEnv, "1");
-      PlanMetadata metadata2 = new PlanMetadata(100, webEnv, "2");
+      ConcretePlanMetadata metadata1 = new ConcretePlanMetadata(100, webEnv, "1");
+      ConcretePlanMetadata metadata2 = new ConcretePlanMetadata(100, webEnv, "2");
 
       // Then
       assertThat(metadata1).isNotEqualTo(metadata2);
@@ -259,7 +319,7 @@ class PlanMetadataTest {
     @DisplayName("toString 应该包含所有字段")
     void toStringShouldContainAllFields() {
       // Given
-      PlanMetadata metadata = new PlanMetadata(
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(
           100,
           "NCID_1_12345678_130.14.22.33_9001_1234567890",
           "1"
@@ -282,7 +342,7 @@ class PlanMetadataTest {
     @DisplayName("与 null 比较应该返回 false")
     void shouldNotEqualNull() {
       // Given
-      PlanMetadata metadata = new PlanMetadata(100, null, null);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(100, null, null);
 
       // Then
       assertThat(metadata).isNotEqualTo(null);
@@ -292,7 +352,7 @@ class PlanMetadataTest {
     @DisplayName("与不同类型比较应该返回 false")
     void shouldNotEqualDifferentType() {
       // Given
-      PlanMetadata metadata = new PlanMetadata(100, null, null);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(100, null, null);
 
       // Then
       assertThat(metadata).isNotEqualTo("not a PlanMetadata");
@@ -302,7 +362,7 @@ class PlanMetadataTest {
     @DisplayName("与自身比较应该返回 true")
     void shouldEqualSelf() {
       // Given
-      PlanMetadata metadata = new PlanMetadata(100, null, null);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(100, null, null);
 
       // Then
       assertThat(metadata).isEqualTo(metadata);
@@ -320,7 +380,7 @@ class PlanMetadataTest {
       int maxInt = Integer.MAX_VALUE;
 
       // When & Then
-      assertThatCode(() -> new PlanMetadata(maxInt, null, null))
+      assertThatCode(() -> new ConcretePlanMetadata(maxInt, null, null))
           .doesNotThrowAnyException();
     }
 
@@ -332,7 +392,7 @@ class PlanMetadataTest {
       String queryKey = "1";
 
       // When & Then
-      assertThatCode(() -> new PlanMetadata(100, longWebEnv, queryKey))
+      assertThatCode(() -> new ConcretePlanMetadata(100, longWebEnv, queryKey))
           .doesNotThrowAnyException();
     }
 
@@ -344,7 +404,7 @@ class PlanMetadataTest {
       String longQueryKey = "1".repeat(1000);
 
       // When & Then
-      assertThatCode(() -> new PlanMetadata(100, webEnv, longQueryKey))
+      assertThatCode(() -> new ConcretePlanMetadata(100, webEnv, longQueryKey))
           .doesNotThrowAnyException();
     }
 
@@ -356,7 +416,7 @@ class PlanMetadataTest {
       String queryKey = "1";
 
       // When
-      PlanMetadata metadata = new PlanMetadata(100, webEnv, queryKey);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(100, webEnv, queryKey);
 
       // Then
       assertThat(metadata.webEnv()).isEqualTo(webEnv);
@@ -371,7 +431,7 @@ class PlanMetadataTest {
       String queryKey = "queryKey-with.special_chars";
 
       // When
-      PlanMetadata metadata = new PlanMetadata(100, webEnv, queryKey);
+      ConcretePlanMetadata metadata = new ConcretePlanMetadata(100, webEnv, queryKey);
 
       // Then
       assertThat(metadata.queryKey()).isEqualTo(queryKey);
