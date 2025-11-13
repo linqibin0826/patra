@@ -92,8 +92,7 @@ class GenericBatchExecutorTest {
             null, // compiledQuery
             null, // compiledParams
             null, // normalizedExpression
-            null, // windowSpec
-            null // planMetadata
+            null // windowSpec
             );
 
     ObjectNode params = objectMapper.createObjectNode();

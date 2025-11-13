@@ -1,9 +1,8 @@
 package com.patra.ingest.app.usecase.execution.strategy.batch;
 
-import com.patra.common.model.plan.EpmcPlanMetadata;
-import com.patra.common.model.plan.PlanMetadata;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.plan.BatchPlan;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,7 +14,7 @@ import java.util.Map;
 /**
  * EPMC 批次生成策略
  *
- * <p>根据 EpmcPlanMetadata 生成批次列表，支持使用 cursorMark 游标令牌进行游标分页。
+ * <p>根据 BatchPlan 生成批次列表，支持使用 cursorMark 游标令牌进行游标分页。
  *
  * <p>EPMC 使用 Solr 风格的 cursorMark 分页机制：
  * <ul>
@@ -32,37 +31,31 @@ import java.util.Map;
 public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
 
     @Override
-    public Class<? extends PlanMetadata> getSupportedType() {
-        return EpmcPlanMetadata.class;
+    public String getSupportedDataSourceCode() {
+        return "epmc";
     }
 
     @Override
-    public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
-        if (!(plan instanceof EpmcPlanMetadata epmcPlan)) {
-            throw new IllegalArgumentException(
-                "期望 EpmcPlanMetadata，实际类型: " + plan.getClass().getName()
-            );
-        }
-
+    public List<Batch> generateBatches(BatchPlan plan, ExecutionContext ctx) {
         List<Batch> batches = new ArrayList<>();
         int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
-        int totalCount = epmcPlan.totalCount();
+        int totalRecords = plan.totalRecords();
 
-        if (totalCount <= 0) {
-            log.info("EPMC 查询结果为空（totalCount=0），返回空批次列表");
+        if (totalRecords <= 0) {
+            log.info("EPMC 查询结果为空（totalRecords=0），返回空批次列表");
             return batches;
         }
 
-        int pageCount = (int) Math.ceil((double) totalCount / batchSize);
+        int pageCount = (int) Math.ceil((double) totalRecords / batchSize);
         String query = ctx.compiledQuery();
 
-        log.debug("生成 EPMC 批次: totalCount={}, batchSize={}, pageCount={}, hasCursorMark={}",
-                totalCount, batchSize, pageCount, epmcPlan.hasSessionToken());
+        log.debug("生成 EPMC 批次: totalRecords={}, batchSize={}, pageCount={}, hasStateToken={}",
+                totalRecords, batchSize, pageCount, plan.hasStateToken());
 
-        // 检查是否有 cursorMark
-        if (epmcPlan.hasSessionToken()) {
-            // 使用游标模式：将 cursorMark 存储在 sessionTokens 中
-            Map<String, String> sessionTokens = Map.of("cursorMark", epmcPlan.cursorMark());
+        // 检查是否有 state token（包含 cursorMark）
+        if (plan.hasStateToken()) {
+            // 使用游标模式：state token 中包含 cursorMark
+            Map<String, String> stateToken = plan.stateToken().orElseThrow();
 
             for (int i = 0; i < pageCount; i++) {
                 int batchNo = i + 1;
@@ -74,12 +67,12 @@ public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
                         null,           // cursorToken 通过 sessionTokens 传递
                         null,           // pageNo (EPMC 不使用页码分页)
                         batchSize,
-                        sessionTokens
+                        stateToken
                 ));
             }
 
-            log.info("已生成 {} 个 EPMC 批次（使用游标模式: cursorMark={}）",
-                    batches.size(), epmcPlan.cursorMark());
+            log.info("已生成 {} 个 EPMC 批次（使用游标模式，cursorMark={}）",
+                    batches.size(), stateToken.get("cursorMark"));
         } else {
             // 常规模式（无游标）
             for (int i = 0; i < pageCount; i++) {

@@ -57,8 +57,7 @@ class BatchPlanTest {
         "test query", // compiledQuery
         JsonNodeFactory.instance.objectNode(), // compiledParams
         "test normalized", // normalizedExpression
-        null, // windowSpec
-        null // planMetadata (初始为 null)
+        null // windowSpec
     );
   }
 
@@ -328,7 +327,7 @@ class BatchPlanTest {
           1L, 1L, 1L, 1L, "PUBMED", "FETCH", DataType.LITERATURE,
           null, "test-hash", "test query",
           JsonNodeFactory.instance.objectNode(),
-          "test normalized", null, null
+          "test normalized", null
       );
       BatchPlan plan1 = new BatchPlan(batches, ctx1);
       BatchPlan plan2 = new BatchPlan(batches, ctx2);
@@ -394,7 +393,7 @@ class BatchPlanTest {
           2L, 1L, 1L, 1L, 1L, "EPMC", "FETCH", DataType.LITERATURE,
           null, "test-hash", "test query",
           JsonNodeFactory.instance.objectNode(),
-          "test normalized", null, null
+          "test normalized", null
       );
       BatchPlan plan1 = new BatchPlan(List.of(createTestBatch(1)), ctx1);
       BatchPlan plan2 = new BatchPlan(List.of(createTestBatch(2)), ctx2);

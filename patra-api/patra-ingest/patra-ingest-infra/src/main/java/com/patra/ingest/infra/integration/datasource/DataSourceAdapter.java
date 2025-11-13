@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.DataType;
-import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.type.TypeReference;
+import com.patra.starter.provenance.internal.metadata.PlanMetadata;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.plan.BatchPlan;
 import com.patra.ingest.domain.port.DataSourcePort;
 import com.patra.ingest.infra.exception.DataSourceException;
+import com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator;
 import com.patra.ingest.infra.registry.ProviderNotFoundException;
 import com.patra.ingest.infra.registry.ProviderRegistry;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -65,6 +67,7 @@ import java.util.Set;
 public class DataSourceAdapter implements DataSourcePort {
 
     private final ProviderRegistry providerRegistry;
+    private final PlanMetadataTranslator planMetadataTranslator;
 
     /**
      * 准备采集计划元数据
@@ -74,17 +77,18 @@ public class DataSourceAdapter implements DataSourcePort {
      *   <li>从ExecutionContext提取通用参数(query, params, config)</li>
      *   <li>使用ProviderRegistry查找Provider</li>
      *   <li>调用Provider.preparePlan()获取元数据</li>
+     *   <li>使用PlanMetadataTranslator翻译为领域模型</li>
      *   <li>处理异常转换</li>
      * </ol>
      *
      * @param context 执行上下文
      * @param dataType 数据类型标识
-     * @return 计划元数据(使用继承体系支持不同数据源)
+     * @return 批次计划（领域模型）
      * @throws ProviderNotFoundException 如果Provider不存在
      * @throws DataSourceException 如果调用数据源失败
      */
     @Override
-    public PlanMetadata preparePlan(ExecutionContext context, DataType dataType) {
+    public BatchPlan preparePlan(ExecutionContext context, DataType dataType) {
         String provenanceCode = context.provenanceCode();
 
         log.debug("DataSourceAdapter.preparePlan: provenance={}, dataType={}",
@@ -99,13 +103,19 @@ public class DataSourceAdapter implements DataSourcePort {
             JsonNode params = context.compiledParams();
             ProvenanceConfig config = convertToProvenanceConfig(context);
 
-            // 3. 调用Provider
+            // 3. 调用Provider获取PlanMetadata
             PlanMetadata planMetadata = provider.preparePlan(query, params, config);
 
             log.info("计划元数据已准备: provenance={}, dataType={}, totalCount={}",
                 provenanceCode, dataType, planMetadata.totalCount());
 
-            return planMetadata;
+            // 4. 使用翻译器转换为领域模型
+            BatchPlan batchPlan = planMetadataTranslator.translate(planMetadata);
+
+            log.debug("计划元数据已翻译为领域模型: dataSourceCode={}, totalRecords={}, hasStateToken={}",
+                batchPlan.dataSourceCode(), batchPlan.totalRecords(), batchPlan.hasStateToken());
+
+            return batchPlan;
 
         } catch (ProviderNotFoundException ex) {
             log.error("Provider未找到: provenance={}, dataType={}", provenanceCode, dataType, ex);

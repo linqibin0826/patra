@@ -1,4 +1,4 @@
-package com.patra.common.model.plan;
+package com.patra.starter.provenance.internal.metadata;
 
 /**
  * EPMC 特定的计划元数据

@@ -1,4 +1,4 @@
-package com.patra.common.model.plan;
+package com.patra.starter.provenance.internal.metadata;
 
 import java.time.Instant;
 import java.util.Collections;

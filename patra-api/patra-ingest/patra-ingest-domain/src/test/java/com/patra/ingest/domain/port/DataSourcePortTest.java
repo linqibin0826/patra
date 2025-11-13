@@ -1,23 +1,21 @@
 package com.patra.ingest.domain.port;
 
-import com.patra.common.model.DataType;
-
-import static org.assertj.core.api.Assertions.*;
-
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
-import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult;
 import com.patra.ingest.domain.port.DataSourcePort.DataFetchResult.ErrorType;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.*;
 
 /**
  * DataSourcePort 接口测试
@@ -53,9 +51,9 @@ class DataSourcePortTest {
             Set.of(DataType.DRUG));
 
     @Override
-    public PlanMetadata preparePlan(ExecutionContext context, DataType dataType) {
-      // Mock 实现：返回空的计划元数据
-      return PlanMetadata.empty(context.provenanceCode());
+    public com.patra.ingest.domain.model.vo.plan.BatchPlan preparePlan(ExecutionContext context, DataType dataType) {
+      // Mock 实现：返回空的批次计划
+      return com.patra.ingest.domain.model.vo.plan.BatchPlan.empty(context.provenanceCode());
     }
 
     @Override
@@ -462,8 +460,7 @@ class DataSourcePortTest {
         null, // compiledQuery
         null, // compiledParams
         null, // normalizedExpression
-        null, // windowSpec
-        null // planMetadata
+        null // windowSpec
         );
   }
 

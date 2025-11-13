@@ -87,8 +87,7 @@ class CursorAdvancerImplTest {
         null, // compiledQuery
         null, // compiledParams
         null, // normalizedExpression
-        windowSpec,
-        null); // planMetadata
+        windowSpec);
   }
 
   @Nested
@@ -673,8 +672,7 @@ class CursorAdvancerImplTest {
               null,
               null,
               null,
-              windowSpec,
-              null);
+              windowSpec);
 
       when(cursorRepository.find(any(), any(), any(), any(), any()))
           .thenReturn(Optional.empty());
@@ -855,8 +853,7 @@ class CursorAdvancerImplTest {
               null,
               null,
               null,
-              windowSpec,
-              null);
+              windowSpec);
 
       when(cursorRepository.find(any(), any(), any(), any(), any()))
           .thenReturn(Optional.empty());
