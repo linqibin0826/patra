@@ -22,14 +22,14 @@ import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.BatchMetadata;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.pubmed.PubMedClient;
-import com.patra.starter.provenance.pubmed.converter.PubmedArticleConverter;
+import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
 import com.patra.starter.provenance.pubmed.model.request.EFetchRequest;
 import com.patra.starter.provenance.pubmed.model.request.EPostRequest;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.EFetchResponse;
 import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
-import com.patra.starter.provenance.pubmed.model.response.PubmedArticle;
+import com.patra.starter.provenance.pubmed.model.response.PubmedLiterature;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,7 +55,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PubmedLiteratureProcessorTest {
 
     @Mock private PubMedClient pubMedClient;
-    @Mock private PubmedArticleConverter converter;
+    @Mock private PubmedLiteratureConverter converter;
     @Mock private ProvenanceProperties properties;
     @Mock private ProvenanceMetrics metrics;
 
@@ -169,7 +169,7 @@ class PubmedLiteratureProcessorTest {
     /**
      * 创建测试用的EFetchResponse
      */
-    private EFetchResponse createEFetchResponse(List<PubmedArticle> articles) {
+    private EFetchResponse createEFetchResponse(List<PubmedLiterature> articles) {
         // 使用反射或工厂方法创建EFetchResponse
         // 由于EFetchResponse的构造逻辑，这里直接返回mock
         EFetchResponse response = mock(EFetchResponse.class);
@@ -178,10 +178,10 @@ class PubmedLiteratureProcessorTest {
     }
 
     /**
-     * 创建测试用的PubmedArticle
+     * 创建测试用的PubmedLiterature
      */
-    private PubmedArticle createMockArticle(String pmid) {
-        PubmedArticle article = mock(PubmedArticle.class, withSettings().lenient());
+    private PubmedLiterature createMockArticle(String pmid) {
+        PubmedLiterature article = mock(PubmedLiterature.class, withSettings().lenient());
         when(article.pmid()).thenReturn(pmid);
         return article;
     }
@@ -192,8 +192,15 @@ class PubmedLiteratureProcessorTest {
     private CanonicalLiterature createValidLiterature(String pmid) {
         return CanonicalLiterature.builder()
                 .title("Test Article " + pmid)
-                .abstractText("Test abstract for " + pmid)
-                .identifiers(Map.of("pmid", pmid))
+                .abstractContent(CanonicalLiterature.Abstract.builder()
+                        .text("Test abstract for " + pmid)
+                        .build())
+                .identifiers(List.of(
+                        CanonicalLiterature.Identifier.builder()
+                                .type("pmid")
+                                .value(pmid)
+                                .build()
+                ))
                 .build();
     }
 
@@ -202,7 +209,9 @@ class PubmedLiteratureProcessorTest {
      */
     private CanonicalLiterature createInvalidLiterature() {
         return CanonicalLiterature.builder()
-                .abstractText("Test abstract without title and pmid")
+                .abstractContent(CanonicalLiterature.Abstract.builder()
+                        .text("Test abstract without title and pmid")
+                        .build())
                 .build();
     }
 
@@ -257,8 +266,8 @@ class PubmedLiteratureProcessorTest {
             List<String> pmids = List.of(TEST_PMID_1, TEST_PMID_2);
             ESearchResponse searchResponse = createESearchResponse(pmids, TEST_WEB_ENV);
 
-            PubmedArticle article1 = createMockArticle(TEST_PMID_1);
-            PubmedArticle article2 = createMockArticle(TEST_PMID_2);
+            PubmedLiterature article1 = createMockArticle(TEST_PMID_1);
+            PubmedLiterature article2 = createMockArticle(TEST_PMID_2);
             EFetchResponse fetchResponse = createEFetchResponse(List.of(article1, article2));
 
             CanonicalLiterature lit1 = createValidLiterature(TEST_PMID_1);
@@ -300,10 +309,10 @@ class PubmedLiteratureProcessorTest {
             ESearchResponse searchResponse = createESearchResponse(pmids, null);
             EPostResponse postResponse = createEPostResponse();
 
-            List<PubmedArticle> articles = new ArrayList<>();
+            List<PubmedLiterature> articles = new ArrayList<>();
             List<CanonicalLiterature> literatures = new ArrayList<>();
             for (int i = 0; i < 250; i++) {
-                PubmedArticle article = createMockArticle(pmids.get(i));
+                PubmedLiterature article = createMockArticle(pmids.get(i));
                 articles.add(article);
                 CanonicalLiterature lit = createValidLiterature(pmids.get(i));
                 literatures.add(lit);
@@ -366,7 +375,7 @@ class PubmedLiteratureProcessorTest {
             List<String> pmids = List.of(TEST_PMID_1);
             ESearchResponse searchResponse = createESearchResponse(pmids, TEST_WEB_ENV);
 
-            PubmedArticle article = createMockArticle(TEST_PMID_1);
+            PubmedLiterature article = createMockArticle(TEST_PMID_1);
             EFetchResponse fetchResponse = createEFetchResponse(List.of(article));
 
             CanonicalLiterature lit = createValidLiterature(TEST_PMID_1);
@@ -400,8 +409,8 @@ class PubmedLiteratureProcessorTest {
             List<String> pmids = List.of(TEST_PMID_1, TEST_PMID_2);
             ESearchResponse searchResponse = createESearchResponse(pmids, null);
 
-            PubmedArticle article1 = createMockArticle(TEST_PMID_1);
-            PubmedArticle article2 = createMockArticle(TEST_PMID_2);
+            PubmedLiterature article1 = createMockArticle(TEST_PMID_1);
+            PubmedLiterature article2 = createMockArticle(TEST_PMID_2);
             EFetchResponse fetchResponse = createEFetchResponse(List.of(article1, article2));
 
             CanonicalLiterature lit1 = createValidLiterature(TEST_PMID_1);
@@ -432,11 +441,11 @@ class PubmedLiteratureProcessorTest {
         void shouldFormatConversionWarningMessageCorrectly() {
             // Given: 多个文章转换失败（超过5个）
             List<String> pmids = new ArrayList<>();
-            List<PubmedArticle> articles = new ArrayList<>();
+            List<PubmedLiterature> articles = new ArrayList<>();
             for (int i = 1; i <= 10; i++) {
                 String pmid = String.valueOf(10000000 + i);
                 pmids.add(pmid);
-                PubmedArticle article = createMockArticle(pmid);
+                PubmedLiterature article = createMockArticle(pmid);
                 articles.add(article);
                 when(converter.toCanonicalLiterature(article))
                         .thenThrow(new RuntimeException("Conversion failed"));
@@ -723,7 +732,7 @@ class PubmedLiteratureProcessorTest {
             CanonicalLiterature literature =
                     CanonicalLiterature.builder()
                             .title("Test Article")
-                            .identifiers(Map.of())
+                            .identifiers(List.of())
                             .build();
 
             // When: 验证数据
@@ -739,7 +748,14 @@ class PubmedLiteratureProcessorTest {
         void shouldFailValidationWhenTitleIsMissing() {
             // Given: 缺少标题
             CanonicalLiterature literature =
-                    CanonicalLiterature.builder().identifiers(Map.of("pmid", TEST_PMID_1)).build();
+                    CanonicalLiterature.builder()
+                            .identifiers(List.of(
+                                    CanonicalLiterature.Identifier.builder()
+                                            .type("pmid")
+                                            .value(TEST_PMID_1)
+                                            .build()
+                            ))
+                            .build();
 
             // When: 验证数据
             ValidationResult result = processor.validate(literature);
@@ -773,9 +789,9 @@ class PubmedLiteratureProcessorTest {
 
         @Test
         @DisplayName("should_transform_pubmed_article_to_canonical_literature")
-        void shouldTransformPubmedArticleToCanonicalLiterature() {
-            // Given: PubmedArticle和预期的转换结果
-            PubmedArticle article = createMockArticle(TEST_PMID_1);
+        void shouldTransformPubmedLiteratureToCanonicalLiterature() {
+            // Given: PubmedLiterature和预期的转换结果
+            PubmedLiterature article = createMockArticle(TEST_PMID_1);
             CanonicalLiterature expectedLiterature = createValidLiterature(TEST_PMID_1);
 
             when(converter.toCanonicalLiterature(article)).thenReturn(expectedLiterature);
@@ -801,14 +817,14 @@ class PubmedLiteratureProcessorTest {
         @DisplayName("should_throw_exception_when_raw_data_is_wrong_type")
         void shouldThrowExceptionWhenRawDataIsWrongType() {
             // Given: 错误类型的原始数据
-            Object wrongTypeData = "This is a string, not a PubmedArticle";
+            Object wrongTypeData = "This is a string, not a PubmedLiterature";
 
             // When & Then: 类型错误时抛出异常
             assertThatThrownBy(() -> processor.transform(wrongTypeData))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("不支持的数据类型")
                     .hasMessageContaining("String")
-                    .hasMessageContaining("PubmedArticle");
+                    .hasMessageContaining("PubmedLiterature");
         }
     }
 
@@ -830,7 +846,7 @@ class PubmedLiteratureProcessorTest {
 
             List<String> pmids = List.of(TEST_PMID_1);
             ESearchResponse searchResponse = createESearchResponse(pmids, null);
-            PubmedArticle article = createMockArticle(TEST_PMID_1);
+            PubmedLiterature article = createMockArticle(TEST_PMID_1);
             EFetchResponse fetchResponse = createEFetchResponse(List.of(article));
             CanonicalLiterature lit = createValidLiterature(TEST_PMID_1);
 
@@ -859,7 +875,7 @@ class PubmedLiteratureProcessorTest {
             ESearchResponse searchResponse = createESearchResponse(pmids, null);
             EPostResponse postResponse = createEPostResponse();
 
-            List<PubmedArticle> articles = new ArrayList<>();
+            List<PubmedLiterature> articles = new ArrayList<>();
             for (int i = 0; i < 160; i++) {
                 articles.add(createMockArticle(pmids.get(i)));
             }
@@ -892,7 +908,7 @@ class PubmedLiteratureProcessorTest {
             ESearchResponse searchResponse = createESearchResponse(pmids, null);
             EPostResponse postResponse = createEPostResponse();
 
-            List<PubmedArticle> articles = new ArrayList<>();
+            List<PubmedLiterature> articles = new ArrayList<>();
             for (int i = 0; i < 110; i++) {
                 articles.add(createMockArticle(pmids.get(i)));
             }
@@ -936,7 +952,7 @@ class PubmedLiteratureProcessorTest {
             ESearchResponse searchResponse = createESearchResponse(pmids, null);
             EPostResponse postResponse = createEPostResponse();
 
-            List<PubmedArticle> articles = new ArrayList<>();
+            List<PubmedLiterature> articles = new ArrayList<>();
             for (int i = 0; i < 210; i++) {
                 articles.add(createMockArticle(pmids.get(i)));
             }

@@ -76,8 +76,15 @@ class DataProcessorTest {
     private CanonicalLiterature createValidLiterature() {
         return CanonicalLiterature.builder()
             .title("Test Article")
-            .abstractText("Test abstract")
-            .identifiers(Map.of("PMID", "12345"))
+            .abstractContent(CanonicalLiterature.Abstract.builder()
+                .text("Test abstract")
+                .build())
+            .identifiers(List.of(
+                CanonicalLiterature.Identifier.builder()
+                    .type("PMID")
+                    .value("12345")
+                    .build()
+            ))
             .build();
     }
 
@@ -86,7 +93,9 @@ class DataProcessorTest {
      */
     private CanonicalLiterature createInvalidLiterature() {
         return CanonicalLiterature.builder()
-            .abstractText("Test abstract without title")
+            .abstractContent(CanonicalLiterature.Abstract.builder()
+                .text("Test abstract without title")
+                .build())
             .build();
     }
 

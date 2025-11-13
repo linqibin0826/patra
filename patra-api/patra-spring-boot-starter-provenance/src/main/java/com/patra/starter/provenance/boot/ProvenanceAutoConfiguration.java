@@ -14,7 +14,7 @@ import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
 // import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider; // 临时注释，待Phase 4升级
-import com.patra.starter.provenance.pubmed.converter.PubmedArticleConverter;
+import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Optional;
@@ -120,8 +120,8 @@ public class ProvenanceAutoConfiguration {
    */
   @Bean
   @ConditionalOnMissingBean
-  public PubmedArticleConverter pubmedArticleConverter() {
-    return new PubmedArticleConverter();
+  public PubmedLiteratureConverter pubmedArticleConverter() {
+    return new PubmedLiteratureConverter();
   }
 
   /**
@@ -170,7 +170,7 @@ public class ProvenanceAutoConfiguration {
   @ConditionalOnMissingBean
   public PubmedDataSourceProvider pubmedDataSourceProvider(
       PubMedClient pubMedClient,
-      PubmedArticleConverter articleConverter,
+      PubmedLiteratureConverter articleConverter,
       ProvenanceProperties properties,
       Optional<ProvenanceMetrics> metrics) {
     return new PubmedDataSourceProvider(

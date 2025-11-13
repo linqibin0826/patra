@@ -2,7 +2,7 @@
 name: java-hexagonal-architecture
 description: 六边形架构和DDD专家。设计领域模型、评审架构方案、技术选型决策。关键词：bounded context、aggregate、domain model、ports and adapters、dependency rule、架构决策、架构评审、领域建模、层次边界、技术方案、架构违规、依赖问题。proactively 在架构设计、方案评审和重要技术决策时提供指导。
 tools: Read, Grep, Glob, Skill, mcp__sequential-thinking__sequentialthinking, mcp__context7__resolve-library-id, mcp__context7__get-library-docs, WebSearch, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__find_referencing_symbols, mcp__serena__replace_symbol_body, mcp__serena__rename_symbol, mcp__serena__activate_project, mcp__serena__get_current_config
-model: opus
+model: sonnet
 color: blue
 ---
 

@@ -4,8 +4,6 @@ import com.patra.catalog.api.dto.AuthorDTO;
 import com.patra.catalog.api.dto.JournalDTO;
 import com.patra.catalog.api.dto.LiteratureDTO;
 import com.patra.common.model.CanonicalLiterature;
-import com.patra.common.model.CanonicalLiterature.AuthorInfo;
-import com.patra.common.model.CanonicalLiterature.JournalInfo;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -36,9 +34,13 @@ public interface LiteratureConverter {
    * @param source 领域文献模型
    * @return 目录 API DTO
    */
+  @Mapping(target = "abstractText", source = "abstractContent", qualifiedByName = "mapAbstract")
   @Mapping(target = "authors", source = "authors", qualifiedByName = "mapAuthors")
   @Mapping(target = "journal", source = "journal", qualifiedByName = "mapJournal")
-  @Mapping(target = "language", ignore = true)
+  @Mapping(target = "identifiers", source = "identifiers", qualifiedByName = "mapIdentifiers")
+  @Mapping(target = "publicationDate", source = "dates", qualifiedByName = "mapPublicationDate")
+  @Mapping(target = "keywords", source = "keywords", qualifiedByName = "mapKeywords")
+  @Mapping(target = "language", source = "language")
   @Mapping(target = "publicationTypes", expression = "java(java.util.List.of())")
   LiteratureDTO toDto(CanonicalLiterature source);
 
@@ -57,7 +59,7 @@ public interface LiteratureConverter {
    * @return 目录作者 DTO 列表
    */
   @Named("mapAuthors")
-  default List<AuthorDTO> mapAuthors(List<AuthorInfo> authors) {
+  default List<AuthorDTO> mapAuthors(List<CanonicalLiterature.Author> authors) {
     if (CollectionUtils.isEmpty(authors)) {
       return List.of();
     }
@@ -67,8 +69,8 @@ public interface LiteratureConverter {
                 AuthorDTO.builder()
                     .lastName(author.getLastName())
                     .foreName(author.getForeName())
-                    .initials(null)
-                    .affiliations(resolveAffiliations(author.getAffiliation()))
+                    .initials(author.getInitials())
+                    .affiliations(resolveAffiliations(author.getAffiliations()))
                     .identifier(null)
                     .identifierSource(null)
                     .build())
@@ -82,29 +84,99 @@ public interface LiteratureConverter {
    * @return 目录期刊 DTO 或 null
    */
   @Named("mapJournal")
-  default JournalDTO mapJournal(JournalInfo journal) {
+  default JournalDTO mapJournal(CanonicalLiterature.Journal journal) {
     if (journal == null) {
       return null;
     }
     return JournalDTO.builder()
         .title(journal.getTitle())
         .issn(journal.getIssn())
-        .issnType(null)
+        .issnType(journal.getIssnType())
         .publisher(journal.getPublisher())
-        .country(null)
+        .country(journal.getCountry())
         .build();
   }
 
   /**
-   * 将单个关联字符串解析为列表格式。
+   * 将机构列表转换为字符串列表。
    *
-   * @param affiliation 关联文本
-   * @return 关联列表 (如果无文本则为空)
+   * @param affiliations 机构列表
+   * @return 机构名称列表 (如果为空则返回空列表)
    */
-  default List<String> resolveAffiliations(String affiliation) {
-    if (!StringUtils.hasText(affiliation)) {
+  default List<String> resolveAffiliations(List<CanonicalLiterature.Affiliation> affiliations) {
+    if (CollectionUtils.isEmpty(affiliations)) {
       return List.of();
     }
-    return List.of(affiliation);
+    return affiliations.stream()
+        .map(CanonicalLiterature.Affiliation::getName)
+        .filter(StringUtils::hasText)
+        .toList();
+  }
+
+  /**
+   * 将 Abstract 对象转换为纯文本字符串。
+   *
+   * @param abstractContent 摘要对象
+   * @return 摘要纯文本 (如果为 null 则返回 null)
+   */
+  @Named("mapAbstract")
+  default String mapAbstract(CanonicalLiterature.Abstract abstractContent) {
+    if (abstractContent == null) {
+      return null;
+    }
+    return abstractContent.getText();
+  }
+
+  /**
+   * 将标识符列表转换为 Map。
+   *
+   * @param identifiers 标识符列表
+   * @return 标识符 Map (如果为 null 或空则返回 null)
+   */
+  @Named("mapIdentifiers")
+  default java.util.Map<String, String> mapIdentifiers(
+      List<CanonicalLiterature.Identifier> identifiers) {
+    if (CollectionUtils.isEmpty(identifiers)) {
+      return null;
+    }
+    return identifiers.stream()
+        .filter(id -> StringUtils.hasText(id.getType()) && StringUtils.hasText(id.getValue()))
+        .collect(java.util.stream.Collectors.toMap(
+            CanonicalLiterature.Identifier::getType,
+            CanonicalLiterature.Identifier::getValue,
+            (v1, v2) -> v1)); // 如果有重复的 key，保留第一个
+  }
+
+  /**
+   * 从 PublicationDates 对象中提取主要出版日期。
+   *
+   * @param dates 出版日期对象
+   * @return 主要出版日期 (如果为 null 则返回 null)
+   */
+  @Named("mapPublicationDate")
+  default java.time.LocalDate mapPublicationDate(CanonicalLiterature.PublicationDates dates) {
+    if (dates == null) {
+      return null;
+    }
+    return dates.getPublished();
+  }
+
+  /**
+   * 将关键词集合列表转换为扁平的关键词字符串列表。
+   *
+   * @param keywordSets 关键词集合列表
+   * @return 关键词字符串列表 (如果为 null 或空则返回 null)
+   */
+  @Named("mapKeywords")
+  default List<String> mapKeywords(List<CanonicalLiterature.KeywordSet> keywordSets) {
+    if (CollectionUtils.isEmpty(keywordSets)) {
+      return null;
+    }
+    return keywordSets.stream()
+        .filter(keywordSet -> !CollectionUtils.isEmpty(keywordSet.getKeywords()))
+        .flatMap(keywordSet -> keywordSet.getKeywords().stream())
+        .map(CanonicalLiterature.Keyword::getTerm)
+        .filter(StringUtils::hasText)
+        .toList();
   }
 }

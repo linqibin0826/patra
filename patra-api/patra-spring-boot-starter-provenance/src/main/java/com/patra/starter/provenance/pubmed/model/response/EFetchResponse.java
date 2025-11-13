@@ -20,7 +20,7 @@ import java.util.List;
  * <p><b>支持的响应格式:</b>
  *
  * <ul>
- *   <li><b>XML文章详情</b>: 包含完整的 PubmedArticle 对象列表
+ *   <li><b>XML文章详情</b>: 包含完整的 PubmedLiterature 对象列表
  *   <li><b>纯文本UID列表</b>: 仅包含标识符列表,用于轻量级批量处理
  * </ul>
  *
@@ -28,12 +28,12 @@ import java.util.List;
  * @since 0.1.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JacksonXmlRootElement(localName = "PubmedArticleSet")
+@JacksonXmlRootElement(localName = "PubmedLiteratureSet")
 public final class EFetchResponse {
 
   @JacksonXmlElementWrapper(useWrapping = false)
-  @JacksonXmlProperty(localName = "PubmedArticle")
-  private List<PubmedArticle> articles;
+  @JacksonXmlProperty(localName = "PubmedLiterature")
+  private List<PubmedLiterature> articles;
 
   @JsonIgnore private List<String> uids;
 
@@ -42,13 +42,13 @@ public final class EFetchResponse {
     this.uids = List.of();
   }
 
-  private EFetchResponse(List<PubmedArticle> articles, List<String> uids) {
+  private EFetchResponse(List<PubmedLiterature> articles, List<String> uids) {
     this.articles = articles;
     this.uids = uids;
   }
 
   /** 不可变的已解析文章记录列表。 */
-  public List<PubmedArticle> articles() {
+  public List<PubmedLiterature> articles() {
     return articles != null ? articles : List.of();
   }
 
