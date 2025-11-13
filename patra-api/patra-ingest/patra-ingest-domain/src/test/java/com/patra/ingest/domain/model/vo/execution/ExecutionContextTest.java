@@ -3,6 +3,7 @@ package com.patra.ingest.domain.model.vo.execution;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import org.junit.jupiter.api.DisplayName;
@@ -51,12 +52,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               configSnapshot,
               EXPR_HASH,
               COMPILED_QUERY,
               compiledParams,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context.taskId()).isEqualTo(TASK_ID);
@@ -66,6 +69,7 @@ class ExecutionContextTest {
       assertThat(context.scheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID);
       assertThat(context.provenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(context.operationCode()).isEqualTo(OPERATION_CODE);
+      assertThat(context.dataType()).isEqualTo(DataType.LITERATURE);
       assertThat(context.configSnapshot()).isEqualTo(configSnapshot);
       assertThat(context.exprHash()).isEqualTo(EXPR_HASH);
       assertThat(context.compiledQuery()).isEqualTo(COMPILED_QUERY);
@@ -80,7 +84,7 @@ class ExecutionContextTest {
       // When
       ExecutionContext context =
           new ExecutionContext(
-              null, null, null, null, null, null, null, null, null, null, null, null, null);
+              null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
       // Then
       assertThat(context.taskId()).isNull();
@@ -111,6 +115,8 @@ class ExecutionContextTest {
               null,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
+              null,
               null,
               null,
               null,
@@ -150,12 +156,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.Time.class);
@@ -179,12 +187,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.IdRange.class);
@@ -208,12 +218,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.CursorLandmark.class);
@@ -238,12 +250,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.VolumeBudget.class);
@@ -267,12 +281,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.Single.class);
@@ -300,12 +316,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               configSnapshot,
               EXPR_HASH,
               COMPILED_QUERY,
               compiledParams,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       ExecutionContext context2 =
           new ExecutionContext(
@@ -316,12 +334,14 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               configSnapshot,
               EXPR_HASH,
               COMPILED_QUERY,
               compiledParams,
               NORMALIZED_EXPRESSION,
-              windowSpec);
+              windowSpec,
+              null);
 
       // Then
       assertThat(context1).isEqualTo(context2);
@@ -341,11 +361,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
+              null,
               null);
 
       ExecutionContext context2 =
@@ -357,11 +379,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
+              null,
               null);
 
       // Then
@@ -381,11 +405,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
+              null,
               null);
 
       // When
@@ -414,11 +440,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
+              null,
               null);
       ExecutionContext key2 =
           new ExecutionContext(
@@ -429,11 +457,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
+              null,
               null);
 
       // When
@@ -456,8 +486,8 @@ class ExecutionContextTest {
       // When
       ExecutionContext context =
           new ExecutionContext(
-              TASK_ID, RUN_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID, "", "", null, "", "", null,
-              "", null);
+              TASK_ID, RUN_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID, "", "", DataType.LITERATURE, null, "", "", null,
+              "", null, null);
 
       // Then
       assertThat(context.provenanceCode()).isEmpty();
@@ -483,11 +513,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               longString,
               longString,
+              DataType.LITERATURE,
               null,
               longString,
               longString,
               null,
               longString,
+              null,
               null);
 
       // Then
@@ -517,11 +549,13 @@ class ExecutionContextTest {
               SCHEDULE_INSTANCE_ID,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               complexNode,
               NORMALIZED_EXPRESSION,
+              null,
               null);
 
       // Then
@@ -543,11 +577,13 @@ class ExecutionContextTest {
               Long.MAX_VALUE,
               PROVENANCE_CODE,
               OPERATION_CODE,
+              DataType.LITERATURE,
               null,
               EXPR_HASH,
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
+              null,
               null);
 
       // Then

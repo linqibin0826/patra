@@ -14,9 +14,10 @@
  * <ul>
  *   <li>{@code BatchPlanner} - 批次规划器接口
  *   <li>{@code BatchPlannerRegistry} - 批次规划器注册表
- *   <li>{@code PubmedBatchPlanner} - PubMed 批次规划器
+ *   <li>{@code UnifiedBatchPlanner} - 统一批次规划器（支持多数据源）
  *       <ul>
- *         <li>使用 offset-based 分页（retstart + retmax）
+ *         <li>使用策略模式委派批次生成逻辑
+ *         <li>通过 BatchGenerationStrategy 自动注入所有策略
  *       </ul>
  * </ul>
  *
@@ -30,7 +31,7 @@
  *   </tr>
  *   <tr>
  *     <td>PubMed</td>
- *     <td>PubmedBatchPlanner</td>
+ *     <td>UnifiedBatchPlanner + PubmedBatchGenerationStrategy</td>
  *     <td>Offset-based</td>
  *     <td>10000（retmax 参数）</td>
  *   </tr>
@@ -64,44 +65,53 @@
  * </ul>
  *
  * <h2>使用示例</h2>
- * <h3>PubMed 批次规划器</h3>
+ * <h3>统一批次规划器（策略模式）</h3>
  * <pre>{@code
+ * // 1. 定义批次生成策略
  * @Component
- * public class PubmedBatchPlanner implements BatchPlanner {
+ * public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
  *
  *     @Override
- *     public String getProvenanceCode() {
- *         return "pubmed";
+ *     public Class<? extends PlanMetadata> getSupportedType() {
+ *         return PubmedPlanMetadata.class;
  *     }
  *
  *     @Override
- *     public BatchPlan plan(ExecutionContext context) {
- *         // 1. 获取总数（通过 ESearch API）
- *         var totalCount = fetchTotalCount(context);
+ *     public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
+ *         PubmedPlanMetadata pubmedPlan = (PubmedPlanMetadata) plan;
+ *         int batchSize = ctx.provenanceConfigSnapshot().pagination().pageSizeValue();
+ *         int totalCount = pubmedPlan.totalCount();
+ *         // 生成批次逻辑...
+ *         return batches;
+ *     }
+ * }
  *
- *         // 2. 计算批次
- *         var batches = new ArrayList<Batch>();
- *         var batchSize = 10000;  // retmax 上限
- *         var offset = 0;
- *         int seq = 1;
+ * // 2. UnifiedBatchPlanner 自动注入所有策略
+ * @Component
+ * public class UnifiedBatchPlanner implements BatchPlanner {
  *
- *         while (offset < totalCount) {
- *             var currentBatchSize = Math.min(batchSize, totalCount - offset);
+ *     public UnifiedBatchPlanner(
+ *             DataSourcePort dataSourcePort,
+ *             List<BatchGenerationStrategy> strategies) {
+ *         this.dataSourcePort = dataSourcePort;
+ *         this.strategyMap = buildStrategyMap(strategies);  // 自动发现策略
+ *     }
  *
- *             batches.add(Batch.builder()
- *                 .seq(seq++)
- *                 .offset(offset)
- *                 .batchSize(currentBatchSize)
- *                 .params(Map.of(
- *                     "retstart", String.valueOf(offset),
- *                     "retmax", String.valueOf(currentBatchSize)
- *                 ))
- *                 .build());
+ *     @Override
+ *     public BatchPlan plan(ExecutionContext ctx) {
+ *         // 1. 准备计划元数据
+ *         PlanMetadata planMetadata = dataSourcePort.preparePlan(ctx, DataType.LITERATURE);
  *
- *             offset += currentBatchSize;
- *         }
+ *         // 2. 根据 PlanMetadata 类型选择对应策略
+ *         BatchGenerationStrategy strategy = strategyMap.get(planMetadata.getClass());
  *
- *         return new BatchPlan(batches, totalCount);
+ *         // 3. 使用策略生成批次
+ *         List<Batch> batches = strategy.generateBatches(planMetadata, ctx);
+ *
+ *         // 4. 将 planMetadata 附加到 context，供执行阶段使用
+ *         ExecutionContext enrichedContext = ctx.withPlanMetadata(planMetadata);
+ *
+ *         return new BatchPlan(batches, enrichedContext);
  *     }
  * }
  * }</pre>

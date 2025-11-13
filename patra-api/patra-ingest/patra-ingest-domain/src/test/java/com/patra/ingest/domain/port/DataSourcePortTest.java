@@ -1,9 +1,12 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.model.DataType;
+
 import static org.assertj.core.api.Assertions.*;
 
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
+import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
@@ -48,6 +51,12 @@ class DataSourcePortTest {
             Set.of(DataType.JOURNAL),
             "drugbank",
             Set.of(DataType.DRUG));
+
+    @Override
+    public PlanMetadata preparePlan(ExecutionContext context, DataType dataType) {
+      // Mock 实现：返回空的计划元数据
+      return PlanMetadata.empty(context.provenanceCode());
+    }
 
     @Override
     public <T> DataFetchResult<T> fetchData(
@@ -447,12 +456,14 @@ class DataSourcePortTest {
         1L, // scheduleInstanceId
         provenanceCode, // provenanceCode
         "test-op", // operationCode
+        DataType.LITERATURE, // dataType
         null, // configSnapshot
         null, // exprHash
         null, // compiledQuery
         null, // compiledParams
         null, // normalizedExpression
-        null // windowSpec
+        null, // windowSpec
+        null // planMetadata
         );
   }
 
@@ -467,7 +478,8 @@ class DataSourcePortTest {
         null, // params
         null, // cursorToken
         1, // pageNo
-        100 // pageSize
+        100, // pageSize
+        null // sessionTokens
         );
   }
 

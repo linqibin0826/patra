@@ -87,8 +87,8 @@ public class PubMedClientImpl implements PubMedClient {
     String baseUrl = finalConfig.baseUrl();
     String path = "/esearch.fcgi";
 
-    java.util.Map<String, String> queryParams = request.toQueryParams();
-    java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
+    Map<String, String> queryParams = request.toQueryParams();
+    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
     HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
     String body = httpClient.get(baseUrl, path, queryParams, headers, rc);

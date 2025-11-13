@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
+import com.patra.common.model.DataType;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -80,12 +81,14 @@ class CursorAdvancerImplTest {
         300L, // scheduleInstanceId
         "pubmed",
         "HARVEST",
+        DataType.LITERATURE, // dataType
         null, // configSnapshot
         exprHash,
         null, // compiledQuery
         null, // compiledParams
         null, // normalizedExpression
-        windowSpec);
+        windowSpec,
+        null); // planMetadata
   }
 
   @Nested
@@ -664,12 +667,14 @@ class CursorAdvancerImplTest {
               300L,
               "pubmed",
               "BACKFILL", // BACKFILL 操作
+              DataType.LITERATURE, // dataType
               null,
               "hash-backfill",
               null,
               null,
               null,
-              windowSpec);
+              windowSpec,
+              null);
 
       when(cursorRepository.find(any(), any(), any(), any(), any()))
           .thenReturn(Optional.empty());
@@ -844,12 +849,14 @@ class CursorAdvancerImplTest {
               300L,
               "pubmed",
               "HARVEST",
+              DataType.LITERATURE, // dataType
               null,
               "hash-null-task",
               null,
               null,
               null,
-              windowSpec);
+              windowSpec,
+              null);
 
       when(cursorRepository.find(any(), any(), any(), any(), any()))
           .thenReturn(Optional.empty());

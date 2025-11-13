@@ -78,10 +78,12 @@ patra-ingest-app/
    │  │  │  └─ HeartbeatRenewalService.java     # 心跳续约服务
    │  │  ├─ strategy/
    │  │  │  ├─ ExecuteTaskBatchesUseCase.java   # 批次执行用例
-   │  │  │  └─ planner/
-   │  │  │     ├─ BatchPlanner.java             # 批次规划器接口
-   │  │  │     ├─ BatchPlannerRegistry.java     # 规划器注册表
-   │  │  │     └─ PubmedBatchPlanner.java       # PubMed 批次规划器
+   │  │  │  ├─ planner/
+   │  │  │  │  ├─ BatchPlanner.java             # 批次规划器接口
+   │  │  │  │  ├─ BatchPlannerRegistry.java     # 规划器注册表
+   │  │  │  │  └─ UnifiedBatchPlanner.java      # 统一批次规划器(策略模式)
+   │  │  │  └─ batch/
+   │  │  │     └─ PubmedBatchGenerationStrategy.java  # PubMed 批次生成策略
    │  │  ├─ cursor/
    │  │  │  └─ CursorAdvancer.java              # 游标推进器
    │  │  ├─ coordination/

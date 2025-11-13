@@ -5,12 +5,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.common.model.DataType;
+import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.DataSourcePort;
+import com.patra.ingest.infra.exception.DataSourceException;
 import com.patra.ingest.infra.registry.ProviderNotFoundException;
 import com.patra.ingest.infra.registry.ProviderRegistry;
+import com.patra.starter.provenance.common.config.ProvenanceConfig;
+import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.provider.BatchExecutionParams;
 import com.patra.starter.provenance.common.provider.BatchMetadata;
 import com.patra.starter.provenance.common.provider.DataSourceProvider;
@@ -61,6 +65,221 @@ import java.util.Set;
 public class DataSourceAdapter implements DataSourcePort {
 
     private final ProviderRegistry providerRegistry;
+
+    /**
+     * 准备采集计划元数据
+     *
+     * <p><strong>实现流程</strong>:
+     * <ol>
+     *   <li>从ExecutionContext提取通用参数(query, params, config)</li>
+     *   <li>使用ProviderRegistry查找Provider</li>
+     *   <li>调用Provider.preparePlan()获取元数据</li>
+     *   <li>处理异常转换</li>
+     * </ol>
+     *
+     * @param context 执行上下文
+     * @param dataType 数据类型标识
+     * @return 计划元数据(使用继承体系支持不同数据源)
+     * @throws ProviderNotFoundException 如果Provider不存在
+     * @throws DataSourceException 如果调用数据源失败
+     */
+    @Override
+    public PlanMetadata preparePlan(ExecutionContext context, DataType dataType) {
+        String provenanceCode = context.provenanceCode();
+
+        log.debug("DataSourceAdapter.preparePlan: provenance={}, dataType={}",
+            provenanceCode, dataType);
+
+        try {
+            // 1. 查找Provider
+            DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
+
+            // 2. 提取通用参数
+            String query = context.compiledQuery();
+            JsonNode params = context.compiledParams();
+            ProvenanceConfig config = convertToProvenanceConfig(context);
+
+            // 3. 调用Provider
+            PlanMetadata planMetadata = provider.preparePlan(query, params, config);
+
+            log.info("计划元数据已准备: provenance={}, dataType={}, totalCount={}",
+                provenanceCode, dataType, planMetadata.totalCount());
+
+            return planMetadata;
+
+        } catch (ProviderNotFoundException ex) {
+            log.error("Provider未找到: provenance={}, dataType={}", provenanceCode, dataType, ex);
+            throw ex;
+        } catch (ProvenanceClientException ex) {
+            log.error("调用数据源失败: provenance={}, dataType={}", provenanceCode, dataType, ex);
+            throw new DataSourceException("准备计划元数据失败: " + ex.getMessage(), ex);
+        } catch (Exception ex) {
+            log.error("准备计划元数据时发生未知错误: provenance={}, dataType={}",
+                provenanceCode, dataType, ex);
+            throw new DataSourceException("准备计划元数据失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * 转换ExecutionContext为ProvenanceConfig
+     *
+     * <p>将Domain层的ProvenanceConfigSnapshot转换为Starter层的ProvenanceConfig。
+     * 如果没有配置快照,返回null(Provider将使用默认配置)。
+     *
+     * @param context 执行上下文
+     * @return ProvenanceConfig,如果快照为空则返回null
+     */
+    private ProvenanceConfig convertToProvenanceConfig(ExecutionContext context) {
+        var snapshot = context.configSnapshot();
+
+        // 如果没有配置快照,返回null(Provider将使用默认配置)
+        if (snapshot == null || snapshot.provenance() == null) {
+            log.debug("配置快照为空,Provider将使用默认配置");
+            return null;
+        }
+
+        // 提取ProvenanceInfo
+        var prov = snapshot.provenance();
+        String baseUrl = prov.baseUrlDefault();
+
+        // 转换各个配置维度
+        var httpConfig = toHttpConfig(snapshot.http());
+        var paginationConfig = toPaginationConfig(snapshot.pagination());
+        var windowOffsetConfig = toWindowOffsetConfig(snapshot.windowOffset());
+        var batchingConfig = toBatchingConfig(snapshot.batching());
+        var retryConfig = toRetryConfig(snapshot.retry());
+        var rateLimitConfig = toRateLimitConfig(snapshot.rateLimit());
+
+        return new ProvenanceConfig(
+            baseUrl,
+            httpConfig,
+            paginationConfig,
+            windowOffsetConfig,
+            batchingConfig,
+            retryConfig,
+            rateLimitConfig
+        );
+    }
+
+    /**
+     * 转换HTTP配置
+     */
+    private com.patra.starter.provenance.common.config.HttpConfig toHttpConfig(
+            com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.HttpConfig httpInfo) {
+        if (httpInfo == null) {
+            return null;
+        }
+
+        // 解析defaultHeadersJson为Map
+        Map<String, String> headers = parseHeadersJson(httpInfo.defaultHeadersJson());
+
+        return new com.patra.starter.provenance.common.config.HttpConfig(
+            headers,
+            httpInfo.timeoutConnectMillis(),
+            httpInfo.timeoutReadMillis(),
+            httpInfo.timeoutTotalMillis()
+        );
+    }
+
+    /**
+     * 解析Headers JSON字符串为Map
+     */
+    private Map<String, String> parseHeadersJson(String headersJson) {
+        if (headersJson == null || headersJson.isBlank()) {
+            return Map.of();
+        }
+
+        try {
+            ObjectMapper mapper = JsonMapperHolder.getObjectMapper();
+            return mapper.readValue(headersJson, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        } catch (Exception ex) {
+            log.warn("解析Headers JSON失败: {}", headersJson, ex);
+            return Map.of();
+        }
+    }
+
+    /**
+     * 转换分页配置
+     */
+    private com.patra.starter.provenance.common.config.PaginationConfig toPaginationConfig(
+            com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.PaginationConfig paginationInfo) {
+        if (paginationInfo == null) {
+            return null;
+        }
+
+        return new com.patra.starter.provenance.common.config.PaginationConfig(
+            paginationInfo.pageSizeValue(),
+            paginationInfo.maxPagesPerExecution()
+        );
+    }
+
+    /**
+     * 转换窗口偏移配置
+     */
+    private com.patra.starter.provenance.common.config.WindowOffsetConfig toWindowOffsetConfig(
+            com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.WindowOffsetConfig windowOffsetInfo) {
+        if (windowOffsetInfo == null) {
+            return null;
+        }
+
+        return new com.patra.starter.provenance.common.config.WindowOffsetConfig(
+            windowOffsetInfo.windowModeCode(),
+            windowOffsetInfo.windowSizeValue(),
+            windowOffsetInfo.windowSizeUnitCode(),
+            windowOffsetInfo.lookbackValue(),
+            windowOffsetInfo.lookbackUnitCode(),
+            windowOffsetInfo.overlapValue(),
+            windowOffsetInfo.overlapUnitCode(),
+            windowOffsetInfo.offsetTypeCode(),
+            windowOffsetInfo.maxIdsPerWindow()
+        );
+    }
+
+    /**
+     * 转换批处理配置
+     */
+    private com.patra.starter.provenance.common.config.BatchingConfig toBatchingConfig(
+            com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.BatchingConfig batchingInfo) {
+        if (batchingInfo == null) {
+            return null;
+        }
+
+        return new com.patra.starter.provenance.common.config.BatchingConfig(
+            batchingInfo.detailFetchBatchSize(),
+            batchingInfo.maxIdsPerRequest(),
+            null  // epostThreshold字段在Snapshot中不存在,传null
+        );
+    }
+
+    /**
+     * 转换重试配置
+     */
+    private com.patra.starter.provenance.common.config.RetryConfig toRetryConfig(
+            com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RetryConfig retryInfo) {
+        if (retryInfo == null) {
+            return null;
+        }
+
+        return new com.patra.starter.provenance.common.config.RetryConfig(
+            retryInfo.maxRetryTimes(),
+            retryInfo.initialDelayMillis()
+        );
+    }
+
+    /**
+     * 转换限流配置
+     */
+    private com.patra.starter.provenance.common.config.RateLimitConfig toRateLimitConfig(
+            com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot.RateLimitConfig rateLimitInfo) {
+        if (rateLimitInfo == null) {
+            return null;
+        }
+
+        return new com.patra.starter.provenance.common.config.RateLimitConfig(
+            rateLimitInfo.maxConcurrentRequests(),
+            rateLimitInfo.perCredentialQpsLimit()
+        );
+    }
 
     /**
      * 从数据源获取指定类型的数据

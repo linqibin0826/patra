@@ -109,13 +109,34 @@ public interface DataSourceProvider {
   /**
    * 判断是否支持指定的数据类型
    *
-   * <p>默认实现：检查getSupportedDataTypes()是否包含指定类型
+   * <p>默认实现:检查getSupportedDataTypes()是否包含指定类型
    *
    * @param dataType 数据类型
    * @return 如果支持则返回true
    */
   default boolean supports(DataType dataType) {
     return getSupportedDataTypes().contains(dataType);
+  }
+
+  /**
+   * 准备计划元数据
+   *
+   * <p>调用外部数据源 API 获取计划所需的元数据。
+   *
+   * <p>注意:此方法只接收通用的查询参数,不接收 Ingest 特定的 ExecutionContext
+   *
+   * @param query 查询字符串
+   * @param params 查询参数(JSON 格式,可包含分页、排序等)
+   * @param config 数据源配置
+   * @return 计划元数据(使用继承体系支持不同数据源)
+   * @throws com.patra.starter.provenance.common.exception.ProvenanceClientException 数据源访问失败时抛出
+   */
+  default com.patra.common.model.plan.PlanMetadata preparePlan(
+      String query,
+      com.fasterxml.jackson.databind.JsonNode params,
+      com.patra.starter.provenance.common.config.ProvenanceConfig config) {
+    throw new UnsupportedOperationException(
+        "Provider " + getProvenanceCode() + " 不支持 preparePlan 操作");
   }
 
   /**

@@ -30,10 +30,15 @@
 ```
 patra-common-model/
 └── model/
-    └── CanonicalLiterature           (标准化文献模型)
-        ├── CanonicalLiterature       (主模型)
-        ├── AuthorInfo           (作者快照)
-        └── JournalInfo          (期刊快照)
+    ├── CanonicalLiterature           (标准化文献模型)
+    │   ├── CanonicalLiterature       (主模型)
+    │   ├── AuthorInfo                (作者快照)
+    │   └── JournalInfo               (期刊快照)
+    └── plan/                         (计划元数据模型)
+        ├── PlanMetadata              (计划元数据抽象基类) ⭐新增
+        ├── PubmedPlanMetadata        (PubMed 特定元数据) ⭐新增
+        ├── EpmcPlanMetadata          (EPMC 特定元数据) ⭐新增
+        └── DoajPlanMetadata          (DOAJ 特定元数据) ⭐新增
 ```
 
 ---
@@ -71,6 +76,70 @@ patra-common-model/
 
 ---
 
+### PlanMetadata 继承体系 — 数据源计划元数据 ⭐新增
+
+**设计定位**: 跨模块通用领域模型,支持多数据源的批次规划和执行。
+
+**核心理念**: 使用继承体系替代 `Map<String, Object>`,提供类型安全和编译时检查。
+
+#### PlanMetadata (抽象基类)
+
+封装将采集任务分解为批次所需的信息,同时允许执行阶段重用上游缓存(如 PubMed 的 WebEnv)。
+
+**核心字段**:
+- `dataSourceType`: 数据源类型(如 "pubmed"、"epmc"、"doaj")
+- `totalCount`: 总记录数(≥0)
+- `plannedAt`: 计划时间戳
+- `extensionMetadata`: 扩展元数据(可选,用于未来扩展)
+
+**抽象方法**:
+- `hasSessionToken()`: 检查是否包含会话令牌(用于优化批次请求)
+
+**业务约束**:
+- `totalCount` 必须 ≥ 0
+- `dataSourceType` 不能为空
+
+#### PubmedPlanMetadata (PubMed 特定实现)
+
+包含 PubMed ESearch API 返回的特定信息:
+
+**特定字段**:
+- `webEnv`: History Server 会话令牌(用于批次请求优化)
+- `queryKey`: 查询键,与 webEnv 配对使用
+
+**业务约束**:
+- `webEnv` 和 `queryKey` 必须同时存在或同时为空
+
+**使用场景**:
+- 批次规划器使用 `webEnv` + `queryKey` 生成优化的批次请求
+- 批次执行器重用上游缓存,避免重复查询
+
+#### EpmcPlanMetadata (EPMC 特定实现)
+
+包含 EPMC API 返回的特定信息:
+
+**特定字段**:
+- `cursorMark`: 游标标记,用于基于游标的分页
+
+**使用场景**:
+- 支持 EPMC 的游标分页机制
+
+#### DoajPlanMetadata (DOAJ 特定实现)
+
+包含 DOAJ API 返回的特定信息:
+
+**特定字段**:
+- `scrollId`: Elasticsearch Scroll ID
+- `pageSize`: 每页大小
+
+**业务约束**:
+- `pageSize` 必须 > 0
+
+**使用场景**:
+- 支持 DOAJ 的 Elasticsearch Scroll API
+
+---
+
 ## 依赖关系
 
 **上游依赖**:
@@ -78,8 +147,9 @@ patra-common-model/
 - `jackson-datatype-jsr310`: Java 8 日期时间支持
 
 **下游消费者**:
-- **patra-ingest-domain**: 端口接口定义(文献适配器返回类型)
-- **patra-ingest-app**: 应用服务编排(跨 Provenance 适配器的统一返回类型)
+- **patra-ingest-domain**: 端口接口定义(DataSourcePort 返回类型)
+- **patra-ingest-app**: 应用服务编排(批次规划器使用)
+- **patra-ingest-infra**: 基础设施层(适配器实现)
 - **patra-spring-boot-starter-provenance**: Provenance 适配器实现(PubMed、EPMC 等)
 - 未来: `patra-catalog`、`patra-search` 等下游服务
 
@@ -96,7 +166,7 @@ patra-common-model/
 </dependency>
 ```
 
-### 创建标准化文献
+### 示例 1: 创建标准化文献
 
 ```java
 import com.patra.common.model.CanonicalLiterature;
@@ -136,87 +206,98 @@ CanonicalLiterature literature = CanonicalLiterature.builder()
     .build();
 ```
 
-### 序列化与反序列化
+### 示例 2: 创建 PlanMetadata (PubMed)
 
 ```java
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.model.plan.PubmedPlanMetadata;
 
-ObjectMapper mapper = new ObjectMapper();
+// 创建 PubMed 计划元数据
+PubmedPlanMetadata pubmedPlan = new PubmedPlanMetadata(
+    1000,           // totalCount
+    "webenv123",    // webEnv
+    "1"             // queryKey
+);
 
-// 序列化为 JSON
-String json = mapper.writeValueAsString(literature);
-
-// 反序列化为对象
-CanonicalLiterature deserialized = mapper.readValue(json, CanonicalLiterature.class);
+// 检查会话令牌
+if (pubmedPlan.hasSessionToken()) {
+    System.out.println("可使用 WebEnv 优化批次请求");
+    System.out.println("WebEnv: " + pubmedPlan.webEnv());
+    System.out.println("QueryKey: " + pubmedPlan.queryKey());
+}
 ```
 
-### 在领域层使用(端口接口)
+### 示例 3: 使用多态处理不同数据源
+
+```java
+import com.patra.common.model.plan.PlanMetadata;
+import com.patra.common.model.plan.PubmedPlanMetadata;
+import com.patra.common.model.plan.EpmcPlanMetadata;
+
+public List<Batch> generateBatches(PlanMetadata plan) {
+    // 类型安全的多态处理
+    if (plan instanceof PubmedPlanMetadata pubmedPlan) {
+        // PubMed 特定逻辑
+        return generatePubmedBatches(pubmedPlan);
+    } else if (plan instanceof EpmcPlanMetadata epmcPlan) {
+        // EPMC 特定逻辑
+        return generateEpmcBatches(epmcPlan);
+    }
+    throw new UnsupportedOperationException("不支持的数据源类型");
+}
+```
+
+### 示例 4: 在领域层使用(端口接口)
 
 ```java
 package com.patra.ingest.domain.port;
 
-import com.patra.common.model.CanonicalLiterature;
-import java.util.Optional;
+import com.patra.common.model.plan.PlanMetadata;
+import com.patra.common.model.DataType;
 
 /**
- * Provenance 适配器端口接口
+ * 数据源端口接口
  */
-public interface ProvenanceAdapter {
+public interface DataSourcePort {
     /**
-     * 根据外部 ID 获取标准化文献数据
+     * 准备计划元数据
+     *
+     * @param context 执行上下文
+     * @param dataType 数据类型
+     * @return 计划元数据(使用继承体系支持不同数据源)
      */
-    Optional<CanonicalLiterature> fetchLiterature(String externalId);
+    PlanMetadata preparePlan(ExecutionContext context, DataType dataType);
 }
 ```
 
-### 在应用层使用(编排)
+### 示例 5: 在应用层使用(批次规划)
 
 ```java
-package com.patra.ingest.app.service;
+package com.patra.ingest.app.strategy.planner;
 
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.port.ProvenanceAdapter;
+import com.patra.common.model.plan.PlanMetadata;
+import com.patra.common.model.plan.PubmedPlanMetadata;
 
-public class LiteratureIngestionService {
-    private final ProvenanceAdapter provenanceAdapter;
+public class UnifiedBatchPlanner {
 
-    public CanonicalLiterature ingestFromPubMed(String pmid) {
-        return provenanceAdapter.fetchLiterature(pmid)
-            .orElseThrow(() -> new LiteratureNotFoundException(pmid));
-    }
-}
-```
+    public BatchPlan plan(ExecutionContext ctx) {
+        // 1. 获取计划元数据
+        PlanMetadata planMetadata = dataSourcePort.preparePlan(ctx, DataType.LITERATURE);
 
-### 在基础设施层使用(适配器实现)
+        // 2. 根据类型生成批次
+        List<Batch> batches = generateBatches(planMetadata, ctx);
 
-```java
-package com.patra.starter.provenance.pubmed;
+        // 3. 将元数据附加到上下文
+        ExecutionContext enrichedContext = ctx.withPlanMetadata(planMetadata);
 
-import com.patra.common.model.CanonicalLiterature;
-import com.patra.ingest.domain.port.ProvenanceAdapter;
-
-public class PubMedAdapter implements ProvenanceAdapter {
-    @Override
-    public Optional<CanonicalLiterature> fetchLiterature(String pmid) {
-        // 1. 调用 PubMed API
-        PubMedArticle article = pubMedClient.fetchArticle(pmid);
-
-        // 2. 转换为 CanonicalLiterature
-        CanonicalLiterature standardized = convertToStandard(article);
-
-        return Optional.of(standardized);
+        return new BatchPlan(batches, enrichedContext);
     }
 
-    private CanonicalLiterature convertToStandard(PubMedArticle article) {
-        return CanonicalLiterature.builder()
-            .title(article.getTitle())
-            .abstractText(article.getAbstractText())
-            .authors(convertAuthors(article.getAuthors()))
-            .journal(convertJournal(article.getJournal()))
-            .identifiers(Map.of("PMID", article.getPmid()))
-            .publicationDate(article.getPublicationDate())
-            .keywords(article.getKeywords())
-            .build();
+    private List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
+        if (plan instanceof PubmedPlanMetadata pubmedPlan) {
+            // 使用 WebEnv 优化批次请求
+            return generatePubmedBatches(pubmedPlan, ctx);
+        }
+        // ... 处理其他数据源
     }
 }
 ```
@@ -250,7 +331,44 @@ public class PubMedAdapter implements ProvenanceAdapter {
 - **线程安全**: 天然线程安全,无需同步
 - **缓存友好**: 可安全缓存和共享
 
-### 4. 可选字段
+### 4. 继承体系 vs Map (PlanMetadata 设计)
+
+#### 为什么使用继承而非 Map<String, Object>?
+
+**❌ 使用 Map 的问题**:
+```java
+// 问题 1: 无类型安全
+Map<String, Object> metadata = plan.getMetadata();
+String webEnv = (String) metadata.get("webEnv");  // 运行时类型转换
+Integer count = (Integer) metadata.get("count");  // 可能抛出 ClassCastException
+
+// 问题 2: 无编译时检查
+String queryKey = (String) metadata.get("queryKy");  // 拼写错误,编译通过,运行时返回 null
+
+// 问题 3: IDE 无法自动补全
+metadata.get("???");  // IDE 不知道有哪些 key
+```
+
+**✅ 使用继承的优势**:
+```java
+// 优势 1: 编译时类型安全
+PubmedPlanMetadata pubmedPlan = (PubmedPlanMetadata) plan;
+String webEnv = pubmedPlan.webEnv();  // 编译时检查,无需类型转换
+
+// 优势 2: IDE 友好
+pubmedPlan.  // IDE 自动补全 webEnv(), queryKey()
+
+// 优势 3: 重构安全
+// 重命名字段时,IDE 可以自动更新所有引用
+
+// 优势 4: 表达清晰的类型关系
+PlanMetadata plan = dataSourcePort.preparePlan(...);
+if (plan instanceof PubmedPlanMetadata pubmedPlan) {
+    // 编译器保证 pubmedPlan 有 webEnv() 和 queryKey()
+}
+```
+
+### 5. 可选字段
 - **null 安全**: 使用 Java 类型系统表达可选性
 - **字段如 `journal`、`publicationDate`**: 可为 null,表示数据不可用
 - **列表字段**: 使用空列表而非 null
@@ -268,8 +386,9 @@ public class PubMedAdapter implements ProvenanceAdapter {
 - **添加新字段**: 使用可选类型,提供默认值
 - **修改现有字段**: 创建新版本模型(`CanonicalLiteratureV2`)
 - **删除字段**: 必须确保无消费者依赖
+- **新增数据源**: 创建新的 PlanMetadata 子类(如 `CrossrefPlanMetadata`)
 
-### 示例: 添加新字段
+### 示例 1: 添加新字段
 
 ```java
 @Value
@@ -289,6 +408,35 @@ public class CanonicalLiterature {
 }
 ```
 
+### 示例 2: 新增数据源
+
+```java
+// 新增 Crossref 数据源的 PlanMetadata
+public class CrossrefPlanMetadata extends PlanMetadata {
+    private final String cursor;
+    private final int pageSize;
+
+    public CrossrefPlanMetadata(int totalCount, String cursor, int pageSize) {
+        super("crossref", totalCount);
+        this.cursor = cursor;
+        this.pageSize = pageSize;
+    }
+
+    @Override
+    public boolean hasSessionToken() {
+        return cursor != null && !cursor.isBlank();
+    }
+
+    public String cursor() {
+        return cursor;
+    }
+
+    public int pageSize() {
+        return pageSize;
+    }
+}
+```
+
 ---
 
 ## 架构优势
@@ -299,12 +447,13 @@ public class CanonicalLiterature {
 - 降低变更影响范围
 
 ### 2. 统一数据理解
-- 所有服务对"文献"概念有一致理解
+- 所有服务对"文献"、"计划元数据"概念有一致理解
 - 减少数据转换错误
 - 提高开发效率
 
 ### 3. 易于扩展
 - 新增服务可直接使用现有模型
+- 新增数据源只需创建新的 PlanMetadata 子类
 - 无需重复定义相同概念
 - 降低维护成本
 
@@ -312,6 +461,11 @@ public class CanonicalLiterature {
 - 不可变对象易于断言
 - Builder 模式方便构造测试数据
 - 清晰的数据契约
+
+### 5. 类型安全 (PlanMetadata 继承体系)
+- 编译时检查,避免运行时错误
+- IDE 自动补全,提升开发效率
+- 重构安全,减少维护成本
 
 ---
 
@@ -321,10 +475,12 @@ public class CanonicalLiterature {
 - [patra-common-core/README.md](../patra-common-core/README.md) — 核心基础设施
 - [patra-common-storage/README.md](../patra-common-storage/README.md) — 存储键生成策略
 - [patra-ingest/README.md](../../patra-ingest/README.md) — 数据采集服务
+- [patra-ingest-domain/README.md](../../patra-ingest/patra-ingest-domain/README.md) — 端口接口定义
 - [patra-spring-boot-starter-provenance/README.md](../../patra-spring-boot-starter-provenance/README.md) — Provenance 适配器
+- [统一数据源端口设计](../../dev/docs/统一数据源端口设计/README.md) — 架构设计方案
 
 ---
 
 **Maven 坐标**: `com.patra:patra-common-model`
 **版本**: 0.1.0-SNAPSHOT
-**最后更新**: 2025-11-03
+**最后更新**: 2025-11-13
