@@ -58,8 +58,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               compiledParams,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context.taskId()).isEqualTo(TASK_ID);
@@ -84,7 +83,7 @@ class ExecutionContextTest {
       // When
       ExecutionContext context =
           new ExecutionContext(
-              null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+              null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
       // Then
       assertThat(context.taskId()).isNull();
@@ -116,7 +115,6 @@ class ExecutionContextTest {
               PROVENANCE_CODE,
               OPERATION_CODE,
               DataType.LITERATURE,
-              null,
               null,
               null,
               null,
@@ -162,8 +160,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.Time.class);
@@ -193,8 +190,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.IdRange.class);
@@ -224,8 +220,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.CursorLandmark.class);
@@ -256,8 +251,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.VolumeBudget.class);
@@ -287,8 +281,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context.windowSpec()).isInstanceOf(WindowSpec.Single.class);
@@ -322,8 +315,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               compiledParams,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       ExecutionContext context2 =
           new ExecutionContext(
@@ -340,8 +332,7 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               compiledParams,
               NORMALIZED_EXPRESSION,
-              windowSpec,
-              null);
+              windowSpec);
 
       // Then
       assertThat(context1).isEqualTo(context2);
@@ -367,7 +358,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              null,
               null);
 
       ExecutionContext context2 =
@@ -385,7 +375,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              null,
               null);
 
       // Then
@@ -411,7 +400,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              null,
               null);
 
       // When
@@ -446,7 +434,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              null,
               null);
       ExecutionContext key2 =
           new ExecutionContext(
@@ -463,7 +450,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              null,
               null);
 
       // When
@@ -487,7 +473,7 @@ class ExecutionContextTest {
       ExecutionContext context =
           new ExecutionContext(
               TASK_ID, RUN_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID, "", "", DataType.LITERATURE, null, "", "", null,
-              "", null, null);
+              "", null);
 
       // Then
       assertThat(context.provenanceCode()).isEmpty();
@@ -519,7 +505,6 @@ class ExecutionContextTest {
               longString,
               null,
               longString,
-              null,
               null);
 
       // Then
@@ -555,7 +540,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               complexNode,
               NORMALIZED_EXPRESSION,
-              null,
               null);
 
       // Then
@@ -583,7 +567,6 @@ class ExecutionContextTest {
               COMPILED_QUERY,
               null,
               NORMALIZED_EXPRESSION,
-              null,
               null);
 
       // Then

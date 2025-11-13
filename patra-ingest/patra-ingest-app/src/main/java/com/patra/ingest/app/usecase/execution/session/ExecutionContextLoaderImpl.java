@@ -186,8 +186,7 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
         compilationResult.query(),
         compilationResult.params(),
         compilationResult.normalizedExpression(),
-        windowSpec,
-        null);
+        windowSpec);
   }
 
   /**

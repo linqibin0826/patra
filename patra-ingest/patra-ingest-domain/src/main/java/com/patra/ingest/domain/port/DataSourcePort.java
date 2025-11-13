@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.port;
 
 import com.patra.common.model.DataType;
-import com.patra.common.model.plan.PlanMetadata;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.plan.BatchPlan;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -69,28 +69,31 @@ import lombok.Builder;
 public interface DataSourcePort {
 
   /**
-   * 准备采集计划元数据
+   * 准备批次计划
    *
-   * <p><strong>业务含义</strong>: 调用外部数据源 API 获取计划所需的元数据,包括总记录数和可选的会话令牌(如 PubMed 的 WebEnv)。
+   * <p><strong>业务含义</strong>: 调用外部数据源 API 获取批次规划所需的信息，包括总记录数和状态令牌。
    *
    * <p><strong>执行流程</strong>:
    * <ol>
    *   <li>从执行上下文中提取查询条件和配置信息</li>
-   *   <li>调用数据源 API 获取计划元数据</li>
-   *   <li>返回数据源特定的 PlanMetadata 子类实例</li>
+   *   <li>调用数据源 API 获取计划信息</li>
+   *   <li>通过防腐层翻译为领域模型 {@link BatchPlan}</li>
    * </ol>
    *
    * <p><strong>使用场景</strong>:
    * <ul>
-   *   <li>在批次规划阶段调用,获取总记录数以生成批次</li>
-   *   <li>获取会话令牌(如 WebEnv)以在执行阶段重用</li>
+   *   <li>在批次规划阶段调用，获取总记录数以生成批次</li>
+   *   <li>获取状态令牌（如 PubMed 的 WebEnv）以在执行阶段重用</li>
    * </ul>
    *
-   * @param context 执行上下文,包含查询条件和配置信息
-   * @param dataType 数据类型标识(如 LITERATURE、JOURNAL)
-   * @return 计划元数据(使用继承体系支持不同数据源)
+   * <p><strong>防腐层</strong>: 此方法返回的 {@link BatchPlan} 是 Ingest 领域模型，
+   * 屏蔽了外部数据源（Provenance Starter）的实现细节。基础设施层负责进行模型转换。
+   *
+   * @param context 执行上下文，包含查询条件和配置信息
+   * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
+   * @return 批次计划（领域模型，不包含外部实现细节）
    */
-  PlanMetadata preparePlan(ExecutionContext context, DataType dataType);
+  BatchPlan preparePlan(ExecutionContext context, DataType dataType);
 
   /**
    * 从数据源获取指定类型的数据

@@ -106,4 +106,4 @@
  * @see com.patra.common.model 通用领域模型
  * @see <a href="../../../../../../../../../patra-ingest/patra-ingest-domain/README.md">patra-ingest-domain</a>
  */
-package com.patra.common.model.plan;
+package com.patra.starter.provenance.internal.metadata;

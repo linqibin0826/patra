@@ -1,9 +1,8 @@
 package com.patra.ingest.app.usecase.execution.strategy.batch;
 
-import com.patra.common.model.plan.PlanMetadata;
-import com.patra.common.model.plan.PubmedPlanMetadata;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.ingest.domain.model.vo.plan.BatchPlan;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -15,7 +14,7 @@ import java.util.Map;
 /**
  * PubMed 批次生成策略
  *
- * <p>根据 PubmedPlanMetadata 生成批次列表，支持使用 WebEnv 会话令牌优化批次请求。
+ * <p>根据 BatchPlan 生成批次列表，支持使用 WebEnv 会话令牌优化批次请求。
  *
  * @author Patra Architecture Team
  * @since 0.2.0
@@ -25,36 +24,34 @@ import java.util.Map;
 public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
 
     @Override
-    public Class<? extends PlanMetadata> getSupportedType() {
-        return PubmedPlanMetadata.class;
+    public String getSupportedDataSourceCode() {
+        return "pubmed";
     }
 
     @Override
-    public List<Batch> generateBatches(PlanMetadata plan, ExecutionContext ctx) {
-        if (!(plan instanceof PubmedPlanMetadata pubmedPlan)) {
-            throw new IllegalArgumentException(
-                "期望 PubmedPlanMetadata，实际类型: " + plan.getClass().getName()
-            );
-        }
-
+    public List<Batch> generateBatches(BatchPlan plan, ExecutionContext ctx) {
         List<Batch> batches = new ArrayList<>();
         int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
-        int totalCount = pubmedPlan.totalCount();
+        int totalRecords = plan.totalRecords();
 
-        if (totalCount <= 0) {
-            log.info("PubMed 查询结果为空（totalCount=0），返回空批次列表");
+        if (totalRecords <= 0) {
+            log.info("PubMed 查询结果为空（totalRecords=0），返回空批次列表");
             return batches;
         }
 
-        int pageCount = (int) Math.ceil((double) totalCount / batchSize);
+        int pageCount = (int) Math.ceil((double) totalRecords / batchSize);
         String query = ctx.compiledQuery();
 
-        log.debug("生成 PubMed 批次: totalCount={}, batchSize={}, pageCount={}, hasSessionToken={}",
-                totalCount, batchSize, pageCount, pubmedPlan.hasSessionToken());
+        log.debug("生成 PubMed 批次: totalRecords={}, batchSize={}, pageCount={}, hasStateToken={}",
+                totalRecords, batchSize, pageCount, plan.hasStateToken());
 
         // 检查是否有 History Server session token
-        if (pubmedPlan.hasSessionToken()) {
+        if (plan.hasStateToken()) {
             // 使用 History Server 模式
+            Map<String, String> stateToken = plan.stateToken().orElseThrow();
+            String webEnv = stateToken.get("webEnv");
+            String queryKey = stateToken.get("queryKey");
+
             for (int i = 0; i < pageCount; i++) {
                 int pageNo = i + 1;
                 int startOffset = i * batchSize;
@@ -65,13 +62,13 @@ public class PubmedBatchGenerationStrategy implements BatchGenerationStrategy {
                         ctx.compiledParams(),
                         startOffset,
                         batchSize,
-                        pubmedPlan.webEnv(),
-                        pubmedPlan.queryKey()
+                        webEnv,
+                        queryKey
                 ));
             }
 
             log.info("已生成 {} 个 PubMed 批次（使用 History Server: webEnv={}）",
-                    batches.size(), pubmedPlan.webEnv());
+                    batches.size(), webEnv);
         } else {
             // 常规模式（无 session token）
             for (int i = 0; i < pageCount; i++) {
