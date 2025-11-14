@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution.strategy.planner;
+package com.patra.ingest.app.usecase.execution.strategy.builder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
