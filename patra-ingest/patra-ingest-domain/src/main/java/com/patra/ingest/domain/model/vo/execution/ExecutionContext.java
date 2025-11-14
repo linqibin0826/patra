@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.vo.execution;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
@@ -33,7 +34,7 @@ public record ExecutionContext(
     Long planId,
     Long sliceId,
     Long scheduleInstanceId,
-    String provenanceCode,
+    ProvenanceCode provenanceCode,
     String operationCode,
     DataType dataType,
     ProvenanceConfigSnapshot configSnapshot,
@@ -42,4 +43,7 @@ public record ExecutionContext(
     JsonNode compiledParams,
     String normalizedExpression,
     WindowSpec windowSpec) {
+
+  public ExecutionContext {
+  }
 }

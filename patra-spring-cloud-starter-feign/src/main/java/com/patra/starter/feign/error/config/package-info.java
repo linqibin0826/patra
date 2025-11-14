@@ -45,8 +45,7 @@
  *   <li>{@link com.patra.starter.feign.error.observation.FeignErrorObservationRecorder} -
  *       指标记录器（可选，依赖 MeterRegistry）
  *   <li>{@link com.patra.starter.feign.error.decoder.ProblemDetailErrorDecoder} - 错误解码器
- *   <li>{@link com.patra.starter.feign.error.interceptor.TraceIdRequestInterceptor} -
- *       TraceId 拦截器
+ *   <li>{@link com.patra.starter.feign.error.interceptor.TraceIdRequestInterceptor} - TraceId 拦截器
  * </ol>
  *
  * @since 0.1.0

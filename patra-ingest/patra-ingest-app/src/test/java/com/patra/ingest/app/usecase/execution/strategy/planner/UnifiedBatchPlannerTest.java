@@ -67,8 +67,8 @@ class UnifiedBatchPlannerTest {
         objectMapper = new ObjectMapper();
 
         // 配置 mock 策略支持的数据源代码
-        when(mockStrategy1.getSupportedDataSourceCode()).thenReturn("pubmed");
-        when(mockStrategy2.getSupportedDataSourceCode()).thenReturn("epmc");
+        when(mockStrategy1.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.PUBMED.getCode());
+        when(mockStrategy2.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.EPMC.getCode());
 
         // 创建 planner 并自动注册策略
         List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, mockStrategy2);
@@ -185,8 +185,9 @@ class UnifiedBatchPlannerTest {
     void should_throw_exception_when_strategy_not_found() {
         // given
         // 创建一个未注册策略的 BatchPlan（使用匿名子类）
+        // 注意: ExecutionContext 使用 PUBMED 是合法的,但 BatchPlan 返回的 dataSourceCode 是未注册的
         com.patra.ingest.domain.model.vo.plan.BatchPlan unknownPlan = createUnknownPlan(100);
-        ExecutionContext ctx = createContext("unknown");
+        ExecutionContext ctx = createContext("pubmed");  // 使用合法的 ProvenanceCode
 
         when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
 
@@ -288,7 +289,7 @@ class UnifiedBatchPlannerTest {
     void should_throw_exception_when_duplicate_strategy_types() {
         // given
         BatchGenerationStrategy duplicateStrategy = mock(BatchGenerationStrategy.class);
-        when(duplicateStrategy.getSupportedDataSourceCode()).thenReturn("pubmed");
+        when(duplicateStrategy.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.PUBMED.getCode());
 
         List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, duplicateStrategy);
 
@@ -307,13 +308,16 @@ class UnifiedBatchPlannerTest {
         ProvenanceConfigSnapshot configSnapshot = mock(ProvenanceConfigSnapshot.class);
         JsonNode params = objectMapper.createObjectNode();
 
+        // 将 String 转换为 ProvenanceCode
+        ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
+
         return new ExecutionContext(
             1L,                     // taskId
             1L,                     // runId
             1L,                     // planId
             1L,                     // sliceId
             1L,                     // scheduleInstanceId
-            provenanceCode,         // provenanceCode
+            code,                   // provenanceCode
             "search",               // operationCode
             DataType.LITERATURE,    // dataType
             configSnapshot,         // configSnapshot
@@ -344,7 +348,7 @@ class UnifiedBatchPlannerTest {
 
             @Override
             public String dataSourceCode() {
-                return "pubmed";
+                return ProvenanceCode.PUBMED.getCode();
             }
 
             @Override
@@ -373,7 +377,7 @@ class UnifiedBatchPlannerTest {
 
             @Override
             public String dataSourceCode() {
-                return "epmc";
+                return ProvenanceCode.EPMC.getCode();
             }
 
             @Override

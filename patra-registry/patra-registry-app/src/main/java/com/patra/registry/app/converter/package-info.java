@@ -1,7 +1,8 @@
 /**
  * 领域对象到查询 DTO 转换器 - 应用层数据组装器。
  *
- * <p>本包包含 MapStruct 转换器(Assembler),负责将领域层的值对象和聚合根转换为只读查询 DTO,供外部客户端(如 Feign 客户端)消费。转换器遵循单向映射原则,仅支持领域对象到查询 DTO 的转换。
+ * <p>本包包含 MapStruct 转换器(Assembler),负责将领域层的值对象和聚合根转换为只读查询 DTO,供外部客户端(如 Feign
+ * 客户端)消费。转换器遵循单向映射原则,仅支持领域对象到查询 DTO 的转换。
  *
  * <h2>职责</h2>
  *
@@ -17,17 +18,15 @@
  * <ul>
  *   <li>{@link com.patra.registry.app.converter.ProvenanceQueryAssembler} - 数据源转换器
  *       <ul>
- *         <li>转换 {@code Provenance} → {@code ProvenanceQuery}</li>
- *         <li>转换 {@code ProvenanceConfiguration} → {@code ProvenanceConfigQuery}</li>
- *         <li>转换各类配置值对象(HTTP、分页、重试、速率限制等)</li>
+ *         <li>转换 {@code Provenance} → {@code ProvenanceQuery}
+ *         <li>转换 {@code ProvenanceConfiguration} → {@code ProvenanceConfigQuery}
+ *         <li>转换各类配置值对象(HTTP、分页、重试、速率限制等)
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.app.converter.ExprQueryAssembler} - 表达式转换器
  *       <ul>
- *         <li>转换 {@code ExprSnapshot} → {@code ExprSnapshotQuery}</li>
- *         <li>转换表达式元数据(字段、能力、映射、规则)</li>
+ *         <li>转换 {@code ExprSnapshot} → {@code ExprSnapshotQuery}
+ *         <li>转换表达式元数据(字段、能力、映射、规则)
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>命名约定</h2>

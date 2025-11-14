@@ -22,6 +22,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>成功响应</h3>
+ *
  * <pre>{@code
  * @RestController
  * @RequestMapping("/api/plans")
@@ -49,6 +50,7 @@
  * }</pre>
  *
  * <h3>业务失败响应</h3>
+ *
  * <pre>{@code
  * @PostMapping
  * public ApiResponse<PlanResponse> create(@RequestBody CreatePlanRequest request) {
@@ -70,6 +72,7 @@
  * }</pre>
  *
  * <h3>分页响应</h3>
+ *
  * <pre>{@code
  * @GetMapping
  * public ApiResponse<PageResult<PlanResponse>> listPlans(
@@ -108,6 +111,7 @@
  * }</pre>
  *
  * <h3>错误响应(通过异常处理器)</h3>
+ *
  * <pre>{@code
  * // 当抛出异常时,GlobalRestExceptionHandler 自动处理
  * @GetMapping("/{id}")
@@ -124,6 +128,7 @@
  * <h2>响应类型选择</h2>
  *
  * <h3>ApiResponse(推荐用于业务成功/失败)</h3>
+ *
  * <ul>
  *   <li><strong>适用场景</strong>: 正常业务流程,包括成功和可预期的业务失败
  *   <li><strong>优势</strong>: 统一的响应格式,前端易于解析
@@ -131,6 +136,7 @@
  * </ul>
  *
  * <h3>ProblemDetail(自动用于异常)</h3>
+ *
  * <ul>
  *   <li><strong>适用场景</strong>: 系统错误、参数验证失败、资源未找到
  *   <li><strong>优势</strong>: 符合 RFC 7807 标准,包含详细的错误上下文
@@ -161,7 +167,8 @@
  *   <li><strong>可预期业务失败</strong> - 使用 {@code ApiResponse.failure(ResultCode, message)}
  *   <li><strong>系统错误/验证失败</strong> - 抛异常,由全局异常处理器转换为 ProblemDetail
  *   <li><strong>分页查询</strong> - 使用 {@code PageResult.of(...)} 封装分页数据
- *   <li><strong>空数据</strong> - 返回 {@code ApiResponse.ok(null)} 或 {@code ApiResponse.ok(Collections.emptyList())}
+ *   <li><strong>空数据</strong> - 返回 {@code ApiResponse.ok(null)} 或 {@code
+ *       ApiResponse.ok(Collections.emptyList())}
  * </ol>
  *
  * <h2>JSON 序列化配置</h2>

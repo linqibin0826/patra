@@ -36,7 +36,12 @@ class ExprFieldQueryTest {
       // When
       ExprFieldQuery query =
           new ExprFieldQuery(
-              fieldKey, displayName, description, dataTypeCode, cardinalityCode, exposable,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              exposable,
               dateField);
 
       // Then
@@ -63,7 +68,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Field key 不能为空白");
@@ -83,7 +93,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Field key 不能为空白");
@@ -103,7 +118,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Field key 不能为空白");
@@ -123,7 +143,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Data type code 不能为空白");
@@ -143,7 +168,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Data type code 不能为空白");
@@ -163,7 +193,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Data type code 不能为空白");
@@ -183,7 +218,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Cardinality code 不能为空白");
@@ -203,7 +243,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Cardinality code 不能为空白");
@@ -223,7 +268,12 @@ class ExprFieldQueryTest {
       assertThatThrownBy(
               () ->
                   new ExprFieldQuery(
-                      fieldKey, displayName, description, dataTypeCode, cardinalityCode, true,
+                      fieldKey,
+                      displayName,
+                      description,
+                      dataTypeCode,
+                      cardinalityCode,
+                      true,
                       false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("Cardinality code 不能为空白");
@@ -551,7 +601,12 @@ class ExprFieldQueryTest {
       // When
       ExprFieldQuery query =
           new ExprFieldQuery(
-              fieldKey, displayName, description, dataTypeCode, cardinalityCode, exposable,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              exposable,
               dateField);
 
       // Then
@@ -646,7 +701,12 @@ class ExprFieldQueryTest {
       // When
       ExprFieldQuery query =
           new ExprFieldQuery(
-              fieldKey, displayName, description, dataTypeCode, cardinalityCode, exposable,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              exposable,
               dateField);
 
       // Then
@@ -669,7 +729,12 @@ class ExprFieldQueryTest {
       // When
       ExprFieldQuery query =
           new ExprFieldQuery(
-              fieldKey, displayName, description, dataTypeCode, cardinalityCode, exposable,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              exposable,
               dateField);
 
       // Then

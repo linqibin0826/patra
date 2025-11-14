@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.strategy.batch;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -324,7 +325,7 @@ class PubmedBatchGenerationStrategyTest {
             1L,                     // planId
             1L,                     // sliceId
             1L,                     // scheduleInstanceId
-            "pubmed",               // provenanceCode
+            ProvenanceCode.PUBMED,  // provenanceCode
             "search",               // operationCode
             DataType.LITERATURE,    // dataType
             configSnapshot,         // configSnapshot

@@ -49,6 +49,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>基础使用</h3>
+ *
  * <pre>{@code
  * @Component
  * public class DefaultProblemDetailAdapter implements ProblemDetailAdapter {
@@ -72,6 +73,7 @@
  * }</pre>
  *
  * <h3>构建结果示例</h3>
+ *
  * <pre>{@code
  * // 输入
  * ErrorResolution resolution = {
@@ -99,6 +101,7 @@
  * <h2>扩展字段</h2>
  *
  * <h3>内置扩展字段</h3>
+ *
  * <ul>
  *   <li><strong>traceId</strong> - 分布式追踪 ID(从 TraceProvider 提取)
  *   <li><strong>timestamp</strong> - 错误发生时间戳(ISO-8601 格式)
@@ -108,6 +111,7 @@
  * </ul>
  *
  * <h3>通过 Contributor 添加自定义字段</h3>
+ *
  * <pre>{@code
  * // 核心 Contributor(所有环境)
  * @Component

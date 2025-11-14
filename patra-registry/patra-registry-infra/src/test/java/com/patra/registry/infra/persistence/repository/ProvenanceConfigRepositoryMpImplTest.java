@@ -15,7 +15,6 @@ import com.patra.registry.domain.model.vo.provenance.*;
 import com.patra.registry.infra.persistence.converter.ProvenanceEntityConverter;
 import com.patra.registry.infra.persistence.entity.provenance.*;
 import com.patra.registry.infra.persistence.mapper.provenance.*;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -175,7 +174,8 @@ class ProvenanceConfigRepositoryMpImplTest {
 
       // When
       Optional<WindowOffsetConfig> result =
-          repository.findActiveWindowOffset(TEST_PROVENANCE_ID, TEST_OPERATION_TYPE, TEST_TIMESTAMP);
+          repository.findActiveWindowOffset(
+              TEST_PROVENANCE_ID, TEST_OPERATION_TYPE, TEST_TIMESTAMP);
 
       // Then
       assertThat(result).isPresent();
@@ -195,7 +195,8 @@ class ProvenanceConfigRepositoryMpImplTest {
 
       // When
       Optional<WindowOffsetConfig> result =
-          repository.findActiveWindowOffset(TEST_PROVENANCE_ID, TEST_OPERATION_TYPE, TEST_TIMESTAMP);
+          repository.findActiveWindowOffset(
+              TEST_PROVENANCE_ID, TEST_OPERATION_TYPE, TEST_TIMESTAMP);
 
       // Then
       assertThat(result).isEmpty();
@@ -231,8 +232,7 @@ class ProvenanceConfigRepositoryMpImplTest {
       repository.findActiveWindowOffset(TEST_PROVENANCE_ID, null, TEST_TIMESTAMP);
 
       // Then
-      verify(windowOffsetCfgMapper)
-          .selectActiveMerged(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
+      verify(windowOffsetCfgMapper).selectActiveMerged(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
     }
   }
 
@@ -289,8 +289,7 @@ class ProvenanceConfigRepositoryMpImplTest {
     void shouldFindHttpConfigSuccessfully() {
       // Given
       RegProvHttpCfgDO cfgDO = createHttpCfgDO();
-      when(httpCfgMapper.selectActiveMerged(
-              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(httpCfgMapper.selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(Optional.of(cfgDO));
 
       HttpConfig config = org.mockito.Mockito.mock(HttpConfig.class);
@@ -345,11 +344,11 @@ class ProvenanceConfigRepositoryMpImplTest {
     void shouldFindRetrySuccessfully() {
       // Given
       RegProvRetryCfgDO cfgDO = createRetryCfgDO();
-      when(retryCfgMapper.selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(retryCfgMapper.selectActiveMerged(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(Optional.of(cfgDO));
 
-      RetryConfig config =
-          org.mockito.Mockito.mock(RetryConfig.class);
+      RetryConfig config = org.mockito.Mockito.mock(RetryConfig.class);
       when(converter.toDomain(cfgDO)).thenReturn(config);
 
       // When
@@ -435,10 +434,10 @@ class ProvenanceConfigRepositoryMpImplTest {
       when(converter.toDomain(batchingDO)).thenReturn(batching);
 
       RegProvRetryCfgDO retryDO = createRetryCfgDO();
-      when(retryCfgMapper.selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(retryCfgMapper.selectActiveMerged(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(Optional.of(retryDO));
-      RetryConfig retry =
-          org.mockito.Mockito.mock(RetryConfig.class);
+      RetryConfig retry = org.mockito.Mockito.mock(RetryConfig.class);
       when(converter.toDomain(retryDO)).thenReturn(retry);
 
       RegProvRateLimitCfgDO rateLimitDO = createRateLimitCfgDO();
@@ -469,10 +468,12 @@ class ProvenanceConfigRepositoryMpImplTest {
           .selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
       verify(paginationCfgMapper)
           .selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
-      verify(httpCfgMapper).selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
+      verify(httpCfgMapper)
+          .selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
       verify(batchingCfgMapper)
           .selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
-      verify(retryCfgMapper).selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
+      verify(retryCfgMapper)
+          .selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
       verify(rateLimitCfgMapper)
           .selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP);
     }
@@ -496,8 +497,7 @@ class ProvenanceConfigRepositoryMpImplTest {
           .selectActiveMerged(anyLong(), anyString(), any(Instant.class));
       verify(paginationCfgMapper, never())
           .selectActiveMerged(anyLong(), anyString(), any(Instant.class));
-      verify(httpCfgMapper, never())
-          .selectActiveMerged(anyLong(), anyString(), any(Instant.class));
+      verify(httpCfgMapper, never()).selectActiveMerged(anyLong(), anyString(), any(Instant.class));
       verify(batchingCfgMapper, never())
           .selectActiveMerged(anyLong(), anyString(), any(Instant.class));
       verify(retryCfgMapper, never())
@@ -532,7 +532,8 @@ class ProvenanceConfigRepositoryMpImplTest {
       when(batchingCfgMapper.selectActiveMerged(
               TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(Optional.empty());
-      when(retryCfgMapper.selectActiveMerged(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(retryCfgMapper.selectActiveMerged(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(Optional.empty());
       when(rateLimitCfgMapper.selectActiveMerged(
               TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))

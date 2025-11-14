@@ -15,18 +15,24 @@
  * <h2>核心 Mapper</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper} - 数据源 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvenanceMapper} - 数据源
+ *       Mapper
  *       <ul>
- *         <li>{@code selectByCode(String code)} - 根据代码查询数据源</li>
- *         <li>{@code selectAllActive()} - 查询所有激活的数据源</li>
+ *         <li>{@code selectByCode(String code)} - 根据代码查询数据源
+ *         <li>{@code selectAllActive()} - 查询所有激活的数据源
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvWindowOffsetCfgMapper} - 时间窗口偏移 Mapper
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvPaginationCfgMapper} - 分页配置 Mapper
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvHttpCfgMapper} - HTTP 配置 Mapper
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvBatchingCfgMapper} - 批处理配置 Mapper
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvRetryCfgMapper} - 重试配置 Mapper
- *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvRateLimitCfgMapper} - 速率限制 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvWindowOffsetCfgMapper}
+ *       - 时间窗口偏移 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvPaginationCfgMapper} -
+ *       分页配置 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvHttpCfgMapper} - HTTP
+ *       配置 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvBatchingCfgMapper} -
+ *       批处理配置 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvRetryCfgMapper} - 重试配置
+ *       Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.provenance.RegProvRateLimitCfgMapper} -
+ *       速率限制 Mapper
  * </ul>
  *
  * <h2>时态查询模式</h2>
@@ -82,7 +88,8 @@
  *   <li>使用 {@code @Param} 注解显式绑定参数
  *   <li>单条记录查询返回 {@code Optional<DO>}
  *   <li>多条记录查询返回 {@code List<DO>}
- *   <li>时态查询必须包含 {@code effective_from <= #{at} AND (effective_until IS NULL OR effective_until > #{at})}
+ *   <li>时态查询必须包含 {@code effective_from <= #{at} AND (effective_until IS NULL OR effective_until >
+ *       #{at})}
  * </ul>
  *
  * @since 0.1.0

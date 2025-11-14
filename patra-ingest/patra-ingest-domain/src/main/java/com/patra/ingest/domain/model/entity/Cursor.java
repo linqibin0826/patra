@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.entity;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
@@ -45,7 +46,7 @@ public class Cursor {
   }
 
   private final Long id;
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
   private final String operationCode;
   private final String cursorKey;
   private final NamespaceScope namespaceScope;
@@ -58,7 +59,7 @@ public class Cursor {
 
   private Cursor(
       Long id,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       NamespaceScope namespaceScope,
@@ -69,7 +70,7 @@ public class Cursor {
       CursorLineage lineage,
       String exprHash) {
     this.id = id;
-    this.provenanceCode = provenanceCode;
+    this.provenanceCode = Objects.requireNonNull(provenanceCode, "provenanceCode 不能为 null");
     this.operationCode = operationCode;
     this.cursorKey = cursorKey;
     this.namespaceScope = namespaceScope;
@@ -83,7 +84,7 @@ public class Cursor {
 
   public static Cursor restore(
       Long id,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       NamespaceScope namespaceScope,
@@ -135,7 +136,7 @@ public class Cursor {
 
   /** Factory method creating a time-based cursor. */
   public static Cursor create(
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScope,
@@ -164,7 +165,7 @@ public class Cursor {
    * @return new cursor instance
    */
   public static Cursor create(
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScope,
@@ -196,7 +197,7 @@ public class Cursor {
    * @return new cursor instance
    */
   public static Cursor create(
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScope,
@@ -311,5 +312,14 @@ public class Cursor {
   /** Return the current time-based watermark. */
   public Instant getCurrentWatermark() {
     return watermark.normalizedInstant();
+  }
+
+  /**
+   * 获取数据来源代码字符串值。
+   *
+   * @return 数据来源代码字符串
+   */
+  public String getProvenanceCodeValue() {
+    return provenanceCode.getCode();
   }
 }

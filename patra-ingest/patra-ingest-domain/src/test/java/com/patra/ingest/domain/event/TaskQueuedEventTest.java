@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.event;
 
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class TaskQueuedEventTest {
   private static final Long PLAN_ID = 2001L;
   private static final Long SLICE_ID = 3001L;
   private static final Long SCHEDULE_INSTANCE_ID = 4001L;
-  private static final String PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "SEARCH";
   private static final String IDEMPOTENT_KEY = "pubmed-search-20250105-001";
   private static final String PARAMS_JSON = "{\"query\":\"cancer research\",\"maxResults\":100}";
@@ -452,7 +453,7 @@ class TaskQueuedEventTest {
 
       var event2 = new TaskQueuedEvent(
           9999L, 8888L, 7777L, 6666L,
-          "EPMC", "FETCH", "different-key",
+          ProvenanceCode.EPMC, "FETCH", "different-key",
           "{\"other\":\"params\"}", 5,
           Instant.parse("2025-01-06T10:00:00Z"),
           Instant.parse("2025-01-06T09:00:00Z")
@@ -652,13 +653,13 @@ class TaskQueuedEventTest {
     void shouldUseIdempotentKeyForDeduplication() {
       // Given: 创建两个 idempotentKey 相同但其他字段不同的事件
       var event1 = new TaskQueuedEvent(
-          1L, 2L, 3L, 4L, "PUBMED", "SEARCH",
+          1L, 2L, 3L, 4L, ProvenanceCode.PUBMED, "SEARCH",
           "same-idempotent-key",
           "{\"a\":1}", 10, SCHEDULED_AT, OCCURRED_AT
       );
 
       var event2 = new TaskQueuedEvent(
-          100L, 200L, 300L, 400L, "EPMC", "FETCH",
+          100L, 200L, 300L, 400L, ProvenanceCode.EPMC, "FETCH",
           "same-idempotent-key",
           "{\"b\":2}", 5,
           Instant.parse("2025-01-06T10:00:00Z"),
@@ -766,20 +767,20 @@ class TaskQueuedEventTest {
       // Given: 创建两个不同来源和操作的事件
       var pubmedSearch = new TaskQueuedEvent(
           1L, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID,
-          "PUBMED", "SEARCH",
+          ProvenanceCode.PUBMED, "SEARCH",
           "key-1", PARAMS_JSON, PRIORITY, SCHEDULED_AT, OCCURRED_AT
       );
 
       var epmcFetch = new TaskQueuedEvent(
           2L, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID,
-          "EPMC", "FETCH",
+          ProvenanceCode.EPMC, "FETCH",
           "key-2", PARAMS_JSON, PRIORITY, SCHEDULED_AT, OCCURRED_AT
       );
 
       // Then: 应该能够按来源和操作进行分组统计
-      assertThat(pubmedSearch.provenanceCode()).isEqualTo("PUBMED");
+      assertThat(pubmedSearch.provenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
       assertThat(pubmedSearch.operationCode()).isEqualTo("SEARCH");
-      assertThat(epmcFetch.provenanceCode()).isEqualTo("EPMC");
+      assertThat(epmcFetch.provenanceCode()).isEqualTo(ProvenanceCode.EPMC);
       assertThat(epmcFetch.operationCode()).isEqualTo("FETCH");
 
       // And: 不同的组合应该代表不同的指标维度
@@ -797,14 +798,14 @@ class TaskQueuedEventTest {
     @Test
     @DisplayName("应该接受空字符串字段")
     void shouldAcceptEmptyStrings() {
-      // Given: 字符串字段为空
+      // Given: 字符串字段为空（ProvenanceCode 为 null，其他为空字符串）
       var event = new TaskQueuedEvent(
           TASK_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID,
-          "", "", "", "", PRIORITY, SCHEDULED_AT, OCCURRED_AT
+          null, "", "", "", PRIORITY, SCHEDULED_AT, OCCURRED_AT
       );
 
       // Then: 空字符串应被正确存储
-      assertThat(event.provenanceCode()).isEmpty();
+      assertThat(event.provenanceCode()).isNull();
       assertThat(event.operationCode()).isEmpty();
       assertThat(event.idempotentKey()).isEmpty();
       assertThat(event.paramsJson()).isEmpty();
@@ -926,13 +927,13 @@ class TaskQueuedEventTest {
       // Given: 字符串字段包含 Unicode 字符
       var event = new TaskQueuedEvent(
           TASK_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID,
-          "中文来源", "搜索操作",
+          null, "搜索操作",
           "幂等键-🔑", "{\"查询\":\"癌症研究\",\"结果数\":100}",
           PRIORITY, SCHEDULED_AT, OCCURRED_AT
       );
 
       // Then: Unicode 字符应被正确存储
-      assertThat(event.provenanceCode()).isEqualTo("中文来源");
+      assertThat(event.provenanceCode()).isNull();
       assertThat(event.operationCode()).isEqualTo("搜索操作");
       assertThat(event.idempotentKey()).contains("🔑");
       assertThat(event.paramsJson()).contains("癌症研究");

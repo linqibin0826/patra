@@ -3,6 +3,7 @@ package com.patra.ingest.app.usecase.execution;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.command.TaskReadyCommand;
 import com.patra.ingest.app.usecase.execution.complete.CompleteTaskExecutionUseCase;
 import com.patra.ingest.app.usecase.execution.prepare.PrepareTaskExecutionUseCase;
@@ -359,7 +360,7 @@ class TaskExecutionUseCaseImplTest {
 
   private ExecutionContext createMockContext() {
     ExecutionContext context = mock(ExecutionContext.class);
-    when(context.provenanceCode()).thenReturn("pubmed");
+    when(context.provenanceCode()).thenReturn(ProvenanceCode.PUBMED);
     when(context.operationCode()).thenReturn("harvest");
     return context;
   }

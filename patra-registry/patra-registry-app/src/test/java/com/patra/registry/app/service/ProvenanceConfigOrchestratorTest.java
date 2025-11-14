@@ -144,7 +144,9 @@ class ProvenanceConfigOrchestratorTest {
 
       // Mock Assembler 返回
       provenances.forEach(
-          p -> when(assembler.toQuery(p)).thenReturn(createMockProvenanceQuery(p.id(), p.code(), p.name())));
+          p ->
+              when(assembler.toQuery(p))
+                  .thenReturn(createMockProvenanceQuery(p.id(), p.code(), p.name())));
 
       // When: 执行方法
       List<ProvenanceQuery> result = orchestrator.listProvenances();
@@ -294,7 +296,8 @@ class ProvenanceConfigOrchestratorTest {
       when(assembler.toQuery(configuration)).thenReturn(configQuery);
 
       // When: 执行方法 (at = null)
-      Optional<ProvenanceConfigQuery> result = orchestrator.loadConfiguration(code, operationType, null);
+      Optional<ProvenanceConfigQuery> result =
+          orchestrator.loadConfiguration(code, operationType, null);
 
       // Then: 验证结果
       assertThat(result).isPresent();

@@ -1,8 +1,7 @@
 /**
  * Registry 值对象根包 - DDD 值对象模式实现。
  *
- * <p>本包是 Registry 服务所有值对象的根包,包含多个子包,按业务领域组织值对象定义。
- * 值对象是 DDD 战术设计的核心模式,表示通过属性值而非标识符定义的领域概念。
+ * <p>本包是 Registry 服务所有值对象的根包,包含多个子包,按业务领域组织值对象定义。 值对象是 DDD 战术设计的核心模式,表示通过属性值而非标识符定义的领域概念。
  *
  * <h2>职责</h2>
  *
@@ -16,10 +15,9 @@
  * <h2>子包结构</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.model.vo.provenance} - 数据源配置值对象,
- *       包含 HTTP、重试、分页、批处理、限流、时间窗口等配置
- *   <li>{@link com.patra.registry.domain.model.vo.expr} - 表达式值对象,
- *       包含字段定义、渲染规则、参数映射、能力声明等
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance} - 数据源配置值对象, 包含
+ *       HTTP、重试、分页、批处理、限流、时间窗口等配置
+ *   <li>{@link com.patra.registry.domain.model.vo.expr} - 表达式值对象, 包含字段定义、渲染规则、参数映射、能力声明等
  * </ul>
  *
  * <h2>设计原则</h2>

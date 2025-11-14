@@ -1,8 +1,7 @@
 /**
  * Registry 领域异常包 - 业务规则违反和领域错误定义。
  *
- * <p>本包包含 Registry 服务领域层的异常定义,表示业务规则违反、领域不变量破坏和领域特定错误。
- * 所有异常都继承自运行时异常,遵循"快速失败"原则,在领域对象构造和业务操作时立即抛出。
+ * <p>本包包含 Registry 服务领域层的异常定义,表示业务规则违反、领域不变量破坏和领域特定错误。 所有异常都继承自运行时异常,遵循"快速失败"原则,在领域对象构造和业务操作时立即抛出。
  *
  * <h2>职责</h2>
  *
@@ -18,16 +17,12 @@
  *
  * <ul>
  *   <li>{@link com.patra.registry.domain.exception.RegistryException} - Registry 服务领域异常基类
- *   <li>{@link com.patra.registry.domain.exception.DomainValidationException} - 领域验证异常,
- *       用于替代 {@link IllegalArgumentException},提供便捷的验证工具方法
- *   <li>{@link com.patra.registry.domain.exception.RegistryNotFound} - 资源未找到异常,
- *       映射为 HTTP 404
- *   <li>{@link com.patra.registry.domain.exception.RegistryConflict} - 资源冲突异常,
- *       映射为 HTTP 409
- *   <li>{@link com.patra.registry.domain.exception.RegistryRuleViolation} - 业务规则违反异常,
- *       映射为 HTTP 422
- *   <li>{@link com.patra.registry.domain.exception.RegistryQuotaExceeded} - 配额超限异常,
- *       映射为 HTTP 429
+ *   <li>{@link com.patra.registry.domain.exception.DomainValidationException} - 领域验证异常, 用于替代 {@link
+ *       IllegalArgumentException},提供便捷的验证工具方法
+ *   <li>{@link com.patra.registry.domain.exception.RegistryNotFound} - 资源未找到异常, 映射为 HTTP 404
+ *   <li>{@link com.patra.registry.domain.exception.RegistryConflict} - 资源冲突异常, 映射为 HTTP 409
+ *   <li>{@link com.patra.registry.domain.exception.RegistryRuleViolation} - 业务规则违反异常, 映射为 HTTP 422
+ *   <li>{@link com.patra.registry.domain.exception.RegistryQuotaExceeded} - 配额超限异常, 映射为 HTTP 429
  * </ul>
  *
  * <h2>异常层次结构</h2>
@@ -102,11 +97,14 @@
  * <p>适配器层({@code patra-registry-adapter})负责将领域异常映射为 HTTP 响应:
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.exception.DomainValidationException} → HTTP 400 Bad Request
+ *   <li>{@link com.patra.registry.domain.exception.DomainValidationException} → HTTP 400 Bad
+ *       Request
  *   <li>{@link com.patra.registry.domain.exception.RegistryNotFound} → HTTP 404 Not Found
  *   <li>{@link com.patra.registry.domain.exception.RegistryConflict} → HTTP 409 Conflict
- *   <li>{@link com.patra.registry.domain.exception.RegistryRuleViolation} → HTTP 422 Unprocessable Entity
- *   <li>{@link com.patra.registry.domain.exception.RegistryQuotaExceeded} → HTTP 429 Too Many Requests
+ *   <li>{@link com.patra.registry.domain.exception.RegistryRuleViolation} → HTTP 422 Unprocessable
+ *       Entity
+ *   <li>{@link com.patra.registry.domain.exception.RegistryQuotaExceeded} → HTTP 429 Too Many
+ *       Requests
  * </ul>
  *
  * <h2>设计原则</h2>
@@ -115,7 +113,8 @@
  *   <li><strong>快速失败</strong>: 在领域对象构造时立即验证,不允许创建无效对象
  *   <li><strong>框架无关</strong>: 不依赖 Spring、Jakarta EE 等框架,保持领域层纯粹性
  *   <li><strong>语义明确</strong>: 异常名称清晰表达业务含义,便于理解和映射
- *   <li><strong>工具优先</strong>: 优先使用 {@link com.patra.registry.domain.exception.DomainValidationException} 的工具方法,避免重复代码
+ *   <li><strong>工具优先</strong>: 优先使用 {@link
+ *       com.patra.registry.domain.exception.DomainValidationException} 的工具方法,避免重复代码
  * </ul>
  *
  * @since 0.1.0

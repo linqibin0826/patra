@@ -1,8 +1,8 @@
 /**
  * Web 全局异常处理器包。
  *
- * <p>本包提供基于 Spring {@code @RestControllerAdvice} 的全局异常处理器,
- * 自动捕获所有未处理的异常并转换为符合 RFC 7807 标准的 ProblemDetail 响应。
+ * <p>本包提供基于 Spring {@code @RestControllerAdvice} 的全局异常处理器, 自动捕获所有未处理的异常并转换为符合 RFC 7807 标准的
+ * ProblemDetail 响应。
  *
  * <h2>职责</h2>
  *
@@ -39,6 +39,7 @@
  * <h2>异常处理示例</h2>
  *
  * <h3>通用异常处理</h3>
+ *
  * <pre>{@code
  * // 业务代码抛出异常
  * @GetMapping("/api/plans/{id}")
@@ -62,6 +63,7 @@
  * }</pre>
  *
  * <h3>参数验证异常处理</h3>
+ *
  * <pre>{@code
  * // 请求模型
  * public record CreatePlanRequest(
@@ -139,8 +141,7 @@
  *
  * <h2>优先级控制</h2>
  *
- * <p>GlobalRestExceptionHandler 使用 {@code @Order(Ordered.HIGHEST_PRECEDENCE)},
- * 确保在其他异常处理器之前执行:
+ * <p>GlobalRestExceptionHandler 使用 {@code @Order(Ordered.HIGHEST_PRECEDENCE)}, 确保在其他异常处理器之前执行:
  *
  * <pre>{@code
  * @RestControllerAdvice

@@ -65,7 +65,13 @@ class ExprFieldTest {
       // When: 创建 ExprField
       ExprField field =
           new ExprField(
-              id, fieldKey, displayName, description, dataTypeCode, cardinalityCode, exposable,
+              id,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              exposable,
               dateField);
 
       // Then: 验证所有字段正确赋值
@@ -98,7 +104,13 @@ class ExprFieldTest {
       // When: 创建 ExprField
       ExprField field =
           new ExprField(
-              id, fieldKey, displayName, description, dataTypeCode, cardinalityCode, exposable,
+              id,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              exposable,
               dateField);
 
       // Then: 验证必需字段正确赋值，可选字段转为空字符串
@@ -156,8 +168,7 @@ class ExprFieldTest {
       Long id = null;
 
       // When & Then: 创建字段应该失败
-      assertThatThrownBy(
-              () -> new ExprField(id, "ti", null, null, "TEXT", "SINGLE", true, false))
+      assertThatThrownBy(() -> new ExprField(id, "ti", null, null, "TEXT", "SINGLE", true, false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Expr field id")
           .hasMessageContaining("必须为正数");
@@ -170,8 +181,7 @@ class ExprFieldTest {
       Long id = 0L;
 
       // When & Then: 创建字段应该失败
-      assertThatThrownBy(
-              () -> new ExprField(id, "ti", null, null, "TEXT", "SINGLE", true, false))
+      assertThatThrownBy(() -> new ExprField(id, "ti", null, null, "TEXT", "SINGLE", true, false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Expr field id")
           .hasMessageContaining("必须为正数");
@@ -184,8 +194,7 @@ class ExprFieldTest {
       Long id = -1L;
 
       // When & Then: 创建字段应该失败
-      assertThatThrownBy(
-              () -> new ExprField(id, "ti", null, null, "TEXT", "SINGLE", true, false))
+      assertThatThrownBy(() -> new ExprField(id, "ti", null, null, "TEXT", "SINGLE", true, false))
           .isInstanceOf(DomainValidationException.class)
           .hasMessageContaining("Expr field id")
           .hasMessageContaining("必须为正数");
@@ -273,8 +282,7 @@ class ExprFieldTest {
       String fieldKey = "  publish_date  ";
 
       // When: 创建 ExprField
-      ExprField field =
-          new ExprField(1001L, fieldKey, null, null, "DATE", "SINGLE", true, true);
+      ExprField field = new ExprField(1001L, fieldKey, null, null, "DATE", "SINGLE", true, true);
 
       // Then: 验证 fieldKey 已被 trim
       assertThat(field.fieldKey()).isEqualTo("publish_date");
@@ -336,8 +344,7 @@ class ExprFieldTest {
       String dataTypeCode = "  TEXT  ";
 
       // When: 创建 ExprField
-      ExprField field =
-          new ExprField(1001L, "ti", null, null, dataTypeCode, "SINGLE", true, false);
+      ExprField field = new ExprField(1001L, "ti", null, null, dataTypeCode, "SINGLE", true, false);
 
       // Then: 验证 dataTypeCode 已被 trim
       assertThat(field.dataTypeCode()).isEqualTo("TEXT");
@@ -453,8 +460,15 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, fieldKey, displayName, description, dataTypeCode, cardinalityCode,
-              true, false);
+          new ExprField(
+              1001L,
+              fieldKey,
+              displayName,
+              description,
+              dataTypeCode,
+              cardinalityCode,
+              true,
+              false);
 
       // Then: 验证所有字段都已被 trim
       assertThat(field.fieldKey()).isEqualTo("ti");
@@ -537,12 +551,11 @@ class ExprFieldTest {
     @DisplayName("应该基于 fieldKey 实现 equals（相同 fieldKey 相等）")
     void shouldImplementEqualsBasedOnFieldKey() {
       // Given: 两个不同的字段，但 fieldKey 相同
-      ExprField field1 =
-          new ExprField(1001L, "ti", "标题", "文献标题", "TEXT", "SINGLE", true, false);
+      ExprField field1 = new ExprField(1001L, "ti", "标题", "文献标题", "TEXT", "SINGLE", true, false);
 
       ExprField field2 =
-          new ExprField(2001L, "ti", "Title", "Different description", "KEYWORD", "MULTI", false,
-              true);
+          new ExprField(
+              2001L, "ti", "Title", "Different description", "KEYWORD", "MULTI", false, true);
 
       // When & Then: 应该相等（因为 fieldKey 相同）
       assertThat(field1).isEqualTo(field2);
@@ -565,12 +578,11 @@ class ExprFieldTest {
     @DisplayName("应该基于 fieldKey 实现 hashCode")
     void shouldImplementHashCodeBasedOnFieldKey() {
       // Given: 两个不同的字段，但 fieldKey 相同
-      ExprField field1 =
-          new ExprField(1001L, "ti", "标题", "文献标题", "TEXT", "SINGLE", true, false);
+      ExprField field1 = new ExprField(1001L, "ti", "标题", "文献标题", "TEXT", "SINGLE", true, false);
 
       ExprField field2 =
-          new ExprField(2001L, "ti", "Title", "Different description", "KEYWORD", "MULTI", false,
-              true);
+          new ExprField(
+              2001L, "ti", "Title", "Different description", "KEYWORD", "MULTI", false, true);
 
       // When & Then: hashCode 应该相等
       assertThat(field1.hashCode()).isEqualTo(field2.hashCode());
@@ -581,8 +593,7 @@ class ExprFieldTest {
     void shouldImplementToStringCorrectly() {
       // Given: 创建字段
       ExprField field =
-          new ExprField(1001L, "publish_date", "发布日期", "文献发布日期", "DATE", "SINGLE", true,
-              true);
+          new ExprField(1001L, "publish_date", "发布日期", "文献发布日期", "DATE", "SINGLE", true, true);
 
       // When: 调用 toString
       String toString = field.toString();
@@ -647,8 +658,15 @@ class ExprFieldTest {
       boolean originalDateField = false;
 
       ExprField field =
-          new ExprField(originalId, originalFieldKey, originalDisplayName, originalDescription,
-              originalDataTypeCode, originalCardinalityCode, originalExposable, originalDateField);
+          new ExprField(
+              originalId,
+              originalFieldKey,
+              originalDisplayName,
+              originalDescription,
+              originalDataTypeCode,
+              originalCardinalityCode,
+              originalExposable,
+              originalDateField);
 
       // When: 获取字段值
       Long retrievedId = field.id();
@@ -675,8 +693,7 @@ class ExprFieldTest {
     @DisplayName("字符串字段应该在创建后保持不变")
     void stringFieldsShouldRemainUnchangedAfterCreation() {
       // Given: 创建字段
-      ExprField field =
-          new ExprField(1001L, "ti", "标题", "文献标题", "TEXT", "SINGLE", true, false);
+      ExprField field = new ExprField(1001L, "ti", "标题", "文献标题", "TEXT", "SINGLE", true, false);
 
       // When: 多次获取字段值
       String fieldKey1 = field.fieldKey();
@@ -707,8 +724,8 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "publish_date", "发布日期", "文献发布日期", dataTypeCode, "SINGLE",
-              true, dateField);
+          new ExprField(
+              1001L, "publish_date", "发布日期", "文献发布日期", dataTypeCode, "SINGLE", true, dateField);
 
       // Then: 验证成功创建
       assertThat(field.dataTypeCode()).isEqualTo("DATE");
@@ -725,8 +742,8 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "created_at", "创建时间", "文献创建时间", dataTypeCode, "SINGLE",
-              true, dateField);
+          new ExprField(
+              1001L, "created_at", "创建时间", "文献创建时间", dataTypeCode, "SINGLE", true, dateField);
 
       // Then: 验证成功创建
       assertThat(field.dataTypeCode()).isEqualTo("DATETIME");
@@ -756,8 +773,7 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "keywords", "关键词", "文献关键词", dataTypeCode, "MULTI", true,
-              false);
+          new ExprField(1001L, "keywords", "关键词", "文献关键词", dataTypeCode, "MULTI", true, false);
 
       // Then: 验证成功创建
       assertThat(field.dataTypeCode()).isEqualTo("KEYWORD");
@@ -772,8 +788,8 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "citation_count", "引用次数", "文献被引用次数", dataTypeCode,
-              "SINGLE", true, false);
+          new ExprField(
+              1001L, "citation_count", "引用次数", "文献被引用次数", dataTypeCode, "SINGLE", true, false);
 
       // Then: 验证成功创建
       assertThat(field.dataTypeCode()).isEqualTo("NUMBER");
@@ -787,8 +803,8 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "is_open_access", "开放获取", "是否开放获取", dataTypeCode,
-              "SINGLE", true, false);
+          new ExprField(
+              1001L, "is_open_access", "开放获取", "是否开放获取", dataTypeCode, "SINGLE", true, false);
 
       // Then: 验证成功创建
       assertThat(field.dataTypeCode()).isEqualTo("BOOLEAN");
@@ -802,8 +818,7 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "author_id", "作者ID", "作者标识符", dataTypeCode, "SINGLE", false,
-              false);
+          new ExprField(1001L, "author_id", "作者ID", "作者标识符", dataTypeCode, "SINGLE", false, false);
 
       // Then: 验证成功创建
       assertThat(field.dataTypeCode()).isEqualTo("TOKEN");
@@ -818,8 +833,7 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "authors", "作者", "文献作者列表", "TEXT", cardinalityCode, true,
-              false);
+          new ExprField(1001L, "authors", "作者", "文献作者列表", "TEXT", cardinalityCode, true, false);
 
       // Then: 验证成功创建
       assertThat(field.cardinalityCode()).isEqualTo("MULTI");
@@ -833,8 +847,7 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "doi", "DOI", "数字对象标识符", "KEYWORD", cardinalityCode, true,
-              false);
+          new ExprField(1001L, "doi", "DOI", "数字对象标识符", "KEYWORD", cardinalityCode, true, false);
 
       // Then: 验证成功创建
       assertThat(field.cardinalityCode()).isEqualTo("SINGLE");
@@ -863,8 +876,8 @@ class ExprFieldTest {
 
       // When: 创建 ExprField
       ExprField field =
-          new ExprField(1001L, "internal_score", "内部评分", "系统内部评分字段", "NUMBER", "SINGLE",
-              exposable, false);
+          new ExprField(
+              1001L, "internal_score", "内部评分", "系统内部评分字段", "NUMBER", "SINGLE", exposable, false);
 
       // Then: 验证成功创建
       assertThat(field.exposable()).isFalse();
@@ -882,12 +895,10 @@ class ExprFieldTest {
     @DisplayName("应该处理 trim 后相同的不同输入")
     void shouldHandleDifferentInputsWithSameTrimmedValue() {
       // Given: trim 后相同的不同输入
-      ExprField field1 =
-          new ExprField(1001L, "ti", "标题", "描述", "TEXT", "SINGLE", true, false);
+      ExprField field1 = new ExprField(1001L, "ti", "标题", "描述", "TEXT", "SINGLE", true, false);
 
       ExprField field2 =
-          new ExprField(1001L, "  ti  ", "  标题  ", "  描述  ", "  TEXT  ", "  SINGLE  ", true,
-              false);
+          new ExprField(1001L, "  ti  ", "  标题  ", "  描述  ", "  TEXT  ", "  SINGLE  ", true, false);
 
       // When & Then: trim 后应该相等（基于 fieldKey）
       assertThat(field1).isEqualTo(field2);

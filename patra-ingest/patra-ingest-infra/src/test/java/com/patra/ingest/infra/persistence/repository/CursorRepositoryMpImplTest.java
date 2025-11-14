@@ -11,6 +11,7 @@ import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.infra.persistence.converter.CursorConverter;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
 import com.patra.ingest.infra.persistence.mapper.CursorMapper;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -56,7 +57,7 @@ class CursorRepositoryMpImplTest {
   @InjectMocks private CursorRepositoryMpImpl repository;
 
   private static final Long TEST_CURSOR_ID = 1L;
-  private static final String TEST_PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode TEST_PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String TEST_OPERATION_CODE = "SEARCH";
   private static final String TEST_CURSOR_KEY = "last_pmid";
   private static final String TEST_NAMESPACE_SCOPE_CODE = "GLOBAL";
@@ -166,7 +167,7 @@ class CursorRepositoryMpImplTest {
       // When
       Optional<Cursor> result =
           repository.find(
-              TEST_PROVENANCE_CODE,
+              TEST_PROVENANCE_CODE.getCode(),
               TEST_OPERATION_CODE,
               TEST_CURSOR_KEY,
               TEST_NAMESPACE_SCOPE_CODE,
@@ -187,7 +188,7 @@ class CursorRepositoryMpImplTest {
       // When
       Optional<Cursor> result =
           repository.find(
-              TEST_PROVENANCE_CODE,
+              TEST_PROVENANCE_CODE.getCode(),
               TEST_OPERATION_CODE,
               TEST_CURSOR_KEY,
               TEST_NAMESPACE_SCOPE_CODE,
@@ -207,7 +208,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       repository.find(
-          TEST_PROVENANCE_CODE,
+          TEST_PROVENANCE_CODE.getCode(),
           TEST_OPERATION_CODE,
           TEST_CURSOR_KEY,
           TEST_NAMESPACE_SCOPE_CODE,
@@ -235,7 +236,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
+          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isPresent().contains(TEST_WATERMARK);
@@ -250,7 +251,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
+          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isEmpty();
@@ -269,7 +270,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, null);
+          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), null);
 
       // Then
       assertThat(result).isPresent().contains(TEST_WATERMARK);
@@ -283,7 +284,7 @@ class CursorRepositoryMpImplTest {
       when(mapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
       // When
-      repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
+      repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
 
       // Then
       verify(mapper).selectOne(any(QueryWrapper.class));
@@ -309,7 +310,7 @@ class CursorRepositoryMpImplTest {
   private CursorDO createTestCursorDO(Long id) {
     CursorDO entity = new CursorDO();
     entity.setId(id);
-    entity.setProvenanceCode(TEST_PROVENANCE_CODE);
+    entity.setProvenanceCode(TEST_PROVENANCE_CODE.getCode());
     entity.setOperationCode(TEST_OPERATION_CODE);
     entity.setCursorKey(TEST_CURSOR_KEY);
     entity.setNamespaceScopeCode(TEST_NAMESPACE_SCOPE_CODE);

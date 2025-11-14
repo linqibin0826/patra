@@ -15,7 +15,8 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.mybatis.autoconfig.PatraMybatisAutoConfiguration} - 主配置类,定义 Mapper 扫描和类型处理器注册
+ *   <li>{@link com.patra.starter.mybatis.autoconfig.PatraMybatisAutoConfiguration} - 主配置类,定义 Mapper
+ *       扫描和类型处理器注册
  *   <li>{@link com.patra.starter.mybatis.autoconfig.MybatisPluginAutoConfig} - 插件配置类,注册元数据处理器和分页拦截器
  * </ul>
  *
@@ -23,7 +24,8 @@
  *
  * <ul>
  *   <li><b>约定优于配置:</b> 默认扫描 {@code com.patra.**.infra.persistence.mapper} 包,符合项目六边形架构规范
- *   <li><b>依赖注入:</b> 使用 Spring 管理的 {@link com.fasterxml.jackson.databind.ObjectMapper} 确保 JSON 处理的一致性
+ *   <li><b>依赖注入:</b> 使用 Spring 管理的 {@link com.fasterxml.jackson.databind.ObjectMapper} 确保 JSON
+ *       处理的一致性
  *   <li><b>可扩展性:</b> 业务模块可通过 MyBatis-Plus 标准配置属性扩展 Mapper 路径和类型处理器
  *   <li><b>条件装配:</b> 使用 {@code @ConditionalOnClass} 和 {@code @ConditionalOnMissingBean} 避免冲突
  * </ul>
@@ -31,6 +33,7 @@
  * <h2>配置示例</h2>
  *
  * <p><b>默认行为(零配置):</b>
+ *
  * <pre>
  * // 自动扫描所有模块的 Mapper 接口
  * // com.patra.registry.infra.persistence.mapper.ProvenanceMapper ✓
@@ -38,6 +41,7 @@
  * </pre>
  *
  * <p><b>扩展 Mapper 扫描路径:</b>
+ *
  * <pre>
  * mybatis-plus:
  *   mapper-locations: classpath*:/mapper/&#42;&#42;/&#42;.xml
@@ -45,6 +49,7 @@
  * </pre>
  *
  * <p><b>注册自定义 TypeHandler:</b>
+ *
  * <pre>
  * &#64;Bean
  * public ConfigurationCustomizer customTypeHandlerCustomizer() {

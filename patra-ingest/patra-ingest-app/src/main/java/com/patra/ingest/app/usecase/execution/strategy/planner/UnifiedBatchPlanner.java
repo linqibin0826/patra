@@ -124,7 +124,7 @@ public class UnifiedBatchPlanner implements BatchPlanner {
     }
 
     @Override
-    public com.patra.ingest.domain.model.vo.batch.BatchPlan plan(ExecutionContext ctx) {
+    public BatchPlan plan(ExecutionContext ctx) {
         try {
             // 1. 使用统一端口准备批次计划（已通过防腐层翻译为领域模型）
             com.patra.ingest.domain.model.vo.plan.BatchPlan batchPlan = dataSourcePort.preparePlan(
@@ -134,7 +134,7 @@ public class UnifiedBatchPlanner implements BatchPlanner {
 
             if (batchPlan.totalRecords() == 0) {
                 log.info("计划结果为空: provenance={}", ctx.provenanceCode());
-                return com.patra.ingest.domain.model.vo.batch.BatchPlan.empty(ctx);
+                return BatchPlan.empty(ctx);
             }
 
             log.info("批次计划已准备: provenance={}, dataType={}, totalRecords={}, hasStateToken={}",
@@ -160,7 +160,7 @@ public class UnifiedBatchPlanner implements BatchPlanner {
                     batches.size(),
                     strategy.getClass().getSimpleName());
 
-            return new com.patra.ingest.domain.model.vo.batch.BatchPlan(batches, ctx);
+            return new BatchPlan(batches, ctx);
 
         } catch (Exception ex) {
             log.error("批次规划失败: provenance={}", ctx.provenanceCode(), ex);

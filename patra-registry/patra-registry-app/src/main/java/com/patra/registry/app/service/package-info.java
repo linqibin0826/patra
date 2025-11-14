@@ -18,17 +18,15 @@
  * <ul>
  *   <li>{@link com.patra.registry.app.service.ProvenanceConfigOrchestrator} - 数据源配置查询编排器
  *       <ul>
- *         <li>列出所有数据源</li>
- *         <li>查询单个数据源元数据</li>
- *         <li>加载完整配置聚合(支持时态切片)</li>
+ *         <li>列出所有数据源
+ *         <li>查询单个数据源元数据
+ *         <li>加载完整配置聚合(支持时态切片)
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.app.service.ExprQueryOrchestrator} - 表达式查询编排器
  *       <ul>
- *         <li>加载表达式快照(字段、能力、映射、规则)</li>
- *         <li>支持时态切片查询</li>
+ *         <li>加载表达式快照(字段、能力、映射、规则)
+ *         <li>支持时态切片查询
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>命名约定</h2>

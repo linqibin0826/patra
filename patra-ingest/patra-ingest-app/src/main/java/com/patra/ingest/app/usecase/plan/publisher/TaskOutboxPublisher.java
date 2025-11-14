@@ -2,6 +2,7 @@ package com.patra.ingest.app.usecase.plan.publisher;
 
 import cn.hutool.core.util.StrUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.outbox.config.OutboxPublisherProperties;
 import com.patra.ingest.app.outbox.constants.OutboxAggregateTypes;
 import com.patra.ingest.app.outbox.constants.OutboxBusinessTags;
@@ -161,7 +162,8 @@ public class TaskOutboxPublisher
   @Override
   protected String buildPartitionKey(TaskQueuedEvent event, OutboxPublishContext ctx) {
     // 确保相同 provenance + operation 在下游保持顺序
-    String provenance = StrUtil.nullToEmpty(event.provenanceCode());
+    ProvenanceCode pc = event.provenanceCode();
+    String provenance = pc != null ? pc.getCode() : null;
     String operation = StrUtil.nullToEmpty(event.operationCode());
 
     if (StrUtil.isEmpty(provenance) && StrUtil.isEmpty(operation)) {

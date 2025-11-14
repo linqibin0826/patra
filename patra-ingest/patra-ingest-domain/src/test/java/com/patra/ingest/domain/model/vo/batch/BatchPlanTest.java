@@ -1,18 +1,30 @@
 package com.patra.ingest.domain.model.vo.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.patra.common.enums.ProvenanceCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.patra.common.enums.ProvenanceCode;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
+import com.patra.common.enums.ProvenanceCode;
 import java.util.ArrayList;
+import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Nested;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Test;
+import com.patra.common.enums.ProvenanceCode;
 
 /**
  * {@link BatchPlan} 的单元测试。
@@ -49,7 +61,7 @@ class BatchPlanTest {
         1L, // planId
         1L, // sliceId
         1L, // scheduleInstanceId
-        "PUBMED", // provenanceCode
+        ProvenanceCode.PUBMED, // provenanceCode
         "FETCH", // operationCode
         DataType.LITERATURE, // dataType
         null, // configSnapshot (测试中可以为 null)
@@ -324,7 +336,7 @@ class BatchPlanTest {
       ExecutionContext ctx1 = createTestContext();
       ExecutionContext ctx2 = new ExecutionContext(
           2L, // 不同的 taskId
-          1L, 1L, 1L, 1L, "PUBMED", "FETCH", DataType.LITERATURE,
+          1L, 1L, 1L, 1L, ProvenanceCode.PUBMED, "FETCH", DataType.LITERATURE,
           null, "test-hash", "test query",
           JsonNodeFactory.instance.objectNode(),
           "test normalized", null
@@ -390,7 +402,7 @@ class BatchPlanTest {
       // Given: 不同值的计划
       ExecutionContext ctx1 = createTestContext();
       ExecutionContext ctx2 = new ExecutionContext(
-          2L, 1L, 1L, 1L, 1L, "EPMC", "FETCH", DataType.LITERATURE,
+          2L, 1L, 1L, 1L, 1L, ProvenanceCode.EPMC, "FETCH", DataType.LITERATURE,
           null, "test-hash", "test query",
           JsonNodeFactory.instance.objectNode(),
           "test normalized", null

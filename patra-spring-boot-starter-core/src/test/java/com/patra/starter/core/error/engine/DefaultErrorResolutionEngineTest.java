@@ -326,13 +326,21 @@ class DefaultErrorResolutionEngineTest {
 
     // 测试用异常类 - 类名以映射键结尾
     static class ResourceNotFound extends RuntimeException {}
+
     static class DataConflict extends RuntimeException {}
+
     static class RecordAlreadyExists extends RuntimeException {}
+
     static class InputInvalid extends RuntimeException {}
+
     static class DataValidation extends RuntimeException {}
+
     static class RateLimitQuotaExceeded extends RuntimeException {}
+
     static class AccessUnauthorized extends RuntimeException {}
+
     static class OperationForbidden extends RuntimeException {}
+
     static class RequestTimeout extends RuntimeException {}
   }
 
@@ -481,12 +489,19 @@ class DefaultErrorResolutionEngineTest {
 
     // 测试用客户端错误异常类
     static class TestValidationException extends RuntimeException {}
+
     static class TestNotValidException extends RuntimeException {}
+
     static class TestBindException extends RuntimeException {}
+
     static class TestConstraintViolationException extends RuntimeException {}
+
     static class TestMissingParameterException extends RuntimeException {}
+
     static class TestInvalidRequestException extends RuntimeException {}
+
     static class TestBadRequestException extends RuntimeException {}
+
     static class TestMalformedInputException extends RuntimeException {}
 
     @Test
@@ -589,7 +604,8 @@ class DefaultErrorResolutionEngineTest {
       when(errorCode.httpStatus()).thenReturn(400);
       when(contributor2.mapException(any())).thenReturn(Optional.of(errorCode));
 
-      engine = new DefaultErrorResolutionEngine(errorProperties, List.of(contributor1, contributor2));
+      engine =
+          new DefaultErrorResolutionEngine(errorProperties, List.of(contributor1, contributor2));
       Throwable exception = new RuntimeException("test");
 
       // When

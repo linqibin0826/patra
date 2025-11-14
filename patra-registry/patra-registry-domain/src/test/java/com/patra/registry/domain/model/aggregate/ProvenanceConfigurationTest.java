@@ -204,9 +204,7 @@ class ProvenanceConfigurationTest {
       }
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .batching(mockBatching)
-              .build();
+          ProvenanceConfigurationTestDataBuilder.builder().batching(mockBatching).build();
 
       // When & Then
       assertThat(config.hasBatching()).isTrue();
@@ -237,9 +235,7 @@ class ProvenanceConfigurationTest {
       }
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .retry(mockRetry)
-              .build();
+          ProvenanceConfigurationTestDataBuilder.builder().retry(mockRetry).build();
 
       // When & Then
       assertThat(config.hasRetry()).isTrue();
@@ -270,9 +266,7 @@ class ProvenanceConfigurationTest {
       }
 
       ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder()
-              .rateLimit(mockRateLimit)
-              .build();
+          ProvenanceConfigurationTestDataBuilder.builder().rateLimit(mockRateLimit).build();
 
       // When & Then
       assertThat(config.hasRateLimit()).isTrue();
@@ -433,10 +427,12 @@ class ProvenanceConfigurationTest {
     @DisplayName("Record 字段应该是不可变的")
     void recordFieldsShouldBeImmutable() {
       // Given: 创建配置
-      Provenance originalProvenance = ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
+      Provenance originalProvenance =
+          ProvenanceConfigurationTestDataBuilder.buildActiveProvenance();
       WindowOffsetConfig originalWindowOffset =
           ProvenanceConfigurationTestDataBuilder.buildWindowOffset();
-      PaginationConfig originalPagination = ProvenanceConfigurationTestDataBuilder.buildPagination();
+      PaginationConfig originalPagination =
+          ProvenanceConfigurationTestDataBuilder.buildPagination();
       HttpConfig originalHttp = ProvenanceConfigurationTestDataBuilder.buildHttp();
       BatchingConfig originalBatching = ProvenanceConfigurationTestDataBuilder.buildBatching();
       RetryConfig originalRetry = ProvenanceConfigurationTestDataBuilder.buildRetry();
@@ -617,8 +613,7 @@ class ProvenanceConfigurationTest {
     void shouldHandleMaximalProvenanceId() {
       // Given: ID 为 Long.MAX_VALUE 的 Provenance
       Provenance provenance =
-          new Provenance(
-              Long.MAX_VALUE, "test", "Test Source", null, "UTC", null, true, "ACTIVE");
+          new Provenance(Long.MAX_VALUE, "test", "Test Source", null, "UTC", null, true, "ACTIVE");
 
       // When: 创建配置
       ProvenanceConfiguration config =
@@ -743,8 +738,7 @@ class ProvenanceConfigurationTest {
     @DisplayName("应该正确实现 toString 方法")
     void shouldImplementToStringCorrectly() {
       // Given: 配置
-      ProvenanceConfiguration config =
-          ProvenanceConfigurationTestDataBuilder.builder().build();
+      ProvenanceConfiguration config = ProvenanceConfigurationTestDataBuilder.builder().build();
 
       // When: 调用 toString
       String toString = config.toString();

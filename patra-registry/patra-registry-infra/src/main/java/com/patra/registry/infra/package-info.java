@@ -1,7 +1,8 @@
 /**
  * Registry 基础设施层根包 - 持久化和外部系统集成。
  *
- * <p>本包是六边形架构基础设施层的根包,包含仓储实现、数据库实体、MyBatis-Plus Mapper、实体转换器等基础设施组件。基础设施层实现领域层定义的端口接口,将领域对象持久化到数据库或与外部系统集成。
+ * <p>本包是六边形架构基础设施层的根包,包含仓储实现、数据库实体、MyBatis-Plus
+ * Mapper、实体转换器等基础设施组件。基础设施层实现领域层定义的端口接口,将领域对象持久化到数据库或与外部系统集成。
  *
  * <h2>架构定位</h2>
  *
@@ -19,12 +20,11 @@
  * <ul>
  *   <li>{@code persistence} - 持久化根包
  *       <ul>
- *         <li>{@code repository} - 仓储接口实现(领域端口实现)</li>
- *         <li>{@code entity} - 数据库实体对象(DO)</li>
- *         <li>{@code mapper} - MyBatis-Plus Mapper 接口</li>
- *         <li>{@code converter} - 实体与领域对象转换器</li>
+ *         <li>{@code repository} - 仓储接口实现(领域端口实现)
+ *         <li>{@code entity} - 数据库实体对象(DO)
+ *         <li>{@code mapper} - MyBatis-Plus Mapper 接口
+ *         <li>{@code converter} - 实体与领域对象转换器
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>核心职责</h2>

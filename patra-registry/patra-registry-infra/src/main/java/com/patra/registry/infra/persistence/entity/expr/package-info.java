@@ -1,7 +1,8 @@
 /**
  * 表达式实体包 - Expr 相关数据库实体。
  *
- * <p>本包包含表达式元数据的数据库实体对象,映射 {@code reg_expr_*} 和 {@code reg_prov_*} 系列表。表达式元数据支持 {@code patra-expr-kernel} 动态表达式编译,提供 API 参数映射、字段定义、能力声明和渲染规则。
+ * <p>本包包含表达式元数据的数据库实体对象,映射 {@code reg_expr_*} 和 {@code reg_prov_*} 系列表。表达式元数据支持 {@code
+ * patra-expr-kernel} 动态表达式编译,提供 API 参数映射、字段定义、能力声明和渲染规则。
  *
  * <h2>职责</h2>
  *
@@ -17,32 +18,30 @@
  * <ul>
  *   <li>{@link com.patra.registry.infra.persistence.entity.expr.RegExprFieldDictDO} - 表达式字段定义
  *       <ul>
- *         <li>表: {@code reg_expr_field_dict}</li>
- *         <li>字段: {@code field_code}, {@code field_name}, {@code data_type}, {@code semantic_key}</li>
- *         <li>用途: 定义可用于表达式的字段及其类型和语义</li>
+ *         <li>表: {@code reg_expr_field_dict}
+ *         <li>字段: {@code field_code}, {@code field_name}, {@code data_type}, {@code semantic_key}
+ *         <li>用途: 定义可用于表达式的字段及其类型和语义
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.expr.RegProvExprCapabilityDO} - 数据源能力定义
  *       <ul>
- *         <li>表: {@code reg_prov_expr_capability}</li>
- *         <li>字段: {@code provenance_id}, {@code operation_type}, {@code is_supported}</li>
- *         <li>用途: 声明数据源支持的操作能力(HARVEST, UPDATE 等)</li>
+ *         <li>表: {@code reg_prov_expr_capability}
+ *         <li>字段: {@code provenance_id}, {@code operation_type}, {@code is_supported}
+ *         <li>用途: 声明数据源支持的操作能力(HARVEST, UPDATE 等)
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.expr.RegProvApiParamMapDO} - API 参数映射
  *       <ul>
- *         <li>表: {@code reg_prov_api_param_map}</li>
- *         <li>字段: {@code provenance_id}, {@code logical_param}, {@code api_query_param}, {@code is_required}</li>
- *         <li>用途: 映射逻辑参数到 API 查询参数(如 {@code publicationDate} → {@code pub_date})</li>
+ *         <li>表: {@code reg_prov_api_param_map}
+ *         <li>字段: {@code provenance_id}, {@code logical_param}, {@code api_query_param}, {@code
+ *             is_required}
+ *         <li>用途: 映射逻辑参数到 API 查询参数(如 {@code publicationDate} → {@code pub_date})
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.infra.persistence.entity.expr.RegProvExprRenderRuleDO} - 表达式渲染规则
  *       <ul>
- *         <li>表: {@code reg_prov_expr_render_rule}</li>
- *         <li>字段: {@code provenance_id}, {@code operation_type}, {@code field_code}, {@code render_template}</li>
- *         <li>用途: 定义表达式如何渲染为 API 查询字符串</li>
+ *         <li>表: {@code reg_prov_expr_render_rule}
+ *         <li>字段: {@code provenance_id}, {@code operation_type}, {@code field_code}, {@code
+ *             render_template}
+ *         <li>用途: 定义表达式如何渲染为 API 查询字符串
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>表达式元数据关系</h2>

@@ -8,6 +8,7 @@ import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,7 +40,7 @@ class PlanConverterTest {
 
   private static final Long SCHEDULE_INSTANCE_ID = 1001L;
   private static final String PLAN_KEY = "PUBMED:FETCH_METADATA:2025-01-01:2025-01-31";
-  private static final String PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "HARVEST";
   private static final String EXPR_PROTO_HASH = "proto-hash-123";
   private static final String EXPR_PROTO_SNAPSHOT_JSON = "{\"type\":\"FETCH\",\"source\":\"pubmed\"}";
@@ -87,7 +88,7 @@ class PlanConverterTest {
       assertThat(result).isNotNull();
       assertThat(result.getScheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID);
       assertThat(result.getPlanKey()).isEqualTo(PLAN_KEY);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getOperationCode()).isEqualTo(OPERATION_CODE);
       assertThat(result.getExprProtoHash()).isEqualTo(EXPR_PROTO_HASH);
       assertThat(result.getProvenanceConfigHash()).isEqualTo(PROVENANCE_CONFIG_HASH);
@@ -277,7 +278,7 @@ class PlanConverterTest {
       planDO.setId(100L);
       planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
       planDO.setPlanKey(PLAN_KEY);
-      planDO.setProvenanceCode(PROVENANCE_CODE);
+      planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
       planDO.setExprProtoHash(EXPR_PROTO_HASH);
       planDO.setExprProtoSnapshot(JsonNodeMappings.jsonStringToNode(EXPR_PROTO_SNAPSHOT_JSON));
@@ -303,7 +304,7 @@ class PlanConverterTest {
       assertThat(result.getId()).isEqualTo(100L);
       assertThat(result.getScheduleInstanceId()).isEqualTo(SCHEDULE_INSTANCE_ID);
       assertThat(result.getPlanKey()).isEqualTo(PLAN_KEY);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getOperationCode()).isEqualTo(OPERATION_CODE);
       assertThat(result.getExprProtoHash()).isEqualTo(EXPR_PROTO_HASH);
       assertThat(result.getExprProtoSnapshotJson()).isEqualTo(EXPR_PROTO_SNAPSHOT_JSON);
@@ -332,7 +333,7 @@ class PlanConverterTest {
       planDO.setId(200L);
       planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
       planDO.setPlanKey(PLAN_KEY);
-      planDO.setProvenanceCode(PROVENANCE_CODE);
+      planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
       planDO.setExprProtoHash(EXPR_PROTO_HASH);
       planDO.setExprProtoSnapshot(JsonNodeMappings.jsonStringToNode(EXPR_PROTO_SNAPSHOT_JSON));
@@ -366,7 +367,7 @@ class PlanConverterTest {
       planDO.setId(300L);
       planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
       planDO.setPlanKey(PLAN_KEY);
-      planDO.setProvenanceCode(PROVENANCE_CODE);
+      planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
       planDO.setExprProtoHash(EXPR_PROTO_HASH);
       planDO.setExprProtoSnapshot(JsonNodeMappings.jsonStringToNode(EXPR_PROTO_SNAPSHOT_JSON));
@@ -400,7 +401,7 @@ class PlanConverterTest {
       planDO.setId(400L);
       planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
       planDO.setPlanKey(PLAN_KEY);
-      planDO.setProvenanceCode(PROVENANCE_CODE);
+      planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
       planDO.setExprProtoHash(EXPR_PROTO_HASH);
       planDO.setExprProtoSnapshot(JsonNodeMappings.jsonStringToNode(EXPR_PROTO_SNAPSHOT_JSON));
@@ -434,7 +435,7 @@ class PlanConverterTest {
       planDO.setId(500L);
       planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
       planDO.setPlanKey(PLAN_KEY);
-      planDO.setProvenanceCode(PROVENANCE_CODE);
+      planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
       planDO.setExprProtoHash(EXPR_PROTO_HASH);
       planDO.setExprProtoSnapshot(JsonNodeMappings.jsonStringToNode(EXPR_PROTO_SNAPSHOT_JSON));
@@ -475,7 +476,7 @@ class PlanConverterTest {
       planDO.setId(600L);
       planDO.setScheduleInstanceId(SCHEDULE_INSTANCE_ID);
       planDO.setPlanKey(PLAN_KEY);
-      planDO.setProvenanceCode(PROVENANCE_CODE);
+      planDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       planDO.setOperationCode(OPERATION_CODE);
       planDO.setExprProtoHash(EXPR_PROTO_HASH);
       planDO.setExprProtoSnapshot(JsonNodeMappings.jsonStringToNode(EXPR_PROTO_SNAPSHOT_JSON));

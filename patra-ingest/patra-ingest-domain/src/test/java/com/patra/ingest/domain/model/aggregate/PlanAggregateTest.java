@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.aggregate;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
@@ -40,7 +41,7 @@ class PlanAggregateTest {
       // Given
       Long scheduleInstanceId = 1001L;
       String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String exprProtoHash = "hash123";
       String exprProtoSnapshotJson = "{\"expr\":\"test\"}";
@@ -187,7 +188,7 @@ class PlanAggregateTest {
       Long id = 100L;
       Long scheduleInstanceId = 1001L;
       String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String exprProtoHash = "hash123";
       String exprProtoSnapshotJson = "{\"expr\":\"test\"}";
@@ -244,7 +245,7 @@ class PlanAggregateTest {
           100L,
           1001L,
           "planKey",
-          "pubmed",
+          ProvenanceCode.PUBMED,
           "HARVEST",
           "hash",
           "{}",
@@ -411,7 +412,7 @@ class PlanAggregateTest {
     void shouldEnsurePlanConfigurationRemainsImmutableThroughLifecycle() {
       // Given - 新创建的计划
       String originalPlanKey = "pubmed_harvest_2024-01-01_2024-12-31";
-      String originalProvenanceCode = "pubmed";
+      ProvenanceCode originalProvenanceCode = ProvenanceCode.PUBMED;
       String originalExprProtoHash = "hash123";
       WindowSpec originalWindowSpec = WindowSpec.ofTime(
           Instant.parse("2024-01-01T00:00:00Z"),
@@ -578,7 +579,7 @@ class PlanAggregateTest {
     @DisplayName("应该允许可选字段为 null")
     void shouldAllowOptionalFieldsToBeNull() {
       // Given - 可选字段为 null
-      String provenanceCode = null;
+      ProvenanceCode provenanceCode = null;
       String operationCode = null;
       String exprProtoHash = null;
       String exprProtoSnapshotJson = null;
@@ -699,17 +700,16 @@ class PlanAggregateTest {
     @DisplayName("应该处理空字符串字段")
     void shouldHandleEmptyStringFields() {
       // Given - 空字符串
-      String emptyProvenanceCode = "";
       String emptyExprProtoHash = "";
 
       // When
       PlanAggregate plan = PlanAggregateTestDataBuilder.builder()
-          .provenanceCode(emptyProvenanceCode)
+          .provenanceCode((ProvenanceCode) null)  // 测试 null provenanceCode
           .exprProtoHash(emptyExprProtoHash)
           .build();
 
       // Then - 应该成功创建（业务规则允许空字符串）
-      assertThat(plan.getProvenanceCode()).isEmpty();
+      assertThat(plan.getProvenanceCode()).isNull();
       assertThat(plan.getExprProtoHash()).isEmpty();
     }
   }
@@ -788,7 +788,7 @@ class PlanAggregateTest {
     private Long id = null; // 默认为 null（新创建的聚合根）
     private Long scheduleInstanceId = 1001L;
     private String planKey = "pubmed_harvest_2024-01-01_2024-12-31";
-    private String provenanceCode = "pubmed";
+    private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
     private String exprProtoHash = "hash123";
     private String exprProtoSnapshotJson = "{\"expr\":\"test\"}";
@@ -822,8 +822,13 @@ class PlanAggregateTest {
       return this;
     }
 
-    public PlanAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+    public PlanAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
+      return this;
+    }
+
+    public PlanAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+      this.provenanceCode = ProvenanceCode.parse(provenanceCode);
       return this;
     }
 

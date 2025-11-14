@@ -41,6 +41,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>在异常处理器中使用</h3>
+ *
  * <pre>{@code
  * @RestControllerAdvice
  * public class GlobalRestExceptionHandler {
@@ -63,6 +64,7 @@
  * }</pre>
  *
  * <h3>适配结果示例</h3>
+ *
  * <pre>{@code
  * // 输入: PlanNotFoundException
  * Exception ex = new PlanNotFoundException(123L);

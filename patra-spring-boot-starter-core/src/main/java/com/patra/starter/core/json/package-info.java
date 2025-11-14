@@ -1,8 +1,8 @@
 /**
  * JSON 序列化全局访问桥接包。
  *
- * <p>本包提供对 Spring 管理的 {@link com.fasterxml.jackson.databind.ObjectMapper} 的全局访问能力,
- * 连接 Spring DI 上下文和非 Spring 代码路径(如静态工具类、共享库)。
+ * <p>本包提供对 Spring 管理的 {@link com.fasterxml.jackson.databind.ObjectMapper} 的全局访问能力, 连接 Spring DI
+ * 上下文和非 Spring 代码路径(如静态工具类、共享库)。
  *
  * <h2>职责</h2>
  *
@@ -30,6 +30,7 @@
  * <h2>使用指南</h2>
  *
  * <h3>Spring 组件(推荐方式)</h3>
+ *
  * <pre>{@code
  * @Service
  * public class MyService {
@@ -46,6 +47,7 @@
  * }</pre>
  *
  * <h3>非 Spring 代码(桥接方式)</h3>
+ *
  * <pre>{@code
  * public class StaticJsonUtils {
  *     public static String toJson(Object obj) {

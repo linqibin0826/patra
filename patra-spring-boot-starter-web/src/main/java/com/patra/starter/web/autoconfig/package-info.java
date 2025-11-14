@@ -26,6 +26,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>自动类型转换</h3>
+ *
  * <pre>{@code
  * @RestController
  * @RequestMapping("/api/plans")
@@ -52,6 +53,7 @@
  * }</pre>
  *
  * <h3>转换失败处理</h3>
+ *
  * <pre>
  * // 无效的 ProvenanceCode 请求
  * GET /api/plans/by-source/INVALID_CODE

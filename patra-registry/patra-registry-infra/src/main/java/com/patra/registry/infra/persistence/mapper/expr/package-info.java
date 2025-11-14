@@ -15,30 +15,30 @@
  * <h2>核心 Mapper</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper} - 表达式字段 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegExprFieldDictMapper} - 表达式字段
+ *       Mapper
  *       <ul>
- *         <li>{@code selectByCode(String code)} - 根据字段代码查询</li>
- *         <li>{@code selectAll()} - 查询所有字段定义</li>
+ *         <li>{@code selectByCode(String code)} - 根据字段代码查询
+ *         <li>{@code selectAll()} - 查询所有字段定义
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper} - 数据源能力 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegProvExprCapabilityMapper} -
+ *       数据源能力 Mapper
  *       <ul>
- *         <li>{@code selectByProvenance(Long provenanceId)} - 查询数据源支持的能力</li>
- *         <li>{@code selectByOperation(String operationType)} - 查询支持指定操作的数据源</li>
+ *         <li>{@code selectByProvenance(Long provenanceId)} - 查询数据源支持的能力
+ *         <li>{@code selectByOperation(String operationType)} - 查询支持指定操作的数据源
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper} - API 参数映射 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegProvApiParamMapMapper} - API
+ *       参数映射 Mapper
  *       <ul>
- *         <li>{@code selectByProvenance(Long provenanceId)} - 查询数据源的参数映射</li>
- *         <li>{@code selectByLogicalParam(String logicalParam)} - 查询逻辑参数的映射</li>
+ *         <li>{@code selectByProvenance(Long provenanceId)} - 查询数据源的参数映射
+ *         <li>{@code selectByLogicalParam(String logicalParam)} - 查询逻辑参数的映射
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper} - 渲染规则 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.expr.RegProvExprRenderRuleMapper} - 渲染规则
+ *       Mapper
  *       <ul>
- *         <li>{@code selectByProvenance(Long provenanceId)} - 查询数据源的渲染规则</li>
- *         <li>{@code selectByField(String fieldCode)} - 查询字段的渲染规则</li>
+ *         <li>{@code selectByProvenance(Long provenanceId)} - 查询数据源的渲染规则
+ *         <li>{@code selectByField(String fieldCode)} - 查询字段的渲染规则
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>表达式快照查询</h2>

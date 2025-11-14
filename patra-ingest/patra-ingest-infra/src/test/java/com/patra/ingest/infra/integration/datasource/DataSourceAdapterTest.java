@@ -10,6 +10,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator;
 import com.patra.ingest.infra.registry.ProviderRegistry;
 import com.patra.starter.provenance.common.config.*;
+import com.patra.common.enums.ProvenanceCode;
 import java.lang.reflect.Method;
 import java.time.Instant;
 import java.util.Map;

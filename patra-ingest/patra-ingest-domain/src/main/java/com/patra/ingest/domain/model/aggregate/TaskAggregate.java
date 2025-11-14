@@ -1,6 +1,7 @@
 package com.patra.ingest.domain.model.aggregate;
 
 import com.patra.common.domain.AggregateRoot;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.event.TaskCompletedEvent;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
 import com.patra.ingest.domain.model.enums.TaskStatus;
@@ -8,6 +9,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
 import com.patra.ingest.domain.model.vo.shared.LeaseInfo;
 import java.time.Instant;
+import java.util.Objects;
 import lombok.Getter;
 
 /**
@@ -64,7 +66,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
   private Long sliceId;
 
   /** 数据来源代码（如：pubmed）。 */
-  private final String provenanceCode;
+  private final ProvenanceCode provenanceCode;
 
   /** 操作代码（如：harvest、update）。 */
   private final String operationCode;
@@ -113,7 +115,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
       String idempotentKey,
@@ -132,7 +134,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
     this.scheduleInstanceId = scheduleInstanceId;
     this.planId = planId;
     this.sliceId = sliceId;
-    this.provenanceCode = provenanceCode;
+    this.provenanceCode = Objects.requireNonNull(provenanceCode, "provenanceCode 不能为 null");
     this.operationCode = operationCode;
     this.paramsJson = paramsJson;
     this.idempotentKey = idempotentKey;
@@ -170,7 +172,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
       String idempotentKey,
@@ -229,7 +231,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
       String idempotentKey,
@@ -275,7 +277,7 @@ public class TaskAggregate extends AggregateRoot<Long> {
       Long scheduleInstanceId,
       Long planId,
       Long sliceId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String paramsJson,
       String idempotentKey,
@@ -345,6 +347,15 @@ public class TaskAggregate extends AggregateRoot<Long> {
             this.scheduledAt);
     addDomainEvent(event);
     return event;
+  }
+
+  /**
+   * 获取数据来源代码字符串值。
+   *
+   * @return 数据来源代码字符串
+   */
+  public String getProvenanceCodeValue() {
+    return provenanceCode.getCode();
   }
 
   /** 将任务标记为队列中状态。 */

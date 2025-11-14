@@ -1,8 +1,7 @@
 /**
  * Registry 出站端口包 - 六边形架构仓储接口定义。
  *
- * <p>本包定义了领域层的出站端口(仓储接口),遵循六边形架构的依赖倒置原则。
- * 仓储接口在领域层定义,由基础设施层({@code patra-registry-infra})实现,
+ * <p>本包定义了领域层的出站端口(仓储接口),遵循六边形架构的依赖倒置原则。 仓储接口在领域层定义,由基础设施层({@code patra-registry-infra})实现,
  * 确保领域层不依赖具体的持久化技术。
  *
  * <h2>职责</h2>
@@ -18,10 +17,9 @@
  * <h2>核心仓储接口</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.port.ProvenanceConfigRepository} - 数据源配置仓储,
- *       负责 {@link com.patra.registry.domain.model.aggregate.ProvenanceConfiguration} 聚合根的持久化和查询
- *   <li>{@link com.patra.registry.domain.port.ExprRepository} - 表达式仓储,
- *       负责表达式元数据的查询和快照加载
+ *   <li>{@link com.patra.registry.domain.port.ProvenanceConfigRepository} - 数据源配置仓储, 负责 {@link
+ *       com.patra.registry.domain.model.aggregate.ProvenanceConfiguration} 聚合根的持久化和查询
+ *   <li>{@link com.patra.registry.domain.port.ExprRepository} - 表达式仓储, 负责表达式元数据的查询和快照加载
  * </ul>
  *
  * <h2>设计模式</h2>

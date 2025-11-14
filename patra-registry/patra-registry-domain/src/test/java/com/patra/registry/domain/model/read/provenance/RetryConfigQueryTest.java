@@ -1,14 +1,13 @@
 package com.patra.registry.domain.model.read.provenance;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.patra.registry.domain.exception.DomainValidationException;
+import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * {@link RetryConfigQuery} 的单元测试。
@@ -45,23 +44,24 @@ class RetryConfigQueryTest {
       Integer circuitCooldownMillis = 60000;
 
       // When: 构造对象
-      RetryConfigQuery query = new RetryConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxRetryTimes,
-          backoffPolicyTypeCode,
-          initialDelayMillis,
-          maxDelayMillis,
-          expMultiplierValue,
-          jitterFactorRatio,
-          retryHttpStatusJson,
-          giveupHttpStatusJson,
-          retryOnNetworkError,
-          circuitBreakThreshold,
-          circuitCooldownMillis);
+      RetryConfigQuery query =
+          new RetryConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxRetryTimes,
+              backoffPolicyTypeCode,
+              initialDelayMillis,
+              maxDelayMillis,
+              expMultiplierValue,
+              jitterFactorRatio,
+              retryHttpStatusJson,
+              giveupHttpStatusJson,
+              retryOnNetworkError,
+              circuitBreakThreshold,
+              circuitCooldownMillis);
 
       // Then: 所有字段值应正确设置
       assertThat(query.id()).isEqualTo(id);
@@ -104,23 +104,24 @@ class RetryConfigQueryTest {
       Integer circuitCooldownMillis = null; // 可选
 
       // When: 构造对象
-      RetryConfigQuery query = new RetryConfigQuery(
-          id,
-          provenanceId,
-          operationType,
-          effectiveFrom,
-          effectiveTo,
-          maxRetryTimes,
-          backoffPolicyTypeCode,
-          initialDelayMillis,
-          maxDelayMillis,
-          expMultiplierValue,
-          jitterFactorRatio,
-          retryHttpStatusJson,
-          giveupHttpStatusJson,
-          retryOnNetworkError,
-          circuitBreakThreshold,
-          circuitCooldownMillis);
+      RetryConfigQuery query =
+          new RetryConfigQuery(
+              id,
+              provenanceId,
+              operationType,
+              effectiveFrom,
+              effectiveTo,
+              maxRetryTimes,
+              backoffPolicyTypeCode,
+              initialDelayMillis,
+              maxDelayMillis,
+              expMultiplierValue,
+              jitterFactorRatio,
+              retryHttpStatusJson,
+              giveupHttpStatusJson,
+              retryOnNetworkError,
+              circuitBreakThreshold,
+              circuitCooldownMillis);
 
       // Then: 必填字段应正确设置,可选字段为 null
       assertThat(query.id()).isEqualTo(id);
@@ -151,23 +152,24 @@ class RetryConfigQueryTest {
       String backoffPolicyTypeCode = "LINEAR";
 
       // When: 构造对象
-      RetryConfigQuery query = new RetryConfigQuery(
-          id,
-          provenanceId,
-          null,
-          effectiveFrom,
-          null,
-          null,
-          backoffPolicyTypeCode,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          false,
-          null,
-          null);
+      RetryConfigQuery query =
+          new RetryConfigQuery(
+              id,
+              provenanceId,
+              null,
+              effectiveFrom,
+              null,
+              null,
+              backoffPolicyTypeCode,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       // Then: 必填字段应正确设置
       assertThat(query.id()).isEqualTo(id);

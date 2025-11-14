@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.vo.relay;
 
+import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
 
 /**
@@ -14,7 +15,7 @@ public record LiteratureReadyMessage(Payload payload, Header header) {
   public record Payload(
       Long taskId,
       Long runId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       List<String> storageKeys,
       Integer totalLiteratureCount,
       Integer successBatchCount,
@@ -23,5 +24,9 @@ public record LiteratureReadyMessage(Payload payload, Header header) {
 
   /** Header metadata for tracing. */
   public record Header(
-      String provenanceCode, Long taskId, Long runId, Integer storageKeyCount, Long occurredAt) {}
+      ProvenanceCode provenanceCode,
+      Long taskId,
+      Long runId,
+      Integer storageKeyCount,
+      Long occurredAt) {}
 }

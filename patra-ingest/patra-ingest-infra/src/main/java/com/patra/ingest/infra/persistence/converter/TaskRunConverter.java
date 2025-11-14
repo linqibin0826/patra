@@ -2,9 +2,12 @@ package com.patra.ingest.infra.persistence.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.exception.TaskCheckpointException;
 import com.patra.ingest.domain.model.entity.TaskRun;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskRunStatus;
 import com.patra.ingest.domain.model.vo.execution.RunContext;
 import com.patra.ingest.domain.model.vo.execution.RunStats;
@@ -48,7 +51,7 @@ public interface TaskRunConverter {
         entity.getId(),
         entity.getTaskId(),
         entity.getAttemptNo() == null ? 0 : entity.getAttemptNo(),
-        entity.getProvenanceCode(),
+        ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getOperationCode(),
         status,
         stats,
@@ -117,6 +120,38 @@ public interface TaskRunConverter {
     } catch (Exception ex) {
       throw new TaskCheckpointException(
           TaskCheckpointException.Type.SERIALIZE, "Failed to serialize checkpoint JSON", ex);
+    }
+  }
+
+  // ========== 枚举转换方法 ==========
+
+  default String map(ProvenanceCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  default ProvenanceCode mapProvenanceCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return ProvenanceCode.parse(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 provenance_code: " + code, e);
+    }
+  }
+
+  default String map(OperationCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  default OperationCode mapOperationCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return OperationCode.fromCode(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 operation_code: " + code, e);
     }
   }
 }

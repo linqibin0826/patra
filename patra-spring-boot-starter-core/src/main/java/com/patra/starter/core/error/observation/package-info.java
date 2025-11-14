@@ -1,8 +1,7 @@
 /**
  * 错误处理可观测性包。
  *
- * <p>本包提供错误处理过程的可观测能力,集成 Micrometer 指标收集,
- * 记录错误解析性能指标和慢解析警告。
+ * <p>本包提供错误处理过程的可观测能力,集成 Micrometer 指标收集, 记录错误解析性能指标和慢解析警告。
  *
  * <h2>职责</h2>
  *
@@ -17,12 +16,14 @@
  *
  * <ul>
  *   <li>{@link com.patra.starter.core.error.observation.ErrorObservationRecorder} - 错误观测记录器接口
- *   <li>{@link com.patra.starter.core.error.observation.MicrometerErrorObservationRecorder} - 基于 Micrometer 的实现
+ *   <li>{@link com.patra.starter.core.error.observation.MicrometerErrorObservationRecorder} - 基于
+ *       Micrometer 的实现
  * </ul>
  *
  * <h2>指标类型</h2>
  *
  * <h3>计时器指标</h3>
+ *
  * <ul>
  *   <li><strong>名称</strong>: {@code patra.error.resolution.time}
  *   <li><strong>类型</strong>: Timer
@@ -31,6 +32,7 @@
  * </ul>
  *
  * <h3>计数器指标</h3>
+ *
  * <ul>
  *   <li><strong>名称</strong>: {@code patra.error.resolution.count}
  *   <li><strong>类型</strong>: Counter
@@ -54,6 +56,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>通过拦截器自动记录</h3>
+ *
  * <pre>{@code
  * // MetricsInterceptor 自动使用 ErrorObservationRecorder
  * @Component
@@ -74,6 +77,7 @@
  * }</pre>
  *
  * <h3>查询指标(Prometheus 格式)</h3>
+ *
  * <pre>
  * # 错误解析平均耗时(按异常类型)
  * patra_error_resolution_time_seconds_sum / patra_error_resolution_time_seconds_count

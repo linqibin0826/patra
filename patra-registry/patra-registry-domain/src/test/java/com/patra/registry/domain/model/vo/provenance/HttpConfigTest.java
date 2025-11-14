@@ -293,8 +293,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              id, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null, "IGNORE",
-              null, null, null);
+              id,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.id()).isEqualTo(1L);
@@ -309,8 +322,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              id, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null, "IGNORE",
-              null, null, null);
+              id,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.id()).isEqualTo(Long.MAX_VALUE);
@@ -486,8 +512,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.effectiveFrom()).isEqualTo(effectiveFrom);
@@ -502,8 +541,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.effectiveFrom()).isEqualTo(effectiveFrom);
@@ -518,8 +570,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.effectiveFrom()).isEqualTo(effectiveFrom);
@@ -631,8 +696,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              retryAfterPolicyCode, null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              retryAfterPolicyCode,
+              null,
+              null,
+              null);
 
       // Then: 验证 retryAfterPolicyCode 已被 trim
       assertThat(httpConfig.retryAfterPolicyCode()).isEqualTo("RESPECT");
@@ -654,8 +732,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证 operationType 已被 trim
       assertThat(httpConfig.operationType()).isEqualTo("HARVEST");
@@ -670,8 +761,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true,
-              proxyUrlValue, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              proxyUrlValue,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证 proxyUrlValue 已被 trim
       assertThat(httpConfig.proxyUrlValue()).isEqualTo("http://proxy:8080");
@@ -686,8 +790,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, idempotencyHeaderName, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              idempotencyHeaderName,
+              null);
 
       // Then: 验证 idempotencyHeaderName 已被 trim
       assertThat(httpConfig.idempotencyHeaderName()).isEqualTo("Idempotency-Key");
@@ -738,8 +855,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              retryAfterPolicyCode, null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              retryAfterPolicyCode,
+              null,
+              null,
+              null);
 
       // Then: 验证空白字符都被 trim
       assertThat(httpConfig.operationType()).isEqualTo("BACKFILL");
@@ -755,8 +885,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, idempotencyHeaderName, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              idempotencyHeaderName,
+              null);
 
       // Then: 验证内部空白字符被保留
       assertThat(httpConfig.idempotencyHeaderName()).isEqualTo("X Request ID");
@@ -778,8 +921,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证 operationType 为 null
       assertThat(httpConfig.operationType()).isNull();
@@ -794,8 +950,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true,
-              proxyUrlValue, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              proxyUrlValue,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证 proxyUrlValue 为 null
       assertThat(httpConfig.proxyUrlValue()).isNull();
@@ -810,8 +979,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, idempotencyHeaderName, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              idempotencyHeaderName,
+              null);
 
       // Then: 验证 idempotencyHeaderName 为 null
       assertThat(httpConfig.idempotencyHeaderName()).isNull();
@@ -826,8 +1008,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), effectiveTo, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              effectiveTo,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证 effectiveTo 为 null
       assertThat(httpConfig.effectiveTo()).isNull();
@@ -958,8 +1153,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", retryAfterCapMillis, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              retryAfterCapMillis,
+              null,
+              null);
 
       // Then: 验证 retryAfterCapMillis 为 null
       assertThat(httpConfig.retryAfterCapMillis()).isNull();
@@ -974,8 +1182,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, idempotencyTtlSeconds);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              idempotencyTtlSeconds);
 
       // Then: 验证 idempotencyTtlSeconds 为 null
       assertThat(httpConfig.idempotencyTtlSeconds()).isNull();
@@ -987,8 +1208,21 @@ class HttpConfigTest {
       // Given: 所有可选字段为 null
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, null, Instant.now(), null, null, null, null, null, false, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              null,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证可选字段都为 null
       assertThat(httpConfig.operationType()).isNull();
@@ -1067,13 +1301,39 @@ class HttpConfigTest {
       // Given: 两个不同值的配置
       HttpConfig httpConfig1 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       HttpConfig httpConfig2 =
           new HttpConfig(
-              1002L, 2002L, "UPDATE", Instant.now(), null, null, null, null, null, false, null,
-              "RESPECT", null, null, null);
+              1002L,
+              2002L,
+              "UPDATE",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              "RESPECT",
+              null,
+              null,
+              null);
 
       // When & Then: 不应该相等
       assertThat(httpConfig1).isNotEqualTo(httpConfig2);
@@ -1087,13 +1347,39 @@ class HttpConfigTest {
 
       HttpConfig httpConfig1 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       HttpConfig httpConfig2 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // When & Then: hashCode 应该相等
       assertThat(httpConfig1.hashCode()).isEqualTo(httpConfig2.hashCode());
@@ -1138,8 +1424,21 @@ class HttpConfigTest {
       // Given: 创建配置
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // When & Then: 对象应该等于自身
       assertThat(httpConfig).isEqualTo(httpConfig);
@@ -1153,13 +1452,39 @@ class HttpConfigTest {
 
       HttpConfig httpConfig1 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       HttpConfig httpConfig2 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // When & Then: 对称性（a.equals(b) == b.equals(a)）
       assertThat(httpConfig1.equals(httpConfig2)).isEqualTo(httpConfig2.equals(httpConfig1));
@@ -1175,18 +1500,57 @@ class HttpConfigTest {
 
       HttpConfig httpConfig1 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       HttpConfig httpConfig2 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       HttpConfig httpConfig3 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // When & Then: 传递性（a.equals(b) && b.equals(c) => a.equals(c)）
       assertThat(httpConfig1).isEqualTo(httpConfig2);
@@ -1200,8 +1564,21 @@ class HttpConfigTest {
       // Given: 创建配置
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // When & Then: 与 null 比较应该返回 false
       assertThat(httpConfig).isNotEqualTo(null);
@@ -1213,8 +1590,21 @@ class HttpConfigTest {
       // Given: 创建配置
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // When & Then: 与不同类型对象比较应该返回 false
       assertThat(httpConfig).isNotEqualTo("Not a HttpConfig");
@@ -1322,8 +1712,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.operationType()).isEqualTo("ALL");
@@ -1338,8 +1741,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.operationType()).isEqualTo("HARVEST");
@@ -1354,8 +1770,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.operationType()).isEqualTo("UPDATE");
@@ -1370,8 +1799,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.operationType()).isEqualTo("BACKFILL");
@@ -1386,8 +1828,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              retryAfterPolicyCode, null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              retryAfterPolicyCode,
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.retryAfterPolicyCode()).isEqualTo("IGNORE");
@@ -1402,8 +1857,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              retryAfterPolicyCode, 60000, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              retryAfterPolicyCode,
+              60000,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.retryAfterPolicyCode()).isEqualTo("RESPECT");
@@ -1419,8 +1887,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              retryAfterPolicyCode, 120000, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              retryAfterPolicyCode,
+              120000,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.retryAfterPolicyCode()).isEqualTo("CLAMP");
@@ -1436,8 +1917,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, tlsVerifyEnabled,
-              null, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              tlsVerifyEnabled,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.tlsVerifyEnabled()).isTrue();
@@ -1452,8 +1946,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, tlsVerifyEnabled,
-              null, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              tlsVerifyEnabled,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.tlsVerifyEnabled()).isFalse();
@@ -1468,8 +1975,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true,
-              proxyUrlValue, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              proxyUrlValue,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.proxyUrlValue()).isEqualTo(proxyUrlValue);
@@ -1484,8 +2004,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true,
-              proxyUrlValue, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              proxyUrlValue,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 验证成功创建
       assertThat(httpConfig.proxyUrlValue()).isEqualTo(proxyUrlValue);
@@ -1600,8 +2133,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, operationType, Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              operationType,
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(httpConfig.operationType()).isEqualTo("A");
@@ -1616,8 +2162,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              retryAfterPolicyCode, null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              retryAfterPolicyCode,
+              null,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(httpConfig.retryAfterPolicyCode()).isEqualTo("X");
@@ -1632,8 +2191,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true,
-              proxyUrlValue, "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              proxyUrlValue,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(httpConfig.proxyUrlValue()).isEqualTo(proxyUrlValue);
@@ -1647,8 +2219,21 @@ class HttpConfigTest {
 
       HttpConfig httpConfig1 =
           new HttpConfig(
-              1001L, 2001L, "HARVEST", effectiveFrom, null, null, null, null, null, true, null,
-              "IGNORE", null, null, null);
+              1001L,
+              2001L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              null,
+              null);
 
       HttpConfig httpConfig2 =
           new HttpConfig(
@@ -1747,8 +2332,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "CLAMP", retryAfterCapMillis, null, null);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "CLAMP",
+              retryAfterCapMillis,
+              null,
+              null);
 
       // Then: 应该成功创建
       assertThat(httpConfig.retryAfterCapMillis()).isEqualTo(0);
@@ -1763,8 +2361,21 @@ class HttpConfigTest {
       // When: 创建 HttpConfig
       HttpConfig httpConfig =
           new HttpConfig(
-              1001L, 2001L, "ALL", Instant.now(), null, null, null, null, null, true, null,
-              "IGNORE", null, "Idempotency-Key", idempotencyTtlSeconds);
+              1001L,
+              2001L,
+              "ALL",
+              Instant.now(),
+              null,
+              null,
+              null,
+              null,
+              null,
+              true,
+              null,
+              "IGNORE",
+              null,
+              "Idempotency-Key",
+              idempotencyTtlSeconds);
 
       // Then: 应该成功创建
       assertThat(httpConfig.idempotencyTtlSeconds()).isEqualTo(0);

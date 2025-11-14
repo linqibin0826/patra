@@ -1,8 +1,7 @@
 /**
  * Patra 平台核心共享库根包。
  *
- * <p>本包是 patra-common-core 模块的根包,提供所有 Patra 微服务必需的核心基础设施,
- * 包括 DDD 领域层基类、异常处理框架、共享枚举、JSON 工具和通用工具类。
+ * <p>本包是 patra-common-core 模块的根包,提供所有 Patra 微服务必需的核心基础设施, 包括 DDD 领域层基类、异常处理框架、共享枚举、JSON 工具和通用工具类。
  *
  * <h2>模块职责</h2>
  *
@@ -18,19 +17,17 @@
  * <h2>包结构</h2>
  *
  * <ul>
- *   <li>{@link com.patra.common.domain} - 领域层基础包,
- *       提供聚合根基类({@link com.patra.common.domain.AggregateRoot})和领域事件接口
- *   <li>{@link com.patra.common.error} - 异常处理框架包,
- *       提供领域异常基类({@link com.patra.common.error.DomainException})和错误特征枚举
- *   <li>{@link com.patra.common.enums} - 共享枚举包,
- *       提供跨服务共享的枚举定义({@link com.patra.common.enums.ProvenanceCode}、
- *       {@link com.patra.common.enums.Priority} 等)
- *   <li>{@link com.patra.common.json} - JSON 工具包,
- *       提供 JSON 规范化器({@link com.patra.common.json.JsonNormalizer})和 ObjectMapper 持有者
- *   <li>{@link com.patra.common.messaging} - 消息通道包,
- *       提供通道键接口({@link com.patra.common.messaging.ChannelKey})
- *   <li>{@link com.patra.common.util} - 通用工具包,
- *       提供哈希计算({@link com.patra.common.util.HashUtils})等工具类
+ *   <li>{@link com.patra.common.domain} - 领域层基础包, 提供聚合根基类({@link
+ *       com.patra.common.domain.AggregateRoot})和领域事件接口
+ *   <li>{@link com.patra.common.error} - 异常处理框架包, 提供领域异常基类({@link
+ *       com.patra.common.error.DomainException})和错误特征枚举
+ *   <li>{@link com.patra.common.enums} - 共享枚举包, 提供跨服务共享的枚举定义({@link
+ *       com.patra.common.enums.ProvenanceCode}、 {@link com.patra.common.enums.Priority} 等)
+ *   <li>{@link com.patra.common.json} - JSON 工具包, 提供 JSON 规范化器({@link
+ *       com.patra.common.json.JsonNormalizer})和 ObjectMapper 持有者
+ *   <li>{@link com.patra.common.messaging} - 消息通道包, 提供通道键接口({@link
+ *       com.patra.common.messaging.ChannelKey})
+ *   <li>{@link com.patra.common.util} - 通用工具包, 提供哈希计算({@link com.patra.common.util.HashUtils})等工具类
  * </ul>
  *
  * <h2>设计原则</h2>

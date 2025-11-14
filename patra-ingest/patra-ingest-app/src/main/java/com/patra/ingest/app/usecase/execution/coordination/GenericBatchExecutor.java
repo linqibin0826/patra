@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
@@ -62,12 +63,12 @@ public class GenericBatchExecutor {
 
     long startAt = System.currentTimeMillis();
     int batchNo = batch.batchNo();
-    String provenanceCode = context.provenanceCode();
+    ProvenanceCode provenanceCode = context.provenanceCode();
     String operationCode = context.operationCode();
 
     log.info(
         "批次执行开始 provenanceCode={} operationCode={} batchNo={} runId={}",
-        provenanceCode,
+        provenanceCode != null ? provenanceCode.getCode() : null,
         operationCode,
         batchNo,
         context.runId());
@@ -124,13 +125,13 @@ public class GenericBatchExecutor {
    */
   private BatchResult handleFailure(
       ExecutionContext context, Batch batch, DataFetchResult result, long durationMillis) {
-    String provenanceCode = context.provenanceCode();
+    ProvenanceCode provenanceCode = context.provenanceCode();
     int batchNo = batch.batchNo();
     ErrorType errorType = result.errorType();
     String reason = safeMessage(result.errorMessage());
     log.warn(
         "批次执行失败 provenanceCode={} batchNo={} errorType={} duration={}ms message={}",
-        provenanceCode,
+        provenanceCode != null ? provenanceCode.getCode() : null,
         batchNo,
         errorType,
         durationMillis,
@@ -146,12 +147,12 @@ public class GenericBatchExecutor {
    * @param batchNo 批次编号
    */
   private void logDataFetchWarnings(
-      DataFetchResult fetchResult, String provenanceCode, int batchNo) {
+      DataFetchResult fetchResult, ProvenanceCode provenanceCode, int batchNo) {
     if (fetchResult.errorMessage() != null
         && fetchResult.errorType() == ErrorType.PARTIAL_SUCCESS) {
       log.warn(
           "数据获取报告部分成功 provenanceCode={} batchNo={} warning={}",
-          provenanceCode,
+          provenanceCode != null ? provenanceCode.getCode() : null,
           batchNo,
           fetchResult.errorMessage());
     }
@@ -174,11 +175,12 @@ public class GenericBatchExecutor {
           .storageKey(null)
           .build();
     }
+    ProvenanceCode provenanceCode = context.provenanceCode();
     LiteraturePublisherOrchestrator.PublishContext publishContext =
         LiteraturePublisherOrchestrator.PublishContext.builder()
             .runId(context.runId())
             .batchNo(batchNo)
-            .provenanceCode(context.provenanceCode())
+            .provenanceCode(provenanceCode != null ? provenanceCode.getCode() : null)
             .build();
     return literaturePublisherOrchestrator.publish(payload, publishContext);
   }

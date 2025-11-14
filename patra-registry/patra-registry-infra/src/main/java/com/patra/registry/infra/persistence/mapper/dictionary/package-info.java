@@ -15,25 +15,25 @@
  * <h2>核心 Mapper</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.dictionary.RegSysDictTypeMapper} - 字典类型 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.dictionary.RegSysDictTypeMapper} - 字典类型
+ *       Mapper
  *       <ul>
- *         <li>{@code selectByCode(String typeCode)} - 根据类型代码查询</li>
- *         <li>{@code selectAllSystem()} - 查询所有系统字典类型</li>
+ *         <li>{@code selectByCode(String typeCode)} - 根据类型代码查询
+ *         <li>{@code selectAllSystem()} - 查询所有系统字典类型
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.dictionary.RegSysDictItemMapper} - 字典项 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.dictionary.RegSysDictItemMapper} - 字典项
+ *       Mapper
  *       <ul>
- *         <li>{@code selectByType(String typeCode)} - 查询指定类型的所有字典项</li>
- *         <li>{@code selectByParent(String parentCode)} - 查询子级字典项</li>
- *         <li>{@code selectRootItems(String typeCode)} - 查询顶级字典项(无父级)</li>
+ *         <li>{@code selectByType(String typeCode)} - 查询指定类型的所有字典项
+ *         <li>{@code selectByParent(String parentCode)} - 查询子级字典项
+ *         <li>{@code selectRootItems(String typeCode)} - 查询顶级字典项(无父级)
  *       </ul>
- *   </li>
- *   <li>{@link com.patra.registry.infra.persistence.mapper.dictionary.RegSysDictItemAliasMapper} - 字典别名 Mapper
+ *   <li>{@link com.patra.registry.infra.persistence.mapper.dictionary.RegSysDictItemAliasMapper} -
+ *       字典别名 Mapper
  *       <ul>
- *         <li>{@code selectByItem(Long dictItemId)} - 查询字典项的所有别名</li>
- *         <li>{@code selectByLocale(String locale)} - 查询指定语言的别名</li>
+ *         <li>{@code selectByItem(Long dictItemId)} - 查询字典项的所有别名
+ *         <li>{@code selectByLocale(String locale)} - 查询指定语言的别名
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>层级查询示例</h2>

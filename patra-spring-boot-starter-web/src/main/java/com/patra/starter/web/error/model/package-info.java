@@ -28,6 +28,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>创建验证错误</h3>
+ *
  * <pre>{@code
  * // 手动创建
  * ValidationError error = new ValidationError(
@@ -41,6 +42,7 @@
  * }</pre>
  *
  * <h3>在 ProblemDetail 中使用</h3>
+ *
  * <pre>{@code
  * @RestControllerAdvice
  * public class GlobalRestExceptionHandler {
@@ -64,6 +66,7 @@
  * }</pre>
  *
  * <h3>JSON 序列化示例</h3>
+ *
  * <pre>{@code
  * // ValidationError 列表
  * List<ValidationError> errors = List.of(
@@ -116,23 +119,27 @@
  * <h2>字段路径格式</h2>
  *
  * <h3>简单字段</h3>
+ *
  * <pre>{@code
  * field: "email"
  * }</pre>
  *
  * <h3>嵌套对象</h3>
+ *
  * <pre>{@code
  * field: "userInfo.email"
  * field: "address.city"
  * }</pre>
  *
  * <h3>集合元素</h3>
+ *
  * <pre>{@code
  * field: "items[0].name"
  * field: "orderItems[2].quantity"
  * }</pre>
  *
  * <h3>Map 键</h3>
+ *
  * <pre>{@code
  * field: "metadata[key1]"
  * }</pre>
@@ -140,6 +147,7 @@
  * <h2>前端解析示例</h2>
  *
  * <h3>React 示例</h3>
+ *
  * <pre>{@code
  * // 处理验证错误响应
  * axios.post('/api/plans', data)
@@ -164,6 +172,7 @@
  * }</pre>
  *
  * <h3>Vue 示例</h3>
+ *
  * <pre>{@code
  * // 处理验证错误
  * this.$http.post('/api/plans', data)

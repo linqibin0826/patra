@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.registry.api.dto.provenance.*;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

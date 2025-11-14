@@ -78,6 +78,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>完整配置示例</h3>
+ *
  * <pre>{@code
  * patra:
  *   web:
@@ -93,6 +94,7 @@
  * }</pre>
  *
  * <h3>自定义 ProblemDetail 字段</h3>
+ *
  * <pre>{@code
  * @Component
  * public class CustomProblemFieldContributor implements WebProblemFieldContributor {

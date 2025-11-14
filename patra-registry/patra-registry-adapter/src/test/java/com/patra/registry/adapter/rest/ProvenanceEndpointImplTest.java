@@ -62,11 +62,13 @@ class ProvenanceEndpointImplTest {
     @DisplayName("应该成功返回所有数据源列表")
     void shouldReturnProvenanceList() {
       // Given: 准备测试数据
-      List<ProvenanceQuery> queryResults = List.of(createMockProvenanceQuery("PUBMED"), createMockProvenanceQuery("EPMC"));
+      List<ProvenanceQuery> queryResults =
+          List.of(createMockProvenanceQuery("PUBMED"), createMockProvenanceQuery("EPMC"));
 
       when(orchestrator.listProvenances()).thenReturn(queryResults);
 
-      List<ProvenanceResp> expectedResps = List.of(createMockProvenanceResp("PUBMED"), createMockProvenanceResp("EPMC"));
+      List<ProvenanceResp> expectedResps =
+          List.of(createMockProvenanceResp("PUBMED"), createMockProvenanceResp("EPMC"));
       when(converter.toResp(queryResults)).thenReturn(expectedResps);
 
       // When: 执行方法
@@ -181,7 +183,8 @@ class ProvenanceEndpointImplTest {
       Instant at = Instant.parse("2024-01-01T00:00:00Z");
 
       ProvenanceConfigQuery queryResult = createMockConfigQuery();
-      when(orchestrator.loadConfiguration(code, operationType, at)).thenReturn(Optional.of(queryResult));
+      when(orchestrator.loadConfiguration(code, operationType, at))
+          .thenReturn(Optional.of(queryResult));
 
       ProvenanceConfigResp expectedResp = createMockConfigResp();
       when(converter.toResp(queryResult)).thenReturn(expectedResp);
@@ -230,7 +233,8 @@ class ProvenanceEndpointImplTest {
       // When & Then: 验证异常
       assertThatThrownBy(() -> endpoint.getConfiguration(code, operationType, null))
           .isInstanceOf(ProvenanceNotFoundException.class)
-          .hasMessageContaining("Provenance configuration not found for code [EPMC] and operationType [HARVEST]");
+          .hasMessageContaining(
+              "Provenance configuration not found for code [EPMC] and operationType [HARVEST]");
 
       verify(orchestrator).loadConfiguration(code, operationType, null);
     }
@@ -243,7 +247,8 @@ class ProvenanceEndpointImplTest {
       Instant historicalTime = Instant.parse("2023-01-01T00:00:00Z");
 
       ProvenanceConfigQuery queryResult = createMockConfigQuery();
-      when(orchestrator.loadConfiguration(code, null, historicalTime)).thenReturn(Optional.of(queryResult));
+      when(orchestrator.loadConfiguration(code, null, historicalTime))
+          .thenReturn(Optional.of(queryResult));
 
       ProvenanceConfigResp expectedResp = createMockConfigResp();
       when(converter.toResp(queryResult)).thenReturn(expectedResp);
@@ -261,7 +266,8 @@ class ProvenanceEndpointImplTest {
     void shouldPropagateOrchestratorException() {
       // Given: Orchestrator 抛出异常
       ProvenanceCode code = ProvenanceCode.PUBMED;
-      when(orchestrator.loadConfiguration(any(), any(), any())).thenThrow(new RuntimeException("Database error"));
+      when(orchestrator.loadConfiguration(any(), any(), any()))
+          .thenThrow(new RuntimeException("Database error"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(() -> endpoint.getConfiguration(code, null, null))
@@ -299,12 +305,14 @@ class ProvenanceEndpointImplTest {
         // Given: 配置不存在
         ProvenanceCode code = ProvenanceCode.PUBMED;
         String operationType = "UPDATE";
-        when(orchestrator.loadConfiguration(code, operationType, null)).thenReturn(Optional.empty());
+        when(orchestrator.loadConfiguration(code, operationType, null))
+            .thenReturn(Optional.empty());
 
         // When & Then: 验证异常消息包含代码和操作类型
         assertThatThrownBy(() -> endpoint.getConfiguration(code, operationType, null))
             .isInstanceOf(ProvenanceNotFoundException.class)
-            .hasMessage("Provenance configuration not found for code [PUBMED] and operationType [UPDATE]");
+            .hasMessage(
+                "Provenance configuration not found for code [PUBMED] and operationType [UPDATE]");
 
         verify(orchestrator).loadConfiguration(code, operationType, null);
       }
@@ -319,7 +327,8 @@ class ProvenanceEndpointImplTest {
         // When & Then: 验证异常消息包含 null
         assertThatThrownBy(() -> endpoint.getConfiguration(code, null, null))
             .isInstanceOf(ProvenanceNotFoundException.class)
-            .hasMessage("Provenance configuration not found for code [EPMC] and operationType [null]");
+            .hasMessage(
+                "Provenance configuration not found for code [EPMC] and operationType [null]");
 
         verify(orchestrator).loadConfiguration(code, null, null);
       }
@@ -386,8 +395,7 @@ class ProvenanceEndpointImplTest {
         // Given: Orchestrator 返回正常，但 Converter 抛出异常
         List<ProvenanceQuery> queryResults = List.of(createMockProvenanceQuery("PUBMED"));
         when(orchestrator.listProvenances()).thenReturn(queryResults);
-        when(converter.toResp(queryResults))
-            .thenThrow(new RuntimeException("Converter error"));
+        when(converter.toResp(queryResults)).thenThrow(new RuntimeException("Converter error"));
 
         // When & Then: 验证异常传播
         assertThatThrownBy(() -> endpoint.listProvenances())
@@ -405,8 +413,7 @@ class ProvenanceEndpointImplTest {
         ProvenanceCode code = ProvenanceCode.PUBMED;
         ProvenanceQuery queryResult = createMockProvenanceQuery("PUBMED");
         when(orchestrator.findProvenance(code)).thenReturn(Optional.of(queryResult));
-        when(converter.toResp(queryResult))
-            .thenThrow(new RuntimeException("Converter error"));
+        when(converter.toResp(queryResult)).thenThrow(new RuntimeException("Converter error"));
 
         // When & Then: 验证异常传播
         assertThatThrownBy(() -> endpoint.getProvenance(code))
@@ -424,8 +431,7 @@ class ProvenanceEndpointImplTest {
         ProvenanceCode code = ProvenanceCode.PUBMED;
         ProvenanceConfigQuery queryResult = createMockConfigQuery();
         when(orchestrator.loadConfiguration(code, null, null)).thenReturn(Optional.of(queryResult));
-        when(converter.toResp(queryResult))
-            .thenThrow(new RuntimeException("Converter error"));
+        when(converter.toResp(queryResult)).thenThrow(new RuntimeException("Converter error"));
 
         // When & Then: 验证异常传播
         assertThatThrownBy(() -> endpoint.getConfiguration(code, null, null))
@@ -468,7 +474,8 @@ class ProvenanceEndpointImplTest {
         Instant at = Instant.parse("2024-01-01T00:00:00Z");
 
         ProvenanceConfigQuery queryResult = createMockConfigQuery();
-        when(orchestrator.loadConfiguration(code, operationType, at)).thenReturn(Optional.of(queryResult));
+        when(orchestrator.loadConfiguration(code, operationType, at))
+            .thenReturn(Optional.of(queryResult));
         when(converter.toResp(queryResult)).thenReturn(createMockConfigResp());
 
         // When: 调用方法
@@ -488,7 +495,8 @@ class ProvenanceEndpointImplTest {
         String operationType = "UPDATE";
 
         ProvenanceConfigQuery queryResult = createMockConfigQuery();
-        when(orchestrator.loadConfiguration(code, operationType, null)).thenReturn(Optional.of(queryResult));
+        when(orchestrator.loadConfiguration(code, operationType, null))
+            .thenReturn(Optional.of(queryResult));
         when(converter.toResp(queryResult)).thenReturn(createMockConfigResp());
 
         // When: 调用方法
@@ -514,7 +522,7 @@ class ProvenanceEndpointImplTest {
         "https://docs.example.com", // docsUrl
         true, // active
         "ACTIVE" // lifecycleStatusCode
-    );
+        );
   }
 
   private ProvenanceResp createMockProvenanceResp(String code) {
@@ -527,7 +535,7 @@ class ProvenanceEndpointImplTest {
         "https://docs.example.com", // docsUrl
         true, // active
         "ACTIVE" // lifecycleStatusCode
-    );
+        );
   }
 
   private ProvenanceConfigQuery createMockConfigQuery() {
@@ -538,8 +546,8 @@ class ProvenanceEndpointImplTest {
         null, // httpConfig
         null, // batching
         null, // retry
-        null  // rateLimit
-    );
+        null // rateLimit
+        );
   }
 
   private ProvenanceConfigResp createMockConfigResp() {
@@ -550,7 +558,7 @@ class ProvenanceEndpointImplTest {
         null, // httpConfig
         null, // batching
         null, // retry
-        null  // rateLimit
-    );
+        null // rateLimit
+        );
   }
 }

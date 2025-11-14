@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.event;
 
+import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
 import lombok.Builder;
 
@@ -26,7 +27,7 @@ public record LiteratureDataReadyEvent(
     /** 运行 ID。 */
     Long runId,
     /** 数据源代码(Provenance)。 */
-    String provenanceCode,
+    ProvenanceCode provenanceCode,
     /** 存储键列表,引用外部存储的文献文档。 */
     List<String> storageKeys,
     /** 文献总数。 */
@@ -36,4 +37,8 @@ public record LiteratureDataReadyEvent(
     /** 失败批次数。 */
     Integer failedBatchCount,
     /** 事件时间戳。 */
-    Long timestamp) {}
+    Long timestamp) {
+
+  public LiteratureDataReadyEvent {
+  }
+}

@@ -1,8 +1,7 @@
 /**
  * 错误处理框架配置包。
  *
- * <p>本包提供 Patra 平台统一错误处理框架的自动配置和属性定义,
- * 包括错误解析引擎、拦截器管道、观测能力和可选的熔断保护。
+ * <p>本包提供 Patra 平台统一错误处理框架的自动配置和属性定义, 包括错误解析引擎、拦截器管道、观测能力和可选的熔断保护。
  *
  * <h2>职责</h2>
  *
@@ -17,7 +16,8 @@
  *
  * <ul>
  *   <li>{@link com.patra.starter.core.error.config.CoreErrorAutoConfiguration} - 核心错误处理自动配置
- *   <li>{@link com.patra.starter.core.error.config.CircuitBreakerErrorAutoConfiguration} - 熔断器自动配置(可选)
+ *   <li>{@link com.patra.starter.core.error.config.CircuitBreakerErrorAutoConfiguration} -
+ *       熔断器自动配置(可选)
  *   <li>{@link com.patra.starter.core.error.config.ErrorProperties} - 错误处理配置属性
  *   <li>{@link com.patra.starter.core.error.config.TracingProperties} - 追踪配置属性
  * </ul>
@@ -25,6 +25,7 @@
  * <h2>配置属性</h2>
  *
  * <h3>错误处理配置 ({@code patra.error})</h3>
+ *
  * <pre>{@code
  * patra:
  *   error:
@@ -41,6 +42,7 @@
  * }</pre>
  *
  * <h3>熔断器配置 ({@code patra.error.circuit-breaker})</h3>
+ *
  * <pre>{@code
  * patra:
  *   error:
@@ -54,6 +56,7 @@
  * }</pre>
  *
  * <h3>追踪配置 ({@code patra.tracing})</h3>
+ *
  * <pre>{@code
  * patra:
  *   tracing:

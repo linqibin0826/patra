@@ -3,6 +3,7 @@ package com.patra.ingest.app.usecase.execution.strategy;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.planner.BatchPlanner;
@@ -77,7 +78,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     ReflectionTestUtils.setField(executeUseCase, "failFast", false);
 
     // 默认行为：BatchPlannerRegistry 返回 planner
-    when(plannerRegistry.get(mockContext.provenanceCode())).thenReturn(mockPlanner);
+    when(plannerRegistry.get(mockContext.provenanceCode().getCode())).thenReturn(mockPlanner);
   }
 
   // ========== 正常流程测试 ==========
@@ -534,10 +535,11 @@ class ExecuteTaskBatchesUseCaseImplTest {
 
   private ExecutionContext createMockContext() {
     ExecutionContext context = mock(ExecutionContext.class);
-    when(context.provenanceCode()).thenReturn("pubmed");
+    when(context.provenanceCode()).thenReturn(ProvenanceCode.PUBMED);
     when(context.operationCode()).thenReturn("harvest");
     return context;
   }
+
 
   private Batch createBatch(int batchNo, int totalBatches) {
     Batch batch = mock(Batch.class, "batch" + batchNo);

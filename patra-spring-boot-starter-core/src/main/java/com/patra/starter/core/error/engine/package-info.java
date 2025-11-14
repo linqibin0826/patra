@@ -1,8 +1,7 @@
 /**
  * 错误解析引擎包。
  *
- * <p>本包提供核心的异常到错误码转换引擎,将任意 Java 异常标准化为平台统一的错误表示。
- * 支持多种解析策略,确保所有错误都能被正确识别和映射。
+ * <p>本包提供核心的异常到错误码转换引擎,将任意 Java 异常标准化为平台统一的错误表示。 支持多种解析策略,确保所有错误都能被正确识别和映射。
  *
  * <h2>职责</h2>
  *
@@ -25,9 +24,11 @@
  * <p>引擎按以下优先级应用解析策略:
  *
  * <ol>
- *   <li><strong>SPI 贡献者映射</strong> - 通过 {@link com.patra.starter.core.error.spi.ErrorMappingContributor} 提供的自定义映射
+ *   <li><strong>SPI 贡献者映射</strong> - 通过 {@link
+ *       com.patra.starter.core.error.spi.ErrorMappingContributor} 提供的自定义映射
  *   <li><strong>特征映射</strong> - 基于异常实现的接口(如 {@code ErrorCodeLike})进行映射
- *   <li><strong>类名启发式</strong> - 根据异常类名生成错误码(如 {@code IllegalArgumentException} → {@code ILLEGAL_ARGUMENT})
+ *   <li><strong>类名启发式</strong> - 根据异常类名生成错误码(如 {@code IllegalArgumentException} → {@code
+ *       ILLEGAL_ARGUMENT})
  * </ol>
  *
  * <h2>原因链遍历</h2>

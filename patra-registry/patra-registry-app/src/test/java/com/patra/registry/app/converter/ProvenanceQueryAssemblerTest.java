@@ -284,16 +284,7 @@ class ProvenanceQueryAssemblerTest {
 
       PaginationConfig config =
           new PaginationConfig(
-              20L,
-              1L,
-              "HARVEST",
-              effectiveFrom,
-              effectiveTo,
-              "PAGE_NUMBER",
-              100,
-              50,
-              "sort",
-              1);
+              20L, 1L, "HARVEST", effectiveFrom, effectiveTo, "PAGE_NUMBER", 100, 50, "sort", 1);
 
       // When: 执行转换
       PaginationConfigQuery result = assembler.toQuery(config);
@@ -808,13 +799,32 @@ class ProvenanceQueryAssemblerTest {
     @DisplayName("应该正确转换完整的 ProvenanceConfiguration 为 Query")
     void shouldConvertCompleteProvenanceConfiguration() {
       // Given: 准备完整的 ProvenanceConfiguration 聚合根
-      Provenance provenance = new Provenance(1L, "PUBMED", "PubMed", null, "UTC", null, true, "ACTIVE");
+      Provenance provenance =
+          new Provenance(1L, "PUBMED", "PubMed", null, "UTC", null, true, "ACTIVE");
 
       Instant now = Instant.now();
       WindowOffsetConfig windowOffset =
           new WindowOffsetConfig(
-              10L, 1L, "HARVEST", now, null, "SLIDING", 7, "DAY", null, null, null, null, null,
-              null, "DATE", "date", "yyyy-MM-dd", null, null, null);
+              10L,
+              1L,
+              "HARVEST",
+              now,
+              null,
+              "SLIDING",
+              7,
+              "DAY",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              "DATE",
+              "date",
+              "yyyy-MM-dd",
+              null,
+              null,
+              null);
 
       PaginationConfig pagination =
           new PaginationConfig(20L, 1L, "HARVEST", now, null, "PAGE_NUMBER", 100, null, null, null);

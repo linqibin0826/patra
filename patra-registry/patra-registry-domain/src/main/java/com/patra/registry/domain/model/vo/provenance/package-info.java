@@ -1,8 +1,8 @@
 /**
  * Provenance 配置值对象包 - Registry Domain 层。
  *
- * <p>本包包含数据源配置的核心值对象,定义了多维度的运营配置策略。所有值对象都是不可变的(immutable),
- * 通过 {@code record} 实现,在构造时执行业务规则验证,确保领域不变性。
+ * <p>本包包含数据源配置的核心值对象,定义了多维度的运营配置策略。所有值对象都是不可变的(immutable), 通过 {@code record}
+ * 实现,在构造时执行业务规则验证,确保领域不变性。
  *
  * <h2>职责</h2>
  *
@@ -17,20 +17,27 @@
  * <h2>核心值对象</h2>
  *
  * <ul>
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.Provenance} - 数据源元数据,包含唯一标识、代码、名称、默认 URL 和时区
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.HttpConfig} - HTTP 客户端配置,定义超时、代理、TLS、Retry-After 处理等策略
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.RetryConfig} - 重试策略配置,包含退避算法、最大重试次数、可重试条件
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.PaginationConfig} - 分页策略配置,定义分页参数、cursor 模式等
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.Provenance} - 数据源元数据,包含唯一标识、代码、名称、默认
+ *       URL 和时区
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.HttpConfig} - HTTP
+ *       客户端配置,定义超时、代理、TLS、Retry-After 处理等策略
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.RetryConfig} -
+ *       重试策略配置,包含退避算法、最大重试次数、可重试条件
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.PaginationConfig} -
+ *       分页策略配置,定义分页参数、cursor 模式等
  *   <li>{@link com.patra.registry.domain.model.vo.provenance.BatchingConfig} - 批处理配置,用于优化详情获取等批量操作
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.RateLimitConfig} - 速率限制配置,定义 API 调用频率控制策略
- *   <li>{@link com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig} - 时间窗口偏移配置,用于基于时间分段的数据采集
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.RateLimitConfig} - 速率限制配置,定义 API
+ *       调用频率控制策略
+ *   <li>{@link com.patra.registry.domain.model.vo.provenance.WindowOffsetConfig} -
+ *       时间窗口偏移配置,用于基于时间分段的数据采集
  * </ul>
  *
  * <h2>设计原则</h2>
  *
  * <ul>
  *   <li><strong>不可变性</strong>: 所有值对象使用 {@code record} 实现,一旦创建不可修改
- *   <li><strong>自验证</strong>: 通过规范构造器强制执行业务约束,使用 {@link com.patra.registry.domain.exception.DomainValidationException} 快速失败
+ *   <li><strong>自验证</strong>: 通过规范构造器强制执行业务约束,使用 {@link
+ *       com.patra.registry.domain.exception.DomainValidationException} 快速失败
  *   <li><strong>值语义</strong>: 基于字段值比较相等性,而非对象引用
  *   <li><strong>时态支持</strong>: 所有配置都有生效时间范围(effectiveFrom/effectiveTo),支持时态查询
  *   <li><strong>框架无关</strong>: 纯 Java 对象,不依赖 Spring、JPA 等框架

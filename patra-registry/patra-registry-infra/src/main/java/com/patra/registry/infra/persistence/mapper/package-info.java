@@ -1,7 +1,8 @@
 /**
  * MyBatis-Plus Mapper 根包 - 数据库访问接口。
  *
- * <p>本包包含所有 MyBatis-Plus Mapper 接口,定义数据库 CRUD 操作和自定义 SQL 查询。Mapper 继承 {@code BaseMapper<DO>} 获得基础 CRUD 能力,并通过注解或 XML 定义复杂查询。
+ * <p>本包包含所有 MyBatis-Plus Mapper 接口,定义数据库 CRUD 操作和自定义 SQL 查询。Mapper 继承 {@code BaseMapper<DO>} 获得基础
+ * CRUD 能力,并通过注解或 XML 定义复杂查询。
  *
  * <h2>职责</h2>
  *

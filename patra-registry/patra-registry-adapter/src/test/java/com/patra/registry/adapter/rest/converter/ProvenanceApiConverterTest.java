@@ -82,7 +82,8 @@ class ProvenanceApiConverterTest {
       assertThat(result.id()).isEqualTo(1L);
       assertThat(result.code()).isEqualTo("PUBMED");
       assertThat(result.name()).isEqualTo("PubMed");
-      assertThat(result.baseUrlDefault()).isEqualTo("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/");
+      assertThat(result.baseUrlDefault())
+          .isEqualTo("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/");
       assertThat(result.timezoneDefault()).isEqualTo("America/New_York");
       assertThat(result.docsUrl()).isEqualTo("https://www.ncbi.nlm.nih.gov/books/NBK25501/");
       assertThat(result.active()).isTrue();
@@ -511,8 +512,8 @@ class ProvenanceApiConverterTest {
       Instant effectiveTo = Instant.parse("2025-01-01T00:00:00Z");
 
       BatchingConfigQuery query =
-          new BatchingConfigQuery(40L, 1L, "HARVEST", effectiveFrom, effectiveTo, 100, "id", ",",
-              200);
+          new BatchingConfigQuery(
+              40L, 1L, "HARVEST", effectiveFrom, effectiveTo, 100, "id", ",", 200);
 
       // When: 执行转换
       BatchingConfigResp result = converter.toResp(query);
@@ -812,8 +813,22 @@ class ProvenanceApiConverterTest {
 
       RetryConfigQuery retry =
           new RetryConfigQuery(
-              50L, 1L, "HARVEST", effectiveFrom, null, 3, "EXPONENTIAL", null, null, null, null,
-              null, null, false, null, null);
+              50L,
+              1L,
+              "HARVEST",
+              effectiveFrom,
+              null,
+              3,
+              "EXPONENTIAL",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              false,
+              null,
+              null);
 
       RateLimitConfigQuery rateLimit =
           new RateLimitConfigQuery(60L, 1L, "HARVEST", effectiveFrom, null, null, null);

@@ -91,7 +91,8 @@ class ExprRepositoryMpImplTest {
       when(provenanceMapper.selectByCode("PUBMED")).thenReturn(Optional.of(provenanceDO));
 
       // Mock 字段字典
-      List<RegExprFieldDictDO> fieldDOs = List.of(createFieldDictDO("title"), createFieldDictDO("author"));
+      List<RegExprFieldDictDO> fieldDOs =
+          List.of(createFieldDictDO("title"), createFieldDictDO("author"));
       when(fieldDictMapper.selectAllActive()).thenReturn(fieldDOs);
       ExprField field1 = org.mockito.Mockito.mock(ExprField.class);
       ExprField field2 = org.mockito.Mockito.mock(ExprField.class);
@@ -100,20 +101,24 @@ class ExprRepositoryMpImplTest {
 
       // Mock 能力查询
       List<RegProvExprCapabilityDO> capabilityDOs = List.of(createCapabilityDO("title", true));
-      when(capabilityMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(capabilityMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(capabilityDOs);
       ExprCapability capability = org.mockito.Mockito.mock(ExprCapability.class);
       when(converter.toDomain(capabilityDOs.get(0))).thenReturn(capability);
 
       // Mock 渲染规则
-      List<RegProvExprRenderRuleDO> renderRuleDOs = List.of(createRenderRuleDO("title", "{{value}}"));
-      when(renderRuleMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      List<RegProvExprRenderRuleDO> renderRuleDOs =
+          List.of(createRenderRuleDO("title", "{{value}}"));
+      when(renderRuleMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(renderRuleDOs);
       ExprRenderRule renderRule = org.mockito.Mockito.mock(ExprRenderRule.class);
       when(converter.toDomain(renderRuleDOs.get(0))).thenReturn(renderRule);
 
       // Mock API 参数映射
-      List<RegProvApiParamMapDO> apiParamDOs = List.of(createApiParamMapDO("title", "title[Title]"));
+      List<RegProvApiParamMapDO> apiParamDOs =
+          List.of(createApiParamMapDO("title", "title[Title]"));
       when(apiParamMapMapper.selectActiveByTask(
               TEST_PROVENANCE_ID, TEST_OPERATION_KEY, "ESEARCH", TEST_TIMESTAMP))
           .thenReturn(apiParamDOs);
@@ -159,14 +164,18 @@ class ExprRepositoryMpImplTest {
 
       // When: at 参数为 null
       ExprSnapshot snapshot =
-          repository.loadSnapshot(TEST_PROVENANCE_CODE, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, null);
+          repository.loadSnapshot(
+              TEST_PROVENANCE_CODE, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, null);
 
       // Then: 应使用当前时间 (验证调用了带 Instant 参数的方法)
       assertThat(snapshot).isNotNull();
-      verify(capabilityMapper).selectActiveByTask(eq(TEST_PROVENANCE_ID), eq(TEST_OPERATION_KEY), any(Instant.class));
-      verify(renderRuleMapper).selectActiveByTask(eq(TEST_PROVENANCE_ID), eq(TEST_OPERATION_KEY), any(Instant.class));
+      verify(capabilityMapper)
+          .selectActiveByTask(eq(TEST_PROVENANCE_ID), eq(TEST_OPERATION_KEY), any(Instant.class));
+      verify(renderRuleMapper)
+          .selectActiveByTask(eq(TEST_PROVENANCE_ID), eq(TEST_OPERATION_KEY), any(Instant.class));
       verify(apiParamMapMapper)
-          .selectActiveByTask(eq(TEST_PROVENANCE_ID), eq(TEST_OPERATION_KEY), eq("ESEARCH"), any(Instant.class));
+          .selectActiveByTask(
+              eq(TEST_PROVENANCE_ID), eq(TEST_OPERATION_KEY), eq("ESEARCH"), any(Instant.class));
     }
 
     @Test
@@ -176,11 +185,14 @@ class ExprRepositoryMpImplTest {
       RegProvenanceDO provenanceDO = createProvenanceDO(TEST_PROVENANCE_ID, "PUBMED");
       when(provenanceMapper.selectByCode("PUBMED")).thenReturn(Optional.of(provenanceDO));
       when(fieldDictMapper.selectAllActive()).thenReturn(List.of());
-      when(capabilityMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(capabilityMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(renderRuleMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(renderRuleMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(apiParamMapMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, null, TEST_TIMESTAMP))
+      when(apiParamMapMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, null, TEST_TIMESTAMP))
           .thenReturn(List.of());
 
       // When: endpointName 为 null
@@ -200,11 +212,14 @@ class ExprRepositoryMpImplTest {
       RegProvenanceDO provenanceDO = createProvenanceDO(TEST_PROVENANCE_ID, "PUBMED");
       when(provenanceMapper.selectByCode("PUBMED")).thenReturn(Optional.of(provenanceDO));
       when(fieldDictMapper.selectAllActive()).thenReturn(List.of());
-      when(capabilityMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(capabilityMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(renderRuleMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(renderRuleMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(apiParamMapMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, null, TEST_TIMESTAMP))
+      when(apiParamMapMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, null, TEST_TIMESTAMP))
           .thenReturn(List.of());
 
       // When: endpointName 为空白字符串
@@ -240,10 +255,8 @@ class ExprRepositoryMpImplTest {
       repository.loadSnapshot(TEST_PROVENANCE_CODE, "search", TEST_ENDPOINT_NAME, TEST_TIMESTAMP);
 
       // Then: 应转换为大写 "SEARCH"
-      verify(capabilityMapper)
-          .selectActiveByTask(TEST_PROVENANCE_ID, "SEARCH", TEST_TIMESTAMP);
-      verify(renderRuleMapper)
-          .selectActiveByTask(TEST_PROVENANCE_ID, "SEARCH", TEST_TIMESTAMP);
+      verify(capabilityMapper).selectActiveByTask(TEST_PROVENANCE_ID, "SEARCH", TEST_TIMESTAMP);
+      verify(renderRuleMapper).selectActiveByTask(TEST_PROVENANCE_ID, "SEARCH", TEST_TIMESTAMP);
       verify(apiParamMapMapper)
           .selectActiveByTask(TEST_PROVENANCE_ID, "SEARCH", "ESEARCH", TEST_TIMESTAMP);
     }
@@ -266,10 +279,8 @@ class ExprRepositoryMpImplTest {
       repository.loadSnapshot(TEST_PROVENANCE_CODE, null, TEST_ENDPOINT_NAME, TEST_TIMESTAMP);
 
       // Then: 应转换为 "ALL"
-      verify(capabilityMapper)
-          .selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
-      verify(renderRuleMapper)
-          .selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
+      verify(capabilityMapper).selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
+      verify(renderRuleMapper).selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
       verify(apiParamMapMapper)
           .selectActiveByTask(TEST_PROVENANCE_ID, "ALL", "ESEARCH", TEST_TIMESTAMP);
     }
@@ -292,10 +303,8 @@ class ExprRepositoryMpImplTest {
       repository.loadSnapshot(TEST_PROVENANCE_CODE, "   ", TEST_ENDPOINT_NAME, TEST_TIMESTAMP);
 
       // Then: 应转换为 "ALL"
-      verify(capabilityMapper)
-          .selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
-      verify(renderRuleMapper)
-          .selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
+      verify(capabilityMapper).selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
+      verify(renderRuleMapper).selectActiveByTask(TEST_PROVENANCE_ID, "ALL", TEST_TIMESTAMP);
       verify(apiParamMapMapper)
           .selectActiveByTask(TEST_PROVENANCE_ID, "ALL", "ESEARCH", TEST_TIMESTAMP);
     }
@@ -364,7 +373,10 @@ class ExprRepositoryMpImplTest {
       assertThatThrownBy(
               () ->
                   repository.loadSnapshot(
-                      TEST_PROVENANCE_CODE, TEST_OPERATION_TYPE, TEST_ENDPOINT_NAME, TEST_TIMESTAMP))
+                      TEST_PROVENANCE_CODE,
+                      TEST_OPERATION_TYPE,
+                      TEST_ENDPOINT_NAME,
+                      TEST_TIMESTAMP))
           .isInstanceOf(ProvenanceNotFoundException.class)
           .hasMessageContaining("Provenance code not found: PUBMED");
 
@@ -390,11 +402,14 @@ class ExprRepositoryMpImplTest {
       RegProvenanceDO provenanceDO = createProvenanceDO(TEST_PROVENANCE_ID, "PUBMED");
       when(provenanceMapper.selectByCode("PUBMED")).thenReturn(Optional.of(provenanceDO));
       when(fieldDictMapper.selectAllActive()).thenReturn(List.of());
-      when(capabilityMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(capabilityMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(renderRuleMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(renderRuleMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(apiParamMapMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, "ESEARCH", TEST_TIMESTAMP))
+      when(apiParamMapMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, "ESEARCH", TEST_TIMESTAMP))
           .thenReturn(List.of());
 
       // When
@@ -422,11 +437,14 @@ class ExprRepositoryMpImplTest {
       ExprField field = org.mockito.Mockito.mock(ExprField.class);
       when(converter.toDomain(fieldDOs.get(0))).thenReturn(field);
 
-      when(capabilityMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(capabilityMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(renderRuleMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
+      when(renderRuleMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, TEST_TIMESTAMP))
           .thenReturn(List.of());
-      when(apiParamMapMapper.selectActiveByTask(TEST_PROVENANCE_ID, TEST_OPERATION_KEY, "ESEARCH", TEST_TIMESTAMP))
+      when(apiParamMapMapper.selectActiveByTask(
+              TEST_PROVENANCE_ID, TEST_OPERATION_KEY, "ESEARCH", TEST_TIMESTAMP))
           .thenReturn(List.of());
 
       // When

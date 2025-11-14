@@ -10,6 +10,7 @@ import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,7 @@ class TaskRunBatchConverterTest {
             3001L,
             4001L,
             5001L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             1,
             1,
@@ -140,7 +141,7 @@ class TaskRunBatchConverterTest {
     assertThat(batch.getTaskId()).isEqualTo(3001L);
     assertThat(batch.getSliceId()).isEqualTo(4001L);
     assertThat(batch.getPlanId()).isEqualTo(5001L);
-    assertThat(batch.getProvenanceCode()).isEqualTo("PUBMED");
+    assertThat(batch.getProvenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
     assertThat(batch.getOperationCode()).isEqualTo("HARVEST");
     assertThat(batch.getBatchNo()).isEqualTo(2);
     assertThat(batch.getPageNo()).isEqualTo(2);
@@ -178,7 +179,7 @@ class TaskRunBatchConverterTest {
             3L,
             4L,
             5L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             3,
             null,
@@ -428,7 +429,7 @@ class TaskRunBatchConverterTest {
             3L,
             4L,
             5L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             1,
             1,
@@ -463,7 +464,7 @@ class TaskRunBatchConverterTest {
             3L,
             4L,
             5L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             1,
             null, // pageNo为null
@@ -500,7 +501,7 @@ class TaskRunBatchConverterTest {
             3L,
             4L,
             5L,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             5,
             5,

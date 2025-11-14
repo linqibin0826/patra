@@ -49,6 +49,7 @@
  * <h2>使用示例</h2>
  *
  * <p><b>定义业务实体:</b>
+ *
  * <pre>{@code
  * @Data
  * @SuperBuilder
@@ -69,6 +70,7 @@
  * }</pre>
  *
  * <p><b>插入操作(自动填充审计字段):</b>
+ *
  * <pre>{@code
  * ProvenanceDO provenance = ProvenanceDO.builder()
  *     .name("PubMed")
@@ -79,6 +81,7 @@
  * }</pre>
  *
  * <p><b>更新操作(乐观锁):</b>
+ *
  * <pre>{@code
  * ProvenanceDO provenance = mapper.selectById(id);
  * provenance.setDescription("更新描述");
@@ -91,6 +94,7 @@
  * }</pre>
  *
  * <p><b>软删除操作:</b>
+ *
  * <pre>{@code
  * mapper.deleteById(id); // 实际执行: UPDATE ... SET deleted = 1
  * mapper.selectById(id); // 返回 null,查询自动过滤 deleted = 1 的记录

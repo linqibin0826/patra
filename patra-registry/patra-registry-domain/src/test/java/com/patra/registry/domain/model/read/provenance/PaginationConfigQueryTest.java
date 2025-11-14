@@ -232,8 +232,16 @@ class PaginationConfigQueryTest {
       assertThatThrownBy(
               () ->
                   new PaginationConfigQuery(
-                      VALID_ID, 0L, null, VALID_EFFECTIVE_FROM, null, VALID_PAGINATION_MODE, null,
-                      null, null, null))
+                      VALID_ID,
+                      0L,
+                      null,
+                      VALID_EFFECTIVE_FROM,
+                      null,
+                      VALID_PAGINATION_MODE,
+                      null,
+                      null,
+                      null,
+                      null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("来源ID必须为正数");
     }
@@ -246,8 +254,16 @@ class PaginationConfigQueryTest {
       assertThatThrownBy(
               () ->
                   new PaginationConfigQuery(
-                      VALID_ID, -1L, null, VALID_EFFECTIVE_FROM, null, VALID_PAGINATION_MODE, null,
-                      null, null, null))
+                      VALID_ID,
+                      -1L,
+                      null,
+                      VALID_EFFECTIVE_FROM,
+                      null,
+                      VALID_PAGINATION_MODE,
+                      null,
+                      null,
+                      null,
+                      null))
           .isInstanceOf(DomainValidationException.class)
           .hasMessage("来源ID必须为正数");
     }

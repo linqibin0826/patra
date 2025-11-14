@@ -133,8 +133,7 @@ class ExprApiConverterTest {
     void shouldConvertDateFieldFlag() {
       // Given: dateField 为 true
       ExprFieldQuery query =
-          new ExprFieldQuery(
-              "created_date", "Created Date", "", "DATETIME", "SINGLE", true, true);
+          new ExprFieldQuery("created_date", "Created Date", "", "DATETIME", "SINGLE", true, true);
 
       // When: 执行转换
       ExprFieldResp result = converter.toResp(query);
@@ -234,8 +233,8 @@ class ExprApiConverterTest {
       Instant effectiveFrom = Instant.parse("2024-01-01T00:00:00Z");
 
       ApiParamMappingQuery query =
-          new ApiParamMappingQuery(2L, null, null, "term", "query", null, null, effectiveFrom,
-              null);
+          new ApiParamMappingQuery(
+              2L, null, null, "term", "query", null, null, effectiveFrom, null);
 
       // When: 执行转换
       ApiParamMappingResp result = converter.toResp(query);
@@ -596,8 +595,7 @@ class ExprApiConverterTest {
 
       ExprSnapshotQuery query =
           new ExprSnapshotQuery(
-              List.of(
-                  new ExprFieldQuery("field1", "Field 1", "", "TEXT", "SINGLE", true, false)),
+              List.of(new ExprFieldQuery("field1", "Field 1", "", "TEXT", "SINGLE", true, false)),
               List.of(
                   new ExprCapabilityQuery(
                       1L,
@@ -649,8 +647,7 @@ class ExprApiConverterTest {
                       null)),
               List.of(
                   new ApiParamMappingQuery(
-                      1L, "HARVEST", "esearch", "term", "query", null, null, effectiveFrom,
-                      null)));
+                      1L, "HARVEST", "esearch", "term", "query", null, null, effectiveFrom, null)));
 
       // When: 执行转换
       ExprSnapshotResp result = converter.toResp(query);
@@ -671,8 +668,7 @@ class ExprApiConverterTest {
     @DisplayName("应该正确处理空列表字段")
     void shouldHandleEmptyListFields() {
       // Given: 列表字段为空
-      ExprSnapshotQuery query =
-          new ExprSnapshotQuery(List.of(), List.of(), List.of(), List.of());
+      ExprSnapshotQuery query = new ExprSnapshotQuery(List.of(), List.of(), List.of(), List.of());
 
       // When: 执行转换
       ExprSnapshotResp result = converter.toResp(query);

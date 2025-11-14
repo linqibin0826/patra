@@ -6,6 +6,7 @@ import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.enums.SliceStatus;
 import com.patra.ingest.infra.persistence.entity.PlanSliceDO;
+import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class PlanSliceConverterTest {
   private final PlanSliceConverter converter = new PlanSliceConverterImpl();
 
   private static final Long PLAN_ID = 2001L;
-  private static final String PROVENANCE_CODE = "PUBMED";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final int SLICE_NO = 5;
   private static final String SLICE_SIGNATURE_HASH = "slice-hash-abc123";
   private static final String WINDOW_SPEC_JSON =
@@ -72,7 +73,7 @@ class PlanSliceConverterTest {
       // Then: 验证基本字段
       assertThat(result).isNotNull();
       assertThat(result.getPlanId()).isEqualTo(PLAN_ID);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getSliceNo()).isEqualTo(SLICE_NO);
       assertThat(result.getSliceSignatureHash()).isEqualTo(SLICE_SIGNATURE_HASH);
       assertThat(result.getExprHash()).isEqualTo(EXPR_HASH);
@@ -222,7 +223,7 @@ class PlanSliceConverterTest {
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(100L);
       sliceDO.setPlanId(PLAN_ID);
-      sliceDO.setProvenanceCode(PROVENANCE_CODE);
+      sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
       sliceDO.setWindowSpec(JsonNodeMappings.jsonStringToNode(WINDOW_SPEC_JSON));
@@ -238,7 +239,7 @@ class PlanSliceConverterTest {
       assertThat(result).isNotNull();
       assertThat(result.getId()).isEqualTo(100L);
       assertThat(result.getPlanId()).isEqualTo(PLAN_ID);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
       assertThat(result.getSliceNo()).isEqualTo(SLICE_NO);
       assertThat(result.getSliceSignatureHash()).isEqualTo(SLICE_SIGNATURE_HASH);
       assertThat(result.getWindowSpecJson()).isEqualTo(WINDOW_SPEC_JSON);
@@ -255,7 +256,7 @@ class PlanSliceConverterTest {
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(200L);
       sliceDO.setPlanId(PLAN_ID);
-      sliceDO.setProvenanceCode(PROVENANCE_CODE);
+      sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
       sliceDO.setWindowSpec(JsonNodeMappings.jsonStringToNode(WINDOW_SPEC_JSON));
@@ -278,7 +279,7 @@ class PlanSliceConverterTest {
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(300L);
       sliceDO.setPlanId(PLAN_ID);
-      sliceDO.setProvenanceCode(PROVENANCE_CODE);
+      sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
       sliceDO.setWindowSpec(JsonNodeMappings.jsonStringToNode(WINDOW_SPEC_JSON));
@@ -301,7 +302,7 @@ class PlanSliceConverterTest {
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(400L);
       sliceDO.setPlanId(PLAN_ID);
-      sliceDO.setProvenanceCode(PROVENANCE_CODE);
+      sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(null); // null sliceNo
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
       sliceDO.setWindowSpec(JsonNodeMappings.jsonStringToNode(WINDOW_SPEC_JSON));
@@ -324,7 +325,7 @@ class PlanSliceConverterTest {
       PlanSliceDO sliceDO = new PlanSliceDO();
       sliceDO.setId(500L);
       sliceDO.setPlanId(PLAN_ID);
-      sliceDO.setProvenanceCode(PROVENANCE_CODE);
+      sliceDO.setProvenanceCode(PROVENANCE_CODE.getCode());
       sliceDO.setSliceNo(SLICE_NO);
       sliceDO.setSliceSignatureHash(SLICE_SIGNATURE_HASH);
       sliceDO.setWindowSpec(JsonNodeMappings.jsonStringToNode(WINDOW_SPEC_JSON));

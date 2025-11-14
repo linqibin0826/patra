@@ -14,7 +14,8 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.core.error.trace.HeaderBasedTraceProvider} - 基于 HTTP Header 的追踪 ID 提取器
+ *   <li>{@link com.patra.starter.core.error.trace.HeaderBasedTraceProvider} - 基于 HTTP Header 的追踪 ID
+ *       提取器
  * </ul>
  *
  * <h2>支持的 Header 格式</h2>
@@ -41,6 +42,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>自动提取追踪 ID</h3>
+ *
  * <pre>{@code
  * // TracingInterceptor 自动使用 HeaderBasedTraceProvider
  * @Component
@@ -65,6 +67,7 @@
  * }</pre>
  *
  * <h3>手动获取追踪 ID</h3>
+ *
  * <pre>{@code
  * @Service
  * public class MyService {

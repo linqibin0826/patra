@@ -1,8 +1,8 @@
 /**
  * 日志增强包。
  *
- * <p>本包提供 Logback 自定义转换器(Converter),用于在日志格式中嵌入分布式追踪信息(Trace ID、Span ID、Segment ID)。
- * 集成 SkyWalking APM Toolkit,确保日志与分布式追踪链路关联。
+ * <p>本包提供 Logback 自定义转换器(Converter),用于在日志格式中嵌入分布式追踪信息(Trace ID、Span ID、Segment ID)。 集成 SkyWalking
+ * APM Toolkit,确保日志与分布式追踪链路关联。
  *
  * <h2>职责</h2>
  *
@@ -23,6 +23,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>Logback 配置</h3>
+ *
  * <pre>{@code
  * <configuration>
  *   <!-- 注册自定义转换器 -->
@@ -47,6 +48,7 @@
  * }</pre>
  *
  * <h3>日志输出示例</h3>
+ *
  * <pre>
  * 10:30:45.123 [abc123def456] [span-789] INFO  c.p.i.a.PlanIngestionOrchestrator - 开始导入计划
  * 10:30:45.234 [abc123def456] [span-790] DEBUG c.p.i.d.r.PlanRepository - 保存计划到数据库
@@ -75,6 +77,7 @@
  * <h2>应用场景</h2>
  *
  * <h3>场景 1: 关联日志与追踪链路</h3>
+ *
  * <pre>
  * SkyWalking UI 追踪链路
  *   ├─ Span 1: HTTP GET /api/plans/123 [traceId=abc123]
@@ -87,6 +90,7 @@
  * </pre>
  *
  * <h3>场景 2: 快速定位问题</h3>
+ *
  * <pre>
  * 1. 用户报告错误,提供追踪 ID: abc123def456
  * 2. 在日志系统中搜索: grep "abc123def456" app.log
@@ -95,6 +99,7 @@
  * </pre>
  *
  * <h3>场景 3: 聚合日志分析</h3>
+ *
  * <pre>{@code
  * // ELK Stack 日志查询
  * traceId: "abc123def456"
@@ -108,11 +113,13 @@
  * <h2>配置建议</h2>
  *
  * <h3>开发环境</h3>
+ *
  * <pre>{@code
  * <pattern>%d{HH:mm:ss.SSS} [%traceId] %-5level %logger{36} - %msg%n</pattern>
  * }</pre>
  *
  * <h3>生产环境(JSON 格式)</h3>
+ *
  * <pre>{@code
  * <encoder class="net.logstash.logback.encoder.LogstashEncoder">
  *   <customFields>{"service":"patra-ingest"}</customFields>

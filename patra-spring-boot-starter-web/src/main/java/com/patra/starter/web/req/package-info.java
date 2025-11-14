@@ -22,6 +22,7 @@
  * <h2>使用示例</h2>
  *
  * <h3>分页查询</h3>
+ *
  * <pre>{@code
  * public record PlanPageRequest(
  *     int page,         // 页码(从 0 开始)
@@ -54,6 +55,7 @@
  * }</pre>
  *
  * <h3>排序查询</h3>
+ *
  * <pre>{@code
  * public record PlanSortRequest(
  *     String sortBy,        // 排序字段
@@ -76,6 +78,7 @@
  * }</pre>
  *
  * <h3>分页排序组合</h3>
+ *
  * <pre>{@code
  * public record PlanQueryRequest(
  *     int page,

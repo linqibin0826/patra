@@ -13,6 +13,7 @@ import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
 import com.patra.ingest.domain.port.TechnicalRetryPort;
+import com.patra.common.enums.ProvenanceCode;
 import feign.FeignException;
 import feign.Request;
 import feign.RetryableException;

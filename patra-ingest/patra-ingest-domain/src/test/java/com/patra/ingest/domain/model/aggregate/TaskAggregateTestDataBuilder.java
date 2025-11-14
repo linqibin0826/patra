@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.model.aggregate;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
@@ -43,7 +44,7 @@ public class TaskAggregateTestDataBuilder {
   private Long scheduleInstanceId = 1001L;
   private Long planId = 2001L;
   private Long sliceId = 3001L;
-  private String provenanceCode = "pubmed";
+  private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
   private String operationCode = "harvest";
   private String paramsJson = "{\"batchSize\":100}";
   private String idempotentKey = "test-idempotent-key";
@@ -176,8 +177,13 @@ public class TaskAggregateTestDataBuilder {
     return this;
   }
 
-  public TaskAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+  public TaskAggregateTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
     this.provenanceCode = provenanceCode;
+    return this;
+  }
+
+  public TaskAggregateTestDataBuilder provenanceCode(String provenanceCode) {
+    this.provenanceCode = ProvenanceCode.parse(provenanceCode);
     return this;
   }
 

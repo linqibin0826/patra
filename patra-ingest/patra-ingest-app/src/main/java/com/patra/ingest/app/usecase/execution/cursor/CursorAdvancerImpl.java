@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.cursor;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.entity.CursorEvent;
 import com.patra.ingest.domain.model.enums.CursorDirection;
@@ -66,8 +67,9 @@ public class CursorAdvancerImpl implements CursorAdvancer {
   @Override
   public boolean advance(ExecutionContext context, Long taskId, Long runId, Long batchId) {
     // 1) 提取游标参数
-    String provenanceCode = context.provenanceCode();
+    ProvenanceCode provenanceCode = context.provenanceCode();
     String operationCode = context.operationCode();
+    String provenanceCodeStr = provenanceCode != null ? provenanceCode.getCode() : null;
 
     WindowSpec windowSpec = context.windowSpec();
     if (windowSpec == null) {
@@ -101,7 +103,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
     log.debug(
         "推进游标 provenanceCode={} operationCode={} cursorKey={} newWatermark={} taskId={} runId={}",
-        provenanceCode,
+        provenanceCodeStr,
         operationCode,
         cursorKey,
         newWatermark,
@@ -122,7 +124,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       // 5) 查找当前游标
       Optional<Cursor> cursorOpt =
           cursorRepository.find(
-              provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey);
+              provenanceCodeStr, operationCode, cursorKey, namespaceScope, namespaceKey);
 
       Cursor cursor;
       Instant prevWatermark = null;
@@ -138,7 +140,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
         if (log.isDebugEnabled()) {
           log.debug(
               "找到游标 provenanceCode={} endpointName={} currentWatermark={}",
-              provenanceCode,
+              provenanceCodeStr,
               operationCode,
               oldWatermark);
         }
@@ -174,7 +176,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         log.info(
             "游标已推进 provenanceCode={} endpointName={} from={} to={} taskId={} runId={} planId={} sliceId={}",
-            provenanceCode,
+            provenanceCodeStr,
             operationCode,
             oldWatermark,
             newWatermark,
@@ -200,7 +202,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
 
         log.info(
             "游标已创建 provenanceCode={} endpointName={} watermark={} exprHash={} taskId={} runId={} planId={} sliceId={}",
-            provenanceCode,
+            provenanceCodeStr,
             operationCode,
             newWatermark,
             context.exprHash(),
@@ -216,7 +218,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       // 7) 生成幂等键用于事件去重
       String idempotentKey =
           generateIdempotentKey(
-              provenanceCode,
+              provenanceCodeStr,
               operationCode,
               cursorKey,
               namespaceScope,
@@ -266,7 +268,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       // 乐观锁冲突(版本不匹配)
       log.warn(
           "游标推进冲突 provenanceCode={} endpointName={} taskId={} runId={}",
-          provenanceCode,
+          provenanceCodeStr,
           operationCode,
           taskId,
           runId);
@@ -275,7 +277,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
     } catch (Exception e) {
       log.error(
           "游标推进失败 provenanceCode={} endpointName={} taskId={} runId={}",
-          provenanceCode,
+          provenanceCodeStr,
           operationCode,
           taskId,
           runId,

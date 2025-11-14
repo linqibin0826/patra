@@ -1,7 +1,8 @@
 /**
  * Registry 适配器配置包 - Spring Boot 配置和 SPI 实现。
  *
- * <p>本包包含 Registry 服务适配器层的 Spring Boot 配置类、异常映射贡献者和其他基础设施配置。配置类负责装配适配器层的 Bean,并提供领域异常到 HTTP 错误码的映射规则。
+ * <p>本包包含 Registry 服务适配器层的 Spring Boot 配置类、异常映射贡献者和其他基础设施配置。配置类负责装配适配器层的 Bean,并提供领域异常到 HTTP
+ * 错误码的映射规则。
  *
  * <h2>职责</h2>
  *
@@ -17,13 +18,12 @@
  * <ul>
  *   <li>{@link com.patra.registry.config.RegistryErrorMappingContributor} - Registry 异常映射贡献者
  *       <ul>
- *         <li>将 {@code DomainValidationException} 映射为 {@code BAD_REQUEST}</li>
- *         <li>将 {@code RegistryQuotaExceeded} 映射为 {@code CONFLICT}</li>
- *         <li>将 {@code DuplicateKeyException} 映射为 {@code CONFLICT}</li>
- *         <li>将 {@code DataIntegrityViolationException} 映射为 {@code UNPROCESSABLE}</li>
- *         <li>将 {@code OptimisticLockingFailureException} 映射为 {@code CONFLICT}</li>
+ *         <li>将 {@code DomainValidationException} 映射为 {@code BAD_REQUEST}
+ *         <li>将 {@code RegistryQuotaExceeded} 映射为 {@code CONFLICT}
+ *         <li>将 {@code DuplicateKeyException} 映射为 {@code CONFLICT}
+ *         <li>将 {@code DataIntegrityViolationException} 映射为 {@code UNPROCESSABLE}
+ *         <li>将 {@code OptimisticLockingFailureException} 映射为 {@code CONFLICT}
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>设计原则</h2>

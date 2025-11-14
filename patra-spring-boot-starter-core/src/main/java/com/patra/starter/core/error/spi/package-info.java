@@ -1,8 +1,7 @@
 /**
  * 错误处理框架扩展点 (SPI) 包。
  *
- * <p>本包定义错误处理框架的所有扩展点接口(Service Provider Interface),
- * 允许业务模块和自定义组件集成到错误处理管道中。
+ * <p>本包定义错误处理框架的所有扩展点接口(Service Provider Interface), 允许业务模块和自定义组件集成到错误处理管道中。
  *
  * <h2>职责</h2>
  *
@@ -117,6 +116,7 @@
  * <h2>使用场景</h2>
  *
  * <h3>场景 1: 领域特定错误映射</h3>
+ *
  * <pre>{@code
  * // patra-ingest-domain 模块
  * @Component
@@ -133,6 +133,7 @@
  * }</pre>
  *
  * <h3>场景 2: 添加安全上下文</h3>
+ *
  * <pre>{@code
  * @Component
  * public class SecurityContextContributor implements ProblemFieldContributor {
@@ -149,6 +150,7 @@
  * }</pre>
  *
  * <h3>场景 3: 多来源追踪 ID</h3>
+ *
  * <pre>{@code
  * @Component
  * @Order(10)  // 优先从 SkyWalking 提取

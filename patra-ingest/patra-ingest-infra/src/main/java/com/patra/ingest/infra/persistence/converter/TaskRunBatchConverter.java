@@ -2,9 +2,12 @@ package com.patra.ingest.infra.persistence.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
+import com.patra.ingest.domain.exception.InfrastructureException;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
+import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
@@ -43,7 +46,7 @@ public interface TaskRunBatchConverter {
         entity.getTaskId(),
         entity.getSliceId(),
         entity.getPlanId(),
-        entity.getProvenanceCode(),
+        ProvenanceCode.parse(entity.getProvenanceCode()),
         entity.getOperationCode(),
         entity.getBatchNo() == null ? 0 : entity.getBatchNo(),
         entity.getPageNo(),
@@ -100,5 +103,37 @@ public interface TaskRunBatchConverter {
       return BatchStats.of(statsNode.get("recordCount").asInt());
     }
     return BatchStats.of(0);
+  }
+
+  // ========== 枚举转换方法 ==========
+
+  default String map(ProvenanceCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  default ProvenanceCode mapProvenanceCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return ProvenanceCode.parse(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 provenance_code: " + code, e);
+    }
+  }
+
+  default String map(OperationCode code) {
+    return code == null ? null : code.getCode();
+  }
+
+  default OperationCode mapOperationCode(String code) {
+    if (code == null || code.isBlank()) {
+      return null;
+    }
+    try {
+      return OperationCode.fromCode(code);
+    } catch (IllegalArgumentException e) {
+      throw new InfrastructureException("数据库中存在无效的 operation_code: " + code, e);
+    }
   }
 }

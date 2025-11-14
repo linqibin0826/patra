@@ -1,7 +1,9 @@
 package com.patra.ingest.domain.event;
 
 import com.patra.common.domain.DomainEvent;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * 任务入队领域事件。当任务进入执行队列时发布。
@@ -28,7 +30,7 @@ public record TaskQueuedEvent(
     /* Scheduling instance identifier. */
     Long scheduleInstanceId,
     /* Provenance code. */
-    String provenanceCode,
+    ProvenanceCode provenanceCode,
     /* Operation code. */
     String operationCode,
     /* Idempotency key for deduplication. */
@@ -69,7 +71,7 @@ public record TaskQueuedEvent(
       Long planId,
       Long sliceId,
       Long scheduleInstanceId,
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String idempotentKey,
       String paramsJson,

@@ -356,8 +356,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, provenanceId, "HARVEST", "search", "from", "mindate", null, null,
-              Instant.now(), null);
+              1001L,
+              provenanceId,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 验证成功创建
       assertThat(mapping.provenanceId()).isEqualTo(1L);
@@ -454,7 +462,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", stdKey, "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              stdKey,
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // Then: 验证 stdKey 已被 trim
@@ -552,8 +568,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", providerParamName, null, null,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              providerParamName,
+              null,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 验证 providerParamName 已被 trim
       assertThat(mapping.providerParamName()).isEqualTo("mindate");
@@ -600,7 +624,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, effectiveFrom,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              effectiveFrom,
               null);
 
       // Then: 验证成功创建
@@ -616,7 +648,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, effectiveFrom,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              effectiveFrom,
               null);
 
       // Then: 验证成功创建
@@ -632,7 +672,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, effectiveFrom,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              effectiveFrom,
               null);
 
       // Then: 验证成功创建
@@ -679,7 +727,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", endpointName, "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              endpointName,
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // Then: 验证 endpointName 已被 trim
@@ -695,8 +751,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", transformCode, null,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              transformCode,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 验证 transformCode 已被 trim
       assertThat(mapping.transformCode()).isEqualTo("TO_EXCLUSIVE_MINUS_1D");
@@ -744,7 +808,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, operationType, "search", stdKey, "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              operationType,
+              "search",
+              stdKey,
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // Then: 验证空白字符都被 trim
@@ -768,7 +840,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, operationType, "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              operationType,
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // Then: 验证 operationType 为 null
@@ -784,7 +864,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", endpointName, "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              endpointName,
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // Then: 验证 endpointName 为 null
@@ -800,8 +888,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", transformCode, null,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              transformCode,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 验证 transformCode 为 null
       assertThat(mapping.transformCode()).isNull();
@@ -816,8 +912,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, notesJson,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              notesJson,
+              Instant.now(),
+              null);
 
       // Then: 验证 notesJson 为 null
       assertThat(mapping.notesJson()).isNull();
@@ -832,7 +936,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               effectiveTo);
 
       // Then: 验证 effectiveTo 为 null
@@ -923,7 +1035,15 @@ class ApiParamMappingTest {
       // Given: 两个不同值的映射
       ApiParamMapping mapping1 =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       ApiParamMapping mapping2 =
@@ -942,12 +1062,28 @@ class ApiParamMappingTest {
 
       ApiParamMapping mapping1 =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, effectiveFrom,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              effectiveFrom,
               null);
 
       ApiParamMapping mapping2 =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, effectiveFrom,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              effectiveFrom,
               null);
 
       // When & Then: hashCode 应该相等
@@ -989,7 +1125,15 @@ class ApiParamMappingTest {
       // Given: 创建映射
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // When & Then: 对象应该等于自身
@@ -1002,7 +1146,15 @@ class ApiParamMappingTest {
       // Given: 创建映射
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // When & Then: 与 null 比较应该返回 false
@@ -1015,7 +1167,15 @@ class ApiParamMappingTest {
       // Given: 创建映射
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // When & Then: 与不同类型对象比较应该返回 false
@@ -1080,7 +1240,15 @@ class ApiParamMappingTest {
       // Given: 创建映射
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // When: 多次获取字段值
@@ -1155,8 +1323,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", endpointName, "apiKey", "api_key", null, null,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              endpointName,
+              "apiKey",
+              "api_key",
+              null,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 验证 endpointName 为 null
       assertThat(mapping.endpointName()).isNull();
@@ -1172,8 +1348,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "esearch", "from", "mindate", null, notesJson,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "esearch",
+              "from",
+              "mindate",
+              null,
+              notesJson,
+              Instant.now(),
+              null);
 
       // Then: 验证 notesJson 正确赋值
       assertThat(mapping.notesJson()).isEqualTo(notesJson);
@@ -1250,7 +1434,15 @@ class ApiParamMappingTest {
 
       ApiParamMapping mapping1 =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, effectiveFrom,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              effectiveFrom,
               null);
 
       ApiParamMapping mapping2 =
@@ -1294,8 +1486,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "term", providerParamName, null, null,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "term",
+              providerParamName,
+              null,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 应该成功创建
       assertThat(mapping.providerParamName()).isEqualTo("q");
@@ -1310,7 +1510,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", stdKey, "mindate", null, null, Instant.now(),
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              stdKey,
+              "mindate",
+              null,
+              null,
+              Instant.now(),
               null);
 
       // Then: 应该成功创建
@@ -1326,8 +1534,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", providerParamName, null, null,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              providerParamName,
+              null,
+              null,
+              Instant.now(),
+              null);
 
       // Then: 应该成功创建
       assertThat(mapping.providerParamName()).isEqualTo("date.from");
@@ -1345,8 +1561,16 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, notesJson,
-              Instant.now(), null);
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              notesJson,
+              Instant.now(),
+              null);
 
       // Then: 应该成功创建
       assertThat(mapping.notesJson()).isEqualTo(notesJson);
@@ -1361,7 +1585,15 @@ class ApiParamMappingTest {
       // When: 创建 ApiParamMapping
       ApiParamMapping mapping =
           new ApiParamMapping(
-              1001L, 2001L, "HARVEST", "search", "from", "mindate", null, null, sameInstant,
+              1001L,
+              2001L,
+              "HARVEST",
+              "search",
+              "from",
+              "mindate",
+              null,
+              null,
+              sameInstant,
               sameInstant);
 
       // Then: 应该成功创建

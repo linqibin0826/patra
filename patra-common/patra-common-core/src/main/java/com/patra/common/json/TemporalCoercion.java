@@ -16,10 +16,10 @@ import java.util.Optional;
 /**
  * 时间值强制转换为规范 ISO-8601 格式的辅助类。
  *
- * <p>在 JSON 规范化过程中，将各种格式的日期时间值统一转换为标准的 ISO-8601 格式：
- * {@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}（UTC 时区）。
+ * <p>在 JSON 规范化过程中，将各种格式的日期时间值统一转换为标准的 ISO-8601 格式： {@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}（UTC 时区）。
  *
  * <p><b>支持的输入格式</b>:
+ *
  * <ul>
  *   <li>Unix 时间戳（秒或毫秒）
  *   <li>ISO-8601 标准格式（如 2023-12-31T23:59:59.123Z）
@@ -35,8 +35,7 @@ import java.util.Optional;
  */
 final class TemporalCoercion {
   private static final DateTimeFormatter CANONICAL_INSTANT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-          .withZone(ZoneOffset.UTC);
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
 
   private static final List<DateTimeFormatter> TEMPORAL_FORMATTERS =
       List.of(

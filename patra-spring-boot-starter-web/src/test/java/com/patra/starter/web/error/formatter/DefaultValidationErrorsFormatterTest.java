@@ -155,7 +155,10 @@ class DefaultValidationErrorsFormatterTest {
     BindingResult bindingResult = mock(BindingResult.class);
     List<ObjectError> errors =
         IntStream.range(0, 150)
-            .mapToObj(i -> new FieldError("request", "field" + i, "value" + i, false, null, null, "错误 " + i))
+            .mapToObj(
+                i ->
+                    new FieldError(
+                        "request", "field" + i, "value" + i, false, null, null, "错误 " + i))
             .collect(java.util.stream.Collectors.toList());
 
     when(bindingResult.getAllErrors()).thenReturn(errors);
@@ -173,7 +176,8 @@ class DefaultValidationErrorsFormatterTest {
   void shouldHandleNullFieldName() {
     // Given: 准备包含 null 字段名的错误
     BindingResult bindingResult = mock(BindingResult.class);
-    FieldError fieldError = new FieldError("request", "email", "test@example.com", false, null, null, "错误消息");
+    FieldError fieldError =
+        new FieldError("request", "email", "test@example.com", false, null, null, "错误消息");
 
     when(bindingResult.getAllErrors()).thenReturn(List.of(fieldError));
     when(bindingResult.getErrorCount()).thenReturn(1);
@@ -191,7 +195,8 @@ class DefaultValidationErrorsFormatterTest {
   void shouldHandleNullRejectedValue() {
     // Given: 准备包含 null rejected value 的错误
     BindingResult bindingResult = mock(BindingResult.class);
-    FieldError fieldError = new FieldError("request", "password", null, false, null, null, "密码不能为空");
+    FieldError fieldError =
+        new FieldError("request", "password", null, false, null, null, "密码不能为空");
 
     when(bindingResult.getAllErrors()).thenReturn(List.of(fieldError));
     when(bindingResult.getErrorCount()).thenReturn(1);

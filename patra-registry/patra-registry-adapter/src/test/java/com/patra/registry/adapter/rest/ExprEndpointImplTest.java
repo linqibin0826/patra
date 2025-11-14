@@ -73,7 +73,8 @@ class ExprEndpointImplTest {
       when(converter.toResp(queryResult)).thenReturn(expectedResp);
 
       // When: 执行方法
-      ExprSnapshotResp result = endpoint.getSnapshot(provenanceCode, operationType, endpointName, at);
+      ExprSnapshotResp result =
+          endpoint.getSnapshot(provenanceCode, operationType, endpointName, at);
 
       // Then: 验证结果
       assertThat(result).isNotNull();
@@ -193,7 +194,8 @@ class ExprEndpointImplTest {
       when(converter.toResp(queryResult)).thenReturn(expectedResp);
 
       // When: 执行方法
-      ExprSnapshotResp result = endpoint.getSnapshot(provenanceCode, operationType, endpointName, null);
+      ExprSnapshotResp result =
+          endpoint.getSnapshot(provenanceCode, operationType, endpointName, null);
 
       // Then: 验证过滤参数正确传递
       assertThat(result).isNotNull();
@@ -240,9 +242,7 @@ class ExprEndpointImplTest {
       // Given: Orchestrator 抛出领域验证异常
       String provenanceCode = "PUBMED";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
-          .thenThrow(
-              new DomainValidationException(
-                  "operationType 不能为空白"));
+          .thenThrow(new DomainValidationException("operationType 不能为空白"));
 
       // When & Then: 验证 DomainValidationException 被传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, "", null, null))
@@ -257,9 +257,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "EPMC";
       Instant futureTime = Instant.parse("2099-01-01T00:00:00Z");
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
-          .thenThrow(
-              new DomainValidationException(
-                  "at 必须在过去或现在"));
+          .thenThrow(new DomainValidationException("at 必须在过去或现在"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, futureTime))
@@ -273,14 +271,11 @@ class ExprEndpointImplTest {
       // Given: 数据源配置不存在
       String provenanceCode = "ARXIV";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
-          .thenThrow(
-              new ProvenanceNotFoundException(
-                  "数据源配置未找到: " + provenanceCode));
+          .thenThrow(new ProvenanceNotFoundException("数据源配置未找到: " + provenanceCode));
 
       // When & Then: 验证 RegistryNotFound 异常被传播
       assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, null))
-          .isInstanceOf(
-              ProvenanceNotFoundException.class)
+          .isInstanceOf(ProvenanceNotFoundException.class)
           .hasMessageContaining("数据源配置未找到");
     }
 
@@ -291,15 +286,11 @@ class ExprEndpointImplTest {
       String provenanceCode = "PUBMED";
       String operationType = "UNKNOWN_OPERATION";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
-          .thenThrow(
-              new ProvenanceNotFoundException(
-                  "未找到操作类型 " + operationType + " 的配置"));
+          .thenThrow(new ProvenanceNotFoundException("未找到操作类型 " + operationType + " 的配置"));
 
       // When & Then: 验证异常传播
-      assertThatThrownBy(
-              () -> endpoint.getSnapshot(provenanceCode, operationType, null, null))
-          .isInstanceOf(
-              ProvenanceNotFoundException.class)
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, operationType, null, null))
+          .isInstanceOf(ProvenanceNotFoundException.class)
           .hasMessageContaining("未找到操作类型");
     }
 
@@ -311,15 +302,12 @@ class ExprEndpointImplTest {
       String operationType = "HARVEST";
       String endpointName = "unknown_endpoint";
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
-          .thenThrow(
-              new ProvenanceNotFoundException(
-                  "未找到端点 " + endpointName + " 的配置"));
+          .thenThrow(new ProvenanceNotFoundException("未找到端点 " + endpointName + " 的配置"));
 
       // When & Then: 验证异常传播
       assertThatThrownBy(
               () -> endpoint.getSnapshot(provenanceCode, operationType, endpointName, null))
-          .isInstanceOf(
-              ProvenanceNotFoundException.class)
+          .isInstanceOf(ProvenanceNotFoundException.class)
           .hasMessageContaining("未找到端点");
     }
 
@@ -330,15 +318,11 @@ class ExprEndpointImplTest {
       String provenanceCode = "PUBMED";
       Instant historicalTime = Instant.parse("2000-01-01T00:00:00Z");
       when(orchestrator.loadSnapshot(any(), any(), any(), any()))
-          .thenThrow(
-              new ProvenanceNotFoundException(
-                  "在时间点 " + historicalTime + " 未找到有效配置"));
+          .thenThrow(new ProvenanceNotFoundException("在时间点 " + historicalTime + " 未找到有效配置"));
 
       // When & Then: 验证异常传播
-      assertThatThrownBy(
-              () -> endpoint.getSnapshot(provenanceCode, null, null, historicalTime))
-          .isInstanceOf(
-              ProvenanceNotFoundException.class)
+      assertThatThrownBy(() -> endpoint.getSnapshot(provenanceCode, null, null, historicalTime))
+          .isInstanceOf(ProvenanceNotFoundException.class)
           .hasMessageContaining("未找到有效配置");
     }
 
@@ -349,8 +333,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "PUBMED";
 
       // 创建一个具体的 RegistryQuotaExceeded 子类实例
-      class ConcurrentQueryQuotaExceeded
-          extends RegistryQuotaExceeded {
+      class ConcurrentQueryQuotaExceeded extends RegistryQuotaExceeded {
         public ConcurrentQueryQuotaExceeded(String message) {
           super(message);
         }
@@ -371,8 +354,7 @@ class ExprEndpointImplTest {
       // Given: 查询结果大小超出限制
       String provenanceCode = "EPMC";
 
-      class ResultSizeQuotaExceeded
-          extends RegistryQuotaExceeded {
+      class ResultSizeQuotaExceeded extends RegistryQuotaExceeded {
         public ResultSizeQuotaExceeded(String message) {
           super(message);
         }
@@ -393,8 +375,7 @@ class ExprEndpointImplTest {
       // Given: 版本冲突（例如乐观锁失败）
       String provenanceCode = "PUBMED";
 
-      class VersionConflictException
-          extends RegistryConflict {
+      class VersionConflictException extends RegistryConflict {
         public VersionConflictException(String message) {
           super(message);
         }
@@ -416,8 +397,7 @@ class ExprEndpointImplTest {
       String provenanceCode = "CROSSREF";
       Instant at = Instant.parse("2024-06-01T00:00:00Z");
 
-      class TemporalSliceConflictException
-          extends RegistryConflict {
+      class TemporalSliceConflictException extends RegistryConflict {
         public TemporalSliceConflictException(String message) {
           super(message);
         }
@@ -441,8 +421,8 @@ class ExprEndpointImplTest {
         Collections.emptyList(), // fields
         Collections.emptyList(), // capabilities
         Collections.emptyList(), // renderRules
-        Collections.emptyList()  // paramMappings
-    );
+        Collections.emptyList() // paramMappings
+        );
   }
 
   private ExprSnapshotResp createMockResponse() {
@@ -451,7 +431,7 @@ class ExprEndpointImplTest {
         Collections.emptyList(), // fields
         Collections.emptyList(), // capabilities
         Collections.emptyList(), // renderRules
-        Collections.emptyList()  // paramMappings
-    );
+        Collections.emptyList() // paramMappings
+        );
   }
 }

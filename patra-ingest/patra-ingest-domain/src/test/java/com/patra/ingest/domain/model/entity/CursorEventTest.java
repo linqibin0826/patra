@@ -2,6 +2,7 @@ package com.patra.ingest.domain.model.entity;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.enums.CursorDirection;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
@@ -51,7 +52,7 @@ class CursorEventTest {
     @DisplayName("应该成功创建 TIME 类型的游标前进事件")
     void shouldCreateTimeTypeCursorEvent() {
       // Given
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
       String namespaceScopeCode = "GLOBAL";
@@ -127,7 +128,7 @@ class CursorEventTest {
       // When - ID 类型不使用 Instant 字段
       CursorEvent event =
           CursorEvent.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "record_id",
               "GLOBAL",
@@ -171,7 +172,7 @@ class CursorEventTest {
       // When
       CursorEvent event =
           CursorEvent.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -206,7 +207,7 @@ class CursorEventTest {
       // When
       CursorEvent event =
           CursorEvent.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -236,7 +237,7 @@ class CursorEventTest {
       // When
       CursorEvent event =
           CursorEvent.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -266,7 +267,7 @@ class CursorEventTest {
       // When
       CursorEvent event =
           CursorEvent.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -296,7 +297,7 @@ class CursorEventTest {
       // When
       CursorEvent event =
           CursorEvent.create(
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -333,7 +334,7 @@ class CursorEventTest {
     void shouldRestoreTimeTypeCursorEventFromPersistentState() {
       // Given
       Long id = 100L;
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
       String namespaceScopeCode = "GLOBAL";
@@ -416,7 +417,7 @@ class CursorEventTest {
       CursorEvent event =
           CursorEvent.restore(
               id,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "record_id",
               "GLOBAL",
@@ -467,7 +468,7 @@ class CursorEventTest {
       CursorEvent event =
           CursorEvent.restore(
               id,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -513,7 +514,7 @@ class CursorEventTest {
       CursorEvent event =
           CursorEvent.restore(
               id,
-              "pubmed",
+              ProvenanceCode.PUBMED,
               "HARVEST",
               "publication_date",
               "GLOBAL",
@@ -673,7 +674,7 @@ class CursorEventTest {
     @DisplayName("应该正确返回所有基础字段")
     void shouldReturnAllBasicFields() {
       // Given
-      String provenanceCode = "pubmed";
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String operationCode = "HARVEST";
       String cursorKey = "publication_date";
       String namespaceScopeCode = "GLOBAL";
@@ -890,20 +891,20 @@ class CursorEventTest {
     @DisplayName("应该处理极长的字符串字段")
     void shouldHandleVeryLongStringFields() {
       // Given
-      String longProvenanceCode = "a".repeat(500);
+      ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
       String longCursorKey = "b".repeat(500);
       String longNamespaceKey = "c".repeat(500);
 
       // When
       CursorEvent event =
           CursorEventTestDataBuilder.aTimeEvent()
-              .provenanceCode(longProvenanceCode)
+              .provenanceCode(provenanceCode)
               .cursorKey(longCursorKey)
               .namespaceKey(longNamespaceKey)
               .build();
 
       // Then
-      assertThat(event.getProvenanceCode()).hasSize(500);
+      assertThat(event.getProvenanceCode()).isEqualTo(provenanceCode);
       assertThat(event.getCursorKey()).hasSize(500);
       assertThat(event.getNamespaceKey()).hasSize(500);
     }
@@ -966,7 +967,7 @@ class CursorEventTest {
               .build();
 
       // When - 保存初始值
-      String initialProvenanceCode = event.getProvenanceCode();
+      ProvenanceCode initialProvenanceCode = event.getProvenanceCode();
       String initialCursorKey = event.getCursorKey();
       String initialNewValue = event.getNewValue();
       CursorLineage initialLineage = event.getLineage();
@@ -1127,7 +1128,7 @@ class CursorEventTest {
    */
   static class CursorEventTestDataBuilder {
     private Long id = null; // 默认为 null（新创建的事件）
-    private String provenanceCode = "pubmed";
+    private ProvenanceCode provenanceCode = ProvenanceCode.PUBMED;
     private String operationCode = "HARVEST";
     private String cursorKey = "publication_date";
     private String namespaceScopeCode = "GLOBAL";
@@ -1156,7 +1157,7 @@ class CursorEventTest {
       return this;
     }
 
-    public CursorEventTestDataBuilder provenanceCode(String provenanceCode) {
+    public CursorEventTestDataBuilder provenanceCode(ProvenanceCode provenanceCode) {
       this.provenanceCode = provenanceCode;
       return this;
     }

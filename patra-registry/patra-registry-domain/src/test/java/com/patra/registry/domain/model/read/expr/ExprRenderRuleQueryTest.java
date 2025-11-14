@@ -499,8 +499,22 @@ class ExprRenderRuleQueryTest {
       // When: 构造对象
       var query =
           new ExprRenderRuleQuery(
-              1L, null, "author", "EQ", null, false, null, "PARAM", "author={value}", null, null,
-              false, null, null, now, null);
+              1L,
+              null,
+              "author",
+              "EQ",
+              null,
+              false,
+              null,
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // Then: 可选字段应保持 null
       assertThat(query.operationType()).isNull();
@@ -620,8 +634,22 @@ class ExprRenderRuleQueryTest {
       // When: 构造对象
       var query =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", null, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              null,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // Then: negated 应为 null
       assertThat(query.negated()).isNull();
@@ -636,13 +664,41 @@ class ExprRenderRuleQueryTest {
       // When: 构造两个对象
       var queryWithTrue =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, true, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              true,
+              null,
+              null,
+              now,
+              null);
 
       var queryWithFalse =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // Then: wrapGroup 应正确设置
       assertThat(queryWithTrue.wrapGroup()).isTrue();
@@ -661,13 +717,41 @@ class ExprRenderRuleQueryTest {
       Instant now = Instant.now();
       var query1 =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       var query2 =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // When & Then: 应该相等且 hashCode 相同
       assertThat(query1).isEqualTo(query2);
@@ -681,13 +765,41 @@ class ExprRenderRuleQueryTest {
       Instant now = Instant.now();
       var query1 =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       var query2 =
           new ExprRenderRuleQuery(
-              2L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              2L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // When & Then: 应该不相等
       assertThat(query1).isNotEqualTo(query2);
@@ -700,8 +812,22 @@ class ExprRenderRuleQueryTest {
       Instant now = Instant.now();
       var query =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", "author={value}",
-              null, null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              "author={value}",
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // When: 调用 toString
       String result = query.toString();
@@ -823,8 +949,22 @@ class ExprRenderRuleQueryTest {
       // When: 构造对象
       var query =
           new ExprRenderRuleQuery(
-              1L, "QUERY", longString, "EQ", "EXACT", false, "STRING", "PARAM", longString, null,
-              null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              longString,
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              longString,
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // Then: 应该成功构造
       assertThat(query.fieldKey()).isEqualTo(longString);
@@ -904,8 +1044,22 @@ class ExprRenderRuleQueryTest {
       // When: 构造对象
       var query =
           new ExprRenderRuleQuery(
-              1L, "QUERY", "author", "EQ", "EXACT", false, "STRING", "PARAM", specialChars, null,
-              null, false, null, null, now, null);
+              1L,
+              "QUERY",
+              "author",
+              "EQ",
+              "EXACT",
+              false,
+              "STRING",
+              "PARAM",
+              specialChars,
+              null,
+              null,
+              false,
+              null,
+              null,
+              now,
+              null);
 
       // Then: 应该成功构造
       assertThat(query.template()).isEqualTo(specialChars);

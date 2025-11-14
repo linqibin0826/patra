@@ -1,7 +1,8 @@
 /**
  * 查询 DTO 到 API 响应 DTO 转换器 - REST 适配器数据映射。
  *
- * <p>本包包含 MapStruct 转换器,负责将应用层查询 DTO 转换为 API 契约定义的响应 DTO,供外部 Feign 客户端消费。转换器遵循单向映射原则,仅支持查询 DTO 到响应 DTO 的转换。
+ * <p>本包包含 MapStruct 转换器,负责将应用层查询 DTO 转换为 API 契约定义的响应 DTO,供外部 Feign 客户端消费。转换器遵循单向映射原则,仅支持查询 DTO 到响应
+ * DTO 的转换。
  *
  * <h2>职责</h2>
  *
@@ -17,17 +18,15 @@
  * <ul>
  *   <li>{@link com.patra.registry.adapter.rest.converter.ProvenanceApiConverter} - 数据源 API 转换器
  *       <ul>
- *         <li>转换 {@code ProvenanceQuery} → {@code ProvenanceResp}</li>
- *         <li>转换 {@code ProvenanceConfigQuery} → {@code ProvenanceConfigResp}</li>
- *         <li>转换各类配置查询 DTO 到响应 DTO</li>
+ *         <li>转换 {@code ProvenanceQuery} → {@code ProvenanceResp}
+ *         <li>转换 {@code ProvenanceConfigQuery} → {@code ProvenanceConfigResp}
+ *         <li>转换各类配置查询 DTO 到响应 DTO
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.registry.adapter.rest.converter.ExprApiConverter} - 表达式 API 转换器
  *       <ul>
- *         <li>转换 {@code ExprSnapshotQuery} → {@code ExprSnapshotResp}</li>
- *         <li>转换表达式元数据查询 DTO 到响应 DTO</li>
+ *         <li>转换 {@code ExprSnapshotQuery} → {@code ExprSnapshotResp}
+ *         <li>转换表达式元数据查询 DTO 到响应 DTO
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>命名约定</h2>

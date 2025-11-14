@@ -2,9 +2,7 @@ package com.patra.registry.domain.model.vo.expr;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -307,8 +305,10 @@ class ExprSnapshotTest {
       List<ApiParamMapping> apiParamMappings =
           List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
 
-      ExprSnapshot snapshot1 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
-      ExprSnapshot snapshot2 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot1 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot2 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
 
       // When & Then: 应该相等
       assertThat(snapshot1).isEqualTo(snapshot2);
@@ -319,10 +319,8 @@ class ExprSnapshotTest {
     @DisplayName("应该正确实现 equals 方法（不同值对象不相等）")
     void shouldImplementEqualsCorrectlyForDifferentObjects() {
       // Given: 两个不同值的快照
-      List<ExprField> fields1 =
-          List.of(ExprSnapshotTestDataBuilder.buildExprField(1L, "title"));
-      List<ExprField> fields2 =
-          List.of(ExprSnapshotTestDataBuilder.buildExprField(2L, "abstract"));
+      List<ExprField> fields1 = List.of(ExprSnapshotTestDataBuilder.buildExprField(1L, "title"));
+      List<ExprField> fields2 = List.of(ExprSnapshotTestDataBuilder.buildExprField(2L, "abstract"));
 
       ExprSnapshot snapshot1 =
           new ExprSnapshot(
@@ -353,8 +351,10 @@ class ExprSnapshotTest {
       List<ApiParamMapping> apiParamMappings =
           List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
 
-      ExprSnapshot snapshot1 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
-      ExprSnapshot snapshot2 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot1 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot2 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
 
       // When & Then: hashCode 应该相等
       assertThat(snapshot1.hashCode()).isEqualTo(snapshot2.hashCode());
@@ -408,8 +408,10 @@ class ExprSnapshotTest {
       List<ApiParamMapping> apiParamMappings =
           List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
 
-      ExprSnapshot snapshot1 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
-      ExprSnapshot snapshot2 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot1 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot2 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
 
       // When & Then: 对称性（a.equals(b) == b.equals(a)）
       assertThat(snapshot1.equals(snapshot2)).isEqualTo(snapshot2.equals(snapshot1));
@@ -428,9 +430,12 @@ class ExprSnapshotTest {
       List<ApiParamMapping> apiParamMappings =
           List.of(ExprSnapshotTestDataBuilder.buildApiParamMapping());
 
-      ExprSnapshot snapshot1 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
-      ExprSnapshot snapshot2 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
-      ExprSnapshot snapshot3 = new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot1 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot2 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
+      ExprSnapshot snapshot3 =
+          new ExprSnapshot(fields, capabilities, renderRules, apiParamMappings);
 
       // When & Then: 传递性（a.equals(b) && b.equals(c) => a.equals(c)）
       assertThat(snapshot1).isEqualTo(snapshot2);

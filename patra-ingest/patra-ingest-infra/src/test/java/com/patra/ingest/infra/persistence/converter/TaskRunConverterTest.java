@@ -13,6 +13,7 @@ import com.patra.ingest.domain.model.vo.execution.RunContext;
 import com.patra.ingest.domain.model.vo.execution.RunStats;
 import com.patra.ingest.domain.model.vo.execution.TaskRunCheckpoint;
 import com.patra.ingest.infra.persistence.entity.TaskRunDO;
+import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,7 +56,7 @@ class TaskRunConverterTest {
             1001L,
             2001L,
             1,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             TaskRunStatus.SUCCEEDED,
             stats,
@@ -170,7 +171,7 @@ class TaskRunConverterTest {
 
     TaskRun original =
         TaskRun.restore(
-            1L, 2L, 1, "PUBMED", "HARVEST", TaskRunStatus.RUNNING, stats, now, null, now, checkpoint, null,
+            1L, 2L, 1, ProvenanceCode.PUBMED, "HARVEST", TaskRunStatus.RUNNING, stats, now, null, now, checkpoint, null,
             context, null);
 
     // When: Domain → DO → Domain
@@ -285,7 +286,7 @@ class TaskRunConverterTest {
   @DisplayName("应当正确处理空RunStats转换为null JsonNode")
   void shouldConvertEmptyRunStatsToNull() {
     // Given: stats为null的TaskRun
-    TaskRun taskRun = new TaskRun(1L, 2L, 1, "PUBMED", "HARVEST");
+    TaskRun taskRun = new TaskRun(1L, 2L, 1, ProvenanceCode.PUBMED, "HARVEST");
 
     // When: 转换为DO
     TaskRunDO entity = converter.toDO(taskRun);
@@ -300,7 +301,7 @@ class TaskRunConverterTest {
   @DisplayName("应当正确处理空TaskRunCheckpoint转换为null JsonNode")
   void shouldConvertEmptyCheckpointToNull() {
     // Given: checkpoint为empty的TaskRun
-    TaskRun taskRun = new TaskRun(1L, 2L, 1, "PUBMED", "HARVEST");
+    TaskRun taskRun = new TaskRun(1L, 2L, 1, ProvenanceCode.PUBMED, "HARVEST");
 
     // When: 转换为DO
     TaskRunDO entity = converter.toDO(taskRun);
@@ -364,7 +365,7 @@ class TaskRunConverterTest {
             1L,
             2L,
             1,
-            "PUBMED",
+            ProvenanceCode.PUBMED,
             "HARVEST",
             TaskRunStatus.FAILED,
             RunStats.empty(),
@@ -421,7 +422,7 @@ class TaskRunConverterTest {
     RunContext context = new RunContext("trace-correlation-id");
     TaskRun taskRun =
         TaskRun.restore(
-            1L, 2L, 1, "PUBMED", "HARVEST", TaskRunStatus.RUNNING, RunStats.empty(),
+            1L, 2L, 1, ProvenanceCode.PUBMED, "HARVEST", TaskRunStatus.RUNNING, RunStats.empty(),
             Instant.now(), null, Instant.now(), TaskRunCheckpoint.empty(), null, context, null);
 
     // When: 转换为DO

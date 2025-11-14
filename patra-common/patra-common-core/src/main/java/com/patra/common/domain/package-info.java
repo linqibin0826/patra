@@ -1,8 +1,7 @@
 /**
  * 领域层基础包 - DDD 聚合根和领域事件基类。
  *
- * <p>本包提供所有 Patra 微服务领域层的基础抽象,包括聚合根基类、只读聚合根和领域事件接口。
- * 这些抽象遵循 DDD(领域驱动设计)战术模式,支持事件驱动架构和 CQRS 模式。
+ * <p>本包提供所有 Patra 微服务领域层的基础抽象,包括聚合根基类、只读聚合根和领域事件接口。 这些抽象遵循 DDD(领域驱动设计)战术模式,支持事件驱动架构和 CQRS 模式。
  *
  * <h2>职责</h2>
  *
@@ -18,19 +17,16 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.common.domain.AggregateRoot} - 聚合根抽象基类,
- *       支持领域事件收集、乐观锁版本管理和聚合标识符生命周期管理
- *   <li>{@link com.patra.common.domain.ReadOnlyAggregate} - 只读聚合根基类,
- *       用于 CQRS 读端,不支持领域事件和状态修改
- *   <li>{@link com.patra.common.domain.DomainEvent} - 领域事件标记接口,
- *       用于标识领域内发生的重要状态变更
+ *   <li>{@link com.patra.common.domain.AggregateRoot} - 聚合根抽象基类, 支持领域事件收集、乐观锁版本管理和聚合标识符生命周期管理
+ *   <li>{@link com.patra.common.domain.ReadOnlyAggregate} - 只读聚合根基类, 用于 CQRS 读端,不支持领域事件和状态修改
+ *   <li>{@link com.patra.common.domain.DomainEvent} - 领域事件标记接口, 用于标识领域内发生的重要状态变更
  * </ul>
  *
  * <h2>AggregateRoot 核心特性</h2>
  *
  * <ul>
- *   <li><strong>领域事件收集</strong>: 通过 {@code addDomainEvent()} 收集事件,
- *       通过 {@code pullDomainEvents()} 提取事件(事件溯源模式)
+ *   <li><strong>领域事件收集</strong>: 通过 {@code addDomainEvent()} 收集事件, 通过 {@code pullDomainEvents()}
+ *       提取事件(事件溯源模式)
  *   <li><strong>乐观锁支持</strong>: 通过 {@code version} 字段支持并发控制
  *   <li><strong>标识符管理</strong>: 通过 {@code assignId()} 分配聚合标识符
  *   <li><strong>不变量检查</strong>: 通过 {@code assertInvariants()} 钩子方法验证业务规则
@@ -93,18 +89,17 @@
  * <p>领域事件的生命周期:
  *
  * <ol>
- *   <li><strong>收集阶段</strong>: 聚合根通过 {@code addDomainEvent()} 收集事件</li>
- *   <li><strong>持久化阶段</strong>: 应用层保存聚合根到仓储</li>
- *   <li><strong>提取阶段</strong>: 应用层通过 {@code pullDomainEvents()} 提取事件</li>
- *   <li><strong>发布阶段</strong>: 应用层通过 Outbox 模式或消息总线发布事件</li>
- *   <li><strong>消费阶段</strong>: 其他聚合或服务订阅并消费事件</li>
+ *   <li><strong>收集阶段</strong>: 聚合根通过 {@code addDomainEvent()} 收集事件
+ *   <li><strong>持久化阶段</strong>: 应用层保存聚合根到仓储
+ *   <li><strong>提取阶段</strong>: 应用层通过 {@code pullDomainEvents()} 提取事件
+ *   <li><strong>发布阶段</strong>: 应用层通过 Outbox 模式或消息总线发布事件
+ *   <li><strong>消费阶段</strong>: 其他聚合或服务订阅并消费事件
  * </ol>
  *
  * <h2>CQRS 模式支持</h2>
  *
  * <ul>
- *   <li><strong>写模型</strong>: {@link com.patra.common.domain.AggregateRoot},
- *       包含业务逻辑和状态修改,支持领域事件收集
+ *   <li><strong>写模型</strong>: {@link com.patra.common.domain.AggregateRoot}, 包含业务逻辑和状态修改,支持领域事件收集
  *   <li><strong>读模型</strong>: {@link com.patra.common.domain.ReadOnlyAggregate},
  *       只读聚合,用于查询优化,不支持状态修改
  * </ul>

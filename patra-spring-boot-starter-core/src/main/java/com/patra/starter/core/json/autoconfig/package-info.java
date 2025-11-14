@@ -14,7 +14,8 @@
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration} - Jackson ObjectMapper 自动配置类
+ *   <li>{@link com.patra.starter.core.json.autoconfig.JacksonAutoConfiguration} - Jackson
+ *       ObjectMapper 自动配置类
  * </ul>
  *
  * <h2>配置能力</h2>

@@ -1,7 +1,8 @@
 /**
  * Patra Registry 启动入口包 - Spring Boot 应用启动和组装。
  *
- * <p>本包是 Registry 服务的可执行入口,负责组装所有六边形架构层(domain, app, adapter, infra)并启动 Spring Boot 应用。Registry 是 Patra 平台的单一真实数据源(SSOT),为其他微服务提供 Provenance、表达式、字典和元数据的集中管理。
+ * <p>本包是 Registry 服务的可执行入口,负责组装所有六边形架构层(domain, app, adapter, infra)并启动 Spring Boot 应用。Registry 是
+ * Patra 平台的单一真实数据源(SSOT),为其他微服务提供 Provenance、表达式、字典和元数据的集中管理。
  *
  * <h2>核心职责</h2>
  *
@@ -81,9 +82,9 @@
  * <h3>Nacos 配置</h3>
  *
  * <ul>
- *   <li>数据源连接信息(MySQL)</li>
- *   <li>MyBatis-Plus 配置</li>
- *   <li>日志级别</li>
+ *   <li>数据源连接信息(MySQL)
+ *   <li>MyBatis-Plus 配置
+ *   <li>日志级别
  * </ul>
  *
  * <h2>启动方式</h2>
@@ -160,12 +161,12 @@
  * <h2>相关文档</h2>
  *
  * <ul>
- *   <li><a href="../../README.md">patra-registry 模块 README</a></li>
- *   <li><a href="../patra-registry-api/README.md">patra-registry-api 模块</a></li>
- *   <li><a href="../patra-registry-domain/README.md">patra-registry-domain 模块</a></li>
- *   <li><a href="../patra-registry-app/README.md">patra-registry-app 模块</a></li>
- *   <li><a href="../patra-registry-adapter/README.md">patra-registry-adapter 模块</a></li>
- *   <li><a href="../patra-registry-infra/README.md">patra-registry-infra 模块</a></li>
+ *   <li><a href="../../README.md">patra-registry 模块 README</a>
+ *   <li><a href="../patra-registry-api/README.md">patra-registry-api 模块</a>
+ *   <li><a href="../patra-registry-domain/README.md">patra-registry-domain 模块</a>
+ *   <li><a href="../patra-registry-app/README.md">patra-registry-app 模块</a>
+ *   <li><a href="../patra-registry-adapter/README.md">patra-registry-adapter 模块</a>
+ *   <li><a href="../patra-registry-infra/README.md">patra-registry-infra 模块</a>
  * </ul>
  *
  * @since 0.1.0
