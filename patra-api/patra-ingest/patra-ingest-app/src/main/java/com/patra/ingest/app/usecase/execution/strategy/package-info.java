@@ -23,7 +23,7 @@
  * <h2>批次执行流程</h2>
  *
  * <pre>
- * 1. 批次构建（BatchPlanner）
+ * 1. 批次调度构建（BatchScheduleBuilder）
  *    └─ 根据数据源策略生成批次列表
  *
  * 2. 循环执行批次
@@ -73,7 +73,7 @@
  * @Component
  * @RequiredArgsConstructor
  * public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
- *     private final BatchPlannerRegistry plannerRegistry;
+ *     private final BatchScheduleBuilderRegistry builderRegistry;
  *     private final GenericBatchExecutor batchExecutor;
  *     private final CursorAdvancer cursorAdvancer;
  *     private final LiteraturePublisherOrchestrator literaturePublisher;
@@ -82,14 +82,14 @@
  *     public void execute(ExecutionSession session) {
  *         var context = session.getContext();
  *
- *         // 1. 获取批次构建器
- *         var planner = plannerRegistry.getPlanner(context.getProvenanceCode());
+ *         // 1. 获取批次调度构建器
+ *         var builder = builderRegistry.getBuilder(context.getProvenanceCode());
  *
- *         // 2. 构建批次
- *         var batchPlan = planner.plan(context);
+ *         // 2. 构建批次调度
+ *         var batchSchedule = builder.build(context);
  *
  *         // 3. 循环执行批次
- *         for (var batch : batchPlan.getBatches()) {
+ *         for (var batch : batchSchedule.getBatches()) {
  *             // 3.1 执行批次
  *             var batchResult = batchExecutor.execute(batch, context);
  *

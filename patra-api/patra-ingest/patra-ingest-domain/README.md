@@ -60,7 +60,7 @@ patra-ingest-domain/
    │  │  │  └─ RunContext.java                # 运行上下文
    │  │  ├─ batch/                        # 批次相关值对象
    │  │  │  ├─ Batch.java                     # 批次定义
-   │  │  │  ├─ BatchPlan.java                 # 批次调度
+   │  │  │  ├─ BatchSchedule.java             # 批次调度
    │  │  │  └─ BatchResult.java               # 批次结果
    │  │  ├─ shared/                       # 共享值对象
    │  │  │  ├─ IdempotentKey.java             # 幂等键
