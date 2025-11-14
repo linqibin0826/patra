@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.storage.StorageUploadRequest;
 import com.patra.ingest.domain.model.vo.storage.StorageUploadResult;
 
@@ -42,5 +43,5 @@ public interface StoragePort {
    * @param batchNo 批次编号
    * @return 对象键(不包含 bucket)
    */
-  String generateObjectPath(String provenanceCode, Long runId, int batchNo);
+  String generateObjectPath(ProvenanceCode provenanceCode, Long runId, int batchNo);
 }

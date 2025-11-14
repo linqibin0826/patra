@@ -117,7 +117,7 @@ class CursorAdvancerImplTest {
               "hash-001");
 
       when(cursorRepository.find(
-              eq(ProvenanceCode.PUBMED.getCode()),
+              eq(ProvenanceCode.PUBMED),
               eq("HARVEST"),
               eq("TIME"),
               eq("GLOBAL"),
@@ -261,7 +261,7 @@ class CursorAdvancerImplTest {
       testContext = createTestContext(windowSpec, "hash-new");
 
       when(cursorRepository.find(
-              eq(ProvenanceCode.PUBMED.getCode()),
+              eq(ProvenanceCode.PUBMED),
               eq("HARVEST"),
               eq("TIME"),
               eq("GLOBAL"),
@@ -639,7 +639,7 @@ class CursorAdvancerImplTest {
 
       // Then: 验证查询时使用 "TIME" 键
       verify(cursorRepository)
-          .find(eq(ProvenanceCode.PUBMED.getCode()), eq("HARVEST"), eq("TIME"), any(), any());
+          .find(eq(ProvenanceCode.PUBMED), eq("HARVEST"), eq("TIME"), any(), any());
     }
   }
 

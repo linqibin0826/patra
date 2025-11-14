@@ -149,15 +149,14 @@ class PlanIngestionOrchestratorTest {
       when(patraRegistryPort.fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST))
           .thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), eq(configSnapshot), any(), any()))
           .thenReturn(window);
       when(planExpressionBuilder.build(any(), eq(configSnapshot))).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any(PlanAssemblyRequest.class))).thenReturn(assemblyResult);
       when(planRepository.findByPlanKey("plan-key-001")).thenReturn(Optional.empty());
@@ -199,13 +198,12 @@ class PlanIngestionOrchestratorTest {
       inOrder.verify(patraRegistryPort).fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST);
       inOrder
           .verify(cursorRepository)
-          .findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode());
+          .findLatestGlobalTimeWatermark(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode());
       inOrder.verify(planningWindowResolver).resolveWindow(any(), eq(configSnapshot), any(), any());
       inOrder.verify(planExpressionBuilder).build(any(), eq(configSnapshot));
       inOrder
           .verify(taskRepository)
-          .countQueuedTasks(ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode());
+          .countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode());
       inOrder
           .verify(plannerValidator)
           .validateBeforeAssemble(any(), eq(configSnapshot), eq(window), eq(0L));
@@ -234,14 +232,13 @@ class PlanIngestionOrchestratorTest {
       when(patraRegistryPort.fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST))
           .thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any(PlanAssemblyRequest.class))).thenReturn(assemblyResult);
       when(plan.getPlanKey()).thenReturn("plan-key-001");
@@ -282,14 +279,13 @@ class PlanIngestionOrchestratorTest {
       when(patraRegistryPort.fetchConfig(ProvenanceCode.PUBMED, OperationCode.HARVEST))
           .thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.of(Instant.parse("2025-01-01T00:00:00Z")));
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(5L);
       when(planAssembler.assemble(any(PlanAssemblyRequest.class))).thenReturn(assemblyResult);
       when(plan.getPlanKey()).thenReturn("plan-key-001");
@@ -326,7 +322,7 @@ class PlanIngestionOrchestratorTest {
       when(schedule.getId()).thenReturn(1L);
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
-      when(cursorRepository.findLatestGlobalTimeWatermark(anyString(), anyString()))
+      when(cursorRepository.findLatestGlobalTimeWatermark(any(ProvenanceCode.class), anyString()))
           .thenThrow(new RuntimeException("Database connection failed"));
 
       // When & Then
@@ -346,7 +342,7 @@ class PlanIngestionOrchestratorTest {
       when(schedule.getId()).thenReturn(1L);
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
-      when(cursorRepository.findLatestGlobalTimeWatermark(anyString(), anyString()))
+      when(cursorRepository.findLatestGlobalTimeWatermark(any(ProvenanceCode.class), anyString()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any()))
           .thenThrow(new RuntimeException("Invalid window configuration"));
@@ -369,14 +365,13 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(1000L);
       doThrow(validationException)
           .when(plannerValidator)
@@ -409,14 +404,13 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any())).thenReturn(failedResult);
 
@@ -436,14 +430,13 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any())).thenReturn(null);
 
@@ -466,14 +459,13 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any())).thenReturn(assemblyResult);
       when(plan.getPlanKey()).thenReturn("plan-key-001");
@@ -504,15 +496,14 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), eq(configSnapshot), eq(null), any()))
           .thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any())).thenReturn(assemblyResult);
       when(plan.getPlanKey()).thenReturn("plan-key-001");
@@ -538,14 +529,13 @@ class PlanIngestionOrchestratorTest {
       when(persistenceCoordinator.persistScheduleInstance(command)).thenReturn(schedule);
       when(patraRegistryPort.fetchConfig(any(), any())).thenReturn(configSnapshot);
       when(cursorRepository.findLatestGlobalTimeWatermark(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+              ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(Optional.empty());
       when(planningWindowResolver.resolveWindow(any(), any(), any(), any())).thenReturn(window);
       when(planExpressionBuilder.build(any(), any())).thenReturn(expressionDescriptor);
       when(expressionDescriptor.hash()).thenReturn("hash-001");
       when(expressionDescriptor.jsonSnapshot()).thenReturn("{}");
-      when(taskRepository.countQueuedTasks(
-              ProvenanceCode.PUBMED.getCode(), OperationCode.HARVEST.getCode()))
+      when(taskRepository.countQueuedTasks(ProvenanceCode.PUBMED, OperationCode.HARVEST.getCode()))
           .thenReturn(0L);
       when(planAssembler.assemble(any())).thenReturn(assemblyResult);
       when(plan.getPlanKey()).thenReturn("plan-key-001");

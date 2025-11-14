@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
@@ -75,7 +76,7 @@ class LiteraturePublisherOrchestratorTest {
         LiteraturePublisherOrchestrator.PublishContext.builder()
             .runId(RUN_ID)
             .batchNo(BATCH_NO)
-            .provenanceCode(PROVENANCE_CODE)
+            .provenanceCode(ProvenanceCode.PUBMED)
             .build();
 
     literatures = createLiteratureList(5);
@@ -195,7 +196,7 @@ class LiteraturePublisherOrchestratorTest {
       LiteratureStoragePort.StorageContext captured = contextCaptor.getValue();
       assertThat(captured.runId()).isEqualTo(RUN_ID);
       assertThat(captured.batchNo()).isEqualTo(BATCH_NO);
-      assertThat(captured.provenanceCode()).isEqualTo(PROVENANCE_CODE);
+      assertThat(captured.provenanceCode()).isEqualTo(ProvenanceCode.PUBMED);
     }
 
     @Test
@@ -404,7 +405,7 @@ class LiteraturePublisherOrchestratorTest {
           LiteraturePublisherOrchestrator.PublishContext.builder()
               .runId(null)
               .batchNo(BATCH_NO)
-              .provenanceCode(PROVENANCE_CODE)
+              .provenanceCode(ProvenanceCode.PUBMED)
               .build();
 
       when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
@@ -465,7 +466,7 @@ class LiteraturePublisherOrchestratorTest {
           LiteraturePublisherOrchestrator.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
-              .provenanceCode("")
+              .provenanceCode(null) // 注意：空字符串测试需要调整为 null，因为 ProvenanceCode 是枚举类型
               .build();
 
       when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);
@@ -494,7 +495,7 @@ class LiteraturePublisherOrchestratorTest {
           LiteraturePublisherOrchestrator.PublishContext.builder()
               .runId(RUN_ID)
               .batchNo(BATCH_NO)
-              .provenanceCode("PUBMED")
+              .provenanceCode(ProvenanceCode.PUBMED) // 注意：枚举已经定义为 PUBMED，无需测试大小写转换
               .build();
 
       when(literatureStoragePort.store(any(), any())).thenReturn(storageResult);

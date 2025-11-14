@@ -1,6 +1,7 @@
 package com.patra.ingest.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.port.CursorRepository;
 import com.patra.ingest.infra.persistence.converter.CursorConverter;
@@ -86,7 +87,7 @@ public class CursorRepositoryMpImpl implements CursorRepository {
    */
   @Override
   public Optional<Cursor> find(
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScopeCode,
@@ -94,7 +95,7 @@ public class CursorRepositoryMpImpl implements CursorRepository {
     CursorDO found =
         mapper.selectOne(
             new QueryWrapper<CursorDO>()
-                .eq("provenance_code", provenanceCode)
+                .eq("provenance_code", provenanceCode.getCode())
                 .eq("operation_code", operationCode)
                 .eq("cursor_key", cursorKey)
                 .eq("namespace_scope_code", namespaceScopeCode)
@@ -122,9 +123,9 @@ public class CursorRepositoryMpImpl implements CursorRepository {
    */
   @Override
   public Optional<Instant> findLatestGlobalTimeWatermark(
-      String provenanceCode, String operationCode) {
+      ProvenanceCode provenanceCode, String operationCode) {
     QueryWrapper<CursorDO> wrapper = new QueryWrapper<>();
-    wrapper.eq("provenance_code", provenanceCode);
+    wrapper.eq("provenance_code", provenanceCode.getCode());
     if (operationCode != null) {
       wrapper.eq("operation_code", operationCode);
     }

@@ -181,8 +181,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
    */
   private void performPreValidation(PlanningContext context) {
     long queuedTasks =
-        taskRepository.countQueuedTasks(
-            context.provenanceCode().getCode(), opCode(context.operationCode()));
+        taskRepository.countQueuedTasks(context.provenanceCode(), opCode(context.operationCode()));
     validateBeforeAssemble(context.norm(), context.configSnapshot(), context.window(), queuedTasks);
     log.debug(
         "预验证通过 数据源 [{}] 操作 [{}]: 当前队列任务数 {}",
@@ -269,7 +268,7 @@ public class PlanIngestionOrchestrator implements PlanIngestionUseCase {
       ProvenanceCode provenanceCode, OperationCode operationCode) {
     try {
       return cursorRepository
-          .findLatestGlobalTimeWatermark(provenanceCode.getCode(), opCode(operationCode))
+          .findLatestGlobalTimeWatermark(provenanceCode, opCode(operationCode))
           .orElse(null);
     } catch (RuntimeException ex) {
       throw new PlanPersistenceException(PlanPersistenceException.Stage.PLAN, "加载游标水位失败", ex);

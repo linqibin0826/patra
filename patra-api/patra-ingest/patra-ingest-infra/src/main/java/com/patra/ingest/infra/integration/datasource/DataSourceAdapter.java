@@ -106,8 +106,7 @@ public class DataSourceAdapter implements DataSourcePort {
 
     try {
       // 1. 查找Provider
-      DataSourceProvider provider =
-          providerRegistry.getProvider(provenanceCode, dataType);
+      DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
 
       // 2. 提取通用参数
       String query = context.compiledQuery();
@@ -328,8 +327,7 @@ public class DataSourceAdapter implements DataSourcePort {
       validateTypeConsistency(dataType, typeRef);
 
       // 2. 查找Provider
-      DataSourceProvider provider =
-          providerRegistry.getProvider(provenanceCode, dataType);
+      DataSourceProvider provider = providerRegistry.getProvider(provenanceCode, dataType);
 
       // 3. 构建ProviderRequest
       ProviderRequest request = buildProviderRequest(context, batch);

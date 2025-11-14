@@ -180,7 +180,7 @@ public class GenericBatchExecutor {
         LiteraturePublisherOrchestrator.PublishContext.builder()
             .runId(context.runId())
             .batchNo(batchNo)
-            .provenanceCode(provenanceCode != null ? provenanceCode.getCode() : null)
+            .provenanceCode(provenanceCode)
             .build();
     return literaturePublisherOrchestrator.publish(payload, publishContext);
   }

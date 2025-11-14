@@ -42,11 +42,11 @@ class DataSourcePortTest {
   static class MockDataSourcePort implements DataSourcePort {
     private final Map<String, Set<DataType>> supportedTypes =
         Map.of(
-            "pubmed",
+            ProvenanceCode.PUBMED.getCode(),
             Set.of(DataType.LITERATURE, DataType.CITATION),
-            "doaj",
+            ProvenanceCode.DOAJ.getCode(),
             Set.of(DataType.JOURNAL),
-            "drugbank",
+            ProvenanceCode.EPMC.getCode(),
             Set.of(DataType.DRUG));
 
     @Override
@@ -65,17 +65,20 @@ class DataSourcePortTest {
     }
 
     @Override
-    public boolean supports(String provenanceCode, DataType dataType) {
+    public boolean supports(ProvenanceCode provenanceCode, DataType dataType) {
       if (provenanceCode == null || dataType == null) {
         return false;
       }
-      Set<DataType> types = supportedTypes.get(provenanceCode);
+      Set<DataType> types = supportedTypes.get(provenanceCode.getCode());
       return types != null && types.contains(dataType);
     }
 
     @Override
-    public Set<DataType> getSupportedTypes(String provenanceCode) {
-      return supportedTypes.getOrDefault(provenanceCode, Set.of());
+    public Set<DataType> getSupportedTypes(ProvenanceCode provenanceCode) {
+      if (provenanceCode == null) {
+        return Set.of();
+      }
+      return supportedTypes.getOrDefault(provenanceCode.getCode(), Set.of());
     }
   }
 
@@ -207,20 +210,20 @@ class DataSourcePortTest {
       DataSourcePort port = new MockDataSourcePort();
 
       // Then: PubMed 支持文献和引用
-      assertThat(port.supports("pubmed", DataType.LITERATURE)).isTrue();
-      assertThat(port.supports("pubmed", DataType.CITATION)).isTrue();
+      assertThat(port.supports(ProvenanceCode.PUBMED, DataType.LITERATURE)).isTrue();
+      assertThat(port.supports(ProvenanceCode.PUBMED, DataType.CITATION)).isTrue();
 
       // Then: PubMed 不支持药品
-      assertThat(port.supports("pubmed", DataType.DRUG)).isFalse();
+      assertThat(port.supports(ProvenanceCode.PUBMED, DataType.DRUG)).isFalse();
 
       // Then: DOAJ 支持期刊
-      assertThat(port.supports("doaj", DataType.JOURNAL)).isTrue();
+      assertThat(port.supports(ProvenanceCode.DOAJ, DataType.JOURNAL)).isTrue();
 
       // Then: DOAJ 不支持文献
-      assertThat(port.supports("doaj", DataType.LITERATURE)).isFalse();
+      assertThat(port.supports(ProvenanceCode.DOAJ, DataType.LITERATURE)).isFalse();
 
       // Then: 未知数据源不支持任何类型
-      assertThat(port.supports("unknown", DataType.LITERATURE)).isFalse();
+      assertThat(port.supports(null, DataType.LITERATURE)).isFalse();
     }
 
     @Test
@@ -233,7 +236,7 @@ class DataSourcePortTest {
       assertThat(port.supports(null, DataType.LITERATURE)).isFalse();
 
       // Then: 空数据类型应该返回 false
-      assertThat(port.supports("pubmed", null)).isFalse();
+      assertThat(port.supports(ProvenanceCode.PUBMED, null)).isFalse();
     }
   }
 
@@ -248,18 +251,18 @@ class DataSourcePortTest {
       DataSourcePort port = new MockDataSourcePort();
 
       // When & Then: PubMed 支持文献和引用
-      Set<DataType> pubmedTypes = port.getSupportedTypes("pubmed");
+      Set<DataType> pubmedTypes = port.getSupportedTypes(ProvenanceCode.PUBMED);
       assertThat(pubmedTypes)
           .isNotNull()
           .hasSize(2)
           .contains(DataType.LITERATURE, DataType.CITATION);
 
       // When & Then: DOAJ 支持期刊
-      Set<DataType> doajTypes = port.getSupportedTypes("doaj");
+      Set<DataType> doajTypes = port.getSupportedTypes(ProvenanceCode.DOAJ);
       assertThat(doajTypes).isNotNull().hasSize(1).contains(DataType.JOURNAL);
 
       // When & Then: DrugBank 支持药品
-      Set<DataType> drugbankTypes = port.getSupportedTypes("drugbank");
+      Set<DataType> drugbankTypes = port.getSupportedTypes(ProvenanceCode.EPMC);
       assertThat(drugbankTypes).isNotNull().hasSize(1).contains(DataType.DRUG);
     }
 
@@ -270,7 +273,7 @@ class DataSourcePortTest {
       DataSourcePort port = new MockDataSourcePort();
 
       // When: 查询未知数据源
-      Set<DataType> unknownTypes = port.getSupportedTypes("unknown");
+      Set<DataType> unknownTypes = port.getSupportedTypes(null);
 
       // Then: 返回空集合
       assertThat(unknownTypes).isNotNull().isEmpty();
@@ -283,7 +286,7 @@ class DataSourcePortTest {
       DataSourcePort port = new MockDataSourcePort();
 
       // When: 获取支持的类型
-      Set<DataType> types = port.getSupportedTypes("pubmed");
+      Set<DataType> types = port.getSupportedTypes(ProvenanceCode.PUBMED);
 
       // Then: 尝试修改应该抛出异常（不可变集合）
       assertThatThrownBy(() -> types.add(DataType.DRUG))

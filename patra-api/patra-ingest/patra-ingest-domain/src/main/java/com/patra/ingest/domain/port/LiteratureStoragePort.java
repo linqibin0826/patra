@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import java.util.List;
 import lombok.Builder;
@@ -61,5 +62,5 @@ public interface LiteratureStoragePort {
    * @param provenanceCode 归一化的数据源标识符
    */
   @Builder
-  record StorageContext(Long runId, int batchNo, String provenanceCode) {}
+  record StorageContext(Long runId, int batchNo, ProvenanceCode provenanceCode) {}
 }

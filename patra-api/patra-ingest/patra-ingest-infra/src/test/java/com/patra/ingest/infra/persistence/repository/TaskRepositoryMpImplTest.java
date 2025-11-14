@@ -267,7 +267,9 @@ class TaskRepositoryMpImplTest {
       when(mapper.selectCount(any(QueryWrapper.class))).thenReturn(5L);
 
       // When
-      long count = repository.countQueuedTasks(ProvenanceCode.parse(TEST_PROVENANCE_CODE), TEST_OPERATION_CODE);
+      long count =
+          repository.countQueuedTasks(
+              ProvenanceCode.parse(TEST_PROVENANCE_CODE), TEST_OPERATION_CODE);
 
       // Then
       assertThat(count).isEqualTo(5L);
