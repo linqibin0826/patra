@@ -354,7 +354,8 @@ class OutboxPatternE2E {
       String dedupKey = "e2e-rollback-unique-" + System.currentTimeMillis();
 
       // 验证: 执行前 Outbox 消息不存在
-      var msgBefore = outboxRepository.findByChannelAndDedup(MessageChannels.INGEST_TASK_READY, dedupKey);
+      var msgBefore =
+          outboxRepository.findByChannelAndDedup(MessageChannels.INGEST_TASK_READY, dedupKey);
       assertThat(msgBefore).isEmpty();
 
       // 模拟: 在事务中执行业务操作失败,应导致回滚
@@ -375,7 +376,8 @@ class OutboxPatternE2E {
       // 验证: 由于在非事务环境下执行,消息实际已被保存
       // 如果在真实的 @Transactional 方法中,异常会导致回滚
       // 此测试主要验证概念,实际回滚需要在 Service 层的集成测试中验证
-      var msgAfter = outboxRepository.findByChannelAndDedup(MessageChannels.INGEST_TASK_READY, dedupKey);
+      var msgAfter =
+          outboxRepository.findByChannelAndDedup(MessageChannels.INGEST_TASK_READY, dedupKey);
       // 根据实际执行环境调整断言
       // 如果使用 Spring 事务管理,应该为 empty
       // 这里注释掉原有的断言,因为测试环境可能不支持自动回滚

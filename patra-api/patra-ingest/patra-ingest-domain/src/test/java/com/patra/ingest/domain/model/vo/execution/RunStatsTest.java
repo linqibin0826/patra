@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.vo.execution;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("RunStats 值对象单元测试")
 class RunStatsTest {
@@ -75,8 +75,7 @@ class RunStatsTest {
     @DisplayName("应该允许创建最大长整型值")
     void shouldAllowMaxLongValues() {
       // When
-      RunStats stats =
-          new RunStats(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
+      RunStats stats = new RunStats(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE);
 
       // Then
       assertThat(stats.fetched()).isEqualTo(Long.MAX_VALUE);

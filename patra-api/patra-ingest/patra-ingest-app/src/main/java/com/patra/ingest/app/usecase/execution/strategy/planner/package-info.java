@@ -4,6 +4,7 @@
  * <p>本包提供不同数据源的批次规划策略，根据数据源特性生成批次执行计划。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>根据数据源策略规划批次（如 PubMed、EPMC、Crossref）
  *   <li>计算批次大小和偏移量
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code BatchPlanner} - 批次规划器接口
  *   <li>{@code BatchPlannerRegistry} - 批次规划器注册表
@@ -22,6 +24,7 @@
  * </ul>
  *
  * <h2>批次规划策略</h2>
+ *
  * <table border="1">
  *   <tr>
  *     <th>数据源</th>
@@ -50,7 +53,9 @@
  * </table>
  *
  * <h2>分页方式对比</h2>
+ *
  * <h3>Offset-based（如 PubMed）</h3>
+ *
  * <ul>
  *   <li><strong>优点</strong>: 简单、可预测
  *   <li><strong>缺点</strong>: 大偏移量性能差、数据变化可能导致漏数据
@@ -58,6 +63,7 @@
  * </ul>
  *
  * <h3>Cursor-based（如 EPMC）</h3>
+ *
  * <ul>
  *   <li><strong>优点</strong>: 性能稳定、不受数据变化影响
  *   <li><strong>缺点</strong>: 无法跳页、cursor 有时效性
@@ -65,7 +71,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>统一批次规划器（策略模式）</h3>
+ *
  * <pre>{@code
  * // 1. 定义批次生成策略
  * @Component

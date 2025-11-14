@@ -141,8 +141,7 @@ class IngestConfigurationExceptionTest {
           new IngestConfigurationException("PUBMED", "FETCH", "配置错误");
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

@@ -75,7 +75,8 @@ import org.springframework.stereotype.Repository;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class OutboxMessageRepositoryMpImpl implements OutboxMessageRepository, OutboxRelayRepository {
+public class OutboxMessageRepositoryMpImpl
+    implements OutboxMessageRepository, OutboxRelayRepository {
 
   private final OutboxMessageMapper mapper;
   private final OutboxMessageConverter converter;

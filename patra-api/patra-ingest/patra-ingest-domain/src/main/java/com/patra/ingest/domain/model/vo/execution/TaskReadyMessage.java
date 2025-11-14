@@ -30,8 +30,7 @@ public record TaskReadyMessage(Payload payload, Header header) {
       String planSliceStrategy,
       PlanSliceParams planSliceParams) {
 
-    public Payload {
-    }
+    public Payload {}
   }
 
   /** 任务执行所需的特定参数。 */

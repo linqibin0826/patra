@@ -4,6 +4,7 @@
  * <p>本包提供任务执行的幂等性检查，防止重复消费任务消息。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>检查任务是否已成功完成
  *   <li>防止重复消费任务消息
@@ -11,12 +12,14 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code IdempotencyChecker} - 幂等性检查器接口
  *   <li>{@code IdempotencyCheckerImpl} - 幂等性检查器实现
  * </ul>
  *
  * <h2>检查策略</h2>
+ *
  * <pre>
  * 1. 查询任务状态
  *    └─ TaskRepository.findById(taskId)
@@ -28,6 +31,7 @@
  * </pre>
  *
  * <h2>幂等键设计</h2>
+ *
  * <ul>
  *   <li><strong>任务级别</strong>: {@code taskId}（防止同一任务重复执行）
  *   <li><strong>消息级别</strong>: {@code idempotentKey}（如 planKey + taskSeq）
@@ -38,7 +42,9 @@
  * </ul>
  *
  * <h2>使用场景</h2>
+ *
  * <h3>场景 1: 消息重复消费</h3>
+ *
  * <pre>
  * 原因：MQ 至少一次语义（At-Least-Once）
  * 表现：同一任务消息被多次投递
@@ -46,6 +52,7 @@
  * </pre>
  *
  * <h3>场景 2: 任务重试</h3>
+ *
  * <pre>
  * 原因：任务执行失败（如网络超时）
  * 表现：任务状态为 FAILED
@@ -53,6 +60,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

@@ -61,7 +61,7 @@ import org.springframework.stereotype.Component;
     name = "patra.ingest.listener.task-ready.enabled",
     havingValue = "true",
     matchIfMissing = true // 默认启用（生产环境）
-)
+    )
 @RequiredArgsConstructor
 @RocketMQMessageListener(
     topic = "${patra.ingest.mq.topics.task-ready}", // 从配置读取 Topic 名称

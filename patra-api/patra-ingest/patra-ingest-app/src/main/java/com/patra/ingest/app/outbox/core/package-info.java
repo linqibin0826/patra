@@ -4,6 +4,7 @@
  * <p>本包提供 Outbox 发布器的抽象基类和核心模型，定义通用发布流程和扩展点。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>定义 Outbox 发布器的模板方法（Template Method Pattern）
  *   <li>提供批量发布的通用逻辑
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code AbstractOutboxPublisher<E, P, H>} - Outbox 发布器抽象基类
  *       <ul>
@@ -30,6 +32,7 @@
  * </ul>
  *
  * <h2>模板方法流程</h2>
+ *
  * <pre>
  * AbstractOutboxPublisher.publish(List<E> events)
  *   ↓
@@ -50,7 +53,9 @@
  * </pre>
  *
  * <h2>扩展指南</h2>
+ *
  * <h3>必须实现的方法</h3>
+ *
  * <pre>{@code
  * @Component
  * public class MyOutboxPublisher
@@ -107,6 +112,7 @@
  * }</pre>
  *
  * <h3>可选覆盖的方法</h3>
+ *
  * <pre>{@code
  * // 自定义事件验证
  * @Override
@@ -124,6 +130,7 @@
  * }</pre>
  *
  * <h2>设计模式</h2>
+ *
  * <ul>
  *   <li><strong>模板方法模式</strong>: {@code AbstractOutboxPublisher} 定义发布流程骨架
  *   <li><strong>策略模式</strong>: 子类定义具体的分区策略、幂等策略

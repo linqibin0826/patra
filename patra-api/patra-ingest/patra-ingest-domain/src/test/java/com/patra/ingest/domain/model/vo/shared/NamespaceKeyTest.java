@@ -194,10 +194,7 @@ class NamespaceKeyTest {
       String result = namespaceKey.toString();
 
       // Then
-      assertThat(result)
-          .contains("NamespaceKey")
-          .contains("scope=" + scope)
-          .contains("key=" + key);
+      assertThat(result).contains("NamespaceKey").contains("scope=" + scope).contains("key=" + key);
     }
 
     @Test
@@ -248,10 +245,7 @@ class NamespaceKeyTest {
       NamespaceKey global2 = NamespaceKey.global();
 
       // Then
-      assertThat(global1)
-          .isEqualTo(global2)
-          .hasSameHashCodeAs(global2)
-          .isNotSameAs(global2);
+      assertThat(global1).isEqualTo(global2).hasSameHashCodeAs(global2).isNotSameAs(global2);
     }
   }
 
@@ -373,10 +367,8 @@ class NamespaceKeyTest {
     @DisplayName("应该支持多租户隔离场景")
     void shouldSupportMultiTenantIsolation() {
       // Given - 不同租户的命名空间键
-      NamespaceKey tenant1 =
-          new NamespaceKey(NamespaceScope.CUSTOM, "tenant-001");
-      NamespaceKey tenant2 =
-          new NamespaceKey(NamespaceScope.CUSTOM, "tenant-002");
+      NamespaceKey tenant1 = new NamespaceKey(NamespaceScope.CUSTOM, "tenant-001");
+      NamespaceKey tenant2 = new NamespaceKey(NamespaceScope.CUSTOM, "tenant-002");
 
       // When & Then - 不同租户的键应该不相等
       assertThat(tenant1).isNotEqualTo(tenant2);

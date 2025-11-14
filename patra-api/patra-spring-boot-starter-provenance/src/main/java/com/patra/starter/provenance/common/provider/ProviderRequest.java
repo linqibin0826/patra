@@ -22,9 +22,7 @@ import lombok.extern.jackson.Jacksonized;
 @Builder
 @Jacksonized
 public record ProviderRequest(
-    ProvenanceConfig config,
-    BatchExecutionParams executionParams,
-    BatchMetadata metadata) {
+    ProvenanceConfig config, BatchExecutionParams executionParams, BatchMetadata metadata) {
 
   /**
    * 创建记录时验证不变量

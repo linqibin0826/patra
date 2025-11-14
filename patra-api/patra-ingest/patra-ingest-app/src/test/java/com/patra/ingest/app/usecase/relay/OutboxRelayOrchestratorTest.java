@@ -80,7 +80,8 @@ class OutboxRelayOrchestratorTest {
   // 辅助方法：创建空的 RelayBatchResult
   private RelayBatchResult createBatchResult(
       ChannelKey channel, int fetched, int published, int retried, int failed, int leaseMissed) {
-    return new RelayBatchResult(channel, fetched, published, retried, failed, leaseMissed, Collections.emptyList());
+    return new RelayBatchResult(
+        channel, fetched, published, retried, failed, leaseMissed, Collections.emptyList());
   }
 
   @Nested

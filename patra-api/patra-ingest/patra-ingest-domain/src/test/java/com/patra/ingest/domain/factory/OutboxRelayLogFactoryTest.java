@@ -116,8 +116,7 @@ class OutboxRelayLogFactoryTest {
     @DisplayName("应正确处理首次尝试（retryCount 为 null）")
     void shouldHandleFirstAttempt() {
       // Given: 首次尝试的消息（retryCount 为 null）
-      OutboxMessage firstAttemptMessage =
-          sampleMessage.toBuilder().retryCount(null).build();
+      OutboxMessage firstAttemptMessage = sampleMessage.toBuilder().retryCount(null).build();
 
       // When: 创建租约竞争失败的日志
       OutboxRelayLog log =
@@ -131,8 +130,7 @@ class OutboxRelayLogFactoryTest {
     @DisplayName("应正确处理首次尝试（retryCount 为 0）")
     void shouldHandleFirstAttemptWithZeroRetry() {
       // Given: 首次尝试的消息（retryCount 为 0）
-      OutboxMessage firstAttemptMessage =
-          sampleMessage.toBuilder().retryCount(0).build();
+      OutboxMessage firstAttemptMessage = sampleMessage.toBuilder().retryCount(0).build();
 
       // When: 创建租约竞争失败的日志
       OutboxRelayLog log =
@@ -155,8 +153,7 @@ class OutboxRelayLogFactoryTest {
 
       // When: 创建发布成功的日志
       OutboxRelayLog log =
-          factory.createForPublished(
-              sampleMessage, batchId, leaseOwner, startTime, publishedAt);
+          factory.createForPublished(sampleMessage, batchId, leaseOwner, startTime, publishedAt);
 
       // Then: 验证基本字段
       assertThat(log.getOutboxMessageId()).isEqualTo(1001L);
@@ -173,8 +170,7 @@ class OutboxRelayLogFactoryTest {
 
       // When: 创建发布成功的日志
       OutboxRelayLog log =
-          factory.createForPublished(
-              sampleMessage, batchId, leaseOwner, startTime, publishedAt);
+          factory.createForPublished(sampleMessage, batchId, leaseOwner, startTime, publishedAt);
 
       // Then: 验证时间戳
       assertThat(log.getStartedAt()).isEqualTo(startTime);
@@ -190,8 +186,7 @@ class OutboxRelayLogFactoryTest {
 
       // When: 创建发布成功的日志
       OutboxRelayLog log =
-          factory.createForPublished(
-              sampleMessage, batchId, leaseOwner, startTime, publishedAt);
+          factory.createForPublished(sampleMessage, batchId, leaseOwner, startTime, publishedAt);
 
       // Then: 尝试次数应为 3（retryCount=2 + 1）
       assertThat(log.getAttemptNumber()).isEqualTo(3);
@@ -205,8 +200,7 @@ class OutboxRelayLogFactoryTest {
 
       // When: 创建发布成功的日志
       OutboxRelayLog log =
-          factory.createForPublished(
-              sampleMessage, batchId, leaseOwner, startTime, publishedAt);
+          factory.createForPublished(sampleMessage, batchId, leaseOwner, startTime, publishedAt);
 
       // Then: 错误字段应为 null
       assertThat(log.getErrorCode()).isNull();
@@ -424,7 +418,13 @@ class OutboxRelayLogFactoryTest {
       // When: 创建永久失败的日志
       OutboxRelayLog log =
           factory.createForFailed(
-              sampleMessage, batchId, leaseOwner, startTime, "ERROR_CODE", longErrorMessage, "FATAL");
+              sampleMessage,
+              batchId,
+              leaseOwner,
+              startTime,
+              "ERROR_CODE",
+              longErrorMessage,
+              "FATAL");
 
       // Then: 错误消息应被截断为 512 字符
       assertThat(log.getErrorMessage()).hasSize(512);
@@ -534,7 +534,8 @@ class OutboxRelayLogFactoryTest {
       Instant sameTime = fixedNow;
 
       // When: 创建租约竞争失败的日志
-      OutboxRelayLog log = factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, sameTime);
+      OutboxRelayLog log =
+          factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, sameTime);
 
       // Then: 持续时间应为 0
       assertThat(log.getDurationMs()).isEqualTo(0);
@@ -551,13 +552,16 @@ class OutboxRelayLogFactoryTest {
       Instant start3 = fixedNow.minus(Duration.ofMinutes(1));
 
       // When & Then: 验证各种持续时间计算
-      OutboxRelayLog log1 = factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, start1);
+      OutboxRelayLog log1 =
+          factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, start1);
       assertThat(log1.getDurationMs()).isEqualTo(1);
 
-      OutboxRelayLog log2 = factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, start2);
+      OutboxRelayLog log2 =
+          factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, start2);
       assertThat(log2.getDurationMs()).isEqualTo(1000);
 
-      OutboxRelayLog log3 = factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, start3);
+      OutboxRelayLog log3 =
+          factory.createForLeaseMissed(sampleMessage, batchId, leaseOwner, start3);
       assertThat(log3.getDurationMs()).isEqualTo(60000);
     }
   }
@@ -572,8 +576,7 @@ class OutboxRelayLogFactoryTest {
       // Given: 使用不同的固定时间创建工厂
       Instant differentTime = Instant.parse("2025-12-01T12:00:00Z");
       Clock differentClock = Clock.fixed(differentTime, ZoneOffset.UTC);
-      OutboxRelayLogFactory factoryWithDifferentClock =
-          new OutboxRelayLogFactory(differentClock);
+      OutboxRelayLogFactory factoryWithDifferentClock = new OutboxRelayLogFactory(differentClock);
 
       // When: 创建租约竞争失败的日志
       OutboxRelayLog log =
@@ -588,8 +591,7 @@ class OutboxRelayLogFactoryTest {
     @DisplayName("应允许使用系统时钟创建工厂")
     void shouldAllowSystemClockCreation() {
       // When: 使用系统时钟创建工厂
-      OutboxRelayLogFactory factoryWithSystemClock =
-          new OutboxRelayLogFactory(Clock.systemUTC());
+      OutboxRelayLogFactory factoryWithSystemClock = new OutboxRelayLogFactory(Clock.systemUTC());
 
       // Then: 不应抛出异常
       assertThatCode(

@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.enums.BatchStatus;
 import com.patra.ingest.domain.model.vo.batch.BatchStats;
 import com.patra.ingest.domain.model.vo.shared.IdempotentKey;
 import com.patra.ingest.infra.persistence.entity.TaskRunBatchDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -456,7 +456,8 @@ class TaskRunBatchConverterTest {
   @DisplayName("应当正确处理基于游标的分页（pageNo为null）")
   void shouldHandleCursorBasedPagination() {
     // Given: 游标分页的TaskRunBatch（pageNo为null）
-    IdempotentKey key = new IdempotentKey("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+    IdempotentKey key =
+        new IdempotentKey("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
     TaskRunBatch batch =
         TaskRunBatch.restore(
             1L,
@@ -493,7 +494,8 @@ class TaskRunBatchConverterTest {
   @DisplayName("应当正确处理基于页码的分页（beforeToken为null）")
   void shouldHandlePageBasedPagination() {
     // Given: 页码分页的TaskRunBatch（beforeToken为null）
-    IdempotentKey key = new IdempotentKey("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210");
+    IdempotentKey key =
+        new IdempotentKey("fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210");
     TaskRunBatch batch =
         TaskRunBatch.restore(
             1L,

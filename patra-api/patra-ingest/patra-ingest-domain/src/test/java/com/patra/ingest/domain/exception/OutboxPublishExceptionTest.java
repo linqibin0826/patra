@@ -88,9 +88,7 @@ class OutboxPublishExceptionTest {
       // Then
       assertThat(reasons)
           .containsExactlyInAnyOrder(
-              Reason.CHANNEL_NOT_ALLOWED,
-              Reason.HEADERS_INVALID,
-              Reason.SEND_FAILED);
+              Reason.CHANNEL_NOT_ALLOWED, Reason.HEADERS_INVALID, Reason.SEND_FAILED);
     }
 
     @Test
@@ -141,8 +139,7 @@ class OutboxPublishExceptionTest {
     @DisplayName("可重试错误应该包含 DEP_UNAVAILABLE 错误特征")
     void retryableErrorsShouldContainDepUnavailableTrait() {
       // Given
-      OutboxPublishException exception =
-          new OutboxPublishException(Reason.SEND_FAILED, "发送失败");
+      OutboxPublishException exception = new OutboxPublishException(Reason.SEND_FAILED, "发送失败");
 
       // When
       Set<ErrorTrait> traits = exception.getErrorTraits();
@@ -160,8 +157,7 @@ class OutboxPublishExceptionTest {
     @DisplayName("应该继承自 OutboxRelayExecutionException")
     void shouldExtendOutboxRelayExecutionException() {
       // Given
-      OutboxPublishException exception =
-          new OutboxPublishException(Reason.SEND_FAILED, "发布失败");
+      OutboxPublishException exception = new OutboxPublishException(Reason.SEND_FAILED, "发布失败");
 
       // When & Then
       assertThat(exception).isInstanceOf(OutboxRelayExecutionException.class);
@@ -171,8 +167,7 @@ class OutboxPublishExceptionTest {
     @DisplayName("应该继承自 IngestException")
     void shouldExtendIngestException() {
       // Given
-      OutboxPublishException exception =
-          new OutboxPublishException(Reason.SEND_FAILED, "发布失败");
+      OutboxPublishException exception = new OutboxPublishException(Reason.SEND_FAILED, "发布失败");
 
       // When & Then
       assertThat(exception).isInstanceOf(IngestException.class);

@@ -4,6 +4,7 @@
  * <p>本包提供 Outbox 中继的 Spring Boot 配置属性。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>定义中继配置属性（批大小、租约时长、轮询间隔）
  *   <li>提供配置默认值和验证规则
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxRelayProperties} - Outbox 中继属性
  *       <ul>
@@ -25,6 +27,7 @@
  * </ul>
  *
  * <h2>配置示例</h2>
+ *
  * <pre>
  * # application.yml
  * patra:
@@ -40,6 +43,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Configuration
  * @EnableConfigurationProperties(OutboxRelayProperties.class)

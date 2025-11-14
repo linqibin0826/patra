@@ -2,7 +2,6 @@ package com.patra.starter.provenance.common.converter;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -137,8 +136,7 @@ class XmlToJsonConverterTest {
         """;
 
     // Act & Assert - 不应抛出异常
-    assertThatCode(() -> converter.convert(xml, TestPerson.class))
-        .doesNotThrowAnyException();
+    assertThatCode(() -> converter.convert(xml, TestPerson.class)).doesNotThrowAnyException();
 
     TestPerson result = converter.convert(xml, TestPerson.class);
     assertThat(result.name).isEqualTo("John");

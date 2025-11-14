@@ -4,14 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
-import com.patra.starter.provenance.internal.metadata.PlanMetadata;
-import com.patra.starter.provenance.internal.metadata.PubmedPlanMetadata;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
 import com.patra.starter.provenance.common.processor.ProcessResult;
 import com.patra.starter.provenance.common.processor.ProviderContext;
 import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import com.patra.starter.provenance.common.provider.ProviderRequest;
 import com.patra.starter.provenance.common.provider.ProviderResult;
+import com.patra.starter.provenance.internal.metadata.PlanMetadata;
+import com.patra.starter.provenance.internal.metadata.PubmedPlanMetadata;
 import com.patra.starter.provenance.pubmed.model.request.ESearchRequest;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import com.patra.starter.provenance.pubmed.processor.PubmedLiteratureProcessor;
@@ -75,8 +75,7 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
       String webEnv = result != null ? result.webEnv() : null;
       String queryKey = result != null ? result.queryKey() : null;
 
-      log.info("PubMed 计划元数据已准备: totalCount={}, hasWebEnv={}",
-               totalCount, webEnv != null);
+      log.info("PubMed 计划元数据已准备: totalCount={}, hasWebEnv={}", totalCount, webEnv != null);
 
       // 4. 返回 PubmedPlanMetadata
       return new PubmedPlanMetadata(totalCount, webEnv, queryKey);
@@ -87,19 +86,13 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
     } catch (Exception ex) {
       log.error("准备 PubMed 计划元数据时发生未知错误: query={}", query, ex);
       throw new ProvenanceClientException(
-          "pubmed",
-          "preparePlan",
-          "准备 PubMed 计划元数据失败: " + ex.getMessage(),
-          ex
-      );
+          "pubmed", "preparePlan", "准备 PubMed 计划元数据失败: " + ex.getMessage(), ex);
     }
   }
 
   @Override
   public <T> ProviderResult<T> fetchData(
-      ProviderRequest request,
-      DataType dataType,
-      Class<T> targetClass) {
+      ProviderRequest request, DataType dataType, Class<T> targetClass) {
     long start = System.currentTimeMillis();
     int batchNo = request.metadata().batchNo();
 
@@ -107,11 +100,10 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
 
     // 1. 验证类型一致性
     if (!dataType.getDataClass().isAssignableFrom(targetClass)) {
-      String errorMsg = String.format(
-          "类型不匹配: DataType期望%s, 但提供了%s",
-          dataType.getDataClass().getSimpleName(),
-          targetClass.getSimpleName()
-      );
+      String errorMsg =
+          String.format(
+              "类型不匹配: DataType期望%s, 但提供了%s",
+              dataType.getDataClass().getSimpleName(), targetClass.getSimpleName());
       log.error(errorMsg);
       return ProviderResult.nonRetriableFailure(dataType, errorMsg);
     }
@@ -120,8 +112,10 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
     if (dataType == DataType.LITERATURE) {
       try {
         ProviderContext context = ProviderContext.builder().build();
-        ProcessResult<CanonicalLiterature> processResult = literatureProcessor.process(request, context);
-        ProviderResult<CanonicalLiterature> result = convertToProviderResult(processResult, dataType);
+        ProcessResult<CanonicalLiterature> processResult =
+            literatureProcessor.process(request, context);
+        ProviderResult<CanonicalLiterature> result =
+            convertToProviderResult(processResult, dataType);
 
         long duration = System.currentTimeMillis() - start;
         log.info(
@@ -137,8 +131,7 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
         long duration = System.currentTimeMillis() - start;
         log.error("PubMed provider error: batchNo={} duration={}ms", batchNo, duration, ex);
         return ProviderResult.nonRetriableFailure(
-            dataType,
-            "PubMed provider error: " + ex.getMessage());
+            dataType, "PubMed provider error: " + ex.getMessage());
       }
     }
 
@@ -150,9 +143,7 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
     return ProviderResult.nonRetriableFailure(dataType, errorMsg);
   }
 
-  /**
-   * 转换 ProcessResult 为 ProviderResult
-   */
+  /** 转换 ProcessResult 为 ProviderResult */
   private ProviderResult<CanonicalLiterature> convertToProviderResult(
       ProcessResult<CanonicalLiterature> processResult, DataType dataType) {
     if (processResult.success()) {
@@ -162,14 +153,9 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
               dataType,
               processResult.nextCursor(),
               processResult.errorMessage())
-          : ProviderResult.success(
-              processResult.data(),
-              dataType,
-              processResult.nextCursor());
+          : ProviderResult.success(processResult.data(), dataType, processResult.nextCursor());
     } else {
-      return ProviderResult.nonRetriableFailure(
-          dataType,
-          processResult.errorMessage());
+      return ProviderResult.nonRetriableFailure(dataType, processResult.errorMessage());
     }
   }
 }

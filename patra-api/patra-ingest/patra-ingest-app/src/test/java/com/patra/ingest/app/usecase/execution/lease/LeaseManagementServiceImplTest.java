@@ -97,8 +97,7 @@ class LeaseManagementServiceImplTest {
 
       // 验证调用链
       verify(taskRepository).findById(TASK_ID);
-      verify(taskRepository)
-          .tryAcquireLease(TASK_ID, OWNER, fixedInstant, 60, IDEMPOTENT_KEY);
+      verify(taskRepository).tryAcquireLease(TASK_ID, OWNER, fixedInstant, 60, IDEMPOTENT_KEY);
       verify(clock).instant();
     }
 
@@ -182,8 +181,7 @@ class LeaseManagementServiceImplTest {
     @DisplayName("应该成功续约租约")
     void shouldRenewLeaseSuccessfully() {
       // Given: Mock 续约成功
-      when(taskRepository.renewLease(
-              eq(TASK_ID), eq(OWNER), eq(fixedInstant), eq(60)))
+      when(taskRepository.renewLease(eq(TASK_ID), eq(OWNER), eq(fixedInstant), eq(60)))
           .thenReturn(true);
 
       // When: 续约租约
@@ -200,8 +198,7 @@ class LeaseManagementServiceImplTest {
     @DisplayName("续约失败应该返回 false")
     void shouldReturnFalseWhenRenewalFails() {
       // Given: Mock 续约失败（租约已被撤销或过期）
-      when(taskRepository.renewLease(anyLong(), anyString(), any(), anyInt()))
-          .thenReturn(false);
+      when(taskRepository.renewLease(anyLong(), anyString(), any(), anyInt())).thenReturn(false);
 
       // When: 续约租约
       boolean renewed = leaseService.renewLease(TASK_ID, OWNER, LEASE_DURATION);
@@ -410,8 +407,7 @@ class LeaseManagementServiceImplTest {
 
       // Then: 正常处理
       assertThat(acquired).isTrue();
-      verify(taskRepository)
-          .tryAcquireLease(eq(TASK_ID), eq(OWNER), any(), eq(86400), anyString());
+      verify(taskRepository).tryAcquireLease(eq(TASK_ID), eq(OWNER), any(), eq(86400), anyString());
     }
 
     @Test
@@ -445,8 +441,7 @@ class LeaseManagementServiceImplTest {
           .thenReturn(true);
 
       // When: 获取租约
-      boolean acquired =
-          serviceWithTokyoClock.tryAcquireLease(TASK_ID, OWNER, LEASE_DURATION);
+      boolean acquired = serviceWithTokyoClock.tryAcquireLease(TASK_ID, OWNER, LEASE_DURATION);
 
       // Then: 正常处理（Instant 不受时区影响）
       assertThat(acquired).isTrue();

@@ -4,6 +4,7 @@ package com.patra.starter.provenance.internal.metadata;
  * EPMC 特定的计划元数据
  *
  * <p>包含 EPMC API 返回的特定信息:
+ *
  * <ul>
  *   <li>cursorMark - 游标标记,用于基于游标的分页
  * </ul>
@@ -13,25 +14,25 @@ package com.patra.starter.provenance.internal.metadata;
  */
 public class EpmcPlanMetadata extends PlanMetadata {
 
-    private final String cursorMark;
+  private final String cursorMark;
 
-    public EpmcPlanMetadata(int totalCount, String cursorMark) {
-        super("epmc", totalCount);
-        this.cursorMark = cursorMark;
-    }
+  public EpmcPlanMetadata(int totalCount, String cursorMark) {
+    super("epmc", totalCount);
+    this.cursorMark = cursorMark;
+  }
 
-    @Override
-    public boolean hasSessionToken() {
-        return cursorMark != null && !cursorMark.isBlank();
-    }
+  @Override
+  public boolean hasSessionToken() {
+    return cursorMark != null && !cursorMark.isBlank();
+  }
 
-    public String cursorMark() {
-        return cursorMark;
-    }
+  public String cursorMark() {
+    return cursorMark;
+  }
 
-    @Override
-    public String toString() {
-        return String.format("EpmcPlanMetadata[totalCount=%d, hasCursorMark=%b]",
-                totalCount(), hasSessionToken());
-    }
+  @Override
+  public String toString() {
+    return String.format(
+        "EpmcPlanMetadata[totalCount=%d, hasCursorMark=%b]", totalCount(), hasSessionToken());
+  }
 }

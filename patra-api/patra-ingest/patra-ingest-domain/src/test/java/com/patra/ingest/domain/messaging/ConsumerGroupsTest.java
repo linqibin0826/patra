@@ -276,8 +276,7 @@ class ConsumerGroupsTest {
       String result = ConsumerGroups.svc("ingest", "task-ready");
 
       // Then
-      assertThat(result)
-          .matches("^svc-[a-z0-9-]+-[a-z0-9-]+-cg$");
+      assertThat(result).matches("^svc-[a-z0-9-]+-[a-z0-9-]+-cg$");
     }
   }
 

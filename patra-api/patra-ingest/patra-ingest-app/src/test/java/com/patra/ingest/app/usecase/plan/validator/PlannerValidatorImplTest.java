@@ -1,6 +1,5 @@
 package com.patra.ingest.app.usecase.plan.validator;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,8 +50,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createMinimalSnapshot();
 
       // When & Then: 验证通过
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, null, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, null, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -67,8 +65,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithIncrementalCapability();
 
       // When & Then: 验证通过
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -103,8 +100,7 @@ class PlannerValidatorImplTest {
       // When & Then: 验证通过
       assertThatCode(
               () ->
-                  validator.validateBeforeAssemble(
-                      triggerNorm, createMinimalSnapshot(), null, 10L))
+                  validator.validateBeforeAssemble(triggerNorm, createMinimalSnapshot(), null, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -117,8 +113,7 @@ class PlannerValidatorImplTest {
       // When & Then: 抛出窗口缺失异常
       assertThatThrownBy(
               () ->
-                  validator.validateBeforeAssemble(
-                      triggerNorm, createMinimalSnapshot(), null, 10L))
+                  validator.validateBeforeAssemble(triggerNorm, createMinimalSnapshot(), null, 10L))
           .isInstanceOf(PlanValidationException.class)
           .hasMessageContaining("must not be null")
           .extracting(ex -> ((PlanValidationException) ex).getReason())
@@ -262,7 +257,8 @@ class PlannerValidatorImplTest {
 
       // When & Then: 验证通过
       assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, createMinimalSnapshot(), null, 0L))
+              () ->
+                  validator.validateBeforeAssemble(triggerNorm, createMinimalSnapshot(), null, 0L))
           .doesNotThrowAnyException();
     }
 
@@ -342,8 +338,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithIncrementalCapability();
 
       // When & Then: 验证通过
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -359,8 +354,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithFullMode();
 
       // When & Then: 抛出能力不匹配异常
-      assertThatThrownBy(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatThrownBy(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .isInstanceOf(PlanValidationException.class)
           .hasMessageContaining("不支持自动增量采集")
           .extracting(ex -> ((PlanValidationException) ex).getReason())
@@ -378,8 +372,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithDateOffsetMissingFields();
 
       // When & Then: 抛出能力不匹配异常
-      assertThatThrownBy(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatThrownBy(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .isInstanceOf(PlanValidationException.class)
           .hasMessageContaining("但缺少日期字段配置")
           .extracting(ex -> ((PlanValidationException) ex).getReason())
@@ -397,8 +390,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithDateOffsetHasOffsetFieldKey();
 
       // When & Then: 验证通过
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -413,8 +405,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithCompositeOffsetHasWindowDateFieldKey();
 
       // When & Then: 验证通过
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -426,8 +417,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createMinimalSnapshot();
 
       // When & Then: 验证通过(UPDATE 不需要增量能力验证)
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, null, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, null, 10L))
           .doesNotThrowAnyException();
     }
   }
@@ -447,8 +437,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithInvalidWindowSize(null);
 
       // When & Then: 不抛出异常,只记录警告
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -463,8 +452,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithInvalidWindowSize(0);
 
       // When & Then: 不抛出异常,只记录警告
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -479,8 +467,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithInvalidMaxWindowSpan(0);
 
       // When & Then: 不抛出异常,只记录警告
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
 
@@ -495,8 +482,7 @@ class PlannerValidatorImplTest {
       ProvenanceConfigSnapshot snapshot = createSnapshotWithFullMode();
 
       // When & Then: 不抛出异常(FULL 模式跳过配置完整性验证)
-      assertThatCode(
-              () -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
+      assertThatCode(() -> validator.validateBeforeAssemble(triggerNorm, snapshot, window, 10L))
           .doesNotThrowAnyException();
     }
   }
@@ -574,8 +560,7 @@ class PlannerValidatorImplTest {
             null,
             null);
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
   /**
@@ -611,8 +596,7 @@ class PlannerValidatorImplTest {
             null,
             null);
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
   /**
@@ -648,8 +632,7 @@ class PlannerValidatorImplTest {
             null,
             null);
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
   /**
@@ -685,8 +668,7 @@ class PlannerValidatorImplTest {
             null,
             null);
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
   /**
@@ -722,8 +704,7 @@ class PlannerValidatorImplTest {
             null,
             null);
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
   /**
@@ -760,8 +741,7 @@ class PlannerValidatorImplTest {
             null,
             null);
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 
   /**
@@ -799,7 +779,6 @@ class PlannerValidatorImplTest {
             null,
             maxWindowSpanSeconds); // 最大窗口跨度无效
 
-    return new ProvenanceConfigSnapshot(
-        provenanceInfo, windowOffset, null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenanceInfo, windowOffset, null, null, null, null, null);
   }
 }

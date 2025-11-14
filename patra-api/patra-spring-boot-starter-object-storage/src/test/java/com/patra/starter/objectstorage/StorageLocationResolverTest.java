@@ -48,8 +48,7 @@ class StorageLocationResolverTest {
   void resolve_withCustomKeyGenerator_shouldUseCustomKey() {
     // Arrange
     ObjectKeyGenerator customGenerator = mock(ObjectKeyGenerator.class);
-    when(customGenerator.generate(any(ObjectKeyContext.class)))
-        .thenReturn("custom/path/file.pdf");
+    when(customGenerator.generate(any(ObjectKeyContext.class))).thenReturn("custom/path/file.pdf");
 
     StorageLocationResolver resolver =
         new StorageLocationResolver("prod", "patra-registry", customGenerator);
@@ -177,10 +176,11 @@ class StorageLocationResolverTest {
     // Arrange
     ObjectKeyGenerator customGenerator = mock(ObjectKeyGenerator.class);
     when(customGenerator.generate(any(ObjectKeyContext.class)))
-        .thenAnswer(invocation -> {
-          ObjectKeyContext ctx = invocation.getArgument(0);
-          return "path/file" + ctx.extension();
-        });
+        .thenAnswer(
+            invocation -> {
+              ObjectKeyContext ctx = invocation.getArgument(0);
+              return "path/file" + ctx.extension();
+            });
 
     StorageLocationResolver resolver =
         new StorageLocationResolver("dev", "patra-ingest", customGenerator);
@@ -303,18 +303,19 @@ class StorageLocationResolverTest {
     // Arrange
     ObjectKeyGenerator customGenerator = mock(ObjectKeyGenerator.class);
     when(customGenerator.generate(any(ObjectKeyContext.class)))
-        .thenAnswer(invocation -> {
-          ObjectKeyContext ctx = invocation.getArgument(0);
+        .thenAnswer(
+            invocation -> {
+              ObjectKeyContext ctx = invocation.getArgument(0);
 
-          // 验证传递的参数
-          assertThat(ctx.serviceName()).isEqualTo("patra-ingest");
-          assertThat(ctx.businessType()).isEqualTo("document");
-          assertThat(ctx.businessId()).isEqualTo("biz123");
-          assertThat(ctx.partitionDate()).isEqualTo(LocalDate.of(2024, 1, 15));
-          assertThat(ctx.extension()).isEqualTo(".pdf");
+              // 验证传递的参数
+              assertThat(ctx.serviceName()).isEqualTo("patra-ingest");
+              assertThat(ctx.businessType()).isEqualTo("document");
+              assertThat(ctx.businessId()).isEqualTo("biz123");
+              assertThat(ctx.partitionDate()).isEqualTo(LocalDate.of(2024, 1, 15));
+              assertThat(ctx.extension()).isEqualTo(".pdf");
 
-          return "validated/key.pdf";
-        });
+              return "validated/key.pdf";
+            });
 
     StorageLocationResolver resolver =
         new StorageLocationResolver("dev", "patra-ingest", customGenerator);
@@ -380,8 +381,7 @@ class StorageLocationResolverTest {
   void resolve_shouldGenerateStorageKey() {
     // Arrange
     ObjectKeyGenerator customGenerator = mock(ObjectKeyGenerator.class);
-    when(customGenerator.generate(any(ObjectKeyContext.class)))
-        .thenReturn("2024/01/15/test.pdf");
+    when(customGenerator.generate(any(ObjectKeyContext.class))).thenReturn("2024/01/15/test.pdf");
 
     StorageLocationResolver resolver =
         new StorageLocationResolver("dev", "patra-ingest", customGenerator);

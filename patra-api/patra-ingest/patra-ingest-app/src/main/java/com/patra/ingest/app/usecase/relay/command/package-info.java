@@ -4,6 +4,7 @@
  * <p>本包定义 Outbox 中继用例的输入命令对象。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>封装中继用例的输入参数
  *   <li>支持按通道过滤（channel）或处理所有通道（channel=null）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxRelayCommand} - Outbox 中继命令
  *       <ul>
@@ -20,7 +22,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>中继所有通道</h3>
+ *
  * <pre>{@code
  * var command = OutboxRelayCommand.builder()
  *     .batchSize(100)
@@ -30,6 +34,7 @@
  * }</pre>
  *
  * <h3>中继特定通道</h3>
+ *
  * <pre>{@code
  * var command = OutboxRelayCommand.builder()
  *     .channel(OutboxChannels.INGEST_TASK_READY)

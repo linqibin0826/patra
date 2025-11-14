@@ -79,8 +79,7 @@ class IngestScheduleParameterExceptionTest {
     @DisplayName("应该包含 RULE_VIOLATION 错误特征")
     void shouldContainRuleViolationErrorTrait() {
       // Given
-      IngestScheduleParameterException exception =
-          new IngestScheduleParameterException("参数错误");
+      IngestScheduleParameterException exception = new IngestScheduleParameterException("参数错误");
 
       // When
       Set<ErrorTrait> traits = exception.getErrorTraits();
@@ -98,8 +97,7 @@ class IngestScheduleParameterExceptionTest {
     @DisplayName("应该继承自 IngestException")
     void shouldExtendIngestException() {
       // Given
-      IngestScheduleParameterException exception =
-          new IngestScheduleParameterException("参数错误");
+      IngestScheduleParameterException exception = new IngestScheduleParameterException("参数错误");
 
       // When & Then
       assertThat(exception).isInstanceOf(IngestException.class);
@@ -109,12 +107,10 @@ class IngestScheduleParameterExceptionTest {
     @DisplayName("应该实现 HasErrorTraits 接口")
     void shouldImplementHasErrorTraits() {
       // Given
-      IngestScheduleParameterException exception =
-          new IngestScheduleParameterException("参数错误");
+      IngestScheduleParameterException exception = new IngestScheduleParameterException("参数错误");
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

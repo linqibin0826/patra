@@ -13,8 +13,6 @@ import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,12 +61,14 @@ class ObjectStorageTemplateTest {
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenReturn(expectedResult);
 
     // 模拟 RetryTemplate 直接执行回调
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act
     UploadResult result = template.upload(BUCKET, KEY, inputStream, metadata);
@@ -93,12 +93,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -119,12 +121,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -145,12 +149,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -170,12 +176,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -195,12 +203,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -220,12 +230,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -245,12 +257,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -270,12 +284,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -295,12 +311,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -328,19 +346,22 @@ class ObjectStorageTemplateTest {
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenReturn(expectedResult);
 
     // 模拟重试 2 次后成功
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(2);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(2);
+              return callback.doWithRetry(context);
+            });
 
     // Act
     UploadResult result = template.upload(BUCKET, KEY, inputStream, metadata);
 
     // Assert
     assertThat(result).isEqualTo(expectedResult);
-    verify(metrics).recordUploadSuccess(eq(ProviderType.MINIO), eq(BUCKET), anyLong(), eq(FILE_SIZE));
+    verify(metrics)
+        .recordUploadSuccess(eq(ProviderType.MINIO), eq(BUCKET), anyLong(), eq(FILE_SIZE));
     verify(metrics).recordRetry(ProviderType.MINIO, BUCKET, 2);
   }
 
@@ -362,12 +383,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenReturn(expectedResult);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act
     template.upload(BUCKET, KEY, inputStream, metadata);
@@ -388,12 +411,14 @@ class ObjectStorageTemplateTest {
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
     // 模拟重试 3 次后仍失败
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(3);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(3);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))
@@ -414,12 +439,14 @@ class ObjectStorageTemplateTest {
     when(provider.getProviderType()).thenReturn(ProviderType.MINIO);
     when(provider.upload(BUCKET, KEY, inputStream, metadata)).thenThrow(exception);
 
-    when(retryTemplate.execute(any())).thenAnswer(invocation -> {
-      RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
-      RetryContext context = mock(RetryContext.class);
-      when(context.getRetryCount()).thenReturn(0);
-      return callback.doWithRetry(context);
-    });
+    when(retryTemplate.execute(any()))
+        .thenAnswer(
+            invocation -> {
+              RetryCallback<UploadResult, Exception> callback = invocation.getArgument(0);
+              RetryContext context = mock(RetryContext.class);
+              when(context.getRetryCount()).thenReturn(0);
+              return callback.doWithRetry(context);
+            });
 
     // Act & Assert
     assertThatThrownBy(() -> template.upload(BUCKET, KEY, inputStream, metadata))

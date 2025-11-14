@@ -1221,10 +1221,16 @@ class StorageProviderTest {
       StorageProvider cos = StorageProvider.COS;
 
       // When
-      boolean minioIsCloud = (minio == StorageProvider.S3 || minio == StorageProvider.OSS || minio == StorageProvider.COS);
-      boolean s3IsCloud = (s3 == StorageProvider.S3 || s3 == StorageProvider.OSS || s3 == StorageProvider.COS);
-      boolean ossIsCloud = (oss == StorageProvider.S3 || oss == StorageProvider.OSS || oss == StorageProvider.COS);
-      boolean cosIsCloud = (cos == StorageProvider.S3 || cos == StorageProvider.OSS || cos == StorageProvider.COS);
+      boolean minioIsCloud =
+          (minio == StorageProvider.S3
+              || minio == StorageProvider.OSS
+              || minio == StorageProvider.COS);
+      boolean s3IsCloud =
+          (s3 == StorageProvider.S3 || s3 == StorageProvider.OSS || s3 == StorageProvider.COS);
+      boolean ossIsCloud =
+          (oss == StorageProvider.S3 || oss == StorageProvider.OSS || oss == StorageProvider.COS);
+      boolean cosIsCloud =
+          (cos == StorageProvider.S3 || cos == StorageProvider.OSS || cos == StorageProvider.COS);
 
       // Then
       assertThat(minioIsCloud).isFalse(); // MinIO 是开源自建

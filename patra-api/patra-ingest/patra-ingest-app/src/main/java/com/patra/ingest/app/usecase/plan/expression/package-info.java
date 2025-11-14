@@ -1,10 +1,10 @@
 /**
  * Plan 表达式构建器包。
  *
- * <p>本包负责构建 Plan 的表达式描述符（未编译的原始表达式），
- * 表达式在 Task 执行阶段会被编译为可执行的查询和参数。
+ * <p>本包负责构建 Plan 的表达式描述符（未编译的原始表达式）， 表达式在 Task 执行阶段会被编译为可执行的查询和参数。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>根据 Provenance 配置构建原始表达式
  *   <li>生成表达式的哈希值（用于去重和缓存）
@@ -13,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code PlanExpressionBuilder} - 表达式构建器
  *   <li>{@code PlanExpressionDescriptor} - 表达式描述符
@@ -24,6 +25,7 @@
  * </ul>
  *
  * <h2>表达式生命周期</h2>
+ *
  * <pre>
  * 1. Plan 摄入阶段（本包）
  *    └─ PlanExpressionBuilder.build() → PlanExpressionDescriptor（未编译）
@@ -39,7 +41,9 @@
  * </pre>
  *
  * <h2>表达式示例</h2>
+ *
  * <h3>PubMed HARVEST 表达式</h3>
+ *
  * <pre>
  * {
  *   "query": "entrez_date:[${from} TO ${to}]",
@@ -53,6 +57,7 @@
  * </pre>
  *
  * <h3>EPMC SEARCH 表达式</h3>
+ *
  * <pre>
  * {
  *   "query": "(FIRST_PDATE:[${from} TO ${to}])",
@@ -66,6 +71,7 @@
  * </pre>
  *
  * <h2>表达式哈希</h2>
+ *
  * <ul>
  *   <li>使用 SHA-256 计算表达式的哈希值
  *   <li>用于判断两个 Plan 是否使用相同的表达式
@@ -73,6 +79,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

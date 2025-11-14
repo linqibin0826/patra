@@ -194,7 +194,8 @@ class RelayRetryPolicyTest {
       assertThat(policy.computeDelay(4)).isEqualTo(Duration.ofSeconds(40)); // 5 * 2^3 = 40
       assertThat(policy.computeDelay(5)).isEqualTo(Duration.ofSeconds(80)); // 5 * 2^4 = 80
       assertThat(policy.computeDelay(6)).isEqualTo(Duration.ofSeconds(160)); // 5 * 2^5 = 160
-      assertThat(policy.computeDelay(7)).isEqualTo(Duration.ofSeconds(300)); // 5 * 2^6 = 320 → 300(max)
+      assertThat(policy.computeDelay(7))
+          .isEqualTo(Duration.ofSeconds(300)); // 5 * 2^6 = 320 → 300(max)
     }
   }
 
@@ -333,7 +334,8 @@ class RelayRetryPolicyTest {
       assertThat(policy.computeDelay(4)).isEqualTo(Duration.ofSeconds(27)); // 1 * 3^3 = 27
       assertThat(policy.computeDelay(5)).isEqualTo(Duration.ofSeconds(81)); // 1 * 3^4 = 81
       assertThat(policy.computeDelay(6)).isEqualTo(Duration.ofSeconds(243)); // 1 * 3^5 = 243
-      assertThat(policy.computeDelay(7)).isEqualTo(Duration.ofSeconds(300)); // 1 * 3^6 = 729 → 300(max)
+      assertThat(policy.computeDelay(7))
+          .isEqualTo(Duration.ofSeconds(300)); // 1 * 3^6 = 729 → 300(max)
     }
   }
 

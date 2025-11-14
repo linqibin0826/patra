@@ -18,7 +18,6 @@ import com.patra.starter.provenance.pubmed.model.response.EPostResponse;
 import com.patra.starter.provenance.pubmed.model.response.ESearchResponse;
 import java.io.IOException;
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 
 /**

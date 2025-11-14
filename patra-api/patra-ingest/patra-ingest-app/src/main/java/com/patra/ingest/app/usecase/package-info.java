@@ -4,6 +4,7 @@
  * <p>本包包含 patra-ingest 服务的所有业务用例编排器（Orchestrator）和协调器（Coordinator）。
  *
  * <h2>子模块</h2>
+ *
  * <ul>
  *   <li>{@link com.patra.ingest.app.usecase.plan} - Plan 摄入用例编排
  *       <ul>
@@ -20,7 +21,9 @@
  * </ul>
  *
  * <h2>核心概念</h2>
+ *
  * <h3>编排器（Orchestrator）</h3>
+ *
  * <ul>
  *   <li>协调多个领域对象、仓储、外部服务完成完整业务流程
  *   <li>管理事务边界（使用 {@code @Transactional}）
@@ -29,6 +32,7 @@
  * </ul>
  *
  * <h3>协调器（Coordinator）</h3>
+ *
  * <ul>
  *   <li>负责特定子流程的协调（如持久化、发布、幂等性检查）
  *   <li>被编排器调用，实现关注点分离
@@ -36,6 +40,7 @@
  * </ul>
  *
  * <h3>用例接口（UseCase）</h3>
+ *
  * <ul>
  *   <li>定义用例的公共接口（门面模式）
  *   <li>供 Adapter 层调用，隐藏实现细节
@@ -43,6 +48,7 @@
  * </ul>
  *
  * <h2>设计原则</h2>
+ *
  * <ul>
  *   <li><strong>单一职责</strong>: 每个编排器负责一个完整业务用例
  *   <li><strong>协调而非实现</strong>: 编排器不包含业务逻辑，只协调领域对象
@@ -51,6 +57,7 @@
  * </ul>
  *
  * <h2>典型编排流程</h2>
+ *
  * <pre>{@code
  * @Service
  * @RequiredArgsConstructor

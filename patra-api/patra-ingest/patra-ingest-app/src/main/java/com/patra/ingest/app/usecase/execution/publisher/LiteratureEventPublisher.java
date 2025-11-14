@@ -81,11 +81,7 @@ public class LiteratureEventPublisher
     ProvenanceCode pc = event.provenanceCode();
     String provenanceCode = pc != null ? pc.getCode() : null;
     return new LiteratureReadyHeaders(
-        provenanceCode,
-        event.taskId(),
-        event.runId(),
-        storageKeyCount,
-        event.timestamp());
+        provenanceCode, event.taskId(), event.runId(), storageKeyCount, event.timestamp());
   }
 
   @Override

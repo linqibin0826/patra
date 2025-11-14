@@ -1,5 +1,7 @@
 package com.patra.ingest.domain.model.vo.execution;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -7,13 +9,10 @@ import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
+import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("ExecutionContext 值对象单元测试")
 class ExecutionContextTest {
@@ -473,8 +472,20 @@ class ExecutionContextTest {
       // When
       ExecutionContext context =
           new ExecutionContext(
-              TASK_ID, RUN_ID, PLAN_ID, SLICE_ID, SCHEDULE_INSTANCE_ID, null, "", DataType.LITERATURE, null, "", "", null,
-              "", null);
+              TASK_ID,
+              RUN_ID,
+              PLAN_ID,
+              SLICE_ID,
+              SCHEDULE_INSTANCE_ID,
+              null,
+              "",
+              DataType.LITERATURE,
+              null,
+              "",
+              "",
+              null,
+              "",
+              null);
 
       // Then
       assertThat(context.provenanceCode()).isNull();

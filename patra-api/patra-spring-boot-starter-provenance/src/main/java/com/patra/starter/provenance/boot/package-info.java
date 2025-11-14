@@ -1,8 +1,8 @@
 /**
  * Provenance Starter 启动配置包。
  *
- * <p>本包提供 Spring Boot 自动配置支持，用于快速集成 Provenance 数据源客户端。自动注册
- * PubMed 和 Europe PMC 端口实现，并支持通过属性文件进行声明式配置。
+ * <p>本包提供 Spring Boot 自动配置支持，用于快速集成 Provenance 数据源客户端。自动注册 PubMed 和 Europe PMC
+ * 端口实现，并支持通过属性文件进行声明式配置。
  *
  * <h2>职责</h2>
  *

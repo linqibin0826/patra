@@ -234,7 +234,9 @@ class HeartbeatRenewalServiceImplTest {
       await()
           .atMost(1000, TimeUnit.MILLISECONDS)
           .untilAsserted(
-              () -> verify(leaseManagementService, atLeastOnce()).validateLease(TASK_ID, LEASE_OWNER));
+              () ->
+                  verify(leaseManagementService, atLeastOnce())
+                      .validateLease(TASK_ID, LEASE_OWNER));
 
       // 租约应该被标记为已撤销
       assertThat(handle.isLeaseRevoked()).isTrue();
@@ -408,7 +410,9 @@ class HeartbeatRenewalServiceImplTest {
       await()
           .atMost(500, TimeUnit.MILLISECONDS)
           .untilAsserted(
-              () -> verify(leaseManagementService, atLeastOnce()).validateLease(TASK_ID, LEASE_OWNER));
+              () ->
+                  verify(leaseManagementService, atLeastOnce())
+                      .validateLease(TASK_ID, LEASE_OWNER));
 
       // 清理
       handle.stop();
@@ -450,7 +454,9 @@ class HeartbeatRenewalServiceImplTest {
       await()
           .atMost(1000, TimeUnit.MILLISECONDS)
           .untilAsserted(
-              () -> verify(leaseManagementService, atLeastOnce()).validateLease(TASK_ID, LEASE_OWNER));
+              () ->
+                  verify(leaseManagementService, atLeastOnce())
+                      .validateLease(TASK_ID, LEASE_OWNER));
 
       // 租约不应该被撤销
       assertThat(handle.isLeaseRevoked()).isFalse();

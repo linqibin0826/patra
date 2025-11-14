@@ -1,14 +1,14 @@
 /**
  * Storage 基础设施层 MyBatis Mapper 包。
  *
- * <p>本包包含 patra-storage 服务的 MyBatis Mapper 接口,作为六边形架构基础设施层的一部分。
- * Mapper 接口定义了数据库访问方法,与 MyBatis-Plus 框架配合实现 ORM 功能。
+ * <p>本包包含 patra-storage 服务的 MyBatis Mapper 接口,作为六边形架构基础设施层的一部分。 Mapper 接口定义了数据库访问方法,与 MyBatis-Plus
+ * 框架配合实现 ORM 功能。
  *
  * <h2>核心组件</h2>
  *
  * <ul>
- *   <li>{@link com.patra.storage.infra.persistence.mapper.FileMetadataMapper} -
- *       文件元数据 Mapper,继承 BaseMapper 提供基础 CRUD 操作,并扩展自定义查询方法
+ *   <li>{@link com.patra.storage.infra.persistence.mapper.FileMetadataMapper} - 文件元数据 Mapper,继承
+ *       BaseMapper 提供基础 CRUD 操作,并扩展自定义查询方法
  * </ul>
  *
  * <h2>Mapper 职责</h2>

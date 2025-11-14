@@ -44,6 +44,5 @@ public record ExecutionContext(
     String normalizedExpression,
     WindowSpec windowSpec) {
 
-  public ExecutionContext {
-  }
+  public ExecutionContext {}
 }

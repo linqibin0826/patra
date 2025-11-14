@@ -486,8 +486,7 @@ class TaskAggregateTest {
     void shouldRecordFinishTimeWhenMarkingAsSucceeded() {
       // Given: 运行中的任务
       Instant startedAt = Instant.parse("2025-01-01T10:05:00Z");
-      TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
+      TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
 
       // When: 标记为成功
       Instant finishedAt = Instant.parse("2025-01-01T10:10:00Z");
@@ -505,8 +504,7 @@ class TaskAggregateTest {
     void shouldRecordFinishTimeWhenMarkingAsFailed() {
       // Given: 运行中的任务
       Instant startedAt = Instant.parse("2025-01-01T10:05:00Z");
-      TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
+      TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
 
       // When: 标记为失败
       Instant finishedAt = Instant.parse("2025-01-01T10:08:00Z");
@@ -524,8 +522,7 @@ class TaskAggregateTest {
     void shouldEnsureFinishTimeIsAfterStartTime() {
       // Given: 运行中的任务
       Instant startedAt = Instant.parse("2025-01-01T10:05:00Z");
-      TaskAggregate task =
-          TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
+      TaskAggregate task = TaskAggregateTestDataBuilder.aRunningTask().startedAt(startedAt).build();
 
       // When & Then: 尝试使用早于开始时间的完成时间应该失败
       Instant invalidFinishedAt = Instant.parse("2025-01-01T10:00:00Z");

@@ -275,10 +275,7 @@ class RelayBatchIdTest {
       String timestampPart = batchId.getTimestampPart();
 
       // Then: 应返回前 14 位
-      assertThat(timestampPart)
-          .isEqualTo("20251031150000")
-          .hasSize(14)
-          .matches("\\d{14}");
+      assertThat(timestampPart).isEqualTo("20251031150000").hasSize(14).matches("\\d{14}");
     }
 
     @Test
@@ -291,10 +288,7 @@ class RelayBatchIdTest {
       String uuidPart = batchId.getUuidPart();
 
       // Then: 应返回后 8 位 (跳过分隔符 '-')
-      assertThat(uuidPart)
-          .isEqualTo("a1b2c3d4")
-          .hasSize(8)
-          .matches("[a-f0-9]{8}");
+      assertThat(uuidPart).isEqualTo("a1b2c3d4").hasSize(8).matches("[a-f0-9]{8}");
     }
 
     @Test
@@ -325,9 +319,7 @@ class RelayBatchIdTest {
       RelayBatchId batchId2 = RelayBatchId.of("20251031150000-a1b2c3d4");
 
       // When & Then: 应该相等
-      assertThat(batchId1)
-          .isEqualTo(batchId2)
-          .hasSameHashCodeAs(batchId2);
+      assertThat(batchId1).isEqualTo(batchId2).hasSameHashCodeAs(batchId2);
     }
 
     @Test

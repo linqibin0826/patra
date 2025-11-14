@@ -4,6 +4,7 @@
  * <p>本包提供批次执行的协调逻辑，调用 Provider API 并发布文献数据。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>调用 Provider API（如 PubMed ESearch + EFetch）
  *   <li>解析 API 响应数据
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code GenericBatchExecutor} - 通用批次执行器
  *       <ul>
@@ -26,6 +28,7 @@
  * </ul>
  *
  * <h2>批次执行流程</h2>
+ *
  * <pre>
  * 1. 调用 Provider API
  *    ├─ 构建 API 请求（使用编译后的查询和参数）
@@ -45,7 +48,9 @@
  * </pre>
  *
  * <h2>Provider API 调用示例</h2>
+ *
  * <h3>PubMed ESearch + EFetch</h3>
+ *
  * <pre>
  * Step 1: ESearch（搜索 PMID 列表）
  *   Request: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
@@ -64,7 +69,9 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>通用批次执行器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -102,6 +109,7 @@
  * }</pre>
  *
  * <h3>文献发布编排器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

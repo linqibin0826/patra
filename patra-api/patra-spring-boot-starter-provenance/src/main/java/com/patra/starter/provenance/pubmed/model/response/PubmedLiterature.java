@@ -112,8 +112,8 @@ public final class PubmedLiterature {
 
   /**
    * 返回 MeSH 标引列表。
-   * <p>MeSH (Medical Subject Headings) 是美国国家医学图书馆创建的受控词表,
-   * 用于标引医学文献的主题和内容。每个 MeSH 标引项包含一个主题词和可选的限定词。
+   *
+   * <p>MeSH (Medical Subject Headings) 是美国国家医学图书馆创建的受控词表, 用于标引医学文献的主题和内容。每个 MeSH 标引项包含一个主题词和可选的限定词。
    *
    * @return MeSH 标引列表,如果没有则返回空列表
    */
@@ -123,6 +123,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回补充 MeSH 概念列表。
+   *
    * <p>补充 MeSH 概念用于描述疾病、药物试验等特定主题。
    *
    * @return 补充 MeSH 概念列表,如果没有则返回空列表
@@ -133,6 +134,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回评论、更正、撤稿信息列表。
+   *
    * <p>包含与本文献相关的评论、更正、撤稿、勘误等信息。
    *
    * @return 评论更正信息列表,如果没有则返回空列表
@@ -143,6 +145,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回基因符号列表。
+   *
    * <p>与本文献相关的基因符号标识。
    *
    * @return 基因符号列表,如果没有则返回空列表
@@ -153,6 +156,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回其他 ID 列表（如 PMC ID）。
+   *
    * <p>除 PMID 外的其他标识符,如 PMC ID、NLM ID 等。
    *
    * @return 其他 ID 列表,如果没有则返回空列表
@@ -163,6 +167,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回其他语言的摘要列表。
+   *
    * <p>除主摘要外的其他语言版本摘要。
    *
    * @return 其他语言摘要列表,如果没有则返回空列表
@@ -173,6 +178,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回作为主题的人物列表。
+   *
    * <p>以人物为主题的文献中涉及的人物信息。
    *
    * @return 人物主题列表,如果没有则返回空列表
@@ -183,6 +189,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回研究者列表。
+   *
    * <p>参与研究但非文章作者的研究者信息。
    *
    * @return 研究者列表,如果没有则返回空列表
@@ -193,6 +200,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回 NLM 内部注释列表。
+   *
    * <p>NLM 对文献的内部注释和备注信息。
    *
    * @return NLM 注释列表,如果没有则返回空列表
@@ -203,6 +211,7 @@ public final class PubmedLiterature {
 
   /**
    * 返回航天任务列表。
+   *
    * <p>与本文献相关的航天任务名称列表。
    *
    * @return 航天任务列表,如果没有则返回空列表
@@ -391,7 +400,9 @@ public final class PubmedLiterature {
     }
 
     private List<CommentsCorrections> commentsCorrections() {
-      return commentsCorrectionsList != null ? commentsCorrectionsList.commentsCorrections() : List.of();
+      return commentsCorrectionsList != null
+          ? commentsCorrectionsList.commentsCorrections()
+          : List.of();
     }
 
     private List<String> geneSymbols() {
@@ -541,8 +552,7 @@ public final class PubmedLiterature {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class NameOfSubstance {
 
-    @JacksonXmlText
-    private String value;
+    @JacksonXmlText private String value;
 
     @JacksonXmlProperty(isAttribute = true, localName = "UI")
     private String ui;
@@ -577,7 +587,9 @@ public final class PubmedLiterature {
 
   /**
    * MeSH 标引项。
+   *
    * <p>包含主题词(DescriptorName)和可选的限定词列表(QualifierName)。
+   *
    * <p>例如: "Humans" [DescriptorName] + "genetics" [QualifierName] 表示"人类遗传学"主题。
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -592,16 +604,12 @@ public final class PubmedLiterature {
 
     private MeshHeading() {}
 
-    /**
-     * 返回 MeSH 主题词。
-     */
+    /** 返回 MeSH 主题词。 */
     public DescriptorName descriptorName() {
       return descriptorName;
     }
 
-    /**
-     * 返回 MeSH 限定词列表。
-     */
+    /** 返回 MeSH 限定词列表。 */
     public List<QualifierName> qualifierNames() {
       return qualifierNames != null ? List.copyOf(qualifierNames) : List.of();
     }
@@ -609,20 +617,22 @@ public final class PubmedLiterature {
 
   /**
    * MeSH 主题词。
+   *
    * <p>主题词是 MeSH 术语的主要部分,描述文章的核心主题。
+   *
    * <p>包含:
+   *
    * <ul>
-   *   <li>UI: MeSH 主题词的唯一标识符</li>
-   *   <li>MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)</li>
-   *   <li>Type: 主题词的类别类型(如 Geographic 表示地理名称)</li>
-   *   <li>value: 主题词的文本值(如 "Humans", "Antibodies")</li>
+   *   <li>UI: MeSH 主题词的唯一标识符
+   *   <li>MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)
+   *   <li>Type: 主题词的类别类型(如 Geographic 表示地理名称)
+   *   <li>value: 主题词的文本值(如 "Humans", "Antibodies")
    * </ul>
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class DescriptorName {
 
-    @JacksonXmlText
-    private String value;
+    @JacksonXmlText private String value;
 
     @JacksonXmlProperty(isAttribute = true, localName = "UI")
     private String ui;
@@ -635,22 +645,19 @@ public final class PubmedLiterature {
 
     private DescriptorName() {}
 
-    /**
-     * 返回主题词的文本值。
-     */
+    /** 返回主题词的文本值。 */
     public String value() {
       return value;
     }
 
-    /**
-     * 返回主题词的唯一标识符。
-     */
+    /** 返回主题词的唯一标识符。 */
     public String ui() {
       return ui;
     }
 
     /**
      * 返回是否为文章的主要主题。
+     *
      * @return "Y" 表示是,"N" 表示否
      */
     public String majorTopicYN() {
@@ -659,6 +666,7 @@ public final class PubmedLiterature {
 
     /**
      * 返回主题词的类别类型。
+     *
      * @return 如 "Geographic" 表示地理名称
      */
     public String type() {
@@ -668,23 +676,26 @@ public final class PubmedLiterature {
 
   /**
    * MeSH 副主题词（限定词）。
+   *
    * <p>限定词用于进一步细化主题词的含义,例如:
+   *
    * <ul>
-   *   <li>"Humans" [主题词] + "genetics" [限定词] = "人类遗传学"</li>
-   *   <li>"Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"</li>
+   *   <li>"Humans" [主题词] + "genetics" [限定词] = "人类遗传学"
+   *   <li>"Diabetes Mellitus" [主题词] + "drug therapy" [限定词] = "糖尿病药物治疗"
    * </ul>
+   *
    * <p>包含:
+   *
    * <ul>
-   *   <li>UI: MeSH 限定词的唯一标识符</li>
-   *   <li>MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)</li>
-   *   <li>value: 限定词的文本值(如 "genetics", "drug therapy")</li>
+   *   <li>UI: MeSH 限定词的唯一标识符
+   *   <li>MajorTopicYN: 是否为文章的主要主题(Y=是, N=否)
+   *   <li>value: 限定词的文本值(如 "genetics", "drug therapy")
    * </ul>
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class QualifierName {
 
-    @JacksonXmlText
-    private String value;
+    @JacksonXmlText private String value;
 
     @JacksonXmlProperty(isAttribute = true, localName = "UI")
     private String ui;
@@ -694,22 +705,19 @@ public final class PubmedLiterature {
 
     private QualifierName() {}
 
-    /**
-     * 返回限定词的文本值。
-     */
+    /** 返回限定词的文本值。 */
     public String value() {
       return value;
     }
 
-    /**
-     * 返回限定词的唯一标识符。
-     */
+    /** 返回限定词的唯一标识符。 */
     public String ui() {
       return ui;
     }
 
     /**
      * 返回是否为文章的主要主题。
+     *
      * @return "Y" 表示是,"N" 表示否
      */
     public String majorTopicYN() {
@@ -734,13 +742,13 @@ public final class PubmedLiterature {
 
   /**
    * 补充 MeSH 概念。
+   *
    * <p>补充 MeSH 概念用于描述疾病、药物试验等特定主题。
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class SupplMeshName {
 
-    @JacksonXmlText
-    private String value;
+    @JacksonXmlText private String value;
 
     @JacksonXmlProperty(isAttribute = true, localName = "Type")
     private String type;
@@ -783,6 +791,7 @@ public final class PubmedLiterature {
 
   /**
    * 评论、更正、撤稿信息。
+   *
    * <p>包含与本文献相关的评论、更正、撤稿、勘误等信息。
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -826,8 +835,7 @@ public final class PubmedLiterature {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class PmidRef {
 
-      @JacksonXmlText
-      private String value;
+      @JacksonXmlText private String value;
 
       @JacksonXmlProperty(isAttribute = true, localName = "Version")
       private String version;
@@ -859,14 +867,11 @@ public final class PubmedLiterature {
     }
   }
 
-  /**
-   * 其他 ID（如 PMC ID）。
-   */
+  /** 其他 ID（如 PMC ID）。 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class OtherId {
 
-    @JacksonXmlText
-    private String value;
+    @JacksonXmlText private String value;
 
     @JacksonXmlProperty(isAttribute = true, localName = "Source")
     private String source;
@@ -884,9 +889,7 @@ public final class PubmedLiterature {
     }
   }
 
-  /**
-   * 其他语言的摘要。
-   */
+  /** 其他语言的摘要。 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class OtherAbstract {
 
@@ -927,6 +930,7 @@ public final class PubmedLiterature {
 
   /**
    * 作为主题的人物。
+   *
    * <p>以人物为主题的文献中涉及的人物信息。
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -984,6 +988,7 @@ public final class PubmedLiterature {
 
   /**
    * 研究者（非作者）。
+   *
    * <p>参与研究但非文章作者的研究者信息。
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -1050,14 +1055,11 @@ public final class PubmedLiterature {
     }
   }
 
-  /**
-   * NLM 内部注释。
-   */
+  /** NLM 内部注释。 */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static final class GeneralNote {
 
-    @JacksonXmlText
-    private String value;
+    @JacksonXmlText private String value;
 
     @JacksonXmlProperty(isAttribute = true, localName = "Owner")
     private String owner;
@@ -1509,8 +1511,7 @@ public final class PubmedLiterature {
   /**
    * 从 PubMed 引文中提取的作者信息。
    *
-   * <p>包含作者的姓名、缩写、机构隶属关系和可选的标识符 (如 ORCID)。
-   * 支持个人作者和团体作者两种类型。
+   * <p>包含作者的姓名、缩写、机构隶属关系和可选的标识符 (如 ORCID)。 支持个人作者和团体作者两种类型。
    *
    * <p><b>主要字段:</b>
    *

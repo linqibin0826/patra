@@ -1,10 +1,10 @@
 package com.patra.ingest.domain.model.vo.execution;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("TaskRunCheckpoint 值对象单元测试")
 class TaskRunCheckpointTest {

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,7 +12,6 @@ import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.infra.persistence.converter.TaskConverter;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
 import com.patra.ingest.infra.persistence.mapper.TaskMapper;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -74,10 +72,12 @@ class TaskRepositoryMpImplTest {
       TaskDO entityWithId = createTestTaskDO(TEST_TASK_ID);
 
       when(converter.toEntity(aggregate)).thenReturn(entity);
-      when(mapper.insert(entity)).thenAnswer(invocation -> {
-        entity.setId(TEST_TASK_ID); // 模拟数据库生成 ID
-        return 1;
-      });
+      when(mapper.insert(entity))
+          .thenAnswer(
+              invocation -> {
+                entity.setId(TEST_TASK_ID); // 模拟数据库生成 ID
+                return 1;
+              });
 
       // When
       TaskAggregate result = repository.save(aggregate);
@@ -129,11 +129,13 @@ class TaskRepositoryMpImplTest {
 
       when(converter.toEntity(task1)).thenReturn(entity1);
       when(converter.toEntity(task2)).thenReturn(entity2);
-      when(mapper.insert(any(TaskDO.class))).thenAnswer(invocation -> {
-        TaskDO entity = invocation.getArgument(0);
-        entity.setId(entity == entity1 ? TEST_TASK_ID : TEST_TASK_ID + 1);
-        return 1;
-      });
+      when(mapper.insert(any(TaskDO.class)))
+          .thenAnswer(
+              invocation -> {
+                TaskDO entity = invocation.getArgument(0);
+                entity.setId(entity == entity1 ? TEST_TASK_ID : TEST_TASK_ID + 1);
+                return 1;
+              });
 
       // When
       List<TaskAggregate> result = repository.saveAll(tasks);
@@ -296,8 +298,7 @@ class TaskRepositoryMpImplTest {
       Instant now = Instant.now();
       int ttlSeconds = 300;
 
-      when(mapper.tryAcquireLease(
-              TEST_TASK_ID, TEST_OWNER, now, ttlSeconds, TEST_IDEMPOTENT_KEY))
+      when(mapper.tryAcquireLease(TEST_TASK_ID, TEST_OWNER, now, ttlSeconds, TEST_IDEMPOTENT_KEY))
           .thenReturn(1);
 
       // When
@@ -318,8 +319,7 @@ class TaskRepositoryMpImplTest {
       Instant now = Instant.now();
       int ttlSeconds = 300;
 
-      when(mapper.tryAcquireLease(
-              TEST_TASK_ID, TEST_OWNER, now, ttlSeconds, TEST_IDEMPOTENT_KEY))
+      when(mapper.tryAcquireLease(TEST_TASK_ID, TEST_OWNER, now, ttlSeconds, TEST_IDEMPOTENT_KEY))
           .thenReturn(0);
 
       // When

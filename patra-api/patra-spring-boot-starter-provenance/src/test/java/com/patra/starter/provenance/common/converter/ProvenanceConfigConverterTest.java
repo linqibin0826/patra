@@ -110,14 +110,7 @@ class ProvenanceConfigConverterTest {
 
     HttpConfig httpConfig = new HttpConfig(headers, null, null, 5000);
     ProvenanceConfig config =
-        new ProvenanceConfig(
-            "https://api.example.com",
-            httpConfig,
-            null,
-            null,
-            null,
-            null,
-            null);
+        new ProvenanceConfig("https://api.example.com", httpConfig, null, null, null, null, null);
 
     // Act
     Map<String, String> result = ProvenanceConfigConverter.extractHeaders(config);
@@ -145,8 +138,7 @@ class ProvenanceConfigConverterTest {
   void extractHeaders_shouldReturnEmptyMap_whenHttpConfigIsNull() {
     // Arrange
     ProvenanceConfig config =
-        new ProvenanceConfig(
-            "https://api.example.com", null, null, null, null, null, null);
+        new ProvenanceConfig("https://api.example.com", null, null, null, null, null, null);
 
     // Act
     Map<String, String> result = ProvenanceConfigConverter.extractHeaders(config);
@@ -162,14 +154,7 @@ class ProvenanceConfigConverterTest {
     // Arrange
     HttpConfig httpConfig = new HttpConfig(Map.of("User-Agent", "Test/1.0"), null, null, 5000);
     ProvenanceConfig config =
-        new ProvenanceConfig(
-            "https://api.example.com",
-            httpConfig,
-            null,
-            null,
-            null,
-            null,
-            null);
+        new ProvenanceConfig("https://api.example.com", httpConfig, null, null, null, null, null);
 
     // Act
     Map<String, String> result = ProvenanceConfigConverter.extractHeaders(config);
@@ -183,17 +168,14 @@ class ProvenanceConfigConverterTest {
   private ProvenanceConfig createTestConfig(
       Integer timeoutMillis, Integer maxRetries, Long backoffMillis, Integer qpsLimit) {
     HttpConfig httpConfig =
-        timeoutMillis != null
-            ? new HttpConfig(null, null, null, timeoutMillis)
-            : null;
+        timeoutMillis != null ? new HttpConfig(null, null, null, timeoutMillis) : null;
 
     RetryConfig retryConfig =
         (maxRetries != null || backoffMillis != null)
             ? new RetryConfig(maxRetries, backoffMillis != null ? backoffMillis.intValue() : null)
             : null;
 
-    RateLimitConfig rateLimitConfig =
-        qpsLimit != null ? new RateLimitConfig(null, qpsLimit) : null;
+    RateLimitConfig rateLimitConfig = qpsLimit != null ? new RateLimitConfig(null, qpsLimit) : null;
 
     return new ProvenanceConfig(
         "https://api.example.com",

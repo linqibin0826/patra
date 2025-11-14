@@ -29,8 +29,7 @@ class OutboxRelayExecutionExceptionTest {
       Throwable cause = new RuntimeException("网络超时");
 
       // When
-      OutboxRelayExecutionException exception =
-          new OutboxRelayExecutionException(message, cause);
+      OutboxRelayExecutionException exception = new OutboxRelayExecutionException(message, cause);
 
       // Then
       assertThat(exception.getMessage()).isEqualTo(message);
@@ -99,8 +98,7 @@ class OutboxRelayExecutionExceptionTest {
           new OutboxRelayExecutionException("执行失败", new RuntimeException());
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

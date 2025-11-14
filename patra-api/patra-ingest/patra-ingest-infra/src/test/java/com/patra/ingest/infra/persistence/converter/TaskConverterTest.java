@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonMapperHolder;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
-import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.TaskStatus;
 import com.patra.ingest.domain.model.vo.execution.ExecutionTimeline;
 import com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext;
@@ -128,8 +127,7 @@ class TaskConverterTest {
     Instant leasedUntil = now.plusSeconds(300);
 
     JsonNode params =
-        JsonMapperHolder.getObjectMapper()
-            .readTree("{\"query\":\"test\",\"pageSize\":100}");
+        JsonMapperHolder.getObjectMapper().readTree("{\"query\":\"test\",\"pageSize\":100}");
 
     TaskDO entity = new TaskDO();
     entity.setId(1001L);

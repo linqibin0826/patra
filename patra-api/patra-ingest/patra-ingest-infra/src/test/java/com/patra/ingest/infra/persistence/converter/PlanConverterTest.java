@@ -3,12 +3,12 @@ package com.patra.ingest.infra.persistence.converter;
 import static org.assertj.core.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.infra.persistence.entity.PlanDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,7 +43,8 @@ class PlanConverterTest {
   private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final String OPERATION_CODE = "HARVEST";
   private static final String EXPR_PROTO_HASH = "proto-hash-123";
-  private static final String EXPR_PROTO_SNAPSHOT_JSON = "{\"type\":\"FETCH\",\"source\":\"pubmed\"}";
+  private static final String EXPR_PROTO_SNAPSHOT_JSON =
+      "{\"type\":\"FETCH\",\"source\":\"pubmed\"}";
   private static final String PROVENANCE_CONFIG_SNAPSHOT_JSON =
       "{\"apiKey\":\"***\",\"endpoint\":\"https://api.pubmed.gov\"}";
   private static final String PROVENANCE_CONFIG_HASH = "config-hash-456";
@@ -520,8 +521,7 @@ class PlanConverterTest {
       assertThat(PlanConverter.planStatusFromCode("SLICING")).isEqualTo(PlanStatus.SLICING);
       assertThat(PlanConverter.planStatusFromCode("READY")).isEqualTo(PlanStatus.READY);
       assertThat(PlanConverter.planStatusFromCode("ARCHIVED")).isEqualTo(PlanStatus.ARCHIVED);
-      assertThat(PlanConverter.planStatusFromCode(null))
-          .isEqualTo(PlanStatus.DRAFT); // 默认值
+      assertThat(PlanConverter.planStatusFromCode(null)).isEqualTo(PlanStatus.DRAFT); // 默认值
     }
 
     @Test

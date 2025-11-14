@@ -1,5 +1,11 @@
 package com.patra.ingest.app.usecase.execution.strategy.planner;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
@@ -14,7 +20,6 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.port.DataSourcePort;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,16 +30,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 /**
  * UnifiedBatchPlanner 单元测试
  *
  * <p>测试重点：
+ *
  * <ul>
  *   <li>策略自动注册（通过 Spring 注入）
  *   <li>策略选择逻辑（根据 PlanMetadata 类型）
@@ -50,374 +50,359 @@ import static org.mockito.Mockito.*;
 @DisplayName("UnifiedBatchPlanner 单元测试")
 class UnifiedBatchPlannerTest {
 
-    @Mock
-    private DataSourcePort dataSourcePort;
+  @Mock private DataSourcePort dataSourcePort;
 
-    @Mock
-    private BatchGenerationStrategy mockStrategy1;
+  @Mock private BatchGenerationStrategy mockStrategy1;
 
-    @Mock
-    private BatchGenerationStrategy mockStrategy2;
+  @Mock private BatchGenerationStrategy mockStrategy2;
 
-    private UnifiedBatchPlanner planner;
-    private ObjectMapper objectMapper;
+  private UnifiedBatchPlanner planner;
+  private ObjectMapper objectMapper;
 
-    @BeforeEach
-    void setUp() {
-        objectMapper = new ObjectMapper();
+  @BeforeEach
+  void setUp() {
+    objectMapper = new ObjectMapper();
 
-        // 配置 mock 策略支持的数据源代码
-        when(mockStrategy1.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.PUBMED.getCode());
-        when(mockStrategy2.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.EPMC.getCode());
+    // 配置 mock 策略支持的数据源代码
+    when(mockStrategy1.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.PUBMED.getCode());
+    when(mockStrategy2.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.EPMC.getCode());
 
-        // 创建 planner 并自动注册策略
-        List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, mockStrategy2);
-        planner = new UnifiedBatchPlanner(dataSourcePort, strategies);
-    }
+    // 创建 planner 并自动注册策略
+    List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, mockStrategy2);
+    planner = new UnifiedBatchPlanner(dataSourcePort, strategies);
+  }
 
-    @Test
-    @DisplayName("构造函数应该自动注册所有策略")
-    void should_register_all_strategies_in_constructor() {
-        // 验证：通过日志或后续调用验证策略已注册
-        // 这里通过实际使用策略来验证
-        com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
-        ExecutionContext ctx = createContext("pubmed");
+  @Test
+  @DisplayName("构造函数应该自动注册所有策略")
+  void should_register_all_strategies_in_constructor() {
+    // 验证：通过日志或后续调用验证策略已注册
+    // 这里通过实际使用策略来验证
+    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    ExecutionContext ctx = createContext("pubmed");
 
-        when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
-        when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
+    when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
+    when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
-        // when
-        planner.plan(ctx);
+    // when
+    planner.plan(ctx);
 
-        // then
-        verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
-    }
+    // then
+    verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
+  }
 
-    @Test
-    @DisplayName("getProvenanceCode 应该返回 null（支持所有数据源）")
-    void should_return_null_for_provenance_code() {
-        // when
-        ProvenanceCode provenanceCode = planner.getProvenanceCode();
+  @Test
+  @DisplayName("getProvenanceCode 应该返回 null（支持所有数据源）")
+  void should_return_null_for_provenance_code() {
+    // when
+    ProvenanceCode provenanceCode = planner.getProvenanceCode();
 
-        // then
-        assertThat(provenanceCode).isNull();
-    }
+    // then
+    assertThat(provenanceCode).isNull();
+  }
 
-    @Test
-    @DisplayName("应该成功规划 PubMed 数据源")
-    void should_plan_pubmed_data_source_successfully() {
-        // given
-        int totalCount = 1000;
-        com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(totalCount, false);
-        ExecutionContext ctx = createContext("pubmed");
+  @Test
+  @DisplayName("应该成功规划 PubMed 数据源")
+  void should_plan_pubmed_data_source_successfully() {
+    // given
+    int totalCount = 1000;
+    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan =
+        createPubmedPlan(totalCount, false);
+    ExecutionContext ctx = createContext("pubmed");
 
-        List<Batch> mockBatches = List.of(
-            createBatch(1),
-            createBatch(2),
-            createBatch(3)
+    List<Batch> mockBatches = List.of(createBatch(1), createBatch(2), createBatch(3));
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
+    when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(mockBatches);
+
+    // when
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+
+    // then
+    assertThat(result.batches()).hasSize(3);
+    assertThat(result.totalBatches()).isEqualTo(3);
+    assertThat(result.hasBatches()).isTrue();
+
+    verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
+    verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
+  }
+
+  @Test
+  @DisplayName("应该成功规划 EPMC 数据源")
+  void should_plan_epmc_data_source_successfully() {
+    // given
+    int totalCount = 2000;
+    com.patra.ingest.domain.model.vo.plan.BatchPlan epmcPlan =
+        createEpmcPlan(totalCount, "cursor-123");
+    ExecutionContext ctx = createContext("epmc");
+
+    List<Batch> mockBatches = List.of(createBatch(1), createBatch(2));
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(epmcPlan);
+    when(mockStrategy2.generateBatches(epmcPlan, ctx)).thenReturn(mockBatches);
+
+    // when
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+
+    // then
+    assertThat(result.batches()).hasSize(2);
+    assertThat(result.totalBatches()).isEqualTo(2);
+
+    verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
+    verify(mockStrategy2).generateBatches(epmcPlan, ctx);
+  }
+
+  @Test
+  @DisplayName("当 totalCount 为 0 时应该返回空计划")
+  void should_return_empty_plan_when_total_count_is_zero() {
+    // given
+    com.patra.ingest.domain.model.vo.plan.BatchPlan emptyPlan = createPubmedPlan(0, false);
+    ExecutionContext ctx = createContext("pubmed");
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
+
+    // when
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+
+    // then
+    assertThat(result.totalBatches()).isZero();
+    assertThat(result.batches()).isEmpty();
+    assertThat(result.hasBatches()).isFalse();
+
+    verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
+    verify(mockStrategy1, never()).generateBatches(any(), any());
+  }
+
+  @Test
+  @DisplayName("当未找到对应策略时应该抛出异常")
+  void should_throw_exception_when_strategy_not_found() {
+    // given
+    // 创建一个未注册策略的 BatchPlan（使用匿名子类）
+    // 注意: ExecutionContext 使用 PUBMED 是合法的,但 BatchPlan 返回的 dataSourceCode 是未注册的
+    com.patra.ingest.domain.model.vo.plan.BatchPlan unknownPlan = createUnknownPlan(100);
+    ExecutionContext ctx = createContext("pubmed"); // 使用合法的 ProvenanceCode
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
+
+    // when & then
+    assertThatThrownBy(() -> planner.plan(ctx))
+        .isInstanceOf(BatchPlanningException.class)
+        .hasMessageContaining("批次规划失败")
+        .hasCauseInstanceOf(IllegalStateException.class);
+
+    verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
+  }
+
+  @Test
+  @DisplayName("当 DataSourcePort 抛出异常时应该包装为 BatchPlanningException")
+  void should_wrap_data_source_exception_as_batch_planning_exception() {
+    // given
+    ExecutionContext ctx = createContext("pubmed");
+    RuntimeException sourceException = new RuntimeException("数据源错误");
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenThrow(sourceException);
+
+    // when & then
+    assertThatThrownBy(() -> planner.plan(ctx))
+        .isInstanceOf(BatchPlanningException.class)
+        .hasMessageContaining("批次规划失败")
+        .hasCause(sourceException);
+
+    verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
+  }
+
+  @Test
+  @DisplayName("当策略生成批次失败时应该包装为 BatchPlanningException")
+  void should_wrap_strategy_exception_as_batch_planning_exception() {
+    // given
+    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    ExecutionContext ctx = createContext("pubmed");
+    RuntimeException strategyException = new RuntimeException("批次生成错误");
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
+    when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenThrow(strategyException);
+
+    // when & then
+    assertThatThrownBy(() -> planner.plan(ctx))
+        .isInstanceOf(BatchPlanningException.class)
+        .hasMessageContaining("批次规划失败")
+        .hasCause(strategyException);
+
+    verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
+    verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
+  }
+
+  @Test
+  @DisplayName("应该正确处理策略返回空列表的情况")
+  void should_handle_empty_batch_list_from_strategy() {
+    // given
+    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    ExecutionContext ctx = createContext("pubmed");
+
+    when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
+    when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(List.of());
+
+    // when
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+
+    // then
+    assertThat(result.batches()).isEmpty();
+    assertThat(result.totalBatches()).isZero();
+    assertThat(result.hasBatches()).isFalse();
+  }
+
+  @Test
+  @DisplayName("构造函数应该拒绝返回 null supportedDataSourceCode 的策略")
+  void should_warn_about_strategy_with_null_supported_data_source_code() {
+    // given
+    BatchGenerationStrategy invalidStrategy = mock(BatchGenerationStrategy.class);
+    when(invalidStrategy.getSupportedDataSourceCode()).thenReturn(null);
+
+    List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
+
+    // when
+    UnifiedBatchPlanner planner = new UnifiedBatchPlanner(dataSourcePort, strategies);
+
+    // then
+    // 验证：planner 应该跳过 null 策略，只注册有效策略
+    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    ExecutionContext ctx = createContext("pubmed");
+
+    when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
+    when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
+
+    planner.plan(ctx);
+
+    verify(mockStrategy1).generateBatches(any(), any());
+    verify(invalidStrategy, never()).generateBatches(any(), any());
+  }
+
+  @Test
+  @DisplayName("构造函数应该拒绝重复的策略类型")
+  void should_throw_exception_when_duplicate_strategy_types() {
+    // given
+    BatchGenerationStrategy duplicateStrategy = mock(BatchGenerationStrategy.class);
+    when(duplicateStrategy.getSupportedDataSourceCode())
+        .thenReturn(ProvenanceCode.PUBMED.getCode());
+
+    List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, duplicateStrategy);
+
+    // when & then
+    assertThatThrownBy(() -> new UnifiedBatchPlanner(dataSourcePort, strategies))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("重复的批次生成策略");
+  }
+
+  // === 辅助方法 ===
+
+  /** 创建测试用的 ExecutionContext */
+  private ExecutionContext createContext(String provenanceCode) {
+    ProvenanceConfigSnapshot configSnapshot = mock(ProvenanceConfigSnapshot.class);
+    JsonNode params = objectMapper.createObjectNode();
+
+    // 将 String 转换为 ProvenanceCode
+    ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
+
+    return new ExecutionContext(
+        1L, // taskId
+        1L, // runId
+        1L, // planId
+        1L, // sliceId
+        1L, // scheduleInstanceId
+        code, // provenanceCode
+        "search", // operationCode
+        DataType.LITERATURE, // dataType
+        configSnapshot, // configSnapshot
+        "expr-hash", // exprHash
+        "test-query", // compiledQuery
+        params, // compiledParams
+        "normalized-expr", // normalizedExpression
+        new WindowSpec.Single() // windowSpec
         );
+  }
 
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
-        when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(mockBatches);
+  /** 创建测试用的 Batch */
+  private Batch createBatch(int batchNo) {
+    return Batch.first("test-query", objectMapper.createObjectNode());
+  }
 
-        // when
-        com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+  /** 创建测试用的 BatchPlan (PubMed) - 计划元数据 */
+  private com.patra.ingest.domain.model.vo.plan.BatchPlan createPubmedPlan(
+      int totalRecords, boolean hasToken) {
+    return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
+      @Override
+      public int totalRecords() {
+        return totalRecords;
+      }
 
-        // then
-        assertThat(result.batches()).hasSize(3);
-        assertThat(result.totalBatches()).isEqualTo(3);
-        assertThat(result.hasBatches()).isTrue();
+      @Override
+      public String dataSourceCode() {
+        return ProvenanceCode.PUBMED.getCode();
+      }
 
-        verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
-        verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
-    }
+      @Override
+      public boolean hasStateToken() {
+        return hasToken;
+      }
 
-    @Test
-    @DisplayName("应该成功规划 EPMC 数据源")
-    void should_plan_epmc_data_source_successfully() {
-        // given
-        int totalCount = 2000;
-        com.patra.ingest.domain.model.vo.plan.BatchPlan epmcPlan = createEpmcPlan(totalCount, "cursor-123");
-        ExecutionContext ctx = createContext("epmc");
+      @Override
+      public Optional<Map<String, String>> stateToken() {
+        return hasToken
+            ? Optional.of(Map.of("webEnv", "test-env", "queryKey", "1"))
+            : Optional.empty();
+      }
+    };
+  }
 
-        List<Batch> mockBatches = List.of(
-            createBatch(1),
-            createBatch(2)
-        );
+  /** 创建测试用的 BatchPlan (EPMC) - 计划元数据 */
+  private com.patra.ingest.domain.model.vo.plan.BatchPlan createEpmcPlan(
+      int totalRecords, String cursorMark) {
+    return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
+      @Override
+      public int totalRecords() {
+        return totalRecords;
+      }
 
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(epmcPlan);
-        when(mockStrategy2.generateBatches(epmcPlan, ctx)).thenReturn(mockBatches);
+      @Override
+      public String dataSourceCode() {
+        return ProvenanceCode.EPMC.getCode();
+      }
 
-        // when
-        com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+      @Override
+      public boolean hasStateToken() {
+        return cursorMark != null;
+      }
 
-        // then
-        assertThat(result.batches()).hasSize(2);
-        assertThat(result.totalBatches()).isEqualTo(2);
+      @Override
+      public Optional<Map<String, String>> stateToken() {
+        return cursorMark != null
+            ? Optional.of(Map.of("cursorMark", cursorMark))
+            : Optional.empty();
+      }
+    };
+  }
 
-        verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
-        verify(mockStrategy2).generateBatches(epmcPlan, ctx);
-    }
+  /** 创建测试用的 BatchPlan (未知数据源) - 计划元数据 */
+  private com.patra.ingest.domain.model.vo.plan.BatchPlan createUnknownPlan(int totalRecords) {
+    return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
+      @Override
+      public int totalRecords() {
+        return totalRecords;
+      }
 
-    @Test
-    @DisplayName("当 totalCount 为 0 时应该返回空计划")
-    void should_return_empty_plan_when_total_count_is_zero() {
-        // given
-        com.patra.ingest.domain.model.vo.plan.BatchPlan emptyPlan = createPubmedPlan(0, false);
-        ExecutionContext ctx = createContext("pubmed");
+      @Override
+      public String dataSourceCode() {
+        return "unknown-source";
+      }
 
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
+      @Override
+      public boolean hasStateToken() {
+        return false;
+      }
 
-        // when
-        com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
-
-        // then
-        assertThat(result.totalBatches()).isZero();
-        assertThat(result.batches()).isEmpty();
-        assertThat(result.hasBatches()).isFalse();
-
-        verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
-        verify(mockStrategy1, never()).generateBatches(any(), any());
-    }
-
-    @Test
-    @DisplayName("当未找到对应策略时应该抛出异常")
-    void should_throw_exception_when_strategy_not_found() {
-        // given
-        // 创建一个未注册策略的 BatchPlan（使用匿名子类）
-        // 注意: ExecutionContext 使用 PUBMED 是合法的,但 BatchPlan 返回的 dataSourceCode 是未注册的
-        com.patra.ingest.domain.model.vo.plan.BatchPlan unknownPlan = createUnknownPlan(100);
-        ExecutionContext ctx = createContext("pubmed");  // 使用合法的 ProvenanceCode
-
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
-
-        // when & then
-        assertThatThrownBy(() -> planner.plan(ctx))
-            .isInstanceOf(BatchPlanningException.class)
-            .hasMessageContaining("批次规划失败")
-            .hasCauseInstanceOf(IllegalStateException.class);
-
-        verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
-    }
-
-    @Test
-    @DisplayName("当 DataSourcePort 抛出异常时应该包装为 BatchPlanningException")
-    void should_wrap_data_source_exception_as_batch_planning_exception() {
-        // given
-        ExecutionContext ctx = createContext("pubmed");
-        RuntimeException sourceException = new RuntimeException("数据源错误");
-
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenThrow(sourceException);
-
-        // when & then
-        assertThatThrownBy(() -> planner.plan(ctx))
-            .isInstanceOf(BatchPlanningException.class)
-            .hasMessageContaining("批次规划失败")
-            .hasCause(sourceException);
-
-        verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
-    }
-
-    @Test
-    @DisplayName("当策略生成批次失败时应该包装为 BatchPlanningException")
-    void should_wrap_strategy_exception_as_batch_planning_exception() {
-        // given
-        com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
-        ExecutionContext ctx = createContext("pubmed");
-        RuntimeException strategyException = new RuntimeException("批次生成错误");
-
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
-        when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenThrow(strategyException);
-
-        // when & then
-        assertThatThrownBy(() -> planner.plan(ctx))
-            .isInstanceOf(BatchPlanningException.class)
-            .hasMessageContaining("批次规划失败")
-            .hasCause(strategyException);
-
-        verify(dataSourcePort).preparePlan(ctx, DataType.LITERATURE);
-        verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
-    }
-
-    @Test
-    @DisplayName("应该正确处理策略返回空列表的情况")
-    void should_handle_empty_batch_list_from_strategy() {
-        // given
-        com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
-        ExecutionContext ctx = createContext("pubmed");
-
-        when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
-        when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(List.of());
-
-        // when
-        com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
-
-        // then
-        assertThat(result.batches()).isEmpty();
-        assertThat(result.totalBatches()).isZero();
-        assertThat(result.hasBatches()).isFalse();
-    }
-
-    @Test
-    @DisplayName("构造函数应该拒绝返回 null supportedDataSourceCode 的策略")
-    void should_warn_about_strategy_with_null_supported_data_source_code() {
-        // given
-        BatchGenerationStrategy invalidStrategy = mock(BatchGenerationStrategy.class);
-        when(invalidStrategy.getSupportedDataSourceCode()).thenReturn(null);
-
-        List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
-
-        // when
-        UnifiedBatchPlanner planner = new UnifiedBatchPlanner(dataSourcePort, strategies);
-
-        // then
-        // 验证：planner 应该跳过 null 策略，只注册有效策略
-        com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
-        ExecutionContext ctx = createContext("pubmed");
-
-        when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
-        when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
-
-        planner.plan(ctx);
-
-        verify(mockStrategy1).generateBatches(any(), any());
-        verify(invalidStrategy, never()).generateBatches(any(), any());
-    }
-
-    @Test
-    @DisplayName("构造函数应该拒绝重复的策略类型")
-    void should_throw_exception_when_duplicate_strategy_types() {
-        // given
-        BatchGenerationStrategy duplicateStrategy = mock(BatchGenerationStrategy.class);
-        when(duplicateStrategy.getSupportedDataSourceCode()).thenReturn(ProvenanceCode.PUBMED.getCode());
-
-        List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, duplicateStrategy);
-
-        // when & then
-        assertThatThrownBy(() -> new UnifiedBatchPlanner(dataSourcePort, strategies))
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("重复的批次生成策略");
-    }
-
-    // === 辅助方法 ===
-
-    /**
-     * 创建测试用的 ExecutionContext
-     */
-    private ExecutionContext createContext(String provenanceCode) {
-        ProvenanceConfigSnapshot configSnapshot = mock(ProvenanceConfigSnapshot.class);
-        JsonNode params = objectMapper.createObjectNode();
-
-        // 将 String 转换为 ProvenanceCode
-        ProvenanceCode code = ProvenanceCode.parse(provenanceCode);
-
-        return new ExecutionContext(
-            1L,                     // taskId
-            1L,                     // runId
-            1L,                     // planId
-            1L,                     // sliceId
-            1L,                     // scheduleInstanceId
-            code,                   // provenanceCode
-            "search",               // operationCode
-            DataType.LITERATURE,    // dataType
-            configSnapshot,         // configSnapshot
-            "expr-hash",            // exprHash
-            "test-query",           // compiledQuery
-            params,                 // compiledParams
-            "normalized-expr",      // normalizedExpression
-            new WindowSpec.Single() // windowSpec
-        );
-    }
-
-    /**
-     * 创建测试用的 Batch
-     */
-    private Batch createBatch(int batchNo) {
-        return Batch.first("test-query", objectMapper.createObjectNode());
-    }
-
-    /**
-     * 创建测试用的 BatchPlan (PubMed) - 计划元数据
-     */
-    private com.patra.ingest.domain.model.vo.plan.BatchPlan createPubmedPlan(int totalRecords, boolean hasToken) {
-        return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
-            @Override
-            public int totalRecords() {
-                return totalRecords;
-            }
-
-            @Override
-            public String dataSourceCode() {
-                return ProvenanceCode.PUBMED.getCode();
-            }
-
-            @Override
-            public boolean hasStateToken() {
-                return hasToken;
-            }
-
-            @Override
-            public Optional<Map<String, String>> stateToken() {
-                return hasToken ?
-                    Optional.of(Map.of("webEnv", "test-env", "queryKey", "1")) :
-                    Optional.empty();
-            }
-        };
-    }
-
-    /**
-     * 创建测试用的 BatchPlan (EPMC) - 计划元数据
-     */
-    private com.patra.ingest.domain.model.vo.plan.BatchPlan createEpmcPlan(int totalRecords, String cursorMark) {
-        return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
-            @Override
-            public int totalRecords() {
-                return totalRecords;
-            }
-
-            @Override
-            public String dataSourceCode() {
-                return ProvenanceCode.EPMC.getCode();
-            }
-
-            @Override
-            public boolean hasStateToken() {
-                return cursorMark != null;
-            }
-
-            @Override
-            public Optional<Map<String, String>> stateToken() {
-                return cursorMark != null ?
-                    Optional.of(Map.of("cursorMark", cursorMark)) :
-                    Optional.empty();
-            }
-        };
-    }
-
-    /**
-     * 创建测试用的 BatchPlan (未知数据源) - 计划元数据
-     */
-    private com.patra.ingest.domain.model.vo.plan.BatchPlan createUnknownPlan(int totalRecords) {
-        return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
-            @Override
-            public int totalRecords() {
-                return totalRecords;
-            }
-
-            @Override
-            public String dataSourceCode() {
-                return "unknown-source";
-            }
-
-            @Override
-            public boolean hasStateToken() {
-                return false;
-            }
-
-            @Override
-            public Optional<Map<String, String>> stateToken() {
-                return Optional.empty();
-            }
-        };
-    }
+      @Override
+      public Optional<Map<String, String>> stateToken() {
+        return Optional.empty();
+      }
+    };
+  }
 }

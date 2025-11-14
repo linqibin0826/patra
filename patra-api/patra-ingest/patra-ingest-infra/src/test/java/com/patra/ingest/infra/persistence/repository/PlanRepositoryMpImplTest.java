@@ -1,7 +1,6 @@
 package com.patra.ingest.infra.persistence.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,10 +76,12 @@ class PlanRepositoryMpImplTest {
 
       when(planConverter.toEntity(aggregate)).thenReturn(entityWithoutId);
       // 模拟插入后 ID 被回写
-      when(planMapper.insert(entityWithoutId)).thenAnswer(invocation -> {
-        entityWithoutId.setId(TEST_PLAN_ID);
-        return 1;
-      });
+      when(planMapper.insert(entityWithoutId))
+          .thenAnswer(
+              invocation -> {
+                entityWithoutId.setId(TEST_PLAN_ID);
+                return 1;
+              });
       when(planConverter.toAggregate(entityWithoutId)).thenReturn(aggregate);
 
       // When: 保存

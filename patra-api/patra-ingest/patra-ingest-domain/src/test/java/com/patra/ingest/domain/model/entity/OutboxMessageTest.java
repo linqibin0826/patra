@@ -234,8 +234,7 @@ class OutboxMessageTest {
 
       // When & Then
       assertThatThrownBy(
-              () ->
-                  OutboxMessageTestDataBuilder.aPendingMessage().aggregateId(aggregateId).build())
+              () -> OutboxMessageTestDataBuilder.aPendingMessage().aggregateId(aggregateId).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("aggregateId must not be null");
     }
@@ -260,7 +259,8 @@ class OutboxMessageTest {
       String opType = null;
 
       // When & Then
-      assertThatThrownBy(() -> OutboxMessageTestDataBuilder.aPendingMessage().opType(opType).build())
+      assertThatThrownBy(
+              () -> OutboxMessageTestDataBuilder.aPendingMessage().opType(opType).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("opType must not be null");
     }
@@ -274,9 +274,7 @@ class OutboxMessageTest {
       // When & Then
       assertThatThrownBy(
               () ->
-                  OutboxMessageTestDataBuilder.aPendingMessage()
-                      .partitionKey(partitionKey)
-                      .build())
+                  OutboxMessageTestDataBuilder.aPendingMessage().partitionKey(partitionKey).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("partitionKey must not be null");
     }
@@ -935,12 +933,7 @@ class OutboxMessageTest {
       // When - 创建各种变体（模拟状态转换）
       OutboxMessage publishing = message.toBuilder().statusCode("PUBLISHING").build();
       OutboxMessage failed =
-          message
-              .toBuilder()
-              .statusCode("FAILED")
-              .retryCount(3)
-              .errorCode("ERR_TEST")
-              .build();
+          message.toBuilder().statusCode("FAILED").retryCount(3).errorCode("ERR_TEST").build();
       OutboxMessage refreshed = message.refreshForRetry("{}", "{}");
 
       // Then - 核心标识字段应该在所有变体中保持不变

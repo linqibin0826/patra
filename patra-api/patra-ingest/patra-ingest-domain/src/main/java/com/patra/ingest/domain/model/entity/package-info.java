@@ -1,53 +1,46 @@
 /**
  * Ingest 领域模型 - 实体包。
  *
- * <p>本包包含领域实体(Entities),它们拥有唯一标识和生命周期,但不是聚合根。实体通常作为聚合根的一部分存在,
- * 由聚合根管理其一致性边界。
+ * <p>本包包含领域实体(Entities),它们拥有唯一标识和生命周期,但不是聚合根。实体通常作为聚合根的一部分存在, 由聚合根管理其一致性边界。
  *
  * <h2>核心实体</h2>
  *
  * <ul>
  *   <li>{@link com.patra.ingest.domain.model.entity.OutboxMessage} - Outbox 消息实体
  *       <ul>
- *         <li>实现事务性消息发布模式(Transactional Outbox Pattern)</li>
- *         <li>保证业务操作与消息发送的原子性</li>
- *         <li>状态: PENDING → PUBLISHED/FAILED/DEFERRED</li>
- *         <li>支持租约机制防止并发发布</li>
+ *         <li>实现事务性消息发布模式(Transactional Outbox Pattern)
+ *         <li>保证业务操作与消息发送的原子性
+ *         <li>状态: PENDING → PUBLISHED/FAILED/DEFERRED
+ *         <li>支持租约机制防止并发发布
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.model.entity.OutboxRelayLog} - Outbox 中继日志实体
  *       <ul>
- *         <li>记录消息中继(Relay)的执行历史</li>
- *         <li>用于补偿机制和监控</li>
- *         <li>关联批次 ID、执行结果和重试次数</li>
+ *         <li>记录消息中继(Relay)的执行历史
+ *         <li>用于补偿机制和监控
+ *         <li>关联批次 ID、执行结果和重试次数
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.model.entity.Cursor} - 游标实体
  *       <ul>
- *         <li>增量采集的断点续传游标</li>
- *         <li>追踪数据源的消费位置(水位线)</li>
- *         <li>支持前向和后向游标</li>
+ *         <li>增量采集的断点续传游标
+ *         <li>追踪数据源的消费位置(水位线)
+ *         <li>支持前向和后向游标
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.model.entity.CursorEvent} - 游标事件实体
  *       <ul>
- *         <li>记录游标变更的审计日志</li>
- *         <li>支持游标血缘追踪和回溯</li>
+ *         <li>记录游标变更的审计日志
+ *         <li>支持游标血缘追踪和回溯
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.model.entity.TaskRun} - 任务执行记录实体
  *       <ul>
- *         <li>任务的单次执行实例</li>
- *         <li>包含执行上下文、统计数据和时间线</li>
- *         <li>支持断点续传和批次追踪</li>
+ *         <li>任务的单次执行实例
+ *         <li>包含执行上下文、统计数据和时间线
+ *         <li>支持断点续传和批次追踪
  *       </ul>
- *   </li>
  *   <li>{@link com.patra.ingest.domain.model.entity.TaskRunBatch} - 任务批次实体
  *       <ul>
- *         <li>任务执行的批次记录</li>
- *         <li>追踪批次范围、处理结果和性能指标</li>
+ *         <li>任务执行的批次记录
+ *         <li>追踪批次范围、处理结果和性能指标
  *       </ul>
- *   </li>
  * </ul>
  *
  * <h2>实体与聚合根的区别</h2>
@@ -83,10 +76,10 @@
  * <h2>实体特征</h2>
  *
  * <ul>
- *   <li><b>唯一标识</b>: 通过 ID 区分,即使属性相同</li>
- *   <li><b>可变性</b>: 实体状态可变,通过业务方法修改</li>
- *   <li><b>相等性</b>: 基于 ID 判断,不是值相等</li>
- *   <li><b>生命周期</b>: 创建、修改、销毁的完整生命周期</li>
+ *   <li><b>唯一标识</b>: 通过 ID 区分,即使属性相同
+ *   <li><b>可变性</b>: 实体状态可变,通过业务方法修改
+ *   <li><b>相等性</b>: 基于 ID 判断,不是值相等
+ *   <li><b>生命周期</b>: 创建、修改、销毁的完整生命周期
  * </ul>
  *
  * <h2>Outbox Pattern 设计</h2>
@@ -165,9 +158,9 @@
  * <h2>命名约定</h2>
  *
  * <ul>
- *   <li>实体类名使用名词,清晰表达领域概念</li>
- *   <li>状态字段使用枚举类型,避免魔法字符串</li>
- *   <li>行为方法使用动词,表达业务操作</li>
+ *   <li>实体类名使用名词,清晰表达领域概念
+ *   <li>状态字段使用枚举类型,避免魔法字符串
+ *   <li>行为方法使用动词,表达业务操作
  * </ul>
  *
  * @see com.patra.ingest.domain.model.aggregate 聚合根定义

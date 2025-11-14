@@ -104,10 +104,7 @@ class TaskCompletedEventTest {
 
       // Then
       Instant after = Instant.now();
-      assertThat(event.occurredAt())
-          .isNotNull()
-          .isAfterOrEqualTo(before)
-          .isBeforeOrEqualTo(after);
+      assertThat(event.occurredAt()).isNotNull().isAfterOrEqualTo(before).isBeforeOrEqualTo(after);
     }
 
     @Test
@@ -200,7 +197,8 @@ class TaskCompletedEventTest {
         Instant before = Instant.now();
 
         // When
-        TaskCompletedEvent event = TaskCompletedEvent.of(taskId, sliceId, planId, status, finishedAt);
+        TaskCompletedEvent event =
+            TaskCompletedEvent.of(taskId, sliceId, planId, status, finishedAt);
 
         // Then
         Instant after = Instant.now();
@@ -299,13 +297,7 @@ class TaskCompletedEventTest {
         for (String errorCode : errorCodes) {
           TaskCompletedEvent event =
               TaskCompletedEvent.ofFailure(
-                  1001L,
-                  2001L,
-                  3001L,
-                  "FAILED",
-                  errorCode,
-                  "Error message",
-                  Instant.now());
+                  1001L, 2001L, 3001L, "FAILED", errorCode, "Error message", Instant.now());
 
           assertThat(event.errorCode()).isEqualTo(errorCode);
         }
@@ -440,8 +432,7 @@ class TaskCompletedEventTest {
     void statusShouldReturnCorrectValue() {
       // Given
       String status = "SUCCEEDED";
-      TaskCompletedEvent event =
-          TaskCompletedEvent.of(1001L, 2001L, 3001L, status, Instant.now());
+      TaskCompletedEvent event = TaskCompletedEvent.of(1001L, 2001L, 3001L, status, Instant.now());
 
       // When
       String result = event.status();
@@ -616,9 +607,11 @@ class TaskCompletedEventTest {
         // Given
         Instant timestamp = Instant.now();
         TaskCompletedEvent event1 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
         TaskCompletedEvent event2 =
-            new TaskCompletedEvent(1002L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1002L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
 
         // When & Then
         assertThat(event1).isNotEqualTo(event2);
@@ -630,7 +623,8 @@ class TaskCompletedEventTest {
         // Given
         Instant timestamp = Instant.now();
         TaskCompletedEvent event1 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
         TaskCompletedEvent event2 =
             new TaskCompletedEvent(1001L, 2001L, 3001L, "FAILED", null, null, timestamp, timestamp);
 
@@ -690,9 +684,11 @@ class TaskCompletedEventTest {
         // Given
         Instant timestamp = Instant.now();
         TaskCompletedEvent event1 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
         TaskCompletedEvent event2 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
 
         // When & Then
         assertThat(event1).isEqualTo(event2);
@@ -705,11 +701,14 @@ class TaskCompletedEventTest {
         // Given
         Instant timestamp = Instant.now();
         TaskCompletedEvent event1 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
         TaskCompletedEvent event2 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
         TaskCompletedEvent event3 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
 
         // When & Then
         assertThat(event1).isEqualTo(event2);
@@ -751,9 +750,11 @@ class TaskCompletedEventTest {
         // Given
         Instant timestamp = Instant.now();
         TaskCompletedEvent event1 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
         TaskCompletedEvent event2 =
-            new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+            new TaskCompletedEvent(
+                1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
 
         // When & Then
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -1030,7 +1031,8 @@ class TaskCompletedEventTest {
       Long minId = 1L;
 
       // When
-      TaskCompletedEvent event = TaskCompletedEvent.of(minId, minId, minId, "SUCCEEDED", Instant.now());
+      TaskCompletedEvent event =
+          TaskCompletedEvent.of(minId, minId, minId, "SUCCEEDED", Instant.now());
 
       // Then
       assertThat(event.taskId()).isEqualTo(minId);
@@ -1045,7 +1047,8 @@ class TaskCompletedEventTest {
       Long maxId = Long.MAX_VALUE;
 
       // When
-      TaskCompletedEvent event = TaskCompletedEvent.of(maxId, maxId, maxId, "SUCCEEDED", Instant.now());
+      TaskCompletedEvent event =
+          TaskCompletedEvent.of(maxId, maxId, maxId, "SUCCEEDED", Instant.now());
 
       // Then
       assertThat(event.taskId()).isEqualTo(maxId);
@@ -1075,7 +1078,8 @@ class TaskCompletedEventTest {
 
       // When
       TaskCompletedEvent event =
-          new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, minInstant, minInstant);
+          new TaskCompletedEvent(
+              1001L, 2001L, 3001L, "SUCCEEDED", null, null, minInstant, minInstant);
 
       // Then
       assertThat(event.finishedAt()).isEqualTo(minInstant);
@@ -1090,7 +1094,8 @@ class TaskCompletedEventTest {
 
       // When
       TaskCompletedEvent event =
-          new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, maxInstant, maxInstant);
+          new TaskCompletedEvent(
+              1001L, 2001L, 3001L, "SUCCEEDED", null, null, maxInstant, maxInstant);
 
       // Then
       assertThat(event.finishedAt()).isEqualTo(maxInstant);
@@ -1175,7 +1180,8 @@ class TaskCompletedEventTest {
       Instant finishedAt = Instant.parse("2024-01-15T10:30:00Z");
 
       // When
-      TaskCompletedEvent event = TaskCompletedEvent.of(1001L, 2001L, 3001L, "SUCCEEDED", finishedAt);
+      TaskCompletedEvent event =
+          TaskCompletedEvent.of(1001L, 2001L, 3001L, "SUCCEEDED", finishedAt);
 
       // Then
       assertThat(event.occurredAt()).isAfterOrEqualTo(event.finishedAt());
@@ -1193,8 +1199,7 @@ class TaskCompletedEventTest {
 
       // Then
       Instant after = Instant.now();
-      assertThat(event.occurredAt())
-          .isBetween(before, after.plusMillis(100)); // 允许 100ms 误差
+      assertThat(event.occurredAt()).isBetween(before, after.plusMillis(100)); // 允许 100ms 误差
     }
 
     @Test
@@ -1205,7 +1210,8 @@ class TaskCompletedEventTest {
 
       // When
       TaskCompletedEvent event =
-          new TaskCompletedEvent(1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
+          new TaskCompletedEvent(
+              1001L, 2001L, 3001L, "SUCCEEDED", null, null, timestamp, timestamp);
 
       // Then
       assertThat(event.finishedAt()).isEqualTo(event.occurredAt());

@@ -13,7 +13,6 @@ import com.patra.ingest.domain.model.enums.OperationCode;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.SliceStrategy;
 import com.patra.ingest.domain.model.enums.TriggerType;
-import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm;
 import com.patra.ingest.domain.model.vo.plan.PlannerWindow;
 import java.time.Instant;
@@ -304,9 +303,6 @@ class SingleSlicePlannerTest {
 
   private PlanExpressionDescriptor createPlanExpression() {
     Expr baseExpr = Exprs.constTrue();
-    return new PlanExpressionDescriptor(
-        baseExpr,
-        "{\"type\":\"const_true\"}",
-        "hash-12345");
+    return new PlanExpressionDescriptor(baseExpr, "{\"type\":\"const_true\"}", "hash-12345");
   }
 }

@@ -39,6 +39,5 @@ public record LiteratureDataReadyEvent(
     /** 事件时间戳。 */
     Long timestamp) {
 
-  public LiteratureDataReadyEvent {
-  }
+  public LiteratureDataReadyEvent {}
 }

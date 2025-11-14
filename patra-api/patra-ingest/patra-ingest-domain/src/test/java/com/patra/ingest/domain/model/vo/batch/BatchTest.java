@@ -289,9 +289,7 @@ class BatchTest {
     @DisplayName("应该创建带会话令牌的批次")
     void shouldCreateBatchWithSessionTokens() {
       // When: 调用 withPageAndSession() 工厂方法
-      Batch batch = Batch.withPageAndSession(
-          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
-      );
+      Batch batch = Batch.withPageAndSession(1, testQuery, testParams, 0, 100, "MCID_123456", "1");
 
       // Then: 应该创建带会话令牌的批次
       assertThat(batch.batchNo()).isEqualTo(1);
@@ -308,9 +306,7 @@ class BatchTest {
     @DisplayName("应该设置 cursorToken 为 null")
     void shouldSetCursorTokenToNull() {
       // When: 调用 withPageAndSession() 工厂方法
-      Batch batch = Batch.withPageAndSession(
-          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
-      );
+      Batch batch = Batch.withPageAndSession(1, testQuery, testParams, 0, 100, "MCID_123456", "1");
 
       // Then: cursorToken 应为 null
       assertThat(batch.cursorToken()).isNull();
@@ -320,9 +316,8 @@ class BatchTest {
     @DisplayName("应该遵守 batchNo 验证规则")
     void shouldEnforceBatchNoValidation() {
       // When & Then: batchNo < 1 应抛出异常
-      assertThatThrownBy(() ->
-          Batch.withPageAndSession(0, testQuery, testParams, 0, 100, "MCID_123456", "1")
-      )
+      assertThatThrownBy(
+              () -> Batch.withPageAndSession(0, testQuery, testParams, 0, 100, "MCID_123456", "1"))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("batchNo must be >= 1");
     }
@@ -338,9 +333,9 @@ class BatchTest {
       String queryKey = "1";
 
       // When: 创建批次
-      Batch batch = Batch.withPageAndSession(
-          batchNo, testQuery, testParams, retstart, retmax, webEnv, queryKey
-      );
+      Batch batch =
+          Batch.withPageAndSession(
+              batchNo, testQuery, testParams, retstart, retmax, webEnv, queryKey);
 
       // Then: 应该正确设置
       assertThat(batch.batchNo()).isEqualTo(2);
@@ -537,9 +532,7 @@ class BatchTest {
     @DisplayName("应该返回 true - sessionTokens 非空")
     void shouldReturnTrueWhenSessionTokensNotEmpty() {
       // Given: 包含会话令牌的批次
-      Batch batch = Batch.withPageAndSession(
-          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
-      );
+      Batch batch = Batch.withPageAndSession(1, testQuery, testParams, 0, 100, "MCID_123456", "1");
 
       // When: 调用 hasSessionTokens()
       boolean result = batch.hasSessionTokens();
@@ -567,9 +560,8 @@ class BatchTest {
       // Given: 三种批次类型
       Batch pageBasedBatch = Batch.withPage(1, testQuery, testParams, 0, 100);
       Batch cursorBasedBatch = Batch.withToken(2, testQuery, testParams, "cursor-xyz", 100);
-      Batch sessionBasedBatch = Batch.withPageAndSession(
-          3, testQuery, testParams, 0, 100, "MCID_123456", "1"
-      );
+      Batch sessionBasedBatch =
+          Batch.withPageAndSession(3, testQuery, testParams, 0, 100, "MCID_123456", "1");
 
       // When & Then: hasSessionTokens() 应该区分是否有会话令牌
       assertThat(pageBasedBatch.hasSessionTokens()).isFalse();
@@ -665,12 +657,8 @@ class BatchTest {
     @DisplayName("equals() - 不同 sessionTokens 应不相等")
     void shouldNotBeEqualForDifferentSessionTokens() {
       // Given: sessionTokens 不同的 Batch
-      Batch batch1 = Batch.withPageAndSession(
-          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
-      );
-      Batch batch2 = Batch.withPageAndSession(
-          1, testQuery, testParams, 0, 100, "MCID_789012", "2"
-      );
+      Batch batch1 = Batch.withPageAndSession(1, testQuery, testParams, 0, 100, "MCID_123456", "1");
+      Batch batch2 = Batch.withPageAndSession(1, testQuery, testParams, 0, 100, "MCID_789012", "2");
 
       // When & Then: 应该不相等
       assertThat(batch1).isNotEqualTo(batch2);
@@ -681,9 +669,7 @@ class BatchTest {
     void shouldNotBeEqualForDifferentSessionTokensPresence() {
       // Given: 一个有 sessionTokens，一个没有
       Batch batch1 = Batch.withPage(1, testQuery, testParams, 0, 100);
-      Batch batch2 = Batch.withPageAndSession(
-          1, testQuery, testParams, 0, 100, "MCID_123456", "1"
-      );
+      Batch batch2 = Batch.withPageAndSession(1, testQuery, testParams, 0, 100, "MCID_123456", "1");
 
       // When & Then: 应该不相等
       assertThat(batch1).isNotEqualTo(batch2);

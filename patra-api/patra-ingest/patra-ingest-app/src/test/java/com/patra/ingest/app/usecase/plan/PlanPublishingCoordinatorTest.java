@@ -1,13 +1,12 @@
 package com.patra.ingest.app.usecase.plan;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.plan.dto.PlanIngestionResult;
 import com.patra.ingest.app.usecase.plan.publisher.TaskOutboxPublisher;
 import com.patra.ingest.domain.event.TaskQueuedEvent;
@@ -16,7 +15,6 @@ import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.model.enums.PlanStatus;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -243,12 +241,13 @@ class PlanPublishingCoordinatorTest {
       // Given
       TaskQueuedEvent queuedEvent = createTaskQueuedEvent(1L);
       // 创建其他类型的 DomainEvent
-      com.patra.common.domain.DomainEvent otherEvent = new com.patra.common.domain.DomainEvent() {
-        @Override
-        public Instant occurredAt() {
-          return Instant.now();
-        }
-      };
+      com.patra.common.domain.DomainEvent otherEvent =
+          new com.patra.common.domain.DomainEvent() {
+            @Override
+            public Instant occurredAt() {
+              return Instant.now();
+            }
+          };
 
       when(task1.pullDomainEvents()).thenReturn(List.of(queuedEvent, otherEvent));
 
@@ -329,8 +328,7 @@ class PlanPublishingCoordinatorTest {
       List<TaskAggregate> tasks = List.of(task1, task2);
 
       // When
-      PlanIngestionResult result =
-          coordinator.buildIngestionResult(schedule, plan, slices, tasks);
+      PlanIngestionResult result = coordinator.buildIngestionResult(schedule, plan, slices, tasks);
 
       // Then
       assertThat(result).isNotNull();
@@ -427,8 +425,7 @@ class PlanPublishingCoordinatorTest {
       List<TaskAggregate> tasks = Collections.emptyList();
 
       // When
-      PlanIngestionResult result =
-          coordinator.buildIngestionResult(schedule, plan, slices, tasks);
+      PlanIngestionResult result = coordinator.buildIngestionResult(schedule, plan, slices, tasks);
 
       // Then
       assertThat(result.finalStatus()).isEqualTo("ARCHIVED");
@@ -516,6 +513,15 @@ class PlanPublishingCoordinatorTest {
   /** 创建 TaskQueuedEvent。 */
   private TaskQueuedEvent createTaskQueuedEvent(Long taskId) {
     return TaskQueuedEvent.of(
-        taskId, 100L, 10L, 1L, ProvenanceCode.PUBMED, "HARVEST", "task-key-" + taskId, "{}", 1, Instant.now());
+        taskId,
+        100L,
+        10L,
+        1L,
+        ProvenanceCode.PUBMED,
+        "HARVEST",
+        "task-key-" + taskId,
+        "{}",
+        1,
+        Instant.now());
   }
 }

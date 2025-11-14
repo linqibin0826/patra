@@ -4,6 +4,7 @@
  * <p>本包提供将采集的文献数据发布到 Outbox 的实现。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>将 LiteratureReadyEvent 发布到 Outbox 表
  *   <li>构建文献消息的负载（{@code LiteratureReadyPayload}）和消息头（{@code LiteratureReadyHeaders}）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code LiteratureEventPublisher} - 文献事件发布器
  *       <ul>
@@ -32,18 +34,21 @@
  * </ul>
  *
  * <h2>分区策略</h2>
+ *
  * <ul>
  *   <li>按 {@code externalId} 的哈希值分区
  *   <li>确保同一文献的消息路由到同一分区（便于消费者幂等处理）
  * </ul>
  *
  * <h2>幂等键策略</h2>
+ *
  * <ul>
  *   <li>使用 {@code provenanceCode + ":" + externalId} 作为幂等键
  *   <li>防止同一文献的重复发布
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

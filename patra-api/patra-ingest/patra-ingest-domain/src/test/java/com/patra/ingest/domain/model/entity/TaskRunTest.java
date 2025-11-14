@@ -112,30 +112,29 @@ class TaskRunTest {
       Instant finishedAt = null;
       Instant lastHeartbeat = Instant.parse("2025-01-01T10:05:00Z");
       TaskRunCheckpoint checkpoint = new TaskRunCheckpoint("{\"cursor\":\"token123\"}");
-      WindowSpec windowSpec = WindowSpec.ofTime(
-          Instant.parse("2024-01-01T00:00:00Z"),
-          Instant.parse("2024-12-31T23:59:59Z")
-      );
+      WindowSpec windowSpec =
+          WindowSpec.ofTime(
+              Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-12-31T23:59:59Z"));
       RunContext runContext = new RunContext("correlation-001");
       String error = null;
 
       // When: 从持久化恢复
-      TaskRun taskRun = TaskRun.restore(
-          id,
-          taskId,
-          attemptNo,
-          provenanceCode,
-          operationCode,
-          status,
-          stats,
-          startedAt,
-          finishedAt,
-          lastHeartbeat,
-          checkpoint,
-          windowSpec,
-          runContext,
-          error
-      );
+      TaskRun taskRun =
+          TaskRun.restore(
+              id,
+              taskId,
+              attemptNo,
+              provenanceCode,
+              operationCode,
+              status,
+              stats,
+              startedAt,
+              finishedAt,
+              lastHeartbeat,
+              checkpoint,
+              windowSpec,
+              runContext,
+              error);
 
       // Then: 验证所有状态都被正确恢复
       assertThat(taskRun.getId()).isEqualTo(id);
@@ -161,9 +160,7 @@ class TaskRunTest {
       RunStats stats = null;
 
       // When
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .stats(stats)
-          .buildRestored();
+      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().stats(stats).buildRestored();
 
       // Then: 应该使用空 stats
       assertThat(taskRun.getStats()).isNotNull().isEqualTo(RunStats.empty());
@@ -176,9 +173,8 @@ class TaskRunTest {
       TaskRunCheckpoint checkpoint = null;
 
       // When
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .checkpoint(checkpoint)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun().checkpoint(checkpoint).buildRestored();
 
       // Then: 应该使用空 checkpoint
       assertThat(taskRun.getCheckpoint()).isNotNull().isEqualTo(TaskRunCheckpoint.empty());
@@ -191,9 +187,8 @@ class TaskRunTest {
       RunContext runContext = null;
 
       // When
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .runContext(runContext)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun().runContext(runContext).buildRestored();
 
       // Then: 应该使用空 runContext
       assertThat(taskRun.getRunContext()).isNotNull().isEqualTo(RunContext.empty());
@@ -228,9 +223,8 @@ class TaskRunTest {
     void shouldIgnoreStartFromNonPendingStatus() {
       // Given: RUNNING 状态的 TaskRun
       Instant originalStartedAt = Instant.parse("2025-01-01T09:00:00Z");
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun()
-          .startedAt(originalStartedAt)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aRunningTaskRun().startedAt(originalStartedAt).buildRestored();
 
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.RUNNING);
 
@@ -392,9 +386,8 @@ class TaskRunTest {
     void shouldPreserveCheckpointForResumableExecution() {
       // Given: RUNNING 状态的 TaskRun，包含检查点
       TaskRunCheckpoint checkpoint = new TaskRunCheckpoint("{\"lastProcessedId\":1000}");
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun()
-          .checkpoint(checkpoint)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aRunningTaskRun().checkpoint(checkpoint).buildRestored();
 
       // When: 标记为部分完成
       taskRun.markPartial("Partial completion", Instant.now());
@@ -547,7 +540,8 @@ class TaskRunTest {
       assertThat(taskRun.getCheckpoint()).isEqualTo(TaskRunCheckpoint.empty());
 
       // When: 更新检查点
-      TaskRunCheckpoint checkpoint = new TaskRunCheckpoint("{\"cursor\":\"page-5\",\"offset\":500}");
+      TaskRunCheckpoint checkpoint =
+          new TaskRunCheckpoint("{\"cursor\":\"page-5\",\"offset\":500}");
       taskRun.updateCheckpoint(checkpoint);
 
       // Then: 检查点应该被更新
@@ -560,9 +554,8 @@ class TaskRunTest {
     void shouldConvertNullCheckpointToEmpty() {
       // Given: RUNNING 状态的 TaskRun，已有检查点
       TaskRunCheckpoint existingCheckpoint = new TaskRunCheckpoint("{\"data\":\"old\"}");
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun()
-          .checkpoint(existingCheckpoint)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aRunningTaskRun().checkpoint(existingCheckpoint).buildRestored();
 
       assertThat(taskRun.getCheckpoint().isPresent()).isTrue();
 
@@ -664,9 +657,8 @@ class TaskRunTest {
     void shouldHandleZeroDelta() {
       // Given: RUNNING 状态的 TaskRun，已有统计
       RunStats initialStats = new RunStats(100, 95, 5, 10);
-      TaskRun taskRun = TaskRunTestDataBuilder.aRunningTaskRun()
-          .stats(initialStats)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aRunningTaskRun().stats(initialStats).buildRestored();
 
       // When: 追加零值增量
       RunStats zeroDelta = RunStats.empty();
@@ -705,10 +697,9 @@ class TaskRunTest {
       assertThat(taskRun.getWindowSpec()).isNull();
 
       // When: 分配时间窗口
-      WindowSpec windowSpec = WindowSpec.ofTime(
-          Instant.parse("2024-01-01T00:00:00Z"),
-          Instant.parse("2024-01-31T23:59:59Z")
-      );
+      WindowSpec windowSpec =
+          WindowSpec.ofTime(
+              Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-01-31T23:59:59Z"));
       taskRun.assignWindow(windowSpec);
 
       // Then: 窗口应该被分配
@@ -748,17 +739,17 @@ class TaskRunTest {
     void shouldAllowOverwritingExistingWindow() {
       // Given: TaskRun 已有窗口
       WindowSpec oldWindow = WindowSpec.ofSingle();
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .windowSpec(oldWindow)
-          .buildRestored(); // 使用 buildRestored() 以保留 windowSpec
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun()
+              .windowSpec(oldWindow)
+              .buildRestored(); // 使用 buildRestored() 以保留 windowSpec
 
       assertThat(taskRun.getWindowSpec()).isEqualTo(oldWindow);
 
       // When: 分配新窗口
-      WindowSpec newWindow = WindowSpec.ofTime(
-          Instant.parse("2024-01-01T00:00:00Z"),
-          Instant.parse("2024-12-31T23:59:59Z")
-      );
+      WindowSpec newWindow =
+          WindowSpec.ofTime(
+              Instant.parse("2024-01-01T00:00:00Z"), Instant.parse("2024-12-31T23:59:59Z"));
       taskRun.assignWindow(newWindow);
 
       // Then: 窗口应该被覆盖
@@ -770,9 +761,10 @@ class TaskRunTest {
     void shouldAllowAssigningNullWindow() {
       // Given: TaskRun 已有窗口
       WindowSpec window = WindowSpec.ofSingle();
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .windowSpec(window)
-          .buildRestored(); // 使用 buildRestored() 以保留 windowSpec
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun()
+              .windowSpec(window)
+              .buildRestored(); // 使用 buildRestored() 以保留 windowSpec
 
       // When: 分配 null 窗口
       taskRun.assignWindow(null);
@@ -808,9 +800,8 @@ class TaskRunTest {
     void shouldAllowOverwritingExistingCorrelationId() {
       // Given: TaskRun 已有 correlationId
       RunContext oldContext = new RunContext("trace-old");
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .runContext(oldContext)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun().runContext(oldContext).buildRestored();
 
       assertThat(taskRun.getRunContext().correlationId()).isEqualTo("trace-old");
 
@@ -827,9 +818,8 @@ class TaskRunTest {
     void shouldAllowBindingNullCorrelationId() {
       // Given: TaskRun 已有 correlationId
       RunContext context = new RunContext("trace-001");
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .runContext(context)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun().runContext(context).buildRestored();
 
       // When: 绑定 null correlationId
       taskRun.bindRunContext(null);
@@ -853,22 +843,22 @@ class TaskRunTest {
       Instant maxTime = Instant.parse("2099-12-31T23:59:59Z");
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRun.restore(
-          1001L,
-          2001L,
-          1,
-          ProvenanceCode.PUBMED,
-          "HARVEST",
-          TaskRunStatus.SUCCEEDED,
-          RunStats.empty(),
-          minTime,
-          maxTime,
-          maxTime,
-          TaskRunCheckpoint.empty(),
-          null,
-          RunContext.empty(),
-          null
-      );
+      TaskRun taskRun =
+          TaskRun.restore(
+              1001L,
+              2001L,
+              1,
+              ProvenanceCode.PUBMED,
+              "HARVEST",
+              TaskRunStatus.SUCCEEDED,
+              RunStats.empty(),
+              minTime,
+              maxTime,
+              maxTime,
+              TaskRunCheckpoint.empty(),
+              null,
+              RunContext.empty(),
+              null);
 
       // Then: 应该正确处理
       assertThat(taskRun.getStartedAt()).isEqualTo(minTime);
@@ -884,9 +874,7 @@ class TaskRunTest {
       RunStats largeStats = new RunStats(largeValue, largeValue, largeValue, largeValue);
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .stats(largeStats)
-          .buildRestored();
+      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().stats(largeStats).buildRestored();
 
       // Then: 应该正确处理
       assertThat(taskRun.getStats()).isEqualTo(largeStats);
@@ -900,9 +888,8 @@ class TaskRunTest {
       TaskRunCheckpoint longCheckpoint = new TaskRunCheckpoint(longJson);
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .checkpoint(longCheckpoint)
-          .buildRestored();
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPendingTaskRun().checkpoint(longCheckpoint).buildRestored();
 
       // Then: 应该正确处理
       assertThat(taskRun.getCheckpoint()).isEqualTo(longCheckpoint);
@@ -916,9 +903,7 @@ class TaskRunTest {
       String longError = "Error: " + "x".repeat(5000);
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aFailedTaskRun()
-          .error(longError)
-          .buildRestored();
+      TaskRun taskRun = TaskRunTestDataBuilder.aFailedTaskRun().error(longError).buildRestored();
 
       // Then: 应该正确处理
       assertThat(taskRun.getError()).isEqualTo(longError);
@@ -931,9 +916,7 @@ class TaskRunTest {
       int attemptNo = 1;
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .attemptNo(attemptNo)
-          .build();
+      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().attemptNo(attemptNo).build();
 
       // Then: 应该正确处理
       assertThat(taskRun.getAttemptNo()).isEqualTo(attemptNo);
@@ -946,9 +929,7 @@ class TaskRunTest {
       int attemptNo = Integer.MAX_VALUE;
 
       // When: 创建 TaskRun
-      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun()
-          .attemptNo(attemptNo)
-          .build();
+      TaskRun taskRun = TaskRunTestDataBuilder.aPendingTaskRun().attemptNo(attemptNo).build();
 
       // Then: 应该正确处理
       assertThat(taskRun.getAttemptNo()).isEqualTo(attemptNo);
@@ -1014,11 +995,13 @@ class TaskRunTest {
     @DisplayName("PARTIAL 状态应该支持断点续传")
     void shouldSupportResumableExecutionInPartialStatus() {
       // Given: PARTIAL 状态的 TaskRun，包含检查点
-      TaskRunCheckpoint checkpoint = new TaskRunCheckpoint("{\"lastBatchId\":50,\"processedCount\":5000}");
-      TaskRun taskRun = TaskRunTestDataBuilder.aPartialTaskRun()
-          .checkpoint(checkpoint)
-          .stats(new RunStats(5000, 4950, 50, 50))
-          .buildRestored();
+      TaskRunCheckpoint checkpoint =
+          new TaskRunCheckpoint("{\"lastBatchId\":50,\"processedCount\":5000}");
+      TaskRun taskRun =
+          TaskRunTestDataBuilder.aPartialTaskRun()
+              .checkpoint(checkpoint)
+              .stats(new RunStats(5000, 4950, 50, 50))
+              .buildRestored();
 
       // Then: 应该处于 PARTIAL 状态，并保留检查点和统计信息
       assertThat(taskRun.getStatus()).isEqualTo(TaskRunStatus.PARTIAL);
@@ -1033,22 +1016,23 @@ class TaskRunTest {
     @DisplayName("应该支持可选字段为 null")
     void shouldSupportOptionalFieldsAsNull() {
       // Given: 可选字段为 null
-      TaskRun taskRun = TaskRun.restore(
-          1001L,
-          2001L,
-          1,
-          null, // provenanceCode 可选
-          null, // operationCode 可选
-          TaskRunStatus.PENDING,
-          null, // stats 可选（自动转为 empty）
-          null, // startedAt 可选
-          null, // finishedAt 可选
-          null, // lastHeartbeat 可选
-          null, // checkpoint 可选（自动转为 empty）
-          null, // windowSpec 可选
-          null, // runContext 可选（自动转为 empty）
-          null  // error 可选
-      );
+      TaskRun taskRun =
+          TaskRun.restore(
+              1001L,
+              2001L,
+              1,
+              null, // provenanceCode 可选
+              null, // operationCode 可选
+              TaskRunStatus.PENDING,
+              null, // stats 可选（自动转为 empty）
+              null, // startedAt 可选
+              null, // finishedAt 可选
+              null, // lastHeartbeat 可选
+              null, // checkpoint 可选（自动转为 empty）
+              null, // windowSpec 可选
+              null, // runContext 可选（自动转为 empty）
+              null // error 可选
+              );
 
       // Then: 应该成功创建，并使用默认值
       assertThat(taskRun).isNotNull();
@@ -1192,16 +1176,12 @@ class TaskRunTest {
       return this;
     }
 
-    /**
-     * 构建新创建的 TaskRun（使用标准构造函数）。
-     */
+    /** 构建新创建的 TaskRun（使用标准构造函数）。 */
     public TaskRun build() {
       return new TaskRun(id, taskId, attemptNo, provenanceCode, operationCode);
     }
 
-    /**
-     * 构建从持久化重建的 TaskRun（使用 restore() 工厂方法）。
-     */
+    /** 构建从持久化重建的 TaskRun（使用 restore() 工厂方法）。 */
     public TaskRun buildRestored() {
       return TaskRun.restore(
           id,
@@ -1217,8 +1197,7 @@ class TaskRunTest {
           checkpoint,
           windowSpec,
           runContext,
-          error
-      );
+          error);
     }
   }
 }

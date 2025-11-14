@@ -2,7 +2,6 @@ package com.patra.ingest.app.usecase.execution.session;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.ingest.domain.model.aggregate.PlanAggregate;
 import com.patra.ingest.domain.model.aggregate.PlanSliceAggregate;
@@ -136,11 +135,11 @@ public class ExecutionContextLoaderImpl implements ExecutionContextLoader {
     }
 
     // 创建编译请求(不包含 endpointName,默认为 null)
-    String provenanceCodeStr = task.getProvenanceCode() != null ? task.getProvenanceCode().getCode() : null;
+    String provenanceCodeStr =
+        task.getProvenanceCode() != null ? task.getProvenanceCode().getCode() : null;
     ExprCompilationRequest compilationRequest =
         new ExprCompilationRequest(
-            provenanceCodeStr,
-            exprSnapshotJson // 使用 Slice 的表达式快照
+            provenanceCodeStr, exprSnapshotJson // 使用 Slice 的表达式快照
             );
 
     // 步骤5: 编译表达式并验证结果

@@ -4,6 +4,7 @@ package com.patra.starter.provenance.internal.metadata;
  * DOAJ 特定的计划元数据
  *
  * <p>包含 DOAJ API 返回的特定信息:
+ *
  * <ul>
  *   <li>scrollId - Elasticsearch Scroll ID
  *   <li>pageSize - 每页大小
@@ -14,34 +15,35 @@ package com.patra.starter.provenance.internal.metadata;
  */
 public class DoajPlanMetadata extends PlanMetadata {
 
-    private final String scrollId;
-    private final int pageSize;
+  private final String scrollId;
+  private final int pageSize;
 
-    public DoajPlanMetadata(int totalCount, String scrollId, int pageSize) {
-        super("doaj", totalCount);
-        if (pageSize <= 0) {
-            throw new IllegalArgumentException("pageSize 必须 > 0");
-        }
-        this.scrollId = scrollId;
-        this.pageSize = pageSize;
+  public DoajPlanMetadata(int totalCount, String scrollId, int pageSize) {
+    super("doaj", totalCount);
+    if (pageSize <= 0) {
+      throw new IllegalArgumentException("pageSize 必须 > 0");
     }
+    this.scrollId = scrollId;
+    this.pageSize = pageSize;
+  }
 
-    @Override
-    public boolean hasSessionToken() {
-        return scrollId != null && !scrollId.isBlank();
-    }
+  @Override
+  public boolean hasSessionToken() {
+    return scrollId != null && !scrollId.isBlank();
+  }
 
-    public String scrollId() {
-        return scrollId;
-    }
+  public String scrollId() {
+    return scrollId;
+  }
 
-    public int pageSize() {
-        return pageSize;
-    }
+  public int pageSize() {
+    return pageSize;
+  }
 
-    @Override
-    public String toString() {
-        return String.format("DoajPlanMetadata[totalCount=%d, pageSize=%d, hasScrollId=%b]",
-                totalCount(), pageSize, hasSessionToken());
-    }
+  @Override
+  public String toString() {
+    return String.format(
+        "DoajPlanMetadata[totalCount=%d, pageSize=%d, hasScrollId=%b]",
+        totalCount(), pageSize, hasSessionToken());
+  }
 }

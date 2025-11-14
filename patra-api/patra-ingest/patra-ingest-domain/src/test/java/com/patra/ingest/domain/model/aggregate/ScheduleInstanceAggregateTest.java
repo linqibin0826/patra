@@ -94,9 +94,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
-              .triggeredAt(triggeredAt)
-              .build();
+          ScheduleInstanceAggregateTestDataBuilder.builder().triggeredAt(triggeredAt).build();
 
       Instant afterCreation = Instant.now();
 
@@ -140,10 +138,7 @@ class ScheduleInstanceAggregateTest {
 
       // When & Then
       assertThatThrownBy(
-              () ->
-                  ScheduleInstanceAggregateTestDataBuilder.builder()
-                      .scheduler(scheduler)
-                      .build())
+              () -> ScheduleInstanceAggregateTestDataBuilder.builder().scheduler(scheduler).build())
           .isInstanceOf(NullPointerException.class)
           .hasMessageContaining("schedulerCode must not be null");
     }
@@ -293,9 +288,7 @@ class ScheduleInstanceAggregateTest {
       triggerParams.put("original", "value");
 
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
-              .triggerParams(triggerParams)
-              .build();
+          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(triggerParams).build();
 
       // When - 修改外部 Map
       triggerParams.put("modified", "newValue");
@@ -333,9 +326,7 @@ class ScheduleInstanceAggregateTest {
     @DisplayName("应该支持所有触发类型")
     void shouldSupportAllTriggerTypes() {
       // Given - 所有触发类型
-      TriggerType[] allTriggerTypes = {
-        TriggerType.SCHEDULE, TriggerType.MANUAL, TriggerType.API
-      };
+      TriggerType[] allTriggerTypes = {TriggerType.SCHEDULE, TriggerType.MANUAL, TriggerType.API};
 
       // When & Then - 每个触发类型都应该成功创建调度实例
       for (TriggerType triggerType : allTriggerTypes) {
@@ -360,9 +351,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
-              .triggerParams(complexParams)
-              .build();
+          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(complexParams).build();
 
       // Then
       assertThat(instance.getTriggerParams()).isEqualTo(complexParams);
@@ -482,9 +471,7 @@ class ScheduleInstanceAggregateTest {
 
       // When
       ScheduleInstanceAggregate instance =
-          ScheduleInstanceAggregateTestDataBuilder.builder()
-              .triggerParams(paramsWithNull)
-              .build();
+          ScheduleInstanceAggregateTestDataBuilder.builder().triggerParams(paramsWithNull).build();
 
       // Then
       assertThat(instance.getTriggerParams()).containsEntry("key1", "value1");
@@ -608,7 +595,8 @@ class ScheduleInstanceAggregateTest {
       assertThat(instance.getScheduler()).isEqualTo(Scheduler.XXL);
       assertThat(instance.getSchedulerJobId()).isEqualTo(schedulerJobId);
       assertThat(instance.getSchedulerLogId()).isEqualTo(schedulerLogId);
-      assertThat(instance.getTriggerParams()).containsEntry("executorHandler", "pubmedHarvestHandler");
+      assertThat(instance.getTriggerParams())
+          .containsEntry("executorHandler", "pubmedHarvestHandler");
     }
 
     @Test
@@ -665,7 +653,8 @@ class ScheduleInstanceAggregateTest {
       // Then
       assertThat(instance.getTriggerType()).isEqualTo(TriggerType.MANUAL);
       assertThat(instance.getTriggerParams()).containsEntry("userId", "admin");
-      assertThat(instance.getTriggerParams()).containsEntry("reason", "Manual backfill for missing data");
+      assertThat(instance.getTriggerParams())
+          .containsEntry("reason", "Manual backfill for missing data");
     }
 
     @Test
@@ -693,7 +682,8 @@ class ScheduleInstanceAggregateTest {
 
       // Then
       assertThat(instance.getTriggerType()).isEqualTo(TriggerType.API);
-      assertThat(instance.getTriggerParams()).containsEntry("apiEndpoint", "/api/v1/trigger/harvest");
+      assertThat(instance.getTriggerParams())
+          .containsEntry("apiEndpoint", "/api/v1/trigger/harvest");
       assertThat(instance.getTriggerParams()).containsEntry("requestId", "req-12345");
     }
   }

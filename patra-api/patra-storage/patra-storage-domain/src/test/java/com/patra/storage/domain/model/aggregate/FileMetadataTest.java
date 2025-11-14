@@ -800,12 +800,10 @@ class FileMetadataTest {
           new FileChecksum(
               "D41D8CD98F00B204E9800998ECF8427E",
               "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855");
-      FileMetadata metadata =
-          FileMetadataTestDataBuilder.anActiveFile().checksum(checksum).build();
+      FileMetadata metadata = FileMetadataTestDataBuilder.anActiveFile().checksum(checksum).build();
 
       // When & Then - 哈希值应该被标准化为小写
-      assertThat(metadata.getChecksum().md5Hash())
-          .isEqualTo("d41d8cd98f00b204e9800998ecf8427e");
+      assertThat(metadata.getChecksum().md5Hash()).isEqualTo("d41d8cd98f00b204e9800998ecf8427e");
       assertThat(metadata.getChecksum().sha256Hash())
           .isEqualTo("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     }
@@ -823,7 +821,8 @@ class FileMetadataTest {
       // When & Then
       assertThat(metadata.getContext().correlationData()).containsEntry("source", "pubmed");
       assertThat(metadata.getContext().correlationData()).containsEntry("year", 2024);
-      assertThat(metadata.getContext().correlationData()).containsEntry("importBatchId", "batch-001");
+      assertThat(metadata.getContext().correlationData())
+          .containsEntry("importBatchId", "batch-001");
     }
   }
 

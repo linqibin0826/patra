@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.patra.expr.*;
 import com.patra.expr.Atom.*;
 import java.io.IOException;
-import java.lang.Void;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -335,8 +334,7 @@ public final class ExprJsonCodec {
       return list;
     }
 
-    private Value parseAtomValue(JsonNode node, DeserializationContext ctxt)
-        throws IOException {
+    private Value parseAtomValue(JsonNode node, DeserializationContext ctxt) throws IOException {
       String kind = getText(node, "kind");
       return switch (kind) {
         case "TERM" -> parseTermValue(node);
@@ -375,10 +373,8 @@ public final class ExprJsonCodec {
 
     private Value parseRange(JsonNode node, DeserializationContext ctxt) {
       String rangeType = getText(node, "rangeType");
-      RangeValue.Boundary fromBoundary =
-          RangeValue.Boundary.valueOf(getText(node, "fromBoundary"));
-      RangeValue.Boundary toBoundary =
-          RangeValue.Boundary.valueOf(getText(node, "toBoundary"));
+      RangeValue.Boundary fromBoundary = RangeValue.Boundary.valueOf(getText(node, "fromBoundary"));
+      RangeValue.Boundary toBoundary = RangeValue.Boundary.valueOf(getText(node, "toBoundary"));
       JsonNode fromNode = node.get("from");
       JsonNode toNode = node.get("to");
 

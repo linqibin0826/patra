@@ -4,6 +4,7 @@
  * <p>本包提供任务的批次执行逻辑，根据数据源策略分批调用 Provider API。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>根据数据源规划批次（如 PubMed 每批 10000 条）
  *   <li>循环执行批次（调用 Provider API）
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code ExecuteTaskBatchesUseCase} - 批次执行用例接口
  *   <li>{@code ExecuteTaskBatchesUseCaseImpl} - 批次执行用例实现
@@ -19,6 +21,7 @@
  * </ul>
  *
  * <h2>批次执行流程</h2>
+ *
  * <pre>
  * 1. 批次规划（BatchPlanner）
  *    └─ 根据数据源策略生成批次列表
@@ -36,7 +39,9 @@
  * </pre>
  *
  * <h2>批次规划示例</h2>
+ *
  * <h3>PubMed 批次规划</h3>
+ *
  * <pre>
  * 输入：
  *   - 总数: 25000 条
@@ -49,6 +54,7 @@
  * </pre>
  *
  * <h3>EPMC 批次规划</h3>
+ *
  * <pre>
  * 输入：
  *   - 总数: 5500 条
@@ -62,6 +68,7 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

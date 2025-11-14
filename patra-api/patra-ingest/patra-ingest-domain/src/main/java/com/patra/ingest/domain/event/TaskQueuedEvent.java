@@ -3,7 +3,6 @@ package com.patra.ingest.domain.event;
 import com.patra.common.domain.DomainEvent;
 import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
-import java.util.Objects;
 
 /**
  * 任务入队领域事件。当任务进入执行队列时发布。

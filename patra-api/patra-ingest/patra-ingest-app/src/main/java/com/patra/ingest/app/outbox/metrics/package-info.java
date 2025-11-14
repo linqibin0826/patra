@@ -4,6 +4,7 @@
  * <p>本包提供 Outbox 发布和中继的监控指标收集，集成 Micrometer。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>记录 Outbox 消息发布成功/失败数量
  *   <li>记录 Outbox 中继批次的成功/失败统计
@@ -13,6 +14,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxMetrics} - Outbox 指标收集器
  *       <ul>
@@ -24,6 +26,7 @@
  * </ul>
  *
  * <h2>指标清单</h2>
+ *
  * <table border="1">
  *   <tr>
  *     <th>指标名称</th>
@@ -64,6 +67,7 @@
  * </table>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -96,7 +100,9 @@
  * }</pre>
  *
  * <h2>监控示例</h2>
+ *
  * <h3>Prometheus 查询</h3>
+ *
  * <pre>
  * # Outbox 发布成功率
  * rate(outbox_publish_success_total[5m])

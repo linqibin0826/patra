@@ -1,6 +1,5 @@
 package com.patra.ingest.adapter.scheduler.job;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -12,7 +11,6 @@ import static org.mockito.Mockito.when;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.core.util.IdUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.patra.common.messaging.ChannelKey;
 import com.patra.ingest.adapter.scheduler.param.OutboxRelayJobParam;
 import com.patra.ingest.app.usecase.relay.OutboxRelayUseCase;
 import com.patra.ingest.app.usecase.relay.command.OutboxRelayCommand;
@@ -23,7 +21,6 @@ import com.patra.ingest.domain.exception.OutboxRelayExecutionException;
 import com.patra.ingest.domain.messaging.IngestPublishingChannels;
 import com.xxl.job.core.context.XxlJobHelper;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,8 +78,7 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("uuid-12345");
 
         RelayReport mockReport =
-            new RelayReport(
-                IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 0);
+            new RelayReport(IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 0);
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
@@ -90,8 +86,7 @@ class OutboxRelayJobTest {
 
         // Then
         verify(relayUseCase, times(1)).relay(any(OutboxRelayCommand.class));
-        xxlJobHelper.verify(
-            () -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
+        xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
       }
     }
 
@@ -105,9 +100,7 @@ class OutboxRelayJobTest {
         // Given
         String jsonParam =
             "{\"channel\":\"TASK_READY\",\"batchSize\":50,\"leaseDuration\":\"PT30S\",\"maxAttempts\":5,\"initialBackoff\":\"PT5S\"}";
-        OutboxRelayJobParam param =
-            new OutboxRelayJobParam(
-                "TASK_READY", 50, "PT30S", 5, "PT5S");
+        OutboxRelayJobParam param = new OutboxRelayJobParam("TASK_READY", 50, "PT30S", 5, "PT5S");
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
@@ -117,8 +110,7 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
         RelayReport mockReport =
-            new RelayReport(
-                IngestPublishingChannels.TASK_READY, 50, 45, 3, 2, 0);
+            new RelayReport(IngestPublishingChannels.TASK_READY, 50, 45, 3, 2, 0);
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
@@ -127,15 +119,13 @@ class OutboxRelayJobTest {
         // Then
         verify(objectMapper).readValue(jsonParam, OutboxRelayJobParam.class);
         verify(relayUseCase, times(1)).relay(any(OutboxRelayCommand.class));
-        xxlJobHelper.verify(
-            () -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
+        xxlJobHelper.verify(() -> XxlJobHelper.handleSuccess(any(String.class)), times(1));
       }
     }
 
     @Test
     @DisplayName("应该在参数解析失败时抛出 IngestScheduleParameterException")
-    void execute_shouldThrowIngestScheduleParameterExceptionWhenParamParseFails()
-        throws Exception {
+    void execute_shouldThrowIngestScheduleParameterExceptionWhenParamParseFails() throws Exception {
       try (MockedStatic<XxlJobHelper> xxlJobHelper = mockStatic(XxlJobHelper.class)) {
 
         // Given
@@ -230,8 +220,7 @@ class OutboxRelayJobTest {
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
         RelayReport mockReport =
-            new RelayReport(
-                IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 0);
+            new RelayReport(IngestPublishingChannels.TASK_READY, 10, 8, 1, 1, 0);
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
@@ -249,7 +238,8 @@ class OutboxRelayJobTest {
 
         // Given
         String jsonParam = "{\"channel\":\"INVALID_CHANNEL\"}";
-        OutboxRelayJobParam param = new OutboxRelayJobParam("INVALID_CHANNEL", null, null, null, null);
+        OutboxRelayJobParam param =
+            new OutboxRelayJobParam("INVALID_CHANNEL", null, null, null, null);
 
         xxlJobHelper.when(XxlJobHelper::getJobParam).thenReturn(jsonParam);
         xxlJobHelper.when(XxlJobHelper::getJobId).thenReturn(123L);
@@ -282,8 +272,7 @@ class OutboxRelayJobTest {
 
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
-        RelayReport mockReport =
-            new RelayReport(null, 10, 8, 1, 1, 0);
+        RelayReport mockReport = new RelayReport(null, 10, 8, 1, 1, 0);
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
@@ -312,8 +301,7 @@ class OutboxRelayJobTest {
 
         when(objectMapper.readValue(jsonParam, OutboxRelayJobParam.class)).thenReturn(param);
 
-        RelayReport mockReport =
-            new RelayReport(null, 10, 8, 1, 1, 0);
+        RelayReport mockReport = new RelayReport(null, 10, 8, 1, 1, 0);
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When
@@ -421,8 +409,7 @@ class OutboxRelayJobTest {
         idUtil.when(IdUtil::fastSimpleUUID).thenReturn("uuid-12345");
 
         RelayReport mockReport =
-            new RelayReport(
-                IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 1);
+            new RelayReport(IngestPublishingChannels.TASK_READY, 100, 95, 3, 2, 1);
         when(relayUseCase.relay(any(OutboxRelayCommand.class))).thenReturn(mockReport);
 
         // When

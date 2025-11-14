@@ -2,10 +2,10 @@
  * Transactional Outbox 模式组件包。
  *
  * <p>本包实现 <strong>Transactional Outbox Pattern</strong>，确保领域事件的可靠发布。
- * 通过将事件写入数据库表（与业务操作在同一事务），然后异步轮询并发布到消息队列，
- * 解决分布式系统中的双写问题（数据库 + 消息队列）。
+ * 通过将事件写入数据库表（与业务操作在同一事务），然后异步轮询并发布到消息队列， 解决分布式系统中的双写问题（数据库 + 消息队列）。
  *
  * <h2>核心职责</h2>
+ *
  * <ul>
  *   <li>将领域事件写入 Outbox 表（事务内）
  *   <li>异步轮询 Outbox 表中的待发布消息
@@ -15,6 +15,7 @@
  * </ul>
  *
  * <h2>模块结构</h2>
+ *
  * <ul>
  *   <li>{@link com.patra.ingest.app.outbox.core} - Outbox 核心抽象和发布逻辑
  *   <li>{@link com.patra.ingest.app.outbox.publisher} - 具体的 Outbox 发布器实现
@@ -24,6 +25,7 @@
  * </ul>
  *
  * <h2>Outbox 模式流程</h2>
+ *
  * <pre>
  * [写入阶段] 业务事务内
  * 1. 执行业务操作（如创建 Task）
@@ -41,6 +43,7 @@
  * </pre>
  *
  * <h2>关键特性</h2>
+ *
  * <ul>
  *   <li><strong>At-Least-Once 保证</strong>: 确保消息至少发布一次（消费端需实现幂等性）
  *   <li><strong>租约机制</strong>: 防止多实例并发发布同一消息
@@ -52,6 +55,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code AbstractOutboxPublisher} - Outbox 发布器抽象基类
  *       <ul>
@@ -71,6 +75,7 @@
  * </ul>
  *
  * <h2>配置示例</h2>
+ *
  * <pre>
  * patra:
  *   ingest:
@@ -87,7 +92,9 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>定义 Outbox 发布器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -133,6 +140,7 @@
  * }</pre>
  *
  * <h3>在编排器中使用</h3>
+ *
  * <pre>{@code
  * @Service
  * @RequiredArgsConstructor
@@ -162,6 +170,7 @@
  *
  * @since 0.1.0
  * @author linqibin
- * @see <a href="https://microservices.io/patterns/data/transactional-outbox.html">Transactional Outbox Pattern</a>
+ * @see <a href="https://microservices.io/patterns/data/transactional-outbox.html">Transactional
+ *     Outbox Pattern</a>
  */
 package com.patra.ingest.app.outbox;

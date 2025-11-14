@@ -1,13 +1,14 @@
 /**
  * Storage 服务 Feign 客户端包。
  *
- * <p>本包提供 patra-storage 服务的 OpenFeign 客户端接口,供其他微服务进行类型安全的 RPC 调用。
- * 所有客户端接口都是六边形架构 API 层的一部分,继承端点契约并添加 Feign 注解,实现服务间透明远程调用。
+ * <p>本包提供 patra-storage 服务的 OpenFeign 客户端接口,供其他微服务进行类型安全的 RPC 调用。 所有客户端接口都是六边形架构 API
+ * 层的一部分,继承端点契约并添加 Feign 注解,实现服务间透明远程调用。
  *
  * <h2>核心客户端</h2>
  *
  * <ul>
- *   <li>{@link com.patra.storage.api.client.StorageClient} - Storage 服务 Feign 客户端,扩展 {@link com.patra.storage.api.endpoint.StorageEndpoint}
+ *   <li>{@link com.patra.storage.api.client.StorageClient} - Storage 服务 Feign 客户端,扩展 {@link
+ *       com.patra.storage.api.endpoint.StorageEndpoint}
  * </ul>
  *
  * <h2>设计原则</h2>
@@ -116,7 +117,8 @@
  * <ul>
  *   <li>端点契约: {@link com.patra.storage.api.endpoint.StorageEndpoint}
  *   <li>DTO 定义: {@link com.patra.storage.api.dto}
- *   <li>OpenFeign 官方文档: <a href="https://spring.io/projects/spring-cloud-openfeign">spring.io/projects/spring-cloud-openfeign</a>
+ *   <li>OpenFeign 官方文档: <a
+ *       href="https://spring.io/projects/spring-cloud-openfeign">spring.io/projects/spring-cloud-openfeign</a>
  * </ul>
  *
  * @author linqibin

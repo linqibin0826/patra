@@ -2,12 +2,12 @@ package com.patra.ingest.infra.persistence.converter;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.json.JsonNodeMappings;
 import com.patra.ingest.domain.model.aggregate.ScheduleInstanceAggregate;
 import com.patra.ingest.domain.model.enums.Scheduler;
 import com.patra.ingest.domain.model.enums.TriggerType;
 import com.patra.ingest.infra.persistence.entity.ScheduleInstanceDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -80,7 +80,8 @@ class ScheduleInstanceConverterTest {
 
       // 验证 triggerParams JSON 转换
       assertThat(result.getTriggerParams()).isNotNull();
-      Map<String, Object> restoredParams = JsonNodeMappings.jsonNodeToMap(result.getTriggerParams());
+      Map<String, Object> restoredParams =
+          JsonNodeMappings.jsonNodeToMap(result.getTriggerParams());
       assertThat(restoredParams).containsEntry("window", "2025-01");
       assertThat(restoredParams).containsEntry("mode", "incremental");
       assertThat(restoredParams).containsEntry("retryCount", 3);

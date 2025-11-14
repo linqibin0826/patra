@@ -3,7 +3,6 @@ package com.patra.ingest.app.usecase.execution.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -171,10 +170,7 @@ class ExecutionSessionManagerImplTest {
       // Assert
       verify(heartbeatRenewalService)
           .startHeartbeat(
-              eq(TASK_ID),
-              eq(LEASE_OWNER),
-              eq(Duration.ofSeconds(60)),
-              eq(Duration.ofSeconds(20)));
+              eq(TASK_ID), eq(LEASE_OWNER), eq(Duration.ofSeconds(60)), eq(Duration.ofSeconds(20)));
     }
   }
 

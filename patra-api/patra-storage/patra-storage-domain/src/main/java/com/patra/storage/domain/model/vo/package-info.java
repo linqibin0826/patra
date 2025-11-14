@@ -158,7 +158,8 @@
  * <ul>
  *   <li>聚合根: {@link com.patra.storage.domain.model.aggregate.FileMetadata}
  *   <li>枚举类型: {@link com.patra.storage.domain.model.enums}
- *   <li>DDD 值对象模式: <a href="https://martinfowler.com/bliki/ValueObject.html">martinfowler.com/bliki/ValueObject.html</a>
+ *   <li>DDD 值对象模式: <a
+ *       href="https://martinfowler.com/bliki/ValueObject.html">martinfowler.com/bliki/ValueObject.html</a>
  * </ul>
  *
  * @author linqibin

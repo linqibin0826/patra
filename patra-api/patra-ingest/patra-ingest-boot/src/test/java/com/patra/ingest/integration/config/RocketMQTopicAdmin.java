@@ -1,12 +1,11 @@
 package com.patra.ingest.integration.config;
 
+import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.ComposeContainer;
 import org.testcontainers.containers.ContainerState;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * RocketMQ Topic 管理工具类。
@@ -79,10 +78,15 @@ public class RocketMQTopicAdmin {
               try {
                 var result =
                     brokerContainer.execInContainer(
-                        "sh", "mqadmin", "updateTopic",
-                        "-n", "nameserver:9876", // 容器内部使用别名
-                        "-t", topic,
-                        "-c", "DefaultCluster");
+                        "sh",
+                        "mqadmin",
+                        "updateTopic",
+                        "-n",
+                        "nameserver:9876", // 容器内部使用别名
+                        "-t",
+                        topic,
+                        "-c",
+                        "DefaultCluster");
 
                 String output = result.getStdout();
                 boolean success = result.getExitCode() == 0 && output.contains("success");
@@ -115,9 +119,7 @@ public class RocketMQTopicAdmin {
     try {
       var result =
           brokerContainer.execInContainer(
-              "sh", "mqadmin", "topicRoute",
-              "-n", "nameserver:9876",
-              "-t", topic);
+              "sh", "mqadmin", "topicRoute", "-n", "nameserver:9876", "-t", topic);
 
       String output = result.getStdout();
       boolean routeAvailable = output != null && output.contains("brokerName");
@@ -157,10 +159,15 @@ public class RocketMQTopicAdmin {
       brokerContainerOpt
           .get()
           .execInContainer(
-              "sh", "mqadmin", "deleteTopic",
-              "-n", "nameserver:9876",
-              "-t", topic,
-              "-c", "DefaultCluster");
+              "sh",
+              "mqadmin",
+              "deleteTopic",
+              "-n",
+              "nameserver:9876",
+              "-t",
+              topic,
+              "-c",
+              "DefaultCluster");
       log.info("Topic {} 已删除", topic);
     } catch (Exception e) {
       log.warn("删除 Topic 失败: {}", e.getMessage());

@@ -33,7 +33,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -143,8 +142,7 @@ class CompleteTaskExecutionUseCaseImplTest {
       completeUseCase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该调用游标推进
-      verify(cursorAdvancer)
-          .advance(mockContext, mockSession.taskId(), mockSession.runId(), 9001L);
+      verify(cursorAdvancer).advance(mockContext, mockSession.taskId(), mockSession.runId(), 9001L);
     }
 
     @Test
@@ -523,7 +521,8 @@ class CompleteTaskExecutionUseCaseImplTest {
       completeUseCase.complete(mockSession, mockContext, executeResult);
 
       // Then: 应该调用 appendStats
-      verify(mockTaskRun).appendStats(argThat(stats -> stats.fetched() == 400L && stats.failed() == 1L));
+      verify(mockTaskRun)
+          .appendStats(argThat(stats -> stats.fetched() == 400L && stats.failed() == 1L));
     }
 
     @Test

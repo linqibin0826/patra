@@ -59,17 +59,7 @@ class ProvenanceConfigSnapshotTest {
 
   private static PaginationConfig createSamplePaginationConfig() {
     Instant now = Instant.parse("2025-01-01T00:00:00Z");
-    return new PaginationConfig(
-        201L,
-        1L,
-        "FETCH",
-        now,
-        null,
-        "PAGE_NUMBER",
-        100,
-        10,
-        "sort",
-        1);
+    return new PaginationConfig(201L, 1L, "FETCH", now, null, "PAGE_NUMBER", 100, 10, "sort", 1);
   }
 
   private static HttpConfig createSampleHttpConfig() {
@@ -94,16 +84,7 @@ class ProvenanceConfigSnapshotTest {
 
   private static BatchingConfig createSampleBatchingConfig() {
     Instant now = Instant.parse("2025-01-01T00:00:00Z");
-    return new BatchingConfig(
-        401L,
-        1L,
-        "DETAIL_FETCH",
-        now,
-        null,
-        50,
-        "ids",
-        ",",
-        200);
+    return new BatchingConfig(401L, 1L, "DETAIL_FETCH", now, null, 50, "ids", ",", 200);
   }
 
   private static RetryConfig createSampleRetryConfig() {
@@ -129,14 +110,7 @@ class ProvenanceConfigSnapshotTest {
 
   private static RateLimitConfig createSampleRateLimitConfig() {
     Instant now = Instant.parse("2025-01-01T00:00:00Z");
-    return new RateLimitConfig(
-        601L,
-        1L,
-        "FETCH",
-        now,
-        null,
-        10,
-        3);
+    return new RateLimitConfig(601L, 1L, "FETCH", now, null, 10, 3);
   }
 
   private static ProvenanceConfigSnapshot createFullSnapshot() {
@@ -180,14 +154,8 @@ class ProvenanceConfigSnapshotTest {
       ProvenanceInfo provenance = createSampleProvenanceInfo();
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          provenance,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(provenance, null, null, null, null, null, null);
 
       // Then
       assertThat(snapshot.provenance()).isEqualTo(provenance);
@@ -208,14 +176,8 @@ class ProvenanceConfigSnapshotTest {
       HttpConfig http = createSampleHttpConfig();
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          provenance,
-          null,
-          pagination,
-          http,
-          null,
-          null,
-          null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(provenance, null, pagination, http, null, null, null);
 
       // Then
       assertThat(snapshot.provenance()).isEqualTo(provenance);
@@ -253,15 +215,16 @@ class ProvenanceConfigSnapshotTest {
     @DisplayName("应该支持创建非激活状态的 ProvenanceInfo")
     void shouldCreateInactiveProvenanceInfo() {
       // Given
-      ProvenanceInfo info = new ProvenanceInfo(
-          2L,
-          "crossref",
-          "CrossRef",
-          "https://api.crossref.org/",
-          "UTC",
-          "https://www.crossref.org/documentation/",
-          false,
-          "DEPRECATED");
+      ProvenanceInfo info =
+          new ProvenanceInfo(
+              2L,
+              "crossref",
+              "CrossRef",
+              "https://api.crossref.org/",
+              "UTC",
+              "https://www.crossref.org/documentation/",
+              false,
+              "DEPRECATED");
 
       // Then
       assertThat(info.active()).isFalse();
@@ -285,8 +248,16 @@ class ProvenanceConfigSnapshotTest {
     void provenanceInfoInequalityForDifferentCode() {
       // Given
       ProvenanceInfo info1 = createSampleProvenanceInfo();
-      ProvenanceInfo info2 = new ProvenanceInfo(
-          1L, "epmc", "EPMC", "https://example.com", "UTC", "https://docs.example.com", true, "ACTIVE");
+      ProvenanceInfo info2 =
+          new ProvenanceInfo(
+              1L,
+              "epmc",
+              "EPMC",
+              "https://example.com",
+              "UTC",
+              "https://docs.example.com",
+              true,
+              "ACTIVE");
 
       // Then
       assertThat(info1).isNotEqualTo(info2);
@@ -319,12 +290,28 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportCalendarWindowMode() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      WindowOffsetConfig config = new WindowOffsetConfig(
-          102L, 1L, "FETCH", now, null,
-          "CALENDAR", 1, "MONTH", "DAY",
-          0, "DAY", 0, "HOUR", 0,
-          "DATE", "created_at", "ISO_INSTANT", "created_at",
-          500, 7200);
+      WindowOffsetConfig config =
+          new WindowOffsetConfig(
+              102L,
+              1L,
+              "FETCH",
+              now,
+              null,
+              "CALENDAR",
+              1,
+              "MONTH",
+              "DAY",
+              0,
+              "DAY",
+              0,
+              "HOUR",
+              0,
+              "DATE",
+              "created_at",
+              "ISO_INSTANT",
+              "created_at",
+              500,
+              7200);
 
       // Then
       assertThat(config.windowModeCode()).isEqualTo("CALENDAR");
@@ -337,12 +324,28 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportCompositeOffsetType() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      WindowOffsetConfig config = new WindowOffsetConfig(
-          103L, 1L, "FETCH", now, null,
-          "SLIDING", 1, "DAY", null,
-          0, "HOUR", 0, "HOUR", 0,
-          "COMPOSITE", "date_id_composite", null, "publication_date",
-          1000, 3600);
+      WindowOffsetConfig config =
+          new WindowOffsetConfig(
+              103L,
+              1L,
+              "FETCH",
+              now,
+              null,
+              "SLIDING",
+              1,
+              "DAY",
+              null,
+              0,
+              "HOUR",
+              0,
+              "HOUR",
+              0,
+              "COMPOSITE",
+              "date_id_composite",
+              null,
+              "publication_date",
+              1000,
+              3600);
 
       // Then
       assertThat(config.offsetTypeCode()).isEqualTo("COMPOSITE");
@@ -386,9 +389,8 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportCursorPaginationMode() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      PaginationConfig config = new PaginationConfig(
-          202L, 1L, "FETCH", now, null,
-          "CURSOR", null, null, "cursor", 1);
+      PaginationConfig config =
+          new PaginationConfig(202L, 1L, "FETCH", now, null, "CURSOR", null, null, "cursor", 1);
 
       // Then
       assertThat(config.paginationModeCode()).isEqualTo("CURSOR");
@@ -401,9 +403,9 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportDescendingSortDirection() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      PaginationConfig config = new PaginationConfig(
-          203L, 1L, "FETCH", now, null,
-          "PAGE_NUMBER", 50, 20, "sort", 0); // 0 = DESC
+      PaginationConfig config =
+          new PaginationConfig(
+              203L, 1L, "FETCH", now, null, "PAGE_NUMBER", 50, 20, "sort", 0); // 0 = DESC
 
       // Then
       assertThat(config.sortingDirection()).isEqualTo(0);
@@ -448,11 +450,10 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportDisabledTlsVerification() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      HttpConfig config = new HttpConfig(
-          302L, 1L, "FETCH", now, null,
-          null, 5000, 30000, 60000,
-          false, // TLS 验证禁用
-          null, "IGNORE", null, null, null);
+      HttpConfig config =
+          new HttpConfig(
+              302L, 1L, "FETCH", now, null, null, 5000, 30000, 60000, false, // TLS 验证禁用
+              null, "IGNORE", null, null, null);
 
       // Then
       assertThat(config.tlsVerifyEnabled()).isFalse();
@@ -463,11 +464,23 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportProxyConfiguration() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      HttpConfig config = new HttpConfig(
-          303L, 1L, "FETCH", now, null,
-          null, 5000, 30000, 60000, true,
-          "http://proxy.example.com:8080",
-          "RESPECT", 300000, null, null);
+      HttpConfig config =
+          new HttpConfig(
+              303L,
+              1L,
+              "FETCH",
+              now,
+              null,
+              null,
+              5000,
+              30000,
+              60000,
+              true,
+              "http://proxy.example.com:8080",
+              "RESPECT",
+              300000,
+              null,
+              null);
 
       // Then
       assertThat(config.proxyUrlValue()).isEqualTo("http://proxy.example.com:8080");
@@ -478,10 +491,10 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportClampRetryAfterPolicy() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      HttpConfig config = new HttpConfig(
-          304L, 1L, "FETCH", now, null,
-          null, 5000, 30000, 60000, true, null,
-          "CLAMP", 60000, null, null);
+      HttpConfig config =
+          new HttpConfig(
+              304L, 1L, "FETCH", now, null, null, 5000, 30000, 60000, true, null, "CLAMP", 60000,
+              null, null);
 
       // Then
       assertThat(config.retryAfterPolicyCode()).isEqualTo("CLAMP");
@@ -526,9 +539,8 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportCustomIdsDelimiter() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      BatchingConfig config = new BatchingConfig(
-          402L, 1L, "DETAIL_FETCH", now, null,
-          100, "id_list", "|", 500);
+      BatchingConfig config =
+          new BatchingConfig(402L, 1L, "DETAIL_FETCH", now, null, 100, "id_list", "|", 500);
 
       // Then
       assertThat(config.idsJoinDelimiter()).isEqualTo("|");
@@ -574,10 +586,24 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportFixedBackoffPolicy() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      RetryConfig config = new RetryConfig(
-          502L, 1L, "FETCH", now, null,
-          5, "FIXED", 2000, 2000, null, null,
-          "[503]", "[400,401]", true, 3, 30000);
+      RetryConfig config =
+          new RetryConfig(
+              502L,
+              1L,
+              "FETCH",
+              now,
+              null,
+              5,
+              "FIXED",
+              2000,
+              2000,
+              null,
+              null,
+              "[503]",
+              "[400,401]",
+              true,
+              3,
+              30000);
 
       // Then
       assertThat(config.backoffPolicyTypeCode()).isEqualTo("FIXED");
@@ -631,9 +657,7 @@ class ProvenanceConfigSnapshotTest {
     void shouldSupportUnlimitedPerCredentialQps() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      RateLimitConfig config = new RateLimitConfig(
-          602L, 1L, "FETCH", now, null,
-          20, null);
+      RateLimitConfig config = new RateLimitConfig(602L, 1L, "FETCH", now, null, 20, null);
 
       // Then
       assertThat(config.maxConcurrentRequests()).isEqualTo(20);
@@ -673,18 +697,27 @@ class ProvenanceConfigSnapshotTest {
     @DisplayName("不同 ProvenanceInfo 的快照应该不相等")
     void shouldNotBeEqualForDifferentProvenanceInfo() {
       // Given
-      ProvenanceInfo differentProvenance = new ProvenanceInfo(
-          2L, "epmc", "EPMC", "https://api.epmc.org/", "UTC", "https://docs.epmc.org/", true, "ACTIVE");
+      ProvenanceInfo differentProvenance =
+          new ProvenanceInfo(
+              2L,
+              "epmc",
+              "EPMC",
+              "https://api.epmc.org/",
+              "UTC",
+              "https://docs.epmc.org/",
+              true,
+              "ACTIVE");
 
       ProvenanceConfigSnapshot snapshot1 = createFullSnapshot();
-      ProvenanceConfigSnapshot snapshot2 = new ProvenanceConfigSnapshot(
-          differentProvenance,
-          createSampleWindowOffsetConfig(),
-          createSamplePaginationConfig(),
-          createSampleHttpConfig(),
-          createSampleBatchingConfig(),
-          createSampleRetryConfig(),
-          createSampleRateLimitConfig());
+      ProvenanceConfigSnapshot snapshot2 =
+          new ProvenanceConfigSnapshot(
+              differentProvenance,
+              createSampleWindowOffsetConfig(),
+              createSamplePaginationConfig(),
+              createSampleHttpConfig(),
+              createSampleBatchingConfig(),
+              createSampleRetryConfig(),
+              createSampleRateLimitConfig());
 
       // Then
       assertThat(snapshot1).isNotEqualTo(snapshot2);
@@ -737,8 +770,8 @@ class ProvenanceConfigSnapshotTest {
     void snapshotShouldBeImmutable() {
       // Given
       ProvenanceInfo originalProvenance = createSampleProvenanceInfo();
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          originalProvenance, null, null, null, null, null, null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(originalProvenance, null, null, null, null, null, null);
 
       // When - 获取 provenance 引用
       ProvenanceInfo retrievedProvenance = snapshot.provenance();
@@ -753,8 +786,9 @@ class ProvenanceConfigSnapshotTest {
     void nestedRecordsShouldBeImmutable() {
       // Given
       WindowOffsetConfig originalConfig = createSampleWindowOffsetConfig();
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          createSampleProvenanceInfo(), originalConfig, null, null, null, null, null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(
+              createSampleProvenanceInfo(), originalConfig, null, null, null, null, null);
 
       // When
       WindowOffsetConfig retrievedConfig = snapshot.windowOffset();
@@ -777,8 +811,8 @@ class ProvenanceConfigSnapshotTest {
       ProvenanceInfo provenance = createSampleProvenanceInfo();
 
       // When & Then
-      assertThatCode(() -> new ProvenanceConfigSnapshot(
-          provenance, null, null, null, null, null, null))
+      assertThatCode(
+              () -> new ProvenanceConfigSnapshot(provenance, null, null, null, null, null, null))
           .doesNotThrowAnyException();
     }
 
@@ -788,13 +822,15 @@ class ProvenanceConfigSnapshotTest {
       // Given
       String longJson = "{\"header\":\"" + "A".repeat(10000) + "\"}";
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      HttpConfig config = new HttpConfig(
-          999L, 1L, "FETCH", now, null,
-          longJson, 5000, 30000, 60000, true, null, "RESPECT", 300000, null, null);
+      HttpConfig config =
+          new HttpConfig(
+              999L, 1L, "FETCH", now, null, longJson, 5000, 30000, 60000, true, null, "RESPECT",
+              300000, null, null);
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          createSampleProvenanceInfo(), null, null, config, null, null, null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(
+              createSampleProvenanceInfo(), null, null, config, null, null, null);
 
       // Then
       assertThat(snapshot.http().defaultHeadersJson()).hasSize(longJson.length());
@@ -805,13 +841,23 @@ class ProvenanceConfigSnapshotTest {
     void shouldHandleNullEffectiveTo() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      PaginationConfig config = new PaginationConfig(
-          999L, 1L, "FETCH", now, null, // effectiveTo = null (长期有效)
-          "PAGE_NUMBER", 100, 10, "sort", 1);
+      PaginationConfig config =
+          new PaginationConfig(
+              999L,
+              1L,
+              "FETCH",
+              now,
+              null, // effectiveTo = null (长期有效)
+              "PAGE_NUMBER",
+              100,
+              10,
+              "sort",
+              1);
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          createSampleProvenanceInfo(), null, config, null, null, null, null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(
+              createSampleProvenanceInfo(), null, config, null, null, null, null);
 
       // Then
       assertThat(snapshot.pagination().effectiveTo()).isNull();
@@ -822,14 +868,15 @@ class ProvenanceConfigSnapshotTest {
     void shouldHandleNullOperationType() {
       // Given
       Instant now = Instant.parse("2025-01-01T00:00:00Z");
-      RetryConfig config = new RetryConfig(
-          999L, 1L, null, // operationType = null (通用配置)
-          now, null, 3, "FIXED", 1000, 5000, null, null,
-          "[429]", "[400]", true, 5, 60000);
+      RetryConfig config =
+          new RetryConfig(
+              999L, 1L, null, // operationType = null (通用配置)
+              now, null, 3, "FIXED", 1000, 5000, null, null, "[429]", "[400]", true, 5, 60000);
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          createSampleProvenanceInfo(), null, null, null, null, config, null);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(
+              createSampleProvenanceInfo(), null, null, null, null, config, null);
 
       // Then
       assertThat(snapshot.retry().operationType()).isNull();
@@ -844,53 +891,95 @@ class ProvenanceConfigSnapshotTest {
     @DisplayName("PubMed 完整配置快照")
     void pubmedFullConfigSnapshot() {
       // Given - PubMed 实际配置场景
-      ProvenanceInfo pubmedProvenance = new ProvenanceInfo(
-          1L,
-          "pubmed",
-          "PubMed",
-          "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
-          "America/New_York",
-          "https://www.ncbi.nlm.nih.gov/books/NBK25501/",
-          true,
-          "ACTIVE");
+      ProvenanceInfo pubmedProvenance =
+          new ProvenanceInfo(
+              1L,
+              "pubmed",
+              "PubMed",
+              "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/",
+              "America/New_York",
+              "https://www.ncbi.nlm.nih.gov/books/NBK25501/",
+              true,
+              "ACTIVE");
 
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
-      WindowOffsetConfig windowConfig = new WindowOffsetConfig(
-          100L, 1L, "FETCH", effectiveFrom, null,
-          "SLIDING", 1, "DAY", null,
-          2, "HOUR", 1, "HOUR", 300,
-          "DATE", "pubdate", "yyyyMMdd", "pubdate",
-          10000, 86400);
+      WindowOffsetConfig windowConfig =
+          new WindowOffsetConfig(
+              100L,
+              1L,
+              "FETCH",
+              effectiveFrom,
+              null,
+              "SLIDING",
+              1,
+              "DAY",
+              null,
+              2,
+              "HOUR",
+              1,
+              "HOUR",
+              300,
+              "DATE",
+              "pubdate",
+              "yyyyMMdd",
+              "pubdate",
+              10000,
+              86400);
 
-      PaginationConfig paginationConfig = new PaginationConfig(
-          200L, 1L, "FETCH", effectiveFrom, null,
-          "PAGE_NUMBER", 500, 100, "sort", 1);
+      PaginationConfig paginationConfig =
+          new PaginationConfig(
+              200L, 1L, "FETCH", effectiveFrom, null, "PAGE_NUMBER", 500, 100, "sort", 1);
 
-      HttpConfig httpConfig = new HttpConfig(
-          300L, 1L, "FETCH", effectiveFrom, null,
-          "{\"User-Agent\":\"PatraBot/1.0\",\"X-Request-ID\":\"auto\"}",
-          3000, 20000, 60000, true, null,
-          "RESPECT", 600000,
-          "X-Idempotency-Key", 3600);
+      HttpConfig httpConfig =
+          new HttpConfig(
+              300L,
+              1L,
+              "FETCH",
+              effectiveFrom,
+              null,
+              "{\"User-Agent\":\"PatraBot/1.0\",\"X-Request-ID\":\"auto\"}",
+              3000,
+              20000,
+              60000,
+              true,
+              null,
+              "RESPECT",
+              600000,
+              "X-Idempotency-Key",
+              3600);
 
-      RetryConfig retryConfig = new RetryConfig(
-          400L, 1L, "FETCH", effectiveFrom, null,
-          3, "EXP_JITTER", 1000, 32000, 2.0, 0.25,
-          "[429,503,504]", "[400,401,403,404]", true, 5, 300000);
+      RetryConfig retryConfig =
+          new RetryConfig(
+              400L,
+              1L,
+              "FETCH",
+              effectiveFrom,
+              null,
+              3,
+              "EXP_JITTER",
+              1000,
+              32000,
+              2.0,
+              0.25,
+              "[429,503,504]",
+              "[400,401,403,404]",
+              true,
+              5,
+              300000);
 
-      RateLimitConfig rateLimitConfig = new RateLimitConfig(
-          500L, 1L, "FETCH", effectiveFrom, null,
-          3, 3);
+      RateLimitConfig rateLimitConfig =
+          new RateLimitConfig(500L, 1L, "FETCH", effectiveFrom, null, 3, 3);
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          pubmedProvenance,
-          windowConfig,
-          paginationConfig,
-          httpConfig,
-          null, // 无批处理配置
-          retryConfig,
-          rateLimitConfig);
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(
+              pubmedProvenance,
+              windowConfig,
+              paginationConfig,
+              httpConfig,
+              null, // 无批处理配置
+              retryConfig,
+              rateLimitConfig);
 
       // Then - 验证完整性
       assertThat(snapshot.provenance().code()).isEqualTo("pubmed");
@@ -906,41 +995,69 @@ class ProvenanceConfigSnapshotTest {
     @DisplayName("EPMC 批量详情获取配置快照")
     void epmcBatchDetailFetchSnapshot() {
       // Given - EPMC 批量详情获取场景
-      ProvenanceInfo epmcProvenance = new ProvenanceInfo(
-          2L,
-          "epmc",
-          "Europe PMC",
-          "https://www.ebi.ac.uk/europepmc/webservices/rest/",
-          "UTC",
-          "https://europepmc.org/RestfulWebService",
-          true,
-          "ACTIVE");
+      ProvenanceInfo epmcProvenance =
+          new ProvenanceInfo(
+              2L,
+              "epmc",
+              "Europe PMC",
+              "https://www.ebi.ac.uk/europepmc/webservices/rest/",
+              "UTC",
+              "https://europepmc.org/RestfulWebService",
+              true,
+              "ACTIVE");
 
       Instant effectiveFrom = Instant.parse("2025-01-01T00:00:00Z");
-      BatchingConfig batchingConfig = new BatchingConfig(
-          100L, 2L, "DETAIL_FETCH", effectiveFrom, null,
-          100, "ext_ids", ",", 1000);
+      BatchingConfig batchingConfig =
+          new BatchingConfig(
+              100L, 2L, "DETAIL_FETCH", effectiveFrom, null, 100, "ext_ids", ",", 1000);
 
-      HttpConfig httpConfig = new HttpConfig(
-          200L, 2L, "DETAIL_FETCH", effectiveFrom, null,
-          "{\"Accept\":\"application/json\"}",
-          5000, 30000, 90000, true, null,
-          "CLAMP", 120000, null, null);
+      HttpConfig httpConfig =
+          new HttpConfig(
+              200L,
+              2L,
+              "DETAIL_FETCH",
+              effectiveFrom,
+              null,
+              "{\"Accept\":\"application/json\"}",
+              5000,
+              30000,
+              90000,
+              true,
+              null,
+              "CLAMP",
+              120000,
+              null,
+              null);
 
-      RetryConfig retryConfig = new RetryConfig(
-          300L, 2L, "DETAIL_FETCH", effectiveFrom, null,
-          5, "EXP_JITTER", 500, 16000, 2.0, 0.3,
-          "[429,503]", "[400,404]", true, 10, 600000);
+      RetryConfig retryConfig =
+          new RetryConfig(
+              300L,
+              2L,
+              "DETAIL_FETCH",
+              effectiveFrom,
+              null,
+              5,
+              "EXP_JITTER",
+              500,
+              16000,
+              2.0,
+              0.3,
+              "[429,503]",
+              "[400,404]",
+              true,
+              10,
+              600000);
 
       // When
-      ProvenanceConfigSnapshot snapshot = new ProvenanceConfigSnapshot(
-          epmcProvenance,
-          null, // 无窗口配置
-          null, // 无分页配置
-          httpConfig,
-          batchingConfig,
-          retryConfig,
-          null); // 无速率限制配置
+      ProvenanceConfigSnapshot snapshot =
+          new ProvenanceConfigSnapshot(
+              epmcProvenance,
+              null, // 无窗口配置
+              null, // 无分页配置
+              httpConfig,
+              batchingConfig,
+              retryConfig,
+              null); // 无速率限制配置
 
       // Then
       assertThat(snapshot.provenance().code()).isEqualTo("epmc");

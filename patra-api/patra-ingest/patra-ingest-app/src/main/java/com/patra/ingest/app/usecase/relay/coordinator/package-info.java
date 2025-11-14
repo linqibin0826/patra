@@ -4,6 +4,7 @@
  * <p>本包提供中继流程中的各种协调器，负责租约管理、消息发布、日志记录等子流程。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>租约获取和释放（RelayLeaseCoordinator）
  *   <li>消息发布到 RocketMQ（RelayPublishCoordinator）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code RelayLeaseCoordinator} - 租约协调器
  *       <ul>
@@ -33,6 +35,7 @@
  * </ul>
  *
  * <h2>租约协调器流程</h2>
+ *
  * <pre>
  * 1. 批量更新消息状态
  *    UPDATE outbox_message
@@ -50,6 +53,7 @@
  * </pre>
  *
  * <h2>发布协调器流程</h2>
+ *
  * <pre>
  * 1. 遍历消息列表
  * 2. 对每条消息：
@@ -62,7 +66,9 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>租约协调器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -92,6 +98,7 @@
  * }</pre>
  *
  * <h3>发布协调器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

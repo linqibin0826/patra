@@ -1,6 +1,5 @@
 package com.patra.expr;
 
-import java.lang.Void;
 
 /**
  * 表达式访问者契约,与表达式模型解耦,使编解码器、渲染器和其他转换器可以在内核外部安全遍历表达式树。

@@ -120,8 +120,7 @@ class FileStatusTest {
       FileStatus[] values = FileStatus.values();
 
       // Then
-      assertThat(values)
-          .containsExactly(FileStatus.ACTIVE, FileStatus.EXPIRED, FileStatus.DELETED);
+      assertThat(values).containsExactly(FileStatus.ACTIVE, FileStatus.EXPIRED, FileStatus.DELETED);
     }
 
     @Test

@@ -1,30 +1,17 @@
 package com.patra.ingest.domain.model.vo.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import com.patra.common.enums.ProvenanceCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import com.patra.common.enums.ProvenanceCode;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.patra.common.enums.ProvenanceCode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
-import com.patra.common.enums.ProvenanceCode;
-import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
-import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.common.enums.ProvenanceCode;
 import java.util.ArrayList;
-import com.patra.common.enums.ProvenanceCode;
 import java.util.List;
-import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.DisplayName;
-import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Nested;
-import com.patra.common.enums.ProvenanceCode;
 import org.junit.jupiter.api.Test;
-import com.patra.common.enums.ProvenanceCode;
 
 /**
  * {@link BatchPlan} 的单元测试。
@@ -70,7 +57,7 @@ class BatchPlanTest {
         JsonNodeFactory.instance.objectNode(), // compiledParams
         "test normalized", // normalizedExpression
         null // windowSpec
-    );
+        );
   }
 
   // ==================== 成功构造测试 ====================
@@ -120,8 +107,7 @@ class BatchPlanTest {
     @DisplayName("应该成功创建包含多个批次的计划")
     void shouldCreatePlanWithMultipleBatches() {
       // Given: 多个批次和上下文
-      List<Batch> batches =
-          List.of(createTestBatch(1), createTestBatch(2), createTestBatch(3));
+      List<Batch> batches = List.of(createTestBatch(1), createTestBatch(2), createTestBatch(3));
       ExecutionContext ctx = createTestContext();
 
       // When: 创建批次计划
@@ -272,8 +258,7 @@ class BatchPlanTest {
     @DisplayName("totalBatches() 应该返回批次列表的大小")
     void totalBatchesShouldReturnBatchesSize() {
       // Given: 包含 3 个批次的计划
-      List<Batch> batches =
-          List.of(createTestBatch(1), createTestBatch(2), createTestBatch(3));
+      List<Batch> batches = List.of(createTestBatch(1), createTestBatch(2), createTestBatch(3));
       ExecutionContext ctx = createTestContext();
       BatchPlan plan = new BatchPlan(batches, ctx);
 
@@ -334,13 +319,22 @@ class BatchPlanTest {
       // Given: 不同上下文的计划
       List<Batch> batches = List.of(createTestBatch(1));
       ExecutionContext ctx1 = createTestContext();
-      ExecutionContext ctx2 = new ExecutionContext(
-          2L, // 不同的 taskId
-          1L, 1L, 1L, 1L, ProvenanceCode.PUBMED, "FETCH", DataType.LITERATURE,
-          null, "test-hash", "test query",
-          JsonNodeFactory.instance.objectNode(),
-          "test normalized", null
-      );
+      ExecutionContext ctx2 =
+          new ExecutionContext(
+              2L, // 不同的 taskId
+              1L,
+              1L,
+              1L,
+              1L,
+              ProvenanceCode.PUBMED,
+              "FETCH",
+              DataType.LITERATURE,
+              null,
+              "test-hash",
+              "test query",
+              JsonNodeFactory.instance.objectNode(),
+              "test normalized",
+              null);
       BatchPlan plan1 = new BatchPlan(batches, ctx1);
       BatchPlan plan2 = new BatchPlan(batches, ctx2);
 
@@ -401,12 +395,22 @@ class BatchPlanTest {
     void hashCodeShouldReturnDifferentValueForDifferentObjects() {
       // Given: 不同值的计划
       ExecutionContext ctx1 = createTestContext();
-      ExecutionContext ctx2 = new ExecutionContext(
-          2L, 1L, 1L, 1L, 1L, ProvenanceCode.EPMC, "FETCH", DataType.LITERATURE,
-          null, "test-hash", "test query",
-          JsonNodeFactory.instance.objectNode(),
-          "test normalized", null
-      );
+      ExecutionContext ctx2 =
+          new ExecutionContext(
+              2L,
+              1L,
+              1L,
+              1L,
+              1L,
+              ProvenanceCode.EPMC,
+              "FETCH",
+              DataType.LITERATURE,
+              null,
+              "test-hash",
+              "test query",
+              JsonNodeFactory.instance.objectNode(),
+              "test normalized",
+              null);
       BatchPlan plan1 = new BatchPlan(List.of(createTestBatch(1)), ctx1);
       BatchPlan plan2 = new BatchPlan(List.of(createTestBatch(2)), ctx2);
 
@@ -427,10 +431,7 @@ class BatchPlanTest {
       String result = plan.toString();
 
       // Then: 验证包含字段名称
-      assertThat(result)
-          .contains("BatchPlan")
-          .contains("batches")
-          .contains("enrichedContext");
+      assertThat(result).contains("BatchPlan").contains("batches").contains("enrichedContext");
     }
 
     @Test

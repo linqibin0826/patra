@@ -26,7 +26,6 @@ import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.client.producer.SendStatus;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
-import org.springframework.messaging.Message;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,6 +37,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.messaging.Message;
 
 /**
  * RocketMqOutboxPublisher 单元测试。
@@ -237,7 +237,8 @@ class RocketMqOutboxPublisherTest {
 
       // 验证 Spring Message 的消息元数据
       Message<?> springMsg = messageCaptor.getValue();
-      assertThat(springMsg.getHeaders().get("KEYS")).isEqualTo(dedupKey); // dedupKey → KEYS (不是 partitionKey!)
+      assertThat(springMsg.getHeaders().get("KEYS"))
+          .isEqualTo(dedupKey); // dedupKey → KEYS (不是 partitionKey!)
       assertThat(springMsg.getHeaders().get("partitionKey"))
           .isEqualTo(partitionKey); // partitionKey → header
     }
@@ -555,7 +556,8 @@ class RocketMqOutboxPublisherTest {
       verify(rocketMQTemplate).syncSend(topicCaptor.capture(), messageCaptor.capture(), eq(3000L));
 
       // 验证 destination 包含 tags (格式: "topic:tags")
-      assertThat(topicCaptor.getValue()).isEqualTo("INGEST_TASK_READY:" + opType); // opType → destination 中的 tags
+      assertThat(topicCaptor.getValue())
+          .isEqualTo("INGEST_TASK_READY:" + opType); // opType → destination 中的 tags
     }
   }
 

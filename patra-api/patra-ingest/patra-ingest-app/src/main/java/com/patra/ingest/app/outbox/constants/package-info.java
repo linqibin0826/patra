@@ -4,6 +4,7 @@
  * <p>本包定义 Outbox 模式使用的枚举常量，确保通道、聚合类型、业务标签的一致性。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>定义 Outbox 消息通道（RocketMQ Topic）
  *   <li>定义聚合类型（区分不同领域对象的事件）
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code OutboxChannels} - Outbox 消息通道枚举
  *       <ul>
@@ -35,6 +37,7 @@
  * </ul>
  *
  * <h2>设计原则</h2>
+ *
  * <ul>
  *   <li><strong>类型安全</strong>: 使用枚举替代魔法字符串
  *   <li><strong>集中管理</strong>: 所有通道和标签在一处定义
@@ -43,7 +46,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>在 Outbox 发布器中使用</h3>
+ *
  * <pre>{@code
  * @Component
  * public class TaskOutboxPublisher extends AbstractOutboxPublisher<...> {
@@ -66,6 +71,7 @@
  * }</pre>
  *
  * <h3>在中继日志中使用</h3>
+ *
  * <pre>{@code
  * @Service
  * public class OutboxRelayOrchestrator {
@@ -89,6 +95,7 @@
  * }</pre>
  *
  * <h2>常量命名规范</h2>
+ *
  * <ul>
  *   <li><strong>通道命名</strong>: {SERVICE}_{ENTITY}_{ACTION}
  *       <ul>

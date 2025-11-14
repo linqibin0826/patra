@@ -10,12 +10,13 @@ import org.junit.jupiter.api.Test;
  * {@link TaskSchedulerContext} 单元测试
  *
  * <p>验证任务调度器上下文值对象的行为：
+ *
  * <ul>
- *   <li>构造器验证</li>
- *   <li>工厂方法</li>
- *   <li>派生方法</li>
- *   <li>Record 语义（equals/hashCode/toString）</li>
- *   <li>边界条件</li>
+ *   <li>构造器验证
+ *   <li>工厂方法
+ *   <li>派生方法
+ *   <li>Record 语义（equals/hashCode/toString）
+ *   <li>边界条件
  * </ul>
  */
 @DisplayName("TaskSchedulerContext 单元测试")
@@ -557,8 +558,7 @@ class TaskSchedulerContextTest {
       TaskSchedulerContext upstreamContext = new TaskSchedulerContext("parent-trace-xyz");
 
       // When: 派生子追踪上下文
-      TaskSchedulerContext downstreamContext =
-          upstreamContext.withCorrelation("child-trace-xyz");
+      TaskSchedulerContext downstreamContext = upstreamContext.withCorrelation("child-trace-xyz");
 
       // Then
       assertThat(downstreamContext.correlationId()).isEqualTo("child-trace-xyz");

@@ -4,6 +4,7 @@
  * <p>本包提供具体的 Outbox 发布器实现，继承自 {@link com.patra.ingest.app.outbox.core.AbstractOutboxPublisher}。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>实现特定领域事件的 Outbox 发布逻辑
  *   <li>定义消息负载和消息头的构建规则
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code TaskOutboxPublisher} - 任务事件发布器
  *       <ul>
@@ -33,6 +35,7 @@
  * </ul>
  *
  * <h2>发布器清单</h2>
+ *
  * <table border="1">
  *   <tr>
  *     <th>发布器</th>
@@ -61,7 +64,9 @@
  * </table>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>定义发布器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -105,6 +110,7 @@
  * }</pre>
  *
  * <h3>在编排器中使用</h3>
+ *
  * <pre>{@code
  * @Service
  * @RequiredArgsConstructor

@@ -1,12 +1,11 @@
 package com.patra.ingest.integration;
 
+import java.io.File;
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.ComposeContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-
-import java.io.File;
-import java.time.Duration;
 
 /**
  * RocketMQ TestContainers 容器管理类。
@@ -54,92 +53,88 @@ import java.time.Duration;
  */
 public class RocketMQContainerSupport {
 
-    private static final Logger log = LoggerFactory.getLogger(RocketMQContainerSupport.class);
+  private static final Logger log = LoggerFactory.getLogger(RocketMQContainerSupport.class);
 
-    private static final int NAMESRV_PORT = 9876;
-    private static final int BROKER_PORT = 10911;
+  private static final int NAMESRV_PORT = 9876;
+  private static final int BROKER_PORT = 10911;
 
-    private final ComposeContainer composeContainer;
+  private final ComposeContainer composeContainer;
 
-    /**
-     * 构造函数，初始化 Docker Compose 容器
-     */
-    public RocketMQContainerSupport() {
-        // 从 classpath 加载 docker-compose 文件
-        File composeFile = new File(
-            getClass().getClassLoader().getResource("docker-compose-rocketmq.yml").getFile()
-        );
+  /** 构造函数，初始化 Docker Compose 容器 */
+  public RocketMQContainerSupport() {
+    // 从 classpath 加载 docker-compose 文件
+    File composeFile =
+        new File(getClass().getClassLoader().getResource("docker-compose-rocketmq.yml").getFile());
 
-        if (!composeFile.exists()) {
-            throw new IllegalStateException(
-                "找不到 docker-compose-rocketmq.yml 文件，路径: " + composeFile.getAbsolutePath()
-            );
-        }
-
-        log.info("加载 Docker Compose 配置: {}", composeFile.getAbsolutePath());
-
-        this.composeContainer = new ComposeContainer(composeFile)
-                .withExposedService("nameserver", NAMESRV_PORT,
-                        Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)))
-                .withExposedService("broker", BROKER_PORT,
-                        Wait.forLogMessage(".*The broker.*boot success.*", 1)
-                                .withStartupTimeout(Duration.ofMinutes(2)))
-                .withLocalCompose(true);
+    if (!composeFile.exists()) {
+      throw new IllegalStateException(
+          "找不到 docker-compose-rocketmq.yml 文件，路径: " + composeFile.getAbsolutePath());
     }
 
-    /**
-     * 启动 RocketMQ 容器
-     */
-    public void start() {
-        log.info("========================================");
-        log.info("启动 RocketMQ Docker Compose 环境");
-        log.info("========================================");
+    log.info("加载 Docker Compose 配置: {}", composeFile.getAbsolutePath());
 
-        composeContainer.start();
+    this.composeContainer =
+        new ComposeContainer(composeFile)
+            .withExposedService(
+                "nameserver",
+                NAMESRV_PORT,
+                Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)))
+            .withExposedService(
+                "broker",
+                BROKER_PORT,
+                Wait.forLogMessage(".*The broker.*boot success.*", 1)
+                    .withStartupTimeout(Duration.ofMinutes(2)))
+            .withLocalCompose(true);
+  }
 
-        // 等待服务完全就绪
-        log.info("等待 RocketMQ 服务就绪...");
-        try {
-            Thread.sleep(10000); // 给予充足时间让 Broker 注册到 NameServer
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+  /** 启动 RocketMQ 容器 */
+  public void start() {
+    log.info("========================================");
+    log.info("启动 RocketMQ Docker Compose 环境");
+    log.info("========================================");
 
-        log.info("========================================");
-        log.info("RocketMQ Docker Compose 环境启动完成");
-        log.info("NameServer 地址: {}", getNameserverAddress());
-        log.info("========================================");
+    composeContainer.start();
+
+    // 等待服务完全就绪
+    log.info("等待 RocketMQ 服务就绪...");
+    try {
+      Thread.sleep(10000); // 给予充足时间让 Broker 注册到 NameServer
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     }
 
-    /**
-     * 停止 RocketMQ 容器
-     */
-    public void stop() {
-        log.info("停止 RocketMQ Docker Compose 环境");
-        if (composeContainer != null) {
-            composeContainer.stop();
-        }
-        log.info("RocketMQ 容器已停止");
-    }
+    log.info("========================================");
+    log.info("RocketMQ Docker Compose 环境启动完成");
+    log.info("NameServer 地址: {}", getNameserverAddress());
+    log.info("========================================");
+  }
 
-    /**
-     * 获取 NameServer 地址（供客户端连接）
-     * <p>
-     * 由于使用 1:1 端口映射，直接使用 localhost:9876
-     *
-     * @return NameServer 地址，格式: localhost:9876
-     */
-    public String getNameserverAddress() {
-        return "localhost:" + NAMESRV_PORT;
+  /** 停止 RocketMQ 容器 */
+  public void stop() {
+    log.info("停止 RocketMQ Docker Compose 环境");
+    if (composeContainer != null) {
+      composeContainer.stop();
     }
+    log.info("RocketMQ 容器已停止");
+  }
 
+  /**
+   * 获取 NameServer 地址（供客户端连接）
+   *
+   * <p>由于使用 1:1 端口映射，直接使用 localhost:9876
+   *
+   * @return NameServer 地址，格式: localhost:9876
+   */
+  public String getNameserverAddress() {
+    return "localhost:" + NAMESRV_PORT;
+  }
 
-    /**
-     * 获取 ComposeContainer 实例
-     *
-     * @return ComposeContainer 实例
-     */
-    public ComposeContainer getComposeContainer() {
-        return composeContainer;
-    }
+  /**
+   * 获取 ComposeContainer 实例
+   *
+   * @return ComposeContainer 实例
+   */
+  public ComposeContainer getComposeContainer() {
+    return composeContainer;
+  }
 }

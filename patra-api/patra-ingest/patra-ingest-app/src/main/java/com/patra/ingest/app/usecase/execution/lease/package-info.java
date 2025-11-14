@@ -4,6 +4,7 @@
  * <p>本包提供任务执行的租约管理和心跳续约功能，防止并发执行和僵尸任务。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>获取任务租约（防止并发执行）
  *   <li>心跳续约（延长租约有效期）
@@ -12,6 +13,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code LeaseManagementService} - 租约管理服务接口
  *   <li>{@code LeaseManagementServiceImpl} - 租约管理服务实现
@@ -20,7 +22,9 @@
  * </ul>
  *
  * <h2>租约机制</h2>
+ *
  * <h3>租约获取</h3>
+ *
  * <pre>
  * 1. 尝试获取租约（存储在 Redis/DB）
  *    ├─ 检查是否已被其他节点占用
@@ -36,6 +40,7 @@
  * </pre>
  *
  * <h3>心跳续约</h3>
+ *
  * <pre>
  * 1. 启动后台线程（ScheduledExecutorService）
  * 2. 每隔一定时间（如 1 分钟）执行续约
@@ -46,6 +51,7 @@
  * </pre>
  *
  * <h3>租约释放</h3>
+ *
  * <pre>
  * 1. 停止心跳线程
  * 2. 删除租约记录
@@ -53,6 +59,7 @@
  * </pre>
  *
  * <h2>租约过期处理</h2>
+ *
  * <ul>
  *   <li><strong>场景</strong>: 执行节点宕机，租约无法续约
  *   <li><strong>结果</strong>: 租约在过期时间后自动失效
@@ -60,7 +67,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>租约管理服务</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -115,6 +124,7 @@
  * }</pre>
  *
  * <h3>心跳续约服务</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

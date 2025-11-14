@@ -186,8 +186,7 @@ class PlanValidationExceptionTest {
       PlanValidationException exception = new PlanValidationException("验证失败");
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

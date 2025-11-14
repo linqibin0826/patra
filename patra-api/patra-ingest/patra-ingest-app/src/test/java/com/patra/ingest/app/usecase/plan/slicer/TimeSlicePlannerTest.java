@@ -81,14 +81,10 @@ class TimeSlicePlannerTest {
       assertThat(result.get(2).sliceNo()).isEqualTo(3);
 
       // 验证每个切片的签名唯一
-      assertThat(result)
-          .extracting(SlicePlan::sliceSignatureSeed)
-          .doesNotHaveDuplicates();
+      assertThat(result).extracting(SlicePlan::sliceSignatureSeed).doesNotHaveDuplicates();
 
       // 验证切片表达式不为空
-      assertThat(result)
-          .extracting(SlicePlan::sliceExpr)
-          .allMatch(expr -> expr != null);
+      assertThat(result).extracting(SlicePlan::sliceExpr).allMatch(expr -> expr != null);
 
       // 验证 JSON 规格不为空
       assertThat(result)
@@ -163,7 +159,8 @@ class TimeSlicePlannerTest {
       PlanExpressionDescriptor planExpr = createPlanExpression();
       ProvenanceConfigSnapshot configSnapshot = createConfigSnapshot();
 
-      SlicePlanningContext context = new SlicePlanningContext(norm, window, planExpr, configSnapshot);
+      SlicePlanningContext context =
+          new SlicePlanningContext(norm, window, planExpr, configSnapshot);
 
       // When
       List<SlicePlan> result = planner.slice(context);
@@ -246,9 +243,7 @@ class TimeSlicePlannerTest {
 
       // Then
       assertThat(result).hasSize(5);
-      assertThat(result)
-          .extracting(SlicePlan::sliceSignatureSeed)
-          .doesNotHaveDuplicates();
+      assertThat(result).extracting(SlicePlan::sliceSignatureSeed).doesNotHaveDuplicates();
     }
 
     @Test
@@ -265,9 +260,7 @@ class TimeSlicePlannerTest {
 
       // Then
       assertThat(result).hasSize(4);
-      assertThat(result)
-          .extracting(SlicePlan::sliceNo)
-          .containsExactly(1, 2, 3, 4);
+      assertThat(result).extracting(SlicePlan::sliceNo).containsExactly(1, 2, 3, 4);
     }
   }
 
@@ -309,10 +302,7 @@ class TimeSlicePlannerTest {
 
   private PlanExpressionDescriptor createPlanExpression() {
     Expr baseExpr = Exprs.constTrue();
-    return new PlanExpressionDescriptor(
-        baseExpr,
-        "{\"type\":\"const_true\"}",
-        "hash-12345");
+    return new PlanExpressionDescriptor(baseExpr, "{\"type\":\"const_true\"}", "hash-12345");
   }
 
   private ProvenanceConfigSnapshot createConfigSnapshot() {
@@ -350,10 +340,7 @@ class TimeSlicePlannerTest {
             1000,
             86400);
 
-    return new ProvenanceConfigSnapshot(
-        provenance,
-        windowOffset,
-        null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenance, windowOffset, null, null, null, null, null);
   }
 
   private ProvenanceConfigSnapshot createConfigSnapshotWithoutTimeField() {
@@ -391,9 +378,6 @@ class TimeSlicePlannerTest {
             1000,
             86400);
 
-    return new ProvenanceConfigSnapshot(
-        provenance,
-        windowOffset,
-        null, null, null, null, null);
+    return new ProvenanceConfigSnapshot(provenance, windowOffset, null, null, null, null, null);
   }
 }

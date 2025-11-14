@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.converter;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import com.patra.ingest.domain.model.enums.CursorType;
 import com.patra.ingest.domain.model.enums.NamespaceScope;
@@ -9,7 +10,6 @@ import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.domain.model.vo.cursor.CursorValue;
 import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
 import com.patra.ingest.infra.persistence.entity.CursorDO;
-import com.patra.common.enums.ProvenanceCode;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;

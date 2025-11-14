@@ -181,7 +181,8 @@
  * <ul>
  *   <li>聚合根: {@link com.patra.storage.domain.model.aggregate.FileMetadata}
  *   <li>仓储实现: {@code patra-storage-infra/persistence/repository/FileMetadataRepositoryImpl}
- *   <li>六边形架构: <a href="https://alistair.cockburn.us/hexagonal-architecture/">alistair.cockburn.us/hexagonal-architecture/</a>
+ *   <li>六边形架构: <a
+ *       href="https://alistair.cockburn.us/hexagonal-architecture/">alistair.cockburn.us/hexagonal-architecture/</a>
  * </ul>
  *
  * @author linqibin

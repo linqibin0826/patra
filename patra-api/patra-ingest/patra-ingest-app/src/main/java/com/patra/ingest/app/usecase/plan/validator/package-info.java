@@ -4,6 +4,7 @@
  * <p>本包提供 Plan 摄入前的预验证逻辑，在装配前检查窗口合法性、背压状态、容量限制。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>验证规划窗口的合法性（起始时间 < 结束时间、窗口大小合理）
  *   <li>检查背压状态（待处理任务数是否超过阈值）
@@ -12,12 +13,14 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code PlannerValidator} - Plan 验证器接口
  *   <li>{@code PlannerValidatorImpl} - Plan 验证器实现
  * </ul>
  *
  * <h2>验证规则</h2>
+ *
  * <ul>
  *   <li><strong>窗口合法性</strong>:
  *       <ul>
@@ -38,6 +41,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

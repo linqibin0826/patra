@@ -4,6 +4,7 @@
  * <p>本包定义 Task 执行用例的输入命令对象。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>封装任务执行的输入参数
  *   <li>提供幂等键用于去重
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code TaskReadyCommand} - 任务就绪命令
  *       <ul>
@@ -22,6 +24,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * var command = TaskReadyCommand.builder()
  *     .taskId(123456L)

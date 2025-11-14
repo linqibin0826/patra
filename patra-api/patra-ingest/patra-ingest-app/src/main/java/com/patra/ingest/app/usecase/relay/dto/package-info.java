@@ -4,6 +4,7 @@
  * <p>本包定义 Outbox 中继用例的输出结果对象。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>封装中继用例的输出结果
  *   <li>提供中继统计信息（成功数、失败数、租约丢失数）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code RelayReport} - 中继报告
  *       <ul>
@@ -25,6 +27,7 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * public RelayReport relay(OutboxRelayCommand command) {
  *     // 执行中继逻辑

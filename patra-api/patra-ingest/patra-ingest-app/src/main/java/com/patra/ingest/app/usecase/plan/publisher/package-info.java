@@ -4,6 +4,7 @@
  * <p>本包提供将 Task 事件发布到 Outbox 的实现。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>将 TaskQueuedEvent 发布到 Outbox 表
  *   <li>构建任务消息的负载（{@code TaskPayload}）和消息头（{@code TaskHeaders}）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code TaskOutboxPublisher} - 任务 Outbox 发布器
  *       <ul>
@@ -32,17 +34,20 @@
  * </ul>
  *
  * <h2>分区策略</h2>
+ *
  * <ul>
  *   <li>按 {@code taskId} 分区，确保同一任务的消息顺序消费
  * </ul>
  *
  * <h2>幂等键策略</h2>
+ *
  * <ul>
  *   <li>使用 {@code planKey + ":" + taskSeq} 作为幂等键
  *   <li>防止同一 Plan 的相同 Task 重复发布
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

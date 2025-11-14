@@ -87,10 +87,7 @@ class OutboxPersistenceExceptionTest {
 
       // Then
       assertThat(stages)
-          .containsExactlyInAnyOrder(
-              Stage.MARK_PUBLISHED,
-              Stage.MARK_RETRY,
-              Stage.MARK_DEAD);
+          .containsExactlyInAnyOrder(Stage.MARK_PUBLISHED, Stage.MARK_RETRY, Stage.MARK_DEAD);
     }
 
     @Test
@@ -148,8 +145,7 @@ class OutboxPersistenceExceptionTest {
           new OutboxPersistenceException(Stage.MARK_PUBLISHED, "标记失败");
 
       // When & Then
-      assertThat(exception)
-          .isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
+      assertThat(exception).isInstanceOf(com.patra.common.error.trait.HasErrorTraits.class);
     }
   }
 }

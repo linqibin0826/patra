@@ -4,6 +4,7 @@
  * <p>本包提供 patra-ingest 应用层的 Spring 配置类和属性配置。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>注册应用层 Bean（Orchestrator、Coordinator、UseCase）
  *   <li>配置外部服务集成（Provenance、Expression Compiler）
@@ -12,11 +13,13 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code IngestAppConfig} - 应用层主配置类
  * </ul>
  *
  * <h2>配置示例</h2>
+ *
  * <pre>{@code
  * @Configuration
  * public class IngestAppConfig {

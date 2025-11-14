@@ -139,8 +139,7 @@ class TaskExecutionUseCaseImplTest {
     void shouldNotThrowExceptionWhenIdempotentSkip() {
       // Given: 准备阶段抛出任务已成功异常
       when(prepareUseCase.prepare(command))
-          .thenThrow(
-              new PrepareTaskExecutionUseCase.TaskAlreadySucceededException("任务已成功"));
+          .thenThrow(new PrepareTaskExecutionUseCase.TaskAlreadySucceededException("任务已成功"));
 
       // When & Then: 执行任务不应该抛出异常
       assertThatCode(() -> taskExecutionUseCase.execute(command)).doesNotThrowAnyException();

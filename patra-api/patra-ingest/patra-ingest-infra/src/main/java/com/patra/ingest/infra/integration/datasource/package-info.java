@@ -1,8 +1,8 @@
 /**
  * 数据源端口实现包 - Infrastructure 层桥接实现
  *
- * <p><b>职责</b>: 实现 Domain 层的 {@link com.patra.ingest.domain.port.DataSourcePort} 接口, 桥接到
- * Framework 层的 {@code patra-starter-provenance} 提供者实现。
+ * <p><b>职责</b>: 实现 Domain 层的 {@link com.patra.ingest.domain.port.DataSourcePort} 接口, 桥接到 Framework
+ * 层的 {@code patra-starter-provenance} 提供者实现。
  *
  * <h2>架构关系</h2>
  *

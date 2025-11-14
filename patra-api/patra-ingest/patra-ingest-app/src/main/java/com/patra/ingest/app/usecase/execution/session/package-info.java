@@ -4,6 +4,7 @@
  * <p>本包提供任务执行会话的创建、管理和上下文加载功能。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>加载执行上下文（编译表达式、加载配置快照）
  *   <li>创建执行会话（封装上下文和租约信息）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code ExecutionContextLoader} - 执行上下文加载器接口
  *   <li>{@code ExecutionContextLoaderImpl} - 执行上下文加载器实现
@@ -20,6 +22,7 @@
  * </ul>
  *
  * <h2>执行上下文（ExecutionContext）</h2>
+ *
  * <ul>
  *   <li>{@code taskId}: 任务 ID
  *   <li>{@code runId}: 执行批次 ID（同一任务可能多次执行）
@@ -34,6 +37,7 @@
  * </ul>
  *
  * <h2>表达式编译</h2>
+ *
  * <p>执行上下文加载器的核心职责是将 Plan 中保存的原始表达式编译为可执行的查询和参数。
  *
  * <pre>
@@ -63,7 +67,9 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>加载执行上下文</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -105,6 +111,7 @@
  * }</pre>
  *
  * <h3>创建执行会话</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

@@ -4,6 +4,7 @@
  * <p>本包提供中继完成事件的发布，用于监控和审计。
  *
  * <h2>职责</h2>
+ *
  * <ul>
  *   <li>发布中继完成事件（RelayCompletedEvent）
  *   <li>记录中继执行结果（用于审计）
@@ -11,6 +12,7 @@
  * </ul>
  *
  * <h2>核心组件</h2>
+ *
  * <ul>
  *   <li>{@code RelayEventPublisher} - 中继事件发布器接口
  *   <li>{@code LoggingRelayEventPublisher} - 日志发布器实现（测试用）
@@ -20,7 +22,9 @@
  * </ul>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>日志发布器</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -40,6 +44,7 @@
  * }</pre>
  *
  * <h3>MQ 发布器（生产环境）</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor

@@ -136,11 +136,17 @@ class PrepareTaskExecutionUseCaseImplTest {
               sessionManager,
               contextLoader,
               taskRunRepository);
-      inOrder.verify(idempotencyChecker).isAlreadySucceeded(command.taskId(), command.idempotentKey());
-      inOrder.verify(leaseManagementService).tryAcquireLease(eq(command.taskId()), anyString(), any(Duration.class));
+      inOrder
+          .verify(idempotencyChecker)
+          .isAlreadySucceeded(command.taskId(), command.idempotentKey());
+      inOrder
+          .verify(leaseManagementService)
+          .tryAcquireLease(eq(command.taskId()), anyString(), any(Duration.class));
       inOrder.verify(taskRepository).findById(command.taskId());
       inOrder.verify(planSliceRepository).findById(mockTask.getSliceId());
-      inOrder.verify(sessionManager).createSession(eq(mockTask), anyString(), eq(command.getCorrelationId()));
+      inOrder
+          .verify(sessionManager)
+          .createSession(eq(mockTask), anyString(), eq(command.getCorrelationId()));
       inOrder.verify(contextLoader).loadContext(mockTask, mockSession.runId());
       inOrder.verify(taskRunRepository).findById(mockSession.runId());
     }
@@ -154,7 +160,8 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
       when(planSliceRepository.findById(anyLong())).thenReturn(Optional.of(mockSlice));
-      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString())).thenReturn(mockSession);
+      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString()))
+          .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong())).thenReturn(mockContext);
       when(taskRunRepository.findById(anyLong())).thenReturn(Optional.of(mockTaskRun));
 
@@ -175,7 +182,8 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
       when(planSliceRepository.findById(anyLong())).thenReturn(Optional.of(mockSlice));
-      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString())).thenReturn(mockSession);
+      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString()))
+          .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong())).thenReturn(mockContext);
       when(taskRunRepository.findById(anyLong())).thenReturn(Optional.of(mockTaskRun));
 
@@ -195,7 +203,8 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
       when(planSliceRepository.findById(anyLong())).thenReturn(Optional.of(mockSlice));
-      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString())).thenReturn(mockSession);
+      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString()))
+          .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong())).thenReturn(mockContext);
       when(taskRunRepository.findById(anyLong())).thenReturn(Optional.of(mockTaskRun));
 
@@ -278,8 +287,7 @@ class PrepareTaskExecutionUseCaseImplTest {
     void shouldNotCreateSessionWhenLeaseFails() {
       // Given: 租约获取失败
       when(idempotencyChecker.isAlreadySucceeded(anyLong(), anyString())).thenReturn(false);
-      when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any()))
-          .thenReturn(false);
+      when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(false);
 
       // When: 尝试准备（会抛出异常）
       try {
@@ -298,8 +306,7 @@ class PrepareTaskExecutionUseCaseImplTest {
       // Given: 设置租约持续时间为 120 秒
       ReflectionTestUtils.setField(prepareUseCase, "leaseDurationSeconds", 120);
       when(idempotencyChecker.isAlreadySucceeded(anyLong(), anyString())).thenReturn(false);
-      when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any()))
-          .thenReturn(false);
+      when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(false);
 
       // When: 尝试准备（会抛出异常）
       try {
@@ -348,11 +355,13 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
       when(planSliceRepository.findById(anyLong())).thenReturn(Optional.of(mockSlice));
-      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString())).thenReturn(mockSession);
+      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString()))
+          .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong()))
           .thenThrow(new RuntimeException("上下文加载失败"));
 
-      ExecutionSession.HeartbeatHandle heartbeatHandle = mock(ExecutionSession.HeartbeatHandle.class);
+      ExecutionSession.HeartbeatHandle heartbeatHandle =
+          mock(ExecutionSession.HeartbeatHandle.class);
       when(mockSession.heartbeatHandle()).thenReturn(heartbeatHandle);
 
       // When & Then: 应该抛出异常
@@ -373,11 +382,13 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
       when(planSliceRepository.findById(anyLong())).thenReturn(Optional.of(mockSlice));
-      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString())).thenReturn(mockSession);
+      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString()))
+          .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong())).thenReturn(mockContext);
       when(taskRunRepository.findById(mockSession.runId())).thenReturn(Optional.empty());
 
-      ExecutionSession.HeartbeatHandle heartbeatHandle = mock(ExecutionSession.HeartbeatHandle.class);
+      ExecutionSession.HeartbeatHandle heartbeatHandle =
+          mock(ExecutionSession.HeartbeatHandle.class);
       when(mockSession.heartbeatHandle()).thenReturn(heartbeatHandle);
 
       // When & Then: 应该抛出异常
@@ -398,11 +409,13 @@ class PrepareTaskExecutionUseCaseImplTest {
       when(leaseManagementService.tryAcquireLease(anyLong(), anyString(), any())).thenReturn(true);
       when(taskRepository.findById(anyLong())).thenReturn(Optional.of(mockTask));
       when(planSliceRepository.findById(anyLong())).thenReturn(Optional.of(mockSlice));
-      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString())).thenReturn(mockSession);
+      when(sessionManager.createSession(any(TaskAggregate.class), anyString(), anyString()))
+          .thenReturn(mockSession);
       when(contextLoader.loadContext(any(TaskAggregate.class), anyLong()))
           .thenThrow(new RuntimeException("上下文加载失败"));
 
-      ExecutionSession.HeartbeatHandle heartbeatHandle = mock(ExecutionSession.HeartbeatHandle.class);
+      ExecutionSession.HeartbeatHandle heartbeatHandle =
+          mock(ExecutionSession.HeartbeatHandle.class);
       when(mockSession.heartbeatHandle()).thenReturn(heartbeatHandle);
       doThrow(new RuntimeException("心跳停止失败")).when(heartbeatHandle).stop();
 

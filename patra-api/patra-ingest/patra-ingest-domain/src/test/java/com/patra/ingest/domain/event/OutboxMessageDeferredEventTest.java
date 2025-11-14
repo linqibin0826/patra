@@ -165,7 +165,13 @@ class OutboxMessageDeferredEventTest {
       // When
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, nextRetryAt, "NETWORK_TIMEOUT", "Error message", Instant.now());
+              1001L,
+              "literature.parsed",
+              3,
+              nextRetryAt,
+              "NETWORK_TIMEOUT",
+              "Error message",
+              Instant.now());
 
       // Then
       assertThat(event.nextRetryAt()).isNull();
@@ -543,7 +549,13 @@ class OutboxMessageDeferredEventTest {
       String channel = "literature.parsed";
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, channel, 3, Instant.now().plusSeconds(300), "NETWORK_TIMEOUT", "Error message", Instant.now());
+              1001L,
+              channel,
+              3,
+              Instant.now().plusSeconds(300),
+              "NETWORK_TIMEOUT",
+              "Error message",
+              Instant.now());
 
       // When & Then
       assertThat(event.channel()).isEqualTo(channel);
@@ -575,7 +587,13 @@ class OutboxMessageDeferredEventTest {
       Instant nextRetryAt = Instant.parse("2024-01-15T10:35:00Z");
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, nextRetryAt, "NETWORK_TIMEOUT", "Error message", Instant.now());
+              1001L,
+              "literature.parsed",
+              3,
+              nextRetryAt,
+              "NETWORK_TIMEOUT",
+              "Error message",
+              Instant.now());
 
       // When & Then
       assertThat(event.nextRetryAt()).isEqualTo(nextRetryAt);
@@ -771,7 +789,13 @@ class OutboxMessageDeferredEventTest {
       Instant occurredAt = Instant.parse("2024-01-15T10:30:00Z");
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, nextRetryAt, "NETWORK_TIMEOUT", "Error message", occurredAt);
+              1001L,
+              "literature.parsed",
+              3,
+              nextRetryAt,
+              "NETWORK_TIMEOUT",
+              "Error message",
+              occurredAt);
 
       // When - Instant 是不可变的，任何修改都会返回新实例
       Instant modifiedNextRetryAt = event.nextRetryAt().plusSeconds(3600);
@@ -1205,7 +1229,13 @@ class OutboxMessageDeferredEventTest {
       // When
       OutboxMessageDeferredEvent event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 2, nextRetryAt, "NETWORK_TIMEOUT", "Error message", occurredAt);
+              1001L,
+              "literature.parsed",
+              2,
+              nextRetryAt,
+              "NETWORK_TIMEOUT",
+              "Error message",
+              occurredAt);
 
       // Then
       assertThat(event.nextRetryAt()).isBefore(event.occurredAt());
@@ -1672,7 +1702,8 @@ class OutboxMessageDeferredEventTest {
 
       // Then
       assertThat(event.nextRetryAt()).isEqualTo(event.occurredAt());
-      long delaySeconds = event.nextRetryAt().getEpochSecond() - event.occurredAt().getEpochSecond();
+      long delaySeconds =
+          event.nextRetryAt().getEpochSecond() - event.occurredAt().getEpochSecond();
       assertThat(delaySeconds).isZero();
     }
 
@@ -1695,7 +1726,8 @@ class OutboxMessageDeferredEventTest {
               occurredAt);
 
       // Then
-      long delaySeconds = event.nextRetryAt().getEpochSecond() - event.occurredAt().getEpochSecond();
+      long delaySeconds =
+          event.nextRetryAt().getEpochSecond() - event.occurredAt().getEpochSecond();
       assertThat(delaySeconds).isEqualTo(7200);
       assertThat(delaySeconds).isGreaterThan(3600); // 超过 1 小时
     }
@@ -1709,7 +1741,13 @@ class OutboxMessageDeferredEventTest {
       // Channel 1: 高频短退避
       OutboxMessageDeferredEvent channel1Event =
           new OutboxMessageDeferredEvent(
-              1001L, "literature.parsed", 3, now.plusSeconds(60), "NETWORK_TIMEOUT", "Error 1", now);
+              1001L,
+              "literature.parsed",
+              3,
+              now.plusSeconds(60),
+              "NETWORK_TIMEOUT",
+              "Error 1",
+              now);
 
       // Channel 2: 低频长退避
       OutboxMessageDeferredEvent channel2Event =

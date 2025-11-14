@@ -1,10 +1,11 @@
 /**
  * Outbox 中继用例编排包。
  *
- * <p>本包实现 Outbox 消息的中继流程，将 Outbox 表中的待发布消息发布到 RocketMQ。
- * 这是 Transactional Outbox Pattern 的核心实现，确保领域事件的最终一致性和可靠投递。
+ * <p>本包实现 Outbox 消息的中继流程，将 Outbox 表中的待发布消息发布到 RocketMQ。 这是 Transactional Outbox Pattern
+ * 的核心实现，确保领域事件的最终一致性和可靠投递。
  *
  * <h2>核心职责</h2>
+ *
  * <ul>
  *   <li>轮询 Outbox 表中的待发布消息（状态为 PENDING）
  *   <li>获取消息租约（防止多实例并发发布同一消息）
@@ -15,6 +16,7 @@
  * </ul>
  *
  * <h2>模块结构</h2>
+ *
  * <ul>
  *   <li>{@code OutboxRelayOrchestrator} - 中继编排器（事务边界）
  *   <li>{@code OutboxRelayUseCase} - 中继用例接口（供 Adapter 调用）
@@ -30,6 +32,7 @@
  * </ul>
  *
  * <h2>中继流程</h2>
+ *
  * <pre>
  * Phase 1: 构建中继计划（RelayPlanBuilder）
  *   ├─ 查询待发布消息（状态=PENDING, notBefore<=now, 按创建时间排序）
@@ -58,7 +61,9 @@
  * </pre>
  *
  * <h2>关键设计</h2>
+ *
  * <h3>租约机制</h3>
+ *
  * <ul>
  *   <li>每条消息在中继前必须获取租约（防止并发中继）
  *   <li>租约有过期时间（如 5 分钟），防止中继节点宕机导致消息永久锁定
@@ -67,6 +72,7 @@
  * </ul>
  *
  * <h3>错误分类</h3>
+ *
  * <ul>
  *   <li><strong>可重试错误</strong>:
  *       <ul>
@@ -83,6 +89,7 @@
  * </ul>
  *
  * <h3>批量处理</h3>
+ *
  * <ul>
  *   <li>每次中继处理固定数量的消息（如 100 条）
  *   <li>批量查询、批量更新状态（提高性能）
@@ -90,6 +97,7 @@
  * </ul>
  *
  * <h3>延迟发布</h3>
+ *
  * <ul>
  *   <li>支持 {@code notBefore} 字段（延迟发布时间）
  *   <li>中继时只处理 {@code notBefore <= now} 的消息
@@ -97,7 +105,9 @@
  * </ul>
  *
  * <h2>调度策略</h2>
+ *
  * <h3>定时调度</h3>
+ *
  * <pre>
  * @Scheduled(fixedDelay = 10000)  // 每 10 秒执行一次
  * public void scheduleRelay() {
@@ -108,6 +118,7 @@
  * </pre>
  *
  * <h3>按通道调度</h3>
+ *
  * <pre>
  * // 为不同通道配置不同的调度频率
  * @Scheduled(fixedDelay = 5000)  // 高优先级通道（如任务消息）
@@ -128,7 +139,9 @@
  * </pre>
  *
  * <h2>使用示例</h2>
+ *
  * <h3>从定时任务触发中继</h3>
+ *
  * <pre>{@code
  * @Component
  * @RequiredArgsConstructor
@@ -150,6 +163,7 @@
  * }</pre>
  *
  * <h3>从 REST API 手动触发中继</h3>
+ *
  * <pre>{@code
  * @RestController
  * @RequestMapping("/api/ingest/outbox")
@@ -175,6 +189,7 @@
  * }</pre>
  *
  * <h2>监控和指标</h2>
+ *
  * <ul>
  *   <li><strong>outbox.relay.published</strong>: 成功发布的消息数
  *   <li><strong>outbox.relay.failed</strong>: 发布失败的消息数
@@ -184,6 +199,7 @@
  * </ul>
  *
  * <h2>错误处理</h2>
+ *
  * <ul>
  *   <li>{@code LeaseLostException}: 租约丢失（被其他节点抢占）
  *   <li>{@code RelayPublishException}: 发布失败（网络超时、Broker 错误）
@@ -193,6 +209,7 @@
  * @since 0.1.0
  * @author linqibin
  * @see com.patra.ingest.app.outbox Transactional Outbox 模式组件
- * @see <a href="https://microservices.io/patterns/data/transactional-outbox.html">Transactional Outbox Pattern</a>
+ * @see <a href="https://microservices.io/patterns/data/transactional-outbox.html">Transactional
+ *     Outbox Pattern</a>
  */
 package com.patra.ingest.app.usecase.relay;
