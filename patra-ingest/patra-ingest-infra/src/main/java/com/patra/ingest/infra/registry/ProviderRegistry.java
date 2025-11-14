@@ -174,7 +174,8 @@ public class ProviderRegistry {
    * @param dataType 数据类型
    * @return Provider实例（如果存在）
    */
-  public Optional<DataSourceProvider> findProvider(ProvenanceCode provenanceCode, DataType dataType) {
+  public Optional<DataSourceProvider> findProvider(
+      ProvenanceCode provenanceCode, DataType dataType) {
     String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
     ProviderKey key = new ProviderKey(normalizedCode, dataType);
     return Optional.ofNullable(providersByType.get(key));

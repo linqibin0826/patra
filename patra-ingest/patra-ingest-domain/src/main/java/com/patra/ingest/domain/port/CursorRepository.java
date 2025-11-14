@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.entity.Cursor;
 import java.time.Instant;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public interface CursorRepository {
    * @return 匹配的 Cursor 实体,或 {@link Optional#empty()}
    */
   Optional<Cursor> find(
-      String provenanceCode,
+      ProvenanceCode provenanceCode,
       String operationCode,
       String cursorKey,
       String namespaceScope,
@@ -61,5 +62,6 @@ public interface CursorRepository {
    * @param operationCode 操作代码过滤条件(可为 null)
    * @return 最新的 GLOBAL 时间水位线,或 {@link Optional#empty()}
    */
-  Optional<Instant> findLatestGlobalTimeWatermark(String provenanceCode, String operationCode);
+  Optional<Instant> findLatestGlobalTimeWatermark(
+      ProvenanceCode provenanceCode, String operationCode);
 }

@@ -240,8 +240,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(
-              TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
+          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isPresent().contains(TEST_WATERMARK);
@@ -256,8 +255,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(
-              TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
+          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isEmpty();

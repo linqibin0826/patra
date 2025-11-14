@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import java.time.Instant;
 import java.util.List;
@@ -84,7 +85,7 @@ public interface TaskRepository {
    * @param operationCode 操作代码过滤条件(可为 null)
    * @return 排队任务数量
    */
-  long countQueuedTasks(String provenanceCode, String operationCode);
+  long countQueuedTasks(ProvenanceCode provenanceCode, String operationCode);
 
   /**
    * 尝试通过 CAS(Compare-And-Set)获取租约(步骤 0)。

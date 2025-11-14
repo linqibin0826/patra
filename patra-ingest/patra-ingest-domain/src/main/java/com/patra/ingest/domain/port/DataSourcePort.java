@@ -1,5 +1,6 @@
 package com.patra.ingest.domain.port;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.common.type.TypeReference;
 import com.patra.ingest.domain.model.vo.batch.Batch;
@@ -180,7 +181,7 @@ public interface DataSourcePort {
    * @param dataType 数据类型标识
    * @return 如果支持则返回 true，否则返回 false
    */
-  boolean supports(String provenanceCode, DataType dataType);
+  boolean supports(ProvenanceCode provenanceCode, DataType dataType);
 
   /**
    * 获取指定数据源支持的所有数据类型
@@ -220,7 +221,7 @@ public interface DataSourcePort {
    * @param provenanceCode 数据源代码
    * @return 支持的数据类型集合（不可变），如果数据源不存在则返回空集合
    */
-  Set<DataType> getSupportedTypes(String provenanceCode);
+  Set<DataType> getSupportedTypes(ProvenanceCode provenanceCode);
 
   /**
    * 数据获取结果值对象

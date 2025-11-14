@@ -93,11 +93,17 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     Long runId = session.runId();
     ProvenanceCode provenanceCode = context.provenanceCode();
 
-    log.info("开始执行批次 taskId={} runId={} provenanceCode={}", taskId, runId,
+    log.info(
+        "开始执行批次 taskId={} runId={} provenanceCode={}",
+        taskId,
+        runId,
         provenanceCode != null ? provenanceCode.getCode() : null);
 
     // 步骤1: 规划批次
-    log.debug("规划批次中 taskId={} runId={} provenanceCode={}", taskId, runId,
+    log.debug(
+        "规划批次中 taskId={} runId={} provenanceCode={}",
+        taskId,
+        runId,
         provenanceCode != null ? provenanceCode.getCode() : null);
     BatchPlanner planner = plannerRegistry.get(provenanceCode);
     BatchPlan plan = planner.plan(context);

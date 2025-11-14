@@ -2,6 +2,7 @@ package com.patra.ingest.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.domain.port.TaskRepository;
 import com.patra.ingest.infra.persistence.converter.TaskConverter;
@@ -173,11 +174,11 @@ public class TaskRepositoryMpImpl implements TaskRepository {
    * @return count of queued tasks
    */
   @Override
-  public long countQueuedTasks(String provenanceCode, String operationCode) {
+  public long countQueuedTasks(ProvenanceCode provenanceCode, String operationCode) {
     QueryWrapper<TaskDO> wrapper = new QueryWrapper<>();
     wrapper.eq("status_code", "QUEUED");
     if (provenanceCode != null) {
-      wrapper.eq("provenance_code", provenanceCode);
+      wrapper.eq("provenance_code", provenanceCode.getCode());
     }
     if (operationCode != null) {
       wrapper.eq("operation_code", operationCode);

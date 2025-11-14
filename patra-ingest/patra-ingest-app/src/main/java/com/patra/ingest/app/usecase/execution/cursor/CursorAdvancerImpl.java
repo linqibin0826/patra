@@ -124,7 +124,7 @@ public class CursorAdvancerImpl implements CursorAdvancer {
       // 5) 查找当前游标
       Optional<Cursor> cursorOpt =
           cursorRepository.find(
-              provenanceCodeStr, operationCode, cursorKey, namespaceScope, namespaceKey);
+              provenanceCode, operationCode, cursorKey, namespaceScope, namespaceKey);
 
       Cursor cursor;
       Instant prevWatermark = null;

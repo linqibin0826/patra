@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.coordination;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.domain.port.StorageMetadataPort;
@@ -16,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 /**
  * 文献发布编排器
@@ -238,10 +238,8 @@ public class LiteraturePublisherOrchestrator {
     }
   }
 
-  private String safeProvenance(String provenanceCode) {
-    return StringUtils.hasText(provenanceCode)
-        ? provenanceCode.toLowerCase(Locale.ROOT)
-        : "unknown";
+  private String safeProvenance(ProvenanceCode provenanceCode) {
+    return provenanceCode != null ? provenanceCode.getCode().toLowerCase(Locale.ROOT) : "unknown";
   }
 
   /**
@@ -265,5 +263,5 @@ public class LiteraturePublisherOrchestrator {
    * @param provenanceCode 标准化的数据源标识符
    */
   @Builder
-  public record PublishContext(Long runId, int batchNo, String provenanceCode) {}
+  public record PublishContext(Long runId, int batchNo, ProvenanceCode provenanceCode) {}
 }
