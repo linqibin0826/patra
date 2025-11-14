@@ -1,6 +1,7 @@
 package com.patra.starter.provenance.common.provider;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
 import com.patra.starter.provenance.common.exception.ProvenanceClientException;
@@ -52,8 +53,8 @@ import java.util.Set;
  *     );
  *
  *     @Override
- *     public String getProvenanceCode() {
- *         return "pubmed";
+ *     public ProvenanceCode getProvenanceCode() {
+ *         return ProvenanceCode.PUBMED;
  *     }
  *
  *     @Override
@@ -87,15 +88,14 @@ public interface DataSourceProvider {
    * <p>数据源代码用于标识外部数据源，例如：
    *
    * <ul>
-   *   <li>"pubmed" - PubMed数据库
-   *   <li>"doaj" - Directory of Open Access Journals
-   *   <li>"crossref" - Crossref引用数据库
-   *   <li>"drugbank" - DrugBank药品数据库
+   *   <li>ProvenanceCode.PUBMED - PubMed数据库
+   *   <li>ProvenanceCode.DOAJ - Directory of Open Access Journals
+   *   <li>ProvenanceCode.CROSSREF - Crossref引用数据库
    * </ul>
    *
-   * @return 唯一的数据源代码（小写，不含空格）
+   * @return 数据源代码枚举
    */
-  String getProvenanceCode();
+  ProvenanceCode getProvenanceCode();
 
   /**
    * 获取此Provider支持的所有数据类型

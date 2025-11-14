@@ -1,6 +1,7 @@
 package com.patra.starter.provenance.pubmed;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.config.ProvenanceConfig;
@@ -41,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PubmedDataSourceProvider implements DataSourceProvider {
 
-  private static final String PROVENANCE_CODE = "pubmed";
+  private static final ProvenanceCode PROVENANCE_CODE = ProvenanceCode.PUBMED;
   private static final Set<DataType> SUPPORTED_TYPES = Set.of(DataType.LITERATURE);
 
   private final PubmedLiteratureProcessor literatureProcessor;
@@ -49,7 +50,7 @@ public class PubmedDataSourceProvider implements DataSourceProvider {
   private final PubMedESearchRequestAssembler requestAssembler;
 
   @Override
-  public String getProvenanceCode() {
+  public ProvenanceCode getProvenanceCode() {
     return PROVENANCE_CODE;
   }
 
