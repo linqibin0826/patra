@@ -1,4 +1,4 @@
-package com.patra.ingest.infra.registry;
+package com.patra.starter.provenance.common.provider;
 
 /**
  * Provider未找到异常
