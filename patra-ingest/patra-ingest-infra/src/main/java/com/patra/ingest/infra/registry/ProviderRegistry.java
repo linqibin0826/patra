@@ -1,5 +1,6 @@
 package com.patra.ingest.infra.registry;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.provider.DataSourceProvider;
 import java.util.*;
@@ -152,8 +153,8 @@ public class ProviderRegistry {
    * @return Provider实例
    * @throws ProviderNotFoundException 如果Provider不存在
    */
-  public DataSourceProvider getProvider(String provenanceCode, DataType dataType) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode);
+  public DataSourceProvider getProvider(ProvenanceCode provenanceCode, DataType dataType) {
+    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
     ProviderKey key = new ProviderKey(normalizedCode, dataType);
 
     DataSourceProvider provider = providersByType.get(key);
@@ -173,8 +174,8 @@ public class ProviderRegistry {
    * @param dataType 数据类型
    * @return Provider实例（如果存在）
    */
-  public Optional<DataSourceProvider> findProvider(String provenanceCode, DataType dataType) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode);
+  public Optional<DataSourceProvider> findProvider(ProvenanceCode provenanceCode, DataType dataType) {
+    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
     ProviderKey key = new ProviderKey(normalizedCode, dataType);
     return Optional.ofNullable(providersByType.get(key));
   }
@@ -186,8 +187,8 @@ public class ProviderRegistry {
    * @param dataType 数据类型
    * @return 如果支持则返回true
    */
-  public boolean supports(String provenanceCode, DataType dataType) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode);
+  public boolean supports(ProvenanceCode provenanceCode, DataType dataType) {
+    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
     ProviderKey key = new ProviderKey(normalizedCode, dataType);
     return providersByType.containsKey(key);
   }
@@ -198,8 +199,8 @@ public class ProviderRegistry {
    * @param provenanceCode 数据源代码
    * @return 数据类型集合（不可变，如果数据源不存在则返回空集合）
    */
-  public Set<DataType> getSupportedTypes(String provenanceCode) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode);
+  public Set<DataType> getSupportedTypes(ProvenanceCode provenanceCode) {
+    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
     Set<DataType> types = typesByProvenance.get(normalizedCode);
     return types != null ? Set.copyOf(types) : Set.of();
   }

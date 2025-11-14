@@ -78,7 +78,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     ReflectionTestUtils.setField(executeUseCase, "failFast", false);
 
     // 默认行为：BatchPlannerRegistry 返回 planner
-    when(plannerRegistry.get(mockContext.provenanceCode().getCode())).thenReturn(mockPlanner);
+    when(plannerRegistry.get(mockContext.provenanceCode())).thenReturn(mockPlanner);
   }
 
   // ========== 正常流程测试 ==========

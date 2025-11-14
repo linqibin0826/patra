@@ -53,8 +53,12 @@ public class BatchPlannerRegistry {
    * @return 批处理规划器
    * @throws IllegalArgumentException 规划器未找到时抛出
    */
-  public BatchPlanner get(String provenanceCode) {
-    BatchPlanner planner = planners.get(provenanceCode);
+  public BatchPlanner get(ProvenanceCode provenanceCode) {
+    if (provenanceCode == null) {
+      throw new IllegalArgumentException("provenanceCode 不能为 null");
+    }
+    String code = provenanceCode.getCode();
+    BatchPlanner planner = planners.get(code);
     if (planner == null) {
       throw new IllegalArgumentException(
           "未找到批处理规划器: provenanceCode=" + provenanceCode + "; 可用的规划器: " + planners.keySet());
@@ -63,7 +67,10 @@ public class BatchPlannerRegistry {
   }
 
   /** 检查指定 provenanceCode 的规划器是否存在 */
-  public boolean contains(String provenanceCode) {
-    return planners.containsKey(provenanceCode);
+  public boolean contains(ProvenanceCode provenanceCode) {
+    if (provenanceCode == null) {
+      return false;
+    }
+    return planners.containsKey(provenanceCode.getCode());
   }
 }

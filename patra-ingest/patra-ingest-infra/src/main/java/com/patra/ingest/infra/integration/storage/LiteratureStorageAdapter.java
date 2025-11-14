@@ -3,6 +3,7 @@ package com.patra.ingest.infra.integration.storage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.catalog.api.dto.LiteratureDTO;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.ingest.domain.port.LiteratureStoragePort;
 import com.patra.ingest.infra.integration.storage.acl.LiteratureConverter;
@@ -179,10 +180,12 @@ public class LiteratureStorageAdapter implements LiteratureStoragePort {
     return provenance + "-" + context.batchNo() + "-" + runIdSegment;
   }
 
-  private String safeProvenance(String provenanceCode) {
-    return StringUtils.hasText(provenanceCode)
-        ? provenanceCode.toLowerCase(Locale.ROOT)
-        : "unknown";
+  private String safeProvenance(ProvenanceCode provenanceCode) {
+    if (provenanceCode == null) {
+      return "unknown";
+    }
+    String code = provenanceCode.getCode();
+    return StringUtils.hasText(code) ? code.toLowerCase(Locale.ROOT) : "unknown";
   }
 
   /** 存储异常,指示序列化或上传失败。 */

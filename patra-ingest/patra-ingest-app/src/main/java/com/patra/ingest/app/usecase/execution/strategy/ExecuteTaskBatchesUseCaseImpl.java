@@ -1,5 +1,6 @@
 package com.patra.ingest.app.usecase.execution.strategy;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
 import com.patra.ingest.app.usecase.execution.strategy.planner.BatchPlanner;
@@ -90,13 +91,14 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
   public ExecuteResult execute(ExecutionSession session, ExecutionContext context) {
     Long taskId = session.taskId();
     Long runId = session.runId();
-    String provenanceCode =
-        context.provenanceCode() != null ? context.provenanceCode().getCode() : null;
+    ProvenanceCode provenanceCode = context.provenanceCode();
 
-    log.info("开始执行批次 taskId={} runId={} provenanceCode={}", taskId, runId, provenanceCode);
+    log.info("开始执行批次 taskId={} runId={} provenanceCode={}", taskId, runId,
+        provenanceCode != null ? provenanceCode.getCode() : null);
 
     // 步骤1: 规划批次
-    log.debug("规划批次中 taskId={} runId={} provenanceCode={}", taskId, runId, provenanceCode);
+    log.debug("规划批次中 taskId={} runId={} provenanceCode={}", taskId, runId,
+        provenanceCode != null ? provenanceCode.getCode() : null);
     BatchPlanner planner = plannerRegistry.get(provenanceCode);
     BatchPlan plan = planner.plan(context);
 

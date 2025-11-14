@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.aggregate.TaskAggregate;
 import com.patra.ingest.infra.persistence.converter.TaskConverter;
 import com.patra.ingest.infra.persistence.entity.TaskDO;
@@ -266,7 +267,7 @@ class TaskRepositoryMpImplTest {
       when(mapper.selectCount(any(QueryWrapper.class))).thenReturn(5L);
 
       // When
-      long count = repository.countQueuedTasks(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
+      long count = repository.countQueuedTasks(ProvenanceCode.parse(TEST_PROVENANCE_CODE), TEST_OPERATION_CODE);
 
       // Then
       assertThat(count).isEqualTo(5L);

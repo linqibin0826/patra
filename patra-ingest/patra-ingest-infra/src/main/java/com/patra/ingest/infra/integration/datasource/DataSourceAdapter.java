@@ -107,7 +107,7 @@ public class DataSourceAdapter implements DataSourcePort {
     try {
       // 1. 查找Provider
       DataSourceProvider provider =
-          providerRegistry.getProvider(provenanceCode.getCode(), dataType);
+          providerRegistry.getProvider(provenanceCode, dataType);
 
       // 2. 提取通用参数
       String query = context.compiledQuery();
@@ -329,7 +329,7 @@ public class DataSourceAdapter implements DataSourcePort {
 
       // 2. 查找Provider
       DataSourceProvider provider =
-          providerRegistry.getProvider(provenanceCode.getCode(), dataType);
+          providerRegistry.getProvider(provenanceCode, dataType);
 
       // 3. 构建ProviderRequest
       ProviderRequest request = buildProviderRequest(context, batch);
@@ -380,7 +380,7 @@ public class DataSourceAdapter implements DataSourcePort {
    * @return 如果支持则返回true
    */
   @Override
-  public boolean supports(String provenanceCode, DataType dataType) {
+  public boolean supports(ProvenanceCode provenanceCode, DataType dataType) {
     return providerRegistry.supports(provenanceCode, dataType);
   }
 
@@ -391,7 +391,7 @@ public class DataSourceAdapter implements DataSourcePort {
    * @return 数据类型集合
    */
   @Override
-  public Set<DataType> getSupportedTypes(String provenanceCode) {
+  public Set<DataType> getSupportedTypes(ProvenanceCode provenanceCode) {
     return providerRegistry.getSupportedTypes(provenanceCode);
   }
 
