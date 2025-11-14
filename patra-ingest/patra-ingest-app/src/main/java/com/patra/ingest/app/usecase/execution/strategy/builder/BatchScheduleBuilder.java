@@ -1,4 +1,4 @@
-package com.patra.ingest.app.usecase.execution.strategy.planner;
+package com.patra.ingest.app.usecase.execution.strategy.builder;
 
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.domain.model.vo.batch.BatchSchedule;

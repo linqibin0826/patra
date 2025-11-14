@@ -17,7 +17,7 @@
  * <ul>
  *   <li>{@code ExecuteTaskBatchesUseCase} - 批次执行用例接口
  *   <li>{@code ExecuteTaskBatchesUseCaseImpl} - 批次执行用例实现
- *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.planner} - 批次构建器
+ *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.builder} - 批次构建器
  * </ul>
  *
  * <h2>批次执行流程</h2>
