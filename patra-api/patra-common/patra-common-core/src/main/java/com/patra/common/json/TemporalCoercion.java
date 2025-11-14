@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
@@ -35,7 +36,7 @@ import java.util.Optional;
 final class TemporalCoercion {
   private static final DateTimeFormatter CANONICAL_INSTANT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-          .withZone(java.time.ZoneOffset.UTC);
+          .withZone(ZoneOffset.UTC);
 
   private static final List<DateTimeFormatter> TEMPORAL_FORMATTERS =
       List.of(

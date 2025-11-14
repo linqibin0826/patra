@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.patra.expr.*;
 import com.patra.expr.Atom.*;
 import java.io.IOException;
+import java.lang.Void;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -65,7 +66,7 @@ public final class ExprJsonCodec {
   }
 
   // ================= 序列化器 =================
-  static class ExprSerializer extends JsonSerializer<Expr> implements ExprVisitor<java.lang.Void> {
+  static class ExprSerializer extends JsonSerializer<Expr> implements ExprVisitor<Void> {
     private JsonGenerator gen;
 
     @Override
@@ -76,27 +77,27 @@ public final class ExprJsonCodec {
     }
 
     @Override
-    public java.lang.Void visitAnd(And andExpr) {
+    public Void visitAnd(And andExpr) {
       return wrapIOException(() -> writeAndExpression(andExpr));
     }
 
     @Override
-    public java.lang.Void visitOr(Or orExpr) {
+    public Void visitOr(Or orExpr) {
       return wrapIOException(() -> writeOrExpression(orExpr));
     }
 
     @Override
-    public java.lang.Void visitNot(Not notExpr) {
+    public Void visitNot(Not notExpr) {
       return wrapIOException(() -> writeNotExpression(notExpr));
     }
 
     @Override
-    public java.lang.Void visitConst(Const constantExpr) {
+    public Void visitConst(Const constantExpr) {
       return wrapIOException(() -> writeConstExpression(constantExpr));
     }
 
     @Override
-    public java.lang.Void visitAtom(Atom atomExpr) {
+    public Void visitAtom(Atom atomExpr) {
       return wrapIOException(() -> writeAtomExpression(atomExpr));
     }
 
@@ -147,7 +148,7 @@ public final class ExprJsonCodec {
       gen.writeEndObject();
     }
 
-    private java.lang.Void wrapIOException(IOAction action) {
+    private Void wrapIOException(IOAction action) {
       try {
         action.run();
         return null;
@@ -161,7 +162,7 @@ public final class ExprJsonCodec {
       void run() throws IOException;
     }
 
-    private void writeAtomValue(Atom.Value v) throws IOException {
+    private void writeAtomValue(Value v) throws IOException {
       if (v instanceof TermValue tv) {
         writeTermValue(tv);
       } else if (v instanceof InValues iv) {
@@ -319,8 +320,8 @@ public final class ExprJsonCodec {
       if (valueNode == null || !valueNode.isObject()) {
         ctxt.reportInputMismatch(Expr.class, "ATOM missing value");
       }
-      Atom.Value val = parseAtomValue(valueNode, ctxt);
-      Atom.Operator operator = Atom.Operator.valueOf(op);
+      Value val = parseAtomValue(valueNode, ctxt);
+      Operator operator = Operator.valueOf(op);
       return new Atom(field, operator, val);
     }
 
@@ -334,7 +335,7 @@ public final class ExprJsonCodec {
       return list;
     }
 
-    private Atom.Value parseAtomValue(JsonNode node, DeserializationContext ctxt)
+    private Value parseAtomValue(JsonNode node, DeserializationContext ctxt)
         throws IOException {
       String kind = getText(node, "kind");
       return switch (kind) {

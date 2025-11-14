@@ -27,15 +27,15 @@ public interface CursorConverter {
   @Mapping(
       target = "normalizedInstant",
       expression =
-          "java(com.patra.ingest.infra.persistence.converter.CursorConverter.normalizedInstant(source))")
+          "java(CursorConverter.normalizedInstant(source))")
   @Mapping(
       target = "normalizedNumeric",
       expression =
-          "java(com.patra.ingest.infra.persistence.converter.CursorConverter.normalizedNumeric(source))")
+          "java(CursorConverter.normalizedNumeric(source))")
   @Mapping(
       target = "observedMaxValue",
       expression =
-          "java(com.patra.ingest.infra.persistence.converter.CursorConverter.observedMaxValue(source))")
+          "java(CursorConverter.observedMaxValue(source))")
   @Mapping(target = "scheduleInstanceId", source = "lineage.scheduleInstanceId")
   @Mapping(target = "planId", source = "lineage.planId")
   @Mapping(target = "sliceId", source = "lineage.sliceId")

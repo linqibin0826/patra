@@ -1,5 +1,7 @@
 package com.patra.expr;
 
+import java.lang.Void;
+
 /**
  * 表达式访问者契约,与表达式模型解耦,使编解码器、渲染器和其他转换器可以在内核外部安全遍历表达式树。
  *
@@ -55,33 +57,33 @@ public interface ExprVisitor<R> {
    *
    * <p>子类只需实现 {@link #visit(Expr)} 方法,处理所有类型的表达式节点。
    */
-  abstract class NoReturn implements ExprVisitor<java.lang.Void> {
+  abstract class NoReturn implements ExprVisitor<Void> {
     @Override
-    public final java.lang.Void visitAnd(And andExpr) {
+    public final Void visitAnd(And andExpr) {
       visit(andExpr);
       return null;
     }
 
     @Override
-    public final java.lang.Void visitOr(Or orExpr) {
+    public final Void visitOr(Or orExpr) {
       visit(orExpr);
       return null;
     }
 
     @Override
-    public final java.lang.Void visitNot(Not notExpr) {
+    public final Void visitNot(Not notExpr) {
       visit(notExpr);
       return null;
     }
 
     @Override
-    public final java.lang.Void visitConst(Const constantExpr) {
+    public final Void visitConst(Const constantExpr) {
       visit(constantExpr);
       return null;
     }
 
     @Override
-    public final java.lang.Void visitAtom(Atom atomExpr) {
+    public final Void visitAtom(Atom atomExpr) {
       visit(atomExpr);
       return null;
     }

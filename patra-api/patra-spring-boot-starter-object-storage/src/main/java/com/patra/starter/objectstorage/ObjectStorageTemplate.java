@@ -5,7 +5,10 @@ import com.patra.starter.objectstorage.domain.ObjectMetadata;
 import com.patra.starter.objectstorage.domain.UploadFailedException;
 import com.patra.starter.objectstorage.domain.UploadResult;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import org.springframework.retry.support.RetryTemplate;
 
 /**
@@ -134,9 +137,9 @@ public class ObjectStorageTemplate implements ObjectStorageOperations {
     }
 
     // 检查异常类型
-    if (ex instanceof java.io.IOException
-        || ex instanceof java.net.SocketException
-        || ex instanceof java.net.SocketTimeoutException) {
+    if (ex instanceof IOException
+        || ex instanceof SocketException
+        || ex instanceof SocketTimeoutException) {
       return "network";
     }
 

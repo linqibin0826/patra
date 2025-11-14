@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
@@ -191,7 +192,7 @@ public class SimpleHttpClient {
       Map<String, String> base, Map<String, String> extra) {
     if (base == null || base.isEmpty()) return extra == null ? Map.of() : Map.copyOf(extra);
     if (extra == null || extra.isEmpty()) return Map.copyOf(base);
-    java.util.LinkedHashMap<String, String> m = new java.util.LinkedHashMap<>(base);
+    LinkedHashMap<String, String> m = new LinkedHashMap<>(base);
     m.putAll(extra);
     return Map.copyOf(m);
   }

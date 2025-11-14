@@ -42,5 +42,4 @@ public record ExecutionContext(
     JsonNode compiledParams,
     String normalizedExpression,
     WindowSpec windowSpec) {
-  // planMetadata 字段已移除，现在使用 BatchPlan（通过 DataSourcePort.preparePlan()）来传递计划信息
 }

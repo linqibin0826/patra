@@ -12,6 +12,7 @@ import com.patra.starter.provenance.common.http.SimpleHttpClient;
 import com.patra.starter.provenance.common.metrics.ProvenanceMetrics;
 import com.patra.starter.provenance.epmc.model.request.SearchRequest;
 import com.patra.starter.provenance.epmc.model.response.SearchResponse;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -72,8 +73,8 @@ public class EPMCClientImpl implements EPMCClient {
 
     String baseUrl = finalConfig.baseUrl();
     String path = "/search";
-    java.util.Map<String, String> queryParams = request.toQueryParams();
-    java.util.Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
+    Map<String, String> queryParams = request.toQueryParams();
+    Map<String, String> headers = ProvenanceConfigConverter.extractHeaders(finalConfig);
     HttpResilienceConfig rc = ProvenanceConfigConverter.toHttpResilienceConfig(finalConfig);
 
     String body = httpClient.get(baseUrl, path, queryParams, headers, rc);

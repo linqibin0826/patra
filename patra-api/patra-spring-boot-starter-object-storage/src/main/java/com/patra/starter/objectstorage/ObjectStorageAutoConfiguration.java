@@ -4,6 +4,10 @@ import com.patra.common.storage.ObjectKeyGenerator;
 import com.patra.starter.objectstorage.metrics.ObjectStorageMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.minio.MinioClient;
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -95,9 +99,9 @@ public class ObjectStorageAutoConfiguration {
     return RetryTemplate.builder()
         .maxAttempts(maxAttempts)
         .exponentialBackoff(baseDelay, 2.0, maxDelay)
-        .retryOn(java.io.IOException.class)
-        .retryOn(java.net.SocketTimeoutException.class)
-        .retryOn(java.net.ConnectException.class)
+        .retryOn(IOException.class)
+        .retryOn(SocketTimeoutException.class)
+        .retryOn(ConnectException.class)
         .traversingCauses()
         .build();
   }
@@ -200,7 +204,7 @@ public class ObjectStorageAutoConfiguration {
       ObjectStorageProperties properties, String providerKey) {
     return properties.getProviders().entrySet().stream()
         .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(providerKey))
-        .map(java.util.Map.Entry::getValue)
+        .map(Map.Entry::getValue)
         .findFirst()
         .orElseThrow(() -> new IllegalStateException("缺少对象存储提供者配置: " + providerKey));
   }

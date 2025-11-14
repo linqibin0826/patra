@@ -5,6 +5,7 @@ import com.patra.ingest.domain.model.enums.NamespaceScope;
 import com.patra.ingest.domain.model.vo.cursor.CursorLineage;
 import com.patra.ingest.domain.model.vo.cursor.CursorValue;
 import com.patra.ingest.domain.model.vo.cursor.CursorWatermark;
+import java.time.Instant;
 import java.util.Objects;
 import lombok.Getter;
 
@@ -139,7 +140,7 @@ public class Cursor {
       String cursorKey,
       String namespaceScope,
       String namespaceKey,
-      java.time.Instant watermark) {
+      Instant watermark) {
     return create(
         provenanceCode,
         operationCode,
@@ -168,7 +169,7 @@ public class Cursor {
       String cursorKey,
       String namespaceScope,
       String namespaceKey,
-      java.time.Instant watermark,
+      Instant watermark,
       CursorLineage lineage) {
     return create(
         provenanceCode,
