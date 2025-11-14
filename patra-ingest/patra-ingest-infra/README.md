@@ -234,7 +234,7 @@ public class DataSourceAdapter implements DataSourcePort {
     private final ProviderRegistry providerRegistry;
 
     @Override
-    public PlanMetadata preparePlan(ExecutionContext context, DataType dataType) {
+    public PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
         // 1. 获取对应的 Provider
         DataSourceProvider provider = providerRegistry.getProvider(
             context.provenanceCode(),
@@ -247,7 +247,7 @@ public class DataSourceAdapter implements DataSourcePort {
         ProvenanceConfig config = null; // Provider 从 ProvenanceProperties 获取
 
         // 3. 调用 Provider 准备计划
-        return provider.preparePlan(query, params, config);
+        return provider.prepareFetchMetadata(query, params, config);
     }
 
     @Override

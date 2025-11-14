@@ -360,7 +360,7 @@ public interface ExpressionCompilerPort {
 ```java
 public interface DataSourcePort {
     // 准备计划元数据（获取总数、会话令牌等）
-    PlanMetadata preparePlan(ExecutionContext context, DataType dataType);
+    PlanMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
 
     // 获取指定类型的数据
     <T> DataFetchResult<T> fetchData(
@@ -379,7 +379,7 @@ public interface DataSourcePort {
 **使用示例**:
 ```java
 // 准备计划
-PlanMetadata planMetadata = dataSourcePort.preparePlan(context, DataType.LITERATURE);
+PlanMetadata planMetadata = dataSourcePort.prepareFetchMetadata(context, DataType.LITERATURE);
 
 // 获取文献数据
 TypeReference<CanonicalLiterature> typeRef = new TypeReference<>() {};

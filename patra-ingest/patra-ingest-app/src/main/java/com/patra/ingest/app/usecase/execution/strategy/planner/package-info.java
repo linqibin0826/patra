@@ -108,7 +108,7 @@
  *     @Override
  *     public BatchSchedule build(ExecutionContext ctx) {
  *         // 1. 准备计划元数据
- *         PlanMetadata planMetadata = dataSourcePort.preparePlan(ctx, DataType.LITERATURE);
+ *         PlanMetadata planMetadata = dataSourcePort.prepareFetchMetadata(ctx, DataType.LITERATURE);
  *
  *         // 2. 根据 PlanMetadata 类型选择对应策略
  *         BatchGenerationStrategy strategy = strategyMap.get(planMetadata.getClass());

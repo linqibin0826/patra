@@ -27,7 +27,7 @@ import java.util.Optional;
  * <p><strong>使用场景</strong>：
  *
  * <ul>
- *   <li>DataSourcePort.preparePlan() 返回此接口
+ *   <li>DataSourcePort.prepareFetchMetadata() 返回此接口
  *   <li>BatchGenerationStrategy.generateBatches() 接收此接口作为输入
  *   <li>FetchMetadataTranslator 将外部元数据翻译为此接口
  * </ul>
