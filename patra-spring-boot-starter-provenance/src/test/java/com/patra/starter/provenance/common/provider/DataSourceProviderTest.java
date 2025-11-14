@@ -2,6 +2,7 @@ package com.patra.starter.provenance.common.provider;
 
 import static org.assertj.core.api.Assertions.*;
 
+import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.CanonicalLiterature;
 import com.patra.common.model.DataType;
 import com.patra.starter.provenance.common.processor.DataProcessor;
@@ -48,10 +49,10 @@ class DataSourceProviderTest {
       DataSourceProvider provider = new MockPubmedProvider();
 
       // When: 获取数据源代码
-      String provenanceCode = provider.getProvenanceCode();
+      ProvenanceCode provenanceCode = provider.getProvenanceCode();
 
       // Then: 应该返回正确的代码
-      assertThat(provenanceCode).isEqualTo("pubmed");
+      assertThat(provenanceCode).isEqualTo(ProvenanceCode.PUBMED);
     }
 
     @Test
@@ -303,8 +304,8 @@ class DataSourceProviderTest {
         Set.of(DataType.LITERATURE, DataType.CITATION);
 
     @Override
-    public String getProvenanceCode() {
-      return "pubmed";
+    public ProvenanceCode getProvenanceCode() {
+      return ProvenanceCode.PUBMED;
     }
 
     @Override

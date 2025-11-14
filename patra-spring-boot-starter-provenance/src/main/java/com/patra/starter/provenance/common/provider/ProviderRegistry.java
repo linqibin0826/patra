@@ -74,7 +74,7 @@ public class ProviderRegistry {
   private final Map<ProviderKey, DataSourceProvider> providersByType;
 
   /** 辅助索引1：provenanceCode → Set<DataType> */
-  private final Map<String, Set<DataType>> typesByProvenance;
+  private final Map<ProvenanceCode, Set<DataType>> typesByProvenance;
 
   /** 辅助索引2：dataType → List<Provider> */
   private final Map<DataType, List<DataSourceProvider>> providersByDataType;
@@ -105,7 +105,7 @@ public class ProviderRegistry {
    * @param provider Provider实例
    */
   private void register(DataSourceProvider provider) {
-    String provenanceCode = normalizeProvenanceCode(provider.getProvenanceCode());
+    ProvenanceCode provenanceCode = provider.getProvenanceCode();
     Set<DataType> supportedTypes = provider.getSupportedDataTypes();
 
     // 检测重复的provenanceCode
@@ -151,8 +151,7 @@ public class ProviderRegistry {
    * @throws ProviderNotFoundException 如果Provider不存在
    */
   public DataSourceProvider getProvider(ProvenanceCode provenanceCode, DataType dataType) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
-    ProviderKey key = new ProviderKey(normalizedCode, dataType);
+    ProviderKey key = new ProviderKey(provenanceCode, dataType);
 
     DataSourceProvider provider = providersByType.get(key);
 
@@ -173,8 +172,7 @@ public class ProviderRegistry {
    */
   public Optional<DataSourceProvider> findProvider(
       ProvenanceCode provenanceCode, DataType dataType) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
-    ProviderKey key = new ProviderKey(normalizedCode, dataType);
+    ProviderKey key = new ProviderKey(provenanceCode, dataType);
     return Optional.ofNullable(providersByType.get(key));
   }
 
@@ -186,8 +184,7 @@ public class ProviderRegistry {
    * @return 如果支持则返回true
    */
   public boolean supports(ProvenanceCode provenanceCode, DataType dataType) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
-    ProviderKey key = new ProviderKey(normalizedCode, dataType);
+    ProviderKey key = new ProviderKey(provenanceCode, dataType);
     return providersByType.containsKey(key);
   }
 
@@ -198,8 +195,7 @@ public class ProviderRegistry {
    * @return 数据类型集合（不可变，如果数据源不存在则返回空集合）
    */
   public Set<DataType> getSupportedTypes(ProvenanceCode provenanceCode) {
-    String normalizedCode = normalizeProvenanceCode(provenanceCode.getCode());
-    Set<DataType> types = typesByProvenance.get(normalizedCode);
+    Set<DataType> types = typesByProvenance.get(provenanceCode);
     return types != null ? Set.copyOf(types) : Set.of();
   }
 
@@ -220,17 +216,7 @@ public class ProviderRegistry {
    * @return Provider列表（不可变，去重后）
    */
   public List<DataSourceProvider> getAllProviders() {
-    return providersByType.values().stream().distinct().collect(Collectors.toUnmodifiableList());
-  }
-
-  /**
-   * 标准化数据源代码（转小写，去空格）
-   *
-   * @param provenanceCode 原始代码
-   * @return 标准化后的代码
-   */
-  private String normalizeProvenanceCode(String provenanceCode) {
-    return provenanceCode != null ? provenanceCode.toLowerCase().trim() : "";
+    return providersByType.values().stream().distinct().toList();
   }
 
   /** 记录注册统计信息 */
@@ -251,18 +237,5 @@ public class ProviderRegistry {
   }
 
   /** Provider索引键（provenanceCode + dataType） */
-  private record ProviderKey(String provenanceCode, DataType dataType) {
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      ProviderKey that = (ProviderKey) o;
-      return Objects.equals(provenanceCode, that.provenanceCode) && dataType == that.dataType;
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(provenanceCode, dataType);
-    }
-  }
+  private record ProviderKey(ProvenanceCode provenanceCode, DataType dataType) {}
 }
