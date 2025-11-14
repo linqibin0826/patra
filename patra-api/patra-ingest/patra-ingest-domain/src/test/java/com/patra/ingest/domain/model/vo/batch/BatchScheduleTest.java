@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
  * @author linqibin
  * @since 0.2.0
  */
-@DisplayName("BatchSchedule 批次规划结果值对象测试")
+@DisplayName("BatchSchedule 批次调度结果值对象测试")
 class BatchScheduleTest {
 
   // ==================== 测试工具方法 ====================
@@ -74,7 +74,7 @@ class BatchScheduleTest {
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
 
-      // When: 创建批次计划
+      // When: 创建批次调度
       BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // Then: 验证所有字段
@@ -92,7 +92,7 @@ class BatchScheduleTest {
       List<Batch> emptyBatches = List.of();
       ExecutionContext ctx = createTestContext();
 
-      // When: 创建批次计划
+      // When: 创建批次调度
       BatchSchedule plan = new BatchSchedule(emptyBatches, ctx);
 
       // Then: 验证空列表
@@ -110,7 +110,7 @@ class BatchScheduleTest {
       List<Batch> batches = List.of(createTestBatch(1), createTestBatch(2), createTestBatch(3));
       ExecutionContext ctx = createTestContext();
 
-      // When: 创建批次计划
+      // When: 创建批次调度
       BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // Then: 验证批次列表
@@ -161,7 +161,7 @@ class BatchScheduleTest {
   class FactoryMethods {
 
     @Test
-    @DisplayName("empty() 应该创建空批次计划")
+    @DisplayName("empty() 应该创建空批次调度")
     void emptyShouldCreateEmptyPlan() {
       // Given: 准备上下文
       ExecutionContext ctx = createTestContext();
@@ -187,7 +187,7 @@ class BatchScheduleTest {
       // When: 调用 single 工厂方法
       BatchSchedule plan = BatchSchedule.single(batch, ctx);
 
-      // Then: 验证单批次计划
+      // Then: 验证单批次调度
       assertThat(plan.batches()).hasSize(1).containsExactly(batch);
       assertThat(plan.enrichedContext()).isEqualTo(ctx);
       assertThat(plan.totalBatches()).isEqualTo(1);
@@ -234,7 +234,7 @@ class BatchScheduleTest {
     @Test
     @DisplayName("hasBatches() 应该在空列表时返回 false")
     void hasBatchesShouldReturnFalseWhenEmpty() {
-      // Given: 空批次计划
+      // Given: 空批次调度
       ExecutionContext ctx = createTestContext();
       BatchSchedule plan = BatchSchedule.empty(ctx);
 
@@ -245,7 +245,7 @@ class BatchScheduleTest {
     @Test
     @DisplayName("hasBatches() 应该在包含多个批次时返回 true")
     void hasBatchesShouldReturnTrueWithMultipleBatches() {
-      // Given: 多批次计划
+      // Given: 多批次调度
       List<Batch> batches = List.of(createTestBatch(1), createTestBatch(2));
       ExecutionContext ctx = createTestContext();
       BatchSchedule plan = new BatchSchedule(batches, ctx);
@@ -270,7 +270,7 @@ class BatchScheduleTest {
     @Test
     @DisplayName("exceedsLimit() 应该返回 false（当前默认实现）")
     void exceedsLimitShouldReturnFalseByDefault() {
-      // Given: 任意批次计划
+      // Given: 任意批次调度
       List<Batch> batches = List.of(createTestBatch(1));
       ExecutionContext ctx = createTestContext();
       BatchSchedule plan = new BatchSchedule(batches, ctx);
@@ -563,7 +563,7 @@ class BatchScheduleTest {
     }
 
     @Test
-    @DisplayName("single() 应该等价于构造器创建的单批次计划")
+    @DisplayName("single() 应该等价于构造器创建的单批次调度")
     void singleShouldBeEquivalentToConstructor() {
       // Given: 准备批次和上下文
       Batch batch = createTestBatch(1);

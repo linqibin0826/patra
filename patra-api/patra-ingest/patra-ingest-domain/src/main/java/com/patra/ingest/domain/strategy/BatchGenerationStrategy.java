@@ -8,20 +8,20 @@ import java.util.List;
 /**
  * 批次生成策略接口
  *
- * <p>职责：定义如何根据批次计划生成批次列表
+ * <p>职责：定义如何根据抓取元数据生成批次列表
  *
  * <p>设计原则：
  *
  * <ul>
  *   <li>策略模式：每个数据源对应一个策略实现
- *   <li>开闭原则：新增数据源无需修改 UnifiedBatchPlanner
+ *   <li>开闭原则：新增数据源无需修改 UnifiedBatchScheduleBuilder
  *   <li>单一职责：每个策略类只处理一种数据源的批次生成
  * </ul>
  *
  * <p>使用场景：
  *
  * <ul>
- *   <li>UnifiedBatchPlanner 根据数据源代码选择对应策略
+ *   <li>UnifiedBatchScheduleBuilder 根据数据源代码选择对应策略
  *   <li>通过 Spring 自动注入所有策略实现
  *   <li>使用 Map 进行策略路由（基于数据源代码）
  * </ul>
@@ -43,12 +43,12 @@ public interface BatchGenerationStrategy {
   /**
    * 获取策略支持的数据源代码
    *
-   * <p>此方法允许策略类自己声明支持的数据源，避免了在 UnifiedBatchPlanner 中硬编码。
+   * <p>此方法允许策略类自己声明支持的数据源，避免了在 UnifiedBatchScheduleBuilder 中硬编码。
    *
    * <p><strong>设计理由</strong>：
    *
    * <ul>
-   *   <li>消除硬编码：无需在 UnifiedBatchPlanner 中维护已知类型列表
+   *   <li>消除硬编码：无需在 UnifiedBatchScheduleBuilder 中维护已知类型列表
    *   <li>完全符合 OCP：新增数据源零修改
    *   <li>解耦实现：不依赖外部框架的具体类型
    *   <li>自动发现：Spring 启动时自动构建策略 Map

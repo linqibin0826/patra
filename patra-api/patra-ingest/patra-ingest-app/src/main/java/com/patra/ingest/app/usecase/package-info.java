@@ -12,7 +12,7 @@
  *       </ul>
  *   <li>{@link com.patra.ingest.app.usecase.execution} - Task 执行用例协调
  *       <ul>
- *         <li>执行准备、租约管理、批次规划、批次执行、游标推进、任务完成
+ *         <li>执行准备、租约管理、批次调度、批次执行、游标推进、任务完成
  *       </ul>
  *   <li>{@link com.patra.ingest.app.usecase.relay} - Outbox 中继用例编排
  *       <ul>

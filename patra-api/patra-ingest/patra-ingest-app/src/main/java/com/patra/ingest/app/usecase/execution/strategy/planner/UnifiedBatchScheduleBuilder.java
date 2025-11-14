@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * <p>职责：
  *
  * <ul>
- *   <li>使用 DataSourcePort.preparePlan() 获取批次计划
+ *   <li>使用 DataSourcePort.preparePlan() 获取批次调度
  *   <li>使用策略模式委派批次生成逻辑
  *   <li>构建完整的 BatchSchedule（包含批次列表和执行上下文）
  * </ul>
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
  *
  * <ul>
  *   <li>Infrastructure 层（DataSourceAdapter + 防腐层）：获取并翻译计划元数据
- *   <li>Application 层策略（BatchGenerationStrategy）：根据批次计划生成批次
+ *   <li>Application 层策略（BatchGenerationStrategy）：根据批次调度生成批次
  *   <li>Application 层编排（UnifiedBatchScheduleBuilder）：策略路由和流程编排
  * </ul>
  *

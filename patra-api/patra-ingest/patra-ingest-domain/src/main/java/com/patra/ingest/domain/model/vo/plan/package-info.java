@@ -1,10 +1,9 @@
 /**
- * 计划和调度值对象。
+ * 采集任务调度计划值对象。
  *
- * <p>包含用于采集计划规范和调度的值对象:
+ * <p>包含用于采集任务调度计划规范的值对象（注意：批次调度相关模型已迁移至 batch 和 fetch 包）:
  *
  * <ul>
- *   <li>{@link com.patra.ingest.domain.model.vo.plan.BatchPlan} - 批次计划（领域模型，屏蔽外部数据源实现细节）
  *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlanTriggerNorm} - 计划触发器归一化
  *   <li>{@link com.patra.ingest.domain.model.vo.plan.PlannerWindow} - 计划器窗口规范
  *   <li>{@link com.patra.ingest.domain.model.vo.plan.TaskSchedulerContext} - 任务调度器上下文

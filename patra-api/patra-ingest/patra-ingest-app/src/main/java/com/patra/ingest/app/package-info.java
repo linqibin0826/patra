@@ -39,7 +39,7 @@
  * <ul>
  *   <li><strong>编排器模式（Orchestrator）</strong>: 协调多个领域对象完成复杂流程
  *   <li><strong>命令模式（Command）</strong>: 使用命令对象封装用例输入参数
- *   <li><strong>策略模式（Strategy）</strong>: 支持多种切片/批次规划策略
+ *   <li><strong>策略模式（Strategy）</strong>: 支持多种切片/批次调度策略
  *   <li><strong>模板方法模式（Template Method）</strong>: AbstractOutboxPublisher 定义通用流程
  *   <li><strong>事件驱动模式（Event-Driven）</strong>: 通过领域事件实现跨聚合协调
  * </ul>
@@ -63,7 +63,7 @@
  * <pre>
  * 1. TaskReadyMessageListener(Adapter) → TaskExecutionUseCase(App)
  * 2. 准备执行上下文（编译表达式 + 获取租约 + 启动心跳）
- * 3. 批次规划 → 批次执行 → 游标推进
+ * 3. 批次调度 → 批次执行 → 游标推进
  * 4. 发布文献数据到下游
  * 5. 完成任务（释放租约 + 发布 TaskCompletedEvent）
  * </pre>
