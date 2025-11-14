@@ -1,0 +1,189 @@
+# patra-ingest 项目 String provenanceCode 详细行号清单
+
+## 📑 Port 接口层 (Domain)
+
+### 1. CursorRepository.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/CursorRepository.java
+- Line 39: String provenanceCode (参数)
+- Line 64: String provenanceCode (参数)
+
+### 2. TaskRepository.java  
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/TaskRepository.java
+- Line 87: String provenanceCode (参数)
+
+### 3. DataSourcePort.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/DataSourcePort.java
+- Line 179: String provenanceCode (参数)
+- Line 220: String provenanceCode (参数)
+
+### 4. StoragePort.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/StoragePort.java
+- Line 45: String provenanceCode (参数)
+
+### 5. LiteratureStoragePort.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/port/LiteratureStoragePort.java
+- Line 64: record StorageContext 中的 String provenanceCode
+
+---
+
+## 🔴 Repository 实现层
+
+### 6. CursorRepositoryMpImpl.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/repository/CursorRepositoryMpImpl.java
+- Line 89: String provenanceCode (参数)
+- Line 125: String provenanceCode (参数)
+
+### 7. TaskRepositoryMpImpl.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/repository/TaskRepositoryMpImpl.java
+- Line 176: String provenanceCode (参数)
+
+---
+
+## 🟠 Persistence DO Entity 层
+
+### 8. CursorDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/CursorDO.java
+- Line 35: private String provenanceCode
+
+### 9. CursorEventDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/CursorEventDO.java
+- Line 35: private String provenanceCode
+
+### 10. TaskDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/TaskDO.java
+- Line 47: private String provenanceCode
+
+### 11. TaskRunDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/TaskRunDO.java
+- Line 43: private String provenanceCode
+
+### 12. TaskRunBatchDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/TaskRunBatchDO.java
+- Line 55: private String provenanceCode
+
+### 13. PlanDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/PlanDO.java
+- Line 45: private String provenanceCode
+
+### 14. PlanSliceDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/PlanSliceDO.java
+- Line 37: private String provenanceCode
+
+### 15. ScheduleInstanceDO.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/entity/ScheduleInstanceDO.java
+- Line 61: private String provenanceCode
+
+---
+
+## 🔧 Mapper 层
+
+### 16. PlanMapper.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/persistence/mapper/PlanMapper.java
+- Line 24: @Param("provenanceCode") String provenanceCode
+- Line 33: @Param("provenanceCode") String provenanceCode
+
+---
+
+## 🌐 Infrastructure Adapter 层
+
+### 17. ProviderRegistry.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/registry/ProviderRegistry.java
+- Line 110: String provenanceCode = normalizeProvenanceCode(...)
+- Line 155: public DataSourceProvider getProvider(String provenanceCode, DataType dataType)
+- Line 176: public Optional<DataSourceProvider> findProvider(String provenanceCode, DataType dataType)
+- Line 189: public boolean supports(String provenanceCode, DataType dataType)
+- Line 201: public Set<DataType> getSupportedTypes(String provenanceCode)
+- Line 233: private String normalizeProvenanceCode(String provenanceCode)
+- Line 255: private record ProviderKey(String provenanceCode, DataType dataType)
+
+### 18. DataSourceAdapter.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/integration/datasource/DataSourceAdapter.java
+- Line 383: public boolean supports(String provenanceCode, DataType dataType)
+- Line 394: public Set<DataType> getSupportedTypes(String provenanceCode)
+
+### 19. LiteratureStorageAdapter.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/integration/storage/LiteratureStorageAdapter.java
+- Line 182: private String safeProvenance(String provenanceCode)
+
+### 20. PatraRegistryAdapter.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-infra/src/main/java/com/patra/ingest/infra/integration/registry/PatraRegistryAdapter.java
+- Line 138: private ProvenanceConfigSnapshot createMinimalSnapshot(String provenanceCode)
+
+---
+
+## 🚀 Application UseCase 层
+
+### 21. CursorAdvancerImpl.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/cursor/CursorAdvancerImpl.java
+- Line 72: String provenanceCodeStr = provenanceCode != null ? provenanceCode.getCode() : null
+- Line 353: 方法签名参数（需读取完整内容）
+
+### 22. ExecuteTaskBatchesUseCaseImpl.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/strategy/ExecuteTaskBatchesUseCaseImpl.java
+- Line 93: String provenanceCode = ...（需读取完整内容）
+
+### 23. ExecutionContextLoaderImpl.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/session/ExecutionContextLoaderImpl.java
+- Line 138: String provenanceCodeStr = ...（需读取完整内容）
+
+### 24. BatchPlannerRegistry.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/strategy/planner/BatchPlannerRegistry.java
+- Line 56: public BatchPlanner get(String provenanceCode)
+- Line 66: public boolean contains(String provenanceCode)
+
+### 25. LiteraturePublisherOrchestrator.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/coordination/LiteraturePublisherOrchestrator.java
+- Line 241: private String safeProvenance(String provenanceCode)
+- Line 268: public record PublishContext(Long runId, int batchNo, String provenanceCode)
+
+### 26. LiteratureEventPublisher.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/publisher/LiteratureEventPublisher.java
+- Line 65: String provenanceCode = pc != null ? pc.getCode() : null
+- Line 82: String provenanceCode = pc != null ? pc.getCode() : null
+- Line 90: String provenanceCode = pc != null ? pc.getCode() : null
+
+### 27. LiteratureReadyHeaders.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/publisher/LiteratureReadyHeaders.java
+- Line 15: String provenanceCode (record 字段)
+
+### 28. LiteratureReadyPayload.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-app/src/main/java/com/patra/ingest/app/usecase/execution/publisher/LiteratureReadyPayload.java
+- Line 22: String provenanceCode (record 字段)
+
+---
+
+## 🏢 Domain 模型层
+
+### 29. ExprCompilationRequest.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/model/vo/expression/ExprCompilationRequest.java
+- Line 29: String provenanceCode (参数)
+- Line 36: String provenanceCode (参数)
+
+### 30. IngestConfigurationException.java
+文件: /Users/linqibin/Desktop/Patra-api/patra-ingest/patra-ingest-domain/src/main/java/com/patra/ingest/domain/exception/IngestConfigurationException.java
+- Line 37: private final String provenanceCode (字段)
+- Line 51: String provenanceCode (构造函数参数)
+- Line 68: String provenanceCode (构造函数参数)
+
+---
+
+## 📊 统计总结
+
+**总计：73+ 个文件中的 String provenanceCode 使用**
+
+分类统计：
+- Port 接口参数: 7 处
+- Repository 实现参数: 3 处
+- DO Entity 字段: 8 处
+- Mapper @Param: 2 处
+- Registry/Adapter: 13 处
+- UseCase/Service: 18+ 处
+- Domain Model: 3 处
+- Exception: 3 处
+- Record 字段: 2 处
+- 其他: 13+ 处
+
+优先级改写顺序：
+1. 端口接口 → 实现层 → 调用链
+2. Domain 模型 → Value Objects → Exception
+3. DO Entity 和 Mapper（可选，保持 String）

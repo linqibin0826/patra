@@ -171,7 +171,7 @@ class CursorRepositoryMpImplTest {
       // When
       Optional<Cursor> result =
           repository.find(
-              TEST_PROVENANCE_CODE.getCode(),
+              TEST_PROVENANCE_CODE,
               TEST_OPERATION_CODE,
               TEST_CURSOR_KEY,
               TEST_NAMESPACE_SCOPE_CODE,
@@ -192,7 +192,7 @@ class CursorRepositoryMpImplTest {
       // When
       Optional<Cursor> result =
           repository.find(
-              TEST_PROVENANCE_CODE.getCode(),
+              TEST_PROVENANCE_CODE,
               TEST_OPERATION_CODE,
               TEST_CURSOR_KEY,
               TEST_NAMESPACE_SCOPE_CODE,
@@ -212,7 +212,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       repository.find(
-          TEST_PROVENANCE_CODE.getCode(),
+          TEST_PROVENANCE_CODE,
           TEST_OPERATION_CODE,
           TEST_CURSOR_KEY,
           TEST_NAMESPACE_SCOPE_CODE,
@@ -241,7 +241,7 @@ class CursorRepositoryMpImplTest {
       // When
       Optional<Instant> result =
           repository.findLatestGlobalTimeWatermark(
-              TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
+              TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isPresent().contains(TEST_WATERMARK);
@@ -257,7 +257,7 @@ class CursorRepositoryMpImplTest {
       // When
       Optional<Instant> result =
           repository.findLatestGlobalTimeWatermark(
-              TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
+              TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
 
       // Then
       assertThat(result).isEmpty();
@@ -276,7 +276,7 @@ class CursorRepositoryMpImplTest {
 
       // When
       Optional<Instant> result =
-          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), null);
+          repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, null);
 
       // Then
       assertThat(result).isPresent().contains(TEST_WATERMARK);
@@ -290,7 +290,7 @@ class CursorRepositoryMpImplTest {
       when(mapper.selectOne(any(QueryWrapper.class))).thenReturn(null);
 
       // When
-      repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE.getCode(), TEST_OPERATION_CODE);
+      repository.findLatestGlobalTimeWatermark(TEST_PROVENANCE_CODE, TEST_OPERATION_CODE);
 
       // Then
       verify(mapper).selectOne(any(QueryWrapper.class));
