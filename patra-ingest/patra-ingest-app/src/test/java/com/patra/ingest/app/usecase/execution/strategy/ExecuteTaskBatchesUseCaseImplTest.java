@@ -10,8 +10,8 @@ import com.patra.ingest.app.usecase.execution.strategy.planner.BatchScheduleBuil
 import com.patra.ingest.app.usecase.execution.strategy.planner.BatchScheduleBuilderRegistry;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
+import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;

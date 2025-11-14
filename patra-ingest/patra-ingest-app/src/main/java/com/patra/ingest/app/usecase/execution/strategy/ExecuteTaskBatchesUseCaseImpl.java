@@ -7,8 +7,8 @@ import com.patra.ingest.app.usecase.execution.strategy.planner.BatchScheduleBuil
 import com.patra.ingest.app.usecase.execution.strategy.planner.BatchScheduleBuilderRegistry;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
+import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
 import com.patra.ingest.domain.port.TaskRunRepository;
@@ -93,18 +93,10 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     Long runId = session.runId();
     ProvenanceCode provenanceCode = context.provenanceCode();
 
-    log.info(
-        "开始执行批次 taskId={} runId={} provenanceCode={}",
-        taskId,
-        runId,
-        provenanceCode);
+    log.info("开始执行批次 taskId={} runId={} provenanceCode={}", taskId, runId, provenanceCode);
 
     // 步骤1: 构建批次调度表
-    log.debug(
-        "构建批次调度中 taskId={} runId={} provenanceCode={}",
-        taskId,
-        runId,
-        provenanceCode);
+    log.debug("构建批次调度中 taskId={} runId={} provenanceCode={}", taskId, runId, provenanceCode);
     BatchScheduleBuilder builder = builderRegistry.get(provenanceCode);
     BatchSchedule schedule = builder.build(context);
 
@@ -129,7 +121,11 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
     for (Batch batch : schedule.batches()) {
       // 步骤4.1: 检查租约撤销状态
       log.debug(
-          "处理批次 [{}/{}] taskId={} runId={}", batch.batchNo(), schedule.totalBatches(), taskId, runId);
+          "处理批次 [{}/{}] taskId={} runId={}",
+          batch.batchNo(),
+          schedule.totalBatches(),
+          taskId,
+          runId);
 
       // 如果租约被撤销,立即中止后续批次执行
       if (session.heartbeatHandle() != null && session.heartbeatHandle().isLeaseRevoked()) {
