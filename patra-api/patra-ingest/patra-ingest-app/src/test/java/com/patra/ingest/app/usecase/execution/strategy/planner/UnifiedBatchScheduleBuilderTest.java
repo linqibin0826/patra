@@ -260,7 +260,8 @@ class UnifiedBatchScheduleBuilderTest {
     List<BatchGenerationStrategy> strategies = List.of(mockStrategy1, invalidStrategy);
 
     // when
-    UnifiedBatchScheduleBuilder builder = new UnifiedBatchScheduleBuilder(dataSourcePort, strategies);
+    UnifiedBatchScheduleBuilder builder =
+        new UnifiedBatchScheduleBuilder(dataSourcePort, strategies);
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
