@@ -239,7 +239,7 @@ class PlanSliceConverterTest {
       assertThat(result).isNotNull();
       assertThat(result.getId()).isEqualTo(100L);
       assertThat(result.getPlanId()).isEqualTo(PLAN_ID);
-      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE.getCode());
+      assertThat(result.getProvenanceCode()).isEqualTo(PROVENANCE_CODE);
       assertThat(result.getSliceNo()).isEqualTo(SLICE_NO);
       assertThat(result.getSliceSignatureHash()).isEqualTo(SLICE_SIGNATURE_HASH);
       assertThat(result.getWindowSpecJson()).isEqualTo(WINDOW_SPEC_JSON);
