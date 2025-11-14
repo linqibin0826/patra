@@ -3,11 +3,11 @@ package com.patra.ingest.app.usecase.execution.strategy;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.ingest.app.usecase.execution.coordination.GenericBatchExecutor;
 import com.patra.ingest.app.usecase.execution.session.ExecutionSession;
-import com.patra.ingest.app.usecase.execution.strategy.planner.BatchPlanner;
-import com.patra.ingest.app.usecase.execution.strategy.planner.BatchPlannerRegistry;
+import com.patra.ingest.app.usecase.execution.strategy.planner.BatchScheduleBuilder;
+import com.patra.ingest.app.usecase.execution.strategy.planner.BatchScheduleBuilderRegistry;
 import com.patra.ingest.domain.model.entity.TaskRunBatch;
 import com.patra.ingest.domain.model.vo.batch.Batch;
-import com.patra.ingest.domain.model.vo.batch.BatchPlan;
+import com.patra.ingest.domain.model.vo.batch.BatchSchedule;
 import com.patra.ingest.domain.model.vo.batch.BatchResult;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import com.patra.ingest.domain.port.TaskRunBatchRepository;
@@ -21,12 +21,12 @@ import org.springframework.stereotype.Service;
 /**
  * 执行任务批次用例的实现。
  *
- * <p>核心职责: 批次规划 → 批次执行 → 持久化结果 → 返回统计信息。
+ * <p>核心职责: 批次调度构建 → 批次执行 → 持久化结果 → 返回统计信息。
  *
  * <p>设计要点:
  *
  * <ul>
- *   <li>通过 BatchPlannerRegistry 进行批次规划,构建批次列表
+ *   <li>通过 BatchScheduleBuilderRegistry 进行批次调度构建,构建批次列表
  *   <li>强制执行批次限制,超出时抛出异常
  *   <li>批次执行委托给 GenericBatchExecutor,由适配器注册表支持
  *   <li>通过 TaskRunBatchRepository 立即持久化每个批次结果
@@ -55,7 +55,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase {
 
-  private final BatchPlannerRegistry plannerRegistry;
+  private final BatchScheduleBuilderRegistry builderRegistry;
   private final GenericBatchExecutor batchExecutor;
   private final TaskRunBatchRepository batchRepository;
   private final TaskRunRepository taskRunRepository;
@@ -64,12 +64,12 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
   private boolean failFast;
 
   /**
-   * 执行批次(规划 + 执行)。
+   * 执行批次(构建调度 + 执行)。
    *
    * <p>执行流程:
    *
    * <ol>
-   *   <li>通过 BatchPlanner 规划批次列表
+   *   <li>通过 BatchScheduleBuilder 构建批次调度表
    *   <li>验证批次数量不超过限制
    *   <li>循环执行每个批次:
    *       <ul>
@@ -97,39 +97,39 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         "开始执行批次 taskId={} runId={} provenanceCode={}",
         taskId,
         runId,
-        provenanceCode != null ? provenanceCode.getCode() : null);
+        provenanceCode);
 
-    // 步骤1: 规划批次
+    // 步骤1: 构建批次调度表
     log.debug(
-        "规划批次中 taskId={} runId={} provenanceCode={}",
+        "构建批次调度中 taskId={} runId={} provenanceCode={}",
         taskId,
         runId,
-        provenanceCode != null ? provenanceCode.getCode() : null);
-    BatchPlanner planner = plannerRegistry.get(provenanceCode);
-    BatchPlan plan = planner.plan(context);
+        provenanceCode);
+    BatchScheduleBuilder builder = builderRegistry.get(provenanceCode);
+    BatchSchedule schedule = builder.build(context);
 
     // 步骤2: 验证批次数量不超过限制
-    if (plan.exceedsLimit()) {
+    if (schedule.exceedsLimit()) {
       throw new BatchLimitExceededException(
-          "批次数量超过限制 taskId=" + taskId + " totalBatches=" + plan.totalBatches());
+          "批次数量超过限制 taskId=" + taskId + " totalBatches=" + schedule.totalBatches());
     }
 
     // 步骤3: 如果没有批次,返回空结果
-    if (!plan.hasBatches()) {
-      log.warn("未规划任何批次 taskId={} runId={}", taskId, runId);
+    if (!schedule.hasBatches()) {
+      log.warn("未构建任何批次 taskId={} runId={}", taskId, runId);
       return new ExecuteResult(0, 0, 0);
     }
 
-    log.info("批次计划已创建 taskId={} runId={} totalBatches={}", taskId, runId, plan.totalBatches());
+    log.info("批次调度已构建 taskId={} runId={} totalBatches={}", taskId, runId, schedule.totalBatches());
 
     // 步骤4: 执行批次循环
     int succeededCount = 0;
     int failedCount = 0;
 
-    for (Batch batch : plan.batches()) {
+    for (Batch batch : schedule.batches()) {
       // 步骤4.1: 检查租约撤销状态
       log.debug(
-          "处理批次 [{}/{}] taskId={} runId={}", batch.batchNo(), plan.totalBatches(), taskId, runId);
+          "处理批次 [{}/{}] taskId={} runId={}", batch.batchNo(), schedule.totalBatches(), taskId, runId);
 
       // 如果租约被撤销,立即中止后续批次执行
       if (session.heartbeatHandle() != null && session.heartbeatHandle().isLeaseRevoked()) {
@@ -143,7 +143,7 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
           taskId,
           runId,
           batch.batchNo(),
-          plan.totalBatches());
+          schedule.totalBatches());
 
       BatchResult result;
       try {
@@ -206,11 +206,11 @@ public class ExecuteTaskBatchesUseCaseImpl implements ExecuteTaskBatchesUseCase 
         "批次执行完成 taskId={} runId={} total={} succeeded={} failed={}",
         taskId,
         runId,
-        plan.totalBatches(),
+        schedule.totalBatches(),
         succeededCount,
         failedCount);
 
-    return new ExecuteResult(plan.totalBatches(), succeededCount, failedCount);
+    return new ExecuteResult(schedule.totalBatches(), succeededCount, failedCount);
   }
 
   /** 批次数量超过限制异常。 */

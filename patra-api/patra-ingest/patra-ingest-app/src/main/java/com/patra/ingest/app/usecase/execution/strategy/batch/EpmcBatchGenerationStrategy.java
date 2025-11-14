@@ -2,7 +2,7 @@ package com.patra.ingest.app.usecase.execution.strategy.batch;
 
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.plan.BatchPlan;
+import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * EPMC 批次生成策略
  *
- * <p>根据 BatchPlan 生成批次列表，支持使用 cursorMark 游标令牌进行游标分页。
+ * <p>根据抓取元数据生成批次列表，支持使用 cursorMark 游标令牌进行游标分页。
  *
  * <p>EPMC 使用 Solr 风格的 cursorMark 分页机制：
  *
@@ -36,10 +36,10 @@ public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
   }
 
   @Override
-  public List<Batch> generateBatches(BatchPlan plan, ExecutionContext ctx) {
+  public List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx) {
     List<Batch> batches = new ArrayList<>();
     int batchSize = ctx.configSnapshot().pagination().pageSizeValue();
-    int totalRecords = plan.totalRecords();
+    int totalRecords = metadata.totalRecords();
 
     if (totalRecords <= 0) {
       log.info("EPMC 查询结果为空（totalRecords=0），返回空批次列表");
@@ -54,12 +54,12 @@ public class EpmcBatchGenerationStrategy implements BatchGenerationStrategy {
         totalRecords,
         batchSize,
         pageCount,
-        plan.hasStateToken());
+        metadata.hasStateToken());
 
     // 检查是否有 state token（包含 cursorMark）
-    if (plan.hasStateToken()) {
+    if (metadata.hasStateToken()) {
       // 使用游标模式：state token 中包含 cursorMark
-      Map<String, String> stateToken = plan.stateToken().orElseThrow();
+      Map<String, String> stateToken = metadata.stateToken().orElseThrow();
 
       for (int i = 0; i < pageCount; i++) {
         int batchNo = i + 1;

@@ -7,13 +7,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * {@link BatchPlanningException} 的单元测试。
+ * {@link BatchSchedulingException} 的单元测试。
  *
  * @author linqibin
  * @since 0.1.0
  */
-@DisplayName("BatchPlanningException 单元测试")
-class BatchPlanningExceptionTest {
+@DisplayName("BatchSchedulingException 单元测试")
+class BatchSchedulingExceptionTest {
 
   @Nested
   @DisplayName("构造器测试")
@@ -26,7 +26,7 @@ class BatchPlanningExceptionTest {
       String message = "批量规划失败:数据源配置缺失";
 
       // When
-      BatchPlanningException exception = new BatchPlanningException(message);
+      BatchSchedulingException exception = new BatchSchedulingException(message);
 
       // Then
       assertThat(exception.getMessage()).isEqualTo(message);
@@ -41,7 +41,7 @@ class BatchPlanningExceptionTest {
       Throwable cause = new RuntimeException("网络连接超时");
 
       // When
-      BatchPlanningException exception = new BatchPlanningException(message, cause);
+      BatchSchedulingException exception = new BatchSchedulingException(message, cause);
 
       // Then
       assertThat(exception.getMessage()).isEqualTo(message);
@@ -59,7 +59,7 @@ class BatchPlanningExceptionTest {
       // Given
       RuntimeException rootCause = new RuntimeException("根本原因");
       IllegalStateException cause = new IllegalStateException("中间原因", rootCause);
-      BatchPlanningException exception = new BatchPlanningException("规划失败", cause);
+      BatchSchedulingException exception = new BatchSchedulingException("规划失败", cause);
 
       // When & Then
       assertThat(exception.getCause()).isEqualTo(cause);
@@ -75,7 +75,7 @@ class BatchPlanningExceptionTest {
     @DisplayName("应该继承自 IngestException")
     void shouldExtendIngestException() {
       // Given
-      BatchPlanningException exception = new BatchPlanningException("规划失败");
+      BatchSchedulingException exception = new BatchSchedulingException("规划失败");
 
       // When & Then
       assertThat(exception).isInstanceOf(IngestException.class);

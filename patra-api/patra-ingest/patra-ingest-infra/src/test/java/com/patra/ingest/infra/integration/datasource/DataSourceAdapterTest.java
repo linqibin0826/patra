@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.infra.integration.datasource.acl.PlanMetadataTranslator;
+import com.patra.ingest.infra.integration.datasource.acl.FetchMetadataTranslator;
 import com.patra.ingest.infra.registry.ProviderRegistry;
 import com.patra.starter.provenance.common.config.*;
 import java.lang.reflect.Method;

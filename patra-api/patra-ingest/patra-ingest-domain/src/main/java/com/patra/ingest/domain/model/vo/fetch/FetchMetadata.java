@@ -1,12 +1,12 @@
-package com.patra.ingest.domain.model.vo.plan;
+package com.patra.ingest.domain.model.vo.fetch;
 
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * 批次计划 - Ingest 领域模型
+ * 数据源抓取元数据 - Ingest 领域模型
  *
- * <p>封装批次生成所需的计划信息，屏蔽外部数据源的实现细节。
+ * <p>封装从外部数据源获取的元数据信息，用于批次生成规划。
  *
  * <p><strong>职责</strong>：
  *
@@ -24,10 +24,18 @@ import java.util.Optional;
  *   <li>状态令牌为 opaque 类型，Ingest 不解析其内容
  * </ul>
  *
+ * <p><strong>使用场景</strong>：
+ *
+ * <ul>
+ *   <li>DataSourcePort.preparePlan() 返回此接口
+ *   <li>BatchGenerationStrategy.generateBatches() 接收此接口作为输入
+ *   <li>FetchMetadataTranslator 将外部元数据翻译为此接口
+ * </ul>
+ *
  * @author Patra Architecture Team
  * @since 0.3.0
  */
-public interface BatchPlan {
+public interface FetchMetadata {
 
   /**
    * 获取总记录数
@@ -66,18 +74,18 @@ public interface BatchPlan {
   Optional<Map<String, String>> stateToken();
 
   /**
-   * 创建空的批次计划（表示无可用数据）
+   * 创建空的抓取元数据（表示无可用数据）
    *
    * @param dataSourceCode 数据源代码
-   * @return 空批次计划
+   * @return 空抓取元数据
    */
-  static BatchPlan empty(String dataSourceCode) {
-    return new EmptyBatchPlan(dataSourceCode);
+  static FetchMetadata empty(String dataSourceCode) {
+    return new EmptyFetchMetadata(dataSourceCode);
   }
 }
 
-/** 空批次计划实现（包级私有） */
-record EmptyBatchPlan(String dataSourceCode) implements BatchPlan {
+/** 空抓取元数据实现（包级私有） */
+record EmptyFetchMetadata(String dataSourceCode) implements FetchMetadata {
 
   @Override
   public int totalRecords() {

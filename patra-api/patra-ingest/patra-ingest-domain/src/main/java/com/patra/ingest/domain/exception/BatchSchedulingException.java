@@ -1,9 +1,9 @@
 package com.patra.ingest.domain.exception;
 
 /**
- * 批量规划异常。
+ * 批次调度异常。
  *
- * <p>触发场景:当批量规划由于以下原因无法继续时抛出:
+ * <p>触发场景:当批次调度由于以下原因无法继续时抛出:
  *
  * <ul>
  *   <li>输入参数无效(如窗口参数错误、数据源配置缺失)
@@ -25,24 +25,24 @@ package com.patra.ingest.domain.exception;
  * @author linqibin
  * @since 0.1.0
  */
-public class BatchPlanningException extends IngestException {
+public class BatchSchedulingException extends IngestException {
 
   /**
-   * 构造批量规划异常。
+   * 构造批次调度异常。
    *
-   * @param message 详细错误消息,应包含失败原因和涉及的计划参数
+   * @param message 详细错误消息,应包含失败原因和涉及的调度参数
    */
-  public BatchPlanningException(String message) {
+  public BatchSchedulingException(String message) {
     super(message);
   }
 
   /**
-   * 构造批量规划异常并附带根本原因。
+   * 构造批次调度异常并附带根本原因。
    *
    * @param message 详细错误消息
    * @param cause 底层异常(如元数据查询的网络错误)
    */
-  public BatchPlanningException(String message, Throwable cause) {
+  public BatchSchedulingException(String message, Throwable cause) {
     super(message, cause);
   }
 }

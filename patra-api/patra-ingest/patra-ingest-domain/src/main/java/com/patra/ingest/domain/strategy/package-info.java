@@ -28,7 +28,7 @@
  *   <li>调用 DataSourcePort.preparePlan() 获取计划元数据
  *   <li>根据元数据类型（如 PubmedPlanMetadata）查找对应策略
  *   <li>委托策略生成批次列表
- *   <li>返回 BatchPlan 供执行阶段使用
+ *   <li>返回 BatchSchedule 供执行阶段使用
  * </ol>
  *
  * <h2>扩展指南</h2>

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
- * {@link BatchPlan} 的单元测试。
+ * {@link BatchSchedule} 的单元测试。
  *
  * <p>测试覆盖：
  *
@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
  * @author linqibin
  * @since 0.2.0
  */
-@DisplayName("BatchPlan 批次规划结果值对象测试")
-class BatchPlanTest {
+@DisplayName("BatchSchedule 批次规划结果值对象测试")
+class BatchScheduleTest {
 
   // ==================== 测试工具方法 ====================
 
@@ -75,7 +75,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 创建批次计划
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // Then: 验证所有字段
       assertThat(plan.batches()).hasSize(1).containsExactly(batch);
@@ -93,7 +93,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 创建批次计划
-      BatchPlan plan = new BatchPlan(emptyBatches, ctx);
+      BatchSchedule plan = new BatchSchedule(emptyBatches, ctx);
 
       // Then: 验证空列表
       assertThat(plan.batches()).isEmpty();
@@ -111,7 +111,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 创建批次计划
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // Then: 验证批次列表
       assertThat(plan.batches()).hasSize(3);
@@ -135,7 +135,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When & Then: 验证异常
-      assertThatThrownBy(() -> new BatchPlan(nullBatches, ctx))
+      assertThatThrownBy(() -> new BatchSchedule(nullBatches, ctx))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("batches must not be null");
     }
@@ -148,7 +148,7 @@ class BatchPlanTest {
       ExecutionContext nullCtx = null;
 
       // When & Then: 验证异常
-      assertThatThrownBy(() -> new BatchPlan(batches, nullCtx))
+      assertThatThrownBy(() -> new BatchSchedule(batches, nullCtx))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessage("enrichedContext must not be null");
     }
@@ -167,7 +167,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 调用 empty 工厂方法
-      BatchPlan plan = BatchPlan.empty(ctx);
+      BatchSchedule plan = BatchSchedule.empty(ctx);
 
       // Then: 验证空计划
       assertThat(plan.batches()).isEmpty();
@@ -185,7 +185,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 调用 single 工厂方法
-      BatchPlan plan = BatchPlan.single(batch, ctx);
+      BatchSchedule plan = BatchSchedule.single(batch, ctx);
 
       // Then: 验证单批次计划
       assertThat(plan.batches()).hasSize(1).containsExactly(batch);
@@ -202,10 +202,10 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 多次调用工厂方法
-      BatchPlan empty1 = BatchPlan.empty(ctx);
-      BatchPlan empty2 = BatchPlan.empty(ctx);
-      BatchPlan single1 = BatchPlan.single(createTestBatch(1), ctx);
-      BatchPlan single2 = BatchPlan.single(createTestBatch(1), ctx);
+      BatchSchedule empty1 = BatchSchedule.empty(ctx);
+      BatchSchedule empty2 = BatchSchedule.empty(ctx);
+      BatchSchedule single1 = BatchSchedule.single(createTestBatch(1), ctx);
+      BatchSchedule single2 = BatchSchedule.single(createTestBatch(1), ctx);
 
       // Then: 验证不同实例（但值相等）
       assertThat(empty1).isNotSameAs(empty2).isEqualTo(empty2);
@@ -225,7 +225,7 @@ class BatchPlanTest {
       // Given: 包含批次的计划
       List<Batch> batches = List.of(createTestBatch(1));
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证有批次
       assertThat(plan.hasBatches()).isTrue();
@@ -236,7 +236,7 @@ class BatchPlanTest {
     void hasBatchesShouldReturnFalseWhenEmpty() {
       // Given: 空批次计划
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = BatchPlan.empty(ctx);
+      BatchSchedule plan = BatchSchedule.empty(ctx);
 
       // When & Then: 验证无批次
       assertThat(plan.hasBatches()).isFalse();
@@ -248,7 +248,7 @@ class BatchPlanTest {
       // Given: 多批次计划
       List<Batch> batches = List.of(createTestBatch(1), createTestBatch(2));
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证有批次
       assertThat(plan.hasBatches()).isTrue();
@@ -260,7 +260,7 @@ class BatchPlanTest {
       // Given: 包含 3 个批次的计划
       List<Batch> batches = List.of(createTestBatch(1), createTestBatch(2), createTestBatch(3));
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证总数
       assertThat(plan.totalBatches()).isEqualTo(3);
@@ -273,7 +273,7 @@ class BatchPlanTest {
       // Given: 任意批次计划
       List<Batch> batches = List.of(createTestBatch(1));
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证默认不超限
       assertThat(plan.exceedsLimit()).isFalse();
@@ -293,8 +293,8 @@ class BatchPlanTest {
       Batch batch = createTestBatch(1);
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan1 = new BatchPlan(batches, ctx);
-      BatchPlan plan2 = new BatchPlan(batches, ctx);
+      BatchSchedule plan1 = new BatchSchedule(batches, ctx);
+      BatchSchedule plan2 = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证相等性
       assertThat(plan1).isEqualTo(plan2);
@@ -306,8 +306,8 @@ class BatchPlanTest {
     void equalsShouldReturnFalseForDifferentBatches() {
       // Given: 不同批次列表的计划
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan1 = new BatchPlan(List.of(createTestBatch(1)), ctx);
-      BatchPlan plan2 = new BatchPlan(List.of(createTestBatch(2)), ctx);
+      BatchSchedule plan1 = new BatchSchedule(List.of(createTestBatch(1)), ctx);
+      BatchSchedule plan2 = new BatchSchedule(List.of(createTestBatch(2)), ctx);
 
       // When & Then: 验证不相等
       assertThat(plan1).isNotEqualTo(plan2);
@@ -335,8 +335,8 @@ class BatchPlanTest {
               JsonNodeFactory.instance.objectNode(),
               "test normalized",
               null);
-      BatchPlan plan1 = new BatchPlan(batches, ctx1);
-      BatchPlan plan2 = new BatchPlan(batches, ctx2);
+      BatchSchedule plan1 = new BatchSchedule(batches, ctx1);
+      BatchSchedule plan2 = new BatchSchedule(batches, ctx2);
 
       // When & Then: 验证不相等
       assertThat(plan1).isNotEqualTo(plan2);
@@ -347,7 +347,7 @@ class BatchPlanTest {
     void equalsShouldReturnFalseForNull() {
       // Given: 一个有效计划
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = BatchPlan.empty(ctx);
+      BatchSchedule plan = BatchSchedule.empty(ctx);
 
       // When & Then: 验证与 null 不相等
       assertThat(plan.equals(null)).isFalse();
@@ -358,7 +358,7 @@ class BatchPlanTest {
     void equalsShouldReturnFalseForDifferentType() {
       // Given: 一个有效计划和不同类型对象
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = BatchPlan.empty(ctx);
+      BatchSchedule plan = BatchSchedule.empty(ctx);
       Object other = new Object();
 
       // When & Then: 验证与不同类型不相等
@@ -370,7 +370,7 @@ class BatchPlanTest {
     void equalsShouldReturnTrueForSelf() {
       // Given: 一个有效计划
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = BatchPlan.empty(ctx);
+      BatchSchedule plan = BatchSchedule.empty(ctx);
 
       // When & Then: 验证自反性
       assertThat(plan).isEqualTo(plan);
@@ -383,8 +383,8 @@ class BatchPlanTest {
       Batch batch = createTestBatch(1);
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan1 = new BatchPlan(batches, ctx);
-      BatchPlan plan2 = new BatchPlan(batches, ctx);
+      BatchSchedule plan1 = new BatchSchedule(batches, ctx);
+      BatchSchedule plan2 = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证哈希码一致性
       assertThat(plan1.hashCode()).isEqualTo(plan2.hashCode());
@@ -411,8 +411,8 @@ class BatchPlanTest {
               JsonNodeFactory.instance.objectNode(),
               "test normalized",
               null);
-      BatchPlan plan1 = new BatchPlan(List.of(createTestBatch(1)), ctx1);
-      BatchPlan plan2 = new BatchPlan(List.of(createTestBatch(2)), ctx2);
+      BatchSchedule plan1 = new BatchSchedule(List.of(createTestBatch(1)), ctx1);
+      BatchSchedule plan2 = new BatchSchedule(List.of(createTestBatch(2)), ctx2);
 
       // When & Then: 验证哈希码不同（通常情况）
       assertThat(plan1.hashCode()).isNotEqualTo(plan2.hashCode());
@@ -425,13 +425,13 @@ class BatchPlanTest {
       Batch batch = createTestBatch(1);
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When: 调用 toString
       String result = plan.toString();
 
       // Then: 验证包含字段名称
-      assertThat(result).contains("BatchPlan").contains("batches").contains("enrichedContext");
+      assertThat(result).contains("BatchSchedule").contains("batches").contains("enrichedContext");
     }
 
     @Test
@@ -441,7 +441,7 @@ class BatchPlanTest {
       Batch batch = createTestBatch(1);
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证访问器
       assertThat(plan.batches()).isEqualTo(batches);
@@ -464,7 +464,7 @@ class BatchPlanTest {
       Batch batch = createTestBatch(1);
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When & Then: 验证列表不可修改
       assertThatThrownBy(() -> plan.batches().add(createTestBatch(2)))
@@ -472,13 +472,13 @@ class BatchPlanTest {
     }
 
     @Test
-    @DisplayName("外部修改可变列表不应影响 BatchPlan")
+    @DisplayName("外部修改可变列表不应影响 BatchSchedule")
     void externalMutableListModificationShouldNotAffectPlan() {
       // Given: 使用 ArrayList 创建计划
       List<Batch> mutableList = new ArrayList<>();
       mutableList.add(createTestBatch(1));
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(List.copyOf(mutableList), ctx);
+      BatchSchedule plan = new BatchSchedule(List.copyOf(mutableList), ctx);
 
       int originalSize = plan.batches().size();
 
@@ -496,7 +496,7 @@ class BatchPlanTest {
       Batch batch = createTestBatch(1);
       List<Batch> batches = List.of(batch);
       ExecutionContext ctx = createTestContext();
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // When: 保存原始值
       List<Batch> originalBatches = plan.batches();
@@ -533,7 +533,7 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 创建计划
-      BatchPlan plan = new BatchPlan(batches, ctx);
+      BatchSchedule plan = new BatchSchedule(batches, ctx);
 
       // Then: 验证正确处理
       assertThat(plan.batches()).hasSize(10);
@@ -555,8 +555,8 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 使用工厂方法和构造器
-      BatchPlan factoryPlan = BatchPlan.empty(ctx);
-      BatchPlan constructorPlan = new BatchPlan(List.of(), ctx);
+      BatchSchedule factoryPlan = BatchSchedule.empty(ctx);
+      BatchSchedule constructorPlan = new BatchSchedule(List.of(), ctx);
 
       // Then: 验证等价性
       assertThat(factoryPlan).isEqualTo(constructorPlan);
@@ -570,8 +570,8 @@ class BatchPlanTest {
       ExecutionContext ctx = createTestContext();
 
       // When: 使用工厂方法和构造器
-      BatchPlan factoryPlan = BatchPlan.single(batch, ctx);
-      BatchPlan constructorPlan = new BatchPlan(List.of(batch), ctx);
+      BatchSchedule factoryPlan = BatchSchedule.single(batch, ctx);
+      BatchSchedule constructorPlan = new BatchSchedule(List.of(batch), ctx);
 
       // Then: 验证等价性
       assertThat(factoryPlan).isEqualTo(constructorPlan);

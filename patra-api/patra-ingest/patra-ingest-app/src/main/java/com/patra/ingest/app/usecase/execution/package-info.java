@@ -7,7 +7,7 @@
  *
  * <ul>
  *   <li>准备执行上下文（编译表达式、获取租约、启动心跳）
- *   <li>批次规划和执行（根据数据源策略分批处理）
+ *   <li>批次构建和执行（根据数据源策略分批处理）
  *   <li>游标推进（记录采集进度）
  *   <li>文献发布（将采集结果发布到下游）
  *   <li>任务完成（更新状态、释放租约、发布完成事件）
@@ -42,7 +42,7 @@
  *   └─ 启动心跳续约（保持租约）
  *
  * Phase 2: 执行阶段（ExecuteTaskBatchesUseCase）
- *   ├─ 批次规划（BatchPlanner：根据数据源策略分批）
+ *   ├─ 批次构建（BatchPlanner：根据数据源策略分批）
  *   ├─ 批次执行（GenericBatchExecutor：调用 Provider API）
  *   ├─ 游标推进（CursorAdvancer：记录进度）
  *   └─ 文献发布（LiteraturePublisherOrchestrator：发布到 Outbox）

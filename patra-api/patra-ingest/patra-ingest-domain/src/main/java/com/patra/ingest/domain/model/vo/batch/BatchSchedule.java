@@ -4,9 +4,9 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
 import java.util.List;
 
 /**
- * 批次规划结果值对象。
+ * 批次执行调度表。
  *
- * <p>封装规划器生成的批次列表和增强的执行上下文。
+ * <p>封装批次调度构建器生成的批次列表和执行上下文。
  *
  * <p>不变式:
  *
@@ -16,12 +16,12 @@ import java.util.List;
  * </ul>
  *
  * @param batches 批次列表
- * @param enrichedContext 包含 planMetadata 的增强执行上下文
+ * @param enrichedContext 包含元数据的执行上下文
  * @author linqibin
  * @since 0.2.0
  */
-public record BatchPlan(List<Batch> batches, ExecutionContext enrichedContext) {
-  public BatchPlan {
+public record BatchSchedule(List<Batch> batches, ExecutionContext enrichedContext) {
+  public BatchSchedule {
     if (batches == null) {
       throw new IllegalArgumentException("batches must not be null");
     }
@@ -30,14 +30,14 @@ public record BatchPlan(List<Batch> batches, ExecutionContext enrichedContext) {
     }
   }
 
-  /** 创建空的批次计划。 */
-  public static BatchPlan empty(ExecutionContext ctx) {
-    return new BatchPlan(List.of(), ctx);
+  /** 创建空的批次调度表。 */
+  public static BatchSchedule empty(ExecutionContext ctx) {
+    return new BatchSchedule(List.of(), ctx);
   }
 
-  /** 创建包含单个批次的计划。 */
-  public static BatchPlan single(Batch batch, ExecutionContext ctx) {
-    return new BatchPlan(List.of(batch), ctx);
+  /** 创建包含单个批次的调度表。 */
+  public static BatchSchedule single(Batch batch, ExecutionContext ctx) {
+    return new BatchSchedule(List.of(batch), ctx);
   }
 
   /** 批次总数。 */

@@ -10,13 +10,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.patra.common.enums.ProvenanceCode;
 import com.patra.common.model.DataType;
-import com.patra.ingest.domain.exception.BatchPlanningException;
+import com.patra.ingest.domain.exception.BatchSchedulingException;
 import com.patra.ingest.domain.model.snapshot.ProvenanceConfigSnapshot;
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-// Note: 使用完整类名来区分两个不同的 BatchPlan:
+// Note: 使用完整类名来区分两个不同的 BatchSchedule:
 // - com.patra.ingest.domain.model.vo.batch.BatchPlan: 规划结果（包含批次列表）
-// - com.patra.ingest.domain.model.vo.plan.BatchPlan: 计划元数据（用于生成批次）
+// - com.patra.ingest.domain.model.vo.fetch.FetchMetadata: 计划元数据（用于生成批次）
 import com.patra.ingest.domain.model.vo.plan.WindowSpec;
 import com.patra.ingest.domain.port.DataSourcePort;
 import com.patra.ingest.domain.strategy.BatchGenerationStrategy;
@@ -48,7 +48,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("UnifiedBatchPlanner 单元测试")
-class UnifiedBatchPlannerTest {
+class UnifiedBatchScheduleBuilderTest {
 
   @Mock private DataSourcePort dataSourcePort;
 
@@ -77,14 +77,14 @@ class UnifiedBatchPlannerTest {
   void should_register_all_strategies_in_constructor() {
     // 验证：通过日志或后续调用验证策略已注册
     // 这里通过实际使用策略来验证
-    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
     when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
     // when
-    planner.plan(ctx);
+    planner.build(ctx);
 
     // then
     verify(mockStrategy1).generateBatches(pubmedPlan, ctx);
@@ -105,7 +105,7 @@ class UnifiedBatchPlannerTest {
   void should_plan_pubmed_data_source_successfully() {
     // given
     int totalCount = 1000;
-    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan =
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan =
         createPubmedPlan(totalCount, false);
     ExecutionContext ctx = createContext("pubmed");
 
@@ -115,7 +115,7 @@ class UnifiedBatchPlannerTest {
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(mockBatches);
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
 
     // then
     assertThat(result.batches()).hasSize(3);
@@ -131,7 +131,7 @@ class UnifiedBatchPlannerTest {
   void should_plan_epmc_data_source_successfully() {
     // given
     int totalCount = 2000;
-    com.patra.ingest.domain.model.vo.plan.BatchPlan epmcPlan =
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata epmcPlan =
         createEpmcPlan(totalCount, "cursor-123");
     ExecutionContext ctx = createContext("epmc");
 
@@ -141,7 +141,7 @@ class UnifiedBatchPlannerTest {
     when(mockStrategy2.generateBatches(epmcPlan, ctx)).thenReturn(mockBatches);
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
 
     // then
     assertThat(result.batches()).hasSize(2);
@@ -155,13 +155,13 @@ class UnifiedBatchPlannerTest {
   @DisplayName("当 totalCount 为 0 时应该返回空计划")
   void should_return_empty_plan_when_total_count_is_zero() {
     // given
-    com.patra.ingest.domain.model.vo.plan.BatchPlan emptyPlan = createPubmedPlan(0, false);
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata emptyPlan = createPubmedPlan(0, false);
     ExecutionContext ctx = createContext("pubmed");
 
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(emptyPlan);
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
 
     // then
     assertThat(result.totalBatches()).isZero();
@@ -176,16 +176,16 @@ class UnifiedBatchPlannerTest {
   @DisplayName("当未找到对应策略时应该抛出异常")
   void should_throw_exception_when_strategy_not_found() {
     // given
-    // 创建一个未注册策略的 BatchPlan（使用匿名子类）
-    // 注意: ExecutionContext 使用 PUBMED 是合法的,但 BatchPlan 返回的 dataSourceCode 是未注册的
-    com.patra.ingest.domain.model.vo.plan.BatchPlan unknownPlan = createUnknownPlan(100);
+    // 创建一个未注册策略的 BatchSchedule（使用匿名子类）
+    // 注意: ExecutionContext 使用 PUBMED 是合法的,但 BatchSchedule 返回的 dataSourceCode 是未注册的
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata unknownPlan = createUnknownPlan(100);
     ExecutionContext ctx = createContext("pubmed"); // 使用合法的 ProvenanceCode
 
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(unknownPlan);
 
     // when & then
-    assertThatThrownBy(() -> planner.plan(ctx))
-        .isInstanceOf(BatchPlanningException.class)
+    assertThatThrownBy(() -> planner.build(ctx))
+        .isInstanceOf(BatchSchedulingException.class)
         .hasMessageContaining("批次规划失败")
         .hasCauseInstanceOf(IllegalStateException.class);
 
@@ -193,7 +193,7 @@ class UnifiedBatchPlannerTest {
   }
 
   @Test
-  @DisplayName("当 DataSourcePort 抛出异常时应该包装为 BatchPlanningException")
+  @DisplayName("当 DataSourcePort 抛出异常时应该包装为 BatchSchedulingException")
   void should_wrap_data_source_exception_as_batch_planning_exception() {
     // given
     ExecutionContext ctx = createContext("pubmed");
@@ -202,8 +202,8 @@ class UnifiedBatchPlannerTest {
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenThrow(sourceException);
 
     // when & then
-    assertThatThrownBy(() -> planner.plan(ctx))
-        .isInstanceOf(BatchPlanningException.class)
+    assertThatThrownBy(() -> planner.build(ctx))
+        .isInstanceOf(BatchSchedulingException.class)
         .hasMessageContaining("批次规划失败")
         .hasCause(sourceException);
 
@@ -211,10 +211,10 @@ class UnifiedBatchPlannerTest {
   }
 
   @Test
-  @DisplayName("当策略生成批次失败时应该包装为 BatchPlanningException")
+  @DisplayName("当策略生成批次失败时应该包装为 BatchSchedulingException")
   void should_wrap_strategy_exception_as_batch_planning_exception() {
     // given
-    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
     RuntimeException strategyException = new RuntimeException("批次生成错误");
 
@@ -222,8 +222,8 @@ class UnifiedBatchPlannerTest {
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenThrow(strategyException);
 
     // when & then
-    assertThatThrownBy(() -> planner.plan(ctx))
-        .isInstanceOf(BatchPlanningException.class)
+    assertThatThrownBy(() -> planner.build(ctx))
+        .isInstanceOf(BatchSchedulingException.class)
         .hasMessageContaining("批次规划失败")
         .hasCause(strategyException);
 
@@ -235,14 +235,14 @@ class UnifiedBatchPlannerTest {
   @DisplayName("应该正确处理策略返回空列表的情况")
   void should_handle_empty_batch_list_from_strategy() {
     // given
-    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
     when(dataSourcePort.preparePlan(ctx, DataType.LITERATURE)).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(pubmedPlan, ctx)).thenReturn(List.of());
 
     // when
-    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.plan(ctx);
+    com.patra.ingest.domain.model.vo.batch.BatchPlan result = planner.build(ctx);
 
     // then
     assertThat(result.batches()).isEmpty();
@@ -264,13 +264,13 @@ class UnifiedBatchPlannerTest {
 
     // then
     // 验证：planner 应该跳过 null 策略，只注册有效策略
-    com.patra.ingest.domain.model.vo.plan.BatchPlan pubmedPlan = createPubmedPlan(1000, false);
+    com.patra.ingest.domain.model.vo.fetch.FetchMetadata pubmedPlan = createPubmedPlan(1000, false);
     ExecutionContext ctx = createContext("pubmed");
 
     when(dataSourcePort.preparePlan(any(), eq(DataType.LITERATURE))).thenReturn(pubmedPlan);
     when(mockStrategy1.generateBatches(any(), any())).thenReturn(List.of());
 
-    planner.plan(ctx);
+    planner.build(ctx);
 
     verify(mockStrategy1).generateBatches(any(), any());
     verify(invalidStrategy, never()).generateBatches(any(), any());
@@ -325,10 +325,10 @@ class UnifiedBatchPlannerTest {
     return Batch.first("test-query", objectMapper.createObjectNode());
   }
 
-  /** 创建测试用的 BatchPlan (PubMed) - 计划元数据 */
-  private com.patra.ingest.domain.model.vo.plan.BatchPlan createPubmedPlan(
+  /** 创建测试用的 BatchSchedule (PubMed) - 计划元数据 */
+  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata createPubmedPlan(
       int totalRecords, boolean hasToken) {
-    return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
+    return new com.patra.ingest.domain.model.vo.fetch.FetchMetadata() {
       @Override
       public int totalRecords() {
         return totalRecords;
@@ -353,10 +353,10 @@ class UnifiedBatchPlannerTest {
     };
   }
 
-  /** 创建测试用的 BatchPlan (EPMC) - 计划元数据 */
-  private com.patra.ingest.domain.model.vo.plan.BatchPlan createEpmcPlan(
+  /** 创建测试用的 BatchSchedule (EPMC) - 计划元数据 */
+  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata createEpmcPlan(
       int totalRecords, String cursorMark) {
-    return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
+    return new com.patra.ingest.domain.model.vo.fetch.FetchMetadata() {
       @Override
       public int totalRecords() {
         return totalRecords;
@@ -381,9 +381,9 @@ class UnifiedBatchPlannerTest {
     };
   }
 
-  /** 创建测试用的 BatchPlan (未知数据源) - 计划元数据 */
-  private com.patra.ingest.domain.model.vo.plan.BatchPlan createUnknownPlan(int totalRecords) {
-    return new com.patra.ingest.domain.model.vo.plan.BatchPlan() {
+  /** 创建测试用的 BatchSchedule (未知数据源) - 计划元数据 */
+  private com.patra.ingest.domain.model.vo.fetch.FetchMetadata createUnknownPlan(int totalRecords) {
+    return new com.patra.ingest.domain.model.vo.fetch.FetchMetadata() {
       @Override
       public int totalRecords() {
         return totalRecords;

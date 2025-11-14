@@ -6,7 +6,7 @@
  * <h2>职责</h2>
  *
  * <ul>
- *   <li>根据数据源规划批次（如 PubMed 每批 10000 条）
+ *   <li>根据数据源构建批次（如 PubMed 每批 10000 条）
  *   <li>循环执行批次（调用 Provider API）
  *   <li>推进游标（记录采集进度）
  *   <li>发布文献数据到下游
@@ -17,13 +17,13 @@
  * <ul>
  *   <li>{@code ExecuteTaskBatchesUseCase} - 批次执行用例接口
  *   <li>{@code ExecuteTaskBatchesUseCaseImpl} - 批次执行用例实现
- *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.planner} - 批次规划器
+ *   <li>{@link com.patra.ingest.app.usecase.execution.strategy.planner} - 批次构建器
  * </ul>
  *
  * <h2>批次执行流程</h2>
  *
  * <pre>
- * 1. 批次规划（BatchPlanner）
+ * 1. 批次构建（BatchPlanner）
  *    └─ 根据数据源策略生成批次列表
  *
  * 2. 循环执行批次
@@ -38,9 +38,9 @@
  *    └─ 如果没有 → 完成
  * </pre>
  *
- * <h2>批次规划示例</h2>
+ * <h2>批次构建示例</h2>
  *
- * <h3>PubMed 批次规划</h3>
+ * <h3>PubMed 批次构建</h3>
  *
  * <pre>
  * 输入：
@@ -53,7 +53,7 @@
  *   Batch 3: retstart=20000, retmax=5000
  * </pre>
  *
- * <h3>EPMC 批次规划</h3>
+ * <h3>EPMC 批次构建</h3>
  *
  * <pre>
  * 输入：
@@ -82,10 +82,10 @@
  *     public void execute(ExecutionSession session) {
  *         var context = session.getContext();
  *
- *         // 1. 获取批次规划器
+ *         // 1. 获取批次构建器
  *         var planner = plannerRegistry.getPlanner(context.getProvenanceCode());
  *
- *         // 2. 规划批次
+ *         // 2. 构建批次
  *         var batchPlan = planner.plan(context);
  *
  *         // 3. 循环执行批次

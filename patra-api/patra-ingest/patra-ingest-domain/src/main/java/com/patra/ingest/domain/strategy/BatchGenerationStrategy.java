@@ -2,7 +2,7 @@ package com.patra.ingest.domain.strategy;
 
 import com.patra.ingest.domain.model.vo.batch.Batch;
 import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
-import com.patra.ingest.domain.model.vo.plan.BatchPlan;
+import com.patra.ingest.domain.model.vo.fetch.FetchMetadata;
 import java.util.List;
 
 /**
@@ -68,7 +68,7 @@ public interface BatchGenerationStrategy {
   String getSupportedDataSourceCode();
 
   /**
-   * 根据批次计划生成批次列表
+   * 根据抓取元数据生成批次列表
    *
    * <p>批次生成规则由具体策略实现，可能包括：
    *
@@ -78,9 +78,9 @@ public interface BatchGenerationStrategy {
    *   <li>附加状态令牌（opaque，不解析其内容）
    * </ul>
    *
-   * @param plan 批次计划（领域模型）
+   * @param metadata 抓取元数据（领域模型）
    * @param ctx 执行上下文（包含配置信息）
    * @return 批次列表
    */
-  List<Batch> generateBatches(BatchPlan plan, ExecutionContext ctx);
+  List<Batch> generateBatches(FetchMetadata metadata, ExecutionContext ctx);
 }
