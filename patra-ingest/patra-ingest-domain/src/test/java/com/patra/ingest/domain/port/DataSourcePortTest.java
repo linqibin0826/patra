@@ -52,7 +52,7 @@ class DataSourcePortTest {
     @Override
     public com.patra.ingest.domain.model.vo.fetch.FetchMetadata preparePlan(
         ExecutionContext context, DataType dataType) {
-      // Mock 实现：返回空的批次计划
+      // Mock 实现：返回空的批次调度
       return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(
           context.provenanceCode().getCode());
     }

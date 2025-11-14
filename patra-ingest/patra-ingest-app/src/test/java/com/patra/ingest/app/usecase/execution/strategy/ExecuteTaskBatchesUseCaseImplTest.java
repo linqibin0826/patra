@@ -36,7 +36,7 @@ import org.springframework.test.util.ReflectionTestUtils;
  * <p>测试范围:
  *
  * <ul>
- *   <li>✅ 正常流程: 批次规划 → 批次执行 → 持久化结果
+ *   <li>✅ 正常流程: 批次调度 → 批次执行 → 持久化结果
  *   <li>✅ 多批次执行: 顺序执行多个批次
  *   <li>✅ 批次执行失败: 某个批次失败，记录错误继续
  *   <li>✅ 全部批次失败: 所有批次都失败
@@ -90,7 +90,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("应该成功执行单个批次")
     void shouldExecuteSingleBatchSuccessfully() {
-      // Given: 创建单批次计划
+      // Given: 创建单批次调度
       Batch batch1 = createBatch(1, 1);
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
       when(mockBuilder.build(mockContext)).thenReturn(plan);
@@ -125,7 +125,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("应该顺序执行多个批次")
     void shouldExecuteMultipleBatchesSequentially() {
-      // Given: 创建三批次计划
+      // Given: 创建三批次调度
       Batch batch1 = createBatch(1, 3);
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
@@ -172,7 +172,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("某个批次失败时应该记录错误并继续执行")
     void shouldRecordFailureAndContinueWhenBatchFails() {
-      // Given: 创建三批次计划，第二个批次失败
+      // Given: 创建三批次调度，第二个批次失败
       Batch batch1 = createBatch(1, 3);
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
@@ -209,7 +209,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("所有批次失败时应该返回全部失败统计")
     void shouldReturnAllFailedWhenAllBatchesFail() {
-      // Given: 创建两批次计划，都失败
+      // Given: 创建两批次调度，都失败
       Batch batch1 = createBatch(1, 2);
       Batch batch2 = createBatch(2, 2);
       BatchSchedule plan = createBatchSchedule(List.of(batch1, batch2));
@@ -277,7 +277,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("当没有批次时应该返回零统计结果")
     void shouldReturnZeroStatsWhenNoBatches() {
-      // Given: 创建空批次计划
+      // Given: 创建空批次调度
       BatchSchedule plan = createBatchSchedule(List.of());
       when(mockBuilder.build(mockContext)).thenReturn(plan);
 
@@ -298,7 +298,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("当批次数量超过限制时应该抛出异常")
     void shouldThrowExceptionWhenBatchLimitExceeded() {
-      // Given: 创建超限的批次计划
+      // Given: 创建超限的批次调度
       BatchSchedule plan = mock(BatchSchedule.class);
       when(plan.exceedsLimit()).thenReturn(true);
       when(plan.totalBatches()).thenReturn(10000);
@@ -325,7 +325,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("当租约被撤销时应该立即中止后续批次执行")
     void shouldAbortWhenLeaseIsRevoked() {
-      // Given: 创建三批次计划
+      // Given: 创建三批次调度
       Batch batch1 = createBatch(1, 3);
       Batch batch2 = createBatch(2, 3);
       Batch batch3 = createBatch(3, 3);
@@ -398,7 +398,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("批次执行后应该更新 TaskRun 心跳")
     void shouldUpdateHeartbeatAfterEachBatch() {
-      // Given: 创建单批次计划
+      // Given: 创建单批次调度
       Batch batch1 = createBatch(1, 1);
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
       when(mockBuilder.build(mockContext)).thenReturn(plan);
@@ -424,7 +424,7 @@ class ExecuteTaskBatchesUseCaseImplTest {
     @Test
     @DisplayName("心跳更新失败时不应该影响批次执行")
     void shouldContinueExecutionWhenHeartbeatUpdateFails() {
-      // Given: 创建单批次计划
+      // Given: 创建单批次调度
       Batch batch1 = createBatch(1, 1);
       BatchSchedule plan = createBatchSchedule(List.of(batch1));
       when(mockBuilder.build(mockContext)).thenReturn(plan);

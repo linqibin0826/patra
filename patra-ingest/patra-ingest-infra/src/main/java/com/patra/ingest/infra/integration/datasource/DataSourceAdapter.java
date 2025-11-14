@@ -91,7 +91,7 @@ public class DataSourceAdapter implements DataSourcePort {
    *
    * @param context 执行上下文
    * @param dataType 数据类型标识
-   * @return 批次计划（领域模型）
+   * @return 批次调度（领域模型）
    * @throws ProviderNotFoundException 如果Provider不存在
    * @throws DataSourceException 如果调用数据源失败
    */

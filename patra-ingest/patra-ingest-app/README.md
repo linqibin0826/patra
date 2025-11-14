@@ -18,7 +18,7 @@
 ## 核心职责
 
 - **Plan 摄入编排**: 协调配置加载、窗口解析、表达式编译、计划装配、任务发布全流程
-- **Task 执行编排**: 管理任务执行会话、批次规划、租约管理、进度跟踪
+- **Task 执行编排**: 管理任务执行会话、批次调度、租约管理、进度跟踪
 - **Outbox 中继**: 轮询 Outbox 表,可靠地将领域事件发布到 MQ
 - **事件驱动协调**: 处理领域事件,驱动跨聚合的状态更新
 - **表达式编译**: 集成 patra-expr-kernel,编译 Plan 表达式为可执行参数
@@ -79,9 +79,9 @@ patra-ingest-app/
    │  │  ├─ strategy/
    │  │  │  ├─ ExecuteTaskBatchesUseCase.java   # 批次执行用例
    │  │  │  ├─ planner/
-   │  │  │  │  ├─ BatchPlanner.java             # 批次规划器接口
+   │  │  │  │  ├─ BatchPlanner.java             # 批次调度器接口
    │  │  │  │  ├─ BatchPlannerRegistry.java     # 规划器注册表
-   │  │  │  │  └─ UnifiedBatchPlanner.java      # 统一批次规划器(策略模式)
+   │  │  │  │  └─ UnifiedBatchPlanner.java      # 统一批次调度器(策略模式)
    │  │  │  └─ batch/
    │  │  │     └─ PubmedBatchGenerationStrategy.java  # PubMed 批次生成策略
    │  │  ├─ cursor/
@@ -224,7 +224,7 @@ public RelayReport relay(OutboxRelayCommand command) {
 
 **执行流程**:
 1. **Prepare**: 加载执行上下文(编译表达式)、获取租约、开始心跳
-2. **Execute**: 批次规划 → 批次执行 → 进度跟踪 → 游标推进
+2. **Execute**: 批次调度 → 批次执行 → 进度跟踪 → 游标推进
 3. **Complete**: 标记任务完成、释放租约、发布完成事件
 
 **关键子用例**:
@@ -363,7 +363,7 @@ public ExecutionContext loadContext(Long taskId, Long runId) {
 
 使用策略接口支持多种实现:
 - `SlicePlanner`: 切片策略(TIME/DATE/SINGLE)
-- `BatchPlanner`: 批次规划策略(PubMed/EPMC/Crossref)
+- `BatchPlanner`: 批次调度策略(PubMed/EPMC/Crossref)
 
 ### 4. 模板方法模式 (Template Method Pattern)
 

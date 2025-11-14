@@ -13,7 +13,7 @@
 3. **任务生成(Task Generation)**: 将计划切片为可并行执行的任务,保证幂等性
 4. **游标跟踪(Cursor Tracking)**: 维护增量采集的水位线(Watermark)
 5. **Outbox 中继(Outbox Relay)**: 通过 Outbox 模式可靠地将任务事件发布到 MQ
-6. **执行协调(Execution Coordination)**: 跟踪任务状态、租约管理、批次规划
+6. **执行协调(Execution Coordination)**: 跟踪任务状态、租约管理、批次调度
 
 **核心原则**: 确保**至少一次交付(At-least-once Delivery)**和**幂等任务执行(Idempotent Task Execution)**。
 

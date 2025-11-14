@@ -8,7 +8,7 @@ import com.patra.ingest.domain.model.vo.execution.ExecutionContext;
  *
  * <p>在六边形架构+DDD中的角色:应用层用例,负责任务执行阶段的批次处理。
  *
- * <p>主要职责:批次规划 + 批次执行(支持并发/幂等)
+ * <p>主要职责:批次调度 + 批次执行(支持并发/幂等)
  *
  * @author linqibin
  * @since 0.1.0
