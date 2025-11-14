@@ -13,8 +13,10 @@ import com.patra.starter.provenance.epmc.EPMCClient;
 import com.patra.starter.provenance.epmc.EPMCClientImpl;
 import com.patra.starter.provenance.pubmed.PubMedClient;
 import com.patra.starter.provenance.pubmed.PubMedClientImpl;
-// import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider; // 临时注释，待Phase 4升级
+import com.patra.starter.provenance.pubmed.PubmedDataSourceProvider;
 import com.patra.starter.provenance.pubmed.converter.PubmedLiteratureConverter;
+import com.patra.starter.provenance.pubmed.processor.PubmedLiteratureProcessor;
+import com.patra.starter.provenance.pubmed.request.PubMedESearchRequestAssembler;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Optional;
@@ -165,17 +167,54 @@ public class ProvenanceAutoConfiguration {
         new SimpleHttpClient(), configProvider, objectMapper, metrics.orElse(null));
   }
 
-  // 临时注释：PubmedDataSourceProvider已升级
-  /*
+  /**
+   * 创建 PubMed ESearch 请求组装器
+   *
+   * @return PubMed ESearch 请求组装器实例
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public PubMedESearchRequestAssembler pubMedESearchRequestAssembler() {
+    log.debug("初始化 PubMed ESearch 请求组装器");
+    return new PubMedESearchRequestAssembler();
+  }
+
+  /**
+   * 创建 PubMed 文献处理器
+   *
+   * @param pubMedClient PubMed 客户端
+   * @param converter PubMed 文献转换器
+   * @param properties Provenance 配置属性
+   * @param metrics 可选的指标记录器
+   * @return PubMed 文献处理器实例
+   */
+  @Bean
+  @ConditionalOnMissingBean
+  public PubmedLiteratureProcessor pubmedLiteratureProcessor(
+      PubMedClient pubMedClient,
+      PubmedLiteratureConverter converter,
+      ProvenanceProperties properties,
+      Optional<ProvenanceMetrics> metrics) {
+    log.debug("初始化 PubMed 文献处理器");
+    return new PubmedLiteratureProcessor(
+        pubMedClient, converter, properties, metrics.orElse(null));
+  }
+
+  /**
+   * 创建 PubMed 数据源提供者
+   *
+   * @param literatureProcessor PubMed 文献处理器
+   * @param pubMedClient PubMed 客户端
+   * @param requestAssembler 请求组装器
+   * @return PubMed 数据源提供者实例
+   */
   @Bean
   @ConditionalOnMissingBean
   public PubmedDataSourceProvider pubmedDataSourceProvider(
+      PubmedLiteratureProcessor literatureProcessor,
       PubMedClient pubMedClient,
-      PubmedLiteratureConverter articleConverter,
-      ProvenanceProperties properties,
-      Optional<ProvenanceMetrics> metrics) {
-    return new PubmedDataSourceProvider(
-        pubMedClient, articleConverter, properties, metrics.orElse(null));
+      PubMedESearchRequestAssembler requestAssembler) {
+    log.info("自动配置 PubMed 数据源提供者，将注册到 ProviderRegistry");
+    return new PubmedDataSourceProvider(literatureProcessor, pubMedClient, requestAssembler);
   }
-  */
 }

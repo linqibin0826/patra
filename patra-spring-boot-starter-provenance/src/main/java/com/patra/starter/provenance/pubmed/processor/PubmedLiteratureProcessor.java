@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
 
 /**
  * PubMed 文献数据处理器
@@ -62,11 +61,13 @@ import org.springframework.stereotype.Component;
  * PubMedClient → NCBI E-utilities API
  * </pre>
  *
+ * <p><strong>注意</strong>：此类通过 {@link com.patra.starter.provenance.boot.ProvenanceAutoConfiguration}
+ * 自动配置注册为 Spring Bean，不使用 {@code @Component} 注解。
+ *
  * @author Patra Architecture Team
  * @since 0.1.0
  */
 @Slf4j
-@Component
 @RequiredArgsConstructor
 public class PubmedLiteratureProcessor implements DataProcessor<CanonicalLiterature> {
 
