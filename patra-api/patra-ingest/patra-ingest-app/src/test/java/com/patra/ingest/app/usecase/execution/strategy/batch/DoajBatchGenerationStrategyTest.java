@@ -74,11 +74,11 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 1000;
       int pageSize = 100;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       int expectedBatchCount = (int) Math.ceil((double) totalRecords / pageSize);
@@ -92,11 +92,11 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 50;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(10); // 500 / 50 = 10
@@ -109,11 +109,11 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 250;
       int pageSize = 100;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(3);
@@ -131,11 +131,11 @@ class DoajBatchGenerationStrategyTest {
       String query = "bibjson.journal.title:cancer";
       JsonNode params = objectMapper.createObjectNode().put("pageSize", pageSize);
 
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize, query, params);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(2);
@@ -154,15 +154,15 @@ class DoajBatchGenerationStrategyTest {
       int pageSize = 100;
       String scrollId = "scroll-123456";
       Map<String, String> stateToken = Map.of("cursorMark", scrollId);
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", stateToken);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(10);
-      assertThat(plan.hasStateToken()).isTrue();
+      assertThat(metadata.hasStateToken()).isTrue();
 
       // 验证所有批次都包含 cursorMark session token
       assertThat(batches)
@@ -180,15 +180,15 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(5);
-      assertThat(plan.hasStateToken()).isFalse();
+      assertThat(metadata.hasStateToken()).isFalse();
 
       // 验证所有批次都不包含 session tokens（应该是 null 或空 Map）
       assertThat(batches)
@@ -203,11 +203,11 @@ class DoajBatchGenerationStrategyTest {
       int pageSize = 100;
       String scrollId = "scroll-789";
       Map<String, String> stateToken = Map.of("cursorMark", scrollId);
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", stateToken);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", stateToken);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(3);
@@ -225,11 +225,11 @@ class DoajBatchGenerationStrategyTest {
     @DisplayName("当 totalRecords 为 0 时应该返回空批次列表")
     void should_return_empty_list_when_total_records_is_zero() {
       // given
-      BatchSchedule plan = createBatchSchedule(0, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(0, "doaj", null);
       ExecutionContext ctx = createContext(100);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).isEmpty();
@@ -241,11 +241,11 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 50;
       int pageSize = 100;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(1);
@@ -259,11 +259,11 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 500;
       int pageSize = 100;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(5);
@@ -276,11 +276,11 @@ class DoajBatchGenerationStrategyTest {
       // given
       int totalRecords = 10000;
       int pageSize = 100;
-      BatchSchedule plan = createBatchSchedule(totalRecords, "doaj", null);
+      FetchMetadata metadata = createFetchMetadata(totalRecords, "doaj", null);
       ExecutionContext ctx = createContext(pageSize);
 
       // when
-      List<Batch> batches = strategy.generateBatches(plan, ctx);
+      List<Batch> batches = strategy.generateBatches(metadata, ctx);
 
       // then
       assertThat(batches).hasSize(100);
@@ -292,16 +292,16 @@ class DoajBatchGenerationStrategyTest {
   // === 辅助方法 ===
 
   /**
-   * 创建测试用的 BatchSchedule
+   * 创建测试用的 FetchMetadata
    *
    * @param totalRecords 总记录数
    * @param dataSourceCode 数据源代码
    * @param stateToken 状态令牌（可为 null）
-   * @return BatchSchedule 实例
+   * @return FetchMetadata 实例
    */
-  private BatchSchedule createBatchSchedule(
+  private FetchMetadata createFetchMetadata(
       int totalRecords, String dataSourceCode, Map<String, String> stateToken) {
-    return new BatchSchedule() {
+    return new FetchMetadata() {
       @Override
       public int totalRecords() {
         return totalRecords;
