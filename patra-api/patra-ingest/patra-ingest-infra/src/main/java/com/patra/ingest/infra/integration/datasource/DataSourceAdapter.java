@@ -84,7 +84,7 @@ public class DataSourceAdapter implements DataSourcePort {
    * <ol>
    *   <li>从ExecutionContext提取通用参数(query, params, config)
    *   <li>使用ProviderRegistry查找Provider
-   *   <li>调用Provider.preparePlan()获取元数据
+   *   <li>调用Provider.prepareFetchMetadata()获取元数据
    *   <li>使用PlanMetadataTranslator翻译为领域模型
    *   <li>处理异常转换
    * </ol>
@@ -96,11 +96,11 @@ public class DataSourceAdapter implements DataSourcePort {
    * @throws DataSourceException 如果调用数据源失败
    */
   @Override
-  public FetchMetadata preparePlan(ExecutionContext context, DataType dataType) {
+  public FetchMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType) {
     ProvenanceCode provenanceCode = context.provenanceCode();
 
     log.debug(
-        "DataSourceAdapter.preparePlan: provenance={}, dataType={}",
+        "DataSourceAdapter.prepareFetchMetadata: provenance={}, dataType={}",
         provenanceCode.getCode(),
         dataType);
 

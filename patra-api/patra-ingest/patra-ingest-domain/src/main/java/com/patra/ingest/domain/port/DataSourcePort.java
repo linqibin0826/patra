@@ -98,7 +98,7 @@ public interface DataSourcePort {
    * @param dataType 数据类型标识（如 LITERATURE、JOURNAL）
    * @return 抓取元数据（领域模型，不包含外部实现细节）
    */
-  FetchMetadata preparePlan(ExecutionContext context, DataType dataType);
+  FetchMetadata prepareFetchMetadata(ExecutionContext context, DataType dataType);
 
   /**
    * 从数据源获取指定类型的数据

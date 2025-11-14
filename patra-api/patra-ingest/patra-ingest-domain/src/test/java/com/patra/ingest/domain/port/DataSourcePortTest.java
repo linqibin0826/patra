@@ -50,9 +50,9 @@ class DataSourcePortTest {
             Set.of(DataType.DRUG));
 
     @Override
-    public com.patra.ingest.domain.model.vo.fetch.FetchMetadata preparePlan(
+    public com.patra.ingest.domain.model.vo.fetch.FetchMetadata prepareFetchMetadata(
         ExecutionContext context, DataType dataType) {
-      // Mock 实现：返回空的批次调度
+      // Mock 实现：返回空的抓取元数据
       return com.patra.ingest.domain.model.vo.fetch.FetchMetadata.empty(
           context.provenanceCode().getCode());
     }

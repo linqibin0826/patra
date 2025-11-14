@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * <p>职责：
  *
  * <ul>
- *   <li>使用 DataSourcePort.preparePlan() 获取批次调度
+ *   <li>使用 DataSourcePort.prepareFetchMetadata() 获取批次调度
  *   <li>使用策略模式委派批次生成逻辑
  *   <li>构建完整的 BatchSchedule（包含批次列表和执行上下文）
  * </ul>
@@ -123,7 +123,7 @@ public class UnifiedBatchScheduleBuilder implements BatchScheduleBuilder {
   public BatchSchedule build(ExecutionContext ctx) {
     try {
       // 1. 使用统一端口准备抓取元数据（已通过防腐层翻译为领域模型）
-      FetchMetadata fetchMetadata = dataSourcePort.preparePlan(ctx, ctx.dataType());
+      FetchMetadata fetchMetadata = dataSourcePort.prepareFetchMetadata(ctx, ctx.dataType());
 
       if (fetchMetadata.totalRecords() == 0) {
         log.info("抓取元数据为空: provenance={}", ctx.provenanceCode());
