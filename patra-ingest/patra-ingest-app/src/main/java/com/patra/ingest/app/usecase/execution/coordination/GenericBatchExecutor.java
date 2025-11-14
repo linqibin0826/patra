@@ -68,7 +68,7 @@ public class GenericBatchExecutor {
 
     log.info(
         "批次执行开始 provenanceCode={} operationCode={} batchNo={} runId={}",
-        provenanceCode != null ? provenanceCode.getCode() : null,
+        provenanceCode,
         operationCode,
         batchNo,
         context.runId());
@@ -131,7 +131,7 @@ public class GenericBatchExecutor {
     String reason = safeMessage(result.errorMessage());
     log.warn(
         "批次执行失败 provenanceCode={} batchNo={} errorType={} duration={}ms message={}",
-        provenanceCode != null ? provenanceCode.getCode() : null,
+        provenanceCode,
         batchNo,
         errorType,
         durationMillis,
@@ -152,7 +152,7 @@ public class GenericBatchExecutor {
         && fetchResult.errorType() == ErrorType.PARTIAL_SUCCESS) {
       log.warn(
           "数据获取报告部分成功 provenanceCode={} batchNo={} warning={}",
-          provenanceCode != null ? provenanceCode.getCode() : null,
+          provenanceCode,
           batchNo,
           fetchResult.errorMessage());
     }

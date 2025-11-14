@@ -96,4 +96,16 @@ public enum ProvenanceCode {
   public String toJson() {
     return this.code;
   }
+
+  /**
+   * 返回代码字符串，用于日志打印和字符串拼接。
+   *
+   * <p>使 SLF4J 的 {@code {}} 占位符可以直接使用 ProvenanceCode 对象， 无需手动调用 {@code getCode()} 或处理 null 检查。
+   *
+   * @return 数据源代码字符串
+   */
+  @Override
+  public String toString() {
+    return this.code;
+  }
 }
